@@ -5,13 +5,12 @@
 """
 Moodboard → Chat composer sync.
 
-Mirrors the set of currently-selected moodboard images (and images
-belonging to selected groups) into ``scene.mixie_chat_pending_attachments``
-so the agent automatically sees them as attachments when the next
-message is sent. One-way: moodboard selection drives the composer,
-not the other way around. Manually-added attachments (file picker,
-screenshots, clipboard, blend-data) are left untouched — we only
-own attachments whose ``is_moodboard`` flag is True.
+Adds newly selected moodboard stills (including groups and generated results)
+to ``scene.mixie_chat_pending_attachments``. References remain staged when the
+selection changes or clears; only explicit composer removal/clear or sending
+consumes them. Selection edges add references once, so attachment-count changes
+cannot resurrect a removed reference or silently fill a newly freed slot.
+Manual attachments share the same identity checks and five-reference limit.
 
 **Why polling instead of a property update= callback:**
 The moodboard's click / box-select / cmd-click operators are
@@ -48,6 +47,7 @@ from .chat_sync_dedupe import (
     attachment_shows_board_item,
     board_image_is_attached,
     attachment_identity_sets,
+    file_key,
 )
 from .media_utils import is_video_item
 
@@ -128,11 +128,7 @@ def _collect_selected_image_names(scene) -> list[str]:
 
 
 def _compute_selection_signature(scene) -> tuple:
-    """Hashable tuple uniquely identifying the desired attachment state
-    for this scene. Includes the moodboard-origin attachment count so
-    we also detect drift when an external code path (e.g. the chat
-    send pipeline) clears ``pending_attachments`` out from under us.
-    """
+    """Observed selection and attachment count, including explicit composer edits."""
     names = tuple(_collect_selected_image_names(scene))
 
     attachments = getattr(scene, "mixie_chat_pending_attachments", None)
@@ -149,100 +145,49 @@ def _compute_selection_signature(scene) -> tuple:
 # Reconciliation (single-pass, atomic-ish)
 # ----------------------------------------------------------------- #
 def _reconcile_attachments(scene, target_names: Iterable[str], *, animate=False) -> None:
-    """Make the moodboard-origin attachments in ``pending_attachments``
-    exactly equal to ``target_names``, subject to the per-message
-    attachment cap. Single pass so a mid-iteration RNA failure can't
-    leave the collection half-reconciled.
+    """Add these selection edges without removing or replacing staged references.
 
-    Manually-added attachments (FILE / non-moodboard BLEND_DATA) are
-    never touched. Also de-dupes against them — if the user already
-    attached the same picture, we don't add a moodboard copy on top of
-    it. A BLEND_DATA attachment matches by image name (this also covers
-    the post-reload case where SKIP_SAVE wiped the is_moodboard flag on
-    a previously-mirrored attachment); a FILE attachment matches when
-    the board image was loaded from that file — a picture dropped into
-    the chat, mirrored onto the board by ``attachment_board_sync`` and
-    then selected there. Identity rules: ``chat_sync_dedupe``.
-
-    The total attachment count is capped at MAX_ATTACHMENTS_PER_MESSAGE
-    (matches the backend's per-turn limit) — once the collection is
-    at the cap, additional selected moodboard images stay queued but
-    don't get attached. When the user deselects or removes a slot,
-    the next poll picks them up.
+    Identity is shared with manual FILE/BLEND_DATA attachments. Repeated
+    selection never duplicates or replays a reference; overflow is rejected,
+    not queued for a surprise attach after the user removes something else.
     """
-    # Lazy import to keep moodboard from carrying a hard dep on chat
-    # module loading order.
-    try:
-        from mixar.modules.space_mixie_chat.constants import (
-            MAX_ATTACHMENTS_PER_MESSAGE,
-        )
-    except Exception:  # noqa: BLE001
-        MAX_ATTACHMENTS_PER_MESSAGE = 5  # safe default matching the C++ side
+    from mixar.modules.space_mixie_chat.constants import MAX_ATTACHMENTS_PER_MESSAGE
 
     attachments = getattr(scene, "mixie_chat_pending_attachments", None)
     if attachments is None:
         return
-
-    target_set: set[str] = set(target_names)
-
-    # Snapshot what's there so we don't mutate while iterating.
-    existing_moodboard_indices: list[int] = []
-    for i, att in enumerate(attachments):
-        if getattr(att, "is_moodboard", False):
-            existing_moodboard_indices.append(i)
-    existing_blend_names, existing_file_keys = attachment_identity_sets(attachments)
-
-    # Compute the operations.
-    to_remove: list[int] = []  # indices in `attachments`
-    to_add: list[str] = []     # image names
-    keeps: set[str] = set()    # moodboard-origin names already present
-
-    for i in existing_moodboard_indices:
-        path = attachments[i].image_path
-        if path in target_set:
-            keeps.add(path)
-        else:
-            to_remove.append(i)
-
-    for name in sorted(target_set):
-        if name in keeps:
-            continue
-        # De-dupe against any pre-existing attachment showing this
-        # picture: a BLEND_DATA one of the same name (a survivor of
-        # save/reload that lost its is_moodboard flag, or a manual
-        # blend-data add), or a FILE one the board image was loaded from
-        # (a chat drop mirrored onto the board, then selected there).
-        if board_image_is_attached(name, existing_blend_names, existing_file_keys):
-            continue
-        to_add.append(name)
-
-    if not to_remove and not to_add:
-        return
-
-    # Apply removes high-to-low so earlier indices stay valid.
-    for i in sorted(to_remove, reverse=True):
-        attachments.remove(i)
-
-    # Stable order also gives group attachments a predictable animation stagger.
-    remaining_slots = MAX_ATTACHMENTS_PER_MESSAGE - len(attachments)
-    if remaining_slots > 0:
-        for name in to_add[:remaining_slots]:
-            att = attachments.add()
-            att.image_path = name
-            att.image_source = 'BLEND_DATA'
-            att.display_name = name
-            att.is_moodboard = True
-        if animate and to_add:
+    blend_names, file_keys = attachment_identity_sets(attachments)
+    to_add = [name for name in sorted(set(target_names))
+              if not board_image_is_attached(name, blend_names, file_keys)]
+    remaining = max(0, MAX_ATTACHMENTS_PER_MESSAGE - len(attachments))
+    added = to_add[:remaining]
+    for name in added:
+        att = attachments.add()
+        att.image_path = name
+        att.image_source = 'BLEND_DATA'
+        att.display_name = name
+        att.is_moodboard = True
+    if added:
+        if animate:
             from .attachment_motion import animate_attachments
-            animate_attachments(scene, to_add[:remaining_slots])
+            animate_attachments(scene, added)
+        _redraw_chat_areas()
+    if len(to_add) > remaining:
+        _notify_attachment_limit(MAX_ATTACHMENTS_PER_MESSAGE)
 
-    # Tag chat + bubble areas for a repaint. No forced bubble resize
-    # — earlier we tried a rising-edge force_attachment_height to
-    # auto-grow the bubble for new thumbnails, but it produced a
-    # visible flash on every first-of-a-batch selection. The
-    # composer's own draw pipeline handles attachment layout within
-    # whatever bubble size the user has chosen.
-    _redraw_chat_areas()
+
+def _notify_attachment_limit(limit):
+    """A rejected selection must not look like it replaced an older reference."""
+    try:
+        from mixar.modules.common.notifications import get_notification_store
+        get_notification_store().push(
+            "warning", f"Chat reference limit reached ({limit})",
+            body="Remove a reference in Agent chat, then select the image again.",
+            id="chat-reference-limit",
+            ttl_ms=6000,
+        )
+    except Exception:
+        _logger.debug("Attachment limit notification unavailable", exc_info=True)
 
 
 # ----------------------------------------------------------------- #
@@ -302,9 +247,9 @@ def _poll_tick():
             return _POLL_INTERVAL_S
 
         previous = _last_signatures.get(key)
-        _last_signatures[key] = signature
-        _reconcile_attachments(scene, signature[1],
-                               animate=previous is not None and previous[1] != signature[1])
+        names = signature[1] if previous is None else sorted(set(signature[1]) - set(previous[1]))
+        _reconcile_attachments(scene, names, animate=previous is not None and bool(names))
+        _last_signatures[key] = _compute_selection_signature(scene)
     except Exception as e:  # noqa: BLE001 — timer must never raise
         _logger.debug("moodboard chat_sync poll failed: %s", e, exc_info=True)
 
@@ -315,13 +260,18 @@ def _poll_tick():
 # Public helpers
 # ----------------------------------------------------------------- #
 def force_resync(scene=None) -> None:
-    """Drop the cached signature so the next poll runs a full sync.
+    """Explicitly allow the current selection to attach again on the next poll.
     If ``scene`` is omitted, invalidates *all* per-scene caches.
     """
     if scene is None:
         _last_signatures.clear()
     else:
         _last_signatures.pop(scene.name, None)
+
+
+def consume_selection(scene) -> None:
+    """Record selection before an explicit clear/send so it cannot re-attach."""
+    _last_signatures[scene.name] = _compute_selection_signature(scene)
 
 
 def deselect_moodboard_image_for_attachment(
@@ -331,12 +281,18 @@ def deselect_moodboard_image_for_attachment(
     ``(image_path, image_source)`` stands for. Returns True if at least
     one image was deselected.
 
-    Called from the chat composer's X-button operator so removing a pill
-    cleanly drops the board's selection — without this, the polling tick
-    would re-add the attachment on the next cycle. Manual FILE pills
-    included: a dropped image mirrored onto the board and selected there
-    has that FILE pill as its ONE pill (the sync de-dupes against it).
+    The X button consumes this reference's selection edge, including groups
+    and generated nodes, and releases direct media selection. FILE references
+    use the same identity rules as their selected board copies.
     """
+    # Consume only this reference, including selected groups/generated nodes.
+    # Other images selected since the last poll still get their normal add edge.
+    previous = _last_signatures.get(scene.name, (0, ()))
+    blend_names = {image_path} if image_source == 'BLEND_DATA' else set()
+    file_keys = {file_key(image_path)} if image_source == 'FILE' else set()
+    dismissed = {name for name in _collect_selected_image_names(scene)
+                 if board_image_is_attached(name, blend_names, file_keys)}
+    _last_signatures[scene.name] = (previous[0], tuple(sorted(set(previous[1]) | dismissed)))
     images_attr = getattr(scene, "mixie_moodboard_images", None)
     if images_attr is None:
         return False
@@ -348,7 +304,6 @@ def deselect_moodboard_image_for_attachment(
             mb_img.selected = False
             changed = True
     if changed:
-        force_resync(scene)
         _redraw_moodboard_areas()
     return changed
 
@@ -367,6 +322,7 @@ def deselect_all_moodboard_origin_attachments(scene) -> int:
 
     Returns the number of moodboard images deselected.
     """
+    consume_selection(scene)
     images_attr = getattr(scene, "mixie_moodboard_images", None)
     groups_attr = getattr(scene, "mixie_moodboard_groups", None)
     attachments = getattr(scene, "mixie_chat_pending_attachments", None)
@@ -400,7 +356,6 @@ def deselect_all_moodboard_origin_attachments(scene) -> int:
                 groups_attr[idx].selected = False
 
     if count:
-        force_resync(scene)
         _redraw_moodboard_areas()
     return count
 

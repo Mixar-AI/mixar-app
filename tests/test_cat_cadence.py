@@ -49,7 +49,8 @@ int main() {
   assert(mixie_cat_next_frame(motion,1.1,70)==MIXIE_CAT_FRAME_SECONDS);
   for(auto mode : {MixieCatActivity::Thinking, MixieCatActivity::Working,
                   MixieCatActivity::Reading, MixieCatActivity::Generating,
-                  MixieCatActivity::Responding, MixieCatActivity::Connecting}) {
+                  MixieCatActivity::Responding, MixieCatActivity::Connecting,
+                  MixieCatActivity::Catching}) {
     motion.sample(10,mode);
     assert(mixie_cat_next_frame(motion,20,70)==MIXIE_CAT_FRAME_SECONDS);
   }

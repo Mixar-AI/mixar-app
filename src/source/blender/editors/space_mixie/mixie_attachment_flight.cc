@@ -230,7 +230,7 @@ double tick(uintptr_t /*id*/, void * /*data*/)
                                [&](const Flight &f) {
                                  return !f.source_window.stationary() || !live_image(f) ||
                                         (f.start ?
-                                             (!f.target_window.stationary() || progress(f) >= 1) :
+                                             (!f.target_window.stationary() || progress(f) > 1) :
                                              now - f.queued > 0.35);
                                }),
                 flights.end());
@@ -359,5 +359,43 @@ void mixie_attachment_qa_register()
 {
   Mixar_qa_register_target_provider(SPACE_MIXIE, qa_targets);
   Mixar_qa_register_target_provider(SPACE_VIEW3D, qa_targets);
+}
+
+bool ED_moodboard_attachment_incoming(const wmWindow *target, MixieAttachmentIncoming &r_incoming)
+{
+  int best = -1;
+  double best_arrival = 0.0;
+  for (int i = 0; i < int(flights.size()); i++) {
+    const Flight &f = flights[size_t(i)];
+    if (!target || !f.start || f.target_window.window != target || !live_image(f)) {
+      continue;
+    }
+    const float t = progress(f);
+    if (t > 1.0f) {
+      continue;
+    }
+    const double arrival = f.start + ed::mixie::ATTACHMENT_FLIGHT_SECONDS;
+    if (best < 0 || arrival < best_arrival) {
+      best = i;
+      best_arrival = arrival;
+    }
+  }
+  if (best < 0) {
+    return false;
+  }
+  const Flight &f = flights[size_t(best)];
+  const float t = std::clamp(progress(f), 0.0f, 1.0f);
+  const ed::mixie::FlightPoint pos = ed::mixie::attachment_flight_vertex(
+      f.source, f.target, 0.5f, 0.5f, t);
+  const ed::mixie::FlightPoint land = ed::mixie::attachment_flight_vertex(
+      f.source, f.target, 0.5f, 0.5f, 1.0f);
+  r_incoming.progress = progress(f);
+  r_incoming.position[0] = pos[0];
+  r_incoming.position[1] = pos[1];
+  r_incoming.target[0] = land[0];
+  r_incoming.target[1] = land[1];
+  r_incoming.start = f.start;
+  r_incoming.arrival = best_arrival;
+  return true;
 }
 }  // namespace blender

@@ -55,6 +55,8 @@ def capture_selection(node_id, directory, expected=True, remove=False, minimized
             destination_bounds = [destination.x, destination.y, destination.width, destination.height]
         frames.append({'time': time.monotonic()-started, 'path': path,
                        'target_path': target_path,
+                       'cat': {'activity': targets[0]['value'], 'rect': targets[0]['rect']}
+                              if minimized and targets else None,
                        'main': [win.x, win.y, win.width, win.height],
                        'destination': destination_bounds,
                        'flights': [{'rect': t['rect'], 'progress': float(t['value']),
@@ -74,6 +76,7 @@ def clear_selection(qa):
             "for item in scene.mixie_moodboard_images: item.selected=False\n"
             "for node in scene.mixie_moodboard_action_nodes: node.selected=False\n"
             "for group in scene.mixie_moodboard_groups: group.selected=False\n"
+            "if scene.mixie_chat_pending_attachments: bpy.ops.mixie_chat.clear_attachments()\n"
             "from mixar.modules.moodboard.core.chat_sync import force_resync\n"
             "force_resync(scene)\nresult=True")
     qa.wait(f'not {SCENE}.mixie_chat_pending_attachments', timeout=5)

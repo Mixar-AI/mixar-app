@@ -19,4 +19,14 @@ void ED_moodboard_attachment_target(const bContext *C,
                                     const rctf &rect);
 void MIXIE_OT_moodboard_attachment_flight(wmOperatorType *ot);
 void mixie_attachment_qa_register();
+/** Live flight the cat can track. Progress uses the existing flight clock;
+ * several overlapping ribbons lock to the soonest landing. */
+struct MixieAttachmentIncoming {
+  float progress = 0.0f;
+  float position[2] = {0.0f, 0.0f};
+  float target[2] = {0.0f, 0.0f};
+  double start = 0.0;
+  double arrival = 0.0;
+};
+bool ED_moodboard_attachment_incoming(const wmWindow *target, MixieAttachmentIncoming &r_incoming);
 }  // namespace blender

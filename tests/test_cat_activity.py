@@ -17,11 +17,15 @@ def test_activity_and_pose_contract(tmp_path):
     source = tmp_path/'cat.cc'
     source.write_text(r'''
 #include "agent_ui_cat_activity.hh"
+#include "mixie_attachment_motion.hh"
 #include <cassert>
 #include <cmath>
 using namespace blender;
+using blender::ed::mixie::ATTACHMENT_FLIGHT_SECONDS;
 float distance(const MixieCatPose &a, const MixieCatPose &b) {
   return std::abs(a.tilt-b.tilt)+std::abs(a.look_x-b.look_x)+
+         std::abs(a.breathe-b.breathe)+std::abs(a.ear_l-b.ear_l)+
+         std::abs(a.ear_r-b.ear_r)+std::abs(a.pupil_scale-b.pupil_scale)+
          std::abs(a.look_y-b.look_y)+std::abs(a.openness-b.openness)+
          std::abs(a.bounce-b.bounce)+std::abs(a.eye_scale-b.eye_scale)+
          std::abs(a.eye_width-b.eye_width)+std::abs(a.lid_l-b.lid_l)+
@@ -54,6 +58,15 @@ int main() {
   assert(!mixie_cat_is_working(mixie_cat_activity(s)));
   s.listening=true;
   assert(mixie_cat_activity(s)==MixieCatActivity::Listening);
+  s.offline=false;
+  s.catching=true;
+  assert(mixie_cat_activity(s)==MixieCatActivity::Catching); // Reflex beats voice and work.
+  s.offline=true;
+  s.listening=s.waiting=false;
+  assert(mixie_cat_activity(s)==MixieCatActivity::Offline);
+  s.offline=s.catching=s.listening=s.waiting=false;
+  s.thinking=true;
+  assert(mixie_cat_activity(s)==MixieCatActivity::Thinking);
   MixieCatMotion a,b;
   a.sample(1, MixieCatActivity::Idle); b.sample(1, MixieCatActivity::Idle);
   a.sample(2, MixieCatActivity::Thinking); b.sample(2, MixieCatActivity::Thinking);
@@ -65,7 +78,7 @@ int main() {
   assert(distance(before,a.sample(2.16,MixieCatActivity::Waiting))<1e-5);
   assert(distance(a.sample(20,MixieCatActivity::Waiting),
                   mixie_cat_activity_pose(20,MixieCatActivity::Waiting))<1e-5);
-  for(int mode=0;mode<=int(MixieCatActivity::Connecting);mode++) {
+  for(int mode=0;mode<=int(MixieCatActivity::Catching);mode++) {
     float energy=0;
     auto last=mixie_cat_activity_pose(0,MixieCatActivity(mode));
     for(int n=1;n<=3600;n++) {
@@ -92,7 +105,9 @@ int main() {
     auto generating=mixie_cat_activity_pose(t,MixieCatActivity::Generating);
     auto responding=mixie_cat_activity_pose(t,MixieCatActivity::Responding);
     auto listening=mixie_cat_activity_pose(t,MixieCatActivity::Listening);
+    auto catching=mixie_cat_activity_pose(t,MixieCatActivity::Catching);
     assert(thinking.lid_r-thinking.lid_l>.5f);
+    assert(std::abs(catching.look_x)>.5f); // Default catch aims, it does not stare ahead.
     assert(responding.smile>=.85f && generating.smile==0);
     assert(listening.pupil_scale-generating.pupil_scale>.45f);
     assert(reading.eye_width>working.eye_width && working.look_x==0);
@@ -100,7 +115,7 @@ int main() {
   }
   // All silhouette vertices stay inside the fixed chip, including transitions.
   // Painter uses 0.326 cheek radius, rounded ear corners and a -0.025 y offset.
-  for(int mode=0;mode<=int(MixieCatActivity::Connecting);mode++) {
+  for(int mode=0;mode<=int(MixieCatActivity::Catching);mode++) {
     for(int n=0;n<3600;n++) {
       auto p=mixie_cat_activity_pose(n/60.0,MixieCatActivity(mode));
       const float angle=(12+p.tilt)*3.14159265f/180;
@@ -112,10 +127,70 @@ int main() {
       }
     }
   }
+  float prog[]={0.4f,0.55f,1.1f};
+  double arrive[]={10.0,9.4,8.0};
+  assert(mixie_cat_catch_pick(prog,arrive,3)==1); // Soonest landing still in flight.
+  auto left=mixie_cat_catch_aim(0.5f,0,100,200,100);
+  auto right=mixie_cat_catch_aim(0.5f,400,100,200,100);
+  auto up=mixie_cat_catch_aim(0.5f,200,300,200,100);
+  assert(left.look_x<0 && right.look_x>0 && up.look_y>0);
+  const double start=4.0;
+  const float land=float((start+ATTACHMENT_FLIGHT_SECONDS-start)/ATTACHMENT_FLIGHT_SECONDS);
+  assert(land==1.0f);
+  MixieCatCatch early{0.20f,-0.70f,0.40f}, snap{land,-0.70f,0.40f};
+  auto early_pose=mixie_cat_catch_pose(5,early);
+  auto snap_pose=mixie_cat_catch_pose(5,snap);
+  assert(snap_pose.bounce>early_pose.bounce+0.008f); // Reach, not a blink.
+  assert(std::abs(snap_pose.look_x-early_pose.look_x)<1e-5);
+  MixieCatMotion catcher;
+  catcher.sample(1,MixieCatActivity::Thinking);
+  auto held=catcher.sample(2,MixieCatActivity::Catching,snap);
+  assert(distance(held,catcher.sample(2,MixieCatActivity::Catching,snap))<1e-5);
+  catcher.sample(2.13,MixieCatActivity::Thinking);
+  assert(distance(catcher.sample(3,MixieCatActivity::Thinking),
+                  mixie_cat_activity_pose(3,MixieCatActivity::Thinking))<1e-5);
+  // Losing the flight replaces catch input with defaults. Capture the outgoing
+  // pose first, both at landing and when another activity interrupts the blend.
+  const MixieCatCatch aimed{0.99f,0.80f,-0.50f};
+  for(double elapsed : {0.13,0.68}) {
+    for(auto next : {MixieCatActivity::Idle, MixieCatActivity::Thinking,
+                     MixieCatActivity::Offline}) {
+      MixieCatMotion motion;
+      motion.sample(4,MixieCatActivity::Thinking);
+      motion.sample(5,MixieCatActivity::Catching,early);
+      const double now=5+elapsed;
+      const auto outgoing=motion.sample(now,MixieCatActivity::Catching,aimed);
+      assert(distance(outgoing,motion.sample(now,next))<1e-5);
+      assert(distance(motion.sample(now+.13,next),
+                      mixie_cat_blend(outgoing,mixie_cat_activity_pose(now+.13,next),.5f))<1e-5);
+      assert(distance(motion.sample(now+.26,next),
+                      mixie_cat_activity_pose(now+.26,next))<1e-5);
+    }
+  }
+  // First-frame catches and same-activity tracking must consume the new aim.
+  MixieCatMotion fresh;
+  assert(distance(fresh.sample(6,MixieCatActivity::Catching,aimed),
+                  mixie_cat_activity_pose(6,MixieCatActivity::Catching,aimed))<1e-5);
+  assert(distance(fresh.sample(6.1,MixieCatActivity::Catching,snap),
+                  mixie_cat_activity_pose(6.1,MixieCatActivity::Catching,snap))<1e-5);
+  for(float lx : {-0.85f,0.0f,0.85f}) {
+    for(float ly : {-0.65f,0.0f,0.65f}) {
+      auto pose=mixie_cat_catch_pose(1.2,MixieCatCatch{1.0f,lx,ly});
+      const float angle=(12+pose.tilt)*3.14159265f/180;
+      for(float side : {-1.f,1.f}) {
+        float x=side*.285f, y=.375f*(side<0?pose.ear_height_l:pose.ear_height_r);
+        const float tx=pose.breathe*(x*std::cos(angle)-y*std::sin(angle));
+        const float ty=pose.breathe*(x*std::sin(angle)+y*std::cos(angle))+pose.bounce-.025f;
+        assert(std::abs(tx)<.49f && std::abs(ty)<.49f);
+      }
+    }
+  }
 }
 ''')
     binary = tmp_path/'cat'
-    subprocess.run([compiler, '-std=c++17', '-I', str(ROOT/'src/source/blender/editors/space_agent_bubble'),
+    subprocess.run([compiler, '-std=c++17',
+                    '-I', str(ROOT/'src/source/blender/editors/space_agent_bubble'),
+                    '-I', str(ROOT/'src/source/blender/editors/space_mixie'),
                     str(source), '-o', str(binary)], check=True, capture_output=True)
     subprocess.run([str(binary)], check=True, capture_output=True)
 
@@ -130,3 +205,10 @@ def test_activity_reads_live_native_slots_and_region_owns_transition():
     motion = (root/'agent_ui_motion.cc').read_text()
     assert 'MixieCatMotion cat' in motion and 'motion.cat_scene != scene' in motion
     assert 'motion.cat = {}' in motion
+    assert 'ED_moodboard_attachment_incoming' in state
+    assert 'cat.catching = true' in state
+    flight = (ROOT/'src/source/blender/editors/space_mixie'/'mixie_attachment_flight.cc').read_text()
+    assert 'ED_moodboard_attachment_incoming' in flight
+    assert 'ATTACHMENT_FLIGHT_SECONDS' in flight
+    assert 'progress(f) > 1' in flight
+    assert flight.count('BLI_timer_register(') == 1

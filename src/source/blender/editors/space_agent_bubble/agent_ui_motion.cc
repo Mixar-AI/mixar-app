@@ -36,7 +36,8 @@ MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
                                         const MixieCatActivity activity,
                                         const double now,
                                         const void *scene,
-                                        const float chip_pixels)
+                                        const float chip_pixels,
+                                        const MixieCatCatch &incoming)
 {
   if (!region->regiondata) {
     region->regiondata = MEM_new<AgentIslandMotion>("Agent island motion");
@@ -46,7 +47,7 @@ MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
     motion.cat = {};
     motion.cat_scene = scene;
   }
-  const MixieCatPose pose = motion.cat.sample(now, activity);
+  const MixieCatPose pose = motion.cat.sample(now, activity, incoming);
   motion.cat_next_frame = mixie_cat_next_frame(motion.cat, now, chip_pixels);
   return pose;
 }

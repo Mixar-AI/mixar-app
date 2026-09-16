@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "agent_ui_cat_catch.hh"
 #include "agent_ui_pill_cat_pose.hh"
 
 namespace blender {
@@ -18,6 +19,7 @@ enum class MixieCatActivity {
   Waiting,
   Offline,
   Connecting,
+  Catching,
 };
 
 struct MixieCatSignals {
@@ -26,6 +28,7 @@ struct MixieCatSignals {
   bool thinking = false, reading = false, working = false, responding = false;
   bool generating = false;
   bool finishing = false;
+  bool catching = false;
 };
 
 inline bool mixie_cat_is_working(const MixieCatActivity activity)
@@ -35,9 +38,14 @@ inline bool mixie_cat_is_working(const MixieCatActivity activity)
          activity == MixieCatActivity::Responding;
 }
 
-/** Live semantic state wins over historical message/queue decoration. */
+/** Live semantic state wins over historical message/queue decoration.
+ * Catching is a short physical reflex: it wins over work, voice and
+ * reconnect, then the existing 260ms blend returns to whatever remains.
+ * Offline stays offline. */
 inline MixieCatActivity mixie_cat_activity(const MixieCatSignals &s)
 {
+  if (s.catching && !s.offline)
+    return MixieCatActivity::Catching;
   if (s.listening)
     return MixieCatActivity::Listening;
   if (s.waiting)
@@ -83,6 +91,8 @@ inline const char *mixie_cat_activity_name(const MixieCatActivity activity)
       return "Offline";
     case MixieCatActivity::Connecting:
       return "Connecting";
+    case MixieCatActivity::Catching:
+      return "Catching";
     default:
       return "Idle";
   }
@@ -101,13 +111,17 @@ inline float mixie_cat_gesture(double now, double period, float start, float spa
 
 /** Distinct eye silhouettes stay legible at the actual 44px pill height.
  * Motion phrases have pauses; parallel avatars keep their quieter sampler. */
-inline MixieCatPose mixie_cat_activity_pose(const double now, const MixieCatActivity activity)
+inline MixieCatPose mixie_cat_activity_pose(const double now,
+                                           const MixieCatActivity activity,
+                                           const MixieCatCatch &incoming = {})
 {
   MixieCatPose p = mixie_cat_eval_pose(now, false);
   const auto wave = [now](double speed) { return float(std::sin(now * speed)); };
   float open = 1.0f;
   double blink_time = now;
   switch (activity) {
+    case MixieCatActivity::Catching:
+      return mixie_cat_catch_pose(now, incoming);
     case MixieCatActivity::Thinking: {
       const float glance = mixie_cat_gesture(now, 3.6, 0.35f, 0.50f);
       p.look_x = -0.65f + 1.3f * glance;
@@ -243,28 +257,31 @@ inline MixieCatPose mixie_cat_blend(const MixieCatPose &a, const MixieCatPose &b
 struct MixieCatMotion {
   MixieCatActivity activity = MixieCatActivity::Idle;
   MixieCatPose from{};
+  MixieCatCatch incoming{};
   double started = 0.0;
   bool initialized = false;
 
   MixieCatPose at(double now) const
   {
     const float t = mixie_cat_smooth01(float((now - started) / 0.26));
-    return mixie_cat_blend(from, mixie_cat_activity_pose(now, activity), t);
+    return mixie_cat_blend(from, mixie_cat_activity_pose(now, activity, incoming), t);
   }
 
-  MixieCatPose sample(double now, MixieCatActivity next)
+  MixieCatPose sample(double now, MixieCatActivity next, const MixieCatCatch &catch_in = {})
   {
     if (!initialized) {
       initialized = true;
       activity = next;
       started = now - 0.26;
-      from = mixie_cat_activity_pose(now, next);
+      from = mixie_cat_activity_pose(now, next, catch_in);
     }
     else if (next != activity) {
       from = at(now);
       activity = next;
       started = now;
     }
+    /* Preserve the outgoing catch aim until its transition pose is captured. */
+    incoming = catch_in;
     return at(now);
   }
 };

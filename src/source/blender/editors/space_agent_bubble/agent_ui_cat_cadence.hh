@@ -37,7 +37,8 @@ inline double mixie_cat_next_frame(const MixieCatMotion &motion,
                                    const float chip_pixels)
 {
   if (now < motion.started + 0.26 || mixie_cat_is_working(motion.activity) ||
-      motion.activity == MixieCatActivity::Connecting)
+      motion.activity == MixieCatActivity::Connecting ||
+      motion.activity == MixieCatActivity::Catching)
   {
     return MIXIE_CAT_FRAME_SECONDS;
   }
