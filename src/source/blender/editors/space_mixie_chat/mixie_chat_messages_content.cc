@@ -17,6 +17,7 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_rect.h"
+#include "BLI_string.h"
 
 #include "BKE_main.hh"
 
@@ -238,6 +239,35 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       MEM_delete_void(static_cast<void *>(meta_buf));
     }
   }
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Sender Label
+ * \{ */
+
+const char *mixie_chat_sender_label(const MessageLayoutData &layout, PointerRNA *msg_ptr)
+{
+  if (layout.is_error) {
+    return "Error";
+  }
+  if (!layout.is_user) {
+    return "Mixie";
+  }
+  /* A user message sent into a running turn (an interjection) carries its
+   * delivery state until the backend's `joined` ack clears the hint. */
+  static char label_buf[64];
+  if (g_msg_props.delivery_hint) {
+    char hint[40] = "";
+    const int hint_len = RNA_property_string_length(msg_ptr, g_msg_props.delivery_hint);
+    if (hint_len > 0 && hint_len < int(sizeof(hint))) {
+      RNA_property_string_get(msg_ptr, g_msg_props.delivery_hint, hint);
+      SNPRINTF(label_buf, "You (%s)", hint);
+      return label_buf;
+    }
+  }
+  return "You";
 }
 
 /** \} */

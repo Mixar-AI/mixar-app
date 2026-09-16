@@ -237,10 +237,17 @@ def test_action_properties_match_the_operator_signatures():
 
 
 def _tab_table():
-    block = re.search(
-        r"const TabSpec g_tabs\[AGENT_TAB_COUNT\] = \{(.*?)\};", DRAW_CC, re.S
+    icons = re.search(
+        r"const AgentIcon g_tab_icons\[AGENT_TAB_COUNT\] = \{(.*?)\};", DRAW_CC, re.S
     ).group(1)
-    return dict(re.findall(r'\{"([^"]+)",\s*(AGENT_ICON_\w+)\}', block))
+    layout = (CPP / "agent_ui_layout.cc").read_text()
+    metrics = re.search(
+        r"const TabMetric g_tab_metrics\[AGENT_TAB_COUNT\] = \{(.*?)\};", layout, re.S
+    ).group(1)
+    labels = re.findall(r'"([^"]+)"', metrics)
+    marks = re.findall(r"AGENT_ICON_\w+", icons)
+    assert len(labels) == len(marks) == 6
+    return dict(zip(labels, marks))
 
 
 def test_every_category_tab_carries_its_own_mark():
@@ -295,7 +302,7 @@ def test_the_icon_sentinel_stays_last():
 
 def test_an_unmarked_tab_centres_its_label():
     """Left-aligning at the icon offset hangs the word off an empty pill."""
-    assert "g_tabs[i].icon == AGENT_ICON_COUNT" in DRAW_CC
+    assert "g_tab_icons[i] == AGENT_ICON_COUNT" in DRAW_CC
     assert re.search(r"label_centre\(\s*label.c_str\(\), BLI_rctf_cent_x\(&tab.pill\)", DRAW_CC)
 
 

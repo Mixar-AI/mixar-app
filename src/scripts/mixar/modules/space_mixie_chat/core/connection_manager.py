@@ -254,9 +254,9 @@ class ConnectionManager:
                 # while the main thread is adding and removing lane scenes,
                 # and iterating that ListBase concurrently is a segfault.
                 try:
-                    from .turn_resume import check_orphaned_turns
+                    from .turn_events import reconnect
 
-                    run_on_main_thread(check_orphaned_turns)
+                    run_on_main_thread(reconnect)
                 except Exception:
                     logger.exception("orphaned-turn check failed (non-fatal)")
 
@@ -297,7 +297,7 @@ class ConnectionManager:
             # terminal. Anything else is a transient drop the client will
             # auto-reconnect from, so a running agent turn (BUSY / MODIFYING /
             # AWAITING_INPUT) must survive it: the turn streams over its own
-            # SSE connection and the backend keeps executing — wiping its
+            # backend task and the backend keeps executing — wiping its
             # state here made the client refuse every post-reconnect script
             # with "Agent session not active" while showing an idle pill.
             terminal = reason == DISCONNECT_REASON_AUTH_FAILED
@@ -367,6 +367,11 @@ class ConnectionManager:
             """Harness v3 agent.execution.* — main-thread work, deferred reply."""
             from mixar.modules.common.agent_execution.handlers import handle_execution_request
             return handle_execution_request(method, params, request_id)
+
+        def on_turn_event(method: str, params: dict) -> None:
+            """agent.turn.* — a backend-started turn streamed over the socket."""
+            from .turn_events import handle_turn_notification
+            handle_turn_notification(method, params)
 
         def on_llm_request(params: dict, request_id) -> None:
             """Relay one backend llm.request to the user's local model server.
@@ -502,6 +507,7 @@ class ConnectionManager:
             on_llm_request=on_llm_request,
             on_addon_project_request=on_addon_project_request,
             on_execution_request=on_execution_request,
+            on_turn_event=on_turn_event,
         )
 
         # Connect
@@ -536,6 +542,9 @@ class ConnectionManager:
         # Update session state unless Blender is already in restricted
         # shutdown, where bpy.data.scenes is no longer available.
         if update_session_state:
+            # A deliberate disconnect is terminal for the runs too: no
+            # socket, no wake-ups, and the next connect starts clean.
+            session.clear_all_runs()
             session.set_all_scenes_state(SessionState.OFFLINE)
             self._is_shutting_down = False
 

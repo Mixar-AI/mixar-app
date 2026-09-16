@@ -48,3 +48,12 @@ def pending_question_ref(scene) -> Optional[dict]:
         if getattr(bubble, "interrupt_id", ""):
             return None  # the pending interrupt is a legacy one
     return None
+
+
+def pending_interrupt_id(scene) -> Optional[str]:
+    """Address typed input to the newest question still displayed as pending."""
+    for bubble in reversed(scene.mixie_chat_messages):
+        if (getattr(bubble, 'sender', '') == 'AGENT'
+                and getattr(bubble, 'input_type', '')):
+            return getattr(bubble, 'interrupt_id', '') or None
+    return None

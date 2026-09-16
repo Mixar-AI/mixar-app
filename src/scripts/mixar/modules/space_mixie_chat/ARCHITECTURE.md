@@ -3,150 +3,22 @@
 
 # `space_mixie_chat` — Plugin Agent Client Architecture
 
-> Companion to the agent `ARCHITECTURE.md` in the private `mixar-backend` repository. This doc covers the **plugin side** of the agent — the two networked channels, the main-thread executor, the dual sandbox, scene routing, the SSE → slot → C++ render pipeline, undo / render / file-load guards. Hold this open alongside the backend doc when working on cross-cutting changes.
+The client is both the agent UI and its Blender execution arm. All desktop agent traffic uses one authenticated JSON-RPC WebSocket. The full command/replay contract is in the private `docs/modules/agent-websocket-migration.md` document.
 
-## TL;DR
+## Transport and module map
 
-The plugin is *both* the agent's UI (a custom in-tree C++ Blender editor + Python message/state shell) *and* the agent's execution arm (it runs the `bpy` scripts the backend emits). Two simultaneous network channels connect plugin and backend:
+- `common/agent_rpc/client.py`: shared settings/command facade; UUID mutation receipts and explicit uncertainty.
+- `core/jsonrpc_client.py`: connection state and callbacks; `socket_connection.py` owns reconnect/handshake, `socket_dispatch.py` routes incoming methods, `socket_requests.py` correlates responses/deadlines.
+- `socket_writer.py` and `socket_queue.py`: connection-scoped bounded writer, independent of reads.
+- `socket_reauth.py`: same-user token rotation; `jsonrpc_auth.py` shares refresh synchronization.
+- `composer_send.py`, `chat_payloads.py`, `turn_transport.py`: shared outgoing context and chat/input selection. Answers carry native interrupt IDs; open-run interjections settle through command receipts.
+- `turn_events.py`: bounded main-thread inbox for starts, slot payloads and terminal records; per-turn sequence deduplication and replay. `turn_cursor.py` persists the rendered cursor with the scene transcript.
+- `queue_processor.py`, `slot_processor.py`: typed payload/state updates and slot rendering shared by both chat surfaces.
+- `main_thread_executor.py`, `executor.py`, sandbox modules: existing script execution and safety boundaries.
 
-- **HTTP/SSE** — per-turn, plugin → backend (`POST /agent/chat`), backend → plugin (slot events). Lives only for the turn duration.
-- **JSON-RPC 2.0 over WebSocket** — long-lived, bidirectional, backend → plugin (`blender.execute_script` + tool lifecycle notifications), plugin → backend (responses + `system.handshake` + `system.ping` + `notifications.sync`).
+`instance_id` identifies the process, `session_id` the scene conversation, `run_id` background work spanning turns, `turn_id` one delivery stream, and `bubble_id` a rendered message. New Chat/file teardown fences late events from the previous session. Script responses never replay scene-changing execution.
 
-Both channels share the same JWT auth, refreshed through a single mutex-guarded helper (`refresh_access_token_shared` — K5).
-
-The plugin's job in one sentence: **receive scripts on a WS thread, run them on Blender's main thread, push results back, render the streaming chat into a Blender editor while it happens.**
-
-## Why this design is worth understanding
-
-A naive implementation of "agent that runs `bpy` code" would call `bpy.ops.*` from whatever thread the network handler is on. That segfaults Blender within seconds — `bpy` is strictly main-thread. So the plugin needs:
-
-1. A **queue** that crosses the WS-receive thread / main thread boundary.
-2. A **main-thread timer** that drains the queue and runs each script with `bpy` access.
-3. A **second sandbox** inside the executor in case the backend sandbox missed something.
-4. A **render guard** that defers execution while Blender is rendering (another known segfault path).
-5. **Scene-aware routing** so a script for session A runs against scene A even if the user is currently viewing scene B.
-6. **Exception safety** at every layer because Blender's timer system silently swallows unhandled exceptions, killing the timer permanently.
-
-Each of these gets its own layer below.
-
-## Topology
-
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                          BLENDER PROCESS                                      │
-│                                                                               │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │  C++  space_mixie_chat editor          mixie_chat_messages_render   │    │
-│  │       (in-tree Blender editor)         + layout + content slots     │    │
-│  │       scene.mixie_chat_messages  ←─── chat persists per scene       │    │
-│  └────────────────────────────────────────┬──────────────────────────────┘    │
-│                                            │ slot updates                    │
-│                                            ▼                                  │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │   Python: space_mixie_chat.core                                      │    │
-│  │                                                                       │    │
-│  │   sse_handler.py ────────► slot_processor.py ────► bubble PropertyGrp│    │
-│  │   (per-scene SSE thread)   (mutate mixie_chat_messages on main thr)  │    │
-│  │           ▲                                                           │    │
-│  │           │ slot events                                              │    │
-│  │           │                                                          │    │
-│  │   jsonrpc_client.py ──────► main_thread_executor.py ──► executor.py │    │
-│  │   (WS thread)                (queue + main-thr timer)   (script run)│    │
-│  │           ▲                                                          │    │
-│  │           │ requests                                                  │    │
-│  └───────────┼──────────────────────────────────────────────────────────┘    │
-│              │                                                               │
-└──────────────┼───────────────────────────────────────────────────────────────┘
-               │
-       ── NETWORK ──
-               │
-┌──────────────▼───────────────────────────────────────────────────────────────┐
-│                         BACKEND (mixar-backend)                              │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
-Three IDs identify what:
-
-- `instance_id` (UUID v4, `WindowManager.mixie_instance_id`) — one per **Blender process**. Survives `.blend` open/close.
-- `session_id` (UUID v4, `scene.mixie_session_id`) — one per **conversation**. One per scene.
-- `bubble_id` (server-generated) — one per UI bubble within a session. Cached in Redis as `todo_bubble:{session_id}` so cross-stream todo updates land in the same bubble.
-
-## Module map
-
-```
-src/scripts/mixar/modules/space_mixie_chat/
-├── constants.py              Enums (SessionState), endpoint paths, timeouts.
-├── core/
-│   ├── connection_manager.py    Singleton WS lifecycle (connect/disconnect/reset); transient disconnects preserve active agent-turn states so resumed tool calls remain routable.
-│   ├── jsonrpc_client.py        WS client (tool execution channel). B3/B4/B6/B8/K5.
-│   ├── jsonrpc_auth.py          AuthBackoffManager + shared JWT refresh helper (K5).
-│   ├── sse_handler.py           Per-scene HTTP SSE client; safely retries pre-accept ConnectError only (never ambiguous mid-stream/write failures).
-│   ├── main_thread_executor.py  Request queue + main-thread timer (B3/B6/B8/K1/render guard).
-│   ├── executor.py              ScriptExecutor — second sandbox + handler snapshot/restore.
-│   ├── sandbox_validator.py     AST validator (mirrors backend, runs again on plugin).
-│   ├── sandbox_modules.py       RESTRICTED_TEMPFILE / RESTRICTED_BASE64 / RESTRICTED_STRING / RESTRICTED_URLLIB wrappers (os/pathlib/runpy/operator not exposed).
-│   ├── sandbox_builtins.py      Safe __builtins__ (no eval/exec/compile/__import__/vars).
-│   ├── session.py               Per-scene SessionManager (state + active_sessions registry).
-│   ├── lane_scene_sweep.py      Session-end sweep of leaked agentlane:* workspace scenes (mirrors backend remove_scene semantics; one-shot main-thread timer).
-│   ├── slot_processor.py        Apply SSE slot events to scene.mixie_chat_messages.
-│   ├── queue_processor.py       SSE event queue drained on main-thread timer (K2).
-│   ├── feedback_policy.py       Pure rating/comment validation shared by the UI.
-│   ├── undo_guard.py            Snapshot/restore chat across undo/redo (K4 try/finally).
-│   ├── animation_manager.py     Loader-spinner animation timer (K2 active-scene-first).
-│   ├── file_handlers.py         load_pre / load_post cleanup chain (K6 exception-safe).
-│   ├── markdown_parser.py       Mistune-based markdown → segment AST for C++ rendering.
-│   ├── markdown_preprocessor.py Pre-AST transforms (code-block numbering, etc.).
-│   ├── image_utils.py           Moodboard image encoding for multimodal uploads.
-│   ├── generation_poller.py     Async generation result polling.
-│   ├── performance_metrics.py   Client-side metrics shipped to the backend.
-│   └── message_helpers.py       Message construction helpers.
-├── ui/                          Blender Python panels + operators (UI shell).
-│   └── operators/
-│       ├── chat_ops.py             Main "send message" operator.
-│       ├── auth_ops.py             Login flow.
-│       ├── screenshot_ops.py       Viewport capture.
-│       └── chat_special_ops.py     Approve / abort / modify + async feedback operators.
-└── ARCHITECTURE.md           This file.
-
-Related but outside space_mixie_chat:
-src/scripts/mixar/modules/agent_bubble/      Floating chat bubble (separate UI shell).
-src/scripts/mixar/modules/moodboard/         Moodboard image management.
-src/source/blender/editors/space_mixie_chat/ C++ in-tree Blender editor (rendering).
-```
-
-## The two channels
-
-### Channel A — JSON-RPC 2.0 over WebSocket
-
-**File:** `core/jsonrpc_client.py` (~700 lines). One background thread (`MixarJSONRPCWS`) per Blender process. Long-lived; same socket carries every tool call for the session.
-
-**Connect path:** `_run_loop` → `_do_connect` → `_perform_handshake` (sends `system.handshake` with `blender_version`, `addon_version`, `capabilities`) → `_receive_loop`.
-
-**Reconnect:** exponential backoff (1s → 30s). After three consecutive auth failures the loop stops — see `AuthBackoffManager` in `jsonrpc_auth.py`. If the token hasn't changed across the backoff window, the loop stops early so we don't hammer the auth backend with a stale token.
-
-**Receive-loop hardening (B3/B4):** every per-message handler is wrapped so unparseable JSON or a handler exception logs + continues. Pre-B4, a single bad message killed the loop and orphaned every pending callback.
-
-**On reconnect handshake completion:** calls `flush_pending_responses()` (defined in `main_thread_executor`) to replay any tool responses that were buffered while disconnected. See B6 + K1.
-
-**Auth refresh (K5):** when a 401 fires, `_try_refresh_token` delegates to `refresh_access_token_shared` (mutex + 2s result cache) in `jsonrpc_auth.py`. The SSE handler uses the same helper. Both channels stay in lock-step on token rotation.
-
-**Reconnect turn recovery (#1258):** on every WS reconnect, `core/turn_resume.py` (`check_orphaned_turns`, called from `connection_manager.on_connected`) asks the server `turn.status` for the idle scenes' session ids — the backend reports which sessions still have a live or replayable turn (ownership-scoped Redis state from the resume buffer). A hit surfaces ONE deduplicated chat bubble ("A previous task is still running") with a `resume_task:<session_id>` PRIMARY action; confirming runs `mixie_chat.resume_previous_task`, which adopts the session into a per-scene SSE handler and replays + follows via the existing attach endpoint (`SSEStreamHandler.resume_stream`). **Attach cursor, best first:** the carried per-scene cursor when it matches the session; else the `last_seq` `turn.status` reported, parked by `offer_resume_prompt` in `turn_resume._REPORTED_LAST_SEQ`; else `-1`. `-1` is the last resort, never the default — content slots stream as `append` and the dropped turn's bubbles are still in `scene.mixie_chat_messages`, so a whole-turn replay doubles each bubble's prose while the message COUNT stays right (bubble-id lookup is idempotent). Before the parked cursor existed, a scene with no carried handler (client restart / `cleanup_sse_handler`) always attached at `-1`. Both buttons route through `dismiss_resume_prompt`, which removes the notice by INDEX in reverse — `bpy_prop_collection.remove()` takes an int, and passing the message raised `TypeError` and left the bubble on screen forever. Answered questions in a replay are neutralised SERVER-side (`actions: []`, no `input_type`), so `_apply_input_type_slot` stays the only owner of the AWAITING_INPUT transition; scenes already streaming are skipped (their own attach loop owns recovery).
-
-**Client -> server notifications:** `send_notification(method, params)` queues a responseless JSON-RPC notification on the outbound queue. Used by the fire-and-forget final render (`ui/operators/agent_final_render_ops.py`): when the background render job completes, is cancelled, or its completion is lost (stale-job self-heal), the operator reports `render.final_render_result` echoing the kickoff's `job_key` — the backend's only server-side evidence of the outcome (Langfuse observation + Loki event). Best-effort: no client / pre-reporting job = no send, never a crash. Local render paths never leave the machine.
-
-### Channel B — HTTP/SSE
-
-**File:** `core/sse_handler.py`. One short-lived `httpx.Client` per agent turn. Reopened per `/agent/chat` or `/agent/input` call.
-
-**Per-scene handler registry** — `_sse_handlers: dict[scene_name, SSEStreamHandler]`. Multi-scene Blenders run concurrent SSE streams, each tied to its scene.
-
-**Two event formats supported** (the parsing layer normalises):
-- **Slot-based** (current) — event has `bubble_id`, event_type set to `"slot"`. Routed through `slot_processor`.
-- **Legacy** — event has `type` field. Older code path still tolerated for back-compat.
-
-**Timeouts:** `connect=10s`, `read=SSE_READ_TIMEOUT` (>600s to outlast backend tool timeout), `write=60s` (covers base64-image uploads), `pool=10s`.
-
-**401 handling:** read response, call shared `_try_refresh_token`, retry once with new token. If refresh fails, surface error.
+Requests require `agent_ws_v1`; no HTTP fallback exists. Agent settings, feedback, chat and questions share the socket with tools and `llm.request`. Login/refresh, generation and other non-agent HTTP APIs remain separate. One sequenced `turn_end` completes a delivery stream; reconnect status uses the last applied cursor and reports unavailable history explicitly.
 
 ## Main-thread executor — the linchpin
 
@@ -168,7 +40,7 @@ _request_queue.put((id, script, tool, session))
                                  _process_one_request()  [B3 outer guard]
                                      │
                                      ▼
-                                 drain_pending_events()  (SSE first)
+                                 drain_pending_events()  (agent stream first)
                                      │
                                      ▼
                                  wait for execution gate (50ms post tool_start)
@@ -242,9 +114,9 @@ Result envelope sent over JSON-RPC:
 }
 ```
 
-## SSE → UI: `slot_processor.py` + the C++ editor
+## agent stream → UI: `slot_processor.py` + the C++ editor
 
-When an SSE event arrives, `_on_event` dispatches to `SlotEventProcessor.apply_event(event_data, scene)`:
+When an agent stream event arrives, `_on_event` dispatches to `SlotEventProcessor.apply_event(event_data, scene)`:
 
 1. **Bubble resolve** — `_get_or_create_bubble(bubble_id, scene)` searches `scene.mixie_chat_messages` for a `PropertyGroup` with matching `bubble_id`. Creates one if not found; removes any optimistic-UI placeholder loader.
 2. **Per-slot apply**, each in its own try/except so one bad slot never blocks the others:
@@ -285,9 +157,20 @@ main thread through `main_thread_executor.run_on_main_thread` before touching RN
 | `scene.mixie_chat_state` | enum | `OFFLINE` / `CONNECTING` / `IDLE` / `BUSY` / `MODIFYING` / `AWAITING_INPUT` |
 | `scene.mixie_chat_is_busy` | bool | Derived flag for the C++ rendering path (faster than parsing the enum). |
 | `scene.mixie_session_id` | UUID v4 | Conversation identifier. |
+| `scene.mixie_run_open` / `scene.mixie_run_id` | bool / str | The backend run behind the chat is still open (workers may build while the turn is IDLE). Single writer: `SessionManager.set_run` (main thread); reader `run_open`. SKIP_SAVE. |
 | `WindowManager.mixie_instance_id` | UUID v4 | Blender process identifier. |
 
-**Active-scenes registry:** class-level `_active_scenes: set` tracks scene names whose state is `BUSY/MODIFYING/AWAITING_INPUT`. Updated only from the main thread under `_active_scenes_lock`. Background threads read it (e.g. `on_script_execute` checks `has_active_session()` to reject stray scripts after a session ends).
+**Active-scenes registry:** class-level `_active_scenes: set` tracks scene names whose state is `BUSY/MODIFYING/AWAITING_INPUT` **or whose run is open**. Updated only from the main thread under `_active_scenes_lock` (`set_state` and `set_run` both resync). Background threads read it (e.g. `on_script_execute` checks `has_active_session()` to reject stray scripts after a session ends). Counting the run is what lets a background worker's script land while the orchestrator's turn is IDLE — before it, every such script was refused with "Agent session not active".
+
+### Runs that span turns
+
+Backend contract: `mixar-backend/docs/api/frontend/wakeup-turns.md`. Client pins: `tests/test_open_run.py` (run state, typed payloads, composer) and `tests/test_socket_turns.py` (`agent.turn.*`).
+
+- **Run state** — the typed payload `{"type": "run_status", "run_id", "status": "in_progress" | "completed"}` (first payload of every orchestrated turn and again before its final `complete`) is the run's authoritative signal; `queue_processor._handle_typed_payload` feeds `set_run`. `{"type": "cancelled"}` closes the run. `turn_end` closes the run unless a `run_status` arrived during that turn (older backend / chat-only turn). Typed payloads are settled BEFORE the executor's undo-turn bracket; unknown types are still ignored.
+- **Lifetime** — a transient WS drop preserves the run (the backend defers wake-ups until the next handshake); a terminal disconnect, `ConnectionManager.disconnect`, `load_pre`, Stop (`abort_session`), New Chat and a history switch close it. `load_pre` also aborts a scene whose turn is IDLE but whose run is open.
+- **Wake-up turns and composer** — `turn_events` applies all delivery streams through the same ordered inbox. `composer_send` chooses a native interrupt answer, open-run interjection or initial chat. Each mutation has a stable command ID and each user bubble has its own delivery hint. Joining a run does not end or replace its active stream.
+
+- **Buttons (C++)** — both surfaces show SEND whenever the composer has text and STOP only while busy with an empty composer (`mixie_chat_footer.cc` `show_send`, `agent_ui_state.cc` `stop_visible`); the generation-cancel branch is unchanged. **Status** — BUSY reads "Running"; IDLE with the run open reads "Working in background" (`agent_bubble/ui/header.py`, `status_indicator.py`); the cat pulses while the run is open; the viewport lock stays keyed on BUSY/MODIFYING; the parked auto-resume and the orphaned-turn check skip scenes with an open run.
 
 **Session start (`start_session(scene, user_request)`):** generates a new `session_id` only if none exists; otherwise continues. Sets state to `BUSY`. Returns the session_id.
 
@@ -311,7 +194,7 @@ The list UI is a custom screen-space overlay in the chat main region (drawn afte
 
 Key mechanics:
 
-- **Upsert by session_id** — `archive_current(scene)` also runs at every turn end (`queue_processor._handle_sse_complete_internal`, IDLE branch), so history is crash-safe. `created_at` is preserved across upserts; oldest sessions beyond `MAX_ARCHIVED_SESSIONS` are pruned (records + media).
+- **Upsert by session_id** — `archive_current(scene)` also runs at every turn end (`queue_processor._handle_agent_complete_internal`, IDLE branch), so history is crash-safe. `created_at` is preserved across upserts; oldest sessions beyond `MAX_ARCHIVED_SESSIONS` are pruned (records + media).
 - **Sanitize on archive** — mirrors abort semantics on the snapshot dicts: loader-only bubbles dropped, `*Stopped*` marker on interrupted content, stale `action_items`/`input_type` stripped, RUNNING steps settled, live thinking collapsed.
 - **Media copy** — chat images/screenshots live in Blender's per-session temp dir and die on restart; archive copies referenced local files into `chat_media/` and rewrites paths (capped by `CHAT_HISTORY_MEDIA_MAX_BYTES`; http(s) URLs untouched).
 - **Reopen** (`MIXIE_CHAT_OT_open_history_session`) — tears down any in-flight turn (same cleanup as New Chat), archives the outgoing chat, restores the transcript via `restore_propgroup`, and sets `scene.mixie_session_id` back. The **backend resumes the conversation from its LangGraph checkpoint** keyed by that id (`thread_id == session_id`) — the transcript itself is never uploaded. Checkpoints are retained `CHECKPOINT_RETENTION_DAYS` (7) server-side; after expiry a reopened chat still shows its transcript but the agent starts contextually fresh.
@@ -341,7 +224,7 @@ Either says "rendering" → defer-and-retick: leave the script on the queue, ret
 
 **File:** `core/file_handlers.py`. When the user opens a new `.blend`:
 
-- `load_pre` — flush all SSE handlers (`cleanup_all_sse_handlers`), stop the main-thread executor (`cleanup`), clear pending responses, force-OFFLINE all scenes. **K6 fix** wraps each step in `try/except` so a partial failure (a stale SSE handler that refuses to close, etc.) doesn't strand later cleanup steps.
+- `load_pre` — flush all agent stream handlers (`cleanup_all_turn_handlers`), stop the main-thread executor (`cleanup`), clear pending responses, force-OFFLINE all scenes and close their runs (a scene whose turn is IDLE but whose run is open is aborted too). **K6 fix** wraps each step in `try/except` so a partial failure (a stale agent stream handler that refuses to close, etc.) doesn't strand later cleanup steps.
 - `load_post` — re-init session state for the newly-loaded scenes (chat messages persisted as scene properties are still there).
 
 ## Cross-channel contracts (the invariants)
@@ -350,7 +233,7 @@ These are the contracts between the two repos. Breaking any of them on either si
 
 - **`__RESULT__` protocol** — all `bpy` scripts that need to return data MUST `print("__RESULT__" + json.dumps(result))`. Plugin executor captures stdout and parses lines beginning with this prefix. Bare expressions at the end of the script are discarded.
 - **`mixie_session_id` per scene** — backend addresses scripts to a specific session; plugin routes execution to the matching scene by this property. The non-pinned `agent:<connection>`/empty session runs against the user's active scene; any other unresolved per-scene session is **rejected** (see "Per-scene hard-fail" above), never silently misrouted.
-- **Slot event shape** — `loader` / `content` / `ephemeral` / `todo` / `actions` / `images` / `input_type` / `interrupt_context`. Choice contexts may set `include_cancel=false` when their explicit actions are exhaustive (export preflight uses exactly Fix and Export, Export Anyways, Stop). `file_save` context is restricted to format, scope, extension, and sanitized suggested filename. Preflight reports and decisions never carry a path; the chosen path is held only in `core/export_destination.py` and never enters an SSE or HTTP payload.
+- **Slot event shape** — `loader` / `content` / `ephemeral` / `todo` / `actions` / `images` / `input_type` / `interrupt_context`. Choice contexts may set `include_cancel=false` when their explicit actions are exhaustive (export preflight uses exactly Fix and Export, Export Anyways, Stop). `file_save` context is restricted to format, scope, extension, and sanitized suggested filename. Preflight reports and decisions never carry a path; the chosen path is held only in `core/export_destination.py` and never enters an agent stream or HTTP payload.
 - **Tool-call pairing invariant** — every `tool_use` the backend emits must get a matching `tool_result`. B5 (RPC timeout), B6 (disconnect buffer), B8 (queue full), B-Mira (invariant guard), B1 (compaction scrub) all defend this from a different angle.
 - **JWT shared across both channels** — same token, refreshed in lock-step via `refresh_access_token_shared` (K5).
 - **`request_id` uniqueness** — within a connection lifetime. Plugin's `_pending_responses` and backend's tool-call tracking both key on it.
@@ -362,7 +245,7 @@ These are the contracts between the two repos. Breaking any of them on either si
 | Why did a tool call hang forever? | `main_thread_executor.py` (queue, render guard, B3/B6) |
 | Why is the bubble showing stale content? | `slot_processor.py` (slot apply) + `markdown_parser.py` |
 | Why did Blender just segfault? | render guard in `main_thread_executor.py`, or sandbox bypass in `executor.py` |
-| Why did the agent stop responding mid-turn? | `sse_handler.py` (read timeout, 401, [DONE] missing) |
+| Why did the agent stop responding mid-turn? | `turn_events.py` / `socket_connection.py` (replay availability, connection state) |
 | Why am I getting auth errors on long sessions? | `jsonrpc_auth.py` K5 shared refresh; check both channels hold the same token |
 | Why did the chat disappear after undo? | `undo_guard.py` snapshot/restore + K4 try/finally |
 | Why did loading a new `.blend` break the agent? | `file_handlers.py` load_pre cleanup + K6 exception-safety |

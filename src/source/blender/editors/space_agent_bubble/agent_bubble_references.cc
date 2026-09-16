@@ -111,17 +111,19 @@ void agent_bubble_send_button(const bContext * /*C*/,
                               const AgentIslandLayout &layout,
                               const AgentIslandState &state)
 {
+  /* A draft joins the running turn; Stop is only shown for an empty composer.
+   * Both composer regions share the same action and painted state. */
   const rctf &r = layout.btn_generate;
   uiDefButO(block,
             ui::ButtonType::But,
-            state.status_busy ? "mixie_chat.abort_session" : "mixie_chat.send_message",
+            state.stop_visible ? "mixie_chat.abort_session" : "mixie_chat.send_message",
             wm::OpCallContext::InvokeDefault,
             "",
             int(r.xmin) - region->winrct.xmin,
             int(r.ymin) - region->winrct.ymin,
             short(BLI_rctf_size_x(&r)),
             short(BLI_rctf_size_y(&r)),
-            state.status_busy ? "Stop the running turn" : "Send");
+            state.stop_visible ? "Stop the running turn" : "Send");
 }
 
 namespace {

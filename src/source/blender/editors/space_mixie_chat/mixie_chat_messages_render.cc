@@ -161,7 +161,7 @@ void mixie_chat_render_messages(const bContext *C,
       }
 
       float label_y = layout.y_pos - metrics.label_height;
-      const char *label = layout.is_error ? "Error" : (layout.is_user ? "You" : "Mixie");
+      const char *label = mixie_chat_sender_label(layout, &msg_ptr);
       float label_x = layout.is_user ? (layout.bubble_x + layout.bubble_width)
                                      : layout.bubble_x;
       chat_ui_draw_sender_label(label, label_x,

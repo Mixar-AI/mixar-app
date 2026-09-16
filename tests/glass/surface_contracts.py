@@ -129,7 +129,7 @@ PANE_CALLS = {
     "interface/interface_widgets.cc": ("MIXAR_GLASS_CHIP", "MIXAR_GLASS_PILL"),
     "space_agent_bubble/agent_ui_draw.cc": ("MIXAR_GLASS_PILL",),
     "space_view3d/view3d_agent_panel_draw.cc": ("MIXAR_GLASS_PANEL",),
-    "space_view3d/view3d_moodboard_drawer_draw.cc": ("MIXAR_GLASS_PANEL",),
+    "space_view3d/view3d_moodboard_drawer_draw.cc": ("MIXAR_GLASS_MOODBOARD_TAB",),
     "space_mixie/mixie_draw_moodboard.cc": ("MIXAR_GLASS_MOODBOARD",),
     "space_mixie/mixie_draw_moodboard_graph.cc": (),
     "space_mixie/mixie_draw_moodboard_node_settings.cc": (),

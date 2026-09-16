@@ -72,14 +72,14 @@ def test_reading_and_clear_chips_only_exist_while_marks_are_queued():
     assert count_gate < armed_gate < clear, "Clear is offered only when NOT armed — the freeze has its own undo"
 
 
-def test_attachment_thumbnails_start_after_the_last_chip_shown():
-    """The thumbs used to hang off the Upload chip's right edge; a chip
-    inserted after it must move them, or they draw over the Scribble chip."""
+def test_attachment_column_does_not_overlap_the_scribble_chips():
+    """References have their own region; chips must not also paint thumbnails."""
     body = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
-    assert "rctf thumbs_after = layout->chip_upload;" in body
-    for chip in ("chip_scribble", "chip_reading", "chip_clear"):
-        assert f"thumbs_after = layout->{chip};" in body
-    assert "agent_bubble_rect_to_region(region, thumbs_after, &bx, &by, &bw, &bh);" in body
+    assert "footer_thumbnails_draw_image" not in body
+    references = (CPP / "agent_bubble_references.cc").read_text()
+    visible = _function_body(references, "bool agent_bubble_references_visible(")
+    assert "state.active_tab == AGENT_TAB_AGENT && !state.ink_visible" in visible
+    assert "RGN_TYPE_UI" in references
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ def test_new_glyphs_keep_count_last():
 
 
 def test_layout_places_scribble_right_of_upload():
-    assert "AGENT_SEG_X + AGENT_CHIP_UPLOAD_W + AGENT_CHIP_GAP" in LAYOUT_CC
+    assert "AGENT_SEG_X + upload_w + AGENT_CHIP_GAP" in LAYOUT_CC
     for rect in ("chip_scribble", "chip_reading", "chip_clear"):
         assert f"r_layout->{rect} = f.box(" in LAYOUT_CC
 
@@ -140,17 +140,13 @@ def test_layout_places_scribble_right_of_upload():
 # Two island behaviours Scribble needed.
 # ---------------------------------------------------------------------------
 
-def test_hover_collapse_stands_down_while_scribble_is_armed():
-    """Marking means drawing on the 3D viewport — outside the island by
-    definition. The collapse must not pull the composer (count, reading)
-    away mid-gesture. Checked BEFORE the temp-window guards."""
-    start = BUBBLE_CC.index("mixar_bubble_hover_tick_exec")
-    end = BUBBLE_CC.index("void MIXAR_OT_bubble_hover_tick", start)
-    body = BUBBLE_CC[start:end]
-    scribble = body.index("agent_bubble_scribble_active(C)")
-    temp = body.index("WM_window_is_temp_screen")
+def test_outside_click_collapse_stands_down_while_scribble_is_armed():
+    """Drawing on the viewport must not dismiss the Scribble composer."""
+    body = _function_body(BUBBLE_CC, "void ED_agent_bubble_handle_event(")
+    scribble = body.index("!agent_bubble_scribble_active(C)")
     minimise = body.index('"MIXAR_OT_bubble_minimise"')
-    assert scribble < temp < minimise
+    assert scribble < minimise
+    assert "agent_bubble_should_dismiss(C, event," in body
     helper = _function_body(BUBBLE_CC, "static bool agent_bubble_scribble_active(")
     assert '"mixar_mark_armed"' in helper
     assert '"mixie_chat_ink_visible"' in helper

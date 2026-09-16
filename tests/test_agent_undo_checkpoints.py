@@ -283,12 +283,12 @@ def _method_body(source: str, name: str) -> str:
 def test_turn_boundaries_are_wired_in_the_stream_pipeline():
     queue_processor = (_CORE_ROOT / "queue_processor.py").read_text(encoding="utf-8")
     # Begin: the first streamed event of a turn.
-    assert "begin_agent_turn()" in _method_body(queue_processor, "_handle_sse_event_internal")
+    assert "begin_agent_turn()" in _method_body(queue_processor, "_handle_agent_event_internal")
     # End: however the stream stops.
     for handler in (
-        "_handle_sse_complete_internal",
+        "_handle_agent_complete_internal",
         "_handle_inband_error",
-        "_handle_sse_error_internal",
+        "_handle_agent_error_internal",
     ):
         assert "end_agent_turn()" in _method_body(queue_processor, handler), handler
 

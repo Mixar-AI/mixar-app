@@ -31,7 +31,7 @@ from mixar.modules.addon_project.service import AddonProjectService
 from mixar.modules.addon_project.checks import run_blender_reload
 from mixar.modules.addon_project.transactions import TransactionStore
 from mixar.modules.space_mixie_chat.core.jsonrpc_client import JSONRPCWebSocketClient
-from mixar.modules.space_mixie_chat.core import sse_handler as sse_module
+from mixar.modules.space_mixie_chat.core.chat_payloads import build_chat_payload
 
 
 @pytest.fixture
@@ -353,65 +353,14 @@ def test_handshake_advertises_project_capability():
     assert "addon_project_v1" in client._ws.sent[0]["params"]["capabilities"]
 
 
-def test_sse_chat_payload_carries_only_path_free_project_context(monkeypatch):
-    requests = []
-
-    class Response:
-        status_code = 200
-        text = ""
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return False
-
-        def iter_lines(self):
-            yield "data: [DONE]"
-
-    class Client:
-        def __init__(self, timeout=None):
-            pass
-
-        def stream(self, method, url, json=None, headers=None):
-            requests.append(json)
-            return Response()
-
-        def close(self):
-            pass
-
-    class FakeHttpx:
-        Timeout = lambda **_kwargs: object()
-
-        class ConnectError(Exception):
-            pass
-
-        class TimeoutException(Exception):
-            pass
-
-    FakeHttpx.Client = Client
-
-    monkeypatch.setattr(sse_module, "httpx", FakeHttpx)
-    context = {
-        "mode": "addon_project",
-        "protocol_version": 1,
-        "project_id": "project-id",
-        "lease_id": "lease-id",
-        "revision": "a" * 64,
-    }
-    handler = sse_module.SSEStreamHandler(
-        host="http://localhost",
-        on_event=lambda _event: None,
-        on_error=lambda error: pytest.fail(error),
-        on_complete=lambda: None,
-    )
-    handler._running.set()
-    handler._stream_loop(
-        "change it", "instance-1", "session-1", False, True, True, None,
-        project_context=context,
-    )
-    assert requests[0]["project_context"] == context
-    assert "root" not in requests[0]["project_context"]
+def test_chat_payload_carries_only_path_free_project_context():
+    context = {'mode':'addon_project', 'protocol_version':1, 'project_id':'project-id',
+               'lease_id':'lease-id', 'revision':'a'*64}
+    payload = build_chat_payload(message='change it', instance_id='instance-1',
+        session_id='session-1', plan_required=False, execution_required=True,
+        approval_required=True, project_context=context)
+    assert payload['project_context'] == context
+    assert 'root' not in payload['project_context']
 
 
 def test_blender_reload_exercises_disabled_addon_then_installs_it(tmp_path, monkeypatch):
