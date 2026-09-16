@@ -65,7 +65,7 @@ class MIXIE_CHAT_HT_header(Header):
             # session has a checkpoint to go back to; same hasattr guard as
             # the history button (deferred UI registration).
             if hasattr(bpy.types, 'MIXIE_CHAT_MT_checkpoints'):
-                from ...core import turn_checkpoints
+                from ..core import turn_checkpoints
                 if turn_checkpoints.has_checkpoints(session.get_session_id(scene)):
                     layout.menu("MIXIE_CHAT_MT_checkpoints", text="", icon='LOOP_BACK')
 

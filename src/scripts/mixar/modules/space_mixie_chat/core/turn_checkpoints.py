@@ -13,12 +13,14 @@ it was at that moment. Identical bytes are stored once (sha256), and only
 the newest ``MAX_PER_SESSION`` checkpoints of a session are kept.
 
 Restore (``restore``): a safety copy of the current state is captured first,
-then the snapshot is read back with ``wm.recover_auto_save``. That operator
-reads with Blender's recover flag, which takes the document's path from the
-file's own recovery header — empty for a copy — so the document comes back
-UNTITLED and nothing on disk is touched. A project that had a path is then
-saved back to it once (``save_as_mainfile``), which is the one place this
-module writes the user's file; an untitled project simply stays untitled.
+then the snapshot is read back with ``wm.recover_auto_save``. Nothing on disk
+is touched by the read, but the recovered document's path becomes the
+snapshot file (a copy carries no recovery header for Blender to take the
+original path from), and no operator can make a document untitled again. So
+the document is always saved once right after the read: a project that had a
+path goes back to it (the one place this module writes the user's file); a
+project that was untitled goes to the session's ``working.mixar`` next to
+its checkpoints, so a later Ctrl-S can never overwrite a checkpoint.
 
 The conversation half lives on the backend: the snapshot taken before turn
 N is bound to that turn's command id (``bind_request``), and after a restore
@@ -135,6 +137,14 @@ def _write_index(session_id: str, items: list) -> None:
 
 def _file_path(record: dict) -> str:
     return os.path.join(session_dir(record.get("session_id", "")), record.get("file", ""))
+
+
+WORKING_FILENAME = "working.mixar"
+
+
+def working_file(session_id: str) -> str:
+    """Where a restored UNTITLED project lands: never a checkpoint file."""
+    return os.path.join(session_dir(session_id), WORKING_FILENAME)
 
 
 def list_checkpoints(session_id: str) -> list:
@@ -347,13 +357,16 @@ def restore(scene, checkpoint_id: str):
     finally:
         _restoring = False
 
-    if original_path:
-        # The recovered document is untitled; give it its path back. This is
-        # the one write of the user's file — the restored state, once.
-        try:
-            bpy.ops.wm.save_as_mainfile(filepath=original_path)
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Turn checkpoint: could not save back to the project path: {e}", exc_info=True)
+    # The recovered document now points at the checkpoint file. Give a
+    # titled project its own path back (the one write of the user's file:
+    # the restored state, once); park an untitled one in the session's
+    # working file so Ctrl-S never lands on a checkpoint.
+    target = original_path or working_file(record.get("session_id", ""))
+    try:
+        bpy.ops.wm.save_as_mainfile(filepath=target)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Turn checkpoint: could not save the restored document to {os.path.basename(target)}: {e}",
+                     exc_info=True)
 
     restored_scene = _session_scene(record.get("session_id", ""))
     _after_load(restored_scene, record, safety_request_id)
@@ -363,7 +376,7 @@ def restore(scene, checkpoint_id: str):
 def _after_load(scene, record: dict, safety_request_id: str) -> None:
     """Rebind the live session to the restored transcript and rewind the backend."""
     from .session import get_session_manager
-    from .turn_events import reopen
+    from .turn_events import drop_scene
     from .ui_utils import bump_layout_epoch, redraw_chat_areas
 
     session = get_session_manager()
@@ -371,10 +384,14 @@ def _after_load(scene, record: dict, safety_request_id: str) -> None:
     if session.is_connected(scene):
         session.clear_streaming()
         session.set_connected(scene)
+    # Fence the session's turn bookkeeping: the turns newer than the
+    # snapshot are complete as far as this transcript is concerned, and the
+    # reconnect-time recovery check must not replay them into the restored
+    # chat. The next send (``turn_events.expect``) lifts the fence.
     try:
-        reopen(scene)
+        drop_scene(scene.name)
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"turn_events.reopen after restore skipped: {e}")
+        logger.debug(f"turn fence after restore skipped: {e}")
     try:
         from .markdown_parser import clear_incremental_cache
         clear_incremental_cache()
@@ -423,7 +440,10 @@ def _send_backend(session_id: str, calls: list) -> None:
         failure = ""
         try:
             for method, payload in calls:
-                request(method, payload, mutation=True)
+                reply = request(method, payload, mutation=True)
+                logger.info(f"Turn checkpoint {method} -> {reply!r}"[:400])
+                if isinstance(reply, dict) and (reply.get("ok") is False or reply.get("status") == "failure"):
+                    raise RuntimeError(reply.get("message") or f"{method} refused")
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Turn checkpoint backend call failed: {e}")
             failure = str(e)

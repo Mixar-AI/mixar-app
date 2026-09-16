@@ -394,7 +394,11 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # checkpoint to it so a restore can rewind the conversation too.
         if checkpoint is not None:
             from ...core import turn_checkpoints
-            turn_checkpoints.bind_request(checkpoint, getattr(user_msg, "bubble_id", ""))
+            from ...core.turn_transport import get_turn_handler
+            handler = get_turn_handler(scene.name)
+            request_id = (getattr(handler, "last_command_id", "") if handler else "") \
+                or getattr(user_msg, "bubble_id", "")
+            turn_checkpoints.bind_request(checkpoint, request_id)
 
         # Drop the moodboard selection for any images we just sent.
         # Without this the moodboard's polling sync would re-add them

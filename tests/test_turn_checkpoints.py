@@ -82,7 +82,7 @@ def tc(monkeypatch, tmp_path):
     session = FakeSession()
     stub = {
         "mixar.modules.space_mixie_chat.core.session": {"get_session_manager": lambda: session},
-        "mixar.modules.space_mixie_chat.core.turn_events": {"reopen": MagicMock()},
+        "mixar.modules.space_mixie_chat.core.turn_events": {"drop_scene": MagicMock()},
         "mixar.modules.space_mixie_chat.core.ui_utils": {"bump_layout_epoch": MagicMock(), "redraw_chat_areas": MagicMock()},
         "mixar.modules.space_mixie_chat.core.markdown_parser": {"clear_incremental_cache": MagicMock()},
         "mixar.modules.space_mixie_chat.core.message_helpers": {"add_agent_message": MagicMock()},
@@ -254,13 +254,26 @@ def test_restore_keeps_a_safety_copy_recovers_the_snapshot_and_saves_the_path_ba
     assert ("set_run", "", False) in tc.session.calls and ("set_connected",) in tc.session.calls
 
 
-def test_untitled_project_stays_untitled(tc, monkeypatch):
+def test_untitled_project_is_parked_in_the_session_working_file(tc, monkeypatch):
     tc.bpy.data.filepath = ""
     scene = _scene()
     target, sent, _ = _prepare_restore(tc, monkeypatch, scene)
     ok, _ = tc.m.restore(scene, target["id"])
     assert ok
-    assert not [c for c in tc.bpy.ops.wm.save_as_mainfile.call_args_list if not c.kwargs.get("copy")]
+    saves = [c.kwargs for c in tc.bpy.ops.wm.save_as_mainfile.call_args_list if not c.kwargs.get("copy")]
+    assert saves == [{"filepath": tc.m.working_file("sess-1")}]
+    # A later Ctrl-S lands there, never on a checkpoint file.
+    assert not saves[0]["filepath"].endswith(target["file"])
+    assert tc.m.list_checkpoints("sess-1")   # the working file is not a checkpoint
+
+
+def test_header_imports_core_at_the_right_depth():
+    # ui/header.py sits one level below the package: ``..core`` is the
+    # package's core; ``...core`` raised in the live app and blanked the
+    # whole header after the history button.
+    source = (_CHAT_ROOT / "ui" / "header.py").read_text(encoding="utf-8")
+    assert "from ..core import turn_checkpoints" in source
+    assert "from ...core import turn_checkpoints" not in source
 
 
 def test_restore_of_a_pre_conversation_snapshot_starts_a_fresh_session(tc, monkeypatch):
@@ -299,6 +312,29 @@ def test_a_failed_read_reports_and_clears_the_restoring_flag(tc, monkeypatch):
     ok, message = tc.m.restore(scene, target["id"])
     assert ok is False and "Could not read" in message and tc.m.is_restoring() is False
     assert sent == []
+
+
+def test_restore_fences_the_session_so_recovery_does_not_replay_undone_turns(tc, monkeypatch):
+    scene = _scene(users=3)
+    target, _, _ = _prepare_restore(tc, monkeypatch, scene)
+    assert tc.m.restore(scene, target["id"])[0]
+    sys.modules["mixar.modules.space_mixie_chat.core.turn_events"].drop_scene.assert_called_once_with("Scene")
+
+
+def test_a_refused_backend_reply_is_reported_as_a_failure(tc, monkeypatch):
+    import threading
+    request = sys.modules["mixar.modules.common.agent_rpc.client"].request
+    request.side_effect = None
+    request.return_value = {"status": "failure", "message": "This turn is unknown to the backend"}
+    notices = []
+    monkeypatch.setattr(tc.m, "_notify", lambda scene_name, text: notices.append(text))
+    tc.bpy.data.scenes = [_scene()]
+    tc.m._send_backend("sess-1", [("checkpoint.rewind", {"session_id": "sess-1", "request_id": "x"})])
+    for _ in range(200):
+        if not tc.m.rewind_in_flight():
+            break
+        threading.Event().wait(0.01)
+    assert notices and "unknown to the backend" in notices[0]
 
 
 def test_backend_calls_block_sending_until_done(tc, monkeypatch):

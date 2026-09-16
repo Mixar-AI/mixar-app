@@ -266,9 +266,18 @@ Before every fresh turn `chat_ops.send_message` captures the whole document with
 command id once the send is accepted. The header shows a Checkpoints menu once the
 session has one. Restore runs only while the session is IDLE with no open run: a
 safety copy is captured first, the snapshot is read with `wm.recover_auto_save`
-(the recover flag makes the document untitled, so nothing on disk is touched), a
-titled project is then saved back to its own path once, and `load_pre` skips its
-session abort while `turn_checkpoints.is_restoring()`. The backend is told on a
-worker thread — `checkpoint.mark` for the safety copy, then `checkpoint.rewind`
-for the restored turn — and `composer_send.can_send` refuses while that is in
-flight. Contract: mixar-backend `docs/api/frontend/turn-checkpoints.md`.
+(nothing on disk is touched by the read, but the document's path becomes the
+snapshot file), then the document is saved once: a titled project back to its
+own path, an untitled one to the session's `working.mixar` so Ctrl-S never lands
+on a checkpoint. `load_pre` skips its session abort while
+`turn_checkpoints.is_restoring()`, and `turn_events.drop_scene` fences the
+session so the reconnect-time recovery check does not replay the undone turns
+into the restored chat (the next send lifts the fence). The checkpoint is bound
+to the turn through `TurnTransport.last_command_id`, not the user bubble's
+`bubble_id` (a collection reference taken before the placeholder bubble is added
+can go stale). The backend is told on a worker thread — `checkpoint.mark` for the
+safety copy, then `checkpoint.rewind` for the restored turn — and
+`composer_send.can_send` refuses while that is in flight. On the 5.2 Zen layout
+the chat is the native island, so the header menu is only visible when a
+MIXIE_CHAT editor is docked. Contract: mixar-backend
+`docs/api/frontend/turn-checkpoints.md`.
