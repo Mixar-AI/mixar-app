@@ -768,7 +768,9 @@ void agent_ui_draw_island(ARegion *region,
       const float *text_col = state->input_text[0] ? col_active : col_dim;
       label_centre(disp, cx, cy, font_size, text_col);
     }
-    else {
+    else if (state->title[0] != '\0') {
+      /* Overlay-centred: omitted when empty so the header discs keep
+       * their artboard seats and no reserved title slot remains. */
       label_centre(state->title,
                    layout->hdr_title_cx,
                    layout->hdr_title_y,
