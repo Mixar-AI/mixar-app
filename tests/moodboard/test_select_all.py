@@ -31,8 +31,8 @@ def test_select_all_operator_covers_graph_nodes_and_skips_embedded_media():
     assert "mixie_moodboard_active_node_id" in body
 
 
-def test_drawer_tab_keymap_is_bound_in_c_and_addon():
-    """Tab toggles the Zen drawer. C defaultconf + addon keyconfig must
+def test_drawer_tilde_keymap_is_bound_in_c_and_addon():
+    """~ toggles the Zen drawer. C defaultconf + addon keyconfig must
     both carry it so a GUI keyconfig preset reload cannot wipe the shortcut.
     The binding lives on Moodboard Drawer Grip (TOOL_PROPS), never Mixie."""
     ops = _read(
@@ -41,18 +41,19 @@ def test_drawer_tab_keymap_is_bound_in_c_and_addon():
     keymap = _read(MOODBOARD / "ui/keymap.py")
 
     assert 'WM_keymap_add_item(keymap, "VIEW3D_OT_moodboard_drawer_toggle"' in ops
-    assert "EVT_TABKEY" in ops
+    assert "EVT_ACCENTGRAVEKEY" in ops
+    assert "EVT_TABKEY" not in ops
     keymap_fn = ops.split("void view3d_moodboard_drawer_keymap")[1]
     assert "RGN_TYPE_TOOL_PROPS" in keymap_fn
     assert "SPACE_VIEW3D" in keymap_fn
 
     assert "'view3d.moodboard_drawer_toggle'" in keymap
-    tab_at = keymap.index("'view3d.moodboard_drawer_toggle'")
-    item = keymap[tab_at : tab_at + 80]
-    assert "type='TAB'" in item
+    toggle_at = keymap.index("'view3d.moodboard_drawer_toggle'")
+    item = keymap[toggle_at : toggle_at + 80]
+    assert "type='ACCENT_GRAVE'" in item
     assert "ctrl=" not in item and "shift=" not in item and "oskey=" not in item
     drawer_map = keymap.index("Moodboard Drawer Grip")
-    assert drawer_map < tab_at
+    assert drawer_map < toggle_at
     assert "'mixie.moodboard_pie_menu_call'" in keymap
     pie_tab = keymap.index("type='TAB'")
     assert "ctrl=True" in keymap[pie_tab : pie_tab + 80]

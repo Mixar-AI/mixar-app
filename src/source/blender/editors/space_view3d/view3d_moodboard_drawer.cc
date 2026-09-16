@@ -250,7 +250,7 @@ bool view3d_moodboard_drawer_grip_handler_poll(const wmWindow * /*win*/,
                                               const ARegion *region,
                                               const wmEvent *event)
 {
-  if (event == nullptr || event->type == EVT_TABKEY || area == nullptr ||
+  if (event == nullptr || event->type == EVT_ACCENTGRAVEKEY || area == nullptr ||
       area->spacetype != SPACE_VIEW3D)
   {
     return false;
@@ -258,12 +258,12 @@ bool view3d_moodboard_drawer_grip_handler_poll(const wmWindow * /*win*/,
   return view3d_moodboard_drawer_grip_contains_xy(area, region, event->xy);
 }
 
-bool view3d_moodboard_drawer_tab_handler_poll(const wmWindow * /*win*/,
-                                             const ScrArea *area,
-                                             const ARegion *region,
-                                             const wmEvent *event)
+bool view3d_moodboard_drawer_toggle_handler_poll(const wmWindow * /*win*/,
+                                                const ScrArea *area,
+                                                const ARegion *region,
+                                                const wmEvent *event)
 {
-  return event != nullptr && event->type == EVT_TABKEY && event->modifier == 0 &&
+  return event != nullptr && event->type == EVT_ACCENTGRAVEKEY && event->modifier == 0 &&
          view3d_moodboard_drawer_contains_xy(area, region, event->xy);
 }
 
@@ -384,7 +384,7 @@ void view3d_moodboard_drawer_region_init(wmWindowManager *wm, ARegion *region)
   region->v2d.cur.ymin = center_y - half_height;
   region->v2d.cur.ymax = center_y + half_height;
 
-  /* Grip first, then UI, then Tab (so a focused field keeps Tab), then Mixie. */
+  /* Grip first, then UI, then ~ (so a focused field keeps the key), then Mixie. */
   wmKeyMap *grip_keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Moodboard Drawer Grip", SPACE_VIEW3D, RGN_TYPE_TOOL_PROPS);
   WM_event_add_keymap_handler_poll(&region->runtime->handlers,
@@ -395,7 +395,7 @@ void view3d_moodboard_drawer_region_init(wmWindowManager *wm, ARegion *region)
 
   WM_event_add_keymap_handler_poll(&region->runtime->handlers,
                                    grip_keymap,
-                                   view3d_moodboard_drawer_tab_handler_poll);
+                                   view3d_moodboard_drawer_toggle_handler_poll);
 
   wmKeyMap *mixie_keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);

@@ -9,7 +9,7 @@ Moodboard Keymap Registration
 Registers keyboard shortcuts for moodboard operations.
 Cmd+P (macOS) / Ctrl+P (Windows/Linux): Send selected images to Mixie Chat
 View Pie Menu: Follows user's pie menu key preference (default: backtick)
-Tab (Zen drawer TOOL_PROPS only): toggle the moodboard drawer
+~ / accent grave (Zen drawer TOOL_PROPS only): toggle the moodboard drawer
 """
 
 import bpy
@@ -266,13 +266,14 @@ def register():
         )
         addon_keymaps.append((km_drawer, kmi))
 
-        # Unmodified Tab on this TOOL_PROPS map only — never on 3D View, or
-        # Edit Mode is lost. Closed: Tab on the grip opens. Open: Tab on the
-        # grip or painted panel closes. Text fields keep Tab: the C handler
-        # is registered after UI, and window-modal text-edit consumes Tab
+        # Unmodified ~ (accent grave) on this TOOL_PROPS map only — never
+        # on 3D View, or the View pie is lost. Tab stays Object / Edit
+        # Mode. Closed: ~ on the grip opens. Open: ~ on the grip or
+        # painted panel closes. Text fields keep the key: the C handler
+        # is registered after UI, and window-modal text-edit consumes it
         # first. Keep in sync with view3d_moodboard_drawer_keymap.
         kmi = km_drawer.keymap_items.new(
-            'view3d.moodboard_drawer_toggle', type='TAB', value='PRESS'
+            'view3d.moodboard_drawer_toggle', type='ACCENT_GRAVE', value='PRESS'
         )
         addon_keymaps.append((km_drawer, kmi))
 

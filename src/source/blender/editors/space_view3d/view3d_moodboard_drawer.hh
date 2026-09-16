@@ -30,9 +30,10 @@
  * Event routing uses `view3d_moodboard_drawer_contains_xy`: only the grip and
  * the painted panel slice belong to this region; the scissored remainder is
  * the viewport. The grip keymap is grip-only for LEFTMOUSE (no canvas clicks),
- * polled onto the handle before `ui::region_handlers_add`. Unmodified Tab is
- * on the same map but polled onto the drawer visual after UI so a focused
- * text field keeps Tab, and never on the 3D View WINDOW map.
+ * polled onto the handle before `ui::region_handlers_add`. Unmodified `~`
+ * (accent grave) is on the same map but polled onto the drawer visual after
+ * UI so a focused text field keeps the key, and never on the 3D View WINDOW
+ * map (Tab stays Object / Edit Mode; `~` stays the View pie).
  */
 
 #pragma once
@@ -138,11 +139,11 @@ bool view3d_moodboard_drawer_grip_handler_poll(const wmWindow *win,
                                               const ARegion *region,
                                               const wmEvent *event);
 
-/** Handler poll: unmodified Tab on the grip or painted panel, never the viewport. */
-bool view3d_moodboard_drawer_tab_handler_poll(const wmWindow *win,
-                                             const ScrArea *area,
-                                             const ARegion *region,
-                                             const wmEvent *event);
+/** Handler poll: unmodified `~` on the grip or painted panel, never the viewport. */
+bool view3d_moodboard_drawer_toggle_handler_poll(const wmWindow *win,
+                                                const ScrArea *area,
+                                                const ARegion *region,
+                                                const wmEvent *event);
 
 /** Register the `RGN_TYPE_TOOL_PROPS` region type on the 3D View space. */
 void view3d_moodboard_drawer_region_register(SpaceType *st);
