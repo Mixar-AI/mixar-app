@@ -19,6 +19,11 @@ class TurnTransport:
         self._session_id = ''
         self._last_seq = -1
         self._running = False
+        # The command id of the most recent send — the backend's request id.
+        # Read by the send operator to bind its turn checkpoint; the user
+        # bubble carries the same id, but a bpy collection reference taken
+        # before the placeholder bubble was added can go stale.
+        self.last_command_id = ''
 
     @property
     def is_running(self):
@@ -33,6 +38,7 @@ class TurnTransport:
             return False
         self._session_id = payload['session_id']
         command_id = str(uuid.uuid4())
+        self.last_command_id = command_id
         previous_state = get_session_manager().get_state(scene)
         joining = interjecting
         if previous_state.value == 'busy' and not joining:

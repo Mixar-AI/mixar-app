@@ -697,13 +697,16 @@ void agent_ui_draw_island(ARegion *region,
   const bool agent_tab = layout->tabs[AGENT_TAB_AGENT].active;
   if (agent_tab) {
     /* Header buttons: an accent disc with a lighter glyph on top. */
-    float history_fill[4], new_chat_fill[4];
+    float history_fill[4], new_chat_fill[4], checkpoints_fill[4];
     agent_ui_motion_color(accent, accent,
                           agent_ui_motion_sample(region, AgentIslandControl::History, layout->hdr_history),
                           history_fill);
     agent_ui_motion_color(accent, accent,
                           agent_ui_motion_sample(region, AgentIslandControl::NewChat, layout->hdr_new_chat),
                           new_chat_fill);
+    agent_ui_motion_color(accent, accent,
+                          agent_ui_motion_sample(region, AgentIslandControl::Checkpoints, layout->hdr_checkpoints),
+                          checkpoints_fill);
     fill_round(&layout->hdr_history,
                BLI_rctf_size_x(&layout->hdr_history) * 0.5f,
                history_fill);
@@ -714,9 +717,17 @@ void agent_ui_draw_island(ARegion *region,
                new_chat_fill);
     agent_ui_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, new_chat_fill);
 
+    /* Turn checkpoints: same disc, a counter-clockwise arrow glyph. Opens
+     * the MIXIE_CHAT_MT_checkpoints menu (space_mixie_chat/ui/operators/
+     * checkpoint_ops.py) — the island has no Python header to host it. */
+    fill_round(&layout->hdr_checkpoints,
+               BLI_rctf_size_x(&layout->hdr_checkpoints) * 0.5f,
+               checkpoints_fill);
+    agent_ui_icon_draw(AGENT_ICON_RESTORE, &layout->hdr_checkpoints, glyph, checkpoints_fill);
+
     if (state->ink_visible) {
       /* Scribble text output window over the new chat topbar */
-      const float left_limit = layout->hdr_new_chat.xmax + 16.0f * u;
+      const float left_limit = layout->hdr_checkpoints.xmax + 16.0f * u;
       const float right_limit = layout->card.xmax - 23.0f * u;
       const float max_w = right_limit - left_limit;
       const float cx = layout->hdr_title_cx;

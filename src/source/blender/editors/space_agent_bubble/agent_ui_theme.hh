@@ -200,6 +200,8 @@ namespace blender {
 #define AGENT_HDR_BTN_CY 38
 #define AGENT_HDR_BTN1_CX 36
 #define AGENT_HDR_BTN2_CX 82
+/** Third disc, same 46-unit pitch: turn checkpoints (restore an earlier turn). */
+#define AGENT_HDR_BTN3_CX 128
 #define AGENT_HDR_GLYPH_R 13
 
 #define AGENT_HDR_TITLE_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Heading)

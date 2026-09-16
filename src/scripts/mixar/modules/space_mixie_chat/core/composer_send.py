@@ -23,6 +23,9 @@ class OutgoingMessage:
 
 
 def can_send(scene):
+    from .turn_checkpoints import rewind_in_flight
+    if rewind_in_flight():
+        return False, 'Restoring a checkpoint…'
     session = get_session_manager()
     state = session.get_state(scene)
     if state in (SessionState.IDLE, SessionState.MODIFYING, SessionState.AWAITING_INPUT):
