@@ -27,6 +27,9 @@ set(SRC
   agent_ui_generations.cc
   agent_ui_generations_data.cc
   agent_ui_generations_detail.cc
+  agent_ui_generations_qa.cc
+  agent_ui_generations_navigation.cc
+  agent_ui_generations_libraries.cc
   agent_ui_generations_grid.cc
   agent_ui_generations_read.cc
   agent_ui_icons.cc
@@ -56,6 +59,7 @@ set(SRC
   agent_bubble_glass.hh
   agent_ui_draw.hh
   agent_ui_generations.hh
+  agent_ui_generations_clip.hh
   agent_ui_generations_intern.hh
   agent_ui_icons.hh
   agent_ui_layout.hh

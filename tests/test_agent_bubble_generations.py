@@ -50,7 +50,9 @@ PANE_CC = (CPP / "agent_ui_generations.cc").read_text(encoding="utf-8")
 GRID_CC = (CPP / "agent_ui_generations_grid.cc").read_text(encoding="utf-8")
 DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
 #: The pane is five translation units; a name may live in any of them.
-ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC
+LIBRARIES_CC = (CPP / "agent_ui_generations_libraries.cc").read_text(encoding="utf-8")
+NAV_CC = (CPP / "agent_ui_generations_navigation.cc").read_text(encoding="utf-8")
+ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC + LIBRARIES_CC + NAV_CC
 INTERN_HH = (CPP / "agent_ui_generations_intern.hh").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
 DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
@@ -126,6 +128,10 @@ def test_every_pane_property_is_written_by_a_control(name):
     ``data_path`` names it — so the pane's own source must mention the
     ``window_manager.`` path for each one.
     """
+    if name.endswith("_scroll"):
+        assert f'"{name}"' in PANE_CC + LIBRARIES_CC
+        assert "ui::ButtonType::Scroll" in LIBRARIES_CC
+        return
     path = f"window_manager.{name}"
     assert path in ALL_CC, (
         f"nothing in the pane sets {path}, so the user cannot change it"
@@ -204,6 +210,8 @@ def _cpp_operator_idnames(source):
 def test_every_operator_the_pane_dispatches_exists():
     registered = {cls.bl_idname for cls in OPS.classes}
     dispatched = _cpp_operator_idnames(ALL_CC)
+    assert "WM_operatortype_append(MIXAR_OT_generations_navigate)" in SPACE_CC
+    registered.add("mixar.generations_navigate")
     missing = dispatched - registered
     assert not missing, f"the pane dispatches operators that do not exist: {missing}"
 
@@ -536,14 +544,12 @@ def test_the_detail_column_is_anchored_to_the_panel_foot():
 
 
 def test_the_tile_shrinks_rather_than_clipping_its_caption():
-    assert "GEN_TILE_MIN" in INTERN_HH
+    assert "GEN_TILE" in INTERN_HH
     assert "avail - caption" in GRID_CC
 
 
 def test_there_is_no_bottom_fade():
-    """The design's fade means "there is more below"; this grid pages, so
-    nothing is ever half-visible under it and over a single visible row the
-    gradient just swallowed the captions."""
+    """The scrollbar communicates overflow without obscuring captions."""
     assert "GEN_FADE_H" not in INTERN_HH
     assert "fade" not in GRID_CC.replace("No bottom fade", "")
 
@@ -556,30 +562,25 @@ def test_a_tile_is_never_blank():
     assert "draw_placeholder(box, AGENT_ICON_SPLAT)" in GRID_CC
 
 
-def _tile_button_block() -> str:
-    """The second grid pass — the one that lays the buttons."""
-    start = GRID_CC.index("uiDefIconPreviewBut")
-    return GRID_CC[GRID_CC.rindex("BIFIconID preview", 0, start) : start]
+def _preview_request_block() -> str:
+    start = GRID_CC.index("bool agent_ui_generations_asset_has_preview")
+    return GRID_CC[start:GRID_CC.index("\n}", start)]
 
 
-def test_the_preview_icon_id_is_never_gated_on_having_pixels():
-    """Attaching the icon id to a button is what STARTS the deferred read
-    (`ui_def_but_icon` -> `ui_icon_ensure_deferred`), so withholding it until
-    the pixels arrived was a deadlock: no icon, no read, no pixels, no icon.
-    Every archived generation drew the placeholder cube forever while
-    Blender's own Asset Browser showed the same file's thumbnail fine.
+def test_the_preview_request_is_never_gated_on_having_pixels():
+    """An icon-less hit button must still request the deferred preview.
+
+    Painting owns the image so partial rows clip instead of shrinking it.
+    Waiting for preview pixels before requesting them would deadlock.
     """
-    block = _tile_button_block()
-    assert "ensure_previewable(" in block
-    assert "asset_preview_icon_id" in block
-    # The gate must not reappear on the path that decides the icon id.
-    assert "agent_ui_generations_asset_has_preview" not in block
+    block = _preview_request_block()
+    assert "ui::icon_ensure_deferred(" in block
+    assert block.index("icon_ensure_deferred(") < block.index("get_preview()")
 
 
 def test_the_preview_request_precedes_the_icon_read():
-    """`ensure_previewable` is what mints the icon id; reading it first
-    yields ICON_NONE and the tile never asks for its preview again."""
-    block = _tile_button_block()
+    """Ensure the icon exists before starting its asynchronous preview read."""
+    block = _preview_request_block()
     assert block.index("ensure_previewable(") < block.index("asset_preview_icon_id")
 
 

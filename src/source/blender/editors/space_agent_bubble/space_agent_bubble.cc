@@ -4142,6 +4142,9 @@ static void agent_bubble_main_region_init(wmWindowManager *wm, ARegion *region)
   wmKeyMap *keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Agent Bubble Queue", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
   WM_event_add_keymap_handler(&region->runtime->handlers, keymap);
+  keymap = WM_keymap_ensure(
+      wm->runtime->defaultconf, "Agent Bubble Library", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+  WM_event_add_keymap_handler(&region->runtime->handlers, keymap);
   mixie_chat_main_region_init(wm, region);
 }
 
@@ -4160,11 +4163,13 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_bubble_toggle_expand);
   WM_operatortype_append(MIXAR_OT_bubble_set_bg_color);
   WM_operatortype_append(MIXAR_OT_queue_navigate);
+  WM_operatortype_append(MIXAR_OT_generations_navigate);
   WM_operatortype_append(MIXAR_OT_reference_scroll);
 }
 
 static void agent_bubble_keymap(wmKeyConfig *keyconf)
 {
+  WM_keymap_ensure(keyconf, "Agent Bubble Library", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
   WM_keymap_ensure(keyconf, "Agent Bubble Queue", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
   WM_keymap_ensure(keyconf, "Agent Bubble References", SPACE_AGENT_BUBBLE, RGN_TYPE_UI);
   /* Ensure all three region keymap categories exist on the default
@@ -4359,6 +4364,7 @@ void ED_spacetype_agent_bubble()
 
   agent_ui_pill_cat_qa_register();
   agent_bubble_references_qa_register();
+  agent_ui_generations_qa_register();
 }
 
 /** \} */

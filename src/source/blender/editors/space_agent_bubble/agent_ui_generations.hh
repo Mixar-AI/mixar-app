@@ -29,6 +29,9 @@ namespace blender {
 struct ARegion;
 struct bContext;
 struct rctf;
+struct wmOperatorType;
+void agent_ui_generations_qa_register();
+void MIXAR_OT_generations_navigate(wmOperatorType *ot);
 
 /**
  * Paint the Library pane and lay its controls into the card panel.
