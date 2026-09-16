@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * "My Generations" tab for the Agent island: the browser for everything Mixar
+ * "Library" tab for the Agent island: the browser for everything Mixar
  * has made plus every asset library the user has connected.
  *
  * Two sources, one grid (the design's left rail switches between them):
@@ -31,7 +31,7 @@ struct bContext;
 struct rctf;
 
 /**
- * Paint the My Generations pane and lay its controls into the card panel.
+ * Paint the Library pane and lay its controls into the card panel.
  *
  * \param panel: the card panel rect in REGION pixel coordinates — the space
  * the island's uiBlocks use. Call from the WINDOW region's draw, NOT inside a

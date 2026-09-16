@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * The My Generations pane's gathering pass.
+ * The Library pane's gathering pass.
  *
  * Four sources are normalised into one #GenItem list. None of them is owned
  * here — every one is read from something another module already maintains:

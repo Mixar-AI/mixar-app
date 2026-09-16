@@ -148,7 +148,7 @@ void agent_bubble_references_draw(const bContext *C,
                                                  agent_bubble_reference_fraction(wm));
   ui::Block *block = ui::block_begin(C, region, "agent_references", ui::EmbossType::None);
   agent_bubble_send_button(C, region, block, layout, state);
-  /* The same neutral hairline as the My Generations column separators. */
+  /* The same neutral hairline as the Library column separators. */
   pane_column_divider(1, g.view.ymin, g.view.ymax, u);
   int old_scissor[4];
   GPU_scissor_get(old_scissor);

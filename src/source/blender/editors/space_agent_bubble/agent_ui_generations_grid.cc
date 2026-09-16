@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * My Generations — the tile grid itself: how many tiles fit, what each one
+ * Library — the tile grid itself: how many tiles fit, what each one
  * shows, and the drag that carries a 3D generation into the viewport.
  *
  * \section drag Dragging a generation into the viewport

@@ -24,7 +24,7 @@ struct rctf;
 enum AgentIcon {
   /* Tab strip. `generations.svg` draws marks for Agent and Gaussian Splat;
    * 3D and Media use the cube and folded-page glyphs below so those tabs
-   * do not read as the odd ones out. My Generations is label-only. */
+   * do not read as the odd ones out. Library is label-only. */
   AGENT_ICON_AGENT = 0, /* Person in a ring. */
   AGENT_ICON_MEDIA,     /* Folded page — Media. */
   AGENT_ICON_SPLAT,     /* Nine-dot rosette — Gaussian Splat. */

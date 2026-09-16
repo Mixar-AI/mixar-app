@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Actions for the island's My Generations tab.
+"""Actions for the island's Library tab.
 
 The pane itself is C++ and stateless — everything it can DO is one of the
 operators below, bound to a painted button. Each one is deliberately thin and

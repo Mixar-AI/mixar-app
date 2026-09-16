@@ -146,9 +146,10 @@ namespace blender {
 #define AGENT_TAB_X_SPLAT 360
 #define AGENT_TAB_W_SPLAT 262
 
-/** Right cluster. */
-#define AGENT_TAB_X_GENERATIONS 965
-#define AGENT_TAB_W_GENERATIONS 218
+/** Right cluster. Library is unmarked and short; width is for that label,
+ *  and X holds the 6-unit gap to Queue. */
+#define AGENT_TAB_X_GENERATIONS 1055
+#define AGENT_TAB_W_GENERATIONS 128
 #define AGENT_TAB_X_QUEUE 1189
 #define AGENT_TAB_W_QUEUE 111
 

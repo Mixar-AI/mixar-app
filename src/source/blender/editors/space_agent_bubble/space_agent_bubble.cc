@@ -3530,7 +3530,7 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
   }
 
   /* Stand down when the button under the cursor is waiting to start its own
-   * drag — a My Generations asset tile. Blender answers a press over a
+   * drag — a Library asset tile. Blender answers a press over a
    * draggable button with WM_UI_HANDLER_CONTINUE (`ui_do_but_EXIT`) so a
    * region keymap can still select, which is the only reason that press ever
    * reaches the WINDOW-level LEFTMOUSE binding this operator hangs off. Taking

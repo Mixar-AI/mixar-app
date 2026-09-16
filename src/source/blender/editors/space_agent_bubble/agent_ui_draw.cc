@@ -792,7 +792,7 @@ void agent_ui_draw_island(ARegion *region,
       tab_title = "Gaussian Splat";
     }
     else if (layout->tabs[AGENT_TAB_GENERATIONS].active) {
-      tab_title = "My Generations";
+      tab_title = "Library";
     }
     label_centre(tab_title,
                  layout->hdr_title_cx,

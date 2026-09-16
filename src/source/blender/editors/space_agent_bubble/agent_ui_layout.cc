@@ -79,7 +79,7 @@ const TabMetric g_tab_metrics[AGENT_TAB_COUNT] = {
     {AGENT_TAB_X_3D, AGENT_TAB_W_3D, "3D"},
     {AGENT_TAB_X_MEDIA, AGENT_TAB_W_MEDIA, "Media"},
     {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, "Gaussian Splat"},
-    {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, "My Generations"},
+    {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, "Library"},
     {AGENT_TAB_X_QUEUE, AGENT_TAB_W_QUEUE, "Queue"},
 };
 

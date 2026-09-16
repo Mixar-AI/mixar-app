@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Private vocabulary of the My Generations pane: its measured tokens, the one
+ * Private vocabulary of the Library pane: its measured tokens, the one
  * item model every source is normalised into, and the split between the
  * gathering pass (`agent_ui_generations_data.cc`), the grid pass
  * (`agent_ui_generations.cc`) and the detail column

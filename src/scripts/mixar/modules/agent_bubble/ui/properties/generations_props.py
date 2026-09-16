@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""My Generations tab state for the agent island.
+"""Library tab state for the agent island.
 
 The whole pane is driven by these WindowManager properties, and every control
 in the C++ pane is a stock ``wm.context_set_enum`` / ``wm.context_set_string``
@@ -59,7 +59,7 @@ PROP_NAMES = (
 
 
 def bump_revision():
-    """Tell the My Generations pane an asset library changed on disk.
+    """Tell the Library pane an asset library changed on disk.
 
     Blender's asset list is a CACHE: it reads a library once and never
     notices a .blend appearing underneath it (the Asset Browser has a
@@ -108,7 +108,7 @@ def register():
     wm = bpy.types.WindowManager
     wm.mixar_generations_source = EnumProperty(
         name="Generations Source",
-        description="Which collection the My Generations grid is showing",
+        description="Which collection the Library grid is showing",
         items=SOURCE_ITEMS,
         default='AI',
         update=_reset_page,
@@ -124,7 +124,7 @@ def register():
     )
     wm.mixar_generations_sort = EnumProperty(
         name="Generations Sort",
-        description="Order the My Generations grid is sorted in",
+        description="Order the Library grid is sorted in",
         items=SORT_ITEMS,
         default='NEWEST',
         update=_reset_page,
@@ -156,7 +156,7 @@ def register():
     )
     wm.mixar_generations_page = IntProperty(
         name="Generations Page",
-        description="Zero-based page of the My Generations grid",
+        description="Zero-based page of the Library grid",
         default=0,
         min=0,
         update=_redraw_bubbles,

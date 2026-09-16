@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The My Generations tab is a C++ surface over Python state.
+"""The Library tab is a C++ surface over Python state.
 
 Nothing links the two halves at build time: the pane reads WindowManager
 properties by NAME through RNA and dispatches operators by BL_IDNAME string,
@@ -186,9 +186,8 @@ def test_the_generations_tab_is_reachable():
     as the tab had no pane, and the strip still PAINTED the pill — so it
     looked clickable and was not.
     """
-    assert "GENERATIONS" in dict(
-        (item[0], item[1]) for item in bubble_tab_props.TAB_ITEMS
-    )
+    tabs = dict((item[0], item[1]) for item in bubble_tab_props.TAB_ITEMS)
+    assert tabs["GENERATIONS"] == "Library"
     assert '{AGENT_TAB_GENERATIONS, "GENERATIONS"' in SPACE_CC
     assert "agent_ui_generations_draw(C, region, panel_region, u)" in SPACE_CC
 
@@ -255,19 +254,37 @@ def test_every_category_tab_carries_its_own_mark():
 
     `generations.svg` draws marks for Agent and Gaussian Splat; 3D and Media
     take the island's own cube and folded-page glyphs so those tabs cannot
-    read as failed-to-load. My Generations and Queue are label-only
+    read as failed-to-load. Library and Queue are label-only
     (`AGENT_ICON_COUNT`); Queue still gains a count chip while nonempty.
     """
     tabs = _tab_table()
     assert tabs["Agent"] == "AGENT_ICON_AGENT"
     assert tabs["Gaussian Splat"] == "AGENT_ICON_SPLAT"
-    assert tabs["My Generations"] == "AGENT_ICON_COUNT"
+    assert tabs["Library"] == "AGENT_ICON_COUNT"
     assert tabs["Queue"] == "AGENT_ICON_COUNT"
     assert tabs["3D"] == "AGENT_ICON_MESH"
     assert tabs["Media"] == "AGENT_ICON_MEDIA"
 
     marks = [icon for icon in tabs.values() if icon != "AGENT_ICON_COUNT"]
     assert len(set(marks)) == len(marks)
+
+
+def test_the_library_tab_is_sized_for_the_short_label():
+    """218 was artboard-tuned for 'My Generations' and would stretch Library."""
+    theme = (CPP / "agent_ui_theme.hh").read_text()
+
+    def token(name):
+        return int(re.search(rf"#define {name} (\d+)", theme).group(1))
+
+    width = token("AGENT_TAB_W_GENERATIONS")
+    gap = (
+        token("AGENT_TAB_X_QUEUE")
+        - token("AGENT_TAB_X_GENERATIONS")
+        - width
+    )
+    assert width <= 150, "Library is much shorter than the old label"
+    assert width >= token("AGENT_TAB_W_QUEUE")
+    assert gap == 6, "the right cluster keeps the 6-unit gap to Queue"
 
 
 def test_reference_tab_marks_have_dedicated_stroked_artwork():

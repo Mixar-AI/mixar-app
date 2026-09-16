@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * My Generations — the pane's frame: the source rail, the filter chips and
+ * Library — the pane's frame: the source rail, the filter chips and
  * the paging. The tiles and their drag are `agent_ui_generations_grid.cc`,
  * the right-hand inspector is `agent_ui_generations_detail.cc`, and the
  * gathering pass is `agent_ui_generations_data.cc`.
