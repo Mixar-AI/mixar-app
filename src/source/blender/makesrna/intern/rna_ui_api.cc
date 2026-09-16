@@ -1773,7 +1773,6 @@ void RNA_api_ui_layout(StructRNA *srna)
       {6, "SEGMENT", 0, "Segment", "Native enum item"},
       {7, "SURFACE", 0, "Surface", "Container"},
       {8, "LABEL", 0, "Label", "Text"},
-      {10, "GLASS_TOOL", 0, "Glass Tool", "Icon action or menu in an aligned glass capsule"},
       {0, nullptr, 0, nullptr, nullptr},
   };
   static const EnumPropertyItem mixar_variant_items[] = {

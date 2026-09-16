@@ -9,13 +9,12 @@ Moodboard Toolbar Panel
 Left T-panel toolbar with core moodboard actions:
   • Add Image  — add an existing or new image from disk
   • Add Text   — add a text box to the canvas
+  • Crop       — crop the selected image
   • Mask Tools — popover with Box Mask, Lasso, and Magic Select
   • Lasso      — direct Multi-Lasso Mask shortcut
   • Annotate   — draw persistent freehand notes on a selected image
-
-The media and text builders are shared by both canvas hosts. The Zen drawer
-adds a persistent canvas Annotate tool in the same glass capsule; the Mixie
-T-panel also exposes image-attached mask/annotation controls.
+  • Rotate     — rotate selected image 90° clockwise
+  • Send to Chat — send selected image(s) to Mixie Chat
 """
 
 import bpy
@@ -33,47 +32,6 @@ _MASK_TOOL_ICONS = {
 }
 _MASK_ICON_DEFAULT = "MOD_MASK"
 
-# Open-drawer threshold shared with canvas_context / C++ drawer active amount.
-_DRAWER_ACTIVE_AMOUNT = 0.98
-
-
-def draw_moodboard_open_media_tool(layout, *, drawer=False):
-    """Folder menu that opens image/video or picks existing media."""
-    row = layout if drawer else layout.row(align=True)
-    row.scale_x = 2.0 if drawer else 1.5
-    row.scale_y = 2.3 if drawer else 1.5
-    row.menu(
-        "MIXIE_MT_add_image_menu",
-        text="",
-        icon="FILE_FOLDER",
-    )
-    if drawer:
-        row.mixar_style(component="GLASS_TOOL")
-
-
-def draw_moodboard_add_text_tool(layout, *, drawer=False):
-    """Add a text box to the canvas."""
-    row = layout if drawer else layout.row(align=True)
-    row.scale_x = 2.0 if drawer else 1.5
-    row.scale_y = 2.3 if drawer else 1.5
-    row.operator("mixie.moodboard_add_textbox", text="", icon="FONT_DATA")
-    if drawer:
-        row.mixar_style(component="GLASS_TOOL")
-
-
-def draw_moodboard_add_tools(layout, context):
-    """One left-side glass capsule, with native icons and hover tooltips."""
-    surface = layout.mixar_surface(theme="ZEN", density="COMPACT")
-    surface.operator_context = "INVOKE_DEFAULT"
-    col = surface.column(align=True)
-    draw_moodboard_open_media_tool(col, drawer=True)
-    draw_moodboard_add_text_tool(col, drawer=True)
-    col.operator(
-        "mixie.moodboard_annotate_canvas", text="", icon="GREASEPENCIL",
-        depress=context.window_manager.mixie_moodboard_annotating,
-    )
-    col.mixar_style(component="GLASS_TOOL")
-
 
 # A Menu (not a popover) so it auto-dismisses the instant an option is
 # picked. Both add operators return RUNNING_MODAL from invoke() (a file
@@ -82,7 +40,7 @@ def draw_moodboard_add_tools(layout, context):
 # NOTE: kept as a comment, not a docstring — a Menu's docstring is shown
 # as the button tooltip, and this rationale isn't meant for users.
 class MIXIE_MT_add_image_menu(Menu):
-    """Open an image or video, or choose existing media"""
+    """Dropdown menu with media-adding options."""
 
     bl_idname = "MIXIE_MT_add_image_menu"
     bl_label = "Add Media"
@@ -267,7 +225,14 @@ class MIXIE_PT_moodboard_toolbar(Panel):
         col = layout.column(align=True)
 
         # ── Add Image (menu) ──────────────────────────────────────────
-        draw_moodboard_open_media_tool(col)
+        row = col.row(align=True)
+        row.scale_x = 1.5
+        row.scale_y = 1.5
+        row.menu(
+            "MIXIE_MT_add_image_menu",
+            text="",
+            icon="FILE_FOLDER",
+        )
 
         col.separator(factor=0.6)
 
@@ -322,7 +287,10 @@ class MIXIE_PT_moodboard_toolbar(Panel):
         col.separator(factor=0.6)
 
         # ── Add Text ──────────────────────────────────────────────────
-        draw_moodboard_add_text_tool(col)
+        row = col.row(align=True)
+        row.scale_x = 1.5
+        row.scale_y = 1.5
+        row.operator("mixie.moodboard_add_textbox", text="", icon="FONT_DATA")
 
         # "Send to Mixie Chat" toolbar button removed — moodboard
         # selection auto-mirrors into the chat composer's attachments
@@ -333,37 +301,6 @@ class MIXIE_PT_moodboard_toolbar(Panel):
         layout.separator(factor=0.5)
 
 
-class VIEW3D_PT_moodboard_drawer_add_tools(Panel):
-    """Native glass capsule for media, text, and canvas annotation.
-
-    Hosted on the Zen Mode sliding drawer (VIEW_3D TOOL_PROPS) by the
-    native drawer draw path via ``UI_paneltype_draw`` — not by
-    ``ED_region_panels``, which would steal the canvas View2D.
-    """
-
-    bl_label = ""
-    bl_idname = "VIEW3D_PT_moodboard_drawer_add_tools"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "TOOL_PROPS"
-    bl_options = {"HIDE_HEADER"}
-
-    @classmethod
-    def poll(cls, context):
-        if getattr(getattr(context, "workspace", None), "name", None) != "Zen Mode":
-            return False
-        if getattr(getattr(context, "region", None), "type", None) != "TOOL_PROPS":
-            return False
-        amount = getattr(
-            getattr(context, "window_manager", None),
-            "mixar_moodboard_drawer_amount",
-            0.0,
-        )
-        return float(amount) >= _DRAWER_ACTIVE_AMOUNT
-
-    def draw(self, context):
-        draw_moodboard_add_tools(self.layout, context)
-
-
 # Only include panels if MIXIE space is available
 classes = (
     (
@@ -371,7 +308,6 @@ classes = (
         MIXIE_PT_mask_tools_popover,
         MIXIE_PT_annotation_tools_popover,
         MIXIE_PT_moodboard_toolbar,
-        VIEW3D_PT_moodboard_drawer_add_tools,
     )
     if MIXIE_SPACE_AVAILABLE
     else ()

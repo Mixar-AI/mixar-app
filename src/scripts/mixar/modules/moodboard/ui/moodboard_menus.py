@@ -279,7 +279,6 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         layout.operator("mixie.moodboard_add_image", text="Open Image or Video", icon='FILE_FOLDER')
         layout.operator("mixie.moodboard_paste_image", text="Paste from Clipboard", icon='PASTEDOWN')
         layout.operator("mixie.moodboard_add_textbox", text="Add Text", icon='FONT_DATA')
-        layout.menu("MIXIE_MT_canvas_annotations", icon='GREASEPENCIL')
 
         layout.separator()
 

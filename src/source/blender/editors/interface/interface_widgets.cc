@@ -1379,10 +1379,7 @@ static void widget_draw_icon(
     return;
   }
 
-  const bool glass_tool = but->mixar_style.theme == MixarTheme::Zen &&
-                          but->mixar_style.component == MixarComponent::GlassTool;
-  const float icon_scale = but->icon_scale * (glass_tool ? 1.5f : 1.0f);
-  const float aspect = (1.0f / icon_scale) * but->block->aspect * UI_INV_SCALE_FAC;
+  const float aspect = (1.0f / but->icon_scale) * but->block->aspect * UI_INV_SCALE_FAC;
   const float height = ICON_DEFAULT_HEIGHT / aspect;
   bool force_outline = false;
 
@@ -6010,20 +6007,16 @@ static bool zen_toolbar_tool(const Button *but)
 }
 
 /**
- * One PILL pane: viewport tools, explicit glass actions, the header shading
- * strip, or a standalone icon chip beside it (the Zen guides toggle). `Row` is
+ * One PILL pane: the toolbar trio, the header's icon-only shading strip, or
+ * a standalone icon chip parked beside it (the Zen guides toggle). `Row` is
  * an expanded RNA enum cell; `But` is an icon-only operator chip, which is
  * the same material one cell wide. A labelled button is not a chip, so the
  * empty `drawstr` and the explicit `alignnr` scope keep this to controls a
- * Zen layout deliberately put in an aligned group of their own. Explicit
- * GlassTool components opt in independently of the native button type.
+ * Zen layout deliberately put in an aligned group of their own.
  */
 static bool zen_glass_cell(const Button *but)
 {
-  if (zen_toolbar_tool(but) ||
-      (but != nullptr && but->mixar_style.theme == MixarTheme::Zen &&
-       but->mixar_style.component == MixarComponent::GlassTool))
-  {
+  if (zen_toolbar_tool(but)) {
     return true;
   }
   if (but == nullptr || but->mixar_style.theme != MixarTheme::Zen || but->alignnr == 0) {
@@ -6111,8 +6104,7 @@ static void widget_zen_tool_glass(Button *but,
   if (selected || hover) {
     rctf cell;
     BLI_rctf_rcti_copy(&cell, rect);
-    const bool transform = zen_toolbar_tool(but) ||
-                           but->mixar_style.component == MixarComponent::GlassTool;
+    const bool transform = zen_toolbar_tool(but);
     const float inset = (transform ? 1.0f : 2.0f) * UI_SCALE_FAC;
     BLI_rctf_pad(&cell, -inset, -inset);
     const float cell_rad = 0.5f * std::min(BLI_rctf_size_x(&cell), BLI_rctf_size_y(&cell));
@@ -6663,10 +6655,7 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
       MixarCardElement::None : UI_mixar_card_element_get(but);
   const bool mixar_row_editing = mixar_element == MixarCardElement::CinemaRow &&
                                  but->editstr != nullptr;
-  if (mixar_component && but->mixar_style.component == MixarComponent::GlassTool) {
-    wt = widget_type(WidgetStyle::ToolbarItem);
-  }
-  else if (mixar_component) {
+  if (mixar_component) {
     wt = widget_type(WidgetStyle::Regular);
   }
   else if (mixar_element != MixarCardElement::None && !mixar_row_editing) {
@@ -7045,16 +7034,7 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
   const float zoom = 1.0f / but->block->aspect;
   wt->state(wt, &state, but->emboss);
   bool native_text = true;
-  if (mixar_component && but->mixar_style.component == MixarComponent::GlassTool) {
-    /* Actions and menus retain native input/text, sharing the viewport tool pane. */
-    widget_zen_tool_glass(but, rect, &state, roundboxalign);
-    if (!use_alpha_blend) {
-      for (int i = 0; i < 4; i++) {
-        wt->wcol.text[i] = wt->wcol.text_sel[i] = uchar(mixar_tokens::zen.text[i] * 255.0f);
-      }
-    }
-  }
-  else if (mixar_component) {
+  if (mixar_component) {
     native_text = mixar_component_draw(*but, wt->wcol, *rect);
   }
   else if (but->type == ButtonType::Row && zen_glass_cell(but)) {

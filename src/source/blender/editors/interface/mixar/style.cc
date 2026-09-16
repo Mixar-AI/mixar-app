@@ -17,10 +17,6 @@ static bool supports(const Button &button, const MixarComponent component)
   switch (component) {
     case MixarComponent::Action:
       return button.type == ButtonType::But;
-    case MixarComponent::GlassTool:
-      return button.icon != ICON_NONE && button.str.empty() &&
-             ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block,
-                  ButtonType::Popover);
     case MixarComponent::Dropdown:
       return ELEM(
           button.type, ButtonType::Menu, ButtonType::Block, ButtonType::Popover, ButtonType::But);
@@ -142,8 +138,6 @@ const char *mixar_component_name(const MixarComponent component)
       return "surface";
     case MixarComponent::Label:
       return "label";
-    case MixarComponent::GlassTool:
-      return "glass_tool";
     case MixarComponent::LegacyCard:
       return "legacy_card";
     default:

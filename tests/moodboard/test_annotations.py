@@ -116,7 +116,6 @@ def test_native_renderer_draws_annotations_inside_image_transform():
     draw_call = renderer.index("mixie_draw_moodboard_annotations(")
     matrix_pop = renderer.index("GPU_matrix_pop();")
     assert matrix_push < draw_call < matrix_pop
-    assert "GPU_PRIM_TRI_STRIP" in annotations
-    assert "GPU_line_width(" not in annotations
+    assert "GPU_PRIM_LINE_STRIP" in annotations
     assert "show_annotations" in annotations
     assert "mixie_draw_moodboard_annotations.cc" in cmake

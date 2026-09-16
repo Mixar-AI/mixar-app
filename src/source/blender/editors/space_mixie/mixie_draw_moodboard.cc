@@ -352,9 +352,6 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   /* Draw moodboard groups */
   mixie_draw_moodboard_groups(C, v2d);
 
-  /* Board marks sit over its content and share its pan/zoom and host scissor. */
-  mixie_draw_moodboard_canvas_annotations(&scene_ptr, v2d);
-
   /* Draw edit tool overlay */
   mixie_draw_edit_tool_overlay(C, v2d);
 

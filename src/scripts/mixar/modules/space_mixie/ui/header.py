@@ -20,15 +20,12 @@ from bpy.types import Header, Menu
 def _has_moodboard_content(context):
     """Check if there is any content in the moodboard."""
     scene = context.scene
-    return any(getattr(scene, name, ()) for name in (
-        'mixie_moodboard_images',
-        'mixie_moodboard_textboxes',
-        'mixie_moodboard_groups',
-        'mixie_moodboard_action_nodes',
-        'mixie_moodboard_asset_nodes',
-        'mixie_moodboard_links',
-        'mixie_moodboard_annotations',
-    ))
+    has_content = False
+    if hasattr(scene, 'mixie_moodboard_images') and len(scene.mixie_moodboard_images) > 0:
+        has_content = True
+    if hasattr(scene, 'mixie_moodboard_textboxes') and len(scene.mixie_moodboard_textboxes) > 0:
+        has_content = True
+    return has_content
 
 
 class MIXIE_MT_view(Menu):

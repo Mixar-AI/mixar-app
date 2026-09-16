@@ -14,10 +14,6 @@ from bpy.types import Operator
 from bpy.props import IntProperty, StringProperty
 
 from ...core.moodboard_utils import get_moodboard_viewport_center
-from ...core.canvas_context import (
-    find_moodboard_canvas_region,
-    redraw_moodboard_canvases,
-)
 from ...core.image_lifecycle import release_moodboard_image_entry
 from ....common.utils.platform_utils import format_shortcut
 from ...constants import (
@@ -39,8 +35,21 @@ _CARET = "|"
 _EDIT = {"index": -1, "value": "", "original": "", "select_all": True, "armed": False}
 
 
-def _tag_moodboard_redraw():
-    redraw_moodboard_canvases()
+def _tag_mixie_redraw(context):
+    for area in context.screen.areas:
+        if area.type == 'MIXIE':
+            area.tag_redraw()
+
+
+def _find_mixie_window_region(context):
+    """Return the MIXIE (moodboard) WINDOW region with a view2d, or None."""
+    for area in context.screen.areas:
+        if area.type != 'MIXIE':
+            continue
+        for region in area.regions:
+            if region.type == 'WINDOW' and getattr(region, 'view2d', None):
+                return region
+    return None
 
 
 class MIXIE_OT_moodboard_add_textbox(Operator):
@@ -83,7 +92,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
         if self.text.strip():
             return self.execute(context)
 
-        region = find_moodboard_canvas_region(context)
+        region = _find_mixie_window_region(context)
         if region is None:
             # No visible moodboard to place into: drop a sample box at 0,0.
             self.text = TEXTBOX_TEXT_DEFAULT
@@ -109,7 +118,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
 
         vx, vy = self._cursor_view_coords(event)
         self._move_to(scene, vx, vy)
-        _tag_moodboard_redraw()
+        _tag_mixie_redraw(context)
 
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -120,11 +129,11 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
         if event.type == 'MOUSEMOVE':
             vx, vy = self._cursor_view_coords(event)
             self._move_to(scene, vx, vy)
-            _tag_moodboard_redraw()
+            _tag_mixie_redraw(context)
             return {'RUNNING_MODAL'}
 
         if event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
-            _tag_moodboard_redraw()
+            _tag_mixie_redraw(context)
             self.report({'INFO'}, "Added text box (double-click to edit)")
             return {'FINISHED'}
 
@@ -132,7 +141,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
             boxes = scene.mixie_moodboard_textboxes
             if 0 <= self._tb_index < len(boxes):
                 boxes.remove(self._tb_index)
-            _tag_moodboard_redraw()
+            _tag_mixie_redraw(context)
             return {'CANCELLED'}
 
         return {'RUNNING_MODAL'}
@@ -151,7 +160,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
         item.font_size = TEXTBOX_FONT_SIZE_DEFAULT
         item.z_order = len(scene.mixie_moodboard_textboxes) + len(scene.mixie_moodboard_images)
 
-        _tag_moodboard_redraw()
+        _tag_mixie_redraw(context)
 
         self.report({'INFO'}, "Added text box to moodboard")
         return {'FINISHED'}
@@ -198,7 +207,7 @@ class MIXIE_OT_moodboard_edit_textbox(Operator):
         # Non-interactive call (text supplied): set and finish, no modal.
         if self.text:
             scene.mixie_moodboard_textboxes[idx].text = self.text
-            _tag_moodboard_redraw()
+            _tag_mixie_redraw(context)
             return {'FINISHED'}
 
         # Edit state lives at module scope (see _EDIT) rather than on self, so it
@@ -217,7 +226,7 @@ class MIXIE_OT_moodboard_edit_textbox(Operator):
         target.selected = True
         target.text = _EDIT["value"] + _CARET
 
-        _tag_moodboard_redraw()
+        _tag_mixie_redraw(context)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
@@ -238,14 +247,14 @@ class MIXIE_OT_moodboard_edit_textbox(Operator):
         if (event.type in {'RET', 'NUMPAD_ENTER', 'TAB'} and event.value == 'PRESS') or \
            (event.type == 'LEFTMOUSE' and event.value == 'PRESS' and _EDIT["armed"]):
             tb.text = _EDIT["value"]
-            _tag_moodboard_redraw()
+            _tag_mixie_redraw(context)
             self.report({'INFO'}, "Text updated")
             return {'FINISHED'}
 
         # Cancel: restore the original text.
         if event.type == 'ESC' and event.value == 'PRESS':
             tb.text = _EDIT["original"]
-            _tag_moodboard_redraw()
+            _tag_mixie_redraw(context)
             return {'CANCELLED'}
 
         if event.value != 'PRESS':
@@ -272,7 +281,7 @@ class MIXIE_OT_moodboard_edit_textbox(Operator):
 
         # Reflect the edit with a trailing caret.
         tb.text = _EDIT["value"] + _CARET
-        _tag_moodboard_redraw()
+        _tag_mixie_redraw(context)
         return {'RUNNING_MODAL'}
 
     def execute(self, context):
@@ -284,7 +293,7 @@ class MIXIE_OT_moodboard_edit_textbox(Operator):
             return {'CANCELLED'}
 
         scene.mixie_moodboard_textboxes[idx].text = self.text
-        _tag_moodboard_redraw()
+        _tag_mixie_redraw(context)
         self.report({'INFO'}, "Text box updated")
         return {'FINISHED'}
 

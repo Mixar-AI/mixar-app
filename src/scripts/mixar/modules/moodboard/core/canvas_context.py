@@ -18,55 +18,6 @@ def is_moodboard_context(context):
     )
 
 
-def find_moodboard_canvas_region(context):
-    """Return the live moodboard canvas region (Mixie WINDOW or open drawer)."""
-    region = getattr(context, "region", None)
-    if (
-        region is not None
-        and getattr(region, "view2d", None) is not None
-        and region.type in {"WINDOW", "TOOL_PROPS"}
-        and region.width > 1
-    ):
-        space = getattr(context, "space_data", None)
-        if getattr(space, "type", None) == "MIXIE" and region.type == "WINDOW":
-            return region
-        if (
-            getattr(space, "type", None) == "VIEW_3D"
-            and region.type == "TOOL_PROPS"
-            and float(
-                getattr(context.window_manager, "mixar_moodboard_drawer_amount", 0.0)
-            )
-            >= 0.98
-        ):
-            return region
-
-    wm = context.window_manager
-    drawer_live = float(getattr(wm, "mixar_moodboard_drawer_amount", 0.0)) >= 0.98
-    mixie_fallback = None
-    for window in wm.windows:
-        screen = getattr(window, "screen", None)
-        if screen is None:
-            continue
-        for area in screen.areas:
-            if drawer_live and area.type == "VIEW_3D":
-                for candidate in area.regions:
-                    if (
-                        candidate.type == "TOOL_PROPS"
-                        and candidate.width > 1
-                        and getattr(candidate, "view2d", None) is not None
-                    ):
-                        return candidate
-            if area.type == "MIXIE" and mixie_fallback is None:
-                for candidate in area.regions:
-                    if (
-                        candidate.type == "WINDOW"
-                        and getattr(candidate, "view2d", None) is not None
-                    ):
-                        mixie_fallback = candidate
-                        break
-    return mixie_fallback
-
-
 def redraw_moodboard_canvases():
     """Refresh board changes and job pulses without redrawing the 3D scene."""
     wm = getattr(bpy.context, "window_manager", None)

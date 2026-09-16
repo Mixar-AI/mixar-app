@@ -13,7 +13,6 @@ import bpy
 from bpy.types import Operator
 from bpy.props import FloatProperty
 
-from ...core.canvas_context import redraw_moodboard_canvases
 from ...core.image_lifecycle import release_all_moodboard_images
 from ...core.moodboard_utils import stamp_moodboard_item_added
 
@@ -204,11 +203,11 @@ class MIXIE_OT_rotate_images(Operator):
 
 
 class MIXIE_OT_clear_moodboard(Operator):
-    """Clear all content, including canvas annotations, from the moodboard"""
+    """Clear all images, text boxes and groups from the moodboard"""
 
     bl_idname = "mixie.clear_moodboard"
     bl_label = "Clear Moodboard"
-    bl_description = "Remove all images, text boxes, groups, nodes, connections and annotations"
+    bl_description = "Remove all images, text boxes and groups from the moodboard"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -221,10 +220,8 @@ class MIXIE_OT_clear_moodboard(Operator):
             + len(scene.mixie_moodboard_asset_nodes)
         )
         link_count = len(scene.mixie_moodboard_links)
-        annotation_count = len(scene.mixie_moodboard_annotations)
 
-        if not any((image_count, textbox_count, group_count, node_count, link_count,
-                    annotation_count)):
+        if not any((image_count, textbox_count, group_count, node_count, link_count)):
             self.report({'INFO'}, "Moodboard is already empty")
             return {'CANCELLED'}
 
@@ -235,10 +232,9 @@ class MIXIE_OT_clear_moodboard(Operator):
         scene.mixie_moodboard_action_nodes.clear()
         scene.mixie_moodboard_asset_nodes.clear()
         scene.mixie_moodboard_links.clear()
-        scene.mixie_moodboard_annotations.clear()
         scene.mixie_moodboard_active_node_id = ""
 
-        redraw_moodboard_canvases()
+        tag_mixie_redraw(context)
 
         parts = []
         if image_count > 0:
@@ -251,8 +247,6 @@ class MIXIE_OT_clear_moodboard(Operator):
             parts.append(f"{node_count} node(s)")
         if link_count > 0:
             parts.append(f"{link_count} connection(s)")
-        if annotation_count > 0:
-            parts.append(f"{annotation_count} annotation stroke(s)")
         self.report({'INFO'}, f"Cleared {', '.join(parts)}")
         return {'FINISHED'}
 
