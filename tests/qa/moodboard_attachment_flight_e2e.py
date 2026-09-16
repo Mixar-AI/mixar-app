@@ -55,6 +55,8 @@ def capture_selection(node_id, directory, expected=True, remove=False, minimized
             destination_bounds = [destination.x, destination.y, destination.width, destination.height]
         frames.append({'time': time.monotonic()-started, 'path': path,
                        'target_path': target_path,
+                       'cat': {'activity': targets[0]['value'], 'rect': targets[0]['rect']}
+                              if minimized and targets else None,
                        'main': [win.x, win.y, win.width, win.height],
                        'destination': destination_bounds,
                        'flights': [{'rect': t['rect'], 'progress': float(t['value']),

@@ -24,6 +24,8 @@ using namespace blender;
 using blender::ed::mixie::ATTACHMENT_FLIGHT_SECONDS;
 float distance(const MixieCatPose &a, const MixieCatPose &b) {
   return std::abs(a.tilt-b.tilt)+std::abs(a.look_x-b.look_x)+
+         std::abs(a.breathe-b.breathe)+std::abs(a.ear_l-b.ear_l)+
+         std::abs(a.ear_r-b.ear_r)+std::abs(a.pupil_scale-b.pupil_scale)+
          std::abs(a.look_y-b.look_y)+std::abs(a.openness-b.openness)+
          std::abs(a.bounce-b.bounce)+std::abs(a.eye_scale-b.eye_scale)+
          std::abs(a.eye_width-b.eye_width)+std::abs(a.lid_l-b.lid_l)+
@@ -147,6 +149,30 @@ int main() {
   catcher.sample(2.13,MixieCatActivity::Thinking);
   assert(distance(catcher.sample(3,MixieCatActivity::Thinking),
                   mixie_cat_activity_pose(3,MixieCatActivity::Thinking))<1e-5);
+  // Losing the flight replaces catch input with defaults. Capture the outgoing
+  // pose first, both at landing and when another activity interrupts the blend.
+  const MixieCatCatch aimed{0.99f,0.80f,-0.50f};
+  for(double elapsed : {0.13,0.68}) {
+    for(auto next : {MixieCatActivity::Idle, MixieCatActivity::Thinking,
+                     MixieCatActivity::Offline}) {
+      MixieCatMotion motion;
+      motion.sample(4,MixieCatActivity::Thinking);
+      motion.sample(5,MixieCatActivity::Catching,early);
+      const double now=5+elapsed;
+      const auto outgoing=motion.sample(now,MixieCatActivity::Catching,aimed);
+      assert(distance(outgoing,motion.sample(now,next))<1e-5);
+      assert(distance(motion.sample(now+.13,next),
+                      mixie_cat_blend(outgoing,mixie_cat_activity_pose(now+.13,next),.5f))<1e-5);
+      assert(distance(motion.sample(now+.26,next),
+                      mixie_cat_activity_pose(now+.26,next))<1e-5);
+    }
+  }
+  // First-frame catches and same-activity tracking must consume the new aim.
+  MixieCatMotion fresh;
+  assert(distance(fresh.sample(6,MixieCatActivity::Catching,aimed),
+                  mixie_cat_activity_pose(6,MixieCatActivity::Catching,aimed))<1e-5);
+  assert(distance(fresh.sample(6.1,MixieCatActivity::Catching,snap),
+                  mixie_cat_activity_pose(6.1,MixieCatActivity::Catching,snap))<1e-5);
   for(float lx : {-0.85f,0.0f,0.85f}) {
     for(float ly : {-0.65f,0.0f,0.65f}) {
       auto pose=mixie_cat_catch_pose(1.2,MixieCatCatch{1.0f,lx,ly});

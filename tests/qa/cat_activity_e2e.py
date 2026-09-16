@@ -21,6 +21,7 @@ from lib import run_scenario
 from compact_agent_bubble_e2e import _hover_off, _hover_on
 from zen_motion_capture import contact_sheet, preview
 from cat_activity_evidence import compare_faces
+from cat_catch_evidence import capture_catch
 
 
 def _record(output, activity):
@@ -198,6 +199,7 @@ bpy.ops.mixar.bubble_minimise()
                          'Waiting for you','Listening','Connecting','Offline','Idle'):
             name=activity.lower().replace(' ','-')
             results[name]=qa.step(name,capture,qa,out/name,activity)
+        results['catching']=qa.step('catching',capture_catch,qa,out/'catching')
         qa.eval("scene=drv.main_window().scene\nscene.mixie_chat_state='IDLE'\n"
                 "scene.mixie_chat_is_busy=False\nresult=True")
         # Real pill click must still open the island; native rectangle comes from QA.

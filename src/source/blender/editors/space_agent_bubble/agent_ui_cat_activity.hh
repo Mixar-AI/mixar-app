@@ -269,18 +269,19 @@ struct MixieCatMotion {
 
   MixieCatPose sample(double now, MixieCatActivity next, const MixieCatCatch &catch_in = {})
   {
-    incoming = catch_in;
     if (!initialized) {
       initialized = true;
       activity = next;
       started = now - 0.26;
-      from = mixie_cat_activity_pose(now, next, incoming);
+      from = mixie_cat_activity_pose(now, next, catch_in);
     }
     else if (next != activity) {
       from = at(now);
       activity = next;
       started = now;
     }
+    /* Preserve the outgoing catch aim until its transition pose is captured. */
+    incoming = catch_in;
     return at(now);
   }
 };
