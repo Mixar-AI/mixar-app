@@ -120,13 +120,8 @@ def handle_rendering(op, context, state):
 
     session.finish()
     op._feed_collected(session.collected[len(op._collected):])
-    # Rendered because no thumbnail existed -> write the render back as the
-    # asset's thumbnail (fire-and-forget worker; never blocks).
-    if session.rendered_items:
-        from mixar.modules.asset_search.core.train_support import (
-            launch_thumbnail_backfill,
-        )
-        launch_thumbnail_backfill(session.rendered_items)
+    # Training is read-only: rewriting embedded thumbnails would immediately
+    # invalidate the content revisions being uploaded for this snapshot.
     return complete(op, context, state, op._collected, session.failures,
                     reused=session.preview_reused)
 

@@ -10,21 +10,18 @@ Modal operators for searching indexed assets and checking whether
 the training embeddings are stale.
 """
 
-import json
 import threading
-from pathlib import Path
 
 import bpy
 from bpy.types import Operator
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
-from mixar.modules.asset_search.core.api_client import metered_client
+from mixar.modules.asset_search.core.search_api import search_api as _search_api, status_api as _status_api
 from mixar.modules.common.api.client import HTTPClient
 
 logger = get_logger(__name__)
 from mixar.modules.asset_search.constants import (
-    ASSET_SEARCH_ENDPOINT,
     ASSET_STATUS_ENDPOINT,
 )
 
@@ -183,6 +180,9 @@ class MIXIE_OT_refresh_asset_status(Operator):
         self._thread = None
         self._result = None
         self._metadata = None
+        from mixar.modules.asset_search.core.catalog.service import inventory
+        with inventory() as catalog:
+            self._source_id = catalog.source_id()
 
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.1, window=context.window)
@@ -196,11 +196,22 @@ class MIXIE_OT_refresh_asset_status(Operator):
         state = context.scene.mixie_asset_training
 
         if self._phase == 'INIT':
+            from mixar.modules.asset_search.core.catalog.service import refresh
+            refresh()
             self._phase = 'SCANNING'
             return {"RUNNING_MODAL"}
 
         if self._phase == 'SCANNING':
-            self._metadata = _scan_asset_library_metadata(context)
+            try:
+                self._metadata = _scan_asset_library_metadata(context)
+            except ValueError as exc:
+                state.needs_retraining = True
+                state.retraining_message = str(exc)
+                self._cleanup(context)
+                self.report({'WARNING'}, str(exc))
+                return {'CANCELLED'}
+            if self._metadata is None:
+                return {'RUNNING_MODAL'}
             self._result = None
             self._thread = threading.Thread(
                 target=_status_api,
@@ -289,140 +300,10 @@ def _extract_search_image_bytes(img):
             os.remove(tmp_path)
 
 
-def _search_api(prompt, image_bytes, operator):
-    """POST a search query to the backend proxy in a background thread."""
-    try:
-        # Credit-metered per call — never auto-retried (see core/api_client).
-        client = metered_client()
-        form_data = {"prompt": prompt or ""}
-        files = None
-        if image_bytes:
-            files = {"image": ("search_query.jpg", image_bytes, "image/jpeg")}
-
-        resp = client.post(
-            ASSET_SEARCH_ENDPOINT,
-            data=form_data,
-            files=files,
-            timeout=30,
-            raise_for_status=False,
-        )
-
-        if resp.status_code == 404:
-            operator._result = {
-                "success": False,
-                "message": "No trained model found. Please train first.",
-            }
-            return
-
-        if not resp.success:
-            msg = resp.message or f"Server returned {resp.status_code}"
-            operator._result = {"success": False, "message": msg}
-            return
-
-        data = resp.data or {}
-        # Backend wraps: {status, message, data: {results: [...]}}
-        inner = data.get("data", data)
-        results = inner.get("results", [])
-        if not results:
-            operator._result = {
-                "success": True,
-                "message": "No matching assets found",
-                "results": [],
-            }
-            return
-
-        # Structured rows: the panel renders these with score bars and a
-        # "locate in browser" action, not raw text.
-        rows = []
-        for r in results:
-            meta = r.get("metadata", {}) or {}
-            rows.append({
-                "name": meta.get("name") or r.get("model_name", "?"),
-                "score": float(r.get("similarity_score", 0) or 0),
-                "library": meta.get("library", ""),
-                "blend_file": meta.get("blend_file", ""),
-                "type": meta.get("type", ""),
-            })
-        operator._result = {
-            "success": True,
-            "message": f"Found {len(rows)} matching asset(s)",
-            "results": rows,
-        }
-    except Exception as exc:
-        operator._result = {
-            "success": False,
-            "message": f"Search failed: {exc}",
-        }
-
-
-def _status_api(metadata, operator):
-    """POST metadata to the backend status proxy in a background thread."""
-    try:
-        client = HTTPClient(base_url=get_server_url())
-        resp = client.post(
-            ASSET_STATUS_ENDPOINT,
-            data={"metadata": json.dumps(metadata)},
-            timeout=30,
-            raise_for_status=False,
-        )
-
-        if resp.status_code == 404:
-            operator._result = {
-                "success": True,
-                "needs_retraining": True,
-                "message": "No trained model found. Please train first.",
-            }
-            return
-
-        if not resp.success:
-            msg = resp.message or f"Server returned {resp.status_code}"
-            operator._result = {"success": False, "message": msg}
-            return
-
-        data = resp.data or {}
-        inner = data.get("data", data)
-        operator._result = {
-            "success": True,
-            "needs_retraining": inner.get("needs_retraining", False),
-            "message": inner.get("message", ""),
-        }
-    except Exception as exc:
-        operator._result = {
-            "success": False,
-            "message": f"Status check failed: {exc}",
-        }
-
-
 def _scan_asset_library_metadata(context):
-    """Scan ENROLLED asset libraries for names/metadata without rendering."""
-    from mixar.modules.asset_search.core.library_enrollment import enrolled_libraries
-
-    metadata = []
-    for lib in enrolled_libraries(context):
-        library_path = Path(lib.path)
-        if not library_path.exists():
-            continue
-        for blend_file in library_path.glob("**/*.blend"):
-            rel_path = blend_file.relative_to(library_path)
-            try:
-                with bpy.data.libraries.load(
-                    str(blend_file), assets_only=True
-                ) as (data_from, _):
-                    for name in data_from.objects:
-                        metadata.append({
-                            "name": name,
-                            "library": lib.name,
-                            "blend_file": str(rel_path),
-                        })
-                    for name in data_from.collections:
-                        metadata.append({
-                            "name": name,
-                            "library": lib.name,
-                            "blend_file": str(rel_path),
-                        })
-            except Exception:
-                continue
-    return metadata
+    """Return the complete versioned snapshot, or None while its worker runs."""
+    from mixar.modules.asset_search.core.catalog.training import manifest
+    return manifest()
 
 
 # ======================================================================
@@ -528,6 +409,9 @@ def _start_generation_library():
         # to a missing directory don't fail with an opaque write error.
         generation_library.ensure_library_dirs()
         generation_library.attach_listeners()
+        from mixar.modules.asset_search.core.catalog.service import inventory
+        with inventory():
+            pass  # Publish GUI preferences before headless agents query the catalog.
     except Exception as exc:
         logger.warning("[Asset Search] Generation library init failed: %s", exc)
     return None  # one-shot

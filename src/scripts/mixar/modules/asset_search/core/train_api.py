@@ -54,7 +54,7 @@ def prepare_api(metadata, operator):
         client = train_client()
         resp = client.post(
             ASSET_TRAIN_PREPARE_ENDPOINT,
-            data={"metadata": json.dumps(metadata)},
+            data={"metadata": json.dumps(metadata), "source_id": getattr(operator, '_source_id', '')},
             timeout=30,
             raise_for_status=False,
         )
@@ -64,6 +64,11 @@ def prepare_api(metadata, operator):
             return
         data = resp.data or {}
         inner = data.get("data", data)
+        source_id = getattr(operator, '_source_id', '')
+        if source_id and inner.get('source_id') != source_id:
+            operator._bg_result = {'success': False, 'message':
+                'The server needs the library catalog update before training. Local search and scatter are ready.'}
+            return
         operator._bg_result = {
             "success": True,
             "action": inner.get("action", "full_train"),
@@ -133,8 +138,7 @@ def _read_batch_files(files):
             with open(path, "rb") as fh:
                 payload.append(("images", (fname, fh.read(), "image/jpeg")))
         except OSError as exc:
-            logger.warning("[Asset Training] Skipping unreadable preview %s: %s",
-                           path, exc)
+            raise ValueError("A preview became unreadable; retry training") from exc
     return payload
 
 
@@ -159,6 +163,7 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
                 ASSET_TRAIN_ENDPOINT,
                 data={
                     "mode": "incremental",
+                    "source_id": getattr(operator, '_source_id', ''),
                     "removed_assets": json.dumps(removed_assets),
                     "metadata": "[]",
                     **({"metadata_checksum": metadata_checksum}
@@ -187,6 +192,7 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
             form_data = {
                 # Only the FIRST batch may replace (full); the rest accumulate.
                 "mode": mode if is_first else "incremental",
+                "source_id": getattr(operator, '_source_id', ''),
                 "removed_assets": json.dumps(removed_assets if is_first else []),
                 "metadata": json.dumps(batch["metadata"]),
             }

@@ -48,6 +48,8 @@ def feed(op, infos):
     """Record finished assets and queue them for upload (streaming only)."""
     if not infos:
         return
+    from mixar.modules.asset_search.core.catalog.training import enrich
+    enrich(infos, op._scan_metadata)
     op._collected.extend(infos)
     if op._builder is not None and not op._stream.aborted:
         op._builder.add(infos)
@@ -79,7 +81,8 @@ def handle_uploading(op, context, state):
     # Previews live on disk (info["image_path"]); build_upload_batches bounds
     # each batch by file SIZE and post_batches reads the bytes one batch at a
     # time, so peak memory is one batch — not the whole library.
-    batches = build_upload_batches(get_collected_asset_data())
+    from mixar.modules.asset_search.core.catalog.training import enrich
+    batches = build_upload_batches(enrich(get_collected_asset_data(), op._scan_metadata))
     if not batches and not op._removed_assets and op._train_mode == "full":
         op._finish(context, success=False, message="No images to upload")
         return {"FINISHED"}

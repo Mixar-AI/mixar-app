@@ -64,6 +64,10 @@ class MixieAssetSearchResult(PropertyGroup):
     library: StringProperty(name="Library", default="")
     blend_file: StringProperty(name="Blend File", default="")
     asset_type: StringProperty(name="Type", default="")
+    asset_id: StringProperty(default="")
+    revision: StringProperty(default="")
+    available: BoolProperty(default=False)
+    scatterable: BoolProperty(default=False)
 
 
 class MixieAssetTrainingState(PropertyGroup):
@@ -97,6 +101,15 @@ class MixieAssetTrainingState(PropertyGroup):
     last_trained_at: StringProperty(name="Last Trained", default="")
 
     search_prompt: StringProperty(name="Search", default="")
+    catalog_library: StringProperty(name="Library", default="",
+        description="Exact library name; leave empty to search all libraries, including biomes")
+    catalog_scatter_only: BoolProperty(name="Scatterable Only", default=False)
+    show_scatter_settings: BoolProperty(name="Scatter Settings", default=False)
+    scatter_count: IntProperty(name="Instances", default=100, min=1, max=10000)
+    scatter_seed: IntProperty(name="Seed", default=0, min=0, max=2147483647)
+    scatter_scale_min: FloatProperty(name="Minimum Scale", default=1, min=.001, max=100)
+    scatter_scale_max: FloatProperty(name="Maximum Scale", default=1, min=.001, max=100)
+    scatter_spacing: FloatProperty(name="Spacing", default=0, min=0, subtype='DISTANCE')
     search_results: CollectionProperty(type=MixieAssetSearchResult)
     needs_retraining: BoolProperty(name="Needs Retraining", default=False)
     retraining_message: StringProperty(name="Retraining Message", default="")

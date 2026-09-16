@@ -193,6 +193,7 @@ def post_stream(stream, mode, removed_assets, operator):
             form_data = {
                 # Only the FIRST request may replace (full); the rest accumulate.
                 "mode": mode if sent == 0 else "incremental",
+                "source_id": getattr(operator, '_source_id', ''),
                 "removed_assets": json.dumps(removed_assets if sent == 0 else []),
                 "metadata": json.dumps(batch["metadata"]),
             }
@@ -249,6 +250,7 @@ def post_stream(stream, mode, removed_assets, operator):
                     ASSET_TRAIN_ENDPOINT,
                     data={
                         "mode": "incremental",
+                        "source_id": getattr(operator, '_source_id', ''),
                         "removed_assets": json.dumps(removed_assets),
                         "metadata": "[]",
                         **({"metadata_checksum": operator._metadata_checksum}

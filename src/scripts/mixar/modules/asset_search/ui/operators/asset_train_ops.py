@@ -108,6 +108,9 @@ class MIXIE_OT_train_asset_model(Operator):
         self._bg_thread = None
         self._bg_result = None
         self._scan_metadata = None
+        from mixar.modules.asset_search.core.catalog.service import inventory
+        with inventory() as catalog:
+            self._source_id = catalog.source_id()
         self._train_mode = "full"
         self._removed_assets = []
         self._metadata_checksum = None
@@ -131,6 +134,15 @@ class MIXIE_OT_train_asset_model(Operator):
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
+        try:
+            return self._modal(context, event)
+        except Exception:
+            logger.exception('Asset training stopped before completion')
+            self._finish(context, success=False,
+                         message='Training stopped before completion; refresh libraries and retry')
+            return {'CANCELLED'}
+
+    def _modal(self, context, event):
         state = context.scene.mixie_asset_training
         if event.type == 'ESC':
             state.cancel_requested = True
@@ -138,6 +150,8 @@ class MIXIE_OT_train_asset_model(Operator):
             return {"PASS_THROUGH"}
 
         if self._phase == 'INIT':
+            from mixar.modules.asset_search.core.catalog.service import refresh
+            refresh()
             state.phase_text = "Scanning libraries…"
             self._phase = 'SCANNING'
             self._redraw(context)
@@ -150,9 +164,19 @@ class MIXIE_OT_train_asset_model(Operator):
     # ------------------------------------------------------------------ #
 
     def _handle_scanning(self, context, state):
-        from .asset_search_ops import _scan_asset_library_metadata
+        from mixar.modules.asset_search.core.catalog.training import manifest
 
-        self._scan_metadata = _scan_asset_library_metadata(context)
+        if state.cancel_requested:
+            self._finish(context, success=False, message='Training cancelled')
+            return {'CANCELLED'}
+        try:
+            self._scan_metadata = manifest()
+        except ValueError as exc:
+            self._finish(context, success=False, message=str(exc))
+            return {'CANCELLED'}
+        if self._scan_metadata is None:
+            state.phase_text = "Indexing libraries in background…"
+            return {'RUNNING_MODAL'}
         if not self._scan_metadata and not self.auto:
             from mixar.modules.asset_search.core.library_enrollment import (
                 enrolled_names,
@@ -190,17 +214,9 @@ class MIXIE_OT_train_asset_model(Operator):
         res = self._bg_result or {}
         scanned = len(self._scan_metadata or [])
         if not res.get("success"):
-            logger.warning("[Asset Training] Prepare failed: %s — full train",
-                           res.get('message'))
-            self._train_mode = "full"
-            self._removed_assets = []
-            # Prepare failed, so we do NOT know whether the user already has an
-            # index. A streamed mode="full" first batch would REPLACE it before
-            # the run can be cancelled, so this path keeps the old barrier:
-            # render everything, then upload.
-            self._stream_uploads = False
-            state.prepare_note = f"{scanned} assets — full training"
-            return self._start_rendering(context, state, filter_assets=None)
+            self._finish(context, success=False,
+                         message=res.get('message') or 'Could not check the index; retry training')
+            return {'CANCELLED'}
 
         action = res.get("action", "full_train")
         self._metadata_checksum = res.get("metadata_checksum")

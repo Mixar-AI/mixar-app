@@ -16,7 +16,6 @@ import os
 from mixar.config.logging_config import get_logger
 from mixar.modules.asset_search.core import preview_worker
 from mixar.modules.asset_search.core.train_support import (
-    launch_thumbnail_backfill,
     set_failures,
 )
 
@@ -105,11 +104,8 @@ def handle_render_worker(op, context, state):
                 + preview_worker.missing_result_failures(worker))
     reused = sum(1 for r in worker.ok_results
                  if (r.get("info") or {}).get("reused_preview"))
-    # Rendered because no thumbnail existed -> write the render back as the
-    # asset's thumbnail in a DETACHED process, exactly like the in-process
-    # path. Fire-and-forget: it re-saves .blend files and must not hold up the
-    # upload (it copies the JPEGs it needs, so the dir below can go).
-    launch_thumbnail_backfill(preview_worker.backfill_entries(worker))
+    # Keep source libraries unchanged; their content hashes are the revisions
+    # in the training manifest. Preview images are temporary upload artifacts.
     # The work dir holds the JPEGs the upload phase is about to read, so it is
     # handed to the operator instead of being removed here.
     op._image_dir = worker.work_dir

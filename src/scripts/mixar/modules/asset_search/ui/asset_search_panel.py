@@ -61,15 +61,15 @@ def _input(layout, data, prop, **kw):
 def _draw_status(layout, state):
     """Library Index section: state badge, last-run summary, train actions."""
     col = _section(
-        layout, "Library Index", icon='ASSET_MANAGER',
+        layout, "Semantic Search", icon='ASSET_MANAGER',
         action_op="mixie.refresh_asset_status",
         action_icon='SORTTIME' if state.is_refreshing else 'FILE_REFRESH',
         action_enabled=not state.is_refreshing,
     )
 
     if not state.has_model and not state.last_trained_at:
-        col.label(text="Not indexed yet", icon='INFO')
-        _hint(col, "Train to enable search and agent reuse")
+        col.label(text="Semantic search not trained", icon='INFO')
+        _hint(col, "Name and tag search is ready without training")
     elif state.needs_retraining:
         alert = col.row()
         alert.alert = True
@@ -183,9 +183,13 @@ def _draw_training_progress(layout, state):
                         text="Cancel", icon='CANCEL')
 
 
-def _draw_search(layout, state, is_training):
+def _draw_search(layout, context, state, is_training):
     """Search section: prompt + reference image + button + actionable results."""
-    col = _section(layout, "Search Library", icon='VIEWZOOM')
+    col = _section(layout, "Assets & Biomes", icon='VIEWZOOM',
+                   action_op='mixie.catalog_refresh', action_enabled=not state.is_searching)
+    col.prop_search(state, "catalog_library", context.preferences.filepaths, "asset_libraries", text="Library")
+    _hint(col, "Empty library filter = all libraries")
+    col.prop(state, "catalog_scatter_only")
 
     if is_training:
         _hint(col, "Unavailable while training", icon='LOCKED')
@@ -193,18 +197,30 @@ def _draw_search(layout, state, is_training):
 
     _input(col, state, "search_prompt", text="",
            icon='VIEWZOOM', placeholder="Describe an asset…")
-    col.separator(factor=_SEP_INTRA)
-    _hint(col, "Reference Image (optional)", icon='IMAGE_DATA')
-    col.template_ID(state, "search_image", open="image.open")
+    if state.has_model or state.search_image:
+        col.template_ID(state, "search_image", open="image.open")
 
     col.separator(factor=_SEP_INTRA)
     btn = col.row()
     btn.scale_y = _BTN_SCALE
     if state.is_searching:
         btn.enabled = False
-        btn.operator("mixie.search_assets", text="Searching…", icon='SORTTIME')
+        btn.operator("mixie.catalog_search", text="Searching…", icon='SORTTIME')
     else:
-        btn.operator("mixie.search_assets", text="Search", icon='VIEWZOOM')
+        btn.operator("mixie.catalog_search", text="Search", icon='VIEWZOOM')
+
+    settings = col.row(align=True)
+    settings.prop(state, "show_scatter_settings", text="Settings", emboss=False,
+                  icon='TRIA_DOWN' if state.show_scatter_settings else 'TRIA_RIGHT')
+    settings.label(text=f"{state.scatter_count} instances")
+    if state.show_scatter_settings:
+        col.prop(state, "scatter_count")
+        col.prop(state, "scatter_seed")
+        row = col.row(align=True)
+        row.prop(state, "scatter_scale_min", text="Scale Min")
+        row.prop(state, "scatter_scale_max", text="Max")
+        col.prop(state, "scatter_spacing")
+    _hint(col, "Scatter uses the selected mesh")
 
     if state.search_results:
         col.separator(factor=_SEP_SECTION)
@@ -222,21 +238,27 @@ def _draw_search(layout, state, is_training):
             if hit.asset_type:
                 src += f" · {hit.asset_type}"
             _hint(main, "    " + src)
-            score_row = main.row(align=True)
-            score_row.scale_y = 0.6
-            try:
-                score_row.progress(factor=hit.score,
-                                   text=f"{hit.score:.0%}", type='BAR')
-            except Exception:
-                _hint(score_row, f"score {hit.score:.2f}")
+            _hint(main, hit.blend_file)
             btn_col = row.column()
+            if hit.asset_id:
+                actions = card.row(align=True)
+                actions.enabled = hit.available
+                for mode, label in [('append', 'Add'), ('scatter', 'Scatter')]:
+                    if mode == 'scatter' and not hit.scatterable:
+                        continue
+                    action = actions.operator('mixie.catalog_place', text=label)
+                    action.asset_id = hit.asset_id
+                    action.revision = hit.revision
+                    action.mode = mode
+                if not hit.available:
+                    _hint(card, "Library unavailable or indexing; Refresh to retry", icon='INFO')
             op = btn_col.operator("mixie.locate_search_result", text="",
                                   icon='ZOOM_SELECTED')
             op.asset_name = hit.name
             op.library = hit.library
-        _hint(col, "Click the magnifier to show a result in the browser",
+        _hint(col, "Magnifier: show asset",
               icon='INFO')
-    elif state.search_message:
+    if state.search_message:
         col.separator(factor=_SEP_INTRA)
         row = col.row(align=True)
         row.scale_y = _HINT_SCALE
@@ -280,14 +302,14 @@ class MIXIE_PT_asset_library_search(Panel):
             return
         is_training = state.is_training
 
+        _draw_search(layout, context, state, is_training)
+        layout.separator(factor=_SEP_SECTION)
         if is_training:
             _draw_training_progress(layout, state)
         else:
             _draw_status(layout, state)
             layout.separator(factor=_SEP_SECTION)
             _draw_library_enrollment(layout, context)
-        layout.separator(factor=_SEP_SECTION)
-        _draw_search(layout, state, is_training)
         layout.separator(factor=_SEP_SECTION)
         _draw_agent_reuse(layout, state)
 

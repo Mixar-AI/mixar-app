@@ -123,7 +123,7 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — h
 | **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` |
 | **onboarding** / **plugin_import** | First-run GPU-rendered tour cards; one-click import of the user's vanilla-Blender plugins |
 | **workflow** | Zen/Engine dual-mode workspace UI, the topbar slider and Mixar topbar widgets |
-| **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search + the "Mixar Generations" archive; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
+| **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Local asset/biome catalog, semantic search, terrain-owned scattering + the "Mixar Generations" archive; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
 | **testing** | Legacy embedded test suite (explicit opt-in) |
 
 ## Generation Catalog & Dynamic Params
