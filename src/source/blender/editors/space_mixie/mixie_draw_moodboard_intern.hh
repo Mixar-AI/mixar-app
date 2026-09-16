@@ -135,6 +135,9 @@ void moodboard_draw_glass_pane(const rctf &rect, float radius);
 /** Draw moodboard images */
 void mixie_draw_moodboard_images(const bContext *C, View2D *v2d);
 
+/** Draw project-owned freehand annotations in the shared canvas View2D. */
+void mixie_draw_moodboard_canvas_annotations(PointerRNA *scene, View2D *v2d);
+
 /** Draw persistent freehand annotations over one moodboard image */
 void mixie_draw_moodboard_annotations(PointerRNA *itemptr,
                                       View2D *v2d,
