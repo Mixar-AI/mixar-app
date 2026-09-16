@@ -114,5 +114,3 @@ def status_api(metadata, operator):
             "success": False,
             "message": f"Status check failed: {exc}",
         }
-
-
