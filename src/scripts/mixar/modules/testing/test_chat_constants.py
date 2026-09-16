@@ -106,7 +106,7 @@ class TestImageConstants(unittest.TestCase):
         self.assertEqual(MAX_IMAGE_SIZE_MB, 25)
         self.assertEqual(MAX_IMAGE_SIZE_BYTES, 25 * 1024 * 1024)
         self.assertEqual(MAX_IMAGE_DIMENSION, 16384)
-        self.assertEqual(MAX_ATTACHMENTS_PER_MESSAGE, 5)
+        self.assertEqual(MAX_ATTACHMENTS_PER_MESSAGE, 10)
 
     def test_supported_formats(self):
         from mixar.modules.space_mixie_chat.constants import SUPPORTED_IMAGE_FORMATS

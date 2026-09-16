@@ -84,13 +84,13 @@ def test_only_committed_new_attachments_animate(monkeypatch):
     animate.reset_mock()
     chat_sync._reconcile_attachments(scene, ['a', 'b'], animate=True)
     animate.assert_not_called()
-    chat_sync._reconcile_attachments(scene, list('abcdefg'), animate=True)
-    animate.assert_called_once_with(scene, ['c', 'd', 'e'])
-    assert len(attachments) == 5
+    chat_sync._reconcile_attachments(scene, list('abcdefghijkl'), animate=True)
+    animate.assert_called_once_with(scene, list('cdefghij'))
+    assert len(attachments) == 10
     animate.reset_mock()
     chat_sync._reconcile_attachments(scene, [], animate=True)
     animate.assert_not_called()
-    assert len(attachments) == 5  # Deselecting never silently removes references.
+    assert len(attachments) == 10  # Deselecting never silently removes references.
 
 
 def test_load_and_attachment_drift_do_not_replay_motion(monkeypatch):

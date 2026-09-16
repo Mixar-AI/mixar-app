@@ -10,7 +10,7 @@ to ``scene.mixie_chat_pending_attachments``. References remain staged when the
 selection changes or clears; only explicit composer removal/clear or sending
 consumes them. Selection edges add references once, so attachment-count changes
 cannot resurrect a removed reference or silently fill a newly freed slot.
-Manual attachments share the same identity checks and five-reference limit.
+Manual attachments share the same identity checks and ten-reference limit.
 
 **Why polling instead of a property update= callback:**
 The moodboard's click / box-select / cmd-click operators are

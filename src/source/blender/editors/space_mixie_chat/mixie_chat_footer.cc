@@ -163,7 +163,7 @@ void mixie_chat_footer_region_layout(const bContext *C, ARegion *region)
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
   int mention_rows = mixie_chat_mention_row_count(scene);
   int required_height_unscaled = footer_layout_calculate_height(
-      scene, theme, &has_overflow, input_lines, mention_rows);
+      scene, theme, &has_overflow, input_lines, mention_rows, region->winx);
 
   /* Warn if height exceeds maximum (should rarely happen) */
   if (has_overflow) {
@@ -205,7 +205,8 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   const FooterThemeCache *theme = footer_cache_get_theme();
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
   int mention_rows = mixie_chat_mention_row_count(scene);
-  region->sizey = footer_layout_calculate_height(scene, theme, nullptr, input_lines, mention_rows);
+  region->sizey = footer_layout_calculate_height(
+      scene, theme, nullptr, input_lines, mention_rows, region->winx);
 
   ScrArea *area = CTX_wm_area(C);
   if (area) {

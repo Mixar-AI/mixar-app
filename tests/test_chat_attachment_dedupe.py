@@ -251,7 +251,7 @@ def test_chat_sync_uses_the_shared_identity_rules():
 
 @pytest.fixture
 def staged_scene(images, monkeypatch):
-    images.update({name: _image(name, '/tmp/'+name+'.png') for name in 'abcdef'})
+    images.update({name: _image(name, '/tmp/'+name+'.png') for name in 'abcdefghijkl'})
     scene = _scene(FakeAttachments(), [_board_item(image) for image in images.values()])
     monkeypatch.setattr(bpy.context, 'scene', scene)
     monkeypatch.setattr(chat_sync, '_last_signatures', {})
@@ -324,16 +324,15 @@ def test_remove_does_not_consume_an_unrelated_unpolled_selection(staged_scene):
 
 def test_cap_never_evicts_or_silently_refills_a_reference(staged_scene):
     scene = staged_scene
-    for name in 'abcdef':
-        _select(scene, name)
-    assert _attached(scene) == list('abcde')
-    chat_sync._notify_attachment_limit.assert_called_once_with(5)
+    _select(scene, *'abcdefghijkl')
+    assert _attached(scene) == list('abcdefghij')
+    chat_sync._notify_attachment_limit.assert_called_once_with(10)
     scene.mixie_chat_pending_attachments.remove(0)
     chat_sync._poll_tick()
-    assert _attached(scene) == list('bcde')
+    assert _attached(scene) == list('bcdefghij')
     _select(scene)
-    _select(scene, 'f')
-    assert _attached(scene) == list('bcdef')
+    _select(scene, 'k')
+    assert _attached(scene) == list('bcdefghijk')
 
 
 def test_explicit_clear_before_selection_poll_does_not_repopulate(staged_scene):
@@ -359,8 +358,8 @@ def test_send_consumes_generated_and_overflow_selections(staged_scene):
     scene = staged_scene
     scene.mixie_moodboard_action_nodes.append(SimpleNamespace(
         selected=True, preview_image=scene.mixie_moodboard_images[0].image))
-    _select(scene, *'abcdef')
-    assert len(_attached(scene)) == 5
+    _select(scene, *'abcdefghijkl')
+    assert len(_attached(scene)) == 10
     chat_sync.deselect_all_moodboard_origin_attachments(scene)
     scene.mixie_chat_pending_attachments.clear()
     chat_sync._poll_tick()
