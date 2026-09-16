@@ -17,6 +17,7 @@ helpers fall through to the raw path — which is what lets them run at all.
 
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import bpy
 import pytest
@@ -246,3 +247,121 @@ def test_chat_sync_uses_the_shared_identity_rules():
     assert "board_image_is_attached(" in source
     assert "attachment_identity_sets(" in source
     assert "attachment_shows_board_item(" in source
+
+
+@pytest.fixture
+def staged_scene(images, monkeypatch):
+    images.update({name: _image(name, '/tmp/'+name+'.png') for name in 'abcdef'})
+    scene = _scene(FakeAttachments(), [_board_item(image) for image in images.values()])
+    monkeypatch.setattr(bpy.context, 'scene', scene)
+    monkeypatch.setattr(chat_sync, '_last_signatures', {})
+    monkeypatch.setattr(chat_sync, '_ensure_graph_node_ids', lambda _: None)
+    monkeypatch.setattr(chat_sync, '_redraw_chat_areas', lambda: None)
+    monkeypatch.setattr(chat_sync, '_redraw_moodboard_areas', lambda: None)
+    monkeypatch.setattr(chat_sync, '_notify_attachment_limit', Mock())
+    from mixar.modules.moodboard.core import attachment_motion
+    monkeypatch.setattr(attachment_motion, 'animate_attachments', Mock())
+    chat_sync._poll_tick()
+    return scene
+
+
+def _select(scene, *names):
+    for item in scene.mixie_moodboard_images:
+        item.selected = item.image.name in names
+    chat_sync._poll_tick()
+
+
+def _attached(scene):
+    return [a.image_path for a in scene.mixie_chat_pending_attachments]
+
+
+def test_selection_changes_and_empty_selection_keep_staged_references(staged_scene):
+    scene = staged_scene
+    _select(scene, 'a')
+    _select(scene, 'b')
+    assert _attached(scene) == ['a', 'b']
+    _select(scene)
+    assert _attached(scene) == ['a', 'b']
+    _select(scene, 'a')
+    assert _attached(scene) == ['a', 'b']
+
+
+@pytest.mark.parametrize('kind', ['direct', 'group', 'sibling', 'node', 'file'])
+def test_explicit_remove_stays_removed_until_a_new_selection(staged_scene, kind):
+    scene = staged_scene
+    item = scene.mixie_moodboard_images[0]
+    if kind == 'group':
+        item.group_index = 0
+        scene.mixie_moodboard_groups.append(SimpleNamespace(selected=True))
+    elif kind == 'sibling':
+        item.group_index = scene.mixie_moodboard_images[1].group_index = 0
+        scene.mixie_moodboard_images[1].selected = True
+    elif kind == 'node':
+        scene.mixie_moodboard_action_nodes.append(SimpleNamespace(selected=True, preview_image=item.image))
+    else:
+        item.selected = True
+    if kind == 'file':
+        _file_attachment(scene.mixie_chat_pending_attachments, item.image.filepath)
+    chat_sync._poll_tick()
+    attachment = scene.mixie_chat_pending_attachments[0]
+    chat_sync.deselect_moodboard_image_for_attachment(scene, attachment.image_path, attachment.image_source)
+    scene.mixie_chat_pending_attachments.remove(0)
+    chat_sync._poll_tick()
+    assert 'a' not in _attached(scene) and item.image.filepath not in _attached(scene)
+    _select(scene, 'c')
+    assert 'a' not in _attached(scene), 'An unrelated selection resurrected a removed group/node reference'
+
+
+def test_remove_does_not_consume_an_unrelated_unpolled_selection(staged_scene):
+    scene = staged_scene
+    _select(scene, 'a')
+    scene.mixie_moodboard_images[1].selected = True
+    chat_sync.deselect_moodboard_image_by_name(scene, 'a')
+    scene.mixie_chat_pending_attachments.remove(0)
+    chat_sync._poll_tick()
+    assert _attached(scene) == ['b']
+
+
+def test_cap_never_evicts_or_silently_refills_a_reference(staged_scene):
+    scene = staged_scene
+    for name in 'abcdef':
+        _select(scene, name)
+    assert _attached(scene) == list('abcde')
+    chat_sync._notify_attachment_limit.assert_called_once_with(5)
+    scene.mixie_chat_pending_attachments.remove(0)
+    chat_sync._poll_tick()
+    assert _attached(scene) == list('bcde')
+    _select(scene)
+    _select(scene, 'f')
+    assert _attached(scene) == list('bcdef')
+
+
+def test_explicit_clear_before_selection_poll_does_not_repopulate(staged_scene):
+    import ast
+    scene = staged_scene
+    _select(scene, 'a')
+    scene.mixie_moodboard_images[1].selected = True
+    tree = ast.parse(IMAGE_OPS.read_text())
+    owner = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                 and n.name == 'MIXIE_CHAT_OT_clear_attachments')
+    method = next(n for n in owner.body if isinstance(n, ast.FunctionDef) and n.name == 'execute')
+    namespace = dict(cleanup_loaded_file_images=Mock(), redraw_chat_areas=Mock())
+    exec(compile(ast.Module(body=[method], type_ignores=[]), str(IMAGE_OPS), 'exec'), namespace)
+    assert namespace['execute'](SimpleNamespace(report=Mock()), SimpleNamespace(scene=scene)) == {'FINISHED'}
+    chat_sync._poll_tick()
+    assert not _attached(scene)
+    _select(scene)
+    _select(scene, 'b')
+    assert _attached(scene) == ['b']
+
+
+def test_send_consumes_generated_and_overflow_selections(staged_scene):
+    scene = staged_scene
+    scene.mixie_moodboard_action_nodes.append(SimpleNamespace(
+        selected=True, preview_image=scene.mixie_moodboard_images[0].image))
+    _select(scene, *'abcdef')
+    assert len(_attached(scene)) == 5
+    chat_sync.deselect_all_moodboard_origin_attachments(scene)
+    scene.mixie_chat_pending_attachments.clear()
+    chat_sync._poll_tick()
+    assert not _attached(scene)

@@ -37,7 +37,6 @@ from .constants import (
     CLOSE_BUTTON_RADIUS,
     CLOSE_ICON_FONT_SIZE,
     TITLE_FONT_SIZE,
-    TOAST_CORNER_OFFSET_X,
     TOAST_CORNER_OFFSET_Y,
     TOAST_CORNER_RADIUS,
     TOAST_MARGIN,
@@ -47,6 +46,7 @@ from .constants import (
     get_toast_colors,
 )
 from .store import NotificationItem, get_notification_store
+from .toast_layout import _scale, _fsize, _wrap_text, toast_right_edge
 from .toast_renderer_shapes import (
     draw_circle,
     draw_rect,
@@ -108,28 +108,6 @@ toast_bounds_by_region: dict[int, dict[str, list]] = {}
 toast_hover_state: dict = {"key": None}
 toast_pressed_state: dict = {"key": None}
 
-
-# The layout constants were authored on a Retina display where Blender's
-# UI_SCALE_FAC (``preferences.system.ui_scale`` == ``U.scale_factor`` ==
-# ``dpi / 72``, which folds in the native pixel size) is ~2.0. We normalise
-# by that so the toast keeps its authored size on Retina and scales down on
-# lower-DPI external monitors — matching how every native Blender widget
-# scales. Without this the toast draws at fixed pixels and looks oversized
-# when the window moves to a display with a different scale factor.
-_AUTHORED_SCALE = 2.0
-
-
-def _scale() -> float:
-    """Current UI scale relative to the authored (Retina) baseline."""
-    try:
-        return float(bpy.context.preferences.system.ui_scale) / _AUTHORED_SCALE
-    except Exception:  # noqa: BLE001 — preferences unavailable (headless/tests)
-        return 1.0
-
-
-def _fsize(base: float, s: float) -> int:
-    """Scale a font point size, clamped to a sane minimum."""
-    return max(1, int(round(base * s)))
 
 
 def bounds_for_region(region_ptr: int) -> dict[str, list] | None:
@@ -215,34 +193,6 @@ def _pressed(color: tuple) -> tuple:
         min(color[3] + 0.25, 1.0),
     )
 
-
-def _wrap_text(text: str, font_size: int, max_width: float) -> list[str]:
-    """Word-wrap text to fit within max_width pixels using BLF metrics.
-
-    Explicit newlines in *text* are honored as hard line breaks — each is
-    wrapped independently — so callers can force a new line with ``\\n``.
-    """
-    blf.size(_FONT_ID, font_size)
-
-    lines: list[str] = []
-    for segment in text.split("\n"):
-        words = segment.split()
-        if not words:
-            continue
-
-        current_line = words[0]
-        for word in words[1:]:
-            test = current_line + " " + word
-            w, _ = blf.dimensions(_FONT_ID, test)
-            if w <= max_width:
-                current_line = test
-            else:
-                lines.append(current_line)
-                current_line = word
-
-        lines.append(current_line)
-
-    return lines
 
 
 def _apply_opacity(color: tuple, opacity: float) -> tuple:
@@ -524,7 +474,7 @@ def _draw_toast_callback() -> None:
     toast_bounds_by_region[region.as_pointer()] = bounds
 
     s = _scale()
-    x_right = region.width - TOAST_CORNER_OFFSET_X * s
+    x_right = toast_right_edge(region, bpy.context.area, bpy.context.window_manager, s)
     y_cursor = region.height - TOAST_CORNER_OFFSET_Y * s
 
     for item in toasts:

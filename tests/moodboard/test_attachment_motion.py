@@ -90,13 +90,13 @@ def test_only_committed_new_attachments_animate(monkeypatch):
     animate.reset_mock()
     chat_sync._reconcile_attachments(scene, [], animate=True)
     animate.assert_not_called()
+    assert len(attachments) == 5  # Deselecting never silently removes references.
 
 
 def test_load_and_attachment_drift_do_not_replay_motion(monkeypatch):
-    import bpy
     from mixar.modules.moodboard.core import chat_sync
     scene = SimpleNamespace(name='motion scene')
-    monkeypatch.setattr(bpy.context, 'scene', scene)
+    monkeypatch.setattr(chat_sync.bpy.context, 'scene', scene)
     monkeypatch.setattr(chat_sync, '_last_signatures', {})
     monkeypatch.setattr(chat_sync, '_ensure_graph_node_ids', lambda _: None)
     signature = [0, ('a',)]
@@ -107,10 +107,10 @@ def test_load_and_attachment_drift_do_not_replay_motion(monkeypatch):
     reconcile.assert_called_with(scene, ('a',), animate=False)
     signature[0] = 1
     chat_sync._poll_tick()
-    reconcile.assert_called_with(scene, ('a',), animate=False)
+    reconcile.assert_called_with(scene, [], animate=False)
     signature[1] = ('b',)
     chat_sync._poll_tick()
-    reconcile.assert_called_with(scene, ('b',), animate=True)
+    reconcile.assert_called_with(scene, ['b'], animate=True)
     chat_sync._on_file_load_post()
     chat_sync._poll_tick()
     reconcile.assert_called_with(scene, ('b',), animate=False)

@@ -76,6 +76,7 @@ def clear_selection(qa):
             "for item in scene.mixie_moodboard_images: item.selected=False\n"
             "for node in scene.mixie_moodboard_action_nodes: node.selected=False\n"
             "for group in scene.mixie_moodboard_groups: group.selected=False\n"
+            "if scene.mixie_chat_pending_attachments: bpy.ops.mixie_chat.clear_attachments()\n"
             "from mixar.modules.moodboard.core.chat_sync import force_resync\n"
             "force_resync(scene)\nresult=True")
     qa.wait(f'not {SCENE}.mixie_chat_pending_attachments', timeout=5)
