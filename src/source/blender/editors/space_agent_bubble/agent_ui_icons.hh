@@ -32,6 +32,7 @@ enum AgentIcon {
   /* Card header. */
   AGENT_ICON_CLOCK,
   AGENT_ICON_PLUS,
+  AGENT_ICON_RESTORE, /* Counter-clockwise arrow arc — turn checkpoints. */
 
   /* Chip row, and the two tabs the design leaves unmarked. */
   AGENT_ICON_IMAGE, /* Framed picture — Upload Reference. */

@@ -337,6 +337,30 @@ def test_a_refused_backend_reply_is_reported_as_a_failure(tc, monkeypatch):
     assert notices and "unknown to the backend" in notices[0]
 
 
+def test_restore_runs_the_file_ops_in_the_main_window(tc, monkeypatch):
+    main = SimpleNamespace(screen=SimpleNamespace(is_temporary=False), name="main")
+    island = SimpleNamespace(screen=SimpleNamespace(is_temporary=True), name="island")
+    tc.bpy.context.window_manager.windows = [island, main]
+    scene = _scene()
+    target, _, _ = _prepare_restore(tc, monkeypatch, scene)
+    assert tc.m.restore(scene, target["id"])[0]
+    overrides = [c.kwargs.get("window") for c in tc.bpy.context.temp_override.call_args_list]
+    assert overrides and all(w is main for w in overrides)
+
+
+def test_restore_deferred_runs_on_a_timer_and_reports_failure_as_a_notice(tc, monkeypatch):
+    scene = _scene()
+    tc.bpy.data.scenes = SimpleNamespace(get=lambda name: scene)
+    notices = []
+    monkeypatch.setattr(tc.m, "_notify", lambda scene_name, text: notices.append(text))
+    tc.m.restore_deferred("Scene", "missing")
+    register = tc.bpy.app.timers.register
+    assert register.called
+    callback = register.call_args.args[0]
+    assert callback() is None
+    assert notices == ["Checkpoint not restored: Checkpoint not found"]
+
+
 def test_backend_calls_block_sending_until_done(tc, monkeypatch):
     import threading
     request = sys.modules["mixar.modules.common.agent_rpc.client"].request

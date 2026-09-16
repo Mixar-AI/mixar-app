@@ -84,6 +84,7 @@ struct AgentIslandLayout {
   rctf card_header;  /* Gradient band above the panel. */
   rctf hdr_history;
   rctf hdr_new_chat;
+  rctf hdr_checkpoints; /* Turn checkpoints — restore an earlier turn. */
   float hdr_title_cx;
   float hdr_title_y;
 

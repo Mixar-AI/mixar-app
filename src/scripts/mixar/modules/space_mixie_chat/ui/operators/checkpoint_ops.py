@@ -92,6 +92,14 @@ class MIXIE_CHAT_OT_restore_checkpoint(Operator):
     def execute(self, context):
         if not self.checkpoint_id:
             return {'CANCELLED'}
+        screen = getattr(context.window, "screen", None) if context.window else None
+        if screen is not None and getattr(screen, "is_temporary", False):
+            # Invoked from the chat island (a temporary companion window
+            # that the file read closes): run it on the next tick instead
+            # of on this operator's call stack.
+            turn_checkpoints.restore_deferred(context.scene.name, self.checkpoint_id)
+            self.report({'INFO'}, "Restoring checkpoint…")
+            return {'FINISHED'}
         ok, message = turn_checkpoints.restore(context.scene, self.checkpoint_id)
         self.report({'INFO'} if ok else {'ERROR'}, message)
         return {'FINISHED'} if ok else {'CANCELLED'}

@@ -278,6 +278,9 @@ to the turn through `TurnTransport.last_command_id`, not the user bubble's
 can go stale). The backend is told on a worker thread — `checkpoint.mark` for the
 safety copy, then `checkpoint.rewind` for the restored turn — and
 `composer_send.can_send` refuses while that is in flight. On the 5.2 Zen layout
-the chat is the native island, so the header menu is only visible when a
-MIXIE_CHAT editor is docked. Contract: mixar-backend
+the chat is the native island; its C++ card header draws a third disc (arrow
+glyph, `AGENT_HDR_BTN3_CX`, `space_agent_bubble.cc`) that calls `wm.call_menu` on
+`MIXIE_CHAT_MT_checkpoints`. The operator defers the restore to a timer when it
+is invoked from that temporary window, and the file read and save run under a
+`temp_override` of the main window. Contract: mixar-backend
 `docs/api/frontend/turn-checkpoints.md`.

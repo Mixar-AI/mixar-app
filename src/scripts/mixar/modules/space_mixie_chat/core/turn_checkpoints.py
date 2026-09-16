@@ -324,6 +324,21 @@ def _session_scene(session_id: str):
     return bpy.context.window.scene if bpy.context.window else bpy.context.scene
 
 
+def _main_window():
+    """The document's main window. The chat island lives in a temporary
+    companion window that a file read tears down, so the read and the save
+    run with the main window as context whichever window asked."""
+    import bpy
+    try:
+        for window in bpy.context.window_manager.windows:
+            screen = getattr(window, "screen", None)
+            if screen is not None and not getattr(screen, "is_temporary", False):
+                return window
+    except Exception:  # noqa: BLE001
+        pass
+    return bpy.context.window
+
+
 def restore(scene, checkpoint_id: str):
     """Put the document back to a checkpoint. Returns ``(ok, message)``."""
     import bpy
@@ -348,9 +363,11 @@ def restore(scene, checkpoint_id: str):
         bind_request(safety, safety_request_id)
 
     original_path = bpy.data.filepath or record.get("original_path") or ""
+    window = _main_window()
     _restoring = True
     try:
-        bpy.ops.wm.recover_auto_save(filepath=path)
+        with bpy.context.temp_override(window=window):
+            bpy.ops.wm.recover_auto_save(filepath=path)
     except Exception as e:  # noqa: BLE001
         logger.error(f"Turn checkpoint restore failed: {e}", exc_info=True)
         return False, "Could not read the checkpoint"
@@ -363,7 +380,8 @@ def restore(scene, checkpoint_id: str):
     # working file so Ctrl-S never lands on a checkpoint.
     target = original_path or working_file(record.get("session_id", ""))
     try:
-        bpy.ops.wm.save_as_mainfile(filepath=target)
+        with bpy.context.temp_override(window=_main_window()):
+            bpy.ops.wm.save_as_mainfile(filepath=target)
     except Exception as e:  # noqa: BLE001
         logger.error(f"Turn checkpoint: could not save the restored document to {os.path.basename(target)}: {e}",
                      exc_info=True)
@@ -371,6 +389,28 @@ def restore(scene, checkpoint_id: str):
     restored_scene = _session_scene(record.get("session_id", ""))
     _after_load(restored_scene, record, safety_request_id)
     return True, f"Restored to before turn {record.get('turn_index', '?')}"
+
+
+def restore_deferred(scene_name: str, checkpoint_id: str) -> None:
+    """Restore on the next main-loop tick, outside the calling operator.
+
+    The island header button runs its operator inside the companion window;
+    the file read closes that window, so the swap must not run on its call
+    stack. Failures are reported as a chat notice (no operator to report to)."""
+    import bpy
+
+    def _run():
+        try:
+            scene = bpy.data.scenes.get(scene_name) or _session_scene("")
+            ok, message = restore(scene, checkpoint_id)
+            if not ok:
+                _notify(scene_name, f"Checkpoint not restored: {message}")
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Deferred checkpoint restore failed: {e}", exc_info=True)
+            _notify(scene_name, "Checkpoint not restored: unexpected error")
+        return None
+
+    bpy.app.timers.register(_run, first_interval=0.05)
 
 
 def _after_load(scene, record: dict, safety_request_id: str) -> None:

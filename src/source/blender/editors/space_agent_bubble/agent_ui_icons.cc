@@ -222,6 +222,64 @@ void glyph_plus(const float cx, const float cy, const float s, const float col[4
   vrule(cy - arm, cy + arm, cx, w, col);
 }
 
+/** Band of constant width along a circular arc, as a triangle strip. */
+void arc_band(const float cx,
+              const float cy,
+              const float r,
+              const float w,
+              const float a0,
+              const float a1,
+              const float col[4])
+{
+  const int steps = 24;
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4fv(col);
+
+  immBegin(GPU_PRIM_TRI_STRIP, (steps + 1) * 2);
+  for (int i = 0; i <= steps; i++) {
+    const float t = a0 + (a1 - a0) * (float(i) / float(steps));
+    const float c = std::cos(t);
+    const float sn = std::sin(t);
+    immVertex2f(pos, cx + c * (r - w * 0.5f), cy + sn * (r - w * 0.5f));
+    immVertex2f(pos, cx + c * (r + w * 0.5f), cy + sn * (r + w * 0.5f));
+  }
+  immEnd();
+
+  immUnbindProgram();
+}
+
+/** Counter-clockwise arrow on an open ring — the turn-checkpoints button
+ *  ("go back to an earlier turn"). Same monoline weight as the clock. */
+void glyph_restore(const float cx, const float cy, const float s, const float col[4])
+{
+  const float w = std::max(1.0f, s * 0.10f);
+  const float r = s * 0.40f;
+  /* The arc runs from the top-left gap round to the upper-left arrowhead. */
+  const float a_start = float(M_PI) * 0.72f; /* Where the arrow tip sits. */
+  const float a_end = a_start + float(M_PI) * 1.55f;
+  arc_band(cx, cy, r, w, a_start, a_end, col);
+
+  /* Arrowhead at the start of the arc, pointing along the (counter-clockwise)
+   * travel direction: a small filled triangle tangent to the ring. */
+  const float tx = cx + std::cos(a_start) * r;
+  const float ty = cy + std::sin(a_start) * r;
+  const float dx = std::sin(a_start);  /* Tangent, pointing "backwards". */
+  const float dy = -std::cos(a_start);
+  const float nx = -dy;
+  const float ny = dx;
+  const float len = s * 0.26f;
+  const float half = s * 0.17f;
+  const float pts[3][2] = {
+      {tx + dx * len, ty + dy * len},
+      {tx - nx * half, ty - ny * half},
+      {tx + nx * half, ty + ny * half},
+  };
+  poly(pts, 3, col);
+}
+
 /** Framed picture with a horizon and a sun — the Upload Reference chip. */
 void glyph_image(const float cx, const float cy, const float s, const float col[4])
 {
@@ -398,6 +456,9 @@ void agent_ui_icon_draw(const AgentIcon icon,
       break;
     case AGENT_ICON_PLUS:
       glyph_plus(cx, cy, s, color);
+      break;
+    case AGENT_ICON_RESTORE:
+      glyph_restore(cx, cy, s, color);
       break;
     case AGENT_ICON_IMAGE:
       glyph_image(cx, cy, s, color);
