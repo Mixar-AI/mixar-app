@@ -144,8 +144,13 @@ def focus_segments_panel(context):
 
 def draw_prompt_section(layout, prop_owner, label="Prompt",
                         icon='TEXT', action_op=None, action_icon='FILE_FOLDER',
-                        min_lines=2, max_lines=5):
-    """Boxed prompt input with label and optional action button. Returns col."""
+                        min_lines=2, max_lines=5, refine=True):
+    """Boxed prompt input with label and optional action button. Returns col.
+
+    Every sidebar prompt comes through here, which is why the Refine / Revert
+    row is added here rather than in each drawer (see ``prompt_refine_drawer``
+    — a tab with no target entry simply gets no row).
+    """
     box = layout.mixar_section() if hasattr(layout, 'mixar_section') else layout.box()
     col = box.column()
     col.label(text=label, icon=icon)
@@ -159,6 +164,10 @@ def draw_prompt_section(layout, prop_owner, label="Prompt",
     else:
         draw_multiline_text_input(col, prop_owner, "prompt",
                                   min_lines=min_lines, max_lines=max_lines)
+
+    if refine:
+        from .prompt_refine_drawer import draw_prompt_refine_row
+        draw_prompt_refine_row(col, prop_owner)
     return col
 
 

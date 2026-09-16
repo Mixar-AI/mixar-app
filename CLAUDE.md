@@ -360,6 +360,65 @@ normalized first: CRLF to `\n`, and the `\x1F` submit marker stripped, or a
 clipboard ending in one would send the message mid-paste. Pinned by
 `tests/test_chat_paste.py`.
 
+**Prompt Refine / Revert contract:** every generation prompt field — the
+moodboard N-panel tabs and the inference-graph node cards — carries a
+**Refine** button that rewrites the prompt for the model it is about to be
+sent to (backend `POST /api/v1/prompt-refine/refine`, one short LLM call, NOT
+a queue job, so it never appears in the Queue UI). Once a refinement lands a
+**Revert** button JOINS Refine — it never replaces it: a rewrite that missed
+is as often answered by running it again as by taking the original back.
+`moodboard/core/prompt_refine.py` is the ONE engine and there are two kinds of
+field behind one `_Slot` interface. Three rules:
+- **Refine targets the model the prompt will actually be SENT to.** A sidebar
+  tab resolves its `(service_key, model_slug)` through the SAME
+  `resolve_service_key`/`resolve_model_slug` helpers its own Mode/Model
+  dropdowns draw from (`core/prompt_refine_targets.py:SIDEBAR_PROMPT_TARGETS`,
+  keyed on the owner PropertyGroup's RNA identifier like
+  `prompt_submit.PROMPT_TAB_DISPATCH`), so Refine can never refine for one
+  model while Generate submits to another; a node uses its saved
+  `service_key_id`/`model_slug` strings, never its dynamic enums (an enum
+  persists as an index and repoints after a catalog reorder). A tab with no
+  table entry simply gets no button — refining an image prompt as if it were a
+  video prompt is worse than not refining at all. The backend keys its
+  instructions on that pair and falls back to a default profile, so an unknown
+  service still refines.
+- **Nothing the user wrote is ever lost.** The stash is written from the
+  response's `original_prompt` — the exact text the backend refined, not
+  whatever is in the field when a slow answer lands (the user can keep typing
+  while the call is out). Only the FIRST refinement stashes (`_Slot.has_stash`,
+  a separate question from a non-empty `stashed()` — reverting TO an empty
+  prompt is legitimate): Refine survives its own success, so a second pass
+  rewrites the refinement, and Revert must still return the user's own words
+  rather than stepping back one machine-written draft. A failed refinement, an
+  empty rewrite, or a rewrite identical to the input leaves the field alone and
+  adds NO Revert — a Revert button for a change that never happened promises an
+  undo of nothing — but it never clears an EARLIER stash either, since that
+  undo is still real.
+- **The two surfaces keep their state in different places for one reason.** A
+  tab's stash and in-flight marker live in module state (`forget_sidebar_state`
+  clears them on `load_post` via `ui/prompt_refine_sync.py` — a stash belongs
+  to the prompt that was on screen, and reverting another file's prompt to it
+  is a data loss dressed as an undo); a node's live on the node as
+  `prompt_pre_refine` / `prompt_refined` / `prompt_refining`, all `SKIP_SAVE`,
+  because the card is painted in C++ and the draw pass chooses Refine vs Revert
+  vs disabled from RNA. `prompt_refined` is a separate bool from a non-empty
+  stash: a user may legitimately revert TO an empty prompt.
+The row is added inside the ONE shared `draw_prompt_section`
+(`ui/sidebar_ui_helpers.py`), so a tab that grows a prompt gets the button by
+construction; the node's sits left of Generate in
+`mixie_draw_moodboard_node_tile_controls.cc`, laid out right-to-left (Generate,
+then Revert, then Refine) so Refine keeps the same relationship to the pair
+whether or not Revert is present and Generate never moves. Refine gets its OWN
+sub-row in the sidebar (`ui/prompt_refine_drawer.py`) because `enabled` applies
+to a whole layout item — sharing one row would grey Revert out with it whenever
+the prompt is empty or a refinement is in flight, and a Revert you cannot press
+is the one affordance that must survive once a rewrite has landed. Both operators
+(`mixie.refine_prompt` / `mixie.revert_prompt`) keep `node_id` and `owner`
+`SKIP_SAVE` — they are REGISTER operators, and an unscoped Refine would
+re-refine whichever node was refined last. Neither is UNDO: Revert is the
+affordance, and a second one competing with Ctrl+Z reads as ambiguous. Pinned
+by `tests/moodboard/test_prompt_refine.py`.
+
 ## Moodboard Canvas, Inference Graph & Video
 
 - **Canvas**: theme-independent pure black with a sparse neutral-gray dot grid fixed in *canvas* space (zoom in → fewer/larger dots). Dots are filled discs, not GPU point primitives (subpixel Moiré), and fade out as their projected diameter approaches one pixel.

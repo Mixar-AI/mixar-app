@@ -320,6 +320,36 @@ class MixieMoodboardActionNode(PropertyGroup):
         name="Progress", default="", maxlen=GRAPH_PROGRESS_MAXLEN
     )
     prompt: StringProperty(name="Prompt", default="", maxlen=GRAPH_PROMPT_MAXLEN)
+    # Refine / Revert state for the in-tile prompt. On the node, not in a
+    # Python dict, because the card is painted in C++: the draw pass reads
+    # these to choose between Refine, Revert and a disabled button, and it
+    # cannot consult module state to do it.
+    #
+    # SKIP_SAVE on all three: what the user typed before a refinement is a
+    # this-session affordance, and a .blend that reopened offering to
+    # "revert" a prompt to something from a previous session would be
+    # presenting a stale edit as an undo. An interrupted refinement likewise
+    # must not reload as permanently in-flight.
+    prompt_pre_refine: StringProperty(
+        name="Prompt Before Refine",
+        default="",
+        maxlen=GRAPH_PROMPT_MAXLEN,
+        options={'SKIP_SAVE'},
+    )
+    # Distinct from a non-empty prompt_pre_refine: a user may legitimately
+    # revert TO an empty prompt, and "" must not read as "nothing to revert".
+    prompt_refined: BoolProperty(
+        name="Prompt Refined",
+        description="This node's prompt was refined and can be reverted",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    prompt_refining: BoolProperty(
+        name="Refining Prompt",
+        description="A prompt refinement is in flight for this node",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
     # MASK_DETAIL in-node controls, drawn vertically inside the node card by the
     # C++ layout. Real node props so each mask node is independent; catalog image
     # params come from the node's own `parameters` collection.
