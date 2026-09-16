@@ -437,6 +437,14 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
+  /* A selected reference image or movie gets its own Rename / Preview / Export
+   * row on this same block, so it scales and hit-tests exactly like a card's
+   * (mixie_draw_moodboard_media_actions.cc). */
+  moodboard_add_selected_media_actions(C, block, v2d, region, &scene_ptr, cache);
+  /* And a selected FRAME gets its pencil + More row (or its name field) on the
+   * same block, for the same reason: the same glyph in the same place relative
+   * to the thing it belongs to (mixie_draw_moodboard_frame_actions.cc). */
+  moodboard_add_selected_frame_actions(C, block, v2d, region, &scene_ptr);
   UI_block_end(C, block);
   UI_block_draw(C, block);
 
@@ -455,6 +463,9 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   }
   /* moodboard_media_labels: painted text, so no uiBlock of its own. */
   mixie_draw_moodboard_selected_media_labels(v2d, region, &scene_ptr, cache);
+  /* Frame names are painted here rather than in the frame pass so that a
+   * member drawn inside a frame can never cover the frame's own name. */
+  mixie_draw_moodboard_frame_labels(v2d, region, &scene_ptr);
   UI_view2d_view_ortho(v2d);
 }
 

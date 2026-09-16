@@ -196,9 +196,21 @@ class MixieMoodboardImage(PropertyGroup):
         default="",
         maxlen=2048,
     )
+    # Membership in a canvas frame, by the frame's own stable id. Resolved from
+    # geometry when the item is dropped (see `core/frames.py`), so the user
+    # never assigns it by hand.
+    frame_id: StringProperty(
+        name="Frame ID",
+        description="Canvas frame this item belongs to (empty for none)",
+        default="",
+        maxlen=GRAPH_NODE_ID_MAXLEN,
+    )
+    # LEGACY, read only by the frame migration. The old grouping model kept
+    # membership as an index into `mixie_moodboard_groups`, which had to be
+    # renumbered by hand whenever a group was removed. Never write this.
     group_index: IntProperty(
-        name="Group Index",
-        description="Index of the group this image belongs to (-1 for no group)",
+        name="Group Index (legacy)",
+        description="Superseded by frame_id; retained so pre-frame .blend files migrate",
         default=-1
     )
 
@@ -393,6 +405,13 @@ class MixieMoodboardGroup(PropertyGroup):
 class MixieMoodboardTextBox(PropertyGroup):
     """Property group for moodboard text boxes"""
 
+    # Frames hold every canvas kind, not just pictures -- see the frame props.
+    frame_id: StringProperty(
+        name="Frame ID",
+        description="Canvas frame this text box belongs to (empty for none)",
+        default="",
+        maxlen=GRAPH_NODE_ID_MAXLEN,
+    )
     text: StringProperty(
         name="Text",
         description="Text content of the text box",

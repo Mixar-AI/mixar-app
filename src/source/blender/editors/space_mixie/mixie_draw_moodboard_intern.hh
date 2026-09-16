@@ -122,6 +122,18 @@ bool is_rect_in_view(View2D *v2d, float x, float y, float w, float h);
 /** Draw selection overlay with resize handles for a selected element */
 void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float w, float h);
 
+/**
+ * Paint the four corner resize squares of \a rect.
+ *
+ * Positions come from `moodboard_resize_handle_positions`, the ONE definition
+ * the hit-test reads, so the squares and the region that responds cannot part
+ * company. Expects an already-bound `GPU_SHADER_3D_UNIFORM_COLOR` and the
+ * caller's `pos` attribute -- both callers (the media/text selection overlay
+ * and the node card pass) are already inside one.
+ */
+void mixie_draw_moodboard_resize_handles(
+    View2D *v2d, uint pos, float x, float y, float w, float h);
+
 /** Draw the shared neutral node frame behind imported image/movie content. */
 void mixie_draw_moodboard_media_frame(float x, float y, float w, float h, bool selected);
 
@@ -152,8 +164,35 @@ void mixie_draw_moodboard_video_overlay(View2D *v2d,
 /** Draw moodboard text boxes */
 void mixie_draw_moodboard_textboxes(const bContext *C, View2D *v2d);
 
-/** Draw moodboard groups */
-void mixie_draw_moodboard_groups(const bContext *C, View2D *v2d);
+/**
+ * Draw canvas frames: the washed pastel box, its thicker top strip and, on a
+ * selected frame, its resize grip. Runs FIRST of every canvas pass -- a
+ * translucent wash painted over a card would tint its result.
+ */
+void mixie_draw_moodboard_frames(const bContext *C, View2D *v2d);
+
+/**
+ * Paint each frame's NAME just above its top-left corner. Screen space
+ * (plain BLF text, so it takes no uiBlock), drawn late so a member can never
+ * cover it. Always drawn, selected or not: a rect cannot say which frame it
+ * is, and that is the whole reason a frame carries a name.
+ */
+void mixie_draw_moodboard_frame_labels(View2D *v2d, ARegion *region, PointerRNA *scene_ptr);
+
+/**
+ * The row floating above a SELECTED frame's top-left corner: the pencil that
+ * starts the in-place rename and the More menu button -- or, while the rename
+ * is running, the name field itself in the row's place
+ * (mixie_draw_moodboard_frame_actions.cc).
+ */
+void moodboard_add_selected_frame_actions(const bContext *C,
+                                          uiBlock *block,
+                                          View2D *v2d,
+                                          ARegion *region,
+                                          PointerRNA *scene_ptr);
+/** Canvas rect the action row above a frame occupies -- the ONE definition,
+ * shared with the frame label so the name never lands under the buttons. */
+void moodboard_frame_action_row_rect(const rctf &frame_rect, rctf *r_row);
 
 /* Socket/handle painters and the type palette (mixie_draw_moodboard_graph_sockets.cc).
  * Colors are returned as borrowed float[3] pointers into static palette storage. */
@@ -164,12 +203,13 @@ const float *moodboard_mesh_output_color();
 void moodboard_draw_socket(
     float x, float y, const float color[3], bool connected, bool required);
 void moodboard_draw_output_handle(float x, float y, const float color[3]);
-/** Bottom-right resize grip on a node card (see mixie_moodboard_ops_graph_resize.cc). */
+/** Corner resize handles on a SELECTED node card -- the same four squares a
+ * selected reference picture wears (see mixie_moodboard_ops_graph_resize.cc). */
 /** The card itself: fill plus border, brighter while selected. */
 void moodboard_draw_card_background(const rctf &rect, bool selected);
 /** The breathing accent a QUEUED/RUNNING card wears. */
 void moodboard_draw_running_glow(const rctf &rect);
-void moodboard_draw_node_resize_grip(const rctf &rect, bool selected);
+void moodboard_draw_node_resize_handles(View2D *v2d, const rctf &rect);
 /**
  * The header strip inside a node card's top edge: the node's name (or, unnamed,
  * its type) on the left and its live queue state on the right. Painted text
@@ -217,6 +257,26 @@ void moodboard_add_node_card_actions(uiBlock *block,
                                      bool edit_mode,
                                      bool has_media_result,
                                      const char *node_id);
+/**
+ * The action row floating above a selected reference image or movie: Rename,
+ * Preview and Export, on the same line and in the same order as a finished
+ * card's Edit / Preview / Export (mixie_draw_moodboard_media_actions.cc).
+ * Every button is scoped to the tile it sits on through the media's graph id.
+ */
+void moodboard_add_media_card_actions(uiBlock *block,
+                                      const rctf &media_rect,
+                                      const char *media_id);
+/** One row per selected standalone media, added to the canvas block -- or,
+ * for the media being renamed, the in-place name field in the row's place. */
+void moodboard_add_selected_media_actions(const bContext *C,
+                                          uiBlock *block,
+                                          View2D *v2d,
+                                          ARegion *region,
+                                          PointerRNA *scene_ptr,
+                                          const MoodboardGraphCache *cache);
+/** Canvas rect the row above `media_rect` occupies -- the ONE definition,
+ * shared with the selected-media label so the name never lands under it. */
+void moodboard_media_action_row_rect(const rctf &media_rect, rctf *r_row);
 void moodboard_draw_socket_label(PointerRNA *socket, float socket_x, float socket_y);
 
 /* Shared by the node-UI toolbar and the selected-media name

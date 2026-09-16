@@ -276,9 +276,11 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
         const bool controls_visible = selected;
         moodboard_draw_card_background(rect, selected);
         moodboard_draw_node_header(&node, rect, selected);
-        /* MASK_DETAIL has a fixed square card, so it shows no resize grip. */
-        if (!moodboard_node_is_mask_detail(&node)) {
-          moodboard_draw_node_resize_grip(rect, selected);
+        /* Corner resize handles, like a selected reference picture's -- only
+         * while SELECTED, and never on MASK_DETAIL, whose square card is
+         * deliberately not resizable. */
+        if (selected && !moodboard_node_is_mask_detail(&node)) {
+          moodboard_draw_node_resize_handles(v2d, rect);
         }
         if (ELEM(state, 1, 2)) { /* QUEUED or RUNNING */
           moodboard_draw_running_glow(rect);

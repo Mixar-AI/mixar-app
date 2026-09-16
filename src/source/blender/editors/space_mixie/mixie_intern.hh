@@ -53,6 +53,10 @@ struct wmWindowManager;
 /* Moodboard Interaction Constants */
 #define MOODBOARD_HANDLE_TOLERANCE_PX 16.0f
 #define MOODBOARD_DRAG_THRESHOLD_PX 5.0f
+/* A resize handle is a fixed SCREEN size converted through the view scale: it
+ * is an affordance, not part of the picture, so it stays equally aimable at
+ * every zoom. */
+#define MOODBOARD_RESIZE_HANDLE_PX 12.0f
 
 /* Moodboard Grid Constants */
 #define MOODBOARD_GRID_SPACING 50.0f
@@ -91,6 +95,10 @@ struct wmWindowManager;
  * painter and the button layout so they cannot drift onto different lines. */
 #define MOODBOARD_NODE_HEADER_LIFT 12.0f
 #define MOODBOARD_NODE_HEADER_ROW_H 30.0f
+/* Floor on the in-place rename field above a reference tile (canvas units,
+ * x UI_SCALE_FAC): the field spans the tile's width, but a tile shrunk below
+ * this still needs room to read and type a name. */
+#define MOODBOARD_MEDIA_RENAME_MIN_W 180.0f
 /* Display-only echo of a draft node's prompt inside its tile. Deliberately far
  * below the prompt's 4096 maxlen: the clamped read truncates, which is exactly
  * what a one-line preview wants. Not part of the maxlen<buffer pairings. */
@@ -110,18 +118,63 @@ struct wmWindowManager;
 #define MOODBOARD_NODE_PANEL_MIN_ROW_H 20.0f
 /** Inset of a node card's media preview from the card edge. */
 #define MOODBOARD_GRAPH_PREVIEW_INSET 6.0f
-/* Bottom-right resize grip on a standard action node's card. Drag it to
- * resize the card; the node keeps its current aspect (the card tracks its
- * result image, see node_schema.refresh_node_height) and its TOP edge stays
- * put so the card grows down-right. CANVAS units, like the socket radii — the
- * hit-test converts through the view scale. Width bounds stay inside the
- * `width` RNA property's own min/max (140..1400). */
-#define MOODBOARD_NODE_RESIZE_GRIP 22.0f
+/* Width bounds for a resized action card, inside the `width` RNA property's
+ * own min/max (140..1400). The card is resized by the SHARED corner handles
+ * (see the Resize Handles block below), keeping the aspect it had at drag
+ * start -- the card tracks its result image, see
+ * node_schema.refresh_node_height. */
 #define MOODBOARD_ACTION_NODE_MIN_W 360.0f
 #define MOODBOARD_ACTION_NODE_MAX_W 1200.0f
 /* Socket radii/offset are CANVAS units (they zoom with the graph); hit-tests
  * must convert through the view scale, never compare these against pixels
  * (see region_socket_hit). */
+/* Canvas frames (grouping). A frame is a first-class canvas object with its
+ * own rect, so every metric below describes THE FRAME rather than being
+ * derived from whatever happens to be inside it.
+ *
+ * `name` is the only string the canvas reads off a frame, and it follows the
+ * GRAPH_*_MAXLEN <-> MIXIE_*_BUF rule: FRAME_NAME_MAXLEN (96, moodboard's
+ * constants.py) stays strictly below this buffer, and the read still clamps. */
+#define MIXIE_FRAME_NAME_BUF 128
+/* Floors, mirrored as FRAME_MIN_WIDTH / FRAME_MIN_HEIGHT in constants.py --
+ * the C++ resize drag and the Python geometry must not disagree about how
+ * small a frame may get. */
+#define MOODBOARD_FRAME_MIN_W 220.0f
+#define MOODBOARD_FRAME_MIN_H 160.0f
+#define MOODBOARD_FRAME_RADIUS 20.0f
+/* Border thickness in CANVAS units, so it zooms with the frame like the socket
+ * radii do. The TOP edge is deliberately thicker: it is the frame's drag
+ * handle and its primary click target, the same job the header strip does on a
+ * node card, and it has to be aimable. */
+#define MOODBOARD_FRAME_BORDER 7.0f
+#define MOODBOARD_FRAME_TOP_BORDER 26.0f
+/* The washed fill. On the board's pure-black canvas a pastel at low alpha
+ * reads as a faint coloured haze, which is the intent; DESATURATING toward
+ * white (the instinct from a white canvas) would instead turn it grey and cost
+ * the frame its identity. So the two states differ in alpha only, never in
+ * saturation. */
+#define MOODBOARD_FRAME_FILL_ALPHA 0.07f
+#define MOODBOARD_FRAME_FILL_ALPHA_SELECTED 0.12f
+#define MOODBOARD_FRAME_BORDER_ALPHA 0.55f
+#define MOODBOARD_FRAME_BORDER_ALPHA_SELECTED 1.0f
+/* The click zone is wider than the paint: even a 7-canvas-unit line falls under
+ * a couple of pixels when zoomed out, and an edge the user can see but cannot
+ * grab is worse than no edge. Converted through the view scale with a pixel
+ * floor. */
+#define MOODBOARD_FRAME_HIT_SLOP 1.8f
+#define MOODBOARD_FRAME_HIT_MIN_PX 6.0f
+/* Frame name: sized WITH the canvas exactly like a selected media's name, so a
+ * frame drawn half as wide carries a name half as tall. Base point size at
+ * zoom 1 before the DPI factor, then clamped, then fitted to the frame's own
+ * width (see mixie_draw_moodboard_frame_labels). A frame name is ALWAYS drawn,
+ * selected or not -- it is the one thing the rect itself cannot say, and it is
+ * how frames are told apart at a glance. */
+#define MOODBOARD_FRAME_LABEL_SIZE_PX 13.0f
+#define MOODBOARD_FRAME_LABEL_MIN_PX 8.0f
+#define MOODBOARD_FRAME_LABEL_MAX_PX 30.0f
+#define MOODBOARD_FRAME_LABEL_MAX_CHARS 28
+#define MOODBOARD_FRAME_LABEL_HEAD_CHARS 14
+#define MOODBOARD_FRAME_LABEL_TAIL_CHARS 13
 #define MOODBOARD_GRAPH_SOCKET_RADIUS 12.0f
 #define MOODBOARD_GRAPH_OUTPUT_RADIUS 15.0f
 #define MOODBOARD_GRAPH_SOCKET_OFFSET 14.0f
@@ -208,6 +261,140 @@ int moodboard_find_action_node_under_mouse(PointerRNA *scene_ptr,
                                            float mouse_x,
                                            float mouse_y,
                                            rctf *r_rect);
+
+/* -------------------------------------------------------------------- */
+/** \name Resize Handles (mixie_moodboard_resize_handles.cc)
+ *
+ * The ONE definition of a resize handle on this canvas. Every resizable thing
+ * -- a reference image, a movie, a text box, an inference card -- wears the
+ * same four corner squares and resizes by the same rule: the OPPOSITE corner
+ * is anchored and the gesture is a uniform scale about it. Draw, hit-test and
+ * drag all resolve through here, so the squares the user aims at cannot drift
+ * from the region that responds, and no two surfaces can grow different
+ * behaviour -- which is exactly what had happened: a node card had one
+ * bottom-right wedge that only ever grew down-right, while a picture had
+ * eight handles.
+ *
+ * CORNERS ONLY. The four edge-midpoint handles are gone: they meant "stretch
+ * one axis", which on a picture or a generated result is a distortion nobody
+ * asks for, and they crowded the corners that do the work.
+ * \{ */
+
+#define MOODBOARD_RESIZE_HANDLE_COUNT 4
+/* Counter-clockwise from the bottom-left. Renumbering these means renumbering
+ * the anchor rule with them; the values are runtime-only (never RNA), so the
+ * order is free to change as long as both move together. */
+#define MOODBOARD_HANDLE_BOTTOM_LEFT 0
+#define MOODBOARD_HANDLE_BOTTOM_RIGHT 1
+#define MOODBOARD_HANDLE_TOP_RIGHT 2
+#define MOODBOARD_HANDLE_TOP_LEFT 3
+
+/** Where the four corner squares sit, in the rect's own space. */
+void moodboard_resize_handle_positions(const rctf &rect,
+                                       float r_pos[MOODBOARD_RESIZE_HANDLE_COUNT][2]);
+/** Handle index under a point already mapped into the rect's space, or -1. */
+int moodboard_resize_handle_at(const rctf &rect,
+                               float local_x,
+                               float local_y,
+                               float tolerance);
+/** The corner held fixed while \a handle is dragged (the diagonal opposite). */
+void moodboard_resize_handle_anchor(const rctf &rect,
+                                    int handle,
+                                    float *r_anchor_x,
+                                    float *r_anchor_y);
+/** Uniform scale factor from the anchor's diagonal -- one number for both
+ * axes, which is what keeps the aspect locked. */
+float moodboard_resize_scale_factor(const rctf &rect,
+                                    int handle,
+                                    float local_x,
+                                    float local_y);
+/** \a rect at a new size, grown or shrunk away from the anchored corner. */
+void moodboard_resize_place(const rctf &rect,
+                            int handle,
+                            float new_width,
+                            float new_height,
+                            rctf *r_rect);
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Canvas Frames (mixie_moodboard_frame_geometry.cc)
+ *
+ * ONE definition of a frame's geometry, shared by the draw pass, the action
+ * row and the hit-test -- so the pixels the user aims at and the region that
+ * responds can never drift apart at any zoom.
+ * \{ */
+
+/** Which part of a frame a press landed on. */
+enum MoodboardFramePart {
+  MOODBOARD_FRAME_PART_NONE = 0,
+  /** The thick top strip: the frame's drag handle and primary click target. */
+  MOODBOARD_FRAME_PART_TOP,
+  /** Left / right / bottom border. Selects and drags like the top strip. */
+  MOODBOARD_FRAME_PART_BORDER,
+  /** Inside, away from every edge. A press here is a marquee, not a move. */
+  MOODBOARD_FRAME_PART_INTERIOR,
+};
+
+/** Canvas rect of one frame. */
+void moodboard_frame_rect(PointerRNA *frame, rctf *r_rect);
+/** The thick top strip inside the frame's top edge, in canvas units. */
+void moodboard_frame_top_strip(const rctf &frame_rect, rctf *r_strip);
+/**
+ * Which part of \a frame_rect the canvas point lands on. \a view_scale
+ * converts the hit slop from pixels, so the grab zone stays aimable when the
+ * border itself is drawn sub-pixel thin.
+ */
+MoodboardFramePart moodboard_frame_part_at(const rctf &frame_rect,
+                                           float mouse_x,
+                                           float mouse_y,
+                                           float view_scale,
+                                           bool collapsed);
+/**
+ * The frame under the cursor, SMALLEST first, and which part of it was hit.
+ *
+ * Smallest-area wins, exactly the tie-break the Python membership resolver
+ * uses, so clicking and containment can never disagree about which frame an
+ * area belongs to. A LOCKED frame is skipped entirely: that is what the lock
+ * means -- only its members can be reached.
+ *
+ * Returns the frame's collection index, or -1.
+ */
+int moodboard_find_frame_at(PointerRNA *scene_ptr,
+                            float mouse_x,
+                            float mouse_y,
+                            float view_scale,
+                            MoodboardFramePart *r_part,
+                            rctf *r_rect);
+/**
+ * Select the frame under \a mouse_x / \a mouse_y, its empty INTERIOR included.
+ *
+ * The click-time counterpart of #moodboard_find_frame_at: a plain click
+ * anywhere on a frame selects it, while MOVING one is still only possible from
+ * its border or title strip. It cannot live in the frame select operator --
+ * that installs a modal, and claiming the interior there would take the press
+ * away from a member's own drag and from the marquee over open space inside
+ * the frame -- so it is called from the branch that already knows the gesture
+ * ended as a click (box select's tiny-box case), after the selection has been
+ * cleared. Returns whether a frame was selected.
+ */
+bool moodboard_frame_select_at_point(PointerRNA *scene_ptr,
+                                     float mouse_x,
+                                     float mouse_y,
+                                     float view_scale);
+/** The palette pastel at \a index, wrapped. Borrowed float[3]. */
+const float *moodboard_frame_palette_color(int index);
+/** The colour a frame actually wears: its custom colour, else its pastel. */
+void moodboard_frame_color(PointerRNA *frame, float r_color[3]);
+/**
+ * Is an in-place frame rename running on this frame?
+ * (mixie_moodboard_ops_frame_select.cc; runtime state keyed on the scene's
+ * session uid, exactly like the media rename -- never scene data.)
+ */
+bool moodboard_frame_rename_is_active(const Scene *scene, const char *frame_id);
+void moodboard_frame_rename_end();
+
+/** \} */
 /** Media-preview rect of a node card. Shared by draw, toolbar and hit-test. */
 void moodboard_graph_node_preview_bounds(const rctf &node_rect, rctf *r_bounds);
 /** True when the action node is a MASK_DETAIL node: it has a fixed square card
@@ -218,6 +405,13 @@ bool moodboard_graph_node_id_selected(PointerRNA *scene_ptr, const char *node_id
 bool moodboard_node_is_mask_detail(PointerRNA *node);
 /** Index into `mixie_moodboard_images` of the media a node owns, or -1. */
 int moodboard_find_embedded_media_index(PointerRNA *scene_ptr, const char *node_id);
+/**
+ * In-place rename of a reference (mixie_moodboard_ops_rename_media.cc).
+ * Runtime-only, keyed on the scene's session uid; the draw pass asks whether a
+ * tile is being renamed and reports the end of the edit back.
+ */
+bool moodboard_media_rename_is_active(const Scene *scene, const char *media_id);
+void moodboard_media_rename_end();
 /**
  * Index into `mixie_moodboard_images` of the movie rendered inside the action
  * node under the cursor, or -1. Deliberately the media index, not the node
@@ -386,12 +580,15 @@ void MIXIE_OT_sam3d_preview_delete(wmOperatorType *ot);
 void MIXIE_OT_moodboard_drop_image(wmOperatorType *ot);
 void MIXIE_OT_moodboard_select_image(wmOperatorType *ot);
 void MIXIE_OT_moodboard_graph_select(wmOperatorType *ot);
+void MIXIE_OT_moodboard_frame_select(wmOperatorType *ot);
+void MIXIE_OT_moodboard_rename_frame(wmOperatorType *ot);
 void MIXIE_OT_moodboard_context_menu(wmOperatorType *ot);
 void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot);
 void MIXIE_OT_moodboard_zoom(wmOperatorType *ot);
 void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot);
 void MIXIE_OT_moodboard_frame(wmOperatorType *ot);
 void MIXIE_OT_moodboard_preview_media(wmOperatorType *ot);
+void MIXIE_OT_moodboard_rename_media(wmOperatorType *ot);
 void MIXIE_OT_moodboard_box_select(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_box_mask(wmOperatorType *ot);
 void MIXIE_OT_moodboard_generate_lasso_mask(wmOperatorType *ot);

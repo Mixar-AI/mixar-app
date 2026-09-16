@@ -404,7 +404,7 @@ def test_component_property_group_registers_before_its_owner():
 
 def test_duplicate_keeps_component_provenance_but_not_identity():
     duplicate = (MOODBOARD / "ui/operators/transform_ops.py").read_text()
-    clipboard = (MOODBOARD / "core/moodboard_clipboard.py").read_text()
+    clipboard = (MOODBOARD / "core/clipboard_snapshot.py").read_text()
 
     assert "new_img.component_role = orig_img.component_role" in duplicate
     assert "new_img.component_source_item_id" in duplicate

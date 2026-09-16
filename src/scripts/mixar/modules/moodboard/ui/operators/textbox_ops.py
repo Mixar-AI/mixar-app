@@ -309,11 +309,10 @@ class MIXIE_OT_moodboard_delete(Operator):
     def execute(self, context):
         scene = context.scene
         moodboard_images = scene.mixie_moodboard_images
-        moodboard_groups = scene.mixie_moodboard_groups
 
         deleted_images = 0
         deleted_textboxes = 0
-        deleted_groups = 0
+        deleted_frames = 0
         deleted_links = 0
         from ...core.node_deletion import delete_selected_graph_nodes
         from ...core.node_graph import ensure_media_node_ids
@@ -352,23 +351,21 @@ class MIXIE_OT_moodboard_delete(Operator):
                 if node is not None:
                     refresh_node_socket_visibility(scene, node)
 
-        # First, delete selected groups (in reverse order to maintain indices)
-        groups_to_remove = []
-        for i in range(len(moodboard_groups) - 1, -1, -1):
-            if moodboard_groups[i].selected:
-                groups_to_remove.append(i)
+        # Selected frames go first. Deleting a frame RELEASES its members where
+        # they stand -- it never deletes them. Anything inside that the user
+        # also wants gone is selected in its own right and handled below, which
+        # is how "Delete Frame and Contents" is built (frame_ops.py) rather
+        # than by giving Delete a second, destructive meaning.
+        from ...core.frames import delete_frame
 
-        for group_idx in groups_to_remove:
-            # Reset group_index for images in this group
-            # Also shift indices for images in higher groups
-            for img in moodboard_images:
-                if img.group_index == group_idx:
-                    img.group_index = -1
-                elif img.group_index > group_idx:
-                    img.group_index -= 1
-
-            moodboard_groups.remove(group_idx)
-            deleted_groups += 1
+        selected_frame_ids = [
+            frame.frame_id
+            for frame in getattr(scene, 'mixie_moodboard_frames', ())
+            if frame.selected and frame.frame_id
+        ]
+        for frame_id in selected_frame_ids:
+            if delete_frame(scene, frame_id):
+                deleted_frames += 1
 
         # Delete selected images (in reverse order to maintain indices)
         indices_to_remove_img = []
@@ -392,7 +389,7 @@ class MIXIE_OT_moodboard_delete(Operator):
             textboxes.remove(idx)
             deleted_textboxes += 1
 
-        if not any((deleted_images, deleted_textboxes, deleted_groups, deleted_links, deleted_nodes)):
+        if not any((deleted_images, deleted_textboxes, deleted_frames, deleted_links, deleted_nodes)):
             self.report({'WARNING'}, "No elements selected")
             return {'CANCELLED'}
 
@@ -409,8 +406,8 @@ class MIXIE_OT_moodboard_delete(Operator):
             parts.append(f"{deleted_images} image(s)")
         if deleted_textboxes > 0:
             parts.append(f"{deleted_textboxes} text box(es)")
-        if deleted_groups > 0:
-            parts.append(f"{deleted_groups} group(s)")
+        if deleted_frames > 0:
+            parts.append(f"{deleted_frames} frame(s)")
         if deleted_links > 0:
             parts.append(f"{deleted_links} connection(s)")
         if deleted_nodes > 0:

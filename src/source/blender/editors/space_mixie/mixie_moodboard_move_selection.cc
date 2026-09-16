@@ -24,13 +24,16 @@
 
 namespace blender::ed::mixie {
 
-/* Every collection a drag can move. All four carry `position_x`/`position_y`
- * and `selected`, which is the whole reason one capture can serve them. */
+/* Every collection a drag can move. All five carry `position_x`/`position_y`
+ * and `selected`, which is the whole reason one capture can serve them --
+ * frames included: a frame has its OWN rect, so moving it is moving a
+ * position like any other item rather than nudging a derived bounding box. */
 static const char *drag_collection_names[] = {
     "mixie_moodboard_images",
     "mixie_moodboard_textboxes",
     "mixie_moodboard_action_nodes",
     "mixie_moodboard_asset_nodes",
+    "mixie_moodboard_frames",
 };
 
 static bool drag_kind_wanted(const MoodboardDragKinds kinds, const char *collection)
@@ -41,28 +44,46 @@ static bool drag_kind_wanted(const MoodboardDragKinds kinds, const char *collect
   if (STREQ(collection, "mixie_moodboard_textboxes")) {
     return (kinds & MOODBOARD_DRAG_TEXTBOXES) != 0;
   }
+  if (STREQ(collection, "mixie_moodboard_frames")) {
+    return (kinds & MOODBOARD_DRAG_FRAMES) != 0;
+  }
   return (kinds & MOODBOARD_DRAG_NODES) != 0;
 }
 
-/* An image inherits its group's selection: the group handle is what the user
- * grabbed, and its members have to travel with it. Only images are grouped. */
-static bool image_group_is_selected(PointerRNA *scene_ptr, PointerRNA *item)
+/* An item inherits the selection of the FRAME it belongs to: the frame's
+ * border is what the user grabbed, and its members travel with it.
+ *
+ * This replaced the legacy group version, which resolved membership through an
+ * INDEX into `mixie_moodboard_groups` and therefore only ever worked for
+ * images. Membership is now the item's own stable `frame_id`, so a text box,
+ * an inference card and a 3D result are carried by their frame exactly as a
+ * picture is. */
+bool moodboard_item_frame_selected(PointerRNA *scene_ptr, PointerRNA *item)
 {
-  PropertyRNA *groups = RNA_struct_find_property(scene_ptr, "mixie_moodboard_groups");
-  PropertyRNA *group_idx = RNA_struct_find_property(item, "group_index");
-  if (!groups || !group_idx) {
+  PropertyRNA *frames = RNA_struct_find_property(scene_ptr, "mixie_moodboard_frames");
+  PropertyRNA *frame_id_prop = RNA_struct_find_property(item, "frame_id");
+  if (!frames || !frame_id_prop) {
     return false;
   }
-  const int index = RNA_property_int_get(item, group_idx);
-  if (index < 0) {
+  char frame_id[MIXIE_GRAPH_ID_BUF];
+  mixie_rna_property_string_get_clamped(item, frame_id_prop, frame_id, sizeof(frame_id));
+  if (frame_id[0] == '\0') {
     return false;
   }
-  PointerRNA group;
-  if (!RNA_property_collection_lookup_int(scene_ptr, groups, index, &group)) {
-    return false;
+  bool selected = false;
+  CollectionPropertyIterator iter{};
+  RNA_property_collection_begin(scene_ptr, frames, &iter);
+  while (iter.valid && !selected) {
+    char candidate[MIXIE_GRAPH_ID_BUF];
+    mixie_rna_string_get_clamped(&iter.ptr, "frame_id", candidate, sizeof(candidate));
+    if (STREQ(candidate, frame_id)) {
+      selected = RNA_boolean_get(&iter.ptr, "selected");
+      break;
+    }
+    RNA_property_collection_next(&iter);
   }
-  PropertyRNA *selected = RNA_struct_find_property(&group, "selected");
-  return selected && RNA_property_boolean_get(&group, selected);
+  RNA_property_collection_end(&iter);
+  return selected;
 }
 
 void moodboard_drag_set_capture(PointerRNA *scene_ptr,
@@ -86,7 +107,7 @@ void moodboard_drag_set_capture(PointerRNA *scene_ptr,
       }
       PropertyRNA *selected = RNA_struct_find_property(&item, "selected");
       const bool is_selected = selected && RNA_property_boolean_get(&item, selected);
-      if (!is_selected && !image_group_is_selected(scene_ptr, &item)) {
+      if (!is_selected && !moodboard_item_frame_selected(scene_ptr, &item)) {
         continue;
       }
       PropertyRNA *pos_x = RNA_struct_find_property(&item, "position_x");

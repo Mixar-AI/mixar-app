@@ -91,3 +91,33 @@ SHOT_RENDER_OUTPUT_ITEMS = (
         4,
     ),
 )
+
+
+# Where the camera-first "Export to Moodboard" surface takes its render span
+# from. Director shots always render their beat span; a power user animating a
+# camera natively expects the scene or preview range they already work in.
+CAMERA_EXPORT_RANGE_ITEMS = (
+    (
+        "CAMERA_KEYS",
+        "Camera Keys",
+        "First to last keyframe on the chosen camera",
+        0,
+    ),
+    (
+        "SCENE",
+        "Scene Range",
+        "The scene's own Start and End frames",
+        1,
+    ),
+    (
+        "PREVIEW",
+        "Preview Range",
+        "The scene's preview range, or its frame range when none is set",
+        2,
+    ),
+)
+
+# One label, one panel id: the Render menu row, the animation-editor row and
+# the popup they both open must name the same thing.
+CAMERA_EXPORT_LABEL = "Export to Moodboard"
+CAMERA_EXPORT_PANEL_ID = "MIXAR_PT_camera_export"

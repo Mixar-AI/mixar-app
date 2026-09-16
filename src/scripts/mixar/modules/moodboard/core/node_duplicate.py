@@ -6,10 +6,13 @@
 
 A duplicate is a SNAPSHOT of plain dicts, re-materialised as new nodes -- never
 RNA pointers, so the copy is independent of the originals from the moment it is
-taken. There is deliberately no node clipboard: Ctrl/Cmd+C and +V on the canvas
-belong to the board's media (they copy the picture or clip a node generated, so
-it can be pasted as an ordinary board item, or into another application), and
-duplicating a node is Shift+D.
+taken. This module keeps no clipboard state of its own: Shift+D snapshots and
+re-materialises in one breath, and the board's ONE clipboard
+(``moodboard_clipboard`` over ``clipboard_snapshot``) reuses the serializers
+here so a copied node is the same plain-dict value whether it is pasted back
+into this scene, into another scene, or -- through the on-disk copy buffer --
+into another running Mixar. That is why every image is referenced by NAME and
+resolved through an injectable ``image_resolver`` at paste time.
 
 The node's CONFIGURATION travels, and so does the finished IMAGE or VIDEO it was
 showing -- a copy of a card that has generated something looks like the card it
@@ -260,8 +263,21 @@ def _apply_parameter(parameter, data: dict) -> None:
             pass
 
 
-def _restore_result(scene, node, data: dict) -> None:
+def default_image_resolver(name: str):
+    """Resolve an image NAME in this file -- the in-process paste path."""
+    import bpy
+
+    return bpy.data.images.get(name) if name else None
+
+
+def _restore_result(scene, node, data: dict, image_resolver=None) -> None:
     """Give the pasted node the picture or clip the original was showing.
+
+    ``image_resolver`` maps a recorded datablock name to the Image to bind. In
+    this file that is ``bpy.data.images.get``; a paste from another running
+    Mixar hands in the datablocks it just appended from the copy buffer, which
+    may have been renamed (``chair.png.001``) on a collision -- so the name in
+    the snapshot is never looked up directly here.
 
     The Image DATABLOCK is SHARED, exactly as duplicating a board image shares
     it (``transform_ops`` assigns ``new_img.image = orig_img.image``):
@@ -277,18 +293,17 @@ def _restore_result(scene, node, data: dict) -> None:
     ``moodboard_find_image_under_mouse``, so the extra entry never appears as a
     second loose tile on the canvas.
     """
-    import bpy
-
     from .moodboard_utils import stamp_moodboard_item_added
 
-    image = bpy.data.images.get(data["preview_image_name"])
+    resolve = image_resolver or default_image_resolver
+    image = resolve(data["preview_image_name"])
     if image is None:
         # The original was deleted and took its datablock with it. A DRAFT is
         # the truthful result -- better than a card advertising a lost result.
         return
 
     for media_data in data["media"]:
-        media_image = bpy.data.images.get(media_data["image_name"])
+        media_image = resolve(media_data["image_name"])
         if media_image is None:
             continue
         item = scene.mixie_moodboard_images.add()
@@ -316,7 +331,7 @@ def _restore_result(scene, node, data: dict) -> None:
         node.error = data["error"]
 
 
-def _materialize(scene, data: dict, delta: tuple):
+def _materialize(scene, data: dict, delta: tuple, image_resolver=None):
     """Create one node from clipboard data, translated by ``delta``."""
     node = scene.mixie_moodboard_action_nodes.add()
     node.node_id = new_node_id()
@@ -347,12 +362,19 @@ def _materialize(scene, data: dict, delta: tuple):
         # they are for a node loaded from a .blend.
         pass
     if data.get("result"):
-        _restore_result(scene, node, data["result"])
+        _restore_result(scene, node, data["result"], image_resolver)
     node.selected = True
     return node
 
 
-def paste_snapshot(scene, payload: dict, anchor=None) -> list:
+# Public names for the board clipboard (``clipboard_snapshot``), which builds
+# ONE payload spanning media, text boxes and nodes and therefore drives the
+# per-node steps itself rather than calling ``paste_snapshot``.
+serialize_node = _serialize_node
+materialize_node = _materialize
+
+
+def paste_snapshot(scene, payload: dict, anchor=None, *, image_resolver=None) -> list:
     """Re-create a snapshot's nodes and their links.
 
     ``anchor`` puts the set's top-left corner at a canvas point. Without it the
@@ -378,7 +400,7 @@ def paste_snapshot(scene, payload: dict, anchor=None) -> list:
     id_map = {}
     created = []
     for data in payload["nodes"]:
-        node = _materialize(scene, data, delta)
+        node = _materialize(scene, data, delta, image_resolver)
         id_map[data["node_id"]] = node.node_id
         created.append(node)
 

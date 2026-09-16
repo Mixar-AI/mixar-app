@@ -30,6 +30,11 @@ _GRAB_COLLECTIONS = {
     'TEXTBOX': "mixie_moodboard_textboxes",
     'ACTION_NODE': "mixie_moodboard_action_nodes",
     'ASSET_NODE': "mixie_moodboard_asset_nodes",
+    # A frame carries `position_x`/`position_y` like every other kind, which is
+    # what lets one capture move it. Its MEMBERS travel with it because
+    # `get_all_items_to_transform` expands a selected frame into them -- not
+    # because the frame drags them, so the two never double-apply the delta.
+    'FRAME': "mixie_moodboard_frames",
 }
 
 
@@ -46,15 +51,26 @@ def _grab_item(scene, item_type, index):
 
 
 def _selected_graph_nodes(scene):
-    """(kind, index, x, y) for each selected inference and 3D asset node."""
+    """(kind, index, x, y) for each selected inference and 3D asset node.
+
+    Frames ride along here: a selected frame moves as one object, and its
+    members are added separately by `get_all_items_to_transform`.
+    """
+    from .transform_ops import get_selected_frame_ids
+
+    frame_ids = get_selected_frame_ids(scene)
     recorded = []
     for item_type in ('ACTION_NODE', 'ASSET_NODE'):
         collection = getattr(scene, _GRAB_COLLECTIONS[item_type], ())
         for index, node in enumerate(collection):
-            if node.selected:
+            in_moved_frame = bool(frame_ids) and getattr(node, "frame_id", "") in frame_ids
+            if node.selected or in_moved_frame:
                 recorded.append(
                     (item_type, index, node.position_x, node.position_y)
                 )
+    for index, frame in enumerate(getattr(scene, _GRAB_COLLECTIONS['FRAME'], ())):
+        if frame.selected:
+            recorded.append(('FRAME', index, frame.position_x, frame.position_y))
     return recorded
 
 
@@ -80,6 +96,30 @@ class MIXIE_OT_moodboard_grab(Operator):
                 event.mouse_region_x, event.mouse_region_y
             )
         return event.mouse_region_x, event.mouse_region_y
+
+    def _resolve_membership(self, context):
+        """Re-resolve the frame of every item this grab actually moved.
+
+        A frame that travelled is deliberately NOT a reason to re-resolve
+        anything else: its own members moved with it and keep their
+        membership, and items it passed over were never part of the gesture.
+        """
+        scene = context.scene
+        moved = []
+        for item_type, index, _x, _y in self._initial_positions:
+            if item_type == 'FRAME':
+                continue
+            item = _grab_item(scene, item_type, index)
+            if item is not None:
+                moved.append(item)
+        if not moved:
+            return
+        try:
+            from mixar.modules.moodboard.core.frames import resolve_membership
+
+            resolve_membership(scene, moved)
+        except Exception:  # noqa: BLE001 — a modal must never die on this
+            pass
 
     def modal(self, context, event):
         if event.type == 'MOUSEMOVE':
@@ -120,7 +160,11 @@ class MIXIE_OT_moodboard_grab(Operator):
             return {'RUNNING_MODAL'}
 
         elif event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
-            # Confirm the move
+            # Confirm the move, then re-resolve frame membership: dragging an
+            # item INTO a frame is how it joins one. Only on confirm, and only
+            # for the items that moved -- a frame sweeping over the board must
+            # not adopt whatever it passed over (see `resolve_membership`).
+            self._resolve_membership(context)
             count = len(self._initial_positions)
             self.report({'INFO'}, f"Moved {count} item(s)")
             return {'FINISHED'}

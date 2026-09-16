@@ -283,6 +283,8 @@ class MixieMoodboardActionNode(PropertyGroup):
     """One configurable inference block on the moodboard canvas."""
 
     node_id: StringProperty(name="Node ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
+    # Canvas frame membership -- a frame holds cards as readily as pictures.
+    frame_id: StringProperty(name="Frame ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
     action_type: EnumProperty(
         name="Action",
         items=ACTION_TYPES,
@@ -428,6 +430,8 @@ class MixieMoodboardAssetNode(PropertyGroup):
     """
 
     node_id: StringProperty(name="Node ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
+    # Canvas frame membership -- a frame holds cards as readily as pictures.
+    frame_id: StringProperty(name="Frame ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
     title: StringProperty(name="Title", default="3D Asset", maxlen=GRAPH_LABEL_MAXLEN)
     object_names: StringProperty(
         name="Object Names", default="", maxlen=GRAPH_OBJECT_NAMES_MAXLEN
