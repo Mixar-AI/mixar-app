@@ -14,8 +14,7 @@
  *   status text   scene.mixie_chat_state   (the enum item's own UI name)
  *   status dot    scene.mixie_chat_is_busy
  *   title         the wm.mixie_chat_history_entries row whose session_id
- *                 matches scene.mixie_session_id; empty when none matches
- *                 (no invented "New Chat" fallback)
+ *                 matches scene.mixie_session_id
  *   segmented     scene.mixie_chat_mode == 'AGENT'
  *   placeholder   shown while scene.mixie_chat_input is empty
  *   queue count   live rows in wm.mixie_queue.items
@@ -190,6 +189,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   r_state->splat_is_new = true;
   r_state->placeholder = "Describe your scene here...";
   r_state->agent_mode = true;
+  BLI_strncpy(r_state->title, "New Chat", sizeof(r_state->title));
 
   Scene *scene = CTX_data_scene(C);
   wmWindowManager *wm = CTX_wm_manager(C);

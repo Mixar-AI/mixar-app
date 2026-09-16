@@ -261,6 +261,15 @@ class MIXIE_CHAT_OT_send_message(Operator):
             except Exception:
                 pass
 
+        # Turn checkpoint: the document exactly as it is before this fresh
+        # turn (core/turn_checkpoints.py). Taken before the user bubble is
+        # added so a restore shows the chat up to the previous reply. Never
+        # blocks the send.
+        checkpoint = None
+        if fresh_turn:
+            from ...core import turn_checkpoints
+            checkpoint = turn_checkpoints.capture(scene, message_text)
+
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
         user_msg.sender = 'USER'
@@ -380,6 +389,12 @@ class MIXIE_CHAT_OT_send_message(Operator):
             return {'CANCELLED'}
 
         metrics.stop_timer('agent_send')
+
+        # The turn's command id is the backend's request id: bind the
+        # checkpoint to it so a restore can rewind the conversation too.
+        if checkpoint is not None:
+            from ...core import turn_checkpoints
+            turn_checkpoints.bind_request(checkpoint, getattr(user_msg, "bubble_id", ""))
 
         # Drop the moodboard selection for any images we just sent.
         # Without this the moodboard's polling sync would re-add them

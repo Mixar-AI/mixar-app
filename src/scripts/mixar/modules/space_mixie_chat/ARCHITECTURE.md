@@ -257,3 +257,18 @@ These are the contracts between the two repos. Breaking any of them on either si
 
 - Backend-side companion (graph, agents, middleware, transport): `modules/agent/ARCHITECTURE.md` in the private `mixar-backend` repository.
 - Fix rationale for the May 2026 audit and the deferred items / verified false positives: `docs/reviews/AGENT_STUCK_INVESTIGATION.md` and `docs/reviews/AGENT_REVIEW_2026_05_BACKLOG.md` in the private `mixar-backend` repository.
+
+## Turn checkpoints (`core/turn_checkpoints.py`, `ui/operators/checkpoint_ops.py`)
+
+Before every fresh turn `chat_ops.send_message` captures the whole document with
+`save_as_mainfile(copy=True)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
+(sha256-deduplicated, newest 20 per session) and binds the record to the turn's
+command id once the send is accepted. The header shows a Checkpoints menu once the
+session has one. Restore runs only while the session is IDLE with no open run: a
+safety copy is captured first, the snapshot is read with `wm.recover_auto_save`
+(the recover flag makes the document untitled, so nothing on disk is touched), a
+titled project is then saved back to its own path once, and `load_pre` skips its
+session abort while `turn_checkpoints.is_restoring()`. The backend is told on a
+worker thread — `checkpoint.mark` for the safety copy, then `checkpoint.rewind`
+for the restored turn — and `composer_send.can_send` refuses while that is in
+flight. Contract: mixar-backend `docs/api/frontend/turn-checkpoints.md`.

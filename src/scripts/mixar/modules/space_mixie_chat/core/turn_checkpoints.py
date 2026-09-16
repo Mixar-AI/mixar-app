@@ -1,0 +1,458 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Turn checkpoints: a ``.mixar`` snapshot before every fresh turn, and a
+one-click way back to it while the session is idle.
+
+Capture (``capture``): right before a fresh message goes out, the whole
+document is written with ``save_as_mainfile(copy=True)`` to
+``~/.mixar/checkpoints/<session>/<id>.mixar``. Chat bubbles and the session
+id live in scene properties, so the file already holds the conversation as
+it was at that moment. Identical bytes are stored once (sha256), and only
+the newest ``MAX_PER_SESSION`` checkpoints of a session are kept.
+
+Restore (``restore``): a safety copy of the current state is captured first,
+then the snapshot is read back with ``wm.recover_auto_save``. That operator
+reads with Blender's recover flag, which takes the document's path from the
+file's own recovery header — empty for a copy — so the document comes back
+UNTITLED and nothing on disk is touched. A project that had a path is then
+saved back to it once (``save_as_mainfile``), which is the one place this
+module writes the user's file; an untitled project simply stays untitled.
+
+The conversation half lives on the backend: the snapshot taken before turn
+N is bound to that turn's command id (``bind_request``), and after a restore
+``checkpoint.rewind`` asks the backend to fork the session thread from
+where that turn started. The safety copy gets its own bookmark through
+``checkpoint.mark``. Both go over the agent socket on a worker thread; the
+composer refuses to send while they are in flight
+(``rewind_in_flight``). See ``docs/api/frontend/turn-checkpoints.md`` in
+mixar-backend.
+"""
+
+import hashlib
+import json
+import os
+import re
+import threading
+import uuid
+from datetime import datetime, timezone
+
+from mixar.config.logging_config import get_logger
+
+from ..constants import DEV_MODE, SessionState
+
+logger = get_logger(__name__)
+
+MAX_PER_SESSION = 20
+_INDEX_FILENAME = "index.json"
+_RECORD_VERSION = 1
+_LABEL_LIMIT = 80
+
+_restoring = False
+_rewind_inflight = False
+_LOCK = threading.Lock()
+
+
+# =============================================================================
+# Paths and JSON
+# =============================================================================
+
+def checkpoints_root() -> str:
+    """Per-user app-data dir, next to chat_history — never Blender's session
+    temp dir, which is purged on exit."""
+    return os.path.join(os.path.expanduser("~"), ".mixar", "checkpoints")
+
+
+def _safe_id(session_id: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_-]", "_", session_id or "")[:80] or "_nosession"
+
+
+def session_dir(session_id: str) -> str:
+    path = os.path.join(checkpoints_root(), _safe_id(session_id))
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def _index_path(session_id: str) -> str:
+    return os.path.join(session_dir(session_id), _INDEX_FILENAME)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
+
+
+def _order(item: dict):
+    """Newest last: creation time, then the per-session sequence (several
+    captures can share a timestamp)."""
+    return (item.get("created_at", ""), int(item.get("seq", 0) or 0))
+
+
+def _read_json(path: str):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def _atomic_write_json(path: str, data) -> None:
+    """tmp + rename so a crash never leaves a half-written index."""
+    tmp = f"{path}.{uuid.uuid4().hex[:8]}.tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _sha256(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+# =============================================================================
+# Index
+# =============================================================================
+
+def _load_index(session_id: str) -> list:
+    data = _read_json(_index_path(session_id))
+    items = data.get("checkpoints") if isinstance(data, dict) else None
+    return [i for i in (items or []) if isinstance(i, dict) and i.get("id")]
+
+
+def _write_index(session_id: str, items: list) -> None:
+    _atomic_write_json(_index_path(session_id), {"version": _RECORD_VERSION, "checkpoints": items})
+
+
+def _file_path(record: dict) -> str:
+    return os.path.join(session_dir(record.get("session_id", "")), record.get("file", ""))
+
+
+def list_checkpoints(session_id: str) -> list:
+    """Restorable checkpoints of a session, newest first."""
+    if not session_id:
+        return []
+    items = [i for i in _load_index(session_id) if os.path.isfile(_file_path(i))]
+    return sorted(items, key=_order, reverse=True)
+
+
+_has_cache = {}
+
+
+def has_checkpoints(session_id: str) -> bool:
+    """Header-draw cheap: one stat of the index per draw, re-read on change."""
+    if not session_id:
+        return False
+    path = os.path.join(checkpoints_root(), _safe_id(session_id), _INDEX_FILENAME)
+    try:
+        stamp = os.stat(path).st_mtime_ns
+    except OSError:
+        _has_cache.pop(session_id, None)
+        return False
+    cached = _has_cache.get(session_id)
+    if cached is not None and cached[0] == stamp:
+        return cached[1]
+    value = bool(list_checkpoints(session_id))
+    _has_cache[session_id] = (stamp, value)
+    return value
+
+
+def get_checkpoint(session_id: str, checkpoint_id: str):
+    for item in _load_index(session_id):
+        if item.get("id") == checkpoint_id:
+            return item
+    return None
+
+
+def _prune(session_id: str, items: list) -> list:
+    """Keep the newest MAX_PER_SESSION records; drop files nothing references."""
+    items = sorted(items, key=_order)
+    kept = items[-MAX_PER_SESSION:]
+    referenced = {i.get("file") for i in kept}
+    for stale in items[:-MAX_PER_SESSION]:
+        if stale.get("file") in referenced:
+            continue
+        try:
+            os.remove(_file_path(stale))
+        except OSError:
+            pass
+    return kept
+
+
+def _update(session_id: str, checkpoint_id: str, **changes) -> None:
+    items = _load_index(session_id)
+    for item in items:
+        if item.get("id") == checkpoint_id:
+            item.update(changes)
+    _write_index(session_id, items)
+
+
+# =============================================================================
+# Capture
+# =============================================================================
+
+def _user_message_count(scene) -> int:
+    messages = getattr(scene, "mixie_chat_messages", None) or []
+    return sum(1 for m in messages if getattr(m, "sender", "") == "USER")
+
+
+def capture(scene, label: str, *, kind: str = "turn"):
+    """Snapshot the whole document. Returns the record, or None when nothing
+    was written. Never raises: a checkpoint must not stop a send.
+
+    A chat with no session id yet gets one here (``start_session`` keeps an
+    existing id), so the snapshot is filed under the session it will belong
+    to; ``session_was_new`` remembers that the backend has no conversation
+    for it — a restore then clears the id instead of asking for a rewind.
+    """
+    if DEV_MODE or scene is None:
+        return None
+    try:
+        import bpy
+
+        session_id = getattr(scene, "mixie_session_id", "") or ""
+        session_was_new = not session_id
+        if session_was_new:
+            session_id = str(uuid.uuid4())
+            scene.mixie_session_id = session_id
+
+        directory = session_dir(session_id)
+        checkpoint_id = uuid.uuid4().hex[:12]
+        tmp = os.path.join(directory, f"{checkpoint_id}.tmp.mixar")
+        bpy.ops.wm.save_as_mainfile(filepath=tmp, copy=True, compress=True)
+        if not os.path.isfile(tmp):
+            logger.warning("Turn checkpoint: nothing written")
+            return None
+
+        digest = _sha256(tmp)
+        size = os.path.getsize(tmp)
+        items = _load_index(session_id)
+        same = next((i for i in items if i.get("sha256") == digest and os.path.isfile(_file_path(i))), None)
+        if same is not None:
+            os.remove(tmp)
+            filename = same["file"]
+        else:
+            filename = f"{checkpoint_id}.mixar"
+            os.replace(tmp, os.path.join(directory, filename))
+
+        record = {
+            "id": checkpoint_id,
+            "seq": max((int(i.get("seq", 0) or 0) for i in items), default=0) + 1,
+            "session_id": session_id,
+            "kind": kind,
+            "request_id": "",
+            "turn_index": _user_message_count(scene) + (1 if kind == "turn" else 0),
+            "label": (label or "").strip().replace("\n", " ")[:_LABEL_LIMIT],
+            "created_at": _now_iso(),
+            "file": filename,
+            "sha256": digest,
+            "bytes": size,
+            "original_path": bpy.data.filepath or "",
+            "session_was_new": session_was_new,
+            "message_count": len(getattr(scene, "mixie_chat_messages", None) or []),
+        }
+        items.append(record)
+        _write_index(session_id, _prune(session_id, items))
+        logger.info(f"Turn checkpoint {checkpoint_id} written ({size} bytes, turn {record['turn_index']})")
+        return record
+    except Exception as e:  # noqa: BLE001 — never block the message
+        logger.warning(f"Turn checkpoint skipped: {e}", exc_info=True)
+        return None
+
+
+def bind_request(record: dict, request_id: str) -> None:
+    """Attach the turn's command id — the backend's request id — to its checkpoint."""
+    if not record or not request_id:
+        return
+    try:
+        record["request_id"] = request_id
+        _update(record["session_id"], record["id"], request_id=request_id)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Turn checkpoint bind skipped: {e}")
+
+
+# =============================================================================
+# Restore
+# =============================================================================
+
+def is_restoring() -> bool:
+    """True while the snapshot is being read; ``load_pre`` must not abort the session."""
+    return _restoring
+
+
+def rewind_in_flight() -> bool:
+    return _rewind_inflight
+
+
+def can_restore(scene):
+    """Only an idle, connected session with no open run may swap the document."""
+    from .session import get_session_manager
+    session = get_session_manager()
+    if _rewind_inflight:
+        return False, "Restoring a checkpoint…"
+    if session.get_state(scene) != SessionState.IDLE:
+        return False, "Wait for the agent to finish"
+    if session.run_open(scene):
+        return False, "The agent is still building"
+    return True, ""
+
+
+def _session_scene(session_id: str):
+    import bpy
+    for scene in bpy.data.scenes:
+        if getattr(scene, "mixie_session_id", "") == session_id:
+            return scene
+    return bpy.context.window.scene if bpy.context.window else bpy.context.scene
+
+
+def restore(scene, checkpoint_id: str):
+    """Put the document back to a checkpoint. Returns ``(ok, message)``."""
+    import bpy
+    global _restoring
+
+    session_id = getattr(scene, "mixie_session_id", "") or ""
+    record = get_checkpoint(session_id, checkpoint_id)
+    if record is None:
+        return False, "Checkpoint not found"
+    path = _file_path(record)
+    if not os.path.isfile(path):
+        return False, "Checkpoint file is missing"
+    allowed, reason = can_restore(scene)
+    if not allowed:
+        return False, reason
+
+    # Safety copy of what is about to be replaced, restorable like any turn.
+    safety = capture(scene, f"Before restoring turn {record.get('turn_index', '?')}", kind="safety")
+    safety_request_id = ""
+    if safety is not None:
+        safety_request_id = str(uuid.uuid4())
+        bind_request(safety, safety_request_id)
+
+    original_path = bpy.data.filepath or record.get("original_path") or ""
+    _restoring = True
+    try:
+        bpy.ops.wm.recover_auto_save(filepath=path)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Turn checkpoint restore failed: {e}", exc_info=True)
+        return False, "Could not read the checkpoint"
+    finally:
+        _restoring = False
+
+    if original_path:
+        # The recovered document is untitled; give it its path back. This is
+        # the one write of the user's file — the restored state, once.
+        try:
+            bpy.ops.wm.save_as_mainfile(filepath=original_path)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Turn checkpoint: could not save back to the project path: {e}", exc_info=True)
+
+    restored_scene = _session_scene(record.get("session_id", ""))
+    _after_load(restored_scene, record, safety_request_id)
+    return True, f"Restored to before turn {record.get('turn_index', '?')}"
+
+
+def _after_load(scene, record: dict, safety_request_id: str) -> None:
+    """Rebind the live session to the restored transcript and rewind the backend."""
+    from .session import get_session_manager
+    from .turn_events import reopen
+    from .ui_utils import bump_layout_epoch, redraw_chat_areas
+
+    session = get_session_manager()
+    session.set_run(scene, "", False)
+    if session.is_connected(scene):
+        session.clear_streaming()
+        session.set_connected(scene)
+    try:
+        reopen(scene)
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"turn_events.reopen after restore skipped: {e}")
+    try:
+        from .markdown_parser import clear_incremental_cache
+        clear_incremental_cache()
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"markdown cache clear after restore skipped: {e}")
+    if hasattr(scene, "mixie_chat_user_has_engaged"):
+        scene.mixie_chat_user_has_engaged = bool(_user_message_count(scene))
+    bump_layout_epoch(scene)
+    redraw_chat_areas()
+
+    session_id = record.get("session_id", "")
+    if record.get("session_was_new"):
+        # The snapshot predates the conversation: the next message starts a
+        # new backend session. The safety copy still belongs to the old one.
+        session.clear_session_id(scene)
+        if safety_request_id:
+            _send_backend(session_id, [("checkpoint.mark", {"session_id": session_id, "request_id": safety_request_id})])
+        return
+    calls = []
+    if safety_request_id:
+        calls.append(("checkpoint.mark", {"session_id": session_id, "request_id": safety_request_id}))
+    if record.get("request_id"):
+        calls.append(("checkpoint.rewind", {"session_id": session_id, "request_id": record["request_id"]}))
+    else:
+        _notify(scene.name, "Scene restored. This checkpoint has no conversation bookmark, so the chat memory was not rewound.")
+    _send_backend(session_id, calls)
+
+
+def _send_backend(session_id: str, calls: list) -> None:
+    """Run the backend bookmarks/rewind on a worker thread, in order."""
+    global _rewind_inflight
+    if not calls:
+        return
+    scene_name = ""
+    try:
+        scene = _session_scene(session_id)
+        scene_name = scene.name if scene else ""
+    except Exception:  # noqa: BLE001
+        pass
+    with _LOCK:
+        _rewind_inflight = True
+
+    def _run():
+        global _rewind_inflight
+        from mixar.modules.common.agent_rpc.client import request
+        failure = ""
+        try:
+            for method, payload in calls:
+                request(method, payload, mutation=True)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Turn checkpoint backend call failed: {e}")
+            failure = str(e)
+        finally:
+            with _LOCK:
+                _rewind_inflight = False
+        if failure:
+            _notify(scene_name, "Scene restored, but the conversation could not be rewound: "
+                                f"{failure}. The agent may still remember the undone turns.")
+
+    threading.Thread(target=_run, name="mixie-turn-checkpoint", daemon=True).start()
+
+
+def _notify(scene_name: str, text: str) -> None:
+    """Add an agent bubble on the main thread (safe from any thread)."""
+    def _add():
+        try:
+            import bpy
+            from .message_helpers import add_agent_message
+            from .ui_utils import redraw_chat_areas
+            scene = bpy.data.scenes.get(scene_name) if scene_name else None
+            scene = scene or (bpy.context.window.scene if bpy.context.window else bpy.context.scene)
+            add_agent_message(scene, text)
+            redraw_chat_areas()
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"checkpoint notice skipped: {e}")
+        return None
+    try:
+        import bpy as _bpy
+        _bpy.app.timers.register(_add, first_interval=0.05)
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"checkpoint notice timer skipped: {e}")

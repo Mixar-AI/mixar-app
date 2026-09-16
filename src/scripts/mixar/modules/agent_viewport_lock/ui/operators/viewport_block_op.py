@@ -20,15 +20,6 @@ whole duration of an agent turn (window modal handlers run before the
 region's toast UI handler, so this modal is the only place that can
 yield).
 
-The Parallel Agents panel (the worker cards docked bottom-left of the
-viewport, VIEW_3D EXECUTE region) is another such layer: its cards exist
-almost only WHILE the agent is running, and its eye / dismiss / chevron
-controls sit inside the WINDOW region's rect. A left-press over that region
-is handed to the panel's own click operator (``view3d.agent_panel_click``,
-the C++ hit-test) from here; a press the panel does not claim stays
-consumed, so an empty part of the card band never falls through to
-viewport selection mid-turn.
-
 Started programmatically by the bootstrap tick when the agent enters
 BUSY / MODIFYING; self-stops via a short timer when the agent leaves
 those states (so the first post-completion click isn't eaten).
@@ -130,11 +121,6 @@ class MIXAR_OT_agent_viewport_block(Operator):
                 if (et == 'LEFTMOUSE' and event.value == 'PRESS'
                         and self._on_toast_control(region, event)):
                     return {"PASS_THROUGH"}
-                if et == 'LEFTMOUSE' and event.value == 'PRESS':
-                    # Worker cards: let the panel hit-test the press. Claimed
-                    # or not, the press is consumed here so nothing under
-                    # the card band can select or edit mid-turn.
-                    self._forward_to_agent_panel(context, event)
                 return {"RUNNING_MODAL"}  # consume → blocked
 
         return {"PASS_THROUGH"}
@@ -164,46 +150,6 @@ class MIXAR_OT_agent_viewport_block(Operator):
                         region.y <= my <= region.y + region.height):
                     return region
         return None
-
-    @staticmethod
-    def _agent_panel_region_under_pointer(context, event):
-        """The VIEW_3D EXECUTE region (Parallel Agents panel) under the
-        mouse, as ``(area, region)``, or None. The region is poll-driven and
-        sized 1x1 while no cards are shown, so a hit here means the panel is
-        actually on screen."""
-        win = context.window
-        if win is None or win.screen is None:
-            return None
-        mx, my = event.mouse_x, event.mouse_y
-        for area in win.screen.areas:
-            if area.type != 'VIEW_3D':
-                continue
-            for region in area.regions:
-                if region.type != 'EXECUTE' or region.width <= 1:
-                    continue
-                if (region.x <= mx <= region.x + region.width and
-                        region.y <= my <= region.y + region.height):
-                    return area, region
-        return None
-
-    def _forward_to_agent_panel(self, context, event) -> bool:
-        """Hand a left-press over the Parallel Agents panel to its own click
-        operator. Window modal handlers run before region handlers, so
-        without this the panel's eye / dismiss / chevron are dead for the
-        whole turn — exactly when the cards are on screen. Returns True when
-        the panel claimed the press."""
-        hit = self._agent_panel_region_under_pointer(context, event)
-        if hit is None:
-            return False
-        area, region = hit
-        try:
-            with context.temp_override(window=context.window, area=area,
-                                       region=region):
-                result = bpy.ops.view3d.agent_panel_click('INVOKE_DEFAULT')
-        except Exception as e:  # noqa: BLE001 — never break the lock
-            logger.debug("agent panel forward skipped: %s", e)
-            return False
-        return 'FINISHED' in result
 
     @staticmethod
     def _on_toast_control(region, event) -> bool:
