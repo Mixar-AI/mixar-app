@@ -160,6 +160,44 @@ def test_drawer_grip_keymap_is_grip_only():
     assert "_bind_moodboard_pointer(km)" in py
 
 
+def test_tab_toggles_the_drawer_only_on_the_drawer_surface():
+    """Tab is Edit Mode in the 3D viewport. Bind it only on TOOL_PROPS.
+
+    Closed: Tab on the grip opens. Open: the same key on the grip or
+    painted panel closes. Text fields keep Tab: a window-modal text-edit
+    handler consumes it first, and the region Tab handler is registered
+    after UI.
+    """
+    ops = _read(VIEW3D / "view3d_moodboard_drawer_ops.cc")
+    keymap = _fn(_strip_comments(ops), "void view3d_moodboard_drawer_keymap(")
+    assert "EVT_TABKEY" in keymap
+    assert "VIEW3D_OT_moodboard_drawer_toggle" in keymap
+    assert "SPACE_VIEW3D" in keymap and "RGN_TYPE_TOOL_PROPS" in keymap
+    assert "SPACE_EMPTY" not in keymap
+
+    core = _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer.cc"))
+    grip_poll = _fn(core, "bool view3d_moodboard_drawer_grip_handler_poll(")
+    assert "EVT_TABKEY" in grip_poll
+    tab_poll = _fn(core, "bool view3d_moodboard_drawer_tab_handler_poll(")
+    assert "EVT_TABKEY" in tab_poll
+    assert "event->modifier == 0" in tab_poll
+    assert "view3d_moodboard_drawer_contains_xy" in tab_poll
+    assert "view3d_moodboard_drawer_grip_contains_xy" not in tab_poll
+
+    init = _fn(core, "void view3d_moodboard_drawer_region_init(")
+    ui = init.index("region_handlers_add")
+    tab = init.index("view3d_moodboard_drawer_tab_handler_poll")
+    canvas = init.index("view3d_moodboard_drawer_canvas_handler_poll")
+    assert ui < tab < canvas
+
+    # space_view3d only ensures the drawer map; it must not bind Tab on
+    # the 3D View WINDOW keymap (that is Edit Mode).
+    view3d = _read(VIEW3D / "space_view3d.cc")
+    assert "view3d_moodboard_drawer_keymap" in view3d
+    assert "VIEW3D_OT_moodboard_drawer_toggle" not in view3d
+    assert "EVT_TABKEY" not in view3d
+
+
 def test_grip_click_flips_target_and_escape_restores_invoke_state():
     body = _fn(
         _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer_ops.cc")),

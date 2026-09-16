@@ -349,13 +349,13 @@ void view3d_moodboard_drawer_operatortypes()
 
 void view3d_moodboard_drawer_keymap(wmKeyConfig *keyconf)
 {
-  /* Grip only. Canvas LEFTMOUSE items must not share this map: a GUI
+  /* LEFTMOUSE is grip-only. Canvas clicks must not share this map: a GUI
    * keyconfig reload builds a user copy that can list those items *above*
    * the grip, and `WM_keymap_active` then prefers that copy — a centre
-   * click on the open handle becomes select and never toggles. The addon
-   * binding that survives a reload is in `modules/moodboard/ui/keymap.py`.
-   * Off-grip the operator PASS_THROUGHs so UI / Mixie / the viewport keep
-   * the event. */
+   * click on the open handle becomes select and never toggles. Tab is
+   * safe here: it is not a canvas click. The addon bindings that survive
+   * a reload are in `modules/moodboard/ui/keymap.py`. Off-grip the grip
+   * operator PASS_THROUGHs so UI / Mixie / the viewport keep the event. */
   wmKeyMap *keymap = WM_keymap_ensure(
       keyconf, "Moodboard Drawer Grip", SPACE_VIEW3D, RGN_TYPE_TOOL_PROPS);
 
@@ -363,6 +363,15 @@ void view3d_moodboard_drawer_keymap(wmKeyConfig *keyconf)
   grip_params.type = LEFTMOUSE;
   grip_params.value = KM_PRESS;
   WM_keymap_add_item(keymap, "VIEW3D_OT_moodboard_drawer_grip", &grip_params);
+
+  /* Unmodified Tab toggles the drawer on this TOOL_PROPS map only. Binding
+   * it on 3D View WINDOW would steal Edit Mode. Closed: Tab on the grip
+   * opens. Open: Tab on the grip or panel closes. Same key both ways. */
+  KeyMapItem_Params tab_params{};
+  tab_params.type = EVT_TABKEY;
+  tab_params.value = KM_PRESS;
+  tab_params.modifier = 0;
+  WM_keymap_add_item(keymap, "VIEW3D_OT_moodboard_drawer_toggle", &tab_params);
 }
 
 /* -------------------------------------------------------------------- */
