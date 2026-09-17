@@ -275,11 +275,19 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
     }
   }
   else {
-    /* Bottom-right grip resizes the card, like resizing an image tile. Checked
-     * before the playback and move paths so a corner drag resizes rather than
-     * moving the node or toggling its video. */
+    /* A corner handle resizes the card -- the same four squares and the same
+     * uniform scale a reference picture has, from the shared resize unit.
+     * Checked before the playback and move paths so a corner drag resizes
+     * rather than moving the node or toggling its video. */
     MoodboardGraphResizeState resize_state{};
-    if (moodboard_graph_resize_grip_hit(&node, node_rect, mouse_x, mouse_y, &resize_state)) {
+    if (moodboard_graph_resize_handle_hit(
+            &node,
+            node_rect,
+            mouse_x,
+            mouse_y,
+            ui::view2d_scale_get_x(&region->v2d),
+            &resize_state))
+    {
       GraphMoveData *rdata = MEM_new<GraphMoveData>("MoodboardGraphResize");
       rdata->link_drag = false;
       rdata->moved = false;
@@ -439,8 +447,15 @@ static wmOperatorStatus graph_select_modal(bContext *C,
     return OPERATOR_RUNNING_MODAL;
   }
   if (event->type == LEFTMOUSE && event->val == KM_RELEASE) {
+    const bool moved = data->moved;
     MEM_delete(data);
     op->customdata = nullptr;
+    /* Dragging a card INTO a frame is how it joins one, so membership is
+     * re-resolved once the gesture ends -- only when something actually
+     * moved, so a plain click never writes scene data. */
+    if (moved) {
+      moodboard_frames_request_reframe(C);
+    }
     return OPERATOR_FINISHED;
   }
   if (ELEM(event->type, EVT_ESCKEY, RIGHTMOUSE)) {

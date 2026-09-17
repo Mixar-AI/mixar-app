@@ -167,6 +167,10 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
+  /* A selected FRAME gets its pencil + More row (or its name field) on this
+   * same block, so it scales and hit-tests exactly like a card's
+   * (mixie_draw_moodboard_frame_actions.cc). */
+  moodboard_add_selected_frame_actions(C, block, v2d, region, &scene_ptr);
   /* A selected reference image or movie gets its own Rename / Preview / Export
    * row on this same block, so it scales and hit-tests exactly like a card's
    * (mixie_draw_moodboard_media_actions.cc). */
@@ -186,6 +190,9 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   /* moodboard_media_labels: painted text, so it takes no block of its own and
    * has to run while pixel space is still restored. */
   mixie_draw_moodboard_selected_media_labels(C, v2d, region, &scene_ptr, cache);
+  /* Frame names are painted here rather than in the frame pass so that a
+   * member drawn inside a frame can never cover the frame's own name. */
+  mixie_draw_moodboard_frame_labels(v2d, region, &scene_ptr);
   ui::view2d_view_ortho(v2d);
 }
 

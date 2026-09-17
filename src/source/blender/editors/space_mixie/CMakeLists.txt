@@ -22,7 +22,8 @@ set(SRC
   mixie_dragdrop.cc
   mixie_draw_moodboard.cc
   mixie_draw_moodboard_annotations.cc
-  mixie_draw_moodboard_groups.cc
+  mixie_draw_moodboard_frames.cc
+  mixie_draw_moodboard_frame_actions.cc
   mixie_draw_moodboard_graph.cc
   mixie_draw_moodboard_graph_chrome.cc
   mixie_draw_moodboard_graph_sockets.cc
@@ -40,6 +41,7 @@ set(SRC
   mixie_draw_moodboard_tools.cc
   mixie_draw_sam3d.cc
   mixie_header.cc
+  mixie_moodboard_frame_geometry.cc
   mixie_moodboard_move_selection.cc
   mixie_moodboard_ops_box_select.cc
   mixie_moodboard_ops_crop.cc
@@ -52,9 +54,12 @@ set(SRC
   mixie_moodboard_ops_masks.cc
   mixie_moodboard_ops_preview.cc
   mixie_moodboard_ops_preview_window.cc
+  mixie_moodboard_ops_frame_select.cc
+  mixie_moodboard_ops_rename_frame.cc
   mixie_moodboard_ops_rename_media.cc
   mixie_moodboard_ops_select.cc
   mixie_moodboard_ops_zoom.cc
+  mixie_moodboard_resize_handles.cc
   mixie_ops.cc
   mixie_moodboard_qa_targets.cc
   mixie_select.cc

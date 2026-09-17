@@ -203,6 +203,24 @@ def _ensure_graph_node_ids(scene) -> None:
         _logger.debug("moodboard node id migration failed: %s", e, exc_info=True)
 
 
+def _migrate_legacy_frames(scene) -> None:
+    """Turn a pre-frame board's index-based groups into real frames.
+
+    Runs from the poll tick and ``load_post``, never from a draw callback, for
+    the same reason the node-id migration does: it writes scene data.
+    One-way and idempotent -- the legacy collection is cleared as it converts,
+    so every later tick finds nothing and returns immediately.
+    """
+    try:
+        if not getattr(scene, "mixie_moodboard_groups", None):
+            return
+        from .frames import migrate_legacy_groups
+
+        migrate_legacy_groups(scene)
+    except Exception as e:  # noqa: BLE001 — timer must never raise
+        _logger.debug("moodboard frame migration failed: %s", e, exc_info=True)
+
+
 def _restore_graph_node_selections(scene) -> None:
     """Re-derive each node's Mode/Model dropdown from its saved slugs.
 
@@ -240,6 +258,7 @@ def _poll_tick():
         # backfilled for images added by any of the collection's writers —
         # including the C++ drop operator. No-ops once every id is present.
         _ensure_graph_node_ids(scene)
+        _migrate_legacy_frames(scene)
 
         key = scene.name
         signature = _compute_selection_signature(scene)
@@ -413,6 +432,7 @@ def _on_file_load_post(*_args) -> None:
     try:
         for scene in bpy.data.scenes:
             _ensure_graph_node_ids(scene)
+            _migrate_legacy_frames(scene)
             _restore_graph_node_selections(scene)
     except Exception as e:  # noqa: BLE001 — handler must never raise
         _logger.debug("moodboard node id load migration failed: %s", e, exc_info=True)

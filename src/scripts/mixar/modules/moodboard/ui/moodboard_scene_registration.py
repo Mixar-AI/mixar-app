@@ -49,6 +49,7 @@ from .moodboard_annotation_props import (
     MixieMoodboardAnnotationPoint,
     MixieMoodboardAnnotationStroke,
 )
+from .moodboard_frame_props import MixieMoodboardFrame
 from .moodboard_graph_properties import (
     MixieMoodboardActionNode,
     MixieMoodboardAssetNode,
@@ -88,6 +89,9 @@ classes = (
     MixieMoodboardAnnotationStroke,
     MixieMoodboardSegment,
     MixieMoodboardImage,
+    MixieMoodboardFrame,
+    # Legacy; kept registered so a pre-frame .blend still loads and can be
+    # migrated. Nothing writes it -- see `core/frames.py:migrate_legacy_groups`.
     MixieMoodboardGroup,
     MixieMoodboardNodeParameter,
     MixieMoodboardInputSocket,
@@ -150,11 +154,21 @@ def register():
         ),
     )
     _safe_scene_prop(
+        'mixie_moodboard_frames',
+        CollectionProperty(
+            type=MixieMoodboardFrame,
+            name="Mixie Moodboard Frames",
+            description="Canvas frames grouping board items",
+        ),
+    )
+    # LEGACY collection. Still registered so a .blend saved before frames
+    # loads, and so the one-time migration can read it; nothing writes it.
+    _safe_scene_prop(
         'mixie_moodboard_groups',
         CollectionProperty(
             type=MixieMoodboardGroup,
-            name="Mixie Moodboard Groups",
-            description="Collection of image groups",
+            name="Mixie Moodboard Groups (legacy)",
+            description="Superseded by mixie_moodboard_frames; retained for migration",
         ),
     )
     _safe_scene_prop(
@@ -427,6 +441,7 @@ def unregister():
         'mixie_moodboard_asset_nodes',
         'mixie_moodboard_action_nodes',
         'mixie_moodboard_selected_index',
+        'mixie_moodboard_frames',
         'mixie_moodboard_groups',
         'mixie_moodboard_textboxes',
         'mixie_moodboard_images',

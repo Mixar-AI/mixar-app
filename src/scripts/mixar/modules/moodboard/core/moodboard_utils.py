@@ -266,6 +266,33 @@ def place_new_moodboard_item(
         )
     ensure_moodboard_region_visible(item.position_x, item.position_y, disp_w, disp_h)
     stamp_moodboard_item_added(item)
+    _adopt_into_frame(scene, item)
+
+
+def _adopt_into_frame(scene, item) -> None:
+    """A new item landing inside a frame joins it.
+
+    Dropping a file into a frame is the same gesture as dragging one in, so it
+    has the same outcome -- resolved through the ONE membership rule
+    (``core/frames``) rather than a second copy of it here. An explicit
+    ``frame_id`` set by the caller wins and is left alone. Best-effort: a
+    failure here must never block placing the item.
+    """
+    if getattr(item, "frame_id", ""):
+        return
+    try:
+        from .frames import frame_at_point, item_rect
+        from .frame_geometry import rect_center
+
+        rect = item_rect(item)
+        if rect is None:
+            return
+        center_x, center_y = rect_center(rect)
+        frame_id = frame_at_point(scene, center_x, center_y)
+        if frame_id:
+            item.frame_id = frame_id
+    except Exception:  # noqa: BLE001 — placement must never fail on this
+        pass
 
 
 def validate_selection_region(state, min_size=0.01):

@@ -20,6 +20,25 @@ def _tag_redraw(context):
         area.tag_redraw()
 
 
+def _refit_frames(context) -> None:
+    """After an arrange, every frame wraps its own members again.
+
+    An arrange moves the ITEMS; a frame is a container with its own rect, so
+    leaving it where it was would strand its members outside their own frame.
+    Refitting is also why frames themselves are not arrange targets: laying
+    out containers and their contents in one pass would fight itself.
+    Membership is NOT re-resolved -- an arrange is a tidy-up, not a regrouping.
+    """
+    try:
+        from mixar.modules.moodboard.core.frames import fit_frame_to_members
+
+        for frame in getattr(context.scene, "mixie_moodboard_frames", ()):
+            if frame.frame_id:
+                fit_frame_to_members(context.scene, frame.frame_id)
+    except Exception:  # noqa: BLE001 — an arrange must not fail on this
+        pass
+
+
 def _poll_nodes(context) -> bool:
     """Arranging needs two things to arrange, whatever kind they are."""
     scene = getattr(context, "scene", None)
@@ -66,6 +85,7 @@ class MIXIE_OT_moodboard_align_nodes(Operator):
         if not moved:
             self.report({'WARNING'}, "Nothing to align: the board needs two items")
             return {'CANCELLED'}
+        _refit_frames(context)
         _tag_redraw(context)
         self.report({'INFO'}, f"Aligned {moved} item(s)")
         return {'FINISHED'}
@@ -105,6 +125,7 @@ class MIXIE_OT_moodboard_distribute_nodes(Operator):
                 {'WARNING'}, "Nothing to distribute: the board needs three items"
             )
             return {'CANCELLED'}
+        _refit_frames(context)
         _tag_redraw(context)
         self.report({'INFO'}, f"Distributed {moved} item(s)")
         return {'FINISHED'}
@@ -132,6 +153,7 @@ class MIXIE_OT_moodboard_tidy_nodes(Operator):
         if not moved:
             self.report({'WARNING'}, "Nothing to tidy")
             return {'CANCELLED'}
+        _refit_frames(context)
         _tag_redraw(context)
         self.report({'INFO'}, f"Tidied {moved} item(s)")
         return {'FINISHED'}

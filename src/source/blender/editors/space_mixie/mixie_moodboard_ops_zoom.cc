@@ -217,6 +217,28 @@ static bool moodboard_content_bounds(PointerRNA *scene_ptr,
       BLI_rctf_union(r_bounds, &rect);
     }
   }
+
+  /* Frames are not graph nodes either, and an EMPTY frame is still content --
+   * it is a region of the board the user deliberately claimed, so Home must
+   * fit it and Frame Selected must go to it. */
+  PropertyRNA *frames = RNA_struct_find_property(scene_ptr, "mixie_moodboard_frames");
+  const int frame_count = frames ? RNA_property_collection_length(scene_ptr, frames) : 0;
+  for (int index = 0; index < frame_count; index++) {
+    PointerRNA frame;
+    RNA_property_collection_lookup_int(scene_ptr, frames, index, &frame);
+    if (selected_only && !RNA_boolean_get(&frame, "selected")) {
+      continue;
+    }
+    rctf rect;
+    moodboard_frame_rect(&frame, &rect);
+    if (!found) {
+      *r_bounds = rect;
+      found = true;
+    }
+    else {
+      BLI_rctf_union(r_bounds, &rect);
+    }
+  }
   return found;
 }
 

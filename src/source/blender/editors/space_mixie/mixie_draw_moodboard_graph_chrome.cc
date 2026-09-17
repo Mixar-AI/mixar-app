@@ -62,23 +62,28 @@ void moodboard_draw_running_glow(const rctf &rect)
   ui::draw_roundbox_4fv(&rect, false, 22.0f, border);
 }
 
-void moodboard_draw_node_resize_grip(const rctf &rect, const bool selected)
+void moodboard_draw_node_resize_handles(View2D *v2d, const rctf &rect)
 {
-  /* A quiet corner wedge, the same idea as an image tile's resize handle. Its
-   * size is MOODBOARD_NODE_RESIZE_GRIP in CANVAS units — the identical box the
-   * grip hit-test uses — so the pixels the user aims at and the region that
-   * responds can never drift apart. */
-  const float grip = MOODBOARD_NODE_RESIZE_GRIP;
+  /* The SAME four corner squares a selected reference picture wears, from the
+   * one shared painter -- so the gesture looks identical wherever it is
+   * offered and the squares cannot drift from the hit-test.
+   *
+   * Drawn only for a SELECTED card, by the caller: handles are a property of
+   * the selection, exactly as they are for a picture. The wedge this replaces
+   * was painted on every card, selected or not, and pointed at a resize rule
+   * that behaved differently from a picture's. */
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(
       format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformColor4f(0.55f, 0.56f, 0.60f, selected ? 0.95f : 0.5f);
-  immBegin(GPU_PRIM_TRIS, 3);
-  immVertex2f(pos, rect.xmax - grip, rect.ymin);
-  immVertex2f(pos, rect.xmax, rect.ymin);
-  immVertex2f(pos, rect.xmax, rect.ymin + grip);
-  immEnd();
+  GPU_blend(GPU_BLEND_ALPHA);
+  mixie_draw_moodboard_resize_handles(v2d,
+                                      pos,
+                                      rect.xmin,
+                                      rect.ymin,
+                                      BLI_rctf_size_x(&rect),
+                                      BLI_rctf_size_y(&rect));
+  GPU_blend(GPU_BLEND_NONE);
   immUnbindProgram();
 }
 

@@ -393,3 +393,47 @@ GRAPH_SNAP_GRID = 40.0
 # `mixie_rna_string_get_clamped` into MIXIE_GRAPH_PROMPT_PREVIEW_BUF, a
 # deliberately tiny one-line preview buffer that truncates by design.
 GRAPH_PROMPT_MAXLEN = 32768
+
+# ---------------------------------------------------------------------------
+# Canvas frames (grouping)
+# ---------------------------------------------------------------------------
+# A frame is a FIRST-CLASS canvas object with its own rect, name and colour --
+# not a bounding box derived from whichever items happen to carry an index.
+# That is what lets a frame be empty, be dragged to open canvas, be resized to
+# claim space, and adopt what is dropped inside it. Membership is the item's
+# own `frame_id` (a stable string), never a collection index: the legacy
+# `group_index` had to be renumbered by hand in three separate operators every
+# time a group was removed.
+FRAME_NAME_MAXLEN = 96             # <-> char name[128] (MIXIE_FRAME_NAME_BUF)
+
+# Eight pastels, CYCLED (`len(frames) % 8`) rather than picked at random: a
+# random pick gives two adjacent frames the same colour about one time in
+# eight and is not reproducible in QA. What is stored is the INDEX, so the
+# palette can be retuned later and saved boards follow it.
+#
+# Must equal `FRAME_PALETTE` in `mixie_draw_moodboard_frames.cc`, which is the
+# painter's own copy -- `tests/moodboard/test_frame_ui.py` pins the two
+# together. The swatch menu here is the only Python reader.
+FRAME_PALETTE = (
+    ("Rose", (0.96, 0.64, 0.64)),
+    ("Apricot", (0.97, 0.79, 0.61)),
+    ("Butter", (0.95, 0.91, 0.63)),
+    ("Mint", (0.72, 0.89, 0.66)),
+    ("Aqua", (0.64, 0.86, 0.85)),
+    ("Sky", (0.65, 0.77, 0.94)),
+    ("Lilac", (0.76, 0.69, 0.93)),
+    ("Orchid", (0.94, 0.69, 0.84)),
+)
+FRAME_PALETTE_SIZE = len(FRAME_PALETTE)
+
+# A frame created from a selection wraps its members with this much slack on
+# every side (canvas units), so the members are not flush against the border.
+FRAME_SELECTION_PADDING = 56.0
+# A frame created with nothing selected: somewhere to drop things into.
+FRAME_DEFAULT_WIDTH = 900.0
+FRAME_DEFAULT_HEIGHT = 640.0
+# Floors. A frame narrower than its own name plus its action row is unusable,
+# and a resize must not be able to invert the rect. Mirrored as
+# MOODBOARD_FRAME_MIN_W/H in mixie_intern.hh.
+FRAME_MIN_WIDTH = 220.0
+FRAME_MIN_HEIGHT = 160.0
