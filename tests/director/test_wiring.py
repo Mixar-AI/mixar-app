@@ -57,7 +57,9 @@ def test_rotation_continuity_is_repaired_on_every_key_writing_path():
     # every action that evaluates an in-between camera pose.
     assert capture.count("repair_rotation_continuity(camera)") == 2
     assert "repair_rotation_continuity(shot.camera)" in preview
-    assert "repair_rotation_continuity(shot.camera)" in render
+    # The render job now serves shots AND bare animated cameras through one
+    # RenderTarget, so it repairs the target's camera.
+    assert "repair_rotation_continuity(target.camera)" in render
     assert "repair_rotation_continuity(shot.camera)" in shot_api
     # Character Turn presets key through matrix_world too (a 90 degree turn
     # must never play as a 270 degree spin the other way).
@@ -85,9 +87,19 @@ def test_video_handoff_remains_catalog_driven_and_provider_neutral():
 
 
 def test_director_has_no_n_panel_implementation():
+    """The DIRECTING surface is native; no Python panel duplicates it.
+
+    Scope is the Director viewport experience. The camera-first Export to
+    Moodboard popup is deliberately NOT part of it — it exists for users who
+    never enter Director, is hosted in the topbar (`TOPBAR`/`HEADER`, drawn
+    only when `wm.call_panel` opens it) and is asserted below to never reach
+    a View3D region. Everything else stays native.
+    """
     panel_path = DIRECTOR / "ui/panels/director_panel.py"
     python_sources = "\n".join(
-        path.read_text(encoding="utf-8") for path in DIRECTOR.rglob("*.py")
+        path.read_text(encoding="utf-8")
+        for path in DIRECTOR.rglob("*.py")
+        if "camera_export" not in path.name
     )
 
     assert not panel_path.exists()
@@ -99,6 +111,14 @@ def test_director_has_no_n_panel_implementation():
     # Every popup is native now; no Python panel/popover survives.
     assert not (DIRECTOR / "ui/panels/render_popover.py").exists()
     assert "bl_region_type = 'HEADER'" not in python_sources
+
+    # The one Python panel in the module is the camera export popup, and it
+    # must stay out of the viewport that the native surface owns.
+    export_panel = (
+        DIRECTOR / "ui/panels/camera_export_panel.py"
+    ).read_text(encoding="utf-8")
+    assert "bl_space_type = 'TOPBAR'" in export_panel
+    assert "VIEW_3D" not in export_panel
 
 
 def test_incremental_install_cannot_retain_removed_director_panel():
