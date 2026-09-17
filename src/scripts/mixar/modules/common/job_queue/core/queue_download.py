@@ -254,6 +254,14 @@ class DownloadMixin:
             job.on_imported(obj_names)
             job.state = JobState.SUCCESS
             _record_output_landed(job, file_type, obj_names, resolve_uids=True)
+            # Without this, Blender's next Ctrl+Z rewinds past the import and
+            # the generated (paid-for) object is gone beyond redo, because the
+            # forward step predates it too. Deferred import: the utils package
+            # pulls in PIL/numpy, which must not land in the bootstrap path.
+            from mixar.modules.common.utils.undo import push_undo_step
+            push_undo_step(
+                f"Import {job.label}" if job.label else "Import Generated Result"
+            )
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Import failed: {e}"
