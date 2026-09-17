@@ -72,9 +72,6 @@ any feature work, read the playbook:
 
 ## Bootstrap & Registration
 
-<<<<<<< Updated upstream
-`src/scripts/startup/bootstrap/__init__.py` loads everything in 4 phases:
-=======
 **Eevee visible mesh capture:** `bpy.ops.render.render(capture_visible_objects=True)` opts an
 Eevee still render into camera-sample mesh identity capture. Results are local runtime JSON
 at `scene.render.visible_objects_json`; only `status="complete"` is consumable. Meshes behind
@@ -88,8 +85,7 @@ six-view visibility is an approximation of exterior membership, not a geometric 
 IDs are session-local and instances resolve to source meshes. See
 `docs/render-visible-objects.md` for the API, boundaries, and deterministic QA scene/scenario.
 
-`src/scripts/startup/bootstrap/__init__.py` loads everything in 3 phases:
->>>>>>> Stashed changes
+`src/scripts/startup/bootstrap/__init__.py` loads everything in 4 phases:
 
 1. **Package setup** — synthetic packages for `src/scripts/mixar/` (no `__init__.py` needed in most subdirs).
 2. **Network** — `modules/common/network.configure_network()`: exports the resolved proxy to the environment and installs the OS trust store (`truststore`) by replacing `ssl.SSLContext`. Must precede every bootstrap module — only contexts created afterwards are affected.
@@ -119,6 +115,7 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — o
 | **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` |
 | **onboarding** | First-run GPU-rendered tour cards + highlight overlays. Cards are pure `gpu`/`blf` painted from a `POST_PIXEL` handler with the modal hit-testing named rects — there is **no `UILayout` in the card path**, so a card can never host a Blender widget (`template_list`, `prop`, `operator`); `invoke_props_dialog` was deliberately removed (see the `constants.py` rationale) and a popup over a card would be swallowed by the off-card-click-skips-the-tour rule. Step 7 (second-to-last, before Completion) offers to import the user's Blender add-ons: because the checklist can't live in a card, the tour imports **everything** in one click via `core/plugin_import_bridge.py` and points at Preferences for per-plugin control. Three mechanisms were added to the card engine for it and are reusable — `StepDef.alt_label`/`alt_step` draws a muted secondary pill left of the primary one and branches straight to a named step (the only branch off `continue_step`); `StepDef.primary_action` lets a card whose outcome isn't known until the click (imported vs nothing-found) pick its own next step from a deferred main-thread timer instead of a plain `advance()`; and `StepDef.available` is a predicate that drops a step from the run entirely — step 7 is shown ONLY when a Blender install with user plugins exists. An unavailable step must be walked over in **both** directions (`state._resolve_available`), or Back from the next card lands on a hidden step and dead-ends. Step dots therefore cannot use the static `progress` tuples — `steps.numbered_progress()` walks the live `continue_step` chain so a skipped step can't leave "STEP 7 OF 7" on a six-card tour. `STEP_PLUGIN_IMPORT_NONE` survives only as the landing spot for the Import button's `refresh=True` re-scan disagreeing with the earlier gate (Blender uninstalled mid-tour); it is unreachable in the normal flow. Card copy that depends on runtime data (plugin count, import counts) is built in `card_config.py`, never declared in the step table |
 | **plugin_import** | One-click import of the user's existing vanilla-Blender plugins. Mixar's rebranded on-disk identity (`Mixar/5.0`) means a stock Blender install lives beside it under the platform's standard `Blender/<ver>` tree — Mixar reads FROM that and writes INTO its own user tree. `core/discovery.py` finds installed Blender versions per-OS; `core/enumerate.py` scans only the *user config* tree (`scripts/addons/` + `extensions/<repo>/<pkg>/`, all repo dirs incl. `blender_org`) so Blender's bundled plugins are excluded; `core/source_select.py` picks between them and is the **only** entry point callers should use — newest-by-version-number is wrong because Blender creates a version's config dir on first launch, so an empty `5.1` beside a populated `5.0` would make Scan report nothing. It prefers the newest version that actually *has* plugins and separates "no Blender at all" (`None`) from "Blender installed, nothing to import" (`has_plugins == False`), a distinction onboarding's "no Blender found" card depends on. All three are bpy-free and covered by `tests/plugin_import/`. `core/importer.py` copies in (add-ons → `user_resource('SCRIPTS')/addons`; extensions → Mixar's `user_default` repo), refreshes via **`bpy.utils.refresh_script_paths()`** + `preferences.addon_refresh` + the **offline** `extensions.repo_refresh_all` (never the online `repo_sync`), then enables ticked plugins with `addon_utils.enable(default_set=True, persistent=True, handle_error=...)` + `wm.save_userpref()`. **`refresh_script_paths()` is load-bearing and must stay first**: `mixar_addons_dir()` passes `create=True`, so on a fresh profile — exactly the onboarding first-run case, on all three platforms — the destination did not exist at startup, `addon_utils.paths()` skipped it and nothing put it on `sys.path`; `preferences.addon_refresh` only runs `addon_utils.modules_refresh()` (bl_info cache, never `sys.path`), so every legacy add-on copied in fine and then failed to enable with ModuleNotFoundError until a restart. Blender's own `PREFERENCES_OT_addon_install` calls it for the same reason. It only removes/re-adds paths Blender itself tracks, so Mixar's bootstrap `sys.path` inserts are untouched. `addon_utils.enable` never propagates a failure (its default `handle_error` prints a traceback and returns `None`), so the importer passes its own handler — otherwise an incompatible `blender_version_min` or a raising `register()` reaches the checklist as the misleading "add-on not found after import". Idempotent and per-plugin fault-isolated — one bad/incompatible plugin never aborts the batch; extensions whose `blender_manifest.toml` requires a `blender_version_min` above 5.0.0 are reported honestly as enable failures. UI: WM-attached checklist props + UIList + `mixie.scan_blender_plugins` / `mixie.plugin_import_select` / `mixie.import_blender_plugins`. The checklist flow has ONE definition — `ui/plugin_import_drawer.py:draw_plugin_import(layout, context)` — and exactly **two** surfaces exist overall: the **Edit > Preferences > Add-ons** section (`ui/panels/plugin_import_prefs_panel.py`, the only host that renders the drawer) and onboarding's step-7 card, which is a deliberately different presentation (GPU-painted, imports everything in one click) because a card cannot host Blender widgets. There is **no View3D N-panel** — it was removed once Preferences landed; don't reintroduce one. Onboarding's step-7 offer is gated by `steps._has_plugins_to_import`, which is False both when there is nothing to import AND once the import has actually run (`plugin_import_bridge.import_ran()`) — `_resolve_available` walks the predicate in BOTH directions, so this, not `back_step`, is what stops Back from Completion re-offering an import the user already performed. Declining does not count as answered: that user keeps their Back. The drawer stays a standalone module rather than being folded into the panel because the panel reaches it through a `prepend` hook and so has no body of its own. The Preferences host **prepends** onto upstream `USERPREF_PT_addons` rather than registering a sibling `bl_context="addons"` panel (the `privacy_panel.py` pattern): `bl_order` is RNA `PROP_UNSIGNED` and `USERPREF_PT_addons` already sits at the default 0, so a later-registered sibling can only sort *below* the whole scrolling add-on list. `prepend` is the sanctioned hook — upstream's own `addons_core/bl_pkg` appends to that same panel and `_GenericUI` isolates each draw function's exceptions. Since `USERPREF_PT_addons` carries `bl_options={'HIDE_HEADER'}` there is no real header to collapse, so the section draws its own disclosure triangle off `state.show_panel` |
+| **voice** | Hold-to-talk dictation: a mic button records, the clip is transcribed by the backend's catalog-driven `speech_to_text` service (fal Wizper), and the transcript is APPENDED to the text field the recording was started in. Capture is native C++ (`editors/mixar_audio`, vendored miniaudio — Blender's `aud` is playback-only and there is no bundled ffmpeg): 16 kHz mono WAV, the whole buffer allocated at start so the audio callback never allocates, exposed to Python as read-only `WindowManager.mixar_audio_*` RNA plus `mixar_audio_record_start/stop/cancel`. See the voice-dictation contract below. |
 | **workflow** | Zen/Engine dual-mode workspace UI |
 | **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
 | **testing** | Legacy embedded test suite (explicit opt-in) |
@@ -359,6 +356,133 @@ every other Blender text field keeps the stock exact-match test. Pasted text is
 normalized first: CRLF to `\n`, and the `\x1F` submit marker stripped, or a
 clipboard ending in one would send the message mid-paste. Pinned by
 `tests/test_chat_paste.py`.
+
+**Voice dictation contract (`modules/voice/` + `editors/mixar_audio/`):** one
+microphone, one session, and the transcript goes where the recording STARTED.
+
+- **The target is captured at the press and carried to the end.**
+  `core/targets.py` owns the three shapes — `chat` (the composer, shared by the
+  Mixie chat editor and the Agent Bubble), `node:<node_id>`, and
+  `tab:<PropsRnaIdentifier>` (keyed exactly as `prompt_submit.PROMPT_TAB_DISPATCH`
+  keys its Enter-to-generate table, and pinned equal to it). Re-reading "the
+  focused field" at the end would paste a sentence spoken into the chat onto
+  whatever node was clicked while it transcribed. A target that no longer
+  resolves DROPS the transcript with a notice; it is never written to a
+  neighbouring field as a consolation.
+- **A press while recording STOPS — it never re-aims.** A press while
+  transcribing is refused rather than queued (two transcripts racing for one
+  field). A clip under `MIN_RECORDING_SECONDS` is discarded without an upload,
+  so a mis-click costs nothing. At `MAX_RECORDING_SECONDS` the session stops
+  itself: the C++ buffer stops growing at its own cap, so a higher Python cap
+  would tick a clock over audio nobody captured (pinned by
+  `tests/voice/test_voice_cpp_contract.py`).
+- **The transcript is APPENDED, and the submit marker is stripped first.** Half
+  a typed sentence plus a dictated rest is the normal case; replacing would
+  throw the typed half away. `\x1f` is the composer's "Enter was pressed"
+  marker — a transcript carrying one would send the message mid-insert, the
+  same trap the chat paste contract documents.
+- **Silence is a SUCCESS at every layer.** The backend returns an empty
+  transcript with status DONE; the session says "Didn't catch that" and leaves
+  the field alone. Failing instead would refund a credit and raise an error
+  toast at someone who simply did not speak.
+- **Deliberately NOT a `FeatureQueue`.** The client queue exists to make long
+  generations visible — it feeds the N-panel Queue list, the "N generations in
+  progress" toast and the Agent Bubble's pill, all off `all_queues()`. A
+  one-second transcription on that machinery would flash all three for every
+  sentence. `core/transcription.py` stages, submits and polls on its own; the
+  BACKEND still queues and bills it like any other job.
+- **No hardcoded model slug.** `catalog_default_model("speech_to_text")`
+  resolves it; `None` aborts the submit with an honest "not ready yet" rather
+  than spending the round trip on a 422.
+- **Three surfaces, one operator.** `mixar.voice_record_toggle(target=...)` is
+  invoked by the C++ chat footer, the C++ moodboard node tile and the Python
+  N-panel drawer; behaviour has one owner and the surfaces only say where the
+  words go (the Director's split). `target` is **`SKIP_SAVE`** — without it
+  `WM_operator_last_properties_init` refills a press that set nothing from the
+  PREVIOUS press, and a mic clicked in the chat would dictate into whichever
+  node was recorded to an hour ago (the same failure the moodboard's `extend`
+  contract documents).
+- **The N-panel mic is added in ONE place**: `sidebar_ui_helpers.draw_prompt_section`,
+  the shared boxed prompt every generation tab draws. Every caller must pass
+  `context` or that tab silently loses its mic — pinned by
+  `tests/voice/test_voice_surfaces.py`. That is exactly how the Video Upscale
+  tab was caught: it landed while the mic was on another branch, so the merge
+  produced a tab that could submit on Enter but neither dictate nor refine.
+- **Dictation and Prompt Refine share every prompt, and never share a row.**
+  Both features hook the same two surfaces, so the split is deliberate and the
+  same in both: the mic FILLS the field, Refine / Revert TRANSFORM what is
+  already in it. In the sidebar the mic rides the prompt HEADER beside the
+  label and Refine / Revert sits BELOW the field. On a node card there is one
+  row, so Refine / Revert run right-to-left from Generate while the mic is
+  ANCHORED to the tile's left edge — which also means neither group moves when
+  Revert appears after a refinement, and Generate never moves. A card too
+  narrow for both drops the MIC (Refine has no other home on that card, and
+  dictation returns when the card is widened); overlapping widgets would leave
+  both unusable. `_TAB_ATTRIBUTES` (voice) and `SIDEBAR_PROMPT_TARGETS`
+  (refine) are both keyed on the tab PropertyGroup's RNA identifier and both
+  pinned against `prompt_submit.PROMPT_TAB_DISPATCH`, so a new prompt tab
+  cannot reach one feature without the other.
+- **ONE glyph, four surfaces, no stock icon.** Blender ships no microphone
+  icon, so `ED_mixar_voice_draw_button` paints one from the same
+  rounded-box/arc primitives the account card's icons use — a level-driven halo
+  while recording, a stop square, a spun arc while transcribing. The chat
+  composer, the Agent Bubble and the **moodboard node tile** all call that one
+  painter; the tile briefly used stock `ICON_SOUND`/`ICON_REC`/`ICON_SORTTIME`
+  on the theory that it should match its stock Edit/Preview/Export neighbours,
+  and the result was that one control read as three different things depending
+  on where you found it — three static icons standing in for an animated
+  state. Pinned absent by `tests/voice/test_voice_glyph_parity.py`.
+  The painter takes `level` and `pulse` as arguments and never reads the
+  capture engine, so two surfaces sampling at different moments cannot show two
+  levels for one recording; each pass samples ONCE and paints every mic from
+  that (`moodboard_draw_voice_buttons`).
+- **The glyph is a GPU pass, so a mic is a label-less `uiBut` plus a paint.**
+  The widget system can neither size nor animate the glyph, so the button owns
+  the click, the hover plate and the tooltip while the glyph goes on top —
+  `mixie_chat_voice.cc` for the composer, and on the canvas a `VoiceButtonDraw`
+  collector filled during the block build and drained by
+  `moodboard_draw_voice_buttons` right after `UI_block_draw`, while the View2D
+  ortho is still current (the rects are CANVAS units, so each mic scales and
+  pans with its card).
+- **The N-panel rasterizes the same shapes, because it cannot paint.** A
+  sidebar is `UILayout` all the way down with no GPU pass, so
+  `voice/core/glyph_raster.py` (pure Python, `bpy`-free, signed-distance AA)
+  redraws the identical mic/stop/halo/spinner and `core/glyph_icons.py` serves
+  them as `bpy.utils.previews` frames the drawer picks per redraw from the live
+  level and clock. **Every ratio and colour there is a SECOND copy of
+  `mixar_audio_glyph.cc` and is pinned against that source by value** — the
+  failure mode is silent, and a mic that is slightly wrong in the one place
+  nobody is looking raises nothing. The halo blooms wider than its own button
+  (radius up to `0.77 * size`), which simply bleeds over neighbouring pixels on
+  the GPU surfaces but must fit a fixed icon cell, so `BUTTON_FILL` insets the
+  button until the widest halo exactly touches the edge. Frames are built
+  lazily per state (~150 ms for the whole set) and the collection is allocated
+  on first read, so the module needs no hand-written `register()` — only the
+  teardown in `voice_ops.unregister()`, since preview collections outlive
+  Python's module state like the capture device does. Stock `ICON_*` survives
+  in `_FALLBACK_ICONS` only for a build where the collection cannot be
+  allocated; `icon_id` returns 0 rather than raising, because that call sits in
+  a panel `draw()` that runs on every mouse move. The N-panel's old
+  `row.progress()` level bar is gone — the halo carries the level now, and the
+  bar was the one piece of this control that existed on no other surface.
+- **`sidebar_ui_helpers.py` is at the 500-line ceiling and stays there by
+  splitting.** It is the shared drawer vocabulary every generation tab imports,
+  and `draw_prompt_section` now hosts two features' hooks, so the image-preview
+  widgets moved to `sidebar_image_widgets.py` and are RE-EXPORTED from it — a
+  dozen drawers already import them from the old module and where the code
+  lives is not their business. Same reason `prompt_refine_drawer` and
+  `voice/ui/voice_button` sit beside it rather than inside it.
+- **Thread rules.** The audio callback touches only this module's own buffer —
+  no `bpy`, no Blender data, no allocation. `record_start`/`_stop`/`_cancel`
+  are main-thread only. The level/duration/waveform readers are atomic loads
+  and safe from a draw pass. `unregister()` calls `shutdown()`, because the
+  device outlives Python's module state and a reload while recording would
+  leave the mic open with nothing able to stop it.
+- **State crosses the languages by IDENTIFIER, never by index** — an enum
+  persists as an index, so `mixar_audio_state.cc` reads
+  `RNA_property_enum_identifier`. The target string is read BOUNDED
+  (`mixar_voice_target` has no `maxlen`, and `RNA_property_string_get` is
+  strcpy-shaped).
 
 **Prompt Refine / Revert contract:** every generation prompt field — the
 moodboard N-panel tabs and the inference-graph node cards — carries a

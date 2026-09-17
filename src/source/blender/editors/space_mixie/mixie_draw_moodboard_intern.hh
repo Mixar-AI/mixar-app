@@ -19,6 +19,9 @@
 #include "BLI_listbase.h"
 #include "BLI_math_vector.h"
 #include "BLI_rect.h"
+#include "BLI_vector.hh"
+
+#include "ED_mixar_audio_ui.hh"
 
 #include "BLF_api.hh"
 
@@ -231,18 +234,53 @@ void moodboard_set_node_tooltip(uiBut *but, const char *text);
 /** Tooltip for one catalog parameter: its name, what it does, and its range. */
 void moodboard_set_parameter_tooltip(uiBut *but, PointerRNA *parameter);
 /**
+ * One mic button recorded while the canvas block is built, painted once the
+ * block has been drawn.
+ *
+ * The glyph cannot be an `ICON_*` — it is `ED_mixar_voice_draw_button`, the
+ * same painter the chat composer and the Agent Bubble use, so a mic means the
+ * same thing and animates the same way wherever it appears. That painter is a
+ * GPU pass and the widget system can neither size nor animate it, so the
+ * button is a label-less `uiBut` (which keeps the click, the hover plate and
+ * the tooltip) and the glyph goes on top afterwards — exactly the split
+ * `mixie_chat_voice.cc` uses for the composer's mic.
+ *
+ * `rect` is in CANVAS units, like everything else on this block: the paint
+ * pass runs while the View2D ortho is still current, so the glyph scales and
+ * pans with its card.
+ */
+struct VoiceButtonDraw {
+  rctf rect;
+  /** What to paint. `Idle` whenever the live recording belongs to a DIFFERENT
+   * target — another field's recording must not make this mic look live. */
+  MixarVoiceVisual state;
+};
+
+/**
+ * Paint every mic recorded during the block build.
+ *
+ * Call after `UI_block_draw` and while the View2D ortho is still current. The
+ * level and the clock are sampled ONCE for the whole pass, so two mics on
+ * screen can never show two different levels for one recording.
+ * (mixie_draw_moodboard_node_tile_controls.cc)
+ */
+void moodboard_draw_voice_buttons(const blender::Vector<VoiceButtonDraw> &voice_buttons);
+
+/**
  * The controls a node draws inside its own tile: the prompt and Generate, or
  * Cancel while a generation is in flight. Canvas units, from `node_rect`.
  * (mixie_draw_moodboard_node_tile_controls.cc)
  */
-void moodboard_add_node_tile_controls(uiBlock *block,
+void moodboard_add_node_tile_controls(const bContext *C,
+                                      uiBlock *block,
                                       PointerRNA *node,
                                       const rctf &node_rect,
                                       bool generation_running,
                                       bool has_result,
                                       int state,
                                       bool edit_mode,
-                                      const char *node_id);
+                                      const char *node_id,
+                                      blender::Vector<VoiceButtonDraw> &voice_buttons);
 /**
  * The action row floating over a finished card's top-right corner: an
  * Edit/Done toggle, and Export beside it when the result is media.

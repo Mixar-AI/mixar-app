@@ -170,11 +170,13 @@ static void disable_while_submitted(uiBut *button, const bool submitted)
   }
 }
 
-static void add_action_toolbar(uiBlock *block,
+static void add_action_toolbar(const bContext *C,
+                               uiBlock *block,
                                View2D *v2d,
                                ARegion *region,
                                PointerRNA *node,
-                               blender::Vector<ObjectPreviewDraw> &object_previews)
+                               blender::Vector<ObjectPreviewDraw> &object_previews,
+                               blender::Vector<VoiceButtonDraw> &voice_buttons)
 {
   rctf node_rect;
   node_rect.xmin = RNA_float_get(node, "position_x");
@@ -402,8 +404,16 @@ static void add_action_toolbar(uiBlock *block,
   /* Controls drawn INSIDE the tile (prompt / Generate, or Cancel while a
    * generation is in flight) live in their own unit — see
    * mixie_draw_moodboard_node_tile_controls.cc. */
-  moodboard_add_node_tile_controls(
-      block, node, node_rect, generation_running, has_result, state, edit_mode, node_id);
+  moodboard_add_node_tile_controls(C,
+                                   block,
+                                   node,
+                                   node_rect,
+                                   generation_running,
+                                   has_result,
+                                   state,
+                                   edit_mode,
+                                   node_id,
+                                   voice_buttons);
 }
 
 void mixie_draw_moodboard_graph_controls(const bContext *C,
@@ -430,10 +440,14 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   uiBlock *block = UI_block_begin(
       C, region, "moodboard_node_controls", blender::ui::EmbossType::Emboss);
   blender::Vector<ObjectPreviewDraw> object_previews;
+  /* Mics are recorded here and painted after the block: the glyph is a GPU
+   * pass (`ED_mixar_voice_draw_button`), not an icon, so it cannot be part of
+   * the widget the click lives on. Same split as the chat composer's mic. */
+  blender::Vector<VoiceButtonDraw> voice_buttons;
   CollectionPropertyIterator iter{};
   RNA_property_collection_begin(&scene_ptr, actions, &iter);
   while (iter.valid) {
-    add_action_toolbar(block, v2d, region, &iter.ptr, object_previews);
+    add_action_toolbar(C, block, v2d, region, &iter.ptr, object_previews, voice_buttons);
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
@@ -447,6 +461,11 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   moodboard_add_selected_frame_actions(C, block, v2d, region, &scene_ptr);
   UI_block_end(C, block);
   UI_block_draw(C, block);
+
+  /* Mic glyphs, on top of the label-less buttons the block just drew and
+   * while the View2D ortho is still current — their rects are canvas units,
+   * so each mic scales and pans with its own card. */
+  moodboard_draw_voice_buttons(voice_buttons);
 
   /* Screen-space pass. Icon previews are pixel blits and a selected media's
    * name is painted at a fixed point size, so both stay a constant screen size

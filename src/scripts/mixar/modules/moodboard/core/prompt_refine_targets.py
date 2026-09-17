@@ -92,6 +92,16 @@ SIDEBAR_PROMPT_TARGETS: dict[str, SidebarPromptTarget] = {
         capability="video_gen",
         fallback_service="video_gen",
     ),
+    # Video Upscale's prompt is optional ("describe the detail to enhance"),
+    # which is exactly the kind of field a refinement helps with — an empty
+    # one still gets no Refine, since the drawer disables it on empty text.
+    # It landed in PROMPT_TAB_DISPATCH without a row here, so the tab could
+    # submit on Enter but not refine.
+    "MixieMoodboardTabVideoUpscaleProps": SidebarPromptTarget(
+        "mixie_moodboard_sidebar.tab_video_upscale",
+        capability="video_upscale",
+        fallback_service="video_upscale",
+    ),
     "MixieMoodboardTabWorldLabsProps": SidebarPromptTarget(
         "mixie_moodboard_sidebar.tab_world_labs",
         capability="world_labs",

@@ -107,6 +107,11 @@ struct FooterElementPositions {
   int thumb_size;
   int thumb_spacing;
 
+  /* Mic button (voice dictation). Sits in the button row; its x is resolved
+   * during the draw because what precedes it depends on the mode. */
+  int voice_btn_x;
+  int voice_btn_size;
+
   /* Padding */
   int side_padding;
   int bottom_padding;
@@ -339,5 +344,33 @@ void footer_draw_thumbnails(const bContext *C,
                              int pending_count,
                              const blender::Vector<FooterAttachmentCache> *attachments,
                              float scale);
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Voice Dictation (mixie_chat_voice.cc)
+ *
+ * The mic button follows the footer's own split for custom glyphs: a
+ * transparent `uiBut` click target (so hover, tooltip and operator dispatch
+ * stay Blender's) plus a GPU overlay that paints the pixels. The same pair the
+ * Send button uses, and for the same reason — the widget system cannot size or
+ * animate this glyph.
+ * \{ */
+
+struct uiBlock;
+
+/** Place the mic's click target. Returns the x just past it, so the caller
+ * keeps laying the button row out left to right. */
+int mixie_chat_voice_add_button(uiBlock *block,
+                                FooterElementPositions &pos,
+                                int x,
+                                float scale);
+
+/** Paint the mic, and — while recording — the live waveform and clock over the
+ * composer. Call after `UI_block_draw`, with the other footer overlays. */
+void mixie_chat_voice_draw(const bContext *C,
+                           ARegion *region,
+                           const FooterElementPositions &pos,
+                           float scale);
 
 /** \} */

@@ -58,7 +58,7 @@ def _draw_video_upscale(layout, context):
     draw_section_separator(layout)
     draw_prompt_section(
         layout, tab, label="Detail Prompt (optional)", icon='TEXT',
-        min_lines=2, max_lines=4,
+        min_lines=2, max_lines=4, context=context,
     )
     draw_section_separator(layout)
 

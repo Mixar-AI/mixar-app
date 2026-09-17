@@ -53,6 +53,7 @@ set(SRC
   mixie_chat_ui_primitives.cc
   mixie_chat_ui_theme.cc
   mixie_chat_ui_widgets.cc
+  mixie_chat_voice.cc
   space_mixie_chat.cc
 
   mixie_chat_footer_constants.hh
@@ -77,6 +78,8 @@ set(LIB
   PRIVATE bf::intern::guardedalloc
   PRIVATE bf::windowmanager
   bf_editor_interface
+  # Mic capture + the shared voice glyph (editors/mixar_audio).
+  bf_editor_mixar_audio
 )
 
 blender_add_lib(bf_editor_space_mixie_chat "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")

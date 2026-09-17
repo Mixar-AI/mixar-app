@@ -23,6 +23,12 @@
 
 #include <optional>
 
+#include "BLI_string.h"
+#include "BLI_time.h"
+
+#include "ED_mixar_audio.hh"
+#include "ED_mixar_audio_ui.hh"
+
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_resources.hh"
@@ -144,14 +150,16 @@ void moodboard_add_node_card_actions(uiBlock *block,
           "adjusted and run again.");
 }
 
-void moodboard_add_node_tile_controls(uiBlock *block,
+void moodboard_add_node_tile_controls(const bContext *C,
+                                      uiBlock *block,
                                       PointerRNA *node,
                                       const rctf &node_rect,
                                       const bool generation_running,
                                       const bool has_result,
                                       const int state,
                                       const bool edit_mode,
-                                      const char *node_id)
+                                      const char *node_id,
+                                      blender::Vector<VoiceButtonDraw> &voice_buttons)
 {
   if (generation_running) {
     /* The tile already carries the Queued/Generating hint and the glow; the
@@ -228,26 +236,37 @@ void moodboard_add_node_tile_controls(uiBlock *block,
       }
     }
 
-    /* Refine (and, once a rewrite has landed, Revert) left of Generate. The
-     * prompt is the one thing on this tile the user authors by hand, so the
-     * help with writing it belongs beside the field rather than in the
-     * settings panel, which is folded away exactly when a draft node is
-     * being written.
+    const int generate_x = int(node_rect.xmax) - prompt_margin - generate_w;
+
+    /* The prompt's own controls, on the row beneath it.
      *
-     * Square icon buttons: the tile is small and the words would crowd
-     * Generate, which must stay the obvious action.
+     * TWO features meet here and they are deliberately not interleaved.
+     * Refine / Revert TRANSFORM text that is already written, so they run
+     * right-to-left from Generate, the action they lead to; the mic FILLS the
+     * field, so it is anchored to the tile's LEFT edge. That is the same split
+     * the sidebar makes, where the mic rides the prompt header and
+     * Refine / Revert sits under the field — one control group per side of the
+     * thing they act on, rather than three similar buttons in a row.
      *
-     * Laid out right to left — Generate, then Revert, then Refine — so
-     * Refine keeps the same relationship to the pair whether or not Revert
-     * is present, and Generate never moves. */
+     * It also keeps both groups still. Generate never moves, and because the
+     * mic is ANCHORED rather than queued behind the pair, it does not slide
+     * sideways when Revert appears after a refinement — a control that jumps
+     * under a reaching pointer is worse than one that is further away.
+     *
+     * Only when the node takes a prompt: a mesh-only node has no text field
+     * for any of this to act on. */
     if (RNA_boolean_get(node, "show_prompt")) {
+      const int row_y = int(node_rect.ymin) + prompt_margin;
+      /* Square, like the card's floating action row, so every icon control on
+       * a node is the same target size. */
+      const int control_w = generate_h;
+      const int control_gap = int(8 * UI_SCALE_FAC);
+
+      /* -- Refine / Revert, right to left from Generate -------------------- */
+
       const bool refined = RNA_boolean_get(node, "prompt_refined");
       const bool refining = RNA_boolean_get(node, "prompt_refining");
-      const int refine_w = generate_h;
-      const int refine_gap = int(8 * UI_SCALE_FAC);
-      const int refine_y = int(node_rect.ymin) + prompt_margin;
-      int refine_x = int(node_rect.xmax) - prompt_margin - generate_w -
-                     refine_gap - refine_w;
+      int refine_x = generate_x - control_gap - control_w;
 
       if (refined) {
         uiBut *revert = uiDefIconButO(block,
@@ -256,15 +275,15 @@ void moodboard_add_node_tile_controls(uiBlock *block,
                                       blender::wm::OpCallContext::ExecDefault,
                                       ICON_LOOP_BACK,
                                       refine_x,
-                                      refine_y,
-                                      refine_w,
+                                      row_y,
+                                      control_w,
                                       generate_h,
                                       nullptr);
         RNA_string_set(UI_but_operator_ptr_ensure(revert), "node_id", node_id);
         moodboard_set_node_tooltip(
             revert,
             "Revert\n\nRestore the prompt you wrote before it was refined.");
-        refine_x -= refine_gap + refine_w;
+        refine_x -= control_gap + control_w;
       }
 
       uiBut *refine = uiDefIconButO(block,
@@ -273,8 +292,8 @@ void moodboard_add_node_tile_controls(uiBlock *block,
                                     blender::wm::OpCallContext::ExecDefault,
                                     ICON_SHADERFX,
                                     refine_x,
-                                    refine_y,
-                                    refine_w,
+                                    row_y,
+                                    control_w,
                                     generate_h,
                                     nullptr);
       RNA_string_set(UI_but_operator_ptr_ensure(refine), "node_id", node_id);
@@ -298,6 +317,62 @@ void moodboard_add_node_tile_controls(uiBlock *block,
                        refining ? "Refining this prompt..." :
                                   "Write a prompt first");
       }
+
+      /* -- Mic, anchored to the tile's left edge --------------------------- */
+
+      const int mic_x = int(node_rect.xmin) + prompt_margin;
+      /* A card narrow enough to run the two groups together drops the MIC, not
+       * the refine pair: Refine sits beside the Generate it feeds and has no
+       * other home on this card, while dictation is reachable again the moment
+       * the card is widened. Overlapping widgets would leave both unusable. */
+      if (mic_x + control_w + control_gap <= refine_x) {
+        /* The SAME hand-drawn glyph the chat composer and the Agent Bubble
+         * use — `ED_mixar_voice_draw_button`, recorded here and painted once
+         * the block is drawn. A mic is one control that happens to appear in
+         * four places, so it reads and animates identically in all of them:
+         * the level-driven halo while recording, the stop square, the spun arc
+         * while transcribing. An `ICON_*` can do none of that.
+         *
+         * The button is label-less for the same reason the composer's is: it
+         * owns the click, the hover plate and the tooltip, while the glyph
+         * goes on top. */
+        const MixarVoiceVisual voice = ED_mixar_voice_visual_state(C);
+        /* `node:` plus the id, sized off the same buffer every graph
+         * string read uses (mixie_intern.hh). */
+        char voice_target[MIXIE_GRAPH_ID_BUF + 8];
+        BLI_snprintf(voice_target, sizeof(voice_target), "node:%s", node_id);
+        /* Recording elsewhere must not make THIS node's mic look live. */
+        const bool mine = ED_mixar_voice_target_is(C, voice_target);
+
+        uiBut *mic = uiDefButO(block,
+                               ButType::But,
+                               "MIXAR_OT_voice_record_toggle",
+                               blender::wm::OpCallContext::ExecDefault,
+                               "",
+                               mic_x,
+                               row_y,
+                               control_w,
+                               generate_h,
+                               nullptr);
+        /* Scoped to THIS node: the transcript lands in the prompt the user was
+         * standing in, even if another card is selected while it transcribes. */
+        RNA_string_set(UI_but_operator_ptr_ensure(mic), "target", voice_target);
+        moodboard_set_node_tooltip(
+            mic,
+            mine && voice == MixarVoiceVisual::Recording ?
+                "Stop dictating\n\nStop recording and add what you said to "
+                "this node's prompt." :
+                "Dictate\n\nRecord your voice and add the transcript to this "
+                "node's prompt. Press again to stop.");
+
+        VoiceButtonDraw paint;
+        paint.rect.xmin = float(mic_x);
+        paint.rect.xmax = float(mic_x + control_w);
+        paint.rect.ymin = float(row_y);
+        paint.rect.ymax = float(row_y + generate_h);
+        paint.state = mine ? voice : MixarVoiceVisual::Idle;
+        voice_buttons.append(paint);
+      }
     }
 
     uiBut *generate = uiDefButO(block,
@@ -305,12 +380,33 @@ void moodboard_add_node_tile_controls(uiBlock *block,
                                 "MIXIE_OT_moodboard_run_action_node",
                                 blender::wm::OpCallContext::ExecDefault,
                                 "Generate",
-                                int(node_rect.xmax) - prompt_margin - generate_w,
+                                generate_x,
                                 int(node_rect.ymin) + prompt_margin,
                                 generate_w,
                                 generate_h,
                                 nullptr);
     RNA_string_set(UI_but_operator_ptr_ensure(generate), "node_id", node_id);
+  }
+}
+
+void moodboard_draw_voice_buttons(const blender::Vector<VoiceButtonDraw> &voice_buttons)
+{
+  if (voice_buttons.is_empty()) {
+    return;
+  }
+  /* Sampled ONCE for the whole pass. The painter deliberately reads neither,
+   * so that two mics drawn in one frame cannot show two different levels for
+   * the single recording behind them. The level comes straight from the
+   * capture engine rather than through RNA: this is a draw pass and the
+   * engine's reading is an atomic load. */
+  const float level = ED_mixar_audio_level();
+  const float pulse = float(BLI_time_now_seconds());
+
+  for (const VoiceButtonDraw &voice : voice_buttons) {
+    /* `hovered` is false: the label-less button underneath already draws the
+     * widget system's own hover plate, and a second one painted on top of it
+     * would read as a double highlight. */
+    ED_mixar_voice_draw_button(&voice.rect, voice.state, level, pulse, false);
   }
 }
 
