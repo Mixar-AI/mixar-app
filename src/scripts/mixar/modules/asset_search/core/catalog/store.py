@@ -5,6 +5,7 @@
 import json
 import re
 import sqlite3
+import time
 import uuid
 from pathlib import Path
 
@@ -40,6 +41,40 @@ class Catalog:
 
     def close(self):
         self.db.close()
+
+    # A scan is owned across OS processes (GUI, headless agent workers, QA
+    # runners all share this file): the record names the scanner's PID so a
+    # process that did not start it can tell a live scan from a crashed one.
+    def scan_owner(self):
+        row = self.db.execute("SELECT value FROM settings WHERE key='scan_owner'").fetchone()
+        return json.loads(row[0]) if row else None
+
+    def claim_scan(self, start):
+        """Run ``start()`` under the write lock when no scan is claimed.
+
+        ``start`` returns the scanner PID; the claim is committed with it. Returns
+        the owner record, or None when another process holds the claim.
+        """
+        self.db.execute('BEGIN IMMEDIATE')
+        try:
+            if self.scan_owner() is not None:
+                self.db.execute('ROLLBACK')
+                return None
+            owner = {'pid': int(start()), 'started': time.time()}
+            self.db.execute("INSERT OR REPLACE INTO settings VALUES('scan_owner',?)",
+                            (json.dumps(owner),))
+            self.db.execute('COMMIT')
+            return owner
+        except BaseException:
+            self.db.execute('ROLLBACK')
+            raise
+
+    def release_scan(self, pid=None):
+        """Drop the claim, or only the claim held by ``pid`` when given."""
+        with self.db:
+            owner = self.scan_owner()
+            if owner is not None and (pid is None or owner.get('pid') == pid):
+                self.db.execute("DELETE FROM settings WHERE key='scan_owner'")
 
     def configure(self, libraries):
         """Disable removed preferences; an offline library is still configured."""

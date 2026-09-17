@@ -32,11 +32,13 @@ def manifest():
 
 
 def enrich(infos, metadata):
+    """Stamp rendered infos with the manifest's exact identity; upload what was indexed."""
     by_key = {(m['name'],m['library'],m['blend_file'],m['type']): m for m in metadata or []}
     for info in infos:
-        key = (info.get('name'),info.get('library'),str(info.get('blend_file','')).replace('\\','/'),info.get('type'))
-        row = by_key.get(key)
+        blend_file = str(info.get('blend_file','')).replace('\\','/')
+        row = by_key.get((info.get('name'),info.get('library'),blend_file,info.get('type')))
         if row is None:
             raise ValueError('Rendered asset differs from the indexed snapshot; refresh libraries and retry')
-        info.update(asset_id=row['asset_id'], revision=row['revision'], source_id=row['source_id'])
+        info.update(blend_file=blend_file, asset_id=row['asset_id'],
+                    revision=row['revision'], source_id=row['source_id'])
     return infos

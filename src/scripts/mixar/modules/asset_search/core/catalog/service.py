@@ -14,10 +14,19 @@ from pathlib import Path
 
 import bpy
 
+from mixar.modules.common.utils.platform_utils import pid_alive
+
 from .store import Catalog, fuse
 
+# The process that spawned the scanner: (Popen, temp folder, monotonic start).
+# Only IT reads done.json and cleans up. Every other process sharing the
+# catalog (headless agent workers, QA runners) learns about the scan from the
+# store's owner record, never from this global.
 _job = None
 _last_error = ''
+SCAN_DEADLINE = 900        # the owner terminates its scanner past this
+FOREIGN_SCAN_GRACE = 60    # after which another process may declare it dead
+INTERRUPTED = 'Previous scan was interrupted; Refresh to retry'
 
 
 def shutdown():
@@ -54,36 +63,65 @@ def inventory():
         catalog.close()
 
 
-def status():
+def _mark_interrupted(catalog, message=INTERRUPTED):
+    for lib in catalog.libraries():
+        if lib['status'] == 'indexing':
+            catalog.status(lib['id'], 'partial', message)
+
+
+def _foreign_scan(catalog):
+    """The owner record of a scan another process started, or None.
+
+    A record whose PID is gone, or older than the owner's deadline plus grace
+    (a PID can be recycled), is a crashed scan: its claim is released and its
+    half-written libraries become ``partial``. A live one is reported as
+    indexing and left alone — resetting it would report a healthy scan as
+    interrupted and let this process start a duplicate scanner.
+    """
+    owner = catalog.scan_owner()
+    if owner is None:
+        return None
+    expired = time.time() - float(owner.get('started', 0)) > SCAN_DEADLINE + FOREIGN_SCAN_GRACE
+    if not expired and pid_alive(owner.get('pid')):
+        return owner
+    catalog.release_scan(owner.get('pid'))
+    _mark_interrupted(catalog)
+    return None
+
+
+def _finish_own_job():
+    """Reap this process's scanner once it exits; True while it still runs."""
     global _job, _last_error
-    if _job:
-        proc, folder, started = _job
-        elapsed = time.monotonic() - started
-        expired = elapsed > 900
-        if expired and proc.poll() is None:
-            proc.kill() if elapsed > 905 else proc.terminate()
-        if proc.poll() is not None:
-            done = Path(folder) / 'done.json'
-            try:
-                result = json.loads(done.read_text())
-            except (OSError, ValueError):
-                result = None
-            if result is None:
-                _last_error = 'Library scan stopped; Refresh to retry. Existing assets were preserved.'
-                with inventory() as catalog:
-                    for lib in catalog.libraries():
-                        if lib['status'] == 'indexing':
-                            catalog.status(lib['id'], 'partial', _last_error)
-            else:
-                _last_error = '' if result['success'] else 'Some libraries are unavailable; their last index was preserved.'
-            shutil.rmtree(folder, ignore_errors=True)
-            _job = None
+    proc, folder, started = _job
+    elapsed = time.monotonic() - started
+    if elapsed > SCAN_DEADLINE and proc.poll() is None:
+        proc.kill() if elapsed > SCAN_DEADLINE + 5 else proc.terminate()
+    if proc.poll() is None:
+        return True
+    try:
+        result = json.loads((Path(folder) / 'done.json').read_text())
+    except (OSError, ValueError):
+        result = None
     with inventory() as catalog:
-        if _job is None:
-            for lib in catalog.libraries():
-                if lib['status'] == 'indexing':
-                    catalog.status(lib['id'], 'partial', 'Previous scan was interrupted; Refresh to retry')
-        return {'schema_version': 1, 'indexing': _job is not None,
+        catalog.release_scan(proc.pid)
+        if result is None:
+            _last_error = 'Library scan stopped; Refresh to retry. Existing assets were preserved.'
+            _mark_interrupted(catalog, _last_error)
+        else:
+            _last_error = '' if result['success'] else 'Some libraries are unavailable; their last index was preserved.'
+    shutil.rmtree(folder, ignore_errors=True)
+    _job = None
+    return False
+
+
+def status():
+    indexing = bool(_job) and _finish_own_job()
+    with inventory() as catalog:
+        if not indexing:
+            indexing = _foreign_scan(catalog) is not None
+        if not indexing:
+            _mark_interrupted(catalog)
+        return {'schema_version': 1, 'indexing': indexing,
                 'source_id': catalog.source_id(),
                 'libraries': catalog.libraries(), 'message': _last_error}
 
@@ -95,24 +133,34 @@ def refresh():
         return current
     with inventory() as catalog:
         libs = catalog.libraries(private=True)
+        if not libs:
+            return current
         database = catalog.db.execute('PRAGMA database_list').fetchone()[2]
-    if not libs:
-        return current
-    folder = tempfile.mkdtemp(prefix='mixar_catalog_')
-    plan = Path(folder) / 'plan.json'
-    plan.write_text(json.dumps({'database': database, 'libraries': libs,
-                               'done': str(Path(folder) / 'done.json')}))
-    flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
-    try:
-        with open(Path(folder) / 'worker.log', 'w') as log:
-            proc = subprocess.Popen([bpy.app.binary_path, '-b', '--factory-startup',
-                '--disable-autoexec', '--python', str(Path(__file__).with_name('worker.py')),
-                '--', str(plan)], stdout=log, stderr=subprocess.STDOUT, creationflags=flags)
-        _job = (proc, folder, time.monotonic())
+        folder = tempfile.mkdtemp(prefix='mixar_catalog_')
+        plan = Path(folder) / 'plan.json'
+        plan.write_text(json.dumps({'database': database, 'libraries': libs,
+                                   'done': str(Path(folder) / 'done.json')}))
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+        spawned = []
+
+        def start():
+            with open(Path(folder) / 'worker.log', 'w') as log:
+                spawned.append(subprocess.Popen([bpy.app.binary_path, '-b', '--factory-startup',
+                    '--disable-autoexec', '--python', str(Path(__file__).with_name('worker.py')),
+                    '--', str(plan)], stdout=log, stderr=subprocess.STDOUT, creationflags=flags))
+            return spawned[-1].pid
+        try:
+            # The claim and the spawn share one write transaction, so two
+            # processes refreshing at once cannot both start a scanner.
+            owner = catalog.claim_scan(start)
+        except Exception:
+            shutil.rmtree(folder, ignore_errors=True)
+            raise RuntimeError('Could not start library indexing; try Refresh again') from None
+        if owner is None:
+            shutil.rmtree(folder, ignore_errors=True)
+            return status()
+        _job = (spawned[-1], folder, time.monotonic())
         _last_error = ''
-    except Exception:
-        shutil.rmtree(folder, ignore_errors=True)
-        raise RuntimeError('Could not start library indexing; try Refresh again') from None
     return status()
 
 

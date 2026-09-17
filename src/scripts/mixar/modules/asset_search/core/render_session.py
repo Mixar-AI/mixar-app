@@ -108,7 +108,9 @@ def build_render_plan(context, identity_filter=None):
         if not library_path.exists() or not library_path.is_dir():
             continue
         for blend_file in sorted(library_path.glob("**/*.blend")):
-            rel_path = str(blend_file.relative_to(library_path))
+            # POSIX form on every platform: the catalog manifest, the server's
+            # incremental diff and the render filter all key on this string.
+            rel_path = blend_file.relative_to(library_path).as_posix()
             try:
                 with bpy.data.libraries.load(
                     str(blend_file), assets_only=True

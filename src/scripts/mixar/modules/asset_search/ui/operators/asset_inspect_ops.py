@@ -44,14 +44,19 @@ def set_collected_asset_data(assets):
     _collected_assets = list(assets)
 
 
+_BACKSLASH = "\\"
+
+
 def set_render_filter(asset_identities):
     """Set filter so only matching assets (name/library/blend_file dicts) are rendered."""
     global _render_filter
     if asset_identities is None:
         _render_filter = None
     else:
+        # POSIX relative paths: the server's diff and the catalog manifest use
+        # them, while the render plan is built on the same form.
         _render_filter = {
-            f"{a['name']}|{a['library']}|{a['blend_file']}"
+            f"{a['name']}|{a['library']}|{str(a['blend_file']).replace(_BACKSLASH, '/')}"
             for a in asset_identities
         }
 
