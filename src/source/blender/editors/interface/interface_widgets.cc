@@ -6067,21 +6067,48 @@ static void widget_zen_tool_glass(Button *but,
   bool paint_bed = true;
 
   if (but->block != nullptr && but->alignnr != 0) {
+    /* Only cells `draw_block` will actually draw may own or extend the bed.
+     * It skips UI_HIDDEN | UI_SCROLLED, so counting those made a hidden or
+     * scrolled-out first cell the owner -- and then nothing painted the bed at
+     * all, leaving the whole capsule as bare icons over the viewport. They also
+     * stretched the union over the gap where they would have been. */
+    auto drawable = [&](const Button &other) {
+      return zen_glass_cell(&other) && other.alignnr == but->alignnr &&
+             (other.flag & (UI_HIDDEN | UI_SCROLLED)) == 0;
+    };
     rctf uni = but->rect;
-    int first_index = but->block->but_index(but);
+    /* Block order is the iteration order, so ownership is "no drawable cell
+     * came before me" -- no need for the linear `but_index` lookup per cell,
+     * which made the scan O(cells^2 x block). */
+    bool seen_self = false;
+    bool first_drawable = true;
     for (Button &other : but->block->buttons()) {
-      if (!zen_glass_cell(&other) || other.alignnr != but->alignnr) {
+      if (&other == but) {
+        seen_self = true;
+        continue;
+      }
+      if (!drawable(other)) {
         continue;
       }
       BLI_rctf_union(&uni, &other.rect);
-      first_index = std::min(first_index, but->block->but_index(&other));
+      if (!seen_self) {
+        first_drawable = false;
+      }
     }
-    paint_bed = (but->block->but_index(but) == first_index);
+    paint_bed = first_drawable;
     if (paint_bed) {
-      pane.xmin = uni.xmin + (float(rect->xmin) - but->rect.xmin);
-      pane.ymin = uni.ymin + (float(rect->ymin) - but->rect.ymin);
-      pane.xmax = uni.xmax + (float(rect->xmax) - but->rect.xmax);
-      pane.ymax = uni.ymax + (float(rect->ymax) - but->rect.ymax);
+      /* `uni` is in block coordinates; `rect` is region pixels, which
+       * `block_to_window_rctf` produced by applying the block's scale *and*
+       * offset. A constant delta only maps `but->rect`'s own corner correctly,
+       * so scale the offsets the way `draw_segment` does. */
+      const float px_x = float(BLI_rcti_size_x(rect)) /
+                         std::max(BLI_rctf_size_x(&but->rect), 1e-3f);
+      const float px_y = float(BLI_rcti_size_y(rect)) /
+                         std::max(BLI_rctf_size_y(&but->rect), 1e-3f);
+      pane.xmin = float(rect->xmin) + (uni.xmin - but->rect.xmin) * px_x;
+      pane.xmax = float(rect->xmin) + (uni.xmax - but->rect.xmin) * px_x;
+      pane.ymin = float(rect->ymin) + (uni.ymin - but->rect.ymin) * px_y;
+      pane.ymax = float(rect->ymin) + (uni.ymax - but->rect.ymin) * px_y;
     }
   }
 
