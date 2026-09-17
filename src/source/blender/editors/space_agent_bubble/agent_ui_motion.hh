@@ -18,6 +18,7 @@ enum class AgentIslandControl {
   Queue,
   History,
   NewChat,
+  Checkpoints,
   Upload,
   Scribble,
   Reading,

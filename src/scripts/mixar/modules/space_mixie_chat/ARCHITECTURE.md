@@ -257,3 +257,30 @@ These are the contracts between the two repos. Breaking any of them on either si
 
 - Backend-side companion (graph, agents, middleware, transport): `modules/agent/ARCHITECTURE.md` in the private `mixar-backend` repository.
 - Fix rationale for the May 2026 audit and the deferred items / verified false positives: `docs/reviews/AGENT_STUCK_INVESTIGATION.md` and `docs/reviews/AGENT_REVIEW_2026_05_BACKLOG.md` in the private `mixar-backend` repository.
+
+## Turn checkpoints (`core/turn_checkpoints.py`, `ui/operators/checkpoint_ops.py`)
+
+Before every fresh turn `chat_ops.send_message` captures the whole document with
+`save_as_mainfile(copy=True)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
+(sha256-deduplicated, newest 20 per session) and binds the record to the turn's
+command id once the send is accepted. The header shows a Checkpoints menu once the
+session has one. Restore runs only while the session is IDLE with no open run: a
+safety copy is captured first, the snapshot is read with `wm.recover_auto_save`
+(nothing on disk is touched by the read, but the document's path becomes the
+snapshot file), then the document is saved once: a titled project back to its
+own path, an untitled one to the session's `working.mixar` so Ctrl-S never lands
+on a checkpoint. `load_pre` skips its session abort while
+`turn_checkpoints.is_restoring()`, and `turn_events.drop_scene` fences the
+session so the reconnect-time recovery check does not replay the undone turns
+into the restored chat (the next send lifts the fence). The checkpoint is bound
+to the turn through `TurnTransport.last_command_id`, not the user bubble's
+`bubble_id` (a collection reference taken before the placeholder bubble is added
+can go stale). The backend is told on a worker thread — `checkpoint.mark` for the
+safety copy, then `checkpoint.rewind` for the restored turn — and
+`composer_send.can_send` refuses while that is in flight. On the 5.2 Zen layout
+the chat is the native island; its C++ card header draws a third disc (arrow
+glyph, `AGENT_HDR_BTN3_CX`, `space_agent_bubble.cc`) that calls `wm.call_menu` on
+`MIXIE_CHAT_MT_checkpoints`. The operator defers the restore to a timer when it
+is invoked from that temporary window, and the file read and save run under a
+`temp_override` of the main window. Contract: mixar-backend
+`docs/api/frontend/turn-checkpoints.md`.

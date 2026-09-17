@@ -60,6 +60,15 @@ class MIXIE_CHAT_HT_header(Header):
                     depress=bool(getattr(wm, 'mixie_chat_history_visible', False)),
                 )
 
+            # Turn checkpoints — one row per fresh turn of this chat
+            # (checkpoint_ops.py + core/turn_checkpoints.py). Shown once the
+            # session has a checkpoint to go back to; same hasattr guard as
+            # the history button (deferred UI registration).
+            if hasattr(bpy.types, 'MIXIE_CHAT_MT_checkpoints'):
+                from ..core import turn_checkpoints
+                if turn_checkpoints.has_checkpoints(session.get_session_id(scene)):
+                    layout.menu("MIXIE_CHAT_MT_checkpoints", text="", icon='LOOP_BACK')
+
             # Project rules — toggles the C++-drawn rules overlay in the
             # chat region (same style as the past-chats overlay; see
             # rules_ops.py / mixie_chat_rules_overlay.cc). The label flips

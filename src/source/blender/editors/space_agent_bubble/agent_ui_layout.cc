@@ -277,6 +277,7 @@ void agent_ui_layout_build(const int window_w,
   const float hdr_cy = AGENT_CARD_Y + AGENT_HDR_BTN_CY;
   r_layout->hdr_history = f.disc(AGENT_HDR_BTN1_CX, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_new_chat = f.disc(AGENT_HDR_BTN2_CX, hdr_cy, AGENT_HDR_BTN_R);
+  r_layout->hdr_checkpoints = f.disc(AGENT_HDR_BTN3_CX, hdr_cy, AGENT_HDR_BTN_R);
 
   r_layout->hdr_title_cx = f.x(AGENT_CARD_X + card_w * 0.5f);
   r_layout->hdr_title_y = f.y(AGENT_CARD_Y + AGENT_CARD_HEADER_H * 0.5f);
