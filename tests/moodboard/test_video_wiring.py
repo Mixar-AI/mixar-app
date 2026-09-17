@@ -143,3 +143,27 @@ def test_video_generation_streams_selected_movies_and_imports_the_result():
     assert "b64" not in queue_job[queue_job.index("class StreamingVideoJob"):]
     assert "mixar/generated_videos" in media_import
     assert "place_new_moodboard_item" in media_import
+
+
+def test_every_video_gen_limit_lookup_passes_the_selected_model():
+    """`video_gen` serves models whose reference ceilings differ by more than
+    3x and `input_spec` is service-level, so a lookup that omits the model
+    reads the widest set — and every one of these call sites decides what gets
+    compressed and uploaded before the backend ever sees the payload."""
+    operator = _read(MOODBOARD / "ui/operators/video_gen_ops.py")
+    drawer = _read(MOODBOARD / "ui/video_gen_drawer.py")
+    node = _read(MOODBOARD / "core/node_execution.py")
+    handoff = _read(
+        ROOT / "src/scripts/mixar/modules/director/core/handoff.py"
+    )
+
+    assert "get_video_generation_limits(service_key, model)" in operator
+    assert "get_video_generation_limits(service_key, model)" in node
+    # The drawer and the Director handoff have no model in hand, so both go
+    # through the one resolver rather than re-deriving the tab's selection.
+    assert "selected_video_model_slug(scene)" in drawer
+    assert "selected_video_model_slug(scene)" in handoff
+    # A bare service-only lookup anywhere here is the bug this pins.
+    for source in (operator, drawer, node, handoff):
+        assert 'get_video_generation_limits("video_gen")' not in source
+        assert "get_video_generation_limits(service_key)" not in source
