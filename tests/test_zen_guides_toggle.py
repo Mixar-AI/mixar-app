@@ -5,9 +5,10 @@
 """Zen Mode header control: the grids + relationship-lines toggle chip.
 
 The chip sits beside the floating Wireframe / Solid / Material Preview /
-Rendered strip and flips floor grid, axes, ortho grid, and relationship
-lines together. Pressed state mirrors whether any of those guides are
-visible. Texturing keeps the shared shading strip without this chip.
+Rendered strip and flips floor grid, axes, ortho grid, relationship
+lines, and object extras (the light / camera / empty helpers) together.
+Pressed state mirrors whether any of those guides are visible. Texturing
+keeps the shared shading strip without this chip.
 """
 
 from pathlib import Path
@@ -23,7 +24,7 @@ OPS = (WORKFLOW / "ui/operators/zen_guides_ops.py").read_text(encoding="utf-8")
 HEADER = (WORKFLOW / "ui/headers/view3d_header_filter.py").read_text(encoding="utf-8")
 
 
-def _space(floor=True, x=True, y=True, ortho=True, relationship=True):
+def _space(floor=True, x=True, y=True, ortho=True, relationship=True, extras=True):
     return SimpleNamespace(
         overlay=SimpleNamespace(
             show_floor=floor,
@@ -31,7 +32,19 @@ def _space(floor=True, x=True, y=True, ortho=True, relationship=True):
             show_axis_y=y,
             show_ortho_grid=ortho,
             show_relationship_lines=relationship,
+            show_extras=extras,
         )
+    )
+
+
+def _flags(space):
+    return (
+        space.overlay.show_floor,
+        space.overlay.show_axis_x,
+        space.overlay.show_axis_y,
+        space.overlay.show_ortho_grid,
+        space.overlay.show_relationship_lines,
+        space.overlay.show_extras,
     )
 
 
@@ -47,39 +60,26 @@ def test_guides_shown_is_true_when_floor_or_relationship_is_on():
     assert viewport_guides.guides_shown(SimpleNamespace()) is False
 
 
-def test_toggle_guides_hides_grid_and_relationship_together():
-    space = _space(True, True, True, True, True)
+def test_toggle_guides_hides_grid_relationship_and_extras_together():
+    # Extras is what draws lights, cameras and empties: hiding the guides
+    # has to take those helpers with it, or the "clean canvas" click leaves
+    # a camera wireframe and a light gizmo behind.
+    space = _space(True, True, True, True, True, True)
     assert viewport_guides.toggle_guides(space) is False
-    assert (
-        space.overlay.show_floor,
-        space.overlay.show_axis_x,
-        space.overlay.show_axis_y,
-        space.overlay.show_ortho_grid,
-        space.overlay.show_relationship_lines,
-    ) == (False, False, False, False, False)
+    assert _flags(space) == (False, False, False, False, False, False)
     assert viewport_guides.toggle_guides(space) is True
-    assert (
-        space.overlay.show_floor,
-        space.overlay.show_axis_x,
-        space.overlay.show_axis_y,
-        space.overlay.show_ortho_grid,
-        space.overlay.show_relationship_lines,
-    ) == (True, True, True, True, True)
+    assert _flags(space) == (True, True, True, True, True, True)
 
 
 def test_toggle_guides_resyncs_a_mixed_overlay_state():
     # Zen entry forces relationship lines off while the floor may stay on;
     # one click must settle every flag, never leave the chip disagreeing
     # with what is drawn.
-    space = _space(floor=True, x=True, y=False, ortho=True, relationship=False)
+    space = _space(
+        floor=True, x=True, y=False, ortho=True, relationship=False, extras=True
+    )
     assert viewport_guides.toggle_guides(space) is False
-    assert (
-        space.overlay.show_floor,
-        space.overlay.show_axis_x,
-        space.overlay.show_axis_y,
-        space.overlay.show_ortho_grid,
-        space.overlay.show_relationship_lines,
-    ) == (False, False, False, False, False)
+    assert _flags(space) == (False, False, False, False, False, False)
 
 
 def test_toggle_guides_tolerates_partial_overlay_rna():
@@ -160,12 +160,13 @@ def test_the_glass_painter_accepts_a_standalone_icon_chip():
     assert "but->drawstr.empty()" in cell
 
 
-def test_guide_flag_list_covers_floor_axes_ortho_and_relationship():
+def test_guide_flag_list_covers_floor_axes_ortho_relationship_and_extras():
     assert '"show_floor"' in CORE
     assert '"show_axis_x"' in CORE
     assert '"show_axis_y"' in CORE
     assert '"show_ortho_grid"' in CORE
     assert '"show_relationship_lines"' in CORE
+    assert '"show_extras"' in CORE
 
 
 def test_a_glass_chip_takes_the_shading_strips_icon_colours():

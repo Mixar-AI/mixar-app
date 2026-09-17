@@ -166,6 +166,13 @@ class JSONRPCMethod:
     # fire-and-forget final render job started by the agent's render_scene
     # tool; echoes the job_key the kickoff pinned (session/turn identity).
     RENDER_FINAL_RESULT = "render.final_render_result"
+    # Client -> Server (request - received:true acknowledgement): terminal outcome of
+    # ONE generation the agent enqueued through a client operator. The client
+    # owns submit/poll/download/import, so it is the only party that knows the
+    # final object / image names — this is what saves the agent from polling.
+    # The backend dispatcher drops "agent.*" notifications, hence the
+    # "generation." namespace. Sent by job_queue/core/agent_results.py.
+    GENERATION_AGENT_RESULT = "generation.agent_result"
 
 
 # ============================================================================

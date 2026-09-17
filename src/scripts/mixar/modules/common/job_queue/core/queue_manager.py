@@ -377,6 +377,12 @@ class FeatureQueue(DownloadMixin):
 
     def submit(self, job: Job) -> bool:
         """Submit a job. Returns False if a duplicate is already queued."""
+        # Consume even a rejected enqueue's ref; only accepted jobs own it.
+        from mixar.modules.common.utils.agent_feedback import take_agent_ref
+        from .agent_batches import current_agent_batch
+
+        batch = current_agent_batch()
+        ref = dict(batch.ref) if batch is not None else take_agent_ref(bpy.context)
         # Dedup: reject if same label is already active
         if job.label and any(
             j.label == job.label and j.state not in TERMINAL_STATES
@@ -385,6 +391,8 @@ class FeatureQueue(DownloadMixin):
             logger.warning("%s duplicate job rejected: %s", LOG_PREFIX, job.label)
             return False
         job.feature_key = self.feature_key
+        if ref:
+            job.agent_ref = ref
         # Stamp the originating scene (submit runs on the main thread) so the
         # scene-flag listener targets the scene that started the job, not
         # whatever is active when a later notification fires.
@@ -396,6 +404,8 @@ class FeatureQueue(DownloadMixin):
             except Exception:
                 pass
         self._jobs.append(job)
+        if batch is not None:
+            batch.add(job)
         self._notify_enqueue_toast(job)
         self._notify()
         self._pump()
@@ -431,6 +441,7 @@ class FeatureQueue(DownloadMixin):
         self._pump()
 
     def clear_completed(self) -> None:
+        self._report_agent_results()
         self._jobs = [j for j in self._jobs if j.state not in TERMINAL_STATES]
         self._notify()
 
@@ -463,6 +474,7 @@ class FeatureQueue(DownloadMixin):
                     "%s resource release failed for %s: %s",
                     LOG_PREFIX, job.id, e,
                 )
+        self._report_agent_results()
         self._jobs = []
         self._notify()
 
@@ -607,6 +619,7 @@ class FeatureQueue(DownloadMixin):
                         LOG_PREFIX, job.id, e,
                     )
         self._notify_failure_toasts()
+        self._report_agent_results()
         self._refresh_queue_toast()
         self._ensure_status_pump()
         for fn in list(self._listeners):
@@ -615,6 +628,20 @@ class FeatureQueue(DownloadMixin):
             except Exception as e:
                 logger.warning("%s listener failed: %s", LOG_PREFIX, e)
         redraw_3d_views()
+
+    def _report_agent_results(self) -> None:
+        """Push the terminal outcome of agent-enqueued jobs to the backend.
+
+        Edge-detected per job (``_agent_reported``) and a no-op for every
+        user-initiated job, whose ``agent_ref`` is empty. Unacknowledged results
+        stay in the independent outbox for timed retries and reconnect sweeps,
+        even if the visible job history is cleared.
+        """
+        try:
+            from .agent_results import report_agent_results
+            report_agent_results(self._jobs)
+        except Exception as e:
+            logger.debug("%s agent result report failed: %s", LOG_PREFIX, e)
 
     def _notify_failure_toasts(self) -> None:
         """Surface a viewport toast once for each newly-FAILED job.
