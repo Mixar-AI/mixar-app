@@ -224,11 +224,16 @@ def test_the_drop_anchor_is_cleared_at_every_other_menu_entry_point():
     stale anchor would spawn the next card on top of it."""
     ops = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph.cc")
 
-    drag_start = ops.split("static wmOperatorStatus graph_select_invoke(")[1].split(
+    # Both link-drag starts (the output handle, and detaching an existing link
+    # from an input) go through one helper, so the clear cannot be forgotten by
+    # one of them.
+    drag_start = ops.split("static wmOperatorStatus start_link_drag(")[1].split(
         "return OPERATOR_RUNNING_MODAL;"
     )[0]
-    assert "moodboard_graph_clear_link_drop_anchor(&scene_ptr);" in drag_start
-    context = ops.split("static wmOperatorStatus graph_context_invoke(")[1]
+    assert "moodboard_graph_clear_link_drop_anchor(scene_ptr);" in drag_start
+
+    # The context menu is its own unit now (500-line rule).
+    context = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_context.cc")
     assert "moodboard_graph_clear_link_drop_anchor(&scene_ptr);" in context
 
 
@@ -242,7 +247,10 @@ def test_link_drop_state_is_registered_and_unregistered():
     ):
         assert registration.count(f"'{name}'") >= 1, f"{name} is never unregistered"
     # x/y are registered through the shared axis loop.
-    assert "f'mixie_moodboard_link_drop_{axis}'" in registration
+    # The transient canvas-interaction props live in their own module now
+    # (500-line rule); the teardown list stays with the rest of the teardown.
+    transient = _read(MOODBOARD / "ui/moodboard_graph_transient_props.py")
+    assert "f'mixie_moodboard_link_drop_{axis}'" in transient
     assert "'mixie_moodboard_link_drop_active'," in registration
 
 

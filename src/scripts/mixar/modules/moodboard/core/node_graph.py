@@ -413,6 +413,7 @@ def create_connected_action(
     action_type: str,
     source_node_id: str = "",
     drop_position: tuple[float, float] | None = None,
+    allow_empty: bool = False,
 ):
     """Create a continuation node and wire it to its source.
 
@@ -420,6 +421,10 @@ def create_connected_action(
     When given it wins over the source-relative placement: the user already
     said where the node goes, so the card is centred on that point with its
     input edge under the cursor.
+
+    ``allow_empty`` lets the Shift+A "Add Node" menu drop a standalone node the
+    user wires up afterwards (the node-editor way). Without it, creating one of
+    these types from nothing is a user error and raises.
     """
     # Operator context, so the migrating write is safe here — and required,
     # since the new node's links key off media ids.
@@ -436,7 +441,7 @@ def create_connected_action(
             sources = [source]
     if not sources and not mesh_feature:
         sources = _selected_media(scene, action_type)
-    if not sources:
+    if not sources and not allow_empty:
         if mesh_feature:
             raise ValueError("Connect this from a 3D mesh node")
         if action_type != 'IMAGE_GEN':

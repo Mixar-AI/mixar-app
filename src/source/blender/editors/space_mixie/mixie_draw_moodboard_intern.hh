@@ -48,6 +48,9 @@
 
 namespace blender::ui {
 struct Block;
+/* The tooltip helpers below take a button; the UI headers that define it are
+ * not pulled in here, and only the pointer type is needed. */
+struct Button;
 }  // namespace blender::ui
 
 namespace blender::ed::mixie {
@@ -150,9 +153,14 @@ void mixie_draw_moodboard_annotations(PointerRNA *itemptr,
 /** Draw image/movie content fitted inside an inference-node result area. */
 void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds);
 
-/** Draw the screen-size-stable play/pause affordance over a movie frame. */
-void mixie_draw_moodboard_video_overlay(
-    View2D *v2d, float center_x, float center_y, bool is_playing);
+/** Draw the play/pause affordance centred on a movie frame.
+ *
+ * Takes the tile's rect rather than a centre so it can size itself through
+ * #moodboard_video_play_radius -- screen-size-stable, but never bigger than a
+ * fraction of the tile it sits on. */
+void mixie_draw_moodboard_video_overlay(View2D *v2d,
+                                        const rctf &media_rect,
+                                        bool is_playing);
 
 /** Draw moodboard text boxes */
 void mixie_draw_moodboard_textboxes(const bContext *C, View2D *v2d);
@@ -174,15 +182,76 @@ void moodboard_draw_socket_label(
 /** Canvas-space width from the same font used by the socket label painter. */
 float moodboard_socket_label_width(View2D *v2d, const char *label);
 
-/* Shared by the node-UI toolbar and the selected-media label bar
+/* Card chrome painted in CANVAS units, so it lines up with the hit-tests at
+ * any zoom (mixie_draw_moodboard_graph_chrome.cc). */
+/** The card itself: the shared glass pane, with a brighter rim while selected. */
+void moodboard_draw_card_background(const rctf &rect, bool selected);
+/** The breathing accent a QUEUED/RUNNING card wears. */
+void moodboard_draw_running_glow(const rctf &rect);
+/** Bottom-right resize grip on a node card (see mixie_moodboard_ops_graph_resize.cc). */
+void moodboard_draw_node_resize_grip(const rctf &rect, bool selected);
+/**
+ * The header strip floating above a node card's top edge: the node's name (or,
+ * unnamed, its type) on the left and its live queue state on the right. Painted
+ * text rather than widgets, so the strip doubles as the card's drag handle.
+ */
+void moodboard_draw_node_header(PointerRNA *node, const rctf &rect, bool selected);
+/** Why the last connection was refused, drawn beside the node it was aimed at.
+ * Read-only: the message is posted and cleared from Python. */
+void moodboard_draw_graph_notice(PointerRNA *scene_ptr);
+/**
+ * Give `but` a tooltip whose text is not a compile-time constant.
+ *
+ * `ui::Button::tip` is a NON-owning StringRef, so a locally built string would
+ * dangle the moment the draw function returns — the button outlives it and is
+ * what the tooltip is read from, during event handling. These take a copy the
+ * button owns and frees.
+ */
+void moodboard_set_node_tooltip(ui::Button *but, const char *text);
+/** Tooltip for one catalog parameter: its name, what it does, and its range. */
+void moodboard_set_parameter_tooltip(ui::Button *but, PointerRNA *parameter);
+/**
+ * The controls a node draws inside its own tile: the prompt and Generate, or
+ * Cancel while a generation is in flight. Screen space, laid out inside the
+ * visible card intersection #moodboard_node_controls_rect returns.
+ * (mixie_draw_moodboard_node_tile_controls.cc)
+ */
+void moodboard_add_node_tile_controls(ui::Block *block,
+                                      PointerRNA *node,
+                                      const rcti &tile,
+                                      bool generation_running,
+                                      bool has_result,
+                                      int state,
+                                      bool edit_mode,
+                                      const char *node_id);
+/**
+ * The action row floating over a finished card's top edge: an Edit/Cancel-Edit
+ * toggle, plus Preview and Export when the result is media.
+ *
+ * Edit flips the node's `edit_mode`, which folds the settings panel and the
+ * in-tile prompt in and out — a presentation flag only, so the node keeps its
+ * state, its result and its error either way. Preview and Export are scoped to
+ * this node's own result rather than the selection.
+ */
+void moodboard_add_node_card_actions(ui::Block *block,
+                                     const rcti &card,
+                                     const rcti &canvas,
+                                     bool edit_mode,
+                                     bool has_media_result,
+                                     const char *node_id);
+
+/* Shared by the node-UI toolbar and the selected-media name
  * (mixie_draw_moodboard_node_ui.cc / mixie_draw_moodboard_media_labels.cc). */
 bool moodboard_view_rect_to_region(View2D *v2d,
                                    ARegion *region,
                                    const rctf &view_rect,
                                    rcti *r_region_rect);
 void moodboard_draw_floating_background(const rctf &rect);
+/** Paint each selected standalone media's own name just above it. Plain BLF
+ * text, no widgets and no background of its own -- it takes no #ui::Block. The
+ * context is what bounds it to the painted canvas, which in the Zen drawer is
+ * narrower than the region. */
 void mixie_draw_moodboard_selected_media_labels(const bContext *C,
-                                                ui::Block *block,
                                                 View2D *v2d,
                                                 ARegion *region,
                                                 PointerRNA *scene_ptr,

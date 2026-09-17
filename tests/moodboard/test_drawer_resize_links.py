@@ -45,9 +45,16 @@ def test_active_pointer_map_hits_graph_before_media_fallback(modifier):
 
 
 def test_socket_menus_keep_the_originating_canvas_region():
-    for name in ('mixie_moodboard_ops_graph.cc', 'mixie_moodboard_ops_graph_link.cc'):
+    # The right-click resolver lives in its own unit (500-line rule); every
+    # graph file that opens a menu still has to keep the drawer region.
+    openers = ('mixie_moodboard_ops_graph_context.cc',
+               'mixie_moodboard_ops_graph_link.cc')
+    for name in ('mixie_moodboard_ops_graph.cc',) + openers:
         source = (EDITOR / 'space_mixie' / name).read_text()
         assert 'OpCallContext::InvokeRegionWin' not in source
+    for name in openers:
+        source = (EDITOR / 'space_mixie' / name).read_text()
+        assert 'WM_operator_name_call_ptr(' in source
         assert 'OpCallContext::InvokeDefault' in source
     menus = (MODULE / 'ui/moodboard_menus.py').read_text()
     output_menu = menus.split('class MIXIE_MT_moodboard_output_menu')[1]
