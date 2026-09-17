@@ -269,7 +269,9 @@ safety copy is captured first, the snapshot is read with `wm.recover_auto_save`
 (nothing on disk is touched by the read, but the document's path becomes the
 snapshot file), then the document is saved once: a titled project back to its
 own path, an untitled one to the session's `working.mixar` so Ctrl-S never lands
-on a checkpoint. `load_pre` skips its session abort while
+on a checkpoint. Recovery must return `FINISHED`: a cancelled read reports failure
+without saving the document or rewinding the backend conversation.
+`load_pre` skips its session abort while
 `turn_checkpoints.is_restoring()`, and `turn_events.drop_scene` fences the
 session so the reconnect-time recovery check does not replay the undone turns
 into the restored chat (the next send lifts the fence). The checkpoint is bound

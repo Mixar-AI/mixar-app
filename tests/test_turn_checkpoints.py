@@ -314,6 +314,21 @@ def test_a_failed_read_reports_and_clears_the_restoring_flag(tc, monkeypatch):
     assert sent == []
 
 
+def test_cancelled_read_does_not_save_or_rewind_the_conversation(tc, monkeypatch):
+    scene = _scene()
+    target, sent, _ = _prepare_restore(tc, monkeypatch, scene)
+    tc.bpy.ops.wm.recover_auto_save.side_effect = lambda **kwargs: {'CANCELLED'}
+    tc.bpy.ops.wm.save_as_mainfile.reset_mock()
+
+    ok, message = tc.m.restore(scene, target["id"])
+
+    assert ok is False and "Could not read" in message
+    assert tc.m.is_restoring() is False
+    assert sent == []
+    assert tc.session.calls == []
+    assert all(call.kwargs.get("copy") for call in tc.bpy.ops.wm.save_as_mainfile.call_args_list)
+
+
 def test_restore_fences_the_session_so_recovery_does_not_replay_undone_turns(tc, monkeypatch):
     scene = _scene(users=3)
     target, _, _ = _prepare_restore(tc, monkeypatch, scene)

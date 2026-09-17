@@ -367,7 +367,9 @@ def restore(scene, checkpoint_id: str):
     _restoring = True
     try:
         with bpy.context.temp_override(window=window):
-            bpy.ops.wm.recover_auto_save(filepath=path)
+            result = bpy.ops.wm.recover_auto_save(filepath=path)
+        if 'FINISHED' not in result:
+            return False, "Could not read the checkpoint"
     except Exception as e:  # noqa: BLE001
         logger.error(f"Turn checkpoint restore failed: {e}", exc_info=True)
         return False, "Could not read the checkpoint"
