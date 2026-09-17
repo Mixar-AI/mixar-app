@@ -8,7 +8,6 @@ from ..constants import SessionState, STATE_LABELS
 from .session import get_session_manager
 
 HINT_QUEUED = 'queued'
-HINT_UNDELIVERED = 'could not be delivered'
 
 
 @dataclass

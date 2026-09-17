@@ -1383,10 +1383,9 @@ static void bubble_set_min_content_size(void *ghostwin, const int min_height)
     return;
   }
   /* Skip the AppKit/Win32 calls when the constraints are already in
-   * effect. This function runs from the footer's layout AND draw
-   * callbacks (agent_bubble_sync_footer_window_size), i.e. twice per
-   * frame while the bubble repaints — two cross-runtime window calls
-   * per frame for values that almost never change.
+   * effect. This runs from the island's layout callback on every repaint —
+   * a cross-runtime window call per frame for values that almost never
+   * change.
    *
    * The cache MUST be invalidated whenever Mixar_WindowForceSize runs:
    * force-size clears both contentMinSize and contentMaxSize to allow
@@ -1644,146 +1643,7 @@ static int agent_bubble_collapsed_height_for_current_attachments(const bContext 
   return height;
 }
 
-/* `from_draw` marked which caller this was, back when the footer's own
- * layout/draw callback had to REQUEST a resize rather than apply one. The
- * island replaced that region, so the only caller left is an operator exec
- * and the parameter is vestigial — kept so develop's call sites still
- * compile after the merge. */
-static void agent_bubble_sync_footer_window_size(const bContext *C,
-                                                 ARegion *region,
-                                                 const bool from_draw)
-{
-#if defined(__APPLE__) || defined(_WIN32)
-  wmWindow *win = CTX_wm_window(C);
-  ARegion *sync_region = region;
-  if (win == nullptr || win->runtime->ghostwin == nullptr || win->runtime->ghostwin != g_bubble_ghostwin) {
-    wmWindowManager *wm = CTX_wm_manager(C);
-    if (wm != nullptr) {
-      for (wmWindow &candidate_iter : wm->windows) {
-        wmWindow *candidate = &candidate_iter;
-        if (candidate->runtime->ghostwin != g_bubble_ghostwin) {
-          continue;
-        }
-        win = candidate;
-        sync_region = nullptr;
-        bScreen *screen = WM_window_get_active_screen(win);
-        if (screen != nullptr && BLI_listbase_is_single(&screen->areabase)) {
-          ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
-          if (area != nullptr && area->spacetype == SPACE_AGENT_BUBBLE) {
-            for (ARegion &candidate_region_iter : area->regionbase) {
-              ARegion *candidate_region = &candidate_region_iter;
-              if (candidate_region->regiontype == RGN_TYPE_TOOLS) {
-                sync_region = candidate_region;
-                break;
-              }
-            }
-          }
-        }
-        break;
-      }
-    }
-  }
-  if (win == nullptr || win->runtime->ghostwin == nullptr || win->runtime->ghostwin != g_bubble_ghostwin ||
-      g_bubble_minimised)
-  {
-    return;
-  }
 
-  const int attachment_count = agent_bubble_pending_attachment_count(C);
-  const int height_floor = agent_bubble_height_floor_for_attachments(attachment_count);
-  bubble_set_min_content_size(win->runtime->ghostwin, height_floor);
-
-  const bool has_attachments = (attachment_count > 0);
-  const bool was_had_pending = g_bubble_had_pending_attachments;
-
-  if (!has_attachments) {
-    g_bubble_had_pending_attachments = false;
-  }
-
-  /* Compute required height from the footer's actual sizey so that
-   * multi-line text input grows the window even without attachments. */
-  int required_height = height_floor;
-  if (sync_region != nullptr) {
-    required_height = sync_region->sizey + AGENT_BUBBLE_HEADER_HEIGHT +
-                      AGENT_BUBBLE_BODY_MIN_HEIGHT + AGENT_BUBBLE_AUTOGROW_SLACK;
-  }
-
-  if (has_attachments) {
-    g_bubble_had_pending_attachments = true;
-    required_height += AGENT_BUBBLE_ATTACHMENT_AUTOGROW_EXTRA;
-  }
-
-  /* Already big enough — skip resize. */
-  if (required_height <= win->sizey + AGENT_BUBBLE_AUTOGROW_SLACK &&
-      win->sizey >= height_floor) {
-    return;
-  }
-
-  int target_height = (required_height > height_floor) ? required_height : height_floor;
-
-  /* Clamp to screen boundary. */
-  const int max_height = Mixar_WindowGetMaxHeightToScreenTop(
-      win->runtime->ghostwin, AGENT_BUBBLE_AUTOGROW_TOP_RESERVE);
-  if (max_height > 0 && target_height > max_height) {
-    target_height = max_height;
-  }
-
-  if (target_height > win->sizey ||
-      (has_attachments && !was_had_pending && !g_bubble_expanded))
-  {
-    if (from_draw) {
-      agent_bubble_request_resize(C, target_height, height_floor);
-    }
-    else {
-      bubble_force_size_and_refresh(const_cast<bContext *>(C),
-                                    win->runtime->ghostwin,
-                                    AGENT_BUBBLE_DEFAULT_WIDTH,
-                                    target_height);
-      bubble_set_min_content_size(win->runtime->ghostwin, height_floor);
-    }
-  }
-#else
-  (void)C;
-  (void)region;
-  (void)from_draw;
-#endif
-}
-
-static void agent_bubble_footer_region_draw(const bContext *C, ARegion *region)
-{
-  agent_bubble_sync_footer_window_size(C, region, /*from_draw=*/true);
-
-  /* Read footer background from the Agent Bubble theme.  The colour is
-   * stored as uchar[4] (0-255) and the override API expects float (0-1).
-   * If the theme field is still at its zero-init default (alpha == 0),
-   * fall back to the space's main `back` colour. */
-  bTheme *btheme = ui::theme::theme_get();
-  const unsigned char *fb = btheme->space_agent_bubble.chat_footer_bg;
-  float footer_bg[4];
-  if (fb[3] == 0) {
-    const unsigned char *bk = btheme->space_agent_bubble.back;
-    footer_bg[0] = bk[0] / 255.0f;
-    footer_bg[1] = bk[1] / 255.0f;
-    footer_bg[2] = bk[2] / 255.0f;
-    footer_bg[3] = bk[3] / 255.0f;
-  }
-  else {
-    footer_bg[0] = fb[0] / 255.0f;
-    footer_bg[1] = fb[1] / 255.0f;
-    footer_bg[2] = fb[2] / 255.0f;
-    footer_bg[3] = fb[3] / 255.0f;
-  }
-  mixie_chat_set_bg_override(footer_bg);
-
-  mixie_chat_footer_region_draw(C, region);
-  mixie_chat_clear_bg_override();
-}
-
-static void agent_bubble_footer_region_layout(const bContext *C, ARegion *region)
-{
-  mixie_chat_footer_region_layout(C, region);
-  agent_bubble_sync_footer_window_size(C, region, /*from_draw=*/true);
-}
 
 
 /* Resize the pill window AND keep Blender's wmWindow / area / region

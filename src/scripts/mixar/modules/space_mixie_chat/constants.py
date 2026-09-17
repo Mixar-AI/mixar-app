@@ -218,8 +218,6 @@ DEFAULT_WS_URL_TEMPLATE = "/api/agent/ws"
 DEFAULT_RECONNECT_DELAY = 1.0
 DEFAULT_MAX_RECONNECT_DELAY = 30.0
 DEFAULT_PING_INTERVAL = 15.0
-DEFAULT_QUEUE_POLL_INTERVAL = 0.1
-EXECUTION_POLL_INTERVAL = 0.3  # Slower polling during tool execution
 
 # ============================================================================
 # AGENT FEEDBACK
@@ -237,8 +235,6 @@ FEEDBACK_STATUS_FAILED = 3
 # CONNECTION MANAGER SETTINGS
 # ============================================================================
 
-# Default timeout for HTTP requests (seconds)
-DEFAULT_HTTP_TIMEOUT = 30.0
 
 # WebSocket liveness: the client pings every ~15s and the server answers, so
 # a healthy connection always receives SOMETHING within this window. Zero
@@ -468,11 +464,6 @@ CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 
 # Timer interval for agent event queue processing (~60fps for short content)
 TIMER_INTERVAL = 1 / 60  # ~0.016s
-# Throttled interval when streaming long content (~30fps)
-# Yields more main thread time to Blender's event loop (pinch-to-zoom, etc.)
-TIMER_INTERVAL_THROTTLED = 1 / 30  # ~0.033s
-# Content length threshold (chars) to switch from 60fps to 30fps
-TIMER_THROTTLE_CONTENT_THRESHOLD = 2000
 
 # Timeout threshold for script execution warnings (seconds)
 SCRIPT_TIMEOUT_THRESHOLD = 30.0
