@@ -122,6 +122,7 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — h
 | **operation_history** | Local JSONL log of agent scripts + curated manual ops; agent queries via `core/tools.py:run_tool`; 15-day prune |
 | **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` |
 | **onboarding** / **plugin_import** | First-run GPU-rendered tour cards; one-click import of the user's vanilla-Blender plugins |
+| **voice** | Hold-to-talk dictation: a mic button records, the backend's catalog-driven `speech_to_text` service transcribes, and the transcript is APPENDED to the text field the recording was started in. Chat composer, moodboard node tile and the N-panel prompt share one operator, one session and one glyph; capture is native C++ (`editors/mixar_audio`, vendored miniaudio — Blender's `aud` is playback-only). Separate from the chat header's macOS-only platform recogniser (`space_mixie_chat/core/voice.py`) |
 | **workflow** | Zen/Engine dual-mode workspace UI, the topbar slider and Mixar topbar widgets |
 | **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search + the "Mixar Generations" archive; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
 | **testing** | Legacy embedded test suite (explicit opt-in) |

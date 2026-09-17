@@ -18,6 +18,13 @@
 #include "BLI_vector.hh"
 
 #include "mixie_chat_footer_constants.hh"
+
+namespace blender::ui {
+/* Only the pointer type is needed here; the UI headers that define it are not
+ * pulled into this internal header. */
+struct Block;
+}  // namespace blender::ui
+
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
@@ -111,6 +118,11 @@ struct FooterElementPositions {
   int thumb_spacing;
   int thumb_columns;
   int thumb_rows;
+
+  /* Mic button (voice dictation). Sits in the button row; its x is resolved
+   * during the draw because what precedes it depends on the mode. */
+  int voice_btn_x;
+  int voice_btn_size;
 
   /* Padding */
   int side_padding;
@@ -348,4 +360,31 @@ void footer_draw_thumbnails(const bContext *C,
                              float scale);
 
 /** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Voice Dictation (mixie_chat_voice.cc)
+ *
+ * The mic button follows the footer's own split for custom glyphs: a
+ * transparent `ui::Button` click target (so hover, tooltip and operator
+ * dispatch stay Blender's) plus a GPU overlay that paints the pixels. The same
+ * pair the Send button uses, and for the same reason — the widget system cannot
+ * size or animate this glyph.
+ * \{ */
+
+/** Place the mic's click target. Returns the x just past it, so the caller
+ * keeps laying the button row out left to right. */
+int mixie_chat_voice_add_button(ui::Block *block,
+                                FooterElementPositions &pos,
+                                int x,
+                                float scale);
+
+/** Paint the mic, and — while recording — the live waveform and clock over the
+ * composer. Call after `ui::block_draw`, with the other footer overlays. */
+void mixie_chat_voice_draw(const bContext *C,
+                           ARegion *region,
+                           const FooterElementPositions &pos,
+                           float scale);
+
+/** \} */
+
 }  // namespace blender

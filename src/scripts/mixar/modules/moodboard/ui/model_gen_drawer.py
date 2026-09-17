@@ -62,7 +62,7 @@ def _draw_model_gen(layout, context):
     ) or "model_3d"
 
     # --- Prompt ---
-    draw_prompt_section(layout, tab, label="Prompt (optional)")
+    draw_prompt_section(layout, tab, label="Prompt (optional)", context=context)
     draw_section_separator(layout)
 
     # --- Input image (shared by all modes) ---
