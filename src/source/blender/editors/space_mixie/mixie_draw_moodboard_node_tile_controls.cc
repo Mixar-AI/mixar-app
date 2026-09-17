@@ -218,6 +218,78 @@ void moodboard_add_node_tile_controls(ui::Block *block,
       }
     }
 
+    /* Refine (and, once a rewrite has landed, Revert) left of Generate. The
+     * prompt is the one thing on this tile the user authors by hand, so the
+     * help with writing it belongs beside the field rather than in the
+     * settings panel, which is folded away exactly when a draft node is
+     * being written.
+     *
+     * Square icon buttons: the tile is small and the words would crowd
+     * Generate, which must stay the obvious action.
+     *
+     * Laid out right to left — Generate, then Revert, then Refine — so
+     * Refine keeps the same relationship to the pair whether or not Revert
+     * is present, and Generate never moves. */
+    if (RNA_boolean_get(node, "show_prompt")) {
+      const bool refined = RNA_boolean_get(node, "prompt_refined");
+      const bool refining = RNA_boolean_get(node, "prompt_refining");
+      const int refine_w = generate_h;
+      const int refine_gap = int(8 * UI_SCALE_FAC);
+      const int refine_y = tile.ymin + margin;
+      int refine_x = tile.xmax - margin - generate_w - refine_gap - refine_w;
+
+      if (refined) {
+        ui::Button *revert = ui::uiDefIconButO(block,
+                                               ui::ButtonType::But,
+                                               "MIXIE_OT_revert_prompt",
+                                               blender::wm::OpCallContext::ExecDefault,
+                                               ICON_LOOP_BACK,
+                                               refine_x,
+                                               refine_y,
+                                               refine_w,
+                                               generate_h,
+                                               nullptr);
+        ui::mixar_style_button(
+            revert, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
+        RNA_string_set(ui::button_operator_ptr_ensure(revert), "node_id", node_id);
+        moodboard_set_node_tooltip(
+            revert, "Revert\n\nRestore the prompt you wrote before it was refined.");
+        refine_x -= refine_gap + refine_w;
+      }
+
+      ui::Button *refine = ui::uiDefIconButO(block,
+                                             ui::ButtonType::But,
+                                             "MIXIE_OT_refine_prompt",
+                                             blender::wm::OpCallContext::ExecDefault,
+                                             ICON_SHADERFX,
+                                             refine_x,
+                                             refine_y,
+                                             refine_w,
+                                             generate_h,
+                                             nullptr);
+      ui::mixar_style_button(
+          refine, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
+      RNA_string_set(ui::button_operator_ptr_ensure(refine), "node_id", node_id);
+      /* Refine survives its own success: a rewrite that missed is as often
+       * answered by running it again as by taking the original back, and
+       * Revert always returns the user's OWN words however many passes ran. */
+      moodboard_set_node_tooltip(refine,
+                                 refined ?
+                                     "Refine Again\n\nRewrite this prompt once more for the "
+                                     "model it will be sent to. Revert still restores your "
+                                     "own wording, not the previous refinement." :
+                                     "Refine\n\nRewrite this prompt for the model it will be "
+                                     "sent to, adding the detail that model responds to.");
+      /* After the tooltip, so the disabled hint is what the reader gets
+       * first when the button cannot be pressed. The button stays in place
+       * rather than disappearing, so Generate does not shift sideways under
+       * the pointer as the prompt is typed. */
+      const bool has_prompt = RNA_string_length(node, "prompt") > 0;
+      if (!has_prompt || refining) {
+        ui::button_disable(refine, refining ? "Refining this prompt..." : "Write a prompt first");
+      }
+    }
+
     ui::Button *generate = ui::uiDefButO(block,
                                          ui::ButtonType::But,
                                          "MIXIE_OT_moodboard_run_action_node",
