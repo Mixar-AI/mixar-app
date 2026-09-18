@@ -8,8 +8,11 @@ import logging
 import threading
 import time
 
-from ..constants import POLL_SECONDS, REQUEST_TIMEOUT
-from . import store
+from ..constants import BACKOFF_MAX_SECONDS, POLL_SECONDS, REPLY_WAIT_SECONDS, REQUEST_TIMEOUT
+from . import blobs, store
+
+# Retried automatically; a toast would only restate the connection indicator.
+TRANSIENT = ('archive_sync_timeout', 'archive_sync_unavailable')
 
 
 class ArchiveSync:
@@ -29,14 +32,14 @@ class ArchiveSync:
     def stop(self):
         self.stop_event.set()
 
-    def _notice(self, code):
+    def _notice(self, code, level=logging.WARNING):
         if code == self.last_error:
             return
         self.last_error = code
-        logging.getLogger(__name__).warning('Agent archive: %s', code)
+        logging.getLogger(__name__).log(level, 'Agent archive: %s', code)
+        if code in TRANSIENT:
+            return
         bodies = {
-            'archive_sync_timeout': 'History sync timed out. Retrying automatically.',
-            'archive_sync_unavailable': 'History sync is unavailable. Retrying when the connection is ready.',
             'archive_sync_rejected': 'The server rejected the history sync request. Update the app and backend, then reconnect.',
             'archive_owner_changed': 'History sync stopped because the signed-in account changed. Reconnect to resume.',
             'archive_gap': 'Some history is no longer available from the server. The missing range is marked in the archive.',
@@ -82,8 +85,40 @@ class ArchiveSync:
             ready.wait(min(0.25, max(0.0, deadline - time.monotonic())))
         return ok[0]
 
+    def _drop_request(self, request_id):
+        lock = getattr(self.client, '_pending_lock', None)
+        if lock is None:
+            return
+        with lock:
+            self.client._pending_callbacks.pop(request_id, None)
+            self.client._pending_deadlines.pop(request_id, None)
+
+    def _wait_reply(self, ready, request_id):
+        """Wait for the reply as long as its connection lives; never re-request.
+
+        Returns the failure code, or None once the reply is in. Abandoning a
+        slow reply on a timer used to re-queue the same multi-megabyte batch
+        behind the one still in flight, starving pings and tool replies.
+        """
+        started = time.monotonic()
+        while not ready.wait(1.0):
+            if self.stop_event.is_set() or not self.client.is_connected:
+                self._drop_request(request_id)
+                return 'archive_sync_disconnected'
+            if time.monotonic() - started >= REPLY_WAIT_SECONDS:
+                self._drop_request(request_id)
+                return 'archive_sync_timeout'
+        return None
+
+    def _pause(self, failures):
+        """Poll interval, doubling after consecutive failures so a broken fetch
+        cannot become a two-second loop of repeated multi-megabyte downloads."""
+        self.stop_event.wait(min(BACKOFF_MAX_SECONDS, POLL_SECONDS * (2 ** failures)) if failures else POLL_SECONDS)
+
     def _run(self):
         acknowledgements = []
+        failures = 0
+        reference = bool(getattr(self.client, 'agent_history_blobs_by_reference', False))
         while not self.stop_event.is_set() and self.client.is_connected:
             if not self._capture_scene_ids():
                 self.stop_event.wait(POLL_SECONDS)
@@ -96,19 +131,25 @@ class ArchiveSync:
             start = self.discovery_offset % max(1, len(known))
             known = known[start:] + known[:start]
             self.discovery_offset += 32
+            params = {'acknowledgements': acknowledgements, 'session_ids': known[:32]}
+            if reference:
+                params['blobs'] = 'reference'
             try:
-                request_id = self.client.send_request('agent.history_sync',
-                    {'acknowledgements': acknowledgements, 'session_ids': known[:32]},
-                    received, timeout=REQUEST_TIMEOUT)
+                request_id = self.client.send_request('agent.history_sync', params,
+                    received, timeout=REPLY_WAIT_SECONDS)
             except Exception:
                 self._notice('archive_sync_unavailable')
-                self.stop_event.wait(POLL_SECONDS)
+                failures += 1
+                self._pause(failures)
                 continue
             # No disk write is acknowledged until a subsequent successful pull.
-            if not ready.wait(REQUEST_TIMEOUT):
-                with self.client._pending_lock:
-                    self.client._pending_callbacks.pop(request_id, None)
-                    self.client._pending_deadlines.pop(request_id, None)
+            failure = self._wait_reply(ready, request_id)
+            if failure == 'archive_sync_disconnected':
+                # Normal teardown; the connection indicator already shows it.
+                self._notice('archive_sync_unavailable', logging.INFO)
+            elif failure:
+                self._notice(failure)
+            elif reply and isinstance(reply[0], dict) and reply[0].get('code') == -32020:
                 self._notice('archive_sync_timeout')
             elif reply and isinstance(reply[0], dict) and reply[0].get('code') == -32601:
                 return  # Older backend; leave existing client features available.
@@ -128,6 +169,19 @@ class ArchiveSync:
                 healthy = True
                 for packet in result.get('sessions', []):
                     try:
+                        if reference:
+                            try:
+                                blobs.materialize(packet, should_stop=self.stop_event.is_set)
+                            except blobs.BlobUnavailable as exc:
+                                # Keep what did arrive: records are contiguous, so
+                                # acknowledging the prefix makes the next pull resume there.
+                                healthy = False
+                                packet = {**packet, 'records': (packet.get('records') or [])[:exc.index]}
+                                self._notice('archive_sync_unavailable')
+                                if not packet['records'] or self.stop_event.is_set():
+                                    continue
+                        if self.stop_event.is_set():
+                            return
                         ack = store.write_batch(owner, packet, self.scene_ids.get(packet['session_id']))
                         if ack:
                             acknowledgements.append(ack)
@@ -149,7 +203,8 @@ class ArchiveSync:
                         self._notice('archive_write_failed')
                 if healthy:
                     self.last_error = None
-            self.stop_event.wait(POLL_SECONDS)
+            failures = 0 if self.last_error is None else failures + 1
+            self._pause(failures)
 
     def read(self, params, request_id):
         def work():

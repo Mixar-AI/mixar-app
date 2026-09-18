@@ -122,6 +122,7 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         self._on_addon_project_request = on_addon_project_request
         self._archive_sync = None
         self.agent_history_supported = False
+        self.agent_history_blobs_by_reference = False
         self._on_execution_request = on_execution_request
         self._on_turn_event = on_turn_event
         self._role = role

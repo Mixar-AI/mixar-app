@@ -259,6 +259,8 @@ class SocketConnection:
             # sends them when the user's BYOK provider is "local".
             "capabilities": [
                 "agent_history_v1",
+                # Image bytes by HTTP reference; sync frames stay small.
+                "agent_history_v2",
                 "script_execution",
                 "notifications",
                 "local_llm",
@@ -298,6 +300,7 @@ class SocketConnection:
 
         self.agent_ws_supported = False
         self.agent_history_supported = False
+        self.agent_history_blobs_by_reference = False
         self._ws.send(json.dumps(handshake))
 
         try:
@@ -318,4 +321,6 @@ class SocketConnection:
 
     def _set_server_capabilities(self, result):
         self.agent_ws_supported = bool(result.get('agent_ws_v1'))
-        self.agent_history_supported = 'agent_history_v1' in result.get('server_capabilities', [])
+        capabilities = result.get('server_capabilities', [])
+        self.agent_history_supported = 'agent_history_v1' in capabilities
+        self.agent_history_blobs_by_reference = 'agent_history_v2' in capabilities

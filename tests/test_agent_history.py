@@ -155,6 +155,7 @@ def test_socket_archive_negotiation_and_dispatch_contract():
     connection = (core / 'socket_connection.py').read_text()
     dispatch = (core / 'socket_dispatch.py').read_text()
     assert '"agent_history_v1"' in connection
+    assert '"agent_history_v2"' in connection
     assert 'if self.agent_history_supported:' in connection
     assert 'result_sink=self._set_server_capabilities' in connection
     assert "if method == 'agent.history_read':" in dispatch
@@ -162,20 +163,22 @@ def test_socket_archive_negotiation_and_dispatch_contract():
 
 HANDSHAKE_RESULT = {
     "success": True, "server_version": "x", "connection_id": "c", "supported_methods": [],
-    "server_capabilities": ["bidirectional_rpc", "batch_requests", "notifications", "scene_caching", "agent_history_v1"],
+    "server_capabilities": ["bidirectional_rpc", "batch_requests", "notifications", "scene_caching", "agent_history_v1", "agent_history_v2"],
     "agent_ws_v1": {"max_message_bytes": 33554432, "replay": True},
 }
 
 
-@pytest.mark.parametrize('result, history, ws', [
-    (HANDSHAKE_RESULT, True, True),
-    ({**HANDSHAKE_RESULT, 'server_capabilities': ['bidirectional_rpc']}, False, True),
-    ({'success': True}, False, False),
+@pytest.mark.parametrize('result, history, reference, ws', [
+    (HANDSHAKE_RESULT, True, True, True),
+    ({**HANDSHAKE_RESULT, 'server_capabilities': ['bidirectional_rpc', 'agent_history_v1']}, True, False, True),
+    ({**HANDSHAKE_RESULT, 'server_capabilities': ['bidirectional_rpc']}, False, False, True),
+    ({'success': True}, False, False, False),
 ])
-def test_handshake_server_capabilities_list_negotiates_archive(result, history, ws):
+def test_handshake_server_capabilities_list_negotiates_archive(result, history, reference, ws):
     # The backend handshake reply carries server_capabilities as a flat list of strings.
     from mixar.modules.space_mixie_chat.core.socket_connection import SocketConnection
     connection = types.SimpleNamespace()
     SocketConnection._set_server_capabilities(connection, result)
     assert connection.agent_history_supported is history
+    assert connection.agent_history_blobs_by_reference is reference
     assert connection.agent_ws_supported is ws

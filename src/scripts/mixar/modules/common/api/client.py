@@ -366,7 +366,13 @@ class HTTPClient:
             try:
                 response_data = response.json()
             except Exception:
-                response_data = response.text
+                content_type = response.headers.get("Content-Type", "")
+                if content_type and not (content_type.startswith("text/")
+                                         or "json" in content_type or "xml" in content_type):
+                    # Binary body (image, archive blob): never charset-sniff megabytes.
+                    response_data = response.content
+                else:
+                    response_data = response.text
 
             return APIResponse(
                 success=response.ok,
