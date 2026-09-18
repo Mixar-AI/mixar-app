@@ -47,6 +47,17 @@ def _live_offset_and_size(window, host):
     points, from the windowing system's LIVE client bounds
     (``Window.mixar_live_client_rect``, Mixar RNA; top-left origin). None
     when the build lacks it or a window has no native window."""
+    # Preferred: the child's content rect in the host's client coordinates,
+    # measured natively (exact across window styles; GHOST client bounds
+    # subtract a per-style title-bar height and do not share an origin).
+    fn = getattr(window, "mixar_content_rect_in", None)
+    if fn is not None:
+        try:
+            x, y, w, h = fn(host)
+            if w > 0 and h > 0:
+                return (float(x), float(y), float(w), float(h))
+        except Exception:  # noqa: BLE001
+            pass
     fn = getattr(window, "mixar_live_client_rect", None)
     hfn = getattr(host, "mixar_live_client_rect", None)
     if fn is None or hfn is None:

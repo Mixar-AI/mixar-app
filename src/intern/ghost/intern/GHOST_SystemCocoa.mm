@@ -4104,3 +4104,38 @@ GHOST_TSuccess GHOST_SystemCocoa::showMessageBox(const char *title,
   }
   return GHOST_kSuccess;
 }
+
+/* Mixar: a child window's CONTENT rect relative to a parent window's CONTENT
+ * rect, in points with a bottom-left origin — i.e. the child expressed in
+ * the parent's client coordinates. GHOST's getClientBounds subtracts the
+ * title-bar height per window style, so a bordered host and a borderless
+ * island do not share an origin there; NSWindow frames do. */
+extern "C" bool Mixar_WindowGetContentRectInParent(void *child_handle,
+                                                   void *parent_handle,
+                                                   int *r_x,
+                                                   int *r_y,
+                                                   int *r_w,
+                                                   int *r_h)
+{
+  if (child_handle == nullptr || parent_handle == nullptr || r_x == nullptr || r_y == nullptr ||
+      r_w == nullptr || r_h == nullptr)
+  {
+    return false;
+  }
+  GHOST_WindowCocoa *child_cocoa = static_cast<GHOST_WindowCocoa *>(child_handle);
+  GHOST_WindowCocoa *parent_cocoa = static_cast<GHOST_WindowCocoa *>(parent_handle);
+  NSWindow *child = (NSWindow *)child_cocoa->getViewWindow();
+  NSWindow *parent = (NSWindow *)parent_cocoa->getViewWindow();
+  if (child == nil || parent == nil) {
+    return false;
+  }
+  @autoreleasepool {
+    const NSRect pc = [parent contentRectForFrameRect:parent.frame];
+    const NSRect cc = [child contentRectForFrameRect:child.frame];
+    *r_x = (int)lround(cc.origin.x - pc.origin.x);
+    *r_y = (int)lround(cc.origin.y - pc.origin.y);
+    *r_w = (int)lround(cc.size.width);
+    *r_h = (int)lround(cc.size.height);
+  }
+  return true;
+}
