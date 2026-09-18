@@ -166,6 +166,13 @@ class SocketConnection:
                 return False
 
             self._handshake_complete = True
+            if self._archive_sync:
+                self._archive_sync.stop()
+                self._archive_sync = None
+            if self.agent_history_supported:
+                from ...common.agent_history.core.sync import ArchiveSync
+                self._archive_sync = ArchiveSync(self)
+                self._archive_sync.start()
             self._current_delay = self._reconnect_delay
             self._auth.reset()
             self._last_ping_time = time.time()
@@ -251,6 +258,7 @@ class SocketConnection:
             # a local model server (modules/local_models) — the backend only
             # sends them when the user's BYOK provider is "local".
             "capabilities": [
+                "agent_history_v1",
                 "script_execution",
                 "notifications",
                 "local_llm",
@@ -289,12 +297,13 @@ class SocketConnection:
         }
 
         self.agent_ws_supported = False
+        self.agent_history_supported = False
         self._ws.send(json.dumps(handshake))
 
         try:
             outcome, detail = wait_for_handshake(
                 self._ws, timeout=10.0,
-                result_sink=lambda result: setattr(self, "agent_ws_supported", bool(result.get("agent_ws_v1"))),
+                result_sink=self._set_server_capabilities,
             )
         except Exception as e:
             logger.warning(f"Handshake error: {e} - transient, will retry")
@@ -306,3 +315,7 @@ class SocketConnection:
         else:
             logger.warning(f"Handshake not answered: {detail} - will retry")
         return outcome
+
+    def _set_server_capabilities(self, result):
+        self.agent_ws_supported = bool(result.get('agent_ws_v1'))
+        self.agent_history_supported = 'agent_history_v1' in result.get('server_capabilities', [])
