@@ -278,8 +278,15 @@ class TestTheCategoryTabsArePanes:
 
     def test_the_tab_hit_rects_are_still_recorded(self) -> None:
         """The strip is drawn, not made of buttons, so the click map comes from
-        the same rect the pane was laid in — and it is recorded every draw."""
-        assert "mixar_category_tab_rects().add_overwrite(region, std::move(tab_rects));" in self._tabs()
+        the same rect the pane was laid in — and it is recorded every draw.
+
+        The record now carries the region's winrct alongside the rects, so a
+        recycled ARegion pointer cannot read a dead region's tabs; assert the
+        recording, not the exact call text it is made with.
+        """
+        tabs = self._tabs()
+        assert "add_overwrite(region, MixarCategoryTabs{region->winrct" in tabs
+        assert "std::move(tab_rects)" in tabs
 
     def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
         calls = re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(SECTION))
