@@ -320,6 +320,8 @@ const blender::Vector<MessageLayoutData> &mixie_chat_get_layout_cache(
  * Call when space is destroyed to prevent leaks.
  */
 void mixie_chat_clear_layout_cache(struct SpaceMixieChat *smixie);
+/* Same, but keeps the vector's buffer for the rebuild that follows. */
+void mixie_chat_clear_layout_cache_for_rebuild(struct SpaceMixieChat *smixie);
 
 /**
  * Reset property caches to prevent stale pointers.

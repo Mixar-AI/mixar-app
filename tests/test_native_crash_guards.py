@@ -41,17 +41,30 @@ def _fn(src: str, name: str) -> str:
     raise AssertionError(name)
 
 
-def test_bubble_draw_and_layout_only_request_a_resize():
+def test_bubble_layout_only_requests_a_resize():
+    """A draw or layout callback must never resize an OS window.
+
+    This used to pin agent_bubble_footer_region_{draw,layout} and their
+    sync helper -- three statics nothing referenced, left behind when the
+    island replaced the footer region. The LIVE callback that can ask for a
+    resize is the island's layout pass, so guard that one instead.
+    """
     src = BUBBLE.read_text(encoding="utf-8")
-    draw = _fn(src, "static void agent_bubble_footer_region_draw")
-    layout = _fn(src, "static void agent_bubble_footer_region_layout")
-    for block in (draw, layout):
-        assert "agent_bubble_sync_footer_window_size(C, region, /*from_draw=*/true)" in block
-        assert "bubble_force_size_and_refresh(" not in block
-        assert "ED_screen_refresh(" not in block
-    sync = _fn(src, "static void agent_bubble_sync_footer_window_size")
-    # The draw-time branch records and notifies; only the exec branch resizes.
-    assert "if (from_draw) {\n      agent_bubble_request_resize(C, target_height, height_floor);" in sync
+    # The dead footer trio must not come back.
+    for gone in (
+        "agent_bubble_footer_region_draw",
+        "agent_bubble_footer_region_layout",
+        "agent_bubble_sync_footer_window_size",
+    ):
+        assert gone not in src, f"{gone} is dead code; do not reintroduce it"
+
+    layout = _fn(src, "static void agent_bubble_island_region_layout")
+    assert "agent_bubble_request_resize(" in layout
+    assert "bubble_force_size_and_refresh(" not in layout
+    assert "Mixar_WindowForceSize" not in layout
+    assert "ED_screen_refresh(" not in layout
+
+    # Requesting only records and notifies; the listener applies it later.
     request = _fn(src, "static void agent_bubble_request_resize")
     assert "WM_event_add_notifier(C, NC_WINDOW, nullptr);" in request
     assert "Mixar_WindowForceSize" not in request and "ED_screen_refresh" not in request

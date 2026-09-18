@@ -57,7 +57,7 @@ int parse_markdown_segments(const char *metadata_json,
 
 /**
  * Cached variant keyed on the metadata JSON (LRU, main-thread only —
- * mixie_chat_markdown_parse.cc). The returned pointer is valid until the
+ * mixie_chat_markdown_cache.cc). The returned pointer is valid until the
  * entry is evicted; consume it before the next cache access.
  */
 const MarkdownSegment *markdown_segments_get_cached(const char *metadata_json, int *r_count);

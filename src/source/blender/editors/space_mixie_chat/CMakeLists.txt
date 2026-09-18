@@ -36,6 +36,7 @@ set(SRC
   mixie_chat_ink_util.cc
   mixie_chat_main_region.cc
   mixie_chat_markdown.cc
+  mixie_chat_markdown_cache.cc
   mixie_chat_markdown_parse.cc
   mixie_chat_mention.cc
   mixie_chat_table.cc

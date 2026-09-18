@@ -39,6 +39,7 @@ class SandboxViolationError(RuntimeError):
 
 # Restricted module wrappers (see sandbox_modules.py for implementation)
 from .sandbox_modules import (
+    safe_module,
     RESTRICTED_BASE64,
     RESTRICTED_STRING,
     RESTRICTED_TEMPFILE,
@@ -388,34 +389,51 @@ class ScriptExecutor:
 
             exec_namespace = {
                 "__builtins__": get_safe_builtins(),
-                "bpy": bpy,
+                # bpy is wrapped too. It IS the capability the agent is given,
+                # so every same-package child stays reachable -- bpy.ops,
+                # bpy.data, bpy.types, bpy.props, bpy.app, bpy.path, bpy.utils
+                # all resolve exactly as before. What the wrap refuses is the
+                # foreign modules bound INSIDE it: Blender's own
+                # bpy/utils/__init__.py does `import os as _os` / `import sys
+                # as _sys`, so bpy.utils._os was the real os module and
+                # bpy.utils._sys.modules['builtins'].exec arbitrary code --
+                # reachable with no dunder, so the AST guard never saw it, and
+                # through the one module every script already has. Leaving bpy
+                # exempt meant this whole class of escape was still open.
+                "bpy": safe_module(bpy),
                 "__name__": "__main__",
-                # Safe modules (unrestricted)
-                "json": json,
-                "math": math,
-                "random": random,
-                "colorsys": colorsys,
-                "re": re,
-                "datetime": datetime,
-                "collections": collections,
-                "hashlib": hashlib,
-                "time": time,
-                "numpy": numpy,
-                "struct": struct,
-                "itertools": itertools,
-                "functools": functools,
-                "statistics": statistics,
-                "heapq": heapq,
-                "bisect": bisect,
-                "copy": copy,
-                "textwrap": textwrap,
-                "fractions": fractions,
-                "decimal": decimal,
+                # Safe modules. Each is wrapped so it cannot hand out a
+                # module from another package: `random._os`, `fractions.sys`,
+                # `statistics.sys`, `datetime.sys`, `collections._sys`,
+                # `re.enum.sys` and `json.codecs` were all plain attributes
+                # reaching the real `os`/`builtins` without touching a single
+                # dunder, so the AST guard never saw them. Same-package
+                # submodules (`collections.abc`, `numpy.linalg`) still work.
+                "json": safe_module(json),
+                "math": safe_module(math),
+                "random": safe_module(random),
+                "colorsys": safe_module(colorsys),
+                "re": safe_module(re),
+                "datetime": safe_module(datetime),
+                "collections": safe_module(collections),
+                "hashlib": safe_module(hashlib),
+                "time": safe_module(time),
+                "numpy": safe_module(numpy),
+                "struct": safe_module(struct),
+                "itertools": safe_module(itertools),
+                "functools": safe_module(functools),
+                "statistics": safe_module(statistics),
+                "heapq": safe_module(heapq),
+                "bisect": safe_module(bisect),
+                "copy": safe_module(copy),
+                "textwrap": safe_module(textwrap),
+                "fractions": safe_module(fractions),
+                "decimal": safe_module(decimal),
                 # Blender modules
-                "bmesh": bmesh,
-                "mathutils": mathutils,
-                "bpy_extras": bpy_extras,
-                "imbuf": imbuf,
+                "bmesh": safe_module(bmesh),
+                "mathutils": safe_module(mathutils),
+                "bpy_extras": safe_module(bpy_extras),
+                "imbuf": safe_module(imbuf),
                 # Restricted modules -- only safe subsets exposed
                 # (see sandbox_modules.py for implementation)
                 "base64": RESTRICTED_BASE64,
@@ -457,7 +475,23 @@ class ScriptExecutor:
                 # NOT urllib.* — only the RestrictedUrllib wrapper may reach the network.
                 top_module = name.split(".")[0]
                 if top_module in ("mixar", "numpy", "mathutils", "bmesh", "bpy_extras"):
-                    return _real_import(name, *args, **kwargs)
+                    real = _real_import(name, *args, **kwargs)
+                    # `import a.b` binds `a`, so handing back the real package
+                    # here would return the UNWRAPPED module and undo the
+                    # cross-package guard. Return the proxy we already built
+                    # where there is one, and wrap first-party packages so a
+                    # module that does `import os` cannot re-export it.
+                    #
+                    # ONLY for the no-fromlist form. With a fromlist,
+                    # `__import__` returns the LEAF module and the interpreter
+                    # then getattrs the names off it, so substituting the top
+                    # package here broke every `from numpy.linalg import norm`
+                    # / `from mathutils.geometry import ...` with "cannot
+                    # import name". The leaf's own proxy is equally guarded.
+                    fromlist = args[2] if len(args) > 2 else kwargs.get("fromlist")
+                    if not fromlist and top_module in exec_namespace:
+                        return exec_namespace[top_module]
+                    return safe_module(real)
                 raise ImportError(
                     f"Module '{name}' is not available. "
                     f"Allowed modules: {', '.join(sorted(_allowed))}"
