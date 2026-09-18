@@ -27,7 +27,7 @@ is a cosmetic regression, while an exception in a panel draw blanks the tab.
 
 from __future__ import annotations
 
-from typing import List, Set
+from typing import Dict, List, Optional
 
 import bpy
 
@@ -43,13 +43,7 @@ logger = get_logger(__name__)
 ICON_SIZE = 32
 
 _previews = None
-#: States whose frames are rasterized and ready.
-_built: Set[str] = set()
-#: States whose build RAISED. Kept apart from `_built` on purpose: a single
-#: dict cannot distinguish "not built yet" from "will never build", and a
-#: falsy entry read as the former means the draw callback re-runs the whole
-#: per-pixel raster on every redraw of a failing state.
-_unavailable: Set[str] = set()
+_built: Dict[str, bool] = {}
 #: Latched once the collection cannot be allocated, so a draw callback running
 #: every mouse move does not retry a failing allocation on every frame.
 _failed = False
@@ -112,10 +106,8 @@ def _ensure_state(state: str) -> bool:
     """Build `state`'s frames if they are not there yet. False if unavailable."""
     if not _ensure_collection():
         return False
-    if state in _built:
+    if _built.get(state):
         return True
-    if state in _unavailable:
-        return False
     try:
         for name, kwargs in _frames_for(state):
             if name in _previews:
@@ -129,30 +121,10 @@ def _ensure_state(state: str) -> bool:
         # A partially built state would animate with gaps; drop the whole thing
         # and let the caller fall back to a stock icon.
         logger.debug("[Voice] glyph frames unavailable for %s", state, exc_info=True)
-        _unavailable.add(state)
+        _built[state] = False
         return False
-    _built.add(state)
+    _built[state] = True
     return True
-
-
-def prewarm(state: str) -> None:
-    """Build `state`'s frames NOW, off the draw path.
-
-    `icon_id` is reached from a panel `draw()`, and CLAUDE.md's handler pattern
-    forbids heavy work there — a state entered for the first time would
-    otherwise rasterize its whole set (up to a dozen frames of pure-Python
-    per-pixel work) inside the redraw that first shows it. `VoiceSession` calls
-    this from `start()` and `stop()`, which run on the main thread from the
-    operator press, so the cost lands next to a microphone opening exactly as
-    this module's contract says it does.
-
-    Never raises and never reports: a state that cannot be built is latched in
-    `_unavailable`, and the drawer falls back to a stock icon.
-    """
-    try:
-        _ensure_state(state)
-    except Exception:  # noqa: BLE001 — a warm-up must not break the press
-        logger.debug("[Voice] glyph prewarm failed for %s", state, exc_info=True)
 
 
 def icon_id(state: str, level: float = 0.0, pulse: float = 0.0) -> int:
@@ -186,7 +158,6 @@ def unregister() -> None:
     """
     global _previews, _failed
     _built.clear()
-    _unavailable.clear()
     _failed = False
     if _previews is None:
         return
