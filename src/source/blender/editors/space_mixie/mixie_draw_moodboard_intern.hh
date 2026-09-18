@@ -19,6 +19,9 @@
 #include "BLI_listbase.h"
 #include "BLI_math_vector.h"
 #include "BLI_rect.h"
+#include "BLI_vector.hh"
+
+#include "ED_mixar_audio_ui.hh"
 
 #include "BLF_api.hh"
 
@@ -251,19 +254,55 @@ void moodboard_set_node_tooltip(ui::Button *but, const char *text);
 /** Tooltip for one catalog parameter: its name, what it does, and its range. */
 void moodboard_set_parameter_tooltip(ui::Button *but, PointerRNA *parameter);
 /**
+ * One mic button recorded while the node-controls block is built, painted once
+ * the block has been drawn.
+ *
+ * The glyph cannot be an `ICON_*` — it is `ED_mixar_voice_draw_button`, the
+ * same painter the chat composer and the Agent Bubble use, so a mic means the
+ * same thing and animates the same way wherever it appears. That painter is a
+ * GPU pass and the widget system can neither size nor animate it, so the
+ * button is a label-less `ui::Button` (which keeps the click, the hover plate
+ * and the tooltip) and the glyph goes on top afterwards — exactly the split
+ * `mixie_chat_voice.cc` uses for the composer's mic.
+ *
+ * `rect` is in SCREEN space, like the rest of this block: these controls
+ * arrive already projected and clipped to the painted canvas
+ * (#moodboard_node_controls_rect), so the mic stays a constant size and can
+ * never spill past the Zen drawer's edge.
+ */
+struct VoiceButtonDraw {
+  rctf rect;
+  /** What to paint. `Idle` whenever the live recording belongs to a DIFFERENT
+   * target — another field's recording must not make this mic look live. */
+  MixarVoiceVisual state;
+};
+
+/**
+ * Paint every mic recorded during the block build.
+ *
+ * Call after `ui::block_draw` and while pixel space is still restored. The
+ * level and the clock are sampled ONCE for the whole pass, so two mics on
+ * screen can never show two different levels for one recording.
+ * (mixie_draw_moodboard_node_tile_controls.cc)
+ */
+void moodboard_draw_voice_buttons(const blender::Vector<VoiceButtonDraw> &voice_buttons);
+
+/**
  * The controls a node draws inside its own tile: the prompt and Generate, or
  * Cancel while a generation is in flight. Screen space, laid out inside the
  * visible card intersection #moodboard_node_controls_rect returns.
  * (mixie_draw_moodboard_node_tile_controls.cc)
  */
-void moodboard_add_node_tile_controls(ui::Block *block,
+void moodboard_add_node_tile_controls(const bContext *C,
+                                      ui::Block *block,
                                       PointerRNA *node,
                                       const rcti &tile,
                                       bool generation_running,
                                       bool has_result,
                                       int state,
                                       bool edit_mode,
-                                      const char *node_id);
+                                      const char *node_id,
+                                      blender::Vector<VoiceButtonDraw> &voice_buttons);
 /**
  * The action row floating over a finished card's top edge: an Edit/Cancel-Edit
  * toggle, plus Preview and Export when the result is media.

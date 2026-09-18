@@ -57,7 +57,8 @@ static void add_action_toolbar(const bContext *C,
                                View2D *v2d,
                                ARegion *region,
                                PointerRNA *node,
-                               blender::Vector<ObjectPreviewDraw> &object_previews)
+                               blender::Vector<ObjectPreviewDraw> &object_previews,
+                               blender::Vector<VoiceButtonDraw> &voice_buttons)
 {
   rctf node_rect;
   node_rect.xmin = RNA_float_get(node, "position_x");
@@ -137,8 +138,16 @@ static void add_action_toolbar(const bContext *C,
     controls.ymax -= height + margin;
   }
   /* Tile controls use the visible intersection, never an off-canvas edge. */
-  moodboard_add_node_tile_controls(
-      block, node, controls, generation_running, has_result, state, edit_mode, node_id);
+  moodboard_add_node_tile_controls(C,
+                                   block,
+                                   node,
+                                   controls,
+                                   generation_running,
+                                   has_result,
+                                   state,
+                                   edit_mode,
+                                   node_id,
+                                   voice_buttons);
 }
 
 void mixie_draw_moodboard_graph_controls(const bContext *C,
@@ -160,10 +169,14 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   ui::Block *block = ui::block_begin(
       C, region, "moodboard_floating_node_controls", blender::ui::EmbossType::Emboss);
   blender::Vector<ObjectPreviewDraw> object_previews;
+  /* Mics are recorded here and painted after the block: the glyph is a GPU
+   * pass (`ED_mixar_voice_draw_button`), not an icon, so it cannot be part of
+   * the widget the click lives on. Same split as the chat composer's mic. */
+  blender::Vector<VoiceButtonDraw> voice_buttons;
   CollectionPropertyIterator iter{};
   RNA_property_collection_begin(&scene_ptr, actions, &iter);
   while (iter.valid) {
-    add_action_toolbar(C, block, v2d, region, &iter.ptr, object_previews);
+    add_action_toolbar(C, block, v2d, region, &iter.ptr, object_previews, voice_buttons);
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
@@ -187,6 +200,10 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   /* Compact Settings and retry controls occupy the tile itself. Keep native
    * controls above mesh thumbnails, just as they are above image previews. */
   ui::block_draw(C, block);
+  /* Mic glyphs, on top of the label-less buttons the block just drew and while
+   * pixel space is still restored — their rects are the same screen-space ones
+   * the buttons were laid out in. */
+  moodboard_draw_voice_buttons(voice_buttons);
   /* moodboard_media_labels: painted text, so it takes no block of its own and
    * has to run while pixel space is still restored. */
   mixie_draw_moodboard_selected_media_labels(C, v2d, region, &scene_ptr, cache);

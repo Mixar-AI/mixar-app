@@ -49,6 +49,7 @@
 #include "DNA_windowmanager_types.h"
 
 #include "BLI_listbase.h"
+#include "BLI_path_utils.hh" /* FILE_MAX — used by both halves of this file. */
 
 #ifdef RNA_RUNTIME
 #  include <algorithm>
@@ -66,6 +67,9 @@
 #  include "IMB_imbuf_types.hh"
 #  include "WM_api.hh"
 
+#  include "BLI_string.h"
+
+#  include "../../editors/include/ED_mixar_audio.hh"
 #  include "../../editors/interface/interface_qa_inspect.hh"
 #else
 #  include "rna_internal_types.hh"
@@ -204,6 +208,76 @@ static bool rna_Window_mixar_qa_capture_frame(wmWindow *win,
   return saved;
 }
 
+/* -------------------------------------------------------------------- */
+/** \name Voice capture
+ *
+ * RNA is the only channel between the capture engine (C++, in
+ * `editors/mixar_audio`) and the Python module that owns the voice flow.
+ * These are FUNCTIONS rather than operators because stop has to hand back a
+ * value — the path of the file it just wrote — and an operator's return set
+ * cannot carry one. The user-facing operator (`mixar.voice_record_toggle`)
+ * stays in Python with the rest of the behaviour; the C++ surfaces that draw
+ * a mic button invoke that operator, they do not call these.
+ *
+ * The read-only properties are safe from a draw callback: every one is an
+ * atomic read, and none of them allocates.
+ * \{ */
+
+static bool rna_WindowManager_mixar_audio_recording_get(PointerRNA * /*ptr*/)
+{
+  return ED_mixar_audio_is_recording();
+}
+
+static bool rna_WindowManager_mixar_audio_available_get(PointerRNA * /*ptr*/)
+{
+  return ED_mixar_audio_is_available();
+}
+
+static float rna_WindowManager_mixar_audio_level_get(PointerRNA * /*ptr*/)
+{
+  return ED_mixar_audio_level();
+}
+
+static float rna_WindowManager_mixar_audio_duration_get(PointerRNA * /*ptr*/)
+{
+  return ED_mixar_audio_duration();
+}
+
+static bool rna_WindowManager_mixar_audio_record_start(wmWindowManager * /*wm*/,
+                                                       ReportList *reports)
+{
+  char error[256] = "";
+  if (ED_mixar_audio_record_start(error, sizeof(error))) {
+    return true;
+  }
+  /* The message is written for the user ("No microphone is available…"), so
+   * it is reported rather than swallowed into a bare False — the caller
+   * surfaces it verbatim. */
+  BKE_report(reports, RPT_WARNING, error[0] ? error : "Recording could not be started");
+  return false;
+}
+
+static void rna_WindowManager_mixar_audio_record_stop(wmWindowManager * /*wm*/,
+                                                      ReportList *reports,
+                                                      char *r_filepath)
+{
+  char error[256] = "";
+  char filepath[FILE_MAX] = "";
+  if (!ED_mixar_audio_record_stop(filepath, sizeof(filepath), error, sizeof(error))) {
+    BKE_report(reports, RPT_WARNING, error[0] ? error : "No audio was captured");
+    r_filepath[0] = '\0';
+    return;
+  }
+  BLI_strncpy(r_filepath, filepath, FILE_MAX);
+}
+
+static void rna_WindowManager_mixar_audio_record_cancel(wmWindowManager * /*wm*/)
+{
+  ED_mixar_audio_record_cancel();
+}
+
+/** \} */
+
 #else /* RNA_RUNTIME */
 
 void RNA_def_wm_mixar(BlenderRNA *brna)
@@ -303,6 +377,74 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         "QA UI Dump",
         "JSON snapshot of all live UI widgets (labels, operators, properties, "
         "window-space rects, state) for the Mixar QA harness");
+
+    /* Voice capture. Read-only status the UI polls every redraw, plus the
+     * three lifecycle calls. Kept on WindowManager, never Scene: a recording
+     * is a property of this running app, not of the .blend. */
+    prop = RNA_def_property(srna_wm, "mixar_audio_available", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(
+        prop, "rna_WindowManager_mixar_audio_available_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(prop,
+                             "Voice Capture Available",
+                             "Whether this build can record from a microphone");
+
+    prop = RNA_def_property(srna_wm, "mixar_audio_recording", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(
+        prop, "rna_WindowManager_mixar_audio_recording_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(
+        prop, "Recording", "Whether the microphone is capturing right now");
+
+    prop = RNA_def_property(srna_wm, "mixar_audio_level", PROP_FLOAT, PROP_FACTOR);
+    RNA_def_property_float_funcs(
+        prop, "rna_WindowManager_mixar_audio_level_get", nullptr, nullptr);
+    RNA_def_property_range(prop, 0.0f, 1.0f);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(
+        prop, "Input Level", "Smoothed peak level of the microphone, 0 to 1");
+
+    prop = RNA_def_property(srna_wm, "mixar_audio_duration", PROP_FLOAT, PROP_NONE);
+    RNA_def_property_float_funcs(
+        prop, "rna_WindowManager_mixar_audio_duration_get", nullptr, nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(
+        prop, "Recording Length", "Seconds captured in the current recording");
+
+    {
+      FunctionRNA *func = RNA_def_function(
+          srna_wm, "mixar_audio_record_start", "rna_WindowManager_mixar_audio_record_start");
+      RNA_def_function_flag(func, FUNC_USE_REPORTS);
+      RNA_def_function_ui_description(
+          func, "Start recording from the default microphone");
+      PropertyRNA *parm = RNA_def_boolean(
+          func, "started", false, "", "Whether recording started");
+      RNA_def_function_return(func, parm);
+    }
+
+    {
+      FunctionRNA *func = RNA_def_function(
+          srna_wm, "mixar_audio_record_stop", "rna_WindowManager_mixar_audio_record_stop");
+      RNA_def_function_flag(func, FUNC_USE_REPORTS);
+      RNA_def_function_ui_description(
+          func,
+          "Stop recording and write a WAV file; returns its path, or an empty "
+          "string if nothing was captured");
+      PropertyRNA *parm = RNA_def_string(
+          func, "filepath", nullptr, FILE_MAX, "", "Path of the recorded file");
+      /* THICK_WRAP: the function writes into a caller-owned buffer rather
+       * than handing back a pointer whose lifetime nobody owns. */
+      RNA_def_parameter_flags(parm, PROP_THICK_WRAP, ParameterFlag(0));
+      RNA_def_function_output(func, parm);
+    }
+
+    {
+      FunctionRNA *func = RNA_def_function(srna_wm,
+                                           "mixar_audio_record_cancel",
+                                           "rna_WindowManager_mixar_audio_record_cancel");
+      RNA_def_function_ui_description(
+          func, "Stop recording and discard the audio without writing a file");
+    }
   }
 }
 

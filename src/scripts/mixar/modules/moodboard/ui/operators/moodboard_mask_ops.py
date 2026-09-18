@@ -154,7 +154,7 @@ class MIXIE_OT_moodboard_box_mask_tool(Operator):
         state = scene.mixie_edit_tool_state
 
         # Surface the segments panel (Character Parts / Scene Gen fallback)
-        from ..sidebar_ui_helpers import focus_segments_panel
+        from ..sidebar_focus import focus_segments_panel
         focus_segments_panel(context)
 
         # Find the selected image
@@ -373,7 +373,7 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
         state = scene.mixie_edit_tool_state
 
         # Surface the segments panel (Character Parts / Scene Gen fallback)
-        from ..sidebar_ui_helpers import focus_segments_panel
+        from ..sidebar_focus import focus_segments_panel
         focus_segments_panel(context)
 
         # Find the selected image

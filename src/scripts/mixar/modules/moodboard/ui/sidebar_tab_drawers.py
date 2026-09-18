@@ -204,7 +204,7 @@ def _draw_mesh_segment(layout, context):
         return
 
     # Mesh Segmentation (default) — existing inputs + submit flow.
-    draw_prompt_section(layout, tab, label="Description")
+    draw_prompt_section(layout, tab, label="Description", context=context)
     draw_section_separator(layout)
 
     col = draw_section_box(
@@ -226,7 +226,7 @@ def _draw_mesh_segment(layout, context):
 def _draw_hunyuan_pro(layout, pro, context=None):
     """Draw Pro mode inputs."""
     # --- Prompt ---
-    draw_prompt_section(layout, pro)
+    draw_prompt_section(layout, pro, context=context)
     draw_section_separator(layout)
 
     # --- Input image ---

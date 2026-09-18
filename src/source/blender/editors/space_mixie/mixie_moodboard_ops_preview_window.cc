@@ -130,13 +130,16 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
   ImageUser probe{};
   BKE_imageuser_default(&probe);
   void *lock = nullptr;
-  if (ImBuf *ibuf = BKE_image_acquire_ibuf(image, &probe, &lock)) {
-    if (ibuf->x > 0 && ibuf->y > 0) {
-      width = ibuf->x;
-      height = ibuf->y;
-    }
+  /* The acquired buffer is REFERENCED, so it has to be handed back to
+   * `BKE_image_release_ibuf` -- passing nullptr releases the lock but leaks the
+   * reference, once per preview the user opens. Hence the scope, rather than an
+   * `if`-scoped declaration. */
+  ImBuf *ibuf = BKE_image_acquire_ibuf(image, &probe, &lock);
+  if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
+    width = ibuf->x;
+    height = ibuf->y;
   }
-  BKE_image_release_ibuf(image, nullptr, lock);
+  BKE_image_release_ibuf(image, ibuf, lock);
 
   width = std::clamp(width, PREVIEW_MIN_W, PREVIEW_MAX_W);
   height = std::clamp(height, PREVIEW_MIN_H, PREVIEW_MAX_H) + PREVIEW_CHROME_H;

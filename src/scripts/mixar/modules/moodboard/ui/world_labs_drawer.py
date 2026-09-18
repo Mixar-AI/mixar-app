@@ -41,7 +41,7 @@ def draw_world_labs(layout, context):
     draw_section_separator(layout)
 
     if mode == 'TEXT':
-        draw_prompt_section(layout, tab, label="World Prompt", icon='WORLD')
+        draw_prompt_section(layout, tab, label="World Prompt", icon='WORLD', context=context)
     else:
         col = draw_section_box(
             layout, "Input Image", icon='IMAGE_DATA',
@@ -54,7 +54,7 @@ def draw_world_labs(layout, context):
                 remove_op="mixie.world_labs_remove_image",
             )
         draw_section_separator(layout)
-        draw_prompt_section(layout, tab, label="Prompt (optional)", icon='TEXT')
+        draw_prompt_section(layout, tab, label="Prompt (optional)", icon='TEXT', context=context)
 
     draw_section_separator(layout)
     draw_generate_footer(

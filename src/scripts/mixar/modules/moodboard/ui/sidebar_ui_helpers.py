@@ -86,74 +86,26 @@ def draw_hint(col, text, icon='NONE'):
 
 
 # ---------------------------------------------------------------------------
-# Sidebar tab focus
-# ---------------------------------------------------------------------------
-
-def focus_segments_panel(context):
-    """Surface the panel hosting the Segments to 3D UI.
-
-    Used by the moodboard segmentation tools (magic select, box/lasso
-    mask) so their results are visible where the Generate button lives.
-    Post-split catalogs host Segments to 3D in the dedicated "Character
-    Parts" tab; pre-split catalogs (and offline) keep it as the Scene Gen
-    tab's ``scene_gen`` mode, so the pre-split path still selects that mode
-    (the enum item doesn't exist offline — silently skipped). The target
-    category is resolved through ``get_tab_category()`` so it follows catalog
-    label renames rather than a hardcoded string. Never raises.
-    """
-    capability = "scene_gen"
-    fallback_label = "Scene Gen"
-    try:
-        from mixar.bootstrap.generation_catalog_cache import (
-            get_services, is_loaded,
-        )
-        if is_loaded() and get_services("character_parts"):
-            capability = "character_parts"
-            fallback_label = "Character Parts"
-    except Exception:
-        pass
-    if capability == "scene_gen":
-        scene = context.scene
-        sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
-        if sidebar is not None and hasattr(sidebar, 'tab_scene_recon'):
-            try:
-                sidebar.tab_scene_recon.mode = 'scene_gen'
-            except Exception:
-                pass  # catalog not loaded / capability disabled
-    try:
-        space = context.space_data
-        if hasattr(space, 'show_region_ui'):
-            space.show_region_ui = True
-        area = context.area
-        region = next(
-            (r for r in area.regions if r.type == 'UI'), None,
-        ) if area else None
-        if region and hasattr(region, 'active_panel_category'):
-            from mixar.bootstrap.analytics_module import note_programmatic_panel_change
-            from .moodboard_sidebar_panels import get_tab_category
-            category = get_tab_category(capability, fallback_label)
-            note_programmatic_panel_change(region, category)
-            region.active_panel_category = category
-    except Exception:
-        pass
-
-
-# ---------------------------------------------------------------------------
 # Prompt section
 # ---------------------------------------------------------------------------
 
 def draw_prompt_section(layout, prop_owner, label="Prompt",
                         icon='TEXT', action_op=None, action_icon='FILE_FOLDER',
-                        min_lines=2, max_lines=5, refine=True):
+                        min_lines=2, max_lines=5, refine=True, context=None):
     """Boxed prompt input with label and optional action button. Returns col.
 
     Every sidebar prompt comes through here, which is why the Refine / Revert
     row is added here rather than in each drawer (see ``prompt_refine_drawer``
     — a tab with no target entry simply gets no row).
+
+    With `context` the header also carries a dictation mic for THIS prompt.
     """
+    from mixar.modules.voice.ui.voice_button import draw_prompt_mic
     box = layout.mixar_section() if hasattr(layout, 'mixar_section') else layout.box()
     col = box.column()
-    col.label(text=label, icon=icon)
+    header = col.row(align=True)
+    header.label(text=label, icon=icon)
+    draw_prompt_mic(header, context, prop_owner)
 
     if action_op:
         row = col.row(align=True)
