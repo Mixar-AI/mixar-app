@@ -228,6 +228,28 @@ def _session_mtime(path: str) -> float:
     return newest
 
 
+def _live_document_dir(root: str) -> str:
+    """The session directory holding the OPEN document, if it lives under root.
+
+    `restore()` parks a restored UNTITLED project at <session>/working.mixar and
+    that becomes bpy.data.filepath -- but the session id that named the directory
+    is cleared on that same path, so `keep_session_id` stops protecting it. The
+    directory would then be retired by the age cutoff or the count cap, taking
+    the user's open document with it. Protect it by where the document actually
+    is, not by which session id happens to be current."""
+    try:
+        import bpy
+        path = bpy.data.filepath or ""
+        if not path:
+            return ""
+        parent = os.path.dirname(os.path.abspath(path))
+        if os.path.normcase(os.path.dirname(parent)) != os.path.normcase(os.path.abspath(root)):
+            return ""
+        return os.path.basename(parent)
+    except Exception:  # noqa: BLE001 -- housekeeping never blocks a capture
+        return ""
+
+
 def prune_sessions(keep_session_id: str = "") -> int:
     """Retire whole session directories: older than MAX_AGE_DAYS, or outside
     the newest MAX_SESSIONS. The live session is never a candidate. Returns
@@ -238,15 +260,16 @@ def prune_sessions(keep_session_id: str = "") -> int:
         names = [n for n in os.listdir(root) if os.path.isdir(os.path.join(root, n))]
     except OSError:
         return 0
+    protected = {n for n in (keep, _live_document_dir(root)) if n}
     aged = sorted(
-        ((n, _session_mtime(os.path.join(root, n))) for n in names if n != keep),
+        ((n, _session_mtime(os.path.join(root, n))) for n in names if n not in protected),
         key=lambda pair: pair[1], reverse=True,
     )
     cutoff = time.time() - MAX_AGE_DAYS * 86400.0
-    # The live session occupies a slot only once it actually has a directory --
+    # A protected session occupies a slot only once it actually has a directory --
     # reserving one for a session that has not written yet would retire an extra
     # candidate for nothing.
-    budget = max(0, MAX_SESSIONS - (1 if keep and keep in names else 0))
+    budget = max(0, MAX_SESSIONS - len(protected & set(names)))
     removed = 0
     for index, (name, mtime) in enumerate(aged):
         if index < budget and mtime >= cutoff:
