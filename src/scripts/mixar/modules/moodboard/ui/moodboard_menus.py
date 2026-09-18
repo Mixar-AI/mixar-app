@@ -18,82 +18,13 @@ from mixar.modules.common.utils.mixie_space_utils import (
 )
 from mixar.modules.moodboard.core import node_layout
 
-
-def _capability_available(capability: str) -> bool:
-    """Whether this capability has an enabled model on the moodboard surface.
-
-    The surface filter is not optional: services are tagged ``moodboard`` or
-    ``paint``, and a paint-only service (``brush_gen`` under ``image_gen``)
-    must never make a canvas action look available.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import get_models, get_services
-
-        return any(
-            get_models(service.get("key") or "")
-            for service in get_services(capability, surface="moodboard")
-        )
-    except Exception:
-        return False
-
-
-_MESH_CONTINUATIONS = (
-    ('PBR_GEN', "PBR Generation", 'TEXTURE', "pbr_generation"),
-    ('RETOPOLOGY', "Retopology", 'MOD_REMESH', "retopology"),
-    ('MESH_SEGMENT', "Mesh Segmentation", 'MOD_EXPLODE', "mesh_segmentation"),
-    ('AUTO_RIG', "Auto Rig", 'ARMATURE_DATA', "animate"),
+from .moodboard_menu_actions import (
+    MESH_CONTINUATIONS as _MESH_CONTINUATIONS,
+    capability_available as _capability_available,
+    connected_action as _connected_action,
+    link_drop_anchor as _link_drop_anchor,
+    mesh_source_id as _mesh_source_id,
 )
-
-
-def _mesh_source_id(scene) -> str:
-    """Node id of the active/selected node that currently holds a 3D mesh."""
-    try:
-        from mixar.modules.moodboard.core.node_graph import node_holds_mesh
-    except Exception:
-        return ""
-    active = str(getattr(scene, "mixie_moodboard_active_node_id", "") or "")
-    if active and node_holds_mesh(scene, active):
-        return active
-    for asset in getattr(scene, "mixie_moodboard_asset_nodes", ()):
-        if asset.selected and node_holds_mesh(scene, asset.node_id):
-            return asset.node_id
-    for node in getattr(scene, "mixie_moodboard_action_nodes", ()):
-        if node.selected and node_holds_mesh(scene, node.node_id):
-            return node.node_id
-    return ""
-
-
-def _connected_action(
-    layout, action_type: str, text: str, icon: str, source="", drop=None,
-    allow_empty=False,
-):
-    op = layout.operator(
-        "mixie.moodboard_create_connected_action", text=text, icon=icon
-    )
-    op.action_type = action_type
-    op.source_node_id = source
-    if drop is not None:
-        op.use_drop_position = True
-        op.drop_x, op.drop_y = drop
-    # Only the Shift+A Add menu sets this — a standalone node with no source.
-    op.allow_empty = allow_empty
-    return op
-
-
-def _link_drop_anchor(scene):
-    """Canvas point a dragged noodle was released at, or None.
-
-    Read-only: this runs from a menu draw, so it must never write scene data.
-    The C++ graph modal sets the flag just before opening this menu and clears
-    it at every other entry point, so a stale anchor cannot leak into a node
-    created from the output handle or the right-click menu.
-    """
-    if not getattr(scene, "mixie_moodboard_link_drop_active", False):
-        return None
-    return (
-        float(getattr(scene, "mixie_moodboard_link_drop_x", 0.0)),
-        float(getattr(scene, "mixie_moodboard_link_drop_y", 0.0)),
-    )
 
 
 class MIXIE_MT_moodboard_context_menu(Menu):
@@ -467,65 +398,7 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         row.operator("mixie.moodboard_delete", text="Delete", icon='TRASH')
 
 
-class MIXIE_MT_moodboard_output_menu(Menu):
-    """Compact continuation menu opened from a node's output plus."""
-
-    bl_label = "Create Next Node"
-    bl_idname = "MIXIE_MT_moodboard_output_menu"
-
-    def draw(self, context):
-        layout = self.layout
-        layout.operator_context = 'INVOKE_DEFAULT'
-        scene = context.scene
-        try:
-            from mixar.modules.moodboard.core.node_graph import node_output_type
-
-            source_id = str(scene.mixie_moodboard_output_source_id or "")
-            source_type = node_output_type(scene, source_id)
-        except Exception:
-            source_id = ""
-            source_type = ""
-        drop = _link_drop_anchor(scene)
-
-        added = False
-        if source_type == 'IMAGE' and _capability_available("image_gen"):
-            _connected_action(
-                layout, 'IMAGE_GEN', "Generate Image", 'IMAGE_DATA', source_id, drop
-            )
-            added = True
-        if source_type == 'IMAGE' and _capability_available("model_gen"):
-            _connected_action(
-                layout, 'MODEL_3D', "Generate 3D", 'MESH_DATA', source_id, drop
-            )
-            added = True
-        if source_type in {'IMAGE', 'VIDEO'} and _capability_available("video_gen"):
-            _connected_action(
-                layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE', source_id, drop
-            )
-            added = True
-        if source_type == 'VIDEO' and _capability_available("video_upscale"):
-            _connected_action(
-                layout, 'VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER',
-                source_id, drop,
-            )
-            added = True
-        # A 3D mesh output continues into the mesh -> mesh features, matching the
-        # right-click "Continue in 3D" section.
-        if source_type == 'MESH':
-            drew_mesh = False
-            for action_type, text, icon, capability in _MESH_CONTINUATIONS:
-                if _capability_available(capability):
-                    if not drew_mesh:
-                        layout.label(text="Continue in 3D")
-                        drew_mesh = True
-                    _connected_action(layout, action_type, text, icon, source_id, drop)
-                    added = True
-        if not added:
-            layout.label(text="No compatible continuation", icon='INFO')
-
-
 # Only include menu if MIXIE space is available
 classes = (
     MIXIE_MT_moodboard_context_menu,
-    MIXIE_MT_moodboard_output_menu,
 ) if MIXIE_SPACE_AVAILABLE else ()

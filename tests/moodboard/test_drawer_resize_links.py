@@ -62,8 +62,7 @@ def test_socket_menus_keep_the_originating_canvas_region():
         source = (EDITOR / 'space_mixie' / name).read_text()
         assert 'WM_operator_name_call_ptr(' in source
         assert 'OpCallContext::InvokeDefault' in source
-    menus = (MODULE / 'ui/moodboard_menus.py').read_text()
-    output_menu = menus.split('class MIXIE_MT_moodboard_output_menu')[1]
+    output_menu = (MODULE / 'ui/moodboard_output_menu.py').read_text()
     assert "layout.operator_context = 'INVOKE_DEFAULT'" in output_menu
 
 

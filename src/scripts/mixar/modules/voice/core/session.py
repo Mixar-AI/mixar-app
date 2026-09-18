@@ -43,6 +43,7 @@ from ..constants import (
     STATE_RECORDING,
     STATE_TRANSCRIBING,
 )
+from . import glyph_icons
 from .targets import insert_transcript, is_valid_target
 from .transcription import TranscriptionRequest
 
@@ -136,6 +137,12 @@ class VoiceSession:
             self._enter_error("")
             return False, ""
 
+        # Build RECORDING's frames here, not in the redraw that first shows
+        # them: `icon_id` is reached from a panel draw, and the handler pattern
+        # keeps heavy work off that path. This is the press the module's
+        # contract names, and the mic is already opening.
+        glyph_icons.prewarm(STATE_RECORDING)
+
         self.state = STATE_RECORDING
         self.target = target
         self.message = ""
@@ -166,6 +173,9 @@ class VoiceSession:
         if not filepath:
             self._enter_error("")
             return False, ""
+
+        # Same reason, for the state with the most frames.
+        glyph_icons.prewarm(STATE_TRANSCRIBING)
 
         self.state = STATE_TRANSCRIBING
         self._publish()

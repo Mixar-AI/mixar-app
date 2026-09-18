@@ -375,14 +375,13 @@ def test_node_takes_one_video_socket_from_the_catalog_contract():
 
 
 def test_menus_offer_upscale_only_where_a_video_can_feed_it():
-    menus = _read(MOODBOARD / "ui/moodboard_menus.py")
+    context_menu = _read(MOODBOARD / "ui/moodboard_menus.py")
     node_menus = _read(MOODBOARD / "ui/moodboard_node_menus.py")
 
-    output_menu = menus[menus.index("class MIXIE_MT_moodboard_output_menu"):]
-    assert "if source_type == 'VIDEO' and _capability_available(\"video_upscale\")" in output_menu
+    output_menu = _read(MOODBOARD / "ui/moodboard_output_menu.py")
+    assert "if source_type == 'VIDEO' and capability_available(\"video_upscale\")" in output_menu
     assert "'VIDEO_UPSCALE', \"Upscale Video\"" in output_menu
 
-    context_menu = menus[: menus.index("class MIXIE_MT_moodboard_output_menu")]
     assert "'IMAGE_GEN', 'VIDEO_GEN', 'VIDEO_UPSCALE'" in context_menu
     assert "{'VIDEO_GEN', 'VIDEO_UPSCALE'}" in context_menu
     assert "selected_images > selected_stills and _capability_available(\"video_upscale\")" in context_menu

@@ -80,10 +80,16 @@ extern void moodboard_deselect_all(PointerRNA *scene_ptr);
  * primitives below are, and both units index the same two collections. */
 enum GraphNodeKind { GRAPH_ACTION = 0, GRAPH_ASSET = 1 };
 
-/* mixie_moodboard_ops_graph.cc -- graph selection primitives, shared with the
- * context-menu unit so "what is selected" has exactly one implementation. */
+/* mixie_moodboard_ops_graph_selection.cc -- graph selection primitives, shared
+ * with the select, context-menu and resize units so "what is selected" has
+ * exactly one implementation. */
 /** Clear the selection on every graph node and the active-node id with it. */
 void moodboard_graph_deselect_nodes(PointerRNA *scene_ptr);
+/** Resolve a node collection index to its RNA pointer. False when out of range. */
+bool moodboard_graph_node_pointer(PointerRNA *scene_ptr,
+                                  GraphNodeKind kind,
+                                  int index,
+                                  PointerRNA *r_node);
 /** Make one node the whole selection; `r_node` receives it when non-null. */
 void moodboard_graph_select_node(PointerRNA *scene_ptr,
                                  GraphNodeKind kind,

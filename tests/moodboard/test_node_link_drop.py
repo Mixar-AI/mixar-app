@@ -256,7 +256,7 @@ def test_link_drop_state_is_registered_and_unregistered():
 
 def _menu_draw_ast():
     """The output menu's ``draw`` body, parsed."""
-    tree = ast.parse(_read(MOODBOARD / "ui/moodboard_menus.py"))
+    tree = ast.parse(_read(MOODBOARD / "ui/moodboard_output_menu.py"))
     menu = next(
         node for node in tree.body
         if isinstance(node, ast.ClassDef)
@@ -277,7 +277,7 @@ def test_the_continuation_menu_forwards_the_drop_anchor_to_every_entry():
         node for node in ast.walk(draw)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
-        and node.func.id == "_connected_action"
+        and node.func.id == "connected_action"
     ]
     assert calls, "the continuation menu offers no actions"
     for call in calls:
@@ -299,12 +299,12 @@ def test_the_create_operator_never_remembers_a_drop_position():
 
 
 def test_the_menu_reads_the_anchor_without_writing_scene_data():
-    """``_link_drop_anchor`` runs from a menu draw, where a write to scene data
+    """``link_drop_anchor`` runs from a menu draw, where a write to scene data
     tags the depsgraph and re-triggers the redraw that called it."""
-    tree = ast.parse(_read(MOODBOARD / "ui/moodboard_menus.py"))
+    tree = ast.parse(_read(MOODBOARD / "ui/moodboard_menu_actions.py"))
     anchor = next(
         node for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name == "_link_drop_anchor"
+        if isinstance(node, ast.FunctionDef) and node.name == "link_drop_anchor"
     )
 
     reads = {

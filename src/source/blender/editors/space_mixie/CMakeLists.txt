@@ -50,6 +50,7 @@ set(SRC
   mixie_moodboard_ops_graph_context.cc
   mixie_moodboard_ops_graph_link.cc
   mixie_moodboard_ops_graph_resize.cc
+  mixie_moodboard_ops_graph_selection.cc
   mixie_moodboard_ops_graph_video.cc
   mixie_moodboard_ops_masks.cc
   mixie_moodboard_ops_preview.cc
