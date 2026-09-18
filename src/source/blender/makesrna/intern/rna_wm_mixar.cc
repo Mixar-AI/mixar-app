@@ -161,6 +161,16 @@ static void rna_Window_mixar_qa_drop_file(
   Mixar_qa_simulate_file_drop(C, win, x, y, paths);
 }
 
+/* Mixar: live GHOST client bounds (wm_draw.cc); wmWindow::posx/posy can be stale. */
+bool Mixar_window_live_client_rect(const wmWindow *win, int r_rect[4]);
+
+static void rna_Window_mixar_live_client_rect(wmWindow *win, int r_rect[4])
+{
+  if (!Mixar_window_live_client_rect(win, r_rect)) {
+    r_rect[0] = r_rect[1] = r_rect[2] = r_rect[3] = 0;
+  }
+}
+
 /** Observe cached UI frames. SCREEN_OT_screenshot deliberately calls
  * WM_redraw_windows to clear menus, which destroys the hover being measured. */
 static bool rna_Window_mixar_qa_capture_frame(wmWindow *win,
@@ -289,6 +299,18 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     }
     parm = RNA_def_boolean(func, "success", false, "", "Frame saved");
     RNA_def_function_return(func, parm);
+  }
+  /* Live client bounds straight from GHOST — screen coordinates in points,
+   * top-left origin (l, t, r, b) — for cross-window overlay geometry. */
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_live_client_rect", "rna_Window_mixar_live_client_rect");
+    RNA_def_function_ui_description(
+        func, "Current client bounds from the windowing system: (left, top, right, bottom) in "
+              "screen points with a top-left origin; zeros when the window has no native window");
+    PropertyRNA *parm = RNA_def_int_array(func, "rect", 4, nullptr, INT_MIN, INT_MAX, "Rect",
+                                          "left, top, right, bottom", INT_MIN, INT_MAX);
+    RNA_def_function_output(func, parm);
   }
   StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager", nullptr);
   if (srna_wm != nullptr) {

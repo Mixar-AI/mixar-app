@@ -69,10 +69,20 @@ def maybe_show_for_user(email: str) -> bool:
             pass
         if not _operator_registered(OP_WELCOME) or not _operator_registered(OP_CARD_MODAL):
             return 0.2
+        # The interactive video tour replaces the info cards whenever its
+        # asset is bundled; the cards stay as the offline/legacy fallback.
+        op_path = OP_WELCOME
         try:
-            bpy.ops.mixar.onboarding_welcome("INVOKE_DEFAULT")
+            from mixar.modules.onboarding.core import tour as tour_pkg
+            if tour_pkg.is_available() and _operator_registered(tour_pkg.config.OP_TOUR):
+                op_path = tour_pkg.config.OP_TOUR
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Onboarding: tour availability check failed: %s", exc)
+        try:
+            namespace, op_name = op_path.split(".", 1)
+            getattr(getattr(bpy.ops, namespace), op_name)("INVOKE_DEFAULT")
         except Exception as exc:
-            logger.warning("Onboarding: welcome invoke failed: %s", exc)
+            logger.warning("Onboarding: %s invoke failed: %s", op_path, exc)
         finally:
             _scheduled_welcome_emails.discard(email)
         return None

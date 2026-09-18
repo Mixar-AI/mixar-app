@@ -1825,3 +1825,31 @@ void WM_draw_region_viewport_unbind(ARegion *region)
 /** \} */
 
 }  // namespace blender
+
+/* -------------------------------------------------------------------- */
+/** \name Mixar: live window client bounds
+ *
+ * `wmWindow::posx/posy` are refreshed only from GHOST move/size events, so a
+ * window the OS re-seated at creation (dock, menu bar) or one Mixar moves
+ * natively (the Agent island's pill glide) reports a stale position. The
+ * onboarding tour needs the island's TRUE footprint in the main window's
+ * pixels to draw around it, so this asks GHOST directly.
+ * \{ */
+
+bool Mixar_window_live_client_rect(const wmWindow *win, int r_rect[4])
+{
+  if (win == nullptr || win->runtime == nullptr || win->runtime->ghostwin == nullptr) {
+    return false;
+  }
+  const GHOST_IWindow *ghost_window = static_cast<const GHOST_IWindow *>(
+      win->runtime->ghostwin);
+  GHOST_Rect rect;
+  ghost_window->getClientBounds(rect);
+  r_rect[0] = rect.l_;
+  r_rect[1] = rect.t_;
+  r_rect[2] = rect.r_;
+  r_rect[3] = rect.b_;
+  return true;
+}
+
+/** \} */

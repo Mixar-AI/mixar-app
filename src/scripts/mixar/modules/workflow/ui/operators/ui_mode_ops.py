@@ -77,6 +77,25 @@ def _notify_splash_mode_chosen():
         _logger.debug("notify_mode_chosen failed: %s", exc)
 
 
+def _interactive_tour_active() -> bool:
+    """True while the interactive (video) tour owns the screen, or is
+    switching modes itself. Its ``actions`` module raises a flag around
+    its own mode switches; ``session.is_running()`` covers user clicks on
+    the mode buttons mid-tour. Either module missing means "not running".
+    """
+    try:
+        from mixar.modules.onboarding.core.tour import actions as tour_actions
+        if getattr(tour_actions, "suppress_legacy_restart", False):
+            return True
+    except Exception:  # noqa: BLE001 — ImportError or a half-loaded package
+        pass
+    try:
+        from mixar.modules.onboarding.core.tour import session as tour_session
+        return bool(tour_session.is_running())
+    except Exception:  # noqa: BLE001 — not written yet, or not running
+        return False
+
+
 def _restart_onboarding_after_mode():
     """Make the chosen mode OWN the first-run onboarding.
 
@@ -94,7 +113,13 @@ def _restart_onboarding_after_mode():
     fired yet, the still-pending auth trigger opens it in this workspace.
     If the user isn't signed in yet (no email), the auth-success hook
     triggers the tour when login completes.
+
+    The interactive tour replaces this card flow: while it runs, a mode
+    switch (its own or the user's) must not restart the old cards on top.
     """
+    if _interactive_tour_active():
+        _logger.debug("interactive tour active — card onboarding not restarted")
+        return
     try:
         from mixar.modules.onboarding.ui.operators.card_modal_op import (
             close_active_card,

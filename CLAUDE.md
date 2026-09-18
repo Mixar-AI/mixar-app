@@ -121,7 +121,7 @@ Rules: expose a `classes` tuple and let the fallback mechanism register it — h
 | **byok** / **local_models** | Bring-your-own-key provider settings (cloud catalog, OpenRouter, Codex, Local); zero-setup local llama.cpp runtime |
 | **operation_history** | Local JSONL log of agent scripts + curated manual ops; agent queries via `core/tools.py:run_tool`; 15-day prune |
 | **scene_graph** | Lazy per-scene agent-readable object graph, queried via `core/tools.run_tool` |
-| **onboarding** / **plugin_import** | First-run GPU-rendered tour cards; one-click import of the user's vanilla-Blender plugins |
+| **onboarding** / **plugin_import** | First-run interactive tour: founder video cut into beats that drive real UI actions with semantic anchors, a fake cursor and state-polled gates (`core/tour/`); GPU-rendered info cards as the fallback; one-click import of the user's vanilla-Blender plugins |
 | **workflow** | Zen/Engine dual-mode workspace UI, the topbar slider and Mixar topbar widgets |
 | **asset_search** / **mesh_segment** / **texel_density** / **uv_editor** / **space_texture_sets** / **space_mixie** | Asset embedding search + the "Mixar Generations" archive; SAM segmentation; texel density; UV workspace; texture set management; Mixie space |
 | **testing** | Legacy embedded test suite (explicit opt-in) |
