@@ -44,12 +44,16 @@ def register():
         bpy.types.WindowManager.mixie_moodboard_annotating = BoolProperty(
             name="Annotate", default=False, options={"SKIP_SAVE"},
         )
+    if not hasattr(bpy.types.WindowManager, "mixie_moodboard_erasing"):
+        bpy.types.WindowManager.mixie_moodboard_erasing = BoolProperty(
+            name="Erase", default=False, options={"SKIP_SAVE"},
+        )
 
 
 def unregister():
     for owner, names in (
         (bpy.types.Scene, ("mixie_moodboard_annotations", "mixie_moodboard_show_annotations")),
-        (bpy.types.WindowManager, ("mixie_moodboard_annotating",)),
+        (bpy.types.WindowManager, ("mixie_moodboard_annotating", "mixie_moodboard_erasing")),
     ):
         for name in names:
             if hasattr(owner, name):

@@ -120,21 +120,22 @@ static void VIEW3D_OT_moodboard_drawer_update(wmOperatorType *ot)
 }
 
 /**
- * Release Annotate when the USER puts the board away.
+ * Release Annotate/Erase when the USER puts the board away.
  *
- * The mode flag lives on the WindowManager and is shared by both hosts of the
- * canvas, so this is deliberately narrow on two axes. It runs only from the
- * grip and the toggle operator, never from `view3d.moodboard_drawer_set`:
+ * The mode flags live on the WindowManager and are shared by both hosts of
+ * the canvas, so this is deliberately narrow on two axes. It runs only from
+ * the grip and the toggle operator, never from `view3d.moodboard_drawer_set`:
  * Scribble's capture closes the drawer through that one (`scribble_mark/core/
  * drawer_guard.py`) and its restore only puts `amount`/`target` back, so
  * clearing there would silently disarm Annotate across every capture. And a
  * standalone Mixie editor is an annotate host in its own right — its poll
  * never asks about the drawer — so an open one keeps the mode alive.
  *
- * What is left is the case the flag would otherwise be stranded in: Zen Mode,
+ * What is left is the case the flags would otherwise be stranded in: Zen Mode,
  * whose workspace holds no Mixie editor, where a shut drawer makes
  * `mixie.moodboard_annotation_exit` unpollable and the first click after
- * reopening draws a saved stroke instead of selecting a card.
+ * reopening draws a saved stroke (or eats selection while Erase is armed)
+ * instead of selecting a card.
  */
 static void drawer_release_annotate(bContext *C)
 {
@@ -157,9 +158,12 @@ static void drawer_release_annotate(bContext *C)
   if (PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixie_moodboard_annotating")) {
     RNA_property_boolean_set(&wm_ptr, prop, false);
   }
+  if (PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixie_moodboard_erasing")) {
+    RNA_property_boolean_set(&wm_ptr, prop, false);
+  }
 }
 
-/** Set the target, and release Annotate when that target is shut. */
+/** Set the target, and release Annotate/Erase when that target is shut. */
 static void drawer_user_target_set(bContext *C, const int target)
 {
   view3d_moodboard_drawer_target_set(C, target);

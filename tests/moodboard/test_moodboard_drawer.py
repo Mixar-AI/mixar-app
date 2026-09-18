@@ -158,6 +158,16 @@ def test_drawer_grip_keymap_is_grip_only():
     assert "Moodboard Drawer Grip" in py
     assert "_bind_moodboard_pointer(km_drawer)" not in py
     assert "_bind_moodboard_pointer(km)" in py
+    assert "mixie.moodboard_annotation_erase" in py
+
+
+def test_user_close_releases_annotate_and_erase():
+    body = _fn(
+        _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer_ops.cc")),
+        "static void drawer_release_annotate(",
+    )
+    assert "mixie_moodboard_annotating" in body
+    assert "mixie_moodboard_erasing" in body
 
 
 def test_grip_click_flips_target_and_escape_restores_invoke_state():
@@ -269,6 +279,7 @@ def test_drawer_hosts_the_same_add_tools_row_as_the_mixie_toolbar():
     assert "draw_moodboard_add_tools(self.layout, context)" in toolbar
     assert "draw_moodboard_open_media_tool(col)" in toolbar
     assert "draw_moodboard_add_text_tool(col)" in toolbar
+    assert 'mixie.moodboard_erase_canvas' in toolbar
     assert "VIEW3D_PT_moodboard_drawer_add_tools," in toolbar
 
     assert 'WM_paneltype_find("VIEW3D_PT_moodboard_drawer_add_tools"' in draw
