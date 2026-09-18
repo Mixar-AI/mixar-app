@@ -128,13 +128,21 @@ def _is_node_owned(item) -> bool:
 
 
 def frame_members(scene, frame_id: str) -> list:
-    """Every item whose ``frame_id`` is *frame_id*."""
+    """Every item whose ``frame_id`` is *frame_id* (node-owned media excluded).
+
+    The exclusion is not belt-and-braces. A generation result is placed on the
+    board BEFORE ``connect_image_result`` marks it node-owned, so it can be
+    stamped with a frame's id on the way in, and ``resolve_membership`` skips
+    node-owned items -- it could never clear the stamp again. Filtering here
+    makes membership agree with ``selected_items``/``create_frame``, so a
+    card's own output is not counted, fitted around, or deleted with a frame.
+    """
     if not frame_id:
         return []
     return [
         item
         for _name, item in board_items(scene)
-        if getattr(item, "frame_id", "") == frame_id
+        if getattr(item, "frame_id", "") == frame_id and not _is_node_owned(item)
     ]
 
 
@@ -432,58 +440,13 @@ def fit_frame_to_members(scene, frame_id: str) -> bool:
 def migrate_legacy_groups(scene) -> int:
     """Turn a pre-frame board's ``group_index`` groups into real frames.
 
-    Idempotent and one-way: the legacy collection is cleared as it is
-    converted, so a second run finds nothing. Called from the poll tick and
-    ``load_post``, never from a draw callback -- the same place the media-id
-    migration runs. A group with no surviving members is dropped, not
-    converted: its rect WAS its members' bounds, so it drew nothing at all.
-
-    The rect is the members' bounds plus padding, which is exactly what the old
-    draw derived every frame; the colour of a legacy group was a free RGBA
-    picker value, so it is carried over as a custom colour rather than being
-    forced into the palette.
+    Idempotent and one-way. The body lives in ``frame_migration`` (500-line
+    rule); this stays the public entry point every caller already uses. The
+    import is deferred so that module can import this one without a cycle.
     """
-    groups = getattr(scene, "mixie_moodboard_groups", None)
-    frames = _frames(scene)
-    if not groups or frames is None:
-        return 0
+    from .frame_migration import migrate_legacy_groups as _migrate
 
-    images = getattr(scene, "mixie_moodboard_images", None) or []
-    migrated = 0
-    for group_index, group in enumerate(groups):
-        members = [
-            image
-            for image in images
-            if getattr(image, "group_index", -1) == group_index
-            and not _is_node_owned(image)
-        ]
-        if not members:
-            continue
-        frame = create_frame(scene, from_items=members, name=group.name or "")
-        if frame is None:
-            continue
-        # A legacy group's colour came from a full colour picker, so it is
-        # almost never one of the palette's pastels. Keep what the user chose.
-        try:
-            frame.use_custom_color = True
-            frame.custom_color = tuple(group.color)[:3]
-        except (TypeError, ValueError, AttributeError):
-            frame.use_custom_color = False
-        if not getattr(group, "visible", True):
-            frame.collapsed = True
-        frame.locked = bool(getattr(group, "locked", False))
-        migrated += 1
-
-    # One-way regardless of how many groups had anything left to convert:
-    # the guard above means the collection was non-empty, and leaving it
-    # standing would re-run this on every poll tick forever.
-    for image in images:
-        if getattr(image, "group_index", -1) != -1:
-            image.group_index = -1
-    groups.clear()
-    if migrated:
-        logger.info("Migrated %d legacy moodboard group(s) to frames", migrated)
-    return migrated
+    return _migrate(scene)
 
 
 def frame_center(frame) -> tuple[float, float]:

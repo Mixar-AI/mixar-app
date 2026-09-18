@@ -191,6 +191,9 @@ def test_no_consumer_still_resolves_selection_through_group_index():
     allowed = {
         # The one-way migration itself, and nothing else.
         "src/scripts/mixar/modules/moodboard/core/frames.py",
+        # The one-way conversion moved here (500-line rule); reading
+        # `group_index` is its whole job.
+        "src/scripts/mixar/modules/moodboard/core/frame_migration.py",
     }
     # Reading membership means WALKING the legacy collection or comparing a
     # `group_index`. Writing `group_index = -1` on a fresh copy, or clearing

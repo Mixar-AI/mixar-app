@@ -281,7 +281,12 @@ def _adopt_into_frame(scene, item) -> None:
     if getattr(item, "frame_id", ""):
         return
     try:
-        from .frames import frame_at_point, item_rect
+        from .frames import _is_node_owned, frame_at_point, item_rect
+
+        # Not a frame's to adopt. A generation result is placed BEFORE it is
+        # marked node-owned, so `frame_members` is what catches that case.
+        if _is_node_owned(item):
+            return
         from .frame_geometry import rect_center
 
         rect = item_rect(item)

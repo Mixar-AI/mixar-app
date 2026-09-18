@@ -55,6 +55,12 @@ struct Button;
 
 namespace blender::ed::mixie {
 
+/**
+ * The cached sRGB GPU texture for \a image (mixie_draw_moodboard_texture_cache.cc).
+ * Raw sRGB bytes, so the board's colours survive; null when it cannot be built.
+ */
+gpu::Texture *mixie_moodboard_srgb_texture(Image *image, ImageUser *image_user);
+
 /* -------------------------------------------------------------------- */
 /** \name RNA Property Caching
  *
@@ -286,7 +292,7 @@ void moodboard_add_node_card_actions(ui::Block *block,
  * Every button is scoped to the tile it sits on through the media's graph id.
  */
 void moodboard_add_media_card_actions(ui::Block *block,
-                                      const rctf &media_rect,
+                                      const rcti &media_region,
                                       const char *media_id);
 /** One row per selected standalone media, added to the canvas block -- or,
  * for the media being renamed, the in-place name field in the row's place. */

@@ -62,18 +62,23 @@ void moodboard_frame_action_row_rect(const rctf &frame_rect, rctf *r_row)
 }
 
 static void add_frame_card_actions(ui::Block *block,
-                                   const rctf &frame_rect,
+                                   const rcti &frame_region,
                                    const char *frame_id)
 {
+  /* REGION pixels, not canvas units: this block is opened after
+   * `view2d_view_restore` (mixie_draw_moodboard_node_ui.cc), so everything
+   * handed to a button is a region pixel. The sizes below are already pixels
+   * (UI_SCALE_FAC), and mixing the two put the row somewhere else entirely at
+   * any zoom or pan but 1:1 at the origin. */
   const int height = int(MOODBOARD_NODE_HEADER_ROW_H * UI_SCALE_FAC);
   const int width = height;
   const int gap = int(MOODBOARD_FRAME_ACTION_GAP * UI_SCALE_FAC);
-  const int row_y = int(frame_rect.ymax + MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
+  const int row_y = frame_region.ymax + int(MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
 
   /* Laid out from the frame's RIGHT edge, like a card's row, so the buttons
    * line up with a card's when several things are selected at once. The name
    * keeps the left end of the same line. */
-  int x = int(frame_rect.xmax) - width;
+  int x = frame_region.xmax - width;
 
   /* More: everything a frame can do that is not its name -- select contents,
    * add the selection, fit, colour, lock, collapse, ungroup, delete. A menu
@@ -126,20 +131,23 @@ static bool add_frame_rename_field(const bContext *C,
                                    ui::Block *block,
                                    ARegion *region,
                                    PointerRNA *frame,
-                                   const rctf &frame_rect)
+                                   const rcti &frame_region)
 {
+  /* REGION pixels -- see `add_frame_card_actions`. The width matters most
+   * here: taken in canvas units it is the frame's width in BOARD space, which
+   * at any zoom is not the number of pixels the field should span. */
   const int height = int(MOODBOARD_NODE_HEADER_ROW_H * UI_SCALE_FAC);
-  const int row_y = int(frame_rect.ymax + MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
+  const int row_y = frame_region.ymax + int(MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
   /* Never narrower than a name needs: a small frame still gets a usable
    * field, anchored on its left edge where the painted name sits. */
-  const int width = std::max(int(BLI_rctf_size_x(&frame_rect)),
+  const int width = std::max(BLI_rcti_size_x(&frame_region),
                              int(MOODBOARD_FRAME_RENAME_MIN_W * UI_SCALE_FAC));
   /* Bound straight to the frame's own `name`, so applying the edit IS the
    * rename and there is no operator between the field and the result. */
   ui::Button *field = ui::uiDefButR(block,
                                     ui::ButtonType::Text,
                                     "",
-                                    int(frame_rect.xmin),
+                                    frame_region.xmin,
                                     row_y,
                                     short(width),
                                     short(height),
@@ -197,8 +205,13 @@ void moodboard_add_selected_frame_actions(const bContext *C,
     moodboard_frame_action_row_rect(frame_rect, &row_rect);
     rcti row_region;
     if (moodboard_view_rect_to_region(v2d, region, row_rect, &row_region)) {
+      /* The buttons live in the block's REGION space, so the frame rect has to
+       * cross over too -- `row_region` above only answers "any of it on
+       * screen?". */
+      rcti frame_region;
+      moodboard_view_rect_to_region(v2d, region, frame_rect, &frame_region);
       if (renaming) {
-        if (!add_frame_rename_field(C, block, region, &frame, frame_rect)) {
+        if (!add_frame_rename_field(C, block, region, &frame, frame_region)) {
           moodboard_frame_rename_end();
           /* The buttons come back on the NEXT redraw, not this one -- the same
            * one-frame notifier the outliner's rename needs. */
@@ -206,7 +219,7 @@ void moodboard_add_selected_frame_actions(const bContext *C,
         }
       }
       else {
-        add_frame_card_actions(block, frame_rect, frame_id);
+        add_frame_card_actions(block, frame_region, frame_id);
       }
     }
     RNA_property_collection_next(&iter);

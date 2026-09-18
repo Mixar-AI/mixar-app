@@ -137,13 +137,15 @@ def test_graph_cpp_never_reads_rna_strings_unbounded():
 
 def test_link_drag_preview_is_not_keyed_on_a_raw_scene_pointer():
     """A static Scene * outlives its scene across a file load."""
-    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
+    # The drag is runtime state for one gesture, so it lives in its own TU now
+    # (500-line rule); the geometry file stays pure functions of the scene.
+    drag = _read(SPACE_MIXIE / "mixie_moodboard_graph_link_drag.cc")
 
-    assert "scene_uid" in geometry
-    assert "Scene *scene = nullptr;" not in geometry
-    assert "g_link_drag.scene ==" not in geometry
+    assert "scene_uid" in drag
+    assert "Scene *scene = nullptr;" not in drag
+    assert "g_link_drag.scene ==" not in drag
     # Region teardown must be able to drop an in-flight drag outright.
-    assert "void moodboard_graph_link_drag_reset()" in geometry
+    assert "void moodboard_graph_link_drag_reset()" in drag
     assert "moodboard_graph_link_drag_reset" in _read(SPACE_MIXIE / "space_mixie.cc")
 
 

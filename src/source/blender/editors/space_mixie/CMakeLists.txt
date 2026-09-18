@@ -30,6 +30,7 @@ set(SRC
   mixie_draw_moodboard_media_actions.cc
   mixie_draw_moodboard_media_labels.cc
   mixie_moodboard_graph_geometry.cc
+  mixie_moodboard_graph_link_drag.cc
   mixie_moodboard_graph_hit.cc
   mixie_draw_moodboard_node_ui.cc
   mixie_draw_moodboard_node_settings.cc
@@ -37,6 +38,7 @@ set(SRC
   mixie_draw_moodboard_node_tooltips.cc
   mixie_moodboard_node_layout.cc
   mixie_draw_moodboard_images.cc
+  mixie_draw_moodboard_texture_cache.cc
   mixie_draw_moodboard_textboxes.cc
   mixie_draw_moodboard_tools.cc
   mixie_draw_sam3d.cc
@@ -70,6 +72,7 @@ set(SRC
   mixie_intern.hh
   mixie_moodboard_canvas.hh
   mixie_moodboard_graph_geometry.hh
+  mixie_moodboard_hit_geometry.hh
   mixie_moodboard_node_layout.hh
   mixie_moodboard_socket_style.hh
   mixie_moodboard_ops_common.hh

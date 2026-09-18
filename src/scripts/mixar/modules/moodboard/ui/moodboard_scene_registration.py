@@ -42,9 +42,9 @@ from mixar.config.logging_config import get_logger
 from .moodboard_properties import (
     MixieMoodboardSegment,
     MixieMoodboardImage,
-    MixieMoodboardGroup,
     MixieMoodboardTextBox,
 )
+from .moodboard_legacy_props import MixieMoodboardGroup
 from .moodboard_annotation_props import (
     MixieMoodboardAnnotationPoint,
     MixieMoodboardAnnotationStroke,

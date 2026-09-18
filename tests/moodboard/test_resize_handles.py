@@ -40,7 +40,10 @@ def test_there_are_exactly_four_handles_and_they_are_the_corners():
     """The four edge midpoints are gone. On this canvas they meant "stretch one
     axis", which for a picture or a generated result is a distortion nobody
     asks for, and they crowded the corners that do the work."""
-    intern = _read(SPACE_MIXIE / "mixie_intern.hh")
+    # The resize-handle and canvas-frame declarations live in their own header
+    # now (500-line rule); `mixie_intern.hh` includes it, so every consumer's
+    # include list is unchanged.
+    intern = _read(SPACE_MIXIE / "mixie_moodboard_hit_geometry.hh")
     assert "#define MOODBOARD_RESIZE_HANDLE_COUNT 4" in intern
     for corner in (
         "MOODBOARD_HANDLE_BOTTOM_LEFT",

@@ -199,6 +199,18 @@ class MIXIE_OT_moodboard_delete_frame(Operator):
             # Route the members through the board's OWN delete, which already
             # owns image lifecycle, link cleanup and cancelling the in-flight
             # job of a card that can no longer receive it.
+            #
+            # That operator deletes whatever is selected BOARD-WIDE, and
+            # `select_frame_contents` only adds to the selection. Anything the
+            # user had selected elsewhere -- shift-click and box-select-extend
+            # both keep the previous selection -- would be destroyed too, well
+            # past what this button's own "and N item(s)" label promises. So
+            # the board is cleared first and the frame's own members are the
+            # entire selection by the time the delete runs.
+            frame_core.deselect_all_frames(scene)
+            for _name, item in frame_core.board_items(scene):
+                if item.selected:
+                    item.selected = False
             frame_core.select_frame_contents(scene, frame_id)
             frame = frame_core.frame_by_id(scene, frame_id)
             if frame is not None:

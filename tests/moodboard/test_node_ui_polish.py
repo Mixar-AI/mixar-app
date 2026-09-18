@@ -334,12 +334,12 @@ def test_sockets_name_themselves_while_a_noodle_is_in_flight():
     the selected one, and "what does this accept?" is exactly the question a
     drag raises."""
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
-    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
+    drag = _read(SPACE_MIXIE / "mixie_moodboard_graph_link_drag.cc")
     assert "moodboard_graph_link_drag_active(scene)" in draw
     assert "if ((selected || dragging_link) && radius >= 5 * UI_SCALE_FAC &&" in draw
     # The predicate reuses the drag state the preview noodle already keys on,
     # rather than tracking a second copy of "is a drag happening".
-    assert "return link_drag_matches(scene);" in geometry
+    assert "return link_drag_matches(scene);" in drag
 
 
 def test_a_refused_connection_says_why_on_the_canvas():

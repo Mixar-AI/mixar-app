@@ -55,7 +55,12 @@ def test_the_media_row_is_built_and_wired_like_the_node_row():
     for metric in ("MOODBOARD_NODE_HEADER_LIFT", "MOODBOARD_NODE_HEADER_ROW_H"):
         assert metric in actions, metric
     assert "const int width = height;" in actions, "icon buttons must stay square"
-    assert "int(media_rect.xmax) - width" in actions
+    # REGION pixels, never canvas units. The block is opened after
+    # `view2d_view_restore`, and the button sizes above are already pixels, so
+    # a canvas-space coordinate here puts the row somewhere else entirely at
+    # any zoom or pan but 1:1 at the origin.
+    assert "media_region.xmax - width" in actions
+    assert "media_rect.xmax) - width" not in actions
 
 
 def test_the_three_buttons_keep_the_node_rows_order_and_glyphs():
@@ -255,7 +260,7 @@ def test_rename_is_in_place_not_a_dialog():
     renaming = loop.split("if (moodboard_media_rename_is_active(scene, media_id)) {")[1]
     assert "moodboard_media_rename_end();" in renaming.split("else {")[0]
     assert "ED_region_tag_redraw(region);" in renaming.split("else {")[0]
-    assert "moodboard_add_media_card_actions(block, *media_rect, media_id);" in renaming.split(
+    assert "moodboard_add_media_card_actions(block, media_region, media_id);" in renaming.split(
         "else {"
     )[1]
     # The pencil execs the operator (nothing to invoke: the field appears on

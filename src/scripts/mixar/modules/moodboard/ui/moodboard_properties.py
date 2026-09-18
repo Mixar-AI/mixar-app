@@ -367,41 +367,6 @@ class MixieMoodboardImage(PropertyGroup):
     )
 
 
-class MixieMoodboardGroup(PropertyGroup):
-    """Property group for moodboard image groups"""
-
-    name: StringProperty(
-        name="Name",
-        description="Group name",
-        default="Group",
-        maxlen=64
-    )
-    color: FloatVectorProperty(
-        name="Color",
-        description="Group color",
-        subtype='COLOR',
-        size=4,
-        default=(0.2, 0.6, 1.0, 1.0),
-        min=0.0,
-        max=1.0
-    )
-    visible: BoolProperty(
-        name="Visible",
-        description="Whether group is visible",
-        default=True
-    )
-    locked: BoolProperty(
-        name="Locked",
-        description="Whether group is locked (cannot select children)",
-        default=False
-    )
-    selected: BoolProperty(
-        name="Selected",
-        description="Whether this group is currently selected",
-        default=False
-    )
-
-
 class MixieMoodboardTextBox(PropertyGroup):
     """Property group for moodboard text boxes"""
 

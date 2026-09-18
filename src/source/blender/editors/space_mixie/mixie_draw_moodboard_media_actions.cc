@@ -62,22 +62,27 @@ void moodboard_media_action_row_rect(const rctf &media_rect, rctf *r_row)
 }
 
 void moodboard_add_media_card_actions(ui::Block *block,
-                                      const rctf &media_rect,
+                                      const rcti &media_region,
                                       const char *media_id)
 {
+  /* REGION pixels, not canvas units: this block is opened after
+   * `view2d_view_restore` (mixie_draw_moodboard_node_ui.cc), so everything
+   * handed to a button is a region pixel. The sizes below are already pixels
+   * (UI_SCALE_FAC), and mixing the two put the row somewhere else entirely at
+   * any zoom or pan but 1:1 at the origin. */
   /* Floats OUTSIDE the tile, on the row just above its top edge, exactly like
    * the node card's row -- the picture is the whole point of the tile, so
    * nothing is laid over it. */
   const int height = int(MOODBOARD_NODE_HEADER_ROW_H * UI_SCALE_FAC);
   const int width = height;
   const int gap = int(MOODBOARD_MEDIA_ACTION_GAP * UI_SCALE_FAC);
-  const int row_y = int(media_rect.ymax + MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
+  const int row_y = media_region.ymax + int(MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
 
   /* Laid out from the right edge, in the node row's order: Export claims the
    * corner, Preview steps left of it, and the "change it" button takes the
    * left-most slot -- so the same glyph means the same thing in the same place
    * on a reference and on a card. */
-  int x = int(media_rect.xmax) - width;
+  int x = media_region.xmax - width;
 
   /* ICON_IMPORT for the same reason as the node row: the arrow INTO the tray
    * is the download sign the user reads. InvokeDefault because the exporter
@@ -141,13 +146,16 @@ static bool moodboard_add_media_rename_field(const bContext *C,
                                              ui::Block *block,
                                              ARegion *region,
                                              PointerRNA *image_ptr,
-                                             const rctf &media_rect)
+                                             const rcti &media_region)
 {
+  /* REGION pixels -- see `moodboard_add_media_card_actions`. The width matters
+   * most here: taken in canvas units it is the tile's width in BOARD space,
+   * which at any zoom is not the number of pixels the field should span. */
   const int height = int(MOODBOARD_NODE_HEADER_ROW_H * UI_SCALE_FAC);
-  const int row_y = int(media_rect.ymax + MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
+  const int row_y = media_region.ymax + int(MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
   /* Never narrower than a name needs: a user-shrunk tile still gets a usable
    * field, anchored on the tile's left edge like the painted name is. */
-  const int width = std::max(int(BLI_rctf_size_x(&media_rect)),
+  const int width = std::max(BLI_rcti_size_x(&media_region),
                              int(MOODBOARD_MEDIA_RENAME_MIN_W * UI_SCALE_FAC));
   /* Bound straight to the datablock's `name`: applying the edit IS the rename
    * (RNA's ID-name setter uniquifies a clash the way Blender always does), so
@@ -156,7 +164,7 @@ static bool moodboard_add_media_rename_field(const bContext *C,
   ui::Button *field = ui::uiDefButR(block,
                                     ui::ButtonType::Text,
                                     "",
-                                    int(media_rect.xmin),
+                                    media_region.xmin,
                                     row_y,
                                     short(width),
                                     short(height),
@@ -223,11 +231,16 @@ void moodboard_add_selected_media_actions(const bContext *C,
       moodboard_media_action_row_rect(*media_rect, &row_rect);
       rcti row_region;
       if (moodboard_view_rect_to_region(v2d, region, row_rect, &row_region)) {
+        /* The buttons live in the block's REGION space, so the tile rect has to
+         * cross over too -- `row_region` above only answers "any of it on
+         * screen?". */
+        rcti media_region;
+        moodboard_view_rect_to_region(v2d, region, *media_rect, &media_region);
         if (moodboard_media_rename_is_active(scene, media_id)) {
           /* The field takes the row's place: once the user is typing, the
            * three buttons have nothing to add, and the field wants the tile's
            * whole width for the name. */
-          if (!moodboard_add_media_rename_field(C, block, region, &image_ptr, *media_rect)) {
+          if (!moodboard_add_media_rename_field(C, block, region, &image_ptr, media_region)) {
             moodboard_media_rename_end();
             /* The buttons come back on the next redraw, not this one -- the
              * same one-frame notifier the outliner's rename needs. */
@@ -235,7 +248,7 @@ void moodboard_add_selected_media_actions(const bContext *C,
           }
         }
         else {
-          moodboard_add_media_card_actions(block, *media_rect, media_id);
+          moodboard_add_media_card_actions(block, media_region, media_id);
         }
       }
     }
