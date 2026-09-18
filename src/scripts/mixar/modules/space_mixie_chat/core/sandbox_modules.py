@@ -60,6 +60,33 @@ import types
 # is refused by the proxy.
 _MODULE_INFO_DUNDERS = frozenset({"__name__", "__doc__", "__version__", "__all__"})
 
+# Same-package children that are NOT safe, because they exist to reach outside
+# Python. The cross-package rule below cannot see these: `numpy.ctypeslib` is
+# genuinely part of numpy, but `numpy.ctypeslib.load_library(...)` RETURNS a
+# live `ctypes.CDLL` -- a plain function return, no module hop and no dunder,
+# so neither the module guard nor the AST guard sees it. Verified: it loads
+# libc and calls into it from inside the sandbox.
+_DENIED_SUBMODULES = frozenset({
+    "numpy.ctypeslib",   # -> ctypes.CDLL
+    "numpy.f2py",        # compiles and loads native extensions
+    "numpy.distutils",   # build machinery: compilers, subprocesses
+    "numpy.testing",     # pytest bootstrapping
+})
+
+# Same-package ATTRIBUTES that are not safe for the same reason -- they run
+# Python from disk. `bpy.utils` is the live case: it is the module every agent
+# script already reaches through, and these turn it into an arbitrary-code
+# loader without leaving the `bpy` package.
+_DENIED_ATTRS = {
+    "bpy.utils": frozenset({
+        "execfile",
+        "load_scripts",
+        "load_scripts_extensions",
+        "modules_from_path",
+        "register_submodule_factory",
+    }),
+}
+
 _SAFE_MODULE_CACHE: dict = {}
 
 
@@ -98,9 +125,29 @@ def safe_module(module, root: str = None):
                 raise AttributeError(
                     f"{name}.{attr} is not available in the sandbox."
                 )
+            if attr in _DENIED_ATTRS.get(name, ()):
+                raise AttributeError(
+                    f"{name}.{attr} is not available in the sandbox: it runs "
+                    f"Python from outside the script."
+                )
+            # Refuse by NAME, before the fetch. A denied child should never be
+            # imported at all, and several of these are lazy attributes whose
+            # import has side effects (numpy resolves numpy.ctypeslib through
+            # a module-level __getattr__).
+            if f"{name}.{attr}" in _DENIED_SUBMODULES:
+                raise AttributeError(
+                    f"{name}.{attr} is not available in the sandbox: it "
+                    f"bridges out of Python."
+                )
             value = getattr(module, attr)
             if isinstance(value, types.ModuleType):
                 child = getattr(value, "__name__", "")
+                if child in _DENIED_SUBMODULES:
+                    # An alias under another attribute name.
+                    raise AttributeError(
+                        f"{name}.{attr} is not available in the sandbox: "
+                        f"'{child}' bridges out of Python."
+                    )
                 if child == root or child.startswith(prefix):
                     return safe_module(value, root)
                 raise AttributeError(

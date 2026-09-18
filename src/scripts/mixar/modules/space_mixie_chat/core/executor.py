@@ -389,7 +389,18 @@ class ScriptExecutor:
 
             exec_namespace = {
                 "__builtins__": get_safe_builtins(),
-                "bpy": bpy,
+                # bpy is wrapped too. It IS the capability the agent is given,
+                # so every same-package child stays reachable -- bpy.ops,
+                # bpy.data, bpy.types, bpy.props, bpy.app, bpy.path, bpy.utils
+                # all resolve exactly as before. What the wrap refuses is the
+                # foreign modules bound INSIDE it: Blender's own
+                # bpy/utils/__init__.py does `import os as _os` / `import sys
+                # as _sys`, so bpy.utils._os was the real os module and
+                # bpy.utils._sys.modules['builtins'].exec arbitrary code --
+                # reachable with no dunder, so the AST guard never saw it, and
+                # through the one module every script already has. Leaving bpy
+                # exempt meant this whole class of escape was still open.
+                "bpy": safe_module(bpy),
                 "__name__": "__main__",
                 # Safe modules. Each is wrapped so it cannot hand out a
                 # module from another package: `random._os`, `fractions.sys`,
@@ -470,7 +481,15 @@ class ScriptExecutor:
                     # cross-package guard. Return the proxy we already built
                     # where there is one, and wrap first-party packages so a
                     # module that does `import os` cannot re-export it.
-                    if top_module in exec_namespace:
+                    #
+                    # ONLY for the no-fromlist form. With a fromlist,
+                    # `__import__` returns the LEAF module and the interpreter
+                    # then getattrs the names off it, so substituting the top
+                    # package here broke every `from numpy.linalg import norm`
+                    # / `from mathutils.geometry import ...` with "cannot
+                    # import name". The leaf's own proxy is equally guarded.
+                    fromlist = args[2] if len(args) > 2 else kwargs.get("fromlist")
+                    if not fromlist and top_module in exec_namespace:
                         return exec_namespace[top_module]
                     return safe_module(real)
                 raise ImportError(

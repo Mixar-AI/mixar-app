@@ -175,8 +175,11 @@ def test_every_injected_module_is_wrapped():
         )
     ]
     assert namespaces, "could not find the sandbox namespace dict in executor.py"
-    # `bpy` is deliberately unwrapped: it IS the capability the agent is given.
-    exempt = {"bpy"}
+    # Nothing is exempt any more. `bpy` used to be, on the reasoning that it IS
+    # the capability the agent is given -- but Blender's own bpy/utils binds
+    # `import os as _os` / `import sys as _sys`, so that exemption left the
+    # whole escape class open through the one module every script has.
+    exempt = set()
     raw = []
     for node in namespaces:
         for key, value in zip(node.keys, node.values):
@@ -193,3 +196,81 @@ def test_every_injected_module_is_wrapped():
 def test_injected_module_list_is_not_empty():
     """Guards the AST scrape above from silently matching nothing."""
     assert len(_injected_module_names()) >= 10
+
+
+# ---------------------------------------------------------------------------
+# Escapes that do NOT go through a module attribute
+# ---------------------------------------------------------------------------
+
+
+def test_a_same_package_bridge_out_of_python_is_refused():
+    """numpy.ctypeslib is genuinely part of numpy, so the cross-package rule
+    cannot see it -- but load_library() RETURNS a live ctypes.CDLL. A plain
+    function return, no module hop, no dunder: verified loading libc and
+    calling into it from inside the sandbox before this guard existed."""
+    numpy = pytest.importorskip("numpy")
+    proxy = safe_module(numpy)
+    # Probed through the proxy only: numpy resolves these through a lazy
+    # module-level __getattr__, and the guard refuses by NAME before the fetch
+    # precisely so a denied child is never imported.
+    for denied in ("ctypeslib", "f2py", "distutils"):
+        with pytest.raises(AttributeError) as excinfo:
+            getattr(proxy, denied)
+        assert "sandbox" in str(excinfo.value)
+
+
+def test_the_arithmetic_parts_of_numpy_still_resolve():
+    numpy = pytest.importorskip("numpy")
+    proxy = safe_module(numpy)
+    assert proxy.linalg is not None
+    assert proxy.random is not None
+    assert float(numpy.linalg.norm(proxy.array([3.0, 4.0]))) == 5.0
+
+
+def _fake_bpy():
+    """A stand-in shaped like the real bpy: same-package children plus the
+    foreign modules Blender's own bpy/utils/__init__.py binds as _os / _sys."""
+    import os
+    import sys
+
+    bpy = types.ModuleType("bpy")
+    utils = types.ModuleType("bpy.utils")
+    ops = types.ModuleType("bpy.ops")
+    utils._os = os                      # Blender: `import os as _os`
+    utils._sys = sys                    # Blender: `import sys as _sys`
+    utils.execfile = lambda path: None  # runs Python from disk
+    utils.user_resource = lambda *a, **k: "/tmp"
+    bpy.utils = utils
+    bpy.ops = ops
+    bpy.data = object()
+    return bpy
+
+
+def test_bpy_cannot_hand_out_the_os_module_through_utils():
+    """The one module every agent script receives. Leaving it unwrapped meant
+    bpy.utils._os.system(...) and bpy.utils._sys.modules['builtins'].exec(...)
+    reached the real os/sys with no dunder involved."""
+    proxy = safe_module(_fake_bpy())
+    utils = proxy.utils
+    for leaked in ("_os", "_sys"):
+        with pytest.raises(AttributeError) as excinfo:
+            getattr(utils, leaked)
+        assert "sandbox" in str(excinfo.value)
+
+
+def test_bpy_utils_cannot_run_python_from_disk():
+    """Same-package, so the module rule does not apply -- but execfile and its
+    siblings are arbitrary-code loaders."""
+    utils = safe_module(_fake_bpy()).utils
+    with pytest.raises(AttributeError) as excinfo:
+        utils.execfile
+    assert "sandbox" in str(excinfo.value)
+
+
+def test_wrapping_bpy_keeps_the_capability_it_exists_for():
+    """Every same-package child must still resolve, or every agent script
+    breaks: this guard is only worth having if bpy still works."""
+    proxy = safe_module(_fake_bpy())
+    assert proxy.ops is not None
+    assert proxy.data is not None
+    assert proxy.utils.user_resource() == "/tmp"
