@@ -23,22 +23,32 @@ addon_keymaps = []
 
 
 def _bind_moodboard_pointer(km):
-    """Canvas click/drag/hover/menu.
+    """Canvas click/drag/hover/menu, including frame chrome.
 
     C registers these on the Mixie defaultconf keymap. A GUI keyconfig
     reload wipes that copy, and ``WM_keymap_active`` then prefers the
     user Mixie map — which never received the C items. The addon map is
     the binding that survives (same rule as delete and the drawer grip).
     """
-    # wm_keymap_addon_add prepends each item when composing the user map.
-    # Register the media fallback first so graph sockets/cards run FIRST in
-    # the active map, including after a GUI keyconfig preset reload.
+    # wm_keymap_addon_add prepends each item when composing the user map, so
+    # this list is written in REVERSE priority: last registered runs first.
+    # space_mixie.cc orders the press as frame -> card -> media (frames get
+    # first refusal but only claim their own chrome), so register media, then
+    # cards, then frames.
     kmi = km.keymap_items.new('mixie.moodboard_select_image', 'LEFTMOUSE', 'PRESS')
     addon_keymaps.append((km, kmi))
     kmi = km.keymap_items.new('mixie.moodboard_graph_select', 'LEFTMOUSE', 'PRESS')
     addon_keymaps.append((km, kmi))
+    kmi = km.keymap_items.new('mixie.moodboard_frame_select', 'LEFTMOUSE', 'PRESS')
+    addon_keymaps.append((km, kmi))
     kmi = km.keymap_items.new(
         'mixie.moodboard_select_image', 'LEFTMOUSE', 'DOUBLE_CLICK'
+    )
+    addon_keymaps.append((km, kmi))
+    # Double-click a frame's title strip to rename it in place; the operator
+    # passes through everywhere else, so text boxes keep their double-click.
+    kmi = km.keymap_items.new(
+        'mixie.moodboard_frame_select', 'LEFTMOUSE', 'DOUBLE_CLICK'
     )
     addon_keymaps.append((km, kmi))
 
@@ -51,6 +61,11 @@ def _bind_moodboard_pointer(km):
         addon_keymaps.append((km, kmi))
         kmi = km.keymap_items.new(
             'mixie.moodboard_graph_select', 'LEFTMOUSE', 'PRESS', **extras
+        )
+        kmi.properties.extend = True
+        addon_keymaps.append((km, kmi))
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_frame_select', 'LEFTMOUSE', 'PRESS', **extras
         )
         kmi.properties.extend = True
         addon_keymaps.append((km, kmi))
@@ -160,7 +175,12 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # Register Cmd+C (macOS) / Ctrl+C (Windows/Linux) for copying images
+        # Cmd/Ctrl+C and +V copy and paste the SELECTION as one snapshot --
+        # media, text boxes, inference nodes and their links -- through the
+        # one moodboard clipboard, which also writes the shared on-disk copy
+        # buffer so the paste works in another running Mixar. ONE operator
+        # per key: separate media and node clipboards behind the same binding
+        # are exactly what this replaced.
         kmi = km.keymap_items.new(
             'mixie.moodboard_copy_image',
             type='C',
@@ -189,6 +209,22 @@ def register():
             )
             addon_keymaps.append((km, kmi))
 
+        # Cmd/Ctrl+G frames the selection, Alt+G dissolves the frame — the
+        # node-editor convention. Mirrored in space_mixie.cc; the addon copy
+        # is what survives a keyconfig preset reload.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_create_frame',
+            type='G',
+            value='PRESS',
+            ctrl=modifier.get('ctrl', False),
+            oskey=modifier.get('oskey', False)
+        )
+        addon_keymaps.append((km, kmi))
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_ungroup', type='G', value='PRESS', alt=True
+        )
+        addon_keymaps.append((km, kmi))
+
         # A / Alt+A — same Blender convention as the node editor. Mirrored in
         # space_mixie.cc; the addon copy is what survives a keyconfig reload.
         kmi = km.keymap_items.new(
@@ -197,6 +233,32 @@ def register():
         addon_keymaps.append((km, kmi))
         kmi = km.keymap_items.new(
             'mixie.moodboard_deselect_all', type='A', value='PRESS', alt=True
+        )
+        addon_keymaps.append((km, kmi))
+
+        # Home frames the whole board, Numpad-Period the selection -- the pair
+        # every Blender editor uses. Mirrored in space_mixie.cc; without the
+        # addon copy a keyconfig preset reload leaves the canvas with no way
+        # back to its own contents.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_frame', type='HOME', value='PRESS'
+        )
+        addon_keymaps.append((km, kmi))
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_frame', type='NUMPAD_PERIOD', value='PRESS'
+        )
+        kmi.properties.selected_only = True
+        addon_keymaps.append((km, kmi))
+
+        # Shift+A: searchable Add-Node menu at the cursor, like the 3D viewport.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_add_menu', type='A', value='PRESS', shift=True
+        )
+        addon_keymaps.append((km, kmi))
+
+        # F2 renames the active node, matching Blender's rename shortcut.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_rename_node', type='F2', value='PRESS'
         )
         addon_keymaps.append((km, kmi))
 

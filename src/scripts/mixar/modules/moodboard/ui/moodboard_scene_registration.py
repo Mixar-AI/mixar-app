@@ -34,18 +34,22 @@ from bpy.props import (
     StringProperty,
 )
 
+from mixar.modules.moodboard.ui.moodboard_graph_transient_props import (
+    register_graph_transient_props,
+)
 from mixar.config.logging_config import get_logger
 
 from .moodboard_properties import (
     MixieMoodboardSegment,
     MixieMoodboardImage,
-    MixieMoodboardGroup,
     MixieMoodboardTextBox,
 )
+from .moodboard_legacy_props import MixieMoodboardGroup
 from .moodboard_annotation_props import (
     MixieMoodboardAnnotationPoint,
     MixieMoodboardAnnotationStroke,
 )
+from .moodboard_frame_props import MixieMoodboardFrame
 from .moodboard_graph_properties import (
     MixieMoodboardActionNode,
     MixieMoodboardAssetNode,
@@ -69,6 +73,7 @@ from .moodboard_tab_properties import (
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     MixieMoodboardTabVideoGenProps,
+    MixieMoodboardTabVideoUpscaleProps,
     MixieMoodboardTabWorldLabsProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
@@ -84,6 +89,9 @@ classes = (
     MixieMoodboardAnnotationStroke,
     MixieMoodboardSegment,
     MixieMoodboardImage,
+    MixieMoodboardFrame,
+    # Legacy; kept registered so a pre-frame .blend still loads and can be
+    # migrated. Nothing writes it -- see `core/frames.py:migrate_legacy_groups`.
     MixieMoodboardGroup,
     MixieMoodboardNodeParameter,
     MixieMoodboardInputSocket,
@@ -105,6 +113,7 @@ classes = (
     MixieMoodboardTabRetopologyProps,
     MixieMoodboardTabUVUnwrapProps,
     MixieMoodboardTabVideoGenProps,
+    MixieMoodboardTabVideoUpscaleProps,
     MixieMoodboardTabWorldLabsProps,
     # Scene Gen Experimental disabled
     # MixieSceneGenExpBBox,
@@ -145,11 +154,21 @@ def register():
         ),
     )
     _safe_scene_prop(
+        'mixie_moodboard_frames',
+        CollectionProperty(
+            type=MixieMoodboardFrame,
+            name="Mixie Moodboard Frames",
+            description="Canvas frames grouping board items",
+        ),
+    )
+    # LEGACY collection. Still registered so a .blend saved before frames
+    # loads, and so the one-time migration can read it; nothing writes it.
+    _safe_scene_prop(
         'mixie_moodboard_groups',
         CollectionProperty(
             type=MixieMoodboardGroup,
-            name="Mixie Moodboard Groups",
-            description="Collection of image groups",
+            name="Mixie Moodboard Groups (legacy)",
+            description="Superseded by mixie_moodboard_frames; retained for migration",
         ),
     )
     _safe_scene_prop(
@@ -204,29 +223,7 @@ def register():
                 options={'SKIP_SAVE'},
             ),
         )
-    # Where a dragged noodle was released. The C++ graph modal sets these
-    # before opening the continuation menu so the node the menu creates lands
-    # under the cursor; every other entry point clears the flag, because the
-    # output handle's own coordinates would spawn the node on its source.
-    _safe_scene_prop(
-        'mixie_moodboard_link_drop_active',
-        BoolProperty(
-            name="Moodboard Link Drop Active",
-            description="Whether a released link opened the continuation menu",
-            default=False,
-            options={'SKIP_SAVE'},
-        ),
-    )
-    for axis in ('x', 'y'):
-        _safe_scene_prop(
-            f'mixie_moodboard_link_drop_{axis}',
-            FloatProperty(
-                name=f"Moodboard Link Drop {axis.upper()}",
-                description="Canvas position where the dragged link was released",
-                default=0.0,
-                options={'SKIP_SAVE'},
-            ),
-        )
+    register_graph_transient_props(_safe_scene_prop)
     _safe_scene_prop(
         'mixie_moodboard_selected_index',
         IntProperty(
@@ -300,6 +297,15 @@ def register():
         BoolProperty(
             name="Is Generating",
             description="Whether video generation is in progress",
+            default=False,
+            options={'SKIP_SAVE'},
+        ),
+    )
+    _safe_scene_prop(
+        'mixie_video_upscale_is_generating',
+        BoolProperty(
+            name="Is Generating",
+            description="Whether video upscaling is in progress",
             default=False,
             options={'SKIP_SAVE'},
         ),
@@ -381,7 +387,8 @@ def register():
     )
 
     # Generation progress floats (session-only)
-    for prefix in ('imagegen', 'video_gen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
+    for prefix in ('imagegen', 'video_gen', 'video_upscale', 'lookdev', 'lookdev360',
+                    'image_to_3d', 'scene_recon',
                     'segment_to_3d', 'mesh_segment', 'retopology', 'animate',
                     'pbr_gen', 'tripo_segment', 'smart_segment'):
         # Scene Gen Experimental ('scene_gen_hp', 'scene_gen_lp') intentionally omitted.
@@ -414,6 +421,7 @@ def unregister():
         'mixie_lookdev_is_generating',
         'mixie_imagegen_is_generating',
         'mixie_video_gen_is_generating',
+        'mixie_video_upscale_is_generating',
         'mixie_scene_recon_error',
         'mixie_scene_recon_is_generating',
         'mixie_segment_to_3d_is_generating',
@@ -423,6 +431,9 @@ def unregister():
         'mixie_moodboard_active_node_id',
         'mixie_moodboard_link_drop_y',
         'mixie_moodboard_link_drop_x',
+        'mixie_moodboard_graph_notice_y',
+        'mixie_moodboard_graph_notice_x',
+        'mixie_moodboard_graph_notice',
         'mixie_moodboard_link_drop_active',
         'mixie_moodboard_context_y',
         'mixie_moodboard_context_x',
@@ -430,6 +441,7 @@ def unregister():
         'mixie_moodboard_asset_nodes',
         'mixie_moodboard_action_nodes',
         'mixie_moodboard_selected_index',
+        'mixie_moodboard_frames',
         'mixie_moodboard_groups',
         'mixie_moodboard_textboxes',
         'mixie_moodboard_images',
@@ -441,7 +453,8 @@ def unregister():
 
     # WindowManager properties
     wm_attrs = []
-    for prefix in ('imagegen', 'video_gen', 'lookdev', 'lookdev360', 'image_to_3d', 'scene_recon',
+    for prefix in ('imagegen', 'video_gen', 'video_upscale', 'lookdev', 'lookdev360',
+                    'image_to_3d', 'scene_recon',
                     'segment_to_3d', 'mesh_segment', 'retopology', 'animate', 'pbr_gen'):
         wm_attrs.append(f'mixie_{prefix}_generate_progress')
     for attr in wm_attrs:

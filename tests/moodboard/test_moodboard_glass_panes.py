@@ -5,7 +5,7 @@
 """The moodboard's pans are liquid glass, and they are ONE material.
 
 The bed, the rim and the gloss live in the shared token table; the three call
-sites (the media frame, the graph node card, the floating node toolbar) only
+sites (the media frame, the graph card chrome, the floating node toolbar) only
 say which rect and radius to paint, plus the ACTIVE accent a node's state
 implies. Pinned at source level because the failure is invisible at runtime:
 these panes are an opaque fill today, so a missed conversion simply keeps a
@@ -21,7 +21,7 @@ SPACE_MIXIE = ROOT / "src/source/blender/editors/space_mixie"
 ED = ROOT / "src/source/blender/editors"
 INTERN = SPACE_MIXIE / "mixie_draw_moodboard_intern.hh"
 MEDIA = SPACE_MIXIE / "mixie_draw_moodboard.cc"
-GRAPH = SPACE_MIXIE / "mixie_draw_moodboard_graph.cc"
+GRAPH = SPACE_MIXIE / "mixie_draw_moodboard_graph_chrome.cc"
 NODE_UI = SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc"
 KIT = ED / "interface" / "interface_mixar_liquid_glass_tokens.cc"
 GLASS_HEADER = ED / "include" / "ED_mixar_glass.hh"
@@ -112,14 +112,14 @@ def test_the_media_frame_keeps_the_selected_rim_at_the_call_site():
 
 
 def test_the_node_card_bed_is_gone():
-    body = _fn(GRAPH_TEXT, "static void draw_card_background(")
+    body = _fn(GRAPH_TEXT, "void moodboard_draw_card_background(")
     assert "moodboard_draw_glass_pane(rect, 22.0f);" in body
     assert "draw_roundbox_4fv(&rect, true," not in body, "the opaque bed survived"
     assert "0.105f, 0.105f, 0.11f" not in body, "the hand-mixed bed colour survived"
 
 
 def test_the_node_card_keeps_the_selected_rim_at_the_call_site():
-    body = _fn(GRAPH_TEXT, "static void draw_card_background(")
+    body = _fn(GRAPH_TEXT, "void moodboard_draw_card_background(")
     assert "if (selected) {" in body
     selected = body.split("if (selected) {")[1]
     assert "const float border[4] = {0.38f, 0.39f, 0.42f, 0.92f};" in selected
@@ -129,7 +129,7 @@ def test_the_node_card_keeps_the_selected_rim_at_the_call_site():
 def test_the_running_glow_stays_a_call_site_accent():
     """Only the call site knows a node is QUEUED/RUNNING: the token row's rim is
     the resting one, and the breathing green border is painted on top of it."""
-    glow = _fn(GRAPH_TEXT, "static void draw_running_glow(")
+    glow = _fn(GRAPH_TEXT, "void moodboard_draw_running_glow(")
     assert "{0.32f, 0.72f, 0.55f}" in glow
     assert "0.24f + 0.30f * pulse" in glow, "the breathing border was flattened"
     assert "0.05f + 0.10f * pulse" in glow, "the outset halo was flattened"

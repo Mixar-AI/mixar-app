@@ -311,10 +311,15 @@ static void mixie_operatortypes()
   WM_operatortype_append(MIXIE_OT_moodboard_select_image);
   WM_operatortype_append(MIXIE_OT_moodboard_attachment_flight);
   WM_operatortype_append(MIXIE_OT_moodboard_graph_select);
+  WM_operatortype_append(MIXIE_OT_moodboard_frame_select);
+  WM_operatortype_append(MIXIE_OT_moodboard_rename_frame);
   WM_operatortype_append(MIXIE_OT_moodboard_context_menu);
   WM_operatortype_append(MIXIE_OT_moodboard_video_hover);
   WM_operatortype_append(MIXIE_OT_moodboard_zoom);
   WM_operatortype_append(MIXIE_OT_moodboard_ensure_visible);
+  WM_operatortype_append(MIXIE_OT_moodboard_frame);
+  WM_operatortype_append(MIXIE_OT_moodboard_preview_media);
+  WM_operatortype_append(MIXIE_OT_moodboard_rename_media);
   WM_operatortype_append(MIXIE_OT_moodboard_box_select);
   WM_operatortype_append(MIXIE_OT_moodboard_generate_box_mask);
   WM_operatortype_append(MIXIE_OT_moodboard_generate_lasso_mask);
@@ -345,7 +350,13 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   params.type = LEFTMOUSE;
   params.value = KM_PRESS;
   params.modifier = 0;
-  /* Graph cards get first refusal; the operator passes through on media/empty space. */
+  /* Order matters and implements the whole selection model. Frames get
+   * FIRST refusal, but only claim a press that landed on their border or
+   * their thick top strip -- the frame's own chrome. A press on a frame's
+   * INTERIOR passes through, so a member inside it takes the click (a
+   * click on a thing selects that thing) and open space inside it starts a
+   * marquee. Cards come next and pass through off-card, then media. */
+  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_frame_select", &params);
   WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_graph_select", &params);
   WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_select_image", &params);
 
@@ -354,6 +365,9 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   params_dbl.type = LEFTMOUSE;
   params_dbl.value = KM_DBL_CLICK;
   params_dbl.modifier = 0;
+  /* A double-click on a frame's title strip renames it in place; the
+   * operator passes through everywhere else, so text boxes keep theirs. */
+  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_frame_select", &params_dbl);
   WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_select_image", &params_dbl);
 
   /* Multi-select with Shift+LEFTMOUSE. Graph cards get first refusal (same
@@ -364,6 +378,9 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   params_extend.type = LEFTMOUSE;
   params_extend.value = KM_PRESS;
   params_extend.modifier = KM_SHIFT;
+  wmKeyMapItem *kmi_extend_frame = WM_keymap_add_item(
+      keymap, "MIXIE_OT_moodboard_frame_select", &params_extend);
+  RNA_boolean_set(kmi_extend_frame->ptr, "extend", true);
   wmKeyMapItem *kmi_extend_graph = WM_keymap_add_item(
       keymap, "MIXIE_OT_moodboard_graph_select", &params_extend);
   RNA_boolean_set(kmi_extend_graph->ptr, "extend", true);
@@ -383,6 +400,9 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
 #else
   params_extend_native.modifier = KM_CTRL;
 #endif
+  wmKeyMapItem *kmi_extend_native_frame = WM_keymap_add_item(
+      keymap, "MIXIE_OT_moodboard_frame_select", &params_extend_native);
+  RNA_boolean_set(kmi_extend_native_frame->ptr, "extend", true);
   wmKeyMapItem *kmi_extend_native_graph = WM_keymap_add_item(
       keymap, "MIXIE_OT_moodboard_graph_select", &params_extend_native);
   RNA_boolean_set(kmi_extend_native_graph->ptr, "extend", true);
@@ -391,6 +411,22 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   RNA_boolean_set(kmi_extend_native->ptr, "extend", true);
 
   /* Zoom selected images - Pinch Gesture */
+  /* Home frames the board, Numpad-Period the selection -- the pair every
+   * Blender editor uses (View Selected is Numpad `.`, never the main-row `.`).
+   * MIXIE_OT_moodboard_ensure_visible cannot serve here: it only grows the
+   * visible rect and so never zooms in. */
+  KeyMapItem_Params frame_params{};
+  frame_params.type = EVT_HOMEKEY;
+  frame_params.value = KM_PRESS;
+  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_frame", &frame_params);
+
+  KeyMapItem_Params frame_sel_params{};
+  frame_sel_params.type = EVT_PADPERIOD;
+  frame_sel_params.value = KM_PRESS;
+  wmKeyMapItem *kmi_frame_sel = WM_keymap_add_item(
+      keymap, "MIXIE_OT_moodboard_frame", &frame_sel_params);
+  RNA_boolean_set(kmi_frame_sel->ptr, "selected_only", true);
+
   KeyMapItem_Params zoom_params{};
   zoom_params.type = MOUSEZOOM;
   zoom_params.value = KM_ANY;
@@ -540,25 +576,29 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   send_chat_params_win.modifier = KM_CTRL;
   WM_keymap_add_item(keymap, "mixie.moodboard_send_to_chat", &send_chat_params_win);
 
-  /* Create Group - Cmd+G (macOS) / Ctrl+G (Windows/Linux) */
+  /* Frame the selection - Cmd+G (macOS) / Ctrl+G (Windows/Linux).
+   * Zero-question by design: the operator creates the frame immediately
+   * with an auto name and the next palette pastel, then drops into the
+   * in-place rename so the user types over it. The operator this replaced
+   * opened a props dialog with a name field and a colour picker. */
   KeyMapItem_Params group_params_mac{};
   group_params_mac.type = EVT_GKEY;
   group_params_mac.value = KM_PRESS;
   group_params_mac.modifier = KM_OSKEY;
-  WM_keymap_add_item(keymap, "mixie.create_group", &group_params_mac);
+  WM_keymap_add_item(keymap, "mixie.moodboard_create_frame", &group_params_mac);
 
   KeyMapItem_Params group_params_win{};
   group_params_win.type = EVT_GKEY;
   group_params_win.value = KM_PRESS;
   group_params_win.modifier = KM_CTRL;
-  WM_keymap_add_item(keymap, "mixie.create_group", &group_params_win);
+  WM_keymap_add_item(keymap, "mixie.moodboard_create_frame", &group_params_win);
 
   /* Ungroup - Alt+G (all platforms) */
   KeyMapItem_Params ungroup_params{};
   ungroup_params.type = EVT_GKEY;
   ungroup_params.value = KM_PRESS;
   ungroup_params.modifier = KM_ALT;
-  WM_keymap_add_item(keymap, "mixie.ungroup", &ungroup_params);
+  WM_keymap_add_item(keymap, "mixie.moodboard_ungroup", &ungroup_params);
 
   /* Right-click context menu */
   KeyMapItem_Params context_menu_params{};

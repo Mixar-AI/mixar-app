@@ -27,23 +27,22 @@ def get_all_image_indices_to_send(scene):
     """
     image_indices = set()
 
-    # Get selected group indices
-    selected_group_indices = set()
-    for i, group in enumerate(scene.mixie_moodboard_groups):
-        if group.selected:
-            selected_group_indices.add(i)
+    # A SELECTED FRAME stands for everything inside it: selecting the frame is
+    # how the user says "this set". The reverse does not hold -- selecting one
+    # picture inside a frame stages that picture alone, because a click on a
+    # member selects the member.
+    selected_frame_ids = {
+        frame.frame_id
+        for frame in getattr(scene, 'mixie_moodboard_frames', ())
+        if frame.selected and frame.frame_id
+    }
 
-    # Get group indices from selected images (group cohesion)
-    for img in scene.mixie_moodboard_images:
-        if img.selected and img.group_index >= 0:
-            selected_group_indices.add(img.group_index)
-
-    # Collect images
     for i, img in enumerate(scene.mixie_moodboard_images):
-        if img.selected and not is_video_item(img):
-            image_indices.add(i)
-        elif img.group_index in selected_group_indices and not is_video_item(img):
-            # Image belongs to a group being sent
+        if is_video_item(img):
+            continue
+        if img.selected or (
+            selected_frame_ids and getattr(img, 'frame_id', '') in selected_frame_ids
+        ):
             image_indices.add(i)
 
     return image_indices

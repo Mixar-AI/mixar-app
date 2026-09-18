@@ -139,7 +139,10 @@ def test_pad_unit_is_the_default_width_unit():
     assert "Mixar_WindowGetContentSize(" in ratio
     begin = _body(BUBBLE_CC, "bool agent_bubble_island_layout_get(")
     assert "agent_bubble_pad_ratio(win)" in begin
-    assert "/*pad_real_w=*/(pad_ratio > 0.0f) ? px_w : 0" in begin
+    # The pad's real width is a named local (it also feeds the composer wrap
+    # width) and is forwarded to the layout builder unchanged.
+    assert "const int pad_real_w = (pad_ratio > 0.0f) ? px_w : 0;" in begin
+    assert "pad_real_w," in begin
     chrome = _body(BUBBLE_CC, "static void agent_bubble_sync_chrome_sizes(const bContext *C)")
     assert "agent_bubble_pad_ratio(win)" in chrome
     assert "AGENT_PANEL_Y - (AGENT_CARD_Y - AGENT_PAD_TOP_INSET)" in chrome

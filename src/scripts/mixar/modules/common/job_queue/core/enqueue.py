@@ -44,6 +44,9 @@ def enqueue_generation(
     image_inputs: Optional[list] = None,
     video_inputs: Optional[list] = None,
     max_video_duration_seconds: float = 15.0,
+    upload_purpose: str = "",
+    video_key_field: str = "reference_video_s3_keys",
+    single_video_key: bool = False,
     # Listener options
     scene_flag: str = "",
     batch_popup_title: str = "",
@@ -139,6 +142,9 @@ def enqueue_generation(
             image_inputs=list(image_inputs or []),
             video_inputs=list(video_inputs or []),
             max_video_duration_seconds=max_video_duration_seconds,
+            upload_purpose=upload_purpose,
+            video_key_field=video_key_field,
+            single_video_key=single_video_key,
         )
     else:
         raise ValueError(f"Unknown enqueue_generation kind: {kind!r}")

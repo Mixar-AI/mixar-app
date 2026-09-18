@@ -64,7 +64,8 @@ class SelectedImageInfo(TypedDict):
     flip_horizontal: bool
     flip_vertical: bool
     z_order: int
-    group_index: int
+    frame_id: str
+    frame_name: str
     generation_prompt: str
     segment_count: int
     has_segments: bool
@@ -131,10 +132,12 @@ def get_selected_moodboard_images(
     if not moodboard_images:
         return result
 
+    frame_names = frame_name_map(scene)
+
     # Iterate through all images and collect selected ones
     for i, moodboard_img in enumerate(moodboard_images):
         if moodboard_img.selected:
-            image_info = _get_moodboard_image_info(i, moodboard_img)
+            image_info = _get_moodboard_image_info(i, moodboard_img, frame_names)
             result["images"].append(image_info)
 
     result["count"] = len(result["images"])
@@ -143,7 +146,23 @@ def get_selected_moodboard_images(
     return result
 
 
-def _get_moodboard_image_info(index: int, moodboard_img) -> SelectedImageInfo:
+def frame_name_map(scene) -> dict[str, str]:
+    """``frame_id -> name`` for every frame on the board.
+
+    Built ONCE per enumeration and handed to the per-item builder: a
+    per-item lookup would re-walk the frame collection for every picture
+    on the board.
+    """
+    return {
+        frame.frame_id: frame.name
+        for frame in getattr(scene, "mixie_moodboard_frames", ())
+        if frame.frame_id
+    }
+
+
+def _get_moodboard_image_info(
+    index: int, moodboard_img, frame_names: dict[str, str] | None = None
+) -> SelectedImageInfo:
     """
     Extract detailed information from a moodboard image item.
 
@@ -183,7 +202,15 @@ def _get_moodboard_image_info(index: int, moodboard_img) -> SelectedImageInfo:
         "flip_horizontal": moodboard_img.flip_horizontal,
         "flip_vertical": moodboard_img.flip_vertical,
         "z_order": moodboard_img.z_order,
-        "group_index": moodboard_img.group_index,
+        # Canvas frame this item sits in, by the frame's stable id, plus the
+        # frame's NAME -- which is what the user calls it and therefore what
+        # they will refer to ("everything in the Interior refs frame").
+        # Membership is resolved from geometry when an item is dropped, so a
+        # frame is a scope the agent can act on without the user restating it.
+        "frame_id": getattr(moodboard_img, "frame_id", "") or "",
+        "frame_name": (frame_names or {}).get(
+            getattr(moodboard_img, "frame_id", "") or "", ""
+        ),
         "generation_prompt": moodboard_img.generation_prompt,
         "segment_count": len(moodboard_img.segments),
         "has_segments": len(moodboard_img.segments) > 0,
@@ -312,6 +339,7 @@ def list_moodboard_images(
                 break
 
     needle = generation_prompt_contains.lower() if generation_prompt_contains else ""
+    frame_names = frame_name_map(scene)
     try:
         capped = max(0, int(limit))
     except (TypeError, ValueError):
@@ -341,7 +369,9 @@ def list_moodboard_images(
             result["truncated"] = True
             continue
 
-        result["images"].append(_get_moodboard_image_info(i, moodboard_img))
+        result["images"].append(
+            _get_moodboard_image_info(i, moodboard_img, frame_names)
+        )
 
     result["count"] = len(result["images"])
     return result

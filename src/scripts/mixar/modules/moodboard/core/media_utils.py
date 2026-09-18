@@ -210,6 +210,41 @@ def describe_moodboard_media(
     }
 
 
+def node_exportable_media(scene, node_id: str) -> list:
+    """Exportable media owned by ONE inference node.
+
+    The card's Export button acts on the node it sits on, not on the selection:
+    the two coincide most of the time (clicking a card selects it), but a user
+    with several cards selected expects the button on THIS card to save THIS
+    result. Same read-only limitation as `selected_exportable_media`.
+    """
+    node_id = str(node_id or "")
+    if not node_id:
+        return []
+    return [
+        item for item in getattr(scene, "mixie_moodboard_images", ())
+        if getattr(item, "image", None) and item.embedded_node_id == node_id
+    ]
+
+
+def standalone_exportable_media(scene, media_id: str) -> list:
+    """Exportable media that is ONE reference on the board, by its own graph id.
+
+    The counterpart of `node_exportable_media` for the action row above a
+    selected reference image or movie: the button on that tile saves that
+    tile, whatever else is selected. A reference is addressed by ITS OWN
+    ``node_id`` (a node's result is addressed through ``embedded_node_id``),
+    so the two lookups walk different fields and stay separate on purpose.
+    """
+    media_id = str(media_id or "")
+    if not media_id:
+        return []
+    return [
+        item for item in getattr(scene, "mixie_moodboard_images", ())
+        if getattr(item, "image", None) and item.node_id == media_id
+    ]
+
+
 def selected_exportable_media(scene) -> list:
     """Media the user has selected, including results owned by selected nodes.
 

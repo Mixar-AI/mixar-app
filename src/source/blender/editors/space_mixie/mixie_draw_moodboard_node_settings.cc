@@ -12,6 +12,8 @@
 
 #include "BLI_string.h"
 
+#include <string>
+
 #include "DNA_theme_types.h"   /* UI_SCALE_FAC */
 #include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
 
@@ -126,17 +128,24 @@ static ui::Button *add_parameter_button(ui::Block *block,
   {
     display_label = "";
   }
-  return moodboard_screen_prop_button(block,
-                                      parameter,
-                                      value_property,
-                                      display_label,
-                                      button_type,
-                                      x,
-                                      y,
-                                      width,
-                                      height,
-                                      minimum,
-                                      maximum);
+  ui::Button *button = moodboard_screen_prop_button(block,
+                                                    parameter,
+                                                    value_property,
+                                                    display_label,
+                                                    button_type,
+                                                    x,
+                                                    y,
+                                                    width,
+                                                    height,
+                                                    minimum,
+                                                    maximum);
+  /* The caption above says what the field is; the tooltip carries what the
+   * caption has no room for -- the catalog's own description, and the bounds a
+   * plain number field cannot show until a value snaps back. It cannot come
+   * from RNA: every parameter shares one set of value properties, so the
+   * property's description is identical on every field of every node. */
+  moodboard_set_parameter_tooltip(button, parameter);
+  return button;
 }
 
 static void disable_while_submitted(ui::Button *button, const bool submitted)
@@ -196,6 +205,12 @@ void moodboard_draw_node_settings(ui::Block *block, PointerRNA *node, const rcti
                                                     y,
                                                     field_width,
                                                     row_h);
+    std::string mode_tip = "Mode\n\nGeneration service this node runs on.";
+    if (mode_label[0]) {
+      mode_tip += "\nCurrently: ";
+      mode_tip += mode_label;
+    }
+    moodboard_set_node_tooltip(mode, mode_tip.c_str());
     disable_while_submitted(mode, generation_running);
     y -= row_h + caption_h + gap;
   }
@@ -221,6 +236,12 @@ void moodboard_draw_node_settings(ui::Block *block, PointerRNA *node, const rcti
                                                    y,
                                                    field_width,
                                                    row_h);
+  std::string model_tip = "Model\n\nThe model this node generates with.";
+  if (model_label[0]) {
+    model_tip += "\nCurrently: ";
+    model_tip += model_label;
+  }
+  moodboard_set_node_tooltip(model, model_tip.c_str());
   disable_while_submitted(model, generation_running);
   y -= row_h + caption_h + gap;
 

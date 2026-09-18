@@ -279,35 +279,39 @@ void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float
   immVertex2f(pos, x, y + h);
   immEnd();
 
-  /* Draw resize handles */
-  float handle_size_px = 12.0f;
-  float handle_size = handle_size_px / ui::view2d_scale_get_x(v2d);
-
-  /* 8 handle positions: 4 corners + 4 edge midpoints */
-  float handle_positions[8][2] = {
-      {x, y},                 /* 0: Bottom-left */
-      {x + w / 2, y},         /* 1: Bottom-center */
-      {x + w, y},             /* 2: Bottom-right */
-      {x + w, y + h / 2},     /* 3: Right-center */
-      {x + w, y + h},         /* 4: Top-right */
-      {x + w / 2, y + h},     /* 5: Top-center */
-      {x, y + h},             /* 6: Top-left */
-      {x, y + h / 2}          /* 7: Left-center */
-  };
-
-  immUniformColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-  for (int i = 0; i < 8; i++) {
-    immRectf(pos,
-             handle_positions[i][0] - handle_size / 2,
-             handle_positions[i][1] - handle_size / 2,
-             handle_positions[i][0] + handle_size / 2,
-             handle_positions[i][1] + handle_size / 2);
-  }
+  mixie_draw_moodboard_resize_handles(v2d, pos, x, y, w, h);
 
   GPU_line_width(1.0f);
   GPU_blend(GPU_BLEND_NONE);
 
   immUnbindProgram();
+}
+
+void mixie_draw_moodboard_resize_handles(
+    View2D *v2d, const uint pos, const float x, const float y, const float w, const float h)
+{
+  /* FOUR corner squares, from the ONE definition the hit-test reads
+   * (`moodboard_resize_handle_positions`), so the squares the user aims at and
+   * the region that responds cannot drift apart. The four edge midpoints this
+   * replaces meant "stretch one axis" -- a distortion nobody asks of a picture
+   * or a generated result -- and they crowded the corners that do the work.
+   *
+   * A fixed SCREEN size converted through the view scale: a handle is an
+   * affordance, not part of the picture, so it stays the same size to aim at
+   * at every zoom. */
+  const float handle_size = MOODBOARD_RESIZE_HANDLE_PX / ui::view2d_scale_get_x(v2d);
+  const rctf rect = {x, x + w, y, y + h};
+  float handles[MOODBOARD_RESIZE_HANDLE_COUNT][2];
+  moodboard_resize_handle_positions(rect, handles);
+
+  immUniformColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+  for (int i = 0; i < MOODBOARD_RESIZE_HANDLE_COUNT; i++) {
+    immRectf(pos,
+             handles[i][0] - handle_size / 2,
+             handles[i][1] - handle_size / 2,
+             handles[i][0] + handle_size / 2,
+             handles[i][1] + handle_size / 2);
+  }
 }
 
 /** \} */
@@ -334,6 +338,13 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   /* Draw grid background */
   mixie_draw_moodboard_grid(v2d);
 
+  /* Canvas frames come next, UNDERNEATH every other pass. A frame is a
+   * translucent wash over a region of the board, so drawing it after the
+   * media and the cards (which is where the old group pass sat) would tint
+   * the very results the user is looking at. Its NAME is painted much later,
+   * in the screen-space pass, so a member can never cover it. */
+  mixie_draw_moodboard_frames(C, v2d);
+
   /* One rect/link cache for every graph pass of this frame. Each pass
    * building its own re-acquired every image's ImBuf (aspect lookup) several
    * times per redraw — at the generating-glow repaint rate that was the
@@ -353,9 +364,6 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
 
   /* Draw moodboard text boxes */
   mixie_draw_moodboard_textboxes(C, v2d);
-
-  /* Draw moodboard groups */
-  mixie_draw_moodboard_groups(C, v2d);
 
   /* Board marks sit over its content and share its pan/zoom and host scissor. */
   mixie_draw_moodboard_canvas_annotations(&scene_ptr, v2d);

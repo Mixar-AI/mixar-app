@@ -10,7 +10,11 @@ retrieving active UV layers, default UV names, and relevant UV layers
 for painting context.
 """
 
-from ...utils.blender_commons import get_bpy_data, remove_datablock
+from ...utils.blender_commons import (
+    get_active_object,
+    get_bpy_data,
+    remove_datablock,
+)
 from ...utils.common import is_mask_using_vector
 from ...utils.constants import TEMP_UV
 from ..layer.layer_utils import get_uv_layers
@@ -67,51 +71,86 @@ def get_active_render_uv(obj):
     return uv_name
 
 
+def _first_real_uv_name(uv_layers):
+    """Name of the first UV layer that is not the paint system's temp layer."""
+    for uv_layer in uv_layers:
+        if uv_layer.name != TEMP_UV:
+            return uv_layer.name
+    return ''
+
+
+def _mesh_default_uv_name(obj, mp=None):
+    """The UV map a new layer/mask on *obj* should bind to, or ``''``.
+
+    Reads the mesh's OWN layers: the active one first, then index 0. A UV
+    map is named by whatever wrote the file (Blender's glTF importer says
+    ``UV Map``, an FBX from Tripo Quad says ``tripo____``, a user's own mesh
+    says anything), so the name must come from the mesh, never a literal.
+    """
+    if not obj or getattr(obj, 'type', None) != 'MESH':
+        return ''
+    uv_layers = get_uv_layers(obj)
+    if len(uv_layers) == 0:
+        return ''
+
+    active = uv_layers.active
+    active_name = active.name if active is not None else ''
+    if active_name and active_name != TEMP_UV:
+        return active_name
+
+    # The temp UV is active while painting a segment: the active paint layer
+    # already knows which real map it stands in for.
+    if active_name == TEMP_UV and mp and len(mp.layers) > 0:
+        layer_uv = mp.layers[mp.active_layer_index].uv_name
+        if layer_uv and uv_layers.get(layer_uv) is not None:
+            return layer_uv
+
+    # No usable active layer -> index 0 (skipping the temp layer).
+    return _first_real_uv_name(uv_layers)
+
+
 def get_default_uv_name(obj=None, mp=None):
     """
     Get the default UV layer name.
 
-    Determines the default UV layer name from the active mesh object or creates
-    a temporary mesh to get the default UV layer name used by Blender.
+    Resolution order:
+
+    1. The mesh's active UV layer, else its first one (``obj``, or the
+       active object when ``obj`` is None).
+    2. Only when no mesh with UV layers is available: Blender's default
+       new-layer name, read off a temporary mesh.
+
+    Step 1 is what keeps the paint system format-agnostic: the literal
+    default name is NOT what an FBX import (Tripo Quad's ``tripo____``) or a
+    user-authored mesh carries, and a layer bound to a UV map the mesh does
+    not have samples nothing until the user renames it by hand.
 
     Parameters:
-        obj: Blender object. Default is None.
+        obj: Blender object. Default is None (the active object is used).
         mp: MPaint data. Default is None.
 
     Returns:
         str: Default UV layer name
     """
-    uv_name = ''
+    if obj is None:
+        obj = get_active_object()
 
-    if obj and obj.type == 'MESH':
+    uv_name = _mesh_default_uv_name(obj, mp)
+    if uv_name:
+        return uv_name
 
-        # Get active uv name from active mesh object
-        uv_layers = get_uv_layers(obj)
-        if len(uv_layers) > 0:
-            active_name = uv_layers.active.name
-            if active_name == TEMP_UV:
-                if mp and len(mp.layers) > 0:
-                    uv_name = mp.layers[mp.active_layer_index].uv_name
-                else:
-                    for uv_layer in uv_layers:
-                        if uv_layer.name != TEMP_UV:
-                            uv_name = uv_layer.name
-            else:
-                uv_name = uv_layers.active.name
+    # Create temporary mesh
+    temp_mesh = get_bpy_data().meshes.new('___TEMP___')
 
-    else:
-        # Create temporary mesh
-        temp_mesh = get_bpy_data().meshes.new('___TEMP___')
+    # Create temporary uv layer
+    uv_layers = temp_mesh.uv_layers
+    uv_layer = uv_layers.new()
 
-        # Create temporary uv layer
-        uv_layers = temp_mesh.uv_layers
-        uv_layer = uv_layers.new()
+    # Get the uv name
+    uv_name = uv_layer.name
 
-        # Get the uv name
-        uv_name = uv_layer.name
-
-        # Remove temporary mesh
-        remove_datablock(get_bpy_data().meshes, temp_mesh)
+    # Remove temporary mesh
+    remove_datablock(get_bpy_data().meshes, temp_mesh)
 
     return uv_name
 
