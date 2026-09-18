@@ -112,6 +112,21 @@ def target_ref(target: RenderTarget) -> dict:
     return ref
 
 
+def resolve_status_owner(scene, ref: dict):
+    """The RNA carrying *ref*'s progress, even when its camera is gone.
+
+    ``resolve_target`` needs the camera to rebuild a full target; the status
+    owner does not — a shot is found by id and the camera-export settings
+    live on the scene — so a finished job can always put "running" down.
+    """
+    if ref.get("kind") == "SHOT":
+        state = getattr(scene, "mixar_director", None)
+        if state is None:
+            return None
+        return next((s for s in state.shots if s.shot_id == ref.get("shot_id")), None)
+    return getattr(scene, "mixar_camera_export", None)
+
+
 def resolve_target(scene, ref: dict):
     """Rebuild the target from *ref*, or ``None`` if what it named is gone."""
     import bpy

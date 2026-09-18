@@ -272,3 +272,20 @@ def test_moving_a_wrapper_moves_the_underlying_item():
     target.position_x = 300.0
     target.position_y = 400.0
     assert (media.position_x, media.position_y) == (300.0, 400.0)
+
+
+# --------------------------------------------------------------------------- #
+# Depth guard
+# --------------------------------------------------------------------------- #
+
+
+def test_a_cyclic_graph_bails_out_instead_of_overflowing_the_stack():
+    """A corrupt .blend may carry a link cycle. The depth guard must fire
+    before Python's own recursion limit does, or ``tidy_nodes`` raises an
+    unhandled RecursionError from inside the UI."""
+    ids = {f"n{i}" for i in range(node_layout._MAX_DEPTH + 8)}
+    ordered = sorted(ids, key=lambda s: int(s[1:]))
+    sources = {a: {b} for a, b in zip(ordered, ordered[1:] + ordered[:1])}
+    depths = node_layout._depths(ids, sources)
+    assert set(depths) == ids
+    assert all(isinstance(value, int) for value in depths.values())

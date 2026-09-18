@@ -86,6 +86,9 @@ class MIXIE_OT_revert_prompt(Operator):
 
     def execute(self, context):
         slot = _resolve_slot(context, self.node_id, self.owner)
+        if slot is not None and slot.is_running():
+            self.report({'WARNING'}, "Wait for the refinement to finish")
+            return {'CANCELLED'}
         if slot is None or not prompt_refine.revert(slot):
             self.report({'WARNING'}, "Nothing to revert to")
             return {'CANCELLED'}

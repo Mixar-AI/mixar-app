@@ -167,6 +167,12 @@ def read_manifest() -> dict | None:
         return None
     if not isinstance(manifest.get("payload"), dict) or not manifest.get("buffer_id"):
         return None
+    # ``blend`` is a flag ("" = no images, BLEND_NAME = the sibling file we
+    # wrote), never a path: the manifest is a world-readable file in a shared
+    # temp directory, and a value joined into a load path would let anyone
+    # who can write there make the next paste append from an arbitrary .blend.
+    if manifest.get("blend", "") not in ("", BLEND_NAME):
+        return None
     return manifest
 
 
@@ -182,11 +188,10 @@ def import_buffer_images(manifest: dict) -> dict:
     never by the recorded name. Names the ``.blend`` does not carry, and IDs
     Blender could not read, are simply absent from the map.
     """
-    blend_name = str(manifest.get("blend") or "")
     names = [str(name) for name in manifest.get("image_names") or () if name]
-    if not blend_name or not names:
+    if manifest.get("blend") != BLEND_NAME or not names:
         return {}
-    path = os.path.join(buffer_directory(), blend_name)
+    path = blend_path()
     if not os.path.isfile(path):
         logger.warning("Moodboard copy buffer: %s is missing", path)
         return {}

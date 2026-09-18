@@ -41,8 +41,8 @@ def draw_prompt_refine_row(layout, prop_owner):
     if owner_type not in SIDEBAR_PROMPT_TARGETS:
         return
 
-    refining = prompt_refine.sidebar_is_refining(owner_type)
-    can_revert = prompt_refine.sidebar_can_revert(owner_type)
+    refining = prompt_refine.sidebar_is_refining(prop_owner, owner_type)
+    can_revert = prompt_refine.sidebar_can_revert(prop_owner, owner_type)
 
     row = layout.row(align=True)
 

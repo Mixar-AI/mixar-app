@@ -175,9 +175,13 @@ def _depths(node_ids: set, sources: dict) -> dict:
         if guard > _MAX_DEPTH:
             return 0
         parents = sources.get(node_id) or ()
-        value = 0 if not parents else 1 + max(
-            resolve(parent, guard + 1) for parent in parents
-        )
+        # An explicit loop, not ``max(genexp)``: the generator adds a second
+        # Python frame per level, which hits the interpreter's recursion limit
+        # before ``_MAX_DEPTH`` on a cyclic (corrupt) graph — an unhandled
+        # RecursionError instead of the bounded bail-out this guard promises.
+        value = 0
+        for parent in parents:
+            value = max(value, 1 + resolve(parent, guard + 1))
         depth[node_id] = value
         return value
 

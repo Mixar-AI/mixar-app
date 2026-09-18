@@ -226,3 +226,23 @@ def test_manifest_write_is_atomic(blender, monkeypatch):
     (src, dst), = replaced
     assert dst == cb.manifest_path()
     assert src.startswith(dst) and src.endswith(".tmp")
+
+
+def test_the_manifest_blend_field_is_a_name_check_never_a_path(blender):
+    """The manifest lives in a shared temp dir; a path there would let the
+    next paste append from an arbitrary .blend."""
+    for bad in ("/tmp/other.blend", "../x.blend", "other.blend"):
+        json.dump(
+            {"version": 1, "buffer_id": "x", "payload": {}, "blend": bad, "image_names": ["a"]},
+            open(cb.manifest_path(), "w"),
+        )
+        assert cb.read_manifest() is None
+    json.dump(
+        {"version": 1, "buffer_id": "x", "payload": {}, "blend": cb.BLEND_NAME},
+        open(cb.manifest_path(), "w"),
+    )
+    assert cb.read_manifest()["blend"] == cb.BLEND_NAME
+    # And the loader only ever opens the sibling file it wrote itself.
+    assert cb.import_buffer_images(
+        {"blend": "/tmp/other.blend", "image_names": ["a"]}
+    ) == {}

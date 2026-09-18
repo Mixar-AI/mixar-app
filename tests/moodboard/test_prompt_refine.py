@@ -571,3 +571,41 @@ def test_the_sidebar_row_keeps_refine_beside_revert():
     assert "refine_row.enabled" in row, (
         "Refine needs its own sub-row; `enabled` applies to a whole layout item"
     )
+
+
+def test_revert_refuses_while_a_refinement_is_in_flight(monkeypatch):
+    """Reverting mid-flight would clear the stash, and the landing response
+    would then re-stash the PREVIOUS refinement as if it were the user's
+    words — so the guard is in the engine, not in either UI surface."""
+    engine = _engine()
+    monkeypatch.setattr(engine, "redraw_prompt_surfaces", lambda: None)
+    slot = _FakeSlot("refined once")
+    slot.stash("a knight")
+    slot.running = True
+    assert engine.revert(slot) is False
+    assert slot.text == "refined once" and slot.stashed() == "a knight"
+    slot.running = False
+    assert engine.revert(slot) is True
+    assert slot.text == "a knight" and slot.has_stash() is False
+
+
+def test_sidebar_state_is_scoped_to_the_owning_scene():
+    """The sidebar props are registered per Scene, so a stash keyed by tab
+    alone would let Scene B revert to Scene A's prompt."""
+    engine = _engine()
+    engine.forget_sidebar_state()
+    owner_a = SimpleNamespace(prompt="x", id_data=SimpleNamespace(name="Scene A"))
+    owner_b = SimpleNamespace(prompt="y", id_data=SimpleNamespace(name="Scene B"))
+    slot_a = engine.SidebarSlot(owner_a, "MixieTab", "image_gen", "m")
+    slot_a.stash("a knight")
+    slot_a.set_running(True)
+    try:
+        assert engine.sidebar_can_revert(owner_a, "MixieTab") is True
+        assert engine.sidebar_is_refining(owner_a, "MixieTab") is True
+        assert engine.sidebar_can_revert(owner_b, "MixieTab") is False
+        assert engine.sidebar_is_refining(owner_b, "MixieTab") is False
+        engine.forget_sidebar_state(owner_b, "MixieTab")
+        assert engine.sidebar_can_revert(owner_a, "MixieTab") is True
+    finally:
+        engine.forget_sidebar_state()
+    assert engine.sidebar_can_revert(owner_a, "MixieTab") is False

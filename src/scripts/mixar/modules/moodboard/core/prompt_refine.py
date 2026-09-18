@@ -44,12 +44,19 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Sidebar stashes and in-flight markers, keyed by the owner PropertyGroup's
-# RNA identifier (one prompt per tab). Deliberately module state and not RNA:
-# it is per-session UI affordance, and a pre-refine prompt has no business in
-# a saved .blend.
+# Sidebar stashes and in-flight markers, keyed by OWNING SCENE plus the owner
+# PropertyGroup's RNA identifier (one prompt per tab per scene). Deliberately
+# module state and not RNA: it is per-session UI affordance, and a pre-refine
+# prompt has no business in a saved .blend. The scene is part of the key
+# because the sidebar props are registered per Scene: keyed by tab alone,
+# Scene B's Revert would offer — and write — Scene A's stashed prompt.
 _sidebar_stash: dict[str, str] = {}
 _sidebar_running: set[str] = set()
+
+
+def _sidebar_key(owner, owner_type: str) -> str:
+    scene = getattr(owner, "id_data", None)
+    return f"{getattr(scene, 'name', '') or ''}:{owner_type}"
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +109,7 @@ class SidebarSlot(_Slot):
 
     def __init__(self, owner, owner_type: str, service_key: str, model_slug: str):
         self._owner = owner
-        self.key = owner_type
+        self.key = _sidebar_key(owner, owner_type)
         self.service_key = service_key
         self.model_slug = model_slug
 
@@ -284,24 +291,25 @@ def node_slot(scene, node_id: str) -> Optional[NodeSlot]:
 # Draw-time queries (safe to call from a panel draw)
 # ---------------------------------------------------------------------------
 
-def sidebar_can_revert(owner_type: str) -> bool:
-    return owner_type in _sidebar_stash
+def sidebar_can_revert(owner, owner_type: str) -> bool:
+    return _sidebar_key(owner, owner_type) in _sidebar_stash
 
 
-def sidebar_is_refining(owner_type: str) -> bool:
-    return owner_type in _sidebar_running
+def sidebar_is_refining(owner, owner_type: str) -> bool:
+    return _sidebar_key(owner, owner_type) in _sidebar_running
 
 
-def forget_sidebar_state(owner_type: str = "") -> None:
+def forget_sidebar_state(owner=None, owner_type: str = "") -> None:
     """Drop stash + in-flight marker for one owner, or all of them.
 
     Called on file load: a stash belongs to the prompt that was on screen,
     and offering to "revert" a different file's prompt to it would be a data
     loss dressed up as an undo.
     """
-    if owner_type:
-        _sidebar_stash.pop(owner_type, None)
-        _sidebar_running.discard(owner_type)
+    if owner is not None and owner_type:
+        key = _sidebar_key(owner, owner_type)
+        _sidebar_stash.pop(key, None)
+        _sidebar_running.discard(key)
         return
     _sidebar_stash.clear()
     _sidebar_running.clear()
@@ -396,8 +404,17 @@ def refine(slot: _Slot, on_done: Callable[[bool, str], None]) -> bool:
 
 
 def revert(slot: _Slot) -> bool:
-    """Put the user's own prompt back. False when there is nothing stashed."""
+    """Put the user's own prompt back. False when there is nothing stashed.
+
+    Also False while a refinement is in flight for this slot: reverting then
+    would clear the stash, and the response landing afterwards would see no
+    stash and re-stash the CURRENT text — the previous refinement — so the
+    user's real wording would be gone for good. Both surfaces keep Revert
+    pressable during a refine, so the guard lives here, not in the UI.
+    """
     if not slot.alive():
+        return False
+    if slot.is_running():
         return False
     if not slot.has_stash():
         slot.clear_stash()

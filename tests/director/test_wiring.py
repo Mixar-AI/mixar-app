@@ -57,9 +57,12 @@ def test_rotation_continuity_is_repaired_on_every_key_writing_path():
     # every action that evaluates an in-between camera pose.
     assert capture.count("repair_rotation_continuity(camera)") == 2
     assert "repair_rotation_continuity(shot.camera)" in preview
-    # The render job now serves shots AND bare animated cameras through one
-    # RenderTarget, so it repairs the target's camera.
-    assert "repair_rotation_continuity(target.camera)" in render
+    # The render job serves shots AND bare animated cameras through one
+    # RenderTarget, but only the SHOT starter repairs its camera: a bare
+    # Export-to-Moodboard camera is the user's own animation and a render
+    # button must never rewrite its keys.
+    assert "repair_rotation_continuity(shot.camera)" in render
+    assert "repair_rotation_continuity(target.camera)" not in render
     assert "repair_rotation_continuity(shot.camera)" in shot_api
     # Character Turn presets key through matrix_world too (a 90 degree turn
     # must never play as a 270 degree spin the other way).

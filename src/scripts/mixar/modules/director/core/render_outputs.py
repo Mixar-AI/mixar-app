@@ -28,6 +28,7 @@ from .render_passes import (
     snapshot_render_settings,
 )
 from .render_target import (
+    resolve_status_owner,
     camera_target,
     resolve_target,
     shot_target,
@@ -150,6 +151,16 @@ def _finish_job(success: bool, message: str) -> None:
             progress=1.0 if success else 0.0,
             status=message,
         )
+    elif scene is not None:
+        # The camera was renamed or deleted mid-render, so the target no
+        # longer resolves — but the RNA that shows "running" (the shot, or
+        # the scene's camera-export settings) is still there and would stay
+        # frozen at "rendering" until the file is reloaded.
+        owner = resolve_status_owner(scene, job["target"])
+        if owner is not None:
+            owner.render_is_running = False
+            owner.render_progress = 0.0
+            owner.render_status = message
     _redraw()
 
 
@@ -340,9 +351,14 @@ def _on_render_write(scene, _depsgraph=None) -> None:
 
 
 def _start_render(context, scene, target, preparing: str) -> int:
-    """Arm the job for *target* and start its first pass."""
+    """Arm the job for *target* and start its first pass.
+
+    Never touches the camera's animation: a bare Export-to-Moodboard camera
+    is the USER's, and rewriting its rotation keys (even to an equivalent
+    representation) from a render button would be a silent, non-undoable
+    edit. Director repairs its own shot cameras in ``start_shot_render``.
+    """
     global _job
-    repair_rotation_continuity(target.camera)
     view_layer = context.view_layer
     if view_layer is None or scene.view_layers.get(view_layer.name) is None:
         view_layer = scene.view_layers[0]
@@ -378,6 +394,9 @@ def start_shot_render(context, shot) -> int:
     if not kinds:
         raise ValueError("Select at least one shot render")
     frame_start, frame_end = shot_frame_range(shot)
+    # Director owns this camera's keys, so the continuity repair every other
+    # Director key-writing path runs is right here too.
+    repair_rotation_continuity(shot.camera)
 
     scene = shot.scene_ref or context.scene
     target = shot_target(shot, frame_start, frame_end, kinds)
