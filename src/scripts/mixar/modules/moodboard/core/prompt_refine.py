@@ -147,49 +147,88 @@ class NodeSlot(_Slot):
     card is painted in C++: the draw pass reads ``prompt_refined`` and
     ``prompt_refining`` to choose between Refine, Revert and a disabled
     button, and it cannot consult a Python dict to do it.
+
+    The slot holds the node's ID STRING, never the node, and re-resolves it
+    on every access. A refine is a live round trip, and a collection
+    element's RNA pointer dangles as soon as the collection is edited --
+    the node deleted, the board cleared, another file opened. ``bl_rna``
+    cannot catch that: it answers off the cached type without ever
+    dereferencing the element, so a liveness check through the stored
+    pointer reads True and the write that follows lands on freed memory.
+    Same rule as every other async path here (``voice/core/targets.py``,
+    ``director/core/render_target.py``): re-resolve by id.
     """
 
-    def __init__(self, node, service_key: str, model_slug: str):
-        self._node = node
-        self.key = f"node:{getattr(node, 'node_id', '')}"
+    def __init__(self, scene, node_id: str, service_key: str, model_slug: str):
+        self._scene = scene
+        self.node_id = node_id
+        self.key = f"node:{node_id}"
         self.service_key = service_key
         self.model_slug = model_slug
 
+    def _node(self):
+        """The node this slot addresses right now, or None if it is gone."""
+        try:
+            nodes = getattr(self._scene, "mixie_moodboard_action_nodes", None)
+            if not nodes or not self.node_id:
+                return None
+            for node in nodes:
+                if getattr(node, "node_id", "") == self.node_id:
+                    return node
+        except (ReferenceError, AttributeError):
+            # The scene itself was freed (file load); Blender invalidates the
+            # Python wrapper, which is the one removal it does report.
+            return None
+        return None
+
     def read(self) -> str:
-        return getattr(self._node, "prompt", "") or ""
+        node = self._node()
+        return (getattr(node, "prompt", "") or "") if node is not None else ""
 
     def write(self, text: str) -> None:
-        self._node.prompt = text
+        node = self._node()
+        if node is not None:
+            node.prompt = text
 
     def stash(self, original: str) -> None:
-        self._node.prompt_pre_refine = original
+        node = self._node()
+        if node is None:
+            return
+        node.prompt_pre_refine = original
         # Two properties, not one: a refinement of an EMPTY-looking prompt is
         # impossible (the button is disabled), but a user can legitimately
         # revert to a prompt that is shorter than the stash cap allows, and
         # "" must not be mistaken for "nothing to revert to".
-        self._node.prompt_refined = True
+        node.prompt_refined = True
 
     def stashed(self) -> str:
-        return getattr(self._node, "prompt_pre_refine", "") or ""
+        node = self._node()
+        if node is None:
+            return ""
+        return getattr(node, "prompt_pre_refine", "") or ""
 
     def has_stash(self) -> bool:
-        return bool(getattr(self._node, "prompt_refined", False))
+        node = self._node()
+        return node is not None and bool(getattr(node, "prompt_refined", False))
 
     def clear_stash(self) -> None:
-        self._node.prompt_pre_refine = ""
-        self._node.prompt_refined = False
+        node = self._node()
+        if node is None:
+            return
+        node.prompt_pre_refine = ""
+        node.prompt_refined = False
 
     def set_running(self, running: bool) -> None:
-        self._node.prompt_refining = running
+        node = self._node()
+        if node is not None:
+            node.prompt_refining = running
 
     def is_running(self) -> bool:
-        return bool(getattr(self._node, "prompt_refining", False))
+        node = self._node()
+        return node is not None and bool(getattr(node, "prompt_refining", False))
 
     def alive(self) -> bool:
-        try:
-            return self._node is not None and bool(self._node.bl_rna)
-        except (ReferenceError, AttributeError):
-            return False
+        return self._node() is not None
 
 
 # ---------------------------------------------------------------------------
@@ -233,7 +272,8 @@ def node_slot(scene, node_id: str) -> Optional[NodeSlot]:
         if not getattr(node, "show_prompt", True):
             return None
         return NodeSlot(
-            node,
+            scene,
+            node_id,
             getattr(node, "service_key_id", "") or "",
             getattr(node, "model_slug", "") or "",
         )

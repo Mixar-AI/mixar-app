@@ -445,7 +445,8 @@ def migrate_legacy_groups(scene) -> int:
     Idempotent and one-way: the legacy collection is cleared as it is
     converted, so a second run finds nothing. Called from the poll tick and
     ``load_post``, never from a draw callback -- the same place the media-id
-    migration runs.
+    migration runs. A group with no surviving members is dropped, not
+    converted: its rect WAS its members' bounds, so it drew nothing at all.
 
     The rect is the members' bounds plus padding, which is exactly what the old
     draw derived every frame; the colour of a legacy group was a free RGBA
@@ -466,6 +467,8 @@ def migrate_legacy_groups(scene) -> int:
             if getattr(image, "group_index", -1) == group_index
             and not _is_node_owned(image)
         ]
+        if not members:
+            continue
         frame = create_frame(scene, from_items=members, name=group.name or "")
         if frame is None:
             continue
@@ -481,11 +484,14 @@ def migrate_legacy_groups(scene) -> int:
         frame.locked = bool(getattr(group, "locked", False))
         migrated += 1
 
+    # One-way regardless of how many groups had anything left to convert:
+    # the guard above means the collection was non-empty, and leaving it
+    # standing would re-run this on every poll tick forever.
+    for image in images:
+        if getattr(image, "group_index", -1) != -1:
+            image.group_index = -1
+    groups.clear()
     if migrated:
-        for image in images:
-            if getattr(image, "group_index", -1) != -1:
-                image.group_index = -1
-        groups.clear()
         logger.info("Migrated %d legacy moodboard group(s) to frames", migrated)
     return migrated
 

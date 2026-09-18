@@ -36,7 +36,13 @@ def test_active_pointer_map_hits_graph_before_media_fallback(modifier):
     for extras in ({}, {'shift': True}, modifier):
         press = [item for item in active if item.event == 'LEFTMOUSE'
                  and item.value == 'PRESS' and item.modifiers == extras]
-        expected = ['mixie.moodboard_graph_select', 'mixie.moodboard_select_image']
+        # Same order space_mixie.cc registers: frames claim their own chrome
+        # first and pass through on their interior, then cards, then media.
+        # Without the frame item in the ADDON map a keyconfig preset reload
+        # left frames unselectable.
+        expected = ['mixie.moodboard_frame_select',
+                    'mixie.moodboard_graph_select',
+                    'mixie.moodboard_select_image']
         if not extras:
             expected.insert(0, 'mixie.moodboard_annotation_stroke')
         assert [item.idname for item in press] == expected

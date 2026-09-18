@@ -337,6 +337,105 @@ def _annotated_members(path: Path, class_name: str) -> dict:
     return members
 
 
+class _NodeCollection(list):
+    """A bpy CollectionProperty of graph nodes: ``remove(index)`` is what
+    makes a held element pointer dangle."""
+
+    def remove(self, index):
+        del self[index]
+
+
+def _graph_node(node_id="node-1", prompt="a knight"):
+    return SimpleNamespace(
+        # RNA answers `bl_rna` off the wrapper's cached TYPE, without ever
+        # dereferencing the element -- which is why it keeps answering for a
+        # collection entry that has been removed, and why a liveness check
+        # built on it reads True on freed memory.
+        bl_rna=object(),
+        node_id=node_id,
+        prompt=prompt,
+        prompt_pre_refine="",
+        prompt_refined=False,
+        prompt_refining=False,
+        show_prompt=True,
+        service_key_id="image_gen",
+        model_slug="flux",
+    )
+
+
+def test_a_node_slot_addresses_its_node_by_id_not_by_held_pointer():
+    """A refine is a live round trip, and the node can be deleted while it is
+    out. A collection element's RNA pointer dangles the moment the collection
+    is edited, and ``bl_rna`` cannot see it -- it answers off the cached type
+    without dereferencing the element -- so a liveness check through a stored
+    pointer reads True and the write that follows lands on freed memory.
+    Every other async path here re-resolves by id; so must this one."""
+    engine = _engine()
+    nodes = _NodeCollection([_graph_node()])
+    scene = SimpleNamespace(mixie_moodboard_action_nodes=nodes)
+
+    slot = engine.node_slot(scene, "node-1")
+    assert slot is not None and slot.alive()
+    assert slot.read() == "a knight"
+
+    # The user deletes the card while the refinement is in flight.
+    detached = nodes[0]
+    nodes.remove(0)
+
+    assert slot.alive() is False
+    assert slot.read() == ""
+    assert slot.has_stash() is False
+    assert slot.is_running() is False
+
+    # And every write is a no-op rather than a dangling assignment.
+    slot.write("refined")
+    slot.stash("a knight")
+    slot.set_running(True)
+    assert detached.prompt == "a knight"
+    assert detached.prompt_pre_refine == ""
+    assert detached.prompt_refining is False
+
+
+def test_a_node_slot_survives_a_sibling_being_deleted():
+    """Removing an earlier element shifts every later one down. Re-resolving
+    by id has to keep addressing the SAME card, not whatever now sits at the
+    index the slot was built from."""
+    engine = _engine()
+    nodes = _NodeCollection([_graph_node("node-0", "first"),
+                             _graph_node("node-1", "second")])
+    scene = SimpleNamespace(mixie_moodboard_action_nodes=nodes)
+
+    slot = engine.node_slot(scene, "node-1")
+    nodes.remove(0)
+
+    assert slot.alive() is True
+    slot.write("refined")
+    assert nodes[0].node_id == "node-1"
+    assert nodes[0].prompt == "refined"
+
+
+def test_a_refinement_landing_after_the_node_is_gone_changes_nothing(monkeypatch):
+    engine = _install_service(
+        monkeypatch,
+        lambda prompt: {"prompt": "A knight at dusk", "original_prompt": prompt},
+    )
+    nodes = _NodeCollection([_graph_node()])
+    scene = SimpleNamespace(mixie_moodboard_action_nodes=nodes)
+    slot = engine.node_slot(scene, "node-1")
+
+    seen = []
+    # The card is deleted between the click and the answer.
+    detached = nodes[0]
+    nodes.remove(0)
+    engine.refine(slot, lambda ok, msg: seen.append((ok, msg)))
+
+    assert nodes == []
+    # An empty prompt is never sent, so the click reports rather than
+    # refining a card that is no longer there.
+    assert seen and seen[0][0] is False
+    assert detached.prompt == "a knight"
+
+
 def test_node_refine_state_lives_on_the_node_because_cpp_paints_the_card():
     """C++ chooses Refine vs Revert from RNA, so these props must exist and
     must not be serialized into the .blend."""

@@ -195,14 +195,16 @@ class MIXIE_OT_clear_moodboard(Operator):
 
     bl_idname = "mixie.clear_moodboard"
     bl_label = "Clear Moodboard"
-    bl_description = "Remove all images, text boxes, groups, nodes, connections and annotations"
+    bl_description = ("Remove all images, text boxes, frames, nodes, connections "
+                      "and annotations")
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         scene = context.scene
         image_count = len(scene.mixie_moodboard_images)
         textbox_count = len(scene.mixie_moodboard_textboxes)
-        group_count = len(scene.mixie_moodboard_groups)
+        frames = getattr(scene, 'mixie_moodboard_frames', None)
+        frame_count = len(frames) if frames is not None else 0
         node_count = (
             len(scene.mixie_moodboard_action_nodes)
             + len(scene.mixie_moodboard_asset_nodes)
@@ -210,7 +212,7 @@ class MIXIE_OT_clear_moodboard(Operator):
         link_count = len(scene.mixie_moodboard_links)
         annotation_count = len(scene.mixie_moodboard_annotations)
 
-        if not any((image_count, textbox_count, group_count, node_count, link_count,
+        if not any((image_count, textbox_count, frame_count, node_count, link_count,
                     annotation_count)):
             self.report({'INFO'}, "Moodboard is already empty")
             return {'CANCELLED'}
@@ -219,6 +221,8 @@ class MIXIE_OT_clear_moodboard(Operator):
         scene.mixie_moodboard_images.clear()
         scene.mixie_moodboard_textboxes.clear()
         scene.mixie_moodboard_groups.clear()
+        if frames is not None:
+            frames.clear()
         scene.mixie_moodboard_action_nodes.clear()
         scene.mixie_moodboard_asset_nodes.clear()
         scene.mixie_moodboard_links.clear()
@@ -232,8 +236,8 @@ class MIXIE_OT_clear_moodboard(Operator):
             parts.append(f"{image_count} image(s)")
         if textbox_count > 0:
             parts.append(f"{textbox_count} text box(es)")
-        if group_count > 0:
-            parts.append(f"{group_count} group(s)")
+        if frame_count > 0:
+            parts.append(f"{frame_count} frame(s)")
         if node_count > 0:
             parts.append(f"{node_count} node(s)")
         if link_count > 0:
@@ -284,13 +288,16 @@ class MIXIE_OT_moodboard_duplicate(Operator):
             self.report({'WARNING'}, "No items selected to duplicate")
             return {'CANCELLED'}
 
-        # Deselect all original items and groups
+        # Deselect all original items and frames. The frame matters as much
+        # as the members: `get_all_items_to_transform` expands a still-selected
+        # frame back into every ORIGINAL member, so leaving it set makes the
+        # grab that follows drag the sources along with the copies.
         for img in scene.mixie_moodboard_images:
             img.selected = False
         for tb in scene.mixie_moodboard_textboxes:
             tb.selected = False
-        for group in scene.mixie_moodboard_groups:
-            group.selected = False
+        for frame in getattr(scene, 'mixie_moodboard_frames', ()):
+            frame.selected = False
 
         # Duplicate images (no offset - grab mode will handle positioning)
         for i in image_indices:
@@ -367,11 +374,11 @@ class MIXIE_OT_moodboard_duplicate(Operator):
 
 
 class MIXIE_OT_moodboard_select_all(Operator):
-    """Select all moodboard media, text boxes, groups, and graph nodes."""
+    """Select all moodboard media, text boxes, frames, and graph nodes."""
 
     bl_idname = "mixie.moodboard_select_all"
     bl_label = "Select All"
-    bl_description = "Select all images, text boxes, groups and graph nodes"
+    bl_description = "Select all images, text boxes, frames and graph nodes"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -389,9 +396,9 @@ class MIXIE_OT_moodboard_select_all(Operator):
             if not tb.selected:
                 tb.selected = True
                 count += 1
-        for grp in scene.mixie_moodboard_groups:
-            if not grp.selected:
-                grp.selected = True
+        for frame in getattr(scene, 'mixie_moodboard_frames', ()):
+            if not frame.selected:
+                frame.selected = True
                 count += 1
         # Nodes too. Deselect All has always cleared them, so leaving them out
         # here meant Select All followed by Delete silently spared every node.
@@ -414,7 +421,7 @@ class MIXIE_OT_moodboard_deselect_all(Operator):
 
     bl_idname = "mixie.moodboard_deselect_all"
     bl_label = "Deselect All"
-    bl_description = "Deselect all images, text boxes and groups"
+    bl_description = "Deselect all images, text boxes and frames"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -423,8 +430,8 @@ class MIXIE_OT_moodboard_deselect_all(Operator):
             img.selected = False
         for tb in scene.mixie_moodboard_textboxes:
             tb.selected = False
-        for grp in scene.mixie_moodboard_groups:
-            grp.selected = False
+        for frame in getattr(scene, 'mixie_moodboard_frames', ()):
+            frame.selected = False
         for node in scene.mixie_moodboard_action_nodes:
             node.selected = False
         for node in scene.mixie_moodboard_asset_nodes:

@@ -65,33 +65,41 @@ _last_signatures: dict[str, tuple] = {}
 
 
 # ----------------------------------------------------------------- #
-# Selection collection (honors both direct image selection and group
+# Selection collection (honors both direct image selection and frame
 # selection, mirroring the manual MIXIE_OT_moodboard_send_to_chat).
 # ----------------------------------------------------------------- #
+def _selected_frame_ids(scene) -> set[str]:
+    """Ids of every selected canvas frame.
+
+    Frames replaced the index-based ``mixie_moodboard_groups`` collection,
+    which ``frames.migrate_legacy_groups`` empties permanently on load — so
+    membership is read from ``frame_id`` here, never from ``group_index``.
+    """
+    return {
+        frame.frame_id
+        for frame in getattr(scene, "mixie_moodboard_frames", ()) or ()
+        if getattr(frame, "selected", False) and getattr(frame, "frame_id", "")
+    }
+
+
 def _collect_selected_image_names(scene) -> list[str]:
     """Return sorted unique ``bpy.data.images.name`` for every moodboard
     image that should be attached. Includes:
       * directly selected images
-      * all images in groups that are selected
-      * all images in groups that contain at least one selected image
-        (group cohesion — matches the legacy "send to chat" op)
+      * every image inside a SELECTED frame
+
+    Deliberately NOT the reverse: selecting one picture inside a frame
+    attaches that picture, not its neighbours. That is the same rule
+    ``get_all_items_to_transform`` applies to dragging — clicking a thing
+    acts on that thing, and the frame is selected by its own border — and
+    it is what the frame rewrite replaced the old group cohesion with.
     """
     images_attr = getattr(scene, "mixie_moodboard_images", None)
-    groups_attr = getattr(scene, "mixie_moodboard_groups", None)
     if images_attr is None:
         return []
 
-    # 1. Build the set of group indices that should pull all members.
-    selected_group_indices: set[int] = set()
-    if groups_attr is not None:
-        for i, group in enumerate(groups_attr):
-            if group.selected:
-                selected_group_indices.add(i)
-        # Group cohesion: any image with a selected sibling pulls the
-        # whole group.
-        for mb_img in images_attr:
-            if mb_img.selected and mb_img.group_index >= 0:
-                selected_group_indices.add(mb_img.group_index)
+    # 1. Frames whose whole contents ride along.
+    selected_frame_ids = _selected_frame_ids(scene)
 
     # 2. Collect names.
     names: set[str] = set()
@@ -104,7 +112,10 @@ def _collect_selected_image_names(scene) -> list[str]:
             continue
         if mb_img.selected:
             names.add(img.name)
-        elif mb_img.group_index in selected_group_indices:
+        elif (
+            selected_frame_ids
+            and getattr(mb_img, "frame_id", "") in selected_frame_ids
+        ):
             names.add(img.name)
 
     # 3. Selected inference nodes contribute their generated still output.
@@ -333,17 +344,17 @@ def deselect_moodboard_image_by_name(scene, image_name: str) -> bool:
 
 
 def deselect_all_moodboard_origin_attachments(scene) -> int:
-    """Deselect every moodboard image (and any groups they belong to)
+    """Deselect every moodboard image (and any frame that carried it in)
     whose corresponding ``is_moodboard`` attachment is in
     ``pending_attachments``. Called from the chat send paths BEFORE
     ``pending_attachments.clear()`` so moodboard selections don't
     auto-re-attach on the next poll after the message goes out.
 
-    Returns the number of moodboard images deselected.
+    Returns the number of moodboard items deselected.
     """
     consume_selection(scene)
     images_attr = getattr(scene, "mixie_moodboard_images", None)
-    groups_attr = getattr(scene, "mixie_moodboard_groups", None)
+    frames_attr = getattr(scene, "mixie_moodboard_frames", None)
     attachments = getattr(scene, "mixie_chat_pending_attachments", None)
     if images_attr is None or attachments is None:
         return 0
@@ -355,24 +366,29 @@ def deselect_all_moodboard_origin_attachments(scene) -> int:
     if not moodboard_attached_names:
         return 0
 
-    # Collect the group indices touched so we deselect groups too —
-    # otherwise group cohesion would re-include their images on the
-    # next poll.
-    touched_groups: set[int] = set()
+    # A selected FRAME attaches its whole contents, so an attachment can
+    # come from an image that was never selected in its own right. Deselect
+    # the frames that were sent as well as the images — otherwise the next
+    # poll re-attaches every member of a still-selected frame.
     count = 0
+    sent_frame_ids = set()
     for mb_img in images_attr:
         if mb_img.image is None:
             continue
-        if mb_img.image.name in moodboard_attached_names and mb_img.selected:
+        if mb_img.image.name not in moodboard_attached_names:
+            continue
+        frame_id = getattr(mb_img, "frame_id", "")
+        if frame_id:
+            sent_frame_ids.add(frame_id)
+        if mb_img.selected:
             mb_img.selected = False
-            if mb_img.group_index >= 0:
-                touched_groups.add(mb_img.group_index)
             count += 1
 
-    if groups_attr is not None:
-        for idx in touched_groups:
-            if 0 <= idx < len(groups_attr) and groups_attr[idx].selected:
-                groups_attr[idx].selected = False
+    if frames_attr is not None:
+        for frame in frames_attr:
+            if getattr(frame, "frame_id", "") in sent_frame_ids and frame.selected:
+                frame.selected = False
+                count += 1
 
     if count:
         _redraw_moodboard_areas()

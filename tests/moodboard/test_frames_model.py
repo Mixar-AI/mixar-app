@@ -424,7 +424,8 @@ def test_migration_is_one_way_and_idempotent():
 
 
 def test_a_hidden_legacy_group_migrates_to_a_collapsed_frame():
-    scene = _Scene()
+    member = _Media(x=0.0, y=0.0, scale=0.1, group_index=0)
+    scene = _Scene(media=[member])
     scene.mixie_moodboard_groups = _Collection(lambda: _LegacyGroup(""))
     scene.mixie_moodboard_groups.append(
         _LegacyGroup("Hidden", visible=False, locked=True)
@@ -433,6 +434,25 @@ def test_a_hidden_legacy_group_migrates_to_a_collapsed_frame():
     frame = scene.mixie_moodboard_frames[0]
     assert frame.collapsed is True
     assert frame.locked is True
+
+
+def test_a_legacy_group_with_no_surviving_members_is_dropped_not_framed():
+    """Its rect WAS its members' bounds, so it drew nothing on the old canvas.
+
+    Converting it anyway parks a default-sized frame at the canvas origin
+    that then adopts, through `resolve_membership`, whatever real content
+    happens to sit near (0, 0) -- content the user never grouped.
+    """
+    orphan = _Media(x=0.0, y=0.0, scale=0.1, embedded_node_id="node-1")
+    scene = _Scene(media=[orphan])
+    scene.mixie_moodboard_groups = _Collection(lambda: _LegacyGroup(""))
+    scene.mixie_moodboard_groups.append(_LegacyGroup("Gone"))
+
+    assert frame_core.migrate_legacy_groups(scene) == 0
+    assert len(scene.mixie_moodboard_frames) == 0
+    # Still one-way: the legacy collection is dropped either way, or the poll
+    # tick re-runs this migration forever.
+    assert len(scene.mixie_moodboard_groups) == 0
 
 
 def test_get_or_create_frame_is_named_lookup_then_create():

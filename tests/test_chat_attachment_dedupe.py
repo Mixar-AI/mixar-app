@@ -76,7 +76,7 @@ def _image(name, filepath=""):
 
 
 def _board_item(image, selected=False):
-    return SimpleNamespace(image=image, selected=selected, group_index=-1)
+    return SimpleNamespace(image=image, selected=selected, frame_id="")
 
 
 def _scene(attachments, board_items=()):
@@ -84,7 +84,7 @@ def _scene(attachments, board_items=()):
         name="Scene",
         mixie_chat_pending_attachments=attachments,
         mixie_moodboard_images=list(board_items),
-        mixie_moodboard_groups=[],
+        mixie_moodboard_frames=[],
         mixie_moodboard_action_nodes=[],
     )
 
@@ -286,15 +286,22 @@ def test_selection_changes_and_empty_selection_keep_staged_references(staged_sce
     assert _attached(scene) == ['a', 'b']
 
 
-@pytest.mark.parametrize('kind', ['direct', 'group', 'sibling', 'node', 'file'])
+@pytest.mark.parametrize('kind', ['direct', 'frame', 'sibling', 'node', 'file'])
 def test_explicit_remove_stays_removed_until_a_new_selection(staged_scene, kind):
     scene = staged_scene
     item = scene.mixie_moodboard_images[0]
-    if kind == 'group':
-        item.group_index = 0
-        scene.mixie_moodboard_groups.append(SimpleNamespace(selected=True))
+    if kind == 'frame':
+        # A selected FRAME attaches its whole contents; the member itself is
+        # never selected, so the X must still keep it from coming back.
+        item.frame_id = 'frame-1'
+        scene.mixie_moodboard_frames.append(
+            SimpleNamespace(frame_id='frame-1', selected=True)
+        )
     elif kind == 'sibling':
-        item.group_index = scene.mixie_moodboard_images[1].group_index = 0
+        item.frame_id = scene.mixie_moodboard_images[1].frame_id = 'frame-1'
+        scene.mixie_moodboard_frames.append(
+            SimpleNamespace(frame_id='frame-1', selected=False)
+        )
         scene.mixie_moodboard_images[1].selected = True
     elif kind == 'node':
         scene.mixie_moodboard_action_nodes.append(SimpleNamespace(selected=True, preview_image=item.image))
@@ -309,7 +316,7 @@ def test_explicit_remove_stays_removed_until_a_new_selection(staged_scene, kind)
     chat_sync._poll_tick()
     assert 'a' not in _attached(scene) and item.image.filepath not in _attached(scene)
     _select(scene, 'c')
-    assert 'a' not in _attached(scene), 'An unrelated selection resurrected a removed group/node reference'
+    assert 'a' not in _attached(scene), 'An unrelated selection resurrected a removed frame/node reference'
 
 
 def test_remove_does_not_consume_an_unrelated_unpolled_selection(staged_scene):
