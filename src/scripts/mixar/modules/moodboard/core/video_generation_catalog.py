@@ -79,8 +79,6 @@ def get_video_generation_limits(service_key, model_slug=""):
         return None
     if not limits["video_extensions"]:
         return None
-    #: Overwritten per model below; every model takes references by default.
-    limits["supports_references"] = True
     return _apply_model_limits(limits, service_key, model_slug)
 
 
@@ -130,12 +128,6 @@ def _apply_model_limits(limits, service_key, model_slug):
         model = get_model(service_key, model_slug) or {}
     except Exception:
         return limits
-    # A tier whose provider has no reference-to-video endpoint (MiniMax H3 Max
-    # Turbo) publishes an explicit False. Only False blocks: null/absent means
-    # the model takes references, which is every other model.
-    limits["supports_references"] = (
-        model.get("supports_reference_to_video") is not False
-    )
     model_limits = model.get("reference_limits") or {}
     if not isinstance(model_limits, dict):
         return limits
@@ -175,16 +167,6 @@ def video_reference_count_error(
                 "image modes"
             )
         return None
-    if (image_count or video_count) and not limits.get(
-        "supports_references", True
-    ):
-        # This tier has no reference-to-video endpoint; submitting anyway
-        # reaches a URL that does not exist and fal answers a bare 404.
-        return (
-            "This model cannot take reference images or videos. Use First "
-            "Frame or First + Last Frame to drive it from an image, or pick "
-            "a model that supports references."
-        )
     if image_count > limits["max_images"]:
         return f"Select at most {limits['max_images']} images"
     if video_count > limits["max_videos"]:
