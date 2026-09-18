@@ -60,7 +60,6 @@ struct ChatMessageProps {
   PropertyRNA *step_items;
   PropertyRNA *steps_summary;
   PropertyRNA *steps_collapsed;
-  PropertyRNA *images_collapsed;
 
   /* Thinking dropdown (finalized) */
   PropertyRNA *thinking_text;
@@ -107,7 +106,6 @@ struct ChatImageItemProps {
   PropertyRNA *local_path;
   PropertyRNA *width;
   PropertyRNA *height;
-  PropertyRNA *step_id;
   bool initialized;
 };
 
@@ -254,7 +252,7 @@ struct MessageLayoutData {
   bool has_feedback;       /* feedback_visible is true */
   int feedback_rating;     /* 0=unrated, 1-5 */
   float feedback_row_height;
-  FeedbackVoteData feedback_votes[FEEDBACK_VOTE_COUNT];
+  FeedbackStarData feedback_stars[FEEDBACK_STAR_COUNT];
   rctf feedback_comment_bounds;
   bool feedback_comment_hovered;
   bool feedback_comment_expanded;  /* inline comment field visible */
@@ -271,19 +269,6 @@ struct MessageLayoutData {
   bool steps_collapsed;
   char steps_summary[256];
   rctf steps_header_bounds;  /* block header hit area */
-
-  /* "Viewed N images" block: the bubble's step-tagged capture tiles, drawn
-   * under the steps block with its own collapse state (mixie_chat_steps.cc). */
-  bool images_collapsed;
-  float slot_gallery_height;
-  rctf images_header_bounds;
-  bool images_header_hovered;
-  /* One row of the NEWEST tiles; the rest sit behind a "+N" chip that opens
-   * the lightbox (which still steps through every tile). */
-  int gallery_hidden;            /* tiles not shown in the row */
-  int gallery_first_hidden;      /* slot_images index the chip opens */
-  rctf gallery_more_bounds;      /* the chip's hit area, zero when none */
-  bool gallery_more_hovered;
 
   /* Thinking block. When thinking_active, it renders as a LIVE pinned panel
    * (spinner + streaming FIFO text); when finalized it collapses to the
@@ -394,9 +379,7 @@ struct HistoryRowHit {
    * downward). Keyboard navigation uses it to scroll a selected row into
    * view without re-deriving the grouped layout. */
   float content_top = 0.0f;
-  char session_id[128] = ""; /* chat session id, or the checkpoint id */
-  char title[200] = "";      /* row label, exported as a QA target */
-  char group[32] = "";       /* section the row sits in (QA target detail) */
+  char session_id[128] = "";
 };
 
 /** \} */
@@ -544,10 +527,6 @@ struct MixieChatRuntime {
   /** History overlay: visibility mirrored from the Python-registered
    * WindowManager bool during draw (events check this, never RNA). */
   bool history_overlay_active = false;
-  /** History overlay: mode (HistoryMode) of the last draw, so switching the
-   * open card between chats and checkpoints resets the search, scroll and
-   * armed row like opening it does. -1 = not drawn yet. */
-  int history_mode_last = -1;
 
   /** History overlay: panel bounds in region pixels (click-away test). */
   rctf history_panel_bounds = {0, 0, 0, 0};

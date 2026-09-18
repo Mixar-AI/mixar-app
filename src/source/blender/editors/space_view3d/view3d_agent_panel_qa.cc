@@ -23,7 +23,6 @@
 #include "../interface/interface_qa_inspect.hh"
 
 #include "view3d_agent_panel.hh"
-#include "view3d_workspace_viewer.hh"
 #include "../space_agent_bubble/agent_ui_cat_style.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -38,9 +37,6 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
 {
   if (area->spacetype != SPACE_VIEW3D || region->regiontype != RGN_TYPE_EXECUTE) {
     return;
-  }
-  if (const WorkspaceViewer *viewer = view3d_workspace_viewer_active()) {
-    if (viewer->region && viewer->area == area) { return; }
   }
   /* Read `regiondata` directly, never `runtime_ensure`: a dump must not
    * allocate region data on a panel the user has not opened. */
@@ -74,9 +70,7 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
      * keeps the harness off hand-computed offsets — they are the SAME rects
      * the layout pass wrote and the click handler hit-tests, so a metric
      * change moves the targets with the pixels. */
-    rcti visible;
-    if (!BLI_rcti_isect(&card.rect, &runtime->column_rect, &visible)) { continue; }
-    push(visible, "agent_panel_card", card.name, i);
+    push(card.rect, "agent_panel_card", card.expanded ? card.task : card.name, i);
     /* Same pane bounds and sampled fraction the painter consumes. No second
      * clock in introspection, so the value describes the last drawn frame. */
     rcti progress_visible;
@@ -89,21 +83,14 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
       push(cat_visible, "agent_panel_cat", card.task_id, i);
       r_targets.back().value = mixie_cat_style(card.cat_ordinal).name;
     }
-    if (card.has_workspace && BLI_rcti_isect(&card.eye_rect, &runtime->column_rect, &visible)) {
-      push(visible, "agent_panel_eye", "eye", i);
-      r_targets.back().value = card.task_id;
-    }
-    if (BLI_rcti_isect(&card.action_rect, &runtime->column_rect, &visible)) {
-      push(visible, "agent_panel_dismiss", "dismiss", i);
-    }
+    push(card.eye_rect, "agent_panel_eye", "eye", i);
+    push(card.action_rect, "agent_panel_dismiss", "dismiss", i);
   }
 
   /* The chevron sits below the clipped column and is present only while
    * there are agents the stack cannot show. */
   if (BLI_rcti_size_x(&runtime->chevron_rect) > 0) {
     push(runtime->chevron_rect, "agent_panel_chevron", "more", -1);
-    r_targets.back().value = view3d_agent_panel_at_end(runtime) ? "first" : "next";
-    r_targets.back().detail = runtime->chevron_label;
   }
 }
 

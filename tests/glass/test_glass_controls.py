@@ -160,7 +160,7 @@ class TestTheCardButtonsArePanes:
     def test_the_plain_button_keeps_its_border_and_a_hover_cue(self) -> None:
         """Its bed carries no colour, so hover must show in the pane's alpha."""
         switch = self._switch()
-        assert "mixar_card_outline_round(&box, rad, border_strong_u, mixar_chrome::card_outline)" in switch
+        assert "mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, mixar_chrome::card_outline)" in switch
         assert "MIXAR_GLASS_CHIP, hover_alpha(0.85f, 1.0f)" in switch, (
             "the plain card button lost its only hover cue with the grey bed"
         )
@@ -203,7 +203,7 @@ class TestTheProfilePlanChipIsAPane:
         no longer distinguishable from any other chip on the card.
         """
         pill = self._pill()
-        assert "mixar_card_outline_round(&chip, rad, border_strong_u, 1.0f);" in pill, (
+        assert "mixar_card_outline_round(&chip, rad, MX_BORDER_STRONG, 1.0f);" in pill, (
             "the chip lost the stroke that separates it from the card"
         )
 
@@ -224,6 +224,6 @@ class TestTheProfilePlanChipIsAPane:
         usage = _code(_fn_body(PROFILE_DRAW, "void draw_usage_bar("))
         for name, body in (("draw_divider", divider), ("draw_usage_bar", usage)):
             assert "mixar_card_glass_round(" not in body, f"{name} was glassed"
-        assert "mixar_card_fill_round(&line, 0.0f, border_strong_u)" in divider
-        assert "mixar_card_fill_round(&track, rad, sunken_u)" in usage
+        assert "mixar_card_fill_round(&line, 0.0f, MX_BORDER_STRONG)" in divider
+        assert "mixar_card_fill_round(&track, rad, MX_BG_SUNKEN)" in usage
         assert "fill_ramp(&fill, rad, CARD_USAGE_RAMP_START, CARD_USAGE_RAMP_END)" in usage

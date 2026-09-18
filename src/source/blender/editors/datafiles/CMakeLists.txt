@@ -583,7 +583,6 @@ if(WITH_BLENDER)
       meta_plane
       mixar_icon
       paperclip
-      eraser
       submit_arrow
       modifier
       modifier_data

@@ -150,9 +150,8 @@ void draw_eyes(const MixieCatPose &pose, const MixieCatStyle &style, float pixel
      * That keeps every detail inside the eye through a blink. */
     GPU_matrix_push();
     GPU_matrix_translate_2f(x, 0.012f + pose.look_y * 0.012f);
-    /* Gaze translates both eyes equally; side-dependent compression reads
-     * as a skewed eye at the pill and parallel-card sizes. */
-    const float lid = side < 0 ? pose.lid_l : pose.lid_r;
+    const float lid = (side < 0 ? pose.lid_l : pose.lid_r) *
+                      (1.0f - 0.10f * std::max(0.0f, side * pose.look_x));
     GPU_matrix_scale_2f(pose.eye_scale * pose.eye_width, openness * pose.eye_scale * lid);
     ellipse(0.0f, 0.0f, 0.086f, 0.112f, pixel, eye, pose.smile);
     const float rx = 0.037f * pose.pupil_scale * pose.pupil_width;

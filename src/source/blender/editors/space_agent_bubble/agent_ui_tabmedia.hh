@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Image and Video tabs for the Agent island: the moodboard's Image Gen and Video Gen
+ * Media tab for the Agent island: the moodboard's Image Gen and Video Gen
  * panels re-skinned as island chips. Which controls exist comes from the
  * live generation catalog (the per-(service, model) WindowManager param
  * groups built by `modules/common/generation_params`), never from the
@@ -23,7 +23,7 @@ struct bContext;
 struct rctf;
 
 /**
- * Paint the active Image or Video pane and lay its controls into the card panel.
+ * Paint the Media pane and lay its controls into the card panel.
  *
  * \param panel: the card panel rect in REGION pixel coordinates. Call where
  * the other tab panes are called (the transcript WINDOW region's draw), NOT
@@ -32,7 +32,8 @@ struct rctf;
  *
  * Reads/writes only EXISTING state: `scene.mixie_moodboard_sidebar`'s
  * `tab_imagegen` / `tab_video_gen` PropertyGroups, the catalog param groups
- * on WindowManager, and `wm.mixar_bubble_tab` (IMAGE or VIDEO).
+ * on WindowManager, and `wm.mixar_bubble_media_kind` (Image/Video sub-tab,
+ * registered by `agent_bubble/ui/properties/bubble_media_props.py`).
  * Generate dispatches the same operators the moodboard footers use.
  */
 void agent_ui_tabmedia_draw(const bContext *C,

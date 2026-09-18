@@ -15,8 +15,7 @@
 #include "mixie_moodboard_socket_style.hh"
 
 #include "BLI_string.h"
-#include "DNA_theme_types.h"   /* UI_SCALE_FAC */
-#include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
+#include "DNA_userdef_types.h"
 #include "UI_interface_c.hh"
 
 namespace blender::ed::mixie {
@@ -33,10 +32,9 @@ const float *moodboard_socket_type_color(const char *accepted_types)
 /* Output kind per ACTION_TYPES index. ORDER-PINNED to
  * ``moodboard_graph_properties.py``'s ACTION_TYPES and the output map in
  * ``node_schema.py`` (IMAGE_GEN, VIDEO_GEN, MODEL_3D, MASK_DETAIL, PBR_GEN,
- * RETOPOLOGY, MESH_SEGMENT, AUTO_RIG, VIDEO_UPSCALE, WORLD_LABS, CHARACTER_PARTS,
- * ASSEMBLE) — see tests/moodboard/test_node_ui_polish.py. */
-static const char ACTION_OUTPUT_KINDS[] = {
-    'I', 'V', 'M', 'I', 'M', 'M', 'M', 'M', 'V', 'S', 'M', 'M'};
+ * RETOPOLOGY, MESH_SEGMENT, AUTO_RIG) — see
+ * tests/moodboard/test_node_ui_polish.py. */
+static const char ACTION_OUTPUT_KINDS[] = {'I', 'V', 'M', 'I', 'M', 'M', 'M', 'M'};
 
 const float *moodboard_action_output_color(const int action_type)
 {

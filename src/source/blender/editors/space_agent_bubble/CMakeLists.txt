@@ -20,19 +20,12 @@ set(SRC
   agent_bubble_glass.cc
   agent_bubble_composer.cc
   agent_bubble_references.cc
-  agent_bubble_reference_items.cc
   agent_bubble_references_navigation.cc
   agent_bubble_interaction.cc
-  agent_bubble_pill_voice.cc
-  agent_ui_asset_picker.cc
-  agent_ui_asset_picker_detail.cc
-  agent_ui_asset_picker_qa.cc
   agent_ui_draw.cc
-  agent_ui_draw_primitives.hh
   agent_ui_controls_paint.cc
   agent_ui_generations.cc
   agent_ui_generations_data.cc
-  agent_ui_generations_layout.cc
   agent_ui_generations_detail.cc
   agent_ui_generations_qa.cc
   agent_ui_generations_navigation.cc
@@ -48,7 +41,6 @@ set(SRC
   agent_ui_pane_kit_feedback.cc
   agent_ui_pane_kit_thumbs.cc
   agent_ui_pill_cat.cc
-  agent_ui_pill_draft.cc
   agent_ui_queue_navigation.cc
   agent_ui_queue_data.cc
   agent_ui_queue.cc
@@ -61,33 +53,24 @@ set(SRC
   agent_ui_tab3d.cc
   agent_ui_tab3d_params.cc
   agent_ui_visible_if.cc
-  agent_ui_voice_paint.cc
 
   agent_bubble_intern.hh
   agent_bubble_references.hh
   agent_bubble_glass.hh
-  agent_ui_asset_picker.hh
-  agent_ui_asset_picker_intern.hh
-  agent_ui_asset_picker_layout.hh
   agent_ui_draw.hh
   agent_ui_generations.hh
   agent_ui_generations_clip.hh
   agent_ui_generations_intern.hh
-  agent_ui_generations_layout.hh
   agent_ui_icons.hh
   agent_ui_layout.hh
   agent_ui_motion.hh
   agent_ui_pane_kit.hh
   agent_ui_pill_cat.hh
-  agent_ui_pill_draft.hh
   agent_ui_cat_style.hh
   agent_ui_cat_activity.hh
   agent_ui_cat_catch.hh
   agent_ui_cat_cadence.hh
   agent_ui_cat_scheduler.hh
-  agent_ui_chip_fit.hh
-  agent_ui_voice_motion.hh
-  agent_ui_voice_paint.hh
   ../include/ED_agent_bubble_motion.hh
   agent_ui_pill_cat_pose.hh
   agent_ui_queue_intern.hh

@@ -38,12 +38,11 @@ from bpy.types import PropertyGroup
 #: flippable reading is the whole point: a drawing silently taken as nine
 #: placement targets is a mode the user could neither see nor correct.
 INTENT_ITEMS = (
-    ('AUTO', "Auto detect", "Automatically detect from your drawing "
-     "whether to build a shape or edit the places you marked", 'AUTO', 0),
-    ('SKETCH', "Draw to build", "Build the shape you draw — for example, "
-     "sketch a chair to create a chair", 'GREASEPENCIL', 1),
-    ('POINT', "Point to edit", "Circle an object or draw an arrow to show "
-     "where to make a change. Describe the change in chat",
+    ('AUTO', "Auto", "Read from the ink: a few gestures are marks, a drawing "
+     "is a sketch", 'AUTO', 0),
+    ('SKETCH', "Sketch", "Everything drawn is ONE drawing of what to build, "
+     "laid out as drawn", 'GREASEPENCIL', 1),
+    ('POINT', "Marks", "Each gesture points at a thing or a spot",
      'RESTRICT_SELECT_OFF', 2),
 )
 
@@ -138,10 +137,11 @@ def register():
         options={'SKIP_SAVE'},
     )
     bpy.types.WindowManager.mixar_mark_intent = EnumProperty(
-        name="Use Drawing To",
+        name="Read Ink As",
         description=(
-            "Draw to build creates the shape you sketch. Point to edit uses "
-            "circles and arrows to show where your instructions apply"
+            "How the ink on the frozen viewport is read: marks that each "
+            "point at something, or one sketch of what to build. Auto "
+            "decides from the ink itself; Tab flips it while drawing"
         ),
         items=INTENT_ITEMS,
         default='AUTO',

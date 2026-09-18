@@ -8,30 +8,22 @@
 
 namespace blender {
 struct ARegion;
-struct BlendLibReader;
-struct ID;
-struct SpaceLink;
 
 enum class AgentIslandControl {
   Agent,
   ThreeD,
-  Image,
-  Video,
+  Media,
   Splat,
   Generations,
   Queue,
   History,
   NewChat,
   Checkpoints,
-  Rules,
-  Handwriting,
   Upload,
   Scribble,
   Reading,
   Clear,
   Voice,
-  Auto,
-  Model,
   Generate,
   Count,
 };
@@ -63,5 +55,4 @@ MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
                                        const MixieCatCatch &incoming = {});
 double agent_ui_cat_motion_next_frame(const ARegion *region);
 void *agent_ui_motion_region_duplicate(void *regiondata);
-void agent_ui_motion_blend_read_after_liblink(BlendLibReader *reader, ID *parent_id, SpaceLink *sl);
 }  // namespace blender

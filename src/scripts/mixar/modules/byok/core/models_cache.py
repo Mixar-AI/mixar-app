@@ -217,7 +217,6 @@ def _schedule_populate(epoch: int, data: Dict[str, Any]) -> None:
             if epoch != _lifecycle_epoch or _shutdown_requested:
                 return None
         model_suggestions.populate_from_payload(data)
-        _refresh_preference()
         _redraw()
         return None  # Don't repeat
 
@@ -225,26 +224,6 @@ def _schedule_populate(epoch: int, data: Dict[str, Any]) -> None:
         if _shutdown_requested:
             return
         bpy.app.timers.register(_apply, first_interval=0.0)
-
-
-def _refresh_preference() -> None:
-    """Re-read the saved hosted-model pick whenever the catalog CHANGES.
-
-    Only from the network path, never from `load_from_disk()`: bootstrap phase 3
-    runs before the login hook, so a disk restore would spend a guaranteed 401.
-
-    A catalog swap is exactly when the pick can have gone stale — `eligible` is
-    derived per caller, and a model can be retired from under a saved
-    preference. The endpoint is `no-store` and tiny, so there is no ETag to
-    revalidate and no timer to hang it off. A 304 reaches neither this nor
-    `populate`, which is the point: an unchanged catalog costs nothing.
-    """
-    try:
-        from . import preference_state
-
-        preference_state.refresh()
-    except Exception as exc:  # noqa: BLE001 — never break a catalog swap
-        logger.debug("Agent model preference refresh failed: %s", exc)
 
 
 def _redraw() -> None:

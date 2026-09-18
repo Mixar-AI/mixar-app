@@ -52,7 +52,8 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
   ScrArea *area = CTX_wm_area(C);
   /* SPACE_AGENT_BUBBLE has a layout-compatible spacedata struct
    * (see DNA_space_types.h), so this cast is valid for both. */
-  if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
+  if (area && (area->spacetype == SPACE_MIXIE_CHAT ||
+               area->spacetype == SPACE_AGENT_BUBBLE))
   {
     return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }
@@ -322,19 +323,6 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
     return OPERATOR_CANCELLED;
   }
 
-  /* The island's single region also hosts its header and composer. A press
-   * outside the message view band is theirs (the header's "+" is a
-   * ui::Button that fires on RELEASE, so its PRESS reaches this keymap): the
-   * hit-tests below convert region pixels to View2D coordinates, and a
-   * header click mapped onto a capture tile of the still-loaded previous
-   * session and opened the lightbox — a blocking modal — over the new chat. */
-  {
-    MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
-    if (rt->view_band_valid && !BLI_rcti_isect_pt(&rt->view_band, event->mval[0], event->mval[1])) {
-      return OPERATOR_CANCELLED | OPERATOR_PASS_THROUGH;
-    }
-  }
-
   /* Check for scroll-to-bottom indicator click first (screen-space) */
   if (mixie_chat_handle_scroll_indicator_click(
           smixie, region, float(event->mval[0]), float(event->mval[1])))
@@ -344,9 +332,7 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
   }
 
   /* Check for empty prompt clicks first (when chat is empty) */
-  if (mixie_chat_handle_empty_prompt_click(
-        C, region, float(event->mval[0]), float(event->mval[1])))
-  {
+  if (mixie_chat_handle_empty_prompt_click(C, float(event->mval[0]), float(event->mval[1]))) {
     return OPERATOR_FINISHED;
   }
 

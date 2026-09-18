@@ -5,14 +5,16 @@
 /** \file
  * \ingroup spview3d
  *
- * Parallel Agents panel: a bottom-left 3D viewport region that slides in
+ * Parallel Agents panel: a right-docked 3D viewport region that slides in
  * with one card per agent of the running turn — the agent's name (derived
  * from the task it was assigned), its status and its elapsed clock. Three
  * cards are visible at a time; a longer fan-out scrolls.
  *
- * Cards follow tasks; only tasks with a live private workspace expose an eye.
- * The workspace viewer reuses the old strip's offscreen rendering in a large,
- * read-only overlay with switchable tabs.
+ * Successor of the Agent Scene Strip, which docked at the bottom and showed
+ * an offscreen-rendered tile per non-active scene. Parallel agents no longer
+ * get a scene each (the backend's `Task.scene_session_id` exists but is
+ * unassigned), so tiles had nothing to preview: the surface is now driven by
+ * the turn's task list instead.
  *
  * The card data is a read-only projection of the WindowManager mirror that
  * `mixar/modules/agent_panel/core/cards.py` writes from the chat's `todo`
@@ -72,7 +74,7 @@ struct wmWindowManager;
  * share an edge instead of letting them overlap each other, so a left-docked
  * panel pushes the tool shelf bodily out into the viewport. Tall enough for
  * the visible cards, the chevron and the margins. */
-#define AGENT_PANEL_PREFSIZEY 210
+#define AGENT_PANEL_PREFSIZEY 200
 /** Card pill: width and height. */
 #define AGENT_PANEL_CARD_WIDTH 320
 #define AGENT_PANEL_CARD_HEIGHT 40
@@ -90,13 +92,13 @@ struct wmWindowManager;
 
 /** Right-hand glyph buttons: box size, gap between them, inset from the
  * card's right edge. */
-#define AGENT_PANEL_ICON_SIZE 28
-#define AGENT_PANEL_ICON_GAP 2
-#define AGENT_PANEL_ICON_INSET 6
+#define AGENT_PANEL_ICON_SIZE 16
+#define AGENT_PANEL_ICON_GAP 8
+#define AGENT_PANEL_ICON_INSET 10
 
 /** The "more agents" chevron below the stack. */
-#define AGENT_PANEL_CHEVRON_WIDTH 152
-#define AGENT_PANEL_CHEVRON_HEIGHT 28
+#define AGENT_PANEL_CHEVRON_WIDTH 38
+#define AGENT_PANEL_CHEVRON_HEIGHT 22
 #define AGENT_PANEL_CHEVRON_GAP 8
 
 /** Cards visible before the column scrolls. Mirrors `VISIBLE_CARDS` in
@@ -186,13 +188,15 @@ struct AgentPanelCard {
   ui::MixarMotionValue slide;
   ui::MixarMotionValue row;
 
-  /** A live workspace matched by session, run and task identity. */
-  bool has_workspace = false;
+  /** True while the eye has this card showing its full task instead of the
+   * short agent name. Pure view state: carried across syncs by `task_id`,
+   * never mirrored back to Python. */
+  bool expanded = false;
 
   /** Region-local pixel rects. Written by the layout pass, read by draw, the
    * hit test and the QA target provider — one owner, three readers. */
   rcti rect = {};
-  /** The eye button: opens the separate workspace scene preview. */
+  /** The eye button: expands the card to show the full task. */
   rcti eye_rect = {};
   /** The right-hand slot: a dismiss cross while the agent works, the outcome
    * glyph once it has settled. */
@@ -210,8 +214,6 @@ struct AgentPanelRuntime {
 
   /** The "more agents" chevron's rect, empty while the stack fits. */
   rcti chevron_rect = {};
-  /** Paging copy derived from the layout's pixel-rounded rows, shared with QA. */
-  char chevron_label[48] = {};
 
   /** `wm.mixar_agent_cards_generation` as of the last sync. Python bumps it
    * for every new fan-out; a change resets the scroll and replays the
@@ -236,7 +238,7 @@ struct AgentPanelRuntime {
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name view3d_agent_panel_cards.cc / view3d_agent_panel_sync.cc / view3d_agent_panel_layout.cc
+/** \name view3d_agent_panel_cards.cc / view3d_agent_panel_sync.cc
  * \{ */
 
 /** Register the panel's `RGN_TYPE_EXECUTE` region type on the View3D space. */
@@ -271,7 +273,6 @@ void view3d_agent_panel_layout_cards(const ARegion *region, AgentPanelRuntime *r
 
 /** True while `rect` has any part inside the clipped card column. */
 bool view3d_agent_panel_card_visible(const AgentPanelRuntime *runtime, const rcti &rect);
-bool view3d_agent_panel_at_end(const AgentPanelRuntime *runtime);
 
 enum class AgentPanelHit {
   None = 0,

@@ -23,7 +23,7 @@
  * the prompt box — schema `order` decided the PropertyGroup's declaration
  * order, so priority params land first. Catalog `visible_if` is evaluated
  * from the group's `mixar_visible_if` table; hidden params never consume
- * strip space. The moodboard sidebar exposes the full schema.
+ * strip space. Settings remains the full schema surface.
  */
 
 #include "agent_ui_text.hh"
@@ -251,7 +251,7 @@ void draw_number_chip(ui::Block *slider_block,
     return;
   }
   const float chip[4] = PANE_COL_CHIP;
-  const float *text = ui::mixar_tokens::mixar_zen().text;
+  const float *text = ui::mixar_tokens::zen.text;
   pane_fill_round(&rect, PANE_RADIUS * u, chip);
   const float fitted_name_w = std::max(0.0f, BLI_rctf_size_x(&rect) - slider_w - pad * 1.5f - 12.0f * u);
   const std::string fitted = ui::mixar_fit_text(name, fitted_name_w + 2.0f, font);
@@ -297,7 +297,7 @@ float agent_ui_tab3d_params_draw(const bContext *C,
   f.gap = PANE_CHIP_GAP * u;
 
   /* Keep the summary above the composer floor. All remaining schema
-   * parameters stay reachable through the moodboard sidebar. */
+   * parameters stay reachable through the native Settings popup. */
 
   RNA_STRUCT_BEGIN (group_ptr, prop) {
     const char *identifier = RNA_property_identifier(prop);
@@ -345,7 +345,7 @@ float agent_ui_tab3d_params_draw(const bContext *C,
         break;
       default:
         /* Strings and pointers have no chip vocabulary in the design —
-         * the moodboard sidebar remains the surface for those. */
+         * the Settings popup remains the surface for those. */
         break;
     }
   }

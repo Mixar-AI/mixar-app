@@ -69,7 +69,7 @@ struct MediaParamChip {
 };
 
 /** All `p_*` params of the catalog group into chips (enums/bools/ints;
- * floats/strings skipped — the moodboard sidebar exposes the full schema).
+ * floats/strings skipped — Settings stays the full-fidelity surface).
  * Hidden `visible_if` params are omitted from the strip and overflow count. */
 int media_gather_param_chips(const bContext *C,
                              PointerRNA *group,

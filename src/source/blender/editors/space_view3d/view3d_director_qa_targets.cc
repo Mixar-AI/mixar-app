@@ -13,7 +13,6 @@
  * Strictly read-only.
  */
 
-#include <cmath>
 #include <string>
 
 #include "BLI_rect.h"
@@ -95,24 +94,15 @@ void director_qa_targets(const wmWindow * /*win*/,
     strip.text = "strip";
     r_targets.push_back(std::move(strip));
   }
-  /* Every key column is a handle; the ones carrying a beat are also
-   * published as that beat, indexed the way the shot's collection is. */
-  for (const DirectorTimelineKeyHit &hit : runtime->key_hits) {
-    MixarQATarget key;
-    if (!region_rect_to_window(region, hit.bounds, &key.rect_win)) {
+  for (const DirectorTimelineBeatHit &hit : runtime->beat_hits) {
+    MixarQATarget t;
+    if (!region_rect_to_window(region, hit.bounds, &t.rect_win)) {
       continue;
     }
-    key.surface = "director_key";
-    key.text = hit.selected ? "key selected" : "key";
-    key.index = int(std::lround(hit.frame));
-    if (hit.beat >= 0) {
-      MixarQATarget beat = key;
-      beat.surface = "director_beat";
-      beat.text = "beat";
-      beat.index = hit.beat;
-      r_targets.push_back(std::move(beat));
-    }
-    r_targets.push_back(std::move(key));
+    t.surface = "director_beat";
+    t.text = "beat";
+    t.index = hit.index;
+    r_targets.push_back(std::move(t));
   }
 }
 

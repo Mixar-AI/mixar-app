@@ -201,7 +201,6 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
     layout.slot_actions_height = 0.0f;
     layout.slot_images_height = 0.0f;
     layout.slot_steps_height = 0.0f;
-    layout.slot_gallery_height = 0.0f;
     layout.thinking_height = 0.0f;
     layout.is_markdown_content = false;
     bool is_slot_msg = populate_slot_layout_data(&msg_ptr, &layout);
@@ -428,11 +427,6 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
         layout.slot_steps_height =
             chat_ui_calc_steps_block_height(&style, &layout, content_width);
       }
-      /* "Viewed N images": the bubble's capture tiles, under the steps. */
-      if (is_slot_msg && layout.has_images && layout.slot_image_count > 0) {
-        layout.slot_gallery_height =
-            chat_ui_calc_images_block_height(&style, &layout, content_width);
-      }
 
       /* Live activity line vs finalized dropdown.
        * - Live single line ONLY for a content bubble with a running loader
@@ -472,10 +466,6 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
         total_height += metrics.bubble_spacing;
         total_height += layout.slot_steps_height;
       }
-      if (layout.slot_gallery_height > 0.0f) {
-        total_height += metrics.bubble_spacing;
-        total_height += layout.slot_gallery_height;
-      }
       if (layout.thinking_height > 0.0f) {
         total_height += metrics.bubble_spacing;
         total_height += layout.thinking_height;
@@ -484,14 +474,12 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       if (text_height > 0.0f && !layout.has_loader) {
         total_height += chat_ui_get_action_buttons_height(UI_SCALE_FAC);
       }
-      /* Votes share the copy row; only status/comments add height. */
+      /* Feedback row height (5 stars + comment link) */
       if (is_slot_msg && layout.has_feedback) {
-        layout.feedback_row_height = (layout.feedback_status == FEEDBACK_STATUS_SENDING ||
-                                      layout.feedback_status == FEEDBACK_STATUS_FAILED) ?
-                                         style.font_size * 1.5f : 0.0f;
-        total_height += layout.feedback_row_height;
-        /* Accepted comments sit beneath the message actions. */
-        if (layout.feedback_submitted_comment[0] != '\0' && !layout.feedback_comment_expanded) {
+        layout.feedback_row_height = style.font_size * 2.0f;
+        total_height += layout.feedback_row_height + chat_ui_get_feedback_top_gap(metrics);
+        /* Read-only copy of the accepted comment, shown under the stars. */
+        if (layout.feedback_submitted_comment[0] != '\0') {
           const float comment_indent = style.font_size;
           float comment_w = 0.0f, comment_h = 0.0f;
           chat_ui_calc_text_bounds(layout.feedback_submitted_comment,
@@ -508,8 +496,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
          * inserts newlines via Shift+Enter (same behavior as the composer). */
         if (layout.feedback_comment_expanded) {
           layout.feedback_comment_input_height =
-              mixie_chat_feedback_comment_input_height(&msg_ptr, bubble_width) +
-              28.0f * UI_SCALE_FAC;
+              mixie_chat_feedback_comment_input_height(&msg_ptr, bubble_width);
           total_height += layout.feedback_comment_input_height + metrics.bubble_spacing;
         }
       }
@@ -572,10 +559,6 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       y_pos -= metrics.bubble_spacing;
       y_pos -= layout.slot_steps_height;
     }
-    if (layout.slot_gallery_height > 0.0f) {
-      y_pos -= metrics.bubble_spacing;
-      y_pos -= layout.slot_gallery_height;
-    }
 
     if (layout.thinking_height > 0.0f) {
       y_pos -= metrics.bubble_spacing;
@@ -586,8 +569,8 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       y_pos -= chat_ui_get_action_buttons_height(UI_SCALE_FAC);
     }
 
-    if (layout.has_feedback) {
-      y_pos -= layout.feedback_row_height;
+    if (layout.has_feedback && layout.feedback_row_height > 0.0f) {
+      y_pos -= layout.feedback_row_height + chat_ui_get_feedback_top_gap(metrics);
       if (layout.feedback_submitted_comment_height > 0.0f) {
         y_pos -= layout.feedback_submitted_comment_height + metrics.bubble_spacing;
       }

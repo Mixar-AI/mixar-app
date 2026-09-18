@@ -94,6 +94,7 @@ _SHOT_DEFAULTS = {
     "version": 1,
     "parent_shot_id": "",
     "state": "DRAFT",
+    "scene_ref": None,
     "camera": None,
     "prompt": "",
     "guidance_strength": "BALANCED",
@@ -126,7 +127,7 @@ def _make_scene():
 @pytest.fixture()
 def quiet_manifest(monkeypatch):
     monkeypatch.setattr(shot_api, "refresh_manifest", lambda scene, shot: "")
-    monkeypatch.setattr(shot_api, "release_preview_range", lambda scene: None)
+    monkeypatch.setattr(shot_api, "scope_preview_range", lambda scene, shot: None)
 
 
 def test_new_take_inherits_a_parent_that_the_add_invalidated(quiet_manifest):
@@ -175,9 +176,7 @@ def test_camera_move_reports_frames_not_stale_beat_references(monkeypatch):
         frame_set=lambda frame: setattr(scene, "frame_current", frame),
     )
     beats = _Collection(_BEAT_DEFAULTS)
-    shot = SimpleNamespace(
-        id_data=scene, camera=SimpleNamespace(matrix_world=None), beats=beats
-    )
+    shot = SimpleNamespace(scene_ref=scene, camera=SimpleNamespace(matrix_world=None), beats=beats)
 
     def _capture(_context, target_shot, _seconds):
         beat = target_shot.beats.add()

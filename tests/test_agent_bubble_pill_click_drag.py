@@ -134,8 +134,7 @@ def test_pill_drag_starts_only_past_the_threshold():
     move = undecided[undecided.index("'MOUSEMOVE'") : undecided.index("'RELEASE'")]
     assert "travelled < PILL_DRAG_THRESHOLD_PX" in move
     assert "_pill_begin_drag" in move
-    imports = DRAG_OP_SRC.split("from mixar.modules.agent_bubble.constants import (", 1)[1].split(")", 1)[0]
-    assert "PILL_DRAG_THRESHOLD_PX," in imports
+    assert "from mixar.modules.agent_bubble.constants import PILL_DRAG_THRESHOLD_PX" in DRAG_OP_SRC
     match = re.search(r"^PILL_DRAG_THRESHOLD_PX\s*=\s*(\d+)", CONSTANTS_SRC, re.M)
     assert match is not None
     assert 2 <= int(match.group(1)) <= 8
@@ -270,12 +269,10 @@ def test_island_content_press_cannot_start_window_drag():
     assert namespace['invoke'](object(), context, object()) == {'FINISHED'}
     begin.assert_called_once()
     begin.reset_mock()
-    context.window_manager = SimpleNamespace(mixie_chat_ink_visible=True)
-    assert namespace['invoke'](object(), context, object()) == {'PASS_THROUGH'}
+    for flag in ('mixie_chat_ink_visible', 'mixar_mark_armed'):
+        context.window_manager = SimpleNamespace(**{flag: True})
+        assert namespace['invoke'](object(), context, object()) == {'PASS_THROUGH'}
     begin.assert_not_called()
-    context.window_manager = SimpleNamespace(mixar_mark_armed=True)
-    assert namespace['invoke'](object(), context, object()) == {'FINISHED'}
-    begin.assert_called_once()
 
 
 def test_native_begin_drag_also_refuses_content():

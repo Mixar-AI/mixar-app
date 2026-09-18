@@ -3,6 +3,7 @@
 
 #include "mixie_attachment_geometry.hh"
 #include "BKE_context.hh"
+#include "BKE_image.hh"
 #include "BKE_screen.hh"
 #include "BLI_listbase.h"
 #include "DNA_scene_types.h"
@@ -12,10 +13,10 @@
 #include "ED_moodboard_attachment.hh"
 #include "ED_moodboard_drawer.hh"
 #include "ED_space_api.hh"
+#include "IMB_imbuf_types.hh"
 #include "RNA_access.hh"
 #include "UI_view2d.hh"
 #include "WM_api.hh"
-#include "mixie_draw_moodboard_intern.hh"
 #include "mixie_intern.hh"
 #include "mixie_moodboard_graph_geometry.hh"
 
@@ -111,18 +112,19 @@ static bool image_canvas_rect(
     const float x = RNA_float_get(&node, "position_x"), y = RNA_float_get(&node, "position_y");
     moodboard_graph_node_preview_bounds(
         {x, x + RNA_float_get(&node, "width"), y, y + RNA_float_get(&node, "height")}, &rect);
-    int px = 0;
-    int py = 0;
-    if (mixie_moodboard_image_size(image, nullptr, &px, &py) && px > 0 && py > 0) {
-      const float fit = std::min(BLI_rctf_size_x(&rect) / float(px),
-                                 BLI_rctf_size_y(&rect) / float(py));
+    void *lock = nullptr;
+    ImBuf *buffer = BKE_image_acquire_ibuf(image, nullptr, &lock);
+    if (buffer && buffer->x > 0 && buffer->y > 0) {
+      const float fit = std::min(BLI_rctf_size_x(&rect) / buffer->x,
+                                 BLI_rctf_size_y(&rect) / buffer->y);
       const float cx = BLI_rctf_cent_x(&rect), cy = BLI_rctf_cent_y(&rect);
-      rect = {cx - float(px) * fit / 2,
-              cx + float(px) * fit / 2,
-              cy - float(py) * fit / 2,
-              cy + float(py) * fit / 2};
+      rect = {cx - buffer->x * fit / 2,
+              cx + buffer->x * fit / 2,
+              cy - buffer->y * fit / 2,
+              cy + buffer->y * fit / 2};
       found = true;
     }
+    BKE_image_release_ibuf(image, buffer, lock);
     break;
   }
   RNA_END;

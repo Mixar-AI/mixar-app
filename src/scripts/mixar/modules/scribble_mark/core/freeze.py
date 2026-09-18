@@ -59,20 +59,6 @@ def annotated_name(serial):
     return f"{ANNOTATED_IMAGE_NAME}_{int(serial):0{MARK_SERIAL_DIGITS}d}"
 
 
-def window_resizing(context):
-    """Whether handlers are running from inside an OS window resize.
-
-    macOS and Windows do not return to the main loop while a window edge is
-    dragged, so the window manager runs timers and modal handlers from inside
-    the resize callback. On macOS, ``render.opengl`` drains the Metal render
-    boundary's autorelease pool, which sits beneath AppKit's resize loop pool.
-    That also pops AppKit's pool, and macOS kills the app. Captures wait for
-    the first main-loop tick after the resize.
-    """
-    wm = getattr(context, "window_manager", None)
-    return getattr(wm, "mixar_window_resizing", False) is True
-
-
 def capture_region_still(context, window, area, region, name):
     """Render *region*'s view to a packed image datablock. Returns its name.
 
@@ -80,10 +66,6 @@ def capture_region_still(context, window, area, region, name):
     because a mark mode with nothing frozen under it would let the user draw
     on a live viewport that then moves.
     """
-    if window_resizing(context):
-        logger.warning("Scribble mark: refusing a viewport capture during a window resize")
-        return None
-
     from mixar.modules.space_mixie_chat.core.image_utils import (
         get_mixar_screenshots_dir,
     )

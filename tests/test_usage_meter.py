@@ -435,7 +435,7 @@ class TestCardGlyphs:
         """A button built without an icon silently centres its label,
         which is only correct for the two kinds that want it."""
         source = CARD_CC.read_text(encoding="utf-8")
-        for glyph in ("Grid", "Document", "Alert", "Cross"):
+        for glyph in ("Grid", "Sliders", "Document", "Alert", "Cross"):
             assert "MixarCardIcon::%s" % glyph in source, glyph
 
 

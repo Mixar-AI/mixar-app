@@ -33,9 +33,12 @@ def _get_tab(context):
 def _single_reference_image(context, tab):
     """The single-mode reference image (moodboard-selected or manual)."""
     if getattr(tab, "use_selected_image", False):
-        from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
-
-        return first_selected_reference_still(context.scene)
+        scene = context.scene
+        if hasattr(scene, "mixie_moodboard_images"):
+            for item in scene.mixie_moodboard_images:
+                if item.selected and item.image:
+                    return item.image
+        return None
     return getattr(tab, "reference_image", None)
 
 

@@ -305,10 +305,7 @@ struct TextBoundsCacheEntry {
   float height = 0.0f;
 };
 
-/* A streaming turn remeasures every message. 512 slots aliased a long
- * transcript back onto itself (collision == full BLF measure). 4096 is
- * ~192 KB and keeps a few thousand segments direct-mapped. */
-#define TEXT_BOUNDS_CACHE_SLOTS 4096 /* power of two */
+#define TEXT_BOUNDS_CACHE_SLOTS 512 /* power of two, ~24 KB total */
 
 static TextBoundsCacheEntry g_text_bounds_cache[TEXT_BOUNDS_CACHE_SLOTS];
 

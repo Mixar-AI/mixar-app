@@ -31,10 +31,8 @@
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
-#include "DNA_windowmanager_types.h"
 
 #include "ED_mixar_glass.hh"
-#include "ED_agent_panel.hh"
 #include "ED_screen.hh"
 
 #include "GPU_framebuffer.hh"
@@ -48,7 +46,6 @@
 
 #include "../space_agent_bubble/agent_ui_pill_cat.hh"
 #include "view3d_agent_panel.hh"
-#include "view3d_workspace_viewer.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -145,25 +142,11 @@ void glass_pane(const rctf *rect,
   style.progress_tint[0] = 0.015f;
   style.progress_tint[1] = 0.74f;
   style.progress_tint[2] = 0.19f;
-  style.progress_tint[3] = completed ? 0.16f : 0.28f;
+  style.progress_tint[3] = completed ? 0.16f : 0.42f;
   ui::mixar_glass_draw(pane, style);
 }
 
-rcti control_glyph(const rcti &box, const float alpha, const bool hovered)
-{
-  if (hovered) {
-    const rctf rect = to_rctf(box);
-    const float wash[4] = {1.0f, 1.0f, 1.0f, 0.12f * alpha};
-    ui::draw_roundbox_corner_set(ui::CNR_ALL);
-    ui::draw_roundbox_4fv(&rect, true, 8.0f * UI_SCALE_FAC, wash);
-  }
-  rcti glyph = box;
-  BLI_rcti_pad(&glyph, -int(6.0f * UI_SCALE_FAC), -int(6.0f * UI_SCALE_FAC));
-  return glyph;
-}
-
-void draw_card(const AgentPanelCard &card, const float alpha, const double now,
-               const AgentPanelHit hover)
+void draw_card(const AgentPanelCard &card, const float alpha, const double now)
 {
   const float scale = UI_SCALE_FAC;
   const bool running = card.status == AgentCardStatus::Running;
@@ -191,88 +174,60 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now,
   const float baseline = avatar_cy - line_h * 0.34f;
 
   const float text_x = cat.xmax + 7.0f * scale;
-  const float text_right = float(card.has_workspace ? card.eye_rect.xmin : card.action_rect.xmin) - 8.0f * scale;
+  const float text_right = float(card.eye_rect.xmin) - 8.0f * scale;
 
   BLF_size(font_id, 12.0f * scale);
   float name_color[4];
   with_alpha(TEXT_NAME, alpha, name_color);
+  /* The eye swaps the short agent name for the full task it was given —
+   * the name is derived from that task and elides early, so this is where a
+   * long instruction is actually readable. */
   draw_elided(font_id,
-              card.name,
+              card.expanded ? card.task : card.name,
               text_x,
               baseline,
               text_right - text_x,
               name_color);
 
-  /* Controls: the eye opens this task's workspace; the right slot is a
+  /* Controls: the eye expands the card's full task; the right slot is a
    * dismiss cross while the agent works and its outcome once it settles. */
   float glyph[4];
   with_alpha(GLYPH, alpha, glyph);
-  if (card.has_workspace) {
-    const rcti eye = control_glyph(card.eye_rect, alpha, hover == AgentPanelHit::Eye);
-    view3d_agent_panel_glyph_eye(eye, scale, glyph);
-  }
+  view3d_agent_panel_glyph_eye(card.eye_rect, scale, glyph);
+
   switch (card.status) {
     case AgentCardStatus::Done: {
-      const rcti action = control_glyph(card.action_rect, alpha, hover == AgentPanelHit::Action);
       float done[4];
       with_alpha(GLYPH_DONE, alpha, done);
-      view3d_agent_panel_glyph_check(action, scale, done);
+      view3d_agent_panel_glyph_check(card.action_rect, scale, done);
       break;
     }
     case AgentCardStatus::Failed: {
-      const rcti action = control_glyph(card.action_rect, alpha, hover == AgentPanelHit::Action);
       float failed[4];
       with_alpha(GLYPH_FAILED, alpha, failed);
-      view3d_agent_panel_glyph_cross(action, scale, failed);
+      view3d_agent_panel_glyph_cross(card.action_rect, scale, failed);
       break;
     }
     default:
-      ED_agent_panel_draw_close(card.action_rect, alpha, hover == AgentPanelHit::Action);
+      view3d_agent_panel_glyph_cross(card.action_rect, scale, glyph);
       break;
   }
 }
 
-void draw_chevron(const AgentPanelRuntime *runtime, const float alpha, const bool hovered)
+void draw_chevron(const rcti &box, const float alpha)
 {
-  const rcti &box = runtime->chevron_rect;
   if (BLI_rcti_size_x(&box) <= 0) {
     return;
   }
   const float scale = UI_SCALE_FAC;
   const rctf rect = to_rctf(box);
   glass_pane(&rect, ui::MIXAR_GLASS_PANEL, BLI_rctf_size_y(&rect) * 0.5f, alpha);
-  if (hovered) {
-    const float wash[4] = {1.0f, 1.0f, 1.0f, 0.10f * alpha};
-    ui::draw_roundbox_corner_set(ui::CNR_ALL);
-    ui::draw_roundbox_4fv(&rect, true, BLI_rctf_size_y(&rect) * 0.5f, wash);
-  }
   float glyph[4];
   with_alpha(GLYPH, alpha, glyph);
-  const bool at_end = view3d_agent_panel_at_end(runtime);
-  const int font = BLF_default();
-  BLF_size(font, 11.0f * scale);
-  const float cy = BLI_rctf_cent_y(&rect);
-  draw_elided(font, runtime->chevron_label, rect.xmin + 14.0f * scale,
-              cy - BLF_height_max(font) * 0.34f, BLI_rctf_size_x(&rect) - 42.0f * scale, glyph);
-  const float cx = rect.xmax - 17.0f * scale;
-  const float direction = at_end ? -1.0f : 1.0f;
-  const float dy = 2.5f * scale * direction;
-  view3d_agent_panel_glyph_line(cx - 4.5f * scale, cy + dy, cx, cy - dy, 1.4f * scale, glyph);
-  view3d_agent_panel_glyph_line(cx, cy - dy, cx + 4.5f * scale, cy + dy, 1.4f * scale, glyph);
+  view3d_agent_panel_glyph_chevrons_down(box, scale, glyph);
 }
 
 }  // namespace
-
-void ED_agent_panel_draw_close(const rcti &bounds, const float alpha, const bool hovered)
-{
-  const auto previous_blend = GPU_blend_get();
-  GPU_blend(GPU_BLEND_ALPHA);
-  const rcti glyph = control_glyph(bounds, alpha, hovered);
-  float color[4];
-  with_alpha(GLYPH, alpha, color);
-  view3d_agent_panel_glyph_cross(glyph, UI_SCALE_FAC, color);
-  GPU_blend(previous_blend);
-}
 
 /* -------------------------------------------------------------------- */
 /** \name Region Init / Exit
@@ -317,9 +272,6 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
     ui::theme::frame_buffer_clear(TH_BACK);
   }
 
-  if (const WorkspaceViewer *viewer = view3d_workspace_viewer_active()) {
-    if (viewer->region && viewer->area == CTX_wm_area(C)) { return; }
-  }
   AgentPanelRuntime *runtime = view3d_agent_panel_runtime_ensure(region);
   view3d_agent_panel_cards_sync(C, runtime);
   view3d_agent_panel_layout_cards(region, runtime);
@@ -346,11 +298,6 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
   }
 
   const double now = BLI_time_now_seconds();
-  const wmWindow *win = CTX_wm_window(C);
-  const int mouse[2] = {win->runtime->eventstate->xy[0] - region->winrct.xmin,
-                        win->runtime->eventstate->xy[1] - region->winrct.ymin};
-  int hovered_card = -1;
-  const AgentPanelHit hover = view3d_agent_panel_hit_test(runtime, mouse, &hovered_card);
   const int n = int(runtime->cards.size());
   for (int i = 0; i < n; i++) {
     const AgentPanelCard &card = runtime->cards[i];
@@ -362,7 +309,7 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
     /* A finished card fades as it leaves, so it does not simply blink out at
      * the column edge. */
     const float alpha = 1.0f - card.slide.value;
-    draw_card(card, alpha, now, i == hovered_card ? hover : AgentPanelHit::None);
+    draw_card(card, alpha, now);
   }
 
   if (clip) {
@@ -370,7 +317,7 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
   }
 
   /* The chevron sits BELOW the clipped column, so it is drawn unclipped. */
-  draw_chevron(runtime, view3d_agent_panel_reveal(runtime, 0), hover == AgentPanelHit::Chevron);
+  draw_chevron(runtime->chevron_rect, view3d_agent_panel_reveal(runtime, 0));
 
   GPU_blend(GPU_BLEND_NONE);
 

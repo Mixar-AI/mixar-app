@@ -45,7 +45,8 @@ engine._classes[key] = cls
 engine._schemas[key] = schema
 getattr(wm, attr).p_choice = '01'
 getattr(wm, attr).p_fraction = 1.234567
-wm.mixar_bubble_tab = 'IMAGE'
+wm.mixar_bubble_media_kind = 'IMAGE'
+wm.mixar_bubble_tab = 'MEDIA'
 bpy.ops.mixar.agent_bubble_open_window()
 result = list(key)
 '''
@@ -66,21 +67,14 @@ def run(qa):
                                           "area_type": "AGENT_BUBBLE"}, item=choice)
             qa.wait(f"__import__('mixar.modules.common.generation_params.core.engine', "
                     f"fromlist=['get_param_group']).get_param_group(*{key!r}).p_choice == {choice!r}", timeout=10)
-            assert not qa.find(op="MIXAR_OT_pane_generation_settings")["total"]
+            qa.wait("len(drv.find(op='MIXAR_OT_pane_generation_settings')) == 1", timeout=10)
             time.sleep(0.3)  # Introspection precedes the native popup/window paint.
             qa.cmd("snap", path=str(out / f"{name}-strip.png"),
-                   target={"area_type": "AGENT_BUBBLE", "prop": "prompt"}, margin=1800)
+                   target={"op": "MIXAR_OT_pane_generation_settings"}, margin=1800)
             strip = qa.find(area_type="AGENT_BUBBLE")["widgets"]
             props = {w.get("prop") for w in strip}
             collected = qa.eval(IMPORT + f"result=engine.collect_params(*{key!r})")
-            # The header shortcut is removed. Invoke the retained schema popup
-            # directly as a renderer fixture to compare its visibility rules.
-            window = qa.eval('h=drv.find_one(area_type="AGENT_BUBBLE",prop="prompt"); '
-                             'result=h["window"]')
-            qa.eval('h=drv.find_one(area_type="AGENT_BUBBLE",prop="prompt")\n'
-                    'with bpy.context.temp_override(window=h["_win"],area=h["_area"]):\n'
-                    f'    bpy.ops.mixar.pane_generation_settings("INVOKE_DEFAULT",service_key={key[0]!r},model_slug={key[1]!r})\n'
-                    'result=True')
+            settings = qa.click(op="MIXAR_OT_pane_generation_settings")
             qa.wait("len(drv.find(popup=True, text='Generation Settings')) == 1", timeout=10)
             popup = {w.get("prop") for w in qa.find(popup=True)["widgets"]}
             time.sleep(0.3)
@@ -91,7 +85,7 @@ def run(qa):
                 results.append({"case": name, "param": param, "expected": expected,
                                 "strip": f"p_{param}" in props,
                                 "settings": f"p_{param}" in popup})
-            qa.press("ESC", window=window)
+            qa.press("ESC", window=settings["window"])
             qa.wait("not drv.find(popup=True)", timeout=10)
         verdict = {"paid_requests": 0, "cases": results}
         (out / "verdict.json").write_text(json.dumps(verdict, indent=2) + "\n")

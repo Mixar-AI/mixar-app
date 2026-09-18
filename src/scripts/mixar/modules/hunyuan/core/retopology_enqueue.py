@@ -283,6 +283,7 @@ def _enqueue_hunyuan(obj, shared, file_bytes, filename):
         fail_message="Retopology failed",
         on_imported=_retopology_on_imported,
         scene_flag="mixie_retopology_is_generating",
+        batch_popup_title="Retopology batch complete",
     )
 
 
@@ -328,4 +329,5 @@ def _enqueue_tripo(obj, shared, file_bytes, filename):
         fail_message="Retopology failed",
         on_imported=_make_tripo_on_imported(bake),
         scene_flag="mixie_retopology_is_generating",
+        batch_popup_title="Retopology batch complete",
     )

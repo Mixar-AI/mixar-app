@@ -9,19 +9,16 @@
 
 namespace blender::ed::mixie {
 
-rcti moodboard_canvas_host_rect(const bContext *C);
-rcti moodboard_canvas_host_rect(const ScrArea *area, ARegion *region);
-/** Full painting surface. Floating controls and the N-panel composite above it. */
-rcti moodboard_canvas_draw_rect(const bContext *C);
-rcti moodboard_canvas_draw_rect(const ScrArea *area, ARegion *region);
-/** Canvas controls cannot capture the drawer resize sash. */
-rcti moodboard_canvas_controls_rect(const bContext *C);
-/** Unobstructed placement/framing area, not a painting clip. */
-rcti moodboard_visible_canvas_rect(const ScrArea *area, ARegion *region);
 rcti moodboard_visible_canvas_rect(const bContext *C);
 
 /** One visibility/ownership gate for both tile hints and editable controls. */
 bool moodboard_node_controls_rect(const bContext *C, View2D *v2d, PointerRNA *node, rcti *r_rect);
+/** A full settings panel fits beside the card, or the caller uses a popup. */
+bool moodboard_node_settings_rect(const bContext *C,
+                                  PointerRNA *node,
+                                  const rcti &card,
+                                  rcti *r_rect);
+void moodboard_draw_node_settings(ui::Block *block, PointerRNA *node, const rcti &panel);
 ui::Button *moodboard_screen_prop_button(ui::Block *block,
                                          PointerRNA *ptr,
                                          const char *property,

@@ -17,9 +17,18 @@ import bpy
 from bpy.types import Header, Menu
 
 
-from mixar.modules.moodboard.core.canvas_context import (
-    has_moodboard_content as _has_moodboard_content,
-)
+def _has_moodboard_content(context):
+    """Check if there is any content in the moodboard."""
+    scene = context.scene
+    return any(getattr(scene, name, ()) for name in (
+        'mixie_moodboard_images',
+        'mixie_moodboard_textboxes',
+        'mixie_moodboard_groups',
+        'mixie_moodboard_action_nodes',
+        'mixie_moodboard_asset_nodes',
+        'mixie_moodboard_links',
+        'mixie_moodboard_annotations',
+    ))
 
 
 class MIXIE_MT_view(Menu):

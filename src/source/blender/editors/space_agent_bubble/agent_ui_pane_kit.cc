@@ -92,16 +92,15 @@ void pane_label_right(
   pane_label_left(text, x - pane_text_width(text, size), cy, size, col);
 }
 
-void pane_fit_text(char *text, const size_t capacity, const float max_w, const float size)
+void pane_fit_text(char *text, const float max_w, const float size)
 {
-  /* Adding then subtracting layout padding can lose a fraction of a pixel.
-   * Don't elide a measured-to-fit label because of that float round trip. */
-  const std::string fitted = ui::mixar_fit_text(text, max_w + 0.001f, size);
-  /* Use the allocation size, not the original label's byte length. */
+  const size_t capacity = strlen(text) + 1;
+  const std::string fitted = ui::mixar_fit_text(text, max_w, size);
+  /* This compatibility API only shrinks the caller's buffer. */
   if (fitted.size() < capacity) {
     memcpy(text, fitted.c_str(), fitted.size() + 1);
   }
-  else if (capacity > 0) {
+  else {
     text[0] = '\0';
   }
 }
@@ -193,18 +192,32 @@ float pane_bottom_row_ymin(const rctf &box, const float u)
   return composer_layout(box, u).action_bottom;
 }
 
-rctf pane_generate_rect(const rctf &box, const float u, const char *label)
+rctf pane_generate_rect(const rctf &box, const float u)
 {
   const auto layout = composer_layout(box, u);
   rctf rect;
   rect.xmax = box.xmax - PANE_BOTTOM_IN_R * u;
-  const char *text = (label && label[0]) ? label : "Generate";
   const float width = std::max(PANE_GENERATE_W * u,
-                               pane_action_chip_w(text, false, u) + 2.0f);
+                               pane_action_chip_w("Generate", false, u) + 2.0f);
   rect.xmin = rect.xmax - width;
   rect.ymin = layout.action_bottom;
   rect.ymax = layout.action_top;
   return rect;
+}
+
+void pane_settings_button(ui::Block *block, const float right, const float top,
+                          const float u, const char *service, const char *model)
+{
+  ui::Button *button = uiDefButO(block, ui::ButtonType::But, "mixar.pane_generation_settings",
+      wm::OpCallContext::InvokeDefault, "Settings", int(right - PANE_SETTINGS_W * u),
+      int(top - PANE_ROW_H * u), short(PANE_SETTINGS_W * u), short(PANE_ROW_H * u),
+      "Edit all settings, including parameters that do not fit in the strip");
+  ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
+  if (button) {
+    PointerRNA *props = ui::button_operator_ptr_ensure(button);
+    RNA_string_set(props, "service_key", service);
+    RNA_string_set(props, "model_slug", model);
+  }
 }
 
 float pane_action_chip_w(const char *label, const bool with_icon, const float u)

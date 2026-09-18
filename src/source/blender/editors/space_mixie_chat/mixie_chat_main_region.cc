@@ -36,10 +36,7 @@
 #include "GPU_framebuffer.hh"
 #include "UI_view2d.hh"
 
-#include "ED_mixie_chat_asset_picker.hh"
-
 #include "mixie_chat_intern.hh"
-#include "mixie_chat_footer_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
@@ -91,7 +88,6 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
   {
     return;
   }
-
 
   /* Check scroll-to-bottom indicator (screen-space, checked before View2D transform) */
   if (rt->scroll_indicator_visible) {
@@ -179,17 +175,21 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
     }
 
 
-    /* Only in-flight feedback is locked; accepted votes remain switchable. */
-    const bool feedback_locked = layout.feedback_status == FEEDBACK_STATUS_SENDING;
+    /* Feedback stars hover. Locked (in-flight or accepted) feedback is not
+     * interactive, so it gets no hover affordance either. */
+    const bool feedback_locked = layout.feedback_status == FEEDBACK_STATUS_SENDING ||
+                                 layout.feedback_status == FEEDBACK_STATUS_RECEIVED;
     if (layout.has_feedback) {
-      /* Vote buttons highlight on hover; the island keeps its default cursor. */
-      for (int i = 0; i < FEEDBACK_VOTE_COUNT; i++) {
-        FeedbackVoteData &vote = layout.feedback_votes[i];
-        bool was_hovered = vote.is_hovered;
-        bool has_bounds = vote.bounds.xmax > vote.bounds.xmin;
-        vote.is_hovered = !feedback_locked && has_bounds &&
-                          BLI_rctf_isect_pt(&vote.bounds, mouse_x, mouse_y);
-        if (was_hovered != vote.is_hovered) {
+      /* Stars keep the DEFAULT cursor: the fill preview is the hover
+       * affordance, and flipping to the hand while sweeping the row reads as
+       * flicker. So hover only drives needs_redraw, never any_hovered. */
+      for (int i = 0; i < FEEDBACK_STAR_COUNT; i++) {
+        FeedbackStarData &star = layout.feedback_stars[i];
+        bool was_hovered = star.is_hovered;
+        bool has_bounds = star.bounds.xmax > star.bounds.xmin;
+        star.is_hovered = !feedback_locked && has_bounds &&
+                          BLI_rctf_isect_pt(&star.bounds, mouse_x, mouse_y);
+        if (was_hovered != star.is_hovered) {
           needs_redraw = true;
         }
       }
@@ -197,7 +197,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
       bool was_comment_hovered = layout.feedback_comment_hovered;
       bool has_comment_bounds = layout.feedback_comment_bounds.xmax >
                                 layout.feedback_comment_bounds.xmin;
-      layout.feedback_comment_hovered = !feedback_locked && has_comment_bounds &&
+      layout.feedback_comment_hovered = has_comment_bounds &&
           BLI_rctf_isect_pt(&layout.feedback_comment_bounds, mouse_x, mouse_y);
       if (was_comment_hovered != layout.feedback_comment_hovered) {
         needs_redraw = true;
@@ -228,45 +228,6 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         if (step.is_hovered && step.detail[0] != '\0' &&
             step.kind != 0 && step.kind != 3)
         {
-          any_hovered = true;
-        }
-      }
-    }
-    /* "Viewed N images": the header toggles, the tiles open the lightbox
-     * (hand cursor + a brighter frame on hover; bounds zero while collapsed). */
-    if (layout.slot_gallery_height > 0.0f) {
-      const bool was_header = layout.images_header_hovered;
-      layout.images_header_hovered =
-          layout.images_header_bounds.xmax > layout.images_header_bounds.xmin &&
-          BLI_rctf_isect_pt(&layout.images_header_bounds, mouse_x, mouse_y);
-      if (was_header != layout.images_header_hovered) {
-        needs_redraw = true;
-      }
-      if (layout.images_header_hovered) {
-        any_hovered = true;
-      }
-      const bool was_more = layout.gallery_more_hovered;
-      layout.gallery_more_hovered = !layout.images_collapsed &&
-          layout.gallery_more_bounds.xmax > layout.gallery_more_bounds.xmin &&
-          BLI_rctf_isect_pt(&layout.gallery_more_bounds, mouse_x, mouse_y);
-      if (was_more != layout.gallery_more_hovered) {
-        needs_redraw = true;
-      }
-      if (layout.gallery_more_hovered) {
-        any_hovered = true;
-      }
-      for (int i = 0; i < layout.slot_image_count; i++) {
-        ImageSlotData &img = layout.slot_images[i];
-        if (img.step_id[0] == '\0') {
-          continue;
-        }
-        const bool was_hovered = img.is_hovered;
-        img.is_hovered = !layout.images_collapsed && img.bounds.xmax > img.bounds.xmin &&
-                         BLI_rctf_isect_pt(&img.bounds, mouse_x, mouse_y);
-        if (was_hovered != img.is_hovered) {
-          needs_redraw = true;
-        }
-        if (img.is_hovered) {
           any_hovered = true;
         }
       }
@@ -324,7 +285,7 @@ static bool mixie_chat_dispatch_is_live(const bContext *C)
     return false;
   }
   if (area->spacetype != SPACE_AGENT_BUBBLE) {
-    return false;
+    return area->spacetype == SPACE_MIXIE_CHAT;
   }
 
   wmWindowManager *wm = CTX_wm_manager(C);
@@ -347,15 +308,7 @@ static bool mixie_chat_dispatch_is_live(const bContext *C)
   {
     return true;
   }
-  if (!STREQ(ident, "AGENT")) {
-    return false;
-  }
-  /* A pending asset question replaces the transcript with the island's
-   * Library-style picker (agent_ui_asset_picker.cc), which builds its tiles
-   * and actions as uiBlock buttons in this same region. The message rects
-   * are dropped while it shows, but the scroll indicator and empty-prompt
-   * hits are not rect-cached — stand down exactly as on a pane tab. */
-  return !mixie_chat_asset_picker_shown(C, nullptr);
+  return STREQ(ident, "AGENT");
 }
 
 int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
@@ -386,7 +339,6 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
     return WM_UI_HANDLER_BREAK;
   }
 
-
   if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
     ScrArea *area = CTX_wm_area(C);
     ARegion *region = CTX_wm_region(C);
@@ -395,7 +347,8 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
      * compatible spacedata struct (see DNA_space_types.h on
      * SpaceAgentBubble). The cast below works for both. */
     if (!area || !region ||
-        (area->spacetype != SPACE_AGENT_BUBBLE))
+        (area->spacetype != SPACE_MIXIE_CHAT &&
+         area->spacetype != SPACE_AGENT_BUBBLE))
     {
       return WM_UI_HANDLER_CONTINUE;
     }
@@ -415,7 +368,7 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
     }
 
     /* 2. Empty prompt clicks */
-    if (mixie_chat_handle_empty_prompt_click(C, region, mx, my)) {
+    if (mixie_chat_handle_empty_prompt_click(C, mx, my)) {
       return WM_UI_HANDLER_BREAK;
     }
 
@@ -466,13 +419,23 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
               PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
               RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
               RNA_string_set(&op_ptr, "action_value", bubble.option_text);
-              mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
+              WM_operator_name_call_ptr(
+                  C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
               WM_operator_properties_free(&op_ptr);
+              ED_region_tag_redraw(region);
               return WM_UI_HANDLER_BREAK;
             }
           }
         }
       }
+    }
+
+    /* 8. Scribble auto-open: a stylus press that reached this point hit no
+     * interactive chat target — pen users write, they don't drag-select
+     * transcript text. The press itself seeds the first ink stroke.
+     * Mouse presses fall through to text selection / View2D as before. */
+    if (mixie_chat_ink_try_auto_open(C, event)) {
+      return WM_UI_HANDLER_BREAK;
     }
 
     /* Let text selection / View2D scrolling handle it */
@@ -559,12 +522,12 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
 
   /* Register Mixie Chat keymap for text selection (modal drag) and copy. */
   wmKeyMap *mixie_keymap = WM_keymap_ensure(
-      wm->runtime->defaultconf, "Agent Chat", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+      wm->runtime->defaultconf, "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
   WM_event_add_keymap_handler(&region->runtime->handlers, mixie_keymap);
 
   /* Register dropbox handler for image drag-and-drop. */
   ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
-      "Agent Chat", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+      "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
   WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
                                static_cast<ListBaseT<wmDropBox> *>(dropboxes));
 }
@@ -720,12 +683,6 @@ void mixie_chat_main_region_listener(const wmRegionListenerParams *params)
    * worked in the viewport (selection, frame changes, bakes, renders) —
    * a large part of the perceived bubble lag. */
   switch (wmn->category) {
-    case NC_WINDOW:
-      /* Theme RNA edits mutate the same bTheme in place. Pointer identity
-       * cannot invalidate these cached values; the generic listener already
-       * schedules the redraw that will refresh them. */
-      footer_cache_invalidate();
-      break;
     case NC_SPACE:
       /* Redraw on our space notifier OR the agent bubble's, since
        * SPACE_AGENT_BUBBLE reuses this listener (layout-compatible

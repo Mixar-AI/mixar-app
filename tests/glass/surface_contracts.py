@@ -61,8 +61,7 @@ AGENT_THEME = (AGENT / "agent_ui_theme.hh").read_text(encoding="utf-8")
 AGENT_LAYOUT_HH = (AGENT / "agent_ui_layout.hh").read_text(encoding="utf-8")
 AGENT_LAYOUT = (AGENT / "agent_ui_layout.cc").read_text(encoding="utf-8")
 AGENT_CONTROLS = (AGENT / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
-AGENT_DRAW = ((AGENT / "agent_ui_draw_primitives.hh").read_text(encoding="utf-8")
-              + (AGENT / "agent_ui_draw.cc").read_text(encoding="utf-8"))
+AGENT_DRAW = (AGENT / "agent_ui_draw.cc").read_text(encoding="utf-8")
 
 
 def _fn_body(src: str, signature: str) -> str:
@@ -130,6 +129,10 @@ PANE_CALLS = {
     "interface/interface_widgets.cc": ("MIXAR_GLASS_CHIP", "MIXAR_GLASS_PILL"),
     "space_agent_bubble/agent_ui_draw.cc": ("MIXAR_GLASS_PILL",),
     "space_view3d/view3d_agent_panel_draw.cc": ("MIXAR_GLASS_PANEL",),
+    "space_view3d/view3d_moodboard_drawer_draw.cc": ("MIXAR_GLASS_MOODBOARD_TAB",),
+    "space_mixie/mixie_draw_moodboard.cc": ("MIXAR_GLASS_MOODBOARD",),
+    "space_mixie/mixie_draw_moodboard_graph.cc": (),
+    "space_mixie/mixie_draw_moodboard_node_settings.cc": (),
     "space_mixie_chat/mixie_chat_ui_primitives.cc": ("MIXAR_GLASS_CHAT",),
     "space_mixie_chat/mixie_chat_ui_widgets.cc": (),
     "space_mixie_chat/mixie_chat_messages_content.cc": (),
@@ -150,4 +153,5 @@ KIT_FILES = {
     "interface/interface_mixar_liquid_glass_draw.cc",
     "interface/interface_mixar_liquid_glass_tokens.cc",
 }
+
 

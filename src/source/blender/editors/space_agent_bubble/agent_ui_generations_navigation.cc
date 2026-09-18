@@ -62,10 +62,10 @@ wmOperatorStatus navigate(bContext *C, wmOperator *op, const wmEvent *event)
   }
   GenPaneData data;
   agent_ui_generations_gather(C, &data);
-  const GenFrame frame = agent_ui_generations_frame(panel, island.scale);
-  const auto grid = agent_ui_generations_grid_metrics(frame, data);
-  const auto libraries = agent_ui_generations_library_metrics(frame, data);
-  const bool rail = event && data.source == GEN_SOURCE_LIBRARY && event->mval[0] < frame.rail_div_x;
+  const auto grid = agent_ui_generations_grid_metrics(panel, island.scale, data);
+  const auto libraries = agent_ui_generations_library_metrics(panel, island.scale, data);
+  const bool rail = event && data.source == GEN_SOURCE_LIBRARY &&
+                    event->mval[0] < GEN_XL(panel, GEN_DIVIDER_X, island.scale);
   const float maximum = rail ? libraries.max_scroll : grid.max_scroll;
   const float page = rail ? BLI_rctf_size_y(&libraries.view) : BLI_rctf_size_y(&grid.view);
   const float pitch = rail ? libraries.pitch : grid.pitch_y;

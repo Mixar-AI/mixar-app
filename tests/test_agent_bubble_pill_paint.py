@@ -85,8 +85,7 @@ class TestNothingIsPaintedOutsideTheWindow:
 
 @pytest.fixture(scope="module")
 def pill_src() -> str:
-    return (PILL_DRAW.with_name("agent_ui_draw_primitives.hh").read_text(encoding="utf-8")
-            + PILL_DRAW.read_text(encoding="utf-8"))
+    return PILL_DRAW.read_text(encoding="utf-8")
 
 
 class TestTheCapsuleIsLiquidGlass:

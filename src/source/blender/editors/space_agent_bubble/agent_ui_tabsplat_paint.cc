@@ -15,7 +15,6 @@
  */
 
 #include "agent_ui_text.hh"
-#include "agent_bubble_references.hh"
 
 #include <algorithm>
 #include <cstring>
@@ -67,7 +66,7 @@ void splat_pane_rects_build(const rctf &panel,
 
   const float row_top = panel.ymax - PANE_STRIP_TOP * u;
   const float strip_x = panel.xmin + PANE_INSET_X * u;
-  const float strip_max_x = panel.xmax - PANE_INSET_X * u;
+  const float strip_max_x = panel.xmax - (PANE_INSET_X + PANE_SETTINGS_W + PANE_CHIP_GAP) * u;
   const float box_floor = std::min(pane_params_floor(panel, u), row_top - PANE_ROW_H * u);
   ui::MixarFlow flow;
   flow.x = flow.x0 = strip_x;
@@ -102,7 +101,7 @@ void splat_pane_rects_build(const rctf &panel,
     }
     dropdown = count > SPLAT_ENUM_MAX || width > strip_max_x - strip_x;
     if (!place_param(dropdown ? 360.0f * u : width, track)) {
-      return; /* The full schema is still available in the moodboard sidebar. */
+      return; /* The full schema is still available in Settings. */
     }
     if (!dropdown) {
       visible_count = count;
@@ -185,7 +184,7 @@ void splat_pane_paint(const bContext *C,
                       const SplatPaneRects &rects,
                       const float u)
 {
-  const float *dim = ui::mixar_tokens::mixar_zen().secondary;
+  const float *dim = ui::mixar_tokens::zen.secondary;
 
   /* Prompt box (pane kit; the wash is painted by the caller, which owns the
    * true panel rect). */
@@ -201,7 +200,7 @@ void splat_pane_paint(const bContext *C,
      * selection while the switch is on, otherwise its own uploaded/captured
      * image (world_labs_ops::_resolve_image reads exactly this way). Same
      * thumbnails the Agent tab shows for its pending attachments. */
-    if (!agent_bubble_references_visible(C) && splat_rect_is_live(rects.thumbs)) {
+    if (splat_rect_is_live(rects.thumbs)) {
       Image *images[PANE_REF_THUMB_MAX] = {nullptr};
       int count = 0;
       if (state.use_selected) {

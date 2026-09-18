@@ -111,13 +111,6 @@ bool queue_state_is_active(const char *state)
          STREQ(state, "RUNNING_DOWNLOAD");
 }
 
-/** Already past the waiting states — the Generate chip says "Generating". */
-bool queue_state_is_running(const char *state)
-{
-  return STREQ(state, "RUNNING_SUBMIT") || STREQ(state, "RUNNING_POLL") ||
-         STREQ(state, "RUNNING_DOWNLOAD");
-}
-
 /**
  * Does this mirror row belong to \a service_key?
  *
@@ -173,11 +166,8 @@ bool g_msg_stamp_valid = false;
 /** \name Queue-backed busy state
  * \{ */
 
-int pane_active_job_count(const bContext *C, const char *service_key, int *r_running)
+int pane_active_job_count(const bContext *C, const char *service_key)
 {
-  if (r_running) {
-    *r_running = 0;
-  }
   wmWindowManager *wm = CTX_wm_manager(C);
   if (!wm) {
     return 0;
@@ -200,7 +190,6 @@ int pane_active_job_count(const bContext *C, const char *service_key, int *r_run
   const bool match_any = (service_key == nullptr) || (service_key[0] == '\0');
 
   int count = 0;
-  int running = 0;
   char state[32];
   CollectionPropertyIterator iter;
   RNA_property_collection_begin(&queue, items, &iter);
@@ -212,15 +201,9 @@ int pane_active_job_count(const bContext *C, const char *service_key, int *r_run
     }
     if (match_any || queue_row_matches(&item, service_key)) {
       count++;
-      if (queue_state_is_running(state)) {
-        running++;
-      }
     }
   }
   RNA_property_collection_end(&iter);
-  if (r_running) {
-    *r_running = running;
-  }
   return count;
 }
 
@@ -295,7 +278,7 @@ bool pane_report_line_draw(const bContext *C, const rctf &box, const float u)
   }
   const float col_error[4] = PANE_COL_MSG_ERROR;
   const float col_warn[4] = PANE_COL_MSG_WARN;
-  MIXAR_THEME_LOAD(col_info, TextSecondary);
+  const float col_info[4] = AGENT_COL_TEXT_DIM;
   const float *col = col_info;
   if (level >= PANE_MSG_LEVEL_ERROR) {
     col = col_error;
@@ -320,23 +303,14 @@ bool pane_report_line_draw(const bContext *C, const rctf &box, const float u)
 
 /** \} */
 
-void pane_queue_label(char *out,
-                      const int out_maxncpy,
-                      const int active_jobs,
-                      const bool generating)
+void pane_queue_label(char *out, const int out_maxncpy, const int active_jobs)
 {
   if (active_jobs <= 0) {
     BLI_strncpy(out, "Generate", size_t(out_maxncpy));
     return;
   }
   /* The count is the feedback: it appears the moment the job is queued and
-   * ticks down as jobs land, so the user can see their submit took. Once any
-   * matched job has left PENDING, the wording switches to Generating so an
-   * in-flight mesh does not keep looking stuck in the queue. */
-  if (generating) {
-    BLI_snprintf(out, size_t(out_maxncpy), "Generating (%d)", active_jobs);
-    return;
-  }
+   * ticks down as jobs land, so the user can see their submit took. */
   BLI_snprintf(out, size_t(out_maxncpy), "Queued (%d)", active_jobs);
 }
 

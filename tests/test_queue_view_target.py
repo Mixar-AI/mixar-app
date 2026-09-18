@@ -5,7 +5,8 @@
 """`View Queue` lands on the agent island's Queue tab.
 
 The toast's action button is the main way the queue is opened, and the island
-is where the user is already watching the status pill tick — opening fails clearly when the island is unavailable.
+is where the user is already watching the status pill tick — the sidebar
+panel stays as the fallback for builds/platforms without the island.
 """
 
 import ast
@@ -35,17 +36,18 @@ def _queue_view_execute() -> ast.FunctionDef:
     raise AssertionError("MIXIE_OT_queue_view.execute not found")
 
 
-def test_the_island_is_opened():
+def test_the_island_is_tried_before_the_sidebar():
     body = _queue_view_execute().body
     assert isinstance(body[0], ast.If)
     assert "_show_island_queue_tab" in ast.dump(body[0].test)
 
 
-def test_missing_island_cancels_without_reopening_the_retired_sidebar():
+def test_the_sidebar_remains_the_fallback():
+    """A build without the spacetype, or a platform whose window controls are
+    stubbed, must still get somewhere."""
     src = ast.get_source_segment(SOURCE, _queue_view_execute())
-    assert "{'CANCELLED'}" in src
-    assert 'self.report' in src
-    assert 'active_panel_category' not in src
+    assert "find_largest_queue_area" in src
+    assert "active_panel_category" in src
 
 
 def test_the_tab_is_set_after_the_window_opens():

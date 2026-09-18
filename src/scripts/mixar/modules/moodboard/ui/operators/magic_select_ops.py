@@ -22,11 +22,12 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-from ...core.mask_tool_context import mouse_to_image_coords
+from ...core.moodboard_utils import (
+    mouse_to_image_coords,
+)
 from ...core.scene_segment_manager import get_scene_segment_manager
 from ...core.segment_overlay import recomposite_display_image
 from ...core.media_utils import is_still_item
-from ...core.canvas_context import redraw_moodboard_canvases
 
 
 class MIXIE_OT_moodboard_magic_select_tool(Operator):
@@ -116,7 +117,10 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
                     self.report({'WARNING'}, "No object detected. Try clicking elsewhere.")
                 else:
                     self.report({'ERROR'}, f"Segmentation failed: {error_msg}")
-                redraw_moodboard_canvases()
+                for window in bpy.context.window_manager.windows:
+                    for area in window.screen.areas:
+                        if area.type == 'MIXIE':
+                            area.tag_redraw()
 
         manager.request_segmentation(
             image=img_item.image,
@@ -136,7 +140,10 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
             else:
                 state.magic_select_pending = False
                 self.report({'ERROR'}, f"Re-upload failed: {message}")
-                redraw_moodboard_canvases()
+                for window in bpy.context.window_manager.windows:
+                    for area in window.screen.areas:
+                        if area.type == 'MIXIE':
+                            area.tag_redraw()
 
         manager.queue_upload(img_item.image, img_item=img_item,
                              on_complete=on_upload_complete)
@@ -190,13 +197,19 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
             logger.debug("[SceneSegment] Added %s to image", segment_name)
 
             # Trigger redraw
-            redraw_moodboard_canvases()
+            for window in bpy.context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'MIXIE':
+                        area.tag_redraw()
 
         except Exception as e:
             state.magic_select_pending = False
             logger.error("[SceneSegment] Failed to create segment: %s", e, exc_info=True)
 
-            redraw_moodboard_canvases()
+            for window in bpy.context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'MIXIE':
+                        area.tag_redraw()
         finally:
             if mask_temp_path:
                 try:
@@ -217,7 +230,7 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
 
-        # Preserve the shared legacy segmentation form selection
+        # Surface the segments panel (Character Parts / Scene Gen fallback)
         from ..sidebar_ui_helpers import focus_segments_panel
         focus_segments_panel(context)
 
@@ -251,7 +264,10 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
                 self.report({'INFO'}, "Ready! Click on image to segment.")
             else:
                 self.report({'ERROR'}, f"Upload failed: {message}")
-            redraw_moodboard_canvases()
+            for window in bpy.context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'MIXIE':
+                        area.tag_redraw()
 
         if manager.is_uploading(image):
             self.report({'INFO'}, "Waiting for image upload...")
@@ -303,7 +319,10 @@ class MIXIE_OT_toggle_segment(Operator):
         recomposite_display_image(img_item)
 
         # Trigger redraw
-        redraw_moodboard_canvases()
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'MIXIE':
+                    area.tag_redraw()
 
         return {'FINISHED'}
 
@@ -348,7 +367,10 @@ class MIXIE_OT_delete_segment(Operator):
         recomposite_display_image(img_item)
 
         # Trigger redraw
-        redraw_moodboard_canvases()
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type == 'MIXIE':
+                    area.tag_redraw()
 
         return {'FINISHED'}
 

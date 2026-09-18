@@ -1325,8 +1325,7 @@ struct SpaceMixie {
 
 /** \} */
 
-/** Legacy chat storage layout retained for saved-file compatibility and the
- * shared transcript runtime. No standalone editor or RNA space is registered. */
+/** Mixie Chat Space for Mixar. */
 struct SpaceMixieChat {
   SpaceLink *next = nullptr, *prev = nullptr;
   /** Storage of regions for inactive spaces. */
@@ -1348,7 +1347,7 @@ struct SpaceMixieChat {
 
 /** Floating Agent Bubble — small chat overlay editor for Mixar.
  *
- * The only agent chat surface, intended to be
+ * A separate editor space (not the full mixie chat) intended to be
  * opened in a small tear-off Blender window so it floats over the
  * user's working area. Three regions: header (status pill), main
  * (scrollable history), footer (input + send).

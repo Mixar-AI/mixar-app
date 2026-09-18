@@ -337,6 +337,7 @@ def enqueue_pro_job(
         on_imported=make_model_rename_on_imported(
             resolved_name, model_front_zrot(model_key), placement=placement),
         scene_flag="mixie_image_to_3d_is_generating",
+        batch_popup_title="Image to 3D batch complete",
     )
 
 
@@ -401,6 +402,7 @@ def enqueue_scene_gen_hp_jobs(
             fail_message="Scene generation failed",
             on_imported=_make_hp_on_imported(chain_id),
             scene_flag="mixie_scene_gen_hp_is_generating",
+            batch_popup_title="Scene Gen HP batch complete",
         )
         if job is not None:
             enqueued.append(job)
@@ -480,6 +482,7 @@ def enqueue_scene_gen_lp_jobs(
             fail_message="Scene generation failed",
             on_imported=_make_lp_on_imported(chain_id),
             scene_flag="mixie_scene_gen_lp_is_generating",
+            batch_popup_title="Scene Gen LP batch complete",
         )
         if job is not None:
             enqueued.append(job)

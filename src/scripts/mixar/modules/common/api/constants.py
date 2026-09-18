@@ -68,7 +68,6 @@ class APIModule(Enum):
     GENERATION_CATALOG = "generation-catalog"
     TELEMETRY = "telemetry"
     SUBSCRIPTIONS = "subscriptions"
-    PROMPT_REFINE = "prompt-refine"
 
 
 # ============================================================================

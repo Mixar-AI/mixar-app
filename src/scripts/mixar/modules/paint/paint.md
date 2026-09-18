@@ -791,15 +791,19 @@ ui_constants.py                 # UI constants
 ---
 
 ## procedural_materials/
-Procedural material registry. The library is served by the backend catalog
-(`matgen_client`, scripts cached on demand in the user cache dir); no material
-scripts or thumbnails ship with the app. The user's own AI-generated materials
-are persisted in the user data dir by `matgen_persistence`.
+Procedural material definitions (organized by category).
+```
+__init__.py
+material_registry.py            # Material registration
+test_compatibility.py           # Compatibility testing
+```
 
 ### Contents
-- `material_registry.py` - registry + server catalog / script loading
-- `matgen_client.py`, `matgen_fetcher.py`, `matgen_persistence.py`, `matgen_queue.py` - MatGen catalog/script client, auth/cache helpers, persistence of generated materials, unified-queue job
-- `script_preprocessor.py` - generated-script compatibility fixes
+- `asphalt/`, `bricks/`, `ceramic/`, `dirt/`, `fabric/` - bundled procedural material scripts by category (one `.py` per material)
+- `showcase_v8/`, `showcase_substance/` - showcase material scripts with `render_*.png` previews (`showcase_v8_catalog.json`, `showcase_substance_catalog.json`)
+- `matgen/` - MatGen-generated material scripts + previews (`matgen_catalog.json`); `matgen_client.py`, `matgen_fetcher.py`, `matgen_persistence.py`, `matgen_queue.py` drive the MatGen pipeline
+- `materials_catalog_final.json` - combined material catalog; `script_preprocessor.py` - material script preprocessing
+- `thumbnails_transparent/` - Material thumbnails
 - `tests/` - in-tree suite (see `pytest.ini`)
 
 ---

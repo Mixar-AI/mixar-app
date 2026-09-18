@@ -10,16 +10,16 @@ Two small operators the island's C++ panes bind:
   see ``space_mixie_chat/ui/operators/screenshot_ops.py``) and attach the
   still as the ACTIVE pane's reference:
 
-  * Image  -> ``tab_imagegen.reference_images`` (the exact add the
+  * Media / Image  -> ``tab_imagegen.reference_images`` (the exact add the
     moodboard's ``mixie.imagegen_upload_reference`` performs: packed image,
     boarded unselected, mirrored into the tab's reference collection).
-  * Video  -> boarded as a SELECTED moodboard item — Video Gen's
+  * Media / Video  -> boarded as a SELECTED moodboard item — Video Gen's
     references ARE the selected board media
     (``get_selected_moodboard_media_inputs``).
   * Gaussian Splat -> ``tab_world_labs.reference_image`` with
     ``use_selected_image`` switched off so the capture is what submits.
 
-- ``mixar.pane_video_upload_reference`` — file picker that imports images and videos
+- ``mixar.pane_video_upload_reference`` — file picker that imports stills
   onto the moodboard AS SELECTED, feeding Video Gen's native selection-based
   reference flow. (The moodboard Video Gen tab has no upload property — its
   references are the board selection, so "upload a reference" for video
@@ -186,6 +186,7 @@ class MIXAR_OT_pane_capture_viewport(Operator):
         scene = context.scene
         wm = context.window_manager
         tab = getattr(wm, "mixar_bubble_tab", 'AGENT')
+        media_kind = getattr(wm, "mixar_bubble_media_kind", 'IMAGE')
 
         try:
             path = _capture_viewport_to_file(context)
@@ -203,7 +204,7 @@ class MIXAR_OT_pane_capture_viewport(Operator):
             return {'CANCELLED'}
 
         try:
-            if tab == 'VIDEO':
+            if tab == 'MEDIA' and media_kind == 'VIDEO':
                 if _attach_to_board_selected(scene, path) is None:
                     raise RuntimeError("could not board the capture")
             else:
@@ -216,7 +217,7 @@ class MIXAR_OT_pane_capture_viewport(Operator):
                     if hasattr(wl, "use_selected_image"):
                         wl.use_selected_image = False
                 else:
-                    # Image (and any future pane defaults here).
+                    # MEDIA / IMAGE (and any future pane defaults here).
                     _attach_to_imagegen(scene, img, path)
         except Exception as exc:  # noqa: BLE001
             logger.error("Could not attach viewport capture: %r", exc)
@@ -232,12 +233,12 @@ class MIXAR_OT_pane_capture_viewport(Operator):
 
 
 class MIXAR_OT_pane_video_upload_reference(Operator):
-    """Upload image and video references for video generation"""
+    """Upload reference stills for video generation (boarded as selected)"""
 
     bl_idname = "mixar.pane_video_upload_reference"
     bl_label = "Upload Video References"
     bl_description = (
-        "Import image and video files onto the moodboard as selected references for "
+        "Import image files onto the moodboard as selected references for "
         "video generation"
     )
     bl_options = {'REGISTER', 'UNDO'}
@@ -246,8 +247,7 @@ class MIXAR_OT_pane_video_upload_reference(Operator):
     files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
     directory: bpy.props.StringProperty(subtype='DIR_PATH')
     filter_glob: bpy.props.StringProperty(
-        default=";".join(f"*{ext}" for ext in sorted(
-            set(bpy.path.extensions_image) | set(bpy.path.extensions_movie))),
+        default="*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.tiff;*.webp",
         options={'HIDDEN'},
     )
 
@@ -258,8 +258,8 @@ class MIXAR_OT_pane_video_upload_reference(Operator):
     def execute(self, context):
         scene = context.scene
         added = 0
-        paths = [os.path.join(self.directory, file.name) for file in self.files if file.name]
-        for filepath in paths or [self.filepath]:
+        for file_elem in self.files:
+            filepath = os.path.join(self.directory, file_elem.name)
             try:
                 filepath = os.path.abspath(os.path.realpath(filepath))
             except (OSError, ValueError):
@@ -272,7 +272,7 @@ class MIXAR_OT_pane_video_upload_reference(Operator):
             except Exception as exc:  # noqa: BLE001
                 logger.error("Video reference import failed: %r", exc)
         if added == 0:
-            self.report({'WARNING'}, "No valid image or video references added")
+            self.report({'WARNING'}, "No reference images added")
             return {'CANCELLED'}
         self.report(
             {'INFO'},

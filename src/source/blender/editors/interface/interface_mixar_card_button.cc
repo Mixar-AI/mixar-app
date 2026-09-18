@@ -31,7 +31,6 @@
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
-#include "UI_mixar_theme.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
 
@@ -71,16 +70,8 @@ void UI_mixar_card_button_draw(Button *but,
 
   GPU_blend(GPU_BLEND_ALPHA);
 
-  uchar accent_u[4], danger_u[4], fg1_u[4], fg2_u[4], fg4_u[4], border_strong_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::Focus, MX_ACCENT, accent_u);
-  mixar_theme_copy_u(MixarThemeSlot::Danger, MX_DANGER, danger_u);
-  mixar_theme_copy_u(MixarThemeSlot::Fg1, MX_FG_1, fg1_u);
-  mixar_theme_copy_u(MixarThemeSlot::Fg2, MX_FG_2, fg2_u);
-  mixar_theme_copy_u(MixarThemeSlot::Fg4, MX_FG_4, fg4_u);
-  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong_u);
-
-  const uchar *text_col = fg1_u;
-  const uchar *icon_col = fg2_u;
+  const uchar *text_col = MX_FG_1;
+  const uchar *icon_col = MX_FG_2;
 
   switch (element) {
     case MixarCardElement::AccentButton: {
@@ -90,15 +81,15 @@ void UI_mixar_card_button_draw(Button *but,
       mixar_card_fill_round(
           &box,
           rad,
-          accent_u,
+          MX_ACCENT,
           hover_alpha(mixar_chrome::card_accent_fill, mixar_chrome::card_accent_fill_hover));
       mixar_card_outline_round(
           &box,
           rad,
-          accent_u,
+          MX_ACCENT,
           hover_alpha(mixar_chrome::card_accent_outline, mixar_chrome::card_accent_outline_hover));
-      text_col = accent_u;
-      icon_col = accent_u;
+      text_col = MX_ACCENT;
+      icon_col = MX_ACCENT;
       break;
     }
     case MixarCardElement::DangerButton: {
@@ -110,14 +101,14 @@ void UI_mixar_card_button_draw(Button *but,
       mixar_card_fill_round(
           &box,
           rad,
-          danger_u,
+          MX_DANGER,
           hover_alpha(mixar_chrome::card_danger_fill, mixar_chrome::card_danger_fill_hover));
       mixar_card_outline_round(
           &box,
           rad,
-          danger_u,
+          MX_DANGER,
           hover_alpha(mixar_chrome::card_danger_outline, mixar_chrome::card_danger_outline_hover));
-      icon_col = danger_u;
+      icon_col = MX_DANGER;
       break;
     }
     case MixarCardElement::GhostButton: {
@@ -125,14 +116,14 @@ void UI_mixar_card_button_draw(Button *but,
       if (motion.hover > 0.0f) {
         mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP, motion.hover);
       }
-      text_col = fg2_u;
-      icon_col = fg4_u;
+      text_col = MX_FG_2;
+      icon_col = MX_FG_4;
       break;
     }
     case MixarCardElement::CardButton:
     default: {
       mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP, hover_alpha(0.85f, 1.0f));
-      mixar_card_outline_round(&box, rad, border_strong_u, mixar_chrome::card_outline);
+      mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, mixar_chrome::card_outline);
       break;
     }
   }

@@ -11,17 +11,12 @@
  * Every value here comes from an EXISTING property — this file introduces no
  * state of its own. The mapping, once, so it is auditable:
  *
- *   status text   scene.mixie_chat_state   (the enum item's own UI name),
- *                 overridden to "Working" while IDLE with
- *                 scene.mixie_run_open (an open run's workers still building)
- *   status dot    scene.mixie_chat_is_busy, or that same open run
+ *   status text   scene.mixie_chat_state   (the enum item's own UI name)
+ *   status dot    scene.mixie_chat_is_busy
  *   title         the wm.mixie_chat_history_entries row whose session_id
  *                 matches scene.mixie_session_id; empty when none matches
  *                 (no invented "New Chat" fallback)
  *   segmented     scene.mixie_chat_mode == 'AGENT'
- *   auto switch   scene.mixie_chat_auto_mode
- *   model chip    wm.mixar_agent_model_label / wm.mixar_agent_model_byok_active
- *                 (absent until the Python half registers them)
  *   placeholder   shown while scene.mixie_chat_input is empty
  *   queue count   live rows in wm.mixie_queue.items
  *   cat catch     ED_moodboard_attachment_incoming (the live flight clock)
@@ -39,7 +34,6 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_string.h"
-#include "BLI_string_utf8.h"
 
 #include "BKE_context.hh"
 
@@ -62,8 +56,7 @@ namespace blender {
 
 namespace {
 
-void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int out_maxncpy,
-                      const bool tail = false)
+void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int out_maxncpy)
 {
   out[0] = '\0';
   PropertyRNA *prop = RNA_struct_find_property(ptr, name);
@@ -74,14 +67,7 @@ void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int ou
   int len = 0;
   char *value = RNA_property_string_get_alloc(ptr, prop, fixed, sizeof(fixed), &len);
   if (value) {
-    const char *start = value;
-    if (tail && len >= out_maxncpy) {
-      start += len - out_maxncpy + 1;
-      while ((*start & 0xc0) == 0x80) {
-        start++;
-      }
-    }
-    BLI_strncpy_utf8(out, start, out_maxncpy);
+    BLI_strncpy(out, value, out_maxncpy);
     if (value != fixed) {
       MEM_delete(value);
     }
@@ -222,8 +208,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     } tab_map[] = {
         {"AGENT", AGENT_TAB_AGENT},
         {"THREE_D", AGENT_TAB_3D},
-        {"IMAGE", AGENT_TAB_IMAGE},
-        {"VIDEO", AGENT_TAB_VIDEO},
+        {"MEDIA", AGENT_TAB_MEDIA},
         {"SPLAT", AGENT_TAB_SPLAT},
         {"GENERATIONS", AGENT_TAB_GENERATIONS},
         {"QUEUE", AGENT_TAB_QUEUE},
@@ -244,25 +229,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     r_state->status_busy = read_bool_prop(&scene_ptr, "mixie_chat_is_busy") ||
                            enum_is(&scene_ptr, "mixie_chat_state", "BUSY") ||
                            enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
-    /* The orchestrator ended its turn but the run is open: workers keep
-     * building and the backend starts the next turn itself. The state enum
-     * stays IDLE throughout, so its own UI name would read "Idle" while work
-     * is going on. Same label and same lit dot as the Python header's
-     * equivalent branch (agent_bubble/ui/header.py:_get_status). NOT
-     * status_busy: the composer stays free while the cat still reflects
-     * the workers' activity. A scene
-     * without the property (file saved before the chat registered it) reads
-     * false and keeps today's label. */
-    r_state->status_active = enum_is(&scene_ptr, "mixie_chat_state", "IDLE") &&
-                             read_bool_prop(&scene_ptr, "mixie_run_open");
-    if (r_state->status_active) {
-      BLI_strncpy(
-          r_state->status_text, "Working", sizeof(r_state->status_text));
-    }
     r_state->agent_mode = enum_is(&scene_ptr, "mixie_chat_mode", "AGENT");
-    /* A scene saved before the chat registered the property reads false —
-     * the same default the send path uses (core/composer_send.py). */
-    r_state->auto_mode = read_bool_prop(&scene_ptr, "mixie_chat_auto_mode");
     cat.busy = r_state->status_busy;
     cat.waiting = enum_is(&scene_ptr, "mixie_chat_state", "AWAITING_INPUT") ||
                   enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
@@ -342,11 +309,11 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
    * operator would be inert for the deferred UI pass and read as broken. */
   r_state->scribble_available = WM_operatortype_find("MIXAR_OT_scribble_toggle", true) !=
                                 nullptr;
-  r_state->handwriting_available = WM_operatortype_find("MIXIE_CHAT_OT_ink_toggle", true) != nullptr;
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     r_state->ink_visible = read_bool_prop(&wm_ptr, "mixie_chat_ink_visible");
-    r_state->scribble_armed = read_bool_prop(&wm_ptr, "mixar_mark_armed");
+    r_state->scribble_armed = r_state->ink_visible ||
+                              read_bool_prop(&wm_ptr, "mixar_mark_armed");
     read_enum_name(&wm_ptr, "mixar_mark_intent", r_state->mark_intent,
                    sizeof(r_state->mark_intent));
   }
@@ -356,36 +323,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     r_state->voice_listening = read_bool_prop(&wm_ptr, "mixie_chat_voice_listening");
-    read_string_prop(&wm_ptr, "mixie_chat_voice_status", r_state->voice_status, sizeof(r_state->voice_status));
-    /* "Listening" is core/voice.py's recording state (pinned by
-     * tests/test_voice_stop_control.py); only then is the click a Stop. */
-    r_state->voice_capturing = r_state->voice_listening &&
-                               STREQ(r_state->voice_status, "Listening");
-    PropertyRNA *level = RNA_struct_find_property(&wm_ptr, "mixie_chat_voice_level");
-    r_state->voice_level = (r_state->voice_capturing && level &&
-                            RNA_property_type(level) == PROP_FLOAT) ?
-                               std::clamp(RNA_property_float_get(&wm_ptr, level), 0.0f, 1.0f) :
-                               0.0f;
   }
-  /* Hosted model pick — the WindowManager mirror the Python half writes
-   * (byok preference state). A build whose Python half has not landed, or
-   * an old .blend opened before the properties registered, reads as "no
-   * picker": the chip is left out entirely instead of popping a menu that
-   * is not registered. */
-  r_state->model_available = false;
-  r_state->model_byok_active = false;
-  r_state->model_label[0] = '\0';
-  if (wm) {
-    PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-    PropertyRNA *label = RNA_struct_find_property(&wm_ptr, "mixar_agent_model_label");
-    if (label && RNA_property_type(label) == PROP_STRING) {
-      r_state->model_available = true;
-      read_string_prop(
-          &wm_ptr, "mixar_agent_model_label", r_state->model_label, sizeof(r_state->model_label));
-      r_state->model_byok_active = read_bool_prop(&wm_ptr, "mixar_agent_model_byok_active");
-    }
-  }
-
   cat.listening = r_state->voice_listening;
   if (scene) {
     PointerRNA ptr = RNA_id_pointer_create(&scene->id);
@@ -427,10 +365,6 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                                               float(win->posy) + chip_y / scale);
     }
   }
-  /* Delegated workers outlive the orchestrator turn. Apply this after reading
-   * transcript signals so old reasoning cannot animate an otherwise idle run. */
-  cat.busy |= r_state->status_active;
-  cat.working |= r_state->status_active;
   r_state->cat_activity = mixie_cat_activity(cat);
   if (scene) {
     /* DRAFT marks only: SENT marks stay in the scene for follow-up turns but
@@ -450,18 +384,6 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
       }
       RNA_property_collection_end(&iter);
     }
-  }
-
-  if (r_state->scribble_armed) {
-    r_state->placeholder = "Draw or type instructions. Enter to send.";
-    if (scene) {
-      PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-      read_string_prop(&scene_ptr, "mixie_chat_input", r_state->sketch_prompt,
-                       sizeof(r_state->sketch_prompt), true);
-    }
-  }
-  else if (r_state->mark_count > 0) {
-    r_state->placeholder = "Sketch ready. Add instructions, then Send.";
   }
 
   /* Same property the account card meters — one source of truth for credits.

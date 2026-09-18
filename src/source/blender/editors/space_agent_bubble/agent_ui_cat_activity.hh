@@ -124,10 +124,13 @@ inline MixieCatPose mixie_cat_activity_pose(const double now,
       return mixie_cat_catch_pose(now, incoming);
     case MixieCatActivity::Thinking: {
       const float glance = mixie_cat_gesture(now, 3.6, 0.35f, 0.50f);
-      p.look_x = -0.45f + 0.9f * glance;
-      p.look_y = 0.45f;
-      /* Curiosity comes from a shared upward gaze, never a one-eye squint. */
-      p.tilt = -12.0f + 4.0f * glance;
+      p.look_x = -0.65f + 1.3f * glance;
+      p.look_y = 0.65f;
+      p.tilt = -27.0f + 9.0f * glance;
+      p.lid_l = 0.48f;
+      p.lid_r = 1.08f;
+      p.ear_height_l = 0.82f;
+      p.ear_height_r = 1.10f;
       p.pupil_scale = 0.78f;
       break;
     }
@@ -147,16 +150,16 @@ inline MixieCatPose mixie_cat_activity_pose(const double now,
       break;
     }
     case MixieCatActivity::Working: {
-      const MixieCatRoll roll = mixie_cat_eye_roll(now);
-      p.look_x = roll.look_x;
-      p.look_y = roll.look_y;
-      p.tilt = -6.0f + 4.0f * roll.look_x;
-      p.bounce = 0.0f;
-      p.eye_width = 1.04f;
-      p.eye_scale = 1.10f;
-      p.ear_height_l = p.ear_height_r = 0.90f;
-      p.pupil_scale = 0.90f;
-      open = 1.0f;
+      const float nod = mixie_cat_gesture(now, 1.6, 0.08f, 0.24f) +
+                        mixie_cat_gesture(now, 1.6, 0.40f, 0.24f);
+      p.look_x = 0.0f;
+      p.look_y = -0.55f;
+      p.tilt = -12.0f + 5.0f * nod;
+      p.bounce = -0.040f * nod;
+      p.eye_width = 1.10f;
+      p.ear_height_l = p.ear_height_r = 0.86f;
+      p.pupil_scale = 0.72f;
+      open = 0.36f;
       break;
     }
     case MixieCatActivity::Generating:
@@ -193,9 +196,12 @@ inline MixieCatPose mixie_cat_activity_pose(const double now,
     case MixieCatActivity::Waiting:
       p.look_x = 0.0f;
       p.look_y = 0.10f;
-      p.tilt = -6.0f;
+      p.tilt = 14.0f;
       p.eye_scale = 1.10f;
+      p.lid_l = 1.05f;
+      p.lid_r = 0.70f;
       p.pupil_scale = 1.22f;
+      p.ear_height_r = 0.80f;
       blink_time *= 0.7;
       break;
     case MixieCatActivity::Offline:

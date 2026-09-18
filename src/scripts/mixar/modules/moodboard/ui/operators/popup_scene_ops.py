@@ -15,11 +15,7 @@ from bpy.types import Operator
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
-from mixar.modules.moodboard.core.media_utils import (
-    first_selected_reference_still,
-    selected_reference_still_entries,
-    selected_reference_stills,
-)
+from mixar.modules.moodboard.core.media_utils import is_still_item
 
 
 # =============================================================================
@@ -41,17 +37,23 @@ class MIXIE_OT_segment_to_3d_popup(Operator):
             return False
         # Require at least one image selected
         scene = context.scene
-        return bool(selected_reference_stills(scene))
+        if hasattr(scene, 'mixie_moodboard_images'):
+            for img_item in scene.mixie_moodboard_images:
+                if img_item.selected and is_still_item(img_item):
+                    return True
+        return False
 
     def invoke(self, context, event):
         return context.window_manager.invoke_popup(self, width=450)
 
     def _get_selected_image(self, context):
-        """Get the first selected image and its collection index."""
-        entries = selected_reference_still_entries(context.scene)
-        if not entries:
-            return -1, None
-        return entries[0]
+        """Get the first selected image and its index"""
+        scene = context.scene
+        if hasattr(scene, 'mixie_moodboard_images'):
+            for i, img_item in enumerate(scene.mixie_moodboard_images):
+                if img_item.selected and is_still_item(img_item):
+                    return i, img_item
+        return -1, None
 
     def draw(self, context):
         layout = self.layout
@@ -221,10 +223,13 @@ class MIXIE_OT_scene_recon_popup(Operator):
         row.label(text="Use Selected Moodboard Image")
 
         if tab.use_selected_image:
-            img = first_selected_reference_still(scene)
-            if img:
+            selected = [
+                item for item in scene.mixie_moodboard_images
+                if item.selected and is_still_item(item)
+            ]
+            if selected:
                 row = box_col.row()
-                row.label(text=f"Selected: {img.name}", icon='CHECKMARK')
+                row.label(text=f"Selected: {selected[0].image.name}", icon='CHECKMARK')
             else:
                 row = box_col.row()
                 row.label(text="No image selected in moodboard", icon='ERROR')

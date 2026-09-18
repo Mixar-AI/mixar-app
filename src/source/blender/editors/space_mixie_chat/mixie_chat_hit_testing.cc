@@ -14,7 +14,6 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.h"
 #include "BLI_rect.h"
 #include "BLI_string.h"
 #include "BLI_string_ref.hh"
@@ -27,9 +26,7 @@
 #include "BKE_main.hh"
 
 #include "DNA_scene_types.h"
-#include "DNA_screen_types.h"
 #include "DNA_space_types.h"
-#include "DNA_windowmanager_types.h"
 
 #include "RNA_access.hh"
 #include "RNA_prototypes.hh"
@@ -55,7 +52,8 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
   /* SPACE_AGENT_BUBBLE has a layout-compatible spacedata struct
    * (see DNA_space_types.h), so this cast is valid for both — the
    * agent bubble reuses the chat hit-testing logic for selection. */
-  if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
+  if (area && (area->spacetype == SPACE_MIXIE_CHAT ||
+               area->spacetype == SPACE_AGENT_BUBBLE))
   {
     return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }
@@ -308,8 +306,10 @@ static bool dispatch_slot_action(bContext *C,
   PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
   RNA_string_set(&op_ptr, "action_value", action.value);
-  mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
+  WM_operator_name_call_ptr(
+      C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
   WM_operator_properties_free(&op_ptr);
+  ED_region_tag_redraw(region);
   return true;
 }
 
@@ -343,45 +343,6 @@ bool mixie_chat_handle_slot_action_click(bContext *C,
   return false;
 }
 
-bool mixie_chat_region_is_alive(const bContext *C, const ARegion *region)
-{
-  const wmWindowManager *wm = CTX_wm_manager(C);
-  if (wm == nullptr || region == nullptr) {
-    return false;
-  }
-  for (const wmWindow &win : wm->windows) {
-    const bScreen *screen = WM_window_get_active_screen(&win);
-    if (screen == nullptr) {
-      continue;
-    }
-    ED_screen_areas_iter (&win, screen, area) {
-      for (const ARegion &candidate : area->regionbase) {
-        if (&candidate == region) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-void mixie_chat_call_operator_and_redraw(bContext *C,
-                                          ARegion *region,
-                                          wmOperatorType *ot,
-                                          PointerRNA *op_ptr)
-{
-  /* Request the redraw first: the operator may close the window that owns
-   * `region` (the Agent Bubble purge runs from save_pre while a fresh turn
-   * takes its checkpoint), after which the pointer is freed memory. The
-   * purge restores a live context window, so CTX_wm_window() cannot tell
-   * us; only the region's presence in a live screen can. */
-  ED_region_tag_redraw(region);
-  WM_operator_name_call_ptr(C, ot, blender::wm::OpCallContext::ExecDefault, op_ptr, nullptr);
-  if (mixie_chat_region_is_alive(C, region)) {
-    ED_region_tag_redraw(region);
-  }
-}
-
 /* DRY helper: find + call a toggle operator with bubble_id (+ optional item_id). */
 static bool dispatch_toggle(bContext *C,
                             ARegion *region,
@@ -398,8 +359,10 @@ static bool dispatch_toggle(bContext *C,
   if (item_id) {
     RNA_string_set(&op_ptr, "item_id", item_id);
   }
-  mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
+  WM_operator_name_call_ptr(
+      C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
   WM_operator_properties_free(&op_ptr);
+  ED_region_tag_redraw(region);
   return true;
 }
 
@@ -425,36 +388,6 @@ bool mixie_chat_handle_steps_click(bContext *C,
   ui::view2d_region_to_view(v2d, mouse_x, mouse_y, &view_x, &view_y);
 
   for (const MessageLayoutData &layout : layout_cache) {
-    /* "Viewed N images": a tile opens the lightbox (bounds are zero while
-     * the block is collapsed); the header toggles the block. */
-    if (layout.slot_gallery_height > 0.0f) {
-      if (!layout.images_collapsed) {
-        for (int i = 0; i < layout.slot_image_count; i++) {
-          const ImageSlotData &img = layout.slot_images[i];
-          if (img.step_id[0] == '\0' || img.bounds.xmax <= img.bounds.xmin) {
-            continue;
-          }
-          if (BLI_rctf_isect_pt(&img.bounds, view_x, view_y)) {
-            mixie_chat_lightbox_open(C, layout.bubble_id, i);
-            ED_region_tag_redraw(region);
-            return true;
-          }
-        }
-      }
-      const rctf &mb = layout.gallery_more_bounds;
-      if (!layout.images_collapsed && mb.xmax > mb.xmin && layout.gallery_first_hidden >= 0 &&
-          BLI_rctf_isect_pt(&mb, view_x, view_y))
-      {
-        mixie_chat_lightbox_open(C, layout.bubble_id, layout.gallery_first_hidden);
-        ED_region_tag_redraw(region);
-        return true;
-      }
-      const rctf &gb = layout.images_header_bounds;
-      if (gb.xmax > gb.xmin && BLI_rctf_isect_pt(&gb, view_x, view_y)) {
-        return dispatch_toggle(C, region, "mixie_chat.toggle_images",
-                               layout.bubble_id, nullptr);
-      }
-    }
     if (layout.has_steps) {
       /* Expanded rows with detail toggle their own second level. */
       if (!layout.steps_collapsed) {
@@ -490,10 +423,7 @@ bool mixie_chat_handle_steps_click(bContext *C,
   return false;
 }
 
-bool mixie_chat_handle_empty_prompt_click(bContext *C,
-                                          ARegion *region,
-                                          float mouse_x,
-                                          float mouse_y)
+bool mixie_chat_handle_empty_prompt_click(bContext *C, float mouse_x, float mouse_y)
 {
   SpaceMixieChat *smixie = get_space_mixie_chat(C);
   if (!smixie) {
@@ -513,7 +443,8 @@ bool mixie_chat_handle_empty_prompt_click(bContext *C,
         RNA_string_set(&op_ptr, "text", rt->empty_prompts[i].text);
         RNA_string_set(&op_ptr, "mode", g_empty_prompt_modes[i]);
         RNA_string_set(&op_ptr, "generate_type", g_empty_prompt_generate_types[i]);
-        mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
+        WM_operator_name_call_ptr(
+            C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
         WM_operator_properties_free(&op_ptr);
         return true;
       }

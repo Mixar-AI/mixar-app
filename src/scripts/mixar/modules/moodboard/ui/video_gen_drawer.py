@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Catalog-driven Video Gen drawer (Seedance and the MiniMax H3 tiers)."""
+"""Catalog-driven Seedance video generation drawer."""
 
 from mixar.modules.common.job_queue.constants import FEATURE_VIDEO_GEN
 
@@ -29,7 +29,6 @@ def _draw_video_gen(layout, context):
     )
     from mixar.modules.moodboard.core.video_generation_catalog import (
         get_video_generation_limits,
-        selected_video_model_slug,
     )
 
     refs = get_selected_moodboard_media_inputs(context)
@@ -59,9 +58,7 @@ def _draw_video_gen(layout, context):
     draw_capability_selector(settings, tab, "video_gen")
 
     limit_box = draw_section_box(layout, "Reference Limits", icon='INFO')
-    limits = get_video_generation_limits(
-        "video_gen", selected_video_model_slug(scene)
-    )
+    limits = get_video_generation_limits("video_gen")
     if limits is None:
         draw_hint(limit_box, "Catalog input config is incomplete", icon='ERROR')
     else:

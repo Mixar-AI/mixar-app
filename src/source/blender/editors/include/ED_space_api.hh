@@ -15,17 +15,12 @@ struct ARegion;
 struct ARegionType;
 struct bContext;
 struct wmEvent;
-struct wmWindow;
-struct wmWindowManager;
 
 /* Observe an outside press without consuming the destination window event. */
 void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event);
 
 /* Exact native-window identity; the open island's small status pill is excluded. */
 bool ED_agent_bubble_is_resting_pill(const bContext *C);
-
-/* Resolve the live native host; reparenting need not change wmWindow::parent. */
-wmWindow *ED_agent_bubble_host_window_get(wmWindowManager *wm);
 
 /* Only called once on startup. storage is global in BKE kernel listbase. */
 void ED_spacetypes_init();
@@ -63,6 +58,7 @@ void ED_spacetype_mixar_assets();  /* Mixar Assets space */
 
 void ED_spacetype_baking();  /* Texturing Baking space */
 void ED_spacetype_texture_sets();  /* Texture Sets space */
+void ED_spacetype_mixie_chat();  /* Mixie Chat space for Mixar */
 void ED_spacetype_agent_bubble();  /* Floating Agent Bubble overlay editor for Mixar */
 
 /* Mixar: reset the Agent Bubble's cached native-window pointers (bubble/

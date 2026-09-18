@@ -16,7 +16,7 @@ class MIXIE_OT_video_gen_generate(Operator):
 
     bl_idname = "mixie.video_gen_generate"
     bl_label = "Generate Video"
-    bl_description = "Generate a video from text and selected moodboard references"
+    bl_description = "Generate a Seedance video from text and selected references"
     bl_options = {'REGISTER'}
 
     def execute(self, context):
@@ -56,18 +56,16 @@ class MIXIE_OT_video_gen_generate(Operator):
             build_image_reference_inputs,
             build_video_reference_inputs,
             get_video_generation_limits,
-            video_reference_count_error,
+            seedance_reference_count_error,
         )
 
-        # Model-aware: H3's reference ceilings are far tighter than Seedance's
-        # and everything below this line uploads.
-        limits = get_video_generation_limits(service_key, model)
+        limits = get_video_generation_limits(service_key)
         if limits is None:
             self.report({'ERROR'}, "Video generation catalog config is incomplete")
             return {'CANCELLED'}
 
         params = collect_params(service_key, model)
-        count_error = video_reference_count_error(
+        count_error = seedance_reference_count_error(
             limits,
             image_count=len(refs["images"]),
             video_count=len(refs["videos"]),
@@ -97,7 +95,7 @@ class MIXIE_OT_video_gen_generate(Operator):
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
         except Exception as exc:
-            logger.exception("Could not prepare video image references")
+            logger.exception("Could not prepare Seedance image references")
             self.report({'ERROR'}, f"Could not prepare image references: {exc}")
             return {'CANCELLED'}
 
@@ -120,6 +118,7 @@ class MIXIE_OT_video_gen_generate(Operator):
                 video_inputs=video_inputs,
                 max_video_duration_seconds=limits["max_video_seconds"],
                 scene_flag="mixie_video_gen_is_generating",
+                batch_popup_title="Video Generation Complete",
             )
         except Exception as exc:
             self.report({'ERROR'}, f"Failed to start video generation: {exc}")

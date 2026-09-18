@@ -88,17 +88,6 @@ struct FooterElementPositions {
   int buttons_y;
   int dropdown_x;
   int dropdown_width;
-  /* Agent model picker, between the mode dropdowns and the attach button.
-   * `model_dropdown_x` is its slot with the mode dropdown ALONE; generate
-   * mode shifts it past the second dropdown at draw time, exactly as it
-   * already shifts the attach button. `model_dropdown_width` is a ceiling —
-   * the draw clamps it to whatever is left before the attach button. */
-  int model_dropdown_x;
-  int model_dropdown_width;
-  int model_dropdown_min_width;
-  /* Slot for the attach button with NO model picker (the Python half may not
-   * have registered its WindowManager mirror). The draw shifts it right past
-   * whichever of the model picker / generate dropdown is actually shown. */
   int attach_btn_x;
   int send_btn_x;
   int btn_size;          /* Size of send button */
@@ -175,22 +164,14 @@ void footer_cache_clear();
  * \{ */
 
 /**
- * Count the number of visible lines in the chat input text: explicit
- * newlines (Shift+Enter) plus BLF wrapping at the width and font the
- * multi-line painter really uses. Clamps between FOOTER_INPUT_LINE_COUNT (3)
- * and FOOTER_INPUT_MAX_LINE_COUNT (6).
+ * Count the number of visible lines in the chat input text.
+ * Counts explicit newlines (from Shift+Enter). Clamps between
+ * FOOTER_INPUT_LINE_COUNT (3) and FOOTER_INPUT_MAX_LINE_COUNT (10).
  *
  * \param scene: Scene to read mixie_chat_input from
  * \return Line count clamped to [min, max] range
  */
 int footer_layout_get_input_line_count(Scene *scene, int region_width);
-
-/**
- * Unscaled height of the input box for `input_line_count` rows, derived from
- * the multi-line painter's row height and top inset so the painter's
- * visible_lines equals the counted lines exactly (no spare empty row).
- */
-int footer_layout_input_row_base(int input_line_count);
 
 /**
  * Calculate required footer height based on pending attachments.
@@ -337,4 +318,34 @@ void footer_thumbnails_draw_border(float x, float y, float size, const float col
 
 /** \} */
 
+/* -------------------------------------------------------------------- */
+/** \name Footer Overlay Drawing (mixie_chat_footer_draw.cc)
+ * \{ */
+
+struct ARegion;
+struct bContext;
+struct PointerRNA;
+
+void footer_draw_send_button_glow(ARegion *region,
+                                   PointerRNA *scene_ptr,
+                                   const FooterElementPositions &pos,
+                                   float scale);
+void footer_draw_submit_icon(ARegion *region, const FooterElementPositions &pos);
+void footer_draw_plan_toggle(ARegion *region,
+                              const FooterThemeCache *theme,
+                              const FooterElementPositions &pos,
+                              bool plan_enabled,
+                              int plan_toggle_x,
+                              float scale);
+void footer_draw_thumbnails(const bContext *C,
+                             ARegion *region,
+                             Main *bmain,
+                             PointerRNA *scene_ptr,
+                             const FooterElementPositions &pos,
+                             const FooterThemeCache *theme,
+                             int pending_count,
+                             const blender::Vector<FooterAttachmentCache> *attachments,
+                             float scale);
+
+/** \} */
 }  // namespace blender

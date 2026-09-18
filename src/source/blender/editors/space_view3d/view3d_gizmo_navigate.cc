@@ -6,8 +6,6 @@
  * \ingroup spview3d
  */
 
-#include <algorithm> /* Mixar: `std::min` in the drawer / N-panel clamp. */
-
 #include "BLI_math_vector.h"
 #include "BLI_utildefines.h"
 
@@ -32,7 +30,7 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
-#include "view3d_director.hh"
+#include "view3d_director_cinema.hh"
 #include "view3d_moodboard_drawer.hh"
 #include "view3d_intern.hh" /* own include */
 
@@ -169,15 +167,6 @@ static bool WIDGETGROUP_navigate_poll(const bContext *C, wmGizmoGroupType * /*gz
   {
     return false;
   }
-  /* Mixar: Cinema Mode has no navigation cluster at all — no axis globe, no
-   * zoom / move buttons, no camera-view toggle, no lock-camera-to-view
-   * toggle. The camera IS the view there: the Walk chip drives it, and each
-   * of these either left the camera view the mode is built on or flipped
-   * the lock the session holds on. The user's own hide flags above are
-   * still asked first, and outside Cinema Mode nothing changes. */
-  if (view3d_director_is_directing(CTX_data_scene(C))) {
-    return false;
-  }
   return true;
 }
 
@@ -295,8 +284,10 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
     copy_v3_v3(navgroup->gz_array[GZ_INDEX_ROTATE]->matrix_offset[i], rv3d->viewmat[i]);
   }
 
-  /* Mixar: Cinema Mode draws no navigation gizmos (see the poll), so only
-   * the moodboard drawer and the N-panel move them off the region corner. */
+  /* Mixar: while the Cinema Mode surface draws, the gizmos sit inside its
+   * stage frame (the design's top-right corner of the working viewport)
+   * instead of the region corner, where they would lie across the right
+   * column's My Cameras card. */
   rcti rect_adjusted = *ED_region_visible_rect(region);
   /* The moodboard is a sliding overlay, not a reserved viewport sidebar.
    * Keep navigation anchored to the viewport when the drawer is tucked away;
@@ -328,6 +319,13 @@ static void WIDGETGROUP_navigate_draw_prepare(const bContext *C, wmGizmoGroup *g
       rect_adjusted.xmax = std::min(rect_adjusted.xmax,
                                     sidebar->winrct.xmin - region->winrct.xmin);
     }
+  }
+  rctf stage;
+  if (cinema_stage_rect(C, region, &stage)) {
+    /* Clear of the frame's rounded corner, as in the design. */
+    const float pad = 10.0f * cinema_unit();
+    rect_adjusted.xmax = int(stage.xmax - pad);
+    rect_adjusted.ymax = int(stage.ymax - pad);
   }
   const rcti *rect_visible = &rect_adjusted;
 

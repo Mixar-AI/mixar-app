@@ -80,27 +80,6 @@ def toggle(qa, amount):
     settle(qa, amount)
 
 
-def tilde_toggle(qa, amount, *, over="viewport"):
-    """`~` must open and shut the drawer from the 3D view, the open canvas,
-    and the grip — not only from a grip click."""
-    if over == "viewport":
-        x0, y0, x1, y1 = geometry(qa)["viewport"]
-        x, y = (x0 + x1) // 2, (y0 + y1) // 2
-    elif over == "panel":
-        pos = point(target(qa, "moodboard_drawer_panel"))
-        x, y = pos["x"], pos["y"]
-    else:
-        pos = point(target(qa, "moodboard_drawer_grip"))
-        x, y = pos["x"], pos["y"]
-    qa.eval(
-        "import qa_driver as d\n"
-        f"d.move_to(drv.main_window(), {x}, {y})\n"
-        "result = 1"
-    )
-    qa.press("ACCENT_GRAVE")
-    settle(qa, amount)
-
-
 def drag_grip(qa, direction, amount, travel=0.85):
     grip = target(qa, "moodboard_drawer_grip")
     panel_width = geometry(qa)["drawer"]
@@ -217,22 +196,6 @@ def move_pan_zoom(qa, node_id):
             f"drv.find(surface='moodboard_media', text={node_id!r}))", timeout=4)
     require(next(i for i in media(qa) if i["id"] == node_id)["scale"] == state["scale"],
             "Zoom changed media scale instead of canvas view")
-
-    select(qa, node_id)
-    pre_pinch = target(qa, "moodboard_media", text=node_id)
-    xy = point(pre_pinch)
-    qa.eval(SETUP + f"""
-x, y = {xy['x']}, {xy['y']}
-win.cursor_warp(x, y)
-win.event_simulate(type='MOUSEMOVE', value='NOTHING', x=x, y=y)
-win.event_simulate(type='TRACKPADZOOM', value='NOTHING', x=x + 80, y=y)
-result = True
-""")
-    qa.wait(f"any(w['rect'][2] - w['rect'][0] != "
-            f"{pre_pinch['rect'][2] - pre_pinch['rect'][0]} for w in "
-            f"drv.find(surface='moodboard_media', text={node_id!r}))", timeout=4)
-    require(next(i for i in media(qa) if i["id"] == node_id)["scale"] == state["scale"],
-            "Trackpad pinch changed media scale instead of canvas view")
     select(qa, node_id)
 
 
@@ -240,6 +203,15 @@ def switch_mode(qa, op, workspace):
     qa.eval(SETUP + "with bpy.context.temp_override(window=win, area=area, region=viewport):\n"
             f"    result = str(bpy.ops.{op}())\n")
     qa.wait(f"drv.main_window().workspace.name == {workspace!r}", timeout=10)
+
+
+def cancel_generation_dialog(qa):
+    # The prompt has autofocus: Esc first exits its text edit. If the popup
+    # remains, another Esc dismisses the dialog itself (normal Blender UI).
+    qa.press("ESC")
+    if qa.find(popup=True, op="MIXIE_OT_imagegen_generate_and_close")["total"]:
+        qa.press("ESC")
+    qa.wait("not any(w.get('popup') for w in drv.find())", timeout=4)
 
 
 def extra_media(qa, viewport_at):
@@ -307,10 +279,6 @@ def run(qa: QA):
     qa.step("panel_visible", target, qa, "moodboard_drawer_panel")
     qa.step("snap_empty", snap, qa, "02_open_empty")
     qa.step("click_close", toggle, qa, 0)
-    qa.step("tilde_reveal_from_viewport", tilde_toggle, qa, 1, over="viewport")
-    qa.step("tilde_close_from_panel", tilde_toggle, qa, 0, over="panel")
-    qa.step("tilde_reveal_from_grip", tilde_toggle, qa, 1, over="grip")
-    qa.step("tilde_close_from_viewport", tilde_toggle, qa, 0, over="viewport")
     qa.step("drag_reveal", drag_grip, qa, -1, 1)
     qa.step("drag_close", drag_grip, qa, 1, 0)
     qa.step("full_travel_reveal", drag_grip, qa, -1, 1, 1.2)
@@ -358,16 +326,15 @@ def run(qa: QA):
     qa.step("snap_context_menu", snap, qa, "06_context_menu")
     qa.step("dismiss_context_menu", qa.press, "ESC")
     qa.step("restore_canvas_focus", select, qa, second)
-    # Ctrl+Tab is the pie's only key; it lists the catalog node templates
-    # (same entries as the + Add menu), never the retired generation popups.
     qa.step("open_features_pie", qa.press, "TAB", ctrl=True)
     qa.step("features_pie_shown", qa.wait,
-            "len(drv.find(popup=True, op='MIXIE_OT_moodboard_add_template')) >= 1",
-            timeout=4)
-    qa.step("snap_features_pie", snap, qa, "features_pie_popup")
-    qa.step("dismiss_features_pie", qa.press, "ESC")
-    qa.step("features_pie_closed", qa.wait,
-            "not any(w.get('popup') for w in drv.find())", timeout=4)
+            "len(drv.find(popup=True, op='MIXIE_OT_imagegen_popup')) == 1", timeout=4)
+    qa.step("open_imagegen_popup", qa.click, popup=True, op="MIXIE_OT_imagegen_popup")
+    qa.step("imagegen_popup_shown", qa.wait,
+            "len(drv.find(popup=True, op='MIXIE_OT_imagegen_generate_and_close')) == 1",
+            timeout=5)
+    qa.step("snap_generation_popup", snap, qa, "generation_popup")
+    qa.step("cancel_generation_popup", cancel_generation_dialog, qa)
 
     qa.step("close_with_references", toggle, qa, 0)
     qa.step("reopen_keeps_references", toggle, qa, 1)

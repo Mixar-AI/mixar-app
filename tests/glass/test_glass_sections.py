@@ -71,8 +71,8 @@ class TestTheSectionCardsArePanes:
         """#141414 at full strength is opaque, so it is laid back at a named
         fraction — still the card's own black, over the pane."""
         card = self._card()
-        assert "copy_v4_v4_uchar(bed, bg_u);" in card
-        assert "bed[3] = uchar(float(bg_u[3]) * CARD_WASH);" in card
+        assert "copy_v4_v4_uchar(bed, MX_BG);" in card
+        assert "bed[3] = uchar(float(MX_BG[3]) * CARD_WASH);" in card
         assert "copy_v4_v4_uchar(wcol->inner, bed);" in card
         wash = re.search(r"constexpr float CARD_WASH = ([0-9.]+)f;", card)
         assert wash is not None, "the wash strength is not a named constant"
@@ -82,7 +82,7 @@ class TestTheSectionCardsArePanes:
         """The 1px #262626 outline is the card's own edge, and `shaded = 0`
         keeps the widget shader from gradient-filling it into a charcoal."""
         card = self._card()
-        assert "copy_v4_v4_uchar(wcol->outline, widget_border);" in card
+        assert "copy_v4_v4_uchar(wcol->outline, MX_BORDER);" in card
         assert "wcol->shaded = 0;" in card
         assert "round_box_edges(&wtb, roundboxalign, rect, rad);" in card
 
@@ -126,7 +126,7 @@ class TestTheSectionCardsArePanes:
         assert "style.draw_tint = floats_over_content" in body
         assert "mixar_glass_draw(pane_i, style)" in body
         assert "MIXAR_GLASS_CHIP" not in body
-        assert "mixar_tokens::mixar_zen().selected" in body
+        assert "mixar_tokens::zen.selected" in body
         assert "0.88f" in body
         assert "draw_roundbox_corner_set(CNR_ALL)" in body
         icons = _code(_fn_body(WIDGETS, "static void widget_draw_icon("))
@@ -135,21 +135,6 @@ class TestTheSectionCardsArePanes:
         assert "widget_zen_tool_glass(but, rect, state, roundboxalign)" in exec_body
         assert "zen_glass_cell(but)" in exec_body
         assert "wtb.draw_inner = false;" in exec_body
-
-    def test_a_wide_zen_toolbar_cell_clamps_to_a_square(self) -> None:
-        """A tools-region column stretches these buttons to the region width.
-        The capsule radius is half the short side, so a wide short cell paints
-        a horizontal bar and the glyph sits on its left. Clamping the draw
-        rect to a square anchored on that edge keeps the pane, the selected
-        wash and the icon on the same footprint. Header shading rows are wider
-        than they are tall on purpose, so the clamp is toolbar-tools only."""
-        body = _code(_fn_body(WIDGETS, "static void widget_zen_tool_glass("))
-        clamp = body[: body.index("rctf pane;")]
-        assert "if (zen_toolbar_tool(but))" in clamp
-        assert "w > h && h > 0" in clamp
-        assert "rect->xmax = rect->xmin + h;" in clamp
-        icons = _code(_fn_body(WIDGETS, "static void widget_draw_text_icon("))
-        assert "is_tool && !zen_toolbar_tool(but)" in icons
 
     def test_explicit_glass_tool_capsules_take_the_readability_floor(self) -> None:
         """The 0.20 wash is calibrated for the viewport transform strip, whose
@@ -183,7 +168,7 @@ class TestTheSectionCardsArePanes:
         union = _code(_fn_body(WIDGETS, "static void widget_zen_tool_glass("))
         assert "zen_glass_cell(&other)" in union
         assert "BUT_ALIGN_RIGHT" in union
-        assert "ELEM(but->type, ButtonType::Row, ButtonType::Popover) && zen_glass_cell(but)" in WIDGETS
+        assert "but->type == ButtonType::Row && zen_glass_cell(but)" in WIDGETS
         assert "widget_zen_tool_glass(but, rect, &state, roundboxalign)" in WIDGETS
 
 

@@ -114,12 +114,8 @@ def test_whole_drag_is_one_undo_step_and_esc_restores():
 def test_the_placement_resolves_the_shared_shot_camera():
     state = (VIEW3D / "view3d_director_state.cc").read_text(encoding="utf-8")
     assert "Object *view3d_director_shot_camera(Scene *scene, bool *r_locked)" in state
-    # The nudge and the Cinema walk both go through the shared resolver.
-    move = (VIEW3D / "view3d_director_camera_move.cc").read_text(encoding="utf-8")
-    assert "return view3d_director_shot_camera(scene, r_locked);" in move
-    for name in ("view3d_director_nudge.cc", "view3d_director_walk.cc"):
-        source = (VIEW3D / name).read_text(encoding="utf-8")
-        assert "director_move_camera(" in source, name
+    nudge = (VIEW3D / "view3d_director_nudge.cc").read_text(encoding="utf-8")
+    assert "return view3d_director_shot_camera(scene, r_locked);" in nudge
     assert OPS.count("view3d_director_shot_camera(") >= 3
     assert "view3d_director_shot_camera(scene, &locked)" in DRAW
     assert "This take is locked; start a new take to move the camera" in OPS
@@ -152,7 +148,7 @@ def test_the_world_mapping_is_clamped_inside_the_placeable_area():
 
 
 def test_the_right_panel_card_is_the_aerial_map_now():
-    assert "cinema_draw_minimap(\n      block, C, region, state, column_card(region, PREVIEW_Y, CINEMA_PREVIEW_H));" in RIGHT
+    assert "cinema_draw_minimap(block, C, region, state, preview);" in RIGHT
     assert "CINEMA_PREVIEW_H" in RIGHT
     assert "cinema_image_preview(" not in RIGHT
     assert "beats_prop" not in RIGHT and "image_prop" not in RIGHT

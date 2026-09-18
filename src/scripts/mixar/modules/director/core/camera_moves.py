@@ -17,7 +17,6 @@ import math
 
 from .capture import capture_beat
 from .frame_math import frames_per_beat
-from .shot_api import shot_scene
 
 # (key, label, tooltip)
 CAMERA_MOVES = (
@@ -144,7 +143,7 @@ def apply_camera_move(context, shot, state, move: str) -> list[int]:
     reallocates the collection and invalidates any beat reference taken
     before it.
     """
-    scene = shot_scene(shot, context.scene)
+    scene = shot.scene_ref or context.scene
     camera = shot.camera
     poses = move_poses(scene, camera, move)
     stride = frames_per_beat(

@@ -19,15 +19,13 @@ from ...core.node.get_nodes import get_layer_source
 class BAKING_HT_header(Header):
     """Title bar for the Baking space.
 
-    Draws ``template_header()``: every editor in the Texturing workspace
-    stays swappable, so this space keeps the stock Editor Type dropdown and
-    appears under the menu's "Texturing" heading.
+    No ``template_header()``: the space is hidden from the Editor Type
+    dropdown, matching Zen / Cinema chrome that is not a switchable editor.
     """
     bl_space_type = 'BAKING'
 
     def draw(self, context):
         layout = self.layout
-        layout.template_header()
         layout.label(text="Baking")
 
 

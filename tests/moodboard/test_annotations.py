@@ -84,19 +84,26 @@ def test_annotation_properties_are_persistent_and_image_attached():
     ) < registered_classes.index("MixieMoodboardImage,")
 
 
-def test_canvas_annotate_is_the_only_drawing_tool():
+def test_annotation_tool_exposes_complete_editing_workflow():
     operators = (MOODBOARD / "ui/operators/annotation_ops.py").read_text(encoding="utf-8")
     toolbar = (MOODBOARD / "ui/moodboard_toolbar.py").read_text(encoding="utf-8")
     duplicate = (MOODBOARD / "ui/operators/transform_ops.py").read_text(encoding="utf-8")
 
-    assert 'MIXIE_OT_moodboard_annotate_tool' not in operators
-    assert 'MIXIE_PT_annotation_tools_popover' not in toolbar
-    assert '"mixie.moodboard_annotate_tool"' not in toolbar
-    assert toolbar.count('"mixie.moodboard_annotate_canvas"') == 1
-    assert '"mixie.moodboard_lasso_tool"' in toolbar
-    # Existing projects still retain, render, duplicate and clean up old marks.
+    assert 'bl_idname = "mixie.moodboard_annotate_tool"' in operators
     assert 'bl_idname = "mixie.moodboard_undo_annotation"' in operators
     assert 'bl_idname = "mixie.moodboard_clear_annotations"' in operators
+    assert 'bl_options = {"REGISTER", "UNDO"}' in operators
+    assert '"BLOCKING"' not in operators
+    assert 'self.report({"INFO"}, "Annotation stroke added")' in operators
+    # Lasso keeps its direct gaming-workflow shortcut, while annotations get
+    # a dedicated split row: one-click drawing plus settings/history.
+    assert 'row.operator(\n            "mixie.moodboard_lasso_tool"' in toolbar
+    assert 'row.operator(\n            "mixie.moodboard_annotate_tool"' in toolbar
+    assert 'panel="MIXIE_PT_annotation_tools_popover"' in toolbar
+    assert 'bl_idname = "MIXIE_PT_annotation_tools_popover"' in toolbar
+    assert "MIXIE_PT_annotation_tools_popover," in toolbar
+    assert 'col.prop(state, "annotation_color"' in toolbar
+    assert 'col.prop(state, "annotation_width"' in toolbar
     assert "for original_stroke in orig_img.annotations" in duplicate
 
 

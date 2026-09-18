@@ -248,7 +248,6 @@ class SocketConnection:
         reply is HANDSHAKE_TRANSIENT and just retries (jsonrpc_frames).
         """
         from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
-        from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
 
@@ -283,11 +282,6 @@ class SocketConnection:
                 "document_epoch_v1",
                 "runtime_questions_v1",
             ],
-            # Physical resources of THIS machine. The backend sizes the agent's
-            # scene geometry budget from it (a Cycles render of a scene that
-            # outgrew the RAM is what the OS kills); a client that omits it is
-            # assumed to be a 16 GB machine.
-            "machine": machine_block(),
         }
         # Anti-abuse device signal (one trial per machine); best-effort
         if self._device_id:

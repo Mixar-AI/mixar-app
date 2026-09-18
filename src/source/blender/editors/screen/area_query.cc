@@ -172,16 +172,6 @@ bool ED_region_contains_xy(const ARegion *region, const int event_xy[2])
       else {
         /* Side-bar & any other kind of overlapping region. */
 
-        /* Mixar: the parallel agents stack (View3D's only EXECUTE overlap
-         * region, see #ED_region_is_overlap) is BOTTOM-aligned and taller
-         * than its cards. The top/bottom rule below clips X alone, so every
-         * press in the band above the cards landed in the stack, never
-         * reaching the viewport or the notifications painted over it there.
-         * Its View2D extent is exactly the cards and chevron: clip both axes. */
-        if (region->regiontype == RGN_TYPE_EXECUTE) {
-          return ED_region_overlap_isect_xy(region, event_xy);
-        }
-
         const int alignment = RGN_ALIGN_ENUM_FROM_MASK(region->alignment);
 
         /* Check alignment to avoid region tabs being clipped out

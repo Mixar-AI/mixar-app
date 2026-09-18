@@ -25,14 +25,6 @@ from mixar.modules.moodboard.constants import (
     ANNOTATION_WIDTH_MIN,
     EDIT_TOOL_TYPES,
 )
-from mixar.modules.moodboard.core.canvas_mark_mode import exit_canvas_mark_mode
-
-
-def _on_active_tool_update(self, context):
-    """An image tool (crop, masks, image annotate) taking over the canvas
-    releases canvas Annotate/Erase, the same as the Text tool does."""
-    if self.active_tool != 'NONE':
-        exit_canvas_mark_mode(context)
 
 
 class LassoPoint(PropertyGroup):
@@ -52,8 +44,7 @@ class MoodboardEditToolState(PropertyGroup):
     active_tool: EnumProperty(
         name="Active Tool",
         items=EDIT_TOOL_TYPES,
-        default='NONE',
-        update=_on_active_tool_update,
+        default='NONE'
     )
 
     # Target image index

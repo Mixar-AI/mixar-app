@@ -183,6 +183,9 @@ const uchar *get_color_ptr(bTheme *btheme, int spacetype, int colorid)
         case SPACE_SPREADSHEET:
           ts = &btheme->space_spreadsheet;
           break;
+        case SPACE_MIXIE_CHAT:
+          ts = &btheme->space_mixie_chat;
+          break;
         case SPACE_AGENT_BUBBLE:
           ts = &btheme->space_agent_bubble;
           break;

@@ -81,8 +81,6 @@ rcti padded_text_rect(const rcti *rect)
 
 void draw_caption(Button *but, const rcti *rect)
 {
-  uchar caption_tok[4];
-  themed(MixarThemeSlot::CinemaRowCaption, CAPTION, caption_tok);
   const uiFontStyle fs = caption_font();
   const char *label = row_label(but);
   rcti text = padded_text_rect(rect);
@@ -90,17 +88,11 @@ void draw_caption(Button *but, const rcti *rect)
   /* Same rule as the option row: icon then label, icon dropped if tight. */
   const bool icon_drawn = draw_leading_icon(but, rect, text, label_w, 0.55f);
   draw_label(
-      fs, &text, label, caption_tok, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack());
+      fs, &text, label, CAPTION, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack());
 }
 
 void draw_slider(Button *but, const rcti *rect, const bool /*is_hover*/)
 {
-  uchar track_tok[4], hover_tok[4], slider_on[4], text_on[4], text_disabled[4];
-  themed(MixarThemeSlot::CinemaRowTrack, TRACK, track_tok);
-  themed(MixarThemeSlot::CinemaRowHover, HOVER, hover_tok);
-  themed(MixarThemeSlot::CinemaRowSliderOn, SLIDER_ON, slider_on);
-  themed(MixarThemeSlot::CinemaRowTextOn, TEXT_ON, text_on);
-  themed(MixarThemeSlot::CinemaRowTextDisabled, TEXT_DISABLED, text_disabled);
   const bool disabled = (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
   const rctf row = row_rect(rect);
   const float rad = row_radius(row);
@@ -111,7 +103,7 @@ void draw_slider(Button *but, const rcti *rect, const bool /*is_hover*/)
   const float emphasis = std::max(motion.hover, motion.press);
   uchar track[4];
   for (int i = 0; i < 4; i++) {
-    track[i] = uchar(float(track_tok[i]) + (float(hover_tok[i]) - track_tok[i]) * emphasis);
+    track[i] = uchar(float(TRACK[i]) + (float(HOVER[i]) - TRACK[i]) * emphasis);
   }
   mixar_card_fill_round(&row, rad, track, 1.0f);
 
@@ -126,11 +118,11 @@ void draw_slider(Button *but, const rcti *rect, const bool /*is_hover*/)
     rctf fill = row;
     fill.xmax = row.xmin + BLI_rctf_size_x(&row) * fraction;
     const float fill_rad = std::min(rad, BLI_rctf_size_x(&fill) * 0.5f);
-    mixar_card_fill_round(&fill, fill_rad, slider_on, disabled ? 0.45f : 1.0f);
+    mixar_card_fill_round(&fill, fill_rad, SLIDER_ON, disabled ? 0.45f : 1.0f);
   }
 
   const uiFontStyle fs = row_font();
-  const uchar *col = disabled ? text_disabled : text_on;
+  const uchar *col = disabled ? TEXT_DISABLED : TEXT_ON;
   const rcti text = padded_text_rect(rect);
 
   /* Value right-aligned; the label takes what is left, ellipsised if tight. */

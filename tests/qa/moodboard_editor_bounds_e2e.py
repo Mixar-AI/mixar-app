@@ -86,8 +86,7 @@ result=node.node_id
     # Commit by clicking known empty canvas, then revisit the node. Enter is
     # deliberately avoided because it is the generation shortcut.
     x0, y0, x1, y1 = evidence['bounds']['canvas']
-    scale = qa.eval('result=bpy.context.preferences.system.ui_scale')
-    qa.cmd('click_xy', x=round(x0+100*scale), y=round(y0+80*scale))
+    qa.cmd('click_xy', x=round((x0+x1)/2), y=y1-60)
     qa.click(area_type='MIXIE', surface='moodboard_node', text=node_id)
     qa.step('edited_controls_clear_sidebar', check, qa)
     qa.cmd('snap', path=str(OUT / '02_edited_prompt.png'), area='MIXIE')

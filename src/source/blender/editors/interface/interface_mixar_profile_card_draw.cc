@@ -39,7 +39,6 @@
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
-#include "UI_mixar_theme.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
 
@@ -121,8 +120,6 @@ void fill_ramp(const rctf *rect, float rad, const uchar from[4], const uchar to[
 
 void draw_heading(Button *but, rcti *rect)
 {
-  uchar fg1_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::Fg1, MX_FG_1, fg1_u);
   rcti text_rect = *rect;
   text_rect.xmin += mixar_card_text_pad();
   text_rect.xmax -= mixar_card_text_pad();
@@ -143,7 +140,7 @@ void draw_heading(Button *but, rcti *rect)
   mixar_card_draw_text(mixar_card_font(scale, mixar_chrome::card_heading_weight),
             &text_rect,
             but->drawstr.c_str(),
-            fg1_u,
+            MX_FG_1,
             UI_STYLE_TEXT_LEFT);
 }
 
@@ -157,9 +154,6 @@ void draw_muted(Button *but, rcti *rect, const FontStyleAlign align, const uchar
 
 void draw_pill(Button *but, rcti *rect)
 {
-  uchar border_strong_u[4], fg2_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong_u);
-  mixar_theme_copy_u(MixarThemeSlot::Fg2, MX_FG_2, fg2_u);
   const uiFontStyle fs = mixar_card_font(MIXAR_CARD_PILL_SCALE, 0);
   fontstyle_set(&fs);
 
@@ -180,18 +174,16 @@ void draw_pill(Button *but, rcti *rect)
   const float rad = height * mixar_chrome::card_pill_radius;
   /* Plan chip sits on the card pane — CHIP role, with its own stronger stroke. */
   mixar_card_glass_round(&chip, rad, MIXAR_GLASS_CHIP);
-  mixar_card_outline_round(&chip, rad, border_strong_u, 1.0f);
+  mixar_card_outline_round(&chip, rad, MX_BORDER_STRONG, 1.0f);
   GPU_blend(GPU_BLEND_NONE);
 
   rcti text_rect;
   BLI_rcti_init(&text_rect, int(chip.xmin), int(chip.xmax), int(chip.ymin), int(chip.ymax));
-  mixar_card_draw_text(fs, &text_rect, label, fg2_u, UI_STYLE_TEXT_CENTER);
+  mixar_card_draw_text(fs, &text_rect, label, MX_FG_2, UI_STYLE_TEXT_CENTER);
 }
 
 void draw_divider(rcti *rect)
 {
-  uchar border_strong_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong_u);
   const float y = float(rect->ymin + rect->ymax) * 0.5f;
   const float thickness = std::max(1.0f, U.pixelsize);
 
@@ -202,7 +194,7 @@ void draw_divider(rcti *rect)
   line.ymax = line.ymin + thickness;
 
   GPU_blend(GPU_BLEND_ALPHA);
-  mixar_card_fill_round(&line, 0.0f, border_strong_u);
+  mixar_card_fill_round(&line, 0.0f, MX_BORDER_STRONG);
   GPU_blend(GPU_BLEND_NONE);
 }
 
@@ -217,12 +209,6 @@ void draw_divider(rcti *rect)
  */
 void draw_usage_bar(Button *but, rcti *rect)
 {
-  uchar danger_u[4], warning_u[4], fg1_u[4], sunken_u[4], border_strong_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::Danger, MX_DANGER, danger_u);
-  mixar_theme_copy_u(MixarThemeSlot::Warning, MX_WARNING, warning_u);
-  mixar_theme_copy_u(MixarThemeSlot::Fg1, MX_FG_1, fg1_u);
-  mixar_theme_copy_u(MixarThemeSlot::Sunken, MX_BG_SUNKEN, sunken_u);
-  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong_u);
   const float factor = std::clamp(but->mixar_style.progress, 0.0f, 1.0f);
 
   const float pad = float(mixar_card_text_pad());
@@ -233,7 +219,7 @@ void draw_usage_bar(Button *but, rcti *rect)
   const bool is_critical = factor < CARD_USAGE_CRITICAL_FACTOR;
   const bool is_warning = !is_critical && factor < CARD_USAGE_WARNING_FACTOR;
   const bool is_healthy = !is_critical && !is_warning;
-  const uchar *accent_col = is_critical ? danger_u : (is_warning ? warning_u : fg1_u);
+  const uchar *accent_col = is_critical ? MX_DANGER : (is_warning ? MX_WARNING : MX_FG_1);
 
   /* Measure the label first; the track takes whatever is left. */
   const uiFontStyle fs = mixar_card_font(1.0f, mixar_chrome::card_heading_weight);
@@ -262,8 +248,8 @@ void draw_usage_bar(Button *but, rcti *rect)
     const float rad = height * 0.5f;
 
     GPU_blend(GPU_BLEND_ALPHA);
-    mixar_card_fill_round(&track, rad, sunken_u);
-    mixar_card_outline_round(&track, rad, border_strong_u, 1.0f);
+    mixar_card_fill_round(&track, rad, MX_BG_SUNKEN);
+    mixar_card_outline_round(&track, rad, MX_BORDER_STRONG, 1.0f);
 
     if (factor > 0.0f) {
       rctf fill = track;
@@ -317,10 +303,6 @@ void UI_mixar_profile_card_draw_element(
    * kept in the signature because it is the widget-callback shape and
    * dropping it would make this the odd one out. */
   UNUSED_VARS(wcol);
-  uchar fg3_u[4], fg4_u[4], danger_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::Fg3, MX_FG_3, fg3_u);
-  mixar_theme_copy_u(MixarThemeSlot::Fg4, MX_FG_4, fg4_u);
-  mixar_theme_copy_u(MixarThemeSlot::Danger, MX_DANGER, danger_u);
 
   /* Topbar elements are buttons too, but they own their own chrome — check
    * them before the card-button painter claims them. */
@@ -338,13 +320,13 @@ void UI_mixar_profile_card_draw_element(
       draw_heading(but, rect);
       break;
     case MixarCardElement::Muted:
-      draw_muted(but, rect, UI_STYLE_TEXT_LEFT, fg4_u);
+      draw_muted(but, rect, UI_STYLE_TEXT_LEFT, MX_FG_4);
       break;
     case MixarCardElement::SectionLabel:
-      draw_muted(but, rect, UI_STYLE_TEXT_LEFT, fg3_u);
+      draw_muted(but, rect, UI_STYLE_TEXT_LEFT, MX_FG_3);
       break;
     case MixarCardElement::MetaRight:
-      draw_muted(but, rect, UI_STYLE_TEXT_RIGHT, fg4_u);
+      draw_muted(but, rect, UI_STYLE_TEXT_RIGHT, MX_FG_4);
       break;
     case MixarCardElement::Pill:
       draw_pill(but, rect);
@@ -356,7 +338,7 @@ void UI_mixar_profile_card_draw_element(
       draw_divider(rect);
       break;
     case MixarCardElement::DangerText:
-      draw_muted(but, rect, UI_STYLE_TEXT_LEFT, danger_u);
+      draw_muted(but, rect, UI_STYLE_TEXT_LEFT, MX_DANGER);
       break;
     default:
       break;

@@ -43,8 +43,8 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 
 from ...constants import (
-    CHAT_INPUT_MAXLEN,
     MAX_ATTACHMENTS_PER_MESSAGE,
+    MAX_MESSAGE_LENGTH,
     SUPPORTED_IMAGE_FORMATS,
 )
 from ...core import validate_image_file
@@ -108,14 +108,12 @@ def append_clipboard_text_to_input(context, report=None):
     # Append clipboard to current input (at end)
     new_input = scene.mixie_chat_input + clipboard_text
 
-    # Clamp to the composer property's own maxlen (CHAT_INPUT_MAXLEN, the
-    # RNA limit on scene.mixie_chat_input) so a long paste warns instead of
-    # being silently truncated by RNA at a different, smaller bound.
-    if len(new_input) > CHAT_INPUT_MAXLEN:
+    # Security: Validate total length
+    if len(new_input) > MAX_MESSAGE_LENGTH:
         if report is not None:
             report({'WARNING'},
-                   f"Pasted text too long (max {CHAT_INPUT_MAXLEN} chars)")
-        new_input = new_input[:CHAT_INPUT_MAXLEN]
+                   f"Pasted text too long (max {MAX_MESSAGE_LENGTH} chars)")
+        new_input = new_input[:MAX_MESSAGE_LENGTH]
 
     scene.mixie_chat_input = new_input
     redraw_chat_areas()
@@ -228,7 +226,7 @@ class MIXIE_CHAT_OT_paste_image(Operator):
 
             # Tag footer region for thumbnail update
             for area in context.screen.areas:
-                if area.type == 'AGENT_BUBBLE':
+                if area.type == 'MIXIE_CHAT':
                     for region in area.regions:
                         if region.type == 'TOOLS':
                             region.tag_redraw()

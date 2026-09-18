@@ -6,28 +6,6 @@
 import bpy
 
 
-MOODBOARD_CONTENT_COLLECTIONS = (
-    "mixie_moodboard_images",
-    "mixie_moodboard_textboxes",
-    # Frames replaced the index-based `mixie_moodboard_groups`, which the
-    # load-time migration empties for good. The legacy name stays listed
-    # only so a board that has not ticked the migration yet still reads
-    # as non-empty.
-    "mixie_moodboard_frames",
-    "mixie_moodboard_groups",
-    "mixie_moodboard_action_nodes",
-    "mixie_moodboard_asset_nodes",
-    "mixie_moodboard_links",
-    "mixie_moodboard_annotations",
-)
-
-
-def has_moodboard_content(context):
-    """True when either canvas host should offer Clear Moodboard."""
-    scene = getattr(context, "scene", None)
-    return any(getattr(scene, name, ()) for name in MOODBOARD_CONTENT_COLLECTIONS)
-
-
 def is_moodboard_context(context):
     space = getattr(context, "space_data", None)
     if getattr(space, "type", None) == "MIXIE":
@@ -108,4 +86,3 @@ def redraw_moodboard_canvases():
                 for region in area.regions:
                     if region.type == "TOOL_PROPS":
                         region.tag_redraw()
-

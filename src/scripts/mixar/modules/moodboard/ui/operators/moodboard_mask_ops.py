@@ -20,11 +20,11 @@ from ...constants import (
     LASSO_MIN_POINTS,
 )
 from ...core.moodboard_utils import (
+    mouse_to_image_coords,
     validate_selection_region,
     reset_tool_state,
 )
 from ...core.media_utils import is_still_item
-from ...core.mask_tool_context import mouse_to_image_coords
 
 
 def _auto_trigger_box_sam():
@@ -122,12 +122,7 @@ class MIXIE_OT_moodboard_box_mask_tool(Operator):
                 if state.is_drawing:
                     state.is_drawing = False
                     # Apply mask on mouse release
-                    result = bpy.ops.mixie.moodboard_apply_box_mask(invert=False)
-                    if result != {'FINISHED'}:
-                        state.box_select_has_selection = False
-                        state.box_select_pending = False
-                        reset_tool_state(state, context)
-                        return {'CANCELLED'}
+                    bpy.ops.mixie.moodboard_apply_box_mask(invert=False)
                     # Mark selection as ready for SAM processing
                     state.box_select_has_selection = True
                     context.area.tag_redraw()
@@ -158,7 +153,7 @@ class MIXIE_OT_moodboard_box_mask_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
 
-        # Preserve the shared legacy segmentation form selection
+        # Surface the segments panel (Character Parts / Scene Gen fallback)
         from ..sidebar_ui_helpers import focus_segments_panel
         focus_segments_panel(context)
 
@@ -174,8 +169,6 @@ class MIXIE_OT_moodboard_box_mask_tool(Operator):
             return {'CANCELLED'}
 
         # Initialize state
-        state.box_select_has_selection = False
-        state.box_select_pending = False
         state.active_tool = 'BOX_MASK'
         state.target_image_index = selected_idx
         state.box_start_x = 0.0
@@ -242,9 +235,6 @@ class MIXIE_OT_moodboard_apply_box_mask(Operator):
             invert=self.invert,
             offset_x=offset_x
         )
-
-        if result != {'FINISHED'}:
-            return result
 
         # Remove mask from moodboard (we don't want to display it)
         # The mask is created by C++ but we only need the selection coords for SAM
@@ -327,7 +317,6 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
                     # Apply mask on mouse release if we have enough points
                     if len(state.lasso_points) >= LASSO_MIN_POINTS:
                         if not _commit_lasso_loop(state):
-                            reset_tool_state(state, context)
                             self.report({'ERROR'}, "Could not save lasso loop")
                             return {'CANCELLED'}
                         context.area.tag_redraw()
@@ -383,7 +372,7 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
         scene = context.scene
         state = scene.mixie_edit_tool_state
 
-        # Preserve the shared legacy segmentation form selection
+        # Surface the segments panel (Character Parts / Scene Gen fallback)
         from ..sidebar_ui_helpers import focus_segments_panel
         focus_segments_panel(context)
 
@@ -461,9 +450,6 @@ class MIXIE_OT_moodboard_apply_lasso_mask(Operator):
             invert=self.invert,
             offset_x=offset_x
         )
-
-        if result != {'FINISHED'}:
-            return result
 
         # Remove mask from moodboard (we don't want to display it)
         # The mask is created by C++ but we only need the lasso points for SAM

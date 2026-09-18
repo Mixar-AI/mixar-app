@@ -8,11 +8,7 @@ Moodboard Keymap Registration
 
 Registers keyboard shortcuts for moodboard operations.
 Cmd+P (macOS) / Ctrl+P (Windows/Linux): Send selected images to Mixie Chat
-`~` (Accent Grave): toggle the Zen Mode drawer open/shut
-Node pie menu: Ctrl+Tab only (Blender's stock editor pie key) in the
-  standalone Mixie editor. The backtick is never bound to the pie: it is the
-  drawer toggle, and mirroring the 3D View's View-pie key here made the two
-  collide.
+View Pie Menu: Follows user's pie menu key preference (default: backtick)
 """
 
 import bpy
@@ -27,32 +23,22 @@ addon_keymaps = []
 
 
 def _bind_moodboard_pointer(km):
-    """Canvas click/drag/hover/menu, including frame chrome.
+    """Canvas click/drag/hover/menu.
 
     C registers these on the Mixie defaultconf keymap. A GUI keyconfig
     reload wipes that copy, and ``WM_keymap_active`` then prefers the
     user Mixie map — which never received the C items. The addon map is
     the binding that survives (same rule as delete and the drawer grip).
     """
-    # wm_keymap_addon_add prepends each item when composing the user map, so
-    # this list is written in REVERSE priority: last registered runs first.
-    # space_mixie.cc orders the press as frame -> card -> media (frames get
-    # first refusal but only claim their own chrome), so register media, then
-    # cards, then frames.
+    # wm_keymap_addon_add prepends each item when composing the user map.
+    # Register the media fallback first so graph sockets/cards run FIRST in
+    # the active map, including after a GUI keyconfig preset reload.
     kmi = km.keymap_items.new('mixie.moodboard_select_image', 'LEFTMOUSE', 'PRESS')
     addon_keymaps.append((km, kmi))
     kmi = km.keymap_items.new('mixie.moodboard_graph_select', 'LEFTMOUSE', 'PRESS')
     addon_keymaps.append((km, kmi))
-    kmi = km.keymap_items.new('mixie.moodboard_frame_select', 'LEFTMOUSE', 'PRESS')
-    addon_keymaps.append((km, kmi))
     kmi = km.keymap_items.new(
         'mixie.moodboard_select_image', 'LEFTMOUSE', 'DOUBLE_CLICK'
-    )
-    addon_keymaps.append((km, kmi))
-    # Double-click a frame's title strip to rename it in place; the operator
-    # passes through everywhere else, so text boxes keep their double-click.
-    kmi = km.keymap_items.new(
-        'mixie.moodboard_frame_select', 'LEFTMOUSE', 'DOUBLE_CLICK'
     )
     addon_keymaps.append((km, kmi))
 
@@ -68,47 +54,72 @@ def _bind_moodboard_pointer(km):
         )
         kmi.properties.extend = True
         addon_keymaps.append((km, kmi))
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_frame_select', 'LEFTMOUSE', 'PRESS', **extras
-        )
-        kmi.properties.extend = True
-        addon_keymaps.append((km, kmi))
 
     kmi = km.keymap_items.new('mixie.moodboard_video_hover', 'MOUSEMOVE', 'ANY')
     addon_keymaps.append((km, kmi))
     kmi = km.keymap_items.new('mixie.moodboard_context_menu', 'RIGHTMOUSE', 'PRESS')
     addon_keymaps.append((km, kmi))
 
-    # Addon items are prepended to the active map. Annotate/Erase must claim a
-    # drag before media/graph selection, and their polls release when off.
+    # Addon items are prepended to the active map. Annotate must claim a drag
+    # before media/graph selection, and its poll releases it when the tool is off.
     kmi = km.keymap_items.new('mixie.moodboard_annotation_stroke', 'LEFTMOUSE', 'PRESS')
-    addon_keymaps.append((km, kmi))
-    kmi = km.keymap_items.new('mixie.moodboard_annotation_erase', 'LEFTMOUSE', 'PRESS')
     addon_keymaps.append((km, kmi))
     kmi = km.keymap_items.new('mixie.moodboard_annotation_exit', 'ESC', 'PRESS')
     addon_keymaps.append((km, kmi))
 
 
-def _bind_drawer_toggle(km):
-    """`~` and Shift+`~` slide the Zen drawer. Bound on Moodboard Drawer
-    (first on the viewport), Window (header / topbar), and 3D View
-    (beats the View pie after a preset reload empties the C map)."""
-    for extras in ({}, {'shift': True}):
-        kmi = km.keymap_items.new(
-            'view3d.moodboard_drawer_toggle',
-            type='ACCENT_GRAVE',
-            value='PRESS',
-            head=True,
-            **extras,
-        )
-        addon_keymaps.append((km, kmi))
+def get_user_pie_menu_key():
+    """
+    Get the user's preferred pie menu key by looking at VIEW3D_MT_view_pie binding.
+    Falls back to ACCENT_GRAVE (backtick) if not found.
 
+    Returns:
+        dict: keys 'type', 'value', 'ctrl', 'shift', 'alt', 'oskey'
+    """
+    wm = getattr(bpy.context, 'window_manager', None)
+    if not wm:
+        return {
+            'type': 'ACCENT_GRAVE',
+            'value': 'PRESS',
+            'ctrl': False,
+            'shift': False,
+            'alt': False,
+            'oskey': False,
+        }
 
-def _ensure_addon_keymap(kc, name, space_type, region_type='WINDOW'):
-    km = kc.keymaps.find(name=name, space_type=space_type, region_type=region_type)
-    if km:
-        return km
-    return kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
+    # Check user keyconfig first (user customizations), then default
+    for kc in (wm.keyconfigs.user, wm.keyconfigs.default):
+        if not kc:
+            continue
+
+        # Look for 3D View keymap
+        km = kc.keymaps.get('3D View')
+        if not km:
+            continue
+
+        # Find the VIEW3D_MT_view_pie binding
+        for kmi in km.keymap_items:
+            if kmi.idname == 'wm.call_menu_pie':
+                # Check if this is the view pie menu
+                if kmi.properties.get('name') == 'VIEW3D_MT_view_pie':
+                    return {
+                        'type': kmi.type,
+                        'value': kmi.value,
+                        'ctrl': kmi.ctrl,
+                        'shift': kmi.shift,
+                        'alt': kmi.alt,
+                        'oskey': kmi.oskey,
+                    }
+
+    # Default fallback: backtick with no modifiers
+    return {
+        'type': 'ACCENT_GRAVE',
+        'value': 'PRESS',
+        'ctrl': False,
+        'shift': False,
+        'alt': False,
+        'oskey': False,
+    }
 
 
 def register():
@@ -147,12 +158,7 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # Cmd/Ctrl+C and +V copy and paste the SELECTION as one snapshot --
-        # media, text boxes, inference nodes and their links -- through the
-        # one moodboard clipboard, which also writes the shared on-disk copy
-        # buffer so the paste works in another running Mixar. ONE operator
-        # per key: separate media and node clipboards behind the same binding
-        # are exactly what this replaced.
+        # Register Cmd+C (macOS) / Ctrl+C (Windows/Linux) for copying images
         kmi = km.keymap_items.new(
             'mixie.moodboard_copy_image',
             type='C',
@@ -181,22 +187,6 @@ def register():
             )
             addon_keymaps.append((km, kmi))
 
-        # Cmd/Ctrl+G frames the selection, Alt+G dissolves the frame — the
-        # node-editor convention. Mirrored in space_mixie.cc; the addon copy
-        # is what survives a keyconfig preset reload.
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_create_frame',
-            type='G',
-            value='PRESS',
-            ctrl=modifier.get('ctrl', False),
-            oskey=modifier.get('oskey', False)
-        )
-        addon_keymaps.append((km, kmi))
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_ungroup', type='G', value='PRESS', alt=True
-        )
-        addon_keymaps.append((km, kmi))
-
         # A / Alt+A — same Blender convention as the node editor. Mirrored in
         # space_mixie.cc; the addon copy is what survives a keyconfig reload.
         kmi = km.keymap_items.new(
@@ -208,42 +198,20 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # Home frames the whole board, Numpad-Period the selection -- the pair
-        # every Blender editor uses. Mirrored in space_mixie.cc; without the
-        # addon copy a keyconfig preset reload leaves the canvas with no way
-        # back to its own contents.
+        # Pie menu keymap - follows user's VIEW3D pie menu key preference
+        pie_key = get_user_pie_menu_key()
         kmi = km.keymap_items.new(
-            'mixie.moodboard_frame', type='HOME', value='PRESS'
-        )
-        addon_keymaps.append((km, kmi))
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_frame', type='NUMPAD_PERIOD', value='PRESS'
-        )
-        kmi.properties.selected_only = True
-        addon_keymaps.append((km, kmi))
-
-        # Trackpad pinch zooms the canvas. C binds MOUSEZOOM on Mixie; the
-        # addon copy is what survives a keyconfig preset reload.
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_zoom', type='TRACKPADZOOM', value='ANY'
+            'mixie.moodboard_pie_menu_call',
+            type=pie_key['type'],
+            value=pie_key['value'],
+            ctrl=pie_key['ctrl'],
+            shift=pie_key['shift'],
+            alt=pie_key['alt'],
+            oskey=pie_key['oskey'],
         )
         addon_keymaps.append((km, kmi))
 
-        # Shift+A: searchable Add-Node menu at the cursor, like the 3D viewport.
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_add_menu', type='A', value='PRESS', shift=True
-        )
-        addon_keymaps.append((km, kmi))
-
-        # F2 renames the active node, matching Blender's rename shortcut.
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_rename_node', type='F2', value='PRESS'
-        )
-        addon_keymaps.append((km, kmi))
-
-        # Node pie menu on Ctrl+Tab, Blender's stock editor pie key. This is
-        # the ONLY pie binding: the backtick belongs to the drawer toggle, so
-        # the old "mirror the 3D View's View-pie key" item is gone for good.
+        # Ctrl+Tab as additional pie menu shortcut (matching other Blender spaces)
         kmi = km.keymap_items.new(
             'mixie.moodboard_pie_menu_call',
             type='TAB',
@@ -273,12 +241,12 @@ def register():
         # Mixie above: a combined map's user copy can list select *above*
         # the grip, and WM_keymap_active then prefers that copy.
         #
-        # C registers the same grip click and `~` toggle in the default
-        # keyconfig (view3d_moodboard_drawer_keymap); a GUI keyconfig
-        # preset reload wipes that copy, so the addon ones below are the
-        # bindings that survive. Keep the two in sync. Off-grip the
-        # operator PASS_THROUGHs so Mixie canvas handlers (open) or the
-        # viewport (shut) keep the event.
+        # C registers the same binding in the default keyconfig
+        # (view3d_moodboard_drawer_keymap); a GUI keyconfig preset reload
+        # wipes that copy, so the addon one below is the binding that
+        # survives. Keep the two in sync. Off-grip the operator
+        # PASS_THROUGHs so Mixie canvas handlers (open) or the viewport
+        # (shut) keep the event.
         # `space_type` is RNA's space enum ('VIEW_3D'), NOT the C SPACE_VIEW3D
         # spelling and not the operator idname prefix.
         km_drawer = kc.keymaps.find(
@@ -297,20 +265,12 @@ def register():
         )
         addon_keymaps.append((km_drawer, kmi))
 
-        # Same maps as view3d_moodboard_drawer_keymap. Addon items survive
-        # a GUI keyconfig preset reload that empties the C defaultconf copy.
-        _bind_drawer_toggle(
-            _ensure_addon_keymap(kc, 'Moodboard Drawer', 'VIEW_3D', 'WINDOW')
-        )
-        _bind_drawer_toggle(_ensure_addon_keymap(kc, 'Window', 'EMPTY', 'WINDOW'))
-        _bind_drawer_toggle(_ensure_addon_keymap(kc, '3D View', 'VIEW_3D', 'WINDOW'))
-
         cmd_key = get_command_modifier()
         logger.info("Registered keymap: %s+P for sending images to chat", cmd_key)
         logger.info("Registered keymap: %s+C for copying images", cmd_key)
         logger.info("Registered keymap: %s+V for pasting image from clipboard", cmd_key)
-        logger.info("Registered keymap: ACCENT_GRAVE toggles the Zen moodboard drawer")
-        logger.info("Registered keymap: Ctrl+Tab for the node pie menu (only pie binding)")
+        logger.info("Registered keymap: %s for pie menu (follows user preference)", pie_key['type'])
+        logger.info("Registered keymap: Ctrl+Tab for pie menu (additional shortcut)")
         logger.info("Registered keymap: %s+Shift+3, 4, 7 for direct feature popups", cmd_key)
 
 

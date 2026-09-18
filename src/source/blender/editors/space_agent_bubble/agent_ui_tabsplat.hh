@@ -37,7 +37,7 @@ struct rctf;
  * (`p_mode`, `p_lod`). Generate uses the shared owner-based dispatcher;
  * reference actions retain their existing operators. Mode/LOD segments use
  * `wm.context_set_enum`; compact choices and model use `wm.context_menu_enum`.
- * The moodboard sidebar exposes the full schema over these same WM values.
+ * Settings opens the shared native schema popup over these same WM values.
  * `wm.context_toggle` owns the Use Moodboard switch.
  */
 void agent_ui_tabsplat_draw(const bContext *C,

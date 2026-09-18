@@ -18,8 +18,6 @@ import bpy
 from mathutils import Matrix, Vector
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.render_coordinator import core as render_slot
-from mixar.modules.common.render_coordinator.constants import RETRY_INTERVAL
 
 logger = get_logger(__name__)
 
@@ -147,7 +145,7 @@ def _collect_datablocks(clean_obj):
     return blocks
 
 
-def _attach_preview(clean_obj, render_token=None):
+def _attach_preview(clean_obj):
     """Render a 512² thumbnail and embed it as the asset's datablock preview.
 
     Reuses the same rig as the embedding-training flow (EEVEE, transparent
@@ -176,15 +174,13 @@ def _attach_preview(clean_obj, render_token=None):
     img = None
     linked = False
     try:
-        with PreviewRenderRig(scene, size=512, render_token=render_token) as rig:
+        with PreviewRenderRig(scene, size=512) as rig:
             scene.collection.objects.link(clean_obj)
             linked = True
             bpy.context.view_layer.update()
             frame_camera(rig.camera, [clean_obj])
             # pack=True so the pixels survive render_to_image deleting its temp file
-            img = render_to_image(
-                scene, f"_asset_preview_{clean_obj.name}", pack=True, render_token=rig.token
-            )
+            img = render_to_image(scene, f"_asset_preview_{clean_obj.name}", pack=True)
 
         if not img:
             return
@@ -216,47 +212,8 @@ def _attach_preview(clean_obj, render_token=None):
                 pass
 
 
-def schedule_object_export(obj, label, library_path):
-    """Retain an imported reconstruction object until the renderer is free.
-
-    The nonpersistent timer is discarded on file load. Keep the object's
-    identity so deleting it cannot export a different, same-named object.
-    """
-    def export_when_idle():
-        try:
-            if bpy.data.objects.get(obj.name) != obj:
-                return None
-        except ReferenceError:
-            return None
-        if render_slot.busy():
-            return RETRY_INTERVAL
-        try:
-            if not export_object_to_asset_library(obj, label, library_path):
-                logger.error("Asset export failed for '%s'", label)
-        except Exception:
-            logger.exception("Asset export failed for '%s'", label)
-        return None
-
-    bpy.app.timers.register(export_when_idle, first_interval=0.0)
-
-
 def export_object_to_asset_library(
     obj, label, library_path, *, asset_name=None, description="", tags=None
-):
-    """Reserve before export setup; a busy renderer leaves the scene untouched."""
-    try:
-        with render_slot.reserve("asset-export") as token:
-            return _export_object_to_asset_library(
-                obj, label, library_path, asset_name=asset_name,
-                description=description, tags=tags, render_token=token,
-            )
-    except render_slot.RenderBusy:
-        logger.info("[AssetExporter] Another render is in progress; retry export later")
-        return False
-
-
-def _export_object_to_asset_library(
-    obj, label, library_path, *, asset_name=None, description="", tags=None, render_token=None
 ):
     """Export a Blender object to an asset library as a clean .blend file.
 
@@ -331,7 +288,7 @@ def _export_object_to_asset_library(
 
     # Best-effort: render a thumbnail and embed it as the asset preview so
     # library assets (e.g. image-to-3D generations) aren't preview-less.
-    _attach_preview(clean_obj, render_token)
+    _attach_preview(clean_obj)
 
     # Collect datablocks from the clean copy only
     datablocks = _collect_datablocks(clean_obj)

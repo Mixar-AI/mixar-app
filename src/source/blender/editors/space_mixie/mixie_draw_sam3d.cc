@@ -28,7 +28,6 @@
 
 #include "RNA_access.hh"
 
-#include "mixie_draw_moodboard_intern.hh"
 #include "mixie_intern.hh"
 
 namespace blender::ed::mixie {
@@ -379,13 +378,17 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
             continue;
           }
 
-          /* Layout only — the thumbnail draw still reads pixels itself. */
-          int thumb_width = PREVIEW_THUMB_HEIGHT;
-          int src_x = 0;
-          int src_y = 0;
-          if (mixie_moodboard_image_size(history_image, nullptr, &src_x, &src_y) && src_y > 0) {
-            thumb_width = int(PREVIEW_THUMB_HEIGHT * (float(src_x) / float(src_y)));
+          /* Calculate thumbnail dimensions maintaining aspect ratio */
+          void *lock;
+          ImBuf *ibuf = BKE_image_acquire_ibuf(history_image, nullptr, &lock);
+          int thumb_width = PREVIEW_THUMB_HEIGHT; /* Default to square */
+
+          if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
+            /* Maintain aspect ratio, fit to height */
+            float aspect_ratio = float(ibuf->x) / float(ibuf->y);
+            thumb_width = int(PREVIEW_THUMB_HEIGHT * aspect_ratio);
           }
+          BKE_image_release_ibuf(history_image, ibuf, lock);
 
           /* Check if we have space for this thumbnail */
           if (current_x + thumb_width > region_width - PREVIEW_PADDING) {

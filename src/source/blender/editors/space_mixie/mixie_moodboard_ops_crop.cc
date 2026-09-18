@@ -203,10 +203,7 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
   RNA_boolean_set(&new_item_ptr, "flip_vertical", orig_flip_v);
   RNA_boolean_set(&new_item_ptr, "selected", true);
   RNA_int_set(&new_item_ptr, "z_order", orig_z_order + 1);
-  /* A crop result is a NEW item and belongs to no frame until it is
-   * dropped into one; membership is resolved from geometry at drop time
-   * (core/frames.py), never inherited from the source. */
-  RNA_string_set(&new_item_ptr, "frame_id", "");
+  RNA_int_set(&new_item_ptr, "group_index", -1);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, crop_image);
   WM_event_add_notifier(C, NC_SPACE | ND_SPACE_MIXIE, nullptr);

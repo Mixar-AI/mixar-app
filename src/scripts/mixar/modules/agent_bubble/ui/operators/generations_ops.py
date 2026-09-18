@@ -16,13 +16,10 @@ delegates to a flow that already exists:
   shows up empty until a restart. Like Blender, it does not force a
   ``save_userpref``: Preferences auto-save is what persists it, and forcing a
   write would also flush every unrelated preference the user is mid-edit on.
-- Adding an asset to the scene goes through ``core/spawn_asset.py``. It
-  loads the datablock with ``bpy.data.libraries.load`` and links it into a
-  collection the viewport can see, then frames it. ``wm.append`` is not used:
-  from this window it returns ``{'CANCELLED'}`` without raising and has no
-  View3D to frame the result, so the button used to report success while the
-  grid stayed empty. Dragging a tile does not come through here at all — that
-  is Blender's asset drag and the View3D's own asset dropbox.
+- Adding an asset to the scene is ``wm.append`` with the same
+  ``<blend>/<ID type>/<name>`` addressing the asset browser uses. This is the
+  BUTTON's path; dragging a tile into the viewport does not come through here
+  at all — that is Blender's asset drag and the View3D's own asset dropbox.
 - Selecting a still or a movie selects it ON THE MOODBOARD, which is the
   app-wide way an image becomes a reference (the chat composer mirrors the
   board selection, and Video Gen reads it directly). The image is already
@@ -124,14 +121,33 @@ class MIXAR_OT_generations_add_asset(Operator):
     id_dir: StringProperty(name="ID Type", default="Object")
     asset_name: StringProperty(name="Asset Name", default="")
 
-    def execute(self, context):
-        from mixar.modules.agent_bubble.core.spawn_asset import spawn_library_asset
+    def execute(self, _context):
+        blend = (self.blend_path or "").strip()
+        name = (self.asset_name or "").strip()
+        id_dir = (self.id_dir or "Object").strip()
+        if not blend or not name:
+            self.report({'ERROR'}, "That asset has no file on disk")
+            return {'CANCELLED'}
+        if not os.path.isfile(blend):
+            self.report({'ERROR'}, "The asset's .blend is missing")
+            return {'CANCELLED'}
 
-        ok, message = spawn_library_asset(
-            context, self.blend_path, self.id_dir, self.asset_name
-        )
-        self.report({'INFO'} if ok else {'ERROR'}, message)
-        return {'FINISHED'} if ok else {'CANCELLED'}
+        # The asset browser addresses a datablock as
+        # "<blend>/<ID type>/<name>"; `directory` must keep the trailing
+        # separator or Blender reads the type folder as the file name.
+        directory = os.path.join(blend, id_dir) + os.sep
+        try:
+            bpy.ops.wm.append(
+                filepath=os.path.join(directory, name),
+                directory=directory,
+                filename=name,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("[Generations] Append failed")
+            self.report({'ERROR'}, f"Could not add '{name}': {exc}")
+            return {'CANCELLED'}
+        self.report({'INFO'}, f"Added '{name}' to the scene")
+        return {'FINISHED'}
 
 
 class MIXAR_OT_generations_select_media(Operator):

@@ -253,15 +253,15 @@ def _tab_table():
     ).group(1)
     labels = re.findall(r'"([^"]+)"', metrics)
     marks = re.findall(r"AGENT_ICON_\w+", icons)
-    assert len(labels) == len(marks) == 7
+    assert len(labels) == len(marks) == 6
     return dict(zip(labels, marks))
 
 
 def test_every_category_tab_carries_its_own_mark():
     """No two marked category tabs may share a glyph.
 
-    `generations.svg` draws marks for Agent and Gaussian Splat; 3D, Image and Video
-    take the island's cube, picture and camera glyphs so those tabs cannot
+    `generations.svg` draws marks for Agent and Gaussian Splat; 3D and Media
+    take the island's own cube and folded-page glyphs so those tabs cannot
     read as failed-to-load. Library and Queue are label-only
     (`AGENT_ICON_COUNT`); Queue still gains a count chip while nonempty.
     """
@@ -271,8 +271,7 @@ def test_every_category_tab_carries_its_own_mark():
     assert tabs["Library"] == "AGENT_ICON_COUNT"
     assert tabs["Queue"] == "AGENT_ICON_COUNT"
     assert tabs["3D"] == "AGENT_ICON_MESH"
-    assert tabs["Image"] == "AGENT_ICON_IMAGE"
-    assert tabs["Video"] == "AGENT_ICON_VIDEO"
+    assert tabs["Media"] == "AGENT_ICON_MEDIA"
 
     marks = [icon for icon in tabs.values() if icon != "AGENT_ICON_COUNT"]
     assert len(set(marks)) == len(marks)
@@ -297,11 +296,10 @@ def test_the_library_tab_is_sized_for_the_short_label():
 
 
 def test_reference_tab_marks_have_dedicated_stroked_artwork():
-    """Video uses dedicated stroked camera artwork."""
+    """Media uses a dedicated stroked page path."""
     artwork = (CPP / "agent_ui_tab_icons.cc").read_text()
-    assert "AGENT_ICON_VIDEO" in artwork
-    assert "stroke_path(body," in artwork
-    assert "stroke_path(lens," in artwork
+    assert "AGENT_ICON_MEDIA" in artwork
+    assert "stroke_path(page," in artwork
     assert "stroke_path(hand," not in artwork
     assert "stroke_path(cuff," not in artwork
 
@@ -349,32 +347,6 @@ def test_every_colour_literal_states_its_alpha():
 # ---------------------------------------------------------------------------
 # Drag and drop
 # ---------------------------------------------------------------------------
-
-
-def test_asset_drag_covers_the_whole_tile():
-    """A clipped row is not square. Without BUT_DRAG_FULL_BUT the drag hit is
-    the center square, so the visible strip cannot start a drag."""
-    call = GRID_CC.index("button_drag_set_asset")
-    flag = GRID_CC.index("button_dragflag_enable", call)
-    assert "BUT_DRAG_FULL_BUT" in GRID_CC[flag:flag + 120]
-
-
-def test_add_to_scene_loads_the_datablock_itself():
-    """``wm.append`` from the bubble returns CANCELLED without raising and
-    never frames a View3D, so the button reported success on an empty grid."""
-    assert "bpy.ops.wm.append" not in LIB_OPS_SRC
-    assert "spawn_library_asset" in LIB_OPS_SRC
-
-
-def test_add_to_scene_reports_the_spawn_result(monkeypatch):
-    import mixar.modules.agent_bubble.core.spawn_asset as spawn
-
-    monkeypatch.setattr(
-        spawn, "spawn_library_asset", lambda *_args: (False, "The asset's .blend is missing")
-    )
-    op = _op_self(blend_path="/missing.blend", id_dir="Object", asset_name="Fox")
-    assert OPS.MIXAR_OT_generations_add_asset.execute(op, object()) == {'CANCELLED'}
-    assert op.reports[0] == ({'ERROR'}, "The asset's .blend is missing")
 
 
 def test_only_assets_are_draggable():

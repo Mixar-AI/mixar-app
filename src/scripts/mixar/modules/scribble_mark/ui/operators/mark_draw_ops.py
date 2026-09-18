@@ -49,12 +49,11 @@ from mixar.modules.scribble_mark.constants import (
     MIN_SAMPLE_DIST_PX,
 )
 from mixar.modules.scribble_mark.core import (
-    freeze,
     gesture,
     marks as mark_store,
     overlay,
-    prompt_input,
     resolve,
+    scribble_mode,
 )
 from mixar.modules.scribble_mark.core.stroke_capture import StrokeBuffer
 from mixar.modules.scribble_mark.core.freeze_session import (
@@ -64,7 +63,6 @@ from mixar.modules.scribble_mark.core.freeze_session import (
 )
 
 from mixar.modules.scribble_mark.core import pending
-from mixar.modules.scribble_mark.core.push_to_talk import HoldToTalk
 
 logger = get_logger(__name__)
 
@@ -106,8 +104,11 @@ class MIXAR_OT_scribble_mark_draw(Operator):
     _area_ptr = 0
     _region_ptr = 0
     _ink = None
-    _talk = None
     _session = None
+    #: True when the chat handwriting canvas was up as this freeze started —
+    #: the two halves of Scribble then leave together (see scribble_mode).
+    _ink_linked = False
+
     # -- lifecycle -------------------------------------------------------
 
     def invoke(self, context, event):
@@ -145,7 +146,6 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         self._area_ptr = area.as_pointer()
         self._region_ptr = region.as_pointer()
         self._ink = StrokeBuffer(MAX_STROKES_PER_MARK, MAX_POINTS_PER_STROKE)
-        self._talk = HoldToTalk(on_status=overlay.tag_redraw)
 
         overlay.reset()
         overlay.set_target(self._area_ptr, self._region_ptr)
@@ -153,6 +153,9 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         context.window_manager.mixar_mark_armed = True
 
         wm = context.window_manager
+        # The toggle raises the chat canvas BEFORE starting this modal, so
+        # "is it up right now" is exactly "are we one mode with it".
+        self._ink_linked = scribble_mode.ink_open(wm)
         # Bound to the window that OWNS the frozen viewport, not to whichever
         # window the button was clicked in — see freeze_session.find_view3d.
         with context.temp_override(window=window, area=area, region=region):
@@ -198,20 +201,16 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self._finish(context)
             return {"FINISHED"}
 
-        # Hold Option/Alt to talk. Before the viewport test: a hold that began
-        # here must still finish when the key comes up over the chat.
-        talk = getattr(self, "_talk", None)
-        if talk is not None and talk.handle(
-                context, event, overlay.point_in_region(region, event.mouse_x, event.mouse_y)):
-            return {"RUNNING_MODAL"}
-
         if event.type == "TIMER":
-            if freeze.window_resizing(context):
-                # Re-freezing renders, which aborts macOS from inside a resize
-                # (see freeze.window_resizing). The still stretches until the
-                # first main-loop tick, which re-freezes and then commits.
-                return {"PASS_THROUGH"}
             if not self._refreeze_if_resized(context, region):
+                self._disarm(context)
+                self._finish(context)
+                return {"FINISHED"}
+            # The chat half closed under us — Esc or the close X over the
+            # chat canvas are C++ paths this modal never sees. One mode, one
+            # exit: the freeze follows it down.
+            if self._ink_linked and not scribble_mode.ink_open(wm):
+                self._commit_pending(context)
                 self._disarm(context)
                 self._finish(context)
                 return {"FINISHED"}
@@ -222,6 +221,14 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             # docked chat in this window, handwriting would never convert
             # while the viewport was frozen.
             return {"PASS_THROUGH"}
+
+        # Esc is the ONE binding that is deliberately window-wide: it is the
+        # way out, and the hint pill promises it works wherever the pointer is.
+        if event.type == "ESC" and event.value == "PRESS":
+            self._commit_pending(context)
+            self._disarm(context)
+            self._finish(context)
+            return {"FINISHED"}
 
         # A pen-up can land OUTSIDE the frozen frame — the stylus lifted over
         # the chat composer. Ending the open stroke matters wherever it
@@ -240,29 +247,22 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             # Outside the frozen viewport the app is entirely normal — the
             # chat, the sidebar and every other editor keep working, which is
             # how the user types the prompt that goes with their marks. This
-            # test must come BEFORE every key binding below: this
+            # test must come BEFORE every key binding below except Esc: this
             # is a WINDOW-level modal, so it is offered the whole window's
-            # events, and handling drawing keys above it meant a
+            # events, and handling Backspace/Delete/Tab above it meant a
             # Delete meant for the Outliner silently ate a mark and reported
             # "Mark removed", and Tab in the Properties editor flipped the
             # ink reading instead of switching mode.
             return {"PASS_THROUGH"}
 
-        # Escape belongs to this drawing surface, not a docked composer or popup.
-        if event.type == "ESC" and event.value == "PRESS":
-            self._commit_pending(context)
-            self._disarm(context)
-            self._finish(context)
-            return {"FINISHED"}
-
-        # Typing over the drawing surface goes straight into the Agent draft.
-        # Backspace edits words; undoing ink has its own explicit chord.
-        if event.value == "PRESS" and prompt_input.handle(context, event, self.report):
-            return {"RUNNING_MODAL"}
-
-        # Modal-owned, so a GUI keyconfig reload cannot remove sketch undo.
-        if (event.value == "PRESS" and event.type == "Z"
-                and (event.ctrl or event.oskey) and not event.shift and not event.alt):
+        # Undo, reachable from inside the freeze. Drawing a mark you did not
+        # mean and having no way back short of leaving the mode is exactly the
+        # brittleness users report of ink tools; the freeze owns every event
+        # over this region, so the binding lives here rather than in a keymap
+        # (which a GUI keyconfig reload would wipe).
+        if (event.value == "PRESS"
+                and (event.type in ("BACK_SPACE", "DEL")
+                     or (event.type == "Z" and (event.ctrl or event.oskey)))):
             self._undo_last(context)
             return {"RUNNING_MODAL"}
 
@@ -361,10 +361,10 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         # callback), so the pill changes under the user's eyes.
         if current == INTENT_SKETCH:
             wm.mixar_mark_intent = "POINT"
-            self.report({"INFO"}, "Point to edit: your drawing shows where to make changes")
+            self.report({"INFO"}, "Reading the ink as separate marks")
         else:
             wm.mixar_mark_intent = "SKETCH"
-            self.report({"INFO"}, "Draw to build: the agent will build what you drew")
+            self.report({"INFO"}, "Reading the ink as one sketch")
 
     def _commit_pending(self, context):
         region = self._region(context)
@@ -478,14 +478,14 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self._timer = None
         overlay.remove()
         overlay.tag_redraw()
+        # The chat half leaves with the viewport half, whatever ended the
+        # freeze — Esc over the viewport, a vanished region, or the send.
+        # The canvas converts what is still on it before it lowers; a
+        # canvas that is already down makes this a no-op.
+        scribble_mode.close_ink(context.window_manager)
         _running = False
         _live_session = None
         pending.clear()
-        from mixar.modules.scribble_mark.core import preview
-        for note in preview.sync(context.scene):
-            self.report({"WARNING"}, note)
-        from mixar.modules.scribble_mark.core import island
-        island.reveal_draft(context)
 
 
 classes = (MIXAR_OT_scribble_mark_draw,)

@@ -164,7 +164,7 @@ int media_gather_param_chips(const bContext *C, PointerRNA *group, MediaParamChi
       chip.value = std::to_string(RNA_property_int_get(group, prop));
     }
     else {
-      /* Floats/strings don't fit a chip strip; the moodboard sidebar remains
+      /* Floats/strings don't fit a chip strip; the Settings popup remains
        * the full-fidelity surface for those (documented in the spec). */
       (*r_total)--;
       continue;
@@ -225,7 +225,7 @@ void media_param_chip_control(ui::Block *block,
   else {
     /* Caption and value are a composite: the caption is decorative, while
      * the value has one native rectangle for paint, editing and QA. */
-    ui::mixar_fill_round(chip.rect, radius * u, mixar_zen().control);
+    ui::mixar_fill_round(chip.rect, radius * u, zen.control);
     const float value_min = (chip.kind == MediaChipKind::Int ? 64.0f : 100.0f) * u;
     const float value_width = std::max(value_min, std::min(
         ui::mixar_text_width(chip.value.c_str(), body_style) + (2 * padding + icon) * u,
@@ -235,7 +235,7 @@ void media_param_chip_control(ui::Block *block,
         std::max(0.0f, BLI_rctf_size_x(&control) - (padding + 10) * u - value_width));
     const std::string caption = ui::mixar_fit_text(chip.label.c_str(), caption_width, caption_style);
     ui::mixar_label_left(caption.c_str(), control.xmin + padding * u,
-                        BLI_rctf_cent_y(&control), caption_style, mixar_zen().secondary);
+                        BLI_rctf_cent_y(&control), caption_style, zen.secondary);
     control.xmin += padding * u + caption_width + 10 * u;
     if (chip.kind == MediaChipKind::Enum) {
       button = uiDefButO(block,

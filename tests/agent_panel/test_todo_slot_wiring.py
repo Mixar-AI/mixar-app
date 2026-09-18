@@ -57,26 +57,13 @@ class TestTurnLifecycle:
         )
         assert re.search(r"is_active and not was_active", text)
 
-    def test_finalize_turn_settles_running_cards_only_when_the_run_is_closed(self):
+    def test_finalize_turn_settles_running_cards(self):
         text = SLOT_PROCESSOR.read_text()
         body = text[text.index("def finalize_turn") :]
         body = body[: body.index("\nclass ")]
         assert "settle_running" in body, (
             "an aborted turn brings no terminal todo snapshot — without this "
             "a card's elapsed clock ticks forever"
-        )
-        assert re.search(r"if not .*run_open\(scene\):\s*\n\s*try:\s*\n\s*from .* import settle_running", body), (
-            "the orchestrator ends its turn while its workers keep building: "
-            "settling the cards at every turn end froze the overlay between turns"
-        )
-
-    def test_closing_the_run_settles_running_cards(self):
-        text = SESSION.read_text()
-        body = text[text.index("def set_run") :]
-        body = body[: body.index("\n    @")]
-        assert "settle_running" in body and "was_open and not open" in body, (
-            "finalize_turn skips the settle while the run is open, so the run "
-            "closing (completed / cancelled / abort) is what settles the cards"
         )
 
 

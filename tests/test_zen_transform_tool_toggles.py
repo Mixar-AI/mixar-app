@@ -196,28 +196,8 @@ def test_the_strip_is_a_zen_surface_so_the_buttons_glass():
     inherited MixarTheme::Zen. Without the surface the strip stays the
     theme slab. `align=True` is what unifies the three cells onto one pane."""
     strip = _strip_body()
-    assert 'row.mixar_surface(theme="ZEN")' in strip
+    assert 'layout.mixar_surface(theme="ZEN")' in strip
     assert "col = surface.column(align=True)" in strip
-
-
-def test_the_strip_stays_one_icon_column_wide():
-    """The tools panel root is a column, and a column stretches every child
-    to the region width. That turned the glass pane into a horizontal
-    capsule (its radius is half the short side) with the glyphs pinned to
-    the left edge. A left-aligned row keeps the icon column at two widget
-    units — one toolbar icon column — instead of the region width."""
-    strip = _strip_body()
-    assert 'row = layout.row(align=False)' in strip
-    assert 'row.alignment = "LEFT"' in strip
-    assert "col.ui_units_x = _ZEN_TOOL_UNITS_X" in strip
-    assert HEADER._ZEN_TOOL_UNITS_X == 2.0
-    # The row has to wrap the surface, or the panel column stretches it.
-    assert strip.index("row = layout.row(align=False)") < strip.index(
-        'row.mixar_surface(theme="ZEN")'
-    )
-    assert strip.index('row.mixar_surface(theme="ZEN")') < strip.index(
-        "col.ui_units_x = _ZEN_TOOL_UNITS_X"
-    )
 
 
 def test_the_strip_dispatches_the_stock_tool_operator():

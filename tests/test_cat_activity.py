@@ -18,7 +18,6 @@ def test_activity_and_pose_contract(tmp_path):
     source.write_text(r'''
 #include "agent_ui_cat_activity.hh"
 #include "mixie_attachment_motion.hh"
-#include <algorithm>
 #include <cassert>
 #include <cmath>
 using namespace blender;
@@ -87,7 +86,6 @@ int main() {
       assert(std::isfinite(pose.tilt));
       assert(std::abs(pose.look_x)<=.86 && std::abs(pose.look_y)<=.66);
       assert(pose.openness>=.079 && pose.openness<=1.001);
-      assert(pose.lid_l==pose.lid_r); // All activities blink with a balanced pair of eyes.
       assert(pose.eye_scale<=1.23 && std::abs(pose.bounce)<=.041);
       assert(std::abs(pose.tilt)<=27.01);
       energy+=distance(last,pose);last=pose;
@@ -95,34 +93,9 @@ int main() {
     assert(energy>1); // Even the quiet offline/waiting states keep a visible blink.
   }
   auto think=mixie_cat_activity_pose(1.2,MixieCatActivity::Thinking);
+  auto work=mixie_cat_activity_pose(1.2,MixieCatActivity::Working);
   auto wait=mixie_cat_activity_pose(1.2,MixieCatActivity::Waiting);
-  assert(think.look_y>0.3 && std::abs(12+wait.tilt)<=8);
-  float work_max_x=0, work_max_y=0, work_min_x=0, work_min_y=0;
-  bool work_open_seen=false, work_blink_seen=false;
-  for(int n=0;n<=int(MIXIE_ROLL_PERIOD*60);n++) {
-    auto working=mixie_cat_activity_pose(n/60.0,MixieCatActivity::Working);
-    work_max_x=std::max(work_max_x,working.look_x);
-    work_min_x=std::min(work_min_x,working.look_x);
-    work_max_y=std::max(work_max_y,working.look_y);
-    work_min_y=std::min(work_min_y,working.look_y);
-    if(working.openness>.9f) work_open_seen=true;
-    if(working.openness<.15f) work_blink_seen=true;
-    assert(working.bounce==0);
-    assert(working.eye_width<1.08f);
-  }
-  assert(work_open_seen && work_blink_seen);
-  assert(work_max_x>0.35f && work_min_x<-0.35f);
-  assert(work_max_y>0.35f && work_min_y<-0.25f);
-  // The paused orbit joins the resting gaze without a one-frame eye jump.
-  for(int cycle=-2;cycle<=2;cycle++) {
-    for(float phase : {MIXIE_ROLL_START, MIXIE_ROLL_START+MIXIE_ROLL_SPAN}) {
-      const double t=(cycle+double(phase))*MIXIE_ROLL_PERIOD;
-      const auto before=mixie_cat_eye_roll(t-1e-5);
-      const auto after=mixie_cat_eye_roll(t+1e-5);
-      assert(std::abs(before.look_x-after.look_x)<1e-4);
-      assert(std::abs(before.look_y-after.look_y)<1e-4);
-    }
-  }
+  assert(think.look_y>0.3 && work.look_y<0 && wait.tilt>8);
   // Expression separation must survive a paused frame, not just phase offsets.
   for(int n=1;n<=240;n++) {
     const double t=n/60.0;
@@ -133,15 +106,12 @@ int main() {
     auto responding=mixie_cat_activity_pose(t,MixieCatActivity::Responding);
     auto listening=mixie_cat_activity_pose(t,MixieCatActivity::Listening);
     auto catching=mixie_cat_activity_pose(t,MixieCatActivity::Catching);
-    assert(thinking.lid_l==1.0f && thinking.lid_r==1.0f);
-    assert(std::abs(12+thinking.tilt)<=4.01f);
+    assert(thinking.lid_r-thinking.lid_l>.5f);
     assert(std::abs(catching.look_x)>.5f); // Default catch aims, it does not stare ahead.
     assert(responding.smile>=.85f && generating.smile==0);
     assert(listening.pupil_scale-generating.pupil_scale>.45f);
-    assert(reading.eye_width>working.eye_width);
-    assert(generating.pupil_width<working.pupil_width);
-    if(reading.openness>.5f && working.openness>.5f)
-      assert(working.openness-reading.openness>.20f);
+    assert(reading.eye_width>working.eye_width && working.look_x==0);
+    if(reading.openness>.5f) assert(reading.openness-working.openness>.20f);
   }
   // All silhouette vertices stay inside the fixed chip, including transitions.
   // Painter uses 0.326 cheek radius, rounded ear corners and a -0.025 y offset.

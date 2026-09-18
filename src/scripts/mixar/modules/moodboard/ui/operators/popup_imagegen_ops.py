@@ -16,7 +16,6 @@ from bpy.props import BoolProperty
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
-from mixar.modules.moodboard.core.media_utils import selected_reference_stills
 
 
 # =============================================================================
@@ -74,8 +73,12 @@ class MIXIE_OT_imagegen_popup(Operator):
                     ref_images.remove(len(ref_images) - 1)
 
     def _get_selected_image_count(self, context):
-        """Count selected stills, including a selected node's result."""
-        return len(selected_reference_stills(context.scene))
+        """Count selected images in moodboard"""
+        count = 0
+        for item in context.scene.mixie_moodboard_images:
+            if item.selected:
+                count += 1
+        return count
 
     def draw(self, context):
         layout = self.layout
@@ -166,13 +169,10 @@ class MIXIE_OT_imagegen_generate_and_close(Operator):
             self.report({'WARNING'}, "Please enter a prompt")
             return {'CANCELLED'}
 
-        # If not using selected images, clear selection before generate.
-        # Node-owned results are never item.selected — the node carries it.
+        # If not using selected images, deselect all before calling generate
         if not self.use_selected_images:
             for item in context.scene.mixie_moodboard_images:
                 item.selected = False
-            for node in getattr(context.scene, "mixie_moodboard_action_nodes", ()):
-                node.selected = False
 
         # Call the imagegen generate operator
         bpy.ops.mixie.imagegen_generate()

@@ -83,11 +83,6 @@ def finalize_turn(scene) -> None:
     - Collapses each bubble's live thinking into the "Thought for Ns" dropdown.
     - Marks any still-RUNNING tool steps DONE so their animation settles.
     - Hides lingering loaders.
-    - Settles the Parallel Agents cards — unless the RUN is still open: the
-      orchestrator ends its turn right after delegating and the workers on
-      those cards keep building between turns, so their clocks and progress
-      keep running; ``SessionManager.set_run`` settles them when the run
-      closes (``run_status: completed``, a cancel, abort).
     A retry then starts from a clean, settled transcript instead of interleaving
     with a half-finished turn.
     """
@@ -105,13 +100,11 @@ def finalize_turn(scene) -> None:
         if getattr(msg, "loader_visible", False):
             msg.loader_visible = False
 
-    from .session import get_session_manager
-    if not get_session_manager().run_open(scene):
-        try:
-            from mixar.modules.agent_panel.core.cards import settle_running
-            settle_running()
-        except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
-            logger.debug("Agent panel settle failed", exc_info=True)
+    try:
+        from mixar.modules.agent_panel.core.cards import settle_running
+        settle_running()
+    except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
+        logger.debug("Agent panel settle failed", exc_info=True)
 
     _bump_layout_epoch(scene)
 
@@ -518,17 +511,10 @@ class SlotEventProcessor:
         Args:
             bubble: Message PropertyGroup
             actions: List of dicts with label, value, style, and (for
-                asset-picker options) asset_name/library/blend_file/asset_type/score
+                asset-picker options) asset_name/library/blend_file/asset_type
             scene: The Blender scene (for asset-picker preview generation)
         """
         from . import asset_choice_previews
-        from . import asset_picker
-
-        # An agent asset question shows the top five picks, never more — the
-        # island's Library-style picker grid is sized for exactly those.
-        # input_type is applied before actions in the same event.
-        if getattr(bubble, "input_type", "") == "choice":
-            actions = asset_picker.cap_asset_actions(actions)
 
         prev_count = len(bubble.action_items)
 
@@ -563,10 +549,6 @@ class SlotEventProcessor:
             action.library = action_data.get("library") or ""
             action.blend_file = action_data.get("blend_file") or ""
             action.asset_type = action_data.get("asset_type") or ""
-            score = action_data.get("score")
-            action.score = (float(score)
-                            if isinstance(score, (int, float)) and not isinstance(score, bool)
-                            and 0.0 <= score <= 1.0 else -1.0)
             if action.asset_name and action.blend_file:
                 has_asset_options = True
 
@@ -576,11 +558,6 @@ class SlotEventProcessor:
         # .blend preview first, render fallback) — thumbnails pop in per tick.
         if has_asset_options and scene is not None:
             asset_choice_previews.schedule(scene, bubble)
-        # A pending asset question takes over the island's Agent tab as a
-        # Library-style grid (core/asset_picker.py): start on the best match
-        # and bring that tab forward.
-        if has_asset_options:
-            asset_picker.present(bubble)
 
         # Buttons alone must NEVER drive the session state — _apply_input_type_slot
         # is the one owner of the AWAITING_INPUT transition. Every paused turn
@@ -603,22 +580,8 @@ class SlotEventProcessor:
             bubble: Message PropertyGroup
             images: List of dicts with url, alt, caption, thumbnail_url, width, height
         """
-        # Replace the backend-owned gallery only. Tiles tagged with a step_id
-        # were recorded locally by steps_recorder from this client's own
-        # captures and are not the backend's to replace.
-        kept = [
-            {
-                "url": img.url, "alt": img.alt, "caption": img.caption,
-                "thumbnail_url": img.thumbnail_url, "local_path": img.local_path,
-                "width": img.width, "height": img.height, "step_id": img.step_id,
-            }
-            for img in bubble.image_items if img.step_id
-        ]
+        # Clear existing items
         bubble.image_items.clear()
-        for data in kept:
-            img = bubble.image_items.add()
-            for key, value in data.items():
-                setattr(img, key, value)
 
         # Add new items
         for img_data in images:

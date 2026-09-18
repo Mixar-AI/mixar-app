@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTROLS = ROOT / "src/scripts/mixar/modules/addon_project/ui/controls.py"
 FOOTER = ROOT / "src/scripts/mixar/modules/agent_bubble/ui/panels/footer_panel.py"
 HEADER = ROOT / "src/scripts/mixar/modules/agent_bubble/ui/header.py"
+CHAT_HEADER = ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/header.py"
 LINK_OPERATORS = ROOT / "src/scripts/mixar/modules/addon_project/ui/operators.py"
 PROJECT_MENU = ROOT / "src/scripts/mixar/modules/addon_project/ui/menus.py"
 CHAT = ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/operators/chat_ops.py"
@@ -129,6 +130,10 @@ def test_floating_agent_bubble_keeps_drag_handle_without_project_controls():
     assert 'handle_row.label(text="▬▬▬▬")' in centered_block
 
 
+def test_linked_project_controls_remain_in_full_mixie_chat_header():
+    source = CHAT_HEADER.read_text(encoding="utf-8")
+
+    assert "draw_project_controls(layout, scene)" in source
 
 
 def test_linked_project_is_not_duplicated_in_the_composer():

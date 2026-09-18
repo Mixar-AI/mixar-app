@@ -41,17 +41,12 @@ set(SRC
   interface_drop.cc
   interface_dropboxes.cc
   interface_handlers.cc
-  interface_text_dictation.cc
-  interface_text_dictation.hh
   interface_icons.cc
   interface_icons_event.cc
   interface_layout.cc
   mixar/style.cc
-  mixar/clip.cc
   mixar/text.cc
   mixar/components.cc
-  mixar/toolbar.cc
-  mixar/toolbar.hh
   mixar/custom_motion.cc
   mixar/motion.cc
   interface_mixar_card_button.cc
@@ -68,7 +63,6 @@ set(SRC
   interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
   interface_mixar_tab_rects.cc
-  interface_mixar_theme.cc
   interface_mixar_topbar.cc
   interface_mixar_zen_chrome.cc
   interface_qa_inspect.cc

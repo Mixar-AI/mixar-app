@@ -22,7 +22,7 @@ import base64 as _b64
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
+from mixar.modules.moodboard.core.media_utils import is_still_item
 
 logger = get_logger(__name__)
 
@@ -47,7 +47,12 @@ def _resolve_model(tab, service_key, fallback):
 def _get_reference_image(context, tab):
     """Reference image from the shared image-source UI (or None)."""
     if getattr(tab, 'use_selected_image', False):
-        return first_selected_reference_still(context.scene)
+        scene = context.scene
+        if hasattr(scene, 'mixie_moodboard_images'):
+            for item in scene.mixie_moodboard_images:
+                if item.selected and is_still_item(item):
+                    return item.image
+        return None
     return getattr(tab, 'reference_image', None)
 
 

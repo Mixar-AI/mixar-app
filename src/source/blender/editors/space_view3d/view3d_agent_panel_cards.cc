@@ -5,8 +5,13 @@
 /** \file
  * \ingroup spview3d
  *
- * Parallel Agents panel: animation clocks and region lifecycle.
- * Card geometry and input bounds live in view3d_agent_panel_layout.cc.
+ * Parallel Agents panel: reading the WindowManager card mirror, laying the
+ * cards out, hit-testing them, and the region-type registration.
+ *
+ * The layout pass is the ONE owner of `card.rect`. Draw, the mouse hit test
+ * and the QA target provider all read what it wrote — including the scroll
+ * offset and the slide-in animation — so a card can never be drawn in one
+ * place and clicked in another.
  */
 
 #include <algorithm>
@@ -103,6 +108,215 @@ bool view3d_agent_panel_is_animating(const AgentPanelRuntime *runtime)
     }
   }
   return false;
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Layout & Hit Testing
+ * \{ */
+
+/** Publish the card column as the region's View2D extent.
+ *
+ * This is what makes the panel clickable at all. For an overlapping side
+ * region `ED_region_contains_xy` does NOT stop at `winrct`: it runs
+ * `ED_region_overlap_isect_y_with_margin`, which bails immediately when
+ * `v2d.mask` is degenerate and otherwise tests the event against `v2d.tot`.
+ * A custom-drawn region that never sets up a View2D therefore has an empty
+ * mask and is transparent to every event — the keymap resolves, the operator
+ * polls fine, and no wheel or click ever arrives, with nothing logged.
+ *
+ * Publishing the CARD COLUMN rather than the whole region is also what the
+ * surface wants: the panel is as tall as the area, so anything below the last
+ * card stays viewport, and an orbit drag started there still reaches the 3D
+ * view. `cur` is set equal to `mask` so the region→view mapping is the
+ * identity and `tot` can be given in region pixels. */
+static void agent_panel_view2d_sync(const ARegion *region, const rcti &column)
+{
+  View2D *v2d = &const_cast<ARegion *>(region)->v2d;
+
+  BLI_rcti_init(&v2d->mask, 0, std::max(region->winx - 1, 0), 0, std::max(region->winy - 1, 0));
+  v2d->cur.xmin = 0.0f;
+  v2d->cur.xmax = float(region->winx);
+  v2d->cur.ymin = 0.0f;
+  v2d->cur.ymax = float(region->winy);
+
+  v2d->tot.xmin = float(column.xmin);
+  v2d->tot.xmax = float(column.xmax + 1);
+  v2d->tot.ymin = float(column.ymin);
+  v2d->tot.ymax = float(column.ymax + 1);
+}
+
+void view3d_agent_panel_layout_cards(const ARegion *region, AgentPanelRuntime *runtime)
+{
+  const int n = int(runtime->cards.size());
+  if (n == 0) {
+    runtime->scroll = 0.0f;
+    runtime->scroll_max = 0.0f;
+    BLI_rcti_init(&runtime->column_rect, 0, 0, 0, 0);
+    BLI_rcti_init(&runtime->chevron_rect, 0, 0, 0, 0);
+    agent_panel_view2d_sync(region, runtime->column_rect);
+    return;
+  }
+
+  const float scale = UI_SCALE_FAC;
+  const int left = int(AGENT_PANEL_MARGIN_LEFT * scale);
+  const int bottom = int(AGENT_PANEL_MARGIN_BOTTOM * scale);
+  const int card_h = int(AGENT_PANEL_CARD_HEIGHT * scale);
+  const int gap = int(AGENT_PANEL_CARD_GAP * scale);
+  const int card_w = std::min(int(AGENT_PANEL_CARD_WIDTH * scale),
+                              std::max(region->winx - 2 * left, 0));
+
+  const int stride = card_h + gap;
+  const int column_h = n * stride - gap;
+  const int chevron_h = int(AGENT_PANEL_CHEVRON_HEIGHT * scale);
+  const int chevron_gap = int(AGENT_PANEL_CHEVRON_GAP * scale);
+
+  /* The stack sits at the BOTTOM-LEFT and grows upward, with the chevron
+   * tucked under its lowest card. */
+  const int stack_bottom = bottom + chevron_h + chevron_gap;
+  const int room_h = std::max(region->winy - stack_bottom - bottom, 0);
+  const int visible_h = std::min(room_h, AGENT_PANEL_VISIBLE_CARDS * stride - gap);
+
+  runtime->scroll_max = float(std::max(column_h - visible_h, 0));
+  runtime->scroll = std::clamp(runtime->scroll, 0.0f, runtime->scroll_max);
+
+  /* The clipped window the column scrolls behind. A left-docked region is as
+   * tall as the whole area, so this — not `region->winy` — is what "visible"
+   * means for a card. */
+  BLI_rcti_init(
+      &runtime->column_rect, left, left + card_w - 1, stack_bottom, stack_bottom + visible_h - 1);
+
+  /* Card 0 is the top of the reading order and starts at the TOP of the
+   * visible band, so an unscrolled stack shows the FIRST three agents and the
+   * chevron's downward arrow means what it says: more of them are below. */
+  const int column_top = stack_bottom + visible_h;
+  const double now = BLI_time_now_seconds();
+  for (int i = 0; i < n; i++) {
+    /* Both the slide-in and a finished card's slide-out travel the same way:
+     * off the LEFT edge of the region. */
+    AgentPanelCard &card = runtime->cards[i];
+    const bool leaving = card.seen_exit_at != 0.0 &&
+                         (card.dismissing || card.status == AgentCardStatus::Done) &&
+                         now >= card.seen_exit_at +
+                                    (card.dismissing ? 0.0 : AGENT_PANEL_DONE_DWELL_SECONDS);
+    if (now >= card.reveal_started_at) {
+      card.slide.sample(leaving ? 1.0f : 0.0f,
+                        now,
+                        leaving ? AGENT_PANEL_EXIT_SECONDS : AGENT_PANEL_REVEAL_SECONDS);
+    }
+    const float offscreen = card.slide.value;
+    const int slide = int(roundf(offscreen * float(left + card_w)));
+
+    const float row = card.row.sample(float(i), now, ui::mixar_motion::selection_seconds);
+    const int card_bottom = column_top - int(roundf((row + 1.0f) * stride)) + gap +
+                            int(roundf(runtime->scroll));
+    rcti *rect = &runtime->cards[i].rect;
+    rect->xmin = left - slide;
+    rect->xmax = rect->xmin + card_w - 1;
+    rect->ymin = card_bottom;
+    rect->ymax = card_bottom + card_h - 1;
+
+    const int avatar = int(AGENT_PANEL_AVATAR_SIZE * scale);
+    rcti &cat = runtime->cards[i].cat_rect;
+    cat.xmin = rect->xmin + int(AGENT_PANEL_AVATAR_INSET * scale);
+    cat.xmax = cat.xmin + avatar - 1;
+    cat.ymin = card_bottom + (card_h - avatar) / 2;
+    cat.ymax = cat.ymin + avatar - 1;
+
+    /* The two glyph buttons, right-aligned inside the card. */
+    const int icon = int(AGENT_PANEL_ICON_SIZE * scale);
+    const int icon_gap = int(AGENT_PANEL_ICON_GAP * scale);
+    const int icon_inset = int(AGENT_PANEL_ICON_INSET * scale);
+    const int icon_y = card_bottom + (card_h - icon) / 2;
+
+    rcti *action = &runtime->cards[i].action_rect;
+    action->xmax = rect->xmax - icon_inset;
+    action->xmin = action->xmax - icon + 1;
+    action->ymin = icon_y;
+    action->ymax = icon_y + icon - 1;
+
+    rcti *eye = &runtime->cards[i].eye_rect;
+    eye->xmax = action->xmin - icon_gap;
+    eye->xmin = eye->xmax - icon + 1;
+    eye->ymin = icon_y;
+    eye->ymax = icon_y + icon - 1;
+  }
+
+  /* The chevron only exists while there are MORE AGENTS THAN THE STACK SHOWS
+   * — it is the discoverable half of scrolling. Keyed on the card count
+   * rather than on `scroll_max` alone: a viewport short enough to squeeze the
+   * column gives a non-zero `scroll_max` at three cards or fewer, and a
+   * chevron appearing next to a stack that plainly shows everything reads as
+   * a bug. `scroll_max` still gates it too, so it is never a dead control. */
+  if (n > AGENT_PANEL_VISIBLE_CARDS && runtime->scroll_max > 0.0f) {
+    const int chevron_w = int(AGENT_PANEL_CHEVRON_WIDTH * scale);
+    const int cx = left + card_w / 2;
+    BLI_rcti_init(&runtime->chevron_rect,
+                  cx - chevron_w / 2,
+                  cx - chevron_w / 2 + chevron_w - 1,
+                  bottom,
+                  bottom + chevron_h - 1);
+  }
+  else {
+    BLI_rcti_init(&runtime->chevron_rect, 0, 0, 0, 0);
+  }
+
+  /* The View2D extent covers the cards AND the chevron, so both are
+   * clickable and everything else in this full-height region stays
+   * transparent to the viewport behind it. */
+  rcti hit = runtime->column_rect;
+  if (BLI_rcti_size_x(&runtime->chevron_rect) > 0) {
+    BLI_rcti_union(&hit, &runtime->chevron_rect);
+  }
+  agent_panel_view2d_sync(region, hit);
+}
+
+bool view3d_agent_panel_card_visible(const AgentPanelRuntime *runtime, const rcti &rect)
+{
+  const rcti &column = runtime->column_rect;
+  if (BLI_rcti_size_x(&column) <= 0 || BLI_rcti_size_y(&column) <= 0) {
+    return false;
+  }
+  return !(rect.ymax < column.ymin || rect.ymin > column.ymax || rect.xmin > column.xmax ||
+           rect.xmax < column.xmin);
+}
+
+AgentPanelHit view3d_agent_panel_hit_test(AgentPanelRuntime *runtime,
+                                          const int mval[2],
+                                          int *r_card_index)
+{
+  if (r_card_index != nullptr) {
+    *r_card_index = -1;
+  }
+  if (BLI_rcti_isect_pt(&runtime->chevron_rect, mval[0], mval[1]) &&
+      BLI_rcti_size_x(&runtime->chevron_rect) > 0)
+  {
+    return AgentPanelHit::Chevron;
+  }
+  /* Clipped away is not clickable — the same test draw and the QA provider
+   * apply, so a card scrolled out of the column is hit nowhere. */
+  if (!BLI_rcti_isect_pt(&runtime->column_rect, mval[0], mval[1])) {
+    return AgentPanelHit::None;
+  }
+  const int n = int(runtime->cards.size());
+  for (int i = 0; i < n; i++) {
+    const AgentPanelCard &card = runtime->cards[i];
+    if (!BLI_rcti_isect_pt(&card.rect, mval[0], mval[1])) {
+      continue;
+    }
+    if (r_card_index != nullptr) {
+      *r_card_index = i;
+    }
+    if (BLI_rcti_isect_pt(&card.action_rect, mval[0], mval[1])) {
+      return AgentPanelHit::Action;
+    }
+    if (BLI_rcti_isect_pt(&card.eye_rect, mval[0], mval[1])) {
+      return AgentPanelHit::Eye;
+    }
+    return AgentPanelHit::Card;
+  }
+  return AgentPanelHit::None;
 }
 
 /** \} */
@@ -224,18 +438,6 @@ static void *agent_panel_region_duplicate(void * /*poin*/)
   return nullptr;
 }
 
-static void agent_panel_region_cursor(wmWindow *win, ScrArea * /*area*/, ARegion *region)
-{
-  auto *runtime = static_cast<AgentPanelRuntime *>(region->regiondata);
-  if (!runtime) { return; }
-  const int mouse[2] = {win->runtime->eventstate->xy[0] - region->winrct.xmin,
-                        win->runtime->eventstate->xy[1] - region->winrct.ymin};
-  const AgentPanelHit hit = view3d_agent_panel_hit_test(runtime, mouse, nullptr);
-  const bool control = ELEM(hit, AgentPanelHit::Eye, AgentPanelHit::Action, AgentPanelHit::Chevron);
-  WM_cursor_set(win, control ? WM_CURSOR_HAND : WM_CURSOR_DEFAULT);
-  ED_region_tag_redraw(region);
-}
-
 void view3d_agent_panel_region_register(SpaceType *st)
 {
   /* Fully custom GPU drawing — no ED_KEYMAP_UI, whose ui_region_handler could
@@ -252,9 +454,6 @@ void view3d_agent_panel_region_register(SpaceType *st)
   art->free = agent_panel_region_free;
   art->duplicate = agent_panel_region_duplicate;
   art->listener = agent_panel_region_listener;
-  art->cursor = agent_panel_region_cursor;
-  /* Re-evaluate controls on moves within this region, including settled cards. */
-  art->event_cursor = true;
   BLI_addhead(&st->regiontypes, art);
 }
 

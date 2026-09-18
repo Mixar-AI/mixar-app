@@ -1196,7 +1196,7 @@ enum eSpace_Type : char {
    * Value reserved for backwards compatibility with versioning. */
   SPACE_BAKING = 105,             /* Texturing Baking space */
   SPACE_TEXTURE_SETS = 106,       /* Texture Sets management space */
-  SPACE_MIXIE_CHAT_DEPRECATED = 107, /* Reserved: removed standalone chat editor. */
+  SPACE_MIXIE_CHAT = 107,         /* Mixie Chat space for Mixar */
   SPACE_AGENT_BUBBLE = 108,       /* Floating Agent Bubble — small chat overlay editor */
   /* SPACE_SCENE_GRID = 109 — REMOVED: replaced by the View3D Agent Scene Strip region.
    * Value reserved for backwards compatibility; unregistered spaces fall back to

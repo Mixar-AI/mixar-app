@@ -47,7 +47,6 @@
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
 #include "UI_mixar.hh"
-#include "UI_mixar_theme.hh"
 #include "UI_mixar_tokens.hh"
 
 #include "GPU_batch.hh"
@@ -1358,7 +1357,6 @@ static int but_draw_menu_icon(const Button *but)
 
 /* icons have been standardized... and this call draws in untransformed coordinates */
 
-static bool zen_toolbar_tool(const Button *but);
 static bool zen_glass_cell(const Button *but);
 
 static void widget_draw_icon(
@@ -1386,7 +1384,6 @@ static void widget_draw_icon(
   const float icon_scale = but->icon_scale * (glass_tool ? 1.5f : 1.0f);
   const float aspect = (1.0f / icon_scale) * but->block->aspect * UI_INV_SCALE_FAC;
   const float height = ICON_DEFAULT_HEIGHT / aspect;
-  const bool mixar_is_tool_icon = (but->icon != ICON_NONE) && but_is_tool(but);
   bool force_outline = false;
 
   /* calculate blend color */
@@ -1447,17 +1444,7 @@ static void widget_draw_icon(
       }
     }
     else {
-      float width = height;
-#ifdef USE_UI_TOOLBAR_HACK
-      /* GEOM and toolbar SVG icons expand to toolbar size in icon_draw_size.
-       * That pass preserves their vertical center but keeps x fixed. Center
-       * the final width here so Zen's centered tool glyphs stay in the pane;
-       * left-aligned native tools retain their existing padding. */
-      if (mixar_is_tool_icon) {
-        width = ICON_DEFAULT_HEIGHT_TOOLBAR / aspect;
-      }
-#endif
-      xs = (rect->xmin + rect->xmax - width) / 2.0f;
+      xs = (rect->xmin + rect->xmax - height) / 2.0f;
     }
     ys = (rect->ymin + rect->ymax - height) / 2.0f;
 
@@ -1479,6 +1466,7 @@ static void widget_draw_icon(
      * `.dat` GEOM icons already self-scale via `USE_UI_TOOLBAR_HACK`.
      * The `extern "C"` prototype lives at file scope (above) — MSVC
      * `/permissive-` rejects in-function linkage specifications. */
+    const bool mixar_is_tool_icon = (but->icon != ICON_NONE) && but_is_tool(but);
     if (mixar_is_tool_icon) {
       UI_mixar_set_drawing_tool_icon(true);
     }
@@ -2117,11 +2105,9 @@ static bool ui_but_is_multiline_text(const Button *but)
 static void widget_draw_text_multiline(const uiFontStyle *fstyle,
                                        const uiWidgetColors *wcol,
                                        Button *but,
-                                       rcti *rect,
-                                       const rcti &bounds)
+                                       rcti *rect)
 {
   using namespace blender;
-  const bool padded_input = mixar_multiline_input_rect(*but, bounds, *rect);
 
   /* Preserve the native widget font. Hit testing reads this exact style. */
   uiFontStyle chat_fstyle = *fstyle;
@@ -2185,7 +2171,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
           /* Draw placeholder top-left aligned */
           rcti placeholder_rect = *rect;
           const float lh = BLF_height(fontid, "Wg", 2);
-          const int padding = padded_input ? 0 : int(4.0f * U.pixelsize);
+          const int padding = int(4.0f * U.pixelsize);
           placeholder_rect.ymax = rect->ymax - padding;
           placeholder_rect.ymin = placeholder_rect.ymax - int(lh);
           fontstyle_draw_ex(&style,
@@ -2212,7 +2198,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
 
   /* Inset the top of the drawing rect so text doesn't hug the top edge.
    * This shifts text, selection highlights, and cursor down uniformly. */
-  const int top_inset = padded_input ? 0 : int(4.0f * U.pixelsize);
+  const int top_inset = int(4.0f * U.pixelsize);
   rect->ymax -= top_inset;
 
   state.font = chat_fstyle;
@@ -2476,12 +2462,6 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
     immUnbindProgram();
     GPU_blend(GPU_BLEND_NONE);
   }
-
-  /* block_draw() established alpha blending for the whole block; the
-   * selection, caret and scrollbar passes above leave it off, and anything
-   * the footer paints next without its own blend call (submit icon, chips)
-   * would then land opaque — an RGBA-0 backdrop turns solid black. */
-  GPU_blend(GPU_BLEND_ALPHA);
 }
 
 /** \} */
@@ -3275,7 +3255,6 @@ static void widget_draw_text_icon(const uiFontStyle *fstyle,
                                   Button *but,
                                   rcti *rect)
 {
-  const rcti text_bounds = *rect;
   const bool show_menu_icon = but_draw_menu_icon(but);
   const float alpha = float(wcol->text[3]) / 255.0f;
   std::string password_str;
@@ -3359,7 +3338,7 @@ static void widget_draw_text_icon(const uiFontStyle *fstyle,
     const float icon_padding = 2 * UI_SCALE_FAC;
 
 #ifdef USE_UI_TOOLBAR_HACK
-    if (is_tool && !zen_toolbar_tool(but)) {
+    if (is_tool) {
       /* pass (even if its a menu toolbar) */
       but->drawflag |= BUT_TEXT_LEFT;
       but->drawflag |= BUT_ICON_LEFT;
@@ -3480,7 +3459,7 @@ static void widget_draw_text_icon(const uiFontStyle *fstyle,
   }
   else if (ui_but_is_multiline_text(but)) {
     /* Multi-line text buttons handle their own wrapping and drawing. */
-    widget_draw_text_multiline(fstyle, wcol, but, rect, text_bounds);
+    widget_draw_text_multiline(fstyle, wcol, but, rect);
   }
   else if (but->type != ButtonType::TextBox) {
     widget_draw_text(fstyle, wcol, but, rect);
@@ -5229,10 +5208,14 @@ static void widget_textbut_custom(Button *but,
                                   int roundboxalign,
                                   const float zoom)
 {
-  /* Only an explicit translucent wash suppresses chrome. Height cannot
-   * identify the island's empty-state panel: subsequent multiline drafts
-   * grow past 120 pixels too, and must retain their input background.
-   * Placeholder and typed text still draw via wt->text; Emboss keeps clicks. */
+  /* The island's empty-state field is a full-region Text button. Its
+   * theme inner is opaque `#121212` and dest-over cannot lower dest A=1,
+   * so frost never reaches the compositor. Skip chrome on a tall field
+   * (the panel) and on an explicit wash; placeholder and typed text
+   * still draw via wt->text. Emboss stays so clicks work. */
+  if (rect != nullptr && BLI_rcti_size_y(rect) > 120) {
+    return;
+  }
   if (but != nullptr && but->col[3]) {
     if (but->col[3] < 128) {
       return;
@@ -5523,16 +5506,10 @@ static void widget_mixar_toggle(Button *but,
   trackf.ymin = float(track.ymin);
   trackf.ymax = float(track.ymax);
 
-  uchar gray_700[4], toggle_on[4], bg_u[4], fg_2[4];
-  mixar_theme_copy_u(MixarThemeSlot::Gray700, MX_GRAY_700, gray_700);
-  mixar_theme_copy_u(MixarThemeSlot::Focus, MX_TOGGLE_ON, toggle_on);
-  mixar_theme_copy_u(MixarThemeSlot::Bg, MX_BG, bg_u);
-  mixar_theme_copy_u(MixarThemeSlot::Fg2, MX_FG_2, fg_2);
-
   float track_col[4];
   for (int channel = 0; channel < 4; channel++) {
-    track_col[channel] = (float(gray_700[channel]) +
-                          (float(toggle_on[channel]) - float(gray_700[channel])) *
+    track_col[channel] = (float(MX_GRAY_700[channel]) +
+                          (float(MX_TOGGLE_ON[channel]) - float(MX_GRAY_700[channel])) *
                               motion.selected) / 255.0f;
   }
   for (int channel = 0; channel < 3; channel++) {
@@ -5564,7 +5541,7 @@ static void widget_mixar_toggle(Button *but,
 
   /* Knob = --mx-bg (dark), with a hairline so it reads on either track. */
   float knob_col[4];
-  rgba_uchar_to_float(knob_col, bg_u);
+  rgba_uchar_to_float(knob_col, MX_BG);
   draw_roundbox_4fv(&knob_rect, true, knob_rad, knob_col);
   float knob_outline[4] = {1.0f, 1.0f, 1.0f, 0.20f};
   draw_roundbox_4fv(&knob_rect, false, knob_rad, knob_outline);
@@ -5572,8 +5549,8 @@ static void widget_mixar_toggle(Button *but,
   GPU_blend(GPU_BLEND_NONE);
 
   /* Neutral label in both states — the ON label must not turn green. */
-  copy_v4_v4_uchar(wcol->text, fg_2);
-  copy_v4_v4_uchar(wcol->text_sel, fg_2);
+  copy_v4_v4_uchar(wcol->text, MX_FG_2);
+  copy_v4_v4_uchar(wcol->text_sel, MX_FG_2);
 
   /* --- Adjust text rect so label doesn't overlap the toggle --------------- */
   const float offset = 4.0f * UI_SCALE_FAC;
@@ -5608,12 +5585,8 @@ static void widget_mixar_input(uiWidgetColors *wcol,
 
   /* Recipe: #1f1f1f fill, 1px #2e2e2e border — identical at rest/hover/focus.
    * Interaction state is carried by the focus ring below, not the border. */
-  uchar gray_800[4], border_strong[4], accent_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::Gray800, MX_GRAY_800, gray_800);
-  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong);
-  mixar_theme_copy_u(MixarThemeSlot::Focus, MX_ACCENT, accent_u);
-  copy_v4_v4_uchar(wcol->inner, gray_800);
-  copy_v4_v4_uchar(wcol->outline, border_strong);
+  copy_v4_v4_uchar(wcol->inner, MX_GRAY_800);
+  copy_v4_v4_uchar(wcol->outline, MX_BORDER_STRONG);
 
   round_box_edges(&wtb, roundboxalign, rect, rad);
   wtb.draw_outline = true;
@@ -5626,7 +5599,7 @@ static void widget_mixar_input(uiWidgetColors *wcol,
    * solid 2px ring. */
   if (is_focused) {
     float ring[4];
-    rgba_uchar_to_float(ring, accent_u);
+    rgba_uchar_to_float(ring, MX_ACCENT);
     const float offset = 2.0f * UI_SCALE_FAC; /* outline-offset */
     GPU_blend(GPU_BLEND_ALPHA);
     draw_roundbox_corner_set(CNR_ALL);
@@ -5727,12 +5700,12 @@ static void widget_box(Button *but,
 
 /* -- Mixar Section Widget ------------------------------------------------ */
 
-static void widget_mixar_section(Button * /*but*/,
+static void widget_mixar_section(Button *but,
                                  uiWidgetColors *wcol,
                                  rcti *rect,
                                  const WidgetStateInfo * /*state*/,
                                  int roundboxalign,
-                                 const float /*zoom*/)
+                                 const float zoom)
 {
   WidgetBase wtb;
   widget_init(&wtb);
@@ -5760,19 +5733,16 @@ static void widget_mixar_section(Button * /*but*/,
    * default top/bottom shade gradient would otherwise lighten the fill into
    * an uneven charcoal instead of a flat black. */
   constexpr float CARD_WASH = 0.6f;
-  uchar bg_u[4], widget_border[4];
-  mixar_theme_copy_u(MixarThemeSlot::Bg, MX_BG, bg_u);
-  mixar_theme_copy_u(MixarThemeSlot::WidgetBorder, MX_BORDER, widget_border);
   uchar bed[4];
-  copy_v4_v4_uchar(bed, bg_u);
-  bed[3] = uchar(float(bg_u[3]) * CARD_WASH);
+  copy_v4_v4_uchar(bed, MX_BG);
+  bed[3] = uchar(float(MX_BG[3]) * CARD_WASH);
 
   uchar old_inner[4], old_outline[4];
   const char old_shaded = wcol->shaded;
   copy_v4_v4_uchar(old_inner, wcol->inner);
   copy_v4_v4_uchar(old_outline, wcol->outline);
   copy_v4_v4_uchar(wcol->inner, bed);
-  copy_v4_v4_uchar(wcol->outline, widget_border);
+  copy_v4_v4_uchar(wcol->outline, MX_BORDER);
   wcol->shaded = 0;
 
   round_box_edges(&wtb, roundboxalign, rect, rad);
@@ -5797,7 +5767,7 @@ static void widget_mixar_dropdown(Button *but,
                                   rcti *rect,
                                   const WidgetStateInfo *state,
                                   int roundboxalign,
-                                  const float /*zoom*/)
+                                  const float zoom)
 {
   WidgetBase wtb;
   widget_init(&wtb);
@@ -5816,19 +5786,15 @@ static void widget_mixar_dropdown(Button *but,
 
   /* #1f1f1f fill / #2e2e2e border — identical to the input recipe. Subtle
    * lift on hover / dim on press; state only, no accent chrome. */
-  uchar gray_800[4], border_strong[4], fg4_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::Gray800, MX_GRAY_800, gray_800);
-  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong);
-  mixar_theme_copy_u(MixarThemeSlot::Fg4, MX_FG_4, fg4_u);
-  copy_v4_v4_uchar(wcol->inner, gray_800);
+  copy_v4_v4_uchar(wcol->inner, MX_GRAY_800);
   for (int channel = 0; channel < 3; channel++) {
     const float boost = (1.0f + 0.15f * motion.hover) * (1.0f - 0.15f * motion.press);
     wcol->inner[channel] = uchar(std::min(float(wcol->inner[channel]) * boost, 255.0f));
   }
-  copy_v4_v4_uchar(wcol->outline, border_strong);
+  copy_v4_v4_uchar(wcol->outline, MX_BORDER_STRONG);
 
   /* Chevron-down in --mx-fg-4 (wcol->item colors the tria mesh). */
-  copy_v4_v4_uchar(wcol->item, fg4_u);
+  copy_v4_v4_uchar(wcol->item, MX_FG_4);
 
   round_box_edges(&wtb, roundboxalign, rect, rad);
 
@@ -5937,7 +5903,7 @@ static void mixar_draw_gradient_hbar(const rctf *rect, float rad)
 static void widget_mixar_action_button(Button *but,
                                        uiWidgetColors *wcol,
                                        rcti *rect,
-                                       const WidgetStateInfo * /*state*/,
+                                       const WidgetStateInfo *state,
                                        int /*roundboxalign*/,
                                        const float /*zoom*/)
 {
@@ -5949,16 +5915,12 @@ static void widget_mixar_action_button(Button *but,
   rctf rectf;
   BLI_rctf_rcti_copy(&rectf, rect);
 
-  uchar accent_u[4], ink_u[4];
-  mixar_theme_copy_u(MixarThemeSlot::Focus, MX_ACCENT, accent_u);
-  mixar_theme_copy_u(MixarThemeSlot::Ink, MX_INK, ink_u);
-
   /* --mx-shadow-glow: soft teal glow behind the button. */
   {
     const float g = 3.0f * UI_SCALE_FAC;
     rctf glow = {rectf.xmin - g, rectf.xmax + g, rectf.ymin - g, rectf.ymax + g};
     float glow_col[4];
-    rgba_uchar_to_float(glow_col, accent_u);
+    rgba_uchar_to_float(glow_col, MX_ACCENT);
     glow_col[3] = 0.22f;
     GPU_blend(GPU_BLEND_ALPHA);
     draw_roundbox_corner_set(CNR_ALL);
@@ -5994,10 +5956,10 @@ static void widget_mixar_action_button(Button *but,
   }
 
   /* Near-black label + play glyph for contrast on the bright gradient. */
-  copy_v4_v4_uchar(wcol->text, ink_u);
-  copy_v4_v4_uchar(wcol->text_sel, ink_u);
-  copy_v4_v4_uchar(wcol->inner, ink_u);
-  copy_v4_v4_uchar(wcol->inner_sel, ink_u);
+  copy_v4_v4_uchar(wcol->text, MX_INK);
+  copy_v4_v4_uchar(wcol->text_sel, MX_INK);
+  copy_v4_v4_uchar(wcol->inner, MX_INK);
+  copy_v4_v4_uchar(wcol->inner_sel, MX_INK);
 }
 
 /* -- Mixar Account Card --------------------------------------------------- */
@@ -6082,10 +6044,8 @@ static bool zen_glass_cell(const Button *but)
   if (but->mixar_style.component != MixarComponent::None) {
     return false;
   }
-  /* Popover joins for the Zen header's shading-options chip: an icon-only
-   * popover on its own aligned Zen surface, beside the enum capsule. */
-  return ELEM(but->type, ButtonType::Row, ButtonType::But, ButtonType::Popover) &&
-         but->icon != ICON_NONE && but->drawstr.empty();
+  return ELEM(but->type, ButtonType::Row, ButtonType::But) && but->icon != ICON_NONE &&
+         but->drawstr.empty();
 }
 
 /**
@@ -6116,22 +6076,6 @@ static void widget_zen_tool_glass(Button *but,
                                   const WidgetStateInfo *state,
                                   const int roundboxalign)
 {
-  /* The tools panel is a column, so these buttons inherit the region width.
-   * A cell wider than it is tall then paints a horizontal capsule — the
-   * radius is half the short side — and the glyph sits on the left edge.
-   * Clamp the draw rect to a square anchored on that left edge. The union
-   * below maps into this width, and the icon pass after this call uses the
-   * same rect, so the capsule and the glyph stay on top of each other.
-   * Header shading rows and explicit GlassTool capsules are wider than they
-   * are tall on purpose and are not toolbar tools, so they are left alone. */
-  if (zen_toolbar_tool(but)) {
-    const int w = BLI_rcti_size_x(rect);
-    const int h = BLI_rcti_size_y(rect);
-    if (w > h && h > 0) {
-      rect->xmax = rect->xmin + h;
-    }
-  }
-
   rctf pane;
   BLI_rctf_rcti_copy(&pane, rect);
   bool paint_bed = true;
@@ -6231,7 +6175,7 @@ static void widget_zen_tool_glass(Button *but,
     }
     float wash[4];
     if (selected) {
-      copy_v4_v4(wash, mixar_tokens::mixar_zen().selected);
+      copy_v4_v4(wash, mixar_tokens::zen.selected);
       wash[3] = 0.88f;
     }
     else {
@@ -7159,22 +7103,15 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
     widget_zen_tool_glass(but, rect, &state, roundboxalign);
     if (!use_alpha_blend) {
       for (int i = 0; i < 4; i++) {
-        wt->wcol.text[i] = wt->wcol.text_sel[i] = uchar(mixar_tokens::mixar_zen().text[i] * 255.0f);
+        wt->wcol.text[i] = wt->wcol.text_sel[i] = uchar(mixar_tokens::zen.text[i] * 255.0f);
       }
     }
   }
   else if (mixar_component) {
     native_text = mixar_component_draw(*but, wt->wcol, *rect);
   }
-  else if (ELEM(but->type, ButtonType::Row, ButtonType::Popover) && zen_glass_cell(but)) {
-    /* Keep Radio state/text and RNA editing; replace only the background.
-     * A Popover chip themes from `wcol_menu`, so borrow the strip's own
-     * icon colour (`wcol_radio`) the way the `But` guides chip does. */
-    if (but->type == ButtonType::Popover) {
-      const uiWidgetColors &radio = theme::theme_get()->tui.wcol_radio;
-      copy_v4_v4_uchar(wt->wcol.text, radio.text);
-      copy_v4_v4_uchar(wt->wcol.text_sel, radio.text_sel);
-    }
+  else if (but->type == ButtonType::Row && zen_glass_cell(but)) {
+    /* Keep Radio state/text and RNA editing; replace only the background. */
     widget_zen_tool_glass(but, rect, &state, roundboxalign);
   }
   else if (wt->custom) {

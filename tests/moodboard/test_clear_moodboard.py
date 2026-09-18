@@ -74,20 +74,13 @@ def test_empty_board_does_not_add_an_undo_step(clear_board):
 @pytest.fixture
 def has_content():
     source = Path(__file__).resolve().parents[2] / (
-        'src/scripts/mixar/modules/moodboard/core/canvas_context.py')
+        'src/scripts/mixar/modules/space_mixie/ui/header.py')
     tree = ast.parse(source.read_text())
-    keep = []
-    for node in tree.body:
-        if isinstance(node, ast.Assign):
-            names = [target.id for target in node.targets if isinstance(target, ast.Name)]
-            if 'MOODBOARD_CONTENT_COLLECTIONS' in names:
-                keep.append(node)
-        if isinstance(node, ast.FunctionDef) and node.name == 'has_moodboard_content':
-            keep.append(node)
-    tree.body = keep
+    tree.body = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                 and node.name == '_has_moodboard_content']
     scope = {}
     exec(compile(tree, str(source), 'exec'), scope)
-    return scope['has_moodboard_content']
+    return scope['_has_moodboard_content']
 
 
 @pytest.mark.parametrize('name', COLLECTIONS)
@@ -100,11 +93,3 @@ def test_clear_button_is_available_for_each_content_type(clear_board, has_conten
 
 def test_header_can_draw_before_moodboard_properties_are_registered(has_content):
     assert not has_content(SimpleNamespace(scene=SimpleNamespace()))
-
-
-def test_both_canvases_offer_clear_in_the_shared_board_menu():
-    root = Path(__file__).resolve().parents[2]
-    menu = (root / "src/scripts/mixar/modules/moodboard/ui/menus/node_templates_menu.py").read_text()
-    assert 'row.enabled = has_moodboard_content(context)' in menu
-    assert '"mixie.clear_moodboard"' in menu
-    assert "variant='DANGER'" in menu

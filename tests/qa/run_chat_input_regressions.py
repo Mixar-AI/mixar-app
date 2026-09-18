@@ -14,12 +14,10 @@ import sys
 
 SCENARIOS = (
     'blender_native_text_fields_e2e.py',
-    'chat_popup_enter_activation_e2e.py',
     'mixie_caret_placement_e2e.py',
     'multiline_field_isolation_e2e.py',
     'mixie_text_selection_e2e.py',
     'mixie_open_type_send_e2e.py',
-    'voice_composer_focus_e2e.py',
 )
 
 if __name__ == '__main__':

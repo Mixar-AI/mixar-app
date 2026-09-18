@@ -31,13 +31,9 @@ def _source_item(scene, requested_index):
     if 0 <= requested_index < len(items):
         item = items[requested_index]
         return requested_index, item if item.image else None
-    from mixar.modules.moodboard.core.media_utils import (
-        selected_reference_still_entries,
-    )
-
-    entries = selected_reference_still_entries(scene)
-    if entries:
-        return entries[0]
+    for index, item in enumerate(items):
+        if item.selected and item.image:
+            return index, item
     return -1, None
 
 

@@ -147,8 +147,6 @@ class MIXIE_CHAT_OT_new_session(Operator):
         return context.scene is not None
 
     def execute(self, context):
-        from ...core import voice
-        voice.cancel()
         session = get_session_manager()
         scene = context.scene
         scene_name = scene.name
@@ -322,8 +320,6 @@ class MIXIE_CHAT_OT_abort_session(Operator):
             from mixar.modules.scribble_mark.core import marks as mark_store
             reopened = mark_store.reopen_last_sent(scene)
             if reopened:
-                from mixar.modules.scribble_mark.core import preview
-                preview.sync(scene)
                 logger.info(f"Scribble: reopened {reopened} mark(s) after stop")
         except Exception as e:  # noqa: BLE001
             logger.debug(f"scribble mark reopen on abort skipped: {e}")
@@ -339,7 +335,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
 
         for window in context.window_manager.windows:
             for area in window.screen.areas:
-                if area.type == 'AGENT_BUBBLE':
+                if area.type == 'MIXIE_CHAT':
                     area.tag_redraw()
 
         logger.info("Session aborted by user")

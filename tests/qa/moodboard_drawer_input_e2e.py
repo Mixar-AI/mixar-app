@@ -24,7 +24,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 from moodboard_drawer_e2e import (  # noqa: E402
-    SCENE, drop, geometry, png, require, settle, target, tilde_toggle, toggle,
+    SCENE, drop, geometry, png, require, settle, target, toggle,
 )
 
 HARNESS = os.environ.get("QA_HARNESS")
@@ -250,8 +250,6 @@ def run(qa):
     qa.step("snap_shut", snap, qa, "01_shut", area="VIEW_3D")
     qa.step("reveal_tab_suppressed_when_shut", sidebar_tab_suppressed, qa, "shut")
     qa.step("sidebar_key_still_works", sidebar_key_still_works, qa)
-    qa.step("tilde_opens_from_viewport", tilde_toggle, qa, 1, over="viewport")
-    qa.step("tilde_closes_from_panel", tilde_toggle, qa, 0, over="panel")
 
     qa.step("open_drawer", toggle, qa, 1)
     qa.step("reveal_tab_suppressed_when_open", sidebar_tab_suppressed, qa, "open")

@@ -17,7 +17,6 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.render_coordinator import core as render_slot
 from mixar.modules.asset_search.core.render_session import (
     RenderSession,
     build_render_plan,
@@ -79,9 +78,6 @@ class MIXIE_OT_inspect_asset_libraries(Operator):
     bl_options = {"REGISTER"}
 
     def execute(self, context):
-        if render_slot.busy():
-            self.report({"WARNING"}, "Another render is in progress; retry inspection later")
-            return {"CANCELLED"}
         _collected_assets.clear()
 
         if not context.preferences.filepaths.asset_libraries:
@@ -94,9 +90,7 @@ class MIXIE_OT_inspect_asset_libraries(Operator):
         session.start()
         try:
             while not session.done:
-                if not session.step(8):
-                    self.report({"WARNING"}, "Another render is in progress")
-                    return {"CANCELLED"}
+                session.step(8)
         finally:
             session.finish()
 

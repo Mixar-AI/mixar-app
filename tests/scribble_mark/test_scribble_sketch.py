@@ -382,8 +382,9 @@ class TestAnnotatedFrame:
         assert 'region.get("polygon")' in text
 
     def test_the_frame_is_drawn_from_the_stored_records_not_the_wire_copy(self):
-        text = source(f"{MODULE}/core/preview.py")
-        assert 'mark_store.draft_marks(scene)' in text
+        text = source(f"{MODULE}/core/chat_bridge.py")
+        body = text[text.index("def _attach_frames"):]
+        assert 'mark_store.draft_marks(scene) or marks' in body
 
 
 class TestResolverStrokes:
@@ -405,9 +406,9 @@ class TestVisibleReading:
     failure ink tools hit first (arXiv:2607.21468)."""
 
     def test_the_hint_names_both_readings_and_the_flip(self):
-        assert "Tab" in C.MARK_HINT_MARKED and "Draw to build" in C.MARK_HINT_MARKED
-        assert "Tab" in C.MARK_HINT_SKETCH and "Point to edit" in C.MARK_HINT_SKETCH
-        assert "Esc" in C.MARK_HINT_SKETCH and "Ctrl/Cmd+Z" in C.MARK_HINT_SKETCH
+        assert "Tab" in C.MARK_HINT_MARKED and "sketch" in C.MARK_HINT_MARKED
+        assert "Tab" in C.MARK_HINT_SKETCH and "Sketch" in C.MARK_HINT_SKETCH
+        assert "Esc" in C.MARK_HINT_SKETCH and "Backspace" in C.MARK_HINT_SKETCH
 
     def test_the_pill_reads_the_cached_reading_not_the_records(self):
         text = source(f"{MODULE}/core/overlay.py")
@@ -430,7 +431,8 @@ class TestVisibleReading:
         assert "refresh_reading" in arm
 
     def test_the_override_is_drawn_beside_the_count_on_both_headers(self):
-        for rel in ("src/scripts/mixar/modules/agent_bubble/ui/header.py",):
+        for rel in ("src/scripts/mixar/modules/space_mixie_chat/ui/header.py",
+                    "src/scripts/mixar/modules/agent_bubble/ui/header.py"):
             assert '"mixar_mark_intent"' in source(rel), rel
 
     def test_the_override_is_session_only_and_reset_when_the_ink_goes(self):

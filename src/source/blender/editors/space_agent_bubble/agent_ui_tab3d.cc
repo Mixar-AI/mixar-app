@@ -17,7 +17,6 @@
  */
 
 #include "agent_ui_text.hh"
-#include "agent_bubble_references.hh"
 
 #include <algorithm>
 #include <cstdio>
@@ -176,11 +175,9 @@ bool state_gather(const bContext *C, Tab3DState *st)
    * pane's own service key is `mode_id` (the catalog service this tab
    * submits: model_3d / image_to_3d / hunyuan_rapid / …), never a hardcoded
    * slug; an unresolved mode passes an empty key and counts any active job
-   * rather than reporting nothing. `generating` is true once ANY matched job
-   * has left PENDING — that is what flips the chip from Queued to Generating. */
-  int running = 0;
-  st->active_jobs = pane_active_job_count(C, st->mode_id, &running);
-  st->generating = running > 0;
+   * rather than reporting nothing. */
+  st->active_jobs = pane_active_job_count(C, st->mode_id);
+  st->generating = st->active_jobs > 0;
 
   /* Schema param group: wm.mixar_genparams_<service>__<slug> (engine.py's
    * _wm_attr). Placeholder enum ids (LOADING/ERROR/NONE) simply fail to
@@ -264,7 +261,11 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   /* --- Params strip: Mode + Model dropdowns, then the schema params. --- */
   float x = panel.xmin + PANE_INSET_X * u;
   const float row_top = panel.ymax - PANE_STRIP_TOP * u;
-  const float x_max = panel.xmax - PANE_INSET_X * u;
+  const float settings_right = panel.xmax - PANE_INSET_X * u;
+  const float x_max = settings_right - (st.group_ok ? (PANE_SETTINGS_W + PANE_CHIP_GAP) * u : 0);
+  if (st.group_ok) {
+    pane_settings_button(block, settings_right, row_top, u, st.mode_id, st.model_id);
+  }
 
   x += dropdown_chip(C, block, region, st.mode_label,
                      "scene.mixie_moodboard_sidebar.tab_image_to_3d.mode",
@@ -330,12 +331,6 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
   /* --- Bottom row inside the box foot: Upload Reference + Generate. --- */
   const float chip_y0 = pane_bottom_row_ymin(box, u);
-  /* Queue label first — Generate's width (and the thumbs' right edge) grow
-   * with "Generating (N)" / "Queued (N)", so sizing thumbs against the idle
-   * "Generate" chip would let them overlap the live button. */
-  char gen_label[32];
-  pane_queue_label(gen_label, sizeof(gen_label), st.active_jobs, st.generating);
-  const rctf generate = pane_generate_rect(box, u, gen_label);
   {
     /* Upload chip — the tab's OWN picker (sets reference_image and the
      * generate path reads it when use_selected_image is off). The chip keeps
@@ -358,23 +353,21 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
     /* Reference preview — whatever this tab will actually SUBMIT: the board
      * selection while `use_selected_image` is on, otherwise its own upload. */
-    if (!agent_bubble_references_visible(C)) {
-      Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
-      int ref_count = 0;
-      if (st.use_selected_image) {
-        ref_count = pane_board_selected_images(C, ref_images, PANE_REF_THUMB_MAX);
-      }
-      else if (st.reference_image != nullptr) {
-        ref_images[ref_count++] = st.reference_image;
-      }
-      pane_ref_thumbs_paint(ref_images,
-                            ref_count,
-                            rect.xmax + PANE_CHIP_GAP * u,
-                            chip_y0,
-                            PANE_ROW_H * u,
-                            generate.xmin - PANE_CHIP_GAP * u,
-                            u);
+    Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
+    int ref_count = 0;
+    if (st.use_selected_image) {
+      ref_count = pane_board_selected_images(C, ref_images, PANE_REF_THUMB_MAX);
     }
+    else if (st.reference_image != nullptr) {
+      ref_images[ref_count++] = st.reference_image;
+    }
+    pane_ref_thumbs_paint(ref_images,
+                          ref_count,
+                          rect.xmax + PANE_CHIP_GAP * u,
+                          chip_y0,
+                          PANE_ROW_H * u,
+                          pane_generate_rect(box, u).xmin - PANE_CHIP_GAP * u,
+                          u);
   }
 
   {
@@ -384,12 +377,16 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
      * generations. The owner is the tab PropertyGroup's own RNA identifier —
      * exactly what interface_handlers.cc forwards — so no per-mode operator
      * table is duplicated here at all (smart segmentation included). */
-    const rctf rect = generate;
+    const rctf rect = pane_generate_rect(box, u);
   /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
    * the point — so an active job is INFORMATION (the label carries the
    * count), never a lock. Only a missing prompt field or an unusable
    * catalog can disarm it. */
     const bool armed = prompt_ok;
+    /* "Queued..." — the same word the Media pane uses, because both now read
+     * the same thing: a job sitting in the unified queue. */
+    char gen_label[32];
+    pane_queue_label(gen_label, sizeof(gen_label), st.active_jobs);
 
     {
       ui::Button *but = uiDefButO(block, ui::ButtonType::But, "mixie.moodboard_prompt_generate",

@@ -84,12 +84,6 @@ class EventProcessor:
         if kind == "cancelled":
             self._session.set_run(scene, "", False)
             return True
-        if kind == "activity":
-            # One per backend tool call: a step row (merged with the script
-            # path's row on call_id) plus the images the call produced.
-            from .steps_recorder import record_activity
-            record_activity(scene, data)
-            return True
         return False
 
     def _settle_run_on_complete(self, scene) -> None:

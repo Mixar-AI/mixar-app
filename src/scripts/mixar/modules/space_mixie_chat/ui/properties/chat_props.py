@@ -28,7 +28,7 @@ from .chat_slot_types import (
     MixieChatImageItem,
     MixieChatStepItem,
 )
-from ...constants import SESSION_STATE_ITEMS, CHAT_INPUT_MAXLEN, FEEDBACK_STATUS_SENDING
+from ...constants import SESSION_STATE_ITEMS, CHAT_INPUT_MAXLEN
 
 logger = get_logger(__name__)
 
@@ -70,11 +70,6 @@ class MixieChatAttachment(PropertyGroup):
         description="Display name for the attachment",
         default=""
     )
-    scribble_view: StringProperty(
-        name="Sketch View",
-        description="Frozen view owned by this draft sketch preview",
-        default="",
-    )
     # Marks attachments that were auto-added by the moodboard selection sync.
     # The sync code uses this flag to know which pending attachments it owns
     # — manually added FILE / BLEND_DATA attachments are never touched.
@@ -105,7 +100,7 @@ def on_feedback_comment_changed(self, context):
         return
     if not self.feedback_comment.strip():
         return
-    if self.feedback_comment_submitting or self.feedback_status == FEEDBACK_STATUS_SENDING:
+    if self.feedback_comment_submitting:
         return
     if not 1 <= int(self.feedback_rating) <= 5:
         logger.info(
@@ -320,13 +315,6 @@ class MixieChatMessage(PropertyGroup):
         description="Whether the steps block is collapsed to its summary",
         default=True
     )
-    images_collapsed: BoolProperty(
-        name="Images Collapsed",
-        description="Whether the 'Viewed N images' block (the bubble's capture "
-                    "tiles) is collapsed to its header. Opened for the bubble "
-                    "that most recently received a tile, collapsed elsewhere",
-        default=False
-    )
 
     # -------------------------------------------------------------------------
     # Thinking dropdown (finalized reasoning; live reasoning uses `ephemeral`)
@@ -365,13 +353,13 @@ class MixieChatMessage(PropertyGroup):
     # -------------------------------------------------------------------------
     feedback_visible: BoolProperty(
         name="Feedback Visible",
-        description="Whether to show feedback controls",
+        description="Whether to show the feedback rating row",
         default=False,
         options={'SKIP_SAVE'},
     )
     feedback_rating: IntProperty(
         name="Feedback Rating",
-        description="Response vote (0=unrated, 1=down, 5=up; legacy 1-5 supported)",
+        description="User's star rating (0=unrated, 1-5=rated)",
         default=0,
         min=0,
         max=5,
@@ -399,7 +387,7 @@ class MixieChatMessage(PropertyGroup):
     )
     feedback_status: IntProperty(
         name="Feedback Status",
-        description="Local submission state: 0=idle, 2=submitted; 1/3 are legacy values",
+        description="Submission state: 0=idle, 1=sending, 2=received, 3=failed",
         default=0,
         min=0,
         max=3,
@@ -407,7 +395,7 @@ class MixieChatMessage(PropertyGroup):
     )
     feedback_submitted_comment: StringProperty(
         name="Submitted Feedback Comment",
-        description="Locally submitted comment, shown read-only in the chat",
+        description="Comment accepted by the server, shown read-only in the chat",
         default="",
         maxlen=2000,
         options={'SKIP_SAVE'},
@@ -467,24 +455,19 @@ def _execute_send_message():
             bpy.ops.mixie_chat.send_message()
     except Exception as e:  # noqa: BLE001 — operator may not be available
         logger.warning("send_message from Enter failed: %s", e)
-        _report_send_refused(str(e).strip().removeprefix("Error: "))
 
 
 def _report_send_refused(reason: str) -> None:
-    """Surface a refused Enter-send (timer context: no operator to report on).
-
-    Raised as a viewport notification in the shared bottom-left lane, like
-    every other alert, rather than a popup menu under the cursor.
-    """
+    """Surface a refused Enter-send (timer context: no operator to report on)."""
     logger.warning("Message not sent: %s", reason)
     try:
-        from mixar.modules.common.notifications import get_notification_store
-        # One stable id: repeated Enters replace the toast, never stack it.
-        get_notification_store().push(
-            "warning", "Message not sent", body=reason,
-            ttl_ms=6000, id="mixie_chat_send_refused",
+        wm = bpy.context.window_manager
+        wm.popup_menu(
+            lambda self, _ctx: self.layout.label(text=reason),
+            title="Message not sent",
+            icon='INFO',
         )
-    except Exception:  # noqa: BLE001 — the log line above still records it
+    except Exception:  # noqa: BLE001 — a popup needs a window; the log suffices
         pass
 
 
@@ -831,16 +814,6 @@ def register():
         default=False,
     )
 
-    # Auto mode: sent as `auto_mode: true` on every agent.chat while set
-    # (core/composer_send.py). The backend persists nothing — the most
-    # recent turn's value governs the run — so this is the sticky state.
-    bpy.types.Scene.mixie_chat_auto_mode = BoolProperty(
-        name="Auto Mode",
-        description="The agent decides every open choice itself instead of "
-                    "asking you, and lists its decisions in the summary",
-        default=False,
-    )
-
     bpy.types.Scene.mixie_chat_is_busy = BoolProperty(
         name="Mixie Is Busy",
         description="True when the agent is processing a request (BUSY state)",
@@ -883,7 +856,7 @@ def register():
     # backend starts later turns itself (wake-ups over the socket). While the
     # run is open the composer keeps sending (an interjection joins the run),
     # worker scripts are accepted while the turn is IDLE, and the status
-    # reads "Working". Written only by SessionManager.set_run.
+    # reads "Working in background". Written only by SessionManager.set_run.
     bpy.types.Scene.mixie_run_open = BoolProperty(
         name="Agent Run Open",
         description="True while the backend run behind this chat is still open",
@@ -1043,14 +1016,6 @@ def register():
         description="Chat session identifier for this scene",
         default="",
     )
-    # Kept while the chat's session id is cleared by a revert to before turn 1
-    # (the backend has no conversation there), so the Checkpoints card still
-    # lists that timeline and its turns can be reapplied.
-    bpy.types.Scene.mixie_checkpoint_session_id = StringProperty(
-        name="Checkpoint Session ID",
-        description="Session whose turn checkpoints this scene still shows",
-        default="",
-    )
 
 
 def unregister():
@@ -1086,10 +1051,10 @@ def unregister():
     # Remove Scene-level properties
     for attr in (
         'mixie_chat_layout_epoch',
-        'mixie_session_id', 'mixie_checkpoint_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
+        'mixie_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
         'mixie_chat_model', 'mixie_chat_generate_type',
         'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
-        'mixie_chat_auto_mode', 'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
+        'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
         'mixie_run_open', 'mixie_run_id',
         'mixie_chat_mode', 'mixie_addon_project_id', 'mixie_addon_project_name',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',

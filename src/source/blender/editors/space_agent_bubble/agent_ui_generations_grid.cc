@@ -12,12 +12,10 @@
  * \section drag Dragging a generation into the viewport
  *
  * A 3D tile's button carries Blender's OWN asset drag
- * (#ui::button_drag_set_asset) plus #BUT_DRAG_FULL_BUT, so releasing it over a
- * 3D viewport runs the View3D's existing asset dropbox: the import method the
- * library is configured with, the undo push, the placement under the cursor —
- * all of it is Blender's, none of it re-implemented here. The full-button flag
- * is what lets a viewport-clipped tile start that drag from its visible strip.
- * That is only possible because
+ * (#ui::button_drag_set_asset), so releasing it over a 3D viewport runs the
+ * View3D's existing asset dropbox: the import method the library is
+ * configured with, the undo push, the placement under the cursor — all of it
+ * is Blender's, none of it re-implemented here. That is only possible because
  * the generations already ARE assets in a registered library
  * (`asset_search/core/generation_library.py` archives them), which is why the
  * pane enumerates through `ED_asset_list.hh` rather than reading the folder
@@ -69,36 +67,36 @@ namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Grid geometry
  *
- * Column count comes from the resolved frame (at most the design's four).
- * A short island still shrinks the tile so the caption stays inside the
- * panel instead of being scissored off.
+ * Column count is fixed at the design's four and never computed: the island
+ * is a constant 1310 units wide whatever the window's pixel width (the unit
+ * scale absorbs it), so the design's four columns always fit exactly. Only
+ * the row count varies, with the island's height.
  * \{ */
 
-GenGridMetrics agent_ui_generations_grid_metrics(const GenFrame &frame, const GenPaneData &data)
+GenGridMetrics agent_ui_generations_grid_metrics(const rctf &panel,
+                                                 const float u,
+                                                 const GenPaneData &data)
 {
   GenGridMetrics m{};
-  m.cols = std::max(1, frame.cols);
-  m.x0 = frame.grid_x;
-  m.y0 = frame.grid_top;
-  m.bottom = frame.grid_bottom;
+  m.x0 = GEN_XL(panel, GEN_GRID_X, u);
+  m.y0 = GEN_YTOP(panel, GEN_GRID_Y, u);
+  m.bottom = panel.ymin + GEN_PAD * u;
 
   const float avail = std::max(0.0f, m.y0 - m.bottom);
-  const float font = frame.font_cap;
-  const float caption = frame.cap_gap + 2.45f * font;
-  m.tile = std::max(1.0f, std::min(frame.tile, avail - caption));
-  m.pitch_x = m.tile + frame.tile_gap;
-  m.pitch_y = m.tile + caption + frame.row_gap;
-  const int total_rows = (data.count + m.cols - 1) / m.cols;
-  const float content = total_rows * m.pitch_y - frame.row_gap;
+  const float font = GEN_CAP_FONT * agent_ui_text_unit();
+  const float caption = GEN_CAP_GAP * u + 2.25f * font;
+  m.tile = std::max(1.0f, std::min(GEN_TILE * u, avail - caption));
+  m.pitch_x = m.tile + GEN_TILE_GAP * u;
+  m.pitch_y = m.tile + caption + GEN_ROW_GAP * u;
+  const int total_rows = (data.count + GEN_COLS - 1) / GEN_COLS;
+  const float content = total_rows * m.pitch_y - GEN_ROW_GAP * u;
   m.max_scroll = std::max(0.0f, content - avail);
   m.offset = std::clamp(data.scroll / 100.0f, 0.0f, 1.0f) * m.max_scroll;
-  m.first_row = m.pitch_y > 0.0f ? int(m.offset / m.pitch_y) : 0;
-  m.end_row = m.pitch_y > 0.0f ? std::min(total_rows, int(std::ceil((m.offset + avail) / m.pitch_y))) :
-                                 total_rows;
-  const float gutter = std::max(4.0f, frame.gap * 0.35f);
-  m.view = {m.x0, frame.grid_right, m.bottom, m.y0};
-  m.scrollbar = {frame.grid_right + gutter,
-                 std::max(frame.grid_right + gutter + 6.0f, frame.detail_div_x - gutter),
+  m.first_row = int(m.offset / m.pitch_y);
+  m.end_row = std::min(total_rows, int(std::ceil((m.offset + avail) / m.pitch_y)));
+  m.view = {m.x0, GEN_XL(panel, GEN_DETAIL_DIVIDER_X - 22, u), m.bottom, m.y0};
+  m.scrollbar = {GEN_XL(panel, GEN_DETAIL_DIVIDER_X - 18, u),
+                 GEN_XL(panel, GEN_DETAIL_DIVIDER_X - 10, u),
                  m.bottom,
                  m.y0};
   return m;
@@ -109,7 +107,7 @@ namespace {
 /** A dim glyph centred on the tile plate, for anything with no pixels. */
 void draw_placeholder(const rctf &box, const AgentIcon icon)
 {
-  MIXAR_THEME_LOAD(col, TextSecondary);
+  const float col[4] = AGENT_COL_TEXT_DIM;
   const float bg[4] = GEN_COL_TILE;
   const float s = std::min(BLI_rctf_size_x(&box), BLI_rctf_size_y(&box)) * 0.34f;
   rctf glyph;
@@ -185,24 +183,23 @@ void agent_ui_generations_thumb(const bContext *C,
 void agent_ui_generations_grid(const bContext *C,
                                ui::Block *block,
                                const rctf &panel,
-                               const GenFrame &frame,
+                               const float u,
                                const GenPaneData &data,
                                const GenGridMetrics &grid,
                                rctf *r_selected_tile)
 {
   BLI_rctf_init(r_selected_tile, 0.0f, 0.0f, 0.0f, 0.0f);
 
-  MIXAR_THEME_LOAD(text, Text);
-  MIXAR_THEME_LOAD(dim, TextSecondary);
+  const float text[4] = AGENT_COL_TEXT;
+  const float dim[4] = AGENT_COL_TEXT_DIM;
   const float tile_bg[4] = GEN_COL_TILE;
   const float live[4] = GEN_COL_LIVE;
-  const float font_chip = frame.font_chip;
-  const float font_cap = frame.font_cap;
-  const int cols = std::max(1, grid.cols);
+  const float font_chip = GEN_CHIP_FONT * agent_ui_text_unit();
+  const float font_cap = GEN_CAP_FONT * agent_ui_text_unit();
 
   /* ---- Tiles ---- */
-  const int first = grid.first_row * cols;
-  const int last = std::min(data.count, grid.end_row * cols);
+  const int first = grid.first_row * GEN_COLS;
+  const int last = std::min(data.count, grid.end_row * GEN_COLS);
   const GenViewportClip clip(grid.view);
 
   if (data.count == 0) {
@@ -211,7 +208,8 @@ void agent_ui_generations_grid(const bContext *C,
                                             "No assets in this library yet" :
                                             "Your generations will appear here");
     pane_label_centre(empty,
-                      (frame.grid_x + frame.grid_right) * 0.5f,
+                      (GEN_XL(panel, GEN_GRID_X, u) + GEN_XL(panel, GEN_DETAIL_DIVIDER_X, u)) *
+                          0.5f,
                       (panel.ymin + panel.ymax) * 0.5f,
                       font_chip,
                       dim);
@@ -221,49 +219,44 @@ void agent_ui_generations_grid(const bContext *C,
     const GenItem &item = data.items[i];
     const int slot = i - first;
     rctf tile;
-    tile.xmin = grid.x0 + float(slot % cols) * grid.pitch_x;
+    tile.xmin = grid.x0 + float(slot % GEN_COLS) * grid.pitch_x;
     tile.xmax = tile.xmin + grid.tile;
-    tile.ymax = grid.y0 + grid.offset - float(i / cols) * grid.pitch_y;
+    tile.ymax = grid.y0 + grid.offset - float(i / GEN_COLS) * grid.pitch_y;
     tile.ymin = tile.ymax - grid.tile;
 
-    pane_fill_round(&tile, std::min(GEN_TILE_RADIUS * frame.u, grid.tile * 0.18f), tile_bg);
+    pane_fill_round(&tile, GEN_TILE_RADIUS * u, tile_bg);
     /* Paint full-size images under the viewport scissor, including partial rows. */
-    agent_ui_generations_thumb(C, item, tile, frame.u);
+    agent_ui_generations_thumb(C, item, tile, u);
 
     if (STREQ(item.key, data.selected)) {
       /* The caller paints the selection ring under the same viewport clip. */
       *r_selected_tile = tile;
     }
 
-    /* Caption: type and age share the first line (both are short). The name
-     * gets the whole tile on the second line, inset by padding, so the age
-     * no longer truncates it. */
-    const float inset = std::min(frame.cap_inset, grid.tile * 0.12f);
-    const float text_w = std::max(1.0f, grid.tile - 2.0f * inset);
-    const float cap1 = tile.ymin - frame.cap_gap - font_cap * 0.5f;
-    const float cap2 = cap1 - font_cap * 1.35f;
+    /* Caption: type over name on the left, age right-aligned on line two. */
+    const float cap1 = tile.ymin - GEN_CAP_GAP * u - font_cap * 0.5f;
+    const float cap2 = cap1 - font_cap * 1.25f;
     if (item.kind == GEN_ITEM_JOB) {
       pane_label_centre("GENERATING", BLI_rctf_cent_x(&tile), cap1, font_cap, live);
       char name[96];
       BLI_strncpy(name, item.name, sizeof(name));
-      pane_fit_text(name, text_w, font_cap);
+      pane_fit_text(name, grid.tile, font_cap);
       pane_label_centre(name, BLI_rctf_cent_x(&tile), cap2, font_cap, dim);
     }
     else {
-      const float age_w = item.age[0] ? pane_text_width(item.age, font_cap) : 0.0f;
-      const float type_max = age_w > 0.0f ? text_w - age_w - frame.gap * 0.65f : text_w;
       char type_label[64];
       BLI_strncpy(type_label, item.type_label, sizeof(type_label));
-      pane_fit_text(type_label, std::max(1.0f, type_max), font_cap);
-      pane_label_left(type_label, tile.xmin + inset, cap1, font_cap, dim);
-      if (item.age[0]) {
-        pane_label_right(item.age, tile.xmax - inset, cap1, font_cap, dim);
-      }
+      pane_fit_text(type_label, grid.tile, font_cap);
+      pane_label_left(type_label, tile.xmin, cap1, font_cap, dim);
 
+      const float age_w = item.age[0] ? pane_text_width(item.age, font_cap) + 8.0f * u : 0.0f;
       char name[96];
       BLI_strncpy(name, item.name, sizeof(name));
-      pane_fit_text(name, text_w, font_cap);
-      pane_label_left(name, tile.xmin + inset, cap2, font_cap, text);
+      pane_fit_text(name, grid.tile - age_w, font_cap);
+      pane_label_left(name, tile.xmin, cap2, font_cap, text);
+      if (item.age[0]) {
+        pane_label_right(item.age, tile.xmax, cap2, font_cap, dim);
+      }
     }
   }
 
@@ -271,9 +264,9 @@ void agent_ui_generations_grid(const bContext *C,
     const GenItem &item = data.items[i];
     const int slot = i - first;
     rctf tile;
-    tile.xmin = grid.x0 + float(slot % cols) * grid.pitch_x;
+    tile.xmin = grid.x0 + float(slot % GEN_COLS) * grid.pitch_x;
     tile.xmax = tile.xmin + grid.tile;
-    tile.ymax = grid.y0 + grid.offset - float(i / cols) * grid.pitch_y;
+    tile.ymax = grid.y0 + grid.offset - float(i / GEN_COLS) * grid.pitch_y;
     tile.ymin = tile.ymax - grid.tile;
 
     const char *tip = (item.kind == GEN_ITEM_ASSET) ?
@@ -341,11 +334,6 @@ void agent_ui_generations_grid(const bContext *C,
                                 import_settings,
                                 ICON_NONE,
                                 blender::ed::asset::asset_preview_icon_id(*item.asset));
-      /* The drag payload does not mark the whole button draggable.
-       * `but_contains_point_px_icon` then hit-tests a center square, so a
-       * tile clipped by the grid (wider than it is tall) cannot start a
-       * drag from the strip that is actually on screen. */
-      ui::button_dragflag_enable(but, ui::BUT_DRAG_FULL_BUT);
     }
   }
   UNUSED_VARS(C);

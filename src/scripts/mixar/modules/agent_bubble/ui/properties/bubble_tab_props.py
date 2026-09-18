@@ -20,8 +20,7 @@ from bpy.props import EnumProperty
 TAB_ITEMS = (
     ('AGENT', "Agent", "Chat with the agent"),
     ('THREE_D', "3D", "3D generation (coming soon)"),
-    ('IMAGE', "Image", "Image generation"),
-    ('VIDEO', "Video", "Video generation"),
+    ('MEDIA', "Media", "Media generation (coming soon)"),
     ('SPLAT', "Gaussian Splat", "Gaussian splat worlds (coming soon)"),
     ('GENERATIONS', "Library",
      "Your generations and connected asset libraries"),

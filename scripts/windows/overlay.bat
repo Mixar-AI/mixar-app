@@ -13,9 +13,8 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM Incremental overlay: copy files when timestamps or sizes differ, including older upstream
-REM files restored after a branch removes an override. Matching files keep their timestamps.
-REM build_clean.bat handles full wipes when needed.
+REM Incremental overlay: only copy files newer than destination (preserves timestamps for
+REM unchanged files so Ninja skips them). build_clean.bat handles full wipes when needed.
 if not exist "%SOURCE_DIR%" mkdir "%SOURCE_DIR%"
 
 REM Multi-threaded robocopy: set ROBOCOPY_THREADS env var to control thread count.
@@ -24,12 +23,11 @@ if not defined ROBOCOPY_THREADS set "ROBOCOPY_THREADS=8"
 
 echo Copying upstream to source (threads: %ROBOCOPY_THREADS%)...
 REM /E   = copy subdirectories including empty ones
-REM Do not use /XO: a previous branch's override can be newer than the upstream file that
-REM must replace it. The src pass below always wins for overrides on the current branch.
+REM /XO  = eXclude Older: skip destination files that are the same age or newer than source
 REM /XD  = exclude directories  /XF = exclude files
 REM /MT  = multi-threaded copy
 REM /NFL /NDL /NJH /NJS /nc /ns /np = minimal output  /R:3 /W:1 = retry settings
-robocopy "%UPSTREAM_DIR%" "%SOURCE_DIR%" /E /MT:%ROBOCOPY_THREADS% ^
+robocopy "%UPSTREAM_DIR%" "%SOURCE_DIR%" /E /XO /MT:%ROBOCOPY_THREADS% ^
     /XD ".git" ".github" ".vscode" ".idea" ".gitea" ^
     /XF ".gitignore" ".gitmodules" ".gitattributes" ".gitkeep" ^
     /R:3 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np

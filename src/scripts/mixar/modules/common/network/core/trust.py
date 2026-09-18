@@ -422,24 +422,6 @@ def _real_ssl_context_class() -> type:
     return ssl.SSLContext
 
 
-def server_ssl_context(protocol: int = ssl.PROTOCOL_TLS_SERVER) -> ssl.SSLContext:
-    """A context for a socket that ACCEPTS TLS, bypassing the trust store.
-
-    :func:`install_trust_store` injects truststore's ``SSLContext`` process-wide
-    so every OUTBOUND client verifies against the OS store. truststore verifies
-    the PEER's chain inside ``wrap_socket``, which is meaningless for a
-    listening socket and fatal when the handshake is deferred: the wrapped
-    socket has no ``_sslobj`` yet, so it raises ``AttributeError:
-    'NoneType' object has no attribute 'get_unverified_chain'`` and the server
-    never starts. Anything serving TLS therefore needs the real class.
-
-    The extra-CA patch is installed on ``__new__`` of that same real class, so
-    operator-supplied CAs still attach here; only the peer verification
-    truststore adds is skipped, which is the part a server must not do.
-    """
-    return _real_ssl_context_class()(protocol)
-
-
 def _refresh_requests_preloaded_context() -> None:
     """Rebuild the context ``requests`` created at import, if it already did.
 

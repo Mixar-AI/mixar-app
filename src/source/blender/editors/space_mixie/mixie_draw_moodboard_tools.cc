@@ -116,8 +116,14 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
                            RNA_property_boolean_get(&img_item_ptr, flip_vertical_prop) :
                            false;
 
-  const float display_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
-  const float display_height = display_width * mixie_moodboard_image_aspect(image);
+  /* Calculate display size */
+  void *lock;
+  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
+  float display_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
+  float display_height = (ibuf && ibuf->x > 0 && ibuf->y > 0) ?
+                             (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale :
+                             MOODBOARD_IMAGE_BASE_SIZE * scale;
+  BKE_image_release_ibuf(image, ibuf, lock);
 
   /* Normalize box coordinates (handle drag in any direction) */
   float norm_x1 = std::min(box_x1, box_x2);

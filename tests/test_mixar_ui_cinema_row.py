@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INCLUDE = ROOT / "src/source/blender/editors/include"
 INTERFACE = ROOT / "src/source/blender/editors/interface"
 CINEMA_HH = (
-    ROOT / "src/source/blender/editors/space_view3d/view3d_director_cinema_tokens.hh"
+    ROOT / "src/source/blender/editors/space_view3d/view3d_director_cinema.hh"
 )
 ROW = INTERFACE / "interface_mixar_cinema_row.cc"
 

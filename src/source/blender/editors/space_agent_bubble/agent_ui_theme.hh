@@ -9,12 +9,11 @@
  * Design tokens for the Agent island — the floating command surface that
  * replaces the old Agent Bubble chat UI.
  *
- * Geometry starts from the source artboard
+ * EVERY number below is measured from the source artboard
  * (`entire chat ui full.svg`, agent frame at board origin 853,1138 — the
  * frame that carries the model chip; the standalone `just agent.svg`
  * export is the same geometry minus that chip and with slightly different
- * card-gradient stops, and is NOT the reference). Header and composer spacing
- * use the shared insets below so native controls have room around their glyphs.
+ * card-gradient stops, and is NOT the reference).
  *
  * \section units Artboard units
  *
@@ -37,7 +36,6 @@
 #pragma once
 
 #include "UI_mixar_text.hh"
-#include "UI_mixar_theme.hh"
 
 #include "BLI_utildefines.h"
 
@@ -143,11 +141,9 @@ namespace blender {
 #define AGENT_TAB_W_AGENT 122
 #define AGENT_TAB_X_3D 137
 #define AGENT_TAB_W_3D 88
-#define AGENT_TAB_X_IMAGE 231
-#define AGENT_TAB_W_IMAGE 123
-#define AGENT_TAB_X_VIDEO 360
-#define AGENT_TAB_W_VIDEO 123
-#define AGENT_TAB_X_SPLAT 489
+#define AGENT_TAB_X_MEDIA 231
+#define AGENT_TAB_W_MEDIA 123
+#define AGENT_TAB_X_SPLAT 360
 #define AGENT_TAB_W_SPLAT 262
 
 /** Right cluster. Library is unmarked and short; width is for that label,
@@ -195,19 +191,18 @@ namespace blender {
 #define AGENT_CARD_RADIUS 32
 #define AGENT_CARD_BORDER 2
 
-/** Header actions share the composer's side inset and a regular button pitch.
- * Keep the glyph smaller than its disc, with equal space above and below. */
-#define AGENT_HDR_BTN_R 22
-#define AGENT_HDR_BTN_GAP 16
-#define AGENT_HDR_PAD_Y 20
-#define AGENT_HDR_BTN_CY (AGENT_HDR_PAD_Y + AGENT_HDR_BTN_R)
-#define AGENT_HDR_BTN_PITCH (2 * AGENT_HDR_BTN_R + AGENT_HDR_BTN_GAP)
-#define AGENT_HDR_BTN1_CX (AGENT_SEG_X + AGENT_HDR_BTN_R)
-#define AGENT_HDR_BTN2_CX (AGENT_HDR_BTN1_CX + AGENT_HDR_BTN_PITCH)
-#define AGENT_HDR_BTN3_CX (AGENT_HDR_BTN2_CX + AGENT_HDR_BTN_PITCH)
-#define AGENT_HDR_BTN4_CX (AGENT_HDR_BTN3_CX + AGENT_HDR_BTN_PITCH)
-#define AGENT_HDR_GLYPH_R 16
-#define AGENT_CARD_HEADER_H (2 * AGENT_HDR_BTN_CY)
+/** Header band: the card's gradient showing above the inner panel. */
+#define AGENT_CARD_HEADER_H 74
+
+/** Round buttons in the header: artboard circles r19.5 at cy=499.5,
+ *  cx 303.5 / 349.5 -> island-local cy 38.5 within the card, cx 36.5 / 82.5. */
+#define AGENT_HDR_BTN_R 19
+#define AGENT_HDR_BTN_CY 38
+#define AGENT_HDR_BTN1_CX 36
+#define AGENT_HDR_BTN2_CX 82
+/** Third disc, same 46-unit pitch: turn checkpoints (restore an earlier turn). */
+#define AGENT_HDR_BTN3_CX 128
+#define AGENT_HDR_GLYPH_R 13
 
 #define AGENT_HDR_TITLE_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Heading)
 
@@ -220,7 +215,7 @@ namespace blender {
  * \{ */
 
 #define AGENT_PANEL_X 6
-#define AGENT_PANEL_Y (AGENT_CARD_Y + AGENT_CARD_HEADER_H)
+#define AGENT_PANEL_Y 197
 #define AGENT_PANEL_W 1298
 #define AGENT_PANEL_H 366
 #define AGENT_PANEL_RADIUS 28
@@ -237,7 +232,7 @@ namespace blender {
  * above it, which is exactly what a taller window produced.
  *
  * These are the fixed distances measured UP from the card's bottom edge. */
-#define AGENT_CARD_PAD_BOTTOM 24 /* matches the composer's side inset */
+#define AGENT_CARD_PAD_BOTTOM 16 /* card foot -> chip row bottom */
 #define AGENT_INPUT_H 56
 #define AGENT_INPUT_MAX_LINES 4  /* strip auto-grows 1–4 rows on Shift+Enter */
 #define AGENT_INPUT_GAP 16       /* input line -> chip row */
@@ -247,7 +242,7 @@ namespace blender {
  * the pill, tab strip and card header; the middle is the transcript (a real
  * WINDOW region, so it scrolls with View2D); the bottom holds the input line
  * and the chip row. */
-#define AGENT_SLAB_TOP_H AGENT_PANEL_Y
+#define AGENT_SLAB_TOP_H 197
 #define AGENT_SLAB_BOTTOM_Y 426
 
 /** Prompt text: ink box starts at artboard (312, 577) -> local (45, 237). */
@@ -275,7 +270,7 @@ namespace blender {
 
 /** Segmented Agent/Generate mode control: track 291,842 273x44, and the
  *  active thumb inset 2 units on every side (293,844 125x40). */
-#define AGENT_SEG_X 24
+#define AGENT_SEG_X 16
 #define AGENT_SEG_W 273
 #define AGENT_SEG_THUMB_INSET 2
 #define AGENT_SEG_THUMB_W 125
@@ -285,32 +280,19 @@ namespace blender {
 #define AGENT_CHIP_UPLOAD_X 332
 #define AGENT_CHIP_UPLOAD_W 240
 
-/** The artboard's model chip (756,842 188x44, "* Claude Opus 5 v") — the
- * hosted model pick. This is its NOMINAL width only: the chip row is
- * width-budgeted, so #agent_ui_layout_fit_controls measures the real label
- * and steps the chip down its own compact ladder (see #AgentModelChipForm)
- * rather than holding this width against Upload Reference. */
-#define AGENT_CHIP_MODEL_W 188
+/* The artboard's model chip (756,842 188x44, "* Claude Opus 5 v") is
+ * deliberately NOT reproduced — the model picker was cut from the design.
+ * Its slot is left empty rather than reflowed: the chips that remain keep
+ * the artboard's x positions. */
 
 /** Scribble chips, right of Upload Reference in the model chip's old slot:
  *  the toggle (pen + "Scribble", or "Scribble · N" with N draft marks), then,
- *  while drawing or queued, the reading dropdown (Auto detect / Draw to build / Point to edit)
+ *  only while marks are queued, the reading dropdown (Auto / Sketch / Marks)
  *  and a clear X. Sized like the Upload chip; the same 12-unit gap between. */
 #define AGENT_CHIP_GAP 12
 #define AGENT_CHIP_SCRIBBLE_W 150
 /* Voice: mic glyph + "Listening" fits. */
 #define AGENT_CHIP_VOICE_W 118
-/* While capturing, Voice reads "Stop" beside a stop square and a live ECG
- * trace this wide (about one and a half icons). The idle chip reserves the
- * same width, so starting and stopping dictation never shifts the row. */
-#define AGENT_CHIP_WAVE_W 30
-/* Auto: "Auto" label + a sliding ON/OFF switch, right of Voice. The switch
- * is the backend's per-turn `auto_mode` flag — on, the agent decides every
- * open choice itself instead of asking the user. */
-#define AGENT_CHIP_AUTO_W 118
-#define AGENT_SWITCH_W 40
-#define AGENT_SWITCH_H 22
-#define AGENT_SWITCH_INSET 3
 #define AGENT_CHIP_READING_W 104
 #define AGENT_CHIP_CLEAR_W 44
 
@@ -327,9 +309,8 @@ namespace blender {
  * three-value initialiser zero-fills it and the shape draws invisible.
  * \{ */
 
-/* AppKit frost and the Windows live GPU backdrop share the same light wash. */
-#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}
-#define AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 48}
+/* Surfaces */
+#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f} /* shared native pill/chat bed */
 #define AGENT_COL_SURFACE {0.071f, 0.071f, 0.071f, 1.0f}      /* #121212 strip, panel, pill */
 #define AGENT_COL_CHIP {0.114f, 0.114f, 0.114f, 1.0f}         /* #1D1D1D chip track */
 #define AGENT_COL_CHIP_ACTIVE {0.196f, 0.196f, 0.196f, 1.0f}  /* #323232 segment thumb */

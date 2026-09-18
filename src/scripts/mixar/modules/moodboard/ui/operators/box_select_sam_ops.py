@@ -21,10 +21,15 @@ logger = get_logger(__name__)
 
 from ...core.scene_segment_manager import get_scene_segment_manager
 from ...core.segment_overlay import recomposite_display_image
-from ...core.canvas_context import redraw_moodboard_canvases
 
 
-_redraw_all = redraw_moodboard_canvases
+def _redraw_all():
+    """Trigger redraw of all MIXIE areas."""
+    for window in bpy.context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'MIXIE':
+                area.tag_redraw()
+
 
 def _reset_box_state(state):
     """Reset box selection state."""

@@ -22,7 +22,6 @@
 #include "WM_types.hh"
 
 #include "mixie_intern.hh"
-#include "mixie_moodboard_template_drag.hh"
 #include "mixie_moodboard_ops_common.hh"
 
 #include <string>
@@ -156,7 +155,6 @@ static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop
 
 void mixie_dropboxes()
 {
-  ed::mixie::moodboard_template_dropboxes();
   ListBaseT<wmDropBox> *lb = WM_dropboxmap_find("Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
 
   wmDropBox *drop = WM_dropbox_add(lb,

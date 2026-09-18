@@ -17,8 +17,6 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 from ...constants import (
-    BEAT_INTERPOLATION_DEFAULT,
-    BEAT_INTERPOLATION_ITEMS,
     CAMERA_TEMPLATE_ITEMS,
     DEFAULT_BEAT_SECONDS,
     DEFAULT_SPEED,
@@ -31,25 +29,158 @@ from ...constants import (
     SPEED_MAX,
     SPEED_MIN,
 )
-from ...core.property_updates import (
-    _activate_shot_camera,
-    _get_auto_key,
-    _get_range_end_seconds,
-    _get_range_start_seconds,
-    _set_range_end_seconds,
-    _set_range_start_seconds,
-    _camera_poll,
-    _on_beat_interpolation_update,
-    _on_active_shot_change,
-    _on_directing_update,
-    _on_handheld_update,
-    _on_interpolation_update,
-    _on_speed_update,
-    _on_track_target_update,
-    _redraw_director_surface,
-    _set_auto_key,
-    _track_target_poll,
-)
+from ...core.shot_api import scope_preview_range
+from ...core.viewport import enter_camera_view, select_camera_object
+
+
+def _camera_poll(_self, obj):
+    return getattr(obj, "type", None) == 'CAMERA'
+
+
+def _request_beat_reconcile() -> None:
+    """Adopt/prune native camera keys for the newly watched shot right away.
+
+    The beat_sync watcher only ticks on depsgraph updates, which entering
+    Director or switching shots does not cause — without this, a camera
+    keyed through the native timeline shows an empty Director strip until
+    some unrelated edit happens to tick the handler.
+    """
+    from ...core import beat_sync
+
+    try:
+        beat_sync.request_reconcile()
+    except Exception:
+        # Never let a reconcile request break the camera-switch update.
+        pass
+
+
+def _activate_shot_camera(self, context):
+    scene = getattr(self, "scene_ref", None)
+    camera = getattr(self, "camera", None)
+    if scene is not None and camera is not None and camera.type == 'CAMERA':
+        scene.camera = camera
+        state = getattr(scene, "mixar_director", None)
+        if state is not None and state.is_directing:
+            select_camera_object(context or bpy.context, camera)
+            try:
+                enter_camera_view(context or bpy.context, camera, remember=False)
+            except Exception:
+                # RNA updates can run without a usable area during file loading.
+                pass
+        _request_beat_reconcile()
+
+
+def _on_active_shot_change(self, context):
+    """Follow the newly active shot: its camera, view, selection, and range.
+
+    All shots share one scene timeline, so switching shots must re-point the
+    scene camera and the playback range or the timeline shows one shot's beats
+    while the view and playhead still belong to another. The selection follows
+    while directing so gizmos and transform keys edit the new shot's camera.
+    """
+    scene = getattr(context, "scene", None) or bpy.context.scene
+    shots = getattr(self, "shots", None)
+    if scene is None or not shots:
+        return
+    index = min(max(0, self.active_shot_index), len(shots) - 1)
+    shot = shots[index]
+    camera = getattr(shot, "camera", None)
+    if camera is not None and getattr(camera, "type", None) == 'CAMERA':
+        scene.camera = camera
+        if self.is_directing:
+            select_camera_object(context or bpy.context, camera)
+            try:
+                enter_camera_view(context or bpy.context, camera, remember=False)
+            except Exception:
+                pass
+    scope_preview_range(scene, shot)
+    _request_beat_reconcile()
+
+
+def _on_handheld_update(self, _context):
+    from ...core.handheld import refresh_handheld
+
+    try:
+        refresh_handheld(self)
+    except Exception:
+        # Property updates can fire during file load before the camera's
+        # animation data is reachable; the next capture refreshes anyway.
+        pass
+
+
+def _on_interpolation_update(self, _context):
+    from ...core.interpolation import apply_interpolation
+
+    try:
+        apply_interpolation(self)
+    except Exception:
+        # Property updates can fire during file load before the camera's
+        # animation data is reachable; the next capture re-applies anyway.
+        pass
+
+
+def _on_speed_update(self, context):
+    """Retime the shot to its new speed (``core/retime.py``).
+
+    Locked shots return untouched (the surface disables their slider); the
+    value is never fought over. Load-safe: no operators, and a shot whose
+    animation is not reachable yet keeps its frames until the next edit.
+    """
+    from ...core.retime import apply_shot_speed
+
+    if self.state != 'DRAFT':
+        return
+    scene = getattr(self, "scene_ref", None)
+    if scene is None:
+        scene = getattr(context, "scene", None) or bpy.context.scene
+    if scene is None:
+        return
+    try:
+        apply_shot_speed(scene, self)
+    except Exception:
+        pass
+
+
+def _track_target_poll(self, obj):
+    return getattr(obj, "type", None) != 'CAMERA'
+
+
+def _on_track_target_update(self, _context):
+    from ...core.tracking import refresh_tracking
+
+    try:
+        refresh_tracking(self)
+    except Exception:
+        pass
+
+
+def _on_directing_update(self, context):
+    """Directing entry: refresh the surface and reconcile the watched shot.
+
+    All four entry operators set ``is_directing = True``; none of them
+    causes a depsgraph update, so without an explicit request the strip
+    ignores natively keyed cameras until an unrelated edit ticks the
+    beat_sync handler.
+    """
+    _redraw_director_surface(self, context)
+    if self.is_directing:
+        _request_beat_reconcile()
+
+
+def _redraw_director_surface(_self, context):
+    """Refresh native Director overlays and poll-driven regions."""
+    window_manager = getattr(context, "window_manager", None)
+    if window_manager is None:
+        window_manager = getattr(bpy.context, "window_manager", None)
+    for window in getattr(window_manager, "windows", ()):
+        screen = getattr(window, "screen", None)
+        for area in getattr(screen, "areas", ()):
+            if area.type in {'VIEW_3D', 'MIXIE'}:
+                area.tag_redraw()
+        # The topbar Director toggle lives in a global area, which screen
+        # iteration misses; global_areas is a Mixar RNA addition.
+        for area in getattr(window, "global_areas", ()):
+            area.tag_redraw()
 
 
 class MixarDirectorBeat(PropertyGroup):
@@ -68,16 +199,6 @@ class MixarDirectorBeat(PropertyGroup):
         name="Reference Frame",
         description="Packed viewport capture associated with this keyframe",
         type=bpy.types.Image,
-    )
-    # A keyframe's interpolation governs the segment FROM it TO the next one,
-    # so this IS "the easing between these two keyframes". Resting on SHOT
-    # keeps a take easing one way by default; an override changes one span.
-    interpolation: EnumProperty(
-        name="Interpolation",
-        description="How the camera eases from this keyframe to the next one",
-        items=BEAT_INTERPOLATION_ITEMS,
-        default=BEAT_INTERPOLATION_DEFAULT,
-        update=_on_beat_interpolation_update,
     )
 
 
@@ -98,31 +219,6 @@ class MixarDirectorRenderOutput(PropertyGroup):
     rendered_at: StringProperty(name="Rendered At", default="", maxlen=64)
 
 
-class MixarDirectorCameraOutput(PropertyGroup):
-    """The aspect ratio a camera remembers as its own.
-
-    Blender has one render size and it belongs to the SCENE — there is no
-    per-camera resolution to bind to. A director works the other way round:
-    the 2.39:1 hero shot and the 9:16 social cutdown are two cameras in one
-    scene, and a ratio picked for one must not silently reshape the other. So
-    the ratio is remembered here and written into `scene.render` whenever this
-    camera becomes the live one (`core/aspect.apply_camera_ratio`); the scene
-    stays the single source of truth for what actually renders.
-
-    ``configured`` is what keeps an untouched camera from snapping the frame to
-    a default nobody chose: until a ratio is picked for it, switching to this
-    camera leaves the scene's shape alone.
-    """
-
-    aspect_x: IntProperty(name="Ratio Width", default=16, min=1, max=100000)
-    aspect_y: IntProperty(name="Ratio Height", default=9, min=1, max=100000)
-    configured: BoolProperty(
-        name="Has Its Own Aspect",
-        description="A ratio has been chosen for this camera",
-        default=False,
-    )
-
-
 class MixarDirectorShot(PropertyGroup):
     """A take on a native Blender scene and camera."""
 
@@ -131,6 +227,11 @@ class MixarDirectorShot(PropertyGroup):
     version: IntProperty(name="Take", default=1, min=1)
     parent_shot_id: StringProperty(name="Parent Shot ID", default="")
     state: EnumProperty(name="State", items=SHOT_STATE_ITEMS, default="DRAFT")
+    scene_ref: PointerProperty(
+        name="Scene",
+        description="Live scene used as the set for this take",
+        type=bpy.types.Scene,
+    )
     camera: PointerProperty(
         name="Camera",
         description="Native Blender camera directed by this take",
@@ -172,10 +273,7 @@ class MixarDirectorShot(PropertyGroup):
     )
     interpolation: EnumProperty(
         name="Interpolation",
-        description=(
-            "How the camera eases between this shot's keyframes, wherever a "
-            "keyframe has not chosen for itself"
-        ),
+        description="How the camera eases between this shot's keyframes",
         items=INTERPOLATION_ITEMS,
         default="BEZIER",
         update=_on_interpolation_update,
@@ -211,21 +309,16 @@ class MixarDirectorShot(PropertyGroup):
         items=CAMERA_TEMPLATE_ITEMS,
         default="NONE",
     )
-    export_images: BoolProperty(
-        name="Keyframe Images",
-        description="Add each keyframe's captured image to the Moodboard",
-        default=True,
-    )
     render_output_types: EnumProperty(
-        name="Videos",
-        description="Videos of this shot to render into the Moodboard",
+        name="Video Renders",
+        description="Shot videos to render and add to the Moodboard",
         items=SHOT_RENDER_OUTPUT_ITEMS,
         options={'ENUM_FLAG'},
         default={'CLAY'},
     )
     render_resolution_percentage: IntProperty(
-        name="Video Size",
-        description="Size of the videos, as a percentage of the scene's output size",
+        name="Resolution",
+        description="Percentage of the scene output resolution used for shot videos",
         default=50,
         min=25,
         max=100,
@@ -300,61 +393,14 @@ class MixarDirectorState(PropertyGroup):
         options={'SKIP_SAVE', 'HIDDEN'},
         update=_on_directing_update,
     )
-    # The Custom aspect fields, edited in the aspect popup itself.
-    #
-    # They live on the state rather than on the operator because the operator
-    # used `invoke_props_dialog`, which is Blender's STOCK dialog — grey
-    # chrome, OK/Cancel, nothing like the glass popup it opened from. A ratio
-    # is two numbers; two numbers belong in the popup.
-    custom_aspect_x: IntProperty(
-        name="Width",
-        description="Width side of a custom ratio",
-        default=16,
-        min=1,
-        max=100000,
-    )
-    custom_aspect_y: IntProperty(
-        name="Height",
-        description="Height side of a custom ratio",
-        default=9,
-        min=1,
-        max=100000,
-    )
     ruler_unit: EnumProperty(
         name="Ruler Unit",
-        description="How the timeline ruler labels the shot",
-        # The choice a director actually has is FRAMES or elapsed time, not
-        # two spellings of elapsed time. Minutes-versus-seconds was a format
-        # detail the ruler can decide for itself from how long the shot is.
+        description="How the timeline ruler labels time",
         items=(
-            ("FRAMES", "Frames", "Label the ruler with frame numbers", 0),
-            (
-                "DURATION",
-                "Duration",
-                "Label the ruler with elapsed time",
-                1,
-            ),
+            ("MIN", "Min", "Label the ruler in minutes and seconds", 0),
+            ("SEC", "Sec", "Label the ruler in seconds", 1),
         ),
-        default="DURATION",
-    )
-    # The dock's Start/End fields read in the unit the switch beside them
-    # selects, so DURATION needs the scene's range as a time. These are
-    # mirrors, not state: nothing is stored, every read and write goes
-    # straight through to `scene.frame_start` / `scene.frame_end`, which is
-    # what keeps them correct when the range is changed from anywhere else.
-    range_start_seconds: FloatProperty(
-        name="Start",
-        description="First frame of the scene range, in seconds",
-        unit='TIME_ABSOLUTE',
-        get=_get_range_start_seconds,
-        set=_set_range_start_seconds,
-    )
-    range_end_seconds: FloatProperty(
-        name="End",
-        description="Last frame of the scene range, in seconds",
-        unit='TIME_ABSOLUTE',
-        get=_get_range_end_seconds,
-        set=_set_range_end_seconds,
+        default="SEC",
     )
     timeline_expanded: BoolProperty(
         name="Timeline",
@@ -383,17 +429,6 @@ class MixarDirectorState(PropertyGroup):
         default="NAVIGATE",
         options={'SKIP_SAVE'},
     )
-    walk_active: BoolProperty(
-        name="Walking",
-        description=(
-            "Blender's own walk navigation is running. Session state, not a "
-            "setting: the Cinema top strip swaps its shortcut hints for "
-            "walk's own while it is on"
-        ),
-        default=False,
-        options={'SKIP_SAVE'},
-        update=_redraw_director_surface,
-    )
     animation_seconds: FloatProperty(
         name="Motion Length",
         description="How long a character animation preset lasts",
@@ -404,6 +439,15 @@ class MixarDirectorState(PropertyGroup):
         precision=1,
         subtype='TIME',
     )
+    show_trajectory: BoolProperty(
+        name="Path",
+        description=(
+            "Draw the shot camera's trajectory over the scene while "
+            "directing — keyframes in green, the playhead position in blue"
+        ),
+        default=True,
+        update=_redraw_director_surface,
+    )
     level_horizon: BoolProperty(
         name="Fix Z",
         description=(
@@ -412,42 +456,19 @@ class MixarDirectorState(PropertyGroup):
         ),
         default=True,
     )
-    walk_stop_requested: BoolProperty(
-        name="Stop Walking",
-        description=(
-            "Ask the running Cinema walk to finish. The native walk clears "
-            "it on the tick it stops"
-        ),
-        default=False,
-        options={'SKIP_SAVE'},
-    )
-    recording: BoolProperty(
-        name="Recording",
-        description=(
-            "Read-only: a take is being laid down right now — Auto Key is on, "
-            "the timeline is playing, and something is driving the camera"
-        ),
-        default=False,
-        options={'SKIP_SAVE'},
-        update=_redraw_director_surface,
-    )
-    # Blender's own Auto Keying, not a copy of it: see
-    # `core/property_updates.py` (`_get_auto_key` / `_set_auto_key`).
     auto_key: BoolProperty(
-        name="Auto Keying",
+        name="Auto Key",
         description=(
-            "Blender's Auto Keying (the Timeline's record button): key the "
-            "camera after every move, and record a take while the timeline plays"
+            "Automatically capture a keyframe after every camera move "
+            "instead of pressing F or Capture Keyframe"
         ),
-        get=_get_auto_key,
-        set=_set_auto_key,
+        default=False,
         update=_redraw_director_surface,
     )
 
 
 classes = (
     MixarDirectorBeat,
-    MixarDirectorCameraOutput,
     MixarDirectorRenderOutput,
     MixarDirectorShot,
     MixarDirectorState,
@@ -463,18 +484,9 @@ def register():
         name="Mixar Director",
         description="Sparse camera-direction shots for this scene",
     )
-    # On the camera DATA, not the object: a ratio belongs to the lens the
-    # director framed with, and it travels with the camera into another file.
-    bpy.types.Camera.mixar_director_output = PointerProperty(
-        type=MixarDirectorCameraOutput,
-        name="Mixar Output",
-        description="Output aspect ratio this camera frames for",
-    )
 
 
 def unregister():
-    if hasattr(bpy.types.Camera, "mixar_director_output"):
-        del bpy.types.Camera.mixar_director_output
     if hasattr(bpy.types.Scene, "mixar_director"):
         del bpy.types.Scene.mixar_director
     for cls in reversed(classes):

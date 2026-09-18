@@ -138,8 +138,6 @@ class WorldLabsJob(Job):
             self._spz_url, self._glb_url, self._pano_url, self.label,
         )
         semantics = dict(self._semantics)
-        graph_node_id = self.graph_node_id
-        scene_name = self.scene_name
 
         def _bg_download():
             ply_path = ""
@@ -170,7 +168,6 @@ class WorldLabsJob(Job):
             def _import():
                 _import_on_main(
                     ply_path, glb_path, pano_path, label, semantics, on_done, on_error,
-                    graph_node_id=graph_node_id, scene_name=scene_name,
                 )
                 return None
 
@@ -191,10 +188,7 @@ class WorldLabsJob(Job):
         self._semantics = {}
 
 
-def _import_on_main(
-    ply_path, glb_path, pano_path, label, semantics, on_done, on_error,
-    graph_node_id="", scene_name="",
-):
+def _import_on_main(ply_path, glb_path, pano_path, label, semantics, on_done, on_error):
     """Run the import on the main thread, then clean up temp files."""
     try:
         from mixar.modules.moodboard.core.world_labs_importer import (
@@ -211,7 +205,6 @@ def _import_on_main(
         # agent can inspect ("world_interior"). Never fail the import over it.
         if pano_path:
             _import_pano_to_moodboard(pano_path)
-        _attach_graph_result(scene_name, graph_node_id, names)
         try:
             bpy.ops.ed.undo_push(message="World Labs: Import World")
         except Exception:  # noqa: BLE001
@@ -313,24 +306,6 @@ def _cleanup_temp_paths(*paths: str) -> None:
 _listener_attached = False
 
 
-def _attach_graph_result(scene_name: str, graph_node_id: str, names) -> None:
-    """Embed the imported splat world onto the producing canvas node."""
-    if not scene_name or not graph_node_id or not names:
-        return
-    scene = bpy.data.scenes.get(scene_name)
-    if scene is None:
-        return
-    from mixar.modules.moodboard.core.node_graph import (
-        action_node_by_id,
-        create_asset_result,
-    )
-
-    node = action_node_by_id(scene, graph_node_id)
-    if node is None:
-        return
-    create_asset_result(scene, node, ", ".join(names))
-
-
 def enqueue_world_labs_job(
     *,
     mode: str,
@@ -339,8 +314,6 @@ def enqueue_world_labs_job(
     lod: str,
     image_bytes_b64: str = "",
     label: str = "",
-    graph_node_id: str = "",
-    scene_name: str = "",
 ) -> Optional[WorldLabsJob]:
     """Build a ``WorldLabsJob`` and submit it to the queue."""
     job = WorldLabsJob(
@@ -352,8 +325,6 @@ def enqueue_world_labs_job(
         model=model,
         lod=lod,
         image_bytes_b64=image_bytes_b64,
-        graph_node_id=graph_node_id,
-        scene_name=scene_name,
     )
     queue = _get_world_labs_queue()
     if not queue.submit(job):

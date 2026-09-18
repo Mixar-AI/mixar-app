@@ -1,165 +1,146 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Done previews each frozen view; clean companions never enter the composer."""
+"""The annotated frame only carries the ink drawn on IT.
 
-from types import SimpleNamespace
+A freeze mints its frame image and its baked camera from one serial, and a
+mark names the camera it was drawn under. When the mode is re-armed — or the
+viewport resizes mid-mode — the drafts of the earlier freeze describe a
+different camera and framing. Converting their normalized strokes against
+this frame's size would ink them where the user never drew, on the one
+picture the agent is told shows the marks, so ``_attach_frames`` draws only
+the marks whose view matches the attached frame.
+"""
 
-import pytest
+import sys
+from unittest.mock import MagicMock
 
-from mixar.modules.scribble_mark.core import preview, view_bake
-from mixar.modules.space_mixie_chat.core import ui_utils
+sys.modules.setdefault("bpy.app.handlers", MagicMock(name="bpy.app.handlers"))
+for _name in ("keyring", "keyring.errors"):
+    sys.modules.setdefault(_name, MagicMock(name=_name))
 
-VIEW_CURRENT = 'mixar_mark_view_0007'
-VIEW_OLDER = 'mixar_mark_view_0003'
-FRAME_CURRENT = 'mixar_mark_frame_0007'
-FRAME_OLDER = 'mixar_mark_frame_0003'
+import pytest  # noqa: E402
+
+from mixar.modules.scribble_mark.core import chat_bridge, view_bake  # noqa: E402
 
 
-class Attachments(list):
+VIEW_CURRENT = "mixar_mark_view_0007"
+VIEW_OLDER = "mixar_mark_view_0003"
+FRAME_CURRENT = "mixar_mark_frame_0007"
+
+
+def _mark(mark_id, view, strokes=None):
+    return {
+        "id": mark_id,
+        "view": view,
+        "gesture": "circle",
+        "closed": True,
+        "strokes": strokes if strokes is not None else [[[0.1, 0.1], [0.9, 0.9]]],
+        "region": {"bbox": [0.1, 0.1, 0.9, 0.9], "polygon": [], "anchor": None},
+    }
+
+
+class FakeAttachments:
+    """Duck-typed pending-attachments collection property."""
+
+    def __init__(self):
+        self._items = []
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __len__(self):
+        return len(self._items)
+
     def add(self):
-        item = SimpleNamespace(image_source='', image_path='', display_name='', scribble_view='')
-        self.append(item)
+        item = MagicMock()
+        self._items.append(item)
         return item
 
-    def remove(self, index):
-        del self[index]
 
-
-def mark(serial, view):
-    return {'id': serial, 'view': view, 'strokes': [[[.1, .1], [.9, .9]]]}
+class FakeScene:
+    def __init__(self, frame_name=FRAME_CURRENT):
+        self.mixar_mark_frame_name = frame_name
+        self.mixie_chat_pending_attachments = FakeAttachments()
 
 
 @pytest.fixture
-def rig(monkeypatch):
-    scene = SimpleNamespace(mixie_chat_pending_attachments=Attachments(), mixie_chat_messages=[])
-    images = {name: SimpleNamespace(name=name) for name in (FRAME_CURRENT, FRAME_OLDER)}
-    drafts, rendered = [], []
+def seams(monkeypatch):
+    """Stub the bpy-adjacent seams and record what the annotator received."""
+    recorded = {}
 
-    def render(image, ink, name):
-        rendered.append((image.name, list(ink), name))
-        images[name] = SimpleNamespace(name=name)
-        return name
+    def get_image(name):
+        return MagicMock(name=f"image:{name}")
 
-    monkeypatch.setattr(preview.freeze, 'get_image', images.get)
-    monkeypatch.setattr(preview.freeze, 'release', lambda name: images.pop(name, None))
-    monkeypatch.setattr(preview.annotate, 'render_annotated', render)
-    monkeypatch.setattr(preview.mark_store, 'draft_marks', lambda scene: drafts)
-    monkeypatch.setattr(ui_utils, 'redraw_chat_areas', lambda: None)
-    return SimpleNamespace(scene=scene, images=images, drafts=drafts, rendered=rendered,
-                           pending=scene.mixie_chat_pending_attachments)
+    def render_annotated(image, marks, name):
+        recorded["marks"] = list(marks)
+        recorded["name"] = name
+        return "annotated_image"
 
-
-def test_frame_view_identity_is_reversible():
-    assert view_bake.view_name_for_frame(FRAME_CURRENT) == VIEW_CURRENT
-    assert preview.frame_for_view(VIEW_CURRENT) == FRAME_CURRENT
-    for value in ('', 'not_a_view_7', 'mixar_mark_view_no_serial', None):
-        assert preview.frame_for_view(value) == ''
+    monkeypatch.setattr(chat_bridge.freeze, "get_image", get_image)
+    monkeypatch.setattr(
+        chat_bridge.annotate, "render_annotated", render_annotated
+    )
+    return recorded
 
 
-def test_each_view_previews_only_its_own_raw_ink(rig):
-    older, current = mark(3, VIEW_OLDER), mark(7, VIEW_CURRENT)
-    rig.drafts.extend([older, current])
-    assert preview.sync(rig.scene) == []
-    assert [(frame, ink) for frame, ink, _ in rig.rendered] == [
-        (FRAME_OLDER, [older]), (FRAME_CURRENT, [current])]
-    assert len(rig.pending) == 2
-    assert [att.scribble_view for att in rig.pending] == [VIEW_OLDER, VIEW_CURRENT]
-    assert all('annotated' in att.image_path for att in rig.pending)
+def test_the_frame_serial_mints_its_view_name():
+    assert view_bake.view_name_for_frame("mixar_mark_frame_0007") == VIEW_CURRENT
+    assert view_bake.view_name_for_frame("mixar_mark_frame_0") == \
+        "mixar_mark_view_0000"
+    assert view_bake.view_name_for_frame("") is None
+    assert view_bake.view_name_for_frame("mixar_mark_frame") is None
 
 
-def test_clean_frames_join_only_the_outgoing_list(rig):
-    rig.drafts.append(mark(7, VIEW_CURRENT))
-    preview.sync(rig.scene)
-    visible = list(rig.pending)
-    outgoing = preview.outgoing_attachments(rig.scene)
-    assert len(outgoing) == 2 and outgoing[0] is visible[0]
-    assert outgoing[1].image_path == FRAME_CURRENT
-    assert list(rig.pending) == visible
+def test_marks_from_the_frame_view_are_annotated(seams, monkeypatch):
+    current = _mark(7, VIEW_CURRENT)
+    older = _mark(3, VIEW_OLDER)
+    monkeypatch.setattr(
+        chat_bridge.mark_store, "draft_marks", lambda scene: [current, older]
+    )
+    notes = chat_bridge._attach_frames(FakeScene(), {"marks": [current, older]})
+
+    assert seams["marks"] == [current]
+    assert any("1 earlier mark" in note for note in notes)
 
 
-def test_retry_reuses_the_preview_without_repainting_or_duplicating(rig):
-    rig.drafts.append(mark(7, VIEW_CURRENT))
-    preview.sync(rig.scene)
-    preview.sync(rig.scene)
-    assert len(rig.rendered) == len(rig.pending) == 1
-    assert len(preview.outgoing_attachments(rig.scene)) == 2
+def test_every_mark_on_its_own_frame_annotates_normally(seams, monkeypatch):
+    only = _mark(7, VIEW_CURRENT)
+    monkeypatch.setattr(
+        chat_bridge.mark_store, "draft_marks", lambda scene: [only]
+    )
+    notes = chat_bridge._attach_frames(FakeScene(), {"marks": [only]})
+
+    assert seams["marks"] == [only]
+    assert not any("earlier mark" in note for note in notes)
 
 
-def test_undo_refreshes_ink_and_releases_the_obsolete_preview(rig):
-    rig.drafts.extend([mark(7, VIEW_CURRENT), mark(8, VIEW_CURRENT)])
-    preview.sync(rig.scene)
-    old = rig.pending[0].image_path
-    rig.drafts.pop()
-    preview.sync(rig.scene)
-    assert len(rig.pending) == 1
-    assert rig.rendered[-1][1] == rig.drafts
-    assert rig.pending[0].image_path != old and old not in rig.images
+def test_an_older_freeze_frame_skips_foreign_ink(seams, monkeypatch):
+    """Sending while only older-freeze drafts exist: no annotation is queued
+    (it would duplicate the clean frame) and the note says so."""
+    older = _mark(3, VIEW_OLDER)
+    monkeypatch.setattr(
+        chat_bridge.mark_store, "draft_marks", lambda scene: [older]
+    )
+    scene = FakeScene()
+    notes = chat_bridge._attach_frames(scene, {"marks": [older]})
+
+    attached = [a.display_name for a in scene.mixie_chat_pending_attachments]
+    assert "annotated_image" not in attached
+    assert any("carries none of the marks" in note for note in notes)
+    # The clean frame still travels.
+    assert FRAME_CURRENT in attached
 
 
-def test_discarded_drafts_do_not_remove_sent_images_or_manual_references(rig):
-    rig.drafts.append(mark(7, VIEW_CURRENT))
-    preview.sync(rig.scene)
-    sent = SimpleNamespace(attachments=list(rig.pending))
-    rig.scene.mixie_chat_messages.append(sent)
-    manual = rig.pending.add()
-    manual.image_path, manual.image_source = '/tmp/reference.png', 'FILE'
-    rig.drafts.clear()
-    preview.sync(rig.scene)
-    assert list(rig.pending) == [manual]
-    assert sent.attachments[0].image_path in rig.images
-    assert preview.outgoing_attachments(rig.scene) == [manual]
+def test_wire_marks_without_drafts_are_filtered_too(seams, monkeypatch):
+    """The wire fallback (stored records gone) still respects the view gate."""
+    current = _mark(7, VIEW_CURRENT)
+    current.pop("strokes")  # the wire payload leaves the raw strokes behind
+    older = _mark(3, VIEW_OLDER)
+    monkeypatch.setattr(
+        chat_bridge.mark_store, "draft_marks", lambda scene: []
+    )
+    chat_bridge._attach_frames(FakeScene(), {"marks": [current, older]})
 
-
-def test_all_visible_references_take_priority_over_clean_companions(rig):
-    for i in range(9):
-        att = rig.pending.add()
-        att.image_path, att.image_source = f'/tmp/{i}.png', 'FILE'
-    rig.drafts.append(mark(7, VIEW_CURRENT))
-    assert preview.sync(rig.scene) == []
-    assert len(rig.pending) == len(preview.outgoing_attachments(rig.scene)) == 10
-    assert rig.pending[-1].scribble_view == VIEW_CURRENT
-
-
-def test_full_composer_explains_how_to_recover(rig):
-    for _ in range(10):
-        rig.pending.add()
-    rig.drafts.append(mark(7, VIEW_CURRENT))
-    assert any('Remove a reference' in note for note in preview.sync(rig.scene))
-    assert len(rig.pending) == 10 and not rig.rendered
-    rig.pending.remove(0)
-    assert preview.sync(rig.scene) == []
-    assert rig.pending[-1].scribble_view == VIEW_CURRENT
-
-
-def test_failed_annotation_never_presents_a_clean_frame_as_the_sketch(rig, monkeypatch):
-    rig.drafts.append(mark(7, VIEW_CURRENT))
-    monkeypatch.setattr(preview.annotate, 'render_annotated', lambda *args: None)
-    assert any('Draw again' in note for note in preview.sync(rig.scene))
-    assert not rig.pending and not preview.outgoing_attachments(rig.scene)
-    assert len(rig.drafts) == 1
-
-
-def test_removing_a_preview_discards_only_its_view_and_resets_intent_when_empty(rig, monkeypatch):
-    from mixar.modules.scribble_mark.ui.operators import mark_draw_ops
-    wm = SimpleNamespace(mixar_mark_intent='POINT')
-    rig.drafts.extend([mark(3, VIEW_OLDER), mark(7, VIEW_CURRENT)])
-    preview.sync(rig.scene)
-
-    def clear(scene, *, drafts_only, view, keep_view):
-        assert drafts_only and keep_view == ''
-        rig.drafts[:] = [m for m in rig.drafts if m['view'] != view]
-
-    monkeypatch.setattr(mark_draw_ops, 'live_view_name', lambda: '')
-    monkeypatch.setattr(preview.mark_store, 'clear', clear)
-    monkeypatch.setattr(preview.mark_store, 'view_referenced',
-                        lambda scene, view: any(m['view'] == view for m in rig.drafts))
-    monkeypatch.setattr(preview.mark_store, 'has_drafts', lambda scene: bool(rig.drafts))
-    monkeypatch.setattr(preview.mark_store, 'refresh_reading', lambda *args: None)
-    monkeypatch.setattr(preview.mark_store.overlay, 'tag_redraw', lambda: None)
-    preview.discard_view(rig.scene, wm, VIEW_CURRENT)
-    assert [a.scribble_view for a in rig.pending] == [VIEW_OLDER]
-    assert FRAME_CURRENT not in rig.images and FRAME_OLDER in rig.images
-    assert wm.mixar_mark_intent == 'POINT'
-    preview.discard_view(rig.scene, wm, VIEW_OLDER)
-    assert not rig.pending and not rig.drafts and wm.mixar_mark_intent == 'AUTO'
+    assert seams["marks"] == [current]

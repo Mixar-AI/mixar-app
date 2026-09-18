@@ -32,10 +32,10 @@ from mixar.modules.common.ui.constants import (
     CARD_ROW_HEADING,
 )
 
-from ...core import catalog_labels, model_suggestions
+from ...core import model_suggestions
 
 # Row heights (uiLayout.scale_y). Match chrome ``card_row_*``.
-# Footer actions use the CTA recipe (1.7), not the profile action rows (1.9).
+# Footer actions use the CTA recipe (1.7), not the profile 2x2 grid (1.9).
 HEADER_SCALE_Y = CARD_ROW_HEADING
 FIELD_SCALE_Y = CARD_ROW_FIELD
 ACTION_SCALE_Y = CARD_ROW_CTA
@@ -158,12 +158,21 @@ def dismiss_button(layout, text="Cancel", kind='GHOST', default=False):
 
 
 # ---------------------------------------------------------------------------
-# Catalog label lookups (raw IDs only as a fallback) — shared with the picker
-# menu's BYOK note, so they live bpy-free in `core/catalog_labels`.
+# Catalog label lookups (raw IDs only as a fallback)
 # ---------------------------------------------------------------------------
 
-lookup_provider_label = catalog_labels.lookup_provider_label
-lookup_model_label = catalog_labels.lookup_model_label
+def lookup_provider_label(provider_id):
+    for pid, plabel, _desc in model_suggestions.get_provider_items():
+        if pid == provider_id:
+            return plabel
+    return provider_id
+
+
+def lookup_model_label(provider_id, model_id):
+    for mid, mlabel, _desc in model_suggestions.get_model_items(provider_id):
+        if mid == model_id:
+            return mlabel
+    return model_id
 
 
 def _wrap(text, width):

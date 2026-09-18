@@ -51,7 +51,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
-from .bounds import integer_bounds, numeric_bounds
 from ..constants import (
     FLOAT_TYPES,
     PARAM_ATTR_PREFIX,
@@ -59,6 +58,8 @@ from ..constants import (
     TYPE_INTEGER,
     UNBOUNDED_FLOAT_MAX,
     UNBOUNDED_FLOAT_MIN,
+    UNBOUNDED_INT_MAX,
+    UNBOUNDED_INT_MIN,
     VISIBLE_IF_ATTR,
     VISIBLE_IF_MAXLEN,
     WM_ATTR_PREFIX,
@@ -148,31 +149,29 @@ def _make_prop(param_name: str, spec: dict):
         )
 
     if ptype == TYPE_INTEGER:
-        # int() truncation admits values a fractional catalog bound excludes,
-        # and int() of a non-finite bound raises out of register_class.
-        pmin, pmax, pdefault = integer_bounds(spec)
+        pmin = spec.get("min")
+        pmax = spec.get("max")
         return (
             IntProperty(
                 name=label,
                 description=description,
-                default=pdefault,
-                min=pmin,
-                max=pmax,
+                default=int(default) if default is not None else 0,
+                min=int(pmin) if pmin is not None else UNBOUNDED_INT_MIN,
+                max=int(pmax) if pmax is not None else UNBOUNDED_INT_MAX,
             ),
             None,
         )
 
     if ptype in FLOAT_TYPES:
-        pmin, pmax, pdefault = numeric_bounds(
-            spec, float, UNBOUNDED_FLOAT_MIN, UNBOUNDED_FLOAT_MAX, 0.0
-        )
+        pmin = spec.get("min")
+        pmax = spec.get("max")
         return (
             FloatProperty(
                 name=label,
                 description=description,
-                default=pdefault,
-                min=pmin,
-                max=pmax,
+                default=float(default) if default is not None else 0.0,
+                min=float(pmin) if pmin is not None else UNBOUNDED_FLOAT_MIN,
+                max=float(pmax) if pmax is not None else UNBOUNDED_FLOAT_MAX,
             ),
             None,
         )

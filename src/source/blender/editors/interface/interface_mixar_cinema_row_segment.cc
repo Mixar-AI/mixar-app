@@ -9,23 +9,15 @@
  * (#MixarCinemaRowKind::Segment).
  *
  * A group is N equal cells on one baseline (the lens popup's Perspective /
- * Orthographic / Panoramic, the export popup's video kinds and sizes). Every
- * cell paints a resting track and the live one the graded chip, so the group
- * reads as one switch; labels are centred and no cell carries an icon, since
- * an icon that fits in one cell and not in its neighbour is what made the
- * export popup's three-up rows read as loose words.
- *
- * The cells are too narrow for their labels, so while one is hovered it is
- * PAINTED wide enough for its whole label and the others share what is left,
- * in order.
+ * Orthographic / Panoramic). The cells are too narrow for their labels, so
+ * while one is hovered it is PAINTED wide enough for its whole label and
+ * the others share what is left, in order.
  *
  * Why the painter and not a re-layout: a native block popup opened from a
- * dropdown (`uiDefIconBlockBut`) is re-laid at most after a row RUNS (the
- * Cinema surface opens its popups with `can_refresh` set,
- * `BLOCK_MIXAR_POPUPS_REFRESH`, honoured in `button_activate_init`), never
- * on hover — and a re-layout
- * under the pointer would move the very hit rect it is over. The HIT rects
- * therefore stay the original equal cells;
+ * dropdown (`uiDefIconBlockBut`) is never refreshed — `can_refresh` is
+ * false for it (`interface_handlers.cc`, the `popup_menu_create` call in
+ * `button_activate_init`'s menu branch) — so the block cannot re-lay its
+ * buttons on hover. The HIT rects therefore stay the original equal cells;
  * only the painted cells move. The hovered cell grows OUTWARD from its own
  * cell (leftmost grows right, middle both ways, rightmost left) and always
  * contains its hit rect, so the pointer never leaves the cell it is
@@ -186,14 +178,6 @@ void draw_segment(Button *but, const rcti *rect)
   const float inset = 1.0f * UI_SCALE_FAC;
   BLI_rctf_pad(&row, -inset, -inset);
   const float rad = row_radius(row);
-  /* Every cell carries a resting track, so the group reads as a switch with
-   * N cells rather than as loose words with one chip somewhere among them —
-   * an unlit cell used to paint nothing at all. */
-  if (motion.selected < 1.0f) {
-    uchar track[4];
-    themed(MixarThemeSlot::CinemaRowTrack, TRACK, track);
-    mixar_card_fill_round(&row, rad, track, (1.0f - motion.selected) * (disabled ? 0.5f : 1.0f));
-  }
   const float hover = 0.9f * motion.hover + (1.0f - 0.9f * motion.hover) * motion.press;
   draw_hover(row, rad, hover * (1.0f - motion.selected));
   if (motion.selected > 0.0f) {
@@ -204,15 +188,11 @@ void draw_segment(Button *but, const rcti *rect)
   BLI_rcti_rctf_copy(&text, &cell);
   text.xmin += int(TEXT_PAD * UI_SCALE_FAC);
   text.xmax -= int(TEXT_PAD * UI_SCALE_FAC);
-  uchar text_off[4], text_on[4], text_disabled[4];
-  themed(MixarThemeSlot::CinemaRowTextOff, TEXT_OFF, text_off);
-  themed(MixarThemeSlot::CinemaRowTextOn, TEXT_ON, text_on);
-  themed(MixarThemeSlot::CinemaRowTextDisabled, TEXT_DISABLED, text_disabled);
   uchar col[4];
   for (int i = 0; i < 4; i++) {
     col[i] = disabled ?
-                 text_disabled[i] :
-                 uchar(float(text_off[i]) + (float(text_on[i]) - text_off[i]) * motion.selected);
+                 TEXT_DISABLED[i] :
+                 uchar(float(TEXT_OFF[i]) + (float(TEXT_ON[i]) - TEXT_OFF[i]) * motion.selected);
   }
   draw_label(fs, &text, row_label(but), col, UI_STYLE_TEXT_CENTER, pad_slack(), pad_slack());
 }

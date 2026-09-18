@@ -145,38 +145,6 @@ def dismiss_popup(qa):
 
 def settings_edit_reset(qa, node_id):
     fields = parameters(qa, node_id)
-    synthetic = not any(p['type'] == 'INTEGER' and p['maximum'] > p['minimum']
-                        for p in fields)
-    if synthetic:
-        # The live catalog may expose only enums. A local schema fixture pins
-        # numeric bounds without changing the catalog or choosing a provider.
-        qa.eval(node_code(node_id) + """
-p=node.parameters.add()
-p.name='qa_bounded_integer'
-p.label='QA bounded count'
-p.parameter_type='INTEGER'
-p.visible=True
-p.minimum=1
-p.maximum=4
-p.value_integer=1
-area.tag_redraw()
-""")
-    try:
-        result = _settings_edit_reset(qa, node_id)
-        result['synthetic_numeric_schema'] = synthetic
-        return result
-    finally:
-        if synthetic:
-            qa.eval(node_code(node_id) + """
-for i in reversed(range(len(node.parameters))):
-    if node.parameters[i].name=='qa_bounded_integer':
-        node.parameters.remove(i)
-area.tag_redraw()
-""")
-
-
-def _settings_edit_reset(qa, node_id):
-    fields = parameters(qa, node_id)
     items = popup(qa)
     labels = {w.get("text", "") for w in items}
     require("Model" in labels, "Settings popup hides the model caption")
@@ -295,7 +263,6 @@ area.tag_redraw()
     try:
         require(not qa.find(op=GENERATE, **REGION)["total"],
                 "Completed result still presents Generate over its preview")
-        qa.click(op='MIXIE_OT_moodboard_toggle_node_edit', **REGION)
         items = popup(qa)
         edit = one(items, "op", GENERATE)
         require(edit["text"] == "Edit & Run Again", "Result lacks edit entry point")
@@ -327,10 +294,8 @@ node.state='SUCCESS'
 area.tag_redraw()
 """)
     try:
-        if not qa.find(op=SETTINGS, **REGION)['total']:
-            qa.click(op='MIXIE_OT_moodboard_toggle_node_edit', **REGION)
         require(qa.find(op=SETTINGS, **REGION)["total"] == 1,
-                "Editing an object result lost Settings")
+                "Object result lost compact Settings")
         snap(qa, "14_compact_object_result")
         items = popup(qa)
         require(one(items, "op", GENERATE)["text"] == "Edit & Run Again",
@@ -376,13 +341,17 @@ def run(qa: QA):
 
     wide = min(2300, geometry(qa)["area"][2]-80)
     qa.step("expand_drawer", resize, qa, wide)
-    # Settings keep one stable entry point at every width and card position.
-    qa.step("place_right", place, qa, node_id, 900)
-    qa.step("right_card_settings", assert_layout, qa, node_id, True)
-    qa.step("snap_right_card", snap, qa, "03_right_card")
-    qa.step("place_left", place, qa, node_id, 120)
-    qa.step("left_card_settings", assert_layout, qa, node_id, True)
-    qa.step("snap_left_card", snap, qa, "04_left_card")
+    # Keep room for the bounded, readable input labels beside the inspector.
+    qa.step("place_for_left_dock", place, qa, node_id, 900)
+    left = qa.step("left_docked", assert_layout, qa, node_id, False)
+    require(one(left["controls"], "prop", "model")["rect"][2] < left["card"][0],
+            "Settings did not dock left when space was available")
+    qa.step("snap_left_dock", snap, qa, "03_left_dock")
+    qa.step("place_for_right_dock", place, qa, node_id, 80)
+    right = qa.step("right_docked", assert_layout, qa, node_id, False)
+    require(one(right["controls"], "prop", "model")["rect"][0] > right["card"][2],
+            "Settings did not dock right near left edge")
+    qa.step("snap_right_dock", snap, qa, "04_right_dock")
     qa.step("pan_to_left_boundary", pan, qa, -110)
     evidence["boundary"] = qa.step("boundary_inside_drawer", assert_layout, qa, node_id)
     qa.step("snap_boundary", snap, qa, "05_boundary_pan")

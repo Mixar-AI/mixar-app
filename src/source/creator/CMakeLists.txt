@@ -556,11 +556,6 @@ if(WITH_PYTHON)
     PATTERN "addons_core/bl_pkg/Makefile" EXCLUDE
     PATTERN "addons_core/bl_pkg/tests" EXCLUDE
     PATTERN "addons_core/bl_pkg/example_extension" EXCLUDE
-
-    # Mixar test code runs from the repository (pytest), never inside the app:
-    # the legacy embedded suite and the in-tree `tests/` packages.
-    PATTERN "mixar/modules/testing" EXCLUDE
-    REGEX "/scripts/mixar/.+/tests$" EXCLUDE
   )
 
   if(WITH_PYTHON_MODULE)
@@ -809,10 +804,6 @@ function(install_dir from to)
     PATTERN ".DS_Store" EXCLUDE
     # Unneeded Python files.
     PATTERN "config-${PYTHON_VERSION}/*.a" EXCLUDE  # static lib
-    # The directory is `config-<ver>-<platform>` on macOS/Linux, which the
-    # pattern above never matches, so the static libpython (~80 MB on 5.2;
-    # Linux also carries a second copy in `python/lib/`) shipped.
-    PATTERN "libpython*.a" EXCLUDE
     PATTERN "lib2to3" EXCLUDE                   # ./lib2to3
     PATTERN "tkinter" EXCLUDE                   # ./tkinter
     PATTERN "lib-dynload/_tkinter.*" EXCLUDE    # ./lib-dynload/_tkinter.co
@@ -962,7 +953,6 @@ if(UNIX AND NOT APPLE)
         DESTINATION ${TARGETDIR_VER}/python/${_target_LIB}
         PATTERN "__pycache__" EXCLUDE               # * any cache *
         PATTERN "config-${PYTHON_VERSION}/*.a" EXCLUDE  # static lib
-        PATTERN "libpython*.a" EXCLUDE              # static lib in `config-<ver>-<platform>`
         PATTERN "lib2to3" EXCLUDE                   # ./lib2to3
         PATTERN "site-packages/*" EXCLUDE           # ./site-packages/*
         PATTERN "tkinter" EXCLUDE                   # ./tkinter

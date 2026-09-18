@@ -32,8 +32,8 @@
  *
  * The table entry for this file is registered in Mixar's overlay
  * of ``makesrna.cc`` (right after ``rna_wm.cc``). That same overlay
- * includes the runtime helpers only in the generated ``rna_wm_gen.cc``
- * (not the empty ``rna_wm_mixar_gen.cc``) so the functions below are
+ * also injects an extra ``#include "rna_wm_mixar.cc"`` into the
+ * generated ``rna_wm_gen.cc`` so the helper functions below are
  * visible to the auto-generated property wrappers for Window
  * (which are emitted into rna_wm_gen.cc because Window itself was
  * registered in rna_wm.cc).
@@ -112,12 +112,6 @@ static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *v
 /* Defined in windowmanager/intern/wm_{event_system,window}.cc (Mixar overlay). */
 void Mixar_qa_simulate_file_drop(bContext *C, wmWindow *win, int x, int y, Span<const char *> paths);
 void Mixar_qa_simulate_file_drag(bContext *C, wmWindow *win, const char *filepath);
-bool Mixar_window_resize_dispatch_active();
-
-static bool rna_WindowManager_mixar_window_resizing_get(PointerRNA * /*ptr*/)
-{
-  return Mixar_window_resize_dispatch_active();
-}
 
 static void rna_Window_mixar_qa_drag_file(
     wmWindow *win, bContext *C, ReportList *reports, const char *filepath)
@@ -165,6 +159,16 @@ static void rna_Window_mixar_qa_drop_file(
     return;
   }
   Mixar_qa_simulate_file_drop(C, win, x, y, paths);
+}
+
+/* Mixar: live GHOST client bounds (wm_draw.cc); wmWindow::posx/posy can be stale. */
+bool Mixar_window_live_client_rect(const wmWindow *win, int r_rect[4]);
+
+static void rna_Window_mixar_live_client_rect(wmWindow *win, int r_rect[4])
+{
+  if (!Mixar_window_live_client_rect(win, r_rect)) {
+    r_rect[0] = r_rect[1] = r_rect[2] = r_rect[3] = 0;
+  }
 }
 
 /** Observe cached UI frames. SCREEN_OT_screenshot deliberately calls
@@ -296,6 +300,18 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     parm = RNA_def_boolean(func, "success", false, "", "Frame saved");
     RNA_def_function_return(func, parm);
   }
+  /* Live client bounds straight from GHOST — screen coordinates in points,
+   * top-left origin (l, t, r, b) — for cross-window overlay geometry. */
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_live_client_rect", "rna_Window_mixar_live_client_rect");
+    RNA_def_function_ui_description(
+        func, "Current client bounds from the windowing system: (left, top, right, bottom) in "
+              "screen points with a top-left origin; zeros when the window has no native window");
+    PropertyRNA *parm = RNA_def_int_array(func, "rect", 4, nullptr, INT_MIN, INT_MAX, "Rect",
+                                          "left, top, right, bottom", INT_MIN, INT_MAX);
+    RNA_def_function_output(func, parm);
+  }
   StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager", nullptr);
   if (srna_wm != nullptr) {
     prop = RNA_def_property(srna_wm, "mixar_qa_ui_dump", PROP_STRING, PROP_NONE);
@@ -309,17 +325,6 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         "QA UI Dump",
         "JSON snapshot of all live UI widgets (labels, operators, properties, "
         "window-space rects, state) for the Mixar QA harness");
-
-    /* Timers and modal handlers also run from inside the OS resize callback
-     * (see wm_window.cc). A viewport render there crashes macOS. */
-    prop = RNA_def_property(srna_wm, "mixar_window_resizing", PROP_BOOLEAN, PROP_NONE);
-    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_window_resizing_get", nullptr);
-    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
-    RNA_def_property_ui_text(
-        prop,
-        "Window Resizing",
-        "Handlers are running from inside an OS window resize. Defer viewport "
-        "renders (render.opengl) until this is False");
   }
 }
 

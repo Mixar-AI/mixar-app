@@ -115,11 +115,11 @@ def quiet(monkeypatch):
     def _refresh(_scene, _shot):
         calls.refreshed += 1
 
-    def _scope(_scene):
+    def _scope(_scene, _shot):
         calls.scoped += 1
 
     monkeypatch.setattr(retime, "refresh_manifest", _refresh)
-    monkeypatch.setattr(retime, "release_preview_range", _scope)
+    monkeypatch.setattr(retime, "scope_preview_range", _scope)
     return calls
 
 
@@ -318,16 +318,15 @@ def test_failure_restores_the_preview_range_toggle(monkeypatch):
         lambda animated_id: tuple(getattr(animated_id, "curves", ())),
     )
 
-    def _scope(inner_scene):
-        # Stands in for any helper that writes the toggle at all: the point
-        # is that a FAILED retime leaves it as the user had it, whichever
-        # way the real one moves it.
+    def _scope(inner_scene, _shot):
+        # The real helper switches the preview range on to loop the shot's
+        # own beats.
         inner_scene.use_preview_range = True
 
     def _boom(_scene, _shot):
         raise RuntimeError("manifest")
 
-    monkeypatch.setattr(retime, "release_preview_range", _scope)
+    monkeypatch.setattr(retime, "scope_preview_range", _scope)
     monkeypatch.setattr(retime, "refresh_manifest", _boom)
 
     with pytest.raises(RuntimeError):
@@ -373,38 +372,35 @@ def test_shift_shot_timing_keeps_sub_frame_bases_exact():
     assert [b.time_base for b in shot.beats] == pytest.approx([11.0, 35.37])
 
 
-def test_timeline_drags_record_timing():
-    """A key drag re-records each moved beat under the shot's speed; the
-    strip drag slides every base exactly (`core/key_drag.py`)."""
-    source = _read("core/key_drag.py")
-    finish = source.split("def finish(self)", 1)[1]
-    assert "shift_shot_timing(shot, self.delta)" in finish
-    assert "note_beat_timing(shot, beat)" in finish
-    # Timing is recorded before a replaced beat is removed, while the moved
-    # beats' indices still hold.
-    assert finish.index("note_beat_timing(shot, beat)") < finish.index("remove_beat(")
+def test_timeline_drags_record_timing(quiet):
+    shot = _shot((1, 25, 49), speed=1.0)
+    # Consistent with speed 1: the captured timing was twice as long.
+    for beat, time_base in zip(shot.beats, (1.0, 49.0, 97.0), strict=True):
+        beat.time_base = time_base
+    scene = _scene(frame_end=49)
+    timeline.move_single_beat(scene, shot, 1, 6, rebuild_manifest=False)
+    assert shot.beats[1].frame == 31
+    assert shot.beats[1].time_base == pytest.approx(61.0)
+
+    timeline.shift_camera_beats(scene, shot, 4, rebuild_manifest=False)
+    assert _frames(shot) == [5, 35, 53]
+    assert [b.time_base for b in shot.beats] == pytest.approx([5.0, 65.0, 101.0])
 
 
 def test_every_frame_writer_records_time_base():
     capture = _read("core/capture.py")
-    # The append path is the only one that writes a frame, and it records the
-    # time base on the very next line. Re-keying the playhead's own beat
-    # (Auto Key) writes no frame at all, so it needs no time base either.
-    appended = capture.split("beat = shot.beats.add()", 1)[1]
-    assert "beat.frame = target_frame\n" in appended
-    frame_write, _, rest = appended.partition("beat.frame = target_frame\n")
-    assert rest.lstrip().startswith("note_beat_timing(shot, beat)")
-    replaced = capture.split("if existing_index >= 0:", 1)[1].split("else:", 1)[0]
-    assert ".frame" not in replaced
-    assert "note_beat_timing" not in replaced
+    assert "beat.frame = target_frame\n        note_beat_timing(shot, beat)" in capture
 
     beat_sync = _read("core/beat_sync.py")
     assert "beat.frame = frame\n        note_beat_timing(shot, beat)" in beat_sync
 
-    # A beat moved with its key in another editor is re-recorded too.
-    follow = beat_sync.split("def follow_moved_keys", 1)[1].split("\ndef ", 1)[0]
-    assert "beat.frame = targets[int(beat.frame)]" in follow
-    assert "note_beat_timing(shot, beat)" in follow
+    source = _read("core/timeline.py")
+    single = source.split("def move_single_beat", 1)[1].split("def shift_camera_beats", 1)[0]
+    assert "beat.frame = new_frame" in single
+    assert "note_beat_timing(shot, beat)" in single
+    whole = source.split("def shift_camera_beats", 1)[1]
+    assert "beat.frame += delta" in whole
+    assert "shift_shot_timing(shot, delta)" in whole
 
     shot_api = _read("core/shot_api.py")
     split = shot_api.split("def split_shot", 1)[1].split("def create_new_take", 1)[0]
@@ -420,9 +416,8 @@ def test_every_frame_writer_records_time_base():
 
 
 def test_speed_update_is_load_safe_and_skips_locked_shots():
-    # The update callbacks live beside the rest of the logic (500-line rule).
-    updates = _read("core/property_updates.py")
-    update = updates.split("def _on_speed_update", 1)[1].split("\ndef ", 1)[0]
+    properties = _read("ui/properties/director_properties.py")
+    update = properties.split("def _on_speed_update", 1)[1].split("\ndef ", 1)[0]
     assert "if self.state != 'DRAFT':\n        return" in update
     assert "apply_shot_speed(scene, self)" in update
     assert "try:" in update and "except Exception:" in update

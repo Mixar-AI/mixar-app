@@ -13,8 +13,8 @@ Instead, it renders a living, animated representation of work:
   1. The capsule stays the shared PILL glass — no second green rim.
   2. Pulsing gradient on the Mixar logo chip.
   3. Pulsating green activity indicator dot with an expanding/fading ripple halo.
-  4. Animated status text with a fixed-width U+00B7 activity field (0..3
-     slots) and task prompt context.
+  4. Animated status text with cycling trailing dots ("Working.", "Working..",
+     "Working...", "Working") and task prompt context.
   5. Native one-shot scheduling predicts useful mascot frames. Neither the
      draw callback nor the hover policy duplicates its redraw requests.
 """
@@ -45,7 +45,6 @@ def test_minimized_pill_checks_working_state():
     assert elongated != -1
     elongated_body = body[elongated:]
 
-    assert "state->status_active" in elongated_body
     assert "is_working" in elongated_body
     assert "mixie_cat_is_working(state->cat_activity)" in elongated_body
 
@@ -113,10 +112,9 @@ def test_working_state_draws_activity_dot_and_animated_dots():
     assert "fill_round(&ripple, rip_r, rip_col);" in elongated
     assert "fill_round(&dot, dot_r, dot_col);" in elongated
 
-    # Cycling trailing dots (0 to 3) in a fixed-width U+00B7 field.
+    # Cycling trailing dots (0 to 3 dots)
     assert "dot_count = int(fmod(now * 2.5, 4.0))" in elongated
-    assert "*d++ = '\\xc2'" in elongated
-    assert "*d++ = '\\xb7'" in elongated
+    assert "dots[i] = '.'" in elongated
 
     # Status label formulation
     assert "mixie_cat_activity_name(state->cat_activity)" in elongated
@@ -127,14 +125,7 @@ def test_pill_draw_schedules_one_native_frame_without_self_redraw():
     draw_start = BUBBLE_CC.index("void agent_bubble_header_region_draw")
     draw_end = BUBBLE_CC.index("agent_bubble_header_region_draw_overlay", draw_start)
     draw_body = BUBBLE_CC[draw_start:draw_end]
-    # One native timer: the cat's next useful frame, or sooner only for the
-    # Sketch pill's caret blink edge / live ECG (agent_ui_pill_draft.cc).
-    schedule = draw_body[draw_body.index("agent_ui_cat_schedule(") :]
-    schedule = schedule[: schedule.index(";")]
-    assert "g_host_ghostwin" in schedule
-    assert "std::min(agent_ui_cat_motion_next_frame(region)" in schedule
-    assert "agent_ui_pill_draft_next_frame())" in schedule
-    assert draw_body.count("agent_ui_cat_schedule(") == 1
+    assert "agent_ui_cat_schedule(win, region, g_host_ghostwin, agent_ui_cat_motion_next_frame(region))" in draw_body
     assert "ED_region_tag_redraw(region)" not in draw_body
     assert "agent_ui_cat_scheduler_forget(region)" in draw_body
 
@@ -173,8 +164,9 @@ def test_bottom_row_buttons_and_input_bubble_aligned():
 
 
 def test_uniform_spacing_around_input_bubble_and_buttons():
-    """The card has matching side/foot padding and compact internal row gaps."""
-    assert "#define AGENT_CARD_PAD_BOTTOM 24" in THEME_HH
+    """Padding below buttons, gap between buttons and input, gap above input, and
+    side margins all use uniform 16-unit spacing."""
+    assert "#define AGENT_CARD_PAD_BOTTOM 16" in THEME_HH
     assert "#define AGENT_INPUT_GAP 16" in THEME_HH
     assert "#define AGENT_TRANSCRIPT_GAP 16" in THEME_HH
-    assert "#define AGENT_SEG_X 24" in THEME_HH
+    assert "#define AGENT_SEG_X 16" in THEME_HH

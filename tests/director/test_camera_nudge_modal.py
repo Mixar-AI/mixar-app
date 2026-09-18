@@ -6,14 +6,8 @@
 
 `mixar.director_nudge_camera` is a C++ modal operator: one key press starts
 it, a timer integrates every held direction at walk speed, and the whole
-motion is one undo step.
-
-**It is no longer on a keymap.** Holding W/A/S/D/Q/E on the shot camera for a
-whole Cinema Mode session is a mode the director never asked to be in, so
-those keys are inert now and N hands them to Blender's own walk navigation
-instead (`tests/director/test_walk_navigation.py`). The operator stays
-registered and correct — it is a legitimate camera move a button could
-invoke — and these pins keep it that way rather than letting it rot.
+motion is one undo step. These pins keep the keymap contract in
+`director/ui/keymap.py` and the operator in step without a build.
 """
 
 import re
@@ -24,8 +18,6 @@ ROOT = Path(__file__).resolve().parents[2]
 DIRECTOR = ROOT / "src/scripts/mixar/modules/director"
 VIEW3D = ROOT / "src/source/blender/editors/space_view3d"
 NUDGE = VIEW3D / "view3d_director_nudge.cc"
-#: The direction math the nudge and the Cinema walk share.
-MOVE = VIEW3D / "view3d_director_camera_move.cc"
 
 DIRECTIONS = ("FORWARD", "BACK", "LEFT", "RIGHT", "UP", "DOWN")
 KEY_TO_DIRECTION = {
@@ -40,10 +32,6 @@ KEY_TO_DIRECTION = {
 
 def _source() -> str:
     return NUDGE.read_text(encoding="utf-8")
-
-
-def _move_source() -> str:
-    return MOVE.read_text(encoding="utf-8")
 
 
 def _block(source: str, start: str) -> str:
@@ -72,32 +60,29 @@ def test_operator_is_registered_from_the_view3d_space():
     assert "void view3d_director_operatortypes();" in header
 
 
-def test_the_direction_enum_is_complete():
+def test_direction_enum_matches_the_keymap_identifiers():
     source = _source()
+    keymap = (DIRECTOR / "ui/keymap.py").read_text(encoding="utf-8")
     for identifier in DIRECTIONS:
         assert f'"{identifier}"' in source
+        assert f'"{identifier}")' in keymap
     assert 'RNA_def_enum(ot->srna,\n               "direction",' in source
     assert 'ot->name = "Move Camera";' in source
 
 
-def test_nothing_binds_the_nudge_any_more():
-    """The keys belong to walk now, and a key can only mean one thing."""
-    keymap = (DIRECTOR / "ui/keymap.py").read_text(encoding="utf-8")
-    assert "director_nudge_camera" not in keymap
-    top = (VIEW3D / "view3d_director_cinema_top.cc").read_text(encoding="utf-8")
-    assert "director_nudge_camera" not in top
-
-
 def test_modal_handles_every_key_with_press_and_release():
     source = _source()
-    mapping = _block(_move_source(), "int director_move_from_key(")
+    mapping = _block(source, "static int nudge_direction_from_key(")
     for key, direction in KEY_TO_DIRECTION.items():
-        assert re.search(rf"case EVT_{key}KEY:\s*return DIRECTOR_MOVE_{direction};", mapping), key
+        assert re.search(rf"case EVT_{key}KEY:\s*return NUDGE_{direction};", mapping), key
+    keymap = (DIRECTOR / "ui/keymap.py").read_text(encoding="utf-8")
+    for key, direction in KEY_TO_DIRECTION.items():
+        assert f"('{key}', \"{direction}\")" in keymap
     modal = _block(source, "static wmOperatorStatus director_nudge_modal(")
     assert "event->val == KM_PRESS" in modal
     assert "event->val == KM_RELEASE" in modal
     assert "data->held |= bit;" in modal
-    assert "data->held &= ~director_move_bit(direction);" in modal
+    assert "data->held &= ~nudge_bit(direction);" in modal
     assert "EVT_ESCKEY, RIGHTMOUSE" in modal
 
 
@@ -125,15 +110,15 @@ def test_camera_moves_through_its_world_matrix_at_walk_speed():
     assert "data->matrix = camera->object_to_world();" in source
     assert "DEG_id_tag_update(&camera->id, ID_RECALC_TRANSFORM);" in source
     assert "WM_event_add_notifier(C, NC_OBJECT | ND_TRANSFORM, camera);" in source
-    speed = _block(_move_source(), "float director_walk_speed()")
+    speed = _block(source, "static float nudge_walk_speed()")
     assert "U.walk_navigation.walk_speed" in speed
-    assert "DEFAULT_WALK_SPEED" in speed
-    assert "DEFAULT_WALK_SPEED = 3.0f" in _move_source()
+    assert "NUDGE_DEFAULT_WALK_SPEED" in speed
+    assert "NUDGE_DEFAULT_WALK_SPEED = 3.0f" in source
 
 
 def test_diagonals_are_normalised_and_vertical_is_world_z():
     source = _source()
-    vector = _block(_move_source(), "float3 director_move_vector(")
+    vector = _block(source, "static float3 nudge_direction_vector(")
     assert "return math::normalize(sum);" in vector
     assert "-math::normalize(matrix.z_axis())" in vector
     assert "math::normalize(matrix.x_axis())" in vector

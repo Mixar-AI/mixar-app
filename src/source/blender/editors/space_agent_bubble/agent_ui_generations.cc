@@ -71,94 +71,111 @@ void agent_ui_generations_draw(const bContext *C,
 {
   GenPaneData data;
   agent_ui_generations_gather(C, &data);
-  const GenFrame frame = agent_ui_generations_frame(panel, u);
 
-  MIXAR_THEME_LOAD(text, Text);
-  MIXAR_THEME_LOAD(strong, TextStrong);
-  MIXAR_THEME_LOAD(dim, TextSecondary);
+  const float text[4] = AGENT_COL_TEXT;
+  const float strong[4] = AGENT_COL_TEXT_STRONG;
+  const float dim[4] = AGENT_COL_TEXT_DIM;
   const float pill_on[4] = GEN_COL_PILL_ON;
   const float pill_off[4] = GEN_COL_PILL_OFF;
   const float chip_off[4] = GEN_COL_CHIP_OFF;
 
-  const float font_chip = frame.font_chip;
+  const float font_chip = GEN_CHIP_FONT * agent_ui_text_unit();
 
   GPU_blend(GPU_BLEND_ALPHA);
   pane_wash_paint(panel, u);
 
   /* ---- Column dividers ---- */
-  const float div_inset = std::max(GEN_DIVIDER_INSET * u, frame.pad * 0.5f);
-  const float div_top = panel.ymax - div_inset;
-  const float div_bottom = panel.ymin + div_inset;
-  hairline(frame.rail_div_x, div_bottom, div_top, u);
-  hairline(frame.detail_div_x, div_bottom, div_top, u);
+  const float div_top = GEN_YTOP(panel, GEN_DIVIDER_INSET, u);
+  const float div_bottom = panel.ymin + GEN_DIVIDER_INSET * u;
+  hairline(GEN_XL(panel, GEN_DIVIDER_X, u), div_bottom, div_top, u);
+  hairline(GEN_XL(panel, GEN_DETAIL_DIVIDER_X, u), div_bottom, div_top, u);
 
-  /* ---- Source rail. Boxes already include padding around the label. ---- */
+  /* ---- Source rail ---- */
   struct RailSpec {
     const char *label;
     const char *value;
     GenSource source;
   };
   const RailSpec rail[] = {
-      {GEN_RAIL_LABELS[0], "AI", GEN_SOURCE_AI},
-      {GEN_RAIL_LABELS[1], "LIBRARY", GEN_SOURCE_LIBRARY},
+      {"AI generations", "AI", GEN_SOURCE_AI},
+      {"Asset Library", "LIBRARY", GEN_SOURCE_LIBRARY},
   };
   rctf rail_rect[2];
   for (int i = 0; i < 2; i++) {
     const bool active = data.source == rail[i].source;
     rctf &r = rail_rect[i];
-    r = gen_rct(frame.rail[i]);
-    pane_fill_round(&r, std::min(frame.rail_r, BLI_rctf_size_y(&r) * 0.5f), active ? pill_on : pill_off);
+    r.xmin = GEN_XL(panel, GEN_PAD, u);
+    r.xmax = r.xmin + GEN_RAIL_W * u;
+    r.ymax = GEN_YTOP(panel, GEN_RAIL_Y + i * GEN_RAIL_PITCH, u);
+    r.ymin = r.ymax - GEN_RAIL_H * u;
+    pane_fill_round(&r, GEN_RAIL_RADIUS * u, active ? pill_on : pill_off);
 
     const float cy = BLI_rctf_cent_y(&r);
+    float label_x = r.xmin + GEN_RAIL_LABEL_X * u;
     if (active) {
-      const float dot_r = frame.rail_dot_r;
+      const float dot_r = GEN_RAIL_DOT_R * u;
       rctf dot;
-      dot.xmin = frame.rail_dot_x - dot_r;
-      dot.xmax = frame.rail_dot_x + dot_r;
+      dot.xmin = r.xmin + GEN_RAIL_DOT_X * u - dot_r;
+      dot.xmax = dot.xmin + dot_r * 2.0f;
       dot.ymin = cy - dot_r;
       dot.ymax = cy + dot_r;
       pane_fill_round(&dot, dot_r, strong);
     }
-    char label[64];
-    BLI_strncpy(label, rail[i].label, sizeof(label));
-    pane_fit_text(label, std::max(1.0f, r.xmax - frame.pad - frame.rail_label_x), font_chip);
-    pane_label_left(label, frame.rail_label_x, cy, font_chip, active ? strong : dim);
+    else {
+      label_x = r.xmin + GEN_RAIL_LABEL_X * u;
+    }
+    pane_label_left(rail[i].label, label_x, cy, font_chip, active ? strong : dim);
   }
 
-  /* ---- Filter chips. Same order as GEN_FILTER_LABELS. ---- */
+  /* ---- Filter chips ---- */
   struct ChipSpec {
     const char *label;
     const char *value;
     GenFilter filter;
   };
   const ChipSpec chips[] = {
-      {GEN_FILTER_LABELS[0], "ALL", GEN_FILTER_ALL},
-      {GEN_FILTER_LABELS[1], "THREE_D", GEN_FILTER_3D},
-      {GEN_FILTER_LABELS[2], "IMAGE", GEN_FILTER_IMAGE},
-      {GEN_FILTER_LABELS[3], "VIDEO", GEN_FILTER_VIDEO},
-      {GEN_FILTER_LABELS[4], "SPLAT", GEN_FILTER_SPLAT},
+      {"All", "ALL", GEN_FILTER_ALL},
+      {"3D", "THREE_D", GEN_FILTER_3D},
+      {"Image", "IMAGE", GEN_FILTER_IMAGE},
+      {"Video", "VIDEO", GEN_FILTER_VIDEO},
+      {"Splats", "SPLAT", GEN_FILTER_SPLAT},
   };
   rctf chip_rect[ARRAY_SIZE(chips)];
-  for (int i = 0; i < int(ARRAY_SIZE(chips)); i++) {
-    const bool active = data.filter == chips[i].filter;
-    rctf &r = chip_rect[i];
-    r = gen_rct(frame.chip[i]);
-    pane_fill_round(&r, std::min(frame.chip_r, BLI_rctf_size_y(&r) * 0.5f), active ? pill_on : chip_off);
-    pane_label_centre(chips[i].label,
-                      BLI_rctf_cent_x(&r),
-                      BLI_rctf_cent_y(&r),
-                      font_chip,
-                      active ? strong : dim);
+  {
+    float x = GEN_XL(panel, GEN_GRID_X, u);
+    const float y_top = GEN_YTOP(panel, GEN_CHIP_Y, u);
+    for (int i = 0; i < int(ARRAY_SIZE(chips)); i++) {
+      const bool active = data.filter == chips[i].filter;
+      rctf &r = chip_rect[i];
+      r.xmin = x;
+      r.xmax = x + pane_text_width(chips[i].label, font_chip) + 2.0f * GEN_CHIP_PAD_X * u;
+      r.ymax = y_top;
+      r.ymin = y_top - GEN_CHIP_H * u;
+      pane_fill_round(&r, GEN_CHIP_RADIUS * u, active ? pill_on : chip_off);
+      pane_label_centre(chips[i].label,
+                        BLI_rctf_cent_x(&r),
+                        BLI_rctf_cent_y(&r),
+                        font_chip,
+                        active ? strong : dim);
+      x = r.xmax + GEN_CHIP_GAP * u;
+    }
   }
 
-  const GenGridMetrics grid = agent_ui_generations_grid_metrics(frame, data);
+  const GenGridMetrics grid = agent_ui_generations_grid_metrics(panel, u, data);
 
-  /* Sort chip sits on the resolved grid's right edge, not a shrinking tile. */
-  rctf sort_rect = gen_rct(frame.sort);
-  pane_fill_round(&sort_rect, std::min(frame.chip_r, BLI_rctf_size_y(&sort_rect) * 0.5f), chip_off);
+  /* Sort chip — right-aligned to the DESIGN's grid right edge (its 1127..1183
+   * span ends exactly where the fourth column does). Deliberately not the
+   * live grid's edge: tiles shrink on a short island, and a chip that slides
+   * with them reads as drift in the chip row. */
+  rctf sort_rect;
+  sort_rect.xmax = GEN_XL(panel, GEN_GRID_RIGHT, u);
+  sort_rect.xmin = sort_rect.xmax - GEN_SORT_W * u;
+  sort_rect.ymax = GEN_YTOP(panel, GEN_CHIP_Y, u);
+  sort_rect.ymin = sort_rect.ymax - GEN_CHIP_H * u;
+  pane_fill_round(&sort_rect, GEN_CHIP_RADIUS * u, chip_off);
   {
     rctf glyph;
-    const float s = std::max(8.0f, BLI_rctf_size_y(&sort_rect) - 2.0f * frame.pad * GEN_PAD_SHRINK);
+    const float s = GEN_TAB_GLYPH * u;
     glyph.xmin = BLI_rctf_cent_x(&sort_rect) - s * 0.5f;
     glyph.xmax = glyph.xmin + s;
     glyph.ymin = BLI_rctf_cent_y(&sort_rect) - s * 0.5f;
@@ -166,23 +183,21 @@ void agent_ui_generations_draw(const bContext *C,
     agent_ui_icon_draw(AGENT_ICON_SORT, &glyph, dim, chip_off);
   }
 
-  /* Page chips, only when they fit in the padding between the filters and
-   * the sort control — never overlapping a label. */
+  /* Page chips, only when there is another page to reach. */
   rctf page_rect[2]{};
   const bool paged = grid.max_scroll > 0;
-  const float page_w = std::max(GEN_PAGE_W * u, frame.chip_h);
-  const bool page_fits = paged && frame.sort.xmin - frame.gap - page_w * 2.0f - frame.gap >=
-                                      frame.row0_right;
-  if (page_fits) {
-    page_rect[1].xmax = sort_rect.xmin - frame.gap;
-    page_rect[1].xmin = page_rect[1].xmax - page_w;
-    page_rect[0].xmax = page_rect[1].xmin - frame.gap;
-    page_rect[0].xmin = page_rect[0].xmax - page_w;
+  if (paged) {
+    const float w = GEN_PAGE_W * u;
+    const float gap = GEN_PAGE_GAP * u;
+    page_rect[1].xmax = sort_rect.xmin - 12.0f * u;
+    page_rect[1].xmin = page_rect[1].xmax - w;
+    page_rect[0].xmax = page_rect[1].xmin - gap;
+    page_rect[0].xmin = page_rect[0].xmax - w;
     for (int i = 0; i < 2; i++) {
       page_rect[i].ymax = sort_rect.ymax;
       page_rect[i].ymin = sort_rect.ymin;
       const bool enabled = (i == 0) ? (grid.offset > 0) : (grid.offset < grid.max_scroll);
-      pane_fill_round(&page_rect[i], std::min(frame.chip_r, BLI_rctf_size_y(&page_rect[i]) * 0.5f), chip_off);
+      pane_fill_round(&page_rect[i], GEN_CHIP_RADIUS * u, chip_off);
       pane_label_centre((i == 0) ? "\xE2\x80\xB9" : "\xE2\x80\xBA", /* ‹ › */
                         BLI_rctf_cent_x(&page_rect[i]),
                         BLI_rctf_cent_y(&page_rect[i]),
@@ -223,7 +238,7 @@ void agent_ui_generations_draw(const bContext *C,
              (i == 0) ? "Everything Mixar has generated" :
                         "Browse and connect Blender asset libraries");
   }
-  agent_ui_generations_libraries(C, block, frame, data);
+  agent_ui_generations_libraries(C, block, panel, u, data);
 
   for (int i = 0; i < int(ARRAY_SIZE(chips)); i++) {
     set_enum(chip_rect[i],
@@ -250,26 +265,24 @@ void agent_ui_generations_draw(const bContext *C,
     }
   }
   if (paged) {
-    if (page_fits) {
-      for (int i = 0; i < 2; i++) {
-        const rctf &r = page_rect[i];
-        if (BLI_rctf_size_x(&r) <= 0) {
-          continue;
-        }
-        ui::Button *but = uiDefButO(block,
-                                    ui::ButtonType::But,
-                                    "mixar.generations_navigate",
-                                    wm::OpCallContext::InvokeDefault,
-                                    "",
-                                    int(r.xmin),
-                                    int(r.ymin),
-                                    short(BLI_rctf_size_x(&r)),
-                                    short(BLI_rctf_size_y(&r)),
-                                    i ? "Next rows" : "Previous rows");
-        PointerRNA *op = ui::button_operator_ptr_ensure(but);
-        RNA_enum_set(op, "action", 1);
-        RNA_float_set(op, "delta", i ? 1 : -1);
+    for (int i = 0; i < 2; i++) {
+      const rctf &r = page_rect[i];
+      if (BLI_rctf_size_x(&r) <= 0) {
+        continue;
       }
+      ui::Button *but = uiDefButO(block,
+                                  ui::ButtonType::But,
+                                  "mixar.generations_navigate",
+                                  wm::OpCallContext::InvokeDefault,
+                                  "",
+                                  int(r.xmin),
+                                  int(r.ymin),
+                                  short(BLI_rctf_size_x(&r)),
+                                  short(BLI_rctf_size_y(&r)),
+                                  i ? "Next rows" : "Previous rows");
+      PointerRNA *op = ui::button_operator_ptr_ensure(but);
+      RNA_enum_set(op, "action", 1);
+      RNA_float_set(op, "delta", i ? 1 : -1);
     }
     PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
     agent_ui_generations_scrollbar(
@@ -277,11 +290,11 @@ void agent_ui_generations_draw(const bContext *C,
   }
 
   rctf selected_tile;
-  agent_ui_generations_grid(C, block, panel, frame, data, grid, &selected_tile);
+  agent_ui_generations_grid(C, block, panel, u, data, grid, &selected_tile);
 
   /* The detail column paints AND lays its two actions, so it runs while blend
    * is still on and before the block is closed. */
-  agent_ui_generations_detail(C, block, panel, frame, data);
+  agent_ui_generations_detail(C, block, panel, u, data);
 
   GPU_blend(GPU_BLEND_NONE);
 
@@ -291,8 +304,8 @@ void agent_ui_generations_draw(const bContext *C,
   /* Clip the selection ring along with partial rows. */
   if (BLI_rctf_size_x(&selected_tile) > 0.0f) {
     const GenViewportClip clip(grid.view);
-    MIXAR_THEME_LOAD(accent, AgentAccent);
-    const float w = std::max(GEN_SEL_BORDER * u, frame.pad * 0.2f);
+    const float accent[4] = AGENT_COL_ACCENT;
+    const float w = GEN_SEL_BORDER * u;
     rctf ring = selected_tile;
     BLI_rctf_pad(&ring, -w * 0.5f, -w * 0.5f);
     GPU_blend(GPU_BLEND_ALPHA);

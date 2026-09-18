@@ -400,8 +400,7 @@ bool ANIM_animdata_context_getdata(bAnimContext *ac)
       case SPACE_STATUSBAR:
       case SPACE_SPREADSHEET:
       case SPACE_MIXIE:
-      case SPACE_MIXIE_CHAT_DEPRECATED:
-      case SPACE_AGENT_BUBBLE:
+      case SPACE_MIXIE_CHAT:
       case SPACE_MIXAR_LAYERS:
       case SPACE_MIXAR_PROPERTIES:
       case SPACE_MIXAR_ASSETS:

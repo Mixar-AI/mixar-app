@@ -179,8 +179,9 @@ if defined BUILD_WITH_NINJA (
 REM --- CUDA / OptiX Selection ---
 REM MIXAR_CUDA and MIXAR_CUDA_BINARIES come from .env via settings.bat and are
 REM interpreted by cmake\mixar_overrides.cmake, which is the ONE place that
-REM decides. Normalize them here so the cache check can clear stale toolkit
-REM discovery when CUDA becomes available after a CPU-only configure.
+REM decides. They are normalized here only so the cache check below knows what
+REM the next configure would ask for: configure is skipped once build files
+REM exist, so a flipped .env would otherwise keep building the old way.
 REM settings.bat's .env reader keeps everything after the "=", so strip a
 REM trailing "# comment" and any spaces from these three before anyone (here or
 REM CMake, which inherits them) reads them. Deliberately NOT done in the .env
@@ -258,6 +259,9 @@ if defined OPTIX_FOUND (
 
 :cuda_cache_check
 REM --- CUDA Cache Check ---
+REM Configure is skipped when build files already exist, so a cache that
+REM disagrees with what we would configure now (toolkit installed since, or
+REM MIXAR_CUDA / MIXAR_CUDA_BINARIES flipped in .env) has to be revisited.
 REM Turning CUDA ON where the cache says OFF WIPES the cache, because the
 REM toolkit was found this run and every cached CUDA_*-NOTFOUND has to go.
 REM Every other mismatch is just a flipped .env, so it re-runs configure IN
@@ -317,27 +321,41 @@ if defined BUILD_WITH_NINJA (
     )
 )
 
-REM --- [5/8] CMake Configure ---
-REM Always configure after overlay, as build.sh does. Restored upstream CMake
-REM files can be older than build.ninja, so Ninja's timestamp check alone can
-REM keep compiling targets removed by a branch switch. Object files survive.
-echo [5/8] Configuring CMake...
-echo   Blender: %BLENDER_BUILD_ENV%   Mixar: %MIXAR_ENV%   Platform: %PLATFORM%
-
-cmake -C "%CMAKE_DIR%\mixar_overrides.cmake" ^
-    %CMAKE_GENERATOR_ARGS% ^
-    -S "%SOURCE_DIR%" ^
-    -B "%BUILD_ENV_DIR%" ^
-    -DCMAKE_BUILD_TYPE=%BLENDER_BUILD_ENV% ^
-    -DWITH_WINDOWS_RELEASE_PDB=OFF ^
-    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ^
-    %CUDA_CMAKE_ARGS%
-
-if %ERRORLEVEL% neq 0 (
-    echo Error: CMake configuration failed
-    exit /b 1
+REM --- [5/8] CMake Configure (once) ---
+REM Following upstream pattern (upstream/build_files/windows/configure_ninja.cmd):
+REM   if NOT EXIST build.ninja set MUST_CONFIGURE=1
+REM Configure only when build files don't exist; subsequent runs skip straight to build.
+echo [5/8] Checking CMake configuration...
+set "MUST_CONFIGURE=0"
+if defined BUILD_WITH_NINJA (
+    if not exist "%BUILD_ENV_DIR%\build.ninja" set "MUST_CONFIGURE=1"
+) else (
+    if not exist "%BUILD_ENV_DIR%\Blender.sln" set "MUST_CONFIGURE=1"
 )
-echo [5/8] CMake configuration complete at %TIME%
+REM A CUDA setting that no longer matches the cache reconfigures over it.
+if defined FORCE_RECONFIGURE set "MUST_CONFIGURE=1"
+
+if "%MUST_CONFIGURE%"=="1" (
+    echo Configuring CMake...
+    echo   Blender: %BLENDER_BUILD_ENV%   Mixar: %MIXAR_ENV%   Platform: %PLATFORM%
+
+    cmake -C "%CMAKE_DIR%\mixar_overrides.cmake" ^
+        %CMAKE_GENERATOR_ARGS% ^
+        -S "%SOURCE_DIR%" ^
+        -B "%BUILD_ENV_DIR%" ^
+        -DCMAKE_BUILD_TYPE=%BLENDER_BUILD_ENV% ^
+        -DWITH_WINDOWS_RELEASE_PDB=OFF ^
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ^
+        %CUDA_CMAKE_ARGS%
+
+    if !ERRORLEVEL! neq 0 (
+        echo Error: CMake configuration failed
+        exit /b 1
+    )
+    echo [5/8] CMake configuration complete at %TIME%
+) else (
+    echo [5/8] CMake already configured — skipping ^(delete %BUILD_ENV_DIR% to reconfigure^)
+)
 
 REM --- [6/8] Build ---
 echo [6/8] Building...

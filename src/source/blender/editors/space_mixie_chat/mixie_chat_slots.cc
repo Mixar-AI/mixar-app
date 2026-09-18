@@ -121,14 +121,6 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     layout->thinking_text[0] = '\0';
     memset(&layout->steps_header_bounds, 0, sizeof(layout->steps_header_bounds));
     memset(&layout->thinking_header_bounds, 0, sizeof(layout->thinking_header_bounds));
-    layout->images_collapsed = false;
-    layout->slot_gallery_height = 0.0f;
-    layout->images_header_hovered = false;
-    memset(&layout->images_header_bounds, 0, sizeof(layout->images_header_bounds));
-    layout->gallery_hidden = 0;
-    layout->gallery_first_hidden = -1;
-    layout->gallery_more_hovered = false;
-    memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
     return false;
   }
 
@@ -345,18 +337,6 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     layout->steps_collapsed =
         RNA_property_boolean_get(msg_ptr, g_msg_props.steps_collapsed);
   }
-  layout->images_collapsed = false;
-  layout->slot_gallery_height = 0.0f;
-  layout->images_header_hovered = false;
-  memset(&layout->images_header_bounds, 0, sizeof(layout->images_header_bounds));
-  layout->gallery_hidden = 0;
-  layout->gallery_first_hidden = -1;
-  layout->gallery_more_hovered = false;
-  memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
-  if (g_msg_props.images_collapsed) {
-    layout->images_collapsed =
-        RNA_property_boolean_get(msg_ptr, g_msg_props.images_collapsed);
-  }
   read_rna_string_bounded(msg_ptr, g_msg_props.steps_summary, layout->steps_summary,
                           sizeof(layout->steps_summary));
   if (layout->has_steps && g_msg_props.step_items) {
@@ -449,7 +429,6 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       img.local_path[0] = '\0';
       img.width = 0.0f;
       img.height = 0.0f;
-      img.step_id[0] = '\0';
       img.is_hovered = false;
       memset(&img.bounds, 0, sizeof(img.bounds));
 
@@ -464,12 +443,8 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       if (g_image_props.height) {
         img.height = RNA_property_float_get(&image_ptr, g_image_props.height);
       }
-      read_rna_string_bounded(&image_ptr, g_image_props.step_id, img.step_id, sizeof(img.step_id));
 
-      /* Step-tagged tiles are measured and drawn by the steps block
-       * (chat_ui_calc_steps_block_height); only backend gallery images
-       * count toward the (reserved, undrawn) images slot height. */
-      if (img.height > 0.0f && img.step_id[0] == '\0') {
+      if (img.height > 0.0f) {
         layout->slot_images_height += img.height;
       }
 
@@ -502,10 +477,10 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
                             sizeof(layout->feedback_submitted_comment));
   }
   layout->feedback_submitted_comment_height = 0.0f;
-  for (int i = 0; i < FEEDBACK_VOTE_COUNT; i++) {
-    layout->feedback_votes[i].rating = i == 0 ? 5 : 1;
-    layout->feedback_votes[i].is_hovered = false;
-    memset(&layout->feedback_votes[i].bounds, 0, sizeof(rctf));
+  for (int i = 0; i < FEEDBACK_STAR_COUNT; i++) {
+    layout->feedback_stars[i].star_index = i + 1;
+    layout->feedback_stars[i].is_hovered = false;
+    memset(&layout->feedback_stars[i].bounds, 0, sizeof(rctf));
   }
   memset(&layout->feedback_comment_bounds, 0, sizeof(rctf));
 

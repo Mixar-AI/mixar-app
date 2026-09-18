@@ -110,26 +110,6 @@ def resolve_agent_context_ids(
     return session_id, request_id
 
 
-def _attach_scene_cost(result_dict: dict) -> None:
-    """Add ``scene_cost`` to an EFFECTFUL script's reply (best effort).
-
-    The routed scene is the active one for the whole of this call — routing
-    switched to it before the request ran and restores after — so the measurement
-    describes the scene the script actually built in. Never raises and never
-    changes an outcome: a scene the probe cannot read simply reports nothing.
-    """
-    try:
-        import bpy  # noqa: PLC0415 — this module stays importable outside Blender
-
-        from .scene_cost import cost_for_result
-
-        cost = cost_for_result(bpy.context.scene, result_dict)
-        if cost is not None:
-            result_dict["scene_cost"] = cost
-    except Exception:  # noqa: BLE001
-        logger.debug("scene cost probe skipped", exc_info=True)
-
-
 def execute_request(
     req: ExecutionRequest,
     executor: Any,
@@ -156,7 +136,6 @@ def execute_request(
         set_agent_execution_context(context_session_id, context_turn_id)
         result = executor.execute(req.script)
         result_dict = result.to_dict()
-        _attach_scene_cost(result_dict)
         if result_dict.get("success") and on_success is not None:
             try:
                 on_success()

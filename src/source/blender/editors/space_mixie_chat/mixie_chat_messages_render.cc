@@ -135,7 +135,6 @@ void mixie_chat_render_messages(const bContext *C,
       float msg_top = layout.y_pos + layout.bubble_height + metrics.label_height;
       float msg_bottom = layout.y_pos - layout.slot_todo_height -
                          layout.slot_actions_height - layout.slot_steps_height -
-                         layout.slot_gallery_height -
                          layout.thinking_height - layout.feedback_row_height -
                          layout.feedback_submitted_comment_height -
                          layout.feedback_comment_input_height - action_zone_h;
@@ -293,11 +292,7 @@ void mixie_chat_render_messages(const bContext *C,
         }
       }
 
-      /* The gallery is in this gate too: a bubble with tiles but no steps
-       * block was counted by the layout and never drawn — a blank band the
-       * view could scroll into. */
       if (layout.is_slot_based && (layout.slot_steps_height > 0.0f ||
-                                   layout.slot_gallery_height > 0.0f ||
                                    layout.thinking_height > 0.0f)) {
         MessageLayoutData &ml = const_cast<MessageLayoutData &>(layout);
 
@@ -315,21 +310,12 @@ void mixie_chat_render_messages(const bContext *C,
             ml.content_width + 2.0f * ml.style.h_padding + 4.0f * UI_SCALE_FAC;
 
         if (ml.slot_steps_height > 0.0f) {
-          chat_ui_draw_steps_block(bmain, &ml.style, &ml,
+          chat_ui_draw_steps_block(&ml.style, &ml,
                                    ml.bubble_x,
                                    stack_y - ml.slot_steps_height,
                                    block_width,
                                    ml.content_width);
           stack_y -= ml.slot_steps_height + metrics.bubble_spacing;
-        }
-
-        if (ml.slot_gallery_height > 0.0f) {
-          chat_ui_draw_images_block(bmain, &ml.style, &ml,
-                                    ml.bubble_x,
-                                    stack_y - ml.slot_gallery_height,
-                                    block_width,
-                                    ml.content_width);
-          stack_y -= ml.slot_gallery_height + metrics.bubble_spacing;
         }
 
         if (ml.thinking_height > 0.0f) {
@@ -374,9 +360,6 @@ void mixie_chat_render_messages(const bContext *C,
         }
         if (layout.slot_steps_height > 0.0f) {
           action_btn_y -= metrics.bubble_spacing + layout.slot_steps_height;
-        }
-        if (layout.slot_gallery_height > 0.0f) {
-          action_btn_y -= metrics.bubble_spacing + layout.slot_gallery_height;
         }
         if (layout.thinking_height > 0.0f) {
           action_btn_y -= metrics.bubble_spacing + layout.thinking_height;
@@ -488,7 +471,8 @@ void mixie_chat_render_messages(const bContext *C,
         }
       }
     }
-    /* Feedback votes highlight on hover without changing the island cursor. */
+    /* Feedback stars intentionally keep the default cursor — the fill
+     * preview is their hover affordance (see mixie_chat_main_region_cursor). */
     if (any_button_hovered) {
       break;
     }

@@ -34,26 +34,6 @@ def action_fcurves(animated_id):
     return getattr(action, "fcurves", None)
 
 
-def bound_fcurves(binding) -> tuple:
-    """Read every curve for an AnimData or NLA strip's assigned action slot.
-
-    Layered actions never fall back to another slot or a legacy view. Keep
-    action_fcurves separate: its callers need an editable collection.
-    """
-    action = getattr(binding, "action", None)
-    if action is None:
-        return ()
-    layers = getattr(action, "layers", ())
-    if layers:
-        slot = getattr(binding, "action_slot", None)
-        if slot is None:
-            return ()
-        return tuple(curve for layer in layers for strip in layer.strips
-                     for bag in getattr(strip, "channelbags", ())
-                     if bag.slot_handle == slot.handle for curve in bag.fcurves)
-    return tuple(getattr(action, "fcurves", ()))
-
-
 def assigned_fcurves(animated_id) -> tuple:
     """All F-curves currently driving *animated_id*."""
     collection = action_fcurves(animated_id)

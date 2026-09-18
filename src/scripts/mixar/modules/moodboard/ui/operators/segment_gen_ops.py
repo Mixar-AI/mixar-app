@@ -18,7 +18,7 @@ and the import hook (parts collection, part naming, source hidden) are shared.
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
+from mixar.modules.moodboard.core.media_utils import is_still_item
 
 logger = get_logger(__name__)
 
@@ -43,7 +43,11 @@ def _get_input_image(context, tab):
     """
     scene = context.scene
     if getattr(tab, 'use_selected_image', False):
-        return first_selected_reference_still(scene)
+        if hasattr(scene, 'mixie_moodboard_images'):
+            for item in scene.mixie_moodboard_images:
+                if item.selected and is_still_item(item):
+                    return item.image
+        return None
     return getattr(tab, 'reference_image', None)
 
 

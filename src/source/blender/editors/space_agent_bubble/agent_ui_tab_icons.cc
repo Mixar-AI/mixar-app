@@ -116,43 +116,18 @@ void stroke_path(const float (*pts)[2],
 
 }  // namespace
 
-/* Thin-stroke glyphs balance the neighboring marks at compact sizes. */
+/* Reference tab mark: a folded media page. Thin stroke so it balances the
+ * other tab glyphs at compact sizes. */
 void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, const float color[4])
 {
+  if (icon != AGENT_ICON_MEDIA) {
+    return;
+  }
   const float weight = std::max(1.0f, size / 14.0f);
-  if (icon == AGENT_ICON_SIGNATURE) {
-    /* A short signed name: one rising stroke and the line it sits on. */
-    static const float stroke[][2] = {
-        {-.32f, -.04f},
-        {-.20f, .20f},
-        {-.06f, -.14f},
-        {.06f, .18f},
-        {.20f, -.06f},
-        {.34f, .06f},
-    };
-    static const float baseline[][2] = {{-.24f, -.26f}, {.32f, -.26f}};
-    stroke_path(stroke, 6, cx, cy, size, weight, false, color);
-    stroke_path(baseline, 2, cx, cy, size, weight, false, color);
-    return;
-  }
-  if (icon == AGENT_ICON_RULES) {
-    static const float page[][2] = {
-        {-.25f, -.32f}, {.25f, -.32f}, {.25f, .14f}, {.07f, .32f}, {-.25f, .32f}};
-    static const float fold[][2] = {{.07f, .32f}, {.07f, .14f}, {.25f, .14f}};
-    stroke_path(page, 5, cx, cy, size, weight, true, color);
-    stroke_path(fold, 3, cx, cy, size, weight, false, color);
-    for (const float y : {.04f, -.12f}) {
-      const float line[][2] = {{-.12f, y}, {.12f, y}};
-      stroke_path(line, 2, cx, cy, size, weight, false, color);
-    }
-    return;
-  }
-  if (icon != AGENT_ICON_VIDEO) {
-    return;
-  }
-  static const float body[][2] = {{-.40f,-.28f},{.12f,-.28f},{.12f,.28f},{-.40f,.28f}};
-  static const float lens[][2] = {{.12f,-.12f},{.40f,-.28f},{.40f,.28f},{.12f,.12f}};
-  stroke_path(body, 4, cx, cy, size, weight, true, color);
-  stroke_path(lens, 4, cx, cy, size, weight, true, color);
+  static const float page[][2] = {{-.30f,-.40f},{.30f,-.40f},{.30f,.15f},
+                                 {.05f,.40f},{-.30f,.40f}};
+  static const float fold[][2] = {{.05f,.40f},{.05f,.15f},{.30f,.15f}};
+  stroke_path(page, 5, cx, cy, size, weight, true, color);
+  stroke_path(fold, 3, cx, cy, size, weight, false, color);
 }
 }  // namespace blender

@@ -55,7 +55,6 @@ void director_popup_section_label(ui::Block *block, const char *text, int y, int
  * every row invokes the Python-owned `mixar.director_*` operators. */
 ui::Block *view3d_director_lens_popup_create(bContext *C, ARegion *region, void *arg);
 ui::Block *view3d_director_aspect_popup_create(bContext *C, ARegion *region, void *arg);
-ui::Block *view3d_director_dof_popup_create(bContext *C, ARegion *region, void *arg);
 ui::Block *view3d_director_moves_popup_create(bContext *C, ARegion *region, void *arg);
 ui::Block *view3d_director_shots_popup_create(bContext *C, ARegion *region, void *arg);
 ui::Block *view3d_director_camera_popup_create(bContext *C, ARegion *region, void *arg);

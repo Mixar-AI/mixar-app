@@ -121,6 +121,7 @@ def space_type_for_area_type(area_type: str):
     """Map an area type string to the matching ``bpy.types.Space*`` class."""
     candidate = {
         "MIXIE": "SpaceMixie",
+        "MIXIE_CHAT": "SpaceMixieChat",
         "AGENT_BUBBLE": "SpaceAgentBubble",
         "VIEW_3D": "SpaceView3D",
     }.get(area_type)

@@ -41,7 +41,6 @@
 #pragma once
 
 #include "BLI_rect.h"
-#include "UI_mixar_theme.hh"
 #include "UI_mixar_tokens.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -85,6 +84,7 @@ struct Block;
 #define PANE_BOTTOM_IN_L 17  /* Box left -> first action chip. */
 #define PANE_BOTTOM_IN_R 16  /* Box right -> Generate right edge. */
 #define PANE_GENERATE_W 114
+#define PANE_SETTINGS_W 150
 
 /* Generation-pane references: chip-height squares with a rounded backplate
  * and overflow count. Agent attachments use their dedicated right column. */
@@ -93,21 +93,21 @@ struct Block;
 #define PANE_REF_THUMB_RADIUS 6
 
 /* Palette. */
-#define PANE_COL_WASH_TOP {ui::mixar_tokens::mixar_zen().panel[0], ui::mixar_tokens::mixar_zen().panel[1], ui::mixar_tokens::mixar_zen().panel[2], ui::mixar_tokens::mixar_zen().panel[3]}    /* #2D2D2D */
-#define PANE_COL_WASH_BOTTOM MIXAR_THEME_BRACE(PaneWash) /* #131413 */
-#define PANE_COL_CHIP {ui::mixar_tokens::mixar_zen().control[0], ui::mixar_tokens::mixar_zen().control[1], ui::mixar_tokens::mixar_zen().control[2], ui::mixar_tokens::mixar_zen().control[3]}        /* #313131 params chip / track */
-#define PANE_COL_PILL {ui::mixar_tokens::mixar_zen().selected[0], ui::mixar_tokens::mixar_zen().selected[1], ui::mixar_tokens::mixar_zen().selected[2], ui::mixar_tokens::mixar_zen().selected[3]}        /* #484848 value pill / thumb */
-#define PANE_COL_PILL_DIM MIXAR_THEME_BRACE(PanePillDim)    /* #3C3C3C recessed value */
-#define PANE_COL_PILL_ON MIXAR_THEME_BRACE(PanePillOn)     /* #474747 ON pill */
-#define PANE_COL_ACTION {ui::mixar_tokens::mixar_zen().action[0], ui::mixar_tokens::mixar_zen().action[1], ui::mixar_tokens::mixar_zen().action[2], ui::mixar_tokens::mixar_zen().action[3]}      /* #1D1D1D bottom chips */
-#define PANE_COL_GENERATE {ui::mixar_tokens::mixar_zen().primary[0], ui::mixar_tokens::mixar_zen().primary[1], ui::mixar_tokens::mixar_zen().primary[2], ui::mixar_tokens::mixar_zen().primary[3]}    /* #1A4026 */
-#define PANE_COL_BOX {ui::mixar_tokens::mixar_zen().input[0], ui::mixar_tokens::mixar_zen().input[1], ui::mixar_tokens::mixar_zen().input[2], ui::mixar_tokens::mixar_zen().input[3]}         /* #121212 prompt box */
+#define PANE_COL_WASH_TOP {ui::mixar_tokens::zen.panel[0], ui::mixar_tokens::zen.panel[1], ui::mixar_tokens::zen.panel[2], ui::mixar_tokens::zen.panel[3]}    /* #2D2D2D */
+#define PANE_COL_WASH_BOTTOM {0.075f, 0.078f, 0.075f, 1.0f} /* #131413 */
+#define PANE_COL_CHIP {ui::mixar_tokens::zen.control[0], ui::mixar_tokens::zen.control[1], ui::mixar_tokens::zen.control[2], ui::mixar_tokens::zen.control[3]}        /* #313131 params chip / track */
+#define PANE_COL_PILL {ui::mixar_tokens::zen.selected[0], ui::mixar_tokens::zen.selected[1], ui::mixar_tokens::zen.selected[2], ui::mixar_tokens::zen.selected[3]}        /* #484848 value pill / thumb */
+#define PANE_COL_PILL_DIM {0.235f, 0.235f, 0.235f, 1.0f}    /* #3C3C3C recessed value */
+#define PANE_COL_PILL_ON {0.278f, 0.278f, 0.278f, 1.0f}     /* #474747 ON pill */
+#define PANE_COL_ACTION {ui::mixar_tokens::zen.action[0], ui::mixar_tokens::zen.action[1], ui::mixar_tokens::zen.action[2], ui::mixar_tokens::zen.action[3]}      /* #1D1D1D bottom chips */
+#define PANE_COL_GENERATE {ui::mixar_tokens::zen.primary[0], ui::mixar_tokens::zen.primary[1], ui::mixar_tokens::zen.primary[2], ui::mixar_tokens::zen.primary[3]}    /* #1A4026 */
+#define PANE_COL_BOX {ui::mixar_tokens::zen.input[0], ui::mixar_tokens::zen.input[1], ui::mixar_tokens::zen.input[2], ui::mixar_tokens::zen.input[3]}         /* #121212 prompt box */
 
 /* Report line (see "Live feedback" below). The error tone follows the queue
  * pane's muted red rather than a saturated one — this line sits inside a very
  * dark panel and a pure red vibrates against it. */
-#define PANE_COL_MSG_ERROR {ui::mixar_tokens::mixar_zen().danger[0], ui::mixar_tokens::mixar_zen().danger[1], ui::mixar_tokens::mixar_zen().danger[2], ui::mixar_tokens::mixar_zen().danger[3]}
-#define PANE_COL_MSG_WARN {ui::mixar_tokens::mixar_zen().warning[0], ui::mixar_tokens::mixar_zen().warning[1], ui::mixar_tokens::mixar_zen().warning[2], ui::mixar_tokens::mixar_zen().warning[3]}
+#define PANE_COL_MSG_ERROR {ui::mixar_tokens::zen.danger[0], ui::mixar_tokens::zen.danger[1], ui::mixar_tokens::zen.danger[2], ui::mixar_tokens::zen.danger[3]}
+#define PANE_COL_MSG_WARN {ui::mixar_tokens::zen.warning[0], ui::mixar_tokens::zen.warning[1], ui::mixar_tokens::zen.warning[2], ui::mixar_tokens::zen.warning[3]}
 #define PANE_MSG_FONT PANE_FONT_SUB
 #define PANE_MSG_TTL_S 5.0 /* Seconds a report stays on screen. */
 
@@ -127,15 +127,10 @@ void pane_label_right(const char *text, float x, float cy, float size, const flo
 /**
  * Truncate \a text in place (UTF-8-safe) until it fits \a max_w, appending an
  * ellipsis when anything was actually removed — a bare chop reads as a
- * different string ("ReproCone" -> "ReproCon"), not a shortened one. Capacity
- * includes the terminator: an ellipsis can shorten the rendered text while
- * increasing its UTF-8 byte length.
+ * different string ("ReproCone" -> "ReproCon"), not a shortened one. Only ever
+ * shrinks the caller's buffer.
  */
-void pane_fit_text(char *text, size_t capacity, float max_w, float size);
-template<size_t N> inline void pane_fit_text(char (&text)[N], float max_w, float size)
-{
-  pane_fit_text(text, N, max_w, size);
-}
+void pane_fit_text(char *text, float max_w, float size);
 
 /** \} */
 
@@ -178,12 +173,11 @@ rctf pane_prompt_field_rect(const rctf &box, float u);
  * row out through its own top over the params strip (the OPS block wins
  * overlapping clicks, so a floating row makes the params unreachable). */
 float pane_bottom_row_ymin(const rctf &box, float u);
-/**
- * Generate chip rect, sized for \a label (defaults to "Generate"). Busy labels
- * like "Generating (3)" outgrow the idle chip, so every pane that paints a
- * live queue label must pass it here — thumbs stop at this rect's left edge.
- */
-rctf pane_generate_rect(const rctf &box, float u, const char *label = "Generate");
+rctf pane_generate_rect(const rctf &box, float u);
+
+/** Catalog settings use native popup layout over the same parameter group. */
+void pane_settings_button(ui::Block *block, float right, float top, float u,
+                          const char *service, const char *model);
 
 /** True when \a prop_id has no catalog `visible_if`, or the live sibling
  * values match. Missing `mixar_visible_if` metadata fails open. */
@@ -228,15 +222,8 @@ float pane_onoff_chip_w(const char *label, float u);
  * busy state: those are only written by enqueue paths that pass a
  * `scene_flag`, which the Image Gen and World Labs flows do not, so the
  * button never changed for a job that was in fact queued.
- *
- * When \a r_running is non-null it receives how many of those active jobs are
- * already past PENDING / PAUSED_AUTH (RUNNING_SUBMIT / RUNNING_POLL /
- * RUNNING_DOWNLOAD) — the pane label says "Generating" whenever any matched
- * job has started, and "Queued" only while everything is still waiting.
  */
-int pane_active_job_count(const bContext *C,
-                          const char *service_key,
-                          int *r_running = nullptr);
+int pane_active_job_count(const bContext *C, const char *service_key);
 
 /** The band the message line paints in: the PANE_BOX_GAP the kit already
  * leaves above the prompt box, so no pane gives up layout for it. */
@@ -307,16 +294,13 @@ void pane_but_tooltip_owned(ui::Button *but, const char *text);
 /**
  * The Generate button's label for \a active_jobs already in the queue.
  *
- * "Generate" when nothing is active; "Generating (N)" when any matched job is
- * already RUNNING_*; "Queued (N)" when every matched job is still PENDING /
- * PAUSED_AUTH. The button stays ARMED either way — this is a queue, stacking
- * jobs is the point, so an active job is information, not a lock. Before this
- * the panes showed nothing at all on submit (their busy flag read a legacy
- * scene property the queue path never sets), so a user pressed Generate, the
- * job queued, and the UI said nothing. And a RUNNING job used to keep the
- * "Queued" wording, which made in-flight generation look stuck in the queue.
+ * "Generate" when nothing is running, otherwise the count — the button stays
+ * ARMED either way. This is a queue: stacking jobs is the point, so an active
+ * job is information, not a lock. Before this the panes showed nothing at all
+ * on submit (their busy flag read a legacy scene property the queue path never
+ * sets), so a user pressed Generate, the job queued, and the UI said nothing.
  */
-void pane_queue_label(char *out, int out_maxncpy, int active_jobs, bool generating);
+void pane_queue_label(char *out, int out_maxncpy, int active_jobs);
 
 /** \} */
 

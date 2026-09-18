@@ -150,11 +150,8 @@ bool splat_state_resolve(const bContext *C, SplatTabState *r_state)
 
   /* Busy state from the unified queue — the pane's only honest source: World
    * Labs enqueues pass no `scene_flag`, so no legacy `is_generating` property
-   * is ever written for this flow. `generating` flips once any matched job
-   * has left PENDING (Queued → Generating on the chip). */
-  int running = 0;
-  r_state->active_jobs = pane_active_job_count(C, SPLAT_SERVICE_KEY, &running);
-  r_state->generating = running > 0;
+   * is ever written for this flow. */
+  r_state->active_jobs = pane_active_job_count(C, SPLAT_SERVICE_KEY);
 
   r_state->use_selected = false;
   if (PropertyRNA *use_sel = RNA_struct_find_property(&r_state->tab, "use_selected_image")) {

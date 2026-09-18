@@ -52,20 +52,12 @@ class TestTheTopbarPillsArePanes:
         assert "mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, 0.84f + 0.16f * emphasis);" in body
 
     def test_the_lit_cinema_pill_keeps_its_opaque_green_state(self) -> None:
-        """Selection animates the green to opaque; hover cannot select it."""
+        """Selection animates the green ramp to opaque; hover cannot select it."""
         body = self._body("void draw_cinema_pill(")
-        assert "fill[3] = motion.selected;" in body
-        assert "draw_roundbox_4fv(&pill, true, rad, fill);" in body
-        assert "mixar_card_to_float(pill_on, fill);" in body
-
-    def test_the_cinema_pill_has_no_gradient(self) -> None:
-        """One green, one label colour per state: the ramps were decoration on
-        a control whose only job is to say on or off."""
-        body = self._body("void draw_cinema_pill(")
-        assert "draw_roundbox_4fv_ex(" not in body
-        assert "CinemaPillOnA" not in body
-        assert "draw_label_gradient" not in body
-        assert "draw_label_centred(rect, but->drawstr.c_str(), label, label_scale);" in body
+        assert "top[3] = bottom[3] = motion.selected;" in body
+        assert "draw_roundbox_4fv_ex(&pill, top, bottom, 1.0f, nullptr, 0.0f, rad);" in body
+        assert "mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_a, bottom);" in body
+        assert "mixar_card_to_float(mixar_chrome::cinema_pill_fill_on_b, top);" in body
 
     def test_the_viewport_pills_alpha_dims_the_whole_pane(self) -> None:
         """Dim and lit are one alpha, so it must scale every layer.
@@ -84,10 +76,10 @@ class TestTheTopbarPillsArePanes:
         rim. Colours live in `UI_mixar_chrome.hh`.
         """
         cinema = self._body("void draw_cinema_pill(")
-        assert re.search(r"blend_color\(pill_border,\s*"
-                         r"pill_border_on,\s*motion.selected,\s*border\)", cinema)
+        assert re.search(r"blend_color\(mixar_chrome::cinema_pill_border,\s*"
+                         r"mixar_chrome::cinema_pill_border_on,\s*motion.selected,\s*border\)", cinema)
         assert "mixar_card_outline_round(&pill, rad, border," in cinema
-        assert "mixar_card_outline_round(&pill, rad, viewport_border, alpha);" in self._body(
+        assert "mixar_card_outline_round(&pill, rad, mixar_chrome::viewport_pill_border, alpha);" in self._body(
             "void draw_viewport_pill("
         )
 
@@ -102,7 +94,7 @@ class TestTheTopbarPillsArePanes:
                 f"{signature} was glassed"
             )
         slider = self._body("void draw_slider_left(")
-        assert "mixar_card_fill_round(&track, rad, slider_track_u);" in slider
+        assert "mixar_card_fill_round(&track, rad, mixar_chrome::slider_track);" in slider
         assert "mixar_card_fill_round(&thumb, rad, fill);" in slider
 
     def test_the_avatar_disc_stays_flat(self) -> None:
@@ -112,7 +104,7 @@ class TestTheTopbarPillsArePanes:
         """
         body = self._body("void draw_profile_pill(")
         disc = body[body.index("rctf disc;") : body.index("mixar_card_draw_text")]
-        assert "mixar_card_fill_round(&disc, rad, profile_avatar);" in disc
+        assert "mixar_card_fill_round(&disc, rad, mixar_chrome::profile_avatar);" in disc
         assert "mixar_card_glass_round(" not in disc, "the avatar disc was glassed"
 
     def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
@@ -169,8 +161,8 @@ class TestTheCinemaRowsArePanes:
         """The ramp at full strength is opaque, so it would cover the pane it
         now sits on — and its token is pinned at 255, so it is softened here."""
         chip = self._chip()
-        assert "mixar_card_to_float(row_top, top);" in chip
-        assert "mixar_card_to_float(row_bottom, bottom);" in chip
+        assert "mixar_card_to_float(ROW_TOP, top);" in chip
+        assert "mixar_card_to_float(ROW_BOTTOM, bottom);" in chip
         assert "top[3] *= CHIP_WASH * alpha;" in chip and "bottom[3] *= CHIP_WASH * alpha;" in chip
         wash = re.search(r"^constexpr float CHIP_WASH = ([0-9.]+)f;", CINEMA_ROW, re.M)
         assert wash is not None, "the wash strength is not a named constant"
@@ -188,7 +180,7 @@ class TestTheCinemaRowsArePanes:
         slider = _code(_fn_body(CINEMA_VALUE, "void draw_slider("))
         assert "mixar_card_glass_round(" not in slider, "the slider was glassed"
         assert "mixar_card_fill_round(&row, rad, track, 1.0f);" in slider
-        assert "mixar_card_fill_round(&fill, fill_rad, slider_on, disabled ? 0.45f : 1.0f);" in slider
+        assert "mixar_card_fill_round(&fill, fill_rad, SLIDER_ON, disabled ? 0.45f : 1.0f);" in slider
 
     def test_no_mirrored_token_was_orphaned_by_the_conversion(self) -> None:
         """Every token still has a painter, so a later edit cannot read one as
@@ -261,7 +253,7 @@ class TestTheCategoryTabsArePanes:
         indistinguishable from its neighbours.
         """
         tabs = self._tabs()
-        assert "const float active_bg[4] = {col_accent[0], col_accent[1], col_accent[2], 0.13f};" in tabs
+        assert "const float active_bg[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 0.13f};" in tabs
         assert "const float active_outline[4] = {col_accent[0], col_accent[1], col_accent[2], 0.45f};" in tabs
         assert "draw_roundbox_4fv(&tab_rect, false, tab_radius, active_outline);" in tabs
 

@@ -47,7 +47,7 @@ void blo_do_versions_mixar(Main *bmain)
             case 28: sl->spacetype = SPACE_EMPTY; break;  /* Was SPACE_MIXAR_UV_PROPERTIES */
             case 29: sl->spacetype = SPACE_BAKING; break;
             case 30: sl->spacetype = SPACE_TEXTURE_SETS; break;
-            case 31: sl->spacetype = SPACE_EMPTY; break;  /* Removed standalone chat. */
+            case 31: sl->spacetype = SPACE_MIXIE_CHAT; break;
             default: break;
           }
 

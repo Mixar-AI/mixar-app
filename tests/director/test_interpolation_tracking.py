@@ -143,10 +143,8 @@ def test_the_shot_property_applies_on_change_and_the_operator_writes_the_propert
 def test_the_popup_lists_the_property_own_items():
     popup = (VIEW3D / "view3d_director_popup_interp.cc").read_text(encoding="utf-8")
     # Rows come from RNA, never a hardcoded list that could drift from Python.
-    # `list_ptr` is the shot with nothing selected and the first selected
-    # keyframe otherwise, so the rows are always the ones being written.
-    assert 'RNA_struct_find_property(&list_ptr, "interpolation")' in popup
-    assert "RNA_property_enum_items(C, &list_ptr, prop," in popup
+    assert 'RNA_struct_find_property(&data.shot_ptr, "interpolation")' in popup
+    assert "RNA_property_enum_items(" in popup
     assert '"MIXAR_OT_director_set_interpolation"' in popup
     assert "MEM_delete_void" in popup
 
@@ -239,10 +237,6 @@ def test_the_strip_chip_passes_clear_when_a_target_is_live():
     assert '"MIXAR_OT_director_pick_track_target"' in top
     assert 'RNA_boolean_set(ui::button_operator_ptr_ensure(but), "clear", tracking)' in top
     assert 'cinema_qa_record(region, chip, "director_track"' in top
-    # Interpolation moved to the timeline dock (it is how the camera eases
-    # BETWEEN KEYFRAMES), and takes its QA surface with it.
-    dock = (VIEW3D / "view3d_director_cinema_dock.cc").read_text(encoding="utf-8")
-    assert "director_interpolation" not in top
-    assert 'cinema_qa_record(region, rect, "director_interpolation"' in dock
+    assert 'cinema_qa_record(region, row, "director_interpolation"' in top
     # The hints yield to the controls, never the other way round.
     assert "std::min(controls_left, float(region->winx))" in top

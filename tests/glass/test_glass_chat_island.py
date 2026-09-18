@@ -266,9 +266,6 @@ class TestZenChromeUsesTheFamily:
         left = (ED / "space_view3d" / "view3d_director_cinema_left.cc").read_text(
             encoding="utf-8"
         )
-        cameras = (
-            ED / "space_view3d" / "view3d_director_cinema_cameras.cc"
-        ).read_text(encoding="utf-8")
         right = (ED / "space_view3d" / "view3d_director_cinema_right.cc").read_text(
             encoding="utf-8"
         )
@@ -279,7 +276,7 @@ class TestZenChromeUsesTheFamily:
             encoding="utf-8"
         )
         assert left.count("cinema_glass_panel(card") == 3
-        assert "cinema_glass_panel(card," in cameras
+        assert "cinema_glass_panel(cameras," in right
         assert "cinema_glass_panel(panel," in dock
         assert "cinema_glass_panel(card," in minimap
         assert "cinema_panel(row," in left
@@ -298,17 +295,17 @@ class TestZenChromeUsesTheFamily:
         cmake = (IFACE / "CMakeLists.txt").read_text(encoding="utf-8")
         assert "interface_mixar_zen_chrome.cc" in cmake
 
-    def test_zen_toolbar_has_a_bed_and_empty_tool_header_stays_transparent(self) -> None:
-        """Zen reserves the existing overlap geometry with an opaque scene bar."""
+    def test_zen_view3d_header_floats_without_a_bar(self) -> None:
+        """The View3D header overlaps and clears transparent.
+
+        A full-width ISLAND bed or theme slab would keep the bar the
+        glass groups are meant to replace. Empty header space already
+        passes events through on overlapping headers.
+        """
         chrome = (IFACE / "interface_mixar_zen_chrome.cc").read_text(encoding="utf-8")
         assert "GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f)" in chrome
         assert "RGN_TYPE_HEADER" in chrome
-        assert "GPU_clear_color(0.0f, 0.0f, 0.0f, 1.0f)" in chrome
-        # Both header rows still use the same Zen-only region dispatch.
-        assert (
-            "ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER)"
-            in chrome
-        )
+        assert "RGN_TYPE_TOOL_HEADER && mixar_workspace_is_zen(C)" in chrome
         assert "mixar_area_floats_viewport_chrome" in chrome
         area = (ED / "screen" / "area.cc").read_text(encoding="utf-8")
         assert "mixar_area_floats_viewport_chrome(area)" in area

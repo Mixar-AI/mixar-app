@@ -16,7 +16,6 @@ from mixar.modules.space_mixie_chat.constants import MAX_ATTACHMENTS_PER_MESSAGE
 
 ROOT = Path(__file__).resolve().parents[1]
 CHAT = ROOT / 'src/scripts/mixar/modules/space_mixie_chat'
-VIDEO_MESSAGE = "Videos can't be sent to the agent yet"
 
 
 class Attachments(list):
@@ -83,8 +82,6 @@ def validate():
     namespace = dict(os=os, HAS_PIL=True, PILImage=Image, MAX_IMAGE_DIMENSION=16384,
                      MAX_IMAGE_SIZE_BYTES=25*1024*1024,
                      SUPPORTED_IMAGE_FORMATS={'.png', '.jpg', '.webp'},
-                     VIDEO_FILE_FORMATS={'.mp4', '.mov', '.webm'},
-                     VIDEO_ATTACHMENT_REJECTED=VIDEO_MESSAGE,
                      _is_path_safe=lambda p: (True, ''))
     return function(CHAT/'core/image_utils.py', 'validate_image_file', namespace)
 
@@ -145,38 +142,6 @@ def test_webp_reference_is_supported(validate, tmp_path):
     path = tmp_path/'reference.webp'
     Image.new('RGB', (32, 32), '#abcdef').save(path)
     assert validate(str(path)) == (True, '')
-
-
-@pytest.mark.parametrize('name', ['clip.mp4', 'clip.MOV', 'clip.webm'])
-def test_video_reference_is_refused_with_a_specific_reason(validate, tmp_path, name):
-    path = tmp_path/name
-    path.write_bytes(b'\x00\x00\x00\x18ftypmp42')
-    valid, err = validate(str(path))
-    assert valid is False
-    assert err == VIDEO_MESSAGE
-    assert 'Unsupported format' not in err
-
-
-def test_chat_drop_poll_refuses_movie_paths_before_release():
-    src = (ROOT/'src/source/blender/editors/space_mixie_chat/mixie_chat_dragdrop.cc').read_text()
-    start = src.index('if (drag->type == WM_DRAG_PATH)')
-    body = src[start:src.index('return false;\n}', start)]
-    assert 'WM_drag_has_path_file_type(drag, FILE_TYPE_MOVIE)' in body
-    assert body.index('FILE_TYPE_MOVIE') < body.index('return true;')
-
-
-def test_moodboard_attach_reports_skipped_videos():
-    src = ROOT/'src/scripts/mixar/modules/moodboard/ui/operators/chat_integration_ops.py'
-    namespace = dict(is_video_item=lambda item: item.video)
-    count = function(src, 'count_selected_videos', namespace)
-    still = SimpleNamespace(selected=True, video=False)
-    clip = SimpleNamespace(selected=True, video=True)
-    idle = SimpleNamespace(selected=False, video=True)
-    assert count(SimpleNamespace(mixie_moodboard_images=[still, clip, idle, clip])) == 2
-    body = src.read_text()
-    execute = body[body.index('class MIXIE_OT_moodboard_send_to_chat'):]
-    assert 'count_selected_videos(scene)' in execute
-    assert "'WARNING'" in execute[execute.index('skipped_videos'):]
 
 
 @pytest.mark.parametrize('target,remaining', [('/tmp/b.obj', ['/tmp/a.obj']),

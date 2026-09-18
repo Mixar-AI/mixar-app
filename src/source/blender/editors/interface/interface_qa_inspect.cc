@@ -333,10 +333,6 @@ void qa_dump_region(std::string &out,
 
       rcti pix;
       blender::ui::button_to_pixelrect(&pix, region, &block, but);
-      const rcti layout_pix = pix;
-      if (!blender::ui::mixar_block_clip_pixelrect(region, &block, &pix)) {
-        continue;
-      }
 
       /* Region-space pixels -> window pixels (origin bottom-left), the same
        * space ``Window.event_simulate`` consumes. Clipped to the region so a
@@ -419,12 +415,6 @@ void qa_dump_region(std::string &out,
 
       out += "\"rect\":[" + std::to_string(rect.xmin) + ',' + std::to_string(rect.ymin) +
              ',' + std::to_string(rect.xmax) + ',' + std::to_string(rect.ymax) + "],";
-      if (block.mixar_clip_rect) {
-        out += "\"layout_rect\":[" + std::to_string(region->winrct.xmin + layout_pix.xmin) +
-               ',' + std::to_string(region->winrct.ymin + layout_pix.ymin) +
-               ',' + std::to_string(region->winrct.xmin + layout_pix.xmax) +
-               ',' + std::to_string(region->winrct.ymin + layout_pix.ymax) + "],";
-      }
 
       out += std::string("\"enabled\":") +
              (((but->flag & blender::ui::BUT_DISABLED) == 0) ? "true" : "false");

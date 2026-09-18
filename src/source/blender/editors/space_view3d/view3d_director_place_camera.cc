@@ -66,7 +66,6 @@
 
 #include "view3d_director.hh"
 #include "view3d_director_cinema.hh"
-#include "view3d_director_minimap.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {

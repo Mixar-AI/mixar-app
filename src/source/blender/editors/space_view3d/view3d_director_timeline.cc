@@ -97,18 +97,11 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
     return;
   }
-  /* CLEAR FIRST. This is an ordinary opaque region (RGN_TYPE_CHANNELS is not
-   * in View3D's overlap set), so nothing clears its framebuffer for us, and
-   * the dock's own panel is translucent glass inset 8 px from the edges.
-   * Without this the previous frame stays underneath and every redraw
-   * composites onto it: the ruler, the keyframes and the transport all leave
-   * ghosts of where they used to be, and the inset border never repaints at
-   * all. Every other channel/footer region in Blender opens the same way. */
-  ui::theme::frame_buffer_clear(TH_BACK);
   ED_region_pixelspace(region);
   GPU_blend(GPU_BLEND_ALPHA);
   const int margin = std::max(6, int(8.0f * UI_SCALE_FAC));
   const int unit = std::max(18, int(20.0f * UI_SCALE_FAC));
+  const int gap = std::max(4, int(5.0f * UI_SCALE_FAC));
   const bool playing = ED_screen_animation_playing(CTX_wm_manager(C)) != nullptr;
   playback_redraw_timer_update(C, playing);
   /* The unit is the VIEWPORT's fit, not this one-row dock's. */
@@ -121,22 +114,19 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   ui::Block *block = ui::block_begin(
       C, region, "mixar_director_timeline", blender::ui::EmbossType::Emboss);
   ui::block_theme_style_set(block, ui::BLOCK_THEME_STYLE_POPUP);
-  /* Same as the viewport surface: the Interpolation popup refreshes. */
-  ui::block_flag_enable(block, ui::BLOCK_MIXAR_POPUPS_REFRESH);
   /* The designed dock row is half of the wide surface, so it is gated on the
    * SAME test the columns use — and that test reads the VIEWPORT region, not
    * this dock (whose own height is one control row). Below the gate the old
    * viewport rail draws instead, and the two together stacked duplicate
    * controls on one screen. */
-  const bool full = main_region != nullptr && cinema_surface_fits(main_region);
-  if (full) {
+  if (main_region != nullptr && cinema_surface_fits(main_region)) {
     cinema_draw_dock_controls(block, C, region, state, playing);
   }
   else {
     cinema_draw_dock_compact(block, region, state, playing);
   }
   DirectorTimelineRuntime *runtime = view3d_director_timeline_runtime_ensure(region);
-  const int content_top = region->winy - int(cinema_dock_control_height(full));
+  const int content_top = region->winy - int(cinema_dock_control_height());
   view3d_director_timeline_draw_content(region, state, runtime, margin, unit, content_top);
   ui::block_end(C, block);
   ui::block_draw(C, block);
@@ -157,20 +147,9 @@ void director_timeline_listener(const wmRegionListenerParams *params)
 
 void view3d_director_timeline_region_ensure(ScrArea *area)
 {
-  if (!area || area->spacetype != SPACE_VIEW3D) {
-    return;
-  }
-
-  if (ARegion *existing = BKE_area_find_region_type(area, RGN_TYPE_CHANNELS)) {
-    /* A layout saved by an earlier build carries THAT build's height, and
-     * nothing else ever revisits it — the height below is only ever written
-     * when the region is created. The dock's height is fixed, so ANY other
-     * height is put back: a short one would collapse the keyframe strip, and
-     * a tall one is a resize from a build that still allowed dragging it. */
-    if (existing->sizey != VIEW3D_DIRECTOR_TIMELINE_HEIGHT) {
-      existing->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
-    }
-    existing->flag |= RGN_FLAG_NO_USER_RESIZE;
+  if (!area || area->spacetype != SPACE_VIEW3D ||
+      BKE_area_find_region_type(area, RGN_TYPE_CHANNELS))
+  {
     return;
   }
 
@@ -198,9 +177,7 @@ void view3d_director_timeline_region_ensure(ScrArea *area)
    * View3D region type because RGN_TYPE_FOOTER ignores custom heights. */
   region->alignment = RGN_ALIGN_BOTTOM;
   region->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
-  /* Fixed height: `area.cc` gives this region no edge action zone, and the
-   * flag makes `region_scale` put the size back should anything start one. */
-  region->flag |= RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_POLL_FAILED | RGN_FLAG_NO_USER_RESIZE;
+  region->flag |= RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_POLL_FAILED;
   /* The normal type-assignment pass preceded this callback. Without this,
    * ED_area_init() dereferences a null runtime type while visiting the newly
    * inserted region. */

@@ -164,9 +164,6 @@ def test_enter_camera_view_ends_aerial_like_explore():
         viewport.find_view3d_context = original
     assert state.navigation_mode == 'NAVIGATE'
     assert space.region_3d.view_perspective == 'CAMERA'
-    # And the camera view keeps "Lock Camera to View" on, which is what makes
-    # an orbit or a dolly inside the frame move the CAMERA
-    # (`tests/director/test_camera_lock.py`).
     assert space.lock_camera is True
 
 
@@ -287,10 +284,8 @@ def test_o_toggles_aerial_and_esc_leaves_it():
     assert "type='ESC'" in esc_item and "value='PRESS'" in esc_item
     before = KEYMAP[: KEYMAP.index('"mixar.director_aerial_exit",')]
     assert 'name="3D View"' in before[before.rfind("keyconfig.keymaps.new("):]
-    # The walk lost O and gained no key at all: it is the top strip's Walk
-    # chip now (tests/director/test_walk_navigation.py).
-    assert "_WALK_KEY = " not in KEYMAP
-    assert '"mixar.director_navigate",' not in KEYMAP
+    # The walk lost O and nothing else: it is still registered elsewhere.
+    assert '"mixar.director_navigate",\n            type=' not in KEYMAP
     assert "director_navigate" in KEYMAP.split("_OPERATOR_NAMES")[1]
     camera_ops = (DIRECTOR / "ui/operators/camera_ops.py").read_text(encoding="utf-8")
     assert 'bl_idname = "mixar.director_navigate"' in camera_ops
@@ -319,11 +314,9 @@ def test_state_mirrors_aerial_and_the_poll_opens_to_the_stage():
 
 def test_the_hint_is_aerial_view_and_lights_with_the_mode():
     assert '{0.0f, {"O"}, 1, "Aerial view", false}' in TOP
-    # Only in the resting set: there is no Aerial hint while walking, so the
-    # lit flag has to say which set it is reading.
-    assert "const bool lit = !state.walking && index == 0 && state.aerial_mode;" in TOP
+    assert "const bool lit = index == 0 && state.aerial_mode;" in TOP
     assert "lit ? hint_lit : hint_col" in TOP
-    assert "MIXAR_THEME_LOAD(hint_lit, CinemaRowTextOn);" in TOP
+    assert "const float hint_lit[4] = CINEMA_COL_VALUE;" in TOP
     assert '"Navigate"' not in TOP
 
 

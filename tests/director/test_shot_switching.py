@@ -16,7 +16,7 @@ if str(SCRIPTS) not in sys.path:
 
 from mixar.modules.director.core.shot_api import (  # noqa: E402
     latest_shot_index_for_camera,
-    release_preview_range,
+    scope_preview_range,
 )
 
 
@@ -36,21 +36,23 @@ def test_camera_switching_prefers_the_newest_take():
     assert latest_shot_index_for_camera(state, object()) == -1
 
 
-def test_playback_uses_the_scenes_own_range_not_the_keyframes():
-    """It used to clamp the preview range to the active shot's first and last
-    beat, so pressing play looped between two keyframes however long the
-    scene was — and the dock's Start and End fields, which edit
-    `scene.frame_start` / `frame_end`, had no effect on what played. Two
-    controls for one thing, and the invisible one won."""
+def test_preview_range_tracks_only_the_active_shot_keyframes():
     scene = SimpleNamespace(
-        use_preview_range=True,
-        frame_preview_start=1,
-        frame_preview_end=49,
+        use_preview_range=False,
+        frame_preview_start=0,
+        frame_preview_end=0,
+    )
+    shot = SimpleNamespace(
+        beats=[
+            SimpleNamespace(frame=49),
+            SimpleNamespace(frame=1),
+            SimpleNamespace(frame=25),
+        ]
     )
 
-    release_preview_range(scene)
-    assert scene.use_preview_range is False
-    # The preview range itself is the USER's setting; the session saves it on
-    # entry and restores it on exit (tests/director/test_preview_range_restore),
-    # so nothing here rewrites its bounds.
+    scope_preview_range(scene, shot)
+    assert scene.use_preview_range is True
     assert (scene.frame_preview_start, scene.frame_preview_end) == (1, 49)
+
+    scope_preview_range(scene, None)
+    assert scene.use_preview_range is False

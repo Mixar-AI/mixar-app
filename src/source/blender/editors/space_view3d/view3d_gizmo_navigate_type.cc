@@ -15,7 +15,6 @@
  */
 
 #include <algorithm>
-#include <cmath>
 
 #include "BLI_math_constants.h" /* MIXAR: M_PI, for the globe ring sampling. */
 #include "BLI_math_matrix.h"
@@ -32,7 +31,6 @@
 #include "BLF_api.hh"
 
 #include "UI_interface.hh"
-#include "UI_mixar.hh"
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
@@ -51,38 +49,12 @@ namespace blender {
 /* Sizes of axis spheres containing XYZ characters in relation to above. */
 #define AXIS_HANDLE_SIZE 0.20f
 
-/* MIXAR: hovered-axis readout. Text scales with the widget so the capsule is
- * the same shape at every UI scale; the floor keeps it legible if the user
- * shrinks `gizmo_size_navigate_v3d`. The far side of the sphere only dims to
- * `MARKER_ALPHA_BACK` — the marker is a cursor readout, so it stays readable
- * behind the globe where the rings themselves fade out. */
-#define MARKER_TEXT_SIZE_MIN (9.0f * UI_SCALE_FAC)
-#define MARKER_TEXT_SIZE_FAC 0.46f
-#define MARKER_ALPHA_BACK 0.72f
-
 #define AXIS_LINE_WIDTH ((GIZMO_SIZE / 40.0f) * U.pixelsize)
 #define AXIS_RING_WIDTH ((GIZMO_SIZE / 60.0f) * U.pixelsize)
 #define AXIS_TEXT_SIZE (WIDGET_RADIUS * AXIS_HANDLE_SIZE * 1.25f)
 
 /* distance within this from center is considered positive. */
 #define AXIS_DEPTH_BIAS 0.01f
-
-/**
- * ONE colour per axis, shared by the globe's rings and the hover marker so
- * the two can never drift apart.
- *
- * A ring takes the colour of the axis it is perpendicular to: the circle in
- * the YZ plane is red, the circle in the XZ plane is green, and the circle
- * in the XY plane is blue. The hue is constant all the way around the ring.
- *
- * Blender's THEME axis colours are not used: `axis_y` is a yellow-green and
- * `axis_x` a pink-red, neither of which belongs to this globe.
- */
-static const float axis_colors[3][4] = {
-    {0.878f, 0.263f, 0.286f, 1.0f}, /* #E04349 — X. */
-    {0.094f, 0.612f, 0.310f, 1.0f}, /* #189C4F — Y. */
-    {0.000f, 0.369f, 1.000f, 1.0f}, /* #005EFF — Z. */
-};
 
 /* -------------------------------------------------------------------- */
 /** \name MIXAR: Globe navigation icon
@@ -95,9 +67,9 @@ static const float axis_colors[3][4] = {
  * The globe is the three great circles of the XY / XZ / YZ planes drawn
  * through the gizmo's existing `matrix_offset` rotation, so the ellipses
  * reshape as the view orbits (a static ellipse pair would not track the
- * view). Each circle is one colour — the colour of the axis perpendicular
- * to it, from `axis_colors` — and that hue does not change around the ring.
- * Alpha fades toward the far side of the sphere so the near half reads as
+ * view). Each ring is tinted by the axis NORMAL to its plane — the same
+ * convention as Blender's rotate gizmo, where the red ring turns about X —
+ * and fades toward the far side of the sphere so the near half reads as
  * being in front.
  *
  * Design proportions: stroke 1.60714 at globe radius 21.6964, i.e. the
@@ -106,10 +78,6 @@ static const float axis_colors[3][4] = {
 
 #define GLOBE_LINE_WIDTH ((GIZMO_SIZE / 27.0f) * U.pixelsize)
 #define GLOBE_RING_SEGMENTS 64
-
-/* Shared alpha for the three axis rings. The depth fade multiplies this, so
- * the far half of each circle recedes without changing its hue. */
-#define GLOBE_RING_ALPHA 0.82f
 
 /* Silhouette ring, #494949 at 24% (design). Deliberately faint in both light
  * and dark themes — it only has to hint at the sphere's edge. */
@@ -122,8 +90,6 @@ static const float axis_colors[3][4] = {
  * Draw one great circle of the unit sphere as a line strip.
  *
  * \param normal_axis: the axis perpendicular to the circle's plane (0=X, 1=Y, 2=Z).
- * \param color: one flat colour for the whole ring. The three globe rings pass
- * the colour of `normal_axis`.
  * \param depth_axis: view-space Z of the gizmo's rotation (the third row of
  * `matrix_offset`), used to fade the far half. Pass nullptr for a ring that
  * is already screen-aligned (the silhouette), which keeps a constant alpha.
@@ -150,9 +116,7 @@ static void gizmo_globe_ring_draw(const int normal_axis,
     p[(normal_axis + 1) % 3] = cosf(angle);
     p[(normal_axis + 2) % 3] = sinf(angle);
 
-    float vert_color[4];
-    copy_v4_v4(vert_color, color);
-    const float base_alpha = vert_color[3];
+    float vert_color[4] = {color[0], color[1], color[2], color[3]};
     if (depth_axis != nullptr) {
       /* -1 at the back of the sphere, +1 at the front. Squaring the
        * front-ness keeps the far half faint without losing it entirely, so
@@ -161,107 +125,13 @@ static void gizmo_globe_ring_draw(const int normal_axis,
       /* Cubic falloff: the design's gradients reach full transparency on
        * the far side, so a squared ramp still left the back half too
        * present at ring scale. */
-      vert_color[3] = base_alpha * (0.06f + (0.94f * front * front * front));
+      vert_color[3] = color[3] * (0.06f + (0.94f * front * front * front));
     }
     immAttr4fv(color_id, vert_color);
     immVertex3fv(pos_id, p);
   }
   immEnd();
   immUnbindProgram();
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name MIXAR: Hovered axis readout
- *
- * The design has no axis balls, so nothing marks the six axis click targets
- * at rest — but those targets still exist (`gizmo_axis_test_select`,
- * unchanged, highlights the nearest one as soon as the cursor enters the
- * circle), and a bare dot only says "something is here". It does not say
- * WHICH axis, nor which END of it, and click-to-snap sends the view
- * somewhere the user did not choose.
- *
- * So the marker is a labelled capsule: filled with that axis's colour and
- * carrying its letter and sign, so `+X` and `-X` can never be confused.
- * Nothing about hit-testing changes.
- * \{ */
-
-/**
- * Draw the readout for the axis handle under the cursor.
- *
- * \param axis: 0=X, 1=Y, 2=Z.
- * \param is_pos: the handle on the positive end of that axis.
- */
-static void gizmo_axis_marker_draw(const wmGizmo *gz, const int axis, const bool is_pos)
-{
-  float v_local[3] = {0.0f, 0.0f, 0.0f};
-  v_local[axis] = 1.0f * (is_pos ? 1.0f : -1.0f);
-
-  float m3_offset[3][3];
-  copy_m3_m4(m3_offset, gz->matrix_offset);
-  float v_rot[3];
-  mul_v3_m3v3(v_rot, m3_offset, v_local);
-
-  /* Sign first: the direction is what a bare dot could never show. */
-  const char label[3] = {is_pos ? '+' : '-', char('X' + axis), '\0'};
-
-  /* Capsule metrics in pixels. The height floor is the resting handle size,
-   * so the marker is never smaller than the dot it replaces. */
-  const float text_size = std::max(MARKER_TEXT_SIZE_MIN, WIDGET_RADIUS * MARKER_TEXT_SIZE_FAC);
-  const float text_width = ui::mixar_text_width(label, text_size);
-  const float half_h = std::max(WIDGET_RADIUS * AXIS_HANDLE_SIZE * 1.25f, text_size * 0.78f);
-  const float half_w = std::max(half_h, (text_width * 0.5f) + (text_size * 0.45f));
-
-  /* Keep the capsule inside the widget circle by pulling it in along its own
-   * direction — `gizmo_axis_screen_bounds_get` is the gizmo's redraw rect and
-   * stays untouched, so the marker must not spill past `WIDGET_RADIUS`. The
-   * extent is the capsule box's support function along that direction, so a
-   * marker at the rim ends exactly on it instead of being pulled to the
-   * bounding circle of its own diagonal. */
-  float dir[2] = {v_rot[0], v_rot[1]};
-  const float dir_len = len_v2(dir);
-  if (dir_len > 1e-5f) {
-    mul_v2_fl(dir, 1.0f / dir_len);
-    const float extent = ((fabsf(dir[0]) * half_w) + (fabsf(dir[1]) * half_h)) / WIDGET_RADIUS;
-    const float radius = std::min(dir_len, std::max(0.0f, 1.0f - extent));
-    v_rot[0] = dir[0] * radius;
-    v_rot[1] = dir[1] * radius;
-  }
-
-  /* Depth of this axis handle, exactly as the upstream artwork derived it,
-   * so a marker on the far side of the sphere reads as being behind it. */
-  const float depth = gz->matrix_offset[axis][2] * (is_pos ? 1.0f : -1.0f);
-  const float front = (depth + 1.0f) * 0.5f;
-
-  float fill[4];
-  copy_v4_v4(fill, axis_colors[axis]);
-  fill[3] = MARKER_ALPHA_BACK + ((1.0f - MARKER_ALPHA_BACK) * front);
-
-  /* Contrast follows the fill so a re-tinted axis stays readable. */
-  const float luminance = (0.2126f * fill[0]) + (0.7152f * fill[1]) + (0.0722f * fill[2]);
-  const bool text_is_dark = (luminance > 0.6f);
-  const float text_color[4] = {
-      text_is_dark ? 0.07f : 1.0f,
-      text_is_dark ? 0.07f : 1.0f,
-      text_is_dark ? 0.08f : 1.0f,
-      1.0f,
-  };
-
-  GPU_matrix_push();
-  GPU_matrix_translate_3fv(v_rot);
-  GPU_matrix_scale_1f(1.0f / WIDGET_RADIUS);
-
-  rctf rect{};
-  rect.xmin = -half_w;
-  rect.xmax = half_w;
-  rect.ymin = -half_h;
-  rect.ymax = half_h;
-  /* Full capsule: the corner radius is the half height. */
-  ui::mixar_fill_round(rect, half_h, fill);
-  ui::mixar_label_left(label, -text_width * 0.5f, 0.0f, text_size, text_color);
-
-  GPU_matrix_pop();
 }
 
 /** \} */
@@ -325,28 +195,65 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
     gizmo_globe_ring_draw(2, silhouette_color, nullptr, viewport_size);
   }
 
-  /* The three great circles, rotated with the view. Each circle is the
-   * colour of the axis it is perpendicular to, the same `axis_colors` entry
-   * the hover capsule uses for that axis. */
+  /* The three great circles, rotated with the view.
+   *
+   * MIXAR: tints come from the DESIGN export, not from the theme's axis
+   * colours. The theme's are fully saturated primaries meant for axis
+   * lines; at ring scale they read as a bright RGB toy, where the design
+   * is a muted globe that recedes into the viewport. Order matches
+   * `gizmo_globe_ring_draw`'s plane->axis mapping (ring normal to X, Y, Z). */
+  const float ring_colors[3][4] = {
+      {0.329f, 0.173f, 0.173f, 0.85f}, /* #542C2C — equator (normal X). */
+      {0.094f, 0.612f, 0.310f, 0.80f}, /* #189C4F — meridian (normal Y). */
+      {0.000f, 0.369f, 1.000f, 0.80f}, /* #005EFF — meridian (normal Z). */
+  };
   GPU_matrix_push();
   GPU_matrix_mul(gz->matrix_offset);
   for (int axis = 0; axis < 3; axis++) {
-    float ring_color[4];
-    copy_v4_v4(ring_color, axis_colors[axis]);
-    ring_color[3] = GLOBE_RING_ALPHA;
-    gizmo_globe_ring_draw(axis, ring_color, depth_axis, viewport_size);
+    gizmo_globe_ring_draw(axis, ring_colors[axis], depth_axis, viewport_size);
   }
   GPU_matrix_pop();
 
-  /* Hovered axis readout (see the MIXAR section above).
+  /* Hovered axis marker.
    *
-   * Part numbering is `gizmo_axis_test_select`'s: it walks axis-major,
-   * negative end first, from 1 — so part 1/2 are -X/+X, 3/4 -Y/+Y, 5/6 -Z/+Z.
-   * Gated on the highlight STATE, not on `highlight_part` alone, which keeps
-   * its last value after the cursor leaves the gizmo. */
-  if (is_active && gz->highlight_part >= 1 && gz->highlight_part <= 6) {
+   * MIXAR: the design has no axis balls, so nothing marks the six axis click
+   * targets at rest — but those targets still exist (see
+   * `gizmo_axis_test_select`, unchanged), and without any feedback
+   * click-to-snap becomes undiscoverable. A single dot under the cursor
+   * keeps the interaction legible while leaving the resting artwork exactly
+   * as designed. Delete this block to get the pure design at all times. */
+  if (gz->highlight_part >= 1 && gz->highlight_part <= 6) {
     const int part = gz->highlight_part - 1;
-    gizmo_axis_marker_draw(gz, part / 2, (part % 2) != 0);
+    const int axis = part / 2;
+    const bool is_pos = (part % 2) != 0;
+
+    float v_local[3] = {0.0f, 0.0f, 0.0f};
+    v_local[axis] = 1.0f * (is_pos ? 1.0f : -1.0f);
+
+    float m3_offset[3][3];
+    copy_m3_m4(m3_offset, gz->matrix_offset);
+    float v_rot[3];
+    mul_v3_m3v3(v_rot, m3_offset, v_local);
+
+    float dot_color[4];
+    ui::theme::get_color_3fv(TH_AXIS_X + axis, dot_color);
+    /* Depth of this axis handle, exactly as the upstream artwork derived it,
+     * so a marker on the far side of the sphere reads as being behind it. */
+    const float depth = gz->matrix_offset[axis][2] * (is_pos ? 1.0f : -1.0f);
+    dot_color[3] = 0.35f + (0.65f * ((depth + 1.0f) * 0.5f));
+
+    const float rad = WIDGET_RADIUS * AXIS_HANDLE_SIZE * 1.25f;
+    GPU_matrix_push();
+    GPU_matrix_translate_3fv(v_rot);
+    GPU_matrix_scale_1f(1.0f / WIDGET_RADIUS);
+
+    rctf rect{};
+    rect.xmin = -rad;
+    rect.xmax = rad;
+    rect.ymin = -rad;
+    rect.ymax = rad;
+    ui::draw_roundbox_4fv(&rect, true, rad, dot_color);
+    GPU_matrix_pop();
   }
 
   if (use_project_matrix) {

@@ -20,11 +20,8 @@ queues drain (which also fires when the last job FAILS).
 import time
 
 import bpy
-from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.common.render_coordinator import core as render_slot
-from mixar.modules.common.render_coordinator.constants import RETRY_INTERVAL
 from mixar.modules.asset_search.constants import (
     GENERATION_LIBRARY_JOB_TYPES,
     GENERATION_LIBRARY_NAME,
@@ -202,22 +199,10 @@ def _on_queue_changed(queue) -> None:
         logger.exception("[GenLibrary] listener error")
 
 
-@persistent
-def _clear_pending_archives(_unused, _extra=None):
-    global _archive_timer_running, _batch_dirty, _retrain_scheduled
-    _archive_queue.clear()
-    _saved_job_ids.clear()
-    _archive_timer_running = _batch_dirty = _retrain_scheduled = False
-    if bpy.app.timers.is_registered(_process_archive_queue):
-        bpy.app.timers.unregister(_process_archive_queue)
-
-
 def _ensure_archive_timer() -> None:
     global _archive_timer_running
     if _archive_timer_running:
         return
-    if _clear_pending_archives not in bpy.app.handlers.load_pre:
-        bpy.app.handlers.load_pre.append(_clear_pending_archives)
     _archive_timer_running = True
     bpy.app.timers.register(_process_archive_queue, first_interval=0.0)
 
@@ -236,10 +221,6 @@ def _process_archive_queue():
             _schedule_retrain()
         return None
 
-    # Includes the agent's result-copy/restore phase AFTER native job teardown.
-    # Check before dequeueing or creating any export datablocks.
-    if render_slot.busy():
-        return RETRY_INTERVAL
     job = _archive_queue.pop(0)
     try:
         _save_job(job)

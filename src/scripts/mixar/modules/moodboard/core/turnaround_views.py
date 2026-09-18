@@ -34,7 +34,7 @@ decide what a generation submits.
 
 import uuid
 
-from .media_utils import first_selected_reference_still, selected_reference_stills
+from .media_utils import is_still_item
 from typing import List, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
@@ -111,7 +111,12 @@ def get_tab_input_image(scene):
         return None
     if not getattr(tab, 'use_selected_image', False):
         return getattr(tab, 'reference_image', None)
-    return first_selected_reference_still(scene)
+    if not hasattr(scene, 'mixie_moodboard_images'):
+        return None
+    for item in scene.mixie_moodboard_images:
+        if item.selected and is_still_item(item):
+            return item.image
+    return None
 
 
 def set_tab_input_image(scene, image) -> None:
@@ -415,11 +420,15 @@ def eligible_selected_images(scene, group_id: str, main_image) -> list:
     companion). Order follows the moodboard so the assignment of angles is
     predictable.
     """
+    if not hasattr(scene, 'mixie_moodboard_images'):
+        return []
     images = []
-    for item in selected_reference_stills(scene):
+    for item in scene.mixie_moodboard_images:
+        if not item.selected or not is_still_item(item):
+            continue
         if item.image == main_image:
             continue
-        if group_id and getattr(item, "turnaround_group", "") == group_id:
+        if group_id and item.turnaround_group == group_id:
             continue
         images.append(item.image)
     return images

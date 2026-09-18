@@ -24,14 +24,14 @@ SEE at once; a template that merely arms a flag reads as broken:
 honestly; it changes no behaviour by itself.
 """
 
-from bpy.props import EnumProperty, IntProperty
+from bpy.props import EnumProperty
 from bpy.types import Operator
 
 from ...constants import CAMERA_TEMPLATE_ITEMS, RESOLUTION_PRESETS
 from ...core.camera_moves import apply_camera_move
 from ...core.capture import capture_beat
 from ...core.rotation_curves import repair_rotation_continuity, rotation_data_path
-from ...core.shot_api import active_shot, refresh_manifest, shot_scene
+from ...core.shot_api import active_shot, refresh_manifest
 from ...core.viewport import level_camera_horizon
 
 # Templates that key a path, and the existing preset each one runs.
@@ -55,7 +55,7 @@ def _apply_handheld(context, shot, state) -> str:
 def _apply_level_horizon(context, shot) -> str:
     """Level the horizon on every keyframe and the live pose; returns the report."""
     camera = shot.camera
-    scene = shot_scene(shot, context.scene)
+    scene = shot.scene_ref or context.scene
     frames = sorted({int(beat.frame) for beat in shot.beats})
     if not frames:
         if level_camera_horizon(camera):
@@ -168,34 +168,7 @@ class MIXAR_OT_director_set_resolution(Operator):
         return {'FINISHED'}
 
 
-class MIXAR_OT_director_set_fps(Operator):
-    """Set the scene frame rate"""
-
-    bl_idname = "mixar.director_set_fps"
-    bl_label = "Frame Rate"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    fps: IntProperty(
-        name="Frame Rate",
-        description="Frames per second",
-        default=24,
-        min=1,
-        max=240,
-    )
-
-    def execute(self, context):
-        render = context.scene.render
-        render.fps = self.fps
-        # The BASE is what makes 24 mean 23.976 (24 / 1.001). Setting `fps`
-        # alone — which is all `WM_OT_context_set_int` could do — left an
-        # NTSC scene at 23.976 while the chip claimed 24, with no way back to
-        # a whole rate from this surface.
-        render.fps_base = 1.0
-        return {'FINISHED'}
-
-
 classes = (
     MIXAR_OT_director_set_template,
     MIXAR_OT_director_set_resolution,
-    MIXAR_OT_director_set_fps,
 )

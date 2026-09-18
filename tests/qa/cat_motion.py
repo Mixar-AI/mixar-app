@@ -58,7 +58,7 @@ def capture(qa, queries, output, duration=6.5):
     )
 
 
-def _features(path, emerald=False):
+def _features(path):
     with Image.open(path) as image:
         image = image.convert("RGB")
         colored, highlights = [], []
@@ -66,9 +66,7 @@ def _features(path, emerald=False):
             high, low = max(rgb), min(rgb)
             point = (index % image.width, index // image.width)
             # Bright saturated iris pixels exclude the card's glass bed.
-            r, g, b = rgb
-            iris = (g > 125 and g > 4*r and g > 2*b) if emerald else (high > 170 and high - low > 70)
-            if iris:
+            if high > 170 and high - low > 70:
                 colored.append(point)
             elif low > 170 and high - low < 35:
                 highlights.append(point)
@@ -79,10 +77,8 @@ def _centroid(points):
     return tuple(sum(point[axis] for point in points) / len(points) for axis in (0, 1))
 
 
-def verify(sequence, *, blink=False, still=False, emerald=False):
-    # The main pill's bright green working pulse needs a stricter iris mask
-    # than the six card palettes, or background motion can imitate pupil travel.
-    samples = [_features(frame["path"], emerald) for frame in sequence]
+def verify(sequence, *, blink=False, still=False):
+    samples = [_features(frame["path"]) for frame in sequence]
     if len(samples) < 12 or len({size for size, _, _ in samples}) != 1:
         raise ScenarioFail("Motion capture needs 12+ frames with stable target dimensions")
     areas = [len(colored) for _, colored, _ in samples]

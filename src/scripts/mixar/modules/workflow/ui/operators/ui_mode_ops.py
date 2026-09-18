@@ -77,6 +77,25 @@ def _notify_splash_mode_chosen():
         _logger.debug("notify_mode_chosen failed: %s", exc)
 
 
+def _interactive_tour_active() -> bool:
+    """True while the interactive (video) tour owns the screen, or is
+    switching modes itself. Its ``actions`` module raises a flag around
+    its own mode switches; ``session.is_running()`` covers user clicks on
+    the mode buttons mid-tour. Either module missing means "not running".
+    """
+    try:
+        from mixar.modules.onboarding.core.tour import actions as tour_actions
+        if getattr(tour_actions, "suppress_legacy_restart", False):
+            return True
+    except Exception:  # noqa: BLE001 — ImportError or a half-loaded package
+        pass
+    try:
+        from mixar.modules.onboarding.core.tour import session as tour_session
+        return bool(tour_session.is_running())
+    except Exception:  # noqa: BLE001 — not written yet, or not running
+        return False
+
+
 def _restart_onboarding_after_mode():
     """Make the chosen mode OWN the first-run onboarding.
 
@@ -94,7 +113,13 @@ def _restart_onboarding_after_mode():
     fired yet, the still-pending auth trigger opens it in this workspace.
     If the user isn't signed in yet (no email), the auth-success hook
     triggers the tour when login completes.
+
+    The interactive tour replaces this card flow: while it runs, a mode
+    switch (its own or the user's) must not restart the old cards on top.
     """
+    if _interactive_tour_active():
+        _logger.debug("interactive tour active — card onboarding not restarted")
+        return
     try:
         from mixar.modules.onboarding.ui.operators.card_modal_op import (
             close_active_card,
@@ -137,16 +162,6 @@ def _force_workspace_rebuild(target):
         return
     window.workspace = other
     window.workspace = target
-
-
-def _schedule_object_mode() -> None:
-    """Arm the bootstrap's Object Mode reset for the workspace just entered."""
-    try:
-        from mixar.bootstrap import workflow_module
-
-        workflow_module.schedule_object_mode_reset()
-    except Exception as exc:  # noqa: BLE001 — the switch matters more than the reset
-        _logger.debug("object mode reset scheduling failed: %s", exc)
 
 
 def _kick_slider_animation() -> None:
@@ -199,11 +214,6 @@ class MIXAR_OT_set_ui_mode_ai(Operator):
         # overlays on gets cleaned up on entry.
         configure_basic_workspace_chrome()
         _force_workspace_rebuild(target)
-        # Zen has no mode selector, so a user arriving from Edit/Sculpt/
-        # Texture Paint must land in Object Mode. The workspace msgbus arms
-        # the same reset; this call covers a switch that did not go through
-        # the RNA setter (already on Zen with one workspace).
-        _schedule_object_mode()
         _redraw_topbar(context)
         # Now that we're in Zen Mode, unblock the onboarding gate, then
         # (re)start the tour so it owns the welcome card in THIS workspace

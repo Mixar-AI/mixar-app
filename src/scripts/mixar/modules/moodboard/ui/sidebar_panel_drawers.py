@@ -17,7 +17,7 @@ from .sidebar_ui_helpers import (
     draw_toggle, draw_image_info_card, draw_status_badge,
 )
 from mixar.modules.moodboard.constants import SEP_INTRA, SEP_SECTION
-from mixar.modules.moodboard.core.media_utils import selected_reference_stills
+from mixar.modules.moodboard.core.media_utils import is_still_item
 from .queue_drawer import draw_queue as _draw_queue
 from .world_labs_drawer import draw_world_labs as _draw_world_labs
 
@@ -71,8 +71,10 @@ def _draw_imagegen(layout, context):
     draw_toggle(col, tab, "use_reference_images", text=ref_label)
 
     if tab.use_reference_images:
-        for item in selected_reference_stills(scene):
-            draw_image_info_card(col, item.image)
+        if hasattr(scene, 'mixie_moodboard_images'):
+            for item in scene.mixie_moodboard_images:
+                if item.selected and is_still_item(item):
+                    draw_image_info_card(col, item.image)
         if selected_count == 0:
             row = col.row()
             row.label(text="No image selected in moodboard", icon='ERROR')

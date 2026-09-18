@@ -257,7 +257,7 @@ def _scene(*shots):
 def _sync_fakes(monkeypatch):
     repaired = []
     monkeypatch.setattr(beat_sync, "refresh_manifest", lambda scene, shot: None)
-    monkeypatch.setattr(beat_sync, "release_preview_range", lambda scene: None)
+    monkeypatch.setattr(beat_sync, "scope_preview_range", lambda scene, shot: None)
     monkeypatch.setattr(beat_sync, "_ensure_timer", lambda: None)
     monkeypatch.setattr(beat_sync, "_redraw", lambda: None)
     monkeypatch.setattr(

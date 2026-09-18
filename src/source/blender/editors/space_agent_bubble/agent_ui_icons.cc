@@ -257,17 +257,17 @@ void glyph_restore(const float cx, const float cy, const float s, const float co
 {
   const float w = std::max(1.0f, s * 0.10f);
   const float r = s * 0.40f;
-  /* Follow the arc counter-clockwise to its upper-right end. */
-  const float a_start = float(M_PI) * 0.72f;
+  /* The arc runs from the top-left gap round to the upper-left arrowhead. */
+  const float a_start = float(M_PI) * 0.72f; /* Where the arrow tip sits. */
   const float a_end = a_start + float(M_PI) * 1.55f;
   arc_band(cx, cy, r, w, a_start, a_end, col);
 
-  /* A left-pointing arrow at the end reads as undo/restore. The old head
-   * sat at the start with the opposite tangent and read as redo. */
-  const float tx = cx + std::cos(a_end) * r;
-  const float ty = cy + std::sin(a_end) * r;
-  const float dx = -std::sin(a_end);
-  const float dy = std::cos(a_end);
+  /* Arrowhead at the start of the arc, pointing along the (counter-clockwise)
+   * travel direction: a small filled triangle tangent to the ring. */
+  const float tx = cx + std::cos(a_start) * r;
+  const float ty = cy + std::sin(a_start) * r;
+  const float dx = std::sin(a_start);  /* Tangent, pointing "backwards". */
+  const float dy = -std::cos(a_start);
   const float nx = -dy;
   const float ny = dx;
   const float len = s * 0.26f;
@@ -439,9 +439,7 @@ void agent_ui_icon_draw(const AgentIcon icon,
     case AGENT_ICON_AGENT:
       glyph_agent(cx, cy, s, color);
       break;
-    case AGENT_ICON_VIDEO:
-    case AGENT_ICON_RULES:
-    case AGENT_ICON_SIGNATURE:
+    case AGENT_ICON_MEDIA:
       agent_ui_tab_icon_draw(icon, cx, cy, s, color);
       break;
     case AGENT_ICON_SPLAT:
@@ -460,8 +458,7 @@ void agent_ui_icon_draw(const AgentIcon icon,
       glyph_plus(cx, cy, s, color);
       break;
     case AGENT_ICON_RESTORE:
-      /* Keep the ring and arrowhead comfortably inside the accent disc. */
-      glyph_restore(cx, cy, s * 0.78f, color);
+      glyph_restore(cx, cy, s, color);
       break;
     case AGENT_ICON_IMAGE:
       glyph_image(cx, cy, s, color);

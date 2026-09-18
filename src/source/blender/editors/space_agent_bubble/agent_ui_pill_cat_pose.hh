@@ -10,8 +10,8 @@
  * only consumes this; tests compile the same header. No GPU, no bpy.
  *
  * Idle motion uses close–hold–open blink, gaze that
- * drifts then returns to centre, a slow breath. Working keeps the eyes
- * open and rolls the pupils in a paused circular phrase — not a squint.
+ * drifts then returns to centre, a slow breath. Working reuses that
+ * envelope with a lower rest openness (a squint), not a second clip.
  */
 
 #pragma once
@@ -48,12 +48,7 @@ constexpr double MIXIE_BLINK_OPEN = 0.092;
 constexpr double MIXIE_BLINK_SPAN = MIXIE_BLINK_CLOSE + MIXIE_BLINK_HOLD + MIXIE_BLINK_OPEN;
 constexpr float MIXIE_BLINK_CLOSED = 0.08f;
 constexpr float MIXIE_IDLE_OPEN = 1.0f;
-
-constexpr double MIXIE_ROLL_PERIOD = 2.6;
-constexpr float MIXIE_ROLL_START = 0.12f;
-constexpr float MIXIE_ROLL_SPAN = 0.50f;
-constexpr float MIXIE_ROLL_RX = 0.80f;
-constexpr float MIXIE_ROLL_RY = 0.58f;
+constexpr float MIXIE_WORK_OPEN = 0.78f;
 
 constexpr double MIXIE_GAZE_PERIOD = 4.6;
 constexpr double MIXIE_GAZE_REST_END = 0.30;
@@ -127,74 +122,36 @@ inline float mixie_cat_ear_twitch(const double now, const float side)
   return 4.0f * side * wave * wave;
 }
 
-/** One counterclockwise pupil orbit with eased fade in/out, then a rest.
- * Distinct from Generating's continuous slit-pupil orbit. */
-struct MixieCatRoll {
-  float look_x;
-  float look_y;
-  float amount;
-};
-
-inline MixieCatRoll mixie_cat_eye_roll(const double now)
-{
-  const double wrapped = std::fmod(now / MIXIE_ROLL_PERIOD, 1.0);
-  const double phase = wrapped < 0.0 ? wrapped + 1.0 : wrapped;
-  const float u = float((phase - MIXIE_ROLL_START) / MIXIE_ROLL_SPAN);
-  MixieCatRoll roll{0.0f, 0.08f, 0.0f};
-  if (u <= 0.0f || u >= 1.0f) {
-    return roll;
-  }
-  const float fade = (u < 0.16f) ? mixie_cat_smooth01(u / 0.16f) :
-                     (u > 0.84f) ? 1.0f - mixie_cat_smooth01((u - 0.84f) / 0.16f) :
-                     1.0f;
-  constexpr float k_tau = 6.283185307f;
-  const float angle = u * k_tau;
-  roll.amount = fade;
-  roll.look_x = fade * MIXIE_ROLL_RX * std::cos(angle);
-  /* Blend back to the resting gaze as well as the orbit, so neither end of
-   * the phrase jumps vertically when the eyes settle. */
-  roll.look_y += fade * (MIXIE_ROLL_RY * std::sin(angle) - roll.look_y);
-  return roll;
-}
-
 inline MixieCatPose mixie_cat_eval_pose(const double now, const bool working)
 {
   MixieCatPose p;
-  p.openness = mixie_cat_blink_openness(now, MIXIE_IDLE_OPEN);
+  const float rest_open = working ? MIXIE_WORK_OPEN : MIXIE_IDLE_OPEN;
+  p.openness = mixie_cat_blink_openness(now, rest_open);
   p.breathe = working ? (1.0f + 0.012f * float(std::sin(now * 1.55))) :
                         (1.0f + 0.009f * float(std::sin(now * 1.25)));
-  /* Working energy is the eye roll + a slightly livelier breath — not a
-   * bounce or a squint. Idle has none. */
+  /* Working energy is the squint + a slightly livelier breath — not a
+   * bounce. Idle has none. */
   p.bounce = 0.0f;
-  if (working) {
-    const MixieCatRoll roll = mixie_cat_eye_roll(now);
-    p.look_x = roll.look_x;
-    p.look_y = roll.look_y;
-    p.tilt = 5.0f * roll.look_x;
-    p.eye_scale = 1.0f + 0.08f * roll.amount;
-    p.pupil_scale = 1.0f + 0.07f * float(std::sin(now * 1.7)) - 0.04f * roll.amount;
-  }
-  else {
-    /* Look, hold, return. Different vertical targets avoid a pendulum loop. */
-    const float gaze = mixie_cat_gaze_amount(now);
-    constexpr float targets[8][2] = {
-        {-0.85f, 0.30f},
-        {0.75f, 0.55f},
-        {-0.45f, -0.55f},
-        {0.85f, 0.05f},
-        {0.15f, 0.65f},
-        {-0.80f, -0.20f},
-        {0.65f, -0.45f},
-        {-0.55f, 0.50f},
-    };
-    const int cycle = int(std::floor(now / MIXIE_GAZE_PERIOD));
-    const int target = (cycle % 8 + 8) % 8;
-    p.look_x = targets[target][0] * gaze;
-    p.look_y = targets[target][1] * gaze;
-    p.tilt = 5.0f * p.look_x;
-    p.eye_scale = 1.0f + 0.10f * gaze;
-    p.pupil_scale = 1.0f + 0.07f * float(std::sin(now * 1.7)) - 0.08f * gaze;
-  }
+  /* Look, hold, return. Different vertical targets avoid a pendulum loop;
+   * working cats stay curious instead of locking their pupils in place. */
+  const float gaze = mixie_cat_gaze_amount(now);
+  constexpr float targets[8][2] = {
+      {-0.85f, 0.30f},
+      {0.75f, 0.55f},
+      {-0.45f, -0.55f},
+      {0.85f, 0.05f},
+      {0.15f, 0.65f},
+      {-0.80f, -0.20f},
+      {0.65f, -0.45f},
+      {-0.55f, 0.50f},
+  };
+  const int cycle = int(std::floor(now / MIXIE_GAZE_PERIOD));
+  const int target = (cycle % 8 + 8) % 8;
+  p.look_x = targets[target][0] * gaze;
+  p.look_y = targets[target][1] * gaze;
+  p.tilt = 5.0f * p.look_x;
+  p.eye_scale = 1.0f + 0.10f * gaze;
+  p.pupil_scale = 1.0f + 0.07f * float(std::sin(now * 1.7)) - 0.08f * gaze;
   p.ear_l = mixie_cat_ear_twitch(now, -1.0f);
   p.ear_r = mixie_cat_ear_twitch(now, 1.0f);
   return p;

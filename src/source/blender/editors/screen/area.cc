@@ -61,7 +61,6 @@
 #include "UI_interface_icons.hh"
 #include "UI_interface_layout.hh"
 #include "UI_mixar.hh"
-#include "UI_mixar_chrome.hh"
 
 #include "UI_resources.hh"
 #include "UI_view2d.hh"
@@ -1320,16 +1319,6 @@ static bool region_azone_edge_poll(const ScrArea *area,
     return false;
   }
 
-  /* Mixar Cinema Mode timeline dock: View3D `CHANNELS` is used by nothing
-   * else, and the dock's height is FIXED (`VIEW3D_DIRECTOR_TIMELINE_HEIGHT`).
-   * `RGN_FLAG_NO_USER_RESIZE` alone only restores the size when a drag ends —
-   * the edge still offers a resize cursor, the dock still stretches while
-   * dragged, and a drag past the collapse threshold hides it — so the edge is
-   * not offered at all. */
-  if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_CHANNELS) {
-    return false;
-  }
-
   /* Same area, the hidden N-panel's reveal tab. `region_azone_tab_plus` pins
    * it to the area's top-right corner, which in Zen Mode is inside the
    * drawer's painted panel whenever it is open and on the navigation gizmo
@@ -1444,13 +1433,6 @@ static void region_azones_add_edge(ScrArea *area,
 static void region_azones_add(const bScreen *screen, ScrArea *area, ARegion *region)
 {
   if (area->spacetype == SPACE_AGENT_BUBBLE) {
-    return;
-  }
-
-  /* Retired Moodboard sidebars can retain scrollbar flags in saved files.
-   * Edge polling alone only removes the resize/reveal zone; skip the complete
-   * azone pass so neither old scrollbars nor fullscreen zones claim input. */
-  if (area->spacetype == SPACE_MIXIE && region->regiontype == RGN_TYPE_UI) {
     return;
   }
 
@@ -1712,7 +1694,7 @@ static void region_rect_recursive(
 
   /* set here, assuming userpref switching forces to call this again */
   region->overlap = ED_region_is_overlap(area->spacetype, region->regiontype);
-  /* Zen Mode's View3D headers must overlap even when the theme header
+  /* Zen/Texturing View3D headers must overlap even when the theme header
    * is opaque — otherwise the reserved strip stays a bar. Empty header
    * space already passes events through (`ED_region_contains_xy`). */
   if (!region->overlap && ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER) &&
@@ -1766,9 +1748,6 @@ static void region_rect_recursive(
         UI_SCALE_FAC * (region->sizey + 0.5f) > ED_area_headersize())
     {
       prefsizey = UI_SCALE_FAC * (region->sizey + 0.5f);
-    }
-    else if (ui::mixar_area_floats_viewport_chrome(area)) {
-      prefsizey = UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_height;
     }
     else {
       prefsizey = ED_area_headersize();
@@ -3667,8 +3646,8 @@ void ED_region_draw_overflow_indication(const ScrArea *area,
 
   const bool is_overlap = ED_region_is_overlap(area->spacetype, region->regiontype);
   const bool is_header = ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER);
-  /* Forced-overlap Zen headers clear transparent. An overflow fade would
-   * still paint opaque TH_BACK across the strip. */
+  /* Forced-overlap Zen/Texturing headers clear transparent. An overflow
+   * fade would still paint opaque TH_BACK across the strip. */
   if (region->overlap && is_header && ui::mixar_area_floats_viewport_chrome(area)) {
     return;
   }
@@ -4048,17 +4027,10 @@ void ED_region_header_layout(const bContext *C, ARegion *region)
   bool region_layout_based = region->flag & RGN_FLAG_DYNAMIC_SIZE;
   const ScrArea *area = CTX_wm_area(C);
   const bool is_global = area && ELEM(area->spacetype, SPACE_TOPBAR, SPACE_STATUSBAR);
-  const bool zen_toolbar = area && area->spacetype == SPACE_VIEW3D &&
-                           region->regiontype == RGN_TYPE_HEADER &&
-                           ui::mixar_workspace_is_zen(C);
-  const int offset = zen_toolbar ? 15.0f * UI_SCALE_FAC :
-                     is_global ? 4.0f * UI_SCALE_FAC : int(UI_HEADER_OFFSET);
+  const int offset = is_global ? 4.0f * UI_SCALE_FAC : int(UI_HEADER_OFFSET);
 
   /* Height of buttons and scaling needed to achieve it. */
-  const int button_height = zen_toolbar ?
-                                UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_control_height :
-                                UI_UNIT_Y;
-  const int buttony = min_ii(button_height, region->winy - 2 * UI_SCALE_FAC);
+  const int buttony = min_ii(UI_UNIT_Y, region->winy - 2 * UI_SCALE_FAC);
   const float buttony_scale = buttony / float(UI_UNIT_Y);
 
   /* Vertically center buttons. */
@@ -4152,8 +4124,9 @@ static void region_draw_blocks_in_view2d(const bContext *C, const ARegion *regio
 
 void ED_region_header_draw(const bContext *C, ARegion *region)
 {
-  /* Zen owns its topbar and scene-toolbar beds; the empty tool header
-   * stays transparent. Other workspaces use the native theme clear. */
+  /* Zen chrome is the family's ISLAND pane on the topbar. View3D headers
+   * in Zen/Texturing clear transparent so glass groups float. An opaque
+   * theme clear would bury either; dest-over cannot lower dest A=1. */
   if (!ui::mixar_zen_floating_header_clear(C, region) &&
       !ui::mixar_zen_header_clear(C, region))
   {
@@ -4177,9 +4150,10 @@ void ED_region_header_draw_with_button_sections(const bContext *C,
   const ThemeColorID bgcolorid = region_background_color_id(C, region);
 
   /* Clear and draw button sections background when using region overlap. Otherwise clear using the
-   * background color like normal. Zen supplies its own header beds. */
+   * background color like normal. Zen topbar is the ISLAND pane; floating
+   * View3D headers stay transparent so only the glass groups read. */
   if (ui::mixar_zen_floating_header_clear(C, region)) {
-    /* Scene-toolbar bed or transparent empty tool header already painted. */
+    /* Viewport shows through; button groups paint their own PILL panes. */
   }
   else if (ui::mixar_zen_header_clear(C, region)) {
     /* Glass already replaced the theme slab. */

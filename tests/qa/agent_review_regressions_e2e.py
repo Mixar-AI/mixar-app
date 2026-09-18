@@ -107,7 +107,20 @@ assert scene.mixie_chat_state == 'IDLE' and not scene.mixie_run_open
 result = True
 '''
 
-
+FOOTER = '''
+from mixar.bootstrap import chat_generate_options_cache as catalog
+f = drv._review_send
+f.originals.append((catalog, 'get_generate_type_enum_items', catalog.get_generate_type_enum_items))
+catalog.get_generate_type_enum_items = lambda: [('image_gen', 'Image', 'QA image generation', 0)]
+f.area = max(drv.main_window().screen.areas, key=lambda a: a.width*a.height)
+f.old_type = f.area.type
+f.area.type = 'MIXIE_CHAT'
+f.scene.mixie_chat_mode = 'GENERATE'
+f.scene.mixie_chat_generate_type = 'image_gen'
+f.scene.mixie_imagegen_is_generating = True
+f.scene.mixie_chat_input = 'Do not hide Cancel while I draft the next prompt.'
+result = True
+'''
 
 
 def run(qa):
@@ -118,8 +131,14 @@ def run(qa):
     try:
         qa.step('quick_prompt_preserves_both_drafts', qa.eval, QUICK)
         qa.step('delivery_and_expired_background_journal', qa.eval, DELIVERY)
+        qa.step('active_generation_with_draft', qa.eval, FOOTER)
+        qa.wait("bool(drv.find(area_type='MIXIE_CHAT', op='MIXIE_CHAT_OT_cancel_generation'))", timeout=10)
+        assert not qa.find(area_type='MIXIE_CHAT', op='MIXIE_CHAT_OT_send_message')['total']
+        time.sleep(.3)
+        qa.eval("win=drv.main_window()\nwith bpy.context.temp_override(window=win):\n"
+                f"    result=win.mixar_qa_capture_frame(filepath={str(out / 'generation-cancel.png')!r})")
         return {'drafts_preserved': True, 'delivery_identity': True,
-                'background_run_preserved': True, 'backend_calls': 0}
+                'background_run_preserved': True, 'cancel_visible': True, 'backend_calls': 0}
     finally:
         qa.eval('''
 import chat_send_probe as probe

@@ -27,9 +27,6 @@
 namespace blender {
 struct ARegion;
 struct bContext;
-struct ScrArea;
-struct wmWindow;
-struct wmEvent;
 }  // namespace blender
 
 namespace blender::ed::mixie {
@@ -37,16 +34,5 @@ namespace blender::ed::mixie {
 /** Paint the moodboard canvas (grid, links, images, textboxes, graph nodes)
  * into `region`, clipped to it by the region's own View2D mask. */
 void mixie_moodboard_canvas_draw(const bContext *C, ARegion *region);
-
-/** Exposed canvas point, excluding the actual floating controls and sidebar. */
-bool moodboard_canvas_point_is_interactive(const ScrArea *area,
-                                          const ARegion *region,
-                                          const int xy[2]);
-
-/** Gate pointer actions while preserving region shortcuts, leave events and timers. */
-bool moodboard_canvas_handler_poll(const wmWindow *win,
-                                  const ScrArea *area,
-                                  const ARegion *region,
-                                  const wmEvent *event);
 
 }  // namespace blender::ed::mixie
