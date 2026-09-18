@@ -55,8 +55,12 @@ _sidebar_running: set[str] = set()
 
 
 def _sidebar_key(owner, owner_type: str) -> str:
+    """``<scene>:<owner_type>`` — the scene by ``session_uid`` (stable across
+    a rename within the session, never reused), falling back to its name."""
     scene = getattr(owner, "id_data", None)
-    return f"{getattr(scene, 'name', '') or ''}:{owner_type}"
+    uid = getattr(scene, "session_uid", None)
+    scene_id = str(uid) if isinstance(uid, int) and uid else str(getattr(scene, "name", "") or "")
+    return f"{scene_id}:{owner_type}"
 
 
 # ---------------------------------------------------------------------------

@@ -594,8 +594,8 @@ def test_sidebar_state_is_scoped_to_the_owning_scene():
     alone would let Scene B revert to Scene A's prompt."""
     engine = _engine()
     engine.forget_sidebar_state()
-    owner_a = SimpleNamespace(prompt="x", id_data=SimpleNamespace(name="Scene A"))
-    owner_b = SimpleNamespace(prompt="y", id_data=SimpleNamespace(name="Scene B"))
+    owner_a = SimpleNamespace(prompt="x", id_data=SimpleNamespace(name="Scene A", session_uid=11))
+    owner_b = SimpleNamespace(prompt="y", id_data=SimpleNamespace(name="Scene B", session_uid=12))
     slot_a = engine.SidebarSlot(owner_a, "MixieTab", "image_gen", "m")
     slot_a.stash("a knight")
     slot_a.set_running(True)
@@ -605,6 +605,9 @@ def test_sidebar_state_is_scoped_to_the_owning_scene():
         assert engine.sidebar_can_revert(owner_b, "MixieTab") is False
         assert engine.sidebar_is_refining(owner_b, "MixieTab") is False
         engine.forget_sidebar_state(owner_b, "MixieTab")
+        assert engine.sidebar_can_revert(owner_a, "MixieTab") is True
+        # A rename within the session does not orphan the stash.
+        owner_a.id_data.name = "Scene A renamed"
         assert engine.sidebar_can_revert(owner_a, "MixieTab") is True
     finally:
         engine.forget_sidebar_state()
