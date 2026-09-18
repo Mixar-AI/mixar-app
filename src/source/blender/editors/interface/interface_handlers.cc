@@ -3389,6 +3389,12 @@ static bool ui_but_is_multiline_text(const Button *but)
   if (!(but->flag & BUT_TEXTEDIT_UPDATE)) {
     return false;
   }
+  /* Same rule as interface_widgets.cc: scene.mixie_chat_input is always
+   * multiline so later prompts keep wrapping after the island collapses
+   * to its 1-line strip. */
+  if (but->rnaprop && STREQ(RNA_property_identifier(but->rnaprop), "mixie_chat_input")) {
+    return true;
+  }
   return (int(BLI_rctf_size_y(&but->rect)) > int(UI_UNIT_Y * 1.5f));
 }
 

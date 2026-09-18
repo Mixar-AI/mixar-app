@@ -62,12 +62,16 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
   const int input_w = int(float(region_width) - side_padding * 2.0f);
   const int rect_width = std::max(input_w - int(4.0f * U.pixelsize), 10);
 
+  /* Widget wrap width is the field minus the 0.4 UI-unit text pad that
+   * widget_draw_text applies before wrapping, then 4*pixelsize. Matching
+   * that (and the native widget font — no 1.2x) keeps footer growth in
+   * lock-step with the glyphs the user actually sees. */
+  const int text_pad = int(0.4f * U.widget_unit);
+  const int wrap_width = std::max(rect_width - text_pad, 10);
+
   int visual_line_count;
-  if (rect_width > 10) {
-    /* Use the same font setup as widget_draw_text_multiline():
-     *   font = ui::style_get()->widget with points * 1.2f */
+  if (wrap_width > 10) {
     uiFontStyle fstyle = ui::style_get()->widget;
-    fstyle.points *= 1.2f;
     ui::fontstyle_set(&fstyle);
     const int fontid = fstyle.uifont_id;
 
@@ -75,7 +79,7 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
     blender::Vector<blender::StringRef> lines = BLF_string_wrap(
         fontid,
         blender::StringRef(text, text_len),
-        rect_width,
+        wrap_width,
         BLFWrapMode(int(BLFWrapMode::Typographical) | int(BLFWrapMode::HardLimit)));
 
     visual_line_count = int(lines.size());

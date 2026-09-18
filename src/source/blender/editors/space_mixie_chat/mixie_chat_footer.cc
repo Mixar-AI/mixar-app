@@ -252,6 +252,15 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   FooterElementPositions pos;
   footer_layout_calculate_positions(
       region->winx, pending_count, theme, &pos, input_lines, mention_rows);
+  /* Layout may have asked for more lines than this frame's winrct has —
+   * a uiButton taller than its region stops drawing text entirely, which
+   * is how a grown subsequent prompt vanished until the next resize. */
+  {
+    const int max_input_h = region->winy - pos.input_y;
+    if (max_input_h > 0 && pos.input_height > max_input_h) {
+      pos.input_height = max_input_h;
+    }
+  }
 
   const float scale = UI_SCALE_FAC;
 

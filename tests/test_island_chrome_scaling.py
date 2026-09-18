@@ -67,6 +67,17 @@ def test_the_default_window_is_a_compact_cut_of_the_artboard():
     assert 0.51 < scale < 0.53
 
 
+def test_post_transcript_strip_grows_instead_of_staying_one_artboard_row():
+    """After the first send the composer is a TOOLS strip. A fixed
+    AGENT_INPUT_H row is shorter than the multiline gate at the default
+    island width, so later prompts must grow the strip and the chrome."""
+    build = _function_body(LAYOUT_CC, "void agent_ui_layout_build(")
+    assert "agent_ui_composer_strip_h(input_lines)" in build
+    assert "chip_y - AGENT_INPUT_GAP - AGENT_INPUT_H" not in build
+    chrome = _function_body(BUBBLE_CC, "static void agent_bubble_sync_chrome_sizes(")
+    assert "agent_ui_composer_strip_h(input_lines)" in chrome
+
+
 def test_compact_height_is_valid_the_card_stretches():
     """A window shorter than the artboard must still lay out.
 

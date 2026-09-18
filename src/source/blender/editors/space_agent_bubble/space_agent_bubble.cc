@@ -879,13 +879,20 @@ bool agent_bubble_island_layout_get(const bContext *C,
   const float pad_ratio = agent_bubble_pad_ratio(win);
   const int px_w = WM_window_native_pixel_x(win);
   const int unit_w = (pad_ratio > 0.0f) ? int(float(px_w) * pad_ratio + 0.5f) : px_w;
+  const int pad_real_w = (pad_ratio > 0.0f) ? px_w : 0;
+  const int input_lines = input_is_strip ?
+                              agent_ui_composer_visual_lines(
+                                  r_state->input_text,
+                                  agent_ui_composer_wrap_width_px(unit_w, pad_real_w)) :
+                              1;
   agent_ui_layout_build(unit_w,
                         WM_window_native_pixel_y(win),
                         AgentTabId(r_state->active_tab),
                         r_state->agent_mode,
                         input_is_strip,
                         r_layout,
-                        /*pad_real_w=*/(pad_ratio > 0.0f) ? px_w : 0);
+                        pad_real_w,
+                        input_lines);
   /* The layout always reserves the Voice chip's slot right of Scribble; on a
    * platform without a recogniser the toggle is never registered, so the
    * chips after it close the gap and the slot is emptied. */
@@ -1246,8 +1253,10 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
   const int top_units = (pad_ratio > 0.0f) ?
                             (AGENT_PANEL_Y - (AGENT_CARD_Y - AGENT_PAD_TOP_INSET)) :
                             (AGENT_PANEL_Y - AGENT_ISLAND_TOP);
-  const int bottom_units = AGENT_TRANSCRIPT_GAP + AGENT_INPUT_H + AGENT_INPUT_GAP +
-                           AGENT_CHIP_H + AGENT_CARD_PAD_BOTTOM;
+  /* Strip height is filled in after state gather — a 1-line default here
+   * would leave TOOLS short of a 2–4 line draft and clip the extra lines. */
+  int bottom_units = AGENT_TRANSCRIPT_GAP + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
+                     AGENT_CARD_PAD_BOTTOM;
 
   /* With no conversation the field IS the panel, so the TOOLS region grows to
    * cover everything below the header except the sliver Blender reserves as
@@ -1272,6 +1281,17 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
   AgentIslandState tab_probe;
   agent_ui_state_gather(C, &tab_probe);
   const bool agent_tab_active = (tab_probe.active_tab == AGENT_TAB_AGENT);
+  const bool wants_input_strip = has_conversation || tab_probe.ink_visible;
+  if (wants_input_strip) {
+    const int native_w = WM_window_native_pixel_x(win);
+    const int unit_w = (pad_ratio > 0.0f) ? int(float(native_w) * pad_ratio + 0.5f) : native_w;
+    const int pad_real_w = (pad_ratio > 0.0f) ? native_w : 0;
+    const int input_lines = agent_ui_composer_visual_lines(
+        tab_probe.input_text, agent_ui_composer_wrap_width_px(unit_w, pad_real_w));
+    const int strip_units = int(agent_ui_composer_strip_h(input_lines) + 0.5f);
+    bottom_units = AGENT_TRANSCRIPT_GAP + strip_units + AGENT_INPUT_GAP + AGENT_CHIP_H +
+                   AGENT_CARD_PAD_BOTTOM;
+  }
   (void)win_logical_h;
   for (ARegion &other_ref : area->regionbase) {
     ARegion *other = &other_ref;
@@ -1289,7 +1309,6 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
          * the strip clamps to zero height inside a band with no space for it
          * and the island has no composer at all, which is how a landed
          * handwriting transcription ended up with nowhere to be seen. */
-        const bool wants_input_strip = has_conversation || tab_probe.ink_visible;
         units = wants_input_strip ? bottom_units : bottom_units_empty;
       }
       else {
