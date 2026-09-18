@@ -136,6 +136,16 @@ void agent_ui_layout_build(int window_w,
                            bool agent_mode_active,
                            bool has_transcript,
                            AgentIslandLayout *r_layout,
-                           int pad_real_w);
+                           int pad_real_w,
+                           int input_lines = 1);
+
+/** Pixel wrap width of the composer field for the given window / pad. */
+float agent_ui_composer_wrap_width_px(int window_w, int pad_real_w);
+
+/** Visual wrapped lines in `text`, clamped to 1..AGENT_INPUT_MAX_LINES. */
+int agent_ui_composer_visual_lines(const char *text, float wrap_width_px);
+
+/** Artboard-unit height of the post-transcript input strip. */
+float agent_ui_composer_strip_h(int visual_lines);
 
 }  // namespace blender

@@ -2089,6 +2089,12 @@ static bool ui_but_is_multiline_text(const Button *but)
   if (!(but->flag & BUT_TEXTEDIT_UPDATE)) {
     return false;
   }
+  /* The Mixie / island composer must wrap even when the strip is a single
+   * artboard row (~29 px at the default island width). The height gate
+   * alone would flip it back to single-line after the first send. */
+  if (but->rnaprop && STREQ(RNA_property_identifier(but->rnaprop), "mixie_chat_input")) {
+    return true;
+  }
   return (int(BLI_rctf_size_y(&but->rect)) > int(UI_UNIT_Y * 1.5f));
 }
 
@@ -2139,12 +2145,18 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
 #endif
 
   if (!drawstr || !drawstr[0]) {
+    /* A leftover scroll from the previous prompt hid the next one: the
+     * MixarMultilineState is copied across button rebuilds, and the
+     * placeholder path used to return before the was_editing reset. */
+    state.scroll_offset = 0;
+    state.previous_cursor = -1;
     if (but->editstr) {
       /* Editing an empty string — fall through to draw the cursor.
        * We still need line height, scroll tracking, and cursor rendering
        * so the caret is visible immediately on click. */
     }
     else {
+      state.was_editing = false;
       /* Not editing: draw placeholder if available, then return */
       if (ELEM(but->type, ButtonType::Text, ButtonType::SearchMenu)) {
         const char *placeholder = button_placeholder_get(but);

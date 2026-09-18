@@ -40,7 +40,8 @@ def drawing():
     context = NS(
         scene=NS(mixie_moodboard_annotations=strokes, mixie_moodboard_show_annotations=False,
                  mixie_edit_tool_state=NS(annotation_width=4, annotation_color=(1, .1, 0, 1))),
-        window_manager=NS(mixie_moodboard_annotating=True, modal_handler_add=Mock()),
+        window_manager=NS(mixie_moodboard_annotating=True, mixie_moodboard_erasing=False,
+                          modal_handler_add=Mock()),
         region=NS(type='TOOL_PROPS', x=100, y=80,
                   view2d=NS(region_to_view=lambda x, y: (x * 2 - 500, y * 2 + 300))),
         window=NS(cursor_modal_set=Mock(), cursor_modal_restore=Mock()),

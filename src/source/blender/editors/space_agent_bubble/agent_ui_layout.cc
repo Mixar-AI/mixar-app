@@ -9,11 +9,19 @@
  * Builds the Agent island's geometry from the artboard tokens.
  */
 
+#include <algorithm>
+#include <cstring>
+
 #include "BLI_rect.h"
+#include "BLI_string_ref.hh"
+#include "BLI_vector.hh"
 
 #include "BKE_screen.hh"
 
+#include "BLF_api.hh"
+
 #include "DNA_screen_types.h"
+#include "DNA_userdef_types.h"
 
 #include "UI_interface.hh"
 #include "UI_mixar.hh"
@@ -96,13 +104,57 @@ const char *agent_ui_tab_label(const AgentTabId tab)
 /** \name Build
  * \{ */
 
+float agent_ui_composer_wrap_width_px(const int window_w, const int pad_real_w)
+{
+  const bool pad = pad_real_w > 0;
+  const float u = float(window_w) / float(AGENT_ISLAND_W);
+  const float region_w = pad ? float(pad_real_w) : float(window_w);
+  const float island_w = pad ? (region_w / u) : float(AGENT_ISLAND_W);
+  const float card_w = island_w - AGENT_CARD_X * 2.0f;
+  return (card_w - AGENT_SEG_X * 2.0f) * u;
+}
+
+int agent_ui_composer_visual_lines(const char *text, const float wrap_width_px)
+{
+  if (text == nullptr || text[0] == '\0') {
+    return 1;
+  }
+
+  /* Must match widget_draw_text_multiline: native widget font, wrap width
+   * after the 0.4 UI-unit text pad and 4*pixelsize inset. */
+  const int text_pad = int(0.4f * U.widget_unit);
+  const int width = std::max(int(wrap_width_px) - text_pad - int(4.0f * U.pixelsize), 10);
+
+  uiFontStyle fstyle = ui::style_get()->widget;
+  ui::fontstyle_set(&fstyle);
+  const int fontid = fstyle.uifont_id;
+  const int text_len = int(strlen(text));
+  blender::Vector<blender::StringRef> lines = BLF_string_wrap(
+      fontid,
+      blender::StringRef(text, text_len),
+      width,
+      BLFWrapMode(int(BLFWrapMode::Typographical) | int(BLFWrapMode::HardLimit)));
+  int count = int(lines.size());
+  if (text_len > 0 && text[text_len - 1] == '\n') {
+    count++;
+  }
+  return std::clamp(std::max(1, count), 1, AGENT_INPUT_MAX_LINES);
+}
+
+float agent_ui_composer_strip_h(const int visual_lines)
+{
+  const int lines = std::clamp(visual_lines, 1, AGENT_INPUT_MAX_LINES);
+  return float(AGENT_INPUT_H * lines);
+}
+
 void agent_ui_layout_build(const int window_w,
                            const int window_h,
                            AgentTabId active_tab,
                            const bool /*agent_mode_active*/,
                            const bool has_transcript,
                            AgentIslandLayout *r_layout,
-                           const int pad_real_w)
+                           const int pad_real_w,
+                           const int input_lines)
 {
   *r_layout = {};
   const bool pad = pad_real_w > 0;
@@ -299,8 +351,14 @@ void agent_ui_layout_build(const int window_w,
    * the transcript region owns the panel. */
   const float input_x = AGENT_SEG_X;
   const float input_w = card_w - AGENT_SEG_X * 2.0f;
-  const float input_y = has_transcript ? (chip_y - AGENT_INPUT_GAP - AGENT_INPUT_H)
-                                       : AGENT_PANEL_Y;
+  /* After the first send the field is a strip above the chips. Grow that
+   * strip with the draft (1–4 visual lines) so Shift+Enter stays visible —
+   * a fixed AGENT_INPUT_H row is ~29 px at the default 678-wide island,
+   * which falls under the 1.5*UI_UNIT_Y multiline gate and clips later
+   * prompts to a single line. */
+  const float strip_h = agent_ui_composer_strip_h(input_lines);
+  const float input_y = has_transcript ? (chip_y - AGENT_INPUT_GAP - strip_h) :
+                                         AGENT_PANEL_Y;
   r_layout->input = f.box(input_x,
                           input_y,
                           input_w,

@@ -234,6 +234,7 @@ namespace blender {
  * These are the fixed distances measured UP from the card's bottom edge. */
 #define AGENT_CARD_PAD_BOTTOM 16 /* card foot -> chip row bottom */
 #define AGENT_INPUT_H 56
+#define AGENT_INPUT_MAX_LINES 4  /* strip auto-grows 1–4 rows on Shift+Enter */
 #define AGENT_INPUT_GAP 16       /* input line -> chip row */
 #define AGENT_TRANSCRIPT_GAP 16  /* transcript -> input line */
 

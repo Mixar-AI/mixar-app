@@ -18,12 +18,13 @@ sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario
 sys.path.insert(0, str(Path(__file__).parent))
 from moodboard_drawer_e2e import SETUP, drop, geometry, png, point, target, toggle
-from moodboard_drawer_tools_e2e import ANNOTATE, toolbar, hover
+from moodboard_drawer_tools_e2e import ANNOTATE, ERASE, toolbar, hover
 from moodboard_drawer_resize_links_e2e import reload_preset
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/moodboard-annotations'))
 STROKES = 'drv.main_window().scene.mixie_moodboard_annotations'
 ACTIVE = 'bpy.context.window_manager.mixie_moodboard_annotating'
+ERASING = 'bpy.context.window_manager.mixie_moodboard_erasing'
 
 
 def strokes(qa):
@@ -46,6 +47,48 @@ def set_mode(qa, enabled):
     # channel; the QA `sel` field only covers native enum/value selection.
     qa.wait(f"abs(drv.find_one(**{ANNOTATE!r})['mixar_motion']['selected']-{int(enabled)}) < .002",
             timeout=4)
+    if enabled:
+        qa.wait(f'not {ERASING}', timeout=4)
+
+
+def set_erase(qa, enabled):
+    current = qa.eval(f'result={ERASING}')
+    if current != enabled:
+        qa.click(**ERASE)
+    qa.wait(f'{ERASING} == {enabled!r}', timeout=4)
+    qa.wait(f"abs(drv.find_one(**{ERASE!r})['mixar_motion']['selected']-{int(enabled)}) < .002",
+            timeout=4)
+    if enabled:
+        qa.wait(f'not {ACTIVE}', timeout=4)
+
+
+def erase_stroke(qa, *, index=0, cancel=False):
+    before = strokes(qa)
+    qa.eval(SETUP + f'''
+def gesture():
+    p={STROKES}[{index}].points[0]
+    sx,sy=drawer.view2d.view_to_region(p.x,p.y,clip=False)
+    x,y=drawer.x+sx,drawer.y+sy
+    drv.move_to(win,x,y)
+    yield .08
+    drv._sim(win,type='LEFTMOUSE',value='PRESS',x=x,y=y)
+    yield .08
+    drv.move_to(win,x+6,y+4)
+    yield .04
+    if {cancel!r}:
+        drv.press(win,'ESC')
+        yield .1
+    drv._sim(win,type='LEFTMOUSE',value='RELEASE',x=x+6,y=y+4)
+    yield .15
+    return True
+result=gesture()
+''')
+    after = strokes(qa)
+    if cancel:
+        assert after == before, (before, after)
+    else:
+        assert len(after) == len(before) - 1, (before, after)
+    assert qa.eval(f'result={ERASING}')
 
 
 def draw(qa, *, cancel=False, offset=0, canvas=None):
@@ -220,6 +263,17 @@ def visibility(qa):
             capture(qa, '08-hidden')
 
 
+def close_releases_erase(qa):
+    assert qa.eval(f'result={ERASING}')
+    before = strokes(qa)
+    toggle(qa, 0)
+    qa.wait(f'not {ERASING}', timeout=5)
+    toggle(qa, 1)
+    qa.wait('bpy.context.window_manager.mixar_moodboard_drawer_amount > .998', timeout=8)
+    assert strokes(qa) == before
+    assert not qa.eval(f'result={ERASING}')
+
+
 def clear_and_undo(qa):
     before = strokes(qa)
     for confirm in (False, True):
@@ -248,6 +302,16 @@ def run(qa):
     qa.step('enable_annotation', set_mode, qa, True)
     qa.step('draw_on_empty_board', draw, qa)
     qa.step('draw_second_stroke', draw, qa, offset=.12)
+    qa.wait("len(drv.find(region_type='TOOL_PROPS', op='MIXIE_OT_moodboard_erase_canvas')) == 1",
+            timeout=4)
+    qa.step('erase_tooltip', hover, qa, ERASE, '12-erase-tooltip')
+    qa.step('enable_erase', set_erase, qa, True)
+    qa.step('cancel_inflight_erase', erase_stroke, qa, cancel=True)
+    qa.step('erase_one_stroke', erase_stroke, qa)
+    qa.step('erased_screenshot', capture, qa, '09-erased')
+    qa.step('close_releases_erase', close_releases_erase, qa)
+    qa.step('enable_annotation_after_erase', set_mode, qa, True)
+    qa.step('restore_second_stroke', draw, qa, offset=.12)
     qa.step('cancel_inflight_stroke', draw, qa, cancel=True, offset=-.12)
     qa.step('undo_redo_per_stroke', undo_redo, qa)
     qa.step('drawn_screenshot', capture, qa, '01-strokes')

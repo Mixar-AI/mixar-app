@@ -45,6 +45,7 @@ def test_active_pointer_map_hits_graph_before_media_fallback(modifier):
                     'mixie.moodboard_select_image']
         if not extras:
             expected.insert(0, 'mixie.moodboard_annotation_stroke')
+            expected.insert(0, 'mixie.moodboard_annotation_erase')
         assert [item.idname for item in press] == expected
         if extras:
             assert all(item.properties.extend for item in press)

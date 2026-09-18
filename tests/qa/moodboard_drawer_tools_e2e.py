@@ -23,6 +23,7 @@ BLOCK = {'region_type': 'TOOL_PROPS'}
 TEXT = {**BLOCK, 'op': 'MIXIE_OT_moodboard_add_textbox'}
 MEDIA = {**BLOCK, 'but_type': 'Menu'}
 ANNOTATE = {**BLOCK, 'op': 'MIXIE_OT_moodboard_annotate_canvas'}
+ERASE = {**BLOCK, 'op': 'MIXIE_OT_moodboard_erase_canvas'}
 BOXES = 'drv.main_window().scene.mixie_moodboard_textboxes'
 IMAGES = 'drv.main_window().scene.mixie_moodboard_images'
 
@@ -58,6 +59,7 @@ def toolbar(qa):
     assert 'saved in the project' in annotate['tip'], annotate
     assert media['tip'].startswith('Open an image or video'), media
     assert 'Add a text box' in text['tip'], text
+    assert not qa.find(**ERASE)['total']
     return controls
 
 
