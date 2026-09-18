@@ -20,6 +20,8 @@ from pathlib import Path
 
 _EDITORS = Path(__file__).parents[1] / "src/source/blender/editors"
 _SECTION = _EDITORS / "interface/interface_mixar_section.cc"
+# The cache itself lives in its own TU; the section only draws and hands rects over.
+_TAB_RECTS = _EDITORS / "interface/interface_mixar_tab_rects.cc"
 _WM_WINDOW = (Path(__file__).parents[1]
               / "src/source/blender/windowmanager/intern/wm_window.cc")
 
@@ -40,7 +42,7 @@ def _fn(source: str, signature: str) -> str:
 
 
 def test_the_tab_rect_cache_is_bounded():
-    src = _SECTION.read_text(encoding="utf-8")
+    src = _TAB_RECTS.read_text(encoding="utf-8")
     assert "MIXAR_TAB_RECT_MAX_REGIONS" in src
     # The bound is enforced where entries are added, not merely declared.
     assert "rect_map.size() >= MIXAR_TAB_RECT_MAX_REGIONS" in src
@@ -48,7 +50,7 @@ def test_the_tab_rect_cache_is_bounded():
 
 
 def test_a_recycled_region_pointer_cannot_read_stale_tabs():
-    src = _SECTION.read_text(encoding="utf-8")
+    src = _TAB_RECTS.read_text(encoding="utf-8")
     body = _fn(src, "static const Vector<MixarCategoryTabRect> *mixar_category_tabs_for(")
     assert "winrct" in body and "BLI_rcti_compare" in body
     # Both readers must go through the validating accessor, not the raw map.
@@ -59,8 +61,18 @@ def test_a_recycled_region_pointer_cannot_read_stale_tabs():
 
 
 def test_the_recorded_entry_carries_the_regions_geometry():
-    src = _SECTION.read_text(encoding="utf-8")
+    src = _TAB_RECTS.read_text(encoding="utf-8")
     assert "MixarCategoryTabs{region->winrct" in src
+
+
+def test_the_strip_records_its_rects_through_the_bounded_writer():
+    """The bound and the winrct stamp are only worth having if the draw cannot
+    reach past them -- the section must hand its rects to the writer rather
+    than touching the map, which now lives in another translation unit."""
+    src = _SECTION.read_text(encoding="utf-8")
+    body = _fn(src, "void UI_panel_category_draw_all_mixar(")
+    assert "mixar_category_tabs_store(region, std::move(tab_rects));" in body
+    assert "add_overwrite" not in body and "rect_map" not in body
 
 
 def test_the_bubble_blanket_reset_waits_for_the_last_window():

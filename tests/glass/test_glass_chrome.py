@@ -283,9 +283,13 @@ class TestTheCategoryTabsArePanes:
         The record now carries the region's winrct alongside the rects, so a
         recycled ARegion pointer cannot read a dead region's tabs; assert the
         recording, not the exact call text it is made with.
+
+        The map moved to interface_mixar_tab_rects.cc, so what the draw owes is
+        handing its rects over -- the bound and the winrct stamp are pinned in
+        tests/test_native_cache_lifetimes.py.
         """
         tabs = self._tabs()
-        assert "add_overwrite(region, MixarCategoryTabs{region->winrct" in tabs
+        assert "mixar_category_tabs_store(region" in tabs
         assert "std::move(tab_rects)" in tabs
 
     def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
