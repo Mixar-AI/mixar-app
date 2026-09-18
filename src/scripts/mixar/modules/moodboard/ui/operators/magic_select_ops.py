@@ -231,7 +231,7 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
         state = scene.mixie_edit_tool_state
 
         # Surface the segments panel (Character Parts / Scene Gen fallback)
-        from ..sidebar_focus import focus_segments_panel
+        from ..sidebar_ui_helpers import focus_segments_panel
         focus_segments_panel(context)
 
         # Find the selected image

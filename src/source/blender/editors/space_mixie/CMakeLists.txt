@@ -89,8 +89,6 @@ set(LIB
   PRIVATE bf::dependencies::fmt
   PRIVATE bf::windowmanager
   bf_editor_interface
-  # The shared voice glyph + session-state readers (editors/mixar_audio).
-  bf_editor_mixar_audio
 )
 
 

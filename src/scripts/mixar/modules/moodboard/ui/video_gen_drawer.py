@@ -50,7 +50,6 @@ def _draw_video_gen(layout, context):
     draw_section_separator(layout)
     draw_prompt_section(
         layout, tab, label="Prompt", icon='TEXT', min_lines=3, max_lines=7,
-        context=context,
     )
     draw_section_separator(layout)
 

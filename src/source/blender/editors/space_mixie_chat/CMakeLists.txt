@@ -85,8 +85,6 @@ set(LIB
   PRIVATE bf::intern::guardedalloc
   PRIVATE bf::windowmanager
   bf_editor_interface
-  # Mic capture + the shared voice glyph (editors/mixar_audio).
-  bf_editor_mixar_audio
 )
 
 blender_add_lib(bf_editor_space_mixie_chat "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")

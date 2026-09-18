@@ -460,17 +460,6 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
                  int(FOOTER_BUTTON_SPACING_BASE * scale);
   }
 
-  /* Mic — last in the row, so the controls read left to right as "what am I
-   * sending" (attachments, screenshot) then "how am I writing it". Only in
-   * AGENT mode: the generate modes submit a prompt through a different lane
-   * and their fields are not this composer. */
-  if (!is_generate_mode) {
-    next_btn_x = mixie_chat_voice_add_button(block, pos, next_btn_x, scale);
-  }
-  else {
-    pos.voice_btn_size = 0;
-  }
-
   /* Plan mode toggle (iOS-style switch) removed for now. It used to sit
    * here, only in Agent mode: a "Plan" label + iOS switch with a
    * transparent click target running MIXIE_CHAT_OT_toggle_plan_mode, plus
@@ -585,8 +574,6 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   if (show_send) {
     footer_draw_submit_icon(region, pos);
   }
-  /* The mic's glyph, and its waveform over the composer while recording. */
-  mixie_chat_voice_draw(C, region, pos, scale);
   /* Plan mode toggle overlay removed for now (see the click-target
    * removal above); footer_draw_plan_toggle() remains available to
    * restore it. */

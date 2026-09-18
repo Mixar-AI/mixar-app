@@ -39,7 +39,7 @@ def draw_blockout_mode(layout, context, model_owner):
         return
 
     # --- Prompt ---
-    draw_prompt_section(layout, lookdev_tab, context=context)
+    draw_prompt_section(layout, lookdev_tab)
     draw_section_separator(layout)
 
     # --- Settings ---

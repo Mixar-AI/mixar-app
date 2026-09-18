@@ -100,9 +100,7 @@ def _draw_texture_gen(layout, context):
 
     # --- Prompt ---
     draw_prompt_section(
-        layout, tab, label=_PROMPT_LABELS.get(service_key, "Prompt"),
-        context=context,
-    )
+        layout, tab, label=_PROMPT_LABELS.get(service_key, "Prompt"))
     draw_section_separator(layout)
 
     # --- Per-mode inputs ---

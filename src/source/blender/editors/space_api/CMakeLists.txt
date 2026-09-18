@@ -24,7 +24,6 @@ set(LIB
   PRIVATE bf::blenlib
   PRIVATE bf::dna
   bf_editor_geometry
-  bf_editor_mixar_audio
   bf_editor_space_action
   bf_editor_space_buttons
   bf_editor_space_clip
