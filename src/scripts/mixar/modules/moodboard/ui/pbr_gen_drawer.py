@@ -85,7 +85,7 @@ def _draw_pbr_gen(layout, context):
     draw_section_separator(layout)
 
     # --- Prompt (optional text guidance) ---
-    draw_prompt_section(layout, tab, label="Prompt (optional)", context=context)
+    draw_prompt_section(layout, tab, label="Prompt (optional)")
     draw_section_separator(layout)
 
     # --- Reference images: single ⇄ multi-view ---

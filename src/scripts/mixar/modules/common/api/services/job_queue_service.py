@@ -173,10 +173,7 @@ class JobQueueService(BaseService):
         caller is unchanged.
         """
         _require_auth()
-        # ``audio`` is voice dictation's only upload path — there is no base64
-        # fallback for a recording, so this is how a clip reaches the backend
-        # at all (and how its duration gets measured for billing).
-        if media_kind not in {"image", "video", "audio"}:
+        if media_kind not in {"image", "video"}:
             raise ValueError(f"Unsupported media kind: {media_kind!r}")
         path = f"uploads/{media_kind}"
         if purpose:

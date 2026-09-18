@@ -208,7 +208,7 @@ def _hosting_capability() -> str:
     """Capability whose tab hosts Segments-to-3D on the live catalog.
 
     Character Parts on post-split catalogs, Scene Gen before the split —
-    the same resolution ``sidebar_focus.focus_segments_panel`` uses.
+    the same resolution ``sidebar_ui_helpers.focus_segments_panel`` uses.
     Feeds only the draft-abandonment suppression marker.
     """
     try:

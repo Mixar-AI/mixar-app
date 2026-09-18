@@ -52,7 +52,7 @@ def _draw_imagegen(layout, context):
     # --- Text to Image (default / catalog-not-loaded fallback) ---
 
     # --- Prompt ---
-    draw_prompt_section(layout, tab, context=context)
+    draw_prompt_section(layout, tab)
     draw_section_separator(layout)
 
     # --- Reference images ---
@@ -142,7 +142,7 @@ def _draw_lookdev360(layout, context):
     tab = context.scene.mixie_moodboard_sidebar.tab_lookdev360
 
     # --- Prompt ---
-    draw_prompt_section(layout, tab, context=context)
+    draw_prompt_section(layout, tab)
     draw_section_separator(layout)
 
     # --- Reference image ---
@@ -225,7 +225,7 @@ def _draw_image_to_3d_basic(layout, context):
     tab = scene.mixie_moodboard_sidebar.tab_image_to_3d
 
     # --- Prompt ---
-    draw_prompt_section(layout, tab, label="Prompt (optional)", context=context)
+    draw_prompt_section(layout, tab, label="Prompt (optional)")
     draw_section_separator(layout)
 
     # --- Input image ---
@@ -279,7 +279,7 @@ def _draw_scene_recon(layout, context):
     tab = scene.mixie_moodboard_sidebar.tab_scene_recon
 
     # --- Description ---
-    draw_prompt_section(layout, tab, label="Scene Description", icon='SCENE_DATA', context=context)
+    draw_prompt_section(layout, tab, label="Scene Description", icon='SCENE_DATA')
     draw_section_separator(layout)
 
     # --- Input image ---

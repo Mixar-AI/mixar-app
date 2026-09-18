@@ -22,7 +22,6 @@ if(WITH_BLENDER)
   add_subdirectory(io)
   add_subdirectory(lattice)
   add_subdirectory(mask)
-  add_subdirectory(mixar_audio)  # Microphone capture for voice dictation
   add_subdirectory(mesh)
   add_subdirectory(metaball)
   add_subdirectory(object)
