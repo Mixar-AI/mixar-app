@@ -56,9 +56,16 @@ inline constexpr int INK_JSON_MAX = 98304;
  * between-words pause is ~0.3 s; a between-letters pause well under it. */
 inline constexpr double INK_IDLE_COMMIT_SEC = 0.45;
 
-/** Idle-commit timer period. Shorter than the idle threshold so a commit
- * fires at most one period late. */
-inline constexpr double INK_IDLE_TIMER_STEP = 0.15;
+/** Idle-commit timer period. The idle threshold above is only ever MEASURED
+ * on this tick, so the period is the commit's quantization error: a batch
+ * leaves between INK_IDLE_COMMIT_SEC and INK_IDLE_COMMIT_SEC + this after
+ * the pen lifts. At 0.15 that was an average 75 ms of pure waiting added to
+ * every batch, on the one delay the user feels most — with the on-device
+ * recogniser answering in a few hundred ms, the idle pause IS most of the
+ * time between lifting the pen and seeing text. The tick itself compares two
+ * doubles and passes the event through, and it only exists while ink is
+ * pending. */
+inline constexpr double INK_IDLE_TIMER_STEP = 0.05;
 
 /** \} */
 

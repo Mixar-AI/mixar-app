@@ -2,15 +2,28 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Stroke smoothing for the viewport ink overlay.
+"""Stroke smoothing — the curve the writer sees.
 
 Pointer samples arrive at the event rate and are distance-decimated on
 capture, so a fast stroke is a handful of points joined by straight
 segments — every corner of the polyline shows. This turns a sampled stroke
 into a Catmull-Rom spline through the SAME points (the ink still passes
 through every sample the user made, nothing is moved or dropped) and emits
-extra points along it for drawing. Draw-time only: what is stored, resolved
-against the scene, and sent as a sketch is still the raw sample.
+extra points along it.
+
+Three callers, one curve, which is the point: the viewport mark overlay
+(``core/overlay.py``), the chat canvas's C++ twin (``ink_smooth_stroke`` in
+``mixie_chat_ink_overlay.cc``) and the handwriting rasterizer
+(``space_mixie_chat/core/scribble_raster.py``). The rasterizer is why this
+is not draw-only any more: the page a recognizer reads has to show what the
+user watched come out of the pen, not the chords between the samples. What
+is STORED, resolved against the scene and sent as a sketch is still the raw
+sample.
+
+The parameterization is uniform, not centripetal. At capture density
+(~2 px between samples) the two differ by a fraction of the ink's width,
+and this runs per stroke on the draw path; centripetal's guarantee against
+overshoot only starts to pay at chord lengths a hand does not produce.
 
 Pure Python, no ``bpy``: pinned by the standalone suite.
 """
@@ -36,12 +49,15 @@ MAX_OUTPUT_POINTS = 4096
 def catmull_rom(points: Sequence[Point],
                 subdivisions: int = DEFAULT_SUBDIVISIONS,
                 min_segment_px: float = MIN_SEGMENT_PX) -> List[Tuple[float, ...]]:
-    """Return the stroke resampled along a centripetal-ish Catmull-Rom spline.
+    """Return the stroke resampled along a uniform Catmull-Rom spline.
 
     Every input point is emitted (in order), with ``subdivisions - 1``
     interpolated points inserted between neighbours whose distance exceeds
     ``min_segment_px``. Components beyond x/y (pressure, time) are carried
     by linear interpolation. Fewer than three points come back unchanged.
+
+    ``min_segment_px`` is measured in whatever space *points* are in, so a
+    caller working on a scaled page passes the threshold scaled to match.
     """
     pts = [tuple(float(c) for c in p) for p in points]
     n = len(pts)
