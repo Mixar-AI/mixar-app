@@ -4071,6 +4071,34 @@ extern "C" bool Mixar_WindowGetParentOffset(void *child_handle,
   return true;
 }
 
+/* Mixar: child client rect in the parent's client coordinates (logical
+ * 96-DPI units, bottom-left origin) — the Windows twin of the Cocoa helper. */
+extern "C" bool Mixar_WindowGetContentRectInParent(void *child_handle,
+                                                   void *parent_handle,
+                                                   int *r_x,
+                                                   int *r_y,
+                                                   int *r_w,
+                                                   int *r_h)
+{
+  HWND child = mixar_get_hwnd(child_handle);
+  HWND parent = mixar_get_hwnd(parent_handle);
+  if (!child || !parent || !r_x || !r_y || !r_w || !r_h) return false;
+  RECT pc, cc;
+  POINT po = {0, 0}, co = {0, 0};
+  if (!GetClientRect(parent, &pc) || !GetClientRect(child, &cc)) return false;
+  if (!ClientToScreen(parent, &po) || !ClientToScreen(child, &co)) return false;
+  float scale = mixar_get_dpi_scale_from_ghost(child_handle);
+  if (scale <= 0.0f) scale = 1.0f;
+  const int parent_h = pc.bottom - pc.top;
+  const int child_h = cc.bottom - cc.top;
+  *r_x = (int)((co.x - po.x) / scale);
+  /* Screen y grows downward; express the child's bottom edge from the parent's bottom. */
+  *r_y = (int)(((po.y + parent_h) - (co.y + child_h)) / scale);
+  *r_w = (int)((cc.right - cc.left) / scale);
+  *r_h = (int)(child_h / scale);
+  return true;
+}
+
 /* Logical (96-DPI) client size — the units Mixar_WindowForceSize takes. */
 extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *r_width, int *r_height)
 {

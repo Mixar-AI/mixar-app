@@ -164,6 +164,15 @@ static void rna_Window_mixar_qa_drop_file(
 /* Mixar: live GHOST client bounds (wm_draw.cc); wmWindow::posx/posy can be stale. */
 bool Mixar_window_live_client_rect(const wmWindow *win, int r_rect[4]);
 
+bool Mixar_window_content_rect_in(const wmWindow *win, const wmWindow *host, int r_rect[4]);
+
+static void rna_Window_mixar_content_rect_in(wmWindow *win, wmWindow *host, int r_rect[4])
+{
+  if (!Mixar_window_content_rect_in(win, host, r_rect)) {
+    r_rect[0] = r_rect[1] = r_rect[2] = r_rect[3] = 0;
+  }
+}
+
 static void rna_Window_mixar_live_client_rect(wmWindow *win, int r_rect[4])
 {
   if (!Mixar_window_live_client_rect(win, r_rect)) {
@@ -310,6 +319,20 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
               "screen points with a top-left origin; zeros when the window has no native window");
     PropertyRNA *parm = RNA_def_int_array(func, "rect", 4, nullptr, INT_MIN, INT_MAX, "Rect",
                                           "left, top, right, bottom", INT_MIN, INT_MAX);
+    RNA_def_function_output(func, parm);
+  }
+  /* This window's client rect inside another window's client coordinates
+   * (points, bottom-left origin) — exact across window styles. */
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_content_rect_in", "rna_Window_mixar_content_rect_in");
+    RNA_def_function_ui_description(
+        func, "This window's client rect in another window's client coordinates: "
+              "(x, y, width, height) in points, bottom-left origin; zeros when unavailable");
+    PropertyRNA *parm = RNA_def_pointer(func, "host", "Window", "", "The reference window");
+    RNA_def_parameter_flags(parm, PROP_NEVER_NULL, PARM_REQUIRED);
+    parm = RNA_def_int_array(func, "rect", 4, nullptr, INT_MIN, INT_MAX, "Rect",
+                             "x, y, width, height", INT_MIN, INT_MAX);
     RNA_def_function_output(func, parm);
   }
   StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager", nullptr);
