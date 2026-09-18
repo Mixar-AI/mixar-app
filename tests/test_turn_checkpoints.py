@@ -391,3 +391,117 @@ def test_backend_calls_block_sending_until_done(tc, monkeypatch):
         threading.Event().wait(0.01)
     assert tc.m.rewind_in_flight() is False
     assert request.call_args.args[0] == "checkpoint.rewind" and request.call_args.kwargs == {"mutation": True}
+
+
+def test_a_bookmarkless_rewind_clears_the_session_id(tc, monkeypatch):
+    """The backend only forks when the bookmark has a checkpoint id.
+    `has_conversation: false` means NOTHING was forked, and the contract says
+    the client clears its session id. It was deciding from its own local
+    `session_was_new` instead -- a different question -- so a .blend carrying a
+    session id whose backend thread was purged rolled the scene back while the
+    agent kept remembering every reverted turn."""
+    import threading
+    request = sys.modules["mixar.modules.common.agent_rpc.client"].request
+    request.side_effect = None
+    request.return_value = {"status": "success", "has_conversation": False}
+    notices, cleared = [], []
+    monkeypatch.setattr(tc.m, "_notify", lambda scene_name, text: notices.append(text))
+    monkeypatch.setattr(tc.m, "_clear_session_on_main",
+                        lambda scene_name: cleared.append(scene_name))
+    tc.bpy.data.scenes = [_scene()]
+
+    tc.m._send_backend("sess-1", [("checkpoint.rewind", {"session_id": "sess-1", "request_id": "x"})])
+    for _ in range(200):
+        if not tc.m.rewind_in_flight():
+            break
+        threading.Event().wait(0.01)
+
+    assert cleared, "has_conversation: false must clear the session id"
+    assert not notices, "a bookmark-less rewind is not a failure"
+
+
+def test_a_rewind_that_forked_leaves_the_session_alone(tc, monkeypatch):
+    import threading
+    request = sys.modules["mixar.modules.common.agent_rpc.client"].request
+    request.side_effect = None
+    request.return_value = {"status": "success", "has_conversation": True}
+    cleared = []
+    monkeypatch.setattr(tc.m, "_clear_session_on_main",
+                        lambda scene_name: cleared.append(scene_name))
+    tc.bpy.data.scenes = [_scene()]
+
+    tc.m._send_backend("sess-1", [("checkpoint.rewind", {"session_id": "sess-1", "request_id": "x"})])
+    for _ in range(200):
+        if not tc.m.rewind_in_flight():
+            break
+        threading.Event().wait(0.01)
+
+    assert not cleared
+
+
+def _age(path, days):
+    old = os.path.getmtime(path) - days * 86400.0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            os.utime(os.path.join(root, name), (old, old))
+    os.utime(path, (old, old))
+
+
+def test_stale_session_directories_are_retired(tc, monkeypatch):
+    """Per-session pruning bounded ONE chat at 20 snapshots; nothing ever
+    retired a session directory, and each snapshot is a whole document."""
+    root = tc.m.checkpoints_root()
+    for name in ("old-a", "old-b", "fresh"):
+        d = tc.m.session_dir(name)
+        with open(os.path.join(d, "x.mixar"), "w") as f:
+            f.write("blend")
+    _age(os.path.join(root, "old-a"), tc.m.MAX_AGE_DAYS + 1)
+    _age(os.path.join(root, "old-b"), tc.m.MAX_AGE_DAYS + 1)
+
+    assert tc.m.prune_sessions("live") == 2
+    assert sorted(os.listdir(root)) == ["fresh"]
+
+
+def test_the_live_session_is_never_retired(tc, monkeypatch):
+    root = tc.m.checkpoints_root()
+    d = tc.m.session_dir("live")
+    with open(os.path.join(d, "x.mixar"), "w") as f:
+        f.write("blend")
+    _age(d, tc.m.MAX_AGE_DAYS + 5)
+
+    assert tc.m.prune_sessions("live") == 0
+    assert os.listdir(root) == ["live"]
+
+
+def test_session_directories_are_capped_by_count_too(tc, monkeypatch):
+    """Age alone does not bound the multiplication: a burst of chats in one
+    week is exactly the case that fills the disk."""
+    monkeypatch.setattr(tc.m, "MAX_SESSIONS", 3)
+    root = tc.m.checkpoints_root()
+    for i in range(6):
+        d = tc.m.session_dir(f"chat-{i}")
+        with open(os.path.join(d, "x.mixar"), "w") as f:
+            f.write("blend")
+        _age(d, 6 - i)          # chat-0 oldest, chat-5 newest
+
+    removed = tc.m.prune_sessions("live")
+    survivors = sorted(os.listdir(root))
+    assert len(survivors) == 3 and removed == 3
+    assert survivors == ["chat-3", "chat-4", "chat-5"]
+
+
+def test_the_session_prune_runs_at_most_once_a_day(tc, monkeypatch):
+    calls = []
+    monkeypatch.setattr(tc.m, "prune_sessions", lambda keep="": calls.append(keep))
+    tc.m._last_cleanup_day = -1
+    tc.m._prune_sessions_once_per_day("sess-1")
+    tc.m._prune_sessions_once_per_day("sess-1")
+    assert calls == ["sess-1"]
+
+
+def test_a_failing_session_prune_never_blocks_a_capture(tc, monkeypatch):
+    def boom(keep=""):
+        raise OSError("disk gone")
+    monkeypatch.setattr(tc.m, "prune_sessions", boom)
+    tc.m._last_cleanup_day = -1
+    tc.m._prune_sessions_once_per_day("sess-1")     # must not raise

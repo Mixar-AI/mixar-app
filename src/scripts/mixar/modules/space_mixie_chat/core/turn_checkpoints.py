@@ -36,7 +36,9 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -47,6 +49,16 @@ from ..constants import DEV_MODE, SessionState
 logger = get_logger(__name__)
 
 MAX_PER_SESSION = 20
+# Per-session pruning alone is not a disk budget: it bounds one chat at 20
+# snapshots, but nothing ever retired a session DIRECTORY, and each snapshot is
+# a full copy of the document. Left to run, a few dozen chats multiply into tens
+# of gigabytes in a hidden folder the user never sees. `working.mixar` is not in
+# any index either, so it was never reclaimed at all.
+#
+# Same shape as operation_history's cleanup: an age cutoff, a once-a-day guard,
+# and rmtree of whatever falls outside it.
+MAX_AGE_DAYS = 15
+MAX_SESSIONS = 40          # newest session dirs kept, whatever their age
 _INDEX_FILENAME = "index.json"
 _RECORD_VERSION = 1
 _LABEL_LIMIT = 80
@@ -198,6 +210,67 @@ def _prune(session_id: str, items: list) -> list:
     return kept
 
 
+_last_cleanup_day = -1
+
+
+def _session_mtime(path: str) -> float:
+    """Newest mtime in the directory: an active session keeps being written."""
+    newest = 0.0
+    try:
+        newest = os.path.getmtime(path)
+        for name in os.listdir(path):
+            try:
+                newest = max(newest, os.path.getmtime(os.path.join(path, name)))
+            except OSError:
+                continue
+    except OSError:
+        pass
+    return newest
+
+
+def prune_sessions(keep_session_id: str = "") -> int:
+    """Retire whole session directories: older than MAX_AGE_DAYS, or outside
+    the newest MAX_SESSIONS. The live session is never a candidate. Returns
+    how many were removed. Best effort — never raises into a capture."""
+    root = checkpoints_root()
+    keep = _safe_id(keep_session_id) if keep_session_id else ""
+    try:
+        names = [n for n in os.listdir(root) if os.path.isdir(os.path.join(root, n))]
+    except OSError:
+        return 0
+    aged = sorted(
+        ((n, _session_mtime(os.path.join(root, n))) for n in names if n != keep),
+        key=lambda pair: pair[1], reverse=True,
+    )
+    cutoff = time.time() - MAX_AGE_DAYS * 86400.0
+    # The live session occupies a slot only once it actually has a directory --
+    # reserving one for a session that has not written yet would retire an extra
+    # candidate for nothing.
+    budget = max(0, MAX_SESSIONS - (1 if keep and keep in names else 0))
+    removed = 0
+    for index, (name, mtime) in enumerate(aged):
+        if index < budget and mtime >= cutoff:
+            continue
+        shutil.rmtree(os.path.join(root, name), ignore_errors=True)
+        removed += 1
+    if removed:
+        logger.info(f"Turn checkpoints: retired {removed} stale session director"
+                    f"{'y' if removed == 1 else 'ies'}")
+    return removed
+
+
+def _prune_sessions_once_per_day(keep_session_id: str = "") -> None:
+    global _last_cleanup_day
+    day = int(time.time() // 86400)
+    if _last_cleanup_day == day:
+        return
+    _last_cleanup_day = day
+    try:
+        prune_sessions(keep_session_id)
+    except Exception as e:  # noqa: BLE001 — housekeeping never blocks a capture
+        logger.warning(f"Turn checkpoint session prune skipped: {e}")
+
+
 def _update(session_id: str, checkpoint_id: str, **changes) -> None:
     items = _load_index(session_id)
     for item in items:
@@ -272,6 +345,7 @@ def capture(scene, label: str, *, kind: str = "turn"):
         }
         items.append(record)
         _write_index(session_id, _prune(session_id, items))
+        _prune_sessions_once_per_day(session_id)
         logger.info(f"Turn checkpoint {checkpoint_id} written ({size} bytes, turn {record['turn_index']})")
         return record
     except Exception as e:  # noqa: BLE001 — never block the message
@@ -486,6 +560,17 @@ def _send_backend(session_id: str, calls: list) -> None:
                 logger.info(f"Turn checkpoint {method} -> {reply!r}"[:400])
                 if isinstance(reply, dict) and (reply.get("ok") is False or reply.get("status") == "failure"):
                     raise RuntimeError(reply.get("message") or f"{method} refused")
+                # The backend only forks when the bookmark has a checkpoint id.
+                # `has_conversation: false` means NOTHING was forked, and the
+                # contract says the client clears its session id so the next
+                # message starts a new one. We were deciding from our own local
+                # `session_was_new` instead, which is a different question --
+                # so a .blend carrying a session id whose backend thread was
+                # purged (or belongs to the other environment) rolled the scene
+                # back while the agent kept remembering every reverted turn.
+                if (method == "checkpoint.rewind" and isinstance(reply, dict)
+                        and reply.get("has_conversation") is False):
+                    _clear_session_on_main(scene_name)
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Turn checkpoint backend call failed: {e}")
             failure = str(e)
@@ -497,6 +582,28 @@ def _send_backend(session_id: str, calls: list) -> None:
                                 f"{failure}. The agent may still remember the undone turns.")
 
     threading.Thread(target=_run, name="mixie-turn-checkpoint", daemon=True).start()
+
+
+def _clear_session_on_main(scene_name: str) -> None:
+    """Drop the session id from the worker thread (bpy only on the main one)."""
+    def _clear():
+        try:
+            import bpy
+            from .session import get_session_manager
+            scene = bpy.data.scenes.get(scene_name) if scene_name else None
+            scene = scene or (bpy.context.window.scene if bpy.context.window else bpy.context.scene)
+            if scene is not None:
+                get_session_manager().clear_session_id(scene)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Could not clear the session id after a bookmark-less rewind: {e}")
+        return None
+    try:
+        import bpy as _bpy
+        _bpy.app.timers.register(_clear, first_interval=0.0)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Session clear timer skipped: {e}")
+    _notify(scene_name, "Scene restored. That checkpoint predates the conversation, "
+                        "so the next message starts a new chat.")
 
 
 def _notify(scene_name: str, text: str) -> None:
