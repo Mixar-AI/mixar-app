@@ -1399,8 +1399,13 @@ static void bubble_set_min_content_size(void *ghostwin, const int min_height)
   g_bubble_last_min_height = min_height;
   const AgentBubbleSize minimum = bubble_fit_to_host(AGENT_BUBBLE_MIN_WIDTH, min_height);
   Mixar_WindowSetMinContentSize(ghostwin, minimum.width, minimum.height);
-  /* Native screen bounds constrain resizing; the preset is not a maximum. */
+  /* Native screen bounds constrain resizing; the preset is not a maximum.
+   * Only AppKit keeps a content maximum that has to be cleared — Win32's
+   * default ptMaxTrackSize is already the monitor work area and the Mixar
+   * overlay never narrows it, so there is no Windows counterpart to call. */
+#ifdef __APPLE__
   Mixar_WindowSetMaxContentSize(ghostwin, 0, 0);
+#endif
 }
 
 /* A resize the footer's draw/layout callback asked for, applied later by

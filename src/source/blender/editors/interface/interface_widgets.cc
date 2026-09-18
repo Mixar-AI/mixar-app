@@ -6055,7 +6055,9 @@ static bool zen_glass_cell(const Button *but)
  * Native frost is a window effect the toolbar cannot request, so the bed
  * is the capsule's GPU stand-in: PILL's grey at the 0.20 wash the frost
  * path uses, then the shared sheen and rim with `draw_tint=false`. The
- * kit's fallback floor would otherwise raise that bed to 0.74.
+ * kit's fallback floor would otherwise raise that bed to 0.74 — which is
+ * exactly what an explicit GlassTool capsule wants, because it floats over
+ * arbitrary board content rather than the viewport. See the bed below.
  */
 static void widget_zen_tool_glass(Button *but,
                                   rcti *rect,
@@ -6114,13 +6116,25 @@ static void widget_zen_tool_glass(Button *but,
 
   if (paint_bed) {
     const float glass_rad = 0.5f * std::min(BLI_rctf_size_x(&pane), BLI_rctf_size_y(&pane));
-    const MixarGlassTokens tokens = mixar_glass_tokens(MIXAR_GLASS_PILL);
-    const float wash[4] = {
-        tokens.tint_bottom[0], tokens.tint_bottom[1], tokens.tint_bottom[2], 0.20f};
-    GPU_blend(GPU_BLEND_ALPHA);
-    draw_roundbox_corner_set(CNR_ALL);
-    draw_roundbox_4fv(&pane, true, glass_rad, wash);
-    GPU_blend(GPU_BLEND_NONE);
+    /* An explicit GlassTool capsule floats over content the pane cannot
+     * predict — the moodboard drawer's add-tools sit directly on reference
+     * photography — so it takes the kit's readability floor instead of the
+     * 0.20 wash. That wash is calibrated for `zen_toolbar_tool`, whose only
+     * backdrop is the 3D viewport; measured over a bright reference card it
+     * left the bed indistinguishable from the image behind it (~1.2:1 against
+     * the icons), because a bed with no backdrop contributes nothing the
+     * shader can refract. PILL's `fallback_alpha` is the constant the design
+     * system already defines for unblurred content. */
+    const bool floats_over_content = but->mixar_style.component == MixarComponent::GlassTool;
+    if (!floats_over_content) {
+      const MixarGlassTokens tokens = mixar_glass_tokens(MIXAR_GLASS_PILL);
+      const float wash[4] = {
+          tokens.tint_bottom[0], tokens.tint_bottom[1], tokens.tint_bottom[2], 0.20f};
+      GPU_blend(GPU_BLEND_ALPHA);
+      draw_roundbox_corner_set(CNR_ALL);
+      draw_roundbox_4fv(&pane, true, glass_rad, wash);
+      GPU_blend(GPU_BLEND_NONE);
+    }
     rcti pane_i;
     BLI_rcti_rctf_copy(&pane_i, &pane);
     MixarGlassStyle style;
@@ -6128,7 +6142,7 @@ static void widget_zen_tool_glass(Button *but,
     style.radius = glass_rad;
     style.draw_shadow = false;
     style.draw_specular = false;
-    style.draw_tint = false;
+    style.draw_tint = floats_over_content;
     mixar_glass_draw(pane_i, style);
   }
 
