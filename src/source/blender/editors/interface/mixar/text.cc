@@ -40,26 +40,27 @@ void mixar_label_left(
 }
 std::string mixar_fit_text(const char *text, const float max_width, const float size)
 {
-  std::string result = text ? text : "";
-  if (mixar_text_width(result.c_str(), size) <= max_width) {
-    return result;
+  if (!text || !text[0]) {
+    return "";
+  }
+  const int font = BLF_default();
+  BLF_size(font, size);
+  const size_t len = strlen(text);
+  if (BLF_width(font, text, len) <= max_width) {
+    return text;
   }
   const char *ellipsis = "…";
-  const float budget = max_width - mixar_text_width(ellipsis, size);
+  const float budget = max_width - BLF_width(font, ellipsis, strlen(ellipsis));
   if (budget < 0.0f) {
     return "";
   }
-  while (!result.empty()) {
-    size_t end = result.size() - 1;
-    while (end > 0 && (static_cast<unsigned char>(result[end]) & 0xc0) == 0x80) {
-      end--;
-    }
-    result.resize(end);
-    if (mixar_text_width(result.c_str(), size) <= budget) {
-      break;
-    }
-  }
-  return result + ellipsis;
+  /* One measuring pass instead of one per dropped codepoint: dropping a
+   * character at a time re-shaped the whole remaining string every step, which
+   * is O(n^2) glyph shaping on a path that runs per label per frame.
+   * `BLF_width_to_strlen` respects UTF-8 boundaries, so the cut can never land
+   * inside a multi-byte character. */
+  const size_t keep = BLF_width_to_strlen(font, text, len, budget, nullptr);
+  return std::string(text, keep) + ellipsis;
 }
 static std::string tooltip_owned(bContext *, void *arg, StringRef)
 {

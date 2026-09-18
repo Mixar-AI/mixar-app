@@ -31,6 +31,7 @@ for _name in ("keyring", "keyring.errors"):
 
 from mixar.modules.space_mixie_chat.core import scribble_raster  # noqa: E402
 from mixar.modules.space_mixie_chat.core.scribble_raster import (  # noqa: E402
+    line_geometry,
     raster_geometry,
     rasterize_strokes,
     segment_width,
@@ -270,3 +271,145 @@ class TestUnavailablePillow:
         monkeypatch.setitem(sys.modules, "PIL.Image", None)
         with pytest.raises(scribble_raster.RasterizerUnavailableError):
             rasterize_strokes(DIAGONAL, max_edge=200)
+
+
+class TestSmoothAndAntialiased:
+    """What the recognizer sees has to be what the writer saw.
+
+    Capture decimates samples to ~2 px on screen and the page then magnifies
+    them, so drawing the chords between samples handed the recognizer a
+    visibly faceted polygon of a curve the user had watched come out smooth.
+    And PIL draws no antialiasing at all — a letter rendered as a two-level
+    stencil is not what any recognizer was trained on.
+    """
+
+    @staticmethod
+    def arc(points=40, radius=60.0):
+        import math
+        return {"w": 400, "h": 400, "strokes": [[
+            (200.0 + radius * math.cos(i * math.pi / points),
+             200.0 + radius * math.sin(i * math.pi / points), 1.0)
+            for i in range(points + 1)
+        ]]}
+
+    def test_the_page_is_antialiased(self, pillow):
+        image = render(pillow, self.arc(), max_edge=600)
+        levels = sum(1 for count in image.histogram() if count)
+        assert levels > 8, "a two-level stencil means no antialiasing ran"
+
+    def test_a_sparse_curve_is_splined_not_chorded(self, pillow):
+        """A fast pen leaves samples far apart. Between two of them the curve
+        and the chord across it are two different places on the page — and
+        the curve is the one the writer watched come out of the pen."""
+        import math
+
+        radius, step, count = 60.0, 0.9, 6
+        sparse = {"w": 400, "h": 400, "strokes": [[
+            (200.0 + radius * math.cos(i * step),
+             200.0 + radius * math.sin(i * step), 1.0)
+            for i in range(count + 1)
+        ]]}
+        geom = raster_geometry(sparse, max_edge=600)
+        image = render(pillow, sparse, max_edge=600)
+
+        def at(angle):
+            return geom.project(200.0 + radius * math.cos(angle),
+                                200.0 + radius * math.sin(angle))
+
+        # Halfway between samples 2 and 3, by angle (on the arc) and by
+        # straight line (on the chord). They are far enough apart here that
+        # no stroke weight can cover both.
+        on_arc = at(2.5 * step)
+        ends = (at(2 * step), at(3 * step))
+        on_chord = ((ends[0][0] + ends[1][0]) / 2.0,
+                    (ends[0][1] + ends[1][1]) / 2.0)
+        assert math.dist(on_arc, on_chord) > 16.0
+
+        assert image.getpixel((int(on_arc[0]), int(on_arc[1]))) < 128, (
+            "the curve through the samples is not on the page"
+        )
+        assert image.getpixel((int(on_chord[0]), int(on_chord[1]))) > 200, (
+            "ink on the chord means the facets were drawn, not the curve"
+        )
+
+    def test_smoothing_never_moves_a_sample(self, pillow):
+        """The spline passes THROUGH every point the hand made: ink at the
+        first and last sample is the writer's, not the interpolator's."""
+        payload = self.arc()
+        geom = raster_geometry(payload, max_edge=600)
+        image = render(pillow, payload, max_edge=600)
+        for end in (payload["strokes"][0][0], payload["strokes"][0][-1]):
+            x, y = geom.project(end[0], end[1])
+            assert image.getpixel((int(x), int(y))) < 128
+
+
+class TestPenWeight:
+    def test_the_pen_is_sized_from_the_ink_not_the_page(self):
+        """A text line drawn with page margins is mostly margin. Sizing the
+        pen from the page height blotted the letters it had to make legible."""
+        payload = {"w": 2000, "h": 2000, "strokes": [
+            [(0.0, 0.0, 1.0), (800.0, 40.0, 1.0)]
+        ]}
+        narrow = line_geometry(payload, line_height=120, max_width=1400,
+                               pad_x=10, pad_y=10)
+        padded = line_geometry(payload, line_height=120, max_width=1400,
+                               pad_x=160, pad_y=120)
+        assert padded.height > narrow.height
+        assert padded.ink_h == narrow.ink_h
+
+    def test_a_multi_line_block_does_not_get_a_fifth_of_a_line_as_a_pen(self):
+        """The ink-height divisor reads the box as ONE line. A page written
+        over several of them has a box many lines tall, and the pen has to be
+        capped or every loop in the writing fills in."""
+        from mixar.modules.space_mixie_chat.core import scribble_raster as R
+
+        block = {"w": 2000, "h": 2000, "strokes": [
+            [(0.0, 0.0, 1.0), (1200.0, 1200.0, 1.0)]
+        ]}
+        geom = raster_geometry(block, max_edge=1280)
+        assert geom.ink_h > 1000
+        assert R._base_width(geom) == R._MAX_BASE_WIDTH
+
+
+class TestLineGeometry:
+    """The on-device recogniser's page: a text LINE, not a longest-edge fit."""
+
+    BOX = {"w": 4000, "h": 4000, "strokes": [
+        [(0.0, 0.0, 1.0), (900.0, 0.0, 1.0), (900.0, 300.0, 1.0)]
+    ]}
+
+    def test_the_ink_lands_at_the_requested_line_height(self):
+        geom = line_geometry(self.BOX, line_height=120, max_width=1400,
+                             pad_x=160, pad_y=120)
+        assert abs(geom.ink_h - 120) <= 1
+        assert geom.height == 120 + 2 * 120
+
+    def test_a_long_line_is_capped_by_width(self):
+        wide = {"w": 9000, "h": 9000, "strokes": [
+            [(0.0, 0.0, 1.0), (9000.0, 0.0, 1.0), (9000.0, 300.0, 1.0)]
+        ]}
+        geom = line_geometry(wide, line_height=120, max_width=1400,
+                             pad_x=160, pad_y=120)
+        assert geom.ink_w == 1400
+        assert geom.ink_h < 120
+
+    def test_small_ink_is_scaled_up(self):
+        small = {"w": 4000, "h": 4000, "strokes": [
+            [(0.0, 0.0, 1.0), (80.0, 0.0, 1.0), (80.0, 40.0, 1.0)]
+        ]}
+        geom = line_geometry(small, line_height=120, max_width=1400,
+                             pad_x=160, pad_y=120)
+        assert geom.scale > 1.0
+        assert abs(geom.ink_h - 120) <= 1
+
+    def test_a_still_pen_still_lays_out(self):
+        dot = {"w": 400, "h": 400, "strokes": [[(10.0, 10.0, 1.0)]]}
+        geom = line_geometry(dot, line_height=120, max_width=1400,
+                             pad_x=160, pad_y=120)
+        assert geom.scale == 1.0
+        assert geom.width >= SCRIBBLE_RASTER_MIN_EDGE
+
+    def test_no_ink_raises(self):
+        with pytest.raises(ValueError):
+            line_geometry({"w": 10, "h": 10, "strokes": []},
+                          line_height=120, max_width=1400, pad_x=1, pad_y=1)

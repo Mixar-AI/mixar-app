@@ -95,6 +95,12 @@ def _drawer_tick():
 
     override = _view3d_override()
     if override is None:
+        # Same situation as the operator failing below: there is no Zen 3D View
+        # to slide, so the target is unreachable. Settle on it rather than
+        # leaving amount != target forever -- that kept this tick walking every
+        # window, area and region of every screen at 10 Hz for the rest of the
+        # session, and left the drawer reading as mid-slide to everything else.
+        window_manager.mixar_moodboard_drawer_amount = float(target)
         return _IDLE_INTERVAL
 
     try:

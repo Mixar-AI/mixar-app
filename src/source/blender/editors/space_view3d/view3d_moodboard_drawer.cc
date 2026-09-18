@@ -123,6 +123,9 @@ int view3d_moodboard_drawer_target(const bContext *C)
   return drawer_int_get(C, "mixar_moodboard_drawer_target", 0);
 }
 
+/* Stays a pure setter: Scribble's capture and any script close the drawer
+ * through here too, so side effects belong on the user-facing close paths in
+ * `view3d_moodboard_drawer_ops.cc`, not on this. */
 void view3d_moodboard_drawer_target_set(bContext *C, const int target)
 {
   drawer_int_set(C, "mixar_moodboard_drawer_target", target != 0 ? 1 : 0);
@@ -362,7 +365,10 @@ void view3d_moodboard_drawer_region_init(wmWindowManager *wm, ARegion *region)
   region->v2d.max[1] = 32000.0f;
   region->v2d.minzoom = 0.05f;
   region->v2d.maxzoom = 21.0f;
-  region->v2d.scroll = V2D_SCROLL_RIGHT | V2D_SCROLL_BOTTOM;
+  /* No scrollers: this region spans the viewport's right band in BOTH states
+   * (closing is a paint translation), so `AZONE_REGION_SCROLL` would claim
+   * presses there while shut, for a thumb `tot`'s fixed box cannot inform. */
+  region->v2d.scroll = eView2D_Scroll(0);
   region->v2d.keepzoom = V2D_LIMITZOOM;
   region->v2d.keeptot = V2D_KEEPTOT_FREE;
   /* Match the canvas aspect before its first paint (a closed drawer can

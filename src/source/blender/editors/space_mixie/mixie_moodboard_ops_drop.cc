@@ -290,7 +290,12 @@ void MIXIE_OT_moodboard_drop_image(wmOperatorType *ot)
   ot->invoke = blender::ed::mixie::moodboard_drop_image_invoke;
   ot->poll = nullptr;
 
-  ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
+  /* UNDO only. Every property below is `PROP_SKIP_SAVE` so that a drop payload
+   * cannot contaminate the next one, which leaves REGISTER with nothing to put
+   * in the redo panel: it drew an empty block that collapsed to its minimum
+   * width and clipped its own header to "Drop Media to Moodboar", then stayed
+   * on screen as the last operator through unrelated later actions. */
+  ot->flag = OPTYPE_UNDO;
 
   RNA_def_string(
       ot->srna, "filepath", nullptr, FILE_MAX, "File Path", "Path to image or video file");

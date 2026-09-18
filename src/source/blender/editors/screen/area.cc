@@ -1319,6 +1319,25 @@ static bool region_azone_edge_poll(const ScrArea *area,
     return false;
   }
 
+  /* Same area, the hidden N-panel's reveal tab. `region_azone_tab_plus` pins
+   * it to the area's top-right corner, which in Zen Mode is inside the
+   * drawer's painted panel whenever it is open and on the navigation gizmo
+   * when it is shut. Azones resolve screen-wide before any region handler, so
+   * the drawer can never win that press: one click there silently sets
+   * `show_region_ui` and materialises a full stock sidebar underneath the
+   * board, invisible until the drawer is closed again. The azone list is not
+   * rebuilt when the drawer slides (a toggle only tags a redraw), so this
+   * cannot be gated on the slide amount — suppress it wherever the drawer
+   * region exists, which `drawer_region_poll` already limits to Zen Mode. `N`
+   * still opens the sidebar there, and other workspaces keep the tab. */
+  if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_UI && is_hidden) {
+    const ARegion *drawer = BKE_area_find_region_type(const_cast<ScrArea *>(area),
+                                                      RGN_TYPE_TOOL_PROPS);
+    if (drawer != nullptr && !(drawer->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED))) {
+      return false;
+    }
+  }
+
   if (is_hidden && (U.app_flag & USER_APP_HIDE_REGION_TOGGLE)) {
     return false;
   }

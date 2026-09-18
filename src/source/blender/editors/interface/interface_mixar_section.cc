@@ -28,7 +28,6 @@
 
 #include "BKE_screen.hh"
 
-#include "BLI_map.hh"
 #include "BLI_string.h"
 #include "BLI_vector.hh"
 
@@ -43,6 +42,7 @@
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
+#include "interface_mixar_tab_rects.hh"
 #include "UI_mixar.hh"
 
 #include "UI_interface_layout.hh"
@@ -188,58 +188,6 @@ static void ubyte4_to_float4(float dst[4], const unsigned char src[4])
 /* Padding constants */
 #define MIXAR_TAB_PAD_TEXT 8.0f
 #define MIXAR_TAB_PAD_BETWEEN 6.0f
-
-/* -------------------------------------------------------------------- */
-/* Mixar tab hit-rects.
- *
- * Blender 5.2 removed `PanelCategoryDyn::rect` (upstream tabs became real
- * buttons), so the rects of the Mixar-drawn strip are recorded here at draw
- * time and hit-tested by the MIXAR hook in interface_panel.cc. Entries are
- * overwritten on every draw; a stale entry for a freed region can only be
- * read if a click arrives for a region that never drew, which cannot
- * happen for a visible strip. */
-
-struct MixarCategoryTabRect {
-  char idname[64];
-  rcti rect;
-};
-
-static Map<const ARegion *, Vector<MixarCategoryTabRect>> &mixar_category_tab_rects()
-{
-  static Map<const ARegion *, Vector<MixarCategoryTabRect>> map;
-  return map;
-}
-
-const char *UI_mixar_panel_category_find_at(const ARegion *region, const int mval[2])
-{
-  const Vector<MixarCategoryTabRect> *tabs = mixar_category_tab_rects().lookup_ptr(region);
-  if (tabs == nullptr) {
-    return nullptr;
-  }
-  for (const MixarCategoryTabRect &tab : *tabs) {
-    if (BLI_rcti_isect_pt(&tab.rect, mval[0], mval[1])) {
-      return tab.idname;
-    }
-  }
-  return nullptr;
-}
-
-bool UI_mixar_panel_category_tab_rect_get(const ARegion *region,
-                                          const char *idname,
-                                          rcti *r_rect)
-{
-  const Vector<MixarCategoryTabRect> *tabs = mixar_category_tab_rects().lookup_ptr(region);
-  if (tabs == nullptr) {
-    return false;
-  }
-  for (const MixarCategoryTabRect &tab : *tabs) {
-    if (STREQ(tab.idname, idname)) {
-      *r_rect = tab.rect;
-      return true;
-    }
-  }
-  return false;
-}
 
 void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_active)
 {
@@ -472,7 +420,7 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
     }
   }
 
-  mixar_category_tab_rects().add_overwrite(region, std::move(tab_rects));
+  mixar_category_tabs_store(region, std::move(tab_rects));
 
   GPU_blend(GPU_BLEND_NONE);
   GPU_line_smooth(false);

@@ -278,8 +278,19 @@ class TestTheCategoryTabsArePanes:
 
     def test_the_tab_hit_rects_are_still_recorded(self) -> None:
         """The strip is drawn, not made of buttons, so the click map comes from
-        the same rect the pane was laid in — and it is recorded every draw."""
-        assert "mixar_category_tab_rects().add_overwrite(region, std::move(tab_rects));" in self._tabs()
+        the same rect the pane was laid in — and it is recorded every draw.
+
+        The record now carries the region's winrct alongside the rects, so a
+        recycled ARegion pointer cannot read a dead region's tabs; assert the
+        recording, not the exact call text it is made with.
+
+        The map moved to interface_mixar_tab_rects.cc, so what the draw owes is
+        handing its rects over -- the bound and the winrct stamp are pinned in
+        tests/test_native_cache_lifetimes.py.
+        """
+        tabs = self._tabs()
+        assert "mixar_category_tabs_store(region" in tabs
+        assert "std::move(tab_rects)" in tabs
 
     def test_no_call_site_picks_a_colour_for_the_seam(self) -> None:
         calls = re.findall(r"mixar_card_glass_round\(([^;]*)\);", _code(SECTION))

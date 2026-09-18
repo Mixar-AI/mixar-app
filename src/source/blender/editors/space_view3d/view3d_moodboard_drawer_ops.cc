@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "BLI_listbase_iterator.hh"
 #include "BLI_rect.h"
 #include "BLI_string.h"
 
@@ -118,6 +119,54 @@ static void VIEW3D_OT_moodboard_drawer_update(wmOperatorType *ot)
   ot->flag = 0;
 }
 
+/**
+ * Release Annotate when the USER puts the board away.
+ *
+ * The mode flag lives on the WindowManager and is shared by both hosts of the
+ * canvas, so this is deliberately narrow on two axes. It runs only from the
+ * grip and the toggle operator, never from `view3d.moodboard_drawer_set`:
+ * Scribble's capture closes the drawer through that one (`scribble_mark/core/
+ * drawer_guard.py`) and its restore only puts `amount`/`target` back, so
+ * clearing there would silently disarm Annotate across every capture. And a
+ * standalone Mixie editor is an annotate host in its own right — its poll
+ * never asks about the drawer — so an open one keeps the mode alive.
+ *
+ * What is left is the case the flag would otherwise be stranded in: Zen Mode,
+ * whose workspace holds no Mixie editor, where a shut drawer makes
+ * `mixie.moodboard_annotation_exit` unpollable and the first click after
+ * reopening draws a saved stroke instead of selecting a card.
+ */
+static void drawer_release_annotate(bContext *C)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (wm == nullptr) {
+    return;
+  }
+  for (wmWindow &win : wm->windows) {
+    const bScreen *screen = WM_window_get_active_screen(&win);
+    if (screen == nullptr) {
+      continue;
+    }
+    for (const ScrArea &area : screen->areabase) {
+      if (area.spacetype == SPACE_MIXIE) {
+        return;
+      }
+    }
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  if (PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixie_moodboard_annotating")) {
+    RNA_property_boolean_set(&wm_ptr, prop, false);
+  }
+}
+
+/** Set the target, and release Annotate when that target is shut. */
+static void drawer_user_target_set(bContext *C, const int target)
+{
+  view3d_moodboard_drawer_target_set(C, target);
+  if (target == 0) {
+    drawer_release_annotate(C);
+  }
+}
 static wmOperatorStatus drawer_reveal_exec(bContext *C, wmOperator * /*op*/)
 {
   if (view3d_moodboard_drawer_target(C) == 0) {
@@ -143,7 +192,7 @@ static wmOperatorStatus drawer_toggle_exec(bContext *C, wmOperator * /*op*/)
   /* Capture the pixels on screen, then flip the intent — a click mid-slide
    * reverses from here instead of reading "is it past halfway?". */
   view3d_moodboard_drawer_slide_begin(C);
-  view3d_moodboard_drawer_target_set(C, view3d_moodboard_drawer_target(C) != 0 ? 0 : 1);
+  drawer_user_target_set(C, view3d_moodboard_drawer_target(C) != 0 ? 0 : 1);
   drawer_tag_redraw(C);
   return OPERATOR_FINISHED;
 }
@@ -291,11 +340,11 @@ static wmOperatorStatus drawer_grip_modal(bContext *C, wmOperator *op, const wmE
               view3d_moodboard_drawer_slide_begin(C);
             }
           }
-          view3d_moodboard_drawer_target_set(C, open ? 1 : 0);
+          drawer_user_target_set(C, open ? 1 : 0);
         }
         else {
           view3d_moodboard_drawer_slide_begin(C);
-          view3d_moodboard_drawer_target_set(
+          drawer_user_target_set(
               C, view3d_moodboard_drawer_target(C) != 0 ? 0 : 1);
         }
         drawer_tag_redraw(C);

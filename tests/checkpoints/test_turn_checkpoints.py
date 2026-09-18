@@ -5,118 +5,18 @@
 """Turn checkpoints (core/turn_checkpoints.py): a whole-document snapshot
 before every fresh turn, deduplicated and pruned per session, and a restore
 that keeps a safety copy, reads the snapshot with the recover flag, gives a
-titled project its path back, and rewinds the backend conversation."""
+titled project its path back, and rewinds the backend conversation.
 
-import importlib.util
+The disk budget across sessions lives in test_session_pruning.py."""
+
 import os
 from pathlib import Path
 import sys
-from types import ModuleType, SimpleNamespace
-from unittest.mock import MagicMock
+from types import SimpleNamespace
 
-import pytest
-
-_SRC_ROOT = Path(__file__).parents[1] / "src" / "scripts"
-_MIXAR_ROOT = _SRC_ROOT / "mixar"
-_MODULES_ROOT = _MIXAR_ROOT / "modules"
-_CHAT_ROOT = _MODULES_ROOT / "space_mixie_chat"
-_CORE_ROOT = _CHAT_ROOT / "core"
-
-if str(_SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(_SRC_ROOT))
-
-
-class FakeSession:
-    def __init__(self, state="idle", run_open=False, connected=True):
-        self.state = SimpleNamespace(value=state)
-        self._run_open = run_open
-        self._connected = connected
-        self.calls = []
-
-    def get_state(self, scene):
-        return self.state
-
-    def run_open(self, scene):
-        return self._run_open
-
-    def is_connected(self, scene):
-        return self._connected
-
-    def set_run(self, scene, run_id, open_):
-        self.calls.append(("set_run", run_id, open_))
-
-    def clear_streaming(self):
-        self.calls.append(("clear_streaming",))
-
-    def set_connected(self, scene):
-        self.calls.append(("set_connected",))
-
-    def get_session_id(self, scene):
-        return getattr(scene, "mixie_session_id", "")
-
-    def clear_session_id(self, scene):
-        scene.mixie_session_id = ""
-        self.calls.append(("clear_session_id",))
-
-
-@pytest.fixture
-def tc(monkeypatch, tmp_path):
-    """Load core/turn_checkpoints.py with its lazy neighbours stubbed."""
-    for name, path in (
-        ("mixar", _MIXAR_ROOT),
-        ("mixar.modules", _MODULES_ROOT),
-        ("mixar.modules.space_mixie_chat", _CHAT_ROOT),
-        ("mixar.modules.space_mixie_chat.core", _CORE_ROOT),
-    ):
-        package = ModuleType(name)
-        package.__path__ = [str(path)]
-        monkeypatch.setitem(sys.modules, name, package)
-
-    project_dir = tmp_path / "projects"
-    project_dir.mkdir()
-    bpy = MagicMock(name="bpy")
-    bpy.data.filepath = str(project_dir / "lamp.mixar")
-    bpy.data.scenes = []
-    monkeypatch.setitem(sys.modules, "bpy", bpy)
-
-    session = FakeSession()
-    stub = {
-        "mixar.modules.space_mixie_chat.core.session": {"get_session_manager": lambda: session},
-        "mixar.modules.space_mixie_chat.core.turn_events": {"drop_scene": MagicMock()},
-        "mixar.modules.space_mixie_chat.core.ui_utils": {"bump_layout_epoch": MagicMock(), "redraw_chat_areas": MagicMock()},
-        "mixar.modules.space_mixie_chat.core.markdown_parser": {"clear_incremental_cache": MagicMock()},
-        "mixar.modules.space_mixie_chat.core.message_helpers": {"add_agent_message": MagicMock()},
-        "mixar.modules.common": {},
-        "mixar.modules.common.agent_rpc": {},
-        "mixar.modules.common.agent_rpc.client": {"request": MagicMock()},
-    }
-    for name, attrs in stub.items():
-        module = ModuleType(name)
-        for key, value in attrs.items():
-            setattr(module, key, value)
-        monkeypatch.setitem(sys.modules, name, module)
-
-    module_name = "mixar.modules.space_mixie_chat.core.turn_checkpoints"
-    spec = importlib.util.spec_from_file_location(module_name, _CORE_ROOT / "turn_checkpoints.py")
-    module = importlib.util.module_from_spec(spec)
-    monkeypatch.setitem(sys.modules, module_name, module)
-    spec.loader.exec_module(module)
-
-    monkeypatch.setattr(module, "checkpoints_root", lambda: str(tmp_path / "checkpoints"))
-    monkeypatch.setattr(module, "DEV_MODE", False)
-    module.SessionState = SimpleNamespace(IDLE=session.state)   # can_restore compares by identity
-    module._has_cache.clear()
-
-    # save_as_mainfile writes whatever the test says the document holds.
-    document = {"bytes": b"scene-v1"}
-
-    def save_as(filepath="", copy=False, **_kw):
-        with open(filepath, "wb") as f:
-            f.write(document["bytes"])
-        return {'FINISHED'}
-
-    bpy.ops.wm.save_as_mainfile.side_effect = save_as
-    return SimpleNamespace(m=module, bpy=bpy, session=session, document=document)
+# The one source-level case below reads the real header; the rest go through `tc`.
+_CHAT_ROOT = (Path(__file__).parents[2] / "src" / "scripts" / "mixar"
+              / "modules" / "space_mixie_chat")
 
 
 def _scene(session_id="sess-1", users=1):
@@ -314,6 +214,21 @@ def test_a_failed_read_reports_and_clears_the_restoring_flag(tc, monkeypatch):
     assert sent == []
 
 
+def test_cancelled_read_does_not_save_or_rewind_the_conversation(tc, monkeypatch):
+    scene = _scene()
+    target, sent, _ = _prepare_restore(tc, monkeypatch, scene)
+    tc.bpy.ops.wm.recover_auto_save.side_effect = lambda **kwargs: {'CANCELLED'}
+    tc.bpy.ops.wm.save_as_mainfile.reset_mock()
+
+    ok, message = tc.m.restore(scene, target["id"])
+
+    assert ok is False and "Could not read" in message
+    assert tc.m.is_restoring() is False
+    assert sent == []
+    assert tc.session.calls == []
+    assert all(call.kwargs.get("copy") for call in tc.bpy.ops.wm.save_as_mainfile.call_args_list)
+
+
 def test_restore_fences_the_session_so_recovery_does_not_replay_undone_turns(tc, monkeypatch):
     scene = _scene(users=3)
     target, _, _ = _prepare_restore(tc, monkeypatch, scene)
@@ -376,3 +291,49 @@ def test_backend_calls_block_sending_until_done(tc, monkeypatch):
         threading.Event().wait(0.01)
     assert tc.m.rewind_in_flight() is False
     assert request.call_args.args[0] == "checkpoint.rewind" and request.call_args.kwargs == {"mutation": True}
+
+
+def test_a_bookmarkless_rewind_clears_the_session_id(tc, monkeypatch):
+    """The backend only forks when the bookmark has a checkpoint id.
+    `has_conversation: false` means NOTHING was forked, and the contract says
+    the client clears its session id. It was deciding from its own local
+    `session_was_new` instead -- a different question -- so a .blend carrying a
+    session id whose backend thread was purged rolled the scene back while the
+    agent kept remembering every reverted turn."""
+    import threading
+    request = sys.modules["mixar.modules.common.agent_rpc.client"].request
+    request.side_effect = None
+    request.return_value = {"status": "success", "has_conversation": False}
+    notices, cleared = [], []
+    monkeypatch.setattr(tc.m, "_notify", lambda scene_name, text: notices.append(text))
+    monkeypatch.setattr(tc.m, "_clear_session_on_main",
+                        lambda scene_name: cleared.append(scene_name))
+    tc.bpy.data.scenes = [_scene()]
+
+    tc.m._send_backend("sess-1", [("checkpoint.rewind", {"session_id": "sess-1", "request_id": "x"})])
+    for _ in range(200):
+        if not tc.m.rewind_in_flight():
+            break
+        threading.Event().wait(0.01)
+
+    assert cleared, "has_conversation: false must clear the session id"
+    assert not notices, "a bookmark-less rewind is not a failure"
+
+
+def test_a_rewind_that_forked_leaves_the_session_alone(tc, monkeypatch):
+    import threading
+    request = sys.modules["mixar.modules.common.agent_rpc.client"].request
+    request.side_effect = None
+    request.return_value = {"status": "success", "has_conversation": True}
+    cleared = []
+    monkeypatch.setattr(tc.m, "_clear_session_on_main",
+                        lambda scene_name: cleared.append(scene_name))
+    tc.bpy.data.scenes = [_scene()]
+
+    tc.m._send_backend("sess-1", [("checkpoint.rewind", {"session_id": "sess-1", "request_id": "x"})])
+    for _ in range(200):
+        if not tc.m.rewind_in_flight():
+            break
+        threading.Event().wait(0.01)
+
+    assert not cleared

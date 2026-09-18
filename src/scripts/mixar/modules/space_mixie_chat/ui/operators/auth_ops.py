@@ -25,8 +25,10 @@ from ....auth.core.auth import (
     refresh_access_token,
 )
 from ....auth.core.auth_hooks import (
+    invalidate_agent_settings,
     invalidate_generation_caches,
     maybe_show_onboarding,
+    refresh_agent_settings,
     refresh_generation_caches,
 )
 from ....auth.core.sso import sso_login
@@ -119,27 +121,6 @@ def _connecting_timeout_check():
     return None  # Don't repeat
 
 
-def _schedule_byok_fetch():
-    """Trigger BYOK state + models-catalog refresh after login.
-
-    Runs via a small-delay timer so the byok operators have time to be
-    registered (UI modules load in time-budgeted batches post-bootstrap).
-    Silent no-op if the operators aren't available yet — BYOK falls back
-    to "inactive" + an empty models-catalog cache, both safe defaults.
-    """
-    def _try():
-        try:
-            if hasattr(bpy.types, 'MIXAR_BYOK_OT_fetch_state'):
-                bpy.ops.mixar_byok.fetch_state()
-            if hasattr(bpy.types, 'MIXAR_BYOK_OT_fetch_models_catalog'):
-                bpy.ops.mixar_byok.fetch_models_catalog()
-        except Exception as e:
-            logger.debug("BYOK fetch trigger failed: %s", e)
-        return None  # Don't repeat
-
-    bpy.app.timers.register(_try, first_interval=0.5)
-
-
 def _apply_account_name(user_info) -> None:
     """Store the profile card's greeting name from a ``/me`` payload.
 
@@ -193,11 +174,10 @@ def _clear_byok_state_on_logout(wm):
             except Exception as e:
                 logger.debug("Failed clearing %s on logout: %s", attr, e)
 
-    try:
-        from mixar.modules.byok.core import model_suggestions
-        model_suggestions.clear()
-    except Exception as e:
-        logger.debug("Failed clearing models-catalog cache on logout: %s", e)
+    # NOTE: the models-catalog cache is NOT cleared here. `invalidate_agent_settings()`
+    # owns it, and clears memory, suggestions and the disk file together under the
+    # cache's epoch bump. Doing it from two places gave a worker still in flight two
+    # orderings to win in — which is the race this whole change removes.
 
     # Local provider: stop the managed llama-server and drop transient
     # relay grants + UI mirrors. Downloaded model files stay on disk.
@@ -245,7 +225,7 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
             refresh_generation_caches()
             maybe_show_onboarding(email)
             _auto_connect_websocket()
-            _schedule_byok_fetch()
+            refresh_agent_settings()
         except Exception as e:
             logger.warning("Auth state apply failed: %s", e)
         finally:
@@ -372,7 +352,7 @@ def _auth_check_background() -> None:
                     refresh_generation_caches()
                     maybe_show_onboarding(email)
                     _auto_connect_websocket()
-                    _schedule_byok_fetch()
+                    refresh_agent_settings()
                     logger.info("Auto SSO re-login completed successfully")
             else:
                 if hasattr(wm, 'mixie_chat_login_error'):
@@ -538,7 +518,7 @@ class MIXIE_CHAT_OT_login(Operator):
                             refresh_generation_caches()
                             maybe_show_onboarding(email)
                             _auto_connect_websocket()
-                            _schedule_byok_fetch()
+                            refresh_agent_settings()
                             logger.info("SSO login completed — user is logged in")
                     else:
                         msg = result.get("message", "Login failed")
@@ -602,6 +582,7 @@ class MIXIE_CHAT_OT_logout(Operator):
 
         # Clear cached generation configs
         invalidate_generation_caches()
+        invalidate_agent_settings()
 
         # Clear login state
         wm.mixie_chat_is_logged_in = False

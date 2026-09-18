@@ -190,6 +190,19 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
   immUniformColor4fv(grid_color);
 
+  /* Every dot is the same disc at a different centre, so the rim offsets are
+   * loop-invariant: resolve the unit circle once instead of four trig calls
+   * per segment per dot. A default-width drawer shows ~700 dots, which cost
+   * ~34k `cosf`/`sinf` per frame before this and 24 after. */
+  float rim_x[MOODBOARD_GRID_DOT_SEGMENTS + 1];
+  float rim_y[MOODBOARD_GRID_DOT_SEGMENTS + 1];
+  for (int segment = 0; segment <= MOODBOARD_GRID_DOT_SEGMENTS; segment++) {
+    const float angle = (2.0f * float(M_PI) * float(segment)) /
+                        float(MOODBOARD_GRID_DOT_SEGMENTS);
+    rim_x[segment] = cosf(angle) * dot_radius;
+    rim_y[segment] = sinf(angle) * dot_radius;
+  }
+
   /* Filled discs avoid the varying subpixel coverage of GPU point primitives,
    * which otherwise creates visible Moire groupings. */
   immBegin(GPU_PRIM_TRIS, dot_count * MOODBOARD_GRID_DOT_SEGMENTS * 3);
@@ -199,17 +212,9 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
       const float center_x = float(column) * grid_step;
 
       for (int segment = 0; segment < MOODBOARD_GRID_DOT_SEGMENTS; segment++) {
-        const float angle_a = (2.0f * float(M_PI) * float(segment)) /
-                              float(MOODBOARD_GRID_DOT_SEGMENTS);
-        const float angle_b = (2.0f * float(M_PI) * float(segment + 1)) /
-                              float(MOODBOARD_GRID_DOT_SEGMENTS);
         immVertex2f(pos, center_x, center_y);
-        immVertex2f(pos,
-                    center_x + cosf(angle_a) * dot_radius,
-                    center_y + sinf(angle_a) * dot_radius);
-        immVertex2f(pos,
-                    center_x + cosf(angle_b) * dot_radius,
-                    center_y + sinf(angle_b) * dot_radius);
+        immVertex2f(pos, center_x + rim_x[segment], center_y + rim_y[segment]);
+        immVertex2f(pos, center_x + rim_x[segment + 1], center_y + rim_y[segment + 1]);
       }
     }
   }

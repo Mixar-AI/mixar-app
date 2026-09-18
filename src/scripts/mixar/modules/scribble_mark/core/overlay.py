@@ -18,6 +18,14 @@ redraw never touches scene data.
 The still is drawn from a cached ``GPUTexture``. Rebuilding it per frame
 re-uploads a full-screen image on every mouse move; the cache is keyed on the
 image's name and update tag so a re-arm swaps it and nothing else does.
+
+The ink is cached the same way and for the same reason. Every stroke is drawn
+as a Catmull-Rom spline, and re-splining the whole drawing on every pointer
+sample makes the pen lag the further into a sketch the user gets — the cost
+grows with what they have already drawn. Settled strokes never change, so
+they are splined ONCE when they settle; of the live strokes only the one
+under the pen has grown, so only it is re-splined. What is stored, resolved
+and sent is still the raw sample either way.
 """
 
 from __future__ import annotations
@@ -65,6 +73,16 @@ _live_strokes = []
 #: that grows with the number of marks.
 _settled_strokes = []
 
+#: The splined copy of every settled mark, built once as the mark settles.
+#: Parallel to ``_settled_strokes`` — every path that pushes, pops or clears
+#: one must do the same here, which is why both are private.
+_settled_smooth = []
+
+#: The splined copy of the strokes under the pen, plus the sample count each
+#: was splined at. Only the stroke that grew is re-splined on a redraw.
+_live_smooth = []
+_live_lens = []
+
 _texture = None
 _texture_key = None
 
@@ -94,17 +112,29 @@ def set_target(area_ptr, region_ptr):
 
 
 def set_live_strokes(strokes):
+    """Point the overlay at the operator's live stroke buffer.
+
+    The buffer is handed over by reference and grows under the pen, so the
+    spline cache is dropped here and rebuilt per stroke as it is drawn.
+    """
     global _live_strokes
     _live_strokes = strokes
+    _live_smooth.clear()
+    _live_lens.clear()
 
 
 def push_settled(strokes):
-    _settled_strokes.append([list(s) for s in strokes])
+    settled = [list(s) for s in strokes]
+    _settled_strokes.append(settled)
+    # Splined once, here, rather than on every redraw for the rest of the
+    # session: a settled mark never changes again.
+    _settled_smooth.append([_smooth(s) for s in settled])
 
 
 def pop_settled():
     if _settled_strokes:
         _settled_strokes.pop()
+        _settled_smooth.pop()
 
 
 def set_reading(intent, stroke_count):
@@ -122,7 +152,10 @@ def reset_ink():
     """
     global _live_strokes, _texture, _texture_key
     _live_strokes = []
+    _live_smooth.clear()
+    _live_lens.clear()
     _settled_strokes.clear()
+    _settled_smooth.clear()
     _texture = None
     _texture_key = None
 
@@ -132,7 +165,10 @@ def reset():
     global _live_strokes, _texture, _texture_key, _reading
     global _target_area_ptr, _target_region_ptr
     _live_strokes = []
+    _live_smooth.clear()
+    _live_lens.clear()
     _settled_strokes.clear()
+    _settled_smooth.clear()
     _texture = None
     _texture_key = None
     _reading = None
@@ -222,26 +258,61 @@ def _draw_scrim(region):
     batch.draw(shader)
 
 
-def _draw_strokes(strokes, color, width):
+def _smooth(stroke):
+    """One stroke as the polyline the shader draws, or ``[]`` for no ink.
+
+    Draw-time only: the spline passes through every sample; what is stored,
+    resolved and sent stays the raw stroke. A single sample is a dot, and a
+    LINE_STRIP of one point draws nothing — doubling it gives the polyline
+    shader a segment to round off, so a deliberate tap is still visible ink.
+    """
+    points = list(stroke)
+    if len(points) == 1:
+        return points * 2
+    if len(points) < 2:
+        return []
+    return catmull_rom(points)
+
+
+def _live_smoothed():
+    """The splined live strokes, re-splining only the ones that grew.
+
+    The pen extends exactly one stroke at a time, so this is O(that stroke)
+    per redraw rather than O(everything drawn since the last commit).
+    """
+    del _live_smooth[len(_live_strokes):]
+    del _live_lens[len(_live_strokes):]
+    for index, stroke in enumerate(_live_strokes):
+        count = len(stroke)
+        if index < len(_live_smooth):
+            if _live_lens[index] == count:
+                continue
+            _live_smooth[index] = _smooth(stroke)
+            _live_lens[index] = count
+        else:
+            _live_smooth.append(_smooth(stroke))
+            _live_lens.append(count)
+    return _live_smooth
+
+
+def _draw_smoothed(polylines, color, width):
+    """Draw already-splined polylines. Empty ones are skipped."""
     shader = gpu.shader.from_builtin('POLYLINE_UNIFORM_COLOR')
     shader.bind()
     viewport = gpu.state.viewport_get()
     shader.uniform_float("viewportSize", (viewport[2], viewport[3]))
     shader.uniform_float("lineWidth", width)
     shader.uniform_float("color", color)
-    for stroke in strokes:
-        # A single sample is a dot, and LINE_STRIP of one point draws nothing;
-        # doubling it gives the polyline shader a segment to round off, so a
-        # deliberate tap is still visible ink.
-        points = list(stroke)
-        if len(points) == 1:
-            points = points * 2
+    for points in polylines:
         if len(points) < 2:
             continue
-        # Draw-time only: the spline passes through every sample; what is
-        # stored, resolved and sent stays the raw stroke.
-        points = catmull_rom(points)
         batch_for_shader(shader, 'LINE_STRIP', {"pos": points}).draw(shader)
+
+
+def _draw_strokes(strokes, color, width):
+    """Spline *strokes* and draw them. Uncached — for callers outside the
+    live/settled split (tests, and any one-off ink)."""
+    _draw_smoothed([_smooth(stroke) for stroke in strokes], color, width)
 
 
 def _hint_text(scene):
@@ -332,10 +403,10 @@ def _draw_callback():
 
             scale = ui_scale()
             width = MARK_INK_WIDTH * scale
-            for strokes in _settled_strokes:
-                _draw_strokes(strokes, MARK_INK_COLOR_SETTLED, width)
+            for polylines in _settled_smooth:
+                _draw_smoothed(polylines, MARK_INK_COLOR_SETTLED, width)
             if _live_strokes:
-                _draw_strokes(_live_strokes, MARK_INK_COLOR, width)
+                _draw_smoothed(_live_smoothed(), MARK_INK_COLOR, width)
 
             _draw_hint(region, scene, scale)
         finally:
@@ -373,11 +444,28 @@ def remove():
 
 
 def tag_redraw():
-    """Invalidate 3D viewports so the ink follows the pen."""
+    """Invalidate the FROZEN viewport so the ink follows the pen.
+
+    Only that one: this runs on every pointer sample, and every other 3D
+    viewport in the file is still live, so tagging it re-renders the whole
+    scene at the pen's sample rate for a frame in which nothing changed. The
+    overlay refuses to paint anywhere but the frozen region anyway, so those
+    redraws could never show the ink.
+
+    Without a target (before the operator pins one) it falls back to tagging
+    every 3D viewport — a redraw too many is cheap, a stroke that does not
+    appear is not.
+    """
     try:
         for window in bpy.context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.type == 'VIEW_3D':
-                    area.tag_redraw()
+            screen = getattr(window, "screen", None)
+            if screen is None:
+                continue
+            for area in screen.areas:
+                if area.type != 'VIEW_3D':
+                    continue
+                if _target_area_ptr and area.as_pointer() != _target_area_ptr:
+                    continue
+                area.tag_redraw()
     except Exception as exc:  # noqa: BLE001
         logger.debug("Scribble mark: redraw tag failed: %s", exc)

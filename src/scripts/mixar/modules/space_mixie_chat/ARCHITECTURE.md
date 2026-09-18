@@ -236,6 +236,7 @@ These are the contracts between the two repos. Breaking any of them on either si
 - **Slot event shape** — `loader` / `content` / `ephemeral` / `todo` / `actions` / `images` / `input_type` / `interrupt_context`. Choice contexts may set `include_cancel=false` when their explicit actions are exhaustive (export preflight uses exactly Fix and Export, Export Anyways, Stop). `file_save` context is restricted to format, scope, extension, and sanitized suggested filename. Preflight reports and decisions never carry a path; the chosen path is held only in `core/export_destination.py` and never enters an agent stream or HTTP payload.
 - **Tool-call pairing invariant** — every `tool_use` the backend emits must get a matching `tool_result`. B5 (RPC timeout), B6 (disconnect buffer), B8 (queue full), B-Mira (invariant guard), B1 (compaction scrub) all defend this from a different angle.
 - **JWT shared across both channels** — same token, refreshed in lock-step via `refresh_access_token_shared` (K5).
+- **Generation callbacks (`generation.agent_result`)** — the client owns generation submission, download and import, so it reports terminal outcomes through an acknowledged JSON-RPC request using the same method and params as the notification API. `common/job_queue/core/agent_results.py` retains callback params independently of the visible queue until the backend returns `received: true` (a `relay_failed` result retries), permanently refuses the request, or the 20-attempt/one-hour retention budget expires. Give-up logs once and prevents reinsertion without marking the result acknowledged. Queue acceptance alone never sets `Job._agent_reported`. Timed retries and the post-handshake sweep preserve the generation identity, which the backend deduplicates. The retry timer survives file loads; socket response callbacks only enqueue Python data for the main-thread sweep. This is process-local recovery, not persistence across app restarts. Retopology claims the WindowManager ref once for its per-mesh fan-out: all accepted siblings share it, and one combined outcome waits for all of them to finish. Outside that scoped batch, the enqueue script's WindowManager ref is consumed even on duplicate rejection, and the shared GUI/headless execution pump clears any unclaimed ref at the script boundary. Frozen params: `agent_ref`, `generation_id`, `feature_key`, `job_type`, `model`, `label`, `backend_job_id`, `status`, `error`, `result_names`; local paths are excluded.
 - **`request_id` uniqueness** — within a connection lifetime. Plugin's `_pending_responses` and backend's tool-call tracking both key on it.
 
 ## Where to look for what
@@ -269,7 +270,9 @@ safety copy is captured first, the snapshot is read with `wm.recover_auto_save`
 (nothing on disk is touched by the read, but the document's path becomes the
 snapshot file), then the document is saved once: a titled project back to its
 own path, an untitled one to the session's `working.mixar` so Ctrl-S never lands
-on a checkpoint. `load_pre` skips its session abort while
+on a checkpoint. Recovery must return `FINISHED`: a cancelled read reports failure
+without saving the document or rewinding the backend conversation.
+`load_pre` skips its session abort while
 `turn_checkpoints.is_restoring()`, and `turn_events.drop_scene` fences the
 session so the reconnect-time recovery check does not replay the undone turns
 into the restored chat (the next send lifts the fence). The checkpoint is bound

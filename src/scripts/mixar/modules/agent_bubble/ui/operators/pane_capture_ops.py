@@ -89,19 +89,40 @@ def _capture_viewport_to_file(context):
             pass
 
     scene = window.scene
-    original_filepath = scene.render.filepath
-    original_x = scene.render.resolution_x
-    original_y = scene.render.resolution_y
+    render = scene.render
+    settings = render.image_settings
+    original_filepath = render.filepath
+    original_x = render.resolution_x
+    original_y = render.resolution_y
+    original_percentage = render.resolution_percentage
+    original_format = settings.file_format
+    original_media = getattr(settings, "media_type", None)
     try:
-        scene.render.filepath = path
-        scene.render.resolution_x = region.width
-        scene.render.resolution_y = region.height
+        render.filepath = path
+        render.resolution_x = region.width
+        render.resolution_y = region.height
+        # Anything but 100% and the capture is not the size of the region the
+        # user is looking at.
+        render.resolution_percentage = 100
+        # media_type BEFORE file_format: on Blender 5 a scene whose output is
+        # FFMPEG rejects PNG outright, so this died on any scene that had been
+        # through Director's guide render or that the user simply configured
+        # for video. Both sibling capture paths (scribble_mark/core/freeze.py,
+        # director/core/capture.py) document the same ordering; this one was
+        # written without it.
+        if original_media is not None:
+            settings.media_type = "IMAGE"
+        settings.file_format = "PNG"
         with context.temp_override(window=window, area=area, region=region):
             bpy.ops.render.opengl(write_still=True, view_context=True)
     finally:
-        scene.render.filepath = original_filepath
-        scene.render.resolution_x = original_x
-        scene.render.resolution_y = original_y
+        render.filepath = original_filepath
+        render.resolution_x = original_x
+        render.resolution_y = original_y
+        render.resolution_percentage = original_percentage
+        if original_media is not None:
+            settings.media_type = original_media
+        settings.file_format = original_format
 
     return path if os.path.exists(path) else None
 

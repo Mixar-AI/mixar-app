@@ -3,13 +3,16 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""BYOK cached-state mirror + fetch operators.
+"""BYOK refresh operators + the WindowManager mirror helpers.
 
-Split out of byok_ops.py (500-line rule). Owns the WindowManager mirror
-of the server's BYOK state (`byok_is_active`, `byok_current_*`,
-`byok_key_preview`), the redraw nudge that makes async state flips
-visible, and the non-interactive fetch operators the auth hooks fire on
-login/refresh. The dialog and its save/remove flow live in byok_ops.py.
+State and parsing live in `core/credential_state.py` (credentials) and
+`core/models_cache.py` (the provider/model catalog); this module is the operator
+surface the dialog, the auth hooks and QA drive, plus the redraw nudge that makes
+async state flips visible.
+
+The delegating helpers `_apply_cached_state` / `_clear_cached_state` /
+`_on_fetch_done` keep their names: byok_ops imports all three, and the
+non-destructive-failure contract is pinned against `_on_fetch_done` directly.
 """
 
 import bpy
@@ -17,7 +20,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 
-from ...core import byok_client, model_suggestions
+from ...core import credential_state, models_cache
 
 logger = get_logger(__name__)
 
@@ -45,34 +48,48 @@ def _redraw_mixie_chat_areas():
         logger.debug("BYOK area redraw failed: %s", e)
 
 
-def _clear_cached_state(wm):
-    """Reset all cached BYOK display fields to defaults."""
-    wm.byok_is_active = False
-    wm.byok_current_provider = ''
-    wm.byok_current_model = ''
-    wm.byok_current_supports_vision = True
-    wm.byok_key_preview = ''
+def _clear_cached_state(wm=None):
+    """Reset the cached BYOK display state to defaults."""
+    credential_state.clear(wm)
 
 
-def _apply_cached_state(wm, data):
-    """Write the server's `data.items[0]` into the cached display fields.
+def _apply_cached_state(wm, data, epoch=None):
+    """Adopt a server payload the caller already holds (e.g. a save's echo).
 
-    All 4 items are identical per the backend contract; just read index 0.
+    Returns False when ``epoch`` is stale (a logout landed first) and the
+    payload was dropped.
     """
-    if not isinstance(data, dict):
-        return
-    wm.byok_is_active = bool(data.get('byok_active', False))
-    items = data.get('items') or []
-    if items and isinstance(items[0], dict):
-        wm.byok_current_provider = items[0].get('provider', '') or ''
-        wm.byok_current_model = items[0].get('model', '') or ''
-        # Absent on older backends → default to vision-capable (no false note).
-        wm.byok_current_supports_vision = bool(items[0].get('supports_vision', True))
-        wm.byok_key_preview = items[0].get('key_preview', '') or ''
+    return credential_state.apply_from_payload(data, wm, epoch=epoch)
+
+
+def _on_fetch_done(success: bool, data, err):
+    """Main-thread fetch callback.
+
+    A failure LEAVES the cached state alone rather than clearing it. Only the
+    server can tell us a credential is gone, and it does that through the
+    success path (``byok_active: false``). Clearing here would turn a transient
+    miss into a session-long "Not configured" over a credential that is still
+    stored and still being resolved on every turn.
+    """
+    try:
+        if success:
+            credential_state.apply_from_payload(data)
+            snapshot = credential_state.snapshot()
+            logger.debug(
+                "BYOK state fetched: is_active=%s provider=%s model=%s",
+                snapshot["byok_is_active"],
+                snapshot["byok_current_provider"],
+                snapshot["byok_current_model"],
+            )
+        else:
+            logger.debug("BYOK state fetch failed (keeping cached state): %s", err)
+        _redraw_mixie_chat_areas()
+    except Exception as e:
+        logger.error("BYOK fetch callback failed: %s", e, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
-# Fetch BYOK state (called from auth hooks on login / refresh)
+# Fetch operators (auth hooks, the dialog and QA drive these)
 # ---------------------------------------------------------------------------
 
 class MIXAR_BYOK_OT_fetch_state(Operator):
@@ -82,102 +99,19 @@ class MIXAR_BYOK_OT_fetch_state(Operator):
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        byok_client.fetch_state(on_done=_on_fetch_done)
+        credential_state.refresh()
         return {'FINISHED'}
 
 
-def _on_fetch_done(success: bool, data, err):
-    """Main-thread fetch callback.
-
-    On failure, leave cached state at defaults (byok_is_active=False).
-    The profile menu falls back to "inactive" which is the safe failure mode —
-    subsequent agent calls use Mixar's system keys.
-    """
-    try:
-        wm = bpy.context.window_manager
-        if success:
-            _apply_cached_state(wm, data or {})
-            logger.debug(
-                "BYOK state fetched: is_active=%s provider=%s model=%s",
-                wm.byok_is_active, wm.byok_current_provider, wm.byok_current_model,
-            )
-        else:
-            logger.debug("BYOK state fetch failed: %s", err)
-            _clear_cached_state(wm)
-        _redraw_mixie_chat_areas()
-    except Exception as e:
-        logger.error("BYOK fetch callback failed: %s", e, exc_info=True)
-
-
-# ---------------------------------------------------------------------------
-# Fetch models catalog (called from auth hooks on login)
-# ---------------------------------------------------------------------------
-
 class MIXAR_BYOK_OT_fetch_models_catalog(Operator):
-    """Refresh the provider+model catalog from the backend"""
+    """Revalidate the provider+model catalog from the backend"""
     bl_idname = "mixar_byok.fetch_models_catalog"
     bl_label = "Refresh Models Catalog"
     bl_options = {'INTERNAL'}
 
     def execute(self, context):
-        byok_client.fetch_models_catalog(on_done=_on_models_catalog_done)
+        models_cache.refresh()
         return {'FINISHED'}
-
-
-def _on_models_catalog_done(success: bool, data, err):
-    """Main-thread callback for the GET /agent/models fetch.
-
-    Response shape (inner `data`):
-      { "providers": [
-          { "id": "anthropic", "label": "Anthropic",
-            "models": [ {"id": "claude-sonnet-4-5", "label": "..."}, ... ] },
-          ...
-      ] }
-    """
-    try:
-        if not success:
-            logger.debug("Models catalog fetch failed: %s", err)
-            return
-
-        envelope = data or {}
-        provider_entries = envelope.get('providers') or []
-
-        providers: list[tuple[str, str, str]] = []
-        models: dict[str, list[tuple[str, str, str]]] = {}
-        for entry in provider_entries:
-            if not isinstance(entry, dict):
-                continue
-            pid = entry.get('id')
-            if not pid:
-                continue
-            label = entry.get('label') or pid
-            # EnumProperty items need a 3-tuple (id, label, description).
-            # The API doesn't provide a description — the label doubles
-            # as the tooltip.
-            providers.append((pid, label, label))
-
-            model_entries = entry.get('models') or []
-            model_items: list[tuple[str, str, str]] = []
-            for m in model_entries:
-                if not isinstance(m, dict):
-                    continue
-                mid = m.get('id')
-                if not mid:
-                    continue
-                mlabel = m.get('label') or mid
-                # EnumProperty items are (id, label, description); the
-                # API gives us id + label, so label doubles as description.
-                model_items.append((mid, mlabel, mlabel))
-            models[pid] = model_items
-
-        model_suggestions.populate(providers, models)
-        logger.debug(
-            "Models catalog populated: %d providers, %d model lists",
-            len(providers), len(models),
-        )
-        _redraw_mixie_chat_areas()
-    except Exception as e:
-        logger.error("Models catalog callback failed: %s", e, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
