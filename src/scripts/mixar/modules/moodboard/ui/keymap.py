@@ -207,6 +207,22 @@ def register():
             )
             addon_keymaps.append((km, kmi))
 
+        # Cmd/Ctrl+G frames the selection, Alt+G dissolves the frame — the
+        # node-editor convention. Mirrored in space_mixie.cc; the addon copy
+        # is what survives a keyconfig preset reload.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_create_frame',
+            type='G',
+            value='PRESS',
+            ctrl=modifier.get('ctrl', False),
+            oskey=modifier.get('oskey', False)
+        )
+        addon_keymaps.append((km, kmi))
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_ungroup', type='G', value='PRESS', alt=True
+        )
+        addon_keymaps.append((km, kmi))
+
         # A / Alt+A — same Blender convention as the node editor. Mirrored in
         # space_mixie.cc; the addon copy is what survives a keyconfig reload.
         kmi = km.keymap_items.new(

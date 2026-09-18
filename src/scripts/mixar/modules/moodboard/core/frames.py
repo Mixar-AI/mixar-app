@@ -33,7 +33,6 @@ from .frame_geometry import (
     frame_for_point,
     grow_rect_to_contain,
     next_palette_index,
-    palette_color,
     rect_center,
     rect_of,
     resolve_membership as resolve_membership_pure,
@@ -82,15 +81,6 @@ def item_rect(item):
 
 def frame_rect(frame):
     return rect_of(frame.position_x, frame.position_y, frame.width, frame.height)
-
-
-def frame_color(frame) -> tuple[float, float, float]:
-    """The pastel this frame wears. The palette index is the norm; a custom
-    colour is an explicit opt-in, so clearing the flag restores the pastel
-    rather than losing it."""
-    if getattr(frame, "use_custom_color", False):
-        return tuple(frame.custom_color)
-    return palette_color(frame.palette_index)
 
 
 def frame_rects(scene) -> list[tuple[str, tuple[float, float, float, float]]]:

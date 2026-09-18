@@ -51,7 +51,7 @@ def _draw_video_upscale(layout, context):
     else:
         draw_hint(
             source,
-            video_upscale_source_error(None, video_count=len(videos)),
+            video_upscale_source_error(video_count=len(videos)),
             icon='INFO' if not videos else 'ERROR',
         )
 

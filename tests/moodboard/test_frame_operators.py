@@ -214,6 +214,14 @@ def test_the_keymap_binds_the_frame_operators_not_the_group_ones():
     assert '"mixie.ungroup"' not in keymap
 
 
+def test_the_frame_shortcuts_have_addon_keyconfig_copies():
+    """The keyconfig-reload rule: a C-registered binding alone is wiped by a
+    GUI keyconfig preset reload, so the addon keyconfig must carry a copy."""
+    keymap = _read(MOODBOARD / "ui" / "keymap.py")
+    assert "'mixie.moodboard_create_frame'" in keymap
+    assert "'mixie.moodboard_ungroup'" in keymap
+
+
 def test_the_more_menu_offers_every_frame_action():
     menu = _read(MOODBOARD / "ui/moodboard_frame_menus.py")
     for operator in (

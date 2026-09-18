@@ -38,6 +38,8 @@ def resolve_video_upscale_target(mode: str, model_choice: str) -> tuple[str, str
     )
 
     service_key = resolve_service_key(CAPABILITY_KEY, mode)
+    if not service_key:
+        raise ValueError("Video Upscale is not available right now")
     if service_key != SERVICE_KEY:
         raise ValueError("The selected upscale service needs a newer app version")
     model = resolve_model_slug(service_key, model_choice)
@@ -51,7 +53,7 @@ def prepare_video_upscale_source(videos, limits=None) -> tuple[dict, dict]:
     limits = limits or get_video_upscale_limits(SERVICE_KEY)
     if limits is None:
         raise ValueError("Video upscale catalog config is incomplete")
-    error = video_upscale_source_error(limits, video_count=len(videos))
+    error = video_upscale_source_error(video_count=len(videos))
     if error:
         raise ValueError(error)
     return build_video_upscale_input(videos[0], limits), limits

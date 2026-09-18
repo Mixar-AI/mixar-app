@@ -33,13 +33,6 @@ def palette_color(index: int) -> tuple[float, float, float]:
     return FRAME_PALETTE[int(index) % FRAME_PALETTE_SIZE][1]
 
 
-def palette_name(index: int) -> str:
-    """The pastel's name at *index*, wrapped into the palette."""
-    if FRAME_PALETTE_SIZE == 0:  # pragma: no cover
-        return "Colour"
-    return FRAME_PALETTE[int(index) % FRAME_PALETTE_SIZE][0]
-
-
 def next_palette_index(existing_count: int) -> int:
     """Palette slot for the next frame.
 

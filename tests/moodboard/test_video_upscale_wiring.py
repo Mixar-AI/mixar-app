@@ -134,9 +134,9 @@ def test_optional_pixel_caps_are_tolerated(monkeypatch):
 
 def test_exactly_one_selected_video_is_required():
     module = _load_catalog_module()
-    assert "Select one video" in module.video_upscale_source_error(None, video_count=0)
-    assert "one video at a time" in module.video_upscale_source_error(None, video_count=2)
-    assert module.video_upscale_source_error(None, video_count=1) is None
+    assert "Select one video" in module.video_upscale_source_error(video_count=0)
+    assert "one video at a time" in module.video_upscale_source_error(video_count=2)
+    assert module.video_upscale_source_error(video_count=1) is None
 
 
 def test_source_validator_streams_from_the_path_and_checks_size_and_extension(monkeypatch):
@@ -159,6 +159,28 @@ def test_source_validator_streams_from_the_path_and_checks_size_and_extension(mo
         module.build_video_upscale_input(_video("clip.webm"), limits)
     with pytest.raises(ValueError, match="moved or deleted"):
         module.build_video_upscale_input(_video(available=False), limits)
+
+
+def test_source_validator_refuses_an_oversize_frame_before_upload(monkeypatch):
+    """The catalog's pixel ceilings are enforced from the frame size Blender
+    already knows, so a 4K clip fails at the click, not after a 50 MB upload."""
+    monkeypatch.setitem(sys.modules, CATALOG_MODULE, _catalog_stub(_service()))
+    module = _load_catalog_module()
+    limits = module.get_video_upscale_limits("video_upscale")
+
+    ok = dict(_video(), width=2560, height=1440)
+    assert module.build_video_upscale_input(ok, limits)["filename"] == "clip.mp4"
+    # Unknown size (not probed yet): allowed through, the backend measures it.
+    assert module.build_video_upscale_input(dict(_video(), width=0, height=0), limits)
+
+    with pytest.raises(ValueError, match="longest side"):
+        module.build_video_upscale_input(dict(_video(), width=3840, height=2160), limits)
+    with pytest.raises(ValueError, match="pixels max"):
+        module.build_video_upscale_input(dict(_video(), width=2560, height=1600), limits)
+
+    # A row without pixel caps enforces none.
+    del limits["max_side_pixels"], limits["max_pixels"]
+    assert module.build_video_upscale_input(dict(_video(), width=7680, height=4320), limits)
 
 
 def test_limit_hints_name_the_catalog_ceilings(monkeypatch):

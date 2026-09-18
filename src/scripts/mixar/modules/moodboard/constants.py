@@ -289,16 +289,6 @@ CANVAS_ANNOTATION_SAMPLE_PX = 2.0
 REFERENCE_IMAGES_MAX_WITH_WARNING = 14
 
 # ============================================================================
-# GROUP DRAWING CONSTANTS (used by mixie_draw_moodboard_groups.cc)
-# ============================================================================
-
-# Size of group selection handles in pixels
-GROUP_HANDLE_SIZE_PX = 12.0
-
-# Default group selection color (RGBA)
-GROUP_SELECTION_COLOR = (0.2, 0.6, 1.0, 1.0)
-
-# ============================================================================
 # SIDEBAR LAYOUT CONSTANTS (must match C++ constants)
 # ============================================================================
 
@@ -411,7 +401,7 @@ FRAME_NAME_MAXLEN = 96             # <-> char name[128] (MIXIE_FRAME_NAME_BUF)
 # eight and is not reproducible in QA. What is stored is the INDEX, so the
 # palette can be retuned later and saved boards follow it.
 #
-# Must equal `FRAME_PALETTE` in `mixie_draw_moodboard_frames.cc`, which is the
+# Must equal `FRAME_PALETTE` in `mixie_moodboard_frame_geometry.cc`, which is the
 # painter's own copy -- `tests/moodboard/test_frame_ui.py` pins the two
 # together. The swatch menu here is the only Python reader.
 FRAME_PALETTE = (

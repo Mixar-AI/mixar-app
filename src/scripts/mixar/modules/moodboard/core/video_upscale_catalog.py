@@ -78,7 +78,7 @@ def _optional_positive_int(value):
     return number if number > 0 else None
 
 
-def video_upscale_source_error(limits, *, video_count):
+def video_upscale_source_error(*, video_count):
     """Human-readable reason the selection is not ONE usable source, or None."""
     if video_count == 0:
         return "Select one video on the moodboard to upscale"
@@ -92,9 +92,13 @@ def build_video_upscale_input(video, limits) -> dict:
 
     One definition for BOTH submit paths (node graph and sidebar drawer), the
     same rule ``build_video_reference_inputs`` follows for Video Gen. Movies
-    stream from ``filepath`` at upload time, so only path/size/extension are
-    checked here — never the bytes. Duration and pixel size are measured by
-    the backend uploader, which stamps them into the staged key.
+    stream from ``filepath`` at upload time, so the bytes are never read
+    here: size and extension come from the path, and the frame size Blender
+    already knows (``describe_moodboard_media``) is checked against the
+    catalog's pixel ceilings so an oversize clip is refused BEFORE a 50 MB
+    upload the backend would only reject. The backend still measures the
+    uploaded bytes itself (duration, frame size) and stamps them into the
+    staged key — that measurement, not this one, is what prices the job.
     """
     if not video.get("source_available", True):
         raise ValueError(f"Video source was moved or deleted: {video['filename']}")
@@ -106,12 +110,38 @@ def build_video_upscale_input(video, limits) -> dict:
     extension = os.path.splitext(video["filename"])[1].lower()
     if extension not in limits["video_extensions"]:
         raise ValueError(f"Unsupported video for upscaling: {video['filename']}")
+    _check_frame_size(video, limits)
     return {
         "filename": video["filename"],
         "mime_type": video["mime_type"],
         "filepath": video["resolved_filepath"],
         "file_size_bytes": video["file_size_bytes"],
     }
+
+
+def _check_frame_size(video, limits) -> None:
+    """Refuse a source whose known frame size exceeds the catalog ceilings.
+
+    An unknown size (0x0 — the movie has not been probed yet, or the caller
+    passed a bare path) is allowed through: the backend measures the real
+    container at upload and fails closed there.
+    """
+    width = int(video.get("width") or 0)
+    height = int(video.get("height") or 0)
+    if width <= 0 or height <= 0:
+        return
+    max_side = limits.get("max_side_pixels")
+    if max_side and max(width, height) > max_side:
+        raise ValueError(
+            f"Video frame is too large to upscale ({width}x{height}; "
+            f"{max_side} px on the longest side max): {video['filename']}"
+        )
+    max_pixels = limits.get("max_pixels")
+    if max_pixels and width * height > max_pixels:
+        raise ValueError(
+            f"Video frame is too large to upscale ({width}x{height}; "
+            f"{max_pixels} pixels max): {video['filename']}"
+        )
 
 
 def describe_source_limits(limits) -> list[str]:
@@ -121,7 +151,7 @@ def describe_source_limits(limits) -> list[str]:
         f"{limits['max_bytes'] // (1024 * 1024)} MB",
     ]
     if limits.get("max_side_pixels"):
-        lines.append(f"Up to {limits['max_side_pixels']} px on the longest side (2K)")
+        lines.append(f"Up to {limits['max_side_pixels']} px on the longest side")
     lines.append(
         "Formats: " + ", ".join(ext.lstrip(".").upper() for ext in limits["video_extensions"])
     )

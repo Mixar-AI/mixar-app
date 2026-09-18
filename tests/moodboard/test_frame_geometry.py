@@ -46,7 +46,6 @@ def test_palette_lookup_wraps_instead_of_raising():
     """A .blend written against a longer palette still resolves to a colour."""
     assert fg.palette_color(FRAME_PALETTE_SIZE) == FRAME_PALETTE[0][1]
     assert fg.palette_color(-1) == FRAME_PALETTE[-1][1]
-    assert fg.palette_name(0) == FRAME_PALETTE[0][0]
 
 
 def test_every_palette_entry_is_a_named_pastel_triple():
