@@ -125,6 +125,15 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
     except ImportError:
         pass
 
+    # 6. Stop the agent models catalog scheduling main-thread work. Flag-only:
+    #    BPY_python_end runs after BKE_blender_free(), so an atexit hook that
+    #    touched bpy data would be a use-after-free (tests/test_shutdown_hooks_atexit.py).
+    try:
+        from mixar.modules.byok.core.models_cache import mark_shutdown
+        _safe("stop_agent_models_cache", mark_shutdown)
+    except ImportError:
+        pass
+
 
 def register() -> None:
     """Register the atexit fallback so hard-exit paths still flush."""
