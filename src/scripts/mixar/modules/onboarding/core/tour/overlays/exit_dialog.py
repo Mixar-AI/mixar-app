@@ -7,7 +7,7 @@
 Interactive tour — the "Leave the tour?" confirmation.
 
 A centred dialog over a dim film with two pill buttons: *Continue tour*
-(accent filled) and *Yes, exit* (outlined). Layout is arithmetic over
+(accent filled) and *Leave* (outlined). Layout is arithmetic over
 ``config`` so the tests can pin it; drawing is ``gpu``/``blf`` only.
 """
 

@@ -83,6 +83,40 @@ def test_card_fades_in_over_card_fade_seconds():
 def test_reset_forgets_everything():
     m = CardMotion()
     m.step(DT, A, True)
+    m.fade_out()
     m.reset()
     assert m.rect is None and m.target is None
     assert m.alpha == 0.0 and m.controls_alpha == 0.0
+    assert not m.fading_out and not m.faded_out
+
+
+def test_fade_out_eases_alpha_to_zero_then_reports_faded_out():
+    m = CardMotion()
+    for _ in range(60):
+        m.step(DT, A, False)
+    assert m.alpha == 1.0 and not m.faded_out
+    m.fade_out()
+    assert m.fading_out and not m.faded_out      # nothing moves until a step
+    assert m.step(DT, A, False) is True
+    assert 0.0 < m.alpha < 1.0
+    steps = 1
+    while not m.faded_out and steps < 1000:
+        assert m.step(DT, A, False) is True       # still changing
+        steps += 1
+    assert m.faded_out and m.alpha == 0.0
+    assert steps * DT == pytest.approx(config.CARD_FADE_OUT_SECONDS, abs=DT * 1.5)
+    # Settled at nothing: no more changes, and the fade-in never restarts.
+    assert m.step(DT, A, False) is False
+    assert m.alpha == 0.0
+
+
+def test_fade_out_is_idempotent_and_wins_over_a_pending_fade_in():
+    m = CardMotion()
+    m.step(DT, A, False)                          # alpha barely above 0
+    m.fade_out()
+    m.fade_out()
+    m.step(DT, A, False)
+    assert m.fading_out
+    for _ in range(60):
+        m.step(DT, A, False)
+    assert m.faded_out

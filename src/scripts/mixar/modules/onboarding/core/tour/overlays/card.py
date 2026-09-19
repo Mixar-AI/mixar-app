@@ -19,7 +19,10 @@ and QA targets ignore visibility, so the harness can always click them.
 island when they would overlap and shrinking it, aspect kept, when the host
 is small. ``layout_from_card_rect`` rebuilds a full layout from an animated
 card rect so the session can glide between targets. ``draw_card`` paints a
-layout; ``hit_test`` and ``qa_targets`` read it back. The exit confirmation
+layout (with an optional freeze-frame film while a gate waits);
+``draw_caption_under`` seats a hint-style pill centred under the card for
+copy that belongs to the moment, not the video (the outro's replay note);
+``hit_test`` and ``qa_targets`` read a layout back. The exit confirmation
 lives in ``exit_dialog`` and is re-exported here.
 
 Layout is pure arithmetic over ``config`` numbers, so it runs under the
@@ -52,6 +55,7 @@ logger = get_logger(__name__)
 
 __all__ = (
     "CardLayout", "compute_card_layout", "layout_from_card_rect", "draw_card",
+    "draw_caption_under", "caption_under_rect",
     "hit_test", "qa_targets", "format_rate",
     "ExitConfirmLayout", "compute_exit_confirm_layout", "draw_exit_confirm",
     "hit_test_exit_confirm",
@@ -65,6 +69,9 @@ VIDEO_PLACEHOLDER = (0.03, 0.03, 0.04, 1.0)
 CONTROL_TEXT_HOVER = (1.0, 1.0, 1.0, 1.0)
 GATE_CAPTION = "Your turn"
 GATE_CAPTION_INSET = 10.0     # logical px from the video's right edge
+GATE_FILM = (0.0, 0.0, 0.0, 1.0)
+CAPTION_PAD_X = 12.0          # logical px, the hint pill's padding
+CAPTION_PAD_Y = 7.0
 
 
 @dataclass
@@ -254,8 +261,8 @@ def _draw_controls(layout: CardLayout, paused: bool, rate: float, px: float,
 
 def _draw_gate_caption(layout: CardLayout, px: float, s: float,
                        alpha: float, controls_alpha: float) -> None:
-    """Dim "Waiting for you" at the video's bottom-right; slides left of
-    the skip button as the controls reveal so the two never overlap."""
+    """Dim "Your turn" at the video's bottom-right; slides left of the
+    Next button as the controls reveal so the two never overlap."""
     cw = _text_width(GATE_CAPTION, px)
     hidden_right = layout.video[2] - GATE_CAPTION_INSET * s
     skip = layout.buttons.get("skip")
@@ -293,9 +300,12 @@ def draw_card(layout: CardLayout, texture, progress: float, paused: bool, rate: 
               alpha: float = 1.0, ui_scale: float = 1.0,
               gate_seconds_left: Optional[float] = None,
               hover: Optional[str] = None, caption: str = "",
-              controls_alpha: float = 0.0) -> None:
-    """Paint the card: background, video, caption, controls strip (scaled
-    by ``controls_alpha``), progress hairline, gate caption, pause glyph."""
+              controls_alpha: float = 0.0, gate_film: float = 0.0) -> None:
+    """Paint the card: background, video, gate film, caption, controls strip
+    (scaled by ``controls_alpha``), progress hairline, gate caption, pause
+    glyph. ``gate_film`` (0..1, eased by the session) darkens the held frame
+    by ``GATE_FILM_ALPHA`` while a gate waits, so the pause reads as a
+    deliberate freeze-frame rather than a stall."""
     if alpha <= 0.0:
         return
     try:
@@ -306,6 +316,11 @@ def draw_card(layout: CardLayout, texture, progress: float, paused: bool, rate: 
                           _with_alpha(config.CARD_BG, alpha))
 
         _draw_video(texture, layout.video, alpha)
+        film = max(0.0, min(1.0, float(gate_film)))
+        if film > 0.0:
+            vx0, vy0, vx1, vy1 = layout.video
+            draw_rect(vx0, vy0, vx1 - vx0, vy1 - vy0,
+                      _with_alpha(GATE_FILM, alpha * config.GATE_FILM_ALPHA * film))
         px = config.CONTROL_FONT_PX * s
         _draw_caption(layout.video, caption, px, s, alpha)
         _draw_controls(layout, paused, rate, px, hover, alpha * ca)
@@ -324,6 +339,38 @@ def draw_card(layout: CardLayout, texture, progress: float, paused: bool, rate: 
             _draw_paused_glyph(layout.video, s, alpha)
     except Exception as exc:
         logger.debug("Tour card draw failed: %s", exc)
+
+
+def caption_under_rect(layout: CardLayout, text: str, ui_scale: float = 1.0) -> tuple:
+    """Where ``draw_caption_under`` puts its pill: centred on the card,
+    ``CAPTION_UNDER_GAP`` below ``layout.card``. Pure, for the tests."""
+    s = max(0.1, float(ui_scale))
+    px = config.HINT_FONT_PX * s
+    w = _text_width(text, px) + 2 * CAPTION_PAD_X * s
+    h = px + 2 * CAPTION_PAD_Y * s
+    cx = (layout.card[0] + layout.card[2]) * 0.5
+    ymax = layout.card[1] - config.CAPTION_UNDER_GAP * s
+    return (cx - w * 0.5, ymax - h, cx + w * 0.5, ymax)
+
+
+def draw_caption_under(layout: CardLayout, text: str, ui_scale: float = 1.0,
+                       alpha: float = 1.0) -> Optional[tuple]:
+    """A hint-style pill (``HINT_BG`` / ``HINT_TEXT``) centred under the
+    card; returns its rect, or None when nothing was drawn."""
+    if not text or alpha <= 0.0:
+        return None
+    try:
+        s = max(0.1, float(ui_scale))
+        rect = caption_under_rect(layout, text, s)
+        xmin, ymin, xmax, ymax = rect
+        w, h = xmax - xmin, ymax - ymin
+        draw_rounded_rect(xmin, ymin, w, h, h * 0.5, _with_alpha(config.HINT_BG, alpha))
+        draw_text_centered(rect, text, config.HINT_FONT_PX * s,
+                           _with_alpha(config.HINT_TEXT, alpha))
+        return rect
+    except Exception as exc:
+        logger.debug("Tour caption draw failed: %s", exc)
+        return None
 
 
 # -- hit testing / QA -------------------------------------------------------

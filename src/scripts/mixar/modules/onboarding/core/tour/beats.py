@@ -33,6 +33,9 @@ from .config import END_AFTER_WALL_MS, GATE_AUTO_ADVANCE_DEFAULT_MS, SKIP_DWELL_
 OVERLAY_CURSOR = "cursor"
 OVERLAY_SCRIBBLE = "scribble"
 OVERLAY_HINT = "hint"
+# A line of copy the session draws centred UNDER the video card (no anchor,
+# no position): the outro's "replay any time" note.
+OVERLAY_CAPTION = "caption"
 
 # Card placements.
 PLACE_CENTER = "center"
@@ -73,6 +76,11 @@ A_DRAWER_TEXT = {"op": "mixie.moodboard_add_textbox", "area": "VIEW_3D"}
 A_DRAWER_ANNOTATE = {"op": "mixie.moodboard_annotate_canvas", "area": "VIEW_3D"}
 A_ENGINE_BUTTON = {"op": "mixar.set_ui_mode_pro"}
 A_ZEN_BUTTON = {"op": "mixar.set_ui_mode_ai"}
+# A generation tile in the island's Library tab (see the `library` beat).
+A_LIBRARY_TILE = {"surface": "library_tile", "area": "AGENT_BUBBLE"}
+# Engine-mode editors the "full toolkit" line points at (inset rings).
+A_PROPERTIES_EDITOR = {"area": "PROPERTIES", "region": "WINDOW"}
+A_OUTLINER = {"area": "OUTLINER", "region": "WINDOW"}
 
 
 @dataclass(frozen=True)
@@ -86,7 +94,7 @@ class Overlay:
     disappear_ms: Optional[int] = None   # None → until the beat ends
     click_ms: Optional[int] = None       # cursor: pulse a click at this ms
     orbit: bool = False                  # cursor: circle the anchor
-    text: str = ""                       # hint: the label
+    text: str = ""                       # hint / caption: the label
     side: str = "auto"                   # hint: "auto" (below/above) or "left"
 
 
@@ -210,13 +218,23 @@ def validate(tour: Tour) -> None:
             if j <= find_index(tour.beats, b.id):
                 raise ValueError(f"{b.id}: gate must advance forward")
         prev_enter = b.enter_ms
-    build_skip_plan(tour.beats, [b.id for b in tour.beats if b.optional])
+    # With every optional beat dropped, each surviving gate must still have
+    # a forward target: the runner refuses a table whose gate would no-op.
+    kept, _ranges = build_skip_plan(tour.beats, [b.id for b in tour.beats if b.optional])
+    for i, b in enumerate(kept):
+        if b.gate is None:
+            continue
+        j = find_index(kept, b.gate.advance_to)
+        if j < 0:
+            raise ValueError(f"{b.id}: gate target {b.gate.advance_to!r} is optional "
+                             "and may be skipped")
+        if j <= i:
+            raise ValueError(f"{b.id}: gate must advance forward after skips")
 
 
 # ---------------------------------------------------------------------------
-# The Mixar intro tour. Timings are placeholders matching the generated
-# placeholder video; re-time against the founder recording, nothing else
-# changes.
+# The Mixar intro tour, timed to the founder recording. Re-timing a new take
+# changes only the numbers below; the script and its anchors stay.
 # ---------------------------------------------------------------------------
 
 def _cursor(id_, anchor=None, appear=None, click=None, disappear=None,
@@ -238,12 +256,20 @@ def _hint(id_, text, anchor=None, appear=None, disappear=None, at_pct=None,
                    side=side)
 
 
+def _caption(id_, text, appear=None, disappear=None):
+    """Copy drawn under the video card by the session; never anchored."""
+    return Overlay(id_, OVERLAY_CAPTION, text=text, appear_ms=appear,
+                   disappear_ms=disappear)
+
+
 MIXAR_INTRO = Tour(
     id="mixar-intro",
     title="Welcome to Mixar",
     # Timed to the founder take of 2026-09-18 (1:54): every enter_ms is the
     # first word of that line minus ~150 ms; a gated beat's clip_end_ms is
-    # ~300 ms after its last word so the pause lands in the natural silence.
+    # the last word + 500 ms so the pause lands in the natural silence (the
+    # jump then seeks to the next line, so the gap is never played).
+    # Captions name the ACT, not the beat, and hold across an act's beats.
     beats=(
         Beat("intro", 0, 6700, "hero", PLACE_CENTER,
              label="Welcome",
@@ -255,30 +281,35 @@ MIXAR_INTRO = Tour(
              overlays=(
                  _cursor("viewport-orbit", A_VIEWPORT, appear=8500, orbit=True),
              )),
-        # "Go on, give it a spin." 14.3–16.1 s, then the tour waits.
-        Beat("viewport-try", 14150, 16400, "half", PLACE_BOTTOM_LEFT,
-             label="Part 1 · Try it: orbit the view",
+        # "Go on, give it a spin." 14.3–16.08 s, then the tour waits.
+        Beat("viewport-try", 14150, 16600, "half", PLACE_BOTTOM_LEFT,
+             label="Part 1 · The viewport",
              overlays=(
-                 _hint("viewport-hint", "Drag to orbit, scroll to zoom", A_VIEWPORT),
+                 _hint("viewport-hint",
+                       "Middle-drag to orbit · scroll to zoom · or drag the axis ball, top right",
+                       A_VIEWPORT),
              ),
              gate=Gate("viewport_interacted", "find-island", anchor=A_VIEWPORT,
-                       auto_advance_wall_ms=12000)),
-        # -- Act 2: the Agent island ("See the little island…" 18.7 s) --------
-        Beat("find-island", 18570, 24700, "half", PLACE_BOTTOM_LEFT,
-             label="Part 2 · Mixie, your agent",
+                       auto_advance_wall_ms=10000)),
+        # -- Act 2: Mixie ("See the little island…" 18.7 s; "open it up." ends 24.42)
+        # The cursor glides to the pill and rests there: the click is the
+        # user's (a fake click on a gated target would read as "done").
+        Beat("find-island", 18570, 24900, "half", PLACE_BOTTOM_LEFT,
+             label="Part 2 · Mixie",
              actions=((18570, "island_open", {}),),
              overlays=(
                  _scribble("island-ring", A_PILL_ON_HOST, appear=19500),
-                 _cursor("island-cursor", A_PILL_TOP_ON_HOST, appear=20000, click=24000),
-                 _hint("island-hint", "Click the island to open Mixie", A_PILL_ON_HOST,
-                       appear=21000),
+                 _cursor("island-cursor", A_PILL_TOP_ON_HOST, appear=20000),
+                 _hint("island-hint", "Open Mixie", A_PILL_ON_HOST, appear=21000),
              ),
              gate=Gate("island_expanded", "island-tabs", anchor=A_PILL,
-                       auto_advance_wall_ms=12000,
+                       auto_advance_wall_ms=8000,
                        auto_action=("island_expand", {}))),
         # "Mixie has tabs." 27.4 s · Agent 29.0 · 3D 34.5 · Media 38.4 · Splat 42.4
-        Beat("island-tabs", 27250, 47550, "card", PLACE_BOTTOM_RIGHT,
-             label="Part 2 · What Mixie can do",
+        # The first hop crosses into the island window: the cursor leads the
+        # click by >= 900 ms so the eye follows it there before the tab flips.
+        Beat("island-tabs", 27250, 47550, "half", PLACE_BOTTOM_RIGHT,
+             label="Part 2 · Mixie",
              actions=(
                  (27250, "island_expand", {}),
                  (29000, "island_tab", {"tab": "AGENT"}),
@@ -287,7 +318,7 @@ MIXAR_INTRO = Tour(
                  (42440, "island_tab", {"tab": "SPLAT"}),
              ),
              overlays=(
-                 _cursor("tab-agent", A_TAB_AGENT, appear=28500, click=29000, disappear=34200),
+                 _cursor("tab-agent", A_TAB_AGENT, appear=27600, click=29000, disappear=34200),
                  _scribble("tab-agent-ring", A_TAB_AGENT, appear=29000, disappear=34200),
                  _cursor("tab-3d", A_TAB_3D, appear=34200, click=34540, disappear=38100),
                  _scribble("tab-3d-ring", A_TAB_3D, appear=34540, disappear=38100),
@@ -296,39 +327,46 @@ MIXAR_INTRO = Tour(
                  _cursor("tab-splat", A_TAB_SPLAT, appear=42100, click=42440),
                  _scribble("tab-splat-ring", A_TAB_SPLAT, appear=42440),
              )),
-        # "Everything you generate lands in Library. Check it out." 47.7–52.0 s
-        Beat("library-prompt", 47550, 52300, "card", PLACE_BOTTOM_RIGHT,
-             label="Part 2 · Your Library",
+        # "Everything you generate lands in Library. Check it out." 47.7–52.02 s
+        Beat("library-prompt", 47550, 52500, "half", PLACE_BOTTOM_RIGHT,
+             label="Part 2 · Mixie",
              overlays=(
                  _scribble("library-ring", A_TAB_LIBRARY, appear=47900),
                  _cursor("library-cursor", A_TAB_LIBRARY, appear=48300),
                  _hint("library-hint", "Open Library", A_TAB_LIBRARY, appear=49500),
              ),
              gate=Gate("bubble_tab:GENERATIONS", "library", anchor=A_TAB_LIBRARY,
-                       auto_advance_wall_ms=8000,
+                       auto_advance_wall_ms=10000,
                        auto_action=("island_tab", {"tab": "GENERATIONS"}))),
-        # "Your generations sit here…" 53.3 s
-        Beat("library", 53190, 62590, "card", PLACE_BOTTOM_RIGHT,
-             label="Part 2 · Your Library",
+        # "Your generations sit here…" 53.3 s. Two glides instead of an orbit:
+        # the first tile, then the island as a whole. The dump exports every
+        # tile as `library_tile` with only its asset id in `value`, and the
+        # matcher keeps the largest match (all tiles are equal, so the first
+        # one wins); no key selects the Nth tile, and a fresh account has no
+        # tiles at all, hence the host-percent fallbacks.
+        Beat("library", 53190, 62590, "half", PLACE_BOTTOM_RIGHT,
+             label="Part 2 · Mixie",
              actions=((53190, "island_tab", {"tab": "GENERATIONS"}),),
              overlays=(
-                 _cursor("library-sweep", A_ISLAND, appear=54500, orbit=True),
+                 _cursor("library-tile", A_LIBRARY_TILE, appear=54500, disappear=58000,
+                         at_pct=(70, 40)),
+                 _cursor("library-sweep", A_ISLAND, appear=58000, at_pct=(70, 40)),
              )),
-        # -- Act 3: the moodboard ("Ideas start in 2D…" 62.7 s) ---------------
-        Beat("moodboard-prompt", 62590, 66900, "half", PLACE_TOP_RIGHT,
+        # -- Act 3: the moodboard ("Ideas start in 2D…" 62.7 s; "right." ends 66.62)
+        Beat("moodboard-prompt", 62590, 67100, "half", PLACE_BOTTOM_LEFT,
              label="Part 3 · The moodboard",
              overlays=(
                  _scribble("grip-ring", A_DRAWER_GRIP, appear=63200),
                  _cursor("grip-cursor", A_DRAWER_GRIP, appear=63800),
-                 _hint("grip-hint", "Pull the moodboard out", A_DRAWER_GRIP, appear=64800,
-                       side="left"),
+                 _hint("grip-hint", "Drag the Moodboard tab out", A_DRAWER_GRIP,
+                       appear=64800, side="left"),
              ),
              gate=Gate("drawer_open", "moodboard-canvas", anchor=A_DRAWER_GRIP,
-                       auto_advance_wall_ms=10000,
+                       auto_advance_wall_ms=8000,
                        auto_action=("drawer_set", {"amount": 1.0}))),
         # "It's a canvas for references and concepts…" 69.2 s
-        Beat("moodboard-canvas", 69090, 78890, "card", PLACE_TOP_LEFT,
-             label="Part 3 · A 2D canvas for ideas",
+        Beat("moodboard-canvas", 69090, 78890, "half", PLACE_TOP_LEFT,
+             label="Part 3 · The moodboard",
              actions=(
                  (69090, "drawer_set", {"amount": 1.0}),
                  (69700, "moodboard_add_demo_image", {}),
@@ -339,28 +377,26 @@ MIXAR_INTRO = Tour(
                          at_pct=(88, 55)),
              )),
         # "Add images and videos from here." 79.0 · "Write notes" 81.8 · "sketch" 84.2
-        Beat("moodboard-tools", 78890, 88170, "card", PLACE_TOP_LEFT,
-             label="Part 3 · Moodboard tools",
+        # Rings and cursor only: the narration names each tool, a hint pill
+        # would repeat it over the drawer. The drawer is re-asserted open so
+        # a user who nudged it shut still sees the capsule.
+        Beat("moodboard-tools", 78890, 88170, "half", PLACE_TOP_LEFT,
+             label="Part 3 · The moodboard",
+             actions=((78890, "drawer_set", {"amount": 1.0}),),
              overlays=(
                  _cursor("tool-media", A_DRAWER_ADD_MEDIA, appear=78890, click=79040,
                          disappear=81700),
                  _scribble("tool-media-ring", A_DRAWER_ADD_MEDIA, appear=79040,
                            disappear=81700),
-                 _hint("tool-media-hint", "Add images and video", A_DRAWER_ADD_MEDIA,
-                       appear=79100, disappear=81700, side="left"),
                  _cursor("tool-text", A_DRAWER_TEXT, appear=81700, click=81820,
                          disappear=84100),
                  _scribble("tool-text-ring", A_DRAWER_TEXT, appear=81820, disappear=84100),
-                 _hint("tool-text-hint", "Add notes", A_DRAWER_TEXT, appear=81900,
-                       disappear=84100, side="left"),
                  _cursor("tool-annotate", A_DRAWER_ANNOTATE, appear=84100, click=84220),
                  _scribble("tool-annotate-ring", A_DRAWER_ANNOTATE, appear=84220),
-                 _hint("tool-annotate-hint", "Sketch over the board", A_DRAWER_ANNOTATE,
-                       appear=84300, side="left"),
              )),
-        # -- Act 4: Zen vs Engine ("You are in Zen mode…" 88.3 s) --------------
-        Beat("engine-prompt", 88170, 92900, "half", PLACE_BOTTOM_CENTER,
-             label="Part 4 · Zen and Engine mode",
+        # -- Act 4: Zen vs Engine ("You are in Zen mode…" 88.3 s; "mode." ends 92.60)
+        Beat("engine-prompt", 88170, 93100, "half", PLACE_BOTTOM_CENTER,
+             label="Part 4 · Zen and Engine",
              actions=((88170, "drawer_set", {"amount": 0.0}),),
              overlays=(
                  _scribble("engine-ring", A_ENGINE_BUTTON, appear=88800),
@@ -369,24 +405,36 @@ MIXAR_INTRO = Tour(
                        appear=91500),
              ),
              gate=Gate("ui_mode:PRO", "engine-mode", anchor=A_ENGINE_BUTTON,
-                       auto_advance_wall_ms=12000,
+                       auto_advance_wall_ms=8000,
                        auto_action=("ui_mode", {"mode": "PRO"}))),
-        # "The full toolkit is there…" 95.3 s · "Let's head back to Zen." 103.0–104.0
-        Beat("engine-mode", 95110, 106200, "half", PLACE_BOTTOM_CENTER,
-             label="Part 4 · Engine mode",
+        # "The full toolkit is there…" 95.3 s: inset rings on the Properties
+        # editor and the Outliner (region-sized anchors ring inward) ·
+        # "Let's head back to Zen." 103.0–103.96
+        Beat("engine-mode", 95110, 106200, "half", PLACE_BOTTOM_LEFT,
+             label="Part 4 · Zen and Engine",
              actions=(
                  (95110, "ui_mode", {"mode": "PRO"}),
                  (104000, "ui_mode", {"mode": "AI"}),
              ),
              overlays=(
+                 _scribble("engine-toolkit-ring", A_PROPERTIES_EDITOR, appear=96000,
+                           disappear=101500),
+                 _scribble("engine-outliner-ring", A_OUTLINER, appear=96000,
+                           disappear=101500),
                  _scribble("zen-ring", A_ZEN_BUTTON, appear=103000),
                  _cursor("zen-cursor", A_ZEN_BUTTON, appear=102600, click=104000),
              )),
         # "That's it. You know where everything is. Now let's make 3D
-        # together." 106.4–110.0 s; the clip ends at 114.27.
+        # together." 106.36–110.0 s; the clip ends at 114.27. Cleanup lands in
+        # the pause after "everything is", then the card fades out over the
+        # replay note (END_AFTER_WALL_MS) while the moodboard stays open.
         Beat("outro", 106200, 110600, "hero", PLACE_CENTER,
-             label="Now let's make 3D together",
+             label="You're all set",
              hide_cursor=True, hero_dim=True,
-             actions=((106200, "tour_cleanup", {}),)),
+             actions=((109500, "tour_cleanup", {}),),
+             overlays=(
+                 _caption("replay-hint", "Replay any time from Help → Start tour",
+                          appear=110200),
+             )),
     ),
 )
