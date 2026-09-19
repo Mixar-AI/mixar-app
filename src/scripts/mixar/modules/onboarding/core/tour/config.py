@@ -111,6 +111,16 @@ HINT_FONT_PX = 15
 HINT_BG = (0.09, 0.09, 0.11, 0.92)
 HINT_TEXT = (0.95, 0.95, 0.97, 1.0)
 HERO_DIM = (0.0, 0.0, 0.0, 0.82)
+# "Your turn": while a beat waits on the user, the main window dims with a
+# spotlight cut around the target, the ring pulses and the starburst shows.
+# Automatic beats stay undimmed and calm so the two modes never look alike.
+GATE_DIM = (0.0, 0.0, 0.0, 0.62)
+SPOTLIGHT_PAD = 14               # logical px of bright margin around the target
+GATE_RING_PULSE_SECONDS = 1.6    # breathing period of a gated ring
+GATE_RING_PULSE_MIN = 0.55       # alpha floor of the breath
+OVERLAY_FADE_SECONDS = 0.25      # rings/hints fade out instead of vanishing
+GATE_DONE_FLASH_SECONDS = 0.6    # expanding ring when the user completes a gate
+GATE_DONE_FLASH_GROW = 22        # logical px the flash ring grows outward
 
 # ---------------------------------------------------------------------------
 # Copy.

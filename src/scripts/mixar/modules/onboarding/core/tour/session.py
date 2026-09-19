@@ -18,6 +18,7 @@ POST_PIXEL callback and must not write RNA properties — it only reads the
 state ``tick()`` prepared.
 """
 
+import math
 import time
 
 import bpy
@@ -95,6 +96,9 @@ class TourSession(SessionInputMixin):
         self._texture = None
         self._last_beat_id = None
         self._drag_origin = None
+        self._gated = False            # a beat is waiting on the user
+        self._gate_hole = None         # spotlight rect in host px, if in the host window
+        self._gate_flash = None        # (rect, window_ptr, wall) after a gate is completed
         self.anchor_cache = anchors.AnchorCache()
         self.cursor = CursorAnim()
         self.overlay_state = BeatOverlayState()
@@ -212,6 +216,9 @@ class TourSession(SessionInputMixin):
             if self.runner.gate_active():
                 gate = self.runner.beat.gate
                 if actions.check(gate.check, self.flags):
+                    flash_at = self._resolve(gate.anchor) if gate.anchor else None
+                    if flash_at is not None:
+                        self._gate_flash = (flash_at[0], flash_at[1], now)
                     self.runner.satisfy_gate()
         if self.runner.status == STATUS_ENDED and not self.running:
             return
@@ -219,12 +226,21 @@ class TourSession(SessionInputMixin):
 
         ms = self.runner.last_ms
         beat = self.runner.beat
+        self._gated = bool(self.runner.gate_active())
+        self._gate_hole = None
+        if self._gated and beat is not None and beat.gate is not None and beat.gate.anchor:
+            resolved = self._resolve(beat.gate.anchor)
+            if resolved is not None and resolved[1] == self._host_window_ptr:
+                self._gate_hole = resolved[0]
         views, cmd = self.overlay_state.compute(
             ms, now, self._resolve, self._host_rect, self._host_window_ptr,
             config.CURSOR_ORBIT_RADIUS * self._ui_scale,
         )
         self._views = views
-        if cmd.visible:
+        if self._gate_flash is not None and \
+                now - self._gate_flash[2] > config.GATE_DONE_FLASH_SECONDS:
+            self._gate_flash = None
+        if cmd.visible and not self._gated:
             self.cursor.show()
             if cmd.orbit:
                 self.cursor.set_orbit(cmd.x, cmd.y, cmd.orbit_radius, cmd.window_ptr)
@@ -370,29 +386,60 @@ class TourSession(SessionInputMixin):
         except Exception as exc:  # noqa: BLE001
             logger.debug("Tour: draw failed: %s", exc)
 
+    def _gate_pulse(self) -> float:
+        """Breathing alpha for a gated ring (1.0 when not gated)."""
+        if not self._gated:
+            return 1.0
+        period = max(0.1, config.GATE_RING_PULSE_SECONDS)
+        wave = 0.5 * (1.0 + math.sin(2.0 * math.pi * time.monotonic() / period))
+        return config.GATE_RING_PULSE_MIN + (1.0 - config.GATE_RING_PULSE_MIN) * wave
+
     def _draw_window_layer(self, window_ptr, is_host: bool) -> None:
         beat = self.runner.beat if self.runner else None
-        if beat is not None and beat.hero_dim and window_ptr == self._host_window_ptr:
+        window_rect = self._window_rect(window_ptr)
+        if window_ptr == self._host_window_ptr and beat is not None:
             # Every region of the main window paints the film over the whole
             # window rect (each is clipped to itself), so the topbar and the
             # sidebars dim together with the viewport.
-            scribble_ui.draw_dim(self._window_rect(window_ptr), config.HERO_DIM)
+            # The card is cut out of every film: an overlapping region (the
+            # drawer, a sidebar) paints AFTER the host region, so its band
+            # of film would otherwise land on top of the card.
+            keep = (self._card_layout.card,) if self._card_layout is not None else ()
+            if beat.hero_dim:
+                scribble_ui.draw_spotlight_dim(window_rect, None, config.HERO_DIM, keep=keep)
+            elif self._gated:
+                # "Your turn": dim everything except a spotlight around the
+                # target. A target in another window (the island pill)
+                # floats bright over the film by itself.
+                scribble_ui.draw_spotlight_dim(window_rect, self._gate_hole, config.GATE_DIM,
+                                               pad=config.SPOTLIGHT_PAD * self._ui_scale,
+                                               keep=keep)
 
         views = views_for_window(self._views, window_ptr)
-        bounds = self._window_rect(window_ptr)
+        pulse = self._gate_pulse()
         for v in scribble_views(views):
-            scribble_ui.draw_scribble(v.rect, v.reveal, ui_scale=self._ui_scale,
-                                      bounds=bounds)
+            scribble_ui.draw_scribble(v.rect, v.reveal, alpha=v.alpha * pulse,
+                                      ui_scale=self._ui_scale, bounds=window_rect,
+                                      starburst=self._gated)
         # Hints paint in EVERY region (clipped to each), like the rings:
         # an overlapping region such as the moodboard drawer paints after
         # the viewport, so a pill drawn only by the host region would be
         # buried under it.
-        window_rect = self._window_rect(window_ptr)
         for v in hint_views(views):
             scribble_ui.draw_hint(v.overlay.text, v.rect, window_rect,
-                                  ui_scale=self._ui_scale, alpha=min(1.0, v.reveal * 2),
-                                  side=v.overlay.side)
-        self.cursor.draw(window_ptr)
+                                  ui_scale=self._ui_scale,
+                                  alpha=min(1.0, v.reveal * 2) * v.alpha,
+                                  side=v.overlay.side, accent=self._gated)
+        flash = self._gate_flash
+        if flash is not None and flash[1] == window_ptr:
+            t = (time.monotonic() - flash[2]) / max(0.05, config.GATE_DONE_FLASH_SECONDS)
+            if t < 1.0:
+                scribble_ui.draw_success_flash(flash[0], t, ui_scale=self._ui_scale,
+                                               bounds=window_rect)
+        # The fake cursor is the actor of automatic beats only; while the
+        # user is asked to act, their own pointer is the only cursor.
+        if not self._gated:
+            self.cursor.draw(window_ptr)
 
         if is_host and self._card_layout is not None and beat is not None:
             ms = self.runner.last_ms

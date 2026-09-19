@@ -24,6 +24,7 @@ from gpu_extras.batch import batch_for_shader
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.notifications.toast_renderer_shapes import (
+    draw_rounded_rect_outline,
     draw_rect,
     draw_rounded_rect,
 )
@@ -125,7 +126,8 @@ RING_EDGE_INSET = 2.0   # logical px kept between a ring and the window edge
 
 
 def draw_scribble(rect: tuple, reveal: float, alpha: float = 1.0,
-                  ui_scale: float = 1.0, bounds: tuple = None) -> None:
+                  ui_scale: float = 1.0, bounds: tuple = None,
+                  starburst: bool = True) -> None:
     """Accent ring padded around ``rect`` plus the corner starburst.
     ``bounds`` (the window rect) keeps the ring inside the window: a tab in
     the island's header sits a few px from a rounded window edge, and a
@@ -167,7 +169,8 @@ def draw_scribble(rect: tuple, reveal: float, alpha: float = 1.0,
         # cross the window edge (a tab in the island's header) it would be
         # cut mid-stroke, so it is skipped rather than drawn clipped.
         reach = (STARBURST_GAP + STARBURST_LENGTH) * ui_scale
-        if bounds is None or (x - reach >= bounds[0] and y + h + reach <= bounds[3]):
+        if starburst and (bounds is None
+                          or (x - reach >= bounds[0] and y + h + reach <= bounds[3])):
             quads = starburst_quads(x, y + h, reveal, ui_scale)
             _draw_strokes(quads, _with_alpha(config.ACCENT, alpha))
     except Exception as exc:
@@ -230,7 +233,8 @@ def hint_rect(text: str, anchor_rect: tuple, window_rect: tuple,
 
 
 def draw_hint(text: str, anchor_rect: tuple, window_rect: tuple,
-              ui_scale: float = 1.0, alpha: float = 1.0, side: str = "auto") -> tuple:
+              ui_scale: float = 1.0, alpha: float = 1.0, side: str = "auto",
+              accent: bool = False) -> tuple:
     """Dark rounded pill with ``text``; returns the pill rect."""
     rect = hint_rect(text, anchor_rect, window_rect, ui_scale, side=side)
     if alpha <= 0.0 or not text:
@@ -239,6 +243,9 @@ def draw_hint(text: str, anchor_rect: tuple, window_rect: tuple,
         xmin, ymin, xmax, ymax = rect
         w, h = xmax - xmin, ymax - ymin
         draw_rounded_rect(xmin, ymin, w, h, h * 0.5, _with_alpha(config.HINT_BG, alpha))
+        if accent:
+            draw_rounded_rect_outline(xmin, ymin, xmax - xmin, ymax - ymin, h * 0.5,
+                                      _with_alpha(config.ACCENT, alpha * 0.9), width=1.5 * ui_scale)
         px = config.HINT_FONT_PX * ui_scale
         draw_text(xmin + HINT_PAD_X * ui_scale,
                   ymin + HINT_PAD_Y * ui_scale + px * 0.18,
@@ -246,6 +253,79 @@ def draw_hint(text: str, anchor_rect: tuple, window_rect: tuple,
     except Exception as exc:
         logger.debug("Tour hint draw failed: %s", exc)
     return rect
+
+
+def draw_success_flash(rect: tuple, t: float, ui_scale: float = 1.0,
+                       bounds: tuple = None) -> None:
+    """A ring that grows out of ``rect`` and fades over ``t`` in 0..1 — the
+    "you did it" beat when the user completes a gate."""
+    t = max(0.0, min(1.0, t))
+    if t >= 1.0:
+        return
+    grow = config.GATE_DONE_FLASH_GROW * ui_scale * t
+    xmin, ymin, xmax, ymax = rect
+    x, y = xmin - grow, ymin - grow
+    w, h = (xmax - xmin) + 2 * grow, (ymax - ymin) + 2 * grow
+    if bounds is not None:
+        x, y = max(x, bounds[0]), max(y, bounds[1])
+        w, h = min(x + w, bounds[2]) - x, min(y + h, bounds[3]) - y
+    if w <= 0 or h <= 0:
+        return
+    a = 1.0 - t
+    _draw_rounded_ring(x, y, w, h, config.SCRIBBLE_THICKNESS * ui_scale,
+                       config.SCRIBBLE_RADIUS * ui_scale + grow,
+                       _with_alpha(config.ACCENT, a), _with_alpha(_lighter(config.ACCENT), a))
+
+
+def _subtract(rects: list, hole: tuple) -> list:
+    """Split every rect in ``rects`` around ``hole`` (up to four bands each)."""
+    hx0, hy0, hx1, hy1 = hole
+    out = []
+    for (xmin, ymin, xmax, ymax) in rects:
+        cx0, cy0, cx1, cy1 = max(xmin, hx0), max(ymin, hy0), min(xmax, hx1), min(ymax, hy1)
+        if cx1 <= cx0 or cy1 <= cy0:
+            out.append((xmin, ymin, xmax, ymax))
+            continue
+        if cy0 > ymin:
+            out.append((xmin, ymin, xmax, cy0))       # below
+        if ymax > cy1:
+            out.append((xmin, cy1, xmax, ymax))       # above
+        if cx0 > xmin:
+            out.append((xmin, cy0, cx0, cy1))         # left
+        if xmax > cx1:
+            out.append((cx1, cy0, xmax, cy1))         # right
+    return out
+
+
+def draw_dim_with_holes(rect: tuple, holes, color: tuple, pad: float = 0.0) -> None:
+    """Dim ``rect`` except the given holes (each padded by ``pad``). Used
+    for the "your turn" film: the target AND the video card stay bright,
+    whichever region happens to paint the film over them."""
+    pieces = [tuple(rect)]
+    for hole in holes:
+        if hole is None:
+            continue
+        hx0, hy0, hx1, hy1 = hole
+        pieces = _subtract(pieces, (hx0 - pad, hy0 - pad, hx1 + pad, hy1 + pad))
+    for (x0, y0, x1, y1) in pieces:
+        if x1 > x0 and y1 > y0:
+            draw_rect(x0, y0, x1 - x0, y1 - y0, color)
+
+
+def draw_spotlight_dim(rect: tuple, hole: tuple, color: tuple = config.GATE_DIM,
+                       pad: float = 0.0, keep=()) -> None:
+    """Dim ``rect`` except a window of light around ``hole`` (padded) and
+    any ``keep`` rects (unpadded, e.g. the video card)."""
+    pieces = [tuple(rect)]
+    if hole is not None:
+        hx0, hy0, hx1, hy1 = hole
+        pieces = _subtract(pieces, (hx0 - pad, hy0 - pad, hx1 + pad, hy1 + pad))
+    for k in keep:
+        if k is not None:
+            pieces = _subtract(pieces, tuple(k))
+    for (x0, y0, x1, y1) in pieces:
+        if x1 > x0 and y1 > y0:
+            draw_rect(x0, y0, x1 - x0, y1 - y0, color)
 
 
 def draw_dim(rect: tuple, color: tuple = config.HERO_DIM) -> None:
