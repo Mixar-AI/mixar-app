@@ -293,6 +293,13 @@ namespace blender {
 #define AGENT_CHIP_SCRIBBLE_W 150
 /* Voice: mic glyph + "Listening" fits. */
 #define AGENT_CHIP_VOICE_W 118
+/* Auto: "Auto" label + a sliding ON/OFF switch, right of Voice. The switch
+ * is the backend's per-turn `auto_mode` flag — on, the agent decides every
+ * open choice itself instead of asking the user. */
+#define AGENT_CHIP_AUTO_W 118
+#define AGENT_SWITCH_W 40
+#define AGENT_SWITCH_H 22
+#define AGENT_SWITCH_INSET 3
 #define AGENT_CHIP_READING_W 104
 #define AGENT_CHIP_CLEAR_W 44
 

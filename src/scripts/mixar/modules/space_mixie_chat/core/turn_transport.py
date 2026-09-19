@@ -94,14 +94,14 @@ class TurnTransport:
                      execution_required=True, approval_required=True, auth_token=None,
                      image_attachments=None, attachment_names=None, imported_object_names=None,
                      project_context=None, mark_context=None, user_message=None,
-                     interjecting=False):
+                     interjecting=False, auto_mode=False):
         payload = build_chat_payload(
             message=message, instance_id=instance_id, session_id=session_id,
             plan_required=plan_required, execution_required=execution_required,
             approval_required=approval_required, image_attachments=image_attachments,
             attachment_names=attachment_names, imported_object_names=imported_object_names,
             project_context=project_context, mark_context=mark_context,
-            user_preferences=collect_user_preferences(),
+            user_preferences=collect_user_preferences(), auto_mode=auto_mode,
         )
         return self._send('chat', payload, user_message, interjecting)
 

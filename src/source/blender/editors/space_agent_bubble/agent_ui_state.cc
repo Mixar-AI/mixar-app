@@ -17,6 +17,7 @@
  *                 matches scene.mixie_session_id; empty when none matches
  *                 (no invented "New Chat" fallback)
  *   segmented     scene.mixie_chat_mode == 'AGENT'
+ *   auto switch   scene.mixie_chat_auto_mode
  *   placeholder   shown while scene.mixie_chat_input is empty
  *   queue count   live rows in wm.mixie_queue.items
  *   cat catch     ED_moodboard_attachment_incoming (the live flight clock)
@@ -230,6 +231,9 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                            enum_is(&scene_ptr, "mixie_chat_state", "BUSY") ||
                            enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
     r_state->agent_mode = enum_is(&scene_ptr, "mixie_chat_mode", "AGENT");
+    /* A scene saved before the chat registered the property reads false —
+     * the same default the send path uses (core/composer_send.py). */
+    r_state->auto_mode = read_bool_prop(&scene_ptr, "mixie_chat_auto_mode");
     cat.busy = r_state->status_busy;
     cat.waiting = enum_is(&scene_ptr, "mixie_chat_state", "AWAITING_INPUT") ||
                   enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");

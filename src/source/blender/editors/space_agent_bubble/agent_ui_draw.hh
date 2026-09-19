@@ -74,6 +74,12 @@ struct AgentIslandState {
   bool voice_available;
   bool voice_listening;     /* A dictation session is up. */
 
+  /* Auto mode (scene.mixie_chat_auto_mode, space_mixie_chat/ui/properties/
+   * chat_props.py). While set, every send carries `auto_mode: true` and the
+   * agent decides open choices itself instead of asking. The composer chip's
+   * switch thumb sits on the ON side. */
+  bool auto_mode;
+
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

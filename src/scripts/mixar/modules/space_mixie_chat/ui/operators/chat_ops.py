@@ -214,6 +214,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
             "is_modify": is_modify,
             "is_awaiting_input": is_awaiting_input,
             "plan_enabled": bool(getattr(scene, "mixie_chat_plan_enabled", False)),
+            "auto_mode": bool(getattr(scene, "mixie_chat_auto_mode", False)),
             "model": getattr(scene, "mixie_chat_model", "") or None,
         }, context=context)
 

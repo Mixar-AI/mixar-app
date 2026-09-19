@@ -238,7 +238,9 @@ def test_island_voice_chip():
     begin = begin[: begin.index("\n}\n")]
     assert "if (!r_state->voice_available)" in begin
     assert "const float voice_w = AGENT_CHIP_VOICE_W + voice_extra * row_growth;" in LAYOUT_CC
-    assert "const float reading_x = voice_x + voice_w + AGENT_CHIP_GAP;" in LAYOUT_CC
+    # Auto sits right of Voice; the reading chip follows Auto.
+    assert "const float auto_x = voice_x + voice_w + AGENT_CHIP_GAP;" in LAYOUT_CC
+    assert "const float reading_x = auto_x + AGENT_CHIP_AUTO_W + AGENT_CHIP_GAP;" in LAYOUT_CC
 
 
 def _mm_fn(signature_start: str) -> str:

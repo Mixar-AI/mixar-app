@@ -103,6 +103,9 @@ struct AgentIslandLayout {
   /* Voice input, right of Scribble; the caller empties it and closes the gap
    * when no recogniser is registered (agent_bubble_island_begin). */
   rctf chip_voice;
+  /* Auto mode switch, right of Voice (closes the gap with it when Voice is
+   * absent). Always drawn: the flag is a plain scene property. */
+  rctf chip_auto;
   rctf chip_reading;
   rctf chip_clear;
   rctf btn_generate;

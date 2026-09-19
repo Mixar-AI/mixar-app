@@ -648,6 +648,21 @@ class MIXIE_CHAT_OT_toggle_plan_mode(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_toggle_auto_mode(Operator):
+    """Auto mode: the agent decides every open choice itself instead of asking you"""
+    bl_idname = "mixie_chat.toggle_auto_mode"
+    bl_label = "Toggle Auto Mode"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    def execute(self, context):
+        scene = context.scene
+        scene.mixie_chat_auto_mode = not scene.mixie_chat_auto_mode
+        # The island composer lives in its own window: redraw every chat
+        # surface, not just this window's screen.
+        redraw_chat_areas()
+        return {'FINISHED'}
+
+
 class MIXIE_CHAT_OT_set_feedback_rating(Operator):
     """Set star rating for an agent response"""
     bl_idname = "mixie_chat.set_feedback_rating"
@@ -946,6 +961,7 @@ classes = (
     MIXIE_CHAT_OT_select_slot_action,
     MIXIE_CHAT_OT_insert_prompt_text,
     MIXIE_CHAT_OT_toggle_plan_mode,
+    MIXIE_CHAT_OT_toggle_auto_mode,
     MIXIE_CHAT_OT_set_feedback_rating,
     MIXIE_CHAT_OT_toggle_feedback_comment,
     MIXIE_CHAT_OT_submit_feedback_comment,

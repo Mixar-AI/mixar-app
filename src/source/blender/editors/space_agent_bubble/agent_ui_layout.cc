@@ -374,7 +374,9 @@ void agent_ui_layout_build(const int window_w,
 
   /* --- Chip row ---
    * The mode toggle is gone (there is only Agent mode), so Upload Reference
-   * takes the row's left edge where the toggle sat. */
+   * takes the row's left edge where the toggle sat. Left to right: Upload
+   * Reference, Scribble, Voice, Auto, then the two conditional Scribble
+   * chips; Send is pinned to the right inset. */
   auto chip_extra = [&](const char *label, const float base_w) {
     return std::max(0.0f, ui::mixar_text_width(label, text_size) / u + AGENT_CHIP_ICON +
                              3.0f * AGENT_CHIP_ICON_GAP + 2.0f / u - base_w);
@@ -384,7 +386,8 @@ void agent_ui_layout_build(const int window_w,
   const float voice_extra = chip_extra("Listening", AGENT_CHIP_VOICE_W);
   const float row_extra = upload_extra + scribble_extra + voice_extra;
   const float row_base = AGENT_CHIP_UPLOAD_W + AGENT_CHIP_SCRIBBLE_W + AGENT_CHIP_VOICE_W +
-                         AGENT_CHIP_READING_W + AGENT_CHIP_CLEAR_W + 5.0f * AGENT_CHIP_GAP;
+                         AGENT_CHIP_AUTO_W + AGENT_CHIP_READING_W + AGENT_CHIP_CLEAR_W +
+                         6.0f * AGENT_CHIP_GAP;
   const float row_spare = std::max(
       0.0f, card_w - 2.0f * AGENT_SEG_X - AGENT_BTN_GENERATE_W - row_base);
   const float row_growth = row_extra > 0.0f ? std::min(1.0f, row_spare / row_extra) : 0.0f;
@@ -396,7 +399,11 @@ void agent_ui_layout_build(const int window_w,
   r_layout->chip_scribble = f.box(scribble_x, chip_y, scribble_w, AGENT_CHIP_H);
   const float voice_x = scribble_x + scribble_w + AGENT_CHIP_GAP;
   r_layout->chip_voice = f.box(voice_x, chip_y, voice_w, AGENT_CHIP_H);
-  const float reading_x = voice_x + voice_w + AGENT_CHIP_GAP;
+  /* Auto keeps its artboard width: its label is one short word and the
+   * switch has a fixed size, so there is nothing for row growth to fit. */
+  const float auto_x = voice_x + voice_w + AGENT_CHIP_GAP;
+  r_layout->chip_auto = f.box(auto_x, chip_y, AGENT_CHIP_AUTO_W, AGENT_CHIP_H);
+  const float reading_x = auto_x + AGENT_CHIP_AUTO_W + AGENT_CHIP_GAP;
   r_layout->chip_reading = f.box(reading_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
   r_layout->chip_clear = f.box(
       reading_x + AGENT_CHIP_READING_W + AGENT_CHIP_GAP, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);

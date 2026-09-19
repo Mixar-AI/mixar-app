@@ -662,6 +662,19 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                                        "Dictate into the composer (on-device speech recognition)");
   }
 
+  /* --- Auto, right of Voice ---
+   * Flips scene.mixie_chat_auto_mode (space_mixie_chat/ui/operators/
+   * chat_special_ops.py); core/composer_send.py stamps the flag on every
+   * send while it is set. Nothing is persisted server-side. */
+  agent_bubble_rect_to_region(region, layout->chip_auto, &bx, &by, &bw, &bh);
+  uiDefButO(block, ui::ButtonType::But, "mixie_chat.toggle_auto_mode",
+            blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+            state->auto_mode ?
+                "Auto mode is on: the agent decides open choices itself and never asks. "
+                "Click to let it ask again" :
+                "Auto mode: the agent decides open choices itself instead of asking you, "
+                "and lists its decisions in the summary");
+
   if (!agent_bubble_references_visible(C)) {
     agent_bubble_send_button(C, region, block, *layout, *state);
   }
@@ -898,6 +911,7 @@ bool agent_bubble_island_layout_get(const bContext *C,
    * chips after it close the gap and the slot is emptied. */
   if (!r_state->voice_available) {
     const float dx = -(AGENT_CHIP_VOICE_W + AGENT_CHIP_GAP) * r_layout->scale;
+    BLI_rctf_translate(&r_layout->chip_auto, dx, 0.0f);
     BLI_rctf_translate(&r_layout->chip_reading, dx, 0.0f);
     BLI_rctf_translate(&r_layout->chip_clear, dx, 0.0f);
     r_layout->chip_voice = rctf{};
