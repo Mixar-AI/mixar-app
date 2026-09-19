@@ -42,6 +42,12 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
     """Invoke every known cleanup_/stop_ entry point in dependency order."""
     # 1. Stop producers first (operator-facing cleanup), then drain consumers.
     try:
+        from mixar.modules.space_mixie_chat.core.voice import shutdown
+        _safe("stop_dictation", shutdown, app_exit=(reason == "atexit"))
+    except ImportError:
+        pass
+
+    try:
         from mixar.bootstrap.analytics_module import capture_session_ended
         _safe("capture_session_ended", capture_session_ended, reason)
     except ImportError:

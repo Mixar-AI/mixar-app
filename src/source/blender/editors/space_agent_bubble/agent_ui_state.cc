@@ -327,6 +327,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     r_state->voice_listening = read_bool_prop(&wm_ptr, "mixie_chat_voice_listening");
+    read_string_prop(&wm_ptr, "mixie_chat_voice_status", r_state->voice_status, sizeof(r_state->voice_status));
   }
   cat.listening = r_state->voice_listening;
   if (scene) {

@@ -393,7 +393,7 @@ SCRIBBLE_LOCAL_PAGE_PAD_Y = 120
 # controls: a platform earns Voice by having someone write its recogniser,
 # and the operator is not even registered elsewhere, so no surface can draw
 # a dead microphone.
-VOICE_INPUT_SUPPORTED = sys.platform == "darwin"
+VOICE_INPUT_SUPPORTED = sys.platform in {"darwin", "win32"}
 
 # Recogniser event kinds — lockstep with SpeechEventKind in
 # GHOST_MixarSpeechCocoa.mm.

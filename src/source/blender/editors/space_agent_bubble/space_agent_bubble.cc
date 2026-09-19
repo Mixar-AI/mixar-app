@@ -653,8 +653,8 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     agent_bubble_rect_to_region(region, layout->chip_voice, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.voice_toggle",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-              state->voice_listening ? "Stop dictating" :
-                                       "Dictate into the composer (on-device speech recognition)");
+              state->voice_listening ? "Stop dictating (click while finishing to cancel)" :
+                                       "Dictate in English using cloud transcription; click again to stop");
   }
 
   /* --- Auto, right of Voice ---
