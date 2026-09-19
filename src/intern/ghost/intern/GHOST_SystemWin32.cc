@@ -706,6 +706,7 @@ GHOST_TKey GHOST_SystemWin32::processSpecialKey(short vKey, short /*scanCode*/) 
       key = GHOST_kKeySlash;
       break;
     case u'`':
+    case u'~':
     case u'²':
       key = GHOST_kKeyAccentGrave;
       break;

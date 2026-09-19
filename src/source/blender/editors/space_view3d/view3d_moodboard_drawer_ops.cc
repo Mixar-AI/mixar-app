@@ -42,6 +42,9 @@ namespace blender {
 static void drawer_tag_redraw(bContext *C)
 {
   ScrArea *area = CTX_wm_area(C);
+  if (area == nullptr || area->spacetype != SPACE_VIEW3D) {
+    area = view3d_moodboard_drawer_area_find(C);
+  }
   if (area == nullptr) {
     return;
   }
@@ -58,16 +61,14 @@ static void drawer_tag_redraw(bContext *C)
 
 static const MoodboardDrawerRuntime *drawer_runtime(const bContext *C)
 {
-  const ARegion *region = view3d_moodboard_drawer_region_find(CTX_wm_area(C));
+  const ARegion *region = view3d_moodboard_drawer_region_from_context(C);
   return region != nullptr ? static_cast<const MoodboardDrawerRuntime *>(region->regiondata) :
                              nullptr;
 }
 
 static bool drawer_op_poll(bContext *C)
 {
-  const ScrArea *area = CTX_wm_area(C);
-  return area != nullptr && area->spacetype == SPACE_VIEW3D &&
-         view3d_moodboard_drawer_zen_active(C);
+  return view3d_moodboard_drawer_area_find(C) != nullptr;
 }
 
 /** Commit the wall-clock ease into RNA and tag the drawer region.
@@ -119,24 +120,8 @@ static void VIEW3D_OT_moodboard_drawer_update(wmOperatorType *ot)
   ot->flag = 0;
 }
 
-/**
- * Release Annotate/Erase when the USER puts the board away.
- *
- * The mode flags live on the WindowManager and are shared by both hosts of
- * the canvas, so this is deliberately narrow on two axes. It runs only from
- * the grip and the toggle operator, never from `view3d.moodboard_drawer_set`:
- * Scribble's capture closes the drawer through that one (`scribble_mark/core/
- * drawer_guard.py`) and its restore only puts `amount`/`target` back, so
- * clearing there would silently disarm Annotate across every capture. And a
- * standalone Mixie editor is an annotate host in its own right — its poll
- * never asks about the drawer — so an open one keeps the mode alive.
- *
- * What is left is the case the flags would otherwise be stranded in: Zen Mode,
- * whose workspace holds no Mixie editor, where a shut drawer makes
- * `mixie.moodboard_annotation_exit` unpollable and the first click after
- * reopening draws a saved stroke (or eats selection while Erase is armed)
- * instead of selecting a card.
- */
+/** Grip/toggle only — never `drawer_set` (Scribble capture) or while a
+ * standalone Mixie editor is open. A shut Zen drawer cannot poll exit. */
 static void drawer_release_annotate(bContext *C)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
@@ -205,7 +190,7 @@ static void VIEW3D_OT_moodboard_drawer_toggle(wmOperatorType *ot)
 {
   ot->name = "Toggle Moodboard Drawer";
   ot->idname = "VIEW3D_OT_moodboard_drawer_toggle";
-  ot->description = "Slide the moodboard drawer in or out";
+  ot->description = "Slide the moodboard drawer in or out (tilde / `)";
 
   ot->exec = drawer_toggle_exec;
   ot->poll = drawer_op_poll;
@@ -402,20 +387,30 @@ void view3d_moodboard_drawer_operatortypes()
 
 void view3d_moodboard_drawer_keymap(wmKeyConfig *keyconf)
 {
-  /* Grip only. Canvas LEFTMOUSE items must not share this map: a GUI
-   * keyconfig reload builds a user copy that can list those items *above*
-   * the grip, and `WM_keymap_active` then prefers that copy — a centre
-   * click on the open handle becomes select and never toggles. The addon
-   * binding that survives a reload is in `modules/moodboard/ui/keymap.py`.
-   * Off-grip the operator PASS_THROUGHs so UI / Mixie / the viewport keep
-   * the event. */
-  wmKeyMap *keymap = WM_keymap_ensure(
+  /* Grip-only map. Addon copy in `modules/moodboard/ui/keymap.py`. */
+  wmKeyMap *grip = WM_keymap_ensure(
       keyconf, "Moodboard Drawer Grip", SPACE_VIEW3D, RGN_TYPE_TOOL_PROPS);
 
   KeyMapItem_Params grip_params{};
   grip_params.type = LEFTMOUSE;
   grip_params.value = KM_PRESS;
-  WM_keymap_add_item(keymap, "VIEW3D_OT_moodboard_drawer_grip", &grip_params);
+  WM_keymap_add_item(grip, "VIEW3D_OT_moodboard_drawer_grip", &grip_params);
+
+  KeyMapItem_Params key{};
+  key.type = EVT_ACCENTGRAVEKEY;
+  key.value = KM_PRESS;
+  wmKeyMap *toggle = WM_keymap_ensure(
+      keyconf, "Moodboard Drawer", SPACE_VIEW3D, RGN_TYPE_WINDOW);
+  WM_keymap_add_item(toggle, "VIEW3D_OT_moodboard_drawer_toggle", &key);
+  key.modifier = KM_SHIFT;
+  WM_keymap_add_item(toggle, "VIEW3D_OT_moodboard_drawer_toggle", &key);
+
+  /* Window map: header / topbar / other editors. Addon copy must match. */
+  wmKeyMap *window = WM_keymap_ensure(keyconf, "Window", SPACE_EMPTY, RGN_TYPE_WINDOW);
+  key.modifier = 0;
+  WM_keymap_add_item(window, "VIEW3D_OT_moodboard_drawer_toggle", &key);
+  key.modifier = KM_SHIFT;
+  WM_keymap_add_item(window, "VIEW3D_OT_moodboard_drawer_toggle", &key);
 }
 
 /* -------------------------------------------------------------------- */

@@ -80,6 +80,27 @@ def toggle(qa, amount):
     settle(qa, amount)
 
 
+def tilde_toggle(qa, amount, *, over="viewport"):
+    """`~` must open and shut the drawer from the 3D view, the open canvas,
+    and the grip — not only from a grip click."""
+    if over == "viewport":
+        x0, y0, x1, y1 = geometry(qa)["viewport"]
+        x, y = (x0 + x1) // 2, (y0 + y1) // 2
+    elif over == "panel":
+        pos = point(target(qa, "moodboard_drawer_panel"))
+        x, y = pos["x"], pos["y"]
+    else:
+        pos = point(target(qa, "moodboard_drawer_grip"))
+        x, y = pos["x"], pos["y"]
+    qa.eval(
+        "import qa_driver as d\n"
+        f"d.move_to(drv.main_window(), {x}, {y})\n"
+        "result = 1"
+    )
+    qa.press("ACCENT_GRAVE")
+    settle(qa, amount)
+
+
 def drag_grip(qa, direction, amount, travel=0.85):
     grip = target(qa, "moodboard_drawer_grip")
     panel_width = geometry(qa)["drawer"]
@@ -279,6 +300,10 @@ def run(qa: QA):
     qa.step("panel_visible", target, qa, "moodboard_drawer_panel")
     qa.step("snap_empty", snap, qa, "02_open_empty")
     qa.step("click_close", toggle, qa, 0)
+    qa.step("tilde_reveal_from_viewport", tilde_toggle, qa, 1, over="viewport")
+    qa.step("tilde_close_from_panel", tilde_toggle, qa, 0, over="panel")
+    qa.step("tilde_reveal_from_grip", tilde_toggle, qa, 1, over="grip")
+    qa.step("tilde_close_from_viewport", tilde_toggle, qa, 0, over="viewport")
     qa.step("drag_reveal", drag_grip, qa, -1, 1)
     qa.step("drag_close", drag_grip, qa, 1, 0)
     qa.step("full_travel_reveal", drag_grip, qa, -1, 1, 1.2)

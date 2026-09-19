@@ -49,12 +49,8 @@ namespace blender {
 /** \name State
  * \{ */
 
-/* The drawer's state is a `wmWindowManager` property Python registers
- * (`modules/moodboard/ui/moodboard_drawer_props.py`). C reads it on every poll
- * and every draw, so each accessor is a single property lookup and never a
- * walk of anything. `amount` is the last committed RNA value; `target` is the
- * side a wall-clock ease converges on. Paint reads `display_amount`, not a
- * per-tick fraction, so a bunched Python timer cannot jump the panel. */
+/* WM RNA: `amount` is last committed, `target` is the ease side. Paint
+ * reads `display_amount` so a bunched timer cannot jump the panel. */
 
 static PropertyRNA *drawer_prop(const bContext *C, PointerRNA *r_wm_ptr, const char *name)
 {
@@ -107,9 +103,8 @@ void view3d_moodboard_drawer_amount_set(bContext *C, const float amount)
 {
   const float clamped = std::clamp(amount, 0.0f, 1.0f);
   drawer_float_set(C, "mixar_moodboard_drawer_amount", clamped);
-  /* Keep regiondata in lockstep so visual routing does not wait a frame for
-   * the next draw — `ED_area_find_region_xy_visual` reads this amount. */
-  if (ARegion *region = view3d_moodboard_drawer_region_find(CTX_wm_area(C))) {
+  /* Regiondata must match RNA: visual routing reads this amount. */
+  if (ARegion *region = view3d_moodboard_drawer_region_from_context(C)) {
     if (MoodboardDrawerRuntime *runtime =
             static_cast<MoodboardDrawerRuntime *>(region->regiondata))
     {
@@ -123,9 +118,6 @@ int view3d_moodboard_drawer_target(const bContext *C)
   return drawer_int_get(C, "mixar_moodboard_drawer_target", 0);
 }
 
-/* Stays a pure setter: Scribble's capture and any script close the drawer
- * through here too, so side effects belong on the user-facing close paths in
- * `view3d_moodboard_drawer_ops.cc`, not on this. */
 void view3d_moodboard_drawer_target_set(bContext *C, const int target)
 {
   drawer_int_set(C, "mixar_moodboard_drawer_target", target != 0 ? 1 : 0);
@@ -133,7 +125,7 @@ void view3d_moodboard_drawer_target_set(bContext *C, const int target)
 
 static MoodboardDrawerRuntime *drawer_runtime(const bContext *C)
 {
-  ARegion *region = view3d_moodboard_drawer_region_find(CTX_wm_area(C));
+  ARegion *region = view3d_moodboard_drawer_region_from_context(C);
   return region != nullptr ? static_cast<MoodboardDrawerRuntime *>(region->regiondata) :
                              nullptr;
 }
@@ -218,8 +210,7 @@ void view3d_moodboard_drawer_slide_hold(bContext *C)
 
 bool view3d_moodboard_drawer_zen_active(const bContext *C)
 {
-  const WorkSpace *workspace = CTX_wm_workspace(C);
-  return workspace != nullptr && STREQ(workspace->id.name + 2, "Zen Mode");
+  return view3d_moodboard_drawer_workspace_is_zen(CTX_wm_workspace(C));
 }
 
 bool view3d_moodboard_drawer_canvas_is_active(const ARegion *region)
@@ -319,6 +310,13 @@ static bool drawer_region_poll(const RegionPollParams *params)
   return view3d_moodboard_drawer_zen_active(params->context);
 }
 
+void view3d_moodboard_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *region)
+{
+  wmKeyMap *keymap = WM_keymap_ensure(
+      wm->runtime->defaultconf, "Moodboard Drawer", SPACE_VIEW3D, RGN_TYPE_WINDOW);
+  WM_event_add_keymap_handler_priority(&region->runtime->handlers, keymap, 0);
+}
+
 void view3d_moodboard_drawer_region_init(wmWindowManager *wm, ARegion *region)
 {
   view3d_moodboard_drawer_size_sync(wm, nullptr, region);
@@ -327,14 +325,8 @@ void view3d_moodboard_drawer_region_init(wmWindowManager *wm, ARegion *region)
     region->regiondata = MEM_new<MoodboardDrawerRuntime>("moodboard drawer runtime");
   }
 
-  /* Same View2D framing as the Mixie moodboard main region: the canvas derives
-   * its own view from the region rect on every draw
-   * (`mixie_moodboard_region_set_view2d`), so this only has to seed a sane
-   * centre and the zoom clamp it must respect. */
   const bool is_first_init = (region->v2d.cur.xmax - region->v2d.cur.xmin) < 1.0f;
   rctf saved_cur = region->v2d.cur;
-  /* Mask bounds can be recomputed to winx - 1 by View2D between draws.
-   * Reusing that span compounds a pixel of zoom on each drag event. */
   const int previous_width = region->v2d.winx;
   if (!is_first_init && previous_width > 0) {
     /* Expanding left reveals more board at the same zoom and right edge. */
@@ -371,15 +363,15 @@ void view3d_moodboard_drawer_region_init(wmWindowManager *wm, ARegion *region)
   region->v2d.scroll = eView2D_Scroll(0);
   region->v2d.keepzoom = V2D_LIMITZOOM;
   region->v2d.keeptot = V2D_KEEPTOT_FREE;
-  /* Match the canvas aspect before its first paint (a closed drawer can
-   * already receive references). Keep its centre and horizontal zoom. */
   const float half_height = 0.5f * BLI_rctf_size_x(&region->v2d.cur) *
                             float(region->winy) / std::max(int(region->winx), 1);
   const float center_y = BLI_rctf_cent_y(&region->v2d.cur);
   region->v2d.cur.ymin = center_y - half_height;
   region->v2d.cur.ymax = center_y + half_height;
 
-  /* Grip first (no canvas LEFTMOUSE on that map), then UI, then Mixie. */
+  /* `~` first, then grip, then UI, then Mixie. */
+  view3d_moodboard_drawer_toggle_handlers_add(wm, region);
+
   wmKeyMap *grip_keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Moodboard Drawer Grip", SPACE_VIEW3D, RGN_TYPE_TOOL_PROPS);
   WM_event_add_keymap_handler_poll(&region->runtime->handlers,
@@ -434,9 +426,6 @@ void view3d_moodboard_drawer_region_exit(wmWindowManager *wm, ARegion *region)
 
 void view3d_moodboard_drawer_region_register(SpaceType *st)
 {
-  /* `RGN_TYPE_TOOL_PROPS` is used as an otherwise-unused View3D region type
-   * because `ED_region_is_overlap()` already answers true for it, which is
-   * what makes the dock float over the viewport instead of shrinking it. */
   ARegionType *art = MEM_new_zeroed<ARegionType>("spacetype view3d moodboard drawer region");
   art->regionid = RGN_TYPE_TOOL_PROPS;
   art->prefsizex = VIEW3D_MOODBOARD_DRAWER_WIDTH;
@@ -458,8 +447,6 @@ void view3d_moodboard_drawer_region_ensure(wmWindowManager *wm, ScrArea *area)
 
   ARegion *window_region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
   if (ARegion *existing = BKE_area_find_region_type(area, RGN_TYPE_TOOL_PROPS)) {
-    /* Saved and newly created spaces can have different region orders. Paint
-     * and route the drawer above the N-panel in both, even while it is closed. */
     if (window_region && existing->next != window_region) {
       BLI_remlink(&area->regionbase, existing);
       BLI_insertlinkbefore(&area->regionbase, window_region, existing);
@@ -477,9 +464,6 @@ void view3d_moodboard_drawer_region_ensure(wmWindowManager *wm, ScrArea *area)
   }
   region->regiontype = RGN_TYPE_TOOL_PROPS;
 
-  /* `ED_area_and_region_types_init()` has already run when SpaceType.init is
-   * called. Without the explicit type assignment below, `ED_area_init()`
-   * dereferences a null runtime type while visiting the region added here. */
   region->alignment = RGN_ALIGN_RIGHT;
   region->sizex = 0;
   region->flag |= RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_POLL_FAILED;

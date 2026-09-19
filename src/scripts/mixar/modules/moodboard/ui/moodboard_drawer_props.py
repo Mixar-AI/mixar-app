@@ -12,7 +12,8 @@ Three WindowManager properties shared with the C++ drawer
     frame of a grip drag.
   - mixar_moodboard_drawer_target: the side the drawer settles on, 0 or 1.
     Written by the grip (a click flips the current target, a release after a
-    drag keeps the chosen width or closes a small pull) and by ``view3d.moodboard_drawer_{toggle,set}``.
+    drag keeps the chosen width or closes a small pull), by ``~``
+    (``view3d.moodboard_drawer_toggle``), and by ``view3d.moodboard_drawer_set``.
 
   - mixar_moodboard_drawer_width: chosen width in UI units, remembered when
     closing and reopening. Grip travel can fill the available viewport.
