@@ -309,8 +309,17 @@ namespace blender {
  * three-value initialiser zero-fills it and the shape draws invisible.
  * \{ */
 
-/* Surfaces */
-#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f} /* shared native pill/chat bed */
+/* Surfaces.
+ * macOS NSGlass already supplies frost, so the wash stays a 0.20 tint.
+ * Windows has no blur behind the island — only this GPU wash — so the
+ * same colour uses a higher alpha or the card reads as a hole. */
+#ifdef _WIN32
+#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.40f}
+#define AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 102}
+#else
+#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}
+#define AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 48}
+#endif
 #define AGENT_COL_SURFACE {0.071f, 0.071f, 0.071f, 1.0f}      /* #121212 strip, panel, pill */
 #define AGENT_COL_CHIP {0.114f, 0.114f, 0.114f, 1.0f}         /* #1D1D1D chip track */
 #define AGENT_COL_CHIP_ACTIVE {0.196f, 0.196f, 0.196f, 1.0f}  /* #323232 segment thumb */

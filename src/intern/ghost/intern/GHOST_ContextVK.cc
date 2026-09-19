@@ -1357,6 +1357,68 @@ GHOST_TSuccess GHOST_ContextVK::initializeFrameData()
   return GHOST_kSuccess;
 }
 
+#ifdef _WIN32
+static VkCompositeAlphaFlagBitsKHR mixar_select_composite_alpha(
+    const VkSurfaceCapabilitiesKHR &capabilities, const bool premul)
+{
+  if (premul) {
+    if (capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR) {
+      return VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+    }
+    /* POST_MULTIPLIED would multiply already-premultiplied pixels again. */
+  }
+  if (capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) {
+    return VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  }
+  if (capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) {
+    return VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+  }
+  return VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+}
+
+bool GHOST_ContextVK::mixar_supports_non_opaque_composite_alpha() const
+{
+  if (surface_ == VK_NULL_HANDLE || !vulkan_instance.has_value() ||
+      !vulkan_instance->device.has_value())
+  {
+    return false;
+  }
+  VkSurfaceCapabilitiesKHR capabilities = {};
+  if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+          vulkan_instance->device->vk_physical_device, surface_, &capabilities) != VK_SUCCESS)
+  {
+    return false;
+  }
+  /* Frost pixels are premultiplied. POST-only surfaces stay opaque. */
+  return (capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR) != 0;
+}
+
+bool GHOST_ContextVK::mixar_set_premultiplied_composite_alpha(const bool enable)
+{
+  if (enable && !mixar_supports_non_opaque_composite_alpha()) {
+    return false;
+  }
+  if (mixar_premul_composite_alpha_ == enable) {
+    return true;
+  }
+  const bool previous = mixar_premul_composite_alpha_;
+  mixar_premul_composite_alpha_ = enable;
+  if (swapchain_ == VK_NULL_HANDLE) {
+    /* Minimized or not yet presented: the next recreateSwapchain honours
+     * the flag. Do not treat a missing swapchain as unsupported frost. */
+    return true;
+  }
+  if (recreateSwapchain(use_hdr_swapchain_) != GHOST_kSuccess) {
+    if (swapchain_ == VK_NULL_HANDLE) {
+      return true;
+    }
+    mixar_premul_composite_alpha_ = previous;
+    return false;
+  }
+  return true;
+}
+#endif
+
 GHOST_TSuccess GHOST_ContextVK::recreateSwapchain(bool use_hdr_swapchain)
 {
   GHOST_InstanceVK &instance_vk = vulkan_instance.value();
@@ -1517,7 +1579,12 @@ GHOST_TSuccess GHOST_ContextVK::recreateSwapchain(bool use_hdr_swapchain)
   create_info.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                            (use_hdr_swapchain ? VK_IMAGE_USAGE_STORAGE_BIT : 0);
   create_info.preTransform = capabilities.currentTransform;
+#ifdef _WIN32
+  create_info.compositeAlpha = mixar_select_composite_alpha(capabilities,
+                                                            mixar_premul_composite_alpha_);
+#else
   create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+#endif
   create_info.presentMode = present_mode;
   create_info.clipped = VK_TRUE;
   create_info.oldSwapchain = old_swapchain;
@@ -1548,13 +1615,14 @@ GHOST_TSuccess GHOST_ContextVK::recreateSwapchain(bool use_hdr_swapchain)
   }
   CLOG_DEBUG(&LOG,
              "Vulkan: recreating swapchain: width=%u, height=%u, format=%s, colorSpace=%s, "
-             "present_mode=%s, image_count_requested=%u, image_count_acquired=%u, "
-             "swapchain=%" PRIx64 ", old_swapchain=%" PRIx64 "",
+             "present_mode=%s, composite_alpha=%u, image_count_requested=%u, "
+             "image_count_acquired=%u, swapchain=%" PRIx64 ", old_swapchain=%" PRIx64 "",
              render_extent_.width,
              render_extent_.height,
              to_string_vk_format(surface_format_.format),
              to_string_vk_color_space(surface_format_.colorSpace),
              to_string_vk_present_mode(present_mode),
+             uint32_t(create_info.compositeAlpha),
              image_count_requested,
              actual_image_count,
              uint64_t(swapchain_),

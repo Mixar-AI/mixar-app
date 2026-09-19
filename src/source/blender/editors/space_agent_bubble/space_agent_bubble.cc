@@ -1185,7 +1185,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
            * #121212. When frost is showing, recolour the chrome as a wash
            * (but->col[3] == 0 means "no override", so this cannot be 0). */
           if (agent_bubble_island_bed_is_transparent()) {
-            const uchar wash[4] = {18, 22, 20, 48};
+            const uchar wash[4] = AGENT_COL_GLASS_FIELD_UCHAR;
             ui::button_color_set(input_but, wash);
           }
         }

@@ -3218,12 +3218,12 @@ static std::unordered_map<HWND, MixarDragState> s_drag_states;
  * macOS implements that call as a Core Animation mask
  * (`layer.cornerRadius` + `masksToBounds`) over a non-opaque window, so the
  * area outside the radius is genuinely transparent and the pill's capsule is
- * all the user sees. Windows has no equivalent for a GL-rendered window: the
- * WGL pixel format Blender asks for carries no alpha channel
- * (GHOST_WindowWin32 constructs GHOST_ContextWGL with alphaBackground=false),
- * so DWM composites the client area as opaque no matter what the shader
- * writes, and the pill's own near-black bed showed as a hard rectangle around
- * the capsule wherever the viewport behind it was not equally dark.
+ * all the user sees. Windows has no Core Animation mask for a GPU window.
+ * Mixar requests an alpha channel on the on-screen WGL context (and a
+ * non-opaque Vulkan swapchain when frost is enabled) so DWM can honour
+ * client alpha. Without that channel the pill's own near-black bed showed
+ * as a hard rectangle around the capsule wherever the viewport behind it
+ * was not equally dark.
  *
  * The Win32 way to make a window non-rectangular is a window region, so that
  * is what this is: the same radius, applied as the window's actual shape. */
@@ -3238,9 +3238,9 @@ static std::unordered_map<HWND, MixarCornerShape> s_corner_shapes;
  * actually changed since the region was last built. */
 static void mixar_window_apply_corner_region(HWND hwnd, bool force)
 {
-  /* Native Acrylic extends underneath the entire client. Keep its rounded
-   * window region even when GPU alpha is available, or frost and the wash
-   * outside the painted pill make a rectangular halo. */
+  /* The GPU wash and DWM see-through cover the entire client. Keep the
+   * rounded window region even when GPU alpha is available, or frost
+   * outside the painted pill makes a rectangular halo. */
   auto it = s_corner_shapes.find(hwnd);
   if (it == s_corner_shapes.end()) {
     return;
@@ -3585,21 +3585,29 @@ extern "C" void Mixar_WindowSetCornerRadius(void *window_handle, float radius)
 
 extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
 
-/* Does this window's pixel format carry an alpha channel?
+/* Does this window's framebuffer carry an alpha channel DWM can composite?
  *
- * GHOST_WindowWin32 builds GHOST_ContextWGL with alphaBackground=false, so
- * nothing ASKED for one — but `wglChoosePixelFormatARB` matches the closest
- * hardware format, and a colour buffer of 24 bits with no alpha is not a thing
- * modern GPUs expose; what comes back is RGBA8. This reads what was actually
- * chosen rather than what was requested, because without alpha bits DWM
- * composites the client area opaque no matter what the shader writes, and the
- * caller has to fall back to shaping the window with a region instead. */
+ * OpenGL: GHOST_WindowWin32 now requests 8 alpha bits, but the driver may
+ * still hand back a format without them — read the chosen PFD, never assume.
+ * Vulkan: WGL DescribePixelFormat is meaningless; the swapchain's supported
+ * composite-alpha flags are the channel. Without alpha bits DWM composites
+ * the client opaque no matter what the shader writes. */
 extern "C" bool Mixar_WindowHasAlphaChannel(void *window_handle)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
   if (!hwnd) {
     return false;
   }
+#ifdef WITH_VULKAN_BACKEND
+  GHOST_WindowWin32 *win32 = static_cast<GHOST_WindowWin32 *>(window_handle);
+  if (win32->getDrawingContextType() == GHOST_kDrawingContextTypeVulkan) {
+    GHOST_Context *context = win32->getContext();
+    if (context == nullptr) {
+      return false;
+    }
+    return static_cast<GHOST_ContextVK *>(context)->mixar_supports_non_opaque_composite_alpha();
+  }
+#endif
   HDC hdc = GetDC(hwnd);
   if (!hdc) {
     return false;
@@ -3623,8 +3631,8 @@ extern "C" bool Mixar_WindowHasAlphaChannel(void *window_handle)
  * Agent pill's capsule have a smooth silhouette rather than the hard circle a
  * window region rasterises.
  *
- * Keep the rounded region: Acrylic covers the whole client underneath GPU
- * pixels, so alpha alone cannot clip native frost to the capsule. */
+ * Keep the rounded region: the wash covers the whole client, so alpha
+ * alone cannot clip the silhouette to the capsule. */
 extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
@@ -3648,7 +3656,27 @@ extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
     Mixar_Win32GlassSetEnabled(hwnd, false);
     return false;
   }
-  return Mixar_Win32GlassSetEnabled(hwnd, enable);
+  const bool dwm_ok = Mixar_Win32GlassSetEnabled(hwnd, enable);
+#ifdef WITH_VULKAN_BACKEND
+  GHOST_WindowWin32 *win32 = static_cast<GHOST_WindowWin32 *>(window_handle);
+  if (win32->getDrawingContextType() == GHOST_kDrawingContextTypeVulkan) {
+    GHOST_Context *context = win32->getContext();
+    if (context != nullptr) {
+      GHOST_ContextVK *vk = static_cast<GHOST_ContextVK *>(context);
+      if (!vk->mixar_set_premultiplied_composite_alpha(enable && dwm_ok)) {
+        if (enable && dwm_ok) {
+          Mixar_Win32GlassSetEnabled(hwnd, false);
+          return false;
+        }
+      }
+    }
+    else if (enable && dwm_ok) {
+      Mixar_Win32GlassSetEnabled(hwnd, false);
+      return false;
+    }
+  }
+#endif
+  return dwm_ok;
 }
 
 extern "C" void Mixar_WindowMakeKey(void *window_handle)

@@ -55,8 +55,7 @@ namespace {
 
 void fill_round(const rctf *rect, const float radius, const float col[4])
 {
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(rect, true, radius, col);
+  ui::mixar_fill_round(*rect, radius, col);
 }
 
 void outline_round(const rctf *rect, const float radius, const float col[4])
@@ -80,7 +79,7 @@ void outline_round(const rctf *rect, const float radius, const float col[4])
  * window passes `true`.
  *
  * Native frost passes tint=false: the common sheen and rim finish the pane
- * without stacking another coloured bed on top of AppKit or Acrylic.
+ * without stacking another coloured bed on top of AppKit or DWM see-through.
  */
 void glass_fill_round(const rctf *rect,
                       const ui::eMixarGlassRole role,
