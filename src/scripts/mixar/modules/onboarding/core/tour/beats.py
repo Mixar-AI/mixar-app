@@ -243,7 +243,7 @@ MIXAR_INTRO = Tour(
     title="Welcome to Mixar",
     # Timed to the founder take of 2026-09-18 (1:54): every enter_ms is the
     # first word of that line minus ~150 ms; a gated beat's clip_end_ms is
-    # ~400 ms after its last word so the pause lands in the natural silence.
+    # ~300 ms after its last word so the pause lands in the natural silence.
     beats=(
         Beat("intro", 0, 6700, "hero", PLACE_CENTER,
              label="Welcome",
@@ -256,7 +256,7 @@ MIXAR_INTRO = Tour(
                  _cursor("viewport-orbit", A_VIEWPORT, appear=8500, orbit=True),
              )),
         # "Go on, give it a spin." 14.3–16.1 s, then the tour waits.
-        Beat("viewport-try", 14150, 16500, "half", PLACE_BOTTOM_LEFT,
+        Beat("viewport-try", 14150, 16400, "half", PLACE_BOTTOM_LEFT,
              label="Part 1 · Try it: orbit the view",
              overlays=(
                  _hint("viewport-hint", "Drag to orbit, scroll to zoom", A_VIEWPORT),
@@ -264,7 +264,7 @@ MIXAR_INTRO = Tour(
              gate=Gate("viewport_interacted", "find-island", anchor=A_VIEWPORT,
                        auto_advance_wall_ms=12000)),
         # -- Act 2: the Agent island ("See the little island…" 18.7 s) --------
-        Beat("find-island", 18570, 24800, "half", PLACE_BOTTOM_LEFT,
+        Beat("find-island", 18570, 24700, "half", PLACE_BOTTOM_LEFT,
              label="Part 2 · Mixie, your agent",
              actions=((18570, "island_open", {}),),
              overlays=(
@@ -297,7 +297,7 @@ MIXAR_INTRO = Tour(
                  _scribble("tab-splat-ring", A_TAB_SPLAT, appear=42440),
              )),
         # "Everything you generate lands in Library. Check it out." 47.7–52.0 s
-        Beat("library-prompt", 47550, 52400, "card", PLACE_BOTTOM_RIGHT,
+        Beat("library-prompt", 47550, 52300, "card", PLACE_BOTTOM_RIGHT,
              label="Part 2 · Your Library",
              overlays=(
                  _scribble("library-ring", A_TAB_LIBRARY, appear=47900),
@@ -315,7 +315,7 @@ MIXAR_INTRO = Tour(
                  _cursor("library-sweep", A_ISLAND, appear=54500, orbit=True),
              )),
         # -- Act 3: the moodboard ("Ideas start in 2D…" 62.7 s) ---------------
-        Beat("moodboard-prompt", 62590, 67000, "half", PLACE_TOP_RIGHT,
+        Beat("moodboard-prompt", 62590, 66900, "half", PLACE_TOP_RIGHT,
              label="Part 3 · The moodboard",
              overlays=(
                  _scribble("grip-ring", A_DRAWER_GRIP, appear=63200),
@@ -359,7 +359,7 @@ MIXAR_INTRO = Tour(
                        appear=84300, side="left"),
              )),
         # -- Act 4: Zen vs Engine ("You are in Zen mode…" 88.3 s) --------------
-        Beat("engine-prompt", 88170, 93000, "half", PLACE_BOTTOM_CENTER,
+        Beat("engine-prompt", 88170, 92900, "half", PLACE_BOTTOM_CENTER,
              label="Part 4 · Zen and Engine mode",
              actions=((88170, "drawer_set", {"amount": 0.0}),),
              overlays=(
