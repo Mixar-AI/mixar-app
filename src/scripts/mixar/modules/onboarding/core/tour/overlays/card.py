@@ -63,7 +63,7 @@ ISLAND_GAP = 12.0             # logical px between the island and a lifted card
 MIN_VIDEO_W = 96.0
 VIDEO_PLACEHOLDER = (0.03, 0.03, 0.04, 1.0)
 CONTROL_TEXT_HOVER = (1.0, 1.0, 1.0, 1.0)
-GATE_CAPTION = "Waiting for you"
+GATE_CAPTION = "Your turn"
 GATE_CAPTION_INSET = 10.0     # logical px from the video's right edge
 
 

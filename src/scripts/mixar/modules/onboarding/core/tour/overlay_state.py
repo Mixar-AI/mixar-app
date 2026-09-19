@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from .beats import OVERLAY_CURSOR, OVERLAY_HINT, OVERLAY_SCRIBBLE, Beat
-from .config import SCRIBBLE_REVEAL_SECONDS
+from .config import OVERLAY_FADE_SECONDS, SCRIBBLE_REVEAL_SECONDS
 
 
 @dataclass
@@ -25,6 +25,7 @@ class OverlayView:
     rect: Optional[tuple]           # (xmin, ymin, xmax, ymax) window px, or None
     window_ptr: Optional[int]
     reveal: float                   # 0..1 since first visible
+    alpha: float = 1.0              # 1 while live, easing to 0 after it goes
 
 
 @dataclass
@@ -44,11 +45,18 @@ class BeatOverlayState:
     beat: Optional[Beat] = None
     first_visible_wall: dict = field(default_factory=dict)   # overlay id → wall s
     clicked: set = field(default_factory=set)                # overlay ids whose click fired
+    last_views: dict = field(default_factory=dict)           # overlay id → last OverlayView
+    fading: dict = field(default_factory=dict)               # overlay id → (view, gone_at_wall)
 
     def reset(self, beat: Optional[Beat]) -> None:
+        # Whatever was on screen fades out over the beat change; the fade
+        # start is stamped on the next compute (no wall clock here).
+        for oid, view in self.last_views.items():
+            self.fading.setdefault(oid, (view, None))
         self.beat = beat
         self.first_visible_wall = {}
         self.clicked = set()
+        self.last_views = {}
 
     @staticmethod
     def _is_visible(ov, ms: int) -> bool:
@@ -76,6 +84,7 @@ class BeatOverlayState:
         views = []
         cursor_cmd = CursorCommand(visible=False)
         beat = self.beat
+        views.extend(self._fading_views(wall))
         if beat is None:
             return views, cursor_cmd
 
@@ -83,6 +92,9 @@ class BeatOverlayState:
         for ov in beat.overlays:
             if not self._is_visible(ov, ms):
                 self.first_visible_wall.pop(ov.id, None)
+                gone = self.last_views.pop(ov.id, None)
+                if gone is not None and ov.id not in self.fading:
+                    self.fading[ov.id] = (gone, wall)
                 continue
             if ov.id not in self.first_visible_wall:
                 self.first_visible_wall[ov.id] = wall
@@ -110,7 +122,10 @@ class BeatOverlayState:
                 continue
             if rect is None:
                 continue
-            views.append(OverlayView(ov, rect, window_ptr, reveal))
+            view = OverlayView(ov, rect, window_ptr, reveal)
+            self.last_views[ov.id] = view
+            self.fading.pop(ov.id, None)
+            views.append(view)
 
         if beat.hide_cursor or active_cursor is None:
             return views, cursor_cmd
@@ -133,6 +148,22 @@ class BeatOverlayState:
             orbit=ov.orbit, orbit_radius=radius, pulse=pulse,
         )
         return views, cursor_cmd
+
+
+    def _fading_views(self, wall: float):
+        """Views that just went away, easing their alpha to 0."""
+        out = []
+        for oid, (view, gone_at) in list(self.fading.items()):
+            if gone_at is None:
+                gone_at = wall
+                self.fading[oid] = (view, wall)
+            t = (wall - gone_at) / OVERLAY_FADE_SECONDS if OVERLAY_FADE_SECONDS > 0 else 1.0
+            if t >= 1.0:
+                del self.fading[oid]
+                continue
+            out.append(OverlayView(view.overlay, view.rect, view.window_ptr,
+                                   view.reveal, alpha=1.0 - t))
+        return out
 
 
 def views_for_window(views, window_ptr: Optional[int]):
