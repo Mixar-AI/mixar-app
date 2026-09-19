@@ -532,14 +532,9 @@ static void agent_bubble_island_controls_header(const bContext *C,
     /* Turn checkpoints: the Python menu lists the snapshots taken before
      * each turn of this chat; a row restores scene and chat to that point. */
     agent_bubble_rect_to_region(region, layout->hdr_checkpoints, &bx, &by, &bw, &bh);
-    ui::Button *cp_but = uiDefButO(block, ui::ButtonType::But, "wm.call_menu",
-                                   blender::wm::OpCallContext::InvokeDefault, "",
-                                   bx, by, bw, bh,
-                                   "Checkpoints — go back to an earlier turn of this chat");
-    if (cp_but) {
-      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(cp_but);
-      RNA_string_set(op_ptr, "name", "MIXIE_CHAT_MT_checkpoints");
-    }
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_checkpoints",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              "Checkpoints — go back to an earlier turn of this chat");
   }
   ui::block_end(C, block);
   ui::block_draw(C, block);

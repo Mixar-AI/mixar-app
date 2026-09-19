@@ -143,10 +143,8 @@ void mixie_chat_rules_dispatch_op(
   if (text != nullptr) {
     RNA_string_set(&op_ptr, "text", text);
   }
-  WM_operator_name_call_ptr(
-      C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+  mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
   WM_operator_properties_free(&op_ptr);
-  ED_region_tag_redraw(region);
 }
 
 void mixie_chat_rules_reset_runtime(MixieChatRuntime *rt)

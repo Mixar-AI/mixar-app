@@ -86,6 +86,9 @@ def tc(monkeypatch, tmp_path):
         "mixar.modules.space_mixie_chat.core.ui_utils": {"bump_layout_epoch": MagicMock(), "redraw_chat_areas": MagicMock()},
         "mixar.modules.space_mixie_chat.core.markdown_parser": {"clear_incremental_cache": MagicMock()},
         "mixar.modules.space_mixie_chat.core.message_helpers": {"add_agent_message": MagicMock()},
+        "mixar.modules.agent_bubble": {},
+        "mixar.modules.agent_bubble.core": {},
+        "mixar.modules.agent_bubble.core.bubble_lifecycle": {"close_restored_agent_bubble_windows": MagicMock()},
         "mixar.modules.common": {},
         "mixar.modules.common.agent_rpc": {},
         "mixar.modules.common.agent_rpc.client": {"request": MagicMock()},
@@ -102,7 +105,9 @@ def tc(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, module_name, module)
     spec.loader.exec_module(module)
 
-    monkeypatch.setattr(module, "checkpoints_root", lambda: str(tmp_path / "checkpoints"))
+    root = lambda: str(tmp_path / "checkpoints")  # noqa: E731
+    monkeypatch.setattr(module, "checkpoints_root", root)
+    monkeypatch.setattr(module.checkpoint_store, "checkpoints_root", root)   # session_dir & co. live there
     monkeypatch.setattr(module, "DEV_MODE", False)
     module.SessionState = SimpleNamespace(IDLE=session.state)   # can_restore compares by identity
     module._has_cache.clear()

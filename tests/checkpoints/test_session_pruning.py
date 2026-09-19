@@ -79,13 +79,13 @@ def test_a_failing_session_prune_never_blocks_a_capture(tc, monkeypatch):
 
 
 def test_the_open_document_is_never_retired_by_age(tc):
-    """`restore()` parks a restored UNTITLED project at <session>/working.mixar
-    and that becomes bpy.data.filepath -- and the same path clears the session
-    id, so `keep_session_id` stops protecting the directory. Retiring it would
-    delete the document the artist currently has open."""
+    """Older builds parked a restored UNTITLED project at <session>/working.mixar
+    and that became bpy.data.filepath -- with the session id cleared, so
+    `keep_session_id` stopped protecting the directory. Such a document may
+    still be open somewhere; retiring its directory would delete it."""
     root = tc.m.checkpoints_root()
     live = tc.m.session_dir("orphaned")
-    document = os.path.join(live, tc.m.WORKING_FILENAME)
+    document = os.path.join(live, "working.mixar")
     with open(document, "w") as f:
         f.write("blend")
     tc.bpy.data.filepath = document
@@ -101,7 +101,7 @@ def test_the_open_document_is_never_retired_by_the_count_cap(tc, monkeypatch):
     monkeypatch.setattr(tc.m, "MAX_SESSIONS", 2)
     root = tc.m.checkpoints_root()
     live = tc.m.session_dir("orphaned")
-    document = os.path.join(live, tc.m.WORKING_FILENAME)
+    document = os.path.join(live, "working.mixar")
     with open(document, "w") as f:
         f.write("blend")
     tc.bpy.data.filepath = document

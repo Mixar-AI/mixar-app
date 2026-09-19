@@ -643,6 +643,14 @@ void MIXIE_CHAT_OT_voice_stop(wmOperatorType *ot);
 void MIXIE_CHAT_OT_voice_poll(wmOperatorType *ot);
 
 /* Hit testing and click handlers (mixie_chat_hit_testing.cc) */
+/* Region-level handlers call operators that may close the window owning
+ * `region` (see mixie_chat_call_operator_and_redraw). Never touch `region`
+ * after an operator call without this check. */
+bool mixie_chat_region_is_alive(const bContext *C, const ARegion *region);
+void mixie_chat_call_operator_and_redraw(bContext *C,
+                                          ARegion *region,
+                                          wmOperatorType *ot,
+                                          PointerRNA *op_ptr);
 bool mixie_chat_handle_slot_action_click(bContext *C,
                                           ARegion *region,
                                           float mouse_x,
@@ -673,6 +681,9 @@ void mixie_chat_dropboxes();
  * agent_bubble_menu.py — so it inherits the bubble's position, drag
  * behavior, and ESC dismissal automatically. */
 void MIXIE_CHAT_OT_agent_bubble_show(wmOperatorType *ot);
+/* mixie_chat_document_ops.cc: re-title the open document without writing it. */
+void MIXIE_CHAT_OT_retitle_document(wmOperatorType *ot);
+void MIXIE_CHAT_OT_undo_stamp(wmOperatorType *ot);
 
 /* Property cache, layout data, runtime state: see mixie_chat_layout_data.hh */
 

@@ -727,9 +727,10 @@ void agent_ui_draw_island(ARegion *region,
                new_chat_fill);
     agent_ui_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, new_chat_fill);
 
-    /* Turn checkpoints: same disc, a counter-clockwise arrow glyph. Opens
-     * the MIXIE_CHAT_MT_checkpoints menu (space_mixie_chat/ui/operators/
-     * checkpoint_ops.py) — the island has no Python header to host it. */
+    /* Turn checkpoints: same disc, a counter-clockwise arrow glyph. Runs
+     * mixie_chat.show_checkpoints (space_mixie_chat/ui/operators/
+     * checkpoint_ops.py), the native card — the island has no Python header
+     * to host a button. */
     fill_round(&layout->hdr_checkpoints,
                BLI_rctf_size_x(&layout->hdr_checkpoints) * 0.5f,
                checkpoints_fill);
