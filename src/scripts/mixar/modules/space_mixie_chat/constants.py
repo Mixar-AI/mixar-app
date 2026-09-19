@@ -162,10 +162,6 @@ class JSONRPCMethod:
     NOTIFICATIONS_GET_UNREAD = "notifications.get_unread"
     JOB_SYNC = "job.sync"
     JOB_GET = "job.get"
-    # Client -> Server (notification - no response): outcome of one
-    # fire-and-forget final render job started by the agent's render_scene
-    # tool; echoes the job_key the kickoff pinned (session/turn identity).
-    RENDER_FINAL_RESULT = "render.final_render_result"
     # Client -> Server (request - received:true acknowledgement): terminal outcome of
     # ONE generation the agent enqueued through a client operator. The client
     # owns submit/poll/download/import, so it is the only party that knows the
@@ -467,6 +463,9 @@ TIMER_INTERVAL = 1 / 60  # ~0.016s
 
 # Timeout threshold for script execution warnings (seconds)
 SCRIPT_TIMEOUT_THRESHOLD = 30.0
+# Longest a render_viewport(quality="final") tool call is held open waiting for
+# its native preview job (core/preview_deferral.py); the job itself keeps going.
+PREVIEW_DEFERRED_MAX_S = 240.0
 
 # Undo checkpoints for agent-executed scripts.
 #

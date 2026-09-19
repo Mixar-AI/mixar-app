@@ -69,10 +69,11 @@ _shutdown_requested = False
 # Execution gate: defer script running so the chat UI can render planning text
 _execution_gate_until: float = 0.0
 
-# Render jobs never gate scripts. The agent's final render is fire-and-forget
-# on Blender's job thread and the render evaluates its OWN depsgraph, so the
-# agent keeps working (and the user keeps clicking) while it runs — exactly
-# as a user's F12 does with Lock Interface off. A hold here (3.4.2) parked
+# Render jobs never gate scripts. The agent's preview render runs on Blender's
+# job thread and evaluates its OWN depsgraph, so the agent keeps working (and
+# the user keeps clicking) while it runs — exactly as a user's F12 does with
+# Lock Interface off. The tool call that started it is held open by
+# preview_deferral (a timer poller), never by this queue. A hold here (3.4.2) parked
 # the head-of-queue script while Blender reported a RENDER job alive, for up
 # to 20 s, then failed it — which stalled every turn for the whole render (the
 # render lane's own post-render verification script included) and turned any
@@ -114,9 +115,12 @@ def get_inflight_script() -> Optional[dict]:
     blender.liveness handler answered on the WebSocket thread.
     """
     with _inflight_lock:
-        if not _inflight:
-            return None
-        info = dict(_inflight)
+        info = dict(_inflight) if _inflight else None
+    if info is None:
+        # A held-open preview tool call counts as busy too: the main thread is
+        # idle, but the backend is still waiting on that request id.
+        from .preview_deferral import get_pending_inflight
+        return get_pending_inflight()
     info["elapsed_s"] = round(time.monotonic() - info.pop("_started"), 1)
     return info
 
@@ -372,9 +376,14 @@ def _process_one_request() -> Optional[float]:
     _clear_inflight()
 
     # Send response directly via WebSocket client (thread-safe). This avoids
-    # cross-thread queue polling which caused segfaults.
-    from .jsonrpc_client import get_jsonrpc_client
-    pump.respond(get_jsonrpc_client(), req, result_dict)
+    # cross-thread queue polling which caused segfaults. A preview render
+    # script asks to be held open instead: the reply goes out from the
+    # deferral's timer when the native job ends, and this queue keeps draining.
+    from .preview_deferral import defer_response, deferred_preview_key
+    deferred_key = deferred_preview_key(result_dict)
+    if deferred_key is None or not defer_response(req, deferred_key):
+        from .jsonrpc_client import get_jsonrpc_client
+        pump.respond(get_jsonrpc_client(), req, result_dict)
 
     # Continue timer if more requests pending
     if not _request_queue.empty():
@@ -448,6 +457,12 @@ def cleanup(shutdown: bool = False) -> None:
 
     _execution_gate_until = 0.0
     _held = None  # drop a prefetch-held request along with the queue
+    # A held-open preview tool call belongs to the flushed session/connection.
+    try:
+        from .preview_deferral import fail_pending
+        fail_pending("executor_reset")
+    except Exception:
+        logger.debug("preview deferral flush skipped", exc_info=True)
 
     # Clear request queue
     while not _request_queue.empty():
