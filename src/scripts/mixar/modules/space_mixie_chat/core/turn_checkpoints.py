@@ -454,5 +454,3 @@ def _after_load(scene, record: dict, mark_request_id: str) -> None:
     else:
         _notify(scene.name, "Scene restored. This checkpoint has no conversation bookmark, so the chat memory was not rewound.")
     _send_backend(session_id, calls)
-
-

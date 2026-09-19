@@ -69,17 +69,26 @@ def fetch_parked_report(base_url: str, token: str, session_id: str, timeout: flo
         return None
 
 
-def send_continue(scene) -> bool:
-    """Send the bare continuation message through the normal chat send path
-    (full guards: state, connection, optimistic UI). IDLE-only by design: a
-    retry while a turn is live would race the running build."""
-    import bpy
-
+def can_send_continue(scene) -> bool:
+    """IDLE and no open run: a retry while a turn is live would race the
+    running build."""
     from ..constants import SessionState
     from .session import get_session_manager
 
     session = get_session_manager()
-    if session.get_state(scene) != SessionState.IDLE or session.run_open(scene):
+    return session.get_state(scene) == SessionState.IDLE and not session.run_open(scene)
+
+
+def send_continue(scene) -> bool:
+    """Send the bare continuation message through the normal chat send path
+    (full guards: state, connection, optimistic UI). IDLE-only by design.
+
+    Callers inside a native click handler must NOT call this directly: the
+    send can tear the island windows down, freeing the region that handler
+    still holds. Defer it to a ``bpy.app.timers`` tick instead."""
+    import bpy
+
+    if not can_send_continue(scene):
         return False
     previous = scene.mixie_chat_input
     scene.mixie_chat_input = CONTINUE_MESSAGE
