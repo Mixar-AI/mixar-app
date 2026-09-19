@@ -6,9 +6,9 @@
 """
 Moodboard Chat Integration Operators
 
-Explicitly attach the current moodboard selection through the same additive
-sync as automatic selection. The toolbar and P binding can reattach a removed
-reference without toggling its board selection; existing references stay put.
+Thin wrappers around ``moodboard.core.chat_sync``. Auto-sync mirrors
+selected moodboard images into the chat composer; this operator is the
+toolbar / ``P`` keymap force-refresh if anything ever desynchronises.
 """
 
 from bpy.types import Operator
@@ -49,10 +49,10 @@ def get_all_image_indices_to_send(scene):
 
 
 class MIXIE_OT_moodboard_send_to_chat(Operator):
-    """Add selected moodboard references without replacing staged references."""
+    """Force the moodboard→chat sync to run immediately."""
     bl_idname = "mixie.moodboard_send_to_chat"
-    bl_label = "Attach Selected to Chat"
-    bl_description = f"Add selected images to chat references ({format_shortcut('P')})"
+    bl_label = "Refresh Chat Attachments"
+    bl_description = f"Refresh moodboard→chat attachment sync ({format_shortcut('P')})"
     bl_options = {'REGISTER'}
 
     @classmethod
@@ -70,28 +70,29 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
         scene = context.scene
         try:
             from mixar.modules.moodboard.core.chat_sync import (
-                consume_selection,
+                force_resync,
                 _reconcile_attachments,
                 _collect_selected_image_names,
             )
-            before = len(scene.mixie_chat_pending_attachments)
             selected = _collect_selected_image_names(scene)
+            force_resync(scene)
             _reconcile_attachments(scene, selected, animate=True)
-            consume_selection(scene)
         except Exception as e:  # noqa: BLE001 — keep the keymap functional
             self.report({'WARNING'}, f"Sync failed: {e}")
             return {'CANCELLED'}
 
-        added = len(scene.mixie_chat_pending_attachments) - before
-        if not selected:
+        selected_count = sum(
+            1 for att in scene.mixie_chat_pending_attachments
+            if getattr(att, "is_moodboard", False)
+        )
+        if selected_count == 0:
             self.report({'INFO'}, "No moodboard images selected")
-        elif added:
+        else:
             self.report(
                 {'INFO'},
-                f"Attached {added} reference{'s' if added != 1 else ''}",
+                f"Synced {selected_count} moodboard image"
+                f"{'s' if selected_count != 1 else ''}",
             )
-        else:
-            self.report({'INFO'}, "No new references attached")
         return {'FINISHED'}
 
 
@@ -102,7 +103,7 @@ class MIXIE_CHAT_OT_attach_moodboard_image(Operator):
     bl_idname = "mixie_chat.attach_moodboard_image"
     bl_label = "Attach Selected Moodboard Image"
     bl_description = (
-        f"Add selected images to chat references ({format_shortcut('P')})"
+        f"Refresh moodboard→chat attachment sync ({format_shortcut('P')})"
     )
     bl_options = {'REGISTER'}
 
