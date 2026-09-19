@@ -43,7 +43,9 @@ ENV_SILENT = "MIXAR_TOUR_SILENT"
 # ---------------------------------------------------------------------------
 TICK_SECONDS = 1.0 / 30.0
 GATE_AUTO_ADVANCE_DEFAULT_MS = 10000
-END_AFTER_WALL_MS = 1500
+# After the terminal beat's clip end: the card fades out over the replay
+# caption for this long before the modal ends.
+END_AFTER_WALL_MS = 2500
 SKIP_DWELL_MS = 500
 # The terminal beat counts as reached this close to its clip end: an audio
 # clock can settle a few ms short of the file's end and never cross it.
@@ -54,6 +56,7 @@ CURSOR_ORBIT_RADIUS = 46.0
 CURSOR_ORBIT_SPEED = 1.6         # rad/s
 SCRIBBLE_REVEAL_SECONDS = 0.45
 CARD_FADE_SECONDS = 0.25         # card alpha 0 -> 1 on tour start
+CARD_FADE_OUT_SECONDS = 0.6      # card alpha 1 -> 0 at the end (CardMotion.fade_out)
 CARD_MOVE_RATE = 8.0             # exponential ease of the card rect (1/s)
 CARD_MOVE_SNAP_PX = 0.5          # within this of the target the rect snaps
 CONTROL_REVEAL_RATE = 10.0       # exponential ease of the controls strip (1/s)
@@ -70,10 +73,11 @@ SPEED_OPTIONS = (1.0, 1.25, 1.5, 2.0)
 # that is invisible until the pointer hovers the card, the tour is paused
 # or the exit dialog is up.
 # ---------------------------------------------------------------------------
+# Two sizes only: "hero" for the framed intro/outro, "half" for every
+# beat over the live UI (the old 300 px "card" read as a thumbnail).
 CARD_VARIANTS = {
     "hero": 560,
     "half": 400,
-    "card": 300,
 }
 CARD_ASPECT = 16.0 / 9.0
 CARD_MARGIN = 28
@@ -93,6 +97,10 @@ CONTROL_TEXT_DIM = (0.65, 0.66, 0.70, 0.9)
 CONTROL_FONT_PX = 13
 CONTROL_GAP = 14
 GATE_CAPTION_ALPHA_FLOOR = 0.6                 # always readable while gated
+# Freeze-frame film over the paused video while a gate waits (times the
+# session's eased 0..1 `gate_film`), so the pause reads as intentional.
+GATE_FILM_ALPHA = 0.15
+CAPTION_UNDER_GAP = 12                         # px between the card and a caption under it
 PAUSED_DISC = (0.0, 0.0, 0.0, 0.45)
 PAUSED_GLYPH = (1.0, 1.0, 1.0, 0.85)
 PAUSED_DISC_RADIUS = 26
@@ -126,12 +134,12 @@ GATE_DONE_FLASH_GROW = 22        # logical px the flash ring grows outward
 # Copy.
 # ---------------------------------------------------------------------------
 EXIT_CONFIRM_TITLE = "Leave the tour?"
-EXIT_CONFIRM_BODY = "It takes two minutes, and you can restart it from Help."
+EXIT_CONFIRM_BODY = "Two minutes now saves an hour of hunting later."
 EXIT_CONFIRM_CONTINUE = "Continue tour"
-EXIT_CONFIRM_QUIT = "Yes, exit"
+EXIT_CONFIRM_QUIT = "Leave"
 CONTROL_PAUSE = "Pause"
 CONTROL_RESUME = "Play"
-CONTROL_SKIP = "Skip step"
+CONTROL_SKIP = "Next"
 CONTROL_EXIT = "Exit"
 HELP_MENU_START_TOUR = "Start tour"
 

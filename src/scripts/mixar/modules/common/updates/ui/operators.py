@@ -21,6 +21,46 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+# While the interactive onboarding tour runs, the restart prompt would
+# open a dialog over the tour's card; re-check on this cadence instead.
+TOUR_RETRY_SECONDS = 30.0
+
+
+def _tour_running() -> bool:
+    """True while the interactive onboarding tour owns the screen; a
+    missing or half-loaded tour package reads as "not running"."""
+    try:
+        from mixar.modules.onboarding.core.tour import session as tour_session
+        return bool(tour_session.is_running())
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _reinvoke_restart_prompt():
+    """One-shot timer: bring the restart prompt back once the tour is over
+    (the operator re-checks and reschedules itself if it is not)."""
+    try:
+        window = next(iter(bpy.context.window_manager.windows), None)
+        if window is not None:
+            with bpy.context.temp_override(window=window, screen=window.screen):
+                bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
+        else:
+            bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
+    except Exception:  # noqa: BLE001 — operator may be unavailable
+        logger.error("Could not re-open the restart prompt", exc_info=True)
+    return None
+
+
+def _defer_restart_prompt_for_tour() -> None:
+    if not bpy.app.timers.is_registered(_reinvoke_restart_prompt):
+        bpy.app.timers.register(
+            _reinvoke_restart_prompt, first_interval=TOUR_RETRY_SECONDS,
+        )
+    logger.info(
+        "Restart prompt deferred: onboarding tour running (retry in %.0fs)",
+        TOUR_RETRY_SECONDS,
+    )
+
 
 class MIXAR_OT_restart_to_update(bpy.types.Operator):
     """Restart Mixar and install the downloaded update"""
@@ -36,6 +76,11 @@ class MIXAR_OT_restart_to_update(bpy.types.Operator):
     )
 
     def invoke(self, context, event):
+        if _tour_running():
+            _defer_restart_prompt_for_tour()
+            self.report({"INFO"}, "Mixar will ask to update once the tour ends")
+            return {"CANCELLED"}
+
         routed = self._route(context)
         if routed is not None:
             return routed

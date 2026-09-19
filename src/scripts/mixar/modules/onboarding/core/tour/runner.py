@@ -23,15 +23,35 @@ Contract (per ``tick()``):
    the deadline (the tour does it via ``auto_action``) jumps to
    ``gate.advance_to``.
 5. The terminal beat ends the tour once its clip end is reached.
+6. A stall watchdog: while running (not user-paused, not waiting out the
+   terminal beat), a clock position that has not moved for
+   ``STALL_SECONDS`` — or a clock reporting ``ended()`` on a non-terminal
+   beat — skips the current beat (ends the tour on the terminal one). The
+   clock is an audio handle whose ceiling comes from the movie's estimated
+   duration; when either is wrong the tour must still have an exit.
 
 User pause is independent of gate pause and freezes gate deadlines.
+
+A gate whose ``advance_to`` cannot be jumped to (missing, or not forward)
+is *consumed* on the first attempt and then behaves like a plain beat: the
+next beat enters at its ``enter_ms``. ``__init__`` rejects such a table up
+front; the consumed path is the runtime safety net.
 """
 
 import time
 from typing import Callable, Optional
 
+from mixar.config.logging_config import get_logger
+
 from .beats import Tour, build_skip_plan, find_index
 from .config import TERMINAL_END_SLACK_MS
+
+logger = get_logger(__name__)
+
+# Wall seconds the clock may sit still while running before the watchdog
+# skips the beat. Longer than any plausible decode/seek hiccup, shorter than
+# a user would wait for a frozen tour.
+STALL_SECONDS = 3.0
 
 STATUS_IDLE = "idle"
 STATUS_RUNNING = "running"
@@ -61,6 +81,7 @@ class TourRunner:
     ):
         self.tour = tour
         self.beats, self.skip_ranges = build_skip_plan(tour.beats, skipped_ids)
+        self._validate_gates()
         self.clock = clock
         self.on_action = on_action
         self.on_end = on_end
@@ -75,7 +96,23 @@ class TourRunner:
         self._entered_wall: float = 0.0
         self._end_deadline: Optional[float] = None
         self._gate_satisfied_early = False
+        self._gate_consumed: Optional[str] = None   # beat id whose gate is spent
+        self._watch_ms: Optional[int] = None        # watchdog: last position seen
+        self._watch_wall: Optional[float] = None    # ... and when it changed
         self.last_ms = 0
+
+    def _validate_gates(self) -> None:
+        """Every gate must jump forward within the post-skip-plan table, or
+        ``_jump`` would no-op at the clip end and the beat could never leave."""
+        for i, beat in enumerate(self.beats):
+            if beat.gate is None:
+                continue
+            j = find_index(self.beats, beat.gate.advance_to)
+            if j < 0:
+                raise ValueError(f"TourRunner: {beat.id}: gate target "
+                                 f"{beat.gate.advance_to!r} is not a playable beat")
+            if j <= i:
+                raise ValueError(f"TourRunner: {beat.id}: gate must advance forward")
 
     # -- lifecycle -------------------------------------------------------
 
@@ -87,6 +124,7 @@ class TourRunner:
 
     def start(self) -> None:
         self.status = STATUS_RUNNING
+        self._reset_watchdog()
         self.clock.seek_ms(0)
         self.clock.resume()
         self.tick()
@@ -129,7 +167,7 @@ class TourRunner:
         # would have done, in order, so app state is what the target expects.
         while True:
             beat = self.beat
-            if beat is not None and beat.gate is not None and ms >= beat.clip_end_ms:
+            if beat is not None and self._gate_pending(beat) and ms >= beat.clip_end_ms:
                 self._fire_due_actions(beat, ms)
                 if self._gate_satisfied_early:
                     # Done while the line was still playing: no pause, just
@@ -159,12 +197,45 @@ class TourRunner:
                     self.clock.pause()
                 if now >= self._end_deadline:
                     self.end()
+                return
+        self._watchdog(ms, now)
 
     def _enter(self, idx: int) -> None:
         self.index = idx
         self._entered_wall = self.wall()
         self._gate_deadline = None
         self._gate_satisfied_early = False
+        self._reset_watchdog()
+
+    # -- stall watchdog --------------------------------------------------
+
+    def _reset_watchdog(self) -> None:
+        self._watch_ms = None
+        self._watch_wall = None
+
+    def _watchdog(self, ms: int, now: float) -> None:
+        """Runs at the end of a RUNNING tick that did not end the tour."""
+        terminal = self.index == len(self.beats) - 1
+        if not terminal and self.clock.ended():
+            self._stall("clock ended", ms)
+            return
+        if self._watch_wall is None or ms != self._watch_ms:
+            self._watch_ms = ms
+            self._watch_wall = now
+            return
+        if now - self._watch_wall >= STALL_SECONDS:
+            self._stall(f"no progress for {STALL_SECONDS:.1f}s", ms)
+
+    def _stall(self, why: str, ms: int) -> None:
+        beat = self.beat
+        terminal = self.index == len(self.beats) - 1
+        logger.warning("Tour %s: clock stalled at %d ms on beat %r (%s); %s",
+                       self.tour.id, ms, beat.id if beat else "", why,
+                       "ending" if terminal else "skipping the beat")
+        if terminal:
+            self.end()
+        else:
+            self.skip_beat()
 
     def _fire_due_actions(self, beat, ms: int) -> None:
         for i, (at_ms, name, args) in enumerate(beat.actions):
@@ -182,10 +253,14 @@ class TourRunner:
 
     # -- gates and jumps -------------------------------------------------
 
+    def _gate_pending(self, beat) -> bool:
+        """``beat`` has a gate that has not been consumed by a failed jump."""
+        return beat.gate is not None and beat.id != self._gate_consumed
+
     def gate_active(self) -> bool:
         """True while the current beat's gate can still be satisfied."""
         beat = self.beat
-        return (beat is not None and beat.gate is not None
+        return (beat is not None and self._gate_pending(beat)
                 and self.status in (STATUS_RUNNING, STATUS_GATED))
 
     def satisfy_gate(self) -> bool:
@@ -212,6 +287,9 @@ class TourRunner:
         the tour's own way when one is pending)."""
         if self.status == STATUS_ENDED:
             return
+        # An early satisfaction is void once the user skips: the jump happens
+        # here, not again at the clip end.
+        self._gate_satisfied_early = False
         if self.gate_active():
             self._auto_advance()
             return
@@ -223,8 +301,16 @@ class TourRunner:
     def _jump(self, beat_id: str) -> None:
         target = find_index(self.beats, beat_id)
         if target < 0 or target <= self.index:
-            # Never jump backwards; treat as a no-op to keep the clock sane.
+            # Never jump backwards. The gate that asked for this is spent:
+            # without that, ``tick`` would re-gate at the same clip end and
+            # ``_auto_advance`` would rerun the action on every timeout.
+            beat = self.beat
+            if beat is not None and beat.gate is not None:
+                self._gate_consumed = beat.id
+            self._gate_deadline = None
+            self._gate_satisfied_early = False
             self.status = STATUS_RUNNING
+            self._reset_watchdog()
             if not self.user_paused:
                 self.clock.resume()
             return
@@ -261,6 +347,7 @@ class TourRunner:
             if self._end_deadline is not None:
                 self._end_deadline += delta
         self._pause_started = None
+        self._reset_watchdog()
         if self.status == STATUS_RUNNING:
             self.clock.resume()
 

@@ -4,13 +4,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
-Interactive tour — the running session.
+Interactive tour — the running session (tick + draw).
 
 Owns everything a live tour needs: the runner, the clock, the movie
-texture, anchor cache, cursor animation, card motion (glide between beat
-placements, hover-revealed controls, start fade), per-beat overlay state,
-the draw handlers on every space class, and the state/QA JSON published on
-the WindowManager. The modal operator (``ui/operators/tour_modal_op.py``)
+texture, the shared anchor cache, cursor animation, card motion (glide
+between beat placements, hover-revealed controls, start/end fades),
+per-beat overlay state and the "your turn" visuals. Lifecycle (start,
+stop, teardown, publishing) lives in ``session_lifecycle.py``, input in
+``session_input.py``. The modal operator (``ui/operators/tour_modal_op.py``)
 forwards its timer ticks and window events here.
 
 Threading: every method runs on the main thread. ``draw()`` runs inside a
@@ -27,38 +28,24 @@ import gpu
 from mixar.config.logging_config import get_logger
 
 from . import actions, anchors, config
-from .beats import MIXAR_INTRO
+from .beats import MIXAR_INTRO, OVERLAY_CAPTION
 from .card_motion import CardMotion
-from .clock import make_clock
 from .overlay_state import (
     BeatOverlayState, hint_views, scribble_views, views_for_window,
 )
 from .overlays import card as card_ui
 from .overlays import scribble as scribble_ui
 from .overlays.cursor import CursorAnim
+from .runner import STATUS_ENDED, STATUS_GATED
 from .session_input import SessionInputMixin
-from .runner import STATUS_ENDED, STATUS_GATED, TourRunner
-from .video import MovieTexture
+from .session_lifecycle import SessionLifecycleMixin
 
 logger = get_logger(__name__)
 
-# (space class name, region type) pairs that get a draw handler. The card
-# lives in the host region (main window VIEW_3D); overlays can land in any
-# of these, including the floating Agent island's own window.
-_DRAW_TARGETS = (
-    ("SpaceView3D", "WINDOW"), ("SpaceView3D", "HEADER"),
-    ("SpaceView3D", "UI"), ("SpaceView3D", "TOOLS"),
-    # The Zen moodboard drawer is an overlapping TOOL_PROPS region painted
-    # after WINDOW, so overlays on its tools must be drawn there too.
-    ("SpaceView3D", "TOOL_PROPS"),
-    ("SpaceTopBar", "HEADER"),
-    ("SpaceAgentBubble", "WINDOW"), ("SpaceAgentBubble", "HEADER"),
-    ("SpaceAgentBubble", "TOOLS"),
-    ("SpaceMixie", "WINDOW"), ("SpaceMixie", "UI"),
-    ("SpaceMixieChat", "WINDOW"),
-)
-
 _current = None
+
+HOVER_DECAY_SECONDS = 2.0      # no MOUSEMOVE for this long → not hovering
+GATE_FILM_RATE = 6.0           # ease of the paused-frame film (1/s)
 
 
 def is_running() -> bool:
@@ -69,7 +56,7 @@ def current():
     return _current
 
 
-class TourSession(SessionInputMixin):
+class TourSession(SessionLifecycleMixin, SessionInputMixin):
     def __init__(self, rate: float = 1.0, silent: bool = False,
                  tour=MIXAR_INTRO):
         self.tour = tour
@@ -81,13 +68,16 @@ class TourSession(SessionInputMixin):
         self.hover = None
         self.card_hovered = False      # pointer anywhere over the card
         self._mouse = None             # last main-window pointer position
+        self._last_mouse_wall = 0.0
         self.flags: dict = {"viewport_interacted": False}
         self._handles: list = []
         self._host_window_ptr = None
         self._host_region_ptr = None
         self._host_rect = (0, 0, 0, 0)
+        self._host_lost = False        # host window has no VIEW_3D right now
         self._ui_scale = 1.0
         self._last_wall = time.monotonic()
+        self._started_wall = self._last_wall
         self._views: list = []
         self._card_layout = None       # ANIMATED layout: drawn, hit-tested, published
         self._card_target = None       # where compute_card_layout wants the card
@@ -100,106 +90,29 @@ class TourSession(SessionInputMixin):
         self._gate_hole = None         # spotlight rect in host px, if in the host window
         self._gate_dim_scale = 1.0     # 0.5 when the target is the whole viewport
         self._gate_flash = None        # (rect, window_ptr, wall) after a gate is completed
-        self.anchor_cache = anchors.AnchorCache()
+        self._gate_done_for = None     # beat id whose gate the user already satisfied
+        self._gate_film = 0.0          # 0..1 film over the paused video frame
+        self._end_requested = False    # runner finished: fade the card, then stop
+        self._end_requested_wall = 0.0
+        self._exit_requested = False   # another window asked for the exit dialog
+        self._pre_tour_state = None
+        self._published_key = None
+        self._published_at = 0.0
+        # ONE anchor cache shared with the gate predicates: each read of the
+        # widget dump serializes the whole UI, so two caches cost double.
+        self.anchor_cache = actions._anchor_cache
         self.cursor = CursorAnim()
         self.overlay_state = BeatOverlayState()
         self.video = None
         self.clock = None
         self.runner = None
 
-    # -- lifecycle -------------------------------------------------------
-
-    def start(self, window, area, region) -> bool:
-        global _current
-        path = config.video_path()
-        if not path:
-            logger.warning("Tour: no video asset; refusing to start")
-            return False
-        try:
-            self.video = MovieTexture(path)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Tour: movie load failed: %s", exc)
-            return False
-        try:
-            self.clock = make_clock(path, self.video.duration_ms,
-                                    silent=self.silent, rate=self.rate)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Tour: clock init failed: %s", exc)
-            self.video.close()
-            return False
-
-        self._host_window_ptr = anchors.normalize_ptr(window.as_pointer())
-        self._host_region_ptr = anchors.normalize_ptr(region.as_pointer())
-        self._refresh_host(window, region)
-        self.runner = TourRunner(self.tour, self.clock,
-                                 on_action=self._on_action,
-                                 on_end=self._on_runner_end)
-        self._install_draw_handlers()
-        self.running = True
-        _current = self
-        self._last_wall = time.monotonic()
-        self.runner.start()
-        self._sync_beat()
-        self._publish()
-        logger.info("Tour %s started (rate=%.2f silent=%s)",
-                    self.tour.id, self.rate, self.silent)
-        return True
-
-    def stop(self, reason: str = "stopped") -> None:
-        global _current
-        if not self.running:
-            return
-        self.running = False
-        self._remove_draw_handlers()
-        try:
-            if self.runner is not None and self.runner.status != STATUS_ENDED:
-                self.runner.status = STATUS_ENDED
-        except Exception:  # noqa: BLE001
-            pass
-        for closer in (getattr(self.clock, "close", None),
-                       getattr(self.video, "close", None)):
-            try:
-                if closer:
-                    closer()
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("Tour: close failed: %s", exc)
-        if reason in ("completed", "exited"):
-            self._mark_seen()
-        try:
-            actions.run("tour_cleanup", {})
-        except Exception:  # noqa: BLE001
-            pass
-        self._publish(final=True)
-        self._tag_redraw_all()
-        if _current is self:
-            _current = None
-        logger.info("Tour %s stopped: %s", self.tour.id, reason)
-
-    def _mark_seen(self) -> None:
-        try:
-            from mixar.modules.onboarding.core import state as legacy_state
-            legacy_state._mark_current_user_seen()
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Tour: mark-seen skipped: %s", exc)
-
-    # -- runner callbacks ------------------------------------------------
-
-    def _on_action(self, name: str, args: dict) -> None:
-        actions.run(name, args)
-        # Any action can move UI around; drop cached rects.
-        self.anchor_cache.invalidate()
-
-    def _on_runner_end(self) -> None:
-        self.completed = True
-
-        # Defer the teardown out of the runner's own tick.
-        def _stop():
-            self.stop("completed")
-            return None
-
-        bpy.app.timers.register(_stop, first_interval=0.0)
-
     # -- per-tick --------------------------------------------------------
+
+    def request_exit_confirm(self) -> None:
+        """Ask for the exit dialog from outside the host window (the
+        island's Escape); honoured on the next tick."""
+        self._exit_requested = True
 
     def tick(self) -> None:
         if not self.running or self.runner is None:
@@ -211,22 +124,68 @@ class TourSession(SessionInputMixin):
         if not self._host_alive():
             self.stop("host-closed")
             return
+        if self._exit_requested:
+            self._exit_requested = False
+            if not self.exit_confirm and not self._end_requested:
+                self.set_exit_confirm(True)
+        if self._end_requested:
+            self._finish_when_faded(dt, now)
+            return
 
-        if not self.exit_confirm:
+        if not self.exit_confirm and not self._host_lost:
             self.runner.tick()
-            if self.runner.gate_active():
-                gate = self.runner.beat.gate
-                if actions.check(gate.check, self.flags):
-                    flash_at = self._resolve(gate.anchor) if gate.anchor else None
-                    if flash_at is not None:
-                        self._gate_flash = (flash_at[0], flash_at[1], now)
-                    self.runner.satisfy_gate()
-        if self.runner.status == STATUS_ENDED and not self.running:
+            self._check_gate(now)
+        if not self.running:
             return
         self._sync_beat()
 
         ms = self.runner.last_ms
         beat = self.runner.beat
+        self._update_gate_state(beat, dt)
+        views, cmd = self.overlay_state.compute(
+            ms, now, self._resolve, self._host_rect, self._host_window_ptr,
+            config.CURSOR_ORBIT_RADIUS * self._ui_scale,
+        )
+        self._views = views
+        if self._gate_flash is not None and \
+                now - self._gate_flash[2] > config.GATE_DONE_FLASH_SECONDS:
+            self._gate_flash = None
+        if cmd.visible and not self._gated and not self._host_lost:
+            self.cursor.show()
+            if cmd.orbit:
+                self.cursor.set_orbit(cmd.x, cmd.y, cmd.orbit_radius, cmd.window_ptr)
+            else:
+                self.cursor.clear_orbit()
+                self.cursor.set_target(cmd.x, cmd.y, cmd.window_ptr)
+            if cmd.pulse:
+                self.cursor.pulse()
+        else:
+            self.cursor.hide()
+        self.cursor.step(dt)
+
+        self._step_card(dt, beat, now)
+        self._exit_layout = (card_ui.compute_exit_confirm_layout(
+            self._host_rect, self._ui_scale) if self.exit_confirm else None)
+        self._publish()
+        self._tag_redraw_all()
+
+    def _check_gate(self, now: float) -> None:
+        """Satisfy the current gate from its state predicate, once per beat."""
+        if not self.runner.gate_active():
+            return
+        beat = self.runner.beat
+        if beat is None or self._gate_done_for == beat.id:
+            return
+        gate = beat.gate
+        if not actions.check(gate.check, self.flags):
+            return
+        self._gate_done_for = beat.id
+        flash_at = self._resolve(gate.anchor) if gate.anchor else None
+        if flash_at is not None:
+            self._gate_flash = (flash_at[0], flash_at[1], now)
+        self.runner.satisfy_gate()
+
+    def _update_gate_state(self, beat, dt: float) -> None:
         # "Your turn" visuals begin only once the video has PAUSED after the
         # instruction (status gated), never while the line is still playing.
         self._gated = self.runner.status == STATUS_GATED
@@ -245,38 +204,33 @@ class TourSession(SessionInputMixin):
                     self._gate_dim_scale = 0.5
                 else:
                     self._gate_hole = hole
-        views, cmd = self.overlay_state.compute(
-            ms, now, self._resolve, self._host_rect, self._host_window_ptr,
-            config.CURSOR_ORBIT_RADIUS * self._ui_scale,
-        )
-        self._views = views
-        if self._gate_flash is not None and \
-                now - self._gate_flash[2] > config.GATE_DONE_FLASH_SECONDS:
-            self._gate_flash = None
-        if cmd.visible and not self._gated:
-            self.cursor.show()
-            if cmd.orbit:
-                self.cursor.set_orbit(cmd.x, cmd.y, cmd.orbit_radius, cmd.window_ptr)
-            else:
-                self.cursor.clear_orbit()
-                self.cursor.set_target(cmd.x, cmd.y, cmd.window_ptr)
-            if cmd.pulse:
-                self.cursor.pulse()
-        else:
-            self.cursor.hide()
-        self.cursor.step(dt)
+        # The held frame eases under a light film so the freeze reads as
+        # intentional rather than as a stall.
+        target = 1.0 if self._gated else 0.0
+        self._gate_film += (target - self._gate_film) * (1.0 - math.exp(-dt * GATE_FILM_RATE))
 
-        self._step_card(dt, beat)
-        self._exit_layout = (card_ui.compute_exit_confirm_layout(
-            self._host_rect, self._ui_scale) if self.exit_confirm else None)
-        self._publish()
+    def _finish_when_faded(self, dt: float, now: float) -> None:
+        """After the last beat: fade the card out, then stop (deliberate
+        ending). A wall-clock cap guards against a fade that never lands."""
+        if not self._end_requested_wall:
+            self._end_requested_wall = now
+            self.card_motion.fade_out()
+            self.cursor.hide()
+        self.card_motion.step(dt, None, False)
+        rect = self.card_motion.rect
+        self._card_layout = (card_ui.layout_from_card_rect(rect, self._ui_scale)
+                             if rect is not None else None)
+        overdue = now - self._end_requested_wall > config.END_AFTER_WALL_MS / 1000.0
+        if self.card_motion.faded_out or overdue:
+            self.stop("completed")
+            return
         self._tag_redraw_all()
 
-    def _step_card(self, dt: float, beat) -> None:
+    def _step_card(self, dt: float, beat, now: float) -> None:
         """Glide the card toward the beat's target rect, ease the controls
         strip in/out and run the start fade; the drawn layout is rebuilt
         from the animated rect so hit-testing and QA targets follow it."""
-        if beat is not None:
+        if beat is not None and not self._host_lost:
             island = self._island_rect_in_host()
             self._card_target = card_ui.compute_card_layout(
                 beat.card_variant, beat.card_placement, self._host_rect,
@@ -284,9 +238,13 @@ class TourSession(SessionInputMixin):
             )
         target = self._card_target.card if self._card_target is not None else None
         # Hover is re-checked every tick: the pointer may be still while the
-        # card glides out from under it, and MOUSEMOVE would never fire.
+        # card glides out from under it (no MOUSEMOVE fires), and a pointer
+        # that left the window sends nothing at all, so hover decays.
         if self._mouse is not None and self._card_layout is not None:
-            self.card_hovered = card_ui.hit_test(self._card_layout, *self._mouse) is not None
+            if now - self._last_mouse_wall > HOVER_DECAY_SECONDS:
+                self.card_hovered = False
+            else:
+                self.card_hovered = card_ui.hit_test(self._card_layout, *self._mouse) is not None
         reveal = (self.card_hovered or self.exit_confirm
                   or bool(self.runner.user_paused))
         self.card_motion.step(dt, target, reveal)
@@ -297,12 +255,22 @@ class TourSession(SessionInputMixin):
     def _sync_beat(self) -> None:
         beat = self.runner.beat
         beat_id = beat.id if beat else None
-        if beat_id != self._last_beat_id:
-            self._last_beat_id = beat_id
-            self.overlay_state.reset(beat)
-            self.anchor_cache.invalidate()
-            if beat is not None and beat.hide_cursor:
-                self.cursor.hide()
+        if beat_id == self._last_beat_id:
+            return
+        self._last_beat_id = beat_id
+        self.overlay_state.reset(beat)
+        self._gate_done_for = None
+        if beat is not None and beat.hide_cursor:
+            self.cursor.hide()
+        if beat is not None and beat.gate is not None \
+                and beat.gate.check == "viewport_interacted":
+            # Only input given AFTER the ask counts.
+            self.flags["viewport_interacted"] = False
+        try:
+            from . import telemetry
+            telemetry.step(self.tour.id, beat_id or "", self.runner.index)
+        except Exception:  # noqa: BLE001
+            pass
 
     def _resolve(self, spec: dict):
         rect = self.anchor_cache.get(spec)
@@ -310,17 +278,42 @@ class TourSession(SessionInputMixin):
             return None
         return ((rect.xmin, rect.ymin, rect.xmax, rect.ymax), rect.window_ptr)
 
+    # -- host ------------------------------------------------------------
+
     def _host_alive(self) -> bool:
-        window, area, region = anchors.host_region()
+        """The host is the VIEW_3D WINDOW region of the window the tour
+        started in. A layout change there (Engine mode swaps workspaces)
+        re-homes the card; a window with no VIEW_3D pauses the tour until
+        one is back; the window going away ends it. Never follow another
+        window: events and the timer stay bound to the original one."""
+        window = anchors.window_by_ptr(self._host_window_ptr)
         if window is None:
             return False
+        region = None
+        try:
+            for area in window.screen.areas:
+                if area.type != "VIEW_3D":
+                    continue
+                region = next((r for r in area.regions if r.type == "WINDOW"), None)
+                if region is not None:
+                    break
+        except Exception:  # noqa: BLE001
+            region = None
+        if region is None:
+            if not self._host_lost:
+                self._host_lost = True
+                self.runner.set_user_paused(True)
+                self.cursor.hide()
+            return True
+        if self._host_lost:
+            self._host_lost = False
+            if not self.exit_confirm:
+                self.runner.set_user_paused(False)
         ptr = anchors.normalize_ptr(region.as_pointer())
         if ptr != self._host_region_ptr:
-            # The layout changed (e.g. Engine mode swapped workspaces):
-            # follow the new host instead of dying.
-            self._host_window_ptr = anchors.normalize_ptr(window.as_pointer())
             self._host_region_ptr = ptr
             self.anchor_cache.invalidate()
+            self.card_motion.reset()   # snap to the new layout, no cross-layout glide
         self._refresh_host(window, region)
         return True
 
@@ -333,55 +326,34 @@ class TourSession(SessionInputMixin):
             self._ui_scale = 1.0
 
     def _island_rect_in_host(self):
-        """The floating island's rect expressed in host-window pixels, so
-        the card can dodge it. None when no island window is open."""
+        """The island's VISIBLE footprint in host-window pixels, so the card
+        can dodge it: the resting pill while minimised (the hidden
+        full-size window must not count), else the shown island window."""
         try:
-            from mixar.modules.onboarding.ui.operators.host_resolver import (
-                bubble_anchor_in_region,
-            )
-            window = anchors.window_by_ptr(self._host_window_ptr)
-            if window is None:
+            from . import anchors_windows
+            from .beats import A_PILL_ON_HOST
+            pill = self._resolve(A_PILL_ON_HOST)
+            if pill is not None and pill[1] == self._host_window_ptr:
+                return pill[0]
+            host = anchors.window_by_ptr(self._host_window_ptr)
+            if host is None:
                 return None
-            anchor = bubble_anchor_in_region((window.x, window.y), (0, 0))
-            if anchor is None:
-                return None
-            cx, cy, w, h = anchor
-            scale = self._pixel_scale(window)
-            cx, cy, w, h = cx * scale, cy * scale, w * scale, h * scale
-            return (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+            for w in anchors._windows():
+                if not anchors._has_area(w, anchors.BUBBLE_AREA):
+                    continue
+                if not anchors_windows._window_is_shown(w):
+                    continue
+                live = anchors_windows._live_offset_and_size(w, host)
+                if live is None:
+                    return None
+                dx, dy, pw, ph = live
+                scale = anchors.window_rect(host).width / float(host.width) if host.width else 1.0
+                return (dx * scale, dy * scale, (dx + pw) * scale, (dy + ph) * scale)
         except Exception:  # noqa: BLE001
             return None
-
-    @staticmethod
-    def _pixel_scale(window) -> float:
-        """Window.width is logical points; region rects are native pixels."""
-        try:
-            xmax = max(r.x + r.width for a in window.screen.areas for r in a.regions)
-            return max(1.0, xmax / float(window.width)) if window.width else 1.0
-        except Exception:  # noqa: BLE001
-            return 1.0
+        return None
 
     # -- drawing ---------------------------------------------------------
-
-    def _install_draw_handlers(self) -> None:
-        for cls_name, region_type in _DRAW_TARGETS:
-            cls = getattr(bpy.types, cls_name, None)
-            if cls is None or not hasattr(cls, "draw_handler_add"):
-                continue
-            try:
-                handle = cls.draw_handler_add(self.draw, (), region_type, "POST_PIXEL")
-                self._handles.append((cls, handle, region_type))
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("Tour: draw handler %s/%s failed: %s",
-                             cls_name, region_type, exc)
-
-    def _remove_draw_handlers(self) -> None:
-        for cls, handle, region_type in self._handles:
-            try:
-                cls.draw_handler_remove(handle, region_type)
-            except Exception:  # noqa: BLE001
-                pass
-        self._handles = []
 
     def draw(self) -> None:
         if not self.running:
@@ -417,17 +389,19 @@ class TourSession(SessionInputMixin):
 
     def _draw_window_layer(self, window_ptr, is_host: bool, film_ok: bool = True) -> None:
         beat = self.runner.beat if self.runner else None
+        if beat is None or self._host_lost:
+            return
         window_rect = self._window_rect(window_ptr)
-        if film_ok and window_ptr == self._host_window_ptr and beat is not None:
-            # Every region of the main window paints the film over the whole
-            # window rect (each is clipped to itself), so the topbar and the
-            # sidebars dim together with the viewport.
+        # After the last beat the film and card fade out together.
+        fade = self.card_motion.alpha if self._end_requested else 1.0
+        if film_ok and window_ptr == self._host_window_ptr:
             # The card is cut out of every film: an overlapping region (the
             # drawer, a sidebar) paints AFTER the host region, so its band
             # of film would otherwise land on top of the card.
             keep = (self._card_layout.card,) if self._card_layout is not None else ()
             if beat.hero_dim:
-                scribble_ui.draw_spotlight_dim(window_rect, None, config.HERO_DIM, keep=keep)
+                r, g, b, a = config.HERO_DIM
+                scribble_ui.draw_spotlight_dim(window_rect, None, (r, g, b, a * fade), keep=keep)
             elif self._gated:
                 # "Your turn": dim everything except a spotlight around the
                 # target. A target in another window (the island pill)
@@ -438,6 +412,30 @@ class TourSession(SessionInputMixin):
                                                pad=config.SPOTLIGHT_PAD * self._ui_scale,
                                                keep=keep)
 
+        if not self._end_requested:
+            self._draw_overlays(window_ptr, window_rect)
+
+        if is_host and self._card_layout is not None:
+            ms = self.runner.last_ms
+            self._texture = self.video.texture_for_ms(ms) if self.video else None
+            beats = self.runner.beats
+            total = max(1, beats[-1].clip_end_ms if beats else 1)
+            card_ui.draw_card(
+                self._card_layout, self._texture, min(1.0, ms / total),
+                self.runner.user_paused and not self.exit_confirm and not self._gated,
+                getattr(self.clock, "rate", 1.0),
+                alpha=self.card_motion.alpha, ui_scale=self._ui_scale,
+                gate_seconds_left=self.runner.gate_seconds_left(),
+                hover=self.hover, caption=beat.label,
+                controls_alpha=self.card_motion.controls_alpha,
+                gate_film=self._gate_film,
+            )
+            self._draw_captions()
+            if self.exit_confirm and self._exit_layout is not None:
+                card_ui.draw_exit_confirm(self._exit_layout, ui_scale=self._ui_scale,
+                                          hover=self.hover)
+
+    def _draw_overlays(self, window_ptr, window_rect) -> None:
         views = views_for_window(self._views, window_ptr)
         pulse = self._gate_pulse()
         for v in scribble_views(views):
@@ -464,22 +462,23 @@ class TourSession(SessionInputMixin):
         if not self._gated:
             self.cursor.draw(window_ptr)
 
-        if is_host and self._card_layout is not None and beat is not None:
-            ms = self.runner.last_ms
-            self._texture = self.video.texture_for_ms(ms) if self.video else None
-            total = max(1, self.video.duration_ms if self.video else 1)
-            card_ui.draw_card(
-                self._card_layout, self._texture, min(1.0, ms / total),
-                self.runner.user_paused and not self.exit_confirm,
-                getattr(self.clock, "rate", 1.0),
-                alpha=self.card_motion.alpha, ui_scale=self._ui_scale,
-                gate_seconds_left=self.runner.gate_seconds_left(),
-                hover=self.hover, caption=beat.label,
-                controls_alpha=self.card_motion.controls_alpha,
-            )
-            if self.exit_confirm and self._exit_layout is not None:
-                card_ui.draw_exit_confirm(self._exit_layout, ui_scale=self._ui_scale,
-                                          hover=self.hover)
+    def _draw_captions(self) -> None:
+        """Anchorless ``caption`` overlays of the current beat sit centred
+        under the card (``overlay_state`` ignores them: no rect)."""
+        beat = self.runner.beat
+        ms = self.runner.last_ms
+        now = time.monotonic()
+        for ov in beat.overlays:
+            if ov.kind != OVERLAY_CAPTION or not ov.text:
+                continue
+            if ov.appear_ms is not None and ms < ov.appear_ms:
+                continue
+            if ov.disappear_ms is not None and ms >= ov.disappear_ms:
+                continue
+            first = self.overlay_state.first_visible_wall.setdefault(ov.id, now)
+            reveal = min(1.0, (now - first) / max(0.05, config.SCRIBBLE_REVEAL_SECONDS))
+            card_ui.draw_caption_under(self._card_layout, ov.text, self._ui_scale,
+                                       min(1.0, reveal * 2) * self.card_motion.alpha)
 
     def _window_rect(self, window_ptr):
         window = anchors.window_by_ptr(window_ptr)
@@ -487,38 +486,3 @@ class TourSession(SessionInputMixin):
             return self._host_rect
         r = anchors.window_rect(window)
         return (r.xmin, r.ymin, r.xmax, r.ymax)
-
-    # -- publishing ------------------------------------------------------
-
-    def _publish(self, final: bool = False) -> None:
-        try:
-            from mixar.modules.onboarding.ui.properties import tour_props
-            wm = bpy.context.window_manager
-            state = self.runner.state() if self.runner else {"status": "idle"}
-            state["running"] = self.running
-            state["exit_confirm"] = self.exit_confirm
-            state["completed"] = self.completed
-            if final:
-                state["status"] = STATUS_ENDED
-            tour_props.publish_state(wm, state)
-            targets = []
-            if self.running and self._card_layout is not None:
-                targets = card_ui.qa_targets(self._card_layout, self._exit_layout)
-                gate = self.runner.beat.gate if self.runner.beat else None
-                if gate is not None and gate.anchor:
-                    resolved = self._resolve(gate.anchor)
-                    if resolved is not None:
-                        targets.append({"name": "tour_gate_anchor",
-                                        "rect": list(resolved[0]),
-                                        "window": resolved[1]})
-            tour_props.publish_qa_targets(wm, targets)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Tour: publish failed: %s", exc)
-
-    @staticmethod
-    def _tag_redraw_all() -> None:
-        try:
-            from mixar.modules.onboarding.core.overlay import overlay_renderer
-            overlay_renderer.tag_redraw_all()
-        except Exception:  # noqa: BLE001
-            pass

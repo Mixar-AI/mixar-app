@@ -79,11 +79,11 @@ def test_every_placement_lands_inside_host_with_margins(variant, placement):
 
 def test_placements_pick_the_right_corner():
     m = config.CARD_MARGIN
-    tl = card.compute_card_layout("card", beats.PLACE_TOP_LEFT, HOST, 1.0).card
-    tr = card.compute_card_layout("card", beats.PLACE_TOP_RIGHT, HOST, 1.0).card
-    bl = card.compute_card_layout("card", beats.PLACE_BOTTOM_LEFT, HOST, 1.0).card
-    br = card.compute_card_layout("card", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0).card
-    bc = card.compute_card_layout("card", beats.PLACE_BOTTOM_CENTER, HOST, 1.0).card
+    tl = card.compute_card_layout("half", beats.PLACE_TOP_LEFT, HOST, 1.0).card
+    tr = card.compute_card_layout("half", beats.PLACE_TOP_RIGHT, HOST, 1.0).card
+    bl = card.compute_card_layout("half", beats.PLACE_BOTTOM_LEFT, HOST, 1.0).card
+    br = card.compute_card_layout("half", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0).card
+    bc = card.compute_card_layout("half", beats.PLACE_BOTTOM_CENTER, HOST, 1.0).card
     cc = card.compute_card_layout("hero", beats.PLACE_CENTER, HOST, 1.0).card
     assert tl[0] == pytest.approx(m) and tl[3] == pytest.approx(HOST[3] - m)
     assert tr[2] == pytest.approx(HOST[2] - m) and tr[3] == pytest.approx(HOST[3] - m)
@@ -125,7 +125,7 @@ def test_layout_from_card_rect_reproduces_the_target(variant, placement):
 
 
 def test_layout_from_an_intermediate_rect_keeps_buttons_inside_the_strip():
-    a = card.compute_card_layout("card", beats.PLACE_BOTTOM_LEFT, HOST, 1.0).card
+    a = card.compute_card_layout("half", beats.PLACE_BOTTOM_LEFT, HOST, 1.0).card
     b = card.compute_card_layout("hero", beats.PLACE_CENTER, HOST, 1.0).card
     mid = tuple((x + y) * 0.5 for x, y in zip(a, b))
     layout = card.layout_from_card_rect(mid, 1.0)
@@ -202,7 +202,7 @@ def test_hit_test_every_button_and_outside():
 
 
 def test_buttons_do_not_overlap():
-    layout = card.compute_card_layout("card", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0)
+    layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_RIGHT, HOST, 1.0)
     b = layout.buttons
     assert b["pause"][2] <= b["speed"][0]
     assert b["speed"][2] <= b["skip"][0]
@@ -237,6 +237,47 @@ def test_qa_targets_names_and_rects():
     assert by_name["tour_confirm_exit"] == [float(v) for v in exit_layout.buttons["exit"]]
     assert [t["name"] for t in card.qa_targets(layout)] == names[:4]
     assert card.qa_targets(None, exit_layout) == targets[4:]
+
+
+def test_only_hero_and_half_variants_exist_and_unknown_falls_back_to_half():
+    assert set(config.CARD_VARIANTS) == {"hero", "half"}
+    assert config.CARD_VARIANTS["hero"] > config.CARD_VARIANTS["half"]
+    half = card.compute_card_layout("half", beats.PLACE_TOP_LEFT, HOST, 1.0)
+    for unknown in ("card", "", "thumbnail"):
+        assert card.compute_card_layout(unknown, beats.PLACE_TOP_LEFT, HOST, 1.0).card \
+            == half.card
+    # The table never asks for a variant that does not exist.
+    for b in beats.MIXAR_INTRO.beats:
+        assert b.card_variant in config.CARD_VARIANTS, b.id
+
+
+def test_caption_under_rect_is_centred_below_the_card():
+    layout = card.compute_card_layout("hero", beats.PLACE_CENTER, HOST, 1.0)
+    rect = card.caption_under_rect(layout, "Replay any time from Help → Start tour", 1.0)
+    assert _center(rect)[0] == pytest.approx(_center(layout.card)[0])
+    assert rect[3] == pytest.approx(layout.card[1] - config.CAPTION_UNDER_GAP)
+    assert rect[3] - rect[1] == pytest.approx(config.HINT_FONT_PX + 2 * card.CAPTION_PAD_Y)
+    assert rect[2] - rect[0] > 2 * card.CAPTION_PAD_X
+    two = card.caption_under_rect(layout, "Replay any time from Help → Start tour", 2.0)
+    assert two[3] == pytest.approx(layout.card[1] - 2 * config.CAPTION_UNDER_GAP)
+    assert (two[3] - two[1]) == pytest.approx(2 * (rect[3] - rect[1]))
+
+
+def test_draw_caption_under_returns_its_rect_or_none():
+    layout = card.compute_card_layout("hero", beats.PLACE_CENTER, HOST, 1.0)
+    text = "Replay any time from Help → Start tour"
+    assert card.draw_caption_under(layout, text, 1.0, 1.0) == pytest.approx(
+        card.caption_under_rect(layout, text, 1.0))
+    assert card.draw_caption_under(layout, "", 1.0, 1.0) is None
+    assert card.draw_caption_under(layout, text, 1.0, 0.0) is None
+
+
+def test_draw_card_accepts_the_gate_film_and_never_raises():
+    layout = card.compute_card_layout("half", beats.PLACE_BOTTOM_LEFT, HOST, 1.0)
+    for film in (0.0, 0.5, 1.0, 7.0, -1.0):
+        card.draw_card(layout, None, 0.3, False, 1.0, gate_seconds_left=4.0,
+                       caption="Part 1 · The viewport", gate_film=film)
+    assert 0.0 < config.GATE_FILM_ALPHA < 0.5
 
 
 def test_format_rate():

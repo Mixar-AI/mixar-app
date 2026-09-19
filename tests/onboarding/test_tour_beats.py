@@ -105,7 +105,10 @@ def test_mixar_intro_anchors_are_none_or_non_empty():
             assert ov.anchor is None or (
                 isinstance(ov.anchor, dict) and ov.anchor
             ), (b.id, ov.id)
-            if ov.anchor is None:
+            if ov.kind == B.OVERLAY_CAPTION:
+                # Drawn under the card by the session: never positioned.
+                assert ov.anchor is None and ov.at_pct is None, (b.id, ov.id)
+            elif ov.anchor is None:
                 # An un-anchored overlay needs a fallback position.
                 assert ov.at_pct is not None, (b.id, ov.id)
 
@@ -115,7 +118,8 @@ def test_mixar_intro_overlay_windows_sit_inside_their_beat():
         ids = [ov.id for ov in b.overlays]
         assert len(ids) == len(set(ids)), b.id
         for ov in b.overlays:
-            assert ov.kind in (B.OVERLAY_CURSOR, B.OVERLAY_SCRIBBLE, B.OVERLAY_HINT)
+            assert ov.kind in (B.OVERLAY_CURSOR, B.OVERLAY_SCRIBBLE, B.OVERLAY_HINT,
+                               B.OVERLAY_CAPTION)
             if ov.appear_ms is not None:
                 assert b.enter_ms <= ov.appear_ms <= b.clip_end_ms, (b.id, ov.id)
             if ov.disappear_ms is not None:
@@ -124,7 +128,7 @@ def test_mixar_intro_overlay_windows_sit_inside_their_beat():
                     assert ov.disappear_ms > ov.appear_ms, (b.id, ov.id)
             if ov.click_ms is not None:
                 assert b.enter_ms <= ov.click_ms <= b.clip_end_ms, (b.id, ov.id)
-            if ov.kind == B.OVERLAY_HINT:
+            if ov.kind in (B.OVERLAY_HINT, B.OVERLAY_CAPTION):
                 assert ov.text, (b.id, ov.id)
 
 
@@ -334,6 +338,18 @@ def test_validate_rejects_backward_self_or_unknown_gate_targets():
                        _beat("b", 1000, 2000)))
     validate(_tour(_beat("a", 0, 1000, gate=Gate("c", "b")),
                    _beat("b", 1000, 2000)))
+
+
+def test_validate_rejects_gate_target_that_the_skip_plan_may_drop():
+    # Forward in the full table, but gone once every optional beat is
+    # skipped: the runner would refuse this table, so validate must too.
+    with pytest.raises(ValueError, match="optional and may be skipped"):
+        validate(_tour(_beat("a", 0, 1000, gate=Gate("c", "opt")),
+                       _beat("opt", 1000, 2000, optional=True),
+                       _beat("z", 2000, 3000)))
+    validate(_tour(_beat("a", 0, 1000, gate=Gate("c", "z")),
+                   _beat("opt", 1000, 2000, optional=True),
+                   _beat("z", 2000, 3000)))
 
 
 def test_validate_runs_skip_plan_over_all_optional_beats():

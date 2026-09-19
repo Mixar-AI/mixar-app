@@ -26,6 +26,10 @@ across frames could dangle.
 Frame rate: Blender's Image RNA exposes the frame count but not the fps,
 so it is estimated from the audio track length (``aud``) and snapped to a
 standard rate; ``config.VIDEO_FPS_FALLBACK`` covers a silent container.
+The audio length is only trusted when it agrees with the video: a trimmed
+audio tail would make the fps too high and ``duration_ms`` too short, the
+clock would clamp at that ceiling and a mid-table beat could never end
+(see ``estimate_fps`` — the runner's stall watchdog is the second net).
 
 ``texture_for_ms`` runs inside draw callbacks: every GPU call is guarded
 and a failure logs once and degrades to drawing nothing.
@@ -43,6 +47,10 @@ logger = get_logger(__name__)
 _STANDARD_FPS = (23.976, 24.0, 25.0, 29.97, 30.0, 48.0, 50.0, 59.94, 60.0)
 _SNAP_TOLERANCE = 0.01  # 1 %: AAC priming/padding shifts the audio length slightly
 _FPS_MIN, _FPS_MAX = 5.0, 240.0
+# An audio track shorter than this fraction of the video's fallback-rate
+# duration is treated as trimmed and ignored.
+_AUDIO_DURATION_MIN_RATIO = 0.9
+_fallback_warned = False
 
 
 def _audio_seconds(path: str) -> Optional[float]:
@@ -67,14 +75,42 @@ def _snap_fps(fps: float) -> float:
     return fps
 
 
+def _warn_fallback_once(reason: str) -> None:
+    """One warning per process; a repeat (the next tour) logs at debug."""
+    global _fallback_warned
+    level = logger.debug if _fallback_warned else logger.warning
+    _fallback_warned = True
+    level("MovieTexture: %s; using the fallback rate of %.3f fps",
+          reason, config.VIDEO_FPS_FALLBACK)
+
+
 def estimate_fps(frame_count: int, seconds: Optional[float]) -> float:
+    """Frame rate from the frame count and the audio length.
+
+    The audio-derived rate is used only when it is plausible: within
+    ``[_FPS_MIN, _FPS_MAX]``, and the audio no shorter than
+    ``_AUDIO_DURATION_MIN_RATIO`` of the video's length at the fallback
+    rate (``config.VIDEO_FPS_FALLBACK`` is the rate the asset is expected
+    to have). A trimmed audio tail would otherwise shrink ``duration_ms``
+    below the beat table and stall the tour at the clock's clamp. The
+    fallback wins on a mismatch: its duration is never shorter than the
+    video, so the table stays reachable.
+    """
+    fallback = config.VIDEO_FPS_FALLBACK
     if not seconds or seconds <= 0 or frame_count <= 0:
-        return config.VIDEO_FPS_FALLBACK
+        return fallback
     fps = _snap_fps(frame_count / seconds)
     if not (_FPS_MIN <= fps <= _FPS_MAX):
         # A bogus audio length (silent track, mocked aud) must not produce
         # an absurd rate that races through the movie.
-        return config.VIDEO_FPS_FALLBACK
+        _warn_fallback_once(f"audio length {seconds:.2f}s implies {fps:.2f} fps "
+                            f"for {frame_count} frames")
+        return fallback
+    video_seconds = frame_count / fallback
+    if seconds < video_seconds * _AUDIO_DURATION_MIN_RATIO:
+        _warn_fallback_once(f"audio length {seconds:.2f}s is shorter than the "
+                            f"video ({video_seconds:.2f}s at {fallback:.3f} fps)")
+        return fallback
     return fps
 
 

@@ -108,6 +108,9 @@ def _mark_current_user_seen(context=None) -> None:
         scene = (context or bpy.context).scene
         email = getattr(scene, "mixie_chat_user_id", "") if scene else ""
         if not email:
+            # INFO, not debug: a tour that keeps coming back is otherwise
+            # undiagnosable from the log.
+            logger.info("onboarding: no signed-in user id, seen flag not written")
             return
         from mixar.modules.onboarding.core import persistence
         persistence.mark_user_seen_onboarding(email)

@@ -69,10 +69,20 @@ class MIXAR_OT_onboarding_tour(Operator):
             self.report({"WARNING"}, "The tour could not start (see log)")
             return {"CANCELLED"}
         self._session = session
-        self._timer = context.window_manager.event_timer_add(
-            config.TICK_SECONDS, window=window,
-        )
-        context.window_manager.modal_handler_add(self)
+        wm = context.window_manager
+        # The timer and the modal handler must bind to the SAME window: from
+        # the auto-start timer path ``context.window`` may be the island's
+        # window, and a timer added on another window never reaches a modal
+        # bound there.
+        try:
+            with context.temp_override(window=window, area=area, region=region):
+                self._timer = wm.event_timer_add(config.TICK_SECONDS, window=window)
+                wm.modal_handler_add(self)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Tour: could not bind to the host window: %s", exc)
+            self._finish(context)
+            session.stop("start-failed")
+            return {"CANCELLED"}
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
@@ -80,16 +90,25 @@ class MIXAR_OT_onboarding_tour(Operator):
         if session is None or not session.running:
             self._finish(context)
             return {"FINISHED"}
-        if event.type == "TIMER":
-            if self._timer is not None and getattr(event, "timer", None) is not None \
-                    and event.timer != self._timer:
-                return {"PASS_THROUGH"}
-            session.tick()
-            if not session.running:
-                self._finish(context)
-                return {"FINISHED"}
-            return {"PASS_THROUGH"}
-        result = session.handle_event(event)
+        try:
+            if event.type == "TIMER":
+                if self._timer is not None and getattr(event, "timer", None) is not None \
+                        and event.timer != self._timer:
+                    return {"PASS_THROUGH"}
+                session.tick()
+                result = "PASS_THROUGH"
+            else:
+                result = session.handle_event(event)
+        except Exception as exc:  # noqa: BLE001
+            # A tick that raises must never leave draw handlers, the clock
+            # or the movie behind: tear the whole tour down.
+            logger.warning("Tour: stopped after an error: %r", exc)
+            try:
+                session.stop("error")
+            except Exception:  # noqa: BLE001
+                pass
+            self._finish(context)
+            return {"FINISHED"}
         if not session.running:
             self._finish(context)
             return {"FINISHED"}

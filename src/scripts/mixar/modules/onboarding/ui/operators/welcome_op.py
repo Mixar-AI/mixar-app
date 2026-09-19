@@ -31,6 +31,16 @@ from mixar.modules.onboarding.constants import (
 logger = get_logger(__name__)
 
 
+def _tour_running() -> bool:
+    """True while the interactive (video) tour owns the screen; a missing
+    or half-loaded tour package reads as "not running"."""
+    try:
+        from mixar.modules.onboarding.core.tour import session as tour_session
+        return bool(tour_session.is_running())
+    except Exception:  # noqa: BLE001
+        return False
+
+
 class MIXAR_OT_onboarding_welcome(Operator):
     """Show the Mixar welcome card."""
 
@@ -44,6 +54,12 @@ class MIXAR_OT_onboarding_welcome(Operator):
         from mixar.modules.onboarding.ui.operators.card_modal_op import (
             is_card_active,
         )
+
+        # Help → Welcome while the interactive tour runs: the cards would
+        # stack under the tour's overlays and fight it for the viewport.
+        if _tour_running():
+            self.report({"INFO"}, "The Mixar tour is already running")
+            return {"CANCELLED"}
 
         # Guard against duplicate welcome cards: several triggers (auth
         # hook, mode-pick nudge, dev fallback) can each fire the welcome

@@ -67,10 +67,29 @@ def _operator_registered() -> bool:
     return True
 
 
+def _tour_op_path() -> str:
+    """The interactive video tour's operator when its asset is bundled and
+    the operator is registered, else "" (the cards are the fallback).
+    Mirrors ``onboarding.core.maybe_show_for_user``."""
+    try:
+        from mixar.modules.onboarding.core import tour as tour_pkg
+        if not tour_pkg.is_available():
+            return ""
+        namespace, op_name = tour_pkg.config.OP_TOUR.split(".", 1)
+        op_namespace = getattr(bpy.ops, namespace, None)
+        if op_namespace is None or not hasattr(op_namespace, op_name):
+            return ""
+        return tour_pkg.config.OP_TOUR
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Onboarding: tour availability check failed: %s", exc)
+        return ""
+
+
 def _invoke_welcome_dialog():
     """Timer callback. Invokes the welcome dialog when the operator is
     registered, otherwise asks the timer to retry shortly. Idempotent
-    via ``_welcome_shown``.
+    via ``_welcome_shown``. Prefers the interactive tour over the cards
+    whenever it is available.
     """
     global _welcome_shown
     if _welcome_shown:
@@ -79,14 +98,15 @@ def _invoke_welcome_dialog():
     if not _operator_registered():
         return 0.2
 
-    namespace, op_name = OP_WELCOME.split(".", 1)
+    op_path = _tour_op_path() or OP_WELCOME
+    namespace, op_name = op_path.split(".", 1)
     op = getattr(getattr(bpy.ops, namespace), op_name)
 
     try:
         op("INVOKE_DEFAULT")
         _welcome_shown = True
     except Exception as exc:
-        logger.warning("Onboarding welcome failed to launch: %s", exc)
+        logger.warning("Onboarding %s failed to launch: %s", op_path, exc)
         return 0.5
     return None
 

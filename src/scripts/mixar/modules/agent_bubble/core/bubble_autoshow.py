@@ -27,6 +27,16 @@ from . import bubble_state as _st
 logger = get_logger(__name__)
 
 
+def _tour_running() -> bool:
+    """True while the interactive onboarding tour owns the island; a
+    missing or half-loaded tour package reads as "not running"."""
+    try:
+        from mixar.modules.onboarding.core.tour import session as tour_session
+        return bool(tour_session.is_running())
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def find_target_context():
     """Pick a (window, area, region) tuple a popup can be invoked from.
 
@@ -105,6 +115,14 @@ def autoshow_bubble():
 
 
 def _autoshow_bubble_inner():
+    if _tour_running():
+        # The tour drives the island itself; stop the retry loop rather
+        # than re-opening the island under its overlays.
+        logger.info("agent_bubble: interactive tour running, autoshow stopped")
+        _st.autoshow_attempts = 0
+        _st.autoshow_start_minimised = False
+        return None
+
     _st.autoshow_attempts += 1
 
     try:
@@ -138,7 +156,11 @@ def _autoshow_bubble_inner():
 
 
 def arm_autoshow(reset: bool = True, start_minimised: bool = False) -> None:
-    """Arm (or re-arm) the auto-show timer. Idempotent."""
+    """Arm (or re-arm) the auto-show timer. Idempotent. A no-op while the
+    interactive tour runs — it opens and minimises the island itself."""
+    if _tour_running():
+        logger.debug("agent_bubble: interactive tour running, autoshow not armed")
+        return
     if reset:
         _st.autoshow_attempts = 0
     _st.autoshow_start_minimised = start_minimised
