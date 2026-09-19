@@ -74,6 +74,7 @@ class TourRunner:
         self._pause_started: Optional[float] = None
         self._entered_wall: float = 0.0
         self._end_deadline: Optional[float] = None
+        self._gate_satisfied_early = False
         self.last_ms = 0
 
     # -- lifecycle -------------------------------------------------------
@@ -130,6 +131,12 @@ class TourRunner:
             beat = self.beat
             if beat is not None and beat.gate is not None and ms >= beat.clip_end_ms:
                 self._fire_due_actions(beat, ms)
+                if self._gate_satisfied_early:
+                    # Done while the line was still playing: no pause, just
+                    # continue to the next line now that this one finished.
+                    self._gate_satisfied_early = False
+                    self._jump(beat.gate.advance_to)
+                    return
                 self.clock.pause()
                 self.status = STATUS_GATED
                 self._gate_deadline = now + beat.gate.auto_advance_wall_ms / 1000.0
@@ -157,6 +164,7 @@ class TourRunner:
         self.index = idx
         self._entered_wall = self.wall()
         self._gate_deadline = None
+        self._gate_satisfied_early = False
 
     def _fire_due_actions(self, beat, ms: int) -> None:
         for i, (at_ms, name, args) in enumerate(beat.actions):
@@ -181,9 +189,14 @@ class TourRunner:
                 and self.status in (STATUS_RUNNING, STATUS_GATED))
 
     def satisfy_gate(self) -> bool:
-        """The user performed the gate action: jump forward now."""
+        """The user performed the gate action. While the beat is still
+        playing its line, the jump is deferred to the clip end so the
+        sentence finishes; once paused (gated) it jumps at once."""
         if not self.gate_active():
             return False
+        if self.status == STATUS_RUNNING:
+            self._gate_satisfied_early = True
+            return True
         self._jump(self.beat.gate.advance_to)
         return True
 

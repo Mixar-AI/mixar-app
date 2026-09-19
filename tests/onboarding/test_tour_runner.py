@@ -146,13 +146,20 @@ def test_satisfy_gate_during_gate_jumps_to_advance_to(h):
     assert h.runner.satisfy_gate() is False      # "after" has no gate
 
 
-def test_satisfy_gate_before_clip_end_jumps_early(h):
+def test_satisfy_gate_before_clip_end_waits_for_the_line_to_finish(h):
+    # Acting while the instruction is still playing must not cut it off:
+    # the jump is deferred to the clip end, and no pause happens there.
     h.runner.start()
     h.run_to(6000)
     assert h.runner.beat.id == "gate" and h.runner.status == STATUS_RUNNING
     assert h.runner.gate_active()
     assert h.runner.satisfy_gate() is True
+    assert h.runner.beat.id == "gate" and h.runner.status == STATUS_RUNNING
+    pauses = h.clock.count("pause")
+    h.run_to(8000)
     assert h.runner.beat.id == "after"
+    assert h.runner.status == STATUS_RUNNING
+    assert h.clock.count("pause") == pauses
     assert h.clock.pos == 8000 and h.clock.running
     assert h.names == ["a0", "a1", "opt0", "g0", "after0"]
 

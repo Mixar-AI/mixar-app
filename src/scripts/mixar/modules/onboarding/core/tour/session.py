@@ -37,7 +37,7 @@ from .overlays import card as card_ui
 from .overlays import scribble as scribble_ui
 from .overlays.cursor import CursorAnim
 from .session_input import SessionInputMixin
-from .runner import STATUS_ENDED, TourRunner
+from .runner import STATUS_ENDED, STATUS_GATED, TourRunner
 from .video import MovieTexture
 
 logger = get_logger(__name__)
@@ -98,6 +98,7 @@ class TourSession(SessionInputMixin):
         self._drag_origin = None
         self._gated = False            # a beat is waiting on the user
         self._gate_hole = None         # spotlight rect in host px, if in the host window
+        self._gate_dim_scale = 1.0     # 0.5 when the target is the whole viewport
         self._gate_flash = None        # (rect, window_ptr, wall) after a gate is completed
         self.anchor_cache = anchors.AnchorCache()
         self.cursor = CursorAnim()
@@ -226,12 +227,24 @@ class TourSession(SessionInputMixin):
 
         ms = self.runner.last_ms
         beat = self.runner.beat
-        self._gated = bool(self.runner.gate_active())
+        # "Your turn" visuals begin only once the video has PAUSED after the
+        # instruction (status gated), never while the line is still playing.
+        self._gated = self.runner.status == STATUS_GATED
         self._gate_hole = None
+        self._gate_dim_scale = 1.0
         if self._gated and beat is not None and beat.gate is not None and beat.gate.anchor:
             resolved = self._resolve(beat.gate.anchor)
             if resolved is not None and resolved[1] == self._host_window_ptr:
-                self._gate_hole = resolved[0]
+                hole = resolved[0]
+                hx0, hy0, hx1, hy1 = self._host_rect
+                host_area = max(1.0, (hx1 - hx0) * (hy1 - hy0))
+                hole_area = (hole[2] - hole[0]) * (hole[3] - hole[1])
+                if hole_area / host_area > 0.5:
+                    # The target IS the viewport: a hole that size would
+                    # leave nothing dimmed, so dim everything lightly.
+                    self._gate_dim_scale = 0.5
+                else:
+                    self._gate_hole = hole
         views, cmd = self.overlay_state.compute(
             ms, now, self._resolve, self._host_rect, self._host_window_ptr,
             config.CURSOR_ORBIT_RADIUS * self._ui_scale,
@@ -411,7 +424,9 @@ class TourSession(SessionInputMixin):
                 # "Your turn": dim everything except a spotlight around the
                 # target. A target in another window (the island pill)
                 # floats bright over the film by itself.
-                scribble_ui.draw_spotlight_dim(window_rect, self._gate_hole, config.GATE_DIM,
+                r, g, b, a = config.GATE_DIM
+                scribble_ui.draw_spotlight_dim(window_rect, self._gate_hole,
+                                               (r, g, b, a * self._gate_dim_scale),
                                                pad=config.SPOTLIGHT_PAD * self._ui_scale,
                                                keep=keep)
 
