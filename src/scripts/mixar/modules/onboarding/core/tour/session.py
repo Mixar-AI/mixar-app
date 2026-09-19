@@ -393,9 +393,17 @@ class TourSession(SessionInputMixin):
                 return
             window_ptr = anchors.normalize_ptr(window.as_pointer())
             is_host = anchors.normalize_ptr(region.as_pointer()) == self._host_region_ptr
+            # Films are painted ONCE per window: by WINDOW regions and the
+            # global areas (topbar/statusbar). Overlapping regions (toolbar,
+            # sidebar, the moodboard drawer) paint after the viewport with a
+            # transparent background, so a film there would stack into a
+            # darker bar over their band.
+            area = bpy.context.area
+            film_ok = region.type == "WINDOW" or (
+                area is not None and area.type in ("TOPBAR", "STATUSBAR"))
             with gpu.matrix.push_pop():
                 gpu.matrix.translate((-region.x, -region.y, 0))
-                self._draw_window_layer(window_ptr, is_host)
+                self._draw_window_layer(window_ptr, is_host, film_ok)
         except Exception as exc:  # noqa: BLE001
             logger.debug("Tour: draw failed: %s", exc)
 
@@ -407,10 +415,10 @@ class TourSession(SessionInputMixin):
         wave = 0.5 * (1.0 + math.sin(2.0 * math.pi * time.monotonic() / period))
         return config.GATE_RING_PULSE_MIN + (1.0 - config.GATE_RING_PULSE_MIN) * wave
 
-    def _draw_window_layer(self, window_ptr, is_host: bool) -> None:
+    def _draw_window_layer(self, window_ptr, is_host: bool, film_ok: bool = True) -> None:
         beat = self.runner.beat if self.runner else None
         window_rect = self._window_rect(window_ptr)
-        if window_ptr == self._host_window_ptr and beat is not None:
+        if film_ok and window_ptr == self._host_window_ptr and beat is not None:
             # Every region of the main window paints the film over the whole
             # window rect (each is clipped to itself), so the topbar and the
             # sidebars dim together with the viewport.
