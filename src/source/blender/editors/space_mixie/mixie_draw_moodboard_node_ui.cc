@@ -141,6 +141,28 @@ static void add_action_toolbar(const bContext *C,
       block, node, controls, generation_running, has_result, state, edit_mode, node_id);
 }
 
+static void add_asset_preview(View2D *v2d,
+                              ARegion *region,
+                              PointerRNA *node,
+                              blender::Vector<ObjectPreviewDraw> &object_previews)
+{
+  PointerRNA object_ptr = RNA_pointer_get(node, "preview_object");
+  if (!object_ptr.data) {
+    return;
+  }
+
+  rctf preview_rect;
+  preview_rect.xmin = RNA_float_get(node, "position_x") + 8.0f;
+  preview_rect.ymin = RNA_float_get(node, "position_y") + 8.0f;
+  preview_rect.xmax = preview_rect.xmin + RNA_float_get(node, "width") - 16.0f;
+  /* Keep the asset title strip visible above the object thumbnail. */
+  preview_rect.ymax = preview_rect.ymin + RNA_float_get(node, "height") - 52.0f;
+  rcti preview_region;
+  if (moodboard_view_rect_to_region(v2d, region, preview_rect, &preview_region)) {
+    object_previews.append({static_cast<Object *>(object_ptr.data), preview_region});
+  }
+}
+
 void mixie_draw_moodboard_graph_controls(const bContext *C,
                                          View2D *v2d,
                                          const MoodboardGraphCache *cache)
@@ -167,6 +189,15 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
+  PropertyRNA *assets = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_asset_nodes");
+  if (assets) {
+    RNA_property_collection_begin(&scene_ptr, assets, &iter);
+    while (iter.valid) {
+      add_asset_preview(v2d, region, &iter.ptr, object_previews);
+      RNA_property_collection_next(&iter);
+    }
+    RNA_property_collection_end(&iter);
+  }
   /* A selected FRAME gets its pencil + More row (or its name field) on this
    * same block, so it scales and hit-tests exactly like a card's
    * (mixie_draw_moodboard_frame_actions.cc). */

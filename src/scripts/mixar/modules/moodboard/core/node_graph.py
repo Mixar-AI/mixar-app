@@ -815,6 +815,9 @@ def mesh_source_object_names(scene, node_id: str) -> list:
         return [name.strip() for name in action.result_names.split(",") if name.strip()]
     asset = asset_node_by_id(scene, node_id)
     if asset is not None:
+        preview = getattr(asset, "preview_object", None)
+        if preview is not None:
+            return [preview.name]
         return [name.strip() for name in asset.object_names.split(",") if name.strip()]
     return []
 
