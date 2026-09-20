@@ -54,40 +54,9 @@ from mixar.modules.space_mixie_chat import constants as C  # noqa: E402
 from mixar.modules.space_mixie_chat.core.scribble_local import (  # noqa: E402
     LocalRecognitionQueue,
     accept,
-    vision_page,
+    prepare_vision_image,
+    vision_page_geometry,
 )
-from mixar.modules.space_mixie_chat.core.scribble_raster import (  # noqa: E402
-    line_geometry,
-)
-
-
-def _page(payload):
-    """The geometry the recogniser's copy of *payload* is drawn on."""
-    return line_geometry(
-        payload,
-        line_height=C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX,
-        max_width=C.SCRIBBLE_LOCAL_MAX_WIDTH_PX,
-        pad_x=C.SCRIBBLE_LOCAL_PAGE_PAD_X,
-        pad_y=C.SCRIBBLE_LOCAL_PAGE_PAD_Y,
-    )
-
-
-def _box(width, height, step=8):
-    """A payload whose ink spans exactly *width* x *height* region pixels.
-
-    Sampled every *step* px the way a real stroke is, not as four corners:
-    the spline is drawn through the samples, and a chord hundreds of pixels
-    long is not something a pen ever produces.
-    """
-    def edge(x0, y0, x1, y1):
-        count = max(1, int(max(abs(x1 - x0), abs(y1 - y0)) // step))
-        return [(x0 + (x1 - x0) * i / count, y0 + (y1 - y0) * i / count, 1.0)
-                for i in range(count + 1)]
-
-    w, h = float(width), float(height)
-    stroke = (edge(0, 0, w, 0) + edge(w, 0, w, h)
-              + edge(w, h, 0, h) + edge(0, h, 0, 0))
-    return {"w": 4000, "h": 4000, "strokes": [stroke]}
 
 
 class _Clock:
@@ -195,66 +164,53 @@ def test_acceptance_needs_text_and_confidence():
 # ---------------------------------------------------------------------------
 
 
-def test_short_tall_ink_is_framed_as_a_text_line_with_margins():
-    """'HI' drawn as two tall glyphs is line art to Vision, and it refused
-    them. Framed as a ~120 px line with page margins it reads."""
-    page = _page(_box(1328, 979))
-    assert abs(page.ink_h - C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX) <= 1
-    assert page.pad_x == C.SCRIBBLE_LOCAL_PAGE_PAD_X
-    assert page.pad_y == C.SCRIBBLE_LOCAL_PAGE_PAD_Y
-    assert page.height == C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX + 2 * C.SCRIBBLE_LOCAL_PAGE_PAD_Y
+def test_short_tall_ink_is_scaled_down_to_a_text_line_with_margins():
+    """The app raster of 'HI' is 1328x979: two glyphs filling the frame, which
+    Vision reads as line art. Framed as a ~120 px line it reads."""
+    page = vision_page_geometry(1328, 979)
+    assert abs(979 * page.scale - C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX) < 1
+    assert page.offset_x == C.SCRIBBLE_LOCAL_PAGE_PAD_X and page.offset_y == C.SCRIBBLE_LOCAL_PAGE_PAD_Y
+    assert page.page_h == C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX + 2 * C.SCRIBBLE_LOCAL_PAGE_PAD_Y
 
 
 def test_a_long_line_is_capped_by_width_not_height():
-    page = _page(_box(9000, 600))
-    assert page.width == C.SCRIBBLE_LOCAL_MAX_WIDTH_PX + 2 * C.SCRIBBLE_LOCAL_PAGE_PAD_X
-    assert page.ink_h < C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX
+    page = vision_page_geometry(9000, 600)
+    assert page.page_w == C.SCRIBBLE_LOCAL_MAX_WIDTH_PX + 2 * C.SCRIBBLE_LOCAL_PAGE_PAD_X
+    assert 600 * page.scale < C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX
 
 
-def test_small_ink_is_scaled_UP_to_the_line_height():
-    """Words written small in a corner of the region are not small writing to
-    a recogniser reading a page — they are the same letters, and the page is
-    drawn from the vectors, so there is nothing lost to magnify. The old
-    pipeline reached this size by upscaling a raster and so refused to."""
-    page = _page(_box(80, 40))
-    assert page.scale > 1.0
-    assert abs(page.ink_h - C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX) <= 1
+def test_small_ink_is_never_upscaled():
+    page = vision_page_geometry(80, 40)
+    assert page.scale == 1.0
+    assert (page.page_w, page.page_h) == (80 + 2 * C.SCRIBBLE_LOCAL_PAGE_PAD_X, 40 + 2 * C.SCRIBBLE_LOCAL_PAGE_PAD_Y)
 
 
-def test_the_recognisers_copy_is_drawn_from_the_strokes():
+def test_prepare_vision_image_frames_real_pixels():
     from io import BytesIO
 
-    from PIL import Image
+    from PIL import Image, ImageDraw
 
-    payload = _box(1300, 900)
-    framed = Image.open(BytesIO(vision_page(payload))).convert("L")
+    big = Image.new("L", (1300, 900), 255)
+    ImageDraw.Draw(big).rectangle((100, 100, 1200, 800), outline=16, width=30)
+    buf = BytesIO()
+    big.save(buf, format="PNG")
+    framed = Image.open(BytesIO(prepare_vision_image(buf.getvalue()))).convert("L")
     bbox = Image.eval(framed, lambda v: 255 if v < 128 else 0).getbbox()
     assert bbox is not None
     ink_h = bbox[3] - bbox[1]
-    # Within the stroke weight of the target line height.
-    assert abs(ink_h - C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX) <= 8
-    assert bbox[0] >= C.SCRIBBLE_LOCAL_PAGE_PAD_X - 4
-    assert bbox[1] >= C.SCRIBBLE_LOCAL_PAGE_PAD_Y - 4
+    assert abs(ink_h - C.SCRIBBLE_LOCAL_LINE_HEIGHT_PX) <= 2
+    assert bbox[0] >= C.SCRIBBLE_LOCAL_PAGE_PAD_X - 1 and bbox[1] >= C.SCRIBBLE_LOCAL_PAGE_PAD_Y - 1
 
 
-def test_empty_ink_has_no_page():
-    try:
-        vision_page({"w": 100, "h": 100, "strokes": []})
-    except ValueError:
-        return
-    raise AssertionError("ink-free payload should not produce a page")
+def test_prepare_vision_image_returns_the_input_when_it_cannot_frame():
+    assert prepare_vision_image(b"not a png") == b"not a png"
 
 
-def test_submission_writes_the_page_it_was_given():
-    """The framing happens once, in try_start, so a batch that the recogniser
-    refuses has not already paid for a page nobody reads."""
+def test_submission_writes_the_framed_copy():
     src = (ROOT / "src/scripts/mixar/modules/space_mixie_chat/core/scribble_local.py").read_text(encoding="utf-8")
     submit = src[src.index("def _submit_via_operator(") :]
     submit = submit[: submit.index("\ndef ")]
-    assert "handle.write(image_bytes)" in submit
-    start = src[src.index("def try_start(") :]
-    start = start[: start.index("\ndef ")]
-    assert "vision_page(payload)" in start
+    assert "handle.write(prepare_vision_image(image_bytes))" in submit
 
 
 # ---------------------------------------------------------------------------
@@ -271,13 +227,7 @@ def test_scribble_tries_local_first_and_falls_back_to_the_backend():
     on_local = start[start.index("def _on_local("):]
     assert "_finish(seq, _clean_recognized(text), None)" in on_local
     assert on_local.index("_finish(seq, _clean_recognized(text), None)") < on_local.index("_post_backend()")
-    assert "_post(_rasterize(payload), _hint_for(scene), _on_success, _on_error)" in start
-    # The backend's raster is built THERE and nowhere earlier: on the path
-    # this is tuned for — the on-device reader answering — it is never built.
-    assert "_rasterize(" not in start[: start.index("def _post_backend(")]
-    assert "_rasterize(" not in SCRIBBLE_PY[
-        SCRIBBLE_PY.index("def submit_strokes(") : SCRIBBLE_PY.index("def is_busy(")
-    ]
+    assert "_post(image_bytes, _hint_for(scene), _on_success, _on_error)" in start
 
 
 def test_idle_commit_is_shorter_and_lockstep_across_languages():

@@ -48,13 +48,7 @@ class SocketDispatch:
         params = msg.get("params", {})
         request_id = msg.get("id")  # None for notifications
 
-        if method == 'agent.history_read':
-            if self._archive_sync:
-                self._archive_sync.read(params, request_id)
-            elif request_id:
-                self.queue_response(request_id, {'status': 'unavailable'})
-
-        elif method == JSONRPCMethod.BLENDER_EXECUTE_SCRIPT:
+        if method == JSONRPCMethod.BLENDER_EXECUTE_SCRIPT:
             self._handle_execute_script(params, request_id)
 
         elif method == JSONRPCMethod.BLENDER_LIVENESS:

@@ -38,8 +38,6 @@ const char *mixar_variant_name(MixarVariant variant);
 /** Draws the component backdrop; true means the native text pass is still
  * required. */
 bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &rect);
-/** Premultiplied rounded fill that replaces dest alpha for opaque colours.
- * Widget dest-over leaves frost-window dest A at the 0.20 wash on WGL. */
 void mixar_fill_round(const rctf &rect, float radius, const float color[4]);
 float mixar_text_width(const char *text, float size);
 void mixar_label_left(const char *text, float x, float cy, float size, const float color[4]);
@@ -73,8 +71,9 @@ void mixar_button_lit_set(Button *button, bool lit);
 /** True when the context workspace is Mixar's dedicated Zen Mode tab. */
 bool mixar_workspace_is_zen(const bContext *C);
 /**
- * Zen and Texturing View3D headers overlap the viewport so their glass
- * strips float instead of sitting on a full-width bar.
+ * Zen Mode's View3D headers overlap the viewport so its glass strips float
+ * instead of sitting on a full-width bar. No other workspace qualifies —
+ * Texturing keeps Blender's full opaque viewport header.
  */
 bool mixar_workspace_floats_viewport_chrome(const bContext *C);
 bool mixar_area_floats_viewport_chrome(const ScrArea *area);

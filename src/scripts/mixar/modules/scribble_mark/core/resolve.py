@@ -40,7 +40,6 @@ from mixar.config.logging_config import get_logger
 from . import coverage as cov
 from . import vertex_groups as vgroups
 from .geometry import bbox as points_bbox, decimate
-from .simplify import sample_shape
 from .ground import ground_footprint, ray_plane_z
 from .projection import project_object_bbox, ray_from_region, raycast
 from ..constants import (
@@ -241,14 +240,7 @@ def _strokes_world(scene, depsgraph, region, rv3d, strokes):
     on whatever geometry its ray meets, else on the ground plane; a ray that
     meets nothing (sky) is skipped. ``on`` is where MOST of the stroke landed:
     ``"ground"``, an object name, or None for a stroke drawn entirely on sky.
-    Bounded: ``STROKE_WORLD_POINTS`` rays per stroke, spent on the samples
-    that carry the shape FIRST and then filled out evenly (``sample_shape``,
-    never ``simplify_shape``). Evenly spaced samples of a road put most of
-    their rays down one straight run and miss the bend; but a road drawn
-    STRAIGHT across a hillside has no bend to find on screen and still needs
-    rays along its length, because the thing that varies is the ground, which
-    is not in the samples yet. Leaving the budget unspent here throws that
-    away.
+    Bounded: ``STROKE_WORLD_POINTS`` rays per stroke.
     """
     if strokes is None:
         return None
@@ -256,7 +248,7 @@ def _strokes_world(scene, depsgraph, region, rv3d, strokes):
     for stroke in strokes:
         points = []
         labels = {}
-        for sample in sample_shape(list(stroke or ()), STROKE_WORLD_POINTS):
+        for sample in decimate(list(stroke or ()), STROKE_WORLD_POINTS):
             ok, location, _normal, obj = raycast(scene, depsgraph, region, rv3d, sample)
             if ok and location is not None:
                 points.append(_round_vec(location))

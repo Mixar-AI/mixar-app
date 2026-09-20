@@ -162,13 +162,10 @@ class JSONRPCMethod:
     NOTIFICATIONS_GET_UNREAD = "notifications.get_unread"
     JOB_SYNC = "job.sync"
     JOB_GET = "job.get"
-    # Client -> Server (request - received:true acknowledgement): terminal outcome of
-    # ONE generation the agent enqueued through a client operator. The client
-    # owns submit/poll/download/import, so it is the only party that knows the
-    # final object / image names — this is what saves the agent from polling.
-    # The backend dispatcher drops "agent.*" notifications, hence the
-    # "generation." namespace. Sent by job_queue/core/agent_results.py.
-    GENERATION_AGENT_RESULT = "generation.agent_result"
+    # Client -> Server (notification - no response): outcome of one
+    # fire-and-forget final render job started by the agent's render_scene
+    # tool; echoes the job_key the kickoff pinned (session/turn identity).
+    RENDER_FINAL_RESULT = "render.final_render_result"
 
 
 # ============================================================================
@@ -214,6 +211,8 @@ DEFAULT_WS_URL_TEMPLATE = "/api/agent/ws"
 DEFAULT_RECONNECT_DELAY = 1.0
 DEFAULT_MAX_RECONNECT_DELAY = 30.0
 DEFAULT_PING_INTERVAL = 15.0
+DEFAULT_QUEUE_POLL_INTERVAL = 0.1
+EXECUTION_POLL_INTERVAL = 0.3  # Slower polling during tool execution
 
 # ============================================================================
 # AGENT FEEDBACK
@@ -231,6 +230,8 @@ FEEDBACK_STATUS_FAILED = 3
 # CONNECTION MANAGER SETTINGS
 # ============================================================================
 
+# Default timeout for HTTP requests (seconds)
+DEFAULT_HTTP_TIMEOUT = 30.0
 
 # WebSocket liveness: the client pings every ~15s and the server answers, so
 # a healthy connection always receives SOMETHING within this window. Zero
@@ -393,7 +394,7 @@ SCRIBBLE_LOCAL_PAGE_PAD_Y = 120
 # controls: a platform earns Voice by having someone write its recogniser,
 # and the operator is not even registered elsewhere, so no surface can draw
 # a dead microphone.
-VOICE_INPUT_SUPPORTED = sys.platform in {"darwin", "win32"}
+VOICE_INPUT_SUPPORTED = sys.platform == "darwin"
 
 # Recogniser event kinds — lockstep with SpeechEventKind in
 # GHOST_MixarSpeechCocoa.mm.
@@ -411,12 +412,6 @@ VOICE_EVENT_POLL_S = 0.05
 VOICE_STOP_GRACE_S = 2.0
 # Longest dictation session; the recogniser's own limit is about a minute.
 VOICE_MAX_SESSION_S = 180.0
-# Cloud recording limits come from ready; startup has its own permission/auth
-# budget. Session grace includes the 35-second final wait plus transport slack.
-VOICE_STARTUP_TIMEOUT_S = 240.0
-VOICE_FINAL_TIMEOUT_S = 35.0
-VOICE_SESSION_GRACE_S = 40.0
-VOICE_BUFFER_SECONDS = 20
 # Stable toast id for permission / failure notices (re-pushing replaces).
 VOICE_TOAST_ID = "voice_input"
 
@@ -434,7 +429,7 @@ MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp'}
 THUMBNAIL_SIZE = (128, 128)
-MAX_ATTACHMENTS_PER_MESSAGE = 10
+MAX_ATTACHMENTS_PER_MESSAGE = 5
 
 # Security: Maximum image dimensions to prevent memory exhaustion attacks
 # 16384x16384 is a reasonable max (common GPU texture limit)
@@ -466,12 +461,14 @@ CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 
 # Timer interval for agent event queue processing (~60fps for short content)
 TIMER_INTERVAL = 1 / 60  # ~0.016s
+# Throttled interval when streaming long content (~30fps)
+# Yields more main thread time to Blender's event loop (pinch-to-zoom, etc.)
+TIMER_INTERVAL_THROTTLED = 1 / 30  # ~0.033s
+# Content length threshold (chars) to switch from 60fps to 30fps
+TIMER_THROTTLE_CONTENT_THRESHOLD = 2000
 
 # Timeout threshold for script execution warnings (seconds)
 SCRIPT_TIMEOUT_THRESHOLD = 30.0
-# Longest a render_viewport(quality="final") tool call is held open waiting for
-# its native preview job (core/preview_deferral.py); the job itself keeps going.
-PREVIEW_DEFERRED_MAX_S = 240.0
 
 # Undo checkpoints for agent-executed scripts.
 #

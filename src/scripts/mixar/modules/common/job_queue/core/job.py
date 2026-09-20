@@ -139,18 +139,6 @@ class Job:
     # Set once a FAILED toast has been surfaced for this job, so the queue's
     # per-notify failure sweep shows the toast exactly once (edge-detected).
     _failure_notified: bool = field(default=False, repr=False)
-    # Identity of the agent generation that enqueued this job, stamped by
-    # FeatureQueue.submit() from the window_manager side channel the backend's
-    # enqueue script sets (common/utils/agent_feedback.take_agent_ref). Empty
-    # for every user-initiated job — and an empty ref means no callback is
-    # ever sent. See core/agent_results.py.
-    agent_ref: dict = field(default_factory=dict)
-    # Set only after the backend acknowledges the terminal outcome. The
-    # independent callback outbox retries uncertain delivery after disconnect.
-    _agent_reported: bool = field(default=False, repr=False)
-    # Exhausted delivery is distinct from acknowledgement; never reinsert it.
-    _agent_report_abandoned: bool = field(default=False, repr=False)
-    _agent_batch: object = field(default=None, repr=False, compare=False)
     # Captured at construction while an agent script's synchronous execution
     # marker is active. Bespoke jobs can forward this from submit().
     agent_context: dict | None = field(default=None, init=False, repr=False)

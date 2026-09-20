@@ -186,47 +186,39 @@ def test_ask_ignores_non_parked_sessions(monkeypatch):
 
 # --- the retry chip click path -------------------------------------------------
 
-@pytest.mark.parametrize("idle", [False, True])
-def test_retry_chip_schedules_only_when_idle(monkeypatch, idle):
-    from mixar.modules.space_mixie_chat.ui.operators import chat_special_ops as ops
-    from mixar.modules.space_mixie_chat.core import retry_action
+def _chip(monkeypatch, send_ok):
+    from mixar.modules.space_mixie_chat.ui.operators import (
+        chat_special_ops as OPS,
+    )
 
     calls = []
-    monkeypatch.setattr(PR, "can_send_continue", lambda scene: idle)
-    monkeypatch.setattr(retry_action, "schedule_retry", lambda *args: calls.append(args))
-    op = ops.MIXIE_CHAT_OT_select_slot_action()
-    op.report = lambda *args: None
+    monkeypatch.setattr(PR, "send_continue",
+                        lambda scene: calls.append(scene) or send_ok)
+    monkeypatch.setattr(OPS, "redraw_chat_areas", lambda: None)
+    op = OPS.MIXIE_CHAT_OT_select_slot_action()
+    op.report = lambda *args, **kwargs: None
     op.bubble_id = "b1"
     op.action_value = "retry_failed_tasks"
-    scene = SimpleNamespace()
-    assert op.execute(SimpleNamespace(scene=scene)) == ({'FINISHED'} if idle else {'CANCELLED'})
-    assert calls == ([(scene, "b1")] if idle else [])
+    return op, calls
 
 
-def test_retry_chip_never_sends_inside_the_click_handler():
-    from pathlib import Path
-    src = Path(__file__).resolve().parents[1] / (
-        "src/scripts/mixar/modules/space_mixie_chat/ui/operators/chat_special_ops.py")
-    body = src.read_text().split('if self.action_value == "retry_failed_tasks":', 1)[1]
-    body = body.split("# Check connection before dispatching", 1)[0]
-    assert "schedule_retry(scene, self.bubble_id)" in body
-    assert "send_continue(" not in body.replace("can_send_continue(", "")
+def test_retry_chip_sends_continue_and_consumes_chip(monkeypatch):
+    from mixar.modules.space_mixie_chat.ui.operators import (
+        chat_special_ops as OPS,
+    )
+
+    op, calls = _chip(monkeypatch, send_ok=True)
+    msg = SimpleNamespace(bubble_id="b1", action_items=MagicMock())
+    scene = SimpleNamespace(mixie_chat_messages=[msg])
+    assert op.execute(SimpleNamespace(scene=scene)) == {'FINISHED'}
+    assert calls == [scene]  # the continue goes through the chat sender
+    msg.action_items.clear.assert_called_once()  # consumed on success
 
 
-def test_native_retry_dispatchers_use_the_shared_lifetime_guard():
-    """Retry and legacy option clicks share the guard tested in
-    test_mixie_chat_operator_dispatch_guard.py, including safe redraw after
-    operators that leave the region alive.
-    """
-    from pathlib import Path
-    root = Path(__file__).resolve().parents[1] / "src/source/blender/editors/space_mixie_chat"
-    source = (root / "mixie_chat_hit_testing.cc").read_text()
-    for name in ("dispatch_slot_action", "dispatch_toggle"):
-        body = source.split(f"static bool {name}(", 1)[1].split("\n}\n", 1)[0]
-        assert "mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);" in body
-        assert "WM_operator_name_call_ptr(" not in body
-    source = (root / "mixie_chat_main_region.cc").read_text()
-    body = source.split('RNA_string_set(&op_ptr, "action_value", bubble.option_text);', 1)[1]
-    body = body.split("return WM_UI_HANDLER_BREAK;", 1)[0]
-    assert "mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);" in body
-    assert "ED_region_tag_redraw(region)" not in body
+def test_retry_chip_keeps_chip_when_chat_busy(monkeypatch):
+    op, calls = _chip(monkeypatch, send_ok=False)
+    msg = SimpleNamespace(bubble_id="b1", action_items=MagicMock())
+    scene = SimpleNamespace(mixie_chat_messages=[msg])
+    assert op.execute(SimpleNamespace(scene=scene)) == {'CANCELLED'}
+    assert calls == [scene]
+    msg.action_items.clear.assert_not_called()  # clickable again once idle

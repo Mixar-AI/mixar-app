@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Library — the right-hand detail column: preview, metadata chips,
+ * My Generations — the right-hand detail column: preview, metadata chips,
  * prompt, and the two actions the design gives every item.
  *
  * The actions are per-KIND and say what they will actually do, because the

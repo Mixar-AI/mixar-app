@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Private vocabulary of the Library pane: its measured tokens, the one
+ * Private vocabulary of the My Generations pane: its measured tokens, the one
  * item model every source is normalised into, and the split between the
  * gathering pass (`agent_ui_generations_data.cc`), the grid pass
  * (`agent_ui_generations.cc`) and the detail column
@@ -23,9 +23,6 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "BLI_rect.h"
 
 #include "agent_ui_pane_kit.hh"
@@ -39,7 +36,6 @@ struct PointerRNA;
 struct bContext;
 namespace ui {
 struct Block;
-struct Button;
 }
 
 namespace asset_system {
@@ -51,27 +47,27 @@ class AssetRepresentation;
  * \{ */
 
 /* Left rail — the source switch. */
-#define GEN_PAD 18 /* Panel edge -> rail pill / first content. */
+#define GEN_PAD 18            /* Panel edge -> rail pill / first content. */
 #define GEN_RAIL_W 198
 #define GEN_RAIL_H 47
-#define GEN_RAIL_RADIUS 23 /* Design 23.5; the half-unit is sub-pixel. */
+#define GEN_RAIL_RADIUS 23    /* Design 23.5; the half-unit is sub-pixel. */
 #define GEN_RAIL_Y 23
 #define GEN_RAIL_PITCH 61
-#define GEN_RAIL_DOT_X 18 /* Pill left -> active bullet centre. */
+#define GEN_RAIL_DOT_X 18     /* Pill left -> active bullet centre. */
 #define GEN_RAIL_DOT_R 3
-#define GEN_RAIL_LABEL_X 28 /* Pill left -> label ink. */
+#define GEN_RAIL_LABEL_X 28   /* Pill left -> label ink. */
 
 /* Library rows under the rail (Asset Library source only — the design leaves
  * this column empty, and "connect a library" is what it is for). */
 #define GEN_LIB_ROW_H 38
 #define GEN_LIB_ROW_PITCH 42
-#define GEN_LIB_ROWS_Y 158 /* First row top, clear of the two source pills. */
+#define GEN_LIB_ROWS_Y 158    /* First row top, clear of the two source pills. */
 #define GEN_LIB_FONT 16
 
 /* Column dividers — hairlines, not chrome. */
 #define GEN_DIVIDER_X 244
 #define GEN_DETAIL_DIVIDER_X 944
-#define GEN_DIVIDER_INSET 8 /* Panel top/bottom -> divider ends. */
+#define GEN_DIVIDER_INSET 8   /* Panel top/bottom -> divider ends. */
 
 /* Filter chip row. */
 #define GEN_GRID_X 257
@@ -81,26 +77,34 @@ class AssetRepresentation;
 #define GEN_CHIP_PAD_X 20
 #define GEN_CHIP_GAP 4
 #define GEN_CHIP_FONT 18
-#define GEN_SORT_W 56    /* Right-aligned to the grid's own right edge. */
-#define GEN_TAB_GLYPH 24 /* Glyph box inside a chip — the tab-strip size. */
+#define GEN_SORT_W 56         /* Right-aligned to the grid's own right edge. */
+#define GEN_TAB_GLYPH 24      /* Glyph box inside a chip — the tab-strip size. */
 
-/* Optional shortcuts to scroll one visible group of rows. */
+/* Paging. NOT in the design — the design's panel shows one row and says
+ * nothing about the rest. The island's height is the user's, and at the
+ * default height barely one row fits, so the grid pages rather than silently
+ * hiding everything past the first four. Two compact chips sit in the empty
+ * span the design leaves between the filter chips and the sort chip, and they
+ * appear only when there IS another page. */
 #define GEN_PAGE_W 34
 #define GEN_PAGE_GAP 6
 
 /* Tile grid. */
 #define GEN_TILE 146
-#define GEN_TILE_GAP 24 /* Design pitch 170.5 - the 146 tile. */
-#define GEN_GRID_RIGHT \
-  914 /* Design right edge of column 4 — the sort chip \
-       * right-aligns to THIS, not to the live grid, so \
-       * it keeps its place when tiles shrink. */
+#define GEN_TILE_GAP 24       /* Design pitch 170.5 - the 146 tile. */
+#define GEN_TILE_MIN 84       /* Floor when the island is too short for 146. */
+#define GEN_GRID_RIGHT 914    /* Design right edge of column 4 — the sort chip
+                               * right-aligns to THIS, not to the live grid, so
+                               * it keeps its place when tiles shrink. */
 #define GEN_TILE_RADIUS 15
 #define GEN_GRID_Y 120
 #define GEN_SEL_BORDER 3
-#define GEN_CAP_GAP 10 /* Tile bottom -> caption line 1 top. */
+#define GEN_CAP_GAP 10        /* Tile bottom -> caption line 1 top. */
 #define GEN_CAP_FONT 16
+#define GEN_CAP_PITCH 19
+#define GEN_CAP_BLOCK 48      /* Tile bottom -> bottom of caption line two. */
 #define GEN_ROW_GAP 20
+#define GEN_ROW_EXTRA (GEN_CAP_BLOCK + GEN_ROW_GAP)
 
 /* Detail column. */
 #define GEN_DETAIL_X 970
@@ -112,8 +116,8 @@ class AssetRepresentation;
 #define GEN_PREVIEW_H 172
 #define GEN_META_H 26
 #define GEN_META_RADIUS 7
-#define GEN_META_GAP 4     /* Between chips on a row. */
-#define GEN_META_ROW_GAP 5 /* Between the two chip rows. */
+#define GEN_META_GAP 4         /* Between chips on a row. */
+#define GEN_META_ROW_GAP 5     /* Between the two chip rows. */
 #define GEN_META_FONT 15
 #define GEN_META_PAD_X 12
 #define GEN_DESC_FONT 17
@@ -130,18 +134,18 @@ class AssetRepresentation;
  * buttons past the panel's bottom edge, where they are simply scissored off.
  * So the block below is anchored to the foot with the design's own GAPS, and
  * the preview above it absorbs whatever height is left. */
-#define GEN_DETAIL_FOOT 28 /* Panel bottom -> action row bottom. */
-#define GEN_DETAIL_GAP 14  /* Between the stacked blocks. */
-#define GEN_PREVIEW_MIN 40 /* Below this the preview is dropped entirely. */
+#define GEN_DETAIL_FOOT 28     /* Panel bottom -> action row bottom. */
+#define GEN_DETAIL_GAP 14      /* Between the stacked blocks. */
+#define GEN_PREVIEW_MIN 40     /* Below this the preview is dropped entirely. */
 
 /* Palette (alpha ALWAYS stated — a three-value initialiser draws invisible). */
-#define GEN_COL_PILL_ON PANE_COL_CHIP                    /* #313131 */
-#define GEN_COL_PILL_OFF {0.192f, 0.192f, 0.192f, 0.36f} /* #313131 @0.36 */
-#define GEN_COL_CHIP_OFF {0.129f, 0.129f, 0.129f, 1.0f}  /* Recessed chip. */
-#define GEN_COL_TILE {0.129f, 0.129f, 0.129f, 1.0f}      /* Empty tile plate. */
-#define GEN_COL_META {0.333f, 0.333f, 0.333f, 0.28f}     /* #555555 @0.28 */
-#define GEN_COL_SECONDARY {0.596f, 0.596f, 0.596f, 1.0f} /* #989898 */
-#define GEN_COL_LIVE {0.173f, 0.659f, 0.361f, 1.0f}      /* "GENERATING" green. */
+#define GEN_COL_PILL_ON PANE_COL_CHIP                        /* #313131 */
+#define GEN_COL_PILL_OFF {0.192f, 0.192f, 0.192f, 0.36f}     /* #313131 @0.36 */
+#define GEN_COL_CHIP_OFF {0.129f, 0.129f, 0.129f, 1.0f}      /* Recessed chip. */
+#define GEN_COL_TILE {0.129f, 0.129f, 0.129f, 1.0f}          /* Empty tile plate. */
+#define GEN_COL_META {0.333f, 0.333f, 0.333f, 0.28f}         /* #555555 @0.28 */
+#define GEN_COL_SECONDARY {0.596f, 0.596f, 0.596f, 1.0f}     /* #989898 */
+#define GEN_COL_LIVE {0.173f, 0.659f, 0.361f, 1.0f}          /* "GENERATING" green. */
 
 /** Panel-relative design unit -> region y (the one place the flip happens). */
 #define GEN_YTOP(panel, v, u) ((panel).ymax - float(v) * (u))
@@ -156,7 +160,7 @@ class AssetRepresentation;
  * Four very different things share one grid, so they share one struct. The
  * payload union is deliberately NOT a union: an asset item wants its blend
  * path as well as its representation, and the struct is short-lived (one
- * draw's vector), so clarity beats the bytes.
+ * draw's stack array), so clarity beats the bytes.
  * \{ */
 
 enum GenItemKind {
@@ -206,13 +210,15 @@ struct GenItem {
   char id_dir[32];
 };
 
+#define GEN_MAX_ITEMS 240
+
 /** The auto-archive library's name — must match
  * `asset_search/constants.py:GENERATION_LIBRARY_NAME`. */
 #define GENERATIONS_LIBRARY_NAME "Mixar Generations"
 
 /** Everything the pane needs, gathered once per draw before painting. */
 struct GenPaneData {
-  std::vector<GenItem> items;
+  GenItem items[GEN_MAX_ITEMS];
   int count;
 
   GenSource source;
@@ -222,14 +228,15 @@ struct GenPaneData {
   char selected[128];
   /** Asset-library rail: the library name being browsed ("" = all of them). */
   char library[64];
-  /** Percentage scroll positions (0–100), independent of chat and selection. */
-  float scroll;
-  float library_scroll;
+  /** Zero-based grid page. Clamped by the painter, which is the only place
+   * that knows how many rows the current island height can show. */
+  int page;
   /** True while an asset list is still reading — the grid says so. */
   bool loading;
 
   /** Registered asset libraries, for the rail's connect list. */
-  std::vector<std::string> lib_names;
+  char lib_names[16][64];
+  int lib_count;
 };
 
 /** \} */
@@ -241,63 +248,38 @@ struct GenPaneData {
  * island is a constant 1310 units wide whatever the window's pixel width (the
  * unit scale absorbs it), so the design's four columns always fit exactly.
  * Only the row count varies, with the island's height — and at the island's
- * default height that is one row. Content and hit targets follow pixel scroll offsets.
+ * default height that is one row, which is why the grid pages.
  * \{ */
 
 #define GEN_COLS 4
 
 struct GenGridMetrics {
-  float tile; /* Tile edge, in region pixels — shrinks below the design's
-               * 146 when the island is too short to fit a full row plus its
-               * caption, because a caption drawn past the panel's foot is
-               * simply scissored away. */
+  float tile;   /* Tile edge, in region pixels — shrinks below the design's
+                 * 146 when the island is too short to fit a full row plus its
+                 * caption, because a caption drawn past the panel's foot is
+                 * simply scissored away. */
   float pitch_x;
   float pitch_y;
   float x0;     /* Left edge of column 0. */
   float y0;     /* TOP edge of row 0. */
   float bottom; /* Lowest y a caption may reach. */
-  int first_row;
-  int end_row;
-  float offset;
-  float max_scroll;
-  rctf view;
-  rctf scrollbar;
+  int rows;
+  int per_page;
+  int pages;
+  int page;     /* The requested page, clamped into range. */
 };
 
 GenGridMetrics agent_ui_generations_grid_metrics(const rctf &panel,
                                                  float u,
                                                  const GenPaneData &data);
 
-bool agent_ui_generations_button_identity(const ui::Button *a, const ui::Button *b);
-
-struct GenLibraryMetrics {
-  rctf view;
-  rctf add;
-  rctf scrollbar;
-  float pitch;
-  int first_row;
-  int end_row;
-  float offset;
-  float max_scroll;
-};
-GenLibraryMetrics agent_ui_generations_library_metrics(const rctf &panel,
-                                                       float u,
-                                                       const GenPaneData &data);
-void agent_ui_generations_libraries(
-    const bContext *C, ui::Block *block, const rctf &panel, float u, const GenPaneData &data);
-void agent_ui_generations_scrollbar(ui::Block *block,
-                                    PointerRNA *wm,
-                                    const char *property,
-                                    const rctf &rect,
-                                    float visible_height,
-                                    float maximum);
-
 /**
- * Paint the visible rows and lay their buttons into \a block.
+ * Paint the tiles for the current page and lay their buttons into \a block.
  *
  * \a r_selected_tile receives the selected tile's rect, or an empty rect when
- * no visible row is selected. The caller paints the selection ring under
- * the same viewport clip as the tile.
+ * nothing on this page is selected. The selection ring is the CALLER's to
+ * draw, after the block: an asset tile is a preview ui::Button, and the block
+ * paints last, so a ring drawn during this pass loses its inner half.
  */
 void agent_ui_generations_grid(const bContext *C,
                                ui::Block *block,
@@ -348,8 +330,11 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data);
 int agent_ui_generations_selected_index(const GenPaneData &data);
 
 /** Paint + lay out the detail column. \a block is the pane's own ui::Block. */
-void agent_ui_generations_detail(
-    const bContext *C, ui::Block *block, const rctf &panel, float u, const GenPaneData &data);
+void agent_ui_generations_detail(const bContext *C,
+                                 ui::Block *block,
+                                 const rctf &panel,
+                                 float u,
+                                 const GenPaneData &data);
 
 /**
  * Does this asset have preview PIXELS right now?

@@ -21,8 +21,6 @@ import bpy
 from bpy.types import PropertyGroup
 from bpy.props import BoolProperty, EnumProperty, PointerProperty, StringProperty
 
-from mixar.modules.moodboard.constants import GRAPH_PROMPT_MAXLEN
-
 from .moodboard_enum_callbacks import (
     _on_model_changed,
     _get_ai_render_mode_items,
@@ -34,8 +32,6 @@ from .moodboard_enum_callbacks import (
     _get_uv_unwrap_model_items,
     _get_video_gen_mode_items,
     _get_video_gen_model_items,
-    _get_video_upscale_mode_items,
-    _get_video_upscale_model_items,
     _get_world_labs_model_items,
 )
 
@@ -144,35 +140,7 @@ class MixieMoodboardTabVideoGenProps(PropertyGroup):
         name="Prompt",
         description="Describe the video and how selected references should be used",
         default="",
-        maxlen=GRAPH_PROMPT_MAXLEN,
-        options={'TEXTEDIT_UPDATE'},
-    )
-
-
-class MixieMoodboardTabVideoUpscaleProps(PropertyGroup):
-    """Catalog-only FLUX Video Upscale settings (one selected movie in)."""
-
-    mode: EnumProperty(
-        name="Mode",
-        description="Video upscale service",
-        items=_get_video_upscale_mode_items,
-        update=_on_model_changed,
-    )
-
-    model: EnumProperty(
-        name="Model",
-        description="Video upscale model",
-        items=_get_video_upscale_model_items,
-        update=_on_model_changed,
-    )
-
-    prompt: StringProperty(
-        name="Detail Prompt",
-        description=(
-            "Optional: describe the kind of detail to enhance while upscaling"
-        ),
-        default="",
-        maxlen=GRAPH_PROMPT_MAXLEN,
+        maxlen=4096,
         options={'TEXTEDIT_UPDATE'},
     )
 

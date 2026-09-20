@@ -242,20 +242,6 @@ class ConnectionManager:
 
                 client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_job_sync_result)
 
-                # The mirror of job.sync: jobs that reached a terminal state
-                # while this socket was down still owe the agent a
-                # generation.agent_result callback. Retry every stamped job
-                # across all queues now that a connected client exists.
-                # Marshalled to the main thread — on_connected runs on the
-                # WebSocket thread and the sweep walks live queue state.
-                def _sweep_agent_results():
-                    from ...common.job_queue.core.agent_results import (
-                        report_all_agent_results,
-                    )
-                    report_all_agent_results()
-
-                run_on_main_thread(_sweep_agent_results)
-
                 # #1258: a turn that outlived the disconnect is invisible to
                 # the user — ask the server which local sessions have a turn
                 # still running, or abandoned unwatched by the drain, and

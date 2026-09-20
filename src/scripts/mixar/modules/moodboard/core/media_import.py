@@ -15,13 +15,24 @@ import bpy
 from .moodboard_utils import place_new_moodboard_item
 
 
+def get_or_create_group_index(scene, name: str) -> int:
+    """Return the index of the moodboard group named *name*, creating it once."""
+    groups = getattr(scene, "mixie_moodboard_groups", None)
+    if groups is None or not name:
+        return -1
+    for index, group in enumerate(groups):
+        if group.name == name:
+            return index
+    group = groups.add()
+    group.name = name
+    return len(groups) - 1
 
 
 def add_packed_image_to_board(
     scene,
     image,
     *,
-    frame_id: str = "",
+    group_index: int = -1,
     generation_prompt: str = "",
     selected: bool = False,
     anchor: tuple[float, float] | None = None,
@@ -38,11 +49,8 @@ def add_packed_image_to_board(
     item.z_order = len(scene.mixie_moodboard_images) - 1
     item.generation_prompt = generation_prompt
     item.selected = bool(selected)
-    # An explicit frame wins over geometry: the caller is saying which frame
-    # this belongs in, so the placement below must not be re-resolved against
-    # frame rects afterwards.
-    if frame_id:
-        item.frame_id = frame_id
+    if group_index >= 0:
+        item.group_index = group_index
     place_new_moodboard_item(scene, item, anchor=anchor)
     return item
 
@@ -131,7 +139,7 @@ def import_generated_video(
     generation_prompt: str = "",
     display_name: str = "",
     selected: bool = False,
-    frame_name: str = "",
+    group_name: str = "",
 ) -> str:
     """Move an MP4 into durable storage and add it to a moodboard.
 
@@ -162,12 +170,8 @@ def import_generated_video(
         item.z_order = len(scene.mixie_moodboard_images) - 1
         item.generation_prompt = generation_prompt
         item.selected = bool(selected)
-        if frame_name:
-            from .frames import get_or_create_frame
-
-            frame = get_or_create_frame(scene, frame_name)
-            if frame is not None:
-                item.frame_id = frame.frame_id
+        if group_name:
+            item.group_index = get_or_create_group_index(scene, group_name)
         place_new_moodboard_item(scene, item)
         return image.name
     except Exception:

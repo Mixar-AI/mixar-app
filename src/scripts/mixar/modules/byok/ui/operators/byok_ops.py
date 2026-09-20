@@ -29,11 +29,12 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.ui.constants import CARD_DIALOG_WIDTH
 
-from ...core import byok_client, credential_state, model_suggestions, models_cache
+from ...core import byok_client, model_suggestions
 from . import byok_dialog_ui
 from .byok_state_ops import (
     _apply_cached_state,
     _clear_cached_state,
+    _on_models_catalog_done,
     _redraw_mixie_chat_areas,
 )
 
@@ -108,7 +109,7 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # dropdown becomes populated by the time the user picks. (Belt-
         # and-suspenders — the auth login hook normally fires this already.)
         if not model_suggestions.is_loaded():
-            models_cache.refresh()
+            byok_client.fetch_models_catalog(on_done=_on_models_catalog_done)
         # Local provider: refresh the managed-model item cache and prefill
         # mode/model from the last registration (cheap; guarded — the local
         # runtime module may be unavailable in stripped builds).
@@ -190,7 +191,7 @@ class MIXAR_BYOK_OT_save(Operator):
             provider=provider,
             model=model,
             api_key=api_key,
-            on_done=_save_callback(),
+            on_done=_on_save_done,
         )
         return {'FINISHED'}
 
@@ -212,7 +213,7 @@ class MIXAR_BYOK_OT_save(Operator):
             provider='openrouter',
             model=model,
             api_key=api_key,
-            on_done=_save_callback(),
+            on_done=_on_save_done,
         )
         return {'FINISHED'}
 
@@ -220,9 +221,9 @@ class MIXAR_BYOK_OT_save(Operator):
         """Local save: managed requires the supervised server healthy;
         custom pings the user's server off-thread first. Both end in the
         same PUT /agent/byok (with base_url + supports_vision) and the
-        shared save callback."""
+        shared _on_save_done callback."""
         from . import byok_local_ops
-        result = byok_local_ops.execute_local(self, wm, on_done=_save_callback())
+        result = byok_local_ops.execute_local(self, wm, on_done=_on_save_done)
         _redraw_mixie_chat_areas()
         return result
 
@@ -245,7 +246,7 @@ class MIXAR_BYOK_OT_save(Operator):
             provider='codex',
             model=model,
             api_key=bundle,
-            on_done=_save_callback(),
+            on_done=_on_save_done,
         )
         return {'FINISHED'}
 
@@ -269,30 +270,13 @@ def _deregister_local_if_switched_away(active_provider):
         logger.warning("Local deregistration skipped: %s", e)
 
 
-def _save_callback():
-    """Bind the submit-time credential epoch into the save callback.
-
-    The PUT is async; if the user logs out before it lands, the echo must not
-    write the logged-out account's provider back into the mirror.
-    """
-    epoch = credential_state.current_epoch()
-
-    def _done(success: bool, data, err):
-        _on_save_done(success, data, err, epoch=epoch)
-
-    return _done
-
-
-def _on_save_done(success: bool, data, err, epoch=None):
+def _on_save_done(success: bool, data, err):
     """Main-thread save callback."""
     try:
         wm = bpy.context.window_manager
         if success:
-            applied = _apply_cached_state(wm, data or {}, epoch)
+            _apply_cached_state(wm, data or {})
             _wipe_form_secrets(wm)
-            if not applied:
-                logger.debug("BYOK save landed after logout; echo dropped")
-                return
             # SAVED, not IDLE: the dialog shows an explicit recap with a
             # single Done button, so the user never has to wonder
             # whether the save landed.

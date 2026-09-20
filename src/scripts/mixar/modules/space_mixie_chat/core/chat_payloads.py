@@ -17,7 +17,6 @@ def build_chat_payload(
     project_context: Optional[dict] = None,
     mark_context: Optional[dict] = None,
     user_preferences: Optional[dict] = None,
-    auto_mode: bool = False,
 ) -> dict:
     """The ``agent.chat`` command body — one shape for a fresh turn and for an
     interjection into an open run (``core/composer_send.py``)."""
@@ -66,12 +65,6 @@ def build_chat_payload(
     # backend merges into the agent scratchpad for this turn.
     if user_preferences:
         payload["user_preferences"] = user_preferences
-
-    # Auto mode: the agent never asks the user this turn. Written only when
-    # on — omitting the field IS false — and on every send, because the
-    # backend keeps nothing (docs/modules/agent-chat.md § Auto mode).
-    if auto_mode:
-        payload["auto_mode"] = True
     return payload
 
 

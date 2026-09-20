@@ -1,8 +1,6 @@
 /* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
-#include "BLI_string.h"
-
 #include "mixie_moodboard_node_layout.hh"
 #include "ED_moodboard_drawer.hh"
 #include "ED_screen.hh"
@@ -50,31 +48,13 @@ bool moodboard_node_controls_rect(const bContext *C, View2D *v2d, PointerRNA *no
   card.ymin = RNA_float_get(node, "position_y");
   card.xmax = card.xmin + RNA_float_get(node, "width");
   card.ymax = card.ymin + RNA_float_get(node, "height");
-  rcti card_region;
-  if (!moodboard_view_rect_to_region(v2d, CTX_wm_region(C), card, &card_region)) {
-    return false;
-  }
-  /* The CARD's own on-screen size decides whether the controls fit, not the
-   * slice of it a sidebar or the Zen drawer happens to leave uncovered. The
-   * minimum used to be measured after clipping, so pushing a card a little
-   * under the sidebar took its visible width below the threshold and removed
-   * the prompt, Generate AND Settings in one step, leaving a selected node
-   * that still reads "Click this block to type a prompt" and has nothing to
-   * click. */
-  if (BLI_rcti_size_x(&card_region) <
-          std::max(MOODBOARD_GRAPH_CONTROLS_MIN_PX_X, int(180 * UI_SCALE_FAC)) ||
-      BLI_rcti_size_y(&card_region) <
-          std::max(MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y, int(150 * UI_SCALE_FAC)))
-  {
-    return false;
-  }
   const rcti canvas = moodboard_visible_canvas_rect(C);
-  if (!BLI_rcti_isect(&card_region, &canvas, r_rect)) {
-    return false;
-  }
-  /* A sliver has nowhere to put them, so that one does drop out. */
-  return BLI_rcti_size_x(r_rect) >= int(160 * UI_SCALE_FAC) &&
-         BLI_rcti_size_y(r_rect) >= int(120 * UI_SCALE_FAC);
+  return moodboard_view_rect_to_region(v2d, CTX_wm_region(C), card, r_rect) &&
+         BLI_rcti_isect(r_rect, &canvas, r_rect) &&
+         BLI_rcti_size_x(r_rect) >=
+             std::max(MOODBOARD_GRAPH_CONTROLS_MIN_PX_X, int(180 * UI_SCALE_FAC)) &&
+         BLI_rcti_size_y(r_rect) >=
+             std::max(MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y, int(150 * UI_SCALE_FAC));
 }
 
 bool moodboard_node_settings_rect(const bContext *C,
@@ -129,71 +109,13 @@ bool moodboard_node_settings_rect(const bContext *C,
     }
     RNA_property_collection_end(&iter);
   }
-  if (width > BLI_rcti_size_x(&canvas)) {
+  int x = card.xmin - left_separation - width;
+  if (x < canvas.xmin) {
+    x = card.xmax + separation;
+  }
+  if (x < canvas.xmin || x + width > canvas.xmax) {
     return false;
   }
-  /* A side is usable when the panel can sit inside the canvas without
-   * covering the card. Clamping rather than rejecting is the point: the
-   * panel used to be dropped outright the moment its preferred x fell
-   * outside the canvas, so one node dragged across the board cycled
-   * docked -> in-card Settings row -> docked -> nothing, re-deciding every
-   * frame while the pointer was still down. */
-  auto usable = [&](const int preferred, const int overlap_allowed, int *r_x) {
-    const int x = std::clamp(preferred, canvas.xmin, canvas.xmax - width);
-    const int overlap = std::min(x + width, int(card.xmax)) - std::max(x, int(card.xmin));
-    if (overlap > overlap_allowed) {
-      return false;
-    }
-    *r_x = x;
-    return true;
-  };
-  const int left_preferred = card.xmin - left_separation - width;
-  const int right_preferred = card.xmax + separation;
-  int left_x = 0, right_x = 0;
-  const bool fits_left = usable(left_preferred, 0, &left_x);
-  const bool fits_right = usable(right_preferred, 0, &right_x);
-
-  /* Only ONE node owns an inspector at a time, so one latch is the whole
-   * state. It keeps the side already on screen for as long as that side
-   * still works, so a drag cannot make the panel jump across the card. A
-   * stale entry is harmless: a different node, or a side that stopped
-   * fitting, falls straight through to a fresh choice. */
-  static char latched_node[MIXIE_GRAPH_ID_BUF] = "";
-  static int latched_side = 0; /* 0 unset, 1 left, 2 right. */
-  char node_id[MIXIE_GRAPH_ID_BUF];
-  mixie_rna_string_get_clamped(node, "node_id", node_id, sizeof(node_id));
-  if (!STREQ(latched_node, node_id)) {
-    BLI_strncpy(latched_node, node_id, sizeof(latched_node));
-    latched_side = 0;
-  }
-
-  /* The side already on screen gets first refusal, and is allowed to clip a
-   * quarter of the card before giving way. Without that the panel hops across
-   * the card the moment the other side becomes the roomier one, which is the
-   * jump seen while dragging: a card near the middle of a narrow canvas
-   * leaves neither side its full separation. A side chosen fresh (a different
-   * node, or one whose latched side stopped working) still refuses to cover
-   * the card at all. */
-  const int tolerance = BLI_rcti_size_x(&card) / 4;
-  int side = 0;
-  if (latched_side == 1 && (fits_left || usable(left_preferred, tolerance, &left_x))) {
-    side = 1;
-  }
-  else if (latched_side == 2 && (fits_right || usable(right_preferred, tolerance, &right_x))) {
-    side = 2;
-  }
-  else if (fits_left) {
-    side = 1;
-  }
-  else if (fits_right) {
-    side = 2;
-  }
-  if (side == 0) {
-    latched_side = 0;
-    return false;
-  }
-  latched_side = side;
-  const int x = (side == 1) ? left_x : right_x;
   const int y = std::clamp(card.ymax - height, canvas.ymin, canvas.ymax - height);
   *r_rect = {x, x + width, y, y + height};
   return true;

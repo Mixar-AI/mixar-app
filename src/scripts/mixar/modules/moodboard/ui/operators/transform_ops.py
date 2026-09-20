@@ -18,13 +18,22 @@ from ...core.image_lifecycle import release_all_moodboard_images
 from ...core.moodboard_utils import stamp_moodboard_item_added
 
 
-def get_selected_frame_ids(scene):
-    """Ids of every selected frame."""
-    return {
-        frame.frame_id
-        for frame in getattr(scene, 'mixie_moodboard_frames', ())
-        if frame.selected and frame.frame_id
-    }
+def get_selected_group_indices(scene):
+    """Get indices of all selected groups."""
+    selected_group_indices = set()
+    for i, group in enumerate(scene.mixie_moodboard_groups):
+        if group.selected:
+            selected_group_indices.add(i)
+    return selected_group_indices
+
+
+def get_group_indices_from_selected_items(scene):
+    """Get group indices of selected images (for group cohesion)."""
+    group_indices = set()
+    for img in scene.mixie_moodboard_images:
+        if img.selected and img.group_index >= 0:
+            group_indices.add(img.group_index)
+    return group_indices
 
 
 def get_all_items_to_transform(scene):
@@ -34,28 +43,32 @@ def get_all_items_to_transform(scene):
     Returns tuple of (image_indices, textbox_indices) that should be transformed.
     This includes:
     - Directly selected images and textboxes
-    - Every member of a SELECTED frame
-
-    Deliberately NOT the reverse: selecting one picture inside a frame does not
-    drag its neighbours along. That "group cohesion" rule is exactly the
-    inverted selection model the frame rewrite removed -- clicking a member
-    selects the member, and the frame is selected by its own border.
+    - Images from selected groups
+    - All images in a group if any image in that group is selected (group cohesion)
     """
     image_indices = set()
     textbox_indices = set()
 
-    selected_frame_ids = get_selected_frame_ids(scene)
+    # Get selected group indices
+    selected_group_indices = get_selected_group_indices(scene)
 
+    # Get group indices from selected images (group cohesion)
+    cohesion_group_indices = get_group_indices_from_selected_items(scene)
+
+    # Combine all group indices that need to be transformed
+    all_group_indices = selected_group_indices | cohesion_group_indices
+
+    # Collect images
     for i, img in enumerate(scene.mixie_moodboard_images):
-        if img.selected or (
-            selected_frame_ids and getattr(img, 'frame_id', '') in selected_frame_ids
-        ):
+        if img.selected:
+            image_indices.add(i)
+        elif img.group_index in all_group_indices:
+            # Image belongs to a group being transformed
             image_indices.add(i)
 
+    # Collect textboxes (only directly selected for now, as textboxes don't have groups)
     for i, tb in enumerate(scene.mixie_moodboard_textboxes):
-        if tb.selected or (
-            selected_frame_ids and getattr(tb, 'frame_id', '') in selected_frame_ids
-        ):
+        if tb.selected:
             textbox_indices.add(i)
 
     return image_indices, textbox_indices
@@ -195,16 +208,14 @@ class MIXIE_OT_clear_moodboard(Operator):
 
     bl_idname = "mixie.clear_moodboard"
     bl_label = "Clear Moodboard"
-    bl_description = ("Remove all images, text boxes, frames, nodes, connections "
-                      "and annotations")
+    bl_description = "Remove all images, text boxes, groups, nodes, connections and annotations"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         scene = context.scene
         image_count = len(scene.mixie_moodboard_images)
         textbox_count = len(scene.mixie_moodboard_textboxes)
-        frames = getattr(scene, 'mixie_moodboard_frames', None)
-        frame_count = len(frames) if frames is not None else 0
+        group_count = len(scene.mixie_moodboard_groups)
         node_count = (
             len(scene.mixie_moodboard_action_nodes)
             + len(scene.mixie_moodboard_asset_nodes)
@@ -212,7 +223,7 @@ class MIXIE_OT_clear_moodboard(Operator):
         link_count = len(scene.mixie_moodboard_links)
         annotation_count = len(scene.mixie_moodboard_annotations)
 
-        if not any((image_count, textbox_count, frame_count, node_count, link_count,
+        if not any((image_count, textbox_count, group_count, node_count, link_count,
                     annotation_count)):
             self.report({'INFO'}, "Moodboard is already empty")
             return {'CANCELLED'}
@@ -221,8 +232,6 @@ class MIXIE_OT_clear_moodboard(Operator):
         scene.mixie_moodboard_images.clear()
         scene.mixie_moodboard_textboxes.clear()
         scene.mixie_moodboard_groups.clear()
-        if frames is not None:
-            frames.clear()
         scene.mixie_moodboard_action_nodes.clear()
         scene.mixie_moodboard_asset_nodes.clear()
         scene.mixie_moodboard_links.clear()
@@ -236,8 +245,8 @@ class MIXIE_OT_clear_moodboard(Operator):
             parts.append(f"{image_count} image(s)")
         if textbox_count > 0:
             parts.append(f"{textbox_count} text box(es)")
-        if frame_count > 0:
-            parts.append(f"{frame_count} frame(s)")
+        if group_count > 0:
+            parts.append(f"{group_count} group(s)")
         if node_count > 0:
             parts.append(f"{node_count} node(s)")
         if link_count > 0:
@@ -263,41 +272,17 @@ class MIXIE_OT_moodboard_duplicate(Operator):
         # Get all items to duplicate (including from groups)
         image_indices, textbox_indices = get_all_items_to_transform(scene)
 
-        # Inference nodes duplicate through their own path: they carry links,
-        # sockets and catalog parameters, and they are placed at a fixed offset
-        # rather than handed to grab mode (which moves images and text boxes
-        # only). Shift+D therefore acts on whatever is actually selected.
-        node_count = 0
-        try:
-            from mixar.modules.moodboard.core import node_duplicate
-
-            node_count = len(node_duplicate.duplicate_selected_nodes(scene))
-        except Exception:
-            node_count = 0
-
         if not image_indices and not textbox_indices:
-            if node_count:
-                tag_mixie_redraw(context)
-                self.report(
-                    {'INFO'}, f"Duplicated {node_count} node(s) - move to position"
-                )
-                # Same hand-off as the image path below: the copies land on the
-                # originals and grab mode places them.
-                bpy.ops.mixie.moodboard_grab('INVOKE_DEFAULT')
-                return {'FINISHED'}
             self.report({'WARNING'}, "No items selected to duplicate")
             return {'CANCELLED'}
 
-        # Deselect all original items and frames. The frame matters as much
-        # as the members: `get_all_items_to_transform` expands a still-selected
-        # frame back into every ORIGINAL member, so leaving it set makes the
-        # grab that follows drag the sources along with the copies.
+        # Deselect all original items and groups
         for img in scene.mixie_moodboard_images:
             img.selected = False
         for tb in scene.mixie_moodboard_textboxes:
             tb.selected = False
-        for frame in getattr(scene, 'mixie_moodboard_frames', ()):
-            frame.selected = False
+        for group in scene.mixie_moodboard_groups:
+            group.selected = False
 
         # Duplicate images (no offset - grab mode will handle positioning)
         for i in image_indices:
@@ -364,7 +349,6 @@ class MIXIE_OT_moodboard_duplicate(Operator):
 
         tag_mixie_redraw(context)
 
-        duplicated_count += node_count
         self.report({'INFO'}, f"Duplicated {duplicated_count} item(s) - move to position")
 
         # Invoke grab mode for the duplicated items
@@ -374,11 +358,11 @@ class MIXIE_OT_moodboard_duplicate(Operator):
 
 
 class MIXIE_OT_moodboard_select_all(Operator):
-    """Select all moodboard media, text boxes, frames, and graph nodes."""
+    """Select all moodboard media, text boxes, groups, and graph nodes."""
 
     bl_idname = "mixie.moodboard_select_all"
     bl_label = "Select All"
-    bl_description = "Select all images, text boxes, frames and graph nodes"
+    bl_description = "Select all images, text boxes, groups and graph nodes"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -396,20 +380,19 @@ class MIXIE_OT_moodboard_select_all(Operator):
             if not tb.selected:
                 tb.selected = True
                 count += 1
-        for frame in getattr(scene, 'mixie_moodboard_frames', ()):
-            if not frame.selected:
-                frame.selected = True
+        for grp in scene.mixie_moodboard_groups:
+            if not grp.selected:
+                grp.selected = True
                 count += 1
-        # Nodes too. Deselect All has always cleared them, so leaving them out
-        # here meant Select All followed by Delete silently spared every node.
-        for collection in (scene.mixie_moodboard_action_nodes,
-                           scene.mixie_moodboard_asset_nodes):
-            for node in collection:
-                if not node.selected:
-                    node.selected = True
-                    count += 1
-        # Multi-select has no single active graph node (same as box select), so
-        # no card claims the inspector.
+        for node in scene.mixie_moodboard_action_nodes:
+            if not node.selected:
+                node.selected = True
+                count += 1
+        for node in scene.mixie_moodboard_asset_nodes:
+            if not node.selected:
+                node.selected = True
+                count += 1
+        # Multi-select has no single active graph node (same as box select).
         scene.mixie_moodboard_active_node_id = ""
         tag_mixie_redraw(context)
         self.report({'INFO'}, f"Selected {count} item(s)")
@@ -421,7 +404,7 @@ class MIXIE_OT_moodboard_deselect_all(Operator):
 
     bl_idname = "mixie.moodboard_deselect_all"
     bl_label = "Deselect All"
-    bl_description = "Deselect all images, text boxes and frames"
+    bl_description = "Deselect all images, text boxes and groups"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -430,8 +413,8 @@ class MIXIE_OT_moodboard_deselect_all(Operator):
             img.selected = False
         for tb in scene.mixie_moodboard_textboxes:
             tb.selected = False
-        for frame in getattr(scene, 'mixie_moodboard_frames', ()):
-            frame.selected = False
+        for grp in scene.mixie_moodboard_groups:
+            grp.selected = False
         for node in scene.mixie_moodboard_action_nodes:
             node.selected = False
         for node in scene.mixie_moodboard_asset_nodes:

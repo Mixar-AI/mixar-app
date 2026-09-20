@@ -114,8 +114,16 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Local QA evidence is not versioned.
-/docs/development/evidence/
+# Local development captures; replay scripts and text verdicts remain versioned.
+/docs/development/evidence/**/*.png
+/docs/development/evidence/**/*.jpg
+/docs/development/evidence/**/*.jpeg
+/docs/development/evidence/**/*.gif
+/docs/development/evidence/**/*.webp
+/docs/development/evidence/**/*.svg
+/docs/development/evidence/**/*.bmp
+/docs/development/evidence/**/*.tif
+/docs/development/evidence/**/*.tiff
 
 # Translations
 *.mo

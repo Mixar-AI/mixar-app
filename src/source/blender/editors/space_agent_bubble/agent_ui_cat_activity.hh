@@ -150,16 +150,16 @@ inline MixieCatPose mixie_cat_activity_pose(const double now,
       break;
     }
     case MixieCatActivity::Working: {
-      const MixieCatRoll roll = mixie_cat_eye_roll(now);
-      p.look_x = roll.look_x;
-      p.look_y = roll.look_y;
-      p.tilt = -6.0f + 10.0f * roll.look_x;
-      p.bounce = 0.0f;
-      p.eye_width = 1.04f;
-      p.eye_scale = 1.10f;
-      p.ear_height_l = p.ear_height_r = 0.90f;
-      p.pupil_scale = 0.90f;
-      open = 1.0f;
+      const float nod = mixie_cat_gesture(now, 1.6, 0.08f, 0.24f) +
+                        mixie_cat_gesture(now, 1.6, 0.40f, 0.24f);
+      p.look_x = 0.0f;
+      p.look_y = -0.55f;
+      p.tilt = -12.0f + 5.0f * nod;
+      p.bounce = -0.040f * nod;
+      p.eye_width = 1.10f;
+      p.ear_height_l = p.ear_height_r = 0.86f;
+      p.pupil_scale = 0.72f;
+      open = 0.36f;
       break;
     }
     case MixieCatActivity::Generating:

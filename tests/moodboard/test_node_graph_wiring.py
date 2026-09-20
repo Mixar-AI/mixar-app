@@ -9,7 +9,6 @@ standalone checks pin the registration and Python/C++ seams that make the
 feature reachable in-app.
 """
 
-import types
 from pathlib import Path
 
 
@@ -59,11 +58,7 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
     assert "BKE_curve_forward_diff_bezier" in geometry
     assert "mixie_draw_moodboard_graph_controls" in renderer
-    # The prompt / Generate / Cancel a node draws INSIDE its tile live in their
-    # own unit; the settings panel beside the card stays in `controls`.
-    tile = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tile_controls.cc")
-    assert "mixie_draw_moodboard_node_tile_controls.cc" in cmake
-    assert '"prompt",' in tile
+    assert '"prompt",' in controls
     # Mode/Model draw the Python-cached human labels (dynamic enums can't
     # self-display); the static word is only the empty-label fallback.
     assert 'model_label[0] ? model_label : "Model"' in settings
@@ -76,7 +71,7 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert "draw_draft_hint" in renderer
     assert "draw_state_hint" in renderer
     assert 'mixie_rna_string_get_clamped(node, "prompt"' in renderer
-    assert "generation_running" in tile
+    assert "generation_running" in controls
     assert 'RNA_boolean_get(&iter.ptr, "visible")' in settings
     # Numeric parameters are plain manual number fields: the catalog's wide
     # min/max ranges made drag-sliders unusable (e.g. Duration max 3000).
@@ -84,30 +79,14 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert "button_type = ui::ButtonType::Num;" in settings
     assert 'RNA_struct_find_property(node, "parameters")' in settings
     assert "uiDefButO" in controls
-    assert '"MIXIE_OT_moodboard_run_action_node"' in tile
-    # Node controls are SCREEN-space overlays: pixel space is restored first,
-    # so the block is built in region coordinates and every rect it is handed
-    # has already been clipped to the painted canvas
-    # (moodboard_node_controls_rect), which in the Zen drawer stops short of the
-    # grip. The media name is painted text with no block of its own, so it runs
-    # after the block is drawn and therefore lands on top of it.
+    assert '"MIXIE_OT_moodboard_run_action_node"' in controls
     assert controls.index("view2d_view_restore(C)") < controls.index(
         "block_begin("
-    )
-    assert controls.index("block_draw(C, block)") < controls.index(
-        "mixie_draw_moodboard_selected_media_labels("
     )
     assert "region_handlers_add" in space
     assert "ED_KEYMAP_UI | ED_KEYMAP_GIZMO" in space
     assert "moodboard_action_run_button_rect" not in renderer
-    # Card fill, border and the generating glow are chrome, and live with the
-    # rest of it (resize grip, header strip) rather than in the graph pass. The
-    # card bed is the shared liquid-glass pane, so every moodboard surface reads
-    # as one material.
-    chrome = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph_chrome.cc")
-    assert "ui::draw_roundbox_4fv" in chrome
-    assert "moodboard_draw_glass_pane(rect, 22.0f)" in chrome
-    assert "moodboard_draw_card_background(" in renderer
+    assert "draw_roundbox_4fv" in renderer
 
 
 def test_context_actions_create_connected_nodes_and_execute_through_queue():
@@ -140,13 +119,7 @@ def test_catalog_schema_and_results_stay_inside_reusable_blocks():
     assert "def refresh_node_parameter_visibility" in schema
     assert "def sync_all_node_schemas" in schema
     assert 'get_services(capability, surface="moodboard")' in graph
-    # The catalog cache fans a swap out through its consumers unit (its own
-    # 500-line split); the node refresh is one of the consumers there.
-    consumers = _read(
-        ROOT / "src/scripts/mixar/bootstrap/generation_catalog/consumers.py"
-    )
-    assert "notify_catalog_swapped()" in catalog
-    assert "sync_all_node_schemas()" in consumers
+    assert "sync_all_node_schemas()" in catalog
     assert "parameters: CollectionProperty" in properties
     assert "visible: BoolProperty" in properties
     assert "show_mode: BoolProperty" in properties
@@ -169,83 +142,3 @@ def test_queue_state_bridge_targets_originating_scene_and_node():
     assert "action_node_by_id(scene, node_id)" in bridge
     assert "JobState.SUCCESS" in bridge
     assert "JobState.FAILED" in bridge
-
-
-class _FakeNode:
-    """The handful of node fields the queue bridge mirrors onto."""
-
-    def __init__(self, state='RUNNING', edit_mode=True):
-        self.state = state
-        self.edit_mode = edit_mode
-        self.job_id = ""
-        self.error = ""
-        self.progress_text = ""
-
-
-class _FakeJob:
-    def __init__(self, state, node_id="n1"):
-        self.state = state
-        self.graph_node_id = node_id
-        self.scene_name = "Scene"
-        self.id = "local-1"
-        self.backend_job_id = "backend-1"
-        self.user_message = ""
-        self.error = ""
-
-
-class _FakeQueue:
-    def __init__(self, jobs):
-        self._jobs = jobs
-
-    def snapshot(self):
-        return self._jobs
-
-
-def _run_sync(monkeypatch, job, node):
-    """Drive sync_graph_jobs against fakes, with the bpy-touching edges stubbed."""
-    from mixar.modules.moodboard.core import node_job_bridge as bridge
-
-    monkeypatch.setattr(bridge, "action_node_by_id", lambda scene, node_id: node)
-    monkeypatch.setattr(bridge, "_redraw_mixie_areas", lambda: None)
-    monkeypatch.setattr(bridge, "ensure_pulse_timer", lambda: None)
-    monkeypatch.setattr(
-        bridge.bpy, "data", types.SimpleNamespace(scenes={"Scene": object()}), raising=False
-    )
-    bridge.sync_graph_jobs(_FakeQueue([job]))
-    return node
-
-
-def test_a_finished_generation_folds_the_node_editor_away(monkeypatch):
-    """Editing a node and pressing Generate used to leave the prompt parked over
-    the card after the run completed, hiding the very result it produced. The
-    SUCCESS transition closes the editor so the result is what comes back."""
-    from mixar.modules.common.job_queue.core.job import JobState
-
-    node = _run_sync(monkeypatch, _FakeJob(JobState.SUCCESS), _FakeNode(edit_mode=True))
-    assert node.state == 'SUCCESS'
-    assert node.edit_mode is False
-
-
-def test_a_failed_or_cancelled_node_keeps_its_editor_open(monkeypatch):
-    """Fixing the prompt is where that user is going next, so the editor stays."""
-    from mixar.modules.common.job_queue.core.job import JobState
-
-    for job_state, expected in (
-        (JobState.FAILED, 'FAILED'),
-        (JobState.CANCELLED, 'CANCELLED'),
-    ):
-        node = _run_sync(monkeypatch, _FakeJob(job_state), _FakeNode(edit_mode=True))
-        assert node.state == expected
-        assert node.edit_mode is True, job_state
-
-
-def test_reopening_the_editor_on_a_finished_node_is_not_undone(monkeypatch):
-    """The clear rides the state TRANSITION, not the state. Once a node is
-    already SUCCESS, later queue syncs must leave the user's toggle alone."""
-    from mixar.modules.common.job_queue.core.job import JobState
-
-    # Already SUCCESS, and the user has re-opened the editor by hand.
-    node = _run_sync(
-        monkeypatch, _FakeJob(JobState.SUCCESS), _FakeNode(state='SUCCESS', edit_mode=True)
-    )
-    assert node.edit_mode is True

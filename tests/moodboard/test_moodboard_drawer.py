@@ -123,16 +123,15 @@ def test_drawer_region_hosts_mixie_and_view2d_behind_an_open_poll():
 
 
 def test_grip_handler_beats_ui_and_only_answers_on_the_handle():
-    """`~` first, then grip, then UI, then Mixie — a selected card cannot steal close."""
+    """Grip map first, then UI, then Mixie — a selected card cannot steal close."""
     body = _fn(
         _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer.cc")),
         "void view3d_moodboard_drawer_region_init(",
     )
-    toggle = body.index("view3d_moodboard_drawer_toggle_handlers_add")
     grip = body.index("view3d_moodboard_drawer_grip_handler_poll")
     ui = body.index("region_handlers_add")
     canvas = body.index("view3d_moodboard_drawer_canvas_handler_poll")
-    assert toggle < grip < ui < canvas
+    assert grip < ui < canvas
 
 
 def test_drawer_region_type_does_not_take_view2d_keymapflag():
@@ -159,67 +158,6 @@ def test_drawer_grip_keymap_is_grip_only():
     assert "Moodboard Drawer Grip" in py
     assert "_bind_moodboard_pointer(km_drawer)" not in py
     assert "_bind_moodboard_pointer(km)" in py
-    assert "mixie.moodboard_annotation_erase" in py
-
-
-def test_tilde_toggles_drawer_in_c_and_addon():
-    """`~` is AccentGrave on the dedicated View3D map (first on the
-    viewport), the Window map (header / topbar), and addon 3D View
-    (beats the View pie after a preset reload). Poll finds the Zen
-    drawer instead of requiring CTX_wm_area to be the 3D view.
-    """
-    ops = _read(VIEW3D / "view3d_moodboard_drawer_ops.cc")
-    core = _read(VIEW3D / "view3d_moodboard_drawer.cc")
-    space = _read(VIEW3D / "space_view3d.cc")
-    py = _read(ROOT / "src/scripts/mixar/modules/moodboard/ui/keymap.py")
-
-    keymap = _fn(_strip_comments(ops), "void view3d_moodboard_drawer_keymap(")
-    assert '"Moodboard Drawer"' in keymap
-    assert '"Window"' in keymap
-    assert "EVT_ACCENTGRAVEKEY" in keymap
-    assert "KM_SHIFT" in keymap
-    assert "VIEW3D_OT_moodboard_drawer_toggle" in keymap
-    assert '"Moodboard Drawer Grip"' in keymap
-
-    poll = _fn(_strip_comments(ops), "static bool drawer_op_poll(")
-    assert "view3d_moodboard_drawer_area_find" in poll
-
-    attach = _fn(_strip_comments(core), "void view3d_moodboard_drawer_toggle_handlers_add(")
-    assert '"Moodboard Drawer"' in attach
-    assert "WM_event_add_keymap_handler_priority" in attach
-    assert "view3d_moodboard_drawer_toggle_handlers_add(wm, region)" in space
-
-    assert "def _bind_drawer_toggle(" in py
-    assert py.count("_bind_drawer_toggle(") == 4  # def + Drawer + Window + 3D View
-    assert "view3d.moodboard_drawer_toggle" in py
-    assert "'Moodboard Drawer'" in py
-    assert "'Window'" in py
-    assert "'3D View'" in py
-    assert "shift" in py[py.index("def _bind_drawer_toggle(") : py.index("def get_user_pie_menu_key(")]
-
-
-def test_macos_grave_key_is_accent_grave():
-    """The physical `~` key must arrive as AccentGrave. Upstream #if 0's
-    kVK_ANSI_Grave and only maps the '`' character, so Shift+` is Unknown.
-    """
-    cocoa = _read(ROOT / "src/intern/ghost/intern/GHOST_SystemCocoa.mm")
-    convert = _fn(cocoa, "static GHOST_TKey convertKey(")
-    ansi_off = convert.index("#if 0")
-    ansi_end = convert.index("#endif", ansi_off)
-    live = convert[ansi_end:]
-    assert "case kVK_ANSI_Grave:" in live
-    assert "GHOST_kKeyAccentGrave" in live[live.index("case kVK_ANSI_Grave:") :][:200]
-    assert "case '~':" in convert
-    assert "GHOST_kKeyAccentGrave" in convert[convert.index("case '~':") :][:200]
-
-
-def test_user_close_releases_annotate_and_erase():
-    body = _fn(
-        _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer_ops.cc")),
-        "static void drawer_release_annotate(",
-    )
-    assert "mixie_moodboard_annotating" in body
-    assert "mixie_moodboard_erasing" in body
 
 
 def test_grip_click_flips_target_and_escape_restores_invoke_state():
@@ -331,7 +269,6 @@ def test_drawer_hosts_the_same_add_tools_row_as_the_mixie_toolbar():
     assert "draw_moodboard_add_tools(self.layout, context)" in toolbar
     assert "draw_moodboard_open_media_tool(col)" in toolbar
     assert "draw_moodboard_add_text_tool(col)" in toolbar
-    assert 'mixie.moodboard_erase_canvas' in toolbar
     assert "VIEW3D_PT_moodboard_drawer_add_tools," in toolbar
 
     assert 'WM_paneltype_find("VIEW3D_PT_moodboard_drawer_add_tools"' in draw

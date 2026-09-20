@@ -92,15 +92,6 @@ struct MixarButtonMotion {
 
 /** An on-demand timer wakes only live regions until their final settled frame.
  * No retained window/context ownership and no idle or scene redraw loop. */
-/** The user's Interface > Reduce Motion preference (`USER_REDUCE_MOTION`).
- *
- * Blender honours this in six places; no Mixar surface did. Every Mixar
- * transition runs through `mixar_motion_step`, so gating it there settles
- * each value at its target immediately -- the end state is identical, it is
- * simply reached without the intervening frames, and no redraw is requested.
- * Surfaces animating on their own clock should consult this too. */
-bool mixar_motion_reduced();
-
 void mixar_motion_request(ARegion *region, double deadline);
 float mixar_motion_step(MixarMotionValue &motion, float target, double seconds, ARegion *region);
 void mixar_button_motion_update(Button &button, ARegion *region);

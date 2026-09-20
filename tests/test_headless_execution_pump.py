@@ -114,31 +114,6 @@ class TestTakeNext:
 
 
 class TestExecuteAndRespond:
-    @pytest.mark.parametrize("outcome", ["cancelled", "exception", "accepted"])
-    def test_generation_ref_cannot_escape_the_script(self, monkeypatch, outcome):
-        import bpy
-        from mixar.modules.common.utils.agent_feedback import take_agent_ref
-
-        wm = {"mixar_agent_ref": '{"generation_id": "stale"}'}
-        monkeypatch.setattr(bpy, "context", SimpleNamespace(window_manager=wm))
-        ref = '{"generation_id": "current"}'
-        claimed = []
-
-        def execute(script):
-            assert "mixar_agent_ref" not in wm
-            wm["mixar_agent_ref"] = ref
-            if outcome == "accepted":
-                claimed.append(take_agent_ref(bpy.context))
-            if outcome == "exception":
-                raise RuntimeError("operator failed before submit")
-            return SimpleNamespace(to_dict=lambda: {"success": outcome == "accepted"})
-
-        result = pump.execute_request(_req(1), SimpleNamespace(execute=execute))
-        assert result["success"] is (outcome == "accepted")
-        assert "mixar_agent_ref" not in wm
-        assert take_agent_ref(bpy.context) == {}
-        assert claimed == ([{"generation_id": "current"}] if outcome == "accepted" else [])
-
     def test_provenance_set_during_and_cleared_after(self):
         ex = FakeExecutor()
         req = _req(1, session_id="agent:c", agent_ctx={"chat_session_id": "chat", "turn_id": "turn"})

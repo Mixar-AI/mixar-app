@@ -160,7 +160,6 @@ elseif(APPLE AND NOT WITH_GHOST_X11)
     intern/GHOST_SystemCocoa.mm
     # Mixar: runtime-loaded Speech / Vision helpers (no framework link flags).
     intern/GHOST_MixarSpeechCocoa.mm
-    intern/GHOST_MixarMicrophoneCocoa.mm
     intern/GHOST_MixarVisionCocoa.mm
     intern/GHOST_MixarGlassCocoa.mm
     intern/GHOST_WindowCocoa.mm

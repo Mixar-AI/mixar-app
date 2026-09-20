@@ -32,9 +32,10 @@ class MIXAR_LAYERS_HT_header(Header):
         layout = self.layout
         wm = context.window_manager
 
-        # Editor-type switcher omitted: this space is hidden from the
-        # Editor Type menu (same skip list as the Agent Bubble). Zen and
-        # Cinema Mode keep Mixar chrome off that menu too.
+        # Editor Type dropdown: every editor in the Texturing workspace
+        # stays swappable, and this space is listed under the menu's
+        # "Texturing" heading.
+        layout.template_header()
         layout.label(text="Layers")
 
         # Check if mixar_ui exists

@@ -814,16 +814,6 @@ def register():
         default=False,
     )
 
-    # Auto mode: sent as `auto_mode: true` on every agent.chat while set
-    # (core/composer_send.py). The backend persists nothing — the most
-    # recent turn's value governs the run — so this is the sticky state.
-    bpy.types.Scene.mixie_chat_auto_mode = BoolProperty(
-        name="Auto Mode",
-        description="The agent decides every open choice itself instead of "
-                    "asking you, and lists its decisions in the summary",
-        default=False,
-    )
-
     bpy.types.Scene.mixie_chat_is_busy = BoolProperty(
         name="Mixie Is Busy",
         description="True when the agent is processing a request (BUSY state)",
@@ -1026,14 +1016,6 @@ def register():
         description="Chat session identifier for this scene",
         default="",
     )
-    # Kept while the chat's session id is cleared by a revert to before turn 1
-    # (the backend has no conversation there), so the Checkpoints card still
-    # lists that timeline and its turns can be reapplied.
-    bpy.types.Scene.mixie_checkpoint_session_id = StringProperty(
-        name="Checkpoint Session ID",
-        description="Session whose turn checkpoints this scene still shows",
-        default="",
-    )
 
 
 def unregister():
@@ -1069,10 +1051,10 @@ def unregister():
     # Remove Scene-level properties
     for attr in (
         'mixie_chat_layout_epoch',
-        'mixie_session_id', 'mixie_checkpoint_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
+        'mixie_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
         'mixie_chat_model', 'mixie_chat_generate_type',
         'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
-        'mixie_chat_auto_mode', 'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
+        'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
         'mixie_run_open', 'mixie_run_id',
         'mixie_chat_mode', 'mixie_addon_project_id', 'mixie_addon_project_name',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',

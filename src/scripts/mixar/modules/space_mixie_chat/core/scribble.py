@@ -7,14 +7,8 @@
 The C++ ink overlay captures the strokes and, ~``SCRIBBLE_IDLE_COMMIT_MS``
 after the pen lifts, dispatches ``mixie_chat.ink_commit`` with them as JSON
 and clears its canvas. Everything from that point is here: validate the
-payload, read it on device if this platform can (``scribble_local``), else
-rasterize it (``scribble_raster``), POST it to the handwriting endpoint, and
-append the transcription to ``scene.mixie_chat_input``.
-
-**The queue carries strokes, not pixels.** The two recognisers frame the ink
-differently — a text line for the platform reader, a 1280 px page for the
-vision model — so there is no one raster to share, and the backend's is only
-rendered if the backend is actually reached.
+payload, rasterize it (``scribble_raster``), POST it to the handwriting
+endpoint, and append the transcription to ``scene.mixie_chat_input``.
 
 **Pipelined on the wire, delivered in order.** A user writing continuously
 produces a new batch every pause, and each round trip is about a second at
@@ -58,14 +52,10 @@ logger = get_logger(__name__)
 # longer here has already been settled.
 _in_flight: Dict[int, object] = {}
 
-# Batches waiting for a slot, oldest first: (seq, scene, payload). The
-# PARSED STROKES, not pixels: the on-device recogniser frames its own page
-# from the vectors, and it answers for most batches, so rendering the
-# backend's 1280 px raster up front paid for a page that is then thrown
-# away. It is rendered in _post_backend, at the one moment it is needed.
-# (Malformed payloads still fail at the operator — parse_strokes_payload
-# runs there, before anything is queued.)
-_pending: List[Tuple[int, object, dict]] = []
+# Batches waiting for a slot, oldest first: (seq, scene, png_bytes). The
+# strokes are rasterized when they are handed over, so a malformed batch
+# fails at the operator rather than seconds later when its turn comes up.
+_pending: List[Tuple[int, object, bytes]] = []
 
 # Batches that have landed but whose predecessors have not: seq -> (scene,
 # text, error). Released into the composer in sequence order.
@@ -193,12 +183,13 @@ def handle_commit(scene, payload: str) -> bool:
 
 
 def submit_strokes(scene, payload: dict) -> None:
-    """Put *payload* on the wire, or behind the batches already there when
-    every slot is taken."""
+    """Rasterize *payload* and put it on the wire, or behind the batches
+    already there when every slot is taken."""
     global _next_seq
+    image_bytes = _rasterize(payload)
     seq = _next_seq
     _next_seq += 1
-    _pending.append((seq, scene, payload))
+    _pending.append((seq, scene, image_bytes))
     _pump()
 
 
@@ -348,14 +339,14 @@ def _pump() -> None:
     _pumping = True
     try:
         while _pending and len(_in_flight) < SCRIBBLE_MAX_IN_FLIGHT:
-            seq, scene, payload = _pending.pop(0)
-            _start(seq, scene, payload)
+            seq, scene, image_bytes = _pending.pop(0)
+            _start(seq, scene, image_bytes)
     finally:
         _pumping = False
     _set_busy()
 
 
-def _start(seq: int, scene, payload: dict) -> None:
+def _start(seq: int, scene, image_bytes: bytes) -> None:
     """Recognize one batch and wire its completion back onto this queue.
 
     On device FIRST (``scribble_local``: a few hundred milliseconds, offline),
@@ -363,11 +354,6 @@ def _start(seq: int, scene, payload: dict) -> None:
     times out, or when it is not confident enough. Whichever answers, the
     text still enters the composer strictly in written order: both paths
     settle through ``_finish``.
-
-    The backend's raster is built in ``_post_backend`` and nowhere else. The
-    two recognisers want the ink framed differently, so there is no one page
-    to share, and on the path this is tuned for — the on-device reader
-    answering — the backend's copy is never needed at all.
     """
     _in_flight[seq] = scene
 
@@ -379,11 +365,10 @@ def _start(seq: int, scene, payload: dict) -> None:
 
     def _post_backend():
         try:
-            _post(_rasterize(payload), _hint_for(scene), _on_success, _on_error)
+            _post(image_bytes, _hint_for(scene), _on_success, _on_error)
         except Exception as e:
-            # A failure to even dispatch (or to rasterize) must still release
-            # the slot, or every later batch waits on a request that was
-            # never made.
+            # A failure to even dispatch must still release the slot, or every
+            # later batch waits on a request that was never made.
             logger.error("[Scribble] failed to submit handwriting: %s", e)
             _finish(seq, "", e)
 
@@ -395,17 +380,17 @@ def _start(seq: int, scene, payload: dict) -> None:
         else:
             _post_backend()
 
-    if _try_local(payload, _on_local):
+    if _try_local(image_bytes, _on_local):
         return
     _post_backend()
 
 
-def _try_local(payload: dict, on_done) -> bool:
+def _try_local(image_bytes: bytes, on_done) -> bool:
     """Start the on-device reading of one batch; False when there is none."""
     try:
         from . import scribble_local
 
-        return scribble_local.try_start(payload, on_done)
+        return scribble_local.try_start(image_bytes, on_done)
     except Exception:  # noqa: BLE001 — the backend path is always there
         logger.debug("[Scribble] local recognition unavailable", exc_info=True)
         return False

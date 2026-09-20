@@ -6,17 +6,22 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Library — the pane's frame: the source rail, the filter chips and
- * navigation. The tiles and their drag are `agent_ui_generations_grid.cc`,
+ * My Generations — the pane's frame: the source rail, the filter chips and
+ * the paging. The tiles and their drag are `agent_ui_generations_grid.cc`,
  * the right-hand inspector is `agent_ui_generations_detail.cc`, and the
  * gathering pass is `agent_ui_generations_data.cc`.
  *
- * Source, filter, sort, browsed library and selection use stock context
- * operators. Native navigation and scrollbars share the grid/rail RNA state.
+ * \section state Everything is a stock operator
+ *
+ * Source, filter, sort, page, browsed library and selection are all
+ * WindowManager properties, and every control is a plain `wm.context_set_*`
+ * button over the painted surface — the pattern the tab strip and the Queue
+ * tab already use. The pane owns no operator of its own except the three
+ * Python ones that DO something (connect a library, add to scene, add to
+ * board).
  */
 
 #include "agent_ui_text.hh"
-#include "agent_ui_generations_clip.hh"
 
 #include <algorithm>
 #include <cstring>
@@ -28,7 +33,6 @@
 #include "BKE_context.hh"
 
 #include "DNA_screen_types.h"
-#include "DNA_windowmanager_types.h"
 
 #include "GPU_state.hh"
 
@@ -127,6 +131,51 @@ void agent_ui_generations_draw(const bContext *C,
     pane_label_left(rail[i].label, label_x, cy, font_chip, active ? strong : dim);
   }
 
+  /* Registered libraries, listed under the rail while the Asset Library
+   * source is active — the design leaves this column empty, and "connect and
+   * load all your assets" is exactly what it is for. */
+  const int lib_rows = (data.source == GEN_SOURCE_LIBRARY) ? data.lib_count : 0;
+  for (int i = 0; i < lib_rows; i++) {
+    const bool active = STREQ(data.library, data.lib_names[i]);
+    rctf r;
+    r.xmin = GEN_XL(panel, GEN_PAD, u);
+    r.xmax = r.xmin + GEN_RAIL_W * u;
+    r.ymax = GEN_YTOP(panel, GEN_LIB_ROWS_Y + i * GEN_LIB_ROW_PITCH, u);
+    r.ymin = r.ymax - GEN_LIB_ROW_H * u;
+    if (r.ymin < panel.ymin + GEN_PAD * u) {
+      break;
+    }
+    if (active) {
+      pane_fill_round(&r, GEN_META_RADIUS * u, pill_off);
+    }
+    char name[64];
+    BLI_strncpy(name, data.lib_names[i], sizeof(name));
+    pane_fit_text(name, BLI_rctf_size_x(&r) - 24.0f * u, GEN_LIB_FONT * agent_ui_text_unit());
+    pane_label_left(name,
+                    r.xmin + 12.0f * u,
+                    BLI_rctf_cent_y(&r),
+                    GEN_LIB_FONT * agent_ui_text_unit(),
+                    active ? text : dim);
+  }
+  rctf add_lib_rect{};
+  if (data.source == GEN_SOURCE_LIBRARY) {
+    add_lib_rect.xmin = GEN_XL(panel, GEN_PAD, u);
+    add_lib_rect.xmax = add_lib_rect.xmin + GEN_RAIL_W * u;
+    add_lib_rect.ymax = GEN_YTOP(panel, GEN_LIB_ROWS_Y + lib_rows * GEN_LIB_ROW_PITCH, u);
+    add_lib_rect.ymin = add_lib_rect.ymax - GEN_LIB_ROW_H * u;
+    if (add_lib_rect.ymin > panel.ymin + GEN_PAD * u) {
+      pane_fill_round(&add_lib_rect, GEN_META_RADIUS * u, pill_off);
+      pane_label_left("+  Add Library…",
+                      add_lib_rect.xmin + 12.0f * u,
+                      BLI_rctf_cent_y(&add_lib_rect),
+                      GEN_LIB_FONT * agent_ui_text_unit(),
+                      text);
+    }
+    else {
+      add_lib_rect = rctf{};
+    }
+  }
+
   /* ---- Filter chips ---- */
   struct ChipSpec {
     const char *label;
@@ -185,7 +234,7 @@ void agent_ui_generations_draw(const bContext *C,
 
   /* Page chips, only when there is another page to reach. */
   rctf page_rect[2]{};
-  const bool paged = grid.max_scroll > 0;
+  const bool paged = grid.pages > 1;
   if (paged) {
     const float w = GEN_PAGE_W * u;
     const float gap = GEN_PAGE_GAP * u;
@@ -196,7 +245,7 @@ void agent_ui_generations_draw(const bContext *C,
     for (int i = 0; i < 2; i++) {
       page_rect[i].ymax = sort_rect.ymax;
       page_rect[i].ymin = sort_rect.ymin;
-      const bool enabled = (i == 0) ? (grid.offset > 0) : (grid.offset < grid.max_scroll);
+      const bool enabled = (i == 0) ? (grid.page > 0) : (grid.page + 1 < grid.pages);
       pane_fill_round(&page_rect[i], GEN_CHIP_RADIUS * u, chip_off);
       pane_label_centre((i == 0) ? "\xE2\x80\xB9" : "\xE2\x80\xBA", /* ‹ › */
                         BLI_rctf_cent_x(&page_rect[i]),
@@ -214,20 +263,40 @@ void agent_ui_generations_draw(const bContext *C,
       C, region, "agent_island_generations", blender::ui::EmbossType::None);
 
   auto set_enum = [&](const rctf &r, const char *path, const char *value, const char *tip) {
-    ui::Button *but = uiDefButO(block,
-                                ui::ButtonType::But,
-                                "wm.context_set_enum",
-                                blender::wm::OpCallContext::InvokeDefault,
-                                "",
-                                int(r.xmin),
-                                int(r.ymin),
-                                short(BLI_rctf_size_x(&r)),
-                                short(BLI_rctf_size_y(&r)),
-                                tip);
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
+                           blender::wm::OpCallContext::InvokeDefault, "",
+                           int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
+                           short(BLI_rctf_size_y(&r)), tip);
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", path);
       RNA_string_set(op_ptr, "value", value);
+    }
+  };
+  auto set_string = [&](const rctf &r, const char *path, const char *value, const char *tip) {
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_string",
+                           blender::wm::OpCallContext::InvokeDefault, "",
+                           int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
+                           short(BLI_rctf_size_y(&r)), tip);
+    if (but) {
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
+      RNA_string_set(op_ptr, "data_path", path);
+      RNA_string_set(op_ptr, "value", value);
+    }
+    return but;
+  };
+  auto set_int = [&](const rctf &r, const char *path, const int value, const char *tip) {
+    if (BLI_rctf_size_x(&r) <= 0.0f) {
+      return;
+    }
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_int",
+                           blender::wm::OpCallContext::InvokeDefault, "",
+                           int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
+                           short(BLI_rctf_size_y(&r)), tip);
+    if (but) {
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
+      RNA_string_set(op_ptr, "data_path", path);
+      RNA_int_set(op_ptr, "value", value);
     }
   };
 
@@ -238,25 +307,41 @@ void agent_ui_generations_draw(const bContext *C,
              (i == 0) ? "Everything Mixar has generated" :
                         "Browse and connect Blender asset libraries");
   }
-  agent_ui_generations_libraries(C, block, panel, u, data);
+  for (int i = 0; i < lib_rows; i++) {
+    rctf r;
+    r.xmin = GEN_XL(panel, GEN_PAD, u);
+    r.xmax = r.xmin + GEN_RAIL_W * u;
+    r.ymax = GEN_YTOP(panel, GEN_LIB_ROWS_Y + i * GEN_LIB_ROW_PITCH, u);
+    r.ymin = r.ymax - GEN_LIB_ROW_H * u;
+    if (r.ymin < panel.ymin + GEN_PAD * u) {
+      break;
+    }
+    /* Clicking the library already shown clears the filter back to all of
+     * them, so the row is a toggle rather than a one-way trip. */
+    set_string(r,
+               "window_manager.mixar_generations_library",
+               STREQ(data.library, data.lib_names[i]) ? "" : data.lib_names[i],
+               "Show only this asset library");
+  }
+  if (BLI_rctf_size_x(&add_lib_rect) > 0.0f) {
+    uiDefButO(block, ui::ButtonType::But, "mixar.generations_add_library",
+              blender::wm::OpCallContext::InvokeDefault, "",
+              int(add_lib_rect.xmin), int(add_lib_rect.ymin),
+              short(BLI_rctf_size_x(&add_lib_rect)), short(BLI_rctf_size_y(&add_lib_rect)),
+              "Connect a folder as an asset library");
+  }
 
   for (int i = 0; i < int(ARRAY_SIZE(chips)); i++) {
-    set_enum(chip_rect[i],
-             "window_manager.mixar_generations_filter",
-             chips[i].value,
+    set_enum(chip_rect[i], "window_manager.mixar_generations_filter", chips[i].value,
              "Filter the grid");
   }
   {
-    ui::Button *but = uiDefButO(block,
-                                ui::ButtonType::But,
-                                "wm.context_toggle_enum",
-                                blender::wm::OpCallContext::InvokeDefault,
-                                "",
-                                int(sort_rect.xmin),
-                                int(sort_rect.ymin),
-                                short(BLI_rctf_size_x(&sort_rect)),
-                                short(BLI_rctf_size_y(&sort_rect)),
-                                "Newest first / oldest first");
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_toggle_enum",
+                           blender::wm::OpCallContext::InvokeDefault, "",
+                           int(sort_rect.xmin), int(sort_rect.ymin),
+                           short(BLI_rctf_size_x(&sort_rect)),
+                           short(BLI_rctf_size_y(&sort_rect)),
+                           "Newest first / oldest first");
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_generations_sort");
@@ -265,28 +350,9 @@ void agent_ui_generations_draw(const bContext *C,
     }
   }
   if (paged) {
-    for (int i = 0; i < 2; i++) {
-      const rctf &r = page_rect[i];
-      if (BLI_rctf_size_x(&r) <= 0) {
-        continue;
-      }
-      ui::Button *but = uiDefButO(block,
-                                  ui::ButtonType::But,
-                                  "mixar.generations_navigate",
-                                  wm::OpCallContext::InvokeDefault,
-                                  "",
-                                  int(r.xmin),
-                                  int(r.ymin),
-                                  short(BLI_rctf_size_x(&r)),
-                                  short(BLI_rctf_size_y(&r)),
-                                  i ? "Next rows" : "Previous rows");
-      PointerRNA *op = ui::button_operator_ptr_ensure(but);
-      RNA_enum_set(op, "action", 1);
-      RNA_float_set(op, "delta", i ? 1 : -1);
-    }
-    PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
-    agent_ui_generations_scrollbar(
-        block, &wm, "mixar_generations_scroll", grid.scrollbar, BLI_rctf_size_y(&grid.view), grid.max_scroll);
+    set_int(page_rect[0], "window_manager.mixar_generations_page", grid.page - 1,
+            "Previous page");
+    set_int(page_rect[1], "window_manager.mixar_generations_page", grid.page + 1, "Next page");
   }
 
   rctf selected_tile;
@@ -301,9 +367,10 @@ void agent_ui_generations_draw(const bContext *C,
   ui::block_end(C, block);
   ui::block_draw(C, block);
 
-  /* Clip the selection ring along with partial rows. */
+  /* Selection ring LAST: an asset tile is a preview button, so the block just
+   * painted a thumbnail over the whole tile. A ring drawn before that keeps
+   * only the half outside the tile edge and reads as a hairline. */
   if (BLI_rctf_size_x(&selected_tile) > 0.0f) {
-    const GenViewportClip clip(grid.view);
     const float accent[4] = AGENT_COL_ACCENT;
     const float w = GEN_SEL_BORDER * u;
     rctf ring = selected_tile;

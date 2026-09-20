@@ -23,13 +23,15 @@ from ..utils.ui_channel_panels import draw_channels_tab
 class MIXAR_PROPERTIES_HT_header(Header):
     """Title bar for the Mixar Properties space.
 
-    No ``template_header()``: the space is hidden from the Editor Type
-    dropdown, matching Zen / Cinema chrome that is not a switchable editor.
+    Draws ``template_header()``: every editor in the Texturing workspace
+    stays swappable, so this space keeps the stock Editor Type dropdown and
+    appears under the menu's "Texturing" heading.
     """
     bl_space_type = 'MIXAR_PROPERTIES'
 
     def draw(self, context):
         layout = self.layout
+        layout.template_header()
         layout.label(text="Properties")
 
 

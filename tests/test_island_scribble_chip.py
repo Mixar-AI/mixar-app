@@ -78,8 +78,7 @@ def test_attachment_column_does_not_overlap_the_scribble_chips():
     assert "footer_thumbnails_draw_image" not in body
     references = (CPP / "agent_bubble_references.cc").read_text()
     visible = _function_body(references, "bool agent_bubble_references_visible(")
-    assert "!state.ink_visible" in visible
-    assert "agent_bubble_reference_count(C) > 0" in visible
+    assert "state.active_tab == AGENT_TAB_AGENT && !state.ink_visible" in visible
     assert "RGN_TYPE_UI" in references
 
 

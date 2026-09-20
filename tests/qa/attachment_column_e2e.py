@@ -59,7 +59,7 @@ def run(qa):
         dest = out/folder
         dest.mkdir(exist_ok=True)
         paths.append(png(dest/'reference.png', color, width=dimensions[0], height=dimensions[1]))
-    paths += [png(out/f'reference-{i}.png', (65,160,100)) for i in range(8)]
+    paths += [png(out/f'reference-{i}.png', (65,160,100)) for i in range(3)]
 
     def loading_guard():
         actual = qa.eval("cls=bpy.types.Operator.bl_rna_get_subclass_py('MIXIE_CHAT_OT_add_image_from_file')\n"
@@ -110,7 +110,7 @@ def run(qa):
 
     def fill_and_scroll():
         batch_drop(qa, paths[2:], chat=True)
-        assert len(attachments(qa)) == 10, attachments(qa)
+        assert len(attachments(qa)) == 5, attachments(qa)
         assert size(qa) == original, (size(qa), original)
         qa.click(area_type='AGENT_BUBBLE', prop='mixie_chat_input')
         wheel(qa, count=3)
@@ -127,7 +127,7 @@ def run(qa):
         qa.cmd('drag', **{'from':{'window':scroll['window'],'x':x,'y':y1-5},
                           'to':{'window':scroll['window'],'x':x,'y':y0+5}})
         assert qa.eval(f'result={SCROLL}') > .9, 'Scrollbar did not reach the end'
-        assert qa.find(surface='reference_preview', index=9)['total'] == 1
+        assert qa.find(surface='reference_preview', index=4)['total'] == 1
         assert qa.eval(f'result={SCENE}.mixie_chat_input') == draft, qa.eval(f'result={SCENE}.mixie_chat_input')
         capture(qa,out,'column-last')
     qa.step('wheel_and_first_click_scrollbar_keep_draft', fill_and_scroll)
@@ -182,7 +182,7 @@ def run(qa):
         capture(qa,out,'column-empty')
         assert qa.eval(f'result={SCENE}.mixie_chat_input') == draft, qa.eval(f'result={SCENE}.mixie_chat_input')
     qa.step('last_removal_restores_full_chat_width', remove_all)
-    verdict = {'large_inline_previews':True,'ten_references_scrollable':True,
+    verdict = {'large_inline_previews':True,'five_references_scrollable':True,
                'native_scrollbar_drag':True,'draft_preserved':True,'identity_removal':True,
                'transcript_reserved_width':True,'paid_requests':0}
     (out/'attachment-column-verdict.json').write_text(json.dumps(verdict,indent=2)+'\n')

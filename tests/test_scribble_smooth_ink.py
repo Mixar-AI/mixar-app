@@ -127,46 +127,7 @@ def test_chat_canvas_resamples_at_draw_time_only():
 
 def test_viewport_overlay_smooths_strokes_before_drawing():
     assert "from .smoothing import catmull_rom" in OVERLAY_PY
-    smooth = OVERLAY_PY[OVERLAY_PY.index("def _smooth(") :]
-    smooth = smooth[: smooth.index("\ndef ")]
-    assert "catmull_rom(points)" in smooth
-    draw = OVERLAY_PY[OVERLAY_PY.index("def _draw_smoothed(") :]
+    draw = OVERLAY_PY[OVERLAY_PY.index("def _draw_strokes(") :]
     draw = draw[: draw.index("\ndef ")]
+    assert "catmull_rom(points)" in draw
     assert "POLYLINE_UNIFORM_COLOR" in draw
-
-
-def test_viewport_overlay_splines_settled_ink_once():
-    """Re-splining the whole drawing on every pointer sample makes the pen lag
-    the further into a sketch the user gets. A settled mark never changes, so
-    it is splined as it settles and the draw pass only replays the result."""
-    push = OVERLAY_PY[OVERLAY_PY.index("def push_settled(") :]
-    push = push[: push.index("\ndef ")]
-    assert "_settled_smooth.append" in push
-    assert "_smooth(s)" in push
-
-    callback = OVERLAY_PY[OVERLAY_PY.index("def _draw_callback(") :]
-    callback = callback[: callback.index("\ndef ")]
-    # The draw pass replays the cache; it must not spline settled ink itself.
-    assert "for polylines in _settled_smooth" in callback
-    assert "_draw_strokes(" not in callback
-
-    # Every path that drops settled ink must drop its splines with it, or the
-    # overlay paints marks that have been undone.
-    for name in ("def pop_settled(", "def reset_ink(", "def reset("):
-        body = OVERLAY_PY[OVERLAY_PY.index(name) :]
-        body = body[: body.index("\ndef ")]
-        assert "_settled_smooth" in body, name
-
-
-def test_viewport_overlay_respilines_only_the_stroke_under_the_pen():
-    """The pen extends exactly one stroke at a time; re-splining the rest of
-    the group on every sample is work that grows with what is already drawn."""
-    body = OVERLAY_PY[OVERLAY_PY.index("def _live_smoothed(") :]
-    body = body[: body.index("\ndef ")]
-    assert "_live_lens[index] == count" in body
-    assert "continue" in body
-    # Handing over a new live buffer must invalidate the per-stroke cache.
-    setter = OVERLAY_PY[OVERLAY_PY.index("def set_live_strokes(") :]
-    setter = setter[: setter.index("\ndef ")]
-    assert "_live_smooth.clear()" in setter
-    assert "_live_lens.clear()" in setter

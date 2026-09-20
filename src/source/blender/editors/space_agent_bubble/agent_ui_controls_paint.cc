@@ -288,49 +288,8 @@ void agent_ui_draw_chip_row(ARegion *region,
         voice_fill);
     fill_round(&layout->chip_voice, radius, voice_fill);
     chip_content(layout->chip_voice, AGENT_ICON_MIC,
-                 state->voice_listening ? state->voice_status : "Voice",
+                 state->voice_listening ? "Listening" : "Voice",
                  size, icon_edge, icon_gap, text, voice_fill);
-  }
-
-  /* Auto, right of Voice: an "Auto" label and a sliding ON/OFF switch. The
-   * chip bed stays neutral (hover/press only) — the switch carries the state:
-   * its track blends to the accent and the thumb rides `feedback.selected`,
-   * so a click slides it across on the shared Zen timing instead of
-   * jumping. The label brightens with it. */
-  {
-    const float accent[4] = AGENT_COL_ACCENT;
-    const float track_off[4] = AGENT_COL_CHIP_ACTIVE;
-    const float text_dim[4] = AGENT_COL_TEXT_DIM;
-    const AgentIslandFeedback feedback = agent_ui_motion_sample(
-        region, AgentIslandControl::Auto, layout->chip_auto, state->auto_mode);
-    float auto_fill[4];
-    agent_ui_motion_color(chip, chip, feedback, auto_fill);
-    fill_round(&layout->chip_auto, radius, auto_fill);
-
-    const float cy = BLI_rctf_cent_y(&layout->chip_auto);
-    const float switch_w = AGENT_SWITCH_W * u;
-    const float switch_h = AGENT_SWITCH_H * u;
-    const float inset = AGENT_SWITCH_INSET * u;
-    const rctf track{layout->chip_auto.xmax - pad - switch_w,
-                     layout->chip_auto.xmax - pad,
-                     cy - switch_h * 0.5f,
-                     cy + switch_h * 0.5f};
-    float track_fill[4];
-    agent_ui_motion_color(track_off, accent, {0.0f, 0.0f, feedback.selected}, track_fill);
-    fill_round(&track, switch_h * 0.5f, track_fill);
-    const float thumb_d = switch_h - inset * 2.0f;
-    const float thumb_x = track.xmin + inset +
-                          (switch_w - thumb_d - inset * 2.0f) * feedback.selected;
-    const rctf thumb{thumb_x, thumb_x + thumb_d, track.ymin + inset, track.ymax - inset};
-    fill_round(&thumb, thumb_d * 0.5f, text);
-
-    float label_col[4];
-    agent_ui_motion_color(text_dim, text, {0.0f, 0.0f, feedback.selected}, label_col);
-    const std::string label = ui::mixar_fit_text(
-        "Auto",
-        std::max(0.0f, track.xmin - icon_gap - (layout->chip_auto.xmin + pad)),
-        size);
-    label_left(label.c_str(), layout->chip_auto.xmin + pad, cy, size, label_col);
   }
 
   /* Send. */

@@ -93,16 +93,14 @@ def run(qa):
     qa.click(op='MIXIE_CHAT_OT_abort_session')
     qa.wait(f'{SCENE}.mixie_chat_state == "IDLE" and not {SCENE}.mixie_run_open', timeout=45)
     snap(qa, 'cancelled')
-    # Settings no longer ride this socket -- BYOK and the model catalog are HTTP
-    # (see tests/qa/byok_http_e2e.py). The backend still registers the commands
-    # for older clients, but probing them here would assert a path this client
-    # does not take. What stays is the recovery surface, which is socket-only.
     qa.eval(f'from mixar.modules.common.agent_rpc.client import call\n'
             f'drv.ws_checks = {{}}\nsid = {SCENE}.mixie_session_id\n'
             "call('agent.status', {'session_ids': [sid]}, lambda value: drv.ws_checks.update(status=value))\n"
+            "call('agent.models.list', {'payload': {}}, lambda value: drv.ws_checks.update(models_ok=not bool(value.get('code'))))\n"
+            "call('agent.byok.get', {'payload': {}}, lambda value: drv.ws_checks.update(byok_ok=not bool(value.get('code'))))\n"
             'result = True')
-    qa.wait("any(t.get('status') == 'cancelled' for t in "
-            "drv.ws_checks.get('status', {}).get('turns', {}).values())", timeout=45)
+    qa.wait("drv.ws_checks.get('models_ok') and drv.ws_checks.get('byok_ok') and "
+            "any(t.get('status') == 'cancelled' for t in drv.ws_checks.get('status', {}).get('turns', {}).values())", timeout=45)
     qa.click(surface='chat_star', index=4)
     qa.wait(f'any(m.feedback_rating == 4 and m.feedback_status == 2 for m in {SCENE}.mixie_chat_messages)', timeout=45)
     snap(qa, 'feedback')

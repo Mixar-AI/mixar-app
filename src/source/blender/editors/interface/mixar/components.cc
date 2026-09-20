@@ -99,7 +99,6 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
       }
     }
     if (editing || (button.flag & BUT_REDALERT)) {
-      draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(
           &rect, false, radius * u, (button.flag & BUT_REDALERT) ? zen.danger : zen.focus);
     }

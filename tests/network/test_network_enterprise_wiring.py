@@ -45,41 +45,6 @@ def test_auth_transport_failures_are_classified():
     assert source.count("log_network_failure(") >= 3
 
 
-def test_byok_transport_failures_are_classified():
-    """BYOK settings are HTTP again, so its transport failures are real.
-
-    Under the WebSocket transport every failure arrived as an AgentRPCError
-    carrying a status code, so the network branch was dead and a DNS failure
-    surfaced as "Agent is reconnecting". Over HTTP the branch is live, and a
-    customer behind a TLS-inspecting proxy needs the NET-* code, not a flat
-    "could not reach Mixar".
-    """
-    source = _read(
-        "src", "scripts", "mixar", "modules", "byok", "core", "byok_client.py"
-    )
-    assert "classify_network_error(" in source
-    assert "log_network_failure(" in source
-    assert "Could not reach Mixar" not in source
-    assert "Unable to connect to server" not in source
-
-
-def test_http_client_chains_the_original_transport_exception():
-    """`from e` is what lets classify_network_error see the real cause.
-
-    HTTPClient wraps requests' exceptions in its own types. Without chaining,
-    the classifier walks a chain that ends at "Failed to connect to <url>",
-    returns NET-UNKNOWN, and every caller's message degrades to the generic
-    string the contract bans — the TLS/proxy/DNS signatures all live in the
-    wrapped exception.
-    """
-    source = _read(
-        "src", "scripts", "mixar", "modules", "common", "api", "client.py"
-    )
-    assert "raise TimeoutError(f\"Request to {url} timed out\") from e" in source
-    assert "raise ConnectionError(f\"Failed to connect to {url}\") from e" in source
-    assert "raise HTTPClientError(str(e)) from e" in source
-
-
 def test_sso_token_exchange_is_classified_and_stores_fenced_pair():
     source = _read("src", "scripts", "mixar", "modules", "auth", "core", "sso.py")
     assert "classify_network_error(" in source

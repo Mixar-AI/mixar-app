@@ -3,8 +3,6 @@
 #pragma once
 
 #include "BLI_rect.h"
-#include <string>
-#include <vector>
 
 namespace blender {
 struct ARegion;
@@ -12,7 +10,6 @@ struct bContext;
 struct wmWindow;
 struct wmWindowManager;
 struct wmOperatorType;
-struct Scene;
 struct AgentIslandLayout;
 struct AgentIslandState;
 namespace ui {
@@ -21,11 +18,6 @@ struct Block;
 
 constexpr float AGENT_REFERENCE_COLUMN_W = 288.0f;
 constexpr const char *AGENT_REFERENCE_SCROLL = "mixar_reference_scroll";
-struct AgentReference {
-  std::string path, name, source;
-};
-/** Read the active pane's inputs without copying them into the chat draft. */
-std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowManager *wm);
 struct AgentReferenceGeometry {
   rctf view;
   rctf scrollbar;

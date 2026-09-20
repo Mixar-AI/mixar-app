@@ -381,10 +381,6 @@ static void view3d_main_region_init(wmWindowManager *wm, ARegion *region)
    * toast button clicks are captured before viewport interactions. */
   view3d_toast_click_register(region);
 
-  /* `~` toggles the Zen moodboard drawer. First so Object Mode and the
-   * View pie never see the key while the operator polls. */
-  view3d_moodboard_drawer_toggle_handlers_add(wm, region);
-
   /* object ops. */
 
   /* important to be before Pose keymap since they can both be enabled at once */

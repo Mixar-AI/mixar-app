@@ -14,10 +14,8 @@
  *   status text   scene.mixie_chat_state   (the enum item's own UI name)
  *   status dot    scene.mixie_chat_is_busy
  *   title         the wm.mixie_chat_history_entries row whose session_id
- *                 matches scene.mixie_session_id; empty when none matches
- *                 (no invented "New Chat" fallback)
+ *                 matches scene.mixie_session_id
  *   segmented     scene.mixie_chat_mode == 'AGENT'
- *   auto switch   scene.mixie_chat_auto_mode
  *   placeholder   shown while scene.mixie_chat_input is empty
  *   queue count   live rows in wm.mixie_queue.items
  *   cat catch     ED_moodboard_attachment_incoming (the live flight clock)
@@ -191,6 +189,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   r_state->splat_is_new = true;
   r_state->placeholder = "Describe your scene here...";
   r_state->agent_mode = true;
+  BLI_strncpy(r_state->title, "New Chat", sizeof(r_state->title));
 
   Scene *scene = CTX_data_scene(C);
   wmWindowManager *wm = CTX_wm_manager(C);
@@ -231,9 +230,6 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                            enum_is(&scene_ptr, "mixie_chat_state", "BUSY") ||
                            enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
     r_state->agent_mode = enum_is(&scene_ptr, "mixie_chat_mode", "AGENT");
-    /* A scene saved before the chat registered the property reads false —
-     * the same default the send path uses (core/composer_send.py). */
-    r_state->auto_mode = read_bool_prop(&scene_ptr, "mixie_chat_auto_mode");
     cat.busy = r_state->status_busy;
     cat.waiting = enum_is(&scene_ptr, "mixie_chat_state", "AWAITING_INPUT") ||
                   enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
@@ -327,7 +323,6 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     r_state->voice_listening = read_bool_prop(&wm_ptr, "mixie_chat_voice_listening");
-    read_string_prop(&wm_ptr, "mixie_chat_voice_status", r_state->voice_status, sizeof(r_state->voice_status));
   }
   cat.listening = r_state->voice_listening;
   if (scene) {

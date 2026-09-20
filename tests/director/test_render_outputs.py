@@ -78,7 +78,7 @@ def test_render_job_builds_movies_and_restores_temporary_scene_state():
     assert "bpy.app.handlers.render_cancel" in job
     assert "bpy.app.handlers.render_write" in job
     assert "restore_render_settings(" in job
-    assert "_queue_next_pass(target)" in job
+    assert "_queue_next_pass(shot)" in job
     assert "_start_next_pass_when_idle" in job
     assert 'bpy.app.is_job_running("RENDER")' in job
     assert "return _NEXT_PASS_POLL_SECONDS" in job

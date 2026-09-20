@@ -14,8 +14,8 @@ Left T-panel toolbar with core moodboard actions:
   • Annotate   — draw persistent freehand notes on a selected image
 
 The media and text builders are shared by both canvas hosts. The Zen drawer
-adds persistent canvas Annotate and Erase tools in the same glass capsule;
-the Mixie T-panel also exposes image-attached mask/annotation controls.
+adds a persistent canvas Annotate tool in the same glass capsule; the Mixie
+T-panel also exposes image-attached mask/annotation controls.
 """
 
 import bpy
@@ -73,13 +73,6 @@ def draw_moodboard_add_tools(layout, context):
         depress=context.window_manager.mixie_moodboard_annotating,
     )
     col.mixar_style(component="GLASS_TOOL")
-    erasing = bool(getattr(context.window_manager, "mixie_moodboard_erasing", False))
-    if erasing or getattr(context.scene, "mixie_moodboard_annotations", None):
-        col.operator(
-            "mixie.moodboard_erase_canvas", text="", icon="X",
-            depress=erasing,
-        )
-        col.mixar_style(component="GLASS_TOOL")
 
 
 # A Menu (not a popover) so it auto-dismisses the instant an option is
@@ -341,7 +334,7 @@ class MIXIE_PT_moodboard_toolbar(Panel):
 
 
 class VIEW3D_PT_moodboard_drawer_add_tools(Panel):
-    """Native glass capsule for media, text, canvas annotation, and erase.
+    """Native glass capsule for media, text, and canvas annotation.
 
     Hosted on the Zen Mode sliding drawer (VIEW_3D TOOL_PROPS) by the
     native drawer draw path via ``UI_paneltype_draw`` — not by

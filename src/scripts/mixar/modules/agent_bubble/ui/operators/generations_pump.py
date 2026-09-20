@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Redraw heartbeat for the island's Library tab.
+"""Redraw heartbeat for the island's My Generations tab.
 
 Two things on that tab change without any event to notice them:
 

@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * The Library pane's readers: the guarded RNA getters every source
+ * The My Generations pane's readers: the guarded RNA getters every source
  * shares, and the time arithmetic behind a tile's "4d ago".
  *
  * Split out of the gathering pass only to keep both files inside the 500-line

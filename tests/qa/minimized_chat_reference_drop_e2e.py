@@ -50,7 +50,7 @@ def run(qa):
             f"assert not {SCENE}.mixie_chat_pending_attachments\n"
             f"{SCENE}.mixie_chat_input='Use these references for the material'\nresult=True")
     refs = [png(out/f'reference-{i}.png',(60+i*30,150,100),width=180,height=120)
-            for i in range(11)]
+            for i in range(6)]
     corrupt = out/'broken.png'
     corrupt.write_bytes(b'not an image')
     minimise(qa)
@@ -89,13 +89,13 @@ def run(qa):
     def limit():
         minimise(qa)
         drop_on_pill(qa,refs[3:])
-        assert [a['path'] for a in attachments(qa)] == refs[:10]
-        assert len(board(qa)) == 10
+        assert [a['path'] for a in attachments(qa)] == refs[:5]
+        assert len(board(qa)) == 5
     qa.step('minimized_batch_respects_attachment_cap',limit)
     snap_chat(qa,out,'limit-after')
     return {'single_drop':True,'batch_drop':True,'switches_to_agent':True,
             'draft_preserved':True,'dedupe':True,'invalid_rejected':True,
-            'attachment_cap':10,'paid_requests':0}
+            'attachment_cap':5,'paid_requests':0}
 
 
 if __name__ == '__main__':

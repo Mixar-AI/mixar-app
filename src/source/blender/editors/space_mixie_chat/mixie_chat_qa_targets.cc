@@ -15,10 +15,6 @@
 #include <algorithm>
 
 #include "BLI_rect.h"
-#include "BLI_string.h"
-
-#include "BKE_global.hh"
-#include "BKE_main.hh"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -28,7 +24,6 @@
 
 #include "../interface/interface_qa_inspect.hh"
 
-#include "mixie_chat_history_intern.hh"
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
@@ -139,55 +134,6 @@ void chat_qa_targets(const wmWindow * /*win*/,
         t.value = layout.bubble_id;
         r_targets.push_back(std::move(t));
       }
-    }
-  }
-
-  /* The past-chats / checkpoints card (screen-space, region-local rects):
-   * its rows and close button, read from the same hit rects the events use.
-   * `sel` on a row = armed (Delete? / Revert?); `detail` on a checkpoint row
-   * = its section ("Turns", "Reverted turns", "Safety copies"). */
-  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
-  if (rt != nullptr && rt->history_overlay_active) {
-    wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
-    const bool checkpoints = (mixie_chat_history_read_mode(wm) == HistoryMode::Checkpoints);
-    const bool locked = checkpoints && mixie_chat_history_read_locked(wm);
-    const char *row_surface = checkpoints ? "chat_checkpoint_row" : "chat_history_row";
-    auto region_rect = [region](const rctf &r, rcti *r_win) {
-      if (r.xmax <= r.xmin || r.ymax <= r.ymin) {
-        return false;
-      }
-      r_win->xmin = region->winrct.xmin + int(r.xmin);
-      r_win->xmax = region->winrct.xmin + int(r.xmax);
-      r_win->ymin = region->winrct.ymin + int(r.ymin);
-      r_win->ymax = region->winrct.ymin + int(r.ymax);
-      return true;
-    };
-    int index = 0;
-    for (const HistoryRowHit &row : rt->history_rows) {
-      /* Only rows inside the list viewport are clickable. */
-      rctf visible = row.bounds;
-      visible.ymin = std::max(visible.ymin, rt->history_list_bounds.ymin);
-      visible.ymax = std::min(visible.ymax, rt->history_list_bounds.ymax);
-      MixarQATarget t;
-      if (region_rect(visible, &t.rect_win)) {
-        t.surface = row_surface;
-        t.text = row.title;
-        t.value = row.session_id;
-        t.index = index;
-        t.enabled = !locked;
-        t.sel = STREQ(rt->history_confirm_id, row.session_id);
-        if (checkpoints) {
-          t.detail = row.group;
-        }
-        r_targets.push_back(std::move(t));
-      }
-      index++;
-    }
-    MixarQATarget close;
-    if (region_rect(rt->history_close_bounds, &close.rect_win)) {
-      close.surface = checkpoints ? "chat_checkpoints_close" : "chat_history_close";
-      close.text = "close";
-      r_targets.push_back(std::move(close));
     }
   }
 }

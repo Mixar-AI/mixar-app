@@ -88,7 +88,7 @@ def get_selected_moodboard_items(scene):
     """Return counts of selected moodboard items.
 
     Returns:
-        Tuple of (images, textboxes, frames).
+        Tuple of (images, textboxes, groups).
     """
     images = (
         sum(1 for img in scene.mixie_moodboard_images if img.selected)
@@ -98,11 +98,11 @@ def get_selected_moodboard_items(scene):
         sum(1 for tb in scene.mixie_moodboard_textboxes if tb.selected)
         if hasattr(scene, 'mixie_moodboard_textboxes') else 0
     )
-    frames = (
-        sum(1 for frame in scene.mixie_moodboard_frames if frame.selected)
-        if hasattr(scene, 'mixie_moodboard_frames') else 0
+    groups = (
+        sum(1 for grp in scene.mixie_moodboard_groups if grp.selected)
+        if hasattr(scene, 'mixie_moodboard_groups') else 0
     )
-    return (images, textboxes, frames)
+    return (images, textboxes, groups)
 
 
 def redraw_mixie_areas() -> None:

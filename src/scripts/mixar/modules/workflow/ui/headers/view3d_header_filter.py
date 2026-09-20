@@ -5,13 +5,13 @@
 """3D viewport header & tool-panel filter for the dual-mode UI system.
 
 Monkey-patches:
-- VIEW3D_HT_header.draw         → floating liquid-glass Wireframe /
-                                   Solid / Material Preview / Rendered
-                                   strip plus the shading popover in
-                                   Zen Mode AND on the Texturing /
-                                   Texture Paint workspaces. Zen Mode
-                                   also parks a guides chip (grid +
-                                   relationship lines) beside that strip.
+- VIEW3D_HT_header.draw         → in Zen Mode only, a floating
+                                   liquid-glass Wireframe / Solid /
+                                   Material Preview / Rendered strip plus
+                                   the shading popover and a guides chip
+                                   (grid + relationship lines). Every other
+                                   workspace — Texturing included — keeps
+                                   Blender's full viewport header.
 - VIEW3D_HT_tool_header.draw    → renders nothing in Zen mode (empty strip).
 - VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale in Zen mode,
                                    as one vertically centred group.
@@ -32,19 +32,19 @@ Mode check uses context.workspace.name, not the global ui_mode preference.
 This is workspace-driven so the right rendering happens regardless of which
 window is active or whether a workspace switch is mid-flight, and so the
 "AI Mode" workspace tab in Engine mode renders as a regular Pro workspace
-(the Zen-only tool strip does NOT apply there). The Mixar viewport header
-also applies on the Texturing / Texture Paint workspace tabs.
+(the Zen-only tool strip does NOT apply there).
+
+Texturing / Texture Paint are ordinary Engine workspaces here: their 3D
+viewport keeps the stock header — Editor Type dropdown, View/Select/Add
+menus, mode selector, the native shading strip and the rest — because a
+texture-painting workspace is a working editor, not a calm canvas.
 """
 
 import bpy
 
 from mixar.config.logging_config import get_logger
 
-from ...constants import (
-    BASIC_WORKSPACE_NAME,
-    TEXTURING_WORKSPACE_NAMES,
-    ZEN_TRANSFORM_TOOL_IDS,
-)
+from ...constants import BASIC_WORKSPACE_NAME, ZEN_TRANSFORM_TOOL_IDS
 from ...core import viewport_guides
 from ..operators import zen_tool_toggle
 
@@ -71,32 +71,16 @@ def _is_basic_workspace(context) -> bool:
     return ws is not None and ws.name == BASIC_WORKSPACE_NAME
 
 
-def _is_texturing_workspace(context) -> bool:
-    """True if this window is on Mixar's texture-painting workspace."""
-    ws = getattr(context, "workspace", None)
-    return ws is not None and ws.name in TEXTURING_WORKSPACE_NAMES
-
-
-def _uses_mixar_viewport_header(context) -> bool:
-    """Zen and Texturing share the Mixar viewport header.
-
-    The tool-header empty-strip and the Move/Rotate/Scale toolbar stay
-    Zen-only: Texturing still needs stock paint/brush chrome in those
-    regions. Cinema Mode keeps its own C++ overlays and does not pass
-    through here.
-    """
-    return _is_basic_workspace(context) or _is_texturing_workspace(context)
-
-
 def _patched_header_draw(self, context):
     """Replacement for VIEW3D_HT_header.draw.
 
-    Zen and Texturing: a floating Move/Rotate/Scale-style liquid-glass
-    strip of Wireframe / Solid / Material Preview / Rendered plus the
-    shading options popover. The header region itself has no bar. Other
-    Engine workspaces: defer to the original draw.
+    Zen mode: a floating Move/Rotate/Scale-style liquid-glass strip of
+    Wireframe / Solid / Material Preview / Rendered plus the guides chip
+    and the shading options popover. The header region itself has no bar.
+    Every other workspace — Texturing and Texture Paint included — defers
+    to the original draw and keeps Blender's full viewport header.
     """
-    if not _uses_mixar_viewport_header(context):
+    if not _is_basic_workspace(context):
         if _original_header_draw is not None:
             _original_header_draw(self, context)
         return
@@ -126,15 +110,14 @@ def _patched_header_draw(self, context):
     surface = cluster.mixar_surface(theme="ZEN")
     row = surface.row(align=True)
     row.prop(shading, "type", text="", expand=True)
-    if _is_basic_workspace(context):
-        cluster.separator(factor=0.4)
-        chip = cluster.mixar_surface(theme="ZEN").row(align=True)
-        chip.operator(
-            "mixar.zen_toggle_guides",
-            text="",
-            icon="GRID",
-            depress=viewport_guides.guides_shown(view),
-        )
+    cluster.separator(factor=0.4)
+    chip = cluster.mixar_surface(theme="ZEN").row(align=True)
+    chip.operator(
+        "mixar.zen_toggle_guides",
+        text="",
+        icon="GRID",
+        depress=viewport_guides.guides_shown(view),
+    )
     cluster.separator(factor=0.4)
     cluster.popover(panel="VIEW3D_PT_shading", text="")
 

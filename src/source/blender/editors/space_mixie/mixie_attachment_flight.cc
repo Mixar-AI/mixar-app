@@ -17,14 +17,12 @@
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
-#include "DNA_userdef_types.h"
 #include "DNA_windowmanager_types.h"
 #include "ED_moodboard_attachment.hh"
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 #include "GPU_texture.hh"
 #include "RNA_access.hh"
-#include "UI_mixar_motion.hh"
 #include "RNA_define.hh"
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -124,13 +122,6 @@ Image *live_image(const Flight &flight)
 }
 float progress(const Flight &f)
 {
-  /* Reduce Motion: report the flight already past its end. It is retired on the
-   * next tick without ever being drawn, which is the same end state -- the
-   * attachment was registered by the operator, not by the animation -- reached
-   * without an image flying across the screen. */
-  if (f.start && blender::ui::mixar_motion_reduced()) {
-    return 2.0f;
-  }
   return float((BLI_time_now_seconds() - f.start) / ATTACHMENT_FLIGHT_SECONDS);
 }
 

@@ -55,7 +55,8 @@ namespace {
 
 void fill_round(const rctf *rect, const float radius, const float col[4])
 {
-  ui::mixar_fill_round(*rect, radius, col);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(rect, true, radius, col);
 }
 
 void outline_round(const rctf *rect, const float radius, const float col[4])
@@ -79,7 +80,7 @@ void outline_round(const rctf *rect, const float radius, const float col[4])
  * window passes `true`.
  *
  * Native frost passes tint=false: the common sheen and rim finish the pane
- * without stacking another coloured bed on top of AppKit or DWM see-through.
+ * without stacking another coloured bed on top of AppKit or Acrylic.
  */
 void glass_fill_round(const rctf *rect,
                       const ui::eMixarGlassRole role,
@@ -423,8 +424,8 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
    * minimised bubble's whole identity — dim last-prompt preview + Mixie the
    * cat on a green gradient chip (Frame 1533210248.svg, mascot in
    * agent_ui_pill_cat.cc). When working (busy or active queue jobs), it
-   * shows an animated activity dot and a fixed-width activity field on the
-   * status label. Clicking it expands the
+   * shows an animated activity dot and moving progress dots on the status
+   * label. Clicking it expands the
    * island; dragging it moves it (the pill gesture in
    * agent_bubble/ui/operators/bubble_header_drag_op.py). */
   if (w > h * 4.0f) {
@@ -530,22 +531,11 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
 
       /* Trailing dots animation: 0, 1, 2, 3 dots on a 1.6s cycle. */
       const int dot_count = int(fmod(now * 2.5, 4.0));
-      /* Fixed 3-slot activity field. U+00B7 and U+0020 both advance 400/2000 em
-       * in Manrope (BLF_default), and BLF measures the sum of advances, so the
-       * field's width never changes and the preview after it cannot shift. A
-       * '.' is 440 and WOULD shift it; U+2007/U+2008 are not in Manrope at all. */
-      char dots[3 * 2 + 1];
-      char *d = dots;
-      for (int i = 0; i < 3; i++) {
-        if (i < dot_count) {
-          *d++ = '\xc2';
-          *d++ = '\xb7';
-        }
-        else {
-          *d++ = ' ';
-        }
+      char dots[5] = "";
+      for (int i = 0; i < dot_count; i++) {
+        dots[i] = '.';
       }
-      *d = '\0';
+      dots[dot_count] = '\0';
 
       const char *base_status = mixie_cat_activity_name(state->cat_activity);
       char label[160];
@@ -702,20 +692,18 @@ void agent_ui_draw_island(ARegion *region,
                    /*tint=*/!agent_bubble_island_bed_is_transparent(),
                    /*rim=*/false);
 
-  /* Session actions stay available without repeating the active tab title. */
+  /* Card header row is tab-scoped: the chat's discs / session title
+   * belong to the Agent tab; other tabs title the card after themselves. */
   const bool agent_tab = layout->tabs[AGENT_TAB_AGENT].active;
   if (agent_tab) {
     /* Header buttons: an accent disc with a lighter glyph on top. */
-    float history_fill[4], new_chat_fill[4], checkpoints_fill[4];
+    float history_fill[4], new_chat_fill[4];
     agent_ui_motion_color(accent, accent,
                           agent_ui_motion_sample(region, AgentIslandControl::History, layout->hdr_history),
                           history_fill);
     agent_ui_motion_color(accent, accent,
                           agent_ui_motion_sample(region, AgentIslandControl::NewChat, layout->hdr_new_chat),
                           new_chat_fill);
-    agent_ui_motion_color(accent, accent,
-                          agent_ui_motion_sample(region, AgentIslandControl::Checkpoints, layout->hdr_checkpoints),
-                          checkpoints_fill);
     fill_round(&layout->hdr_history,
                BLI_rctf_size_x(&layout->hdr_history) * 0.5f,
                history_fill);
@@ -726,18 +714,9 @@ void agent_ui_draw_island(ARegion *region,
                new_chat_fill);
     agent_ui_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, new_chat_fill);
 
-    /* Turn checkpoints: same disc, a counter-clockwise arrow glyph. Runs
-     * mixie_chat.show_checkpoints (space_mixie_chat/ui/operators/
-     * checkpoint_ops.py), the native card — the island has no Python header
-     * to host a button. */
-    fill_round(&layout->hdr_checkpoints,
-               BLI_rctf_size_x(&layout->hdr_checkpoints) * 0.5f,
-               checkpoints_fill);
-    agent_ui_icon_draw(AGENT_ICON_RESTORE, &layout->hdr_checkpoints, glyph, checkpoints_fill);
-
     if (state->ink_visible) {
       /* Scribble text output window over the new chat topbar */
-      const float left_limit = layout->hdr_checkpoints.xmax + 16.0f * u;
+      const float left_limit = layout->hdr_new_chat.xmax + 16.0f * u;
       const float right_limit = layout->card.xmax - 23.0f * u;
       const float max_w = right_limit - left_limit;
       const float cx = layout->hdr_title_cx;
@@ -789,6 +768,37 @@ void agent_ui_draw_island(ARegion *region,
       const float *text_col = state->input_text[0] ? col_active : col_dim;
       label_centre(disp, cx, cy, font_size, text_col);
     }
+    else {
+      label_centre(state->title,
+                   layout->hdr_title_cx,
+                   layout->hdr_title_y,
+                   AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
+                   strong);
+    }
+
+  }
+  else {
+    const char *tab_title = "";
+    if (layout->tabs[AGENT_TAB_QUEUE].active) {
+      tab_title = "Queue";
+    }
+    else if (layout->tabs[AGENT_TAB_3D].active) {
+      tab_title = "3D";
+    }
+    else if (layout->tabs[AGENT_TAB_MEDIA].active) {
+      tab_title = "Media";
+    }
+    else if (layout->tabs[AGENT_TAB_SPLAT].active) {
+      tab_title = "Gaussian Splat";
+    }
+    else if (layout->tabs[AGENT_TAB_GENERATIONS].active) {
+      tab_title = "My Generations";
+    }
+    label_centre(tab_title,
+                 layout->hdr_title_cx,
+                 layout->hdr_title_y,
+                 AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
+                 strong);
   }
 
   /* --- Inner panel --- */

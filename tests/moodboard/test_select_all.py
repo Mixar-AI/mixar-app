@@ -26,11 +26,7 @@ def test_select_all_operator_covers_graph_nodes_and_skips_embedded_media():
 
     assert "mixie_moodboard_action_nodes" in body
     assert "mixie_moodboard_asset_nodes" in body
-    # Frames, never `mixie_moodboard_groups`: the load-time migration empties
-    # the legacy collection for good, so walking it selects nothing and
-    # Select All followed by Delete spared every frame.
-    assert "mixie_moodboard_frames" in body
-    assert "mixie_moodboard_groups" not in body
+    assert "mixie_moodboard_groups" in body
     assert 'getattr(img, "embedded_node_id", "")' in body
     assert "mixie_moodboard_active_node_id" in body
 

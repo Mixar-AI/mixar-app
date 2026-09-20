@@ -23,13 +23,6 @@ is one drawing however many pauses it took.
 Resolution runs at commit time, here on the main thread, not at send time.
 By the time the user presses Send the payload is already built, so pointing
 at something never adds latency to sending a message.
-
-What a pointer sample DOES to the ink — radial distance decimation, halving
-a full stroke instead of losing its tail, when a group is full — lives in
-``core/stroke_capture.StrokeBuffer``, with no ``bpy`` in it, so the rules
-that decide how faithfully a drawn line survives are exercised by the
-standalone suite rather than only by hand on a tablet. This file owns the
-freeze, the overlay and the reporting.
 """
 
 from __future__ import annotations
@@ -55,7 +48,6 @@ from mixar.modules.scribble_mark.core import (
     resolve,
     scribble_mode,
 )
-from mixar.modules.scribble_mark.core.stroke_capture import StrokeBuffer
 from mixar.modules.scribble_mark.core.freeze_session import (
     FreezeSession,
     find_view3d,
@@ -103,7 +95,9 @@ class MIXAR_OT_scribble_mark_draw(Operator):
     _timer = None
     _area_ptr = 0
     _region_ptr = 0
-    _ink = None
+    _strokes = None
+    _current = None
+    _last_up = 0.0
     _session = None
     #: True when the chat handwriting canvas was up as this freeze started —
     #: the two halves of Scribble then leave together (see scribble_mode).
@@ -145,7 +139,9 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
         self._area_ptr = area.as_pointer()
         self._region_ptr = region.as_pointer()
-        self._ink = StrokeBuffer(MAX_STROKES_PER_MARK, MAX_POINTS_PER_STROKE)
+        self._strokes = []
+        self._current = None
+        self._last_up = 0.0
 
         overlay.reset()
         overlay.set_target(self._area_ptr, self._region_ptr)
@@ -238,7 +234,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         # the way out. The event is consumed: the release belongs to this
         # stroke, not to whatever UI sits under the cursor.
         if (event.type == "LEFTMOUSE" and event.value == "RELEASE"
-                and self._ink.drawing):
+                and self._current is not None):
             self._end_stroke(context)
             return {"RUNNING_MODAL"}
 
@@ -282,7 +278,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                 self._end_stroke(context)
             return {"RUNNING_MODAL"}
 
-        if event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"} and self._ink.drawing:
+        if event.type in {"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"} and self._current is not None:
             self._extend_stroke(point)
             return {"RUNNING_MODAL"}
 
@@ -302,27 +298,36 @@ class MIXAR_OT_scribble_mark_draw(Operator):
     # -- strokes ---------------------------------------------------------
 
     def _begin_stroke(self, context, region, point):
-        if self._ink.full:
+        if len(self._strokes) >= MAX_STROKES_PER_MARK:
             # Commit the group and start another rather than drop ink: a
             # sketch drawn without pausing must not lose its later strokes.
             self._commit(context, region)
-        self._ink.begin(point)
-        overlay.set_live_strokes(self._ink.strokes)
+        self._current = [point]
+        self._strokes.append(self._current)
+        overlay.set_live_strokes(self._strokes)
         overlay.tag_redraw()
 
     def _extend_stroke(self, point):
-        if self._ink.extend(point, MIN_SAMPLE_DIST_PX * overlay.ui_scale()):
-            overlay.tag_redraw()
+        stroke = self._current
+        if stroke is None or len(stroke) >= MAX_POINTS_PER_STROKE:
+            return
+        last = stroke[-1]
+        threshold = MIN_SAMPLE_DIST_PX * overlay.ui_scale()
+        if abs(point[0] - last[0]) < threshold and abs(point[1] - last[1]) < threshold:
+            return
+        stroke.append(point)
+        overlay.tag_redraw()
 
     def _end_stroke(self, context):
-        self._ink.end(time.monotonic())
+        self._current = None
+        self._last_up = time.monotonic()
         overlay.tag_redraw()
 
     def _maybe_commit(self, context, region):
         """Commit once the pen has been up long enough."""
-        if self._ink.drawing or self._ink.empty:
+        if self._current is not None or not self._strokes:
             return
-        if self._ink.idle_for(time.monotonic()) < MARK_COMMIT_IDLE_S:
+        if time.monotonic() - self._last_up < MARK_COMMIT_IDLE_S:
             return
         self._commit(context, region)
 
@@ -333,9 +338,10 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         the user means to take back is what is under it, not the mark they
         already finished.
         """
-        if not self._ink.empty:
-            self._ink.clear()
-            overlay.set_live_strokes(self._ink.strokes)
+        if self._strokes:
+            self._strokes = []
+            self._current = None
+            overlay.set_live_strokes([])
             overlay.tag_redraw()
             return
 
@@ -368,13 +374,15 @@ class MIXAR_OT_scribble_mark_draw(Operator):
 
     def _commit_pending(self, context):
         region = self._region(context)
-        if region is not None and not self._ink.empty and not self._ink.drawing:
+        if region is not None and self._strokes and self._current is None:
             self._commit(context, region)
 
     def _commit(self, context, region):
         """Read the strokes as one mark, resolve it, and store it."""
-        strokes = self._ink.take()
-        overlay.set_live_strokes(self._ink.strokes)
+        strokes = self._strokes
+        self._strokes = []
+        self._current = None
+        overlay.set_live_strokes([])
 
         reading = gesture.classify(strokes, scale=overlay.ui_scale())
         if reading is None:

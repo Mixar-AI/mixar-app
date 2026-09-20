@@ -2,10 +2,13 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Library tab state for the agent island.
+"""My Generations tab state for the agent island.
 
-The pane uses stock context operators for filters and selection. Native
-navigation and draggable scrollbars share percentage grid and sidebar state.
+The whole pane is driven by these WindowManager properties, and every control
+in the C++ pane is a stock ``wm.context_set_enum`` / ``wm.context_set_string``
+/ ``wm.context_set_int`` / ``wm.context_toggle_enum`` button bound to one of
+them — the same pattern as ``bubble_tab_props.py`` and the island's mode
+switch. The pane owns no bespoke state operator.
 
 WindowManager, never Scene: which library you are browsing and which tile is
 selected is per-session UI state. It must not be serialised into a shared
@@ -18,7 +21,7 @@ an index repoints the moment an item is added). Pinned by
 """
 
 import bpy
-from bpy.props import EnumProperty, FloatProperty, IntProperty, StringProperty
+from bpy.props import EnumProperty, IntProperty, StringProperty
 
 #: Module-level so a writer can bump the revision without importing bpy.types
 #: bookkeeping of its own — see :func:`bump_revision`.
@@ -50,14 +53,13 @@ PROP_NAMES = (
     "mixar_generations_sort",
     "mixar_generations_selected",
     "mixar_generations_library",
-    "mixar_generations_scroll",
-    "mixar_generations_library_scroll",
+    "mixar_generations_page",
     "mixar_generations_revision",
 )
 
 
 def bump_revision():
-    """Tell the Library pane an asset library changed on disk.
+    """Tell the My Generations pane an asset library changed on disk.
 
     Blender's asset list is a CACHE: it reads a library once and never
     notices a .blend appearing underneath it (the Asset Browser has a
@@ -90,9 +92,15 @@ def _redraw_bubbles(_self, context):
                 area.tag_redraw()
 
 
-def _reset_scroll(self, context):
-    """Start a changed source, library, filter or sort at its first row."""
-    self.mixar_generations_scroll = 0.0
+def _reset_page(self, context):
+    """Refiltering must land on page one.
+
+    Staying on page 3 of a list that just shrank to one page shows an empty
+    grid, and the paging chips are hidden in that state — so there would be
+    nothing on screen to click back with.
+    """
+    if getattr(self, "mixar_generations_page", 0):
+        self.mixar_generations_page = 0
     _redraw_bubbles(self, context)
 
 
@@ -100,10 +108,10 @@ def register():
     wm = bpy.types.WindowManager
     wm.mixar_generations_source = EnumProperty(
         name="Generations Source",
-        description="Which collection the Library grid is showing",
+        description="Which collection the My Generations grid is showing",
         items=SOURCE_ITEMS,
         default='AI',
-        update=_reset_scroll,
+        update=_reset_page,
         options={'SKIP_SAVE'},
     )
     wm.mixar_generations_filter = EnumProperty(
@@ -111,15 +119,15 @@ def register():
         description="Which kind of generation the grid is showing",
         items=FILTER_ITEMS,
         default='ALL',
-        update=_reset_scroll,
+        update=_reset_page,
         options={'SKIP_SAVE'},
     )
     wm.mixar_generations_sort = EnumProperty(
         name="Generations Sort",
-        description="Order the Library grid is sorted in",
+        description="Order the My Generations grid is sorted in",
         items=SORT_ITEMS,
         default='NEWEST',
-        update=_reset_scroll,
+        update=_reset_page,
         options={'SKIP_SAVE'},
     )
     wm.mixar_generations_selected = StringProperty(
@@ -133,7 +141,7 @@ def register():
         name="Browsed Library",
         description="Asset library the grid is limited to (empty means all)",
         default="",
-        update=_reset_scroll,
+        update=_reset_page,
         options={'SKIP_SAVE'},
     )
     wm.mixar_generations_revision = IntProperty(
@@ -146,17 +154,13 @@ def register():
         update=_redraw_bubbles,
         options={'SKIP_SAVE'},
     )
-    # Native scrollbar painting requires a range >= 2; percentages preserve
-    # the correct thumb size/travel for every content length.
-    wm.mixar_generations_scroll = FloatProperty(
-        name="Library Scroll", description="Scroll the Library asset grid",
-        default=0.0, min=0.0, max=100.0, subtype='PERCENTAGE',
-        update=_redraw_bubbles, options={'SKIP_SAVE'},
-    )
-    wm.mixar_generations_library_scroll = FloatProperty(
-        name="Connected Libraries Scroll", description="Scroll connected asset libraries",
-        default=0.0, min=0.0, max=100.0, subtype='PERCENTAGE',
-        update=_redraw_bubbles, options={'SKIP_SAVE'},
+    wm.mixar_generations_page = IntProperty(
+        name="Generations Page",
+        description="Zero-based page of the My Generations grid",
+        default=0,
+        min=0,
+        update=_redraw_bubbles,
+        options={'SKIP_SAVE'},
     )
 
 

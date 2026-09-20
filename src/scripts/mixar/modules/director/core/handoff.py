@@ -23,21 +23,11 @@ def _selected_prompt(shot) -> str:
 
 def _validate_reference_limit(shot) -> None:
     try:
-        import bpy
-
         from mixar.modules.moodboard.core.video_generation_catalog import (
             get_video_generation_limits,
-            selected_video_model_slug,
         )
 
-        # Against the SELECTED model, not the service's widest: Video Gen
-        # serves several models and their reference ceilings differ by more
-        # than 3x, and this check exists so a shot fails here rather than
-        # after every keyframe has been uploaded.
-        scene = getattr(bpy.context, "scene", None)
-        limits = get_video_generation_limits(
-            "video_gen", selected_video_model_slug(scene)
-        )
+        limits = get_video_generation_limits("video_gen")
     except Exception:
         limits = None
     if limits is not None and len(shot.beats) > limits["max_images"]:

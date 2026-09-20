@@ -12,7 +12,6 @@
  * Split from mixie_chat_footer.cc for modularity.
  */
 
-#include <algorithm>
 #include <cmath>
 
 #include "BLI_time.h"
@@ -183,33 +182,32 @@ void footer_draw_thumbnails(const bContext *C,
   if (pending_count > 0 && bmain && attachments) {
     ED_region_pixelspace(region);
 
+    float thumb_draw_x = float(pos.side_padding);
     const float *border_color = theme->border_color;
     const float thumb_padding = theme->thumbnail_padding;
 
     const int max_display = (pending_count < FOOTER_MAX_ATTACHMENTS) ? pending_count :
                                                                         FOOTER_MAX_ATTACHMENTS;
-    const int columns = std::max(1, pos.thumb_columns);
 
     for (int i = 0; i < max_display; i++) {
       const FooterAttachmentCache &cached = (*attachments)[i];
-      const int col = i % columns;
-      const int row = i / columns;
-      const float x = float(pos.side_padding) + float(col * (pos.thumb_size + pos.thumb_spacing));
-      const float y = float(pos.thumb_y) + float(row * (pos.thumb_size + pos.thumb_spacing));
 
-      footer_thumbnails_draw_border(x, y, float(pos.thumb_size), border_color);
+      footer_thumbnails_draw_border(
+          thumb_draw_x, float(pos.thumb_y), float(pos.thumb_size), border_color);
 
       footer_thumbnails_draw_image(bmain,
                                     cached.path,
                                     cached.source,
-                                    x + thumb_padding,
-                                    y + thumb_padding,
+                                    thumb_draw_x + thumb_padding,
+                                    float(pos.thumb_y) + thumb_padding,
                                     float(pos.thumb_size) - (thumb_padding * 2.0f));
 
       if (cached.source == 1) {
         ED_moodboard_attachment_target(C, region, cached.path,
-            {x, x + pos.thumb_size, y, y + pos.thumb_size});
+            {thumb_draw_x, thumb_draw_x + pos.thumb_size,
+             float(pos.thumb_y), float(pos.thumb_y + pos.thumb_size)});
       }
+      thumb_draw_x += float(pos.thumb_size + pos.thumb_spacing);
     }
   }
 
@@ -218,8 +216,8 @@ void footer_draw_thumbnails(const bContext *C,
     ui::Block *remove_block = ui::block_begin(
         C, region, "remove_buttons", blender::ui::EmbossType::Emboss);
 
+    int thumb_btn_x = pos.side_padding;
     const int remove_btn_size = int(FOOTER_REMOVE_BUTTON_SIZE_BASE * scale);
-    const int columns = std::max(1, pos.thumb_columns);
 
     PropertyRNA *pending_prop = RNA_struct_find_property(
         scene_ptr, "mixie_chat_pending_attachments");
@@ -228,21 +226,19 @@ void footer_draw_thumbnails(const bContext *C,
       const int max_buttons = (count < FOOTER_MAX_ATTACHMENTS) ? count : FOOTER_MAX_ATTACHMENTS;
 
       for (int index = 0; index < max_buttons; index++) {
-        const int col = index % columns;
-        const int row = index / columns;
-        const int x = pos.side_padding + col * (pos.thumb_size + pos.thumb_spacing);
-        const int y = pos.thumb_y + row * (pos.thumb_size + pos.thumb_spacing);
         ui::Button *remove_but = ui::uiDefIconButO(remove_block,
                                           ui::ButtonType::But,
                                           "MIXIE_CHAT_OT_remove_attachment",
                                           blender::wm::OpCallContext::InvokeDefault,
                                           ICON_X,
-                                          x + pos.thumb_size - remove_btn_size,
-                                          y + pos.thumb_size - remove_btn_size,
+                                          thumb_btn_x + pos.thumb_size - remove_btn_size,
+                                          pos.thumb_y + pos.thumb_size - remove_btn_size,
                                           remove_btn_size,
                                           remove_btn_size,
                                           std::nullopt);
         RNA_int_set(ui::button_operator_ptr_ensure(remove_but), "index", index);
+
+        thumb_btn_x += pos.thumb_size + pos.thumb_spacing;
       }
     }
 

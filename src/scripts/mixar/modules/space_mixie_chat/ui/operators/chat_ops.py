@@ -127,12 +127,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
             metrics.stop_timer('send_message_total')
             return library_browse.execute_library_mode(self, context)
 
-        if not self.message_override:
-            from ...core import voice as voice_input
-            if voice_input.defer_send(context):
-                metrics.stop_timer('send_message_total')
-                return {'CANCELLED'}
-
         session = get_session_manager()
         is_modify = (session.get_state(scene) == SessionState.MODIFYING)
         is_awaiting_input = (session.get_state(scene) == SessionState.AWAITING_INPUT)
@@ -150,6 +144,10 @@ class MIXIE_CHAT_OT_send_message(Operator):
             try:
                 from ...core import scribble
                 from ...core import voice as voice_input
+                # A message sent mid-dictation takes what has been recognised
+                # so far; the session ends here so its final transcription
+                # cannot land in the NEXT message's composer.
+                voice_input.stop_if_listening()
                 scribble.flush_pending_ink()
                 if scribble.defer_until_idle(_send_when_handwriting_lands):
                     self.report({'INFO'}, "Converting handwriting…")
@@ -216,7 +214,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
             "is_modify": is_modify,
             "is_awaiting_input": is_awaiting_input,
             "plan_enabled": bool(getattr(scene, "mixie_chat_plan_enabled", False)),
-            "auto_mode": bool(getattr(scene, "mixie_chat_auto_mode", False)),
             "model": getattr(scene, "mixie_chat_model", "") or None,
         }, context=context)
 
@@ -263,15 +260,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 asset_choice_previews.cleanup_orphans(scene)
             except Exception:
                 pass
-
-        # Turn checkpoint: the document exactly as it is before this fresh
-        # turn (core/turn_checkpoints.py). Taken before the user bubble is
-        # added so a restore shows the chat up to the previous reply. Never
-        # blocks the send.
-        checkpoint = None
-        if fresh_turn:
-            from ...core import turn_checkpoints
-            checkpoint = turn_checkpoints.capture(scene, message_text)
 
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
@@ -392,16 +380,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
             return {'CANCELLED'}
 
         metrics.stop_timer('agent_send')
-
-        # The turn's command id is the backend's request id: bind the
-        # checkpoint to it so a restore can rewind the conversation too.
-        if checkpoint is not None:
-            from ...core import turn_checkpoints
-            from ...core.turn_transport import get_turn_handler
-            handler = get_turn_handler(scene.name)
-            request_id = (getattr(handler, "last_command_id", "") if handler else "") \
-                or getattr(user_msg, "bubble_id", "")
-            turn_checkpoints.bind_request(checkpoint, request_id)
 
         # Drop the moodboard selection for any images we just sent.
         # Without this the moodboard's polling sync would re-add them

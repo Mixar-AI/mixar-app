@@ -22,14 +22,6 @@ recogniser through two C++ operators (``mixie_chat_ink_local.cc``):
 * ``mixie_chat.ink_local_poll`` — pops one finished result into the
   ``mixie_chat_ink_local_*`` WindowManager properties (results are produced
   on a system queue and must only cross into Blender from the main thread).
-
-This path takes the STROKES, not the app's raster. Its page is framed
-differently (a text line, not a 1280 px longest edge), so going through the
-raster meant rendering a page, decoding it, thresholding it, cropping it and
-resampling it down — and rendering that page at all is wasted whenever the
-local recogniser answers, which is the point of having one. ``core/scribble``
-therefore keeps the parsed payload and rasterizes for the backend only when
-the backend is actually used.
 """
 
 from __future__ import annotations
@@ -49,7 +41,6 @@ from ..constants import (
     SCRIBBLE_LOCAL_POLL_S,
     SCRIBBLE_LOCAL_TIMEOUT_S,
 )
-from .scribble_raster import line_geometry, render
 
 logger = get_logger(__name__)
 
@@ -59,33 +50,71 @@ ResultCallback = Callable[[str, float, bool], None]
 PoppedResult = Tuple[int, str, float, bool]
 
 
-def vision_page(payload: dict) -> bytes:
-    """The recogniser's copy of one batch, drawn from the stroke VECTORS.
+class VisionPage:
+    """Where the ink lands on the recogniser's page: ``scale`` applied to the
+    ink crop, then pasted at (``offset_x``, ``offset_y``) on a
+    ``page_w`` x ``page_h`` white page."""
 
-    Framed as a text line rather than as the app's 1280 px raster: Vision
-    refuses a one- or two-glyph batch drawn 300+ px tall (line art, not
-    text) and read the same ink perfectly once it was a
-    ``SCRIBBLE_LOCAL_LINE_HEIGHT_PX`` line with page margins around it,
-    while two- and three-line blocks at that total height still read line
-    by line.
+    __slots__ = ("scale", "page_w", "page_h", "offset_x", "offset_y")
 
-    Drawn straight from the strokes, not resampled from the raster the
-    backend gets. That raster exists to be read by a vision model at a
-    different size entirely, so going through it meant rendering the ink
-    once, decoding it, thresholding it, cropping it and resampling it down
-    — paying for a page that is then thrown away whenever the local
-    recogniser answers, which on this path is the common case. The curve is
-    the same curve either way; only this one has not been through a
-    lossy round trip to get here.
+    def __init__(self, scale, page_w, page_h, offset_x, offset_y):
+        self.scale = scale
+        self.page_w = page_w
+        self.page_h = page_h
+        self.offset_x = offset_x
+        self.offset_y = offset_y
+
+
+def vision_page_geometry(ink_w: int, ink_h: int,
+                         line_height: int = SCRIBBLE_LOCAL_LINE_HEIGHT_PX,
+                         max_width: int = SCRIBBLE_LOCAL_MAX_WIDTH_PX,
+                         pad_x: int = SCRIBBLE_LOCAL_PAGE_PAD_X,
+                         pad_y: int = SCRIBBLE_LOCAL_PAGE_PAD_Y) -> VisionPage:
+    """Frame an ink crop as a text line on a page (see the constants).
+
+    The ink is scaled DOWN to ``line_height`` (or to ``max_width`` when a long
+    line would otherwise overrun it) and never up — small ink stays small —
+    then centred inside the margins. Pure: the PIL work is in
+    ``prepare_vision_image``.
     """
-    geometry = line_geometry(
-        payload,
-        line_height=SCRIBBLE_LOCAL_LINE_HEIGHT_PX,
-        max_width=SCRIBBLE_LOCAL_MAX_WIDTH_PX,
-        pad_x=SCRIBBLE_LOCAL_PAGE_PAD_X,
-        pad_y=SCRIBBLE_LOCAL_PAGE_PAD_Y,
-    )
-    return render(payload, geometry)
+    ink_w = max(1, int(ink_w))
+    ink_h = max(1, int(ink_h))
+    scale = min(1.0, line_height / float(ink_h), max_width / float(ink_w))
+    scaled_w = max(1, int(round(ink_w * scale)))
+    scaled_h = max(1, int(round(ink_h * scale)))
+    return VisionPage(scale, scaled_w + 2 * pad_x, scaled_h + 2 * pad_y, pad_x, pad_y)
+
+
+def prepare_vision_image(png_bytes: bytes) -> bytes:
+    """The recogniser's copy of an ink raster: cropped to the ink, framed as
+    a text line on a page. Returns the input unchanged if PIL is missing or
+    the image cannot be read — the recogniser then sees the app raster,
+    which it reads for anything longer than a couple of glyphs."""
+    try:
+        import io
+
+        from PIL import Image
+
+        image = Image.open(io.BytesIO(png_bytes)).convert("L")
+        # Ink is dark on a white page; anything under mid-grey is ink.
+        bbox = Image.eval(image, lambda v: 255 if v < 128 else 0).getbbox()
+        if bbox is None:
+            return png_bytes
+        ink = image.crop(bbox)
+        page = vision_page_geometry(ink.width, ink.height)
+        if page.scale < 1.0:
+            ink = ink.resize(
+                (page.page_w - 2 * page.offset_x, page.page_h - 2 * page.offset_y),
+                Image.LANCZOS,
+            )
+        out = Image.new("L", (page.page_w, page.page_h), 255)
+        out.paste(ink, (page.offset_x, page.offset_y))
+        buffer = io.BytesIO()
+        out.save(buffer, format="PNG", optimize=True)
+        return buffer.getvalue()
+    except Exception:  # noqa: BLE001 — framing is an optimisation, never a gate
+        logger.debug("[Scribble] could not frame the ink for the local recogniser", exc_info=True)
+        return png_bytes
 
 
 def accept(text: str, confidence: float) -> bool:
@@ -200,19 +229,13 @@ def available() -> bool:
         return False
 
 
-def try_start(payload: dict, on_done: ResultCallback) -> bool:
+def try_start(image_bytes: bytes, on_done: ResultCallback) -> bool:
     """Try the instant path for one batch. False when it cannot even start —
     the caller keeps the batch and posts it to the backend."""
     if not available():
         return False
-    try:
-        page = vision_page(payload)
-    except Exception:  # noqa: BLE001 — the backend path is always there
-        logger.debug("[Scribble] could not frame the ink for the local recogniser",
-                     exc_info=True)
-        return False
     queue = _ensure_queue()
-    if not queue.submit(page, on_done):
+    if not queue.submit(image_bytes, on_done):
         return False
     _ensure_timer()
     return True
@@ -239,7 +262,7 @@ def _submit_via_operator(job: int, image_bytes: bytes) -> bool:
     directory = bpy.app.tempdir or ""
     path = os.path.join(directory, f"mixar_scribble_{job}.png")
     with open(path, "wb") as handle:
-        handle.write(image_bytes)
+        handle.write(prepare_vision_image(image_bytes))
     _paths[job] = path
     try:
         result = bpy.ops.mixie_chat.ink_recognize_local(job=job, image_path=path)

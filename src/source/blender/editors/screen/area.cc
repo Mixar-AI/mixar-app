@@ -1319,25 +1319,6 @@ static bool region_azone_edge_poll(const ScrArea *area,
     return false;
   }
 
-  /* Same area, the hidden N-panel's reveal tab. `region_azone_tab_plus` pins
-   * it to the area's top-right corner, which in Zen Mode is inside the
-   * drawer's painted panel whenever it is open and on the navigation gizmo
-   * when it is shut. Azones resolve screen-wide before any region handler, so
-   * the drawer can never win that press: one click there silently sets
-   * `show_region_ui` and materialises a full stock sidebar underneath the
-   * board, invisible until the drawer is closed again. The azone list is not
-   * rebuilt when the drawer slides (a toggle only tags a redraw), so this
-   * cannot be gated on the slide amount — suppress it wherever the drawer
-   * region exists, which `drawer_region_poll` already limits to Zen Mode. `N`
-   * still opens the sidebar there, and other workspaces keep the tab. */
-  if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_UI && is_hidden) {
-    const ARegion *drawer = BKE_area_find_region_type(const_cast<ScrArea *>(area),
-                                                      RGN_TYPE_TOOL_PROPS);
-    if (drawer != nullptr && !(drawer->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED))) {
-      return false;
-    }
-  }
-
   if (is_hidden && (U.app_flag & USER_APP_HIDE_REGION_TOGGLE)) {
     return false;
   }
@@ -1694,7 +1675,7 @@ static void region_rect_recursive(
 
   /* set here, assuming userpref switching forces to call this again */
   region->overlap = ED_region_is_overlap(area->spacetype, region->regiontype);
-  /* Zen/Texturing View3D headers must overlap even when the theme header
+  /* Zen Mode's View3D headers must overlap even when the theme header
    * is opaque — otherwise the reserved strip stays a bar. Empty header
    * space already passes events through (`ED_region_contains_xy`). */
   if (!region->overlap && ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER) &&
@@ -3646,8 +3627,8 @@ void ED_region_draw_overflow_indication(const ScrArea *area,
 
   const bool is_overlap = ED_region_is_overlap(area->spacetype, region->regiontype);
   const bool is_header = ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER);
-  /* Forced-overlap Zen/Texturing headers clear transparent. An overflow
-   * fade would still paint opaque TH_BACK across the strip. */
+  /* Forced-overlap Zen headers clear transparent. An overflow fade would
+   * still paint opaque TH_BACK across the strip. */
   if (region->overlap && is_header && ui::mixar_area_floats_viewport_chrome(area)) {
     return;
   }
@@ -4124,9 +4105,9 @@ static void region_draw_blocks_in_view2d(const bContext *C, const ARegion *regio
 
 void ED_region_header_draw(const bContext *C, ARegion *region)
 {
-  /* Zen chrome is the family's ISLAND pane on the topbar. View3D headers
-   * in Zen/Texturing clear transparent so glass groups float. An opaque
-   * theme clear would bury either; dest-over cannot lower dest A=1. */
+  /* Zen chrome is the family's ISLAND pane on the topbar. Zen's View3D
+   * headers clear transparent so glass groups float. An opaque theme
+   * clear would bury either; dest-over cannot lower dest A=1. */
   if (!ui::mixar_zen_floating_header_clear(C, region) &&
       !ui::mixar_zen_header_clear(C, region))
   {

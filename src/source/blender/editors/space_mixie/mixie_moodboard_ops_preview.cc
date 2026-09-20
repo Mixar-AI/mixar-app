@@ -34,7 +34,7 @@ struct MoodboardVideoPlayback {
 static std::unordered_map<Image *, MoodboardVideoPlayback> g_video_playback;
 static wmTimer *g_video_redraw_timer = nullptr;
 
-Image *moodboard_item_image(PointerRNA *scene_ptr, const int index)
+static Image *moodboard_item_image(PointerRNA *scene_ptr, const int index)
 {
   PropertyRNA *items_prop = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
   if (!items_prop || index < 0 ||

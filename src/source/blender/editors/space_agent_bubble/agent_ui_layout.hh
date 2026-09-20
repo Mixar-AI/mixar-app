@@ -45,9 +45,6 @@ enum AgentTabId {
   AGENT_TAB_COUNT,
 };
 
-/** Content starts below session actions only on the Agent tab. */
-float agent_ui_panel_top(AgentTabId tab);
-
 /** Shared by text measurement and tab painting. */
 const char *agent_ui_tab_label(AgentTabId tab);
 
@@ -87,7 +84,6 @@ struct AgentIslandLayout {
   rctf card_header;  /* Gradient band above the panel. */
   rctf hdr_history;
   rctf hdr_new_chat;
-  rctf hdr_checkpoints; /* Turn checkpoints — restore an earlier turn. */
   float hdr_title_cx;
   float hdr_title_y;
 
@@ -106,9 +102,6 @@ struct AgentIslandLayout {
   /* Voice input, right of Scribble; the caller empties it and closes the gap
    * when no recogniser is registered (agent_bubble_island_begin). */
   rctf chip_voice;
-  /* Auto mode switch, right of Voice (closes the gap with it when Voice is
-   * absent). Always drawn: the flag is a plain scene property. */
-  rctf chip_auto;
   rctf chip_reading;
   rctf chip_clear;
   rctf btn_generate;
@@ -142,16 +135,6 @@ void agent_ui_layout_build(int window_w,
                            bool agent_mode_active,
                            bool has_transcript,
                            AgentIslandLayout *r_layout,
-                           int pad_real_w,
-                           int input_lines = 1);
-
-/** Pixel wrap width of the composer field for the given window / pad. */
-float agent_ui_composer_wrap_width_px(int window_w, int pad_real_w);
-
-/** Visual wrapped lines in `text`, clamped to 1..AGENT_INPUT_MAX_LINES. */
-int agent_ui_composer_visual_lines(const char *text, float wrap_width_px);
-
-/** Artboard-unit height of the post-transcript input strip. */
-float agent_ui_composer_strip_h(int visual_lines);
+                           int pad_real_w);
 
 }  // namespace blender

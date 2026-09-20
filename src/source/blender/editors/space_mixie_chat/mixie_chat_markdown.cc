@@ -25,7 +25,7 @@
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
-/* Parsed-segment cache lives in mixie_chat_markdown_cache.cc
+/* Parsed-segment cache lives in mixie_chat_markdown_parse.cc
  * (markdown_segments_get_cached in mixie_chat_markdown_intern.hh). */
 
 /* -------------------------------------------------------------------- */

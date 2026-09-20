@@ -376,7 +376,7 @@ class TestVisibleControlsAndRecovery:
         text = source(self.MODAL)
         body = text[text.index("def _undo_last"):]
         body = body[:body.index("\n    def ", 1)]
-        assert body.index("self._ink") < body.index("remove_last")
+        assert body.index("self._strokes") < body.index("remove_last")
 
     def test_queued_marks_can_be_cleared_without_re_arming(self):
         text = source(self.HEADER)

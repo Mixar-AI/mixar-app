@@ -149,12 +149,7 @@ def test_truncated_text_gets_an_ellipsis():
     assert "mixar_fit_text(text, max_w, size)" in body
     shared = (CPP.parent / "interface/mixar/text.cc").read_text()
     assert 'const char *ellipsis = "…"' in shared
-    # The cut must land on a codepoint boundary. This used to be a hand-rolled
-    # backwards byte-walk re-measuring the whole string per dropped character
-    # (O(n^2) shaping per label per frame); BLF_width_to_strlen does the same
-    # job UTF-8-safely in one pass, so assert the guarantee, not the old loop.
-    assert "BLF_width_to_strlen(font, text, len, budget" in shared
-    assert "UTF-8" in shared
+    assert "end > 0" in shared and "0xc0) == 0x80" in shared
     assert re.search(r'if \(budget < 0\.0f\)\s*\{\s*return "";', shared)
 
 

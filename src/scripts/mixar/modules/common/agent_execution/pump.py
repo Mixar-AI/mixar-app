@@ -125,14 +125,12 @@ def execute_request(
         clear_agent_execution_context,
         set_agent_execution_context,
     )
-    from mixar.modules.common.utils.agent_feedback import clear_agent_ref
 
     context_session_id, context_turn_id = resolve_agent_context_ids(
         req.agent_ctx, req.session_id, req.request_id
     )
     started = time.monotonic()
     try:
-        clear_agent_ref()
         set_agent_execution_context(context_session_id, context_turn_id)
         result = executor.execute(req.script)
         result_dict = result.to_dict()
@@ -145,7 +143,6 @@ def execute_request(
         logger.error(f"Script execution failed ({req.tool_name}): {e}")
         result_dict = {"success": False, "error": f"{type(e).__name__}: {e}"}
     finally:
-        clear_agent_ref()
         clear_agent_execution_context()
     # Timing stays on the request (logs / metrics), never in the wire result:
     # backend consumers compare result payloads exactly.

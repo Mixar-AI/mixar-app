@@ -9,15 +9,14 @@ macOS honours it as a Core Animation mask -- ``layer.cornerRadius`` plus
 ``masksToBounds`` over a non-opaque window -- so everything outside the radius
 is genuinely transparent and the resting pill is all the user sees.
 
-Windows has no Core Animation mask for a GPU window. The on-screen
-``GHOST_ContextWGL`` requests eight alpha bits so DWM can composite frost;
-``Mixar_WindowHasAlphaChannel`` still reads the chosen format because the
-driver can refuse. Vulkan windows use the swapchain's composite-alpha flags
-instead of WGL. The pill paints a near-black bed over its whole region
+Windows has no equivalent for a GL-rendered window. ``GHOST_WindowWin32``
+constructs ``GHOST_ContextWGL`` with ``alphaBackground=false``, so the client
+area carries no alpha channel and DWM composites it as opaque whatever the
+shader writes. The pill paints an opaque near-black bed over its whole region
 (deliberately -- it is what stops the capsule blinking when the cached region
-buffer is stale). Without a framebuffer alpha channel that bed showed as a
-hard black rectangle around the capsule. A Windows 11 border line traced the
-same rectangle on top.
+buffer is stale), and that bed showed as a hard black rectangle around the
+capsule wherever the viewport behind it was not equally dark. A Windows 11
+border line traced the same rectangle on top.
 
 So the Win32 half owes two things the naive port did not have: no OS border,
 and the radius applied as the window's actual SHAPE. Both are pinned here,
@@ -38,8 +37,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WIN32 = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_SystemWin32.cc"
-WIN32_WINDOW = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_WindowWin32.cc"
-WIN32_VK = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_ContextVK.cc"
 WIN32_GLASS = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_MixarGlassWin32.cc"
 GHOST_CMAKE = ROOT / "src" / "intern" / "ghost" / "CMakeLists.txt"
 COCOA = ROOT / "src" / "intern" / "ghost" / "intern" / "GHOST_SystemCocoa.mm"
@@ -150,31 +147,16 @@ class TestWin32PerPixelAlpha:
     A window region is binary coverage: the 28.5px capsule it rasterises has
     the hard staircase of any un-anti-aliased circle. Asking DWM to honour the
     alpha channel gives the capsule's own feathered edge instead -- but only
-    where the framebuffer GHOST actually got carries alpha bits. The on-screen
-    WGL context asks for eight of them; the probe still reads the chosen
-    format because the driver can refuse.
+    where the pixel format GHOST actually got carries alpha bits, which nothing
+    requested and which therefore has to be READ rather than assumed.
     """
-
-    def test_onscreen_wgl_requests_an_alpha_channel(self) -> None:
-        src = _read(WIN32_WINDOW)
-        body = _fn_body(src, "GHOST_Context *GHOST_WindowWin32::newDrawingContext(")
-        wgl = body[body.index("new GHOST_ContextWGL(") :]
-        wgl = wgl[: wgl.index("GHOST_OPENGL_WGL_RESET_NOTIFICATION_STRATEGY")]
-        assert "want_context_params_" in wgl and "true," in wgl, (
-            "On-screen WGL must request 8 alpha bits or DWM never sees the "
-            "island/pill wash and frost stays the opaque fallback."
-        )
-        assert "false," not in wgl
 
     def test_alpha_is_probed_not_assumed(self, win32: str) -> None:
         probe = _fn_body(win32, 'extern "C" bool Mixar_WindowHasAlphaChannel(')
         assert "DescribePixelFormat" in probe and "cAlphaBits" in probe, (
-            "GHOST_WindowWin32 requests alphaBackground=true, but this must "
-            "read the format that was chosen, not the one that was asked for."
-        )
-        assert "mixar_supports_non_opaque_composite_alpha" in probe, (
-            "Vulkan windows have no WGL pixel format; the swapchain's "
-            "composite-alpha flags are the channel."
+            "GHOST_WindowWin32 constructs GHOST_ContextWGL with "
+            "alphaBackground=false, so this must read the format that was "
+            "chosen, not the one that was asked for."
         )
         enable = _fn_body(win32, 'extern "C" void Mixar_WindowSetPerPixelAlpha(')
         assert "Mixar_WindowHasAlphaChannel" in enable, (
@@ -197,11 +179,9 @@ class TestWin32PerPixelAlpha:
 
 
 class TestWin32LiquidGlass:
-    """See-through is frame extension plus redirection/legacy alpha.
-
-    TransientWindow Acrylic cannot sample the parent Mixar viewport and
-    fills a gray slab, so glass must leave the backdrop at None. The
-    1×1 blur region is the old alpha-only trick and stays banned.
+    """Per-pixel alpha is not frost. The 1×1 blur region only opted DWM
+    into looking at alpha; the material has to be Acrylic (or a full-window
+    blur on older builds) and DWM has to honour the GPU's wash.
     """
 
     def test_blur_behind_installs_win32_glass(self, win32: str) -> None:
@@ -209,43 +189,22 @@ class TestWin32LiquidGlass:
             win32, 'extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)\n{'
         )
         assert "Mixar_Win32GlassSetEnabled" in body
-        assert "mixar_set_premultiplied_composite_alpha" in body, (
-            "Vulkan presents opaque unless the glass window's swapchain is "
-            "recreated with premultiplied composite alpha."
-        )
         assert "CreateRectRgn(0, 0, 1, 1)" not in body, (
             "A 1×1 blur region is the old alpha-only trick — not glass."
         )
 
-    def test_vulkan_glass_selects_premultiplied_composite_alpha(self) -> None:
-        vk = _read(WIN32_VK)
-        helper = _fn_body(vk, "static VkCompositeAlphaFlagBitsKHR mixar_select_composite_alpha(")
-        assert "VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR" in helper
-        assert "VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR" not in helper
-        assert "VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR" in helper
-        supports = _fn_body(vk, "bool GHOST_ContextVK::mixar_supports_non_opaque_composite_alpha(")
-        assert "VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR" in supports
-        assert "VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR" not in supports
-        setter = _fn_body(vk, "bool GHOST_ContextVK::mixar_set_premultiplied_composite_alpha(")
-        assert "mixar_premul_composite_alpha_ == enable && swapchain_" not in setter
-        assert "if (mixar_premul_composite_alpha_ == enable)" in setter
-        recreate = _fn_body(vk, "GHOST_TSuccess GHOST_ContextVK::recreateSwapchain(")
-        assert "mixar_select_composite_alpha" in recreate
-        assert "mixar_premul_composite_alpha_" in recreate
-
-    def test_see_through_clears_acrylic_instead_of_requesting_it(self) -> None:
+    def test_acrylic_is_the_material_not_mica(self) -> None:
         glass = _read(WIN32_GLASS)
         assert "Mixar_Win32GlassSetEnabled" in glass
         assert "kDwmwaSystemBackdropType = 38" in glass
+        assert "kDwmsbtTransientWindow = 3" in glass
         assert "kDwmsbtNone = 1" in glass
-        assert "kDwmsbtTransientWindow" not in glass
         assert "kDwmwaRedirectionBitmapAlpha = 39" in glass
         assert "kDwmwaUseImmersiveDarkMode = 20" in glass
         assert "DwmExtendFrameIntoClientArea" in glass
         assert "DWM_BB_ENABLE" in glass
         assert "DWM_BLURBEHIND bb = {};" in glass
-        assert "FAILED(frame)" in glass
-        assert "FAILED(alpha) && FAILED(legacy_alpha)" in glass
+        assert "FAILED(material)" in glass
         assert "mixar_disable_glass(hwnd);" in glass
         assert "CreateRectRgn(0, 0, 1, 1)" not in glass
         assert "DWMSBT_MAINWINDOW" not in glass
@@ -319,8 +278,8 @@ class TestIslandWindowTranslucency:
     Where the pill is shaped by DWM honouring its client alpha, the island is
     one window painting several regions, so its route out is the kit's
     ``mixar_glass_window_apply_translucency`` -- a WINDOW background request
-    (per-pixel alpha, plus a native content-view frost on macOS and
-    DWM see-through on Windows) and a defined no-op returning false off
+    (per-pixel alpha, plus a native content-view frost on macOS and Desktop
+    Acrylic on Windows) and a defined no-op returning false off
     macOS/Windows. The return value is the whole point of calling it rather
     than an ``#ifdef``: it says whether the platform acted.
 
@@ -476,17 +435,13 @@ class TestIslandWindowTranslucency:
         assert "widget_textbut_custom" in widgets
         assert "wt.custom = widget_textbut_custom" in widgets
         space = _read(SPACE)
-        assert "const uchar wash[4] = AGENT_COL_GLASS_FIELD_UCHAR;" in space
+        assert "const uchar wash[4] = {18, 22, 20, 48}" in space
         assert "agent_bubble_replace_frost_wash(&r, wash);" in space
         assert "if (but->col[3] < 128)" in widgets
         assert "BLI_rcti_size_y(rect) > 120" in widgets
 
     def test_chat_and_pill_share_the_neutral_native_wash(self) -> None:
         theme = _read(PILL_DRAW.parent / "agent_ui_theme.hh")
-        assert "AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.40f}" in theme
         assert "AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}" in theme
-        assert "AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 102}" in theme
-        assert "AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 48}" in theme
-        assert "#ifdef _WIN32" in theme
         assert _read(SPACE).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 3
         assert _read(PILL_DRAW).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 2

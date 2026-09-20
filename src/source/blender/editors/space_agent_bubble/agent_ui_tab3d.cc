@@ -17,7 +17,6 @@
  */
 
 #include "agent_ui_text.hh"
-#include "agent_bubble_references.hh"
 
 #include <algorithm>
 #include <cstdio>
@@ -354,23 +353,21 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
     /* Reference preview — whatever this tab will actually SUBMIT: the board
      * selection while `use_selected_image` is on, otherwise its own upload. */
-    if (!agent_bubble_references_visible(C)) {
-      Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
-      int ref_count = 0;
-      if (st.use_selected_image) {
-        ref_count = pane_board_selected_images(C, ref_images, PANE_REF_THUMB_MAX);
-      }
-      else if (st.reference_image != nullptr) {
-        ref_images[ref_count++] = st.reference_image;
-      }
-      pane_ref_thumbs_paint(ref_images,
-                            ref_count,
-                            rect.xmax + PANE_CHIP_GAP * u,
-                            chip_y0,
-                            PANE_ROW_H * u,
-                            pane_generate_rect(box, u).xmin - PANE_CHIP_GAP * u,
-                            u);
+    Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
+    int ref_count = 0;
+    if (st.use_selected_image) {
+      ref_count = pane_board_selected_images(C, ref_images, PANE_REF_THUMB_MAX);
     }
+    else if (st.reference_image != nullptr) {
+      ref_images[ref_count++] = st.reference_image;
+    }
+    pane_ref_thumbs_paint(ref_images,
+                          ref_count,
+                          rect.xmax + PANE_CHIP_GAP * u,
+                          chip_y0,
+                          PANE_ROW_H * u,
+                          pane_generate_rect(box, u).xmin - PANE_CHIP_GAP * u,
+                          u);
   }
 
   {

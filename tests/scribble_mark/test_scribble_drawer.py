@@ -96,7 +96,7 @@ def test_live_pointer_events_cannot_pan_the_underlying_canvas(event_type):
     namespace = {'overlay': NS(point_in_region=lambda *a: True)}
     exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), namespace)
     region = NS(x=100, y=20)
-    operator = NS(_region=lambda c: region, _ink=NS(drawing=True), _extend_stroke=Mock())
+    operator = NS(_region=lambda c: region, _current=[(10, 10)], _extend_stroke=Mock())
     context = NS(window_manager=NS(mixar_mark_armed=True))
     event = NS(type=event_type, value='NOTHING', mouse_x=150, mouse_y=80)
     assert namespace['modal'](operator, context, event) == {'RUNNING_MODAL'}

@@ -146,10 +146,9 @@ namespace blender {
 #define AGENT_TAB_X_SPLAT 360
 #define AGENT_TAB_W_SPLAT 262
 
-/** Right cluster. Library is unmarked and short; width is for that label,
- *  and X holds the 6-unit gap to Queue. */
-#define AGENT_TAB_X_GENERATIONS 1055
-#define AGENT_TAB_W_GENERATIONS 128
+/** Right cluster. */
+#define AGENT_TAB_X_GENERATIONS 965
+#define AGENT_TAB_W_GENERATIONS 218
 #define AGENT_TAB_X_QUEUE 1189
 #define AGENT_TAB_W_QUEUE 111
 
@@ -200,8 +199,6 @@ namespace blender {
 #define AGENT_HDR_BTN_CY 38
 #define AGENT_HDR_BTN1_CX 36
 #define AGENT_HDR_BTN2_CX 82
-/** Third disc, same 46-unit pitch: turn checkpoints (restore an earlier turn). */
-#define AGENT_HDR_BTN3_CX 128
 #define AGENT_HDR_GLYPH_R 13
 
 #define AGENT_HDR_TITLE_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Heading)
@@ -234,7 +231,6 @@ namespace blender {
  * These are the fixed distances measured UP from the card's bottom edge. */
 #define AGENT_CARD_PAD_BOTTOM 16 /* card foot -> chip row bottom */
 #define AGENT_INPUT_H 56
-#define AGENT_INPUT_MAX_LINES 4  /* strip auto-grows 1–4 rows on Shift+Enter */
 #define AGENT_INPUT_GAP 16       /* input line -> chip row */
 #define AGENT_TRANSCRIPT_GAP 16  /* transcript -> input line */
 
@@ -293,13 +289,6 @@ namespace blender {
 #define AGENT_CHIP_SCRIBBLE_W 150
 /* Voice: mic glyph + "Listening" fits. */
 #define AGENT_CHIP_VOICE_W 118
-/* Auto: "Auto" label + a sliding ON/OFF switch, right of Voice. The switch
- * is the backend's per-turn `auto_mode` flag — on, the agent decides every
- * open choice itself instead of asking the user. */
-#define AGENT_CHIP_AUTO_W 118
-#define AGENT_SWITCH_W 40
-#define AGENT_SWITCH_H 22
-#define AGENT_SWITCH_INSET 3
 #define AGENT_CHIP_READING_W 104
 #define AGENT_CHIP_CLEAR_W 44
 
@@ -316,17 +305,8 @@ namespace blender {
  * three-value initialiser zero-fills it and the shape draws invisible.
  * \{ */
 
-/* Surfaces.
- * macOS NSGlass already supplies frost, so the wash stays a 0.20 tint.
- * Windows has no blur behind the island — only this GPU wash — so the
- * same colour uses a higher alpha or the card reads as a hole. */
-#ifdef _WIN32
-#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.40f}
-#define AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 102}
-#else
-#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}
-#define AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 48}
-#endif
+/* Surfaces */
+#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f} /* shared native pill/chat bed */
 #define AGENT_COL_SURFACE {0.071f, 0.071f, 0.071f, 1.0f}      /* #121212 strip, panel, pill */
 #define AGENT_COL_CHIP {0.114f, 0.114f, 0.114f, 1.0f}         /* #1D1D1D chip track */
 #define AGENT_COL_CHIP_ACTIVE {0.196f, 0.196f, 0.196f, 1.0f}  /* #323232 segment thumb */

@@ -13,8 +13,8 @@ Instead, it renders a living, animated representation of work:
   1. The capsule stays the shared PILL glass — no second green rim.
   2. Pulsing gradient on the Mixar logo chip.
   3. Pulsating green activity indicator dot with an expanding/fading ripple halo.
-  4. Animated status text with a fixed-width U+00B7 activity field (0..3
-     slots) and task prompt context.
+  4. Animated status text with cycling trailing dots ("Working.", "Working..",
+     "Working...", "Working") and task prompt context.
   5. Native one-shot scheduling predicts useful mascot frames. Neither the
      draw callback nor the hover policy duplicates its redraw requests.
 """
@@ -112,10 +112,9 @@ def test_working_state_draws_activity_dot_and_animated_dots():
     assert "fill_round(&ripple, rip_r, rip_col);" in elongated
     assert "fill_round(&dot, dot_r, dot_col);" in elongated
 
-    # Cycling trailing dots (0 to 3) in a fixed-width U+00B7 field.
+    # Cycling trailing dots (0 to 3 dots)
     assert "dot_count = int(fmod(now * 2.5, 4.0))" in elongated
-    assert "*d++ = '\\xc2'" in elongated
-    assert "*d++ = '\\xb7'" in elongated
+    assert "dots[i] = '.'" in elongated
 
     # Status label formulation
     assert "mixie_cat_activity_name(state->cat_activity)" in elongated

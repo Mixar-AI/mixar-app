@@ -163,14 +163,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
    * Pass 2: Position messages from top to bottom (newest at bottom). */
 
   /* Pass 1: Calculate message dimensions and total height */
-  /* Keep the buffer: this runs every rebuild (every frame while a stream is
-   * active), and MessageLayoutData is a large fixed-size record, so releasing
-   * and regrowing the vector here was a per-frame allocation plus repeated
-   * reallocation memcpy of the whole transcript. */
-  mixie_chat_clear_layout_cache_for_rebuild(smixie);
-  if (msg_count > 0) {
-    rt->layout_cache.reserve(msg_count);
-  }
+  mixie_chat_clear_layout_cache(smixie); /* Clear previous frame's cache */
   float total_height = metrics.padding; /* Start with top padding */
   int message_index = 0;
   CollectionPropertyIterator iter{};

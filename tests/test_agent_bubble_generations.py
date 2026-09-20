@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The Library tab is a C++ surface over Python state.
+"""The My Generations tab is a C++ surface over Python state.
 
 Nothing links the two halves at build time: the pane reads WindowManager
 properties by NAME through RNA and dispatches operators by BL_IDNAME string,
@@ -50,9 +50,7 @@ PANE_CC = (CPP / "agent_ui_generations.cc").read_text(encoding="utf-8")
 GRID_CC = (CPP / "agent_ui_generations_grid.cc").read_text(encoding="utf-8")
 DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
 #: The pane is five translation units; a name may live in any of them.
-LIBRARIES_CC = (CPP / "agent_ui_generations_libraries.cc").read_text(encoding="utf-8")
-NAV_CC = (CPP / "agent_ui_generations_navigation.cc").read_text(encoding="utf-8")
-ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC + LIBRARIES_CC + NAV_CC
+ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC
 INTERN_HH = (CPP / "agent_ui_generations_intern.hh").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
 DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
@@ -128,10 +126,6 @@ def test_every_pane_property_is_written_by_a_control(name):
     ``data_path`` names it — so the pane's own source must mention the
     ``window_manager.`` path for each one.
     """
-    if name.endswith("_scroll"):
-        assert f'"{name}"' in PANE_CC + LIBRARIES_CC
-        assert "ui::ButtonType::Scroll" in LIBRARIES_CC
-        return
     path = f"window_manager.{name}"
     assert path in ALL_CC, (
         f"nothing in the pane sets {path}, so the user cannot change it"
@@ -192,8 +186,9 @@ def test_the_generations_tab_is_reachable():
     as the tab had no pane, and the strip still PAINTED the pill — so it
     looked clickable and was not.
     """
-    tabs = dict((item[0], item[1]) for item in bubble_tab_props.TAB_ITEMS)
-    assert tabs["GENERATIONS"] == "Library"
+    assert "GENERATIONS" in dict(
+        (item[0], item[1]) for item in bubble_tab_props.TAB_ITEMS
+    )
     assert '{AGENT_TAB_GENERATIONS, "GENERATIONS"' in SPACE_CC
     assert "agent_ui_generations_draw(C, region, panel_region, u)" in SPACE_CC
 
@@ -210,8 +205,6 @@ def _cpp_operator_idnames(source):
 def test_every_operator_the_pane_dispatches_exists():
     registered = {cls.bl_idname for cls in OPS.classes}
     dispatched = _cpp_operator_idnames(ALL_CC)
-    assert "WM_operatortype_append(MIXAR_OT_generations_navigate)" in SPACE_CC
-    registered.add("mixar.generations_navigate")
     missing = dispatched - registered
     assert not missing, f"the pane dispatches operators that do not exist: {missing}"
 
@@ -262,37 +255,19 @@ def test_every_category_tab_carries_its_own_mark():
 
     `generations.svg` draws marks for Agent and Gaussian Splat; 3D and Media
     take the island's own cube and folded-page glyphs so those tabs cannot
-    read as failed-to-load. Library and Queue are label-only
+    read as failed-to-load. My Generations and Queue are label-only
     (`AGENT_ICON_COUNT`); Queue still gains a count chip while nonempty.
     """
     tabs = _tab_table()
     assert tabs["Agent"] == "AGENT_ICON_AGENT"
     assert tabs["Gaussian Splat"] == "AGENT_ICON_SPLAT"
-    assert tabs["Library"] == "AGENT_ICON_COUNT"
+    assert tabs["My Generations"] == "AGENT_ICON_COUNT"
     assert tabs["Queue"] == "AGENT_ICON_COUNT"
     assert tabs["3D"] == "AGENT_ICON_MESH"
     assert tabs["Media"] == "AGENT_ICON_MEDIA"
 
     marks = [icon for icon in tabs.values() if icon != "AGENT_ICON_COUNT"]
     assert len(set(marks)) == len(marks)
-
-
-def test_the_library_tab_is_sized_for_the_short_label():
-    """218 was artboard-tuned for 'My Generations' and would stretch Library."""
-    theme = (CPP / "agent_ui_theme.hh").read_text()
-
-    def token(name):
-        return int(re.search(rf"#define {name} (\d+)", theme).group(1))
-
-    width = token("AGENT_TAB_W_GENERATIONS")
-    gap = (
-        token("AGENT_TAB_X_QUEUE")
-        - token("AGENT_TAB_X_GENERATIONS")
-        - width
-    )
-    assert width <= 150, "Library is much shorter than the old label"
-    assert width >= token("AGENT_TAB_W_QUEUE")
-    assert gap == 6, "the right cluster keeps the 6-unit gap to Queue"
 
 
 def test_reference_tab_marks_have_dedicated_stroked_artwork():
@@ -544,12 +519,14 @@ def test_the_detail_column_is_anchored_to_the_panel_foot():
 
 
 def test_the_tile_shrinks_rather_than_clipping_its_caption():
-    assert "GEN_TILE" in INTERN_HH
+    assert "GEN_TILE_MIN" in INTERN_HH
     assert "avail - caption" in GRID_CC
 
 
 def test_there_is_no_bottom_fade():
-    """The scrollbar communicates overflow without obscuring captions."""
+    """The design's fade means "there is more below"; this grid pages, so
+    nothing is ever half-visible under it and over a single visible row the
+    gradient just swallowed the captions."""
     assert "GEN_FADE_H" not in INTERN_HH
     assert "fade" not in GRID_CC.replace("No bottom fade", "")
 
@@ -562,25 +539,30 @@ def test_a_tile_is_never_blank():
     assert "draw_placeholder(box, AGENT_ICON_SPLAT)" in GRID_CC
 
 
-def _preview_request_block() -> str:
-    start = GRID_CC.index("bool agent_ui_generations_asset_has_preview")
-    return GRID_CC[start:GRID_CC.index("\n}", start)]
+def _tile_button_block() -> str:
+    """The second grid pass — the one that lays the buttons."""
+    start = GRID_CC.index("uiDefIconPreviewBut")
+    return GRID_CC[GRID_CC.rindex("BIFIconID preview", 0, start) : start]
 
 
-def test_the_preview_request_is_never_gated_on_having_pixels():
-    """An icon-less hit button must still request the deferred preview.
-
-    Painting owns the image so partial rows clip instead of shrinking it.
-    Waiting for preview pixels before requesting them would deadlock.
+def test_the_preview_icon_id_is_never_gated_on_having_pixels():
+    """Attaching the icon id to a button is what STARTS the deferred read
+    (`ui_def_but_icon` -> `ui_icon_ensure_deferred`), so withholding it until
+    the pixels arrived was a deadlock: no icon, no read, no pixels, no icon.
+    Every archived generation drew the placeholder cube forever while
+    Blender's own Asset Browser showed the same file's thumbnail fine.
     """
-    block = _preview_request_block()
-    assert "ui::icon_ensure_deferred(" in block
-    assert block.index("icon_ensure_deferred(") < block.index("get_preview()")
+    block = _tile_button_block()
+    assert "ensure_previewable(" in block
+    assert "asset_preview_icon_id" in block
+    # The gate must not reappear on the path that decides the icon id.
+    assert "agent_ui_generations_asset_has_preview" not in block
 
 
 def test_the_preview_request_precedes_the_icon_read():
-    """Ensure the icon exists before starting its asynchronous preview read."""
-    block = _preview_request_block()
+    """`ensure_previewable` is what mints the icon id; reading it first
+    yields ICON_NONE and the tile never asks for its preview again."""
+    block = _tile_button_block()
     assert block.index("ensure_previewable(") < block.index("asset_preview_icon_id")
 
 

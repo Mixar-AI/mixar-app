@@ -193,15 +193,7 @@ def _load_autoshow_tick_inner():
 
 @persistent
 def on_save_pre(_dummy_arg) -> None:
-    """Prevent runtime bubble/pill windows from being serialized.
-
-    Runs for EVERY save, snapshot copies included: the native writer only
-    unlinks bubble windows, their screens would still be written, and a file
-    read (a turn checkpoint restore) must never find a live bubble window to
-    free. A save started from a bubble click therefore closes the island under
-    that click; the chat's native dispatchers tolerate it
-    (mixie_chat_call_operator_and_redraw re-checks the region before use).
-    """
+    """Prevent runtime bubble/pill windows from being serialized."""
     closed = close_restored_agent_bubble_windows()
     _st.closed_for_save = closed > 0
     if closed:

@@ -8,7 +8,6 @@
 #include "BLI_time.h"
 #include "BLI_timer.h"
 #include "DNA_screen_types.h"
-#include "DNA_userdef_types.h"
 #include "DNA_windowmanager_types.h"
 #include "ED_screen.hh"
 #include "UI_mixar_motion.hh"
@@ -87,22 +86,13 @@ void mixar_motion_request(ARegion *region, const double deadline)
   until = std::max(until, deadline);
 }
 
-bool mixar_motion_reduced()
-{
-  return (U.uiflag & USER_REDUCE_MOTION) != 0;
-}
-
 float mixar_motion_step(MixarMotionValue &motion,
                         const float target,
                         const double seconds,
                         ARegion *region)
 {
   const double now = BLI_time_now_seconds();
-  /* Reduce Motion: sample() settles at the target for a non-positive duration,
-   * so the pose is the same one the transition would have ended on -- reached
-   * without the intervening frames, and without requesting a redraw for them. */
-  const double length = mixar_motion_reduced() ? 0.0 : seconds;
-  const float value = motion.sample(target, now, length);
+  const float value = motion.sample(target, now, seconds);
   if (motion.active(now)) {
     mixar_motion_request(region, motion.started + motion.duration);
   }

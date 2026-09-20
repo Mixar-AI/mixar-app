@@ -62,16 +62,12 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
   const int input_w = int(float(region_width) - side_padding * 2.0f);
   const int rect_width = std::max(input_w - int(4.0f * U.pixelsize), 10);
 
-  /* Widget wrap width is the field minus the 0.4 UI-unit text pad that
-   * widget_draw_text applies before wrapping, then 4*pixelsize. Matching
-   * that (and the native widget font — no 1.2x) keeps footer growth in
-   * lock-step with the glyphs the user actually sees. */
-  const int text_pad = int(0.4f * U.widget_unit);
-  const int wrap_width = std::max(rect_width - text_pad, 10);
-
   int visual_line_count;
-  if (wrap_width > 10) {
+  if (rect_width > 10) {
+    /* Use the same font setup as widget_draw_text_multiline():
+     *   font = ui::style_get()->widget with points * 1.2f */
     uiFontStyle fstyle = ui::style_get()->widget;
+    fstyle.points *= 1.2f;
     ui::fontstyle_set(&fstyle);
     const int fontid = fstyle.uifont_id;
 
@@ -79,7 +75,7 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
     blender::Vector<blender::StringRef> lines = BLF_string_wrap(
         fontid,
         blender::StringRef(text, text_len),
-        wrap_width,
+        rect_width,
         BLFWrapMode(int(BLFWrapMode::Typographical) | int(BLFWrapMode::HardLimit)));
 
     visual_line_count = int(lines.size());
@@ -130,8 +126,7 @@ int footer_layout_calculate_height(Scene *scene,
                                     const struct FooterThemeCache *theme,
                                     bool *out_has_overflow,
                                     int input_line_count,
-                                    int mention_row_count,
-                                    int region_width)
+                                    int mention_row_count)
 {
   /* Get cached theme if not provided */
   if (!theme) {
@@ -190,22 +185,10 @@ int footer_layout_calculate_height(Scene *scene,
   int required_height_unscaled;
 
   if (pending_count > 0) {
-    /* With thumbnails: wrap onto extra rows when the footer is too narrow
-     * for FOOTER_MAX_ATTACHMENTS in one line. Height is unscaled; wrap
-     * math uses the same unscaled size/spacing as this block. */
-    const int available = (region_width > 0) ?
-                              int(float(region_width) / scale) - int(theme->side_padding) * 2 :
-                              0;
-    /* Unknown width (init) keeps one row so the footer does not jump to
-     * ten stacked thumbnails before the first layout pass. */
-    const int columns = (region_width > 0) ? footer_attachment_columns(
-                            available, thumb_size_base, int(theme->thumbnail_spacing), pending_count) :
-                                             FOOTER_MAX_ATTACHMENTS;
-    const int rows = std::max(1, footer_attachment_rows(pending_count, columns));
-    const int thumbs_h = rows * thumb_size_base + (rows - 1) * int(theme->thumbnail_spacing);
+    /* With thumbnails - include top padding above thumbnails for clearance */
     required_height_unscaled = bottom_padding_base + row_height_base + row_spacing_base +
                                input_row_base + mention_block_base + main_footer_gap_base +
-                               thumb_top_margin_base + thumbs_h + top_padding_base;
+                               thumb_top_margin_base + thumb_size_base + top_padding_base;
   }
   else {
     /* No thumbnails - top padding provides space above input */
@@ -253,9 +236,6 @@ void footer_layout_calculate_positions(int region_width,
     return;
   }
 
-  out_positions->thumb_columns = 1;
-  out_positions->thumb_rows = 0;
-
   const float scale = UI_SCALE_FAC;
 
   /* Get scaled values from theme cache */
@@ -269,11 +249,6 @@ void footer_layout_calculate_positions(int region_width,
   out_positions->input_height = int(FOOTER_UI_UNIT_BASE * effective_lines * scale);
   out_positions->thumb_size = int(theme->thumbnail_size * scale);
   out_positions->thumb_spacing = int(theme->thumbnail_spacing * scale);
-  const int available = region_width - out_positions->side_padding * 2;
-  const int shown = std::min(pending_count, FOOTER_MAX_ATTACHMENTS);
-  out_positions->thumb_columns = footer_attachment_columns(
-      available, out_positions->thumb_size, out_positions->thumb_spacing, shown);
-  out_positions->thumb_rows = footer_attachment_rows(shown, out_positions->thumb_columns);
 
   const int row_spacing = int(theme->row_spacing * scale);
   const int main_footer_gap = int(theme->main_footer_gap * scale);

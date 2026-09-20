@@ -19,11 +19,6 @@ class TurnTransport:
         self._session_id = ''
         self._last_seq = -1
         self._running = False
-        # The command id of the most recent send — the backend's request id.
-        # Read by the send operator to bind its turn checkpoint; the user
-        # bubble carries the same id, but a bpy collection reference taken
-        # before the placeholder bubble was added can go stale.
-        self.last_command_id = ''
 
     @property
     def is_running(self):
@@ -38,7 +33,6 @@ class TurnTransport:
             return False
         self._session_id = payload['session_id']
         command_id = str(uuid.uuid4())
-        self.last_command_id = command_id
         previous_state = get_session_manager().get_state(scene)
         joining = interjecting
         if previous_state.value == 'busy' and not joining:
@@ -94,14 +88,14 @@ class TurnTransport:
                      execution_required=True, approval_required=True, auth_token=None,
                      image_attachments=None, attachment_names=None, imported_object_names=None,
                      project_context=None, mark_context=None, user_message=None,
-                     interjecting=False, auto_mode=False):
+                     interjecting=False):
         payload = build_chat_payload(
             message=message, instance_id=instance_id, session_id=session_id,
             plan_required=plan_required, execution_required=execution_required,
             approval_required=approval_required, image_attachments=image_attachments,
             attachment_names=attachment_names, imported_object_names=imported_object_names,
             project_context=project_context, mark_context=mark_context,
-            user_preferences=collect_user_preferences(), auto_mode=auto_mode,
+            user_preferences=collect_user_preferences(),
         )
         return self._send('chat', payload, user_message, interjecting)
 

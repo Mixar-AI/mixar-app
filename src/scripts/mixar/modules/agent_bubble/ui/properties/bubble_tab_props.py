@@ -22,7 +22,7 @@ TAB_ITEMS = (
     ('THREE_D', "3D", "3D generation (coming soon)"),
     ('MEDIA', "Media", "Media generation (coming soon)"),
     ('SPLAT', "Gaussian Splat", "Gaussian splat worlds (coming soon)"),
-    ('GENERATIONS', "Library",
+    ('GENERATIONS', "My Generations",
      "Your generations and connected asset libraries"),
     ('QUEUE', "Queue", "Generation job queue"),
 )

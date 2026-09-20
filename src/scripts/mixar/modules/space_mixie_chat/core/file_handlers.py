@@ -46,14 +46,6 @@ def _on_load_pre(*_args) -> None:
     from .export_destination import clear_all_destinations
     from .import_source import clear_all_sources
     from .session import get_session_manager
-    from .turn_checkpoints import is_restoring
-
-    if is_restoring():
-        # A turn-checkpoint restore reads a snapshot of THIS session while it
-        # is idle (core/turn_checkpoints.py): the session continues, nothing
-        # to abort.
-        logger.info("load_pre: turn checkpoint restore in progress, session kept")
-        return
 
     clear_all_destinations()
     clear_all_sources()

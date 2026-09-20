@@ -579,6 +579,8 @@ struct wmNotifier {
 #define ND_SPACE_MIXIE (24 << 16)         /* Mixie space updates */
 #define ND_SPACE_MIXIE_CHAT (25 << 16)    /* Mixie Chat space updates */
 #define ND_SPACE_AGENT_BUBBLE (26 << 16)  /* Floating Agent Bubble space updates */
+#define ND_SPACE_AGENT_STRIP (27 << 16)      /* View3D agent scene strip updates */
+#define ND_SPACE_AGENT_STRIP_TICK (28 << 16) /* Agent strip periodic poll tick (timer notifier) */
 #define ND_SPACE_MIXIE_CHAT_TICK (29 << 16)  /* Chat animation frame pump tick (timer notifier) */
 
 /* NC_ASSET. */

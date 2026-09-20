@@ -163,7 +163,7 @@ void mixie_chat_footer_region_layout(const bContext *C, ARegion *region)
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
   int mention_rows = mixie_chat_mention_row_count(scene);
   int required_height_unscaled = footer_layout_calculate_height(
-      scene, theme, &has_overflow, input_lines, mention_rows, region->winx);
+      scene, theme, &has_overflow, input_lines, mention_rows);
 
   /* Warn if height exceeds maximum (should rarely happen) */
   if (has_overflow) {
@@ -205,8 +205,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   const FooterThemeCache *theme = footer_cache_get_theme();
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
   int mention_rows = mixie_chat_mention_row_count(scene);
-  region->sizey = footer_layout_calculate_height(
-      scene, theme, nullptr, input_lines, mention_rows, region->winx);
+  region->sizey = footer_layout_calculate_height(scene, theme, nullptr, input_lines, mention_rows);
 
   ScrArea *area = CTX_wm_area(C);
   if (area) {
@@ -252,15 +251,6 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   FooterElementPositions pos;
   footer_layout_calculate_positions(
       region->winx, pending_count, theme, &pos, input_lines, mention_rows);
-  /* Layout may have asked for more lines than this frame's winrct has —
-   * a uiButton taller than its region stops drawing text entirely, which
-   * is how a grown subsequent prompt vanished until the next resize. */
-  {
-    const int max_input_h = region->winy - pos.input_y;
-    if (max_input_h > 0 && pos.input_height > max_input_h) {
-      pos.input_height = max_input_h;
-    }
-  }
 
   const float scale = UI_SCALE_FAC;
 

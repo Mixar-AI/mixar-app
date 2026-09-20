@@ -8,6 +8,7 @@ from ..constants import SessionState, STATE_LABELS
 from .session import get_session_manager
 
 HINT_QUEUED = 'queued'
+HINT_UNDELIVERED = 'could not be delivered'
 
 
 @dataclass
@@ -22,9 +23,6 @@ class OutgoingMessage:
 
 
 def can_send(scene):
-    from .turn_checkpoints import rewind_in_flight
-    if rewind_in_flight():
-        return False, 'Restoring a checkpoint…'
     session = get_session_manager()
     state = session.get_state(scene)
     if state in (SessionState.IDLE, SessionState.MODIFYING, SessionState.AWAITING_INPUT):
@@ -80,10 +78,6 @@ def send_user_message(scene, msg):
         imported_object_names=msg.imported_object_names,
         project_context=msg.project_context, mark_context=msg.mark_context,
         user_message=msg.user_message, interjecting=interjecting,
-        # The composer's Auto switch. Read here, on the ONE path a fresh turn
-        # and an interjection share, so both carry it; an input answer
-        # (start_input_stream above) is not a turn and never does.
-        auto_mode=bool(getattr(scene, 'mixie_chat_auto_mode', False)),
     )
     if ok:
         mark_rules_sent(scene)

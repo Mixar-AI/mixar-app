@@ -23,11 +23,6 @@ def _has_moodboard_content(context):
     return any(getattr(scene, name, ()) for name in (
         'mixie_moodboard_images',
         'mixie_moodboard_textboxes',
-        # Frames replaced the index-based `mixie_moodboard_groups`, which the
-        # load-time migration empties for good. The legacy name stays listed
-        # only so a board that has not ticked the migration yet still reads
-        # as non-empty.
-        'mixie_moodboard_frames',
         'mixie_moodboard_groups',
         'mixie_moodboard_action_nodes',
         'mixie_moodboard_asset_nodes',

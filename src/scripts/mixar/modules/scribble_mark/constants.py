@@ -81,11 +81,8 @@ MAX_MARKS_PER_TURN = 32
 #: rather than dropping ink — nothing the user drew is ever thrown away.
 MAX_STROKES_PER_MARK = 16
 
-#: Captured samples kept per stroke. Tablets emit far more than this; a
-#: stroke that reaches the cap is HALVED in place and keeps capturing, so a
-#: long line keeps its whole path (at half the sample density, still finer
-#: than anything downstream keeps) instead of losing its end. The buffer
-#: never grows past this.
+#: Captured samples kept per stroke before decimation. Tablets emit far more
+#: than this; the tail is dropped rather than growing the buffer.
 MAX_POINTS_PER_STROKE = 512
 
 #: Minimum on-screen distance between two captured samples, in unscaled
@@ -100,13 +97,9 @@ MIN_SAMPLE_DIST_PX = 2.0
 #: so the gesture is one people meet twice inside one Scribble mode.
 MARK_COMMIT_IDLE_S = 0.6
 
-#: Modal timer period. The idle above is only ever measured ON this tick, so
-#: the period is the commit's quantization error: a commit lands between
-#: MARK_COMMIT_IDLE_S and MARK_COMMIT_IDLE_S + this after the pen lifts. At
-#: 0.15 that averaged 75 ms of pure waiting added to every group; the tick
-#: itself only compares two floats and passes the event through, so buying
-#: that back costs nothing worth measuring.
-MARK_TIMER_STEP_S = 0.05
+#: Modal timer period. Shorter than the idle above, so a commit fires at most
+#: one period late.
+MARK_TIMER_STEP_S = 0.15
 
 # =============================================================================
 # SERIALIZATION LIMITS
@@ -123,14 +116,9 @@ MARK_POLYGON_MAX_POINTS = 32
 MARK_STROKE_MAX_POINTS = 48
 
 #: Samples per stroke projected into world space at commit time (raycast, or
-#: the ground plane where the ray hits nothing). Sixteen is what the backend's
-#: sketch schema already accepts per stroke (MAX_SKETCH_WORLD_POINTS), and the
-#: samples are chosen by SHAPE (simplify.sample_shape), so a road that bends
-#: arrives bent rather than as a straight line through its busiest stretch.
-#: The rays are cast once, at commit, on the main thread — never on the send
-#: path — and payload.serialize thins these paths first when a drawing-sized
-#: turn runs over MARK_JSON_MAX_BYTES.
-STROKE_WORLD_POINTS = 16
+#: the ground plane where the ray hits nothing). Eight is enough to say where
+#: a road runs; the drawing itself is carried by the annotated frame.
+STROKE_WORLD_POINTS = 8
 
 #: Normalized coordinates are rounded to this many decimals — ~0.1 px on a
 #: 1080p frame, and it keeps the JSON small enough to sit in a prompt.

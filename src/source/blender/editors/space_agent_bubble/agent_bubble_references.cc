@@ -35,7 +35,13 @@ void footer_thumbnails_draw_image(Main *, const char *, int, float, float, float
 
 int agent_bubble_reference_count(const bContext *C)
 {
-  return int(agent_bubble_reference_items(CTX_data_scene(C), CTX_wm_manager(C)).size());
+  Scene *scene = CTX_data_scene(C);
+  if (!scene) {
+    return 0;
+  }
+  PointerRNA ptr = RNA_id_pointer_create(&scene->id);
+  PropertyRNA *prop = RNA_struct_find_property(&ptr, "mixie_chat_pending_attachments");
+  return prop ? RNA_property_collection_length(&ptr, prop) : 0;
 }
 
 bool agent_bubble_references_visible(const bContext *C)
@@ -47,7 +53,8 @@ bool agent_bubble_references_visible(const bContext *C)
   }
   AgentIslandState state;
   agent_ui_state_gather(C, &state);
-  return !state.ink_visible && agent_bubble_reference_count(C) > 0;
+  return state.active_tab == AGENT_TAB_AGENT && !state.ink_visible &&
+         agent_bubble_reference_count(C) > 0;
 }
 
 float agent_bubble_reference_fraction(wmWindowManager *wm)
@@ -140,10 +147,8 @@ void agent_bubble_references_draw(const bContext *C,
                                                  agent_bubble_reference_count(C),
                                                  agent_bubble_reference_fraction(wm));
   ui::Block *block = ui::block_begin(C, region, "agent_references", ui::EmbossType::None);
-  if (state.active_tab == AGENT_TAB_AGENT) {
-    agent_bubble_send_button(C, region, block, layout, state);
-  }
-  /* The same neutral hairline as the Library column separators. */
+  agent_bubble_send_button(C, region, block, layout, state);
+  /* The same neutral hairline as the My Generations column separators. */
   pane_column_divider(1, g.view.ymin, g.view.ymax, u);
   int old_scissor[4];
   GPU_scissor_get(old_scissor);
@@ -152,30 +157,35 @@ void agent_bubble_references_draw(const bContext *C,
               int(g.view.ymin),
               int(BLI_rctf_size_x(&g.view)),
               int(BLI_rctf_size_y(&g.view)));
-  const auto items = agent_bubble_reference_items(CTX_data_scene(C), wm);
+  PointerRNA scene = RNA_id_pointer_create(&CTX_data_scene(C)->id);
   int index = 0;
-  for (const AgentReference &item : items) {
+  RNA_BEGIN (&scene, item, "mixie_chat_pending_attachments") {
     const rctf image = image_rect(g, index++);
     if (image.ymin - 28 * u > g.view.ymax || image.ymax < g.view.ymin) {
       continue;
     }
-    const std::string &path = item.path;
-    const std::string &name = item.name;
-    const char *source = item.source.c_str();
-    const bool generation = state.active_tab != AGENT_TAB_AGENT;
+    const std::string path = RNA_string_get(&item, "image_path");
+    const std::string name = RNA_string_get(&item, "display_name");
+    PropertyRNA *source_prop = RNA_struct_find_property(&item, "image_source");
+    const char *source = nullptr;
+    RNA_property_enum_identifier(const_cast<bContext *>(C),
+                                 &item,
+                                 source_prop,
+                                 RNA_property_enum_get(&item, source_prop),
+                                 &source);
     const float plate[4] = {0.08f, 0.09f, 0.085f, 0.25f};
     GPU_blend(GPU_BLEND_ALPHA);
     pane_fill_round(&image, 10 * u, plate);
-    if (generation || STREQ(source, "FILE") || STREQ(source, "BLEND_DATA")) {
+    if (source && (STREQ(source, "FILE") || STREQ(source, "BLEND_DATA"))) {
       footer_thumbnails_draw_image(CTX_data_main(C),
                                    path.c_str(),
-                                   generation || STREQ(source, "BLEND_DATA"),
+                                   STREQ(source, "BLEND_DATA"),
                                    image.xmin,
                                    image.ymin,
                                    g.image_size);
     }
     rctf visible_image;
-    if ((generation || STREQ(source, "BLEND_DATA")) &&
+    if (source && STREQ(source, "BLEND_DATA") &&
         BLI_rctf_isect(&image, &g.view, &visible_image)) {
       ED_moodboard_attachment_target(C, region, path.c_str(), visible_image);
     }
@@ -194,8 +204,7 @@ void agent_bubble_references_draw(const bContext *C,
       pane_fill_round(&close, 14 * u, back);
       ui::Button *button = uiDefIconButO(block,
                                          ui::ButtonType::But,
-                                         generation ? "mixar.pane_remove_reference" :
-                                                      "mixie_chat.remove_attachment",
+                                         "mixie_chat.remove_attachment",
                                          wm::OpCallContext::ExecDefault,
                                          ICON_X,
                                          int(close.xmin),
@@ -209,6 +218,7 @@ void agent_bubble_references_draw(const bContext *C,
       ui::mixar_button_tooltip_owned(button, ("Remove " + name).c_str());
     }
   }
+  RNA_END;
   GPU_scissor(UNPACK4(old_scissor));
   GPU_scissor_test(false);
   PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
@@ -245,13 +255,19 @@ void qa_targets(const wmWindow *win,
   {
     return;
   }
+  PointerRNA scene = RNA_id_pointer_create(&win->scene->id);
+  PropertyRNA *prop = RNA_struct_find_property(&scene, "mixie_chat_pending_attachments");
+  if (!prop) {
+    return;
+  }
   if (!G_MAIN || G_MAIN->wm.is_empty()) {
     return;
   }
-  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
-  const auto items = agent_bubble_reference_items(win->scene, wm);
   const auto g = agent_bubble_reference_geometry(
-      win, region, int(items.size()), agent_bubble_reference_fraction(wm));
+      win,
+      region,
+      RNA_property_collection_length(&scene, prop),
+      agent_bubble_reference_fraction(static_cast<wmWindowManager *>(G_MAIN->wm.first)));
   auto append = [&](const char *surface,
                     const std::string &text,
                     const std::string &path,
@@ -268,18 +284,19 @@ void qa_targets(const wmWindow *win,
   };
   append("reference_column", "Attached references", "", -1, g.view);
   int index = 0;
-  for (const AgentReference &item : items) {
+  RNA_BEGIN (&scene, item, "mixie_chat_pending_attachments") {
     const rctf image = image_rect(g, index);
     rctf visible;
     if (BLI_rctf_isect(&image, &g.view, &visible)) {
       append("reference_preview",
-             item.name,
-             item.path,
+             RNA_string_get(&item, "display_name"),
+             RNA_string_get(&item, "image_path"),
              index,
              visible);
     }
     index++;
   }
+  RNA_END;
 }
 }  // namespace
 
