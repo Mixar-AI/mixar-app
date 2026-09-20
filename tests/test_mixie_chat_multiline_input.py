@@ -61,7 +61,8 @@ def test_island_strip_grows_with_visual_lines():
     assert "agent_ui_composer_strip_h(input_lines)" in build
     assert "chip_y - AGENT_INPUT_GAP - strip_h" in build
     # Chrome floor stays one row so the compact empty island still lays out.
-    assert "AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +" in build
+    assert "panel_y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +" in build
+    assert "agent_ui_panel_top(active_tab)" in build
 
 
 def test_island_chrome_uses_the_grown_strip():

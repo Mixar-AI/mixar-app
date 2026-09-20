@@ -59,13 +59,14 @@ def test_overlay_surface_is_translucent():
 def test_scribble_text_output_window_over_topbar():
     """In scribble mode, the text output window is rendered over the Agent
     topbar, showing recognized text in a rounded window in the header centre
-    (where a session title sits when one exists)."""
+    without restoring the removed session title."""
     assert "if (state->ink_visible) {" in DRAW_CC
     assert "/* Scribble text output window over the new chat topbar */" in DRAW_CC
     assert "fill_round(&text_win, 14.0f * u, win_bg);" in DRAW_CC
     assert "outline_round(&text_win, 14.0f * u, win_border);" in DRAW_CC
     assert "state->input_text" in DRAW_CC
-    assert "else if (state->title[0] != '\\0')" in DRAW_CC
+    assert "label_centre(state->title" not in DRAW_CC
+    assert "tab_title" not in DRAW_CC
     assert 'BLI_strncpy(r_state->title, "New Chat"' not in STATE_CC
 
 

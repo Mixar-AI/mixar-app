@@ -147,6 +147,11 @@ float agent_ui_composer_strip_h(const int visual_lines)
   return float(AGENT_INPUT_H * lines);
 }
 
+float agent_ui_panel_top(const AgentTabId tab)
+{
+  return tab == AGENT_TAB_AGENT ? float(AGENT_PANEL_Y) : float(AGENT_CARD_Y + 12);
+}
+
 void agent_ui_layout_build(const int window_w,
                            const int window_h,
                            AgentTabId active_tab,
@@ -184,6 +189,7 @@ void agent_ui_layout_build(const int window_w,
    * derived from it so the pad re-flows instead of overflowing. */
   const float island_w = pad ? (region_w / u) : float(AGENT_ISLAND_W);
   const float card_w = island_w - AGENT_CARD_X * 2.0f;
+  const float panel_y = agent_ui_panel_top(active_tab);
   const float panel_w = card_w - (AGENT_PANEL_X - AGENT_CARD_X) * 2.0f;
   /* Artboard y that sits at the window's top edge: the tab strip normally;
    * the pad has no strip and starts just above its card. */
@@ -197,7 +203,7 @@ void agent_ui_layout_build(const int window_w,
    * stretches with the window, so a compact default shorter than the
    * 521-unit artboard is valid — requiring AGENT_ISLAND_H painted the
    * island black and hid every tab/chip. Same floor as the Scribble pad. */
-  const float min_h = (AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
+  const float min_h = (panel_y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
                        AGENT_CARD_PAD_BOTTOM) *
                       u;
   if (pad) {
@@ -236,38 +242,39 @@ void agent_ui_layout_build(const int window_w,
    * `active` flags are kept, since the card body still switches on them. */
   r_layout->strip = pad ? rctf{} : f.box(AGENT_STRIP_X, AGENT_STRIP_Y, AGENT_STRIP_W, AGENT_STRIP_H);
 
-  /* Spend the strip's center gap on labels before eliding them. Measurement,
-   * paint, native button bounds and QA targets all use this resolved layout. */
+  /* One centered row, with equal breathing room between pills. Labels grow
+   * at native text size; when space is tight the painter elides inside these
+   * same bounds, which also drive native hits and QA. */
   const float text_size = agent_ui_body_font_size();
   const float badge_size = AGENT_NEW_BADGE_FONT * agent_ui_text_unit();
   const float badge_w = std::max(float(AGENT_NEW_BADGE_W),
                                 ui::mixar_text_width("NEW", badge_size) / u +
                                     2.0f * AGENT_TAB_ICON_GAP);
+  constexpr float gap = 16.0f;
+  constexpr float padding = 20.0f;
   TabMetric tabs[AGENT_TAB_COUNT];
-  float extra = 0.0f;
+  float total = gap * (AGENT_TAB_COUNT - 1);
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     tabs[i] = g_tab_metrics[i];
-    const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W : AGENT_TAB_ICON;
+    const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W + AGENT_TAB_ICON_GAP :
+                          i == AGENT_TAB_GENERATIONS ? 0.0f :
+                                                       AGENT_TAB_ICON + AGENT_TAB_ICON_GAP;
     const float trailing = i == AGENT_TAB_SPLAT ? badge_w + AGENT_TAB_ICON_GAP : 0.0f;
     const float wanted = ui::mixar_text_width(tabs[i].label, text_size) / u + leading +
-                         trailing + 3.0f * AGENT_TAB_ICON_GAP + 2.0f / u;
+                         trailing + 2.0f * padding;
     tabs[i].w = std::max(tabs[i].w, wanted);
-    extra += tabs[i].w - g_tab_metrics[i].w;
+    total += tabs[i].w;
   }
-  const float spare = AGENT_TAB_X_GENERATIONS - (AGENT_TAB_X_SPLAT + AGENT_TAB_W_SPLAT) -
-                      6.0f;
-  const float growth = extra > 0.0f ? std::min(1.0f, spare / extra) : 0.0f;
-  for (int i = 0; i < AGENT_TAB_COUNT; i++) {
-    tabs[i].w = g_tab_metrics[i].w + (tabs[i].w - g_tab_metrics[i].w) * growth;
-    if (i > 0 && i <= AGENT_TAB_SPLAT) {
-      const float gap = g_tab_metrics[i].x -
-                        (g_tab_metrics[i - 1].x + g_tab_metrics[i - 1].w);
-      tabs[i].x = tabs[i - 1].x + tabs[i - 1].w + gap;
-    }
+  const float available = island_w - 2.0f * AGENT_TAB_X_AGENT;
+  const float fit = std::min(1.0f, (available - gap * (AGENT_TAB_COUNT - 1)) /
+                                      (total - gap * (AGENT_TAB_COUNT - 1)));
+  total = (total - gap * (AGENT_TAB_COUNT - 1)) * fit + gap * (AGENT_TAB_COUNT - 1);
+  float tab_x = (island_w - total) * 0.5f;
+  for (TabMetric &tab : tabs) {
+    tab.w *= fit;
+    tab.x = tab_x;
+    tab_x += tab.w + gap;
   }
-  tabs[AGENT_TAB_QUEUE].x = AGENT_TAB_X_QUEUE + AGENT_TAB_W_QUEUE - tabs[AGENT_TAB_QUEUE].w;
-  tabs[AGENT_TAB_GENERATIONS].x = tabs[AGENT_TAB_QUEUE].x - 6.0f -
-                                tabs[AGENT_TAB_GENERATIONS].w;
 
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     AgentTabLayout &tab = r_layout->tabs[i];
@@ -340,8 +347,8 @@ void agent_ui_layout_build(const int window_w,
    * has at the sides (artboard: card ends 569, panel 563). Mirroring the
    * card-top offset here instead left a 76-unit band of bare card gradient
    * under every pane — the "green strip" under the prompt box. */
-  const float panel_h = card_bottom - AGENT_PANEL_Y - (AGENT_PANEL_X - AGENT_CARD_X);
-  r_layout->panel = f.box(AGENT_PANEL_X, AGENT_PANEL_Y, panel_w, panel_h);
+  const float panel_h = card_bottom - panel_y - (AGENT_PANEL_X - AGENT_CARD_X);
+  r_layout->panel = f.box(AGENT_PANEL_X, panel_y, panel_w, panel_h);
 
   const float chip_y = card_bottom - AGENT_CARD_PAD_BOTTOM - AGENT_CHIP_H;
 
@@ -358,15 +365,15 @@ void agent_ui_layout_build(const int window_w,
    * prompts to a single line. */
   const float strip_h = agent_ui_composer_strip_h(input_lines);
   const float input_y = has_transcript ? (chip_y - AGENT_INPUT_GAP - strip_h) :
-                                         AGENT_PANEL_Y;
+                                         panel_y;
   r_layout->input = f.box(input_x,
                           input_y,
                           input_w,
                           chip_y - AGENT_INPUT_GAP - input_y);
   r_layout->transcript = f.box(AGENT_PANEL_X,
-                               AGENT_PANEL_Y,
+                               panel_y,
                                panel_w,
-                               input_y - AGENT_TRANSCRIPT_GAP - AGENT_PANEL_Y);
+                               input_y - AGENT_TRANSCRIPT_GAP - panel_y);
   r_layout->prompt_x = f.x(AGENT_PROMPT_X);
   /* Optical centre of the first line's ink box, not its baseline — the
    * painter centres every label the same way. */

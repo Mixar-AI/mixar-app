@@ -88,7 +88,8 @@ def test_compact_height_is_valid_the_card_stretches():
     """
     build = _function_body(LAYOUT_CC, "void agent_ui_layout_build(")
     assert "AGENT_ISLAND_H * u" not in build
-    assert "AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +" in build
+    assert "panel_y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +" in build
+    assert "agent_ui_panel_top(active_tab)" in build
     assert "region_h < min_h - slack" in build
 
 
@@ -141,9 +142,8 @@ def test_chip_row_metrics_all_share_one_unit():
         assert re.search(rf"{token} \* u;", body), f"{token} is not in the island unit"
 
 
-def test_tab_strip_and_card_header_text_use_fixed_typography():
-    """The labels the bug was reported against: tab strip, queue count, NEW
-    badge and card title."""
+def test_tab_strip_uses_fixed_typography_without_redundant_card_titles():
+    """Tab labels and badges keep native typography; panes omit their titles."""
     strip = _function_body(CONTROLS_CC, "void agent_ui_draw_tab_strip(")
     assert "AGENT_TAB_FONT * agent_ui_text_unit()" in strip
     assert "AGENT_CHIP_FONT * agent_ui_text_unit()" in CONTROLS_CC
@@ -152,9 +152,9 @@ def test_tab_strip_and_card_header_text_use_fixed_typography():
     )
 
     island = _function_body(DRAW_CC, "void agent_ui_draw_island(")
-    assert island.count("AGENT_HDR_TITLE_FONT * agent_ui_text_unit()") == 2, (
-        "the Agent tab's session title and the pane tabs' card title"
-    )
+    assert "state->title" not in island
+    assert "tab_title" not in island
+    assert '"Scribble to type..."' in island
     assert "AGENT_HDR_FAQ_FONT" not in island
 
 

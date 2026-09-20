@@ -1062,6 +1062,9 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
         /* The layout's unit — width-derived normally, the island's default
          * unit on the Scribble pad — never a second derivation here. */
         const float u = layout.scale;
+        if (agent_bubble_references_visible(C)) {
+          panel_region.xmax = float(region->winx) - 6.0f * u;
+        }
         if (tab_probe.active_tab == AGENT_TAB_QUEUE) {
           agent_ui_queue_draw(C, region, panel_region, u);
         }
@@ -1258,10 +1261,13 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
    * the WINDOW region's layout: the TOOLS region can bootstrap-collapse to
    * 1px (too small -> invisible -> its own layout never runs), so it cannot
    * be trusted to fix itself. */
+  AgentIslandState tab_probe;
+  agent_ui_state_gather(C, &tab_probe);
+  const int panel_top = int(agent_ui_panel_top(AgentTabId(tab_probe.active_tab)));
   /* The pad has no tab strip: its top band is just the card header. */
   const int top_units = (pad_ratio > 0.0f) ?
-                            (AGENT_PANEL_Y - (AGENT_CARD_Y - AGENT_PAD_TOP_INSET)) :
-                            (AGENT_PANEL_Y - AGENT_ISLAND_TOP);
+                            (panel_top - (AGENT_CARD_Y - AGENT_PAD_TOP_INSET)) :
+                            (panel_top - AGENT_ISLAND_TOP);
   /* Strip height is filled in after state gather — a 1-line default here
    * would leave TOOLS short of a 2–4 line draft and clip the extra lines. */
   int bottom_units = AGENT_TRANSCRIPT_GAP + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
@@ -1287,8 +1293,6 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
   /* Non-Agent tabs draw their entire pane inside the WINDOW region — panes
    * like the 3D tab pin rows to the panel FOOT, which the Agent tab's TOOLS
    * band would clip — so TOOLS keeps only the card-foot sliver there. */
-  AgentIslandState tab_probe;
-  agent_ui_state_gather(C, &tab_probe);
   const bool agent_tab_active = (tab_probe.active_tab == AGENT_TAB_AGENT);
   const bool wants_input_strip = has_conversation || tab_probe.ink_visible;
   if (wants_input_strip) {
