@@ -11,8 +11,10 @@
  * Every value here comes from an EXISTING property — this file introduces no
  * state of its own. The mapping, once, so it is auditable:
  *
- *   status text   scene.mixie_chat_state   (the enum item's own UI name)
- *   status dot    scene.mixie_chat_is_busy
+ *   status text   scene.mixie_chat_state   (the enum item's own UI name),
+ *                 overridden to "Working" while IDLE with
+ *                 scene.mixie_run_open (an open run's workers still building)
+ *   status dot    scene.mixie_chat_is_busy, or that same open run
  *   title         the wm.mixie_chat_history_entries row whose session_id
  *                 matches scene.mixie_session_id; empty when none matches
  *                 (no invented "New Chat" fallback)
@@ -230,6 +232,21 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     r_state->status_busy = read_bool_prop(&scene_ptr, "mixie_chat_is_busy") ||
                            enum_is(&scene_ptr, "mixie_chat_state", "BUSY") ||
                            enum_is(&scene_ptr, "mixie_chat_state", "MODIFYING");
+    /* The orchestrator ended its turn but the run is open: workers keep
+     * building and the backend starts the next turn itself. The state enum
+     * stays IDLE throughout, so its own UI name would read "Idle" while work
+     * is going on. Same label and same lit dot as the Python header's
+     * equivalent branch (agent_bubble/ui/header.py:_get_status). NOT
+     * status_busy: there is nothing to stop and the composer is free, so the
+     * Stop button and the cat's working animation must stay off. A scene
+     * without the property (file saved before the chat registered it) reads
+     * false and keeps today's label. */
+    r_state->status_active = enum_is(&scene_ptr, "mixie_chat_state", "IDLE") &&
+                             read_bool_prop(&scene_ptr, "mixie_run_open");
+    if (r_state->status_active) {
+      BLI_strncpy(
+          r_state->status_text, "Working", sizeof(r_state->status_text));
+    }
     r_state->agent_mode = enum_is(&scene_ptr, "mixie_chat_mode", "AGENT");
     /* A scene saved before the chat registered the property reads false —
      * the same default the send path uses (core/composer_send.py). */
@@ -313,11 +330,11 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
    * operator would be inert for the deferred UI pass and read as broken. */
   r_state->scribble_available = WM_operatortype_find("MIXAR_OT_scribble_toggle", true) !=
                                 nullptr;
+  r_state->handwriting_available = WM_operatortype_find("MIXIE_CHAT_OT_ink_toggle", true) != nullptr;
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     r_state->ink_visible = read_bool_prop(&wm_ptr, "mixie_chat_ink_visible");
-    r_state->scribble_armed = r_state->ink_visible ||
-                              read_bool_prop(&wm_ptr, "mixar_mark_armed");
+    r_state->scribble_armed = read_bool_prop(&wm_ptr, "mixar_mark_armed");
     read_enum_name(&wm_ptr, "mixar_mark_intent", r_state->mark_intent,
                    sizeof(r_state->mark_intent));
   }

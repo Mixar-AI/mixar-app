@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""No-credit references, title-free panes and centered tabs in the real island.
+"""No-credit references, title-free panes and grouped tabs in the real island.
 
 Uses native Upload Reference/file selectors, moodboard selection, removal and
 scrolling. Run with QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT on a fresh Dev
@@ -19,6 +19,7 @@ from lib import run_scenario
 from reference_drop_ux_e2e import SCENE, batch_drop, pause
 from moodboard_drawer_e2e import select
 from attachment_column_e2e import wheel
+from island_tab_alignment_e2e import assert_tab_alignment
 
 TABS = {
     'AGENT': 'Agent chat', 'THREE_D': '3D generation',
@@ -110,15 +111,8 @@ def run(qa):
     image.transpose(Image.Transpose.FLIP_TOP_BOTTOM).save(board_path)
     tab(qa, 'THREE_D')
 
-    def centered_tabs():
-        pills = [qa.find(area_type='AGENT_BUBBLE', text=tip)['widgets'][0]['rect']
-                 for tip in TABS.values()]
-        width = qa.eval("h=drv.find(area_type='AGENT_BUBBLE',text='Agent chat')[0]; result=h['_area'].width")
-        assert abs((pills[0][0] + pills[-1][2]) / 2 - width / 2) <= 2, pills
-        gaps = [pills[i+1][0] - pills[i][2] for i in range(len(pills)-1)]
-        assert min(gaps) >= 12 and max(gaps)-min(gaps) <= 2, gaps
-        capture(qa, out, 'centered-tabs-no-title')
-    qa.step('centered_tabs_with_equal_larger_gaps', centered_tabs)
+    qa.step('left_navigation_and_right_utility_tabs', assert_tab_alignment, qa)
+    capture(qa, out, 'grouped-tabs-no-title')
 
     # Direct native uploads, including their source-switch side effects.
     for key in OWNERS:

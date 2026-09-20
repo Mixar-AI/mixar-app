@@ -91,16 +91,9 @@ class MIXIE_CHAT_HT_header(Header):
                     depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
                 )
 
-            # Scribble — one mode, two surfaces: ink over the chat becomes
-            # text in the composer (the C++ ink canvas), ink over the frozen
-            # 3D viewport becomes marks the agent resolves against the scene,
-            # so it knows what "this" refers to. The count is how many marks
-            # ride with the next message. depress reflects EITHER half being
-            # up, like the overlays above — a pressed button turns it all off.
-            # hasattr guard: deferred UI registration pass.
+            # Viewport annotation is independent of prompt input.
             if hasattr(bpy.types, 'MIXAR_OT_scribble_toggle'):
-                armed = bool(getattr(wm, 'mixar_mark_armed', False)
-                             or getattr(wm, 'mixie_chat_ink_visible', False))
+                armed = bool(getattr(wm, 'mixar_mark_armed', False))
                 mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
                                  if m.state == 'DRAFT')
                 mark_row = layout.row(align=True)
@@ -123,6 +116,12 @@ class MIXIE_CHAT_HT_header(Header):
                     mark_row.operator(
                         "mixar.scribble_mark_clear", text="", icon='X',
                     )
+
+            if hasattr(bpy.types, 'MIXIE_CHAT_OT_ink_toggle'):
+                layout.operator(
+                    "mixie_chat.ink_toggle", text="Handwriting", icon='FONT_DATA',
+                    depress=bool(getattr(wm, 'mixie_chat_ink_visible', False)),
+                )
 
             # Voice — dictate into the composer. The toggle is registered only
             # where the platform has a recogniser (core/voice.py), so hasattr

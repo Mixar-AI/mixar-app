@@ -245,7 +245,7 @@ def test_status_pill_reads_working_in_background_for_idle_open_run(monkeypatch):
     assert header._get_status(scene).label == "Idle"
     scene.mixie_run_open = True
     status = header._get_status(scene)
-    assert status.label == "Working in background"
+    assert status.label == "Working"
     scene.mixie_chat_state = "BUSY"
     assert header._get_status(scene).label == "Running", "BUSY still wins"
 
@@ -300,3 +300,85 @@ def test_every_send_surface_uses_the_shared_predicate():
 
     abort = _source("ui/operators/session_ops.py")
     assert 'session.set_run(scene, "", False)' in abort
+
+
+# ---------------------------------------------------------------------------
+# F. Parallel Agents cards outlive the orchestrator's turn, not the run
+# ---------------------------------------------------------------------------
+
+
+def _card_settle(monkeypatch):
+    from mixar.modules.agent_panel.core import cards
+
+    calls = []
+    monkeypatch.setattr(cards, "settle_running", lambda: calls.append(True))
+    return calls
+
+
+def test_turn_end_of_an_open_run_leaves_the_cards_running(monkeypatch):
+    from mixar.modules.space_mixie_chat.core import slot_processor
+
+    calls = _card_settle(monkeypatch)
+    monkeypatch.setattr(slot_processor, "_bump_layout_epoch", lambda scene: None)
+    scene = _scene(state="IDLE")
+    scene.mixie_chat_messages.add()
+    SessionManager.set_run(scene, "run-1", True)
+
+    slot_processor.finalize_turn(scene)
+    assert calls == [], "the workers on the cards are still building"
+
+    SessionManager.set_run(scene, "run-1", True)  # re-reported open: no edge
+    assert calls == []
+    SessionManager.set_run(scene, "", False)      # run_status completed / cancel
+    assert calls == [True]
+    SessionManager.set_run(scene, "", False)      # already closed: no edge
+    assert calls == [True]
+
+
+def test_turn_end_without_an_open_run_settles_the_cards(monkeypatch):
+    from mixar.modules.space_mixie_chat.core import slot_processor
+
+    calls = _card_settle(monkeypatch)
+    monkeypatch.setattr(slot_processor, "_bump_layout_epoch", lambda scene: None)
+    scene = _scene(state="IDLE")
+    scene.mixie_chat_messages.add()
+    slot_processor.finalize_turn(scene)
+    assert calls == [True]
+
+
+def test_in_progress_turn_end_keeps_cards_and_run_then_completed_closes_both(monkeypatch):
+    """The end-to-end order on the main thread: run_status in_progress, the
+    `complete` handling (IDLE + finalize_turn), the run stays open and the
+    cards keep running; the next turn's `completed` closes the run and
+    settles them."""
+    from mixar.modules.space_mixie_chat.core import slot_processor
+
+    calls = _card_settle(monkeypatch)
+    monkeypatch.setattr(slot_processor, "_bump_layout_epoch", lambda scene: None)
+    monkeypatch.setattr(queue_processor.EventProcessor, "_show_feedback_on_last_agent_message", lambda self, scene: None)
+    monkeypatch.setattr(queue_processor.EventProcessor, "_redraw_ui", lambda self: None)
+    processor = queue_processor.EventProcessor()
+    scene = _scene(state="BUSY")
+    scene.mixie_chat_messages.add()
+
+    processor._handle_typed_payload({"type": "run_status", "run_id": "run-1", "status": "in_progress"}, scene)
+    processor._handle_agent_complete_internal(scene)
+    assert scene.mixie_chat_state == "IDLE" and scene.mixie_run_open is True
+    assert calls == []
+
+    processor._handle_typed_payload({"type": "run_status", "run_id": "run-1", "status": "completed"}, scene)
+    assert calls == [True] and scene.mixie_run_open is False
+    # The closed run's turn end settles again — idempotent on terminal cards.
+    processor._handle_agent_complete_internal(scene)
+    assert calls == [True, True] and scene.mixie_run_open is False
+
+
+def test_popup_status_reads_working_in_background_for_idle_open_run():
+    from mixar.modules.agent_bubble.ui.menus import agent_bubble_menu
+
+    scene = _scene(state="IDLE")
+    assert agent_bubble_menu._get_status(scene)[0] == "Idle"
+    scene.mixie_run_open = True
+    assert agent_bubble_menu._get_status(scene)[0] == "Working"
+    scene.mixie_chat_state = "BUSY"
+    assert agent_bubble_menu._get_status(scene)[0] == "Running"

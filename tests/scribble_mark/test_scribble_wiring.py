@@ -508,9 +508,9 @@ class TestReviewFindings:
         assert "freeze.release" in release
 
 
-class TestOneScribbleMode:
+class TestIndependentScribbleTools:
     """Handwriting over the chat becomes text, ink over the viewport becomes
-    marks, and the two halves enter and leave together. Pinned at the source
+    marks, with independent lifetimes and a shared Send flush. Pinned at the source
     level because every seam here is a Blender operator or a wmTimer."""
 
     MODAL = "src/scripts/mixar/modules/scribble_mark/ui/operators/mark_draw_ops.py"
@@ -524,69 +524,46 @@ class TestOneScribbleMode:
         "src/scripts/mixar/modules/agent_bubble/ui/header.py",
     )
 
-    def test_there_is_exactly_one_scribble_control(self):
-        """Two grease-pencil buttons — one for text, one for marks — is the
-        two-mode UI this feature exists to remove."""
+    def test_annotation_and_handwriting_have_distinct_controls(self):
         for header in self.HEADERS:
             text = source(header)
             assert text.count("mixar.scribble_toggle") == 1, header
-            assert "toggle_scribble" not in text, header
-            assert "scribble_mark_toggle" not in text, header
-        assert "toggle_scribble" not in source(self.INK_OPS)
+            assert text.count("mixie_chat.ink_toggle") == 1, header
 
     def test_the_toggle_arms_and_disarms_through_the_coordinator(self):
         text = source(self.ARM)
         body = text[text.index("class MIXAR_OT_scribble_toggle"):text.index("class MIXAR_OT_scribble_mark_undo")]
         assert "scribble_mode.arm(" in body
-        assert "scribble_mode.disarm(" in body
+        assert "scribble_mode.disarm_marks(" in body
 
-    def test_the_control_shows_either_half_as_armed(self):
+    def test_the_annotate_control_shows_only_viewport_state(self):
         for header in self.HEADERS:
             text = source(header)
             block = text[text.index("mixar.scribble_toggle") - 600:text.index("mixar.scribble_toggle")]
-            assert "mixar_mark_armed" in block and "mixie_chat_ink_visible" in block, header
+            assert "mixar_mark_armed" in block and "mixie_chat_ink_visible" not in block, header
 
     def test_the_freeze_passes_timer_events_through(self):
         """A window-level modal that swallows every TIMER starves the chat
         canvas's idle-commit timer: with a docked chat in the same window,
         handwriting would never convert while the viewport was frozen."""
         text = source(self.MODAL)
-        timer = text[text.index('if event.type == "TIMER":'):text.index("# Esc is the ONE binding")]
+        timer = text[text.index('if event.type == "TIMER":'):text.index("# A pen-up")]
         assert 'return {"PASS_THROUGH"}' in timer
         assert 'return {"RUNNING_MODAL"}' not in timer
 
-    def test_only_esc_is_bound_window_wide(self):
-        """This is a WINDOW-level modal, so it is offered every event in the
-        window — including keys meant for the Outliner, the Properties editor
-        or a docked chat. Everything but Esc (the promised way out) and the
-        pen-up that closes an open stroke must sit BELOW the region test, or
-        Delete in the Outliner silently undoes a mark and reports "Mark
-        removed", and Tab in the Properties editor flips the ink reading."""
+    def test_all_drawing_keys_are_scoped_to_viewport(self):
         text = source(self.MODAL)
         modal = text[text.index("def modal"):text.index("def cancel")]
         gate = modal.index('if not inside:')
-        for binding, name in (('"BACK_SPACE"', "undo"), ('"TAB"', "reading flip")):
-            assert modal.index(binding) > gate, (
-                f"the {name} binding is handled before the region test — it "
-                f"would fire for the whole window"
-            )
-        assert modal.index('event.type == "ESC"') < gate, (
-            "Esc is the way out and must work from anywhere"
-        )
+        for key in ('"BACK_SPACE"', '"TAB"', '"ESC"'):
+            assert modal.index(key) > gate
+        assert modal.index('and self._ink.drawing') < gate
 
-    def test_the_freeze_follows_the_canvas_down(self):
-        """Esc or the close X over the chat canvas are C++ paths the modal
-        never sees; it polls the flag on its timer instead."""
+    def test_freeze_lifetime_does_not_follow_handwriting(self):
         text = source(self.MODAL)
-        invoke = text[text.index("def invoke"):text.index("def modal")]
-        assert "_ink_linked = scribble_mode.ink_open" in invoke
-        timer = text[text.index('if event.type == "TIMER":'):text.index("# Esc is the ONE binding")]
-        assert "_ink_linked and not scribble_mode.ink_open" in timer
-
-    def test_every_freeze_exit_lowers_the_canvas(self):
-        text = source(self.MODAL)
-        finish = text[text.index("def _finish"):]
-        assert "scribble_mode.close_ink" in finish[:1200]
+        assert "_ink_linked" not in text
+        assert "scribble_mode.close_ink" not in text
+        assert "scribble_mode.ink_open" not in text
 
     def test_the_send_waits_for_handwriting_before_the_empty_check(self):
         """A prompt written entirely by hand is EMPTY until its last batch

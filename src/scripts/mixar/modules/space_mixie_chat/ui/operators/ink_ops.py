@@ -5,11 +5,8 @@
 """Scribble operators — Python side of the handwriting ink overlay.
 
 The C++-drawn ink canvas (``editors/space_mixie_chat/mixie_chat_ink_overlay.cc``)
-is raised two ways: the Scribble control in the chat header
-(``mixar.scribble_toggle``, which arms the chat canvas AND the viewport
-marks together — see ``scribble_mark/core/scribble_mode.py``), or a stylus
-press on the composer / on empty chat background, which C++ handles by
-writing the same WM flag and opens the canvas alone.
+opens only through the explicit Handwriting control. Viewport annotation,
+pen selection and Voice do not open it.
 
 While it is open the overlay captures strokes and, once the pen has been
 still for ``SCRIBBLE_IDLE_COMMIT_MS``, dispatches ``mixie_chat.ink_commit``
@@ -66,6 +63,39 @@ class MIXIE_CHAT_OT_ink_commit(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_ink_toggle(Operator):
+    """Open handwriting explicitly, or return to the typed composer."""
+
+    bl_idname = "mixie_chat.ink_toggle"
+    bl_label = "Handwriting"
+    bl_description = (
+        "Write by hand to turn ink into prompt text. Click again to return to typing; "
+        "viewport annotations stay active"
+    )
+    bl_options = {'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        from ...core import scribble
+        return context.scene is not None and scribble.canvas_available(context.window_manager)
+
+    def execute(self, context):
+        from ...core import scribble
+        wm = context.window_manager
+        if scribble.is_canvas_open(wm):
+            scribble.close_canvas(wm)
+            from ...core.composer_focus import after_redraw
+            after_redraw(context)
+            return {'FINISHED'}
+        if getattr(wm, 'mixie_chat_voice_listening', False):
+            self.report({'WARNING'}, "Finish or cancel Voice before opening Handwriting")
+            return {'CANCELLED'}
+        scribble.release_composer()
+        scribble.open_canvas(wm)
+        return {'FINISHED'}
+
+
 classes = (
     MIXIE_CHAT_OT_ink_commit,
+    MIXIE_CHAT_OT_ink_toggle,
 )

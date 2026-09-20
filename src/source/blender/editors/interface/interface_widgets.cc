@@ -2462,6 +2462,12 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
     immUnbindProgram();
     GPU_blend(GPU_BLEND_NONE);
   }
+
+  /* block_draw() established alpha blending for the whole block; the
+   * selection, caret and scrollbar passes above leave it off, and anything
+   * the footer paints next without its own blend call (submit icon, chips)
+   * would then land opaque — an RGBA-0 backdrop turns solid black. */
+  GPU_blend(GPU_BLEND_ALPHA);
 }
 
 /** \} */
@@ -6044,8 +6050,10 @@ static bool zen_glass_cell(const Button *but)
   if (but->mixar_style.component != MixarComponent::None) {
     return false;
   }
-  return ELEM(but->type, ButtonType::Row, ButtonType::But) && but->icon != ICON_NONE &&
-         but->drawstr.empty();
+  /* Popover joins for the Zen header's shading-options chip: an icon-only
+   * popover on its own aligned Zen surface, beside the enum capsule. */
+  return ELEM(but->type, ButtonType::Row, ButtonType::But, ButtonType::Popover) &&
+         but->icon != ICON_NONE && but->drawstr.empty();
 }
 
 /**
@@ -7110,8 +7118,15 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
   else if (mixar_component) {
     native_text = mixar_component_draw(*but, wt->wcol, *rect);
   }
-  else if (but->type == ButtonType::Row && zen_glass_cell(but)) {
-    /* Keep Radio state/text and RNA editing; replace only the background. */
+  else if (ELEM(but->type, ButtonType::Row, ButtonType::Popover) && zen_glass_cell(but)) {
+    /* Keep Radio state/text and RNA editing; replace only the background.
+     * A Popover chip themes from `wcol_menu`, so borrow the strip's own
+     * icon colour (`wcol_radio`) the way the `But` guides chip does. */
+    if (but->type == ButtonType::Popover) {
+      const uiWidgetColors &radio = theme::theme_get()->tui.wcol_radio;
+      copy_v4_v4_uchar(wt->wcol.text, radio.text);
+      copy_v4_v4_uchar(wt->wcol.text_sel, radio.text_sel);
+    }
     widget_zen_tool_glass(but, rect, &state, roundboxalign);
   }
   else if (wt->custom) {

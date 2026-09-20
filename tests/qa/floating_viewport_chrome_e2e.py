@@ -8,6 +8,10 @@ QA_HARNESS=/path/to/mixar-qa-harness MIXAR_QA_PORT=4879 \
 
 All control clicks resolve native RNA widgets or the drawer's QA targets.
 Inspect the emitted PNGs as well as the state verdict.
+
+Covers the Texturing workspace's restored chrome: the stock 3D viewport
+header, and the Editor Type dropdown on every area with the five texturing
+editors grouped under a "Texturing" heading.
 """
 
 import os
@@ -104,7 +108,91 @@ result = {'shading': view.shading.type,
     return rects
 
 
+SWITCHER = {"region_type": "HEADER", "prop": "ui_type"}
+TEXTURING_EDITORS = (
+    ("MIXAR_LAYERS", "Texturing Layers"),
+    ("MIXAR_PROPERTIES", "Texturing Properties"),
+    ("MIXAR_ASSETS", "Texturing Assets"),
+    ("BAKING", "Texturing Baking Space"),
+    ("TEXTURE_SETS", "Texture Sets"),
+)
+
+
+def editor_type_switchers(qa):
+    """Every Texturing area offers the Editor Type dropdown.
+
+    Drives the real menu: opens the 3D viewport's switcher, reads the
+    popup, and checks the five texturing editors are listed under their
+    own "Texturing" heading — then switches through the menu and back.
+    The texturing side panels are checked for the widget itself, since
+    the Layers header hangs off TOOL_PROPS rather than HEADER.
+    """
+    workspace(qa, "Texturing")
+    saved = qa.eval("""
+result = [a.ui_type for a in drv.main_window().screen.areas]
+""")
+    # The dropdown exists on the 3D viewport and on every texturing editor,
+    # whichever region its header lives in.
+    present = qa.eval("""
+win = drv.main_window()
+found = {}
+for area in win.screen.areas:
+    widgets = []
+    for region in ('HEADER', 'TOOL_PROPS'):
+        widgets += drv.find(area_type=area.type, region_type=region, prop='ui_type')
+    found[area.ui_type] = len(widgets)
+result = found
+""")
+    assert present.get("VIEW_3D"), present
+    for ui_type, _label in TEXTURING_EDITORS:
+        if ui_type in present:
+            assert present[ui_type], (ui_type, present)
+
+    # The whole stock viewport header came back, not just the switcher:
+    # mode selector and the View / Select / Add menus are all native.
+    stock = qa.eval("""
+widgets = drv.find(area_type='VIEW_3D', region_type='HEADER')
+result = {'mode': [w for w in widgets if w.get('prop') == 'mode'],
+          'labels': sorted({w.get('text') for w in widgets if w.get('text')})}
+""")
+    assert stock["mode"], stock
+    for menu in ("View", "Select", "Add"):
+        assert menu in stock["labels"], (menu, stock["labels"])
+
+    qa.click(area_type="VIEW_3D", **SWITCHER)
+    listed = qa.eval("result=[w.get('text') for w in drv.find(popup=True)]")
+    assert "Texturing" in listed, listed
+    heading = listed.index("Texturing")
+    for _ui_type, label in TEXTURING_EDITORS:
+        assert label in listed, (label, listed)
+        assert listed.index(label) > heading, (label, listed)
+    # Nothing that is not an editor leaks into the menu.
+    for label in ("Agent Bubble", "Top Bar", "Status Bar"):
+        assert label not in listed, (label, listed)
+
+    qa.click(popup=True, text="Texturing Layers")
+    qa.wait("any(a.ui_type == 'MIXAR_LAYERS' for a in drv.main_window().screen.areas)",
+            timeout=6)
+    snap(qa, "editor-type-switched")
+    # Areas keep their screen order, so restore by index.
+    qa.eval(f"""
+for area, ui_type in zip(drv.main_window().screen.areas, {saved!r}):
+    if area.ui_type != ui_type:
+        area.ui_type = ui_type
+result=True
+""")
+    qa.wait(f"len(drv.find(**{VIEW!r})) >= 3", timeout=10)
+    return {"listed": listed, "switchers": present}
+
+
 def texturing(qa):
+    """Both Texturing viewport header rows stay real, separate bars.
+
+    Texturing is an ordinary Engine workspace now: the header no longer
+    floats, so HEADER and TOOL_HEADER must each occupy their own strip at
+    either alignment and with region overlap on or off, and a tool-header
+    click must not disturb the shading state.
+    """
     workspace(qa, "Texturing")
     saved = qa.eval(SETUP + """
 result = {'header': view.show_region_header, 'tools': view.show_region_tool_header,
@@ -204,6 +292,7 @@ bpy.app.driver_namespace['qa_chrome_engine'] = QAChromeEngine
         ):
             results[engine] = qa.step(engine, shading_clicks, qa, engine, expected)
         qa.eval("drv.main_window().scene.render.engine='BLENDER_EEVEE'; result=True")
+        results["editor-type"] = qa.step("editor-type", editor_type_switchers, qa)
         results["texturing"] = texturing(qa)
         results["drawer"] = qa.step("zen-drawer", drawer, qa)
         return {"checks": results, "paid_requests": 0, "artifacts": str(OUT)}

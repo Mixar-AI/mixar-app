@@ -428,14 +428,6 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
       }
     }
 
-    /* 8. Scribble auto-open: a stylus press that reached this point hit no
-     * interactive chat target — pen users write, they don't drag-select
-     * transcript text. The press itself seeds the first ink stroke.
-     * Mouse presses fall through to text selection / View2D as before. */
-    if (mixie_chat_ink_try_auto_open(C, event)) {
-      return WM_UI_HANDLER_BREAK;
-    }
-
     /* Let text selection / View2D scrolling handle it */
   }
 

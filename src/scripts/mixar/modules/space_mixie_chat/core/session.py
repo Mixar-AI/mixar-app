@@ -196,11 +196,22 @@ class SessionManager:
             bool(scene.mixie_run_open) != open
             or (getattr(scene, 'mixie_run_id', "") or "") != run_id
         )
+        was_open = bool(scene.mixie_run_open)
         scene.mixie_run_open = open
         if hasattr(scene, 'mixie_run_id'):
             scene.mixie_run_id = run_id
         turn_active = SessionManager.get_state(scene) in SessionManager._ACTIVE_TURN_STATES
         SessionManager._sync_active_scene(scene, turn_active)
+        if was_open and not open:
+            # The run is over (completed, cancelled, aborted): no card may keep
+            # working. A turn end alone does not settle them — the workers on
+            # the cards outlive the orchestrator's turn (finalize_turn skips
+            # the settle while the run is open).
+            try:
+                from mixar.modules.agent_panel.core.cards import settle_running
+                settle_running()
+            except Exception:  # noqa: BLE001 — the panel never blocks the run
+                pass
         if changed and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
                 f"RUN [{scene.name}]: {'open' if open else 'closed'} {run_id[:8]}"

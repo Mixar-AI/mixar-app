@@ -7,8 +7,8 @@
 The chip sits beside the floating Wireframe / Solid / Material Preview /
 Rendered strip and flips floor grid, axes, ortho grid, relationship
 lines, and object extras (the light / camera / empty helpers) together.
-Pressed state mirrors whether any of those guides are visible. Texturing
-keeps the shared shading strip without this chip.
+Pressed state mirrors whether any of those guides are visible. Only Zen
+Mode draws this header at all.
 """
 
 from pathlib import Path
@@ -127,8 +127,9 @@ def test_the_chip_sits_beside_the_zen_shading_strip_only():
     assert '"mixar.zen_toggle_guides"' in header
     assert 'icon="GRID"' in header
     assert "depress=viewport_guides.guides_shown(view)" in header
-    # Zen-only: Texturing keeps the shared shading strip without this chip.
-    assert "if _is_basic_workspace(context):" in header
+    # Zen-only: the whole patched header is gated on the Zen workspace, so
+    # the chip needs no second check — nothing else reaches this draw.
+    assert "if not _is_basic_workspace(context):" in header
     assert header.index("mixar.zen_toggle_guides") < header.index(
         'popover(panel="VIEW3D_PT_shading"'
     )
@@ -152,7 +153,7 @@ def test_the_glass_painter_accepts_a_standalone_icon_chip():
     cell = widgets.split("static bool zen_glass_cell(const Button *but)\n{", 1)[1].split(
         "\n}\n", 1
     )[0]
-    assert "ELEM(but->type, ButtonType::Row, ButtonType::But)" in cell
+    assert "ELEM(but->type, ButtonType::Row, ButtonType::But, ButtonType::Popover)" in cell
     # Still narrow: Zen theme, no Mixar component, icon-only, aligned group.
     assert "but->mixar_style.theme != MixarTheme::Zen || but->alignnr == 0" in cell
     assert "but->mixar_style.component != MixarComponent::None" in cell

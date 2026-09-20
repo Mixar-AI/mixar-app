@@ -16,8 +16,11 @@ repaints from it. Three properties matter and are pinned here:
   ``time.monotonic()`` and C++'s ``BLI_time_now_seconds()`` need not share an
   epoch, so a card's elapsed figure is either a difference within one clock or
   it is nonsense.
-* **The panel opens only for a real fan-out.** One task is the chat's own todo
-  line; showing it again beside the viewport is noise.
+* **The panel opens for every worker of an open run, and only for a real
+  fan-out once it is closed.** A one-task turn with no run behind it is the
+  chat's own todo line; showing it again beside the viewport is noise. A
+  one-task BATCH of an open run is a worker that builds for minutes with this
+  card as the user's only indicator.
 """
 
 import sys
@@ -103,8 +106,24 @@ def _isolate_dismissal_memory():
     leftover id would silently filter another test's todo list.
     """
     cards_mod._dismissed_task_ids.clear()
+    cards_mod._exit_epoch.clear()
     yield
     cards_mod._dismissed_task_ids.clear()
+    cards_mod._exit_epoch.clear()
+
+
+@pytest.fixture
+def open_run(monkeypatch):
+    """The scene's backend run is open — its workers may still be building.
+
+    Set on the real flag (``scene.mixie_run_open``) rather than on the mirror,
+    so the test drives the same ``SessionManager.run_open`` read the mirror
+    does.
+    """
+    monkeypatch.setattr(
+        bpy.context.scene, "mixie_run_open", True, raising=False
+    )
+    return bpy.context.scene
 
 
 def _todo(n, status='IN_PROGRESS', prefix="Build part"):
@@ -114,6 +133,8 @@ def _todo(n, status='IN_PROGRESS', prefix="Build part"):
 
 
 class TestFanOutThreshold:
+    """With no run open, the minimum stands."""
+
     def test_a_single_task_never_opens_the_panel(self, wm):
         assert cards_mod.mirror_todo_items(_todo(1)) == 0
         assert wm.mixar_agent_cards_active == 0
@@ -328,3 +349,173 @@ class TestStatusVocabulary:
     def test_an_unknown_status_degrades_to_pending(self, wm):
         cards_mod.mirror_todo_items(_todo(2, status='SOMETHING_NEW'))
         assert wm.mixar_agent_cards[0].status == 'PENDING'
+
+
+class TestOpenRunShowsEveryWorker:
+    """A batch of one is ordinary now, and its card is the only indicator.
+
+    The orchestrator ends its turn right after delegating, so a lone worker
+    builds for minutes with the chat idle behind it. While the RUN is open
+    (the flag ``finalize_turn`` checks before settling) the fan-out minimum
+    does not apply.
+    """
+
+    def test_a_single_running_task_shows_its_card(self, wm, open_run):
+        assert cards_mod.mirror_todo_items(_todo(1)) == 1
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["0"]
+        assert wm.mixar_agent_cards[0].status == 'RUNNING'
+        assert wm.mixar_agent_cards_active == 1
+
+    def test_the_single_card_starts_its_clock(self, wm, open_run):
+        cards_mod.mirror_todo_items(_todo(1))
+        card = wm.mixar_agent_cards[0]
+        assert card.started_at > 0.0, "the bar is timed from the card's start"
+        assert card.ended_at == 0.0
+
+    def test_the_single_card_still_slides_out_when_it_finishes(self, wm, open_run):
+        """The dwell is what puts the check mark on screen; it must survive."""
+        timers = cards_mod.bpy.app.timers
+        cards_mod.mirror_todo_items(_todo(1))
+        timers.register.reset_mock()
+
+        assert cards_mod.mirror_todo_items(_todo(1, status='DONE')) == 1
+        assert wm.mixar_agent_cards[0].status == 'DONE', (
+            "a finished lone card leaves by its own exit timer, not by being "
+            "dropped from the mirror the moment it settles"
+        )
+        fires = [call.args[0] for call in timers.register.call_args_list]
+        assert len(fires) == 1, "one exit timer for the finished card"
+        for fire in fires:
+            fire()
+        assert len(wm.mixar_agent_cards) == 0
+
+    def test_a_second_batch_of_one_adds_its_card(self, wm, open_run):
+        """Work accepted mid-run arrives as a NEW single-task batch."""
+        cards_mod.mirror_todo_items(_todo(1, status='DONE'))
+        cards_mod.dismiss_card("0")
+        assert len(wm.mixar_agent_cards) == 0
+
+        second = _todo(1, status='DONE') + [
+            {"id": "1", "text": "Texture the frame.", "status": 'IN_PROGRESS'}
+        ]
+        assert cards_mod.mirror_todo_items(second) == 1
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["1"]
+        assert wm.mixar_agent_cards[0].started_at > 0.0
+
+    def test_a_single_done_task_with_the_run_closed_stays_hidden(self, wm):
+        """Nothing is building: a card that would only dismiss itself is noise."""
+        assert cards_mod.mirror_todo_items(_todo(1, status='DONE')) == 0
+        assert len(wm.mixar_agent_cards) == 0
+        assert wm.mixar_agent_cards_active == 0
+
+    def test_a_fan_out_never_consults_the_run(self, wm, monkeypatch):
+        """The minimum short-circuits: a real fan-out shows without the read."""
+        monkeypatch.setattr(
+            cards_mod, "_run_open", lambda: pytest.fail("read for a fan-out")
+        )
+        assert cards_mod.mirror_todo_items(_todo(3)) == 3
+
+
+class TestReopenedTask:
+    """A task the orchestrator reopens gets its card back.
+
+    ``send_to_worker`` puts a finished task back to work, and the backend
+    streams it as IN_PROGRESS again. By then the card has already left the
+    mirror (the finished-card auto-exit calls ``dismiss_card``), so the
+    dismissal memory — which exists to keep a *finished* card away — must not
+    outlive the completion it was recorded for.
+    """
+
+    def _finish_and_let_exit(self, ids=("0", "1", "2")):
+        """Run a fan-out to DONE and let every card slide out."""
+        cards_mod.mirror_todo_items(_todo(len(ids), status='DONE'))
+        for task_id in ids:
+            cards_mod.dismiss_card(task_id)
+
+    def _reopened(self, count=3, reopened=("1",)):
+        items = _todo(count, status='DONE')
+        for item in items:
+            if item["id"] in reopened:
+                item["status"] = 'IN_PROGRESS'
+        return items
+
+    def test_a_reopened_task_brings_its_card_back(self, wm, open_run):
+        self._finish_and_let_exit()
+        assert len(wm.mixar_agent_cards) == 0
+
+        assert cards_mod.mirror_todo_items(self._reopened()) == 1
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["1"]
+        assert wm.mixar_agent_cards[0].status == 'RUNNING'
+        assert wm.mixar_agent_cards_active == 1
+
+    def test_a_revived_card_starts_a_fresh_clock(self, wm, open_run):
+        self._finish_and_let_exit()
+        cards_mod.mirror_todo_items(self._reopened())
+        card = wm.mixar_agent_cards[0]
+        assert card.started_at > 0.0, "the second attempt is timed from its start"
+        assert card.ended_at == 0.0, "a running card has not ended"
+        assert card.dismissing is False
+
+    def test_a_single_running_card_shows_despite_the_minimum(self, wm, open_run):
+        """The minimum keeps a one-task TURN off screen, not the last worker.
+
+        The reopen itself is why the run is open: ``send_to_worker`` only
+        exists inside one.
+        """
+        self._finish_and_let_exit()
+        assert cards_mod.mirror_todo_items(self._reopened()) == 1
+        assert len(wm.mixar_agent_cards) == MIN_CARDS_FOR_PANEL - 1
+
+    def test_a_one_task_turn_still_never_opens_the_panel(self, wm):
+        """No run behind it: the chat's todo line is not repeated beside the
+        viewport."""
+        assert cards_mod.mirror_todo_items(_todo(1, status='IN_PROGRESS')) == 0
+        assert len(wm.mixar_agent_cards) == 0
+
+    def test_a_dismissed_card_arriving_done_stays_dismissed(self, wm):
+        cards_mod.mirror_todo_items(_todo(3, status='IN_PROGRESS'))
+        assert cards_mod.dismiss_card("1") is True
+
+        # The task finishes; its terminal snapshot must not re-add the row.
+        assert cards_mod.mirror_todo_items(_todo(3, status='DONE')) == 2
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["0", "2"]
+        assert "1" in cards_mod._dismissed_task_ids
+
+    def test_reviving_one_card_leaves_its_finished_siblings_dismissed(
+        self, wm, open_run
+    ):
+        self._finish_and_let_exit()
+        cards_mod.mirror_todo_items(self._reopened())
+        assert cards_mod._dismissed_task_ids == {"0", "2"}
+
+    def test_a_pending_exit_timer_does_not_remove_the_revived_card(self, wm):
+        """The timer armed for attempt 1 must not fire on attempt 2's card."""
+        timers = cards_mod.bpy.app.timers
+        timers.register.reset_mock()
+
+        cards_mod.mirror_todo_items(_todo(3, status='IN_PROGRESS'))
+        cards_mod.mirror_todo_items(_todo(3, status='DONE'))
+        fires = [call.args[0] for call in timers.register.call_args_list]
+        assert len(fires) == 3, "one exit timer per finished card"
+
+        # Every card slides out, then two tasks are reopened and finish again.
+        # Attempt 2's completion arms timers of its own while attempt 1's are
+        # still pending — and those would retire the new cards on the spot.
+        for task_id in ("0", "1", "2"):
+            cards_mod.dismiss_card(task_id)
+        assert cards_mod.mirror_todo_items(self._reopened(reopened=("0", "1"))) == 2
+        timers.register.reset_mock()
+        assert cards_mod.mirror_todo_items(_todo(3, status='DONE')) == 2
+        second = [call.args[0] for call in timers.register.call_args_list]
+        assert len(second) == 2
+
+        for fire in fires:
+            assert fire() is None
+        assert [c.task_id for c in wm.mixar_agent_cards] == ["0", "1"], (
+            "a stale timer from the previous attempt cut the new cards' dwell"
+        )
+
+        # The attempt's own timers still retire them.
+        for fire in second:
+            fire()
+        assert len(wm.mixar_agent_cards) == 0

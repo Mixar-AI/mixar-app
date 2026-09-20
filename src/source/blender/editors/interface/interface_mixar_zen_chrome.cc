@@ -7,9 +7,13 @@
  *
  * Zen chrome beds. The island/pill windows frost through GHOST; the Zen
  * topbar lives in the main window, so it takes the same ISLAND pane the
- * kit already owns. View3D headers overlap the viewport and clear
+ * kit already owns. Zen's View3D headers overlap the viewport and clear
  * transparent so only the glass button groups read. macOS and Windows
  * share this GPU path.
+ *
+ * Zen Mode is the only workspace on this path. Texturing / Texture Paint
+ * are ordinary Engine workspaces: their 3D viewport keeps Blender's full
+ * opaque header, so it must stay on the stock overlap and clear path.
  */
 
 #include "BKE_context.hh"
@@ -40,7 +44,7 @@ namespace blender::ui {
 
 static bool mixar_workspace_name_floats_viewport_chrome(const char *name)
 {
-  return STREQ(name, "Zen Mode") || STREQ(name, "Texturing") || STREQ(name, "Texture Paint");
+  return STREQ(name, "Zen Mode");
 }
 
 bool mixar_workspace_is_zen(const bContext *C)
@@ -118,11 +122,8 @@ bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region)
   }
   /* The shading strip lives on HEADER. TOOL_HEADER is empty in Zen and
    * must skip button-section drawing — that painter still strokes a
-   * full-width separator. Texturing keeps stock paint groups on the
-   * overlap + sections path. */
-  if (region->regiontype != RGN_TYPE_HEADER &&
-      !(region->regiontype == RGN_TYPE_TOOL_HEADER && mixar_workspace_is_zen(C)))
-  {
+   * full-width separator. */
+  if (!ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER)) {
     return false;
   }
   ED_region_pixelspace(region);

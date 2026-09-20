@@ -150,17 +150,12 @@ def test_state_reader_mirrors_the_one_property():
 def test_layout_places_auto_right_of_voice_and_closes_the_gap_without_it():
     assert "rctf chip_auto;" in LAYOUT_HH
     assert "#define AGENT_CHIP_AUTO_W" in THEME_HH
-    assert "const float auto_x = voice_x + voice_w + AGENT_CHIP_GAP;" in LAYOUT_CC
-    assert "r_layout->chip_auto = f.box(auto_x, chip_y, AGENT_CHIP_AUTO_W, AGENT_CHIP_H);" in LAYOUT_CC
-    assert "const float reading_x = auto_x + AGENT_CHIP_AUTO_W + AGENT_CHIP_GAP;" in LAYOUT_CC
-    # The row budget counts the new chip and its gap.
-    assert "AGENT_CHIP_AUTO_W + AGENT_CHIP_READING_W" in LAYOUT_CC
-    assert "6.0f * AGENT_CHIP_GAP" in LAYOUT_CC
-    begin = BUBBLE_CC[BUBBLE_CC.index("bool agent_bubble_island_layout_get(") :]
-    begin = begin[: begin.index("\n}\n")]
-    shift = begin[begin.index("if (!r_state->voice_available)"):]
-    shift = shift[: shift.index("}")]
-    assert "BLI_rctf_translate(&r_layout->chip_auto, dx, 0.0f);" in shift
+    fit = _function_body(LAYOUT_CC, "void agent_ui_layout_fit_controls(")
+    assert fit.index("place(layout.chip_voice") < fit.index("place(layout.chip_auto")
+    assert "state.voice_available ?" in fit
+    assert "if (w <= 0) { rect = {}; return; }" in fit
+    assert 'width("Auto", AGENT_SWITCH_W)' in fit
+    assert 'agent_ui_layout_fit_controls(*r_layout, *r_state)' in BUBBLE_CC
 
 
 def test_chip_row_paints_a_sliding_switch_on_the_shared_motion():

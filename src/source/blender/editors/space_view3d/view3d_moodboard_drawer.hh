@@ -71,6 +71,8 @@ namespace blender {
 /** Rendered drawer amount, 0 (closed) .. 1 (open), read from the Python-owned
  * `wm.mixar_moodboard_drawer_amount`. Returns 0 when the property is missing. */
 float view3d_moodboard_drawer_amount(const bContext *C);
+/** The same value without a context, for region init (window manager only). */
+float view3d_moodboard_drawer_amount_wm(const wmWindowManager *wm);
 
 /** Write the rendered amount. Does not move the drawer's target, so a caller
  * that wants the value to stick must set the target as well. */

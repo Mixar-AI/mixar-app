@@ -638,7 +638,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
   }
   GPU_blend(GPU_BLEND_ALPHA);
-  fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
+  fill_round(&dot, dot_r, (state->status_busy || state->status_active) ? accent : dim_dot);
   const float text_x = w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W));
   const float text_size = agent_ui_body_font_size();
   const std::string status_label = ui::mixar_fit_text(
@@ -735,10 +735,12 @@ void agent_ui_draw_island(ARegion *region,
                checkpoints_fill);
     agent_ui_icon_draw(AGENT_ICON_RESTORE, &layout->hdr_checkpoints, glyph, checkpoints_fill);
 
+    agent_ui_draw_handwriting_control(region, layout, state);
+
     if (state->ink_visible) {
-      /* Scribble text output window over the new chat topbar */
+      /* Handwriting text output window over the new chat topbar */
       const float left_limit = layout->hdr_checkpoints.xmax + 16.0f * u;
-      const float right_limit = layout->card.xmax - 23.0f * u;
+      const float right_limit = layout->hdr_handwriting.xmin - 16.0f * u;
       const float max_w = right_limit - left_limit;
       const float cx = layout->hdr_title_cx;
       const float cy = layout->hdr_title_y;
@@ -746,7 +748,7 @@ void agent_ui_draw_island(ARegion *region,
 
       char disp[512];
       BLI_strncpy(disp,
-                  state->input_text[0] ? state->input_text : "Scribble to type...",
+                  state->input_text[0] ? state->input_text : "Write your prompt here...",
                   sizeof(disp));
       for (char *c = disp; *c; c++) {
         if (*c == '\n' || *c == '\r') {
@@ -757,7 +759,7 @@ void agent_ui_draw_island(ARegion *region,
       const float font_size = 18.0f * agent_ui_text_unit();
       const float text_w = text_width(disp, font_size);
       const float pad_x = 18.0f * u;
-      const float win_w = std::clamp(text_w + pad_x * 2.0f, 220.0f * u, max_w);
+      const float win_w = std::min(text_w + pad_x * 2.0f, std::max(0.0f, max_w));
 
       rctf text_win;
       text_win.xmin = cx - win_w * 0.5f;

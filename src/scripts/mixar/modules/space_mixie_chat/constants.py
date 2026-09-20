@@ -433,6 +433,14 @@ VOICE_TOAST_ID = "voice_input"
 MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp'}
+# Movie containers the moodboard accepts. The agent chat has no video content
+# part on the wire (agent.chat carries image_url data URLs only), so these are
+# refused with a specific message instead of the generic "Unsupported format".
+VIDEO_FILE_FORMATS = {'.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi', '.mpg', '.mpeg'}
+VIDEO_ATTACHMENT_REJECTED = (
+    "Videos can't be sent to the agent yet — attach a still frame, or add the "
+    "clip to the moodboard for Video Gen"
+)
 THUMBNAIL_SIZE = (128, 128)
 MAX_ATTACHMENTS_PER_MESSAGE = 10
 

@@ -55,6 +55,7 @@ def test_drawer_sources_stay_under_the_house_line_cap():
         VIEW3D / "view3d_moodboard_drawer.cc",
         VIEW3D / "view3d_moodboard_drawer_draw.cc",
         VIEW3D / "view3d_moodboard_drawer_ops.cc",
+        VIEW3D / "view3d_moodboard_drawer_state.cc",
     ):
         lines = len(path.read_text(encoding="utf-8").splitlines())
         assert lines <= 500, f"{path.name} is {lines} lines"

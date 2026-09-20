@@ -164,14 +164,22 @@ void footer_cache_clear();
  * \{ */
 
 /**
- * Count the number of visible lines in the chat input text.
- * Counts explicit newlines (from Shift+Enter). Clamps between
- * FOOTER_INPUT_LINE_COUNT (3) and FOOTER_INPUT_MAX_LINE_COUNT (10).
+ * Count the number of visible lines in the chat input text: explicit
+ * newlines (Shift+Enter) plus BLF wrapping at the width and font the
+ * multi-line painter really uses. Clamps between FOOTER_INPUT_LINE_COUNT (3)
+ * and FOOTER_INPUT_MAX_LINE_COUNT (6).
  *
  * \param scene: Scene to read mixie_chat_input from
  * \return Line count clamped to [min, max] range
  */
 int footer_layout_get_input_line_count(Scene *scene, int region_width);
+
+/**
+ * Unscaled height of the input box for `input_line_count` rows, derived from
+ * the multi-line painter's row height and top inset so the painter's
+ * visible_lines equals the counted lines exactly (no spare empty row).
+ */
+int footer_layout_input_row_base(int input_line_count);
 
 /**
  * Calculate required footer height based on pending attachments.
