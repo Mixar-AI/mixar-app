@@ -7,7 +7,7 @@ import queue
 from pathlib import Path
 import sys
 import threading
-from types import SimpleNamespace
+from types import SimpleNamespace, ModuleType
 from unittest.mock import Mock
 
 import pytest
@@ -17,10 +17,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
-def transport_module():
+def transport_module(monkeypatch):
     path = ROOT / 'src/scripts/mixar/modules/space_mixie_chat/core/voice_input/transport.py'
+    package = ModuleType('mixar.modules.space_mixie_chat.core.voice_input')
+    package.__path__ = [str(path.parent)]
+    monkeypatch.setitem(sys.modules, package.__name__, package)
     spec = importlib.util.spec_from_file_location(
-        'mixar.modules.space_mixie_chat.core.voice_input._transport_tests', path)
+        package.__name__ + '._transport_tests', path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -232,7 +235,8 @@ def test_coordinator_keeps_capture_after_old_240_second_deadline(monkeypatch):
     events = queue.Queue()
     events.put({'type': 'ready', 'max_duration_seconds': 600})
     state = SimpleNamespace(scene=scene, window=123, began=0, auth_checked=10,
-                            deadline=240, capture=None, state='Connecting',
+                            deadline=240, capture=capture, recording_at=10, ready=False,
+                            max_seconds=180, state='Listening',
                             draft=SimpleNamespace(base='Keep this', identity='same-chat'),
                             attachments=(), transport=SimpleNamespace(events=events))
     module._session = state
@@ -243,3 +247,54 @@ def test_coordinator_keeps_capture_after_old_240_second_deadline(monkeypatch):
     assert state.capture is capture
     module._finish.assert_not_called()
     module._toast.assert_not_called()
+
+
+def test_stopped_opening_audio_is_sent_in_order_after_ready(transport_module, monkeypatch):
+    module = transport_module
+    sock = Socket()
+    ready = json.loads(sock.events[0])
+    ready['max_startup_buffer_seconds'] = 20
+    sock.events[0] = json.dumps(ready)
+    worker = module.Transport('https://uat1.mixar.app', 'valid', 'test')
+    first = bytes([1, 2]) * 1600
+    second = bytes([3, 4]) * 1600
+    worker.feed(first)
+    worker.feed(second)
+    worker.stop()
+    monkeypatch.setattr(module.websocket, 'create_connection', Mock(return_value=sock))
+    worker.run()
+    assert json.loads(sock.sent[0])['buffered_audio_seconds'] == .2
+    assert sock.sent[1:] == [first, second, '{"type":"stop"}']
+    assert worker.audio.empty()
+
+
+def test_cancel_before_ready_never_uploads_buffered_audio(transport_module, monkeypatch):
+    module = transport_module
+    sock = Socket()
+    worker = module.Transport('https://uat1.mixar.app', 'valid', 'test')
+    worker.feed(bytes(3200))
+    recv = sock.recv
+    def ready():
+        worker.cancel()
+        return recv()
+    sock.recv = ready
+    monkeypatch.setattr(module.websocket, 'create_connection', Mock(return_value=sock))
+    worker.run()
+    assert not any(isinstance(x, bytes) for x in sock.sent)
+    assert worker.audio.empty() and sock.closed
+
+
+def test_audio_buffer_is_bounded_by_bytes_not_number_of_reads(transport_module):
+    buf = transport_module.AudioBuffer(20)
+    data = bytes(20 * 32000)
+    buf.feed(data)
+    with pytest.raises(queue.Full):
+        buf.feed(b'\x00\x00')
+    assert buf.bytes_pending == len(data)
+    received = b''
+    while not buf.empty():
+        received += buf.get_nowait()
+    assert received == data
+    buf.feed(b'\x01\x02')
+    buf.clear()
+    assert buf.empty()

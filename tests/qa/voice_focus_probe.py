@@ -16,6 +16,7 @@ class LocalTransport:
         global latest
         latest = self
         self.events = queue.Queue()
+        self.timings = {}
         self.stopped = False
 
     def start(self):
