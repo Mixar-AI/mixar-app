@@ -34,7 +34,7 @@ def draw_connection_status(
 
     if state == SessionState.IDLE and run_open:
         row.label(text="", icon='SORTTIME')
-        row.label(text="Working in background")
+        row.label(text="Working")
     elif state == SessionState.IDLE:
         row.label(text="", icon='CHECKMARK')  # Connected
         row.label(text="Connected")

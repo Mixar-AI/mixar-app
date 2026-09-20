@@ -30,6 +30,9 @@ struct bContext;
 struct AgentIslandState {
   char status_text[64];     /* Status pill label, from the state enum's UI name. */
   bool status_busy;         /* Lights the pill's dot. */
+  /* Background work with the turn itself idle (an open run's workers): lights
+   * the same dot without claiming the agent is busy. */
+  bool status_active;
   MixieCatActivity cat_activity;
   MixieCatCatch cat_catch;  /* Live flight aim; ignored unless activity is Catching. */
   const void *cat_scene;    /* Reset transient expression when the scene changes. */

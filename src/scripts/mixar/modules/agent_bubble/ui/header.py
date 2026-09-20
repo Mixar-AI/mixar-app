@@ -185,7 +185,7 @@ def _get_status(scene) -> PillStatus:
     # (nothing to stop, the composer is free) and not "Idle" (work is going
     # on). The viewport lock stays down — it keys on BUSY/MODIFYING.
     if getattr(scene, "mixie_run_open", False) is True:
-        return PillStatus("Working in background", "green", 'RECORD_ON')
+        return PillStatus("Working", "green", 'RECORD_ON')
 
     # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
     # enqueues a multi-minute generation, answers in chat and drops to IDLE

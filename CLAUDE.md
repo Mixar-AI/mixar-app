@@ -47,14 +47,9 @@ python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (
 - Config: env vars in `.env` (copy `.env.example`; never commit `.env`) → `scripts/unix/settings.sh` → `scripts/generate_config.py` emits runtime `mixar.json`. C++ env header generated at `source/source/creator/mixar_env_config.h` (the assembled `source/` tree is upstream's root, which has its own `source/creator/`). `MIXAR_ENV=Prod` targets `https://api.mixar.app`; `Dev` targets a dev backend and is the only env where dev-bypass credentials are allowed (the build aborts otherwise).
 - **CUDA/OptiX is an `.env` switch** (`MIXAR_CUDA`, `MIXAR_CUDA_BINARIES`, `MIXAR_CUDA_ARCH`), resolved in ONE place — `cmake/mixar_overrides.cmake` reads the env vars `settings.sh`/`settings.bat` export. `MIXAR_CUDA=0` drops CUDA, OptiX and the Cycles GPU kernels; `MIXAR_CUDA_BINARIES=0` keeps GPU support but skips the precompiled cubins; `MIXAR_CUDA_ARCH=sm_89` narrows them to one card. The cost avoided is `WITH_CYCLES_CUDA_BINARIES` (nvcc compiles the Cycles kernel once per architecture in `CYCLES_CUDA_BINARIES_ARCH`, ten by default), which dominates a CLEAN build but saves nothing on an incremental rebuild; such a build renders Cycles on CPU only — a local-dev choice, never a release one. `build.bat` normalizes the same variables only to invalidate a CMake cache configured the other way (it skips configure once build files exist; `build.sh` re-configures every run).
 
-### GUI E2E: the QA harness (MISSION-CRITICAL — this is how features ship)
+### GUI E2E: the QA harness
 
-The QA harness drives the REAL built app like a human — semantic clicks by operator-id/prop/surface (no pixel guessing), drags, file drops, targeted screenshots you must actually READ — and runs replayable E2E scenarios (agent chat, Agent Bubble custom targets, moodboard graph, Director timeline, full image→3D→retopology pipeline). **A feature is DONE only when the running app has proven it: state asserts AND vision, plus a scenario left behind.** Before any feature work, read the playbook:
-
-- Harness: private repo `github.com/Mixar-AI/mixar-qa-harness` — clone anywhere and export the path as `$QA_HARNESS`. Read `README.md` (architecture + gotchas), `SHIP_LOOP.md` (the build→drive→verify→encode→ship contract), `UX_CHECKLIST.md` (checkable "looks right" criteria).
-- In-app C++ half (introspection RNA, custom-surface targets, drop hook) lives in THIS repo's `develop`, so every branch cut from it is drivable — build Dev.
-- Run: `cd "$QA_HARNESS" && ./run_qa_app.sh` then `python3 driver/qa_client.py status`; full suite `./run_scenarios.sh` (spends real credits; one isolated app reloads clean startup state between scenarios); MCP tools available as the `mixar-qa` server.
-- New custom-drawn UI is unshippable until it exports QA targets (`Mixar_qa_register_target_provider` — read the surface's OWN hit-test geometry, never duplicate it).
+**A feature is DONE only when the running app has proven it: state asserts AND vision, plus a replayable scenario left behind.** The harness drives the real built app like a human. Before any feature work, invoke the `qa-harness` skill for the setup, the ship loop and the QA-target rules for new custom-drawn UI.
 
 ## Code Rules
 
@@ -65,21 +60,6 @@ The QA harness drives the REAL built app like a human — semantic clicks by ope
 - Branch names follow the table in `CONTRIBUTING.md` — lowercase kebab-case, most specific prefix wins (`bugfix/` over `task/` for a bug fix).
 - **The keyconfig-reload rule**: custom C region keymaps and any C-registered default-keyconfig binding must ALSO be registered in the addon keyconfig (Python side), never only via C `WM_keymap_add_item` — a GUI keyconfig preset reload wipes C-registered items. Applies to agent_panel, chat select/copy/paste, Director `F` capture, and anything new.
 - Upstream is pinned at Blender `v5.2.0`; Mixar C++ is wrapped in `namespace blender` (interface files in `blender::ui`), DNA lists are `ListBaseT<T>`, allocation is `MEM_new*`, runtime operator pointer props use `RNA_def_pointer_runtime`, and animation access goes through the ID's own channelbag via `common/utils/animation.py` (never `Action.fcurves`). Merging `develop` brings 5.0-shaped code that must be re-ported to these conventions.
-
-Project layout:
-
-```text
-.env.example                       # environment config template (copy to .env)
-scripts/generate_config.py         # emits runtime mixar.json at build time
-src/scripts/mixar/
-├── bootstrap/                     # startup modules (agent_connection, paint_module, …)
-├── config/                        # logging + config persistence
-└── modules/{module}/
-    ├── constants.py
-    ├── core/                      # logic
-    └── ui/{properties,operators,panels,menus,lists}/   # auto-discovered
-src/source/blender/                # C/C++ overlay
-```
 
 ## Documentation structure (required for every documentation change)
 
@@ -156,10 +136,6 @@ Backend runs a LangGraph orchestrator (Claude Sonnet 4.6 primary, Gemini 3.1 Pro
 - **Safety contracts**: backend-authoritative option lists fail closed (empty list → disabled, never resurrect hardcoded services); feedback locks only after confirmed 2xx; BYOK keys are transient `SKIP_SAVE` fields; terminal queue states release large payloads but keep lightweight history; multi-view/turnaround submits refuse loudly rather than degrading to a single image.
 - **C++ overlays of note**: `blenlib/intern/string_utils.cc` (`BLI_string_split_name_number` parses with `std::from_chars`, never `std::stoi` — a datablock named with a float, e.g. `Panel_Vert_0.6699999999999999`, has an int-overflowing suffix and the upstream try/catch still aborted the app on file load; pinned by `tests/test_name_number_split_overlay.py`), `rna_main_api.cc` (kill preview jobs before `bpy.data.*.remove()` frees IDs), `py_capi_utils.cc` (per-thread GIL check), agent-bubble window lifecycle in `wm_files.cc`/`wm_window` (bubble windows never serialized; GHOST pointers invalidated on close AND free), `space_node/node_templates.cc` (hides Mixar-internal node groups from the socket menu).
 - `mixie_chat_free()` clears process-global caches and runs for ANY freed Main (including temp Mains) — any new global cache cleared there needs a self-heal check on the draw path.
-
-## Self-Update (`modules/common/updates/`)
-
-One **Restart & Update** click stages the release installer, spawns a detached helper, quits, and relaunches; the downloads page is the fallback. Decisions live in `core/install_flow.py` (`plan_restart`, `apply_and_restart`) so they are testable under the `bpy` mock; config is `mixar.json` → `updates.{channel,check_delay_seconds,auto_download,downloads_url}`. Install paths carry no version (pinned by `tests/test_update_packaging_paths.py`). Windows staging lives in `%ProgramData%\Mixar\Updates` (a per-machine MSI runs elevated and must read the installer from a shared location); the installer is trusted only after the backend `sha256` matches AND its signature matches the running app's; the detached helper never lives in the install directory; a quit that does not happen is recovered by a 15s watchdog that returns state to READY.
 
 ## Repo Docs Map
 

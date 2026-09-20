@@ -83,6 +83,11 @@ def finalize_turn(scene) -> None:
     - Collapses each bubble's live thinking into the "Thought for Ns" dropdown.
     - Marks any still-RUNNING tool steps DONE so their animation settles.
     - Hides lingering loaders.
+    - Settles the Parallel Agents cards — unless the RUN is still open: the
+      orchestrator ends its turn right after delegating and the workers on
+      those cards keep building between turns, so their clocks and progress
+      keep running; ``SessionManager.set_run`` settles them when the run
+      closes (``run_status: completed``, a cancel, abort).
     A retry then starts from a clean, settled transcript instead of interleaving
     with a half-finished turn.
     """
@@ -100,11 +105,13 @@ def finalize_turn(scene) -> None:
         if getattr(msg, "loader_visible", False):
             msg.loader_visible = False
 
-    try:
-        from mixar.modules.agent_panel.core.cards import settle_running
-        settle_running()
-    except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
-        logger.debug("Agent panel settle failed", exc_info=True)
+    from .session import get_session_manager
+    if not get_session_manager().run_open(scene):
+        try:
+            from mixar.modules.agent_panel.core.cards import settle_running
+            settle_running()
+        except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
+            logger.debug("Agent panel settle failed", exc_info=True)
 
     _bump_layout_epoch(scene)
 

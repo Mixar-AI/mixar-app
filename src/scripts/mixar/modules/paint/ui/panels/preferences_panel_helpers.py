@@ -51,6 +51,7 @@ def draw_rendering_options(layout, prefs):
     col.prop(prefs, "make_preview_mode_srgb")
     col.prop(prefs, "parallax_without_baked")
     col.prop(prefs, "default_bake_device")
+    col.prop(prefs, "default_render_device")
 
 
 def draw_layer_node_options(layout, prefs):

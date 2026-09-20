@@ -23,6 +23,13 @@ Thread rules (docs/render-job-contract.md):
 - Lock Interface and Preferences are never written. Every temporary render
   setting is restored on every exit path, each only if it still holds the
   value we applied (a user's own change during the job wins).
+- The engine and the size come from the CALL (the backend's
+  ``render_viewport(quality="final", engine=..., width=..., height=...)``);
+  the DEVICE never does. ``scene.cycles.device`` is set to ``'GPU'`` for the
+  job only when ``render_device.use_gpu()`` says the user's
+  ``default_render_device`` preference allows it AND a compute device is
+  actually enabled — the enabling itself happens once at startup in
+  ``bootstrap/render_device_module.py``, never here.
 - Error codes are fixed strings; no path or exception text leaves this module.
 """
 
@@ -34,14 +41,32 @@ import time
 import bpy
 from bpy.app.handlers import persistent
 
+from . import render_device
+
 RESULTS_NS = "mixie_agent_preview"
+# The preview cap: a call that names no size keeps the scene's aspect scaled
+# under this. A call that DOES name one is a final render and gets the size it
+# asked for, up to FINAL_MAX_EDGE_PX.
 MAX_EDGE_PX = 768
-MAX_PNG_BYTES = 4_000_000
+FINAL_MAX_EDGE_PX = 1920
+# Big enough for a FINAL_MAX_EDGE_PX frame: a noisy 1920x1080 Cycles render is
+# 4.5-5 MB of PNG even at PNG_COMPRESSION, so the old 768-px-era 4 MB bound
+# failed every full-size final AFTER paying for the whole render. Still far
+# under the agent WebSocket's 16 MiB frame limit once base64 adds ~37%.
+MAX_PNG_BYTES = 8_000_000
+# Blender's default (15) barely compresses; a render saved at 100 is the same
+# pixels ~35% smaller, and the save is off the critical path either way.
+PNG_COMPRESSION = 100
 MAX_RESULTS = 4
 LOST_AFTER_S = 2.0
 CYCLES_SAMPLE_CAP = 32
+# An explicitly requested Cycles final is the one render the user asked to be
+# slow; it still may not run away, so the scene's own samples are capped here.
+CYCLES_FINAL_SAMPLE_CAP = 128
 EEVEE_SAMPLE_CAP = 16
+# 'BLENDER_EEVEE' IS EEVEE Next in 4.2+/5.x; the _NEXT id exists only in 4.2-4.5.
 _EEVEE_ENGINES = ("BLENDER_EEVEE", "BLENDER_EEVEE_NEXT")
+_ENGINE_REQUESTS = {"eevee": _EEVEE_ENGINES, "cycles": ("CYCLES",)}
 
 _job = None        # the ONE in-flight job dict, main thread only
 _revision = 0      # VIEWPORT depsgraph updates seen so far
@@ -116,12 +141,15 @@ def _read_png(scene) -> bytes:
         raise RuntimeError("missing_pixels")
     with tempfile.TemporaryDirectory(prefix="mixar_preview_") as folder:
         path = folder + "/preview.png"
-        fmt = scene.render.image_settings.file_format
+        settings = scene.render.image_settings
+        fmt, compression = settings.file_format, settings.compression
         try:
-            scene.render.image_settings.file_format = "PNG"
+            settings.file_format = "PNG"
+            settings.compression = PNG_COMPRESSION
             image.save_render(path, scene=scene)
         finally:
-            scene.render.image_settings.file_format = fmt
+            settings.file_format = fmt
+            settings.compression = compression
         with open(path, "rb") as handle:
             pixels = handle.read(MAX_PNG_BYTES + 1)
     if len(pixels) > MAX_PNG_BYTES:
@@ -217,25 +245,112 @@ def poll(key):
     return value
 
 
-def _apply_settings(scene, set_value):
-    render = scene.render
+def _engine_id(scene, requested):
+    """The engine id to render with, or None to leave the scene's own alone.
+
+    ``requested`` is the backend's ``"eevee"`` | ``"cycles"``. The EEVEE id
+    moved between Blender versions, so the one this build actually offers is
+    picked from the RNA enum rather than hardcoded.
+    """
+    candidates = _ENGINE_REQUESTS.get(str(requested or "").strip().lower())
+    if not candidates:
+        return None
+    try:
+        available = {str(item.identifier) for item in
+                     scene.render.bl_rna.properties["engine"].enum_items}
+    except Exception:
+        available = set()
+    for candidate in candidates:
+        if not available or candidate in available:
+            return candidate
+    return None
+
+
+def _apply_resolution(render, set_value, width, height):
+    """The requested size (capped for a final), or the scene's own scaled to
+    the preview cap when the call named no size."""
+    if width > 0 and height > 0:
+        scale = min(1.0, FINAL_MAX_EDGE_PX / max(width, height, 1))
+        set_value(render, "resolution_x", max(1, round(width * scale)))
+        set_value(render, "resolution_y", max(1, round(height * scale)))
+        return
     scale = min(1.0, MAX_EDGE_PX / max(render.resolution_x, render.resolution_y, 1))
     set_value(render, "resolution_x", max(1, round(render.resolution_x * scale)))
     set_value(render, "resolution_y", max(1, round(render.resolution_y * scale)))
+
+
+def _downgrade_over_budget(scene, set_value, max_faces):
+    """Swap Cycles for EEVEE when the scene is too big for this machine.
+
+    Cycles gives every object whose instancing is defeated its own mesh AND BVH,
+    and building them is an uninterruptible burst of host allocation: two Mixar
+    processes were killed by the OS that way on 2026-09-20 (1250 tree copies with
+    per-object material links, ~215M unique triangles on 16 GB). EEVEE draws the
+    same scene from real instances and survived both times.
+
+    So an over-budget final is DOWNGRADED, never refused and never allowed to
+    crash the app. ``max_faces`` is the budget the backend derived from this
+    machine's RAM; 0 (an older backend) means no limit. The engine read here is
+    the one the JOB will actually use, because ``_apply_settings`` has already
+    applied the call's own engine. Returns the disclosure dict, or None when
+    nothing was changed.
+    """
+    render = scene.render
+    if max_faces <= 0 or str(render.engine) != "CYCLES":
+        return None
+    from mixar.modules.common.agent_execution.scene_cost import scene_geometry_cost
+
+    faces = scene_geometry_cost(scene)["unique_faces"]
+    if faces <= max_faces:
+        return None
+    eevee = _engine_id(scene, "eevee") or _EEVEE_ENGINES[0]
+    set_value(render, "engine", eevee)
+    return {
+        "from": "CYCLES", "to": eevee,
+        "reason": f"{faces} unique faces over the {max_faces}-face budget for this machine",
+    }
+
+
+def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0):
+    render = scene.render
+    wanted = _engine_id(scene, engine)
+    if wanted is not None and str(render.engine) != wanted:
+        set_value(render, "engine", wanted)
+    # AFTER the call's own engine: the budget judges what this job will really
+    # render with, so a scene the CALL turned into a Cycles render is downgraded
+    # too — and the caps below then read the downgraded engine.
+    downgraded = _downgrade_over_budget(scene, set_value, max_faces)
+    _apply_resolution(render, set_value, int(width or 0), int(height or 0))
     set_value(render, "resolution_percentage", 100)
     set_value(render.image_settings, "file_format", "PNG")
-    engine = str(render.engine)
-    if engine == "CYCLES":
-        set_value(scene.cycles, "samples", min(scene.cycles.samples, CYCLES_SAMPLE_CAP))
-    elif engine in _EEVEE_ENGINES:
+    engine_id = str(render.engine)
+    if engine_id == "CYCLES":
+        cap = (CYCLES_FINAL_SAMPLE_CAP if str(engine).strip().lower() == "cycles"
+               else CYCLES_SAMPLE_CAP)
+        set_value(scene.cycles, "samples", min(scene.cycles.samples, cap))
+        # The device is the user's preference, enabled once at startup; here it
+        # is a per-job setting like any other, restored on every exit path.
+        if render_device.use_gpu():
+            set_value(scene.cycles, "device", "GPU")
+    elif engine_id in _EEVEE_ENGINES:
         eevee = getattr(scene, "eevee", None)
         samples = getattr(eevee, "taa_render_samples", None)
         if samples is not None:
             set_value(eevee, "taa_render_samples", min(samples, EEVEE_SAMPLE_CAP))
+    return downgraded
 
 
-def start(context, key):
-    """Start the preview job for ``key``; idempotent for a key already seen."""
+def start(context, key, width=0, height=0, engine="", max_faces=0):
+    """Start the preview job for ``key``; idempotent for a key already seen.
+
+    ``width``/``height``/``engine`` are the backend's request (see
+    ``_apply_settings``); a call that omits them keeps the old behaviour — the
+    scene's own engine at the 768 px preview cap.
+
+    ``max_faces`` is the backend's machine-derived geometry budget; a render
+    whose CHOSEN engine is Cycles on a scene above it is downgraded to EEVEE and
+    says so in ``render["engine_downgraded"]``.
+    """
     global _job
     if not isinstance(key, str) or not re.fullmatch(r"[a-f0-9]{32}", key):
         return {"job_id": str(key)[:64], "status": "failed", "error": "invalid_job_id"}
@@ -264,8 +379,12 @@ def start(context, key):
            "revision": _revision, "finishing": False, "scene_session": session, "render": {}}
     _job = job
     try:
-        _apply_settings(scene, set_value)
+        downgraded = _apply_settings(scene, set_value, width, height, engine, max_faces)
         job["render"] = _render_info(scene)
+        if downgraded:
+            # Rides the render info the backend already forwards, so the model
+            # discloses that it did not get the engine it asked for.
+            job["render"]["engine_downgraded"] = downgraded
         bpy.app.handlers.render_complete.append(_complete)
         bpy.app.handlers.render_cancel.append(_cancelled)
         # The pixels go to the agent; never open an image-editor window.

@@ -54,12 +54,23 @@ _STATUS_FROM_TODO = {
 
 _TERMINAL = frozenset({'DONE', 'FAILED'})
 
-#: Task ids the user clicked away during the current fan-out. ``dismiss_card``
-#: removes the row from the mirror, but the backend keeps streaming the same
-#: task list, so a later membership rebuild would re-add the card the user just
-#: dismissed. Scoped to the fan-out: ``clear_cards`` resets it, so an id is
-#: never silently hidden in a later turn (synthetic ``idx:N`` ids recur).
+#: Task ids whose card left the mirror during the current fan-out — a user
+#: dismissal or the auto-exit of a finished card. ``dismiss_card`` removes the
+#: row, but the backend keeps streaming the same task list, so a later
+#: membership rebuild would re-add the card that just left. Scoped to the
+#: fan-out: ``clear_cards`` resets it, so an id is never silently hidden in a
+#: later turn (synthetic ``idx:N`` ids recur).
+#:
+#: A dismissal only holds for a task that is FINISHED. When the orchestrator
+#: reopens one (``send_to_worker``) the backend streams it back as
+#: PENDING/IN_PROGRESS — that is new work, not the card the user waved away, so
+#: ``_survives_dismissal`` revives it.
 _dismissed_task_ids: set[str] = set()
+
+#: Bumped every time a task id is revived. A pending exit timer captures the
+#: epoch it was scheduled under and does nothing when it no longer matches, so
+#: the timer armed for the previous completion cannot remove the new card.
+_exit_epoch: dict[str, int] = {}
 
 
 def derive_agent_name(task_label: str) -> str:
@@ -105,6 +116,44 @@ def _normalize(todo_items: Iterable[Any]) -> list[dict]:
             "status": _STATUS_FROM_TODO.get(str(status).upper(), 'PENDING'),
         })
     return out
+
+
+def _revive(task_id: str) -> None:
+    """A dismissed id is working again: forget the dismissal, void its timer."""
+    _dismissed_task_ids.discard(task_id)
+    _exit_epoch[task_id] = _exit_epoch.get(task_id, 0) + 1
+
+
+def _survives_dismissal(rec: dict) -> bool:
+    """Keep ``rec`` unless it is a still-finished card that already left.
+
+    The backend streams the whole task list every update, so a dismissed id
+    keeps arriving. It stays filtered while it arrives TERMINAL (the user's
+    dismissal and the finished-card auto-exit both hold); arriving PENDING or
+    RUNNING means the orchestrator reopened the task, and the card comes back.
+    """
+    task_id = rec["task_id"]
+    if task_id not in _dismissed_task_ids:
+        return True
+    if rec["status"] in _TERMINAL:
+        return False
+    _revive(task_id)
+    return True
+
+
+def _run_open() -> bool:
+    """True while the scene's backend run is open — workers may still build.
+
+    The same flag ``finalize_turn`` checks before settling cards. Imported
+    lazily: the chat module imports this one, so a module-level import back
+    into it would be circular. No session, no open run.
+    """
+    try:
+        from mixar.modules.space_mixie_chat.core.session import SessionManager
+
+        return SessionManager.run_open(getattr(bpy.context, "scene", None))
+    except Exception:  # noqa: BLE001 — the panel never depends on the chat
+        return False
 
 
 def _window_manager() -> Optional[Any]:
@@ -157,15 +206,17 @@ def mirror_todo_items(todo_items: Iterable[Any]) -> int:
 
     records = _normalize(todo_items)
     if _dismissed_task_ids:
-        # The backend streams the whole task list, including the ones the user
-        # dismissed; drop them before the membership diff so a rebuild cannot
-        # resurrect a card that was clicked away.
-        records = [
-            rec for rec in records if rec["task_id"] not in _dismissed_task_ids
-        ]
-    if len(records) < MIN_CARDS_FOR_PANEL:
-        # Hiding a short list is not a new turn. Keep dismissal memory so
-        # subsequent full snapshots cannot bring the dismissed cards back.
+        # The backend streams the whole task list, including the ones that
+        # already left the panel; drop them before the membership diff so a
+        # rebuild cannot resurrect a card that was clicked or slid away.
+        records = [rec for rec in records if _survives_dismissal(rec)]
+    if not records or (len(records) < MIN_CARDS_FOR_PANEL and not _run_open()):
+        # The minimum keeps a one-task TURN off the viewport; while the RUN is
+        # open every task on the list is a delegated worker, and a batch of
+        # one is the whole state of the run — it shows, and leaves by its own
+        # dwell or dismissal like any other card. Hiding a short list is not a
+        # new turn: keep dismissal memory so subsequent full snapshots cannot
+        # bring the dismissed cards back.
         return clear_cards(reset_dismissals=False)
 
     now = time.monotonic()
@@ -253,7 +304,13 @@ def _schedule_exit(task_id: str, dwell: float = DONE_CARD_DWELL_S) -> None:
     if not task_id:
         return
 
+    epoch = _exit_epoch.get(task_id, 0)
+
     def _fire():
+        if _exit_epoch.get(task_id, 0) != epoch:
+            # The task was reopened after this timer was armed: the card on
+            # screen belongs to the new attempt, not the finished one.
+            return None
         wm = _window_manager()
         if wm is None:
             return None
@@ -289,6 +346,7 @@ def clear_cards(*, reset_dismissals: bool = True) -> int:
     """Close the panel; forget dismissals only on an explicit clear/new turn."""
     if reset_dismissals:
         _dismissed_task_ids.clear()
+        _exit_epoch.clear()
     wm = _window_manager()
     if wm is None:
         return 0

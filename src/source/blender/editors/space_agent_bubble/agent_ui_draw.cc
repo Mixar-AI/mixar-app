@@ -638,7 +638,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
   }
   GPU_blend(GPU_BLEND_ALPHA);
-  fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
+  fill_round(&dot, dot_r, (state->status_busy || state->status_active) ? accent : dim_dot);
   const float text_x = w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W));
   const float text_size = agent_ui_body_font_size();
   const std::string status_label = ui::mixar_fit_text(
