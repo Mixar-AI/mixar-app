@@ -14,7 +14,7 @@ up on LEFTMOUSE RELEASE.
 Bound to LEFTMOUSE PRESS in the global Window keymap. Scoped by:
   * poll(): only AGENT_BUBBLE space
   * invoke(): only the HEADER can move the island; content owns its gestures.
-    While Handwriting is open (``mixie_chat_ink_visible``),
+    While Scribble is armed (``mixie_chat_ink_visible`` / ``mixar_mark_armed``),
     the header also passes through so handwriting cannot start a window drag.
   * begin_drag refuses (and invoke passes through) when the press is
     already owned by a uiBut waiting to start its own drag, e.g. a My
@@ -41,15 +41,11 @@ how the press ENDS rather than acted on at PRESS time:
 from __future__ import annotations
 
 import sys
-import time
 
 import bpy
 from bpy.types import Operator
 
-from mixar.modules.agent_bubble.constants import (
-    PILL_CLICK_MAX_SECONDS,
-    PILL_DRAG_THRESHOLD_PX,
-)
+from mixar.modules.agent_bubble.constants import PILL_DRAG_THRESHOLD_PX
 from mixar.modules.common.analytics.bubble_events import capture_bubble_state
 
 _IS_WINDOWS = sys.platform == "win32"
@@ -72,7 +68,6 @@ class MIXAR_OT_bubble_header_drag(Operator):
     # press is still undecided (click or drag); None for the island's own
     # drag, which decides at PRESS time as before.
     _pill_press = None
-    _pill_press_at = 0.0
     _pill_dragging = False
 
     @classmethod
@@ -92,7 +87,6 @@ class MIXAR_OT_bubble_header_drag(Operator):
             # is released where it landed, and a drag only once it travels.
             # Acting at PRESS time is what made the pill impossible to move.
             self._pill_press = (event.mouse_x, event.mouse_y)
-            self._pill_press_at = time.monotonic()
             self._pill_dragging = False
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
@@ -102,10 +96,12 @@ class MIXAR_OT_bubble_header_drag(Operator):
         if region is None or region.type != 'HEADER':
             return {'PASS_THROUGH'}
 
-        # Handwriting owns LEFTMOUSE. Falling through here
+        # Handwriting / viewport marks own LEFTMOUSE. Falling through here
         # starts a native window drag and the pad slides under the stroke.
         wm = context.window_manager
-        if getattr(wm, "mixie_chat_ink_visible", False):
+        if getattr(wm, "mixie_chat_ink_visible", False) or getattr(
+            wm, "mixar_mark_armed", False
+        ):
             return {'PASS_THROUGH'}
 
         try:
@@ -171,21 +167,9 @@ class MIXAR_OT_bubble_header_drag(Operator):
 
         if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self._pill_press = None
-            if time.monotonic() - self._pill_press_at > PILL_CLICK_MAX_SECONDS:
-                # The press's own RELEASE never reached this window (a
-                # restore re-parents the pill while the button is down), so
-                # this is some later release: toggling on it would collapse
-                # an island the user has since been typing in.
-                return {'CANCELLED'}
             return self._pill_click(context)
 
         if event.type in {'RIGHTMOUSE', 'ESC'}:
-            self._pill_press = None
-            return {'CANCELLED'}
-
-        if time.monotonic() - self._pill_press_at > PILL_CLICK_MAX_SECONDS:
-            # Nothing decided the press in time: stop lingering as an armed
-            # click on a window that may already sit above an open island.
             self._pill_press = None
             return {'CANCELLED'}
 

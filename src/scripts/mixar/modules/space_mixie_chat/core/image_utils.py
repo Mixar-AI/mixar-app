@@ -23,8 +23,6 @@ from ..constants import (
     MAX_IMAGE_SIZE_BYTES,
     SUPPORTED_IMAGE_FORMATS,
     THUMBNAIL_SIZE,
-    VIDEO_ATTACHMENT_REJECTED,
-    VIDEO_FILE_FORMATS,
 )
 
 logger = get_logger(__name__)
@@ -245,8 +243,6 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
 
     # Check file extension
     ext = os.path.splitext(filepath)[1].lower()
-    if ext in VIDEO_FILE_FORMATS:
-        return False, VIDEO_ATTACHMENT_REJECTED
     if ext not in SUPPORTED_IMAGE_FORMATS:
         return False, f"Unsupported format: {ext}. Supported: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
 

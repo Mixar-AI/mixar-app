@@ -109,13 +109,6 @@ class MIXAR_OT_agent_viewport_block(Operator):
             self._finish(context)
             return {"FINISHED"}
 
-        # A lock can start after a workspace viewer (the orchestrator resumes
-        # while its workers are still building). Let that read-only modal own
-        # input in either handler order; it consumes edits behind the preview.
-        win = context.window
-        if win and win.modal_operators.get('VIEW3D_OT_workspace_viewer') is not None:
-            return {"PASS_THROUGH"}
-
         et = event.type
 
         if et in NAV_PASS_TYPES or et in VIEW_KEY_PASS_TYPES:

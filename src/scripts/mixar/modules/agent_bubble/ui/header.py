@@ -185,7 +185,7 @@ def _get_status(scene) -> PillStatus:
     # (nothing to stop, the composer is free) and not "Idle" (work is going
     # on). The viewport lock stays down — it keys on BUSY/MODIFYING.
     if getattr(scene, "mixie_run_open", False) is True:
-        return PillStatus("Working", "green", 'RECORD_ON')
+        return PillStatus("Working in background", "green", 'RECORD_ON')
 
     # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
     # enqueues a multi-minute generation, answers in chat and drops to IDLE
@@ -470,14 +470,21 @@ class AGENT_BUBBLE_HT_header(Header):
                 depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
             )
 
-        # Viewport annotation is independent of prompt input.
+        # Scribble — one mode, two surfaces: ink over the chat becomes text
+        # in the composer (the C++ ink canvas), ink over the frozen 3D
+        # viewport becomes marks the agent resolves against the scene. The
+        # count on the button is how many marks ride with the next message,
+        # visible even after the freeze is lowered. depress reflects EITHER
+        # half being up — clicking a pressed button turns everything off.
+        # hasattr guard: registers in the deferred UI pass.
         if hasattr(bpy.types, 'MIXAR_OT_scribble_toggle') and not agent_running:
             wm = context.window_manager
             mark_count = 0
             if scene is not None:
                 mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
                                  if m.state == 'DRAFT')
-            armed = bool(getattr(wm, 'mixar_mark_armed', False))
+            armed = bool(getattr(wm, 'mixar_mark_armed', False)
+                         or getattr(wm, 'mixie_chat_ink_visible', False))
             right_controls.operator(
                 "mixar.scribble_toggle",
                 text=str(mark_count) if mark_count else "",
@@ -492,12 +499,6 @@ class AGENT_BUBBLE_HT_header(Header):
                     wm, "mixar_mark_intent", text="", icon_only=True,
                     emboss=False,
                 )
-
-        if hasattr(bpy.types, 'MIXIE_CHAT_OT_ink_toggle'):
-            right_controls.operator(
-                "mixie_chat.ink_toggle", text="Handwriting", icon='FONT_DATA',
-                depress=bool(getattr(wm, 'mixie_chat_ink_visible', False)),
-            )
 
         # Voice — the same toggle the chat header binds; registered only on
         # platforms with a recogniser, so hasattr is the platform gate.

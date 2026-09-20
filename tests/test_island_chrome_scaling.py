@@ -154,7 +154,7 @@ def test_tab_strip_uses_fixed_typography_without_redundant_card_titles():
     island = _function_body(DRAW_CC, "void agent_ui_draw_island(")
     assert "state->title" not in island
     assert "tab_title" not in island
-    assert '"Write your prompt here..."' in island
+    assert '"Scribble to type..."' in island
     assert "AGENT_HDR_FAQ_FONT" not in island
 
 

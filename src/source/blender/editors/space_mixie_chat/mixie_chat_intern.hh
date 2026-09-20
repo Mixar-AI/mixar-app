@@ -619,6 +619,15 @@ bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event);
 bool mixie_chat_ink_cursor(
     wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
 void mixie_chat_ink_set_visible(bContext *C, bool visible);
+bool mixie_chat_ink_try_auto_open(bContext *C, const wmEvent *event);
+/** Open from a PEN STROKE that started on the composer (interface_handlers.cc
+ * text-edit hooks — the footer region handler never gets those presses; the
+ * caller then exits editing via BUTTON_STATE_EXIT). Seeds the first stroke
+ * from the press point. Window coordinates. */
+bool mixie_chat_ink_composer_stylus_stroke(bContext *C,
+                                           const int press_xy[2],
+                                           const int cur_xy[2],
+                                           float pressure);
 void mixie_chat_ink_footer_handler_register(ARegion *region);
 /** Region-exit cleanup for the idle-commit timer (window close / file load
  * would otherwise leave the process-global wmTimer pointer dangling). */

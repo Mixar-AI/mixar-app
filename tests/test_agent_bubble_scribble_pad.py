@@ -2,10 +2,13 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Explicit Handwriting turns the island into a writing pad.
+"""Scribble turns the island into a writing PAD on the host's right third.
 
-Annotation keeps normal chat geometry. The Handwriting control re-seats the
-chat on the right and restores its previous frame on close.
+Arming Scribble freezes the 3D viewport for sketching — and the island, seated
+at the host's centre-bottom, sat right on top of the frame the user wanted to
+draw on. While Scribble is armed the open island is now re-seated as a tall,
+narrow pad on the host window's right third (viewport clear), and goes back
+to the frame it had when Scribble ends.
 
 Three things had to hold for that to be more than a window move:
 
@@ -53,9 +56,9 @@ def _body(source: str, signature_start: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_hover_tick_applies_and_restores_the_pad_on_handwriting_edges():
+def test_hover_tick_applies_and_restores_the_pad_on_scribble_edges():
     body = _body(BUBBLE_CC, "static wmOperatorStatus mixar_bubble_hover_tick_exec")
-    edge = body.index("mixie_chat_ink_read_visible(CTX_wm_manager(C));")
+    edge = body.index("agent_bubble_scribble_active(C);")
     assert "agent_bubble_pad_apply(C);" in body
     assert "agent_bubble_pad_restore(C);" in body
     assert edge < body.index("agent_ui_cat_scheduler_sync")
@@ -140,10 +143,9 @@ def test_pad_unit_is_the_default_width_unit():
     # width) and is forwarded to the layout builder unchanged.
     assert "const int pad_real_w = (pad_ratio > 0.0f) ? px_w : 0;" in begin
     assert "pad_real_w," in begin
-    chrome = _body(BUBBLE_CC, "static void agent_bubble_sync_chrome_sizes(const bContext *C)\n{")
+    chrome = _body(BUBBLE_CC, "static void agent_bubble_sync_chrome_sizes(const bContext *C)")
     assert "agent_bubble_pad_ratio(win)" in chrome
-    assert "agent_ui_panel_top(AgentTabId(tab_probe.active_tab))" in chrome
-    assert "panel_top - (AGENT_CARD_Y - AGENT_PAD_TOP_INSET)" in chrome
+    assert "AGENT_PANEL_Y - (AGENT_CARD_Y - AGENT_PAD_TOP_INSET)" in chrome
     # Panes take the layout's unit rather than re-deriving it from the width.
     draw = _body(BUBBLE_CC, "static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)")
     assert "const float u = layout.scale;" in draw
@@ -161,8 +163,7 @@ def test_layout_pad_mode_drops_the_strip_and_reflows_to_the_pad_width():
     for token in ("card_w", "panel_w"):
         assert f"const float {token} = " in build
     assert "f.box(AGENT_CARD_X, AGENT_CARD_Y, card_w, card_h)" in build
-    assert "agent_ui_panel_top(active_tab)" in build
-    assert "f.box(AGENT_PANEL_X, panel_y, panel_w, panel_h)" in build
+    assert "f.box(AGENT_PANEL_X, AGENT_PANEL_Y, panel_w, panel_h)" in build
     assert "const float input_w = card_w - AGENT_SEG_X * 2.0f;" in build
     assert "card_w - AGENT_SEG_X - AGENT_BTN_GENERATE_W" in build
     # No strip on the pad: empty rects, active flags kept.
@@ -209,8 +210,8 @@ def test_window_drag_stands_down_while_scribble_owns_the_pad():
     swallowed the stroke. Same poll the pad already uses.
     """
     begin = _body(BUBBLE_CC, "static wmOperatorStatus mixar_bubble_window_begin_drag_exec")
-    assert "mixie_chat_ink_read_visible(CTX_wm_manager(C))" in begin
-    assert begin.index("mixie_chat_ink_read_visible(CTX_wm_manager(C))") < begin.index(
+    assert "agent_bubble_scribble_active(C)" in begin
+    assert begin.index("agent_bubble_scribble_active(C)") < begin.index(
         "Mixar_WindowBeginDrag("
     )
     drag_op = (
@@ -218,7 +219,7 @@ def test_window_drag_stands_down_while_scribble_owns_the_pad():
     ).read_text(encoding="utf-8")
     invoke = drag_op[drag_op.index("def invoke(") : drag_op.index("def modal(")]
     assert "mixie_chat_ink_visible" in invoke
-    assert "mixar_mark_armed" not in invoke
+    assert "mixar_mark_armed" in invoke
     assert "PASS_THROUGH" in invoke
 
 

@@ -305,12 +305,7 @@ class TestZenChromeUsesTheFamily:
         chrome = (IFACE / "interface_mixar_zen_chrome.cc").read_text(encoding="utf-8")
         assert "GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f)" in chrome
         assert "RGN_TYPE_HEADER" in chrome
-        # Zen Mode is the only workspace on this path, so both of its
-        # View3D header rows clear transparent through one check.
-        assert (
-            "ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER)"
-            in chrome
-        )
+        assert "RGN_TYPE_TOOL_HEADER && mixar_workspace_is_zen(C)" in chrome
         assert "mixar_area_floats_viewport_chrome" in chrome
         area = (ED / "screen" / "area.cc").read_text(encoding="utf-8")
         assert "mixar_area_floats_viewport_chrome(area)" in area

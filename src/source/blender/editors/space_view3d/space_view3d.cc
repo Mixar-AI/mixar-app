@@ -77,7 +77,6 @@
 #include "DEG_depsgraph_build.hh"
 
 #include "view3d_agent_panel.hh"
-#include "view3d_workspace_viewer.hh"
 #include "view3d_director.hh"
 #include "view3d_intern.hh" /* own include */
 #include "view3d_moodboard_drawer.hh"
@@ -568,7 +567,6 @@ static void view3d_widgets()
 static void view3d_main_region_free(ARegion *region)
 {
   /* The Director aerial map's GPU buffers, if this region drew them. */
-  view3d_workspace_viewer_region_free(region);
   view3d_director_minimap_region_free(region);
 
   RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
@@ -1822,7 +1820,6 @@ void ED_spacetype_view3d()
 
   /* QA harness: export the parallel agent cards as targets (Mixar). */
   view3d_agent_panel_qa_targets_register();
-  view3d_workspace_viewer_qa_register();
 
   /* Mixar: the Zen Mode sliding moodboard drawer — region, operators,
    * keymap and QA targets. */

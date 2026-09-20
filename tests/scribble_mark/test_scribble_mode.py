@@ -2,7 +2,15 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Independent annotation and handwriting, with shared Send flushing."""
+"""One Scribble mode, two surfaces — the coordinator's contracts.
+
+Handwriting over the chat becomes text, ink over the viewport becomes
+marks, and the two halves enter and leave TOGETHER. What is pinned here is
+the part that keeps them one mode: arming raises the canvas before the
+freeze (so the modal can follow it down), disarming converts what is still
+on the canvas BEFORE lowering it, and a send waits for the last recognition
+request instead of bouncing a hand-written prompt as empty.
+"""
 
 import sys
 import time
@@ -66,27 +74,19 @@ def _draw_returns(monkeypatch, result):
 # =============================================================================
 
 class TestArm:
-    def test_freezes_viewport_without_opening_handwriting(self, monkeypatch, quiet):
+    def test_raises_the_canvas_then_freezes_the_viewport(self, monkeypatch, quiet):
         wm = FakeWM()
         draw = _draw_returns(monkeypatch, {"RUNNING_MODAL"})
+
         assert scribble_mode.arm(FakeContext(wm)) is True
-        assert wm.mixie_chat_ink_visible is False
+        assert wm.mixie_chat_ink_visible is True
         draw.assert_called_once_with("INVOKE_DEFAULT")
 
-    def test_without_a_viewport_does_not_fall_back_to_handwriting(self, monkeypatch, quiet):
+    def test_without_a_viewport_handwriting_still_arms(self, monkeypatch, quiet):
+        """A layout with only the chat open still gets handwriting."""
         wm = FakeWM()
         _draw_returns(monkeypatch, {"CANCELLED"})
-        warn = MagicMock()
-        monkeypatch.setattr(scribble_mode, "_warn_marking_unavailable", warn)
-        ctx = FakeContext(wm)
-        assert scribble_mode.arm(ctx) is False
-        assert wm.mixie_chat_ink_visible is False
-        warn.assert_called_once_with(ctx, None)
 
-    def test_annotating_keeps_existing_handwriting_open(self, monkeypatch, quiet):
-        wm = FakeWM()
-        wm.mixie_chat_ink_visible = True
-        _draw_returns(monkeypatch, {"RUNNING_MODAL"})
         assert scribble_mode.arm(FakeContext(wm)) is True
         assert wm.mixie_chat_ink_visible is True
 
@@ -110,8 +110,8 @@ class TestArm:
         monkeypatch.setattr(bpy.ops.mixar, "scribble_mark_draw", draw, raising=False)
         reports = []
 
-        assert scribble_mode.arm(FakeContext(wm), report=lambda *a: reports.append(a)) is False
-        assert reports and "Cannot sketch" in reports[0][1]
+        assert scribble_mode.arm(FakeContext(wm), report=lambda *a: reports.append(a)) is True
+        assert reports and "boom" in reports[0][1]
 
     def test_opening_the_canvas_closes_the_other_chat_overlays(self, quiet):
         """Scribble, rules and past chats are all modal over the same
@@ -167,11 +167,11 @@ class TestDisarm:
 
 
 class TestIsArmed:
-    def test_handwriting_does_not_light_annotation(self):
+    def test_either_half_counts(self):
         wm = FakeWM()
         assert scribble_mode.is_armed(wm) is False
         wm.mixie_chat_ink_visible = True
-        assert scribble_mode.is_armed(wm) is False
+        assert scribble_mode.is_armed(wm) is True
         wm.mixie_chat_ink_visible = False
         wm.mixar_mark_armed = True
         assert scribble_mode.is_armed(wm) is True
@@ -254,30 +254,57 @@ class TestDeferUntilIdle:
 # A half-armed mode must say so
 # =============================================================================
 
-class TestAnnotationUnavailableIsVisible:
-    def test_notice_names_real_refusals_and_uses_a_toast(self):
-        import inspect
-        text = inspect.getsource(scribble_mode)
-        assert "no 3D viewport is open" in text
-        assert "camera view" in text
-        assert "get_notification_store" in text
-        assert 'id="scribble_annotation_unavailable"' in text
+class TestWritingOnlyIsVisible:
+    """`arm` deliberately succeeds when only ONE surface comes up — a layout
+    with no viewport still writes. But the half that goes missing is the one
+    the user is about to draw on: the chip lights from the canvas alone, so
+    the mode looks fully on while viewport ink is captured by nothing and the
+    message sends with no marks. That is the shape of the uat7 report ("I
+    sketched on the viewport, it was not submitted; the chat worked"), and
+    camera view reaches it from an ordinary working state.
+    """
 
-    def test_annotation_exit_keeps_handwriting(self, quiet):
-        wm = FakeWM()
-        wm.mixar_mark_armed = wm.mixie_chat_ink_visible = True
-        scribble_mode.disarm_marks(wm)
-        assert wm.mixar_mark_armed is False
-        assert wm.mixie_chat_ink_visible is True
-        assert quiet == []
+    def _source(self):
+        import pathlib
+        return (pathlib.Path(__file__).resolve().parents[2]
+                / "src/scripts/mixar/modules/scribble_mark/core/scribble_mode.py"
+                ).read_text()
 
-    def test_handwriting_exit_keeps_annotation(self, quiet):
-        wm = FakeWM()
-        wm.mixar_mark_armed = wm.mixie_chat_ink_visible = True
-        scribble_mode.close_ink(wm)
-        assert wm.mixar_mark_armed is True
-        assert wm.mixie_chat_ink_visible is False
-        assert quiet == ["flush"]
+    def test_arm_warns_when_only_the_canvas_came_up(self):
+        text = self._source()
+        arm = text[text.index("def arm("):text.index("def marking_unavailable_reason")]
+        assert "if opened and not froze:" in arm, (
+            "a half arm must be distinguished from a full one"
+        )
+        assert "_warn_writing_only" in arm
+
+    def test_the_notice_names_the_two_real_refusals(self):
+        text = self._source()
+        fn = text[text.index("def marking_unavailable_reason"):]
+        assert "no 3D viewport is open" in fn
+        assert "camera view" in fn, (
+            "camera view is the refusal a user hits from a normal working "
+            "state — it must be named, not folded into a generic failure"
+        )
+
+    def test_it_goes_out_as_a_toast_not_only_an_operator_report(self):
+        text = self._source()
+        fn = text[text.index("def _warn_writing_only"):]
+        assert "get_notification_store" in fn, (
+            "the toggle is usually clicked on the Agent island, which is its "
+            "own window with no status bar — an operator report is invisible "
+            "there"
+        )
+        assert 'id="scribble_writing_only"' in fn, (
+            "one stable id, or re-arming stacks a toast every time"
+        )
+        assert "except Exception" in fn, "the notice must never break arming"
+
+    def test_a_full_arm_stays_silent(self):
+        text = self._source()
+        arm = text[text.index("def arm("):text.index("def marking_unavailable_reason")]
+        # The warning is reached only on the half-armed branch.
+        assert arm.count("_warn_writing_only") == 1
 
 
 # =============================================================================

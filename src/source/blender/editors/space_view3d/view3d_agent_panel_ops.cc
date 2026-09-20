@@ -33,7 +33,6 @@
 #include "WM_types.hh"
 
 #include "view3d_agent_panel.hh"
-#include "view3d_workspace_viewer.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -225,15 +224,10 @@ static wmOperatorStatus agent_panel_click_invoke(bContext *C,
       ED_region_tag_redraw(region);
       return OPERATOR_FINISHED;
 
-    case AgentPanelHit::Eye: {
-      wmOperatorType *ot = WM_operatortype_find("VIEW3D_OT_workspace_viewer", true);
-      if (!ot) { return OPERATOR_CANCELLED; }
-      PointerRNA props = WM_operator_properties_create_ptr(ot);
-      RNA_string_set(&props, "task_id", runtime->cards[card_index].task_id);
-      WM_operator_name_call_ptr(C, ot, wm::OpCallContext::InvokeDefault, &props, event);
-      WM_operator_properties_free(&props);
+    case AgentPanelHit::Eye:
+      runtime->cards[card_index].expanded = !runtime->cards[card_index].expanded;
+      ED_region_tag_redraw(region);
       return OPERATOR_FINISHED;
-    }
 
     case AgentPanelHit::Action: {
       /* Python owns the card mirror, so the removal goes back through its
@@ -281,7 +275,6 @@ static void VIEW3D_OT_agent_panel_click(wmOperatorType *ot)
 
 void view3d_agent_panel_operatortypes()
 {
-  view3d_workspace_viewer_register();
   WM_operatortype_append(VIEW3D_OT_agent_panel_scroll);
   WM_operatortype_append(VIEW3D_OT_agent_panel_click);
   WM_operatortype_append(VIEW3D_OT_agent_panel_dismiss);

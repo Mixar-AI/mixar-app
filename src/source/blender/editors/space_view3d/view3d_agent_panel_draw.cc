@@ -46,7 +46,6 @@
 
 #include "../space_agent_bubble/agent_ui_pill_cat.hh"
 #include "view3d_agent_panel.hh"
-#include "view3d_workspace_viewer.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -175,25 +174,26 @@ void draw_card(const AgentPanelCard &card, const float alpha, const double now)
   const float baseline = avatar_cy - line_h * 0.34f;
 
   const float text_x = cat.xmax + 7.0f * scale;
-  const float text_right = float(card.has_workspace ? card.eye_rect.xmin : card.action_rect.xmin) - 8.0f * scale;
+  const float text_right = float(card.eye_rect.xmin) - 8.0f * scale;
 
   BLF_size(font_id, 12.0f * scale);
   float name_color[4];
   with_alpha(TEXT_NAME, alpha, name_color);
+  /* The eye swaps the short agent name for the full task it was given —
+   * the name is derived from that task and elides early, so this is where a
+   * long instruction is actually readable. */
   draw_elided(font_id,
-              card.name,
+              card.expanded ? card.task : card.name,
               text_x,
               baseline,
               text_right - text_x,
               name_color);
 
-  /* Controls: the eye opens this task's workspace; the right slot is a
+  /* Controls: the eye expands the card's full task; the right slot is a
    * dismiss cross while the agent works and its outcome once it settles. */
   float glyph[4];
   with_alpha(GLYPH, alpha, glyph);
-  if (card.has_workspace) {
-    view3d_agent_panel_glyph_eye(card.eye_rect, scale, glyph);
-  }
+  view3d_agent_panel_glyph_eye(card.eye_rect, scale, glyph);
 
   switch (card.status) {
     case AgentCardStatus::Done: {
@@ -272,9 +272,6 @@ void view3d_agent_panel_region_draw(const bContext *C, ARegion *region)
     ui::theme::frame_buffer_clear(TH_BACK);
   }
 
-  if (const WorkspaceViewer *viewer = view3d_workspace_viewer_active()) {
-    if (viewer->region && viewer->area == CTX_wm_area(C)) { return; }
-  }
   AgentPanelRuntime *runtime = view3d_agent_panel_runtime_ensure(region);
   view3d_agent_panel_cards_sync(C, runtime);
   view3d_agent_panel_layout_cards(region, runtime);

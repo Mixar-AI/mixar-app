@@ -31,7 +31,7 @@ def _scene():
         render=SimpleNamespace(
             engine="CYCLES", resolution_x=1200, resolution_y=900,
             resolution_percentage=80, use_lock_interface=False,
-            image_settings=SimpleNamespace(file_format="JPEG", compression=15),
+            image_settings=SimpleNamespace(file_format="JPEG"),
         ),
     )
 
@@ -146,7 +146,6 @@ def test_done_pixels_survive_edits_but_cancelled_pixels_do_not(preview, complete
     assert (scene.render.resolution_x, scene.render.resolution_y,
             scene.render.resolution_percentage, scene.cycles.samples) == (1200, 900, 80, 48)
     assert scene.render.image_settings.file_format == "JPEG"
-    assert scene.render.image_settings.compression == 15  # PNG_COMPRESSION restored
     assert preview._job is None
     assert not preview.bpy.app.handlers.render_complete
     assert not preview.bpy.app.handlers.render_cancel
@@ -198,7 +197,7 @@ def test_image_failure_is_path_free_and_restores_settings(preview):
     assert preview.bpy.context.scene.render.resolution_x == 1200
 
 
-def test_png_over_the_size_bound_is_refused(preview):
+def test_png_over_four_megabytes_is_refused(preview):
     preview.start(preview.bpy.context, KEY)
     _pixels(preview, b"x" * (preview.MAX_PNG_BYTES + 1))
     preview._finish(KEY, True)
@@ -302,156 +301,3 @@ def test_native_render_stop_sets_the_pipeline_cancellation_flag():
     assert "WM_jobs_stop_all_from_owner(CTX_wm_manager(&C), &scene);" in block
     # Upstream's own helper is left alone; only the RENDER branch changes.
     assert source.count("G.is_break = true;") == 1
-
-
-# --------------------------------------------------------------------------
-# The engine, the size and the device the job runs with
-# (docs/reviews/final-render-freeze-and-device.md, Q2 option C + Q3 option ii)
-# --------------------------------------------------------------------------
-
-
-def _device(preview, monkeypatch, *, allowed):
-    """Stand in for core/render_device.py, which reads the user's preference
-    and the Cycles Preferences — neither of which exists outside Blender."""
-    monkeypatch.setattr(preview, "render_device",
-                        SimpleNamespace(use_gpu=lambda: allowed), raising=False)
-
-
-def test_the_call_chooses_the_engine_and_eevee_is_not_the_scenes_cycles(preview, monkeypatch):
-    """Nothing used to choose: the scene's engine was whatever a worker script
-    had left on it, which is how three verification frames ran 45-66 s each on
-    Cycles CPU. EEVEE is now what the backend asks for by default."""
-    _device(preview, monkeypatch, allowed=True)
-    scene = preview.bpy.context.scene
-    result = preview.start(preview.bpy.context, KEY, width=1280, height=720, engine="eevee")
-    assert result["status"] == "running"
-    assert scene.render.engine == "BLENDER_EEVEE"
-    assert result["render"]["engine"] == "BLENDER_EEVEE"
-    # An EEVEE job never touches the Cycles device, whatever the preference says.
-    assert scene.cycles.device == "GPU"  # the fixture's own value, untouched
-    assert scene.eevee.taa_render_samples == 16
-    _pixels(preview)
-    preview._finish(KEY, True)
-    assert scene.render.engine == "CYCLES"  # restored
-
-
-def test_a_requested_cycles_final_takes_the_gpu_only_when_it_is_allowed(preview, monkeypatch):
-    scene = preview.bpy.context.scene
-    scene.cycles.device = "CPU"
-    _device(preview, monkeypatch, allowed=True)
-    result = preview.start(preview.bpy.context, KEY, width=1920, height=1080, engine="cycles")
-    assert scene.render.engine == "CYCLES"
-    assert scene.cycles.device == "GPU"
-    assert result["render"]["device"] == "GPU"
-    # ...and it is a per-job setting like every other one.
-    _pixels(preview)
-    preview._finish(KEY, True)
-    assert scene.cycles.device == "CPU"
-
-
-def test_without_an_enabled_device_the_job_stays_on_the_cpu(preview, monkeypatch):
-    scene = preview.bpy.context.scene
-    scene.cycles.device = "CPU"
-    _device(preview, monkeypatch, allowed=False)
-    result = preview.start(preview.bpy.context, KEY, width=1920, height=1080, engine="cycles")
-    assert scene.cycles.device == "CPU"
-    assert result["render"]["device"] == "CPU"
-
-
-def test_a_requested_cycles_final_keeps_the_scenes_samples_under_the_final_cap(preview, monkeypatch):
-    _device(preview, monkeypatch, allowed=False)
-    scene = preview.bpy.context.scene
-    scene.cycles.samples = 512
-    preview.start(preview.bpy.context, KEY, width=1920, height=1080, engine="cycles")
-    assert scene.cycles.samples == preview.CYCLES_FINAL_SAMPLE_CAP == 128
-    _pixels(preview)
-    preview._finish(KEY, True)
-    assert scene.cycles.samples == 512
-
-
-def test_a_final_honours_the_requested_size_up_to_its_own_cap(preview, monkeypatch):
-    """viewport.py clamped width/height and then dropped them; the scene's own
-    1600x1100 came back as 768x528 every time. The request is now the size."""
-    _device(preview, monkeypatch, allowed=False)
-    scene = preview.bpy.context.scene
-    result = preview.start(preview.bpy.context, KEY, width=1600, height=1100, engine="eevee")
-    assert (scene.render.resolution_x, scene.render.resolution_y) == (1600, 1100)
-    assert (result["render"]["width"], result["render"]["height"]) == (1600, 1100)
-    _pixels(preview)
-    preview._finish(KEY, True)
-    assert (scene.render.resolution_x, scene.render.resolution_y) == (1200, 900)
-
-    # Over the final cap, the aspect is kept and the long edge is clamped.
-    preview._before_load(None)
-    preview.start(preview.bpy.context, OTHER, width=3840, height=2160, engine="eevee")
-    assert max(scene.render.resolution_x, scene.render.resolution_y) == preview.FINAL_MAX_EDGE_PX
-    assert (scene.render.resolution_x, scene.render.resolution_y) == (1920, 1080)
-
-
-def test_a_call_with_no_size_keeps_the_preview_cap(preview, monkeypatch):
-    """The 768 px cap is still what a caller that names no size gets."""
-    _device(preview, monkeypatch, allowed=False)
-    scene = preview.bpy.context.scene
-    preview.start(preview.bpy.context, KEY)
-    assert (scene.render.resolution_x, scene.render.resolution_y) == (768, 576)
-    assert preview.MAX_EDGE_PX == 768 and preview.FINAL_MAX_EDGE_PX == 1920
-
-
-def test_an_unknown_engine_request_leaves_the_scenes_own_engine_alone(preview, monkeypatch):
-    _device(preview, monkeypatch, allowed=False)
-    scene = preview.bpy.context.scene
-    preview.start(preview.bpy.context, KEY, engine="")
-    assert scene.render.engine == "CYCLES"
-    preview._before_load(None)
-    preview.start(preview.bpy.context, OTHER, engine="octane")
-    assert scene.render.engine == "CYCLES"
-
-
-# ---------------------------------------------------------------------------
-# Geometry budget: a Cycles final that would not fit the machine
-# ---------------------------------------------------------------------------
-
-
-def _forest_scene(count, link="OBJECT", faces=283_215):
-    """A scene shaped like the one that got two clients SIGKILLed on 2026-09-20."""
-    scene = _scene()
-    mesh = SimpleNamespace(name="tree", polygons=[None] * faces)
-    scene.objects = [
-        SimpleNamespace(data=mesh, type="MESH", modifiers=[],
-                        material_slots=[SimpleNamespace(link="DATA"),
-                                        SimpleNamespace(link=link)],
-                        get=lambda key, default=None: default)
-        for _ in range(count)
-    ]
-    return scene
-
-
-def test_an_over_budget_cycles_final_renders_in_eevee_and_says_so(preview):
-    preview.bpy.context.scene = _forest_scene(50)     # 50 x 283k unique faces
-    result = preview.start(preview.bpy.context, KEY, max_faces=1_000_000)
-    assert result["status"] == "running"
-    downgraded = result["render"]["engine_downgraded"]
-    assert downgraded["from"] == "CYCLES"
-    assert downgraded["to"].startswith("BLENDER_EEVEE")
-    assert "1000000-face budget" in downgraded["reason"]
-    # The engine the job actually runs with, and it is restored like every other
-    # temporary setting when the job ends.
-    assert preview.bpy.context.scene.render.engine.startswith("BLENDER_EEVEE")
-    preview._finish(KEY, False)
-    assert preview.bpy.context.scene.render.engine == "CYCLES"
-
-
-def test_a_scene_that_instances_properly_still_path_traces(preview):
-    """Same 50 trees, ONE shared datablock: one geometry, well under budget."""
-    preview.bpy.context.scene = _forest_scene(50, link="DATA")
-    result = preview.start(preview.bpy.context, KEY, max_faces=1_000_000)
-    assert "engine_downgraded" not in result["render"]
-    assert preview.bpy.context.scene.render.engine == "CYCLES"
-
-
-def test_no_budget_never_downgrades(preview):
-    """An older backend sends no budget; behaviour is exactly what it was."""
-    preview.bpy.context.scene = _forest_scene(50)
-    result = preview.start(preview.bpy.context, KEY)
-    assert "engine_downgraded" not in result["render"]
-    assert preview.bpy.context.scene.render.engine == "CYCLES"

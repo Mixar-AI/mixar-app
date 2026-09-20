@@ -11,7 +11,6 @@
  */
 
 #include <algorithm>
-#include <cmath>
 
 #include "MEM_guardedalloc.h"
 
@@ -54,27 +53,24 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
   char *text = static_cast<char *>(MEM_new_uninitialized(text_len + 1, __func__));
   RNA_property_string_get(&scene_ptr, prop, text);
 
-  /* Calculate available width for text wrapping. Must match what
-   * widget_draw_text_multiline() in interface_widgets.cc actually wraps at:
-   * the button rect is region_width - side_padding*2 (calculate_positions,
-   * from the SAME theme cache), widget_draw_text_icon() then insets the
-   * left edge by button_text_padding() while the field is edited, and the
-   * painter takes another 4*pixelsize. Counting at any other width sizes
-   * the box for rows the painter never fills, which the user sees as blank
-   * "line breaks" under a pasted paragraph that no key can delete. */
+  /* Calculate available width for text wrapping.
+   * Must match widget_draw_text_multiline() in interface_widgets.cc:
+   *   rect_width = BLI_rcti_size_x(rect) - 4*pixelsize
+   * The input rect width = region_width - side_padding*2 (from calculate_positions). */
   const float scale = UI_SCALE_FAC;
-  const FooterThemeCache *theme = footer_cache_get_theme();
-  const int side_padding = int(theme->side_padding * scale);
-  const int input_w = region_width - side_padding * 2;
-  const int text_padding = int(FOOTER_TEXT_MARGIN_X * U.widget_unit + 0.5f);
-  const int rect_width = std::max(input_w - text_padding - int(4.0f * U.pixelsize), 10);
+  const float side_padding = FOOTER_DEFAULT_SIDE_PADDING * scale;
+  const int input_w = int(float(region_width) - side_padding * 2.0f);
+  const int rect_width = std::max(input_w - int(4.0f * U.pixelsize), 10);
+
+  /* Widget wrap width is the field minus the 0.4 UI-unit text pad that
+   * widget_draw_text applies before wrapping, then 4*pixelsize. Matching
+   * that (and the native widget font — no 1.2x) keeps footer growth in
+   * lock-step with the glyphs the user actually sees. */
+  const int text_pad = int(0.4f * U.widget_unit);
+  const int wrap_width = std::max(rect_width - text_pad, 10);
 
   int visual_line_count;
-  if (rect_width > 10) {
-    /* The painter draws the plain widget font ("Preserve the native widget
-     * font. Hit testing reads this exact style."). It used to be 1.2x, and
-     * this counter kept that factor after the painter dropped it, so every
-     * wrapped paragraph counted ~20% more lines than were drawn. */
+  if (wrap_width > 10) {
     uiFontStyle fstyle = ui::style_get()->widget;
     ui::fontstyle_set(&fstyle);
     const int fontid = fstyle.uifont_id;
@@ -83,7 +79,7 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
     blender::Vector<blender::StringRef> lines = BLF_string_wrap(
         fontid,
         blender::StringRef(text, text_len),
-        rect_width,
+        wrap_width,
         BLFWrapMode(int(BLFWrapMode::Typographical) | int(BLFWrapMode::HardLimit)));
 
     visual_line_count = int(lines.size());
@@ -110,24 +106,6 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width)
 
   return std::max(FOOTER_INPUT_LINE_COUNT,
                   std::min(visual_line_count, FOOTER_INPUT_MAX_LINE_COUNT));
-}
-
-int footer_layout_input_row_base(int input_line_count)
-{
-  const int effective_lines = (input_line_count > 0) ? input_line_count : FOOTER_INPUT_LINE_COUNT;
-  /* Mirror widget_draw_text_multiline(): one row is the widget font's "Wg"
-   * height plus 2*pixelsize, the top of the field is inset 4*pixelsize, and
-   * visible_lines = floor((box - inset) / row). Reserve the exact rows plus
-   * a little slack so integer rounding of the scaled height never floors a
-   * row away or leaves a spare, empty one under the text. */
-  uiFontStyle fstyle = ui::style_get()->widget;
-  ui::fontstyle_set(&fstyle);
-  const float row_f = BLF_height(fstyle.uifont_id, "Wg", 2) + 2.0f * U.pixelsize;
-  const float row = std::max(float(int(row_f)), 1.0f);
-  const float scale = UI_SCALE_FAC;
-  const float top_inset = 4.0f * U.pixelsize;
-  const float scaled = float(effective_lines) * row + top_inset + 2.0f * U.pixelsize + scale;
-  return std::max(int(std::ceil(scaled / scale)), 1);
 }
 
 /** \} */
@@ -174,7 +152,8 @@ int footer_layout_calculate_height(Scene *scene,
   /* Extract unscaled values from theme cache */
   const int row_height_base = int(theme->button_row_height);
   /* Dynamic input height: use provided line count, or fall back to theme default */
-  const int input_row_base = footer_layout_input_row_base(input_line_count);
+  const int effective_lines = (input_line_count > 0) ? input_line_count : FOOTER_INPUT_LINE_COUNT;
+  const int input_row_base = FOOTER_UI_UNIT_BASE * effective_lines;
   const int thumb_size_base = int(theme->thumbnail_size);
   const int bottom_padding_base = int(theme->bottom_padding / scale);
   const int row_spacing_base = int(theme->row_spacing);
@@ -285,9 +264,9 @@ void footer_layout_calculate_positions(int region_width,
   out_positions->btn_size = int(chat_ui_get_send_button_size() * scale);
   out_positions->attach_btn_size = int(chat_ui_get_attach_button_size() * scale);
   out_positions->button_row_height = int(theme->button_row_height * scale);
-  /* Dynamic input height based on actual line count, sized from the
-   * painter's row metrics so the box holds exactly that many rows. */
-  out_positions->input_height = int(footer_layout_input_row_base(input_line_count) * scale);
+  /* Dynamic input height based on actual line count */
+  const int effective_lines = (input_line_count > 0) ? input_line_count : FOOTER_INPUT_LINE_COUNT;
+  out_positions->input_height = int(FOOTER_UI_UNIT_BASE * effective_lines * scale);
   out_positions->thumb_size = int(theme->thumbnail_size * scale);
   out_positions->thumb_spacing = int(theme->thumbnail_spacing * scale);
   const int available = region_width - out_positions->side_padding * 2;
@@ -333,17 +312,9 @@ void footer_layout_calculate_positions(int region_width,
   out_positions->dropdown_width = int(FOOTER_DROPDOWN_WIDTH_BASE * scale);
   out_positions->dropdown_x = out_positions->side_padding;
 
-  /* Agent model picker sits between the mode dropdown and the attach button.
-   * Only the widths are settled here; whether it is drawn at all depends on
-   * the WindowManager mirror the Python half owns, so the draw does the
-   * shifting (see mixie_chat_footer.cc). */
-  out_positions->model_dropdown_width = int(FOOTER_MODEL_BUTTON_WIDTH_BASE * scale);
-  out_positions->model_dropdown_min_width = int(FOOTER_MODEL_BUTTON_MIN_BASE * scale);
-  out_positions->model_dropdown_x = out_positions->dropdown_x + out_positions->dropdown_width +
-                                    int(FOOTER_BUTTON_SPACING_BASE * scale);
-
-  /* Attach button comes right after dropdown (no model picker shown) */
-  out_positions->attach_btn_x = out_positions->model_dropdown_x;
+  /* Attach button comes right after dropdown */
+  out_positions->attach_btn_x = out_positions->dropdown_x + out_positions->dropdown_width +
+                                int(FOOTER_BUTTON_SPACING_BASE * scale);
 
   out_positions->send_btn_x = region_width - out_positions->side_padding -
                               out_positions->btn_size;

@@ -422,12 +422,11 @@ void add_actions(Layout *layout)
 {
   Layout &grid = layout->column(false);
 
-  /* Dashboard alone on the top row: the AI Provider Settings entry was
-   * removed from the chat's account card (QA: "remove settings from Mixie
-   * Chat"). The BYOK dialog operator stays registered for scripts. */
   Layout &top = grid.row(true);
   top.scale_y_set(ROW_ACTION);
   add_action(&top, "MIXIE_CHAT_OT_open_dashboard", "Dashboard", MixarCardIcon::Grid,
+             MixarCardElement::CardButton);
+  add_action(&top, "MIXAR_BYOK_OT_open_dialog", "AI Provider Settings", MixarCardIcon::Sliders,
              MixarCardElement::CardButton);
 
   Layout &bottom = grid.row(true);

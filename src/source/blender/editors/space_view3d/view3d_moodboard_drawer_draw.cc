@@ -40,7 +40,11 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_interface_c.hh"
+#include "UI_interface_icons.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
@@ -93,20 +97,35 @@ void draw_centered_line(const int font,
   BLF_batch_draw_flush();
 }
 
-void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
+bool board_has_content(const bContext *C)
 {
   Scene *scene = CTX_data_scene(C);
   if (!scene) {
-    return;
+    return false;
   }
   PointerRNA ptr = RNA_id_pointer_create(&scene->id);
-  for (const char *name : {"mixie_moodboard_images", "mixie_moodboard_action_nodes",
-                           "mixie_moodboard_textboxes", "mixie_moodboard_annotations"})
+  /* Keep in lockstep with canvas_context.MOODBOARD_CONTENT_COLLECTIONS. */
+  for (const char *name : {"mixie_moodboard_images",
+                           "mixie_moodboard_textboxes",
+                           "mixie_moodboard_frames",
+                           "mixie_moodboard_groups",
+                           "mixie_moodboard_action_nodes",
+                           "mixie_moodboard_asset_nodes",
+                           "mixie_moodboard_links",
+                           "mixie_moodboard_annotations"})
   {
     PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
     if (prop && RNA_property_collection_length(&ptr, prop) > 0) {
-      return;
+      return true;
     }
+  }
+  return false;
+}
+
+void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
+{
+  if (board_has_content(C)) {
+    return;
   }
 
   /* Empty-canvas LEFTMOUSE still deselects and starts box-select (or
@@ -177,35 +196,27 @@ void draw_grip(const float x_right, const float y_centre)
   BLF_disable(font, BLF_ROTATION);
 }
 
-/** Host the Python add-media / add-text tools on the open drawer.
- *
- * The Mixie T-panel builds those controls in
- * `moodboard_toolbar.draw_moodboard_add_tools`; this path draws the same
- * `VIEW3D_PT_moodboard_drawer_add_tools` panel into a pixel-space block so the
- * drawer View2D (canvas pan/zoom) is never rewritten by `ED_region_panels`. */
-void draw_add_tools(const bContext *C, ARegion *region, const int panel_xmin)
+/** Host a Python panel in pixel space so the canvas View2D is never rewritten. */
+void draw_hosted_panel(const bContext *C,
+                       ARegion *region,
+                       const char *panel_id,
+                       const char *block_id,
+                       const int x,
+                       const int y,
+                       const int width)
 {
+  if (width <= 0) {
+    return;
+  }
   if (view3d_moodboard_drawer_display_amount(C) < VIEW3D_MOODBOARD_DRAWER_CANVAS_MIN_AMOUNT) {
     return;
   }
-  PanelType *pt = WM_paneltype_find("VIEW3D_PT_moodboard_drawer_add_tools", false);
+  PanelType *pt = WM_paneltype_find(panel_id, false);
   if (pt == nullptr || (pt->poll && !pt->poll(C, pt))) {
     return;
   }
 
-  const float scale = UI_SCALE_FAC;
-  const int pad = int(std::round(12.0f * scale));
-  const int available = region->winx - panel_xmin - 2 * pad;
-  if (available <= 0) {
-    return;
-  }
-  /* Keep the icon tools on the left edge at every drawer width and zoom. */
-  const int width = std::min(available, int(std::round(40.0f * scale)));
-  const int x = panel_xmin + pad;
-  const int y = region->winy - pad;
-
-  ui::Block *block = ui::block_begin(
-      C, region, "moodboard_drawer_add_tools", ui::EmbossType::Emboss);
+  ui::Block *block = ui::block_begin(C, region, block_id, ui::EmbossType::Emboss);
   ui::Layout &layout = ui::block_layout(block,
                                         ui::LayoutDirection::Vertical,
                                         ui::LayoutType::Panel,
@@ -217,6 +228,80 @@ void draw_add_tools(const bContext *C, ARegion *region, const int panel_xmin)
                                         ui::style_get_dpi());
   ui::UI_paneltype_draw(const_cast<bContext *>(C), pt, &layout);
   ui::block_layout_resolve(block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
+}
+
+/** Host the Python add-media / add-text tools on the open drawer.
+ *
+ * The Mixie T-panel builds those controls in
+ * `moodboard_toolbar.draw_moodboard_add_tools`; this path draws the same
+ * `VIEW3D_PT_moodboard_drawer_add_tools` panel into a pixel-space block so the
+ * drawer View2D (canvas pan/zoom) is never rewritten by `ED_region_panels`. */
+void draw_add_tools(const bContext *C, ARegion *region, const int panel_xmin)
+{
+  const float scale = UI_SCALE_FAC;
+  const int pad = int(std::round(12.0f * scale));
+  const int available = region->winx - panel_xmin - 2 * pad;
+  if (available <= 0) {
+    return;
+  }
+  /* Keep the icon tools on the left edge at every drawer width and zoom. */
+  const int width = std::min(available, int(std::round(40.0f * scale)));
+  draw_hosted_panel(C,
+                    region,
+                    "VIEW3D_PT_moodboard_drawer_add_tools",
+                    "moodboard_drawer_add_tools",
+                    panel_xmin + pad,
+                    region->winy - pad,
+                    width);
+}
+
+/** Compact X + Clear chip in the open drawer's upper-right. */
+void draw_clear_tool(const bContext *C, ARegion *region, const int panel_xmin)
+{
+  if (view3d_moodboard_drawer_display_amount(C) < VIEW3D_MOODBOARD_DRAWER_CANVAS_MIN_AMOUNT) {
+    return;
+  }
+  if (!board_has_content(C)) {
+    return;
+  }
+
+  const float scale = UI_SCALE_FAC;
+  /* Shrink the compact ACTION uniformly. Width still uses Body — the painter
+   * role — so "Clear" stays fully visible at the smaller type size. */
+  const float unit = 0.75f * scale;
+  const float text_unit = unit;
+  const ui::MixarTextStyle label = ui::mixar_text_style(ui::MixarTextRole::Body, text_unit);
+  const float label_w = ui::mixar_text_width("Clear", label);
+  const int pad = int(std::round(12.0f * scale));
+  const int height = int(std::round(ui::mixar_tokens::compact_density.control_height * unit));
+  const int width = int(std::ceil((ui::mixar_tokens::padding + ui::mixar_tokens::icon +
+                                   ui::mixar_tokens::icon_gap + ui::mixar_tokens::padding) *
+                                      unit +
+                                  label_w + 3.0f * unit));
+  const int left_extent = panel_xmin + pad + int(std::round(40.0f * scale));
+  const int x = region->winx - pad - width;
+  if (x < left_extent + pad || width <= 0 || height <= 0) {
+    return;
+  }
+  const int y = region->winy - pad - height;
+
+  ui::Block *block = ui::block_begin(C, region, "moodboard_drawer_clear", ui::EmbossType::None);
+  ui::Button *button = ui::uiDefIconTextButO(
+      block,
+      ui::ButtonType::But,
+      "mixie.clear_moodboard",
+      wm::OpCallContext::InvokeDefault,
+      ICON_X,
+      "Clear",
+      x,
+      y,
+      short(width),
+      short(height),
+      "Remove all images, text boxes, frames, nodes, connections and annotations");
+  ui::mixar_style_button(
+      button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, unit, text_unit);
   ui::block_end(C, block);
   ui::block_draw(C, block);
 }
@@ -338,6 +423,7 @@ void view3d_moodboard_drawer_region_draw(const bContext *C, ARegion *region)
     GPU_scissor(panel_xmin, 0, winx - panel_xmin, winy);
     draw_empty_hint(C, region, panel_xmin);
     draw_add_tools(C, region, panel_xmin);
+    draw_clear_tool(C, region, panel_xmin);
 
     /* View2D scrollers/inline controls can widen the scissor. Keep the
      * gutter transparent above and below the protruding tab. */

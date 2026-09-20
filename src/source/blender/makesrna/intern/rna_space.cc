@@ -119,22 +119,6 @@ const EnumPropertyItem rna_enum_space_type_items[] = {
      ICON_OUTLINER_OB_LIGHT,
      "Agent Bubble",
      "Floating agent chat overlay (small variant of Mixie Chat)"},
-    {SPACE_NODE,
-     "NODE_EDITOR",
-     ICON_NODETREE,
-     "Node Editor",
-     "Editor for node-based shading and compositing tools"},
-    {SPACE_SEQ,
-     "SEQUENCE_EDITOR",
-     ICON_SEQUENCE,
-     "Video Sequencer",
-     "Non-linear editor for arranging and mixing scenes, video, audio, and effects"},
-    {SPACE_CLIP, "CLIP_EDITOR", ICON_TRACKER, "Movie Clip Editor", "Motion tracking tools"},
-
-    /* Texturing. Mixar's layered texture-painting editors are grouped under
-     * their own heading so the Editor Type menu reads as one workspace's
-     * toolset instead of scattering five entries through "General". */
-    RNA_ENUM_ITEM_HEADING(N_("Texturing"), nullptr),
     {SPACE_MIXAR_LAYERS,
      "MIXAR_LAYERS",
      ICON_RENDERLAYERS,
@@ -161,6 +145,17 @@ const EnumPropertyItem rna_enum_space_type_items[] = {
      ICON_MATERIAL,
      "Texture Sets",
      "Texture set management for PBR workflows"},
+    {SPACE_NODE,
+     "NODE_EDITOR",
+     ICON_NODETREE,
+     "Node Editor",
+     "Editor for node-based shading and compositing tools"},
+    {SPACE_SEQ,
+     "SEQUENCE_EDITOR",
+     ICON_SEQUENCE,
+     "Video Sequencer",
+     "Non-linear editor for arranging and mixing scenes, video, audio, and effects"},
+    {SPACE_CLIP, "CLIP_EDITOR", ICON_TRACKER, "Movie Clip Editor", "Motion tracking tools"},
 
     /* Animation. */
     RNA_ENUM_ITEM_HEADING(N_("Animation"), nullptr),

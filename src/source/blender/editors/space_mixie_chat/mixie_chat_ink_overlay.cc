@@ -467,7 +467,7 @@ void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region)
       hint_text = "Canvas full — pause to convert";
     }
     else if (rt->ink_point_count == 0) {
-      hint_text = "Handwriting — write your prompt";
+      hint_text = "Scribble — write here with your pen";
     }
     else {
       hint_text = "Pause to convert · Enter converts now · Esc closes";

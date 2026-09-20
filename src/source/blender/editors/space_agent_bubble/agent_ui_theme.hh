@@ -280,12 +280,10 @@ namespace blender {
 #define AGENT_CHIP_UPLOAD_X 332
 #define AGENT_CHIP_UPLOAD_W 240
 
-/** The artboard's model chip (756,842 188x44, "* Claude Opus 5 v") — the
- * hosted model pick. This is its NOMINAL width only: the chip row is
- * width-budgeted, so #agent_ui_layout_fit_controls measures the real label
- * and steps the chip down its own compact ladder (see #AgentModelChipForm)
- * rather than holding this width against Upload Reference. */
-#define AGENT_CHIP_MODEL_W 188
+/* The artboard's model chip (756,842 188x44, "* Claude Opus 5 v") is
+ * deliberately NOT reproduced — the model picker was cut from the design.
+ * Its slot is left empty rather than reflowed: the chips that remain keep
+ * the artboard's x positions. */
 
 /** Scribble chips, right of Upload Reference in the model chip's old slot:
  *  the toggle (pen + "Scribble", or "Scribble · N" with N draft marks), then,

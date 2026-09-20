@@ -73,9 +73,8 @@ void mixar_button_lit_set(Button *button, bool lit);
 /** True when the context workspace is Mixar's dedicated Zen Mode tab. */
 bool mixar_workspace_is_zen(const bContext *C);
 /**
- * Zen Mode's View3D headers overlap the viewport so its glass strips float
- * instead of sitting on a full-width bar. No other workspace qualifies —
- * Texturing keeps Blender's full opaque viewport header.
+ * Zen and Texturing View3D headers overlap the viewport so their glass
+ * strips float instead of sitting on a full-width bar.
  */
 bool mixar_workspace_floats_viewport_chrome(const bContext *C);
 bool mixar_area_floats_viewport_chrome(const ScrArea *area);

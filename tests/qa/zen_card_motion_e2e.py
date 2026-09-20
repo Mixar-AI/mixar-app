@@ -19,6 +19,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario
+from agent_panel_cards_e2e import _click_at, _centre
 from zen_motion_capture import contact_sheet, preview
 
 
@@ -146,17 +147,16 @@ def run(qa):
         qa.eval('def settle():\n    yield .7\n    return True\nresult=settle()')
         arriving = qa.step('record_late_arrival', capture, qa, out/'arrival', append=True)
         arrival = qa.step('verify_late_arrival', verify_arrival, arriving)
-        point = qa.step('native_dismiss_target', qa.eval,
-                        "result=drv.pick_click_point(drv.find(surface='agent_panel_dismiss',index=0)[0])")
+        point = qa.step('native_dismiss_target', _centre, qa, 'agent_panel_dismiss', 0)
         departing = qa.step('record_dismiss_and_reflow', capture, qa, out/'dismissal',
                             dismiss_point=point)
         dismissal = qa.step('verify_dismiss_and_reflow', verify_dismissal, departing)
-        # The surviving MAIN task has no preview eye. Its dismiss target
-        # remains usable after reflow; workspace eyes have their own scenario.
-        qa.step('main_task_has_no_eye', qa.eval,
-                "assert not drv.find(surface='agent_panel_eye')\nresult=True")
-        qa.step('survivor_dismiss_click', qa.click, surface='agent_panel_dismiss', index=0)
-        qa.wait("all(t['text']!='Motion Beta' for t in drv.find(surface='agent_panel_card'))", timeout=8)
+        # The surviving card's actual hit target remains usable after reflow.
+        point = qa.step('survivor_eye_target', _centre, qa, 'agent_panel_eye', 0)
+        qa.step('survivor_eye_click', _click_at, qa, *point)
+        qa.step('survivor_eye_expanded', qa.wait,
+                "any(w['text']=='Motion Beta.' for w in drv.find(surface='agent_panel_card'))",
+                timeout=8)
         results = {'arrival': arrival, 'dismissal': dismissal, 'paid_requests': 0}
         (out/'verdict.json').write_text(json.dumps(results, indent=2)+'\n')
         return results

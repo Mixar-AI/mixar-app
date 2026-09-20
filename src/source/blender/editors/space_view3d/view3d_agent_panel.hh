@@ -10,9 +10,11 @@
  * from the task it was assigned), its status and its elapsed clock. Three
  * cards are visible at a time; a longer fan-out scrolls.
  *
- * Cards follow tasks; only tasks with a live private workspace expose an eye.
- * The workspace viewer reuses the old strip's offscreen rendering in a large,
- * read-only overlay with switchable tabs.
+ * Successor of the Agent Scene Strip, which docked at the bottom and showed
+ * an offscreen-rendered tile per non-active scene. Parallel agents no longer
+ * get a scene each (the backend's `Task.scene_session_id` exists but is
+ * unassigned), so tiles had nothing to preview: the surface is now driven by
+ * the turn's task list instead.
  *
  * The card data is a read-only projection of the WindowManager mirror that
  * `mixar/modules/agent_panel/core/cards.py` writes from the chat's `todo`
@@ -186,13 +188,15 @@ struct AgentPanelCard {
   ui::MixarMotionValue slide;
   ui::MixarMotionValue row;
 
-  /** A live workspace matched by session, run and task identity. */
-  bool has_workspace = false;
+  /** True while the eye has this card showing its full task instead of the
+   * short agent name. Pure view state: carried across syncs by `task_id`,
+   * never mirrored back to Python. */
+  bool expanded = false;
 
   /** Region-local pixel rects. Written by the layout pass, read by draw, the
    * hit test and the QA target provider — one owner, three readers. */
   rcti rect = {};
-  /** The eye button: opens the separate workspace scene preview. */
+  /** The eye button: expands the card to show the full task. */
   rcti eye_rect = {};
   /** The right-hand slot: a dismiss cross while the agent works, the outcome
    * glyph once it has settled. */

@@ -18,10 +18,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.workflow.constants import (
-    BASIC_WORKSPACE_NAME,
-    PRO_DEFAULT_WORKSPACE_NAME,
-)
+from mixar.modules.workflow.constants import PRO_DEFAULT_WORKSPACE_NAME
 from mixar.modules.workflow.core.workspace_loader import (
     configure_basic_workspace_chrome,
 )
@@ -42,15 +39,7 @@ from mixar.modules.workflow.ui.operators.ui_mode_ops import classes as ui_mode_c
 logger = get_logger(__name__)
 
 _all_classes = ui_mode_classes
-# Workspaces that must always come up in Object Mode. Blender restores the
-# interaction mode saved with a workspace, and Zen Mode has no mode selector
-# (its header is only the shading strip), so a user arriving in Edit, Sculpt
-# or Texture Paint mode would be stranded there.
-_OBJECT_MODE_WORKSPACES = {
-    PRO_DEFAULT_WORKSPACE_NAME,
-    "Modelling",
-    BASIC_WORKSPACE_NAME,
-}
+_DEFAULT_MODELING_WORKSPACES = {PRO_DEFAULT_WORKSPACE_NAME, "Modelling"}
 _OBJECT_MODE_RETRY_LIMIT = 20
 _OBJECT_MODE_MSGBUS_OWNER = object()
 _object_mode_retry_count = 0
@@ -58,12 +47,7 @@ _object_mode_done = False
 
 
 def _ensure_modeling_workspace_object_mode():
-    """Reset the interaction mode to Object Mode on the workspaces that need it.
-
-    Runs from a timer after every workspace change (and after file load), so
-    it covers the topbar slider, the splash, agent scripts and a saved file
-    that reopens straight into Zen Mode.
-    """
+    """Undo edit-mode state saved into Blender's default modeling workspace."""
     global _object_mode_done, _object_mode_retry_count
     if _object_mode_done:
         return None
@@ -76,7 +60,7 @@ def _ensure_modeling_workspace_object_mode():
         if workspace is None:
             return 0.2 if _object_mode_retry_count < _OBJECT_MODE_RETRY_LIMIT else None
 
-        if workspace.name not in _OBJECT_MODE_WORKSPACES:
+        if workspace.name not in _DEFAULT_MODELING_WORKSPACES:
             return None
 
         obj = bpy.context.object
@@ -85,7 +69,7 @@ def _ensure_modeling_workspace_object_mode():
 
         if getattr(obj, "mode", "OBJECT") != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
-            logger.info("workflow: reset %s to Object Mode", workspace.name)
+            logger.info("workflow: reset default Modeling workspace to Object Mode")
         _object_mode_done = True
     except Exception as exc:  # noqa: BLE001 - startup guard must never break launch
         logger.debug("workflow: Object Mode startup reset skipped: %s", exc)
@@ -118,14 +102,6 @@ def _on_load_post(_dummy_arg) -> None:
         configure_basic_workspace_chrome()
     except Exception as exc:  # noqa: BLE001 - load handler must never raise
         logger.debug("workflow: zen chrome enforcement on load skipped: %s", exc)
-    # A file saved in Edit/Sculpt mode that reopens into Zen Mode never fires
-    # the workspace msgbus, so arm the Object Mode reset here as well.
-    _schedule_object_mode_reset()
-
-
-def schedule_object_mode_reset() -> None:
-    """Public entry for the Zen switch operator: re-arm the Object Mode reset."""
-    _schedule_object_mode_reset()
 
 
 def _on_workspace_change() -> None:

@@ -58,22 +58,6 @@ struct AgentTabLayout {
   bool active;
 };
 
-struct AgentIslandState;
-
-/**
- * How much of the model chip survives the chip row's width budget.
- *
- * The row is budgeted (see #agent_ui_layout_fit_controls): every chip's width
- * is taken out of the span between Upload Reference and Send, and whatever is
- * left is Upload's. The model chip therefore steps DOWN this ladder — and is
- * dropped entirely — before Upload is allowed below its icon-only floor.
- */
-enum class AgentModelChipForm {
-  Full = 0, /* Icon + model label + chevron. */
-  Label,    /* Icon + model label. */
-  Icon,     /* Icon alone. */
-};
-
 struct AgentIslandLayout {
   /* True once the region is large enough to hold the island. When false the
    * draw pass bails rather than painting a squashed island — a clipped card reads
@@ -103,7 +87,6 @@ struct AgentIslandLayout {
   rctf card_header;  /* Gradient band above the panel. */
   rctf hdr_history;
   rctf hdr_new_chat;
-  rctf hdr_handwriting; /* Explicit input method, separate from Sketch. */
   rctf hdr_checkpoints; /* Turn checkpoints — restore an earlier turn. */
   float hdr_title_cx;
   float hdr_title_y;
@@ -114,7 +97,6 @@ struct AgentIslandLayout {
   float prompt_x;
   float prompt_y;
 
-  bool compact_reference;
   rctf chip_upload;
   /* Scribble: toggle, then (only with queued marks) the reading dropdown and
    * the clear X. Always laid out; the painter and the controls skip the two
@@ -127,17 +109,10 @@ struct AgentIslandLayout {
   /* Auto mode switch, right of Voice (closes the gap with it when Voice is
    * absent). Always drawn: the flag is a plain scene property. */
   rctf chip_auto;
-  /* Hosted model pick, right of Auto. Empty when the Python half has not
-   * registered its WindowManager mirror yet, or when the row is too narrow
-   * to carry it without eating Upload Reference. */
-  rctf chip_model;
-  AgentModelChipForm model_form;
   rctf chip_reading;
   rctf chip_clear;
   rctf btn_generate;
 };
-
-void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state);
 
 /**
  * Resolve the island against `region`, anchored to the region's top-left.
@@ -145,8 +120,6 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
  * `agent_mode_active` is kept in the signature for ABI stability but unused
  * covers; `active_tab` picks the filled pill.
  */
-void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state);
-
 /**
  * Resolve the island against the WINDOW, not a region.
  *

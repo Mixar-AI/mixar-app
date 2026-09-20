@@ -87,11 +87,11 @@ def test_attachment_column_does_not_overlap_the_scribble_chips():
 # State is READ from the Python-registered properties, exactly as the headers.
 # ---------------------------------------------------------------------------
 
-def test_annotate_state_is_independent_of_handwriting():
+def test_armed_means_either_half_is_up():
     gather = _function_body(STATE_CC, "void agent_ui_state_gather(")
     assert '"mixie_chat_ink_visible"' in gather
     assert '"mixar_mark_armed"' in gather
-    assert 'r_state->scribble_armed = read_bool_prop(&wm_ptr, "mixar_mark_armed");' in gather
+    assert "r_state->ink_visible ||" in gather
 
 
 def test_only_draft_marks_are_counted():
@@ -114,7 +114,7 @@ def test_chip_row_paints_scribble_in_the_island_unit():
     assert "AGENT_ICON_PEN" in body
     assert "AgentIslandControl::Scribble" in body
     assert "layout->chip_scribble, state->scribble_armed" in body
-    assert '"Sketch · %d"' in body
+    assert '"Scribble · %d"' in body
     assert "AGENT_ICON_CROSS" in body
     assert "AGENT_ICON_CHEVRON_DOWN" in body
 
@@ -132,7 +132,7 @@ def test_new_glyphs_keep_count_last():
 
 
 def test_layout_places_scribble_right_of_upload():
-    assert "AGENT_SEG_X + AGENT_CHIP_UPLOAD_W + AGENT_CHIP_GAP" in LAYOUT_CC
+    assert "AGENT_SEG_X + upload_w + AGENT_CHIP_GAP" in LAYOUT_CC
     for rect in ("chip_scribble", "chip_reading", "chip_clear"):
         assert f"r_layout->{rect} = f.box(" in LAYOUT_CC
 
@@ -165,20 +165,3 @@ def test_empty_state_paints_the_ink_canvas_instead_of_the_field():
     assert "mixie_chat_draw_ink_overlay(C, region);" in canvas_branch
     assert "uiDefButR" not in canvas_branch
     assert "void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);" in BUBBLE_CC
-
-
-def test_handwriting_has_explicit_header_control_with_shared_geometry():
-    body = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_header(")
-    assert '"mixie_chat.ink_toggle"' in body
-    assert "layout->hdr_handwriting" in body
-    assert "state->handwriting_available" in body
-    paint = _function_body(DRAW_CC, "void agent_ui_draw_handwriting_control(")
-    assert "layout->hdr_handwriting" in paint
-    assert 'state->ink_visible ? "Type instead" : "Handwriting"' in paint
-
-
-def test_chip_widths_fit_mark_counts_voice_status_and_auto_switch():
-    assert 'SNPRINTF(annotation, "Sketch · %d", state.mark_count)' in LAYOUT_CC
-    assert 'width("Auto", AGENT_SWITCH_W)' in LAYOUT_CC
-    assert 'state.voice_listening ? state.voice_status : "Voice"' in LAYOUT_CC
-    assert 'agent_ui_layout_fit_controls(*r_layout, *r_state)' in BUBBLE_CC

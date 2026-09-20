@@ -1694,7 +1694,7 @@ static void region_rect_recursive(
 
   /* set here, assuming userpref switching forces to call this again */
   region->overlap = ED_region_is_overlap(area->spacetype, region->regiontype);
-  /* Zen Mode's View3D headers must overlap even when the theme header
+  /* Zen/Texturing View3D headers must overlap even when the theme header
    * is opaque — otherwise the reserved strip stays a bar. Empty header
    * space already passes events through (`ED_region_contains_xy`). */
   if (!region->overlap && ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER) &&
@@ -3646,8 +3646,8 @@ void ED_region_draw_overflow_indication(const ScrArea *area,
 
   const bool is_overlap = ED_region_is_overlap(area->spacetype, region->regiontype);
   const bool is_header = ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER);
-  /* Forced-overlap Zen headers clear transparent. An overflow fade would
-   * still paint opaque TH_BACK across the strip. */
+  /* Forced-overlap Zen/Texturing headers clear transparent. An overflow
+   * fade would still paint opaque TH_BACK across the strip. */
   if (region->overlap && is_header && ui::mixar_area_floats_viewport_chrome(area)) {
     return;
   }
@@ -4124,9 +4124,9 @@ static void region_draw_blocks_in_view2d(const bContext *C, const ARegion *regio
 
 void ED_region_header_draw(const bContext *C, ARegion *region)
 {
-  /* Zen chrome is the family's ISLAND pane on the topbar. Zen's View3D
-   * headers clear transparent so glass groups float. An opaque theme
-   * clear would bury either; dest-over cannot lower dest A=1. */
+  /* Zen chrome is the family's ISLAND pane on the topbar. View3D headers
+   * in Zen/Texturing clear transparent so glass groups float. An opaque
+   * theme clear would bury either; dest-over cannot lower dest A=1. */
   if (!ui::mixar_zen_floating_header_clear(C, region) &&
       !ui::mixar_zen_header_clear(C, region))
   {

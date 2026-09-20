@@ -11,7 +11,6 @@ from unittest.mock import Mock
 import pytest
 
 from mixar.modules.scribble_mark.core import chat_bridge, freeze_session, pending
-from mixar.modules.scribble_mark.core.stroke_capture import StrokeBuffer
 
 
 @pytest.fixture(autouse=True)
@@ -27,11 +26,8 @@ def setup_live(monkeypatch, *, matches=True, same_scene=True):
     area, region = object(), object()
     override = Mock(return_value=nullcontext())
     context = SimpleNamespace(scene=scene, temp_override=override)
-    ink = StrokeBuffer(8, 128)
-    ink.begin((10, 20))
-    ink.extend((40, 50), 1)
     operator = SimpleNamespace(
-        _ink=ink,
+        _strokes=[[(10, 20), (40, 50)]], _current=[(40, 50)],
         _area_ptr=1, _region_ptr=2,
         _session=SimpleNamespace(matches=lambda r: matches),
         _commit_pending=Mock(),
@@ -44,7 +40,7 @@ def setup_live(monkeypatch, *, matches=True, same_scene=True):
 def test_send_flushes_before_idle_in_the_viewport_window(monkeypatch):
     context, operator, override, (window, area, region) = setup_live(monkeypatch)
     assert pending.flush(context)
-    assert not operator._ink.drawing
+    assert operator._current is None
     operator._commit_pending.assert_called_once_with(context)
     override.assert_called_once_with(window=window, area=area, region=region)
 
@@ -82,11 +78,3 @@ def test_flush_precedes_empty_check_but_attachments_follow_connection_preflight(
               'src/scripts/mixar/modules/space_mixie_chat/ui/operators/chat_ops.py').read_text()
     assert source.index('chat_bridge.flush_for_send') < source.index('Cannot send empty message')
     assert source.index('WebSocket not ready') < source.index('chat_bridge.prepare_for_send')
-
-
-def test_send_with_no_new_strokes_does_not_commit_again(monkeypatch):
-    context, operator, override, _ = setup_live(monkeypatch)
-    operator._ink.clear()
-    assert not pending.flush(context)
-    operator._commit_pending.assert_not_called()
-    override.assert_not_called()

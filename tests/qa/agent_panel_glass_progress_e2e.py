@@ -22,6 +22,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario
+from agent_panel_cards_e2e import _click_at, _centre
 
 SPACE = "space=next(a.spaces.active for a in drv.main_window().screen.areas if a.type=='VIEW_3D')\n"
 HELPERS = "ns=bpy.app.driver_namespace['task_card_glass_qa']\n"
@@ -153,8 +154,8 @@ def run(qa):
         settle(qa)
         reordered = progress(qa)
         assert all(reordered[t] >= before[t] for t in before), (before, reordered)
-        qa.step('main_tasks_have_no_eyes', qa.eval,
-                "assert not drv.find(surface='agent_panel_eye')\nresult=True")
+        qa.step('eye_click', _click_at, qa, *_centre(qa, 'agent_panel_eye', 1))
+        qa.wait("any(t['text']=='Playing around with textures.' for t in drv.find(surface='agent_panel_card'))")
 
         failed = [dict(ITEMS[0], status='failed'), ITEMS[1], ITEMS[2]]
         mirror(qa, failed)
@@ -174,12 +175,12 @@ def run(qa):
         # Removal starts the surviving rows' 200ms reflow. Resolve the click
         # target after that move, so an old rectangle cannot race the gesture.
         settle(qa)
-        qa.step('dismiss_click', qa.click, surface='agent_panel_dismiss', index=0)
+        qa.step('dismiss_click', _click_at, qa, *_centre(qa, 'agent_panel_dismiss', 0))
         # A fan-out already on screen retains its last card until dismissed;
         # the two-task threshold applies to incoming todo snapshots.
         qa.wait("[c.task_id for c in bpy.context.window_manager.mixar_agent_cards]==['glass-c']", timeout=5)
         settle(qa)
-        qa.step('dismiss_last_click', qa.click, surface='agent_panel_dismiss', index=0)
+        qa.step('dismiss_last_click', _click_at, qa, *_centre(qa, 'agent_panel_dismiss', 0))
         qa.wait("not drv.find(surface='agent_panel_card')", timeout=5)
 
         mirror(qa, ITEMS, clear=True)

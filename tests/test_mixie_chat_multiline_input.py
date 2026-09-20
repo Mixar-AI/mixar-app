@@ -77,7 +77,7 @@ def test_island_chrome_uses_the_grown_strip():
 def test_footer_wrap_matches_the_widget_font():
     count = _function_body(FOOTER_LAYOUT, "int footer_layout_get_input_line_count(")
     assert "1.2f" not in count
-    assert "FOOTER_TEXT_MARGIN_X * U.widget_unit" in count
+    assert "0.4f * U.widget_unit" in count
     assert "ui::style_get()->widget" in count
 
 

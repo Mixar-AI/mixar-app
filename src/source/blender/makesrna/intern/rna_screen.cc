@@ -215,17 +215,29 @@ static const EnumPropertyItem *rna_Area_ui_type_itemf(bContext *C,
   }
 
   for (; item_from->identifier; item_from++) {
-    /* Mixar: SPACE_AGENT_BUBBLE is an overlay window, never an editor the
-     * user can switch an area to — it only belongs in its tear-off window.
-     * Same exclusion pattern as SPACE_TOPBAR / SPACE_STATUSBAR.
+    /* Mixar: hide workspace-owned and overlay spaces from the Editor
+     * Type dropdown. They stay fully registered (saved layouts and
+     * Python `bl_space_type` depend on the identifiers), but offering
+     * them in the generic switcher would let users replace any editor
+     * with a bubble or a texturing side panel.
      *
-     * The five texturing spaces (layers / properties / assets / baking /
-     * texture sets) ARE offered, grouped under the "Texturing" heading in
-     * `rna_enum_space_type_items`: every editor in the Texturing workspace
-     * has to stay swappable, so each of those areas needs the Editor Type
-     * dropdown and its own entry in the list. Moodboard and Mixie Chat are
-     * listed for the same reason. */
-    if (ELEM(item_from->value, SPACE_TOPBAR, SPACE_STATUSBAR, SPACE_AGENT_BUBBLE)) {
+     * SPACE_AGENT_BUBBLE only belongs in its tear-off window.
+     * The five texturing spaces (layers / properties / assets /
+     * baking / texture sets) are layout of the Texturing workspace,
+     * the same way Zen Mode and Cinema Mode keep their chrome off
+     * this menu. Moodboard and Mixie Chat stay listed — they are
+     * first-class editors. Same exclusion pattern as SPACE_TOPBAR /
+     * SPACE_STATUSBAR. */
+    if (ELEM(item_from->value,
+             SPACE_TOPBAR,
+             SPACE_STATUSBAR,
+             SPACE_AGENT_BUBBLE,
+             SPACE_MIXAR_LAYERS,
+             SPACE_MIXAR_PROPERTIES,
+             SPACE_MIXAR_ASSETS,
+             SPACE_BAKING,
+             SPACE_TEXTURE_SETS))
+    {
       continue;
     }
 

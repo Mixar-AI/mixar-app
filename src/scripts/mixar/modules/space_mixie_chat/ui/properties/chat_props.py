@@ -866,7 +866,7 @@ def register():
     # backend starts later turns itself (wake-ups over the socket). While the
     # run is open the composer keeps sending (an interjection joins the run),
     # worker scripts are accepted while the turn is IDLE, and the status
-    # reads "Working". Written only by SessionManager.set_run.
+    # reads "Working in background". Written only by SessionManager.set_run.
     bpy.types.Scene.mixie_run_open = BoolProperty(
         name="Agent Run Open",
         description="True while the backend run behind this chat is still open",

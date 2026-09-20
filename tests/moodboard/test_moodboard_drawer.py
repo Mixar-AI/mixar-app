@@ -55,7 +55,6 @@ def test_drawer_sources_stay_under_the_house_line_cap():
         VIEW3D / "view3d_moodboard_drawer.cc",
         VIEW3D / "view3d_moodboard_drawer_draw.cc",
         VIEW3D / "view3d_moodboard_drawer_ops.cc",
-        VIEW3D / "view3d_moodboard_drawer_state.cc",
     ):
         lines = len(path.read_text(encoding="utf-8").splitlines())
         assert lines <= 500, f"{path.name} is {lines} lines"
@@ -335,9 +334,17 @@ def test_drawer_hosts_the_same_add_tools_row_as_the_mixie_toolbar():
     assert 'mixie.moodboard_erase_canvas' in toolbar
     assert "VIEW3D_PT_moodboard_drawer_add_tools," in toolbar
 
-    assert 'WM_paneltype_find("VIEW3D_PT_moodboard_drawer_add_tools"' in draw
+    assert 'WM_paneltype_find(panel_id, false)' in draw
+    assert '"VIEW3D_PT_moodboard_drawer_add_tools"' in draw
     assert "ui::UI_paneltype_draw" in draw
     assert "draw_add_tools(C, region, panel_xmin)" in draw
+    assert "draw_clear_tool(C, region, panel_xmin)" in draw
+    assert "ui::uiDefIconTextButO" in draw
+    assert "ICON_X" in draw
+    assert "compact_density.control_height" in draw
+    assert "MixarTextRole::Body" in draw
+    assert "0.75f * scale" in draw
+    assert '"Clear"' in draw
     # Must not call the panel-region path (comment mentions it as the anti-pattern).
     assert "ED_region_panels(" not in _strip_comments(draw)
 

@@ -339,7 +339,7 @@ MARK_HINT_ACCENT_COLOR = (0.31, 0.85, 0.82, 1.0)
 #: study (arXiv:2607.21468) found first: users could not tell which mode they
 #: were in, and asked for visible controls and a way to undo.
 MARK_HINT_IDLE = (
-    "Sketch on the viewport  ·  Type or use Voice in chat  ·  Esc when done"
+    "Draw here to point or sketch  ·  Write in the chat to type  ·  Esc when done"
 )
 #: ...and once ink is down, what the ink is being READ as, with the way to
 #: change the reading. Both readings name Tab: a sketch mistaken for nine

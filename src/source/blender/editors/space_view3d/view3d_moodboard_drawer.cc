@@ -49,7 +49,79 @@ namespace blender {
 /** \name State
  * \{ */
 
-/* Property accessors live in `view3d_moodboard_drawer_state.cc`. */
+/* WM RNA: `amount` is last committed, `target` is the ease side. Paint
+ * reads `display_amount` so a bunched timer cannot jump the panel. */
+
+static PropertyRNA *drawer_prop(const bContext *C, PointerRNA *r_wm_ptr, const char *name)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (wm == nullptr) {
+    return nullptr;
+  }
+  *r_wm_ptr = RNA_id_pointer_create(&wm->id);
+  return RNA_struct_find_property(r_wm_ptr, name);
+}
+
+static float drawer_float_get(const bContext *C, const char *name, const float fallback)
+{
+  PointerRNA wm_ptr;
+  PropertyRNA *prop = drawer_prop(C, &wm_ptr, name);
+  return prop != nullptr ? RNA_property_float_get(&wm_ptr, prop) : fallback;
+}
+
+static int drawer_int_get(const bContext *C, const char *name, const int fallback)
+{
+  PointerRNA wm_ptr;
+  PropertyRNA *prop = drawer_prop(C, &wm_ptr, name);
+  return prop != nullptr ? RNA_property_int_get(&wm_ptr, prop) : fallback;
+}
+
+static void drawer_float_set(const bContext *C, const char *name, const float value)
+{
+  PointerRNA wm_ptr;
+  PropertyRNA *prop = drawer_prop(C, &wm_ptr, name);
+  if (prop != nullptr) {
+    RNA_property_float_set(&wm_ptr, prop, value);
+  }
+}
+
+static void drawer_int_set(const bContext *C, const char *name, const int value)
+{
+  PointerRNA wm_ptr;
+  PropertyRNA *prop = drawer_prop(C, &wm_ptr, name);
+  if (prop != nullptr) {
+    RNA_property_int_set(&wm_ptr, prop, value);
+  }
+}
+
+float view3d_moodboard_drawer_amount(const bContext *C)
+{
+  return drawer_float_get(C, "mixar_moodboard_drawer_amount", 0.0f);
+}
+
+void view3d_moodboard_drawer_amount_set(bContext *C, const float amount)
+{
+  const float clamped = std::clamp(amount, 0.0f, 1.0f);
+  drawer_float_set(C, "mixar_moodboard_drawer_amount", clamped);
+  /* Regiondata must match RNA: visual routing reads this amount. */
+  if (ARegion *region = view3d_moodboard_drawer_region_from_context(C)) {
+    if (MoodboardDrawerRuntime *runtime =
+            static_cast<MoodboardDrawerRuntime *>(region->regiondata))
+    {
+      runtime->amount = clamped;
+    }
+  }
+}
+
+int view3d_moodboard_drawer_target(const bContext *C)
+{
+  return drawer_int_get(C, "mixar_moodboard_drawer_target", 0);
+}
+
+void view3d_moodboard_drawer_target_set(bContext *C, const int target)
+{
+  drawer_int_set(C, "mixar_moodboard_drawer_target", target != 0 ? 1 : 0);
+}
 
 static MoodboardDrawerRuntime *drawer_runtime(const bContext *C)
 {
@@ -139,23 +211,6 @@ void view3d_moodboard_drawer_slide_hold(bContext *C)
 bool view3d_moodboard_drawer_zen_active(const bContext *C)
 {
   return view3d_moodboard_drawer_workspace_is_zen(CTX_wm_workspace(C));
-}
-
-/* The region poll's answer without a context: the workspace of the window
- * whose active screen holds `area`. SpaceType.init gets only (wm, area). */
-static bool drawer_area_in_zen_workspace(wmWindowManager *wm, const ScrArea *area)
-{
-  if (wm == nullptr || area == nullptr) {
-    return false;
-  }
-  for (wmWindow &win : wm->windows) {
-    const bScreen *screen = WM_window_get_active_screen(&win);
-    if (screen == nullptr || BLI_findindex(&screen->areabase, area) == -1) {
-      continue;
-    }
-    return view3d_moodboard_drawer_workspace_is_zen(WM_window_get_active_workspace(&win));
-  }
-  return false;
 }
 
 bool view3d_moodboard_drawer_canvas_is_active(const ARegion *region)
@@ -267,13 +322,7 @@ void view3d_moodboard_drawer_region_init(wmWindowManager *wm, ARegion *region)
   view3d_moodboard_drawer_size_sync(wm, nullptr, region);
 
   if (region->regiondata == nullptr) {
-    MoodboardDrawerRuntime *runtime = MEM_new<MoodboardDrawerRuntime>("moodboard drawer runtime");
-    /* The grip's hit rect reads `runtime->amount`, which only the draw pass
-     * writes. Fresh regiondata (a workspace round trip re-inits the region)
-     * left it at 0 while the WM property still said open, so the tab painted
-     * open and the click landed on the shut position until one draw ran. */
-    runtime->amount = std::clamp(view3d_moodboard_drawer_amount_wm(wm), 0.0f, 1.0f);
-    region->regiondata = runtime;
+    region->regiondata = MEM_new<MoodboardDrawerRuntime>("moodboard drawer runtime");
   }
 
   const bool is_first_init = (region->v2d.cur.xmax - region->v2d.cur.xmin) < 1.0f;
@@ -419,20 +468,6 @@ void view3d_moodboard_drawer_region_ensure(wmWindowManager *wm, ScrArea *area)
   region->sizex = 0;
   region->flag |= RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_POLL_FAILED;
   region->runtime->type = BKE_regiontype_from_id(area->type, region->regiontype);
-
-  /* `ED_area_init()` polled the regions and laid out their rects BEFORE the
-   * space init that created this one, and nothing re-polls until the next
-   * full screen refresh. A first-ever Zen Mode workspace therefore came up
-   * with a poll-failed, zero-width drawer: no grip drawn, no grip to click
-   * ("moodboard not opening on click") until a window resize or workspace
-   * switch happened to refresh the screen. Answer the poll here with the
-   * same workspace test, size the region, and ask for the region-size pass
-   * that runs before the first draw so this very refresh lays it out. */
-  if (drawer_area_in_zen_workspace(wm, area)) {
-    region->flag &= ~RGN_FLAG_POLL_FAILED;
-  }
-  view3d_moodboard_drawer_size_sync(wm, area, region);
-  area->flag |= AREA_FLAG_REGION_SIZE_UPDATE;
 }
 
 /** \} */

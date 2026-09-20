@@ -89,3 +89,4 @@ def link_drop_anchor(scene):
         float(getattr(scene, "mixie_moodboard_link_drop_x", 0.0)),
         float(getattr(scene, "mixie_moodboard_link_drop_y", 0.0)),
     )
+

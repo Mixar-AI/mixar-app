@@ -67,11 +67,17 @@ class MIXAR_PT_profile(Panel):
 
     @staticmethod
     def _draw_fallback_menu(context, layout) -> None:
+        wm = context.window_manager
+
         layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
 
-        # No AI Provider Settings entry: the chat's account menu carries no
-        # settings surface (mirrors the native card in
-        # interface_mixar_profile_card.cc).
+        if hasattr(bpy.types, 'MIXAR_BYOK_OT_open_dialog'):
+            byok_icon = 'KEY_HLT' if getattr(wm, 'byok_is_active', False) else 'PREFERENCES'
+            layout.operator(
+                "mixar_byok.open_dialog",
+                text="AI Provider Settings",
+                icon=byok_icon,
+            )
 
         layout.separator()
 

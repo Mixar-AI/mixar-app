@@ -147,7 +147,7 @@ mark_draw_ops.MARK_COMMIT_IDLE_S = 300.0
         qa.step('pending_final_stroke', draw, qa, vp, (.86, .42), (.94, .60))
         before = qa.eval('''
 from mixar.modules.scribble_mark.core import pending
-result={'stored':len(bpy.context.scene.mixar_marks),'pending':len(pending._operator._ink.strokes),
+result={'stored':len(bpy.context.scene.mixar_marks),'pending':len(pending._operator._strokes),
         'input':bpy.context.scene.mixie_chat_input,'reading':bpy.context.window_manager.mixar_mark_intent}
 ''')
         assert before == {'stored': 1, 'pending': 1, 'input': '', 'reading': 'SKETCH'}, before

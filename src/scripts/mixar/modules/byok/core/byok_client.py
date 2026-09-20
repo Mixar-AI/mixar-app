@@ -124,16 +124,6 @@ def _schedule_on_main(callback: Callable[..., None], *args) -> None:
     bpy.app.timers.register(_run, first_interval=0.0)
 
 
-# Shared with `preference_client`. The hosted model-preference endpoints sit on
-# the same router, return the same {status, message, data} envelope and raise the
-# same HTTPClientError subclasses, so they get the same status policy and the
-# same NET-* classification rather than a second copy of it. Exported as public
-# names so that reuse is a stated contract, not a reach into a private.
-translate_response = _translate
-translate_exception = _translate_exception
-schedule_on_main = _schedule_on_main
-
-
 # ---------------------------------------------------------------------------
 # BYOK credentials
 # ---------------------------------------------------------------------------

@@ -61,6 +61,19 @@ def draw_moodboard_add_text_tool(layout, *, drawer=False):
         row.mixar_style(component="GLASS_TOOL")
 
 
+def _drawer_host_poll(context):
+    if getattr(getattr(context, "workspace", None), "name", None) != "Zen Mode":
+        return False
+    if getattr(getattr(context, "region", None), "type", None) != "TOOL_PROPS":
+        return False
+    amount = getattr(
+        getattr(context, "window_manager", None),
+        "mixar_moodboard_drawer_amount",
+        0.0,
+    )
+    return float(amount) >= _DRAWER_ACTIVE_AMOUNT
+
+
 def draw_moodboard_add_tools(layout, context):
     """One left-side glass capsule, with native icons and hover tooltips."""
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT")
@@ -356,16 +369,7 @@ class VIEW3D_PT_moodboard_drawer_add_tools(Panel):
 
     @classmethod
     def poll(cls, context):
-        if getattr(getattr(context, "workspace", None), "name", None) != "Zen Mode":
-            return False
-        if getattr(getattr(context, "region", None), "type", None) != "TOOL_PROPS":
-            return False
-        amount = getattr(
-            getattr(context, "window_manager", None),
-            "mixar_moodboard_drawer_amount",
-            0.0,
-        )
-        return float(amount) >= _DRAWER_ACTIVE_AMOUNT
+        return _drawer_host_poll(context)
 
     def draw(self, context):
         draw_moodboard_add_tools(self.layout, context)

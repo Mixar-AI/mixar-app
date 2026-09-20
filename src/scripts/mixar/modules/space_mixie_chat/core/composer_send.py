@@ -21,15 +21,7 @@ class OutgoingMessage:
     user_message: object = None
 
 
-def model_change_pending(scene):
-    from mixar.modules.byok.core.preference_state import mutation_pending
-    return getattr(scene, 'mixie_chat_mode', '') not in {'GENERATE', 'LIBRARY'} and mutation_pending()
-
-
 def can_send(scene):
-    if model_change_pending(scene):
-        from mixar.modules.byok.core.preference_state import PENDING_MESSAGE
-        return False, PENDING_MESSAGE
     from .turn_checkpoints import rewind_in_flight
     if rewind_in_flight():
         return False, 'Restoring a checkpoint…'
