@@ -244,39 +244,38 @@ void agent_ui_layout_build(const int window_w,
    * `active` flags are kept, since the card body still switches on them. */
   r_layout->strip = pad ? rctf{} : f.box(AGENT_STRIP_X, AGENT_STRIP_Y, AGENT_STRIP_W, AGENT_STRIP_H);
 
-  /* One centered row, with equal breathing room between pills. Labels grow
-   * at native text size; when space is tight the painter elides inside these
-   * same bounds, which also drive native hits and QA. */
+  /* Spend the strip's center gap on labels before eliding them. Measurement,
+   * paint, native button bounds and QA targets all use this resolved layout. */
   const float text_size = agent_ui_body_font_size();
   const float badge_size = AGENT_NEW_BADGE_FONT * agent_ui_text_unit();
   const float badge_w = std::max(float(AGENT_NEW_BADGE_W),
                                 ui::mixar_text_width("NEW", badge_size) / u +
                                     2.0f * AGENT_TAB_ICON_GAP);
-  constexpr float gap = 16.0f;
-  constexpr float padding = 20.0f;
   TabMetric tabs[AGENT_TAB_COUNT];
-  float total = gap * (AGENT_TAB_COUNT - 1);
+  float extra = 0.0f;
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     tabs[i] = g_tab_metrics[i];
-    const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W + AGENT_TAB_ICON_GAP :
-                          i == AGENT_TAB_GENERATIONS ? 0.0f :
-                                                       AGENT_TAB_ICON + AGENT_TAB_ICON_GAP;
+    const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W : AGENT_TAB_ICON;
     const float trailing = i == AGENT_TAB_SPLAT ? badge_w + AGENT_TAB_ICON_GAP : 0.0f;
     const float wanted = ui::mixar_text_width(tabs[i].label, text_size) / u + leading +
-                         trailing + 2.0f * padding;
+                         trailing + 3.0f * AGENT_TAB_ICON_GAP + 2.0f / u;
     tabs[i].w = std::max(tabs[i].w, wanted);
-    total += tabs[i].w;
+    extra += tabs[i].w - g_tab_metrics[i].w;
   }
-  const float available = island_w - 2.0f * AGENT_TAB_X_AGENT;
-  const float fit = std::min(1.0f, (available - gap * (AGENT_TAB_COUNT - 1)) /
-                                      (total - gap * (AGENT_TAB_COUNT - 1)));
-  total = (total - gap * (AGENT_TAB_COUNT - 1)) * fit + gap * (AGENT_TAB_COUNT - 1);
-  float tab_x = (island_w - total) * 0.5f;
-  for (TabMetric &tab : tabs) {
-    tab.w *= fit;
-    tab.x = tab_x;
-    tab_x += tab.w + gap;
+  const float spare = AGENT_TAB_X_GENERATIONS - (AGENT_TAB_X_SPLAT + AGENT_TAB_W_SPLAT) -
+                      6.0f;
+  const float growth = extra > 0.0f ? std::min(1.0f, spare / extra) : 0.0f;
+  for (int i = 0; i < AGENT_TAB_COUNT; i++) {
+    tabs[i].w = g_tab_metrics[i].w + (tabs[i].w - g_tab_metrics[i].w) * growth;
+    if (i > 0 && i <= AGENT_TAB_SPLAT) {
+      const float gap = g_tab_metrics[i].x -
+                        (g_tab_metrics[i - 1].x + g_tab_metrics[i - 1].w);
+      tabs[i].x = tabs[i - 1].x + tabs[i - 1].w + gap;
+    }
   }
+  tabs[AGENT_TAB_QUEUE].x = AGENT_TAB_X_QUEUE + AGENT_TAB_W_QUEUE - tabs[AGENT_TAB_QUEUE].w;
+  tabs[AGENT_TAB_GENERATIONS].x = tabs[AGENT_TAB_QUEUE].x - 6.0f -
+                                tabs[AGENT_TAB_GENERATIONS].w;
 
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     AgentTabLayout &tab = r_layout->tabs[i];

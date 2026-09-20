@@ -191,9 +191,16 @@ static bool mixie_chat_image_drop_poll(bContext *C,
   if (drag->type == WM_DRAG_PATH) {
     const char *path = WM_drag_get_single_path(drag);
     if (path && path[0] != '\0') {
-      /* Accept any file-path drop in chat and delegate validation to the
-       * Python attachment operator (validate_image_file). Relying strictly on
-       * WM_drag_get_path_file_type() can reject valid OS drag sources. */
+      /* The agent chat has no video content part on the wire, so a movie
+       * drop is refused here and the cursor shows it — otherwise the drop
+       * looked accepted and only failed with a report after release. */
+      if (WM_drag_has_path_file_type(drag, FILE_TYPE_MOVIE)) {
+        return false;
+      }
+      /* Accept any other file-path drop in chat and delegate validation to
+       * the Python attachment operator (validate_image_file). Relying
+       * strictly on WM_drag_get_path_file_type() can reject valid OS drag
+       * sources. */
       return true;
     }
   }

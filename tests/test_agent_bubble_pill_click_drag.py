@@ -134,7 +134,8 @@ def test_pill_drag_starts_only_past_the_threshold():
     move = undecided[undecided.index("'MOUSEMOVE'") : undecided.index("'RELEASE'")]
     assert "travelled < PILL_DRAG_THRESHOLD_PX" in move
     assert "_pill_begin_drag" in move
-    assert "from mixar.modules.agent_bubble.constants import PILL_DRAG_THRESHOLD_PX" in DRAG_OP_SRC
+    imports = DRAG_OP_SRC.split("from mixar.modules.agent_bubble.constants import (", 1)[1].split(")", 1)[0]
+    assert "PILL_DRAG_THRESHOLD_PX," in imports
     match = re.search(r"^PILL_DRAG_THRESHOLD_PX\s*=\s*(\d+)", CONSTANTS_SRC, re.M)
     assert match is not None
     assert 2 <= int(match.group(1)) <= 8

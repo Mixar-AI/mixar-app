@@ -153,7 +153,7 @@ def test_the_glass_painter_accepts_a_standalone_icon_chip():
     cell = widgets.split("static bool zen_glass_cell(const Button *but)\n{", 1)[1].split(
         "\n}\n", 1
     )[0]
-    assert "ELEM(but->type, ButtonType::Row, ButtonType::But)" in cell
+    assert "ELEM(but->type, ButtonType::Row, ButtonType::But, ButtonType::Popover)" in cell
     # Still narrow: Zen theme, no Mixar component, icon-only, aligned group.
     assert "but->mixar_style.theme != MixarTheme::Zen || but->alignnr == 0" in cell
     assert "but->mixar_style.component != MixarComponent::None" in cell

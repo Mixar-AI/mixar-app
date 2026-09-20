@@ -2811,6 +2811,15 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
     return WM_operator_name_call(C, "MIXAR_OT_bubble_restore",
                                  wm::OpCallContext::ExecDefault, nullptr, nullptr);
   }
+
+  /* An OPEN island belongs to the user. A pill-only autoshow that lands
+   * while it is open (the file-load retry tick, a workspace change) used to
+   * fall through WM_window_open's dedup into the start_minimised block below
+   * and collapse the chat mid-conversation — read as "the island minimises
+   * on its own". Leave it exactly as it is. */
+  if (start_minimised && g_bubble_ghostwin != nullptr && !g_bubble_minimised) {
+    return OPERATOR_FINISHED;
+  }
 #endif
 
   /* WM_window_open with temp=true dedupes against existing temp

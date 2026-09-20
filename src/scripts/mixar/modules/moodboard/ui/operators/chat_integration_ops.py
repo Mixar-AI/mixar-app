@@ -48,6 +48,15 @@ def get_all_image_indices_to_send(scene):
     return image_indices
 
 
+def count_selected_videos(scene) -> int:
+    """Selected board videos the chat sync leaves behind."""
+    return sum(
+        1
+        for img in getattr(scene, "mixie_moodboard_images", [])
+        if getattr(img, "selected", False) and is_video_item(img)
+    )
+
+
 class MIXIE_OT_moodboard_send_to_chat(Operator):
     """Force the moodboard→chat sync to run immediately."""
     bl_idname = "mixie.moodboard_send_to_chat"
@@ -85,9 +94,19 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
             1 for att in scene.mixie_chat_pending_attachments
             if getattr(att, "is_moodboard", False)
         )
-        if selected_count == 0:
+        skipped_videos = count_selected_videos(scene)
+        if skipped_videos:
+            # The sync silently leaves videos on the board (the chat has no
+            # video content part); tell the user instead of doing nothing.
+            self.report(
+                {'WARNING'},
+                f"Skipped {skipped_videos} video"
+                f"{'s' if skipped_videos != 1 else ''}: the agent accepts "
+                "still images only. Use Video Gen on the moodboard for clips",
+            )
+        if selected_count == 0 and not skipped_videos:
             self.report({'INFO'}, "No moodboard images selected")
-        else:
+        elif selected_count:
             self.report(
                 {'INFO'},
                 f"Synced {selected_count} moodboard image"

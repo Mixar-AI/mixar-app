@@ -168,7 +168,10 @@ def test_texturing_viewport_keeps_the_stock_blender_header():
     # descriptions and native selection.
     assert 'cluster.mixar_surface(theme="ZEN")' in header
     assert 'row.prop(shading, "type", text="", expand=True)' in header
-    assert 'popover(panel="VIEW3D_PT_shading", text="")' in header
+    assert '"wm.context_set_enum"' not in header
+    assert "_ZEN_SHADING_TYPES" not in src
+    assert 'popover(panel="VIEW3D_PT_shading", text="", icon="PREFERENCES")' in header
+    assert "VIEWPORT_PILL" not in header
 
 
 def test_mixar_viewport_header_is_zen_only():

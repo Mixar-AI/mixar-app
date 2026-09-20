@@ -168,7 +168,7 @@ class TestTheSectionCardsArePanes:
         union = _code(_fn_body(WIDGETS, "static void widget_zen_tool_glass("))
         assert "zen_glass_cell(&other)" in union
         assert "BUT_ALIGN_RIGHT" in union
-        assert "but->type == ButtonType::Row && zen_glass_cell(but)" in WIDGETS
+        assert "ELEM(but->type, ButtonType::Row, ButtonType::Popover) && zen_glass_cell(but)" in WIDGETS
         assert "widget_zen_tool_glass(but, rect, &state, roundboxalign)" in WIDGETS
 
 

@@ -200,24 +200,30 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     return;
   }
 
-  /* CRITICAL FIX: Force footer size BEFORE any UI drawing.
-   * Blender's layout system may reset sizey, so we enforce it here */
+  /* Blender's layout system may reset sizey, so the required height is
+   * re-checked here — but the region is ALREADY bound to an offscreen of its
+   * current size for this draw, so only a real change tags a size update
+   * (the layout callback owns the growth). Tagging on every draw re-ran the
+   * area layout each frame and drew a growth frame against the old rect. */
   const FooterThemeCache *theme = footer_cache_get_theme();
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
   int mention_rows = mixie_chat_mention_row_count(scene);
-  region->sizey = footer_layout_calculate_height(
+  const int required_height_unscaled = footer_layout_calculate_height(
       scene, theme, nullptr, input_lines, mention_rows, region->winx);
-
   ScrArea *area = CTX_wm_area(C);
-  if (area) {
-    ED_area_tag_region_size_update(area, region);
 
-    /* OPTIMIZED: Only redraw main region, not all regions */
-    for (ARegion &rgn_iter : area->regionbase) {
-      ARegion *rgn = &rgn_iter;
-      if (rgn->regiontype == RGN_TYPE_WINDOW) {
-        ED_region_tag_redraw(rgn);
-        break;
+  if (region->sizey != required_height_unscaled) {
+    region->sizey = required_height_unscaled;
+    if (area) {
+      ED_area_tag_region_size_update(area, region);
+
+      /* OPTIMIZED: Only redraw main region, not all regions */
+      for (ARegion &rgn_iter : area->regionbase) {
+        ARegion *rgn = &rgn_iter;
+        if (rgn->regiontype == RGN_TYPE_WINDOW) {
+          ED_region_tag_redraw(rgn);
+          break;
+        }
       }
     }
   }

@@ -118,8 +118,10 @@ def _patched_header_draw(self, context):
         icon="GRID",
         depress=viewport_guides.guides_shown(view),
     )
+    # Match the shading strip material with a separate icon-only popover chip.
     cluster.separator(factor=0.4)
-    cluster.popover(panel="VIEW3D_PT_shading", text="")
+    options = cluster.mixar_surface(theme="ZEN").row(align=True)
+    options.popover(panel="VIEW3D_PT_shading", text="", icon="PREFERENCES")
 
 
 def _patched_tool_header_draw(self, context):

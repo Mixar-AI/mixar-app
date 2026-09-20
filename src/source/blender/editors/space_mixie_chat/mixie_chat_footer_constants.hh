@@ -24,6 +24,11 @@ namespace blender {
 /* Base UI unit height (unscaled pixels) */
 #define FOOTER_UI_UNIT_BASE 20
 
+/* Left text inset the native Text widget applies while editing
+ * (UI_TEXT_MARGIN_X in interface_intern.hh, which is private to the
+ * interface module): button_text_padding() = round(0.4 * U.widget_unit). */
+#define FOOTER_TEXT_MARGIN_X 0.4f
+
 /* Minimum number of visible text lines in the multi-line input field */
 #define FOOTER_INPUT_LINE_COUNT 3
 
