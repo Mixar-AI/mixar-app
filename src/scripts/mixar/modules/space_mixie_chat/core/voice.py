@@ -78,6 +78,7 @@ def start(context):
     sid = str(uuid4())
     _session = SimpleNamespace(
         scene=scene, window=context.window.as_pointer(),
+        area=context.area.as_pointer() if context.area else None,
         draft=Draft(scene.mixie_chat_input, _identity(scene)),
         attachments=_attachments(scene), transport=Transport(get_server_url(), token, sid),
         capture=None, state='Permission', began=time.monotonic(), recording_at=None,
@@ -233,12 +234,27 @@ def _tick():
                     scribble.redraw_chat()
                     if send:
                         bpy.ops.mixie_chat.send_message()
+                    else:
+                        _focus_composer(s)
                 return None
     except Exception as exc:
         _finish()
         _toast('warning', 'Voice audio could not keep up. Please try again.' if isinstance(exc, queue.Full) else str(exc))
         return None
     return VOICE_EVENT_POLL_S
+
+
+def _focus_composer(session):
+    """Return editing to the originating live surface without opening a window."""
+    import bpy
+    for window in bpy.context.window_manager.windows:
+        if window.as_pointer() != session.window or window.scene != session.scene:
+            continue
+        for area in window.screen.areas:
+            if area.as_pointer() == session.area and area.type in {'MIXIE_CHAT', 'AGENT_BUBBLE'}:
+                with bpy.context.temp_override(window=window, area=area):
+                    bpy.ops.mixie_chat.focus_composer()
+                return
 
 
 def _status(text):

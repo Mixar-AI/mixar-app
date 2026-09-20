@@ -182,6 +182,9 @@ def run(qa):
         warp(qa, SEND)
         qa.step('one_send_click_while_editing', qa.click, **SEND)
         qa.step('click_dispatches_once_and_clears', assert_sent, qa, first, 1)
+        # Successful Send folds the island into its pill. Reopen explicitly
+        # before taking a picture of the conversation's composer.
+        qa.step('reopen_after_send_for_picture', open_pill, qa)
         qa.step('sent_message_visible', snap, qa, out, 'sent-click')
         settle(qa)
 
@@ -212,6 +215,7 @@ def run(qa):
         qa.step('one_click_send_from_footer_field', qa.click, **SEND)
         qa.step('footer_dispatches_once', assert_sent, qa, third, 3)
         settle(qa)
+        qa.step('reopen_final_conversation_for_picture', open_pill, qa)
         qa.step('final_conversation_picture', snap, qa, out, 'conversation')
 
         qa.step('reopen_for_connection_failure', open_pill, qa)

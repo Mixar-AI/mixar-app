@@ -634,6 +634,7 @@ void mixie_chat_ink_footer_handler_register(ARegion *region);
 void mixie_chat_ink_idle_timer_remove(wmWindowManager *wm);
 void MIXIE_CHAT_OT_ink_flush(wmOperatorType *ot);
 void MIXIE_CHAT_OT_ink_release_composer(wmOperatorType *ot);
+void MIXIE_CHAT_OT_focus_composer(wmOperatorType *ot);
 /* On-device recognition (mixie_chat_ink_local.cc): start one batch / pop one result. */
 void MIXIE_CHAT_OT_ink_recognize_local(wmOperatorType *ot);
 void MIXIE_CHAT_OT_ink_local_poll(wmOperatorType *ot);
