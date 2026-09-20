@@ -45,6 +45,9 @@ enum AgentTabId {
   AGENT_TAB_COUNT,
 };
 
+/** Content starts below session actions only on the Agent tab. */
+float agent_ui_panel_top(AgentTabId tab);
+
 /** Shared by text measurement and tab painting. */
 const char *agent_ui_tab_label(AgentTabId tab);
 

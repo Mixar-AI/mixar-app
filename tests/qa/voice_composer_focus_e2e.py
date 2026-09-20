@@ -56,7 +56,7 @@ def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/voice-focus')) / 'snaps'
     out.mkdir(parents=True, exist_ok=True)
     local = str(Path(__file__).resolve().parent)
-    qa.open_chat()
+    open_pill(qa)
     qa.eval(f'import sys; sys.path.insert(0, {local!r}); '
             'import chat_send_probe as p; import voice_focus_probe as v; '
             'p.install(); v.install(); result=True')

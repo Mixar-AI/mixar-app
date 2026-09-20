@@ -702,8 +702,7 @@ void agent_ui_draw_island(ARegion *region,
                    /*tint=*/!agent_bubble_island_bed_is_transparent(),
                    /*rim=*/false);
 
-  /* Card header row is tab-scoped: the chat's discs / session title
-   * belong to the Agent tab; other tabs title the card after themselves. */
+  /* Session actions stay available without repeating the active tab title. */
   const bool agent_tab = layout->tabs[AGENT_TAB_AGENT].active;
   if (agent_tab) {
     /* Header buttons: an accent disc with a lighter glyph on top. */
@@ -790,39 +789,6 @@ void agent_ui_draw_island(ARegion *region,
       const float *text_col = state->input_text[0] ? col_active : col_dim;
       label_centre(disp, cx, cy, font_size, text_col);
     }
-    else if (state->title[0] != '\0') {
-      /* Overlay-centred: omitted when empty so the header discs keep
-       * their artboard seats and no reserved title slot remains. */
-      label_centre(state->title,
-                   layout->hdr_title_cx,
-                   layout->hdr_title_y,
-                   AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
-                   strong);
-    }
-
-  }
-  else {
-    const char *tab_title = "";
-    if (layout->tabs[AGENT_TAB_QUEUE].active) {
-      tab_title = "Queue";
-    }
-    else if (layout->tabs[AGENT_TAB_3D].active) {
-      tab_title = "3D";
-    }
-    else if (layout->tabs[AGENT_TAB_MEDIA].active) {
-      tab_title = "Media";
-    }
-    else if (layout->tabs[AGENT_TAB_SPLAT].active) {
-      tab_title = "Gaussian Splat";
-    }
-    else if (layout->tabs[AGENT_TAB_GENERATIONS].active) {
-      tab_title = "Library";
-    }
-    label_centre(tab_title,
-                 layout->hdr_title_cx,
-                 layout->hdr_title_y,
-                 AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
-                 strong);
   }
 
   /* --- Inner panel --- */

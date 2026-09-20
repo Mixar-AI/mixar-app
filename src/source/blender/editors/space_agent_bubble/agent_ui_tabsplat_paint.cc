@@ -15,6 +15,7 @@
  */
 
 #include "agent_ui_text.hh"
+#include "agent_bubble_references.hh"
 
 #include <algorithm>
 #include <cstring>
@@ -200,7 +201,7 @@ void splat_pane_paint(const bContext *C,
      * selection while the switch is on, otherwise its own uploaded/captured
      * image (world_labs_ops::_resolve_image reads exactly this way). Same
      * thumbnails the Agent tab shows for its pending attachments. */
-    if (splat_rect_is_live(rects.thumbs)) {
+    if (!agent_bubble_references_visible(C) && splat_rect_is_live(rects.thumbs)) {
       Image *images[PANE_REF_THUMB_MAX] = {nullptr};
       int count = 0;
       if (state.use_selected) {

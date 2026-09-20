@@ -20,6 +20,7 @@ set(SRC
   agent_bubble_glass.cc
   agent_bubble_composer.cc
   agent_bubble_references.cc
+  agent_bubble_reference_items.cc
   agent_bubble_references_navigation.cc
   agent_bubble_interaction.cc
   agent_ui_draw.cc
