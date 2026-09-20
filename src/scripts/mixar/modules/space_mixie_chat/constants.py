@@ -411,6 +411,11 @@ VOICE_EVENT_POLL_S = 0.05
 VOICE_STOP_GRACE_S = 2.0
 # Longest dictation session; the recogniser's own limit is about a minute.
 VOICE_MAX_SESSION_S = 180.0
+# Cloud recording limits come from ready; startup has its own permission/auth
+# budget. Session grace includes the 35-second final wait plus transport slack.
+VOICE_STARTUP_TIMEOUT_S = 240.0
+VOICE_FINAL_TIMEOUT_S = 35.0
+VOICE_SESSION_GRACE_S = 40.0
 # Stable toast id for permission / failure notices (re-pushing replaces).
 VOICE_TOAST_ID = "voice_input"
 

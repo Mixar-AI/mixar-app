@@ -11,6 +11,7 @@ import websocket
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.network.core.errors import classify_network_error, log_network_failure
+from ...constants import VOICE_FINAL_TIMEOUT_S, VOICE_SESSION_GRACE_S
 
 logger = get_logger(__name__)
 
@@ -43,11 +44,35 @@ class Transport:
     def emit(self, event):
         self.events.put_nowait(event)
 
+    def _connect(self):
+        try:
+            return websocket.create_connection(self.url, timeout=10,
+                                                header={'Authorization': 'Bearer ' + self.token})
+        except websocket.WebSocketBadStatusException as exc:
+            # FastAPI rejects unauthenticated WebSocket upgrades with HTTP 403.
+            # Retry only that handshake (or 401), before Start or any audio.
+            if exc.status_code not in (401, 403) or self.cancelled.is_set():
+                raise
+            from mixar.modules.auth.core.auth import get_access_token, refresh_access_token
+            token = get_access_token()
+            if not token:
+                raise
+            if token == self.token:
+                result = refresh_access_token()
+                if not result.get('success'):
+                    raise
+                token = get_access_token()
+            if not token or self.cancelled.is_set():
+                raise
+            self.token = token
+            # A rejection here propagates: no refresh loop or audio replay.
+            return websocket.create_connection(self.url, timeout=10,
+                                                header={'Authorization': 'Bearer ' + self.token})
+
     def run(self):
         ws = None
         try:
-            ws = websocket.create_connection(self.url, timeout=10,
-                                              header={'Authorization': 'Bearer ' + self.token})
+            ws = self._connect()
             self.token = ''
             if self.cancelled.is_set():
                 return
@@ -56,11 +81,14 @@ class Transport:
             if ready.get('type') != 'ready':
                 self.emit({'type': 'error', 'message': ready.get('message', 'Voice input unavailable.')})
                 return
+            max_seconds = ready.get('max_duration_seconds')
+            if type(max_seconds) is not int or not 1 <= max_seconds <= 600:
+                raise ValueError('Invalid dictation recording limit')
             self.emit(ready)
             ws.settimeout(.02)
             began = time.monotonic()
             stopped_at = None
-            while time.monotonic() - began < 220:
+            while time.monotonic() - began < max_seconds + VOICE_SESSION_GRACE_S:
                 if self.cancelled.is_set():
                     ws.send('{"type":"cancel"}')
                     return
@@ -76,7 +104,7 @@ class Transport:
                 if self.stopping.is_set() and self.audio.empty() and stopped_at is None:
                     ws.send('{"type":"stop"}')
                     stopped_at = time.monotonic()
-                if stopped_at and time.monotonic() - stopped_at > 35:
+                if stopped_at is not None and time.monotonic() - stopped_at > VOICE_FINAL_TIMEOUT_S:
                     raise TimeoutError('Dictation finalization timed out')
                 try:
                     raw = ws.recv()

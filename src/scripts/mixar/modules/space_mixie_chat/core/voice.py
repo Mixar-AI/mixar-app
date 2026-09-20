@@ -8,7 +8,8 @@ from uuid import uuid4
 
 from mixar.config.logging_config import get_logger
 from .voice_input.composer import Draft
-from ..constants import VOICE_EVENT_POLL_S, VOICE_TOAST_ID
+from ..constants import (VOICE_EVENT_POLL_S, VOICE_TOAST_ID,
+                         VOICE_STARTUP_TIMEOUT_S, VOICE_SESSION_GRACE_S)
 
 _session = None
 logger = get_logger(__name__)
@@ -81,6 +82,7 @@ def start(context):
         attachments=_attachments(scene), transport=Transport(get_server_url(), token, sid),
         capture=None, state='Permission', began=time.monotonic(), recording_at=None,
         started=False, max_seconds=180, auth_checked=time.monotonic(),
+        deadline=time.monotonic() + VOICE_STARTUP_TIMEOUT_S,
     )
     if _on_load not in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.append(_on_load)
@@ -175,7 +177,7 @@ def _tick():
                 or not any(w.as_pointer() == s.window for w in bpy.context.window_manager.windows)):
             cancel()
             return None
-        if time.monotonic() - s.began > 240:
+        if time.monotonic() > s.deadline:
             raise TimeoutError('Voice input timed out. Please try again.')
         if s.scene.mixie_chat_input != s.draft.base or _attachments(s.scene) != s.attachments:
             s.draft.pending_send = False
@@ -205,6 +207,7 @@ def _tick():
                 s.max_seconds = int(event['max_duration_seconds'])
                 s.capture = aud._mixar_capture_open()
                 s.recording_at = time.monotonic()
+                s.deadline = s.recording_at + s.max_seconds + VOICE_SESSION_GRACE_S
                 s.state = 'Listening'
                 _status(s.state)
             elif kind == 'max_duration_reached':
