@@ -28,7 +28,7 @@ from mixar.modules.moodboard.core.scene_recon_submission import (
 )
 from mixar.modules.common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from mixar.modules.moodboard.core.generate_progress import start_progress, reset_progress
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import selected_reference_stills
 
 logger = get_logger(__name__)
 
@@ -229,11 +229,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
 
         if use_selected:
             # Use first selected moodboard image
-            selected = [
-                item
-                for item in scene.mixie_moodboard_images
-                if item.selected and is_still_item(item)
-            ]
+            selected = selected_reference_stills(scene)
             if not selected:
                 self.report({"ERROR"}, "Please select an image in the moodboard")
                 return {"CANCELLED"}

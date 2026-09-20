@@ -23,8 +23,10 @@ def _load_module():
     return module
 
 
-def _item(image, *, selected=True):
-    return SimpleNamespace(image=image, selected=selected)
+def _item(image, *, selected=True, embedded_node_id=""):
+    return SimpleNamespace(
+        image=image, selected=selected, embedded_node_id=embedded_node_id
+    )
 
 
 def test_describe_video_exposes_streamable_source_metadata(tmp_path):
@@ -155,3 +157,60 @@ def test_selected_media_inputs_keep_stills_and_movies_in_separate_lists(tmp_path
     assert [item["image_name"] for item in result["images"]] == ["still.png"]
     assert [item["image_name"] for item in result["videos"]] == ["reference.mp4"]
     assert result["all_video_sources_available"] is True
+
+
+def test_selected_node_result_counts_as_a_reference_still():
+    module = _load_module()
+    still = SimpleNamespace(source="FILE", name="result.png", size=(64, 64))
+    movie = SimpleNamespace(source="MOVIE", name="result.mp4", size=(64, 64))
+    node = SimpleNamespace(node_id="gen", selected=True)
+    scene = SimpleNamespace(
+        mixie_moodboard_action_nodes=[node],
+        mixie_moodboard_images=[
+            _item(still, selected=False, embedded_node_id="gen"),
+            _item(movie, selected=False, embedded_node_id="other"),
+        ],
+    )
+
+    stills = module.selected_reference_stills(scene)
+    assert [item.image.name for item in stills] == ["result.png"]
+    assert module.selected_reference_still_entries(scene)[0][0] == 0
+    assert module.first_selected_reference_still(scene) is still
+    assert module.first_selected_reference_still(None) is None
+    assert module.selected_exportable_media_entries(None) == []
+
+    empty = SimpleNamespace(
+        mixie_moodboard_action_nodes=[node],
+        mixie_moodboard_images=[],
+    )
+    assert module.selected_reference_stills(empty) == []
+
+
+def test_selected_node_video_is_a_video_reference_not_an_image_gen_still(tmp_path):
+    module = _load_module()
+    source = tmp_path / "clip.mp4"
+    source.write_bytes(b"video")
+    movie = SimpleNamespace(
+        source="MOVIE",
+        filepath=str(source),
+        name="clip.mp4",
+        size=(1280, 720),
+        frame_duration=24,
+    )
+    node = SimpleNamespace(node_id="vid", selected=True)
+    context = SimpleNamespace(
+        scene=SimpleNamespace(
+            mixie_moodboard_action_nodes=[node],
+            mixie_moodboard_images=[
+                _item(movie, selected=False, embedded_node_id="vid"),
+            ],
+        )
+    )
+
+    assert module.selected_reference_stills(context.scene) == []
+    videos = module.get_selected_moodboard_video_inputs(context)
+    assert videos["count"] == 1
+    assert videos["videos"][0]["image_name"] == "clip.mp4"
+    mixed = module.get_selected_moodboard_media_inputs(context)
+    assert mixed["images"] == []
+    assert [item["image_name"] for item in mixed["videos"]] == ["clip.mp4"]

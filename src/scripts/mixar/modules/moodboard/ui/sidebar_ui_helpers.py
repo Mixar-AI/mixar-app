@@ -19,7 +19,10 @@ from mixar.modules.moodboard.constants import (
     HINT_SCALE_Y,
 )
 from mixar.modules.common.utils.ui_utils import draw_multiline_text_input
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import (
+    first_selected_reference_still,
+    selected_reference_stills,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -176,13 +179,8 @@ def draw_prompt_section(layout, prop_owner, label="Prompt",
 # ---------------------------------------------------------------------------
 
 def get_selected_moodboard_image(context):
-    """Return first selected moodboard image or None."""
-    scene = context.scene
-    if hasattr(scene, 'mixie_moodboard_images'):
-        for item in scene.mixie_moodboard_images:
-            if item.selected and is_still_item(item):
-                return item.image
-    return None
+    """Return first selected still, including a selected node's result."""
+    return first_selected_reference_still(getattr(context, "scene", None))
 
 
 def get_image_to_3d_input_image(context):
@@ -225,12 +223,9 @@ def draw_moodboard_image_toggle(col, prop_owner, context, *, multi=False):
     if prop_owner.use_selected_image:
         if multi:
             shown = 0
-            scene = context.scene
-            if hasattr(scene, 'mixie_moodboard_images'):
-                for item in scene.mixie_moodboard_images:
-                    if item.selected and is_still_item(item):
-                        draw_image_info_card(col, item.image)
-                        shown += 1
+            for item in selected_reference_stills(context.scene):
+                draw_image_info_card(col, item.image)
+                shown += 1
             if shown == 0:
                 row = col.row()
                 row.label(text="No image selected in moodboard", icon='ERROR')

@@ -305,16 +305,14 @@ class MIXIE_OT_world_labs_generate(Operator):
     def _resolve_image(self, context, tab, quiet=False):
         """Return the chosen image (selected moodboard image or uploaded)."""
         if getattr(tab, "use_selected_image", True):
-            scene = context.scene
-            selected = [
-                item.image for item in getattr(scene, "mixie_moodboard_images", [])
-                if item.selected and item.image
-            ]
-            if not selected:
+            from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
+
+            image = first_selected_reference_still(context.scene)
+            if not image:
                 if not quiet:
                     self.report({"ERROR"}, "Please select an image in the moodboard")
                 return None
-            return selected[0]
+            return image
         image = getattr(tab, "reference_image", None)
         if not image:
             if not quiet:

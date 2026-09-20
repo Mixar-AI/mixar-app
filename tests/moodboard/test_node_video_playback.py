@@ -135,9 +135,11 @@ def test_export_reaches_media_owned_by_a_selected_node():
     assert "selected_exportable_media" in menus
     assert "row.enabled = bool(exportable_media)" in menus
 
-    resolver = media_utils.split("def selected_exportable_media(scene)")[1].split("\ndef ")[0]
+    resolver = media_utils.split("def selected_exportable_media_entries(scene)")[1].split("\ndef ")[0]
     assert "mixie_moodboard_action_nodes" in resolver
     assert "embedded_node_id" in resolver
+    wrapper = media_utils.split("def selected_exportable_media(scene)")[1].split("\ndef ")[0]
+    assert "selected_exportable_media_entries" in wrapper
 
 
 def test_in_place_edits_stay_keyed_on_direct_selection():

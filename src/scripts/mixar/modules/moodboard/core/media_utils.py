@@ -255,19 +255,61 @@ def selected_exportable_media(scene) -> list:
     the owning node — otherwise right-clicking a completed node offers an
     action that can only report "nothing selected".
 
-    Deliberately limited to read-only actions such as export. Editing a result
-    in place (crop, rotate, flip) would desynchronise it from the node that
-    produced it, so those stay keyed on direct selection.
+    Shared by export, copy, chat, and N-panel "use selected" references.
+    Editing a result in place (crop, rotate, flip) would desynchronise it
+    from the node that produced it, so those stay keyed on direct selection.
     """
+    return [item for _index, item in selected_exportable_media_entries(scene)]
+
+
+def selected_exportable_media_entries(scene) -> list:
+    """``(collection_index, item)`` pairs for :func:`selected_exportable_media`.
+
+    Callers that need the moodboard-collection index (Character Parts
+    segments, SAM) must take it from this walk. A second pass that
+    compares RNA wrappers with ``is`` fails in Blender — each collection
+    access builds a new Python object — and the panel then reports
+    "No image selected" for a still that is visibly selected.
+    """
+    if scene is None:
+        return []
     owners = {
-        str(node.node_id) for node in getattr(scene, "mixie_moodboard_action_nodes", ())
-        if node.selected and node.node_id
+        str(node.node_id)
+        for node in getattr(scene, "mixie_moodboard_action_nodes", ())
+        if getattr(node, "selected", False) and getattr(node, "node_id", None)
     }
+    entries = []
+    for index, item in enumerate(getattr(scene, "mixie_moodboard_images", ())):
+        if getattr(item, "image", None) and (
+            getattr(item, "selected", False)
+            or (
+                getattr(item, "embedded_node_id", "")
+                and str(item.embedded_node_id) in owners
+            )
+        ):
+            entries.append((index, item))
+    return entries
+
+
+def selected_reference_still_entries(scene) -> list:
+    """``(collection_index, item)`` pairs for :func:`selected_reference_stills`."""
     return [
-        item for item in getattr(scene, "mixie_moodboard_images", ())
-        if getattr(item, "image", None)
-        and (item.selected or (item.embedded_node_id and item.embedded_node_id in owners))
+        (index, item)
+        for index, item in selected_exportable_media_entries(scene)
+        if is_still_item(item)
     ]
+
+
+def selected_reference_stills(scene) -> list:
+    """Still references for N-panel generate tabs (standalone or node-owned)."""
+    return [item for _index, item in selected_reference_still_entries(scene)]
+
+
+def first_selected_reference_still(scene):
+    """First still datablock from :func:`selected_reference_stills`, or None."""
+    for item in selected_reference_stills(scene):
+        return item.image
+    return None
 
 
 def get_selected_moodboard_video_inputs(context=None, *, fresh: bool = False) -> SelectedVideoInputs:
@@ -283,10 +325,9 @@ def get_selected_moodboard_video_inputs(context=None, *, fresh: bool = False) ->
 
     videos: list[MoodboardMediaInput] = []
     scene = getattr(context, "scene", None)
-    items = getattr(scene, "mixie_moodboard_images", ()) if scene else ()
     use_cache = not fresh
-    for item in items:
-        if getattr(item, "selected", False) and is_video_item(item):
+    for item in selected_exportable_media(scene) if scene else ():
+        if is_video_item(item):
             videos.append(describe_moodboard_media(item, use_cache=use_cache))
 
     return {
@@ -314,11 +355,8 @@ def get_selected_moodboard_media_inputs(
     images = []
     videos = []
     scene = getattr(context, "scene", None)
-    items = getattr(scene, "mixie_moodboard_images", ()) if scene else ()
     use_cache = not fresh
-    for item in items:
-        if not getattr(item, "selected", False) or getattr(item, "image", None) is None:
-            continue
+    for item in selected_exportable_media(scene) if scene else ():
         description = describe_moodboard_media(item, use_cache=use_cache)
         if description["media_type"] == "VIDEO":
             videos.append(description)
