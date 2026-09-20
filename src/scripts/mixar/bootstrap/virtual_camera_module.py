@@ -54,7 +54,7 @@ def unregister() -> None:
     try:
         from mixar.modules.virtual_camera.core import qr_icon, runtime
 
-        runtime.shutdown()
+        runtime.shutdown(remove_handler=True)
         qr_icon.clear()
     except Exception as exc:
         logger.debug("virtual_camera: unregister cleanup skipped: %s", exc)

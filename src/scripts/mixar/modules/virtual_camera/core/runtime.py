@@ -7,6 +7,10 @@
 Follows the repo handler pattern — server threads only fill the Session;
 every bpy mutation happens here on the main thread. The encoder worker gets
 raw pixel buffers and never imports bpy.
+
+The timer is NOT a guaranteed-GPU moment, so it never touches the GPU: it
+parks a frame request and tags a viewport, and a VIEW_3D ``POST_PIXEL`` draw
+handler does the offscreen render and the readback. See ``stream_capture``.
 """
 
 from __future__ import annotations
@@ -27,7 +31,7 @@ from ..constants import (
 from . import stream_encode
 from .camera_driver import CameraDriver
 from .server import get_server
-from .stream_capture import ViewportCapture
+from .stream_capture import ViewportCapture, find_view3d
 
 logger = get_logger(__name__)
 
@@ -94,6 +98,12 @@ class Runtime:
         self._capture_failures = 0
         self.capture_disabled = False
         self.last_error = ""
+        # GPU work is serviced by a VIEW_3D draw handler, never by the timer
+        # (see stream_capture's module docstring): the timer only parks a
+        # request here and tags a viewport for redraw.
+        self._draw_handler = None
+        self._frame_request: tuple[int, int] | None = None
+        self._release_capture = False
 
     # ---- lifecycle ----------------------------------------------------------
 
@@ -103,6 +113,9 @@ class Runtime:
         self._capture_failures = 0
         self.capture_disabled = False
         self.last_error = ""
+        self._release_capture = False
+        self._frame_request = None
+        self._ensure_draw_handler()
         if self._encoder is None:
             self._encoder = _EncoderWorker(self.server.send_stream_frame)
         if not self._timer_registered:
@@ -117,6 +130,7 @@ class Runtime:
             self._encoder.stop()
             self._encoder = None
         self.driver.set_recording(False)
+        self._request_capture_release()
         # The timer notices state.running is False and unregisters itself.
 
     @property
@@ -140,7 +154,7 @@ class Runtime:
     def _tick_inner(self):
         if not self.server.state.running:
             self._timer_registered = False
-            self.capture.free()
+            self._request_capture_release()
             self._tag_redraw()
             return None
 
@@ -208,6 +222,11 @@ class Runtime:
                 self.driver.revert()
 
     def _pump_stream(self, session, now: float) -> None:
+        """Park a frame request for the draw handler and nudge a viewport.
+
+        No GPU call happens here — a timer tick is not a guaranteed-GPU
+        moment and touching the GPU from one access-violates on Windows.
+        """
         if self.capture_disabled:
             return
         settings = session.snapshot_settings()
@@ -217,28 +236,81 @@ class Runtime:
         if now - self._last_capture < 1.0 / fps:
             return
         self._last_capture = now
-        camera = self.driver.camera()
-        quality = int(settings.get("stream_quality", 2))
-        short_edge = STREAM_QUALITY_SIZES.get(quality, 720)
+        self._frame_request = (
+            STREAM_QUALITY_SIZES.get(int(settings.get("stream_quality", 2)), 720),
+            int(settings.get("stream_quality", 2)),
+        )
+        self._tag_viewport_redraw()
+
+    # ---- draw handler (the only place GPU resources are touched) ------------
+
+    def _ensure_draw_handler(self) -> None:
+        if self._draw_handler is None:
+            self._draw_handler = bpy.types.SpaceView3D.draw_handler_add(
+                self._service_capture, (), 'WINDOW', 'POST_PIXEL'
+            )
+
+    def remove_draw_handler(self) -> None:
+        """Teardown only — never called from inside the callback (removing a
+        draw handler mid-iteration of the region's handler list is a
+        use-after-free)."""
+        if self._draw_handler is not None:
+            bpy.types.SpaceView3D.draw_handler_remove(self._draw_handler, 'WINDOW')
+            self._draw_handler = None
+
+    def _request_capture_release(self) -> None:
+        self._frame_request = None
+        self._release_capture = True
+        self._tag_viewport_redraw()
+
+    def _service_capture(self) -> None:
+        """VIEW_3D POST_PIXEL callback: a real draw, so the GPU context is
+        current. Must never raise — an exception here breaks the viewport."""
         try:
-            result = self.capture.capture(camera, short_edge)
+            self._service_capture_inner()
         except Exception:
-            self._capture_failures += 1
-            if self._capture_failures >= _CAPTURE_FAILURE_LIMIT:
-                self.capture_disabled = True
-                self.last_error = "Viewport streaming unavailable — camera control still active"
-                logger.exception(
-                    "virtual_camera: capture failed %d times, streaming disabled",
-                    self._capture_failures,
-                )
-                self.server.send_json(
-                    {"t": "toast", "msg": "Live view unavailable on this system"}
-                )
+            logger.exception("virtual_camera: capture service failed")
+
+    def _service_capture_inner(self) -> None:
+        if self._release_capture:
+            self._release_capture = False
+            self.capture.free()
+            return
+        request = self._frame_request
+        if request is None:
+            return
+        self._frame_request = None
+        if self.capture_disabled or self._encoder is None:
+            return
+        short_edge, quality = request
+        camera = self.driver.camera()
+        if camera is None:
+            return
+        try:
+            result = self.capture.capture(
+                camera, short_edge, bpy.context.space_data, bpy.context.region
+            )
+        except Exception:
+            self._note_capture_failure()
             return
         self._capture_failures = 0
         if result is not None:
             raw, width, height = result
             self._encoder.submit(raw, width, height, quality)
+
+    def _note_capture_failure(self) -> None:
+        self._capture_failures += 1
+        if self._capture_failures < _CAPTURE_FAILURE_LIMIT:
+            return
+        self.capture_disabled = True
+        self.last_error = "Viewport streaming unavailable — camera control still active"
+        logger.exception(
+            "virtual_camera: capture failed %d times, streaming disabled",
+            self._capture_failures,
+        )
+        self.server.send_json(
+            {"t": "toast", "msg": "Live view unavailable on this system"}
+        )
 
     def _sync_state(self, session, now: float) -> None:
         if now - self._last_sync < STATE_SYNC_INTERVAL:
@@ -260,6 +332,14 @@ class Runtime:
         if state != self._last_state:
             self._last_state = {k: v for k, v in state.items() if k != "settings"}
             self.server.send_json(state)
+
+    @staticmethod
+    def _tag_viewport_redraw() -> None:
+        """Drive the stream cadence: the draw handler only runs when a VIEW_3D
+        WINDOW region actually redraws."""
+        view3d = find_view3d()
+        if view3d is not None:
+            view3d[1].tag_redraw()
 
     @staticmethod
     def _tag_redraw() -> None:
@@ -287,8 +367,15 @@ def get_runtime() -> Runtime:
     return _runtime
 
 
-def shutdown() -> None:
-    """Full stop — called from unregister and load_pre."""
+def shutdown(*, remove_handler: bool = False) -> None:
+    """Full stop — called from unregister and load_pre.
+
+    ``remove_handler`` is for unregister only: on a .blend load the handler
+    must stay installed so the next draw can free the offscreen from a real
+    GPU context.
+    """
     global _runtime
     if _runtime is not None:
         _runtime.stop()
+        if remove_handler:
+            _runtime.remove_draw_handler()
