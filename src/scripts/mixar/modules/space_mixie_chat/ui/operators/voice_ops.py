@@ -2,13 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Voice input operator — the one control every surface binds.
-
-``mixie_chat.voice_toggle`` starts a dictation session or stops the running
-one; all the work is in ``core/voice.py``. Its poll is the platform
-capability (the C++ ``voice_start`` poll), so a surface that draws it only
-where ``poll()`` is true never offers a dead microphone.
-"""
+"""Cloud dictation toggle; compiled microphone support owns availability."""
 
 from __future__ import annotations
 
@@ -23,18 +17,22 @@ class MIXIE_CHAT_OT_voice_toggle(Operator):
 
     bl_idname = "mixie_chat.voice_toggle"
     bl_label = "Voice"
-    bl_description = "Dictate into the chat composer; click again to stop"
+    bl_description = "Dictate in English; click again to finish, Shift-click to cancel"
     bl_options = {'REGISTER', 'INTERNAL'}
 
     @classmethod
     def poll(cls, context):
-        if not VOICE_INPUT_SUPPORTED or context.scene is None:
-            return False
-        start = getattr(getattr(bpy.ops, "mixie_chat", None), "voice_start", None)
-        try:
-            return start is not None and bool(start.poll())
-        except Exception:  # noqa: BLE001
-            return False
+        from ...core import voice
+        return (context.scene is not None
+                and getattr(context.scene, 'mixie_chat_mode', '') == 'AGENT'
+                and voice.available())
+
+    def invoke(self, context, event):
+        if event.shift:
+            from ...core import voice
+            voice.cancel()
+            return {'FINISHED'}
+        return self.execute(context)
 
     def execute(self, context):
         from ...core import voice
@@ -48,6 +46,6 @@ class MIXIE_CHAT_OT_voice_toggle(Operator):
         return {'FINISHED'}
 
 
-# Registered only where the platform has a recogniser: every surface gates
+# Registered only on supported capture platforms: every surface gates
 # its Voice control on this operator existing.
 classes = (MIXIE_CHAT_OT_voice_toggle,) if VOICE_INPUT_SUPPORTED else ()

@@ -147,6 +147,8 @@ class MIXIE_CHAT_OT_new_session(Operator):
         return context.scene is not None
 
     def execute(self, context):
+        from ...core import voice
+        voice.cancel()
         session = get_session_manager()
         scene = context.scene
         scene_name = scene.name

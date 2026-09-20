@@ -72,6 +72,7 @@ struct AgentIslandState {
    * registers mixie_chat.voice_toggle, which it does only on platforms with a
    * recogniser — so no surface ever draws a dead microphone. */
   bool voice_available;
+  char voice_status[32];
   bool voice_listening;     /* A dictation session is up. */
 
   /* Auto mode (scene.mixie_chat_auto_mode, space_mixie_chat/ui/properties/

@@ -288,7 +288,7 @@ void agent_ui_draw_chip_row(ARegion *region,
         voice_fill);
     fill_round(&layout->chip_voice, radius, voice_fill);
     chip_content(layout->chip_voice, AGENT_ICON_MIC,
-                 state->voice_listening ? "Listening" : "Voice",
+                 state->voice_listening ? state->voice_status : "Voice",
                  size, icon_edge, icon_gap, text, voice_fill);
   }
 

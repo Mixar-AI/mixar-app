@@ -21,4 +21,5 @@ if [[ ! -x "$BINARY" ]]; then
 fi
 
 echo "Launching Mixar from build/$BUILD_ENV..."
-exec "$BINARY"
+shift || true
+exec open -n -W "$ROOT_DIR/build/$BUILD_ENV/bin/Mixar.app" --args "$@"
