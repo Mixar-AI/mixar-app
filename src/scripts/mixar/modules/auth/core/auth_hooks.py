@@ -97,10 +97,21 @@ def refresh_agent_settings():
         models_cache.refresh()
     except Exception as e:
         logger.warning(f"Agent models catalog refresh failed: {e}")
+    try:
+        from mixar.modules.byok.core import preference_state
+
+        preference_state.refresh()
+    except Exception as e:
+        logger.warning(f"Agent model preference refresh failed: {e}")
 
 
 def invalidate_agent_settings():
-    """Clear BYOK state + the catalog (memory and disk) on logout."""
+    """Clear BYOK state, the catalog (memory and disk) and the model pick.
+
+    The SINGLE owner of all three on logout. Clearing any of them from a second
+    place gives a worker still in flight two orderings to win in — see the note
+    in `space_mixie_chat/ui/operators/auth_ops.py`.
+    """
     try:
         from mixar.modules.byok.core import credential_state
 
@@ -113,3 +124,9 @@ def invalidate_agent_settings():
         models_cache.clear()
     except Exception as e:
         logger.warning(f"Agent models catalog clear failed: {e}")
+    try:
+        from mixar.modules.byok.core import preference_state
+
+        preference_state.clear()
+    except Exception as e:
+        logger.warning(f"Agent model preference clear failed: {e}")

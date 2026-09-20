@@ -83,6 +83,14 @@ struct AgentIslandState {
    * switch thumb sits on the ON side. */
   bool auto_mode;
 
+  /* Hosted agent model pick, mirrored onto the WindowManager by the Python
+   * half (byok). `model_available` is false until those properties are
+   * registered — the chip is then not laid out or drawn at all, rather than
+   * offering a menu that does not exist yet. `model_byok_active` means the
+   * user's own API key overrides the hosted pick, so the chip is inert. */
+  bool model_available;
+  bool model_byok_active;
+  char model_label[96];
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */

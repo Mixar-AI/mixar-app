@@ -88,6 +88,17 @@ struct FooterElementPositions {
   int buttons_y;
   int dropdown_x;
   int dropdown_width;
+  /* Agent model picker, between the mode dropdowns and the attach button.
+   * `model_dropdown_x` is its slot with the mode dropdown ALONE; generate
+   * mode shifts it past the second dropdown at draw time, exactly as it
+   * already shifts the attach button. `model_dropdown_width` is a ceiling —
+   * the draw clamps it to whatever is left before the attach button. */
+  int model_dropdown_x;
+  int model_dropdown_width;
+  int model_dropdown_min_width;
+  /* Slot for the attach button with NO model picker (the Python half may not
+   * have registered its WindowManager mirror). The draw shifts it right past
+   * whichever of the model picker / generate dropdown is actually shown. */
   int attach_btn_x;
   int send_btn_x;
   int btn_size;          /* Size of send button */
@@ -323,6 +334,34 @@ void footer_thumbnails_draw_image(Main *bmain,
  * \param color: RGBA border color
  */
 void footer_thumbnails_draw_border(float x, float y, float size, const float color[4]);
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Agent Model Picker (mixie_chat_footer_model.cc)
+ * \{ */
+
+namespace ui {
+struct Block;
+}
+
+/**
+ * Add the agent model picker to the footer's control row.
+ *
+ * Draws nothing when the Python half has not registered its WindowManager
+ * mirror, or when the footer is too narrow to carry a readable label.
+ *
+ * \param model_x: The picker's slot — the attach button's position without it.
+ * \param reserved_right: Width the buttons right of the picker need, so a
+ * narrow footer elides the label instead of colliding with them.
+ * \return The x the attach button should use (unchanged when nothing drawn).
+ */
+int footer_model_picker_add(const bContext *C,
+                            ui::Block *block,
+                            const FooterElementPositions &pos,
+                            int model_x,
+                            int reserved_right,
+                            float scale);
 
 /** \} */
 

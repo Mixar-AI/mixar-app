@@ -424,16 +424,37 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     }
   }
 
-  /* Create footer icon buttons with hover effects.
-   * Use EmbossType::None for clean icon-only appearance with subtle hover. */
-  ui::block_emboss_set(block, blender::ui::EmbossType::None);
-
-  /* Attachment button (paperclip icon) - position after dropdowns */
+  /* Attachment button slot — after the mode dropdown, or after both when
+   * generate mode is active. The model picker below may push it further. */
+  const int btn_spacing = int(FOOTER_BUTTON_SPACING_BASE * scale);
   int attach_btn_final_x = pos.attach_btn_x;
   if (is_generate_mode) {
     /* Position after both dropdowns when generate mode is active */
-    attach_btn_final_x = generate_dropdown_x + pos.dropdown_width + int(FOOTER_BUTTON_SPACING_BASE * scale);
+    attach_btn_final_x = generate_dropdown_x + pos.dropdown_width + btn_spacing;
   }
+
+  /* The screenshot button only exists in Agent mode outside the bubble; its
+   * slot has to be reserved before the model picker can size itself. */
+  const bool is_bubble = (area && area->spacetype == SPACE_AGENT_BUBBLE);
+  const bool has_screenshot_btn = !is_generate_mode && !is_bubble;
+
+  /* ===== AGENT MODEL PICKER (mixie_chat_footer_model.cc) =====
+   * One button popping the Python menu that owns the whole picker. Skipped
+   * in the Agent Bubble: the island's own chip row carries the model chip
+   * there, and two pickers for one preference is one too many. Returns the
+   * attach button's slot, unmoved when nothing was drawn. */
+  if (!is_bubble) {
+    int reserved = pos.attach_btn_size + btn_spacing;
+    if (has_screenshot_btn) {
+      reserved += pos.attach_btn_size + btn_spacing;
+    }
+    attach_btn_final_x = footer_model_picker_add(
+        C, block, pos, attach_btn_final_x, reserved, scale);
+  }
+
+  /* Create footer icon buttons with hover effects.
+   * Use EmbossType::None for clean icon-only appearance with subtle hover. */
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
 
   ui::uiDefIconButO(block,
                 ui::ButtonType::But,
@@ -456,11 +477,12 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   int next_btn_x = attach_btn_final_x + pos.attach_btn_size +
                     int(FOOTER_BUTTON_SPACING_BASE * scale);
 
-  /* Screenshot button (camera icon) — only in AGENT mode, hidden in Agent Bubble */
-  const bool is_bubble = (area && area->spacetype == SPACE_AGENT_BUBBLE);
+  /* Screenshot button (camera icon) — only in AGENT mode, hidden in Agent
+   * Bubble. `has_screenshot_btn` is resolved above the model picker, which
+   * has to reserve this slot before it can size itself. */
   int screenshot_btn_x = next_btn_x;
 
-  if (!is_generate_mode && !is_bubble) {
+  if (has_screenshot_btn) {
     ui::uiDefIconButO(block,
                   ui::ButtonType::But,
                   "MIXIE_CHAT_OT_capture_screenshot",

@@ -30,6 +30,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.ui.constants import CARD_DIALOG_WIDTH
 
 from ...core import byok_client, credential_state, model_suggestions, models_cache
+from ...core import preference_state
 from . import byok_dialog_ui
 from .byok_state_ops import (
     _apply_cached_state,
@@ -60,6 +61,31 @@ def _wipe_form_secrets(wm):
 # ---------------------------------------------------------------------------
 # Dialog entry point
 # ---------------------------------------------------------------------------
+
+def _dialog_host_window(context):
+    """The main window the dialog should open over, or None to stay put.
+
+    An Agent Bubble window (island or pill) is a small always-on-top overlay:
+    a props dialog opened there is clipped to its height. Prefer the window
+    with the most areas that is NOT a bubble — the primary workspace window.
+    """
+    try:
+        from mixar.modules.agent_bubble.core.bubble_lifecycle import (
+            is_agent_bubble_window,
+        )
+    except Exception:  # noqa: BLE001 — stripped builds: stay in place
+        return None
+    try:
+        if not is_agent_bubble_window(context.window):
+            return None
+        candidates = [w for w in context.window_manager.windows
+                      if not is_agent_bubble_window(w) and w.screen.areas]
+    except Exception:  # noqa: BLE001
+        return None
+    if not candidates:
+        return None
+    return max(candidates, key=lambda w: len(w.screen.areas))
+
 
 class MIXAR_BYOK_OT_open_dialog(Operator):
     """Configure your own API provider and key for the Mixar agent"""
@@ -120,6 +146,19 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # invoke_props_dialog (not invoke_popup) so the dialog redraws
         # continuously — state flips from SAVING → IDLE / ERROR during
         # the async save must be visible without user interaction.
+        #
+        # The dialog is a popup block in CTX_wm_window. Since PR #1562 the
+        # only entry point is the model picker menu, and that lives in the
+        # Agent Bubble ISLAND window (~460px tall) — opened there, the dialog
+        # is clipped to a scrolling sliver over the composer. Re-target it to
+        # the main window, which is what every other dialog in the app uses.
+        # Override the WINDOW only: the bubble's screen is a temporary one and
+        # `temp_override(screen=...)` refuses it outright ("Overriding context
+        # with an active temporary screen isn't supported").
+        host = _dialog_host_window(context)
+        if host is not None and host != context.window:
+            with context.temp_override(window=host):
+                return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
         return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
 
     def execute(self, context):
@@ -293,6 +332,7 @@ def _on_save_done(success: bool, data, err, epoch=None):
             if not applied:
                 logger.debug("BYOK save landed after logout; echo dropped")
                 return
+            preference_state.refresh()
             # SAVED, not IDLE: the dialog shows an explicit recap with a
             # single Done button, so the user never has to wonder
             # whether the save landed.
@@ -428,6 +468,7 @@ def _on_delete_done(success: bool, removed_count: int, err):
         if success:
             _clear_cached_state(wm)
             _wipe_form_secrets(wm)
+            preference_state.refresh()
             # REMOVED, not IDLE — explicit recap, same as the save path.
             wm.byok_dialog_state = 'REMOVED'
             wm.byok_last_error = ''

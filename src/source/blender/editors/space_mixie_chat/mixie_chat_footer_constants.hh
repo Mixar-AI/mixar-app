@@ -108,6 +108,16 @@ inline int footer_attachment_rows(int count, int columns)
 /* Dropdown internal padding (horizontal) */
 #define FOOTER_DROPDOWN_PADDING_BASE 8
 
+/* Agent model picker width — sized for a "Claude Sonnet 4.6"-length label.
+ * It is a ceiling, not a demand: a narrow footer clips it (the widget elides
+ * its own text) and drops it below FOOTER_MODEL_BUTTON_MIN_BASE rather than
+ * letting it collide with the attach button. */
+#define FOOTER_MODEL_BUTTON_WIDTH_BASE 150
+
+/* Below this the label carries no information, so the control is not drawn.
+ * The Agent island keeps its own model chip either way. */
+#define FOOTER_MODEL_BUTTON_MIN_BASE 54
+
 /* Style guide button width */
 #define FOOTER_STYLE_BUTTON_WIDTH_BASE 90
 

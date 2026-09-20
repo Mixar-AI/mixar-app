@@ -25,6 +25,7 @@ set(SRC
   mixie_chat_footer_cache.cc
   mixie_chat_footer_draw.cc
   mixie_chat_footer_layout.cc
+  mixie_chat_footer_model.cc
   mixie_chat_footer_thumbnails.cc
   mixie_chat_header.cc
   mixie_chat_history_chrome.cc

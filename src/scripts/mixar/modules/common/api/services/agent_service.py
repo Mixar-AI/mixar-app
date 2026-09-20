@@ -85,6 +85,59 @@ class AgentService(BaseService):
         """DELETE /agent/credentials/all — remove BYOK config. Always 200."""
         return self.delete("credentials/all")
 
+    # --- Hosted model preference -------------------------------------------
+    #
+    # The pick is a STORED PREFERENCE, resolved server-side when a turn starts.
+    # `/agent/chat` and `/agent/input` carry no model field — do not add one.
+    #
+    # The desktop client saves exactly one pick, under ``role="default"``; the
+    # backend fans it out. The per-agent roles (chat, orchestrator, worker, …)
+    # exist in the API but have no desktop surface.
+
+    def get_model_preference(self) -> APIResponse:
+        """GET /agent/model-preference — the account's saved pick.
+
+        ``Cache-Control: no-store`` server-side and always 200 for an authed
+        user; the response carries ``byok_active`` alongside the items, which is
+        what disables the picker. Never cached to disk — it is per-account and
+        cheap.
+        """
+        return self.get("model-preference")
+
+    def put_model_preference(
+        self,
+        provider: str,
+        model: str,
+        role: str = "default",
+        thinking_level: Optional[str] = None,
+    ) -> APIResponse:
+        """PUT /agent/model-preference — save the pick.
+
+        ``thinking_level`` is omitted from the payload entirely when None (the
+        model's own default), so the bytes stay identical for a backend that
+        predates the field — the same treatment `save_credentials_all` gives
+        base_url / supports_vision.
+
+        400 = ineligible model or a thinking level the model does not offer
+        (message prefixed "Model not available: " for model errors);
+        422 = schema, e.g. a BYOK-only provider.
+        """
+        payload = {"provider": provider, "model": model, "role": role}
+        if thinking_level is not None:
+            payload["thinking_level"] = thinking_level
+        return self.put("model-preference", json=payload)
+
+    def delete_model_preference(self, role: str = "default") -> APIResponse:
+        """DELETE /agent/model-preference/{role} — 200, or 404 if unset.
+
+        The role is not validated server-side; an unknown one simply 404s.
+        """
+        return self.delete(f"model-preference/{role}")
+
+    def delete_model_preferences(self) -> APIResponse:
+        """DELETE /agent/model-preference — clear every role. `{"removed": n}`."""
+        return self.delete("model-preference")
+
 
 _agent_service = None
 
