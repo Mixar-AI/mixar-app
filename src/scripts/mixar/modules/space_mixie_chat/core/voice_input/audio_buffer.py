@@ -11,10 +11,13 @@ class AudioBuffer:
         self.limit = seconds * 32000
         self.frames = deque()
         self.size = 0
+        self.closed = False
         self.lock = threading.Lock()
 
     def feed(self, data):
         with self.lock:
+            if self.closed:
+                return
             if self.size + len(data) > self.limit:
                 raise queue.Full
             self.frames.extend(data[i:i + 3200] for i in range(0, len(data), 3200))
@@ -38,5 +41,12 @@ class AudioBuffer:
 
     def clear(self):
         with self.lock:
+            self.frames.clear()
+            self.size = 0
+
+    def close(self):
+        """Discard surplus and reject late capture feeds atomically."""
+        with self.lock:
+            self.closed = True
             self.frames.clear()
             self.size = 0

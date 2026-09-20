@@ -13,6 +13,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.network.core.errors import classify_network_error, log_network_failure
 from ...constants import VOICE_FINAL_TIMEOUT_S, VOICE_SESSION_GRACE_S, VOICE_BUFFER_SECONDS
 from .audio_buffer import AudioBuffer
+from .token_lifetime import remaining, EXPIRY_MARGIN_S
 
 logger = get_logger(__name__)
 
@@ -43,19 +44,37 @@ class Transport:
 
     def cancel(self):
         self.cancelled.set()
-        self.audio.clear()
+        self.audio.close()
 
     def emit(self, event):
         self.events.put_nowait(event)
 
     def _connect(self):
+        refreshed = False
+        lifetime = remaining(self.token)
+        if lifetime is not None and lifetime <= EXPIRY_MARGIN_S and not self.cancelled.is_set():
+            from mixar.modules.auth.core.auth import get_access_token, refresh_access_token
+            current = get_access_token()
+            if not current:
+                raise ConnectionError('Authentication unavailable')
+            if current == self.token:
+                began_refresh = time.monotonic()
+                result = refresh_access_token()
+                refreshed = True
+                self.timings['auth_refresh_ms'] = round((time.monotonic() - began_refresh) * 1000, 1)
+                if not result.get('success'):
+                    raise ConnectionError('Authentication refresh unavailable')
+                current = get_access_token()
+            if not current or self.cancelled.is_set():
+                raise ConnectionError('Authentication unavailable')
+            self.token = current
         try:
             return websocket.create_connection(self.url, timeout=10,
                                                 header={'Authorization': 'Bearer ' + self.token})
         except websocket.WebSocketBadStatusException as exc:
             # FastAPI rejects unauthenticated WebSocket upgrades with HTTP 403.
             # Retry only that handshake (or 401), before Start or any audio.
-            if exc.status_code not in (401, 403) or self.cancelled.is_set():
+            if exc.status_code not in (401, 403) or self.cancelled.is_set() or refreshed:
                 raise
             from mixar.modules.auth.core.auth import get_access_token, refresh_access_token
             token = get_access_token()
@@ -104,7 +123,7 @@ class Transport:
             self.timings['buffered_audio_ms'] = round(self.audio.bytes_pending / 32, 1)
             server = ready.get('timings_ms', {})
             if isinstance(server, dict):
-                for key in ('auth', 'admission', 'provider_connect', 'provider_ready'):
+                for key in ('auth', 'preparation_release', 'admission', 'provider_connect', 'provider_ready'):
                     value = server.get(key)
                     if type(value) in (int, float) and 0 <= value < 300000:
                         self.timings['server_' + key + '_ms'] = value
@@ -129,10 +148,16 @@ class Transport:
                         data = self.audio.get_nowait()
                     except queue.Empty:
                         break
+                    data = data[:max_seconds * 32000 - sent_bytes]
                     ws.settimeout(5)
                     ws.send_binary(data)
                     sent_bytes += len(data)
                     ws.settimeout(.02)
+                    if sent_bytes == max_seconds * 32000:
+                        self.audio.close()
+                        self.stopping.set()
+                        self.emit({'type': 'max_duration_reached', 'dictation_id': self.id})
+                        break
                 if self.stopping.is_set() and self.audio.empty() and stopped_at is None:
                     ws.send('{"type":"stop"}')
                     stopped_at = time.monotonic()
@@ -166,6 +191,6 @@ class Transport:
                     pass
         finally:
             self.token = ''
-            self.audio.clear()
+            self.audio.close()
             if ws:
                 ws.close(timeout=1)

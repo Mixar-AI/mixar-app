@@ -6,6 +6,7 @@ import threading
 import time
 
 from mixar.config.logging_config import get_logger
+from .token_lifetime import remaining, EXPIRY_MARGIN_S
 
 logger = get_logger(__name__)
 _candidate = None
@@ -32,6 +33,9 @@ class WarmSocket:
             began = time.monotonic()
             opener = Transport(*self.key, 'prepare')
             ws = opener._connect()
+            # _connect may rotate credentials. Bind lifetime and ownership to
+            # the token that actually authenticated this socket.
+            self.key = (self.key[0], opener.token)
             ws.settimeout(5)
             ws.send('{"type":"prepare","protocol_version":1}')
             prepared = json.loads(ws.recv())
@@ -41,7 +45,10 @@ class WarmSocket:
             if type(ttl) is not int or not 1 <= ttl <= 300:
                 return
             self.timings = {'prepare_ms': round((time.monotonic() - began) * 1000, 1)}
-            self.expires = time.monotonic() + ttl - 5
+            lifetime = remaining(self.key[1])
+            if lifetime is None or lifetime <= EXPIRY_MARGIN_S:
+                return
+            self.expires = time.monotonic() + min(ttl - 5, lifetime - EXPIRY_MARGIN_S)
             with self.lock:
                 if self.stop.is_set():
                     return
@@ -72,6 +79,9 @@ class WarmSocket:
         try:
             if self.socket is None or time.monotonic() >= self.expires:
                 return None
+            lifetime = remaining(self.key[1])
+            if lifetime is None or lifetime <= EXPIRY_MARGIN_S:
+                return None
             # Verify an idle socket before Start: reconnecting here cannot
             # replay audio or create a duplicate provider recording.
             try:
@@ -79,6 +89,9 @@ class WarmSocket:
                 if json.loads(self.socket.recv()).get('type') != 'pong':
                     return None
             except Exception:
+                return None
+            lifetime = remaining(self.key[1])
+            if lifetime is None or lifetime <= EXPIRY_MARGIN_S:
                 return None
             ws, self.socket = self.socket, None
             self.transferred = True
