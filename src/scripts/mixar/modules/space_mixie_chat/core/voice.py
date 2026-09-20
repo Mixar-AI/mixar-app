@@ -9,9 +9,10 @@ from uuid import uuid4
 from mixar.config.logging_config import get_logger
 from .voice_input.composer import Draft
 from ..constants import (VOICE_EVENT_POLL_S, VOICE_TOAST_ID,
-                         VOICE_STARTUP_TIMEOUT_S, VOICE_SESSION_GRACE_S)
+                         VOICE_STARTUP_TIMEOUT_S, VOICE_SESSION_GRACE_S, VOICE_BUFFER_SECONDS)
 
 _session = None
+_last_timings = {}
 logger = get_logger(__name__)
 
 
@@ -57,6 +58,7 @@ def toggle(context):
 
 def start(context):
     global _session
+    clicked_at = time.monotonic()
     import bpy
     from mixar.config.config import get_server_url
     from ...auth.core.auth import get_access_token
@@ -81,16 +83,48 @@ def start(context):
         area=context.area.as_pointer() if context.area else None,
         draft=Draft(scene.mixie_chat_input, _identity(scene)),
         attachments=_attachments(scene), transport=Transport(get_server_url(), token, sid),
-        capture=None, state='Permission', began=time.monotonic(), recording_at=None,
-        started=False, max_seconds=180, auth_checked=time.monotonic(),
+        capture=None, state='Permission', began=clicked_at, recording_at=None,
+        started=False, ready=False, max_seconds=180, auth_checked=time.monotonic(),
         deadline=time.monotonic() + VOICE_STARTUP_TIMEOUT_S,
     )
+    _session.transport.began = clicked_at
     if _on_load not in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.append(_on_load)
-    _status('Connecting')
+    try:
+        _begin_capture(_session)
+    except Exception as exc:
+        _finish()
+        _toast('warning', str(exc))
+        return 'unavailable'
     if not bpy.app.timers.is_registered(_tick):
         bpy.app.timers.register(_tick, first_interval=VOICE_EVENT_POLL_S)
     return 'started'
+
+
+def _begin_capture(s):
+    import aud
+    if not hasattr(s, 'permission_at'):
+        s.permission_at = time.monotonic()
+        s.transport.timings['local_setup_ms'] = round((s.permission_at - s.began) * 1000, 1)
+    permission = aud._mixar_capture_permission()
+    if permission == -2:
+        raise RuntimeError('Launch Mixar from Finder to allow microphone access.')
+    if permission < 0:
+        raise RuntimeError('Allow microphone access for Mixar in system privacy settings.')
+    if permission != 1:
+        _status('Allow microphone')
+        return
+    opening = time.monotonic()
+    s.transport.timings['permission_wait_ms'] = round((opening - s.permission_at) * 1000, 1)
+    s.capture = aud._mixar_capture_open()
+    s.recording_at = time.monotonic()
+    s.transport.timings['capture_open_ms'] = round((s.recording_at - opening) * 1000, 1)
+    s.transport.timings['click_to_capture_ms'] = round((s.recording_at - s.began) * 1000, 1)
+    logger.info('Dictation capture timings %s', s.transport.timings)
+    s.state = 'Listening'
+    _status(s.state)
+    s.transport.start()
+    s.started = True
 
 
 def stop():
@@ -141,9 +175,10 @@ def reset_state():
 
 
 def _finish(app_exit=False):
-    global _session
+    global _session, _last_timings
     s, _session = _session, None
     if s:
+        _last_timings = dict(getattr(s.transport, 'timings', {}))
         s.transport.cancel()
         if s.capture is not None:
             import aud
@@ -158,6 +193,8 @@ def _finish(app_exit=False):
 
 def shutdown(app_exit=False):
     _finish(app_exit=app_exit)
+    from .voice_input import warmup
+    warmup.shutdown()
 
 
 def _tick():
@@ -180,18 +217,12 @@ def _tick():
             return None
         if time.monotonic() > s.deadline:
             raise TimeoutError('Voice input timed out. Please try again.')
+        if s.recording_at is not None and not s.ready and time.monotonic() - s.recording_at > VOICE_BUFFER_SECONDS:
+            raise TimeoutError('Voice could not connect. Your draft was preserved. Please try again.')
         if s.scene.mixie_chat_input != s.draft.base or _attachments(s.scene) != s.attachments:
             s.draft.pending_send = False
         if s.state == 'Permission':
-            permission = aud._mixar_capture_permission()
-            if permission == -2:
-                raise RuntimeError('Launch Mixar from Finder to allow microphone access.')
-            if permission < 0:
-                raise RuntimeError('Allow microphone access for Mixar in system privacy settings.')
-            if permission == 1:
-                s.transport.start()
-                s.started = True
-                s.state = 'Connecting'
+            _begin_capture(s)
         if s.capture is not None:
             data = aud._mixar_capture_read(s.capture)
             if data:
@@ -206,11 +237,8 @@ def _tick():
             kind = event.get('type')
             if kind == 'ready':
                 s.max_seconds = int(event['max_duration_seconds'])
-                s.capture = aud._mixar_capture_open()
-                s.recording_at = time.monotonic()
+                s.ready = True
                 s.deadline = s.recording_at + s.max_seconds + VOICE_SESSION_GRACE_S
-                s.state = 'Listening'
-                _status(s.state)
             elif kind == 'max_duration_reached':
                 if s.capture is not None:
                     aud._mixar_capture_stop(s.capture)

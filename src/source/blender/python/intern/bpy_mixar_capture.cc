@@ -8,7 +8,7 @@
 #  include <alc.h>
 #endif
 #ifdef __APPLE__
-extern "C" int Mixar_MicrophonePermission();
+extern "C" int Mixar_MicrophonePermission(bool request);
 #endif
 
 namespace blender {
@@ -33,7 +33,7 @@ static void capture_free(PyObject *capsule)
 static PyObject *capture_permission(PyObject *, PyObject *)
 {
 #  ifdef __APPLE__
-  return PyLong_FromLong(Mixar_MicrophonePermission());
+  return PyLong_FromLong(Mixar_MicrophonePermission(true));
 #  else
   return PyLong_FromLong(1);
 #  endif
@@ -42,7 +42,7 @@ static PyObject *capture_permission(PyObject *, PyObject *)
 static PyObject *capture_open(PyObject *, PyObject *)
 {
 #  ifdef __APPLE__
-  if (Mixar_MicrophonePermission() != 1) {
+  if (Mixar_MicrophonePermission(true) != 1) {
     PyErr_SetString(PyExc_RuntimeError, "Microphone permission is required");
     return nullptr;
   }
@@ -125,7 +125,19 @@ static PyObject *capture_stop(PyObject *, PyObject *capsule)
   return capture_read_impl(capsule, true);
 }
 
+static PyObject *capture_permission_status(PyObject *, PyObject *)
+{
+#  ifdef __APPLE__
+  return PyLong_FromLong(Mixar_MicrophonePermission(false));
+#  else
+  /* Windows desktop privacy/device availability is checked by capture_open. */
+  return PyLong_FromLong(1);
+#  endif
+}
+
 static PyMethodDef methods[] = {
+    {"_mixar_capture_permission_status", capture_permission_status, METH_NOARGS,
+     "Check permission without prompting or opening the microphone."},
     {"_mixar_capture_permission", capture_permission, METH_NOARGS, "Request microphone permission."},
     {"_mixar_capture_open", capture_open, METH_NOARGS, "Open default input: 16 kHz mono PCM16LE."},
     {"_mixar_capture_read", capture_read, METH_O, "Read available PCM without blocking."},

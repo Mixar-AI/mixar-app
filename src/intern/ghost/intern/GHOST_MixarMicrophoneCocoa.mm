@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 /* No speech-recognition permission: Unmute transcribes, macOS only captures. */
-extern "C" int Mixar_MicrophonePermission()
+extern "C" int Mixar_MicrophonePermission(const bool request)
 {
   static std::atomic<bool> pending{false};
   dlopen("/System/Library/Frameworks/AVFoundation.framework/AVFoundation", RTLD_LAZY);
@@ -24,7 +24,7 @@ extern "C" int Mixar_MicrophonePermission()
   if (status != AVAuthorizationStatusNotDetermined) {
     return -1;
   }
-  if (pending) {
+  if (!request || pending) {
     return 0;
   }
   /* TCC reads the responsible application's plist, not necessarily our own. */
