@@ -217,6 +217,22 @@ def move_pan_zoom(qa, node_id):
             f"drv.find(surface='moodboard_media', text={node_id!r}))", timeout=4)
     require(next(i for i in media(qa) if i["id"] == node_id)["scale"] == state["scale"],
             "Zoom changed media scale instead of canvas view")
+
+    select(qa, node_id)
+    pre_pinch = target(qa, "moodboard_media", text=node_id)
+    xy = point(pre_pinch)
+    qa.eval(SETUP + f"""
+x, y = {xy['x']}, {xy['y']}
+win.cursor_warp(x, y)
+win.event_simulate(type='MOUSEMOVE', value='NOTHING', x=x, y=y)
+win.event_simulate(type='TRACKPADZOOM', value='NOTHING', x=x + 80, y=y)
+result = True
+""")
+    qa.wait(f"any(w['rect'][2] - w['rect'][0] != "
+            f"{pre_pinch['rect'][2] - pre_pinch['rect'][0]} for w in "
+            f"drv.find(surface='moodboard_media', text={node_id!r}))", timeout=4)
+    require(next(i for i in media(qa) if i["id"] == node_id)["scale"] == state["scale"],
+            "Trackpad pinch changed media scale instead of canvas view")
     select(qa, node_id)
 
 

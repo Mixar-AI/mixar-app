@@ -21,90 +21,31 @@ namespace blender::ed::mixie {
 
 static wmOperatorStatus moodboard_zoom_invoke(bContext *C, wmOperator * /*op*/, const wmEvent *event)
 {
-  Scene *scene = CTX_data_scene(C);
-  if (!scene) {
+  /* Pinch always changes the canvas view. Item size is the corner-handle
+   * resize gesture; writing `scale` here made a selected picture grow in
+   * board units while the user was trying to zoom. */
+  ARegion *region = CTX_wm_region(C);
+  if (!region) {
     return OPERATOR_PASS_THROUGH;
   }
 
-  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  PropertyRNA *prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
+  View2D *v2d = &region->v2d;
+  const float zoom_delta = float(WM_event_absolute_delta_x(event)) * 0.01f;
+  const float zoom_factor = std::max(0.1f, std::min(10.0f, 1.0f - zoom_delta));
 
-  if (!prop) {
-    return OPERATOR_PASS_THROUGH;
-  }
+  const float new_width = BLI_rctf_size_x(&v2d->cur) * zoom_factor;
+  const float new_height = BLI_rctf_size_y(&v2d->cur) * zoom_factor;
+  const float center_x = BLI_rctf_cent_x(&v2d->cur);
+  const float center_y = BLI_rctf_cent_y(&v2d->cur);
 
-  bool any_selected = false;
-  int image_count = RNA_property_collection_length(&scene_ptr, prop);
+  v2d->cur.xmin = center_x - new_width / 2.0f;
+  v2d->cur.xmax = center_x + new_width / 2.0f;
+  v2d->cur.ymin = center_y - new_height / 2.0f;
+  v2d->cur.ymax = center_y + new_height / 2.0f;
 
-  for (int i = 0; i < image_count; i++) {
-    PointerRNA item_ptr;
-    RNA_property_collection_lookup_int(&scene_ptr, prop, i, &item_ptr);
-    PropertyRNA *sel_prop = RNA_struct_find_property(&item_ptr, "selected");
-    if (sel_prop && RNA_property_boolean_get(&item_ptr, sel_prop)) {
-      any_selected = true;
-      break;
-    }
-  }
-
-  const float sensitivity = 0.01f;
-  int delta_x = WM_event_absolute_delta_x(event);
-  float zoom_delta = float(delta_x) * sensitivity;
-
-  if (!any_selected) {
-    ARegion *region = CTX_wm_region(C);
-    View2D *v2d = &region->v2d;
-
-    float zoom_factor = 1.0f - zoom_delta;
-    zoom_factor = std::max(0.1f, std::min(10.0f, zoom_factor));
-
-    float cur_width = BLI_rctf_size_x(&v2d->cur);
-    float cur_height = BLI_rctf_size_y(&v2d->cur);
-
-    float new_width = cur_width * zoom_factor;
-    float new_height = cur_height * zoom_factor;
-
-    float center_x = (v2d->cur.xmin + v2d->cur.xmax) / 2.0f;
-    float center_y = (v2d->cur.ymin + v2d->cur.ymax) / 2.0f;
-
-    v2d->cur.xmin = center_x - new_width / 2.0f;
-    v2d->cur.xmax = center_x + new_width / 2.0f;
-    v2d->cur.ymin = center_y - new_height / 2.0f;
-    v2d->cur.ymax = center_y + new_height / 2.0f;
-
-    ui::view2d_curRect_validate(v2d);
-    ui::view2d_curRect_changed(C, v2d);
-    ED_area_tag_redraw(CTX_wm_area(C));
-
-    return OPERATOR_FINISHED;
-  }
-
-  bool any_updated = false;
-
-  for (int i = 0; i < image_count; i++) {
-    PointerRNA item_ptr;
-    RNA_property_collection_lookup_int(&scene_ptr, prop, i, &item_ptr);
-
-    PropertyRNA *sel_prop = RNA_struct_find_property(&item_ptr, "selected");
-    if (sel_prop && RNA_property_boolean_get(&item_ptr, sel_prop)) {
-      PropertyRNA *scale_prop = RNA_struct_find_property(&item_ptr, "scale");
-      if (scale_prop) {
-        float current_scale = RNA_property_float_get(&item_ptr, scale_prop);
-        float new_scale = current_scale * (1.0f + zoom_delta);
-
-        new_scale = std::max(MOODBOARD_IMAGE_MIN_SCALE, std::min(MOODBOARD_IMAGE_MAX_SCALE, new_scale));
-
-        if (new_scale != current_scale) {
-          RNA_property_float_set(&item_ptr, scale_prop, new_scale);
-          any_updated = true;
-        }
-      }
-    }
-  }
-
-  if (any_updated) {
-    ED_area_tag_redraw(CTX_wm_area(C));
-  }
-
+  ui::view2d_curRect_validate(v2d);
+  ui::view2d_curRect_changed(C, v2d);
+  ED_area_tag_redraw(CTX_wm_area(C));
   return OPERATOR_FINISHED;
 }
 
@@ -357,9 +298,9 @@ namespace blender {
 
 void MIXIE_OT_moodboard_zoom(wmOperatorType *ot)
 {
-  ot->name = "Zoom Selected Images";
+  ot->name = "Zoom Moodboard";
   ot->idname = "MIXIE_OT_moodboard_zoom";
-  ot->description = "Zoom selected images using pinch gesture";
+  ot->description = "Zoom the moodboard canvas";
 
   ot->invoke = blender::ed::mixie::moodboard_zoom_invoke;
   ot->poll = blender::ed::mixie::moodboard_poll;

@@ -274,6 +274,13 @@ def register():
         kmi.properties.selected_only = True
         addon_keymaps.append((km, kmi))
 
+        # Trackpad pinch zooms the canvas. C binds MOUSEZOOM on Mixie; the
+        # addon copy is what survives a keyconfig preset reload.
+        kmi = km.keymap_items.new(
+            'mixie.moodboard_zoom', type='TRACKPADZOOM', value='ANY'
+        )
+        addon_keymaps.append((km, kmi))
+
         # Shift+A: searchable Add-Node menu at the cursor, like the 3D viewport.
         kmi = km.keymap_items.new(
             'mixie.moodboard_add_menu', type='A', value='PRESS', shift=True

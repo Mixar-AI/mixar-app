@@ -410,7 +410,7 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
       keymap, "MIXIE_OT_moodboard_select_image", &params_extend_native);
   RNA_boolean_set(kmi_extend_native->ptr, "extend", true);
 
-  /* Zoom selected images - Pinch Gesture */
+  /* Trackpad pinch zooms the canvas (never item scale). */
   /* Home frames the board, Numpad-Period the selection -- the pair every
    * Blender editor uses (View Selected is Numpad `.`, never the main-row `.`).
    * MIXIE_OT_moodboard_ensure_visible cannot serve here: it only grows the
