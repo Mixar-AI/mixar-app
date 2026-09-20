@@ -236,6 +236,7 @@ These are the contracts between the two repos. Breaking any of them on either si
 - **Slot event shape** — `loader` / `content` / `ephemeral` / `todo` / `actions` / `images` / `input_type` / `interrupt_context`. Choice contexts may set `include_cancel=false` when their explicit actions are exhaustive (export preflight uses exactly Fix and Export, Export Anyways, Stop). `file_save` context is restricted to format, scope, extension, and sanitized suggested filename. Preflight reports and decisions never carry a path; the chosen path is held only in `core/export_destination.py` and never enters an agent stream or HTTP payload.
 - **Tool-call pairing invariant** — every `tool_use` the backend emits must get a matching `tool_result`. B5 (RPC timeout), B6 (disconnect buffer), B8 (queue full), B-Mira (invariant guard), B1 (compaction scrub) all defend this from a different angle.
 - **JWT shared across both channels** — same token, refreshed in lock-step via `refresh_access_token_shared` (K5).
+- **Generation callbacks (`generation.agent_result`)** — the client owns generation submission, download and import, so it reports terminal outcomes through an acknowledged JSON-RPC request using the same method and params as the notification API. `common/job_queue/core/agent_results.py` retains callback params independently of the visible queue until the backend returns `received: true` (a `relay_failed` result retries), permanently refuses the request, or the 20-attempt/one-hour retention budget expires. Give-up logs once and prevents reinsertion without marking the result acknowledged. Queue acceptance alone never sets `Job._agent_reported`. Timed retries and the post-handshake sweep preserve the generation identity, which the backend deduplicates. The retry timer survives file loads; socket response callbacks only enqueue Python data for the main-thread sweep. This is process-local recovery, not persistence across app restarts. Retopology claims the WindowManager ref once for its per-mesh fan-out: all accepted siblings share it, and one combined outcome waits for all of them to finish. Outside that scoped batch, the enqueue script's WindowManager ref is consumed even on duplicate rejection, and the shared GUI/headless execution pump clears any unclaimed ref at the script boundary. Frozen params: `agent_ref`, `generation_id`, `feature_key`, `job_type`, `model`, `label`, `backend_job_id`, `status`, `error`, `result_names`; local paths are excluded.
 - **`request_id` uniqueness** — within a connection lifetime. Plugin's `_pending_responses` and backend's tool-call tracking both key on it.
 
 ## Where to look for what
@@ -257,3 +258,109 @@ These are the contracts between the two repos. Breaking any of them on either si
 
 - Backend-side companion (graph, agents, middleware, transport): `modules/agent/ARCHITECTURE.md` in the private `mixar-backend` repository.
 - Fix rationale for the May 2026 audit and the deferred items / verified false positives: `docs/reviews/AGENT_STUCK_INVESTIGATION.md` and `docs/reviews/AGENT_REVIEW_2026_05_BACKLOG.md` in the private `mixar-backend` repository.
+
+## Turn checkpoints (`core/turn_checkpoints.py`, `ui/operators/checkpoint_ops.py`)
+
+Modules: `core/turn_checkpoints.py` (policy: capture, the jump, caps, the
+public names), `core/checkpoint_store.py` (paths, index, per-kind prune),
+`core/checkpoint_timeline.py` (position math, undo stamp, document helpers),
+`core/checkpoint_backend.py` (bookmarks and rewinds on a worker thread),
+`core/checkpoint_budget.py` (retiring session directories);
+`ui/properties/history_props.py` (the card's WindowManager mirror) and
+`ui/operators/checkpoint_ops.py` (card sync, the revert operator).
+
+Before every fresh turn `chat_ops.send_message` captures the whole document with
+`save_as_mainfile(copy=True)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
+as the `turn` record "before turn N" (sha256-deduplicated files, newest 20 per
+session) and binds the record to the turn's command id once the send is
+accepted. The Agent Bubble's `save_pre` purge closes the island for this save
+like any other (bubble screens must never reach a file, and a later restore's
+read must never find a live bubble window to free); the island is re-shown
+after the save. A send started from a bubble click therefore closes the window
+whose region is on the click handler's stack, which is why native click
+dispatchers call operators only through `mixie_chat_call_operator_and_redraw`:
+it re-checks that the region still exists in a live screen before redrawing it
+(the purge restores a live context window, so only a screen walk can tell).
+
+**One timeline, position = chat length.** The snapshot before turn N holds N-1
+user messages, so `timeline(session_id, scene)` splits the turns by the scene's
+user-message count: turns at or below it are *applied*, above it *reverted*.
+Nothing is stored to know where the scene is, so a restart or a reopened file
+cannot disagree with the card. Reverting turn N (`restore`) reads the "before
+turn N" snapshot and takes every later turn with it; reapplying a reverted turn
+N reads the state after N, which is the "before turn N+1" snapshot or, for the
+last turn, the `tip` record. A row therefore alternates between the two lists
+and never mints a copy of a stored state. Only what a jump would lose is
+captured first (`_keep_leaving_state`): the `tip` when leaving the end of the
+line (replaced when the tip changed), and hand edits made on a reverted
+position as a `safety` record ("your edits after turn K", own cap
+`MAX_SAFETY_PER_SESSION`). "Changed since the jump" is answered by Blender's
+undo stack: the native `mixie_chat.undo_stamp` operator writes a fingerprint
+(step count, active step) to `WindowManager.mixie_chat_undo_stamp`, taken right
+after each read (`_note_arrival`) and compared on the next jump. A file read
+resets the stack; interactive operators, UI property edits and scripts that
+push a step move it; the chat's own property writes and the re-title do not.
+Limits, accepted: a script writing `bpy.data` directly on a reverted position
+is invisible (its edits are lost on the next jump), and a UI edit of a
+scene-owned chat property counts as a change (one spare snapshot, within the
+caps). Depsgraph traffic and file hashes are never consulted: a layout change
+(the island expanding, an area changing type) flushes every ID, and a re-saved
+.blend is never byte-identical. Turn numbers are the user-message count at
+capture plus one, so a reply or interjection that adds a user bubble without
+a snapshot leaves a gap; `_state_after` uses the next stored turn and the
+prompts name stored turns only. A message sent from a reverted position drops
+the reverted turns, the tip and any safety copy from that dead line (`capture`
+with `kind="turn"`); a replaced line is not kept, by decision. Reverting to
+before turn 1 predates the backend conversation (`session_was_new`, or a
+rewind answered `has_conversation: false`): the chat's session id is cleared
+for the next message, and `Scene.mixie_checkpoint_session_id` remembers the
+directory so the card (`checkpoint_session_id`) still lists the timeline and
+the turns can be reapplied; a new message from there mints a new session and
+forgets it. A jump whose keep-capture fails is refused ("nothing was
+changed"); a jump whose read fails drops the record it had just captured.
+Every read is preceded by the Agent Bubble purge
+(`close_restored_agent_bubble_windows`), because a jump with nothing to keep
+saves nothing and `save_pre` would not have closed the island.
+
+**Card.** The header (and the island's history-button row) shows a
+Checkpoints button once the session has one. It opens the native past-chats
+card in CHECKPOINTS mode (`checkpoint_ops.sync_checkpoint_entries` fills
+`WindowManager.mixie_chat_history_entries`, sets `mixie_chat_history_mode`,
+and passes the `can_restore` lock and its reason as
+`mixie_chat_history_locked` / `mixie_chat_history_notice`): no search, the
+sections "Turns" (applied, newest first), "Reverted turns" and "Safety
+copies", rows read "Turn N · label" / "Safety copy · your edits after turn K",
+a footer explaining the model, dimmed rows and no hand cursor while locked. A
+row arms on the first click and acts on the second; the armed prompt is
+computed per row by Python (`checkpoint_row_action` → entry `action`):
+"Revert this turn?", "Revert turns 3–5?", "Reapply this turn?", "Reapply
+turns 2–4?", "Bring back?". No modal dialog: the second click is the
+confirmation, and the operator runs in EXEC only. QA targets: `chat_checkpoint_row`
+(`value` = checkpoint id, `sel` = armed, `detail` = section name) and
+`chat_checkpoints_close`; the chats mode exports `chat_history_row` /
+`chat_history_close` the same way.
+
+**Restore mechanics.** Only while the session is IDLE with no open run. The
+snapshot is read with `wm.recover_auto_save`, then the native
+`mixie_chat.retitle_document` operator gives the document its recorded
+original path back in memory and marks it modified. Restore never writes the
+artist's project: a titled project is dirty on its own path until they save,
+an untitled one stays untitled so Ctrl-S opens Save As. Snapshots are written
+with `relative_remap=False` so relative paths keep resolving against the
+project folder. Recovery must return `FINISHED`: a cancelled read reports
+failure without saving the document or rewinding the backend conversation.
+`load_pre` skips its session abort while `turn_checkpoints.is_restoring()`,
+and `turn_events.drop_scene` fences the session so the reconnect-time recovery
+check does not replay the undone turns into the restored chat (the next send
+lifts the fence). The checkpoint is bound to the turn through
+`TurnTransport.last_command_id`, not the user bubble's `bubble_id` (a
+collection reference taken before the placeholder bubble is added can go
+stale). The backend is told on a worker thread — `checkpoint.mark` for a new
+tip or safety record, then `checkpoint.rewind` to the record the scene landed
+on — and `composer_send.can_send` refuses while that is in flight. On the 5.2
+Zen layout the chat is the native island; its C++ card header draws a third
+disc (arrow glyph, `AGENT_HDR_BTN3_CX`, `space_agent_bubble.cc`) that runs
+`mixie_chat.show_checkpoints`. The operator defers the jump to a timer when it
+is invoked from that temporary window, and the file read (and any keep
+capture) runs under a `temp_override` of the main window. Contract: mixar-backend
+`docs/api/frontend/turn-checkpoints.md`.

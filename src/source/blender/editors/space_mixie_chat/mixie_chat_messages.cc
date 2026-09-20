@@ -148,7 +148,12 @@ const blender::Vector<MessageLayoutData> &mixie_chat_get_layout_cache(SpaceMixie
   return rt->layout_cache;
 }
 
-void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
+/* Release the text buffers each entry owns and reset the rebuild tracking.
+ * `release_memory` decides whether the vector also gives its buffer back:
+ * teardown wants that, a rebuild does not, because `MessageLayoutData` is a
+ * large fixed-size record and dropping the buffer every frame means a fresh
+ * allocation plus geometric regrowth on every single layout pass. */
+static void mixie_chat_reset_layout_cache(SpaceMixieChat *smixie, const bool release_memory) {
   if (smixie->runtime == nullptr) {
     return;
   }
@@ -174,13 +179,26 @@ void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
       layout.ephemeral_text = nullptr;
     }
   }
-  rt->layout_cache.clear_and_shrink();
+  if (release_memory) {
+    rt->layout_cache.clear_and_shrink();
+  }
+  else {
+    rt->layout_cache.clear();
+  }
   rt->prev_total_height = 0.0f;
   /* Reset tracking state so next draw triggers a full rebuild */
   rt->prev_msg_count = 0;
   rt->prev_winx = 0;
   rt->prev_had_active_stream = false;
   rt->cached_total_height = 0.0f;
+}
+
+void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
+  mixie_chat_reset_layout_cache(smixie, true);
+}
+
+void mixie_chat_clear_layout_cache_for_rebuild(SpaceMixieChat *smixie) {
+  mixie_chat_reset_layout_cache(smixie, false);
 }
 
 /** \} */

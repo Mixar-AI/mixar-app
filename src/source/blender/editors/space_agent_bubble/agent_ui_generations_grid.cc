@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * My Generations — the tile grid itself: how many tiles fit, what each one
+ * Library — the tile grid itself: how many tiles fit, what each one
  * shows, and the drag that carries a 3D generation into the viewport.
  *
  * \section drag Dragging a generation into the viewport
@@ -28,10 +28,11 @@
 
 #include "agent_ui_text.hh"
 
-#include "UI_mixar_layout.hh"
-
 #include <algorithm>
 #include <cstring>
+#include <cmath>
+
+#include "agent_ui_generations_clip.hh"
 
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -82,23 +83,22 @@ GenGridMetrics agent_ui_generations_grid_metrics(const rctf &panel,
   m.bottom = panel.ymin + GEN_PAD * u;
 
   const float avail = std::max(0.0f, m.y0 - m.bottom);
-  const float caption = GEN_CAP_BLOCK * u;
-  m.tile = GEN_TILE * u;
-  m.rows = int(avail / ((GEN_TILE + GEN_ROW_EXTRA) * u));
-  if (m.rows < 1) {
-    /* Not even one design-sized row fits. The tile shrinks to make room for
-     * its caption rather than the caption being scissored off at the panel's
-     * foot — which is what a forced full-size row produced at the island's
-     * DEFAULT height, where the whole caption block hung outside the panel. */
-    m.rows = 1;
-    m.tile = std::clamp(avail - caption, GEN_TILE_MIN * u, GEN_TILE * u);
-  }
+  const float font = GEN_CAP_FONT * agent_ui_text_unit();
+  const float caption = GEN_CAP_GAP * u + 2.25f * font;
+  m.tile = std::max(1.0f, std::min(GEN_TILE * u, avail - caption));
   m.pitch_x = m.tile + GEN_TILE_GAP * u;
-  m.pitch_y = m.tile + GEN_ROW_EXTRA * u;
-
-  m.per_page = m.rows * GEN_COLS;
-  m.pages = ui::mixar_page_count(data.count, m.per_page);
-  m.page = std::clamp(data.page, 0, m.pages - 1);
+  m.pitch_y = m.tile + caption + GEN_ROW_GAP * u;
+  const int total_rows = (data.count + GEN_COLS - 1) / GEN_COLS;
+  const float content = total_rows * m.pitch_y - GEN_ROW_GAP * u;
+  m.max_scroll = std::max(0.0f, content - avail);
+  m.offset = std::clamp(data.scroll / 100.0f, 0.0f, 1.0f) * m.max_scroll;
+  m.first_row = int(m.offset / m.pitch_y);
+  m.end_row = std::min(total_rows, int(std::ceil((m.offset + avail) / m.pitch_y)));
+  m.view = {m.x0, GEN_XL(panel, GEN_DETAIL_DIVIDER_X - 22, u), m.bottom, m.y0};
+  m.scrollbar = {GEN_XL(panel, GEN_DETAIL_DIVIDER_X - 18, u),
+                 GEN_XL(panel, GEN_DETAIL_DIVIDER_X - 10, u),
+                 m.bottom,
+                 m.y0};
   return m;
 }
 
@@ -125,15 +125,18 @@ bool agent_ui_generations_asset_has_preview(const bContext *C, const GenItem &it
   if (item.kind != GEN_ITEM_ASSET || !item.asset) {
     return false;
   }
-  /* Only ATTACHES the deferred read; what starts it is the icon id landing on
-   * a ui::Button (`ui_def_but_icon` -> `ui_icon_ensure_deferred`), which is why an
-   * asset tile is a preview BUTTON rather than a painted plate. */
+  /* Request visible previews explicitly: the native hit button has no icon,
+   * so partial rows can be clipped without resizing their image. */
   item.asset->ensure_previewable(*C);
+  ui::icon_ensure_deferred(C, blender::ed::asset::asset_preview_icon_id(*item.asset), true);
   const PreviewImage *prv = item.asset->get_preview();
   return prv && prv->rect[ICON_SIZE_PREVIEW] != nullptr;
 }
 
-void agent_ui_generations_thumb(const bContext *C, const GenItem &item, const rctf &box, const float u)
+void agent_ui_generations_thumb(const bContext *C,
+                                const GenItem &item,
+                                const rctf &box,
+                                const float u)
 {
   switch (item.kind) {
     case GEN_ITEM_ASSET: {
@@ -144,11 +147,11 @@ void agent_ui_generations_thumb(const bContext *C, const GenItem &item, const rc
         const BIFIconID icon = blender::ed::asset::asset_preview_icon_id(*item.asset);
         const float size = std::min(BLI_rctf_size_x(&box), BLI_rctf_size_y(&box));
         ui::icon_draw_preview(BLI_rctf_cent_x(&box) - size * 0.5f,
-                             BLI_rctf_cent_y(&box) - size * 0.5f,
-                             icon,
-                             1.0f,
-                             1.0f,
-                             int(size));
+                              BLI_rctf_cent_y(&box) - size * 0.5f,
+                              icon,
+                              1.0f,
+                              1.0f,
+                              int(size));
         break;
       }
       /* No pixels YET — the deferred read is asynchronous, and a .blend with
@@ -190,21 +193,20 @@ void agent_ui_generations_grid(const bContext *C,
   const float text[4] = AGENT_COL_TEXT;
   const float dim[4] = AGENT_COL_TEXT_DIM;
   const float tile_bg[4] = GEN_COL_TILE;
-  const float accent[4] = AGENT_COL_ACCENT;
   const float live[4] = GEN_COL_LIVE;
   const float font_chip = GEN_CHIP_FONT * agent_ui_text_unit();
   const float font_cap = GEN_CAP_FONT * agent_ui_text_unit();
 
   /* ---- Tiles ---- */
-  const auto visible = ui::mixar_page_range(data.count, grid.per_page, grid.page);
-  const int first = visible.first;
-  const int last = visible.end();
+  const int first = grid.first_row * GEN_COLS;
+  const int last = std::min(data.count, grid.end_row * GEN_COLS);
+  const GenViewportClip clip(grid.view);
 
   if (data.count == 0) {
     const char *empty = data.loading ? "Loading assets…" :
-                        (data.source == GEN_SOURCE_LIBRARY ?
-                             "No assets in this library yet" :
-                             "Your generations will appear here");
+                                       (data.source == GEN_SOURCE_LIBRARY ?
+                                            "No assets in this library yet" :
+                                            "Your generations will appear here");
     pane_label_centre(empty,
                       (GEN_XL(panel, GEN_GRID_X, u) + GEN_XL(panel, GEN_DETAIL_DIVIDER_X, u)) *
                           0.5f,
@@ -219,27 +221,21 @@ void agent_ui_generations_grid(const bContext *C,
     rctf tile;
     tile.xmin = grid.x0 + float(slot % GEN_COLS) * grid.pitch_x;
     tile.xmax = tile.xmin + grid.tile;
-    tile.ymax = grid.y0 - float(slot / GEN_COLS) * grid.pitch_y;
+    tile.ymax = grid.y0 + grid.offset - float(i / GEN_COLS) * grid.pitch_y;
     tile.ymin = tile.ymax - grid.tile;
 
     pane_fill_round(&tile, GEN_TILE_RADIUS * u, tile_bg);
-    /* This pass is also what REQUESTS an asset preview (see the thumb
-     * helper), so it must run for every kind. A loaded preview is drawn here
-     * and NOT by the button — the button carries the icon so Blender keeps
-     * the deferred read alive, and drawing it twice is harmless overdraw we
-     * avoid by leaving the button's own draw to cover the same pixels. */
+    /* Paint full-size images under the viewport scissor, including partial rows. */
     agent_ui_generations_thumb(C, item, tile, u);
 
     if (STREQ(item.key, data.selected)) {
-      /* The ring is handed back rather than drawn: the block paints AFTER
-       * this pass, and an asset tile's preview would cover the inner half of
-       * a ring drawn now, so the caller re-draws it once the block is down. */
+      /* The caller paints the selection ring under the same viewport clip. */
       *r_selected_tile = tile;
     }
 
     /* Caption: type over name on the left, age right-aligned on line two. */
     const float cap1 = tile.ymin - GEN_CAP_GAP * u - font_cap * 0.5f;
-    const float cap2 = cap1 - GEN_CAP_PITCH * u;
+    const float cap2 = cap1 - font_cap * 1.25f;
     if (item.kind == GEN_ITEM_JOB) {
       pane_label_centre("GENERATING", BLI_rctf_cent_x(&tile), cap1, font_cap, live);
       char name[96];
@@ -264,58 +260,38 @@ void agent_ui_generations_grid(const bContext *C,
     }
   }
 
-  /* No bottom fade. The design draws one to say "there is more below", but
-   * this grid PAGES rather than scrolls — nothing is ever half-visible under
-   * it, and over a single visible row the gradient simply swallowed the
-   * captions. The page chips carry that meaning instead.
-   */
-
   for (int i = first; i < last; i++) {
     const GenItem &item = data.items[i];
     const int slot = i - first;
     rctf tile;
     tile.xmin = grid.x0 + float(slot % GEN_COLS) * grid.pitch_x;
     tile.xmax = tile.xmin + grid.tile;
-    tile.ymax = grid.y0 - float(slot / GEN_COLS) * grid.pitch_y;
+    tile.ymax = grid.y0 + grid.offset - float(i / GEN_COLS) * grid.pitch_y;
     tile.ymin = tile.ymax - grid.tile;
 
     const char *tip = (item.kind == GEN_ITEM_ASSET) ?
                           "Click to inspect, or drag into the viewport" :
                           "Click to inspect";
-    /* An asset tile is a ui::ButtonType::PreviewTile, and that type is load-bearing
-     * rather than cosmetic: Blender's drag-start lives in `ui_do_but_EXIT`,
-     * and only the preview-tile/label family routes there. A ui::ButtonType::But
-     * goes to `ui_do_but_BUT`, which handles the click and NEVER checks
-     * `button_drag_is_draggable` — so the drag data attached below was
-     * present and simply unreachable, and the tile clicked but would not
-     * drag. The operator is attached afterwards, the way the asset shelf
-     * does it, so a click still runs it.
-     *
-     * The preview icon id is passed UNCONDITIONALLY, not once the thumbnail
-     * has pixels. Attaching it to a button is what STARTS the deferred read
-     * (`ui_def_but_icon` -> `ui_icon_ensure_deferred`) — the asset shelf says
-     * so in as many words — so gating it on pixels was a deadlock: no icon,
-     * therefore no read, therefore no pixels, therefore no icon. Every
-     * archived generation drew the placeholder cube forever while Blender's
-     * own Asset Browser showed the same file's thumbnail fine.
-     *
-     * `ensure_previewable` only ALLOCATES the preview and attaches the load
-     * info; the id it mints is valid immediately and resolves to nothing
-     * until the read lands, so an unloaded tile still shows our placeholder
-     * through the button. */
-    BIFIconID preview = BIFIconID(ICON_NONE);
-    if (item.kind == GEN_ITEM_ASSET && item.asset) {
-      item.asset->ensure_previewable(*C);
-      preview = blender::ed::asset::asset_preview_icon_id(*item.asset);
+    /* Keep Blender's PreviewTile event path for asset drag, but paint the
+     * preview above: a clipped native button must not squeeze its image. */
+    rctf hit;
+    if (!BLI_rctf_isect(&tile, &grid.view, &hit) || BLI_rctf_size_y(&hit) < 1.0f) {
+      continue;
     }
 
     ui::Button *but;
     if (item.kind == GEN_ITEM_ASSET) {
-      but = uiDefIconPreviewBut(block, ui::ButtonType::PreviewTile, preview,
-                                int(tile.xmin), int(tile.ymin),
-                                short(BLI_rctf_size_x(&tile)),
-                                short(BLI_rctf_size_y(&tile)),
-                                nullptr, 0.0f, 0.0f, tip);
+      but = uiDefIconPreviewBut(block,
+                                ui::ButtonType::PreviewTile,
+                                ICON_NONE,
+                                int(hit.xmin),
+                                int(hit.ymin),
+                                short(BLI_rctf_size_x(&hit)),
+                                short(BLI_rctf_size_y(&hit)),
+                                nullptr,
+                                0.0f,
+                                0.0f,
+                                tip);
       if (but) {
         if (wmOperatorType *ot = WM_operatortype_find("wm.context_set_string", true)) {
           ui::button_operator_set(but, ot, blender::wm::OpCallContext::InvokeDefault);
@@ -323,15 +299,23 @@ void agent_ui_generations_grid(const bContext *C,
       }
     }
     else {
-      but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_string",
-                      blender::wm::OpCallContext::InvokeDefault, "",
-                      int(tile.xmin), int(tile.ymin), short(BLI_rctf_size_x(&tile)),
-                      short(BLI_rctf_size_y(&tile)), tip);
+      but = uiDefButO(block,
+                      ui::ButtonType::But,
+                      "wm.context_set_string",
+                      blender::wm::OpCallContext::InvokeDefault,
+                      "",
+                      int(hit.xmin),
+                      int(hit.ymin),
+                      short(BLI_rctf_size_x(&hit)),
+                      short(BLI_rctf_size_y(&hit)),
+                      tip);
     }
     if (but) {
+      pane_but_tooltip_owned(but, (std::string(item.name) + " — " + tip).c_str());
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_generations_selected");
       RNA_string_set(op_ptr, "value", item.key);
+      ui::button_func_identity_compare_set(but, agent_ui_generations_button_identity);
     }
     if (but && item.kind == GEN_ITEM_ASSET && item.asset) {
       /* Blender's own asset drag: the View3D's existing asset dropbox does
@@ -346,10 +330,10 @@ void agent_ui_generations_grid(const bContext *C,
       import_settings.method = method;
       import_settings.use_instance_collections = false;
       ui::button_drag_set_asset(but,
-                            item.asset,
-                            import_settings,
-                            ICON_NONE,
-                            blender::ed::asset::asset_preview_icon_id(*item.asset));
+                                item.asset,
+                                import_settings,
+                                ICON_NONE,
+                                blender::ed::asset::asset_preview_icon_id(*item.asset));
     }
   }
   UNUSED_VARS(C);

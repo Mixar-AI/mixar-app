@@ -646,7 +646,10 @@ GHOST_Context *GHOST_WindowWin32::newDrawingContext(GHOST_TDrawingContextType ty
       for (int minor = 6; minor >= 3; --minor) {
         GHOST_Context *context = new GHOST_ContextWGL(
             want_context_params_,
-            false,
+            /* Mixar: request 8 alpha bits so DWM can composite island/pill frost.
+             * Having the channel does not make the window transparent; only
+             * Mixar_WindowSetBlurBehind asks DWM to honour client alpha. */
+            true,
             h_wnd_,
             h_DC_,
             WGL_CONTEXT_CORE_PROFILE_BIT_ARB,

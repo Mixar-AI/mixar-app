@@ -289,17 +289,14 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         # "continue" message instead — the classifier's deterministic
         # continuation guard re-runs only the unfinished lanes.
         if self.action_value == "retry_failed_tasks":
-            from ...core.parked_resume import send_continue
+            from ...core.parked_resume import can_send_continue
+            from ...core.retry_action import schedule_retry
             scene = context.scene
-            if not send_continue(scene):
+            if not can_send_continue(scene):
                 self.report({'WARNING'},
                             "Chat is busy — wait for the current turn to finish")
                 return {'CANCELLED'}
-            for msg in scene.mixie_chat_messages:
-                if getattr(msg, "bubble_id", "") == self.bubble_id:
-                    msg.action_items.clear()
-                    break
-            redraw_chat_areas()
+            schedule_retry(scene, self.bubble_id)
             return {'FINISHED'}
 
         # Check connection before dispatching
@@ -648,6 +645,21 @@ class MIXIE_CHAT_OT_toggle_plan_mode(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_toggle_auto_mode(Operator):
+    """Auto mode: the agent decides every open choice itself instead of asking you"""
+    bl_idname = "mixie_chat.toggle_auto_mode"
+    bl_label = "Toggle Auto Mode"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    def execute(self, context):
+        scene = context.scene
+        scene.mixie_chat_auto_mode = not scene.mixie_chat_auto_mode
+        # The island composer lives in its own window: redraw every chat
+        # surface, not just this window's screen.
+        redraw_chat_areas()
+        return {'FINISHED'}
+
+
 class MIXIE_CHAT_OT_set_feedback_rating(Operator):
     """Set star rating for an agent response"""
     bl_idname = "mixie_chat.set_feedback_rating"
@@ -946,6 +958,7 @@ classes = (
     MIXIE_CHAT_OT_select_slot_action,
     MIXIE_CHAT_OT_insert_prompt_text,
     MIXIE_CHAT_OT_toggle_plan_mode,
+    MIXIE_CHAT_OT_toggle_auto_mode,
     MIXIE_CHAT_OT_set_feedback_rating,
     MIXIE_CHAT_OT_toggle_feedback_comment,
     MIXIE_CHAT_OT_submit_feedback_comment,

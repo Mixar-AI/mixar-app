@@ -18,7 +18,9 @@ from mixar.modules.common.analytics.export_events import capture_export
 from ...core.media_utils import (
     describe_moodboard_media,
     is_video_item,
+    node_exportable_media,
     selected_exportable_media,
+    standalone_exportable_media,
 )
 
 
@@ -33,10 +35,18 @@ def _capture_moodboard_export(context, success, image_count, filepath=None):
         pass
 
 
-def _selected_media(scene):
-    # Includes results owned by a selected inference node: those are never
-    # `selected` themselves, so right-clicking a completed node and choosing
-    # Export used to report "No media selected to export".
+def _media_to_export(scene, node_id="", media_id=""):
+    # `node_id` is set by the Export button on a node card and `media_id` by
+    # the one above a reference image or movie: each button acts on the tile
+    # it sits on, so it must not widen to whatever else happens to be
+    # selected. Without either, the selection is the source — which still
+    # includes results owned by a selected inference node, since those are
+    # never `selected` themselves and Export would otherwise report "nothing
+    # selected" for a completed node.
+    if media_id:
+        return standalone_exportable_media(scene, media_id)
+    if node_id:
+        return node_exportable_media(scene, node_id)
     return selected_exportable_media(scene)
 
 
@@ -97,9 +107,18 @@ class MIXIE_OT_moodboard_export_images(Operator):
         options={'HIDDEN'},
     )
 
+    # Scope the export to one node's own result. SKIP_SAVE: this is a REGISTER
+    # operator, so a remembered id would silently keep exporting that node's
+    # result after the user invoked Export from the menu with a different
+    # selection.
+    node_id: StringProperty(default="", options={'SKIP_SAVE'})
+    # Scope the export to one reference on the board (by its own graph id).
+    # SKIP_SAVE for the same reason as `node_id`.
+    media_id: StringProperty(default="", options={'SKIP_SAVE'})
+
     def invoke(self, context, event):
         scene = context.scene
-        selected_media = _selected_media(scene)
+        selected_media = _media_to_export(scene, self.node_id, self.media_id)
 
         if not selected_media:
             self.report({'WARNING'}, "No media selected to export")
@@ -114,7 +133,7 @@ class MIXIE_OT_moodboard_export_images(Operator):
         import os
 
         scene = context.scene
-        selected_media = _selected_media(scene)
+        selected_media = _media_to_export(scene, self.node_id, self.media_id)
 
         if not selected_media:
             self.report({'WARNING'}, "No media selected to export")

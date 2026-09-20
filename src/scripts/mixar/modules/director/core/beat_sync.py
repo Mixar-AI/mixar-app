@@ -35,7 +35,7 @@ from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
 
-from .anim_curves import assigned_fcurves
+from .anim_curves import camera_key_frames
 from .retime import note_beat_timing
 from .rotation_curves import repair_rotation_continuity
 from .shot_api import active_shot, refresh_manifest, scope_preview_range
@@ -43,13 +43,6 @@ from .shot_api import active_shot, refresh_manifest, scope_preview_range
 logger = get_logger(__name__)
 
 _TIMER_INTERVAL = 0.1
-
-_CAMERA_PATHS = {
-    "location",
-    "rotation_euler",
-    "rotation_quaternion",
-    "rotation_axis_angle",
-}
 
 _INITIAL_STATE = {
     "key": None,
@@ -64,20 +57,7 @@ _state = dict(_INITIAL_STATE)
 
 def _native_key_frames(camera) -> set[int]:
     """Every integer frame carrying a native Director camera key."""
-    frames: set[int] = set()
-    if camera is None:
-        return frames
-    for fcurve in assigned_fcurves(camera):
-        if fcurve.data_path in _CAMERA_PATHS:
-            for point in fcurve.keyframe_points:
-                frames.add(round(float(point.co[0])))
-    data = getattr(camera, "data", None)
-    if data is not None:
-        for fcurve in assigned_fcurves(data):
-            if fcurve.data_path == "lens":
-                for point in fcurve.keyframe_points:
-                    frames.add(round(float(point.co[0])))
-    return frames
+    return camera_key_frames(camera)
 
 
 def prune_orphaned_beats(scene, shot) -> int:

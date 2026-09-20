@@ -12,6 +12,8 @@ from unittest.mock import Mock
 from PIL import Image
 import pytest
 
+from mixar.modules.space_mixie_chat.constants import MAX_ATTACHMENTS_PER_MESSAGE
+
 ROOT = Path(__file__).resolve().parents[1]
 CHAT = ROOT / 'src/scripts/mixar/modules/space_mixie_chat'
 
@@ -36,7 +38,7 @@ def execute(paths, *, attachments=None, valid=None, model=False):
     mirror = Mock()
     importer = Mock(return_value={'success': True, 'display_name': 'model.obj',
                                   'imported_object_names': ['Object']})
-    namespace = dict(os=os, MAX_ATTACHMENTS_PER_MESSAGE=5,
+    namespace = dict(os=os, MAX_ATTACHMENTS_PER_MESSAGE=MAX_ATTACHMENTS_PER_MESSAGE,
                      is_model_file=lambda p: model, import_model_attachment=importer,
                      validate_image_file=valid or (lambda p: (False, 'Cannot decode image')),
                      find_attachment_for_file=lambda a, p: None,

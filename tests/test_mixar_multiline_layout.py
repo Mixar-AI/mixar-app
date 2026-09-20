@@ -44,6 +44,7 @@ def test_native_single_line_and_textbox_paths_stay_outside_multiline_override():
         assert 'but->type != ButtonType::Text' in gate
         assert 'BUT_TEXTEDIT_UPDATE' in gate
         assert 'UI_UNIT_Y * 1.5f' in gate
+        assert 'mixie_chat_input' in gate
     click = body(HANDLERS, 'static void textedit_set_cursor_pos', 'static void textedit_set_cursor_select')
     assert click.index('textbox_textedit_set_cursor_pos') < click.index('ui_but_is_multiline_text')
     activate = body(HANDLERS, 'static int do_but_TEX(', 'static int do_but_TEXTBOX(')

@@ -120,6 +120,9 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         self._on_sandbox_control = on_sandbox_control
         self._on_llm_request = on_llm_request
         self._on_addon_project_request = on_addon_project_request
+        self._archive_sync = None
+        self.agent_history_supported = False
+        self.agent_history_blobs_by_reference = False
         self._on_execution_request = on_execution_request
         self._on_turn_event = on_turn_event
         self._role = role
@@ -218,6 +221,8 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
     def disconnect(self) -> None:
         """Close connection and stop background thread."""
         self._running.clear()
+        if self._archive_sync:
+            self._archive_sync.stop()
 
         if self._ws:
             try:

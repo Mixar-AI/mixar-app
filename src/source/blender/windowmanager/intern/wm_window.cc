@@ -726,7 +726,23 @@ void wm_window_close(bContext *C, wmWindowManager *wm, wmWindow *win)
   wm_window_free(C, wm, win);
 
   if (was_agent_bubble_win) {
-    ED_agent_bubble_windows_closed();
+    /* Only once the LAST one is gone. wm_window_free() has already called
+     * ED_agent_bubble_window_freed() for this window, which clears every
+     * cached GHOST pointer belonging to it -- the part that guards against a
+     * dangle. ED_agent_bubble_windows_closed() is a blanket reset of the whole
+     * subsystem's flags, so firing it for any single window wiped the state of
+     * a SIBLING that is still open (closing the pill reset the island's
+     * minimised/expanded/pad flags and its Cinema seat, and vice versa). */
+    bool bubble_remains = false;
+    for (wmWindow &other : wm->windows) {
+      if (wm_window_contains_agent_bubble_space(&other)) {
+        bubble_remains = true;
+        break;
+      }
+    }
+    if (!bubble_remains) {
+      ED_agent_bubble_windows_closed();
+    }
   }
 
   /* If temp screen, delete it after window free (it stops jobs that can access it).

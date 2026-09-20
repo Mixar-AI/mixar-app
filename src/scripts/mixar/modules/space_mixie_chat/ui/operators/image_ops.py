@@ -336,9 +336,6 @@ class MIXIE_CHAT_OT_clear_attachments(Operator):
         return len(context.scene.mixie_chat_pending_attachments) > 0
 
     def execute(self, context):
-        # Clear is explicit: still-selected board references must stay removed.
-        from mixar.modules.moodboard.core.chat_sync import consume_selection
-        consume_selection(context.scene)
         paths = [
             att.image_path
             for att in context.scene.mixie_chat_pending_attachments

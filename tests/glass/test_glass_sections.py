@@ -123,7 +123,7 @@ class TestTheSectionCardsArePanes:
         assert "BLI_rctf_union(&uni, &other.rect)" in body
         assert "mixar_glass_tokens(MIXAR_GLASS_PILL)" in body
         assert "0.20f" in body
-        assert "style.draw_tint = false" in body
+        assert "style.draw_tint = floats_over_content" in body
         assert "mixar_glass_draw(pane_i, style)" in body
         assert "MIXAR_GLASS_CHIP" not in body
         assert "mixar_tokens::zen.selected" in body
@@ -135,6 +135,23 @@ class TestTheSectionCardsArePanes:
         assert "widget_zen_tool_glass(but, rect, state, roundboxalign)" in exec_body
         assert "zen_glass_cell(but)" in exec_body
         assert "wtb.draw_inner = false;" in exec_body
+
+    def test_explicit_glass_tool_capsules_take_the_readability_floor(self) -> None:
+        """The 0.20 wash is calibrated for the viewport transform strip, whose
+        only backdrop is the 3D view. An explicit GLASS_TOOL capsule floats
+        over content the pane cannot predict — the Zen moodboard drawer's
+        add-tools sit on reference photography — so it skips the manual wash
+        and lets the shader apply PILL's `fallback_alpha`. Measured over a
+        bright card the wash separated the bed from the image behind it by
+        1.14:1 and left the icons at 2.75:1; the floor gives 2.83:1 and
+        4.71:1."""
+        body = _code(_fn_body(WIDGETS, "static void widget_zen_tool_glass("))
+        assert "but->mixar_style.component == MixarComponent::GlassTool" in body
+        assert "if (!floats_over_content) {" in body
+        assert "style.draw_tint = floats_over_content" in body
+        # The wash must remain the branch the transform strip takes.
+        wash = body[body.index("if (!floats_over_content) {"):]
+        assert "0.20f" in wash[:wash.index("}")]
 
     def test_zen_glass_covers_header_shading_icons(self) -> None:
         """The header strip retains native RNA enum buttons.

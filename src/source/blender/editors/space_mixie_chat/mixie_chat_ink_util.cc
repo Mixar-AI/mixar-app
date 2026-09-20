@@ -425,7 +425,9 @@ static wmOperatorStatus ink_release_composer_exec(bContext *C, wmOperator * /*op
       }
       for (ARegion &region_ref : area->regionbase) {
         ARegion *region = &region_ref;
-        if (region->regiontype == RGN_TYPE_TOOLS) {
+        if (region->regiontype == RGN_TYPE_TOOLS ||
+            (area->spacetype == SPACE_AGENT_BUBBLE && region->regiontype == RGN_TYPE_WINDOW))
+        {
           ui::UI_region_free_active_but_all(C, region);
         }
       }

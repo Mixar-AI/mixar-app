@@ -3389,6 +3389,12 @@ static bool ui_but_is_multiline_text(const Button *but)
   if (!(but->flag & BUT_TEXTEDIT_UPDATE)) {
     return false;
   }
+  /* Same rule as interface_widgets.cc: scene.mixie_chat_input is always
+   * multiline so later prompts keep wrapping after the island collapses
+   * to its 1-line strip. */
+  if (but->rnaprop && STREQ(RNA_property_identifier(but->rnaprop), "mixie_chat_input")) {
+    return true;
+  }
   return (int(BLI_rctf_size_y(&but->rect)) > int(UI_UNIT_Y * 1.5f));
 }
 
@@ -13803,7 +13809,9 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
    * reference region gets them. Keep text focus while its sibling column scrolls. */
   if (!region_popup && drop_area && drop_area->spacetype == SPACE_AGENT_BUBBLE &&
       ELEM(event->type, WHEELUPMOUSE, WHEELDOWNMOUSE, MOUSEPAN) && but && but->active &&
-      ui_but_mixie_mention_scene(but) &&
+      (ui_but_mixie_mention_scene(but) ||
+       (but->mixar_style.theme == MixarTheme::Zen &&
+        but->mixar_style.component == MixarComponent::Input)) &&
       ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
   {
     for (const ARegion &other : drop_area->regionbase) {
@@ -13823,7 +13831,9 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
     ScrArea *area = CTX_wm_area(C);
     if (!region_popup && area && area->spacetype == SPACE_AGENT_BUBBLE &&
         event->type == LEFTMOUSE && event->val == KM_PRESS && but->active &&
-        ui_but_mixie_mention_scene(but) &&
+        (ui_but_mixie_mention_scene(but) ||
+         (but->mixar_style.theme == MixarTheme::Zen &&
+          but->mixar_style.component == MixarComponent::Input)) &&
         ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
     {
       for (ARegion &action_region : area->regionbase) {

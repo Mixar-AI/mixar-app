@@ -253,9 +253,15 @@ static GHOST_TKey convertKey(int rawCode, unichar recvChar)
     case kVK_ANSI_Backslash:    return GHOST_kKeyBackslash;
     case kVK_ANSI_LeftBracket:  return GHOST_kKeyLeftBracket;
     case kVK_ANSI_RightBracket: return GHOST_kKeyRightBracket;
-    case kVK_ANSI_Grave:        return GHOST_kKeyAccentGrave;
     case kVK_ISO_Section:       return GHOST_kKeyUnknown;
 #endif
+    /* Mixar: the US `~` / ` key is kVK_ANSI_Grave. Upstream leaves it
+     * inside the #if 0 ANSI block and only maps the '`' character, so
+     * Shift+` (the labeled ~) becomes GHOST_kKeyUnknown whenever
+     * UCKeyTranslate has no layout data. Physical mapping keeps both
+     * ` and ~ as AccentGrave so Zen Mode can toggle the moodboard. */
+    case kVK_ANSI_Grave:
+      return GHOST_kKeyAccentGrave;
     case kVK_VolumeUp:
     case kVK_VolumeDown:
     case kVK_Mute:
@@ -321,6 +327,7 @@ static GHOST_TKey convertKey(int rawCode, unichar recvChar)
           case ']':
             return GHOST_kKeyRightBracket;
           case '`':
+          case '~':
           case '<': /* The position of '`' is equivalent to this symbol in the French layout. */
             return GHOST_kKeyAccentGrave;
           default:

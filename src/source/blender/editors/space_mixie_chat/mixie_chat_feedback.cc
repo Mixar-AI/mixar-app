@@ -438,10 +438,8 @@ bool mixie_chat_handle_feedback_click(bContext *C,
           PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
           RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
           RNA_int_set(&op_ptr, "rating", star.star_index);
-          WM_operator_name_call_ptr(
-              C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+          mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
           WM_operator_properties_free(&op_ptr);
-          ED_region_tag_redraw(region);
           return true;
         }
       }
@@ -456,10 +454,8 @@ bool mixie_chat_handle_feedback_click(bContext *C,
       if (ot) {
         PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
         RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
-        WM_operator_name_call_ptr(
-            C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+        mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
         WM_operator_properties_free(&op_ptr);
-        ED_region_tag_redraw(region);
         return true;
       }
     }

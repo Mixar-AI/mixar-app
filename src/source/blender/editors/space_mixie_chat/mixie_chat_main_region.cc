@@ -419,10 +419,8 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
               PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
               RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
               RNA_string_set(&op_ptr, "action_value", bubble.option_text);
-              WM_operator_name_call_ptr(
-                  C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+              mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
               WM_operator_properties_free(&op_ptr);
-              ED_region_tag_redraw(region);
               return WM_UI_HANDLER_BREAK;
             }
           }

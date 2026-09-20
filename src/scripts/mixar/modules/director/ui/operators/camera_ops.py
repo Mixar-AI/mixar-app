@@ -25,6 +25,27 @@ def _editable_shot(context):
     return shot
 
 
+# The walk-aim overlay's handle, module-level like trajectory_overlay's. It used
+# to live only on the operator instance, so a supervisor that never reached
+# _finish -- a file load ending the modal, an exception -- left the handler
+# installed with nothing able to reach it, and the next walk stacked another.
+# The stale one keeps drawing against a dead region pointer, which a recycled
+# address turns into a reticle painted forever.
+_walk_draw_handle = None
+
+
+def _remove_walk_aim() -> None:
+    """Drop the overlay if one is installed. Safe to call any number of times."""
+    global _walk_draw_handle
+    if _walk_draw_handle is None:
+        return
+    try:
+        bpy.types.SpaceView3D.draw_handler_remove(_walk_draw_handle, 'WINDOW')
+    except (ValueError, ReferenceError, RuntimeError):
+        pass  # already gone with its space type
+    _walk_draw_handle = None
+
+
 def _draw_walk_aim(region_pointer):
     """Draw a clear aim marker while the pointer is hidden by walk mode."""
     region = bpy.context.region
@@ -87,9 +108,12 @@ class _WalkSupervisor:
         self._timer = context.window_manager.event_timer_add(
             0.05, window=window,
         )
-        self._draw_handle = bpy.types.SpaceView3D.draw_handler_add(
+        global _walk_draw_handle
+        _remove_walk_aim()  # a previous supervisor that never reached _finish
+        _walk_draw_handle = bpy.types.SpaceView3D.draw_handler_add(
             _draw_walk_aim, (region.as_pointer(),), 'WINDOW', 'POST_PIXEL',
         )
+        self._draw_handle = _walk_draw_handle
         context.window_manager.modal_handler_add(self)
         area.tag_redraw()
 
@@ -135,9 +159,7 @@ class _WalkSupervisor:
             context.window_manager.event_timer_remove(self._timer)
             self._timer = None
         if self._draw_handle is not None:
-            bpy.types.SpaceView3D.draw_handler_remove(
-                self._draw_handle, 'WINDOW',
-            )
+            _remove_walk_aim()
             self._draw_handle = None
         if reset_cursor:
             # The pointer reappears wherever the OS left it — often off in

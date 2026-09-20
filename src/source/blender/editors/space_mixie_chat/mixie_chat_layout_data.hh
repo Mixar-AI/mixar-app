@@ -320,6 +320,8 @@ const blender::Vector<MessageLayoutData> &mixie_chat_get_layout_cache(
  * Call when space is destroyed to prevent leaks.
  */
 void mixie_chat_clear_layout_cache(struct SpaceMixieChat *smixie);
+/* Same, but keeps the vector's buffer for the rebuild that follows. */
+void mixie_chat_clear_layout_cache_for_rebuild(struct SpaceMixieChat *smixie);
 
 /**
  * Reset property caches to prevent stale pointers.
@@ -377,7 +379,9 @@ struct HistoryRowHit {
    * downward). Keyboard navigation uses it to scroll a selected row into
    * view without re-deriving the grouped layout. */
   float content_top = 0.0f;
-  char session_id[128] = "";
+  char session_id[128] = ""; /* chat session id, or the checkpoint id */
+  char title[200] = "";      /* row label, exported as a QA target */
+  char group[32] = "";       /* section the row sits in (QA target detail) */
 };
 
 /** \} */
@@ -525,6 +529,10 @@ struct MixieChatRuntime {
   /** History overlay: visibility mirrored from the Python-registered
    * WindowManager bool during draw (events check this, never RNA). */
   bool history_overlay_active = false;
+  /** History overlay: mode (HistoryMode) of the last draw, so switching the
+   * open card between chats and checkpoints resets the search, scroll and
+   * armed row like opening it does. -1 = not drawn yet. */
+  int history_mode_last = -1;
 
   /** History overlay: panel bounds in region pixels (click-away test). */
   rctf history_panel_bounds = {0, 0, 0, 0};

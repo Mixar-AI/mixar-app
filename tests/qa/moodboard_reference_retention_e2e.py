@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Native selection adds stable chat references; zero-credit local send probe.
+"""Native board selection mirrors chat references; unselected pills drop.
 
 Run against a fresh isolated Dev QA app with external networking blocked:
-QA_HARNESS=/path/to/harness QA_SCENARIO_OUT=/tmp/reference-retention \
+QA_HARNESS=/path/to/harness QA_SCENARIO_OUT=/tmp/reference-selection-sync \
     python3 tests/qa/moodboard_reference_retention_e2e.py
 Inspect the captured PNGs alongside the verdict.
 """
@@ -25,7 +25,7 @@ from mixie_open_type_send_e2e import SEND, open_pill, type_draft
 
 
 def run(qa):
-    out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/reference-retention')).resolve()
+    out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/reference-selection-sync')).resolve()
     out.mkdir(parents=True, exist_ok=True)
     qa.wait("bpy.types.Operator.bl_rna_get_subclass_py('MIXIE_CHAT_OT_send_message') is not None", timeout=40)
     qa.eval("assert __import__('os').environ.get('MIXAR_QA')=='1'\nresult=True")
@@ -50,85 +50,79 @@ def run(qa):
 
         def expect(expected):
             qa.wait(f'[a.image_path for a in {SCENE}.mixie_chat_pending_attachments]=={expected!r}', timeout=5)
-            pause(qa, .65)  # Survive multiple sync ticks, not just an optimistic write.
+            pause(qa, .65)
             assert [a['path'] for a in attachments(qa)] == expected
 
-        def select_next():
+        def select_replaces():
             select(qa, items[0]['id'])
             expect(names[:1])
             select(qa, items[1]['id'])
-            expect(names[:2])
+            expect(names[1:2])
             assert qa.eval(f'result=[i.selected for i in {SCENE}.mixie_moodboard_images]') == [False, True]+[False]*4
-            qa.cmd('snap', path=str(out/'second-selected.png'), area='VIEW_3D')
-        qa.step('second_selection_keeps_first_reference', select_next)
+            qa.cmd('snap', path=str(out/'second-selected-only.png'), area='VIEW_3D')
+        qa.step('second_selection_drops_the_first_reference', select_replaces)
 
         def deselect():
             qa.press('A', alt=True)
             qa.wait(f'not any(i.selected for i in {SCENE}.mixie_moodboard_images)', timeout=4)
-            expect(names[:2])
+            expect([])
             open_pill(qa)
             pause(qa, .4)
-            assert qa.find(surface='reference_preview')['total'] == 2
-            capture(qa, out, 'deselected-both-still-attached')
-        qa.step('deselect_keeps_both_composer_previews', deselect)
+            capture(qa, out, 'deselected-composer-empty')
+        qa.step('deselect_clears_composer_previews', deselect)
+
+        def multi_select_two():
+            qa.eval(
+                f"imgs=list({SCENE}.mixie_moodboard_images)\n"
+                "imgs[0].selected=True\n"
+                "imgs[1].selected=True\n"
+                "from mixar.modules.moodboard.core.chat_sync import force_resync\n"
+                "force_resync()\nresult=True"
+            )
+            expect(names[:2])
+            capture(qa, out, 'multi-selected-both-attached')
+        qa.step('multi_select_attaches_both', multi_select_two)
 
         def remove_first():
-            # The topmost native × owns the first reference's path/source.
             qa.eval("hits=drv.find(area_type='AGENT_BUBBLE',op='MIXIE_CHAT_OT_remove_attachment')\n"
                     "hit=max(hits,key=lambda h:h['rect'][3])\nresult=drv.click_steps(hit)")
             expect(names[1:2])
             capture(qa, out, 'explicitly-removed-first')
-        qa.step('native_remove_stays_removed', remove_first)
+        qa.step('native_remove_drops_that_reference', remove_first)
 
-        def fill_limit():
-            for item in items[2:]:
-                select(qa, item['id'])
+        def overflow_fills():
+            qa.eval(
+                f"imgs=list({SCENE}.mixie_moodboard_images)\n"
+                "for img in imgs:\n"
+                "    img.selected=True\n"
+                "from mixar.modules.moodboard.core.chat_sync import force_resync\n"
+                "force_resync()\nresult=True"
+            )
+            expect(names)
+            qa.eval(
+                f"{SCENE}.mixie_moodboard_images[0].selected=False\n"
+                "from mixar.modules.moodboard.core.chat_sync import force_resync\n"
+                "force_resync()\nresult=True"
+            )
             expect(names[1:])
-            select(qa, items[0]['id'])
-            expect(names[1:])
-            notices = qa.eval("from mixar.modules.common.notifications import get_notification_store\n"
-                              "result=[dict(title=n.title,body=n.body) for n in get_notification_store().get_visible() "
-                              "if n.id=='chat-reference-limit']")
-            assert notices and 'select the image again' in notices[0]['body'], notices
-            placement = qa.eval("from mixar.modules.common.notifications import toast_renderer\n"
-                                "win=drv.main_window()\narea=next(a for a in win.screen.areas if a.type=='VIEW_3D')\n"
-                                "region=next(r for r in area.regions if r.type=='WINDOW')\n"
-                                "drawer=drv.find_one(surface='moodboard_drawer_panel')\n"
-                                "bounds=toast_renderer.bounds_for_region(region.as_pointer())\n"
-                                "close=next(b for b in bounds['close'] if b[0]=='chat-reference-limit')\n"
-                                "result=dict(close=list(close),drawer=drawer['rect'],offset=region.x)")
-            assert placement['offset']+placement['close'][1]+placement['close'][3] < placement['drawer'][0], placement
-            qa.cmd('snap', path=str(out/'limit-keeps-existing-references.png'), area='VIEW_3D')
-            return notices
-        limit = qa.step('sixth_reference_warns_without_eviction', fill_limit)
-
-        def clear_and_reselect():
-            qa.eval('result=list(bpy.ops.mixie_chat.clear_attachments())')
-            expect([])
-            select(qa, items[1]['id'])
-            expect(names[1:2])
-            select(qa, items[0]['id'])
-            expect([names[1], names[0]])
-            open_pill(qa)
-            pause(qa, .4)
-            capture(qa, out, 'reselected-two-for-send')
-        qa.step('clear_stays_empty_until_new_selection', clear_and_reselect)
+            qa.cmd('snap', path=str(out/'deselect-drops-unselected.png'), area='VIEW_3D')
+        qa.step('deselecting_one_of_many_drops_only_that_reference', overflow_fills)
 
         def send_staged():
-            type_draft(qa, 'Use both references for the material')
+            type_draft(qa, 'Use both remaining references for the material')
             qa.click(**SEND)
             qa.wait('len(__import__("chat_send_probe").calls)==1', timeout=8)
             payload = qa.eval("import chat_send_probe as probe\n"
                               "call=probe.calls[0]\nresult=dict(names=call['attachment_names'],"
                               "image_count=len(call['image_attachments']))")
-            assert payload['names'] == [names[1], names[0]] and payload['image_count'] == 2, payload
+            assert payload['names'] == names[1:] and payload['image_count'] == 5, payload
             expect([])
             qa.eval(f'import chat_send_probe as probe; probe.settle({SCENE}); result=True')
             pause(qa, .4)
             capture(qa, out, 'sent-references-in-transcript')
             return payload
-        payload = qa.step('send_uses_both_references_and_consumes_them', send_staged)
-        verdict = dict(limit_notice=limit, sent=payload, paid_requests=0, output=str(out))
+        payload = qa.step('send_uses_selected_references_and_consumes_them', send_staged)
+        verdict = dict(sent=payload, paid_requests=0, output=str(out))
         (out/'verdict.json').write_text(json.dumps(verdict, indent=2)+'\n')
         return verdict
     finally:

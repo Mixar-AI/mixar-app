@@ -112,7 +112,7 @@ class MIXAR_OT_bubble_header_drag(Operator):
 
         if result != {'FINISHED'}:
             # begin_drag refuses when the press belongs to a uiBut waiting to
-            # start its own drag (a My Generations asset tile). Going modal
+            # start its own drag (a Library asset tile). Going modal
             # here would eat the MOUSEMOVEs that button needs to begin it.
             return {'PASS_THROUGH'}
 

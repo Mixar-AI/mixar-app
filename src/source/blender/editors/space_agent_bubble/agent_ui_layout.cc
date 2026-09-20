@@ -9,11 +9,19 @@
  * Builds the Agent island's geometry from the artboard tokens.
  */
 
+#include <algorithm>
+#include <cstring>
+
 #include "BLI_rect.h"
+#include "BLI_string_ref.hh"
+#include "BLI_vector.hh"
 
 #include "BKE_screen.hh"
 
+#include "BLF_api.hh"
+
 #include "DNA_screen_types.h"
+#include "DNA_userdef_types.h"
 
 #include "UI_interface.hh"
 #include "UI_mixar.hh"
@@ -79,7 +87,7 @@ const TabMetric g_tab_metrics[AGENT_TAB_COUNT] = {
     {AGENT_TAB_X_3D, AGENT_TAB_W_3D, "3D"},
     {AGENT_TAB_X_MEDIA, AGENT_TAB_W_MEDIA, "Media"},
     {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, "Gaussian Splat"},
-    {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, "My Generations"},
+    {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, "Library"},
     {AGENT_TAB_X_QUEUE, AGENT_TAB_W_QUEUE, "Queue"},
 };
 
@@ -96,13 +104,62 @@ const char *agent_ui_tab_label(const AgentTabId tab)
 /** \name Build
  * \{ */
 
+float agent_ui_composer_wrap_width_px(const int window_w, const int pad_real_w)
+{
+  const bool pad = pad_real_w > 0;
+  const float u = float(window_w) / float(AGENT_ISLAND_W);
+  const float region_w = pad ? float(pad_real_w) : float(window_w);
+  const float island_w = pad ? (region_w / u) : float(AGENT_ISLAND_W);
+  const float card_w = island_w - AGENT_CARD_X * 2.0f;
+  return (card_w - AGENT_SEG_X * 2.0f) * u;
+}
+
+int agent_ui_composer_visual_lines(const char *text, const float wrap_width_px)
+{
+  if (text == nullptr || text[0] == '\0') {
+    return 1;
+  }
+
+  /* Must match widget_draw_text_multiline: native widget font, wrap width
+   * after the 0.4 UI-unit text pad and 4*pixelsize inset. */
+  const int text_pad = int(0.4f * U.widget_unit);
+  const int width = std::max(int(wrap_width_px) - text_pad - int(4.0f * U.pixelsize), 10);
+
+  uiFontStyle fstyle = ui::style_get()->widget;
+  ui::fontstyle_set(&fstyle);
+  const int fontid = fstyle.uifont_id;
+  const int text_len = int(strlen(text));
+  blender::Vector<blender::StringRef> lines = BLF_string_wrap(
+      fontid,
+      blender::StringRef(text, text_len),
+      width,
+      BLFWrapMode(int(BLFWrapMode::Typographical) | int(BLFWrapMode::HardLimit)));
+  int count = int(lines.size());
+  if (text_len > 0 && text[text_len - 1] == '\n') {
+    count++;
+  }
+  return std::clamp(std::max(1, count), 1, AGENT_INPUT_MAX_LINES);
+}
+
+float agent_ui_composer_strip_h(const int visual_lines)
+{
+  const int lines = std::clamp(visual_lines, 1, AGENT_INPUT_MAX_LINES);
+  return float(AGENT_INPUT_H * lines);
+}
+
+float agent_ui_panel_top(const AgentTabId tab)
+{
+  return tab == AGENT_TAB_AGENT ? float(AGENT_PANEL_Y) : float(AGENT_CARD_Y + 12);
+}
+
 void agent_ui_layout_build(const int window_w,
                            const int window_h,
                            AgentTabId active_tab,
                            const bool /*agent_mode_active*/,
                            const bool has_transcript,
                            AgentIslandLayout *r_layout,
-                           const int pad_real_w)
+                           const int pad_real_w,
+                           const int input_lines)
 {
   *r_layout = {};
   const bool pad = pad_real_w > 0;
@@ -132,6 +189,7 @@ void agent_ui_layout_build(const int window_w,
    * derived from it so the pad re-flows instead of overflowing. */
   const float island_w = pad ? (region_w / u) : float(AGENT_ISLAND_W);
   const float card_w = island_w - AGENT_CARD_X * 2.0f;
+  const float panel_y = agent_ui_panel_top(active_tab);
   const float panel_w = card_w - (AGENT_PANEL_X - AGENT_CARD_X) * 2.0f;
   /* Artboard y that sits at the window's top edge: the tab strip normally;
    * the pad has no strip and starts just above its card. */
@@ -145,7 +203,7 @@ void agent_ui_layout_build(const int window_w,
    * stretches with the window, so a compact default shorter than the
    * 521-unit artboard is valid — requiring AGENT_ISLAND_H painted the
    * island black and hid every tab/chip. Same floor as the Scribble pad. */
-  const float min_h = (AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
+  const float min_h = (panel_y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
                        AGENT_CARD_PAD_BOTTOM) *
                       u;
   if (pad) {
@@ -184,38 +242,39 @@ void agent_ui_layout_build(const int window_w,
    * `active` flags are kept, since the card body still switches on them. */
   r_layout->strip = pad ? rctf{} : f.box(AGENT_STRIP_X, AGENT_STRIP_Y, AGENT_STRIP_W, AGENT_STRIP_H);
 
-  /* Spend the strip's center gap on labels before eliding them. Measurement,
-   * paint, native button bounds and QA targets all use this resolved layout. */
+  /* One centered row, with equal breathing room between pills. Labels grow
+   * at native text size; when space is tight the painter elides inside these
+   * same bounds, which also drive native hits and QA. */
   const float text_size = agent_ui_body_font_size();
   const float badge_size = AGENT_NEW_BADGE_FONT * agent_ui_text_unit();
   const float badge_w = std::max(float(AGENT_NEW_BADGE_W),
                                 ui::mixar_text_width("NEW", badge_size) / u +
                                     2.0f * AGENT_TAB_ICON_GAP);
+  constexpr float gap = 16.0f;
+  constexpr float padding = 20.0f;
   TabMetric tabs[AGENT_TAB_COUNT];
-  float extra = 0.0f;
+  float total = gap * (AGENT_TAB_COUNT - 1);
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     tabs[i] = g_tab_metrics[i];
-    const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W : AGENT_TAB_ICON;
+    const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W + AGENT_TAB_ICON_GAP :
+                          i == AGENT_TAB_GENERATIONS ? 0.0f :
+                                                       AGENT_TAB_ICON + AGENT_TAB_ICON_GAP;
     const float trailing = i == AGENT_TAB_SPLAT ? badge_w + AGENT_TAB_ICON_GAP : 0.0f;
     const float wanted = ui::mixar_text_width(tabs[i].label, text_size) / u + leading +
-                         trailing + 3.0f * AGENT_TAB_ICON_GAP + 2.0f / u;
+                         trailing + 2.0f * padding;
     tabs[i].w = std::max(tabs[i].w, wanted);
-    extra += tabs[i].w - g_tab_metrics[i].w;
+    total += tabs[i].w;
   }
-  const float spare = AGENT_TAB_X_GENERATIONS - (AGENT_TAB_X_SPLAT + AGENT_TAB_W_SPLAT) -
-                      6.0f;
-  const float growth = extra > 0.0f ? std::min(1.0f, spare / extra) : 0.0f;
-  for (int i = 0; i < AGENT_TAB_COUNT; i++) {
-    tabs[i].w = g_tab_metrics[i].w + (tabs[i].w - g_tab_metrics[i].w) * growth;
-    if (i > 0 && i <= AGENT_TAB_SPLAT) {
-      const float gap = g_tab_metrics[i].x -
-                        (g_tab_metrics[i - 1].x + g_tab_metrics[i - 1].w);
-      tabs[i].x = tabs[i - 1].x + tabs[i - 1].w + gap;
-    }
+  const float available = island_w - 2.0f * AGENT_TAB_X_AGENT;
+  const float fit = std::min(1.0f, (available - gap * (AGENT_TAB_COUNT - 1)) /
+                                      (total - gap * (AGENT_TAB_COUNT - 1)));
+  total = (total - gap * (AGENT_TAB_COUNT - 1)) * fit + gap * (AGENT_TAB_COUNT - 1);
+  float tab_x = (island_w - total) * 0.5f;
+  for (TabMetric &tab : tabs) {
+    tab.w *= fit;
+    tab.x = tab_x;
+    tab_x += tab.w + gap;
   }
-  tabs[AGENT_TAB_QUEUE].x = AGENT_TAB_X_QUEUE + AGENT_TAB_W_QUEUE - tabs[AGENT_TAB_QUEUE].w;
-  tabs[AGENT_TAB_GENERATIONS].x = tabs[AGENT_TAB_QUEUE].x - 6.0f -
-                                tabs[AGENT_TAB_GENERATIONS].w;
 
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     AgentTabLayout &tab = r_layout->tabs[i];
@@ -277,6 +336,7 @@ void agent_ui_layout_build(const int window_w,
   const float hdr_cy = AGENT_CARD_Y + AGENT_HDR_BTN_CY;
   r_layout->hdr_history = f.disc(AGENT_HDR_BTN1_CX, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_new_chat = f.disc(AGENT_HDR_BTN2_CX, hdr_cy, AGENT_HDR_BTN_R);
+  r_layout->hdr_checkpoints = f.disc(AGENT_HDR_BTN3_CX, hdr_cy, AGENT_HDR_BTN_R);
 
   r_layout->hdr_title_cx = f.x(AGENT_CARD_X + card_w * 0.5f);
   r_layout->hdr_title_y = f.y(AGENT_CARD_Y + AGENT_CARD_HEADER_H * 0.5f);
@@ -287,8 +347,8 @@ void agent_ui_layout_build(const int window_w,
    * has at the sides (artboard: card ends 569, panel 563). Mirroring the
    * card-top offset here instead left a 76-unit band of bare card gradient
    * under every pane — the "green strip" under the prompt box. */
-  const float panel_h = card_bottom - AGENT_PANEL_Y - (AGENT_PANEL_X - AGENT_CARD_X);
-  r_layout->panel = f.box(AGENT_PANEL_X, AGENT_PANEL_Y, panel_w, panel_h);
+  const float panel_h = card_bottom - panel_y - (AGENT_PANEL_X - AGENT_CARD_X);
+  r_layout->panel = f.box(AGENT_PANEL_X, panel_y, panel_w, panel_h);
 
   const float chip_y = card_bottom - AGENT_CARD_PAD_BOTTOM - AGENT_CHIP_H;
 
@@ -298,16 +358,22 @@ void agent_ui_layout_build(const int window_w,
    * the transcript region owns the panel. */
   const float input_x = AGENT_SEG_X;
   const float input_w = card_w - AGENT_SEG_X * 2.0f;
-  const float input_y = has_transcript ? (chip_y - AGENT_INPUT_GAP - AGENT_INPUT_H)
-                                       : AGENT_PANEL_Y;
+  /* After the first send the field is a strip above the chips. Grow that
+   * strip with the draft (1–4 visual lines) so Shift+Enter stays visible —
+   * a fixed AGENT_INPUT_H row is ~29 px at the default 678-wide island,
+   * which falls under the 1.5*UI_UNIT_Y multiline gate and clips later
+   * prompts to a single line. */
+  const float strip_h = agent_ui_composer_strip_h(input_lines);
+  const float input_y = has_transcript ? (chip_y - AGENT_INPUT_GAP - strip_h) :
+                                         panel_y;
   r_layout->input = f.box(input_x,
                           input_y,
                           input_w,
                           chip_y - AGENT_INPUT_GAP - input_y);
   r_layout->transcript = f.box(AGENT_PANEL_X,
-                               AGENT_PANEL_Y,
+                               panel_y,
                                panel_w,
-                               input_y - AGENT_TRANSCRIPT_GAP - AGENT_PANEL_Y);
+                               input_y - AGENT_TRANSCRIPT_GAP - panel_y);
   r_layout->prompt_x = f.x(AGENT_PROMPT_X);
   /* Optical centre of the first line's ink box, not its baseline — the
    * painter centres every label the same way. */
@@ -315,7 +381,9 @@ void agent_ui_layout_build(const int window_w,
 
   /* --- Chip row ---
    * The mode toggle is gone (there is only Agent mode), so Upload Reference
-   * takes the row's left edge where the toggle sat. */
+   * takes the row's left edge where the toggle sat. Left to right: Upload
+   * Reference, Scribble, Voice, Auto, then the two conditional Scribble
+   * chips; Send is pinned to the right inset. */
   auto chip_extra = [&](const char *label, const float base_w) {
     return std::max(0.0f, ui::mixar_text_width(label, text_size) / u + AGENT_CHIP_ICON +
                              3.0f * AGENT_CHIP_ICON_GAP + 2.0f / u - base_w);
@@ -325,7 +393,8 @@ void agent_ui_layout_build(const int window_w,
   const float voice_extra = chip_extra("Listening", AGENT_CHIP_VOICE_W);
   const float row_extra = upload_extra + scribble_extra + voice_extra;
   const float row_base = AGENT_CHIP_UPLOAD_W + AGENT_CHIP_SCRIBBLE_W + AGENT_CHIP_VOICE_W +
-                         AGENT_CHIP_READING_W + AGENT_CHIP_CLEAR_W + 5.0f * AGENT_CHIP_GAP;
+                         AGENT_CHIP_AUTO_W + AGENT_CHIP_READING_W + AGENT_CHIP_CLEAR_W +
+                         6.0f * AGENT_CHIP_GAP;
   const float row_spare = std::max(
       0.0f, card_w - 2.0f * AGENT_SEG_X - AGENT_BTN_GENERATE_W - row_base);
   const float row_growth = row_extra > 0.0f ? std::min(1.0f, row_spare / row_extra) : 0.0f;
@@ -337,7 +406,11 @@ void agent_ui_layout_build(const int window_w,
   r_layout->chip_scribble = f.box(scribble_x, chip_y, scribble_w, AGENT_CHIP_H);
   const float voice_x = scribble_x + scribble_w + AGENT_CHIP_GAP;
   r_layout->chip_voice = f.box(voice_x, chip_y, voice_w, AGENT_CHIP_H);
-  const float reading_x = voice_x + voice_w + AGENT_CHIP_GAP;
+  /* Auto keeps its artboard width: its label is one short word and the
+   * switch has a fixed size, so there is nothing for row growth to fit. */
+  const float auto_x = voice_x + voice_w + AGENT_CHIP_GAP;
+  r_layout->chip_auto = f.box(auto_x, chip_y, AGENT_CHIP_AUTO_W, AGENT_CHIP_H);
+  const float reading_x = auto_x + AGENT_CHIP_AUTO_W + AGENT_CHIP_GAP;
   r_layout->chip_reading = f.box(reading_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
   r_layout->chip_clear = f.box(
       reading_x + AGENT_CHIP_READING_W + AGENT_CHIP_GAP, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);

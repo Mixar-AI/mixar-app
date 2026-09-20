@@ -16,8 +16,31 @@ import urllib.request
 from typing import Optional
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.job_queue.core.uv_layer_names import (
+    normalize_object_uv_layer_names,
+)
 
 logger = get_logger(__name__)
+
+
+def _select_and_normalize_imported(new_objects: list) -> None:
+    """Select the freshly imported objects and canonicalise their UV names.
+
+    Every image-to-3D import lands with a ``UV Map`` layer regardless of the
+    engine's file format (an FBX engine carries its own layer name; GLB
+    carries none). Generation-import path only — never user meshes.
+    """
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in new_objects:
+        obj.select_set(True)
+        if obj.type == 'MESH':
+            bpy.context.view_layer.objects.active = obj
+            try:
+                normalize_object_uv_layer_names(obj)
+            except Exception as e:
+                logger.warning(
+                    "[Image to 3D] UV map rename skipped for '%s': %s",
+                    obj.name, e)
 
 
 def download_and_import_glb(url: str) -> list:
@@ -59,12 +82,7 @@ def download_and_import_glb(url: str) -> list:
 
         logger.debug("[Image to 3D] Imported %s objects", len(new_objects))
 
-        # Select and frame the new objects
-        bpy.ops.object.select_all(action='DESELECT')
-        for obj in new_objects:
-            obj.select_set(True)
-            if obj.type == 'MESH':
-                bpy.context.view_layer.objects.active = obj
+        _select_and_normalize_imported(new_objects)
 
         return new_objects
 
@@ -146,12 +164,7 @@ def download_and_import_model(url: str, file_format: str = "glb") -> list:
 
         logger.debug("[Image to 3D] Imported %s objects", len(new_objects))
 
-        # Select and frame the new objects
-        bpy.ops.object.select_all(action='DESELECT')
-        for obj in new_objects:
-            obj.select_set(True)
-            if obj.type == 'MESH':
-                bpy.context.view_layer.objects.active = obj
+        _select_and_normalize_imported(new_objects)
 
         return new_objects
 

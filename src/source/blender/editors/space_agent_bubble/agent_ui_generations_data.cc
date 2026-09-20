@@ -6,7 +6,7 @@
 /** \file
  * \ingroup spagentbubble
  *
- * The My Generations pane's gathering pass.
+ * The Library pane's gathering pass.
  *
  * Four sources are normalised into one #GenItem list. None of them is owned
  * here — every one is read from something another module already maintains:
@@ -76,11 +76,9 @@ namespace {
 
 bool item_push(GenPaneData *data, GenItem **r_item)
 {
-  if (data->count >= GEN_MAX_ITEMS) {
-    return false;
-  }
-  GenItem &item = data->items[data->count++];
-  item = GenItem{};
+  data->items.emplace_back();
+  data->count++;
+  GenItem &item = data->items.back();
   *r_item = &item;
   return true;
 }
@@ -88,16 +86,12 @@ bool item_push(GenPaneData *data, GenItem **r_item)
 /** Every registered library, in preferences order, for the rail's list. */
 void gather_libraries(GenPaneData *data)
 {
-  data->lib_count = 0;
   for (const bUserAssetLibrary &lib_ref : U.asset_libraries) {
     const bUserAssetLibrary *lib = &lib_ref;
-    if (data->lib_count >= 16) {
-      break;
-    }
     if (!lib->name[0]) {
       continue;
     }
-    BLI_strncpy(data->lib_names[data->lib_count++], lib->name, 64);
+    data->lib_names.emplace_back(lib->name);
   }
 }
 
@@ -124,10 +118,7 @@ const char *asset_type_label(const ID_Type id_type)
  * what archiving a finished generation does — so the writer signals us
  * through `wm.mixar_generations_revision` and we clear on the edge. Doing it
  * on every draw instead would re-read the whole library on every mouse move. */
-void gather_assets(const bContext *C,
-                   GenPaneData *data,
-                   const char *only_name,
-                   const bool reload)
+void gather_assets(const bContext *C, GenPaneData *data, const char *only_name, const bool reload)
 {
   for (const bUserAssetLibrary &lib_ref : U.asset_libraries) {
     const bUserAssetLibrary *lib = &lib_ref;
@@ -157,10 +148,13 @@ void gather_assets(const bContext *C,
           item->kind = GEN_ITEM_ASSET;
           item->asset = &asset;
           BLI_strncpy(item->name, asset.get_name().c_str(), sizeof(item->name));
-          BLI_snprintf(item->key, sizeof(item->key), "asset:%s:%s", lib->name,
+          BLI_snprintf(item->key,
+                       sizeof(item->key),
+                       "asset:%s:%s",
+                       lib->name,
                        asset.library_relative_identifier().c_str());
-          BLI_strncpy(item->type_label, asset_type_label(asset.get_id_type()),
-                      sizeof(item->type_label));
+          BLI_strncpy(
+              item->type_label, asset_type_label(asset.get_id_type()), sizeof(item->type_label));
           BLI_strncpy(item->model_label, lib->name, sizeof(item->model_label));
           const std::string blend = asset.full_library_path();
           BLI_strncpy(item->path, blend.c_str(), sizeof(item->path));
@@ -249,9 +243,7 @@ void gather_splats(const bContext *C, GenPaneData *data)
      * `system_properties`. */
     PointerRNA flag_ptr;
     PropertyRNA *flag = nullptr;
-    if (!RNA_path_resolve_property(&ptr, "[\"mixar_splat_world\"]", &flag_ptr, &flag) ||
-        !flag)
-    {
+    if (!RNA_path_resolve_property(&ptr, "[\"mixar_splat_world\"]", &flag_ptr, &flag) || !flag) {
       continue;
     }
     GenItem *item = nullptr;
@@ -309,8 +301,8 @@ void gather_jobs(const bContext *C, GenPaneData *data)
     gen_read_string(&row, "job_id", job_id, sizeof(job_id));
     gen_read_string(&row, "display_label", display, sizeof(display));
     gen_read_string(&row, "label", label, sizeof(label));
-    BLI_strncpy(item->name, display[0] ? display : (label[0] ? label : "Generating"),
-                sizeof(item->name));
+    BLI_strncpy(
+        item->name, display[0] ? display : (label[0] ? label : "Generating"), sizeof(item->name));
     BLI_snprintf(item->key, sizeof(item->key), "job:%s", job_id);
     gen_read_string(&row, "type_label", item->type_label, sizeof(item->type_label));
     gen_read_string(&row, "model_label", item->model_label, sizeof(item->model_label));
@@ -396,15 +388,12 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
     gen_read_enum_id(&wm_ptr, "mixar_generations_source", source, sizeof(source));
     gen_read_enum_id(&wm_ptr, "mixar_generations_filter", filter, sizeof(filter));
     gen_read_enum_id(&wm_ptr, "mixar_generations_sort", sort, sizeof(sort));
-    gen_read_string(&wm_ptr, "mixar_generations_selected", r_data->selected,
-                sizeof(r_data->selected));
-    gen_read_string(&wm_ptr, "mixar_generations_library", r_data->library,
-                sizeof(r_data->library));
-    if (PropertyRNA *page = RNA_struct_find_property(&wm_ptr, "mixar_generations_page");
-        page && RNA_property_type(page) == PROP_INT)
-    {
-      r_data->page = std::max(0, RNA_property_int_get(&wm_ptr, page));
-    }
+    gen_read_string(
+        &wm_ptr, "mixar_generations_selected", r_data->selected, sizeof(r_data->selected));
+    gen_read_string(
+        &wm_ptr, "mixar_generations_library", r_data->library, sizeof(r_data->library));
+    r_data->scroll = gen_read_float(&wm_ptr, "mixar_generations_scroll");
+    r_data->library_scroll = gen_read_float(&wm_ptr, "mixar_generations_library_scroll");
     if (PropertyRNA *rev = RNA_struct_find_property(&wm_ptr, "mixar_generations_revision");
         rev && RNA_property_type(rev) == PROP_INT)
     {
@@ -455,19 +444,18 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
     }
   }
   r_data->count = kept;
+  r_data->items.resize(kept);
 
   const bool newest = r_data->newest_first;
-  std::stable_sort(r_data->items,
-                   r_data->items + r_data->count,
-                   [newest](const GenItem &a, const GenItem &b) {
-                     const bool a_live = a.kind == GEN_ITEM_JOB;
-                     const bool b_live = b.kind == GEN_ITEM_JOB;
-                     if (a_live != b_live) {
-                       return a_live;
-                     }
-                     return newest ? (a.sort_time > b.sort_time) :
-                                     (a.sort_time < b.sort_time);
-                   });
+  std::stable_sort(
+      r_data->items.begin(), r_data->items.end(), [newest](const GenItem &a, const GenItem &b) {
+        const bool a_live = a.kind == GEN_ITEM_JOB;
+        const bool b_live = b.kind == GEN_ITEM_JOB;
+        if (a_live != b_live) {
+          return a_live;
+        }
+        return newest ? (a.sort_time > b.sort_time) : (a.sort_time < b.sort_time);
+      });
 }
 
 int agent_ui_generations_selected_index(const GenPaneData &data)

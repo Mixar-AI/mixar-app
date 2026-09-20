@@ -13,6 +13,7 @@
  */
 
 #include "agent_ui_text.hh"
+#include "agent_bubble_references.hh"
 
 #include <algorithm>
 #include <cstdio>
@@ -358,16 +359,18 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * Video half: Video Gen has no reference property of its own — its
    * references ARE the selected board media — so it always previews those. */
   {
-    Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
-    const int ref_count = media_collect_reference_images(
-        C, tab_ok ? &tab_ptr : nullptr, video, ref_images, PANE_REF_THUMB_MAX);
-    pane_ref_thumbs_paint(ref_images,
-                          ref_count,
-                          bx + PANE_REF_THUMB_GAP * u,
-                          bottom_y,
-                          bottom_h,
-                          generate.xmin - PANE_CHIP_GAP * u,
-                          u);
+    if (!agent_bubble_references_visible(C)) {
+      Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
+      const int ref_count = media_collect_reference_images(
+          C, tab_ok ? &tab_ptr : nullptr, video, ref_images, PANE_REF_THUMB_MAX);
+      pane_ref_thumbs_paint(ref_images,
+                            ref_count,
+                            bx + PANE_REF_THUMB_GAP * u,
+                            bottom_y,
+                            bottom_h,
+                            generate.xmin - PANE_CHIP_GAP * u,
+                            u);
+    }
   }
   char gen_label[32];
   pane_queue_label(gen_label, sizeof(gen_label), active_jobs);

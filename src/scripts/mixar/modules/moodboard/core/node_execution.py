@@ -259,13 +259,13 @@ def _run_video(context, node, operator):
     ]
     images = [item for item in descriptions if item["media_type"] == "IMAGE"]
     videos = [item for item in descriptions if item["media_type"] == "VIDEO"]
-    limits = get_video_generation_limits(service_key)
+    limits = get_video_generation_limits(service_key, model)
     if limits is None:
         raise ValueError("Video generation catalog config is incomplete")
     params = collect_node_params(node)
-    from .video_generation_catalog import seedance_reference_count_error
+    from .video_generation_catalog import video_reference_count_error
 
-    count_error = seedance_reference_count_error(
+    count_error = video_reference_count_error(
         limits,
         image_count=len(images),
         video_count=len(videos),
@@ -643,6 +643,10 @@ def run_action_node(context, node, operator):
         job, params = _run_image(context, node, operator)
     elif node.action_type == 'VIDEO_GEN':
         job, params = _run_video(context, node, operator)
+    elif node.action_type == 'VIDEO_UPSCALE':
+        from .video_upscale_enqueue import run_video_upscale_node
+
+        job, params = run_video_upscale_node(context, node)
     elif node.action_type == 'MASK_DETAIL':
         job, params = _run_mask_detail(context, node, operator)
     elif node.action_type in _MESH_FEATURE_ROUTING:

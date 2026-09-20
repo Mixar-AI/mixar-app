@@ -33,6 +33,7 @@ import json
 
 from . import sketch as sketch_mod
 from .geometry import decimate, normalized_bbox, to_normalized
+from .simplify import simplify_shape
 from ..constants import (
     INTENT_POINT,
     INTENT_SKETCH,
@@ -95,8 +96,12 @@ def build_mark(mark_id, view_name, reading, region_width, region_height,
         "gesture": reading.get("gesture"),
         "closed": bool(reading.get("closed")),
         "region": region,
+        # Shape-preserving, not uniform: these are the ink the annotated
+        # frame is drawn from and the sketch block is read from, so the
+        # budget has to be spent on the corners a stroke turns on rather
+        # than evenly along a trace whose straight runs say nothing.
         "strokes": [
-            to_normalized(decimate(list(s), MARK_STROKE_MAX_POINTS),
+            to_normalized(simplify_shape(list(s), MARK_STROKE_MAX_POINTS),
                           region_width, region_height)
             for s in (strokes or ()) if s
         ],
@@ -246,7 +251,7 @@ def _shed_sketch(working, max_bytes):
 
     sketch = working["sketch"]
     for stroke in sketch.get("strokes") or []:
-        stroke["world"] = decimate(stroke.get("world") or [], 4)
+        stroke["world"] = simplify_shape(stroke.get("world") or [], 4)
     text = _dump(working)
     if len(text.encode("utf-8")) <= max_bytes:
         return text, "sketch stroke paths thinned to fit the context budget"

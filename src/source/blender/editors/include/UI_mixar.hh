@@ -38,6 +38,8 @@ const char *mixar_variant_name(MixarVariant variant);
 /** Draws the component backdrop; true means the native text pass is still
  * required. */
 bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &rect);
+/** Premultiplied rounded fill that replaces dest alpha for opaque colours.
+ * Widget dest-over leaves frost-window dest A at the 0.20 wash on WGL. */
 void mixar_fill_round(const rctf &rect, float radius, const float color[4]);
 float mixar_text_width(const char *text, float size);
 void mixar_label_left(const char *text, float x, float cy, float size, const float color[4]);

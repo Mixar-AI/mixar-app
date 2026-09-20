@@ -458,5 +458,9 @@ class TestCaps:
     def test_a_full_stroke_group_commits_instead_of_dropping_ink(self):
         text = source(f"{MODULE}/ui/operators/mark_draw_ops.py")
         body = text[text.index("def _begin_stroke"):text.index("def _extend_stroke")]
+        # Full group: commit what is there and keep drawing. An early return
+        # here is the bug — the later strokes of an unpaused sketch vanish.
+        assert "self._ink.full" in body
         assert "self._commit(context, region)" in body
-        assert "return" not in body.split("MAX_STROKES_PER_MARK")[1].split("\n")[0]
+        assert "self._ink.begin(point)" in body
+        assert "return" not in body.split("self._ink.full")[1].split("self._ink.begin")[0]

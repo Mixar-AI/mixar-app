@@ -72,7 +72,14 @@ struct AgentIslandState {
    * registers mixie_chat.voice_toggle, which it does only on platforms with a
    * recogniser — so no surface ever draws a dead microphone. */
   bool voice_available;
+  char voice_status[32];
   bool voice_listening;     /* A dictation session is up. */
+
+  /* Auto mode (scene.mixie_chat_auto_mode, space_mixie_chat/ui/properties/
+   * chat_props.py). While set, every send carries `auto_mode: true` and the
+   * agent decides open choices itself instead of asking. The composer chip's
+   * switch thumb sits on the ON side. */
+  bool auto_mode;
 
 };
 

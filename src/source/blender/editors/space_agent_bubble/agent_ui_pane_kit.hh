@@ -118,7 +118,7 @@ struct Block;
  * \{ */
 
 void pane_fill_round(const rctf *rect, float radius, const float col[4]);
-/** Neutral column separator shared by My Generations and chat references. */
+/** Neutral column separator shared by Library and chat references. */
 void pane_column_divider(float x, float y0, float y1, float u);
 float pane_text_width(const char *text, float size);
 void pane_label_left(const char *text, float x, float cy, float size, const float col[4]);

@@ -25,6 +25,10 @@ FEATURE_HUNYUAN_UV = "hunyuan_uv"
 FEATURE_MODEL_3D = "model_3d"
 FEATURE_IMAGEGEN = "imagegen"
 FEATURE_VIDEO_GEN = "video_gen"
+# Video Upscale (FLUX Video Upscale on fal) — one source movie in, an upscaled
+# movie out. Its own queue bucket so the Video Gen footer never reports an
+# upscale as a generation in progress.
+FEATURE_VIDEO_UPSCALE = "video_upscale"
 FEATURE_LOOKDEV360 = "lookdev360"
 # PBR Generation (Tripo /v3/models/texture) — client queue bucket. Distinct
 # from FEATURE_LOOKDEV360 (self-hosted Hunyuan PBR maps → fill layers): this
@@ -138,6 +142,7 @@ __all__ = (
     "FEATURE_MODEL_3D",
     "FEATURE_IMAGEGEN",
     "FEATURE_VIDEO_GEN",
+    "FEATURE_VIDEO_UPSCALE",
     "FEATURE_LOOKDEV360",
     "FEATURE_PBR_GEN",
     "FEATURE_SCENE_GEN",

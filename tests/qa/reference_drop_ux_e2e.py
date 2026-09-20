@@ -139,14 +139,14 @@ def run(qa):
     assert attachments(qa) == before
     qa.click(area_type='AGENT_BUBBLE',text='Agent chat')
 
-    extra = [png(out/f'extra-{i}.png',(100+i*20,100,160)) for i in range(5)]
+    extra = [png(out/f'extra-{i}.png',(100+i*20,100,160)) for i in range(10)]
     qa.step('batch_respects_attachment_limit', batch_drop, qa, extra, chat=True)
-    assert len(attachments(qa)) == 5
+    assert len(attachments(qa)) == 10
     assert {Path(a['path']).name for a in attachments(qa)}.issuperset({'extra-0.png','extra-1.png','extra-2.png'})
     snap_chat(qa,out,'attachment-limit')
     result = {'mixed_batch_nonoverlap':True,'full_paths_preserved':True,
               'invalid_files_rejected':True,'webp':True,'board_chat_dedupe':True,
-              'queue_drop_isolated':True,'attachment_cap':5,'batch_bounds':bounds,'paid_requests':0}
+              'queue_drop_isolated':True,'attachment_cap':10,'batch_bounds':bounds,'paid_requests':0}
     (out/'reference-drop-verdict.json').write_text(json.dumps(result,indent=2)+'\n')
     return result
 

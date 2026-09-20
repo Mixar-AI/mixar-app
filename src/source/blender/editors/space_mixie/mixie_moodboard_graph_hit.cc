@@ -262,6 +262,50 @@ static int find_node_in_collection(PointerRNA *scene_ptr,
   return -1;
 }
 
+bool moodboard_graph_node_id_selected(PointerRNA *scene_ptr, const char *node_id)
+{
+  /* The graph cache is keyed by node id and holds only rects, while `selected`
+   * lives on the item itself -- and an id can belong to a media item, an action
+   * node or an asset node, so all three collections are searched. */
+  if (!node_id || node_id[0] == '\0') {
+    return false;
+  }
+  for (const char *collection_name : {"mixie_moodboard_images",
+                                      "mixie_moodboard_action_nodes",
+                                      "mixie_moodboard_asset_nodes"})
+  {
+    PropertyRNA *prop = RNA_struct_find_property(scene_ptr, collection_name);
+    const int count = prop ? RNA_property_collection_length(scene_ptr, prop) : 0;
+    for (int index = 0; index < count; index++) {
+      PointerRNA item;
+      RNA_property_collection_lookup_int(scene_ptr, prop, index, &item);
+      char id[MIXIE_GRAPH_ID_BUF];
+      mixie_rna_string_get_clamped(&item, "node_id", id, sizeof(id));
+      if (STREQ(id, node_id)) {
+        return RNA_boolean_get(&item, "selected");
+      }
+    }
+  }
+  return false;
+}
+
+bool moodboard_node_is_mask_detail(PointerRNA *node)
+{
+  /* The enum persists as an index, so resolve the identifier rather than
+   * comparing raw values — a catalog/enum reorder must not silently make a
+   * different node type unresizable. */
+  if (!node) {
+    return false;
+  }
+  PropertyRNA *prop = RNA_struct_find_property(node, "action_type");
+  if (!prop) {
+    return false;
+  }
+  const char *id = nullptr;
+  RNA_property_enum_identifier(nullptr, node, prop, RNA_property_enum_get(node, prop), &id);
+  return id && STREQ(id, "MASK_DETAIL");
+}
+
 void moodboard_graph_node_preview_bounds(const rctf &node_rect, rctf *r_bounds)
 {
   /* Single source of truth for the preview rect. The draw path, the floating
