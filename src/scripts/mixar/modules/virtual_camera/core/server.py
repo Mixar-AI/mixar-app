@@ -24,9 +24,14 @@ import time
 from collections import deque
 from urllib.parse import parse_qs, urlparse
 
+from mixar.config.logging_config import get_logger
+from mixar.modules.common.network import server_ssl_context
+
 from ..constants import DEFAULT_PORT, PORT_SCAN_RANGE, WS_PATH
 from . import pairing, tls_utils, ws_codec
 from .session import Session
+
+logger = get_logger(__name__)
 
 _WEBAPP_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "webapp")
@@ -170,7 +175,14 @@ class VirtualCameraServer:
         tls_ok = False
         if cert is not None:
             try:
-                ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                # NOT `ssl.SSLContext` — startup replaces it process-wide with
+                # truststore's client subclass, which verifies the PEER's chain
+                # inside `wrap_socket`. On a listening socket that is
+                # meaningless, and with the handshake deferred it is fatal:
+                # there is no `_sslobj` yet, so it raises AttributeError and the
+                # server never starts. `server_ssl_context` hands back CPython's
+                # own class (`common/network`, which owns the injection).
+                ctx = server_ssl_context()
                 ctx.load_cert_chain(cert[0], cert[1])
                 # do_handshake_on_connect=False: accepted sockets inherit the
                 # flag, deferring the TLS handshake from the accept loop into
@@ -181,8 +193,16 @@ class VirtualCameraServer:
                     do_handshake_on_connect=False,
                 )
                 tls_ok = True
-            except (ssl.SSLError, OSError):
+            except Exception as exc:
+                # TLS is a DEGRADATION, never a failure to start: without it
+                # iOS withholds DeviceOrientation and the app is joystick-only,
+                # which is worth having. Anything narrower lets a new failure
+                # mode take the whole server down, which is what an
+                # AttributeError from the trust store just did. The panel
+                # already says "No TLS: joystick control only" beside the QR;
+                # the REASON belongs in the log, not in a second message.
                 tls_ok = False
+                logger.warning("Virtual camera: serving over HTTP, TLS setup failed: %s", exc)
 
         self._httpd = httpd
         self.state.port = httpd.server_address[1]
