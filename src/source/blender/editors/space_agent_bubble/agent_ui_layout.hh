@@ -58,6 +58,7 @@ struct AgentTabLayout {
   bool active;
 };
 
+struct AgentIslandState;
 struct AgentIslandLayout {
   /* True once the region is large enough to hold the island. When false the
    * draw pass bails rather than painting a squashed island — a clipped card reads
@@ -87,6 +88,7 @@ struct AgentIslandLayout {
   rctf card_header;  /* Gradient band above the panel. */
   rctf hdr_history;
   rctf hdr_new_chat;
+  rctf hdr_handwriting; /* Explicit input method, separate from Sketch. */
   rctf hdr_checkpoints; /* Turn checkpoints — restore an earlier turn. */
   float hdr_title_cx;
   float hdr_title_y;
@@ -97,6 +99,7 @@ struct AgentIslandLayout {
   float prompt_x;
   float prompt_y;
 
+  bool compact_reference;
   rctf chip_upload;
   /* Scribble: toggle, then (only with queued marks) the reading dropdown and
    * the clear X. Always laid out; the painter and the controls skip the two
@@ -114,12 +117,16 @@ struct AgentIslandLayout {
   rctf btn_generate;
 };
 
+void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state);
+
 /**
  * Resolve the island against `region`, anchored to the region's top-left.
  *
  * `agent_mode_active` is kept in the signature for ABI stability but unused
  * covers; `active_tab` picks the filled pill.
  */
+void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state);
+
 /**
  * Resolve the island against the WINDOW, not a region.
  *

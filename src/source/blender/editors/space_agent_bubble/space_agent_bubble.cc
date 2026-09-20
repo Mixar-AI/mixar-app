@@ -311,6 +311,7 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
 /* Scribble ink canvas painter (mixie_chat_ink_overlay.cc). Drawn directly by
  * the transcript region in the EMPTY state, where the whole-panel field would
  * otherwise cover the canvas the user is writing on. */
+bool mixie_chat_ink_read_visible(wmWindowManager *wm);
 void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
 void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region);
 void mixie_chat_ink_draw_canvas(
@@ -393,10 +394,10 @@ static int g_bubble_seat_x = 0, g_bubble_seat_y = 0;
 static int g_bubble_seat_width = 0, g_bubble_seat_height = 0;
 
 
-/* Scribble PAD. While Scribble is armed the island is re-seated as a tall,
+/* Handwriting PAD. While the handwriting canvas is open the island is re-seated as a tall,
  * narrow writing pad on the host window's right third, so the 3D viewport
  * stays clear for sketching; the frame it had before is restored on disarm.
- * Driven by the hover tick's edge on `agent_bubble_scribble_active` — the
+ * Driven by the hover tick's edge on `mixie_chat_ink_read_visible` — the
  * ONE place that already polls the mode from C++, so every arm/disarm path
  * (chip, header toggle, Esc, send, the freeze modal dying) is covered
  * without Python plumbing. The saved frame is an offset from the host's
@@ -521,6 +522,14 @@ static void agent_bubble_island_controls_header(const bContext *C,
   }
 
   if (state->active_tab == AGENT_TAB_AGENT) {
+    if (state->handwriting_available) {
+      agent_bubble_rect_to_region(region, layout->hdr_handwriting, &bx, &by, &bw, &bh);
+      uiDefButO(block, ui::ButtonType::But, "mixie_chat.ink_toggle",
+                blender::wm::OpCallContext::InvokeDefault,
+                "", bx, by, bw, bh,
+                state->ink_visible ? "Return to typing; keep viewport annotations" :
+                                     "Open handwriting to turn written words into prompt text");
+    }
     agent_bubble_rect_to_region(region, layout->hdr_history, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_history",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
@@ -613,7 +622,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
 
   /* --- Scribble chips, right of Upload ---
    * The same operators the chat header binds (space_mixie_chat/ui/header.py):
-   * the toggle arms BOTH halves through scribble_mode, the reading dropdown is
+   * the toggle arms viewport annotation only; the reading dropdown is
    * a stock wm.context_menu_enum over wm.mixar_mark_intent (the panes' own
    * dropdown idiom), and Clear is mixar.scribble_mark_clear. */
   if (state->scribble_available) {
@@ -621,9 +630,8 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     uiDefButO(block, ui::ButtonType::But, "mixar.scribble_toggle",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               state->scribble_armed ?
-                  "Stop scribbling (Esc). Queued marks are kept for the next message" :
-                  "Scribble: write over the chat to type, draw on the 3D viewport to "
-                  "mark what you mean");
+                  "Stop sketching (Esc). Queued marks are kept for the next message" :
+                  "Sketch on the viewport. Type or use Voice in chat; marks accompany your message");
 
     if (state->mark_count > 0) {
       agent_bubble_rect_to_region(region, layout->chip_reading, &bx, &by, &bw, &bh);
@@ -901,16 +909,7 @@ bool agent_bubble_island_layout_get(const bContext *C,
                         r_layout,
                         pad_real_w,
                         input_lines);
-  /* The layout always reserves the Voice chip's slot right of Scribble; on a
-   * platform without a recogniser the toggle is never registered, so the
-   * chips after it close the gap and the slot is emptied. */
-  if (!r_state->voice_available) {
-    const float dx = -(AGENT_CHIP_VOICE_W + AGENT_CHIP_GAP) * r_layout->scale;
-    BLI_rctf_translate(&r_layout->chip_auto, dx, 0.0f);
-    BLI_rctf_translate(&r_layout->chip_reading, dx, 0.0f);
-    BLI_rctf_translate(&r_layout->chip_clear, dx, 0.0f);
-    r_layout->chip_voice = rctf{};
-  }
+  agent_ui_layout_fit_controls(*r_layout, *r_state);
   if (agent_bubble_references_visible(C)) {
     r_layout->input.xmax = float(px_w) - AGENT_REFERENCE_COLUMN_W * r_layout->scale -
                            16.0f * r_layout->scale;
@@ -2037,7 +2036,7 @@ static void bubble_restore_seat(int width, int height)
 /* Scribble pad frame, in logical px. The pad takes the host's right third,
  * from under the topbar to above the status bar, a small gap off the right
  * edge. Narrower hosts clamp the pad to what the layout will still draw. */
-#define AGENT_BUBBLE_PAD_MIN_WIDTH 420
+#define AGENT_BUBBLE_PAD_MIN_WIDTH 616
 #define AGENT_BUBBLE_PAD_MIN_HEIGHT 420
 #define AGENT_BUBBLE_PAD_TOP_INSET 56
 /* Measured from the host's FRAME top but sized from its CONTENT height, so
@@ -3455,7 +3454,7 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
    * PASS_THROUGH on empty canvas — reaches this WINDOW-level binding and
    * AppKit's performWindowDragWithEvent: swallows the moves handwriting
    * needs. Stand down for the whole Scribble mode, same poll the pad uses. */
-  if (agent_bubble_scribble_active(C)) {
+  if (mixie_chat_ink_read_visible(CTX_wm_manager(C))) {
     return OPERATOR_CANCELLED;
   }
 
@@ -3671,18 +3670,18 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
     }
   }
   agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, g_bubble_minimised);
-  /* Scribble pad: arm -> the open island becomes the writing pad on the
+  /* Handwriting pad: open -> the open island becomes the writing pad on the
    * host's right third; disarm -> it goes back. Edge-detected here because
    * this tick is the one C++ poll of the mode that every arm/disarm path
    * reaches (the chip, the header toggle, Esc in the freeze, the send).
    * Before the cooldown gate: the pad must not wait on a minimise/restore
    * settling. */
   {
-    const bool scribble = agent_bubble_scribble_active(C);
-    if (scribble && !g_bubble_pad_active) {
+    const bool handwriting = mixie_chat_ink_read_visible(CTX_wm_manager(C));
+    if (handwriting && !g_bubble_pad_active) {
       agent_bubble_pad_apply(C);
     }
-    else if (!scribble && g_bubble_pad_active) {
+    else if (!handwriting && g_bubble_pad_active) {
       agent_bubble_pad_restore(C);
     }
   }

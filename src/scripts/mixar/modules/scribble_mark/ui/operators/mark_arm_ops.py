@@ -2,20 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Arming, disarming, and tidying Scribble.
-
-The toggle is the feature's one entry point, and it lives in the chat
-composer next to the other ways of showing the agent something. It arms
-BOTH surfaces at once — handwriting over the chat, marks over the frozen
-viewport — through ``core/scribble_mode.py``, which is also what every
-other exit (Esc, send) goes through, so the two halves cannot drift apart.
-
-Disarming the viewport half works by clearing ``wm.mixar_mark_armed`` — the
-running modal watches that flag and stops. There is deliberately no second
-mechanism: a "stop the modal" call that could disagree with the flag is
-exactly how a viewport ends up blocked with nothing left running to
-unblock it.
-"""
+"""Viewport annotation controls; prompt input methods remain independent."""
 
 from __future__ import annotations
 
@@ -29,31 +16,24 @@ logger = get_logger(__name__)
 
 
 class MIXAR_OT_scribble_toggle(Operator):
-    """Scribble: write in the chat to type, draw on the viewport to point"""
+    """Draw on the viewport while typing or dictating the prompt."""
 
     bl_idname = "mixar.scribble_toggle"
-    bl_label = "Scribble"
+    bl_label = "Sketch Viewport"
     bl_description = (
-        "Scribble with a stylus or the mouse. Writing over the chat is "
-        "converted to text in the message box; drawing on the frozen 3D "
-        "viewport marks what you mean, and the marks are sent with your "
-        "message already resolved against the scene"
+        "Freeze the 3D viewport and draw marks or a sketch. "
+        "Type or use Voice in chat; your annotations accompany the next message"
     )
     bl_options = {"REGISTER"}
 
     def execute(self, context):
         wm = context.window_manager
         if scribble_mode.is_armed(wm):
-            # One exit for both halves: the canvas converts what is still
-            # on it and lowers; the freeze modal sees the flag drop on its
-            # next event and finishes, committing anything half-drawn.
-            scribble_mode.disarm(wm)
+            scribble_mode.disarm_marks(wm)
             overlay.tag_redraw()
             return {"FINISHED"}
 
         if not scribble_mode.arm(context, report=self.report):
-            self.report({"WARNING"},
-                        "Nothing to scribble on — open a 3D viewport or the chat")
             return {"CANCELLED"}
         return {"FINISHED"}
 

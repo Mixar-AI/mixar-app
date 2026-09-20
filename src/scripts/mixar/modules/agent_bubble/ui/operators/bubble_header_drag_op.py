@@ -14,7 +14,7 @@ up on LEFTMOUSE RELEASE.
 Bound to LEFTMOUSE PRESS in the global Window keymap. Scoped by:
   * poll(): only AGENT_BUBBLE space
   * invoke(): only the HEADER can move the island; content owns its gestures.
-    While Scribble is armed (``mixie_chat_ink_visible`` / ``mixar_mark_armed``),
+    While Handwriting is open (``mixie_chat_ink_visible``),
     the header also passes through so handwriting cannot start a window drag.
   * begin_drag refuses (and invoke passes through) when the press is
     already owned by a uiBut waiting to start its own drag, e.g. a My
@@ -96,12 +96,10 @@ class MIXAR_OT_bubble_header_drag(Operator):
         if region is None or region.type != 'HEADER':
             return {'PASS_THROUGH'}
 
-        # Handwriting / viewport marks own LEFTMOUSE. Falling through here
+        # Handwriting owns LEFTMOUSE. Falling through here
         # starts a native window drag and the pad slides under the stroke.
         wm = context.window_manager
-        if getattr(wm, "mixie_chat_ink_visible", False) or getattr(
-            wm, "mixar_mark_armed", False
-        ):
+        if getattr(wm, "mixie_chat_ink_visible", False):
             return {'PASS_THROUGH'}
 
         try:

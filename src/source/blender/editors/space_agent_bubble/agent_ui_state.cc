@@ -330,11 +330,11 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
    * operator would be inert for the deferred UI pass and read as broken. */
   r_state->scribble_available = WM_operatortype_find("MIXAR_OT_scribble_toggle", true) !=
                                 nullptr;
+  r_state->handwriting_available = WM_operatortype_find("MIXIE_CHAT_OT_ink_toggle", true) != nullptr;
   if (wm) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     r_state->ink_visible = read_bool_prop(&wm_ptr, "mixie_chat_ink_visible");
-    r_state->scribble_armed = r_state->ink_visible ||
-                              read_bool_prop(&wm_ptr, "mixar_mark_armed");
+    r_state->scribble_armed = read_bool_prop(&wm_ptr, "mixar_mark_armed");
     read_enum_name(&wm_ptr, "mixar_mark_intent", r_state->mark_intent,
                    sizeof(r_state->mark_intent));
   }

@@ -178,6 +178,28 @@ void agent_ui_draw_tab_strip(ARegion *region,
 /** \name Chip row
  * \{ */
 
+void agent_ui_draw_handwriting_control(ARegion *region,
+                                       const AgentIslandLayout *layout,
+                                       const AgentIslandState *state)
+{
+  if (!state->handwriting_available) {
+    return;
+  }
+  const float chip[4] = AGENT_COL_CHIP;
+  const float accent[4] = AGENT_COL_ACCENT;
+  const float text[4] = AGENT_COL_TEXT;
+  float fill[4];
+  agent_ui_motion_color(chip, accent,
+                        agent_ui_motion_sample(region, AgentIslandControl::Handwriting,
+                                               layout->hdr_handwriting, state->ink_visible),
+                        fill);
+  fill_round(&layout->hdr_handwriting, AGENT_CHIP_RADIUS * layout->scale, fill);
+  label_centre(state->ink_visible ? "Type instead" : "Handwriting",
+               BLI_rctf_cent_x(&layout->hdr_handwriting),
+               BLI_rctf_cent_y(&layout->hdr_handwriting),
+               AGENT_CHIP_FONT * agent_ui_text_unit(), text);
+}
+
 void agent_ui_draw_chip_row(ARegion *region,
                             const AgentIslandLayout *layout,
                             const AgentIslandState *state)
@@ -208,11 +230,11 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Upload, layout->chip_upload),
       upload_fill);
   fill_round(&layout->chip_upload, radius, upload_fill);
-  chip_content(layout->chip_upload, AGENT_ICON_IMAGE, "Upload Reference",
+  chip_content(layout->chip_upload, AGENT_ICON_IMAGE,
+               layout->compact_reference ? "Reference" : "Upload Reference",
                size, icon_edge, icon_gap, text, upload_fill);
 
-  /* Scribble. Lit in the accent while either half is up (the viewport freeze
-   * or the chat ink canvas) — the same "pressed" the headers show — and
+  /* Sketch. Lit in the accent while the viewport freeze is up, and
    * carrying the count of draft marks that will ride with the next message.
    * The reading chip and the clear X exist only while marks are queued: a
    * drawing silently read as nine placement targets is a mode the user could
@@ -230,10 +252,10 @@ void agent_ui_draw_chip_row(ARegion *region,
     fill_round(&layout->chip_scribble, radius, scribble_fill);
     char label[32];
     if (state->mark_count > 0) {
-      SNPRINTF(label, "Scribble · %d", state->mark_count);
+      SNPRINTF(label, "Sketch · %d", state->mark_count);
     }
     else {
-      BLI_strncpy(label, "Scribble", sizeof(label));
+      BLI_strncpy(label, "Sketch", sizeof(label));
     }
     chip_content(layout->chip_scribble, AGENT_ICON_PEN, label,
                  size, icon_edge, icon_gap, text, scribble_fill);

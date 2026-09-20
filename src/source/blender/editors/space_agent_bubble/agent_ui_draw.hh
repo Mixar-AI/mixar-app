@@ -61,12 +61,11 @@ struct AgentIslandState {
   float credits_remaining;
   bool splat_is_new;        /* Draws the NEW badge on the Gaussian Splat tab. */
 
-  /* Scribble (modules/scribble_mark + the chat ink canvas). The composer chip
-   * mirrors what the chat and bubble headers show: pressed while EITHER half is
-   * up, the DRAFT mark count riding with the next message, and how that ink is
-   * read. Absent until Python registers mixar.scribble_toggle. */
+  /* Sketch reflects the viewport freeze and DRAFT marks. Handwriting is
+   * an independent, explicitly opened prompt input method. */
   bool scribble_available;
-  bool scribble_armed;      /* Viewport freeze up, or the chat ink canvas open. */
+  bool scribble_armed;      /* Viewport annotation only. */
+  bool handwriting_available;
   bool ink_visible;         /* The chat handwriting canvas is open. */
   int mark_count;           /* DRAFT marks queued for the next message. */
   char mark_intent[32];     /* UI name of wm.mixar_mark_intent (Auto / Sketch / Marks). */
@@ -106,6 +105,8 @@ void agent_ui_draw_island(ARegion *region,
 
 /** Fixed-geometry chrome, with region-owned native interaction feedback. */
 void agent_ui_draw_tab_strip(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
+void agent_ui_draw_handwriting_control(ARegion *region, const AgentIslandLayout *layout,
+                                       const AgentIslandState *state);
 void agent_ui_draw_chip_row(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
 
 /** Translucent moodboard dot grid overlay covering the normal text input field during scribble. */
