@@ -58,6 +58,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_rules_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Edit Helpers
@@ -225,7 +227,7 @@ static void rules_paste(ARegion *region, MixieChatRuntime *rt)
   if (out > 0) {
     rules_insert(region, rt, buf, out);
   }
-  MEM_freeN(buf);
+  MEM_delete_void(static_cast<void *>(buf));
 }
 
 /** Move the caret one visual line up/down, preserving the goal column. */
@@ -726,3 +728,4 @@ bool mixie_chat_rules_handle_event(bContext *C, const wmEvent *event)
 }
 
 /** \} */
+}  // namespace blender

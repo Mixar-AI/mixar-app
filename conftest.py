@@ -16,6 +16,16 @@ def _install_bpy_stubs():
         'bpy', 'bpy.types', 'bpy.props', 'bpy.utils', 'bpy.app',
         'bpy.app.handlers', 'bpy.app.timers', 'bpy.context', 'bpy.data',
         'bpy.ops', 'bpy.ops.mixar',
+        # The rest of what Blender puts on sys.path. Without these, a module
+        # is untestable purely because it imports one of them at module
+        # scope, which pushes its logic into source-level assertions that
+        # cannot actually run it. Stubbing them costs nothing: nothing here
+        # can import the real ones anyway.
+        'bpy_extras', 'bpy_extras.view3d_utils', 'bpy_extras.object_utils',
+        'mathutils', 'mathutils.geometry',
+        'gpu', 'gpu.state', 'gpu.shader', 'gpu.texture',
+        'gpu_extras', 'gpu_extras.batch', 'gpu_extras.presets',
+        'blf', 'bmesh', 'addon_utils', 'idprop', 'aud',
     ]
     for name in stub_names:
         if name not in sys.modules:
@@ -29,3 +39,26 @@ def _install_bpy_stubs():
 
 
 _install_bpy_stubs()
+
+
+def _preload_real_optional_modules():
+    """Import the real Pillow/numpy before any test module can stub them.
+
+    ``mixar.modules.testing.mock_bpy`` stubs "third-party modules that may not
+    be available" only when they are ABSENT from ``sys.modules``, so whichever
+    test imports it first decides whether PIL is real for the whole session.
+    Collection order then silently decided whether the image tests ran against
+    Pillow or against a MagicMock that hands back empty bytes. Importing the
+    real packages here — conftest runs before any test module — makes the mock
+    the fallback it was meant to be.
+    """
+    import importlib
+
+    for name in ("numpy", "PIL", "PIL.Image", "PIL.ImageOps"):
+        try:
+            importlib.import_module(name)
+        except ImportError:
+            pass
+
+
+_preload_real_optional_modules()

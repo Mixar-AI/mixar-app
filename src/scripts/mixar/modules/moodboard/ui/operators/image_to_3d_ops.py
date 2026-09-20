@@ -49,6 +49,12 @@ class MIXIE_OT_image_to_3d_generate(Operator):
     image_name: bpy.props.StringProperty(default="")
     model: bpy.props.StringProperty(default="")
     prompt: bpy.props.StringProperty(default="")
+    # Agent-chosen name for the imported mesh; empty falls back to the input
+    # image name, then a prompt slug (see generation_enqueue.derive_model_name).
+    name: bpy.props.StringProperty(default="")
+    # Where the import lands, as JSON (job_queue.core.placement). Applied by
+    # the post-import hook, so the agent's turn need not outlive the job.
+    placement: bpy.props.StringProperty(default="")
 
     # Trellis-specific
     texture_size: bpy.props.IntProperty(default=0, min=0, max=4096)
@@ -85,7 +91,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             # "which model?" ask); empty means the catalog default.
             model_name = self.model.strip() or _get_default_model_3d()
             if not model_name:
-                self.report({"WARNING"}, "No models available - please wait for models to load")
+                self.report({"ERROR"}, "No models available - please wait for models to load")
                 return {"CANCELLED"}
         else:
             if sidebar_tab:
@@ -100,7 +106,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 model_name = _get_default_model_3d()
 
             if not model_name or model_name in ("LOADING", "ERROR", "NONE", ""):
-                self.report({"WARNING"}, "Please wait for models to load or check connection")
+                self.report({"ERROR"}, "Please wait for models to load or check connection")
                 return {"CANCELLED"}
 
         # Get the input image based on context
@@ -110,10 +116,10 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             if hasattr(scene, 'mixie_image_to_3d_image'):
                 image = scene.mixie_image_to_3d_image
                 if not image:
-                    self.report({"WARNING"}, "Please attach an image in chat")
+                    self.report({"ERROR"}, "Please attach an image in chat")
                     return {"CANCELLED"}
             else:
-                self.report({"WARNING"}, "No input image available")
+                self.report({"ERROR"}, "No input image available")
                 return {"CANCELLED"}
         elif sidebar_tab:
             use_selected = getattr(sidebar_tab, 'use_selected_image', False)
@@ -125,12 +131,12 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 if selected:
                     image = selected[0].image
                 else:
-                    self.report({"WARNING"}, "Please select an image in the moodboard")
+                    self.report({"ERROR"}, "Please select an image in the moodboard")
                     return {"CANCELLED"}
             else:
                 image = getattr(sidebar_tab, 'reference_image', None)
                 if not image:
-                    self.report({"WARNING"}, "Please add an input image")
+                    self.report({"ERROR"}, "Please add an input image")
                     return {"CANCELLED"}
         else:
             if hasattr(scene, 'mixie_image_to_3d_use_selected') and scene.mixie_image_to_3d_use_selected:
@@ -141,15 +147,15 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 if selected:
                     image = selected[0].image
                 else:
-                    self.report({"WARNING"}, "No image selected in moodboard")
+                    self.report({"ERROR"}, "No image selected in moodboard")
                     return {"CANCELLED"}
             elif hasattr(scene, 'mixie_image_to_3d_image'):
                 image = scene.mixie_image_to_3d_image
                 if not image:
-                    self.report({"WARNING"}, "No input image selected")
+                    self.report({"ERROR"}, "No input image selected")
                     return {"CANCELLED"}
             else:
-                self.report({"WARNING"}, "No input image available")
+                self.report({"ERROR"}, "No input image available")
                 return {"CANCELLED"}
 
         # Turnaround sheets: the detect-views endpoint already split this
@@ -184,6 +190,11 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             from mixar.modules.common.job_queue import enqueue_generation
             from mixar.modules.common.job_queue.constants import FEATURE_MODEL_3D
 
+            from mixar.modules.moodboard.core.generation_enqueue import (
+                derive_model_name, make_model_rename_on_imported,
+                model_front_zrot,
+            )
+
             job_label = image.name if image else model_name
             payload = {}
             if turnaround_payload:
@@ -194,6 +205,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             if prompt:
                 payload["prompt"] = prompt
 
+            mesh_name = derive_model_name(image, prompt or "")
             job = enqueue_generation(
                 kind="glb",
                 feature_key=FEATURE_MODEL_3D,
@@ -202,11 +214,13 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 payload=payload,
                 label=job_label or "model_3d",
                 fail_message="3D model generation failed",
+                on_imported=make_model_rename_on_imported(
+                    mesh_name, model_front_zrot(model_name)),
                 scene_flag="mixie_image_to_3d_is_generating",
                 batch_popup_title="Image to 3D batch complete",
             )
             if not job:
-                self.report({"WARNING"}, "A duplicate generation is already queued")
+                self.report({"ERROR"}, "A duplicate generation is already queued")
                 return {"CANCELLED"}
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")
@@ -349,6 +363,16 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         # chained ImageGen → Image-to-3D).
         job_label = prompt[:40] if prompt else (self.image_name.strip() or "model_3d")
 
+        # Mesh name: agent-chosen (self.name) wins, else the input image name,
+        # else a prompt slug. Applied to the import (Trellis empty + mesh, or
+        # a single Hunyuan/Tripo mesh) with origin/world-origin normalization.
+        from mixar.modules.moodboard.core.generation_enqueue import (
+            derive_model_name, make_model_rename_on_imported, model_front_zrot,
+        )
+        mesh_name = derive_model_name(img, prompt or "", explicit=self.name)
+        from mixar.modules.common.job_queue.core.placement import parse_placement
+        placement = parse_placement(self.placement)
+
         job = enqueue_generation(
             kind="glb",
             feature_key=FEATURE_MODEL_3D,
@@ -357,6 +381,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             payload=payload,
             label=job_label,
             fail_message="3D model generation failed",
+            on_imported=make_model_rename_on_imported(
+                mesh_name, model_front_zrot(model_name), placement=placement),
             scene_flag="mixie_image_to_3d_is_generating",
             batch_popup_title="Image to 3D batch complete",
         )

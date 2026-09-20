@@ -13,8 +13,6 @@ from mathutils import Vector
 
 from mixar.config.logging_config import get_logger
 
-from .render_spec import render_frame_bounds
-
 
 logger = get_logger(__name__)
 
@@ -221,16 +219,16 @@ def _depth_compositor(scene, view_layer, depth_min: float, depth_max: float) -> 
     return tree.name
 
 
-def _configure_common(scene, shot, frame_start: int, frame_end: int, path: str) -> None:
+def _configure_common(scene, target, frame_start: int, frame_end: int, path: str) -> None:
     render = scene.render
-    scene.camera = shot.camera
+    scene.camera = target.camera
     scene.frame_start = frame_start
     scene.frame_end = frame_end
     scene.frame_step = 1
     scene.frame_set(frame_start)
     render.engine = 'BLENDER_WORKBENCH'
     render.filepath = path
-    render.resolution_percentage = int(shot.render_resolution_percentage)
+    render.resolution_percentage = int(target.resolution_percentage)
     render.film_transparent = False
     render.use_compositing = False
     render.use_sequencer = False
@@ -261,16 +259,20 @@ def _configure_common(scene, shot, frame_start: int, frame_end: int, path: str) 
 
 def _scene_has_splats(scene) -> bool:
     """True when any mesh carries the KIRI splat geometry-nodes modifier."""
-    return any(
-        o.type == 'MESH' and 'KIRI_3DGS_Render_GN' in o.modifiers
-        for o in scene.objects
-    )
+    from mixar.modules.moodboard.core.splat_render_camera import scene_has_splats
+
+    return scene_has_splats(scene)
 
 
-def configure_render_pass(scene, view_layer, shot, kind: str, path: str) -> str:
-    """Configure one Workbench or normalized-depth movie pass."""
-    frame_start, frame_end = render_frame_bounds(beat.frame for beat in shot.beats)
-    _configure_common(scene, shot, frame_start, frame_end, path)
+def configure_render_pass(scene, view_layer, target, kind: str, path: str) -> str:
+    """Configure one Workbench or normalized-depth movie pass.
+
+    The span comes from the TARGET, which froze it when the job started — a
+    Director shot resolves it from its beats and a plain camera from its own
+    keys or the scene range, and neither may drift mid-render.
+    """
+    frame_start, frame_end = target.frame_start, target.frame_end
+    _configure_common(scene, target, frame_start, frame_end, path)
     view_layer.use_pass_z = kind == "DEPTH"
     shading = scene.display.shading
     if kind == "BEAUTY":
@@ -295,7 +297,7 @@ def configure_render_pass(scene, view_layer, shot, kind: str, path: str) -> str:
     _safe_set(scene.view_settings, "look", 'None')
     depth_min, depth_max = _sample_depth_range(
         scene,
-        shot.camera,
+        target.camera,
         frame_start,
         frame_end,
     )

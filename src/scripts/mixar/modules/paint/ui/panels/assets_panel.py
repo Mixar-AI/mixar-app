@@ -14,12 +14,16 @@ from bpy.types import Header, Panel
 
 
 class MIXAR_ASSETS_HT_header(Header):
-    """Header for the Mixar Assets space (hosts the space-switch dropdown)."""
+    """Title bar for the Mixar Assets space.
+
+    No ``template_header()``: the space is hidden from the Editor Type
+    dropdown, matching Zen / Cinema chrome that is not a switchable editor.
+    """
     bl_space_type = 'MIXAR_ASSETS'
 
     def draw(self, context):
         layout = self.layout
-        layout.template_header()
+        layout.label(text="Assets")
 
 
 class MIXAR_ASSETS_PT_main(Panel):

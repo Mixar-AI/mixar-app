@@ -36,7 +36,7 @@ def _setup_bounds():
         "close": [("n1", 480, 260, 30, 30)],
         # (nid, operator, url, x, y, w, h)
         "action": [
-            ("n1", "mixar.dismiss_update", None, 300, 100, 80, 38),
+            ("n1", "mixar.open_downloads_page", None, 300, 100, 80, 38),
             ("n1", "mixar.install_update", None, 390, 100, 120, 38),
         ],
         # (nid, url, x, y, w, h)
@@ -88,7 +88,7 @@ def test_hover_unknown_region_clears_key():
 def test_adjacent_buttons_resolve_distinctly():
     _setup_bounds()
     tr.update_hover_state(REGION, 310, 110)
-    assert tr.toast_hover_state["key"] == ("action", "n1", "mixar.dismiss_update")
+    assert tr.toast_hover_state["key"] == ("action", "n1", "mixar.open_downloads_page")
     tr.update_hover_state(REGION, 395, 110)
     assert tr.toast_hover_state["key"] == ("action", "n1", "mixar.install_update")
 

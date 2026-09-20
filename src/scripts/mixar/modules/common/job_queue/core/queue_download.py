@@ -226,7 +226,13 @@ class DownloadMixin:
         # Cancelled, or already failed by the RUNNING_DOWNLOAD watchdog while
         # this thread was still running: drop the file, free the slot, and
         # never resurrect a job that has already reached a terminal state.
-        if job.state != JobState.RUNNING_DOWNLOAD:
+        # The membership check covers clear_all() (e.g. a load_post file
+        # switch): a job dropped from the queue must not import its result
+        # into the newly opened file even if its state read as
+        # RUNNING_DOWNLOAD just before the drop.
+        if job.state != JobState.RUNNING_DOWNLOAD or not any(
+            j is job for j in self._jobs
+        ):
             try:
                 os.remove(filepath)
             except OSError:
@@ -258,6 +264,28 @@ class DownloadMixin:
                 os.remove(filepath)
             except OSError:
                 pass
+        else:
+            # Outside the import's try: the objects are already in the scene
+            # and the job is already SUCCESS, so a failure in undo bookkeeping
+            # must not flip a completed, paid-for import to FAILED and delete
+            # the file it would be retried from. push_undo_step never raises,
+            # but importing it can -- the utils package pulls in PIL/numpy,
+            # which is also why the import is deferred out of the bootstrap
+            # path.
+            #
+            # Without the step, Blender's next Ctrl+Z rewinds past the import
+            # and the generated object is gone beyond redo, because the forward
+            # step predates it too.
+            try:
+                from mixar.modules.common.utils.undo import push_undo_step
+                push_undo_step(
+                    f"Import {job.label}" if job.label else "Import Generated Result"
+                )
+            except Exception as undo_error:  # noqa: BLE001 — never demote a success
+                logger.warning(
+                    "%s undo checkpoint for %s skipped: %s",
+                    LOG_PREFIX, job.label or "import", undo_error,
+                )
 
         self._notify()
         self._pump()

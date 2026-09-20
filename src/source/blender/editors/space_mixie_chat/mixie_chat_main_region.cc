@@ -15,11 +15,13 @@
 #include "BLI_listbase.h"
 #include "BLI_rect.h"
 #include "BLI_time.h"
+#include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 
 #include "DNA_space_types.h"
+#include "DNA_windowmanager_types.h"
 
 #include "RNA_access.hh"
 
@@ -35,6 +37,8 @@
 #include "UI_view2d.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Cursor / Hover Tracking
@@ -43,8 +47,8 @@
 void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region)
 {
   int mval[2];
-  mval[0] = win->eventstate->xy[0] - region->winrct.xmin;
-  mval[1] = win->eventstate->xy[1] - region->winrct.ymin;
+  mval[0] = win->runtime->eventstate->xy[0] - region->winrct.xmin;
+  mval[1] = win->runtime->eventstate->xy[1] - region->winrct.ymin;
 
   bool needs_redraw = false;
   bool any_hovered = false;
@@ -58,6 +62,15 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
    * headers cover most of the bubble, which made the cursor flip to a hand
    * over practically the whole window. */
   const bool suppress_hand = (area->spacetype == SPACE_AGENT_BUBBLE);
+
+  /* Scribble ink overlay is modal while open — it owns the cursor (paint
+   * crosshair over the canvas) and suppresses hover behind its scrim.
+   * Checked first, matching its topmost draw slot. */
+  if (rt->ink_overlay_active &&
+      mixie_chat_ink_cursor(win, rt, region, float(mval[0]), float(mval[1])))
+  {
+    return;
+  }
 
   /* Project-rules overlay is modal while open — it owns hover + cursor and
    * suppresses hover on everything behind its scrim. Checked before the
@@ -116,7 +129,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
   /* Convert to View2D coords for message option bubbles */
   View2D *v2d = &region->v2d;
   float mouse_x, mouse_y;
-  UI_view2d_region_to_view(v2d, mval[0], mval[1], &mouse_x, &mouse_y);
+  ui::view2d_region_to_view(v2d, mval[0], mval[1], &mouse_x, &mouse_y);
 
   blender::Vector<MessageLayoutData> &layout_cache =
       const_cast<blender::Vector<MessageLayoutData> &>(mixie_chat_get_layout_cache(smixie));
@@ -160,6 +173,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         any_hovered = true;
       }
     }
+
 
     /* Feedback stars hover. Locked (in-flight or accepted) feedback is not
      * interactive, so it gets no hover affordance either. */
@@ -208,7 +222,12 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         if (was_hovered != step.is_hovered) {
           needs_redraw = true;
         }
-        if (step.is_hovered) {
+        /* Hand cursor only on acted rows that actually toggle. Observation
+         * labels such as "Inspected scene" (kind read/search) are not
+         * controls even when they carry a detail body. */
+        if (step.is_hovered && step.detail[0] != '\0' &&
+            step.kind != 0 && step.kind != 3)
+        {
           any_hovered = true;
         }
       }
@@ -217,6 +236,17 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         BLI_rctf_isect_pt(&layout.thinking_header_bounds, mouse_x, mouse_y))
     {
       any_hovered = true;
+    }
+  }
+
+  /* Code-block copy chips (hover state lives in mixie_chat_code_copy.cc) */
+  {
+    bool chip_hover_changed = false;
+    if (mixie_chat_code_hits_hover(rt, mouse_x, mouse_y, &chip_hover_changed)) {
+      any_hovered = true;
+    }
+    if (chip_hover_changed) {
+      needs_redraw = true;
     }
   }
 
@@ -237,8 +267,63 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
  * before any keymap handlers, ensuring LEFTMOUSE reaches our click dispatch.
  * \{ */
 
-static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
+/**
+ * Is this region's transcript the surface actually on screen?
+ *
+ * The Agent Bubble's WINDOW region is SHARED: the transcript draws there on
+ * the Agent tab, while the 3D / Media / Splat / Generations / Queue panes build
+ * their uiBlocks into the very same region. This handler is registered so it
+ * sees LEFTMOUSE ahead of the ui::Block handler (mixie_chat_main_region_init) —
+ * exactly the overlap that comment warns about. On a pane tab it would dispatch
+ * message rects left over from the last Agent-tab draw and BREAK the event
+ * before the pane's own button ran. SPACE_MIXIE_CHAT is never tab-switched.
+ */
+static bool mixie_chat_dispatch_is_live(const bContext *C)
 {
+  const ScrArea *area = CTX_wm_area(C);
+  if (!area) {
+    return false;
+  }
+  if (area->spacetype != SPACE_AGENT_BUBBLE) {
+    return area->spacetype == SPACE_MIXIE_CHAT;
+  }
+
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm) {
+    return true;
+  }
+  /* wm.mixar_bubble_tab is the island's ONE source of what the card shows
+   * (bubble_tab_props.py). Matched on the stable enum IDENTIFIER, never an
+   * index; absent before Python registers it, and the card is Agent until
+   * then — so every unreadable branch below falls back to live. */
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab");
+  if (!prop || RNA_property_type(prop) != PROP_ENUM) {
+    return true;
+  }
+  const char *ident = nullptr;
+  if (!RNA_property_enum_identifier(
+          nullptr, &wm_ptr, prop, RNA_property_enum_get(&wm_ptr, prop), &ident) ||
+      ident == nullptr)
+  {
+    return true;
+  }
+  return STREQ(ident, "AGENT");
+}
+
+int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
+{
+  /* Ink is modal over this WINDOW region even when a non-Agent tab owns
+   * the card. The live-tab gate below would otherwise CONTINUE and the
+   * Agent Bubble's WINDOW-level LEFTMOUSE binding would move the pad. */
+  if (mixie_chat_ink_handle_event(C, event)) {
+    return WM_UI_HANDLER_BREAK;
+  }
+
+  if (!mixie_chat_dispatch_is_live(C)) {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
   /* 0. Project-rules overlay — modal while open: consumes text-editing
    * keys, clicks (incl. click-away close), scroll, and ESC. Checked
    * before the history overlay because it draws on top. Cheap no-op when
@@ -292,6 +377,11 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
       return WM_UI_HANDLER_BREAK;
     }
 
+    /* 3b. Code-block copy chip clicks */
+    if (mixie_chat_handle_code_copy_click(C, region, mx, my)) {
+      return WM_UI_HANDLER_BREAK;
+    }
+
     /* 4. Steps/thinking collapse toggle clicks */
     if (mixie_chat_handle_steps_click(C, region, mx, my)) {
       return WM_UI_HANDLER_BREAK;
@@ -314,7 +404,7 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
 
       View2D *v2d = &region->v2d;
       float view_x, view_y;
-      UI_view2d_region_to_view(v2d, int(mx), int(my), &view_x, &view_y);
+      ui::view2d_region_to_view(v2d, int(mx), int(my), &view_x, &view_y);
 
       for (const MessageLayoutData &layout : layout_cache) {
         for (int i = 0; i < layout.option_bubble_count; i++) {
@@ -326,19 +416,24 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
              * option text as the action value. Dispatch via Python operator. */
             wmOperatorType *ot = WM_operatortype_find("mixie_chat.select_slot_action", true);
             if (ot && layout.bubble_id[0] != '\0') {
-              PointerRNA op_ptr;
-              WM_operator_properties_create_ptr(&op_ptr, ot);
+              PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
               RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
               RNA_string_set(&op_ptr, "action_value", bubble.option_text);
-              WM_operator_name_call_ptr(
-                  C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+              mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
               WM_operator_properties_free(&op_ptr);
-              ED_region_tag_redraw(region);
               return WM_UI_HANDLER_BREAK;
             }
           }
         }
       }
+    }
+
+    /* 8. Scribble auto-open: a stylus press that reached this point hit no
+     * interactive chat target — pen users write, they don't drag-select
+     * transcript text. The press itself seeds the first ink stroke.
+     * Mouse presses fall through to text selection / View2D as before. */
+    if (mixie_chat_ink_try_auto_open(C, event)) {
+      return WM_UI_HANDLER_BREAK;
     }
 
     /* Let text selection / View2D scrolling handle it */
@@ -347,7 +442,7 @@ static int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*use
   return WM_UI_HANDLER_CONTINUE;
 }
 
-static void mixie_chat_ui_handler_remove(bContext * /*C*/, void * /*userdata*/)
+void mixie_chat_ui_handler_remove(bContext * /*C*/, void * /*userdata*/)
 {
   /* Nothing to free */
 }
@@ -362,7 +457,7 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
 {
   const float prev_y_min = region->v2d.cur.ymin;
 
-  UI_view2d_region_reinit(&region->v2d, V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
+  ui::view2d_region_reinit(&region->v2d, ui::V2D_COMMONVIEW_CUSTOM, region->winx, region->winy);
 
   View2D *v2d = &region->v2d;
 
@@ -385,16 +480,16 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
   v2d->align = V2D_ALIGN_NO_NEG_X | V2D_ALIGN_NO_NEG_Y;
   v2d->keeptot = V2D_KEEPTOT_STRICT;
 
-  /* Register uiBlock event handler so embedded text inputs (feedback comment)
+  /* Register ui::Block event handler so embedded text inputs (feedback comment)
    * can receive clicks and keyboard events. NOTE: both this and
    * WM_event_add_ui_handler below PREPEND (BLI_addhead), so registering the
-   * uiBlock handler first actually makes it run AFTER the chat handler —
+   * ui::Block handler first actually makes it run AFTER the chat handler —
    * mixie_chat_ui_handler gets first look at every mouse press. That works
    * today only because no chat hit-target overlaps the feedback text field
    * (and active textedit grabs keys via the window modal handler); if a chat
-   * hit-target ever overlaps a uiBlock button, the click will be stolen from
+   * hit-target ever overlaps a ui::Block button, the click will be stolen from
    * the button unless this ordering is revisited. */
-  UI_region_handlers_add(&region->runtime->handlers);
+  ui::region_handlers_add(&region->runtime->handlers);
 
   /* Register our direct UI click handler.
    * UI handlers run before ALL keymap handlers in Blender's event dispatch.
@@ -429,9 +524,10 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
   WM_event_add_keymap_handler(&region->runtime->handlers, mixie_keymap);
 
   /* Register dropbox handler for image drag-and-drop. */
-  ListBase *dropboxes = WM_dropboxmap_find(
+  ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
       "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
-  WM_event_add_dropbox_handler(&region->runtime->handlers, dropboxes);
+  WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
+                               static_cast<ListBaseT<wmDropBox> *>(dropboxes));
 }
 
 /* ---- Background colour override for Agent Bubble -------------------- */
@@ -472,7 +568,7 @@ static void mixie_chat_clear_background()
         s_bg_override_rgba[2], s_bg_override_rgba[3]);
   }
   else {
-    UI_ThemeClearColor(TH_BACK);
+    ui::theme::frame_buffer_clear(TH_BACK);
   }
 }
 
@@ -487,6 +583,8 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region)
    * Python toggles keep the two mutually exclusive; this is belt and
    * braces for the event-order contract in mixie_chat_ui_handler). */
   mixie_chat_draw_rules_overlay(C, region);
+  /* Scribble ink overlay — topmost, matching its first-in-events slot. */
+  mixie_chat_draw_ink_overlay(C, region);
 }
 
 /* -------------------------------------------------------------------- */
@@ -559,6 +657,11 @@ void mixie_chat_main_region_exit(wmWindowManager *wm, ARegion * /*region*/)
    * still animating, its next draw re-creates the pump (content updates keep
    * tagging it); if this was the last one, the timer must die here. */
   mixie_chat_anim_pump_shutdown(wm);
+  /* Same discipline for the scribble idle-commit timer: window close and
+   * file-load WM replacement free window-bound timers, and a dangling
+   * global pointer would block re-arming AND could match a recycled
+   * foreign wmTimer. A surviving surface re-arms on its next pen-up. */
+  mixie_chat_ink_idle_timer_remove(wm);
 }
 
 /** \} */
@@ -640,3 +743,4 @@ void mixie_chat_main_region_layout(const bContext * /*C*/, ARegion *region)
 }
 
 /** \} */
+}  // namespace blender

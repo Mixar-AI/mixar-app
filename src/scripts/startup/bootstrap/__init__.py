@@ -463,12 +463,12 @@ def _initialize_theme_defaults():
     import bpy
     try:
         theme = bpy.context.preferences.themes[0]
-        theme.space_mixie_chat.chat_bubble_hover = (0.3, 0.85, 0.95, 0.95)
+        theme.mixie_chat.chat_bubble_hover = (0.3, 0.85, 0.95, 0.95)
         # Past-chats overlay row hover. Seeded every launch (like
         # chat_bubble_hover) so prefs saved before the field existed —
         # which load it as zero — still get a sensible value. Tune the
-        # look here or via theme.space_mixie_chat.chat_history_row_hover.
-        theme.space_mixie_chat.chat_history_row_hover = (1.0, 1.0, 1.0, 0.07)
+        # look here or via theme.mixie_chat.chat_history_row_hover.
+        theme.mixie_chat.chat_history_row_hover = (1.0, 1.0, 1.0, 0.07)
         logger.debug("Initialized mixie chat theme colors")
     except Exception as e:
         logger.debug("Could not initialize theme defaults: %s", e)
@@ -503,6 +503,19 @@ def register():
 
         # 0. Set up mixar packages in sys.modules first (required for relative imports)
         _setup_mixar_packages()
+
+        # 0b. Trust store + proxy. Must precede every bootstrap module: the
+        # OS trust store is installed by replacing ssl.SSLContext, which only
+        # affects contexts created afterwards, and the proxy is exported via
+        # the environment that each HTTP/WebSocket client reads at connect.
+        try:
+            from mixar.modules.common.network import configure_network
+            configure_network()
+        except Exception as e:
+            logger.error(
+                "Network configuration failed; continuing with library defaults: %s",
+                e, exc_info=True,
+            )
 
         # 1. Load and register bootstrap modules first (synchronous, only ~5 files)
         _load_bootstrap_modules()

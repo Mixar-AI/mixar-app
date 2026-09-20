@@ -11,6 +11,7 @@ Provides service classes for each API module with singleton accessors.
 from .agent_service import AgentService, get_agent_service
 from .auth_service import AuthService, get_auth_service
 from .base_service import BaseService
+from .handwriting_service import HandwritingService, get_handwriting_service
 from .images_service import ImagesService, get_images_service
 from .generation_metadata_service import GenerationMetadataService, get_generation_metadata_service
 from .generation_catalog_service import GenerationCatalogService, get_generation_catalog_service
@@ -19,6 +20,8 @@ from .scene_recon_service import SceneReconService, get_scene_recon_service
 from .scene_segment_service import SceneSegmentService, get_scene_segment_service
 from .update_service import UpdateService, get_update_service
 from .job_queue_service import JobQueueService, get_job_queue_service
+from .subscription_service import SubscriptionService, get_subscription_service
+from .prompt_refine_service import PromptRefineService, get_prompt_refine_service
 
 __all__ = [
     # Base
@@ -29,6 +32,9 @@ __all__ = [
     # Agent
     "AgentService",
     "get_agent_service",
+    # Handwriting (Scribble recognition)
+    "HandwritingService",
+    "get_handwriting_service",
     # Images
     "ImagesService",
     "get_images_service",
@@ -53,4 +59,10 @@ __all__ = [
     # Job Queue
     "JobQueueService",
     "get_job_queue_service",
+    # Subscriptions (billing status / usage quota)
+    "SubscriptionService",
+    "get_subscription_service",
+    # Prompt refinement (the Refine button beside a generation prompt)
+    "PromptRefineService",
+    "get_prompt_refine_service",
 ]

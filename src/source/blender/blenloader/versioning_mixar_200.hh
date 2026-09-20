@@ -11,6 +11,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct Main;
 
 /**
@@ -18,3 +21,5 @@ struct Main;
  * Called from blo_do_versions_500() in versioning_500.cc.
  */
 void blo_do_versions_mixar(Main *bmain);
+
+}  // namespace blender

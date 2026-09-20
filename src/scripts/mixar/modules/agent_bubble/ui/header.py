@@ -29,6 +29,9 @@ from typing import NamedTuple
 import bpy
 from bpy.types import Header
 
+from mixar.modules.agent_bubble.constants import (
+    BUBBLE_WINDOW_CONTROLS_SUPPORTED,
+)
 from mixar.modules.agent_bubble.core.pill_icons import (
     get_pill_icon_id_named,
     get_running_text_suffix,
@@ -177,6 +180,13 @@ def _get_status(scene) -> PillStatus:
         # avoids the visual collision.
         return PillStatus("Awaiting Input", "blue", 'QUESTION')
 
+    # The orchestrator ended its turn but the run is open: workers are still
+    # building and the backend will start the next turn itself. Not "Running"
+    # (nothing to stop, the composer is free) and not "Idle" (work is going
+    # on). The viewport lock stays down — it keys on BUSY/MODIFYING.
+    if getattr(scene, "mixie_run_open", False) is True:
+        return PillStatus("Working in background", "green", 'RECORD_ON')
+
     # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
     # enqueues a multi-minute generation, answers in chat and drops to IDLE
     # while the job runs — at which point every surface claimed nothing was
@@ -283,22 +293,36 @@ class AGENT_BUBBLE_HT_header(Header):
             # clipped by the window bounds and only show "Restore" /
             # "Restore." as a partial fragment that looks like a UI
             # bug. Suppressing the tooltip entirely is cleaner.
-            if icon_id:
-                row.operator(
-                    "mixar.bubble_restore_user",
-                    text=label,
-                    icon_value=icon_id,
-                    emboss=False,
-                    no_tooltip=True,
-                )
+            #
+            # Where the native window helpers are missing (Linux) the
+            # restore operator is a stub that returns CANCELLED, so the
+            # pill is drawn as a plain label instead of a button: the
+            # status still reads, but nothing invites a click that
+            # cannot do anything. Reaching the pill at all is already
+            # unlikely there — minimise is stubbed too — but the
+            # workspace-change autoshow can arm the minimised state
+            # directly (agent_bubble_module._on_workspace_change).
+            if BUBBLE_WINDOW_CONTROLS_SUPPORTED:
+                if icon_id:
+                    row.operator(
+                        "mixar.bubble_restore_user",
+                        text=label,
+                        icon_value=icon_id,
+                        emboss=False,
+                        no_tooltip=True,
+                    )
+                else:
+                    row.operator(
+                        "mixar.bubble_restore_user",
+                        text=label,
+                        icon=status.fallback_icon,
+                        emboss=False,
+                        no_tooltip=True,
+                    )
+            elif icon_id:
+                row.label(text=label, icon_value=icon_id)
             else:
-                row.operator(
-                    "mixar.bubble_restore_user",
-                    text=label,
-                    icon=status.fallback_icon,
-                    emboss=False,
-                    no_tooltip=True,
-                )
+                row.label(text=label, icon=status.fallback_icon)
             return
 
         # Main bubble window header (left → right):
@@ -308,41 +332,52 @@ class AGENT_BUBBLE_HT_header(Header):
         #
         # On macOS: coloured traffic-light circles (custom pill icons).
         # On Windows: minimise + expand icon buttons only.
-        traffic = layout.row(align=True)
-        if _IS_WINDOWS:
-            traffic.operator(
-                "mixar.bubble_close",
-                text="",
-                icon='REMOVE',
-                emboss=False,
-                no_tooltip=True,
-            )
-            traffic.operator(
-                "mixar.bubble_toggle_expand_tracked",
-                text="",
-                icon='FULLSCREEN_ENTER',
-                emboss=False,
-                no_tooltip=True,
-            )
-        else:
-            yellow_id = get_pill_icon_id_named("yellow")
-            green_id = get_pill_icon_id_named("green")
-            if yellow_id:
+        #
+        # Elsewhere (Linux): no window-state buttons at all. The operators
+        # behind them are compiled-out stubs that return CANCELLED without
+        # a message, so drawing them offers a control that silently does
+        # nothing — see BUBBLE_WINDOW_CONTROLS_SUPPORTED. The whole row is
+        # skipped rather than left empty: an empty aligned row still takes
+        # header space and would shift the drag handle off centre.
+        #
+        # Only this row is platform-gated. Dragging the bubble works on
+        # every platform, and so do the right-side controls below.
+        if BUBBLE_WINDOW_CONTROLS_SUPPORTED:
+            traffic = layout.row(align=True)
+            if _IS_WINDOWS:
                 traffic.operator(
                     "mixar.bubble_close",
                     text="",
-                    icon_value=yellow_id,
+                    icon='REMOVE',
                     emboss=False,
                     no_tooltip=True,
                 )
-            if green_id:
                 traffic.operator(
                     "mixar.bubble_toggle_expand_tracked",
                     text="",
-                    icon_value=green_id,
+                    icon='FULLSCREEN_ENTER',
                     emboss=False,
                     no_tooltip=True,
                 )
+            else:
+                yellow_id = get_pill_icon_id_named("yellow")
+                green_id = get_pill_icon_id_named("green")
+                if yellow_id:
+                    traffic.operator(
+                        "mixar.bubble_close",
+                        text="",
+                        icon_value=yellow_id,
+                        emboss=False,
+                        no_tooltip=True,
+                    )
+                if green_id:
+                    traffic.operator(
+                        "mixar.bubble_toggle_expand_tracked",
+                        text="",
+                        icon_value=green_id,
+                        emboss=False,
+                        no_tooltip=True,
+                    )
 
         layout.separator_spacer()
         handle_row = layout.row()
@@ -433,6 +468,49 @@ class AGENT_BUBBLE_HT_header(Header):
                 icon='TEXT',
                 emboss=False,
                 depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
+            )
+
+        # Scribble — one mode, two surfaces: ink over the chat becomes text
+        # in the composer (the C++ ink canvas), ink over the frozen 3D
+        # viewport becomes marks the agent resolves against the scene. The
+        # count on the button is how many marks ride with the next message,
+        # visible even after the freeze is lowered. depress reflects EITHER
+        # half being up — clicking a pressed button turns everything off.
+        # hasattr guard: registers in the deferred UI pass.
+        if hasattr(bpy.types, 'MIXAR_OT_scribble_toggle') and not agent_running:
+            wm = context.window_manager
+            mark_count = 0
+            if scene is not None:
+                mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
+                                 if m.state == 'DRAFT')
+            armed = bool(getattr(wm, 'mixar_mark_armed', False)
+                         or getattr(wm, 'mixie_chat_ink_visible', False))
+            right_controls.operator(
+                "mixar.scribble_toggle",
+                text=str(mark_count) if mark_count else "",
+                icon='GREASEPENCIL',
+                emboss=False,
+                depress=armed,
+            )
+            # The reading (marks vs one sketch), visible and flippable
+            # wherever the count is — see space_mixie_chat/ui/header.py.
+            if mark_count and hasattr(wm, 'mixar_mark_intent'):
+                right_controls.prop(
+                    wm, "mixar_mark_intent", text="", icon_only=True,
+                    emboss=False,
+                )
+
+        # Voice — the same toggle the chat header binds; registered only on
+        # platforms with a recogniser, so hasattr is the platform gate.
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_voice_toggle') and not agent_running:
+            wm = context.window_manager
+            listening = bool(getattr(wm, 'mixie_chat_voice_listening', False))
+            right_controls.operator(
+                "mixie_chat.voice_toggle",
+                text="",
+                icon='REC' if listening else 'PLAY_SOUND',
+                emboss=False,
+                depress=listening,
             )
 
 

@@ -12,6 +12,11 @@
 
 #pragma once
 
+#include <algorithm>
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Layout Constants
  * \{ */
@@ -29,12 +34,39 @@
 #define FOOTER_MAX_HEIGHT 1000
 
 /* Maximum attachments per message. Matches MAX_ATTACHMENTS_PER_MESSAGE
- * in the Python side (space_mixie_chat/constants.py); the backend
- * can't process more in a single turn. */
-#define FOOTER_MAX_ATTACHMENTS 5
+ * in the Python side (space_mixie_chat/constants.py). Thumbnails wrap
+ * onto extra rows when a single row would overflow the footer width. */
+#define FOOTER_MAX_ATTACHMENTS 10
 
 /* Maximum attachment collection size for sanity checking */
 #define FOOTER_MAX_ATTACHMENT_COUNT 100
+
+/** How many thumbnail columns fit in `available_width` (same units as size/spacing). */
+inline int footer_attachment_columns(int available_width,
+                                     int thumb_size,
+                                     int spacing,
+                                     int count)
+{
+  if (count <= 0 || thumb_size <= 0) {
+    return 1;
+  }
+  if (available_width <= thumb_size) {
+    return 1;
+  }
+  const int gap = std::max(0, spacing);
+  const int stride = thumb_size + gap;
+  return std::max(1, std::min(count, (available_width + gap) / stride));
+}
+
+/** Row count for a wrapped thumbnail strip. */
+inline int footer_attachment_rows(int count, int columns)
+{
+  if (count <= 0) {
+    return 0;
+  }
+  const int cols = std::max(1, columns);
+  return (count + cols - 1) / cols;
+}
 
 /** \} */
 
@@ -114,3 +146,5 @@
 #define FOOTER_DEFAULT_MAIN_GAP 4.0f
 
 /** \} */
+
+}  // namespace blender

@@ -40,8 +40,8 @@ Result contract (sandbox-readable, no new whitelisting):
 
 from mixar.config.logging_config import get_logger
 import base64
-import os
-import tempfile
+import struct
+import zlib
 
 import bpy
 
@@ -71,24 +71,52 @@ def _resolve_scene(scene_session: str, scene_name: str):
     return None
 
 
+def encode_rgba_png(rgba: bytes, width: int, height: int, flip_vertical: bool = True) -> bytes:
+    """Encode raw 8-bit RGBA rows as a PNG, in pure Python.
+
+    ``rgba`` is ``width * height * 4`` bytes. A GPU framebuffer read is
+    bottom-up (GL origin), so rows are flipped by default to PNG's top-down
+    order. Uncompressed-filter PNG (filter byte 0 per row, zlib stream):
+    what the throwaway ``bpy.data.images`` round trip used to produce, without
+    the datablock.
+    """
+    row = width * 4
+    expected = row * height
+    if len(rgba) != expected:
+        raise ValueError(f"expected {expected} RGBA bytes, got {len(rgba)}")
+    rows = range(height - 1, -1, -1) if flip_vertical else range(height)
+    raw = b"".join(b"\x00" + rgba[y * row:(y + 1) * row] for y in rows)
+
+    def chunk(tag: bytes, payload: bytes) -> bytes:
+        body = tag + payload
+        return (struct.pack(">I", len(payload)) + body
+                + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF))
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)  # 8-bit RGBA
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr)
+            + chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b""))
+
+
 def _encode_buffer_png(buf, width: int, height: int) -> str:
-    """UBYTE RGBA framebuffer -> base64 PNG (via a throwaway bpy image)."""
+    """UBYTE RGBA framebuffer -> base64 PNG.
+
+    Pure Python on purpose. This runs from ``_service_pending`` — a VIEW_3D
+    POST_PIXEL draw callback — on the deferred path, and the previous
+    implementation created, saved and REMOVED a ``bpy.data.images`` datablock
+    there. Mutating ``bpy.data`` inside a draw callback is the crash class this
+    repo already documents for the queue-status icons (``queue_status_icons.py``)
+    and forbids in CLAUDE.md; an ID free mid-draw tears down image buffers and
+    GPU textures the draw manager may still be reading. No datablock, no
+    temp file, no notifier: just bytes.
+    """
     buf.dimensions = width * height * 4
-    img = bpy.data.images.new("_mixie_scene_render_tmp", width, height, alpha=True)
-    tmp = None
     try:
-        img.pixels.foreach_set([v / 255.0 for v in buf])
-        fd, tmp = tempfile.mkstemp(suffix=".png")
-        os.close(fd)
-        img.filepath_raw = tmp
-        img.file_format = "PNG"
-        img.save()
-        with open(tmp, "rb") as f:
-            return base64.b64encode(f.read()).decode("ascii")
-    finally:
-        bpy.data.images.remove(img)
-        if tmp and os.path.exists(tmp):
-            os.remove(tmp)
+        import numpy as np
+
+        rgba = np.asarray(buf, dtype=np.uint8).tobytes()
+    except Exception:
+        rgba = bytes(bytearray(int(v) & 0xFF for v in buf))
+    return base64.b64encode(encode_rgba_png(rgba, width, height)).decode("ascii")
 
 
 def _draw_scene_offscreen(scene, width: int, height: int, v3d, region) -> str:

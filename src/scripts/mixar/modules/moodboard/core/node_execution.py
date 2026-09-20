@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import base64
 import json
-import os
-import re
 
 import bpy
 
+from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue import enqueue_generation
 from mixar.modules.common.utils.image_utils import compress_for_service
 from .media_utils import describe_moodboard_media, is_still_item
@@ -26,11 +25,12 @@ from .node_graph import (
 from .node_job_bridge import ensure_graph_listener
 from .node_schema import collect_node_params, node_model_slug, node_service_key
 
+logger = get_logger(__name__)
 
-def _result_hook(scene_name: str, node_id: str, kind: str, prior_hook=None):
+
+def _result_hook(scene_name: str, node_id: str, kind: str,
+                 mesh_name: str = "", front_zrot: float = 0.0):
     def _hook(job, result_names: str):
-        if prior_hook is not None:
-            prior_hook(job, result_names)
         scene = bpy.data.scenes.get(scene_name)
         if scene is None:
             return
@@ -38,14 +38,34 @@ def _result_hook(scene_name: str, node_id: str, kind: str, prior_hook=None):
         if node is None:
             return
         if kind == 'ASSET':
-            names = [name.strip() for name in result_names.split(",") if name.strip()]
-            resolved = [name for name in names if bpy.data.objects.get(name) is not None]
-            if not resolved and prior_hook is not None:
-                base = re.sub(r'[^a-zA-Z0-9_]', '_', job.label)
-                base = re.sub(r'_+', '_', base).strip('_') or "object"
-                renamed = f"{base}_high"
-                if bpy.data.objects.get(renamed) is not None:
-                    resolved = [renamed]
+            # Name + normalize (placement + -Y orientation) the imported mesh
+            # exactly like the sidebar/chat paths, then bind the node's asset
+            # result to the FINAL object name (rename may add a .NNN suffix).
+            from mixar.modules.common.job_queue.core.model_io import (
+                rename_generated_model,
+            )
+            from mixar.modules.moodboard.core.imported_pbr_layers import (
+                convert_imported_material_to_paint_layers,
+            )
+            from mixar.modules.moodboard.core.generation_enqueue import (
+                _sanitize_label,
+            )
+            target = mesh_name or _sanitize_label(job.label)
+            final = None
+            try:
+                final = rename_generated_model(result_names, target, front_zrot)
+                convert_imported_material_to_paint_layers(final or target)
+            except Exception as e:
+                logger.warning(
+                    "[NodeGraph] post-import processing failed: %s", e)
+            if final:
+                create_asset_result(scene, node, final)
+                # Also re-point the JOB at the renamed mesh (see
+                # AsyncGLBJob.on_imported) — the generations-library archiver
+                # and the queue list resolve job.imported_object_names.
+                return final
+            names = [n.strip() for n in result_names.split(",") if n.strip()]
+            resolved = [n for n in names if bpy.data.objects.get(n) is not None]
             create_asset_result(scene, node, ", ".join(resolved or names))
         elif kind == 'IMAGE':
             connect_image_results(scene, node, result_names)
@@ -187,11 +207,18 @@ def _run_model_3d(context, node, operator):
             payload["prompt"] = prompt
     payload = assemble_payload(service_key, params, payload, model)
 
+    from mixar.modules.moodboard.core.generation_enqueue import (
+        derive_model_name, model_front_zrot,
+    )
+
     route = _routing(service_key)
     feature_key = route.pop("feature_key")
-    prior_hook = route.pop("on_imported", None)
+    route.pop("on_imported", None)  # _routing never sets it; drop if it ever does
     ensure_graph_listener(feature_key)
-    hook = _result_hook(context.scene.name, node.node_id, 'ASSET', prior_hook)
+    mesh_name = derive_model_name(image, prompt or "")
+    hook = _result_hook(
+        context.scene.name, node.node_id, 'ASSET',
+        mesh_name, model_front_zrot(model))
     job = enqueue_generation(
         kind="glb",
         feature_key=feature_key,
@@ -232,38 +259,30 @@ def _run_video(context, node, operator):
     ]
     images = [item for item in descriptions if item["media_type"] == "IMAGE"]
     videos = [item for item in descriptions if item["media_type"] == "VIDEO"]
-    limits = get_video_generation_limits(service_key)
+    limits = get_video_generation_limits(service_key, model)
     if limits is None:
         raise ValueError("Video generation catalog config is incomplete")
-    if len(images) > limits["max_images"] or len(videos) > limits["max_videos"]:
-        raise ValueError("Connected references exceed this model's limits")
-    if len(descriptions) > limits["max_materials"]:
-        raise ValueError("Connected references exceed the total material limit")
+    params = collect_node_params(node)
+    from .video_generation_catalog import video_reference_count_error
+
+    count_error = video_reference_count_error(
+        limits,
+        image_count=len(images),
+        video_count=len(videos),
+        image_mode=(params or {}).get("image_mode"),
+    )
+    if count_error:
+        raise ValueError(count_error)
     if any(not item["source_available"] for item in videos):
         raise ValueError("A connected video was moved or deleted")
 
-    video_inputs = []
-    for video in videos:
-        if video["file_size_bytes"] > limits["max_video_bytes"]:
-            raise ValueError(f"Video is too large: {video['filename']}")
-        if os.path.splitext(video["filename"])[1].lower() not in limits["video_extensions"]:
-            raise ValueError(f"Unsupported video reference: {video['filename']}")
-        video_inputs.append({
-            "filename": video["filename"],
-            "mime_type": video["mime_type"],
-            "filepath": video["resolved_filepath"],
-            "file_size_bytes": video["file_size_bytes"],
-        })
+    from .video_generation_catalog import (
+        build_image_reference_inputs,
+        build_video_reference_inputs,
+    )
 
-    image_inputs = [
-        {
-            "filename": f"reference_{index + 1}.jpg",
-            "mime_type": "image/jpeg",
-            "bytes": compress_for_service(item["image"], "video_gen"),
-        }
-        for index, item in enumerate(images)
-    ]
-    params = collect_node_params(node)
+    video_inputs = build_video_reference_inputs(videos, limits)
+    image_inputs = build_image_reference_inputs(images, limits, compress_for_service)
     ensure_graph_listener(FEATURE_VIDEO_GEN)
     hook = _result_hook(context.scene.name, node.node_id, 'VIDEO')
     job = enqueue_generation(
@@ -432,13 +451,18 @@ _MESH_FEATURE_ROUTING = {
 }
 
 
-def _mesh_result_hook(scene_name: str, node_id: str):
+def _mesh_result_hook(scene_name: str, node_id: str,
+                      texture_finalize: bool = False, base_name: str = ""):
     """Embed the imported result mesh INTO the producing node.
 
     Like Generate 3D, the feature node's generate UI is replaced by the result
     thumbnail (``create_asset_result`` sets ``preview_object`` + ``result_names``),
     rather than spawning a separate asset node. The node stays a MESH source so
     it can be chained onward.
+
+    When *texture_finalize* is set (PBR Generation), the imported mesh is renamed
+    (pose kept) and its material/images cleaned up + packed map split, then the
+    node binds to the FINAL name.
     """
     def _hook(job, object_names: str):
         scene = bpy.data.scenes.get(scene_name)
@@ -449,7 +473,29 @@ def _mesh_result_hook(scene_name: str, node_id: str):
             return
         from .node_graph import create_asset_result
 
-        create_asset_result(scene, node, object_names)
+        result = object_names
+        if texture_finalize:
+            try:
+                from mixar.modules.common.job_queue.core.model_io import (
+                    rename_imported_object,
+                )
+                from mixar.modules.moodboard.core.imported_pbr_layers import (
+                    convert_imported_material_to_paint_layers,
+                )
+                from mixar.modules.moodboard.core.generation_enqueue import (
+                    _sanitize_label,
+                )
+                target = base_name or _sanitize_label(job.label)
+                final = rename_imported_object(object_names, target)
+                convert_imported_material_to_paint_layers(final or target)
+                if final:
+                    result = final
+            except Exception as e:
+                logger.warning(
+                    "[TextureGen] node PBR post-import processing failed: %s", e)
+
+        create_asset_result(scene, node, result)
+        return result  # see AsyncGLBJob.on_imported
 
     return _hook
 
@@ -547,7 +593,11 @@ def _run_mesh_feature(context, node, operator):
     payload = assemble_payload(service_key, params, payload, model)
 
     ensure_graph_listener(routing['feature_key'])
-    hook = _mesh_result_hook(context.scene.name, node.node_id)
+    hook = _mesh_result_hook(
+        context.scene.name, node.node_id,
+        texture_finalize=(node.action_type == 'PBR_GEN'),
+        base_name=meshes[0].name,
+    )
     extra = {}
     if routing.get('import_options'):
         extra['import_options'] = routing['import_options']
@@ -569,6 +619,22 @@ def _run_mesh_feature(context, node, operator):
     return job, params
 
 
+def mark_run_failed(node, message: str) -> bool:
+    """Record a submit failure on a node, unless it is genuinely generating.
+
+    The run operator catches EVERY submission error — including a second
+    click on a node whose job is already queued ("This node is already
+    running"). Demoting that node to FAILED would flash a bogus failure on a
+    live job, so a generating node keeps its state; the message still reaches
+    the user through the operator's own report.
+    """
+    if node.state in {'QUEUED', 'RUNNING'}:
+        return False
+    node.state = 'FAILED'
+    node.error = message
+    return True
+
+
 def run_action_node(context, node, operator):
     if node.state in {'QUEUED', 'RUNNING'}:
         raise ValueError("This node is already running")
@@ -577,6 +643,10 @@ def run_action_node(context, node, operator):
         job, params = _run_image(context, node, operator)
     elif node.action_type == 'VIDEO_GEN':
         job, params = _run_video(context, node, operator)
+    elif node.action_type == 'VIDEO_UPSCALE':
+        from .video_upscale_enqueue import run_video_upscale_node
+
+        job, params = run_video_upscale_node(context, node)
     elif node.action_type == 'MASK_DETAIL':
         job, params = _run_mask_detail(context, node, operator)
     elif node.action_type in _MESH_FEATURE_ROUTING:

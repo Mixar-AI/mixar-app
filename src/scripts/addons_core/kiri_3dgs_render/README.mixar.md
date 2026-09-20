@@ -16,7 +16,25 @@ Serpens-generated operators (`sna.dgs_render_import_ply_e0a3a` to import,
 
 ## What was changed vs upstream
 
-Nothing in code. Omitted from vendoring:
+**One code patch** (marked `MIXAR PATCH` in `__init__.py`): per-object
+visibility. `assets/vert.glsl` culls a gaussian whose object visibility flag
+(slot 2 of the 15-float-per-object metadata texture) is `< 0.5`, but every
+upstream writer of that slot hardcodes `1.0`, so splats kept drawing through
+the addon's `SpaceView3D` handler no matter what the user did in the outliner
+— there was no way to hide a splat at all. The patch adds
+`mixar_object_visibility(obj)` / `mixar_visibility_signature()` near the top of
+the file, feeds the former into all four metadata writers, and — because a
+hide changes no transform, and the texture is only refreshed when one does —
+adds a visibility check next to `check_any_transforms_changed()` in
+`sna_viewport_render_A3941`'s draw loop, plus `mixar_last_visibility` in
+`cleanup_multi_object_cache`'s teardown list. Pinned by
+`tests/test_splat_lifecycle.py`; re-apply it on any vendor bump.
+
+Deletion is handled Mixar-side instead (nothing to patch here):
+`moodboard/core/splat_lifecycle.py` reconciles KIRI's process-global cache and
+textures after outliner deletions — see its module docstring.
+
+Omitted from vendoring:
 
 - `wheels/` (~1 GB across platforms: open3d, scipy, dash/flask/plotly).
   The import + render path needs none of them; `open3d` is imported
@@ -52,4 +70,5 @@ modifiers, proxy, render).
 Shallow-clone the desired tag and re-copy `__init__.py`, `assets/`,
 `LICENSE`, `README.md`, `Important`; re-extract the APPEND blend from the
 release zip (recompress as above). Re-verify the two operator ids above
-still exist — `world_labs_importer.py` pins them.
+still exist — `world_labs_importer.py` pins them — and re-apply the
+visibility patch (`tests/test_splat_lifecycle.py` fails until you do).

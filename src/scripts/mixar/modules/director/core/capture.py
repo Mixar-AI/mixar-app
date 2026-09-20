@@ -13,28 +13,21 @@ import uuid
 import bpy
 
 from .frame_math import frames_per_beat, next_beat_frame
-from .rotation_curves import repair_euler_rotation_continuity
+from .retime import note_beat_timing
+from .rotation_curves import repair_rotation_continuity, rotation_data_path
 from .shot_api import refresh_manifest, scope_preview_range
 from .viewport import enter_camera_view, find_view3d_context
-
-
-def _rotation_data_path(camera) -> str:
-    if camera.rotation_mode == 'QUATERNION':
-        return "rotation_quaternion"
-    if camera.rotation_mode == 'AXIS_ANGLE':
-        return "rotation_axis_angle"
-    return "rotation_euler"
 
 
 def _key_camera(camera, frame: int) -> None:
     camera.keyframe_insert(data_path="location", frame=frame, group="Director")
     camera.keyframe_insert(
-        data_path=_rotation_data_path(camera),
+        data_path=rotation_data_path(camera),
         frame=frame,
         group="Director",
     )
     camera.data.keyframe_insert(data_path="lens", frame=frame, group="Director")
-    repair_euler_rotation_continuity(camera)
+    repair_rotation_continuity(camera)
 
 
 def _delete_camera_keys(camera, frame: int) -> None:
@@ -44,14 +37,14 @@ def _delete_camera_keys(camera, frame: int) -> None:
         return
     for target, data_path in (
         (camera, "location"),
-        (camera, _rotation_data_path(camera)),
+        (camera, rotation_data_path(camera)),
         (camera.data, "lens"),
     ):
         try:
             target.keyframe_delete(data_path=data_path, frame=frame)
         except (RuntimeError, TypeError):
             pass
-    repair_euler_rotation_continuity(camera)
+    repair_rotation_continuity(camera)
 
 
 _CAMERA_MOTION_PATHS = {
@@ -91,7 +84,40 @@ def camera_shared_elsewhere(scene, shot) -> bool:
     )
 
 
-def _render_viewport_still(context, scene, display_name: str):
+def _render_splat_still(scene, camera):
+    """Capture a splat scene's still through a real EEVEE render.
+
+    A viewport OpenGL capture comes out blank in splat scenes: the KIRI
+    proxy draws only during interactive viewport redraws (never inside
+    ``render.opengl``), the splat mesh itself is eye-hidden, and the
+    splat_render_camera handlers that push camera matrices into the
+    geometry-nodes sockets fire only for real renders. So capture the way
+    the Beauty video pass renders: EEVEE evaluating the splat's
+    camera-facing quads, with the render handlers feeding the camera.
+    """
+    from mixar.modules.moodboard.core.splat_render_camera import (
+        enable_render_updates,
+    )
+
+    render = scene.render
+    old_engine = render.engine
+    old_samples = scene.eevee.taa_render_samples
+    old_camera = scene.camera
+    try:
+        # Safe no-op when already enabled; covers splats from files saved
+        # before import-time enabling existed.
+        enable_render_updates(scene.objects)
+        scene.camera = camera
+        render.engine = 'BLENDER_EEVEE'
+        scene.eevee.taa_render_samples = 16
+        return bpy.ops.render.render(write_still=True)
+    finally:
+        render.engine = old_engine
+        scene.eevee.taa_render_samples = old_samples
+        scene.camera = old_camera
+
+
+def _render_viewport_still(context, scene, camera, display_name: str):
     target = find_view3d_context(context)
     if target is None:
         raise RuntimeError("No 3D viewport is available")
@@ -117,6 +143,10 @@ def _render_viewport_still(context, scene, display_name: str):
             image_settings.media_type = 'IMAGE'
         image_settings.file_format = 'PNG'
         image_settings.color_mode = 'RGB'
+        from mixar.modules.moodboard.core.splat_render_camera import (
+            scene_has_splats,
+        )
+
         with context.temp_override(
             window=window,
             area=area,
@@ -124,10 +154,13 @@ def _render_viewport_still(context, scene, display_name: str):
             space_data=space,
             scene=scene,
         ):
-            result = bpy.ops.render.opengl(
-                write_still=True,
-                view_context=True,
-            )
+            if scene_has_splats(scene):
+                result = _render_splat_still(scene, camera)
+            else:
+                result = bpy.ops.render.opengl(
+                    write_still=True,
+                    view_context=True,
+                )
         if 'FINISHED' not in result or not os.path.isfile(path):
             raise RuntimeError("Viewport capture did not produce an image")
 
@@ -190,9 +223,15 @@ def capture_beat(context, shot, beat_seconds: float):
         image = _render_viewport_still(
             context,
             scene,
+            camera,
             f"{shot.name} · Keyframe {number:02d}",
         )
         _key_camera(camera, target_frame)
+        from .interpolation import apply_interpolation
+
+        # The beat for this key is not on `shot.beats` yet, so the frame is
+        # named explicitly; the rest of the shot's keys come from its beats.
+        apply_interpolation(shot, target_frame)
         if shot.handheld:
             # The first capture creates the F-curves noise can attach to.
             from .handheld import refresh_handheld
@@ -201,6 +240,7 @@ def capture_beat(context, shot, beat_seconds: float):
         beat = shot.beats.add()
         beat.beat_id = uuid.uuid4().hex
         beat.frame = target_frame
+        note_beat_timing(shot, beat)
         beat.image = image
         shot.active_beat_index = len(shot.beats) - 1
         scene.frame_end = max(scene.frame_end, target_frame)

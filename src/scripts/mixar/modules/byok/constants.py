@@ -16,9 +16,23 @@ client-side enum left here is the dialog state machine.
 BYOK_API_KEY_MAX_LENGTH = 256
 
 # Dialog state machine — drives what the dialog renders on each draw.
+# The dialog owns its whole footer (the native OK/Cancel row is
+# suppressed — see ui/operators/byok_dialog_ui.py), so every state must
+# resolve to exactly one primary action:
+#
+#   IDLE            form + [Cancel][Save & Activate]
+#   SAVING          disabled form + progress pill (validation in flight)
+#   REMOVING        config card + progress pill (delete in flight)
+#   SAVED           recap card + [Done] — the explicit "it saved" moment
+#   REMOVED         recap card + [Done]
+#   ERROR           form + inline error + [Cancel][Try Again]
+#   CONFIRM_REMOVE  config card + warning + [Keep My Key][Remove API Key]
 DIALOG_STATE_ITEMS = (
     ('IDLE',            "Idle",            "Ready for input"),
-    ('SAVING',          "Saving",          "Request in flight"),
+    ('SAVING',          "Saving",          "Save request in flight"),
+    ('REMOVING',        "Removing",        "Delete request in flight"),
+    ('SAVED',           "Saved",           "Save confirmed — showing the recap"),
+    ('REMOVED',         "Removed",         "Delete confirmed — showing the recap"),
     ('ERROR',           "Error",           "Last request failed"),
     ('CONFIRM_REMOVE',  "Confirm Remove",  "Awaiting delete confirmation"),
 )
@@ -56,14 +70,33 @@ OPENROUTER_PROVIDER_ITEM = (
 OPENROUTER_DEFAULT_MODEL = "anthropic/claude-opus-4.8"
 
 # "Codex (ChatGPT)" — a client-side-only provider option (not in the backend
-# catalog). Selecting it swaps the form to a paste field for the ~/.codex/
-# auth.json bundle + a free-text model slug. The user routes the agent through
-# their ChatGPT subscription instead of an API key.
+# catalog). Selecting it swaps the credential field to a paste field for the
+# ~/.codex/auth.json bundle; the user routes the agent through their ChatGPT
+# subscription instead of an API key. The model dropdown reuses the backend
+# catalog's "openai" group (see model_suggestions._MODEL_SOURCE_PROVIDER).
 CODEX_PROVIDER_ID = 'codex'
 CODEX_PROVIDER_ITEM = (
     CODEX_PROVIDER_ID,
     "Codex (ChatGPT sub)",
     "Use your ChatGPT/Codex subscription — paste ~/.codex/auth.json after `codex login`",
 )
-# Prefilled model slug — the current Codex lineup; the user can edit it.
-CODEX_DEFAULT_MODEL = "gpt-5.5"
+
+# "Local (this computer)" — a client-side-only provider option: the agent's
+# LLM calls are relayed over the agent WebSocket to a model server running on
+# the user's own machine (managed llama-server via modules/local_models, or a
+# custom OpenAI-compatible server like Ollama / LM Studio). No cloud key.
+LOCAL_PROVIDER_ID = 'local'
+LOCAL_PROVIDER_ITEM = (
+    LOCAL_PROVIDER_ID,
+    "Local (this computer)",
+    "Run the agent on a model on this computer — private, no API key required",
+)
+
+# Managed vs custom sub-mode of the Local provider form.
+LOCAL_MODE_ITEMS = (
+    ('MANAGED', "Managed by Mixar",
+     "Mixar downloads and runs a curated model on this computer"),
+    ('CUSTOM', "Custom local server",
+     "Point Mixar at an OpenAI-compatible server you already run "
+     "(Ollama, LM Studio, llama.cpp, ...)"),
+)

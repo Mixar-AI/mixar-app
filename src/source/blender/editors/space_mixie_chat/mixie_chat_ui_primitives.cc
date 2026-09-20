@@ -25,7 +25,11 @@
 #include "GPU_state.hh"
 #include "GPU_texture.hh"
 
+#include "ED_mixar_glass.hh"
+
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Constants
@@ -202,6 +206,25 @@ void chat_ui_draw_rounded_rect_bordered(const rctf *rect,
   chat_ui_draw_rounded_rect(rect, radius, fill_color);
 }
 
+/* The glass counterpart of #chat_ui_draw_rounded_rect: the same bed geometry,
+ * but tinted by the MIXAR_GLASS_CHAT token row. `alpha` fades the whole pane —
+ * `bg_color`'s RGB is deliberately not read, so a call site cannot pick its own
+ * tint. The message area is drawn through the View2D matrix (see
+ * mixie_chat_render_messages), so the painter's specular streak — the one layer
+ * it clips with a region-px scissor — cannot be placed from here and is off;
+ * the bed, gloss, refraction wash and rim all draw through that matrix fine. */
+void chat_ui_draw_glass_pane(const rctf *rect, const float radius, const float alpha)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, rect);
+  ui::MixarGlassStyle style;
+  style.role = ui::MIXAR_GLASS_CHAT;
+  style.radius = radius;
+  style.alpha = alpha;
+  style.draw_specular = false;
+  ui::mixar_glass_draw(pane, style);
+}
+
 void chat_ui_draw_accent_bar(float x,
                              float y_bottom,
                              float height,
@@ -234,13 +257,15 @@ void chat_ui_calc_text_bounds_font(const char *text,
                                    int flags,
                                    int font_id,
                                    float *out_width,
-                                   float *out_height);
+                                   float *out_height,
+                                   BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
 float chat_ui_draw_text_wrapped_font(const char *text,
                                      const rctf *rect,
                                      int font_size,
                                      int flags,
                                      int font_id,
-                                     const float color[4]);
+                                     const float color[4],
+                                     BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
 
 int chat_ui_mono_font()
 {
@@ -275,6 +300,7 @@ struct TextBoundsCacheEntry {
   int font_size = 0;
   int flags = 0;
   int font_id = -1;
+  int wrap_mode = 0;
   float width = 0.0f;
   float height = 0.0f;
 };
@@ -312,7 +338,8 @@ void chat_ui_calc_text_bounds_font(const char *text,
                                    int flags,
                                    int font_id,
                                    float *out_width,
-                                   float *out_height)
+                                   float *out_height,
+                                   BLFWrapMode wrap_mode)
 {
   if (!text || text[0] == '\0') {
     *out_width = 0.0f;
@@ -326,7 +353,8 @@ void chat_ui_calc_text_bounds_font(const char *text,
       g_text_bounds_cache[hash & (TEXT_BOUNDS_CACHE_SLOTS - 1)];
   if (entry.text_hash == hash && entry.text_len == text_len &&
       entry.max_width == max_width && entry.font_size == font_size &&
-      entry.flags == flags && entry.font_id == font_id)
+      entry.flags == flags && entry.font_id == font_id &&
+      entry.wrap_mode == int(wrap_mode))
   {
     *out_width = entry.width;
     *out_height = entry.height;
@@ -343,7 +371,7 @@ void chat_ui_calc_text_bounds_font(const char *text,
 
   /* Use max_width directly - draw will use the same width from rect.
    * This ensures consistent wrapping between bounds calculation and rendering. */
-  BLF_wordwrap(font_id, int(max_width));
+  BLF_wordwrap(font_id, int(max_width), wrap_mode);
 
   rcti bbox;
   BLF_boundbox(font_id, text, text_len, &bbox);
@@ -365,6 +393,7 @@ void chat_ui_calc_text_bounds_font(const char *text,
   entry.font_size = font_size;
   entry.flags = flags;
   entry.font_id = font_id;
+  entry.wrap_mode = int(wrap_mode);
   entry.width = *out_width;
   entry.height = *out_height;
 }
@@ -384,7 +413,8 @@ float chat_ui_draw_text_wrapped_font(const char *text,
                                      int font_size,
                                      int flags,
                                      int font_id,
-                                     const float color[4])
+                                     const float color[4],
+                                     BLFWrapMode wrap_mode)
 {
   if (!text || text[0] == '\0') {
     return 0.0f;
@@ -393,13 +423,13 @@ float chat_ui_draw_text_wrapped_font(const char *text,
   float wrap_width = BLI_rctf_size_x(rect);
 
   BLF_size(font_id, font_size);
-  
+
   if (flags != 0) {
     BLF_enable(font_id, FontFlags(flags));
   }
-  
+
   BLF_enable(font_id, BLF_WORD_WRAP);
-  BLF_wordwrap(font_id, int(wrap_width));
+  BLF_wordwrap(font_id, int(wrap_width), wrap_mode);
   BLF_color4fv(font_id, color);
 
   /* Calculate bbox with CURRENT wrap settings for accurate positioning.
@@ -868,3 +898,4 @@ void chat_ui_calc_image_bounds(int tex_width,
 }
 
 /** \} */
+}  // namespace blender

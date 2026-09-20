@@ -78,7 +78,7 @@ def test_render_job_builds_movies_and_restores_temporary_scene_state():
     assert "bpy.app.handlers.render_cancel" in job
     assert "bpy.app.handlers.render_write" in job
     assert "restore_render_settings(" in job
-    assert "_queue_next_pass(shot)" in job
+    assert "_queue_next_pass(target)" in job
     assert "_start_next_pass_when_idle" in job
     assert 'bpy.app.is_job_running("RENDER")' in job
     assert "return _NEXT_PASS_POLL_SECONDS" in job
@@ -129,9 +129,9 @@ def test_native_surface_hosts_the_export_popup_natively():
     # popup (KEEP_OPEN); only click-outside, Esc, or an action closes it —
     # Export/Render via their explicit close callback, since KEEP_OPEN would
     # otherwise keep the popup up after the action too.
-    assert "UI_BLOCK_KEEP_OPEN" in popup
+    assert "BLOCK_KEEP_OPEN" in popup
     assert "render_popup_close" in popup
-    assert "UI_popup_menu_retval_set" in popup
+    assert "popup_menu_retval_set" in popup
     assert "classes = (" in operators
     assert "MIXAR_OT_director_render_videos," in operators
 

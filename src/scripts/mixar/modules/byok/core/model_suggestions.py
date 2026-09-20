@@ -36,6 +36,8 @@ combination of "no real selection yet".
 from ..constants import (
     CODEX_PROVIDER_ID,
     CODEX_PROVIDER_ITEM,
+    LOCAL_PROVIDER_ID,
+    LOCAL_PROVIDER_ITEM,
     MODEL_EMPTY_SENTINEL,
     OPENROUTER_PROVIDER_ID,
     OPENROUTER_PROVIDER_ITEM,
@@ -43,10 +45,25 @@ from ..constants import (
     PROVIDER_LOADING_SENTINEL,
 )
 
+# Providers whose model dropdown is served from another provider's catalog
+# group. Codex runs OpenAI's gpt-5.x lineup through the user's ChatGPT
+# subscription, so it reuses the "openai" models — no separate catalog rows.
+_MODEL_SOURCE_PROVIDER: dict[str, str] = {CODEX_PROVIDER_ID: 'openai'}
+
 # Module-level caches. Stored as Python-stable references so the
 # EnumProperty callbacks can return them directly without GC issues.
 _provider_cache: list[tuple[str, str, str]] = []
 _model_cache: dict[str, list[tuple[str, str, str]]] = {}
+
+# ONE previous generation of item strings, kept alive deliberately.
+# Blender's EnumProperty stores the raw char* of the identifier/name/description
+# it is handed, not a Python reference. Dropping the last reference to those
+# strings while a redraw is mid-flight is a use-after-free, and clear() now runs
+# on the same main-thread tick as the logout redraw. Retiring rather than
+# freeing gives the outgoing generation one full transition to die out — the
+# same reason generation_catalog_cache prunes its enum cache at version - 1
+# instead of version.
+_retired: list = []
 
 # Set to True once populate() has been called — even with an empty
 # providers list. Used to distinguish "haven't fetched yet" from
@@ -64,13 +81,19 @@ def is_codex(provider: str) -> bool:
     return provider == CODEX_PROVIDER_ID
 
 
+def is_local(provider: str) -> bool:
+    """True when ``provider`` is the client-side Local (this computer) option."""
+    return provider == LOCAL_PROVIDER_ID
+
+
 def get_provider_items() -> list[tuple[str, str, str]]:
     """EnumProperty items for the provider dropdown.
 
-    Always ends with the client-side "OpenRouter" and "Codex (ChatGPT sub)"
-    options (neither is part of the backend catalog), so a user can pick either
-    even offline / before the catalog loads. The cloud providers come first (the
-    cached catalog list, or a sentinel while it loads).
+    Always ends with the client-side "OpenRouter", "Codex (ChatGPT sub)" and
+    "Local (this computer)" options (none is part of the backend catalog), so a
+    user can pick any of them even offline / before the catalog loads. The
+    cloud providers come first (the cached catalog list, or a sentinel while it
+    loads).
     """
     if _provider_cache:
         cloud = list(_provider_cache)
@@ -80,7 +103,9 @@ def get_provider_items() -> list[tuple[str, str, str]]:
         cloud = [PROVIDER_LOADING_SENTINEL]
     items = list(cloud)
     identifiers = {item[0] for item in items}
-    for client_item in (OPENROUTER_PROVIDER_ITEM, CODEX_PROVIDER_ITEM):
+    for client_item in (
+        OPENROUTER_PROVIDER_ITEM, CODEX_PROVIDER_ITEM, LOCAL_PROVIDER_ITEM,
+    ):
         if client_item[0] not in identifiers:
             items.append(client_item)
     return items
@@ -92,8 +117,10 @@ def get_model_items(provider: str) -> list[tuple[str, str, str]]:
     Returns the provider's cached models when available; otherwise a
     single sentinel item. Always returns a non-empty list — Blender
     renders a blank/broken dropdown when items is [].
+
+    Codex shows the "openai" group (see _MODEL_SOURCE_PROVIDER).
     """
-    cached = _model_cache.get(provider)
+    cached = _model_cache.get(_MODEL_SOURCE_PROVIDER.get(provider, provider))
     if cached:
         return cached
     return [MODEL_EMPTY_SENTINEL]
@@ -108,7 +135,8 @@ def is_valid_model(provider: str, model: str) -> bool:
     """
     if not provider or not model or model == "NONE":
         return False
-    return any(item[0] == model for item in (_model_cache.get(provider) or ()))
+    source = _MODEL_SOURCE_PROVIDER.get(provider, provider)
+    return any(item[0] == model for item in (_model_cache.get(source) or ()))
 
 
 def is_loaded() -> bool:
@@ -133,6 +161,7 @@ def populate(providers, models) -> None:
             for that provider's models. May be empty.
     """
     global _populated_once
+    _retire_current()
     _provider_cache.clear()
     if providers:
         _provider_cache.extend(tuple(p) for p in providers)
@@ -148,6 +177,56 @@ def clear() -> None:
     flag so the next login triggers a fresh fetch.
     """
     global _populated_once
+    _retire_current()
     _provider_cache.clear()
     _model_cache.clear()
     _populated_once = False
+
+
+def _retire_current() -> None:
+    """Hold the outgoing item strings for one more transition (see ``_retired``)."""
+    _retired.clear()
+    _retired.append(list(_provider_cache))
+    _retired.append({k: list(v) for k, v in _model_cache.items()})
+
+
+def populate_from_payload(payload) -> None:
+    """Populate from a raw ``GET /agent/models`` payload.
+
+    Shape:
+        {"providers": [{"id", "label", "models": [{"id", "label"}, ...]}, ...]}
+
+    Single writer into the caches, so the disk load and the network refresh can
+    never disagree about how a payload is parsed. Unknown/!dict entries are
+    skipped rather than raising — the backend is authoritative about which
+    options exist, and a malformed row should cost one option, not the dialog.
+    """
+    if not isinstance(payload, dict):
+        return
+
+    providers: list[tuple[str, str, str]] = []
+    models: dict[str, list[tuple[str, str, str]]] = {}
+
+    for entry in payload.get("providers") or []:
+        if not isinstance(entry, dict):
+            continue
+        pid = entry.get("id")
+        if not pid:
+            continue
+        label = entry.get("label") or pid
+        # EnumProperty items are (id, label, description); the API gives id +
+        # label, so the label doubles as the tooltip.
+        providers.append((pid, label, label))
+
+        items: list[tuple[str, str, str]] = []
+        for model in entry.get("models") or []:
+            if not isinstance(model, dict):
+                continue
+            mid = model.get("id")
+            if not mid:
+                continue
+            mlabel = model.get("label") or mid
+            items.append((mid, mlabel, mlabel))
+        models[pid] = items
+
+    populate(providers, models)

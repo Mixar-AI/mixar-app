@@ -51,6 +51,8 @@ def test_world_labs_queue_sends_catalog_parameters_under_params():
     )
     assert 'model: str = "marble-1.1"' not in source
     assert 'lod: str = "500k"' not in source
+    assert "missing collider (GLB) URL" in source
+    assert "resolve_world_labs_mode" in source
 
 
 def test_world_labs_queue_updates_unified_queue_mirror():

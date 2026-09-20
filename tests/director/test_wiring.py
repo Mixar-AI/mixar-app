@@ -35,7 +35,7 @@ def test_camera_beats_key_native_data_and_pack_stills():
 
     assert 'camera.keyframe_insert(data_path="location"' in capture
     assert 'camera.data.keyframe_insert(data_path="lens"' in capture
-    assert "repair_euler_rotation_continuity(camera)" in capture
+    assert "repair_rotation_continuity(camera)" in capture
     assert "bpy.ops.render.opengl" in capture
     # Capture packs the still into the blend but never boards it — stills reach
     # the moodboard only through the explicit Director export.
@@ -45,18 +45,36 @@ def test_camera_beats_key_native_data_and_pack_stills():
     assert "place_new_moodboard_item" in media_import
 
 
-def test_camera_euler_continuity_is_repaired_at_every_output_boundary():
+def test_rotation_continuity_is_repaired_on_every_key_writing_path():
     capture = _read("core/capture.py")
     preview = _read("ui/operators/capture_ops.py")
     render = _read("core/render_outputs.py")
     shot_api = _read("core/shot_api.py")
+    presets = _read("core/animation_presets.py")
+    beat_sync = _read("core/beat_sync.py")
 
     # New or deleted keys normalize immediately. Existing files normalize at
     # every action that evaluates an in-between camera pose.
-    assert capture.count("repair_euler_rotation_continuity(camera)") == 2
-    assert "repair_euler_rotation_continuity(shot.camera)" in preview
-    assert "repair_euler_rotation_continuity(shot.camera)" in render
-    assert "repair_euler_rotation_continuity(shot.camera)" in shot_api
+    assert capture.count("repair_rotation_continuity(camera)") == 2
+    assert "repair_rotation_continuity(shot.camera)" in preview
+    # The render job serves shots AND bare animated cameras through one
+    # RenderTarget, but only the SHOT starter repairs its camera: a bare
+    # Export-to-Moodboard camera is the user's own animation and a render
+    # button must never rewrite its keys.
+    assert "repair_rotation_continuity(shot.camera)" in render
+    assert "repair_rotation_continuity(target.camera)" not in render
+    assert "repair_rotation_continuity(shot.camera)" in shot_api
+    # Character Turn presets key through matrix_world too (a 90 degree turn
+    # must never play as a 270 degree spin the other way).
+    assert "repair_rotation_continuity(obj)" in presets
+    # Keys adopted from the native timeline never pass capture_beat, and a
+    # native key MOVE reorders the chain the filter walks.
+    assert "repair_rotation_continuity(camera)" in beat_sync
+    assert "repair_rotation_continuity(shot.camera)" in beat_sync
+    # The mode-aware filter is the ONLY rotation path resolver: no caller
+    # keeps a private Euler-only copy.
+    assert "def _rotation_data_path" not in capture
+    assert "def _rotation_data_path" not in presets
 
 
 def test_video_handoff_remains_catalog_driven_and_provider_neutral():
@@ -72,9 +90,19 @@ def test_video_handoff_remains_catalog_driven_and_provider_neutral():
 
 
 def test_director_has_no_n_panel_implementation():
+    """The DIRECTING surface is native; no Python panel duplicates it.
+
+    Scope is the Director viewport experience. The camera-first Export to
+    Moodboard popup is deliberately NOT part of it — it exists for users who
+    never enter Director, is hosted in the topbar (`TOPBAR`/`HEADER`, drawn
+    only when `wm.call_panel` opens it) and is asserted below to never reach
+    a View3D region. Everything else stays native.
+    """
     panel_path = DIRECTOR / "ui/panels/director_panel.py"
     python_sources = "\n".join(
-        path.read_text(encoding="utf-8") for path in DIRECTOR.rglob("*.py")
+        path.read_text(encoding="utf-8")
+        for path in DIRECTOR.rglob("*.py")
+        if "camera_export" not in path.name
     )
 
     assert not panel_path.exists()
@@ -86,6 +114,14 @@ def test_director_has_no_n_panel_implementation():
     # Every popup is native now; no Python panel/popover survives.
     assert not (DIRECTOR / "ui/panels/render_popover.py").exists()
     assert "bl_region_type = 'HEADER'" not in python_sources
+
+    # The one Python panel in the module is the camera export popup, and it
+    # must stay out of the viewport that the native surface owns.
+    export_panel = (
+        DIRECTOR / "ui/panels/camera_export_panel.py"
+    ).read_text(encoding="utf-8")
+    assert "bl_space_type = 'TOPBAR'" in export_panel
+    assert "VIEW_3D" not in export_panel
 
 
 def test_incremental_install_cannot_retain_removed_director_panel():
@@ -114,7 +150,11 @@ def test_native_viewport_surface_is_registered_from_view3d():
     assert "view3d_director_timeline_region_register" in space
     assert "view3d_director_timeline_region_ensure" in space
     assert "ED_KEYMAP_UI" in space
-    assert "st->keymap = view3d_keymap;" in space
+    # 5.2: ARegionType::keymap is gone, so the space keymap is a wrapper that
+    # also ensures the Parallel Agents panel's default keymap items (it
+    # replaced the Agent Scene Strip on this branch).
+    assert "view3d_keymap(keyconf);" in space
+    assert "view3d_agent_panel_keymap(keyconf);" in space
     assert '"Director View"' not in space
 
     timeline = (VIEW3D / "view3d_director_timeline.cc").read_text(
@@ -126,6 +166,20 @@ def test_native_viewport_surface_is_registered_from_view3d():
     assert "art->regionid = RGN_TYPE_CHANNELS" in timeline
     assert "VIEW3D_DIRECTOR_TIMELINE_HEIGHT" in timeline
     assert "ED_region_header_init" not in timeline
+
+
+def _native_surface() -> str:
+    """Every Director C++ source, concatenated.
+
+    The Cinema Mode rework split the surface across `view3d_director_cinema_*`
+    files, so pinning a symbol to one filename now tests the file layout
+    rather than the wiring. These tests care that the native surface reaches
+    the operator at all — which file paints the button is free to change.
+    """
+    return "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(VIEW3D.glob("view3d_director_*.cc"))
+    )
 
 
 def test_native_surface_reaches_the_phase_zero_directing_actions():
@@ -149,8 +203,9 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
         encoding="utf-8"
     )
     assert "MIXAR_OT_director_send_keyframes" in popup_render
-    assert "MIXAR_OT_director_toggle_timeline" in timeline
-    assert "MIXAR_OT_director_toggle_immersive" in timeline
+    surface = _native_surface()
+    assert "MIXAR_OT_director_toggle_timeline" in surface
+    assert "MIXAR_OT_director_toggle_immersive" in surface
     assert "mixar.director_pick_camera" in surface_ops
     assert "mixar.director_set_active_shot" in surface_ops
     assert "mixar.director_open_editor" not in surface_ops
@@ -171,8 +226,16 @@ def test_native_surface_uses_timeline_camera_dropdown_without_top_switcher():
     assert "region->winy - unit * 2 - gap * 2" in overlay
     assert "region->winy - unit * 6" not in overlay
     surface_ops = _read("ui/operators/surface_ops.py")
-
-    assert '"MIXAR_OT_director_pick_camera"' in timeline
+    # The Cinema surface replaced the camera DROPDOWN with the "My Cameras"
+    # list: a row directs its shot's camera, and Add Camera starts a take
+    # (adopting a camera the scene already has) or adds a shot. The picker
+    # operator itself still exists for the menu path and keeps its
+    # never-reassign-the-active-shot's-camera contract.
+    surface = _native_surface()
+    assert '"MIXAR_OT_director_set_active_shot"' in surface
+    assert '"MIXAR_OT_director_new_shot"' in surface
+    assert '"MIXAR_OT_director_start"' in surface
+    assert "mixar.director_pick_camera" in surface_ops
     assert "latest_shot_index_for_camera" in surface_ops
     assert "view3d_director_active_shot_pointer" in state
     assert "enter_camera_view(context or bpy.context, camera, remember=False)" in properties
@@ -194,7 +257,8 @@ def test_native_timeline_tracks_playback_and_real_beat_span():
     assert "ND_ANIMPLAY" in timeline
     assert "state.frame_end" in timeline_draw
     assert "runtime->view_span_frames" in timeline_draw
-    assert "state.beats.size() < 2" in timeline
+    # Preview needs a real span: the dock disables it below two beats.
+    assert "state.beats.size() >= 2" in _native_surface()
     assert "frames = sorted({beat.frame for beat in shot.beats})" in preview
     assert "Capture at least two keyframes to preview" in preview
 
@@ -233,7 +297,8 @@ def test_single_keyframe_is_draggable_along_the_timeline():
     click that never moves still just views the keyframe, matching the old
     jump behaviour) and slides the beat plus its matching native camera keys
     on MOUSEMOVE. A single beat is clamped to stay between its time-neighbours
-    because two Director keys must never share a frame. Locked shots stay
+    because two Director keys must never share a frame. First and last
+    handles stay draggable too — see test_timeline_drag.py. Locked shots stay
     view-only: the C++ handler only starts the drag when the shot is unlocked
     and otherwise falls back to jump_beat.
     """
@@ -372,6 +437,28 @@ def test_capture_still_works_on_video_output_scenes():
     assert restore_media < restore_format
 
 
+def test_splat_scene_stills_capture_through_a_real_render():
+    """A splat scene's keyframe still must be a real EEVEE render.
+
+    ``render.opengl`` produces a blank frame in splat scenes: the KIRI
+    proxy draws only during interactive viewport redraws (never inside an
+    OpenGL render), the splat mesh itself is eye-hidden, and the
+    ``splat_render_camera`` handlers that push camera matrices into the
+    geometry-nodes sockets fire only for real renders. The capture path
+    must branch to ``render.render`` with the shot camera and restore
+    engine, samples, and scene camera afterwards.
+    """
+    capture = _read("core/capture.py")
+
+    assert "def _render_splat_still" in capture
+    assert "scene_has_splats(scene)" in capture
+    assert "_render_splat_still(scene, camera)" in capture
+    assert "enable_render_updates(scene.objects)" in capture
+    assert "bpy.ops.render.render(write_still=True)" in capture
+    assert "render.engine = old_engine" in capture
+    assert "scene.camera = old_camera" in capture
+
+
 def test_navigate_supervises_walk_for_esc_and_cursor_reset():
     """Esc must stop navigation in place and the pointer must come back.
 
@@ -437,20 +524,28 @@ def test_directing_absorbs_object_editing_shortcuts():
     assert '"Precise  O"' not in overlay
 
 
-def test_director_entry_sits_beside_the_topbar_mode_switch():
-    """The Director toggle lives next to Engine/Zen Mode, not in View3D.
+def test_cinema_mode_pill_sits_in_the_topbar_right_region():
+    """The entry point is the "Cinema Mode" pill on the topbar's right.
 
-    The workflow module appends the mode switch to TOPBAR_MT_editor_menus;
-    Director appends after it so both sit together, and the active session
-    renders depressed. State flips also tag the topbar's global area, which
-    ordinary screen iteration misses.
+    It is appended to TOPBAR_HT_upper_bar (not the editor-menus list it used
+    to live in) and draws ONLY in the RIGHT region, left of the profile chip
+    — which it keeps right-most by re-appending it, since header callbacks
+    draw in registration order and module order is not guaranteed. The label
+    is user-facing only: `mixar.director_*` idnames stay frozen. State flips
+    also tag the topbar's global area, which ordinary screen iteration
+    misses.
     """
     header = _read("ui/headers/director_header.py")
     properties = _read("ui/properties/director_properties.py")
 
-    assert "TOPBAR_MT_editor_menus" in header
+    assert "TOPBAR_HT_upper_bar" in header
+    assert "TOPBAR_MT_editor_menus" not in header
     assert "VIEW3D_HT_header" not in header
-    assert "depress=True" in header
+    assert "alignment != 'RIGHT'" in header
+    assert 'text="Cinema Mode"' in header
+    assert "mixar.director_enter" in header
+    assert "mixar.director_finish" in header
+    assert "_move_profile_chip_last" in header
     assert '"global_areas"' in properties
 
 
@@ -595,8 +690,7 @@ def test_timeline_strip_can_split_and_delete():
     anim_curves = _read("core/anim_curves.py")
     handheld_source = _read("core/handheld.py")
     timeline_source = _read("core/timeline.py")
-    assert "animdata_get_channelbag_for_assigned_slot" in anim_curves
-    assert "def remove_fcurves" in anim_curves
+    assert "common.utils.animation import assigned_fcurves, remove_fcurves" in anim_curves
     assert "action.fcurves" not in capture
     assert "action.fcurves" not in handheld_source
     assert "assigned_fcurves" in handheld_source
@@ -701,3 +795,39 @@ def test_director_native_files_follow_the_module_size_limit():
     assert native_files
     for path in native_files:
         assert len(path.read_text(encoding="utf-8").splitlines()) <= 500, path.name
+
+
+def test_camera_nudge_keys_beat_the_eyedropper_and_the_block_guard():
+    """W/A/S/D/Q/E move the shot camera, and only inside Cinema Mode.
+
+    The hint strip advertises these keys at rest, but Blender binds them
+    elsewhere: `UI_OT_eyedropper_depth` owns E in the global "User
+    Interface" keymap (and its modal then swallows the NEXT key, which is
+    what made Q look dead too), and our own `director_block_input` guard sat
+    ahead of the nudge on S — addon-vs-addon ordering inside one keymap does
+    not follow registration order the way addon-vs-default does. "User
+    Interface" is the one keymap dispatched ahead of both, so the binding
+    lives there FIRST.
+
+    Being global is only safe because the poll scopes it: directing, in a
+    SPACE_VIEW3D WINDOW region. The poll must NOT also require a camera — it
+    is what decides whether the key is ABSORBED, and a take with no camera
+    (or a locked one) still has to swallow S rather than leak it to
+    `transform.resize`; `invoke` handles those cases. The operator is the
+    native modal in `view3d_director_nudge.cc`.
+    """
+    keymap = _read("ui/keymap.py")
+    nudge = (VIEW3D / "view3d_director_nudge.cc").read_text(encoding="utf-8")
+
+    ui_kbd = keymap.index('("User Interface"')
+    object_mode = keymap.index('("Object Mode"', keymap.index("_NUDGE_KEYMAPS"))
+    assert ui_kbd < object_mode, "User Interface must come first in _NUDGE_KEYMAPS"
+
+    assert 'ot->idname = "MIXAR_OT_director_nudge_camera";' in nudge
+    assert "ot->poll = director_nudge_poll;" in nudge
+    poll = nudge[nudge.index("static bool director_nudge_poll(bContext *C)"):]
+    poll = poll[: poll.index("\n}\n") + 3]
+    assert "view3d_director_is_directing(CTX_data_scene(C))" in poll
+    assert "area->spacetype == SPACE_VIEW3D" in poll
+    assert "region->regiontype == RGN_TYPE_WINDOW" in poll
+    assert "camera" not in poll.lower(), "the poll must not require a camera"

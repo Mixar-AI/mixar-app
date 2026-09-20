@@ -42,6 +42,13 @@ def _env_bool(key: str, default: bool = False) -> bool:
     return default
 
 
+def _env_int(key: str, default: int) -> int:
+    try:
+        return int(os.environ.get(key, "") or default)
+    except ValueError:
+        return default
+
+
 def generate_config(version_file: str) -> dict:
     """Build the config dict from environment variables + hardcoded defaults.
 
@@ -79,6 +86,29 @@ def generate_config(version_file: str) -> dict:
         },
         "performance": {
             "ui_batch_budget_ms": 4,
+        },
+        # Update behaviour. Every key has a code-side default, so an older
+        # mixar.json still works; these make the values visible and
+        # overridable per build/environment.
+        "updates": {
+            "channel": _env("MIXAR_UPDATE_CHANNEL", "stable"),
+            "check_delay_seconds": _env_int("MIXAR_UPDATE_CHECK_DELAY_S", 5),
+            # Stage the installer as soon as an update is found, so
+            # "Restart & Update" is instant rather than a download the user
+            # waits through. Set false to keep the browser-download flow.
+            "auto_download": _env_bool("MIXAR_UPDATE_AUTO_DOWNLOAD", True),
+        },
+        # Enterprise network settings (empty = auto). Environment variables
+        # MIXAR_PROXY_URL / MIXAR_CA_BUNDLE / MIXAR_EXTRA_CA_CERTS / MIXAR_NO_PROXY
+        # take precedence. ca_bundle REPLACES the trusted roots; extra_ca_certs
+        # ADDS files or folders of certificates on top (the per-user and
+        # machine-wide certs folders are always scanned). See
+        # docs/enterprise-network.md.
+        "network": {
+            "proxy_url": "",
+            "ca_bundle": "",
+            "extra_ca_certs": "",
+            "no_proxy": "",
         },
     }
 

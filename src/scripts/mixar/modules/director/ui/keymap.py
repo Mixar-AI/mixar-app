@@ -12,6 +12,11 @@ addon_keymaps = []
 _OPERATOR_NAMES = (
     "director_capture_beat",
     "director_block_input",
+    "director_nudge_camera",
+    "director_navigate",
+    "director_aerial",
+    "director_aerial_exit",
+    "director_place_camera",
 )
 
 # Object-editing shortcuts absorbed while directing, each registered in the
@@ -45,6 +50,73 @@ _GUARDED_KEYS = (
 )
 
 
+# The camera motion the Cinema Mode strip advertises. These live in the SAME
+# keymaps as the guards below, and are inserted at the HEAD so they are the
+# first thing Blender tries for their key: "Object Mode" already binds A to
+# select-all and owns the guarded S, and a nudge parked behind either would
+# never run. Being first also makes the nudge its own guard — it consumes the
+# key while directing, and outside Cinema Mode its poll fails and the key
+# falls through to its native meaning untouched.
+#
+# The operator is the native C++ modal `MIXAR_OT_director_nudge_camera`
+# (`editors/space_view3d/view3d_director_nudge.cc`): the first press starts
+# it, its own timer integrates every held key at walk speed, and releasing
+# the keys ends it as ONE undo step. While it runs it takes the OS repeats
+# itself; `repeat=True` stays so a key still held after Esc ended the modal
+# simply starts a fresh one.
+#
+# Registered in both keymaps that can be dispatched first for these keys:
+# "Object Mode" wins while the user is in Object Mode, and "3D View" covers
+# the other modes (a Pose-mode S still reaches Blender's own scale first).
+_NUDGE_KEYS = (
+    ('W', "FORWARD"),
+    ('S', "BACK"),
+    ('A', "LEFT"),
+    ('D', "RIGHT"),
+    ('E', "UP"),
+    ('Q', "DOWN"),
+)
+
+# The other key the Cinema Mode top strip advertises: O toggles the AERIAL
+# view (`mixar.director_aerial`, `ui/operators/aerial_ops.py`) — the main
+# viewport looks down on the scene and a click in the stage places the shot
+# camera. It used to start the WASD walk; `mixar.director_navigate` stays
+# registered for the gate's Navigate button and the compact rail, it only
+# lost this key. Blender's default keymap gives O to proportional editing in
+# "Object Mode" (and to the per-mode equivalents), so the binding has to sit
+# in that keymap to be reached at all; "3D View" covers the modes that do
+# not bind it.
+#
+# Deliberately NOT registered in the global "User Interface" keymap the
+# nudges need: `MIXAR_OT_director_aerial.poll` checks only that a session is
+# directing — it has no area/region test — so a global binding would claim O
+# app-wide for the whole session. Both keymaps here are dispatched only
+# inside a 3D viewport's WINDOW region, which is the scoping the poll does
+# not do itself. Outside Cinema Mode the poll fails and O falls through to
+# its native meaning untouched.
+_NAVIGATE_KEYMAPS = (
+    ("Object Mode", ('EMPTY', 'WINDOW')),
+    ("3D View", ('VIEW_3D', 'WINDOW')),
+)
+
+_NUDGE_KEYMAPS = (
+    # "User Interface" FIRST and it is the one that matters: Blender
+    # dispatches it ahead of every mode keymap, which is the only place that
+    # beats both `UI_OT_eyedropper_depth` (which owns E globally, and whose
+    # modal then swallows the NEXT key too — that is why Q looked dead) and
+    # our own `mixar.director_block_input` guard on S, which sat ahead of the
+    # nudge in the merged Object Mode keymap no matter which registered
+    # first: addon-vs-addon ordering does not follow registration order the
+    # way addon-vs-default does. Being global is safe only because
+    # `director_nudge_poll` (view3d_director_nudge.cc) scopes the poll to a
+    # directing session inside a 3D viewport's WINDOW region — keep the two
+    # together.
+    ("User Interface", ('EMPTY', 'WINDOW')),
+    ("Object Mode", ('EMPTY', 'WINDOW')),
+    ("3D View", ('VIEW_3D', 'WINDOW')),
+)
+
+
 def _operators_ready() -> bool:
     for name in _OPERATOR_NAMES:
         try:
@@ -63,6 +135,41 @@ def _register_keymap():
     if wm is None or keyconfig is None or not _operators_ready():
         return 0.1
 
+    # Registered FIRST, on purpose. `head=True` only orders items inside the
+    # addon keymap; when Blender merges the addon keyconfig into the one it
+    # dispatches, items keep the order they were REGISTERED in, so a nudge
+    # added after the guard below still lost S to it.
+    for keymap_name, (space_type, region_type) in _NUDGE_KEYMAPS:
+        keymap = keyconfig.keymaps.new(
+            name=keymap_name,
+            space_type=space_type,
+            region_type=region_type,
+        )
+        for key, direction in _NUDGE_KEYS:
+            item = keymap.keymap_items.new(
+                "mixar.director_nudge_camera",
+                type=key,
+                value='PRESS',
+                repeat=True,
+                head=True,
+            )
+            item.properties.direction = direction
+            addon_keymaps.append((keymap, item))
+
+    for keymap_name, (space_type, region_type) in _NAVIGATE_KEYMAPS:
+        keymap = keyconfig.keymaps.new(
+            name=keymap_name,
+            space_type=space_type,
+            region_type=region_type,
+        )
+        item = keymap.keymap_items.new(
+            "mixar.director_aerial",
+            type='O',
+            value='PRESS',
+            head=True,
+        )
+        addon_keymaps.append((keymap, item))
+
     keymap = keyconfig.keymaps.new(
         name="3D View",
         space_type='VIEW_3D',
@@ -71,6 +178,39 @@ def _register_keymap():
     item = keymap.keymap_items.new(
         "mixar.director_capture_beat",
         type='F',
+        value='PRESS',
+        head=True,
+    )
+    addon_keymaps.append((keymap, item))
+
+    # Camera placement by click: a plain LEFTMOUSE press over the aerial map
+    # card, or anywhere in the stage while the AERIAL view is on, places the
+    # shot camera (`MIXAR_OT_director_place_camera`, a native modal in
+    # view3d_director_place_camera.cc — click or drag, one undo step). It is
+    # a PRESS item in this same "3D View" keymap, at its head; the addon
+    # keymap is prepended when Blender merges it into the keymap it
+    # dispatches, so it is asked before the stock `view3d.select` items
+    # (which sit on CLICK with left-click select anyway), and the active
+    # tool's keymap — dispatched before "3D View" — binds only CLICK_DRAG for
+    # the select and transform tools. The operator's POLL is what scopes it:
+    # only over the map the painter published this frame, or inside the
+    # stage in Aerial mode, so anywhere else the press falls through
+    # untouched. No modifiers and `any=False`: Shift/Ctrl/Alt clicks keep
+    # their meaning.
+    item = keymap.keymap_items.new(
+        "mixar.director_place_camera",
+        type='LEFTMOUSE',
+        value='PRESS',
+        head=True,
+    )
+    addon_keymaps.append((keymap, item))
+
+    # Esc leaves the aerial view. `mixar.director_aerial_exit` is a separate
+    # operator whose poll passes ONLY while `navigation_mode == 'AERIAL'`, so
+    # Esc can never enter the mode and keeps its meaning everywhere else.
+    item = keymap.keymap_items.new(
+        "mixar.director_aerial_exit",
+        type='ESC',
         value='PRESS',
         head=True,
     )
@@ -88,6 +228,7 @@ def _register_keymap():
             **modifiers,
         )
         addon_keymaps.append((keymap, item))
+
     return None
 
 

@@ -25,11 +25,14 @@ from ....auth.core.auth import (
     refresh_access_token,
 )
 from ....auth.core.auth_hooks import (
+    invalidate_agent_settings,
     invalidate_generation_caches,
     maybe_show_onboarding,
+    refresh_agent_settings,
     refresh_generation_caches,
 )
 from ....auth.core.sso import sso_login
+from ....auth.utils.constants import SSO_LOGIN_TIMEOUT_S
 
 logger = get_logger(__name__)
 
@@ -118,25 +121,30 @@ def _connecting_timeout_check():
     return None  # Don't repeat
 
 
-def _schedule_byok_fetch():
-    """Trigger BYOK state + models-catalog refresh after login.
+def _apply_account_name(user_info) -> None:
+    """Store the profile card's greeting name from a ``/me`` payload.
 
-    Runs via a small-delay timer so the byok operators have time to be
-    registered (UI modules load in time-budgeted batches post-bootstrap).
-    Silent no-op if the operators aren't available yet — BYOK falls back
-    to "inactive" + an empty models-catalog cache, both safe defaults.
+    The card is drawn in C++ and reads `wm.mixar_account_name`; deriving
+    it here (rather than in the draw) keeps the string work off every
+    redraw and out of the native layer.
     """
-    def _try():
-        try:
-            if hasattr(bpy.types, 'MIXAR_BYOK_OT_fetch_state'):
-                bpy.ops.mixar_byok.fetch_state()
-            if hasattr(bpy.types, 'MIXAR_BYOK_OT_fetch_models_catalog'):
-                bpy.ops.mixar_byok.fetch_models_catalog()
-        except Exception as e:
-            logger.debug("BYOK fetch trigger failed: %s", e)
-        return None  # Don't repeat
+    try:
+        from mixar.modules.common.usage.core import account
 
-    bpy.app.timers.register(_try, first_interval=0.5)
+        account.apply_from_user_info(user_info)
+    except Exception as exc:  # noqa: BLE001 — greeting must not break login
+        logger.debug("Account name apply failed: %s", exc)
+
+
+def _clear_account_name() -> None:
+    """Drop the greeting name so the next user isn't greeted by this one's."""
+    try:
+        from mixar.modules.common.usage.core import account, poller
+
+        account.clear()
+        poller.on_logout()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Account name clear failed: %s", exc)
 
 
 def _clear_byok_state_on_logout(wm):
@@ -154,6 +162,9 @@ def _clear_byok_state_on_logout(wm):
         ('byok_form_api_key', ''),
         ('byok_form_openrouter_model', ''),
         ('byok_form_codex_bundle', ''),
+        ('byok_form_local_custom_base', ''),
+        ('byok_form_local_custom_model', ''),
+        ('byok_form_local_custom_key', ''),
         ('byok_dialog_state', 'IDLE'),
         ('byok_last_error', ''),
     ):
@@ -163,11 +174,30 @@ def _clear_byok_state_on_logout(wm):
             except Exception as e:
                 logger.debug("Failed clearing %s on logout: %s", attr, e)
 
+    # NOTE: the models-catalog cache is NOT cleared here. `invalidate_agent_settings()`
+    # owns it, and clears memory, suggestions and the disk file together under the
+    # cache's epoch bump. Doing it from two places gave a worker still in flight two
+    # orderings to win in — which is the race this whole change removes.
+
+    # Local provider: stop the managed llama-server and drop transient
+    # relay grants + UI mirrors. Downloaded model files stay on disk.
     try:
-        from mixar.modules.byok.core import model_suggestions
-        model_suggestions.clear()
+        from mixar.modules.local_models.core import orchestrator
+        orchestrator.on_logout()
     except Exception as e:
-        logger.debug("Failed clearing models-catalog cache on logout: %s", e)
+        logger.debug("Failed stopping local model server on logout: %s", e)
+    try:
+        from mixar.modules.byok.core import local_provider
+        local_provider.clear()
+    except Exception as e:
+        logger.debug("Failed clearing local provider caches on logout: %s", e)
+    try:
+        from mixar.modules.local_models.ui.properties.local_models_props import (
+            wipe_transient_state,
+        )
+        wipe_transient_state(wm)
+    except Exception as e:
+        logger.debug("Failed clearing local model mirrors on logout: %s", e)
 
 
 def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
@@ -188,13 +218,14 @@ def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
             email = user_info["data"].get("email", "")
             scene.mixie_chat_user_id = email
             scene.mixie_chat_credits = user_info["data"].get("credits", 0)
+            _apply_account_name(user_info)
             if refreshed:
                 logger.info("Token refreshed successfully on startup")
             _capture_session_started("startup_token", refreshed=refreshed)
             refresh_generation_caches()
             maybe_show_onboarding(email)
             _auto_connect_websocket()
-            _schedule_byok_fetch()
+            refresh_agent_settings()
         except Exception as e:
             logger.warning("Auth state apply failed: %s", e)
         finally:
@@ -316,17 +347,19 @@ def _auth_check_background() -> None:
                     if scene is not None:
                         scene.mixie_chat_user_id = email
                         scene.mixie_chat_credits = user_info["data"].get("credits", 0)
+                    _apply_account_name(user_info)
 
                     refresh_generation_caches()
                     maybe_show_onboarding(email)
                     _auto_connect_websocket()
-                    _schedule_byok_fetch()
+                    refresh_agent_settings()
                     logger.info("Auto SSO re-login completed successfully")
             else:
                 if hasattr(wm, 'mixie_chat_login_error'):
-                    wm.mixie_chat_login_error = (
-                        "Session expired. Please log in again."
-                    )
+                    # Keep the real reason: a classified network failure
+                    # (support code included) is what the customer quotes.
+                    reason = result.get('message') or "Please log in again."
+                    wm.mixie_chat_login_error = f"Session expired. {reason}"
                 logger.warning("Auto SSO re-login failed: %s", result.get('message'))
         except Exception as e:
             logger.warning("SSO result apply failed: %s", e)
@@ -393,6 +426,41 @@ def check_auth_on_startup(_):
     ).start()
 
 
+# Grace added to the SSO timeout before the UI watchdog gives up on a login
+# thread that never reported back.
+_LOGIN_WATCHDOG_GRACE_S = 30
+_login_attempt_id = 0
+
+
+def _release_stuck_login(attempt_id, thread):
+    """Timer: clear "Waiting for browser..." if the SSO thread is still running.
+
+    The SSO flow has its own deadline, so this only fires if something below
+    it wedged (it did once: a silent peer on the callback socket). Scoped to
+    one attempt so a stale timer can never clobber a newer login.
+    """
+    if attempt_id != _login_attempt_id or not thread.is_alive():
+        return None
+    logger.error(
+        "SSO login thread still running %ss after its deadline; releasing the UI",
+        SSO_LOGIN_TIMEOUT_S + _LOGIN_WATCHDOG_GRACE_S,
+    )
+    try:
+        wm = bpy.context.window_manager
+        if wm.mixie_chat_is_logging_in:
+            wm.mixie_chat_is_logging_in = False
+            wm.mixie_chat_login_error = (
+                "Browser login did not complete. Please try again."
+            )
+            for window in wm.windows:
+                for area in window.screen.areas:
+                    if area.type == 'MIXIE_CHAT':
+                        area.tag_redraw()
+    except Exception as e:
+        logger.warning("Login watchdog could not update UI: %s", e)
+    return None
+
+
 class MIXIE_CHAT_OT_login(Operator):
     """Login to Mixie Chat via browser SSO"""
     bl_idname = "mixie_chat.login"
@@ -400,7 +468,10 @@ class MIXIE_CHAT_OT_login(Operator):
     bl_description = "Login to Mixie Chat via browser SSO"
 
     def execute(self, context):
+        global _login_attempt_id
         wm = context.window_manager
+        _login_attempt_id += 1
+        attempt_id = _login_attempt_id
 
         # Set loading state and force redraw
         wm.mixie_chat_is_logging_in = True
@@ -442,11 +513,12 @@ class MIXIE_CHAT_OT_login(Operator):
                             if scene is not None:
                                 scene.mixie_chat_user_id = email
                                 scene.mixie_chat_credits = user_info["data"].get("credits", 0)
+                            _apply_account_name(user_info)
 
                             refresh_generation_caches()
                             maybe_show_onboarding(email)
                             _auto_connect_websocket()
-                            _schedule_byok_fetch()
+                            refresh_agent_settings()
                             logger.info("SSO login completed — user is logged in")
                     else:
                         msg = result.get("message", "Login failed")
@@ -464,9 +536,14 @@ class MIXIE_CHAT_OT_login(Operator):
 
             bpy.app.timers.register(_apply_result, first_interval=0.0)
 
-        threading.Thread(
+        sso_thread = threading.Thread(
             target=_sso_thread, daemon=True, name="MixarSSOLogin"
-        ).start()
+        )
+        sso_thread.start()
+        bpy.app.timers.register(
+            lambda: _release_stuck_login(attempt_id, sso_thread),
+            first_interval=SSO_LOGIN_TIMEOUT_S + _LOGIN_WATCHDOG_GRACE_S,
+        )
         return {'FINISHED'}
 
 
@@ -505,12 +582,17 @@ class MIXIE_CHAT_OT_logout(Operator):
 
         # Clear cached generation configs
         invalidate_generation_caches()
+        invalidate_agent_settings()
 
         # Clear login state
         wm.mixie_chat_is_logged_in = False
         scene.mixie_chat_user_id = ""
         wm.mixie_chat_password = ""
         scene.mixie_chat_credits = 0
+
+        # Clear the billing snapshot + greeting immediately, so the profile
+        # card can't show the previous account's plan on the next open.
+        _clear_account_name()
 
         # Clear cached BYOK state so the profile menu and dialog reset
         # when the next user logs in.

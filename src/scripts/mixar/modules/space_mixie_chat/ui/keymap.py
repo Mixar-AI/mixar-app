@@ -88,6 +88,52 @@ def register():
 
         addon_keymaps.append((km_mixie, kmi_paste))
 
+        # Plain Cmd+V (macOS) / Ctrl+V (Windows/Linux): paste clipboard
+        # contents — an image becomes an attachment, anything else becomes
+        # composer text.
+        #
+        # Two reasons this binding has to live in the addon keyconfig and has
+        # to point at mixie_chat.paste rather than mixie_chat.paste_image:
+        #
+        # 1. The C-registered copies of this chord (space_mixie_chat.cc and
+        #    space_agent_bubble.cc) sit in the default keyconfig, which the
+        #    GUI keyconfig preset reload wipes — the same finding as
+        #    select_text/copy above. Addon-keyconfig items survive it.
+        # 2. Text paste used to work ONLY through the inline hook in
+        #    interface_handlers.cc, which requires the composer to be in
+        #    text-edit mode at the moment the key arrives. Any focus change
+        #    drops it out of edit mode (WINDEACTIVATE exits text editing, and
+        #    nothing re-activates the button), and the keymap chord behind it
+        #    was bound to paste_image, which returns CANCELLED when the
+        #    clipboard holds no image. So Ctrl/Cmd+V outside edit mode pasted
+        #    nothing at all — silently. That is what external dictation tools
+        #    (Wispr Flow and friends) hit every time: they put the transcript
+        #    on the clipboard and inject the paste chord, by which point the
+        #    composer no longer holds edit focus.
+        #
+        # The extra ctrl+oskey variant is for the same class of tool: they
+        # inject the paste chord while their own push-to-talk modifier is
+        # still physically held, and Blender matches keymap modifiers
+        # exactly, so Cmd+Ctrl+V would otherwise match nothing.
+        #
+        # No double-paste when the composer DOES hold edit focus:
+        # ui_do_but_textedit() handles the chord and returns
+        # WM_UI_HANDLER_BREAK, so region keymap handlers never see it.
+        paste_modifiers = (
+            [{'oskey': True}, {'oskey': True, 'ctrl': True}]
+            if is_macos
+            else [{'ctrl': True}, {'ctrl': True, 'oskey': True}]
+        )
+        for modifiers in paste_modifiers:
+            kmi_paste_any = km_mixie.keymap_items.new(
+                'mixie_chat.paste',
+                type='V',
+                value='PRESS',
+                **modifiers,
+            )
+            addon_keymaps.append((km_mixie, kmi_paste_any))
+        logger.debug("Registered Cmd/Ctrl+V shortcut for clipboard paste")
+
         # Escape to abort current operation (works when agent is BUSY)
         kmi_abort = km_mixie.keymap_items.new(
             'mixie_chat.abort_session',
@@ -96,6 +142,43 @@ def register():
         )
         addon_keymaps.append((km_mixie, kmi_abort))
         logger.debug("Registered Escape shortcut for abort")
+
+        # Text selection (click-drag) + copy (Cmd/Ctrl+C) in the message area.
+        # The C-side "Mixie Chat" keymap registers both (space_mixie_chat.cc),
+        # but the GUI keyconfig preset reload wipes items from all C-registered
+        # keymaps in the default config, so those bindings go dead in GUI
+        # sessions — the same finding as the agent_scene_strip keymap. The
+        # addon-keyconfig items here survive the reload and are merged into the
+        # same "Mixie Chat" keymap that mixie_chat_main_region_init installs on
+        # the message region of BOTH the docked chat and the Agent Bubble
+        # (the bubble reuses that region init), so selection and copy work in
+        # both surfaces. Without the select_text binding, a click-drag in the
+        # bubble's message area fell through to the global LEFTMOUSE
+        # mixar.bubble_header_drag binding and moved the whole window instead
+        # of selecting text.
+        kmi_select = km_mixie.keymap_items.new(
+            'mixie_chat.select_text',
+            type='LEFTMOUSE',
+            value='PRESS',
+        )
+        addon_keymaps.append((km_mixie, kmi_select))
+
+        if is_macos:
+            kmi_copy = km_mixie.keymap_items.new(
+                'mixie_chat.copy',
+                type='C',
+                value='PRESS',
+                oskey=True,
+            )
+        else:
+            kmi_copy = km_mixie.keymap_items.new(
+                'mixie_chat.copy',
+                type='C',
+                value='PRESS',
+                ctrl=True,
+            )
+        addon_keymaps.append((km_mixie, kmi_copy))
+        logger.debug("Registered select-text and copy shortcuts for chat")
 
 
 def unregister():

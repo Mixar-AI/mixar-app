@@ -62,6 +62,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_rules_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static const float COL_ACCENT[4] = CHAT_ACCENT_LIVE;
 
@@ -412,8 +414,8 @@ void mixie_chat_draw_rules_overlay(const bContext *C, ARegion *region)
   wmWindow *win = CTX_wm_window(C);
   float mouse_x = -1000.0f, mouse_y = -1000.0f;
   if (win) {
-    mouse_x = float(win->eventstate->xy[0] - region->winrct.xmin);
-    mouse_y = float(win->eventstate->xy[1] - region->winrct.ymin);
+    mouse_x = float(win->runtime->eventstate->xy[0] - region->winrct.xmin);
+    mouse_y = float(win->runtime->eventstate->xy[1] - region->winrct.ymin);
   }
 
   const float slide = HIST_OPEN_SLIDE_PX * scale * (1.0f - ease);
@@ -878,3 +880,4 @@ void mixie_chat_draw_rules_overlay(const bContext *C, ARegion *region)
 }
 
 /** \} */
+}  // namespace blender

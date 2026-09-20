@@ -6,40 +6,37 @@
 """
 Mixie Chat Send Message Operator
 
-Core send-message operator for Agent mode with HTTP/SSE streaming.
+Core send-message operator for Agent mode with WebSocket streaming.
 Generate mode is delegated to generate_ops.py.
 """
 
-import json
 import os
-import uuid
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 import bpy
 from bpy.types import Operator
 
-from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.capture import capture
 from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
 
-from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState, TEMP_PLACEHOLDER_PREFIX
+from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState
 from ...core.performance_metrics import get_metrics
 from ...core import (
+    encode_attachment_for_upload,
     get_session_manager,
-    image_to_base64,
+)
+from ...core.attachment_names import resolve_attachment_names
+from ...core.composer_send import (
+    HINT_QUEUED,
+    OutgoingMessage,
+    can_send,
+    is_interjection,
+    send_user_message,
 )
 from ...core.connection_manager import get_connection_manager
 from ...core.jsonrpc_client import get_jsonrpc_client
-from ...core.queue_processor import (
-    queue_sse_event,
-    queue_sse_error,
-    queue_sse_complete,
-)
-from ...core.sse_handler import create_sse_handler
-from ...core.animation_manager import start_loader_animation
-from ...core.message_helpers import add_agent_message, get_auth_token
-from ...core.rules import compose_wire_message, mark_rules_sent
+from ...core.message_helpers import add_turn_placeholder
 from ...core.ui_utils import redraw_chat_areas
 from . import generate_ops
 
@@ -72,18 +69,39 @@ def cleanup_image_encoder():
         _image_encoder_executor = None
 
 
+def _send_when_handwriting_lands():
+    """Re-run the send once Scribble's last recognition request has landed.
+
+    Runs from an app timer (see ``scribble.defer_until_idle``), the same way
+    the Enter key reaches the operator, so every pre-flight check runs again
+    against the composer as it is NOW — with the transcription in it.
+    """
+    try:
+        if hasattr(bpy.ops.mixie_chat, 'send_message'):
+            bpy.ops.mixie_chat.send_message()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("deferred send after handwriting failed: %s", e, exc_info=True)
+
+
 class MIXIE_CHAT_OT_send_message(Operator):
-    """Send a chat message via HTTP/SSE"""
+    """Send a chat message via WebSocket"""
     bl_idname = "mixie_chat.send_message"
     bl_label = "Send Message"
     bl_options = {'REGISTER'}
 
+    message_override: bpy.props.StringProperty(
+        options={'HIDDEN', 'SKIP_SAVE'},
+        description="Send shortcut text while preserving the main composer draft",
+    )
+
     @classmethod
     def poll(cls, context):
-        """Allow sending when idle, modifying, or awaiting input."""
-        session = get_session_manager()
-        scene = context.scene
-        return session.get_state(scene) in (SessionState.IDLE, SessionState.MODIFYING, SessionState.AWAITING_INPUT)
+        """Idle, modifying, awaiting input — or busy while the run is open
+        (the message joins the run). One predicate for every send surface."""
+        allowed, reason = can_send(context.scene)
+        if not allowed:
+            cls.poll_message_set(reason)
+        return allowed
 
     def execute(self, context):
         metrics = get_metrics()
@@ -101,15 +119,82 @@ class MIXIE_CHAT_OT_send_message(Operator):
             metrics.stop_timer('send_message_total')
             return generate_ops.execute_generate_mode(self, context)
 
-        message_text = scene.mixie_chat_input.strip()
+        # Library mode: the typed text searches the asset library (empty = show
+        # everything); results render as clickable thumbnails, no backend call.
+        if scene.mixie_chat_mode == 'LIBRARY':
+            from ...core import library_browse
+            capture(EVENT_MESSAGE_SENT, {"mode": "library"}, context=context)
+            metrics.stop_timer('send_message_total')
+            return library_browse.execute_library_mode(self, context)
+
+        if not self.message_override:
+            from ...core import voice as voice_input
+            if voice_input.defer_send(context):
+                metrics.stop_timer('send_message_total')
+                return {'CANCELLED'}
+
         session = get_session_manager()
         is_modify = (session.get_state(scene) == SessionState.MODIFYING)
         is_awaiting_input = (session.get_state(scene) == SessionState.AWAITING_INPUT)
+        # A turn is streaming and the run is open: this message joins it. The
+        # streaming turn's loader and bubbles stay untouched.
+        interjecting = is_interjection(scene)
+
+        # Scribble: handwriting still on the chat canvas, or still being
+        # converted, belongs to THIS message. Flush the canvas and, if a
+        # recognition request is in flight, send again once it has landed.
+        # This sits ABOVE the empty-message check on purpose: a prompt
+        # written entirely by hand is empty until its last batch lands, and
+        # bouncing it as "empty" would throw away what the user just wrote.
+        if not (is_modify or is_awaiting_input or self.message_override):
+            try:
+                from ...core import scribble
+                from ...core import voice as voice_input
+                scribble.flush_pending_ink()
+                if scribble.defer_until_idle(_send_when_handwriting_lands):
+                    self.report({'INFO'}, "Converting handwriting…")
+                    metrics.stop_timer('send_message_total')
+                    return {'CANCELLED'}
+            except Exception as e:  # noqa: BLE001
+                # Never lose a message over its optional handwriting.
+                logger.debug("scribble flush before send skipped: %s", e, exc_info=True)
+
+        message_text = (self.message_override or scene.mixie_chat_input).strip()
         pending_attachments = scene.mixie_chat_pending_attachments
+
+        if not (is_modify or is_awaiting_input):
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                chat_bridge.flush_for_send(context)
+                if not message_text:
+                    message_text = chat_bridge.default_message(scene, context.window_manager)
+            except Exception:  # Optional ink must never discard the user's words.
+                logger.debug("Could not flush viewport ink for send", exc_info=True)
 
         if not message_text and (is_modify or is_awaiting_input or len(pending_attachments) == 0):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}
+
+        mark_context = None
+
+        project_context = None
+        if scene.mixie_chat_mode == 'ADDON_PROJECT' and not (is_modify or is_awaiting_input):
+            if not str(getattr(scene, "mixie_addon_project_id", "") or ""):
+                from mixar.modules.addon_project.ui.operators import (
+                    ensure_addon_project_ready,
+                )
+                # Zero-question setup: default root + link, then this SAME
+                # send proceeds to build_project_context below.
+                if not ensure_addon_project_ready(self):
+                    metrics.stop_timer('send_message_total')
+                    return {'CANCELLED'}
+            try:
+                from mixar.modules.addon_project.context import build_project_context
+                project_context = build_project_context(scene)
+            except Exception as exc:
+                self.report({'ERROR'}, getattr(exc, "message", str(exc)))
+                metrics.stop_timer('send_message_total')
+                return {'CANCELLED'}
 
         # Mark the user as engaged so the "Hi I'm Mixie" greeting
         # stops re-appearing whenever the message list transiently
@@ -126,11 +211,12 @@ class MIXIE_CHAT_OT_send_message(Operator):
             return {'CANCELLED'}
 
         capture(EVENT_MESSAGE_SENT, {
-            "mode": "agent",
+            "mode": "addon_project" if scene.mixie_chat_mode == 'ADDON_PROJECT' else "agent",
             "has_attachments": bool(len(pending_attachments)),
             "is_modify": is_modify,
             "is_awaiting_input": is_awaiting_input,
             "plan_enabled": bool(getattr(scene, "mixie_chat_plan_enabled", False)),
+            "auto_mode": bool(getattr(scene, "mixie_chat_auto_mode", False)),
             "model": getattr(scene, "mixie_chat_model", "") or None,
         }, context=context)
 
@@ -149,26 +235,51 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'ERROR'}, "WebSocket not ready — no connection ID")
             return {'CANCELLED'}
 
-        # Clear any STALE loader left by a prior turn before starting a new one.
-        # If the previous turn was cancelled or the stream was closed client-side,
-        # the backend can't emit a loader-off (you can't write to a closed stream),
-        # so a "Thinking" loader — and its ghost placeholder bubble — can spin
-        # forever. Starting a NEW turn is the reliable point to clear it. Modify /
-        # input-response turns continue an existing flow, so leave those untouched.
-        if not is_modify and not is_awaiting_input:
-            stale_placeholders = []
-            for i, m in enumerate(scene.mixie_chat_messages):
-                if getattr(m, 'loader_visible', False):
-                    m.loader_visible = False
-                if getattr(m, 'bubble_id', '').startswith(TEMP_PLACEHOLDER_PREFIX):
-                    stale_placeholders.append(i)
-            for i in reversed(stale_placeholders):
-                scene.mixie_chat_messages.remove(i)
+        # Scribble Marks: where the user pointed, already resolved against the
+        # live scene. Placed HERE deliberately — after every pre-flight bail-out
+        # and before the attachment encoding below. prepare_for_send appends the
+        # frozen frames to pending_attachments, so running it any earlier would
+        # leave those frames queued for the NEXT message whenever a pre-flight
+        # check cancels this one.
+        if not (is_modify or is_awaiting_input):
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                mark_context, mark_notes = chat_bridge.prepare_for_send(scene)
+                for note in mark_notes:
+                    self.report({'INFO'}, f"Marks: {note}")
+            except Exception as e:  # noqa: BLE001
+                # The words are a complete request on their own; never lose a
+                # message because the marks could not be assembled.
+                logger.debug("scribble marks skipped on send: %s", e, exc_info=True)
+
+        fresh_turn = not (is_modify or is_awaiting_input or interjecting)
+        if fresh_turn:
+            # A fresh turn is the reliable point to sweep asset-picker
+            # preview thumbnails no bubble references anymore (an abandoned
+            # picker never gets the empty-actions replacement that normally
+            # cleans them).
+            try:
+                from ...core import asset_choice_previews
+                asset_choice_previews.cleanup_orphans(scene)
+            except Exception:
+                pass
+
+        # Turn checkpoint: the document exactly as it is before this fresh
+        # turn (core/turn_checkpoints.py). Taken before the user bubble is
+        # added so a restore shows the chat up to the previous reply. Never
+        # blocks the send.
+        checkpoint = None
+        if fresh_turn:
+            from ...core import turn_checkpoints
+            checkpoint = turn_checkpoints.capture(scene, message_text)
 
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
         user_msg.sender = 'USER'
         user_msg.text = message_text
+        if interjecting:
+            # Settled by the backend's `joined` ack (composer_send).
+            user_msg.delivery_hint = HINT_QUEUED
 
         if not is_modify and not is_awaiting_input:
             # Copy attachments to message history (not for modify/input responses)
@@ -179,34 +290,20 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 msg_att.display_name = att.display_name
 
         # Clear input field immediately for better UX
-        scene.mixie_chat_input = ""
+        if not self.message_override:
+            scene.mixie_chat_input = ""
 
-        # Add temporary placeholder loader for instant feedback (non-modify/input only)
-        # Will be removed when first backend SSE event creates the real bubble
-        if not is_modify and not is_awaiting_input:
-            placeholder = scene.mixie_chat_messages.add()
-            placeholder.sender = 'AGENT'
-            placeholder.bubble_id = f"{TEMP_PLACEHOLDER_PREFIX}{uuid.uuid4().hex[:12]}"
-            placeholder.loader_visible = True
-            placeholder.loader_texts = json.dumps(["Thinking..."])
-            start_loader_animation()
+        # Temporary "Thinking..." placeholder (clears a stale loader first);
+        # replaced when the first backend slot event creates the real bubble.
+        # Modify / input-response turns continue an existing flow, and an
+        # interjection answers inside the turn already streaming.
+        if fresh_turn:
+            add_turn_placeholder(scene)
 
         # Trigger immediate redraw to show user message + loader together
         metrics.start_timer('optimistic_ui_redraw')
         redraw_chat_areas()
         metrics.stop_timer('optimistic_ui_redraw')
-
-        # Create SSE handler with queue callbacks
-        base_url = get_server_url()
-        target_scene_name = scene.name
-        sse_handler = create_sse_handler(
-            scene_name=target_scene_name,
-            host=base_url,
-            on_event=lambda event: queue_sse_event(event, target_scene_name),
-            on_error=lambda error: queue_sse_error(error, target_scene_name),
-            on_complete=lambda: queue_sse_complete(target_scene_name),
-        )
-        auth_token = get_auth_token()
 
         # Encode pending attachments to base64 asynchronously
         encoded_attachments = []
@@ -223,149 +320,88 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 attachment_data.append(att_data)
 
                 if att.image_source == 'FILE':
-                    # FILE images are safe to encode off the main thread
-                    future = executor.submit(image_to_base64, att.image_path, att.image_source)
+                    # FILE images (read + PIL compress) are safe off the main thread
+                    future = executor.submit(
+                        encode_attachment_for_upload, att.image_path, att.image_source
+                    )
                     encoding_futures.append(future)
                 else:
                     # BLEND_DATA images access bpy.data — must stay on main thread
                     encoding_futures.append(None)
 
-            # Wait for all encodings with timeout (5s per image)
-            timeout_per_image = 5.0
+            # Per-image budget. Compression bounds the work (a 12MP photo is
+            # decoded at reduced scale and re-encoded in well under a second),
+            # so a timeout here means something is genuinely wrong with that
+            # one image — drop it and send the rest, never the whole set.
+            timeout_per_image = 10.0
 
-            try:
-                for idx, future in enumerate(encoding_futures):
+            for idx, future in enumerate(encoding_futures):
+                att_path, att_source = attachment_data[idx]
+                try:
                     if future is None:
                         # BLEND_DATA: encode on main thread (bpy.data access)
-                        att_path, att_source = attachment_data[idx]
-                        b64 = image_to_base64(att_path, att_source)
+                        encoded = encode_attachment_for_upload(att_path, att_source)
                     else:
-                        b64 = future.result(timeout=timeout_per_image)
-                    if b64:
-                        att_path, att_source = attachment_data[idx]
-                        ext = os.path.splitext(att_path)[1].lower() if att_source == 'FILE' else '.png'
-                        mime_map = {
-                            '.png': 'image/png',
-                            '.jpg': 'image/jpeg',
-                            '.jpeg': 'image/jpeg',
-                            '.bmp': 'image/bmp',
-                            '.tiff': 'image/tiff',
-                            '.tif': 'image/tiff'
-                        }
-                        mime_type = mime_map.get(ext, 'image/png')
-                        encoded_attachments.append({"base64": b64, "mime_type": mime_type})
-                    else:
-                        logger.warning(f"Failed to encode attachment index {idx}")
+                        encoded = future.result(timeout=timeout_per_image)
+                except FuturesTimeoutError:
+                    logger.error(f"Image encoding timeout for {att_path}")
+                    self.report({'WARNING'},
+                                f"Skipped slow image: {os.path.basename(att_path)}")
+                    continue
+                except Exception as e:
+                    logger.error(f"Image encoding error for {att_path}: {e}")
+                    self.report({'WARNING'}, f"Image encoding failed: {str(e)}")
+                    continue
 
-            except FuturesTimeoutError:
-                # Timeout - proceed without attachments
-                logger.error("Image encoding timeout - sending without attachments")
-                self.report({'WARNING'}, "Image encoding timeout - message sent without images")
-                encoded_attachments = []
-            except Exception as e:
-                logger.error(f"Image encoding error: {e}")
-                self.report({'WARNING'}, f"Image encoding failed: {str(e)}")
-                encoded_attachments = []
+                if encoded:
+                    b64, mime_type = encoded
+                    encoded_attachments.append({"base64": b64, "mime_type": mime_type})
+                else:
+                    logger.warning(f"Failed to encode attachment index {idx}")
 
             total_encode_time = metrics.stop_timer('image_encoding_total')
             if encoded_attachments and total_encode_time is not None:
                 logger.info(f"Encoded {len(encoded_attachments)} image attachment(s) in {total_encode_time*1000:.1f}ms")
 
-        # Resolve each attachment to a stable bpy.data.images name. BLEND_DATA
-        # attachments already carry the name in image_path; FILE attachments
-        # are loaded into bpy.data.images on the main thread (check_existing
-        # reuses an entry if one already points at this filepath). Sending the
-        # name in the payload lets the backend inline it into the user
-        # message, so the agent can pass image_name to generation tools
-        # without a get_last_user_message round-trip.
+        # Stable bpy.data.images names (and #1268 imported object names) the
+        # backend inlines into the user message — core/attachment_names.py.
         attachment_names: list = []
+        imported_object_names: list = []
         if not is_modify and not is_awaiting_input and len(pending_attachments) > 0:
-            for att in pending_attachments:
-                resolved_name = ""
-                try:
-                    if att.image_source == 'BLEND_DATA':
-                        img = bpy.data.images.get(att.image_path)
-                        if img is not None:
-                            resolved_name = img.name
-                    elif att.image_source == 'FILE':
-                        # Prefer an existing entry that already points at this file
-                        for candidate in bpy.data.images:
-                            if (
-                                candidate.filepath == att.image_path
-                                or bpy.path.abspath(candidate.filepath) == att.image_path
-                            ):
-                                resolved_name = candidate.name
-                                break
-                        if not resolved_name and os.path.isfile(att.image_path):
-                            try:
-                                img = bpy.data.images.load(att.image_path, check_existing=True)
-                                img.colorspace_settings.name = 'sRGB'
-                                # Pack so a later move/delete of the source file
-                                # doesn't break the agent's reference.
-                                try:
-                                    img.pack()
-                                except RuntimeError:
-                                    pass
-                                resolved_name = img.name
-                            except RuntimeError as e:
-                                logger.warning(f"Could not load attachment {att.image_path}: {e}")
-                except Exception as e:
-                    logger.warning(f"Failed to resolve attachment name for {att.image_path}: {e}")
-                attachment_names.append(resolved_name)
-
-        metrics.start_timer('sse_start')
-
-        if is_modify or is_awaiting_input:
-            # Send via input stream (modify feedback or user input response)
-            action = "modify" if is_modify else "respond"
-            success = sse_handler.start_input_stream(
-                session_id=session.get_session_id(scene),
-                action=action,
-                text=message_text,
-                auth_token=auth_token,
+            attachment_names, imported_object_names = resolve_attachment_names(
+                pending_attachments
             )
-            if not success:
-                self.report({'ERROR'}, "Failed to send input")
-                session.set_state(scene, SessionState.IDLE)  # Return to idle on error
-                metrics.stop_timer('send_message_total')
-                return {'CANCELLED'}
-            session.set_state(scene, SessionState.BUSY)  # Set to busy after sending
-            session.clear_streaming()
-        else:
-            # Normal message: start new session stream.
-            # Compose the wire message BEFORE start_session — project rules
-            # are prepended only when this send opens a NEW session, and
-            # start_session is what generates the session id. The optimistic
-            # user bubble above keeps the raw message_text.
-            wire_message = compose_wire_message(scene, message_text)
-            session_id = session.start_session(scene, message_text)
 
-            plan_required = getattr(scene, 'mixie_chat_plan_enabled', True)
+        metrics.start_timer('agent_send')
 
-            success = sse_handler.start_stream(
-                message=wire_message,
-                instance_id=ws_client.connection_id,
-                session_id=session_id,
-                plan_required=plan_required,
-                execution_required=True,
-                approval_required=True,
-                auth_token=auth_token,
-                image_attachments=encoded_attachments if encoded_attachments else None,
-                attachment_names=attachment_names if attachment_names else None,
-            )
-            if not success:
-                self.report({'ERROR'}, "Failed to start chat stream")
-                session.set_error(scene)
-                metrics.stop_timer('send_message_total')
-                return {'CANCELLED'}
+        # ONE choice point (core/composer_send.py): input answer, interjection
+        # into the open run, or a fresh socket turn. The optimistic user bubble
+        # above keeps the raw message_text; the wire message is composed there.
+        success, error = send_user_message(scene, OutgoingMessage(
+            text=message_text,
+            image_attachments=encoded_attachments,
+            attachment_names=attachment_names,
+            imported_object_names=imported_object_names,
+            project_context=project_context,
+            mark_context=mark_context,
+            user_message=user_msg,
+        ))
+        if not success:
+            self.report({'ERROR'}, error)
+            metrics.stop_timer('send_message_total')
+            return {'CANCELLED'}
 
-            # The wire message above carried the current ruleset (first
-            # message) or a rules-update block (rules changed
-            # mid-session). Stamp the fingerprint only after the send
-            # succeeded so a failed start never swallows a pending update.
-            mark_rules_sent(scene)
+        metrics.stop_timer('agent_send')
 
-        metrics.stop_timer('sse_start')
+        # The turn's command id is the backend's request id: bind the
+        # checkpoint to it so a restore can rewind the conversation too.
+        if checkpoint is not None:
+            from ...core import turn_checkpoints
+            from ...core.turn_transport import get_turn_handler
+            handler = get_turn_handler(scene.name)
+            request_id = (getattr(handler, "last_command_id", "") if handler else "") \
+                or getattr(user_msg, "bubble_id", "")
+            turn_checkpoints.bind_request(checkpoint, request_id)
 
         # Drop the moodboard selection for any images we just sent.
         # Without this the moodboard's polling sync would re-add them
@@ -385,6 +421,19 @@ class MIXIE_CHAT_OT_send_message(Operator):
             logger.debug(
                 "moodboard deselect on send skipped: %s", e, exc_info=True
             )
+
+        # Settle the marks that just went out and lower the freeze. The marks
+        # themselves are KEPT — a follow-up turn refers back to them, and the
+        # vertex groups and cameras they name are still live in the scene.
+        # Unconditional: sending is the end of the gesture whether or not
+        # anything was drawn. Gated on mark_context, arming and then sending
+        # without marking left the viewport frozen with no marks to explain it.
+        if not is_modify and not is_awaiting_input:
+            try:
+                from mixar.modules.scribble_mark.core import chat_bridge
+                chat_bridge.finish_send(scene)
+            except Exception as e:  # noqa: BLE001
+                logger.debug("scribble mark settle skipped: %s", e, exc_info=True)
 
         # Clear pending attachments (input already cleared above for optimistic update)
         pending_attachments.clear()

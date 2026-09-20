@@ -20,6 +20,12 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+
+/* Mixar 5.2 port: creator code stays in the global namespace; blender::
+ * symbols are reached through a using-directive (declare the namespace
+ * first — only system headers precede this point). */
+namespace blender {}
+using namespace blender;
 #define SOCKET int
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1

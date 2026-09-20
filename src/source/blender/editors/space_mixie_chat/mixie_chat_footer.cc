@@ -50,6 +50,8 @@
 #include "mixie_chat_footer_constants.hh"
 #include "mixie_chat_footer_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Rotating Input Placeholder
@@ -129,9 +131,16 @@ void mixie_chat_footer_region_init(wmWindowManager *wm, ARegion *region)
   WM_event_add_keymap_handler(&region->runtime->handlers, chat_keymap);
 
   /* Register dropbox handler for image drag-and-drop onto the footer. */
-  ListBase *dropboxes = WM_dropboxmap_find(
+  ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
       "Mixie Chat Footer", SPACE_MIXIE_CHAT, RGN_TYPE_TOOLS);
-  WM_event_add_dropbox_handler(&region->runtime->handlers, dropboxes);
+  WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
+                               static_cast<ListBaseT<wmDropBox> *>(dropboxes));
+
+  /* Scribble: a stylus press on the composer input box opens the ink
+   * canvas instead of entering text-edit (mixie_chat_ink_events.cc).
+   * Registered AFTER the uiBlock handlers inside ED_region_header_init —
+   * UI handlers prepend, so this one gets first look at the press. */
+  mixie_chat_ink_footer_handler_register(region);
 
   /* Set initial footer height using centralized calculation
    * This ensures the footer gets adequate space from the start */
@@ -154,7 +163,7 @@ void mixie_chat_footer_region_layout(const bContext *C, ARegion *region)
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
   int mention_rows = mixie_chat_mention_row_count(scene);
   int required_height_unscaled = footer_layout_calculate_height(
-      scene, theme, &has_overflow, input_lines, mention_rows);
+      scene, theme, &has_overflow, input_lines, mention_rows, region->winx);
 
   /* Warn if height exceeds maximum (should rarely happen) */
   if (has_overflow) {
@@ -171,7 +180,8 @@ void mixie_chat_footer_region_layout(const bContext *C, ARegion *region)
 
       /* OPTIMIZED: Only redraw main region instead of all regions
        * The main region's View2D bounds depend on footer height */
-      LISTBASE_FOREACH (ARegion *, rgn, &area->regionbase) {
+      for (ARegion &rgn_iter : area->regionbase) {
+        ARegion *rgn = &rgn_iter;
         if (rgn->regiontype == RGN_TYPE_WINDOW) {
           ED_region_tag_redraw(rgn);
           break; /* Early exit after finding main region */
@@ -195,14 +205,16 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   const FooterThemeCache *theme = footer_cache_get_theme();
   int input_lines = footer_layout_get_input_line_count(scene, region->winx);
   int mention_rows = mixie_chat_mention_row_count(scene);
-  region->sizey = footer_layout_calculate_height(scene, theme, nullptr, input_lines, mention_rows);
+  region->sizey = footer_layout_calculate_height(
+      scene, theme, nullptr, input_lines, mention_rows, region->winx);
 
   ScrArea *area = CTX_wm_area(C);
   if (area) {
     ED_area_tag_region_size_update(area, region);
 
     /* OPTIMIZED: Only redraw main region, not all regions */
-    LISTBASE_FOREACH (ARegion *, rgn, &area->regionbase) {
+    for (ARegion &rgn_iter : area->regionbase) {
+      ARegion *rgn = &rgn_iter;
       if (rgn->regiontype == RGN_TYPE_WINDOW) {
         ED_region_tag_redraw(rgn);
         break;
@@ -217,7 +229,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     GPU_clear_color(bg[0], bg[1], bg[2], bg[3]);
   }
   else {
-    UI_ThemeClearColor(TH_BACK);
+    ui::theme::frame_buffer_clear(TH_BACK);
   }
 
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
@@ -225,6 +237,11 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
    * (shows Send button). RNA_boolean_get would assert/crash; find_property is safe. */
   PropertyRNA *busy_prop = RNA_struct_find_property(&scene_ptr, "mixie_chat_is_busy");
   bool is_busy = busy_prop ? RNA_property_boolean_get(&scene_ptr, busy_prop) : false;
+  /* Codex / Claude Code rule: a non-empty composer always offers Send (the
+   * message joins the open run as an interjection; the operator's poll greys
+   * it out when no run is open). Stop is only for busy + empty. */
+  PropertyRNA *draft_prop = RNA_struct_find_property(&scene_ptr, "mixie_chat_input");
+  const bool has_text = draft_prop && RNA_property_string_length(&scene_ptr, draft_prop) > 0;
 
   /* Get cached attachment data - ELIMINATES per-frame allocations */
   int pending_count = 0;
@@ -235,22 +252,30 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   FooterElementPositions pos;
   footer_layout_calculate_positions(
       region->winx, pending_count, theme, &pos, input_lines, mention_rows);
+  /* Layout may have asked for more lines than this frame's winrct has —
+   * a uiButton taller than its region stops drawing text entirely, which
+   * is how a grown subsequent prompt vanished until the next resize. */
+  {
+    const int max_input_h = region->winy - pos.input_y;
+    if (max_input_h > 0 && pos.input_height > max_input_h) {
+      pos.input_height = max_input_h;
+    }
+  }
 
   const float scale = UI_SCALE_FAC;
 
   /* ===== CREATE UI BLOCK FOR BUTTONS ===== */
-  uiBlock *block = UI_block_begin(C, region, __func__, blender::ui::EmbossType::Emboss);
+  ui::Block *block = ui::block_begin(C, region, __func__, blender::ui::EmbossType::Emboss);
 
   /* ===== ROW 1 (TOP): INPUT FIELD ===== */
   if (pos.input_w > 0) {
     /* Graceful degradation: if Python hasn't registered the property yet, skip the
-     * text field entirely. uiDefButR crashes on a missing RNA property (null deref
+     * text field entirely. ui::uiDefButR crashes on a missing RNA property (null deref
      * inside ui_but_string_get_ex). Same pattern as mixie_chat_is_busy above. */
     PropertyRNA *input_prop = RNA_struct_find_property(&scene_ptr, "mixie_chat_input");
     if (input_prop) {
-      uiBut *input_but = uiDefButR(block,
-                                   ButType::Text,
-                                   0,
+      ui::Button *input_but = ui::uiDefButR(block,
+                                   ui::ButtonType::Text,
                                    "",  /* Empty label - placeholder will be set below */
                                    pos.input_x,
                                    pos.input_y,
@@ -268,17 +293,17 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
          * set of concrete example prompts, picking a fresh one each time the
          * composer returns to empty (see mixie_chat_footer_next_placeholder). */
         const bool input_is_empty = (RNA_property_string_length(&scene_ptr, input_prop) == 0);
-        UI_but_placeholder_set(input_but, mixie_chat_footer_next_placeholder(input_is_empty));
+        ui::button_placeholder_set(input_but, mixie_chat_footer_next_placeholder(input_is_empty));
 
         /* Place cursor at end instead of selecting all text when re-activating. */
-        UI_but_flag2_enable(input_but, UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+        ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
 
-        /* Enable UI_BUT_TEXTEDIT_UPDATE so interface_handlers.cc inserts \x1F on Enter.
+        /* Enable ui::BUT_TEXTEDIT_UPDATE so interface_handlers.cc inserts \x1F on Enter.
          * Shift+Enter inserts a real newline for multi-line input.
          * The Python property's update callback detects the \x1F marker and triggers submit.
          * This ensures Enter key submits, but focus loss (clicking outside) does NOT submit.
-         * NOTE: Do NOT use UI_but_func_set here - that callback fires on focus loss too. */
-        UI_but_flag_enable(input_but, UI_BUT_TEXTEDIT_UPDATE);
+         * NOTE: Do NOT use ui::button_func_set here - that callback fires on focus loss too. */
+        ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
       }
     }
   }
@@ -321,9 +346,8 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     /* Create dropdown button with mode-specific icon and text label
      * Add spaces around text for internal padding */
     std::string padded_mode_name = " " + mode_name + " ";
-    uiDefIconTextButR(block,
-                      ButType::Menu,
-                      0,
+    ui::uiDefIconTextButR(block,
+                      ui::ButtonType::Menu,
                       icon_id,
                       padded_mode_name.c_str(),  /* Display current enum value's name with padding */
                       pos.dropdown_x,
@@ -336,7 +360,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
                       std::nullopt);
 
     if (free_items) {
-      MEM_freeN((void *)items);
+      MEM_delete_void(static_cast<void *>((void *)items));
     }
   }
 
@@ -375,9 +399,8 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
       /* Create generate type dropdown with icon and text label
        * Add spaces around text for internal padding */
       std::string padded_gen_type_name = " " + gen_type_name + " ";
-      uiDefIconTextButR(block,
-                        ButType::Menu,
-                        0,
+      ui::uiDefIconTextButR(block,
+                        ui::ButtonType::Menu,
                         gen_icon_id,
                         padded_gen_type_name.c_str(),  /* Display current enum value's name with padding */
                         generate_dropdown_x,
@@ -390,14 +413,14 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
                         std::nullopt);
 
       if (gen_free_items) {
-        MEM_freeN((void *)gen_items);
+        MEM_delete_void(static_cast<void *>((void *)gen_items));
       }
     }
   }
 
   /* Create footer icon buttons with hover effects.
    * Use EmbossType::None for clean icon-only appearance with subtle hover. */
-  UI_block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
 
   /* Attachment button (paperclip icon) - position after dropdowns */
   int attach_btn_final_x = pos.attach_btn_x;
@@ -406,8 +429,8 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     attach_btn_final_x = generate_dropdown_x + pos.dropdown_width + int(FOOTER_BUTTON_SPACING_BASE * scale);
   }
 
-  uiDefIconButO(block,
-                ButType::But,
+  ui::uiDefIconButO(block,
+                ui::ButtonType::But,
                 "MIXIE_CHAT_OT_add_image_from_file",
                 blender::wm::OpCallContext::InvokeDefault,
                 ICON_PAPERCLIP,
@@ -432,8 +455,8 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
   int screenshot_btn_x = next_btn_x;
 
   if (!is_generate_mode && !is_bubble) {
-    uiDefIconButO(block,
-                  ButType::But,
+    ui::uiDefIconButO(block,
+                  ui::ButtonType::But,
                   "MIXIE_CHAT_OT_capture_screenshot",
                   blender::wm::OpCallContext::InvokeDefault,
                   ICON_CAMERA_DATA,
@@ -453,7 +476,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
    * below. The mixie_chat_plan_enabled property and its toggle operator
    * remain, so the agent's plan behaviour is unchanged (default off) —
    * only the footer control is gone. To restore, re-add this label-measure
-   * + uiDefButO click-target block and the footer_draw_plan_toggle() call. */
+   * + ui::uiDefButO click-target block and the footer_draw_plan_toggle() call. */
 
   /* Check if any generation is running in generate mode */
   bool is_generating = false;
@@ -491,7 +514,7 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
         }
       }
       if (gen_free_chk) {
-        MEM_freeN((void *)gen_items_chk);
+        MEM_delete_void(static_cast<void *>((void *)gen_items_chk));
       }
       if (gen_flag_name) {
         PropertyRNA *gflag = RNA_struct_find_property(&scene_ptr, gen_flag_name);
@@ -502,40 +525,18 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
     }
   }
 
-  /* RIGHT SIDE: Abort when busy, Cancel when generating, Send when idle.
+  /* RIGHT SIDE: Active generation keeps Cancel available even with a draft.
+   * Otherwise Send with text, Abort when busy, and Send when idle.
    * Intentional asymmetry in draw strategy:
-   *   BUSY  → uiDefIconButO(ICON_CANCEL): icon drawn by Blender's widget system.
-   *   GENERATING → uiDefIconButO(ICON_CANCEL): cancel active generation.
-   *   IDLE  → uiDefButO("") + footer_draw_submit_icon() GPU overlay: custom scaled
+   *   BUSY  → ui::uiDefIconButO(ICON_CANCEL): icon drawn by Blender's widget system.
+   *   GENERATING → ui::uiDefIconButO(ICON_CANCEL): cancel active generation.
+   *   SEND  → ui::uiDefButO("") + footer_draw_submit_icon() GPU overlay: custom scaled
    *            ICON_SUBMIT_ARROW that cannot be sized correctly via the widget system.
    * Do not unify these branches — the GPU overlay is required for the Send icon. */
-  if (is_busy) {
-    uiDefIconButO(block,
-                  ButType::But,
-                  "MIXIE_CHAT_OT_abort_session",
-                  blender::wm::OpCallContext::InvokeDefault,
-                  ICON_CANCEL,
-                  pos.send_btn_x,
-                  pos.buttons_y,
-                  pos.btn_size,
-                  pos.btn_size,
-                  std::nullopt);
-  }
-  else if (is_generating) {
-    uiDefIconButO(block,
-                  ButType::But,
-                  "MIXIE_CHAT_OT_cancel_generation",
-                  blender::wm::OpCallContext::InvokeDefault,
-                  ICON_CANCEL,
-                  pos.send_btn_x,
-                  pos.buttons_y,
-                  pos.btn_size,
-                  pos.btn_size,
-                  std::nullopt);
-  }
-  else {
-    uiDefButO(block,
-              ButType::But,
+  const bool show_send = !is_generating && (has_text || !is_busy);
+  if (show_send) {
+    ui::uiDefButO(block,
+              ui::ButtonType::But,
               "MIXIE_CHAT_OT_send_message",
               blender::wm::OpCallContext::InvokeDefault,
               "",
@@ -545,17 +546,41 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
               pos.btn_size,
               std::nullopt);
   }
+  else if (is_busy) {
+    ui::uiDefIconButO(block,
+                  ui::ButtonType::But,
+                  "MIXIE_CHAT_OT_abort_session",
+                  blender::wm::OpCallContext::InvokeDefault,
+                  ICON_CANCEL,
+                  pos.send_btn_x,
+                  pos.buttons_y,
+                  pos.btn_size,
+                  pos.btn_size,
+                  std::nullopt);
+  }
+  else {
+    ui::uiDefIconButO(block,
+                  ui::ButtonType::But,
+                  "MIXIE_CHAT_OT_cancel_generation",
+                  blender::wm::OpCallContext::InvokeDefault,
+                  ICON_CANCEL,
+                  pos.send_btn_x,
+                  pos.buttons_y,
+                  pos.btn_size,
+                  pos.btn_size,
+                  std::nullopt);
+  }
 
   /* Restore emboss for any subsequent UI elements */
-  UI_block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
 
   /* Finalize block */
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 
   /* Custom GPU overlays (delegated to mixie_chat_footer_draw.cc) */
   footer_draw_send_button_glow(region, &scene_ptr, pos, scale);
-  if (!is_busy && !is_generating) {
+  if (show_send) {
     footer_draw_submit_icon(region, pos);
   }
   /* Plan mode toggle overlay removed for now (see the click-target
@@ -572,3 +597,4 @@ void mixie_chat_footer_region_draw(const bContext *C, ARegion *region)
 }
 
 /** \} */
+}  // namespace blender

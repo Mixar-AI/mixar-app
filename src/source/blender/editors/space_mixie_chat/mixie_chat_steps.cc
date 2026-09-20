@@ -39,6 +39,8 @@
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Vertical gap between consecutive rows. */
 #define STEPS_ROW_GAP 6.0f
@@ -91,7 +93,7 @@ void chat_ui_draw_chevron(float x, float center_y, bool collapsed, const float c
                          uchar(color[2] * 255.0f),
                          uchar(color[3] * 255.0f)};
   GPU_blend(GPU_BLEND_ALPHA);
-  UI_icon_draw_ex(x,
+  ui::icon_draw_ex(x,
                   icon_y,
                   collapsed ? ICON_TRIA_RIGHT : ICON_TRIA_DOWN,
                   16.0f / icon_px,
@@ -283,18 +285,6 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
     const float row_top = cursor - gap;
     const float row_bottom = row_top - rh;
 
-    /* Subtle hover highlight behind the row (cursor loop sets is_hovered). */
-    if (step.is_hovered) {
-      float hover_col[4];
-      chat_ui_get_button_hover_color(hover_col);
-      rctf hover_rect;
-      hover_rect.xmin = x + 4.0f * UI_SCALE_FAC;
-      hover_rect.xmax = x + bubble_width - 4.0f * UI_SCALE_FAC;
-      hover_rect.ymin = row_bottom - 2.0f * UI_SCALE_FAC;
-      hover_rect.ymax = row_top + 2.0f * UI_SCALE_FAC;
-      chat_ui_draw_rounded_rect(&hover_rect, 4.0f * UI_SCALE_FAC, hover_col);
-    }
-
     /* Kind glyph on the row's first text line. State is the ONLY use of
      * color here: running = the single live accent, failed = a muted ✕,
      * settled = quiet gray — a finished list reads uniformly calm. */
@@ -342,12 +332,26 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
     row_rect.xmax = row_rect.xmin + steps_row_text_width(step, content_width);
     row_rect.ymin = row_bottom;
     row_rect.ymax = row_top;
-    chat_ui_draw_text_wrapped(row_text, &row_rect, card.font_size, 0, card.text_color);
+    /* Process history stays flat. Observation rows (read/search, including
+     * "Inspected scene") are labels — same muted ink as the header, never a
+     * hover brighten. Only actionable disclosures (acted rows with detail)
+     * brighten on hover. Never paint the shared button-hover fill. */
+    const bool observe = step.kind == 0 || step.kind == 3;
+    const bool disclose = step.detail[0] != '\0';
+    float row_color[4];
+    std::copy_n(card.text_color, 4, row_color);
+    if (observe) {
+      row_color[3] *= 0.65f;
+    }
+    else {
+      row_color[3] *= step.is_hovered && disclose ? 1.0f : 0.85f;
+    }
+    chat_ui_draw_text_wrapped(row_text, &row_rect, card.font_size, 0, row_color);
 
-    /* Trailing disclosure chevron — every row with detail (object names) is
-     * independently expandable, pinned to the content's right edge and on
-     * the same text-anchored center as the kind glyph. */
-    if (step.detail[0] != '\0') {
+    /* Trailing disclosure chevron — acted rows with detail (object names)
+     * are independently expandable. Observation labels omit it so they do
+     * not read as a control. */
+    if (disclose && !observe) {
       const float dim_chev[4] = {card.text_color[0], card.text_color[1],
                                  card.text_color[2], card.text_color[3] * 0.6f};
       const float chev_x = x + card.h_padding + content_width -
@@ -386,3 +390,4 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
 }
 
 /** \} */
+}  // namespace blender

@@ -12,6 +12,7 @@
  * every frame. Split from mixie_chat_messages.cc for modularity.
  */
 
+#include <algorithm>
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -31,6 +32,8 @@
 #include "UI_resources.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Combined Todo Text
@@ -104,7 +107,7 @@ static float calculate_attachments_height(
       int path_len =
           RNA_property_string_length(&att_ptr, g_att_props.image_path);
       char *path_buffer =
-          static_cast<char *>(MEM_mallocN(path_len + 1, "chat_img_path"));
+          static_cast<char *>(MEM_new_uninitialized(path_len + 1, "chat_img_path"));
       RNA_property_string_get(&att_ptr, g_att_props.image_path, path_buffer);
       int source = RNA_property_enum_get(&att_ptr, g_att_props.image_source);
 
@@ -126,7 +129,7 @@ static float calculate_attachments_height(
       }
 
       /* Free dynamically allocated path buffer */
-      MEM_freeN(path_buffer);
+      MEM_delete_void(static_cast<void *>(path_buffer));
     }
 
     RNA_property_collection_next(&att_iter);
@@ -160,7 +163,14 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
    * Pass 2: Position messages from top to bottom (newest at bottom). */
 
   /* Pass 1: Calculate message dimensions and total height */
-  mixie_chat_clear_layout_cache(smixie); /* Clear previous frame's cache */
+  /* Keep the buffer: this runs every rebuild (every frame while a stream is
+   * active), and MessageLayoutData is a large fixed-size record, so releasing
+   * and regrowing the vector here was a per-frame allocation plus repeated
+   * reallocation memcpy of the whole transcript. */
+  mixie_chat_clear_layout_cache_for_rebuild(smixie);
+  if (msg_count > 0) {
+    rt->layout_cache.reserve(msg_count);
+  }
   float total_height = metrics.padding; /* Start with top padding */
   int message_index = 0;
   CollectionPropertyIterator iter{};
@@ -192,6 +202,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
     layout.slot_images_height = 0.0f;
     layout.slot_steps_height = 0.0f;
     layout.thinking_height = 0.0f;
+    layout.is_markdown_content = false;
     bool is_slot_msg = populate_slot_layout_data(&msg_ptr, &layout);
 
     /* For slot-based messages, we may have no text but still need to render slots */
@@ -202,11 +213,11 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       /* Dynamically allocate text buffer based on actual string length */
       char *text_buffer = nullptr;
       if (text_len > 0) {
-        text_buffer = static_cast<char *>(MEM_mallocN(text_len + 1, "chat_text"));
+        text_buffer = static_cast<char *>(MEM_new_uninitialized(text_len + 1, "chat_text"));
         RNA_property_string_get(&msg_ptr, g_msg_props.text, text_buffer);
       } else {
         /* Empty text buffer for slot-based messages with no content */
-        text_buffer = static_cast<char *>(MEM_mallocN(1, "chat_text"));
+        text_buffer = static_cast<char *>(MEM_new_uninitialized(1, "chat_text"));
         text_buffer[0] = '\0';
       }
 
@@ -245,7 +256,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           if (g_msg_props.metadata) {
             int meta_len = RNA_property_string_length(&msg_ptr, g_msg_props.metadata);
             if (meta_len > 0) {
-              slot_meta_h = static_cast<char *>(MEM_mallocN(meta_len + 1, "slot_meta_h"));
+              slot_meta_h = static_cast<char *>(MEM_new_uninitialized(meta_len + 1, "slot_meta_h"));
               RNA_property_string_get(&msg_ptr, g_msg_props.metadata, slot_meta_h);
               slot_has_md = chat_ui_has_markdown_segments(slot_meta_h);
             }
@@ -254,13 +265,14 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           if (slot_has_md) {
             text_height = chat_ui_calc_markdown_height(slot_meta_h, &style, content_width, 1.0f);
             text_width = content_width;
+            layout.is_markdown_content = true;
           } else {
             chat_ui_calc_text_bounds(layout.content_text, content_width, style.font_size, 0,
                                      &text_width, &text_height);
           }
 
           if (slot_meta_h) {
-            MEM_freeN(slot_meta_h);
+            MEM_delete_void(static_cast<void *>(slot_meta_h));
           }
         } else if (layout.has_ephemeral) {
           /* Ephemeral text - wrapped status line + fixed 4-line FIFO body.
@@ -306,7 +318,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
         if (g_msg_props.metadata) {
           int meta_len = RNA_property_string_length(&msg_ptr, g_msg_props.metadata);
           if (meta_len > 0) {
-            meta_buf_height = static_cast<char *>(MEM_mallocN(meta_len + 1, "meta_height"));
+            meta_buf_height = static_cast<char *>(MEM_new_uninitialized(meta_len + 1, "meta_height"));
             RNA_property_string_get(&msg_ptr, g_msg_props.metadata, meta_buf_height);
           }
         }
@@ -315,13 +327,14 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           /* Use markdown height calculation */
           text_height = chat_ui_calc_markdown_height(meta_buf_height, &style, content_width, 1.0f);
           text_width = content_width;
+          layout.is_markdown_content = true;
         } else {
           chat_ui_calc_text_bounds(calc_text, content_width, style.font_size, 0,
                                    &text_width, &text_height);
         }
 
         if (meta_buf_height) {
-          MEM_freeN(meta_buf_height);
+          MEM_delete_void(static_cast<void *>(meta_buf_height));
         }
       }
 
@@ -391,7 +404,17 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
           chat_ui_calc_text_bounds(
               action.label, content_width, style.font_size, 0,
               &action_text_width, &action_text_height);
-          action.height = action_text_height + style.v_padding * 1.5f;
+          if (action.image[0] != '\0') {
+            /* Asset-picker image button: square preview thumbnail left of the
+             * label — the row must fit the thumbnail. Render derives the
+             * thumbnail rect from the same constant. */
+            const float thumb = CHAT_ACTION_THUMB_SIZE * UI_SCALE_FAC;
+            action.height = std::max(thumb, action_text_height) +
+                            style.v_padding * 1.5f;
+          }
+          else {
+            action.height = action_text_height + style.v_padding * 1.5f;
+          }
           layout.slot_actions_height += action.height;
           if (i > 0) {
             layout.slot_actions_height += metrics.bubble_spacing;
@@ -505,7 +528,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       rt->layout_cache.append(layout);
 
       /* Free dynamically allocated text buffer */
-      MEM_freeN(text_buffer);
+      MEM_delete_void(static_cast<void *>(text_buffer));
       message_index++;
     }
 
@@ -581,3 +604,4 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
 }
 
 /** \} */
+}  // namespace blender

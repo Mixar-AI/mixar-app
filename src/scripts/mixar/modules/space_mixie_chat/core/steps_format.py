@@ -64,10 +64,15 @@ def normalize_step_item(item_data: dict) -> dict:
     status = (item_data.get("status") or "done").upper()
     if status not in _VALID_STATUS:
         status = "DONE"
+    label = item_data.get("label") or ""
+    # Inspection is an observation. execute_script otherwise lands on COMMAND
+    # and the native row paints the filled act glyph — a highlighted button.
+    if label == "Inspected scene":
+        kind = "READ"
     return {
         "item_id": item_data.get("id") or "",
         "kind": kind,
-        "label": item_data.get("label") or "",
+        "label": label,
         "target": item_data.get("target") or "",
         "detail": item_data.get("detail") or "",
         "status": status,
@@ -264,6 +269,8 @@ def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = 
         classified = classify_script_action(script)
         if classified:
             label = classified
+    if label == "Inspected scene":
+        row.kind = "READ"
     row.label = label
     row.target = ""
     row.detail = ""
@@ -295,9 +302,14 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
             nc, nm, nd = len(created), len(modified), len(deleted)
             label = getattr(row, "label", "")
             # An "Inspected scene" guess that actually changed objects was wrong
-            # — fall back to the accurate count label.
+            # — fall back to the accurate count label. The row is no longer an
+            # observation, so drop the READ kind that kept it looking like a
+            # label rather than a command.
             if label == "Inspected scene" and (nc or nm or nd):
                 label = "Tool call"
+                row.kind = "TOOL"
+            elif label == "Inspected scene":
+                row.kind = "READ"
             # Keep a meaningful label (real tool name or script-inferred action,
             # set at begin) and show the object counts beside it; only synthesize
             # a label from the counts when the row is still the generic

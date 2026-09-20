@@ -2,10 +2,21 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Transport coverage for explicit agent script provenance."""
+"""Transport coverage for explicit agent script provenance and the v3 envelope."""
 
-from mixar.modules.space_mixie_chat.core.jsonrpc_client import JSONRPCWebSocketClient
-from mixar.modules.space_mixie_chat.core import main_thread_executor
+import os
+import sys
+from unittest.mock import MagicMock
+
+_SRC_SCRIPTS = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "scripts"))
+if _SRC_SCRIPTS not in sys.path:
+    sys.path.insert(0, _SRC_SCRIPTS)
+for _dep in ("keyring", "websocket", "requests", "jwt", "sentry_sdk"):
+    sys.modules.setdefault(_dep, MagicMock(name=_dep))
+
+from mixar.modules.common.agent_execution.request import ExecutionRequest  # noqa: E402
+from mixar.modules.space_mixie_chat.core.jsonrpc_client import JSONRPCWebSocketClient  # noqa: E402
+from mixar.modules.space_mixie_chat.core import main_thread_executor  # noqa: E402
 
 
 def test_execute_script_handler_forwards_agent_ctx():
@@ -51,7 +62,21 @@ def test_execute_script_handler_forwards_absent_agent_ctx():
     assert received[0][4] is None
 
 
-def test_queue_tuple_preserves_agent_ctx(monkeypatch):
+def test_execute_script_handler_passes_envelope_only_when_present():
+    received = []
+    client = object.__new__(JSONRPCWebSocketClient)
+    client._on_script_execute = lambda *args, **kw: received.append((args, kw))
+
+    client._handle_execute_script({"script": "pass"}, "t-1")
+    client._handle_execute_script(
+        {"script": "pass", "envelope": {"run_id": "r", "task_id": "t"}}, "t-2"
+    )
+
+    assert received[0][1] == {}
+    assert received[1][1] == {"envelope": {"run_id": "r", "task_id": "t"}}
+
+
+def test_queue_holds_execution_request_with_agent_ctx(monkeypatch):
     while not main_thread_executor._request_queue.empty():
         main_thread_executor._request_queue.get_nowait()
     monkeypatch.setattr(main_thread_executor, "maybe_start_prefetch", lambda *_: None)
@@ -63,7 +88,8 @@ def test_queue_tuple_preserves_agent_ctx(monkeypatch):
     )
 
     queued = main_thread_executor._request_queue.get_nowait()
-    assert queued[:5] == (
+    assert isinstance(queued, ExecutionRequest)
+    assert queued.as_tuple()[:5] == (
         "transport-3",
         "pass",
         "test_tool",

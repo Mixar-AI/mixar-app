@@ -79,7 +79,12 @@ def remove_mask(layer, mask, obj, refresh_list=True):
     mat = obj.active_material
 
     # Get mask index
-    mask_index = [i for i, m in enumerate(layer.masks) if m == mask][0]
+    mask_index = next((i for i, m in enumerate(layer.masks) if m == mask), None)
+    if mask_index is None:
+        logger.warning(
+            "remove_mask: mask '%s' not found in layer '%s'", mask.name, layer.name
+        )
+        return
 
     # Dealing with decal object
     remove_decal_object(tree, mask)
@@ -96,7 +101,8 @@ def remove_mask(layer, mask, obj, refresh_list=True):
             if mask.segment_name != '':
                 if image.yia.is_image_atlas:
                     segment = image.yia.segments.get(mask.segment_name)
-                    segment.unused = True
+                    if segment:
+                        segment.unused = True
                 elif image.yua.is_udim_atlas:
                     logger.debug('ZEGMENT: %s', mask.segment_name)
                     remove_udim_atlas_segment_by_name(image, mask.segment_name, mp=mp)

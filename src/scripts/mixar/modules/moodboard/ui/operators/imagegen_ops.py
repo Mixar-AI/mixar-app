@@ -138,7 +138,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                     prompt = global_prompt
 
         if not prompt or not prompt.strip():
-            self.report({"WARNING"}, "Please enter a prompt (press Enter to confirm your text)")
+            self.report({"ERROR"}, "Please enter a prompt (press Enter to confirm your text)")
             return {"CANCELLED"}
 
         # Determine model and other params based on context
@@ -148,7 +148,7 @@ class MIXIE_OT_imagegen_generate(Operator):
             model = self.model.strip() or _get_default_image_model()
             if not model:
                 self.report(
-                    {"WARNING"}, "No models available - please wait for models to load"
+                    {"ERROR"}, "No models available - please wait for models to load"
                 )
                 return {"CANCELLED"}
 
@@ -175,7 +175,7 @@ class MIXIE_OT_imagegen_generate(Operator):
 
             if not model or model in ("LOADING", "ERROR", "NONE", ""):
                 self.report(
-                    {"WARNING"}, "Please wait for models to load or check connection"
+                    {"ERROR"}, "Please wait for models to load or check connection"
                 )
                 return {"CANCELLED"}
 
@@ -328,7 +328,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                 listener=get_imagegen_listener(),
             )
             if not job:
-                self.report({"WARNING"}, "A duplicate image generation is already queued")
+                self.report({"ERROR"}, "A duplicate image generation is already queued")
                 return {"CANCELLED"}
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")

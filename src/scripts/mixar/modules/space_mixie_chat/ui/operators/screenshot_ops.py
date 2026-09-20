@@ -15,6 +15,7 @@ from mixar.config.logging_config import get_logger
 
 from ...constants import MAX_ATTACHMENTS_PER_MESSAGE
 from ...core import cleanup_loaded_file_image, get_image_display_name, validate_image_file
+from ...core.attachment_board_sync import mirror_attachment_to_moodboard
 from ...core.image_utils import get_mixar_screenshots_dir
 from ...core.ui_utils import redraw_chat_areas
 
@@ -68,24 +69,41 @@ class MIXIE_CHAT_OT_capture_screenshot(Operator):
             original_filepath = scene.render.filepath
             original_resolution_x = scene.render.resolution_x
             original_resolution_y = scene.render.resolution_y
+            settings = scene.render.image_settings
+            original_format = settings.file_format
+            original_media = getattr(settings, "media_type", None)
 
-            # Set screenshot settings
-            scene.render.filepath = screenshot_path
+            try:
+                # Set screenshot settings
+                scene.render.filepath = screenshot_path
 
-            # Get viewport dimensions
-            for region in view3d_area.regions:
-                if region.type == 'WINDOW':
-                    scene.render.resolution_x = region.width
-                    scene.render.resolution_y = region.height
-                    break
+                # media_type BEFORE file_format: on Blender 5 a scene whose
+                # output is FFMPEG rejects PNG outright, so this failed on any
+                # scene configured for video or left that way by Director's
+                # guide render. Both sibling capture paths document the order.
+                if original_media is not None:
+                    settings.media_type = "IMAGE"
+                settings.file_format = "PNG"
 
-            # Render screenshot using OpenGL
-            bpy.ops.render.opengl(write_still=True, view_context=True)
+                # Get viewport dimensions
+                for region in view3d_area.regions:
+                    if region.type == 'WINDOW':
+                        scene.render.resolution_x = region.width
+                        scene.render.resolution_y = region.height
+                        break
 
-            # Restore original settings
-            scene.render.filepath = original_filepath
-            scene.render.resolution_x = original_resolution_x
-            scene.render.resolution_y = original_resolution_y
+                # Render screenshot using OpenGL
+                bpy.ops.render.opengl(write_still=True, view_context=True)
+            finally:
+                # Restore original settings. This used to sit after the render
+                # rather than in a finally, so a failed capture left the user's
+                # own output path, resolution and format clobbered.
+                scene.render.filepath = original_filepath
+                scene.render.resolution_x = original_resolution_x
+                scene.render.resolution_y = original_resolution_y
+                if original_media is not None:
+                    settings.media_type = original_media
+                settings.file_format = original_format
 
             # Check if file was created
             if not os.path.exists(screenshot_path):
@@ -106,6 +124,8 @@ class MIXIE_CHAT_OT_capture_screenshot(Operator):
             attachment.image_path = screenshot_path
             attachment.image_source = 'FILE'
             attachment.display_name = "viewport_screenshot.png"
+
+            mirror_attachment_to_moodboard(scene, screenshot_path, 'FILE')
 
             logger.info(f"Screenshot captured: {screenshot_path}")
             self.report({'INFO'}, "Viewport screenshot attached")
@@ -253,6 +273,10 @@ class MIXIE_CHAT_OT_snip_image(Operator):
             attachment.image_path = self._screenshot_path
             attachment.image_source = 'FILE'
             attachment.display_name = os.path.basename(self._screenshot_path)
+
+            mirror_attachment_to_moodboard(
+                context.scene, self._screenshot_path, 'FILE'
+            )
 
             logger.info(f"Snipped region saved: {self._screenshot_path}")
             self.report({'INFO'}, "Region captured")

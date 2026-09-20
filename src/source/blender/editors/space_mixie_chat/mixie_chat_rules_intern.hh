@@ -29,6 +29,8 @@
 #include "BLI_vector.hh"
 
 #include "mixie_chat_history_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct MixieChatRuntime;
@@ -132,3 +134,4 @@ void mixie_chat_rules_editor_follow_caret(MixieChatRuntime *rt, float view_h);
 void rules_draw_edit_glyph(float cx, float cy, float half, const float color[4], float scale);
 
 /** \} */
+}  // namespace blender

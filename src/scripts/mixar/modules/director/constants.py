@@ -12,6 +12,14 @@ DEFAULT_BEAT_SECONDS = 1.0
 MIN_BEAT_SECONDS = 0.1
 MAX_BEAT_SECONDS = 10.0
 
+# The Cinema Mode Speed slider retimes the ACTIVE SHOT: every interval between
+# its keyframes is scaled by ``2 ** (-speed)``, so +1 plays twice as fast, -1
+# half as fast, and the slider rests in the middle at the timing as captured.
+# (``beat_seconds`` above stays the spacing for future captures.)
+SPEED_MIN = -1.0
+SPEED_MAX = 1.0
+DEFAULT_SPEED = 0.0
+
 # Familiar photographic focal lengths; directors think in millimetres, so
 # the surface never presents field-of-view degrees.
 LENS_PRESET_ITEMS = (
@@ -43,10 +51,71 @@ ASPECT_PRESETS = {
     "SQUARE": ("Square · 1:1", 1080, 1080),
 }
 
+# Camera "template styles" — the design's named list of how a shot moves.
+#
+# Two of these are STATES that stay live on the shot (handheld drift, a
+# levelled horizon) and two are one-shot MOVES that key a path. They share a
+# list because the user thinks of them as one choice, but the underlying
+# contract is untouched: handheld remains an F-modifier flag and never
+# becomes a camera-move preset (see `core/handheld.py`).
+CAMERA_TEMPLATE_ITEMS = (
+    ("NONE", "None", "Plain camera; no drift and no preset motion", 0),
+    (
+        "HANDHELD",
+        "Handheld camera",
+        "Add organic handheld drift on top of the captured path",
+        1,
+    ),
+    (
+        "Z_FIXED",
+        "Z- Fixed",
+        "Keep the horizon level; roll is removed as the camera moves",
+        2,
+    ),
+    ("DOLLY_ZOOM", "Dolly Zoom", "Key a push toward the subject", 3),
+    ("CRANE", "Crane", "Key a rise above the subject", 4),
+)
+
+# Quality tiers for the shot's output. The preset sets the SHORTER side, so a
+# vertical 9:16 scene reads 1080p as 1080x1920 — the same tier, not a
+# quarter-resolution surprise.
+RESOLUTION_PRESETS = {
+    "HD720": ("720p", 720),
+    "HD1080": ("1080p", 1080),
+    "K2": ("2K", 1440),
+}
+
+RESOLUTION_PRESET_ITEMS = tuple(
+    (key, label, f"Render at {label}", index)
+    for index, (key, (label, _short)) in enumerate(RESOLUTION_PRESETS.items())
+)
+
 DEFAULT_DIRECTION_PROMPT = (
     "Follow the selected keyframes in chronological order as the intended "
     "camera path."
 )
+
+# Blender's own keyframe interpolation types, in its order. The identifiers
+# are `KeyframePoint.interpolation` values and are written straight to the
+# keys, so this list must stay a subset of what the running Blender accepts.
+INTERPOLATION_ITEMS = (
+    ("CONSTANT", "Constant", "No interpolation, hold each keyframe", 0),
+    ("LINEAR", "Linear", "Straight-line interpolation", 1),
+    ("BEZIER", "Bezier", "Smooth interpolation between keyframes", 2),
+    ("SINE", "Sinusoidal", "Sinusoidal easing (weakest, almost linear)", 3),
+    ("QUAD", "Quadratic", "Quadratic easing", 4),
+    ("CUBIC", "Cubic", "Cubic easing", 5),
+    ("QUART", "Quartic", "Quartic easing", 6),
+    ("QUINT", "Quintic", "Quintic easing", 7),
+    ("EXPO", "Exponential", "Exponential easing (dramatic)", 8),
+    ("CIRC", "Circular", "Circular easing (strongest and most dynamic)", 9),
+    ("BACK", "Back", "Cubic easing with overshoot and settle", 10),
+    ("BOUNCE", "Bounce", "Exponentially decaying parabolic bounce", 11),
+    ("ELASTIC", "Elastic", "Exponentially decaying sine wave", 12),
+)
+
+# Name of the Track To constraint Director owns on a tracking shot camera.
+TRACK_CONSTRAINT_NAME = "Mixar Director Track"
 
 SHOT_STATE_ITEMS = (
     (
@@ -91,3 +160,33 @@ SHOT_RENDER_OUTPUT_ITEMS = (
         4,
     ),
 )
+
+
+# Where the camera-first "Export to Moodboard" surface takes its render span
+# from. Director shots always render their beat span; a power user animating a
+# camera natively expects the scene or preview range they already work in.
+CAMERA_EXPORT_RANGE_ITEMS = (
+    (
+        "CAMERA_KEYS",
+        "Camera Keys",
+        "First to last keyframe on the chosen camera",
+        0,
+    ),
+    (
+        "SCENE",
+        "Scene Range",
+        "The scene's own Start and End frames",
+        1,
+    ),
+    (
+        "PREVIEW",
+        "Preview Range",
+        "The scene's preview range, or its frame range when none is set",
+        2,
+    ),
+)
+
+# One label, one panel id: the Render menu row, the animation-editor row and
+# the popup they both open must name the same thing.
+CAMERA_EXPORT_LABEL = "Export to Moodboard"
+CAMERA_EXPORT_PANEL_ID = "MIXAR_PT_camera_export"

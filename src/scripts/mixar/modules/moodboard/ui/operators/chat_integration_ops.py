@@ -6,14 +6,9 @@
 """
 Moodboard Chat Integration Operators
 
-Thin wrappers around ``moodboard.core.chat_sync``. Auto-sync now
-mirrors selected moodboard images into the chat composer's pending
-attachments on a polling tick — this operator used to do that work
-manually (file picker, duplicate checks, attachment cap, etc.) and
-those code paths have been retired. The operator is kept so the
-existing toolbar entry and ``P`` keymap binding stay functional;
-hitting it just nudges the sync to run immediately, useful as a
-"force refresh" if anything ever desynchronises.
+Thin wrappers around ``moodboard.core.chat_sync``. Auto-sync mirrors
+selected moodboard images into the chat composer; this operator is the
+toolbar / ``P`` keymap force-refresh if anything ever desynchronises.
 """
 
 from bpy.types import Operator
@@ -32,35 +27,29 @@ def get_all_image_indices_to_send(scene):
     """
     image_indices = set()
 
-    # Get selected group indices
-    selected_group_indices = set()
-    for i, group in enumerate(scene.mixie_moodboard_groups):
-        if group.selected:
-            selected_group_indices.add(i)
+    # A SELECTED FRAME stands for everything inside it: selecting the frame is
+    # how the user says "this set". The reverse does not hold -- selecting one
+    # picture inside a frame stages that picture alone, because a click on a
+    # member selects the member.
+    selected_frame_ids = {
+        frame.frame_id
+        for frame in getattr(scene, 'mixie_moodboard_frames', ())
+        if frame.selected and frame.frame_id
+    }
 
-    # Get group indices from selected images (group cohesion)
-    for img in scene.mixie_moodboard_images:
-        if img.selected and img.group_index >= 0:
-            selected_group_indices.add(img.group_index)
-
-    # Collect images
     for i, img in enumerate(scene.mixie_moodboard_images):
-        if img.selected and not is_video_item(img):
-            image_indices.add(i)
-        elif img.group_index in selected_group_indices and not is_video_item(img):
-            # Image belongs to a group being sent
+        if is_video_item(img):
+            continue
+        if img.selected or (
+            selected_frame_ids and getattr(img, 'frame_id', '') in selected_frame_ids
+        ):
             image_indices.add(i)
 
     return image_indices
 
 
 class MIXIE_OT_moodboard_send_to_chat(Operator):
-    """Force the moodboard→chat sync to run immediately.
-
-    Retained for the existing toolbar entry and ``P`` keymap. The
-    sync runs automatically every ~200 ms whenever selection changes;
-    this operator is just a manual refresh.
-    """
+    """Force the moodboard→chat sync to run immediately."""
     bl_idname = "mixie.moodboard_send_to_chat"
     bl_label = "Refresh Chat Attachments"
     bl_description = f"Refresh moodboard→chat attachment sync ({format_shortcut('P')})"
@@ -85,8 +74,9 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
                 _reconcile_attachments,
                 _collect_selected_image_names,
             )
+            selected = _collect_selected_image_names(scene)
             force_resync(scene)
-            _reconcile_attachments(scene, _collect_selected_image_names(scene))
+            _reconcile_attachments(scene, selected, animate=True)
         except Exception as e:  # noqa: BLE001 — keep the keymap functional
             self.report({'WARNING'}, f"Sync failed: {e}")
             return {'CANCELLED'}

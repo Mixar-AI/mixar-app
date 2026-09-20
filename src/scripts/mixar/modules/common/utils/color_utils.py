@@ -47,7 +47,18 @@ def get_noncolor_name():
                 return name
 
         # Check non-color name by creating new float image
-        mpprops = bpy.context.window_manager.mpprops
+        # The paint module's WM property group may be unregistered (add-on
+        # load order, paint-only uninstall) — compute the name fresh in that
+        # case instead of raising AttributeError.
+        mpprops = getattr(bpy.context.window_manager, "mpprops", None)
+
+        if mpprops is None:
+            temp_image = bpy.data.images.new(
+                "temmmmp", width=1, height=1, alpha=False, float_buffer=True
+            )
+            name = temp_image.colorspace_settings.name
+            remove_datablock(bpy.data.images, temp_image)
+            return name
 
         if mpprops.custom_noncolor_name == "":
             temp_image = bpy.data.images.new(

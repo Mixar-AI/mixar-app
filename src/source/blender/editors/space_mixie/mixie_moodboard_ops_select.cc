@@ -32,9 +32,7 @@ static MoodboardSelectionContext get_selection_context(PointerRNA *scene_ptr,
   ctx.element_type = element_type;
   ctx.extend_mode = RNA_boolean_get(op->ptr, "extend");
   ctx.is_double_click = (event->val == KM_DBL_CLICK);
-  ctx.group_index = -1;
   ctx.is_image_selected = false;
-  ctx.is_group_selected = false;
   ctx.sel_prop = nullptr;
 
   const char *collection_name = (element_type == MOODBOARD_ELEMENT_TEXTBOX) ?
@@ -52,45 +50,31 @@ static MoodboardSelectionContext get_selection_context(PointerRNA *scene_ptr,
     ctx.is_image_selected = RNA_property_boolean_get(&ctx.item_ptr, ctx.sel_prop);
   }
 
-  /* Check group membership and selection for images */
-  if (element_type == MOODBOARD_ELEMENT_IMAGE) {
-    PropertyRNA *group_idx_prop = RNA_struct_find_property(&ctx.item_ptr, "group_index");
-    if (group_idx_prop) {
-      ctx.group_index = RNA_property_int_get(&ctx.item_ptr, group_idx_prop);
-
-      if (ctx.group_index >= 0) {
-        PropertyRNA *groups_prop = RNA_struct_find_property(scene_ptr, "mixie_moodboard_groups");
-        if (groups_prop) {
-          PointerRNA group_ptr;
-          RNA_property_collection_lookup_int(scene_ptr, groups_prop, ctx.group_index, &group_ptr);
-          PropertyRNA *group_sel_prop = RNA_struct_find_property(&group_ptr, "selected");
-          if (group_sel_prop) {
-            ctx.is_group_selected = RNA_property_boolean_get(&group_ptr, group_sel_prop);
-          }
-        }
-      }
-    }
-  }
-
+  /* Frame membership is DELIBERATELY not read here. A click on an item
+   * selects THAT ITEM, whether or not it sits inside a frame -- the universal
+   * behaviour, and the opposite of what this operator used to do: a plain
+   * click on a grouped image selected the whole GROUP and reaching the image
+   * needed a double-click, while Shift+click on it did nothing at all. A
+   * frame is now selected by its own border or its thick top strip
+   * (MIXIE_OT_moodboard_frame_select), which is a target of its own and needs
+   * no special case here. */
   return ctx;
 }
 
-/** Double-click on image in selected group: deselect group, select individual image */
-static void handle_double_click_grouped_image(MoodboardSelectionContext &ctx)
+/* A plain click replaces the WHOLE board selection, cards included.
+ * `moodboard_deselect_all` only knows about media, so on its own it left
+ * inference and asset cards selected behind a click on a picture -- the graph
+ * operator has always cleared both sides, and the two must agree. It matters
+ * more now that a drag carries every selected kind: a card left selected by a
+ * click the user read as "select just this image" would travel with it. */
+static void moodboard_replace_selection(PointerRNA *scene_ptr)
 {
-  PropertyRNA *groups_prop = RNA_struct_find_property(ctx.scene_ptr, "mixie_moodboard_groups");
-  if (groups_prop) {
-    PointerRNA group_ptr;
-    RNA_property_collection_lookup_int(ctx.scene_ptr, groups_prop, ctx.group_index, &group_ptr);
-    PropertyRNA *group_sel_prop = RNA_struct_find_property(&group_ptr, "selected");
-    if (group_sel_prop) {
-      RNA_property_boolean_set(&group_ptr, group_sel_prop, false);
-    }
-  }
-
-  if (ctx.sel_prop) {
-    RNA_property_boolean_set(&ctx.item_ptr, ctx.sel_prop, true);
-  }
+  /* `moodboard_deselect_all` covers media, text boxes, cards, links AND
+   * frames, so a click on a picture cannot leave a frame selected behind it --
+   * which now matters more than ever, because a selected frame travels with
+   * the drag and carries its members. */
+  moodboard_deselect_all(scene_ptr);
+  moodboard_graph_deselect_nodes(scene_ptr);
 }
 
 /** Double-click on individually selected image: deselect it */
@@ -101,17 +85,17 @@ static void handle_double_click_selected_image(MoodboardSelectionContext &ctx)
   }
 }
 
-/** Double-click on non-grouped unselected image: deselect all, select this image */
-static void handle_double_click_ungrouped_image(MoodboardSelectionContext &ctx)
+/** Double-click on an unselected item: deselect all, select this item */
+static void handle_double_click_unselected_item(MoodboardSelectionContext &ctx)
 {
-  moodboard_deselect_all(ctx.scene_ptr);
+  moodboard_replace_selection(ctx.scene_ptr);
   if (ctx.sel_prop) {
     RNA_property_boolean_set(&ctx.item_ptr, ctx.sel_prop, true);
   }
 }
 
-/** Extend mode (Shift+click) on ungrouped item: toggle selection */
-static void handle_extend_click_ungrouped(MoodboardSelectionContext &ctx)
+/** Extend mode (Shift/Cmd+click): toggle this item in the selection */
+static void handle_extend_click(MoodboardSelectionContext &ctx)
 {
   if (ctx.sel_prop) {
     bool current_state = RNA_property_boolean_get(&ctx.item_ptr, ctx.sel_prop);
@@ -119,26 +103,10 @@ static void handle_extend_click_ungrouped(MoodboardSelectionContext &ctx)
   }
 }
 
-/** Single click on grouped image: deselect all, select the group */
-static void handle_click_select_group(MoodboardSelectionContext &ctx)
-{
-  moodboard_deselect_all(ctx.scene_ptr);
-
-  PropertyRNA *groups_prop = RNA_struct_find_property(ctx.scene_ptr, "mixie_moodboard_groups");
-  if (groups_prop) {
-    PointerRNA group_ptr;
-    RNA_property_collection_lookup_int(ctx.scene_ptr, groups_prop, ctx.group_index, &group_ptr);
-    PropertyRNA *group_sel_prop = RNA_struct_find_property(&group_ptr, "selected");
-    if (group_sel_prop) {
-      RNA_property_boolean_set(&group_ptr, group_sel_prop, true);
-    }
-  }
-}
-
-/** Single click on non-grouped image: deselect all, select this image */
+/** Single click on an item: deselect all, select this item */
 static void handle_click_select_image(MoodboardSelectionContext &ctx)
 {
-  moodboard_deselect_all(ctx.scene_ptr);
+  moodboard_replace_selection(ctx.scene_ptr);
   if (ctx.sel_prop) {
     RNA_property_boolean_set(&ctx.item_ptr, ctx.sel_prop, true);
   }
@@ -150,46 +118,32 @@ static void handle_click_select_image(MoodboardSelectionContext &ctx)
  */
 static void update_moodboard_selection(MoodboardSelectionContext &ctx)
 {
-  /* Group handles - already selected, nothing to do */
-  if (ctx.element_type == MOODBOARD_ELEMENT_GROUP) {
-    return;
-  }
-
   /* Double-click actions */
   if (ctx.is_double_click) {
-    if (ctx.group_index >= 0 && ctx.is_group_selected && !ctx.is_image_selected) {
-      handle_double_click_grouped_image(ctx);
-    }
-    else if (ctx.is_image_selected) {
+    if (ctx.is_image_selected) {
       handle_double_click_selected_image(ctx);
     }
-    else if (ctx.group_index < 0) {
-      handle_double_click_ungrouped_image(ctx);
+    else {
+      handle_double_click_unselected_item(ctx);
     }
     return;
   }
 
-  /* Extend mode (Shift+click) */
+  /* Extend mode (Shift/Cmd+click) toggles, for every item alike. Membership
+   * in a frame no longer disables it -- a grouped image used to be the ONE
+   * thing on this canvas that Shift+click silently refused to add to a
+   * selection. */
   if (ctx.extend_mode) {
-    if (ctx.group_index < 0) {
-      handle_extend_click_ungrouped(ctx);
-    }
-    /* Grouped items: do nothing on extend */
+    handle_extend_click(ctx);
     return;
   }
 
   /* Normal single click - if already selected, do nothing (allow drag) */
-  if (ctx.is_image_selected || ctx.is_group_selected) {
+  if (ctx.is_image_selected) {
     return;
   }
 
-  /* Select based on group membership */
-  if (ctx.group_index >= 0) {
-    handle_click_select_group(ctx);
-  }
-  else {
-    handle_click_select_image(ctx);
-  }
+  handle_click_select_image(ctx);
 }
 
 /** \} */
@@ -212,7 +166,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   View2D *v2d = &region->v2d;
 
   float mouse_x, mouse_y;
-  UI_view2d_region_to_view(v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
+  ui::view2d_region_to_view(v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
 
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
 
@@ -224,7 +178,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   /* FIRST: Check if click is on a resize handle of any selected element.
    * This must be done before checking for elements under mouse, because
    * handles extend outside the element bounds. */
-  float handle_tolerance = MOODBOARD_HANDLE_TOLERANCE_PX / UI_view2d_scale_get_x(v2d);
+  float handle_tolerance = MOODBOARD_HANDLE_TOLERANCE_PX / ui::view2d_scale_get_x(v2d);
   clicked_handle = moodboard_find_resize_handle_at_mouse(&scene_ptr,
                                                           mouse_x,
                                                           mouse_y,
@@ -266,8 +220,7 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   {
     wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_edit_textbox", false);
     if (ot) {
-      PointerRNA ptr;
-      WM_operator_properties_create_ptr(&ptr, ot);
+      PointerRNA ptr = WM_operator_properties_create_ptr(ot);
       RNA_int_set(&ptr, "index", clicked_index);
 
       /* Pass the real double-click event (not nullptr) so the edit operator's
@@ -289,8 +242,13 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
   {
     const float center_x = clicked_pos_x + clicked_width * 0.5f;
     const float center_y = clicked_pos_y + clicked_height * 0.5f;
-    const float view_scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
-    const float play_radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+    /* Shared with the draw pass: a fixed PIXEL size in canvas units, capped
+     * against the tile so a zoomed-out button and its target shrink together. */
+    const rctf media_rect = {clicked_pos_x,
+                             clicked_pos_x + clicked_width,
+                             clicked_pos_y,
+                             clicked_pos_y + clicked_height};
+    const float play_radius = moodboard_video_play_radius(v2d, media_rect);
     const float delta_x = mouse_x - center_x;
     const float delta_y = mouse_y - center_y;
     const bool play_button_hit = delta_x * delta_x + delta_y * delta_y <=
@@ -307,14 +265,13 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
     bool extend = RNA_boolean_get(op->ptr, "extend");
 
     if (!extend) {
-      moodboard_deselect_all(&scene_ptr);
+      moodboard_replace_selection(&scene_ptr);
       ED_area_tag_redraw(CTX_wm_area(C));
     }
 
     wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_box_select", false);
     if (ot) {
-      PointerRNA ptr;
-      WM_operator_properties_create_ptr(&ptr, ot);
+      PointerRNA ptr = WM_operator_properties_create_ptr(ot);
       RNA_boolean_set(&ptr, "wait_for_input", false);
       RNA_enum_set(&ptr, "mode", extend ? SEL_OP_ADD : SEL_OP_SET);
 
@@ -328,13 +285,12 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
     return OPERATOR_FINISHED;
   }
 
-  /* Update selection using helper functions */
-  if (element_type != MOODBOARD_ELEMENT_GROUP) {
-    MoodboardSelectionContext ctx = get_selection_context(
-        &scene_ptr, clicked_index, element_type, event, op);
-    if (ctx.sel_prop) {
-      update_moodboard_selection(ctx);
-    }
+  /* Update selection. Every element this operator can reach is an item in
+   * its own right -- frames are the frame operator's business. */
+  MoodboardSelectionContext ctx = get_selection_context(
+      &scene_ptr, clicked_index, element_type, event, op);
+  if (ctx.sel_prop) {
+    update_moodboard_selection(ctx);
   }
 
   ED_area_tag_redraw(CTX_wm_area(C));
@@ -386,32 +342,11 @@ static wmOperatorStatus moodboard_select_image_invoke(bContext *C,
 
   op->customdata = move_data;
 
-  /* Set cursor based on resize handle for visual feedback */
+  /* Every handle is a corner and every corner is a uniform scale, so there is
+   * one resize cursor. (The edge handles this replaces had their own NS/EW
+   * cursors, which were the only thing that distinguished them.) */
   if (clicked_handle != -1) {
-    wmWindow *win = CTX_wm_window(C);
-    int cursor_type;
-    switch (clicked_handle) {
-      case 0: /* Bottom-left */
-      case 4: /* Top-right */
-        cursor_type = WM_CURSOR_NSEW_SCROLL;
-        break;
-      case 2: /* Bottom-right */
-      case 6: /* Top-left */
-        cursor_type = WM_CURSOR_NSEW_SCROLL;
-        break;
-      case 1: /* Bottom-center */
-      case 5: /* Top-center */
-        cursor_type = WM_CURSOR_NS_SCROLL;
-        break;
-      case 3: /* Right-center */
-      case 7: /* Left-center */
-        cursor_type = WM_CURSOR_EW_SCROLL;
-        break;
-      default:
-        cursor_type = WM_CURSOR_DEFAULT;
-        break;
-    }
-    WM_cursor_modal_set(win, cursor_type);
+    WM_cursor_modal_set(CTX_wm_window(C), WM_CURSOR_NSEW_SCROLL);
   }
 
   WM_event_add_modal_handler(C, op);
@@ -474,12 +409,12 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
 
     case MOUSEMOVE: {
       float mouse_x, mouse_y;
-      UI_view2d_region_to_view(v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
+      ui::view2d_region_to_view(v2d, event->mval[0], event->mval[1], &mouse_x, &mouse_y);
 
       float delta_x = mouse_x - move_data->initial_mouse_x;
       float delta_y = mouse_y - move_data->initial_mouse_y;
 
-      float drag_threshold = MOODBOARD_DRAG_THRESHOLD_PX / UI_view2d_scale_get_x(v2d);
+      float drag_threshold = MOODBOARD_DRAG_THRESHOLD_PX / ui::view2d_scale_get_x(v2d);
 
       if (!move_data->is_dragging) {
         float distance_sq = delta_x * delta_x + delta_y * delta_y;
@@ -506,10 +441,6 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
           move_data->bbox_max_x = -FLT_MAX;
           move_data->bbox_max_y = -FLT_MAX;
 
-          /* Get groups to check for group selection */
-          PropertyRNA *groups_prop = RNA_struct_find_property(&scene_ptr,
-                                                               "mixie_moodboard_groups");
-
           PropertyRNA *img_prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
           if (img_prop) {
             int image_count = RNA_property_collection_length(&scene_ptr, img_prop);
@@ -520,27 +451,16 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
               PointerRNA item_ptr;
               RNA_property_collection_lookup_int(&scene_ptr, img_prop, i, &item_ptr);
 
-              /* Check if image is directly selected */
+              /* Directly selected, or a member of a selected FRAME -- whose
+               * border is what the user grabbed, so its members come with it.
+               * ONE definition of that rule, shared with the drag set; the old
+               * inline version resolved a `group_index` and so could only ever
+               * carry images. */
               PropertyRNA *sel_prop = RNA_struct_find_property(&item_ptr, "selected");
               bool is_image_selected = sel_prop && RNA_property_boolean_get(&item_ptr, sel_prop);
+              const bool in_selected_frame = moodboard_item_frame_selected(&scene_ptr, &item_ptr);
 
-              /* Check if image's group is selected */
-              bool is_group_selected = false;
-              PropertyRNA *group_idx_prop = RNA_struct_find_property(&item_ptr, "group_index");
-              if (group_idx_prop && groups_prop) {
-                int group_index = RNA_property_int_get(&item_ptr, group_idx_prop);
-                if (group_index >= 0) {
-                  PointerRNA group_ptr;
-                  RNA_property_collection_lookup_int(
-                      &scene_ptr, groups_prop, group_index, &group_ptr);
-                  PropertyRNA *group_sel_prop = RNA_struct_find_property(&group_ptr, "selected");
-                  if (group_sel_prop) {
-                    is_group_selected = RNA_property_boolean_get(&group_ptr, group_sel_prop);
-                  }
-                }
-              }
-
-              if (is_image_selected || is_group_selected) {
+              if (is_image_selected || in_selected_frame) {
                 PropertyRNA *pos_x_prop = RNA_struct_find_property(&item_ptr, "position_x");
                 PropertyRNA *pos_y_prop = RNA_struct_find_property(&item_ptr, "position_y");
                 PropertyRNA *scale_prop = RNA_struct_find_property(&item_ptr, "scale");
@@ -590,9 +510,6 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
             }
           }
 
-          /* Calculate bounding box dimensions */
-          move_data->bbox_width = move_data->bbox_max_x - move_data->bbox_min_x;
-          move_data->bbox_height = move_data->bbox_max_y - move_data->bbox_min_y;
         }
 
         int handle = move_data->resize_handle;
@@ -600,7 +517,6 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
         /* Calculate scale factor based on bounding box for multi-select */
         float scale_factor = 1.0f;
         float anchor_x, anchor_y;
-        float dist_func_res;
 
         /* Use bounding box for anchor calculation when multiple images selected */
         bool use_bbox = (move_data->selected_count > 1);
@@ -610,8 +526,6 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
                                      (move_data->initial_pos_x + move_data->initial_width);
         float ref_max_y = use_bbox ? move_data->bbox_max_y :
                                      (move_data->initial_pos_y + move_data->initial_height);
-        float ref_width = use_bbox ? move_data->bbox_width : move_data->initial_width;
-        float ref_height = use_bbox ? move_data->bbox_height : move_data->initial_height;
 
         /* Inverse-rotate the mouse position into the element's local (unrotated)
          * coordinate space so that anchor points and distance calculations work
@@ -632,128 +546,32 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
           local_mouse_y = cy + dx * sin_a + dy * cos_a;
         }
 
-        if (handle == 0) { /* Bottom-left: anchor at top-right */
-          anchor_x = ref_max_x;
-          anchor_y = ref_max_y;
-          dist_func_res = sqrtf(powf(anchor_x - local_mouse_x, 2) + powf(anchor_y - local_mouse_y, 2));
-        }
-        else if (handle == 2) { /* Bottom-right: anchor at top-left */
-          anchor_x = ref_min_x;
-          anchor_y = ref_max_y;
-          dist_func_res = sqrtf(powf(local_mouse_x - anchor_x, 2) + powf(anchor_y - local_mouse_y, 2));
-        }
-        else if (handle == 4) { /* Top-right: anchor at bottom-left */
-          anchor_x = ref_min_x;
-          anchor_y = ref_min_y;
-          dist_func_res = sqrtf(powf(local_mouse_x - anchor_x, 2) + powf(local_mouse_y - anchor_y, 2));
-        }
-        else if (handle == 6) { /* Top-left: anchor at bottom-right */
-          anchor_x = ref_max_x;
-          anchor_y = ref_min_y;
-          dist_func_res = sqrtf(powf(anchor_x - local_mouse_x, 2) + powf(local_mouse_y - anchor_y, 2));
-        }
-        else if (handle == 1) { /* Bottom-center: anchor at top */
-          anchor_x = ref_min_x + ref_width / 2.0f;
-          anchor_y = ref_max_y;
-          dist_func_res = fabsf(anchor_y - local_mouse_y);
-        }
-        else if (handle == 5) { /* Top-center: anchor at bottom */
-          anchor_x = ref_min_x + ref_width / 2.0f;
-          anchor_y = ref_min_y;
-          dist_func_res = fabsf(local_mouse_y - anchor_y);
-        }
-        else if (handle == 3) { /* Right-center: anchor at left */
-          anchor_x = ref_min_x;
-          anchor_y = ref_min_y + ref_height / 2.0f;
-          dist_func_res = fabsf(local_mouse_x - anchor_x);
-        }
-        else if (handle == 7) { /* Left-center: anchor at right */
-          anchor_x = ref_max_x;
-          anchor_y = ref_min_y + ref_height / 2.0f;
-          dist_func_res = fabsf(anchor_x - local_mouse_x);
-        }
-        else {
-          anchor_x = ref_min_x;
-          anchor_y = ref_min_y;
-          dist_func_res = 1.0f;
-        }
+        /* The anchor and the scale factor come from the ONE resize rule the
+         * card hit-test and the draw pass share: the corner diagonally
+         * opposite the grabbed one is held, and the scale is that corner's
+         * diagonal ratio -- one number for both axes, which is what locks the
+         * aspect. Corners are the only handles there are. */
+        const rctf ref_rect = {ref_min_x, ref_max_x, ref_min_y, ref_max_y};
+        moodboard_resize_handle_anchor(ref_rect, handle, &anchor_x, &anchor_y);
+        scale_factor = moodboard_resize_scale_factor(
+            ref_rect, handle, local_mouse_x, local_mouse_y);
 
-        float initial_dist;
-        if (handle % 2 == 0) { /* Corner handles */
-          initial_dist = sqrtf(powf(ref_width, 2) + powf(ref_height, 2));
-        }
-        else if (handle == 1 || handle == 5) { /* Vertical edge handles */
-          initial_dist = ref_height;
-        }
-        else { /* Horizontal edge handles */
-          initial_dist = ref_width;
-        }
-
-        if (initial_dist > 0.001f) {
-          scale_factor = dist_func_res / initial_dist;
-        }
-
-        /* Handle textbox resizing (single element only).
-         *
-         * Corner handles (0,2,4,6): uniform scale — lock aspect ratio,
-         *   scale width, height, and font_size proportionally.
-         * Horizontal edge handles (3,7 — left/right): stretch width only,
-         *   no font_size change — lets more text fit per line.
-         * Vertical edge handles (1,5 — bottom/top): stretch height only,
-         *   no font_size change. */
+        /* Text box: uniform scale with the aspect locked, font_size carried
+         * along so the text keeps its proportion to the box. */
         if (move_data->element_type == MOODBOARD_ELEMENT_TEXTBOX) {
-          bool is_corner = (handle % 2 == 0);
+          float new_width = std::max(
+              50.0f, std::min(2000.0f, move_data->initial_width * scale_factor));
+          float new_height = std::max(
+              30.0f, std::min(2000.0f, move_data->initial_height * scale_factor));
 
-          float new_width, new_height;
-          float new_pos_x = move_data->initial_pos_x;
-          float new_pos_y = move_data->initial_pos_y;
-
-          if (is_corner) {
-            /* Uniform scale: keep aspect ratio locked */
-            new_width = move_data->initial_width * scale_factor;
-            new_height = move_data->initial_height * scale_factor;
-
-            /* Clamp */
-            new_width = std::max(50.0f, std::min(2000.0f, new_width));
-            new_height = std::max(30.0f, std::min(2000.0f, new_height));
-          }
-          else if (handle == 3 || handle == 7) {
-            /* Horizontal edge: stretch width only */
-            new_width = move_data->initial_width * scale_factor;
-            new_width = std::max(50.0f, std::min(2000.0f, new_width));
-            new_height = move_data->initial_height;
-          }
-          else {
-            /* Vertical edge (1, 5): stretch height only */
-            new_width = move_data->initial_width;
-            new_height = move_data->initial_height * scale_factor;
-            new_height = std::max(30.0f, std::min(2000.0f, new_height));
-          }
-
-          /* Anchor the opposite corner/edge */
-          if (handle == 0) { /* Bottom-left */
-            new_pos_x = (move_data->initial_pos_x + move_data->initial_width) - new_width;
-            new_pos_y = (move_data->initial_pos_y + move_data->initial_height) - new_height;
-          }
-          else if (handle == 1) { /* Bottom-center */
-            new_pos_x = move_data->initial_pos_x + (move_data->initial_width - new_width) / 2.0f;
-            new_pos_y = (move_data->initial_pos_y + move_data->initial_height) - new_height;
-          }
-          else if (handle == 2) { /* Bottom-right */
-            new_pos_y = (move_data->initial_pos_y + move_data->initial_height) - new_height;
-          }
-          else if (handle == 3) { /* Right-center: anchor left edge */
-            /* pos_x stays, pos_y stays */
-          }
-          else if (handle == 5) { /* Top-center: anchor bottom */
-            new_pos_x = move_data->initial_pos_x + (move_data->initial_width - new_width) / 2.0f;
-          }
-          else if (handle == 6) { /* Top-left */
-            new_pos_x = (move_data->initial_pos_x + move_data->initial_width) - new_width;
-          }
-          else if (handle == 7) { /* Left-center: anchor right edge */
-            new_pos_x = (move_data->initial_pos_x + move_data->initial_width) - new_width;
-          }
+          const rctf initial = {move_data->initial_pos_x,
+                                move_data->initial_pos_x + move_data->initial_width,
+                                move_data->initial_pos_y,
+                                move_data->initial_pos_y + move_data->initial_height};
+          rctf placed;
+          moodboard_resize_place(initial, handle, new_width, new_height, &placed);
+          const float new_pos_x = placed.xmin;
+          const float new_pos_y = placed.ymin;
 
           PropertyRNA *prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_textboxes");
           if (prop) {
@@ -767,8 +585,9 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
               RNA_property_float_set(&item_ptr, height_prop, new_height);
             }
 
-            /* Scale font_size only for corner handles (uniform scale) */
-            if (is_corner && move_data->initial_font_size > 0) {
+            /* Every handle is a uniform scale now, so the text always keeps
+             * its proportion to the box it sits in. */
+            if (move_data->initial_font_size > 0) {
               PropertyRNA *fs_prop = RNA_struct_find_property(&item_ptr, "font_size");
               if (fs_prop) {
                 int new_font_size = int(move_data->initial_font_size * scale_factor + 0.5f);
@@ -849,10 +668,6 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
           move_data->selected_textbox_count = 0;
           move_data->has_stored_initial_positions = true;
 
-          /* Get groups to check for group selection */
-          PropertyRNA *groups_prop = RNA_struct_find_property(&scene_ptr,
-                                                               "mixie_moodboard_groups");
-
           PropertyRNA *img_prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
           if (img_prop) {
             int image_count = RNA_property_collection_length(&scene_ptr, img_prop);
@@ -863,27 +678,16 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
               PointerRNA item_ptr;
               RNA_property_collection_lookup_int(&scene_ptr, img_prop, i, &item_ptr);
 
-              /* Check if image is directly selected */
+              /* Directly selected, or a member of a selected FRAME -- whose
+               * border is what the user grabbed, so its members come with it.
+               * ONE definition of that rule, shared with the drag set; the old
+               * inline version resolved a `group_index` and so could only ever
+               * carry images. */
               PropertyRNA *sel_prop = RNA_struct_find_property(&item_ptr, "selected");
               bool is_image_selected = sel_prop && RNA_property_boolean_get(&item_ptr, sel_prop);
+              const bool in_selected_frame = moodboard_item_frame_selected(&scene_ptr, &item_ptr);
 
-              /* Check if image's group is selected */
-              bool is_group_selected = false;
-              PropertyRNA *group_idx_prop = RNA_struct_find_property(&item_ptr, "group_index");
-              if (group_idx_prop && groups_prop) {
-                int group_index = RNA_property_int_get(&item_ptr, group_idx_prop);
-                if (group_index >= 0) {
-                  PointerRNA group_ptr;
-                  RNA_property_collection_lookup_int(
-                      &scene_ptr, groups_prop, group_index, &group_ptr);
-                  PropertyRNA *group_sel_prop = RNA_struct_find_property(&group_ptr, "selected");
-                  if (group_sel_prop) {
-                    is_group_selected = RNA_property_boolean_get(&group_ptr, group_sel_prop);
-                  }
-                }
-              }
-
-              if (is_image_selected || is_group_selected) {
+              if (is_image_selected || in_selected_frame) {
                 PropertyRNA *pos_x_prop = RNA_struct_find_property(&item_ptr, "position_x");
                 PropertyRNA *pos_y_prop = RNA_struct_find_property(&item_ptr, "position_y");
 
@@ -909,8 +713,12 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
               PointerRNA item_ptr;
               RNA_property_collection_lookup_int(&scene_ptr, textbox_prop, i, &item_ptr);
 
+              /* Same frame rule as images: a note inside a frame the user
+               * grabbed has to travel with it. Frames hold every canvas kind,
+               * which the index-based grouping this replaces never could. */
               PropertyRNA *sel_prop = RNA_struct_find_property(&item_ptr, "selected");
-              if (sel_prop && RNA_property_boolean_get(&item_ptr, sel_prop)) {
+              const bool selected = sel_prop && RNA_property_boolean_get(&item_ptr, sel_prop);
+              if (selected || moodboard_item_frame_selected(&scene_ptr, &item_ptr)) {
                 PropertyRNA *pos_x_prop = RNA_struct_find_property(&item_ptr, "position_x");
                 PropertyRNA *pos_y_prop = RNA_struct_find_property(&item_ptr, "position_y");
 
@@ -925,6 +733,33 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
               }
             }
           }
+
+          /* Inference and 3D asset cards -- and FRAMES -- selected alongside
+           * this media come with it. Without this a picture and a card
+           * selected together came apart under the mouse: the picture moved
+           * and the card stayed put. Captured through the shared drag set,
+           * which the graph drag uses in the other direction. */
+          moodboard_drag_set_capture(
+              &scene_ptr,
+              MoodboardDragKinds(MOODBOARD_DRAG_NODES | MOODBOARD_DRAG_FRAMES),
+              &move_data->node_drag);
+        }
+
+        if (event->modifier & KM_CTRL) {
+          /* Snap the GRABBED item to the grid and move everything else by the
+           * same delta, so a multi-item selection keeps its shape and only its
+           * anchor lands on the grid. Snapping each item independently would
+           * collapse the spacing the user arranged. Applied here, after the
+           * drag threshold above has already used the raw delta. */
+          const float grid = MOODBOARD_SNAP_GRID;
+          const float snapped_x = std::round(
+                                      (move_data->initial_pos_x + delta_x) / grid) *
+                                  grid;
+          const float snapped_y = std::round(
+                                      (move_data->initial_pos_y + delta_y) / grid) *
+                                  grid;
+          delta_x = snapped_x - move_data->initial_pos_x;
+          delta_y = snapped_y - move_data->initial_pos_y;
         }
 
         PropertyRNA *img_prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
@@ -966,6 +801,10 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
             }
           }
         }
+
+        /* Cards move by the delta the media already applied, so a mixed
+         * selection keeps its arrangement. */
+        moodboard_drag_set_apply(&scene_ptr, move_data->node_drag, delta_x, delta_y);
 
         /* Throttle redraws to avoid excessive GPU load during move */
         double current_time = BLI_time_now_seconds();
@@ -1026,10 +865,19 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
           WM_cursor_modal_restore(win);
         }
 
+        /* Dragging a picture INTO a frame is how it joins one, and resizing
+         * one can move its centre across a frame's edge -- so membership is
+         * re-resolved once the gesture ends. Only when something actually
+         * moved, so a plain click never writes scene data. */
+        const bool changed_geometry = move_data->is_dragging || move_data->is_resizing;
+
         MEM_delete(move_data);
         op->customdata = nullptr;
 
         WM_event_add_notifier(C, NC_SCENE | ND_SEQUENCER, scene);
+        if (changed_geometry) {
+          moodboard_frames_request_reframe(C);
+        }
 
         return OPERATOR_FINISHED;
       }
@@ -1104,6 +952,8 @@ static wmOperatorStatus moodboard_select_image_modal(bContext *C,
               }
             }
           }
+
+          moodboard_drag_set_restore(&scene_ptr, move_data->node_drag);
         }
 
         ED_area_tag_redraw(CTX_wm_area(C));
@@ -1149,6 +999,9 @@ static void moodboard_select_image_cancel(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Operator Registration (C linkage)
  * \{ */
@@ -1173,3 +1026,4 @@ void MIXIE_OT_moodboard_select_image(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

@@ -25,6 +25,15 @@ def remove_action_node(scene, node_id: str) -> bool:
     from .image_lifecycle import release_moodboard_image_entry
 
     node = scene.mixie_moodboard_action_nodes[index]
+    # A deleted node can no longer receive its result, so its in-flight queue
+    # job would just burn credits into the void — cancel it first. Best-effort:
+    # deletion must never fail on queue state.
+    try:
+        from .node_job_bridge import cancel_node_job
+
+        cancel_node_job(node_id)
+    except Exception:
+        pass
     # A MASK_DETAIL node owns a cutout thumbnail datablock (mask_preview) that no
     # moodboard entry references, so it must be freed explicitly here.
     from .node_graph import release_mask_node_cutout

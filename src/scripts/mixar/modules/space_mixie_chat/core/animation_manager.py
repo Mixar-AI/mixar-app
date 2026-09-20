@@ -82,8 +82,8 @@ def _update_loader():
             stop_loader_animation()
             return None
 
-        from .queue_processor import is_sse_timer_active
-        if not is_sse_timer_active():
+        # The socket inbox may be idle while a loader still needs animation.
+        if needs_animation:
             for window in bpy.context.window_manager.windows:
                 for area in window.screen.areas:
                     # The loader/spinner renders both in the MIXIE_CHAT

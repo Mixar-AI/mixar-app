@@ -37,15 +37,36 @@ from ..core import avatar_icon
 
 
 class MIXAR_PT_profile(Panel):
-    """Profile / account dropdown — opened from the global top bar."""
+    """Profile / account dropdown — opened from the global top bar.
+
+    The contents are drawn natively by `layout.mixar_profile_card()`
+    (`interface_mixar_profile_card.cc`): a greeting, the plan chip, the
+    credit usage meter and the account actions, laid out as one card
+    rather than a menu. Python still owns registration and every
+    operator the card invokes — C++ owns only pixels.
+    """
 
     bl_label = "Profile"
     bl_idname = "MIXAR_PT_profile"
     bl_space_type = 'TOPBAR'
     bl_region_type = 'HEADER'
+    #: Narrow enough that the card reads as a card rather than a wide,
+    #: sparse strip — at 17 the content sat in the left third and every
+    #: label looked undersized for the surface it was on.
+    bl_ui_units_x = 15
 
     def draw(self, context):
         layout = self.layout
+
+        try:
+            layout.mixar_profile_card()
+        except AttributeError:
+            # Build whose C++ predates the card item — fall back to the
+            # plain menu so the account actions are never unreachable.
+            self._draw_fallback_menu(context, layout)
+
+    @staticmethod
+    def _draw_fallback_menu(context, layout) -> None:
         wm = context.window_manager
 
         layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
@@ -100,16 +121,23 @@ def _draw_topbar_profile_right(self, context):
         # chat header so the pill width still grows with the email.
         email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
         profile_sub = layout.row(align=True)
-        profile_sub.ui_units_x = len(email) * 0.35 + 2.5
-        # Green avatar disc with the account initial; 0 means the
-        # generator failed (e.g. Pillow missing) → stock USER icon.
-        avatar_id = avatar_icon.get_avatar_icon_id(email)
-        if avatar_id:
-            profile_sub.popover(
-                panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
+        profile_sub.ui_units_x = len(email) * 0.35 + 3.0
+        # Native account chip (interface_mixar_topbar.cc): dark slab, label,
+        # and a full-height avatar disc at the RIGHT end per the design —
+        # which is also why no `icon=` is passed here (Blender would pin it
+        # to the left slot). The disc carries the stock person glyph: with no
+        # profile picture set, the placeholder social platforms use reads
+        # better than a generated initial.
+        profile_sub.popover(panel="MIXAR_PT_profile", text=email)
+        if hasattr(profile_sub, "mixar_topbar_element"):
+            profile_sub.mixar_topbar_element(kind='PROFILE_PILL', active=True)
         else:
-            profile_sub.popover(
-                panel="MIXAR_PT_profile", text=email, icon='USER')
+            # Older build without the widget: keep an icon so the chip still
+            # reads as an account control.
+            avatar_id = avatar_icon.get_avatar_icon_id(email)
+            if avatar_id:
+                profile_sub.popover(
+                    panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
     else:
         # Not logged in → login popover (preferred) with operator fallback
         # for the brief window where the login panel class hasn't

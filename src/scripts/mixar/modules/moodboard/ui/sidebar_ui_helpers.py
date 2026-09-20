@@ -144,8 +144,13 @@ def focus_segments_panel(context):
 
 def draw_prompt_section(layout, prop_owner, label="Prompt",
                         icon='TEXT', action_op=None, action_icon='FILE_FOLDER',
-                        min_lines=2, max_lines=5):
-    """Boxed prompt input with label and optional action button. Returns col."""
+                        min_lines=2, max_lines=5, refine=True):
+    """Boxed prompt input with label and optional action button. Returns col.
+
+    Every sidebar prompt comes through here, which is why the Refine / Revert
+    row is added here rather than in each drawer (see ``prompt_refine_drawer``
+    — a tab with no target entry simply gets no row).
+    """
     box = layout.mixar_section() if hasattr(layout, 'mixar_section') else layout.box()
     col = box.column()
     col.label(text=label, icon=icon)
@@ -159,6 +164,10 @@ def draw_prompt_section(layout, prop_owner, label="Prompt",
     else:
         draw_multiline_text_input(col, prop_owner, "prompt",
                                   min_lines=min_lines, max_lines=max_lines)
+
+    if refine:
+        from .prompt_refine_drawer import draw_prompt_refine_row
+        draw_prompt_refine_row(col, prop_owner)
     return col
 
 
@@ -303,79 +312,13 @@ def draw_styled_progress(layout, data, prop, text="Generating..."):
     row.prop(data, prop, text=text, slider=True)
 
 
-# ---------------------------------------------------------------------------
-# Image thumbnails
-# ---------------------------------------------------------------------------
-
-def _get_preview_icon_id(image):
-    """Return the preview icon_id for a Blender image, ensuring it exists."""
-    if not image:
-        return 0
-    # preview_ensure() must be called before .preview is usable —
-    # without it, .preview may be None even for loaded images.
-    image.preview_ensure()
-    if image.preview:
-        return image.preview.icon_id or 0
-    return 0
-
-
-def draw_image_thumbnail(layout, image, scale=3.0):
-    """Draw an image preview thumbnail using Blender's template_icon.
-
-    Returns True if a thumbnail was drawn, False if fallback label was used.
-    """
-    icon_id = _get_preview_icon_id(image)
-    if icon_id:
-        layout.template_icon(icon_value=icon_id, scale=scale)
-        return True
-    layout.label(text=image.name if image else "No image", icon='IMAGE_DATA')
-    return False
-
-
-def draw_image_info_card(layout, image, remove_op=None, remove_op_props=None,
-                         display_name=None, display_resolution=None):
-    """Draw a compact image card with preview icon, name, resolution, and remove button.
-
-    Args:
-        layout: Parent layout.
-        image: Blender Image datablock (or None).
-        remove_op: Optional operator idname for the X button.
-        remove_op_props: Optional dict of properties to set on the remove operator.
-        display_name: Override name (falls back to image.name).
-        display_resolution: Override resolution string (falls back to WxH from image).
-    """
-    if not image:
-        layout.label(text="No image", icon='IMAGE_DATA')
-        return
-
-    box = layout.box()
-    row = box.row(align=True)
-
-    # Preview icon on the left
-    icon_id = _get_preview_icon_id(image)
-    if icon_id:
-        row.template_icon(icon_value=icon_id, scale=1.8)
-
-    # Name + resolution details
-    info_col = row.column(align=True)
-    name = display_name or image.name
-    info_col.label(text=name)
-
-    res = display_resolution
-    if not res and image.size[0] > 0:
-        res = f"{image.size[0]} x {image.size[1]}"
-    if res:
-        sub = info_col.row()
-        sub.scale_y = 0.75
-        sub.label(text=res, icon='FULLSCREEN_ENTER')
-
-    # Remove button on the right
-    if remove_op:
-        op = row.operator(remove_op, text="", icon='X')
-        if remove_op_props:
-            for k, v in remove_op_props.items():
-                setattr(op, k, v)
-
+# Preview-backed image drawing lives in its own module (500-line rule); it is
+# re-exported here because seven drawers import it from this one.
+from .sidebar_image_helpers import (  # noqa: E402
+    _get_preview_icon_id,
+    draw_image_info_card,
+    draw_image_thumbnail,
+)
 
 # ---------------------------------------------------------------------------
 # Generate footers

@@ -17,13 +17,16 @@ import sys
 import threading
 import time
 import traceback
-from dataclasses import dataclass, field
 from io import StringIO
-from typing import Any, Optional
+from typing import Optional
 
 import bpy
 
-from ..constants import SCRIPT_TIMEOUT_THRESHOLD
+from ..constants import (
+    AGENT_UNDO_GROUP_PER_TURN,
+    AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN,
+    SCRIPT_TIMEOUT_THRESHOLD,
+)
 
 logger = get_logger(__name__)
 
@@ -35,73 +38,21 @@ class SandboxViolationError(RuntimeError):
 
 # Restricted module wrappers (see sandbox_modules.py for implementation)
 from .sandbox_modules import (
+    safe_module,
     RESTRICTED_BASE64,
+    RESTRICTED_STRING,
     RESTRICTED_TEMPFILE,
     RESTRICTED_URLLIB,
     restricted_open,
 )
-from .sandbox_builtins import get_safe_builtins, sanitize_value
+from .sandbox_builtins import get_safe_builtins
+from .executor_handlers import HandlerCleanupMixin
+from .executor_result import ExecutionResult  # noqa: F401 — re-exported
 from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
 
 
-@dataclass
-class ExecutionResult:
-    """Result of script execution."""
-
-    success: bool
-    output: str = ""
-    error: Optional[str] = None
-    traceback: Optional[str] = None
-
-    # Changes detected
-    created_objects: list[str] = field(default_factory=list)
-    modified_objects: list[str] = field(default_factory=list)
-    deleted_objects: list[str] = field(default_factory=list)
-
-    # Return value if script returned something
-    return_value: Any = None
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON-RPC response.
-
-        Returns a response with `success` at the top level.
-        If __RESULT__ was set in the script and is a dict, its contents
-        are flattened into the response.
-        """
-        response = {
-            "success": self.success,
-        }
-
-        # Flatten return_value dict into response (for __RESULT__ data)
-        if self.return_value and isinstance(self.return_value, dict):
-            sanitized = sanitize_value(self.return_value)
-            if isinstance(sanitized, dict):
-                response.update(sanitized)
-        elif self.return_value is not None:
-            response["return_value"] = sanitize_value(self.return_value)
-
-        # Include metadata only if present
-        if self.output:
-            response["output"] = self.output
-        if self.created_objects:
-            response["created_objects"] = self.created_objects
-        if self.modified_objects:
-            response["modified_objects"] = self.modified_objects
-        if self.deleted_objects:
-            response["deleted_objects"] = self.deleted_objects
-        if self.error:
-            response["error"] = self.error
-        # Forward the traceback over the (internal) RPC so the backend can log the
-        # failing line. This is an internal channel; the backend strips tracebacks
-        # from any client-facing API response per its own contract.
-        if self.traceback:
-            response["traceback"] = self.traceback
-
-        return response
-
-
-class ScriptExecutor:
+class ScriptExecutor(HandlerCleanupMixin):
     """
     Safely executes generated bpy scripts.
 
@@ -110,124 +61,104 @@ class ScriptExecutor:
     - Detects scene changes (created/modified/deleted objects)
     - Handles errors gracefully
     - Integrates with Blender's undo system
-    - Cleans up bpy.app.handlers installed by scripts
+    - Cleans up bpy.app.handlers installed by scripts (HandlerCleanupMixin,
+      which exempts the preview-render callbacks by identity)
     - Hardened sandbox: os and pathlib are NOT exposed at all; open, tempfile,
       base64, urllib are restricted wrappers
     """
 
-    # Handler list names on bpy.app.handlers to snapshot/restore
-    _HANDLER_NAMES = (
-        "depsgraph_update_post",
-        "depsgraph_update_pre",
-        "frame_change_post",
-        "frame_change_pre",
-        "load_factory_preferences_post",
-        "load_factory_startup_post",
-        "load_post",
-        "load_pre",
-        "object_bake_cancel",
-        "object_bake_complete",
-        "object_bake_pre",
-        "redo_post",
-        "redo_pre",
-        "render_cancel",
-        "render_complete",
-        "render_init",
-        "render_post",
-        "render_pre",
-        "render_stats",
-        "render_write",
-        "save_post",
-        "save_pre",
-        "undo_post",
-        "undo_pre",
-        "version_update",
-    )
-
-    # Agent turn tracking for undo grouping
+    # Agent turn tracking for undo checkpoints (see AGENT_UNDO_* constants)
     _in_agent_turn: bool = False
-    _undo_pushed_this_turn: bool = False
+    _undo_pushes_this_turn: int = 0          # SUCCESSFUL pushes so far
+    _undo_failure_logged_this_turn: bool = False
 
     def __init__(self):
         """Initialize the executor."""
         self._last_scene_state: Optional[dict] = None
         self._execution_lock = threading.Lock()
 
-    def _snapshot_handlers(self) -> dict[str, list]:
-        """Snapshot all bpy.app.handlers lists before script execution."""
-        snapshot = {}
-        for name in self._HANDLER_NAMES:
-            handler_list = getattr(bpy.app.handlers, name, None)
-            if handler_list is not None:
-                snapshot[name] = list(handler_list)
-        return snapshot
-
-    @staticmethod
-    def _exempt_handler_ids() -> set:
-        """Identities of first-party handlers that scripts install INDIRECTLY
-        via addon operators and that must OUTLIVE the script.
-
-        mixie_chat.agent_final_render starts a background render job during a
-        sandboxed render_scene script; its render_complete/render_cancel
-        handlers do the moodboard import + settings restore AFTER the script
-        is long gone — stripping them orphans the render (settings never
-        restored, image never imported). Matching is by object IDENTITY, not
-        name/module (a script can forge ``__module__`` via ``__name__`` in
-        its globals, but it cannot forge ``id()``); at worst a script can
-        re-append these exact functions, which self-guard (no-op without an
-        active job).
-        """
-        try:
-            from mixar.modules.space_mixie_chat.ui.operators import (
-                agent_final_render_ops as _afr,
-            )
-            return {id(_afr._on_render_complete), id(_afr._on_render_cancel)}
-        except Exception:
-            return set()
-
-    def _cleanup_handlers(self, snapshot: dict[str, list]) -> None:
-        """Remove any handlers that were added since the snapshot.
-
-        Prevents scripts from installing persistent backdoors via handlers.
-        """
-        for name, before_list in snapshot.items():
-            handler_list = getattr(bpy.app.handlers, name, None)
-            if handler_list is None:
-                continue
-            before_set = set(id(h) for h in before_list)
-            added = [h for h in handler_list if id(h) not in before_set]
-            exempt = self._exempt_handler_ids()
-            for handler in added:
-                if id(handler) in exempt:
-                    logger.debug(
-                        "Keeping exempt first-party handler: %s.%s (%s)",
-                        "bpy.app.handlers", name,
-                        getattr(handler, '__name__', repr(handler)),
-                    )
-                    continue
-                try:
-                    handler_list.remove(handler)
-                    logger.warning(
-                        "Cleaned up handler added by script: %s.%s (%s)",
-                        "bpy.app.handlers", name,
-                        getattr(handler, '__name__', repr(handler)),
-                    )
-                except ValueError:
-                    pass
-
     def begin_agent_turn(self) -> None:
-        """Signal the start of an agent turn (multi-tool sequence)."""
+        """Signal the start of an agent turn (multi-tool sequence).
+
+        Idempotent: the queue processor calls it for every streamed event,
+        so the turn begins with the first one and the per-turn undo counters
+        reset exactly once per turn.
+        """
         if not self._in_agent_turn:
             self._in_agent_turn = True
-            self._undo_pushed_this_turn = False
+            self._reset_turn_undo_state()
             logger.debug("Agent turn started")
 
     def end_agent_turn(self) -> None:
         """Signal the end of an agent turn."""
         if self._in_agent_turn:
             self._in_agent_turn = False
-            self._undo_pushed_this_turn = False
+            self._reset_turn_undo_state()
             logger.debug("Agent turn ended")
+
+    def _reset_turn_undo_state(self) -> None:
+        self._undo_pushes_this_turn = 0
+        self._undo_failure_logged_this_turn = False
+
+    def _should_push_undo(self, grouping: bool = None) -> bool:
+        """Whether THIS script should push an undo checkpoint.
+
+        Outside a turn every script pushes. Inside a turn, grouped mode
+        (AGENT_UNDO_GROUP_PER_TURN, or the per-call override) pushes once —
+        the pre-turn state, so one Ctrl-Z reverts the whole multi-tool turn
+        — and per-script mode (default) pushes before each script until
+        AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN checkpoints exist, so the user
+        can step back through the agent's work one tool at a time without
+        a long turn evicting the pre-turn state from Blender's undo stack.
+        Only SUCCESSFUL pushes are counted, so a failed push is retried by
+        the next script instead of silently leaving the turn without one.
+        """
+        group_per_turn = (
+            AGENT_UNDO_GROUP_PER_TURN if grouping is None else grouping
+        )
+        if not self._in_agent_turn:
+            return True
+        limit = 1 if group_per_turn else AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN
+        return self._undo_pushes_this_turn < limit
+
+    def _push_undo_checkpoint(self) -> bool:
+        """Push an undo checkpoint; retry once inside an explicit window
+        context (undo_push's poll fails when the script runs without one).
+        Returns True only when a checkpoint was actually created."""
+        try:
+            bpy.ops.ed.undo_push(message="Mixie Chat Script")
+            return True
+        except RuntimeError:
+            pass
+        try:
+            windows = bpy.context.window_manager.windows
+            if not windows:
+                return False
+            with bpy.context.temp_override(window=windows[0]):
+                bpy.ops.ed.undo_push(message="Mixie Chat Script")
+            return True
+        except (RuntimeError, AttributeError):
+            return False
+
+    def _push_undo_for_script(self) -> bool:
+        """Push this script's checkpoint and account for it.
+
+        A success counts towards the turn's cap. A failure never aborts the
+        script: it is NOT counted (so the next script retries instead of the
+        turn silently having no checkpoint) and it is logged — once per turn,
+        because a context that cannot push will fail for every script in it.
+        """
+        if self._push_undo_checkpoint():
+            if self._in_agent_turn:
+                self._undo_pushes_this_turn += 1
+            return True
+        if not self._in_agent_turn or not self._undo_failure_logged_this_turn:
+            logger.warning(
+                "Undo checkpoint failed - this script's changes may not be "
+                "individually undoable"
+            )
+            self._undo_failure_logged_this_turn = True
+        return False
 
     def execute(self, script: str, push_undo: bool = True) -> ExecutionResult:
         """
@@ -251,19 +182,14 @@ class ScriptExecutor:
         # Capture scene state before execution
         before_state = self._capture_scene_state()
 
-        # Push undo step -- only once per agent turn when grouping is active
-        if push_undo:
-            should_push = True
-            if self._in_agent_turn:
-                if self._undo_pushed_this_turn:
-                    should_push = False
-                else:
-                    self._undo_pushed_this_turn = True
-            if should_push:
-                try:
-                    bpy.ops.ed.undo_push(message="Mixie Chat Script")
-                except RuntimeError:
-                    pass
+        # Push undo step BEFORE the script runs, so the first push of a turn
+        # captures the pre-turn scene. Granularity (per script up to the
+        # per-turn cap, or one per turn when grouped) is decided by
+        # _should_push_undo; a failed push never aborts the script — it is
+        # logged once per turn and retried by the next script, where it used
+        # to be silently swallowed (turns got NO checkpoint at all).
+        if push_undo and self._should_push_undo():
+            self._push_undo_for_script()
 
         # Snapshot handlers before execution to detect additions
         handler_snapshot = self._snapshot_handlers()
@@ -289,43 +215,102 @@ class ScriptExecutor:
             import math
             import re
             import random
-            import runpy
             import colorsys
             import datetime
             import collections
+            import hashlib
+            # Pure-Python stdlib helpers: no process, file or network access,
+            # and no API that resolves an attribute from a caller-supplied name
+            # (that would walk past the wrapped getattr). Deliberately NOT here:
+            #   operator -- attrgetter/methodcaller take the name as a string
+            #   runpy    -- run_module("os") returns the real os namespace
+            #   string   -- proxied below; Formatter().get_field() is the same
+            #               attrgetter hole and returns the object, not a repr
+            import itertools
+            import functools
+            import statistics
+            import heapq
+            import bisect
+            import copy
+            import textwrap
+            import fractions
+            import decimal
             import bmesh
             import mathutils
             import bpy_extras
             import imbuf
             import numpy
+            import struct
 
             exec_namespace = {
                 "__builtins__": get_safe_builtins(),
-                "bpy": bpy,
+                # bpy is wrapped too. It IS the capability the agent is given,
+                # so every same-package child stays reachable -- bpy.ops,
+                # bpy.data, bpy.types, bpy.props, bpy.app, bpy.path, bpy.utils
+                # all resolve exactly as before. What the wrap refuses is the
+                # foreign modules bound INSIDE it: Blender's own
+                # bpy/utils/__init__.py does `import os as _os` / `import sys
+                # as _sys`, so bpy.utils._os was the real os module and
+                # bpy.utils._sys.modules['builtins'].exec arbitrary code --
+                # reachable with no dunder, so the AST guard never saw it, and
+                # through the one module every script already has. Leaving bpy
+                # exempt meant this whole class of escape was still open.
+                "bpy": safe_module(bpy),
                 "__name__": "__main__",
-                # Safe modules (unrestricted)
-                "json": json,
-                "math": math,
-                "random": random,
-                "runpy": runpy,
-                "colorsys": colorsys,
-                "re": re,
-                "datetime": datetime,
-                "collections": collections,
-                "time": time,
-                "numpy": numpy,
+                # Safe modules. Each is wrapped so it cannot hand out a
+                # module from another package: `random._os`, `fractions.sys`,
+                # `statistics.sys`, `datetime.sys`, `collections._sys`,
+                # `re.enum.sys` and `json.codecs` were all plain attributes
+                # reaching the real `os`/`builtins` without touching a single
+                # dunder, so the AST guard never saw them. Same-package
+                # submodules (`collections.abc`, `numpy.linalg`) still work.
+                "json": safe_module(json),
+                "math": safe_module(math),
+                "random": safe_module(random),
+                "colorsys": safe_module(colorsys),
+                "re": safe_module(re),
+                "datetime": safe_module(datetime),
+                "collections": safe_module(collections),
+                "hashlib": safe_module(hashlib),
+                "time": safe_module(time),
+                "numpy": safe_module(numpy),
+                "struct": safe_module(struct),
+                "itertools": safe_module(itertools),
+                "functools": safe_module(functools),
+                "statistics": safe_module(statistics),
+                "heapq": safe_module(heapq),
+                "bisect": safe_module(bisect),
+                "copy": safe_module(copy),
+                "textwrap": safe_module(textwrap),
+                "fractions": safe_module(fractions),
+                "decimal": safe_module(decimal),
                 # Blender modules
-                "bmesh": bmesh,
-                "mathutils": mathutils,
-                "bpy_extras": bpy_extras,
-                "imbuf": imbuf,
+                "bmesh": safe_module(bmesh),
+                "mathutils": safe_module(mathutils),
+                "bpy_extras": safe_module(bpy_extras),
+                "imbuf": safe_module(imbuf),
                 # Restricted modules -- only safe subsets exposed
                 # (see sandbox_modules.py for implementation)
                 "base64": RESTRICTED_BASE64,
+                "string": RESTRICTED_STRING,
                 "tempfile": RESTRICTED_TEMPFILE,
                 "urllib": RESTRICTED_URLLIB,
                 "open": restricted_open,
             }
+
+            # Some first-party scene transaction scripts use
+            # ``globals().get(<sentinel>)`` to gate a commit body. Exposing the
+            # real globals builtin would also expose the mutable builtins map
+            # and the restricted-open capability, so provide only a detached,
+            # filtered snapshot of names already visible to the script.
+            def _safe_globals():
+                return {
+                    name: value
+                    for name, value in exec_namespace.items()
+                    if name not in {"__builtins__", "open"}
+                }
+
+            exec_namespace["__builtins__"]["globals"] = _safe_globals
 
             # Restricted __import__: allows "import bpy", "import json" etc.
             # (which are already in exec_namespace) but blocks arbitrary imports.
@@ -345,7 +330,23 @@ class ScriptExecutor:
                 # NOT urllib.* — only the RestrictedUrllib wrapper may reach the network.
                 top_module = name.split(".")[0]
                 if top_module in ("mixar", "numpy", "mathutils", "bmesh", "bpy_extras"):
-                    return _real_import(name, *args, **kwargs)
+                    real = _real_import(name, *args, **kwargs)
+                    # `import a.b` binds `a`, so handing back the real package
+                    # here would return the UNWRAPPED module and undo the
+                    # cross-package guard. Return the proxy we already built
+                    # where there is one, and wrap first-party packages so a
+                    # module that does `import os` cannot re-export it.
+                    #
+                    # ONLY for the no-fromlist form. With a fromlist,
+                    # `__import__` returns the LEAF module and the interpreter
+                    # then getattrs the names off it, so substituting the top
+                    # package here broke every `from numpy.linalg import norm`
+                    # / `from mathutils.geometry import ...` with "cannot
+                    # import name". The leaf's own proxy is equally guarded.
+                    fromlist = args[2] if len(args) > 2 else kwargs.get("fromlist")
+                    if not fromlist and top_module in exec_namespace:
+                        return exec_namespace[top_module]
+                    return safe_module(real)
                 raise ImportError(
                     f"Module '{name}' is not available. "
                     f"Allowed modules: {', '.join(sorted(_allowed))}"

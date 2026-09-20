@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import math
 
+from .rotation_curves import repair_rotation_continuity, rotation_data_path
+
 # (key, label, tooltip)
 ANIMATION_PRESETS = (
     ("WALK", "Walk Forward", "Walk ahead at a natural pace with a subtle step bob"),
@@ -37,14 +39,6 @@ _WALK_STEPS_HZ = 1.8
 _RUN_STEPS_HZ = 2.8
 _IDLE_BOB = 0.012
 _IDLE_HZ = 0.4
-
-
-def _rotation_data_path(obj) -> str:
-    if obj.rotation_mode == 'QUATERNION':
-        return "rotation_quaternion"
-    if obj.rotation_mode == 'AXIS_ANGLE':
-        return "rotation_axis_angle"
-    return "rotation_euler"
 
 
 def _key(obj, data_path: str, frame: int) -> None:
@@ -99,7 +93,7 @@ def _turn(obj, scene, frame_start: int, seconds: float, degrees: float) -> int:
 
     fps = _fps(scene)
     frame_end = frame_start + max(1, round(seconds * fps))
-    path = _rotation_data_path(obj)
+    path = rotation_data_path(obj)
     _key(obj, path, frame_start)
     rotation = Matrix.Rotation(math.radians(degrees), 4, 'Z')
     matrix = obj.matrix_world.copy()
@@ -107,6 +101,10 @@ def _turn(obj, scene, frame_start: int, seconds: float, degrees: float) -> int:
     target.translation = matrix.translation
     obj.matrix_world = target
     _key(obj, path, frame_end)
+    # matrix_world assignment re-decomposes without compatibility: a 90
+    # degree turn from a 135 degree heading keys as -135 and would play as
+    # a 270 degree spin the other way without the continuity filter.
+    repair_rotation_continuity(obj)
     return frame_end
 
 

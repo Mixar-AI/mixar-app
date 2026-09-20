@@ -114,6 +114,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Local QA evidence is not versioned.
+/docs/development/evidence/
+
 # Translations
 *.mo
 *.pot

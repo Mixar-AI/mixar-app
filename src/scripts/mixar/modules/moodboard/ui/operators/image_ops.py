@@ -19,9 +19,15 @@ from bpy.props import (
     BoolProperty,
 )
 
+from ...core.media_import import load_media_file_to_board
 from ...core.moodboard_utils import place_new_moodboard_item
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from ....common.utils.platform_utils import format_shortcut
+
+# The loader lives in ``core/media_import.py`` so non-UI callers (the chat
+# composer's attachment mirroring) can reuse it without importing an operator
+# module. Kept under the local name the operators below already use.
+_load_media_from_filepath = load_media_file_to_board
 
 
 def _media_filter_glob():
@@ -29,43 +35,6 @@ def _media_filter_glob():
     image_extensions = set(getattr(bpy.path, "extensions_image", ()))
     movie_extensions = set(getattr(bpy.path, "extensions_movie", ()))
     return ";".join(f"*{ext}" for ext in sorted(image_extensions | movie_extensions))
-
-
-def _load_media_from_filepath(scene, filepath, anchor=None):
-    """Load an image or movie from filepath and add it to the moodboard.
-
-    Reusable helper that loads the media into Blender, packs still images,
-    keeps movies linked to their source path, appends it to the moodboard
-    collection, and positions it into visible free space centred on *anchor*
-    (canvas coords, e.g. the cursor) or the viewport centre when *anchor* is
-    ``None``. Returns the new item on success or None.
-
-    Args:
-        scene: The current Blender scene.
-        filepath: Absolute path to the image or movie file.
-        anchor: Optional ``(x, y)`` canvas coordinates to centre the image on.
-
-    Returns:
-        The newly created moodboard media item, or None on failure.
-    """
-    try:
-        img = bpy.data.images.load(filepath, check_existing=True)
-        img.colorspace_settings.name = 'sRGB'
-        # Blender cannot pack movies into the blend file. Keep their original
-        # path so a later video-generation submitter can stream the real bytes.
-        if img.source != 'MOVIE':
-            img.pack()
-        elif img.frame_duration < 1 or img.size[0] <= 0 or img.size[1] <= 0:
-            return None
-    except Exception:
-        return None
-
-    item = scene.mixie_moodboard_images.add()
-    item.image = img
-    item.scale = 1.0
-    item.z_order = len(scene.mixie_moodboard_images) - 1
-    place_new_moodboard_item(scene, item, anchor=anchor)
-    return item
 
 
 class MIXIE_OT_moodboard_add_image(Operator):
@@ -235,14 +204,47 @@ class MIXIE_OT_moodboard_add_existing_image(Operator):
         return {'FINISHED'}
 
 
+def _grab_external_clipboard():
+    """What the OS clipboard holds: a PIL image, a list of file paths, or None.
+
+    Returns ``(content, error)``; ``error`` is a user-facing message when the
+    clipboard could not be read at all (Pillow missing, platform failure).
+    """
+    try:
+        from PIL import ImageGrab
+    except ImportError:
+        return None, "Pillow is required for clipboard paste. Install it with: pip install Pillow"
+    try:
+        return ImageGrab.grabclipboard(), None
+    except Exception as e:
+        return None, f"Failed to read clipboard: {e}"
+
+
+def _is_our_export(content, exported_size) -> bool:
+    """Whether the OS clipboard still holds the still our own copy put there.
+
+    The export is a best-effort PNG of the first copied still; every platform
+    hands it back at the same pixel size, so a size match reads as "ours" and
+    anything else (another picture, a copied file list) as something the user
+    copied more recently in another application -- which then wins.
+    """
+    if exported_size is None:
+        return False
+    size = getattr(content, "size", None)
+    try:
+        return size is not None and (int(size[0]), int(size[1])) == tuple(exported_size)
+    except (IndexError, TypeError, ValueError):
+        return False
+
+
 class MIXIE_OT_moodboard_paste_image(Operator):
-    """Paste an image from the clipboard and add it to the moodboard"""
+    """Paste the copied moodboard items, or an image from the system clipboard"""
 
     bl_idname = "mixie.moodboard_paste_image"
-    bl_label = "Paste Image from Clipboard"
+    bl_label = "Paste"
     bl_description = (
-        f"Paste an image from the clipboard into the moodboard "
-        f"({format_shortcut('V')})"
+        f"Paste what was copied on a moodboard -- in this or another Mixar "
+        f"instance -- or an image from the system clipboard ({format_shortcut('V')})"
     )
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -271,34 +273,46 @@ class MIXIE_OT_moodboard_paste_image(Operator):
         scene = context.scene
         anchor = (self.cursor_x, self.cursor_y) if self.use_cursor else None
 
-        # Primary path: paste from the reliable in-app clipboard (images and text
-        # boxes copied from the moodboard) — a lossless duplicate, no round-trip.
-        from ...core.moodboard_clipboard import has_clipboard, paste_clipboard
+        # Primary path: the moodboard clipboard -- this process's last copy,
+        # or the on-disk buffer another Mixar instance wrote more recently
+        # (images, movies, text boxes, nodes and links; lossless). The one
+        # thing that outranks it is a picture the user copied in ANOTHER
+        # application since: the copy put its first still on the OS clipboard
+        # and recorded that still's size, so a different picture there is
+        # newer than our copy and wins. With nothing recorded (a copy of a
+        # movie, text or nodes; a failed export) the moodboard clipboard wins,
+        # as Blender's own copy buffer always does.
+        from ...core.moodboard_clipboard import (
+            clipboard_exported_size,
+            has_clipboard,
+            paste_clipboard,
+        )
+        clip_img = None
+        clipboard_read = False
         if has_clipboard():
-            pasted = paste_clipboard(scene, anchor=anchor)
-            if pasted:
-                for area in context.screen.areas:
-                    if area.type == 'MIXIE':
-                        area.tag_redraw()
-                self.report({'INFO'}, f"Pasted {pasted} item{'s' if pasted != 1 else ''}")
-                return {'FINISHED'}
+            exported = clipboard_exported_size()
+            external_is_newer = False
+            if exported is not None:
+                clip_img, error = _grab_external_clipboard()
+                clipboard_read = error is None
+                external_is_newer = clip_img is not None and not _is_our_export(clip_img, exported)
+            if not external_is_newer:
+                pasted = paste_clipboard(scene, anchor=anchor)
+                if pasted:
+                    for area in context.screen.areas:
+                        if area.type == 'MIXIE':
+                            area.tag_redraw()
+                    self.report({'INFO'}, f"Pasted {pasted} item{'s' if pasted != 1 else ''}")
+                    return {'FINISHED'}
+                clip_img = None
+                clipboard_read = False
 
-        # Fallback: grab an external image from the system clipboard via Pillow.
-        try:
-            from PIL import ImageGrab
-        except ImportError:
-            self.report(
-                {'ERROR'},
-                "Pillow is required for clipboard paste. "
-                "Install it with: pip install Pillow"
-            )
-            return {'CANCELLED'}
-
-        try:
-            clip_img = ImageGrab.grabclipboard()
-        except Exception as e:
-            self.report({'ERROR'}, f"Failed to read clipboard: {e}")
-            return {'CANCELLED'}
+        # Fallback: an external image from the system clipboard via Pillow.
+        if not clipboard_read:
+            clip_img, error = _grab_external_clipboard()
+            if error:
+                self.report({'ERROR'}, error)
+                return {'CANCELLED'}
 
         if clip_img is None:
             self.report({'WARNING'}, "No image found in clipboard")

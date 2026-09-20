@@ -11,11 +11,14 @@
  */
 
 #include <climits>
+#include <cstdint>
 #include <cstring>
 
 #include "BLI_string.h"
 
 #include "mixie_chat_markdown_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name JSON Parsing Helpers
@@ -403,3 +406,4 @@ int parse_markdown_segments(const char *metadata_json,
 }
 
 /** \} */
+}  // namespace blender

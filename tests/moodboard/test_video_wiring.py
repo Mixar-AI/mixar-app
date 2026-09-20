@@ -28,7 +28,10 @@ def test_native_drop_accepts_movies_and_validates_the_first_frame():
     assert "WM_drag_has_path_file_type(drag, FILE_TYPE_MOVIE)" in dragdrop
     assert "imb_ext_movie" in drop
     assert "BKE_image_acquire_ibuf" in drop
-    assert "image->source == IMA_SRC_MOVIE" in drop
+    assert '"Cannot decode media preview: %s"' in drop
+    # Both stills and movies decode before boarding; only stills are packed.
+    assert "if (image->source != IMA_SRC_MOVIE)" in drop
+    assert "BKE_image_packfiles" in drop
 
 
 def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
@@ -40,7 +43,7 @@ def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
     assert "moodboard_toggle_video_playback" in select
     assert "play_button_hit" in select
     assert "KM_DBL_CLICK" in select
-    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in select
+    assert "moodboard_video_play_radius(v2d, media_rect)" in select
     assert "g_video_playback" in preview
     assert "BKE_image_acquire_ibuf" in preview
     assert "MOV_get_duration_frames" in preview
@@ -77,16 +80,46 @@ def test_movie_thumbnail_has_a_play_affordance():
     assert "image->source == IMA_SRC_MOVIE" in draw
     # Shared with the inference-node preview, hence the exported name.
     assert "mixie_draw_moodboard_video_overlay" in draw
-    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in draw
+    assert "moodboard_video_play_radius(v2d, media_rect)" in draw
     assert "if (is_playing)" in draw
+
+
+def test_the_play_button_never_outgrows_the_video_it_sits_on():
+    """A fixed 28px button is most of a small tile once the canvas is zoomed
+    out, which reads as the button GROWING as you zoom away. It is capped
+    against the tile's shorter side and shrinks with it from there — and draw,
+    the standalone hit-test and the node hit-test all take the radius from the
+    ONE definition, or the clickable disc parts company with the glyph."""
+    intern = _read(SPACE_MIXIE / "mixie_intern.hh")
+    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
+
+    assert "MOODBOARD_VIDEO_PLAY_MAX_FRACTION" in intern
+    assert "float moodboard_video_play_radius(View2D *v2d, const rctf &media_rect);" in intern
+
+    body = geometry.split("float moodboard_video_play_radius(")[1].split("\n}\n")[0]
+    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale" in body
+    assert "MOODBOARD_VIDEO_PLAY_MAX_FRACTION" in body
+    assert "std::min(" in body
+
+    # The only places the raw pixel constant may still be spelled out.
+    users = [
+        path.name
+        for path in SPACE_MIXIE.glob("*.cc")
+        if "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in _read(path)
+    ]
+    assert users == ["mixie_moodboard_graph_geometry.cc"]
 
 
 def test_file_picker_keeps_movies_linked_to_their_source():
     image_ops = _read(MOODBOARD / "ui/operators/image_ops.py")
+    # The loader itself lives in core/ so non-UI callers (the chat composer's
+    # attachment mirroring) can reuse it without importing an operator module.
+    media_import = _read(MOODBOARD / "core/media_import.py")
 
     assert 'getattr(bpy.path, "extensions_movie", ())' in image_ops
-    assert "if img.source != 'MOVIE':" in image_ops
-    assert "img.pack()" in image_ops
+    assert "load_media_file_to_board" in image_ops
+    assert "if img.source != 'MOVIE':" in media_import
+    assert "img.pack()" in media_import
 
 
 def test_video_generation_streams_selected_movies_and_imports_the_result():
@@ -110,3 +143,27 @@ def test_video_generation_streams_selected_movies_and_imports_the_result():
     assert "b64" not in queue_job[queue_job.index("class StreamingVideoJob"):]
     assert "mixar/generated_videos" in media_import
     assert "place_new_moodboard_item" in media_import
+
+
+def test_every_video_gen_limit_lookup_passes_the_selected_model():
+    """`video_gen` serves models whose reference ceilings differ by more than
+    3x and `input_spec` is service-level, so a lookup that omits the model
+    reads the widest set — and every one of these call sites decides what gets
+    compressed and uploaded before the backend ever sees the payload."""
+    operator = _read(MOODBOARD / "ui/operators/video_gen_ops.py")
+    drawer = _read(MOODBOARD / "ui/video_gen_drawer.py")
+    node = _read(MOODBOARD / "core/node_execution.py")
+    handoff = _read(
+        ROOT / "src/scripts/mixar/modules/director/core/handoff.py"
+    )
+
+    assert "get_video_generation_limits(service_key, model)" in operator
+    assert "get_video_generation_limits(service_key, model)" in node
+    # The drawer and the Director handoff have no model in hand, so both go
+    # through the one resolver rather than re-deriving the tab's selection.
+    assert "selected_video_model_slug(scene)" in drawer
+    assert "selected_video_model_slug(scene)" in handoff
+    # A bare service-only lookup anywhere here is the bug this pins.
+    for source in (operator, drawer, node, handoff):
+        assert 'get_video_generation_limits("video_gen")' not in source
+        assert "get_video_generation_limits(service_key)" not in source

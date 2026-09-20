@@ -12,7 +12,6 @@ Builds payloads and calls ``enqueue_generation()`` for:
 
 import base64 as _b64
 import os
-import re
 from typing import Callable, List, Optional, Tuple
 
 import bpy
@@ -43,35 +42,120 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _sanitize_label(label: str) -> str:
-    base = os.path.splitext(label)[0] if "." in label else label
-    base = re.sub(r'[^a-zA-Z0-9_]', '_', base)
-    base = re.sub(r'_+', '_', base).strip('_') or "object"
-    return base
+from mixar.modules.moodboard.core.generation_names import (
+    derive_model_name,
+    sanitize_label as _sanitize_label,
+)
 
 
-def _pro_on_imported(job, object_names: str) -> None:
-    """Rename imported mesh to ``{label}_high`` and set up origin."""
-    target = _sanitize_label(job.label) + "_high"
-    try:
-        from mixar.modules.common.job_queue.core.model_io import (
-            post_import_rename_and_setup,
-        )
-        post_import_rename_and_setup(object_names, target)
-    except Exception as e:
-        logger.warning("[ImageTo3DPro] post_import_rename_and_setup failed: %s", e)
+def model_front_zrot(model_slug: str) -> float:
+    """Z rotation (radians) that makes an engine's import face world -Y.
+
+    Front-facing convention differs per engine: Tripo imports facing +X,
+    while every other supported engine (Hunyuan, Trellis, Rodin) already
+    imports facing -Y. Rotating +X onto -Y about world Z is -90 degrees.
+
+    Assumes Rodin (and any future engine) faces -Y — only Tripo, the one
+    known-offset engine, is corrected. Extend the check if another engine
+    turns out to import on a different axis.
+    """
+    from math import radians
+
+    if "tripo" in (model_slug or "").lower():
+        return radians(-90)
+    return 0.0
+
+
+def make_model_rename_on_imported(
+    mesh_name: str, front_zrot: float = 0.0, placement: Optional[dict] = None,
+) -> Callable:
+    """Build an on_imported hook that renames + normalizes a Model Gen import.
+
+    Handles both provider mesh shapes (single mesh for Hunyuan/Tripo, an
+    Empty-parented mesh for Trellis) via ``rename_generated_model``. Falls
+    back to the queue label when *mesh_name* is empty (e.g. an image whose
+    name sanitized away). *front_zrot* (see :func:`model_front_zrot`) rotates
+    the result about world Z so every engine's front faces -Y.
+
+    *placement* (see ``job_queue.core.placement``) then carries the
+    normalized model to where the user pointed — applied HERE, at import,
+    because the job outlives the agent's turn: the alternative was a mesh at
+    the origin and a follow-up message to move it.
+    """
+
+    def _hook(job, object_names: str):
+        target = mesh_name or _sanitize_label(job.label)
+        try:
+            from mixar.modules.common.job_queue.core.model_io import (
+                rename_generated_model,
+            )
+            from mixar.modules.common.job_queue.core.placement import (
+                apply_placement,
+            )
+            from mixar.modules.moodboard.core.imported_pbr_layers import (
+                convert_imported_material_to_paint_layers,
+            )
+            final = rename_generated_model(
+                object_names, target, front_zrot=front_zrot)
+            if placement and final:
+                # After normalization (base at the origin, facing -Y) and
+                # before the material pass, which is transform-agnostic.
+                apply_placement(final, placement)
+            convert_imported_material_to_paint_layers(final or target)
+            # Hand the final name back so the job stops pointing at the name
+            # the GLB carried — see AsyncGLBJob.on_imported. Without this the
+            # generations-library archiver looks the mesh up by a freed name
+            # and every Model Gen result goes unarchived.
+            return final
+        except Exception as e:
+            logger.warning(
+                "[ModelGen] post-import processing failed: %s", e)
+        return None
+
+    return _hook
+
+
+def make_texture_reimport_on_imported(mesh_name: str = "") -> Callable:
+    """on_imported hook for re-texture imports (PBR Generation / Texture Edit).
+
+    Renames the imported mesh to *mesh_name* (else the queue label, i.e. the
+    source mesh name) and runs the material finalize (rename material + texture
+    images, split any packed metallicRoughness map), but DELIBERATELY does not
+    normalize placement or orientation: the geometry is the user's own mesh
+    re-textured and must keep its pose.
+    """
+
+    def _hook(job, object_names: str):
+        target = mesh_name or _sanitize_label(job.label)
+        try:
+            from mixar.modules.common.job_queue.core.model_io import (
+                rename_imported_object,
+            )
+            from mixar.modules.moodboard.core.imported_pbr_layers import (
+                convert_imported_material_to_paint_layers,
+            )
+            final = rename_imported_object(object_names, target)
+            convert_imported_material_to_paint_layers(final or target)
+            return final  # see AsyncGLBJob.on_imported
+        except Exception as e:
+            logger.warning(
+                "[TextureGen] post-import processing failed: %s", e)
+        return None
+
+    return _hook
 
 
 def _make_hp_on_imported(chain_id: str) -> Callable:
     """Create an on_imported hook that renames + stamps chain_id."""
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         target = _sanitize_label(job.label) + "_high"
+        final = None
         try:
             from mixar.modules.common.job_queue.core.model_io import (
                 post_import_rename_and_setup,
             )
-            post_import_rename_and_setup(object_names, target)
+            final = post_import_rename_and_setup(object_names, target)
         except Exception as e:
             logger.warning("[SceneGenHP] post_import_rename_and_setup failed: %s", e)
 
@@ -84,15 +168,18 @@ def _make_hp_on_imported(chain_id: str) -> Callable:
                 if obj is not None:
                     obj["mixar_chain_id"] = chain_id
 
+        return final  # see AsyncGLBJob.on_imported
+
     return _hook
 
 
 def _make_lp_on_imported(chain_id: str) -> Callable:
     """Create an on_imported hook that handles retopo mesh + stamps chain_id."""
 
-    def _hook(job, object_names: str) -> None:
+    def _hook(job, object_names: str):
         names = [n.strip() for n in object_names.split(",") if n.strip()]
         has_low_suffix = any("_low" in n for n in names)
+        final = None
 
         if has_low_suffix:
             logger.info("[SceneGenLP] Post-processed mesh detected, skipping client-side cleanup")
@@ -108,7 +195,8 @@ def _make_lp_on_imported(chain_id: str) -> Callable:
                 from mixar.modules.common.job_queue.core.model_io import (
                     post_import_rename_and_setup,
                 )
-                post_import_rename_and_setup(object_names, target, smart_uv=True)
+                final = post_import_rename_and_setup(
+                    object_names, target, smart_uv=True)
             except Exception as e:
                 logger.warning("[SceneGenLP] post_import_rename_and_setup failed: %s", e)
 
@@ -123,6 +211,8 @@ def _make_lp_on_imported(chain_id: str) -> Callable:
                 obj = bpy.data.objects.get(name)
                 if obj is not None:
                     obj["mixar_chain_id"] = chain_id
+
+        return final  # see AsyncGLBJob.on_imported
 
     return _hook
 
@@ -212,12 +302,19 @@ def enqueue_pro_job(
     label: str,
     multi_views: Optional[List[Tuple[bytes, str, str]]] = None,
     turnaround: Optional[dict] = None,
+    mesh_name: str = "",
+    placement: Optional[dict] = None,
 ) -> Optional[Job]:
     """Build an Image-to-3D Pro job and submit it to the queue.
 
     Pass *turnaround* (see :func:`_build_pro_payload`) to submit already-staged
     turnaround crops by S3 key; *image* is then only used for the queue label
     and is never re-uploaded.
+
+    The imported mesh is named from *mesh_name* (agent-supplied) when given,
+    else derived from the input *image* name, else from the prompt — see
+    :func:`derive_model_name`. Pro always returns a single mesh, so it takes
+    the standalone-mesh naming + origin/world-origin normalization path.
     """
     image_bytes = b""
     if image is not None and not turnaround:
@@ -225,6 +322,9 @@ def enqueue_pro_job(
 
     payload, model_key = _build_pro_payload(
         image_bytes, shared, multi_views, turnaround)
+
+    resolved_name = derive_model_name(
+        image, shared.get("prompt") or "", explicit=mesh_name)
 
     return enqueue_generation(
         kind="glb",
@@ -234,7 +334,8 @@ def enqueue_pro_job(
         payload=payload,
         label=label,
         fail_message="Image to 3D failed",
-        on_imported=_pro_on_imported,
+        on_imported=make_model_rename_on_imported(
+            resolved_name, model_front_zrot(model_key), placement=placement),
         scene_flag="mixie_image_to_3d_is_generating",
         batch_popup_title="Image to 3D batch complete",
     )

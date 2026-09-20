@@ -1,0 +1,26 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Keeps the upstream/ Blender submodule (and its vendored lib/* submodules)
+# pinned to the commit the new branch actually records. The shared body lives
+# in .githooks/lib/sync_upstream_pin.sh; post-merge reuses it for `git pull`.
+#
+# Installed via `git config core.hooksPath .githooks` (done by
+# scripts/unix/init.sh) so this applies repo-wide, not just to one checkout.
+
+set -euo pipefail
+
+prev_head="$1"
+new_head="$2"
+is_branch_checkout="$3"
+
+# Only a real branch switch (not `git checkout -- <file>`) can move HEAD:upstream.
+[[ "$is_branch_checkout" == "1" ]] || exit 0
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+source "$ROOT_DIR/.githooks/lib/sync_upstream_pin.sh"
+sync_upstream_pin "post-checkout" "$prev_head" "$new_head"

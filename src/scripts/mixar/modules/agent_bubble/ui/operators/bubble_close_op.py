@@ -24,9 +24,31 @@ from __future__ import annotations
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.agent_bubble.constants import (
+    BUBBLE_WINDOW_CONTROLS_SUPPORTED,
+)
 from mixar.modules.common.analytics.capture import capture
 from mixar.modules.common.analytics.constants import EVENT_BUBBLE_EXPAND
 from mixar.modules.common.analytics.bubble_events import capture_bubble_state
+
+
+# Every operator here drives a native window-state operator that only exists
+# on macOS and Windows (see BUBBLE_WINDOW_CONTROLS_SUPPORTED). Elsewhere the
+# native side returns CANCELLED without touching a window, so these gate
+# themselves rather than running their side effects around a call that will
+# not do anything:
+#
+#   * mixar.bubble_close records the user-dismissal that mutes the
+#     workspace-change autoshow. Setting it when nothing minimised is how ESC
+#     could arm a pill-only reopen on a platform that cannot leave the pill.
+#   * mixar.bubble_toggle_minimise reads CANCELLED from minimise as "already
+#     minimised, so restore instead", ignores the restore result and returns
+#     FINISHED. On a stubbed platform both calls fail, so every Ctrl/Cmd+
+#     Shift+B reported success and logged a "maximized" analytics event for a
+#     window that never moved.
+#
+# poll() is the gate wherever there is one: it also greys out the button for
+# any surface that draws these without checking the platform first.
 
 
 class MIXAR_OT_bubble_close(Operator):
@@ -37,6 +59,8 @@ class MIXAR_OT_bubble_close(Operator):
 
     @classmethod
     def poll(cls, context):
+        if not BUBBLE_WINDOW_CONTROLS_SUPPORTED:
+            return False
         space = getattr(context, "space_data", None)
         return space is not None and space.type == 'AGENT_BUBBLE'
 
@@ -72,6 +96,8 @@ class MIXAR_OT_bubble_restore_user(Operator):
 
     @classmethod
     def poll(cls, context):
+        if not BUBBLE_WINDOW_CONTROLS_SUPPORTED:
+            return False
         space = getattr(context, "space_data", None)
         return space is not None and space.type == 'AGENT_BUBBLE'
 
@@ -113,6 +139,12 @@ class MIXAR_OT_bubble_toggle_minimise(Operator):
     bl_label = "Toggle Agent Bubble"
     bl_description = "Minimise the Agent Bubble to its pill, or restore it"
     bl_options = {'REGISTER', 'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        # No space restriction — the shortcut fires from any editor. The
+        # platform gate is the only thing this poll enforces.
+        return BUBBLE_WINDOW_CONTROLS_SUPPORTED
 
     def execute(self, context):
         # bubble_minimise returns FINISHED when it actually minimises, and
@@ -161,6 +193,10 @@ class MIXAR_OT_bubble_toggle_expand_tracked(Operator):
     bl_idname = "mixar.bubble_toggle_expand_tracked"
     bl_label = "Expand or Collapse Agent Bubble"
     bl_options = {'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        return BUBBLE_WINDOW_CONTROLS_SUPPORTED
 
     def execute(self, context):
         try:

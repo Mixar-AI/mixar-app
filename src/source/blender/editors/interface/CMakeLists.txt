@@ -7,8 +7,10 @@ set(INC
   .
   ../asset
   ../include
+  ../../animrig
   ../../makesrna
   ../../python
+  ../../gpu/intern
   ../../../../intern/ghost
   # RNA_prototypes.hh
   ${CMAKE_BINARY_DIR}/source/blender/makesrna
@@ -18,6 +20,7 @@ set(INC_SYS
 )
 
 set(SRC
+  buttons/interface_textbox.cc
   eyedroppers/eyedropper_bone.cc
   eyedroppers/eyedropper_color.cc
   eyedroppers/eyedropper_colorband.cc
@@ -41,8 +44,30 @@ set(SRC
   interface_icons.cc
   interface_icons_event.cc
   interface_layout.cc
+  mixar/style.cc
+  mixar/text.cc
+  mixar/components.cc
+  mixar/custom_motion.cc
+  mixar/motion.cc
+  interface_mixar_card_button.cc
+  interface_mixar_card_icons.cc
+  interface_mixar_cinema_row.cc
+  interface_mixar_cinema_row_segment.cc
+  interface_mixar_cinema_row_value.cc
+  interface_mixar_drag_query.cc
+  interface_mixar_glass_shader.hh
+  interface_mixar_liquid_glass.cc
+  interface_mixar_liquid_glass_draw.cc
+  interface_mixar_liquid_glass_tokens.cc
+  interface_mixar_profile_card.cc
+  interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
+  interface_mixar_tab_rects.cc
+  interface_mixar_topbar.cc
+  interface_mixar_zen_chrome.cc
+  interface_qa_inspect.cc
   interface_ops.cc
+  interface_ops_color.cc
   interface_panel.cc
   interface_query.cc
   regions/interface_region_color_picker.cc
@@ -107,8 +132,17 @@ set(SRC
   views/interface_view.cc
   views/tree_view.cc
 
+  buttons/interface_textbox.hh
   eyedroppers/eyedropper_intern.hh
+  interface_mixar_card_icons.hh
+  interface_mixar_card_paint.hh
+  interface_mixar_cinema_row.hh
+  interface_mixar_drag_query.hh
+  interface_mixar_palette.hh
+  interface_mixar_profile_card.hh
   interface_mixar_section.hh
+  interface_mixar_tab_rects.hh
+  interface_qa_inspect.hh
   templates/interface_templates_intern.hh
   interface_intern.hh
   regions/interface_regions_intern.hh
@@ -128,11 +162,11 @@ set(LIB
   PRIVATE bf::draw
   bf_editor_datafiles
   bf_editor_id_management
-  PRIVATE bf::extern::fmtlib
   PRIVATE bf::functions
   PRIVATE bf::gpu
   PRIVATE bf::imbuf
   PRIVATE bf::imbuf::movie
+  PRIVATE bf::imbuf::opencolorio
   PRIVATE bf::intern::clog
   PRIVATE bf::intern::guardedalloc
   PRIVATE bf::animrig
@@ -168,6 +202,7 @@ if(WITH_GTESTS)
   )
   set(TEST_SRC
     interface_ops_test.cc
+    mixar/style_test.cc
   )
 
   set(TEST_LIB

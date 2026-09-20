@@ -51,6 +51,8 @@
 #include "WM_types.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Animation Registry
@@ -119,22 +121,23 @@ void mixie_chat_free_runtime(SpaceMixieChat *smixie)
     /* Free all allocated text buffers in layout cache */
     for (MessageLayoutData &layout : rt->layout_cache) {
       if (layout.todo_combined_text) {
-        MEM_freeN(layout.todo_combined_text);
+        MEM_delete_void(static_cast<void *>(layout.todo_combined_text));
         layout.todo_combined_text = nullptr;
       }
       if (layout.copy_text) {
-        MEM_freeN(layout.copy_text);
+        MEM_delete_void(static_cast<void *>(layout.copy_text));
         layout.copy_text = nullptr;
       }
       if (layout.content_text) {
-        MEM_freeN(layout.content_text);
+        MEM_delete_void(static_cast<void *>(layout.content_text));
         layout.content_text = nullptr;
       }
       if (layout.ephemeral_text) {
-        MEM_freeN(layout.ephemeral_text);
+        MEM_delete_void(static_cast<void *>(layout.ephemeral_text));
         layout.ephemeral_text = nullptr;
       }
     }
+    mixie_chat_code_hits_forget(rt);
     MEM_delete(rt);
     smixie->runtime = nullptr;
   }
@@ -145,7 +148,12 @@ const blender::Vector<MessageLayoutData> &mixie_chat_get_layout_cache(SpaceMixie
   return rt->layout_cache;
 }
 
-void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
+/* Release the text buffers each entry owns and reset the rebuild tracking.
+ * `release_memory` decides whether the vector also gives its buffer back:
+ * teardown wants that, a rebuild does not, because `MessageLayoutData` is a
+ * large fixed-size record and dropping the buffer every frame means a fresh
+ * allocation plus geometric regrowth on every single layout pass. */
+static void mixie_chat_reset_layout_cache(SpaceMixieChat *smixie, const bool release_memory) {
   if (smixie->runtime == nullptr) {
     return;
   }
@@ -153,31 +161,44 @@ void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
   /* Free any allocated todo_combined_text before clearing */
   for (MessageLayoutData &layout : rt->layout_cache) {
     if (layout.todo_combined_text) {
-      MEM_freeN(layout.todo_combined_text);
+      MEM_delete_void(static_cast<void *>(layout.todo_combined_text));
       layout.todo_combined_text = nullptr;
     }
     /* Free cached copy text */
     if (layout.copy_text) {
-      MEM_freeN(layout.copy_text);
+      MEM_delete_void(static_cast<void *>(layout.copy_text));
       layout.copy_text = nullptr;
     }
     /* Free slot-based text buffers */
     if (layout.content_text) {
-      MEM_freeN(layout.content_text);
+      MEM_delete_void(static_cast<void *>(layout.content_text));
       layout.content_text = nullptr;
     }
     if (layout.ephemeral_text) {
-      MEM_freeN(layout.ephemeral_text);
+      MEM_delete_void(static_cast<void *>(layout.ephemeral_text));
       layout.ephemeral_text = nullptr;
     }
   }
-  rt->layout_cache.clear_and_shrink();
+  if (release_memory) {
+    rt->layout_cache.clear_and_shrink();
+  }
+  else {
+    rt->layout_cache.clear();
+  }
   rt->prev_total_height = 0.0f;
   /* Reset tracking state so next draw triggers a full rebuild */
   rt->prev_msg_count = 0;
   rt->prev_winx = 0;
   rt->prev_had_active_stream = false;
   rt->cached_total_height = 0.0f;
+}
+
+void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
+  mixie_chat_reset_layout_cache(smixie, true);
+}
+
+void mixie_chat_clear_layout_cache_for_rebuild(SpaceMixieChat *smixie) {
+  mixie_chat_reset_layout_cache(smixie, false);
 }
 
 /** \} */
@@ -188,9 +209,39 @@ void mixie_chat_clear_layout_cache(SpaceMixieChat *smixie) {
 
 /**
  * Update View2D dimensions and mask to match current region size.
- * Must be called BEFORE UI_view2d_view_ortho() to ensure correct
+ * Must be called BEFORE ui::view2d_view_ortho() to ensure correct
  * coordinate transformations for scrollbar interactions.
  */
+void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region)
+{
+  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+  if (!rt->view_band_valid) {
+    return;
+  }
+  /* view2d_masks() rebuilds v2d->mask from winx/winy at the region ORIGIN
+   * after every scroll/validate, losing the band's offset. Event-time
+   * consumers (ui::Button hit-testing via ui_region_contains_point_px, the chat
+   * click handlers' region_to_view transforms, the View2D keymap's mask
+   * gate) all read the stored mask, so it must be pinned back to the band
+   * before they run — the island registers this in a UI handler that
+   * dispatches ahead of everything else in the region. */
+  region->v2d.mask = rt->view_band;
+  region->v2d.winx = BLI_rcti_size_x(&rt->view_band);
+  region->v2d.winy = BLI_rcti_size_y(&rt->view_band);
+}
+
+void mixie_chat_set_view_band(SpaceMixieChat *smixie, const rcti *band)
+{
+  MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+  if (band != nullptr) {
+    rt->view_band = *band;
+    rt->view_band_valid = true;
+  }
+  else {
+    rt->view_band_valid = false;
+  }
+}
+
 static void mixie_chat_region_set_view2d(MixieChatRuntime *rt,
                                          ARegion *region) {
   View2D *v2d = &region->v2d;
@@ -198,16 +249,40 @@ static void mixie_chat_region_set_view2d(MixieChatRuntime *rt,
   int winx = BLI_rcti_size_x(&region->winrct) + 1;
   int winy = BLI_rcti_size_y(&region->winrct) + 1;
 
-  bool window_size_changed = (rt->prev_winy != winy);
+  /* With a view band, cur/mask/scroll clamps size to the band; the region
+   * dimensions only bound the mask. ui::view2d_view_ortho maps cur onto the
+   * mask sub-rect, which is exactly the "message view occupies part of the
+   * region" behaviour the Agent Bubble island needs. */
+  rcti mask;
+  if (rt->view_band_valid) {
+    /* The band uses the same exclusive-max convention as the default mask
+     * ({0, winx} spans winx pixels) — no +1. */
+    mask = rt->view_band;
+    winx = BLI_rcti_size_x(&mask);
+    winy = BLI_rcti_size_y(&mask);
+  }
+  else {
+    mask.xmin = 0;
+    mask.ymin = 0;
+    mask.xmax = winx;
+    mask.ymax = winy;
+  }
+
+  /* Re-snap whenever cur's height drifts from the view height, not only on
+   * view-size changes: region re-init (ui::view2d_region_reinit) and validate
+   * calls from View2D operators can hand back a cur sized to the REGION while
+   * the band mask is smaller — zoom is locked 1:1, so cur must always match
+   * the mask height exactly or content draws scaled and scroll clamps act on
+   * the wrong span. */
+  bool window_size_changed = (rt->prev_winy != winy) ||
+                             fabsf(BLI_rctf_size_y(&v2d->cur) - float(winy)) > 0.5f ||
+                             fabsf(BLI_rctf_size_x(&v2d->cur) - float(winx)) > 0.5f;
 
   v2d->winx = winx;
   v2d->winy = winy;
 
   /* Update mask for correct coordinate transforms */
-  v2d->mask.xmin = 0;
-  v2d->mask.ymin = 0;
-  v2d->mask.xmax = winx;
-  v2d->mask.ymax = winy;
+  v2d->mask = mask;
 
   if (window_size_changed) {
     const float scroll_threshold = 20.0f;
@@ -280,6 +355,10 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
 
   int winx = BLI_rcti_size_x(&region->winrct) + 1;
   int winy = BLI_rcti_size_y(&region->winrct) + 1;
+  if (rt->view_band_valid) {
+    winx = BLI_rcti_size_x(&rt->view_band);
+    winy = BLI_rcti_size_y(&rt->view_band);
+  }
 
   /* Check if collection is empty */
   int msg_count = RNA_property_collection_length(&scene_ptr, prop);
@@ -511,7 +590,7 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
   }
 
   /* Setup View2D for drawing */
-  UI_view2d_view_ortho(v2d);
+  ui::view2d_view_ortho(v2d);
 
   /* Delegate rendering to mixie_chat_messages_render.cc */
   mixie_chat_render_messages(
@@ -521,13 +600,13 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
   GPU_blend(GPU_BLEND_NONE);
   GPU_line_smooth(false);
 
-  UI_view2d_view_restore(C);
+  ui::view2d_view_restore(C);
 
   /* Scroll-to-bottom indicator (drawn in screen-space after view restore) */
   mixie_chat_update_scroll_indicator(smixie, region, msg_count);
   mixie_chat_draw_scroll_indicator(smixie, region);
 
-  UI_view2d_scrollers_draw(v2d, nullptr);
+  ui::view2d_scrollers_draw(v2d, nullptr);
 
   /* Keep frames coming while anything on this surface animates: streaming
    * loader/ephemeral content (spinner + live status), a bubble slide-in, or
@@ -540,3 +619,4 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
 }
 
 /** \} */
+}  // namespace blender

@@ -18,6 +18,8 @@
 #include "BLI_vector.hh"
 
 #include "mixie_chat_footer_constants.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct Main;
@@ -102,10 +104,13 @@ struct FooterElementPositions {
   int mention_y;     /* Bottom of the dropdown panel (scaled) */
   int mention_count; /* Number of suggestion rows (0 = closed) */
 
-  /* Thumbnail row (top, if present) */
+  /* Thumbnail strip (top, if present). Extra rows wrap when the footer is
+   * too narrow for FOOTER_MAX_ATTACHMENTS in one line. */
   int thumb_y;
   int thumb_size;
   int thumb_spacing;
+  int thumb_columns;
+  int thumb_rows;
 
   /* Padding */
   int side_padding;
@@ -180,13 +185,15 @@ int footer_layout_get_input_line_count(Scene *scene, int region_width);
  * \param out_has_overflow: Set to true if height exceeds maximum limit (optional)
  * \param input_line_count: Dynamic line count for input field (0 = use default minimum)
  * \param mention_row_count: Visible '@' mention suggestion rows (0 = dropdown closed)
+ * \param region_width: Scaled footer width so extra thumbnail rows are counted
  * \return Required height in unscaled units
  */
 int footer_layout_calculate_height(Scene *scene,
                                     const FooterThemeCache *theme,
                                     bool *out_has_overflow,
                                     int input_line_count = 0,
-                                    int mention_row_count = 0);
+                                    int mention_row_count = 0,
+                                    int region_width = 0);
 
 /**
  * Calculate X/Y positions for footer UI elements.
@@ -341,3 +348,4 @@ void footer_draw_thumbnails(const bContext *C,
                              float scale);
 
 /** \} */
+}  // namespace blender

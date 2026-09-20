@@ -97,6 +97,8 @@ def _is_path_safe(filepath: str) -> tuple[bool, str]:
     # Allow temp directories (on macOS /var/folders resolves to /private/var/folders)
     import tempfile
     allowed_roots = [os.path.realpath(tempfile.gettempdir())]
+    if os.name == 'posix':
+        allowed_roots.append(os.path.realpath('/tmp'))
     try:
         import bpy
         if bpy.app.tempdir:
@@ -236,8 +238,8 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
     if not is_safe:
         return False, error
 
-    if not os.path.exists(filepath):
-        return False, "File does not exist"
+    if not os.path.isfile(filepath):
+        return False, "File does not exist or is not a regular file"
 
     # Check file extension
     ext = os.path.splitext(filepath)[1].lower()
@@ -245,7 +247,10 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
         return False, f"Unsupported format: {ext}. Supported: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
 
     # Check file size
-    file_size = os.path.getsize(filepath)
+    try:
+        file_size = os.path.getsize(filepath)
+    except OSError:
+        return False, "File is no longer accessible"
     if file_size > MAX_IMAGE_SIZE_BYTES:
         size_mb = file_size / (1024 * 1024)
         max_mb = MAX_IMAGE_SIZE_BYTES / (1024 * 1024)
@@ -261,7 +266,8 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
                         f"Image dimensions too large: {width}x{height} "
                         f"(max {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION})"
                     )
-        except (OSError, IOError) as e:
+                img.verify()
+        except (OSError, ValueError, SyntaxError, PILImage.DecompressionBombError) as e:
             return False, f"Could not read image: {e}"
 
     return True, ""
@@ -321,24 +327,65 @@ def blend_image_to_base64(image_name: str) -> Optional[str]:
         return None
 
 
-def image_to_base64(image_path_or_name: str, source: str) -> Optional[str]:
-    """
-    Convert an image to base64 string.
+# Extension -> mime for the uncompressed fallback. The compressed path reports
+# its own mime (always image/jpeg), so this is only consulted when compression
+# was skipped and the original bytes go up as-is.
+_FALLBACK_MIME_BY_EXT = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.bmp': 'image/bmp',
+    '.tiff': 'image/tiff',
+    '.tif': 'image/tiff',
+}
 
-    Args:
-        image_path_or_name: File path or blend image name
-        source: Either 'FILE' or 'BLEND_DATA'
+
+def encode_attachment_for_upload(
+    image_path_or_name: str, source: str
+) -> Optional[tuple[str, str]]:
+    """Encode a pending chat attachment for the chat request body.
+
+    This is the ONE encode path for outgoing attachments. It downscales and
+    JPEG re-encodes first (see ``core.attachment_compression``) so a camera
+    photo travels as a few hundred KB instead of several MB — the previous
+    behaviour uploaded the original file bytes on the FILE path and a
+    full-resolution RGBA PNG on the BLEND_DATA path, and the latter routinely
+    overshot the backend's raw-payload ceiling and had the image dropped
+    before its own compression pass could run.
+
+    Compression failing is never fatal: the original bytes are uploaded
+    instead, exactly as before.
+
+    ``source='FILE'`` is safe on the encoder thread pool. ``'BLEND_DATA'``
+    reads ``bpy.data`` and MUST run on the main thread.
 
     Returns:
-        Base64 encoded string or None on error
+        ``(base64_string, mime_type)``, or ``None`` on error.
     """
+    from .attachment_compression import (
+        compress_blend_image_for_chat,
+        compress_file_for_chat,
+    )
+
     if source == 'FILE':
-        return image_file_to_base64(image_path_or_name)
-    elif source == 'BLEND_DATA':
-        return blend_image_to_base64(image_path_or_name)
-    else:
-        logger.error(f"Unknown image source: {source}")
-        return None
+        compressed = compress_file_for_chat(image_path_or_name)
+        if compressed is not None:
+            data, mime = compressed
+            return base64.b64encode(data).decode('utf-8'), mime
+        ext = os.path.splitext(image_path_or_name)[1].lower()
+        b64 = image_file_to_base64(image_path_or_name)
+        return (b64, _FALLBACK_MIME_BY_EXT.get(ext, 'image/png')) if b64 else None
+
+    if source == 'BLEND_DATA':
+        compressed = compress_blend_image_for_chat(image_path_or_name)
+        if compressed is not None:
+            data, mime = compressed
+            return base64.b64encode(data).decode('utf-8'), mime
+        b64 = blend_image_to_base64(image_path_or_name)
+        return (b64, 'image/png') if b64 else None
+
+    logger.error(f"Unknown image source: {source}")
+    return None
 
 
 def get_image_thumbnail_id(image_path_or_name: str, source: str) -> int:

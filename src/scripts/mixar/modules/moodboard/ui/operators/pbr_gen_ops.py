@@ -60,12 +60,12 @@ class MIXIE_OT_pbr_gen_generate(Operator):
 
         tab = _get_tab(context)
         if tab is None:
-            self.report({"WARNING"}, "PBR Generation tab not available")
+            self.report({"ERROR"}, "PBR Generation tab not available")
             return {"CANCELLED"}
 
         meshes = [o for o in context.selected_objects if o.type == 'MESH']
         if not meshes:
-            self.report({"WARNING"}, "No mesh selected")
+            self.report({"ERROR"}, "No mesh selected")
             return {"CANCELLED"}
 
         service_key = resolve_service_key(

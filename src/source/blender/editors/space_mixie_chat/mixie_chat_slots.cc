@@ -19,6 +19,8 @@
 #include "RNA_access.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name RNA String Helpers
@@ -27,6 +29,13 @@
 /* Safely read an RNA string into a fixed buffer (RNA_property_string_get is
  * unbounded). Uses the fixed buffer when the string fits, else heap-allocs and
  * truncate-copies, so we never overflow `dst`. */
+/* EVERY fixed-buffer slot string read goes through here. Two reasons:
+ * bpy.props.StringProperty(maxlen=N) registers maxlength N + 1, so a string
+ * of exactly N characters is storable and RNA_property_string_get copies
+ * N + 1 bytes (NUL included) — one past a char[N]; and a property with no
+ * maxlen at all (local_path, until 3.4.2) is unbounded backend data. The
+ * _alloc form writes into `dst` only when the value fits and hands back a
+ * heap copy otherwise, which is then truncated safely. */
 static void read_rna_string_bounded(PointerRNA *ptr,
                                     PropertyRNA *prop,
                                     char *dst,
@@ -38,7 +47,7 @@ static void read_rna_string_bounded(PointerRNA *ptr,
   char *buf = RNA_property_string_get_alloc(ptr, prop, dst, int(dstsize), nullptr);
   if (buf != dst) {
     BLI_strncpy(dst, buf, dstsize);
-    MEM_freeN(buf);
+    MEM_delete_void(static_cast<void *>(buf));
   }
 }
 
@@ -137,7 +146,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       RNA_property_string_length(msg_ptr, g_msg_props.ephemeral) : 0;
   layout->has_ephemeral = ephemeral_len > 0;
   if (ephemeral_len > 0) {
-    char *eph_probe = static_cast<char *>(MEM_mallocN(ephemeral_len + 1, "eph_probe"));
+    char *eph_probe = static_cast<char *>(MEM_new_uninitialized(ephemeral_len + 1, "eph_probe"));
     RNA_property_string_get(msg_ptr, g_msg_props.ephemeral, eph_probe);
     const char *p = eph_probe;
     while (*p == ' ' || *p == '\n' || *p == '\t' || *p == '\r') {
@@ -146,7 +155,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     if (*p == '{' || *p == '[') {
       layout->has_ephemeral = false;
     }
-    MEM_freeN(eph_probe);
+    MEM_delete_void(static_cast<void *>(eph_probe));
   }
 
   /* Check todo items collection */
@@ -192,7 +201,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     if (g_msg_props.loader_texts) {
       int texts_len = RNA_property_string_length(msg_ptr, g_msg_props.loader_texts);
       if (texts_len > 0) {
-        char *texts_json = static_cast<char *>(MEM_mallocN(texts_len + 1, "loader_texts"));
+        char *texts_json = static_cast<char *>(MEM_new_uninitialized(texts_len + 1, "loader_texts"));
         RNA_property_string_get(msg_ptr, g_msg_props.loader_texts, texts_json);
 
         /* Simple JSON array parsing - just count texts for now */
@@ -216,7 +225,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
             ptr++;
           }
         }
-        MEM_freeN(texts_json);
+        MEM_delete_void(static_cast<void *>(texts_json));
       }
     }
   }
@@ -224,14 +233,14 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
   /* Read content text if present */
   if (layout->has_content) {
     int content_len = RNA_property_string_length(msg_ptr, g_msg_props.content);
-    layout->content_text = static_cast<char *>(MEM_mallocN(content_len + 1, "content_text"));
+    layout->content_text = static_cast<char *>(MEM_new_uninitialized(content_len + 1, "content_text"));
     RNA_property_string_get(msg_ptr, g_msg_props.content, layout->content_text);
   }
 
   /* Read ephemeral text if present */
   if (layout->has_ephemeral) {
     int ephemeral_len = RNA_property_string_length(msg_ptr, g_msg_props.ephemeral);
-    layout->ephemeral_text = static_cast<char *>(MEM_mallocN(ephemeral_len + 1, "ephemeral_text"));
+    layout->ephemeral_text = static_cast<char *>(MEM_new_uninitialized(ephemeral_len + 1, "ephemeral_text"));
     RNA_property_string_get(msg_ptr, g_msg_props.ephemeral, layout->ephemeral_text);
   }
 
@@ -259,19 +268,17 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       action.label[0] = '\0';
       action.value[0] = '\0';
       action.style = 1; /* default */
+      action.image[0] = '\0';
       action.height = 0.0f;
       action.is_hovered = false;
       memset(&action.bounds, 0, sizeof(action.bounds));
 
-      if (g_action_props.label) {
-        RNA_property_string_get(&action_ptr, g_action_props.label, action.label);
-      }
-      if (g_action_props.value) {
-        RNA_property_string_get(&action_ptr, g_action_props.value, action.value);
-      }
+      read_rna_string_bounded(&action_ptr, g_action_props.label, action.label, sizeof(action.label));
+      read_rna_string_bounded(&action_ptr, g_action_props.value, action.value, sizeof(action.value));
       if (g_action_props.style) {
         action.style = RNA_property_enum_get(&action_ptr, g_action_props.style);
       }
+      read_rna_string_bounded(&action_ptr, g_action_props.image, action.image, sizeof(action.image));
 
       layout->slot_action_count++;
       RNA_property_collection_next(&action_iter);
@@ -308,9 +315,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
           RNA_property_string_get(&todo_ptr, g_todo_props.item_id, todo.id);
         }
       }
-      if (g_todo_props.text) {
-        RNA_property_string_get(&todo_ptr, g_todo_props.text, todo.text);
-      }
+      read_rna_string_bounded(&todo_ptr, g_todo_props.text, todo.text, sizeof(todo.text));
       if (g_todo_props.status) {
         todo.status = RNA_property_enum_get(&todo_ptr, g_todo_props.status);
       }
@@ -392,7 +397,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
           sizeof(layout->thinking_text), nullptr);
       if (tbuf != layout->thinking_text) {
         BLI_strncpy(layout->thinking_text, tbuf, sizeof(layout->thinking_text));
-        MEM_freeN(tbuf);
+        MEM_delete_void(static_cast<void *>(tbuf));
       }
     }
     if (g_msg_props.thinking_collapsed) {
@@ -427,21 +432,11 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       img.is_hovered = false;
       memset(&img.bounds, 0, sizeof(img.bounds));
 
-      if (g_image_props.url) {
-        RNA_property_string_get(&image_ptr, g_image_props.url, img.url);
-      }
-      if (g_image_props.alt) {
-        RNA_property_string_get(&image_ptr, g_image_props.alt, img.alt);
-      }
-      if (g_image_props.caption) {
-        RNA_property_string_get(&image_ptr, g_image_props.caption, img.caption);
-      }
-      if (g_image_props.thumbnail_url) {
-        RNA_property_string_get(&image_ptr, g_image_props.thumbnail_url, img.thumbnail_url);
-      }
-      if (g_image_props.local_path) {
-        RNA_property_string_get(&image_ptr, g_image_props.local_path, img.local_path);
-      }
+      read_rna_string_bounded(&image_ptr, g_image_props.url, img.url, sizeof(img.url));
+      read_rna_string_bounded(&image_ptr, g_image_props.alt, img.alt, sizeof(img.alt));
+      read_rna_string_bounded(&image_ptr, g_image_props.caption, img.caption, sizeof(img.caption));
+      read_rna_string_bounded(&image_ptr, g_image_props.thumbnail_url, img.thumbnail_url, sizeof(img.thumbnail_url));
+      read_rna_string_bounded(&image_ptr, g_image_props.local_path, img.local_path, sizeof(img.local_path));
       if (g_image_props.width) {
         img.width = RNA_property_float_get(&image_ptr, g_image_props.width);
       }
@@ -493,3 +488,4 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
 }
 
 /** \} */
+}  // namespace blender

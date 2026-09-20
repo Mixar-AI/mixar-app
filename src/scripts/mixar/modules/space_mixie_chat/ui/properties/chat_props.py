@@ -49,9 +49,21 @@ class MixieChatAttachment(PropertyGroup):
         name="Image Source",
         items=[
             ('FILE', "File", "Image from file system"),
-            ('BLEND_DATA', "Blend Data", "Image from blend file")
+            ('BLEND_DATA', "Blend Data", "Image from blend file"),
+            # #1268: an attached 3D model file, imported into the scene at
+            # attach time. image_path holds the local path (never sent);
+            # imported_object_names carries what the agent may reference.
+            ('MODEL_FILE', "Model File", "3D model imported into the scene"),
         ],
         default='FILE'
+    )
+    # #1268: comma-separated names of the objects a MODEL_FILE import created
+    # (captured at attach time). Only these names ever reach the backend.
+    imported_object_names: StringProperty(
+        name="Imported Object Names",
+        description="Objects the attached model file created in the scene",
+        default="",
+        options={'SKIP_SAVE'},
     )
     display_name: StringProperty(
         name="Display Name",
@@ -229,10 +241,43 @@ class MixieChatMessage(PropertyGroup):
         maxlen=32,
         options={'SKIP_SAVE'}
     )
+    batched_questions: StringProperty(
+        name="Batched Questions",
+        description="Runtime JSON for a local multi-choice input wizard",
+        default="",
+        maxlen=16384,
+        options={'SKIP_SAVE'},
+    )
+    batched_answers: StringProperty(
+        name="Batched Answers",
+        description="Runtime JSON answers collected by a local input wizard",
+        default="",
+        maxlen=16384,
+        options={'SKIP_SAVE'},
+    )
+    interrupt_id: StringProperty(
+        name="Interrupt ID",
+        description="Checkpointed backend interrupt represented by this bubble",
+        default="",
+        maxlen=200,
+        options={'SKIP_SAVE'},
+    )
+    # Harness v3: JSON {run_id, task_id, question_id} of the durable question
+    # this bubble asks; echoed back on /agent/input so the backend resumes the
+    # ADDRESSED child, never a positional first interrupt.
+    question_ref: StringProperty(default="", maxlen=512, options={'SKIP_SAVE'})
     export_format: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
     export_scope: StringProperty(default="", maxlen=16, options={'SKIP_SAVE'})
     export_extension: StringProperty(default="", maxlen=8, options={'SKIP_SAVE'})
     export_suggested_filename: StringProperty(default="", maxlen=96, options={'SKIP_SAVE'})
+    # #1251 import picker: comma-separated extensions offered by the native
+    # open dialog. Picker configuration only — never a path.
+    import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
+    # USER bubbles only: a short delivery note the renderer appends to the
+    # sender label ("You (queued)"). Set when a message is sent as an
+    # interjection into a streaming turn, cleared by the backend's `joined`
+    # ack, replaced by "could not be delivered" when the ack never comes.
+    delivery_hint: StringProperty(default="", maxlen=32, options={'SKIP_SAVE'})
 
     # Collection slots
     todo_items: CollectionProperty(
@@ -394,12 +439,36 @@ def on_chat_input_changed(self, context):
 
 
 def _execute_send_message():
-    """Execute send_message (called from timer to avoid calling bpy.ops in property update)."""
+    """Execute send_message (called from timer to avoid calling bpy.ops in property update).
+
+    Enter is never swallowed silently: when the send predicate refuses (a turn
+    is running and no run is open to join), the draft stays in the composer
+    and the reason is reported.
+    """
     try:
+        from ...core.composer_send import can_send
+        allowed, reason = can_send(bpy.context.scene)
+        if not allowed:
+            _report_send_refused(reason)
+            return
         if hasattr(bpy.ops.mixie_chat, 'send_message'):
             bpy.ops.mixie_chat.send_message()
-    except Exception:
-        pass  # Operator may not be available
+    except Exception as e:  # noqa: BLE001 — operator may not be available
+        logger.warning("send_message from Enter failed: %s", e)
+
+
+def _report_send_refused(reason: str) -> None:
+    """Surface a refused Enter-send (timer context: no operator to report on)."""
+    logger.warning("Message not sent: %s", reason)
+    try:
+        wm = bpy.context.window_manager
+        wm.popup_menu(
+            lambda self, _ctx: self.layout.label(text=reason),
+            title="Message not sent",
+            icon='INFO',
+        )
+    except Exception:  # noqa: BLE001 — a popup needs a window; the log suffices
+        pass
 
 
 def on_quick_prompt_input_changed(self, context):
@@ -633,6 +702,22 @@ def on_generate_type_changed(self, context):
         redraw_chat_areas()
 
 
+def _on_chat_mode_changed(self, context):
+    """When the user switches INTO Library mode, show the full asset grid so the
+    browse experience is immediate (no need to press Enter first).
+
+    Currently unreachable: LIBRARY is not offered by the mode enum (see
+    ``register()``). Kept, like the rest of ``core/library_browse.py``, so
+    re-listing the item is the only change needed to bring the mode back.
+    """
+    if getattr(self, "mixie_chat_mode", "") == 'LIBRARY':
+        try:
+            from ...core import library_browse
+            library_browse.schedule_show_all()
+        except Exception:
+            pass
+
+
 def register():
     # Install undo/redo guard so chat messages persist through undo
     from ...core.undo_guard import register as register_undo_guard
@@ -690,14 +775,52 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks and assistance", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate creative content (images, 3D models, textures)", 'GENERATE', 1),
+            # Values 2 and 4 belong to retired modes and can still be persisted
+            # in old .blend files. Never reuse either: doing so would silently
+            # turn those files into another mode on load. 2 was the legacy ASK
+            # mode. 4 was LIBRARY, which is no longer offered — the item is
+            # unlisted here so it cannot be drawn in any mode dropdown (the
+            # chat footer, the bubble footer and the bubble menu all enumerate
+            # this property) nor entered by any other route. Library was
+            # authored against 2 before Add-on Project landed and was moved to
+            # 4 for exactly this reason.
+            #
+            # `core/library_browse.py` is left intact and fully dormant — every
+            # one of its entry points is gated on this mode — so restoring the
+            # feature is just re-listing the item below.
+            ('ADDON_PROJECT', "Add-on Project", "Build and maintain a linked multi-file Blender add-on", 'FILE_SCRIPT', 3),
         ],
         default='AGENT',
+        update=_on_chat_mode_changed,
+    )
+
+    bpy.types.Scene.mixie_addon_project_id = StringProperty(
+        name="Add-on Project ID",
+        description="Opaque project identity; the local folder path is stored only on this machine",
+        default="",
+    )
+
+    bpy.types.Scene.mixie_addon_project_name = StringProperty(
+        name="Add-on Project Name",
+        description="Cached display name for the locally linked add-on project",
+        default="",
+        options={'SKIP_SAVE'},
     )
 
     bpy.types.Scene.mixie_chat_plan_enabled = BoolProperty(
         name="Plan Mode",
         description="When enabled, the agent creates a plan before executing. "
                     "When disabled, the agent executes directly",
+        default=False,
+    )
+
+    # Auto mode: sent as `auto_mode: true` on every agent.chat while set
+    # (core/composer_send.py). The backend persists nothing — the most
+    # recent turn's value governs the run — so this is the sticky state.
+    bpy.types.Scene.mixie_chat_auto_mode = BoolProperty(
+        name="Auto Mode",
+        description="The agent decides every open choice itself instead of "
+                    "asking you, and lists its decisions in the summary",
         default=False,
     )
 
@@ -736,6 +859,25 @@ def register():
         items=SESSION_STATE_ITEMS,
         default='OFFLINE',
         options={'SKIP_SAVE'},  # Never persist — always OFFLINE on startup
+    )
+
+    # A backend run spans turns: the orchestrator may answer "in progress"
+    # and end its turn while background workers keep building, then the
+    # backend starts later turns itself (wake-ups over the socket). While the
+    # run is open the composer keeps sending (an interjection joins the run),
+    # worker scripts are accepted while the turn is IDLE, and the status
+    # reads "Working in background". Written only by SessionManager.set_run.
+    bpy.types.Scene.mixie_run_open = BoolProperty(
+        name="Agent Run Open",
+        description="True while the backend run behind this chat is still open",
+        default=False,
+        options={'SKIP_SAVE'},  # Never persist — runs don't survive a file load
+    )
+    bpy.types.Scene.mixie_run_id = StringProperty(
+        name="Agent Run ID",
+        description="Identifier of the open backend run (empty when closed)",
+        default="",
+        options={'SKIP_SAVE'},
     )
 
     # Chat mode captured when the currently running turn started —
@@ -857,6 +999,7 @@ def register():
         items=[
             ('AGENT', "Agent", "AI agent for general tasks", 'AGENT', 0),
             ('GENERATE', "Generate", "Generate content", 'GENERATE', 1),
+            ('ADDON_PROJECT', "Add-on Project", "Work on the linked Blender add-on", 'FILE_SCRIPT', 3),
         ],
         default='AGENT',
     )
@@ -883,6 +1026,14 @@ def register():
         description="Chat session identifier for this scene",
         default="",
     )
+    # Kept while the chat's session id is cleared by a revert to before turn 1
+    # (the backend has no conversation there), so the Checkpoints card still
+    # lists that timeline and its turns can be reapplied.
+    bpy.types.Scene.mixie_checkpoint_session_id = StringProperty(
+        name="Checkpoint Session ID",
+        description="Session whose turn checkpoints this scene still shows",
+        default="",
+    )
 
 
 def unregister():
@@ -901,8 +1052,8 @@ def unregister():
     except Exception:
         pass
     try:
-        from ...core.sse_handler import cleanup_all_sse_handlers
-        cleanup_all_sse_handlers()
+        from ...core.turn_transport import cleanup_all_turn_handlers
+        cleanup_all_turn_handlers()
     except Exception:
         pass
     try:
@@ -918,11 +1069,12 @@ def unregister():
     # Remove Scene-level properties
     for attr in (
         'mixie_chat_layout_epoch',
-        'mixie_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
+        'mixie_session_id', 'mixie_checkpoint_session_id', 'mixie_chat_credits', 'mixie_chat_user_id',
         'mixie_chat_model', 'mixie_chat_generate_type',
         'mixie_chat_generate_model', 'mixie_chat_plan_enabled',
-        'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
-        'mixie_chat_mode',
+        'mixie_chat_auto_mode', 'mixie_chat_is_busy', 'mixie_chat_state', 'mixie_chat_active_turn_mode',
+        'mixie_run_open', 'mixie_run_id',
+        'mixie_chat_mode', 'mixie_addon_project_id', 'mixie_addon_project_name',
         'mixie_chat_pending_attachments', 'mixie_chat_messages', 'mixie_chat_input',
     ):
         if hasattr(bpy.types.Scene, attr):

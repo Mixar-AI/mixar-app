@@ -31,6 +31,8 @@
 #include "WM_api.hh"
 
 #include "view3d_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Set by the Python toast timer (toast_timer.py) while any toast is visible.
  * Must stay in sync with TOASTS_VISIBLE_WM_PROP in notifications/constants.py. */
@@ -62,8 +64,7 @@ static bool toast_call_mouse_op(bContext *C, const wmEvent *event, const char *i
     return false;
   }
 
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_int_set(&op_ptr, "mouse_x", event->mval[0]);
   RNA_int_set(&op_ptr, "mouse_y", event->mval[1]);
 
@@ -124,3 +125,4 @@ void view3d_toast_click_register(ARegion *region)
                           nullptr,
                           eWM_EventHandlerFlag(0));
 }
+}  // namespace blender

@@ -3,22 +3,30 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Async wrappers around the BYOK + models-catalog endpoints.
+"""Async wrappers around the BYOK credential endpoints.
 
 Each function spawns a daemon thread for the HTTP call and marshals the
 result back onto Blender's main thread via `bpy.app.timers.register`.
 Callers get a clean (success, data, error_message) tri-tuple and never
 touch threads, HTTPClient, requests, or the APIResponse envelope.
 
-The pattern mirrors `space_mixie_chat/ui/operators/auth_ops.py`.
+The provider/model CATALOG is not here — it has a different lifecycle (disk
+cache + ETag revalidation, no per-user secret) and lives in
+`byok/core/models_cache.py`. This module owns only the per-user credential
+state and the mutations.
+
+The tri-tuple signatures are a fixed contract: ten call sites and four test
+modules depend on them. Do not widen them.
 """
 
 import threading
 from typing import Any, Callable, Optional
 
+from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
 
 from ...common.api import APIResponse, get_agent_service
+from ...common.network import classify_network_error, log_network_failure
 
 logger = get_logger(__name__)
 
@@ -27,7 +35,6 @@ logger = get_logger(__name__)
 # APIResponse → tri-tuple translation
 # ---------------------------------------------------------------------------
 
-_NETWORK_ERROR_MSG = "Could not reach Mixar. Check your connection and try again."
 _VALIDATION_ERROR_MSG = "Invalid form data — please reach out to support."
 _GENERIC_SERVER_ERROR_MSG = "Something went wrong on our end. Please try again."
 
@@ -81,8 +88,15 @@ def _translate_exception(exc: Exception) -> tuple[bool, Optional[Any], Optional[
     message = getattr(exc, "message", None)
 
     if status is None:
-        # Connection/timeout/retry-exhaustion — not a clean HTTP response.
-        return False, None, _NETWORK_ERROR_MSG
+        # Connection/timeout/retry-exhaustion — not a clean HTTP response, so
+        # route it through the shared classifier instead of a hand-rolled
+        # string. `failure.user_text` carries a NET-* support code the user can
+        # quote and IT can act on; a flat "could not reach Mixar" tells a
+        # customer behind a TLS-inspecting proxy nothing at all, and is banned
+        # by the network contract (pinned by tests/network/).
+        failure = classify_network_error(exc, url=get_server_url())
+        log_network_failure(logger, failure, "BYOK request")
+        return False, None, failure.user_text
     if status == 422:
         return False, None, _VALIDATION_ERROR_MSG
     if status >= 500 and status != 502:
@@ -139,14 +153,21 @@ def fetch_state(
 def save_credentials(
     provider: str,
     model: str,
-    api_key: str,
+    api_key: Optional[str],
     on_done: Callable[[bool, Optional[dict], Optional[str]], None],
+    base_url: Optional[str] = None,
+    supports_vision: Optional[bool] = None,
 ) -> None:
-    """PUT /agent/byok — upsert BYOK config. ≤ 15 s."""
+    """PUT /agent/byok — upsert BYOK config. ≤ 15 s.
+
+    ``base_url`` / ``supports_vision`` are forwarded only when provided
+    (the "local" provider's relay-target registration).
+    """
     def _thread():
         try:
             response = get_agent_service().save_credentials_all(
                 provider=provider, model=model, api_key=api_key,
+                base_url=base_url, supports_vision=supports_vision,
             )
             success, data, err = _translate(response)
         except Exception as e:
@@ -185,30 +206,4 @@ def delete_credentials(
 
     threading.Thread(
         target=_thread, daemon=True, name="MixarBYOKDelete"
-    ).start()
-
-
-# ---------------------------------------------------------------------------
-# Models catalog
-# ---------------------------------------------------------------------------
-
-def fetch_models_catalog(
-    on_done: Callable[[bool, Optional[dict], Optional[str]], None],
-) -> None:
-    """GET /agent/models — provider + model catalog for dropdowns.
-
-    Uses the existing `AgentService.list_models()` — same endpoint. On
-    success the `data` arg of `on_done` is `{"providers": [...]}`.
-    """
-    def _thread():
-        try:
-            response = get_agent_service().list_models()
-            success, data, err = _translate(response)
-        except Exception as e:
-            logger.warning("BYOK fetch_models_catalog failed: %s", e)
-            success, data, err = _translate_exception(e)
-        _schedule_on_main(on_done, success, data, err)
-
-    threading.Thread(
-        target=_thread, daemon=True, name="MixarBYOKModelsCatalog"
     ).start()

@@ -283,19 +283,10 @@ ANNOTATION_WIDTH_MIN = 1.0
 ANNOTATION_WIDTH_MAX = 32.0
 ANNOTATION_MIN_DISTANCE = 0.001
 ANNOTATION_MAX_POINTS_PER_STROKE = 4096
+CANVAS_ANNOTATION_SAMPLE_PX = 2.0
 
 # Warning threshold for reference image count
 REFERENCE_IMAGES_MAX_WITH_WARNING = 14
-
-# ============================================================================
-# GROUP DRAWING CONSTANTS (used by mixie_draw_moodboard_groups.cc)
-# ============================================================================
-
-# Size of group selection handles in pixels
-GROUP_HANDLE_SIZE_PX = 12.0
-
-# Default group selection color (RGBA)
-GROUP_SELECTION_COLOR = (0.2, 0.6, 1.0, 1.0)
 
 # ============================================================================
 # SIDEBAR LAYOUT CONSTANTS (must match C++ constants)
@@ -376,3 +367,63 @@ GRAPH_OBJECT_NAMES_MAXLEN = 2048   # <-> char names[4096]
 GRAPH_JOB_ID_MAXLEN = 128
 GRAPH_ERROR_MAXLEN = 512
 GRAPH_PARAM_NAME_MAXLEN = 96
+GRAPH_PROGRESS_MAXLEN = 96          # <-> char progress[128]
+GRAPH_NOTICE_MAXLEN = 192           # <-> char notice[256]
+# Canvas grid Ctrl snaps to during a move. Must equal MOODBOARD_SNAP_GRID in
+# mixie_intern.hh: the C++ media/node drags and the Python grab modal move the
+# same items, so a mismatch would snap them to two different grids depending on
+# which gesture was used.
+GRAPH_SNAP_GRID = 40.0
+# Prompt fields (the node's and the sidebar tabs'). Deliberately generous:
+# video models in particular take long, shot-by-shot production notes, and the
+# old 4096 was a guess that no provider actually asks for. Still BOUNDED --
+# an RNA string without a maxlen is unbounded, which is the overflow hazard
+# `test_node_graph_hardening` exists to prevent. NOT part of the
+# GRAPH_*_MAXLEN <-> MIXIE_*_BUF pairings: C++ only ever reads a prompt through
+# `mixie_rna_string_get_clamped` into MIXIE_GRAPH_PROMPT_PREVIEW_BUF, a
+# deliberately tiny one-line preview buffer that truncates by design.
+GRAPH_PROMPT_MAXLEN = 32768
+
+# ---------------------------------------------------------------------------
+# Canvas frames (grouping)
+# ---------------------------------------------------------------------------
+# A frame is a FIRST-CLASS canvas object with its own rect, name and colour --
+# not a bounding box derived from whichever items happen to carry an index.
+# That is what lets a frame be empty, be dragged to open canvas, be resized to
+# claim space, and adopt what is dropped inside it. Membership is the item's
+# own `frame_id` (a stable string), never a collection index: the legacy
+# `group_index` had to be renumbered by hand in three separate operators every
+# time a group was removed.
+FRAME_NAME_MAXLEN = 96             # <-> char name[128] (MIXIE_FRAME_NAME_BUF)
+
+# Eight pastels, CYCLED (`len(frames) % 8`) rather than picked at random: a
+# random pick gives two adjacent frames the same colour about one time in
+# eight and is not reproducible in QA. What is stored is the INDEX, so the
+# palette can be retuned later and saved boards follow it.
+#
+# Must equal `FRAME_PALETTE` in `mixie_moodboard_frame_geometry.cc`, which is the
+# painter's own copy -- `tests/moodboard/test_frame_ui.py` pins the two
+# together. The swatch menu here is the only Python reader.
+FRAME_PALETTE = (
+    ("Rose", (0.96, 0.64, 0.64)),
+    ("Apricot", (0.97, 0.79, 0.61)),
+    ("Butter", (0.95, 0.91, 0.63)),
+    ("Mint", (0.72, 0.89, 0.66)),
+    ("Aqua", (0.64, 0.86, 0.85)),
+    ("Sky", (0.65, 0.77, 0.94)),
+    ("Lilac", (0.76, 0.69, 0.93)),
+    ("Orchid", (0.94, 0.69, 0.84)),
+)
+FRAME_PALETTE_SIZE = len(FRAME_PALETTE)
+
+# A frame created from a selection wraps its members with this much slack on
+# every side (canvas units), so the members are not flush against the border.
+FRAME_SELECTION_PADDING = 56.0
+# A frame created with nothing selected: somewhere to drop things into.
+FRAME_DEFAULT_WIDTH = 900.0
+FRAME_DEFAULT_HEIGHT = 640.0
+# Floors. A frame narrower than its own name plus its action row is unusable,
+# and a resize must not be able to invert the rect. Mirrored as
+# MOODBOARD_FRAME_MIN_W/H in mixie_intern.hh.
+FRAME_MIN_WIDTH = 220.0
+FRAME_MIN_HEIGHT = 160.0

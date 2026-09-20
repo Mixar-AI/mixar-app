@@ -9,10 +9,18 @@
 
 #pragma once
 
+#include "BLF_enums.hh"
+
 #include "BLI_rect.h"
 
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
+namespace blender::gpu {
+class Texture;
+}
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct bContext;
@@ -26,9 +34,6 @@ struct wmRegionListenerParams;
 struct wmWindow;
 struct wmWindowManager;
 
-namespace blender::gpu {
-class Texture;
-}
 
 /* -------------------------------------------------------------------- */
 /** \name Region Callbacks
@@ -60,6 +65,12 @@ void mixie_chat_anim_pump_shutdown(wmWindowManager *wm);
 
 /* Main region custom drawing */
 void mixie_chat_draw_messages(const bContext *C, ARegion *region);
+/** Restrict (or, with nullptr, un-restrict) the message view to a region-local
+ * sub-rect — see MixieChatRuntime::view_band. */
+void mixie_chat_set_view_band(SpaceMixieChat *smixie, const rcti *band);
+/** Pin the View2D mask back to the stored view band (no-op without one) —
+ * view2d_masks() stomps the mask to the region origin after every scroll. */
+void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region);
 
 /* Optional per-frame background colour override.  When set, the
  * region draw functions use this RGBA colour instead of TH_BACK.
@@ -160,6 +171,12 @@ void chat_ui_draw_rounded_rect_bordered(const rctf *rect,
                                         const float border_color[4],
                                         float border_width);
 
+/* Paint `rect` as a MIXAR_GLASS_CHAT pane — the glass bed for a chat message.
+ * Called from the View2D matrix (the message area draws through
+ * ui::view2d_view_ortho), so the painter's specular is switched off here; see
+ * the definition. `alpha` fades the whole pane. */
+void chat_ui_draw_glass_pane(const rctf *rect, float radius, float alpha);
+
 /* Thin colored vertical accent bar at the left edge of a block (Plan / steps /
  * thinking), so the three section types are differentiated while staying flat.
  * Drawn in the block's existing left padding — no layout change. */
@@ -185,21 +202,25 @@ float chat_ui_draw_text_wrapped(const char *text,
 
 /* Font-parameterized variants — pass a specific BLF font id (e.g.
  * chat_ui_mono_font() for code). The plain variants above wrap these with
- * BLF_default(). */
+ * BLF_default(). `wrap_mode` must match between measure, draw, and the
+ * selection mapping — code blocks use BLFWrapMode::HardLimit so unbreakable
+ * tokens wrap at the card edge instead of overflowing it. */
 void chat_ui_calc_text_bounds_font(const char *text,
                                    float max_width,
                                    int font_size,
                                    int flags,
                                    int font_id,
                                    float *out_width,
-                                   float *out_height);
+                                   float *out_height,
+                                   BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
 
 float chat_ui_draw_text_wrapped_font(const char *text,
                                      const rctf *rect,
                                      int font_size,
                                      int flags,
                                      int font_id,
-                                     const float color[4]);
+                                     const float color[4],
+                                     BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
 
 /* Lazily-loaded monospace font id for code rendering. */
 int chat_ui_mono_font();
@@ -284,7 +305,9 @@ void chat_ui_get_toggle_label_color(float out_color[4]);
 /** \name UI Widgets (mixie_chat_ui_widgets.cc)
  * \{ */
 
-/* Chat bubble */
+/* Chat bubble. `glass` draws the bed as a MIXAR_GLASS_CHAT pane instead of the
+ * flat `bg_color` fill — the user's own message only, never the block
+ * containers that derive from its style. */
 float chat_ui_calc_bubble_height(const ChatBubbleStyle *style,
                                  const char *text,
                                  float max_width,
@@ -296,7 +319,8 @@ float chat_ui_draw_bubble(const ChatBubbleStyle *style,
                           float bubble_width,
                           float bubble_height,
                           float content_width,
-                          float attachments_height = 0.0f);
+                          float attachments_height = 0.0f,
+                          bool glass = false);
 
 /* Ephemeral bubble with FIFO line limiting (mixie_chat_thinking.cc) */
 /* Current loader status string, or `fallback` when the loader has no valid
@@ -390,6 +414,60 @@ void chat_ui_draw_markdown(const char *metadata_json,
                            const ChatBubbleStyle *style,
                            float scale_factor);
 
+/* Raw text of the text-bearing segment at `seg_index` (paragraph, heading,
+ * code block, quote), or nullptr when out of range or not a text segment.
+ * Served from the markdown parse cache; the pointer is only valid until the
+ * next parse-cache access, so consume it immediately. Pass `code_only` to
+ * restrict to code blocks (the copy chips). */
+const char *chat_ui_markdown_segment_text(const char *metadata_json,
+                                          int seg_index,
+                                          bool code_only);
+
+/* Resolve a message's markdown segment text through Scene RNA + the parse
+ * cache (mixie_chat_code_copy.cc). Same lifetime caveat as above. */
+const char *mixie_chat_message_segment_text(const bContext *C,
+                                            int message_index,
+                                            int seg_index,
+                                            bool code_only);
+
+/* Code-block copy chips (mixie_chat_code_copy.cc).
+ * Collector: the messages render pass resets the hit list, then brackets
+ * every chat_ui_draw_markdown call with set_message(index)/set_message(-1);
+ * draw_code_block registers each chip through mixie_chat_code_chip_draw. */
+void mixie_chat_code_hits_reset(MixieChatRuntime *rt);
+/* Drop the collector's reference when `rt` is about to be freed, so a later
+ * markdown draw can never append hits into freed memory. */
+void mixie_chat_code_hits_forget(const MixieChatRuntime *rt);
+void mixie_chat_code_hits_set_message(int message_index);
+void mixie_chat_code_hits_set_segment(int seg_index);
+/* Draw the Copy button for the current (message, segment) into the code
+ * card whose top-right inner corner is (right_x, top_y), and register its
+ * hit rect. Sized from `font_size` (the code text size) — the markdown
+ * draw path always passes scale_factor 1.0, so px constants scaled by it
+ * would ignore the UI scale entirely. */
+void mixie_chat_code_chip_draw(float right_x, float top_y, float scale_factor, int font_size);
+/* Record the rendered text rect of the current (message, segment) so
+ * selection can map clicks against the segment's own text/font/wrap. */
+void mixie_chat_md_seg_record(const rctf *text_rect, bool mono, int font_size);
+/* Find the recorded rect for (message, segment); false when not drawn. */
+bool mixie_chat_md_seg_find(MixieChatRuntime *rt,
+                            int message_index,
+                            int seg_index,
+                            MarkdownSegHit *r_hit);
+/* True while a recent chip copy should keep repainting (the ✔ flash). */
+bool mixie_chat_code_copy_feedback_pending();
+/* Hover tracking from the region cursor callback (view coords). Returns
+ * true when a chip is hovered; sets *r_changed when hover state moved. */
+bool mixie_chat_code_hits_hover(MixieChatRuntime *rt,
+                                float view_x,
+                                float view_y,
+                                bool *r_changed);
+/* LEFTMOUSE dispatch (region coords) — copies the clicked code block. */
+bool mixie_chat_handle_code_copy_click(bContext *C,
+                                       ARegion *region,
+                                       float mouse_x,
+                                       float mouse_y);
+
 /* Image attachment */
 float chat_ui_calc_image_attachment_height(Main *bmain,
                                            const char *image_path,
@@ -421,7 +499,10 @@ int chat_ui_handle_action_click(float mouse_x,
                                 int button_count);
 float chat_ui_get_action_buttons_height(float scale_factor);
 
-/* Sender label */
+/* Sender label. mixie_chat_sender_label returns "You" / "Mixie" / "Error",
+ * or "You (<delivery_hint>)" for a user message sent into a running turn
+ * (mixie_chat_messages_content.cc; the buffer is valid until the next call). */
+const char *mixie_chat_sender_label(const MessageLayoutData &layout, PointerRNA *msg_ptr);
 void chat_ui_draw_sender_label(const char *label,
                                float x,
                                float y,
@@ -438,22 +519,40 @@ void chat_ui_draw_sender_label(const char *label,
 void MIXIE_CHAT_OT_select_text(wmOperatorType *ot);
 void MIXIE_CHAT_OT_copy(wmOperatorType *ot);
 
-/* Text selection helper - converts mouse position to message index and character offset */
+/* Text selection helper — converts a mouse position to a message index, a
+ * byte offset, and (for markdown bubbles) the segment the offset indexes
+ * (*r_seg_index = -1 means the offset indexes the message's copy text). */
 bool mixie_chat_pos_to_text(const bContext *C,
                             ARegion *region,
                             const int mval[2],
                             int *r_message_index,
+                            int *r_seg_index,
                             int *r_char_offset);
 
-/* Get selected text string (must be freed with MEM_freeN) */
+/* True when the position lands inside any message bubble rect (used to eat
+ * clicks on non-selectable parts of a bubble instead of passing them to
+ * window-level handlers — in the Agent Bubble those start a window drag). */
+bool mixie_chat_pos_in_message_bubble(const bContext *C, ARegion *region, const int mval[2]);
+
+/* Text rect of a cached message layout, matching where the draw pass
+ * actually places the wrapped text (mixie_chat_hit_testing.cc). Returns
+ * false when the message has no selectable text. */
+bool mixie_chat_layout_text_rect(const MessageLayoutData *layout, rctf *r_rect);
+
+/* Get selected text string (must be freed with MEM_delete_void) */
 char *mixie_chat_get_selected_text(const bContext *C);
 
-/* Draw selection highlight over text */
+/* Draw selection highlight over wrapped text drawn with `font_id`.
+ * `line_height` <= 0 derives the plain BLF line height (rich-text segments
+ * pass their 1.15x line height so rows land on the drawn lines). */
 void chat_ui_draw_text_selection(const rctf *text_rect,
                                  const char *text,
                                  int sel_start,
                                  int sel_end,
-                                 int font_size);
+                                 int font_size,
+                                 int font_id,
+                                 float line_height,
+                                 BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
 
 /* Scroll-to-bottom indicator (mixie_chat_scroll_indicator.cc) */
 void mixie_chat_update_scroll_indicator(struct SpaceMixieChat *smixie,
@@ -477,6 +576,12 @@ void chat_ui_get_label_color(float out_color[4]);
  * Python-registered WindowManager bool `mixie_chat_history_visible`;
  * rows from `mixie_chat_history_entries`. */
 void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
+
+/* Chat click/ESC UI handler pair — exported so the Agent Bubble island region
+ * can install the same handler stack as the chat editor's main region (with
+ * its own ui::Block-first ordering). */
+int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void *userdata);
+void mixie_chat_ui_handler_remove(bContext *C, void *userdata);
 bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event);
 bool mixie_chat_history_cursor(
     wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
@@ -492,7 +597,61 @@ bool mixie_chat_rules_cursor(
     wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
 void mixie_chat_rules_set_visible(bContext *C, bool visible);
 
+/* Scribble ink overlay (mixie_chat_ink_overlay.cc / _events.cc / _util.cc):
+ * stylus handwriting captured over the chat main region, recognized via the
+ * Python `mixie_chat.ink_commit` operator (backend vision OCR) and appended
+ * to the composer. Visibility: Python-registered WindowManager bool
+ * `mixie_chat_ink_visible`. Auto-opens on a stylus press over the composer
+ * (footer handler) or on empty chat background (try_auto_open, checked
+ * LAST in mixie_chat_ui_handler so interactive targets keep pen taps). */
+void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
+void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region);
+void mixie_chat_ink_draw_canvas(
+    const rctf *rect, float scale, float origin_x, float origin_y, float ease);
+void mixie_chat_ink_draw_grid(
+    const rctf *rect, float scale, float origin_x, float origin_y, float ease);
+void mixie_chat_ink_draw_strokes(
+    MixieChatRuntime *rt, float scale, float ease, float offset_x, float offset_y);
+ARegion *mixie_chat_ink_area_main_region(ScrArea *area);
+int mixie_chat_ink_header_ui_handler(bContext *C, const wmEvent *event, void *userdata);
+void mixie_chat_ink_header_handler_register(ARegion *region);
+bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event);
+bool mixie_chat_ink_cursor(
+    wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
+void mixie_chat_ink_set_visible(bContext *C, bool visible);
+bool mixie_chat_ink_try_auto_open(bContext *C, const wmEvent *event);
+/** Open from a PEN STROKE that started on the composer (interface_handlers.cc
+ * text-edit hooks — the footer region handler never gets those presses; the
+ * caller then exits editing via BUTTON_STATE_EXIT). Seeds the first stroke
+ * from the press point. Window coordinates. */
+bool mixie_chat_ink_composer_stylus_stroke(bContext *C,
+                                           const int press_xy[2],
+                                           const int cur_xy[2],
+                                           float pressure);
+void mixie_chat_ink_footer_handler_register(ARegion *region);
+/** Region-exit cleanup for the idle-commit timer (window close / file load
+ * would otherwise leave the process-global wmTimer pointer dangling). */
+void mixie_chat_ink_idle_timer_remove(wmWindowManager *wm);
+void MIXIE_CHAT_OT_ink_flush(wmOperatorType *ot);
+void MIXIE_CHAT_OT_ink_release_composer(wmOperatorType *ot);
+void MIXIE_CHAT_OT_focus_composer(wmOperatorType *ot);
+/* On-device recognition (mixie_chat_ink_local.cc): start one batch / pop one result. */
+void MIXIE_CHAT_OT_ink_recognize_local(wmOperatorType *ot);
+void MIXIE_CHAT_OT_ink_local_poll(wmOperatorType *ot);
+/* Voice input (mixie_chat_voice.cc): session start/stop, pop one recogniser event. */
+void MIXIE_CHAT_OT_voice_start(wmOperatorType *ot);
+void MIXIE_CHAT_OT_voice_stop(wmOperatorType *ot);
+void MIXIE_CHAT_OT_voice_poll(wmOperatorType *ot);
+
 /* Hit testing and click handlers (mixie_chat_hit_testing.cc) */
+/* Region-level handlers call operators that may close the window owning
+ * `region` (see mixie_chat_call_operator_and_redraw). Never touch `region`
+ * after an operator call without this check. */
+bool mixie_chat_region_is_alive(const bContext *C, const ARegion *region);
+void mixie_chat_call_operator_and_redraw(bContext *C,
+                                          ARegion *region,
+                                          wmOperatorType *ot,
+                                          PointerRNA *op_ptr);
 bool mixie_chat_handle_slot_action_click(bContext *C,
                                           ARegion *region,
                                           float mouse_x,
@@ -523,7 +682,14 @@ void mixie_chat_dropboxes();
  * agent_bubble_menu.py — so it inherits the bubble's position, drag
  * behavior, and ESC dismissal automatically. */
 void MIXIE_CHAT_OT_agent_bubble_show(wmOperatorType *ot);
+/* mixie_chat_document_ops.cc: re-title the open document without writing it. */
+void MIXIE_CHAT_OT_retitle_document(wmOperatorType *ot);
+void MIXIE_CHAT_OT_undo_stamp(wmOperatorType *ot);
 
 /* Property cache, layout data, runtime state: see mixie_chat_layout_data.hh */
 
+/* QA harness target provider (mixie_chat_qa_targets.cc). */
+void mixie_chat_qa_targets_register();
+
 /** \} */
+}  // namespace blender

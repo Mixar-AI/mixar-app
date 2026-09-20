@@ -20,12 +20,20 @@ from bpy.types import Header, Menu
 def _has_moodboard_content(context):
     """Check if there is any content in the moodboard."""
     scene = context.scene
-    has_content = False
-    if hasattr(scene, 'mixie_moodboard_images') and len(scene.mixie_moodboard_images) > 0:
-        has_content = True
-    if hasattr(scene, 'mixie_moodboard_textboxes') and len(scene.mixie_moodboard_textboxes) > 0:
-        has_content = True
-    return has_content
+    return any(getattr(scene, name, ()) for name in (
+        'mixie_moodboard_images',
+        'mixie_moodboard_textboxes',
+        # Frames replaced the index-based `mixie_moodboard_groups`, which the
+        # load-time migration empties for good. The legacy name stays listed
+        # only so a board that has not ticked the migration yet still reads
+        # as non-empty.
+        'mixie_moodboard_frames',
+        'mixie_moodboard_groups',
+        'mixie_moodboard_action_nodes',
+        'mixie_moodboard_asset_nodes',
+        'mixie_moodboard_links',
+        'mixie_moodboard_annotations',
+    ))
 
 
 class MIXIE_MT_view(Menu):

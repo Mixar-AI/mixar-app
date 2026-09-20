@@ -39,6 +39,8 @@
 #include "WM_types.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 float mixie_chat_feedback_comment_input_height(PointerRNA *msg_ptr, const float input_width)
 {
@@ -49,8 +51,8 @@ float mixie_chat_feedback_comment_input_height(PointerRNA *msg_ptr, const float 
    * floor(rect_height / line_height) lines. Measuring with any other font or
    * per-line height makes the button taller than the widget's line grid —
    * phantom lines the cursor can't reach. */
-  uiFontStyle fstyle = UI_style_get()->widget;
-  UI_fontstyle_set(&fstyle);
+  uiFontStyle fstyle = ui::style_get()->widget;
+  ui::fontstyle_set(&fstyle);
   const int fontid = fstyle.uifont_id;
   const int line_height = std::max(int(BLF_height(fontid, "Wg", 2) + 2.0f * U.pixelsize), 1);
   const int pad = int(4.0f * U.pixelsize); /* widget top inset; mirrored at bottom */
@@ -59,7 +61,7 @@ float mixie_chat_feedback_comment_input_height(PointerRNA *msg_ptr, const float 
   const int text_len = g_msg_props.feedback_comment ?
       RNA_property_string_length(msg_ptr, g_msg_props.feedback_comment) : 0;
   if (text_len > 0) {
-    char *text = static_cast<char *>(MEM_mallocN(size_t(text_len) + 1, __func__));
+    char *text = static_cast<char *>(MEM_new_uninitialized(size_t(text_len) + 1, __func__));
     RNA_property_string_get(msg_ptr, g_msg_props.feedback_comment, text);
 
     const int rect_width = std::max(int(input_width) - pad, 10);
@@ -75,7 +77,7 @@ float mixie_chat_feedback_comment_input_height(PointerRNA *msg_ptr, const float 
     }
     line_count = std::min(line_count, FEEDBACK_COMMENT_MAX_LINES);
 
-    MEM_freeN(text);
+    MEM_delete_void(static_cast<void *>(text));
   }
 
   /* N full lines plus the top inset and a matching bottom margin. The margins
@@ -329,10 +331,10 @@ void mixie_chat_render_feedback(const bContext *C,
   }
   const float input_y_bot = input_y_top - layout.feedback_comment_input_height;
 
-  /* uiBlock buttons use region pixel coordinates for rendering and hit testing. */
+  /* ui::Block buttons use region pixel coordinates for rendering and hit testing. */
   int rx1, ry1, rx2, ry2;
-  UI_view2d_view_to_region(v2d, layout.bubble_x, input_y_bot, &rx1, &ry1);
-  UI_view2d_view_to_region(
+  ui::view2d_view_to_region(v2d, layout.bubble_x, input_y_bot, &rx1, &ry1);
+  ui::view2d_view_to_region(
       v2d, layout.bubble_x + layout.bubble_width, input_y_top, &rx2, &ry2);
 
   if (ry2 <= 0 || ry1 >= region->winy || rx2 <= rx1 || ry2 <= ry1) {
@@ -341,11 +343,10 @@ void mixie_chat_render_feedback(const bContext *C,
 
   char block_name[64];
   BLI_snprintf(block_name, sizeof(block_name), "fb_comment_%d", layout.message_index);
-  uiBlock *block = UI_block_begin(C, region, block_name, blender::ui::EmbossType::Emboss);
+  ui::Block *block = ui::block_begin(C, region, block_name, blender::ui::EmbossType::Emboss);
 
-  uiBut *comment_but = uiDefButR(block,
-                                 ButType::Text,
-                                 0,
+  ui::Button *comment_but = ui::uiDefButR(block,
+                                 ui::ButtonType::Text,
                                  "",
                                  rx1,
                                  ry1,
@@ -358,14 +359,14 @@ void mixie_chat_render_feedback(const bContext *C,
                                  0.0f,
                                  nullptr);
   if (comment_but) {
-    UI_but_placeholder_set(comment_but, "Add a comment (optional) \xe2\x80\x94 press Enter to send");
-    UI_but_flag_enable(comment_but, UI_BUT_TEXTEDIT_UPDATE);
+    ui::button_placeholder_set(comment_but, "Add a comment (optional) \xe2\x80\x94 press Enter to send");
+    ui::button_flag_enable(comment_but, ui::BUT_TEXTEDIT_UPDATE);
   }
 
-  UI_block_end(C, block);
-  UI_view2d_view_restore(C);
-  UI_block_draw(C, block);
-  UI_view2d_view_ortho(v2d);
+  ui::block_end(C, block);
+  ui::view2d_view_restore(C);
+  ui::block_draw(C, block);
+  ui::view2d_view_ortho(v2d);
 }
 
 bool mixie_chat_handle_feedback_click(bContext *C,
@@ -381,7 +382,7 @@ bool mixie_chat_handle_feedback_click(bContext *C,
 
   View2D *v2d = &region->v2d;
   float view_x, view_y;
-  UI_view2d_region_to_view(v2d, mouse_x, mouse_y, &view_x, &view_y);
+  ui::view2d_region_to_view(v2d, mouse_x, mouse_y, &view_x, &view_y);
 
   if (feedback_debug_enabled()) {
     int fb_layouts = 0;
@@ -434,14 +435,11 @@ bool mixie_chat_handle_feedback_click(bContext *C,
       if (has_bounds && BLI_rctf_isect_pt(&star.bounds, view_x, view_y)) {
         wmOperatorType *ot = WM_operatortype_find("mixie_chat.set_feedback_rating", true);
         if (ot) {
-          PointerRNA op_ptr;
-          WM_operator_properties_create_ptr(&op_ptr, ot);
+          PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
           RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
           RNA_int_set(&op_ptr, "rating", star.star_index);
-          WM_operator_name_call_ptr(
-              C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+          mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
           WM_operator_properties_free(&op_ptr);
-          ED_region_tag_redraw(region);
           return true;
         }
       }
@@ -454,13 +452,10 @@ bool mixie_chat_handle_feedback_click(bContext *C,
     {
       wmOperatorType *ot = WM_operatortype_find("mixie_chat.toggle_feedback_comment", true);
       if (ot) {
-        PointerRNA op_ptr;
-        WM_operator_properties_create_ptr(&op_ptr, ot);
+        PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
         RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
-        WM_operator_name_call_ptr(
-            C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+        mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
         WM_operator_properties_free(&op_ptr);
-        ED_region_tag_redraw(region);
         return true;
       }
     }
@@ -468,3 +463,4 @@ bool mixie_chat_handle_feedback_click(bContext *C,
 
   return false;
 }
+}  // namespace blender

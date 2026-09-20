@@ -126,6 +126,13 @@ class ConnectionManager:
             # Access instance_id to trigger generation if needed
             instance_id = session.instance_id
             logger.info(f"ConnectionManager initialized with instance_id: {instance_id[:8]}...")
+            # Harness v3: document identity / epoch handlers + the run-active
+            # WindowManager flag (main thread — initialize() runs on a timer).
+            try:
+                from mixar.modules.common.agent_execution import document as _v3doc
+                _v3doc.register()
+            except Exception as e:
+                logger.warning(f"v3 document identity registration skipped: {e}")
             return True
 
         except Exception as e:
@@ -235,6 +242,38 @@ class ConnectionManager:
 
                 client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_job_sync_result)
 
+                # The mirror of job.sync: jobs that reached a terminal state
+                # while this socket was down still owe the agent a
+                # generation.agent_result callback. Retry every stamped job
+                # across all queues now that a connected client exists.
+                # Marshalled to the main thread — on_connected runs on the
+                # WebSocket thread and the sweep walks live queue state.
+                def _sweep_agent_results():
+                    from ...common.job_queue.core.agent_results import (
+                        report_all_agent_results,
+                    )
+                    report_all_agent_results()
+
+                run_on_main_thread(_sweep_agent_results)
+
+                # #1258: a turn that outlived the disconnect is invisible to
+                # the user — ask the server which local sessions have a turn
+                # still running, or abandoned unwatched by the drain, and
+                # surface "Resume previous task" for those. A turn that ended
+                # in front of the user is never announced.
+                # on_connected runs on the WebSocket thread. The check walks
+                # bpy.data.scenes and reads scene RNA, so it MUST be marshalled
+                # to the main thread — a reconnect fires routinely mid-turn
+                # (every 50 s liveness teardown a GIL-holding script causes)
+                # while the main thread is adding and removing lane scenes,
+                # and iterating that ListBase concurrently is a segfault.
+                try:
+                    from .turn_events import reconnect
+
+                    run_on_main_thread(reconnect)
+                except Exception:
+                    logger.exception("orphaned-turn check failed (non-fatal)")
+
             # Report client version in the background (REST)
             import threading
 
@@ -253,6 +292,16 @@ class ConnectionManager:
 
             threading.Thread(target=_report_version, daemon=True).start()
 
+            # P1-6: if this (re)connect re-activated a session whose last
+            # build died with a dead Blender session (a PARKED turn), the
+            # backend decides whether the tail is small enough to
+            # auto-continue. Fail-quiet — never break the connect path.
+            try:
+                from .parked_resume import schedule_after_connect
+                schedule_after_connect(base_url)
+            except Exception as e:
+                logger.debug(f"[PARKED] auto-resume skipped: {e}")
+
         def on_disconnected(reason: str):
             if self._is_shutting_down:
                 logger.info(f"JSON-RPC WebSocket disconnected: {reason}")
@@ -262,7 +311,7 @@ class ConnectionManager:
             # terminal. Anything else is a transient drop the client will
             # auto-reconnect from, so a running agent turn (BUSY / MODIFYING /
             # AWAITING_INPUT) must survive it: the turn streams over its own
-            # SSE connection and the backend keeps executing — wiping its
+            # backend task and the backend keeps executing — wiping its
             # state here made the client refuse every post-reconnect script
             # with "Agent session not active" while showing an idle pill.
             terminal = reason == DISCONNECT_REASON_AUTH_FAILED
@@ -282,6 +331,7 @@ class ConnectionManager:
             tool_name: str = "unknown",
             session_id: str = "",
             agent_ctx: Optional[dict] = None,
+            envelope: Optional[dict] = None,
         ) -> Optional[dict]:
             """Queue script for main thread execution (non-blocking)."""
             if not session.has_active_session():
@@ -292,16 +342,11 @@ class ConnectionManager:
                 return {"success": False, "error": "Agent session not active"}
 
             from .main_thread_executor import queue_script_request
-            if request_id:
-                queue_script_request(
-                    script, request_id, tool_name, session_id, agent_ctx
-                )
-                return None
-            else:
-                queue_script_request(
-                    script, "notification", tool_name, session_id, agent_ctx
-                )
-                return None
+            queue_script_request(
+                script, request_id or "notification", tool_name, session_id,
+                agent_ctx, envelope=envelope,
+            )
+            return None
 
         def on_tool_start(params: dict):
             """Handle tool start notification."""
@@ -332,6 +377,124 @@ class ConnectionManager:
             from mixar.bootstrap.sandbox_supervisor import handle_sandbox_control
             return handle_sandbox_control(params)
 
+        def on_execution_request(method: str, params: dict, request_id) -> None:
+            """Harness v3 agent.execution.* — main-thread work, deferred reply."""
+            from mixar.modules.common.agent_execution.handlers import handle_execution_request
+            return handle_execution_request(method, params, request_id)
+
+        def on_turn_event(method: str, params: dict) -> None:
+            """agent.turn.* — a backend-started turn streamed over the socket."""
+            from .turn_events import handle_turn_notification
+            handle_turn_notification(method, params)
+
+        def on_llm_request(params: dict, request_id) -> None:
+            """Relay one backend llm.request to the user's local model server.
+
+            Runs on the WS receive thread — which must never block — so the
+            blocking localhost HTTP call happens on its own daemon thread and
+            the reply goes back through client.queue_response (thread-safe
+            Queue). Returning None tells the JSON-RPC client the response is
+            deferred. The worker never touches Blender state.
+            """
+            import threading
+
+            def _respond(result: dict) -> None:
+                if not request_id:
+                    return  # notification — nothing to answer
+                from .jsonrpc_client import get_jsonrpc_client
+                ws_client = get_jsonrpc_client()
+                if ws_client and ws_client.is_connected:
+                    ws_client.queue_response(request_id, result)
+                else:
+                    logger.warning(
+                        "llm.request %s finished after disconnect — reply dropped",
+                        request_id,
+                    )
+
+            def _relay():
+                responded = {"done": False}
+
+                def _respond_once(result: dict) -> None:
+                    if responded["done"]:
+                        return
+                    responded["done"] = True
+                    _respond(result)
+
+                try:
+                    from ...local_models.core.relay import handle_llm_request
+                    handle_llm_request(params, _respond_once)
+                except Exception as exc:  # noqa: BLE001 - must always answer
+                    logger.error("llm.request relay failed: %s", exc, exc_info=True)
+                    _respond_once({
+                        "error": {"code": "relay_internal", "message": str(exc)},
+                    })
+
+            threading.Thread(
+                target=_relay, daemon=True, name="MixarLocalLLMRelay"
+            ).start()
+            return None  # deferred — _respond() replies from the worker
+
+        def on_addon_project_request(method: str, params: dict, request_id) -> None:
+            """Run bounded project I/O off-thread and Blender reload on main."""
+            import threading
+
+            if not request_id:
+                return None
+            if not session.has_active_session():
+                return {"success": False, "error": {
+                    "code": "session_inactive",
+                    "message": "Agent session not active",
+                }}
+            request_client = client
+
+            def _respond(result: dict) -> None:
+                ws_client = get_jsonrpc_client()
+                if ws_client is request_client and request_client.is_connected:
+                    request_client.queue_response(request_id, result)
+                else:
+                    logger.warning("project request %s finished after disconnect", request_id)
+
+            def _worker() -> None:
+                from mixar.modules.addon_project.constants import (
+                    RPC_RUN_CHECKS,
+                    RPC_SET_ENABLED,
+                )
+                from mixar.modules.addon_project.service import get_addon_project_service
+
+                service = get_addon_project_service()
+                # Blender registration APIs must run on the main thread:
+                # reload-checks AND set_enabled both reach addon_utils
+                # enable/disable (register()/unregister(), prefs writes).
+                # Static checks and every other project operation stay on
+                # this worker.
+                needs_main_thread = method == RPC_SET_ENABLED or (
+                    method == RPC_RUN_CHECKS and bool(params.get("reload_blender"))
+                )
+                if needs_main_thread:
+                    if method == RPC_RUN_CHECKS:
+                        static_params = dict(params)
+                        static_params["reload_blender"] = False
+                        static_result = service.dispatch(method, static_params)
+                        if not static_result.get("success"):
+                            _respond(static_result)
+                            return
+
+                    from .main_thread_executor import run_on_main_thread
+
+                    def _run_and_respond() -> None:
+                        _respond(service.dispatch(method, params))
+
+                    run_on_main_thread(_run_and_respond)
+                    return
+                _respond(service.dispatch(method, params))
+
+            threading.Thread(
+                target=_worker,
+                daemon=True,
+                name="MixarAddonProjectRPC",
+            ).start()
+            return None
+
         # Create JSON-RPC WebSocket client
         self._is_shutting_down = False
         # Re-arm the script executor: a prior disconnect(update_session_state=
@@ -355,6 +518,10 @@ class ConnectionManager:
             on_notification=on_notifications_push,
             on_job_update=on_job_update,
             on_sandbox_control=on_sandbox_control,
+            on_llm_request=on_llm_request,
+            on_addon_project_request=on_addon_project_request,
+            on_execution_request=on_execution_request,
+            on_turn_event=on_turn_event,
         )
 
         # Connect
@@ -389,6 +556,9 @@ class ConnectionManager:
         # Update session state unless Blender is already in restricted
         # shutdown, where bpy.data.scenes is no longer available.
         if update_session_state:
+            # A deliberate disconnect is terminal for the runs too: no
+            # socket, no wake-ups, and the next connect starts clean.
+            session.clear_all_runs()
             session.set_all_scenes_state(SessionState.OFFLINE)
             self._is_shutting_down = False
 

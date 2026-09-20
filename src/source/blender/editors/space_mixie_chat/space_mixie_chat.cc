@@ -40,6 +40,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_footer_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Operators
@@ -51,6 +53,16 @@ static void mixie_chat_operatortypes()
   WM_operatortype_append(MIXIE_CHAT_OT_copy);
   WM_operatortype_append(MIXIE_CHAT_OT_drop_image);
   WM_operatortype_append(MIXIE_CHAT_OT_agent_bubble_show);
+  WM_operatortype_append(MIXIE_CHAT_OT_retitle_document);
+  WM_operatortype_append(MIXIE_CHAT_OT_undo_stamp);
+  WM_operatortype_append(MIXIE_CHAT_OT_ink_flush);
+  WM_operatortype_append(MIXIE_CHAT_OT_ink_release_composer);
+  WM_operatortype_append(MIXIE_CHAT_OT_focus_composer);
+  WM_operatortype_append(MIXIE_CHAT_OT_ink_recognize_local);
+  WM_operatortype_append(MIXIE_CHAT_OT_ink_local_poll);
+  WM_operatortype_append(MIXIE_CHAT_OT_voice_start);
+  WM_operatortype_append(MIXIE_CHAT_OT_voice_stop);
+  WM_operatortype_append(MIXIE_CHAT_OT_voice_poll);
 }
 
 /** \} */
@@ -84,7 +96,20 @@ static void mixie_chat_keymap(wmKeyConfig *keyconf)
   /* Ctrl+V / Cmd+V: paste image or text into chat.
    * Added to the main "Mixie Chat" keymap (not a separate footer keymap)
    * to avoid keyconfig lookup mismatches. The footer region also registers
-   * this keymap as a handler so the binding works in both regions. */
+   * this keymap as a handler so the binding works in both regions.
+   *
+   * MIXIE_CHAT_OT_paste, not MIXIE_CHAT_OT_paste_image: this chord fires
+   * when the composer does NOT hold text-edit focus, and paste_image
+   * returns CANCELLED for a clipboard that holds no image, so a text paste
+   * arriving here used to be dropped without a trace. The unified operator
+   * attaches an image if there is one and appends the text otherwise.
+   * (The inline hook in interface_handlers.cc still calls paste_image
+   * directly — it needs the CANCELLED to fall back to its own
+   * cursor-accurate ui_textedit_copypaste.)
+   *
+   * The Python addon keyconfig registers this chord too
+   * (space_mixie_chat/ui/keymap.py); it has to, because the GUI keyconfig
+   * preset reload wipes items from C-registered default-config keymaps. */
   KeyMapItem_Params paste_params{};
   paste_params.type = EVT_VKEY;
   paste_params.value = KM_PRESS;
@@ -93,7 +118,7 @@ static void mixie_chat_keymap(wmKeyConfig *keyconf)
 #else
   paste_params.modifier = KM_CTRL;
 #endif
-  WM_keymap_add_item(keymap, "MIXIE_CHAT_OT_paste_image", &paste_params);
+  WM_keymap_add_item(keymap, "MIXIE_CHAT_OT_paste", &paste_params);
 }
 
 /** \} */
@@ -107,7 +132,7 @@ static SpaceLink *mixie_chat_create(const ScrArea * /*area*/, const Scene * /*sc
   ARegion *region;
   SpaceMixieChat *smixie_chat;
 
-  smixie_chat = MEM_callocN<SpaceMixieChat>("initmixiechat");
+  smixie_chat = MEM_new<SpaceMixieChat>("initmixiechat");
   smixie_chat->spacetype = SPACE_MIXIE_CHAT;
 
   /* Initialize selection state */
@@ -161,7 +186,8 @@ static void mixie_chat_init(wmWindowManager * /*wm*/, ScrArea *area)
 {
   /* Initialize footer (TOOLS) region size */
   if (area) {
-    LISTBASE_FOREACH (ARegion *, region, &area->regionbase) {
+    for (ARegion &region_iter : area->regionbase) {
+      ARegion *region = &region_iter;
       if (region->regiontype == RGN_TYPE_TOOLS && region->alignment == RGN_ALIGN_BOTTOM) {
         region->sizey = 50;  /* Compact height for input + mode buttons */
         region->flag &= ~(RGN_FLAG_HIDDEN | RGN_FLAG_TOO_SMALL);  /* Ensure visible */
@@ -173,7 +199,7 @@ static void mixie_chat_init(wmWindowManager * /*wm*/, ScrArea *area)
 
 static SpaceLink *mixie_chat_duplicate(SpaceLink *sl)
 {
-  SpaceMixieChat *smixie_chat_new = static_cast<SpaceMixieChat *>(MEM_dupallocN(sl));
+  SpaceMixieChat *smixie_chat_new = static_cast<SpaceMixieChat *>(MEM_dupalloc_void(sl));
   /* New instance gets its own fresh runtime — don't share with source */
   smixie_chat_new->runtime = nullptr;
   return (SpaceLink *)smixie_chat_new;
@@ -279,8 +305,17 @@ static void mixie_chat_space_blend_write(BlendWriter *writer, SpaceLink *sl)
   /* Don't save runtime pointer — it's regenerated on load */
   void *runtime_backup = smixie->runtime;
   smixie->runtime = nullptr;
-  BLO_write_struct(writer, SpaceMixieChat, sl);
+  writer->write_struct_cast<SpaceMixieChat>(sl);
   smixie->runtime = runtime_backup;
+}
+
+static void mixie_chat_space_blend_read_data(BlendDataReader * /*reader*/, SpaceLink *sl)
+{
+  SpaceMixieChat *smixie = (SpaceMixieChat *)sl;
+  /* Never trust a runtime pointer read from disk — the reader keeps an
+   * unhandled pointer's stored value, and mixie_chat_ensure_runtime only
+   * allocates when it sees null. */
+  smixie->runtime = nullptr;
 }
 
 /** \} */
@@ -306,14 +341,15 @@ void ED_spacetype_mixie_chat()
   st->keymap = mixie_chat_keymap;
   st->dropboxes = mixie_chat_dropboxes;
   st->blend_write = mixie_chat_space_blend_write;
+  st->blend_read_data = mixie_chat_space_blend_read_data;
   st->listener = mixie_chat_space_listener;
 
   /* regions: main window (custom chat drawing) */
-  art = MEM_callocN<ARegionType>("spacetype mixie_chat region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie_chat region");
   art->regionid = RGN_TYPE_WINDOW;
   /* NO keymapflag here: most of the region uses custom GPU drawing. ED_KEYMAP_UI
    * would also add the broad "User Interface" keymap, which can consume LEFTMOUSE
-   * before the chat handler. main_region_init installs only the uiBlock handler
+   * before the chat handler. main_region_init installs only the ui::Block handler
    * needed by the embedded feedback text field, then adds chat-specific handlers. */
   art->keymapflag = 0;
 
@@ -332,7 +368,7 @@ void ED_spacetype_mixie_chat()
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: header */
-  art = MEM_callocN<ARegionType>("spacetype mixie_chat header region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie_chat header region");
   art->regionid = RGN_TYPE_HEADER;
   art->prefsizey = HEADERY;
 
@@ -344,7 +380,7 @@ void ED_spacetype_mixie_chat()
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: footer (implemented as TOOLS region for dynamic sizing) */
-  art = MEM_callocN<ARegionType>("spacetype mixie_chat footer region");
+  art = MEM_new_zeroed<ARegionType>("spacetype mixie_chat footer region");
   art->regionid = RGN_TYPE_TOOLS;  /* CRITICAL: Use TOOLS not FOOTER for dynamic sizing */
   /* Footer uses ultra-compact sizing:
    * - Input row (~20px)
@@ -363,7 +399,11 @@ void ED_spacetype_mixie_chat()
 
   BLI_addhead(&st->regiontypes, art);
 
+  /* QA harness: export chat action/gate buttons + feedback stars as targets. */
+  mixie_chat_qa_targets_register();
+
   BKE_spacetype_register(std::move(st));
 }
 
 /** \} */
+}  // namespace blender

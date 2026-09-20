@@ -34,7 +34,7 @@ struct MoodboardVideoPlayback {
 static std::unordered_map<Image *, MoodboardVideoPlayback> g_video_playback;
 static wmTimer *g_video_redraw_timer = nullptr;
 
-static Image *moodboard_item_image(PointerRNA *scene_ptr, const int index)
+Image *moodboard_item_image(PointerRNA *scene_ptr, const int index)
 {
   PropertyRNA *items_prop = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
   if (!items_prop || index < 0 ||
@@ -160,7 +160,7 @@ static int hovered_video_index_from_event(bContext *C,
   const int region_x = event->xy[0] - region->winrct.xmin;
   const int region_y = event->xy[1] - region->winrct.ymin;
   float mouse_x, mouse_y;
-  UI_view2d_region_to_view(&region->v2d, region_x, region_y, &mouse_x, &mouse_y);
+  ui::view2d_region_to_view(&region->v2d, region_x, region_y, &mouse_x, &mouse_y);
 
   float pos_x, pos_y, scale, width, height;
   const int index = moodboard_find_image_under_mouse(
@@ -233,7 +233,7 @@ bool moodboard_toggle_video_playback(bContext *C,
     if (ImageAnim *image_anim = static_cast<ImageAnim *>(image->anims.first)) {
       if (image_anim->anim) {
         playback.frame_count = std::max(
-            MOV_get_duration_frames(image_anim->anim, IMB_TC_RECORD_RUN), 1);
+            MOV_get_duration_frames(image_anim->anim), 1);
         const float native_fps = MOV_get_fps(image_anim->anim);
         if (native_fps > 0.0f) {
           playback.fps = native_fps;
@@ -290,6 +290,9 @@ void mixie_moodboard_video_playback_shutdown(wmWindowManager *wm)
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot)
 {
   ot->name = "Moodboard Video Hover Monitor";
@@ -300,3 +303,4 @@ void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot)
   ot->poll = blender::ed::mixie::moodboard_poll;
   ot->flag = OPTYPE_INTERNAL;
 }
+}  // namespace blender

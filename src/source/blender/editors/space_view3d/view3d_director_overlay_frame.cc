@@ -28,10 +28,13 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_mixar.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
 #include "view3d_director_overlay_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
@@ -61,7 +64,7 @@ void camera_lens_label(const View3D *v3d, char *label, const int label_size)
 {
   const Object *object = v3d ? v3d->camera : nullptr;
   const Camera *camera = object && object->type == OB_CAMERA ?
-                             static_cast<const Camera *>(object->data) :
+                             id_cast<const Camera *>(object->data) :
                              nullptr;
   if (!camera) {
     BLI_strncpy(label, "Camera Lens", label_size);
@@ -119,7 +122,7 @@ void camera_aspect_label(const Scene *scene, char *label, const int label_size)
 
 }  // namespace
 
-void view3d_director_frame_controls_draw(uiBlock *block,
+void view3d_director_frame_controls_draw(ui::Block *block,
                                          const bContext *C,
                                          const ARegion *region,
                                          const DirectorViewState &state,
@@ -151,7 +154,7 @@ void view3d_director_frame_controls_draw(uiBlock *block,
   camera_lens_label(CTX_wm_view3d(C), lens_label, sizeof(lens_label));
   camera_aspect_label(CTX_data_scene(C), aspect_label, sizeof(aspect_label));
 
-  uiBut *lens = uiDefBlockBut(block,
+  ui::Button *lens = ui::uiDefBlockBut(block,
                               view3d_director_lens_popup_create,
                               nullptr,
                               lens_label,
@@ -160,12 +163,13 @@ void view3d_director_frame_controls_draw(uiBlock *block,
                               short(lens_w),
                               short(button_h),
                               "Choose the lens type and focal length");
+  ui::mixar_style_button(lens, ui::MixarComponent::Dropdown);
   director_overlay_disable_button(lens, state.locked);
 
   /* Precise stays hidden until its role is clear; Navigate is a plain text
    * action — no icon, so the gate reads as one word. */
-  uiBut *navigate = uiDefButO(block,
-                              ButType::But,
+  ui::Button *navigate = ui::uiDefButO(block,
+                              ui::ButtonType::But,
                               "MIXAR_OT_director_navigate",
                               blender::wm::OpCallContext::InvokeRegionWin,
                               "Navigate",
@@ -174,12 +178,14 @@ void view3d_director_frame_controls_draw(uiBlock *block,
                               short(navigate_w),
                               short(button_h),
                               "Navigate with WASD and mouse");
+  ui::mixar_style_button(navigate, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
+  ui::mixar_button_lit_set(navigate, state.navigate_mode);
   if (state.navigate_mode) {
-    UI_but_flag_enable(navigate, UI_BUT_ACTIVE_DEFAULT);
+    ui::button_flag_enable(navigate, ui::BUT_ACTIVE_DEFAULT);
   }
   director_overlay_disable_button(navigate, state.locked);
 
-  uiBut *aspect = uiDefBlockBut(block,
+  ui::Button *aspect = ui::uiDefBlockBut(block,
                                 view3d_director_aspect_popup_create,
                                 nullptr,
                                 aspect_label,
@@ -188,6 +194,7 @@ void view3d_director_frame_controls_draw(uiBlock *block,
                                 short(aspect_w),
                                 short(button_h),
                                 "Choose the shot output aspect ratio");
+  ui::mixar_style_button(aspect, ui::MixarComponent::Dropdown);
   director_overlay_disable_button(aspect, state.locked);
 
   const float dot_size = std::max(7.0f, 8.0f * UI_SCALE_FAC);
@@ -220,6 +227,7 @@ void view3d_director_frame_controls_draw(uiBlock *block,
                            border.ymax - inset - dot_size,
                            border.ymax - inset};
   const float active_color[4] = {0.25f, 0.92f, 0.52f, 1.0f};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&active_dot, true, dot_size * 0.5f, active_color);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&active_dot, true, dot_size * 0.5f, active_color);
 }
+}  // namespace blender

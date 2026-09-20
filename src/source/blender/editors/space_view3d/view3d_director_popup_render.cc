@@ -14,6 +14,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <string>
 
 #include "MEM_guardedalloc.h"
 
@@ -30,10 +32,37 @@
 #include "UI_interface_c.hh"
 #include "UI_resources.hh"
 
+#include "../interface/interface_mixar_profile_card.hh"
+
 #include "view3d_director.hh"
 #include "view3d_director_overlay_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
+
+/* `ui::Button::tip` is a NON-owning StringRef, so handing it an entry of an
+ * `EnumPropertyItem` array this file is about to free leaves the button
+ * pointing at freed memory — an undefined tooltip on hover, and freed bytes in
+ * the QA introspection dump. The callback form owns its argument. */
+std::string director_tooltip_owned_fn(bContext * /*C*/,
+                                      void *argN,
+                                      blender::StringRef /*tip*/)
+{
+  return std::string(static_cast<const char *>(argN));
+}
+
+void director_but_tooltip_owned(ui::Button *but, const char *text)
+{
+  if (but == nullptr || text == nullptr || text[0] == '\0') {
+    return;
+  }
+  const size_t size = strlen(text) + 1;
+  char *owned = static_cast<char *>(MEM_new_uninitialized(size, __func__));
+  memcpy(owned, text, size);
+  ui::button_func_tooltip_set(but, director_tooltip_owned_fn, owned, MEM_delete_void);
+}
+
 
 int render_kind_icon(const char *identifier)
 {
@@ -54,14 +83,14 @@ int render_kind_icon(const char *identifier)
  * prevents. */
 void render_popup_close(bContext * /*C*/, void *arg_block, void * /*arg2*/)
 {
-  UI_popup_menu_retval_set(static_cast<uiBlock *>(arg_block), UI_RETURN_OK, true);
+  ui::popup_menu_retval_set(static_cast<ui::Block *>(arg_block), ui::RETURN_OK, true);
 }
 
 /* Enum-flag rows bound straight to `render_output_types`: a Row button whose
  * value is one flag bit draws pushed while the bit is set and XORs it on
  * click (native PROP_ENUM_FLAG behavior), so selection needs no operator. */
 int draw_kind_toggles(bContext *C,
-                      uiBlock *block,
+                      ui::Block *block,
                       DirectorPopupData &data,
                       const bool running,
                       const int y,
@@ -86,9 +115,8 @@ int draw_kind_toggles(bContext *C,
     if (!items[index].identifier || !items[index].identifier[0]) {
       continue;
     }
-    uiBut *toggle = uiDefIconTextButR_prop(block,
-                                           ButType::Row,
-                                           0,
+    ui::Button *toggle = ui::uiDefIconTextButR_prop(block,
+                                           ui::ButtonType::Row,
                                            render_kind_icon(items[index].identifier),
                                            items[index].name,
                                            drawn * (third_w + gap),
@@ -100,25 +128,27 @@ int draw_kind_toggles(bContext *C,
                                            -1,
                                            0,
                                            float(items[index].value),
-                                           items[index].description);
+                                           nullptr);
+    director_but_tooltip_owned(toggle, items[index].description);
+    ui::UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Option);
     if (running) {
-      UI_but_flag_enable(toggle, UI_BUT_DISABLED);
+      ui::button_flag_enable(toggle, ui::BUT_DISABLED);
     }
     enabled_count += int((flags & items[index].value) != 0);
     drawn++;
   }
   if (free_items && items) {
-    MEM_freeN(items);
+    MEM_delete_void(static_cast<void *>(const_cast<EnumPropertyItem *>(items)));
   }
   return enabled_count;
 }
 
-uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
+ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
 {
-  uiBlock *block = director_popup_block_begin(C, region, __func__);
+  ui::Block *block = director_popup_block_begin(C, region, __func__);
   /* Multi-select: picking Beauty/Clay/Depth must not dismiss the popup —
    * it closes on click-outside, Esc, or the Export/Render actions below. */
-  UI_block_flag_enable(block, UI_BLOCK_KEEP_OPEN);
+  ui::block_flag_enable(block, ui::BLOCK_KEEP_OPEN);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || data.shot_ptr.data == nullptr) {
     director_popup_section_label(block, "No active Director shot", 0, UI_UNIT_X * 10);
@@ -127,10 +157,13 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   }
   const Scene *scene = CTX_data_scene(C);
 
-  const int width = UI_UNIT_X * 12;
+  const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   const int label_h = int(UI_UNIT_Y * 0.85f);
+  /* One `gap` between sections (caption to caption); half of it between
+   * the rows inside a section. Widths are the bar's; only y moves. */
   const int gap = int(UI_UNIT_Y * 0.25f);
+  const int inner_gap = gap / 2;
   int y = 0;
 
   char shot_name[128] = "";
@@ -158,7 +191,7 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                "Export %d Keyframe%s",
                beat_count,
                beat_count == 1 ? "" : "s");
-  uiBut *export_stills = director_overlay_operator_button(
+  ui::Button *export_stills = director_overlay_operator_button(
       block,
       "MIXAR_OT_director_send_keyframes",
       ICON_EXPORT,
@@ -169,7 +202,8 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
       row_h,
       "Place this shot's keyframe stills together on the Moodboard");
   director_overlay_disable_button(export_stills, beat_count < 1);
-  UI_but_func_set(export_stills, render_popup_close, block, nullptr);
+  ui::UI_mixar_cinema_row_tag(export_stills, ui::MixarCinemaRowKind::Action);
+  ui::button_func_set(export_stills, render_popup_close, block, nullptr);
 
   /* Rendered motion-guide videos → Moodboard. */
   y -= gap + label_h;
@@ -177,10 +211,11 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   y -= row_h;
   const int enabled_count = draw_kind_toggles(C, block, data, running, y, width, gap);
 
-  y -= gap + row_h;
-  uiBut *resolution = uiDefButR(block,
-                                ButType::NumSlider,
-                                0,
+  /* Resolution belongs to the guides section: the slider sits under the
+   * toggles at the inner gap, its summary caption directly under it. */
+  y -= inner_gap + row_h;
+  ui::Button *resolution = ui::uiDefButR(block,
+                                ui::ButtonType::NumSlider,
                                 "Resolution",
                                 0,
                                 y,
@@ -193,8 +228,11 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                 0,
                                 std::nullopt);
   if (running) {
-    UI_but_flag_enable(resolution, UI_BUT_DISABLED);
+    ui::button_flag_enable(resolution, ui::BUT_DISABLED);
   }
+  /* The row-class track with the green fill to the value; drawing only,
+   * the stock drag / ctrl-click / double-click-to-type stay. */
+  ui::UI_mixar_cinema_row_tag(resolution, ui::MixarCinemaRowKind::Slider);
 
   y -= label_h;
   if (beat_count < 2) {
@@ -231,7 +269,7 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                  "Render %d Video%s to Moodboard",
                  enabled_count,
                  enabled_count == 1 ? "" : "s");
-    uiBut *render = director_overlay_operator_button(
+    ui::Button *render = director_overlay_operator_button(
         block,
         "MIXAR_OT_director_render_videos",
         ICON_RENDER_ANIMATION,
@@ -242,7 +280,8 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
         row_h,
         "Render the shot beat span and add each video to Moodboard");
     director_overlay_disable_button(render, beat_count < 2 || enabled_count == 0);
-    UI_but_func_set(render, render_popup_close, block, nullptr);
+    ui::UI_mixar_cinema_row_tag(render, ui::MixarCinemaRowKind::Action);
+    ui::button_func_set(render, render_popup_close, block, nullptr);
   }
 
   PropertyRNA *outputs_prop = RNA_struct_find_property(&data.shot_ptr, "render_outputs");
@@ -262,17 +301,19 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                           PointerRNA_NULL;
       const ID *image_id = static_cast<const ID *>(image_ptr.data);
       y -= label_h;
-      uiDefIconTextBut(block,
-                       ButType::Label,
-                       0,
-                       ICON_FILE_MOVIE,
-                       image_id ? image_id->name + 2 : "Missing video",
-                       0,
-                       y,
-                       short(width),
-                       short(label_h),
-                       nullptr,
-                       std::nullopt);
+      ui::Button *entry = ui::uiDefIconTextBut(block,
+                                               ui::ButtonType::Label,
+                                               ICON_FILE_MOVIE,
+                                               image_id ? image_id->name + 2 : "Missing video",
+                                               0,
+                                               y,
+                                               short(width),
+                                               short(label_h),
+                                               nullptr,
+                                               std::nullopt);
+      /* Caption with its film icon leading; the painter drops the icon
+       * before it clips the name. */
+      ui::UI_mixar_cinema_row_tag(entry, ui::MixarCinemaRowKind::Caption);
     }
   }
 
@@ -282,7 +323,8 @@ uiBlock *render_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 
 }  // namespace
 
-uiBlock *view3d_director_render_popup_create(bContext *C, ARegion *region, void *arg)
+ui::Block *view3d_director_render_popup_create(bContext *C, ARegion *region, void *arg)
 {
   return render_popup_create(C, region, arg);
 }
+}  // namespace blender

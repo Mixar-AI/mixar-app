@@ -30,6 +30,8 @@
 #include "WM_types.hh"
 
 #include "view3d_director_timeline.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
@@ -40,9 +42,11 @@ bool point_inside(const rctf &rect, const wmEvent *event)
 
 int beat_at_event(const DirectorTimelineRuntime &runtime, const wmEvent *event)
 {
-  for (const DirectorTimelineBeatHit &hit : runtime.beat_hits) {
-    if (point_inside(hit.bounds, event)) {
-      return hit.index;
+  /* Last-drawn handle is on top, so search newest-first. Forward order
+   * let an earlier neighbour steal the last keyframe when handles overlap. */
+  for (int i = int(runtime.beat_hits.size()) - 1; i >= 0; --i) {
+    if (point_inside(runtime.beat_hits[i].bounds, event)) {
+      return runtime.beat_hits[i].index;
     }
   }
   return -1;
@@ -72,8 +76,7 @@ bool dispatch_int_operator(bContext *C, const char *idname, const char *property
   if (!ot) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_int_set(&op_ptr, property, value);
   const wmOperatorStatus result = WM_operator_name_call_ptr(
       C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
@@ -88,8 +91,7 @@ bool begin_strip_drag(bContext *C, const wmEvent *event, DirectorTimelineRuntime
   if (!ot || width <= 0.0f) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_float_set(&op_ptr, "frames_per_pixel", runtime->view_span_frames / width);
   const wmOperatorStatus result = WM_operator_name_call_ptr(
       C, ot, blender::wm::OpCallContext::InvokeRegionWin, &op_ptr, event);
@@ -111,14 +113,19 @@ bool begin_beat_drag(bContext *C,
   if (!ot || width <= 0.0f) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_int_set(&op_ptr, "index", beat_index);
   RNA_float_set(&op_ptr, "frames_per_pixel", runtime->view_span_frames / width);
   const wmOperatorStatus result = WM_operator_name_call_ptr(
       C, ot, blender::wm::OpCallContext::InvokeRegionWin, &op_ptr, event);
   WM_operator_properties_free(&op_ptr);
-  return (result & OPERATOR_RUNNING_MODAL) != 0;
+  if (result & OPERATOR_RUNNING_MODAL) {
+    /* Same as strip drag: pin the view so retiming the first/last beat
+     * cannot re-fit the span under the cursor. */
+    runtime->view_user_modified = true;
+    return true;
+  }
+  return false;
 }
 
 bool begin_scrub(bContext *C,
@@ -131,8 +138,7 @@ bool begin_scrub(bContext *C,
   if (!ot || width <= 0.0f) {
     return false;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_float_set(&op_ptr, "frames_per_pixel", runtime->view_span_frames / width);
   RNA_float_set(
       &op_ptr, "origin_px", float(region->winrct.xmin) + runtime->viewport_bounds.xmin);
@@ -330,3 +336,4 @@ void *view3d_director_timeline_region_duplicate(void * /*regiondata*/)
 {
   return nullptr;
 }
+}  // namespace blender

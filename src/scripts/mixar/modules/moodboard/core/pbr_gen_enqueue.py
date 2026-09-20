@@ -141,6 +141,9 @@ def enqueue_pbr_texture_job(
     payload = assemble_payload(service_key, merged, payload, model)
 
     label = label or meshes[0].name
+    from mixar.modules.moodboard.core.generation_enqueue import (
+        make_texture_reimport_on_imported,
+    )
     try:
         job = enqueue_generation(
             kind="glb",
@@ -150,6 +153,7 @@ def enqueue_pbr_texture_job(
             payload=payload,
             label=label,
             fail_message="PBR generation failed",
+            on_imported=make_texture_reimport_on_imported(),
             scene_flag=PBR_GEN_SCENE_FLAG,
         )
     except Exception as e:

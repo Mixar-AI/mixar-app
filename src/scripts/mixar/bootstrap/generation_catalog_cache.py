@@ -16,6 +16,7 @@ import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from mixar.bootstrap.generation_catalog import storage as generation_catalog_storage
+from mixar.bootstrap.generation_catalog import consumers as generation_catalog_consumers
 from mixar.bootstrap.generation_catalog.queries import GenerationCatalogQueries
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.utils.platform_utils import trigger_ui_redraw
@@ -273,30 +274,10 @@ def refresh_generation_catalog_cache() -> None:
 def _on_catalog_swapped() -> None:
     """Main-thread timer callback after a new payload was swapped in.
 
-    Rebuilds the dynamic parameter engine (when present) and redraws all
-    areas. Returns None so the timer does not repeat.
+    Tells every catalog consumer (see `generation_catalog.consumers`) and
+    redraws. Returns None so the timer does not repeat.
     """
-    try:
-        from mixar.modules.common.generation_params.core.engine import (
-            rebuild_from_catalog,
-        )
-
-        rebuild_from_catalog()
-        from mixar.modules.moodboard.core.node_schema import sync_all_node_schemas
-
-        sync_all_node_schemas()
-    except ImportError:
-        pass
-    except Exception as exc:
-        logger.error("Generation param engine rebuild failed: %s", exc)
-    # Re-register moodboard sidebar tabs whose capability label was renamed
-    # (no-op until the panels module loads / when nothing changed). We are
-    # on a main-thread timer here, as bpy class re-registration requires.
-    try:
-        from mixar.modules.moodboard.ui.moodboard_tab_labels import refresh_tab_labels
-        refresh_tab_labels()
-    except Exception as exc:
-        logger.error("Moodboard tab label refresh failed: %s", exc)
+    generation_catalog_consumers.notify_catalog_swapped()
     trigger_ui_redraw()
     return None
 

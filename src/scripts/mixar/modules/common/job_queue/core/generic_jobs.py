@@ -16,11 +16,8 @@ from typing import Callable, List, Optional
 
 from mixar.config.logging_config import get_logger
 from .job import FAILED_BACKEND_STATUSES, Job, JobState
-from .helpers import (
-    download_images_to_moodboard,
-    extract_image_name,
-    extract_image_urls,
-)
+from .image_results import download_images_to_moodboard
+from .helpers import extract_image_name, extract_image_urls
 
 logger = get_logger(__name__)
 
@@ -43,7 +40,9 @@ class AsyncGLBJob(Job):
     fail_message : str
         Human-readable fallback shown when the backend returns FAILED.
     _on_imported_hook : callable | None
-        ``fn(job, object_names)`` called from ``on_imported``.
+        ``fn(job, object_names) -> str | None`` called from ``on_imported``.
+        A hook that RENAMES what it imported must return the final object
+        name(s) — see ``on_imported`` for why.
     """
 
     job_type: str = ""
@@ -88,12 +87,28 @@ class AsyncGLBJob(Job):
         )
 
     def on_imported(self, object_names: str) -> None:
+        """Record the imported objects, then run the post-import hook.
+
+        ``imported_object_names`` is the job's only handle on what it put in
+        the scene, and every later consumer resolves it through
+        ``bpy.data.objects.get()`` — the generations-library archiver, the
+        queue list's "select the result" click. Most of our hooks RENAME the
+        import (``model_gen`` names the mesh after the source image, retopology
+        appends ``_low``), which frees the name recorded a line earlier and
+        leaves the job pointing at an object that no longer exists.
+
+        So a renaming hook returns its final name and we record THAT. Hooks
+        that only inspect return None and keep the imported names.
+        """
         super().on_imported(object_names)
         if self._on_imported_hook is not None:
             try:
-                self._on_imported_hook(self, object_names)
+                final = self._on_imported_hook(self, object_names)
             except Exception as e:
                 logger.warning("on_imported hook failed: %s", e)
+            else:
+                if isinstance(final, str) and final.strip():
+                    self.imported_object_names = final.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +279,16 @@ class StreamingVideoJob(AsyncGLBJob):
     image_inputs: list = field(default_factory=list, repr=False)
     video_inputs: list = field(default_factory=list, repr=False)
     max_video_duration_seconds: float = 15.0
+    #: Backend upload ``purpose`` (``?purpose=`` on the staging call). Empty
+    #: keeps the backend default (Seedance reference material); Video Upscale
+    #: passes ``video_upscale`` so its ONE source clip is validated against
+    #: fal's upscale ceilings and keyed under the prefix the contract re-reads.
+    upload_purpose: str = ""
+    #: Payload field the staged video key(s) land in. Video Gen's references
+    #: are a LIST (``reference_video_s3_keys``); Video Upscale's source is the
+    #: single string ``video_s3_key`` — ``single_video_key`` picks the shape.
+    video_key_field: str = "reference_video_s3_keys"
+    single_video_key: bool = False
     _upload_index: int = field(default=0, repr=False)
     _staged_image_keys: list = field(default_factory=list, repr=False)
     _staged_video_keys: list = field(default_factory=list, repr=False)
@@ -289,8 +314,10 @@ class StreamingVideoJob(AsyncGLBJob):
                     self._staged_image_keys
                 )
             if self._staged_video_keys:
-                self.payload["reference_video_s3_keys"] = list(
-                    self._staged_video_keys
+                self.payload[self.video_key_field] = (
+                    self._staged_video_keys[0]
+                    if self.single_video_key
+                    else list(self._staged_video_keys)
                 )
             super().submit(on_success, on_error)
             return
@@ -347,6 +374,7 @@ class StreamingVideoJob(AsyncGLBJob):
             body_factory=body_factory,
             on_success=_staged,
             on_error=on_error,
+            purpose=self.upload_purpose,
         )
 
     def parse_submit_response(self, response) -> None:
