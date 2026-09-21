@@ -146,7 +146,8 @@ static void add_action_toolbar(const bContext *C,
       block, node, controls, generation_running, has_result, state, edit_mode, node_id);
 }
 
-static void add_asset_preview(View2D *v2d,
+static void add_asset_preview(const bContext *C,
+                              View2D *v2d,
                               ARegion *region,
                               ui::Block *block,
                               PointerRNA *node,
@@ -172,9 +173,13 @@ static void add_asset_preview(View2D *v2d,
   }
   PointerRNA object_ptr = RNA_pointer_get(node, "preview_object");
   if (RNA_boolean_get(node, "scene_mesh_reference")) {
+    /* Same gate as the action toolbar: a button on every card consumes the
+     * press before card select/drag, including the centre of an empty card. */
+    rcti controls;
+    const bool picker_visible = moodboard_node_controls_rect(C, v2d, node, &controls);
     const int height = int(metrics.control_height);
     const int width = std::min(BLI_rcti_size_x(&card), int(200 * UI_SCALE_FAC));
-    if (BLI_rcti_size_y(&card) >= height) {
+    if (picker_visible && width > 0 && BLI_rcti_size_y(&card) >= height) {
       char node_id[MIXIE_GRAPH_ID_BUF];
       mixie_rna_string_get_clamped(node, "node_id", node_id, sizeof(node_id));
       ui::Button *picker = ui::uiDefIconTextButO(
@@ -200,6 +205,16 @@ static void add_asset_preview(View2D *v2d,
                               BLI_rcti_cent_y(&card) + height + metrics.gap,
                               style, ui::mixar_tokens::zen.secondary);
       }
+    }
+    else if (!object_ptr.data) {
+      char names[MIXIE_GRAPH_NAMES_BUF];
+      mixie_rna_string_get_clamped(node, "object_names", names, sizeof(names));
+      const auto style = ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC);
+      const std::string label = ui::mixar_fit_text(
+          names[0] ? "Mesh unavailable" : "Choose a scene mesh",
+          BLI_rcti_size_x(&card), style);
+      ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card), BLI_rcti_cent_y(&card),
+                            style, ui::mixar_tokens::zen.secondary);
     }
     if (!object_ptr.data) {
       return;
@@ -264,7 +279,7 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   if (assets) {
     RNA_property_collection_begin(&scene_ptr, assets, &iter);
     while (iter.valid) {
-      add_asset_preview(v2d, region, block, &iter.ptr, object_previews);
+      add_asset_preview(C, v2d, region, block, &iter.ptr, object_previews);
       RNA_property_collection_next(&iter);
     }
     RNA_property_collection_end(&iter);

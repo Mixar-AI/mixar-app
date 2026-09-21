@@ -281,5 +281,9 @@ def test_asset_node_draws_its_object_preview_and_suppresses_the_empty_hint():
     drawer = (NODE_UI.parent / "mixie_draw_moodboard_chrome.cc").read_text(encoding="utf-8")
 
     assert '"mixie_moodboard_asset_nodes"' in node_ui
-    assert "add_asset_preview(v2d, region, block, &iter.ptr, object_previews)" in node_ui
+    assert "add_asset_preview(C, v2d, region, block, &iter.ptr, object_previews)" in node_ui
+    preview = node_ui.split("static void add_asset_preview(", 1)[1].split(
+        "void mixie_draw_moodboard_graph_controls(", 1)[0]
+    assert preview.index("moodboard_node_controls_rect(") < preview.index(
+        '"MIXIE_OT_moodboard_select_mesh"')
     assert '"mixie_moodboard_asset_nodes"' in drawer
