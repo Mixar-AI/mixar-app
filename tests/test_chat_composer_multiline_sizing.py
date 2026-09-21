@@ -47,7 +47,9 @@ def test_box_height_holds_exactly_the_counted_rows():
     assert "std::ceil(scaled / scale)" in helper
     painter = body(WIDGETS, "static void widget_draw_text_multiline(", "static void widget_draw_textbox")
     assert 'BLF_height(fontid, "Wg", 2) + 2.0f * U.pixelsize' in painter
-    assert "const int top_inset = int(4.0f * U.pixelsize);" in painter
+    assert "const int top_inset = padded_input ? 0 : int(4.0f * U.pixelsize);" in painter
+    input_style = (ROOT / "src/source/blender/editors/interface/mixar/style.cc").read_text()
+    assert 'STREQ(RNA_property_identifier(button.rnaprop), "mixie_chat_input")' in input_style
     height = body(LAYOUT, "int footer_layout_calculate_height(", "\n}\n")
     positions = body(LAYOUT, "void footer_layout_calculate_positions(", "\n}\n")
     assert "footer_layout_input_row_base(input_line_count)" in height

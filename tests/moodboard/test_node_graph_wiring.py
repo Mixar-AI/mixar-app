@@ -106,7 +106,8 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     # as one material.
     chrome = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph_chrome.cc")
     assert "ui::draw_roundbox_4fv" in chrome
-    assert "moodboard_draw_surface(rect, ui::mixar_tokens::radius)" in chrome
+    assert "moodboard_draw_surface(rect, radius)" in chrome
+    assert "moodboard_card_corner_radius(v2d, &node)" in renderer
     assert "moodboard_draw_card_background(" in renderer
 
 

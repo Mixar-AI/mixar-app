@@ -49,3 +49,17 @@ def test_native_single_line_and_textbox_paths_stay_outside_multiline_override():
     assert click.index('textbox_textedit_set_cursor_pos') < click.index('ui_but_is_multiline_text')
     activate = body(HANDLERS, 'static int do_but_TEX(', 'static int do_but_TEXTBOX(')
     assert 'but->type == ButtonType::TextBox || ui_but_mixie_mention_scene(but) != nullptr' in activate
+
+
+def test_zen_input_padding_is_shared_by_placeholder_and_edit_geometry():
+    draw = body(WIDGETS, 'static void widget_draw_text_multiline', 'static void widget_draw_textbox')
+    assert draw.index('mixar_multiline_input_rect') < draw.index('button_placeholder_get')
+    assert draw.index('mixar_multiline_input_rect') < draw.index('state.text_rect = *rect')
+    style = (UI / 'mixar/style.cc').read_text()
+    inset = body(style, 'bool mixar_multiline_input_rect', 'int64_t mixar_button_count')
+    # The auto-growing chat composer owns its own line budget; generic fixed
+    # editors must not change it or apply symmetric padding on top of native's.
+    assert '"mixie_chat_input"' in inset
+    assert 'MixarTheme::Zen' in inset and 'MixarComponent::Input' in inset
+    assert 'text_rect = bounds' in inset
+    assert 'BLI_rcti_pad(&text_rect, -padding, -padding)' in inset

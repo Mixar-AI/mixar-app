@@ -85,7 +85,10 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     }
   }
   if (!label) {
-    mixar_fill_round(rect, radius * u * (input ? 2.0f : 1.0f), fill);
+    const float corner_radius = std::min(radius * u * (input ? 2.0f : 1.0f),
+                                        0.5f * std::min(BLI_rctf_size_x(&rect),
+                                                        BLI_rctf_size_y(&rect)));
+    mixar_fill_round(rect, corner_radius, fill);
     if (button.type == ButtonType::NumSlider && !editing) {
       const double range = double(button.softmax) - double(button.softmin);
       const float fraction =
@@ -101,7 +104,7 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     if (editing || (button.flag & BUT_REDALERT)) {
       draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(
-          &rect, false, radius * u, (button.flag & BUT_REDALERT) ? zen.danger : zen.focus);
+          &rect, false, corner_radius, (button.flag & BUT_REDALERT) ? zen.danger : zen.focus);
     }
   }
   for (int i = 0; i < 4; i++) {
@@ -109,7 +112,12 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   }
   /* Native text owns RNA formatting, icons, selection, caret and IME. Explicit
    * island controls use their already-resolved artboard font. */
-  if (style.unit == 0.0f || input || style.component == MixarComponent::Number) {
+  /* Icon-only actions use native centering and DPI sizing, just like the
+   * equivalent Python layout controls. Artboard text padding belongs to
+   * icon-and-label rows and would shift a square action's glyph to the side. */
+  if (style.unit == 0.0f || input || style.component == MixarComponent::Number ||
+      (style.component == MixarComponent::Action && button.icon && button.str.empty()))
+  {
     return true;
   }
   /* Explicit surfaces host feature-owned content. The button retains its
