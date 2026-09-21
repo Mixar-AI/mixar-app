@@ -6,7 +6,7 @@
  * \ingroup spmixiechat
  *
  * QA harness target provider: exports the chat's custom-drawn clickable
- * geometry (message action/gate buttons, feedback stars, steps/thinking
+ * geometry (message action/gate buttons, feedback votes, steps/thinking
  * headers) from the SAME layout cache the click hit-testing reads
  * (mixie_chat_hit_testing.cc), so QA click targets can never drift from what
  * users actually click. Read-only.
@@ -69,6 +69,19 @@ void chat_qa_targets(const wmWindow * /*win*/,
   const blender::Vector<MessageLayoutData> &cache = mixie_chat_get_layout_cache(smixie);
 
   for (const MessageLayoutData &layout : cache) {
+    for (int i = 0; i < layout.action_button_count; i++) {
+      const ChatActionButton &button = layout.action_buttons[i];
+      MixarQATarget t;
+      if (button.type != CHAT_ACTION_COPY ||
+          !view_rect_to_window(region, button.bounds, &t.rect_win)) {
+        continue;
+      }
+      t.surface = "chat_message_copy";
+      t.text = "Copy response";
+      t.value = layout.bubble_id;
+      t.index = layout.message_index;
+      r_targets.push_back(std::move(t));
+    }
     for (int i = 0; i < layout.slot_action_count; i++) {
       const ActionSlotData &action = layout.slot_actions[i];
       MixarQATarget t;
@@ -82,14 +95,15 @@ void chat_qa_targets(const wmWindow * /*win*/,
       r_targets.push_back(std::move(t));
     }
     if (layout.has_feedback) {
-      for (const FeedbackStarData &star : layout.feedback_stars) {
+      for (const FeedbackVoteData &vote : layout.feedback_votes) {
         MixarQATarget t;
-        if (!view_rect_to_window(region, star.bounds, &t.rect_win)) {
+        if (!view_rect_to_window(region, vote.bounds, &t.rect_win)) {
           continue;
         }
-        t.surface = "chat_star";
-        t.text = layout.bubble_id;
-        t.index = star.star_index;
+        t.surface = "chat_feedback_vote";
+        t.text = vote.rating == 5 ? "Thumbs up" : "Thumbs down";
+        t.value = layout.bubble_id;
+        t.index = vote.rating;
         r_targets.push_back(std::move(t));
       }
       MixarQATarget t;
@@ -199,7 +213,7 @@ void mixie_chat_qa_targets_register()
   /* The floating Agent Bubble: SpaceAgentBubble is layout-identical to
    * SpaceMixieChat and renders chat history through the same code (see
    * space_agent_bubble.cc), so the same layout-cache targets apply — this is
-   * what makes gate buttons / rating stars clickable inside the bubble. */
+   * what makes gate buttons / feedback votes clickable inside the bubble. */
   Mixar_qa_register_target_provider(SPACE_AGENT_BUBBLE, chat_qa_targets);
 }
 

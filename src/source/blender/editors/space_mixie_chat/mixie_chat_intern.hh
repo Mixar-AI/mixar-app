@@ -139,9 +139,6 @@ void mixie_chat_render_feedback(const bContext *C,
                                 PointerRNA *msg_ptr,
                                 const ChatLayoutMetrics &metrics,
                                 const MessageLayoutData &layout);
-/* Vertical gap between the message's last content row and the feedback stars.
- * Shared by the layout pass and the render pass so they always agree. */
-float chat_ui_get_feedback_top_gap(const ChatLayoutMetrics &metrics);
 /* Pixel height for the in-progress feedback comment input, wrap-measured with
  * the exact widget_draw_text_multiline() font and line-height math so the
  * button grows one widget line at a time (Shift+Enter multi-line). Clamped to

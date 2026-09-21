@@ -28,7 +28,7 @@ from .chat_slot_types import (
     MixieChatImageItem,
     MixieChatStepItem,
 )
-from ...constants import SESSION_STATE_ITEMS, CHAT_INPUT_MAXLEN
+from ...constants import SESSION_STATE_ITEMS, CHAT_INPUT_MAXLEN, FEEDBACK_STATUS_SENDING
 
 logger = get_logger(__name__)
 
@@ -100,7 +100,7 @@ def on_feedback_comment_changed(self, context):
         return
     if not self.feedback_comment.strip():
         return
-    if self.feedback_comment_submitting:
+    if self.feedback_comment_submitting or self.feedback_status == FEEDBACK_STATUS_SENDING:
         return
     if not 1 <= int(self.feedback_rating) <= 5:
         logger.info(
@@ -353,13 +353,13 @@ class MixieChatMessage(PropertyGroup):
     # -------------------------------------------------------------------------
     feedback_visible: BoolProperty(
         name="Feedback Visible",
-        description="Whether to show the feedback rating row",
+        description="Whether to show feedback controls",
         default=False,
         options={'SKIP_SAVE'},
     )
     feedback_rating: IntProperty(
         name="Feedback Rating",
-        description="User's star rating (0=unrated, 1-5=rated)",
+        description="Response vote (0=unrated, 1=down, 5=up; legacy 1-5 supported)",
         default=0,
         min=0,
         max=5,
@@ -387,7 +387,7 @@ class MixieChatMessage(PropertyGroup):
     )
     feedback_status: IntProperty(
         name="Feedback Status",
-        description="Submission state: 0=idle, 1=sending, 2=received, 3=failed",
+        description="Local submission state: 0=idle, 2=submitted; 1/3 are legacy values",
         default=0,
         min=0,
         max=3,
@@ -395,7 +395,7 @@ class MixieChatMessage(PropertyGroup):
     )
     feedback_submitted_comment: StringProperty(
         name="Submitted Feedback Comment",
-        description="Comment accepted by the server, shown read-only in the chat",
+        description="Locally submitted comment, shown read-only in the chat",
         default="",
         maxlen=2000,
         options={'SKIP_SAVE'},

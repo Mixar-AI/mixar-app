@@ -252,7 +252,7 @@ struct MessageLayoutData {
   bool has_feedback;       /* feedback_visible is true */
   int feedback_rating;     /* 0=unrated, 1-5 */
   float feedback_row_height;
-  FeedbackStarData feedback_stars[FEEDBACK_STAR_COUNT];
+  FeedbackVoteData feedback_votes[FEEDBACK_VOTE_COUNT];
   rctf feedback_comment_bounds;
   bool feedback_comment_hovered;
   bool feedback_comment_expanded;  /* inline comment field visible */

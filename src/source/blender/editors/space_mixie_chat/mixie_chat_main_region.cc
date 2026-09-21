@@ -176,21 +176,17 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
     }
 
 
-    /* Feedback stars hover. Locked (in-flight or accepted) feedback is not
-     * interactive, so it gets no hover affordance either. */
-    const bool feedback_locked = layout.feedback_status == FEEDBACK_STATUS_SENDING ||
-                                 layout.feedback_status == FEEDBACK_STATUS_RECEIVED;
+    /* Only in-flight feedback is locked; accepted votes remain switchable. */
+    const bool feedback_locked = layout.feedback_status == FEEDBACK_STATUS_SENDING;
     if (layout.has_feedback) {
-      /* Stars keep the DEFAULT cursor: the fill preview is the hover
-       * affordance, and flipping to the hand while sweeping the row reads as
-       * flicker. So hover only drives needs_redraw, never any_hovered. */
-      for (int i = 0; i < FEEDBACK_STAR_COUNT; i++) {
-        FeedbackStarData &star = layout.feedback_stars[i];
-        bool was_hovered = star.is_hovered;
-        bool has_bounds = star.bounds.xmax > star.bounds.xmin;
-        star.is_hovered = !feedback_locked && has_bounds &&
-                          BLI_rctf_isect_pt(&star.bounds, mouse_x, mouse_y);
-        if (was_hovered != star.is_hovered) {
+      /* Vote buttons highlight on hover; the island keeps its default cursor. */
+      for (int i = 0; i < FEEDBACK_VOTE_COUNT; i++) {
+        FeedbackVoteData &vote = layout.feedback_votes[i];
+        bool was_hovered = vote.is_hovered;
+        bool has_bounds = vote.bounds.xmax > vote.bounds.xmin;
+        vote.is_hovered = !feedback_locked && has_bounds &&
+                          BLI_rctf_isect_pt(&vote.bounds, mouse_x, mouse_y);
+        if (was_hovered != vote.is_hovered) {
           needs_redraw = true;
         }
       }
@@ -198,7 +194,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
       bool was_comment_hovered = layout.feedback_comment_hovered;
       bool has_comment_bounds = layout.feedback_comment_bounds.xmax >
                                 layout.feedback_comment_bounds.xmin;
-      layout.feedback_comment_hovered = has_comment_bounds &&
+      layout.feedback_comment_hovered = !feedback_locked && has_comment_bounds &&
           BLI_rctf_isect_pt(&layout.feedback_comment_bounds, mouse_x, mouse_y);
       if (was_comment_hovered != layout.feedback_comment_hovered) {
         needs_redraw = true;

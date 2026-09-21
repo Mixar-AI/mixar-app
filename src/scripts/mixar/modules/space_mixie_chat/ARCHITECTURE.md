@@ -137,16 +137,20 @@ Persisting chat as scene properties means **chat survives `.blend` save/load** f
 
 ### Post-response feedback
 
-On a clean stream completion, `queue_processor.py` clears every stale
-`feedback_visible` flag and exposes the row only on the newest completed agent
-bubble. C++ layout/rendering lives in `mixie_chat_feedback.cc`; Python operators
-post `{session_id, bubble_id, rating, comment?}` to the backend without blocking
-Blender's main thread. Comments require a 1–5 rating and allow only one in-flight
-submission per bubble. Submission is optimistic fire-and-forget: the field
-clears and the row shows "received" immediately; a transport failure after the
-POST was queued is never surfaced (a lost rating is non-critical). Only a
-failure to queue the POST at all (no session, config error) reopens the form. Completion callbacks return to the
-main thread through `main_thread_executor.run_on_main_thread` before touching RNA.
+On a clean stream completion, `queue_processor.py` exposes feedback only on the
+newest completed agent bubble. Thumbs up/down share the copy action row and send
+ratings 5/1 through the existing `feedback` WebSocket command; 0 remains unrated.
+Votes update locally immediately and can switch without waiting for delivery;
+the same selected vote is a no-op. Delivery is best-effort on a sequential daemon
+worker to preserve click order. Missing sessions and transport failures stay silent.
+
+The compact Comment action opens an optional editor after a vote. Save (or Enter)
+submits and closes immediately; Close preserves the draft; Cancel discards it without
+posting. Locally submitted comments remain visible and are preserved when switching
+votes. The legacy RECEIVED RNA value means locally submitted; no delivery callback
+updates RNA, reopens drafts or shows sending/failure status. Native geometry drives
+rendering, hover, clicks and QA targets (`chat_feedback_vote`,
+`chat_feedback_comment`) in the island, the sole remaining chat surface.
 
 ## Session lifecycle
 
