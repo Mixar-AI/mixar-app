@@ -12,8 +12,8 @@ def template_available(template_id):
     return template is not None and capability_available(template[3])
 
 
-def create_template(scene, template_id, center):
-    """Create a draft near the view, reusing graph wiring and placement rules."""
+def create_template(scene, template_id, center, *, exact_position=False):
+    """Create a draft at a drop point, or find free space for a click."""
     if not template_available(template_id):
         raise ValueError("This template needs an available generation model. Check your connection.")
 
@@ -21,7 +21,11 @@ def create_template(scene, template_id, center):
     from .node_graph import create_connected_action
 
     node = create_connected_action(scene, template_id, allow_empty=True, drop_position=center)
-    node.position_x, node.position_y = find_free_asset_position(
-        scene, *center, node.width, node.height, exclude=node,
-    )
+    if exact_position:
+        node.position_x = center[0] - node.width * .5
+        node.position_y = center[1] - node.height * .5
+    else:
+        node.position_x, node.position_y = find_free_asset_position(
+            scene, *center, node.width, node.height, exclude=node,
+        )
     return node

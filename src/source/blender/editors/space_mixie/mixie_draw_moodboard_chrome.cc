@@ -5,6 +5,7 @@
 
 #include "mixie_moodboard_chrome.hh"
 #include "mixie_moodboard_node_layout.hh"
+#include "mixie_moodboard_template_drag.hh"
 
 #include "BKE_screen.hh"
 #include "BLF_api.hh"
@@ -50,6 +51,7 @@ static void draw_panel(const bContext *C,
                                         ui::LayoutType::Panel,
                                         x, y, width, 0, 0, ui::style_get_dpi());
   ui::UI_paneltype_draw(const_cast<bContext *>(C), pt, &layout);
+  moodboard_template_drag_buttons(C, block);
   ui::block_layout_resolve(block);
   ui::block_end(C, block);
   ui::block_draw(C, block);

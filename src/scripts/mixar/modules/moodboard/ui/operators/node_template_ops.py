@@ -17,7 +17,7 @@ from ...core.canvas_context import (
 class MIXIE_OT_moodboard_add_template(Operator):
     bl_idname = "mixie.moodboard_add_template"
     bl_label = "Add Node Template"
-    bl_description = "Add an editable draft; generation starts only when you press Generate"
+    bl_description = "Click to add a draft, or drag a shortcut onto the canvas to place it"
     bl_options = {'UNDO'}
 
     template: bpy.props.EnumProperty(
@@ -25,6 +25,9 @@ class MIXIE_OT_moodboard_add_template(Operator):
                for index, (key, label, icon, _capability) in enumerate(NODE_TEMPLATES)],
         options={'SKIP_SAVE'},
     )
+    from_drop: bpy.props.BoolProperty(default=False, options={'HIDDEN', 'SKIP_SAVE'})
+    drop_x: bpy.props.FloatProperty(options={'HIDDEN', 'SKIP_SAVE'})
+    drop_y: bpy.props.FloatProperty(options={'HIDDEN', 'SKIP_SAVE'})
 
     @classmethod
     def poll(cls, context):
@@ -37,16 +40,19 @@ class MIXIE_OT_moodboard_add_template(Operator):
         region = find_moodboard_canvas_region(context)
         if region is None:
             return {'CANCELLED'}
-        center = region.view2d.region_to_view(region.width * .5, region.height * .5)
+        center = ((self.drop_x, self.drop_y) if self.from_drop else
+                  region.view2d.region_to_view(region.width * .5, region.height * .5))
         try:
-            node = create_template(context.scene, self.template, center)
+            node = create_template(context.scene, self.template, center,
+                                   exact_position=self.from_drop)
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
             return {'CANCELLED'}
         context.scene.mixie_moodboard_link_drop_active = False
-        ensure_moodboard_region_visible(
-            node.position_x, node.position_y, node.width, node.height,
-        )
+        if not self.from_drop:
+            ensure_moodboard_region_visible(
+                node.position_x, node.position_y, node.width, node.height,
+            )
         redraw_moodboard_canvases()
         return {'FINISHED'}
 

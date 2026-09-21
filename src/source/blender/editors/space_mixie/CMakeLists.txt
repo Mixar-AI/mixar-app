@@ -38,6 +38,8 @@ set(SRC
   mixie_draw_moodboard_node_tile_controls.cc
   mixie_draw_moodboard_node_tooltips.cc
   mixie_moodboard_node_layout.cc
+  mixie_moodboard_template_drag.cc
+  mixie_moodboard_template_drag.hh
   mixie_draw_moodboard_images.cc
   mixie_draw_moodboard_texture_cache.cc
   mixie_draw_moodboard_textboxes.cc

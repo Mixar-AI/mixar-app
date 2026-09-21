@@ -42,6 +42,7 @@
 #include "DNA_space_types.h"
 
 #include "mixie_intern.hh"
+#include "mixie_moodboard_template_drag.hh"
 #include "UI_mixar_tokens.hh"
 #include "ED_moodboard_attachment.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -319,6 +320,7 @@ static void mixie_operatortypes()
   WM_operatortype_append(MIXIE_OT_moodboard_zoom);
   WM_operatortype_append(MIXIE_OT_moodboard_ensure_visible);
   WM_operatortype_append(MIXIE_OT_moodboard_frame);
+  WM_operatortype_append(MIXIE_OT_moodboard_drop_template);
   WM_operatortype_append(MIXIE_OT_moodboard_preview_media);
   WM_operatortype_append(MIXIE_OT_moodboard_rename_media);
   WM_operatortype_append(MIXIE_OT_moodboard_box_select);

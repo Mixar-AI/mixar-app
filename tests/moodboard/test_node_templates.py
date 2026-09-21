@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Templates remain catalog gated, editable, and non-overlapping."""
+"""Templates remain catalog gated and preserve click/drop placement semantics."""
 
 from types import SimpleNamespace as NS
 
@@ -35,7 +35,7 @@ def test_catalog_gate_filters_the_surface_and_requires_a_model(monkeypatch):
     assert calls == [('image_gen', 'moodboard')] * 2
 
 
-def test_repeated_templates_create_separate_editable_drafts(monkeypatch):
+def test_clicks_avoid_overlap_and_drops_use_the_release_position(monkeypatch):
     from mixar.modules.moodboard.core import node_graph, node_templates
 
     class Nodes(list):
@@ -58,6 +58,12 @@ def test_repeated_templates_create_separate_editable_drafts(monkeypatch):
     assert (first.position_x, first.position_y) != (second.position_x, second.position_y)
     assert all(n.state == 'DRAFT' and not n.job_id for n in (first, second))
     assert scene.mixie_moodboard_active_node_id == second.node_id
+    dropped = node_templates.create_template(scene, 'IMAGE_GEN', (100, 200),
+                                             exact_position=True)
+    assert dropped.position_x + dropped.width / 2 == 100
+    assert dropped.position_y + dropped.height / 2 == 200
+    assert (dropped.position_x, dropped.position_y) == (first.position_x, first.position_y)
+    assert dropped.state == 'DRAFT' and not dropped.job_id
 
 
 def test_parameter_explanations_keep_catalog_description_bounds_and_required():
