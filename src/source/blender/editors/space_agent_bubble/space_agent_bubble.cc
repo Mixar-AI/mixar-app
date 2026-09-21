@@ -301,6 +301,7 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
  * otherwise cover the canvas the user is writing on. */
 bool mixie_chat_ink_read_visible(wmWindowManager *wm);
 bool mixie_chat_rules_read_visible(wmWindowManager *wm);
+bool mixie_chat_history_read_visible(wmWindowManager *wm);
 void mixie_chat_draw_rules_overlay(const bContext *C, ARegion *region);
 void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
 void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region);
@@ -538,9 +539,8 @@ static void agent_bubble_island_controls_header(const bContext *C,
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               "Checkpoints — go back to an earlier turn of this chat");
     agent_bubble_rect_to_region(region, layout->hdr_rules, &bx, &by, &bw, &bh);
-    uiDefIconButO(block, ui::ButtonType::But, "mixie_chat.add_rules",
-                  blender::wm::OpCallContext::InvokeDefault,
-                  ICON_TEXT, bx, by, bw, bh,
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_rules",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
                   "Rules — edit project and global rules for the agent");
   }
   ui::block_end(C, block);
@@ -1026,8 +1026,9 @@ static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*reg
   /* Not while padded: the grow-once would drag the pad back to the island's
    * default width. The latch stays unset so it still fires once the pad has
    * been restored. */
-  const bool rules_open = mixie_chat_rules_read_visible(CTX_wm_manager(C));
-  if ((has_conversation || rules_open) && !g_bubble_grown_for_chat && !g_bubble_pad_active) {
+  const bool overlay_open = mixie_chat_rules_read_visible(CTX_wm_manager(C)) ||
+                            mixie_chat_history_read_visible(CTX_wm_manager(C));
+  if ((has_conversation || overlay_open) && !g_bubble_grown_for_chat && !g_bubble_pad_active) {
     g_bubble_grown_for_chat = true;
 #if defined(__APPLE__) || defined(_WIN32)
     const int floor = AGENT_BUBBLE_DEFAULT_HEIGHT + AGENT_BUBBLE_TRANSCRIPT_HEIGHT;
@@ -1132,7 +1133,9 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
   AgentIslandState empty_probe;
   agent_ui_state_gather(C, &empty_probe);
   const bool ink_canvas_open = empty_probe.ink_visible;
-  if (draw_chat || mixie_chat_rules_read_visible(CTX_wm_manager(C))) {
+  if (draw_chat || mixie_chat_rules_read_visible(CTX_wm_manager(C)) ||
+      mixie_chat_history_read_visible(CTX_wm_manager(C)))
+  {
     mixie_chat_set_bg_override(panel_bg);
     mixie_chat_main_region_draw(C, region);
     mixie_chat_clear_bg_override();
@@ -1174,8 +1177,9 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
      * — it resets the runtime and drops the idle timer, which is the point. */
     mixie_chat_draw_ink_overlay(C, region);
     agent_bubble_fill_region_backdrop(region);
-    /* Clear the modal runtime on the closing edge before restoring the field. */
+    /* Clear modal runtimes on the closing edge before restoring the field. */
     mixie_chat_draw_rules_overlay(C, region);
+    mixie_chat_draw_history_overlay(C, region);
 
     rctf r;
     r.xmin = 0.0f;

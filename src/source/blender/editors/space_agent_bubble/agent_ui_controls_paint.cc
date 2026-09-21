@@ -183,6 +183,17 @@ void agent_ui_draw_handwriting_control(ARegion *region,
                                        const AgentIslandLayout *layout,
                                        const AgentIslandState *state)
 {
+  /* Paint the Rules action alongside the other header controls. Native
+   * uiBlocks own its hit rectangle and tooltip, just like Checkpoints. */
+  const float rules_accent[4] = AGENT_COL_ACCENT;
+  const float glyph[4] = AGENT_COL_GLYPH;
+  float rules_fill[4];
+  agent_ui_motion_color(rules_accent, rules_accent,
+                        agent_ui_motion_sample(region, AgentIslandControl::Rules,
+                                               layout->hdr_rules), rules_fill);
+  fill_round(&layout->hdr_rules, BLI_rctf_size_x(&layout->hdr_rules) * 0.5f, rules_fill);
+  agent_ui_icon_draw(AGENT_ICON_RULES, &layout->hdr_rules, glyph, rules_fill);
+
   if (!state->handwriting_available) {
     return;
   }

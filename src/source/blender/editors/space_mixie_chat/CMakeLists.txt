@@ -51,6 +51,9 @@ set(SRC
   mixie_chat_props.cc
   mixie_chat_rules_events.cc
   mixie_chat_rules_overlay.cc
+  mixie_chat_rules_chrome.cc
+  mixie_chat_rules_editor.cc
+  mixie_chat_rules_rows.cc
   mixie_chat_rules_util.cc
   mixie_chat_scroll_indicator.cc
   mixie_chat_selection.cc

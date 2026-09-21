@@ -31,6 +31,7 @@ enum AgentIcon {
   AGENT_ICON_CLOCK,
   AGENT_ICON_PLUS,
   AGENT_ICON_RESTORE, /* Counter-clockwise arrow arc — turn checkpoints. */
+  AGENT_ICON_RULES,   /* Document outline — project/global rules. */
 
   /* Chip row, and the two tabs the design leaves unmarked. */
   AGENT_ICON_IMAGE, /* Framed picture — Image tab and Upload Reference. */

@@ -30,6 +30,7 @@
 
 #include "mixie_chat_history_intern.hh"
 #include "mixie_chat_intern.hh"
+#include "mixie_chat_rules_intern.hh"
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
 
@@ -162,7 +163,10 @@ void chat_qa_targets(const wmWindow * /*win*/,
    * = its section ("Turns", "Reverted turns", "Safety copies"). */
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
   if (rt != nullptr && rt->rules_overlay_active) {
-    const auto add_rules_target = [&](const char *surface, const rctf &bounds) {
+    const auto add_rules_target = [&](const char *surface, const rctf &bounds,
+                                      const char *text = "", int index = -1,
+                                      bool selected = false, bool enabled = true,
+                                      bool in_list = false) {
       rctf visible = bounds;
       visible.xmin = std::max(visible.xmin, 0.0f);
       visible.ymin = std::max(visible.ymin, 0.0f);
@@ -171,17 +175,46 @@ void chat_qa_targets(const wmWindow * /*win*/,
       if (visible.xmax <= visible.xmin || visible.ymax <= visible.ymin) {
         return;
       }
+      if (in_list) {
+        visible.ymin = std::max(visible.ymin, rt->rules_list_bounds.ymin);
+        visible.ymax = std::min(visible.ymax, rt->rules_list_bounds.ymax);
+        if (visible.ymax <= visible.ymin) {
+          return;
+        }
+      }
       MixarQATarget target;
       target.surface = surface;
+      target.text = text;
+      target.index = index;
+      target.sel = selected;
+      target.enabled = enabled;
       target.rect_win = {region->winrct.xmin + int(visible.xmin),
                          region->winrct.xmin + int(visible.xmax),
                          region->winrct.ymin + int(visible.ymin),
                          region->winrct.ymin + int(visible.ymax)};
       r_targets.push_back(std::move(target));
     };
-    add_rules_target("chat_rules_editor", rt->rules_text_bounds);
-    add_rules_target("chat_rules_submit", rt->rules_submit_bounds);
-    add_rules_target("chat_rules_close", rt->rules_close_bounds);
+    add_rules_target("chat_rules_panel", rt->rules_panel_bounds, "Project Rules");
+    add_rules_target("chat_rules_editor", rt->rules_text_bounds, "Rule text");
+    add_rules_target("chat_rules_submit", rt->rules_submit_bounds,
+                     rt->rules_editing_index >= 0 ? "Save" : "Add Rule", -1, false,
+                     mixie_chat_rules_can_submit(rt));
+    add_rules_target("chat_rules_close", rt->rules_close_bounds, "Close");
+    add_rules_target("chat_rules_list", rt->rules_list_bounds, "Rules");
+    for (const RuleRowHit &row : rt->rules_rows) {
+      add_rules_target("chat_rules_toggle", row.toggle_bounds, "Enabled", row.index,
+                       row.enabled, true, true);
+      add_rules_target("chat_rules_edit", row.edit_bounds, "Edit", row.index,
+                       rt->rules_editing_index == row.index, true, true);
+      add_rules_target("chat_rules_scope",
+                       mixie_chat_rules_scope_choice_bounds(row.scope_bounds, false),
+                       RULES_SCOPE_PROJECT, row.index, !row.is_global, true, true);
+      add_rules_target("chat_rules_scope",
+                       mixie_chat_rules_scope_choice_bounds(row.scope_bounds, true),
+                       RULES_SCOPE_GLOBAL, row.index, row.is_global, true, true);
+      add_rules_target("chat_rules_delete", row.delete_bounds, "Delete", row.index,
+                       rt->rules_confirm_delete == row.index, true, true);
+    }
   }
   if (rt != nullptr && rt->history_overlay_active) {
     wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
