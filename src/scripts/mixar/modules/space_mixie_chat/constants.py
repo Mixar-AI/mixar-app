@@ -13,26 +13,20 @@ import sys
 from enum import Enum
 
 
-# ============================================================================
 # DEVELOPMENT MODE
-# ============================================================================
 
 # Set to True to bypass WebSocket connection and use dummy data for UI dev
 DEV_MODE = False
 
 
-# ============================================================================
 # STARTUP
-# ============================================================================
 
 # Delay before agent connection attempts on startup (seconds)
 STARTUP_DELAY_SECONDS = 1.0
 
 
 
-# ============================================================================
 # SCENE ROUTING
-# ============================================================================
 
 # The backend addresses every execute_script with a `session_id` that acts as a
 # scene-routing key (backend: decorator.execute_script_on_instance / services).
@@ -64,9 +58,7 @@ def is_lane_scene(scene) -> bool:
     return getattr(scene, 'mixie_session_id', '').startswith(AGENT_LANE_SESSION_PREFIX)
 
 
-# ============================================================================
 # SESSION STATES
-# ============================================================================
 
 class SessionState(Enum):
     """Session states for the chat workflow.
@@ -111,9 +103,7 @@ STATE_LABELS = {
 }
 
 
-# ============================================================================
 # JSON-RPC 2.0 METHODS (WebSocket communication)
-# ============================================================================
 
 class JSONRPCMethod:
     """JSON-RPC 2.0 method names for WebSocket communication."""
@@ -171,9 +161,7 @@ class JSONRPCMethod:
     GENERATION_AGENT_RESULT = "generation.agent_result"
 
 
-# ============================================================================
 # JSON-RPC ERROR CODES
-# ============================================================================
 
 class JSONRPCErrorCode:
     """Standard and custom JSON-RPC 2.0 error codes."""
@@ -191,9 +179,7 @@ class JSONRPCErrorCode:
     BLENDER_ERROR = -32006
 
 
-# ============================================================================
 # WEBSOCKET CLOSE CODES
-# ============================================================================
 
 # Custom WebSocket close code for authentication failure
 WS_CLOSE_AUTH_FAILED = 4001
@@ -206,18 +192,14 @@ WS_CLOSE_AUTH_FAILED = 4001
 DISCONNECT_REASON_AUTH_FAILED = "Authentication failed - please login again"
 
 
-# ============================================================================
 # WEBSOCKET CONFIGURATION DEFAULTS
-# ============================================================================
 
 DEFAULT_WS_URL_TEMPLATE = "/api/agent/ws"
 DEFAULT_RECONNECT_DELAY = 1.0
 DEFAULT_MAX_RECONNECT_DELAY = 30.0
 DEFAULT_PING_INTERVAL = 15.0
 
-# ============================================================================
 # AGENT FEEDBACK
-# ============================================================================
 
 
 # Feedback submission lifecycle shown inline on the rated message.
@@ -227,9 +209,7 @@ FEEDBACK_STATUS_SENDING = 1
 FEEDBACK_STATUS_RECEIVED = 2
 FEEDBACK_STATUS_FAILED = 3
 
-# ============================================================================
 # CONNECTION MANAGER SETTINGS
-# ============================================================================
 
 
 # WebSocket liveness: the client pings every ~15s and the server answers, so
@@ -264,16 +244,12 @@ WS_LIVENESS_PROBE_GRACE = 5.0
 WS_UI_STALE_THRESHOLD = 20.0
 
 
-# ============================================================================
 # UI CONSTANTS
-# ============================================================================
 
 CHAT_PLACEHOLDER_TEXT = "Chat messages will appear here..."
 CHAT_INPUT_PLACEHOLDER = "Type your message..."
 
-# ============================================================================
 # PROPERTY DEFAULTS
-# ============================================================================
 
 CHAT_INPUT_DEFAULT = ""
 CHAT_INPUT_MAXLEN = 10000
@@ -285,9 +261,7 @@ CHAT_INPUT_MAXLEN = 10000
 # the C++ overlay (mixie_chat_rules_intern.hh / mixie_chat_layout_data.hh).
 CHAT_RULES_MAXLEN = 10000
 
-# ============================================================================
 # '@' MENTION AUTOCOMPLETE
-# ============================================================================
 
 # Max suggestion rows in the dropdown. Must match FOOTER_MENTION_MAX_ROWS in
 # mixie_chat_footer_constants.hh — the C++ dropdown never draws more rows.
@@ -301,9 +275,7 @@ MENTION_QUERY_MAXLEN = 96
 # 320-byte buffer (MIXIE_MENTION_INSERT_SIZE) and refuses longer values.
 MENTION_INSERT_MAXLEN = 300
 
-# ============================================================================
 # SCRIBBLE (STYLUS HANDWRITING INPUT)
-# ============================================================================
 
 # Caps on one ink commit, frozen in lockstep with the C++ ink overlay
 # (INK_JSON_MAX / CHAT_INK_MAX_STROKES / CHAT_INK_MAX_POINTS in
@@ -385,9 +357,7 @@ SCRIBBLE_LOCAL_MAX_WIDTH_PX = 1400
 SCRIBBLE_LOCAL_PAGE_PAD_X = 160
 SCRIBBLE_LOCAL_PAGE_PAD_Y = 120
 
-# ============================================================================
 # VOICE INPUT CONSTANTS
-# ============================================================================
 # Platforms whose GHOST layer implements the Mixar_Speech* helpers
 # (GHOST_MixarSpeechCocoa.mm). An ALLOWLIST, like the bubble's window
 # controls: a platform earns Voice by having someone write its recogniser,
@@ -420,9 +390,7 @@ VOICE_BUFFER_SECONDS = 20
 # Stable toast id for permission / failure notices (re-pushing replaces).
 VOICE_TOAST_ID = "voice_input"
 
-# ============================================================================
 # IMAGE ATTACHMENT CONSTANTS
-# ============================================================================
 
 # Ceiling on the SOURCE file a user may attach. Attachments are downscaled and
 # JPEG re-encoded before upload (core/attachment_compression.py), so this no
@@ -436,10 +404,14 @@ SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.w
 # Movie containers the moodboard accepts. The agent chat has no video content
 # part on the wire (agent.chat carries image_url data URLs only), so these are
 # refused with a specific message instead of the generic "Unsupported format".
-VIDEO_FILE_FORMATS = {'.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi', '.mpg', '.mpeg'}
+VIDEO_FILE_FORMATS = {
+    '.avi', '.avs', '.divx', '.dv', '.flc', '.flv', '.gif', '.m2t', '.m2ts',
+    '.m2v', '.m4v', '.mkv', '.mov', '.movie', '.mp4', '.mpeg', '.mpg', '.mpg2',
+    '.mts', '.mv', '.mxf', '.ogg', '.ogv', '.r3d', '.ts', '.vob', '.webm',
+    '.wmv', '.xvid',
+}
 VIDEO_ATTACHMENT_REJECTED = (
-    "Videos can't be sent to the agent yet — attach a still frame, or add the "
-    "clip to the moodboard for Video Gen"
+    "Videos require Video mode. Remove the video to send to Agent."
 )
 THUMBNAIL_SIZE = (128, 128)
 MAX_ATTACHMENTS_PER_MESSAGE = 10
@@ -448,16 +420,12 @@ MAX_ATTACHMENTS_PER_MESSAGE = 10
 # 16384x16384 is a reasonable max (common GPU texture limit)
 MAX_IMAGE_DIMENSION = 16384
 
-# ============================================================================
 # MESSAGE LENGTH LIMITS
-# ============================================================================
 
 # Maximum length for chat messages to prevent memory/performance issues
 MAX_MESSAGE_LENGTH = 100000  # 100KB of text
 
-# ============================================================================
 # CHAT HISTORY ARCHIVE (core/chat_history.py)
-# ============================================================================
 
 # "New Chat" archives the current conversation to ~/.mixar/chat_history/
 # instead of destroying it. Oldest sessions beyond this cap are pruned.
@@ -468,9 +436,7 @@ CHAT_HISTORY_TITLE_MAXLEN = 48
 # Beyond this, remaining images keep their original (possibly temp) paths.
 CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 
-# ============================================================================
 # TIMER / EXECUTION CONSTANTS
-# ============================================================================
 
 # Timer interval for agent event queue processing (~60fps for short content)
 TIMER_INTERVAL = 1 / 60  # ~0.016s
@@ -513,9 +479,7 @@ AGENT_UNDO_GROUP_PER_TURN = False
 # the next script.
 AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN = 8
 
-# ============================================================================
 # SLOT EVENT PROCESSING
-# ============================================================================
 
 # Maximum content.append (streaming text) events processed per timer tick.
 # Higher = text drains faster, but each tick takes longer (blocks main loop).

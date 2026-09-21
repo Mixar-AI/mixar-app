@@ -75,8 +75,9 @@ int pane_board_selected_images(const bContext *C, Image **r_images, const int ma
       continue;
     }
     PointerRNA img_ptr = RNA_property_pointer_get(&item, img_prop);
-    if (img_ptr.data) {
-      r_images[count++] = static_cast<Image *>(img_ptr.data);
+    Image *image = static_cast<Image *>(img_ptr.data);
+    if (image && !ELEM(image->source, IMA_SRC_MOVIE, IMA_SRC_SEQUENCE)) {
+      r_images[count++] = image;
     }
   }
   RNA_property_collection_end(&iter);
@@ -145,8 +146,14 @@ float pane_ref_thumbs_paint(Image *const *images,
 
   float tx = x;
   int shown = 0;
+  /* Movies belong to the Video reference column. A stale image input must
+   * not resurrect one in the compact fallback row of another pane. */
+  const auto is_still = [](const Image *image) {
+    return image && !ELEM(image->source, IMA_SRC_MOVIE, IMA_SRC_SEQUENCE);
+  };
+  const int still_count = int(std::count_if(images, images + count, is_still));
   for (int i = 0; i < count && shown < PANE_REF_THUMB_MAX; i++) {
-    if (images[i] == nullptr) {
+    if (!is_still(images[i])) {
       continue;
     }
     /* Stop before the run would reach whatever sits to its right (Generate),
@@ -165,9 +172,9 @@ float pane_ref_thumbs_paint(Image *const *images,
     shown++;
   }
 
-  if (shown < count) {
+  if (shown < still_count) {
     char more[24];
-    SNPRINTF(more, "+%d", count - shown);
+    SNPRINTF(more, "+%d", still_count - shown);
     pane_label_left(more, tx + 2.0f * u, row_ymin + row_h * 0.5f, PANE_FONT_SUB * agent_ui_text_unit(), dim);
     tx += pane_text_width(more, PANE_FONT_SUB * agent_ui_text_unit()) + gap;
   }

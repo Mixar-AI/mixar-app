@@ -105,7 +105,8 @@ class MIXIE_CHAT_OT_send_message(Operator):
         return allowed
 
     def execute(self, context):
-        if model_change_pending(context.scene):
+        from ...core.attachment_validation import pending_video_attachments
+        if model_change_pending(context.scene) or pending_video_attachments(context.scene):
             self.report({'WARNING'}, can_send(context.scene)[1])
             return {'CANCELLED'}
         metrics = get_metrics()

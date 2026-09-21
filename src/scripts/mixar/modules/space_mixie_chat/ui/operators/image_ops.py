@@ -16,7 +16,7 @@ from bpy.props import CollectionProperty, EnumProperty, IntProperty, StringPrope
 from bpy.types import Operator, OperatorFileListElement
 from bpy_extras.io_utils import ImportHelper
 
-from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS
+from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS, VIDEO_ATTACHMENT_REJECTED
 from ...core import (
     cleanup_loaded_file_image,
     cleanup_loaded_file_images,
@@ -217,6 +217,9 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
             return {'CANCELLED'}
 
         image = bpy.data.images[image_name]
+        if image.source == 'MOVIE':
+            self.report({'WARNING'}, VIDEO_ATTACHMENT_REJECTED)
+            return {'CANCELLED'}
         if not image.has_data:
             self.report({'WARNING'}, "Image has no pixel data")
             return {'CANCELLED'}

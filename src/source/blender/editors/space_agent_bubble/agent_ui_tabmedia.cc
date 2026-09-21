@@ -351,7 +351,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
       int(upload.ymin),
       short(BLI_rctf_size_x(&upload)),
       short(BLI_rctf_size_y(&upload)),
-      video ? "Import selected reference stills for the video" : "Add reference images from disk");
+      video ? "Add reference images and videos from disk" : "Add reference images from disk");
 
   ui::mixar_style_button(
       upload_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
