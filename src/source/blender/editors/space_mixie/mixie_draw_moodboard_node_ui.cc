@@ -28,6 +28,8 @@
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
 #include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
+#include "GPU_state.hh"
 
 namespace blender::ed::mixie {
 
@@ -66,8 +68,20 @@ static void add_action_toolbar(const bContext *C,
   if (!moodboard_view_rect_to_region(v2d, region, node_rect, &node_region)) {
     return;
   }
-
+  rcti controls;
+  const bool controls_visible = moodboard_node_controls_rect(C, v2d, node, &controls);
   PointerRNA object_ptr = RNA_pointer_get(node, "preview_object");
+  PointerRNA preview_ptr = RNA_pointer_get(node, "preview_image");
+  const bool has_result = preview_ptr.data || object_ptr.data;
+  const int state = RNA_enum_get(node, "state");
+  const float header_actions = controls_visible && has_result && ELEM(state, 3, 4, 5) ?
+                                   moodboard_node_card_actions_width(preview_ptr.data != nullptr) :
+                                   0.0f;
+  rctf header_card;
+  BLI_rctf_rcti_copy(&header_card, &node_region);
+  moodboard_draw_node_header(
+      node, header_card, RNA_boolean_get(node, "selected"), header_actions);
+
   if (object_ptr.data) {
     rctf preview_rect = {node_rect.xmin + 6.0f,
                          node_rect.xmax - 6.0f,
@@ -79,13 +93,9 @@ static void add_action_toolbar(const bContext *C,
     }
   }
 
-  rcti controls;
-  if (!moodboard_node_controls_rect(C, v2d, node, &controls)) {
+  if (!controls_visible) {
     return;
   }
-  PointerRNA preview_ptr = RNA_pointer_get(node, "preview_image");
-  const bool has_result = preview_ptr.data || object_ptr.data;
-  const int state = RNA_enum_get(node, "state");
   const bool generation_running = ELEM(state, 1, 2);
   char node_id[MIXIE_GRAPH_ID_BUF];
   mixie_rna_string_get_clamped(node, "node_id", node_id, sizeof(node_id));
@@ -102,7 +112,6 @@ static void add_action_toolbar(const bContext *C,
   if (has_result && ELEM(state, 3, 4, 5)) {
     moodboard_add_node_card_actions(block,
                                     node_region,
-                                    moodboard_visible_canvas_rect(C),
                                     edit_mode,
                                     preview_ptr.data != nullptr,
                                     node_id);
@@ -112,8 +121,9 @@ static void add_action_toolbar(const bContext *C,
   }
 
   /* One stable model/settings entry, regardless of host width. */
-  const int margin = int(8 * UI_SCALE_FAC);
-  const int height = int(32 * UI_SCALE_FAC);
+  const auto metrics = ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC);
+  const int margin = int(metrics.padding);
+  const int height = int(metrics.control_height);
   char model[MIXIE_GRAPH_LABEL_BUF];
   mixie_rna_string_get_clamped(node, "model_label", model, sizeof(model));
   ui::Button *settings = ui::uiDefIconTextButO(block,
@@ -130,8 +140,8 @@ static void add_action_toolbar(const bContext *C,
   ui::mixar_style_button(settings, ui::MixarComponent::Action,
                         ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   RNA_string_set(ui::button_operator_ptr_ensure(settings), "node_id", node_id);
-  controls.ymax -= height + margin;
-  /* Tile controls use the visible intersection, never an off-canvas edge. */
+  controls.ymax -= height + int(metrics.gap);
+  /* All controls remain anchored to the full card, including off-canvas edges. */
   moodboard_add_node_tile_controls(
       block, node, controls, generation_running, has_result, state, edit_mode, node_id);
 }
@@ -141,20 +151,44 @@ static void add_asset_preview(View2D *v2d,
                               PointerRNA *node,
                               blender::Vector<ObjectPreviewDraw> &object_previews)
 {
-  PointerRNA object_ptr = RNA_pointer_get(node, "preview_object");
-  if (!object_ptr.data) {
+  rctf rect;
+  rect.xmin = RNA_float_get(node, "position_x");
+  rect.ymin = RNA_float_get(node, "position_y");
+  rect.xmax = rect.xmin + RNA_float_get(node, "width");
+  rect.ymax = rect.ymin + RNA_float_get(node, "height");
+  rcti card;
+  if (!moodboard_view_rect_to_region(v2d, region, rect, &card)) {
     return;
   }
+  rctf card_float;
+  BLI_rctf_rcti_copy(&card_float, &card);
+  moodboard_draw_node_header(node, card_float, RNA_boolean_get(node, "selected"));
 
-  rctf preview_rect;
-  preview_rect.xmin = RNA_float_get(node, "position_x") + 8.0f;
-  preview_rect.ymin = RNA_float_get(node, "position_y") + 8.0f;
-  preview_rect.xmax = preview_rect.xmin + RNA_float_get(node, "width") - 16.0f;
-  /* Keep the asset title strip visible above the object thumbnail. */
-  preview_rect.ymax = preview_rect.ymin + RNA_float_get(node, "height") - 52.0f;
-  rcti preview_region;
-  if (moodboard_view_rect_to_region(v2d, region, preview_rect, &preview_region)) {
-    object_previews.append({static_cast<Object *>(object_ptr.data), preview_region});
+  const auto metrics = ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC);
+  BLI_rcti_pad(&card, -int(metrics.padding), -int(metrics.padding));
+  if (BLI_rcti_size_x(&card) <= 0 || BLI_rcti_size_y(&card) <= 0) {
+    return;
+  }
+  PointerRNA object_ptr = RNA_pointer_get(node, "preview_object");
+  if (object_ptr.data) {
+    /* Preview icons are square; centre them inside the same padded card. */
+    const int side = std::min(BLI_rcti_size_x(&card), BLI_rcti_size_y(&card));
+    if (side < 16) {
+      return;
+    }
+    card.xmin += (BLI_rcti_size_x(&card) - side) / 2;
+    card.ymin += (BLI_rcti_size_y(&card) - side) / 2;
+    card.xmax = card.xmin + side;
+    card.ymax = card.ymin + side;
+    object_previews.append({static_cast<Object *>(object_ptr.data), card});
+  }
+  else {
+    const auto style = ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC);
+    const char *message = RNA_boolean_get(node, "scene_mesh_reference") ?
+                              "Mesh unavailable" : "3D asset";
+    const std::string label = ui::mixar_fit_text(message, BLI_rcti_size_x(&card), style);
+    ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card), BLI_rcti_cent_y(&card),
+                           style, ui::mixar_tokens::zen.secondary);
   }
 }
 
@@ -176,6 +210,13 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   ui::view2d_view_restore(C);
   ui::Block *block = ui::block_begin(
       C, region, "moodboard_floating_node_controls", blender::ui::EmbossType::Emboss);
+  const rcti canvas = moodboard_visible_canvas_rect(C);
+  rctf clip;
+  BLI_rctf_rcti_copy(&clip, &canvas);
+  ui::mixar_block_clip_set(block, clip);
+  int previous_scissor[4];
+  GPU_scissor_get(previous_scissor);
+  ui::mixar_block_clip_apply(region, block);
   blender::Vector<ObjectPreviewDraw> object_previews;
   CollectionPropertyIterator iter{};
   RNA_property_collection_begin(&scene_ptr, actions, &iter);
@@ -219,6 +260,8 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   /* Frame names are painted here rather than in the frame pass so that a
    * member drawn inside a frame can never cover the frame's own name. */
   mixie_draw_moodboard_frame_labels(v2d, region, &scene_ptr);
+  GPU_scissor(previous_scissor[0], previous_scissor[1],
+              previous_scissor[2], previous_scissor[3]);
   ui::view2d_view_ortho(v2d);
 }
 

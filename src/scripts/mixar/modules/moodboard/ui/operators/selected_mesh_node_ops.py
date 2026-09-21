@@ -8,6 +8,7 @@ import bpy
 from bpy.types import Operator
 
 from ...core.canvas_context import redraw_moodboard_canvases
+from ...core.asset_nodes import add_mesh_references, selected_mesh_objects
 from ...core.moodboard_utils import (
     ensure_moodboard_region_visible,
     get_moodboard_viewport_center,
@@ -31,37 +32,29 @@ def _canvas_center(context):
 
 
 class MIXIE_OT_add_selected_mesh_to_moodboard(Operator):
-    """Add the active mesh to Moodboard as a connectable 3D asset node"""
+    """Add selected meshes as live, connectable 3D references"""
 
     bl_idname = "mixie.add_selected_mesh_to_moodboard"
     bl_label = "Add Mesh to Moodboard"
     bl_description = (
-        "Add the selected mesh to the Moodboard as a 3D node for further connections"
+        "Add selected meshes as 3D nodes, or reveal their existing Moodboard references"
     )
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'UNDO'}
 
     @classmethod
     def poll(cls, context):
-        obj = getattr(context, "active_object", None)
-        if obj is None or getattr(obj, "type", None) != 'MESH':
+        if not selected_mesh_objects(context):
+            cls.poll_message_set("Select a mesh in Object Mode")
             return False
-        if getattr(obj, "mode", None) != 'OBJECT':
-            return False
-        try:
-            return bool(obj.select_get())
-        except (AttributeError, RuntimeError):
-            return False
+        return True
 
     def execute(self, context):
-        from ...core.asset_nodes import create_asset_node
-
-        obj = context.active_object
+        objects = selected_mesh_objects(context)
+        before = len(context.scene.mixie_moodboard_asset_nodes)
         try:
-            node = create_asset_node(
-                context.scene,
-                obj,
-                center=_canvas_center(context),
-            )
+            nodes = add_mesh_references(context.scene, objects,
+                                        center=_canvas_center(context),
+                                        active=context.active_object)
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
             return {'CANCELLED'}
@@ -75,16 +68,16 @@ class MIXIE_OT_add_selected_mesh_to_moodboard(Operator):
             except RuntimeError:
                 pass
 
-        ensure_moodboard_region_visible(
-            node.position_x,
-            node.position_y,
-            node.width,
-            node.height,
-        )
+        left = min(node.position_x for node in nodes)
+        bottom = min(node.position_y for node in nodes)
+        right = max(node.position_x + node.width for node in nodes)
+        top = max(node.position_y + node.height for node in nodes)
+        ensure_moodboard_region_visible(left, bottom, right-left, top-bottom)
         redraw_moodboard_canvases()
         if context.area:
             context.area.tag_redraw()
-        self.report({'INFO'}, f"Added '{obj.name}' to the Moodboard")
+        added = len(context.scene.mixie_moodboard_asset_nodes) - before
+        self.report({'INFO'}, f"Added {added} mesh reference(s); selected {len(nodes)} on the Moodboard")
         return {'FINISHED'}
 
 

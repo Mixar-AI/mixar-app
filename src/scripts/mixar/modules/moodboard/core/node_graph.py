@@ -181,7 +181,10 @@ def node_output_type(scene, node_id: str) -> str:
     action = action_node_by_id(scene, node_id)
     if action is not None:
         return output_type_for_action(action.action_type)
-    if asset_node_by_id(scene, node_id) is not None:
+    asset = asset_node_by_id(scene, node_id)
+    if asset is not None:
+        if getattr(asset, 'scene_mesh_reference', False):
+            return 'MESH' if mesh_source_object_names(scene, node_id) else ''
         return 'MESH'
     return ''
 
@@ -820,7 +823,9 @@ def mesh_source_object_names(scene, node_id: str) -> list:
     if asset is not None:
         preview = getattr(asset, "preview_object", None)
         if preview is not None:
-            return [preview.name]
+            return [preview.name] if getattr(preview, 'type', 'MESH') == 'MESH' else []
+        if getattr(asset, 'scene_mesh_reference', False):
+            return []
         return [name.strip() for name in asset.object_names.split(",") if name.strip()]
     return []
 
@@ -844,5 +849,4 @@ def input_source_object_names(scene, action_node) -> list:
         if names:
             return names
     return []
-
 

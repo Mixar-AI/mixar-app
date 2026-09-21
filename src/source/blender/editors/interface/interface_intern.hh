@@ -710,6 +710,8 @@ struct Block {
   float winmat[4][4] = {};
 
   rctf rect = {};
+  /** Optional viewport in block coordinates. Clips paint and input, never layout. */
+  std::optional<rctf> mixar_clip_rect;
   float aspect = 0.0f;
 
   BlockAlertLevel alert_level = BlockAlertLevel::None;

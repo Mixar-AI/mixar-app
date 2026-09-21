@@ -65,17 +65,32 @@ def find_free_asset_position(
 
 
 def create_asset_node(scene, obj, *, center=(0.0, 0.0)):
-    """Create and select a moodboard source node for one scene mesh object."""
+    """Add or reveal one scene mesh reference, preserving its identity and links."""
     if obj is None or getattr(obj, "type", None) != 'MESH':
         raise ValueError("Select a mesh object in Object Mode")
 
     from .node_graph import deselect_graph_nodes, new_node_id
+
+    existing = next((n for n in scene.mixie_moodboard_asset_nodes
+                     if getattr(n, 'preview_object', None) == obj
+                     and (getattr(n, 'scene_mesh_reference', False)
+                          or n.object_names == obj.name)), None)
+    if existing is not None:
+        if existing.title == existing.object_names:
+            existing.title = obj.name
+        existing.object_names = obj.name
+        existing.scene_mesh_reference = True
+        deselect_graph_nodes(scene)
+        existing.selected = True
+        scene.mixie_moodboard_active_node_id = existing.node_id
+        return existing
 
     node = scene.mixie_moodboard_asset_nodes.add()
     node.node_id = new_node_id()
     node.title = obj.name
     node.object_names = obj.name
     node.preview_object = obj
+    node.scene_mesh_reference = True
     node.position_x, node.position_y = find_free_asset_position(
         scene,
         center[0],
@@ -96,3 +111,34 @@ def create_asset_node(scene, obj, *, center=(0.0, 0.0)):
         # an icon preview for the current object state.
         pass
     return node
+
+
+def selected_mesh_objects(context):
+    """Object-mode selection in either canvas host, independent of active type."""
+    if getattr(context, 'mode', 'OBJECT') != 'OBJECT':
+        return []
+    return [obj for obj in getattr(context, 'selected_objects', ())
+            if getattr(obj, 'type', None) == 'MESH'
+            and getattr(obj, 'mode', 'OBJECT') == 'OBJECT']
+
+
+def add_mesh_references(scene, objects, *, center=(0.0, 0.0), active=None):
+    """One card per mesh, one selection for the batch, no scene-object mutation."""
+    meshes = []
+    for obj in objects:
+        if obj is None or getattr(obj, 'type', None) != 'MESH':
+            raise ValueError('Select mesh objects in Object Mode')
+        if obj not in meshes:
+            meshes.append(obj)
+    if not meshes:
+        raise ValueError('Select mesh objects in Object Mode')
+    # Adding a collection entry can relocate its earlier RNA elements. Hold
+    # identities during mutation and resolve live entries before selecting them.
+    node_ids = [create_asset_node(scene, obj, center=center).node_id for obj in meshes]
+    by_id = {node.node_id: node for node in scene.mixie_moodboard_asset_nodes}
+    nodes = [by_id[node_id] for node_id in node_ids]
+    for node in nodes:
+        node.selected = True
+    active_index = meshes.index(active) if active in meshes else 0
+    scene.mixie_moodboard_active_node_id = nodes[active_index].node_id
+    return nodes

@@ -55,10 +55,10 @@ def draw_moodboard_add_tools(layout, context):
 # NOTE: kept as a comment, not a docstring — a Menu's docstring is shown
 # as the button tooltip, and this rationale isn't meant for users.
 class MIXIE_MT_add_image_menu(Menu):
-    """Open an image or video, or choose existing media"""
+    """Add media or selected scene meshes"""
 
     bl_idname = "MIXIE_MT_add_image_menu"
-    bl_label = "Add Media"
+    bl_label = "Add References"
 
     def draw(self, context):
         layout = self.layout.mixar_surface(theme="ZEN", density="COMPACT")
@@ -75,6 +75,9 @@ class MIXIE_MT_add_image_menu(Menu):
             text="Add Existing Media",
             icon='IMAGE_DATA',
         )
+        layout.separator()
+        layout.operator("mixie.add_selected_mesh_to_moodboard",
+                        text="Add Selected Meshes", icon='OUTLINER_OB_MESH')
 
 
 class MIXIE_PT_mask_tools_popover(Panel):

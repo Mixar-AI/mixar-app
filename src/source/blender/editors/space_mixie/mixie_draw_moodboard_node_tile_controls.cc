@@ -24,9 +24,15 @@
 
 namespace blender::ed::mixie {
 
+float moodboard_node_card_actions_width(const bool has_media)
+{
+  const float height = MOODBOARD_NODE_HEADER_ROW_H * UI_SCALE_FAC;
+  const auto metrics = ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC);
+  return has_media ? 3.0f * height + 2.0f * metrics.gap : height;
+}
+
 void moodboard_add_node_card_actions(ui::Block *block,
                                      const rcti &card,
-                                     const rcti &canvas,
                                      const bool edit_mode,
                                      const bool has_media_result,
                                      const char *node_id)
@@ -46,17 +52,14 @@ void moodboard_add_node_card_actions(ui::Block *block,
    * once the node has finished. */
   const int height = int(MOODBOARD_NODE_HEADER_ROW_H * UI_SCALE_FAC);
   const int width = height;
-  const int gap = int(8 * UI_SCALE_FAC);
-  /* Held inside the painted canvas, which in the Zen drawer stops short of the
-   * grip: a card pushed against the top edge keeps its row rather than posting
-   * buttons into the viewport behind the drawer. */
-  const int row_y = std::clamp(card.ymax + int(MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC),
-                               canvas.ymin,
-                               std::max(canvas.ymin, canvas.ymax - height));
+  const int gap = int(ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC).gap);
+  /* Like the title, actions stay attached to the card. The block clips them
+   * at the canvas edge without moving them into a different row. */
+  const int row_y = card.ymax + int(MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
 
   /* Laid out from the right edge. Export claims the corner and Edit steps left
    * of it: reading order puts "adjust" before "take it away". */
-  int x = std::min(card.xmax, canvas.xmax) - width;
+  int x = card.xmax - width;
 
   /* Only a node whose result is MEDIA can be saved from here. A 3D result is an
    * object in the scene, not a board item, so there is nothing for the
@@ -151,12 +154,13 @@ void moodboard_add_node_tile_controls(ui::Block *block,
                                       const bool edit_mode,
                                       const char *node_id)
 {
-  const int margin = int(8 * UI_SCALE_FAC);
+  const auto metrics = ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC);
+  const int margin = int(metrics.padding);
   if (generation_running) {
     /* The tile already carries the Queued/Generating hint and the glow; the
      * prompt and Generate would draw disabled straight over that text. The
      * one action that makes sense mid-flight is stopping it. */
-    const int cancel_h = int(36 * UI_SCALE_FAC);
+    const int cancel_h = int(metrics.control_height);
     const int cancel_w = int(118 * UI_SCALE_FAC);
     ui::Button *cancel = ui::uiDefButO(block,
                                        ui::ButtonType::But,
@@ -179,8 +183,13 @@ void moodboard_add_node_tile_controls(ui::Block *block,
   else if (!has_result || state == 0 || edit_mode) {
     /* UI-factor sized like the left panel: the label renders at UI_SCALE_FAC,
      * so a fixed 118px clipped "Generate" to "Gener..." at high UI scale. */
-    const int generate_h = int(36 * UI_SCALE_FAC);
-    const int generate_w = int(118 * UI_SCALE_FAC);
+    const int generate_h = int(metrics.control_height);
+    const int refine_count = RNA_boolean_get(node, "show_prompt") ?
+                                 (RNA_boolean_get(node, "prompt_refined") ? 2 : 1) : 0;
+    /* Revert must fit without hiding the editor or changing its outer padding. */
+    const int generate_w = std::min(int(118 * UI_SCALE_FAC),
+                                    BLI_rcti_size_x(&tile) - 2 * margin -
+                                        refine_count * (generate_h + int(metrics.gap)));
     /* Make the prompt a tall multi-line text area: it spans from the top margin
      * down to just above the Generate button. Height comfortably exceeds
      * UI_UNIT_Y * 1.5 at any UI scale, which is what flips the native text
@@ -192,7 +201,7 @@ void moodboard_add_node_tile_controls(ui::Block *block,
      * below is still drawn. */
     if (RNA_boolean_get(node, "show_prompt")) {
       const int prompt_top = tile.ymax - margin;
-      const int prompt_bottom = tile.ymin + margin + generate_h + int(6 * UI_SCALE_FAC);
+      const int prompt_bottom = tile.ymin + margin + generate_h + int(metrics.gap);
       const int prompt_height = prompt_top - prompt_bottom;
       const int prompt_y = prompt_top - prompt_height;
       ui::Button *prompt = moodboard_screen_prop_button(block,
@@ -228,7 +237,7 @@ void moodboard_add_node_tile_controls(ui::Block *block,
       const bool refined = RNA_boolean_get(node, "prompt_refined");
       const bool refining = RNA_boolean_get(node, "prompt_refining");
       const int refine_w = generate_h;
-      const int refine_gap = int(8 * UI_SCALE_FAC);
+      const int refine_gap = int(metrics.gap);
       const int refine_y = tile.ymin + margin;
       int refine_x = tile.xmax - margin - generate_w - refine_gap - refine_w;
 

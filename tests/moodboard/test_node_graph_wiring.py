@@ -88,9 +88,8 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert '"MIXIE_OT_moodboard_run_action_node"' in tile
     # Node controls are SCREEN-space overlays: pixel space is restored first,
     # so the block is built in region coordinates and every rect it is handed
-    # has already been clipped to the painted canvas
-    # (moodboard_node_controls_rect), which in the Zen drawer stops short of the
-    # grip. The media name is painted text with no block of its own, so it runs
+    # stays anchored to the full card. The block clips paint and input to the
+    # canvas independently, including the drawer grip. The media name is painted text with no block of its own, so it runs
     # after the block is drawn and therefore lands on top of it.
     assert controls.index("view2d_view_restore(C)") < controls.index(
         "block_begin("

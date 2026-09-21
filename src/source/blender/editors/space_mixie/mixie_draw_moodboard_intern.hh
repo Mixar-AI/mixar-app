@@ -227,8 +227,7 @@ void moodboard_draw_socket_label(
 /** Canvas-space width from the same font used by the socket label painter. */
 float moodboard_socket_label_width(View2D *v2d, const char *label);
 
-/* Card chrome painted in CANVAS units, so it lines up with the hit-tests at
- * any zoom (mixie_draw_moodboard_graph_chrome.cc). */
+/* Card chrome: canvas-space surfaces/handles and screen-space titles. */
 /** The card itself: the shared glass pane, with a brighter rim while selected. */
 void moodboard_draw_card_background(const rctf &rect, bool selected);
 /** The breathing accent a QUEUED/RUNNING card wears. */
@@ -239,9 +238,14 @@ void moodboard_draw_node_resize_handles(View2D *v2d, const rctf &rect);
 /**
  * The header strip floating above a node card's top edge: the node's name (or,
  * unnamed, its type) on the left and its live queue state on the right. Painted
- * text rather than widgets, so the strip doubles as the card's drag handle.
+ * text rather than widgets; reserve space for visible header actions.
  */
-void moodboard_draw_node_header(PointerRNA *node, const rctf &rect, bool selected);
+/** Screen-space title row; the painter and QA capture share its geometry. */
+rctf moodboard_node_title_rect(const rctf &card);
+void moodboard_draw_node_header(PointerRNA *node,
+                                const rctf &rect,
+                                bool selected,
+                                float reserved_width = 0.0f);
 /** Why the last connection was refused, drawn beside the node it was aimed at.
  * Read-only: the message is posted and cleared from Python. */
 void moodboard_draw_graph_notice(PointerRNA *scene_ptr);
@@ -258,7 +262,8 @@ void moodboard_set_node_tooltip(ui::Button *but, const char *text);
 /**
  * The controls a node draws inside its own tile: the prompt and Generate, or
  * Cancel while a generation is in flight. Screen space, laid out inside the
- * visible card intersection #moodboard_node_controls_rect returns.
+ * full card rectangle #moodboard_node_controls_rect returns. The native block
+ * clips paint and hit targets independently, preserving spacing during pan.
  * (mixie_draw_moodboard_node_tile_controls.cc)
  */
 void moodboard_add_node_tile_controls(ui::Block *block,
@@ -278,9 +283,9 @@ void moodboard_add_node_tile_controls(ui::Block *block,
  * state, its result and its error either way. Preview and Export are scoped to
  * this node's own result rather than the selection.
  */
+float moodboard_node_card_actions_width(bool has_media);
 void moodboard_add_node_card_actions(ui::Block *block,
                                      const rcti &card,
-                                     const rcti &canvas,
                                      bool edit_mode,
                                      bool has_media_result,
                                      const char *node_id);

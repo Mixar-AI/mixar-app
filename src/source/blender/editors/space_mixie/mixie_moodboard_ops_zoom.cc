@@ -61,6 +61,17 @@ static wmOperatorStatus moodboard_zoom_invoke(bContext *C, wmOperator * /*op*/, 
  * A no-op when the target is already on screen.
  * \{ */
 
+/* Framing keeps the screen-sized title/action row above the topmost card.
+ * Canvas-unit margins shrink at low zoom and cannot provide this clearance. */
+static rcti framing_content_rect(const ScrArea *area, ARegion *region)
+{
+  rcti content = moodboard_visible_canvas_rect(area, region);
+  const int title_height = int(
+      (MOODBOARD_NODE_HEADER_LIFT + MOODBOARD_NODE_HEADER_ROW_H) * UI_SCALE_FAC);
+  content.ymax -= std::min(title_height, std::max(BLI_rcti_size_y(&content) / 2, 0));
+  return content;
+}
+
 /* Grow one region's visible rect so the target is on screen.  Returns true if
  * the view was changed. */
 static void frame_in_content_rect(ARegion *region, const rcti &content, const rctf &bounds)
@@ -87,7 +98,7 @@ static bool ensure_rect_visible_in_region(const ScrArea *area,
 {
   View2D *v2d = &region->v2d;
 
-  const rcti content = moodboard_visible_canvas_rect(area, region);
+  const rcti content = framing_content_rect(area, region);
   rctf visible;
   ui::view2d_region_to_view(v2d, content.xmin, content.ymin, &visible.xmin, &visible.ymin);
   ui::view2d_region_to_view(v2d, content.xmax, content.ymax, &visible.xmax, &visible.ymax);
@@ -217,7 +228,7 @@ static wmOperatorStatus moodboard_frame_exec(bContext *C, wmOperator *op)
   /* Unlike ensure-visible this SETS the rect, so the view zooms in as well as
    * out. View2D then re-validates it against the region aspect and the zoom
    * limits, which can only enlarge it -- the content stays framed. */
-  frame_in_content_rect(region, moodboard_visible_canvas_rect(C), bounds);
+  frame_in_content_rect(region, framing_content_rect(CTX_wm_area(C), region), bounds);
   ED_region_tag_redraw(region);
   return OPERATOR_FINISHED;
 }

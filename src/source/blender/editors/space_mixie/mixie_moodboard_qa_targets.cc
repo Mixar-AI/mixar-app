@@ -34,6 +34,7 @@
 #include "../interface/interface_qa_inspect.hh"
 
 #include "mixie_intern.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -93,6 +94,19 @@ void moodboard_qa_targets(const wmWindow *win,
   MoodboardGraphCache cache;
   blender::ed::mixie::moodboard_graph_cache_build(&scene_ptr, &cache);
 
+  blender::Set<std::string> asset_ids;
+  if (PropertyRNA *assets = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_asset_nodes")) {
+    CollectionPropertyIterator iter{};
+    RNA_property_collection_begin(&scene_ptr, assets, &iter);
+    while (iter.valid) {
+      char id[MIXIE_GRAPH_ID_BUF];
+      ed::mixie::mixie_rna_string_get_clamped(&iter.ptr, "node_id", id, sizeof(id));
+      asset_ids.add(id);
+      RNA_property_collection_next(&iter);
+    }
+    RNA_property_collection_end(&iter);
+  }
+
   for (const auto &item : cache.outputs.items()) {
     const std::string &node_id = item.key;
     const rctf &canvas_rect = item.value;
@@ -103,6 +117,25 @@ void moodboard_qa_targets(const wmWindow *win,
       t.surface = is_action ? "moodboard_node" : "moodboard_media";
       t.text = node_id;
       r_targets.push_back(std::move(t));
+    }
+    if (is_action || asset_ids.contains(node_id)) {
+      rcti card_pixels;
+      if (canvas_rect_to_window(region, canvas_rect, &card_pixels)) {
+        rctf card;
+        BLI_rctf_rcti_copy(&card, &card_pixels);
+        const rctf title = ed::mixie::moodboard_node_title_rect(card);
+        MixarQATarget heading;
+        BLI_rcti_rctf_copy(&heading.rect_win, &title);
+        rcti visible = ed::mixie::moodboard_visible_canvas_rect(
+            area, const_cast<ARegion *>(region));
+        BLI_rcti_translate(&visible, region->winrct.xmin, region->winrct.ymin);
+        if (BLI_rcti_isect(&heading.rect_win, &visible, &heading.rect_win)) {
+          heading.surface = "moodboard_node_title";
+          heading.text = node_id;
+          heading.enabled = false; /* Painted label, for visual capture only. */
+          r_targets.push_back(std::move(heading));
+        }
+      }
     }
     if (is_action) {
       rctf preview;

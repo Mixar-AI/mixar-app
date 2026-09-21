@@ -39,6 +39,14 @@ class _Collection(list):
         return node
 
 
+class _RelocatingCollection(_Collection):
+    """RNA collections can invalidate existing element wrappers when they grow."""
+
+    def add(self):
+        self[:] = [SimpleNamespace(**vars(node)) for node in self]
+        return super().add()
+
+
 class _Mesh:
     type = 'MESH'
 
@@ -122,6 +130,81 @@ def test_non_mesh_objects_are_rejected():
         create_asset_node(_scene(), SimpleNamespace(type='CURVE'))
 
 
+def test_readding_a_mesh_reuses_its_identity_position_and_links():
+    from mixar.modules.moodboard.core.asset_nodes import create_asset_node
+
+    scene, mesh = _scene(), _Mesh('Hero')
+    node = create_asset_node(scene, mesh)
+    node.title = 'Custom board title'
+    node.position_x = 1234
+    scene.mixie_moodboard_links.append(SimpleNamespace(from_node_id=node.node_id))
+    mesh.name = 'Renamed, Mesh'
+    repeated = create_asset_node(scene, mesh, center=(9999, 9999))
+    assert repeated is node and len(scene.mixie_moodboard_asset_nodes) == 2
+    assert node.position_x == 1234 and node.title == 'Custom board title'
+    assert node.object_names == mesh.name and node.scene_mesh_reference
+    assert scene.mixie_moodboard_links[0].from_node_id == node.node_id
+    assert mesh.preview_requests == 1
+
+
+def test_legacy_multi_object_asset_is_not_repurposed_as_a_single_mesh_reference():
+    from mixar.modules.moodboard.core.asset_nodes import create_asset_node
+
+    scene, mesh = _scene(), _Mesh('First')
+    legacy = scene.mixie_moodboard_asset_nodes[0]
+    legacy.preview_object = mesh
+    legacy.object_names = 'First,Second'
+    node = create_asset_node(scene, mesh)
+    assert node is not legacy and node.scene_mesh_reference
+    assert legacy.object_names == 'First,Second'
+
+
+def test_batch_add_keeps_every_mesh_selected_and_the_active_mesh_active():
+    from mixar.modules.moodboard.core.asset_nodes import add_mesh_references
+
+    scene, first, second = _scene(), _Mesh('First'), _Mesh('Second')
+    scene.mixie_moodboard_asset_nodes = _RelocatingCollection(scene.mixie_moodboard_asset_nodes)
+    nodes = add_mesh_references(scene, [first, second, first], active=first)
+    assert len(nodes) == 2 and all(n.selected for n in nodes)
+    assert all(n.selected for n in scene.mixie_moodboard_asset_nodes[1:])
+    assert scene.mixie_moodboard_active_node_id == nodes[0].node_id
+    assert (nodes[0].position_x, nodes[0].position_y) != (nodes[1].position_x, nodes[1].position_y)
+    assert not scene.mixie_moodboard_asset_nodes[0].selected
+    assert add_mesh_references(scene, [first, second]) == nodes
+    assert len(scene.mixie_moodboard_asset_nodes) == 3
+
+
+def test_invalid_batch_is_rejected_before_any_mesh_is_added():
+    from mixar.modules.moodboard.core.asset_nodes import add_mesh_references
+
+    scene = _scene()
+    with pytest.raises(ValueError):
+        add_mesh_references(scene, [_Mesh('Valid'), SimpleNamespace(type='CAMERA')])
+    assert len(scene.mixie_moodboard_asset_nodes) == 1
+
+
+def test_selection_filters_non_meshes_without_requiring_an_active_mesh():
+    from mixar.modules.moodboard.core.asset_nodes import selected_mesh_objects
+
+    mesh, camera = _Mesh('Selected'), SimpleNamespace(type='CAMERA')
+    context = SimpleNamespace(selected_objects=[camera, mesh], active_object=camera, mode='OBJECT')
+    assert selected_mesh_objects(context) == [mesh]
+    context.mode = 'EDIT_MESH'
+    assert selected_mesh_objects(context) == []
+
+
+def test_deleted_scene_reference_cannot_bind_to_a_replacement_with_the_same_name():
+    from mixar.modules.moodboard.core.asset_nodes import create_asset_node
+    from mixar.modules.moodboard.core.node_graph import mesh_source_object_names, node_output_type
+
+    scene = _scene()
+    node = create_asset_node(scene, _Mesh('Hero'))
+    node.preview_object = None
+    assert node.object_names == 'Hero'
+    assert mesh_source_object_names(scene, node.node_id) == []
+    assert node_output_type(scene, node.node_id) == ''
+
+
 def test_viewport_object_menu_registers_the_mesh_action():
     source = OPERATOR.read_text(encoding="utf-8")
 
@@ -130,8 +213,8 @@ def test_viewport_object_menu_registers_the_mesh_action():
     assert "VIEW3D_MT_object_context_menu.remove(_draw_object_context_menu)" in source
     draw = source.split("def _draw_object_context_menu")[1].split("classes =")[0]
     assert draw.index("self.layout.operator(") < draw.index("self.layout.separator()")
-    assert "getattr(obj, \"type\", None) != 'MESH'" in source
-    assert "getattr(obj, \"mode\", None) != 'OBJECT'" in source
+    assert "selected_mesh_objects(context)" in source
+    assert "cls.poll_message_set(\"Select a mesh in Object Mode\")" in source
     assert "bpy.ops.view3d.moodboard_drawer_reveal('EXEC_DEFAULT')" in source
 
 

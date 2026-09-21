@@ -79,19 +79,20 @@ bool moodboard_node_controls_rect(const bContext *C, View2D *v2d, PointerRNA *no
    * that still reads "Click this block to type a prompt" and has nothing to
    * click. */
   if (BLI_rcti_size_x(&card_region) <
-          std::max(MOODBOARD_GRAPH_CONTROLS_MIN_PX_X, int(180 * UI_SCALE_FAC)) ||
+          std::max(MOODBOARD_GRAPH_CONTROLS_MIN_PX_X, int(186.0f * UI_SCALE_FAC)) ||
       BLI_rcti_size_y(&card_region) <
           std::max(MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y, int(150 * UI_SCALE_FAC)))
   {
     return false;
   }
   const rcti canvas = moodboard_visible_canvas_rect(C);
-  if (!BLI_rcti_isect(&card_region, &canvas, r_rect)) {
+  if (!BLI_rcti_isect(&card_region, &canvas, nullptr)) {
     return false;
   }
-  /* A sliver has nowhere to put them, so that one does drop out. */
-  return BLI_rcti_size_x(r_rect) >= int(160 * UI_SCALE_FAC) &&
-         BLI_rcti_size_y(r_rect) >= int(120 * UI_SCALE_FAC);
+  /* Visibility never changes layout. The native block clips painting and
+   * hit targets to the canvas after laying out the whole card. */
+  *r_rect = card_region;
+  return true;
 }
 
 }  // namespace blender::ed::mixie
