@@ -98,47 +98,6 @@ def assert_chip_geometry(qa):
             assert min(a[2], b[2]) <= max(a[0], b[0]) or min(a[3], b[3]) <= max(a[1], b[1]), (a, b)
 
 
-def docked_escape_case(qa):
-    """Escape closes handwriting in a same-window chat without ending marks."""
-    qa.eval("import chat_send_probe; chat_send_probe.settle(bpy.context.scene)")
-    qa.eval("result=str(bpy.ops.mixar.bubble_minimise())")
-    qa.eval('''
-win=drv.main_window()
-area=next(a for a in win.screen.areas if a.type=='VIEW_3D')
-with bpy.context.temp_override(window=win,area=area):
-    bpy.ops.screen.area_split(direction='VERTICAL',factor=.62)
-''')
-    qa.eval('''
-win=drv.main_window()
-area=max(win.screen.areas,key=lambda a:a.x)
-area.type='MIXIE_CHAT'
-''')
-    qa.click(op='MIXAR_OT_scribble_toggle', area_type='MIXIE_CHAT')
-    qa.wait('bpy.context.window_manager.mixar_mark_armed', timeout=10)
-    qa.click(op='MIXIE_CHAT_OT_ink_toggle', area_type='MIXIE_CHAT')
-    qa.wait('bpy.context.window_manager.mixie_chat_ink_visible', timeout=10)
-    qa.eval('''
-w=drv.main_window()
-a=next(a for a in w.screen.areas if a.type=='MIXIE_CHAT')
-r=next(r for r in a.regions if r.type=='WINDOW')
-drv.move_to(w,r.x+r.width//2,r.y+r.height//2)
-''')
-    qa.press('ESC')
-    qa.wait('not bpy.context.window_manager.mixie_chat_ink_visible', timeout=10)
-    assert flags(qa)['marks'], 'Chat Escape must not end viewport annotation'
-    qa.cmd('set_text', widget={'prop':'mixie_chat_input','area_type':'MIXIE_CHAT'},
-           text='A typed prompt beside the annotated viewport.', enter=False)
-    qa.cmd('snap', path=str(OUT / '07-docked-typing.png'))
-    qa.press('ESC')  # End the active text edit before returning keyboard focus to the viewport.
-    assert flags(qa)['marks'], 'Composer Escape must leave annotation active'
-    qa.eval('''
-w=drv.main_window()
-a=next(a for a in w.screen.areas if a.type=='VIEW_3D')
-r=next(r for r in a.regions if r.type=='WINDOW')
-drv.move_to(w,r.x+r.width//2,r.y+r.height//2)
-''')
-    qa.press('ESC')
-    qa.wait('not bpy.context.window_manager.mixar_mark_armed', timeout=10)
 
 
 def run(qa):
@@ -229,7 +188,6 @@ result={'message':p['message'],'mark_count':len(p['mark_context']['marks']),
         qa.eval('result=str(bpy.ops.mixar.bubble_restore())')
         qa.wait("bool(drv.find(op='MIXAR_OT_scribble_toggle'))", timeout=10)
         snap(qa, '06-sent')
-        qa.step('docked_escape_and_typing', docked_escape_case, qa)
         return {'passed': True, 'voice': 'local capture/transport fixture',
                 'paid_requests': 0, 'payload': payload, 'steps': qa.log}
     finally:

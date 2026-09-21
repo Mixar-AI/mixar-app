@@ -17,7 +17,7 @@ class MIXIE_CHAT_PT_login(Panel):
     """Login panel for Mixie Chat"""
     bl_label = "Login"
     bl_idname = "MIXIE_CHAT_PT_login"
-    bl_space_type = 'MIXIE_CHAT'
+    bl_space_type = 'TOPBAR'
     bl_region_type = 'WINDOW'
 
     @classmethod

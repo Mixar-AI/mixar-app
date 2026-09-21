@@ -68,7 +68,8 @@ def run(qa):
             {'area_type': 'AGENT_BUBBLE', 'text': 'Agent chat'},
             out/'island-tab', native=False)
         for label, value in (('3D generation', 'THREE_D'),
-                             ('Image and video generation', 'MEDIA'),
+                             ('Image generation', 'IMAGE'),
+                             ('Video generation', 'VIDEO'),
                              ('Gaussian Splat world generation', 'SPLAT'),
                              ('Generation queue', 'QUEUE'), ('Agent chat', 'AGENT')):
             qa.step(f'tab_{value}', qa.click, area_type='AGENT_BUBBLE', text=label)

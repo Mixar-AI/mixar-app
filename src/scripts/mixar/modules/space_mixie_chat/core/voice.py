@@ -279,7 +279,7 @@ def _focus_composer(session):
         if window.as_pointer() != session.window or window.scene != session.scene:
             continue
         for area in window.screen.areas:
-            if area.as_pointer() == session.area and area.type in {'MIXIE_CHAT', 'AGENT_BUBBLE'}:
+            if area.as_pointer() == session.area and area.type in {'AGENT_BUBBLE'}:
                 with bpy.context.temp_override(window=window, area=area):
                     bpy.ops.mixie_chat.focus_composer()
                 return

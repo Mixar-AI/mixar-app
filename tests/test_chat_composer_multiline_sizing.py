@@ -15,7 +15,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CHAT = ROOT / "src/source/blender/editors/space_mixie_chat"
 LAYOUT = (CHAT / "mixie_chat_footer_layout.cc").read_text(encoding="utf-8")
-FOOTER = (CHAT / "mixie_chat_footer.cc").read_text(encoding="utf-8")
 INTERN = (CHAT / "mixie_chat_footer_intern.hh").read_text(encoding="utf-8")
 WIDGETS = (ROOT / "src/source/blender/editors/interface/interface_widgets.cc").read_text(
     encoding="utf-8"
@@ -58,11 +57,6 @@ def test_box_height_holds_exactly_the_counted_rows():
     assert "FOOTER_INPUT_MAX_LINE_COUNT (6)" in INTERN
 
 
-def test_draw_tags_a_region_size_update_only_when_the_height_changes():
-    draw = body(FOOTER, "void mixie_chat_footer_region_draw(", "\n}\n")
-    tag = draw.index("ED_area_tag_region_size_update(area, region);")
-    guard = draw.rindex("if (region->sizey != required_height_unscaled)", 0, tag)
-    assert draw.index("region->sizey = required_height_unscaled;", guard) < tag
 
 
 def test_multiline_painter_restores_the_blocks_alpha_blend():

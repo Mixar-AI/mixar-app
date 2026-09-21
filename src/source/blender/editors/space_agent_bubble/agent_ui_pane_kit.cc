@@ -205,21 +205,6 @@ rctf pane_generate_rect(const rctf &box, const float u)
   return rect;
 }
 
-void pane_settings_button(ui::Block *block, const float right, const float top,
-                          const float u, const char *service, const char *model)
-{
-  ui::Button *button = uiDefButO(block, ui::ButtonType::But, "mixar.pane_generation_settings",
-      wm::OpCallContext::InvokeDefault, "Settings", int(right - PANE_SETTINGS_W * u),
-      int(top - PANE_ROW_H * u), short(PANE_SETTINGS_W * u), short(PANE_ROW_H * u),
-      "Edit all settings, including parameters that do not fit in the strip");
-  ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
-  if (button) {
-    PointerRNA *props = ui::button_operator_ptr_ensure(button);
-    RNA_string_set(props, "service_key", service);
-    RNA_string_set(props, "model_slug", model);
-  }
-}
-
 float pane_action_chip_w(const char *label, const bool with_icon, const float u)
 {
   const float pad = PANE_CHIP_PAD_X * u;

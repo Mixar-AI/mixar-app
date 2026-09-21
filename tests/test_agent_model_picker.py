@@ -150,8 +150,7 @@ def test_byok_active_disables_every_row():
 
     assert any(row.kind == "NOTE" for row in rows)
     # Every row EXCEPT the key route, which must stay clickable — it is the
-    # only way to clear the key that is disabling everything else, and since
-    # PR #1562 the only route to the AI Provider Settings dialog at all.
+    # way to clear the key without leaving the chat model picker.
     assert all(row.enabled is False for row in rows if row.kind != "BYOK")
     byok = [row for row in rows if row.kind == "BYOK"]
     assert len(byok) == 1 and byok[0].enabled is True
@@ -307,15 +306,7 @@ def test_the_wm_mirror_registers_exactly_the_contracted_property_names():
 
 
 def test_the_key_route_is_always_reachable():
-    """The escape hatch, and the reason it exists.
-
-    PR #1562 (bugfix/mixie-chat-qa-round) removed the AI Provider Settings
-    entry from BOTH the account card and the chat's topbar fallback menu,
-    leaving `mixar_byok.open_dialog` registered but unreachable. A user with a
-    key configured then had every model row greyed by that key and no way to
-    clear it. This row is the only remaining route, so it must survive every
-    state the menu can be in.
-    """
+    """Keep the chat's shared settings route reachable in every menu state."""
     states = {
         "populated": model_menu.build_rows([_record("a")]),
         "empty": model_menu.build_rows([]),

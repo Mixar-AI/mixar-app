@@ -4,11 +4,9 @@
 
 """The hosted agent-model picker menu.
 
-**`bl_idname` is a cross-language contract.** Both surfaces draw one button in
-C++ — the Mixie Chat footer's bottom control row and the Agent Bubble island's
-chip row — and that button is a `wm.call_menu` whose ``name`` is this id. Python
-owns the whole picker; C++ owns a label and a click. Renaming it leaves two
-buttons that pop nothing.
+**`bl_idname` is a cross-language contract.** The floating island draws a
+`wm.call_menu` Model chip whose ``name`` is this id. Python owns the picker;
+C++ owns its label and click. Profile settings uses the same BYOK dialog.
 
 **Two menus, one level deep.** The parent lists the models flat; the thinking
 levels live in a submenu that reads the CURRENT pick. Drawing every model's
@@ -64,10 +62,9 @@ def _draw_row(layout, row) -> None:
         # operator does all its work in invoke() (execute() is a deliberate
         # no-op) — so without this the row ran execute(), returned FINISHED
         # and opened nothing. Pinned by tests/test_agent_model_picker.py and
-        # driven for real in tests/qa/agent_model_picker_e2e.py.
+        # driven for real in tests/qa/profile_provider_settings_e2e.py.
         line.operator_context = 'INVOKE_DEFAULT'
-        # `row.active` means a key is currently in use — same icon pair the
-        # topbar entry used before PR #1562 removed it.
+        # Same active-key icon pair as the profile's fallback menu.
         line.operator(
             "mixar_byok.open_dialog",
             text=row.label,

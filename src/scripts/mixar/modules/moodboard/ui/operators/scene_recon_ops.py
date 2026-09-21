@@ -393,7 +393,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
                     scene.mixie_scene_recon_error = message
                     for window in bpy.context.window_manager.windows:
                         for area in window.screen.areas:
-                            if area.type in ("MIXIE", "MIXIE_CHAT"):
+                            if area.type in ("MIXIE", "AGENT_BUBBLE"):
                                 area.tag_redraw()
                 except Exception:
                     pass

@@ -165,7 +165,7 @@ def _redraw_chat_regions():
         return
     for window in wm.windows:
         for area in window.screen.areas:
-            if area.type in {'MIXIE_CHAT', 'AGENT_BUBBLE'}:
+            if area.type in {'AGENT_BUBBLE'}:
                 area.tag_redraw()
 
 

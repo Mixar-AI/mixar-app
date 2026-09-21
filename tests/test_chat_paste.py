@@ -45,7 +45,7 @@ from mixar.modules.space_mixie_chat.ui.operators import clipboard_ops  # noqa: E
 CPP = ROOT / "src" / "source" / "blender" / "editors"
 KEYMAP_PY = SCRIPTS / "mixar" / "modules" / "space_mixie_chat" / "ui" / "keymap.py"
 HANDLERS_CC = CPP / "interface" / "interface_handlers.cc"
-CHAT_CC = CPP / "space_mixie_chat" / "space_mixie_chat.cc"
+CHAT_CC = CPP / "space_mixie_chat" / "mixie_chat_ops.cc"
 BUBBLE_CC = CPP / "space_agent_bubble" / "space_agent_bubble.cc"
 
 

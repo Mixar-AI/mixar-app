@@ -80,12 +80,10 @@ def test_the_params_strip_never_returns_a_bottom_below_its_floor():
     )
 
 
-def test_hidden_parameters_remain_reachable_through_settings():
-    for source in (TAB3D, MEDIA):
-        assert "pane_settings_button(" in source
-    assert "PANE_SETTINGS_W" in TAB3D
-    assert "PANE_SETTINGS_W" in MEDIA
-    assert "PANE_SETTINGS_W" in SPLAT_PAINT
+def test_generation_strips_reclaim_the_settings_shortcut_space():
+    for source in (TAB3D, MEDIA, SPLAT, SPLAT_PAINT):
+        assert "pane_settings_button(" not in source
+        assert "PANE_SETTINGS_W" not in source
     assert "pane_schema_param_visible(" in TAB3D_PARAMS
     media_util = (CPP / "agent_ui_tabmedia_util.cc").read_text(encoding="utf-8")
     splat = (CPP / "agent_ui_tabsplat.cc").read_text(encoding="utf-8")

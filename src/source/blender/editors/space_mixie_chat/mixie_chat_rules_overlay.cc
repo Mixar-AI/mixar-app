@@ -76,7 +76,7 @@ static SpaceMixieChat *rules_space_from_area(ScrArea *area)
   /* SPACE_AGENT_BUBBLE reuses these callbacks via its layout-compatible
    * spacedata struct (same as the history overlay). */
   if (!area || !area->spacedata.first ||
-      (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE))
+      (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return nullptr;
   }

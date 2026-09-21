@@ -109,16 +109,11 @@ const EnumPropertyItem rna_enum_space_type_items[] = {
      ICON_IMAGE_PLANE,
      "Moodboard",
      "Moodboard for your style context"},
-    {SPACE_MIXIE_CHAT,
-     "MIXIE_CHAT",
-     ICON_WORDWRAP_ON,
-     "Mixie Chat",
-     "Chat interface for Mixar"},
     {SPACE_AGENT_BUBBLE,
      "AGENT_BUBBLE",
      ICON_OUTLINER_OB_LIGHT,
      "Agent Bubble",
-     "Floating agent chat overlay (small variant of Mixie Chat)"},
+     "Floating agent chat overlay"},
     {SPACE_NODE,
      "NODE_EDITOR",
      ICON_NODETREE,
@@ -847,8 +842,6 @@ static StructRNA *rna_Space_refine(PointerRNA *ptr)
       return RNA_SpaceSpreadsheet;
     case SPACE_MIXIE:
       return RNA_SpaceMixie;
-    case SPACE_MIXIE_CHAT:
-      return RNA_SpaceMixieChat;
     case SPACE_AGENT_BUBBLE:
       return RNA_SpaceAgentBubble;
     case SPACE_MIXAR_LAYERS:
@@ -9620,15 +9613,6 @@ static void rna_def_space_mixie(BlenderRNA *brna)
   RNA_def_property_update(prop, NC_SPACE | ND_SPACE_MIXIE, "rna_SpaceMixie_mode_update");
 }
 
-static void rna_def_space_mixie_chat(BlenderRNA *brna)
-{
-  StructRNA *srna;
-
-  srna = RNA_def_struct(brna, "SpaceMixieChat", "Space");
-  RNA_def_struct_sdna(srna, "SpaceMixieChat");
-  RNA_def_struct_ui_text(srna, "Mixie Chat Space", "Chat interface for Mixar");
-}
-
 static void rna_def_space_agent_bubble(BlenderRNA *brna)
 {
   StructRNA *srna;
@@ -9638,7 +9622,7 @@ static void rna_def_space_agent_bubble(BlenderRNA *brna)
   RNA_def_struct_ui_text(
       srna,
       "Agent Bubble Space",
-      "Floating agent chat overlay editor for Mixar (small variant of Mixie Chat)");
+      "Floating agent chat overlay editor for Mixar");
 }
 
 /* Mixar: expose SpaceTopBar to Python so addons / Mixar's onboarding can
@@ -9740,7 +9724,6 @@ void RNA_def_space(BlenderRNA *brna)
   rna_def_space_clip(brna);
   rna_def_space_spreadsheet(brna);
   rna_def_space_mixie(brna);
-  rna_def_space_mixie_chat(brna);
   rna_def_space_agent_bubble(brna);
   rna_def_space_topbar(brna);
   rna_def_space_mixar_layers(brna);

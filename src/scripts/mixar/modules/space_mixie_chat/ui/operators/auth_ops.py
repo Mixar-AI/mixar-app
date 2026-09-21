@@ -454,7 +454,7 @@ def _release_stuck_login(attempt_id, thread):
             )
             for window in wm.windows:
                 for area in window.screen.areas:
-                    if area.type == 'MIXIE_CHAT':
+                    if area.type == 'AGENT_BUBBLE':
                         area.tag_redraw()
     except Exception as e:
         logger.warning("Login watchdog could not update UI: %s", e)
@@ -478,7 +478,7 @@ class MIXIE_CHAT_OT_login(Operator):
         wm.mixie_chat_login_error = ""
 
         for area in context.screen.areas:
-            if area.type == 'MIXIE_CHAT':
+            if area.type == 'AGENT_BUBBLE':
                 area.tag_redraw()
 
         # Run SSO on a background thread (blocks waiting for browser callback)
@@ -528,7 +528,7 @@ class MIXIE_CHAT_OT_login(Operator):
                     # Redraw Mixie Chat areas to reflect new auth state
                     for window in bpy.context.window_manager.windows:
                         for area in window.screen.areas:
-                            if area.type == 'MIXIE_CHAT':
+                            if area.type == 'AGENT_BUBBLE':
                                 area.tag_redraw()
                 except Exception as e:
                     logger.error("SSO result apply failed: %s", e)
@@ -644,7 +644,7 @@ class MIXIE_CHAT_OT_refresh_credits(Operator):
                         bpy.context.scene.mixie_chat_credits = credits
                         for window in bpy.context.window_manager.windows:
                             for area in window.screen.areas:
-                                if area.type == 'MIXIE_CHAT':
+                                if area.type == 'AGENT_BUBBLE':
                                     area.tag_redraw()
                         logger.info("[RefreshCredits] Applied credits: %s", credits)
                     except Exception as e:

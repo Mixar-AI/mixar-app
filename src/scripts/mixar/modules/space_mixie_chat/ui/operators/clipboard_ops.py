@@ -228,7 +228,7 @@ class MIXIE_CHAT_OT_paste_image(Operator):
 
             # Tag footer region for thumbnail update
             for area in context.screen.areas:
-                if area.type == 'MIXIE_CHAT':
+                if area.type == 'AGENT_BUBBLE':
                     for region in area.regions:
                         if region.type == 'TOOLS':
                             region.tag_redraw()

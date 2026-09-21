@@ -355,7 +355,7 @@ void mixie_chat_ink_flush_all_surfaces(bContext *C)
     }
     for (ScrArea &area_ref : screen->areabase) {
       ScrArea *area = &area_ref;
-      if (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE) {
+      if (area->spacetype != SPACE_AGENT_BUBBLE) {
         continue;
       }
       SpaceMixieChat *smixie = static_cast<SpaceMixieChat *>(area->spacedata.first);
@@ -420,7 +420,7 @@ static wmOperatorStatus ink_release_composer_exec(bContext *C, wmOperator * /*op
     }
     for (ScrArea &area_ref : screen->areabase) {
       ScrArea *area = &area_ref;
-      if (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE) {
+      if (area->spacetype != SPACE_AGENT_BUBBLE) {
         continue;
       }
       for (ARegion &region_ref : area->regionbase) {

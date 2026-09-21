@@ -15,19 +15,16 @@ set(INC_SYS
 )
 
 set(SRC
+  mixie_chat_ops.cc
   mixie_chat_action_buttons.cc
   mixie_chat_agent_bubble.cc
   mixie_chat_document_ops.cc
   mixie_chat_code_copy.cc
   mixie_chat_composer_focus.cc
   mixie_chat_dragdrop.cc
-  mixie_chat_footer.cc
   mixie_chat_footer_cache.cc
-  mixie_chat_footer_draw.cc
   mixie_chat_footer_layout.cc
-  mixie_chat_footer_model.cc
   mixie_chat_footer_thumbnails.cc
-  mixie_chat_header.cc
   mixie_chat_history_chrome.cc
   mixie_chat_history_events.cc
   mixie_chat_history_overlay.cc
@@ -65,7 +62,6 @@ set(SRC
   mixie_chat_voice.cc
   mixie_chat_ui_widgets.cc
   mixie_chat_ui_attachments.cc
-  space_mixie_chat.cc
 
   mixie_chat_footer_constants.hh
   mixie_chat_footer_intern.hh

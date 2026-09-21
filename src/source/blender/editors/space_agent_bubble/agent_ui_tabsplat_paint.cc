@@ -67,7 +67,7 @@ void splat_pane_rects_build(const rctf &panel,
 
   const float row_top = panel.ymax - PANE_STRIP_TOP * u;
   const float strip_x = panel.xmin + PANE_INSET_X * u;
-  const float strip_max_x = panel.xmax - (PANE_INSET_X + PANE_SETTINGS_W + PANE_CHIP_GAP) * u;
+  const float strip_max_x = panel.xmax - PANE_INSET_X * u;
   const float box_floor = std::min(pane_params_floor(panel, u), row_top - PANE_ROW_H * u);
   ui::MixarFlow flow;
   flow.x = flow.x0 = strip_x;
@@ -102,7 +102,7 @@ void splat_pane_rects_build(const rctf &panel,
     }
     dropdown = count > SPLAT_ENUM_MAX || width > strip_max_x - strip_x;
     if (!place_param(dropdown ? 360.0f * u : width, track)) {
-      return; /* The full schema is still available in Settings. */
+      return; /* The full schema is still available in the moodboard sidebar. */
     }
     if (!dropdown) {
       visible_count = count;

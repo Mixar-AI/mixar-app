@@ -337,7 +337,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
 
         for window in context.window_manager.windows:
             for area in window.screen.areas:
-                if area.type == 'MIXIE_CHAT':
+                if area.type == 'AGENT_BUBBLE':
                     area.tag_redraw()
 
         logger.info("Session aborted by user")

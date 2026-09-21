@@ -431,8 +431,7 @@ class TestVisibleReading:
         assert "refresh_reading" in arm
 
     def test_the_override_is_drawn_beside_the_count_on_both_headers(self):
-        for rel in ("src/scripts/mixar/modules/space_mixie_chat/ui/header.py",
-                    "src/scripts/mixar/modules/agent_bubble/ui/header.py"):
+        for rel in ("src/scripts/mixar/modules/agent_bubble/ui/header.py",):
             assert '"mixar_mark_intent"' in source(rel), rel
 
     def test_the_override_is_session_only_and_reset_when_the_ink_goes(self):

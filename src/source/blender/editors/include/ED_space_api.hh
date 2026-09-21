@@ -58,7 +58,6 @@ void ED_spacetype_mixar_assets();  /* Mixar Assets space */
 
 void ED_spacetype_baking();  /* Texturing Baking space */
 void ED_spacetype_texture_sets();  /* Texture Sets space */
-void ED_spacetype_mixie_chat();  /* Mixie Chat space for Mixar */
 void ED_spacetype_agent_bubble();  /* Floating Agent Bubble overlay editor for Mixar */
 
 /* Mixar: reset the Agent Bubble's cached native-window pointers (bubble/

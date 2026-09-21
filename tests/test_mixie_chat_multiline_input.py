@@ -23,7 +23,6 @@ LAYOUT_HH = (BUBBLE / "agent_ui_layout.hh").read_text(encoding="utf-8")
 LAYOUT_CC = (BUBBLE / "agent_ui_layout.cc").read_text(encoding="utf-8")
 THEME_HH = (BUBBLE / "agent_ui_theme.hh").read_text(encoding="utf-8")
 BUBBLE_CC = (BUBBLE / "space_agent_bubble.cc").read_text(encoding="utf-8")
-FOOTER_CC = (CHAT / "mixie_chat_footer.cc").read_text(encoding="utf-8")
 FOOTER_LAYOUT = (CHAT / "mixie_chat_footer_layout.cc").read_text(encoding="utf-8")
 
 
@@ -81,10 +80,6 @@ def test_footer_wrap_matches_the_widget_font():
     assert "ui::style_get()->widget" in count
 
 
-def test_footer_clamps_the_field_to_the_current_region():
-    draw = _function_body(FOOTER_CC, "void mixie_chat_footer_region_draw(")
-    assert "region->winy - pos.input_y" in draw
-    assert "pos.input_height = max_input_h" in draw
 
 
 def test_empty_draft_resets_copied_scroll():
@@ -93,3 +88,10 @@ def test_empty_draft_resets_copied_scroll():
     empty = empty[: empty.index("/* Calculate line height")]
     assert "state.scroll_offset = 0" in empty
     assert "state.was_editing = false" in empty
+
+
+def test_multiline_chrome_is_not_hidden_by_field_height():
+    draw = _function_body(WIDGETS, "static void widget_textbut_custom(")
+    assert "BLI_rcti_size_y" not in draw
+    assert "if (but->col[3] < 128)" in draw
+    assert "widget_textbut(wcol, rect, state, roundboxalign, zoom)" in draw

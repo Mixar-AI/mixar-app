@@ -23,7 +23,7 @@
  * the prompt box — schema `order` decided the PropertyGroup's declaration
  * order, so priority params land first. Catalog `visible_if` is evaluated
  * from the group's `mixar_visible_if` table; hidden params never consume
- * strip space. Settings remains the full schema surface.
+ * strip space. The moodboard sidebar exposes the full schema.
  */
 
 #include "agent_ui_text.hh"
@@ -297,7 +297,7 @@ float agent_ui_tab3d_params_draw(const bContext *C,
   f.gap = PANE_CHIP_GAP * u;
 
   /* Keep the summary above the composer floor. All remaining schema
-   * parameters stay reachable through the native Settings popup. */
+   * parameters stay reachable through the moodboard sidebar. */
 
   RNA_STRUCT_BEGIN (group_ptr, prop) {
     const char *identifier = RNA_property_identifier(prop);
@@ -345,7 +345,7 @@ float agent_ui_tab3d_params_draw(const bContext *C,
         break;
       default:
         /* Strings and pointers have no chip vocabulary in the design —
-         * the Settings popup remains the surface for those. */
+         * the moodboard sidebar remains the surface for those. */
         break;
     }
   }

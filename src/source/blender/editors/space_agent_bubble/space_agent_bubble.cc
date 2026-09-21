@@ -273,30 +273,18 @@ static void agent_bubble_island_panel_color(float r_rgba[4])
   r_rgba[3] = surface[3];
 }
 
-/* Mixie chat's custom-drawn region callbacks. We reuse them
- * verbatim for the agent bubble's TOOLS (footer) and WINDOW (main /
- * chat history) regions so the bubble looks AND behaves identically
- * to the chat editor — including the dynamic region resize on
- * Shift+Enter that keeps the footer's action row visible, and the
- * native message rendering / scrolling / selection / hover tracking
- * for the chat history.
- *
- * The functions read from scene.mixie_chat_input / mixie_chat_mode
- * / mixie_chat_messages (global Scene properties), so they work
- * outside SPACE_MIXIE_CHAT without modification. Linker resolution
- * comes via bf_editor_space_mixie_chat in CMakeLists.txt LIB list.
- *
- * NOT extern "C" — these are C++ symbols, so the forward
- * declarations below MUST match the original signatures exactly
- * (no defaulted args, no namespace) for name mangling to resolve. */
+/* Agent transcript callbacks live in bf_editor_space_mixie_chat with the
+ * shared renderer, input and connection contracts. The island owns its own
+ * composer and chrome; there is no standalone chat editor. */
 struct ScrArea;
 struct wmWindow;
 struct wmRegionListenerParams;
 struct SpaceMixieChat;
 
-void mixie_chat_footer_region_init(wmWindowManager *wm, ARegion *region);
-void mixie_chat_footer_region_layout(const bContext *C, ARegion *region);
-void mixie_chat_footer_region_draw(const bContext *C, ARegion *region);
+void mixie_chat_operatortypes();
+void mixie_chat_keymap(wmKeyConfig *keyconf);
+void mixie_chat_dropboxes();
+void mixie_chat_qa_targets_register();
 
 void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region);
 /* Message + overlay painters, called directly by the transcript region so it
@@ -329,6 +317,8 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
  * agent_bubble_free — safe because SpaceAgentBubble is layout-
  * compatible with SpaceMixieChat (see DNA_space_types.h). */
 void mixie_chat_free_runtime(struct SpaceMixieChat *smixie);
+void mixie_chat_clear_property_caches();
+void footer_cache_clear();
 
 /* Drops the cached per-message rects. The transcript rebuilds them on its
  * next draw (an empty cache is itself a rebuild trigger), so this is only
@@ -414,7 +404,7 @@ static int g_pad_saved_off_y = 0;
  * mixar.bubble_set_bg_color operator.  The override is pushed into
  * the shared mixie_chat draw functions via
  * mixie_chat_set_bg_override / mixie_chat_clear_bg_override —
- * see mixie_chat_main_region.cc and mixie_chat_footer.cc. */
+ * see mixie_chat_main_region.cc. */
 static bool g_bubble_bg_custom = false;
 static float g_bubble_bg_color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 
@@ -497,7 +487,8 @@ static void agent_bubble_island_controls_header(const bContext *C,
   } tab_buttons[] = {
       {AGENT_TAB_AGENT, "AGENT", "Agent chat"},
       {AGENT_TAB_3D, "THREE_D", "3D generation"},
-      {AGENT_TAB_MEDIA, "MEDIA", "Image and video generation"},
+      {AGENT_TAB_IMAGE, "IMAGE", "Image generation"},
+      {AGENT_TAB_VIDEO, "VIDEO", "Video generation"},
       {AGENT_TAB_SPLAT, "SPLAT", "Gaussian Splat world generation"},
       {AGENT_TAB_GENERATIONS, "GENERATIONS",
        "Your generations and connected asset libraries"},
@@ -696,11 +687,9 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     if (model_but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(model_but);
       RNA_string_set(op_ptr, "name", "MIXIE_CHAT_MT_agent_model");
-      /* Deliberately NOT disabled while a key is in use — see the same note in
-       * mixie_chat_footer_model.cc. The menu's model rows are greyed by
-       * `core/model_menu.build_rows`, but its last row is the ONLY route to
-       * the AI Provider Settings dialog since PR #1562 removed the account
-       * card and topbar entries. The chip still paints dim (the painter reads
+      /* Keep settings reachable while a key is active. The menu's model rows
+       * are greyed by `core/model_menu.build_rows`, but its settings row opens
+       * the same provider dialog as the profile menu. The chip paints dim (the painter reads
        * `model_byok_active`), so it reads as "not what runs" without
        * trapping the user. */
     }
@@ -1098,7 +1087,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
         else if (tab_probe.active_tab == AGENT_TAB_SPLAT) {
           agent_ui_tabsplat_draw(C, region, panel_region, u);
         }
-        else if (tab_probe.active_tab == AGENT_TAB_MEDIA) {
+        else if (ELEM(tab_probe.active_tab, AGENT_TAB_IMAGE, AGENT_TAB_VIDEO)) {
           agent_ui_tabmedia_draw(C, region, panel_region, u);
         }
         else if (tab_probe.active_tab == AGENT_TAB_3D) {
@@ -2583,6 +2572,10 @@ static void agent_bubble_free(SpaceLink *sl)
    * safe: same field offsets. */
   SpaceMixieChat *smixie = reinterpret_cast<SpaceMixieChat *>(sl);
   mixie_chat_free_runtime(smixie);
+  /* The bubble now owns the shared caches formerly cleared by the standalone
+   * editor. A surviving bubble/pill rebuilds them on its next draw. */
+  footer_cache_clear();
+  mixie_chat_clear_property_caches();
 
   /* NOTE: Do NOT clear g_bubble_ghostwin / g_pill_ghostwin /
    * g_host_ghostwin here. This callback fires for EVERY
@@ -4094,6 +4087,7 @@ static void agent_bubble_main_region_init(wmWindowManager *wm, ARegion *region)
 
 static void agent_bubble_operatortypes()
 {
+  mixie_chat_operatortypes();
   WM_operatortype_append(MIXAR_OT_agent_bubble_show_window);
   WM_operatortype_append(MIXAR_OT_agent_bubble_purge_windows);
   WM_operatortype_append(MIXAR_OT_bubble_set_size);
@@ -4113,6 +4107,7 @@ static void agent_bubble_operatortypes()
 
 static void agent_bubble_keymap(wmKeyConfig *keyconf)
 {
+  mixie_chat_keymap(keyconf);
   WM_keymap_ensure(keyconf, "Agent Bubble Library", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
   WM_keymap_ensure(keyconf, "Agent Bubble Queue", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
   WM_keymap_ensure(keyconf, "Agent Bubble References", SPACE_AGENT_BUBBLE, RGN_TYPE_UI);
@@ -4200,6 +4195,7 @@ void ED_spacetype_agent_bubble()
   st->duplicate = agent_bubble_duplicate;
   st->operatortypes = agent_bubble_operatortypes;
   st->keymap = agent_bubble_keymap;
+  st->dropboxes = mixie_chat_dropboxes;
   st->blend_write = agent_bubble_space_blend_write;
   st->blend_read_data = agent_bubble_space_blend_read_data;
 
@@ -4270,22 +4266,6 @@ void ED_spacetype_agent_bubble()
   art->listener = agent_bubble_glass_region_listener;
   BLI_addhead(&st->regiontypes, art);
 
-  /* Footer region — REUSES MIXIE CHAT'S CUSTOM-DRAWN FOOTER.
-   *
-   * The Python panel-based footer (AGENT_BUBBLE_PT_footer) was
-   * limited to a static prefsizey, so multi-line input grown via
-   * Shift+Enter pushed the action row (Mode + paperclip + send) off
-   * the bottom. Mixie chat's footer region has its own
-   * region->sizey-recalculation logic in mixie_chat_footer_region_layout
-   * that grows the region as input lines grow, keeping the action
-   * row pinned to the bottom. Reusing the same callbacks gives the
-   * agent bubble the identical behaviour AND look (custom GPU draw,
-   * attachment thumbnails, send-button glow, plan-mode toggle, …).
-   *
-   * The Python AGENT_BUBBLE_PT_footer registration becomes inert —
-   * mixie_chat_footer_region_init does NOT call ED_region_panels_init,
-   * so the panel system isn't set up for this region; Python panels
-   * registered for AGENT_BUBBLE TOOLS never get a draw call. */
   /* TOOLS region: the island's bottom chrome — input strip, chip row, card
    * foot. Plain ui::Block interaction (ED_KEYMAP_UI installs the ui region
    * handler); its layout callback re-syncs both chrome slabs to the island
@@ -4306,6 +4286,7 @@ void ED_spacetype_agent_bubble()
 
   BKE_spacetype_register(std::move(st));
 
+  mixie_chat_qa_targets_register();
   agent_ui_pill_cat_qa_register();
   agent_bubble_references_qa_register();
   agent_ui_generations_qa_register();

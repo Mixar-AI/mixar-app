@@ -262,11 +262,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   /* --- Params strip: Mode + Model dropdowns, then the schema params. --- */
   float x = panel.xmin + PANE_INSET_X * u;
   const float row_top = panel.ymax - PANE_STRIP_TOP * u;
-  const float settings_right = panel.xmax - PANE_INSET_X * u;
-  const float x_max = settings_right - (st.group_ok ? (PANE_SETTINGS_W + PANE_CHIP_GAP) * u : 0);
-  if (st.group_ok) {
-    pane_settings_button(block, settings_right, row_top, u, st.mode_id, st.model_id);
-  }
+  const float x_max = panel.xmax - PANE_INSET_X * u;
 
   x += dropdown_chip(C, block, region, st.mode_label,
                      "scene.mixie_moodboard_sidebar.tab_image_to_3d.mode",

@@ -439,7 +439,7 @@ void agent_ui_icon_draw(const AgentIcon icon,
     case AGENT_ICON_AGENT:
       glyph_agent(cx, cy, s, color);
       break;
-    case AGENT_ICON_MEDIA:
+    case AGENT_ICON_VIDEO:
       agent_ui_tab_icon_draw(icon, cx, cy, s, color);
       break;
     case AGENT_ICON_SPLAT:

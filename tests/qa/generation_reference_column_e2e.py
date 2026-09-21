@@ -23,13 +23,13 @@ from island_tab_alignment_e2e import assert_tab_alignment
 
 TABS = {
     'AGENT': 'Agent chat', 'THREE_D': '3D generation',
-    'MEDIA': 'Image and video generation', 'SPLAT': 'Gaussian Splat world generation',
+    'IMAGE': 'Image generation', 'VIDEO': 'Video generation', 'SPLAT': 'Gaussian Splat world generation',
     'GENERATIONS': 'Your generations and connected asset libraries',
     'QUEUE': 'Generation queue',
 }
-OWNERS = {'THREE_D': 'tab_image_to_3d', 'MEDIA': 'tab_imagegen', 'SPLAT': 'tab_world_labs'}
+OWNERS = {'THREE_D': 'tab_image_to_3d', 'IMAGE': 'tab_imagegen', 'SPLAT': 'tab_world_labs'}
 UPLOAD = {'THREE_D': 'MIXIE_OT_image_to_3d_pick_image',
-          'MEDIA': 'MIXIE_OT_imagegen_upload_reference', 'SPLAT': 'MIXIE_OT_world_labs_pick_image'}
+          'IMAGE': 'MIXIE_OT_imagegen_upload_reference', 'SPLAT': 'MIXIE_OT_world_labs_pick_image'}
 FIELD = {'area_type': 'AGENT_BUBBLE', 'prop': 'prompt'}
 
 
@@ -138,7 +138,7 @@ def run(qa):
     node_id = qa.eval(f'result=next(i.node_id for i in {SCENE}.mixie_moodboard_images '
                       f'if i.image and i.image.filepath=={str(board_path)!r})')
     for key, owner in OWNERS.items():
-        prop = 'use_reference_images' if key == 'MEDIA' else 'use_selected_image'
+        prop = 'use_reference_images' if key == 'IMAGE' else 'use_selected_image'
         # Source selection is existing sidebar state; the feature under test
         # is a real canvas click feeding that input's native column.
         qa.eval(f'{SCENE}.mixie_moodboard_sidebar.{owner}.{prop}=True; result=True')
@@ -150,23 +150,21 @@ def run(qa):
         qa.wait(f'not any(i.selected for i in {SCENE}.mixie_moodboard_images)', timeout=5)
         qa.wait("not drv.find(surface='reference_column')", timeout=5)
 
-    tab(qa, 'MEDIA')
-    qa.click(area_type='AGENT_BUBBLE', text='Video Generation')
-    qa.wait("bpy.context.window_manager.mixar_bubble_media_kind=='VIDEO'", timeout=5)
+    tab(qa, 'VIDEO')
     qa.step('video_native_upload', upload, qa, 'MIXAR_OT_pane_video_upload_reference', direct)
     qa.step('video_direct_preview', inspect, qa, out, 'video-direct')
     qa.click(area_type='AGENT_BUBBLE', op='MIXAR_OT_pane_remove_reference')
     qa.wait("not drv.find(surface='reference_column')", timeout=5)
     qa.step('video_select_moodboard', select, qa, node_id)
-    tab(qa, 'MEDIA')
+    tab(qa, 'VIDEO')
     qa.step('video_board_preview', inspect, qa, out, 'video-board')
     qa.click(area_type='AGENT_BUBBLE', op='MIXAR_OT_pane_remove_reference')
     qa.wait("not drv.find(surface='reference_column')", timeout=5)
-    qa.click(area_type='AGENT_BUBBLE', text='Image Generation')
+    tab(qa, 'IMAGE')
 
     # Multi-reference scrolling uses Media's real uploaded collection. The
     # batch is fixture setup through the production uploader; scrolling is UI.
-    tab(qa, 'MEDIA')
+    tab(qa, 'IMAGE')
     more = []
     for i in range(7):
         path = out / f'additional-{i}.png'
@@ -179,7 +177,7 @@ def run(qa):
     qa.click(**FIELD)
     qa.step('media_reference_wheel_while_editing', wheel, qa, True, 12)
     assert qa.eval('result=bpy.context.window_manager.mixar_reference_scroll') > 0, 'Generation text editor swallowed the reference wheel'
-    assert qa.eval(f'result={SCENE}.mixie_moodboard_sidebar.tab_imagegen.prompt') == 'Use this media reference'
+    assert qa.eval(f'result={SCENE}.mixie_moodboard_sidebar.tab_imagegen.prompt') == 'Use this image reference'
     capture(qa, out, 'media-scrolled')
     # The scrollbar takes the first press even while the prompt owns focus.
     wheel(qa, False, 30)
@@ -193,11 +191,11 @@ def run(qa):
 
     tab(qa, 'QUEUE')
     qa.wait("not drv.find(surface='reference_column')", timeout=5)
-    tab(qa, 'MEDIA')
+    tab(qa, 'IMAGE')
     qa.wait("bool(drv.find(surface='reference_column'))", timeout=5)
     qa.step('agent_reference_baseline', agent_baseline, qa, out, direct)
-    verdict = {'native_upload_modes': [*OWNERS, 'MEDIA_VIDEO'],
-               'moodboard_modes': [*OWNERS, 'MEDIA_VIDEO'],
+    verdict = {'native_upload_modes': [*OWNERS, 'VIDEO'],
+               'moodboard_modes': [*OWNERS, 'VIDEO'],
                'right_column': True, 'removal_and_drafts': True, 'media_scroll': True,
                'centered_spaced_tabs': True, 'agent_baseline': True, 'paid_requests': 0}
     (out / 'verdict.json').write_text(json.dumps(verdict, indent=2) + '\n')

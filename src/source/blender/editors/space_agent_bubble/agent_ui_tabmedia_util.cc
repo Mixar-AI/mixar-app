@@ -164,7 +164,7 @@ int media_gather_param_chips(const bContext *C, PointerRNA *group, MediaParamChi
       chip.value = std::to_string(RNA_property_int_get(group, prop));
     }
     else {
-      /* Floats/strings don't fit a chip strip; the Settings popup remains
+      /* Floats/strings don't fit a chip strip; the moodboard sidebar remains
        * the full-fidelity surface for those (documented in the spec). */
       (*r_total)--;
       continue;

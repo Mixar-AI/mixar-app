@@ -22,7 +22,7 @@ class OBJECT_PT_qa_native_labels(bpy.types.Panel):
 
     def draw(self, context):
         # Deliberately use ordinary UILayout buttons, with no Mixar styling.
-        for label in ('Queue', 'Send', 'Settings', 'Generate'):
+        for label in ('Queue', 'Send', 'Generate'):
             self.layout.operator('wm.qa_native_label', text=label)
 
 
