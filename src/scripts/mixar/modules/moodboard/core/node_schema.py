@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import logging
 
+from mixar.modules.common.generation_params.core.bounds import catalog_int, rna_int
+
 from ..constants import (
     GRAPH_LABEL_MAXLEN,
     GRAPH_SOCKET_ID_MAXLEN,
@@ -369,12 +371,14 @@ def _assign_default(parameter, spec: dict, choices: list[dict], old_value):
         elif kind == 'BOOLEAN':
             parameter.value_boolean = bool(value)
         elif kind == 'INTEGER':
-            parameter.value_integer = int(value or 0)
+            # int() of a non-finite catalog value raises OverflowError and
+            # would leave this node on its previous schema.
+            parameter.value_integer = rna_int(catalog_int(value))
         elif kind == 'FLOAT':
             parameter.value_float = float(value or 0.0)
         else:
             parameter.value_string = "" if value is None else str(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         pass
 
 

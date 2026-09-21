@@ -5,12 +5,18 @@
 
 import ast
 import math
+import struct
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
 
+from mixar.modules.common.generation_params.constants import (
+    UNBOUNDED_INT_MAX,
+    UNBOUNDED_INT_MIN,
+)
+from mixar.modules.common.generation_params.core.bounds import integer_window
 from mixar.modules.moodboard.core.parameter_help import parameter_help, parameter_specs
 
 
@@ -31,6 +37,7 @@ def popup():
             body.append(item)
     namespace = {
         'math': math,
+        'integer_window': integer_window,
         'parameter_help': parameter_help,
         'parameter_specs': parameter_specs,
         'draw_dropdown': lambda layout, data, prop, **kw: layout.prop(data, prop, **kw),
@@ -172,6 +179,43 @@ def test_numeric_edits_settle_inside_each_catalog_range(popup):
     small.value_integer = -200
     popup['_clamp_numeric_settings'](owner)
     assert small.value_integer == -200
+
+
+def _c_float(value):
+    """Round the way an RNA FloatProperty (a C float) stores a bound."""
+    return struct.unpack('f', struct.pack('f', float(value)))[0]
+
+
+class _RnaIntField:
+    """value_integer rejects anything outside the C int range, as bpy does."""
+
+    def __init__(self, minimum, maximum, value):
+        self.parameter_type = 'INTEGER'
+        self.visible = True
+        self.minimum = _c_float(minimum)
+        self.maximum = _c_float(maximum)
+        self._value = value
+
+    @property
+    def value_integer(self):
+        return self._value
+
+    @value_integer.setter
+    def value_integer(self, value):
+        if not UNBOUNDED_INT_MIN <= int(value) <= UNBOUNDED_INT_MAX:
+            raise ValueError("value not in 'int' range")
+        self._value = int(value)
+
+
+def test_integer_popup_clamp_survives_float32_catalog_bounds(popup):
+    # 2147483647 is a legal RNA int, but a C float stores it as 2147483648.
+    field = _RnaIntField(2147483647, 4294967295, 0)
+    popup['_clamp_numeric_settings'](node(parameters=[field]))
+    assert field.value_integer == UNBOUNDED_INT_MAX
+
+    field = _RnaIntField(4294967295, 4294967295, 0)
+    popup['_clamp_numeric_settings'](node(parameters=[field]))
+    assert field.value_integer == UNBOUNDED_INT_MAX
 
 
 def test_info_uses_owning_nodes_default_and_keeps_current_value(popup):

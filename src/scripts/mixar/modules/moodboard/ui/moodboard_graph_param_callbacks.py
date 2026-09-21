@@ -11,6 +11,8 @@ imports back from it, so the dependency stays one-directional.
 
 import json
 
+from mixar.modules.common.generation_params.core.bounds import integer_window
+
 
 def _enum_label_from_choices(choices_json, value) -> str:
     if not value:
@@ -37,7 +39,12 @@ def _clamp_parameter_value(param) -> None:
     clamp.
     """
     if param.parameter_type == 'INTEGER':
-        low, high = int(param.minimum), int(param.maximum)
+        # minimum/maximum are C floats. A bound the catalog stored as a legal
+        # int can read back above 2**31-1, and assigning that raises ValueError.
+        window = integer_window(param.minimum, param.maximum)
+        if window is None:
+            return
+        low, high = window
         if param.value_integer < low:
             param.value_integer = low
         elif param.value_integer > high:

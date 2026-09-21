@@ -8,6 +8,7 @@ import math
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.generation_params.core.bounds import integer_window
 from mixar.modules.moodboard.core.parameter_help import parameter_help, parameter_specs
 
 from mixar.modules.moodboard.constants import GRAPH_NODE_ID_MAXLEN
@@ -45,17 +46,20 @@ def _clamp_numeric_settings(node):
         if not parameter.visible or kind not in {'INTEGER', 'FLOAT'}:
             continue
         low, high = parameter.minimum, parameter.maximum
-        if not math.isfinite(low) or not math.isfinite(high) or low > high:
-            continue
         if kind == 'INTEGER':
-            low, high = math.ceil(low), math.floor(high)
-            if low > high:
+            # Same ceiling as the canvas. minimum/maximum are C floats, so
+            # ceil() of a rounded bound can sit outside the int setter's range.
+            window = integer_window(low, high)
+            if window is None:
                 continue
+            low, high = window
             value = parameter.value_integer
             bounded = max(low, min(high, value))
             if bounded != value:
                 parameter.value_integer = bounded
         else:
+            if not math.isfinite(low) or not math.isfinite(high) or low > high:
+                continue
             value = parameter.value_float
             bounded = max(low, min(high, value))
             if bounded != value:
