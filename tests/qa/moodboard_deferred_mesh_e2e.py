@@ -12,9 +12,12 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario
+from moodboard_drawer_tools_e2e import resize
+from moodboard_template_drag_e2e import canvas_setup, destination
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/moodboard-deferred-mesh'))
 SCENE = 'drv.main_window().scene'
@@ -75,6 +78,14 @@ def frame_all(qa):
 
 
 def pick(qa, name):
+    node_id=state(qa)[0]['id']
+    if qa.eval(f'result={SCENE}.mixie_moodboard_active_node_id') != node_id:
+        qa.click(surface='moodboard_media',text=node_id)
+    if not qa.find(op=PICK)['total']:
+        # Frame All can shrink the card below the shared control-size gate.
+        qa.click(surface='moodboard_media',text=node_id)
+        qa.press('NUMPAD_PERIOD')
+        qa.wait(f"bool(drv.find(op={PICK!r}))",timeout=5)
     qa.click(op=PICK)
     snapshot(qa,'mesh-picker')
     qa.cmd('type',text=name)
@@ -83,16 +94,76 @@ def pick(qa, name):
             timeout=5)
 
 
-def empty_and_pick(qa):
+def topbar(qa, region='TOOL_PROPS', wide=False):
+    items=qa.find(op=ADD,region_type=region)['widgets']
+    mesh=[w for w in items if w['text']=='Add Mesh']
+    assert len(mesh)==1 and mesh[0]['enabled'],items
+    assert mesh[0]['mixar_theme']=='ZEN' and mesh[0]['mixar_component']=='action'
+    assert mesh[0]['block'].startswith('MIXIE_PT_canvas_templates')
+    if wide:
+        assert [w['text'] for w in items]==[
+            'Add Mesh','Generate Image','Image to 3D','Video Generation'],items
+        assert all(not w['enabled'] for w in items[1:]),items
+    for a,b in zip(items,items[1:]):
+        assert a['rect'][2]<=b['rect'][0],items
+    return mesh[0]
+
+
+def responsive_topbar(qa):
     if qa.eval('result=bpy.context.window_manager.mixar_moodboard_drawer_amount') < .5:
         qa.click(surface='moodboard_drawer_grip')
     qa.wait('bpy.context.window_manager.mixar_moodboard_drawer_amount>.998',timeout=5)
-    snapshot(qa,'01-before')
+    evidence=[]
+    for scale in (1.0,1.25):
+        qa.eval(f'bpy.context.preferences.view.ui_scale={scale}; result=True')
+        time.sleep(.5)
+        for width in (340,850):
+            resize(qa,width)
+            evidence.append({'scale':scale,'width':width,
+                             'button':topbar(qa,wide=width==850)})
+            snapshot(qa,f'topbar-{width}-{scale}')
+            if scale==1.0 and width==340:
+                qa.cmd('snap',path=str(OUT/'topbar-annotated.png'),
+                       annotate={'op':ADD,'text':'Add Mesh'})
+    qa.eval('bpy.context.preferences.view.ui_scale=1.0; result=True')
+    time.sleep(.5)
+    resize(qa,125)
     qa.click(text='Start with an editable node template')
     item=qa.find(popup=True,op=ADD,text='Add Mesh')['widgets'][0]
-    assert item['enabled'], 'Offline mesh template is disabled'
-    snapshot(qa,'02-add-menu')
-    qa.click(popup=True,op=ADD,text='Add Mesh')
+    assert item['enabled'],'Minimum-width menu lost Add Mesh'
+    snapshot(qa,'topbar-minimum-menu')
+    qa.press('ESC')
+    resize(qa,340)
+    return evidence
+
+
+def drag_topbar(qa):
+    xy=destination(qa,'VIEW_3D',.6,.55)
+    expected=qa.eval(canvas_setup('VIEW_3D')+
+                    f"result=list(region.view2d.region_to_view({xy['x']}-region.x,"
+                    f"{xy['y']}-region.y))")
+    qa.cmd('drag',**{'from':{'op':ADD,'text':'Add Mesh','region_type':'TOOL_PROPS'},
+                    'to':xy,'steps':18})
+    qa.wait(f'len({NODES})==1',timeout=5)
+    draft=state(qa)[0]
+    x,y,w,h=draft['rect']
+    assert abs(x+w/2-expected[0])<.02 and abs(y+h/2-expected[1])<.02,draft
+    assert draft['source']==[] and draft['output']==''
+    mods={'oskey':True} if sys.platform=='darwin' else {'ctrl':True}
+    qa.press('Z',**mods)
+    qa.wait(f'len({NODES})==0',timeout=5)
+    qa.press('Z',shift=True,**mods)
+    qa.wait(f'len({NODES})==1',timeout=5)
+    assert state(qa)==[draft]
+    qa.press('Z',**mods)
+    qa.wait(f'len({NODES})==0',timeout=5)
+    return {'release':xy,'draft':draft}
+
+
+def empty_and_pick(qa):
+    snapshot(qa,'01-before')
+    topbar(qa)
+    qa.click(op=ADD,text='Add Mesh',region_type='TOOL_PROPS')
     qa.wait(f'len({NODES})==1',timeout=5)
     draft=state(qa)[0]
     assert draft['output']=='' and draft['source']==[] and draft['reference'],draft
@@ -156,6 +227,7 @@ def editor_save_and_missing(qa):
             "area=next(a for a in win.screen.areas if a.type=='VIEW_3D')\n"
             "area.type='MIXIE'\nbpy.context.preferences.view.ui_scale=1.25\nresult=True")
     frame_all(qa)
+    topbar(qa,region='WINDOW')
     snapshot(qa,'06-editor-125-percent')
     before=state(qa)
     path=str(OUT/'deferred-mesh.mixar')
@@ -179,13 +251,16 @@ result=True
     pick(qa,'QA Deferred Sphere')
     assert state(qa)[0]['source']==['QA Deferred Sphere']
     snapshot(qa,'08-recovered-source')
+    qa.click(op=ADD,text='Add Mesh',region_type='WINDOW')
+    qa.wait(f'len({NODES})==2',timeout=5)
+    assert state(qa)[1]['source']==[]
     # Native Shift+A is the second node-creation entry point.
     qa.eval("w=drv.find_one(surface='moodboard_canvas',area_type='MIXIE')\n"
             "drv.move_to(w['_win'],*drv.pick_click_point(w))\nresult=True")
     qa.press('A',shift=True)
     qa.click(popup=True,op=ADD,text='Add Mesh')
-    qa.wait(f'len({NODES})==2',timeout=5)
-    assert state(qa)[1]['source']==[]
+    qa.wait(f'len({NODES})==3',timeout=5)
+    assert state(qa)[2]['source']==[]
     qa.click(text='Arrange, frame, or clear the board')
     qa.click(popup=True,text='Arrange')
     qa.click(popup=True,op='MIXIE_OT_moodboard_tidy_nodes')
@@ -200,6 +275,8 @@ def empty_scene(qa):
     qa.click(popup=True,op=ADD,text='Add Mesh')
     qa.wait(f'len({NODES})==1',timeout=5)
     before=state(qa)
+    qa.click(surface='moodboard_media',text=before[0]['id'])
+    qa.press('NUMPAD_PERIOD')
     qa.click(op=PICK)
     assert state(qa)==before and before[0]['source']==[]
     assert not qa.find(popup=True)['total']
@@ -211,7 +288,9 @@ def run(qa):
     OUT.mkdir(parents=True,exist_ok=True)
     qa.step('isolated_fixture',prepare,qa)
     evidence={}
-    for name,check in (('empty_cancel_choose',empty_and_pick),('assignment_undo_redo',undo_redo),
+    for name,check in (('responsive_topbar',responsive_topbar),
+                       ('topbar_drag_undo_redo',drag_topbar),
+                       ('empty_cancel_choose',empty_and_pick),('assignment_undo_redo',undo_redo),
                        ('connect_replace',connect_and_replace),
                        ('editor_save_missing_recover',editor_save_and_missing),
                        ('empty_scene_add_reference_menu',empty_scene)):

@@ -99,7 +99,7 @@ void mixie_moodboard_chrome_draw(const bContext *C, ARegion *region)
     }
   }
   draw_panel(C, region, "MIXIE_PT_canvas_tools", x, y, rail);
-  const bool wide = available >= 620 * UI_SCALE_FAC;
+  const bool wide = available >= 740 * UI_SCALE_FAC;
   const bool icon_only = available < 150 * UI_SCALE_FAC;
   draw_panel(C, region,
              wide ? "MIXIE_PT_canvas_templates" :

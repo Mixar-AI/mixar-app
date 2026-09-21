@@ -92,7 +92,8 @@ def add(qa, label, kind, popup=True):
 
 def shortcuts(qa, region='TOOL_PROPS'):
     items = qa.find(op=ADD, region_type=region, limit=100)['widgets']
-    require([w['text'] for w in items] == list(LABELS), f'Wrong shortcut strip: {items}')
+    require([w['text'] for w in items] == ['Add Mesh', *LABELS],
+            f'Wrong shortcut strip: {items}')
     for item in items:
         require(item['enabled'] and item['mixar_theme'] == 'ZEN' and
                 item['mixar_component'] == 'action', f'Unstyled shortcut: {item}')

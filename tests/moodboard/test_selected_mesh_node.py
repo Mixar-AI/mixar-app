@@ -58,6 +58,11 @@ class _Mesh:
         self.preview_requests += 1
 
 
+class _Objects(list):
+    def get(self, name):
+        return next((obj for obj in self if obj.name == name), None)
+
+
 def _scene():
     old = SimpleNamespace(
         node_id="old",
@@ -71,6 +76,7 @@ def _scene():
         selected=True,
     )
     return SimpleNamespace(
+        objects=_Objects(),
         mixie_moodboard_images=[],
         mixie_moodboard_textboxes=[],
         mixie_moodboard_action_nodes=[],
@@ -118,6 +124,7 @@ def test_connections_follow_the_object_pointer_after_a_rename():
     scene = _scene()
     mesh = _Mesh("Hero Head")
     node = create_asset_node(scene, mesh)
+    scene.objects.append(mesh)
     mesh.name = "Hero, Final"
 
     assert mesh_source_object_names(scene, node.node_id) == ["Hero, Final"]
@@ -212,6 +219,7 @@ def test_empty_card_can_be_bound_later_to_the_same_output_as_viewport_add():
     from mixar.modules.moodboard.core.node_graph import mesh_source_object_names, node_output_type
 
     scene, mesh = _scene(), _Mesh('Chosen, Mesh')
+    scene.objects.append(mesh)
     draft = create_empty_mesh_node(scene, center=(100, 200))
     identity, position = draft.node_id, (draft.position_x, draft.position_y)
     assert draft.title == 'Add Mesh' and draft.preview_object is None
@@ -238,7 +246,9 @@ def test_changing_mesh_preserves_custom_title_and_downstream_links():
     link = SimpleNamespace(from_node_id=node.node_id, to_node_id='consumer')
     scene.mixie_moodboard_links.append(link)
     before = (node.node_id, node.position_x, node.position_y, node.width, node.height)
-    assign_mesh_reference(node, _Mesh('Second'))
+    second = _Mesh('Second')
+    scene.objects.append(second)
+    assign_mesh_reference(node, second)
     assert mesh_source_object_names(scene, link.from_node_id) == ['Second']
     assert node.title == 'My reference' and node.frame_id == 'frame'
     assert before == (node.node_id, node.position_x, node.position_y, node.width, node.height)

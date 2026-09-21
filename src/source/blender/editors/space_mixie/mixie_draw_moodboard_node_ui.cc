@@ -16,6 +16,7 @@
 
 #include "BKE_icons.hh"
 #include "BKE_preview_image.hh"
+#include "BKE_scene.hh"
 
 #include "BLI_string.h"
 #include "BLI_vector.hh"
@@ -173,6 +174,14 @@ static void add_asset_preview(const bContext *C,
   }
   PointerRNA object_ptr = RNA_pointer_get(node, "preview_object");
   if (RNA_boolean_get(node, "scene_mesh_reference")) {
+    /* Viewport Delete unlinks the object; this reference can keep its ID alive.
+     * Preserve the pointer for Undo, but never paint the orphan as a live mesh. */
+    if (object_ptr.data &&
+        !BKE_scene_object_find(*CTX_data_main(C), CTX_data_scene(C),
+                              static_cast<Object *>(object_ptr.data)))
+    {
+      object_ptr.data = nullptr;
+    }
     /* Same gate as the action toolbar: a button on every card consumes the
      * press before card select/drag, including the centre of an empty card. */
     rcti controls;
@@ -200,7 +209,7 @@ static void add_asset_preview(const bContext *C,
         mixie_rna_string_get_clamped(node, "object_names", names, sizeof(names));
         const auto style = ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC);
         const std::string label = ui::mixar_fit_text(
-            names[0] ? "Mesh unavailable" : "Choose a scene mesh", width, style);
+            names[0] ? "Mesh removed from scene" : "Choose a scene mesh", width, style);
         ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card),
                               BLI_rcti_cent_y(&card) + height + metrics.gap,
                               style, ui::mixar_tokens::zen.secondary);
@@ -211,7 +220,7 @@ static void add_asset_preview(const bContext *C,
       mixie_rna_string_get_clamped(node, "object_names", names, sizeof(names));
       const auto style = ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC);
       const std::string label = ui::mixar_fit_text(
-          names[0] ? "Mesh unavailable" : "Choose a scene mesh",
+          names[0] ? "Mesh removed from scene" : "Choose a scene mesh",
           BLI_rcti_size_x(&card), style);
       ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card), BLI_rcti_cent_y(&card),
                             style, ui::mixar_tokens::zen.secondary);

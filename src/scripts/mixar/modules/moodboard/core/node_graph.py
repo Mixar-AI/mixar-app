@@ -823,7 +823,9 @@ def mesh_source_object_names(scene, node_id: str) -> list:
     if asset is not None:
         preview = getattr(asset, "preview_object", None)
         if preview is not None:
-            return [preview.name] if getattr(preview, 'type', 'MESH') == 'MESH' else []
+            from .mesh_sources import is_scene_mesh
+
+            return [preview.name] if is_scene_mesh(scene, preview) else []
         if getattr(asset, 'scene_mesh_reference', False):
             return []
         return [name.strip() for name in asset.object_names.split(",") if name.strip()]
@@ -849,4 +851,3 @@ def input_source_object_names(scene, action_node) -> list:
         if names:
             return names
     return []
-
