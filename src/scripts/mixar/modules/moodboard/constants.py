@@ -441,6 +441,7 @@ NODE_TEMPLATES = (
     ('RETOPOLOGY', "Retopology", 'MOD_REMESH', 'retopology'),
     ('MESH_SEGMENT', "Mesh Segmentation", 'MOD_EXPLODE', 'mesh_segmentation'),
     ('AUTO_RIG', "Auto Rig", 'ARMATURE_DATA', 'animate'),
+    ('MESH_REFERENCE', "Add Mesh", 'OUTLINER_OB_MESH', None),
 )
 
 # Display-only explanations when a catalog omits help. Match captions, never

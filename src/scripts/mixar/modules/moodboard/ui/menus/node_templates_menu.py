@@ -23,7 +23,7 @@ class MIXIE_MT_node_templates(Menu):
         layout.operator_context = 'INVOKE_DEFAULT'
         for item in NODE_TEMPLATES:
             draw_template(layout, item)
-        if not any(template_available(item[0]) for item in NODE_TEMPLATES):
+        if not any(template_available(item[0]) for item in NODE_TEMPLATES if item[3]):
             layout.separator()
             layout.label(text="Connect to load generation models", icon='INFO')
 

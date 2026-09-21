@@ -64,12 +64,45 @@ def find_free_asset_position(
     return start_x, start_y
 
 
+def assign_mesh_reference(node, obj):
+    """Bind an existing card without replacing its identity, placement or links."""
+    if obj is None or getattr(obj, "type", None) != 'MESH':
+        raise ValueError("Select a mesh object from the scene")
+    if node.title in ('', 'Add Mesh', node.object_names):
+        node.title = obj.name
+    node.object_names = obj.name
+    node.preview_object = obj
+    node.scene_mesh_reference = True
+    try:
+        obj.asset_generate_preview()
+    except (AttributeError, RuntimeError):
+        # A preview failure must not invalidate an otherwise usable mesh source.
+        pass
+
+
+def create_empty_mesh_node(scene, *, center=(0.0, 0.0)):
+    """Create an unbound scene reference; choosing a mesh is a separate undo step."""
+    from .node_graph import deselect_graph_nodes, new_node_id
+
+    node = scene.mixie_moodboard_asset_nodes.add()
+    node.node_id = new_node_id()
+    node.title = 'Add Mesh'
+    node.scene_mesh_reference = True
+    node.position_x, node.position_y = find_free_asset_position(
+        scene, *center, node.width, node.height, exclude=node,
+    )
+    deselect_graph_nodes(scene)
+    node.selected = True
+    scene.mixie_moodboard_active_node_id = node.node_id
+    return node
+
+
 def create_asset_node(scene, obj, *, center=(0.0, 0.0)):
     """Add or reveal one scene mesh reference, preserving its identity and links."""
     if obj is None or getattr(obj, "type", None) != 'MESH':
         raise ValueError("Select a mesh object in Object Mode")
 
-    from .node_graph import deselect_graph_nodes, new_node_id
+    from .node_graph import deselect_graph_nodes
 
     existing = next((n for n in scene.mixie_moodboard_asset_nodes
                      if getattr(n, 'preview_object', None) == obj
@@ -85,31 +118,8 @@ def create_asset_node(scene, obj, *, center=(0.0, 0.0)):
         scene.mixie_moodboard_active_node_id = existing.node_id
         return existing
 
-    node = scene.mixie_moodboard_asset_nodes.add()
-    node.node_id = new_node_id()
-    node.title = obj.name
-    node.object_names = obj.name
-    node.preview_object = obj
-    node.scene_mesh_reference = True
-    node.position_x, node.position_y = find_free_asset_position(
-        scene,
-        center[0],
-        center[1],
-        node.width,
-        node.height,
-        exclude=node,
-    )
-
-    deselect_graph_nodes(scene)
-    node.selected = True
-    scene.mixie_moodboard_active_node_id = node.node_id
-
-    try:
-        obj.asset_generate_preview()
-    except (AttributeError, RuntimeError):
-        # The card remains a valid mesh source even when Blender cannot build
-        # an icon preview for the current object state.
-        pass
+    node = create_empty_mesh_node(scene, center=center)
+    assign_mesh_reference(node, obj)
     return node
 
 

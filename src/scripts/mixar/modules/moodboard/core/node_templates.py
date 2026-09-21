@@ -9,7 +9,9 @@ from .capabilities import capability_available
 
 def template_available(template_id):
     template = next((item for item in NODE_TEMPLATES if item[0] == template_id), None)
-    return template is not None and capability_available(template[3])
+    return template is not None and (
+        template[3] is None or capability_available(template[3])
+    )
 
 
 def create_template(scene, template_id, center, *, exact_position=False):
@@ -17,10 +19,11 @@ def create_template(scene, template_id, center, *, exact_position=False):
     if not template_available(template_id):
         raise ValueError("This template needs an available generation model. Check your connection.")
 
-    from .asset_nodes import find_free_asset_position
+    from .asset_nodes import create_empty_mesh_node, find_free_asset_position
     from .node_graph import create_connected_action
 
-    node = create_connected_action(scene, template_id, allow_empty=True, drop_position=center)
+    node = (create_empty_mesh_node(scene, center=center) if template_id == 'MESH_REFERENCE'
+            else create_connected_action(scene, template_id, allow_empty=True, drop_position=center))
     if exact_position:
         node.position_x = center[0] - node.width * .5
         node.position_y = center[1] - node.height * .5
