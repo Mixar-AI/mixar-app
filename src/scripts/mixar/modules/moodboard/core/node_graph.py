@@ -103,12 +103,12 @@ def _selected_media(scene, action_type: str):
         item for item in scene.mixie_moodboard_images
         if item.selected and getattr(item, "image", None) is not None
     ]
-    if action_type in {'IMAGE_GEN', 'MODEL_3D'}:
+    if action_type in {'IMAGE_GEN', 'MODEL_3D', 'WORLD_LABS'}:
         selected = [item for item in selected if is_still_item(item)]
     if action_type == 'VIDEO_UPSCALE':
         # One movie in: the node has a single video socket.
         selected = [item for item in selected if not is_still_item(item)]
-    if action_type in {'MODEL_3D', 'VIDEO_UPSCALE'}:
+    if action_type in {'MODEL_3D', 'VIDEO_UPSCALE', 'WORLD_LABS'}:
         return selected[:1]
     return selected
 
@@ -392,6 +392,7 @@ _ACCEPTED_SOURCE_TYPES = {
     'MODEL_3D': {'IMAGE'},
     'VIDEO_GEN': {'IMAGE', 'VIDEO'},
     'VIDEO_UPSCALE': {'VIDEO'},
+    'WORLD_LABS': {'IMAGE'},
     'PBR_GEN': {'MESH'},
     'RETOPOLOGY': {'MESH'},
     'MESH_SEGMENT': {'MESH'},
@@ -450,6 +451,8 @@ def create_connected_action(
             raise ValueError("Connect this from a 3D mesh node")
         if action_type == 'VIDEO_UPSCALE':
             raise ValueError("Upscale Video needs one selected video")
+        if action_type == 'WORLD_LABS':
+            raise ValueError("Generate Splat needs one selected image")
         if action_type != 'IMAGE_GEN':
             raise ValueError(
                 "Generate to 3D needs one selected image"

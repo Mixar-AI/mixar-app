@@ -16,48 +16,13 @@ from bpy.types import Operator
 
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from ...core.image_lifecycle import remove_image_safely
+from ...core.world_labs_enqueue import resolve_world_labs_catalog as _catalog_settings
 
 
 def _get_world_labs_tab(context):
     scene = context.scene
     sidebar = getattr(scene, "mixie_moodboard_sidebar", None)
     return getattr(sidebar, "tab_world_labs", None) if sidebar else None
-
-
-def _catalog_settings(
-    selected_model: str = "", selected_mode: str = "", selected_lod: str = "",
-):
-    """Resolve World Labs model parameters exclusively from the live catalog."""
-    from mixar.bootstrap.generation_catalog_cache import (
-        get_default_model_slug,
-        get_model,
-    )
-    from mixar.modules.common.generation_params import collect_params
-
-    placeholders = {"", "LOADING", "NONE", "ERROR"}
-    requested = selected_model or ""
-    if requested not in placeholders and get_model("world_labs", requested) is None:
-        raise ValueError(f"World Labs model '{requested}' is not enabled")
-    model = (
-        requested if requested not in placeholders
-        else (get_default_model_slug("world_labs") or "")
-    )
-    model_row = get_model("world_labs", model) if model else None
-    if not model_row:
-        raise ValueError("No enabled World Labs model is available")
-
-    values = collect_params("world_labs", model)
-    schema = model_row.get("parameters") or {}
-
-    def _value(name, explicit):
-        spec = schema.get(name) or {}
-        value = explicit or values.get(name) or spec.get("default")
-        allowed = spec.get("enum")
-        if value is None or (allowed is not None and value not in allowed):
-            raise ValueError(f"World Labs catalog parameter '{name}' is unavailable")
-        return str(value)
-
-    return model, _value("mode", selected_mode), _value("lod", selected_lod)
 
 
 class MIXIE_OT_world_labs_pick_image(Operator):

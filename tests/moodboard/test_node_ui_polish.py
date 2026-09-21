@@ -46,7 +46,7 @@ def test_output_handle_colors_match_the_python_output_types():
     assert len(kinds) == len(ACTION_TYPES), (
         "the C++ output-kind table and ACTION_TYPES disagree on length"
     )
-    letter_for = {"IMAGE": "I", "VIDEO": "V", "MESH": "M"}
+    letter_for = {"IMAGE": "I", "VIDEO": "V", "MESH": "M", "SPLAT": "S"}
     for index, (identifier, *_rest) in enumerate(ACTION_TYPES):
         expected = letter_for[_OUTPUT_TYPES[identifier]]
         assert kinds[index] == expected, (

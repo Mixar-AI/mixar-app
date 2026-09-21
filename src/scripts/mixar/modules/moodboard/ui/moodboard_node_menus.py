@@ -69,6 +69,11 @@ class MIXIE_MT_moodboard_add(Menu):
                 layout, 'VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER',
                 drop=drop, allow_empty=True,
             )
+        if _capability_available("world_labs"):
+            _connected_action(
+                layout, 'WORLD_LABS', "Generate Splat", 'WORLD',
+                drop=drop, allow_empty=True,
+            )
 
         # Mesh-feature nodes take a 3D mesh input (wire a mesh node into them).
         mesh_items = [
