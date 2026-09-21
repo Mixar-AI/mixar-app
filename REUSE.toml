@@ -4,13 +4,6 @@
 
 version = 1
 
-# Curated native UI validation captures and their replay verdict summary.
-[[annotations]]
-path = "docs/development/evidence/moodboard-redesign/**"
-precedence = "closest"
-SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
-SPDX-License-Identifier = "GPL-2.0-or-later"
-
 [[annotations]]
 path = [
   ".env.example",
