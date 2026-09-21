@@ -113,21 +113,29 @@ def test_the_row_is_only_for_selected_standalone_media():
     assert "cache->outputs.lookup_ptr(media_id)" in body
     # Culled on the ROW's own footprint: it hangs above the tile, so a tile
     # just below the viewport still has its buttons on screen.
-    assert "moodboard_media_action_row_rect(media_pixels, &row_rect)" in body
-    assert "moodboard_view_rect_to_region(v2d, region, *media_rect, &media_region)" in body
-    assert "row_rect.ymax > 0" in body
+    assert "moodboard_media_action_row_rect(*media_rect, &row_rect)" in body
+    assert "moodboard_view_rect_to_region(v2d, region, row_rect, &row_region)" in body
 
 
 def test_the_media_name_never_lands_under_the_buttons():
-    """The title reserves the shared action width before fitting its text."""
+    """The name floats left-aligned on the same line the row is right-aligned
+    on; on a narrow tile they would meet. The label pass reads the row's rect
+    through the ONE definition the button layout uses and treats it as taken."""
     labels = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_labels.cc")
     actions = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_actions.cc")
     header = _read(SPACE_MIXIE / "mixie_draw_moodboard_intern.hh")
 
     assert "void moodboard_media_action_row_rect(" in header
     assert "void moodboard_media_action_row_rect(" in actions
-    assert "moodboard_node_card_actions_width(true)" in labels
-    assert "moodboard_node_card_actions_width(true)" in actions
+    assert "moodboard_media_action_row_rect(media_canvas, &row_canvas)" in labels
+    assert "has_action_row" in labels
+    # Only the float ABOVE the tile competes with the row; inside the tile the
+    # row is above and clear, so the check is gated on `!inside`.
+    clear = labels.split("auto strip_is_clear = ")[1]
+    assert "!inside && tile.has_action_row" in clear
+    # Only a SELECTED tile has a row, so only a selected tile reserves one.
+    collect = labels.split("if (tile.selected) {")[1].split("tiles.append(tile)")[0]
+    assert "moodboard_media_action_row_rect(" in collect
 
 
 # --------------------------------------------------------------------------- #
@@ -251,9 +259,7 @@ def test_rename_is_in_place_not_a_dialog():
     assert "if (moodboard_media_rename_is_active(scene, media_id)) {" in loop
     renaming = loop.split("if (moodboard_media_rename_is_active(scene, media_id)) {")[1]
     assert "moodboard_media_rename_end();" in renaming.split("else {")[0]
-    assert "moodboard_add_media_card_actions(block, media_region, media_id);" in renaming.split(
-        "else {"
-    )[0]
+    assert "ED_region_tag_redraw(region);" in renaming.split("else {")[0]
     assert "moodboard_add_media_card_actions(block, media_region, media_id);" in renaming.split(
         "else {"
     )[1]
@@ -266,7 +272,7 @@ def test_rename_is_in_place_not_a_dialog():
 def test_the_painted_name_yields_to_the_rename_field():
     labels = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_labels.cc")
     assert "moodboard_media_rename_is_active(scene, media_id)" in labels
-    assert "!moodboard_media_rename_is_active(scene, media_id)" in labels
+    assert "if (!tile.selected || tile.renaming) {" in labels
 
 
 def test_f2_renames_the_selected_reference_when_no_node_is_active():

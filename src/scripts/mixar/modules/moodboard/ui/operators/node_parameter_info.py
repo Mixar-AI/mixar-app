@@ -9,6 +9,18 @@ import bpy
 from bpy.types import Operator
 
 
+def parameter_help(parameter):
+    parts = [parameter.label or parameter.name]
+    if getattr(parameter, 'description', ''):
+        parts.append(parameter.description)
+    if parameter.parameter_type in {'INTEGER', 'FLOAT'}:
+        if -1e17 < parameter.minimum <= parameter.maximum < 1e17:
+            parts.append(f"Range: {parameter.minimum:g} to {parameter.maximum:g}")
+    if getattr(parameter, 'required', False):
+        parts.append("Required")
+    return '\n\n'.join(parts)
+
+
 class MIXIE_OT_moodboard_parameter_info(Operator):
     bl_idname = 'mixie.moodboard_parameter_info'
     bl_label = 'Parameter Info'
@@ -19,21 +31,13 @@ class MIXIE_OT_moodboard_parameter_info(Operator):
         return properties.details
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_popup(self, width=400)
+        return context.window_manager.invoke_popup(self, width=320)
 
     def draw(self, context):
-        layout = self.layout
-        if hasattr(layout, 'mixar_surface'):
-            layout = layout.mixar_surface(theme='ZEN')
-        title, _, body = self.details.partition('\n\n')
-        for line in textwrap.wrap(title, width=45):
-            layout.label(text=line, icon='INFO')
-        layout.separator()
-        for paragraph in body.split('\n\n'):
-            for source_line in paragraph.splitlines():
-                for line in textwrap.wrap(source_line, width=45):
-                    layout.label(text=line)
-            layout.separator(factor=.4)
+        for paragraph in self.details.split('\n\n'):
+            for line in textwrap.wrap(paragraph, width=45):
+                self.layout.label(text=line)
+            self.layout.separator(factor=.4)
 
     def execute(self, context):
         return {'FINISHED'}

@@ -55,8 +55,7 @@ using wmWindowManager = blender::wmWindowManager;
 /* Moodboard Image Constants */
 #define MOODBOARD_IMAGE_BASE_SIZE 700.0f
 #define MOODBOARD_MEDIA_FRAME_PADDING 6.0f
-/* Square media stays uncropped: inner radius zero means outer radius = inset. */
-#define MOODBOARD_MEDIA_FRAME_RADIUS MOODBOARD_MEDIA_FRAME_PADDING
+#define MOODBOARD_MEDIA_FRAME_RADIUS 18.0f
 #define MOODBOARD_IMAGE_MIN_SCALE 0.1f
 #define MOODBOARD_IMAGE_MAX_SCALE 50.0f
 #define MOODBOARD_IMAGE_SCALE_DELTA 0.1f

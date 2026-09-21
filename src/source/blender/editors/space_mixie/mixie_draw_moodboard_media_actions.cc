@@ -15,8 +15,9 @@
  *
  * Same geometry as the node row, from the same two header constants, so a
  * reference and a card selected side by side wear their rows on one line.
- * Laid out in screen pixels from the media's full projected rect, inside the
- * shared clipped canvas block, so buttons keep their size at every zoom.
+ * Laid out in CANVAS units from the media's own rect, inside the canvas block
+ * the node controls already build, so the buttons scale and pan with the tile
+ * and clicks land on them at every zoom.
  *
  * Rename is IN PLACE: while a tile is being renamed the row gives way to a
  * text field on that same line, bound straight to the Image datablock's name,
@@ -36,18 +37,24 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
-#include "UI_mixar.hh"
 #include "UI_resources.hh"
 
 namespace blender::ed::mixie {
+
+/* Three square icon buttons and the gaps between them. */
+#define MOODBOARD_MEDIA_ACTION_COUNT 3
+#define MOODBOARD_MEDIA_ACTION_GAP 8.0f
 
 void moodboard_media_action_row_rect(const rctf &media_rect, rctf *r_row)
 {
   /* ONE definition of where the row sits, shared with the selected-media label
    * painter: the name is left-aligned above the tile and this row is
-   * right-aligned above it. Titles reserve this row's width. */
+   * right-aligned above it, so on a narrow tile the two would meet -- the label
+   * reads this rect as taken and drops inside its picture instead. */
   const float height = MOODBOARD_NODE_HEADER_ROW_H * UI_SCALE_FAC;
-  const float width = moodboard_node_card_actions_width(true);
+  const float width = height * MOODBOARD_MEDIA_ACTION_COUNT +
+                      MOODBOARD_MEDIA_ACTION_GAP * UI_SCALE_FAC *
+                          (MOODBOARD_MEDIA_ACTION_COUNT - 1);
   r_row->ymin = media_rect.ymax + MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC;
   r_row->ymax = r_row->ymin + height;
   r_row->xmax = media_rect.xmax;
@@ -68,7 +75,7 @@ void moodboard_add_media_card_actions(ui::Block *block,
    * nothing is laid over it. */
   const int height = int(MOODBOARD_NODE_HEADER_ROW_H * UI_SCALE_FAC);
   const int width = height;
-  const int gap = int(ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC).gap);
+  const int gap = int(MOODBOARD_MEDIA_ACTION_GAP * UI_SCALE_FAC);
   const int row_y = media_region.ymax + int(MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC);
 
   /* Laid out from the right edge, in the node row's order: Export claims the
@@ -93,8 +100,6 @@ void moodboard_add_media_card_actions(ui::Block *block,
   /* Scoped to THIS reference, so the button on one tile saves that tile even
    * with several selected. */
   RNA_string_set(ui::button_operator_ptr_ensure(save), "media_id", media_id);
-  ui::mixar_style_button(
-      save, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   moodboard_set_node_tooltip(save, "Export\n\nSave this image or video to disk.");
   x -= width + gap;
 
@@ -109,8 +114,6 @@ void moodboard_add_media_card_actions(ui::Block *block,
                                           height,
                                           nullptr);
   RNA_string_set(ui::button_operator_ptr_ensure(preview), "media_id", media_id);
-  ui::mixar_style_button(
-      preview, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   moodboard_set_node_tooltip(
       preview,
       "Preview\n\nOpen this image or video in its own window. Several previews "
@@ -131,8 +134,6 @@ void moodboard_add_media_card_actions(ui::Block *block,
                                          height,
                                          nullptr);
   RNA_string_set(ui::button_operator_ptr_ensure(rename), "media_id", media_id);
-  ui::mixar_style_button(
-      rename, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   moodboard_set_node_tooltip(rename,
                              "Rename\n\nEdit this image or video's name in place, right "
                              "here above it. Enter applies, Escape keeps the old name.");
@@ -176,8 +177,6 @@ static bool moodboard_add_media_rename_field(const bContext *C,
   if (!field) {
     return false;
   }
-  ui::mixar_style_button(
-      field, ui::MixarComponent::Input, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   moodboard_set_node_tooltip(field, "Rename\n\nEnter applies, Escape keeps the old name.");
   /* The outliner's temporary-rename mechanism: the first call activates the
    * field (text editing, cursor in it, text selected); every later redraw must
@@ -228,24 +227,24 @@ void moodboard_add_selected_media_actions(const bContext *C,
       /* Cull on the ROW's footprint, not the tile's: the row hangs above the
        * tile, so a tile just below the bottom edge of the viewport still has
        * its buttons on screen. */
-      rcti media_region;
-      moodboard_view_rect_to_region(v2d, region, *media_rect, &media_region);
-      rctf media_pixels, row_rect;
-      BLI_rctf_rcti_copy(&media_pixels, &media_region);
-      moodboard_media_action_row_rect(media_pixels, &row_rect);
-      if (row_rect.xmax > 0 && row_rect.xmin < region->winx &&
-          row_rect.ymax > 0 && row_rect.ymin < region->winy)
-      {
+      rctf row_rect;
+      moodboard_media_action_row_rect(*media_rect, &row_rect);
+      rcti row_region;
+      if (moodboard_view_rect_to_region(v2d, region, row_rect, &row_region)) {
+        /* The buttons live in the block's REGION space, so the tile rect has to
+         * cross over too -- `row_region` above only answers "any of it on
+         * screen?". */
+        rcti media_region;
+        moodboard_view_rect_to_region(v2d, region, *media_rect, &media_region);
         if (moodboard_media_rename_is_active(scene, media_id)) {
           /* The field takes the row's place: once the user is typing, the
            * three buttons have nothing to add, and the field wants the tile's
            * whole width for the name. */
           if (!moodboard_add_media_rename_field(C, block, region, &image_ptr, media_region)) {
             moodboard_media_rename_end();
-            /* The temporary field has been removed. Restore actions in this
-             * block: tagging redraw from inside drawing can be consumed by the
-             * current frame, leaving an empty row until the next mouse move. */
-            moodboard_add_media_card_actions(block, media_region, media_id);
+            /* The buttons come back on the next redraw, not this one -- the
+             * same one-frame notifier the outliner's rename needs. */
+            ED_region_tag_redraw(region);
           }
         }
         else {

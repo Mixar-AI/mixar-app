@@ -229,10 +229,9 @@ float moodboard_socket_label_width(View2D *v2d, const char *label);
 
 /* Card chrome: canvas-space surfaces/handles and screen-space titles. */
 /** The card itself: the shared glass pane, with a brighter rim while selected. */
-float moodboard_card_corner_radius(View2D *v2d, PointerRNA *node);
-void moodboard_draw_card_background(const rctf &rect, bool selected, float radius);
+void moodboard_draw_card_background(const rctf &rect, bool selected);
 /** The breathing accent a QUEUED/RUNNING card wears. */
-void moodboard_draw_running_glow(const rctf &rect, float radius);
+void moodboard_draw_running_glow(const rctf &rect);
 /** Corner resize handles on a SELECTED node card -- the same four squares a
  * selected reference picture wears (see mixie_moodboard_ops_graph_resize.cc). */
 void moodboard_draw_node_resize_handles(View2D *v2d, const rctf &rect);
@@ -242,11 +241,7 @@ void moodboard_draw_node_resize_handles(View2D *v2d, const rctf &rect);
  * text rather than widgets; reserve space for visible header actions.
  */
 /** Screen-space title row; the painter and QA capture share its geometry. */
-rctf moodboard_node_title_rect(const rctf &card, float reserved_width = 0.0f);
-void moodboard_draw_card_title(const char *title,
-                               const rctf &card,
-                               bool selected,
-                               float reserved_width = 0.0f);
+rctf moodboard_node_title_rect(const rctf &card);
 void moodboard_draw_node_header(PointerRNA *node,
                                 const rctf &rect,
                                 bool selected,
@@ -311,7 +306,7 @@ void moodboard_add_selected_media_actions(const bContext *C,
                                           ARegion *region,
                                           PointerRNA *scene_ptr,
                                           const MoodboardGraphCache *cache);
-/** Screen-space rect the row above `media_rect` occupies -- the ONE definition,
+/** Canvas rect the row above `media_rect` occupies -- the ONE definition,
  * shared with the selected-media label so the name never lands under it. */
 void moodboard_media_action_row_rect(const rctf &media_rect, rctf *r_row);
 

@@ -8,7 +8,7 @@ import math
 import bpy
 from bpy.types import Operator
 
-from mixar.modules.moodboard.core.parameter_help import parameter_help, parameter_specs
+from .node_parameter_info import parameter_help
 
 from mixar.modules.moodboard.constants import GRAPH_NODE_ID_MAXLEN
 from mixar.modules.moodboard.core.canvas_context import (
@@ -62,7 +62,7 @@ def _clamp_numeric_settings(node):
                 parameter.value_float = bounded
 
 
-def _draw_parameter(layout, parameter, spec=None):
+def _draw_parameter(layout, parameter):
     label = parameter.label or parameter.name.replace('_', ' ').title()
     kind = parameter.parameter_type
     field = layout.column(align=True)
@@ -72,7 +72,7 @@ def _draw_parameter(layout, parameter, spec=None):
     else:
         caption.label(text=label)
     info = caption.operator('mixie.moodboard_parameter_info', text='', icon='INFO', emboss=False)
-    info.details = parameter_help(parameter, spec)
+    info.details = parameter_help(parameter)
     if kind == 'BOOLEAN':
         return
     elif kind == 'ENUM':
@@ -102,10 +102,9 @@ def _draw_settings(layout, node):
         draw_dropdown(settings, node, 'service_key', text="")
     settings.label(text="Model")
     draw_dropdown(settings, node, 'model', text="")
-    specs = parameter_specs(node)
     for parameter in node.parameters:
         if parameter.visible:
-            _draw_parameter(settings, parameter, specs.get(parameter.name))
+            _draw_parameter(settings, parameter)
 
     actions = layout.column(align=True)
     actions.enabled = not running

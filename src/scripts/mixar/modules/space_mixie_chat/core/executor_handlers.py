@@ -73,6 +73,9 @@ class HandlerCleanupMixin:
         # Only inspect already-loaded modules: a callback cannot have been
         # installed otherwise, and script cleanup must not bootstrap modules.
         trusted = {
+            "scene_render.core.jobs": {
+                "render_complete": "_complete", "render_cancel": "_cancel",
+                "render_write": "_write", "load_pre": "_before_load"},
             "space_mixie_chat.core.preview_render": {
                 "render_complete": "_complete", "render_cancel": "_cancelled",
                 "depsgraph_update_post": "_changed", "load_pre": "_before_load"},

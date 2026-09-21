@@ -107,27 +107,6 @@ void moodboard_qa_targets(const wmWindow *win,
     RNA_property_collection_end(&iter);
   }
 
-  blender::Set<std::string> media_title_ids;
-  if (PropertyRNA *images = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images")) {
-    CollectionPropertyIterator iter{};
-    RNA_property_collection_begin(&scene_ptr, images, &iter);
-    while (iter.valid) {
-      PointerRNA media = iter.ptr;
-      char id[MIXIE_GRAPH_ID_BUF];
-      ed::mixie::mixie_rna_string_get_clamped(&media, "node_id", id, sizeof(id));
-      PropertyRNA *embedded = RNA_struct_find_property(&media, "embedded_node_id");
-      if (id[0] && RNA_boolean_get(&media, "selected") &&
-          RNA_pointer_get(&media, "image").data &&
-          (!embedded || RNA_property_string_length(&media, embedded) == 0) &&
-          !ed::mixie::moodboard_media_rename_is_active(scene, id))
-      {
-        media_title_ids.add(id);
-      }
-      RNA_property_collection_next(&iter);
-    }
-    RNA_property_collection_end(&iter);
-  }
-
   for (const auto &item : cache.outputs.items()) {
     const std::string &node_id = item.key;
     const rctf &canvas_rect = item.value;
@@ -139,23 +118,19 @@ void moodboard_qa_targets(const wmWindow *win,
       t.text = node_id;
       r_targets.push_back(std::move(t));
     }
-    if (is_action || asset_ids.contains(node_id) || media_title_ids.contains(node_id)) {
+    if (is_action || asset_ids.contains(node_id)) {
       rcti card_pixels;
       if (canvas_rect_to_window(region, canvas_rect, &card_pixels)) {
         rctf card;
         BLI_rctf_rcti_copy(&card, &card_pixels);
-        const bool media_title = media_title_ids.contains(node_id);
-        const rctf title = ed::mixie::moodboard_node_title_rect(
-            card, media_title ? ed::mixie::moodboard_node_card_actions_width(true) : 0.0f);
+        const rctf title = ed::mixie::moodboard_node_title_rect(card);
         MixarQATarget heading;
         BLI_rcti_rctf_copy(&heading.rect_win, &title);
         rcti visible = ed::mixie::moodboard_visible_canvas_rect(
             area, const_cast<ARegion *>(region));
         BLI_rcti_translate(&visible, region->winrct.xmin, region->winrct.ymin);
-        if (title.xmax > title.xmin &&
-            BLI_rcti_isect(&heading.rect_win, &visible, &heading.rect_win))
-        {
-          heading.surface = media_title ? "moodboard_media_title" : "moodboard_node_title";
+        if (BLI_rcti_isect(&heading.rect_win, &visible, &heading.rect_win)) {
+          heading.surface = "moodboard_node_title";
           heading.text = node_id;
           heading.enabled = false; /* Painted label, for visual capture only. */
           r_targets.push_back(std::move(heading));
