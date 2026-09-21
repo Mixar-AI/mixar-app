@@ -260,6 +260,10 @@ CHAT_INPUT_MAXLEN = 10000
 # Must stay in lockstep with RULES_TEXT_MAX / the rules_text buffer in
 # the C++ overlay (mixie_chat_rules_intern.hh / mixie_chat_layout_data.hh).
 CHAT_RULES_MAXLEN = 10000
+# Serialized store has a separate allowance for stable IDs and JSON escaping.
+# Match the backend snapshot envelope (65536 bytes / 512 entries per scope).
+CHAT_RULES_STORE_MAXLEN = 65537
+CHAT_RULES_MAX_ENTRIES = 512
 
 # '@' MENTION AUTOCOMPLETE
 

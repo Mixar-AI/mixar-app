@@ -161,6 +161,28 @@ void chat_qa_targets(const wmWindow * /*win*/,
    * `sel` on a row = armed (Delete? / Revert?); `detail` on a checkpoint row
    * = its section ("Turns", "Reverted turns", "Safety copies"). */
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+  if (rt != nullptr && rt->rules_overlay_active) {
+    const auto add_rules_target = [&](const char *surface, const rctf &bounds) {
+      rctf visible = bounds;
+      visible.xmin = std::max(visible.xmin, 0.0f);
+      visible.ymin = std::max(visible.ymin, 0.0f);
+      visible.xmax = std::min(visible.xmax, float(region->winx));
+      visible.ymax = std::min(visible.ymax, float(region->winy));
+      if (visible.xmax <= visible.xmin || visible.ymax <= visible.ymin) {
+        return;
+      }
+      MixarQATarget target;
+      target.surface = surface;
+      target.rect_win = {region->winrct.xmin + int(visible.xmin),
+                         region->winrct.xmin + int(visible.xmax),
+                         region->winrct.ymin + int(visible.ymin),
+                         region->winrct.ymin + int(visible.ymax)};
+      r_targets.push_back(std::move(target));
+    };
+    add_rules_target("chat_rules_editor", rt->rules_text_bounds);
+    add_rules_target("chat_rules_submit", rt->rules_submit_bounds);
+    add_rules_target("chat_rules_close", rt->rules_close_bounds);
+  }
   if (rt != nullptr && rt->history_overlay_active) {
     wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
     const bool checkpoints = (mixie_chat_history_read_mode(wm) == HistoryMode::Checkpoints);

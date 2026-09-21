@@ -29,7 +29,7 @@ from bpy.props import BoolProperty, CollectionProperty, StringProperty
 from bpy.types import PropertyGroup
 
 from mixar.config.logging_config import get_logger
-from ...constants import CHAT_RULES_MAXLEN
+from ...constants import CHAT_RULES_MAXLEN, CHAT_RULES_STORE_MAXLEN
 
 logger = get_logger(__name__)
 
@@ -90,12 +90,11 @@ def register():
     bpy.types.Scene.mixie_chat_rules = StringProperty(
         name="Project Rules",
         description=(
-            "Rules the Mixie agent must always follow in this file "
-            "(JSON list store; enabled rules are sent along with the "
-            "first message of every new chat)"
+            "Rules for this file; changes apply on your next message or "
+            "answer, with your current request taking priority"
         ),
         default="",
-        maxlen=CHAT_RULES_MAXLEN,
+        maxlen=CHAT_RULES_STORE_MAXLEN,
         update=on_chat_rules_changed,
     )
 

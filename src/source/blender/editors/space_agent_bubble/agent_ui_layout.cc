@@ -339,6 +339,7 @@ void agent_ui_layout_build(const int window_w,
   r_layout->hdr_history = f.disc(AGENT_HDR_BTN1_CX, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_new_chat = f.disc(AGENT_HDR_BTN2_CX, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_checkpoints = f.disc(AGENT_HDR_BTN3_CX, hdr_cy, AGENT_HDR_BTN_R);
+  r_layout->hdr_rules = f.disc(AGENT_HDR_BTN4_CX, hdr_cy, AGENT_HDR_BTN_R);
 
   const float handwriting_w = ui::mixar_text_width("Handwriting", text_size) / u + 40.0f;
   r_layout->hdr_handwriting = f.box(

@@ -106,6 +106,7 @@ struct AgentIslandLayout {
   rctf hdr_new_chat;
   rctf hdr_handwriting; /* Explicit input method, separate from Sketch. */
   rctf hdr_checkpoints; /* Turn checkpoints — restore an earlier turn. */
+  rctf hdr_rules; /* Rules text-document icon, beside Checkpoints. */
   float hdr_title_cx;
   float hdr_title_y;
 
