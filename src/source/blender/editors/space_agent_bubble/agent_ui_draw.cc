@@ -739,7 +739,7 @@ void agent_ui_draw_island(ARegion *region,
 
     if (state->ink_visible) {
       /* Handwriting text output window over the new chat topbar */
-      const float left_limit = layout->hdr_checkpoints.xmax + 16.0f * u;
+      const float left_limit = layout->hdr_rules.xmax + 16.0f * u;
       const float right_limit = layout->hdr_handwriting.xmin - 16.0f * u;
       const float max_w = right_limit - left_limit;
       const float cx = layout->hdr_title_cx;

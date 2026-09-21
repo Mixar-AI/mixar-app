@@ -120,6 +120,21 @@ void stroke_path(const float (*pts)[2],
 void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, const float color[4])
 {
   const float weight = std::max(1.0f, size / 14.0f);
+  if (icon == AGENT_ICON_SIGNATURE) {
+    /* A short signed name: one rising stroke and the line it sits on. */
+    static const float stroke[][2] = {
+        {-.32f, -.04f},
+        {-.20f, .20f},
+        {-.06f, -.14f},
+        {.06f, .18f},
+        {.20f, -.06f},
+        {.34f, .06f},
+    };
+    static const float baseline[][2] = {{-.24f, -.26f}, {.32f, -.26f}};
+    stroke_path(stroke, 6, cx, cy, size, weight, false, color);
+    stroke_path(baseline, 2, cx, cy, size, weight, false, color);
+    return;
+  }
   if (icon == AGENT_ICON_RULES) {
     static const float page[][2] = {
         {-.25f, -.32f}, {.25f, -.32f}, {.25f, .14f}, {.07f, .32f}, {-.25f, .32f}};

@@ -174,7 +174,8 @@ def test_handwriting_has_explicit_header_control_with_shared_geometry():
     assert "state->handwriting_available" in body
     paint = _function_body(DRAW_CC, "void agent_ui_draw_handwriting_control(")
     assert "layout->hdr_handwriting" in paint
-    assert 'state->ink_visible ? "Type instead" : "Handwriting"' in paint
+    assert "agent_ui_icon_draw(AGENT_ICON_SIGNATURE" in paint
+    assert "Type instead" not in paint
 
 
 def test_chip_widths_fit_mark_counts_voice_status_and_auto_switch():

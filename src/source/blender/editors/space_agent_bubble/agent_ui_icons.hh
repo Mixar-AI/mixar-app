@@ -32,6 +32,7 @@ enum AgentIcon {
   AGENT_ICON_PLUS,
   AGENT_ICON_RESTORE, /* Counter-clockwise arrow arc — turn checkpoints. */
   AGENT_ICON_RULES,   /* Document outline — project/global rules. */
+  AGENT_ICON_SIGNATURE, /* Handwritten stroke — the Handwriting control. */
 
   /* Chip row, and the two tabs the design leaves unmarked. */
   AGENT_ICON_IMAGE, /* Framed picture — Image tab and Upload Reference. */

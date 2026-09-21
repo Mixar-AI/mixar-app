@@ -441,6 +441,7 @@ void agent_ui_icon_draw(const AgentIcon icon,
       break;
     case AGENT_ICON_VIDEO:
     case AGENT_ICON_RULES:
+    case AGENT_ICON_SIGNATURE:
       agent_ui_tab_icon_draw(icon, cx, cy, s, color);
       break;
     case AGENT_ICON_SPLAT:

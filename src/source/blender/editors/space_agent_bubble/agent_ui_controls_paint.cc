@@ -199,17 +199,15 @@ void agent_ui_draw_handwriting_control(ARegion *region,
   }
   const float chip[4] = AGENT_COL_CHIP;
   const float accent[4] = AGENT_COL_ACCENT;
-  const float text[4] = AGENT_COL_TEXT;
   float fill[4];
   agent_ui_motion_color(chip, accent,
                         agent_ui_motion_sample(region, AgentIslandControl::Handwriting,
                                                layout->hdr_handwriting, state->ink_visible),
                         fill);
-  fill_round(&layout->hdr_handwriting, AGENT_CHIP_RADIUS * layout->scale, fill);
-  label_centre(state->ink_visible ? "Type instead" : "Handwriting",
-               BLI_rctf_cent_x(&layout->hdr_handwriting),
-               BLI_rctf_cent_y(&layout->hdr_handwriting),
-               AGENT_CHIP_FONT * agent_ui_text_unit(), text);
+  fill_round(&layout->hdr_handwriting,
+             BLI_rctf_size_x(&layout->hdr_handwriting) * 0.5f,
+             fill);
+  agent_ui_icon_draw(AGENT_ICON_SIGNATURE, &layout->hdr_handwriting, glyph, fill);
 }
 
 void agent_ui_draw_chip_row(ARegion *region,
