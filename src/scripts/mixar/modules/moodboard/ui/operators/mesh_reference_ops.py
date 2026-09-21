@@ -13,8 +13,13 @@ from ...core.node_graph import asset_node_by_id
 
 # Enum callbacks receive OperatorProperties, not the operator instance, and
 # cannot store Python attributes on it. Keep strings and object identities
-# alive in a bounded per-card cache for the lifetime of each search popup.
+# alive in a bounded per-card cache for the lifetime of each picker.
 _searches = {}
+
+# Blender's search popup is a fixed ten rows. A scene with a handful of
+# meshes left that box almost empty and covering the card. A short list uses
+# a menu that sizes to its rows; longer scenes keep the search.
+_COMPACT_MESH_MENU_LIMIT = 8
 
 
 def _search_key(props, context):
@@ -24,6 +29,24 @@ def _search_key(props, context):
 def _mesh_items(self, context):
     search = _searches.get(_search_key(self, context)) if context else None
     return search[0] if search else []
+
+
+def _popup_compact_mesh_menu(context, node_id, objects):
+    """A menu whose height follows the mesh count."""
+
+    def draw(menu, _context):
+        layout = menu.layout.mixar_surface(theme='ZEN', density='COMPACT')
+        layout.operator_context = 'EXEC_DEFAULT'
+        for obj in objects:
+            props = layout.operator(
+                "mixie.moodboard_select_mesh",
+                text=obj.name,
+                icon='OUTLINER_OB_MESH',
+            )
+            props.node_id = node_id
+            props.object_name = obj.name
+
+    context.window_manager.popup_menu(draw, title="Select Mesh")
 
 
 class MIXIE_OT_moodboard_select_mesh(Operator):
@@ -53,6 +76,9 @@ class MIXIE_OT_moodboard_select_mesh(Operator):
         if not _mesh_items(self, context):
             self.report({'WARNING'}, "No meshes in this scene. Add a mesh in the viewport first")
             return {'CANCELLED'}
+        if len(objects) <= _COMPACT_MESH_MENU_LIMIT:
+            _popup_compact_mesh_menu(context, self.node_id, objects)
+            return {'INTERFACE'}
         context.window_manager.invoke_search_popup(self)
         return {'RUNNING_MODAL'}
 

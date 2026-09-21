@@ -88,8 +88,7 @@ def pick(qa, name):
         qa.wait(f"bool(drv.find(op={PICK!r}))",timeout=5)
     qa.click(op=PICK)
     snapshot(qa,'mesh-picker')
-    qa.cmd('type',text=name)
-    qa.press('RET')
+    qa.click(popup=True, text=name)
     qa.wait(f"{NODES}[0].preview_object is not None and {NODES}[0].preview_object.name=={name!r}",
             timeout=5)
 

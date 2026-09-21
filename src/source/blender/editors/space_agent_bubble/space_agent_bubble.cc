@@ -679,27 +679,30 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   /* --- Model, right of Auto ---
    * Pops the Python menu that owns the whole picker (catalog projection,
    * preference state, the PUT); C++ only draws the chip and reads the
-   * WindowManager mirror. Same `wm.call_menu` idiom the panes use for their
-   * own dropdowns. The chip is absent until the Python half registers the
-   * mirror, and an empty rect means the width budget dropped it. */
+   * WindowManager mirror. A pulldown is anchored to this chip. A free popup
+   * opened downward from the cursor on this bottom row, and its last item
+   * covered Upload Reference. The chip is absent until the Python half
+   * registers the mirror, and an empty rect means the width budget dropped it. */
   if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
     agent_bubble_rect_to_region(region, layout->chip_model, &bx, &by, &bw, &bh);
-    ui::Button *model_but = uiDefButO(
-        block, ui::ButtonType::But, "wm.call_menu",
-        blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+    uiDefMenuBut(
+        block,
+        [](bContext *C, ui::Layout *menu_layout, void * /*arg*/) {
+          MenuType *mt = WM_menutype_find("MIXIE_CHAT_MT_agent_model", false);
+          if (mt != nullptr) {
+            ui::menutype_draw(C, mt, menu_layout);
+          }
+        },
+        nullptr,
+        "",
+        bx,
+        by,
+        bw,
+        bh,
         state->model_byok_active ?
             "Your own API key is in use, and it decides the model. Open this menu "
             "and pick \"Change or remove my API key\" to choose a hosted model again" :
             "Choose which model the agent runs on");
-    if (model_but) {
-      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(model_but);
-      RNA_string_set(op_ptr, "name", "MIXIE_CHAT_MT_agent_model");
-      /* Keep settings reachable while a key is active. The menu's model rows
-       * are greyed by `core/model_menu.build_rows`, but its settings row opens
-       * the same provider dialog as the profile menu. The chip paints dim (the painter reads
-       * `model_byok_active`), so it reads as "not what runs" without
-       * trapping the user. */
-    }
   }
 
   if (!agent_bubble_references_visible(C)) {

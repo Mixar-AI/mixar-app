@@ -17,7 +17,7 @@ from lib import run_scenario
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/model-ordering'))
 OUT.mkdir(parents=True, exist_ok=True)
-PICKER = {'op': 'WM_OT_call_menu', 'area_type': 'AGENT_BUBBLE'}
+PICKER = {'but_type': 'Pulldown', 'area_type': 'AGENT_BUBBLE', 'region_type': 'TOOLS'}
 SETUP = """
 import bpy, threading
 from types import SimpleNamespace

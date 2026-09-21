@@ -297,3 +297,13 @@ def test_asset_node_draws_its_object_preview_and_suppresses_the_empty_hint():
     assert preview.index("moodboard_node_controls_rect(") < preview.index(
         '"MIXIE_OT_moodboard_select_mesh"')
     assert '"mixie_moodboard_asset_nodes"' in drawer
+
+
+def test_a_short_mesh_list_uses_a_sized_menu():
+    source = (
+        ROOT / "src/scripts/mixar/modules/moodboard/ui/operators/mesh_reference_ops.py"
+    ).read_text(encoding="utf-8")
+    assert "_COMPACT_MESH_MENU_LIMIT = 8" in source
+    assert "popup_menu(draw, title=\"Select Mesh\")" in source
+    assert "return {'INTERFACE'}" in source
+    assert "invoke_search_popup(self)" in source

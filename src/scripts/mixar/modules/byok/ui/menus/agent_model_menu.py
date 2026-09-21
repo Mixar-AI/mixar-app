@@ -5,8 +5,8 @@
 """The hosted agent-model picker menu.
 
 **`bl_idname` is a cross-language contract.** The floating island draws a
-`wm.call_menu` Model chip whose ``name`` is this id. Python owns the picker;
-C++ owns its label and click. Profile settings uses the same BYOK dialog.
+pulldown Model chip that opens this menu. Python owns the picker; C++ owns
+its label and click. Profile settings uses the same BYOK dialog.
 
 **Two menus, one level deep.** The parent lists the models flat; the thinking
 levels live in a submenu that reads the CURRENT pick. Drawing every model's

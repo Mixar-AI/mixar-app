@@ -4,8 +4,8 @@
 
 """The hosted agent model picker: menu rows, operators, preference mirror.
 
-Python owns the whole picker; C++ on each surface draws one button whose label
-comes from a WindowManager string and whose click is a `wm.call_menu`. So the
+Python owns the whole picker; C++ on the island draws one pulldown whose label
+comes from a WindowManager string and whose click opens this menu. So the
 things worth pinning here are the rules the user sees (ineligible greyed not
 hidden, BYOK disables every row, an empty catalog fails closed), the request
 bytes, and the epoch guard that stops a late response repainting the previous
@@ -254,11 +254,20 @@ def _menu_tree():
     return ast.parse(MENU_SOURCE.read_text(encoding="utf-8"))
 
 
+def test_the_island_chip_anchors_the_menu_instead_of_a_free_popup():
+    source = (
+        ROOT / "src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc"
+    ).read_text(encoding="utf-8")
+    assert "uiDefMenuBut(" in source
+    assert 'WM_menutype_find("MIXIE_CHAT_MT_agent_model"' in source
+    assert "wm.call_menu" not in source
+
+
 def test_the_menu_bl_idname_is_the_contract_the_cpp_button_pops():
     source = MENU_SOURCE.read_text(encoding="utf-8")
     assert f'bl_idname = "{MENU_BL_IDNAME}"' in source
 
-    # The class name IS the bl_idname, which is what `wm.call_menu` resolves.
+    # The class name IS the bl_idname the island pulldown opens.
     menu_class = next(
         node for node in ast.walk(_menu_tree())
         if isinstance(node, ast.ClassDef) and node.name == MENU_BL_IDNAME

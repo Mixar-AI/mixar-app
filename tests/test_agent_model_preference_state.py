@@ -4,8 +4,8 @@
 
 """The hosted agent model picker: menu rows, operators, preference mirror.
 
-Python owns the whole picker; C++ on each surface draws one button whose label
-comes from a WindowManager string and whose click is a `wm.call_menu`. So the
+Python owns the whole picker; C++ on the island draws one pulldown whose label
+comes from a WindowManager string and whose click opens this menu. So the
 things worth pinning here are the rules the user sees (ineligible greyed not
 hidden, BYOK disables every row, an empty catalog fails closed), the request
 bytes, and the epoch guard that stops a late response repainting the previous

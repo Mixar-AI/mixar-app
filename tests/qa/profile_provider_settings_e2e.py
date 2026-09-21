@@ -157,7 +157,7 @@ def check_dialog(qa):
 def open_picker(qa, area_type, active):
     if area_type == 'AGENT_BUBBLE':
         qa.eval('result=str(bpy.ops.mixar.agent_bubble_show_window())')
-    qa.click(op='WM_OT_call_menu', area_type=area_type)
+    qa.click(but_type='Pulldown', area_type=area_type, region_type='TOOLS')
     qa.wait("bool(drv.find(op='MIXAR_OT_agent_model_set', popup=True))", timeout=5)
     models = qa.find(op='MIXAR_OT_agent_model_set', popup=True)['widgets']
     if len(models) != 2 or any(w['enabled'] == active for w in models):
