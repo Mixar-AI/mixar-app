@@ -4024,7 +4024,7 @@ static Scene *ui_but_mixie_mention_scene(const Button *but)
 static bool mixie_chat_composer_scroll_transcript(bContext *C, const wmEvent *event)
 {
   ScrArea *area = CTX_wm_area(C);
-  if (!area || !ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
+  if (!area || !(area->spacetype == SPACE_AGENT_BUBBLE)) {
     return false;
   }
   ARegion *transcript = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
@@ -4684,9 +4684,7 @@ static int do_but_textedit(
          * path for every text field in Blender — costs no context lookup. */
         const ScrArea *clipboard_area = (event->modifier != 0) ? CTX_wm_area(C) : nullptr;
         const bool is_chat_space = clipboard_area &&
-                                   ELEM(clipboard_area->spacetype,
-                                        SPACE_MIXIE_CHAT,
-                                        SPACE_AGENT_BUBBLE);
+                                   (clipboard_area->spacetype == SPACE_AGENT_BUBBLE);
         if (ui_textedit_clipboard_modifier_match(event, is_chat_space)) {
           if (event->type == EVT_VKEY) {
             if (is_chat_space) {
@@ -4860,8 +4858,7 @@ static int do_but_textedit(
          * floating-overlay editor variant of the chat — same input
          * field, same backend, just a smaller UI — so Enter should
          * submit there too. */
-        bool is_space_chat = (area && (area->spacetype == SPACE_MIXIE_CHAT ||
-                                        area->spacetype == SPACE_AGENT_BUBBLE));
+        bool is_space_chat = (area && (area->spacetype == SPACE_AGENT_BUBBLE));
 
         /* Also check for Quick Prompt property (works in popup dialogs from any space) */
         bool is_quick_prompt = false;

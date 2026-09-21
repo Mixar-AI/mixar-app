@@ -30,11 +30,8 @@ Wires the floating agent bubble into Blender's startup:
    — whether it's been closed entirely or minimised to the status
    pill — no matter how the auto-show pipeline ends up.
 
-The C++ operator that actually shows the popup is registered by the
-SpaceMixieChat editor's spacetype init (mixie_chat_operatortypes in
-space_mixie_chat.cc) — that path runs during Blender startup, before any
-Python addon. So by the time anything in this file runs, bpy.ops.mixie_chat
-.agent_bubble_show is callable.
+Native agent operators are registered by the Agent Bubble spacetype before
+Python bootstrap; the shared implementations live in mixie_chat_ops.cc.
 """
 
 import sys

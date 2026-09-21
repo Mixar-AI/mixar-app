@@ -22,11 +22,9 @@ namespace blender {
 struct rctf;
 
 enum AgentIcon {
-  /* Tab strip. `generations.svg` draws marks for Agent and Gaussian Splat;
-   * 3D and Media use the cube and folded-page glyphs below so those tabs
-   * do not read as the odd ones out. Library is label-only. */
+  /* Category tabs have distinct marks; Library is label-only. */
   AGENT_ICON_AGENT = 0, /* Person in a ring. */
-  AGENT_ICON_MEDIA,     /* Folded page — Media. */
+  AGENT_ICON_VIDEO,     /* Video camera. */
   AGENT_ICON_SPLAT,     /* Nine-dot rosette — Gaussian Splat. */
 
   /* Card header. */
@@ -35,7 +33,7 @@ enum AgentIcon {
   AGENT_ICON_RESTORE, /* Counter-clockwise arrow arc — turn checkpoints. */
 
   /* Chip row, and the two tabs the design leaves unmarked. */
-  AGENT_ICON_IMAGE, /* Framed picture — Upload Reference. */
+  AGENT_ICON_IMAGE, /* Framed picture — Image tab and Upload Reference. */
   AGENT_ICON_STAR,
   AGENT_ICON_CHEVRON_DOWN,
   AGENT_ICON_SORT, /* Down + up arrow pair — the generations sort chip. */

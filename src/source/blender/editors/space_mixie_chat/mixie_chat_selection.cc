@@ -52,8 +52,7 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
   ScrArea *area = CTX_wm_area(C);
   /* SPACE_AGENT_BUBBLE has a layout-compatible spacedata struct
    * (see DNA_space_types.h), so this cast is valid for both. */
-  if (area && (area->spacetype == SPACE_MIXIE_CHAT ||
-               area->spacetype == SPACE_AGENT_BUBBLE))
+  if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
     return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }

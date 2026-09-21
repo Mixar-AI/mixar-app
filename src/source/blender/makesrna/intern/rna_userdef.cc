@@ -5040,7 +5040,6 @@ static void rna_def_userdef_themes(BlenderRNA *brna)
       {8, "TEXT_EDITOR", ICON_TEXT, "Text Editor", ""},
       {21, "TOPBAR", ICON_TOPBAR, "Top Bar", ""},
       {7, "SEQUENCE_EDITOR", ICON_SEQUENCE, "Video Sequencer", ""},
-      {24, "MIXIE_CHAT", ICON_CONSOLE, "Mixie Chat", ""},
       {28, "MIXIE", ICON_NONE, "Moodboard", ""},
       {27, "AGENT_BUBBLE", ICON_CONSOLE, "Agent Bubble", ""},
       {18, "BONE_COLOR_SETS", ICON_COLOR, "Bone Color Sets", ""},

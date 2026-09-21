@@ -10,10 +10,10 @@ Two small operators the island's C++ panes bind:
   see ``space_mixie_chat/ui/operators/screenshot_ops.py``) and attach the
   still as the ACTIVE pane's reference:
 
-  * Media / Image  -> ``tab_imagegen.reference_images`` (the exact add the
+  * Image  -> ``tab_imagegen.reference_images`` (the exact add the
     moodboard's ``mixie.imagegen_upload_reference`` performs: packed image,
     boarded unselected, mirrored into the tab's reference collection).
-  * Media / Video  -> boarded as a SELECTED moodboard item — Video Gen's
+  * Video  -> boarded as a SELECTED moodboard item — Video Gen's
     references ARE the selected board media
     (``get_selected_moodboard_media_inputs``).
   * Gaussian Splat -> ``tab_world_labs.reference_image`` with
@@ -186,7 +186,6 @@ class MIXAR_OT_pane_capture_viewport(Operator):
         scene = context.scene
         wm = context.window_manager
         tab = getattr(wm, "mixar_bubble_tab", 'AGENT')
-        media_kind = getattr(wm, "mixar_bubble_media_kind", 'IMAGE')
 
         try:
             path = _capture_viewport_to_file(context)
@@ -204,7 +203,7 @@ class MIXAR_OT_pane_capture_viewport(Operator):
             return {'CANCELLED'}
 
         try:
-            if tab == 'MEDIA' and media_kind == 'VIDEO':
+            if tab == 'VIDEO':
                 if _attach_to_board_selected(scene, path) is None:
                     raise RuntimeError("could not board the capture")
             else:
@@ -217,7 +216,7 @@ class MIXAR_OT_pane_capture_viewport(Operator):
                     if hasattr(wl, "use_selected_image"):
                         wl.use_selected_image = False
                 else:
-                    # MEDIA / IMAGE (and any future pane defaults here).
+                    # Image (and any future pane defaults here).
                     _attach_to_imagegen(scene, img, path)
         except Exception as exc:  # noqa: BLE001
             logger.error("Could not attach viewport capture: %r", exc)

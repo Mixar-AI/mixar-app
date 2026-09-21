@@ -335,6 +335,7 @@ def test_no_module_file_exceeds_the_line_limit(path):
 
 
 class TestVisibleControlsAndRecovery:
+    HEADER = "src/scripts/mixar/modules/agent_bubble/ui/header.py"
     """A mode whose boundaries and recovery are invisible is the first thing
     users trip on with ink tools (arXiv:2607.21468 found exactly this: people
     could not tell which mode they were in, and asked for visible controls and
@@ -343,7 +344,6 @@ class TestVisibleControlsAndRecovery:
 
     OVERLAY = "src/scripts/mixar/modules/scribble_mark/core/overlay.py"
     MODAL = "src/scripts/mixar/modules/scribble_mark/ui/operators/mark_draw_ops.py"
-    HEADER = "src/scripts/mixar/modules/space_mixie_chat/ui/header.py"
 
     def test_the_frozen_frame_carries_a_hint(self):
         text = source(self.OVERLAY)
@@ -379,9 +379,9 @@ class TestVisibleControlsAndRecovery:
         assert body.index("self._ink") < body.index("remove_last")
 
     def test_queued_marks_can_be_cleared_without_re_arming(self):
-        text = source(self.HEADER)
+        text = source("src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc")
         assert "mixar.scribble_mark_clear" in text
-        assert "not armed" in text
+        assert "!state->scribble_armed" in text
 
 
 class TestReviewFindings:
@@ -520,7 +520,6 @@ class TestIndependentScribbleTools:
     INK = "src/scripts/mixar/modules/space_mixie_chat/core/scribble.py"
     INK_OPS = "src/scripts/mixar/modules/space_mixie_chat/ui/operators/ink_ops.py"
     HEADERS = (
-        "src/scripts/mixar/modules/space_mixie_chat/ui/header.py",
         "src/scripts/mixar/modules/agent_bubble/ui/header.py",
     )
 

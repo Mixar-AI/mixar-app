@@ -35,7 +35,7 @@ from mixar.modules.common.ui.constants import (
 from ...core import model_suggestions
 
 # Row heights (uiLayout.scale_y). Match chrome ``card_row_*``.
-# Footer actions use the CTA recipe (1.7), not the profile 2x2 grid (1.9).
+# Footer actions use the CTA recipe (1.7), not the profile action rows (1.9).
 HEADER_SCALE_Y = CARD_ROW_HEADING
 FIELD_SCALE_Y = CARD_ROW_FIELD
 ACTION_SCALE_Y = CARD_ROW_CTA

@@ -253,15 +253,15 @@ def _tab_table():
     ).group(1)
     labels = re.findall(r'"([^"]+)"', metrics)
     marks = re.findall(r"AGENT_ICON_\w+", icons)
-    assert len(labels) == len(marks) == 6
+    assert len(labels) == len(marks) == 7
     return dict(zip(labels, marks))
 
 
 def test_every_category_tab_carries_its_own_mark():
     """No two marked category tabs may share a glyph.
 
-    `generations.svg` draws marks for Agent and Gaussian Splat; 3D and Media
-    take the island's own cube and folded-page glyphs so those tabs cannot
+    `generations.svg` draws marks for Agent and Gaussian Splat; 3D, Image and Video
+    take the island's cube, picture and camera glyphs so those tabs cannot
     read as failed-to-load. Library and Queue are label-only
     (`AGENT_ICON_COUNT`); Queue still gains a count chip while nonempty.
     """
@@ -271,7 +271,8 @@ def test_every_category_tab_carries_its_own_mark():
     assert tabs["Library"] == "AGENT_ICON_COUNT"
     assert tabs["Queue"] == "AGENT_ICON_COUNT"
     assert tabs["3D"] == "AGENT_ICON_MESH"
-    assert tabs["Media"] == "AGENT_ICON_MEDIA"
+    assert tabs["Image"] == "AGENT_ICON_IMAGE"
+    assert tabs["Video"] == "AGENT_ICON_VIDEO"
 
     marks = [icon for icon in tabs.values() if icon != "AGENT_ICON_COUNT"]
     assert len(set(marks)) == len(marks)
@@ -296,10 +297,11 @@ def test_the_library_tab_is_sized_for_the_short_label():
 
 
 def test_reference_tab_marks_have_dedicated_stroked_artwork():
-    """Media uses a dedicated stroked page path."""
+    """Video uses dedicated stroked camera artwork."""
     artwork = (CPP / "agent_ui_tab_icons.cc").read_text()
-    assert "AGENT_ICON_MEDIA" in artwork
-    assert "stroke_path(page," in artwork
+    assert "AGENT_ICON_VIDEO" in artwork
+    assert "stroke_path(body," in artwork
+    assert "stroke_path(lens," in artwork
     assert "stroke_path(hand," not in artwork
     assert "stroke_path(cuff," not in artwork
 

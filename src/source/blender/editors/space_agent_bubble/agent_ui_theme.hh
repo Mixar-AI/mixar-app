@@ -141,9 +141,11 @@ namespace blender {
 #define AGENT_TAB_W_AGENT 122
 #define AGENT_TAB_X_3D 137
 #define AGENT_TAB_W_3D 88
-#define AGENT_TAB_X_MEDIA 231
-#define AGENT_TAB_W_MEDIA 123
-#define AGENT_TAB_X_SPLAT 360
+#define AGENT_TAB_X_IMAGE 231
+#define AGENT_TAB_W_IMAGE 123
+#define AGENT_TAB_X_VIDEO 360
+#define AGENT_TAB_W_VIDEO 123
+#define AGENT_TAB_X_SPLAT 489
 #define AGENT_TAB_W_SPLAT 262
 
 /** Right cluster. Library is unmarked and short; width is for that label,

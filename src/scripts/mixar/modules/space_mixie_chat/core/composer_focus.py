@@ -29,7 +29,7 @@ def after_redraw(context):
             for area in window.screen.areas:
                 if area.as_pointer() != area_id:
                     continue
-                if area.type not in {'AGENT_BUBBLE', 'MIXIE_CHAT'}:
+                if area.type not in {'AGENT_BUBBLE'}:
                     return None
                 if (area.type == 'AGENT_BUBBLE'
                         and getattr(wm, 'mixar_bubble_tab', 'AGENT') != 'AGENT'):

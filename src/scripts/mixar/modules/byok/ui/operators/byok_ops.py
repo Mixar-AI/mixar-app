@@ -147,11 +147,9 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # continuously — state flips from SAVING → IDLE / ERROR during
         # the async save must be visible without user interaction.
         #
-        # The dialog is a popup block in CTX_wm_window. Since PR #1562 the
-        # only entry point is the model picker menu, and that lives in the
-        # Agent Bubble ISLAND window (~460px tall) — opened there, the dialog
-        # is clipped to a scrolling sliver over the composer. Re-target it to
-        # the main window, which is what every other dialog in the app uses.
+        # Both the profile and chat picker open this shared dialog. A popup
+        # block in the Agent Bubble's ~460px window would be clipped over the
+        # composer, so host it in the main window instead.
         # Override the WINDOW only: the bubble's screen is a temporary one and
         # `temp_override(screen=...)` refuses it outright ("Overriding context
         # with an active temporary screen isn't supported").

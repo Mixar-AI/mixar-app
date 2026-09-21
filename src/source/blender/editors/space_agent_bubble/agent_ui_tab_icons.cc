@@ -116,18 +116,17 @@ void stroke_path(const float (*pts)[2],
 
 }  // namespace
 
-/* Reference tab mark: a folded media page. Thin stroke so it balances the
+/* Video tab mark: a camera. Thin stroke so it balances the
  * other tab glyphs at compact sizes. */
 void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, const float color[4])
 {
-  if (icon != AGENT_ICON_MEDIA) {
+  if (icon != AGENT_ICON_VIDEO) {
     return;
   }
   const float weight = std::max(1.0f, size / 14.0f);
-  static const float page[][2] = {{-.30f,-.40f},{.30f,-.40f},{.30f,.15f},
-                                 {.05f,.40f},{-.30f,.40f}};
-  static const float fold[][2] = {{.05f,.40f},{.05f,.15f},{.30f,.15f}};
-  stroke_path(page, 5, cx, cy, size, weight, true, color);
-  stroke_path(fold, 3, cx, cy, size, weight, false, color);
+  static const float body[][2] = {{-.40f,-.28f},{.12f,-.28f},{.12f,.28f},{-.40f,.28f}};
+  static const float lens[][2] = {{.12f,-.12f},{.40f,-.28f},{.40f,.28f},{.12f,.12f}};
+  stroke_path(body, 4, cx, cy, size, weight, true, color);
+  stroke_path(lens, 4, cx, cy, size, weight, true, color);
 }
 }  // namespace blender

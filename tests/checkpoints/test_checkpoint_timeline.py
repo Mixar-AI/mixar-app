@@ -243,7 +243,7 @@ def test_scene_changes_are_judged_from_the_undo_stack_not_the_depsgraph():
     assert "MIXIE_CHAT_OT_undo_stamp" in native and "ED_undo_stack_get()" in native
     assert '"mixie_chat_undo_stamp"' in native
     registration = (Path(__file__).parents[2] / "src/source/blender/editors/space_mixie_chat"
-                    / "space_mixie_chat.cc").read_text(encoding="utf-8")
+                    / "mixie_chat_ops.cc").read_text(encoding="utf-8")
     assert "WM_operatortype_append(MIXIE_CHAT_OT_undo_stamp)" in registration
     props = (_CHAT_ROOT / "ui" / "properties" / "history_props.py").read_text(encoding="utf-8")
     assert "mixie_chat_undo_stamp" in props and "mixie_chat_history_current" not in props
@@ -414,9 +414,6 @@ def test_the_chats_button_switches_an_open_checkpoints_card_instead_of_closing_i
     ops = (_CHAT_ROOT / "ui" / "operators" / "history_ops.py").read_text(encoding="utf-8")
     show = ops[ops.index("class MIXIE_CHAT_OT_show_history"):ops.index("class MIXIE_CHAT_OT_open_history_session")]
     assert "opening = not (wm.mixie_chat_history_visible and wm.mixie_chat_history_mode == 'CHATS')" in show
-    header = (_CHAT_ROOT / "ui" / "header.py").read_text(encoding="utf-8")
-    chats_button = header[header.index('"mixie_chat.show_history"'):header.index('"mixie_chat.show_checkpoints"')]
-    assert "mixie_chat_history_mode', 'CHATS') == 'CHATS'" in chats_button
     chat = Path(__file__).parents[2] / "src/source/blender/editors/space_mixie_chat"
     overlay = (chat / "mixie_chat_history_overlay.cc").read_text(encoding="utf-8")
     # Switching modes on the open card resets the search like opening does,

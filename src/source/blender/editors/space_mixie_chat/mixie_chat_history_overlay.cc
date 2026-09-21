@@ -77,7 +77,7 @@ static SpaceMixieChat *history_space_from_area(ScrArea *area)
   /* SPACE_AGENT_BUBBLE reuses these callbacks via its layout-compatible
    * spacedata struct (see DNA_space_types.h on SpaceAgentBubble). */
   if (!area || !area->spacedata.first ||
-      (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE))
+      (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return nullptr;
   }

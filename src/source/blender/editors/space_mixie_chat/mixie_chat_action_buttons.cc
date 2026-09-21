@@ -31,8 +31,7 @@ namespace blender {
 static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
 {
   ScrArea *area = CTX_wm_area(C);
-  if (area && (area->spacetype == SPACE_MIXIE_CHAT ||
-               area->spacetype == SPACE_AGENT_BUBBLE))
+  if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
     return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }

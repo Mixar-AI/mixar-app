@@ -226,13 +226,6 @@ def test_safety_copies_are_pruned_only_among_themselves(tc, monkeypatch):
     assert os.path.exists(os.path.join(tc.m.session_dir("sess-1"), kinds[4][1]))
 
 
-def test_header_imports_core_at_the_right_depth():
-    # ui/header.py sits one level below the package: ``..core`` is the
-    # package's core; ``...core`` raised in the live app and blanked the
-    # whole header after the history button.
-    source = (_CHAT_ROOT / "ui" / "header.py").read_text(encoding="utf-8")
-    assert "from ..core import turn_checkpoints" in source
-    assert "from ...core import turn_checkpoints" not in source
 
 
 def test_restore_of_a_pre_conversation_snapshot_starts_a_fresh_session(tc, monkeypatch):
@@ -413,9 +406,6 @@ def test_restore_operator_runs_in_exec_only_and_the_native_retitle_never_writes(
     assert "wm.mixie_chat_history_mode = 'CHECKPOINTS'" in sync
     assert "wm.mixie_chat_history_locked = not allowed" in sync
     assert "turn_checkpoints.checkpoint_session_id(scene)" in sync
-    header = (_CHAT_ROOT / "ui" / "header.py").read_text(encoding="utf-8")
-    assert '"mixie_chat.show_checkpoints"' in header and "MIXIE_CHAT_MT_checkpoints" not in header
-    assert "turn_checkpoints.checkpoint_session_id(scene)" in header
     native = (Path(__file__).parents[2] / "src/source/blender/editors/space_mixie_chat"
               / "mixie_chat_document_ops.cc").read_text(encoding="utf-8")
     assert "MIXIE_CHAT_OT_retitle_document" in native

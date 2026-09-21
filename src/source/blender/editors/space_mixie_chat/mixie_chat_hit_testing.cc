@@ -55,8 +55,7 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
   /* SPACE_AGENT_BUBBLE has a layout-compatible spacedata struct
    * (see DNA_space_types.h), so this cast is valid for both — the
    * agent bubble reuses the chat hit-testing logic for selection. */
-  if (area && (area->spacetype == SPACE_MIXIE_CHAT ||
-               area->spacetype == SPACE_AGENT_BUBBLE))
+  if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
     return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }

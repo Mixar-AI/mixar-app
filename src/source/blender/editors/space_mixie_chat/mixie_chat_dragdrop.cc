@@ -156,7 +156,7 @@ static bool mixie_chat_image_drop_poll(bContext *C,
    * drop onto the floating bubble. Same dual-spacetype contract as every
    * other shared chat callback (selection, hit-testing, code copy, ...). */
   ScrArea *area = CTX_wm_area(C);
-  if (!area || !ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
+  if (!area || !(area->spacetype == SPACE_AGENT_BUBBLE)) {
     return false;
   }
   if (area->spacetype == SPACE_AGENT_BUBBLE && !ED_agent_bubble_is_resting_pill(C)) {
@@ -246,7 +246,7 @@ void mixie_chat_dropboxes()
 {
   /* Main region (chat messages area). */
   ListBaseT<wmDropBox> *lb = WM_dropboxmap_find(
-      "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
+      "Agent Chat", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
 
   WM_dropbox_add(lb,
                  "MIXIE_CHAT_OT_drop_image",
@@ -258,7 +258,7 @@ void mixie_chat_dropboxes()
   /* Footer region (input area, implemented as TOOLS region).
    * Users naturally drag images onto the input field. */
   ListBaseT<wmDropBox> *lb_footer = WM_dropboxmap_find(
-      "Mixie Chat Footer", SPACE_MIXIE_CHAT, RGN_TYPE_TOOLS);
+      "Agent Chat Composer", SPACE_AGENT_BUBBLE, RGN_TYPE_TOOLS);
 
   WM_dropbox_add(lb_footer,
                  "MIXIE_CHAT_OT_drop_image",

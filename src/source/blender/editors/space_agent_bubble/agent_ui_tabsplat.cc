@@ -125,9 +125,6 @@ void agent_ui_tabsplat_draw(const bContext *C,
   int bx, by;
   short bw, bh;
 
-  pane_settings_button(block, panel.xmax - PANE_INSET_X * u,
-                       panel.ymax - PANE_STRIP_TOP * u, u, SPLAT_SERVICE_KEY, state.model_slug);
-
   /* A compact fallback reads the complete live enum, including choices beyond
    * the segment buffer. Native popup menus own choice navigation and editing. */
   auto dropdown = [&](const rctf &rect, PropertyRNA *prop, const char *caption) {

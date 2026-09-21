@@ -5214,14 +5214,10 @@ static void widget_textbut_custom(Button *but,
                                   int roundboxalign,
                                   const float zoom)
 {
-  /* The island's empty-state field is a full-region Text button. Its
-   * theme inner is opaque `#121212` and dest-over cannot lower dest A=1,
-   * so frost never reaches the compositor. Skip chrome on a tall field
-   * (the panel) and on an explicit wash; placeholder and typed text
-   * still draw via wt->text. Emboss stays so clicks work. */
-  if (rect != nullptr && BLI_rcti_size_y(rect) > 120) {
-    return;
-  }
+  /* Only an explicit translucent wash suppresses chrome. Height cannot
+   * identify the island's empty-state panel: subsequent multiline drafts
+   * grow past 120 pixels too, and must retain their input background.
+   * Placeholder and typed text still draw via wt->text; Emboss keeps clicks. */
   if (but != nullptr && but->col[3]) {
     if (but->col[3] < 128) {
       return;

@@ -196,7 +196,6 @@ void chat_qa_targets(const wmWindow * /*win*/,
 
 void mixie_chat_qa_targets_register()
 {
-  Mixar_qa_register_target_provider(SPACE_MIXIE_CHAT, chat_qa_targets);
   /* The floating Agent Bubble: SpaceAgentBubble is layout-identical to
    * SpaceMixieChat and renders chat history through the same code (see
    * space_agent_bubble.cc), so the same layout-cache targets apply — this is

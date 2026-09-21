@@ -96,27 +96,12 @@ def run(qa):
         qa.press('RET', window=field(qa)['window'])
         qa.step('combined_draft_sent_once', assert_sent, qa, 'Keep this and the camera too', 3)
         settle(qa)
-        # The docked editor has a separate TOOLS composer and must share the
-        # same behavior. Change only the isolated QA window's largest area.
-        qa.eval('bpy.ops.mixar.bubble_minimise(); '
-                'a=max(drv.main_window().screen.areas, key=lambda a:a.width*a.height); '
-                "bpy.app.driver_namespace['_voice_qa_area']=(a,a.type); a.type='MIXIE_CHAT'; result=True")
-        FIELD = dict(FIELD, area_type='MIXIE_CHAT')
-        VOICE = dict(VOICE, area_type='MIXIE_CHAT')
-        qa.wait(f'bool(drv.find(**{VOICE!r}))', timeout=5)
-        qa.step('docked_dictation', dictation, qa, 'Keep the light')
-        qa.step('docked_composer_has_caret', focus_state, qa, 'Keep the light')
-        qa.step('docked_picture', snap, qa, out, 'docked-transcript')
-        qa.press('RET', window=field(qa)['window'])
-        qa.step('docked_enter_sends_once', assert_sent, qa, 'Keep the light', 4)
-        settle(qa)
-        return {'sends': 4, 'backend_calls': 0, 'snapshots': str(out),
+        return {'sends': 3, 'backend_calls': 0, 'snapshots': str(out),
                 'platform': qa.eval('import sys; result=sys.platform')}
     finally:
         qa.eval('import voice_focus_probe as v; import chat_send_probe as p; '
                 'v.uninstall(); p.uninstall(); result=True')
-        qa.eval("saved=bpy.app.driver_namespace.pop('_voice_qa_area', None)\n"
-                'if saved: saved[0].type=saved[1]\nresult=True')
+
 
 
 if __name__ == '__main__':

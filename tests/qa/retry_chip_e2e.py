@@ -45,7 +45,7 @@ def click_until(qa, expected):
 def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/retry-chip-qa'))
     out.mkdir(parents=True, exist_ok=True)
-    qa.cmd('dismiss_splash')
+    qa.press('ESC')
     local = str(Path(__file__).resolve().parent)
     qa.eval(f'import sys; sys.path.insert(0, {local!r}); '
             'import chat_send_probe as p; p.install(); result=True')

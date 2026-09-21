@@ -37,7 +37,7 @@ struct bContext;
 
 /* The job identity this pane submits under — `world_labs_queue.py`'s
  * `_SERVICE_KEY` / `FEATURE_WORLD_LABS`, which are the same string. Used for
- * queue feedback and the active model's Settings popup. */
+ * queue feedback. */
 #define SPLAT_SERVICE_KEY "world_labs"
 
 struct SplatEnumItem {

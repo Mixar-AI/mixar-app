@@ -22,6 +22,10 @@ class Texture;
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
+struct wmKeyConfig;
+void mixie_chat_operatortypes();
+void mixie_chat_keymap(wmKeyConfig *keyconf);
+
 struct ARegion;
 struct bContext;
 struct Main;
@@ -38,15 +42,6 @@ struct wmWindowManager;
 /* -------------------------------------------------------------------- */
 /** \name Region Callbacks
  * \{ */
-
-/* Header region callbacks */
-void mixie_chat_header_region_init(wmWindowManager *wm, ARegion *region);
-void mixie_chat_header_region_draw(const bContext *C, ARegion *region);
-
-/* Footer region callbacks */
-void mixie_chat_footer_region_init(wmWindowManager *wm, ARegion *region);
-void mixie_chat_footer_region_layout(const bContext *C, ARegion *region);
-void mixie_chat_footer_region_draw(const bContext *C, ARegion *region);
 
 /* Main region callbacks (mixie_chat_main_region.cc) */
 void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region);

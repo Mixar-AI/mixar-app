@@ -17,9 +17,9 @@ sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario
 from mixie_open_type_send_e2e import FIELD, SEND, SCENE, snap
 from zen_ui_fixes_e2e import MODE_ZEN, size_bubble
+from island_tab_alignment_e2e import TABS
 
 QUEUE = {'area_type': 'AGENT_BUBBLE', 'text': 'Generation queue'}
-SETTINGS = {'area_type': 'AGENT_BUBBLE', 'op': 'MIXAR_OT_pane_generation_settings'}
 GENERATE = {'area_type': 'AGENT_BUBBLE', 'op': 'MIXIE_OT_moodboard_prompt_generate'}
 NATIVE = {'area_type': 'PROPERTIES', 'op': 'WM_OT_qa_native_label'}
 
@@ -53,8 +53,8 @@ def assert_native(qa, out, name, label, measured):
 
 
 def assert_tab_spacing(qa):
-    tabs = qa.find(area_type='AGENT_BUBBLE', op='WM_OT_context_set_enum')['widgets']
-    assert len(tabs) == 6, tabs
+    tabs = [qa.find(area_type='AGENT_BUBBLE', text=tip)['widgets'][0]
+            for tip in TABS.values()]
     rects = sorted(tab['rect'] for tab in tabs)
     assert all(a[2] < b[0] for a, b in zip(rects, rects[1:])), rects
 
@@ -80,7 +80,7 @@ def run(qa):
             'import native_label_fixture as f; f.install(); '
             'a=drv.main_window().screen.areas[0]; a.type="PROPERTIES"; '
             'a.spaces.active.context="OBJECT"; result=True')
-    qa.wait(f'len(drv.find(**{NATIVE!r})) == 4', timeout=5)
+    qa.wait(f'len(drv.find(**{NATIVE!r})) == 3', timeout=5)
     metrics = {}
     try:
         qa.eval('bpy.context.preferences.ui_styles[0].widget.points=12; result=True')
@@ -113,20 +113,17 @@ def run(qa):
         qa.eval('bpy.context.preferences.view.ui_scale=1.0; result=True')
         qa.click(area_type='AGENT_BUBBLE', text='3D generation')
         time.sleep(.4)
-        settings, generate = [], []
+        generate = []
         for width, height in ((616, 430), (1100, 620)):
             # The Agent composer is absent on other tabs; resize in the tab's window.
-            qa.eval(f't=drv.find_one(**{SETTINGS!r})\n'
+            qa.eval(f't=drv.find_one(**{GENERATE!r})\n'
                     'with bpy.context.temp_override(window=t["_win"]):\n'
                     f'    bpy.ops.mixar.bubble_set_size(width={width},height={height})\nresult=True')
             time.sleep(.5)
-            settings.append(capture_label(qa, out, f'3d-{width}-settings', SETTINGS))
             generate.append(capture_label(qa, out, f'3d-{width}-generate', GENERATE))
             assert_native(qa, out, f'3d-{width}-generate', 'Generate', generate[-1])
-            qa.cmd('snap', path=str(out/f'3d-{width}.png'), target=SETTINGS, margin=4000)
-        qa.step('fixed-native-component-text', assert_fixed, settings)
+            qa.cmd('snap', path=str(out/f'3d-{width}.png'), target=GENERATE, margin=4000)
         qa.step('generate-label-fits-and-matches-native', assert_fixed, generate)
-        metrics['settings'] = settings
         metrics['generate'] = generate
 
         # Preference changes must reach custom tabs/actions and native-styled
@@ -135,8 +132,6 @@ def run(qa):
         for points in (12, 15):
             qa.eval(f'bpy.context.preferences.ui_styles[0].widget.points={points}; result=True')
             time.sleep(.4)
-            pref_settings = capture_label(qa, out, f'font-{points}-settings', SETTINGS)
-            native_settings = assert_native(qa,out,f'font-{points}-settings','Settings',pref_settings)
             pref_generate = capture_label(qa, out, f'font-{points}-generate', GENERATE)
             native_generate = assert_native(qa, out, f'font-{points}-generate', 'Generate', pref_generate)
             qa.click(area_type='AGENT_BUBBLE', text='Agent chat')
@@ -147,11 +142,11 @@ def run(qa):
             assert_tab_spacing(qa)
             snap(qa, out, f'font-{points}-island')
             preference_samples[str(points)] = {
-                'queue':pref_queue, 'send':pref_send, 'settings':pref_settings, 'generate':pref_generate,
+                'queue':pref_queue, 'send':pref_send, 'generate':pref_generate,
                 'native':{
                     'queue':assert_native(qa,out,f'font-{points}-queue','Queue',pref_queue),
                     'send':assert_native(qa,out,f'font-{points}-send','Send',pref_send),
-                    'settings':native_settings, 'generate':native_generate}}
+                    'generate':native_generate}}
             qa.eval('result=str(bpy.ops.mixar.bubble_minimise())')
             qa.wait("bool(drv.find(surface='pill_cat'))", timeout=4)
             qa.cmd('snap', path=str(out/f'font-{points}-pill.png'),
@@ -160,7 +155,7 @@ def run(qa):
             time.sleep(.3)
             qa.click(area_type='AGENT_BUBBLE', text='3D generation')
             time.sleep(.3)
-        for control in ('queue','send','settings','generate'):
+        for control in ('queue','send','generate'):
             ratio = preference_samples['15'][control][0] / preference_samples['12'][control][0]
             assert 1.15 < ratio < 1.4, (control, preference_samples)
         qa.step('blender-font-preference-controls-every-label', lambda: preference_samples)

@@ -134,7 +134,7 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
         sync_bubble_attachment_size_deferred(force_attachment_height=True)
 
         for area in context.screen.areas:
-            if area.type == 'MIXIE_CHAT':
+            if area.type == 'AGENT_BUBBLE':
                 for region in area.regions:
                     if region.type == 'TOOLS':
                         region.tag_redraw()

@@ -12,7 +12,8 @@ struct ARegion;
 enum class AgentIslandControl {
   Agent,
   ThreeD,
-  Media,
+  Image,
+  Video,
   Splat,
   Generations,
   Queue,

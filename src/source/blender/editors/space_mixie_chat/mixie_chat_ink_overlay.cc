@@ -67,7 +67,7 @@ static const float INK_COL_STROKE[4] = CHAT_ACCENT_LIVE;
 static SpaceMixieChat *ink_space_from_area(ScrArea *area)
 {
   if (!area || !area->spacedata.first ||
-      (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE))
+      (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return nullptr;
   }

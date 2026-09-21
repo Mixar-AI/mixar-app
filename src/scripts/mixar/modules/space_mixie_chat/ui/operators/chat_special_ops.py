@@ -640,7 +640,7 @@ class MIXIE_CHAT_OT_toggle_plan_mode(Operator):
         scene.mixie_chat_plan_enabled = not scene.mixie_chat_plan_enabled
 
         for area in context.screen.areas:
-            if area.type == 'MIXIE_CHAT':
+            if area.type == 'AGENT_BUBBLE':
                 area.tag_redraw()
         return {'FINISHED'}
 
@@ -858,7 +858,7 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
 
         # Redraw
         for area in context.screen.areas:
-            if area.type in ('MIXIE_CHAT', 'MIXIE'):
+            if area.type in ('AGENT_BUBBLE', 'MIXIE'):
                 area.tag_redraw()
 
         return {'FINISHED'}

@@ -91,12 +91,12 @@ def test_stand_down_reads_the_bubble_tab_by_identifier():
     assert "RNA_property_enum_identifier" in body
 
 
-def test_stand_down_leaves_the_chat_editor_alone():
-    """SPACE_MIXIE_CHAT is never tab-switched — its dispatch is unchanged."""
+def test_stand_down_rejects_non_bubble_spaces():
+    """Only the floating bubble may dispatch transcript hits."""
     body = _function_body(MAIN_REGION_CC, "static bool mixie_chat_dispatch_is_live(")
     non_bubble = body[body.index("if (area->spacetype != SPACE_AGENT_BUBBLE)") :]
-    assert "return area->spacetype == SPACE_MIXIE_CHAT;" in non_bubble.split("}")[0], (
-        "a non-bubble space must short-circuit to live before the tab is read"
+    assert "return false;" in non_bubble.split("}")[0], (
+        "a non-bubble space must short-circuit to inactive before the tab is read"
     )
 
 

@@ -17,7 +17,7 @@ from lib import run_scenario
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/model-ordering'))
 OUT.mkdir(parents=True, exist_ok=True)
-PICKER = {'op': 'WM_OT_call_menu', 'area_type': 'MIXIE_CHAT'}
+PICKER = {'op': 'WM_OT_call_menu', 'area_type': 'AGENT_BUBBLE'}
 SETUP = """
 import bpy, threading
 from types import SimpleNamespace
@@ -82,12 +82,7 @@ result = True
 
 
 def run(qa):
-    qa.step('dismiss_splash', qa.dismiss_splash)
-    qa.step('open_chat', qa.open_chat)
-    qa.step('open_footer', qa.eval,
-            "area = next(a for w in bpy.context.window_manager.windows "
-            "for a in w.screen.areas if a.type in {'VIEW_3D', 'MIXIE_CHAT'})\n"
-            "area.type = 'MIXIE_CHAT'\nresult = True")
+    qa.step('open_island', qa.eval, 'result=str(bpy.ops.mixar.agent_bubble_show_window())')
     qa.step('install_fixture', qa.eval, SETUP)
     try:
         qa.step('old_read_started', qa.wait,
@@ -106,7 +101,7 @@ result = True
 """)
         qa.step('pending_menu', qa.click, **PICKER)
         pending = str(OUT / 'pending.png')
-        qa.step('snap_pending', qa.cmd, 'snap', path=pending, area='MIXIE_CHAT')
+        qa.step('snap_pending', qa.cmd, 'snap', path=pending, area='AGENT_BUBBLE')
         qa.press('ESC')
         qa.step('acknowledge_save', qa.eval,
                 "from mixar.modules.byok.core import preference_state as P\n"
@@ -133,7 +128,7 @@ result = True
                 "not bpy.context.window_manager.mixar_agent_model_byok_active", timeout=25)
         recovered = str(OUT / 'recovered.png')
         qa.step('open_recovered_menu', qa.click, **PICKER)
-        qa.step('snap_recovered', qa.cmd, 'snap', path=recovered, area='MIXIE_CHAT')
+        qa.step('snap_recovered', qa.cmd, 'snap', path=recovered, area='AGENT_BUBBLE')
         qa.press('ESC')
         return {'snaps': [pending, recovered], 'real_backend_mutations': 0}
     finally:

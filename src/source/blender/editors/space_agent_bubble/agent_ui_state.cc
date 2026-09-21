@@ -213,7 +213,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     } tab_map[] = {
         {"AGENT", AGENT_TAB_AGENT},
         {"THREE_D", AGENT_TAB_3D},
-        {"MEDIA", AGENT_TAB_MEDIA},
+        {"IMAGE", AGENT_TAB_IMAGE},
+        {"VIDEO", AGENT_TAB_VIDEO},
         {"SPLAT", AGENT_TAB_SPLAT},
         {"GENERATIONS", AGENT_TAB_GENERATIONS},
         {"QUEUE", AGENT_TAB_QUEUE},

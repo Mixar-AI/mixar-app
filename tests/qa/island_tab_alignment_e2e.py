@@ -17,7 +17,8 @@ from lib import run_scenario
 TABS = {
     'AGENT': 'Agent chat',
     'THREE_D': '3D generation',
-    'MEDIA': 'Image and video generation',
+    'IMAGE': 'Image generation',
+    'VIDEO': 'Video generation',
     'SPLAT': 'Gaussian Splat world generation',
     'GENERATIONS': 'Your generations and connected asset libraries',
     'QUEUE': 'Generation queue',
@@ -36,9 +37,9 @@ def assert_tab_alignment(qa):
     assert abs(left - right) <= 2, (left, right)
     gaps = [b[0] - a[2] for a, b in zip(pills, pills[1:])]
     assert min(gaps) > 0, pills
-    compact = gaps[:3] + gaps[4:]
+    compact = gaps[:4] + gaps[5:]
     assert max(compact) <= width * .01, gaps
-    assert gaps[3] >= max(compact) - 2, gaps
+    assert gaps[4] >= max(compact) - 2, gaps
     assert max(p[1] for p in pills) - min(p[1] for p in pills) <= 2, pills
     return {'width': width, 'outer_margins': [left, right], 'gaps': gaps}
 

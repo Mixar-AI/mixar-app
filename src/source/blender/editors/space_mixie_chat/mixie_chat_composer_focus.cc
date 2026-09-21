@@ -25,7 +25,7 @@ static wmOperatorStatus focus_composer_exec(bContext *C, wmOperator * /*op*/)
   Scene *scene = CTX_data_scene(C);
   wmWindowManager *wm = CTX_wm_manager(C);
   if (!area || !scene || !wm ||
-      (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE))
+      (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return OPERATOR_CANCELLED;
   }

@@ -575,7 +575,7 @@ bool mixie_chat_rules_handle_event(bContext *C, const wmEvent *event)
   ScrArea *area = CTX_wm_area(C);
   ARegion *region = CTX_wm_region(C);
   if (!area || !region || !area->spacedata.first ||
-      (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE))
+      (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return false;
   }

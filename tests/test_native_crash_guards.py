@@ -19,7 +19,6 @@ BUBBLE = ROOT / "src/source/blender/editors/space_agent_bubble/space_agent_bubbl
 SLOTS = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_slots.cc"
 UI_TYPES = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_ui_types.hh"
 SLOT_PROPS = ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/properties/chat_slot_types.py"
-CHAT_SPACE = ROOT / "src/source/blender/editors/space_mixie_chat/space_mixie_chat.cc"
 TIMELINE = ROOT / "src/source/blender/editors/space_view3d/view3d_director_timeline.cc"
 MESSAGES = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_messages.cc"
 
@@ -119,7 +118,7 @@ def test_image_slot_local_path_maxlen_mirrors_the_c_buffer():
 
 
 def test_chat_spaces_null_runtime_on_read():
-    for path, struct in ((CHAT_SPACE, "SpaceMixieChat"), (BUBBLE, "SpaceAgentBubble")):
+    for path, struct in ((BUBBLE, "SpaceAgentBubble"),):
         src = path.read_text(encoding="utf-8")
         assert "st->blend_read_data = " in src
         name = re.search(r"static void (\w+_blend_read_data)\(", src).group(1)

@@ -20,7 +20,7 @@ Row kinds:
     THINKING  one level inside that submenu (`build_thinking_rows`)
     RESET     drop the saved pick and fall back to the server default
     SENTINEL  the empty-catalog dead end
-    BYOK      open the AI Provider Settings dialog — the only way to reach it
+    BYOK      open the AI Provider Settings dialog shared with the profile menu
 """
 
 from dataclasses import dataclass
@@ -38,13 +38,9 @@ BYOK_NOTE_TEXT = "Your own API key is in use — it overrides this pick"
 
 RESET_TEXT = "Reset to default"
 
-#: The escape hatch, and the ONLY route to the BYOK dialog in the product: PR
-#: #1562 removed the AI Provider Settings entry from both the account card and
-#: the chat's fallback menu, leaving `mixar_byok.open_dialog` registered but
-#: unreachable. Without this row a user with a key configured is stuck — their
-#: key disables every row above, and nothing else offers to clear it. So this
-#: row stays ENABLED while BYOK is active, unlike everything else in the menu,
-#: and it is drawn even when the catalog is empty.
+#: The chat's route to the dialog also offered in the profile menu. Keep it
+#: enabled while BYOK is active so users can clear the key overriding their
+#: hosted pick, including when the model catalog is empty.
 BYOK_SETUP_TEXT = "Use my own API key…"
 BYOK_MANAGE_TEXT = "Change or remove my API key…"
 

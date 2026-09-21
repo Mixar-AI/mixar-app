@@ -62,12 +62,12 @@ std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowM
   }
 
   const bool model = active == "THREE_D";
-  const bool media = active == "MEDIA";
+  const bool video = active == "VIDEO";
+  const bool media = active == "IMAGE" || video;
   const bool splat = active == "SPLAT";
   if (!model && !media && !splat) {
     return items;
   }
-  const bool video = media && enum_id(wm_ptr, "mixar_bubble_media_kind") == "VIDEO";
   PointerRNA sidebar = pointer(scene_ptr, "mixie_moodboard_sidebar");
   PointerRNA tab = pointer(sidebar, model ? "tab_image_to_3d" :
                                     splat ? "tab_world_labs" :

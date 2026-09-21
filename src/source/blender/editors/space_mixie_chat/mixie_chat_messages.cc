@@ -328,8 +328,7 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
   /* SPACE_AGENT_BUBBLE has a layout-compatible spacedata struct
    * (see DNA_space_types.h), so the same cast is valid for both. */
   if (area && area->spacedata.first &&
-      (area->spacetype == SPACE_MIXIE_CHAT ||
-       area->spacetype == SPACE_AGENT_BUBBLE))
+      (area->spacetype == SPACE_AGENT_BUBBLE))
   {
     smixie = static_cast<SpaceMixieChat *>(area->spacedata.first);
   }
@@ -435,12 +434,9 @@ void mixie_chat_draw_messages(const bContext *C, ARegion *region) {
     needs_layout_rebuild = true;
   } else if (!g_msg_props.initialized) {
     /* The global RNA property cache was cleared while our layout cache
-     * stayed populated. This happens whenever ANY SpaceMixieChat is freed —
-     * mixie_chat_free() clears the process-global caches — including the
-     * spaces inside the temp Main that the workspace "+" menu / append
-     * reads from startup.blend and immediately frees
-     * (BKE_blendfile_workspace_config_data_free -> BKE_main_free -> space
-     * free callback). Without this trigger the render path null-guards
+     * stayed populated. agent_bubble_free() clears the process-global caches
+     * when any bubble or companion pill space is freed, including spaces in
+     * temporary Mains. Without this trigger the render path null-guards
      * every g_msg_props access, silently drawing zero-length text: the
      * bubble/chat goes blank until a resize changes winx and forces a
      * rebuild. Rebuilding re-runs init_message_property_cache(), healing

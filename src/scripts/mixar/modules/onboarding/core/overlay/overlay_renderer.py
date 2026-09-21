@@ -159,7 +159,6 @@ _SPACE_TARGETS = (
     "SpaceMixarLayers",
     "SpaceMixarProperties",
     "SpaceMixie",
-    "SpaceMixieChat",
     "SpaceNLA",
     "SpaceNodeEditor",
     "SpaceOutliner",

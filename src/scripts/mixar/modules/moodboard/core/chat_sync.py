@@ -335,7 +335,7 @@ def _redraw_chat_areas() -> None:
     try:
         for window in bpy.context.window_manager.windows:
             for area in window.screen.areas:
-                if area.type in {'MIXIE_CHAT', 'AGENT_BUBBLE'}:
+                if area.type in {'AGENT_BUBBLE'}:
                     area.tag_redraw()
     except Exception as e:  # noqa: BLE001
         _logger.debug("moodboard chat_sync redraw failed: %s", e, exc_info=True)

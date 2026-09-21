@@ -479,7 +479,7 @@ class TestIslandWindowTranslucency:
         assert "const uchar wash[4] = AGENT_COL_GLASS_FIELD_UCHAR;" in space
         assert "agent_bubble_replace_frost_wash(&r, wash);" in space
         assert "if (but->col[3] < 128)" in widgets
-        assert "BLI_rcti_size_y(rect) > 120" in widgets
+        assert "BLI_rcti_size_y(rect) > 120" not in widgets
 
     def test_chat_and_pill_share_the_neutral_native_wash(self) -> None:
         theme = _read(PILL_DRAW.parent / "agent_ui_theme.hh")

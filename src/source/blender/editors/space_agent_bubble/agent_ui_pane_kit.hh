@@ -84,7 +84,6 @@ struct Block;
 #define PANE_BOTTOM_IN_L 17  /* Box left -> first action chip. */
 #define PANE_BOTTOM_IN_R 16  /* Box right -> Generate right edge. */
 #define PANE_GENERATE_W 114
-#define PANE_SETTINGS_W 150
 
 /* Generation-pane references: chip-height squares with a rounded backplate
  * and overflow count. Agent attachments use their dedicated right column. */
@@ -174,10 +173,6 @@ rctf pane_prompt_field_rect(const rctf &box, float u);
  * overlapping clicks, so a floating row makes the params unreachable). */
 float pane_bottom_row_ymin(const rctf &box, float u);
 rctf pane_generate_rect(const rctf &box, float u);
-
-/** Catalog settings use native popup layout over the same parameter group. */
-void pane_settings_button(ui::Block *block, float right, float top, float u,
-                          const char *service, const char *model);
 
 /** True when \a prop_id has no catalog `visible_if`, or the live sibling
  * values match. Missing `mixar_visible_if` metadata fails open. */
