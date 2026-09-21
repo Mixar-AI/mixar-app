@@ -15,6 +15,11 @@ loading the persisted catalog here guarantees the BYOK dropdowns are populated
 the first time `byok_props`' EnumProperty callbacks fire — including offline.
 Phase 3 is also the only guaranteed once-per-process main-thread point, which is
 what keeps `bpy.utils.user_resource` off every worker thread.
+
+The hosted model PREFERENCE hangs off the same cache but has no timer of its
+own: it is `no-store` and tiny, so `models_cache` refetches it whenever the
+catalog actually changes, and `auth_hooks` refetches it on login. Nothing here
+restores it — it is never persisted.
 """
 
 import bpy

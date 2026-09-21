@@ -333,9 +333,17 @@ void footer_layout_calculate_positions(int region_width,
   out_positions->dropdown_width = int(FOOTER_DROPDOWN_WIDTH_BASE * scale);
   out_positions->dropdown_x = out_positions->side_padding;
 
-  /* Attach button comes right after dropdown */
-  out_positions->attach_btn_x = out_positions->dropdown_x + out_positions->dropdown_width +
-                                int(FOOTER_BUTTON_SPACING_BASE * scale);
+  /* Agent model picker sits between the mode dropdown and the attach button.
+   * Only the widths are settled here; whether it is drawn at all depends on
+   * the WindowManager mirror the Python half owns, so the draw does the
+   * shifting (see mixie_chat_footer.cc). */
+  out_positions->model_dropdown_width = int(FOOTER_MODEL_BUTTON_WIDTH_BASE * scale);
+  out_positions->model_dropdown_min_width = int(FOOTER_MODEL_BUTTON_MIN_BASE * scale);
+  out_positions->model_dropdown_x = out_positions->dropdown_x + out_positions->dropdown_width +
+                                    int(FOOTER_BUTTON_SPACING_BASE * scale);
+
+  /* Attach button comes right after dropdown (no model picker shown) */
+  out_positions->attach_btn_x = out_positions->model_dropdown_x;
 
   out_positions->send_btn_x = region_width - out_positions->side_padding -
                               out_positions->btn_size;

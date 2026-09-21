@@ -105,6 +105,35 @@ def clear() -> None:
     set_snapshot(EMPTY)
 
 
+def tier_changed(previous: UsageSnapshot, current: UsageSnapshot) -> bool:
+    """True when the account moved between plans in a way the backend derives from.
+
+    The agent models catalog carries a per-caller ``eligible`` flag computed
+    against the subscription tier, so an upgrade or downgrade silently
+    invalidates a catalog that is otherwise still ETag-fresh (the tag hashes the
+    rendered body, so it WILL differ — nothing else is watching for the change).
+
+    Deliberately conservative:
+
+    * a FAILED fetch (``current.error``) proves nothing — ``snapshot_error``
+      copies the previous figures forward, and a flap must not trigger a refetch
+      storm;
+    * an unfilled ``previous`` (``fetched_at <= 0``) is the first reading of the
+      session, which login already refreshes.
+
+    Pure, and free of ``bpy`` like the rest of this module — :mod:`..core.poller`
+    owns acting on it.
+    """
+    if current.error:
+        return False
+    if previous.fetched_at <= 0.0:
+        return False
+    return (
+        previous.has_subscription != current.has_subscription
+        or previous.plan_slug != current.plan_slug
+    )
+
+
 def is_stale(now: Optional[float] = None) -> bool:
     """True when the cache has never been filled or has aged past its TTL."""
     snap = get_snapshot()

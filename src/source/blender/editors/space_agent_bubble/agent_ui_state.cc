@@ -20,6 +20,8 @@
  *                 (no invented "New Chat" fallback)
  *   segmented     scene.mixie_chat_mode == 'AGENT'
  *   auto switch   scene.mixie_chat_auto_mode
+ *   model chip    wm.mixar_agent_model_label / wm.mixar_agent_model_byok_active
+ *                 (absent until the Python half registers them)
  *   placeholder   shown while scene.mixie_chat_input is empty
  *   queue count   live rows in wm.mixie_queue.items
  *   cat catch     ED_moodboard_attachment_incoming (the live flight clock)
@@ -346,6 +348,25 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     r_state->voice_listening = read_bool_prop(&wm_ptr, "mixie_chat_voice_listening");
     read_string_prop(&wm_ptr, "mixie_chat_voice_status", r_state->voice_status, sizeof(r_state->voice_status));
   }
+  /* Hosted model pick — the WindowManager mirror the Python half writes
+   * (byok preference state). A build whose Python half has not landed, or
+   * an old .blend opened before the properties registered, reads as "no
+   * picker": the chip is left out entirely instead of popping a menu that
+   * is not registered. */
+  r_state->model_available = false;
+  r_state->model_byok_active = false;
+  r_state->model_label[0] = '\0';
+  if (wm) {
+    PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+    PropertyRNA *label = RNA_struct_find_property(&wm_ptr, "mixar_agent_model_label");
+    if (label && RNA_property_type(label) == PROP_STRING) {
+      r_state->model_available = true;
+      read_string_prop(
+          &wm_ptr, "mixar_agent_model_label", r_state->model_label, sizeof(r_state->model_label));
+      r_state->model_byok_active = read_bool_prop(&wm_ptr, "mixar_agent_model_byok_active");
+    }
+  }
+
   cat.listening = r_state->voice_listening;
   if (scene) {
     PointerRNA ptr = RNA_id_pointer_create(&scene->id);

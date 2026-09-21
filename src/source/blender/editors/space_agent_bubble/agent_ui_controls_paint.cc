@@ -355,6 +355,56 @@ void agent_ui_draw_chip_row(ARegion *region,
     label_left(label.c_str(), layout->chip_auto.xmin + pad, cy, size, label_col);
   }
 
+  /* Model, right of Auto: which hosted model the agent runs on. The label is
+   * the Python half's WindowManager mirror — this only reads it. An empty
+   * mirror still reads "Model" so the control is discoverable before a pick
+   * has been made. While a BYOK key overrides the hosted pick the chip is
+   * inert, and says so by dimming its ink (the native button carries the
+   * explanation as its disabled hint).
+   *
+   * The row is width-budgeted, so the chip may have been stepped down to
+   * label-only or icon-only, or dropped entirely — see
+   * agent_ui_layout_fit_controls. An empty rect means dropped. */
+  if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
+    const float text_dim[4] = AGENT_COL_TEXT_DIM;
+    const float *ink = state->model_byok_active ? text_dim : text;
+    float model_fill[4];
+    agent_ui_motion_color(
+        chip,
+        chip,
+        agent_ui_motion_sample(region, AgentIslandControl::Model, layout->chip_model),
+        model_fill);
+    fill_round(&layout->chip_model, radius, model_fill);
+
+    const float cy = BLI_rctf_cent_y(&layout->chip_model);
+    const char *model_label = state->model_label[0] ? state->model_label : "Model";
+    if (layout->model_form == AgentModelChipForm::Icon) {
+      const float ccx = BLI_rctf_cent_x(&layout->chip_model);
+      const rctf glyph{ccx - icon_edge * 0.5f,
+                       ccx + icon_edge * 0.5f,
+                       cy - icon_edge * 0.5f,
+                       cy + icon_edge * 0.5f};
+      agent_ui_icon_draw(AGENT_ICON_STAR, &glyph, ink, model_fill);
+    }
+    else {
+      /* Same centred icon+label group every other chip uses; the chevron,
+       * when it survives the budget, is carved off the right first. */
+      rctf body = layout->chip_model;
+      if (layout->model_form == AgentModelChipForm::Full) {
+        body.xmax -= icon_edge * 0.7f + icon_gap;
+      }
+      chip_content(body, AGENT_ICON_STAR, model_label, size, icon_edge, icon_gap, ink, model_fill);
+      if (layout->model_form == AgentModelChipForm::Full) {
+        rctf chevron = layout->chip_model;
+        chevron.xmax -= pad;
+        chevron.xmin = chevron.xmax - icon_edge * 0.7f;
+        chevron.ymin = cy - icon_edge * 0.35f;
+        chevron.ymax = cy + icon_edge * 0.35f;
+        agent_ui_icon_draw(AGENT_ICON_CHEVRON_DOWN, &chevron, ink, model_fill);
+      }
+    }
+  }
+
   /* Send. */
   float generate_fill[4];
   agent_ui_motion_color(
