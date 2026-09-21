@@ -36,6 +36,12 @@ class TurnTransport:
         scene = bpy.data.scenes.get(self.scene_name)
         if scene is None:
             return False
+        # Central boundary covers typed sends, choices, modify, and retries.
+        # Legacy prose remains on chat for older servers; updated servers
+        # consume this complete snapshot and strip that compatibility prefix.
+        if method in ('chat', 'input'):
+            from .rules import rules_snapshot
+            payload['rules'] = rules_snapshot(scene)
         self._session_id = payload['session_id']
         command_id = str(uuid.uuid4())
         self.last_command_id = command_id

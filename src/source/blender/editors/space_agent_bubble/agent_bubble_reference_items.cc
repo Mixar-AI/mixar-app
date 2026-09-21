@@ -31,10 +31,13 @@ std::string enum_id(PointerRNA owner, const char *name)
   return id ? id : "";
 }
 
-void append_image(std::vector<AgentReference> &items, PointerRNA image, const char *source)
+void append_image(std::vector<AgentReference> &items,
+                  PointerRNA image,
+                  const char *source,
+                  const bool allow_video = false)
 {
   const Image *ima = static_cast<Image *>(image.data);
-  if (ima && ima->source != IMA_SRC_MOVIE && ima->source != IMA_SRC_SEQUENCE) {
+  if (ima && (allow_video || ima->source != IMA_SRC_MOVIE) && ima->source != IMA_SRC_SEQUENCE) {
     items.push_back({ima->id.name + 2, ima->id.name + 2, source});
   }
 }
@@ -79,7 +82,7 @@ std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowM
   if (board) {
     RNA_BEGIN (&scene_ptr, item, "mixie_moodboard_images") {
       if (enabled(item, "selected")) {
-        append_image(items, pointer(item, "image"), "BOARD");
+        append_image(items, pointer(item, "image"), "BOARD", video);
       }
     }
     RNA_END;

@@ -50,6 +50,7 @@ from .executor_handlers import HandlerCleanupMixin
 from .executor_result import ExecutionResult  # noqa: F401 — re-exported
 from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
+from .animation_effects import animation_fingerprint, snapshot_properties_changed
 
 
 class ScriptExecutor(HandlerCleanupMixin):
@@ -432,7 +433,13 @@ class ScriptExecutor(HandlerCleanupMixin):
         }
 
         try:
+            action_cache = {}
             for obj in bpy.data.objects:
+                try:
+                    animation = animation_fingerprint(obj, action_cache)
+                except Exception as exc:
+                    logger.warning("Animation snapshot unavailable for %s: %s", obj.name, exc)
+                    animation = None
                 state["objects"][obj.name] = {
                     "type": obj.type,
                     "location": tuple(obj.location),
@@ -441,6 +448,7 @@ class ScriptExecutor(HandlerCleanupMixin):
                     "material_count": (
                         len(obj.material_slots) if hasattr(obj, "material_slots") else 0
                     ),
+                    "animation": animation,
                 }
             state["materials"] = set(mat.name for mat in bpy.data.materials)
 
@@ -461,7 +469,7 @@ class ScriptExecutor(HandlerCleanupMixin):
         for obj_name in before_objects & after_objects:
             before_props = before["objects"].get(obj_name, {})
             after_props = after["objects"].get(obj_name, {})
-            if before_props != after_props:
+            if snapshot_properties_changed(before_props, after_props):
                 modified.append(obj_name)
 
         return {

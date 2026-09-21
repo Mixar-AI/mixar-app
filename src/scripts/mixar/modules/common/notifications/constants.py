@@ -47,15 +47,12 @@ TOAST_CORNER_OFFSET_X = 28
 TOAST_CORNER_OFFSET_Y = 28
 TOAST_CORNER_RADIUS = 18
 
-# -- Typography -------------------------------------------------------------
-TITLE_FONT_SIZE = 24
-BODY_FONT_SIZE = 18
-ACTION_URL_FONT_SIZE = 16
+# Weight changes preserve the native widget font size.
+EMPHASIS_FONT_FILE = 'Manrope-ExtraBold.ttf'
 
 # -- Close button -----------------------------------------------------------
 CLOSE_BUTTON_SIZE = 36
 CLOSE_BUTTON_RADIUS = 18
-CLOSE_ICON_FONT_SIZE = 20
 
 # -- Badge dot --------------------------------------------------------------
 BADGE_RADIUS = 7
@@ -65,12 +62,7 @@ BUTTON_HEIGHT = 48
 BUTTON_PADDING_X = 26
 BUTTON_GAP = 12
 BUTTON_CORNER_RADIUS = 10
-BUTTON_FONT_SIZE = 18
-# Primary CTA (e.g. "Upgrade") renders larger and in Manrope ExtraBold.
-PRIMARY_BUTTON_FONT_SIZE = 24
 BUTTON_BORDER_WIDTH = 1.0
-# Bundled static Manrope ExtraBold, loaded via blf for primary CTA labels.
-EXTRABOLD_FONT_FILE = "Manrope-ExtraBold.ttf"
 
 # -- Mixar brand ------------------------------------------------------------
 # The brand green used for primary CTAs, with near-black text for contrast.
@@ -124,7 +116,7 @@ def get_toast_colors(ntype: NotificationType) -> dict:
 
     # -- Base from tooltip widget --
     bg = _rgba(tooltip.inner, alpha_override=0.94)
-    text = _rgba(tooltip.text, alpha_override=1.0)
+    text = (0.886, 0.886, 0.886, 1.0)  # Agent island's #E2E2E2 label on neutral glass.
     dim_text = (*text[:3], 0.55)
 
     # -- Badge from semantic state colors --
@@ -160,6 +152,8 @@ def get_toast_colors(ntype: NotificationType) -> dict:
     return {
         "bg": bg,
         "text": text,
+        "title": (1.0, 1.0, 1.0, 1.0),
+        "link": (0.62, 0.88, 0.70, 1.0),
         "dim_text": dim_text,
         "badge": badge,
         "close_bg": close_bg,

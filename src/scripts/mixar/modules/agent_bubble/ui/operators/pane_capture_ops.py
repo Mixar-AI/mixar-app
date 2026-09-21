@@ -19,7 +19,7 @@ Two small operators the island's C++ panes bind:
   * Gaussian Splat -> ``tab_world_labs.reference_image`` with
     ``use_selected_image`` switched off so the capture is what submits.
 
-- ``mixar.pane_video_upload_reference`` — file picker that imports stills
+- ``mixar.pane_video_upload_reference`` — file picker that imports images and videos
   onto the moodboard AS SELECTED, feeding Video Gen's native selection-based
   reference flow. (The moodboard Video Gen tab has no upload property — its
   references are the board selection, so "upload a reference" for video
@@ -232,12 +232,12 @@ class MIXAR_OT_pane_capture_viewport(Operator):
 
 
 class MIXAR_OT_pane_video_upload_reference(Operator):
-    """Upload reference stills for video generation (boarded as selected)"""
+    """Upload image and video references for video generation"""
 
     bl_idname = "mixar.pane_video_upload_reference"
     bl_label = "Upload Video References"
     bl_description = (
-        "Import image files onto the moodboard as selected references for "
+        "Import image and video files onto the moodboard as selected references for "
         "video generation"
     )
     bl_options = {'REGISTER', 'UNDO'}
@@ -246,7 +246,8 @@ class MIXAR_OT_pane_video_upload_reference(Operator):
     files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
     directory: bpy.props.StringProperty(subtype='DIR_PATH')
     filter_glob: bpy.props.StringProperty(
-        default="*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.tiff;*.webp",
+        default=";".join(f"*{ext}" for ext in sorted(
+            set(bpy.path.extensions_image) | set(bpy.path.extensions_movie))),
         options={'HIDDEN'},
     )
 
@@ -257,8 +258,8 @@ class MIXAR_OT_pane_video_upload_reference(Operator):
     def execute(self, context):
         scene = context.scene
         added = 0
-        for file_elem in self.files:
-            filepath = os.path.join(self.directory, file_elem.name)
+        paths = [os.path.join(self.directory, file.name) for file in self.files if file.name]
+        for filepath in paths or [self.filepath]:
             try:
                 filepath = os.path.abspath(os.path.realpath(filepath))
             except (OSError, ValueError):
@@ -271,7 +272,7 @@ class MIXAR_OT_pane_video_upload_reference(Operator):
             except Exception as exc:  # noqa: BLE001
                 logger.error("Video reference import failed: %r", exc)
         if added == 0:
-            self.report({'WARNING'}, "No reference images added")
+            self.report({'WARNING'}, "No valid image or video references added")
             return {'CANCELLED'}
         self.report(
             {'INFO'},

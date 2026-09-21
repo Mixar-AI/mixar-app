@@ -4,7 +4,7 @@
 /** Native button drags; both canvas hosts share the same dropbox and creator. */
 
 #include "mixie_moodboard_template_drag.hh"
-#include "mixie_moodboard_node_layout.hh"
+#include "mixie_moodboard_canvas.hh"
 #include "mixie_moodboard_ops_common.hh"
 #include "../interface/interface_intern.hh"
 
@@ -48,10 +48,11 @@ static bool template_drop_poll(bContext *C, wmDrag *drag, const wmEvent *event)
   if (!region || !ELEM(region->regiontype, RGN_TYPE_WINDOW, RGN_TYPE_TOOL_PROPS)) {
     return false;
   }
-  const rcti content = moodboard_visible_canvas_rect(C);
-  return BLI_rcti_isect_pt(&content,
-                          event->xy[0] - region->winrct.xmin,
-                          event->xy[1] - region->winrct.ymin);
+  /* Drop polling also runs on MOUSEMOVE: unlike event routing, it must test
+   * the current destination even while crossing out of the canvas. */
+  return WM_event_handler_region_v2d_mask_poll(
+             CTX_wm_window(C), CTX_wm_area(C), region, event) &&
+         moodboard_canvas_point_is_interactive(CTX_wm_area(C), region, event->xy);
 }
 
 static void template_drop_copy(bContext * /*C*/, wmDrag *drag, wmDropBox *drop)

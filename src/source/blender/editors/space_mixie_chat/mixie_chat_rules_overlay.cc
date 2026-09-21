@@ -863,7 +863,7 @@ void mixie_chat_draw_rules_overlay(const bContext *C, ARegion *region)
 
   /* Footer hint. */
   {
-    const char *hint = "Enabled rules are sent with the first message of every new chat";
+    const char *hint = "Enabled rules apply to each message; changes apply on your next send";
     float hint_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2],
                          HIST_COL_MUTED[3] * 0.9f * ease};
     const float w = hist_text_width(hint, font_id, hint_px);

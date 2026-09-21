@@ -11,6 +11,10 @@ namespace blender::ed::mixie {
 
 rcti moodboard_canvas_host_rect(const bContext *C);
 rcti moodboard_canvas_host_rect(const ScrArea *area, ARegion *region);
+/** Full painting surface. Floating controls and the N-panel composite above it. */
+rcti moodboard_canvas_draw_rect(const bContext *C);
+rcti moodboard_canvas_draw_rect(const ScrArea *area, ARegion *region);
+/** Unobstructed placement/framing area, not a painting clip. */
 rcti moodboard_visible_canvas_rect(const ScrArea *area, ARegion *region);
 rcti moodboard_visible_canvas_rect(const bContext *C);
 

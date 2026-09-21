@@ -27,6 +27,7 @@
 #include "UI_mixar.hh"
 #include "UI_mixar_tokens.hh"
 #include "mixie_moodboard_chrome.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 #include "UI_interface_c.hh"
 
@@ -338,6 +339,21 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   /* Draw grid background */
   mixie_draw_moodboard_grid(v2d);
 
+  /* Paint the complete board beneath floating chrome and overlapping panels.
+   * Framing margins must never cut a vertical strip out of a panned card. */
+  int previous_scissor[4];
+  GPU_scissor_get(previous_scissor);
+  rcti content = moodboard_canvas_draw_rect(C);
+  const rcti host_scissor = {previous_scissor[0], previous_scissor[0] + previous_scissor[2],
+                            previous_scissor[1], previous_scissor[1] + previous_scissor[3]};
+  if (BLI_rcti_isect(&content, &host_scissor, &content)) {
+    GPU_scissor(content.xmin, content.ymin,
+                BLI_rcti_size_x(&content), BLI_rcti_size_y(&content));
+  }
+  else {
+    GPU_scissor(0, 0, 0, 0);
+  }
+
   /* Canvas frames come next, UNDERNEATH every other pass. A frame is a
    * translucent wash over a region of the board, so drawing it after the
    * media and the cards (which is where the old group pass sat) would tint
@@ -370,6 +386,10 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
 
   /* Draw edit tool overlay */
   mixie_draw_edit_tool_overlay(C, v2d);
+
+  BLF_batch_draw_flush();
+  GPU_scissor(previous_scissor[0], previous_scissor[1],
+              previous_scissor[2], previous_scissor[3]);
 
   /* Reset view */
   ui::view2d_view_restore(C);

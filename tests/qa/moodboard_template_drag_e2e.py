@@ -125,6 +125,17 @@ def undo_redo(qa):
     qa.wait(f'len({SCENE}.mixie_moodboard_action_nodes)=={len(before)-1}', timeout=5)
 
 
+def exposed_drop(qa, host):
+    canvas = target(qa, 'moodboard_canvas', area_type=host)['rect']
+    rail = next(w for w in qa.find(area_type=host, region_type=region_kind(host),
+                                  limit=500)['widgets']
+                if w.get('block') == 'MIXIE_PT_canvas_tools')
+    xy = {'x': rail['center'][0], 'y': canvas[1]+60}
+    evidence = drop_template(qa, host, LABELS[0], KINDS[0], xy)
+    undo_redo(qa)
+    return evidence
+
+
 def pan_zoom(qa):
     xy = destination(qa, 'VIEW_3D', .65, .7)
     qa.cmd('drag', **{'from': xy, 'to': {'x': xy['x']+85, 'y': xy['y']-55},
@@ -163,6 +174,7 @@ def run(qa):
     # Native Undo must remove exactly the dropped template, with no second click action.
     qa.step('undo_redo_drop', undo_redo, qa)
     qa.step('undo_snapshot', snapshot, qa, '02_undo_drop')
+    evidence.append(qa.step('drawer_drop_below_toolbar', exposed_drop, qa, 'VIEW_3D'))
     final = geometry(qa)
     require(original['view'] == final['view'] and original['objects'] == final['objects'],
             'Template drags changed the 3D scene')
@@ -174,6 +186,7 @@ def run(qa):
     qa.click(op='MIXIE_OT_moodboard_frame', popup=True)
     evidence.append(qa.step('editor_drop', drop_template, qa, 'MIXIE',
                            LABELS[1], KINDS[1], destination(qa, 'MIXIE', .6, .6)))
+    evidence.append(qa.step('editor_drop_below_toolbar', exposed_drop, qa, 'MIXIE'))
     qa.step('editor_escape_cancels', cancel_drag, qa, 'MIXIE')
     qa.step('editor_drag_snapshot', snapshot, qa, '03_editor_drop', 'MIXIE')
     result = {'backend_submissions': 0, 'exact_drop_centers': evidence,

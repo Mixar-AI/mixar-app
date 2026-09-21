@@ -41,6 +41,7 @@
 #include "WM_types.hh"
 
 #include "view3d_moodboard_drawer.hh"
+#include "mixie_moodboard_canvas.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -173,15 +174,11 @@ bool view3d_moodboard_drawer_canvas_handler_poll(const wmWindow *win,
                                                 const ARegion *region,
                                                 const wmEvent *event)
 {
-  if (!WM_event_handler_region_v2d_mask_poll(win, area, region, event)) {
-    return false;
-  }
-  if (area == nullptr || area->spacetype != SPACE_VIEW3D ||
-      !view3d_moodboard_drawer_contains_xy(area, region, event->xy))
-  {
-    return false;
-  }
-  return view3d_moodboard_drawer_canvas_is_active(region);
+  /* The shared poll owns pointer bounds and preserves mouse-leave/timer
+   * delivery. A second current-position check would discard those events. */
+  return area && area->spacetype == SPACE_VIEW3D &&
+         view3d_moodboard_drawer_canvas_is_active(region) &&
+         ed::mixie::moodboard_canvas_handler_poll(win, area, region, event);
 }
 
 bool view3d_moodboard_drawer_grip_handler_poll(const wmWindow * /*win*/,

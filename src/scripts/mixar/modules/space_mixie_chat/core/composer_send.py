@@ -4,7 +4,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from ..constants import SessionState, STATE_LABELS
+from ..constants import SessionState, STATE_LABELS, VIDEO_ATTACHMENT_REJECTED
+from .attachment_validation import pending_video_attachments
 from .session import get_session_manager
 
 HINT_QUEUED = 'queued'
@@ -27,6 +28,8 @@ def model_change_pending(scene):
 
 
 def can_send(scene):
+    if pending_video_attachments(scene):
+        return False, VIDEO_ATTACHMENT_REJECTED
     if model_change_pending(scene):
         from mixar.modules.byok.core.preference_state import PENDING_MESSAGE
         return False, PENDING_MESSAGE

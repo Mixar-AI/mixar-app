@@ -8,6 +8,7 @@
  */
 
 #include <cstddef>
+#include <climits>
 #include <cstdlib>
 
 #include "DNA_space_types.h"
@@ -23,6 +24,8 @@
 
 #include "WM_api.hh"
 #include "WM_types.hh"
+
+#include "rna_screen_mixar_glass.hh"
 
 namespace blender {
 
@@ -641,6 +644,7 @@ static void rna_def_region_api(StructRNA *srna)
   /* Wrap #ED_region_tag_refresh_ui (with some additional checks). */
   func = RNA_def_function(srna, "tag_refresh_ui", "rna_Region_tag_refresh_ui");
   RNA_def_function_flag(func, FUNC_USE_REPORTS);
+  rna_def_region_mixar_glass(srna);
 }
 
 static void rna_def_region(BlenderRNA *brna)

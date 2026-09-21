@@ -83,8 +83,12 @@ def assert_offsets(qa, host, expected):
     for key, rect in current.items():
         require(key in expected and all(abs(a-b) <= 2 for a, b in zip(rect, expected[key])),
                 f'{host}: {key} reflowed at the canvas edge: {rect} != {expected.get(key)}')
+    # Native controls paint beneath the overlapping N-panel; its own region
+    # receives input there. The drawer's external tab gutter remains excluded.
+    painted = bounds(qa, host) if host == 'VIEW_3D' else qa.eval(context(host) +
+        'result=[region.x,region.y,region.x+region.width,region.y+region.height]')
     for widget in controls(qa, host):
-        require(inside(widget['rect'], bounds(qa, host)), 'Hit target escaped the canvas')
+        require(inside(widget['rect'], painted), 'Control escaped the painting surface')
     return current
 
 

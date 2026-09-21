@@ -62,6 +62,27 @@ def test_inline_playback_stops_when_the_pointer_leaves_its_tile():
     assert "Stop inline moodboard video playback when the pointer leaves its tile" in preview
 
 
+def test_canvas_filters_preserve_leave_events_and_view2d_timers():
+    """A chrome hit must not suppress hover cleanup or timer communication."""
+    layout = _read(SPACE_MIXIE / "mixie_moodboard_node_layout.cc")
+    poll = layout.split("bool moodboard_canvas_handler_poll(", 1)[1].split("\n}\n", 1)[0]
+    upstream = poll.index("WM_event_handler_region_v2d_mask_poll")
+    pointer_gate = poll.index("return moodboard_canvas_point_is_interactive")
+    for event in ("ISKEYBOARD(event->type)", "ISTIMER(event->type)", "MOUSEMOVE", "WINDEACTIVATE"):
+        assert upstream < poll.index(event) < pointer_gate
+    drawer = _read(ROOT / "src/source/blender/editors/space_view3d/view3d_moodboard_drawer.cc")
+    wrapper = drawer.split("bool view3d_moodboard_drawer_canvas_handler_poll(", 1)[1].split("\n}\n", 1)[0]
+    assert "moodboard_canvas_handler_poll(win, area, region, event)" in wrapper
+    assert "event->xy" not in wrapper  # No second gate may discard accepted leave/timer events.
+
+
+def test_template_hover_uses_destination_bounds_instead_of_event_routing():
+    drop = _read(SPACE_MIXIE / "mixie_moodboard_template_drag.cc")
+    poll = drop.split("static bool template_drop_poll(", 1)[1].split("\n}\n", 1)[0]
+    assert "moodboard_canvas_point_is_interactive(CTX_wm_area(C), region, event->xy)" in poll
+    assert "moodboard_canvas_handler_poll" not in poll
+
+
 def test_inline_playback_is_runtime_only_and_cleans_up_on_shutdown():
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
 

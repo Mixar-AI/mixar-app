@@ -149,7 +149,7 @@ void moodboard_qa_targets(const wmWindow *win,
             card, media_title ? ed::mixie::moodboard_node_card_actions_width(true) : 0.0f);
         MixarQATarget heading;
         BLI_rcti_rctf_copy(&heading.rect_win, &title);
-        rcti visible = ed::mixie::moodboard_visible_canvas_rect(
+        rcti visible = ed::mixie::moodboard_canvas_host_rect(
             area, const_cast<ARegion *>(region));
         BLI_rcti_translate(&visible, region->winrct.xmin, region->winrct.ymin);
         if (title.xmax > title.xmin &&
@@ -309,20 +309,23 @@ void moodboard_qa_targets(const wmWindow *win,
     }
   }
 
-  if (drawer_canvas) {
-    rcti panel;
-    if (view3d_moodboard_drawer_panel_rect_for(
-            area, region, view3d_moodboard_drawer_runtime_amount(region), &panel))
-    {
-      /* The tab gutter shows the viewport, so no canvas target may claim it. */
-      r_targets.erase(
-          std::remove_if(r_targets.begin() + first_target,
-                         r_targets.end(),
-                         [&panel](MixarQATarget &target) {
-                           return !BLI_rcti_isect(&target.rect_win, &panel, &target.rect_win);
-                         }),
-          r_targets.end());
-    }
+  rcti content = ed::mixie::moodboard_canvas_host_rect(area, const_cast<ARegion *>(region));
+  BLI_rcti_translate(&content, region->winrct.xmin, region->winrct.ymin);
+  /* Exclude the sidebar from interaction targets, but retain the canvas
+   * beneath floating chrome. Native blocks own the controls above it. */
+  r_targets.erase(
+      std::remove_if(r_targets.begin() + first_target, r_targets.end(),
+                     [&content](MixarQATarget &target) {
+                       return !BLI_rcti_isect(&target.rect_win, &content, &target.rect_win) ||
+                              BLI_rcti_size_x(&target.rect_win) <= 0 ||
+                              BLI_rcti_size_y(&target.rect_win) <= 0;
+                     }),
+      r_targets.end());
+  if (BLI_rcti_size_x(&content) > 0 && BLI_rcti_size_y(&content) > 0) {
+    MixarQATarget canvas;
+    canvas.surface = "moodboard_canvas";
+    canvas.rect_win = content;
+    r_targets.push_back(std::move(canvas));
   }
 }
 
