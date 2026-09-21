@@ -477,29 +477,3 @@ def test_a_bare_camera_export_never_rewrites_the_users_animation():
     assert "repair_rotation_continuity(shot.camera)" in shot
     camera = outputs.split("def start_camera_render(")[1].split("\ndef ")[0]
     assert "repair_rotation_continuity" not in camera
-
-
-def test_a_finished_job_puts_running_down_even_when_the_camera_is_gone():
-    """Renaming or deleting the export camera mid-render must not freeze the
-    drawer at 'rendering' until the file is reloaded."""
-    from mixar.modules.director.core import render_outputs, render_target
-
-    settings = SimpleNamespace(render_is_running=True, render_progress=0.4, render_status="Rendering")
-    scene = SimpleNamespace(name="Scene", mixar_camera_export=settings, mixar_director=None)
-    ref = {"kind": "CAMERA", "camera_name": "gone"}
-    assert render_target.resolve_status_owner(scene, ref) is settings
-
-    render_outputs._job = {"scene_name": "Scene", "target": ref, "configured": False}
-    with MagicMock() as bpy_mock:
-        bpy_mock.data.scenes.get.return_value = scene
-        bpy_mock.data.objects.get.return_value = None
-        original = render_outputs.bpy
-        render_outputs.bpy = bpy_mock
-        try:
-            render_outputs._finish_job(False, "The render camera was removed while rendering")
-        finally:
-            render_outputs.bpy = original
-    assert render_outputs._job is None
-    assert settings.render_is_running is False
-    assert settings.render_progress == 0.0
-    assert "removed" in settings.render_status

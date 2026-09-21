@@ -42,6 +42,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from . import render_device
+from mixar.modules.common.render_coordinator import core as render_slot
 
 RESULTS_NS = "mixie_agent_preview"
 # The preview cap: a call that names no size keeps the scene's aspect scaled
@@ -166,6 +167,7 @@ def _finish(key, completed, lost=False):
     if not lost and bpy.app.is_job_running("RENDER"):
         return 0.1
     job = _job
+    render_slot.phase(job["reservation"], "finalizing")
     scene = job["scene"]
     result = {"job_id": key, "status": "lost" if lost else "cancelled",
               "render_revision": job["revision"], "scene_session": job["scene_session"]}
@@ -181,16 +183,20 @@ def _finish(key, completed, lost=False):
         result.update(status="failed", error=code)
     finally:
         try:
-            _restore(job)
-        except (ReferenceError, RuntimeError):
-            result.update(status="failed", error="scene_unavailable")
-            result.pop("image_url", None)
-        _job = None
-        _remove_render_handlers()
-        result["scene_revision"] = _revision
-        result["render"] = dict(job["render"],
-                                elapsed_seconds=round(time.monotonic() - job["started_at"], 3))
-        _publish(key, result)
+            try:
+                _restore(job)
+            except (ReferenceError, RuntimeError):
+                result.update(status="failed", error="scene_unavailable")
+                result.pop("image_url", None)
+            _job = None
+            _remove_render_handlers()
+            result["scene_revision"] = _revision
+            result["render"] = dict(job["render"],
+                                    elapsed_seconds=round(time.monotonic() - job["started_at"], 3))
+            _publish(key, result)
+        finally:
+            render_slot.release(job["reservation"])
+
     return None
 
 
@@ -217,6 +223,8 @@ def _cancelled(_scene, _depsgraph=None):
 @persistent
 def _before_load(_unused, _extra=None):
     global _job, _revision
+    if _job is not None:
+        render_slot.release(_job["reservation"])
     _job = None
     _revision += 1
     _records.clear()
@@ -359,7 +367,7 @@ def start(context, key, width=0, height=0, engine="", max_faces=0):
         return poll(key)  # never restart a job the backend already has
     if _job is not None:
         poll(_job["key"])  # recover a lost completion before deciding it is busy
-    if _job is not None or bpy.app.is_job_running("RENDER"):
+    if _job is not None or render_slot.busy():
         return {"job_id": key, "status": "busy", "error": "another_render_running"}
     scene = context.scene
     if scene is None:
@@ -369,6 +377,9 @@ def start(context, key, width=0, height=0, engine="", max_faces=0):
     if scene.camera is None or win is None or bpy.app.background:
         return {"job_id": key, "status": "failed", "error": "camera_and_window_required",
                 "scene_session": session, "render": _render_info(scene)}
+    reservation = render_slot.acquire("agent-preview:" + key)
+    if reservation is None:
+        return {"job_id": key, "status": "busy", "error": "another_render_running"}
     settings = []
 
     def set_value(owner, name, value):
@@ -376,7 +387,8 @@ def start(context, key, width=0, height=0, engine="", max_faces=0):
         setattr(owner, name, value)
 
     job = {"key": key, "scene": scene, "settings": settings, "started_at": time.monotonic(),
-           "revision": _revision, "finishing": False, "scene_session": session, "render": {}}
+           "revision": _revision, "finishing": False, "scene_session": session, "render": {},
+           "reservation": reservation}
     _job = job
     try:
         downgraded = _apply_settings(scene, set_value, width, height, engine, max_faces)
@@ -398,15 +410,25 @@ def start(context, key, width=0, height=0, engine="", max_faces=0):
             view.render_display_type = display
         if "RUNNING_MODAL" not in ret:
             raise RuntimeError("async_render_not_started")
+        render_slot.phase(reservation, "rendering")
         # Flush our own setting writes before taking the revision baseline.
         bpy.context.view_layer.update()
         job["revision"] = _revision
         return {"job_id": key, "status": "running", "render_revision": _revision,
                 "scene_session": session, "render": dict(job["render"])}
     except Exception:
+        # A failure AFTER native invocation must not free the live renderer.
+        if bpy.app.is_job_running("RENDER"):
+            job["finishing"] = True
+            bpy.app.timers.register(lambda: _finish(key, False), first_interval=0.1)
+            return {"job_id": key, "status": "running", "scene_session": session,
+                    "render": dict(job["render"])}
         _remove_render_handlers()
-        _restore(job)
-        _job = None
+        try:
+            _restore(job)
+        finally:
+            _job = None
+            render_slot.release(reservation)
         value = {"job_id": key, "status": "failed", "error": "async_render_unavailable",
                  "scene_session": session, "render": job["render"] or _render_info(scene)}
         _publish(key, value)

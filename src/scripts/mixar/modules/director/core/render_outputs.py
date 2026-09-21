@@ -19,8 +19,10 @@ import time
 import uuid
 
 import bpy
+from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.render_coordinator import core as render_slot
 
 from .render_passes import (
     configure_render_pass,
@@ -105,7 +107,18 @@ def _remove_handlers() -> None:
             pass
 
 
+@persistent
+def _before_load(_unused, _extra=None):
+    global _job
+    if _job is not None:
+        render_slot.release(_job.get("reservation"))
+    _job = None
+    _remove_handlers()
+
+
 def _add_handlers() -> None:
+    if _before_load not in bpy.app.handlers.load_pre:
+        bpy.app.handlers.load_pre.append(_before_load)
     _remove_handlers()
     bpy.app.handlers.render_complete.append(_on_render_complete)
     bpy.app.handlers.render_cancel.append(_on_render_cancel)
@@ -138,30 +151,45 @@ def _discard_temporary_movie(path: str) -> None:
 def _finish_job(success: bool, message: str) -> None:
     global _job
     job = _job
-    _job = None
-    _remove_handlers()
     if job is None:
         return
-    scene, target = _job_target(job)
-    if scene is not None:
-        _restore_active_pass(job, scene)
-    if target is not None:
-        target.set_status(
-            running=False,
-            progress=1.0 if success else 0.0,
-            status=message,
-        )
-    elif scene is not None:
-        # The camera was renamed or deleted mid-render, so the target no
-        # longer resolves — but the RNA that shows "running" (the shot, or
-        # the scene's camera-export settings) is still there and would stay
-        # frozen at "rendering" until the file is reloaded.
-        owner = resolve_status_owner(scene, job["target"])
-        if owner is not None:
-            owner.render_is_running = False
-            owner.render_progress = 0.0
-            owner.render_status = message
-    _redraw()
+    # Between passes our settings are already restored. A foreign native
+    # render must not keep the next-pass timeout (and our reservation) alive.
+    if job.get("configured") and bpy.app.is_job_running("RENDER"):
+        def finish_when_idle():
+            if _job is not job:
+                return None
+            if bpy.app.is_job_running("RENDER"):
+                return _NEXT_PASS_POLL_SECONDS
+            _finish_job(success, message)
+            return None
+        bpy.app.timers.register(finish_when_idle, first_interval=_NEXT_PASS_POLL_SECONDS)
+        return
+    _job = None
+    _remove_handlers()
+    try:
+        scene, target = _job_target(job)
+        if scene is not None:
+            _restore_active_pass(job, scene)
+        if target is not None:
+            target.set_status(
+                running=False,
+                progress=1.0 if success else 0.0,
+                status=message,
+            )
+        elif scene is not None:
+            # The camera was renamed or deleted mid-render, so the target no
+            # longer resolves — but the RNA that shows "running" (the shot, or
+            # the scene's camera-export settings) is still there and would stay
+            # frozen at "rendering" until the file is reloaded.
+            owner = resolve_status_owner(scene, job["target"])
+            if owner is not None:
+                owner.render_is_running = False
+                owner.render_progress = 0.0
+                owner.render_status = message
+        _redraw()
+    finally:
+        render_slot.release(job.get("reservation"))
 
 
 def _start_current_pass() -> None:
@@ -188,6 +216,7 @@ def _start_current_pass() -> None:
     )
     _redraw()
 
+    render_slot.phase(job["reservation"], "rendering")
     job["pass_running"] = True
     manager = bpy.context.window_manager
     window = bpy.context.window or next(iter(getattr(manager, "windows", ())), None)
@@ -233,8 +262,11 @@ def _record_output(scene, target, kind: str, path: str) -> None:
 
 def _complete_current_pass():
     job = _job
-    if job is None:
+    if job is None or not render_slot.owns(job.get("reservation")):
         return None
+    if bpy.app.is_job_running("RENDER"):
+        return _NEXT_PASS_POLL_SECONDS
+    render_slot.phase(job["reservation"], "finalizing")
     job["pass_running"] = False
     scene, target = _job_target(job)
     if scene is None or target is None:
@@ -261,6 +293,16 @@ def _complete_current_pass():
     return None
 
 
+def _schedule_for_job(callback, delay):
+    """Timers from a previous file/job must never act on the next job."""
+    job = _job
+    def run():
+        if _job is not job or job is None:
+            return None
+        return callback()
+    bpy.app.timers.register(run, first_interval=delay)
+
+
 def _queue_next_pass(target) -> None:
     job = _job
     kind = job["kinds"][job["index"]]
@@ -270,15 +312,12 @@ def _queue_next_pass(target) -> None:
         status=f"Preparing {label} {job['index'] + 1}/{len(job['kinds'])}"
     )
     _redraw()
-    bpy.app.timers.register(
-        _start_next_pass_when_idle,
-        first_interval=_NEXT_PASS_POLL_SECONDS,
-    )
+    _schedule_for_job(_start_next_pass_when_idle, _NEXT_PASS_POLL_SECONDS)
 
 
 def _start_next_pass_when_idle():
     job = _job
-    if job is None:
+    if job is None or not render_slot.owns(job.get("reservation")):
         return None
     before_deadline = time.monotonic() < job["next_pass_deadline"]
     try:
@@ -312,7 +351,7 @@ def _on_render_complete(scene, _depsgraph=None) -> None:
     if _job.get("finalize_scheduled"):
         return
     _job["finalize_scheduled"] = True
-    bpy.app.timers.register(_complete_current_pass, first_interval=0.1)
+    _schedule_for_job(_complete_current_pass, 0.1)
 
 
 def _on_render_cancel(scene, _depsgraph=None) -> None:
@@ -326,10 +365,7 @@ def _on_render_cancel(scene, _depsgraph=None) -> None:
         return
     _job["pass_running"] = False
     _job["finalize_scheduled"] = True
-    bpy.app.timers.register(
-        lambda: _finish_job(False, "Shot render canceled"),
-        first_interval=0.1,
-    )
+    _schedule_for_job(lambda: _finish_job(False, "Shot render canceled"), 0.1)
 
 
 def _on_render_write(scene, _depsgraph=None) -> None:
@@ -374,9 +410,14 @@ def _start_render(context, scene, target, preparing: str) -> int:
         "temp_group_name": "",
         "pass_running": False,
     }
-    target.set_status(running=True, progress=0.0, status=preparing)
-    _add_handlers()
+    reservation = render_slot.acquire("director-guides")
+    if reservation is None:
+        _job = None
+        raise RuntimeError("Another render is already in progress")
+    _job["reservation"] = reservation
     try:
+        target.set_status(running=True, progress=0.0, status=preparing)
+        _add_handlers()
         _start_current_pass()
     except Exception:
         _finish_job(False, "Could not start the guide render")
@@ -386,7 +427,7 @@ def _start_render(context, scene, target, preparing: str) -> int:
 
 def start_shot_render(context, shot) -> int:
     """Start an interactive multi-pass render and return the pass count."""
-    if _job is not None or bpy.app.is_job_running("RENDER"):
+    if _job is not None or render_slot.busy():
         raise RuntimeError("Another render is already in progress")
     if shot.camera is None or shot.camera.type != 'CAMERA':
         raise ValueError("Choose a shot camera first")
@@ -410,7 +451,7 @@ def start_camera_render(context, scene, settings, camera, plan) -> int:
     validated the plan, so this never re-derives a span — the readiness rules
     live in ONE place, `core/render_request.py`.
     """
-    if _job is not None or bpy.app.is_job_running("RENDER"):
+    if _job is not None or render_slot.busy():
         raise RuntimeError("Another render is already in progress")
     if not plan.ok:
         raise ValueError(plan.reason)

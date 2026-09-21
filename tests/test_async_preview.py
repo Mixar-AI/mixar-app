@@ -58,6 +58,8 @@ def preview(monkeypatch):
     fake.context.preferences.view.render_display_type = "WINDOW"
     fake.ops.render.render.return_value = {"RUNNING_MODAL"}
     monkeypatch.setattr(module, "bpy", fake)
+    monkeypatch.setattr(module.render_slot, "bpy", fake)
+    monkeypatch.setattr(module.render_slot, "_active", None)
     return module
 
 

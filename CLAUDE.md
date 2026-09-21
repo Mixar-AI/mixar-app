@@ -121,6 +121,7 @@ Backend runs a LangGraph orchestrator (Claude Sonnet 4.6 primary, Gemini 3.1 Pro
 
 ## Cross-cutting Patterns & Gotchas
 
+- **Render coordination**: `common/render_coordinator` reserves participating in-process renders through result collection and settings restoration. Agent previews and Director exports hold ownership; archive/thumbnail queues defer while busy. Ordinary scripts remain runnable.
 - **Shared native Mixar UI**: `UI_mixar{,_types,_tokens}.hh` and `editors/interface/mixar/` own presentation independently of native values. Python surface scopes and C++ buttons share components; the 3D island is the first consumer. Blender owns events, RNA and editing; legacy card/Cinema wrappers preserve their appearance.
 - **Operators can close the window a handler runs in**: every save (turn-checkpoint snapshots included) closes the Agent Bubble windows first, so chat region handlers call operators only through `mixie_chat_call_operator_and_redraw`, which re-verifies the region in a live screen before touching it (pinned by `tests/test_mixie_chat_operator_dispatch_guard.py`). A file read must never find a live bubble window.
 - **Handler pattern**: depsgraph handlers set flags → `bpy.app.timers` do the work. Never do heavy work (or property writes) in draw callbacks. A draw or layout callback must never resize an OS window or re-run `ED_screen_refresh` (see the agent_bubble doc).

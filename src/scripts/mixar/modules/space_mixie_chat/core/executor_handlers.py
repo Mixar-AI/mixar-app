@@ -4,6 +4,8 @@
 
 """Identity-bound cleanup of script handlers and trusted native job callbacks."""
 
+import sys
+
 import bpy
 
 from mixar.config.logging_config import get_logger
@@ -13,7 +15,7 @@ logger = get_logger(__name__)
 
 class HandlerCleanupMixin:
     """Snapshot ``bpy.app.handlers`` before a sandboxed script and strip
-    whatever it added afterwards — except the first-party preview-render
+    whatever it added afterwards — except the first-party render-lifecycle
     callbacks that must outlive the script that started the job."""
 
     # Handler list names on bpy.app.handlers to snapshot/restore
@@ -55,7 +57,7 @@ class HandlerCleanupMixin:
         return snapshot
 
     @staticmethod
-    def _exempt_handler_ids() -> set:
+    def _exempt_handler_ids() -> dict[str, set[int]]:
         """Identities of first-party handlers that scripts install INDIRECTLY
         via addon operators and that must OUTLIVE the script.
 
@@ -65,15 +67,30 @@ class HandlerCleanupMixin:
         restore the settings AFTER the script is long gone — stripping them
         orphans the render. Matching is by object IDENTITY, not name/module
         (a script can forge ``__module__`` via ``__name__`` in its globals,
-        but it cannot forge ``id()``); at worst a script can re-append these
-        exact functions, which self-guard (no-op without an active job).
+        but it cannot forge ``id()``). Each identity is trusted only on its
+        intended handler list; load cleanup must never become a frame hook.
         """
-        try:
-            from . import preview_render as preview
-            return {id(preview._complete), id(preview._cancelled),
-                    id(preview._changed), id(preview._before_load)}
-        except Exception:
-            return set()
+        # Only inspect already-loaded modules: a callback cannot have been
+        # installed otherwise, and script cleanup must not bootstrap modules.
+        trusted = {
+            "space_mixie_chat.core.preview_render": {
+                "render_complete": "_complete", "render_cancel": "_cancelled",
+                "depsgraph_update_post": "_changed", "load_pre": "_before_load"},
+            "common.render_coordinator.core": {"load_pre": "_before_load"},
+            "director.core.render_outputs": {
+                "load_pre": "_before_load", "render_complete": "_on_render_complete",
+                "render_cancel": "_on_render_cancel", "render_write": "_on_render_write"},
+            "asset_search.core.generation_library": {"load_pre": "_clear_pending_archives"},
+            "space_mixie_chat.core.asset_choice_previews": {"load_pre": "_before_load"},
+        }
+        exempt = {}
+        for path, callbacks in trusted.items():
+            module = sys.modules.get("mixar.modules." + path)
+            for handler_list, name in callbacks.items():
+                callback = getattr(module, name, None)
+                if callback is not None:
+                    exempt.setdefault(handler_list, set()).add(id(callback))
+        return exempt
 
     def _cleanup_handlers(self, snapshot: dict[str, list]) -> None:
         """Remove any handlers that were added since the snapshot.
@@ -88,7 +105,7 @@ class HandlerCleanupMixin:
             before_set = set(id(h) for h in before_list)
             added = [h for h in handler_list if id(h) not in before_set]
             for handler in added:
-                if id(handler) in exempt:
+                if id(handler) in exempt.get(name, ()):
                     logger.debug(
                         "Keeping exempt first-party handler: %s.%s (%s)",
                         "bpy.app.handlers", name,
