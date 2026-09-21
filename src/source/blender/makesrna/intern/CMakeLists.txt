@@ -446,6 +446,7 @@ set(SRC
   rna_internal.hh
   rna_internal_types.hh
   rna_screen_utils.hh
+  rna_screen_mixar_glass.hh
 )
 
 set(LIB

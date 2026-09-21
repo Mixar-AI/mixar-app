@@ -104,6 +104,7 @@ set(SRC
   view3d_select.cc
   view3d_snap.cc
   view3d_toast_click.cc
+  view3d_toast_qa.cc
   view3d_utils.cc
   view3d_view.cc
   view3d_vr_location_scouting.cc
