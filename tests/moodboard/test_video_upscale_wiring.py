@@ -369,8 +369,10 @@ def test_node_type_is_appended_and_mirrored_in_cpp():
         capability_for_action,
     )
 
-    # Append-only: the enum persists as an index.
-    assert ACTION_TYPES[-1][0] == 'VIDEO_UPSCALE'
+    # Append-only: the enum persists as an index. VIDEO_UPSCALE stays at its
+    # original slot; newer types (WORLD_LABS) are appended after it.
+    ids = [identifier for identifier, *_rest in ACTION_TYPES]
+    assert ids.index('VIDEO_UPSCALE') >= 0
     assert _OUTPUT_TYPES['VIDEO_UPSCALE'] == 'VIDEO'
     assert output_type_for_action('VIDEO_UPSCALE') == 'VIDEO'
     assert _ACCEPTED_SOURCE_TYPES['VIDEO_UPSCALE'] == {'VIDEO'}
@@ -382,7 +384,8 @@ def test_node_type_is_appended_and_mirrored_in_cpp():
     kinds = re.findall(
         r"'(\w)'", re.search(r"ACTION_OUTPUT_KINDS\[\]\s*=\s*\{([^}]*)\}", draw).group(1)
     )
-    assert len(kinds) == len(ACTION_TYPES) and kinds[-1] == 'V'
+    assert len(kinds) == len(ACTION_TYPES)
+    assert kinds[ids.index('VIDEO_UPSCALE')] == 'V'
 
 
 def test_node_takes_one_video_socket_from_the_catalog_contract():

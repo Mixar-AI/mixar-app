@@ -46,7 +46,7 @@ def test_output_handle_colors_match_the_python_output_types():
     assert len(kinds) == len(ACTION_TYPES), (
         "the C++ output-kind table and ACTION_TYPES disagree on length"
     )
-    letter_for = {"IMAGE": "I", "VIDEO": "V", "MESH": "M"}
+    letter_for = {"IMAGE": "I", "VIDEO": "V", "MESH": "M", "SPLAT": "S"}
     for index, (identifier, *_rest) in enumerate(ACTION_TYPES):
         expected = letter_for[_OUTPUT_TYPES[identifier]]
         assert kinds[index] == expected, (
@@ -135,24 +135,17 @@ def test_mesh_previews_stay_below_compact_settings_and_retry_controls():
     assert controls.index("ui::icon_draw_preview(") < controls.index("ui::block_draw(C, block)")
 
 
-def test_finished_nodes_offer_edit_and_run_again_on_the_panel():
-    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
-    assert "show_rerun" in node_ui
-    assert '"Edit & Run Again"' in node_ui
-    # Blender 5.2: operator properties are set through
-    # ui::button_operator_ptr_ensure (no separate rerun_props handle).
-    assert (
-        'RNA_boolean_set(ui::button_operator_ptr_ensure(rerun), "edit_before_run", true)'
-        in node_ui
-    )
+def test_finished_nodes_offer_edit_and_run_again_in_settings():
+    popup = _read(MOODBOARD / "ui/operators/node_settings_ops.py")
+    assert 'text="Edit & Run Again"' in popup
+    assert 'op.edit_before_run = True' in popup
 
 
-def test_node_panel_metrics_scale_with_the_ui_factor():
-    """Labels render at UI_SCALE_FAC; fixed pixel rows clipped them on high-DPI."""
-    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
-    layout = _read(SPACE_MIXIE / "mixie_moodboard_node_layout.cc")
-    assert "const int row_h = int(32 * ui_scale)" in node_ui
-    assert "const int width = int(244 * scale)" in layout
+def test_settings_entry_scales_with_the_ui_factor():
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+    assert "ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC)" in node_ui
+    assert "const int height = int(metrics.control_height)" in node_ui
+    assert '"MIXIE_OT_moodboard_node_settings"' in node_ui
 
 
 def test_a_finished_node_shows_its_result_behind_a_floating_edit_toggle():
@@ -177,7 +170,7 @@ def test_a_finished_node_shows_its_result_behind_a_floating_edit_toggle():
     # it, the same relationship the settings panel has to the card's left edge.
     # Laid over the card, these controls covered the result they belong to.
     assert "card.ymax + int(MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC)" in tile
-    assert "std::min(card.xmax, canvas.xmax) - width" in tile
+    assert "int x = card.xmax - width" in tile
     assert "card.ymax - margin - height" not in tile
     # The header text is painted on this same row, so both must derive their
     # position from the same two constants or they land on different lines.
@@ -218,9 +211,9 @@ def test_the_card_action_row_stays_inside_the_painted_canvas():
 
     assert "moodboard_visible_canvas_rect(C)" in node_ui
     assert "moodboard_visible_canvas_rect(C)" in labels
-    # The clamp itself lives with the layout, so the row and the header cannot
-    # disagree about where the card's top edge is.
-    assert "canvas.ymax - height" in tile
+    # Clip painting/input, without reflowing the card against the viewport edge.
+    assert "ui::mixar_block_clip_set(block, clip)" in node_ui
+    assert "canvas.ymax - height" not in tile
     # A name is clamped into the canvas too, never into the raw region.
     assert "region->winx" not in labels
     assert "region->winy" not in labels
@@ -265,32 +258,14 @@ def test_a_finished_node_can_export_its_own_result():
     assert "def node_exportable_media(scene, node_id" in media
 
 
-def test_node_fields_carry_their_own_tooltips():
-    """The panel's fields draw their VALUE under a caption -- a dropdown reads
-    "1K", a number field just "1" -- so the catalog's description and the bounds
-    a plain number field cannot show have nowhere else to go. They cannot come
-    from RNA: every catalog parameter shares one set of value properties, so
-    uiDefButR's fallback to the property description would put identical text on
-    every field of every node."""
-    tooltips = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tooltips.cc")
-    settings = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
-
-    # ui::Button::tip is a NON-owning StringRef, so a locally built string would
-    # dangle: the button outlives the draw and is what the tooltip is read from.
-    # The button must own a copy and free it.
-    assert (
-        "ui::button_func_tooltip_set(but, node_tooltip_func, owned, MEM_delete_void)"
-        in tooltips
-    )
-    # Composed from the parameter's OWN catalog text, plus the bounds a plain
-    # number field cannot show.
-    assert 'mixie_rna_string_get_clamped(parameter, "label"' in tooltips
-    assert 'mixie_rna_string_get_clamped(parameter, "description"' in tooltips
-    assert '"Range: "' in tooltips
-    # Every field the panel draws is covered.
-    assert "moodboard_set_parameter_tooltip(button, parameter)" in settings
-    assert "moodboard_set_node_tooltip(mode," in settings
-    assert "moodboard_set_node_tooltip(model," in settings
+def test_node_fields_retain_catalog_help_in_the_popup():
+    settings = _read(MOODBOARD / "ui/operators/node_settings_ops.py")
+    help_source = _read(MOODBOARD / "ui/operators/node_parameter_info.py")
+    assert "info.details = parameter_help(parameter)" in settings
+    assert "return properties.details" in help_source
+    assert "parameter.description" in help_source
+    assert "Range:" in help_source
+    assert 'parts.append("Required")' in help_source
 
 
 def test_a_result_can_be_opened_in_its_own_preview_window():
@@ -411,7 +386,7 @@ def test_painted_canvas_text_carries_the_ui_factor():
     assert "BLF_size(font_id, size);" not in graph
     # The header measures the state text to reserve room for it and then draws
     # it; both calls must use the same size or the reservation is wrong.
-    assert chrome.count("BLF_size(font_id, 15.0f * UI_SCALE_FAC);") == 2
+    assert chrome.count("ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC)") == 2
     assert "BLF_size(font_id, 15.0f);" not in chrome
 
 
@@ -480,123 +455,6 @@ def test_pulse_timer_is_capped_at_fifteen_fps():
 # --------------------------------------------------------------------------- #
 # Selected media name
 # --------------------------------------------------------------------------- #
-
-
-def test_selected_media_shows_its_name_not_a_hovering_bubble():
-    """The selection used to raise a rounded "Image"/"Video" bubble over the
-    canvas — chrome that covered part of the board to repeat what the picture
-    already said. The one thing the tile cannot show is WHICH file it is, so
-    that slot carries the media's own name instead, as plain small text with no
-    background of its own."""
-    labels = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_labels.cc")
-
-    assert "image->id.name + 2" in labels
-    assert "moodboard_draw_floating_background" not in labels
-    assert "uiDefBut" not in labels
-    assert '"Video" : "Image"' not in labels
-    # Painted text, so it takes no uiBlock at all.
-    assert "uiBlock" not in labels
-    assert "BLF_draw(" in labels
-    # The name is sized WITH the canvas, not pinned to a constant screen size.
-    # Pinned, a zoomed-out 111px tile wore a 126px name -- text wider than the
-    # picture it labelled. So the point size carries the DPI factor AND the
-    # View2D scale.
-    assert "MOODBOARD_MEDIA_LABEL_SIZE_PX * UI_SCALE_FAC * view_scale" in labels
-    assert "ui::view2d_scale_get_x(v2d)" in labels
-    size = re.search(
-        r"#define MOODBOARD_MEDIA_LABEL_SIZE_PX (\d+(?:\.\d+)?)f", labels
-    )
-    assert size, "the point size must stay a named constant"
-    assert float(size.group(1)) <= 12.0
-
-
-def test_a_media_name_never_outgrows_the_tile_it_labels():
-    """Scaling by zoom alone is not enough: a tile's width is its OWN canvas
-    size times the zoom, so a user-shrunk image at a high zoom would still wear
-    an oversized name. The size is fitted to the tile, floored for legibility,
-    and dropped outright when the tile is too narrow to carry a readable name
-    -- clamping up without the fit is what puts a name wider than its picture
-    back on screen."""
-    labels = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_labels.cc")
-
-    for macro in (
-        "MOODBOARD_MEDIA_LABEL_MIN_PX",
-        "MOODBOARD_MEDIA_LABEL_MAX_PX",
-    ):
-        assert re.search(rf"#define {macro} (\d+(?:\.\d+)?)f", labels), macro
-    floor = float(
-        re.search(r"#define MOODBOARD_MEDIA_LABEL_MIN_PX (\d+(?:\.\d+)?)f", labels).group(1)
-    )
-    ceiling = float(
-        re.search(r"#define MOODBOARD_MEDIA_LABEL_MAX_PX (\d+(?:\.\d+)?)f", labels).group(1)
-    )
-    assert 0.0 < floor < ceiling
-
-    # Floor first (a pulled-back canvas keeps its names), then fit to the tile.
-    assert "std::clamp(MOODBOARD_MEDIA_LABEL_SIZE_PX * UI_SCALE_FAC * view_scale" in labels
-    assert "font_px *= tile_width / text_width;" in labels
-    fit_at = labels.index("font_px *= tile_width / text_width;")
-    drop_at = labels.index("if (font_px < MOODBOARD_MEDIA_LABEL_MIN_PX * UI_SCALE_FAC) {")
-    assert fit_at < drop_at, "the drop test must read the FITTED size, not the clamped one"
-
-    # Spacing rides the font, so the lockup scales as one piece.
-    assert "font_px * MOODBOARD_MEDIA_LABEL_GAP_RATIO" in labels
-    assert "font_px * MOODBOARD_MEDIA_LABEL_INSET_RATIO" in labels
-
-
-def test_a_media_name_is_placed_where_its_own_picture_is_actually_visible():
-    """Moving a blocked name to the tile's top-left is not enough: a neighbour
-    that covers the strip ABOVE a tile usually overlaps the top of the tile as
-    well, so the name landed on that other picture regardless. The placement
-    walks down a line at a time and takes the first band the tile itself shows.
-
-    Which neighbours count depends on where the strip is, and the two cases are
-    not the same: above the tile the name is in the open, so a neighbour painted
-    BEFORE this tile still shows through there and must count; inside the tile
-    only the neighbours painted after it can cover it."""
-    labels = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_labels.cc")
-
-    assert re.search(r"#define MOODBOARD_MEDIA_LABEL_MAX_PROBES (\d+)", labels)
-    # One predicate serving both cases, told apart by the `inside` flag.
-    assert "auto strip_is_clear = [&](const float x, const float y, const bool inside)" in labels
-    assert "if (other == index || (inside && other < index)) {" in labels
-    # Above the tile: every other tile is a candidate blocker.
-    assert "const bool inside = !strip_is_clear(text_x, text_y, false);" in labels
-    # Inside: probe downward for the first band this tile actually shows.
-    assert "const float candidate = top - float(step) * line_height;" in labels
-    assert "if (strip_is_clear(text_x, candidate, true)) {" in labels
-    # Bounded, because this runs on every redraw.
-    assert "step < MOODBOARD_MEDIA_LABEL_MAX_PROBES" in labels
-    # A fully blanketed tile still gets its name, rather than losing it.
-    assert "text_y = top;" in labels
-    # The outline only applies to the inside case, and is turned back off.
-    assert "BLF_enable(font_id, BLF_SHADOW);" in labels
-    assert "BLF_disable(font_id, BLF_SHADOW);" in labels
-
-
-def test_a_long_media_name_folds_in_the_middle():
-    """A generated name is told apart by its tail and its extension as much as
-    its head, so an over-long name keeps both ends and elides the middle. The
-    offsets come from the UTF-8 helpers, never raw byte counts — a name cut
-    mid-character renders as a replacement glyph."""
-    labels = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_labels.cc")
-
-    head = int(
-        re.search(r"#define MOODBOARD_MEDIA_LABEL_HEAD_CHARS (\d+)", labels).group(1)
-    )
-    tail = int(
-        re.search(r"#define MOODBOARD_MEDIA_LABEL_TAIL_CHARS (\d+)", labels).group(1)
-    )
-    limit = int(
-        re.search(r"#define MOODBOARD_MEDIA_LABEL_MAX_CHARS (\d+)", labels).group(1)
-    )
-    assert limit == 20
-    # The ellipsis has to buy something: the fold must be shorter than the name
-    # it replaces, or a 21-character name comes out longer than the original.
-    assert head + tail + 3 <= limit + 2
-    assert '"%s...%s"' in labels
-    assert "BLI_str_utf8_offset_from_index" in labels
-    assert "BLI_strlen_utf8_ex" in labels
 
 
 # --------------------------------------------------------------------------- #

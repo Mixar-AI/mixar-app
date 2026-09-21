@@ -22,7 +22,7 @@ from typing import Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
-from .media_utils import is_still_item
+from .media_utils import selected_reference_stills
 
 logger = get_logger(__name__)
 
@@ -259,21 +259,20 @@ class SceneGenExpManager:
         found_ref = False
         try:
             scene = bpy.context.scene
-            for item in scene.mixie_moodboard_images:
-                if item.selected and is_still_item(item):
-                    ref_x = item.position_x
-                    ref_y = item.position_y
-                    ref_scale = item.scale
-                    iw, ih = item.image.size[0], item.image.size[1]
-                    if iw == 0 or ih == 0:
-                        iw, ih = MOODBOARD_IMAGE_BASE_SIZE, MOODBOARD_IMAGE_BASE_SIZE
-                    aspect = iw / ih
-                    disp_w = MOODBOARD_IMAGE_BASE_SIZE * ref_scale * aspect
-                    disp_h = MOODBOARD_IMAGE_BASE_SIZE * ref_scale
-                    ref_cx = ref_x + disp_w / 2
-                    ref_bottom_y = ref_y - disp_h - self._GRID_GAP
-                    found_ref = True
-                    break
+            for item in selected_reference_stills(scene):
+                ref_x = item.position_x
+                ref_y = item.position_y
+                ref_scale = item.scale
+                iw, ih = item.image.size[0], item.image.size[1]
+                if iw == 0 or ih == 0:
+                    iw, ih = MOODBOARD_IMAGE_BASE_SIZE, MOODBOARD_IMAGE_BASE_SIZE
+                aspect = iw / ih
+                disp_w = MOODBOARD_IMAGE_BASE_SIZE * ref_scale * aspect
+                disp_h = MOODBOARD_IMAGE_BASE_SIZE * ref_scale
+                ref_cx = ref_x + disp_w / 2
+                ref_bottom_y = ref_y - disp_h - self._GRID_GAP
+                found_ref = True
+                break
         except Exception:
             pass
 

@@ -598,13 +598,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
         use_moodboard = getattr(pro, 'use_selected_image', False)
 
         if use_moodboard:
-            scene = context.scene
-            selected = []
-            if hasattr(scene, 'mixie_moodboard_images'):
-                selected = [
-                    item for item in scene.mixie_moodboard_images
-                    if item.selected and item.image
-                ]
+            from mixar.modules.moodboard.core.media_utils import selected_reference_stills
+
+            selected = selected_reference_stills(context.scene)
             if not selected:
                 raise ValueError("No image selected in moodboard")
             for item in selected:

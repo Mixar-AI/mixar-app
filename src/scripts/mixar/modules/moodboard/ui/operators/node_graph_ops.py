@@ -336,7 +336,7 @@ class MIXIE_OT_moodboard_reset_node_params(Operator):
     bl_idname = "mixie.moodboard_reset_node_params"
     bl_label = "Reset Settings"
     bl_description = "Restore this node's settings to the model defaults"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'UNDO'}
 
     # SKIP_SAVE: see MIXIE_OT_moodboard_run_action_node.node_id.
     node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
@@ -440,7 +440,10 @@ class MIXIE_OT_moodboard_select_asset_objects(Operator):
     node_id: bpy.props.StringProperty(default="")
 
     def execute(self, context):
-        from mixar.modules.moodboard.core.node_graph import asset_node_by_id
+        from mixar.modules.moodboard.core.node_graph import (
+            asset_node_by_id,
+            mesh_source_object_names,
+        )
 
         node = asset_node_by_id(context.scene, self.node_id)
         if node is None:
@@ -456,8 +459,8 @@ class MIXIE_OT_moodboard_select_asset_objects(Operator):
             self.report({'WARNING'}, f"Could not update the selection: {exc}")
             return {'CANCELLED'}
         selected = []
-        for name in node.object_names.split(","):
-            obj = bpy.data.objects.get(name.strip())
+        for name in mesh_source_object_names(context.scene, node.node_id):
+            obj = bpy.data.objects.get(name)
             if obj is not None and obj.name in view_layer.objects:
                 obj.select_set(True)
                 selected.append(obj)

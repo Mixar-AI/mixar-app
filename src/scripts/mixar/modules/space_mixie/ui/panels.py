@@ -14,6 +14,7 @@ import bpy
 from bpy.types import Panel
 
 from ..constants import get_imagegen_max_refs
+from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
 
 
 class MIXIE_PT_mesh_segment(Panel):
@@ -164,13 +165,8 @@ class MIXIE_PT_lookdev(Panel):
                 row.label(text="No depth map selected")
             row.operator("mixie.lookdev_pick_depth_image", text="", icon='FILEBROWSER')
         else:
-            # Show currently selected moodboard image info
-            selected = [
-                item for item in scene.mixie_moodboard_images
-                if item.selected and item.image
-            ]
-            if selected:
-                img = selected[0].image
+            img = first_selected_reference_still(scene)
+            if img:
                 box.label(text=f"Selected: {img.name}", icon='CHECKMARK')
             else:
                 box.label(text="No image selected in moodboard", icon='ERROR')
@@ -276,12 +272,8 @@ class MIXIE_PT_lookdev360(Panel):
 
         if scene.mixie_lookdev360_use_selected_image:
             # Show currently selected moodboard image info
-            selected = [
-                item for item in scene.mixie_moodboard_images
-                if item.selected and item.image
-            ]
-            if selected:
-                img = selected[0].image
+            img = first_selected_reference_still(scene)
+            if img:
                 box.label(text=f"Selected: {img.name}", icon='CHECKMARK')
             else:
                 box.label(text="No image selected in moodboard", icon='INFO')
@@ -472,12 +464,8 @@ class MIXIE_PT_image_to_3d(Panel):
 
         if scene.mixie_image_to_3d_use_selected:
             # Show currently selected moodboard image info
-            selected = [
-                item for item in scene.mixie_moodboard_images
-                if item.selected and item.image
-            ]
-            if selected:
-                img = selected[0].image
+            img = first_selected_reference_still(scene)
+            if img:
                 box.label(text=f"Selected: {img.name}", icon='CHECKMARK')
             else:
                 box.label(text="No image selected in moodboard", icon='ERROR')
@@ -531,8 +519,7 @@ class MIXIE_PT_image_to_3d(Panel):
         # Check if we have an image to generate from
         has_image = False
         if scene.mixie_image_to_3d_use_selected:
-            selected = [item for item in scene.mixie_moodboard_images if item.selected and item.image]
-            has_image = len(selected) > 0
+            has_image = first_selected_reference_still(scene) is not None
         else:
             has_image = scene.mixie_image_to_3d_image is not None
 

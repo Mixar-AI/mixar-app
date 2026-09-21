@@ -11,6 +11,15 @@ import pytest
 from mixar.modules.moodboard.core import canvas_context
 
 
+def test_clear_is_offered_for_every_board_collection():
+    empty = NS(scene=NS())
+    assert canvas_context.has_moodboard_content(empty) is False
+    for name in canvas_context.MOODBOARD_CONTENT_COLLECTIONS:
+        assert name.startswith("mixie_moodboard_")
+        scene = NS(**{name: [object()]})
+        assert canvas_context.has_moodboard_content(NS(scene=scene)) is True
+
+
 @pytest.mark.parametrize(
     "space,workspace,region,amount,expected",
     [

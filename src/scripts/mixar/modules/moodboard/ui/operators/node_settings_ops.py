@@ -1,12 +1,14 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Native settings popup for inference cards without room for a side panel."""
+"""Shared model and parameter editor for every inference card."""
 
 import math
 
 import bpy
 from bpy.types import Operator
+
+from .node_parameter_info import parameter_help
 
 from mixar.modules.moodboard.constants import GRAPH_NODE_ID_MAXLEN
 from mixar.modules.moodboard.core.canvas_context import (
@@ -63,12 +65,17 @@ def _clamp_numeric_settings(node):
 def _draw_parameter(layout, parameter):
     label = parameter.label or parameter.name.replace('_', ' ').title()
     kind = parameter.parameter_type
-    if kind == 'BOOLEAN':
-        draw_toggle(layout, parameter, 'value_boolean', text=label)
-        return
     field = layout.column(align=True)
-    field.label(text=label)
-    if kind == 'ENUM':
+    caption = field.row(align=True)
+    if kind == 'BOOLEAN':
+        draw_toggle(caption, parameter, 'value_boolean', text=label)
+    else:
+        caption.label(text=label)
+    info = caption.operator('mixie.moodboard_parameter_info', text='', icon='INFO', emboss=False)
+    info.details = parameter_help(parameter)
+    if kind == 'BOOLEAN':
+        return
+    elif kind == 'ENUM':
         draw_dropdown(field, parameter, 'value_enum', text="")
     elif kind in {'INTEGER', 'FLOAT'}:
         field.prop(parameter, 'value_integer' if kind == 'INTEGER' else 'value_float', text="")

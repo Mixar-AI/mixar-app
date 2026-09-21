@@ -9,6 +9,7 @@
  */
 
 #include "mixie_moodboard_ops_common.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 #include "DNA_windowmanager_types.h"
 #include "DNA_workspace_types.h"
@@ -21,90 +22,31 @@ namespace blender::ed::mixie {
 
 static wmOperatorStatus moodboard_zoom_invoke(bContext *C, wmOperator * /*op*/, const wmEvent *event)
 {
-  Scene *scene = CTX_data_scene(C);
-  if (!scene) {
+  /* Pinch always changes the canvas view. Item size is the corner-handle
+   * resize gesture; writing `scale` here made a selected picture grow in
+   * board units while the user was trying to zoom. */
+  ARegion *region = CTX_wm_region(C);
+  if (!region) {
     return OPERATOR_PASS_THROUGH;
   }
 
-  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-  PropertyRNA *prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
+  View2D *v2d = &region->v2d;
+  const float zoom_delta = float(WM_event_absolute_delta_x(event)) * 0.01f;
+  const float zoom_factor = std::max(0.1f, std::min(10.0f, 1.0f - zoom_delta));
 
-  if (!prop) {
-    return OPERATOR_PASS_THROUGH;
-  }
+  const float new_width = BLI_rctf_size_x(&v2d->cur) * zoom_factor;
+  const float new_height = BLI_rctf_size_y(&v2d->cur) * zoom_factor;
+  const float center_x = BLI_rctf_cent_x(&v2d->cur);
+  const float center_y = BLI_rctf_cent_y(&v2d->cur);
 
-  bool any_selected = false;
-  int image_count = RNA_property_collection_length(&scene_ptr, prop);
+  v2d->cur.xmin = center_x - new_width / 2.0f;
+  v2d->cur.xmax = center_x + new_width / 2.0f;
+  v2d->cur.ymin = center_y - new_height / 2.0f;
+  v2d->cur.ymax = center_y + new_height / 2.0f;
 
-  for (int i = 0; i < image_count; i++) {
-    PointerRNA item_ptr;
-    RNA_property_collection_lookup_int(&scene_ptr, prop, i, &item_ptr);
-    PropertyRNA *sel_prop = RNA_struct_find_property(&item_ptr, "selected");
-    if (sel_prop && RNA_property_boolean_get(&item_ptr, sel_prop)) {
-      any_selected = true;
-      break;
-    }
-  }
-
-  const float sensitivity = 0.01f;
-  int delta_x = WM_event_absolute_delta_x(event);
-  float zoom_delta = float(delta_x) * sensitivity;
-
-  if (!any_selected) {
-    ARegion *region = CTX_wm_region(C);
-    View2D *v2d = &region->v2d;
-
-    float zoom_factor = 1.0f - zoom_delta;
-    zoom_factor = std::max(0.1f, std::min(10.0f, zoom_factor));
-
-    float cur_width = BLI_rctf_size_x(&v2d->cur);
-    float cur_height = BLI_rctf_size_y(&v2d->cur);
-
-    float new_width = cur_width * zoom_factor;
-    float new_height = cur_height * zoom_factor;
-
-    float center_x = (v2d->cur.xmin + v2d->cur.xmax) / 2.0f;
-    float center_y = (v2d->cur.ymin + v2d->cur.ymax) / 2.0f;
-
-    v2d->cur.xmin = center_x - new_width / 2.0f;
-    v2d->cur.xmax = center_x + new_width / 2.0f;
-    v2d->cur.ymin = center_y - new_height / 2.0f;
-    v2d->cur.ymax = center_y + new_height / 2.0f;
-
-    ui::view2d_curRect_validate(v2d);
-    ui::view2d_curRect_changed(C, v2d);
-    ED_area_tag_redraw(CTX_wm_area(C));
-
-    return OPERATOR_FINISHED;
-  }
-
-  bool any_updated = false;
-
-  for (int i = 0; i < image_count; i++) {
-    PointerRNA item_ptr;
-    RNA_property_collection_lookup_int(&scene_ptr, prop, i, &item_ptr);
-
-    PropertyRNA *sel_prop = RNA_struct_find_property(&item_ptr, "selected");
-    if (sel_prop && RNA_property_boolean_get(&item_ptr, sel_prop)) {
-      PropertyRNA *scale_prop = RNA_struct_find_property(&item_ptr, "scale");
-      if (scale_prop) {
-        float current_scale = RNA_property_float_get(&item_ptr, scale_prop);
-        float new_scale = current_scale * (1.0f + zoom_delta);
-
-        new_scale = std::max(MOODBOARD_IMAGE_MIN_SCALE, std::min(MOODBOARD_IMAGE_MAX_SCALE, new_scale));
-
-        if (new_scale != current_scale) {
-          RNA_property_float_set(&item_ptr, scale_prop, new_scale);
-          any_updated = true;
-        }
-      }
-    }
-  }
-
-  if (any_updated) {
-    ED_area_tag_redraw(CTX_wm_area(C));
-  }
-
+  ui::view2d_curRect_validate(v2d);
+  ui::view2d_curRect_changed(C, v2d);
+  ED_area_tag_redraw(CTX_wm_area(C));
   return OPERATOR_FINISHED;
 }
 
@@ -119,9 +61,36 @@ static wmOperatorStatus moodboard_zoom_invoke(bContext *C, wmOperator * /*op*/, 
  * A no-op when the target is already on screen.
  * \{ */
 
+/* Framing keeps the screen-sized title/action row above the topmost card.
+ * Canvas-unit margins shrink at low zoom and cannot provide this clearance. */
+static rcti framing_content_rect(const ScrArea *area, ARegion *region)
+{
+  rcti content = moodboard_visible_canvas_rect(area, region);
+  const int title_height = int(
+      (MOODBOARD_NODE_HEADER_LIFT + MOODBOARD_NODE_HEADER_ROW_H) * UI_SCALE_FAC);
+  content.ymax -= std::min(title_height, std::max(BLI_rcti_size_y(&content) / 2, 0));
+  return content;
+}
+
 /* Grow one region's visible rect so the target is on screen.  Returns true if
  * the view was changed. */
-static bool ensure_rect_visible_in_region(ARegion *region,
+static void frame_in_content_rect(ARegion *region, const rcti &content, const rctf &bounds)
+{
+  View2D *v2d = &region->v2d;
+  const float units_per_pixel = std::max(
+      BLI_rctf_size_x(&bounds) / std::max(BLI_rcti_size_x(&content), 1),
+      BLI_rctf_size_y(&bounds) / std::max(BLI_rcti_size_y(&content), 1));
+  const float xmin = BLI_rctf_cent_x(&bounds) -
+                     (BLI_rcti_cent_x(&content) - v2d->mask.xmin) * units_per_pixel;
+  const float ymin = BLI_rctf_cent_y(&bounds) -
+                     (BLI_rcti_cent_y(&content) - v2d->mask.ymin) * units_per_pixel;
+  BLI_rctf_init(&v2d->cur, xmin, xmin + BLI_rcti_size_x(&v2d->mask) * units_per_pixel,
+                ymin, ymin + BLI_rcti_size_y(&v2d->mask) * units_per_pixel);
+  ui::view2d_curRect_validate(v2d);
+}
+
+static bool ensure_rect_visible_in_region(const ScrArea *area,
+                                          ARegion *region,
                                           const float tx_min,
                                           const float tx_max,
                                           const float ty_min,
@@ -129,9 +98,13 @@ static bool ensure_rect_visible_in_region(ARegion *region,
 {
   View2D *v2d = &region->v2d;
 
-  /* Already fully inside the visible rect: nothing to do. */
-  if (tx_min >= v2d->cur.xmin && tx_max <= v2d->cur.xmax && ty_min >= v2d->cur.ymin &&
-      ty_max <= v2d->cur.ymax)
+  const rcti content = framing_content_rect(area, region);
+  rctf visible;
+  ui::view2d_region_to_view(v2d, content.xmin, content.ymin, &visible.xmin, &visible.ymin);
+  ui::view2d_region_to_view(v2d, content.xmax, content.ymax, &visible.xmax, &visible.ymax);
+  /* Controls and overlapping sidebars are never usable canvas space. */
+  if (tx_min >= visible.xmin && tx_max <= visible.xmax && ty_min >= visible.ymin &&
+      ty_max <= visible.ymax)
   {
     return false;
   }
@@ -139,24 +112,11 @@ static bool ensure_rect_visible_in_region(ARegion *region,
   /* Grow the visible rect to also contain the target, then let View2D
    * re-validate zoom/aspect limits (which can only enlarge the area, so the
    * target stays visible). */
-  v2d->cur.xmin = std::min(v2d->cur.xmin, tx_min);
-  v2d->cur.xmax = std::max(v2d->cur.xmax, tx_max);
-  v2d->cur.ymin = std::min(v2d->cur.ymin, ty_min);
-  v2d->cur.ymax = std::max(v2d->cur.ymax, ty_max);
-
-  /* The canvas derives vertical span from horizontal zoom on every draw.
-   * Enlarge both axes to that aspect now, otherwise a tall reference (or a
-   * batch) is cropped again as soon as the drawer paints. */
-  const float aspect = float(std::max(int(region->winx), 1)) /
-                       float(std::max(int(region->winy), 1));
-  const float half_width = 0.5f * std::max(BLI_rctf_size_x(&v2d->cur),
-                                          BLI_rctf_size_y(&v2d->cur) * aspect);
-  const float cx = BLI_rctf_cent_x(&v2d->cur);
-  const float cy = BLI_rctf_cent_y(&v2d->cur);
-  BLI_rctf_init(&v2d->cur, cx - half_width, cx + half_width,
-                cy - half_width / aspect, cy + half_width / aspect);
-
-  ui::view2d_curRect_validate(v2d);
+  visible.xmin = std::min(visible.xmin, tx_min);
+  visible.xmax = std::max(visible.xmax, tx_max);
+  visible.ymin = std::min(visible.ymin, ty_min);
+  visible.ymax = std::max(visible.ymax, ty_max);
+  frame_in_content_rect(region, content, visible);
   ED_region_tag_redraw(region);
   return true;
 }
@@ -268,8 +228,7 @@ static wmOperatorStatus moodboard_frame_exec(bContext *C, wmOperator *op)
   /* Unlike ensure-visible this SETS the rect, so the view zooms in as well as
    * out. View2D then re-validates it against the region aspect and the zoom
    * limits, which can only enlarge it -- the content stays framed. */
-  region->v2d.cur = bounds;
-  ui::view2d_curRect_validate(&region->v2d);
+  frame_in_content_rect(region, framing_content_rect(CTX_wm_area(C), region), bounds);
   ED_region_tag_redraw(region);
   return OPERATOR_FINISHED;
 }
@@ -334,7 +293,7 @@ static wmOperatorStatus moodboard_ensure_visible_exec(bContext *C, wmOperator *o
         if (region->regiontype != want_region) {
           continue;
         }
-        if (ensure_rect_visible_in_region(region, tx_min, tx_max, ty_min, ty_max)) {
+        if (ensure_rect_visible_in_region(area, region, tx_min, tx_max, ty_min, ty_max)) {
           ED_area_tag_redraw(area);
         }
       }
@@ -357,9 +316,9 @@ namespace blender {
 
 void MIXIE_OT_moodboard_zoom(wmOperatorType *ot)
 {
-  ot->name = "Zoom Selected Images";
+  ot->name = "Zoom Moodboard";
   ot->idname = "MIXIE_OT_moodboard_zoom";
-  ot->description = "Zoom selected images using pinch gesture";
+  ot->description = "Zoom the moodboard canvas";
 
   ot->invoke = blender::ed::mixie::moodboard_zoom_invoke;
   ot->poll = blender::ed::mixie::moodboard_poll;

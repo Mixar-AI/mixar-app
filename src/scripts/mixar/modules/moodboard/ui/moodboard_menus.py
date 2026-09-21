@@ -164,6 +164,14 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                         'MESH_DATA',
                         action_node.node_id,
                     )
+                    if _capability_available("world_labs"):
+                        _connected_action(
+                            layout,
+                            'WORLD_LABS',
+                            "Generate Splat",
+                            'WORLD',
+                            action_node.node_id,
+                        )
                 if can_continue and _capability_available("video_gen"):
                     _connected_action(
                         layout,
@@ -205,6 +213,10 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             row = layout.row()
             row.enabled = selected_stills > 0
             _connected_action(row, 'MODEL_3D', "Generate to 3D", 'MESH_DATA')
+            if selected_stills > 0 and _capability_available("world_labs"):
+                _connected_action(
+                    layout, 'WORLD_LABS', "Generate Splat", 'WORLD'
+                )
             if _capability_available("video_gen"):
                 _connected_action(
                     layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE'

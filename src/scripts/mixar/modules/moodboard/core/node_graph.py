@@ -103,12 +103,12 @@ def _selected_media(scene, action_type: str):
         item for item in scene.mixie_moodboard_images
         if item.selected and getattr(item, "image", None) is not None
     ]
-    if action_type in {'IMAGE_GEN', 'MODEL_3D'}:
+    if action_type in {'IMAGE_GEN', 'MODEL_3D', 'WORLD_LABS'}:
         selected = [item for item in selected if is_still_item(item)]
     if action_type == 'VIDEO_UPSCALE':
         # One movie in: the node has a single video socket.
         selected = [item for item in selected if not is_still_item(item)]
-    if action_type in {'MODEL_3D', 'VIDEO_UPSCALE'}:
+    if action_type in {'MODEL_3D', 'VIDEO_UPSCALE', 'WORLD_LABS'}:
         return selected[:1]
     return selected
 
@@ -181,7 +181,10 @@ def node_output_type(scene, node_id: str) -> str:
     action = action_node_by_id(scene, node_id)
     if action is not None:
         return output_type_for_action(action.action_type)
-    if asset_node_by_id(scene, node_id) is not None:
+    asset = asset_node_by_id(scene, node_id)
+    if asset is not None:
+        if getattr(asset, 'scene_mesh_reference', False):
+            return 'MESH' if mesh_source_object_names(scene, node_id) else ''
         return 'MESH'
     return ''
 
@@ -392,6 +395,7 @@ _ACCEPTED_SOURCE_TYPES = {
     'MODEL_3D': {'IMAGE'},
     'VIDEO_GEN': {'IMAGE', 'VIDEO'},
     'VIDEO_UPSCALE': {'VIDEO'},
+    'WORLD_LABS': {'IMAGE'},
     'PBR_GEN': {'MESH'},
     'RETOPOLOGY': {'MESH'},
     'MESH_SEGMENT': {'MESH'},
@@ -450,6 +454,8 @@ def create_connected_action(
             raise ValueError("Connect this from a 3D mesh node")
         if action_type == 'VIDEO_UPSCALE':
             raise ValueError("Upscale Video needs one selected video")
+        if action_type == 'WORLD_LABS':
+            raise ValueError("Generate Splat needs one selected image")
         if action_type != 'IMAGE_GEN':
             raise ValueError(
                 "Generate to 3D needs one selected image"
@@ -815,6 +821,11 @@ def mesh_source_object_names(scene, node_id: str) -> list:
         return [name.strip() for name in action.result_names.split(",") if name.strip()]
     asset = asset_node_by_id(scene, node_id)
     if asset is not None:
+        preview = getattr(asset, "preview_object", None)
+        if preview is not None:
+            return [preview.name] if getattr(preview, 'type', 'MESH') == 'MESH' else []
+        if getattr(asset, 'scene_mesh_reference', False):
+            return []
         return [name.strip() for name in asset.object_names.split(",") if name.strip()]
     return []
 
@@ -838,5 +849,4 @@ def input_source_object_names(scene, action_node) -> list:
         if names:
             return names
     return []
-
 

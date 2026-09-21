@@ -97,8 +97,8 @@ def test_annotation_tool_exposes_complete_editing_workflow():
     assert 'self.report({"INFO"}, "Annotation stroke added")' in operators
     # Lasso keeps its direct gaming-workflow shortcut, while annotations get
     # a dedicated split row: one-click drawing plus settings/history.
-    assert 'row.operator(\n            "mixie.moodboard_lasso_tool"' in toolbar
-    assert 'row.operator(\n            "mixie.moodboard_annotate_tool"' in toolbar
+    assert '"mixie.moodboard_lasso_tool"' in toolbar
+    assert '"mixie.moodboard_annotate_tool"' in toolbar
     assert 'panel="MIXIE_PT_annotation_tools_popover"' in toolbar
     assert 'bl_idname = "MIXIE_PT_annotation_tools_popover"' in toolbar
     assert "MIXIE_PT_annotation_tools_popover," in toolbar

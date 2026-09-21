@@ -75,6 +75,7 @@
 #include "CLG_log.h"
 
 #include "interface_intern.hh"
+#include "UI_mixar.hh"
 #include "interface_mixar_profile_card.hh"
 
 namespace blender::ui {
@@ -2324,6 +2325,7 @@ void block_draw(const bContext *C, Block *block)
     const int ymin = rect.ymin + ((block->flag & BLOCK_CLIPBOTTOM) ? arrow_size : 0.0f);
     GPU_scissor(rect.xmin, ymin, BLI_rcti_size_x(&rect), ymax - ymin);
   }
+  mixar_block_clip_apply(region, block);
   /* widgets */
   for (Button &but : block->buttons()) {
     if (but.flag & (UI_HIDDEN | UI_SCROLLED)) {

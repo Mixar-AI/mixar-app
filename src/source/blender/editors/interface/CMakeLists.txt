@@ -45,6 +45,7 @@ set(SRC
   interface_icons_event.cc
   interface_layout.cc
   mixar/style.cc
+  mixar/clip.cc
   mixar/text.cc
   mixar/components.cc
   mixar/custom_motion.cc

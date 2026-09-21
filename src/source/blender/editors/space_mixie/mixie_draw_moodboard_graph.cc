@@ -260,7 +260,6 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
         rcti controls_rect;
         const bool controls_visible = moodboard_node_controls_rect(C, v2d, &node, &controls_rect);
         moodboard_draw_card_background(rect, selected);
-        moodboard_draw_node_header(&node, rect, selected);
         /* Corner resize handles, like a selected reference picture's -- only
          * while SELECTED, and never on MASK_DETAIL, whose square card is
          * deliberately not resizable. */
@@ -399,35 +398,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
         moodboard_draw_output_handle(v2d, rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
                                      BLI_rctf_cent_y(&rect),
                                      moodboard_mesh_output_color());
-        char title[MIXIE_GRAPH_LABEL_BUF];
-        mixie_rna_string_get_clamped(&node, "title", title, sizeof(title));
-        /* 3D mesh node: the object preview icon is drawn in the node-UI pass
-         * (like action nodes' 3D results). Here we lay down its dark backdrop
-         * and a title strip; nodes without a preview object still show text. */
-        PointerRNA object_ptr = RNA_pointer_get(&node, "preview_object");
-        if (object_ptr.data) {
-          rctf preview_bounds = {
-              rect.xmin + 8.0f, rect.xmax - 8.0f, rect.ymin + 8.0f, rect.ymax - 44.0f};
-          GPUVertFormat *format = immVertexFormat();
-          const uint pos = GPU_vertformat_attr_add(
-              format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-          immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-          immUniformColor4f(0.025f, 0.027f, 0.032f, 1.0f);
-          immRectf(pos,
-                   preview_bounds.xmin,
-                   preview_bounds.ymin,
-                   preview_bounds.xmax,
-                   preview_bounds.ymax);
-          immUnbindProgram();
-          draw_text(title, rect.xmin + 18.0f, rect.ymax - 30.0f, 15.0f, 0.9f);
-        }
-        else {
-          char names[MIXIE_GRAPH_NAMES_BUF];
-          mixie_rna_string_get_clamped(&node, "object_names", names, sizeof(names));
-          draw_text("3D Result", rect.xmin + 28.0f, rect.ymax - 44.0f, 16.0f, 0.58f);
-          draw_text(title, rect.xmin + 28.0f, rect.ymax - 82.0f, 22.0f, 1.0f);
-          draw_text(names, rect.xmin + 28.0f, rect.ymax - 120.0f, 15.0f, 0.65f);
-        }
+        /* Title, placeholder and preview share the screen-space node pass. */
       }
       RNA_property_collection_next(&iter);
     }

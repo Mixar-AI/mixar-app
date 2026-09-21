@@ -21,7 +21,7 @@ from bpy.types import Operator
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
 
 # MESH SEGMENT POPUP
 
@@ -230,12 +230,8 @@ class MIXIE_OT_lookdev360_popup(Operator):
 
         # Show current image info
         if tab.use_selected_image:
-            selected = [
-                item for item in scene.mixie_moodboard_images
-                if item.selected and is_still_item(item)
-            ]
-            if selected:
-                img = selected[0].image
+            img = first_selected_reference_still(scene)
+            if img:
                 row = box_col.row()
                 row.label(text=f"Selected: {img.name}", icon='CHECKMARK')
             else:
@@ -335,12 +331,8 @@ class MIXIE_OT_image_to_3d_popup(Operator):
 
         # Show current image info
         if scene.mixie_image_to_3d_use_selected:
-            selected = [
-                item for item in scene.mixie_moodboard_images
-                if item.selected and is_still_item(item)
-            ]
-            if selected:
-                img = selected[0].image
+            img = first_selected_reference_still(scene)
+            if img:
                 row = box_col.row()
                 row.label(text=f"Selected: {img.name}", icon='CHECKMARK')
             else:

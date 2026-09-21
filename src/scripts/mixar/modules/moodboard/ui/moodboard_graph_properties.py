@@ -49,14 +49,12 @@ ACTION_TYPES = (
     ('RETOPOLOGY', "Retopology", "Retopologize the connected 3D mesh"),
     ('MESH_SEGMENT', "Mesh Segmentation", "Segment the connected 3D mesh into parts"),
     ('AUTO_RIG', "Auto Rig", "Auto-rig the connected 3D mesh"),
-    # APPEND ONLY: the enum persists as an index and the C++ ACTION_OUTPUT_KINDS
-    # table in mixie_draw_moodboard_graph_sockets.cc is order-pinned to it.
     ('VIDEO_UPSCALE', "Upscale Video", "Upscale the connected video to 1080p, 2K or 4K"),
+    # APPEND ONLY: enum persists as an index; C++ ACTION_OUTPUT_KINDS is order-pinned.
+    ('WORLD_LABS', "Generate Splat", "Generate a Gaussian splat from a prompt or image"),
 )
 
-# Action node types whose input is a 3D mesh (from a connected mesh node) and
-# whose output is a new 3D mesh. Kept here so both the schema and execution
-# layers agree on the set.
+# Mesh -> mesh continuations. Schema and execution must share this set.
 MESH_FEATURE_ACTIONS = frozenset(
     {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'}
 )
@@ -86,6 +84,8 @@ def capability_for_action(action_type: str) -> str:
         return "video_gen"
     if action_type == 'VIDEO_UPSCALE':
         return "video_upscale"
+    if action_type == 'WORLD_LABS':
+        return "world_labs"
     if action_type in _MESH_FEATURE_CAPABILITY:
         return _MESH_FEATURE_CAPABILITY[action_type]
     return "model_gen"
@@ -452,12 +452,7 @@ class MixieMoodboardActionNode(PropertyGroup):
 
 
 class MixieMoodboardAssetNode(PropertyGroup):
-    """Canvas representation of generated Blender object(s) — a 3D mesh node.
-
-    Holds the mesh identity (``object_names``) so the mesh-continuation features
-    (PBR / Retopology / Mesh Segmentation / Auto Rig) know which objects to
-    select and submit. ``preview_object`` renders the 3D thumbnail on the card.
-    """
+    """Live mesh reference, or a legacy generated asset resolved by object name."""
 
     node_id: StringProperty(name="Node ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
     # Canvas frame membership -- a frame holds cards as readily as pictures.
@@ -465,6 +460,10 @@ class MixieMoodboardAssetNode(PropertyGroup):
     title: StringProperty(name="Title", default="3D Asset", maxlen=GRAPH_LABEL_MAXLEN)
     object_names: StringProperty(
         name="Object Names", default="", maxlen=GRAPH_OBJECT_NAMES_MAXLEN
+    )
+    scene_mesh_reference: BoolProperty(
+        name="Scene Mesh Reference", default=False,
+        description="Use the live object pointer; a removed source must not bind by name",
     )
     preview_object: PointerProperty(name="3D Preview", type=Object)
     position_x: FloatProperty(name="Position X", default=0.0)

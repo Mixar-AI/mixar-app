@@ -3,20 +3,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""
-Moodboard Toolbar Panel
-
-Left T-panel toolbar with core moodboard actions:
-  • Add Image  — add an existing or new image from disk
-  • Add Text   — add a text box to the canvas
-  • Mask Tools — popover with Box Mask, Lasso, and Magic Select
-  • Lasso      — direct Multi-Lasso Mask shortcut
-  • Annotate   — draw persistent freehand notes on a selected image
-
-The media and text builders are shared by both canvas hosts. The Zen drawer
-adds persistent canvas Annotate and Erase tools in the same glass capsule;
-the Mixie T-panel also exposes image-attached mask/annotation controls.
-"""
+"""Shared canvas tools and their native media/mask/annotation menus."""
 
 import bpy
 from bpy.types import Menu, Panel
@@ -25,61 +12,40 @@ from bpy.types import Menu, Panel
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 
 
-# Icon shown for each mask tool state
-_MASK_TOOL_ICONS = {
-    "BOX_MASK": "SELECT_SET",
-    "LASSO": "OUTLINER_DATA_GP_LAYER",
-    "MAGIC_SELECT": "SNAP_FACE",
-}
-_MASK_ICON_DEFAULT = "MOD_MASK"
-
-# Open-drawer threshold shared with canvas_context / C++ drawer active amount.
-_DRAWER_ACTIVE_AMOUNT = 0.98
-
-
-def draw_moodboard_open_media_tool(layout, *, drawer=False):
-    """Folder menu that opens image/video or picks existing media."""
-    row = layout if drawer else layout.row(align=True)
-    row.scale_x = 2.0 if drawer else 1.5
-    row.scale_y = 2.3 if drawer else 1.5
-    row.menu(
-        "MIXIE_MT_add_image_menu",
-        text="",
-        icon="FILE_FOLDER",
-    )
-    if drawer:
-        row.mixar_style(component="GLASS_TOOL")
-
-
-def draw_moodboard_add_text_tool(layout, *, drawer=False):
-    """Add a text box to the canvas."""
-    row = layout if drawer else layout.row(align=True)
-    row.scale_x = 2.0 if drawer else 1.5
-    row.scale_y = 2.3 if drawer else 1.5
-    row.operator("mixie.moodboard_add_textbox", text="", icon="FONT_DATA")
-    if drawer:
-        row.mixar_style(component="GLASS_TOOL")
-
-
 def draw_moodboard_add_tools(layout, context):
-    """One left-side glass capsule, with native icons and hover tooltips."""
+    """One neutral, token-styled rail in both canvas hosts."""
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT")
     surface.operator_context = "INVOKE_DEFAULT"
-    col = surface.column(align=True)
-    draw_moodboard_open_media_tool(col, drawer=True)
-    draw_moodboard_add_text_tool(col, drawer=True)
-    col.operator(
-        "mixie.moodboard_annotate_canvas", text="", icon="GREASEPENCIL",
-        depress=context.window_manager.mixie_moodboard_annotating,
-    )
-    col.mixar_style(component="GLASS_TOOL")
+    col = surface.column()
+    col.scale_x = 1.6
+    col.scale_y = 1.6
+
+    def action(op, icon, **kwargs):
+        row = col.row()
+        row.operator(op, text="", icon=icon, **kwargs)
+        row.mixar_style(component="ACTION", variant="SECONDARY")
+
+    row = col.row()
+    row.menu("MIXIE_MT_add_image_menu", text="", icon="FILE_FOLDER")
+    row.mixar_style(component="ACTION", variant="SECONDARY")
+    action("mixie.moodboard_add_textbox", "FONT_DATA")
+    action("mixie.moodboard_annotate_canvas", "GREASEPENCIL",
+           depress=context.window_manager.mixie_moodboard_annotating)
     erasing = bool(getattr(context.window_manager, "mixie_moodboard_erasing", False))
     if erasing or getattr(context.scene, "mixie_moodboard_annotations", None):
-        col.operator(
-            "mixie.moodboard_erase_canvas", text="", icon="X",
-            depress=erasing,
-        )
-        col.mixar_style(component="GLASS_TOOL")
+        action("mixie.moodboard_erase_canvas", "X", depress=erasing)
+    row = col.row()
+    row.enabled = any(item.selected and item.image and item.image.source != 'MOVIE'
+                      for item in context.scene.mixie_moodboard_images)
+    row.popover(panel="MIXIE_PT_mask_tools_popover", text="", icon="MOD_MASK")
+    row.mixar_style(component="ACTION", variant="SECONDARY")
+    if row.enabled:
+        row = col.row()
+        row.popover(panel="MIXIE_PT_annotation_tools_popover", text="", icon="BRUSH_DATA")
+        row.mixar_style(component="ACTION", variant="SECONDARY")
+    row = col.row()
+    row.menu("MIXIE_MT_canvas_board", text="", icon="DOWNARROW_HLT")
+    row.mixar_style(component="ACTION", variant="SECONDARY")
 
 
 # A Menu (not a popover) so it auto-dismisses the instant an option is
@@ -89,13 +55,13 @@ def draw_moodboard_add_tools(layout, context):
 # NOTE: kept as a comment, not a docstring — a Menu's docstring is shown
 # as the button tooltip, and this rationale isn't meant for users.
 class MIXIE_MT_add_image_menu(Menu):
-    """Open an image or video, or choose existing media"""
+    """Add media or selected scene meshes"""
 
     bl_idname = "MIXIE_MT_add_image_menu"
-    bl_label = "Add Media"
+    bl_label = "Add References"
 
     def draw(self, context):
-        layout = self.layout
+        layout = self.layout.mixar_surface(theme="ZEN", density="COMPACT")
         # INVOKE_DEFAULT so each operator's invoke() runs (opening its
         # file browser / search popup) rather than executing headless.
         layout.operator_context = "INVOKE_DEFAULT"
@@ -109,6 +75,9 @@ class MIXIE_MT_add_image_menu(Menu):
             text="Add Existing Media",
             icon='IMAGE_DATA',
         )
+        layout.separator()
+        layout.operator("mixie.add_selected_mesh_to_moodboard",
+                        text="Add Selected Meshes", icon='OUTLINER_OB_MESH')
 
 
 class MIXIE_PT_mask_tools_popover(Panel):
@@ -125,7 +94,7 @@ class MIXIE_PT_mask_tools_popover(Panel):
     bl_options = {"INSTANCED"}
 
     def draw(self, context):
-        layout = self.layout
+        layout = self.layout.mixar_surface(theme="ZEN", density="COMPACT")
         scene = context.scene
 
         active_tool = "NONE"
@@ -182,7 +151,7 @@ class MIXIE_PT_annotation_tools_popover(Panel):
     bl_options = {"INSTANCED"}
 
     def draw(self, context):
-        layout = self.layout
+        layout = self.layout.mixar_surface(theme="ZEN", density="COMPACT")
         scene = context.scene
         state = scene.mixie_edit_tool_state
         selected = [
@@ -233,153 +202,8 @@ class MIXIE_PT_annotation_tools_popover(Panel):
             layout.label(text="Esc cancels the active stroke", icon="EVENT_ESC")
 
 
-class MIXIE_PT_moodboard_toolbar(Panel):
-    """Moodboard tools panel in the T-panel (left toolbar) region"""
-
-    bl_label = ""
-    bl_idname = "MIXIE_PT_moodboard_toolbar"
-    bl_space_type = "MIXIE" if MIXIE_SPACE_AVAILABLE else "VIEW_3D"
-    bl_region_type = "TOOLS"
-    bl_options = {"HIDE_HEADER"}
-
-    @classmethod
-    def poll(cls, context):
-        """Only show in Moodboard mode."""
-        if not MIXIE_SPACE_AVAILABLE:
-            return False
-        smixie = context.space_data
-        return (
-            smixie
-            and hasattr(smixie, "mixie_mode")
-            and smixie.mixie_mode == "MOODBOARD"
-        )
-
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-
-        active_tool = "NONE"
-        if hasattr(scene, "mixie_edit_tool_state"):
-            active_tool = scene.mixie_edit_tool_state.active_tool
-
-        has_selected_image = False
-        if hasattr(scene, "mixie_moodboard_images"):
-            has_selected_image = any(
-                img.selected and img.image and img.image.source != 'MOVIE'
-                for img in scene.mixie_moodboard_images
-            )
-
-        layout.separator(factor=0.5)
-
-        col = layout.column(align=True)
-
-        # ── Add Image (menu) ──────────────────────────────────────────
-        draw_moodboard_open_media_tool(col)
-
-        col.separator(factor=0.6)
-
-        # ── Mask Tools (single popover) ────────────────────────────────
-        # Icon reflects the currently active mask tool for instant feedback.
-        mask_icon = _MASK_TOOL_ICONS.get(active_tool, _MASK_ICON_DEFAULT)
-        any_mask_active = active_tool in _MASK_TOOL_ICONS
-
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.enabled = has_selected_image
-        row.popover(
-            panel="MIXIE_PT_mask_tools_popover",
-            text="",
-            icon=mask_icon,
-        )
-
-        col.separator(factor=0.6)
-
-        # ── Multi-Lasso Mask (direct shortcut) ────────────────────────
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.enabled = has_selected_image
-        row.operator(
-            "mixie.moodboard_lasso_tool",
-            text="",
-            icon="OUTLINER_DATA_GP_LAYER",
-            depress=(active_tool == "LASSO"),
-        )
-
-        col.separator(factor=0.6)
-
-        # ── Freehand Annotations ──────────────────────────────────────
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.enabled = has_selected_image
-        row.operator(
-            "mixie.moodboard_annotate_tool",
-            text="",
-            icon="BRUSH_DATA",
-            depress=(active_tool == "ANNOTATE"),
-        )
-        row.popover(
-            panel="MIXIE_PT_annotation_tools_popover",
-            text="",
-            icon="DOWNARROW_HLT",
-        )
-
-        col.separator(factor=0.6)
-
-        # ── Add Text ──────────────────────────────────────────────────
-        draw_moodboard_add_text_tool(col)
-
-        # "Send to Mixie Chat" toolbar button removed — moodboard
-        # selection auto-mirrors into the chat composer's attachments
-        # via the polling sync in moodboard.core.chat_sync. The
-        # operator and ``P`` keymap remain for muscle memory but the
-        # toolbar entry was redundant and confusing.
-
-        layout.separator(factor=0.5)
-
-
-class VIEW3D_PT_moodboard_drawer_add_tools(Panel):
-    """Native glass capsule for media, text, canvas annotation, and erase.
-
-    Hosted on the Zen Mode sliding drawer (VIEW_3D TOOL_PROPS) by the
-    native drawer draw path via ``UI_paneltype_draw`` — not by
-    ``ED_region_panels``, which would steal the canvas View2D.
-    """
-
-    bl_label = ""
-    bl_idname = "VIEW3D_PT_moodboard_drawer_add_tools"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "TOOL_PROPS"
-    bl_options = {"HIDE_HEADER"}
-
-    @classmethod
-    def poll(cls, context):
-        if getattr(getattr(context, "workspace", None), "name", None) != "Zen Mode":
-            return False
-        if getattr(getattr(context, "region", None), "type", None) != "TOOL_PROPS":
-            return False
-        amount = getattr(
-            getattr(context, "window_manager", None),
-            "mixar_moodboard_drawer_amount",
-            0.0,
-        )
-        return float(amount) >= _DRAWER_ACTIVE_AMOUNT
-
-    def draw(self, context):
-        draw_moodboard_add_tools(self.layout, context)
-
-
-# Only include panels if MIXIE space is available
 classes = (
-    (
-        MIXIE_MT_add_image_menu,
-        MIXIE_PT_mask_tools_popover,
-        MIXIE_PT_annotation_tools_popover,
-        MIXIE_PT_moodboard_toolbar,
-        VIEW3D_PT_moodboard_drawer_add_tools,
-    )
-    if MIXIE_SPACE_AVAILABLE
-    else ()
-)
+    MIXIE_MT_add_image_menu,
+    MIXIE_PT_mask_tools_popover,
+    MIXIE_PT_annotation_tools_popover,
+) if MIXIE_SPACE_AVAILABLE else ()

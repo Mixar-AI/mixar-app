@@ -31,6 +31,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 TRANSFORM_OPS = ROOT / "src/scripts/mixar/modules/moodboard/ui/operators/transform_ops.py"
 HEADER = ROOT / "src/scripts/mixar/modules/space_mixie/ui/header.py"
+CANVAS = ROOT / "src/scripts/mixar/modules/moodboard/core/canvas_context.py"
 KEYMAP = ROOT / "src/scripts/mixar/modules/moodboard/ui/keymap.py"
 SPACE_MIXIE_CC = ROOT / "src/source/blender/editors/space_mixie/space_mixie.cc"
 
@@ -180,9 +181,11 @@ class _Collection(list):
 # --------------------------------------------------------------------------- #
 
 def test_header_content_check_counts_frames():
-    source = HEADER.read_text(encoding="utf-8")
-    body = source.split("def _has_moodboard_content")[1].split("\n\n\n")[0]
-    assert "'mixie_moodboard_frames'" in body
+    source = CANVAS.read_text(encoding="utf-8")
+    body = source.split("MOODBOARD_CONTENT_COLLECTIONS")[1].split("def has_moodboard_content")[0]
+    assert '"mixie_moodboard_frames"' in body
+    header = HEADER.read_text(encoding="utf-8")
+    assert "has_moodboard_content as _has_moodboard_content" in header
 
 
 def test_no_consumer_still_resolves_selection_through_group_index():

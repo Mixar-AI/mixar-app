@@ -19,7 +19,14 @@ struct uiWidgetColors;
 
 namespace blender::ui {
 struct Button;
+struct Block;
 struct Layout;
+/** Clip an embedded surface without resizing or moving its native widgets. */
+void mixar_block_clip_set(Block *block, const rctf &rect);
+/** Intersect a region-pixel rectangle with the same clip used by paint/input. */
+bool mixar_block_clip_pixelrect(const ARegion *region, const Block *block, rcti *rect);
+/** Intersect the current GPU scissor with the block viewport for drawing. */
+void mixar_block_clip_apply(const ARegion *region, const Block *block);
 void mixar_style_last(Layout *layout, MixarComponent component, MixarVariant variant);
 int64_t mixar_button_count(const Layout *layout);
 void mixar_style_new_buttons(Layout *layout,

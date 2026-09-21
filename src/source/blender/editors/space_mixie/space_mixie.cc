@@ -42,6 +42,8 @@
 #include "DNA_space_types.h"
 
 #include "mixie_intern.hh"
+#include "mixie_moodboard_template_drag.hh"
+#include "UI_mixar_tokens.hh"
 #include "ED_moodboard_attachment.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -231,9 +233,9 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
 
 static void mixie_main_region_draw(const bContext *C, ARegion *region)
 {
-  /* Moodboard reference canvas: neutral pure black, independent of the
-   * selected Blender theme. Other Mixie regions continue using TH_BACK. */
-  GPU_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
+  /* Both moodboard hosts use the shared Zen canvas palette. */
+  const float *canvas = ui::mixar_tokens::zen.canvas;
+  GPU_clear_color(canvas[0], canvas[1], canvas[2], canvas[3]);
 
   /* Always draw moodboard mode - panels are controlled via scene properties */
   mixie_draw_moodboard_mode(C, region);
@@ -318,6 +320,7 @@ static void mixie_operatortypes()
   WM_operatortype_append(MIXIE_OT_moodboard_zoom);
   WM_operatortype_append(MIXIE_OT_moodboard_ensure_visible);
   WM_operatortype_append(MIXIE_OT_moodboard_frame);
+  WM_operatortype_append(MIXIE_OT_moodboard_drop_template);
   WM_operatortype_append(MIXIE_OT_moodboard_preview_media);
   WM_operatortype_append(MIXIE_OT_moodboard_rename_media);
   WM_operatortype_append(MIXIE_OT_moodboard_box_select);
@@ -410,7 +413,7 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
       keymap, "MIXIE_OT_moodboard_select_image", &params_extend_native);
   RNA_boolean_set(kmi_extend_native->ptr, "extend", true);
 
-  /* Zoom selected images - Pinch Gesture */
+  /* Trackpad pinch zooms the canvas (never item scale). */
   /* Home frames the board, Numpad-Period the selection -- the pair every
    * Blender editor uses (View Selected is Numpad `.`, never the main-row `.`).
    * MIXIE_OT_moodboard_ensure_visible cannot serve here: it only grows the
@@ -786,6 +789,8 @@ void ED_spacetype_mixie()
   art->prefsizey = 50;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FRAMES;
 
+  /* Tools now live in the shared canvas chrome, including in saved editors. */
+  art->poll = [](const RegionPollParams *) { return false; };
   art->init = mixie_tools_region_init;
   art->layout = ED_region_panels_layout;
   art->draw = mixie_tools_region_draw;

@@ -52,6 +52,11 @@ class MIXIE_MT_moodboard_output_menu(Menu):
                 layout, 'MODEL_3D', "Generate 3D", 'MESH_DATA', source_id, drop
             )
             added = True
+        if source_type == 'IMAGE' and capability_available("world_labs"):
+            connected_action(
+                layout, 'WORLD_LABS', "Generate Splat", 'WORLD', source_id, drop
+            )
+            added = True
         if source_type in {'IMAGE', 'VIDEO'} and capability_available("video_gen"):
             connected_action(
                 layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE', source_id, drop

@@ -14,22 +14,7 @@ being imported from one menu module into the other.
 from mixar.modules.moodboard.core import node_layout  # noqa: F401  (re-export)
 
 
-def capability_available(capability: str) -> bool:
-    """Whether this capability has an enabled model on the moodboard surface.
-
-    The surface filter is not optional: services are tagged ``moodboard`` or
-    ``paint``, and a paint-only service (``brush_gen`` under ``image_gen``)
-    must never make a canvas action look available.
-    """
-    try:
-        from mixar.bootstrap.generation_catalog_cache import get_models, get_services
-
-        return any(
-            get_models(service.get("key") or "")
-            for service in get_services(capability, surface="moodboard")
-        )
-    except Exception:
-        return False
+from mixar.modules.moodboard.core.capabilities import capability_available
 
 
 MESH_CONTINUATIONS = (

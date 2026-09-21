@@ -5783,6 +5783,18 @@ static bool do_but_ANY_drag_toggle(
 
 static int do_but_BUT(bContext *C, Button *but, HandleButtonData *data, const wmEvent *event)
 {
+  /* Mixar: operator buttons with a drag payload use the native drag threshold.
+   * A release without a drag still invokes the button's ordinary operator. */
+  if (button_drag_is_draggable(but) &&
+      (data->state == BUTTON_STATE_WAIT_DRAG ||
+       (data->state == BUTTON_STATE_HIGHLIGHT && event->type == LEFTMOUSE &&
+        event->val == KM_PRESS && but_contains_point_px_icon(but, data->region, event))))
+  {
+    do_but_EXIT(C, but, data, event);
+    /* The action owns the press: do not also start canvas box selection
+     * while the button is waiting for the drag threshold. */
+    return WM_UI_HANDLER_BREAK;
+  }
 #ifdef USE_DRAG_TOGGLE
   {
     int retval;

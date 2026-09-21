@@ -39,6 +39,9 @@ _OUTPUT_TYPES = {
     'AUTO_RIG': 'MESH',
     # Video -> video: one connected movie in, an upscaled movie out.
     'VIDEO_UPSCALE': 'VIDEO',
+    # Image (or prompt) -> Gaussian splat. SPLAT, not MESH: the + handle must
+    # not offer PBR / retopo / segment / rig on a splat world.
+    'WORLD_LABS': 'SPLAT',
 }
 
 _MESH_FEATURE_CAPABILITY = {
@@ -96,6 +99,8 @@ def _capability_for_action(action_type: str) -> str:
         return "video_gen"
     if action_type == 'VIDEO_UPSCALE':
         return "video_upscale"
+    if action_type == 'WORLD_LABS':
+        return "world_labs"
     if action_type == 'MODEL_3D':
         return "model_gen"
     if action_type in _MESH_FEATURE_CAPABILITY:
@@ -499,6 +504,26 @@ def sync_node_schema(_scene, node) -> None:
             })
         limits = input_contract.setdefault("limits", {})
         limits["IMAGE"] = max(int(limits.get("IMAGE", 0) or 0), _PBR_MAX_IMAGE_REFS)
+    # World Labs accepts one still (standalone or an Image Gen result) OR a
+    # prompt. The catalog may omit a connectable image input, so inject an
+    # optional IMAGE socket the same way mesh features inject MESH.
+    if node.action_type == 'WORLD_LABS' and not any(
+        "IMAGE" in socket.get("accepted_types", ())
+        for socket in input_contract["sockets"]
+    ):
+        input_contract["sockets"].insert(
+            0,
+            {
+                "id": "image",
+                "label": "Image",
+                "accepted_types": ["IMAGE"],
+                "required": False,
+                "group_id": "image",
+                "repeatable": False,
+            },
+        )
+        limits = input_contract.setdefault("limits", {})
+        limits["IMAGE"] = max(int(limits.get("IMAGE", 0) or 0), 1)
     parameters = model.get("parameters") or {}
     if not isinstance(parameters, dict):
         parameters = {}
