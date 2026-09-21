@@ -46,6 +46,13 @@ static void draw_panel(const bContext *C,
     return;
   }
   ui::Block *block = ui::block_begin(C, region, panel_id, ui::EmbossType::Emboss);
+  /* These blocks are painted last. Their actual bounds, including disabled
+   * buttons, must also win over node controls in native hit testing. */
+  ui::block_flag_enable(block, ui::BLOCK_CLIP_EVENTS);
+  rctf clip;
+  const rcti host = moodboard_canvas_host_rect(C);
+  BLI_rctf_rcti_copy(&clip, &host);
+  ui::mixar_block_clip_set(block, clip);
   ui::Layout &layout = ui::block_layout(block,
                                         ui::LayoutDirection::Vertical,
                                         ui::LayoutType::Panel,
@@ -53,6 +60,7 @@ static void draw_panel(const bContext *C,
   ui::UI_paneltype_draw(const_cast<bContext *>(C), pt, &layout);
   moodboard_template_drag_buttons(C, block);
   ui::block_layout_resolve(block);
+  ui::block_bounds_set_normal(block, 0);
   ui::block_end(C, block);
   ui::block_draw(C, block);
 }

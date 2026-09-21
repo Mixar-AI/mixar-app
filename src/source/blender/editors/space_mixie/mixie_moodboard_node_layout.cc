@@ -3,10 +3,15 @@
 
 #include "BLI_string.h"
 
-#include "mixie_moodboard_node_layout.hh"
+#include "DNA_windowmanager_types.h"
 #include "ED_moodboard_drawer.hh"
 #include "ED_screen.hh"
+#include "WM_api.hh"
+#include "wm_event_types.hh"
+
+#include "mixie_moodboard_canvas.hh"
 #include "mixie_moodboard_chrome.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 namespace blender::ed::mixie {
 
@@ -17,11 +22,20 @@ rcti moodboard_canvas_host_rect(const bContext *C)
 
 rcti moodboard_canvas_host_rect(const ScrArea *area, ARegion *region)
 {
-  rcti canvas = {0, region->winx, 0, region->winy};
   if (area->spacetype == SPACE_MIXIE && region->regiontype == RGN_TYPE_WINDOW) {
-    /* The standalone editor can have overlapping tool/sidebar regions. */
-    canvas = *ED_region_visible_rect(region);
+    return *ED_region_visible_rect(region);
   }
+  return moodboard_canvas_draw_rect(area, region);
+}
+
+rcti moodboard_canvas_draw_rect(const bContext *C)
+{
+  return moodboard_canvas_draw_rect(CTX_wm_area(C), CTX_wm_region(C));
+}
+
+rcti moodboard_canvas_draw_rect(const ScrArea *area, ARegion *region)
+{
+  rcti canvas = {0, region->winx, 0, region->winy};
   if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_TOOL_PROPS) {
     rcti panel;
     if (view3d_moodboard_drawer_panel_rect_for(
@@ -46,7 +60,40 @@ rcti moodboard_visible_canvas_rect(const ScrArea *area, ARegion *region)
   BLI_rcti_pad(&canvas, -int(metrics.padding), -int(metrics.padding));
   canvas.xmin += int(metrics.control_height + metrics.gap);
   canvas.ymax -= int(metrics.control_height + metrics.gap);
+  canvas.xmax = std::max(canvas.xmin, canvas.xmax);
+  canvas.ymax = std::max(canvas.ymin, canvas.ymax);
   return canvas;
+}
+
+bool moodboard_canvas_point_is_interactive(const ScrArea *area,
+                                          const ARegion *region,
+                                          const int xy[2])
+{
+  const rcti content = moodboard_canvas_host_rect(area, const_cast<ARegion *>(region));
+  return BLI_rcti_isect_pt(&content,
+                         xy[0] - region->winrct.xmin,
+                         xy[1] - region->winrct.ymin) &&
+         !ui::region_block_find_mouse_over(region, xy, true);
+}
+
+bool moodboard_canvas_handler_poll(const wmWindow *win,
+                                  const ScrArea *area,
+                                  const ARegion *region,
+                                  const wmEvent *event)
+{
+  if (!WM_event_handler_region_v2d_mask_poll(win, area, region, event)) {
+    return false;
+  }
+  /* Preserve the View2D poll's mouse-leave and always-pass event contracts.
+   * Hover cleanup and smooth-view timers must reach their handlers even over
+   * chrome or with a stale pointer outside the canvas. Region shortcuts such
+   * as N also stay available over chrome. Only pointer actions are gated. */
+  if (ISKEYBOARD(event->type) || ISTIMER(event->type) ||
+      ELEM(event->type, MOUSEMOVE, WINDEACTIVATE))
+  {
+    return true;
+  }
+  return moodboard_canvas_point_is_interactive(area, region, event->xy);
 }
 
 bool moodboard_node_controls_rect(const bContext *C, View2D *v2d, PointerRNA *node, rcti *r_rect)
@@ -85,7 +132,7 @@ bool moodboard_node_controls_rect(const bContext *C, View2D *v2d, PointerRNA *no
   {
     return false;
   }
-  const rcti canvas = moodboard_visible_canvas_rect(C);
+  const rcti canvas = moodboard_canvas_draw_rect(C);
   if (!BLI_rcti_isect(&card_region, &canvas, nullptr)) {
     return false;
   }

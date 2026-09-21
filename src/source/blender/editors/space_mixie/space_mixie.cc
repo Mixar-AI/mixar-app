@@ -43,6 +43,7 @@
 
 #include "mixie_intern.hh"
 #include "mixie_moodboard_template_drag.hh"
+#include "mixie_moodboard_canvas.hh"
 #include "UI_mixar_tokens.hh"
 #include "ED_moodboard_attachment.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -223,7 +224,8 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
   wmKeyMap *keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
   mixie_operatortypes_keymap(wm->runtime->defaultconf);
-  WM_event_add_keymap_handler_v2d_mask(&region->runtime->handlers, keymap);
+  WM_event_add_keymap_handler_poll(
+      &region->runtime->handlers, keymap, moodboard_canvas_handler_poll);
 
   /* Add drop boxes for drag-and-drop */
   ListBaseT<wmDropBox> *lb = WM_dropboxmap_find("Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
