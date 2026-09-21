@@ -59,6 +59,38 @@ _DEFAULTS: Dict[str, Any] = {
 _lock = threading.Lock()
 _state: Dict[str, Any] = dict(_DEFAULTS)
 _epoch: int = 0
+_request_serial: int = 0
+_mutating: bool = False
+_RETRY_DELAY_S = 15.0
+PENDING_MESSAGE = "Saving agent model… Please wait before sending or changing models."
+
+
+def mutation_pending() -> bool:
+    with _lock:
+        return _mutating
+
+
+def begin_mutation() -> bool:
+    """Serialize writes and invalidate every read/retry from before this write."""
+    global _mutating, _request_serial
+    with _lock:
+        if _mutating:
+            return False
+        _mutating = True
+        _request_serial += 1
+    _redraw()
+    return True
+
+
+def end_mutation(epoch: int) -> bool:
+    """Only the submitting account may release the send/write barrier."""
+    global _mutating
+    with _lock:
+        if epoch != _epoch:
+            return False
+        _mutating = False
+    _redraw()
+    return True
 
 
 def snapshot() -> Dict[str, Any]:
@@ -69,11 +101,16 @@ def snapshot() -> Dict[str, Any]:
 
 def refresh() -> None:
     """Re-read the saved pick from the server."""
+    global _request_serial
     with _lock:
+        if _mutating:
+            return
         epoch = _epoch
+        _request_serial += 1
+        serial = _request_serial
 
     def _done(success: bool, data, err):
-        _apply_fetch_result(epoch, success, data, err)
+        _apply_fetch_result(epoch, success, data, err, serial=serial)
 
     preference_client.fetch_preference(on_done=_done)
 
@@ -86,9 +123,11 @@ def clear(wm=None) -> None:
     orderings to win in (see the note in
     `space_mixie_chat/ui/operators/auth_ops.py`).
     """
-    global _epoch, _state
+    global _epoch, _state, _mutating, _request_serial
     with _lock:
         _epoch += 1
+        _request_serial += 1
+        _mutating = False
         _state = dict(_DEFAULTS)
     apply_to_wm(wm)
 
@@ -197,7 +236,7 @@ def _parse(data) -> Dict[str, Any]:
     return parsed
 
 
-def _apply_fetch_result(epoch: int, success: bool, data, err) -> None:
+def _apply_fetch_result(epoch: int, success: bool, data, err, *, serial=None) -> None:
     """Main-thread fetch callback.
 
     A FAILED fetch leaves the state alone: only the server retires a pick, and
@@ -207,17 +246,32 @@ def _apply_fetch_result(epoch: int, success: bool, data, err) -> None:
     """
     global _state
     with _lock:
-        if epoch != _epoch:
-            logger.debug("Agent model preference response dropped (stale epoch)")
+        if epoch != _epoch or _mutating:
             return
-        if not success:
-            logger.debug(
-                "Agent model preference fetch failed (keeping cached pick): %s", err
-            )
+        if serial is not None and serial != _request_serial:
             return
-        _state = _parse(data)
+        if success:
+            _state = _parse(data)
+    if not success:
+        logger.debug("Agent model preference fetch failed (retrying): %s", err)
+        _schedule_retry(epoch, serial)
+        return
     apply_to_wm()
     _redraw()
+
+
+def _schedule_retry(epoch, serial) -> None:
+    """Retry independently of catalog ETags; logout/new work cancels the ticket."""
+    import bpy
+
+    def retry():
+        with _lock:
+            if epoch != _epoch or serial != _request_serial or _mutating:
+                return None
+        refresh()
+        return None
+
+    bpy.app.timers.register(retry, first_interval=_RETRY_DELAY_S)
 
 
 def _redraw() -> None:

@@ -31,6 +31,7 @@ from ...core.composer_send import (
     HINT_QUEUED,
     OutgoingMessage,
     can_send,
+    model_change_pending,
     is_interjection,
     send_user_message,
 )
@@ -104,6 +105,9 @@ class MIXIE_CHAT_OT_send_message(Operator):
         return allowed
 
     def execute(self, context):
+        if model_change_pending(context.scene):
+            self.report({'WARNING'}, can_send(context.scene)[1])
+            return {'CANCELLED'}
         metrics = get_metrics()
         metrics.start_timer('send_message_total')
 

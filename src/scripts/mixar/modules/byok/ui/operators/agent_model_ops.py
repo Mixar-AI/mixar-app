@@ -7,9 +7,9 @@
 Both write OPTIMISTICALLY: the WindowManager mirror flips on the click, the
 HTTP request follows on a worker thread, and a non-2xx response puts the
 previous value back. A menu row that visibly does nothing for half a second
-reads as a swallowed click, and the pick is a preference — the cost of being
-briefly wrong is a label, not a wrong turn (the server resolves the preference
-when a turn starts; it never trusts the client's mirror).
+reads as a swallowed click. Send and further model changes stay disabled until
+the write finishes: the server resolves the stored preference at turn start,
+so an optimistic label alone is not sufficient to safely send.
 
 Threading: the request runs on a daemon thread inside `preference_client` and
 the callback is marshalled back through `bpy.app.timers`, so nothing here
@@ -62,6 +62,13 @@ class MIXAR_OT_agent_model_set(Operator):
     bl_label = "Set Agent Model"
     bl_options = {'INTERNAL'}
 
+    @classmethod
+    def poll(cls, context):
+        if preference_state.mutation_pending():
+            cls.poll_message_set(preference_state.PENDING_MESSAGE)
+            return False
+        return True
+
     provider: StringProperty(name="Provider", default="")
     model: StringProperty(name="Model", default="")
     label: StringProperty(name="Label", default="")
@@ -81,6 +88,9 @@ class MIXAR_OT_agent_model_set(Operator):
 
         thinking = (self.thinking_level or "").strip()
         wm = getattr(context, "window_manager", None)
+        if not preference_state.begin_mutation():
+            self.report({'WARNING'}, preference_state.PENDING_MESSAGE)
+            return {'CANCELLED'}
         epoch = preference_state.current_epoch()
         previous = preference_state.snapshot()
 
@@ -118,12 +128,22 @@ class MIXAR_OT_agent_model_reset(Operator):
     bl_label = "Reset Agent Model"
     bl_options = {'INTERNAL'}
 
+    @classmethod
+    def poll(cls, context):
+        if preference_state.mutation_pending():
+            cls.poll_message_set(preference_state.PENDING_MESSAGE)
+            return False
+        return True
+
     def execute(self, context):
         if _byok_active():
             self.report({'ERROR'}, _BYOK_BLOCKED_MSG)
             return {'CANCELLED'}
 
         wm = getattr(context, "window_manager", None)
+        if not preference_state.begin_mutation():
+            self.report({'WARNING'}, preference_state.PENDING_MESSAGE)
+            return {'CANCELLED'}
         epoch = preference_state.current_epoch()
         previous = preference_state.snapshot()
 
@@ -158,12 +178,21 @@ def _on_save_done(epoch, previous, success, data, err) -> None:
     branches a no-op, because restoring the logged-out account's model in front
     of the next user is worse than leaving the cleared default.
     """
+    if epoch != preference_state.current_epoch():
+        return
     if success:
         # The PUT echoes the authoritative state (including a thinking level
         # the server normalised); a follow-up GET would race it.
         if isinstance(data, dict) and data.get("items"):
             preference_state.apply_from_payload(data, epoch=epoch)
+        elif isinstance(data, dict) and data.get("model"):
+            # PUT returns one role view; GET returns an items envelope.
+            preference_state.apply_from_payload({
+                "items": [data],
+                "byok_active": previous["mixar_agent_model_byok_active"],
+            }, epoch=epoch)
         else:
+            preference_state.end_mutation(epoch)
             preference_state.refresh()
     else:
         logger.debug("Agent model save rejected, reverting: %s", err)
@@ -172,16 +201,21 @@ def _on_save_done(epoch, previous, success, data, err) -> None:
         # available: ..."), and a transport failure already arrives carrying a
         # NET-* support code from `classify_network_error`. Surface it verbatim.
         _notify_failure("Could not change model", err or "")
+    preference_state.end_mutation(epoch)
     _redraw()
 
 
 def _on_reset_done(epoch, previous, success, err) -> None:
+    if epoch != preference_state.current_epoch():
+        return
     if success:
+        preference_state.end_mutation(epoch)
         preference_state.refresh()
     else:
         logger.debug("Agent model reset rejected, reverting: %s", err)
         preference_state.apply_local(previous, epoch=epoch)
         _notify_failure("Could not reset model", err or "")
+    preference_state.end_mutation(epoch)
     _redraw()
 
 
