@@ -6,11 +6,9 @@
  * \ingroup spmixie
  * \brief Screen-space floating controls for selected moodboard nodes.
  *
- * This unit owns the pass and the per-node decision of WHICH surface a card
- * gets. The surfaces themselves live next door: the settings panel in
- * #mixie_draw_moodboard_node_settings.cc, and the card's own prompt/Generate
- * plus the action row floating above it in
- * #mixie_draw_moodboard_node_tile_controls.cc.
+ * Shared screen-space model/settings, prompt and action controls.
+ * The Python node-settings popup owns the parameter schema renderer.
+ * Both hosts use the same content bounds and native widgets.
  */
 
 #include "mixie_draw_moodboard_intern.hh"
@@ -113,29 +111,26 @@ static void add_action_toolbar(const bContext *C,
     }
   }
 
-  rcti panel;
-  const bool expanded = moodboard_node_settings_rect(C, node, node_region, &panel);
-  if (expanded) {
-    moodboard_draw_node_settings(block, node, panel);
-  }
-  else {
-    const int margin = int(8 * UI_SCALE_FAC);
-    const int height = int(28 * UI_SCALE_FAC);
-    ui::Button *settings = ui::uiDefButO(block,
-                                         ui::ButtonType::But,
-                                         "MIXIE_OT_moodboard_node_settings",
-                                         blender::wm::OpCallContext::InvokeDefault,
-                                         "Settings",
-                                         controls.xmin + margin,
-                                         controls.ymax - margin - height,
-                                         BLI_rcti_size_x(&controls) - 2 * margin,
-                                         height,
-                                         nullptr);
-    ui::mixar_style_button(
-        settings, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
-    RNA_string_set(ui::button_operator_ptr_ensure(settings), "node_id", node_id);
-    controls.ymax -= height + margin;
-  }
+  /* One stable model/settings entry, regardless of host width. */
+  const int margin = int(8 * UI_SCALE_FAC);
+  const int height = int(32 * UI_SCALE_FAC);
+  char model[MIXIE_GRAPH_LABEL_BUF];
+  mixie_rna_string_get_clamped(node, "model_label", model, sizeof(model));
+  ui::Button *settings = ui::uiDefIconTextButO(block,
+                                               ui::ButtonType::But,
+                                               "MIXIE_OT_moodboard_node_settings",
+                                               wm::OpCallContext::InvokeDefault,
+                                               ICON_PREFERENCES,
+                                               model[0] ? model : "Model & Settings",
+                                               controls.xmin + margin,
+                                               controls.ymax - margin - height,
+                                               BLI_rcti_size_x(&controls) - 2 * margin,
+                                               height,
+                                               "Choose a model and adjust generation settings");
+  ui::mixar_style_button(settings, ui::MixarComponent::Action,
+                        ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
+  RNA_string_set(ui::button_operator_ptr_ensure(settings), "node_id", node_id);
+  controls.ymax -= height + margin;
   /* Tile controls use the visible intersection, never an off-canvas edge. */
   moodboard_add_node_tile_controls(
       block, node, controls, generation_running, has_result, state, edit_mode, node_id);

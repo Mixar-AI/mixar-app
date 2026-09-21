@@ -100,7 +100,8 @@ def _capability_visible(capability_key):
 
 
 def _safe_draw(drawer, layout, context):
-    """Call a drawer function with error handling."""
+    """Every generation tab inherits the same shared presentation scope."""
+    layout = layout.mixar_surface(theme='ZEN', density='COMPACT')
     try:
         drawer(layout, context)
     except Exception as e:

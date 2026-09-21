@@ -336,7 +336,7 @@ class MIXIE_OT_moodboard_reset_node_params(Operator):
     bl_idname = "mixie.moodboard_reset_node_params"
     bl_label = "Reset Settings"
     bl_description = "Restore this node's settings to the model defaults"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'UNDO'}
 
     # SKIP_SAVE: see MIXIE_OT_moodboard_run_action_node.node_id.
     node_id: bpy.props.StringProperty(default="", options={'SKIP_SAVE'})

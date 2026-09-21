@@ -24,7 +24,9 @@
 #include "mixie_draw_moodboard_intern.hh"
 #include "mixie_moodboard_canvas.hh"
 
-#include "ED_mixar_glass.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
+#include "mixie_moodboard_chrome.hh"
 
 #include "UI_interface_c.hh"
 
@@ -163,7 +165,8 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
           (MOODBOARD_GRID_DOT_FADE_END_PX - MOODBOARD_GRID_DOT_FADE_START_PX),
       0.0f,
       1.0f);
-  const float grid_color[4] = {0.45f, 0.45f, 0.45f, grid_alpha};
+  const float *border = ui::mixar_tokens::zen.border;
+  const float grid_color[4] = {border[0], border[1], border[2], grid_alpha * 0.65f};
 
   /* Calculate the visible grid bounds. */
   float view_min_x = v2d->cur.xmin;
@@ -229,14 +232,11 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
 /** \name Selection Overlay Drawing
  * \{ */
 
-void moodboard_draw_glass_pane(const rctf &rect, const float radius)
+void moodboard_draw_surface(const rctf &rect, const float radius)
 {
-  rcti pane;
-  BLI_rcti_rctf_copy(&pane, &rect);
-  ui::MixarGlassStyle style;
-  style.role = ui::MIXAR_GLASS_MOODBOARD;
-  style.radius = radius;
-  ui::mixar_glass_draw(pane, style);
+  ui::mixar_fill_round(rect, radius, ui::mixar_tokens::zen.panel);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&rect, false, radius, ui::mixar_tokens::zen.border);
 }
 
 void mixie_draw_moodboard_media_frame(
@@ -244,11 +244,11 @@ void mixie_draw_moodboard_media_frame(
 {
   const float padding = MOODBOARD_MEDIA_FRAME_PADDING;
   const rctf frame = {x - padding, x + w + padding, y - padding, y + h + padding};
-  moodboard_draw_glass_pane(frame, MOODBOARD_MEDIA_FRAME_RADIUS);
+  moodboard_draw_surface(frame, MOODBOARD_MEDIA_FRAME_RADIUS);
   /* Only the SELECTED frame brightens its rim; the RESTING one is the token
    * row's, so both the media frame and the node card share one resting look. */
   if (selected) {
-    const float border[4] = {0.38f, 0.39f, 0.42f, 0.92f};
+    const float *border = ui::mixar_tokens::zen.focus;
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
     ui::draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
   }
@@ -376,6 +376,7 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
 
   /* Draw View2D scrollers */
   ui::view2d_scrollers_draw(v2d, nullptr);
+  mixie_moodboard_chrome_draw(C, region);
 }
 
 /** \} */

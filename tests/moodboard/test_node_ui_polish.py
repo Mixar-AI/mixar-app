@@ -135,24 +135,16 @@ def test_mesh_previews_stay_below_compact_settings_and_retry_controls():
     assert controls.index("ui::icon_draw_preview(") < controls.index("ui::block_draw(C, block)")
 
 
-def test_finished_nodes_offer_edit_and_run_again_on_the_panel():
-    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
-    assert "show_rerun" in node_ui
-    assert '"Edit & Run Again"' in node_ui
-    # Blender 5.2: operator properties are set through
-    # ui::button_operator_ptr_ensure (no separate rerun_props handle).
-    assert (
-        'RNA_boolean_set(ui::button_operator_ptr_ensure(rerun), "edit_before_run", true)'
-        in node_ui
-    )
+def test_finished_nodes_offer_edit_and_run_again_in_settings():
+    popup = _read(MOODBOARD / "ui/operators/node_settings_ops.py")
+    assert 'text="Edit & Run Again"' in popup
+    assert 'op.edit_before_run = True' in popup
 
 
-def test_node_panel_metrics_scale_with_the_ui_factor():
-    """Labels render at UI_SCALE_FAC; fixed pixel rows clipped them on high-DPI."""
-    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
-    layout = _read(SPACE_MIXIE / "mixie_moodboard_node_layout.cc")
-    assert "const int row_h = int(32 * ui_scale)" in node_ui
-    assert "const int width = int(244 * scale)" in layout
+def test_settings_entry_scales_with_the_ui_factor():
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+    assert "const int height = int(32 * UI_SCALE_FAC)" in node_ui
+    assert '"MIXIE_OT_moodboard_node_settings"' in node_ui
 
 
 def test_a_finished_node_shows_its_result_behind_a_floating_edit_toggle():
@@ -265,32 +257,14 @@ def test_a_finished_node_can_export_its_own_result():
     assert "def node_exportable_media(scene, node_id" in media
 
 
-def test_node_fields_carry_their_own_tooltips():
-    """The panel's fields draw their VALUE under a caption -- a dropdown reads
-    "1K", a number field just "1" -- so the catalog's description and the bounds
-    a plain number field cannot show have nowhere else to go. They cannot come
-    from RNA: every catalog parameter shares one set of value properties, so
-    uiDefButR's fallback to the property description would put identical text on
-    every field of every node."""
-    tooltips = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tooltips.cc")
-    settings = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
-
-    # ui::Button::tip is a NON-owning StringRef, so a locally built string would
-    # dangle: the button outlives the draw and is what the tooltip is read from.
-    # The button must own a copy and free it.
-    assert (
-        "ui::button_func_tooltip_set(but, node_tooltip_func, owned, MEM_delete_void)"
-        in tooltips
-    )
-    # Composed from the parameter's OWN catalog text, plus the bounds a plain
-    # number field cannot show.
-    assert 'mixie_rna_string_get_clamped(parameter, "label"' in tooltips
-    assert 'mixie_rna_string_get_clamped(parameter, "description"' in tooltips
-    assert '"Range: "' in tooltips
-    # Every field the panel draws is covered.
-    assert "moodboard_set_parameter_tooltip(button, parameter)" in settings
-    assert "moodboard_set_node_tooltip(mode," in settings
-    assert "moodboard_set_node_tooltip(model," in settings
+def test_node_fields_retain_catalog_help_in_the_popup():
+    settings = _read(MOODBOARD / "ui/operators/node_settings_ops.py")
+    help_source = _read(MOODBOARD / "ui/operators/node_parameter_info.py")
+    assert "info.details = parameter_help(parameter)" in settings
+    assert "return properties.details" in help_source
+    assert "parameter.description" in help_source
+    assert "Range:" in help_source
+    assert 'parts.append("Required")' in help_source
 
 
 def test_a_result_can_be_opened_in_its_own_preview_window():
@@ -411,7 +385,7 @@ def test_painted_canvas_text_carries_the_ui_factor():
     assert "BLF_size(font_id, size);" not in graph
     # The header measures the state text to reserve room for it and then draws
     # it; both calls must use the same size or the reservation is wrong.
-    assert chrome.count("BLF_size(font_id, 15.0f * UI_SCALE_FAC);") == 2
+    assert chrome.count("BLF_size(font_id, ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC).size);") == 2
     assert "BLF_size(font_id, 15.0f);" not in chrome
 
 

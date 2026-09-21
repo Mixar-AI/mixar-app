@@ -6,15 +6,9 @@
  * \ingroup spmixie
  * \brief The controls a moodboard node draws on and around its own card.
  *
- * Split out of #mixie_draw_moodboard_node_ui.cc (500-line rule), which keeps
- * the settings panel docked beside the card. These are the two surfaces a node
- * has and they answer different questions: the panel is "how should this
- * generate", the card is "what should it generate, and go" — plus, once it has
- * generated, the action row floating just above it.
- *
- * Screen space, like the panel: the rects arrive already projected and clipped
- * to the painted canvas (#moodboard_node_controls_rect), so these controls stay
- * a constant size and can never spill past the Zen drawer's edge.
+ * Shared screen-space model/settings, prompt and action controls.
+ * The Python node-settings popup owns the parameter schema renderer.
+ * Both hosts use the same content bounds and native widgets.
  */
 
 #include "mixie_draw_moodboard_intern.hh"
@@ -37,8 +31,8 @@ void moodboard_add_node_card_actions(ui::Block *block,
                                      const bool has_media_result,
                                      const char *node_id)
 {
-  /* Floats OUTSIDE the card, on the row just above its top edge -- the same
-   * relationship the settings panel has to the card's left edge. A finished
+  /* Floats OUTSIDE the card, on the row just above its top edge -- a consistent
+   * header position for both canvas hosts. A finished
    * card is entirely its RESULT, so nothing is laid over the image.
    *
    * Square icon buttons: the row sits in the user's way, so it stays as small
@@ -300,7 +294,8 @@ void moodboard_add_node_tile_controls(ui::Block *block,
                                          generate_w,
                                          generate_h,
                                          nullptr);
-    ui::mixar_style_button(generate, ui::MixarComponent::Action, ui::MixarVariant::Primary);
+    ui::mixar_style_button(generate, ui::MixarComponent::Action,
+                          ui::MixarVariant::Primary, UI_SCALE_FAC * 0.65f);
     RNA_string_set(ui::button_operator_ptr_ensure(generate), "node_id", node_id);
   }
 }

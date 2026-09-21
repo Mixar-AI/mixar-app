@@ -25,19 +25,21 @@
 
 /* The card painters moved here from the graph pass draw roundboxes. */
 #include "UI_interface_c.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
 
 namespace blender::ed::mixie {
 
 void moodboard_draw_card_background(const rctf &rect, const bool selected)
 {
-  moodboard_draw_glass_pane(rect, 22.0f);
+  moodboard_draw_surface(rect, ui::mixar_tokens::radius);
   /* The running glow below is the "generating" accent; the SELECTED rim is the
    * only other brightening, and both stay here because only the call site
    * knows a node's state. The resting bed and rim live in the token row. */
   if (selected) {
-    const float border[4] = {0.38f, 0.39f, 0.42f, 0.92f};
+    const float *border = ui::mixar_tokens::zen.focus;
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
-    ui::draw_roundbox_4fv(&rect, false, 22.0f, border);
+    ui::draw_roundbox_4fv(&rect, false, ui::mixar_tokens::radius, border);
   }
 }
 
@@ -49,7 +51,7 @@ void moodboard_draw_running_glow(const rctf &rect)
    * (node_job_bridge.ensure_pulse_timer) supplies the continuous redraws; the
    * wall clock supplies the phase (~2.9s breathe). */
   const float pulse = 0.5f + 0.5f * float(std::sin(BLI_time_now_seconds() * 2.2));
-  const float accent[3] = {0.32f, 0.72f, 0.55f}; /* muted Mixar green */
+  const float *accent = ui::mixar_tokens::zen.focus;
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   rctf halo = rect;
   halo.xmin -= 3.0f;
@@ -59,7 +61,7 @@ void moodboard_draw_running_glow(const rctf &rect)
   const float halo_color[4] = {accent[0], accent[1], accent[2], 0.05f + 0.10f * pulse};
   ui::draw_roundbox_4fv(&halo, false, 25.0f, halo_color);
   const float border[4] = {accent[0], accent[1], accent[2], 0.24f + 0.30f * pulse};
-  ui::draw_roundbox_4fv(&rect, false, 22.0f, border);
+  ui::draw_roundbox_4fv(&rect, false, ui::mixar_tokens::radius, border);
 }
 
 void moodboard_draw_node_resize_handles(View2D *v2d, const rctf &rect)
@@ -101,12 +103,13 @@ static void draw_header_text(const char *text,
     return;
   }
   const int font_id = BLF_default();
-  BLF_size(font_id, 15.0f * UI_SCALE_FAC);
+  BLF_size(font_id, ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC).size);
   BLF_enable(font_id, BLF_CLIPPING);
   const float width = BLF_width(font_id, text, strlen(text));
   const float draw_x = right_aligned ? x - std::min(width, max_width) : x;
   BLF_clipping(font_id, draw_x, y - 20.0f, draw_x + max_width, y + 20.0f);
-  BLF_color4f(font_id, 0.90f, 0.91f, 0.94f, alpha);
+  const float *ink = ui::mixar_tokens::zen.text;
+  BLF_color4f(font_id, ink[0], ink[1], ink[2], alpha);
   BLF_position(font_id, draw_x, y, 0.0f);
   BLF_draw(font_id, text, strlen(text));
   BLF_disable(font_id, BLF_CLIPPING);
@@ -142,7 +145,7 @@ void moodboard_draw_node_header(PointerRNA *node, const rctf &rect, const bool s
   float state_width = 0.0f;
   if (progress[0] != '\0') {
     const int font_id = BLF_default();
-    BLF_size(font_id, 15.0f * UI_SCALE_FAC);
+    BLF_size(font_id, ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC).size);
     state_width = BLF_width(font_id, progress, strlen(progress)) +
                   MOODBOARD_NODE_HEADER_LIFT * UI_SCALE_FAC;
     draw_header_text(progress, right, baseline, right - left, 0.72f, true);

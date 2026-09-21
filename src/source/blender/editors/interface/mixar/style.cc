@@ -16,7 +16,8 @@ static bool supports(const Button &button, const MixarComponent component)
 {
   switch (component) {
     case MixarComponent::Action:
-      return button.type == ButtonType::But;
+      return ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block,
+                  ButtonType::Popover);
     case MixarComponent::GlassTool:
       return button.icon != ICON_NONE && button.str.empty() &&
              ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block,

@@ -102,19 +102,9 @@ def test_header_can_draw_before_moodboard_properties_are_registered(has_content)
     assert not has_content(SimpleNamespace(scene=SimpleNamespace()))
 
 
-def test_zen_drawer_hosts_a_corner_clear_action():
+def test_both_canvases_offer_clear_in_the_shared_board_menu():
     root = Path(__file__).resolve().parents[2]
-    draw = (root / "src/source/blender/editors/space_view3d/view3d_moodboard_drawer_draw.cc").read_text()
-    header = (root / "src/scripts/mixar/modules/space_mixie/ui/header.py").read_text()
-
-    assert '"moodboard_drawer_clear"' in draw
-    assert "draw_clear_tool(C, region, panel_xmin)" in draw
-    assert 'uiDefIconTextButO' in draw
-    assert "ICON_X" in draw
-    assert '"Clear"' in draw
-    assert "mixie.clear_moodboard" in draw
-    assert "MixarComponent::Action" in draw
-    assert "compact_density.control_height" in draw
-    assert "MixarTextRole::Body" in draw
-    assert "0.75f * scale" in draw
-    assert "mixie.clear_moodboard" in header
+    menu = (root / "src/scripts/mixar/modules/moodboard/ui/menus/node_templates_menu.py").read_text()
+    assert 'row.enabled = has_moodboard_content(context)' in menu
+    assert '"mixie.clear_moodboard"' in menu
+    assert "variant='DANGER'" in menu

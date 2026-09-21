@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""No-credit replay for the Zen drawer Clear chip.
+"""No-credit replay for the shared moodboard Board menu.
 
 Set QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT, then run this file.
 The Mixie header Clear is a separate host; this scenario stays in Zen Mode.
@@ -20,7 +20,8 @@ from moodboard_drawer_tools_e2e import text_placement
 
 
 OUT = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/moodboard-drawer-clear'))
-CLEAR = {'region_type': 'TOOL_PROPS', 'op': 'MIXIE_OT_clear_moodboard'}
+CLEAR = {'popup': True, 'op': 'MIXIE_OT_clear_moodboard'}
+BOARD = {'region_type': 'TOOL_PROPS', 'text': 'Arrange, frame, or clear the board'}
 TEXT = {'region_type': 'TOOL_PROPS', 'op': 'MIXIE_OT_moodboard_add_textbox'}
 SCENE = 'drv.main_window().scene'
 COLLECTIONS = ('images', 'textboxes', 'groups', 'action_nodes', 'asset_nodes',
@@ -40,25 +41,20 @@ def snap(qa, name, annotated=False):
 
 def assert_hidden(qa):
     assert not qa.find(**CLEAR)['total']
+    qa.click(**BOARD)
+    found = qa.find(**CLEAR)['widgets']
+    assert len(found) == 1 and not found[0]['enabled'], found
+    qa.press('ESC')
 
 
 def assert_visible(qa):
+    qa.click(**BOARD)
     found = qa.find(**CLEAR)
     assert found['total'] == 1, found
     widget = found['widgets'][0]
-    panel = target(qa, 'moodboard_drawer_panel')['rect']
-    x0, y0, x1, y1 = widget['rect']
     assert widget['enabled'] and widget['mixar_theme'] == 'ZEN', widget
     assert widget['mixar_component'] == 'action', widget
-    assert widget['block'] == 'moodboard_drawer_clear', widget
-    assert widget['text'] == 'Clear', widget
-    assert panel[0] < x0 < x1 < panel[2], (widget, panel)
-    assert panel[1] < y0 < y1 < panel[3], (widget, panel)
-    text = qa.find(**TEXT)['widgets']
-    assert len(text) == 1, text
-    left = text[0]['rect']
-    assert x0 > left[2], (widget, text[0])
-    assert abs(y1 - left[3]) <= 8, (widget, text[0])
+    assert widget['text'] == 'Clear Board', widget
     return widget
 
 
@@ -84,6 +80,7 @@ def run(qa):
     qa.wait(f'len({BOXES}) == 1', timeout=5)
     qa.step('undo_restores_clear', assert_visible, qa)
     qa.step('undo_screenshot', snap, qa, '04-undo')
+    qa.press('ESC')
     return {'backend_submissions': 0, 'screenshots': str(OUT)}
 
 

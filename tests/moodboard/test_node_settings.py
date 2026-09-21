@@ -29,6 +29,7 @@ def popup():
             body.append(item)
     namespace = {
         'math': math,
+        'parameter_help': lambda parameter: parameter.label,
         'draw_dropdown': lambda layout, data, prop, **kw: layout.prop(data, prop, **kw),
         'draw_input': lambda layout, data, prop, **kw: layout.prop(data, prop, **kw),
         'draw_toggle': lambda layout, data, prop, **kw: layout.prop(data, prop, **kw),
@@ -141,7 +142,7 @@ def test_running_settings_and_reset_are_disabled(popup, state):
                 if kind in {'prop', 'op'}]
     assert controls and not any(enabled for _, _, enabled in controls)
     assert [value[0] for kind, value, _ in controls if kind == 'op'] == [
-        'mixie.moodboard_reset_node_params']
+        'mixie.moodboard_parameter_info', 'mixie.moodboard_reset_node_params']
 
 
 @pytest.mark.parametrize('state', ['SUCCESS', 'FAILED', 'CANCELLED'])

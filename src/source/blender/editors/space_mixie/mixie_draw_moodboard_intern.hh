@@ -151,7 +151,7 @@ void mixie_draw_moodboard_media_frame(float x, float y, float w, float h, bool s
  * rim, the running glow) stay at the call sites — only the resting bed and rim
  * live here. No drop shadow: these panes sit on a grid and inside the node
  * clip, where a shadow would be clipped into a line. */
-void moodboard_draw_glass_pane(const rctf &rect, float radius);
+void moodboard_draw_surface(const rctf &rect, float radius);
 
 /** Draw moodboard images */
 void mixie_draw_moodboard_images(const bContext *C, View2D *v2d);
@@ -255,7 +255,6 @@ void moodboard_draw_graph_notice(PointerRNA *scene_ptr);
  */
 void moodboard_set_node_tooltip(ui::Button *but, const char *text);
 /** Tooltip for one catalog parameter: its name, what it does, and its range. */
-void moodboard_set_parameter_tooltip(ui::Button *but, PointerRNA *parameter);
 /**
  * The controls a node draws inside its own tile: the prompt and Generate, or
  * Cancel while a generation is in flight. Screen space, laid out inside the
@@ -312,7 +311,6 @@ bool moodboard_view_rect_to_region(View2D *v2d,
                                    ARegion *region,
                                    const rctf &view_rect,
                                    rcti *r_region_rect);
-void moodboard_draw_floating_background(const rctf &rect);
 /** Paint each selected standalone media's own name just above it. Plain BLF
  * text, no widgets and no background of its own -- it takes no #ui::Block. The
  * context is what bounds it to the painted canvas, which in the Zen drawer is

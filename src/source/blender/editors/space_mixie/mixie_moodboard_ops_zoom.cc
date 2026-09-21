@@ -9,6 +9,7 @@
  */
 
 #include "mixie_moodboard_ops_common.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 #include "DNA_windowmanager_types.h"
 #include "DNA_workspace_types.h"
@@ -62,7 +63,23 @@ static wmOperatorStatus moodboard_zoom_invoke(bContext *C, wmOperator * /*op*/, 
 
 /* Grow one region's visible rect so the target is on screen.  Returns true if
  * the view was changed. */
-static bool ensure_rect_visible_in_region(ARegion *region,
+static void frame_in_content_rect(ARegion *region, const rcti &content, const rctf &bounds)
+{
+  View2D *v2d = &region->v2d;
+  const float units_per_pixel = std::max(
+      BLI_rctf_size_x(&bounds) / std::max(BLI_rcti_size_x(&content), 1),
+      BLI_rctf_size_y(&bounds) / std::max(BLI_rcti_size_y(&content), 1));
+  const float xmin = BLI_rctf_cent_x(&bounds) -
+                     (BLI_rcti_cent_x(&content) - v2d->mask.xmin) * units_per_pixel;
+  const float ymin = BLI_rctf_cent_y(&bounds) -
+                     (BLI_rcti_cent_y(&content) - v2d->mask.ymin) * units_per_pixel;
+  BLI_rctf_init(&v2d->cur, xmin, xmin + BLI_rcti_size_x(&v2d->mask) * units_per_pixel,
+                ymin, ymin + BLI_rcti_size_y(&v2d->mask) * units_per_pixel);
+  ui::view2d_curRect_validate(v2d);
+}
+
+static bool ensure_rect_visible_in_region(const ScrArea *area,
+                                          ARegion *region,
                                           const float tx_min,
                                           const float tx_max,
                                           const float ty_min,
@@ -70,9 +87,13 @@ static bool ensure_rect_visible_in_region(ARegion *region,
 {
   View2D *v2d = &region->v2d;
 
-  /* Already fully inside the visible rect: nothing to do. */
-  if (tx_min >= v2d->cur.xmin && tx_max <= v2d->cur.xmax && ty_min >= v2d->cur.ymin &&
-      ty_max <= v2d->cur.ymax)
+  const rcti content = moodboard_visible_canvas_rect(area, region);
+  rctf visible;
+  ui::view2d_region_to_view(v2d, content.xmin, content.ymin, &visible.xmin, &visible.ymin);
+  ui::view2d_region_to_view(v2d, content.xmax, content.ymax, &visible.xmax, &visible.ymax);
+  /* Controls and overlapping sidebars are never usable canvas space. */
+  if (tx_min >= visible.xmin && tx_max <= visible.xmax && ty_min >= visible.ymin &&
+      ty_max <= visible.ymax)
   {
     return false;
   }
@@ -80,24 +101,11 @@ static bool ensure_rect_visible_in_region(ARegion *region,
   /* Grow the visible rect to also contain the target, then let View2D
    * re-validate zoom/aspect limits (which can only enlarge the area, so the
    * target stays visible). */
-  v2d->cur.xmin = std::min(v2d->cur.xmin, tx_min);
-  v2d->cur.xmax = std::max(v2d->cur.xmax, tx_max);
-  v2d->cur.ymin = std::min(v2d->cur.ymin, ty_min);
-  v2d->cur.ymax = std::max(v2d->cur.ymax, ty_max);
-
-  /* The canvas derives vertical span from horizontal zoom on every draw.
-   * Enlarge both axes to that aspect now, otherwise a tall reference (or a
-   * batch) is cropped again as soon as the drawer paints. */
-  const float aspect = float(std::max(int(region->winx), 1)) /
-                       float(std::max(int(region->winy), 1));
-  const float half_width = 0.5f * std::max(BLI_rctf_size_x(&v2d->cur),
-                                          BLI_rctf_size_y(&v2d->cur) * aspect);
-  const float cx = BLI_rctf_cent_x(&v2d->cur);
-  const float cy = BLI_rctf_cent_y(&v2d->cur);
-  BLI_rctf_init(&v2d->cur, cx - half_width, cx + half_width,
-                cy - half_width / aspect, cy + half_width / aspect);
-
-  ui::view2d_curRect_validate(v2d);
+  visible.xmin = std::min(visible.xmin, tx_min);
+  visible.xmax = std::max(visible.xmax, tx_max);
+  visible.ymin = std::min(visible.ymin, ty_min);
+  visible.ymax = std::max(visible.ymax, ty_max);
+  frame_in_content_rect(region, content, visible);
   ED_region_tag_redraw(region);
   return true;
 }
@@ -209,8 +217,7 @@ static wmOperatorStatus moodboard_frame_exec(bContext *C, wmOperator *op)
   /* Unlike ensure-visible this SETS the rect, so the view zooms in as well as
    * out. View2D then re-validates it against the region aspect and the zoom
    * limits, which can only enlarge it -- the content stays framed. */
-  region->v2d.cur = bounds;
-  ui::view2d_curRect_validate(&region->v2d);
+  frame_in_content_rect(region, moodboard_visible_canvas_rect(C), bounds);
   ED_region_tag_redraw(region);
   return OPERATOR_FINISHED;
 }
@@ -275,7 +282,7 @@ static wmOperatorStatus moodboard_ensure_visible_exec(bContext *C, wmOperator *o
         if (region->regiontype != want_region) {
           continue;
         }
-        if (ensure_rect_visible_in_region(region, tx_min, tx_max, ty_min, ty_max)) {
+        if (ensure_rect_visible_in_region(area, region, tx_min, tx_max, ty_min, ty_max)) {
           ED_area_tag_redraw(area);
         }
       }

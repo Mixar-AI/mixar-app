@@ -31,15 +31,12 @@ from mixar.modules.moodboard.core.media_utils import (
 
 def draw_section_box(layout, label=None, icon='NONE', action_op=None,
                      action_icon='FILE_FOLDER'):
-    """Create a styled section box, return an aligned column.
-
-    Uses the custom Mixar section widget (C++ rendered, accent border + shadow)
-    when available, falls back to standard box() otherwise.
-    """
-    if hasattr(layout, 'mixar_section'):
-        box = layout.mixar_section()
-    else:
-        box = layout.box()
+    """Create a neutral shared-UI section, matching the island's controls."""
+    if hasattr(layout, 'mixar_surface'):
+        layout = layout.mixar_surface(theme='ZEN', density='COMPACT')
+    box = layout.box()
+    if hasattr(box, 'mixar_style'):
+        box.mixar_style(component='SURFACE')
     col = box.column()
     if label:
         if action_op:

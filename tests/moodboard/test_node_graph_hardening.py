@@ -380,7 +380,7 @@ def test_node_service_and_model_resolve_from_saved_slugs():
 def test_canvas_menu_filters_catalog_services_to_the_moodboard_surface():
     """Paint-only services (brush_gen under image_gen) must not make a canvas
     action look available."""
-    actions = _read(MOODBOARD / "ui/moodboard_menu_actions.py")
+    actions = _read(MOODBOARD / "core/capabilities.py")
 
     available = actions.split("def capability_available(")[1].split("\ndef ")[0]
     assert 'surface="moodboard"' in available

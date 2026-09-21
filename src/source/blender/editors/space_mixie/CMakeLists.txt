@@ -21,6 +21,7 @@ set(SRC
   mixie_attachment_motion.hh
   mixie_dragdrop.cc
   mixie_draw_moodboard.cc
+  mixie_draw_moodboard_chrome.cc
   mixie_draw_moodboard_annotations.cc
   mixie_draw_moodboard_frames.cc
   mixie_draw_moodboard_frame_actions.cc
@@ -71,6 +72,7 @@ set(SRC
   mixie_draw_moodboard_intern.hh
   mixie_intern.hh
   mixie_moodboard_canvas.hh
+  mixie_moodboard_chrome.hh
   mixie_moodboard_graph_geometry.hh
   mixie_moodboard_hit_geometry.hh
   mixie_moodboard_node_layout.hh

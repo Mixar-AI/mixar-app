@@ -305,49 +305,23 @@ def test_file_and_image_id_drop_payloads_cannot_contaminate_one_another():
         assert f'RNA_string_set(drop->ptr, "{name}", "")' not in body
 
 
-def test_the_drawer_tab_is_a_labeled_glass_pane():
-    """The green glass tab retains its label and shared hit geometry."""
+def test_the_drawer_tab_uses_shared_palette_and_hit_geometry():
     draw = _read(VIEW3D / "view3d_moodboard_drawer_draw.cc")
     assert 'const char *label = "Moodboard";' in draw
-    assert "MIXAR_GLASS_MOODBOARD_TAB" in draw
-    assert "mixar_glass_draw" in draw
+    assert "ui::mixar_tokens::zen.action" in draw
+    assert "view3d_moodboard_drawer_grip_rect_for" in draw
     assert "GRIP_DOT" not in draw
-    assert "GRIP_BORDER" not in draw
-    assert "Drop references here" in draw
-    assert "BLF_size(font, 17.0f * UI_SCALE_FAC)" in draw
-    assert "BLF_size(font, 13.0f * UI_SCALE_FAC)" not in draw
-    assert "Click anywhere" not in draw
-    assert "EMPTY_PLUS" not in draw
 
 
-def test_drawer_hosts_the_same_add_tools_row_as_the_mixie_toolbar():
-    """Open-media + Add Text come from one Python builder; the drawer hosts it."""
-    toolbar = _read(ROOT / "src/scripts/mixar/modules/moodboard/ui/moodboard_toolbar.py")
+def test_drawer_hosts_the_same_canvas_chrome_as_the_editor():
     draw = _read(VIEW3D / "view3d_moodboard_drawer_draw.cc")
-
-    assert "def draw_moodboard_add_tools(layout, context):" in toolbar
-    assert "def draw_moodboard_open_media_tool(layout," in toolbar
-    assert "def draw_moodboard_add_text_tool(layout," in toolbar
-    assert 'bl_idname = "VIEW3D_PT_moodboard_drawer_add_tools"' in toolbar
-    assert "draw_moodboard_add_tools(self.layout, context)" in toolbar
-    assert "draw_moodboard_open_media_tool(col)" in toolbar
-    assert "draw_moodboard_add_text_tool(col)" in toolbar
-    assert 'mixie.moodboard_erase_canvas' in toolbar
-    assert "VIEW3D_PT_moodboard_drawer_add_tools," in toolbar
-
-    assert 'WM_paneltype_find(panel_id, false)' in draw
-    assert '"VIEW3D_PT_moodboard_drawer_add_tools"' in draw
-    assert "ui::UI_paneltype_draw" in draw
-    assert "draw_add_tools(C, region, panel_xmin)" in draw
-    assert "draw_clear_tool(C, region, panel_xmin)" in draw
-    assert "ui::uiDefIconTextButO" in draw
-    assert "ICON_X" in draw
-    assert "compact_density.control_height" in draw
-    assert "MixarTextRole::Body" in draw
-    assert "0.75f * scale" in draw
-    assert '"Clear"' in draw
-    # Must not call the panel-region path (comment mentions it as the anti-pattern).
-    assert "ED_region_panels(" not in _strip_comments(draw)
+    chrome = _read(MIXIE / "mixie_draw_moodboard_chrome.cc")
+    panels = _read(ROOT / "src/scripts/mixar/modules/moodboard/ui/panels/canvas_chrome.py")
+    assert "mixie_moodboard_canvas_draw(C, region)" in draw
+    assert "WM_paneltype_find(panel_id, false)" in chrome
+    assert "ui::UI_paneltype_draw" in chrome
+    assert "draw_moodboard_add_tools(self.layout, context)" in panels
+    assert "ED_region_panels(" not in _strip_comments(chrome)
 
 
 def test_slide_preserves_the_canvas_aspect_correction_for_hit_testing():

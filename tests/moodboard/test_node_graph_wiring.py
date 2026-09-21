@@ -47,7 +47,7 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     canvas = _read(SPACE_MIXIE / "mixie_draw_moodboard.cc")
     renderer = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
     controls = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
-    settings = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
+    settings = _read(MOODBOARD / "ui/operators/node_settings_ops.py")
     layout = _read(SPACE_MIXIE / "mixie_moodboard_node_layout.cc")
 
     assert "mixie_draw_moodboard_graph.cc" in cmake
@@ -66,8 +66,9 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert '"prompt",' in tile
     # Mode/Model draw the Python-cached human labels (dynamic enums can't
     # self-display); the static word is only the empty-label fallback.
-    assert 'model_label[0] ? model_label : "Model"' in settings
-    assert 'mode_label[0] ? mode_label : "Mode"' in settings
+    assert 'model[0] ? model : "Model & Settings"' in controls
+    assert "draw_dropdown(settings, node, 'service_key'" in settings
+    assert "draw_dropdown(settings, node, 'model'" in settings
     assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in layout
     assert "moodboard_node_controls_rect(C, v2d, node, &controls)" in controls
     # The draft hint draws exactly when the floating controls do not, so both
@@ -77,13 +78,13 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     assert "draw_state_hint" in renderer
     assert 'mixie_rna_string_get_clamped(node, "prompt"' in renderer
     assert "generation_running" in tile
-    assert 'RNA_boolean_get(&iter.ptr, "visible")' in settings
+    assert "if parameter.visible:" in settings
     # Numeric parameters are plain manual number fields: the catalog's wide
     # min/max ranges made drag-sliders unusable (e.g. Duration max 3000).
     assert 'STREQ(widget, "slider")' not in controls
-    assert "button_type = ui::ButtonType::Num;" in settings
-    assert 'RNA_struct_find_property(node, "parameters")' in settings
-    assert "uiDefButO" in controls
+    assert "slider=True" not in settings
+    assert "for parameter in node.parameters:" in settings
+    assert "uiDefIconTextButO" in controls
     assert '"MIXIE_OT_moodboard_run_action_node"' in tile
     # Node controls are SCREEN-space overlays: pixel space is restored first,
     # so the block is built in region coordinates and every rect it is handed
@@ -106,7 +107,7 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     # as one material.
     chrome = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph_chrome.cc")
     assert "ui::draw_roundbox_4fv" in chrome
-    assert "moodboard_draw_glass_pane(rect, 22.0f)" in chrome
+    assert "moodboard_draw_surface(rect, ui::mixar_tokens::radius)" in chrome
     assert "moodboard_draw_card_background(" in renderer
 
 

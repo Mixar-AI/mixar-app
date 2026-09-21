@@ -427,3 +427,18 @@ FRAME_DEFAULT_HEIGHT = 640.0
 # MOODBOARD_FRAME_MIN_W/H in mixie_intern.hh.
 FRAME_MIN_WIDTH = 220.0
 FRAME_MIN_HEIGHT = 160.0
+
+
+# Editable node templates: identity, label, icon, catalog capability.
+# The first three are the wide canvas shortcuts; every entry is in the menu.
+NODE_TEMPLATES = (
+    ('IMAGE_GEN', "Generate Image", 'IMAGE_DATA', 'image_gen'),
+    ('MODEL_3D', "Image to 3D", 'MESH_DATA', 'model_gen'),
+    ('VIDEO_GEN', "Video Generation", 'FILE_MOVIE', 'video_gen'),
+    ('VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER', 'video_upscale'),
+    ('WORLD_LABS', "Generate Splat", 'WORLD', 'world_labs'),
+    ('PBR_GEN', "PBR Generation", 'TEXTURE', 'pbr_generation'),
+    ('RETOPOLOGY', "Retopology", 'MOD_REMESH', 'retopology'),
+    ('MESH_SEGMENT', "Mesh Segmentation", 'MOD_EXPLODE', 'mesh_segmentation'),
+    ('AUTO_RIG', "Auto Rig", 'ARMATURE_DATA', 'animate'),
+)

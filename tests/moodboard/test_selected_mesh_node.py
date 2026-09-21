@@ -137,7 +137,7 @@ def test_viewport_object_menu_registers_the_mesh_action():
 
 def test_asset_node_draws_its_object_preview_and_suppresses_the_empty_hint():
     node_ui = NODE_UI.read_text(encoding="utf-8")
-    drawer = DRAWER.read_text(encoding="utf-8")
+    drawer = (NODE_UI.parent / "mixie_draw_moodboard_chrome.cc").read_text(encoding="utf-8")
 
     assert '"mixie_moodboard_asset_nodes"' in node_ui
     assert "add_asset_preview(v2d, region, &iter.ptr, object_previews)" in node_ui
