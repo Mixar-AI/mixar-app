@@ -49,6 +49,11 @@ class MIXIE_MT_moodboard_add(Menu):
         layout = self.layout
         drop = _cursor_anchor(context.scene)
 
+        op = layout.operator("mixie.moodboard_add_template", text="Add Mesh", icon='OUTLINER_OB_MESH')
+        op.template = 'MESH_REFERENCE'
+        op.from_drop = True
+        op.drop_x, op.drop_y = drop
+        layout.separator()
         layout.label(text="Generate")
         _connected_action(
             layout, 'IMAGE_GEN', "Generate Image", 'IMAGE_DATA',

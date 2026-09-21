@@ -205,6 +205,64 @@ def test_deleted_scene_reference_cannot_bind_to_a_replacement_with_the_same_name
     assert node_output_type(scene, node.node_id) == ''
 
 
+def test_empty_card_can_be_bound_later_to_the_same_output_as_viewport_add():
+    from mixar.modules.moodboard.core.asset_nodes import (
+        assign_mesh_reference, create_asset_node, create_empty_mesh_node,
+    )
+    from mixar.modules.moodboard.core.node_graph import mesh_source_object_names, node_output_type
+
+    scene, mesh = _scene(), _Mesh('Chosen, Mesh')
+    draft = create_empty_mesh_node(scene, center=(100, 200))
+    identity, position = draft.node_id, (draft.position_x, draft.position_y)
+    assert draft.title == 'Add Mesh' and draft.preview_object is None
+    assert node_output_type(scene, identity) == ''
+    assert mesh_source_object_names(scene, identity) == []
+    assign_mesh_reference(draft, mesh)
+    direct = create_asset_node(_scene(), mesh)
+    assert (draft.title, draft.object_names, draft.preview_object, draft.scene_mesh_reference) == (
+        direct.title, direct.object_names, direct.preview_object, direct.scene_mesh_reference)
+    assert draft.node_id == identity and (draft.position_x, draft.position_y) == position
+    assert mesh_source_object_names(scene, identity) == ['Chosen, Mesh']
+    assert node_output_type(scene, identity) == 'MESH'
+    assert create_asset_node(scene, mesh) is draft
+
+
+def test_changing_mesh_preserves_custom_title_and_downstream_links():
+    from mixar.modules.moodboard.core.asset_nodes import assign_mesh_reference, create_asset_node
+    from mixar.modules.moodboard.core.node_graph import mesh_source_object_names
+
+    scene = _scene()
+    node = create_asset_node(scene, _Mesh('First'))
+    node.title = 'My reference'
+    node.frame_id = 'frame'
+    link = SimpleNamespace(from_node_id=node.node_id, to_node_id='consumer')
+    scene.mixie_moodboard_links.append(link)
+    before = (node.node_id, node.position_x, node.position_y, node.width, node.height)
+    assign_mesh_reference(node, _Mesh('Second'))
+    assert mesh_source_object_names(scene, link.from_node_id) == ['Second']
+    assert node.title == 'My reference' and node.frame_id == 'frame'
+    assert before == (node.node_id, node.position_x, node.position_y, node.width, node.height)
+    assert scene.mixie_moodboard_links == [link]
+    with pytest.raises(ValueError):
+        assign_mesh_reference(node, SimpleNamespace(type='LIGHT'))
+    assert mesh_source_object_names(scene, node.node_id) == ['Second']
+
+
+def test_empty_mesh_template_is_offline_and_does_not_capture_selection(monkeypatch):
+    from mixar.modules.moodboard.core import node_templates
+
+    monkeypatch.setattr(node_templates, 'capability_available', lambda key: False)
+    scene = _scene()
+    first = node_templates.create_template(scene, 'MESH_REFERENCE', (100, 200))
+    second = node_templates.create_template(scene, 'MESH_REFERENCE', (100, 200))
+    assert first.preview_object is second.preview_object is None
+    assert first.node_id != second.node_id
+    assert (first.position_x, first.position_y) != (second.position_x, second.position_y)
+    exact = node_templates.create_template(scene, 'MESH_REFERENCE', (123, 456), exact_position=True)
+    assert exact.position_x + exact.width / 2 == 123
+    assert exact.position_y + exact.height / 2 == 456
+
+
 def test_viewport_object_menu_registers_the_mesh_action():
     source = OPERATOR.read_text(encoding="utf-8")
 
@@ -223,5 +281,5 @@ def test_asset_node_draws_its_object_preview_and_suppresses_the_empty_hint():
     drawer = (NODE_UI.parent / "mixie_draw_moodboard_chrome.cc").read_text(encoding="utf-8")
 
     assert '"mixie_moodboard_asset_nodes"' in node_ui
-    assert "add_asset_preview(v2d, region, &iter.ptr, object_previews)" in node_ui
+    assert "add_asset_preview(v2d, region, block, &iter.ptr, object_previews)" in node_ui
     assert '"mixie_moodboard_asset_nodes"' in drawer
