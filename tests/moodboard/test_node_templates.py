@@ -67,7 +67,7 @@ def test_clicks_avoid_overlap_and_drops_use_the_release_position(monkeypatch):
 
 
 def test_parameter_explanations_keep_catalog_description_bounds_and_required():
-    from mixar.modules.moodboard.ui.operators.node_parameter_info import parameter_help
+    from mixar.modules.moodboard.core.parameter_help import parameter_help
 
     help_text = parameter_help(NS(label='Duration', name='duration',
                                  description='Length of the generated clip.',

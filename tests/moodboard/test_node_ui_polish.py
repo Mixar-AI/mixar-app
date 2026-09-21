@@ -210,11 +210,12 @@ def test_the_card_action_row_stays_inside_the_painted_canvas():
     labels = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_labels.cc")
 
     assert "moodboard_visible_canvas_rect(C)" in node_ui
-    assert "moodboard_visible_canvas_rect(C)" in labels
     # Clip painting/input, without reflowing the card against the viewport edge.
     assert "ui::mixar_block_clip_set(block, clip)" in node_ui
     assert "canvas.ymax - height" not in tile
-    # A name is clamped into the canvas too, never into the raw region.
+    # The name remains attached to the tile and shares the enclosing scissor.
+    assert node_ui.index("mixie_draw_moodboard_selected_media_labels(") < node_ui.index(
+        "GPU_scissor(previous_scissor")
     assert "region->winx" not in labels
     assert "region->winy" not in labels
 
@@ -261,11 +262,8 @@ def test_a_finished_node_can_export_its_own_result():
 def test_node_fields_retain_catalog_help_in_the_popup():
     settings = _read(MOODBOARD / "ui/operators/node_settings_ops.py")
     help_source = _read(MOODBOARD / "ui/operators/node_parameter_info.py")
-    assert "info.details = parameter_help(parameter)" in settings
+    assert "info.details = parameter_help(parameter, spec)" in settings
     assert "return properties.details" in help_source
-    assert "parameter.description" in help_source
-    assert "Range:" in help_source
-    assert 'parts.append("Required")' in help_source
 
 
 def test_a_result_can_be_opened_in_its_own_preview_window():

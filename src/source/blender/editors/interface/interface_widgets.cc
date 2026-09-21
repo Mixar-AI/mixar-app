@@ -2105,9 +2105,11 @@ static bool ui_but_is_multiline_text(const Button *but)
 static void widget_draw_text_multiline(const uiFontStyle *fstyle,
                                        const uiWidgetColors *wcol,
                                        Button *but,
-                                       rcti *rect)
+                                       rcti *rect,
+                                       const rcti &bounds)
 {
   using namespace blender;
+  const bool padded_input = mixar_multiline_input_rect(*but, bounds, *rect);
 
   /* Preserve the native widget font. Hit testing reads this exact style. */
   uiFontStyle chat_fstyle = *fstyle;
@@ -2171,7 +2173,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
           /* Draw placeholder top-left aligned */
           rcti placeholder_rect = *rect;
           const float lh = BLF_height(fontid, "Wg", 2);
-          const int padding = int(4.0f * U.pixelsize);
+          const int padding = padded_input ? 0 : int(4.0f * U.pixelsize);
           placeholder_rect.ymax = rect->ymax - padding;
           placeholder_rect.ymin = placeholder_rect.ymax - int(lh);
           fontstyle_draw_ex(&style,
@@ -2198,7 +2200,7 @@ static void widget_draw_text_multiline(const uiFontStyle *fstyle,
 
   /* Inset the top of the drawing rect so text doesn't hug the top edge.
    * This shifts text, selection highlights, and cursor down uniformly. */
-  const int top_inset = int(4.0f * U.pixelsize);
+  const int top_inset = padded_input ? 0 : int(4.0f * U.pixelsize);
   rect->ymax -= top_inset;
 
   state.font = chat_fstyle;
@@ -3261,6 +3263,7 @@ static void widget_draw_text_icon(const uiFontStyle *fstyle,
                                   Button *but,
                                   rcti *rect)
 {
+  const rcti text_bounds = *rect;
   const bool show_menu_icon = but_draw_menu_icon(but);
   const float alpha = float(wcol->text[3]) / 255.0f;
   std::string password_str;
@@ -3465,7 +3468,7 @@ static void widget_draw_text_icon(const uiFontStyle *fstyle,
   }
   else if (ui_but_is_multiline_text(but)) {
     /* Multi-line text buttons handle their own wrapping and drawing. */
-    widget_draw_text_multiline(fstyle, wcol, but, rect);
+    widget_draw_text_multiline(fstyle, wcol, but, rect, text_bounds);
   }
   else if (but->type != ButtonType::TextBox) {
     widget_draw_text(fstyle, wcol, but, rect);

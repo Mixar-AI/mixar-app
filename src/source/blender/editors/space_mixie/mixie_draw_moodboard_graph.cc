@@ -259,7 +259,8 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
          * one of the two draws in any given spot. */
         rcti controls_rect;
         const bool controls_visible = moodboard_node_controls_rect(C, v2d, &node, &controls_rect);
-        moodboard_draw_card_background(rect, selected);
+        const float corner_radius = moodboard_card_corner_radius(v2d, &node);
+        moodboard_draw_card_background(rect, selected, corner_radius);
         /* Corner resize handles, like a selected reference picture's -- only
          * while SELECTED, and never on MASK_DETAIL, whose square card is
          * deliberately not resizable. */
@@ -267,7 +268,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
           moodboard_draw_node_resize_handles(v2d, rect);
         }
         if (ELEM(state, 1, 2)) { /* QUEUED or RUNNING */
-          moodboard_draw_running_glow(rect);
+          moodboard_draw_running_glow(rect, corner_radius);
         }
         char node_id[MIXIE_GRAPH_ID_BUF];
         mixie_rna_string_get_clamped(&node, "node_id", node_id, sizeof(node_id));
@@ -394,7 +395,8 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
       if (is_rect_in_view(
               v2d, rect.xmin, rect.ymin, BLI_rctf_size_x(&rect), BLI_rctf_size_y(&rect)))
       {
-        moodboard_draw_card_background(rect, RNA_boolean_get(&node, "selected"));
+        moodboard_draw_card_background(rect, RNA_boolean_get(&node, "selected"),
+                                      moodboard_card_corner_radius(v2d, &node));
         moodboard_draw_output_handle(v2d, rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
                                      BLI_rctf_cent_y(&rect),
                                      moodboard_mesh_output_color());

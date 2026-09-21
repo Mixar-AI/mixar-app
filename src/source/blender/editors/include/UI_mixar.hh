@@ -45,6 +45,8 @@ const char *mixar_variant_name(MixarVariant variant);
 /** Draws the component backdrop; true means the native text pass is still
  * required. */
 bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &rect);
+/** Symmetric content inset for tall Zen inputs; native caret/wrap use this rect. */
+bool mixar_multiline_input_rect(const Button &button, const rcti &bounds, rcti &text_rect);
 /** Premultiplied rounded fill that replaces dest alpha for opaque colours.
  * Widget dest-over leaves frost-window dest A at the 0.20 wash on WGL. */
 void mixar_fill_round(const rctf &rect, float radius, const float color[4]);
