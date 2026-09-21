@@ -127,6 +127,15 @@ def start(context, key, kind='image', label='', expected_session='', **options):
         return _reply('', 'failed', error='invalid_job_id')
     if key in _records:
         return dict(_records[key])
+    # Completed handles belong to the document, not the active window's scene.
+    # Check before start-only guards: replay never needs a camera or free renderer.
+    for origin in bpy.data.scenes:
+        for item in getattr(origin, 'mixie_moodboard_images', ()):
+            if item.mixar_job_handle == key and item.image:
+                return _publish(key, _reply(
+                    key, 'done', kind='video' if item.image.source == 'MOVIE' else 'image',
+                    scene_session=str(getattr(origin, 'mixie_session_id', '') or ''),
+                    moodboard_image_name=item.image.name))
     if _job is not None or slot.busy():
         return _reply(key, 'busy', error='another_render_running')
     scene = context.scene
@@ -135,11 +144,6 @@ def start(context, key, kind='image', label='', expected_session='', **options):
     session = str(getattr(scene, 'mixie_session_id', '') or '')
     if expected_session and expected_session != session:
         return _reply(key, 'failed', error='wrong_scene')
-    for item in getattr(scene, 'mixie_moodboard_images', ()):
-        if item.mixar_job_handle == key and item.image:
-            # Packed images/movie references persist the receipt across save/load.
-            return _publish(key, _reply(key, 'done', kind=kind, scene_session=session,
-                                        moodboard_image_name=item.image.name))
     if scene.camera is None or context.window is None or bpy.app.background:
         return _reply(key, 'failed', error='camera_and_window_required')
     engine = options.get('engine', '')

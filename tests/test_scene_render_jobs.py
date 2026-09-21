@@ -35,6 +35,7 @@ def jobs(monkeypatch):
                                     color_mode='RGB', color_depth='8'),
                   ffmpeg=NS(format='QUICKTIME', codec='MPEG4', constant_rate_factor='HIGH')))
     fake.context.window = object()
+    fake.data.scenes = [fake.context.scene]
     fake.context.preferences.view.render_display_type = 'WINDOW'
     fake.ops.render.render.return_value = {'RUNNING_MODAL'}
     monkeypatch.setattr(module, 'bpy', fake)
@@ -203,9 +204,27 @@ def test_delivery_does_not_apply_preview_resolution_or_sample_caps(jobs):
 
 
 def test_saved_moodboard_handle_prevents_replay_after_file_load(jobs):
-    jobs.bpy.context.scene.mixie_moodboard_images = [NS(mixar_job_handle=KEY, image=NS(name='Saved render'))]
+    jobs.bpy.context.scene.mixie_moodboard_images = [NS(mixar_job_handle=KEY, image=NS(name='Saved render', source='FILE'))]
     result = jobs.start(jobs.bpy.context, KEY)
     assert result['status'] == 'done' and result['moodboard_image_name'] == 'Saved render'
+    jobs.bpy.ops.render.render.assert_not_called()
+
+
+@pytest.mark.parametrize('expected_session', ['', 's'])
+@pytest.mark.parametrize('source,kind', [('FILE', 'image'), ('MOVIE', 'video')])
+def test_reopened_render_replay_finds_origin_with_another_scene_active(jobs, expected_session, source, kind):
+    origin = jobs.bpy.context.scene
+    origin.mixie_moodboard_images = [NS(mixar_job_handle=KEY, image=NS(name='Saved render', source=source))]
+    other = NS(mixie_session_id='other', mixie_moodboard_images=[], camera=None)
+    jobs.bpy.data.scenes.append(other)
+    jobs._before_load(None)
+    jobs.bpy.context.scene = other
+    # An unrelated native render must not hide an already delivered receipt.
+    jobs.bpy.app.is_job_running.return_value = True
+    result = jobs.start(jobs.bpy.context, KEY, expected_session=expected_session)
+    assert result['status'] == 'done'
+    assert result['scene_session'] == 's' and result['kind'] == kind
+    assert other.mixie_moodboard_images == []
     jobs.bpy.ops.render.render.assert_not_called()
 
 

@@ -22,6 +22,8 @@ from mixar.modules.common.render_coordinator import core as slot
 from mixar.modules.space_mixie_chat.core.executor import ScriptExecutor
 with bpy.context.temp_override(window=drv.main_window()):
     scene = bpy.context.scene
+    if not scene.mixie_session_id:
+        scene.mixie_session_id = '11111111-1111-4111-8111-111111111111'
     scene.render.engine = 'BLENDER_EEVEE'
     scene.render.resolution_x = 320
     scene.render.resolution_y = 240
@@ -164,11 +166,22 @@ scene.render.resolution_x, scene.render.resolution_y = 320, 240
 result = receipt
 ''')
     project = str(output / 'render-delivery.blend')
+    qa.step('save_with_other_scene_active', qa.eval, '''
+origin = drv.main_window().scene
+other = bpy.data.scenes['QA Other Scene']
+other.collection.objects.link(origin.camera)
+other.camera = origin.camera
+drv.main_window().scene = other
+result = other.name
+''')
     qa.step('save_project', qa.eval, f"bpy.ops.wm.save_as_mainfile(filepath={project!r})\nresult=True")
     qa.step('reopen_project', qa.eval, f"bpy.ops.wm.open_mainfile(filepath={project!r})\nresult=True")
     qa.step('persistent_media_after_reopen', qa.eval, '''
 import os
-scene = drv.main_window().scene
+other = drv.main_window().scene
+assert other.name == 'QA Other Scene'
+scene = next(s for s in bpy.data.scenes if any(
+    i.mixar_job_handle == '11111111111111111111111111111111' for i in s.mixie_moodboard_images))
 images = [i.image for i in scene.mixie_moodboard_images if i.image]
 still = next(i for i in images if i.name == 'QA Scene Image')
 movie = next(i for i in images if i.name == 'QA Scene Video')
@@ -177,9 +190,15 @@ assert movie.source == 'MOVIE' and movie.frame_duration == 6
 assert os.path.isfile(bpy.path.abspath(movie.filepath))
 from mixar.modules.scene_render.core import jobs
 with bpy.context.temp_override(window=drv.main_window()):
-    assert jobs.start(bpy.context, '11111111111111111111111111111111')['status'] == 'done'
-    assert jobs.start(bpy.context, '22222222222222222222222222222222', kind='video')['status'] == 'done'
+    for expected in ('', scene.mixie_session_id):
+        jobs._records.clear()  # Exercise persisted lookup for each replay shape.
+        for key, kind in (('1' * 32, 'image'), ('2' * 32, 'video')):
+            receipt = jobs.start(bpy.context, key, kind=kind, expected_session=expected)
+            assert receipt['status'] == 'done' and receipt['scene_session'] == scene.mixie_session_id
+assert not other.mixie_moodboard_images
 assert jobs._job is None
+assert not bpy.app.is_job_running('RENDER')
+drv.main_window().scene = scene
 result = {'packed': bool(still.packed_file), 'movie_frames': movie.frame_duration, 'replay_after_load': True}
 ''')
     qa.step('reopened_visible', qa.snap, str(output / 'reopened-moodboard.png'))
