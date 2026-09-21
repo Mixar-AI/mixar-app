@@ -40,7 +40,7 @@ def _reply(key, status, **extra):
 
 @persistent
 def _complete(_scene, _depsgraph=None):
-    if _job is not None:
+    if _job is not None and _job['terminal'] != 'cancelled':
         _job['terminal'] = 'done'
 
 
@@ -76,6 +76,7 @@ def _before_load(_unused, _extra=None):
         slot.release(_job['reservation'])
     _job = None
     _records.clear()
+    bpy.app.driver_namespace.pop(RESULTS_NS, None)
     _handlers(False)
 
 
@@ -134,6 +135,11 @@ def start(context, key, kind='image', label='', expected_session='', **options):
     session = str(getattr(scene, 'mixie_session_id', '') or '')
     if expected_session and expected_session != session:
         return _reply(key, 'failed', error='wrong_scene')
+    for item in getattr(scene, 'mixie_moodboard_images', ()):
+        if item.mixar_job_handle == key and item.image:
+            # Packed images/movie references persist the receipt across save/load.
+            return _publish(key, _reply(key, 'done', kind=kind, scene_session=session,
+                                        moodboard_image_name=item.image.name))
     if scene.camera is None or context.window is None or bpy.app.background:
         return _reply(key, 'failed', error='camera_and_window_required')
     engine = options.get('engine', '')
@@ -164,6 +170,8 @@ def start(context, key, kind='image', label='', expected_session='', **options):
         _job = job
         settings.apply(kind, path, **options)
         job['render'] = render_info(scene)
+        if settings.downgraded:
+            job['render']['engine_downgraded'] = settings.downgraded
         _handlers(True)
         if _before_load not in bpy.app.handlers.load_pre:
             bpy.app.handlers.load_pre.append(_before_load)
@@ -179,16 +187,18 @@ def start(context, key, kind='image', label='', expected_session='', **options):
         if 'RUNNING_MODAL' not in ret:
             raise RuntimeError('async_render_unavailable')
         slot.phase(reservation, 'rendering')
-        bpy.app.timers.register(lambda: _tick(job), first_interval=TICK_SECONDS)
+        bpy.app.timers.register(lambda: _tick(job), first_interval=TICK_SECONDS, persistent=True)
         value = _publish(key, _reply(key, 'started', kind=kind, scene_session=session,
                                      render=job['render']))
-        notify(key, kind, 'started', 'It will appear in Moodboard when finished. Stop using the render progress control.')
+        notify(key, kind, 'started',
+               ('Using EEVEE because this scene exceeds the Cycles memory budget. ' if settings.downgraded else '') +
+               'It will appear in Moodboard when finished. Use the render progress control to cancel.')
         return value
     except Exception:
         logger.exception('Could not start scene render')
         if job is not None and bpy.app.is_job_running('RENDER'):
             # Even a post-invoke failure must retain ownership until native teardown.
-            bpy.app.timers.register(lambda: _tick(job), first_interval=TICK_SECONDS)
+            bpy.app.timers.register(lambda: _tick(job), first_interval=TICK_SECONDS, persistent=True)
             return _publish(key, _reply(key, 'started', kind=kind, scene_session=session,
                                         render=job['render']))
         if job is not None:

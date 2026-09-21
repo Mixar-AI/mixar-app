@@ -164,3 +164,56 @@ def test_invoke_failure_restores_and_remains_idempotent(jobs):
     assert jobs.bpy.context.scene.render.image_settings.file_format == 'JPEG'
     jobs.bpy.ops.render.render.assert_called_once()
     assert not jobs.slot.busy()
+
+
+def test_geometry_budget_discloses_downgrade_and_restores_engine(jobs, monkeypatch):
+    from mixar.modules.common.agent_execution import scene_cost
+    monkeypatch.setattr(scene_cost, 'scene_geometry_cost', lambda scene: {'unique_faces': 1000})
+    result = jobs.start(jobs.bpy.context, KEY, max_faces=100)
+    assert result['render']['engine'] == 'BLENDER_EEVEE'
+    assert result['render']['engine_downgraded']['from'] == 'CYCLES'
+    job = jobs._job
+    jobs._cancel(None)
+    jobs._tick(job)
+    assert jobs.bpy.context.scene.render.engine == 'CYCLES'
+
+
+def test_finalizer_timer_survives_file_load_for_old_temp_cleanup(jobs):
+    jobs.start(jobs.bpy.context, KEY)
+    assert jobs.bpy.app.timers.register.call_args.kwargs['persistent'] is True
+
+
+def test_trusted_handlers_only_survive_on_their_intended_lists(jobs, monkeypatch):
+    from mixar.modules.space_mixie_chat.core.executor_handlers import HandlerCleanupMixin
+    cleanup_module = importlib.import_module('mixar.modules.space_mixie_chat.core.executor_handlers')
+    monkeypatch.setattr(cleanup_module, 'bpy', jobs.bpy)
+    cleanup = HandlerCleanupMixin()
+    before = cleanup._snapshot_handlers()
+    jobs.start(jobs.bpy.context, KEY)
+    jobs.bpy.app.handlers.render_write.append(jobs._complete)
+    cleanup._cleanup_handlers(before)
+    assert jobs._complete in jobs.bpy.app.handlers.render_complete
+    assert jobs._write in jobs.bpy.app.handlers.render_write
+    assert jobs._complete not in jobs.bpy.app.handlers.render_write
+
+
+def test_delivery_does_not_apply_preview_resolution_or_sample_caps(jobs):
+    result = jobs.start(jobs.bpy.context, KEY, width=4096, height=2160, samples=512)
+    assert (result['render']['width'], result['render']['height'], result['render']['samples']) == (4096, 2160, 512)
+
+
+def test_saved_moodboard_handle_prevents_replay_after_file_load(jobs):
+    jobs.bpy.context.scene.mixie_moodboard_images = [NS(mixar_job_handle=KEY, image=NS(name='Saved render'))]
+    result = jobs.start(jobs.bpy.context, KEY)
+    assert result['status'] == 'done' and result['moodboard_image_name'] == 'Saved render'
+    jobs.bpy.ops.render.render.assert_not_called()
+
+
+def test_late_complete_does_not_promote_cancelled_pixels(jobs):
+    jobs.start(jobs.bpy.context, KEY)
+    job = jobs._job
+    jobs._cancel(None)
+    jobs._complete(None)
+    jobs._tick(job)
+    jobs.deliver.assert_not_called()
+    assert jobs._records[KEY]['status'] == 'cancelled'

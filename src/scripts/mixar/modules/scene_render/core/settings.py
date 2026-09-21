@@ -21,10 +21,12 @@ class Settings:
             setattr(owner, name, value)
 
     def apply(self, kind, path, engine="", samples=0, width=0, height=0,
-              frame_start=None, frame_end=None, fps=0):
+              frame_start=None, frame_end=None, fps=0, max_faces=0):
         scene, r = self.scene, self.scene.render
         if engine:
             self.set(r, "engine", {"eevee": "BLENDER_EEVEE", "cycles": "CYCLES"}[engine])
+        from mixar.modules.common.render_coordinator.core.geometry_budget import downgrade_over_budget
+        self.downgraded = downgrade_over_budget(scene, self.set, max_faces)
         if samples:
             owner = scene.cycles if r.engine == 'CYCLES' else scene.eevee
             name = 'samples' if r.engine == 'CYCLES' else 'taa_render_samples'

@@ -303,20 +303,9 @@ def _downgrade_over_budget(scene, set_value, max_faces):
     applied the call's own engine. Returns the disclosure dict, or None when
     nothing was changed.
     """
-    render = scene.render
-    if max_faces <= 0 or str(render.engine) != "CYCLES":
-        return None
-    from mixar.modules.common.agent_execution.scene_cost import scene_geometry_cost
-
-    faces = scene_geometry_cost(scene)["unique_faces"]
-    if faces <= max_faces:
-        return None
-    eevee = _engine_id(scene, "eevee") or _EEVEE_ENGINES[0]
-    set_value(render, "engine", eevee)
-    return {
-        "from": "CYCLES", "to": eevee,
-        "reason": f"{faces} unique faces over the {max_faces}-face budget for this machine",
-    }
+    from mixar.modules.common.render_coordinator.core.geometry_budget import downgrade_over_budget
+    return downgrade_over_budget(scene, set_value, max_faces,
+                                 _engine_id(scene, "eevee") or _EEVEE_ENGINES[0])
 
 
 def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0):
