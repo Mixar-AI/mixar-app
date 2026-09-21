@@ -388,13 +388,15 @@ void agent_ui_layout_build(const int window_w,
   /* --- Chip row ---
    * The mode toggle is gone (there is only Agent mode), so Upload Reference
    * takes the row's left edge where the toggle sat. Left to right: Upload
-   * Reference, Scribble, Voice, Auto, then the two conditional Scribble
-   * chips; Send is pinned to the right inset. */
+   * Reference, Scribble, Voice, Auto, Model, then the two conditional
+   * Scribble chips; Send is pinned to the right inset. */
   const float scribble_x = AGENT_SEG_X + AGENT_CHIP_UPLOAD_W + AGENT_CHIP_GAP;
   r_layout->chip_upload = f.box(AGENT_SEG_X, chip_y, AGENT_CHIP_UPLOAD_W, AGENT_CHIP_H);
   r_layout->chip_scribble = f.box(scribble_x, chip_y, AGENT_CHIP_SCRIBBLE_W, AGENT_CHIP_H);
   r_layout->chip_voice = f.box(scribble_x, chip_y, AGENT_CHIP_VOICE_W, AGENT_CHIP_H);
   r_layout->chip_auto = f.box(scribble_x, chip_y, AGENT_CHIP_AUTO_W, AGENT_CHIP_H);
+  r_layout->chip_model = f.box(scribble_x, chip_y, AGENT_CHIP_MODEL_W, AGENT_CHIP_H);
+  r_layout->model_form = AgentModelChipForm::Full;
   r_layout->chip_reading = f.box(scribble_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
   r_layout->chip_clear = f.box(scribble_x, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);
   /* Generate keeps the artboard's right inset against whatever card width
@@ -406,7 +408,9 @@ void agent_ui_layout_build(const int window_w,
 }
 
 /* Fit the labels actually shown, including the mark count and Voice status.
- * Only the secondary reference label shortens; counts and Send remain visible. */
+ * Counts and Send remain visible. Two things shorten, in this order: the
+ * model chip walks its own compact ladder (and disappears), then the
+ * secondary reference label drops to "Reference". */
 void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state)
 {
   const float u = layout.scale;
@@ -430,11 +434,47 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   const float reading_w = state.mark_count ?
                               width(state.mark_intent[0] ? state.mark_intent : "Auto", AGENT_CHIP_ICON) : 0;
   const float clear_w = state.mark_count && !state.scribble_armed ? AGENT_CHIP_CLEAR_W * u : 0;
-  const float rest = annotate_w + voice_w + auto_w + reading_w + clear_w +
+  const float rest_fixed = annotate_w + voice_w + auto_w + reading_w + clear_w +
                      gap * (2 + (annotate_w > 0) + (voice_w > 0) + (reading_w > 0) + (clear_w > 0));
-  const float upload_budget = layout.btn_generate.xmin - layout.chip_upload.xmin - rest;
+  const float span = layout.btn_generate.xmin - layout.chip_upload.xmin;
+  /* Upload Reference's hard floor: its picture mark and nothing else. */
+  const float upload_floor = AGENT_CHIP_ICON * u + padding;
+
+  /* Model chip. It draws out of the SAME budget as every other chip, so a
+   * long model name must not be what pushes Upload Reference off the row.
+   * Two passes over its compact ladder: first insisting the compact
+   * "Reference" label still fits, then settling for Upload's icon-only
+   * floor. If even the icon-only chip cannot buy that, the model chip is
+   * dropped for this width (the footer picker still has it). */
+  const char *model_label = state.model_label[0] ? state.model_label : "Model";
+  const float model_chevron = (AGENT_CHIP_ICON * 0.7f + AGENT_CHIP_ICON_GAP) * u;
+  const float model_ladder[3] = {
+      width(model_label, AGENT_CHIP_ICON) + model_chevron,
+      width(model_label, AGENT_CHIP_ICON),
+      upload_floor,
+  };
+  const float model_floors[2] = {width("Reference", AGENT_CHIP_ICON), upload_floor};
+  float model_w = 0.0f;
+  layout.model_form = AgentModelChipForm::Icon;
+  if (state.model_available) {
+    for (const float floor_w : model_floors) {
+      for (int i = 0; i < 3; i++) {
+        if (span - (rest_fixed + model_ladder[i] + gap) >= floor_w) {
+          model_w = model_ladder[i];
+          layout.model_form = AgentModelChipForm(i);
+          break;
+        }
+      }
+      if (model_w > 0.0f) {
+        break;
+      }
+    }
+  }
+
+  const float rest = rest_fixed + (model_w > 0.0f ? model_w + gap : 0.0f);
+  const float upload_budget = span - rest;
   layout.compact_reference = width("Upload Reference", AGENT_CHIP_ICON) > upload_budget;
-  const float upload_w = std::max(AGENT_CHIP_ICON * u + padding,
+  const float upload_w = std::max(upload_floor,
       std::min(width(layout.compact_reference ? "Reference" : "Upload Reference", AGENT_CHIP_ICON),
                upload_budget));
   float x = layout.chip_upload.xmin;
@@ -448,6 +488,7 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   place(layout.chip_scribble, annotate_w);
   place(layout.chip_voice, voice_w);
   place(layout.chip_auto, auto_w);
+  place(layout.chip_model, model_w);
   place(layout.chip_reading, reading_w);
   place(layout.chip_clear, clear_w);
 }

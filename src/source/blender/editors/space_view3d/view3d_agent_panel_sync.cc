@@ -23,6 +23,7 @@
 #include "RNA_access.hh"
 
 #include "view3d_agent_panel.hh"
+#include "view3d_workspace_viewer.hh"
 #include <algorithm>
 #include <cmath>
 
@@ -74,12 +75,8 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
   blender::Map<std::string, double> seen_running;
   blender::Map<std::string, double> seen_exit;
   blender::Map<std::string, AgentPanelCard> previous_cards;
-  blender::Set<std::string> expanded;
   for (const AgentPanelCard &card : runtime->cards) {
     previous_cards.add_overwrite(std::string(card.task_id), card);
-    if (card.expanded) {
-      expanded.add(std::string(card.task_id));
-    }
     if (card.seen_running_at != 0.0) {
       seen_running.add_overwrite(std::string(card.task_id), card.seen_running_at);
     }
@@ -110,7 +107,6 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
     previous_cards.clear();
     seen_running.clear();
     seen_exit.clear();
-    expanded.clear();
   }
 
   int arrivals = 0;
@@ -152,7 +148,7 @@ void view3d_agent_panel_cards_sync(const bContext *C, AgentPanelRuntime *runtime
     if (card.dismissing || card.status == AgentCardStatus::Done) {
       card.seen_exit_at = seen_exit.lookup_default(std::string(card.task_id), now);
     }
-    card.expanded = expanded.contains(std::string(card.task_id));
+    card.has_workspace = view3d_workspace_scene(CTX_data_main(C), CTX_data_scene(C), card.task_id) != nullptr;
     card.cat_ordinal = runtime->cat_identities.lookup_or_add(std::string(card.task_id),
                                                              int(runtime->cat_identities.size()));
 

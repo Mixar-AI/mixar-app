@@ -121,7 +121,7 @@ class _FakeRegion:
 def _context_with_view3d(region):
     area = SimpleNamespace(type='VIEW_3D', regions=[region])
     return SimpleNamespace(
-        window=SimpleNamespace(screen=SimpleNamespace(areas=[area])),
+        window=SimpleNamespace(screen=SimpleNamespace(areas=[area]), modal_operators={}),
     )
 
 
@@ -186,3 +186,13 @@ def test_hit_test_failure_falls_back_to_blocking(monkeypatch):
 
     monkeypatch.setattr(TR, "point_in_any_toast_control", _boom)
     assert _run_modal(_event(), monkeypatch) == {"RUNNING_MODAL"}
+
+
+def test_new_lock_yields_to_existing_read_only_workspace_viewer(monkeypatch):
+    monkeypatch.setattr(VBO, "is_agent_executing", lambda: True)
+    context = _context_with_view3d(_FakeRegion())
+    context.window.modal_operators['VIEW3D_OT_workspace_viewer'] = object()
+    op = VBO.MIXAR_OT_agent_viewport_block()
+    assert op.modal(context, _event(on_control=False)) == {"PASS_THROUGH"}
+    context.window.modal_operators.clear()
+    assert op.modal(context, _event(on_control=False)) == {"RUNNING_MODAL"}

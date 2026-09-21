@@ -311,7 +311,7 @@ AgentPanelHit view3d_agent_panel_hit_test(AgentPanelRuntime *runtime,
     if (BLI_rcti_isect_pt(&card.action_rect, mval[0], mval[1])) {
       return AgentPanelHit::Action;
     }
-    if (BLI_rcti_isect_pt(&card.eye_rect, mval[0], mval[1])) {
+    if (card.has_workspace && BLI_rcti_isect_pt(&card.eye_rect, mval[0], mval[1])) {
       return AgentPanelHit::Eye;
     }
     return AgentPanelHit::Card;

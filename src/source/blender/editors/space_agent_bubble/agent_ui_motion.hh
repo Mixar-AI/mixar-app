@@ -26,6 +26,7 @@ enum class AgentIslandControl {
   Clear,
   Voice,
   Auto,
+  Model,
   Generate,
   Count,
 };

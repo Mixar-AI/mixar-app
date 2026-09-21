@@ -23,6 +23,7 @@
 #include "../interface/interface_qa_inspect.hh"
 
 #include "view3d_agent_panel.hh"
+#include "view3d_workspace_viewer.hh"
 #include "../space_agent_bubble/agent_ui_cat_style.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -37,6 +38,9 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
 {
   if (area->spacetype != SPACE_VIEW3D || region->regiontype != RGN_TYPE_EXECUTE) {
     return;
+  }
+  if (const WorkspaceViewer *viewer = view3d_workspace_viewer_active()) {
+    if (viewer->region && viewer->area == area) { return; }
   }
   /* Read `regiondata` directly, never `runtime_ensure`: a dump must not
    * allocate region data on a panel the user has not opened. */
@@ -70,7 +74,7 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
      * keeps the harness off hand-computed offsets — they are the SAME rects
      * the layout pass wrote and the click handler hit-tests, so a metric
      * change moves the targets with the pixels. */
-    push(card.rect, "agent_panel_card", card.expanded ? card.task : card.name, i);
+    push(card.rect, "agent_panel_card", card.name, i);
     /* Same pane bounds and sampled fraction the painter consumes. No second
      * clock in introspection, so the value describes the last drawn frame. */
     rcti progress_visible;
@@ -83,7 +87,10 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
       push(cat_visible, "agent_panel_cat", card.task_id, i);
       r_targets.back().value = mixie_cat_style(card.cat_ordinal).name;
     }
-    push(card.eye_rect, "agent_panel_eye", "eye", i);
+    if (card.has_workspace) {
+      push(card.eye_rect, "agent_panel_eye", "eye", i);
+      r_targets.back().value = card.task_id;
+    }
     push(card.action_rect, "agent_panel_dismiss", "dismiss", i);
   }
 
