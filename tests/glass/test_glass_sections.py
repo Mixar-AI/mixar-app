@@ -136,6 +136,21 @@ class TestTheSectionCardsArePanes:
         assert "zen_glass_cell(but)" in exec_body
         assert "wtb.draw_inner = false;" in exec_body
 
+    def test_a_wide_zen_toolbar_cell_clamps_to_a_square(self) -> None:
+        """A tools-region column stretches these buttons to the region width.
+        The capsule radius is half the short side, so a wide short cell paints
+        a horizontal bar and the glyph sits on its left. Clamping the draw
+        rect to a square anchored on that edge keeps the pane, the selected
+        wash and the icon on the same footprint. Header shading rows are wider
+        than they are tall on purpose, so the clamp is toolbar-tools only."""
+        body = _code(_fn_body(WIDGETS, "static void widget_zen_tool_glass("))
+        clamp = body[: body.index("rctf pane;")]
+        assert "if (zen_toolbar_tool(but))" in clamp
+        assert "w > h && h > 0" in clamp
+        assert "rect->xmax = rect->xmin + h;" in clamp
+        icons = _code(_fn_body(WIDGETS, "static void widget_draw_text_icon("))
+        assert "is_tool && !zen_toolbar_tool(but)" in icons
+
     def test_explicit_glass_tool_capsules_take_the_readability_floor(self) -> None:
         """The 0.20 wash is calibrated for the viewport transform strip, whose
         only backdrop is the 3D view. An explicit GLASS_TOOL capsule floats

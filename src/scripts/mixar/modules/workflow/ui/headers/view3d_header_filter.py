@@ -30,6 +30,13 @@ _original_tools_active_draw = None
 # 20 px there, so 2.3 reproduces it. Blender's stock toolbar uses 1.75.
 _ZEN_TOOL_SCALE_Y = 2.3
 
+# One toolbar icon column. `UI_TOOLBAR_COLUMN` is 1.25 * 32 px and the
+# widget unit is 20 px, so two units is the column the glyphs were drawn
+# for. The tools panel root is itself a column and stretches every child
+# to the region width; without this the glass pane (radius = half the
+# short side) becomes a horizontal capsule and the glyphs sit on its left.
+_ZEN_TOOL_UNITS_X = 2.0
+
 _DEFAULT_FALLBACK_TOOL = "builtin.select"
 """Safety net for `VIEW3D_PT_tools_active.tool_fallback_id`, which is
 `"builtin.select"` (Tweak, the stock first tool). Only used if the panel has
@@ -247,10 +254,16 @@ def _patched_tools_active_draw(self, context):
     if gap > 0.0:
         layout.separator(factor=gap)
 
-    surface = layout.mixar_surface(theme="ZEN")
+    # A column child of the tools panel is stretched to the region width.
+    # A left-aligned row keeps this icon column at `_ZEN_TOOL_UNITS_X`
+    # instead, packed against the left edge where the glyphs already sit.
+    row = layout.row(align=False)
+    row.alignment = "LEFT"
+    surface = row.mixar_surface(theme="ZEN")
     # align=True is load-bearing: it sets `alignnr` so C++ paints one glass
     # pane for the column instead of three separate pills.
     col = surface.column(align=True)
+    col.ui_units_x = _ZEN_TOOL_UNITS_X
     col.scale_y = _ZEN_TOOL_SCALE_Y
     fallback_idname = _fallback_tool_idname()
     resolves = _tool_resolves(cls, context)

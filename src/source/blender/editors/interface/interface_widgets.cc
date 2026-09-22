@@ -1358,6 +1358,7 @@ static int but_draw_menu_icon(const Button *but)
 
 /* icons have been standardized... and this call draws in untransformed coordinates */
 
+static bool zen_toolbar_tool(const Button *but);
 static bool zen_glass_cell(const Button *but);
 
 static void widget_draw_icon(
@@ -1385,6 +1386,7 @@ static void widget_draw_icon(
   const float icon_scale = but->icon_scale * (glass_tool ? 1.5f : 1.0f);
   const float aspect = (1.0f / icon_scale) * but->block->aspect * UI_INV_SCALE_FAC;
   const float height = ICON_DEFAULT_HEIGHT / aspect;
+  const bool mixar_is_tool_icon = (but->icon != ICON_NONE) && but_is_tool(but);
   bool force_outline = false;
 
   /* calculate blend color */
@@ -1445,7 +1447,17 @@ static void widget_draw_icon(
       }
     }
     else {
-      xs = (rect->xmin + rect->xmax - height) / 2.0f;
+      float width = height;
+#ifdef USE_UI_TOOLBAR_HACK
+      /* GEOM and toolbar SVG icons expand to toolbar size in icon_draw_size.
+       * That pass preserves their vertical center but keeps x fixed. Center
+       * the final width here so Zen's centered tool glyphs stay in the pane;
+       * left-aligned native tools retain their existing padding. */
+      if (mixar_is_tool_icon) {
+        width = ICON_DEFAULT_HEIGHT_TOOLBAR / aspect;
+      }
+#endif
+      xs = (rect->xmin + rect->xmax - width) / 2.0f;
     }
     ys = (rect->ymin + rect->ymax - height) / 2.0f;
 
@@ -1467,7 +1479,6 @@ static void widget_draw_icon(
      * `.dat` GEOM icons already self-scale via `USE_UI_TOOLBAR_HACK`.
      * The `extern "C"` prototype lives at file scope (above) — MSVC
      * `/permissive-` rejects in-function linkage specifications. */
-    const bool mixar_is_tool_icon = (but->icon != ICON_NONE) && but_is_tool(but);
     if (mixar_is_tool_icon) {
       UI_mixar_set_drawing_tool_icon(true);
     }
@@ -3348,7 +3359,7 @@ static void widget_draw_text_icon(const uiFontStyle *fstyle,
     const float icon_padding = 2 * UI_SCALE_FAC;
 
 #ifdef USE_UI_TOOLBAR_HACK
-    if (is_tool) {
+    if (is_tool && !zen_toolbar_tool(but)) {
       /* pass (even if its a menu toolbar) */
       but->drawflag |= BUT_TEXT_LEFT;
       but->drawflag |= BUT_ICON_LEFT;
@@ -6105,6 +6116,22 @@ static void widget_zen_tool_glass(Button *but,
                                   const WidgetStateInfo *state,
                                   const int roundboxalign)
 {
+  /* The tools panel is a column, so these buttons inherit the region width.
+   * A cell wider than it is tall then paints a horizontal capsule — the
+   * radius is half the short side — and the glyph sits on the left edge.
+   * Clamp the draw rect to a square anchored on that left edge. The union
+   * below maps into this width, and the icon pass after this call uses the
+   * same rect, so the capsule and the glyph stay on top of each other.
+   * Header shading rows and explicit GlassTool capsules are wider than they
+   * are tall on purpose and are not toolbar tools, so they are left alone. */
+  if (zen_toolbar_tool(but)) {
+    const int w = BLI_rcti_size_x(rect);
+    const int h = BLI_rcti_size_y(rect);
+    if (w > h && h > 0) {
+      rect->xmax = rect->xmin + h;
+    }
+  }
+
   rctf pane;
   BLI_rctf_rcti_copy(&pane, rect);
   bool paint_bed = true;
