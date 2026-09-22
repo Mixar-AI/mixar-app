@@ -6,15 +6,16 @@
 import bpy
 from bpy.props import BoolProperty
 
-from ...core.zen_scene import set_sky_enabled
+from ...core.zen_scene import set_sky_enabled, sky_enabled
+from ...core.zen_sky_viewports import set_sky_viewports
 
 
 class MIXAR_OT_zen_set_sky(bpy.types.Operator):
     bl_idname = "mixar.zen_set_sky"
     bl_label = "Enable Sky Light"
     bl_description = ("Use a procedural sky for scene lighting in renders; "
-                      "Off restores the previous world. Visible in Material Preview "
-                      "and Rendered shading with Scene World enabled")
+                      "Off restores the previous world and viewport lighting. "
+                      "Visible in Material Preview and Rendered shading")
     bl_options = {"REGISTER", "UNDO"}
 
     enabled: BoolProperty(default=True)
@@ -25,18 +26,13 @@ class MIXAR_OT_zen_set_sky(bpy.types.Operator):
 
     def execute(self, context):
         try:
+            restart = self.enabled and not sky_enabled(context.scene)
             set_sky_enabled(context.scene, self.enabled)
+            set_sky_viewports(context.scene, self.enabled, context.screen, restart=restart)
         except (RuntimeError, TypeError, AttributeError) as exc:
             self.report({"ERROR"}, f"Could not change sky lighting: {exc}")
             return {"CANCELLED"}
         areas = context.screen.areas if context.screen else ()
-        if self.enabled:
-            # Make the scene lighting visible in both preview modes. Solid
-            # and Wireframe keep their native, unlit display.
-            for area in areas:
-                if area.type == "VIEW_3D":
-                    area.spaces.active.shading.use_scene_world = True
-                    area.spaces.active.shading.use_scene_world_render = True
         for area in areas:
             area.tag_redraw()
         return {"FINISHED"}

@@ -236,6 +236,8 @@ def sky(qa):
     saved = qa.eval(SETUP + """
 original = scene.world
 original['qa_zen_preserve'] = 'original-world'
+view.shading.use_scene_world = False
+view.shading.use_scene_world_render = True
 result = {'name':original.name, 'nodes':len(original.node_tree.nodes)}
 """)
     qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="ON")
@@ -260,6 +262,7 @@ result=preview()
     qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="OFF")
     assert qa.eval(SETUP + "result=scene.world.name") == saved["name"]
     assert qa.eval(SETUP + "result=len(scene.world.node_tree.nodes)") == saved["nodes"]
+    assert qa.eval(SETUP + "result=[view.shading.use_scene_world, view.shading.use_scene_world_render]") == [False, True]
     snap(qa, "sky-off")
     qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="ON")
     assert qa.eval("result=len(bpy.data.worlds)") == data["worlds"], "Toggle leaked worlds"
@@ -326,13 +329,16 @@ def compact(qa):
 
 def persistence(qa):
     original = qa.eval(SETUP + "result=scene.world.name")
+    flags = qa.eval(SETUP + "result=[view.shading.use_scene_world, view.shading.use_scene_world_render]")
     qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="ON")
     qa.click(area_type="TOPBAR", text="Edit")
     qa.click(popup=True, op="ED_OT_undo")
     qa.wait(f"drv.main_window().scene.world.name == {original!r}", timeout=6)
+    assert qa.eval(SETUP + "result=[view.shading.use_scene_world, view.shading.use_scene_world_render]") == flags
     qa.click(area_type="TOPBAR", text="Edit")
     qa.click(popup=True, op="ED_OT_redo")
     qa.wait("drv.main_window().scene.world == drv.main_window().scene.mixar_zen_sky.sky_world", timeout=6)
+    assert qa.eval(SETUP + "result=[view.shading.use_scene_world, view.shading.use_scene_world_render]") == [True, True]
     path = OUT / "sky-persistence.mixar"
     qa.eval(f"result=str(bpy.ops.wm.save_as_mainfile(filepath={str(path)!r}, check_existing=False))")
     assert path.exists()
@@ -341,6 +347,7 @@ def persistence(qa):
     assert qa.eval(SETUP + "result=scene.world == scene.mixar_zen_sky.sky_world")
     qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="OFF")
     assert qa.eval(SETUP + "result=scene.world.name") == original
+    assert qa.eval(SETUP + "result=[view.shading.use_scene_world, view.shading.use_scene_world_render]") == flags
     snap(qa, "sky-restored-after-reopen")
     return {"undo_redo": True, "reopened": str(path), "restored": original}
 
