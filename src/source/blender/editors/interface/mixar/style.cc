@@ -95,7 +95,7 @@ void mixar_style_button(Button *button,
 }
 
 void mixar_style_last(Layout *layout, const MixarComponent component, const MixarVariant variant,
-                      const bool all_items)
+                      const bool all_items, const bool selected)
 {
   auto &buttons = layout->block()->buttons_ptrs;
   for (int64_t i = buttons.size(); i-- > 0;) {
@@ -112,6 +112,7 @@ void mixar_style_last(Layout *layout, const MixarComponent component, const Mixa
     }
     if (supports(*button, component)) {
       mixar_style_button(button, component, variant);
+      mixar_button_lit_set(button, selected);
       if (!all_items) {
         return;
       }

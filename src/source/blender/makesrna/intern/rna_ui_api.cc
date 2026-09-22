@@ -982,11 +982,13 @@ static Layout *rna_uiLayoutMixarSurface(Layout *layout, int theme, int density)
   return &surface;
 }
 
-static void rna_uiLayoutMixarStyle(Layout *layout, int component, int variant, bool all_items)
+static void rna_uiLayoutMixarStyle(
+    Layout *layout, int component, int variant, bool all_items, bool selected)
 {
   const int64_t count = ui::mixar_button_count(layout);
   if (count > 0) {
-    ui::mixar_style_last(layout, ui::MixarComponent(component), ui::MixarVariant(variant), all_items);
+    ui::mixar_style_last(
+        layout, ui::MixarComponent(component), ui::MixarVariant(variant), all_items, selected);
   }
 }
 
@@ -1793,6 +1795,7 @@ void RNA_api_ui_layout(StructRNA *srna)
   RNA_def_enum(func, "component", mixar_component_items, 1, "Component", "Style the last item in this layout");
   RNA_def_enum(func, "variant", mixar_variant_items, 0, "Variant", "Semantic visual variant");
   RNA_def_boolean(func, "all_items", false, "All Items", "Style all supported buttons in this layout subtree");
+  RNA_def_boolean(func, "selected", false, "Selected", "Show a persistent active state without changing the bound value or operator");
 
   static const EnumPropertyItem mixar_cinema_row_items[] = {
       {0, "OPTION", 0, "Option", "Unselected popup choice"},

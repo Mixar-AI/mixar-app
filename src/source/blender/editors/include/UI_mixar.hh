@@ -28,7 +28,7 @@ bool mixar_block_clip_pixelrect(const ARegion *region, const Block *block, rcti 
 /** Intersect the current GPU scissor with the block viewport for drawing. */
 void mixar_block_clip_apply(const ARegion *region, const Block *block);
 void mixar_style_last(Layout *layout, MixarComponent component, MixarVariant variant,
-                      bool all_items = false);
+                      bool all_items = false, bool selected = false);
 int64_t mixar_button_count(const Layout *layout);
 void mixar_style_new_buttons(Layout *layout,
                              int64_t first,

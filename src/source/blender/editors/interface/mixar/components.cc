@@ -23,8 +23,8 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   const float u = style.unit > 0.0f ? style.unit : UI_SCALE_FAC * 0.65f;
   const bool disabled = (button.flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
   const MixarInteraction motion = mixar_button_motion(button);
-  const bool selected = style.lit || (button.type != ButtonType::But &&
-                                      (button.flag & (UI_SELECT | UI_SELECT_DRAW)));
+  const bool selected = style.lit || (button.flag & UI_SELECT_DRAW) ||
+                        (button.type != ButtonType::But && (button.flag & UI_SELECT));
   const bool editing = button.editstr != nullptr;
   rctf rect = {float(bounds.xmin), float(bounds.xmax), float(bounds.ymin), float(bounds.ymax)};
   const bool input = style.component == MixarComponent::Input;
@@ -75,7 +75,8 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   }
   float fill[4];
   copy_v4_v4(fill, background);
-  if (style.component == MixarComponent::Segment ||
+  if (style.component == MixarComponent::Action ||
+      style.component == MixarComponent::Segment ||
       (style.component == MixarComponent::Toggle && style.unit == 0.0f) ||
       (style.component == MixarComponent::Surface && button.type == ButtonType::But))
   {
@@ -92,6 +93,17 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
                                         0.5f * std::min(BLI_rctf_size_x(&rect),
                                                         BLI_rctf_size_y(&rect)));
     mixar_fill_round(rect, corner_radius, fill);
+    /* Persistent tool selection is distinct from hover/press, including
+     * operator depress and menu buttons carrying an explicit active state. */
+    if (style.component == MixarComponent::Action && !disabled && motion.selected > 0.0f) {
+      float outline[4];
+      copy_v4_v4(outline, mixar_zen().focus);
+      outline[3] *= motion.selected;
+      rctf inset = rect;
+      BLI_rctf_pad(&inset, -U.pixelsize, -U.pixelsize);
+      draw_roundbox_corner_set(CNR_ALL);
+      draw_roundbox_4fv(&inset, false, std::max(0.0f, corner_radius - U.pixelsize), outline);
+    }
     if (button.type == ButtonType::NumSlider && !editing) {
       const double range = double(button.softmax) - double(button.softmin);
       const float fraction =

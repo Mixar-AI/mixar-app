@@ -38,7 +38,11 @@ def draw_moodboard_add_tools(layout, context):
     row.enabled = any(item.selected and item.image and item.image.source != 'MOVIE'
                       for item in context.scene.mixie_moodboard_images)
     row.menu("MIXIE_MT_mask_tools", text="", icon="MOD_MASK")
-    row.mixar_style(component="ACTION", variant="SECONDARY")
+    edit_state = getattr(context.scene, "mixie_edit_tool_state", None)
+    mask_active = getattr(edit_state, "active_tool", "NONE") in {
+        "BOX_MASK", "LASSO", "MAGIC_SELECT",
+    }
+    row.mixar_style(component="ACTION", variant="SECONDARY", selected=mask_active)
     row = col.row()
     row.menu("MIXIE_MT_canvas_board", text="", icon="DOWNARROW_HLT")
     row.mixar_style(component="ACTION", variant="SECONDARY")
