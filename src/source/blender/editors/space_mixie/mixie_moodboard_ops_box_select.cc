@@ -8,6 +8,7 @@
  * \brief Moodboard box select operator
  */
 
+#include "mixie_draw_moodboard_intern.hh"
 #include "mixie_moodboard_ops_common.hh"
 
 namespace blender::ed::mixie {
@@ -235,14 +236,8 @@ static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
       float pos_y = RNA_property_float_get(&item_ptr, pos_y_prop);
       float scale = RNA_property_float_get(&item_ptr, scale_prop);
 
-      /* Calculate image bounds */
-      void *lock;
-      ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-      float img_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
-      float img_height = (ibuf && ibuf->x > 0 && ibuf->y > 0) ?
-                             (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale :
-                             MOODBOARD_IMAGE_BASE_SIZE * scale;
-      BKE_image_release_ibuf(image, ibuf, lock);
+      const float img_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
+      const float img_height = img_width * mixie_moodboard_image_aspect(image);
 
       bool intersects = box_intersects_aabb(
           box_min_x, box_min_y, box_max_x, box_max_y, pos_x, pos_y, pos_x + img_width, pos_y + img_height);

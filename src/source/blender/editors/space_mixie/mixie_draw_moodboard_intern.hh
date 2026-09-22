@@ -61,6 +61,18 @@ namespace blender::ed::mixie {
  */
 gpu::Texture *mixie_moodboard_srgb_texture(Image *image, ImageUser *image_user);
 
+/**
+ * Pixel size of \a image for layout.
+ *
+ * A matching draw stamp (session uid, depsgraph update count, last frame and
+ * the requested frame) returns the cached size without taking the image lock.
+ * Session uid 0 or a missing runtime never hits that cache. False leaves
+ * \a r_width and \a r_height unchanged.
+ */
+bool mixie_moodboard_image_size(Image *image, ImageUser *image_user, int *r_width, int *r_height);
+/** Height / width for canvas tiles. 1 when the buffer cannot be read. */
+float mixie_moodboard_image_aspect(Image *image);
+
 /* -------------------------------------------------------------------- */
 /** \name RNA Property Caching
  *

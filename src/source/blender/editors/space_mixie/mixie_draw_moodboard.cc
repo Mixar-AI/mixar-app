@@ -361,10 +361,8 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
    * in the screen-space pass, so a member can never cover it. */
   mixie_draw_moodboard_frames(C, v2d);
 
-  /* One rect/link cache for every graph pass of this frame. Each pass
-   * building its own re-acquired every image's ImBuf (aspect lookup) several
-   * times per redraw — at the generating-glow repaint rate that was the
-   * dominant per-frame cost on a large board. */
+  /* One rect/link cache for every graph pass of this frame. Aspect comes
+   * from the draw-stamp size cache, so a warm tile does not lock an ImBuf. */
   MoodboardGraphCache graph_cache;
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
   moodboard_graph_cache_build(&scene_ptr, &graph_cache);

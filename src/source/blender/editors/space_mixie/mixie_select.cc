@@ -12,16 +12,13 @@
 #include <cmath>
 
 #include "BKE_context.hh"
-#include "BKE_image.hh"
 
-#include "DNA_image_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 
-#include "IMB_imbuf_types.hh"
-
 #include "RNA_access.hh"
 
+#include "mixie_draw_moodboard_intern.hh"
 #include "mixie_intern.hh"
 #include "mixie_moodboard_ops_common.hh"
 
@@ -110,21 +107,9 @@ int moodboard_find_image_under_mouse(PointerRNA *scene_ptr,
     /* Clamp scale to valid range to prevent rendering issues */
     scale = std::clamp(scale, MOODBOARD_IMAGE_MIN_SCALE, MOODBOARD_IMAGE_MAX_SCALE);
 
-    /* Calculate image bounds using same logic as rendering */
-    void *lock;
-    ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-    float img_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
-    float img_height;
-
-    /* Validate image buffer and dimensions */
-    if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
-      img_height = (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale;
-    }
-    else {
-      /* Fallback to square for images without valid buffers */
-      img_height = MOODBOARD_IMAGE_BASE_SIZE * scale;
-    }
-    BKE_image_release_ibuf(image, ibuf, lock);
+    /* Same aspect the draw pass uses; a warm image does not take the lock. */
+    const float img_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
+    const float img_height = img_width * mixie_moodboard_image_aspect(image);
 
     /* Inverse-rotate mouse into the image's local space so that the
      * axis-aligned bounds check works correctly for rotated images. */
@@ -284,18 +269,8 @@ int moodboard_find_resize_handle_at_mouse(PointerRNA *scene_ptr,
 
       scale = std::clamp(scale, MOODBOARD_IMAGE_MIN_SCALE, MOODBOARD_IMAGE_MAX_SCALE);
 
-      void *lock;
-      ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-      float img_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
-      float img_height;
-
-      if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
-        img_height = (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale;
-      }
-      else {
-        img_height = MOODBOARD_IMAGE_BASE_SIZE * scale;
-      }
-      BKE_image_release_ibuf(image, ibuf, lock);
+      const float img_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
+      const float img_height = img_width * mixie_moodboard_image_aspect(image);
 
       /* Inverse-rotate mouse into the image's local space */
       float local_mx, local_my;
@@ -529,16 +504,11 @@ int mixie_get_sam3d_preview_at_position(const bContext *C,
 
     /* Calculate thumbnail width maintaining aspect ratio */
     int thumb_width = PREVIEW_THUMB_HEIGHT; /* Default to square */
-
-    void *lock;
-    ImBuf *ibuf = BKE_image_acquire_ibuf(history_image, nullptr, &lock);
-
-    if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
-      /* Maintain aspect ratio, fit to height */
-      float aspect_ratio = float(ibuf->x) / float(ibuf->y);
-      thumb_width = int(PREVIEW_THUMB_HEIGHT * aspect_ratio);
+    int src_x = 0;
+    int src_y = 0;
+    if (mixie_moodboard_image_size(history_image, nullptr, &src_x, &src_y) && src_y > 0) {
+      thumb_width = int(PREVIEW_THUMB_HEIGHT * (float(src_x) / float(src_y)));
     }
-    BKE_image_release_ibuf(history_image, ibuf, lock);
 
     /* Check if we're past the region width */
     if (current_x + thumb_width > region->winx - PREVIEW_PADDING) {
@@ -620,15 +590,11 @@ int mixie_get_sam3d_preview_delete_at_position(const bContext *C,
 
     /* Calculate thumbnail width maintaining aspect ratio */
     int thumb_width = PREVIEW_THUMB_HEIGHT;
-
-    void *lock;
-    ImBuf *ibuf = BKE_image_acquire_ibuf(history_image, nullptr, &lock);
-
-    if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
-      float aspect_ratio = float(ibuf->x) / float(ibuf->y);
-      thumb_width = int(PREVIEW_THUMB_HEIGHT * aspect_ratio);
+    int src_x = 0;
+    int src_y = 0;
+    if (mixie_moodboard_image_size(history_image, nullptr, &src_x, &src_y) && src_y > 0) {
+      thumb_width = int(PREVIEW_THUMB_HEIGHT * (float(src_x) / float(src_y)));
     }
-    BKE_image_release_ibuf(history_image, ibuf, lock);
 
     if (current_x + thumb_width > region->winx - PREVIEW_PADDING) {
       break;

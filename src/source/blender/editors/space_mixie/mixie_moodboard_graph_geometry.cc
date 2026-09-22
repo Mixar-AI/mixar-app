@@ -132,13 +132,7 @@ bool moodboard_graph_media_rect(PointerRNA *item, rctf *r_rect)
   if (!image) {
     return false;
   }
-  float aspect = 1.0f;
-  void *lock = nullptr;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-  if (ibuf && ibuf->x > 0) {
-    aspect = float(ibuf->y) / float(ibuf->x);
-  }
-  BKE_image_release_ibuf(image, ibuf, lock);
+  const float aspect = mixie_moodboard_image_aspect(image);
   const float width = MOODBOARD_IMAGE_BASE_SIZE * RNA_float_get(item, "scale");
   r_rect->xmin = RNA_float_get(item, "position_x");
   r_rect->ymin = RNA_float_get(item, "position_y");
@@ -333,9 +327,9 @@ void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cac
 {
   /* One pass over the three collections, reused by every link. Resolving each
    * endpoint independently meant re-scanning the whole image collection per
-   * link — and acquiring that image's ImBuf again just to read its aspect —
-   * which made link drawing O(links * images) with a locked buffer acquire in
-   * the inner loop, every redraw. */
+   * link — and locking that image's buffer again just to read its aspect —
+   * which made link drawing O(links * images) every redraw. Aspect now comes
+   * from mixie_moodboard_image_aspect, so a warm tile does not take the lock. */
   cache->outputs.clear();
   cache->action_nodes.clear();
   cache->occupied_inputs.clear();
