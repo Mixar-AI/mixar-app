@@ -35,6 +35,7 @@
 #include "BKE_context.hh"
 
 #include "DNA_screen_types.h"
+#include "DNA_windowmanager_types.h"
 
 #include "RNA_access.hh"
 
@@ -118,6 +119,21 @@ void wrap_two_lines(
     r_a[split] = '\0';
   }
   pane_fit_text(r_b, max_w, font);
+}
+
+/** Sketch and Voice lock every tab change, including this column's Queue jump. */
+bool tabs_locked(const bContext *C)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (wm == nullptr) {
+    return false;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  auto armed = [&](const char *name) -> bool {
+    PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, name);
+    return prop != nullptr && RNA_property_boolean_get(&wm_ptr, prop);
+  };
+  return armed("mixar_mark_armed") || armed("mixie_chat_voice_listening");
 }
 
 /** The chip row under the preview: whichever of model / age / kind exist. */
@@ -355,12 +371,17 @@ void agent_ui_generations_detail(const bContext *C,
     }
     if (item.kind == GEN_ITEM_JOB && i == 1) {
       /* Jump to the Queue tab — the same stock operator the tab strip uses,
-       * so there is exactly one way the island changes tabs. */
-      ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
+       * so there is exactly one way the island changes tabs. While sketching
+       * or dictating that jump is the same refusal as the strip. */
+      const bool locked = tabs_locked(C);
+      ui::Button *but = uiDefButO(block, ui::ButtonType::But,
+                             locked ? "mixar.bubble_tab_locked" : "wm.context_set_enum",
                              blender::wm::OpCallContext::InvokeDefault, "",
                              int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
-                             short(BLI_rctf_size_y(&r)), "Show the generation queue");
-      if (but) {
+                             short(BLI_rctf_size_y(&r)),
+                             locked ? "Finish sketching or dictating before switching tabs" :
+                                      "Show the generation queue");
+      if (but && !locked) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_tab");
         RNA_string_set(op_ptr, "value", "QUEUE");

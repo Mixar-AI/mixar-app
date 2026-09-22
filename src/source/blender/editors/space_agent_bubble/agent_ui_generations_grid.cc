@@ -12,10 +12,12 @@
  * \section drag Dragging a generation into the viewport
  *
  * A 3D tile's button carries Blender's OWN asset drag
- * (#ui::button_drag_set_asset), so releasing it over a 3D viewport runs the
- * View3D's existing asset dropbox: the import method the library is
- * configured with, the undo push, the placement under the cursor — all of it
- * is Blender's, none of it re-implemented here. That is only possible because
+ * (#ui::button_drag_set_asset) plus #BUT_DRAG_FULL_BUT, so releasing it over a
+ * 3D viewport runs the View3D's existing asset dropbox: the import method the
+ * library is configured with, the undo push, the placement under the cursor —
+ * all of it is Blender's, none of it re-implemented here. The full-button flag
+ * is what lets a viewport-clipped tile start that drag from its visible strip.
+ * That is only possible because
  * the generations already ARE assets in a registered library
  * (`asset_search/core/generation_library.py` archives them), which is why the
  * pane enumerates through `ED_asset_list.hh` rather than reading the folder
@@ -334,6 +336,11 @@ void agent_ui_generations_grid(const bContext *C,
                                 import_settings,
                                 ICON_NONE,
                                 blender::ed::asset::asset_preview_icon_id(*item.asset));
+      /* The drag payload does not mark the whole button draggable.
+       * `but_contains_point_px_icon` then hit-tests a center square, so a
+       * tile clipped by the grid (wider than it is tall) cannot start a
+       * drag from the strip that is actually on screen. */
+      ui::button_dragflag_enable(but, ui::BUT_DRAG_FULL_BUT);
     }
   }
   UNUSED_VARS(C);

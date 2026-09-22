@@ -98,6 +98,11 @@ void MIXAR_OT_bubble_toggle_expand(wmOperatorType *ot);
  * mixar.bubble_set_bg_color(r, g, b, a). */
 void MIXAR_OT_bubble_set_bg_color(wmOperatorType *ot);
 
+/* Sketch / Voice tab lock. The strip stays clickable so the press does
+ * not fall through to the window drag. Python idname:
+ * mixar.bubble_tab_locked. */
+void MIXAR_OT_bubble_tab_locked(wmOperatorType *ot);
+
 /** \} */
 
 }  // namespace blender

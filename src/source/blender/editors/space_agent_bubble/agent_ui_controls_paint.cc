@@ -101,6 +101,12 @@ void agent_ui_draw_tab_strip(ARegion *region,
     agent_ui_motion_color(queue ? queue_fill : surface, active_fill, feedback, pill_bg);
     agent_ui_motion_color(
         queue ? strong : text_dim, strong, {0.0f, 0.0f, feedback.selected}, label_col);
+    if ((state->scribble_armed || state->voice_listening) && !tab.active) {
+      /* The header still has a button here; the dimming is the visible half
+       * of "you cannot leave this tab while sketching or dictating". */
+      label_col[3] *= 0.35f;
+      pill_bg[3] *= 0.45f;
+    }
     std::copy_n(outline, 4, tab_outline);
     tab_outline[3] *= 1.0f - feedback.selected;
     fill_round(&tab.pill, AGENT_TAB_RADIUS * u, pill_bg);

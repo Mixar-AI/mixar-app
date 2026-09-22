@@ -505,6 +505,20 @@ static void agent_bubble_island_controls_header(const bContext *C,
       break;
     }
     agent_bubble_rect_to_region(region, layout->tabs[tb.tab].pill, &bx, &by, &bw, &bh);
+    /* Sketch and Voice own the viewport. A disabled button does not eat the
+     * click, and this strip is in the HEADER, so a press with no button
+     * falls through to the window drag. Keep a real button that refuses. */
+    if ((state->scribble_armed || state->voice_listening) && state->active_tab != tb.tab) {
+      const char *locked_tip = (state->scribble_armed && state->voice_listening) ?
+                                   "Finish sketching or dictating before switching tabs" :
+                               state->scribble_armed ?
+                                   "Finish sketching before switching tabs" :
+                                   "Finish dictating before switching tabs";
+      uiDefButO(block, ui::ButtonType::But, "mixar.bubble_tab_locked",
+                blender::wm::OpCallContext::InvokeDefault, "",
+                bx, by, bw, bh, locked_tip);
+      continue;
+    }
     ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
                            bx, by, bw, bh, tb.tip);
@@ -4088,6 +4102,22 @@ static wmOperatorStatus mixar_bubble_set_bg_color_exec(bContext * /*C*/, wmOpera
   return OPERATOR_FINISHED;
 }
 
+static wmOperatorStatus mixar_bubble_tab_locked_exec(bContext * /*C*/, wmOperator *op)
+{
+  BKE_report(op->reports,
+             RPT_WARNING,
+             "Finish sketching or dictating before switching tabs");
+  return OPERATOR_CANCELLED;
+}
+
+void MIXAR_OT_bubble_tab_locked(wmOperatorType *ot)
+{
+  ot->name = "Tab Locked";
+  ot->idname = "MIXAR_OT_bubble_tab_locked";
+  ot->description = "Tabs stay on this one while sketching or dictating";
+  ot->exec = mixar_bubble_tab_locked_exec;
+}
+
 void MIXAR_OT_bubble_set_bg_color(wmOperatorType *ot)
 {
   ot->name = "Set Agent Bubble Background Colour";
@@ -4131,6 +4161,7 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_bubble_restore);
   WM_operatortype_append(MIXAR_OT_bubble_toggle_expand);
   WM_operatortype_append(MIXAR_OT_bubble_set_bg_color);
+  WM_operatortype_append(MIXAR_OT_bubble_tab_locked);
   WM_operatortype_append(MIXAR_OT_queue_navigate);
   WM_operatortype_append(MIXAR_OT_generations_navigate);
   WM_operatortype_append(MIXAR_OT_reference_scroll);
