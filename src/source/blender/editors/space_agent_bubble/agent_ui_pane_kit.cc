@@ -92,15 +92,16 @@ void pane_label_right(
   pane_label_left(text, x - pane_text_width(text, size), cy, size, col);
 }
 
-void pane_fit_text(char *text, const float max_w, const float size)
+void pane_fit_text(char *text, const size_t capacity, const float max_w, const float size)
 {
-  const size_t capacity = strlen(text) + 1;
-  const std::string fitted = ui::mixar_fit_text(text, max_w, size);
-  /* This compatibility API only shrinks the caller's buffer. */
+  /* Adding then subtracting layout padding can lose a fraction of a pixel.
+   * Don't elide a measured-to-fit label because of that float round trip. */
+  const std::string fitted = ui::mixar_fit_text(text, max_w + 0.001f, size);
+  /* Use the allocation size, not the original label's byte length. */
   if (fitted.size() < capacity) {
     memcpy(text, fitted.c_str(), fitted.size() + 1);
   }
-  else {
+  else if (capacity > 0) {
     text[0] = '\0';
   }
 }

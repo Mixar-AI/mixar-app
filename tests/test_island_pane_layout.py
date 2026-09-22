@@ -142,9 +142,9 @@ def test_truncated_text_gets_an_ellipsis():
     """A bare chop reads as a DIFFERENT string: "ReproCone" rendered as
     "ReproCon" looked like the wrong result, not a shortened name."""
     body = _function(KIT_CC, "void pane_fit_text(")
-    # The compatibility buffer still only shrinks; Unicode fitting is shared.
+    # The compatibility buffer uses allocation capacity; Unicode fitting is shared.
     assert "fitted.size() < capacity" in body
-    assert "mixar_fit_text(text, max_w, size)" in body
+    assert "mixar_fit_text(text, max_w + 0.001f, size)" in body
     shared = (CPP.parent / "interface/mixar/text.cc").read_text()
     assert 'const char *ellipsis = "…"' in shared
     # The cut must land on a codepoint boundary. This used to be a hand-rolled

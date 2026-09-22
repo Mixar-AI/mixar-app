@@ -108,7 +108,7 @@ void wrap_two_lines(
      * `text + strlen(r_a)` skipped three real bytes and, when those bytes sat
      * inside a multi-byte character, started the tail mid-sequence and drew
      * mojibake. Subtract the ellipsis to get the true head length. */
-    pane_fit_text(r_a, max_w, font);
+    pane_fit_text(r_a, 160, max_w, font);
     static const char ELLIPSIS[] = "\xE2\x80\xA6"; /* U+2026, as pane_fit_text writes */
     const size_t ellipsis_len = sizeof(ELLIPSIS) - 1;
     size_t head = strlen(r_a);
@@ -126,7 +126,7 @@ void wrap_two_lines(
       r_a[split + 1] = '\0';
     }
   }
-  pane_fit_text(r_b, max_w, font);
+  pane_fit_text(r_b, 160, max_w, font);
 }
 
 /** Sketch and Voice lock every tab change, including this column's Queue jump. */

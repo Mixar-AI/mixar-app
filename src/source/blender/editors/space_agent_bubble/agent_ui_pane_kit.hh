@@ -127,10 +127,15 @@ void pane_label_right(const char *text, float x, float cy, float size, const flo
 /**
  * Truncate \a text in place (UTF-8-safe) until it fits \a max_w, appending an
  * ellipsis when anything was actually removed — a bare chop reads as a
- * different string ("ReproCone" -> "ReproCon"), not a shortened one. Only ever
- * shrinks the caller's buffer.
+ * different string ("ReproCone" -> "ReproCon"), not a shortened one. Capacity
+ * includes the terminator: an ellipsis can shorten the rendered text while
+ * increasing its UTF-8 byte length.
  */
-void pane_fit_text(char *text, float max_w, float size);
+void pane_fit_text(char *text, size_t capacity, float max_w, float size);
+template<size_t N> inline void pane_fit_text(char (&text)[N], float max_w, float size)
+{
+  pane_fit_text(text, N, max_w, size);
+}
 
 /** \} */
 
