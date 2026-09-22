@@ -242,7 +242,8 @@ void agent_ui_tabmedia_draw(const bContext *C,
   bx = capture.xmax + PANE_CHIP_GAP * u;
 
 
-  /* Generate — "Queued..." while this half has work in the unified queue.
+  /* Generate — "Queued..." / "Generating..." while this half has work in the
+   * unified queue.
    *
    * NOT the legacy `scene.mixie_{imagegen,video_gen}_is_generating` flags: the
    * Image Gen tab's own operator passes no `scene_flag` to
@@ -250,13 +251,16 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * button never acknowledged a click. The queue mirror is where the job
    * actually is. `service_key` is what this half submits (the mode's catalog
    * service, or image_gen/video_gen). */
-  const int active_jobs = pane_active_job_count(C, service_key);
+  int running_jobs = 0;
+  const int active_jobs = pane_active_job_count(C, service_key, &running_jobs);
   /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
    * the point — so an active job is INFORMATION (the label carries the
    * count), never a lock. Only a missing prompt field or an unusable
    * catalog can disarm it. */
   const bool can_generate = tab_ok && !video_unavailable && prompt_ok;
-  generate = pane_generate_rect(prompt_box, u);
+  char gen_label[32];
+  pane_queue_label(gen_label, sizeof(gen_label), active_jobs, running_jobs > 0);
+  generate = pane_generate_rect(prompt_box, u, gen_label);
 
   /* ---- Controls. Two blocks, the composer's split: unembossed operator /
    * dropdown buttons, embossed prompt field. ---- */
@@ -330,8 +334,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
                             u);
     }
   }
-  char gen_label[32];
-  pane_queue_label(gen_label, sizeof(gen_label), active_jobs);
   /* Newest operator report, above the box — the island has no status bar, so
    * without this a refusal ("No image selected in moodboard") is silent. Kit
    * helper: one definition for all three panes. */

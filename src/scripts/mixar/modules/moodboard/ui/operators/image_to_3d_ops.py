@@ -189,7 +189,13 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 model_front_zrot,
             )
 
-            job_label = image.name if image else model_name
+            from mixar.modules.common.job_queue.core.labels import (
+                stackable_job_identity,
+            )
+
+            job_label, display_label = stackable_job_identity(
+                image.name if image else model_name
+            )
             payload = {}
             if turnaround_payload:
                 payload.update(turnaround_payload)
@@ -206,7 +212,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 job_type="model_3d",
                 model=model_name,
                 payload=payload,
-                label=job_label or "model_3d",
+                label=job_label,
+                display_label=display_label,
                 fail_message="3D model generation failed",
                 on_imported=make_model_rename_on_imported(
                     mesh_name, model_front_zrot(model_name)),

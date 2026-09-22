@@ -193,13 +193,14 @@ float pane_bottom_row_ymin(const rctf &box, const float u)
   return composer_layout(box, u).action_bottom;
 }
 
-rctf pane_generate_rect(const rctf &box, const float u)
+rctf pane_generate_rect(const rctf &box, const float u, const char *label)
 {
   const auto layout = composer_layout(box, u);
   rctf rect;
   rect.xmax = box.xmax - PANE_BOTTOM_IN_R * u;
+  const char *text = (label && label[0]) ? label : "Generate";
   const float width = std::max(PANE_GENERATE_W * u,
-                               pane_action_chip_w("Generate", false, u) + 2.0f);
+                               pane_action_chip_w(text, false, u) + 2.0f);
   rect.xmin = rect.xmax - width;
   rect.ymin = layout.action_bottom;
   rect.ymax = layout.action_top;

@@ -63,6 +63,8 @@ struct SplatTabState {
    * state at all: World Labs enqueues pass no `scene_flag`, so there is not
    * even a legacy flag to read, and Generate never acknowledged a click. */
   int active_jobs;
+  /* True once any matched job is RUNNING_* — chip says "Generating". */
+  bool generating;
   /* The tab's OWN uploaded/captured input (tab_world_labs.reference_image).
    * Submitted when `use_selected` is off — see world_labs_ops _resolve_image. */
   Image *reference_image;

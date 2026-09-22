@@ -124,6 +124,28 @@ def test_bottom_row_and_generate_use_shared_composer_geometry():
     generate = _function(KIT_CC, "rctf pane_generate_rect(")
     assert "composer_layout(box, u).action_bottom" in bottom
     assert "layout.action_bottom" in generate and "layout.action_top" in generate
+    # Busy labels ("Generating (N)") must grow the chip — sizing against the
+    # idle "Generate" string alone clips the live wording.
+    assert "pane_action_chip_w(text, false, u)" in generate or "pane_action_chip_w(label" in generate
+    assert 'const char *text = (label && label[0]) ? label : "Generate"' in generate
+
+
+def test_generation_panes_size_generate_from_the_live_queue_label():
+    """Thumbs stop at Generate's left edge, so every pane must measure that
+    edge from the same live label the button paints — or "Generating (N)"
+    grows over the reference previews."""
+    for name, source in (
+        ("agent_ui_tab3d.cc", TAB3D),
+        ("agent_ui_tabmedia.cc", MEDIA),
+        ("agent_ui_tabsplat.cc", SPLAT),
+    ):
+        assert "pane_queue_label(" in source, name
+        assert "gen_label" in source, name
+        assert "pane_generate_rect(" in source and "gen_label" in source, name
+    # Splat paint still lays the idle chip; tabsplat.cc resizes it from the
+    # live label before paint so thumbs see the wider edge.
+    assert "pane_generate_rect(rects.prompt_box, u, gen_label)" in SPLAT
+    assert "pane_generate_rect(r->prompt_box, u)" in SPLAT_PAINT
 
 
 def test_all_generation_fields_use_the_shared_reservation():

@@ -175,6 +175,22 @@ static int hovered_video_index_from_event(bContext *C,
       scene_ptr, mouse_x, mouse_y, nullptr);
 }
 
+static bool hover_region_is_canvas(const bContext *C, const ARegion *region)
+{
+  if (region == nullptr) {
+    return false;
+  }
+  /* Mixie WINDOW is the ordinary moodboard canvas. The Zen Mode drawer hosts
+   * the same canvas inside a View3D TOOL_PROPS region — treating only WINDOW
+   * as a canvas forced hovered_index to -1 on every drawer mousemove and
+   * stopped playback the moment the pointer moved. Sidebar/header Mixie
+   * regions stay non-canvas so leaving the tile still stops playback. */
+  if (region->regiontype == RGN_TYPE_WINDOW) {
+    return true;
+  }
+  return region->regiontype == RGN_TYPE_TOOL_PROPS && moodboard_zen_drawer_active(C);
+}
+
 static wmOperatorStatus moodboard_video_hover_invoke(bContext *C,
                                                      wmOperator * /*op*/,
                                                      const wmEvent *event)
@@ -186,7 +202,7 @@ static wmOperatorStatus moodboard_video_hover_invoke(bContext *C,
   Scene *scene = CTX_data_scene(C);
   PointerRNA scene_ptr = scene ? RNA_id_pointer_create(&scene->id) : PointerRNA_NULL;
   ARegion *region = CTX_wm_region(C);
-  const int hovered_index = scene && region && region->regiontype == RGN_TYPE_WINDOW ?
+  const int hovered_index = scene && hover_region_is_canvas(C, region) ?
                                 hovered_video_index_from_event(C, &scene_ptr, event) :
                                 -1;
   stop_video_playback_outside_tile(C, scene, hovered_index);

@@ -353,9 +353,22 @@ def test_a_queued_job_does_not_disarm_generate():
 
 def test_the_count_is_what_carries_the_feedback():
     """With the button still armed, the label is the only thing that tells the
-    user their submit landed — so it must show the count, from one helper."""
+    user their submit landed — so it must show the count, from one helper.
+
+    PENDING-only work stays "Queued (N)"; once any matched job is RUNNING_*
+    the wording flips to "Generating (N)" so in-flight generation is not
+    mislabelled as still waiting in the queue.
+    """
     kit = _pane("agent_ui_pane_kit_feedback.cc")
     assert "void pane_queue_label(" in kit
     assert '"Queued (%d)"' in kit
-    for name in ("agent_ui_tabmedia.cc", "agent_ui_tab3d.cc"):
-        assert "pane_queue_label(" in _pane(name), name
+    assert '"Generating (%d)"' in kit
+    assert "queue_state_is_running(" in kit
+    for name, generating_arg in (
+        ("agent_ui_tabmedia.cc", "running_jobs > 0"),
+        ("agent_ui_tab3d.cc", "st.generating"),
+        ("agent_ui_tabsplat.cc", "state.generating"),
+    ):
+        source = _pane(name)
+        assert "pane_queue_label(" in source, name
+        assert generating_arg in source, name

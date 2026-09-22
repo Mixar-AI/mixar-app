@@ -178,7 +178,12 @@ rctf pane_prompt_field_rect(const rctf &box, float u);
  * row out through its own top over the params strip (the OPS block wins
  * overlapping clicks, so a floating row makes the params unreachable). */
 float pane_bottom_row_ymin(const rctf &box, float u);
-rctf pane_generate_rect(const rctf &box, float u);
+/**
+ * Generate chip rect, sized for \a label (defaults to "Generate"). Busy labels
+ * like "Generating (3)" outgrow the idle chip, so every pane that paints a
+ * live queue label must pass it here — thumbs stop at this rect's left edge.
+ */
+rctf pane_generate_rect(const rctf &box, float u, const char *label = "Generate");
 
 /** True when \a prop_id has no catalog `visible_if`, or the live sibling
  * values match. Missing `mixar_visible_if` metadata fails open. */
@@ -223,8 +228,15 @@ float pane_onoff_chip_w(const char *label, float u);
  * busy state: those are only written by enqueue paths that pass a
  * `scene_flag`, which the Image Gen and World Labs flows do not, so the
  * button never changed for a job that was in fact queued.
+ *
+ * When \a r_running is non-null it receives how many of those active jobs are
+ * already past PENDING / PAUSED_AUTH (RUNNING_SUBMIT / RUNNING_POLL /
+ * RUNNING_DOWNLOAD) — the pane label says "Generating" whenever any matched
+ * job has started, and "Queued" only while everything is still waiting.
  */
-int pane_active_job_count(const bContext *C, const char *service_key);
+int pane_active_job_count(const bContext *C,
+                          const char *service_key,
+                          int *r_running = nullptr);
 
 /** The band the message line paints in: the PANE_BOX_GAP the kit already
  * leaves above the prompt box, so no pane gives up layout for it. */
@@ -295,13 +307,16 @@ void pane_but_tooltip_owned(ui::Button *but, const char *text);
 /**
  * The Generate button's label for \a active_jobs already in the queue.
  *
- * "Generate" when nothing is running, otherwise the count — the button stays
- * ARMED either way. This is a queue: stacking jobs is the point, so an active
- * job is information, not a lock. Before this the panes showed nothing at all
- * on submit (their busy flag read a legacy scene property the queue path never
- * sets), so a user pressed Generate, the job queued, and the UI said nothing.
+ * "Generate" when nothing is active; "Generating (N)" when any matched job is
+ * already RUNNING_*; "Queued (N)" when every matched job is still PENDING /
+ * PAUSED_AUTH. The button stays ARMED either way — this is a queue, stacking
+ * jobs is the point, so an active job is information, not a lock. Before this
+ * the panes showed nothing at all on submit (their busy flag read a legacy
+ * scene property the queue path never sets), so a user pressed Generate, the
+ * job queued, and the UI said nothing. And a RUNNING job used to keep the
+ * "Queued" wording, which made in-flight generation look stuck in the queue.
  */
-void pane_queue_label(char *out, int out_maxncpy, int active_jobs);
+void pane_queue_label(char *out, int out_maxncpy, int active_jobs, bool generating);
 
 /** \} */
 

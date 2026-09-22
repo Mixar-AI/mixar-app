@@ -62,6 +62,30 @@ def test_inline_playback_stops_when_the_pointer_leaves_its_tile():
     assert "Stop inline moodboard video playback when the pointer leaves its tile" in preview
 
 
+def test_zen_drawer_is_a_canvas_for_video_hover():
+    """The Zen Mode moodboard is a View3D TOOL_PROPS drawer hosting the Mixie
+    canvas. Hover used to require RGN_TYPE_WINDOW only, so every mousemove in
+    the drawer forced hovered_index to -1 and stopped playback immediately —
+    play was never continuous. The drawer must hit-test like the Mixie window;
+    Mixie sidebar/header regions stay non-canvas so leaving the tile still
+    stops playback.
+    """
+    preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
+    common = _read(SPACE_MIXIE / "mixie_moodboard_ops_common.hh")
+
+    assert "hover_region_is_canvas" in preview
+    assert "RGN_TYPE_TOOL_PROPS" in preview
+    assert "moodboard_zen_drawer_active" in preview
+    # The WINDOW-only gate that broke the drawer must not be the sole test.
+    hover = preview.split("moodboard_video_hover_invoke(")[1].split(
+        "\n}\n", 1
+    )[0]
+    assert "hover_region_is_canvas(C, region)" in hover
+    assert "region->regiontype == RGN_TYPE_WINDOW ?" not in hover
+    assert "moodboard_zen_drawer_active" in common
+    assert 'STREQ(workspace->id.name + 2, "Zen Mode")' in common
+
+
 def test_canvas_filters_preserve_leave_events_and_view2d_timers():
     """A chrome hit must not suppress hover cleanup or timer communication."""
     layout = _read(SPACE_MIXIE / "mixie_moodboard_node_layout.cc")

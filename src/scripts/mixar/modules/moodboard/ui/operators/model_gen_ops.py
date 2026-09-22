@@ -248,7 +248,11 @@ class MIXIE_OT_model_gen_generate(Operator):
         # --- Enqueue ---
         route = _routing(service_key)
         feature_key = route.pop("feature_key")
-        label = image.name if image else ((prompt or model)[:40])
+        from mixar.modules.common.job_queue.core.labels import stackable_job_identity
+
+        label, display_label = stackable_job_identity(
+            image.name if image else ((prompt or model)[:40])
+        )
 
         # Name the imported mesh from the input image (or a prompt slug for
         # text-to-3D) and normalize its placement. Overrides any service
@@ -271,6 +275,7 @@ class MIXIE_OT_model_gen_generate(Operator):
                 model=model,
                 payload=payload,
                 label=label,
+                display_label=display_label,
                 **route,
             )
             if not job:

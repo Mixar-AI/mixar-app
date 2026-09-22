@@ -105,6 +105,10 @@ void agent_ui_tabsplat_draw(const bContext *C,
   SplatPaneRects rects;
   splat_pane_rects_build(
       panel, u, state.model_label.c_str(), mode_items, mode_count, lod_items, lod_count, &rects);
+  /* Live queue label sizes Generate (and the thumbs' right edge) before paint. */
+  char gen_label[32];
+  pane_queue_label(gen_label, sizeof(gen_label), state.active_jobs, state.generating);
+  rects.btn_generate = pane_generate_rect(rects.prompt_box, u, gen_label);
 
   splat_pane_paint(C, state, rects, u);
 
@@ -287,9 +291,8 @@ void agent_ui_tabsplat_draw(const bContext *C,
   }
 
   /* Generate and Enter share the owner-based dispatcher. One native button
-   * owns both appearance and enabled state. Queue activity is informational. */
-  char gen_label[32];
-  pane_queue_label(gen_label, sizeof(gen_label), state.active_jobs);
+   * owns both appearance and enabled state. Queue activity is informational.
+   * `gen_label` / `btn_generate` were sized before paint (see above). */
   if (rects.prompt_ok) {
     rect_args(rects.btn_generate, &bx, &by, &bw, &bh);
     ui::Button *but = uiDefButO(block,
