@@ -84,7 +84,7 @@ class MIXIE_MT_add_image_menu(Menu):
 
 # Selecting a tool starts a blocking modal. A menu closes before invoking it;
 # a keep-open popover otherwise survives behind the modal and steals the next
-# toolbar click when the drawing gesture finishes.
+# toolbar click when the drawing gesture finishes. The docstring is the tooltip.
 class MIXIE_MT_mask_tools(Menu):
     """Image mask selection tools"""
 

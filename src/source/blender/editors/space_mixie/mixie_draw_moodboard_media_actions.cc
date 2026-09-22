@@ -134,7 +134,7 @@ void moodboard_add_media_card_actions(ui::Block *block,
   ui::mixar_style_button(
       rename, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   moodboard_set_node_tooltip(rename,
-                             "Rename\n\nEdit this image or video's name in place, right "
+                             "Rename\n\nEdit the name of this image or video in place, right "
                              "here above it. Enter applies, Escape keeps the old name.");
 }
 

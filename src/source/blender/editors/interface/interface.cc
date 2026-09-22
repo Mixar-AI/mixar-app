@@ -976,6 +976,7 @@ static void but_update_old_active_from_new(Button *oldbut, Button *but)
   std::swap(oldbut->pushed_state_func, but->pushed_state_func);
 
   /* Move tooltip from new to old. */
+  oldbut->tip_explicit = but->tip_explicit;
   std::swap(oldbut->tip_func, but->tip_func);
   std::swap(oldbut->tip_arg, but->tip_arg);
   std::swap(oldbut->tip_custom_func, but->tip_custom_func);
@@ -5141,11 +5142,17 @@ static Button *def_but_operator_ptr(Block *block,
                                     short height,
                                     std::optional<StringRef> tip)
 {
+  /* Captured before the RNA description is substituted, so a layout that
+   * passed no tip still presents the operator name. */
+  const bool tip_explicit = tip && !tip->is_empty();
   if ((!tip || tip->is_empty()) && ot && ot->srna && !ot->get_description) {
     tip = RNA_struct_ui_description(ot->srna);
   }
 
   Button *but = def_but(block, type, str, x, y, width, height, nullptr, 0, 0, tip);
+  if (but) {
+    but->tip_explicit = tip_explicit;
+  }
   button_retval_set(but, -1);
   button_operator_set(but, ot, opcontext);
 
@@ -6569,6 +6576,15 @@ std::string button_string_get_label(Button &but)
       }
     }
     return but.str.substr(0, str_len);
+  }
+
+  /* Painted operator controls leave the drawn label empty and pass their own
+   * tip. The operator name ("Context Set Enum", "Call Menu", …) is not a
+   * label then. RNA property buttons are excluded: `text=""` still stores the
+   * property description in `tip`, and the property name ("Roughness") is the
+   * tooltip title. Icon buttons keep the operator name too. */
+  if (!but.rnaprop && but.icon == ICON_NONE && (but.tip_explicit || but.tip_func != nullptr)) {
+    return {};
   }
 
   return button_string_get_rna_label(but);

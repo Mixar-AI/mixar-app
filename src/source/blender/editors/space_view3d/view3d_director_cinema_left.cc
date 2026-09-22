@@ -360,7 +360,7 @@ void cinema_draw_left_panel(ui::Block *block,
   const TemplateRow rows[] = {
       {"None", "NONE", first_template_y},
       {"Handheld camera", "HANDHELD", first_template_y + CINEMA_LIST_PITCH},
-      {"Z- Fixed", "Z_FIXED", first_template_y + CINEMA_LIST_PITCH * 2.0f},
+      {"Z-Fixed", "Z_FIXED", first_template_y + CINEMA_LIST_PITCH * 2.0f},
       {"Dolly Zoom", "DOLLY_ZOOM", first_template_y + CINEMA_LIST_PITCH * 3.0f},
       {"Crane", "CRANE", first_template_y + CINEMA_LIST_PITCH * 4.0f},
   };

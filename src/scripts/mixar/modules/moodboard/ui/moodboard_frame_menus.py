@@ -29,7 +29,7 @@ def _menu_frame_id(context) -> str:
 
 
 class MIXIE_MT_moodboard_frame_color(Menu):
-    """The eight palette pastels."""
+    """Choose this frame's colour"""
 
     bl_label = "Colour"
     bl_idname = "MIXIE_MT_moodboard_frame_color"

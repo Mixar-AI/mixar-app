@@ -96,7 +96,7 @@ CAMERA_TEMPLATE_ITEMS = (
     ),
     (
         "Z_FIXED",
-        "Z- Fixed",
+        "Z-Fixed",
         "Keep the horizon level; roll is removed as the camera moves",
         2,
     ),

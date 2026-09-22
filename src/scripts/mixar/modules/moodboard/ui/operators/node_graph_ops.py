@@ -98,7 +98,7 @@ class MIXIE_OT_moodboard_add_menu(Operator):
 class MIXIE_OT_moodboard_run_action_node(Operator):
     bl_idname = "mixie.moodboard_run_action_node"
     bl_label = "Run Node"
-    bl_description = "Submit this inference node to the generation queue"
+    bl_description = "Add this generation to the queue"
     bl_options = {'REGISTER'}
 
     # SKIP_SAVE: this is a REGISTER operator, so saved last-used properties

@@ -274,6 +274,13 @@ struct Button : NonMovable {
   void *hold_argN = nullptr;
 
   StringRef tip;
+  /**
+   * True only when the caller passed `tip`. Description text copied from RNA
+   * (property buttons, operators with no custom description callback) does not
+   * set this, so an empty layout label can still use the RNA name as its
+   * tooltip title.
+   */
+  bool tip_explicit = false;
   ButtonToolTipFunc tip_func = nullptr;
   void *tip_arg = nullptr;
   FreeArgFunc tip_arg_free = nullptr;
