@@ -863,6 +863,7 @@ static StructRNA *rna_Space_refine(PointerRNA *ptr)
     case SPACE_SCRIPT:
     case SPACE_EMPTY:
     case SPACE_STATUSBAR:
+    case SPACE_MIXIE_CHAT_DEPRECATED:
       break;
   }
 

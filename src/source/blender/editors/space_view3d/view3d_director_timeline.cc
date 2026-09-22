@@ -101,7 +101,6 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   GPU_blend(GPU_BLEND_ALPHA);
   const int margin = std::max(6, int(8.0f * UI_SCALE_FAC));
   const int unit = std::max(18, int(20.0f * UI_SCALE_FAC));
-  const int gap = std::max(4, int(5.0f * UI_SCALE_FAC));
   const bool playing = ED_screen_animation_playing(CTX_wm_manager(C)) != nullptr;
   playback_redraw_timer_update(C, playing);
   /* The unit is the VIEWPORT's fit, not this one-row dock's. */

@@ -5727,12 +5727,12 @@ static void widget_box(Button *but,
 
 /* -- Mixar Section Widget ------------------------------------------------ */
 
-static void widget_mixar_section(Button *but,
+static void widget_mixar_section(Button * /*but*/,
                                  uiWidgetColors *wcol,
                                  rcti *rect,
                                  const WidgetStateInfo * /*state*/,
                                  int roundboxalign,
-                                 const float zoom)
+                                 const float /*zoom*/)
 {
   WidgetBase wtb;
   widget_init(&wtb);
@@ -5797,7 +5797,7 @@ static void widget_mixar_dropdown(Button *but,
                                   rcti *rect,
                                   const WidgetStateInfo *state,
                                   int roundboxalign,
-                                  const float zoom)
+                                  const float /*zoom*/)
 {
   WidgetBase wtb;
   widget_init(&wtb);
@@ -5937,7 +5937,7 @@ static void mixar_draw_gradient_hbar(const rctf *rect, float rad)
 static void widget_mixar_action_button(Button *but,
                                        uiWidgetColors *wcol,
                                        rcti *rect,
-                                       const WidgetStateInfo *state,
+                                       const WidgetStateInfo * /*state*/,
                                        int /*roundboxalign*/,
                                        const float /*zoom*/)
 {

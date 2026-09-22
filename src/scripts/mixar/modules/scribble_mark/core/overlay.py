@@ -347,6 +347,13 @@ def _draw_hint(region, scene, scale):
     of their scene with no idea how to get their viewport back.
     """
     text = _hint_text(scene)
+    from mixar.modules.space_mixie_chat.constants import VOICE_INPUT_SUPPORTED
+    if not VOICE_INPUT_SUPPORTED:
+        text = text.replace("  ·  Ctrl+Space: Voice", "")
+    voice_status = getattr(bpy.context.window_manager, "mixie_chat_voice_status", "")
+    if voice_status:
+        action = "cancel" if voice_status == "Finishing" else "stop"
+        text = text.replace("Ctrl+Space: Voice", f"{voice_status} · Ctrl+Space: {action}")
     height = MARK_HINT_HEIGHT_PX * scale
     pad_x = MARK_HINT_PAD_X_PX * scale
 

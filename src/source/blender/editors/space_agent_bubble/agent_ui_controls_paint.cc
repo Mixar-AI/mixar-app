@@ -250,12 +250,10 @@ void agent_ui_draw_chip_row(ARegion *region,
                layout->compact_reference ? "Reference" : "Upload Reference",
                size, icon_edge, icon_gap, text, upload_fill);
 
-  /* Sketch. Lit in the accent while the viewport freeze is up, and
-   * carrying the count of draft marks that will ride with the next message.
-   * The reading chip and the clear X exist only while marks are queued: a
-   * drawing silently read as nine placement targets is a mode the user could
-   * neither see nor correct, so the reading is on the surface, and queued
-   * marks need a way out that does not re-enter the freeze. */
+  /* Sketch becomes Done while drawing. The reading control explains what the
+   * drawing will do before the first stroke and while a preview is queued.
+   * After Done the preview's removal action and this clear control both discard
+   * draft ink; sent marks remain available to the conversation. */
   if (state->scribble_available) {
     MIXAR_THEME_LOAD(accent, AgentAccent);
     float scribble_fill[4];
@@ -266,17 +264,11 @@ void agent_ui_draw_chip_row(ARegion *region,
             region, AgentIslandControl::Scribble, layout->chip_scribble, state->scribble_armed),
         scribble_fill);
     fill_round(&layout->chip_scribble, radius, scribble_fill);
-    char label[32];
-    if (state->mark_count > 0) {
-      SNPRINTF(label, "Sketch · %d", state->mark_count);
-    }
-    else {
-      BLI_strncpy(label, "Sketch", sizeof(label));
-    }
+    const char *label = state->scribble_armed ? "Done" : "Sketch";
     chip_content(layout->chip_scribble, AGENT_ICON_PEN, label,
                  size, icon_edge, icon_gap, text, scribble_fill);
 
-    if (state->mark_count > 0) {
+    if (state->scribble_armed || state->mark_count > 0) {
       float reading_fill[4];
       agent_ui_motion_color(
           chip,
@@ -285,7 +277,7 @@ void agent_ui_draw_chip_row(ARegion *region,
           reading_fill);
       fill_round(&layout->chip_reading, radius, reading_fill);
       const float cy = BLI_rctf_cent_y(&layout->chip_reading);
-      const char *reading = state->mark_intent[0] ? state->mark_intent : "Auto";
+      const char *reading = state->mark_intent[0] ? state->mark_intent : "Auto detect";
       label_left(reading, layout->chip_reading.xmin + pad, cy, size, text);
       rctf chevron = layout->chip_reading;
       chevron.xmax -= pad;

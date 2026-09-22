@@ -51,10 +51,6 @@ namespace blender {
 
 using namespace blender::ed::mixie;
 
-/* Mixie carries richer generation controls than Blender's generic sidebar.
- * Keep this editor-specific so View3D and Image Editor defaults stay intact. */
-static constexpr int MIXIE_SIDEBAR_PANEL_WIDTH = 320;
-
 /* -------------------------------------------------------------------- */
 /** \name Forward Declarations
  * \{ */

@@ -81,6 +81,8 @@ def arm(context, report=None) -> bool:
     try:
         result = bpy.ops.mixar.scribble_mark_draw("INVOKE_DEFAULT")
         if "RUNNING_MODAL" in result:
+            from . import island
+            island.minimize()
             return True
     except RuntimeError as exc:
         logger.warning("Sketch: could not freeze the viewport: %s", exc)

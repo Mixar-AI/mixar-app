@@ -43,6 +43,7 @@
 #include "agent_ui_layout.hh"
 #include "agent_ui_motion.hh"
 #include "agent_ui_pill_cat.hh"
+#include "agent_ui_pill_draft.hh"
 #include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -57,6 +58,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
                                const float height,
                                const AgentIslandState *state)
 {
+  agent_ui_pill_draft_clear();
   /* Sized from the WINDOW, not the region: the pill's header region comes back
    * taller than the window it lives in, and centring on the region's height
    * put the label and dot above the visible area while the corner radius blew
@@ -151,7 +153,11 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     const float text_size = agent_ui_body_font_size();
     const float text_x = 28.0f * u;
 
-    if (is_working) {
+    if (state->scribble_armed) {
+      agent_ui_draw_pill_draft(state->sketch_prompt, text_x, chip.xmin - 16.0f * u,
+                              h, text_size, state->voice_status);
+    }
+    else if (is_working) {
       /* Pulsing indicator dot on the left. */
       const float dot_cx = text_x + 5.0f * u;
       const float dot_cy = h * 0.5f;

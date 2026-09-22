@@ -339,16 +339,14 @@ MARK_HINT_ACCENT_COLOR = (0.31, 0.85, 0.82, 1.0)
 #: study (arXiv:2607.21468) found first: users could not tell which mode they
 #: were in, and asked for visible controls and a way to undo.
 MARK_HINT_IDLE = (
-    "Sketch on the viewport  ·  Type or use Voice in chat  ·  Esc when done"
+    "Draw a shape or circle what to change  ·  Type instructions  ·  Ctrl+Space: Voice  ·  Enter: send  ·  Done / Esc: preview"
 )
 #: ...and once ink is down, what the ink is being READ as, with the way to
 #: change the reading. Both readings name Tab: a sketch mistaken for nine
 #: marks is exactly the misread the user must be able to see and flip.
 MARK_HINT_MARKED = (
-    "{count} mark{plural}  ·  Tab: read as a sketch  ·  Backspace undoes the "
-    "last  ·  Esc when done"
+    "Point to edit  ·  Type instructions  ·  Ctrl+Space: Voice  ·  Enter: send  ·  Tab: Draw to build  ·  Ctrl/Cmd+Z: undo  ·  Done / Esc: preview"
 )
 MARK_HINT_SKETCH = (
-    "Sketch: {count} stroke{plural}, built as drawn  ·  Tab: read as marks  ·  "
-    "Backspace undoes the last  ·  Esc when done"
+    "Draw to build  ·  Type instructions  ·  Ctrl+Space: Voice  ·  Enter: send  ·  Tab: Point to edit  ·  Ctrl/Cmd+Z: undo  ·  Done / Esc: preview"
 )

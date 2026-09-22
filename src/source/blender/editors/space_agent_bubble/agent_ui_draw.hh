@@ -42,6 +42,7 @@ struct AgentIslandState {
    * conversation has none. */
   char last_prompt[160];          /* Card header — the current session's history title. */
   char input_text[512];           /* Current composer input / recognized scribble text. */
+  char sketch_prompt[512];        /* UTF-8 tail of the live draft for the resting pill. */
   const char *placeholder;  /* Drawn only while the input is empty. */
   bool prompt_empty;
   /* The primary button reads Stop instead of Send: busy AND nothing typed.
@@ -68,7 +69,7 @@ struct AgentIslandState {
   bool handwriting_available;
   bool ink_visible;         /* The chat handwriting canvas is open. */
   int mark_count;           /* DRAFT marks queued for the next message. */
-  char mark_intent[32];     /* UI name of wm.mixar_mark_intent (Auto / Sketch / Marks). */
+  char mark_intent[32];     /* UI name: Auto detect / Draw to build / Point to edit. */
 
   /* Voice input (space_mixie_chat/core/voice.py). Absent until Python
    * registers mixie_chat.voice_toggle, which it does only on platforms with a

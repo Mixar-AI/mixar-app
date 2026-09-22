@@ -180,7 +180,7 @@ def view_referenced(scene, view_name):
     return any(i.view_name == view_name for i in _collection(scene) or ())
 
 
-def clear(scene, drafts_only=False):
+def clear(scene, drafts_only=False, view="", keep_view=""):
     """Remove marks and release their cameras and vertex groups."""
     collection = _collection(scene)
     if collection is None:
@@ -191,11 +191,13 @@ def clear(scene, drafts_only=False):
         item = collection[index]
         if drafts_only and item.state != STATE_DRAFT:
             continue
-        _release_item(item, collection)
+        if view and item.view_name != view:
+            continue
+        _release_item(item, collection, keep_view=keep_view)
         collection.remove(index)
         removed += 1
 
-    if not len(collection):
+    if not len(collection) and not keep_view:
         # The still is unreferenced once NO mark is left — which is the rule,
         # not "the caller asked for everything": clearing the drafts of a turn
         # whose sent marks are still around must leave their frame alone.

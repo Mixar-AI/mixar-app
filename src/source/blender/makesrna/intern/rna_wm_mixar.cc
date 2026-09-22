@@ -32,8 +32,8 @@
  *
  * The table entry for this file is registered in Mixar's overlay
  * of ``makesrna.cc`` (right after ``rna_wm.cc``). That same overlay
- * also injects an extra ``#include "rna_wm_mixar.cc"`` into the
- * generated ``rna_wm_gen.cc`` so the helper functions below are
+ * includes the runtime helpers only in the generated ``rna_wm_gen.cc``
+ * (not the empty ``rna_wm_mixar_gen.cc``) so the functions below are
  * visible to the auto-generated property wrappers for Window
  * (which are emitted into rna_wm_gen.cc because Window itself was
  * registered in rna_wm.cc).

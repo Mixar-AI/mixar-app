@@ -6,6 +6,9 @@
 #include "BKE_context.hh"
 #include "BKE_global.hh"
 #include "BKE_main.hh"
+#include "BKE_image.hh"
+#include "BKE_lib_id.hh"
+#include "BKE_report.hh"
 #include "BKE_screen.hh"
 #include "BLI_listbase.h"
 #include "DNA_scene_types.h"
@@ -13,10 +16,12 @@
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 #include "ED_screen.hh"
+#include "ED_image.hh"
 #include "ED_moodboard_attachment.hh"
 #include "ED_space_api.hh"
 #include "GPU_state.hh"
 #include "RNA_access.hh"
+#include "RNA_define.hh"
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_mixar.hh"
@@ -187,6 +192,19 @@ void agent_bubble_references_draw(const bContext *C,
     GPU_blend(GPU_BLEND_ALPHA);
     pane_label_left(
         caption.c_str(), image.xmin, image.ymin - 16 * u, 15 * agent_ui_text_unit(), dim);
+    if (item.sketch && BLI_rctf_isect(&image, &g.view, &visible_image)) {
+      ui::Button *preview = uiDefButO(block,
+                                      ui::ButtonType::But,
+                                      "mixar.preview_sketch",
+                                      wm::OpCallContext::ExecDefault,
+                                      "",
+                                      int(visible_image.xmin),
+                                      int(visible_image.ymin),
+                                      int(BLI_rctf_size_x(&visible_image)),
+                                      int(BLI_rctf_size_y(&visible_image)),
+                                      "View sketch larger. Add instructions in chat, then Send");
+      RNA_string_set(ui::button_operator_ptr_ensure(preview), "image_name", path.c_str());
+    }
     rctf close = {
         image.xmax - 30 * u, image.xmax - 2 * u, image.ymax - 30 * u, image.ymax - 2 * u};
     if (close.ymin >= g.view.ymin && close.ymax <= g.view.ymax) {
@@ -206,7 +224,8 @@ void agent_bubble_references_draw(const bContext *C,
       PointerRNA *props = ui::button_operator_ptr_ensure(button);
       RNA_string_set(props, "attachment_path", path.c_str());
       RNA_string_set(props, "attachment_source", source ? source : "");
-      ui::mixar_button_tooltip_owned(button, ("Remove " + name).c_str());
+      ui::mixar_button_tooltip_owned(
+          button, item.sketch ? "Discard this sketch and its queued drawing" : ("Remove " + name).c_str());
     }
   }
   GPU_scissor(UNPACK4(old_scissor));
@@ -286,5 +305,41 @@ void qa_targets(const wmWindow *win,
 void agent_bubble_references_qa_register()
 {
   Mixar_qa_register_target_provider(SPACE_AGENT_BUBBLE, qa_targets);
+}
+
+static wmOperatorStatus preview_sketch_exec(bContext *C, wmOperator *op)
+{
+  Main *bmain = CTX_data_main(C);
+  const std::string name = RNA_string_get(op->ptr, "image_name");
+  Image *image = reinterpret_cast<Image *>(BKE_libblock_find_name(bmain, ID_IM, name.c_str()));
+  if (!image) {
+    BKE_report(op->reports, RPT_WARNING, "Sketch preview is unavailable. Draw again to retry");
+    return OPERATOR_CANCELLED;
+  }
+  const rcti rect = {0, 1000, 0, 720};
+  if (!WM_window_open(C, "Sketch Preview", &rect, SPACE_IMAGE, false, false, true,
+                      WIN_ALIGN_PARENT_CENTER, nullptr, nullptr)) {
+    BKE_report(op->reports, RPT_ERROR, "Could not open the sketch preview");
+    return OPERATOR_CANCELLED;
+  }
+  ScrArea *area = CTX_wm_area(C);
+  SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first);
+  ED_space_image_set(bmain, sima, image, false);
+  ARegion *region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
+  CTX_wm_region_set(C, region);
+  WM_operator_name_call(C, "IMAGE_OT_view_all", wm::OpCallContext::ExecDefault, nullptr, nullptr);
+  ED_area_tag_redraw(area);
+  return OPERATOR_FINISHED;
+}
+
+void MIXAR_OT_preview_sketch(wmOperatorType *ot)
+{
+  ot->name = "Preview Sketch";
+  ot->idname = "MIXAR_OT_preview_sketch";
+  ot->description = "Open the completed drawing in a larger preview. Close it to return to chat";
+  ot->exec = preview_sketch_exec;
+  ot->poll = ED_operator_screenactive;
+  PropertyRNA *prop = RNA_def_string(ot->srna, "image_name", nullptr, 0, "Sketch", "Image to preview");
+  RNA_def_property_flag(prop, PROP_SKIP_SAVE);
 }
 }  // namespace blender

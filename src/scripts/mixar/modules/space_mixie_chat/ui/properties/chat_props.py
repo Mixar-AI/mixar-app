@@ -70,6 +70,11 @@ class MixieChatAttachment(PropertyGroup):
         description="Display name for the attachment",
         default=""
     )
+    scribble_view: StringProperty(
+        name="Sketch View",
+        description="Frozen view owned by this draft sketch preview",
+        default="",
+    )
     # Marks attachments that were auto-added by the moodboard selection sync.
     # The sync code uses this flag to know which pending attachments it owns
     # — manually added FILE / BLEND_DATA attachments are never touched.
@@ -455,6 +460,7 @@ def _execute_send_message():
             bpy.ops.mixie_chat.send_message()
     except Exception as e:  # noqa: BLE001 — operator may not be available
         logger.warning("send_message from Enter failed: %s", e)
+        _report_send_refused(str(e).strip().removeprefix("Error: "))
 
 
 def _report_send_refused(reason: str) -> None:

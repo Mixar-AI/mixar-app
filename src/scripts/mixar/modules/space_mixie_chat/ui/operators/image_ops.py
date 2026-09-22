@@ -284,6 +284,10 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
             return {'CANCELLED'}
 
         att = attachments[index]
+        if getattr(att, "scribble_view", ""):
+            from mixar.modules.scribble_mark.core import preview
+            preview.discard_view(context.scene, context.window_manager, att.scribble_view)
+            return {'FINISHED'}
         name = att.display_name
         image_path = att.image_path
         image_source = att.image_source

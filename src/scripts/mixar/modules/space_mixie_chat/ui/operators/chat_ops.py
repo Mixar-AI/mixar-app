@@ -240,16 +240,14 @@ class MIXIE_CHAT_OT_send_message(Operator):
             self.report({'ERROR'}, "WebSocket not ready — no connection ID")
             return {'CANCELLED'}
 
-        # Scribble Marks: where the user pointed, already resolved against the
-        # live scene. Placed HERE deliberately — after every pre-flight bail-out
-        # and before the attachment encoding below. prepare_for_send appends the
-        # frozen frames to pending_attachments, so running it any earlier would
-        # leave those frames queued for the NEXT message whenever a pre-flight
-        # check cancels this one.
+        # Finalize the annotated previews after preflight. Clean companions
+        # belong only to the outgoing encoding list, never the composer/history.
+        outgoing_attachments = list(pending_attachments)
         if not (is_modify or is_awaiting_input):
             try:
                 from mixar.modules.scribble_mark.core import chat_bridge
                 mark_context, mark_notes = chat_bridge.prepare_for_send(scene)
+                outgoing_attachments = chat_bridge.preview.outgoing_attachments(scene)
                 for note in mark_notes:
                     self.report({'INFO'}, f"Marks: {note}")
             except Exception as e:  # noqa: BLE001
@@ -292,7 +290,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 msg_att = user_msg.attachments.add()
                 msg_att.image_path = att.image_path
                 msg_att.image_source = att.image_source
-                msg_att.display_name = att.display_name
+                msg_att.display_name = "Sketch" if att.scribble_view else att.display_name
 
         # Clear input field immediately for better UX
         if not self.message_override:
@@ -312,7 +310,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # Encode pending attachments to base64 asynchronously
         encoded_attachments = []
-        if not is_modify and not is_awaiting_input and len(pending_attachments) > 0:
+        if not is_modify and not is_awaiting_input and len(outgoing_attachments) > 0:
             metrics.start_timer('image_encoding_total')
             executor = get_image_encoder()
 
@@ -320,7 +318,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
             encoding_futures = []
             attachment_data = []  # Store (path, source) tuples
 
-            for att in pending_attachments:
+            for att in outgoing_attachments:
                 att_data = (att.image_path, att.image_source)
                 attachment_data.append(att_data)
 
@@ -372,9 +370,9 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # backend inlines into the user message — core/attachment_names.py.
         attachment_names: list = []
         imported_object_names: list = []
-        if not is_modify and not is_awaiting_input and len(pending_attachments) > 0:
+        if not is_modify and not is_awaiting_input and len(outgoing_attachments) > 0:
             attachment_names, imported_object_names = resolve_attachment_names(
-                pending_attachments
+                outgoing_attachments
             )
 
         metrics.start_timer('agent_send')
@@ -477,7 +475,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 msg_att = user_msg.attachments.add()
                 msg_att.image_path = att.image_path
                 msg_att.image_source = att.image_source
-                msg_att.display_name = att.display_name
+                msg_att.display_name = "Sketch" if att.scribble_view else att.display_name
             start_demo_stream(scene, user_text="")
         else:
             start_demo_stream(scene, user_text=message_text)

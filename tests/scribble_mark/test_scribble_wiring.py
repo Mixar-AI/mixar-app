@@ -304,21 +304,13 @@ class TestResolutionHonesty:
 # =============================================================================
 
 class TestFrameAttachments:
-    def test_both_a_clean_and_an_annotated_frame_are_offered(self):
-        """Burning the ink into the only image means every downstream
-        generation faithfully reproduces the cyan loop."""
-        text = source("src/scripts/mixar/modules/scribble_mark/core/chat_bridge.py")
-        marker = text.index("for name in (")
-        assert "annotated" in text[marker:marker + 200]
-        assert "frame_name" in text[marker:marker + 200]
+    def test_clean_companions_are_only_encoded_for_the_agent(self):
+        text = source("src/scripts/mixar/modules/space_mixie_chat/ui/operators/chat_ops.py")
+        assert 'outgoing_attachments = chat_bridge.preview.outgoing_attachments(scene)' in text
+        history = text[text.index('# Copy attachments to message history'):text.index('# Clear input field')]
+        assert 'for att in pending_attachments:' in history
+        assert 'outgoing_attachments' not in history
 
-    def test_the_annotated_frame_is_queued_first(self):
-        """Under a tight attachment cap the marked frame is the one carrying
-        information the agent cannot get any other way."""
-        text = source("src/scripts/mixar/modules/scribble_mark/core/chat_bridge.py")
-        marker = text.index("for name in (")
-        line = text[marker:text.index("\n", marker)]
-        assert line.index("annotated") < line.index("frame_name")
 
     def test_annotation_flips_v_for_pil(self):
         """The payload is v bottom-up; PIL rows are top-down. Skipping the
@@ -360,14 +352,14 @@ class TestVisibleControlsAndRecovery:
 
     def test_the_hint_names_the_way_back(self):
         from mixar.modules.scribble_mark.constants import MARK_HINT_MARKED
-        assert "Backspace" in MARK_HINT_MARKED
+        assert "Ctrl/Cmd+Z" in MARK_HINT_MARKED
 
     def test_undo_is_reachable_from_inside_the_freeze(self):
         """Bound in the modal rather than a keymap: the freeze already owns
         every event over the region, and a GUI keyconfig reload wipes
         C-registered keymap items."""
         text = source(self.MODAL)
-        assert "BACK_SPACE" in text
+        assert 'event.type == "Z"' in text
         assert "_undo_last" in text
 
     def test_undo_prefers_the_half_drawn_stroke(self):
@@ -554,7 +546,7 @@ class TestIndependentScribbleTools:
         text = source(self.MODAL)
         modal = text[text.index("def modal"):text.index("def cancel")]
         gate = modal.index('if not inside:')
-        for key in ('"BACK_SPACE"', '"TAB"', '"ESC"'):
+        for key in ('prompt_input.handle', '"TAB"', '"ESC"'):
             assert modal.index(key) > gate
         assert modal.index('and self._ink.drawing') < gate
 
@@ -574,7 +566,7 @@ class TestIndependentScribbleTools:
 
     def test_the_send_leaves_both_halves(self):
         text = source(self.BRIDGE)
-        body = text[text.index("def finish_send"):text.index("# ====")]
+        body = text[text.index("def finish_send"):]
         assert "scribble_mode.disarm" in body
         assert "mixar_mark_armed = False" not in body, "the coordinator owns the flag"
 

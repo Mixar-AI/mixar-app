@@ -57,7 +57,9 @@ std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowM
       RNA_BEGIN (&scene_ptr, item, "mixie_chat_pending_attachments") {
         items.push_back({RNA_string_get(&item, "image_path"),
                          RNA_string_get(&item, "display_name"),
-                         enum_id(item, "image_source")});
+                         enum_id(item, "image_source"),
+                         RNA_struct_find_property(&item, "scribble_view") &&
+                             !RNA_string_get(&item, "scribble_view").empty()});
       }
       RNA_END;
     }

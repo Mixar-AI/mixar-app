@@ -23,6 +23,7 @@ constexpr float AGENT_REFERENCE_COLUMN_W = 288.0f;
 constexpr const char *AGENT_REFERENCE_SCROLL = "mixar_reference_scroll";
 struct AgentReference {
   std::string path, name, source;
+  bool sketch = false;
 };
 /** Read the active pane's inputs without copying them into the chat draft. */
 std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowManager *wm);
@@ -50,5 +51,6 @@ AgentReferenceGeometry agent_bubble_reference_geometry(const wmWindow *win,
 int agent_bubble_reference_count(const bContext *C);
 float agent_bubble_reference_fraction(wmWindowManager *wm);
 void MIXAR_OT_reference_scroll(wmOperatorType *ot);
+void MIXAR_OT_preview_sketch(wmOperatorType *ot);
 void agent_bubble_references_qa_register();
 }  // namespace blender

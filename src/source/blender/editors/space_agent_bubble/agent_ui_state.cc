@@ -39,6 +39,7 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_string.h"
+#include "BLI_string_utf8.h"
 
 #include "BKE_context.hh"
 
@@ -61,7 +62,8 @@ namespace blender {
 
 namespace {
 
-void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int out_maxncpy)
+void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int out_maxncpy,
+                      const bool tail = false)
 {
   out[0] = '\0';
   PropertyRNA *prop = RNA_struct_find_property(ptr, name);
@@ -72,7 +74,14 @@ void read_string_prop(PointerRNA *ptr, const char *name, char *out, const int ou
   int len = 0;
   char *value = RNA_property_string_get_alloc(ptr, prop, fixed, sizeof(fixed), &len);
   if (value) {
-    BLI_strncpy(out, value, out_maxncpy);
+    const char *start = value;
+    if (tail && len >= out_maxncpy) {
+      start += len - out_maxncpy + 1;
+      while ((*start & 0xc0) == 0x80) {
+        start++;
+      }
+    }
+    BLI_strncpy_utf8(out, start, out_maxncpy);
     if (value != fixed) {
       MEM_delete(value);
     }
@@ -432,6 +441,18 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
       }
       RNA_property_collection_end(&iter);
     }
+  }
+
+  if (r_state->scribble_armed) {
+    r_state->placeholder = "Draw or type instructions. Enter to send.";
+    if (scene) {
+      PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+      read_string_prop(&scene_ptr, "mixie_chat_input", r_state->sketch_prompt,
+                       sizeof(r_state->sketch_prompt), true);
+    }
+  }
+  else if (r_state->mark_count > 0) {
+    r_state->placeholder = "Sketch ready. Add instructions, then Send.";
   }
 
   /* Same property the account card meters — one source of truth for credits.

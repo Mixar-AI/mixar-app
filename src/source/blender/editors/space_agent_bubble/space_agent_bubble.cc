@@ -81,6 +81,7 @@
 #include "agent_ui_motion.hh"
 #include "agent_ui_cat_scheduler.hh"
 #include "agent_ui_pill_cat.hh"
+#include "agent_ui_pill_draft.hh"
 #include "agent_ui_queue.hh"
 #include "agent_ui_tab3d.hh"
 #include "agent_ui_tabsplat.hh"
@@ -619,7 +620,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
       /* Placeholder on the BUTTON: painting it separately put the ghost text at
        * the artboard's x while Blender drew the caret at the field's own text
        * origin — two places for one thing. */
-      ui::button_placeholder_set(input_but, "Describe your scene here...");
+      ui::button_placeholder_set(input_but, state->placeholder);
       ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
       ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
     }
@@ -642,16 +643,16 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     uiDefButO(block, ui::ButtonType::But, "mixar.scribble_toggle",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               state->scribble_armed ?
-                  "Stop sketching (Esc). Queued marks are kept for the next message" :
-                  "Sketch on the viewport. Type or use Voice in chat; marks accompany your message");
+                  "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send" :
+                  "Draw what to build or circle what to change. Click Done to preview, then Send");
 
-    if (state->mark_count > 0) {
+    if (state->scribble_armed || state->mark_count > 0) {
       agent_bubble_rect_to_region(region, layout->chip_reading, &bx, &by, &bw, &bh);
       ui::Button *reading_but = uiDefButO(
           block, ui::ButtonType::But, "wm.context_menu_enum",
           blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-          "How the ink is read: separate marks that each point at something, or "
-          "one sketch of what to build (Tab flips it while drawing)");
+          "Draw to build creates the shape you sketch. Point to edit shows where "
+          "to apply your chat instructions. Tab switches while drawing");
       if (reading_but) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(reading_but);
         RNA_string_set(op_ptr, "data_path", "window_manager.mixar_mark_intent");
@@ -661,7 +662,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
         agent_bubble_rect_to_region(region, layout->chip_clear, &bx, &by, &bw, &bh);
         uiDefButO(block, ui::ButtonType::But, "mixar.scribble_mark_clear",
                   blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-                  "Discard the queued marks");
+                  "Discard the unsent drawing and its preview");
       }
     }
   }
@@ -1239,7 +1240,7 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
                                      &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
                                      nullptr);
         if (input_but) {
-          ui::button_placeholder_set(input_but, "Describe your scene here...");
+          ui::button_placeholder_set(input_but, empty_probe.placeholder);
           ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
           ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
           /* Emboss is required for clicks, but its default inner is opaque
@@ -3874,6 +3875,10 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
 #endif
 
   g_bubble_minimised = true;
+  /* Minimise returns typing to the viewport, including an armed sketch modal. */
+  if (g_host_ghostwin != nullptr) {
+    Mixar_WindowMakeKey(g_host_ghostwin);
+  }
   return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
@@ -4166,6 +4171,7 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_queue_navigate);
   WM_operatortype_append(MIXAR_OT_generations_navigate);
   WM_operatortype_append(MIXAR_OT_reference_scroll);
+  WM_operatortype_append(MIXAR_OT_preview_sketch);
 }
 
 static void agent_bubble_keymap(wmKeyConfig *keyconf)
@@ -4352,6 +4358,7 @@ void ED_spacetype_agent_bubble()
 
   mixie_chat_qa_targets_register();
   agent_ui_pill_cat_qa_register();
+  agent_ui_pill_draft_qa_register();
   agent_bubble_references_qa_register();
   agent_ui_generations_qa_register();
 }

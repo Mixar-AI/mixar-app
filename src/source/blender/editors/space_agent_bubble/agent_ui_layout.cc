@@ -407,8 +407,8 @@ void agent_ui_layout_build(const int window_w,
                                  AGENT_CHIP_H);
 }
 
-/* Fit the labels actually shown, including the mark count and Voice status.
- * Counts and Send remain visible. Two things shorten, in this order: the
+/* Fit the labels actually shown, including Done, the drawing intent and Voice status.
+ * Drawing controls and Send remain visible. Two things shorten, in this order: the
  * model chip walks its own compact ladder (and disappears), then the
  * secondary reference label drops to "Reference". */
 void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state)
@@ -420,19 +420,13 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   auto width = [&](const char *label, const float icon) {
     return ui::mixar_text_width(label, size) + icon * u + padding + 2.0f;
   };
-  char annotation[48];
-  if (state.mark_count) {
-    SNPRINTF(annotation, "Sketch · %d", state.mark_count);
-  }
-  else {
-    STRNCPY(annotation, "Sketch");
-  }
+  const char *annotation = state.scribble_armed ? "Done" : "Sketch";
   const float annotate_w = state.scribble_available ? width(annotation, AGENT_CHIP_ICON) : 0;
   const float voice_w = state.voice_available ?
                             width(state.voice_listening ? state.voice_status : "Voice", AGENT_CHIP_ICON) : 0;
   const float auto_w = width("Auto", AGENT_SWITCH_W) + AGENT_CHIP_PAD_X * u;
-  const float reading_w = state.mark_count ?
-                              width(state.mark_intent[0] ? state.mark_intent : "Auto", AGENT_CHIP_ICON) : 0;
+  const float reading_w = (state.scribble_armed || state.mark_count) ?
+                              width(state.mark_intent[0] ? state.mark_intent : "Auto detect", AGENT_CHIP_ICON) : 0;
   const float clear_w = state.mark_count && !state.scribble_armed ? AGENT_CHIP_CLEAR_W * u : 0;
   const float rest_fixed = annotate_w + voice_w + auto_w + reading_w + clear_w +
                      gap * (2 + (annotate_w > 0) + (voice_w > 0) + (reading_w > 0) + (clear_w > 0));

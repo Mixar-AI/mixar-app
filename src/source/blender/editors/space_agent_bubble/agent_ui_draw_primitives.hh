@@ -5,7 +5,7 @@
 
 #pragma once
 
-/** Private painting primitives for agent_ui_draw.cc. */
+/** Private inline painting primitives shared by the island and compact draft painters. */
 
 #include <algorithm>
 #include <cmath>
@@ -27,12 +27,12 @@ namespace {
 /** \name Shape helpers
  * \{ */
 
-void fill_round(const rctf *rect, const float radius, const float col[4])
+inline void fill_round(const rctf *rect, const float radius, const float col[4])
 {
   ui::mixar_fill_round(*rect, radius, col);
 }
 
-void outline_round(const rctf *rect, const float radius, const float col[4])
+inline void outline_round(const rctf *rect, const float radius, const float col[4])
 {
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   ui::draw_roundbox_4fv(rect, false, radius, col);
@@ -55,13 +55,13 @@ void outline_round(const rctf *rect, const float radius, const float col[4])
  * Native frost passes tint=false: the common sheen and rim finish the pane
  * without stacking another coloured bed on top of AppKit or DWM see-through.
  */
-void glass_fill_round(const rctf *rect,
-                      const ui::eMixarGlassRole role,
-                      const float radius,
-                      const bool shadow = false,
-                      const bool specular = false,
-                      const bool tint = true,
-                      const bool rim = true)
+inline void glass_fill_round(const rctf *rect,
+                             const ui::eMixarGlassRole role,
+                             const float radius,
+                             const bool shadow = false,
+                             const bool specular = false,
+                             const bool tint = true,
+                             const bool rim = true)
 {
   rcti pane;
   BLI_rcti_rctf_copy(&pane, rect);
@@ -89,12 +89,12 @@ void glass_fill_round(const rctf *rect,
  * (see `aa` below) — the chip has nothing drawn over its edge, and without the
  * feather it drew visibly stair-stepped.
  */
-void fill_round_gradient(const rctf *rect,
-                         const float radius,
-                         const float c0[4],
-                         const float c1[4],
-                         const float a[2],
-                         const float b[2])
+inline void fill_round_gradient(const rctf *rect,
+                                const float radius,
+                                const float c0[4],
+                                const float c1[4],
+                                const float a[2],
+                                const float b[2])
 {
   const float abx = b[0] - a[0];
   const float aby = b[1] - a[1];
@@ -227,12 +227,12 @@ void fill_round_gradient(const rctf *rect,
  * empty-looking border on an account whose balance simply has not loaded yet
  * would read as a rendering bug, not as information.
  */
-void draw_card_border_meter(const rctf *rect,
-                            const float radius,
-                            const float width,
-                            const float lit[4],
-                            const float spent[4],
-                            const float remaining)
+inline void draw_card_border_meter(const rctf *rect,
+                                   const float radius,
+                                   const float width,
+                                   const float lit[4],
+                                   const float spent[4],
+                                   const float remaining)
 {
   /* The BAND only. This used to fill the whole card rect in both branches and
    * rely on an opaque gradient painted afterwards to hide the interior; the
@@ -314,12 +314,12 @@ void draw_card_border_meter(const rctf *rect,
  * mid-word with no runtime signal at all.
  * \{ */
 
-int island_font()
+inline int island_font()
 {
   return BLF_default();
 }
 
-float text_width(const char *text, const float size)
+inline float text_width(const char *text, const float size)
 {
   const int font = island_font();
   BLF_size(font, size);
@@ -327,8 +327,8 @@ float text_width(const char *text, const float size)
 }
 
 /** Draw \a text with its left edge at \a x and its ink centred on \a cy. */
-void label_left(const char *text, const float x, const float cy, const float size,
-                const float col[4])
+inline void label_left(
+    const char *text, const float x, const float cy, const float size, const float col[4])
 {
   if (!text || text[0] == '\0') {
     return;
@@ -352,8 +352,8 @@ void label_left(const char *text, const float x, const float cy, const float siz
 }
 
 /** Draw \a text centred on (cx, cy). */
-void label_centre(const char *text, const float cx, const float cy, const float size,
-                  const float col[4])
+inline void label_centre(
+    const char *text, const float cx, const float cy, const float size, const float col[4])
 {
   if (!text || text[0] == '\0') {
     return;
@@ -362,8 +362,8 @@ void label_centre(const char *text, const float cx, const float cy, const float 
 }
 
 /** Draw \a text with its right edge at \a x. */
-void label_right(const char *text, const float x, const float cy, const float size,
-                 const float col[4])
+inline void label_right(
+    const char *text, const float x, const float cy, const float size, const float col[4])
 {
   if (!text || text[0] == '\0') {
     return;

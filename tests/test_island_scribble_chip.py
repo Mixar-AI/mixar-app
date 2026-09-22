@@ -62,10 +62,10 @@ def test_chip_is_gated_on_the_toggle_being_registered():
     assert 'WM_operatortype_find("MIXAR_OT_scribble_toggle", true)' in STATE_CC
 
 
-def test_reading_and_clear_chips_only_exist_while_marks_are_queued():
+def test_reading_is_available_while_drawing_and_clear_only_after_done():
     body = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
     reading = body.index('"wm.context_menu_enum"')
-    count_gate = body.rindex("state->mark_count > 0", 0, reading)
+    count_gate = body.rindex("state->scribble_armed || state->mark_count > 0", 0, reading)
     assert count_gate < reading
     clear = body.index('"mixar.scribble_mark_clear"')
     armed_gate = body.rindex("!state->scribble_armed", 0, clear)
@@ -114,7 +114,7 @@ def test_chip_row_paints_scribble_in_the_island_unit():
     assert "AGENT_ICON_PEN" in body
     assert "AgentIslandControl::Scribble" in body
     assert "layout->chip_scribble, state->scribble_armed" in body
-    assert '"Sketch · %d"' in body
+    assert 'state->scribble_armed ? "Done" : "Sketch"' in body
     assert "AGENT_ICON_CROSS" in body
     assert "AGENT_ICON_CHEVRON_DOWN" in body
 
@@ -179,7 +179,7 @@ def test_handwriting_has_explicit_header_control_with_shared_geometry():
 
 
 def test_chip_widths_fit_mark_counts_voice_status_and_auto_switch():
-    assert 'SNPRINTF(annotation, "Sketch · %d", state.mark_count)' in LAYOUT_CC
+    assert 'state.scribble_armed ? "Done" : "Sketch"' in LAYOUT_CC
     assert 'width("Auto", AGENT_SWITCH_W)' in LAYOUT_CC
     assert 'state.voice_listening ? state.voice_status : "Voice"' in LAYOUT_CC
     assert 'agent_ui_layout_fit_controls(*r_layout, *r_state)' in BUBBLE_CC

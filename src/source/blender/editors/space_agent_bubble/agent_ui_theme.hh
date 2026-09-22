@@ -293,7 +293,7 @@ namespace blender {
 
 /** Scribble chips, right of Upload Reference in the model chip's old slot:
  *  the toggle (pen + "Scribble", or "Scribble · N" with N draft marks), then,
- *  only while marks are queued, the reading dropdown (Auto / Sketch / Marks)
+ *  while drawing or queued, the reading dropdown (Auto detect / Draw to build / Point to edit)
  *  and a clear X. Sized like the Upload chip; the same 12-unit gap between. */
 #define AGENT_CHIP_GAP 12
 #define AGENT_CHIP_SCRIBBLE_W 150

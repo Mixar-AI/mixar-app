@@ -137,7 +137,7 @@ result = [list(v.view_rotation), list(v.view_location), v.view_distance]
         qa.step('first_stroke', draw, qa, vp, (.35, .4), (.55, .62))
         qa.wait('len(bpy.context.scene.mixar_marks)==1', timeout=10)
         qa.step('choose_sketch', qa.cmd, 'choose',
-                widget={'op': 'WM_OT_context_menu_enum', 'area_type': 'AGENT_BUBBLE'}, item='Sketch')
+                widget={'op': 'WM_OT_context_menu_enum', 'area_type': 'AGENT_BUBBLE'}, item='Draw to build')
         # Hold the timer so screenshots/harness latency cannot hide the race.
         qa.eval('''
 from mixar.modules.scribble_mark.ui.operators import mark_draw_ops

@@ -15,10 +15,9 @@ Both are best-effort by contract. The user's words are a complete request on
 their own; losing the whole message because an optional attachment failed to
 pack would be far worse than losing the illustration.
 
-The frames are attached **annotated first, clean second**. If the composer is
-near its attachment cap only one survives, and the annotated copy is the one
-carrying information the agent cannot get any other way — the clean frame it
-can always re-render from the baked camera.
+Only annotated previews enter the composer and transcript. Clean companion
+frames join the outgoing encoding list in preview.outgoing_attachments;
+visible references take priority when the attachment cap is reached.
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 
-from . import annotate, freeze, marks as mark_store, view_bake
+from . import marks as mark_store, preview
 from . import payload as payload_mod
 
 logger = get_logger(__name__)
@@ -86,7 +85,7 @@ def prepare_for_send(scene):
                        exc)
 
     try:
-        notes.extend(_attach_frames(scene, context))
+        notes.extend(preview.sync(scene))
     except Exception as exc:  # noqa: BLE001 — an attachment is never worth
         # losing the marks, which carry the resolved answer on their own
         logger.warning("Scribble mark: could not attach frozen frames: %s", exc,
@@ -126,97 +125,3 @@ def finish_send(scene):
         scribble_mode.disarm(bpy.context.window_manager)
     except Exception as exc:  # noqa: BLE001
         logger.debug("Scribble mark: could not disarm after send: %s", exc)
-
-
-# =============================================================================
-# Frames
-# =============================================================================
-
-def _attach_frames(scene, context):
-    """Attach the annotated and clean frozen frames. Returns any notes."""
-    from mixar.modules.space_mixie_chat.constants import (
-        MAX_ATTACHMENTS_PER_MESSAGE,
-    )
-
-    frame_name = getattr(scene, "mixar_mark_frame_name", "") or ""
-    image = freeze.get_image(frame_name) if frame_name else None
-    if image is None:
-        return ["the frozen frame was unavailable; marks sent without it"]
-
-    # Named off the newest mark's serial, so an earlier message's attachment
-    # is never overwritten by a later freeze. Drawn from the STORED records,
-    # which still carry the raw strokes the wire payload leaves behind.
-    marks = context.get("marks") or ()
-    serial = marks[-1].get("id") if marks else 0
-    all_ink = mark_store.draft_marks(scene) or marks
-
-    # The annotated copy is THIS frame, so only ink drawn ON it lands where
-    # the user put it. A draft from an earlier freeze — the mode was re-armed,
-    # or the viewport resized mid-mode — describes a different camera and
-    # framing; converting its normalized strokes against this frame's size
-    # would ink them where the user never drew, on the one picture the agent
-    # is told shows the marks. Those marks still travel whole: their resolved
-    # data and the prose describe them, and their own view rides the views map.
-    current_view = view_bake.view_name_for_frame(frame_name)
-    own = [m for m in all_ink if m.get("view") == current_view]
-    omitted = len(all_ink) - len(own)
-
-    annotated = None
-    if own:
-        annotated = annotate.render_annotated(
-            image, own, freeze.annotated_name(serial),
-        )
-
-    pending = scene.mixie_chat_pending_attachments
-    room = MAX_ATTACHMENTS_PER_MESSAGE - len(pending)
-    if room <= 0:
-        return ["no attachment slots left; marks sent without the frame"]
-
-    notes = []
-    # Annotated first: it is the only view of the marks in context, and the
-    # clean frame is reproducible from the baked camera at any time.
-    queued = 0
-    for name in (annotated, frame_name):
-        if not name or queued >= room:
-            continue
-        if _already_attached(pending, name):
-            continue
-        _attach(pending, name)
-        queued += 1
-
-    if annotated and queued == 1 and room == 1:
-        notes.append("only the marked frame fit; the clean frame was not attached")
-    if not annotated:
-        if omitted:
-            notes.append("the newest frame carries none of the marks; "
-                         "it is attached clean")
-        else:
-            notes.append("the marks could not be drawn onto the frame")
-    elif omitted:
-        notes.append(
-            f"{omitted} earlier mark(s) were drawn on a previous frame; "
-            "their resolved data describes them, but their ink is not on "
-            "the attached frame"
-        )
-
-    return notes
-
-
-def _already_attached(pending, name):
-    return any(
-        att.image_source == "BLEND_DATA" and att.image_path == name
-        for att in pending
-    )
-
-
-def _attach(pending, image_name):
-    """Queue a packed datablock as a chat attachment.
-
-    BLEND_DATA rather than FILE: both frames are packed into the .blend and
-    have no file on disk to point at — they live in ``bpy.app.tempdir`` only
-    for the moment between capture and pack.
-    """
-    attachment = pending.add()
-    attachment.image_source = "BLEND_DATA"
-    attachment.image_path = image_name
-    attachment.display_name = image_name

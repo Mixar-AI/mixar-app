@@ -17,6 +17,7 @@ import sys
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import QA
 from scribble_send_scenario import draw, viewport
+from sketch_controls import open_controls
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(os.environ.get('SCRIBBLE_QA_OUT', '/tmp/mixar-scribble-input-modes'))
@@ -118,6 +119,7 @@ chat_send_probe.install()
         snap(qa, '01-default')
         qa.step('annotation_only', qa.click, op='MIXAR_OT_scribble_toggle')
         qa.wait('bpy.context.window_manager.mixar_mark_armed', timeout=10)
+        open_controls(qa)
         assert flags(qa) == {'marks': True, 'ink': False, 'voice': False}
         assert geometry(qa) == normal, 'Annotation must not resize the composer'
         assert qa.find(prop='mixie_chat_input')['widgets']
@@ -163,6 +165,7 @@ chat_send_probe.install()
         qa.wait('not bpy.context.window_manager.mixie_chat_ink_visible', timeout=10)
         qa.click(op='MIXAR_OT_scribble_toggle')
         qa.wait('bpy.context.window_manager.mixar_mark_armed', timeout=10)
+        open_controls(qa)
         scale = qa.eval('result=bpy.context.preferences.view.ui_scale')
         qa.eval('bpy.context.preferences.view.ui_scale=1.25')
         assert_chip_geometry(qa)
@@ -183,7 +186,11 @@ result={'message':p['message'],'mark_count':len(p['mark_context']['marks']),
         'image_count':len(p.get('image_attachments') or [])}
 ''')
         assert payload['message'].endswith(text), payload
-        assert payload['mark_count'] == 2 and payload['image_count'] == 2, payload
+        assert payload['mark_count'] == 2 and payload['image_count'] == 4, payload
+        # Each frozen view has one annotated preview; clean companions are agent-only.
+        visible = qa.eval("result=[len(m.attachments) for m in bpy.context.scene.mixie_chat_messages "
+                          "if m.sender=='USER']")
+        assert visible == [2], visible
         assert flags(qa) == {'marks': False, 'ink': False, 'voice': False}
         qa.eval('result=str(bpy.ops.mixar.bubble_restore())')
         qa.wait("bool(drv.find(op='MIXAR_OT_scribble_toggle'))", timeout=10)

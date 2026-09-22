@@ -6103,7 +6103,20 @@ static int do_but_TEX(
       else {
         if (!but_extra_operator_icon_mouse_over_get(but, data->region, event)) {
           HandleButtonData *data = but->active;
+          const ScrArea *area = CTX_wm_area(C);
           button_activate_state(C, but, BUTTON_STATE_TEXT_EDITING);
+          if (ELEM(event->type, EVT_PADENTER, EVT_RETKEY) &&
+              (but->flag & BUT_TEXTEDIT_UPDATE) && area &&
+              area->spacetype == SPACE_AGENT_BUBBLE &&
+              ui_but_mixie_mention_scene(but) != nullptr)
+          {
+            /* Viewport typing releases the island composer's private edit buffer.
+             * Enter over that highlighted field must submit on this press,
+             * not merely re-enter editing and require another Enter. Reuse
+             * the editing path for Shift+Enter and mention acceptance too.
+             * Popups using the same RNA property keep native Enter activation. */
+            return do_but_textedit(C, block, but, data, event);
+          }
           if (event->type == LEFTMOUSE &&
               (but->type == ButtonType::TextBox || ui_but_mixie_mention_scene(but) != nullptr))
           {

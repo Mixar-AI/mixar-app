@@ -21,14 +21,17 @@ class MIXAR_OT_scribble_toggle(Operator):
     bl_idname = "mixar.scribble_toggle"
     bl_label = "Sketch Viewport"
     bl_description = (
-        "Freeze the 3D viewport and draw marks or a sketch. "
-        "Type or use Voice in chat; your annotations accompany the next message"
+        "Draw what to build or circle what to change on the 3D view. "
+        "The Agent minimizes and shows your typed instructions. "
+        "Enter sends; Escape or Done opens the drawing preview"
     )
     bl_options = {"REGISTER"}
 
     def execute(self, context):
         wm = context.window_manager
         if scribble_mode.is_armed(wm):
+            from mixar.modules.scribble_mark.core import pending
+            pending.flush(context)
             scribble_mode.disarm_marks(wm)
             overlay.tag_redraw()
             return {"FINISHED"}
@@ -57,24 +60,19 @@ class MIXAR_OT_scribble_mark_undo(Operator):
             return {"CANCELLED"}
         overlay.pop_settled()
         mark_store.refresh_reading(context.scene, context.window_manager)
+        if not scribble_mode.is_armed(context.window_manager):
+            from mixar.modules.scribble_mark.core import preview
+            preview.sync(context.scene)
         overlay.tag_redraw()
         return {"FINISHED"}
 
 
 class MIXAR_OT_scribble_mark_clear(Operator):
-    """Discard the queued marks and release what they created
-
-    QUEUED, not every mark. Both surfaces that offer this — the chat header
-    and the island chip — show the DRAFT count beside it and the island's
-    tooltip says "Discard the queued marks", so a user looking at "2" and
-    clicking the X means those two. Removing the SENT marks of earlier turns
-    as well would take with them the vertex groups and cameras the
-    conversation still names, which is the same thing ``remove_last`` used to
-    do through the adjacent button.
-    """
+    """Discard unsent drawings and previews, preserving earlier sent marks."""
 
     bl_idname = "mixar.scribble_mark_clear"
-    bl_label = "Clear Marks"
+    bl_label = "Discard Sketch"
+    bl_description = "Remove the unsent drawing and its preview from this message"
     bl_options = {"REGISTER"}
 
     @classmethod
@@ -82,7 +80,9 @@ class MIXAR_OT_scribble_mark_clear(Operator):
         return mark_store.count(context.scene, drafts_only=True) > 0
 
     def execute(self, context):
-        removed = mark_store.clear(context.scene, drafts_only=True)
+        removed = mark_store.clear(context.scene, drafts_only=True, keep_view=_live_view_name())
+        from mixar.modules.scribble_mark.core import preview
+        preview.sync(context.scene)
         overlay.reset()
         wm = context.window_manager
         # The reading override described ink that no longer exists.
