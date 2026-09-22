@@ -14,6 +14,13 @@ The C++ footer button and the island chip read the mirror — `..._label` is wha
 they draw and `..._byok_active` is what greys them out — so the property names
 are a cross-language contract.
 
+**The dict's `mixar_agent_model_label` is the MODEL-ONLY label; the WM property
+of the same name receives the COMPOSED chip text** (`chip_text()`, built by
+`model_menu.chip_label` from the label, the saved thinking level and the BYOK
+flag: "GPT 5.6 Sol · High", or the BYOK indicator while a user key overrides
+the pick). Composing at the mirror boundary keeps the C++ side a plain string
+reader and the dict a faithful copy of the server payload.
+
 Not persisted to disk. It is per-account, the endpoint is `no-store`, and it is
 one small request on login.
 
@@ -185,8 +192,22 @@ def apply_local(values: Dict[str, Any], wm=None, *, epoch: Optional[int] = None)
     return True
 
 
+def chip_text() -> str:
+    """The composed label the island chip draws (what the WM `_label` holds)."""
+    current = snapshot()
+    return model_menu.chip_label(
+        current["mixar_agent_model_label"],
+        current["mixar_agent_model_thinking"],
+        bool(current["mixar_agent_model_byok_active"]),
+    )
+
+
 def apply_to_wm(wm=None) -> None:
-    """Mirror the state onto WindowManager properties, if they exist yet."""
+    """Mirror the state onto WindowManager properties, if they exist yet.
+
+    `mixar_agent_model_label` is written as the composed chip text — see the
+    module docstring; every other field is copied verbatim.
+    """
     try:
         import bpy
 
@@ -196,6 +217,7 @@ def apply_to_wm(wm=None) -> None:
     if target is None:
         return
     current = snapshot()
+    current["mixar_agent_model_label"] = chip_text()
     for field in _FIELDS:
         try:
             setattr(target, field, current[field])

@@ -242,15 +242,6 @@ def switch_mode(qa, op, workspace):
     qa.wait(f"drv.main_window().workspace.name == {workspace!r}", timeout=10)
 
 
-def cancel_generation_dialog(qa):
-    # The prompt has autofocus: Esc first exits its text edit. If the popup
-    # remains, another Esc dismisses the dialog itself (normal Blender UI).
-    qa.press("ESC")
-    if qa.find(popup=True, op="MIXIE_OT_imagegen_generate_and_close")["total"]:
-        qa.press("ESC")
-    qa.wait("not any(w.get('popup') for w in drv.find())", timeout=4)
-
-
 def extra_media(qa, viewport_at):
     portrait = png(OUT / "reference-portrait.png", (80, 180, 90), width=64, height=768)
     node_id = drop(qa, portrait, **viewport_at)
@@ -367,15 +358,16 @@ def run(qa: QA):
     qa.step("snap_context_menu", snap, qa, "06_context_menu")
     qa.step("dismiss_context_menu", qa.press, "ESC")
     qa.step("restore_canvas_focus", select, qa, second)
+    # Ctrl+Tab is the pie's only key; it lists the catalog node templates
+    # (same entries as the + Add menu), never the retired generation popups.
     qa.step("open_features_pie", qa.press, "TAB", ctrl=True)
     qa.step("features_pie_shown", qa.wait,
-            "len(drv.find(popup=True, op='MIXIE_OT_imagegen_popup')) == 1", timeout=4)
-    qa.step("open_imagegen_popup", qa.click, popup=True, op="MIXIE_OT_imagegen_popup")
-    qa.step("imagegen_popup_shown", qa.wait,
-            "len(drv.find(popup=True, op='MIXIE_OT_imagegen_generate_and_close')) == 1",
-            timeout=5)
-    qa.step("snap_generation_popup", snap, qa, "generation_popup")
-    qa.step("cancel_generation_popup", cancel_generation_dialog, qa)
+            "len(drv.find(popup=True, op='MIXIE_OT_moodboard_add_template')) >= 1",
+            timeout=4)
+    qa.step("snap_features_pie", snap, qa, "features_pie_popup")
+    qa.step("dismiss_features_pie", qa.press, "ESC")
+    qa.step("features_pie_closed", qa.wait,
+            "not any(w.get('popup') for w in drv.find())", timeout=4)
 
     qa.step("close_with_references", toggle, qa, 0)
     qa.step("reopen_keeps_references", toggle, qa, 1)

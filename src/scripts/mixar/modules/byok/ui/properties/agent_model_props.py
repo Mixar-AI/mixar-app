@@ -11,9 +11,15 @@ the channel, the dict in `preference_state` is the source of truth.
 
 **These names are a cross-language contract.** The Mixie Chat footer button and
 the Agent Bubble island chip are drawn in C++ and read them directly:
-`..._label` is the model-only text on the button (empty -> "Mixie") and
-`..._byok_active` is what greys it out. Renaming one silently blanks a control
-in both surfaces.
+`..._label` is the text on the button (empty -> "Mixie") and `..._byok_active`
+is what greys it out. Renaming one silently blanks a control in both surfaces.
+
+**`mixar_agent_model_label` here is the COMPOSED chip text**, not the raw
+model label: `preference_state.apply_to_wm()` writes
+`model_menu.chip_label(...)` — "GPT 5.6 Sol · High" once a thinking level is
+saved, the BYOK indicator (`model_menu.BYOK_CHIP_TEXT`) while a user key
+overrides the pick. The dict field of the same name in `preference_state`
+stays model-only; read that, never this property, when you need the model.
 
 On WindowManager rather than Scene, like every other agent-settings mirror: the
 pick is per-account, not per-.blend, and WindowManager properties are not
@@ -48,7 +54,10 @@ def register():
     )
     WM.mixar_agent_model_label = StringProperty(
         name="Agent Model Label",
-        description="Display label of the saved model — what the picker button draws",
+        description=(
+            "Composed picker chip text: model label plus saved thinking level, "
+            "or the BYOK indicator while your own key overrides the pick"
+        ),
         default='',
     )
     WM.mixar_agent_model_thinking = StringProperty(

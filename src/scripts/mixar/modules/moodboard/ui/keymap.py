@@ -9,8 +9,10 @@ Moodboard Keymap Registration
 Registers keyboard shortcuts for moodboard operations.
 Cmd+P (macOS) / Ctrl+P (Windows/Linux): Send selected images to Mixie Chat
 `~` (Accent Grave): toggle the Zen Mode drawer open/shut
-View Pie Menu: Follows user's pie menu key preference (default: backtick)
-  in the standalone Mixie editor; Ctrl+Tab also opens it.
+Node pie menu: Ctrl+Tab only (Blender's stock editor pie key) in the
+  standalone Mixie editor. The backtick is never bound to the pie: it is the
+  drawer toggle, and mirroring the 3D View's View-pie key here made the two
+  collide.
 """
 
 import bpy
@@ -107,60 +109,6 @@ def _ensure_addon_keymap(kc, name, space_type, region_type='WINDOW'):
     if km:
         return km
     return kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
-
-
-def get_user_pie_menu_key():
-    """
-    Get the user's preferred pie menu key by looking at VIEW3D_MT_view_pie binding.
-    Falls back to ACCENT_GRAVE (backtick) if not found.
-
-    Returns:
-        dict: keys 'type', 'value', 'ctrl', 'shift', 'alt', 'oskey'
-    """
-    wm = getattr(bpy.context, 'window_manager', None)
-    if not wm:
-        return {
-            'type': 'ACCENT_GRAVE',
-            'value': 'PRESS',
-            'ctrl': False,
-            'shift': False,
-            'alt': False,
-            'oskey': False,
-        }
-
-    # Check user keyconfig first (user customizations), then default
-    for kc in (wm.keyconfigs.user, wm.keyconfigs.default):
-        if not kc:
-            continue
-
-        # Look for 3D View keymap
-        km = kc.keymaps.get('3D View')
-        if not km:
-            continue
-
-        # Find the VIEW3D_MT_view_pie binding
-        for kmi in km.keymap_items:
-            if kmi.idname == 'wm.call_menu_pie':
-                # Check if this is the view pie menu
-                if kmi.properties.get('name') == 'VIEW3D_MT_view_pie':
-                    return {
-                        'type': kmi.type,
-                        'value': kmi.value,
-                        'ctrl': kmi.ctrl,
-                        'shift': kmi.shift,
-                        'alt': kmi.alt,
-                        'oskey': kmi.oskey,
-                    }
-
-    # Default fallback: backtick with no modifiers
-    return {
-        'type': 'ACCENT_GRAVE',
-        'value': 'PRESS',
-        'ctrl': False,
-        'shift': False,
-        'alt': False,
-        'oskey': False,
-    }
 
 
 def register():
@@ -293,20 +241,9 @@ def register():
         )
         addon_keymaps.append((km, kmi))
 
-        # Pie menu keymap - follows user's VIEW3D pie menu key preference
-        pie_key = get_user_pie_menu_key()
-        kmi = km.keymap_items.new(
-            'mixie.moodboard_pie_menu_call',
-            type=pie_key['type'],
-            value=pie_key['value'],
-            ctrl=pie_key['ctrl'],
-            shift=pie_key['shift'],
-            alt=pie_key['alt'],
-            oskey=pie_key['oskey'],
-        )
-        addon_keymaps.append((km, kmi))
-
-        # Ctrl+Tab as additional pie menu shortcut (matching other Blender spaces)
+        # Node pie menu on Ctrl+Tab, Blender's stock editor pie key. This is
+        # the ONLY pie binding: the backtick belongs to the drawer toggle, so
+        # the old "mirror the 3D View's View-pie key" item is gone for good.
         kmi = km.keymap_items.new(
             'mixie.moodboard_pie_menu_call',
             type='TAB',
@@ -373,8 +310,7 @@ def register():
         logger.info("Registered keymap: %s+C for copying images", cmd_key)
         logger.info("Registered keymap: %s+V for pasting image from clipboard", cmd_key)
         logger.info("Registered keymap: ACCENT_GRAVE toggles the Zen moodboard drawer")
-        logger.info("Registered keymap: %s for pie menu (follows user preference)", pie_key['type'])
-        logger.info("Registered keymap: Ctrl+Tab for pie menu (additional shortcut)")
+        logger.info("Registered keymap: Ctrl+Tab for the node pie menu (only pie binding)")
         logger.info("Registered keymap: %s+Shift+3, 4, 7 for direct feature popups", cmd_key)
 
 

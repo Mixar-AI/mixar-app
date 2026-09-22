@@ -24,7 +24,7 @@ outside a running Blender.
 import bpy
 from bpy.types import Menu
 
-from ...core import model_menu, model_suggestions, preference_state
+from ...core import catalog_labels, model_menu, model_suggestions, preference_state
 
 THINKING_MENU_ID = "MIXIE_CHAT_MT_agent_model_thinking"
 
@@ -85,12 +85,17 @@ class MIXIE_CHAT_MT_agent_model(Menu):
         layout = self.layout
         layout.ui_units_x = 15
         models, current = _current()
+        # The key in use, named from the credential state at draw time so a
+        # fetch that lands after the menu opened shows on the next draw.
+        byok_provider_label, byok_model_label = catalog_labels.byok_current_labels()
         rows = model_menu.build_rows(
             models,
             active_provider=current["mixar_agent_model_provider"],
             active_model=current["mixar_agent_model_id"],
             active_thinking=current["mixar_agent_model_thinking"],
             byok_active=bool(current["mixar_agent_model_byok_active"]),
+            byok_provider_label=byok_provider_label,
+            byok_model_label=byok_model_label,
         )
         # A build without the BYOK dialog would draw a row that pops nothing;
         # the removed topbar entry guarded the same way.

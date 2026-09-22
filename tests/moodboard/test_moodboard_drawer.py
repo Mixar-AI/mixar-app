@@ -226,7 +226,7 @@ def test_tilde_toggles_drawer_in_c_and_addon():
     assert "'Moodboard Drawer'" in py
     assert "'Window'" in py
     assert "'3D View'" in py
-    assert "shift" in py[py.index("def _bind_drawer_toggle(") : py.index("def get_user_pie_menu_key(")]
+    assert "shift" in py[py.index("def _bind_drawer_toggle(") : py.index("def _ensure_addon_keymap(")]
 
 
 def test_macos_grave_key_is_accent_grave():

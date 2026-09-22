@@ -21,6 +21,10 @@ Row kinds:
     RESET     drop the saved pick and fall back to the server default
     SENTINEL  the empty-catalog dead end
     BYOK      open the AI Provider Settings dialog shared with the profile menu
+
+Also home to the two pure wording rules the island chip and the BYOK note
+share: `chip_label()` (what the WM `mixar_agent_model_label` mirror holds) and
+`byok_note_text()` (the NOTE row naming the key's provider and model).
 """
 
 from dataclasses import dataclass
@@ -33,8 +37,19 @@ EMPTY_SENTINEL_TEXT = "No models available — contact support"
 
 #: Shown at the top of the menu while a user key is configured. The server
 #: resolves BYOK ahead of any stored platform pick, so the pick is inert until
-#: the key is removed — saying so beats a menu of silently dead rows.
+#: the key is removed — saying so beats a menu of silently dead rows. This is
+#: the fallback wording; once the credential state names the provider and
+#: model, `byok_note_text()` says which one ("Your key: <Provider> · <Model>").
 BYOK_NOTE_TEXT = "Your API key controls the model"
+BYOK_NOTE_PREFIX = "Your key: "
+
+#: What the island chip reads while a user key overrides the hosted pick
+#: (product decision: "Custom"; the no-pick chip stays "Mixie"). One constant
+#: so the wording can be swapped in one place — e.g. "My Key", "Own Key".
+BYOK_CHIP_TEXT = "Custom"
+
+#: Separator between the model label and its thinking level on the chip.
+CHIP_SEPARATOR = " · "
 
 RESET_TEXT = "Mixie"
 
@@ -69,12 +84,46 @@ def display_model_label(provider: str, model: str, label: str = "") -> str:
     return (label or model).rsplit(" · ", 1)[-1].strip()
 
 
+def format_thinking_level(level: str) -> str:
+    """Title-cased wording for one thinking level (`medium_high` -> `Medium High`)."""
+    return (level or "").strip().replace("_", " ").title()
+
+
 def format_thinking_label(level: str) -> str:
     """Sub-row wording for one thinking level."""
-    text = (level or "").strip()
+    text = format_thinking_level(level)
     if not text:
         return "Thinking"
-    return "Thinking: " + text.replace("_", " ").title()
+    return "Thinking: " + text
+
+
+def chip_label(model_label: str, thinking_level: str = "", byok_active: bool = False) -> str:
+    """The composed text the island chip draws.
+
+    Empty means "no pick" and C++ falls back to "Mixie". A user key overrides
+    every hosted pick, so the chip says so instead of naming a model the agent
+    is not running on; the level rides along only when one is saved (empty is
+    the model's own default, which the chip does not spell out).
+    """
+    if byok_active:
+        return BYOK_CHIP_TEXT
+    label = (model_label or "").strip()
+    level = format_thinking_level(thinking_level)
+    if label and level:
+        return label + CHIP_SEPARATOR + level
+    return label
+
+
+def byok_note_text(provider_label: str = "", model_label: str = "") -> str:
+    """The menu's BYOK note, naming the key's provider and model when known.
+
+    Both unknown (the credential fetch has not landed) falls back to the
+    generic wording rather than drawing "Your key: " over nothing.
+    """
+    parts = [part.strip() for part in (provider_label, model_label) if (part or "").strip()]
+    if not parts:
+        return BYOK_NOTE_TEXT
+    return BYOK_NOTE_PREFIX + CHIP_SEPARATOR.join(parts)
 
 
 def build_rows(
@@ -84,6 +133,8 @@ def build_rows(
     active_model: str = "",
     active_thinking: str = "",
     byok_active: bool = False,
+    byok_provider_label: str = "",
+    byok_model_label: str = "",
 ) -> List[MenuRow]:
     """Rows for the picker, in the order the backend returned the models.
 
@@ -92,6 +143,9 @@ def build_rows(
     here: providers arrive sorted by label and models in the admin-configured
     display order, and a client-side sort would silently disagree with the
     admin dashboard.
+
+    ``byok_provider_label`` / ``byok_model_label`` are the key's catalog
+    labels (or raw ids) and only shape the NOTE row's wording.
     """
     rows: List[MenuRow] = []
     current_levels: List[str] = []
@@ -105,7 +159,11 @@ def build_rows(
         ]
 
     if byok_active:
-        rows.append(MenuRow(kind="NOTE", label=BYOK_NOTE_TEXT, enabled=False))
+        rows.append(MenuRow(
+            kind="NOTE",
+            label=byok_note_text(byok_provider_label, byok_model_label),
+            enabled=False,
+        ))
 
     for record in models:
         provider = record.get("provider_id") or ""
