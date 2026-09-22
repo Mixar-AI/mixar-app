@@ -9,11 +9,12 @@
  * Design tokens for the Agent island — the floating command surface that
  * replaces the old Agent Bubble chat UI.
  *
- * EVERY number below is measured from the source artboard
+ * Geometry starts from the source artboard
  * (`entire chat ui full.svg`, agent frame at board origin 853,1138 — the
  * frame that carries the model chip; the standalone `just agent.svg`
  * export is the same geometry minus that chip and with slightly different
- * card-gradient stops, and is NOT the reference).
+ * card-gradient stops, and is NOT the reference). Header and composer spacing
+ * use the shared insets below so native controls have room around their glyphs.
  *
  * \section units Artboard units
  *
@@ -194,19 +195,19 @@ namespace blender {
 #define AGENT_CARD_RADIUS 32
 #define AGENT_CARD_BORDER 2
 
-/** Header band: the card's gradient showing above the inner panel. */
-#define AGENT_CARD_HEADER_H 74
-
-/** Round buttons in the header: artboard circles r19.5 at cy=499.5,
- *  cx 303.5 / 349.5 -> island-local cy 38.5 within the card, cx 36.5 / 82.5. */
-#define AGENT_HDR_BTN_R 19
-#define AGENT_HDR_BTN_CY 38
-#define AGENT_HDR_BTN1_CX 36
-#define AGENT_HDR_BTN2_CX 82
-/** Third disc, same 46-unit pitch: turn checkpoints (restore an earlier turn). */
-#define AGENT_HDR_BTN3_CX 128
-#define AGENT_HDR_BTN4_CX 174
-#define AGENT_HDR_GLYPH_R 13
+/** Header actions share the composer's side inset and a regular button pitch.
+ * Keep the glyph smaller than its disc, with equal space above and below. */
+#define AGENT_HDR_BTN_R 22
+#define AGENT_HDR_BTN_GAP 16
+#define AGENT_HDR_PAD_Y 20
+#define AGENT_HDR_BTN_CY (AGENT_HDR_PAD_Y + AGENT_HDR_BTN_R)
+#define AGENT_HDR_BTN_PITCH (2 * AGENT_HDR_BTN_R + AGENT_HDR_BTN_GAP)
+#define AGENT_HDR_BTN1_CX (AGENT_SEG_X + AGENT_HDR_BTN_R)
+#define AGENT_HDR_BTN2_CX (AGENT_HDR_BTN1_CX + AGENT_HDR_BTN_PITCH)
+#define AGENT_HDR_BTN3_CX (AGENT_HDR_BTN2_CX + AGENT_HDR_BTN_PITCH)
+#define AGENT_HDR_BTN4_CX (AGENT_HDR_BTN3_CX + AGENT_HDR_BTN_PITCH)
+#define AGENT_HDR_GLYPH_R 16
+#define AGENT_CARD_HEADER_H (2 * AGENT_HDR_BTN_CY)
 
 #define AGENT_HDR_TITLE_FONT blender::ui::mixar_text_role_size(blender::ui::MixarTextRole::Heading)
 
@@ -219,7 +220,7 @@ namespace blender {
  * \{ */
 
 #define AGENT_PANEL_X 6
-#define AGENT_PANEL_Y 197
+#define AGENT_PANEL_Y (AGENT_CARD_Y + AGENT_CARD_HEADER_H)
 #define AGENT_PANEL_W 1298
 #define AGENT_PANEL_H 366
 #define AGENT_PANEL_RADIUS 28
@@ -236,7 +237,7 @@ namespace blender {
  * above it, which is exactly what a taller window produced.
  *
  * These are the fixed distances measured UP from the card's bottom edge. */
-#define AGENT_CARD_PAD_BOTTOM 16 /* card foot -> chip row bottom */
+#define AGENT_CARD_PAD_BOTTOM 24 /* matches the composer's side inset */
 #define AGENT_INPUT_H 56
 #define AGENT_INPUT_MAX_LINES 4  /* strip auto-grows 1–4 rows on Shift+Enter */
 #define AGENT_INPUT_GAP 16       /* input line -> chip row */
@@ -246,7 +247,7 @@ namespace blender {
  * the pill, tab strip and card header; the middle is the transcript (a real
  * WINDOW region, so it scrolls with View2D); the bottom holds the input line
  * and the chip row. */
-#define AGENT_SLAB_TOP_H 197
+#define AGENT_SLAB_TOP_H AGENT_PANEL_Y
 #define AGENT_SLAB_BOTTOM_Y 426
 
 /** Prompt text: ink box starts at artboard (312, 577) -> local (45, 237). */
@@ -274,7 +275,7 @@ namespace blender {
 
 /** Segmented Agent/Generate mode control: track 291,842 273x44, and the
  *  active thumb inset 2 units on every side (293,844 125x40). */
-#define AGENT_SEG_X 16
+#define AGENT_SEG_X 24
 #define AGENT_SEG_W 273
 #define AGENT_SEG_THUMB_INSET 2
 #define AGENT_SEG_THUMB_W 125

@@ -53,6 +53,18 @@ void chip_content(const rctf &rect, AgentIcon glyph, const char *label,
 }
 }  // namespace
 
+void agent_ui_header_icon_draw(const AgentIcon icon,
+                               const rctf *button,
+                               const float color[4],
+                               const float backdrop[4])
+{
+  rctf glyph = *button;
+  const float inset = BLI_rctf_size_x(button) *
+                      (1.0f - float(AGENT_HDR_GLYPH_R) / AGENT_HDR_BTN_R) * 0.5f;
+  BLI_rctf_pad(&glyph, -inset, -inset);
+  agent_ui_icon_draw(icon, &glyph, color, backdrop);
+}
+
 /* -------------------------------------------------------------------- */
 /** \name Tab strip
  * \{ */
@@ -198,7 +210,7 @@ void agent_ui_draw_handwriting_control(ARegion *region,
                         agent_ui_motion_sample(region, AgentIslandControl::Rules,
                                                layout->hdr_rules), rules_fill);
   fill_round(&layout->hdr_rules, BLI_rctf_size_x(&layout->hdr_rules) * 0.5f, rules_fill);
-  agent_ui_icon_draw(AGENT_ICON_RULES, &layout->hdr_rules, glyph, rules_fill);
+  agent_ui_header_icon_draw(AGENT_ICON_RULES, &layout->hdr_rules, glyph, rules_fill);
 
   if (!state->handwriting_available) {
     return;
@@ -213,7 +225,7 @@ void agent_ui_draw_handwriting_control(ARegion *region,
   fill_round(&layout->hdr_handwriting,
              BLI_rctf_size_x(&layout->hdr_handwriting) * 0.5f,
              fill);
-  agent_ui_icon_draw(AGENT_ICON_SIGNATURE, &layout->hdr_handwriting, glyph, fill);
+  agent_ui_header_icon_draw(AGENT_ICON_SIGNATURE, &layout->hdr_handwriting, glyph, fill);
 }
 
 void agent_ui_draw_chip_row(ARegion *region,

@@ -377,12 +377,12 @@ void agent_ui_draw_island(ARegion *region,
     fill_round(&layout->hdr_history,
                BLI_rctf_size_x(&layout->hdr_history) * 0.5f,
                history_fill);
-    agent_ui_icon_draw(AGENT_ICON_CLOCK, &layout->hdr_history, glyph, history_fill);
+    agent_ui_header_icon_draw(AGENT_ICON_CLOCK, &layout->hdr_history, glyph, history_fill);
 
     fill_round(&layout->hdr_new_chat,
                BLI_rctf_size_x(&layout->hdr_new_chat) * 0.5f,
                new_chat_fill);
-    agent_ui_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, new_chat_fill);
+    agent_ui_header_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, new_chat_fill);
 
     /* Turn checkpoints: same disc, a counter-clockwise arrow glyph. Runs
      * mixie_chat.show_checkpoints (space_mixie_chat/ui/operators/
@@ -391,7 +391,7 @@ void agent_ui_draw_island(ARegion *region,
     fill_round(&layout->hdr_checkpoints,
                BLI_rctf_size_x(&layout->hdr_checkpoints) * 0.5f,
                checkpoints_fill);
-    agent_ui_icon_draw(AGENT_ICON_RESTORE, &layout->hdr_checkpoints, glyph, checkpoints_fill);
+    agent_ui_header_icon_draw(AGENT_ICON_RESTORE, &layout->hdr_checkpoints, glyph, checkpoints_fill);
 
     agent_ui_draw_handwriting_control(region, layout, state);
 

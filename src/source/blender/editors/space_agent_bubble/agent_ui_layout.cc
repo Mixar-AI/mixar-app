@@ -341,7 +341,7 @@ void agent_ui_layout_build(const int window_w,
   r_layout->hdr_checkpoints = f.disc(AGENT_HDR_BTN3_CX, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_rules = f.disc(AGENT_HDR_BTN4_CX, hdr_cy, AGENT_HDR_BTN_R);
 
-  const float handwriting_cx = AGENT_CARD_X + card_w - 23.0f - AGENT_HDR_BTN_R;
+  const float handwriting_cx = AGENT_CARD_X + card_w - AGENT_SEG_X - AGENT_HDR_BTN_R;
   r_layout->hdr_handwriting = f.disc(handwriting_cx, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_title_cx = (r_layout->hdr_rules.xmax +
                             r_layout->hdr_handwriting.xmin) * 0.5f;

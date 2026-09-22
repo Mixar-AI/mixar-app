@@ -49,6 +49,12 @@ enum AgentIcon {
 
 void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, const float color[4]);
 
+/** Inset header artwork without reducing the native button's hit rectangle. */
+void agent_ui_header_icon_draw(AgentIcon icon,
+                               const rctf *button,
+                               const float color[4],
+                               const float backdrop[4]);
+
 /**
  * Draw \a icon centred in \a box.
  *

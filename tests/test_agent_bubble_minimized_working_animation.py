@@ -166,9 +166,8 @@ def test_bottom_row_buttons_and_input_bubble_aligned():
 
 
 def test_uniform_spacing_around_input_bubble_and_buttons():
-    """Padding below buttons, gap between buttons and input, gap above input, and
-    side margins all use uniform 16-unit spacing."""
-    assert "#define AGENT_CARD_PAD_BOTTOM 16" in THEME_HH
+    """The card has matching side/foot padding and compact internal row gaps."""
+    assert "#define AGENT_CARD_PAD_BOTTOM 24" in THEME_HH
     assert "#define AGENT_INPUT_GAP 16" in THEME_HH
     assert "#define AGENT_TRANSCRIPT_GAP 16" in THEME_HH
-    assert "#define AGENT_SEG_X 16" in THEME_HH
+    assert "#define AGENT_SEG_X 24" in THEME_HH
