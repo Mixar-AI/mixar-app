@@ -28,6 +28,7 @@
 
 #include "BLI_rect.h"
 
+#include "agent_ui_generations_layout.hh"
 #include "agent_ui_pane_kit.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -237,18 +238,19 @@ struct GenPaneData {
 /* -------------------------------------------------------------------- */
 /** \name Grid geometry (agent_ui_generations_grid.cc)
  *
- * The column count is FIXED at the design's four and never computed: the
- * island is a constant 1310 units wide whatever the window's pixel width (the
- * unit scale absorbs it), so the design's four columns always fit exactly.
- * Only the row count varies, with the island's height — and at the island's
- * default height that is one row. Content and hit targets follow pixel scroll offsets.
+ * Column count is resolved, not fixed. The island's unit scale absorbs window
+ * width, but the font does not, so a short window used to ellipsize every
+ * caption. `agent_ui_generations_resolve` keeps at most #GEN_COLS columns and
+ * drops one whenever a tile would be narrower than the caption plus padding.
+ * Only the row count varies with height. Content and hit targets follow pixel
+ * scroll offsets.
  * \{ */
 
 #define GEN_COLS 4
 
 struct GenGridMetrics {
-  float tile; /* Tile edge, in region pixels — shrinks below the design's
-               * 146 when the island is too short to fit a full row plus its
+  float tile; /* Tile edge, in region pixels — shrinks below the resolved
+               * width when the island is too short to fit a full row plus its
                * caption, because a caption drawn past the panel's foot is
                * simply scissored away. */
   float pitch_x;
@@ -256,6 +258,7 @@ struct GenGridMetrics {
   float x0;     /* Left edge of column 0. */
   float y0;     /* TOP edge of row 0. */
   float bottom; /* Lowest y a caption may reach. */
+  int cols;
   int first_row;
   int end_row;
   float offset;
@@ -264,9 +267,10 @@ struct GenGridMetrics {
   rctf scrollbar;
 };
 
-GenGridMetrics agent_ui_generations_grid_metrics(const rctf &panel,
-                                                 float u,
-                                                 const GenPaneData &data);
+rctf gen_rct(const GenBox &box);
+GenFrame agent_ui_generations_frame(const rctf &panel, float u);
+
+GenGridMetrics agent_ui_generations_grid_metrics(const GenFrame &frame, const GenPaneData &data);
 
 bool agent_ui_generations_button_identity(const ui::Button *a, const ui::Button *b);
 
@@ -280,11 +284,10 @@ struct GenLibraryMetrics {
   float offset;
   float max_scroll;
 };
-GenLibraryMetrics agent_ui_generations_library_metrics(const rctf &panel,
-                                                       float u,
+GenLibraryMetrics agent_ui_generations_library_metrics(const GenFrame &frame,
                                                        const GenPaneData &data);
 void agent_ui_generations_libraries(
-    const bContext *C, ui::Block *block, const rctf &panel, float u, const GenPaneData &data);
+    const bContext *C, ui::Block *block, const GenFrame &frame, const GenPaneData &data);
 void agent_ui_generations_scrollbar(ui::Block *block,
                                     PointerRNA *wm,
                                     const char *property,
@@ -302,7 +305,7 @@ void agent_ui_generations_scrollbar(ui::Block *block,
 void agent_ui_generations_grid(const bContext *C,
                                ui::Block *block,
                                const rctf &panel,
-                               float u,
+                               const GenFrame &frame,
                                const GenPaneData &data,
                                const GenGridMetrics &grid,
                                rctf *r_selected_tile);
@@ -348,8 +351,11 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data);
 int agent_ui_generations_selected_index(const GenPaneData &data);
 
 /** Paint + lay out the detail column. \a block is the pane's own ui::Block. */
-void agent_ui_generations_detail(
-    const bContext *C, ui::Block *block, const rctf &panel, float u, const GenPaneData &data);
+void agent_ui_generations_detail(const bContext *C,
+                                 ui::Block *block,
+                                 const rctf &panel,
+                                 const GenFrame &frame,
+                                 const GenPaneData &data);
 
 /**
  * Does this asset have preview PIXELS right now?
