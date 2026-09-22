@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TEXT = (ROOT / "src/source/blender/editors/interface/mixar/text.cc").read_text(
     encoding="utf-8"
 )
-DRAW = (ROOT / "src/source/blender/editors/space_agent_bubble/agent_ui_draw.cc").read_text(
+DRAW = (ROOT / "src/source/blender/editors/space_agent_bubble/agent_ui_draw_primitives.hh").read_text(
     encoding="utf-8"
 )
 CONTROLS = (

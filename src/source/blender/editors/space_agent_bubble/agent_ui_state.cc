@@ -240,8 +240,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
      * stays IDLE throughout, so its own UI name would read "Idle" while work
      * is going on. Same label and same lit dot as the Python header's
      * equivalent branch (agent_bubble/ui/header.py:_get_status). NOT
-     * status_busy: there is nothing to stop and the composer is free, so the
-     * Stop button and the cat's working animation must stay off. A scene
+     * status_busy: the composer stays free while the cat still reflects
+     * the workers' activity. A scene
      * without the property (file saved before the chat registered it) reads
      * false and keeps today's label. */
     r_state->status_active = enum_is(&scene_ptr, "mixie_chat_state", "IDLE") &&
@@ -409,6 +409,10 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                                               float(win->posy) + chip_y / scale);
     }
   }
+  /* Delegated workers outlive the orchestrator turn. Apply this after reading
+   * transcript signals so old reasoning cannot animate an otherwise idle run. */
+  cat.busy |= r_state->status_active;
+  cat.working |= r_state->status_active;
   r_state->cat_activity = mixie_cat_activity(cat);
   if (scene) {
     /* DRAFT marks only: SENT marks stay in the scene for follow-up turns but

@@ -158,6 +158,11 @@ def test_cat_paint_stays_inside_the_chip():
     assert outward == [], outward
 
 
+def test_gaze_does_not_squeeze_one_eye_in_the_painter():
+    eyes = CAT_CC[CAT_CC.index("void draw_eyes"):CAT_CC.index("static void draw_cat_pose")]
+    assert "side * pose.look_x" not in eyes
+
+
 def test_qa_target_reads_the_painted_chip():
     assert 't.surface = "pill_cat"' in CAT_CC
     assert "agent_ui_pill_cat_last_rect" in CAT_CC

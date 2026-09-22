@@ -151,7 +151,9 @@ inline MixieCatRoll mixie_cat_eye_roll(const double now)
   const float angle = u * k_tau;
   roll.amount = fade;
   roll.look_x = fade * MIXIE_ROLL_RX * std::cos(angle);
-  roll.look_y = fade * MIXIE_ROLL_RY * std::sin(angle);
+  /* Blend back to the resting gaze as well as the orbit, so neither end of
+   * the phrase jumps vertically when the eyes settle. */
+  roll.look_y += fade * (MIXIE_ROLL_RY * std::sin(angle) - roll.look_y);
   return roll;
 }
 

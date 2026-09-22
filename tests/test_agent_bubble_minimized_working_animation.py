@@ -45,6 +45,7 @@ def test_minimized_pill_checks_working_state():
     assert elongated != -1
     elongated_body = body[elongated:]
 
+    assert "state->status_active" in elongated_body
     assert "is_working" in elongated_body
     assert "mixie_cat_is_working(state->cat_activity)" in elongated_body
 

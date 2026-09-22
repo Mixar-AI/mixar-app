@@ -87,6 +87,7 @@ int main() {
       assert(std::isfinite(pose.tilt));
       assert(std::abs(pose.look_x)<=.86 && std::abs(pose.look_y)<=.66);
       assert(pose.openness>=.079 && pose.openness<=1.001);
+      assert(pose.lid_l==pose.lid_r); // All activities blink with a balanced pair of eyes.
       assert(pose.eye_scale<=1.23 && std::abs(pose.bounce)<=.041);
       assert(std::abs(pose.tilt)<=27.01);
       energy+=distance(last,pose);last=pose;
@@ -95,7 +96,7 @@ int main() {
   }
   auto think=mixie_cat_activity_pose(1.2,MixieCatActivity::Thinking);
   auto wait=mixie_cat_activity_pose(1.2,MixieCatActivity::Waiting);
-  assert(think.look_y>0.3 && wait.tilt>8);
+  assert(think.look_y>0.3 && std::abs(12+wait.tilt)<=8);
   float work_max_x=0, work_max_y=0, work_min_x=0, work_min_y=0;
   bool work_open_seen=false, work_blink_seen=false;
   for(int n=0;n<=int(MIXIE_ROLL_PERIOD*60);n++) {
@@ -112,6 +113,16 @@ int main() {
   assert(work_open_seen && work_blink_seen);
   assert(work_max_x>0.35f && work_min_x<-0.35f);
   assert(work_max_y>0.35f && work_min_y<-0.25f);
+  // The paused orbit joins the resting gaze without a one-frame eye jump.
+  for(int cycle=-2;cycle<=2;cycle++) {
+    for(float phase : {MIXIE_ROLL_START, MIXIE_ROLL_START+MIXIE_ROLL_SPAN}) {
+      const double t=(cycle+double(phase))*MIXIE_ROLL_PERIOD;
+      const auto before=mixie_cat_eye_roll(t-1e-5);
+      const auto after=mixie_cat_eye_roll(t+1e-5);
+      assert(std::abs(before.look_x-after.look_x)<1e-4);
+      assert(std::abs(before.look_y-after.look_y)<1e-4);
+    }
+  }
   // Expression separation must survive a paused frame, not just phase offsets.
   for(int n=1;n<=240;n++) {
     const double t=n/60.0;
@@ -122,7 +133,8 @@ int main() {
     auto responding=mixie_cat_activity_pose(t,MixieCatActivity::Responding);
     auto listening=mixie_cat_activity_pose(t,MixieCatActivity::Listening);
     auto catching=mixie_cat_activity_pose(t,MixieCatActivity::Catching);
-    assert(thinking.lid_r-thinking.lid_l>.5f);
+    assert(thinking.lid_l==1.0f && thinking.lid_r==1.0f);
+    assert(std::abs(12+thinking.tilt)<=4.01f);
     assert(std::abs(catching.look_x)>.5f); // Default catch aims, it does not stare ahead.
     assert(responding.smile>=.85f && generating.smile==0);
     assert(listening.pupil_scale-generating.pupil_scale>.45f);
