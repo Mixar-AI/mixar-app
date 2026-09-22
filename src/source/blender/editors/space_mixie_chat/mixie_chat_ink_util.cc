@@ -249,8 +249,11 @@ void mixie_chat_ink_commit(bContext *C, ARegion *region, MixieChatRuntime *rt)
     if (ot) {
       PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
       RNA_string_set(&op_ptr, "strokes_json", payload.c_str());
-      WM_operator_name_call_ptr(
-          C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+      /* Through the guard: this function goes on to clear `rt`, which is the
+       * REGION's runtime, and a save taken by the operator closes the Agent
+       * Bubble windows first — so the raw call could return with `region`
+       * and `rt` already freed. */
+      mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
       WM_operator_properties_free(&op_ptr);
     }
   }

@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VIEW3D = ROOT / "src/source/blender/editors/space_view3d"
 INTERFACE = ROOT / "src/source/blender/editors/interface"
 
-RIGHT = (VIEW3D / "view3d_director_cinema_right.cc").read_text(encoding="utf-8")
+CAMERAS = (VIEW3D / "view3d_director_cinema_cameras.cc").read_text(encoding="utf-8")
 CINEMA_ROW = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
 SECTION = (INTERFACE / "interface_mixar_section.hh").read_text(encoding="utf-8")
 CARD_HH = (INTERFACE / "interface_mixar_profile_card.hh").read_text(encoding="utf-8")
@@ -34,27 +34,30 @@ UI_C_HH = (ROOT / "src/source/blender/editors/include/UI_interface_c.hh").read_t
     encoding="utf-8"
 )
 
-QA_RECORD = 'cinema_qa_record(region, row, "director_camera", name, index);'
-OP_BUTTON = 'cinema_op_button(\n        block, "MIXAR_OT_director_set_active_shot", row, "Direct this camera");'
+QA_RECORD = 'cinema_qa_record(region, select, "director_camera", name, index);'
+OP_BUTTON = (
+    'cinema_op_button(\n'
+    '        block, "MIXAR_OT_director_pick_camera", select, "Direct this camera");'
+)
 TEXT_FIELD_CALL = (
     'cinema_text_field(\n'
-    '        block, name_ptr, "name", row, "Rename this camera: double-click or Ctrl+click");'
+    '        block, &camera_ptr, "name", select, '
+    '"Rename this camera: double-click or Ctrl+click");'
 )
 TAG_CALL = "ui::UI_mixar_button_double_click_edits_label(but);"
 
 
 def _rows_loop() -> str:
-    """The body of the camera rows loop, up to the empty-list caption."""
-    start = RIGHT.index("for (int slot = 0; slot < visible_rows; slot++) {")
-    end = RIGHT.index("if (shot_count == 0) {", start)
-    return RIGHT[start:end]
+    """The body of the camera rows loop — the last thing the painter does."""
+    start = CAMERAS.index("for (int slot = 0; slot < visible_rows; slot++) {")
+    return CAMERAS[start:]
 
 
 def _helper() -> str:
     """The body of the reusable `cinema_text_field` helper."""
-    start = RIGHT.index("ui::Button *cinema_text_field(ui::Block *block,")
-    end = RIGHT.index("/** Three-way segmented row", start)
-    return RIGHT[start:end]
+    start = CAMERAS.index("ui::Button *cinema_text_field(ui::Block *block,")
+    end = CAMERAS.index("/**\n * The scene's camera objects", start)
+    return CAMERAS[start:end]
 
 
 # -------------------------------------------------------------------------
@@ -80,8 +83,8 @@ def test_text_field_and_operator_button_share_the_row_rect():
     loop = _rows_loop()
     # Both are laid over `row`; a different rect would let one control sit
     # beside the other and break the "single click selects" promise.
-    assert '"MIXAR_OT_director_set_active_shot", row,' in loop
-    assert 'block, name_ptr, "name", row,' in loop
+    assert '"MIXAR_OT_director_pick_camera", select,' in loop
+    assert 'block, &camera_ptr, "name", select,' in loop
 
 
 # -------------------------------------------------------------------------
@@ -108,12 +111,14 @@ def test_helper_binds_the_property_it_is_given_and_the_row_passes_name():
 def test_helper_tags_the_button_as_a_cinema_field():
     helper = _helper()
     assert "ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Field);" in helper
-    assert '#include "../interface/interface_mixar_profile_card.hh"' in RIGHT
+    assert '#include "../interface/interface_mixar_profile_card.hh"' in CAMERAS
 
 
 def test_tooltip_is_a_string_literal_promising_only_live_gestures():
     # Tooltips are non-owning StringRefs: a temporary would dangle.
-    match = re.search(r'cinema_text_field\(\s*block, name_ptr, "name", row, ("[^"]+")\);', RIGHT)
+    match = re.search(
+        r'cinema_text_field\(\s*block, &camera_ptr, "name", select, ("[^"]+")\);', CAMERAS
+    )
     assert match is not None
     # Both gestures are backed by the do_but_BUT hook below.
     assert match.group(1) == '"Rename this camera: double-click or Ctrl+click"'
@@ -123,25 +128,21 @@ def test_tooltip_is_a_string_literal_promising_only_live_gestures():
 # 3. The row edits the name it displays.
 
 
-def test_row_falls_back_to_the_shot_name_pointer_when_no_camera_name():
-    loop = _rows_loop()
-    fallback = loop.index("if (name[0] == '\\0') {")
-    block_end = loop.index("}", fallback)
-    body = loop[fallback:block_end]
-    assert 'RNA_string_get(&shot_ptr, "name", name);' in body
-    assert "name_ptr = &shot_ptr;" in body
-    # Default is the camera object, resolved before the fallback.
-    assert loop.index("PointerRNA *name_ptr = &camera_ptr;") < fallback
+def test_the_row_renames_the_camera_object_it_names():
+    """The list IS the scene's cameras, so there is one name and one owner.
 
-
-def test_camera_pointer_outlives_the_lookup_scope():
+    It used to list shots and fall back to the shot's own name when its camera
+    pointer was empty — which meant a row could silently rename a different
+    datablock from the one it appeared to show.
+    """
     loop = _rows_loop()
-    # Declared at row scope so the text field can bind to it after the
-    # `if (camera_prop != nullptr)` block closes.
-    assert "PointerRNA camera_ptr = PointerRNA_NULL;" in loop
-    assert loop.index("PointerRNA camera_ptr = PointerRNA_NULL;") < loop.index(
-        "camera_ptr = RNA_property_pointer_get(&shot_ptr, camera_prop);"
+    assert "const char *name = camera->id.name + 2;" in loop
+    assert "PointerRNA camera_ptr = RNA_id_pointer_create(&camera->id);" in loop
+    # The pointer is created before the field binds to it, in the same scope.
+    assert loop.index("PointerRNA camera_ptr = RNA_id_pointer_create(&camera->id);") < loop.index(
+        TEXT_FIELD_CALL
     )
+    assert "shot_ptr" not in loop
 
 
 # -------------------------------------------------------------------------
@@ -179,9 +180,9 @@ def test_row_operator_button_is_tagged_for_label_edit_handoff():
     loop = _rows_loop()
     assert loop.count(TAG_CALL) == 1
     # Tagged right after the operator's index is set, before the Text field.
-    assert loop.index('RNA_int_set(ui::button_operator_ptr_ensure(but), "index", index);') < loop.index(
-        TAG_CALL
-    ) < loop.index(TEXT_FIELD_CALL)
+    assert loop.index(
+        'RNA_string_set(ui::button_operator_ptr_ensure(but), "camera_name", name);'
+    ) < loop.index(TAG_CALL) < loop.index(TEXT_FIELD_CALL)
 
 
 def test_tag_is_declared_publicly_and_sets_the_drawflag_bit():

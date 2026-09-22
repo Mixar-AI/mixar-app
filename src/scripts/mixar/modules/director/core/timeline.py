@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from .anim_curves import assigned_fcurves as _assigned_fcurves
-from .frame_math import clamp_frame_delta
+from .frame_math import clamp_frame_delta, write_preview_range
 from .retime import note_beat_timing, shift_shot_timing
 from .shot_api import refresh_manifest
 
@@ -56,9 +56,8 @@ def _restore_shift(
     for fcurve in curves:
         fcurve.update()
     scene.frame_end = scene_state[1]
+    write_preview_range(scene, scene_state[2], scene_state[3])
     scene.use_preview_range = scene_state[4]
-    scene.frame_preview_start = scene_state[2]
-    scene.frame_preview_end = scene_state[3]
     shot.manifest_json = manifest_json
     scene.frame_set(scene_state[0])
 
@@ -238,8 +237,10 @@ def shift_camera_beats(
             and scene.frame_preview_start == old_first
             and scene.frame_preview_end == old_last
         ):
-            scene.frame_preview_start = new_first
-            scene.frame_preview_end = new_last
+            # A shift larger than the strip's own span moves the window
+            # clear of where it is, and the RNA clamp eats whichever edge
+            # is written into the old one first.
+            write_preview_range(scene, new_first, new_last)
         scene.frame_end = max(scene.frame_end, new_last)
         if old_first <= scene_state[0] <= old_last:
             scene.frame_set(scene_state[0] + delta)
@@ -259,3 +260,69 @@ def shift_camera_beats(
             beat.time_base = time_base
         raise
     return delta
+
+
+def move_beats(
+    scene,
+    shot,
+    indices,
+    requested_delta: int,
+    *,
+    rebuild_manifest: bool = True,
+) -> int:
+    """Move several beats by one delta, keeping their spacing.
+
+    Each beat still goes through :func:`move_single_beat`, so the per-beat
+    clamps (never onto a neighbour's frame, never out of the scene range) and
+    the native key matching are unchanged. What this adds is the ORDER.
+
+    ``move_single_beat`` clamps a beat against its neighbours, so moving a
+    selection left-to-right rightwards walks each beat into the one ahead of
+    it and the whole selection collapses against the first unselected beat.
+    Moving rightwards from the LAST beat backwards — and leftwards from the
+    first forwards — means every beat's path is already clear when it moves.
+
+    The applied delta is the SMALLEST any beat managed, and it is re-applied
+    uniformly: a selection that keeps its spacing when one end hits a clamp is
+    a selection the director can still recognise. Returns that delta.
+    """
+    order = sorted(
+        (index for index in set(indices) if 0 <= index < len(shot.beats)),
+        key=lambda index: int(shot.beats[index].frame),
+        reverse=requested_delta > 0,
+    )
+    if not order or not requested_delta:
+        return 0
+
+    # How far can the most constrained beat actually go? Asking once is not
+    # enough: `move_single_beat` clamps against EVERY other beat, selected or
+    # not, so a smaller uniform delta can still be held by a beat further
+    # along `order` that the first pass stopped short of. Each pass either
+    # confirms the delta or shrinks it strictly, so this ends.
+    applied = requested_delta
+    while applied:
+        done: list[tuple[int, int]] = []
+        clamped = applied
+        for index in order:
+            moved = move_single_beat(
+                scene, shot, index, applied, rebuild_manifest=False
+            )
+            done.append((index, moved))
+            if moved != applied:
+                clamped = moved
+                break
+        if clamped == applied:
+            break
+        # A beat hit a clamp. Undo the WHOLE pass before redoing it uniformly
+        # — putting back only the constrained beat would leave the ones
+        # already moved at the requested delta and then move them a second
+        # time. Reverting runs in the opposite order for the same clamp
+        # reason the forward pass has one.
+        for index, moved in reversed(done):
+            if moved:
+                move_single_beat(scene, shot, index, -moved, rebuild_manifest=False)
+        applied = clamped
+
+    if applied and rebuild_manifest:
+        refresh_manifest(scene, shot)
+    return applied

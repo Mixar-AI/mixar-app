@@ -97,6 +97,14 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
     return;
   }
+  /* CLEAR FIRST. This is an ordinary opaque region (RGN_TYPE_CHANNELS is not
+   * in View3D's overlap set), so nothing clears its framebuffer for us, and
+   * the dock's own panel is translucent glass inset 8 px from the edges.
+   * Without this the previous frame stays underneath and every redraw
+   * composites onto it: the ruler, the keyframes and the transport all leave
+   * ghosts of where they used to be, and the inset border never repaints at
+   * all. Every other channel/footer region in Blender opens the same way. */
+  ui::theme::frame_buffer_clear(TH_BACK);
   ED_region_pixelspace(region);
   GPU_blend(GPU_BLEND_ALPHA);
   const int margin = std::max(6, int(8.0f * UI_SCALE_FAC));
@@ -118,14 +126,15 @@ void director_timeline_draw(const bContext *C, ARegion *region)
    * this dock (whose own height is one control row). Below the gate the old
    * viewport rail draws instead, and the two together stacked duplicate
    * controls on one screen. */
-  if (main_region != nullptr && cinema_surface_fits(main_region)) {
+  const bool full = main_region != nullptr && cinema_surface_fits(main_region);
+  if (full) {
     cinema_draw_dock_controls(block, C, region, state, playing);
   }
   else {
     cinema_draw_dock_compact(block, region, state, playing);
   }
   DirectorTimelineRuntime *runtime = view3d_director_timeline_runtime_ensure(region);
-  const int content_top = region->winy - int(cinema_dock_control_height());
+  const int content_top = region->winy - int(cinema_dock_control_height(full));
   view3d_director_timeline_draw_content(region, state, runtime, margin, unit, content_top);
   ui::block_end(C, block);
   ui::block_draw(C, block);
@@ -146,9 +155,20 @@ void director_timeline_listener(const wmRegionListenerParams *params)
 
 void view3d_director_timeline_region_ensure(ScrArea *area)
 {
-  if (!area || area->spacetype != SPACE_VIEW3D ||
-      BKE_area_find_region_type(area, RGN_TYPE_CHANNELS))
-  {
+  if (!area || area->spacetype != SPACE_VIEW3D) {
+    return;
+  }
+
+  if (ARegion *existing = BKE_area_find_region_type(area, RGN_TYPE_CHANNELS)) {
+    /* A layout saved by an earlier build carries THAT build's height, and
+     * nothing else ever revisits it — the height below is only ever written
+     * when the region is created. The dock's content minimum is a floor, not
+     * a preference, so a short one is raised rather than left to collapse the
+     * keyframe strip inside it. A taller one is the user's own resize and is
+     * left exactly as they set it. */
+    if (existing->sizey < VIEW3D_DIRECTOR_TIMELINE_HEIGHT) {
+      existing->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
+    }
     return;
   }
 

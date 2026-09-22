@@ -18,6 +18,27 @@ from .manifest import (
 )
 
 
+def shot_scene(shot, fallback=None):
+    """The Scene a *shot* belongs to.
+
+    ``state.shots`` is a collection on ``bpy.types.Scene``, so a shot's owning
+    ID *is* its scene and ``id_data`` reaches it for free. Director used to
+    carry an explicit ``scene_ref`` PointerProperty instead, and because an RNA
+    ID pointer is refcounted that made every added shot bump the Scene's user
+    count — the "Scene 2", "Scene 3" badge the topbar datablock selector shows
+    beside the scene name. ``id_data`` holds no reference and cannot drift from
+    the collection it was read through.
+    """
+    owner = getattr(shot, "id_data", None)
+    # Identified by the property Director itself registers on Scene rather
+    # than ``isinstance(..., bpy.types.Scene)``: the shots collection only
+    # ever lives on a scene, and the attribute test also holds under the
+    # ``bpy`` mock the standalone suite runs against.
+    if owner is not None and getattr(owner, "mixar_director", None) is not None:
+        return owner
+    return fallback
+
+
 def active_shot(scene):
     """Return the selected shot for *scene*, or ``None``."""
     state = getattr(scene, "mixar_director", None)
@@ -52,20 +73,53 @@ def latest_shot_index_for_camera(state, camera) -> int:
     return max(matches, key=lambda index: (state.shots[index].version, index))
 
 
-def scope_preview_range(scene, shot) -> None:
-    """Loop playback within *shot*'s beats instead of the whole scene.
+def adopt_camera(scene, camera):
+    """Make *camera*'s newest take the active shot, minting one if it has none.
 
-    Every shot shares one scene timeline, so without this the playhead and
-    autoplay use the global frame range (the max across all shots) and a
-    shot's cursor runs past its own beats into another shot's range.
+    Each camera is its own shot and its own timeline, so adopting never
+    reassigns an existing shot's camera — that collapsed every camera onto
+    one strip. It switches to the take already directing this camera, or
+    starts a fresh shot for a camera Director has not seen.
+
+    This is what a click on a My Cameras row does, and what entering Cinema
+    Mode does for the camera it opens on: looking through a camera without
+    adopting it left the session with no active shot, which every
+    shot-gated control reads as "nothing to do" — the Walk chip greyed out
+    on entry, and the row never lit.
+
+    Returns the active shot, or ``None`` when *camera* is not one.
     """
-    frames = sorted({int(beat.frame) for beat in shot.beats}) if shot else []
-    if frames:
-        scene.use_preview_range = True
-        scene.frame_preview_start = frames[0]
-        scene.frame_preview_end = frames[-1]
-    else:
-        scene.use_preview_range = False
+    state = getattr(scene, "mixar_director", None)
+    if state is None or camera is None or getattr(camera, "type", None) != 'CAMERA':
+        return None
+    index = latest_shot_index_for_camera(state, camera)
+    if index >= 0:
+        state.active_shot_index = index
+        scene.camera = camera
+        return state.shots[index]
+    return create_shot(scene, camera)
+
+
+def release_preview_range(scene) -> None:
+    """Hand playback back to the SCENE's own frame range.
+
+    This used to clamp the preview range to the active shot's first and last
+    beat, so pressing play looped between two keyframes however long the
+    scene was — and the dock's own Start and End fields, which edit
+    ``scene.frame_start`` / ``frame_end``, had no effect on what played. Two
+    controls for one thing, and the invisible one won.
+
+    The scene range is the one a director sets and the one the dock shows, so
+    it is the one that plays. Nothing is lost by dropping the clamp: a
+    captured keyframe already pushes ``scene.frame_end`` out to cover itself
+    (``capture_beat``), so a shot's beats are inside the range by
+    construction.
+
+    The session still SAVES the user's own preview range on entry and
+    restores it on exit (``core/viewport.py``); turning it off here is part
+    of what that restore puts back.
+    """
+    scene.use_preview_range = False
 
 
 class _ShotSnapshot:
@@ -110,7 +164,6 @@ def create_shot(scene, camera, *, parent=None):
         parent = _ShotSnapshot(parent)
     shot = state.shots.add()
     shot.shot_id = uuid.uuid4().hex
-    shot.scene_ref = scene
     shot.camera = camera
     if parent is None:
         root_number = sum(1 for item in state.shots if not item.parent_shot_id)
@@ -190,7 +243,7 @@ def split_shot(scene, shot, frame: int):
     refresh_manifest(scene, new_shot)
     # Keep directing the first half: the playhead still sits inside it.
     state.active_shot_index = original_index
-    scope_preview_range(scene, shot)
+    release_preview_range(scene)
     return new_shot
 
 
@@ -227,7 +280,7 @@ def remove_shot(scene, index: int) -> bool:
     if release_motion:
         purge_camera_animation(camera)
     state.active_shot_index = min(index, max(0, len(state.shots) - 1))
-    scope_preview_range(scene, active_shot(scene))
+    release_preview_range(scene)
     return True
 
 
@@ -261,17 +314,22 @@ def build_shot_manifest(scene, shot) -> dict:
 
     current_frame = scene.frame_current
     beats = []
-    try:
-        for beat in shot.beats:
-            sample = _sample_camera(scene, shot.camera, beat.frame)
-            sample.update({
-                "id": beat.beat_id,
-                "frame": beat.frame,
-                "image_name": beat.image.name if beat.image else "",
-            })
-            beats.append(sample)
-    finally:
-        scene.frame_set(current_frame)
+    from .record import suspend_recording
+
+    # Sampling evaluates other frames and then restores the playhead. Neither
+    # the recorder nor the one-shot playback stop may treat it as live input.
+    with suspend_recording():
+        try:
+            for beat in shot.beats:
+                sample = _sample_camera(scene, shot.camera, beat.frame)
+                sample.update({
+                    "id": beat.beat_id,
+                    "frame": beat.frame,
+                    "image_name": beat.image.name if beat.image else "",
+                })
+                beats.append(sample)
+        finally:
+            scene.frame_set(current_frame)
 
     render = scene.render
     return build_camera_direction_manifest(

@@ -59,6 +59,14 @@ bool fit_matches(const GateFit &a, const GateFit &b)
 
 }  // namespace
 
+void cinema_gate_release(const ARegion *region)
+{
+  g_fits.erase(std::remove_if(g_fits.begin(),
+                              g_fits.end(),
+                              [region](const GateFit &fit) { return fit.region == region; }),
+               g_fits.end());
+}
+
 bool cinema_camera_gate_rect(const bContext *C, const ARegion *region, rctf *r_rect)
 {
   const RegionView3D *rv3d = static_cast<const RegionView3D *>(region->regiondata);

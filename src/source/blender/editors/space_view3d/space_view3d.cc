@@ -386,6 +386,12 @@ static void view3d_main_region_init(wmWindowManager *wm, ARegion *region)
    * View pie never see the key while the operator polls. */
   view3d_moodboard_drawer_toggle_handlers_add(wm, region);
 
+  /* Cinema Mode paints its columns INTO this region, so a wheel over a card
+   * is a wheel over the viewport. Decided here, before `view3d.zoom` — a
+   * keymap item has to get past the mode keymaps, the tool keymap and the UI
+   * layer first, and never did. */
+  view3d_director_cinema_region_init(region);
+
   /* object ops. */
 
   /* important to be before Pose keymap since they can both be enabled at once */

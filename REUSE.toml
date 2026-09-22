@@ -93,6 +93,7 @@ path = [
   "docs/development/agent-stack-notifications/*.png",
   "docs/development/zen-toolbar-alignment/*.png",
   "docs/development/library-responsive-layout/*.png",
+  "docs/development/director-auto-key/*.png",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
@@ -109,6 +110,7 @@ path = [
   "docs/development/agent-stack-notifications/review-verdict.json",
   "docs/development/zen-toolbar-alignment/verdict.json",
   "docs/development/library-responsive-layout/verdict.json",
+  "docs/development/director-auto-key/verdict.json",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"

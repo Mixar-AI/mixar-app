@@ -266,6 +266,9 @@ class TestZenChromeUsesTheFamily:
         left = (ED / "space_view3d" / "view3d_director_cinema_left.cc").read_text(
             encoding="utf-8"
         )
+        cameras = (
+            ED / "space_view3d" / "view3d_director_cinema_cameras.cc"
+        ).read_text(encoding="utf-8")
         right = (ED / "space_view3d" / "view3d_director_cinema_right.cc").read_text(
             encoding="utf-8"
         )
@@ -276,7 +279,7 @@ class TestZenChromeUsesTheFamily:
             encoding="utf-8"
         )
         assert left.count("cinema_glass_panel(card") == 3
-        assert "cinema_glass_panel(cameras," in right
+        assert "cinema_glass_panel(card," in cameras
         assert "cinema_glass_panel(panel," in dock
         assert "cinema_glass_panel(card," in minimap
         assert "cinema_panel(row," in left

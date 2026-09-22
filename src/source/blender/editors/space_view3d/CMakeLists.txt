@@ -36,11 +36,19 @@ set(SRC
   view3d_camera_control.cc
   view3d_context.cc
   view3d_cursor_snap.cc
+  view3d_director_cinema_camera_scroll.cc
+  view3d_director_camera_move.cc
+  view3d_director_cinema_cameras.cc
   view3d_director_cinema_dock.cc
+  view3d_director_cinema_dock_actions.cc
+  view3d_director_cinema_dock_ruler.cc
+  view3d_director_cinema_dock_transport.cc
   view3d_director_cinema_gate.cc
   view3d_director_cinema_layout.cc
   view3d_director_cinema_left.cc
   view3d_director_cinema_paint.cc
+  view3d_director_cinema_text.cc
+  view3d_director_cinema_phone.cc
   view3d_director_cinema_right.cc
   view3d_director_cinema_top.cc
   view3d_director_minimap.cc
@@ -51,14 +59,19 @@ set(SRC
   view3d_director_overlay_frame.cc
   view3d_director_place_camera.cc
   view3d_director_popup.cc
+  view3d_director_popup_dof.cc
   view3d_director_popup_interp.cc
+  view3d_director_popup_lens.cc
   view3d_director_popup_render.cc
   view3d_director_popup_shot.cc
   view3d_director_state.cc
   view3d_director_qa_targets.cc
+  view3d_director_walk.cc
   view3d_director_timeline.cc
   view3d_director_timeline_draw.cc
   view3d_director_timeline_interaction.cc
+  view3d_director_timeline_select.cc
+  view3d_director_timeline_ruler.cc
   view3d_draw.cc
   view3d_dropboxes.cc
   view3d_edit.cc
@@ -113,7 +126,9 @@ set(SRC
 
   view3d_agent_panel.hh
   view3d_director.hh
+  view3d_director_camera_move.hh
   view3d_director_cinema.hh
+  view3d_director_cinema_phone.hh
   view3d_director_minimap.hh
   view3d_intern.hh
   view3d_moodboard_drawer.hh

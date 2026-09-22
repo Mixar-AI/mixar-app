@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import math
 
-from .shot_api import refresh_manifest, scope_preview_range
+from .shot_api import refresh_manifest, release_preview_range
 
 
 def speed_factor(speed: float) -> float:
@@ -196,7 +196,7 @@ def apply_shot_speed(scene, shot) -> int:
                 beat.frame = new
         last = max(new for _old, new in moves)
         scene.frame_end = max(int(scene.frame_end), last)
-        scope_preview_range(scene, shot)
+        release_preview_range(scene)
         refresh_manifest(scene, shot)
     except Exception:
         _restore_shift(

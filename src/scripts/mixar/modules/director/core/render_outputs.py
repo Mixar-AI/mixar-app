@@ -37,6 +37,7 @@ from .render_target import (
     target_ref,
 )
 from .rotation_curves import repair_rotation_continuity
+from .shot_api import shot_scene
 from .render_spec import ordered_render_kinds, render_frame_bounds
 
 
@@ -439,7 +440,7 @@ def start_shot_render(context, shot) -> int:
     # Director key-writing path runs is right here too.
     repair_rotation_continuity(shot.camera)
 
-    scene = shot.scene_ref or context.scene
+    scene = shot_scene(shot, context.scene)
     target = shot_target(shot, frame_start, frame_end, kinds)
     return _start_render(context, scene, target, "Preparing shot render")
 

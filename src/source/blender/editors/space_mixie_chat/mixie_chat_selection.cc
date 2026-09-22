@@ -331,7 +331,9 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
   }
 
   /* Check for empty prompt clicks first (when chat is empty) */
-  if (mixie_chat_handle_empty_prompt_click(C, float(event->mval[0]), float(event->mval[1]))) {
+  if (mixie_chat_handle_empty_prompt_click(
+        C, region, float(event->mval[0]), float(event->mval[1])))
+  {
     return OPERATOR_FINISHED;
   }
 

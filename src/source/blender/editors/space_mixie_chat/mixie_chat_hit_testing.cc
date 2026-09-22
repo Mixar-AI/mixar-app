@@ -460,7 +460,10 @@ bool mixie_chat_handle_steps_click(bContext *C,
   return false;
 }
 
-bool mixie_chat_handle_empty_prompt_click(bContext *C, float mouse_x, float mouse_y)
+bool mixie_chat_handle_empty_prompt_click(bContext *C,
+                                          ARegion *region,
+                                          float mouse_x,
+                                          float mouse_y)
 {
   SpaceMixieChat *smixie = get_space_mixie_chat(C);
   if (!smixie) {
@@ -480,8 +483,7 @@ bool mixie_chat_handle_empty_prompt_click(bContext *C, float mouse_x, float mous
         RNA_string_set(&op_ptr, "text", rt->empty_prompts[i].text);
         RNA_string_set(&op_ptr, "mode", g_empty_prompt_modes[i]);
         RNA_string_set(&op_ptr, "generate_type", g_empty_prompt_generate_types[i]);
-        WM_operator_name_call_ptr(
-            C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+        mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
         WM_operator_properties_free(&op_ptr);
         return true;
       }

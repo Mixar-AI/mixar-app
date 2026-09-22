@@ -88,6 +88,28 @@ float cinema_unit()
   return g_unit;
 }
 
+namespace {
+/**
+ * Resolve the unit for \a region, and put back whatever it was.
+ *
+ * #cinema_stage_rect and #cinema_columns_contain are QUERIES, asked from
+ * polls and event handlers, and both need the scale to answer. Leaving it
+ * rewritten is a read with a side effect on every painter that runs next —
+ * harmless only for as long as events and draws never interleave.
+ */
+struct ScopedUnit {
+  float previous;
+  explicit ScopedUnit(const ARegion *region) : previous(g_unit)
+  {
+    cinema_unit_begin(region);
+  }
+  ~ScopedUnit()
+  {
+    g_unit = previous;
+  }
+};
+}  // namespace
+
 float cinema_margin(const ARegion *region)
 {
   const float avail = float(region->winx) / cinema_unit();
@@ -116,7 +138,10 @@ bool cinema_surface_fits(const ARegion *region)
 
 float cinema_list_row_h()
 {
-  return std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH);
+  /* A row was exactly the pitch, so consecutive rows TOUCHED and the active
+   * one's rounded chip butted against its neighbours instead of reading as
+   * one item in a list. */
+  return std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH - CINEMA_LIST_GAP);
 }
 
 int cinema_list_window_start(const int count, const int active)
@@ -140,7 +165,7 @@ bool cinema_stage_rect(const bContext *C, const ARegion *region, rctf *r_rect)
   {
     return false;
   }
-  cinema_unit_begin(region);
+  const ScopedUnit unit_scope(region);
   if (!cinema_surface_fits(region)) {
     return false;
   }
@@ -155,6 +180,32 @@ bool cinema_stage_rect(const bContext *C, const ARegion *region, rctf *r_rect)
   r_rect->ymax = span.ymax;
   r_rect->ymin = span.ymin;
   return BLI_rctf_size_x(r_rect) > 0.0f && BLI_rctf_size_y(r_rect) > 0.0f;
+}
+
+bool cinema_columns_contain(const bContext *C, const ARegion *region, const int x, const int y)
+{
+  DirectorViewState state;
+  if (region == nullptr || !view3d_director_state_read(CTX_data_scene(C), &state) ||
+      !state.active)
+  {
+    return false;
+  }
+  const ScopedUnit unit_scope(region);
+  if (!cinema_surface_fits(region)) {
+    /* The compact rail is drawn instead and owns no column band. */
+    return false;
+  }
+  const float u = cinema_unit();
+  const float margin = cinema_margin(region);
+  const rctf span = cinema_design_rect(
+      region, 0.0f, CINEMA_COLUMN_TOP, 0.0f, cinema_content_bottom() - CINEMA_COLUMN_TOP);
+  if (float(y) < span.ymin || float(y) > span.ymax) {
+    return false;
+  }
+  const float left_max = (margin + CINEMA_PANEL_W) * u;
+  const float right_min = float(region->winx) - (margin + CINEMA_PANEL_W) * u;
+  return (float(x) >= margin * u && float(x) <= left_max) ||
+         (float(x) >= right_min && float(x) <= float(region->winx) - margin * u);
 }
 
 }  // namespace blender

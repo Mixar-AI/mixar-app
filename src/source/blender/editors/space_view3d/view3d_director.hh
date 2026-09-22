@@ -25,7 +25,17 @@ struct SpaceType;
 struct bContext;
 struct wmOperatorType;
 
-constexpr int VIEW3D_DIRECTOR_TIMELINE_HEIGHT = 164;
+/**
+ * The dock's preferred height.
+ *
+ * It has to hold the whole stack: the dock's control row, the playhead's
+ * band, the camera strip, and the ruler's ticks and labels. At 164 it did
+ * not — the strip's height is what the layout took the shortfall out of, and
+ * it went to ZERO, taking every keyframe on it with it.
+ * `tests/director/test_timeline_layout.py` does that arithmetic against the
+ * layout's own constants so the budget can never silently collapse again.
+ */
+constexpr int VIEW3D_DIRECTOR_TIMELINE_HEIGHT = 248;
 
 struct DirectorBeatView {
   int frame = 0;
@@ -43,14 +53,23 @@ struct DirectorViewState {
   bool explore_mode = false;
   /** `navigation_mode == AERIAL`: the main viewport looks down on the scene. */
   bool aerial_mode = false;
+  /** Blender's own walk navigation is running; the top strip's hints follow. */
+  bool walking = false;
   bool auto_key = false;
-  /** Ruler labels time in minutes (`ruler_unit == MIN`) rather than seconds. */
-  bool ruler_minutes = false;
+  /** A live take is armed: every frame playback passes keys the camera. */
+  bool recording = false;
+  /** Ruler labels frame numbers (`ruler_unit == FRAMES`) rather than time. */
+  bool ruler_frames = false;
   int active_beat_index = 0;
   int frame_current = 0;
   int frame_start = 0;
   int frame_end = 0;
+  /* The SCENE's own range. `frame_start` / `frame_end` above collapse onto
+   * the beats' span once a shot has any, so the dock keeps the scene's
+   * separately — it is what the Start/End fields edit and what the timeline
+   * shades as the live stretch. */
   int scene_frame_start = 0;
+  int scene_frame_end = 0;
   float fps = 24.0f;
   const void *shot_identity = nullptr;
   std::string camera_name = "Camera";
@@ -100,6 +119,17 @@ void view3d_director_operatortypes();
 /** Click/drag-to-place modal over the aerial map or the Aerial-mode stage
  * (view3d_director_place_camera.cc). */
 void MIXAR_OT_director_place_camera(wmOperatorType *ot);
+
+/** Wheel-scroll the "My Cameras" list (view3d_director_cinema_cameras.cc).
+ * Its poll is the card's only hit test: the Cinema surface paints and never
+ * hit-tests, so the wheel is scoped by the rect the painter published. */
+void MIXAR_OT_director_scroll_cameras(wmOperatorType *ot);
+void MIXAR_OT_director_walk(wmOperatorType *ot);
+
+/** Install the Cinema surface's UI handler on a View3D WINDOW region.
+ * UI handlers run before every keymap, which is the only way a gesture
+ * over a painted card can beat `view3d.zoom`. */
+void view3d_director_cinema_region_init(struct ARegion *region);
 
 /**
  * Aerial map teardown for the WINDOW region's `ARegionType.free`

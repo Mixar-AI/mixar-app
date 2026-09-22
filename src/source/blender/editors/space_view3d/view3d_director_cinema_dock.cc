@@ -7,12 +7,17 @@
  *
  * Cinema Mode: the timeline dock's control row.
  *
- * The design gives the dock three groups — a Duration unit switch, a centred
- * transport, and the scene's Start/End frame fields — and moves the camera
- * and export actions it used to carry into the right column. The controls it
- * has no home for (capture, explore, immersive, collapse) survive as quiet
- * icons at the right edge rather than being dropped: collapse in particular
- * is the timeline's only way back.
+ * Two rows. The first reads left to right as one sentence about the scale
+ * under it — "Ruler | Frames · Duration | Start | End" — because Start and
+ * End are the range that scale measures, and they now read in whatever unit
+ * the switch beside them selects. The transport stays centred on it, and
+ * interpolation takes the far right: it is how the camera eases BETWEEN
+ * KEYFRAMES, a property of the shot rather than of the ruler, and the right
+ * margin is where a surface puts the thing that belongs to no group.
+ *
+ * The second row is the ACTIONS row (`_dock_actions.cc`), centred under the
+ * transport: Auto Key and Add Keyframe, next to the play button the eye is
+ * already on rather than in the corner furthest from the work.
  *
  * Painting only; every control is a real ui::Button over the painted pixels.
  */
@@ -22,6 +27,8 @@
 
 #include "BLI_rect.h"
 #include "BLI_string.h"
+#include "BLI_utildefines.h"
+#include "BLI_vector.hh"
 
 #include "BKE_context.hh"
 
@@ -38,6 +45,7 @@
 #include "view3d_director.hh"
 #include "view3d_director_cinema.hh"
 #include "view3d_director_overlay_intern.hh"
+#include "view3d_director_timeline.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -47,88 +55,38 @@ namespace {
 /* Design px. */
 constexpr float ROW_H = 30.0f;
 constexpr float ROW_TOP_GAP = 18.0f;
+/** The actions row under it, and the clear space between the two. SUB_ROW_H
+ * is that row's height and must match `ACTION_H` in `_dock_actions.cc`, which
+ * is the pill drawn on it; `tests/director/test_dock_actions_row.py` pins
+ * the pair so the row can never be shorter than what it holds. */
+constexpr float SUB_ROW_H = 30.0f;
+constexpr float SUB_ROW_GAP = 10.0f;
 constexpr float SIDE_PAD = 26.0f;
-constexpr float CHIP_W = 44.0f;
+/** The interpolation dropdown beside them; fits "Sinusoidal" plus a chevron. */
+constexpr float INTERP_W = 118.0f;
 constexpr float CHIP_H = 26.0f;
-constexpr float FIELD_W = 100.0f;
-/** Transport hit box (square) and the clear space between neighbours: the
- * glyph centres sit `TRANSPORT_SIZE + TRANSPORT_GAP` = 44 apart. */
-constexpr float TRANSPORT_SIZE = 26.0f;
-constexpr float TRANSPORT_GAP = 18.0f;
-/* Transport glyph sizes, measured off the design mock (see #transport_glyph).
- * They are explicit so the hit box no longer decides how big a glyph is. */
-constexpr float PLAY_H = 18.0f;
-constexpr float STEP_H = 12.0f;
-constexpr float DOT_D = 5.5f;
-constexpr float STEP_GAP = 3.0f;
-/** Triangle width over height: the mock's play is 16 x 15, a step's 8.5 x 9.5. */
-constexpr float GLYPH_ASPECT = 0.95f;
-/** One muted grey for every transport glyph (mock: RGB 135, pause included). */
-constexpr float TRANSPORT_COL[4] = {0.53f, 0.53f, 0.53f, 1.0f};
-constexpr float TOOL_SIZE = 24.0f;
-constexpr float TOOL_GAP = 6.0f;
-/** Clear space the frame fields must keep from the centred transport. */
+/* A frame field: the whole pill, its label inset, and the gap to the value.
+ * FIELD_W has to hold "Start" plus four digits AFTER a Num button's own arrow
+ * padding eats roughly 24 design px of the text area. */
+constexpr float FIELD_W = 132.0f;
+/** What a field shrinks to before there is nowhere left to put it. */
+constexpr float FIELD_MIN_W = 88.0f;
+constexpr float LABEL_PAD = 12.0f;
+constexpr float LABEL_GAP = 8.0f;
+/** Clear space the other groups must keep from the centred transport. */
 constexpr float FIELD_CLEARANCE = 16.0f;
+/** Gap between Start and End, and from the pair to whatever follows. */
+constexpr float FIELD_GAP = 8.0f;
 
 /**
- * Media glyphs per the design: the preview (play) is a filled triangle; a
- * step is a smaller triangle pointing outward with a dot on its INNER side
- * (`◂●  ▶  ●▸`), not the stock bar-on-the-outside.
+ * Small labelled numeric field ("Start 1").
  *
- * Proportions measured off the 1x design mock (glyph pixel bounding boxes):
- * play 16 wide x 15 tall (a squat, near-equilateral triangle, NOT tall and
- * narrow); a step pair 15 x 10 overall — triangle ~8.5 x 9.5, dot ~4.5 in
- * diameter, ~2.5 between the triangle's flat inner edge and the dot; glyph
- * centres 36 apart, i.e. ~2.4x the play height; every glyph the same muted
- * grey. The tokens above (`PLAY_H`, `STEP_H`, `DOT_D`, `STEP_GAP`,
- * `GLYPH_ASPECT`, `TRANSPORT_COL`) are those numbers rounded to the design's
- * unit; only `box` centre is used — the hit box never sizes the glyph.
+ * \a ptr is whichever datablock owns the property for the unit in force —
+ * the SCENE for `frame_start` / `frame_end`, the Director state for the
+ * seconds mirrors — so the cell itself never has to know which is on.
  */
-void transport_glyph(const rctf &box, const bool forward, const bool step, const bool pause)
-{
-  const float u = cinema_unit();
-  const float *col = TRANSPORT_COL;
-  const float cx = BLI_rctf_cent_x(&box);
-  const float cy = BLI_rctf_cent_y(&box);
-  if (pause) {
-    /* Two bars as tall as the play glyph, each ~0.3 of that wide and as far
-     * apart. */
-    const float half = PLAY_H * 0.5f * u;
-    const float bar = PLAY_H * 0.3f * u;
-    const float gap = PLAY_H * 0.3f * u;
-    rctf left = {cx - gap * 0.5f - bar, cx - gap * 0.5f, cy - half, cy + half};
-    rctf right = {cx + gap * 0.5f, cx + gap * 0.5f + bar, cy - half, cy + half};
-    cinema_fill(left, bar * 0.3f, col);
-    cinema_fill(right, bar * 0.3f, col);
-    return;
-  }
-  const float dir = forward ? 1.0f : -1.0f;
-  if (!step) {
-    /* Flat edge left, apex right, the bounding box centred on the slot. */
-    const float half = PLAY_H * 0.5f * u;
-    const float w = PLAY_H * GLYPH_ASPECT * u;
-    cinema_triangle(cx - dir * w * 0.5f, cy, dir * w, half, col);
-    return;
-  }
-  /* Step: a smaller triangle plus a dot, the pair centred on the slot. The
-   * dot sits on the side facing the play button. */
-  const float sh = STEP_H * 0.5f * u; /* half height */
-  const float sw = STEP_H * GLYPH_ASPECT * u;
-  const float dot = DOT_D * u;
-  const float gap = STEP_GAP * u;
-  const float total = sw + gap + dot;
-  const float outer = cx + dir * total * 0.5f; /* outer end of the pair */
-  /* Triangle: flat edge on the inner side, apex at the outer end. */
-  cinema_triangle(outer - dir * sw, cy, dir * sw, sh, col);
-  const float dot_x0 = outer - dir * (sw + gap);
-  const float dot_x1 = dot_x0 - dir * dot;
-  rctf disc = {std::min(dot_x0, dot_x1), std::max(dot_x0, dot_x1), cy - dot * 0.5f, cy + dot * 0.5f};
-  cinema_fill(disc, dot * 0.5f, col);
-}
-
-/** Small labelled numeric field ("Start 1"). */
 void frame_field(ui::Block *block,
-                 PointerRNA *scene_ptr,
+                 PointerRNA *ptr,
                  const char *label,
                  const char *property,
                  const rctf &rect,
@@ -136,20 +94,31 @@ void frame_field(ui::Block *block,
 {
   const float u = cinema_unit();
   const float bg[4] = {0.149f, 0.149f, 0.149f, 1.0f};
-  MIXAR_THEME_LOAD(label_col, CinemaRowTextDisabled);
+  /* A CAPTION, at the caption size: it titles the value beside it, the same
+   * job "Aspect Ratio" does in the left column. It used to be a 13 px DIM,
+   * which is the surface's "not the live one" grey. */
+  MIXAR_THEME_LOAD(label_col, CinemaRowCaption);
   /* The same radius as every other rounded control, capped to a pill. */
   cinema_fill(rect, std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f), bg);
-  cinema_text_left(label,
-                   rect.xmin + 12.0f * u,
-                   BLI_rctf_cent_y(&rect),
-                   CINEMA_FONT_VALUE * u,
-                   label_col);
+  const float font = CINEMA_FONT_LABEL * u;
+  cinema_text_left(label, rect.xmin + LABEL_PAD * u, BLI_rctf_cent_y(&rect), font, label_col);
 
   /* The value IS the button: a Num button under Emboss::None paints only its
    * value string, so it reads as the design's plain number and still drags
-   * and text-edits like any frame field. */
+   * and text-edits like any frame field.
+   *
+   * It gets everything the label does not need, measured — a fixed 48% split
+   * of a 100-design-px field left about 14px of usable text after a Num
+   * button's own arrow padding, which is where "only 2 digits max is visible"
+   * came from. A scene ending on frame 1200 must read as 1200.
+   *
+   * It also keeps the pill's own inset on the right. A Num button CENTRES
+   * its value in whatever box it is given, so a box running to the pill's
+   * edge floated the number in the middle of the field with a gap after the
+   * label — and pushed a four-digit one flush against the edge. */
   rctf value = rect;
-  value.xmin = rect.xmin + BLI_rctf_size_x(&rect) * 0.52f;
+  value.xmin = rect.xmin + LABEL_PAD * u + cinema_text_width(label, font) + LABEL_GAP * u;
+  value.xmax = rect.xmax - LABEL_PAD * u;
   ui::block_emboss_set(block, blender::ui::EmbossType::None);
   uiDefButR(block,
             ui::ButtonType::Num,
@@ -158,7 +127,7 @@ void frame_field(ui::Block *block,
             int(value.ymin),
             short(BLI_rctf_size_x(&value)),
             short(BLI_rctf_size_y(&value)),
-            scene_ptr,
+            ptr,
             property,
             0,
             0,
@@ -167,160 +136,195 @@ void frame_field(ui::Block *block,
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
 }
 
-/** One of the Duration unit chips. */
-void unit_chip(ui::Block *block,
-               const ARegion *region,
-               const char *label,
-               const char *value,
-               const rctf &rect,
-               const bool active)
+/** The enum NAME and IDENTIFIER of \a ptr's `interpolation`, if it has one. */
+bool interpolation_labels(const bContext *C,
+                          PointerRNA *ptr,
+                          const char **r_name,
+                          const char **r_identifier)
 {
-  const float u = cinema_unit();
-  MIXAR_THEME_LOAD(on_bg, CinemaChip);
-  const float off_bg[4] = {0.176f, 0.176f, 0.176f, 1.0f};
-  MIXAR_THEME_LOAD(on, CinemaRowTextOn);
-  MIXAR_THEME_LOAD(off, CinemaRowTextDisabled);
-  cinema_fill(rect, std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f), active ? on_bg : off_bg);
-  cinema_text_center(label,
-                     BLI_rctf_cent_x(&rect),
-                     BLI_rctf_cent_y(&rect),
-                     CINEMA_FONT_LABEL * u,
-                     active ? on : off);
-
-  cinema_qa_record(region, rect, "director_ruler_unit", value, -1);
-  ui::Button *but = cinema_op_button(
-      block, "WM_OT_context_set_enum", rect, "Label the ruler in minutes or seconds");
-  if (but != nullptr) {
-    PointerRNA *ptr = ui::button_operator_ptr_ensure(but);
-    RNA_string_set(ptr, "data_path", "scene.mixar_director.ruler_unit");
-    RNA_string_set(ptr, "value", value);
+  PropertyRNA *prop = ptr->data ? RNA_struct_find_property(ptr, "interpolation") : nullptr;
+  if (prop == nullptr) {
+    return false;
   }
-}
-
-/** Quiet right-edge icon the design has no slot for, but the mode needs. */
-void tool_icon(ui::Block *block,
-               const char *operator_id,
-               const int icon,
-               const rctf &rect,
-               const char *tooltip,
-               const bool enabled)
-{
-  ui::Button *but = cinema_icon_button(block, operator_id, icon, rect, tooltip);
-  director_overlay_disable_button(but, !enabled);
-}
-
-/** Right edge of the centred transport group, in region px. */
-float transport_right_edge(const ARegion *region)
-{
-  const float u = cinema_unit();
-  const float group_w = TRANSPORT_SIZE * 3.0f * u + TRANSPORT_GAP * 2.0f * u;
-  return (float(region->winx) + group_w) * 0.5f;
-}
-
-/** Transport triple (previous / preview / next), centred on the dock. */
-void draw_transport(ui::Block *block,
-                    const ARegion *region,
-                    const DirectorViewState &state,
-                    const float cy,
-                    const bool playing)
-{
-  const float u = cinema_unit();
-  const float group_w = TRANSPORT_SIZE * 3.0f * u + TRANSPORT_GAP * 2.0f * u;
-  float tx = (float(region->winx) - group_w) * 0.5f;
-  const struct {
-    const char *op;
-    bool forward;
-    bool step;
-    const char *tip;
-  } transport[3] = {
-      {"MIXAR_OT_director_previous_beat", false, true, "Previous keyframe"},
-      {"MIXAR_OT_director_preview", true, false, "Preview this shot"},
-      {"MIXAR_OT_director_next_beat", true, true, "Next keyframe"},
-  };
-  const bool no_beats = state.beats.is_empty();
-  for (int index = 0; index < 3; index++) {
-    /* Every slot is the same TRANSPORT_SIZE hit box; the glyphs size
-     * themselves (#transport_glyph) and only borrow the box's centre. */
-    const float size = TRANSPORT_SIZE * u;
-    const float slot_cx = tx + TRANSPORT_SIZE * u * 0.5f;
-    const rctf box = {slot_cx - size * 0.5f, slot_cx + size * 0.5f, cy - size * 0.5f, cy + size * 0.5f};
-    transport_glyph(box, transport[index].forward, transport[index].step, index == 1 && playing);
-    cinema_qa_record(region, box, "director_transport", transport[index].tip, index);
-    ui::Button *but = cinema_op_button(block, transport[index].op, box, transport[index].tip);
-    const bool enabled = index == 1 ? (state.beats.size() >= 2 &&
-                                       state.frame_end > state.frame_start)
-                                    : !no_beats;
-    director_overlay_disable_button(but, !enabled);
-    tx += (TRANSPORT_SIZE + TRANSPORT_GAP) * u;
+  const int value = RNA_property_enum_get(ptr, prop);
+  const char *found = nullptr;
+  if (RNA_property_enum_name(const_cast<bContext *>(C), ptr, prop, value, &found) &&
+      found != nullptr)
+  {
+    *r_name = found;
   }
+  if (RNA_property_enum_identifier(const_cast<bContext *>(C), ptr, prop, value, &found) &&
+      found != nullptr)
+  {
+    *r_identifier = found;
+  }
+  return true;
 }
 
 /**
- * Right-edge mode tools. Returns the x the next group may claim.
+ * Interpolation: how the camera eases BETWEEN KEYFRAMES.
  *
- * \a full adds capture and add-camera; the compact layout leaves those out
- * because its viewport rail already carries both as primary buttons.
+ * It used to live off the stage's right edge in the top strip, as far from
+ * the keyframes it describes as the surface allows.
+ *
+ * It follows the SELECTION. Select keyframes and the chip reads — and its
+ * popup writes — their own `interpolation`, which is what makes one span ease
+ * differently from the next; a keyframe's interpolation governs the segment
+ * from it to the following one. With nothing selected it is the shot's
+ * default, which is what every beat rests on. Both are RNA enums and the
+ * popup lists whichever property it is about, so a label here can never
+ * disagree with what the popup offers.
  */
-float draw_mode_tools(ui::Block *block,
-                      const ARegion *region,
-                      const DirectorViewState &state,
-                      const float cy,
-                      const bool full)
+void interpolation_chip(ui::Block *block,
+                        const bContext *C,
+                        const ARegion *region,
+                        const rctf &rect,
+                        const bool enabled)
 {
   const float u = cinema_unit();
-  float right = float(region->winx) - (SIDE_PAD + 8.0f) * u;
-  const struct {
-    const char *op;
-    int icon;
-    const char *tip;
-    bool enabled;
-    bool wide_only;
-  } tools[5] = {
-      {"MIXAR_OT_director_toggle_timeline", ICON_X, "Collapse timeline", true, false},
-      {"MIXAR_OT_director_toggle_immersive",
-       ICON_FULLSCREEN_ENTER,
-       "Toggle immersive Director view",
-       true,
-       false},
-      {"MIXAR_OT_director_explore",
-       ICON_VIEW_PAN,
-       "Fly the scene freely without moving the shot camera",
-       state.has_shot,
-       false},
-      {state.locked ? "MIXAR_OT_director_new_take" : "MIXAR_OT_director_capture_beat",
-       state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT,
-       state.locked ? "Start an editable child take" : "Capture the live camera pose (F)",
-       state.has_camera,
-       true},
-      /* The camera entry point. The right column carries it as "+ Add Camera",
-       * but that column only draws in the wide layout — without this the
-       * compact one has no way to start directing at all. */
-      {state.has_shot ? "MIXAR_OT_director_new_shot" : "MIXAR_OT_director_start",
-       state.has_shot ? ICON_ADD : ICON_CAMERA_DATA,
-       state.has_shot ? "Create a new shot camera from this view" :
-                        "Direct the active scene camera from the viewport",
-       true,
-       true},
-  };
-  for (const auto &tool : tools) {
-    if (tool.wide_only && !full) {
-      continue;
+  MIXAR_THEME_LOAD(top, CinemaRowTop);
+  MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
+  MIXAR_THEME_LOAD(value_col, CinemaRowTextOn);
+  const float chevron[4] = {0.851f, 0.851f, 0.851f, 1.0f};
+  cinema_panel(rect, std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f), top, bottom);
+
+  const char *name = "Bezier";
+  const char *identifier = "BEZIER";
+  PointerRNA shot_ptr = {};
+  view3d_director_active_shot_pointer(CTX_data_scene(const_cast<bContext *>(C)), &shot_ptr);
+
+  blender::Vector<int> selected;
+  const bool has_selection = view3d_director_timeline_selection(C, &selected);
+  if (has_selection && shot_ptr.data) {
+    /* One answer only when the selected keyframes AGREE. "Mixed" is the
+     * honest label for a selection that spans two easings, and picking any
+     * row still writes it to all of them. */
+    PropertyRNA *beats = RNA_struct_find_property(&shot_ptr, "beats");
+    const int count = beats ? RNA_property_collection_length(&shot_ptr, beats) : 0;
+    bool first = true;
+    for (const int index : selected) {
+      if (index < 0 || index >= count) {
+        continue;
+      }
+      PointerRNA beat_ptr;
+      if (!RNA_property_collection_lookup_int(&shot_ptr, beats, index, &beat_ptr)) {
+        continue;
+      }
+      const char *beat_name = "Shot Default";
+      const char *beat_id = "SHOT";
+      interpolation_labels(C, &beat_ptr, &beat_name, &beat_id);
+      if (first) {
+        name = beat_name;
+        identifier = beat_id;
+        first = false;
+      }
+      else if (!STREQ(identifier, beat_id)) {
+        name = "Mixed";
+        identifier = "MIXED";
+        break;
+      }
     }
-    const rctf box = {right - TOOL_SIZE * u,
-                      right,
-                      cy - TOOL_SIZE * u * 0.5f,
-                      cy + TOOL_SIZE * u * 0.5f};
-    tool_icon(block, tool.op, tool.icon, box, tool.tip, tool.enabled);
-    right -= (TOOL_SIZE + TOOL_GAP) * u;
   }
-  return right;
+  else {
+    interpolation_labels(C, &shot_ptr, &name, &identifier);
+  }
+  cinema_text_left(
+      name, rect.xmin + 12.0f * u, BLI_rctf_cent_y(&rect), CINEMA_FONT_VALUE * u, value_col);
+  cinema_chevron(rect.xmax - 16.0f * u, BLI_rctf_cent_y(&rect), 9.0f * u, chevron);
+
+  cinema_qa_record(region, rect, "director_interpolation", identifier, -1);
+  ui::Button *but = cinema_popup_button(
+      block,
+      view3d_director_interpolation_popup_create,
+      rect,
+      has_selection ? "Interpolation: how the camera eases out of the selected keyframes" :
+                      "Interpolation: how the camera eases between this shot's keyframes",
+      CinemaPopupSlot::Strip);
+  director_overlay_disable_button(but, !enabled);
+}
+
+
+/**
+ * Start and End, immediately right of the ruler's unit switch — and READ IN
+ * THAT UNIT.
+ *
+ * They used to sit at the far end of the row, past the transport, where
+ * nothing said they were the range the ruler under them is scaling. Beside
+ * the switch the row reads as one sentence: this is the scale, this is what
+ * it spans.
+ *
+ * In DURATION the pair shows seconds instead of frame numbers, through the
+ * Director state's `range_*_seconds` mirrors of the scene's own range. The
+ * seconds are absolute — frame divided by the effective rate, which is what
+ * Blender's own "Show Seconds" means by a time — so both ends stay editable;
+ * the ruler's labels measure ELAPSED time from the scene's start, so on a
+ * scene starting at frame 1 the two differ by that one frame.
+ *
+ * The pair SHRINKS before it disappears: dropping it whole meant a slightly
+ * narrower viewport made Start and End vanish outright.
+ *
+ * Returns the x the next group may claim.
+ */
+float draw_frame_range(ui::Block *block,
+                       const bContext *C,
+                       const ARegion *region,
+                       const DirectorViewState &state,
+                       const float start_x,
+                       const float row_ymin,
+                       const float row_ymax)
+{
+  const float u = cinema_unit();
+  /* NOT `const Scene *`: `view3d_director_state_pointer` takes a mutable
+   * scene, the way every Director state reader does. */
+  Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
+  if (scene == nullptr) {
+    return start_x;
+  }
+  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+  PointerRNA state_ptr = {};
+  const bool seconds = !state.ruler_frames && view3d_director_state_pointer(scene, &state_ptr);
+  PointerRNA *ptr = seconds ? &state_ptr : &scene_ptr;
+
+  /* The transport is the load-bearing group; everything else keeps clear of
+   * it. */
+  const float transport_left = float(region->winx) - cinema_transport_right_edge(region);
+  const float available = transport_left - FIELD_CLEARANCE * u - start_x;
+  const float field_w = std::min(FIELD_W * u, (available - FIELD_GAP * u) * 0.5f);
+  if (field_w < FIELD_MIN_W * u) {
+    return start_x;
+  }
+
+  float x = start_x;
+  const rctf start_rect = {x, x + field_w, row_ymin, row_ymax};
+  frame_field(block,
+              ptr,
+              "Start",
+              seconds ? "range_start_seconds" : "frame_start",
+              start_rect,
+              seconds ? "First frame of the scene range, in seconds" :
+                        "First frame of the scene range");
+  x += field_w + FIELD_GAP * u;
+  const rctf end_rect = {x, x + field_w, row_ymin, row_ymax};
+  frame_field(block,
+              ptr,
+              "End",
+              seconds ? "range_end_seconds" : "frame_end",
+              end_rect,
+              seconds ? "Last frame of the scene range, in seconds" :
+                        "Last frame of the scene range");
+  return x + field_w + FIELD_GAP * u;
 }
 
 }  // namespace
 
-float cinema_dock_control_height()
+float cinema_dock_control_height(const bool full)
 {
-  return (ROW_H + ROW_TOP_GAP * 2.0f) * cinema_unit();
+  const float u = cinema_unit();
+  const float row = (ROW_H + ROW_TOP_GAP * 2.0f) * u;
+  /* Only the wide surface draws the actions row; the compact dock's rail
+   * already carries the same two controls, so it keeps its old budget and
+   * gives the height back to the keyframe strip. */
+  return full ? row + (SUB_ROW_GAP + SUB_ROW_H) * u : row;
 }
 
 void cinema_draw_dock_panel(const ARegion *region)
@@ -343,65 +347,43 @@ void cinema_draw_dock_controls(ui::Block *block,
 {
   cinema_qa_begin(region);
   const float u = cinema_unit();
-  const float title[4] = {0.925f, 0.925f, 0.925f, 1.0f};
-  Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
 
   const float row_ymax = float(region->winy) - ROW_TOP_GAP * u;
   const float row_ymin = row_ymax - ROW_H * u;
   const float cy = (row_ymin + row_ymax) * 0.5f;
 
-  /* -------- Duration -------- */
-  float x = SIDE_PAD * u + 8.0f * u;
-  cinema_text_left("Duration", x, cy, CINEMA_FONT_TITLE * u, title);
-  x += cinema_text_width("Duration", CINEMA_FONT_TITLE * u) + 16.0f * u;
+  /* -------- Ruler, then the range that scale measures -------- */
+  const float x = cinema_draw_ruler_group(block, C, region, SIDE_PAD * u + 8.0f * u, cy);
+  /* The range is the last group on the left, so its own "next x" is unused;
+   * it is returned all the same, because that hand-off is how every group in
+   * this row is laid out. */
+  draw_frame_range(block, C, region, state, x, row_ymin, row_ymax);
 
-  char unit_id[16] = "SEC";
-  PointerRNA state_ptr;
-  if (view3d_director_state_pointer(scene, &state_ptr)) {
-    PropertyRNA *prop = RNA_struct_find_property(&state_ptr, "ruler_unit");
-    const char *identifier = nullptr;
-    if (prop != nullptr &&
-        RNA_property_enum_identifier(const_cast<bContext *>(C),
-                                     &state_ptr,
-                                     prop,
-                                     RNA_property_enum_get(&state_ptr, prop),
-                                     &identifier) &&
-        identifier != nullptr)
-    {
-      BLI_strncpy(unit_id, identifier, sizeof(unit_id));
-    }
+  /* -------- Interpolation, at the dock's right edge --------
+   *
+   * It describes the SHOT, not the ruler, so it belongs to no group on the
+   * left; the right margin is where a surface puts that. Dropped rather than
+   * drawn into the transport when the dock is narrow — the transport is the
+   * load-bearing group and everything else keeps clear of it. */
+  const float right_edge = float(region->winx) - (SIDE_PAD + 8.0f) * u;
+  const rctf interp = {
+      right_edge - INTERP_W * u, right_edge, cy - CHIP_H * u * 0.5f, cy + CHIP_H * u * 0.5f};
+  if (interp.xmin > cinema_transport_right_edge(region) + FIELD_CLEARANCE * u) {
+    interpolation_chip(block, C, region, interp, state.has_shot && !state.locked);
   }
-  const rctf min_chip = {x, x + CHIP_W * u, cy - CHIP_H * u * 0.5f, cy + CHIP_H * u * 0.5f};
-  unit_chip(block, region, "Min", "MIN", min_chip, STREQ(unit_id, "MIN"));
-  x += (CHIP_W + 8.0f) * u;
-  const rctf sec_chip = {x, x + CHIP_W * u, cy - CHIP_H * u * 0.5f, cy + CHIP_H * u * 0.5f};
-  unit_chip(block, region, "Sec", "SEC", sec_chip, STREQ(unit_id, "SEC"));
 
-  /* -------- Transport (centred on the dock) -------- */
-  draw_transport(block, region, state, cy, playing);
+  /* -------- Transport (centred on the dock) --------
+   *
+   * Created AFTER the groups that can share a band with it.
+   * `ui_but_find_mouse_over_ex` walks a block's buttons BACKWARDS, so the
+   * later button wins an overlap: with the frame fields last, an invisible
+   * Num over the transport turned "previous keyframe" into a drag-edit of
+   * the scene's start frame. */
+  cinema_draw_transport(block, region, state, cy, playing);
 
-  /* -------- Right edge: mode tools, then the frame range -------- */
-  float right = draw_mode_tools(block, region, state, cy, /*full=*/true);
-  right -= 14.0f * u;
-
-  /* The fields are created LAST and `ui_but_find_mouse_over_ex` walks a
-   * block's buttons BACKWARDS, so an invisible ui::ButtonType::Num overlapping the
-   * transport wins its clicks — "previous keyframe" started a drag-edit on
-   * the scene Start frame. Drop the pair when the dock is too narrow to hold
-   * them clear of the transport; the transport is the load-bearing group and
-   * the frame range is reachable from Blender's own timeline. */
-  const float fields_w = (FIELD_W * 2.0f + 8.0f) * u;
-  const bool fields_fit = (right - fields_w) >=
-                          (transport_right_edge(region) + FIELD_CLEARANCE * u);
-  if (scene != nullptr && fields_fit) {
-    PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
-    const rctf end_rect = {right - FIELD_W * u, right, row_ymin, row_ymax};
-    frame_field(block, &scene_ptr, "End", "frame_end", end_rect, "Last frame of the scene range");
-    right -= (FIELD_W + 8.0f) * u;
-    const rctf start_rect = {right - FIELD_W * u, right, row_ymin, row_ymax};
-    frame_field(
-        block, &scene_ptr, "Start", "frame_start", start_rect, "First frame of the scene range");
-  }
+  /* -------- Actions, centred on their own row under it -------- */
+  cinema_draw_dock_actions(
+      block, region, state, row_ymin - (SUB_ROW_GAP + SUB_ROW_H * 0.5f) * u);
 }
 
 void cinema_draw_dock_compact(ui::Block *block,
@@ -412,13 +394,11 @@ void cinema_draw_dock_compact(ui::Block *block,
   /* The designed dock row belongs to the wide surface. Below the gate the old
    * viewport rail is what draws, and painting the design's Duration chips and
    * frame fields over it stacked two control sets on one screen. What survives
-   * is only what has no other home while the timeline is expanded: the
-   * transport, and collapse / immersive / explore. */
+   * is the transport alone — the rail carries everything else. */
   cinema_qa_begin(region);
   const float u = cinema_unit();
   const float cy = float(region->winy) - (ROW_TOP_GAP + ROW_H * 0.5f) * u;
-  draw_transport(block, region, state, cy, playing);
-  draw_mode_tools(block, region, state, cy, /*full=*/false);
+  cinema_draw_transport(block, region, state, cy, playing);
 }
 
 }  // namespace blender

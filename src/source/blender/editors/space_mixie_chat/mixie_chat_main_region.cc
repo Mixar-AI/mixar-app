@@ -364,7 +364,7 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
     }
 
     /* 2. Empty prompt clicks */
-    if (mixie_chat_handle_empty_prompt_click(C, mx, my)) {
+    if (mixie_chat_handle_empty_prompt_click(C, region, mx, my)) {
       return WM_UI_HANDLER_BREAK;
     }
 

@@ -22,8 +22,10 @@ INTERFACE = ROOT / "src/source/blender/editors/interface"
 INCLUDE = ROOT / "src/source/blender/editors/include"
 CHROME = (INCLUDE / "UI_mixar_chrome.hh").read_text(encoding="utf-8")
 
-HEADER = (VIEW3D / "view3d_director_cinema.hh").read_text(encoding="utf-8")
+HEADER = (VIEW3D / "view3d_director_cinema_tokens.hh").read_text(encoding="utf-8")
 POPUP = (VIEW3D / "view3d_director_popup.cc").read_text(encoding="utf-8")
+# The lens popup has its own translation unit (500-line rule).
+LENS = (VIEW3D / "view3d_director_popup_lens.cc").read_text(encoding="utf-8")
 RENDER = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
 ROW = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
 MOTION = (INTERFACE / "mixar/motion.cc").read_text(encoding="utf-8")
@@ -43,7 +45,7 @@ def _function(text: str, signature: str) -> str:
 
 def _color_define(name: str) -> tuple[float, ...]:
     match = re.search(rf"^#define {name} \{{([^}}]+)\}}", HEADER, re.M)
-    assert match is not None, f"{name} is not defined in view3d_director_cinema.hh"
+    assert match is not None, f"{name} is not defined in view3d_director_cinema_tokens.hh"
     return tuple(float(part.strip().rstrip("f")) for part in match.group(1).split(","))
 
 
@@ -158,9 +160,12 @@ def test_labels_shrink_the_pad_to_a_floor_before_ellipsising():
 
 
 def test_lens_type_cells_are_a_segment_group():
-    lens = _function(POPUP, "ui::Block *lens_popup_create(")
-    assert "popup_segment_state(but, data.camera->type == types[index].camera_type, data.editable);" in lens
-    seg = _function(POPUP, "void popup_segment_state(")
+    lens = _function(LENS, "ui::Block *lens_popup_create(")
+    # The live flag is named now, because a switch also has to close the
+    # popup (tests/director/test_panoramic_lens.py).
+    assert "const bool live = data.camera->type == types[index].camera_type;" in lens
+    assert "popup_segment_state(but, live, data.editable);" in lens
+    seg = _function(LENS, "void popup_segment_state(")
     assert "director_popup_state(but, active, enabled);" in seg
     assert "ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Segment);" in seg
 
@@ -271,9 +276,14 @@ def test_new_row_tus_are_built_and_under_the_size_rule():
         INTERFACE / "interface_mixar_cinema_row_segment.cc",
         INTERFACE / "interface_mixar_cinema_row_value.cc",
         VIEW3D / "view3d_director_popup.cc",
+        VIEW3D / "view3d_director_popup_lens.cc",
         VIEW3D / "view3d_director_popup_render.cc",
     ):
         assert len(path.read_text(encoding="utf-8").splitlines()) <= 500, path.name
     # The public accessor keeps `interface_intern.hh` out of space_view3d.
     assert "ButtonType UI_mixar_button_type(const Button *but);" in CARD_HH
     assert "interface_intern.hh" not in POPUP
+    assert "interface_intern.hh" not in LENS
+    assert "  view3d_director_popup_lens.cc\n" in (
+        VIEW3D / "CMakeLists.txt"
+    ).read_text(encoding="utf-8")

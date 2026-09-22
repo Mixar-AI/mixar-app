@@ -5,13 +5,19 @@
 """Keyframe interpolation for a shot's camera curves.
 
 Blender decides a key's interpolation per keyframe point, from the user
-preference at insert time. Director exposes it per SHOT instead
-(``shot.interpolation``): picking a type re-interpolates the keys the shot
-itself owns, and every capture afterwards re-applies it, so the whole take
-always eases the same way. Handles are untouched — Bezier keys keep the
-continuity-filtered handles the capture path gave them.
+preference at insert time. Director gives a SHOT a default
+(``shot.interpolation``) and lets any keyframe override it
+(``beat.interpolation``, which rests on ``SHOT``). A keyframe's interpolation
+governs the segment FROM it TO the next one, so an override on the earlier
+beat of a pair is exactly "the easing between these two keyframes" — one span
+can ease while the rest of the take holds constant.
+
+Picking a type re-interpolates the keys the shot itself owns, and every
+capture afterwards re-applies it. Handles are untouched — Bezier keys keep
+the continuity-filtered handles the capture path gave them.
 """
 
+from ..constants import BEAT_INTERPOLATION_DEFAULT
 from .anim_curves import assigned_fcurves
 
 # The channels Director keys for a shot's camera: the motion on the object,
@@ -56,8 +62,38 @@ def camera_keyframe_points(camera, frames=None):
                 yield fcurve, point
 
 
+def beat_interpolation(shot, beat) -> str:
+    """The type *beat* actually eases with: its own, else the shot's.
+
+    ``SHOT`` is not a Blender interpolation — it is the beat saying it has no
+    opinion — so it never reaches a keyframe point.
+    """
+    own = getattr(beat, "interpolation", BEAT_INTERPOLATION_DEFAULT)
+    if not own or own == BEAT_INTERPOLATION_DEFAULT:
+        return getattr(shot, "interpolation", "") or ""
+    return own
+
+
+def interpolation_by_frame(shot, frame=None) -> dict[int, str]:
+    """``{frame: interpolation}`` for every key this shot owns.
+
+    ``frame`` names a key inserted for the beat being captured right now,
+    which is not on ``shot.beats`` yet — it takes the shot's default, which
+    is what a beat rests on anyway.
+    """
+    default = getattr(shot, "interpolation", "") or ""
+    plan = {}
+    for beat in getattr(shot, "beats", ()):
+        resolved = beat_interpolation(shot, beat)
+        if resolved:
+            plan[int(beat.frame)] = resolved
+    if frame is not None and default:
+        plan.setdefault(int(frame), default)
+    return plan
+
+
 def apply_interpolation(shot, frame=None) -> int:
-    """Set the shot's own keys on its camera to ``shot.interpolation``.
+    """Write each of the shot's keys to the type its own beat resolves to.
 
     ``frame`` names a key inserted for the beat being captured right now,
     which is not on ``shot.beats`` yet.
@@ -66,20 +102,23 @@ def apply_interpolation(shot, frame=None) -> int:
     animation yet: it is a no-op then.
     """
     camera = getattr(shot, "camera", None)
-    value = getattr(shot, "interpolation", None)
-    if camera is None or not value:
+    if camera is None:
         return 0
-    frames = {int(beat.frame) for beat in getattr(shot, "beats", ())}
-    if frame is not None:
-        frames.add(int(frame))
+    plan = interpolation_by_frame(shot, frame)
+    if not plan:
+        return 0
     changed = 0
     touched = []
-    for fcurve, point in camera_keyframe_points(camera, frames):
-        if point.interpolation != value:
-            point.interpolation = value
-            changed += 1
-            if fcurve not in touched:
-                touched.append(fcurve)
+    for fcurve, point in camera_keyframe_points(camera, plan.keys()):
+        # The scan matches within `_FRAME_EPSILON`, so the plan is looked up
+        # on the rounded frame rather than the raw float the point carries.
+        value = plan.get(round(float(point.co[0])))
+        if value is None or point.interpolation == value:
+            continue
+        point.interpolation = value
+        changed += 1
+        if fcurve not in touched:
+            touched.append(fcurve)
     for fcurve in touched:
         update = getattr(fcurve, "update", None)
         if callable(update):

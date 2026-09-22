@@ -647,7 +647,8 @@ bool mixie_chat_handle_feedback_click(bContext *C,
                                       ARegion *region,
                                       float mouse_x,
                                       float mouse_y);
-bool mixie_chat_handle_empty_prompt_click(bContext *C, float mouse_x, float mouse_y);
+bool mixie_chat_handle_empty_prompt_click(
+    bContext *C, ARegion *region, float mouse_x, float mouse_y);
 bool mixie_chat_handle_steps_click(bContext *C,
                                    ARegion *region,
                                    float mouse_x,

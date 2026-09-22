@@ -315,7 +315,7 @@ def test_camera_keys_have_one_definition_shared_with_the_beat_strip():
     beat_sync = _read("core/beat_sync.py")
     camera_export = _read("core/camera_export.py")
 
-    assert "def camera_key_frames(camera)" in curves
+    assert "def camera_key_frames(camera," in curves
     assert "CAMERA_MOTION_PATHS" in curves
     # Slotted actions: Blender 4.4+ removed Action.fcurves, and a silent
     # zero-curve read would report every animated camera as unanimated. The

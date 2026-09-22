@@ -5,11 +5,11 @@
 /** \file
  * \ingroup spview3d
  *
- * Aerial map internals shared by the render half
+ * The aerial map: the internals shared by the render half
  * (`view3d_director_minimap.cc`) and the painter half
- * (`view3d_director_minimap_draw.cc`). The public API — the painter entry,
- * the pixel<->world queries and the teardown — is declared in
- * `view3d_director_cinema.hh` / `view3d_director.hh`.
+ * (`view3d_director_minimap_draw.cc`), and the public API — the painter
+ * entry, the pixel<->world queries and the teardown — which moved here from
+ * `view3d_director_cinema.hh` when that header crossed the 500-line rule.
  */
 
 #pragma once
@@ -24,6 +24,14 @@ struct ARegion;
 struct Depsgraph;
 struct GPUViewport;
 struct bContext;
+
+/* The card painter takes a block. Forward-declared exactly as
+ * `view3d_director_cinema.hh` does it — `blender::ui` already exists (DNA
+ * declares it), but `Block` is only a name in it once someone says so. */
+namespace ui {
+struct Block;
+}
+struct DirectorViewState;
 
 /** Objects that carry no geometry the map should trace — not drawn, not measured. */
 constexpr int MINIMAP_HIDDEN_TYPES = (1 << OB_CAMERA) | (1 << OB_LAMP) | (1 << OB_SPEAKER) |
@@ -100,6 +108,56 @@ void view3d_director_minimap_publish(
 
 /** Free buffers queued for release; needs a bound GPU context (call from a draw). */
 void view3d_director_minimap_garbage_flush();
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Aerial map (view3d_director_minimap.cc)
+ *
+ * The right column's preview card is a LIVE top-down orthographic render of
+ * the scene (world XY, +X right, +Y up) with the shot camera marked on it.
+ * The render is an offscreen pass cached in a file-static and re-run only
+ * when the map's world extents, the depsgraph or the card size change; the
+ * marker, the track-target dot and the caption are painted every redraw.
+ * The painter publishes its pixel<->world transform so the placement modal
+ * (`MIXAR_OT_director_place_camera`, bound to LEFTMOUSE in
+ * `director/ui/keymap.py`) can map a press back to world XY. No invisible
+ * button is laid over the map: a uiBut would swallow the press before the
+ * keymap sees it.
+ * \{ */
+
+/** Paint the card at \a card (design `PREVIEW_Y`, `CINEMA_PREVIEW_H`). */
+void cinema_draw_minimap(ui::Block *block,
+                         const bContext *C,
+                         const ARegion *region,
+                         const DirectorViewState &state,
+                         const rctf &card);
+
+/**
+ * World XY under region-local pixel (\a x, \a y) on \a region's map, clamped
+ * to the map's placeable area. False when \a region drew no map this frame.
+ */
+bool view3d_director_minimap_world_from_region_px(const ARegion *region,
+                                                  int x,
+                                                  int y,
+                                                  float r_xy[2]);
+
+/** Whether region-local pixel (\a x, \a y) lies on \a region's drawn map. */
+bool view3d_director_minimap_contains(const ARegion *region, int x, int y);
+
+/**
+ * Drop the map's transform for \a region, and with \a free_gpu (only from a
+ * draw, where a GPU context is bound) free its render buffers when \a region
+ * owns them. Called by the overlay on every draw that shows no map.
+ */
+void view3d_director_minimap_release(const ARegion *region, bool free_gpu);
+
+/**
+ * Queue every GPU buffer for release and forget the transform. Needs no GPU
+ * context: the queue is flushed by the next map draw or by
+ * #view3d_director_minimap_region_free.
+ */
+void view3d_director_minimap_free();
 
 /** \} */
 
