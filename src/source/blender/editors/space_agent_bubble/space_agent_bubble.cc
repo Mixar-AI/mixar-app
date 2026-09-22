@@ -2339,6 +2339,19 @@ static bool agent_bubble_window_contains_space(const wmWindow *win)
   return false;
 }
 
+wmWindow *ED_agent_bubble_host_window_get(wmWindowManager *wm)
+{
+  if (wm == nullptr || g_host_ghostwin == nullptr) {
+    return nullptr;
+  }
+  for (wmWindow &win : wm->windows) {
+    if (win.runtime->ghostwin == g_host_ghostwin) {
+      return &win;
+    }
+  }
+  return nullptr;
+}
+
 /**
  * Reset the cached bubble/pill ghost-window pointers and minimise/expand
  * flags. Every consumer (bubble_force_size_and_refresh, pill_set_size, the

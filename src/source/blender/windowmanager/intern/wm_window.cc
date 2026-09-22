@@ -70,6 +70,7 @@
 #include "WM_types.hh"
 #include "wm.hh"
 #include "wm_draw.hh"
+#include "wm_draw_mixar_glass.hh"
 #include "wm_event_system.hh"
 #include "wm_files.hh"
 #include "wm_mixar_reference_drag.hh"
@@ -274,6 +275,8 @@ static void wm_ghostwindow_destroy(wmWindowManager *wm, wmWindow *win)
   /* We need this window's GPU context active to discard it. */
   ghost_window->activateDrawingContext();
   GPU_context_active_set(static_cast<GPUContext *>(win->runtime->gpuctx));
+
+  wm_draw_mixar_glass_free(win);
 
   /* Delete local GPU context. */
   GPU_context_discard(static_cast<GPUContext *>(win->runtime->gpuctx));

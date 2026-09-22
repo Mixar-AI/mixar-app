@@ -483,10 +483,10 @@ class TestIslandWindowTranslucency:
 
     def test_chat_and_pill_share_the_neutral_native_wash(self) -> None:
         theme = _read(PILL_DRAW.parent / "agent_ui_theme.hh")
-        assert "AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.40f}" in theme
+        assert theme.count("#define AGENT_COL_GLASS_WASH") == 1
         assert "AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}" in theme
-        assert "AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 102}" in theme
+        assert theme.count("#define AGENT_COL_GLASS_FIELD_UCHAR") == 1
         assert "AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 48}" in theme
-        assert "#ifdef _WIN32" in theme
+        assert "#ifdef _WIN32" not in theme
         assert _read(SPACE).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 3
         assert _read(PILL_DRAW).count("const float wash[4] = AGENT_COL_GLASS_WASH;") == 2

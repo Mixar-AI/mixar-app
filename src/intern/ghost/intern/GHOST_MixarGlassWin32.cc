@@ -5,12 +5,12 @@
 /** \file
  * \ingroup GHOST
  *
- * Per-pixel alpha behind the island and pill on Windows.
- * `DWMSBT_TRANSIENTWINDOW` Acrylic cannot sample the parent Mixar viewport
- * (the island is an owned always-on-top HWND) and fills a gray slab instead.
- * Frame extension plus redirection/legacy alpha lets the GPU wash show
- * the scene through the card. DwmEnableBlurBehindWindow has not produced a
- * blur since Windows 8; it is an alpha path, not a frost fallback.
+ * Per-pixel alpha setup for the island and pill on Windows.
+ * This is only the permission to draw a translucent UI bed, not a blur source:
+ * DwmEnableBlurBehindWindow has not produced blur since Windows 8, and GPU
+ * drivers can accept this setup yet present the translucent pixels over black.
+ * wm_draw_mixar_glass supplies the live blurred parent framebuffer on the GPU
+ * and presents opaque interior pixels, clipped by the rounded HWND region.
  */
 
 #include "GHOST_MixarGlassWin32.hh"
