@@ -1023,6 +1023,16 @@ static void view3d_main_region_message_subscribe(const wmRegionMessageSubscribeP
 /** Concept is to retrieve cursor type contextless. */
 static void view3d_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region)
 {
+  /* Screen cursor selection uses View2D contents for overlapping regions.
+   * It can select WINDOW over the drawer after canvas changes; honor the
+   * same sash geometry as input routing before applying viewport tools. */
+  const ARegion *drawer = view3d_moodboard_drawer_region_find(area);
+  if (drawer && drawer->runtime->visible && win->runtime->eventstate &&
+      view3d_moodboard_drawer_resize_contains_xy(area, drawer, win->runtime->eventstate->xy))
+  {
+    WM_cursor_set(win, WM_CURSOR_X_MOVE);
+    return;
+  }
   if (WM_cursor_set_from_tool(win, area, region)) {
     return;
   }
@@ -1719,6 +1729,7 @@ void ED_spacetype_view3d()
   art->listener = view3d_main_region_listener;
   art->message_subscribe = view3d_main_region_message_subscribe;
   art->cursor = view3d_main_region_cursor;
+  art->event_cursor = true;
   art->lock = REGION_DRAW_LOCK_ALL;
   BLI_addhead(&st->regiontypes, art);
 

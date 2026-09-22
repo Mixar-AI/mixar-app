@@ -48,6 +48,21 @@ rcti moodboard_canvas_draw_rect(const ScrArea *area, ARegion *region)
   return canvas;
 }
 
+rcti moodboard_canvas_controls_rect(const bContext *C)
+{
+  const ScrArea *area = CTX_wm_area(C);
+  ARegion *region = CTX_wm_region(C);
+  rcti canvas = moodboard_canvas_draw_rect(area, region);
+  rcti edge;
+  if (view3d_moodboard_drawer_is_overlay(area, region) &&
+      view3d_moodboard_drawer_edge_rect_for(
+          area, region, view3d_moodboard_drawer_runtime_amount(region), &edge))
+  {
+    canvas.xmin = std::max(canvas.xmin, edge.xmax - region->winrct.xmin + 1);
+  }
+  return canvas;
+}
+
 rcti moodboard_visible_canvas_rect(const bContext *C)
 {
   return moodboard_visible_canvas_rect(CTX_wm_area(C), CTX_wm_region(C));

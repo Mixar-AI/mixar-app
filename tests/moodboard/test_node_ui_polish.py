@@ -201,14 +201,18 @@ def test_a_finished_node_shows_its_result_behind_a_floating_edit_toggle():
 
 
 def test_the_card_action_row_stays_inside_the_painted_canvas():
-    """Card actions share the full painting surface with cards and media names.
+    """Card actions use the painting surface except the drawer resize sash.
     The drawer's transparent tab gutter remains outside that surface; floating
     toolbars occlude content through draw order, not framing-margin clipping."""
     node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
     tile = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tile_controls.cc")
     labels = _read(SPACE_MIXIE / "mixie_draw_moodboard_media_labels.cc")
 
-    assert "moodboard_canvas_draw_rect(C)" in node_ui
+    assert "moodboard_canvas_controls_rect(C)" in node_ui
+    layout = _read(SPACE_MIXIE / "mixie_moodboard_node_layout.cc")
+    assert "rcti canvas = moodboard_canvas_draw_rect(area, region)" in layout
+    assert "view3d_moodboard_drawer_edge_rect_for" in layout
+    assert "edge.xmax - region->winrct.xmin + 1" in layout
     # Clip painting/input, without reflowing the card against the viewport edge.
     assert "ui::mixar_block_clip_set(block, clip)" in node_ui
     assert "canvas.ymax - height" not in tile

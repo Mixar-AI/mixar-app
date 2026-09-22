@@ -27,10 +27,10 @@
  * a poll, so the open board is the same surface as SPACE_MIXIE. The region
  * type's `keymapflag` stays 0: a shut overlay must not steal viewport pan.
  * View3D `TOOL_PROPS` has no edge azone — the sash would cover the open grip.
- * Event routing uses `view3d_moodboard_drawer_contains_xy`: only the grip and
+ * Event routing uses `view3d_moodboard_drawer_contains_xy`: only the grip, narrow resize edge and
  * the painted panel slice belong to this region; the scissored remainder is
- * the viewport. The grip keymap is grip-only (no canvas LEFTMOUSE), polled
- * onto the handle, and registered before `ui::region_handlers_add`.
+ * the viewport. The grip keymap has priority over canvas UI; its invoke passes through
+ * outside the handle and resize edge.
  */
 
 #pragma once

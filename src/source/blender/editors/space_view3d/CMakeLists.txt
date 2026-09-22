@@ -78,6 +78,7 @@ set(SRC
   view3d_moodboard_drawer.cc
   view3d_moodboard_drawer_draw.cc
   view3d_moodboard_drawer_ops.cc
+  view3d_moodboard_drawer_qa.cc
   view3d_moodboard_drawer_resize.cc
   view3d_moodboard_drawer_state.cc
   view3d_navigate.cc

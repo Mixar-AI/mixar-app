@@ -52,6 +52,8 @@ static void draw_panel(const bContext *C,
   rctf clip;
   const rcti host = moodboard_canvas_host_rect(C);
   BLI_rctf_rcti_copy(&clip, &host);
+  const rcti controls = moodboard_canvas_controls_rect(C);
+  clip.xmin = std::max(clip.xmin, float(controls.xmin));
   ui::mixar_block_clip_set(block, clip);
   ui::Layout &layout = ui::block_layout(block,
                                         ui::LayoutDirection::Vertical,

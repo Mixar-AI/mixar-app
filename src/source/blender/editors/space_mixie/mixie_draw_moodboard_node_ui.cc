@@ -269,7 +269,7 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
   ui::view2d_view_restore(C);
   ui::Block *block = ui::block_begin(
       C, region, "moodboard_floating_node_controls", blender::ui::EmbossType::Emboss);
-  const rcti canvas = moodboard_canvas_draw_rect(C);
+  const rcti canvas = moodboard_canvas_controls_rect(C);
   rctf clip;
   BLI_rctf_rcti_copy(&clip, &canvas);
   ui::mixar_block_clip_set(block, clip);

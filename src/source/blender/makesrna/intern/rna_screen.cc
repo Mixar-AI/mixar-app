@@ -26,6 +26,7 @@
 #include "WM_types.hh"
 
 #include "rna_screen_mixar_glass.hh"
+#include "rna_screen_mixar_moodboard.hh"
 
 namespace blender {
 
@@ -470,6 +471,8 @@ static void rna_def_area_api(StructRNA *srna)
 {
   FunctionRNA *func;
   PropertyRNA *parm;
+
+  rna_def_area_mixar_moodboard(srna);
 
   RNA_def_function(srna, "tag_redraw", "ED_area_tag_redraw");
 

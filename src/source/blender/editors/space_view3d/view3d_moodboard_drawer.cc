@@ -189,7 +189,15 @@ bool view3d_moodboard_drawer_grip_handler_poll(const wmWindow * /*win*/,
   if (event == nullptr || area == nullptr || area->spacetype != SPACE_VIEW3D) {
     return false;
   }
-  return view3d_moodboard_drawer_grip_contains_xy(area, region, event->xy);
+  return view3d_moodboard_drawer_resize_contains_xy(area, region, event->xy);
+}
+
+static void drawer_region_cursor(wmWindow *win, ScrArea *area, ARegion *region)
+{
+  const wmEvent *event = win->runtime->eventstate;
+  const bool resize = event &&
+                      view3d_moodboard_drawer_resize_contains_xy(area, region, event->xy);
+  WM_cursor_set(win, resize ? WM_CURSOR_X_MOVE : WM_CURSOR_DEFAULT);
 }
 
 /** \} */
@@ -317,16 +325,14 @@ void view3d_moodboard_drawer_region_init(wmWindowManager *wm, ARegion *region)
   region->v2d.cur.ymin = center_y - half_height;
   region->v2d.cur.ymax = center_y + half_height;
 
-  /* `~` first, then grip, then UI, then Mixie. */
-  view3d_moodboard_drawer_toggle_handlers_add(wm, region);
-
+  /* UI handlers prepend themselves. Put the resize keymap ahead of them so
+   * clipped canvas buttons cannot swallow the sash. The operator's invoke
+   * passes through outside the shared grip/edge geometry. */
+  ui::region_handlers_add(&region->runtime->handlers);
   wmKeyMap *grip_keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Moodboard Drawer Grip", SPACE_VIEW3D, RGN_TYPE_TOOL_PROPS);
-  WM_event_add_keymap_handler_poll(&region->runtime->handlers,
-                                   grip_keymap,
-                                   view3d_moodboard_drawer_grip_handler_poll);
-
-  ui::region_handlers_add(&region->runtime->handlers);
+  WM_event_add_keymap_handler_priority(&region->runtime->handlers, grip_keymap, 0);
+  view3d_moodboard_drawer_toggle_handlers_add(wm, region);
 
   wmKeyMap *mixie_keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
@@ -384,6 +390,8 @@ void view3d_moodboard_drawer_region_register(SpaceType *st)
   art->draw = view3d_moodboard_drawer_region_draw;
   art->exit = view3d_moodboard_drawer_region_exit;
   art->free = drawer_region_free;
+  art->cursor = drawer_region_cursor;
+  art->event_cursor = true;
   BLI_addhead(&st->regiontypes, art);
 }
 

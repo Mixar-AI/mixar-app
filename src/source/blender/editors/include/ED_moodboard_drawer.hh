@@ -132,8 +132,39 @@ inline bool view3d_moodboard_drawer_grip_contains_xy(const ScrArea *area,
   return BLI_rcti_isect_pt_v(&grip, xy);
 }
 
+/** A narrow sash around the open panel's leading edge, excluding rounded ends. */
+inline bool view3d_moodboard_drawer_edge_rect_for(const ScrArea *area,
+                                                const ARegion *region,
+                                                const float amount,
+                                                rcti *r_rect)
+{
+  if (amount < VIEW3D_MOODBOARD_DRAWER_CANVAS_MIN_AMOUNT ||
+      !view3d_moodboard_drawer_panel_rect_for(area, region, amount, r_rect))
+  {
+    return false;
+  }
+  const int edge = r_rect->xmin;
+  const int pad = int(std::lround(4.0f * UI_SCALE_FAC));
+  r_rect->xmin = edge - pad;
+  r_rect->xmax = edge + pad;
+  r_rect->ymin += int(VIEW3D_MOODBOARD_DRAWER_RADIUS * UI_SCALE_FAC);
+  r_rect->ymax -= int(VIEW3D_MOODBOARD_DRAWER_RADIUS * UI_SCALE_FAC);
+  return BLI_rcti_size_y(r_rect) > 0;
+}
+
+inline bool view3d_moodboard_drawer_resize_contains_xy(const ScrArea *area,
+                                                     const ARegion *region,
+                                                     const int xy[2])
+{
+  rcti edge;
+  return view3d_moodboard_drawer_grip_contains_xy(area, region, xy) ||
+         (view3d_moodboard_drawer_edge_rect_for(
+              area, region, view3d_moodboard_drawer_runtime_amount(region), &edge) &&
+          BLI_rcti_isect_pt_v(&edge, xy));
+}
+
 /**
- * The region is a resizable overlay; only the grip and the painted panel
+ * The region is a resizable overlay; only the grip, resize edge and painted panel
  * slice are interactive. The scissored remainder is the viewport behind.
  */
 inline bool view3d_moodboard_drawer_contains_xy(const ScrArea *area,
@@ -148,7 +179,7 @@ inline bool view3d_moodboard_drawer_contains_xy(const ScrArea *area,
   if (!BLI_rcti_isect_pt_v(&region->winrct, xy)) {
     return false;
   }
-  if (view3d_moodboard_drawer_grip_contains_xy(area, region, xy)) {
+  if (view3d_moodboard_drawer_resize_contains_xy(area, region, xy)) {
     return true;
   }
   rcti panel;

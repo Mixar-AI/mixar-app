@@ -32,8 +32,6 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
-#include "../interface/interface_qa_inspect.hh"
-
 #include "view3d_moodboard_drawer.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -251,7 +249,7 @@ static void VIEW3D_OT_moodboard_drawer_set(wmOperatorType *ot)
  * regiondata so a poll yes cannot become an invoke miss. */
 static bool drawer_grip_hit(const bContext *C, const int xy[2])
 {
-  return view3d_moodboard_drawer_grip_contains_xy(CTX_wm_area(C), CTX_wm_region(C), xy);
+  return view3d_moodboard_drawer_resize_contains_xy(CTX_wm_area(C), CTX_wm_region(C), xy);
 }
 
 static wmOperatorStatus drawer_grip_invoke(bContext *C, wmOperator *op, const wmEvent *event)
@@ -272,7 +270,10 @@ static wmOperatorStatus drawer_grip_invoke(bContext *C, wmOperator *op, const wm
   RNA_float_set(op->ptr, "start_travel",
                 view3d_moodboard_drawer_display_amount(C) * (region->winx - 1 - inset));
   RNA_boolean_set(op->ptr, "dragged", false);
+  RNA_boolean_set(op->ptr, "edge_resize", !view3d_moodboard_drawer_grip_contains_xy(
+                                            CTX_wm_area(C), region, event->xy));
 
+  WM_cursor_modal_set(CTX_wm_window(C), WM_CURSOR_X_MOVE);
   WM_event_add_modal_handler(C, op);
   return OPERATOR_RUNNING_MODAL;
 }
@@ -300,8 +301,10 @@ static wmOperatorStatus drawer_grip_modal(bContext *C, wmOperator *op, const wmE
       const float max_width = BLI_rcti_size_x(&CTX_wm_area(C)->totrct) + 1;
       const float min_width = std::min(float(VIEW3D_MOODBOARD_DRAWER_MIN_WIDTH) *
                                           UI_SCALE_FAC, max_width);
+      const float min_travel = RNA_boolean_get(op->ptr, "edge_resize") ?
+                                   std::max(min_width - 1 - inset, 0.0f) : 0.0f;
       const float travel = std::clamp(RNA_float_get(op->ptr, "start_travel") - dx,
-                                      0.0f, std::max(max_width - 1 - inset, 0.0f));
+                                      min_travel, std::max(max_width - 1 - inset, min_travel));
       const float width = std::max(travel + 1 + inset, min_width);
       view3d_moodboard_drawer_width_set(C, width / UI_SCALE_FAC);
       view3d_moodboard_drawer_amount_set(C, travel / std::max(width - 1 - inset, 1.0f));
@@ -331,12 +334,13 @@ static wmOperatorStatus drawer_grip_modal(bContext *C, wmOperator *op, const wmE
           }
           drawer_user_target_set(C, open ? 1 : 0);
         }
-        else {
+        else if (!RNA_boolean_get(op->ptr, "edge_resize")) {
           view3d_moodboard_drawer_slide_begin(C);
           drawer_user_target_set(
               C, view3d_moodboard_drawer_target(C) != 0 ? 0 : 1);
         }
         drawer_tag_redraw(C);
+        WM_cursor_modal_restore(CTX_wm_window(C));
         return OPERATOR_FINISHED;
       }
       break;
@@ -348,6 +352,7 @@ static wmOperatorStatus drawer_grip_modal(bContext *C, wmOperator *op, const wmE
       view3d_moodboard_drawer_amount_set(C, RNA_float_get(op->ptr, "start_amount"));
       view3d_moodboard_drawer_target_set(C, RNA_int_get(op->ptr, "start_target"));
       drawer_tag_redraw(C);
+      WM_cursor_modal_restore(CTX_wm_window(C));
       return OPERATOR_FINISHED;
 
     default:
@@ -356,14 +361,23 @@ static wmOperatorStatus drawer_grip_modal(bContext *C, wmOperator *op, const wmE
   return OPERATOR_RUNNING_MODAL;
 }
 
+static void drawer_grip_cancel(bContext *C, wmOperator * /*op*/)
+{
+  /* File loads and screen teardown can remove the modal without a final event. */
+  if (wmWindow *win = CTX_wm_window(C)) {
+    WM_cursor_modal_restore(win);
+  }
+}
+
 static void VIEW3D_OT_moodboard_drawer_grip(wmOperatorType *ot)
 {
   ot->name = "Moodboard Drawer Grip";
   ot->idname = "VIEW3D_OT_moodboard_drawer_grip";
-  ot->description = "Drag the moodboard drawer in or out, or click to toggle it";
+  ot->description = "Drag the edge or tab to resize; click the tab to toggle the moodboard";
 
   ot->invoke = drawer_grip_invoke;
   ot->modal = drawer_grip_modal;
+  ot->cancel = drawer_grip_cancel;
   ot->poll = drawer_op_poll;
 
   ot->flag = 0;
@@ -374,6 +388,7 @@ static void VIEW3D_OT_moodboard_drawer_grip(wmOperatorType *ot)
   RNA_def_float(ot->srna, "start_width", 340.0f, 1.0f, 100000.0f, "Start Width", "", 1.0f, 100000.0f);
   RNA_def_float(ot->srna, "start_travel", 0.0f, 0.0f, 100000.0f, "Start Travel", "", 0.0f, 100000.0f);
   RNA_def_boolean(ot->srna, "dragged", false, "Dragged", "");
+  RNA_def_boolean(ot->srna, "edge_resize", false, "Edge Resize", "");
 }
 
 void view3d_moodboard_drawer_operatortypes()
@@ -412,71 +427,5 @@ void view3d_moodboard_drawer_keymap(wmKeyConfig *keyconf)
   key.modifier = KM_SHIFT;
   WM_keymap_add_item(window, "VIEW3D_OT_moodboard_drawer_toggle", &key);
 }
-
-/* -------------------------------------------------------------------- */
-/** \name QA targets
- * \{ */
-
-namespace {
-
-void drawer_qa_targets(const wmWindow * /*win*/,
-                       const ScrArea *area,
-                       const ARegion *region,
-                       std::vector<MixarQATarget> &r_targets)
-{
-  if (area->spacetype != SPACE_VIEW3D || region->regiontype != RGN_TYPE_TOOL_PROPS) {
-    return;
-  }
-  /* Read `regiondata` directly, never `runtime_ensure`: a dump must not
-   * allocate region data on a region the user has not opened. */
-  const MoodboardDrawerRuntime *runtime =
-      static_cast<const MoodboardDrawerRuntime *>(region->regiondata);
-  if (runtime == nullptr) {
-    return;
-  }
-
-  auto push = [&](const rcti &rect_win,
-                  const char *surface,
-                  const char *text,
-                  const char *value,
-                  const int index) {
-    MixarQATarget t;
-    t.rect_win = rect_win;
-    t.surface = surface;
-    t.text = text;
-    t.value = value;
-    t.index = index;
-    r_targets.push_back(std::move(t));
-  };
-
-  const float amount = std::clamp(runtime->amount, 0.0f, 1.0f);
-  char amount_text[32];
-  SNPRINTF(amount_text, "%.3f", amount);
-
-  /* The grip rides the panel's leading edge, so it is the one target that is
-   * meaningful in both the open and the shut state. It is exported in WINDOW
-   * coordinates even though it lives in a region, so the harness clicks the
-   * same pixels the user does. */
-  rcti grip;
-  if (view3d_moodboard_drawer_grip_rect_for(area, region, amount, &grip)) {
-    push(grip, "moodboard_drawer_grip", "drawer_grip", amount_text, -1);
-  }
-
-  /* The visible slice of the panel. A shut drawer exports no panel target at
-   * all, so a harness cannot click a panel that is not on screen. */
-  rcti panel;
-  if (view3d_moodboard_drawer_panel_rect_for(area, region, amount, &panel)) {
-    push(panel, "moodboard_drawer_panel", "moodboard_drawer", amount_text, 0);
-  }
-}
-
-}  // namespace
-
-void view3d_moodboard_drawer_qa_targets_register()
-{
-  Mixar_qa_register_target_provider(SPACE_VIEW3D, drawer_qa_targets);
-}
-
-/** \} */
 
 }  // namespace blender

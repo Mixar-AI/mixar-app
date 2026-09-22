@@ -13,6 +13,11 @@ camera navigation (orbit / pan / zoom, including Mac trackpad
 gestures) and leaves every other editor (chat, moodboard, sidebars,
 properties) fully interactive.
 
+The Zen Moodboard drawer overlaps the viewport WINDOW rectangle. Its
+painted canvas, resize edge and grip must pass through before checking that rectangle;
+native hit testing keeps this aligned with the slide, resize and UI scale.
+The drawer's transparent remainder remains locked viewport space.
+
 Notification toasts draw INSIDE the viewport but are conceptually a
 layer above it, so a left-press landing on a toast control is passed
 through too — otherwise no toast could be dismissed or actioned for the
@@ -56,6 +61,16 @@ logger = get_logger(__name__)
 # Module-level guard so the bootstrap tick doesn't stack multiple
 # modal instances. Set True on invoke, cleared on finish/cancel.
 _running = False
+
+# These native mouse-capture operators consume LEFTMOUSE RELEASE and finish.
+# Armed tools and keyboard transforms are deliberately not included.
+_MOODBOARD_MOUSE_DRAGS = (
+    "VIEW3D_OT_moodboard_drawer_grip",
+    "MIXIE_OT_moodboard_select_image",
+    "MIXIE_OT_moodboard_graph_select",
+    "MIXIE_OT_moodboard_frame_select",
+    "MIXIE_OT_moodboard_box_select",
+)
 
 
 def is_running() -> bool:
@@ -123,6 +138,13 @@ class MIXAR_OT_agent_viewport_block(Operator):
 
         # Only intercept when the pointer is over a 3D viewport canvas.
         if et in BLOCK_MOUSE_TYPES or et in BLOCK_KEY_TYPES:
+            # If the lock started during a drag, it precedes that older modal.
+            # Deliver its captured release even outside the board so the drag
+            # can end. Never unlock a fresh viewport press or an armed tool.
+            if (et == 'LEFTMOUSE' and event.value == 'RELEASE' and win
+                    and any(win.modal_operators.get(name) is not None
+                            for name in _MOODBOARD_MOUSE_DRAGS)):
+                return {"PASS_THROUGH"}
             region = self._view3d_region_under_pointer(context, event)
             if region is not None:
                 # Notifications float above the locked viewport: let the
@@ -164,6 +186,8 @@ class MIXAR_OT_agent_viewport_block(Operator):
         for area in win.screen.areas:
             if area.type != 'VIEW_3D':
                 continue
+            if area.mixar_moodboard_contains(mx, my):
+                return None
             for region in area.regions:
                 if region.type != 'WINDOW':
                     continue

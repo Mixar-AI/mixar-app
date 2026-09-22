@@ -72,7 +72,7 @@ def test_visual_hit_is_only_the_grip_and_painted_slice():
     """RIGHT overlap clips Y only; the whole overlay must not eat the viewport."""
     geom = _strip_comments(_read(DRAWER_GEOM))
     body = _fn(geom, "inline bool view3d_moodboard_drawer_contains_xy(")
-    assert "view3d_moodboard_drawer_grip_contains_xy" in body
+    assert "view3d_moodboard_drawer_resize_contains_xy" in body
     assert "view3d_moodboard_drawer_panel_rect_for" in body
     panel = _fn(geom, "inline bool view3d_moodboard_drawer_panel_rect_for(")
     assert "0.001f" in panel
@@ -130,10 +130,15 @@ def test_grip_handler_beats_ui_and_only_answers_on_the_handle():
         "void view3d_moodboard_drawer_region_init(",
     )
     toggle = body.index("view3d_moodboard_drawer_toggle_handlers_add")
-    grip = body.index("view3d_moodboard_drawer_grip_handler_poll")
+    grip = body.index("WM_event_add_keymap_handler_priority")
     ui = body.index("region_handlers_add")
     canvas = body.index("view3d_moodboard_drawer_canvas_handler_poll")
-    assert toggle < grip < ui < canvas
+    # Both UI and priority keymaps prepend; registration order is reversed.
+    assert ui < grip < toggle < canvas
+    invoke = _fn(_strip_comments(_read(VIEW3D / "view3d_moodboard_drawer_ops.cc")),
+                 "static wmOperatorStatus drawer_grip_invoke(")
+    assert "drawer_grip_hit(C, event->xy)" in invoke
+    assert "return OPERATOR_PASS_THROUGH" in invoke
 
 
 def test_drawer_region_type_does_not_take_view2d_keymapflag():
@@ -143,6 +148,16 @@ def test_drawer_region_type_does_not_take_view2d_keymapflag():
         "void view3d_moodboard_drawer_region_register(",
     )
     assert "art->keymapflag = 0;" in body
+
+
+def test_viewport_cursor_honors_drawer_edge_after_canvas_view_changes():
+    source = _strip_comments(_read(VIEW3D / "space_view3d.cc"))
+    body = _fn(source, "static void view3d_main_region_cursor(")
+    assert body.index("view3d_moodboard_drawer_resize_contains_xy") < body.index(
+        "WM_cursor_set_from_tool")
+    assert "drawer->runtime->visible" in body
+    assert "WM_CURSOR_X_MOVE" in body
+    assert "art->cursor = view3d_main_region_cursor;\n  art->event_cursor = true;" in source
 
 
 def test_drawer_grip_keymap_is_grip_only():
@@ -239,6 +254,15 @@ def test_canvas_qa_targets_register_on_the_drawer_host():
     source = _strip_comments(_read(MIXIE / "mixie_moodboard_qa_targets.cc"))
     assert "Mixar_qa_register_target_provider(SPACE_VIEW3D" in source
     assert "MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT" in source
+
+
+def test_external_grip_teardown_restores_modal_cursor():
+    source = _read(VIEW3D / "view3d_moodboard_drawer_ops.cc")
+    registration = _fn(source, "static void VIEW3D_OT_moodboard_drawer_grip(")
+    assert "ot->cancel = drawer_grip_cancel;" in registration
+    cancel = _fn(source, "static void drawer_grip_cancel(")
+    assert "if (wmWindow *win = CTX_wm_window(C))" in cancel
+    assert "WM_cursor_modal_restore(win);" in cancel
 
 
 def test_drawer_slide_is_time_based_and_redraws_only_the_region():
