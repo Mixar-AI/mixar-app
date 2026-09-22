@@ -42,42 +42,32 @@ def _set_props(props, row) -> None:
         pass
 
 
-def _draw_row(layout, row) -> None:
-    """Emit one `MenuRow`."""
-    if row.kind in {"NOTE", "SENTINEL"}:
-        line = layout.row()
-        line.enabled = False
-        line.label(text=row.label)
-        return
+def _style_row(line, row) -> None:
+    """Use the same shared painter as Cinema's aspect-ratio options."""
+    if hasattr(line, "mixar_cinema_row"):
+        kind = "CAPTION" if row.kind in {"NOTE", "SENTINEL"} else (
+            "ACTIVE" if row.active and row.kind != "BYOK" else "OPTION")
+        line.mixar_cinema_row(kind=kind)
 
+
+def _draw_row(layout, row) -> None:
+    """Emit a native, introspectable row with Cinema presentation."""
     line = layout.row()
     line.enabled = row.enabled
-
-    if row.kind == "RESET":
-        line.operator("mixar.agent_model_reset", text=row.label, icon='LOOP_BACK')
-        return
-
-    if row.kind == "BYOK":
-        # A Menu's layout runs operators in an EXEC context, and the dialog
-        # operator does all its work in invoke() (execute() is a deliberate
-        # no-op) — so without this the row ran execute(), returned FINISHED
-        # and opened nothing. Pinned by tests/test_agent_model_picker.py and
-        # driven for real in tests/qa/profile_provider_settings_e2e.py.
+    line.scale_y = 1.15
+    if row.kind in {"NOTE", "SENTINEL"}:
+        line.label(text=row.label)
+    elif row.kind == "RESET":
+        line.operator("mixar.agent_model_reset", text=row.label)
+    elif row.kind == "BYOK":
+        # This shared settings operator opens its dialog in invoke().
         line.operator_context = 'INVOKE_DEFAULT'
-        # Same active-key icon pair as the profile's fallback menu.
-        line.operator(
-            "mixar_byok.open_dialog",
-            text=row.label,
-            icon='KEY_HLT' if row.active else 'PREFERENCES',
-        )
-        return
-
-    if row.kind == "THINKING_MENU":
-        line.menu(THINKING_MENU_ID, text=row.label, icon='SEQ_HISTOGRAM')
-        return
-
-    icon = 'RADIOBUT_ON' if row.active else 'RADIOBUT_OFF'
-    _set_props(line.operator("mixar.agent_model_set", text=row.label, icon=icon), row)
+        line.operator("mixar_byok.open_dialog", text=row.label)
+    elif row.kind == "THINKING_MENU":
+        line.menu(THINKING_MENU_ID, text=row.label)
+    else:
+        _set_props(line.operator("mixar.agent_model_set", text=row.label), row)
+    _style_row(line, row)
 
 
 def _current():
@@ -93,6 +83,7 @@ class MIXIE_CHAT_MT_agent_model(Menu):
 
     def draw(self, context):
         layout = self.layout
+        layout.ui_units_x = 15
         models, current = _current()
         rows = model_menu.build_rows(
             models,
@@ -124,6 +115,7 @@ class MIXIE_CHAT_MT_agent_model_thinking(Menu):
 
     def draw(self, context):
         layout = self.layout
+        layout.ui_units_x = 15
         models, current = _current()
         rows = model_menu.build_thinking_rows(
             models,

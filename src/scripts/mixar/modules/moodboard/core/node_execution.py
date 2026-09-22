@@ -459,6 +459,10 @@ def run_action_node(context, node, operator):
         from .world_labs_enqueue import run_world_labs_node
 
         job, params = run_world_labs_node(context, node)
+    elif node.action_type == 'CHARACTER_PARTS':
+        from .character_parts_node import run_character_parts_node
+
+        job, params = run_character_parts_node(context, node)
     elif node.action_type == 'MASK_DETAIL':
         job, params = _run_mask_detail(context, node, operator)
     elif node.action_type in _MESH_FEATURE_ROUTING:

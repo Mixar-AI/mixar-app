@@ -11,7 +11,7 @@ import pytest
 def test_unavailable_or_unknown_template_cannot_mutate_the_board(monkeypatch):
     from mixar.modules.moodboard.core import node_templates as templates
 
-    monkeypatch.setattr(templates, 'capability_available', lambda key: False)
+    monkeypatch.setattr(templates, 'capability_available', lambda key, **kwargs: False)
     for template in ('IMAGE_GEN', 'VIDEO_GEN', 'UNKNOWN'):
         with pytest.raises(ValueError, match='available generation model'):
             templates.create_template(None, template, (0, 0))
@@ -49,7 +49,7 @@ def test_clicks_avoid_overlap_and_drops_use_the_release_position(monkeypatch):
     scene = NS(mixie_moodboard_images=[], mixie_moodboard_action_nodes=Nodes(),
                mixie_moodboard_asset_nodes=[], mixie_moodboard_links=[],
                mixie_moodboard_active_node_id='')
-    monkeypatch.setattr(node_templates, 'capability_available', lambda key: True)
+    monkeypatch.setattr(node_templates, 'capability_available', lambda key, **kwargs: True)
     monkeypatch.setattr(node_graph, '_initialize_catalog_selection', lambda scene, node: None)
     first = node_templates.create_template(scene, 'IMAGE_GEN', (100, 200))
     second = node_templates.create_template(scene, 'IMAGE_GEN', (100, 200))

@@ -5,9 +5,8 @@
 
 from bpy.types import Menu
 
-from ...constants import NODE_TEMPLATES
 from ...core.canvas_context import has_moodboard_content
-from ...core.node_templates import template_available
+from ...core.node_templates import available_templates
 from ..canvas_template_helpers import draw_template
 
 
@@ -21,9 +20,10 @@ class MIXIE_MT_node_templates(Menu):
     def draw(self, context):
         layout = self.layout.mixar_surface(theme='ZEN', density='COMPACT')
         layout.operator_context = 'INVOKE_DEFAULT'
-        for item in NODE_TEMPLATES:
+        items = available_templates()
+        for item in items:
             draw_template(layout, item)
-        if not any(template_available(item[0]) for item in NODE_TEMPLATES if item[3]):
+        if not any(item[3] for item in items):
             layout.separator()
             layout.label(text="Connect to load generation models", icon='INFO')
 

@@ -6,6 +6,10 @@
 Set QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT. Requires Pillow and an
 isolated Dev app. Eval sets placement fixtures; all feature actions use native
 events. No generation is submitted; export's file browser is cancelled.
+
+On macOS, screen.screenshot can omit standalone-editor tooltip regions even
+when the popup is visible on screen. Inspect those tooltips with an OS window
+capture as well; the framebuffer PNG alone cannot establish their absence.
 """
 
 from PIL import Image, ImageChops
@@ -63,6 +67,44 @@ def capture_title(qa, host, media_id, index):
     card = target(qa, 'moodboard_media', text=media_id, area_type=host)['rect']
     return {'ink':[bounds[2]-bounds[0], bounds[3]-bounds[1]],
             'width':card[2]-card[0], 'actions':[w['layout_rect'] for w in actions]}
+
+
+EXPECTED_TIPS = {
+    # Introspection exports uiBut.tip (the RNA description), while the hover
+    # popup executes the custom native tooltip callback. Inspect the captured
+    # popups below to verify that callback does not repeat the RNA description.
+    OPS[0]: "Rename this image or video in place. Enter applies the new name, "
+            "Escape keeps the old one",
+    OPS[1]: "Open this image or video in its own preview window. "
+            "Several can be open at once",
+    OPS[2]: "Save selected images or copy selected videos to disk",
+}
+
+
+def tooltips(qa, host):
+    for op, expected in EXPECTED_TIPS.items():
+        query = {'op': op, 'area_type': host}
+        actual = qa.find(**query)['widgets'][0]['tip']
+        require(actual == expected, f'{op} repeated or changed help: {actual!r}')
+        qa.eval(f"""
+def hover():
+    widget=drv.find_one(**{query!r})
+    x,y=drv.pick_click_point(widget)
+    drv.move_to(widget['_win'],x,y-50)
+    yield .2
+    # Native UI suppresses tips after an action until pointer motion restores
+    # them. Cross its movement threshold inside the button before settling.
+    dx=min(15, max(1, (widget['rect'][2]-widget['rect'][0])//4))
+    drv.move_to(widget['_win'],x-dx,y)
+    yield .2
+    drv.move_to(widget['_win'],x+dx,y)
+    yield .2
+    drv.move_to(widget['_win'],x,y)
+    yield 1.5
+    return True
+result=hover()
+""")
+        qa.cmd('snap', path=str(OUT/f'{host}-{op}-tooltip.png'), area=host)
 
 
 def chrome(qa, host, media_id):
@@ -142,6 +184,7 @@ def run(qa):
                     "if a.type=='VIEW_3D').type='MIXIE'; result=True")
         center(qa,host,initial=True)
         results[host]=qa.step(host+'-title-zoom-and-skin',chrome,qa,host,media_id)
+        qa.step(host+'-single-tooltip-description',tooltips,qa,host)
         qa.step(host+'-rename-apply-cancel',rename,qa,host,media_id)
         qa.step(host+'-preview-export-cancel',preview_export,qa,host)
     return {'backend_submissions':0,'title_pixels':results}

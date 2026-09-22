@@ -333,10 +333,10 @@ def test_feature_is_registered_everywhere_a_capability_tab_needs():
     features = queue_props[queue_props.index("_FEATURES = ("):]
     assert "FEATURE_VIDEO_UPSCALE" in features[: features.index(")")]
 
-    panels = _read(MOODBOARD / "ui/moodboard_sidebar_panels.py")
-    assert '"video_upscale": (MIXIE_PT_gen_video_upscale, "Video Upscale")' in panels
-    assert 'get_services("video_upscale")' in panels
-    assert "MIXIE_PT_gen_video_upscale,\n" in panels[panels.index("classes = ("):]
+    # The generation forms survive for the island/popups; the old Moodboard
+    # N-panel does not register capability tabs.
+    drawer = _read(MOODBOARD / "ui/video_upscale_drawer.py")
+    assert '"video_upscale"' in drawer
 
     dispatch = _read(MOODBOARD / "core/prompt_submit.py")
     assert (
@@ -410,8 +410,8 @@ def test_menus_offer_upscale_only_where_a_video_can_feed_it():
     assert "'IMAGE_GEN', 'VIDEO_GEN', 'VIDEO_UPSCALE'" in context_menu
     assert "{'VIDEO_GEN', 'VIDEO_UPSCALE'}" in context_menu
     assert "selected_images > selected_stills and _capability_available(\"video_upscale\")" in context_menu
-    assert "_capability_available(\"video_upscale\")" in node_menus
-    assert "allow_empty=True" in node_menus[node_menus.index("'VIDEO_UPSCALE'"):]
+    assert "for item in available_templates():" in node_menus
+    assert "draw_template(layout, item, drop=drop)" in node_menus
 
 
 def test_create_connected_action_keeps_only_one_movie_for_upscale():

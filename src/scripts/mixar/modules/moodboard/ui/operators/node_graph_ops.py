@@ -45,6 +45,12 @@ class MIXIE_OT_moodboard_create_connected_action(Operator):
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
             return {'CANCELLED'}
+        if not self.use_drop_position:
+            from ...core.moodboard_utils import ensure_moodboard_region_visible
+
+            ensure_moodboard_region_visible(
+                node.position_x, node.position_y, node.width, node.height,
+            )
         self.report({'INFO'}, f"Created {node.action_type.replace('_', ' ').title()} node")
         if context.area:
             context.area.tag_redraw()

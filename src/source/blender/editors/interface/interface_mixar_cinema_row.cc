@@ -197,7 +197,7 @@ void draw_label(const uiFontStyle &fs,
 bool draw_leading_icon(
     const Button *but, const rcti *rect, rcti &text, const float label_w, const float alpha)
 {
-  if (but->icon == ICON_NONE) {
+  if (ELEM(but->icon, ICON_NONE, ICON_BLANK1)) {
     return false;
   }
   /* The stock 16px glyph, vertically centred, then the label after it —
@@ -242,12 +242,23 @@ void draw_option(Button *but,
   rcti text = *rect;
   text.xmin += int(TEXT_PAD * UI_SCALE_FAC);
   text.xmax -= int(TEXT_PAD * UI_SCALE_FAC);
+  /* Python-authored option menus retain Blender's submenu behavior. Their
+   * shared row painter also owns the trailing disclosure affordance. */
+  const bool submenu = ELEM(but->type, ButtonType::Menu, ButtonType::Block, ButtonType::Pulldown);
+  if (submenu) {
+    const float icon_size = ICON_DEFAULT_HEIGHT * UI_SCALE_FAC;
+    text.xmax -= int(icon_size);
+    icon_draw_alpha(float(text.xmax),
+                    float(rect->ymin) + (float(BLI_rcti_size_y(rect)) - icon_size) * 0.5f,
+                    ICON_RIGHTARROW, disabled ? 0.4f : 0.9f);
+  }
   const uiFontStyle fs = row_font();
   const char *label = row_label(but);
   const float label_w = fontstyle_string_width(&fs, label);
   const bool icon_drawn = draw_leading_icon(but, rect, text, label_w, disabled ? 0.4f : 0.9f);
   draw_label(
-      fs, &text, label, col, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack());
+      fs, &text, label, col, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(),
+      submenu ? 0.0f : pad_slack());
 }
 
 }  // namespace mixar_cinema_row

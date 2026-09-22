@@ -11,7 +11,7 @@ the channel, the dict in `preference_state` is the source of truth.
 
 **These names are a cross-language contract.** The Mixie Chat footer button and
 the Agent Bubble island chip are drawn in C++ and read them directly:
-`..._label` is the text on the button (empty -> "Model") and
+`..._label` is the model-only text on the button (empty -> "Mixie") and
 `..._byok_active` is what greys it out. Renaming one silently blanks a control
 in both surfaces.
 

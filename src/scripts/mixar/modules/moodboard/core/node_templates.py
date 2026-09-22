@@ -10,8 +10,13 @@ from .capabilities import capability_available
 def template_available(template_id):
     template = next((item for item in NODE_TEMPLATES if item[0] == template_id), None)
     return template is not None and (
-        template[3] is None or capability_available(template[3])
+        template[3] is None or capability_available(template[3], action_type=template_id)
     )
+
+
+def available_templates():
+    """Current Add-menu entries; never cache catalog-dependent visibility."""
+    return tuple(item for item in NODE_TEMPLATES if template_available(item[0]))
 
 
 def create_template(scene, template_id, center, *, exact_position=False):

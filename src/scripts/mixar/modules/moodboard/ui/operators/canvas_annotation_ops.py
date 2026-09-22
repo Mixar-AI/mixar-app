@@ -10,6 +10,7 @@ from bpy.types import Operator
 from ...constants import ANNOTATION_MAX_POINTS_PER_STROKE, CANVAS_ANNOTATION_SAMPLE_PX
 from ...core.annotation_erase import erase_hits, restore_strokes, snapshot_strokes
 from ...core.canvas_context import is_moodboard_context, redraw_moodboard_canvases
+from ...core.canvas_mark_mode import set_canvas_mark_mode
 
 
 def _available(context):
@@ -18,16 +19,6 @@ def _available(context):
 
 def _erasing(context):
     return bool(getattr(context.window_manager, "mixie_moodboard_erasing", False))
-
-
-def _set_mark_mode(context, *, annotating=False, erasing=False):
-    wm = context.window_manager
-    wm.mixie_moodboard_annotating = bool(annotating)
-    if hasattr(wm, "mixie_moodboard_erasing"):
-        wm.mixie_moodboard_erasing = bool(erasing)
-    if annotating or erasing:
-        context.scene.mixie_moodboard_show_annotations = True
-    redraw_moodboard_canvases()
 
 
 def _canvas_xy(region, event):
@@ -49,7 +40,7 @@ class MIXIE_OT_moodboard_annotate_canvas(Operator):
         return _available(context)
 
     def execute(self, context):
-        _set_mark_mode(
+        set_canvas_mark_mode(
             context,
             annotating=not context.window_manager.mixie_moodboard_annotating,
             erasing=False,
@@ -67,7 +58,7 @@ class MIXIE_OT_moodboard_erase_canvas(Operator):
         return _available(context)
 
     def execute(self, context):
-        _set_mark_mode(context, annotating=False, erasing=not _erasing(context))
+        set_canvas_mark_mode(context, annotating=False, erasing=not _erasing(context))
         return {"FINISHED"}
 
 
@@ -82,7 +73,7 @@ class MIXIE_OT_moodboard_annotation_exit(Operator):
         )
 
     def execute(self, context):
-        _set_mark_mode(context, annotating=False, erasing=False)
+        set_canvas_mark_mode(context, annotating=False, erasing=False)
         return {"FINISHED"}
 
 

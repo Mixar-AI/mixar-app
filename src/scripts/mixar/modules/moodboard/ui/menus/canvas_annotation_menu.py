@@ -19,7 +19,7 @@ class MIXIE_MT_canvas_annotations(Menu):
         layout.operator("mixie.moodboard_erase_canvas", text=(
             "Exit Erase" if getattr(context.window_manager, "mixie_moodboard_erasing", False)
             else "Erase"
-        ), icon="X")
+        ), icon="ERASER")
         state = context.scene.mixie_edit_tool_state
         layout.prop(state, "annotation_color", text="Color")
         layout.prop(state, "annotation_width", text="Width")

@@ -278,3 +278,13 @@ def test_f2_renames_the_selected_reference_when_no_node_is_active():
     # Only the id-less (keymap) path falls through; the context menu's
     # node-scoped call still reports on a vanished node.
     assert "if not self.node_id:" in invoke
+
+
+def test_contextual_help_replaces_generic_operator_descriptions():
+    source = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_tooltips.cc")
+    callback = source.split("static std::string node_tooltip_func", 1)[1].split(
+        "void moodboard_set_node_tooltip", 1
+    )[0]
+    assert "return static_cast<const char *>(argN);" in callback
+    assert "text +=" not in callback
+    assert "MEM_delete_void" in source

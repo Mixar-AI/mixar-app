@@ -10,37 +10,8 @@ Shared components for Mixie space including mode selector and utilities.
 """
 
 import bpy
-from bpy.types import Panel, Operator
+from bpy.types import Operator
 from bpy.props import StringProperty
-
-
-# ============================================================================
-# Mode Selector Panel
-# ============================================================================
-
-class MIXIE_PT_mode_selector(Panel):
-    """Mode selector panel shown at top of sidebar"""
-    bl_label = "Mode"
-    bl_idname = "MIXIE_PT_mode_selector"
-    bl_space_type = 'MIXIE'
-    bl_region_type = 'UI'
-    bl_category = "Mixie"
-
-    def draw(self, context):
-        layout = self.layout
-        smixie = context.space_data
-
-        # Create a column of mode buttons
-        col = layout.column(align=True)
-
-        # Moodboard button
-        row = col.row()
-        row.scale_y = 1.2
-        op = row.operator("mixie.set_mode", text="Moodboard",
-                         icon='IMAGE_PLANE',
-                         depress=(smixie.mixie_mode == 'MOODBOARD'))
-        op.mode = 'MOODBOARD'
-
 
 
 # ============================================================================
@@ -92,7 +63,6 @@ class MIXIE_OT_placeholder(Operator):
 # ============================================================================
 
 classes = (
-    MIXIE_PT_mode_selector,
     MIXIE_OT_set_mode,
     MIXIE_OT_placeholder,
 )

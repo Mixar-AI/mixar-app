@@ -17,6 +17,7 @@ from mixar.modules.moodboard.core.annotation_erase import (
     snapshot_strokes,
     stroke_hits,
 )
+from mixar.modules.moodboard.core.canvas_mark_mode import set_canvas_mark_mode
 
 ROOT = Path(__file__).resolve().parents[2]
 MOODBOARD = ROOT / "src/scripts/mixar/modules/moodboard"
@@ -103,6 +104,7 @@ def erasing():
         "erase_hits": erase_hits,
         "restore_strokes": restore_strokes,
         "snapshot_strokes": snapshot_strokes,
+        "set_canvas_mark_mode": set_canvas_mark_mode,
     }
     exec(compile(source, str(OPS), "exec"), scope)
     strokes = Collection(lambda: _stroke([]))

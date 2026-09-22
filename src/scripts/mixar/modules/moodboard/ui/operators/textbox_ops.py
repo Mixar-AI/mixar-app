@@ -18,6 +18,7 @@ from ...core.canvas_context import (
     find_moodboard_canvas_region,
     redraw_moodboard_canvases,
 )
+from ...core.canvas_mark_mode import exit_canvas_mark_mode
 from ...core.image_lifecycle import release_moodboard_image_entry
 from ....common.utils.platform_utils import format_shortcut
 from ...constants import (
@@ -78,6 +79,9 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
 
     def invoke(self, context, event):
         scene = context.scene
+        # The Text tool takes over the canvas: a still-armed pencil would
+        # otherwise draw a stroke on the first click after the box is placed.
+        exit_canvas_mark_mode(context)
 
         # Explicit text (e.g. agent/programmatic call) → place immediately.
         if self.text.strip():
@@ -139,6 +143,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
 
     def execute(self, context):
         scene = context.scene
+        exit_canvas_mark_mode(context)
 
         text = self.text.strip() or TEXTBOX_TEXT_DEFAULT
         viewport_cx, viewport_cy = get_moodboard_viewport_center()

@@ -446,7 +446,7 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
    * "Reference" label still fits, then settling for Upload's icon-only
    * floor. If even the icon-only chip cannot buy that, the model chip is
    * dropped for this width (the footer picker still has it). */
-  const char *model_label = state.model_label[0] ? state.model_label : "Model";
+  const char *model_label = state.model_label[0] ? state.model_label : "Mixie";
   const float model_chevron = (AGENT_CHIP_ICON * 0.7f + AGENT_CHIP_ICON_GAP) * u;
   const float model_ladder[3] = {
       width(model_label, AGENT_CHIP_ICON) + model_chevron,

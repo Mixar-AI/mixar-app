@@ -34,21 +34,15 @@ EMPTY_SENTINEL_TEXT = "No models available — contact support"
 #: Shown at the top of the menu while a user key is configured. The server
 #: resolves BYOK ahead of any stored platform pick, so the pick is inert until
 #: the key is removed — saying so beats a menu of silently dead rows.
-BYOK_NOTE_TEXT = "Your own API key is in use — it overrides this pick"
+BYOK_NOTE_TEXT = "Your API key controls the model"
 
-RESET_TEXT = "Reset to default"
+RESET_TEXT = "Mixie"
 
 #: The chat's route to the dialog also offered in the profile menu. Keep it
 #: enabled while BYOK is active so users can clear the key overriding their
 #: hosted pick, including when the model catalog is empty.
 BYOK_SETUP_TEXT = "Use my own API key…"
 BYOK_MANAGE_TEXT = "Change or remove my API key…"
-
-#: Middle dot, not a hyphen: the provider and the model are peers, and the
-#: label is the only place the provider is named at all (no grouping, no
-#: nesting — a deliberately flat list).
-LABEL_SEPARATOR = " · "
-
 
 @dataclass(frozen=True)
 class MenuRow:
@@ -65,15 +59,14 @@ class MenuRow:
     has_thinking: bool = False
 
 
-def format_model_label(provider_label: str, model_label: str) -> str:
-    """The flat row label: ``"Anthropic · Claude Sonnet 4.6"``."""
-    provider = (provider_label or "").strip()
-    model = (model_label or "").strip()
-    if not provider:
-        return model
-    if not model:
-        return provider
-    return provider + LABEL_SEPARATOR + model
+def display_model_label(provider: str, model: str, label: str = "") -> str:
+    """Resolve model-only copy, including older provider-prefixed server echoes."""
+    from . import model_suggestions
+
+    for record in model_suggestions.get_platform_models():
+        if record.get("provider_id") == provider and record.get("model_id") == model:
+            return record.get("model_label") or model
+    return (label or model).rsplit(" · ", 1)[-1].strip()
 
 
 def format_thinking_label(level: str) -> str:
@@ -129,10 +122,7 @@ def build_rows(
         rows.append(
             MenuRow(
                 kind="MODEL",
-                label=format_model_label(
-                    record.get("provider_label") or provider,
-                    record.get("model_label") or model,
-                ),
+                label=record.get("model_label") or model,
                 enabled=enabled,
                 active=is_current,
                 provider=provider,
@@ -163,7 +153,8 @@ def build_rows(
         )
 
     rows.append(
-        MenuRow(kind="RESET", label=RESET_TEXT, enabled=not byok_active)
+        MenuRow(kind="RESET", label=RESET_TEXT, enabled=not byok_active,
+                active=not active_provider and not active_model)
     )
     rows.append(_byok_row(byok_active))
     return rows

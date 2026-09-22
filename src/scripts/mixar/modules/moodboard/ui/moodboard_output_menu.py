@@ -11,6 +11,8 @@ questions as the right-click menu; those live in `moodboard_menu_actions.py`.
 
 from bpy.types import Menu
 
+from ..core.node_templates import template_available
+
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 
 from .moodboard_menu_actions import (
@@ -51,6 +53,10 @@ class MIXIE_MT_moodboard_output_menu(Menu):
             connected_action(
                 layout, 'MODEL_3D', "Generate 3D", 'MESH_DATA', source_id, drop
             )
+            added = True
+        if source_type == 'IMAGE' and template_available('CHARACTER_PARTS'):
+            connected_action(layout, 'CHARACTER_PARTS', "Character Parts",
+                             'OUTLINER_OB_ARMATURE', source_id, drop)
             added = True
         if source_type == 'IMAGE' and capability_available("world_labs"):
             connected_action(

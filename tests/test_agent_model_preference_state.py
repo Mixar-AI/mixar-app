@@ -254,3 +254,10 @@ def test_a_stale_epoch_local_write_does_not_repaint(monkeypatch):
     assert preference_state.apply_local({"mixar_agent_model_label": "X"},
                                         epoch=preference_state.current_epoch() + 99) is False
     assert calls == []
+
+
+def test_server_provider_prefix_is_not_shown_in_the_chip():
+    preference_state.apply_from_payload({"items": [{
+        "provider": "anthropic", "model": "m", "label": "Anthropic · Claude M",
+    }]})
+    assert preference_state.snapshot()["mixar_agent_model_label"] == "Claude M"

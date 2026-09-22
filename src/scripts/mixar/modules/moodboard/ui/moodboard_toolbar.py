@@ -6,7 +6,7 @@
 """Shared canvas tools and their native media/mask/annotation menus."""
 
 import bpy
-from bpy.types import Menu, Panel
+from bpy.types import Menu
 
 
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
@@ -20,7 +20,7 @@ def draw_moodboard_add_tools(layout, context):
     col.scale_x = 1.6
     col.scale_y = 1.6
 
-    def action(op, icon, **kwargs):
+    def action(op, icon="NONE", **kwargs):
         row = col.row()
         row.operator(op, text="", icon=icon, **kwargs)
         row.mixar_style(component="ACTION", variant="SECONDARY")
@@ -33,16 +33,12 @@ def draw_moodboard_add_tools(layout, context):
            depress=context.window_manager.mixie_moodboard_annotating)
     erasing = bool(getattr(context.window_manager, "mixie_moodboard_erasing", False))
     if erasing or getattr(context.scene, "mixie_moodboard_annotations", None):
-        action("mixie.moodboard_erase_canvas", "X", depress=erasing)
+        action("mixie.moodboard_erase_canvas", "ERASER", depress=erasing)
     row = col.row()
     row.enabled = any(item.selected and item.image and item.image.source != 'MOVIE'
                       for item in context.scene.mixie_moodboard_images)
-    row.popover(panel="MIXIE_PT_mask_tools_popover", text="", icon="MOD_MASK")
+    row.menu("MIXIE_MT_mask_tools", text="", icon="MOD_MASK")
     row.mixar_style(component="ACTION", variant="SECONDARY")
-    if row.enabled:
-        row = col.row()
-        row.popover(panel="MIXIE_PT_annotation_tools_popover", text="", icon="BRUSH_DATA")
-        row.mixar_style(component="ACTION", variant="SECONDARY")
     row = col.row()
     row.menu("MIXIE_MT_canvas_board", text="", icon="DOWNARROW_HLT")
     row.mixar_style(component="ACTION", variant="SECONDARY")
@@ -82,21 +78,20 @@ class MIXIE_MT_add_image_menu(Menu):
                         text="Add Selected Meshes", icon='OUTLINER_OB_MESH')
 
 
-class MIXIE_PT_mask_tools_popover(Panel):
-    """
-    Popover panel with all mask selection tools.
-    Opened by clicking the single Mask Tools button in the toolbar.
-    """
+# Selecting a tool starts a blocking modal. A menu closes before invoking it;
+# a keep-open popover otherwise survives behind the modal and steals the next
+# toolbar click when the drawing gesture finishes.
+class MIXIE_MT_mask_tools(Menu):
+    """Image mask selection tools"""
 
-    bl_idname = "MIXIE_PT_mask_tools_popover"
+    bl_idname = "MIXIE_MT_mask_tools"
     bl_label = "Mask Tools"
-    bl_space_type = "MIXIE" if MIXIE_SPACE_AVAILABLE else "VIEW_3D"
-    bl_region_type = "HEADER"
-    bl_ui_units_x = 9
-    bl_options = {"INSTANCED"}
 
     def draw(self, context):
         layout = self.layout.mixar_surface(theme="ZEN", density="COMPACT")
+        # The drawer is TOOL_PROPS; the default INVOKE_REGION_WIN would
+        # dispatch these modals in the unrelated 3D viewport WINDOW.
+        layout.operator_context = "INVOKE_DEFAULT"
         scene = context.scene
 
         active_tool = "NONE"
@@ -142,70 +137,7 @@ class MIXIE_PT_mask_tools_popover(Panel):
             layout.label(text="Select an image first", icon="INFO")
 
 
-class MIXIE_PT_annotation_tools_popover(Panel):
-    """Freehand annotation settings and actions for one selected image."""
-
-    bl_idname = "MIXIE_PT_annotation_tools_popover"
-    bl_label = "Annotate"
-    bl_space_type = "MIXIE" if MIXIE_SPACE_AVAILABLE else "VIEW_3D"
-    bl_region_type = "HEADER"
-    bl_ui_units_x = 10
-    bl_options = {"INSTANCED"}
-
-    def draw(self, context):
-        layout = self.layout.mixar_surface(theme="ZEN", density="COMPACT")
-        scene = context.scene
-        state = scene.mixie_edit_tool_state
-        selected = [
-            item
-            for item in scene.mixie_moodboard_images
-            if item.selected and item.image
-        ]
-        image_item = selected[0] if len(selected) == 1 else None
-
-        col = layout.column(align=True)
-        col.enabled = image_item is not None
-        col.operator(
-            "mixie.moodboard_annotate_tool",
-            text="Draw Stroke",
-            icon="BRUSH_DATA",
-            depress=(state.active_tool == "ANNOTATE"),
-        )
-        col.separator(factor=0.4)
-        col.prop(state, "annotation_color", text="Color")
-        col.prop(state, "annotation_width", text="Width", slider=True)
-
-        if image_item is not None:
-            col.separator(factor=0.4)
-            col.prop(image_item, "show_annotations", text="Show Annotations")
-            row = col.row(align=True)
-            row.enabled = bool(image_item.annotations)
-            row.operator(
-                "mixie.moodboard_undo_annotation",
-                text="Undo Last",
-                icon="LOOP_BACK",
-            )
-            row.operator(
-                "mixie.moodboard_clear_annotations",
-                text="Clear",
-                icon="TRASH",
-            )
-            col.label(
-                text=f"{len(image_item.annotations)} stroke(s)",
-                icon="INFO",
-            )
-        else:
-            layout.separator(factor=0.3)
-            layout.label(text="Select exactly one image", icon="INFO")
-
-        if state.active_tool == "ANNOTATE":
-            layout.separator(factor=0.3)
-            layout.label(text="Drag once; release to finish", icon="MOUSE_LMB")
-            layout.label(text="Esc cancels the active stroke", icon="EVENT_ESC")
-
-
 classes = (
     MIXIE_MT_add_image_menu,
-    MIXIE_PT_mask_tools_popover,
-    MIXIE_PT_annotation_tools_popover,
+    MIXIE_MT_mask_tools,
 ) if MIXIE_SPACE_AVAILABLE else ()

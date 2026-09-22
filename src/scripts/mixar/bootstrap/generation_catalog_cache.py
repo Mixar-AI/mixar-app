@@ -256,6 +256,7 @@ def clear_generation_catalog_cache() -> None:
     # is acquired, no invalidated worker can recreate the file afterward.
     with _persistence_lock:
         generation_catalog_storage.delete()
+    _schedule_catalog_swapped()
 
 
 def refresh_generation_catalog_cache() -> None:

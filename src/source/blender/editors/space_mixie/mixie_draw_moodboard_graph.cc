@@ -187,6 +187,14 @@ static void draw_draft_hint(PointerRNA *node, const rctf &rect)
   const float center_x = BLI_rctf_cent_x(&rect);
   const float center_y = BLI_rctf_cent_y(&rect);
   const float max_width = std::max(60.0f, BLI_rctf_size_x(&rect) - 56.0f);
+  /* CHARACTER_PARTS is append-only action index 10; it has no prompt field. */
+  if (RNA_enum_get(node, "action_type") == 10) {
+    draw_text_centered_clipped(
+        "Mask the source image", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+    draw_text_centered_clipped(
+        "Choose components in Settings", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+    return;
+  }
   if (prompt[0]) {
     draw_text_centered_clipped(prompt, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
     draw_text_centered_clipped(
@@ -371,7 +379,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
           }
         }
         else if (state == 0 && !has_visual) {
-          if (!controls_visible) {
+          if (!controls_visible || RNA_enum_get(&node, "action_type") == 10) {
             draw_draft_hint(&node, rect);
           }
         }

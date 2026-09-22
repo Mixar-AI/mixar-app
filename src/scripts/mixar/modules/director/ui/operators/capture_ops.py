@@ -163,7 +163,7 @@ class MIXAR_OT_director_send_video(Operator):
         else:
             self.report(
                 {'INFO'},
-                f"Selected {count} keyframes; open Moodboard > Video Gen",
+                f"Selected {count} keyframes; open Agent island > Video",
             )
         return {'FINISHED'}
 

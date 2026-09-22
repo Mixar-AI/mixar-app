@@ -13,14 +13,11 @@
 
 namespace blender::ed::mixie {
 
-static std::string node_tooltip_func(bContext * /*C*/, void *argN, const StringRef tip)
+static std::string node_tooltip_func(bContext * /*C*/, void *argN, const StringRef /*tip*/)
 {
-  std::string text = static_cast<const char *>(argN);
-  if (!tip.is_empty()) {
-    text += '\n';
-    text += tip;
-  }
-  return text;
+  /* This is complete, context-specific help. Appending the generic operator
+   * or RNA description repeats the action and can describe a different scope. */
+  return static_cast<const char *>(argN);
 }
 
 void moodboard_set_node_tooltip(ui::Button *but, const char *text)

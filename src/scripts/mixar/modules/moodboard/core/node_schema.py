@@ -44,6 +44,7 @@ _OUTPUT_TYPES = {
     # Image (or prompt) -> Gaussian splat. SPLAT, not MESH: the + handle must
     # not offer PBR / retopo / segment / rig on a splat world.
     'WORLD_LABS': 'SPLAT',
+    'CHARACTER_PARTS': 'MESH',
 }
 
 _MESH_FEATURE_CAPABILITY = {
@@ -69,7 +70,7 @@ _MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
 # Mesh-only operations take no text guidance (Retopology, Mesh Segmentation and
 # Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
 # keeps it — Tripo texturing accepts a texture prompt.
-_PROMPTLESS_ACTION_TYPES = frozenset({'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'})
+_PROMPTLESS_ACTION_TYPES = frozenset({'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS'})
 # PBR texturing accepts a single style/reference image OR exactly four
 # turnaround views, so the node offers up to four optional image sockets.
 _PBR_MAX_IMAGE_REFS = 4
@@ -81,6 +82,8 @@ def output_type_for_action(action_type: str) -> str:
 
 def services_for_action(action_type: str, services) -> list:
     """Keep only catalog services executable by this canvas node type."""
+    if action_type == 'CHARACTER_PARTS':
+        return [service for service in services if service.get("key") == 'scene_gen']
     if action_type == 'MASK_DETAIL':
         # Component-detail generation runs on the plain image_gen service.
         return [service for service in services if service.get("key") == 'image_gen']
@@ -103,6 +106,8 @@ def _capability_for_action(action_type: str) -> str:
         return "video_upscale"
     if action_type == 'WORLD_LABS':
         return "world_labs"
+    if action_type == 'CHARACTER_PARTS':
+        return "character_parts"
     if action_type == 'MODEL_3D':
         return "model_gen"
     if action_type in _MESH_FEATURE_CAPABILITY:
@@ -528,6 +533,9 @@ def sync_node_schema(_scene, node) -> None:
         )
         limits = input_contract.setdefault("limits", {})
         limits["IMAGE"] = max(int(limits.get("IMAGE", 0) or 0), 1)
+    if node.action_type == 'CHARACTER_PARTS':
+        from .character_parts_schema import require_character_image
+        require_character_image(input_contract)
     parameters = model.get("parameters") or {}
     if not isinstance(parameters, dict):
         parameters = {}

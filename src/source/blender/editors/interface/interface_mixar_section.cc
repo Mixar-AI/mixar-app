@@ -142,6 +142,25 @@ void UI_layout_mixar_card_tag_last(Layout *layout,
   mixar_style_card(but, element, payload);
 }
 
+void UI_layout_mixar_cinema_row(Layout *layout, const MixarCinemaRowKind kind)
+{
+  Block *block = layout->block();
+  if (block->buttons_ptrs.is_empty()) {
+    return;
+  }
+  Button *but = block->buttons_ptrs.last().get();
+  Layout *owner = but->layout;
+  while (owner && owner != layout) {
+    owner = owner->parent();
+  }
+  if (!owner || !ELEM(but->type, ButtonType::But, ButtonType::Menu,
+                      ButtonType::Block, ButtonType::Pulldown, ButtonType::Label)) {
+    return;
+  }
+  UI_mixar_cinema_row_tag(but, kind);
+  block_flag_enable(block, BLOCK_MIXAR_ROUND_ALL);
+}
+
 void UI_layout_mixar_card_style_last_button(Layout *layout,
                                             const MixarCardElement element,
                                             const bool active_default)

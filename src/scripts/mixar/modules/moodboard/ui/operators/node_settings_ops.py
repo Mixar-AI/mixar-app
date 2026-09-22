@@ -89,7 +89,7 @@ def _draw_parameter(layout, parameter, spec=None):
         draw_input(field, parameter, 'value_string', text="")
 
 
-def _draw_settings(layout, node):
+def _draw_settings(layout, node, scene=None):
     if hasattr(layout, 'mixar_surface'):
         layout = layout.mixar_surface(theme='ZEN')
     layout.use_property_split = False
@@ -110,6 +110,13 @@ def _draw_settings(layout, node):
     for parameter in node.parameters:
         if parameter.visible:
             _draw_parameter(settings, parameter, specs.get(parameter.name))
+
+    if scene is not None and node.action_type == 'CHARACTER_PARTS':
+        from ..character_parts_node_drawer import draw_character_parts_node
+
+        components = layout.column()
+        components.enabled = not running
+        draw_character_parts_node(components, scene, node)
 
     actions = layout.column(align=True)
     actions.enabled = not running
@@ -153,7 +160,7 @@ class MIXIE_OT_moodboard_node_settings(Operator):
         if node is None:
             self.layout.label(text="This inference node is no longer available", icon='INFO')
             return
-        _draw_settings(self.layout, node)
+        _draw_settings(self.layout, node, context.scene)
 
     def check(self, context):
         node = _popup_node(context, self.node_id)

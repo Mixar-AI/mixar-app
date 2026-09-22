@@ -140,7 +140,17 @@ def test_labels_shrink_the_pad_to_a_floor_before_ellipsising():
     # Uniform: option rows, segment cells, captions and the slider label all
     # hand back their pure-padding sides; a side ending at an icon or a
     # value gives nothing.
-    assert "icon_drawn ? 0.0f : pad_slack(), pad_slack()" in ROW
+    option = _function(ROW, "void draw_option(")
+    normalized = " ".join(option.split())
+    assert "icon_drawn ? 0.0f : pad_slack(), submenu ? 0.0f : pad_slack()" in normalized
+    # A submenu arrow owns the right edge. Reserve its actual icon width
+    # before measuring/clipping text, and never recover that space as padding.
+    assert "ELEM(but->type, ButtonType::Menu, ButtonType::Block, ButtonType::Pulldown)" in option
+    submenu = option[option.index("if (submenu) {") : option.index("const uiFontStyle fs")]
+    assert "text.xmax -= int(icon_size);" in submenu
+    assert "icon_draw_alpha(float(text.xmax)," in submenu
+    assert "ICON_RIGHTARROW" in submenu
+    assert option.index("text.xmax -= int(icon_size);") < option.index("draw_label(")
     assert "UI_STYLE_TEXT_CENTER, pad_slack(), pad_slack()" in SEGMENT
     assert "themed(MixarThemeSlot::CinemaRowCaption, CAPTION, caption_tok);" in VALUE
     assert "caption_tok, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack()" in VALUE

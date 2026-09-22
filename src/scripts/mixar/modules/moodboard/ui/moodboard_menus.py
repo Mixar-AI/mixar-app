@@ -12,6 +12,8 @@ Right-click context menu for moodboard operations.
 import bpy
 from bpy.types import Menu
 
+from ..core.node_templates import template_available
+
 from mixar.modules.common.utils.mixie_space_utils import (
     MIXIE_SPACE_AVAILABLE,
     get_selected_moodboard_items,
@@ -164,6 +166,9 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                         'MESH_DATA',
                         action_node.node_id,
                     )
+                    if template_available('CHARACTER_PARTS'):
+                        _connected_action(layout, 'CHARACTER_PARTS', "Character Parts",
+                                          'OUTLINER_OB_ARMATURE', action_node.node_id)
                     if _capability_available("world_labs"):
                         _connected_action(
                             layout,
@@ -213,6 +218,8 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             row = layout.row()
             row.enabled = selected_stills > 0
             _connected_action(row, 'MODEL_3D', "Generate to 3D", 'MESH_DATA')
+            if selected_stills > 0 and template_available('CHARACTER_PARTS'):
+                _connected_action(layout, 'CHARACTER_PARTS', "Character Parts", 'OUTLINER_OB_ARMATURE')
             if selected_stills > 0 and _capability_available("world_labs"):
                 _connected_action(
                     layout, 'WORLD_LABS', "Generate Splat", 'WORLD'

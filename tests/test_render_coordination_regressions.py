@@ -92,6 +92,7 @@ def test_reconstruction_export_waits_for_renderer(renderer, monkeypatch):
 
 
 def test_reconstruction_import_queues_export_without_losing_busy_result(renderer, monkeypatch):
+    from mixar.modules.moodboard import core as moodboard_core
     from mixar.modules.moodboard.core import scene_asset_exporter as exporter
     from mixar.modules.moodboard.core import scene_recon_submission as submission
 
@@ -102,6 +103,9 @@ def test_reconstruction_import_queues_export_without_losing_busy_result(renderer
         return object()
 
     monkeypatch.setitem(sys.modules, 'mixar.modules.moodboard.core.scene_importer', importer)
+    # `from core import scene_importer` can reuse the parent's cached module
+    # attribute after another test imports the real module. Patch both lookups.
+    monkeypatch.setattr(moodboard_core, 'scene_importer', importer, raising=False)
     monkeypatch.setitem(sys.modules, 'mixar.modules.moodboard.core.scene_recon_queue',
                         SimpleNamespace(enqueue_scene_recon_job=enqueue))
     monkeypatch.setattr(exporter, 'bpy', renderer)
@@ -113,6 +117,7 @@ def test_reconstruction_import_queues_export_without_losing_busy_result(renderer
     renderer.data.objects.get.return_value = obj
     token = slot.acquire('agent')
     callbacks['on_object_ready'](b'glb', {}, 'chair', 'Chair')
+    importer.add_object.assert_called_once_with(b'glb', {}, 'chair', name='Chair')
     tick = renderer.app.timers.register.call_args.args[0]
     assert tick() == 0.25
     exported.assert_not_called()

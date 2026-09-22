@@ -111,7 +111,7 @@ static SpaceLink *mixie_create(const ScrArea * /*area*/, const Scene * /*scene*/
   region->regiontype = RGN_TYPE_TOOLS;
   region->alignment = RGN_ALIGN_LEFT;
 
-  /* UI region (N-panel sidebar on right side) */
+  /* Retired sidebar kept for saved-space compatibility; its region poll is always false. */
   region = BKE_area_region_new();
   BLI_addtail(&smixie->regionbase, region);
   region->regiontype = RGN_TYPE_UI;
@@ -611,15 +611,6 @@ static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
   context_menu_params.value = KM_PRESS;
   context_menu_params.modifier = 0;
   WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_context_menu", &context_menu_params);
-
-  /* Toggle N-panel sidebar - N key */
-  KeyMapItem_Params sidebar_params{};
-  sidebar_params.type = EVT_NKEY;
-  sidebar_params.value = KM_PRESS;
-  sidebar_params.modifier = 0;
-  wmKeyMapItem *kmi_sidebar = WM_keymap_add_item(
-      keymap, "SCREEN_OT_region_toggle", &sidebar_params);
-  RNA_enum_set(kmi_sidebar->ptr, "region_type", RGN_TYPE_UI);
 }
 
 static void mixie_keymap(wmKeyConfig *keyconf)
@@ -687,39 +678,6 @@ static void mixie_footer_region_draw(const bContext *C, ARegion *region)
 }
 
 static void mixie_footer_region_listener(const wmRegionListenerParams *params)
-{
-  ARegion *region = params->region;
-  const wmNotifier *wmn = params->notifier;
-
-  switch (wmn->category) {
-    case NC_SPACE:
-      if (wmn->data == ND_SPACE_MIXIE) {
-        ED_region_tag_redraw(region);
-      }
-      break;
-    case NC_SCENE:
-      ED_region_tag_redraw(region);
-      break;
-  }
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name UI Region Callbacks (N-Panel Sidebar)
- * \{ */
-
-static void mixie_ui_region_init(wmWindowManager *wm, ARegion *region)
-{
-  ED_region_panels_init(wm, region);
-}
-
-static void mixie_ui_region_draw(const bContext *C, ARegion *region)
-{
-  ED_region_panels(C, region);
-}
-
-static void mixie_ui_region_listener(const wmRegionListenerParams *params)
 {
   ARegion *region = params->region;
   const wmNotifier *wmn = params->notifier;
@@ -812,16 +770,10 @@ void ED_spacetype_mixie()
 
   BLI_addhead(&st->regiontypes, art);
 
-  /* regions: UI sidebar (N-panel on right side) */
+  /* Retain the type for old files, but never allocate sidebar space or handlers. */
   art = MEM_new_zeroed<ARegionType>("spacetype mixie ui region");
   art->regionid = RGN_TYPE_UI;
-  art->prefsizex = MIXIE_SIDEBAR_PANEL_WIDTH;
-  art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FRAMES;
-
-  art->listener = mixie_ui_region_listener;
-  art->init = mixie_ui_region_init;
-  art->layout = ED_region_panels_layout;
-  art->draw = mixie_ui_region_draw;
+  art->poll = [](const RegionPollParams *) { return false; };
 
   BLI_addhead(&st->regiontypes, art);
 

@@ -30,7 +30,7 @@ from typing import Any, Dict, Optional
 
 from mixar.config.logging_config import get_logger
 
-from . import preference_client
+from . import model_menu, preference_client
 
 logger = get_logger(__name__)
 
@@ -46,7 +46,7 @@ _FIELDS = (
 _DEFAULTS: Dict[str, Any] = {
     "mixar_agent_model_provider": "",
     "mixar_agent_model_id": "",
-    # Empty label = "no pick yet"; the button falls back to "Model".
+    # Empty label = "no pick yet"; the button falls back to "Mixie".
     "mixar_agent_model_label": "",
     # Empty thinking = the model's own default, NOT "thinking off".
     "mixar_agent_model_thinking": "",
@@ -230,7 +230,10 @@ def _parse(data) -> Dict[str, Any]:
     )
     parsed["mixar_agent_model_provider"] = chosen.get("provider") or ""
     parsed["mixar_agent_model_id"] = chosen.get("model") or ""
-    parsed["mixar_agent_model_label"] = chosen.get("label") or chosen.get("model") or ""
+    parsed["mixar_agent_model_label"] = model_menu.display_model_label(
+        parsed["mixar_agent_model_provider"], parsed["mixar_agent_model_id"],
+        chosen.get("label") or "",
+    )
     parsed["mixar_agent_model_thinking"] = chosen.get("thinking_level") or ""
     parsed["mixar_agent_model_eligible"] = bool(chosen.get("eligible", True))
     return parsed
@@ -241,7 +244,7 @@ def _apply_fetch_result(epoch: int, success: bool, data, err, *, serial=None) ->
 
     A FAILED fetch leaves the state alone: only the server retires a pick, and
     it says so through the success path. Clearing on failure would turn a
-    transient miss into a session-long "Model" over a pick that is stored and
+    transient miss into a session-long default label over a pick that is stored and
     still being resolved on every turn.
     """
     global _state

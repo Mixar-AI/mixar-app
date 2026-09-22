@@ -1437,6 +1437,13 @@ static void region_azones_add(const bScreen *screen, ScrArea *area, ARegion *reg
     return;
   }
 
+  /* Retired Moodboard sidebars can retain scrollbar flags in saved files.
+   * Edge polling alone only removes the resize/reveal zone; skip the complete
+   * azone pass so neither old scrollbars nor fullscreen zones claim input. */
+  if (area->spacetype == SPACE_MIXIE && region->regiontype == RGN_TYPE_UI) {
+    return;
+  }
+
   const bool is_fullscreen = screen->state == SCREENFULL;
 
   /* Only display tab or icons when the header region is hidden

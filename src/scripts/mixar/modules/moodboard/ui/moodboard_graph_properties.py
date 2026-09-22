@@ -38,21 +38,7 @@ from mixar.modules.moodboard.ui.moodboard_graph_param_callbacks import (
 )
 
 
-ACTION_TYPES = (
-    ('IMAGE_GEN', "Generate Image", "Generate or edit an image"),
-    ('VIDEO_GEN', "Generate Video", "Generate a video from image/video references"),
-    ('MODEL_3D', "Generate to 3D", "Generate a 3D asset from one image"),
-    ('MASK_DETAIL', "Multi Lasso Mask",
-     "Generate a detailed image of a lasso-masked region of the source image"),
-    # Mesh -> mesh continuations, chained off a 3D mesh node.
-    ('PBR_GEN', "PBR Generation", "Texture the connected 3D mesh"),
-    ('RETOPOLOGY', "Retopology", "Retopologize the connected 3D mesh"),
-    ('MESH_SEGMENT', "Mesh Segmentation", "Segment the connected 3D mesh into parts"),
-    ('AUTO_RIG', "Auto Rig", "Auto-rig the connected 3D mesh"),
-    ('VIDEO_UPSCALE', "Upscale Video", "Upscale the connected video to 1080p, 2K or 4K"),
-    # APPEND ONLY: enum persists as an index; C++ ACTION_OUTPUT_KINDS is order-pinned.
-    ('WORLD_LABS', "Generate Splat", "Generate a Gaussian splat from a prompt or image"),
-)
+from ..core.node_action_types import ACTION_TYPES  # noqa: F401 (public re-export)
 
 # Mesh -> mesh continuations. Schema and execution must share this set.
 MESH_FEATURE_ACTIONS = frozenset(
@@ -86,6 +72,8 @@ def capability_for_action(action_type: str) -> str:
         return "video_upscale"
     if action_type == 'WORLD_LABS':
         return "world_labs"
+    if action_type == 'CHARACTER_PARTS':
+        return "character_parts"
     if action_type in _MESH_FEATURE_CAPABILITY:
         return _MESH_FEATURE_CAPABILITY[action_type]
     return "model_gen"

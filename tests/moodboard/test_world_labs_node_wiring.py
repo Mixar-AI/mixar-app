@@ -33,7 +33,7 @@ def test_node_type_is_appended_last_and_mirrored_in_cpp():
         capability_for_action,
     )
 
-    assert ACTION_TYPES[-1][0] == 'WORLD_LABS'
+    assert ACTION_TYPES[9][0] == 'WORLD_LABS'
     assert _OUTPUT_TYPES['WORLD_LABS'] == 'SPLAT'
     assert output_type_for_action('WORLD_LABS') == 'SPLAT'
     assert _ACCEPTED_SOURCE_TYPES['WORLD_LABS'] == {'IMAGE'}
@@ -44,7 +44,7 @@ def test_node_type_is_appended_last_and_mirrored_in_cpp():
     kinds = re.findall(
         r"'(\w)'", re.search(r"ACTION_OUTPUT_KINDS\[\]\s*=\s*\{([^}]*)\}", draw).group(1)
     )
-    assert len(kinds) == len(ACTION_TYPES) and kinds[-1] == 'S'
+    assert len(kinds) == len(ACTION_TYPES) and kinds[9] == 'S'
 
 
 def test_splat_output_is_not_a_mesh_continuation_source():
@@ -102,8 +102,8 @@ def test_menus_offer_splat_from_an_image_or_image_gen():
     assert "action_node.action_type == 'IMAGE_GEN'" in context_menu
     assert "'WORLD_LABS', \"Generate Splat\"" in context_menu
     assert "selected_stills > 0 and _capability_available(\"world_labs\")" in context_menu
-    assert "_capability_available(\"world_labs\")" in node_menus
-    assert "allow_empty=True" in node_menus[node_menus.index("'WORLD_LABS'"):]
+    assert "for item in available_templates():" in node_menus
+    assert "draw_template(layout, item, drop=drop)" in node_menus
 
 
 def test_selected_media_keeps_one_still_for_splat():

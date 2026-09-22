@@ -81,11 +81,9 @@ def test_video_handoff_remains_catalog_driven_and_provider_neutral():
     handoff = _read("core/handoff.py")
 
     assert "get_video_generation_limits" in handoff
-    # Tab labels are catalog-driven: the handoff must resolve the Video
-    # Gen tab's current category through get_tab_category("video_gen")
-    # with the literal only as the offline fallback.
-    assert 'get_tab_category("video_gen", "Video Gen")' in handoff
-    assert "region.active_panel_category = category" in handoff
+    assert "agent_bubble_open_window()" in handoff
+    assert "wm.mixar_bubble_tab = 'VIDEO'" in handoff
+    assert "active_panel_category" not in handoff
     assert "seedance" not in handoff.lower()
 
 

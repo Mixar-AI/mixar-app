@@ -95,13 +95,14 @@ def _kinds(rows):
 # Menu rows
 # ---------------------------------------------------------------------------
 
-def test_rows_are_flat_and_labelled_provider_dot_model():
+def test_rows_show_only_model_names_and_keep_provider_identity():
     rows = model_menu.build_rows([
         _record("claude-sonnet-4-6", model_label="Claude Sonnet 4.6"),
     ])
 
     assert rows[0].kind == "MODEL"
-    assert rows[0].label == "Anthropic · Claude Sonnet 4.6"
+    assert rows[0].label == "Claude Sonnet 4.6"
+    assert rows[0].provider == "anthropic"
     # No grouping, no provider header — one row per model, then the tail
     # actions (reset, then the AI Provider Settings route).
     assert _kinds(rows) == ["MODEL", "RESET", "BYOK"]
@@ -242,6 +243,9 @@ def test_a_reset_row_closes_a_populated_menu():
 
     reset = [row for row in rows if row.kind == "RESET"]
     assert len(reset) == 1 and reset[0].enabled is True
+    assert reset[0].label == "Mixie" and reset[0].active
+    picked = model_menu.build_rows([_record("a")], active_provider="anthropic", active_model="a")
+    assert not next(row for row in picked if row.kind == "RESET").active
     byok_rows = model_menu.build_rows([_record("a")], byok_active=True)
     assert [row.enabled for row in byok_rows if row.kind == "RESET"] == [False]
 

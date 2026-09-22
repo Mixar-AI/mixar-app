@@ -12,12 +12,9 @@ menu's branching.
 
 from bpy.types import Menu
 
-from mixar.modules.moodboard.ui.moodboard_menus import (
-    MIXIE_SPACE_AVAILABLE,
-    _MESH_CONTINUATIONS,
-    _capability_available,
-    _connected_action,
-)
+from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
+from ..core.node_templates import available_templates
+from .canvas_template_helpers import draw_template
 
 
 def _cursor_anchor(scene):
@@ -46,53 +43,11 @@ class MIXIE_MT_moodboard_add(Menu):
     bl_options = {'SEARCH_ON_KEY_PRESS'}
 
     def draw(self, context):
-        layout = self.layout
+        layout = self.layout.mixar_surface(theme='ZEN', density='COMPACT')
+        layout.operator_context = 'INVOKE_DEFAULT'
         drop = _cursor_anchor(context.scene)
-
-        op = layout.operator("mixie.moodboard_add_template", text="Add Mesh", icon='OUTLINER_OB_MESH')
-        op.template = 'MESH_REFERENCE'
-        op.from_drop = True
-        op.drop_x, op.drop_y = drop
-        layout.separator()
-        layout.label(text="Generate")
-        _connected_action(
-            layout, 'IMAGE_GEN', "Generate Image", 'IMAGE_DATA',
-            drop=drop, allow_empty=True,
-        )
-        if _capability_available("model_gen"):
-            _connected_action(
-                layout, 'MODEL_3D', "Generate to 3D", 'MESH_DATA',
-                drop=drop, allow_empty=True,
-            )
-        if _capability_available("video_gen"):
-            _connected_action(
-                layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE',
-                drop=drop, allow_empty=True,
-            )
-        if _capability_available("video_upscale"):
-            _connected_action(
-                layout, 'VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER',
-                drop=drop, allow_empty=True,
-            )
-        if _capability_available("world_labs"):
-            _connected_action(
-                layout, 'WORLD_LABS', "Generate Splat", 'WORLD',
-                drop=drop, allow_empty=True,
-            )
-
-        # Mesh-feature nodes take a 3D mesh input (wire a mesh node into them).
-        mesh_items = [
-            (action_type, text, icon)
-            for action_type, text, icon, capability in _MESH_CONTINUATIONS
-            if _capability_available(capability)
-        ]
-        if mesh_items:
-            layout.separator()
-            layout.label(text="3D Mesh")
-            for action_type, text, icon in mesh_items:
-                _connected_action(
-                    layout, action_type, text, icon, drop=drop, allow_empty=True
-                )
+        for item in available_templates():
+            draw_template(layout, item, drop=drop)
 
 
 _ALIGN_ITEMS = (

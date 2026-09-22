@@ -990,6 +990,11 @@ static void rna_uiLayoutMixarStyle(Layout *layout, int component, int variant, b
   }
 }
 
+static void rna_uiLayoutMixarCinemaRow(Layout *layout, int kind)
+{
+  ui::UI_layout_mixar_cinema_row(layout, ui::MixarCinemaRowKind(kind));
+}
+
 static Layout *rna_uiLayoutMixarSection(Layout *layout)
 {
   return UI_layout_mixar_section(layout);
@@ -1788,6 +1793,18 @@ void RNA_api_ui_layout(StructRNA *srna)
   RNA_def_enum(func, "component", mixar_component_items, 1, "Component", "Style the last item in this layout");
   RNA_def_enum(func, "variant", mixar_variant_items, 0, "Variant", "Semantic visual variant");
   RNA_def_boolean(func, "all_items", false, "All Items", "Style all supported buttons in this layout subtree");
+
+  static const EnumPropertyItem mixar_cinema_row_items[] = {
+      {0, "OPTION", 0, "Option", "Unselected popup choice"},
+      {1, "ACTIVE", 0, "Active", "Current choice with a graded background"},
+      {2, "ACTION", 0, "Action", "Popup action"},
+      {4, "CAPTION", 0, "Caption", "Non-interactive explanation"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+  func = RNA_def_function(srna, "mixar_cinema_row", "rna_uiLayoutMixarCinemaRow");
+  RNA_def_function_ui_description(func,
+      "Style the last item with the shared Cinema popup row painter and rounded popup corners");
+  RNA_def_enum(func, "kind", mixar_cinema_row_items, 0, "Kind", "Popup row presentation");
 
   func = RNA_def_function(srna, "mixar_profile_card", "rna_uiLayoutMixarProfileCard");
   RNA_def_function_flag(func, FUNC_USE_CONTEXT);

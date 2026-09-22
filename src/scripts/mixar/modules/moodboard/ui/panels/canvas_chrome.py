@@ -7,6 +7,7 @@ from bpy.types import Panel
 
 from ...constants import NODE_TEMPLATES
 from ...core.canvas_context import is_moodboard_context
+from ...core.node_templates import available_templates
 from ..canvas_template_helpers import draw_template
 
 _MESH_TEMPLATE = next(item for item in NODE_TEMPLATES if item[0] == 'MESH_REFERENCE')
@@ -48,7 +49,9 @@ class MIXIE_PT_canvas_templates(_CanvasPanel, Panel):
         row = surface.row()
         row.scale_y = 1.6
         draw_template(row, _MESH_TEMPLATE)
-        for item in NODE_TEMPLATES[:3]:
+        for item in available_templates():
+            if item[0] not in {entry[0] for entry in NODE_TEMPLATES[:3]}:
+                continue
             draw_template(row, item)
         _more_templates(row)
 
