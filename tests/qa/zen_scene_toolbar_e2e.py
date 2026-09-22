@@ -32,6 +32,10 @@ def reset_zen_scene(qa):
     Use the same real home-file reset but assert today's Zen viewport instead.
     Re-query temporary windows after every close; never retain freed RNA.
     """
+    # The QA socket opens before time-budgeted UI registration has completed.
+    qa.wait("hasattr(drv.main_window().scene, 'mixie_chat_is_busy') and "
+            "hasattr(bpy.types, 'MIXAR_OT_zen_set_sky') and "
+            "hasattr(bpy.types, 'MIXAR_PT_zen_render_settings')", timeout=30)
     qa.eval("""
 import os
 assert os.environ.get('MIXAR_QA') == '1'
