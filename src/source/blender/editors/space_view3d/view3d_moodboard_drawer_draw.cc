@@ -94,9 +94,9 @@ void draw_grip(const float x_right, const float y_centre)
     GPU_scissor(pane.xmin, pane.ymin, clip_w, BLI_rcti_size_y(&pane));
     rctf tab;
     BLI_rctf_rcti_copy(&tab, &pane);
-    ui::mixar_fill_round(tab, radius, ui::mixar_tokens::zen.action);
+    ui::mixar_fill_round(tab, radius, ui::mixar_tokens::mixar_zen().action);
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
-    ui::draw_roundbox_4fv(&tab, false, radius, ui::mixar_tokens::zen.border);
+    ui::draw_roundbox_4fv(&tab, false, radius, ui::mixar_tokens::mixar_zen().border);
   }
   GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
 
@@ -106,7 +106,7 @@ void draw_grip(const float x_right, const float y_centre)
   const size_t label_len = strlen(label);
   const float text_w = BLF_width(font, label, label_len);
   const float text_h = BLF_height_max(font);
-  BLF_color4fv(font, ui::mixar_tokens::zen.text);
+  BLF_color4fv(font, ui::mixar_tokens::mixar_zen().text);
   BLF_enable(font, BLF_ROTATION);
   BLF_rotation(font, float(M_PI_2));
   BLF_position(font,
@@ -207,10 +207,10 @@ void view3d_moodboard_drawer_region_draw(const bContext *C, ARegion *region)
                                   0.5f * (panel.xmax - panel.xmin));
     ui::draw_roundbox_corner_set(ui::CNR_TOP_LEFT | ui::CNR_BOTTOM_LEFT);
     ui::draw_roundbox_4fv_ex(&panel,
-                             /*inner1 (right)*/ ui::mixar_tokens::zen.canvas,
-                             /*inner2 (left)*/ ui::mixar_tokens::zen.canvas,
+                             /*inner1 (right)*/ ui::mixar_tokens::mixar_zen().canvas,
+                             /*inner2 (left)*/ ui::mixar_tokens::mixar_zen().canvas,
                              /*shade_dir*/ 0.0f,
-                             ui::mixar_tokens::zen.border,
+                             ui::mixar_tokens::mixar_zen().border,
                              U.pixelsize,
                              radius);
 

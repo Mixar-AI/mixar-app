@@ -141,7 +141,7 @@ float pane_ref_thumbs_paint(Image *const *images,
     return x;
   }
   const float back[4] = PANE_COL_CHIP;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(dim, TextSecondary);
   const float gap = PANE_REF_THUMB_GAP * u;
 
   float tx = x;

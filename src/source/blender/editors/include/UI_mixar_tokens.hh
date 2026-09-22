@@ -59,6 +59,8 @@ inline constexpr Palette zen = {{0.071f, 0.071f, 0.071f, 1},
                                 {0.804f, 0.361f, 0.361f, 1},
                                 {0.898f, 0.694f, 0.298f, 1},
                                 {0.114f, 0.114f, 0.114f, 1}};
+/** Live palette. `zen` stays the measured artboard; painters read this. */
+const Palette &mixar_zen();
 /** Default density, unscaled. Island chips keep these aliases. Chrome
  * hosts use Compact (`mixar_chrome::density`) without rebinding these. */
 inline constexpr MixarDensityMetrics default_density =

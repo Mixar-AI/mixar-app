@@ -44,6 +44,7 @@
 #include "interface_mixar_section.hh"
 #include "interface_mixar_tab_rects.hh"
 #include "UI_mixar.hh"
+#include "UI_mixar_theme.hh"
 
 #include "UI_interface_layout.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -225,14 +226,14 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
 
   /* Fallback defaults when theme colors are uninitialized (all zero from old .blend files). */
   if (col_accent[0] == 0.0f && col_accent[1] == 0.0f && col_accent[2] == 0.0f) {
-    col_accent[0] = 0.0f/255; col_accent[1] = 192.0f/255; col_accent[2] = 199.0f/255; col_accent[3] = 1.0f; /* #00C0C7 accent */
-    col_strip_bg[0] = 0.08f; col_strip_bg[1] = 0.08f; col_strip_bg[2] = 0.10f; col_strip_bg[3] = 0.95f;
-    col_inactive[0] = 0.14f; col_inactive[1] = 0.14f; col_inactive[2] = 0.16f; col_inactive[3] = 0.6f;
+    col_accent[0] = 0.0f; col_accent[1] = 192.0f / 255.0f; col_accent[2] = 199.0f / 255.0f; col_accent[3] = 1.0f;
+    col_strip_bg[0] = 18.0f / 255.0f; col_strip_bg[1] = 18.0f / 255.0f; col_strip_bg[2] = 18.0f / 255.0f; col_strip_bg[3] = 242.0f / 255.0f;
+    col_inactive[0] = 29.0f / 255.0f; col_inactive[1] = 29.0f / 255.0f; col_inactive[2] = 29.0f / 255.0f; col_inactive[3] = 153.0f / 255.0f;
     col_text_active[0] = col_text_active[1] = col_text_active[2] = col_text_active[3] = 1.0f;
-    col_text_inactive[0] = col_text_inactive[1] = 0.627f; col_text_inactive[2] = 0.667f; col_text_inactive[3] = 1.0f;
-    col_glow[0] = 112.0f/255; col_glow[1] = 198.0f/255; col_glow[2] = 45.0f/255; col_glow[3] = 0.15f;
-    col_highlight[0] = col_highlight[1] = col_highlight[2] = 1.0f; col_highlight[3] = 0.18f;
-    col_indicator[0] = col_indicator[1] = col_indicator[2] = 1.0f; col_indicator[3] = 0.4f;
+    col_text_inactive[0] = col_text_inactive[1] = col_text_inactive[2] = 117.0f / 255.0f; col_text_inactive[3] = 1.0f;
+    col_glow[0] = col_accent[0]; col_glow[1] = col_accent[1]; col_glow[2] = col_accent[2]; col_glow[3] = 38.0f / 255.0f;
+    col_highlight[0] = col_highlight[1] = col_highlight[2] = 1.0f; col_highlight[3] = 46.0f / 255.0f;
+    col_indicator[0] = col_indicator[1] = col_indicator[2] = 1.0f; col_indicator[3] = 102.0f / 255.0f;
   }
 
   /* Wider tabs than default for more breathing room. */
@@ -354,7 +355,7 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
       /* Active tab: the pane, then --mx-accent-soft (#00C0C7 @ ~13%) and the
        * teal outline over it; the teal label (drawn below) carries the accent.
        * Design-agent spec. col_glow / col_highlight stay intentionally unused. */
-      const float active_bg[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 0.13f};
+      const float active_bg[4] = {col_accent[0], col_accent[1], col_accent[2], 0.13f};
       draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(&tab_rect, true, tab_radius, active_bg);
 

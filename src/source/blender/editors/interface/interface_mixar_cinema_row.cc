@@ -133,11 +133,14 @@ constexpr float CHIP_WASH = 0.6f;
 
 void draw_chip(const rctf &row, const float radius, const float alpha)
 {
+  uchar row_top[4], row_bottom[4];
+  themed(MixarThemeSlot::CinemaRowTop, ROW_TOP, row_top);
+  themed(MixarThemeSlot::CinemaRowBottom, ROW_BOTTOM, row_bottom);
   mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP, alpha);
 
   float top[4], bottom[4];
-  mixar_card_to_float(ROW_TOP, top);
-  mixar_card_to_float(ROW_BOTTOM, bottom);
+  mixar_card_to_float(row_top, top);
+  mixar_card_to_float(row_bottom, bottom);
   top[3] *= CHIP_WASH * alpha;
   bottom[3] *= CHIP_WASH * alpha;
   const float inset = 1.0f * UI_SCALE_FAC;
@@ -227,10 +230,14 @@ void draw_option(Button *but,
   }
 
   const float selected = kind == MixarCinemaRowKind::Action ? 1.0f : motion.selected;
+  uchar text_off[4], text_on[4], text_disabled[4];
+  themed(MixarThemeSlot::CinemaRowTextOff, TEXT_OFF, text_off);
+  themed(MixarThemeSlot::CinemaRowTextOn, TEXT_ON, text_on);
+  themed(MixarThemeSlot::CinemaRowTextDisabled, TEXT_DISABLED, text_disabled);
   uchar col[4];
   for (int i = 0; i < 4; i++) {
-    col[i] = disabled ? TEXT_DISABLED[i] :
-                        uchar(float(TEXT_OFF[i]) + (float(TEXT_ON[i]) - TEXT_OFF[i]) * selected);
+    col[i] = disabled ? text_disabled[i] :
+                        uchar(float(text_off[i]) + (float(text_on[i]) - text_off[i]) * selected);
   }
   rcti text = *rect;
   text.xmin += int(TEXT_PAD * UI_SCALE_FAC);

@@ -131,11 +131,11 @@ void segment_row(ui::Block *block,
                  const char *surface)
 {
   const float u = cinema_unit();
-  const float track_top[4] = CINEMA_COL_CARD_TOP;
-  const float track_bottom[4] = CINEMA_COL_CARD_BOTTOM;
-  const float chip[4] = CINEMA_COL_CHIP;
-  const float on[4] = CINEMA_COL_VALUE;
-  const float off[4] = CINEMA_COL_DIMMER;
+  MIXAR_THEME_LOAD(track_top, CinemaCardTop);
+  MIXAR_THEME_LOAD(track_bottom, CinemaCardBottom);
+  MIXAR_THEME_LOAD(chip, CinemaChip);
+  MIXAR_THEME_LOAD(on, CinemaRowTextOn);
+  MIXAR_THEME_LOAD(off, CinemaDimmer);
 
   const rctf track = design_rect_right(
       region, COLUMN_X, design_y, CINEMA_PANEL_W, CINEMA_SEGMENT_H);
@@ -177,9 +177,9 @@ void cinema_draw_right_panel(ui::Block *block,
                              const DirectorViewState &state)
 {
   const float u = cinema_unit();
-  const float label_col[4] = CINEMA_COL_CAPTION;
-  const float value_col[4] = CINEMA_COL_VALUE;
-  const float dim_col[4] = CINEMA_COL_DIM;
+  MIXAR_THEME_LOAD(label_col, CinemaRowCaption);
+  MIXAR_THEME_LOAD(value_col, CinemaRowTextOn);
+  MIXAR_THEME_LOAD(dim_col, CinemaRowTextDisabled);
   Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
 
   /* -------- Cameras -------- */
@@ -198,7 +198,7 @@ void cinema_draw_right_panel(ui::Block *block,
   add.xmin = add.xmax - 96.0f * u;
   add.ymax = cameras.ymax - 12.0f * u;
   add.ymin = add.ymax - 22.0f * u;
-  const float add_top[4] = CINEMA_COL_ROW_TOP;
+  MIXAR_THEME_LOAD(add_top, CinemaRowTop);
   const float add_bottom[4] = {0.192f, 0.192f, 0.192f, 1.0f}; /* #313131 */
   cinema_panel(add, BLI_rctf_size_y(&add) * 0.5f, add_top, add_bottom);
   cinema_text_center("+ Add Camera",
@@ -269,8 +269,8 @@ void cinema_draw_right_panel(ui::Block *block,
                (first_row_y - VIEWPORT_TOP + CINEMA_LIST_PITCH * float(slot)) * u;
     row.ymin = row.ymax - row_h;
     if (active) {
-      const float top[4] = CINEMA_COL_ROW_TOP;
-      const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+      MIXAR_THEME_LOAD(top, CinemaRowTop);
+      MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
       cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);
     }
     cinema_text_left(name,
@@ -348,11 +348,11 @@ void cinema_draw_right_panel(ui::Block *block,
   /* Resolution has to move BOTH axes to keep the chosen aspect, so it goes
    * through a Director operator rather than a context setter. */
   {
-    const float track_top[4] = CINEMA_COL_CARD_TOP;
-    const float track_bottom[4] = CINEMA_COL_CARD_BOTTOM;
-    const float chip[4] = CINEMA_COL_CHIP;
-    const float on[4] = CINEMA_COL_VALUE;
-    const float off[4] = CINEMA_COL_DIMMER;
+    MIXAR_THEME_LOAD(track_top, CinemaCardTop);
+    MIXAR_THEME_LOAD(track_bottom, CinemaCardBottom);
+    MIXAR_THEME_LOAD(chip, CinemaChip);
+    MIXAR_THEME_LOAD(on, CinemaRowTextOn);
+    MIXAR_THEME_LOAD(off, CinemaDimmer);
     const rctf track = design_rect_right(
         region, COLUMN_X, RES_Y, CINEMA_PANEL_W, CINEMA_SEGMENT_H);
     cinema_panel(track, CINEMA_ROW_RADIUS * u, track_top, track_bottom);
@@ -387,7 +387,7 @@ void cinema_draw_right_panel(ui::Block *block,
   /* -------- Export -------- */
   const rctf export_rect = design_rect_right(
       region, COLUMN_X, CINEMA_EXPORT_Y, CINEMA_PANEL_W, CINEMA_EXPORT_H);
-  const float export_col[4] = CINEMA_COL_EXPORT;
+  MIXAR_THEME_LOAD(export_col, Primary);
   cinema_fill(export_rect, CINEMA_ROW_RADIUS * u, export_col);
   const bool can_export = !state.beats.is_empty();
   const float export_text[4] = {1.0f, 1.0f, 1.0f, can_export ? 1.0f : 0.45f};

@@ -77,8 +77,8 @@ void agent_ui_generations_libraries(
     return;
   }
   const auto m = agent_ui_generations_library_metrics(panel, u, data);
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(text, Text);
+  MIXAR_THEME_LOAD(dim, TextSecondary);
   const float bg[4] = GEN_COL_PILL_OFF;
   {
     const GenViewportClip clip(m.view);

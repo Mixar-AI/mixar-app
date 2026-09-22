@@ -182,7 +182,7 @@ void cinema_keycap(const float x, const float y, const char *letter)
 {
   const float u = cinema_unit();
   const rctf cap = {x, x + CINEMA_KEYCAP_W * u, y, y + CINEMA_KEYCAP_H * u};
-  const float fill[4] = CINEMA_COL_KEYCAP;
+  MIXAR_THEME_LOAD(fill, CinemaKeycap);
   const float glyph[4] = {1.0f, 1.0f, 1.0f, 1.0f};
   cinema_fill(cap, CINEMA_KEYCAP_RADIUS * u, fill);
   cinema_text_center(letter,
@@ -200,8 +200,8 @@ void cinema_tick_meter(const rctf &rect, const int count, const int filled)
   const float u = cinema_unit();
   const float tick_w = 3.0f * u;
   const float pitch = BLI_rctf_size_x(&rect) / float(count);
-  const float off[4] = CINEMA_COL_SPEED_OFF;
-  const float on[4] = CINEMA_COL_SPEED_ON;
+  MIXAR_THEME_LOAD(off, Queue);
+  MIXAR_THEME_LOAD(on, CinemaRowSliderOn);
   for (int index = 0; index < count; index++) {
     rctf tick;
     tick.xmin = rect.xmin + pitch * float(index);

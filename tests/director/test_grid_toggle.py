@@ -155,8 +155,8 @@ def test_the_chip_reads_the_floor_flag_and_records_the_action_it_performs():
     # round at the row radius like every other strip chip.
     assert "cinema_panel(chip, CINEMA_ROW_RADIUS * u, top, bottom);" in chip
     assert "cinema_fill(chip, CINEMA_ROW_RADIUS * u, off);" in chip
-    assert "CINEMA_COL_ROW_TOP" in chip and "CINEMA_COL_ROW_BOTTOM" in chip
-    assert "CINEMA_COL_PHONE" in chip
+    assert "CinemaRowTop" in chip and "CinemaRowBottom" in chip
+    assert "CinemaPhone" in chip
 
 
 def test_the_chip_is_never_disabled_with_the_shot():

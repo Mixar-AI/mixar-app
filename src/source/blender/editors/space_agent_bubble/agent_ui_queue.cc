@@ -126,7 +126,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   const float header_h = QHEADER_H * u;
   float y_top = panel.ymax - pad;
 
-  const auto &palette = ui::mixar_tokens::zen;
+  const auto &palette = ui::mixar_tokens::mixar_zen();
   const float *col_text = palette.text;
   const float *col_dim = palette.secondary;
   const float *col_accent = palette.focus;

@@ -25,8 +25,15 @@
 
 #include "interface_mixar_profile_card.hh"
 
+#include "UI_mixar_theme.hh"
+
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui::mixar_cinema_row {
+
+inline void themed(MixarThemeSlot slot, const uchar token[4], uchar out[4])
+{
+  mixar_theme_copy_u(slot, token, out);
+}
 
 /* Design px @1x — mirrored from view3d_director_cinema.hh. */
 extern const float ROW_RADIUS; /* CINEMA_ROW_RADIUS */

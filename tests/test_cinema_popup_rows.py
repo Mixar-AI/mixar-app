@@ -77,9 +77,9 @@ def test_the_slider_track_is_never_the_lit_chip():
     slider = _function(VALUE, "void draw_slider(")
     assert "draw_chip(" not in slider
     assert "mixar_button_motion(*but)" in slider
-    assert "float(TRACK[i]) + (float(HOVER[i]) - TRACK[i]) * emphasis" in slider
+    assert "float(track_tok[i]) + (float(hover_tok[i]) - track_tok[i]) * emphasis" in slider
     assert "motion.selected" not in slider
-    assert "mixar_card_fill_round(&fill, fill_rad, SLIDER_ON" in slider
+    assert "mixar_card_fill_round(&fill, fill_rad, slider_on" in slider
 
 
 # -------------------------------------------------------------------------
@@ -142,7 +142,8 @@ def test_labels_shrink_the_pad_to_a_floor_before_ellipsising():
     # value gives nothing.
     assert "icon_drawn ? 0.0f : pad_slack(), pad_slack()" in ROW
     assert "UI_STYLE_TEXT_CENTER, pad_slack(), pad_slack()" in SEGMENT
-    assert "CAPTION, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack()" in VALUE
+    assert "themed(MixarThemeSlot::CinemaRowCaption, CAPTION, caption_tok);" in VALUE
+    assert "caption_tok, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack()" in VALUE
     assert "UI_STYLE_TEXT_LEFT, pad_slack(), 0.0f" in VALUE
 
 

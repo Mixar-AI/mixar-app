@@ -42,33 +42,33 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     }
     return button.icon != ICON_NONE;
   }
-  const float *background = input ? zen.input : zen.control;
+  const float *background = input ? mixar_zen().input : mixar_zen().control;
   if (style.component == MixarComponent::Surface) {
-    background = button.type == ButtonType::But ? zen.action : zen.panel;
+    background = button.type == ButtonType::But ? mixar_zen().action : mixar_zen().panel;
   }
-  const float *foreground = disabled ? zen.secondary : zen.text;
+  const float *foreground = disabled ? mixar_zen().secondary : mixar_zen().text;
   if (style.component == MixarComponent::Action) {
     switch (style.variant) {
       case MixarVariant::Primary:
-        background = zen.primary;
+        background = mixar_zen().primary;
         break;
       case MixarVariant::Secondary:
-        background = zen.action;
+        background = mixar_zen().action;
         break;
       case MixarVariant::Ghost:
-        background = zen.canvas;
+        background = mixar_zen().canvas;
         break;
       case MixarVariant::Danger:
-        background = zen.danger;
+        background = mixar_zen().danger;
         break;
     }
-    foreground = disabled ? zen.secondary : zen.strong;
+    foreground = disabled ? mixar_zen().secondary : mixar_zen().strong;
   }
   if (style.component == MixarComponent::Segment ||
       (style.component == MixarComponent::Toggle && style.unit == 0.0f))
   {
-    background = zen.control;
-    foreground = disabled || !selected ? zen.secondary : zen.text;
+    background = mixar_zen().control;
+    foreground = disabled || !selected ? mixar_zen().secondary : mixar_zen().text;
   }
   float fill[4];
   copy_v4_v4(fill, background);
@@ -76,7 +76,7 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
       (style.component == MixarComponent::Toggle && style.unit == 0.0f) ||
       (style.component == MixarComponent::Surface && button.type == ButtonType::But))
   {
-    interp_v4_v4v4(fill, background, zen.selected, motion.selected);
+    interp_v4_v4v4(fill, background, mixar_zen().selected, motion.selected);
   }
   if (!input) {
     for (int i = 0; i < 3; i++) {
@@ -98,13 +98,13 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
       rctf progress = rect;
       progress.xmax = progress.xmin + BLI_rctf_size_x(&rect) * fraction;
       if (fraction > 0.0f) {
-        mixar_fill_round(progress, radius * u, zen.selected);
+        mixar_fill_round(progress, radius * u, mixar_zen().selected);
       }
     }
     if (editing || (button.flag & BUT_REDALERT)) {
       draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(
-          &rect, false, corner_radius, (button.flag & BUT_REDALERT) ? zen.danger : zen.focus);
+          &rect, false, corner_radius, (button.flag & BUT_REDALERT) ? mixar_zen().danger : mixar_zen().focus);
     }
   }
   for (int i = 0; i < 4; i++) {
@@ -138,11 +138,11 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     rctf thumb = off;
     thumb.xmin = off.xmin + (on.xmin - off.xmin) * motion.selected;
     thumb.xmax = off.xmax + (on.xmax - off.xmax) * motion.selected;
-    mixar_fill_round(thumb, radius * u, zen.selected);
+    mixar_fill_round(thumb, radius * u, mixar_zen().selected);
     mixar_label_left(
-        "ON", on.xmin + 10 * u, cy, text_style, selected ? foreground : zen.secondary);
+        "ON", on.xmin + 10 * u, cy, text_style, selected ? foreground : mixar_zen().secondary);
     mixar_label_left(
-        "OFF", off.xmin + 10 * u, cy, text_style, selected ? zen.secondary : foreground);
+        "OFF", off.xmin + 10 * u, cy, text_style, selected ? mixar_zen().secondary : foreground);
     right = start - gap * u;
   }
   if (style.component == MixarComponent::Dropdown) {

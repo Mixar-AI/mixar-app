@@ -278,7 +278,7 @@ bool pane_report_line_draw(const bContext *C, const rctf &box, const float u)
   }
   const float col_error[4] = PANE_COL_MSG_ERROR;
   const float col_warn[4] = PANE_COL_MSG_WARN;
-  const float col_info[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(col_info, TextSecondary);
   const float *col = col_info;
   if (level >= PANE_MSG_LEVEL_ERROR) {
     col = col_error;

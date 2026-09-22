@@ -36,6 +36,7 @@
 #pragma once
 
 #include "UI_mixar_text.hh"
+#include "UI_mixar_theme.hh"
 
 #include "BLI_utildefines.h"
 

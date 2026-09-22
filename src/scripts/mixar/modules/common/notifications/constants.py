@@ -101,6 +101,28 @@ def _rgba(color, alpha_override=None):
     return (r, g, b, a)
 
 
+_TEXT_FALLBACK = (226 / 255, 226 / 255, 226 / 255, 1.0)
+_STRONG_FALLBACK = (1.0, 1.0, 1.0, 1.0)
+_FOCUS_FALLBACK = (0.0, 192 / 255, 199 / 255, 1.0)
+_DANGER_FALLBACK = (224 / 255, 72 / 255, 72 / 255, 1.0)
+
+
+def _theme_rgba(ui, name, fallback):
+    """Read one theme color, falling back when it is missing or still zero.
+
+    The read is capped at four channels: under the pytest bpy stub a missing
+    attribute is a MagicMock, and iterating it would not stop.
+    """
+    try:
+        color = getattr(ui, name)
+        channels = [float(color[index]) for index in range(4)]
+    except (TypeError, ValueError, AttributeError, IndexError):
+        return fallback
+    if channels == [0.0, 0.0, 0.0, 0.0]:
+        return fallback
+    return tuple(channels)
+
+
 def get_toast_colors(ntype: NotificationType) -> dict:
     """Resolve toast colors from the active Blender theme.
 
@@ -116,7 +138,7 @@ def get_toast_colors(ntype: NotificationType) -> dict:
 
     # -- Base from tooltip widget --
     bg = _rgba(tooltip.inner, alpha_override=0.94)
-    text = (0.886, 0.886, 0.886, 1.0)  # Agent island's #E2E2E2 label on neutral glass.
+    text = _theme_rgba(ui, "mixar_text", _TEXT_FALLBACK)
     dim_text = (*text[:3], 0.55)
 
     # -- Badge from semantic state colors --
@@ -136,24 +158,24 @@ def get_toast_colors(ntype: NotificationType) -> dict:
     close_icon = (*text[:3], 0.9)
 
     # -- Action buttons --
-    # Primary CTA uses the fixed Mixar brand green (not theme-derived) so the
-    # action always reads on-brand regardless of the active Blender theme.
-    primary_bg = MIXAR_BRAND_GREEN
-    primary_text = MIXAR_BRAND_GREEN_TEXT
+    # Primary follows the shared brand slot. The constants stay the fallback
+    # when the theme field is still zero.
+    primary_bg = _theme_rgba(ui, "mixar_brand", MIXAR_BRAND_GREEN)
+    primary_text = _theme_rgba(ui, "mixar_brand_text", MIXAR_BRAND_GREEN_TEXT)
     # Secondary buttons: subtle text-tinted fill + border so they read as
     # buttons on any theme (the old inner-color fill vanished on the card).
     secondary_bg = (*text[:3], 0.10)
     secondary_text = text
     secondary_border = (*text[:3], 0.30)
-    danger_bg = _rgba(state.error, alpha_override=1.0)
+    danger_bg = _theme_rgba(ui, "mixar_danger", _DANGER_FALLBACK)
     danger_text = (1.0, 1.0, 1.0, 1.0)
     filled_border = (1.0, 1.0, 1.0, 0.20)
 
     return {
         "bg": bg,
         "text": text,
-        "title": (1.0, 1.0, 1.0, 1.0),
-        "link": (0.62, 0.88, 0.70, 1.0),
+        "title": _theme_rgba(ui, "mixar_text_strong", _STRONG_FALLBACK),
+        "link": _theme_rgba(ui, "mixar_focus", _FOCUS_FALLBACK),
         "dim_text": dim_text,
         "badge": badge,
         "close_bg": close_bg,

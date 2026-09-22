@@ -158,10 +158,10 @@ void dropdown_row(ui::Block *block,
                   const bool enabled)
 {
   const float u = cinema_unit();
-  const float caption_col[4] = CINEMA_COL_CAPTION;
-  const float value_col[4] = CINEMA_COL_VALUE;
-  const float top[4] = CINEMA_COL_ROW_TOP;
-  const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+  MIXAR_THEME_LOAD(caption_col, CinemaRowCaption);
+  MIXAR_THEME_LOAD(value_col, CinemaRowTextOn);
+  MIXAR_THEME_LOAD(top, CinemaRowTop);
+  MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
 
   const rctf row = cinema_design_rect(
       region, cinema_margin(region) + 13.0f, design_y, CINEMA_ROW_W, CINEMA_ROW_H);
@@ -203,12 +203,12 @@ void template_row(ui::Block *block,
   const rctf row = cinema_design_rect(
       region, cinema_margin(region) + 13.0f, design_y, CINEMA_ROW_W, cinema_list_row_h());
   if (active) {
-    const float top[4] = CINEMA_COL_ROW_TOP;
-    const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+    MIXAR_THEME_LOAD(top, CinemaRowTop);
+    MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
     cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);
   }
-  const float on[4] = CINEMA_COL_VALUE;
-  const float off[4] = CINEMA_COL_DIM;
+  MIXAR_THEME_LOAD(on, CinemaRowTextOn);
+  MIXAR_THEME_LOAD(off, CinemaRowTextDisabled);
   cinema_text_left(label,
                    row.xmin + 12.0f * u,
                    BLI_rctf_cent_y(&row),
@@ -241,7 +241,7 @@ void cinema_draw_left_panel(ui::Block *block,
   /* Records are cleared once per draw by the overlay, before the top strip
    * (which publishes the eyedropper and interpolation rects) — not here. */
   const float u = cinema_unit();
-  const float label_col[4] = CINEMA_COL_CAPTION;
+  MIXAR_THEME_LOAD(label_col, CinemaRowCaption);
   const bool editable = state.has_camera && !state.locked;
 
   /* Card 1 — output settings: three captioned rows at CINEMA_ROW_PITCH. */

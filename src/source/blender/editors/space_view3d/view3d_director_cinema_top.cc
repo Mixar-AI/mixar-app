@@ -55,8 +55,8 @@ constexpr float STRIP_Y = 159.0f;
 void brand_chip(const rctf &pill)
 {
   const float u = cinema_unit();
-  const float brand_top[4] = CINEMA_COL_BRAND_TOP;
-  const float brand_bottom[4] = CINEMA_COL_BRAND_BOTTOM;
+  MIXAR_THEME_LOAD(brand_top, CinemaBrandTop);
+  MIXAR_THEME_LOAD(brand_bottom, CinemaBrandBottom);
   cinema_panel(pill, CINEMA_ROW_RADIUS * u, brand_top, brand_bottom);
 
   const float cy = BLI_rctf_cent_y(&pill);
@@ -65,12 +65,12 @@ void brand_chip(const rctf &pill)
                      pill.xmin + (CINEMA_BRAND_PAD + CINEMA_BRAND_LOGO) * u,
                      cy - logo_d * 0.5f,
                      cy + logo_d * 0.5f};
-  const float logo_top[4] = CINEMA_COL_LOGO_TOP;
-  const float logo_bottom[4] = CINEMA_COL_LOGO_BOTTOM;
+  MIXAR_THEME_LOAD(logo_top, CinemaPillOnA);
+  MIXAR_THEME_LOAD(logo_bottom, CinemaPillOnB);
   cinema_panel(logo, logo_d * 0.5f, logo_top, logo_bottom);
 
-  const float value_col[4] = CINEMA_COL_VALUE;
-  const float label_col[4] = CINEMA_COL_LABEL;
+  MIXAR_THEME_LOAD(value_col, CinemaRowTextOn);
+  MIXAR_THEME_LOAD(label_col, CinemaLabel);
   const float wordmark_x = logo.xmax + CINEMA_BRAND_GAP * u;
   cinema_text_left("mixar", wordmark_x, cy, CINEMA_FONT_VALUE * u, value_col);
   const float mode_x = wordmark_x + cinema_text_width("mixar", CINEMA_FONT_VALUE * u) +
@@ -99,7 +99,7 @@ void brand_chip(const rctf &pill)
 void phone_button(const rctf &rect, const bool compact)
 {
   const float u = cinema_unit();
-  const float phone_bg[4] = CINEMA_COL_PHONE;
+  MIXAR_THEME_LOAD(phone_bg, CinemaPhone);
   const float phone_text[4] = {0.957f, 0.957f, 0.957f, 0.9f};
   cinema_fill(rect, CINEMA_ROW_RADIUS * u, phone_bg);
   const char *label = "Drive camera from your phone";
@@ -128,9 +128,9 @@ void interpolation_dropdown(ui::Block *block,
                             const bool enabled)
 {
   const float u = cinema_unit();
-  const float top[4] = CINEMA_COL_ROW_TOP;
-  const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
-  const float value_col[4] = CINEMA_COL_VALUE;
+  MIXAR_THEME_LOAD(top, CinemaRowTop);
+  MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
+  MIXAR_THEME_LOAD(value_col, CinemaRowTextOn);
   const float chevron[4] = {0.851f, 0.851f, 0.851f, 1.0f};
   cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);
 
@@ -179,12 +179,12 @@ void track_eyedropper(ui::Block *block,
     }
   }
   if (tracking) {
-    const float on[4] = CINEMA_COL_EXPORT;
+    MIXAR_THEME_LOAD(on, Primary);
     cinema_fill(chip, CINEMA_ROW_RADIUS * cinema_unit(), on);
   }
   else {
-    const float top[4] = CINEMA_COL_ROW_TOP;
-    const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+    MIXAR_THEME_LOAD(top, CinemaRowTop);
+    MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
     cinema_panel(chip, CINEMA_ROW_RADIUS * cinema_unit(), top, bottom);
   }
   /* Both tooltips are literals: `ui::Button::tip` is non-owning. */
@@ -214,12 +214,12 @@ void grid_chip(ui::Block *block, const bContext *C, const ARegion *region, const
   const View3D *v3d = CTX_wm_view3d(const_cast<bContext *>(C));
   const bool shown = v3d != nullptr && (v3d->gridflag & V3D_SHOW_FLOOR) != 0;
   if (shown) {
-    const float top[4] = CINEMA_COL_ROW_TOP;
-    const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+    MIXAR_THEME_LOAD(top, CinemaRowTop);
+    MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
     cinema_panel(chip, CINEMA_ROW_RADIUS * u, top, bottom);
   }
   else {
-    const float off[4] = CINEMA_COL_PHONE;
+    MIXAR_THEME_LOAD(off, CinemaPhone);
     cinema_fill(chip, CINEMA_ROW_RADIUS * u, off);
   }
   /* Both tooltips are literals: `ui::Button::tip` is non-owning. */
@@ -324,8 +324,8 @@ void cinema_draw_top_strip(ui::Block *block,
                band.ymax};
   const float controls_left = grid.xmin;
 
-  const float hint_col[4] = CINEMA_COL_LABEL;
-  const float hint_lit[4] = CINEMA_COL_VALUE;
+  MIXAR_THEME_LOAD(hint_col, CinemaLabel);
+  MIXAR_THEME_LOAD(hint_lit, CinemaRowTextOn);
   for (int index = 0; index < 4; index++) {
     const Hint &hint = hints[index];
     /* The Aerial hint (index 0) reads as a state: lit while the mode is on. */

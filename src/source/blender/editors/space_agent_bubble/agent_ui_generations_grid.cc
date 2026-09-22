@@ -107,7 +107,7 @@ namespace {
 /** A dim glyph centred on the tile plate, for anything with no pixels. */
 void draw_placeholder(const rctf &box, const AgentIcon icon)
 {
-  const float col[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(col, TextSecondary);
   const float bg[4] = GEN_COL_TILE;
   const float s = std::min(BLI_rctf_size_x(&box), BLI_rctf_size_y(&box)) * 0.34f;
   rctf glyph;
@@ -190,8 +190,8 @@ void agent_ui_generations_grid(const bContext *C,
 {
   BLI_rctf_init(r_selected_tile, 0.0f, 0.0f, 0.0f, 0.0f);
 
-  const float text[4] = AGENT_COL_TEXT;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(text, Text);
+  MIXAR_THEME_LOAD(dim, TextSecondary);
   const float tile_bg[4] = GEN_COL_TILE;
   const float live[4] = GEN_COL_LIVE;
   const float font_chip = GEN_CHIP_FONT * agent_ui_text_unit();

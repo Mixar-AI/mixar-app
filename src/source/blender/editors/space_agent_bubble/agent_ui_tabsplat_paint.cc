@@ -185,7 +185,7 @@ void splat_pane_paint(const bContext *C,
                       const SplatPaneRects &rects,
                       const float u)
 {
-  const float *dim = ui::mixar_tokens::zen.secondary;
+  const float *dim = ui::mixar_tokens::mixar_zen().secondary;
 
   /* Prompt box (pane kit; the wash is painted by the caller, which owns the
    * true panel rect). */

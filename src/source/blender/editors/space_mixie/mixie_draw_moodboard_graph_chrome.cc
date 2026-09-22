@@ -56,7 +56,7 @@ void moodboard_draw_card_background(const rctf &rect, const bool selected, const
    * only other brightening, and both stay here because only the call site
    * knows a node's state. The resting bed and rim live in the token row. */
   if (selected) {
-    const float *border = ui::mixar_tokens::zen.focus;
+    const float *border = ui::mixar_tokens::mixar_zen().focus;
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
     ui::draw_roundbox_4fv(&rect, false, radius, border);
   }
@@ -70,7 +70,7 @@ void moodboard_draw_running_glow(const rctf &rect, const float radius)
    * (node_job_bridge.ensure_pulse_timer) supplies the continuous redraws; the
    * wall clock supplies the phase (~2.9s breathe). */
   const float pulse = 0.5f + 0.5f * float(std::sin(BLI_time_now_seconds() * 2.2));
-  const float *accent = ui::mixar_tokens::zen.focus;
+  const float *accent = ui::mixar_tokens::mixar_zen().focus;
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   rctf halo = rect;
   halo.xmin -= 3.0f;
@@ -129,7 +129,7 @@ static void draw_header_text(const char *text,
   const float width = BLF_width(font_id, text, strlen(text));
   const float draw_x = right_aligned ? x - std::min(width, max_width) : x;
   BLF_clipping(font_id, draw_x, y - size, draw_x + max_width, y + size);
-  const float *ink = ui::mixar_tokens::zen.text;
+  const float *ink = ui::mixar_tokens::mixar_zen().text;
   BLF_color4f(font_id, ink[0], ink[1], ink[2], alpha);
   BLF_position(font_id, draw_x, y, 0.0f);
   BLF_draw(font_id, text, strlen(text));

@@ -316,7 +316,7 @@ def test_the_hint_is_aerial_view_and_lights_with_the_mode():
     assert '{0.0f, {"O"}, 1, "Aerial view", false}' in TOP
     assert "const bool lit = index == 0 && state.aerial_mode;" in TOP
     assert "lit ? hint_lit : hint_col" in TOP
-    assert "const float hint_lit[4] = CINEMA_COL_VALUE;" in TOP
+    assert "MIXAR_THEME_LOAD(hint_lit, CinemaRowTextOn);" in TOP
     assert '"Navigate"' not in TOP
 
 

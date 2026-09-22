@@ -87,13 +87,13 @@ void mixie_moodboard_chrome_draw(const bContext *C, ARegion *region)
           narrow ? "Drop media" : "Start with a reference", width, title);
       BLF_disable(BLF_default(), BLF_CLIPPING);
       ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&content),
-                            BLI_rcti_cent_y(&content), title, ui::mixar_tokens::zen.text);
+                            BLI_rcti_cent_y(&content), title, ui::mixar_tokens::mixar_zen().text);
       if (!narrow) {
         const std::string sub = ui::mixar_fit_text(
             "Drop media or choose a node template", width, hint);
         ui::mixar_label_center(sub.c_str(), BLI_rcti_cent_x(&content),
                               BLI_rcti_cent_y(&content) - metrics.control_height,
-                              hint, ui::mixar_tokens::zen.secondary);
+                              hint, ui::mixar_tokens::mixar_zen().secondary);
       }
       BLF_batch_draw_flush();
     }

@@ -179,7 +179,7 @@ void agent_bubble_references_draw(const bContext *C,
         BLI_rctf_isect(&image, &g.view, &visible_image)) {
       ED_moodboard_attachment_target(C, region, path.c_str(), visible_image);
     }
-    const float dim[4] = AGENT_COL_TEXT_DIM;
+    MIXAR_THEME_LOAD(dim, TextSecondary);
     const auto caption = ui::mixar_fit_text(
         name.c_str(),
         g.image_size,

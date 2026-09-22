@@ -75,7 +75,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
   if (!available) {
     /* Fail closed, like the moodboard drawer: message only, no controls —
      * a bundled client must never resurrect a disabled Marble model. */
-    const float *dim = ui::mixar_tokens::zen.secondary;
+    const float *dim = ui::mixar_tokens::mixar_zen().secondary;
     pane_label_centre("World Labs catalog settings are unavailable",
                        BLI_rctf_cent_x(&panel),
                        BLI_rctf_cent_y(&panel),

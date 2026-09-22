@@ -196,9 +196,9 @@ void agent_ui_generations_detail(const bContext *C,
                                  const float u,
                                  const GenPaneData &data)
 {
-  const float text[4] = AGENT_COL_TEXT;
-  const float strong[4] = AGENT_COL_TEXT_STRONG;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(text, Text);
+  MIXAR_THEME_LOAD(strong, TextStrong);
+  MIXAR_THEME_LOAD(dim, TextSecondary);
   const float meta_bg[4] = GEN_COL_META;
   const float plate[4] = GEN_COL_TILE;
   const float primary[4] = PANE_COL_GENERATE;

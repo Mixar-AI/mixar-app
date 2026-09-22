@@ -136,7 +136,7 @@ void frame_field(ui::Block *block,
 {
   const float u = cinema_unit();
   const float bg[4] = {0.149f, 0.149f, 0.149f, 1.0f};
-  const float label_col[4] = CINEMA_COL_DIM;
+  MIXAR_THEME_LOAD(label_col, CinemaRowTextDisabled);
   /* The same radius as every other rounded control, capped to a pill. */
   cinema_fill(rect, std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f), bg);
   cinema_text_left(label,
@@ -176,10 +176,10 @@ void unit_chip(ui::Block *block,
                const bool active)
 {
   const float u = cinema_unit();
-  const float on_bg[4] = CINEMA_COL_CHIP;
+  MIXAR_THEME_LOAD(on_bg, CinemaChip);
   const float off_bg[4] = {0.176f, 0.176f, 0.176f, 1.0f};
-  const float on[4] = CINEMA_COL_VALUE;
-  const float off[4] = CINEMA_COL_DIM;
+  MIXAR_THEME_LOAD(on, CinemaRowTextOn);
+  MIXAR_THEME_LOAD(off, CinemaRowTextDisabled);
   cinema_fill(rect, std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f), active ? on_bg : off_bg);
   cinema_text_center(label,
                      BLI_rctf_cent_x(&rect),

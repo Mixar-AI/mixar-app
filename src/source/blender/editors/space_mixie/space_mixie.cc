@@ -236,7 +236,7 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
 static void mixie_main_region_draw(const bContext *C, ARegion *region)
 {
   /* Both moodboard hosts use the shared Zen canvas palette. */
-  const float *canvas = ui::mixar_tokens::zen.canvas;
+  const float *canvas = ui::mixar_tokens::mixar_zen().canvas;
   GPU_clear_color(canvas[0], canvas[1], canvas[2], canvas[3]);
 
   /* Always draw moodboard mode - panels are controlled via scene properties */

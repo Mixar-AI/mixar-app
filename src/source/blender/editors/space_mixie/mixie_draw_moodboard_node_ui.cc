@@ -212,7 +212,7 @@ static void add_asset_preview(const bContext *C,
             names[0] ? "Mesh removed from scene" : "Choose a scene mesh", width, style);
         ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card),
                               BLI_rcti_cent_y(&card) + height + metrics.gap,
-                              style, ui::mixar_tokens::zen.secondary);
+                              style, ui::mixar_tokens::mixar_zen().secondary);
       }
     }
     else if (!object_ptr.data) {
@@ -223,7 +223,7 @@ static void add_asset_preview(const bContext *C,
           names[0] ? "Mesh removed from scene" : "Choose a scene mesh",
           BLI_rcti_size_x(&card), style);
       ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card), BLI_rcti_cent_y(&card),
-                            style, ui::mixar_tokens::zen.secondary);
+                            style, ui::mixar_tokens::mixar_zen().secondary);
     }
     if (!object_ptr.data) {
       return;
@@ -247,7 +247,7 @@ static void add_asset_preview(const bContext *C,
                               "Mesh unavailable" : "3D asset";
     const std::string label = ui::mixar_fit_text(message, BLI_rcti_size_x(&card), style);
     ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card), BLI_rcti_cent_y(&card),
-                           style, ui::mixar_tokens::zen.secondary);
+                           style, ui::mixar_tokens::mixar_zen().secondary);
   }
 }
 

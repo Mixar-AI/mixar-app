@@ -201,7 +201,7 @@ def test_the_stage_spans_the_columns_and_hosts_the_gizmos():
     # the Mixar mark. It is chrome only.
     assert "brand_chip(" in TOP
     assert "ICON_MIXAR_ICON" in TOP
-    assert "CINEMA_COL_BRAND_TOP" in TOP
+    assert "CinemaBrandTop" in TOP
     assert (
         "brand_chip(cinema_design_rect(region, margin, STRIP_Y, CINEMA_PANEL_W, CINEMA_PHONE_H))"
         in TOP
@@ -398,9 +398,9 @@ def test_hints_start_on_the_gate_and_the_phone_sits_over_the_right_column():
 
 
 def test_captions_use_the_dimmer_caption_colour():
-    assert "const float caption_col[4] = CINEMA_COL_CAPTION;" in LEFT
-    assert "const float label_col[4] = CINEMA_COL_CAPTION;" in LEFT
-    assert "const float label_col[4] = CINEMA_COL_CAPTION;" in RIGHT
+    assert "MIXAR_THEME_LOAD(caption_col, CinemaRowCaption);" in LEFT
+    assert "MIXAR_THEME_LOAD(label_col, CinemaRowCaption);" in LEFT
+    assert "MIXAR_THEME_LOAD(label_col, CinemaRowCaption);" in RIGHT
 
 
 def test_popup_rows_paint_as_the_surface_row_class():

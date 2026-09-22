@@ -73,15 +73,15 @@ void agent_ui_draw_tab_strip(ARegion *region,
                              const AgentIslandState *state)
 {
   const float u = layout->scale;
-  const float surface[4] = AGENT_COL_SURFACE;
-  const float outline[4] = AGENT_COL_OUTLINE;
-  const float active_fill[4] = AGENT_COL_TAB_ACTIVE;
-  const float queue_fill[4] = AGENT_COL_QUEUE;
-  const float queue_count[4] = AGENT_COL_QUEUE_COUNT;
-  const float accent[4] = AGENT_COL_ACCENT;
-  const float text[4] = AGENT_COL_TEXT;
-  const float strong[4] = AGENT_COL_TEXT_STRONG;
-  const float text_dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(surface, Canvas);
+  MIXAR_THEME_LOAD(outline, Border);
+  MIXAR_THEME_LOAD(active_fill, AgentTabActive);
+  MIXAR_THEME_LOAD(queue_fill, Queue);
+  MIXAR_THEME_LOAD(queue_count, QueueCount);
+  MIXAR_THEME_LOAD(accent, AgentAccent);
+  MIXAR_THEME_LOAD(text, Text);
+  MIXAR_THEME_LOAD(strong, TextStrong);
+  MIXAR_THEME_LOAD(text_dim, TextSecondary);
 
   if (!agent_bubble_island_bed_is_transparent()) {
     fill_round(&layout->strip, AGENT_STRIP_RADIUS * u, surface);
@@ -185,8 +185,8 @@ void agent_ui_draw_handwriting_control(ARegion *region,
 {
   /* Paint the Rules action alongside the other header controls. Native
    * uiBlocks own its hit rectangle and tooltip, just like Checkpoints. */
-  const float rules_accent[4] = AGENT_COL_ACCENT;
-  const float glyph[4] = AGENT_COL_GLYPH;
+  MIXAR_THEME_LOAD(rules_accent, AgentAccent);
+  MIXAR_THEME_LOAD(glyph, Glyph);
   float rules_fill[4];
   agent_ui_motion_color(rules_accent, rules_accent,
                         agent_ui_motion_sample(region, AgentIslandControl::Rules,
@@ -197,8 +197,8 @@ void agent_ui_draw_handwriting_control(ARegion *region,
   if (!state->handwriting_available) {
     return;
   }
-  const float chip[4] = AGENT_COL_CHIP;
-  const float accent[4] = AGENT_COL_ACCENT;
+  MIXAR_THEME_LOAD(chip, Chip);
+  MIXAR_THEME_LOAD(accent, AgentAccent);
   float fill[4];
   agent_ui_motion_color(chip, accent,
                         agent_ui_motion_sample(region, AgentIslandControl::Handwriting,
@@ -215,9 +215,9 @@ void agent_ui_draw_chip_row(ARegion *region,
                             const AgentIslandState *state)
 {
   const float u = layout->scale;
-  const float chip[4] = AGENT_COL_CHIP;
-  const float generate[4] = AGENT_COL_GENERATE;
-  const float text[4] = AGENT_COL_TEXT;
+  MIXAR_THEME_LOAD(chip, Chip);
+  MIXAR_THEME_LOAD(generate, Primary);
+  MIXAR_THEME_LOAD(text, Text);
 
   /* Keep text fixed while the measured group stays centered in live geometry. */
   const float size = AGENT_CHIP_FONT * agent_ui_text_unit();
@@ -251,7 +251,7 @@ void agent_ui_draw_chip_row(ARegion *region,
    * neither see nor correct, so the reading is on the surface, and queued
    * marks need a way out that does not re-enter the freeze. */
   if (state->scribble_available) {
-    const float accent[4] = AGENT_COL_ACCENT;
+    MIXAR_THEME_LOAD(accent, AgentAccent);
     float scribble_fill[4];
     agent_ui_motion_color(
         chip,
@@ -310,7 +310,7 @@ void agent_ui_draw_chip_row(ARegion *region,
   /* Voice, right of Scribble: lit in the accent while a dictation session is
    * up. Only drawn when the toggle exists (see AgentIslandState). */
   if (state->voice_available) {
-    const float accent[4] = AGENT_COL_ACCENT;
+    MIXAR_THEME_LOAD(accent, AgentAccent);
     float voice_fill[4];
     agent_ui_motion_color(
         chip,
@@ -330,9 +330,9 @@ void agent_ui_draw_chip_row(ARegion *region,
    * so a click slides it across on the shared Zen timing instead of
    * jumping. The label brightens with it. */
   {
-    const float accent[4] = AGENT_COL_ACCENT;
-    const float track_off[4] = AGENT_COL_CHIP_ACTIVE;
-    const float text_dim[4] = AGENT_COL_TEXT_DIM;
+    MIXAR_THEME_LOAD(accent, AgentAccent);
+    MIXAR_THEME_LOAD(track_off, ChipActive);
+    MIXAR_THEME_LOAD(text_dim, TextSecondary);
     const AgentIslandFeedback feedback = agent_ui_motion_sample(
         region, AgentIslandControl::Auto, layout->chip_auto, state->auto_mode);
     float auto_fill[4];
@@ -376,7 +376,7 @@ void agent_ui_draw_chip_row(ARegion *region,
    * label-only or icon-only, or dropped entirely — see
    * agent_ui_layout_fit_controls. An empty rect means dropped. */
   if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
-    const float text_dim[4] = AGENT_COL_TEXT_DIM;
+    MIXAR_THEME_LOAD(text_dim, TextSecondary);
     const float *ink = state->model_byok_active ? text_dim : text;
     float model_fill[4];
     agent_ui_motion_color(

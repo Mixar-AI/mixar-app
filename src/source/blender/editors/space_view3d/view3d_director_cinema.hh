@@ -23,6 +23,7 @@
 #include <vector>
 #include "DNA_vec_types.h"
 
+#include "UI_mixar_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {

@@ -64,6 +64,7 @@ set(SRC
   interface_mixar_profile_card_draw.cc
   interface_mixar_section.cc
   interface_mixar_tab_rects.cc
+  interface_mixar_theme.cc
   interface_mixar_topbar.cc
   interface_mixar_zen_chrome.cc
   interface_qa_inspect.cc

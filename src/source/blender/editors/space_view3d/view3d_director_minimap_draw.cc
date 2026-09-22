@@ -154,7 +154,7 @@ void caption_chip(const char *text, const float x, const float top, const float 
   chip.ymax = top;
   chip.ymin = top - MINIMAP_CHIP_H * u;
   const float fill[4] = {0.0f, 0.0f, 0.0f, 0.55f};
-  const float label[4] = CINEMA_COL_LABEL;
+  MIXAR_THEME_LOAD(label, CinemaLabel);
   cinema_fill(chip, BLI_rctf_size_y(&chip) * 0.5f, fill);
   cinema_text_left(text, chip.xmin + pad, BLI_rctf_cent_y(&chip), size, label);
 }

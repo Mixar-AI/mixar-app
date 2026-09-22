@@ -266,7 +266,7 @@ static void agent_bubble_island_panel_color(float r_rgba[4])
     r_rgba[3] = wash[3];
     return;
   }
-  const float surface[4] = AGENT_COL_SURFACE;
+  MIXAR_THEME_LOAD(surface, Canvas);
   r_rgba[0] = surface[0];
   r_rgba[1] = surface[1];
   r_rgba[2] = surface[2];

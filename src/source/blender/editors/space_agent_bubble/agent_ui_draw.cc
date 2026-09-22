@@ -164,7 +164,9 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
       ripple.xmax = dot_cx + rip_r;
       ripple.ymin = dot_cy - rip_r;
       ripple.ymax = dot_cy + rip_r;
-      const float rip_col[4] = {0.0f, 1.0f, 0.549f, (1.0f - pulse) * 0.45f};
+      float rip_col[4];
+      ui::mixar_theme_color_f(ui::MixarThemeSlot::AgentBorder, rip_col);
+      rip_col[3] = (1.0f - pulse) * 0.45f;
       fill_round(&ripple, rip_r, rip_col);
 
       /* Solid active dot. */
@@ -173,7 +175,9 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
       dot.xmax = dot_cx + dot_r;
       dot.ymin = dot_cy - dot_r;
       dot.ymax = dot_cy + dot_r;
-      const float dot_col[4] = {0.0f, 1.0f, 0.549f, 0.95f};
+      float dot_col[4];
+      ui::mixar_theme_color_f(ui::MixarThemeSlot::AgentBorder, dot_col);
+      dot_col[3] = 0.95f;
       fill_round(&dot, dot_r, dot_col);
 
       /* Trailing dots animation: 0, 1, 2, 3 dots on a 1.6s cycle. */
@@ -245,9 +249,9 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
 
   agent_ui_pill_cat_clear();
 
-  const float accent[4] = AGENT_COL_ACCENT;
+  MIXAR_THEME_LOAD(accent, AgentAccent);
   const float dim_dot[4] = {0.076f, 0.219f, 0.132f, 1.0f};
-  const float text_dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(text_dim, TextSecondary);
 
   /* The pill owns its whole window, so it is drawn from the region's size
    * rather than the artboard's rect — the window is sized to the artboard's
@@ -307,14 +311,14 @@ void agent_ui_draw_island(ARegion *region,
 
   const float u = layout->scale;
 
-  const float surface[4] = AGENT_COL_SURFACE;
+  MIXAR_THEME_LOAD(surface, Canvas);
   const ui::MixarGlassTokens glass = ui::mixar_glass_tokens(ui::MIXAR_GLASS_PILL);
   const float *border = glass.rim;
-  const float accent[4] = AGENT_COL_ACCENT;
-  const float glyph[4] = AGENT_COL_GLYPH;
-  const float text[4] = AGENT_COL_TEXT;
-  const float strong[4] = AGENT_COL_TEXT_STRONG;
-  const float text_dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(accent, AgentAccent);
+  MIXAR_THEME_LOAD(glyph, Glyph);
+  MIXAR_THEME_LOAD(text, Text);
+  MIXAR_THEME_LOAD(strong, TextStrong);
+  MIXAR_THEME_LOAD(text_dim, TextSecondary);
 
   GPU_blend(GPU_BLEND_ALPHA);
 

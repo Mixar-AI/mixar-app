@@ -188,11 +188,15 @@ void draw_segment(Button *but, const rcti *rect)
   BLI_rcti_rctf_copy(&text, &cell);
   text.xmin += int(TEXT_PAD * UI_SCALE_FAC);
   text.xmax -= int(TEXT_PAD * UI_SCALE_FAC);
+  uchar text_off[4], text_on[4], text_disabled[4];
+  themed(MixarThemeSlot::CinemaRowTextOff, TEXT_OFF, text_off);
+  themed(MixarThemeSlot::CinemaRowTextOn, TEXT_ON, text_on);
+  themed(MixarThemeSlot::CinemaRowTextDisabled, TEXT_DISABLED, text_disabled);
   uchar col[4];
   for (int i = 0; i < 4; i++) {
     col[i] = disabled ?
-                 TEXT_DISABLED[i] :
-                 uchar(float(TEXT_OFF[i]) + (float(TEXT_ON[i]) - TEXT_OFF[i]) * motion.selected);
+                 text_disabled[i] :
+                 uchar(float(text_off[i]) + (float(text_on[i]) - text_off[i]) * motion.selected);
   }
   draw_label(fs, &text, row_label(but), col, UI_STYLE_TEXT_CENTER, pad_slack(), pad_slack());
 }

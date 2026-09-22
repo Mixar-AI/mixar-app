@@ -166,7 +166,7 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
           (MOODBOARD_GRID_DOT_FADE_END_PX - MOODBOARD_GRID_DOT_FADE_START_PX),
       0.0f,
       1.0f);
-  const float *border = ui::mixar_tokens::zen.border;
+  const float *border = ui::mixar_tokens::mixar_zen().border;
   const float grid_color[4] = {border[0], border[1], border[2], grid_alpha * 0.65f};
 
   /* Calculate the visible grid bounds. */
@@ -235,9 +235,9 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
 
 void moodboard_draw_surface(const rctf &rect, const float radius)
 {
-  ui::mixar_fill_round(rect, radius, ui::mixar_tokens::zen.panel);
+  ui::mixar_fill_round(rect, radius, ui::mixar_tokens::mixar_zen().panel);
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(&rect, false, radius, ui::mixar_tokens::zen.border);
+  ui::draw_roundbox_4fv(&rect, false, radius, ui::mixar_tokens::mixar_zen().border);
 }
 
 void mixie_draw_moodboard_media_frame(
@@ -249,7 +249,7 @@ void mixie_draw_moodboard_media_frame(
   /* Only the SELECTED frame brightens its rim; the RESTING one is the token
    * row's, so both the media frame and the node card share one resting look. */
   if (selected) {
-    const float *border = ui::mixar_tokens::zen.focus;
+    const float *border = ui::mixar_tokens::mixar_zen().focus;
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
     ui::draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
   }

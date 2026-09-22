@@ -77,7 +77,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
   }
 
   /* Overflow and unavailable copy use the shared secondary text tone. */
-  const float *col_dim = ui::mixar_tokens::zen.secondary;
+  const float *col_dim = ui::mixar_tokens::mixar_zen().secondary;
 
   const float font = PANE_FONT * agent_ui_text_unit();
   const float font_sub = PANE_FONT_SUB * agent_ui_text_unit();

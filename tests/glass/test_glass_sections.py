@@ -71,8 +71,8 @@ class TestTheSectionCardsArePanes:
         """#141414 at full strength is opaque, so it is laid back at a named
         fraction — still the card's own black, over the pane."""
         card = self._card()
-        assert "copy_v4_v4_uchar(bed, MX_BG);" in card
-        assert "bed[3] = uchar(float(MX_BG[3]) * CARD_WASH);" in card
+        assert "copy_v4_v4_uchar(bed, bg_u);" in card
+        assert "bed[3] = uchar(float(bg_u[3]) * CARD_WASH);" in card
         assert "copy_v4_v4_uchar(wcol->inner, bed);" in card
         wash = re.search(r"constexpr float CARD_WASH = ([0-9.]+)f;", card)
         assert wash is not None, "the wash strength is not a named constant"
@@ -82,7 +82,7 @@ class TestTheSectionCardsArePanes:
         """The 1px #262626 outline is the card's own edge, and `shaded = 0`
         keeps the widget shader from gradient-filling it into a charcoal."""
         card = self._card()
-        assert "copy_v4_v4_uchar(wcol->outline, MX_BORDER);" in card
+        assert "copy_v4_v4_uchar(wcol->outline, widget_border);" in card
         assert "wcol->shaded = 0;" in card
         assert "round_box_edges(&wtb, roundboxalign, rect, rad);" in card
 
@@ -126,7 +126,7 @@ class TestTheSectionCardsArePanes:
         assert "style.draw_tint = floats_over_content" in body
         assert "mixar_glass_draw(pane_i, style)" in body
         assert "MIXAR_GLASS_CHIP" not in body
-        assert "mixar_tokens::zen.selected" in body
+        assert "mixar_tokens::mixar_zen().selected" in body
         assert "0.88f" in body
         assert "draw_roundbox_corner_set(CNR_ALL)" in body
         icons = _code(_fn_body(WIDGETS, "static void widget_draw_icon("))

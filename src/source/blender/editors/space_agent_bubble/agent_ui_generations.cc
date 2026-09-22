@@ -72,9 +72,9 @@ void agent_ui_generations_draw(const bContext *C,
   GenPaneData data;
   agent_ui_generations_gather(C, &data);
 
-  const float text[4] = AGENT_COL_TEXT;
-  const float strong[4] = AGENT_COL_TEXT_STRONG;
-  const float dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(text, Text);
+  MIXAR_THEME_LOAD(strong, TextStrong);
+  MIXAR_THEME_LOAD(dim, TextSecondary);
   const float pill_on[4] = GEN_COL_PILL_ON;
   const float pill_off[4] = GEN_COL_PILL_OFF;
   const float chip_off[4] = GEN_COL_CHIP_OFF;
@@ -304,7 +304,7 @@ void agent_ui_generations_draw(const bContext *C,
   /* Clip the selection ring along with partial rows. */
   if (BLI_rctf_size_x(&selected_tile) > 0.0f) {
     const GenViewportClip clip(grid.view);
-    const float accent[4] = AGENT_COL_ACCENT;
+    MIXAR_THEME_LOAD(accent, AgentAccent);
     const float w = GEN_SEL_BORDER * u;
     rctf ring = selected_tile;
     BLI_rctf_pad(&ring, -w * 0.5f, -w * 0.5f);

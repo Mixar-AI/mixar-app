@@ -251,7 +251,7 @@ void draw_number_chip(ui::Block *slider_block,
     return;
   }
   const float chip[4] = PANE_COL_CHIP;
-  const float *text = ui::mixar_tokens::zen.text;
+  const float *text = ui::mixar_tokens::mixar_zen().text;
   pane_fill_round(&rect, PANE_RADIUS * u, chip);
   const float fitted_name_w = std::max(0.0f, BLI_rctf_size_x(&rect) - slider_w - pad * 1.5f - 12.0f * u);
   const std::string fitted = ui::mixar_fit_text(name, fitted_name_w + 2.0f, font);

@@ -47,6 +47,7 @@
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
 #include "UI_mixar.hh"
+#include "UI_mixar_theme.hh"
 #include "UI_mixar_tokens.hh"
 
 #include "GPU_batch.hh"
@@ -5511,10 +5512,16 @@ static void widget_mixar_toggle(Button *but,
   trackf.ymin = float(track.ymin);
   trackf.ymax = float(track.ymax);
 
+  uchar gray_700[4], toggle_on[4], bg_u[4], fg_2[4];
+  mixar_theme_copy_u(MixarThemeSlot::Gray700, MX_GRAY_700, gray_700);
+  mixar_theme_copy_u(MixarThemeSlot::Focus, MX_TOGGLE_ON, toggle_on);
+  mixar_theme_copy_u(MixarThemeSlot::Bg, MX_BG, bg_u);
+  mixar_theme_copy_u(MixarThemeSlot::Fg2, MX_FG_2, fg_2);
+
   float track_col[4];
   for (int channel = 0; channel < 4; channel++) {
-    track_col[channel] = (float(MX_GRAY_700[channel]) +
-                          (float(MX_TOGGLE_ON[channel]) - float(MX_GRAY_700[channel])) *
+    track_col[channel] = (float(gray_700[channel]) +
+                          (float(toggle_on[channel]) - float(gray_700[channel])) *
                               motion.selected) / 255.0f;
   }
   for (int channel = 0; channel < 3; channel++) {
@@ -5546,7 +5553,7 @@ static void widget_mixar_toggle(Button *but,
 
   /* Knob = --mx-bg (dark), with a hairline so it reads on either track. */
   float knob_col[4];
-  rgba_uchar_to_float(knob_col, MX_BG);
+  rgba_uchar_to_float(knob_col, bg_u);
   draw_roundbox_4fv(&knob_rect, true, knob_rad, knob_col);
   float knob_outline[4] = {1.0f, 1.0f, 1.0f, 0.20f};
   draw_roundbox_4fv(&knob_rect, false, knob_rad, knob_outline);
@@ -5554,8 +5561,8 @@ static void widget_mixar_toggle(Button *but,
   GPU_blend(GPU_BLEND_NONE);
 
   /* Neutral label in both states — the ON label must not turn green. */
-  copy_v4_v4_uchar(wcol->text, MX_FG_2);
-  copy_v4_v4_uchar(wcol->text_sel, MX_FG_2);
+  copy_v4_v4_uchar(wcol->text, fg_2);
+  copy_v4_v4_uchar(wcol->text_sel, fg_2);
 
   /* --- Adjust text rect so label doesn't overlap the toggle --------------- */
   const float offset = 4.0f * UI_SCALE_FAC;
@@ -5590,8 +5597,12 @@ static void widget_mixar_input(uiWidgetColors *wcol,
 
   /* Recipe: #1f1f1f fill, 1px #2e2e2e border — identical at rest/hover/focus.
    * Interaction state is carried by the focus ring below, not the border. */
-  copy_v4_v4_uchar(wcol->inner, MX_GRAY_800);
-  copy_v4_v4_uchar(wcol->outline, MX_BORDER_STRONG);
+  uchar gray_800[4], border_strong[4], accent_u[4];
+  mixar_theme_copy_u(MixarThemeSlot::Gray800, MX_GRAY_800, gray_800);
+  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong);
+  mixar_theme_copy_u(MixarThemeSlot::Focus, MX_ACCENT, accent_u);
+  copy_v4_v4_uchar(wcol->inner, gray_800);
+  copy_v4_v4_uchar(wcol->outline, border_strong);
 
   round_box_edges(&wtb, roundboxalign, rect, rad);
   wtb.draw_outline = true;
@@ -5604,7 +5615,7 @@ static void widget_mixar_input(uiWidgetColors *wcol,
    * solid 2px ring. */
   if (is_focused) {
     float ring[4];
-    rgba_uchar_to_float(ring, MX_ACCENT);
+    rgba_uchar_to_float(ring, accent_u);
     const float offset = 2.0f * UI_SCALE_FAC; /* outline-offset */
     GPU_blend(GPU_BLEND_ALPHA);
     draw_roundbox_corner_set(CNR_ALL);
@@ -5738,16 +5749,19 @@ static void widget_mixar_section(Button *but,
    * default top/bottom shade gradient would otherwise lighten the fill into
    * an uneven charcoal instead of a flat black. */
   constexpr float CARD_WASH = 0.6f;
+  uchar bg_u[4], widget_border[4];
+  mixar_theme_copy_u(MixarThemeSlot::Bg, MX_BG, bg_u);
+  mixar_theme_copy_u(MixarThemeSlot::WidgetBorder, MX_BORDER, widget_border);
   uchar bed[4];
-  copy_v4_v4_uchar(bed, MX_BG);
-  bed[3] = uchar(float(MX_BG[3]) * CARD_WASH);
+  copy_v4_v4_uchar(bed, bg_u);
+  bed[3] = uchar(float(bg_u[3]) * CARD_WASH);
 
   uchar old_inner[4], old_outline[4];
   const char old_shaded = wcol->shaded;
   copy_v4_v4_uchar(old_inner, wcol->inner);
   copy_v4_v4_uchar(old_outline, wcol->outline);
   copy_v4_v4_uchar(wcol->inner, bed);
-  copy_v4_v4_uchar(wcol->outline, MX_BORDER);
+  copy_v4_v4_uchar(wcol->outline, widget_border);
   wcol->shaded = 0;
 
   round_box_edges(&wtb, roundboxalign, rect, rad);
@@ -5791,15 +5805,19 @@ static void widget_mixar_dropdown(Button *but,
 
   /* #1f1f1f fill / #2e2e2e border — identical to the input recipe. Subtle
    * lift on hover / dim on press; state only, no accent chrome. */
-  copy_v4_v4_uchar(wcol->inner, MX_GRAY_800);
+  uchar gray_800[4], border_strong[4], fg4_u[4];
+  mixar_theme_copy_u(MixarThemeSlot::Gray800, MX_GRAY_800, gray_800);
+  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong);
+  mixar_theme_copy_u(MixarThemeSlot::Fg4, MX_FG_4, fg4_u);
+  copy_v4_v4_uchar(wcol->inner, gray_800);
   for (int channel = 0; channel < 3; channel++) {
     const float boost = (1.0f + 0.15f * motion.hover) * (1.0f - 0.15f * motion.press);
     wcol->inner[channel] = uchar(std::min(float(wcol->inner[channel]) * boost, 255.0f));
   }
-  copy_v4_v4_uchar(wcol->outline, MX_BORDER_STRONG);
+  copy_v4_v4_uchar(wcol->outline, border_strong);
 
   /* Chevron-down in --mx-fg-4 (wcol->item colors the tria mesh). */
-  copy_v4_v4_uchar(wcol->item, MX_FG_4);
+  copy_v4_v4_uchar(wcol->item, fg4_u);
 
   round_box_edges(&wtb, roundboxalign, rect, rad);
 
@@ -5920,12 +5938,16 @@ static void widget_mixar_action_button(Button *but,
   rctf rectf;
   BLI_rctf_rcti_copy(&rectf, rect);
 
+  uchar accent_u[4], ink_u[4];
+  mixar_theme_copy_u(MixarThemeSlot::Focus, MX_ACCENT, accent_u);
+  mixar_theme_copy_u(MixarThemeSlot::Ink, MX_INK, ink_u);
+
   /* --mx-shadow-glow: soft teal glow behind the button. */
   {
     const float g = 3.0f * UI_SCALE_FAC;
     rctf glow = {rectf.xmin - g, rectf.xmax + g, rectf.ymin - g, rectf.ymax + g};
     float glow_col[4];
-    rgba_uchar_to_float(glow_col, MX_ACCENT);
+    rgba_uchar_to_float(glow_col, accent_u);
     glow_col[3] = 0.22f;
     GPU_blend(GPU_BLEND_ALPHA);
     draw_roundbox_corner_set(CNR_ALL);
@@ -5961,10 +5983,10 @@ static void widget_mixar_action_button(Button *but,
   }
 
   /* Near-black label + play glyph for contrast on the bright gradient. */
-  copy_v4_v4_uchar(wcol->text, MX_INK);
-  copy_v4_v4_uchar(wcol->text_sel, MX_INK);
-  copy_v4_v4_uchar(wcol->inner, MX_INK);
-  copy_v4_v4_uchar(wcol->inner_sel, MX_INK);
+  copy_v4_v4_uchar(wcol->text, ink_u);
+  copy_v4_v4_uchar(wcol->text_sel, ink_u);
+  copy_v4_v4_uchar(wcol->inner, ink_u);
+  copy_v4_v4_uchar(wcol->inner_sel, ink_u);
 }
 
 /* -- Mixar Account Card --------------------------------------------------- */
@@ -6182,7 +6204,7 @@ static void widget_zen_tool_glass(Button *but,
     }
     float wash[4];
     if (selected) {
-      copy_v4_v4(wash, mixar_tokens::zen.selected);
+      copy_v4_v4(wash, mixar_tokens::mixar_zen().selected);
       wash[3] = 0.88f;
     }
     else {
@@ -7110,7 +7132,7 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
     widget_zen_tool_glass(but, rect, &state, roundboxalign);
     if (!use_alpha_blend) {
       for (int i = 0; i < 4; i++) {
-        wt->wcol.text[i] = wt->wcol.text_sel[i] = uchar(mixar_tokens::zen.text[i] * 255.0f);
+        wt->wcol.text[i] = wt->wcol.text_sel[i] = uchar(mixar_tokens::mixar_zen().text[i] * 255.0f);
       }
     }
   }
