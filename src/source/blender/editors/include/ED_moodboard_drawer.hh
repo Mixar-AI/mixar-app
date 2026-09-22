@@ -37,8 +37,12 @@ struct MoodboardDrawerRuntime {
   wmTimer *tick_timer = nullptr;
 };
 
-/** Initial dock width in unscaled pixels. */
+/** Factory width fallback (unscaled UI units) before the first View3D layout
+ * promotes to ``VIEW3D_MOODBOARD_DRAWER_WIDTH_FRACTION``. Keep in lockstep with
+ * the Python FloatProperty default on `mixar_moodboard_drawer_width`. */
 #define VIEW3D_MOODBOARD_DRAWER_WIDTH 340
+/** Fraction of the View3D area used on first open (~35% coverage). */
+#define VIEW3D_MOODBOARD_DRAWER_WIDTH_FRACTION 0.35f
 /** Pulls smaller than this settle closed; all larger widths stay put. */
 #define VIEW3D_MOODBOARD_DRAWER_MIN_WIDTH 120
 /** Clickable/drawn width of the labeled Moodboard tab. */

@@ -59,6 +59,12 @@ static void draw_panel(const bContext *C,
                                         ui::LayoutDirection::Vertical,
                                         ui::LayoutType::Panel,
                                         x, y, width, 0, 0, ui::style_get_dpi());
+  /* UILayout.width is not an RNA property. Pass the resolved host budget
+   * explicitly; region.width includes the rail and, in the editor, sidebars. */
+  layout.context_int_set("moodboard_chrome_width", width);
+  layout.context_int_set("moodboard_chrome_font", BLF_default());
+  layout.context_int_set("moodboard_chrome_gap", ui::style_get_dpi()->buttonspacex);
+  layout.context_int_set("moodboard_chrome_widget_unit", UI_UNIT_X);
   ui::UI_paneltype_draw(const_cast<bContext *>(C), pt, &layout);
   moodboard_template_drag_buttons(C, block);
   ui::block_layout_resolve(block);
@@ -101,13 +107,12 @@ void mixie_moodboard_chrome_draw(const bContext *C, ARegion *region)
     }
   }
   draw_panel(C, region, "MIXIE_PT_canvas_tools", x, y, rail);
-  const bool wide = available >= 740 * UI_SCALE_FAC;
-  const bool icon_only = available < 150 * UI_SCALE_FAC;
-  draw_panel(C, region,
-             wide ? "MIXIE_PT_canvas_templates" :
-             icon_only ? "MIXIE_PT_canvas_templates_icon" : "MIXIE_PT_canvas_templates_compact",
-             templates_x, y,
-             wide ? available : std::min(available, icon_only ? rail : int(220 * UI_SCALE_FAC)));
+  /* One progressive strip: Python draws as many template buttons as fit in
+   * `available` and always keeps the + menu. Coarse wide/compact/icon panel
+   * switches left blank gaps until the next jump. */
+  if (available > 0) {
+    draw_panel(C, region, "MIXIE_PT_canvas_templates", templates_x, y, available);
+  }
 }
 
 }  // namespace blender::ed::mixie

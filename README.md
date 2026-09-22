@@ -118,6 +118,11 @@ build/<env>/            CMake build directory
    - configures and builds via CMake
    - installs Python packages into the embedded Blender Python
 
+On Windows, both overlay passes replace files when their timestamps or sizes
+differ, even when upstream is older than a previous branch's override. Every
+build reruns CMake after the overlay so restored CMake files remove stale
+targets; existing object files are retained for incremental compilation.
+
 ---
 
 ## Repository layout

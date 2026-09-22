@@ -33,6 +33,25 @@ def test_refresh_removal_and_logout_are_not_cached(monkeypatch):
     assert visible() == {'MESH_REFERENCE'}
 
 
+def test_progressive_strip_fits_only_currently_available_templates(monkeypatch):
+    from mixar.modules.moodboard.core.canvas_template_fit import (
+        canvas_template_strip_items, templates_that_fit,
+    )
+
+    monkeypatch.setattr(catalog, '_catalog', {'capabilities': [
+        capability('video_gen', 'video_gen'),
+    ]})
+    items = canvas_template_strip_items(available_templates())
+    assert [item[0] for item in items] == ['MESH_REFERENCE', 'VIDEO_GEN']
+    assert templates_that_fit(
+        240, items, widths={item[0]: 100 for item in items}, more_width=32, gap=4,
+    ) == list(items)
+    catalog._catalog = None
+    assert [item[0] for item in canvas_template_strip_items(available_templates())] == [
+        'MESH_REFERENCE',
+    ]
+
+
 @pytest.mark.parametrize('overrides', [
     {'surface': 'agent'}, {'models': []}, {'enabled': False},
     {'models': [{'slug': 'disabled', 'enabled': False}]},

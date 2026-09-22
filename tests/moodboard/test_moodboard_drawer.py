@@ -68,6 +68,21 @@ def test_canvas_active_amount_is_one_number():
     assert _define_float(mixie, "MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT") == 0.98
 
 
+def test_first_open_width_is_about_thirty_five_percent_of_the_viewport():
+    geom = _read(DRAWER_GEOM)
+    assert _define_float(geom, "VIEW3D_MOODBOARD_DRAWER_WIDTH_FRACTION") == 0.35
+    assert _define_float(geom, "VIEW3D_MOODBOARD_DRAWER_WIDTH") == 340
+    resize = _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer_resize.cc"))
+    assert "mixar_moodboard_drawer_width_ready" in resize
+    body = _fn(resize, "void view3d_moodboard_drawer_size_sync(")
+    assert "VIEW3D_MOODBOARD_DRAWER_WIDTH_FRACTION" in body
+    assert "drawer_width_ready" in body
+    props = _read(
+        ROOT / "src/scripts/mixar/modules/moodboard/ui/moodboard_drawer_props.py"
+    )
+    assert "mixar_moodboard_drawer_width_ready" in props
+
+
 def test_visual_hit_is_only_the_grip_and_painted_slice():
     """RIGHT overlap clips Y only; the whole overlay must not eat the viewport."""
     geom = _strip_comments(_read(DRAWER_GEOM))

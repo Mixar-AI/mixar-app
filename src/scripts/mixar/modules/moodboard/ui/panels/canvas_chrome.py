@@ -3,18 +3,27 @@
 
 """One set of canvas controls, hosted by both native moodboard regions."""
 
+from math import ceil
+
+import blf
+from bpy.app.translations import pgettext_iface
 from bpy.types import Panel
 
-from ...constants import NODE_TEMPLATES
 from ...core.canvas_context import is_moodboard_context
+from ...core.canvas_template_fit import canvas_template_strip_items, templates_that_fit
 from ...core.node_templates import available_templates
 from ..canvas_template_helpers import draw_template
 
-_MESH_TEMPLATE = next(item for item in NODE_TEMPLATES if item[0] == 'MESH_REFERENCE')
+
+def _ui_scale(context) -> float:
+    try:
+        return float(context.preferences.system.ui_scale) or 1.0
+    except Exception:
+        return 1.0
 
 
 def _more_templates(row):
-    more = row.row()
+    more = row.column()
     more.ui_units_x = 1.6
     more.menu("MIXIE_MT_node_templates", text="", icon='ADD')
     more.mixar_style(component='ACTION', variant='SECONDARY')
@@ -47,39 +56,31 @@ class MIXIE_PT_canvas_templates(_CanvasPanel, Panel):
         surface = self.layout.mixar_surface(theme='ZEN', density='COMPACT')
         surface.operator_context = 'INVOKE_DEFAULT'
         row = surface.row()
+        row.alignment = 'LEFT'
         row.scale_y = 1.6
-        draw_template(row, _MESH_TEMPLATE)
-        for item in available_templates():
-            if item[0] not in {entry[0] for entry in NODE_TEMPLATES[:3]}:
-                continue
-            draw_template(row, item)
+        available = context.moodboard_chrome_width
+        scale = _ui_scale(context)
+        widget_unit = context.moodboard_chrome_widget_unit
+        font = context.moodboard_chrome_font
+        # Match the native Action painter (mixar/components.cc): Body type,
+        # default-density inset/icon metrics, and its native-layout unit.
+        unit = .65 * scale
+        blf.size(font, 18 * unit)
+        items = canvas_template_strip_items(available_templates())
+        widths = {
+            item[0]: ceil(blf.dimensions(font, pgettext_iface(item[1]))[0]
+                          + (2 * 20 + 18 + 8) * unit) + 2
+            for item in items
+        }
+        for item in templates_that_fit(
+            available, items, widths=widths, more_width=int(1.6 * widget_unit),
+            gap=context.moodboard_chrome_gap,
+        ):
+            draw_template(row, item, width_units=widths[item[0]] / widget_unit)
         _more_templates(row)
-
-
-class _CompactTemplates(_CanvasPanel):
-    show_mesh = True
-
-    def draw(self, context):
-        surface = self.layout.mixar_surface(theme='ZEN', density='COMPACT')
-        surface.operator_context = 'INVOKE_DEFAULT'
-        row = surface.row()
-        row.scale_y = 1.6
-        if self.show_mesh:
-            draw_template(row, _MESH_TEMPLATE)
-        _more_templates(row)
-
-
-class MIXIE_PT_canvas_templates_compact(_CompactTemplates, Panel):
-    bl_idname = "MIXIE_PT_canvas_templates_compact"
-
-
-class MIXIE_PT_canvas_templates_icon(_CompactTemplates, Panel):
-    bl_idname = "MIXIE_PT_canvas_templates_icon"
-    show_mesh = False
 
 
 classes = (
     MIXIE_PT_canvas_tools,
-    MIXIE_PT_canvas_templates, MIXIE_PT_canvas_templates_compact,
-    MIXIE_PT_canvas_templates_icon,
+    MIXIE_PT_canvas_templates,
 )

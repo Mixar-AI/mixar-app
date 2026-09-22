@@ -58,7 +58,7 @@ def shortcuts(qa, expected):
 
 def run(qa):
     OUT.mkdir(parents=True, exist_ok=True)
-    qa.dismiss_splash()
+    qa.press('ESC')
     qa.wait("__import__('mixar.bootstrap.generation_catalog_cache',fromlist=['is_loaded']).is_loaded()",
             timeout=30)
     qa.eval('''

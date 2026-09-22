@@ -6,9 +6,11 @@
 from ..core.node_templates import template_available
 
 
-def draw_template(layout, item, *, drop=None):
+def draw_template(layout, item, *, width_units=None, drop=None):
     key, label, icon, _capability = item
-    row = layout.row()
+    row = layout.column() if width_units is not None else layout.row()
+    if width_units is not None:
+        row.ui_units_x = width_units
     row.enabled = template_available(key)
     op = row.operator("mixie.moodboard_add_template", text=label, icon=icon)
     op.template = key

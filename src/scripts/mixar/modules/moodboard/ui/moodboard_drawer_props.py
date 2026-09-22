@@ -16,7 +16,12 @@ Three WindowManager properties shared with the C++ drawer
     (``view3d.moodboard_drawer_toggle``), and by ``view3d.moodboard_drawer_set``.
 
   - mixar_moodboard_drawer_width: chosen width in UI units, remembered when
-    closing and reopening. Grip travel can fill the available viewport.
+    closing and reopening. The factory default (340) is a fallback; the first
+    View3D layout promotes it to ~35% of the area once
+    ``mixar_moodboard_drawer_width_ready`` flips. Grip travel can fill the
+    available viewport.
+  - mixar_moodboard_drawer_width_ready: set after the first auto-size or any
+    explicit width set, so a harness resize back to 340 is not re-promoted.
 
 C owns the wall-clock ease (``display_amount``, ease-out cubic over
 ``VIEW3D_MOODBOARD_DRAWER_SLIDE_SECONDS``) and a ``TIMERNOTIFIER`` that
@@ -30,7 +35,7 @@ never saved scene data.
 """
 
 import bpy
-from bpy.props import FloatProperty, IntProperty
+from bpy.props import BoolProperty, FloatProperty, IntProperty
 
 from mixar.config.logging_config import get_logger
 
@@ -40,6 +45,7 @@ _PROP_NAMES = (
     'mixar_moodboard_drawer_amount',
     'mixar_moodboard_drawer_target',
     'mixar_moodboard_drawer_width',
+    'mixar_moodboard_drawer_width_ready',
 )
 
 # 60 Hz while the drawer is moving, and a slow poll the rest of the time. The
@@ -140,11 +146,20 @@ def register():
 
     bpy.types.WindowManager.mixar_moodboard_drawer_width = FloatProperty(
         name="Moodboard Drawer Width",
-        description="Width chosen by dragging the moodboard grip",
+        description="Width chosen by dragging the moodboard grip. "
+                    "The factory value is replaced by ~35% of the View3D "
+                    "on first open",
         default=340.0,
         min=120.0,
         max=100000.0,
         options={'SKIP_SAVE'},
+    )
+    bpy.types.WindowManager.mixar_moodboard_drawer_width_ready = BoolProperty(
+        name="Moodboard Drawer Width Ready",
+        description="True after the first auto-sized open or an explicit "
+                    "width set; clears with SKIP_SAVE on file load",
+        default=False,
+        options={'SKIP_SAVE', 'HIDDEN'},
     )
 
     if not bpy.app.timers.is_registered(_drawer_tick):

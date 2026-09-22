@@ -92,10 +92,15 @@ def add(qa, label, kind, popup=True):
 
 def shortcuts(qa, region='TOOL_PROPS'):
     items = qa.find(op=ADD, region_type=region, limit=100)['widgets']
-    require([w['text'] for w in items] == ['Add Mesh', *LABELS],
+    required = ['Add Mesh', *LABELS]
+    # Wide hosts can reveal further catalog templates; the drag fixtures
+    # require these leading actions, not a fixed total number of shortcuts.
+    require([w['text'] for w in items[:len(required)]] == required,
             f'Wrong shortcut strip: {items}')
+    require(all(item['enabled'] for item in items[:len(required)]),
+            'A required template is unavailable in the QA catalog')
     for item in items:
-        require(item['enabled'] and item['mixar_theme'] == 'ZEN' and
+        require(item['mixar_theme'] == 'ZEN' and
                 item['mixar_component'] == 'action', f'Unstyled shortcut: {item}')
     for first, second in zip(items, items[1:]):
         require(first['rect'][2] <= second['rect'][0], 'Template buttons overlap')
