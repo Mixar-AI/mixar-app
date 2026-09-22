@@ -37,7 +37,9 @@ enum class MixarComponent : uint8_t {
   Label,
   LegacyCard,
   /** Icon-only native actions/menus sharing one aligned viewport glass capsule. */
-  GlassTool
+  GlassTool,
+  /** Flat, hairline-outlined native toolbar groups; aligned rows share one bed. */
+  Toolbar
 };
 enum class MixarVariant : uint8_t { Primary, Secondary, Ghost, Danger };
 

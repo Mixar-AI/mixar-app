@@ -15,6 +15,9 @@
 namespace blender::ui {
 bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bounds)
 {
+  if (button.mixar_style.component == MixarComponent::Toolbar) {
+    return mixar_toolbar_draw(button, colors, bounds);
+  }
   using namespace mixar_tokens;
   const auto &style = button.mixar_style;
   const float u = style.unit > 0.0f ? style.unit : UI_SCALE_FAC * 0.65f;

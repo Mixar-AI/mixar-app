@@ -75,6 +75,7 @@
 #include "CLG_log.h"
 
 #include "interface_intern.hh"
+#include "mixar/toolbar.hh"
 #include "UI_mixar.hh"
 #include "interface_mixar_profile_card.hh"
 
@@ -3621,6 +3622,11 @@ void button_range_set_hard(Button *but)
 
 void button_range_set_soft(Button *but)
 {
+  /* Zen samples keep a practical drag range across redraws and typed edits.
+   * Other controls retain their native RNA range and auto-expansion. */
+  if (mixar_toolbar_sample_range(*but)) {
+    return;
+  }
   /* This could be split up into functions which handle arrays and not. */
 
   /* Ideally we would not limit this, but practically it's more than

@@ -48,6 +48,8 @@ set(SRC
   mixar/clip.cc
   mixar/text.cc
   mixar/components.cc
+  mixar/toolbar.cc
+  mixar/toolbar.hh
   mixar/custom_motion.cc
   mixar/motion.cc
   interface_mixar_card_button.cc

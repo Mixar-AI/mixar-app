@@ -27,7 +27,8 @@ void mixar_block_clip_set(Block *block, const rctf &rect);
 bool mixar_block_clip_pixelrect(const ARegion *region, const Block *block, rcti *rect);
 /** Intersect the current GPU scissor with the block viewport for drawing. */
 void mixar_block_clip_apply(const ARegion *region, const Block *block);
-void mixar_style_last(Layout *layout, MixarComponent component, MixarVariant variant);
+void mixar_style_last(Layout *layout, MixarComponent component, MixarVariant variant,
+                      bool all_items = false);
 int64_t mixar_button_count(const Layout *layout);
 void mixar_style_new_buttons(Layout *layout,
                              int64_t first,
@@ -45,6 +46,7 @@ const char *mixar_variant_name(MixarVariant variant);
 /** Draws the component backdrop; true means the native text pass is still
  * required. */
 bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &rect);
+bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &rect);
 /** Symmetric content inset for tall Zen inputs; native caret/wrap use this rect. */
 bool mixar_multiline_input_rect(const Button &button, const rcti &bounds, rcti &text_rect);
 /** Premultiplied rounded fill that replaces dest alpha for opaque colours.
@@ -82,19 +84,19 @@ void mixar_button_lit_set(Button *button, bool lit);
 /** True when the context workspace is Mixar's dedicated Zen Mode tab. */
 bool mixar_workspace_is_zen(const bContext *C);
 /**
- * Zen Mode's View3D headers overlap the viewport so its glass strips float
- * instead of sitting on a full-width bar. No other workspace qualifies —
+ * Zen Mode's View3D headers use the established overlapping region layout.
+ * Its scene toolbar reserves the top edge. No other workspace qualifies —
  * Texturing keeps Blender's full opaque viewport header.
  */
 bool mixar_workspace_floats_viewport_chrome(const bContext *C);
 bool mixar_area_floats_viewport_chrome(const ScrArea *area);
 /**
  * Paint the Zen topbar as the family's ISLAND pane instead of the theme
- * header slab. View3D headers are not claimed — they clear transparent
- * and float their button groups. Returns true when the caller must skip
+ * header slab. View3D headers use their own toolbar bed. Returns true when
+ * the caller must skip
  * `ED_region_clear` — dest-over cannot lower an opaque theme clear.
  */
 bool mixar_zen_header_clear(const bContext *C, const ARegion *region);
-/** Transparent View3D header/tool-header clear for floating glass groups. */
+/** Zen scene-toolbar bed / transparent empty tool-header clear. */
 bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region);
 }  // namespace blender::ui
