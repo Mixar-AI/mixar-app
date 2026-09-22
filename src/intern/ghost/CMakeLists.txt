@@ -163,6 +163,7 @@ elseif(APPLE AND NOT WITH_GHOST_X11)
     intern/GHOST_MixarMicrophoneCocoa.mm
     intern/GHOST_MixarVisionCocoa.mm
     intern/GHOST_MixarGlassCocoa.mm
+    intern/GHOST_MixarWindowCocoa.mm
     intern/GHOST_WindowCocoa.mm
 
     intern/GHOST_MixarGlassCocoa.hh

@@ -36,9 +36,13 @@ def test_dispatchers_use_the_guarded_helper():
     helper = helper[:helper.index('\n}\n')]
     assert helper.index('ED_region_tag_redraw(region)') < helper.index('WM_operator_name_call_ptr(')
     assert re.search(r'if \(mixie_chat_region_is_alive\(C, region\)\) \{\s*ED_region_tag_redraw\(region\);', helper)
-    uses = sum(path.read_text().count('mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);')
-               for path in CHAT.glob('*.cc'))
-    assert uses >= 7, uses
+    # Guard each dispatch surface, independent of local pointer names and
+    # consolidation of several buttons into one shared dispatcher.
+    for filename in ('mixie_chat_hit_testing.cc', 'mixie_chat_feedback.cc',
+                     'mixie_chat_main_region.cc', 'mixie_chat_history_util.cc',
+                     'mixie_chat_rules_util.cc'):
+        assert re.search(r'mixie_chat_call_operator_and_redraw\(C, region, ot, &\w+\);',
+                         (CHAT / filename).read_text()), filename
     assert 'mixie_chat_call_operator_and_redraw(' in (CHAT / 'mixie_chat_intern.hh').read_text()
 
 

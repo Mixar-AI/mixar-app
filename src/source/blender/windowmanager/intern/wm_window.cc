@@ -245,6 +245,10 @@ static void wm_window_check_size(rcti *rect)
   }
 }
 
+#ifdef __APPLE__
+extern "C" void Mixar_WindowPrepareForClose(void *window_handle);
+#endif
+
 static void wm_ghostwindow_destroy(wmWindowManager *wm, wmWindow *win)
 {
   if (UNLIKELY(!win->runtime->ghostwin)) {
@@ -262,6 +266,10 @@ static void wm_ghostwindow_destroy(wmWindowManager *wm, wmWindow *win)
   }
 
   GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
+
+#ifdef __APPLE__
+  Mixar_WindowPrepareForClose(ghost_window);
+#endif
 
   /* We need this window's GPU context active to discard it. */
   ghost_window->activateDrawingContext();

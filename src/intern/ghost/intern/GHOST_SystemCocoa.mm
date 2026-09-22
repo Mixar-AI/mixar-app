@@ -510,6 +510,14 @@ static NSString *const kMixarFloatingDockIdentifier = @"mixar_floating_dock";
 static NSInteger s_mixar_floating_dock_suppression_depth = 0;
 static NSMutableArray<NSWindow *> *s_mixar_suppressed_floating_docks = nil;
 
+/* Every native disposal reaches this, including file replacement and quit.
+ * Removing only on reparent leaves observer blocks retaining closed children. */
+extern "C" void Mixar_WindowClearCloseObservers(NSWindow *window)
+{
+  mixar_clear_parent_observers_for_child(window);
+  [s_mixar_suppressed_floating_docks removeObject:window];
+}
+
 /* Force a full Blender redraw for the given NSWindow.
  *
  * Problem: when a window becomes visible after being hidden (orderOut

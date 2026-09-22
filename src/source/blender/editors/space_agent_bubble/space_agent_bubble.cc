@@ -4216,6 +4216,7 @@ void ED_spacetype_agent_bubble()
   st->dropboxes = mixie_chat_dropboxes;
   st->blend_write = agent_bubble_space_blend_write;
   st->blend_read_data = agent_bubble_space_blend_read_data;
+  st->blend_read_after_liblink = agent_ui_motion_blend_read_after_liblink;
 
   /* Main region — REUSES MIXIE CHAT'S CUSTOM-DRAWN MESSAGE LIST.
    *
