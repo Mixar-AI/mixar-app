@@ -14,9 +14,8 @@ In Mixar:
      with the colour of the axis it points ALONG and reading "+X" / "-X", so
      the axis and its direction are both visible before the click snaps the
      view.
-  5. The globe's rings are tinted per VERTEX by the direction each point
-     faces, from the same palette, so the artwork agrees with the axis
-     everywhere instead of contradicting it.
+  5. Each globe ring is one flat colour: the colour of the axis the circle
+     is perpendicular to, from the same palette the hover capsule uses.
 """
 
 from pathlib import Path
@@ -92,40 +91,26 @@ def test_one_axis_palette_is_shared_by_the_rings_and_the_marker():
     assert "{0.094f, 0.612f, 0.310f, 1.0f}" in NAVIGATE_TYPE_CC  # Y
     assert "{0.000f, 0.369f, 1.000f, 1.0f}" in NAVIGATE_TYPE_CC  # Z
     assert "copy_v4_v4(fill, axis_colors[axis]);" in NAVIGATE_TYPE_CC
-    assert "axis_colors[i][c]" in NAVIGATE_TYPE_CC
+    assert "copy_v4_v4(ring_color, axis_colors[axis]);" in NAVIGATE_TYPE_CC
     assert "TH_AXIS_X" not in NAVIGATE_TYPE_CC
 
 
-def test_rings_are_tinted_per_vertex_by_direction_not_per_ring():
-    """A flat per-ring colour is what made the globe contradict the axis: a
-    great circle passes through four of the six handles and misses only its
-    own poles, so tinting by the normal painted the ground circle blue while
-    it ran through the red +X and green +Y handles."""
-    assert "static void gizmo_globe_axis_tint(const float p[3], float r_color[3])" in (
+def test_each_ring_is_one_colour_of_its_perpendicular_axis():
+    """A great circle is flat-coloured with the axis it stands perpendicular
+    to. The YZ ring (normal X) is red, the XZ ring (normal Y) is green, and
+    the XY ring (normal Z) is blue. The hue does not change around the ring."""
+    assert "copy_v4_v4(ring_color, axis_colors[axis]);" in NAVIGATE_TYPE_CC
+    assert "ring_color[3] = GLOBE_RING_ALPHA;" in NAVIGATE_TYPE_CC
+    assert "gizmo_globe_ring_draw(axis, ring_color, depth_axis, viewport_size);" in (
         NAVIGATE_TYPE_CC
     )
-    assert "gizmo_globe_axis_tint(p, vert_color);" in NAVIGATE_TYPE_CC
-    # The three globe rings pass no flat colour at all.
-    assert "gizmo_globe_ring_draw(axis, nullptr, depth_axis, viewport_size);" in NAVIGATE_TYPE_CC
-    # The old per-ring palette, and the muted red that only ever appeared as
-    # the normal-X ring, are gone.
+    assert "copy_v4_v4(vert_color, color);" in NAVIGATE_TYPE_CC
+    # The per-vertex blend, and the old separate muted ring palette, are gone.
+    assert "gizmo_globe_axis_tint" not in NAVIGATE_TYPE_CC
+    assert "GLOBE_AXIS_TINT_POWER" not in NAVIGATE_TYPE_CC
+    assert "GLOBE_AXIS_TINT_SCALE" not in NAVIGATE_TYPE_CC
     assert "ring_colors" not in NAVIGATE_TYPE_CC
     assert "0.329f, 0.173f, 0.173f" not in NAVIGATE_TYPE_CC
-
-
-def test_ring_tint_keeps_each_hue_pure_between_crossings():
-    """A squared weighting is free for a unit vector but spends a long arc as
-    olive between red and green; the exponent is what keeps the hue."""
-    assert "#define GLOBE_AXIS_TINT_POWER 6.0f" in NAVIGATE_TYPE_CC
-    assert "weight[i] = powf(fabsf(p[i]), GLOBE_AXIS_TINT_POWER);" in NAVIGATE_TYPE_CC
-    assert "channel += (weight[i] / total) * axis_colors[i][c];" in NAVIGATE_TYPE_CC
-
-
-def test_rings_stay_muted_against_the_marker():
-    """The globe recedes into the viewport; the hover capsule does not. Same
-    hues, one scale between them."""
-    assert "#define GLOBE_AXIS_TINT_SCALE 0.70f" in NAVIGATE_TYPE_CC
-    assert "r_color[c] = std::min(1.0f, channel * GLOBE_AXIS_TINT_SCALE);" in NAVIGATE_TYPE_CC
 
 
 def test_silhouette_keeps_a_flat_colour():
@@ -134,7 +119,7 @@ def test_silhouette_keeps_a_flat_colour():
     assert "gizmo_globe_ring_draw(2, silhouette_color, nullptr, viewport_size);" in (
         NAVIGATE_TYPE_CC
     )
-    assert "if (color != nullptr) {" in NAVIGATE_TYPE_CC
+    assert "if (depth_axis != nullptr) {" in NAVIGATE_TYPE_CC
 
 
 def test_hover_marker_part_mapping_matches_test_select():

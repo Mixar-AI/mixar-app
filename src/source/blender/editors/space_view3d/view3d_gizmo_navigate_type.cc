@@ -71,10 +71,12 @@ namespace blender {
  * ONE colour per axis, shared by the globe's rings and the hover marker so
  * the two can never drift apart.
  *
+ * A ring takes the colour of the axis it is perpendicular to: the circle in
+ * the YZ plane is red, the circle in the XZ plane is green, and the circle
+ * in the XY plane is blue. The hue is constant all the way around the ring.
+ *
  * Blender's THEME axis colours are not used: `axis_y` is a yellow-green and
- * `axis_x` a pink-red, neither of which belongs to this globe. These are the
- * design's own hues at marker strength; the rings scale them down (see
- * `GLOBE_AXIS_TINT_SCALE`) to stay recessive.
+ * `axis_x` a pink-red, neither of which belongs to this globe.
  */
 static const float axis_colors[3][4] = {
     {0.878f, 0.263f, 0.286f, 1.0f}, /* #E04349 — X. */
@@ -93,16 +95,10 @@ static const float axis_colors[3][4] = {
  * The globe is the three great circles of the XY / XZ / YZ planes drawn
  * through the gizmo's existing `matrix_offset` rotation, so the ellipses
  * reshape as the view orbits (a static ellipse pair would not track the
- * view). They fade toward the far side of the sphere so the near half reads
- * as being in front.
- *
- * Tinting is per VERTEX, by the direction that vertex points (see
- * `gizmo_globe_axis_tint`), never one flat colour per ring. No ring can
- * carry an axis's colour as a whole: each passes through four of the six
- * axis handles and misses only its own two poles. Tinting by the normal —
- * Blender's rotate-gizmo convention — therefore paints the ground circle
- * blue while it runs through the red +X and green +Y handles and past the
- * viewport's own red X / green Y grid lines.
+ * view). Each circle is one colour — the colour of the axis perpendicular
+ * to it, from `axis_colors` — and that hue does not change around the ring.
+ * Alpha fades toward the far side of the sphere so the near half reads as
+ * being in front.
  *
  * Design proportions: stroke 1.60714 at globe radius 21.6964, i.e. the
  * gizmo's full diameter / 27.
@@ -111,18 +107,9 @@ static const float axis_colors[3][4] = {
 #define GLOBE_LINE_WIDTH ((GIZMO_SIZE / 27.0f) * U.pixelsize)
 #define GLOBE_RING_SEGMENTS 64
 
-/* One alpha for all three rings: with a per-vertex tint they no longer have
- * separate identities to weight against each other. */
+/* Shared alpha for the three axis rings. The depth fade multiplies this, so
+ * the far half of each circle recedes without changing its hue. */
 #define GLOBE_RING_ALPHA 0.82f
-
-/* The rings run the axis hues muted, so the globe still recedes into the
- * viewport instead of reading as a bright RGB toy at ring scale. */
-#define GLOBE_AXIS_TINT_SCALE 0.70f
-
-/* Blend exponent (weights are |p_i| to this power, normalised): high keeps
- * each hue pure almost all the way round and turns over only near a
- * 45-degree crossing, where a squared weighting spends a long arc as olive. */
-#define GLOBE_AXIS_TINT_POWER 6.0f
 
 /* Silhouette ring, #494949 at 24% (design). Deliberately faint in both light
  * and dark themes — it only has to hint at the sphere's edge. */
@@ -132,41 +119,11 @@ static const float axis_colors[3][4] = {
   }
 
 /**
- * The colour of a point on the sphere: the axis it is pointing at.
- *
- * \param p: a unit vector in the gizmo's local space.
- *
- * A point sitting on an axis gets that axis's colour exactly. `p` is a unit
- * vector, so one component is always >= 1/sqrt(3) and the total cannot be
- * zero; the guard is for a caller that hands over something else.
- */
-static void gizmo_globe_axis_tint(const float p[3], float r_color[3])
-{
-  float weight[3];
-  float total = 0.0f;
-  for (int i = 0; i < 3; i++) {
-    weight[i] = powf(fabsf(p[i]), GLOBE_AXIS_TINT_POWER);
-    total += weight[i];
-  }
-  if (!(total > 0.0f)) {
-    copy_v3_v3(r_color, axis_colors[0]);
-    return;
-  }
-  for (int c = 0; c < 3; c++) {
-    float channel = 0.0f;
-    for (int i = 0; i < 3; i++) {
-      channel += (weight[i] / total) * axis_colors[i][c];
-    }
-    r_color[c] = std::min(1.0f, channel * GLOBE_AXIS_TINT_SCALE);
-  }
-}
-
-/**
  * Draw one great circle of the unit sphere as a line strip.
  *
  * \param normal_axis: the axis perpendicular to the circle's plane (0=X, 1=Y, 2=Z).
- * \param color: a flat colour for the whole ring, or nullptr to tint every
- * vertex by the axis it points at (what the three globe rings do).
+ * \param color: one flat colour for the whole ring. The three globe rings pass
+ * the colour of `normal_axis`.
  * \param depth_axis: view-space Z of the gizmo's rotation (the third row of
  * `matrix_offset`), used to fade the far half. Pass nullptr for a ring that
  * is already screen-aligned (the silhouette), which keeps a constant alpha.
@@ -193,13 +150,8 @@ static void gizmo_globe_ring_draw(const int normal_axis,
     p[(normal_axis + 1) % 3] = cosf(angle);
     p[(normal_axis + 2) % 3] = sinf(angle);
 
-    float vert_color[4] = {1.0f, 1.0f, 1.0f, GLOBE_RING_ALPHA};
-    if (color != nullptr) {
-      copy_v4_v4(vert_color, color);
-    }
-    else {
-      gizmo_globe_axis_tint(p, vert_color);
-    }
+    float vert_color[4];
+    copy_v4_v4(vert_color, color);
     const float base_alpha = vert_color[3];
     if (depth_axis != nullptr) {
       /* -1 at the back of the sphere, +1 at the front. Squaring the
@@ -373,14 +325,16 @@ static void gizmo_axis_draw(const bContext * /*C*/, wmGizmo *gz)
     gizmo_globe_ring_draw(2, silhouette_color, nullptr, viewport_size);
   }
 
-  /* The three great circles, rotated with the view. No per-ring colour: each
-   * vertex is tinted by the axis it points at, so the globe agrees with the
-   * axis handles and with the viewport's own grid lines (see the section
-   * comment above). */
+  /* The three great circles, rotated with the view. Each circle is the
+   * colour of the axis it is perpendicular to, the same `axis_colors` entry
+   * the hover capsule uses for that axis. */
   GPU_matrix_push();
   GPU_matrix_mul(gz->matrix_offset);
   for (int axis = 0; axis < 3; axis++) {
-    gizmo_globe_ring_draw(axis, nullptr, depth_axis, viewport_size);
+    float ring_color[4];
+    copy_v4_v4(ring_color, axis_colors[axis]);
+    ring_color[3] = GLOBE_RING_ALPHA;
+    gizmo_globe_ring_draw(axis, ring_color, depth_axis, viewport_size);
   }
   GPU_matrix_pop();
 
