@@ -13,9 +13,12 @@ latest = None
 
 
 class LocalTransport:
-    def __init__(self, *_):
+    def __init__(self, *args):
         global latest
-        latest = self
+        # Background connection preparation also constructs a Transport; it
+        # must not replace the recording whose final the scenario supplies.
+        if not args or args[-1] != 'prepare':
+            latest = self
         self.events = queue.Queue()
         self.timings = {}
         self.stopped = False

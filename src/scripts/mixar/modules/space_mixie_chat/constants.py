@@ -393,6 +393,7 @@ VOICE_SESSION_GRACE_S = 40.0
 VOICE_BUFFER_SECONDS = 20
 # Stable toast id for permission / failure notices (re-pushing replaces).
 VOICE_TOAST_ID = "voice_input"
+VOICE_TOAST_TTL_MS = 5000
 
 # IMAGE ATTACHMENT CONSTANTS
 

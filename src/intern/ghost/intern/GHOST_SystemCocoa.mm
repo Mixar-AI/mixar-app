@@ -42,8 +42,15 @@
 
 /* For the currently not ported to Cocoa keyboard layout functions (64bit & 10.6 compatible) */
 #include <Carbon/Carbon.h>
+#include <IOKit/hidsystem/IOLLEvent.h>
 #include <sys/time.h>
 #include <dispatch/dispatch.h>
+
+static bool mixar_cocoa_sync_modifiers(GHOST_SystemCocoa &system,
+                                      GHOST_IWindow *target,
+                                      GHOST_IWindow *active,
+                                      uint32_t &cached,
+                                      NSEvent *event);
 
 /* --------------------------------------------------------------------
  * Keymaps, mouse converters.
@@ -2714,7 +2721,12 @@ GHOST_TSuccess GHOST_SystemCocoa::setMouseCursorPosition(int32_t x, int32_t y)
 GHOST_TSuccess GHOST_SystemCocoa::getModifierKeys(GHOST_ModifierKeys &keys) const
 {
   keys.set(GHOST_kModifierKeyLeftOS, (modifier_mask_ & NSEventModifierFlagCommand) ? true : false);
-  keys.set(GHOST_kModifierKeyLeftAlt, (modifier_mask_ & NSEventModifierFlagOption) ? true : false);
+  const bool option = (modifier_mask_ & NSEventModifierFlagOption) != 0;
+  const bool left_option = option && (modifier_mask_ & NX_DEVICELALTKEYMASK);
+  const bool right_option = option &&
+                            ((modifier_mask_ & NX_DEVICERALTKEYMASK) || !left_option);
+  keys.set(GHOST_kModifierKeyLeftAlt, left_option);
+  keys.set(GHOST_kModifierKeyRightAlt, right_option);
   keys.set(GHOST_kModifierKeyLeftShift,
            (modifier_mask_ & NSEventModifierFlagShift) ? true : false);
   keys.set(GHOST_kModifierKeyLeftControl,
@@ -2897,45 +2909,13 @@ GHOST_TSuccess GHOST_SystemCocoa::handleApplicationBecomeActiveEvent()
 
     need_delayed_application_become_active_event_processing_ = false;
 
-    const unsigned int modifiers = [[[NSApplication sharedApplication] currentEvent]
-        modifierFlags];
-
-    if ((modifiers & NSEventModifierFlagShift) != (modifier_mask_ & NSEventModifierFlagShift)) {
-      pushEvent(std::make_unique<GHOST_EventKey>(
-          getMilliSeconds(),
-          (modifiers & NSEventModifierFlagShift) ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-          window,
-          GHOST_kKeyLeftShift,
-          false));
-    }
-    if ((modifiers & NSEventModifierFlagControl) != (modifier_mask_ & NSEventModifierFlagControl))
-    {
-      pushEvent(std::make_unique<GHOST_EventKey>(
-          getMilliSeconds(),
-          (modifiers & NSEventModifierFlagControl) ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-          window,
-          GHOST_kKeyLeftControl,
-          false));
-    }
-    if ((modifiers & NSEventModifierFlagOption) != (modifier_mask_ & NSEventModifierFlagOption)) {
-      pushEvent(std::make_unique<GHOST_EventKey>(
-          getMilliSeconds(),
-          (modifiers & NSEventModifierFlagOption) ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-          window,
-          GHOST_kKeyLeftAlt,
-          false));
-    }
-    if ((modifiers & NSEventModifierFlagCommand) != (modifier_mask_ & NSEventModifierFlagCommand))
-    {
-      pushEvent(std::make_unique<GHOST_EventKey>(
-          getMilliSeconds(),
-          (modifiers & NSEventModifierFlagCommand) ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-          window,
-          GHOST_kKeyLeftOS,
-          false));
-    }
-
-    modifier_mask_ = modifiers;
+    /* Use the same side-aware repair as ordinary events. A held Right Option
+     * on activation must not become a LeftAlt dictation press. */
+    mixar_cocoa_sync_modifiers(*this,
+                               window,
+                               window,
+                               modifier_mask_,
+                               [[NSApplication sharedApplication] currentEvent]);
 
     outside_loop_event_processed_ = true;
   }
@@ -3450,12 +3430,27 @@ static bool mixar_cocoa_sync_modifiers(GHOST_SystemCocoa &system,
                                       NSEvent *event)
 {
   const uint32_t current = uint32_t(event.modifierFlags);
+  /* Cocoa's public Option flag combines both sides. The device flags retain
+   * the actual key, including on mouse snapshots that repair lost releases.
+   * Unsided synthetic events remain Alt, but must never invent a dictation
+   * trigger: conservatively route those through RightAlt. */
+  const auto sided = [](uint32_t flags) {
+    constexpr uint32_t sides = NX_DEVICELALTKEYMASK | NX_DEVICERALTKEYMASK;
+    if (!(flags & NSEventModifierFlagOption)) {
+      flags &= ~sides;
+    }
+    else if (!(flags & sides)) {
+      flags |= NX_DEVICERALTKEYMASK;
+    }
+    return flags;
+  };
   const uint32_t masks[] = {NSEventModifierFlagShift, NSEventModifierFlagControl,
-                            NSEventModifierFlagOption, NSEventModifierFlagCommand};
+                            NX_DEVICELALTKEYMASK, NX_DEVICERALTKEYMASK,
+                            NSEventModifierFlagCommand};
   const GHOST_TKey keys[] = {GHOST_kKeyLeftShift, GHOST_kKeyLeftControl,
-                            GHOST_kKeyLeftAlt, GHOST_kKeyLeftOS};
+                            GHOST_kKeyLeftAlt, GHOST_kKeyRightAlt, GHOST_kKeyLeftOS};
   const bool changed = mixar_cocoa_modifier_changes(
-      cached, current, masks, [&](const int index, const bool pressed) {
+      sided(cached), sided(current), masks, [&](const int index, const bool pressed) {
         const GHOST_TEventType type = pressed ? GHOST_kEventKeyDown : GHOST_kEventKeyUp;
         system.pushEvent(std::make_unique<GHOST_EventKey>(
             event.timestamp * 1000, type, target, keys[index], false));

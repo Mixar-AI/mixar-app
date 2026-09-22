@@ -18,6 +18,36 @@ logger = get_logger(__name__)
 # Global list to track registered keymaps for cleanup
 addon_keymaps = []
 
+# Active text fields own hold detection. Only the release fallback is global:
+# Option/Alt outside a field keeps native editor bindings.
+_VOICE_PTT_KEYMAPS = (
+    ('User Interface', 'EMPTY', 'WINDOW'),
+    ('Agent Chat', 'AGENT_BUBBLE', 'WINDOW'),
+    ('Window', 'EMPTY', 'WINDOW'),
+)
+
+
+def _register_voice_push_to_talk(kc):
+    """Release owned holds regardless of modifiers; never claim global Alt presses."""
+    from ..constants import VOICE_INPUT_SUPPORTED
+    if not VOICE_INPUT_SUPPORTED:
+        return
+    for name, space_type, region_type in _VOICE_PTT_KEYMAPS:
+        km = kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
+        for idname, value in (
+            ('mixie_chat.voice_push_to_talk_release', 'RELEASE'),
+        ):
+            kmi = km.keymap_items.new(
+                idname,
+                type='LEFT_ALT',
+                value=value,
+                head=True,
+                repeat=False,
+                any=True,
+            )
+            addon_keymaps.append((km, kmi))
+    logger.debug("Registered hold-Option/Alt push-to-talk")
+
 
 def register():
     """Register keymap for Mixie Chat space."""
@@ -175,6 +205,8 @@ def register():
             )
         addon_keymaps.append((km_mixie, kmi_copy))
         logger.debug("Registered select-text and copy shortcuts for chat")
+
+        _register_voice_push_to_talk(kc)
 
 
 def unregister():

@@ -74,6 +74,7 @@
 #include "BPY_extern_run.hh"
 
 #include "buttons/interface_textbox.hh"
+#include "interface_text_dictation.hh"
 #include "interface_intern.hh"
 #include "interface_mixar_section.hh" /* Mixar: UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_TEST. */
 
@@ -420,6 +421,7 @@ struct HandleButtonMulti {
  * Data for editing the value of the button as text.
  */
 struct TextEdit {
+  TextDictation dictation;
   /** The currently displayed/edited string, use 'textedit_string_set' to assign new strings. */
   char *edit_string = nullptr;
   /* Maximum string size the button accepts, and as such the maximum size for #edit_string
@@ -4257,6 +4259,7 @@ static void textedit_end(bContext *C, Button *but, HandleButtonData *data)
 {
   TextEdit &text_edit = data->text_edit;
   wmWindow *win = data->window;
+  text_dictation_end(C, data->wm, win, text_edit.dictation);
 
   ED_workspace_status_text(C, nullptr);
 
@@ -4452,7 +4455,24 @@ static int do_but_textedit(
   {
     return WM_UI_HANDLER_BREAK;
   }
-  switch (event->type) {
+  const TextDictationEvent dictation = text_dictation_event(
+      C,
+      but,
+      text_edit.dictation,
+      event,
+      is_ime_composing,
+      but->type == ButtonType::TextBox || ui_but_is_multiline_text(but));
+  if (!dictation.insert.empty()) {
+    changed = textedit_insert_buf(but, text_edit, dictation.insert.c_str(), dictation.insert.size());
+    if (changed) {
+      but->selsta = but->selend = but->pos;
+    }
+    update = bool(but->flag & BUT_TEXTEDIT_UPDATE);
+  }
+  if (dictation.handled) {
+    retval = WM_UI_HANDLER_BREAK;
+  }
+  if (!dictation.handled) switch (event->type) {
     case MOUSEMOVE:
     case MOUSEPAN:
       /* Touchpad scroll for multiline text buttons.
@@ -4528,6 +4548,7 @@ static int do_but_textedit(
               retval = WM_UI_HANDLER_BREAK;
               break;
             }
+
           }
         }
 
@@ -4664,8 +4685,7 @@ static int do_but_textedit(
       break;
     }
     case WINDEACTIVATE: {
-      /* Exit text editing when the window loses focus so the cursor
-       * doesn't linger after clicking on another window. */
+      /* Focus loss invalidates the originating dictation target. */
       button_activate_state(C, but, BUTTON_STATE_EXIT);
       retval = WM_UI_HANDLER_BREAK;
       break;
@@ -4675,7 +4695,7 @@ static int do_but_textedit(
     }
   }
 
-  if (event->val == KM_PRESS && !is_ime_composing) {
+  if (event->val == KM_PRESS && !is_ime_composing && !dictation.handled) {
     switch (event->type) {
       case EVT_VKEY:
       case EVT_XKEY:

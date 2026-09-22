@@ -29,7 +29,7 @@ for folder in ('scripts/startup', 'datafiles/mixar', 'config/mixar'):
 shutil.copyfile(harness/'qa_boot_startup.py', profile/'scripts/startup/qa_boot.py')
 cfg = json.loads(next((bundle/'Contents/Resources').glob('*/config/mixar.json')).read_text())
 (profile/'datafiles/mixar/onboarding_seen.json').write_text(json.dumps({'users_seen': [cfg['dev_bypass']['username'].lower()]}))
-(profile/'config/mixar/mixar.json').write_text(json.dumps({'backend_url': 'https://uat1.mixar.app'}))
+(profile/'config/mixar/mixar.json').write_text(json.dumps({'backend_url': os.environ.get('QA_BACKEND_URL', 'https://uat1.mixar.app')}))
 env = {'MIXAR_QA': '1', 'MIXAR_USER_RESOURCES': str(profile), 'MIXAR_QA_OUT': str(out),
        'MIXAR_QA_PORT': str(port), 'MIXAR_QA_RECORD': '1' if record else '0',
        'MIXAR_OPERATION_HISTORY_DIR': str(out/'ophistory')}

@@ -29,10 +29,22 @@ _ATTRS = (
     'mixie_chat_voice_status',
     'mixie_chat_voice_event_kind',
     'mixie_chat_voice_event_text',
+    'mixie_chat_voice_field_token',
+    'mixie_chat_voice_field_text',
+    'mixie_chat_voice_field_ready',
 )
 
 
 def register():
+    bpy.types.WindowManager.mixie_chat_voice_field_token = StringProperty(
+        name="Dictation Field Lifetime", options={'SKIP_SAVE', 'HIDDEN'},
+    )
+    bpy.types.WindowManager.mixie_chat_voice_field_text = StringProperty(
+        name="Dictation Field Result", options={'SKIP_SAVE', 'HIDDEN'},
+    )
+    bpy.types.WindowManager.mixie_chat_voice_field_ready = BoolProperty(
+        name="Dictation Field Result Ready", options={'SKIP_SAVE', 'HIDDEN'},
+    )
     bpy.types.WindowManager.mixie_chat_voice_listening = BoolProperty(
         name="Voice Listening",
         description="A voice dictation session is running",

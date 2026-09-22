@@ -8,11 +8,15 @@ from uuid import uuid4
 
 from mixar.config.logging_config import get_logger
 from .voice_input.composer import Draft
-from ..constants import (VOICE_EVENT_POLL_S, VOICE_TOAST_ID,
+from ..constants import (VOICE_EVENT_POLL_S, VOICE_TOAST_ID, VOICE_TOAST_TTL_MS,
                          VOICE_STARTUP_TIMEOUT_S, VOICE_SESSION_GRACE_S, VOICE_BUFFER_SECONDS)
 
 _session = None
 _last_timings = {}
+# True only while a hold of Option/Alt owns the session. A click on the Voice
+# control starts a session this flag does not own, so releasing the key must
+# not stop it.
+_ptt_owned = False
 logger = get_logger(__name__)
 
 
@@ -56,7 +60,44 @@ def toggle(context):
     return start(context)
 
 
-def start(context):
+def push_to_talk_owned():
+    return _ptt_owned
+
+
+def push_to_talk_begin(context, field_token="", chat_target=False):
+    """Start dictation for a held Option/Alt. A click-started session stays as it is."""
+    global _ptt_owned
+    if _ptt_owned:
+        return 'holding'
+    if _session is not None:
+        return 'busy'
+    outcome = (start(context, field_token=field_token, chat_target=chat_target)
+               if field_token else start(context))
+    if outcome == 'started':
+        _ptt_owned = True
+    return outcome
+
+
+def push_to_talk_end(discard=False):
+    """Finish a hold. Release keeps the words; Esc drops them."""
+    global _ptt_owned
+    if not _ptt_owned:
+        return 'ignored'
+    _ptt_owned = False
+    if discard or _session is None:
+        if _session is not None:
+            cancel()
+        return 'cancelled' if discard else 'stopped'
+    try:
+        stop()
+    except Exception as exc:
+        logger.warning('Dictation capture finalization failed: %s', exc)
+        _finish()
+        _toast('warning', 'Voice could not finish. Your draft was preserved.')
+    return 'stopped'
+
+
+def start(context, field_token="", chat_target=False):
     global _session
     clicked_at = time.monotonic()
     import bpy
@@ -76,17 +117,22 @@ def start(context):
     if not token:
         _toast('warning', 'Sign in to use voice input.')
         return 'unavailable'
-    scribble.release_composer()
+    if not field_token:
+        scribble.release_composer()
     sid = str(uuid4())
     _session = SimpleNamespace(
-        scene=scene, window=context.window.as_pointer(),
+        scene=scene, window=context.window.as_pointer(), field_token=field_token,
+        field_chat_identity=_identity(scene) if chat_target else None,
         area=context.area.as_pointer() if context.area else None,
-        draft=Draft(scene.mixie_chat_input, _identity(scene)),
-        attachments=_attachments(scene), transport=Transport(get_server_url(), token, sid),
+        draft=None if field_token else Draft(scene.mixie_chat_input, _identity(scene)),
+        attachments=() if field_token else _attachments(scene), transport=Transport(get_server_url(), token, sid),
         capture=None, state='Permission', began=clicked_at, recording_at=None,
         started=False, ready=False, max_seconds=180, auth_checked=time.monotonic(),
         deadline=time.monotonic() + VOICE_STARTUP_TIMEOUT_S,
     )
+    if field_token:
+        from .voice_input import fields
+        fields.begin(context.window_manager, field_token)
     _session.transport.began = clicked_at
     if _on_load not in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.append(_on_load)
@@ -147,6 +193,10 @@ def defer_send(context):
     s = _session
     if not s:
         return False
+    if getattr(s, 'field_token', ''):
+        # A field hold never inherits a click on the chat Send button.
+        cancel()
+        return True
     if s.scene != context.scene or _identity(s.scene) != s.draft.identity:
         cancel()
         return True
@@ -166,6 +216,14 @@ def cancel():
     _finish()
 
 
+def cancel_field(context, token):
+    """A stale field cannot cancel another field or a click-started session."""
+    from .voice_input import fields
+    if _session is not None and getattr(_session, 'field_token', '') == token:
+        cancel()
+    fields.clear(context.window_manager, token)
+
+
 def _on_load(_):
     cancel()
 
@@ -175,7 +233,8 @@ def reset_state():
 
 
 def _finish(app_exit=False):
-    global _session, _last_timings
+    global _session, _last_timings, _ptt_owned
+    _ptt_owned = False
     s, _session = _session, None
     if s:
         _last_timings = dict(getattr(s.transport, 'timings', {}))
@@ -188,6 +247,10 @@ def _finish(app_exit=False):
                 pass
             s.capture = None
     if not app_exit:
+        if s and getattr(s, 'field_token', ''):
+            import bpy
+            from .voice_input import fields
+            fields.clear(bpy.context.window_manager, s.field_token)
         _status('')
 
 
@@ -210,8 +273,11 @@ def _tick():
             if not get_access_token():
                 cancel()
                 return None
+        field_token = getattr(s, 'field_token', '')
         if (bpy.context.scene != s.scene
-                or _identity(s.scene) != s.draft.identity
+                or (not field_token and _identity(s.scene) != s.draft.identity)
+                or (getattr(s, "field_chat_identity", None) is not None
+                    and _identity(s.scene) != s.field_chat_identity)
                 or not any(w.as_pointer() == s.window for w in bpy.context.window_manager.windows)):
             cancel()
             return None
@@ -219,7 +285,8 @@ def _tick():
             raise TimeoutError('Voice input timed out. Please try again.')
         if s.recording_at is not None and not s.ready and time.monotonic() - s.recording_at > VOICE_BUFFER_SECONDS:
             raise TimeoutError('Voice could not connect. Your draft was preserved. Please try again.')
-        if s.scene.mixie_chat_input != s.draft.base or _attachments(s.scene) != s.attachments:
+        if not field_token and (s.scene.mixie_chat_input != s.draft.base
+                                or _attachments(s.scene) != s.attachments):
             s.draft.pending_send = False
         if s.state == 'Permission':
             _begin_capture(s)
@@ -248,6 +315,13 @@ def _tick():
             elif kind == 'error':
                 raise RuntimeError(event.get('message', 'Voice input failed.'))
             elif kind == 'final':
+                if field_token:
+                    from .voice_input import fields
+                    _finish()
+                    fields.publish(bpy.context.window_manager, field_token, event.get('text', ''))
+                    if not bpy.context.window_manager.mixie_chat_voice_field_text:
+                        _toast('info', "Didn't catch that. Please try speaking again.")
+                    return None
                 text, send = s.draft.final(event.get('text', ''), s.scene.mixie_chat_input, _identity(s.scene))
                 if _attachments(s.scene) != s.attachments:
                     send = False
@@ -291,10 +365,14 @@ def _status(text):
     if wm and hasattr(wm, 'mixie_chat_voice_listening'):
         wm.mixie_chat_voice_listening = bool(text)
         wm.mixie_chat_voice_status = text
+    from .voice_input import fields
+    if not text or (_session and getattr(_session, 'field_token', '')):
+        fields.show_status(text)
     from . import scribble
     scribble.redraw_chat()
 
 
 def _toast(level, message):
     from mixar.modules.common.notifications import get_notification_store
-    get_notification_store().push(level, message, '', id=VOICE_TOAST_ID)
+    get_notification_store().push(level, message, '', id=VOICE_TOAST_ID,
+                                  ttl_ms=VOICE_TOAST_TTL_MS)
