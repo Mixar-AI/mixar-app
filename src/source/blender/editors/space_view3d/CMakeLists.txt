@@ -25,6 +25,7 @@ set(SRC
   view3d_workspace_viewer_ops.cc
   view3d_workspace_viewer_draw.cc
   view3d_workspace_viewer_render.cc
+  view3d_agent_panel_layout.cc
   view3d_agent_panel_cards.cc
   view3d_agent_panel_sync.cc
   view3d_agent_panel_draw.cc

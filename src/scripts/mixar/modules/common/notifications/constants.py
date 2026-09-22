@@ -41,18 +41,20 @@ DEFAULT_TTL_MS = 0
 MAX_VISIBLE_TOASTS = 5
 TOAST_WIDTH = 600
 TOAST_PADDING_X = 34
-TOAST_PADDING_Y = 30
+TOAST_PADDING_Y = 24
 TOAST_MARGIN = 16
 TOAST_CORNER_OFFSET_X = 28
 TOAST_CORNER_OFFSET_Y = 28
-TOAST_CORNER_RADIUS = 18
+# Authored at 2x: match AGENT_PANEL_CARD_RADIUS (12 UI units).
+TOAST_CORNER_RADIUS = 24
 
 # Weight changes preserve the native widget font size.
 EMPHASIS_FONT_FILE = 'Manrope-ExtraBold.ttf'
 
 # -- Close button -----------------------------------------------------------
-CLOSE_BUTTON_SIZE = 36
-CLOSE_BUTTON_RADIUS = 18
+# Match the task card's 28-unit target and 6-unit edge inset.
+CLOSE_BUTTON_SIZE = 56
+CLOSE_BUTTON_INSET = 12
 
 # -- Badge dot --------------------------------------------------------------
 BADGE_RADIUS = 7

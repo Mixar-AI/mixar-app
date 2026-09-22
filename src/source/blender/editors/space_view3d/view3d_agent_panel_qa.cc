@@ -74,7 +74,9 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
      * keeps the harness off hand-computed offsets — they are the SAME rects
      * the layout pass wrote and the click handler hit-tests, so a metric
      * change moves the targets with the pixels. */
-    push(card.rect, "agent_panel_card", card.name, i);
+    rcti visible;
+    if (!BLI_rcti_isect(&card.rect, &runtime->column_rect, &visible)) { continue; }
+    push(visible, "agent_panel_card", card.name, i);
     /* Same pane bounds and sampled fraction the painter consumes. No second
      * clock in introspection, so the value describes the last drawn frame. */
     rcti progress_visible;
@@ -87,17 +89,21 @@ void agent_panel_qa_targets(const wmWindow * /*win*/,
       push(cat_visible, "agent_panel_cat", card.task_id, i);
       r_targets.back().value = mixie_cat_style(card.cat_ordinal).name;
     }
-    if (card.has_workspace) {
-      push(card.eye_rect, "agent_panel_eye", "eye", i);
+    if (card.has_workspace && BLI_rcti_isect(&card.eye_rect, &runtime->column_rect, &visible)) {
+      push(visible, "agent_panel_eye", "eye", i);
       r_targets.back().value = card.task_id;
     }
-    push(card.action_rect, "agent_panel_dismiss", "dismiss", i);
+    if (BLI_rcti_isect(&card.action_rect, &runtime->column_rect, &visible)) {
+      push(visible, "agent_panel_dismiss", "dismiss", i);
+    }
   }
 
   /* The chevron sits below the clipped column and is present only while
    * there are agents the stack cannot show. */
   if (BLI_rcti_size_x(&runtime->chevron_rect) > 0) {
     push(runtime->chevron_rect, "agent_panel_chevron", "more", -1);
+    r_targets.back().value = view3d_agent_panel_at_end(runtime) ? "first" : "next";
+    r_targets.back().detail = runtime->chevron_label;
   }
 }
 

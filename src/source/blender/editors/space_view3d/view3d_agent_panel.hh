@@ -5,7 +5,7 @@
 /** \file
  * \ingroup spview3d
  *
- * Parallel Agents panel: a right-docked 3D viewport region that slides in
+ * Parallel Agents panel: a bottom-left 3D viewport region that slides in
  * with one card per agent of the running turn — the agent's name (derived
  * from the task it was assigned), its status and its elapsed clock. Three
  * cards are visible at a time; a longer fan-out scrolls.
@@ -72,7 +72,7 @@ struct wmWindowManager;
  * share an edge instead of letting them overlap each other, so a left-docked
  * panel pushes the tool shelf bodily out into the viewport. Tall enough for
  * the visible cards, the chevron and the margins. */
-#define AGENT_PANEL_PREFSIZEY 200
+#define AGENT_PANEL_PREFSIZEY 210
 /** Card pill: width and height. */
 #define AGENT_PANEL_CARD_WIDTH 320
 #define AGENT_PANEL_CARD_HEIGHT 40
@@ -90,13 +90,13 @@ struct wmWindowManager;
 
 /** Right-hand glyph buttons: box size, gap between them, inset from the
  * card's right edge. */
-#define AGENT_PANEL_ICON_SIZE 16
-#define AGENT_PANEL_ICON_GAP 8
-#define AGENT_PANEL_ICON_INSET 10
+#define AGENT_PANEL_ICON_SIZE 28
+#define AGENT_PANEL_ICON_GAP 2
+#define AGENT_PANEL_ICON_INSET 6
 
 /** The "more agents" chevron below the stack. */
-#define AGENT_PANEL_CHEVRON_WIDTH 38
-#define AGENT_PANEL_CHEVRON_HEIGHT 22
+#define AGENT_PANEL_CHEVRON_WIDTH 152
+#define AGENT_PANEL_CHEVRON_HEIGHT 28
 #define AGENT_PANEL_CHEVRON_GAP 8
 
 /** Cards visible before the column scrolls. Mirrors `VISIBLE_CARDS` in
@@ -210,6 +210,8 @@ struct AgentPanelRuntime {
 
   /** The "more agents" chevron's rect, empty while the stack fits. */
   rcti chevron_rect = {};
+  /** Paging copy derived from the layout's pixel-rounded rows, shared with QA. */
+  char chevron_label[48] = {};
 
   /** `wm.mixar_agent_cards_generation` as of the last sync. Python bumps it
    * for every new fan-out; a change resets the scroll and replays the
@@ -234,7 +236,7 @@ struct AgentPanelRuntime {
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name view3d_agent_panel_cards.cc / view3d_agent_panel_sync.cc
+/** \name view3d_agent_panel_cards.cc / view3d_agent_panel_sync.cc / view3d_agent_panel_layout.cc
  * \{ */
 
 /** Register the panel's `RGN_TYPE_EXECUTE` region type on the View3D space. */
@@ -269,6 +271,7 @@ void view3d_agent_panel_layout_cards(const ARegion *region, AgentPanelRuntime *r
 
 /** True while `rect` has any part inside the clipped card column. */
 bool view3d_agent_panel_card_visible(const AgentPanelRuntime *runtime, const rcti &rect);
+bool view3d_agent_panel_at_end(const AgentPanelRuntime *runtime);
 
 enum class AgentPanelHit {
   None = 0,

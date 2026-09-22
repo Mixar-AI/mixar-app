@@ -8,11 +8,10 @@ import blf
 
 from .constants import (
     BADGE_RADIUS, BUTTON_BORDER_WIDTH, BUTTON_CORNER_RADIUS,
-    TOAST_CORNER_OFFSET_X, TOAST_CORNER_OFFSET_Y, TOAST_CORNER_RADIUS,
-    TOAST_MARGIN, TOAST_WIDTH, get_toast_colors,
+    TOAST_CORNER_RADIUS, TOAST_MARGIN, get_toast_colors,
 )
 from .store import get_notification_store
-from .toast_layout import _scale, layout_toast, toast_right_edge
+from .toast_layout import _scale, layout_toast, toast_lane
 from .toast_renderer_shapes import draw_circle, draw_rounded_rect, draw_rounded_rect_outline
 
 _draw_handle = {"handler": None}
@@ -166,11 +165,12 @@ def _draw_lines(lines, x, top, font_size, line_height, color, clip, samples, kin
         blf.disable(font_id, blf.CLIPPING)
 
 
-def _draw_single_toast(item, x_right, y_top, bounds, scale, width, available_height, region):
+def _draw_single_toast(item, x_right, y_top, bounds, scale, width, available_height, region,
+                       layout=None):
     opacity = item.opacity
     if opacity <= 0:
         return None
-    layout = layout_toast(item, width, scale)
+    layout = layout if layout is not None else layout_toast(item, width, scale)
     height = min(layout['height'], available_height)
     x, y = x_right-width, y_top-height
     pad_y, pad_x = layout['pad_y'], layout['pad_x']
@@ -192,21 +192,17 @@ def _draw_single_toast(item, x_right, y_top, bounds, scale, width, available_hei
 
     badge_radius = BADGE_RADIUS * scale
     close_size = layout['close_size']
-    center_y = y_top - pad_y - close_size * .5
+    close_inset = layout['close_inset']
+    center_y = y_top - close_inset - close_size * .5
     draw_circle(x + pad_x + badge_radius, center_y, badge_radius,
                 _apply_opacity(colors['badge'], opacity))
     if item.dismissible:
-        close_rect = (x_right - pad_x - close_size, y_top-pad_y-close_size,
+        close_rect = (x_right - close_inset - close_size, y_top-close_inset-close_size,
                       close_size, close_size)
-        cx, cy = close_rect[0]+close_size*.5, close_rect[1]+close_size*.5
         hovered = toast_hover_state['key'] == ('close', item.id)
-        fill = _hovered(colors['close_bg']) if hovered else colors['close_bg']
-        draw_circle(cx, cy, close_size*.5, _apply_opacity(fill, opacity))
-        blf.size(_FONT_ID, layout['font_size'])
-        tw, th = blf.dimensions(_FONT_ID, '×')
-        blf.color(_FONT_ID, *text_color)
-        blf.position(_FONT_ID, cx-tw*.5, cy-th*.5, 0)
-        blf.draw(_FONT_ID, '×')
+        bx, by, bw, bh = close_rect
+        region.mixar_draw_card_close(tuple(round(v) for v in (bx, by, bx+bw, by+bh)),
+                                      alpha=opacity, hovered=hovered)
         bounds['close'].append((item.id, *close_rect))
 
     for block in layout['blocks']:
@@ -270,21 +266,23 @@ def _draw_toast_callback():
     toast_layouts_by_region[ptr] = cards
     toasts = get_notification_store().get_visible()
     scale = _scale()
-    x_right = toast_right_edge(region, bpy.context.area, bpy.context.window_manager, scale)
-    width = min(TOAST_WIDTH * scale, x_right - TOAST_CORNER_OFFSET_X * scale)
+    left, y_cursor, x_right, top = toast_lane(
+        region, bpy.context.area, bpy.context.window_manager, scale)
+    width = x_right - left
     # Leave enough room for a glyph plus the badge, close control and padding.
     if width < 180 * scale:
         return
-    y_cursor = region.height - TOAST_CORNER_OFFSET_Y * scale
-    bottom = TOAST_CORNER_OFFSET_Y * scale
     for item in toasts:
-        available = y_cursor - bottom
+        available = top - y_cursor
         if available < 120 * scale:
             break
-        card = _draw_single_toast(item, x_right, y_cursor, bounds, scale, width, available, region)
+        layout = layout_toast(item, width, scale)
+        height = min(layout['height'], available)
+        card = _draw_single_toast(item, x_right, y_cursor + height, bounds, scale,
+                                  width, available, region, layout)
         if card:
             cards.append(card)
-            y_cursor -= card['rect'][3] + TOAST_MARGIN * scale
+            y_cursor += card['rect'][3] + TOAST_MARGIN * scale
     live_ids = {item.id for item in toasts}
     for key in list(toast_scroll_offsets):
         if key[0] == ptr and key[1] not in live_ids:

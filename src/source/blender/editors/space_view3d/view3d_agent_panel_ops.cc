@@ -216,7 +216,7 @@ static wmOperatorStatus agent_panel_click_invoke(bContext *C,
       return OPERATOR_PASS_THROUGH;
 
     case AgentPanelHit::Chevron:
-      runtime->scroll = std::clamp(runtime->scroll +
+      runtime->scroll = view3d_agent_panel_at_end(runtime) ? 0.0f : std::clamp(runtime->scroll +
                                        AGENT_PANEL_VISIBLE_CARDS *
                                            (AGENT_PANEL_CARD_HEIGHT + AGENT_PANEL_CARD_GAP) *
                                            UI_SCALE_FAC,

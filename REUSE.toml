@@ -83,6 +83,7 @@ path = [
   "src/release/windows/icons/winmixarfile.ico",
   "src/scripts/mixar/modules/onboarding/assets/mixar_logo.png",
   "docs/development/moodboard-add-mesh-node/*.png",
+  "docs/development/agent-stack-notifications/*.png",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
@@ -93,6 +94,8 @@ path = [
   "docs/open-source/asset-provenance-review.csv",
   "docs/open-source/audit/**",
   "docs/development/moodboard-add-mesh-node/verdict.json",
+  "docs/development/agent-stack-notifications/verdict.json",
+  "docs/development/agent-stack-notifications/review-verdict.json",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"

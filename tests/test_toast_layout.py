@@ -34,6 +34,35 @@ def test_partial_drawer_reserves_its_region_and_left_panels_are_ignored():
     assert toast_right_edge(viewport, area, wm, 1.0) == 1692
 
 
+@pytest.mark.parametrize('scale', [.5, 1.0, 1.5])
+@pytest.mark.parametrize('stack_top', [14, 102, 186])
+def test_notifications_follow_native_stack_and_grow_into_free_space(scale, stack_top):
+    viewport = SimpleNamespace(x=120, width=1000, height=700,
+                                mixar_agent_panel_bounds=lambda: (24, 14, 344, stack_top, 700))
+    area = SimpleNamespace(regions=[])
+    wm = SimpleNamespace(mixar_moodboard_drawer_amount=0.0)
+    left, bottom, right, top = toast_layout.toast_lane(viewport, area, wm, scale)
+    assert (left, right) == (24, 344)
+    assert bottom == (14 if stack_top == 14 else stack_top + 16 * scale)
+    assert top == 700 - 28 * scale
+
+
+def test_notification_lane_clamps_to_drawer_without_moving_left_edge():
+    viewport = SimpleNamespace(x=100, width=500, height=450,
+                                mixar_agent_panel_bounds=lambda: (24, 14, 344, 186, 450))
+    area = SimpleNamespace(regions=[SimpleNamespace(type='TOOL_PROPS', x=400, width=200)])
+    wm = SimpleNamespace(mixar_moodboard_drawer_amount=1.0)
+    assert toast_layout.toast_lane(viewport, area, wm, 1.0) == (24, 202, 272, 422)
+
+
+def test_long_notification_stays_below_native_toolbar():
+    viewport = SimpleNamespace(x=0, width=1000, height=700,
+                                mixar_agent_panel_bounds=lambda: (24, 14, 344, 186, 400))
+    area = SimpleNamespace(regions=[])
+    wm = SimpleNamespace(mixar_moodboard_drawer_amount=0.0)
+    assert toast_layout.toast_lane(viewport, area, wm, 1.0) == (24, 202, 344, 400)
+
+
 def test_wrapping_preserves_paragraphs_and_breaks_unspaced_urls():
     text = 'A short line\n\nhttps://example.test/' + 'identifier' * 18
     measure = lambda value: len(value) * 12
@@ -55,7 +84,7 @@ def test_every_label_wraps_inside_its_actual_content_budget(width, font_size):
                  NotificationAction('Continue with selected settings', 'qa.continue', 'primary')])
     layout = toast_layout.layout_toast(item, width, 1.0, font_size, measure)
     assert layout['font_size'] == font_size
-    assert layout['content_x'] + layout['content_width'] <= width-layout['pad_x']-layout['close_size']
+    assert layout['content_x'] + layout['content_width'] <= width-layout['close_inset']-layout['close_size']
     for block in layout['blocks']:
         assert all(measure(line) <= layout['content_width'] for line in block['lines'])
     for button in layout['buttons']:

@@ -8,7 +8,8 @@ import blf
 
 from .constants import (
     BADGE_RADIUS, BUTTON_GAP, BUTTON_HEIGHT, BUTTON_PADDING_X,
-    CLOSE_BUTTON_SIZE, TOAST_CORNER_OFFSET_X, TOAST_PADDING_X, TOAST_PADDING_Y,
+    CLOSE_BUTTON_SIZE, CLOSE_BUTTON_INSET, TOAST_CORNER_OFFSET_X, TOAST_CORNER_OFFSET_Y,
+    TOAST_PADDING_X, TOAST_PADDING_Y, TOAST_MARGIN,
 )
 from .core.typography import emphasis_font_id, text_measure
 
@@ -78,10 +79,11 @@ def layout_toast(item, width, scale, font_size=None, measure=None, emphasis_meas
     if emphasis_measure is None:
         emphasis_measure = text_measure(bold_font, font_size) if bold_font else measure
     pad_x, pad_y = TOAST_PADDING_X * scale, TOAST_PADDING_Y * scale
-    close_size = max(CLOSE_BUTTON_SIZE * scale, font_size * 1.5)
+    close_size = CLOSE_BUTTON_SIZE * scale
+    close_inset = CLOSE_BUTTON_INSET * scale
     badge_space = (BADGE_RADIUS * 2 + 10) * scale
     left = pad_x + badge_space
-    right = pad_x + (close_size + 10 * scale if item.dismissible else 0)
+    right = close_inset + close_size + 10 * scale if item.dismissible else pad_x
     content_width = max(1.0, width - left - right)
     line_height = font_size * 1.35
     blocks, buttons = [], []
@@ -129,7 +131,7 @@ def layout_toast(item, width, scale, font_size=None, measure=None, emphasis_meas
         cursor -= gap
     return dict(width=width, height=max(cursor, close_size) + 2 * pad_y,
                 content_height=cursor, content_x=left, content_width=content_width,
-                pad_x=pad_x, pad_y=pad_y, close_size=close_size,
+                pad_x=pad_x, pad_y=pad_y, close_size=close_size, close_inset=close_inset,
                 font_size=font_size, line_height=line_height, blocks=blocks, buttons=buttons)
 
 
@@ -147,3 +149,16 @@ def toast_right_edge(region, area, wm, scale):
         if overlay.type == 'UI' or (overlay.type == 'TOOL_PROPS' and drawer_open):
             edge = min(edge, overlay.x)
     return edge - region.x - TOAST_CORNER_OFFSET_X * scale
+
+
+def toast_lane(region, area, wm, scale):
+    """Align to the native card column; never reconstruct C++ card metrics.
+
+    The stack reserves its settled band through arrival and departure. Toasts
+    grow upward from it, newest nearest the agents; an empty stack returns the
+    same left edge and a resting bottom anchor.
+    """
+    left, bottom, right, top, ceiling = region.mixar_agent_panel_bounds()
+    right = min(right, toast_right_edge(region, area, wm, scale))
+    bottom = top + TOAST_MARGIN * scale if top > bottom else bottom
+    return left, bottom, right, min(ceiling, region.height - TOAST_CORNER_OFFSET_Y * scale)
