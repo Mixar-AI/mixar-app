@@ -982,11 +982,11 @@ static Layout *rna_uiLayoutMixarSurface(Layout *layout, int theme, int density)
   return &surface;
 }
 
-static void rna_uiLayoutMixarStyle(Layout *layout, int component, int variant)
+static void rna_uiLayoutMixarStyle(Layout *layout, int component, int variant, bool all_items)
 {
   const int64_t count = ui::mixar_button_count(layout);
   if (count > 0) {
-    ui::mixar_style_last(layout, ui::MixarComponent(component), ui::MixarVariant(variant));
+    ui::mixar_style_last(layout, ui::MixarComponent(component), ui::MixarVariant(variant), all_items);
   }
 }
 
@@ -1774,6 +1774,7 @@ void RNA_api_ui_layout(StructRNA *srna)
       {7, "SURFACE", 0, "Surface", "Container"},
       {8, "LABEL", 0, "Label", "Text"},
       {10, "GLASS_TOOL", 0, "Glass Tool", "Icon action or menu in an aligned glass capsule"},
+      {11, "TOOLBAR", 0, "Toolbar", "Flat outlined controls sharing native aligned-row bounds"},
       {0, nullptr, 0, nullptr, nullptr},
   };
   static const EnumPropertyItem mixar_variant_items[] = {
@@ -1786,6 +1787,7 @@ void RNA_api_ui_layout(StructRNA *srna)
   func = RNA_def_function(srna, "mixar_style", "rna_uiLayoutMixarStyle");
   RNA_def_enum(func, "component", mixar_component_items, 1, "Component", "Style the last item in this layout");
   RNA_def_enum(func, "variant", mixar_variant_items, 0, "Variant", "Semantic visual variant");
+  RNA_def_boolean(func, "all_items", false, "All Items", "Style all supported buttons in this layout subtree");
 
   func = RNA_def_function(srna, "mixar_profile_card", "rna_uiLayoutMixarProfileCard");
   RNA_def_function_flag(func, FUNC_USE_CONTEXT);

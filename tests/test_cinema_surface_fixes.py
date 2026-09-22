@@ -359,11 +359,11 @@ def test_topbar_state_is_read_from_the_payload_only(painter):
     assert toggle_types is not None
     for toggle in ("Toggle", "ToggleN", "IconToggle", "IconToggleN", "Checkbox", "CheckboxN", "Row", "ListRow"):
         assert f"ButtonType::{toggle}" in toggle_types.group(1)
-    for action in ("But", "Menu", "Block", "Popover"):
+    for action in ("But", "Menu", "Block", "Popover", "Pulldown"):
         assert f"ButtonType::{action}," not in toggle_types.group(1)
     assert "selected = style.lit || native_selection || cinema_selection" in sampler
     assert "pressed = !toggle && (button.flag & UI_SELECT)" in sampler
-    assert "ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block, ButtonType::Popover)" in sampler
+    assert "ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block, ButtonType::Popover, ButtonType::Pulldown)" in sampler
 
 
 def test_every_rounded_control_shares_the_row_radius():

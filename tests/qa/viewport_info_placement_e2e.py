@@ -43,7 +43,9 @@ def capture_text(qa, name, zen=True):
 r = next(r for r in area.regions if r.type == 'WINDOW')
 s = bpy.context.preferences.system
 result = {'viewport': [r.x, r.y, r.width, r.height],
-          'unit': round(18 * s.ui_scale) + 2 * s.pixel_size}
+          'unit': round(18 * s.ui_scale) + 2 * s.pixel_size,
+          'header_inset': max([r.y + r.height - h.y for h in area.regions
+              if h.type == 'HEADER' and h.alignment == 'TOP' and h.height > 1] or [0])}
 """)
     paths = []
     for show in (False, True):
@@ -66,7 +68,7 @@ result = {'viewport': [r.x, r.y, r.width, r.height],
     unit = geometry['unit']
     if zen:
         assert .3 * unit <= bounds[0] <= .85 * unit, (name, bounds, geometry)
-        assert 0 < bounds[1] <= unit, (name, bounds, geometry)
+        assert 0 < bounds[1] - geometry['header_inset'] <= unit, (name, bounds, geometry)
     else:
         assert bounds[0] > unit, (name, bounds, geometry)
     return {**geometry, 'text_bounds': list(bounds), 'lines': lines}
@@ -114,7 +116,11 @@ view.overlay.show_overlays = True
                 update(qa, f"view.{prop} = False")
                 label = 'zen-without-' + prop
                 results[label] = qa.step(label, capture_text, qa, label)
-                assert results[label]['text_bounds'] == results['zen']['text_bounds']
+                if prop == 'show_region_toolbar':
+                    assert results[label]['text_bounds'] == results['zen']['text_bounds']
+                else:
+                    assert results[label]['text_bounds'][0] == results['zen']['text_bounds'][0]
+                    assert results[label]['text_bounds'][1] < results['zen']['text_bounds'][1]
                 update(qa, f"view.{prop} = True")
             update(qa, f"bpy.context.preferences.view.ui_scale = {saved['scale'] * 1.25!r}")
             results['zen-scaled'] = qa.step('zen-scaled', capture_text, qa, 'zen-scaled')

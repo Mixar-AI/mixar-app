@@ -170,7 +170,7 @@ def test_texturing_viewport_keeps_the_stock_blender_header():
     assert 'row.prop(shading, "type", text="", expand=True)' in header
     assert '"wm.context_set_enum"' not in header
     assert "_ZEN_SHADING_TYPES" not in src
-    assert 'popover(panel="VIEW3D_PT_shading", text="", icon="PREFERENCES")' in header
+    assert 'popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")' in header
     assert "VIEWPORT_PILL" not in header
 
 

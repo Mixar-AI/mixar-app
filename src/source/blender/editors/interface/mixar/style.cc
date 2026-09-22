@@ -37,9 +37,14 @@ int64_t mixar_button_count(const Layout *layout)
 static bool supports(const Button &button, const MixarComponent component)
 {
   switch (component) {
+    case MixarComponent::Toolbar:
+      return ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Pulldown,
+                  ButtonType::Popover, ButtonType::Label, ButtonType::Row,
+                  ButtonType::Num, ButtonType::NumSlider, ButtonType::Toggle,
+                  ButtonType::IconToggle);
     case MixarComponent::Action:
       return ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block,
-                  ButtonType::Popover);
+                  ButtonType::Popover, ButtonType::Pulldown);
     case MixarComponent::GlassTool:
       return button.icon != ICON_NONE && button.str.empty() &&
              ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block,
@@ -89,7 +94,8 @@ void mixar_style_button(Button *button,
   }
 }
 
-void mixar_style_last(Layout *layout, const MixarComponent component, const MixarVariant variant)
+void mixar_style_last(Layout *layout, const MixarComponent component, const MixarVariant variant,
+                      const bool all_items)
 {
   auto &buttons = layout->block()->buttons_ptrs;
   for (int64_t i = buttons.size(); i-- > 0;) {
@@ -99,11 +105,16 @@ void mixar_style_last(Layout *layout, const MixarComponent component, const Mixa
       owner = owner->parent();
     }
     if (!owner) {
-      return;
+      if (!all_items) {
+        return;
+      }
+      continue;
     }
     if (supports(*button, component)) {
       mixar_style_button(button, component, variant);
-      return;
+      if (!all_items) {
+        return;
+      }
     }
   }
 }
@@ -167,6 +178,8 @@ const char *mixar_component_name(const MixarComponent component)
       return "label";
     case MixarComponent::GlassTool:
       return "glass_tool";
+    case MixarComponent::Toolbar:
+      return "toolbar";
     case MixarComponent::LegacyCard:
       return "legacy_card";
     default:

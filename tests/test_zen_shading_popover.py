@@ -28,14 +28,12 @@ def _header_draw():
     )[0]
 
 
-def test_the_popover_sits_on_its_own_zen_surface_beside_the_strip():
+def test_the_popover_shares_the_reference_shading_group():
     header = _header_draw()
-    assert 'options = cluster.mixar_surface(theme="ZEN").row(align=True)' in header
-    assert 'options.popover(panel="VIEW3D_PT_shading", text="", icon="PREFERENCES")' in header
-    # Beside the enum capsule, after the guides chip, never inside `row`.
-    assert 'row.popover(' not in header
-    assert 'cluster.popover(' not in header
-    assert header.index("mixar.zen_toggle_guides") < header.index("options = cluster.mixar_surface")
+    assert 'row.prop(shading, "type", text="", expand=True)' in header
+    assert 'row.popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")' in header
+    assert 'row.mixar_style(component="TOOLBAR", variant="GHOST", all_items=True)' in header
+    assert 'chip.prop(shading, xray_prop, text="", icon="XRAY", toggle=True)' in header
 
 
 def test_the_glass_painter_paints_popover_icon_chips():

@@ -7,9 +7,9 @@
  *
  * Zen chrome beds. The island/pill windows frost through GHOST; the Zen
  * topbar lives in the main window, so it takes the same ISLAND pane the
- * kit already owns. Zen's View3D headers overlap the viewport and clear
- * transparent so only the glass button groups read. macOS and Windows
- * share this GPU path.
+ * kit already owns. The Zen scene toolbar has a black bed; its empty
+ * tool-header remains transparent. Both use the existing overlap geometry.
+ * macOS and Windows share this GPU path.
  *
  * Zen Mode is the only workspace on this path. Texturing / Texture Paint
  * are ordinary Engine workspaces: their 3D viewport keeps Blender's full
@@ -28,6 +28,7 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_workspace_types.h"
+#include "DNA_userdef_types.h"
 
 #include "ED_mixar_glass.hh"
 #include "ED_screen.hh"
@@ -36,6 +37,8 @@
 #include "GPU_state.hh"
 
 #include "UI_mixar.hh"
+#include "UI_mixar_chrome.hh"
+#include "UI_interface_c.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -90,8 +93,8 @@ bool mixar_zen_header_clear(const bContext *C, const ARegion *region)
     return false;
   }
   const ScrArea *area = CTX_wm_area(C);
-  /* Only the topbar keeps the full-width ISLAND bed. View3D headers
-   * overlap and clear transparent so the shading strip can float. */
+  /* Only the topbar uses the ISLAND bed. The scene toolbar owns its
+   * separate flat reference recipe below. */
   if (area == nullptr || area->spacetype != SPACE_TOPBAR) {
     return false;
   }
@@ -120,14 +123,23 @@ bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region)
   if (area == nullptr || area->spacetype != SPACE_VIEW3D) {
     return false;
   }
-  /* The shading strip lives on HEADER. TOOL_HEADER is empty in Zen and
-   * must skip button-section drawing — that painter still strokes a
-   * full-width separator. */
+  /* The scene toolbar owns a full-width bed. TOOL_HEADER remains empty
+   * and transparent, including when users explicitly show that region. */
   if (!ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER)) {
     return false;
   }
   ED_region_pixelspace(region);
-  GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f);
+  if (region->regiontype == RGN_TYPE_HEADER) {
+    GPU_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
+    const rctf divider{0, float(region->winx), 0, float(U.pixelsize)};
+    const float c = mixar_chrome::toolbar_border[0] / 255.0f;
+    const float color[4] = {c, c, c, 1.0f};
+    draw_roundbox_corner_set(CNR_ALL);
+    draw_roundbox_4fv(&divider, true, 0, color);
+  }
+  else {
+    GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f);
+  }
   return true;
 }
 

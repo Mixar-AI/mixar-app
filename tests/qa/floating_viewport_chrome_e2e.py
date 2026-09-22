@@ -39,7 +39,11 @@ def switch():
     return win.workspace.name
 result = switch()
 """)
-    qa.wait(f"len(drv.find(**{VIEW!r})) >= 3", timeout=10)
+    # Stock headers can horizontally overflow in a split Texturing viewport.
+    # Its editor switcher is the visible ready target; shading is tested in Zen.
+    target = VIEW if name == "Zen Mode" else {
+        "area_type": "VIEW_3D", "region_type": "HEADER", "prop": "ui_type"}
+    qa.wait(f"bool(drv.find(**{target!r}))", timeout=10)
 
 
 def snap(qa, name):
@@ -152,7 +156,8 @@ result = found
     # mode selector and the View / Select / Add menus are all native.
     stock = qa.eval("""
 widgets = drv.find(area_type='VIEW_3D', region_type='HEADER')
-result = {'mode': [w for w in widgets if w.get('prop') == 'mode'],
+result = {'mode': [w for w in widgets if w.get('prop') == 'mode' or
+                  (w['type'] == 'Menu' and w.get('text') == 'Object Mode')],
           'labels': sorted({w.get('text') for w in widgets if w.get('text')})}
 """)
     assert stock["mode"], stock
@@ -171,9 +176,10 @@ result = {'mode': [w for w in widgets if w.get('prop') == 'mode'],
         assert label not in listed, (label, listed)
 
     qa.click(popup=True, text="Texturing Layers")
-    qa.wait("any(a.ui_type == 'MIXAR_LAYERS' for a in drv.main_window().screen.areas)",
+    qa.wait("sum(a.ui_type == 'MIXAR_LAYERS' for a in drv.main_window().screen.areas)"
+            f" == {saved.count('MIXAR_LAYERS') + 1}",
             timeout=6)
-    snap(qa, "editor-type-switched")
+    qa.cmd("snap", path=str(OUT / "editor-type-switched.png"))
     # Areas keep their screen order, so restore by index.
     qa.eval(f"""
 for area, ui_type in zip(drv.main_window().screen.areas, {saved!r}):
@@ -181,7 +187,8 @@ for area, ui_type in zip(drv.main_window().screen.areas, {saved!r}):
         area.ui_type = ui_type
 result=True
 """)
-    qa.wait(f"len(drv.find(**{VIEW!r})) >= 3", timeout=10)
+    qa.wait("bool(drv.find(area_type='VIEW_3D', region_type='HEADER', prop='ui_type'))",
+            timeout=10)
     return {"listed": listed, "switchers": present}
 
 
