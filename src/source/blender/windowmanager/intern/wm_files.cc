@@ -5444,8 +5444,58 @@ static ui::Block *block_create__close_file_dialog(bContext *C, ARegion *region, 
   return block;
 }
 
+/**
+ * Mixar: the window the "Save changes before closing?" dialog must open in.
+ * Never an Agent Bubble overlay window. The dialog suppresses every floating
+ * dock (alpha 0 + ignore mouse) for as long as it is open, so a dialog created
+ * inside the island (Cmd+N / Cmd+O / quit with the island focused: the Window
+ * keymap fires in the bubble window and the operator's context window IS the
+ * island) hides itself together with the island — the user sees the island
+ * vanish and nothing else, and the pending action can never be answered.
+ * Mirrors `wm_quit_target_window` in wm_window.cc: prefer the bubble's
+ * top-level parent (the viewport it overlays), else any main window.
+ */
+static wmWindow *wm_close_file_dialog_target_window(wmWindowManager *wm, wmWindow *win)
+{
+  if (win == nullptr || !wm_window_contains_agent_bubble_space(win)) {
+    return win;
+  }
+  wmWindow *win_main = win->parent;
+  while (win_main && win_main->parent) {
+    win_main = win_main->parent;
+  }
+  if (win_main && !wm_window_contains_agent_bubble_space(win_main)) {
+    return win_main;
+  }
+  if (wm != nullptr) {
+    for (wmWindow &iter_win : wm->windows) {
+      if (iter_win.parent == nullptr && !WM_window_is_temp_screen(&iter_win) &&
+          !wm_window_contains_agent_bubble_space(&iter_win))
+      {
+        return &iter_win;
+      }
+    }
+  }
+  return win;
+}
+
 void wm_close_file_dialog(bContext *C, wmGenericCallback *post_action)
 {
+  /* Mixar: host the dialog in a main window when invoked from the Agent
+   * Bubble (see #wm_close_file_dialog_target_window). The popup handler is
+   * registered on the context window, so its buttons — and the post action
+   * they run (read_homefile, open_mainfile, quit) — then execute in the host
+   * window's event loop rather than in an overlay window the read is about
+   * to free. The original context is restored for the caller. */
+  wmWindow *win_ctx = CTX_wm_window(C);
+  ScrArea *area_ctx = CTX_wm_area(C);
+  ARegion *region_ctx = CTX_wm_region(C);
+  wmWindow *win_dialog = wm_close_file_dialog_target_window(CTX_wm_manager(C), win_ctx);
+  const bool redirected = (win_dialog != win_ctx);
+  if (redirected) {
+    CTX_wm_window_set(C, win_dialog);
+  }
+
   if (!ui::popup_block_name_exists(CTX_wm_screen(C), close_file_dialog_name)) {
     save_images_when_file_is_closed = true;
     wm_mixar_floating_docks_suppress_for_modal();
@@ -5458,6 +5508,12 @@ void wm_close_file_dialog(bContext *C, wmGenericCallback *post_action)
   }
   else {
     WM_generic_callback_free(post_action);
+  }
+
+  if (redirected) {
+    CTX_wm_window_set(C, win_ctx);
+    CTX_wm_area_set(C, area_ctx);
+    CTX_wm_region_set(C, region_ctx);
   }
 }
 
