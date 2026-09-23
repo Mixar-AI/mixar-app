@@ -320,6 +320,13 @@ class MixieChatMessage(PropertyGroup):
         description="Whether the steps block is collapsed to its summary",
         default=True
     )
+    images_collapsed: BoolProperty(
+        name="Images Collapsed",
+        description="Whether the 'Viewed N images' block (the bubble's capture "
+                    "tiles) is collapsed to its header. Opened for the bubble "
+                    "that most recently received a tile, collapsed elsewhere",
+        default=False
+    )
 
     # -------------------------------------------------------------------------
     # Thinking dropdown (finalized reasoning; live reasoning uses `ephemeral`)

@@ -15,27 +15,27 @@ _VALID_STATUS = {"PENDING", "RUNNING", "DONE", "FAILED"}
 
 
 def format_steps_summary(kinds: Iterable[str], image_count: int = 0) -> str:
-    """Build the collapsed header, e.g. "5 tools called" / "5 tools called · 3 images".
+    """Build the collapsed header, e.g. "5 tools called".
 
     Deliberately NOT a per-kind breakdown ("Read 2 files · ran 1 command"):
     the agent's tools are Blender scripts, not files and shells, and the
-    breakdown read as noise. The expanded rows carry the specifics.
+    breakdown read as noise. The expanded rows carry the specifics. Images
+    are NOT counted here: they have their own "Viewed N images" block under
+    the steps (mixie_chat_steps.cc), with its own collapse state.
 
     Args:
         kinds: iterable of kind identifier strings (e.g. "READ", "COMMAND").
             Unknown identifiers are ignored; the count is what matters.
-        image_count: number of image tiles captured during these steps.
+        image_count: accepted for compatibility; not shown.
 
     Returns:
         Summary string, or "" when there are no recognized kinds.
     """
+    del image_count
     n = sum(1 for kind in kinds if kind in _VALID_KINDS)
     if n <= 0:
         return ""
-    summary = f"{n} tool{'s' if n != 1 else ''} called"
-    if image_count > 0:
-        summary += f" · {image_count} image{'s' if image_count != 1 else ''}"
-    return summary
+    return f"{n} tool{'s' if n != 1 else ''} called"
 
 
 def normalize_step_item(item_data: dict) -> dict:
@@ -297,9 +297,11 @@ def attach_step_images(bubble, request_id: str, records: list) -> int:
     """Add image tiles for the step `request_id` to the bubble's image_items.
 
     `records` are {local_path, width, height, caption} dicts (capture_store).
-    Tiles are tagged with `step_id` so the native steps block draws them
-    under their own row; backend-owned gallery images (no step_id) are left
-    alone. Returns the number of tiles added.
+    Tiles are tagged with `step_id` (provenance, and what `images_to_fetch`
+    keys on); the native side draws every tagged tile of the bubble in ONE
+    "Viewed N images" block under the steps, opened for the bubble that most
+    recently received a tile (see steps_recorder). Backend-owned gallery
+    images (no step_id) are left alone. Returns the number of tiles added.
     """
     if not records:
         return 0
@@ -325,6 +327,8 @@ def attach_step_images(bubble, request_id: str, records: list) -> int:
     for idx in reversed(step_indices[:max(overflow, 0)]):
         items.remove(idx)
     if added:
+        if hasattr(bubble, "images_collapsed"):
+            bubble.images_collapsed = False
         _refresh_summary(bubble)
     return added
 

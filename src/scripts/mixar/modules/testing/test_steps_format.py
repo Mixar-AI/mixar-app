@@ -37,9 +37,10 @@ def test_unknown_kind_ignored():
     assert format_steps_summary(["READ", "NOPE"]) == "1 tool called"
 
 
-def test_summary_counts_images():
-    assert format_steps_summary(["READ"], image_count=1) == "1 tool called · 1 image"
-    assert format_steps_summary(["READ", "TOOL"], image_count=3) == "2 tools called · 3 images"
+def test_summary_never_counts_images():
+    """Images have their own "Viewed N images" block; the header stays a tool count."""
+    assert format_steps_summary(["READ"], image_count=1) == "1 tool called"
+    assert format_steps_summary(["READ", "TOOL"], image_count=3) == "2 tools called"
     assert format_steps_summary([], image_count=3) == ""
 
 
@@ -105,6 +106,7 @@ class _FakeBubble:
         self.step_items = _FakeColl()
         self.image_items = _FakeImageColl()
         self.steps_summary = ""
+        self.images_collapsed = True
 
 
 def test_apply_steps_replaces_items_and_computes_summary():
@@ -271,7 +273,8 @@ def test_attach_step_images_tags_tiles_and_updates_summary():
     assert tile.width == 1024.0 and tile.height == 768.0
     assert tile.caption == "persp"
     assert steps_format.step_image_count(bubble, "r1") == 1
-    assert bubble.steps_summary == "1 tool called · 1 image"
+    assert bubble.steps_summary == "1 tool called"
+    assert bubble.images_collapsed is False  # a new tile opens the gallery
 
 
 def test_attach_step_images_drops_oldest_past_cap_and_keeps_gallery():

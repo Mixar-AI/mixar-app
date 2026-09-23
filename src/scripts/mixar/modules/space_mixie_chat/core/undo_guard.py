@@ -87,6 +87,7 @@ def _snapshot_single_scene(scene):
             # these, an undo restores messages with the plan but no "Used N tools".
             'steps_summary': msg.steps_summary,
             'steps_collapsed': msg.steps_collapsed,
+            'images_collapsed': msg.images_collapsed,
             'step_items': [
                 {
                     'item_id': step.item_id,
@@ -181,6 +182,7 @@ def _restore_single_scene(scene, snapshot):
         # Steps block + state (.get for snapshots taken before this field existed).
         msg.steps_summary = msg_data.get('steps_summary', '')
         msg.steps_collapsed = msg_data.get('steps_collapsed', True)
+        msg.images_collapsed = msg_data.get('images_collapsed', False)
         for step_data in msg_data.get('step_items', []):
             step = msg.step_items.add()
             step.item_id = step_data['item_id']

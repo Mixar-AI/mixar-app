@@ -235,15 +235,27 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
           any_hovered = true;
         }
       }
-      /* Capture tiles under the rows open the lightbox: hand cursor +
-       * a brighter frame on hover. Bounds are zero while collapsed. */
+    }
+    /* "Viewed N images": the header toggles, the tiles open the lightbox
+     * (hand cursor + a brighter frame on hover; bounds zero while collapsed). */
+    if (layout.slot_gallery_height > 0.0f) {
+      const bool was_header = layout.images_header_hovered;
+      layout.images_header_hovered =
+          layout.images_header_bounds.xmax > layout.images_header_bounds.xmin &&
+          BLI_rctf_isect_pt(&layout.images_header_bounds, mouse_x, mouse_y);
+      if (was_header != layout.images_header_hovered) {
+        needs_redraw = true;
+      }
+      if (layout.images_header_hovered) {
+        any_hovered = true;
+      }
       for (int i = 0; i < layout.slot_image_count; i++) {
         ImageSlotData &img = layout.slot_images[i];
         if (img.step_id[0] == '\0') {
           continue;
         }
         const bool was_hovered = img.is_hovered;
-        img.is_hovered = img.bounds.xmax > img.bounds.xmin &&
+        img.is_hovered = !layout.images_collapsed && img.bounds.xmax > img.bounds.xmin &&
                          BLI_rctf_isect_pt(&img.bounds, mouse_x, mouse_y);
         if (was_hovered != img.is_hovered) {
           needs_redraw = true;

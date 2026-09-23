@@ -131,3 +131,18 @@ def test_fetch_backend_image_rejects_bad_ids_and_failures(tmp_path, monkeypatch)
         raise RuntimeError("offline")
 
     assert capture_store.fetch_backend_image("sess", "c" * 16, fetch=boom) is None
+
+
+def test_extract_reads_the_printed_result_line_in_output():
+    """The capture scripts PRINT `__RESULT__{...}`; only a __RESULT__ variable
+    is flattened into the reply. uat1 session 5cb3f137: no local tile was ever
+    saved because the images sat inside `output`."""
+    import json
+    printed = json.dumps({"success": True, "image_base64": _b64(_JPG), "image_mime": "image/jpeg",
+                          "width": 1024, "height": 768})
+    result = {"success": True, "output": "Rendering...\n__RESULT__" + printed + "\nDone."}
+    out = capture_store.extract_images(result)
+    assert len(out) == 1 and out[0]["data"] == _JPG and out[0]["width"] == 1024
+    # Top-level keys win when present; a garbled line is ignored.
+    assert capture_store.extract_images({"output": "__RESULT__{not json"}) == []
+    assert capture_store.printed_result("x\n__RESULT__[1,2]") == {}

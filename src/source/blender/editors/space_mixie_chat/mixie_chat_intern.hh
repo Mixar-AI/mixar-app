@@ -370,6 +370,18 @@ float chat_ui_wrapped_first_line_center(int font_size,
  * step-tagged image items — draw under their step row when the block is
  * expanded; calc and draw share the tile row layout (tile height is fixed,
  * width follows the image's recorded aspect). */
+/* "Viewed N images" block: the bubble's capture tiles under the steps block,
+ * with its own collapse state (images_collapsed) and header hit bounds. */
+float chat_ui_calc_images_block_height(const ChatBubbleStyle *style,
+                                       const MessageLayoutData *layout,
+                                       float content_width);
+void chat_ui_draw_images_block(Main *bmain,
+                               const ChatBubbleStyle *style,
+                               MessageLayoutData *layout,
+                               float x,
+                               float y,
+                               float bubble_width,
+                               float content_width);
 float chat_ui_calc_steps_block_height(const ChatBubbleStyle *style,
                                       const MessageLayoutData *layout,
                                       float content_width);

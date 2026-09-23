@@ -318,6 +318,15 @@ void mixie_chat_render_messages(const bContext *C,
           stack_y -= ml.slot_steps_height + metrics.bubble_spacing;
         }
 
+        if (ml.slot_gallery_height > 0.0f) {
+          chat_ui_draw_images_block(bmain, &ml.style, &ml,
+                                    ml.bubble_x,
+                                    stack_y - ml.slot_gallery_height,
+                                    block_width,
+                                    ml.content_width);
+          stack_y -= ml.slot_gallery_height + metrics.bubble_spacing;
+        }
+
         if (ml.thinking_height > 0.0f) {
           ChatBubbleStyle think_style = ml.style;
           /* Use wall-clock time so the spinner follows the repaint rate. */

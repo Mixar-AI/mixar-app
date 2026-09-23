@@ -181,22 +181,28 @@ static float steps_tile_width(const ImageSlotData &img)
   return steps_tile_height() * aspect;
 }
 
-static bool steps_tile_belongs(const ImageSlotData &img, const StepItemSlotData &step)
+static bool gallery_tile(const ImageSlotData &img)
 {
-  return img.step_id[0] != '\0' && img.local_path[0] != '\0' &&
-         STREQ(img.step_id, step.id);
+  return img.step_id[0] != '\0' && img.local_path[0] != '\0';
 }
 
-/* Wrap the step's tiles into rows of `avail_width`. Returns the total block
- * height (0 when the step has no tiles) — the sum of tile rows plus the gap
- * above the first. When `layout_out` is non-null every tile's bounds are
- * written relative to (x0, top) — top is the y of the block's upper edge. */
-static float steps_tiles_layout(MessageLayoutData *layout,
-                                const StepItemSlotData &step,
-                                float avail_width,
-                                float x0,
-                                float top,
-                                bool write_bounds)
+static int gallery_tile_count(const MessageLayoutData *layout)
+{
+  int n = 0;
+  for (int i = 0; i < layout->slot_image_count; i++) {
+    n += gallery_tile(layout->slot_images[i]);
+  }
+  return n;
+}
+
+/* Wrap the bubble's capture tiles into rows of `avail_width`. Returns the
+ * total height (0 with no tiles) — the tile rows plus the gap above the first.
+ * When `write_bounds` every tile's bounds are written relative to (x0, top). */
+static float gallery_tiles_layout(MessageLayoutData *layout,
+                                  float avail_width,
+                                  float x0,
+                                  float top,
+                                  bool write_bounds)
 {
   const float th = steps_tile_height();
   const float gap = STEPS_TILE_GAP * UI_SCALE_FAC;
@@ -206,7 +212,7 @@ static float steps_tiles_layout(MessageLayoutData *layout,
 
   for (int i = 0; i < layout->slot_image_count; i++) {
     ImageSlotData &img = layout->slot_images[i];
-    if (!steps_tile_belongs(img, step)) {
+    if (!gallery_tile(img)) {
       continue;
     }
     const float tw = std::min(steps_tile_width(img), avail_width);
@@ -308,11 +314,29 @@ float chat_ui_calc_steps_block_height(const ChatBubbleStyle *style,
       height += STEPS_DETAIL_GAP * UI_SCALE_FAC + dh;
     }
 
-    /* Capture tiles ride under their row whenever the block is expanded
-     * (no per-row disclosure: the tiles ARE the row's result). */
-    height += steps_tiles_layout(const_cast<MessageLayoutData *>(layout), step,
-                                 detail_width, 0.0f, 0.0f, false);
   }
+  return height;
+}
+
+/* "Viewed N images": header (chevron + muted label) plus, when expanded, the
+ * wrapped tile rows. Zero when the bubble holds no capture tile. */
+float chat_ui_calc_images_block_height(const ChatBubbleStyle *style,
+                                       const MessageLayoutData *layout,
+                                       float content_width)
+{
+  const int count = gallery_tile_count(layout);
+  if (count <= 0) {
+    return 0.0f;
+  }
+  const int font_id = BLF_default();
+  BLF_size(font_id, style->font_size);
+  const float line_height = float(BLF_height_max(font_id));
+  float height = line_height + style->v_padding * 2.0f;
+  if (layout->images_collapsed) {
+    return height;
+  }
+  const float avail = content_width - chat_ui_chevron_indent();
+  height += gallery_tiles_layout(const_cast<MessageLayoutData *>(layout), avail, 0.0f, 0.0f, false);
   return height;
 }
 
@@ -330,6 +354,7 @@ void chat_ui_draw_steps_block(Main *bmain,
                               float bubble_width,
                               float content_width)
 {
+  (void)bmain; /* tiles moved to chat_ui_draw_images_block; kept for the call site */
   /* Flat block: no filled card — the tools section reads as flat agent content
    * (only user messages are pills). A hairline divider at the top separates it
    * from the prose above without a heavy box. */
@@ -385,8 +410,6 @@ void chat_ui_draw_steps_block(Main *bmain,
   layout->steps_header_bounds.ymax = card_rect.ymax;
 
   if (layout->steps_collapsed) {
-    /* Collapsed tiles are not click targets. */
-    steps_tiles_clear_bounds(layout);
     return;
   }
 
@@ -510,18 +533,70 @@ void chat_ui_draw_steps_block(Main *bmain,
 
       cursor = detail_bottom;
     }
+  }
+}
 
-    /* Capture tiles: the images this step produced, indented with the text. */
-    const float tiles_h = steps_tiles_layout(layout, step, detail_width,
-                                             x + card.h_padding + text_indent, cursor, true);
-    if (tiles_h > 0.0f) {
-      for (int k = 0; k < layout->slot_image_count; k++) {
-        ImageSlotData &img = layout->slot_images[k];
-        if (steps_tile_belongs(img, step)) {
-          steps_draw_tile(bmain, card, img);
-        }
-      }
-      cursor -= tiles_h;
+static void gallery_label(int count, char *buf, size_t buf_len)
+{
+  BLI_snprintf(buf, buf_len, count == 1 ? "Viewed %d image" : "Viewed %d images", count);
+}
+
+void chat_ui_draw_images_block(Main *bmain,
+                               const ChatBubbleStyle *style,
+                               MessageLayoutData *layout,
+                               float x,
+                               float y,
+                               float bubble_width,
+                               float content_width)
+{
+  const int count = gallery_tile_count(layout);
+  if (count <= 0 || layout->slot_gallery_height <= 0.0f) {
+    steps_tiles_clear_bounds(layout);
+    memset(&layout->images_header_bounds, 0, sizeof(layout->images_header_bounds));
+    return;
+  }
+  const ChatBubbleStyle &card = *style;
+  const float tools_accent[4] = CHAT_ACCENT_TOOLS;
+  chat_ui_draw_accent_bar(x, y, layout->slot_gallery_height, tools_accent, UI_SCALE_FAC);
+
+  const int font_id = BLF_default();
+  BLF_size(font_id, card.font_size);
+  const float line_height = float(BLF_height_max(font_id));
+  const float chevron_indent = chat_ui_chevron_indent();
+
+  /* Header: same muted voice as the steps header, brighter when hovered. */
+  float header_col[4] = {card.text_color[0], card.text_color[1], card.text_color[2],
+                         card.text_color[3] * (layout->images_header_hovered ? 0.9f : 0.65f)};
+  char label[64];
+  gallery_label(count, label, sizeof(label));
+  const float block_top = y + layout->slot_gallery_height;
+  const float header_top = block_top - card.v_padding;
+  const float header_bottom = header_top - line_height;
+  const float header_center = chat_ui_wrapped_first_line_center(
+      card.font_size, label, content_width - chevron_indent, header_bottom);
+  chat_ui_draw_chevron(x + card.h_padding, header_center, layout->images_collapsed, header_col);
+  rctf header_rect;
+  header_rect.xmin = x + card.h_padding + chevron_indent;
+  header_rect.xmax = x + card.h_padding + content_width;
+  header_rect.ymin = header_bottom;
+  header_rect.ymax = header_top;
+  chat_ui_draw_text_wrapped(label, &header_rect, card.font_size, 0, header_col);
+
+  layout->images_header_bounds.xmin = x;
+  layout->images_header_bounds.xmax = x + bubble_width;
+  layout->images_header_bounds.ymin = layout->images_collapsed ? y : header_bottom;
+  layout->images_header_bounds.ymax = block_top;
+
+  if (layout->images_collapsed) {
+    steps_tiles_clear_bounds(layout);
+    return;
+  }
+  const float avail = content_width - chevron_indent;
+  gallery_tiles_layout(layout, avail, x + card.h_padding + chevron_indent, header_bottom, true);
+  for (int k = 0; k < layout->slot_image_count; k++) {
+    ImageSlotData &img = layout->slot_images[k];
+    if (gallery_tile(img)) {
+      steps_draw_tile(bmain, card, img);
     }
   }
 }

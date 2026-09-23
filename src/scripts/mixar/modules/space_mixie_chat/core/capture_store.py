@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import json
 import os
 import re
 
@@ -73,14 +74,37 @@ def _split_data_url(url: str) -> tuple[str, str] | None:
     return mime, payload
 
 
+RESULT_PREFIX = "__RESULT__"
+_IMAGE_KEYS = ("image_base64", "images", "image_url")
+
+
+def printed_result(output: str) -> dict:
+    """The dict a script printed as ``__RESULT__<json>``, else {}.
+
+    The backend's capture scripts (render_viewport, inspect_mesh_seams, the
+    final render) PRINT their result; only the ``__RESULT__`` VARIABLE form is
+    flattened into the reply by ``ExecutionResult.to_dict``. Without this the
+    client never saw its own captures (uat1 session 5cb3f137: zero local
+    tiles, only downloads).
+    """
+    for line in (output or "").splitlines():
+        if line.startswith(RESULT_PREFIX):
+            try:
+                parsed = json.loads(line[len(RESULT_PREFIX):])
+            except ValueError:
+                return {}
+            return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
 def extract_images(result: dict) -> list[dict]:
     """Pull every image out of a tool result dict.
 
     Recognised shapes (see the backend's viewport scripts):
       - render_viewport:        {image_base64, image_mime, width, height}
-      - inspect_mesh_seams /
-        inspect_uv_map:         {images: [{view, image_base64, image_mime?, width?, height?}]}
+      - inspect_mesh_seams:     {images: [{view, image_base64, image_mime?, width?, height?}]}
       - render_viewport_final:  {image_url: "data:image/png;base64,..."}
+    at the top level, or inside the printed ``__RESULT__`` line of ``output``.
 
     Returns a list of {"data": bytes, "mime": str, "width": int, "height": int,
     "caption": str}. Never raises; malformed entries are skipped.
@@ -88,6 +112,10 @@ def extract_images(result: dict) -> list[dict]:
     out: list[dict] = []
     if not isinstance(result, dict):
         return out
+    if not any(result.get(k) for k in _IMAGE_KEYS):
+        printed = printed_result(result.get("output") or "")
+        if any(printed.get(k) for k in _IMAGE_KEYS):
+            result = {**result, **printed}
 
     def push(data, mime, width, height, caption):
         if not data or len(out) >= CAPTURE_MAX_PER_RESULT:

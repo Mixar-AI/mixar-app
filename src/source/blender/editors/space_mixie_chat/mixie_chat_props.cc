@@ -71,6 +71,7 @@ void init_message_property_cache(PointerRNA *msg_ptr) {
   g_msg_props.step_items = RNA_struct_find_property(msg_ptr, "step_items");
   g_msg_props.steps_summary = RNA_struct_find_property(msg_ptr, "steps_summary");
   g_msg_props.steps_collapsed = RNA_struct_find_property(msg_ptr, "steps_collapsed");
+  g_msg_props.images_collapsed = RNA_struct_find_property(msg_ptr, "images_collapsed");
   g_msg_props.thinking_text = RNA_struct_find_property(msg_ptr, "thinking_text");
   g_msg_props.thinking_active = RNA_struct_find_property(msg_ptr, "thinking_active");
   g_msg_props.thinking_duration_ms =

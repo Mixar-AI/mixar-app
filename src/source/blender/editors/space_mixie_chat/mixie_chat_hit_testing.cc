@@ -425,11 +425,10 @@ bool mixie_chat_handle_steps_click(bContext *C,
   ui::view2d_region_to_view(v2d, mouse_x, mouse_y, &view_x, &view_y);
 
   for (const MessageLayoutData &layout : layout_cache) {
-    if (layout.has_steps) {
-      /* Capture tiles (drawn under their rows while expanded) open the
-       * lightbox. Tested first: a tile sits inside the block, never on a
-       * row's own text line, and its bounds are zero while collapsed. */
-      if (!layout.steps_collapsed) {
+    /* "Viewed N images": a tile opens the lightbox (bounds are zero while
+     * the block is collapsed); the header toggles the block. */
+    if (layout.slot_gallery_height > 0.0f) {
+      if (!layout.images_collapsed) {
         for (int i = 0; i < layout.slot_image_count; i++) {
           const ImageSlotData &img = layout.slot_images[i];
           if (img.step_id[0] == '\0' || img.bounds.xmax <= img.bounds.xmin) {
@@ -442,6 +441,13 @@ bool mixie_chat_handle_steps_click(bContext *C,
           }
         }
       }
+      const rctf &gb = layout.images_header_bounds;
+      if (gb.xmax > gb.xmin && BLI_rctf_isect_pt(&gb, view_x, view_y)) {
+        return dispatch_toggle(C, region, "mixie_chat.toggle_images",
+                               layout.bubble_id, nullptr);
+      }
+    }
+    if (layout.has_steps) {
       /* Expanded rows with detail toggle their own second level. */
       if (!layout.steps_collapsed) {
         for (int i = 0; i < layout.slot_step_count; i++) {

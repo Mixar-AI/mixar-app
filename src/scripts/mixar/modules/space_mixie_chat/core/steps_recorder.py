@@ -144,9 +144,22 @@ def _attach_captures(scene, bubble, request_id: str, result: dict, session_id: s
         records = save_captures(session_id, request_id, result)
         if records:
             added = attach_step_images(bubble, request_id, records)
+            open_latest_gallery(scene, bubble)
             logger.debug("[STEPS] %d capture tile(s) for %s", added, request_id)
     except Exception:
         logger.debug("[STEPS] capture tile recording failed", exc_info=True)
+
+
+def open_latest_gallery(scene, bubble) -> None:
+    """Only the bubble that most recently received a tile shows its gallery
+    open; every other bubble's "Viewed N images" collapses to its header."""
+    try:
+        for msg in getattr(scene, "mixie_chat_messages", None) or ():
+            if msg.sender != 'AGENT':
+                continue
+            msg.images_collapsed = msg.bubble_id != bubble.bubble_id
+    except Exception:
+        logger.debug("[STEPS] gallery collapse sweep failed", exc_info=True)
 
 
 def record_activity(scene, activity: dict) -> None:
@@ -203,6 +216,7 @@ def _fetch_activity_images(scene, bubble_id: str, step_id: str, session_id: str,
                 if target is None:
                     return
                 attach_step_images(target, step_id, records)
+                open_latest_gallery(scene, target)
                 bump_layout_epoch(scene)
                 redraw_chat_areas()
             except Exception:
