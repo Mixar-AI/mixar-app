@@ -145,30 +145,18 @@ def test_capacity_warns_and_keeps_the_existing_text(draft, monkeypatch):
     report.assert_called_once()
 
 
-@pytest.mark.parametrize('repeat', [False, True])
-def test_ctrl_space_toggles_voice_once_without_changing_text(draft, monkeypatch, repeat):
+def test_ctrl_space_is_not_a_voice_shortcut_and_types_nothing(draft, monkeypatch):
+    """Sketch talks on held Option/Alt, like the chat (core/push_to_talk.py)."""
     import bpy
     context, release, _, report = draft
     toggle = Mock()
-    monkeypatch.setattr(prompt_input, 'VOICE_INPUT_SUPPORTED', True)
-    monkeypatch.setattr(bpy.ops.mixie_chat, 'voice_toggle', toggle)
-    key = event('SPACE', ' ', is_repeat=repeat)
-    key.ctrl = True
-    assert prompt_input.handle(context, key, report)
-    assert toggle.call_count == int(not repeat)
-    assert context.scene.mixie_chat_input == 'Build '
-    assert context.window_manager.mixar_mark_armed
-    release.assert_not_called()
-
-
-def test_ctrl_space_reports_unavailable_voice_without_mutating_text(draft, monkeypatch):
-    context, _, _, report = draft
-    monkeypatch.setattr(prompt_input, 'VOICE_INPUT_SUPPORTED', False)
+    monkeypatch.setattr(bpy.ops.mixie_chat, 'voice_toggle', toggle, raising=False)
     key = event('SPACE', ' ')
     key.ctrl = True
-    assert prompt_input.handle(context, key, report)
-    report.assert_called_once_with({'WARNING'}, 'Voice input is not available on this system')
+    assert not prompt_input.handle(context, key, report)
+    toggle.assert_not_called()
     assert context.scene.mixie_chat_input == 'Build '
+    release.assert_not_called()
 
 
 @pytest.mark.parametrize('inside', [True, False])

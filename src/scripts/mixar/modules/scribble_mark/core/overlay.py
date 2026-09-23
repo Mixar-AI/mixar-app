@@ -40,6 +40,7 @@ from .smoothing import catmull_rom
 from mixar.config.logging_config import get_logger
 
 from . import freeze
+from mixar.modules.common.utils.ui_utils import top_header_overlap_px
 from ..constants import (
     INTENT_SKETCH,
     MARK_HINT_ACCENT_COLOR,
@@ -52,6 +53,8 @@ from ..constants import (
     MARK_HINT_PAD_X_PX,
     MARK_HINT_TEXT_COLOR,
     MARK_HINT_TOP_GAP_PX,
+    MARK_HINT_TALK_KEY,
+    MARK_HINT_VOICE,
     MARK_INK_COLOR,
     MARK_INK_COLOR_SETTLED,
     MARK_INK_WIDTH,
@@ -339,21 +342,32 @@ def _hint_text(scene):
     return MARK_HINT_MARKED.format(count=count, plural="" if count == 1 else "s")
 
 
-def _draw_hint(region, scene, scale):
+def _hint_voice(text):
+    """Name the talk key, or the live voice status and how to stop it."""
+    from mixar.modules.space_mixie_chat.constants import VOICE_INPUT_SUPPORTED
+    if not VOICE_INPUT_SUPPORTED:
+        return text.replace("  ·  " + MARK_HINT_VOICE, "")
+    voice_status = getattr(bpy.context.window_manager, "mixie_chat_voice_status", "")
+    if isinstance(voice_status, str) and voice_status:
+        from mixar.modules.space_mixie_chat.core import voice
+        if voice.push_to_talk_owned():
+            voice_status += f" · release {MARK_HINT_TALK_KEY}: finish · Esc: cancel"
+        return text.replace(MARK_HINT_VOICE, voice_status)
+    return text
+
+
+def _draw_hint(area, region, scene, scale):
     """A legend across the top of the frozen frame.
 
     Load-bearing, not decoration: the freeze consumes every pointer event over
     the region, so without a visible way out the user is looking at a picture
     of their scene with no idea how to get their viewport back.
+
+    Anchored below any header that overlaps the region's top (the Zen scene
+    toolbar paints an opaque bed there, drawn AFTER this region), or the pill
+    is painted underneath the toolbar and never seen.
     """
-    text = _hint_text(scene)
-    from mixar.modules.space_mixie_chat.constants import VOICE_INPUT_SUPPORTED
-    if not VOICE_INPUT_SUPPORTED:
-        text = text.replace("  ·  Ctrl+Space: Voice", "")
-    voice_status = getattr(bpy.context.window_manager, "mixie_chat_voice_status", "")
-    if voice_status:
-        action = "cancel" if voice_status == "Finishing" else "stop"
-        text = text.replace("Ctrl+Space: Voice", f"{voice_status} · Ctrl+Space: {action}")
+    text = _hint_voice(_hint_text(scene))
     height = MARK_HINT_HEIGHT_PX * scale
     pad_x = MARK_HINT_PAD_X_PX * scale
 
@@ -362,7 +376,8 @@ def _draw_hint(region, scene, scale):
 
     width = text_w + pad_x * 2.0
     x0 = (region.width - width) / 2.0
-    y1 = region.height - MARK_HINT_TOP_GAP_PX * scale
+    y1 = (region.height - top_header_overlap_px(area, region)
+          - MARK_HINT_TOP_GAP_PX * scale)
     y0 = y1 - height
 
     shader = gpu.shader.from_builtin('UNIFORM_COLOR')
@@ -415,7 +430,7 @@ def _draw_callback():
             if _live_strokes:
                 _draw_smoothed(_live_smoothed(), MARK_INK_COLOR, width)
 
-            _draw_hint(region, scene, scale)
+            _draw_hint(area, region, scene, scale)
         finally:
             gpu.state.blend_set('NONE')
     except Exception as exc:  # noqa: BLE001 — a draw handler must never raise

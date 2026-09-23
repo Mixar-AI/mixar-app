@@ -63,6 +63,7 @@ from mixar.modules.scribble_mark.core.freeze_session import (
 )
 
 from mixar.modules.scribble_mark.core import pending
+from mixar.modules.scribble_mark.core.push_to_talk import HoldToTalk
 
 logger = get_logger(__name__)
 
@@ -104,6 +105,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
     _area_ptr = 0
     _region_ptr = 0
     _ink = None
+    _talk = None
     _session = None
     # -- lifecycle -------------------------------------------------------
 
@@ -142,6 +144,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
         self._area_ptr = area.as_pointer()
         self._region_ptr = region.as_pointer()
         self._ink = StrokeBuffer(MAX_STROKES_PER_MARK, MAX_POINTS_PER_STROKE)
+        self._talk = HoldToTalk(on_status=overlay.tag_redraw)
 
         overlay.reset()
         overlay.set_target(self._area_ptr, self._region_ptr)
@@ -193,6 +196,13 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             self._disarm(context)
             self._finish(context)
             return {"FINISHED"}
+
+        # Hold Option/Alt to talk. Before the viewport test: a hold that began
+        # here must still finish when the key comes up over the chat.
+        talk = getattr(self, "_talk", None)
+        if talk is not None and talk.handle(
+                context, event, overlay.point_in_region(region, event.mouse_x, event.mouse_y)):
+            return {"RUNNING_MODAL"}
 
         if event.type == "TIMER":
             if not self._refreeze_if_resized(context, region):

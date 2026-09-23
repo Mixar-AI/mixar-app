@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""One Enter after viewport typing; Ctrl+Space dictation without leaving Sketch.
+"""One Enter after viewport typing; hold-Option/Alt dictation without leaving Sketch.
 
 QA_HARNESS=/path/to/harness MIXAR_QA_PORT=4791 python3 tests/qa/sketch_single_enter_voice_e2e.py
 Fresh isolated Dev scene. Real UI/operators; capture and transports are fixtures.
@@ -60,10 +60,23 @@ chat_send_probe.settle(s)
     return actual
 
 
-def voice_key(qa, vp):
-    qa.cmd('press', key='SPACE', ctrl=True, window=vp['window'])
-    # Release the synthetic modifier before the next unmodified key.
-    qa.cmd('press', key='LEFT_CTRL', window=vp['window'])
+def talk_key(qa, vp, value):
+    """Hold (PRESS) or release left Option/Alt over the frozen viewport.
+
+    Separate native events, because push-to-talk starts only after the key
+    has been held alone for HOLD_SECONDS; a PRESS+RELEASE pair is a tap.
+    """
+    qa.eval("w=drv.main_window()\n"
+            f"drv.move_to(w, {vp['x'] + vp['w'] // 2}, {vp['y'] + vp['h'] // 3})\n"
+            f"drv._sim(w, type='LEFT_ALT', value={value!r})\nresult=True")
+
+
+def tap_does_not_talk(qa, vp):
+    talk_key(qa, vp, 'PRESS')
+    talk_key(qa, vp, 'RELEASE')
+    qa.wait(f"__import__('time').monotonic() >= {__import__('time').monotonic() + 0.6}", timeout=3)
+    assert not qa.eval('result=bpy.context.window_manager.mixie_chat_voice_status')
+    return True
 
 
 def run(qa):
@@ -109,23 +122,29 @@ voice_focus_probe.install()
         qa.cmd('type', text='Vivid bevels.', window=vp['window'])
         qa.wait('any(m.state=="DRAFT" for m in bpy.context.scene.mixar_marks)', timeout=10)
         qa.cmd('snap', path=str(OUT / '01b-voice-shortcut.png'), area='VIEW_3D')
-        qa.step('ctrl_space_starts_voice', voice_key, qa, vp)
+        qa.step('tap_does_not_talk', tap_does_not_talk, qa, vp)
+        qa.step('hold_option_alt_starts_voice', talk_key, qa, vp, 'PRESS')
         qa.wait("bpy.context.window_manager.mixie_chat_voice_status=='Listening'", timeout=10)
         assert qa.eval('result=bpy.context.scene.mixie_chat_input') == 'Vivid bevels.'
         assert qa.find(surface='pill_draft_preview')['widgets']
-        qa.cmd('snap', path=str(OUT / '02-voice-instructions.png'), area='VIEW_3D')
+        # The window's current frame, no forced redraw: the hint must repaint
+        # itself when the voice status changes ('snap' can reuse a stale buffer).
+        qa.wait(f"__import__('time').monotonic() >= {__import__('time').monotonic() + 0.4}", timeout=3)
+        qa.eval("w=drv.main_window()\nwith bpy.context.temp_override(window=w):\n"
+                f" result=w.mixar_qa_capture_frame(filepath={str(OUT / '02-voice-instructions.png')!r})")
         snap(qa, '03-listening-pill', {'surface':'pill_draft_preview'})
-        qa.step('ctrl_space_stops_voice', voice_key, qa, vp)
+        qa.step('release_option_alt_finishes_voice', talk_key, qa, vp, 'RELEASE')
         qa.wait("bpy.context.window_manager.mixie_chat_voice_status=='Finishing'", timeout=10)
         qa.eval("import voice_focus_probe; voice_focus_probe.finish('Keep the camera.')")
         text = 'Vivid bevels. Keep the camera.'
         qa.wait(f'bpy.context.scene.mixie_chat_input=={text!r}', timeout=10)
         assert qa.eval("result=len(__import__('chat_send_probe').calls)") == 2
         assert qa.find(surface='pill_draft_preview')['widgets']
-        qa.step('start_voice_again', voice_key, qa, vp)
+        qa.step('hold_again', talk_key, qa, vp, 'PRESS')
         qa.wait("bpy.context.window_manager.mixie_chat_voice_status=='Listening'", timeout=10)
-        qa.step('one_enter_finishes_voice_and_sends', qa.cmd, 'press', key='RET', window=vp['window'])
+        talk_key(qa, vp, 'RELEASE')
         qa.wait("bpy.context.window_manager.mixie_chat_voice_status=='Finishing'", timeout=10)
+        qa.step('one_enter_sends_after_voice', qa.cmd, 'press', key='RET', window=vp['window'])
         qa.eval("import voice_focus_probe; voice_focus_probe.finish('Make it blue.')")
         results.append(assert_sent(qa, text+' Make it blue.', 3))
         restore(qa, after_send=True)
@@ -133,7 +152,7 @@ voice_focus_probe.install()
         assert qa.eval("result=len(__import__('chat_send_probe').calls)") == 3
         return {'passed':True, 'hover_enter_sends_once':True, 'hover_numpad_sends_once':True,
                 'hover_shift_enter_newline':True, 'literal_v_preserved':True,
-                'ctrl_space_start_stop':True, 'voice_enter_sends_once':True,
+                'hold_option_alt_talk':True, 'tap_ignored':True, 'voice_enter_sends_once':True,
                 'voice':'capture and transport fixtures', 'paid_requests':0, 'sends':results}
     finally:
         qa.eval('''

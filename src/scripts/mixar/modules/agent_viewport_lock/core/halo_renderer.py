@@ -11,6 +11,10 @@ a turn — a Mixar-green analogue of Claude-for-Chrome's working halo.
 The glow is four edge gradients (opaque at the edge, fading to clear
 toward the centre), so the middle of the viewport stays unobstructed.
 
+The glow frames the canvas BELOW any overlapping top header (the Zen
+scene toolbar), so the toolbar reads as chrome outside the locked area
+rather than something the halo washes over.
+
 Drawn only when ``state_probe.is_agent_executing()`` is True; the
 bootstrap tick tags the viewport for redraw at ~20fps during that
 window so the breathing animates.
@@ -38,6 +42,7 @@ from mixar.modules.agent_viewport_lock.constants import (
 from mixar.modules.agent_viewport_lock.core.state_probe import (
     is_agent_executing,
 )
+from mixar.modules.common.utils.ui_utils import top_header_overlap_px
 
 logger = get_logger(__name__)
 
@@ -120,8 +125,9 @@ def _draw_callback() -> None:
         if region is None or region.type != 'WINDOW':
             return
         band = HALO_BAND * _ui_scale()
+        height = region.height - top_header_overlap_px(area, region)
         _draw_inner_glow(
-            float(region.width), float(region.height),
+            float(region.width), float(height),
             band, _breathing_alpha(),
         )
     except Exception as exc:  # noqa: BLE001 — draw must never raise

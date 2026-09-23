@@ -25,6 +25,14 @@ whole duration of an agent turn (window modal handlers run before the
 region's toast UI handler, so this modal is the only place that can
 yield).
 
+The viewport's top header (the Zen scene toolbar) overlaps the WINDOW
+rectangle too. It is chrome, not canvas: an event Blender would route to
+one of its controls passes through (native ``Area.mixar_header_contains``,
+the event system's own overlap query), so render, shading, playback and
+export stay usable and the halo frames the canvas below it. Empty toolbar
+space between controls falls through to the canvas in Blender, so it stays
+locked here.
+
 The Parallel Agents panel (the worker cards docked bottom-left of the
 viewport, VIEW_3D EXECUTE region) is another such layer: its cards exist
 almost only WHILE the agent is running, and its eye / dismiss / chevron
@@ -187,6 +195,8 @@ class MIXAR_OT_agent_viewport_block(Operator):
             if area.type != 'VIEW_3D':
                 continue
             if area.mixar_moodboard_contains(mx, my):
+                return None
+            if area.mixar_header_contains(mx, my):
                 return None
             for region in area.regions:
                 if region.type != 'WINDOW':

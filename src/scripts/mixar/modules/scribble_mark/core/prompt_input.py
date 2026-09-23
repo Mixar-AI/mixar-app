@@ -3,7 +3,7 @@
 
 """Type into the Agent draft without leaving the frozen drawing surface."""
 
-from mixar.modules.space_mixie_chat.constants import CHAT_INPUT_MAXLEN, VOICE_INPUT_SUPPORTED
+from mixar.modules.space_mixie_chat.constants import CHAT_INPUT_MAXLEN
 
 
 def handle(context, event, report):
@@ -15,19 +15,6 @@ def handle(context, event, report):
     """
     if event.value != "PRESS":
         return False
-
-    if (event.type == "SPACE" and event.ctrl
-            and not (event.oskey or event.alt or event.shift)):
-        if not getattr(event, "is_repeat", False):
-            if not VOICE_INPUT_SUPPORTED:
-                report({"WARNING"}, "Voice input is not available on this system")
-                return True
-            import bpy
-            try:
-                bpy.ops.mixie_chat.voice_toggle()
-            except RuntimeError as exc:
-                report({"WARNING"}, str(exc).strip().removeprefix("Error: "))
-        return True
 
     command = event.ctrl or event.oskey
     erase = event.type == "BACK_SPACE" and not command and not event.alt

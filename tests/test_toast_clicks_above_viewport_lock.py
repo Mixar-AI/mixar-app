@@ -137,7 +137,8 @@ class _FakeRegion:
 
 def _context_with_view3d(region):
     area = SimpleNamespace(type='VIEW_3D', regions=[region],
-                           mixar_moodboard_contains=lambda x, y: False)
+                           mixar_moodboard_contains=lambda x, y: False,
+                           mixar_header_contains=lambda x, y: False)
     return SimpleNamespace(
         window=SimpleNamespace(screen=SimpleNamespace(areas=[area]), modal_operators={}),
     )
@@ -230,7 +231,8 @@ def test_drawer_input_passes_while_viewport_stays_locked(monkeypatch, event_type
         hits.append((x, y))
         return on_board
 
-    area = SimpleNamespace(type="VIEW_3D", regions=[region], mixar_moodboard_contains=contains)
+    area = SimpleNamespace(type="VIEW_3D", regions=[region], mixar_moodboard_contains=contains,
+                           mixar_header_contains=lambda x, y: False)
     context = SimpleNamespace(window=SimpleNamespace(
         screen=SimpleNamespace(areas=[area]), modal_operators={}))
     event = SimpleNamespace(type=event_type, value=value, mouse_x=900, mouse_y=400)

@@ -68,3 +68,47 @@ def draw_multiline_text_input(layout, data, prop, *, text="",
         col.mixar_input(data, prop, text=text)
     else:
         col.prop(data, prop, text=text)
+
+
+# Header strips that can overlap the top of a 3D viewport's WINDOW region
+# (the Zen scene toolbar is the HEADER, drawn over the canvas with region
+# overlap). Hidden regions collapse to a 1x1 rect, so size alone says visible.
+_TOP_OVERLAP_REGION_TYPES = frozenset({'HEADER', 'TOOL_HEADER'})
+
+
+def visible_overlapping_headers(area, window_region):
+    """The visible header regions of *area* that sit over *window_region*."""
+    wx0, wy0 = window_region.x, window_region.y
+    wx1, wy1 = wx0 + window_region.width, wy0 + window_region.height
+    found = []
+    for region in area.regions:
+        if region.type not in _TOP_OVERLAP_REGION_TYPES:
+            continue
+        if region.width <= 1 or region.height <= 1:
+            continue
+        rx0, ry0 = region.x, region.y
+        rx1, ry1 = rx0 + region.width, ry0 + region.height
+        if rx0 < wx1 and rx1 > wx0 and ry0 < wy1 and ry1 > wy0:
+            found.append(region)
+    return found
+
+
+def top_header_overlap_px(area, window_region):
+    """Pixels at the top of *window_region* covered by an overlapping header.
+
+    0 when the headers sit beside the canvas (stock, non-overlap layout),
+    are hidden, or are bottom-aligned. Overlays anchored to the top of the
+    region (the agent halo, the sketch hint) start below this inset so the
+    header neither hides them nor is washed over by them.
+    """
+    try:
+        top = window_region.y + window_region.height
+        mid = window_region.y + window_region.height / 2.0
+        inset = 0
+        for region in visible_overlapping_headers(area, window_region):
+            if region.y + region.height / 2.0 < mid:
+                continue  # bottom-aligned header
+            inset = max(inset, top - region.y)
+        return max(0, min(int(inset), int(window_region.height)))
+    except Exception:  # noqa: BLE001 — draw-time helper, never raise
+        return 0

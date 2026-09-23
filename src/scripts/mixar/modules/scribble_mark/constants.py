@@ -16,6 +16,8 @@ image), so ``modules/agent/sculpt/localize.py`` can return a user mark instead
 of asking a vision model to guess one.
 """
 
+import sys
+
 # =============================================================================
 # PAYLOAD CONTRACT
 # =============================================================================
@@ -334,19 +336,28 @@ MARK_HINT_BG_COLOR = (0.05, 0.07, 0.09, 0.86)
 MARK_HINT_TEXT_COLOR = (0.86, 0.93, 0.95, 1.0)
 MARK_HINT_ACCENT_COLOR = (0.31, 0.85, 0.82, 1.0)
 
+#: The talk key, named in every reading: hold left Option (macOS) / left Alt
+#: (Windows), exactly as in the chat composer (``core/push_to_talk.py``). While
+#: listening the overlay swaps this segment for the voice status.
+MARK_HINT_TALK_KEY = "Option" if sys.platform == "darwin" else "Alt"
+MARK_HINT_VOICE = f"Hold {MARK_HINT_TALK_KEY}: talk"
+
 #: What the pill says. Both states name every control that exists, because a
 #: mode whose boundaries and recovery are invisible is the failure the Thinkink
 #: study (arXiv:2607.21468) found first: users could not tell which mode they
 #: were in, and asked for visible controls and a way to undo.
 MARK_HINT_IDLE = (
-    "Draw a shape or circle what to change  ·  Type instructions  ·  Ctrl+Space: Voice  ·  Enter: send  ·  Done / Esc: preview"
+    "Draw a shape or circle what to change  ·  " + MARK_HINT_VOICE
+    + "  ·  Type instructions  ·  Enter: send  ·  Done / Esc: preview"
 )
 #: ...and once ink is down, what the ink is being READ as, with the way to
 #: change the reading. Both readings name Tab: a sketch mistaken for nine
 #: marks is exactly the misread the user must be able to see and flip.
 MARK_HINT_MARKED = (
-    "Point to edit  ·  Type instructions  ·  Ctrl+Space: Voice  ·  Enter: send  ·  Tab: Draw to build  ·  Ctrl/Cmd+Z: undo  ·  Done / Esc: preview"
+    "Point to edit  ·  " + MARK_HINT_VOICE + "  ·  Type instructions  ·  Enter: send"
+    "  ·  Tab: Draw to build  ·  Ctrl/Cmd+Z: undo  ·  Done / Esc: preview"
 )
 MARK_HINT_SKETCH = (
-    "Draw to build  ·  Type instructions  ·  Ctrl+Space: Voice  ·  Enter: send  ·  Tab: Point to edit  ·  Ctrl/Cmd+Z: undo  ·  Done / Esc: preview"
+    "Draw to build  ·  " + MARK_HINT_VOICE + "  ·  Type instructions  ·  Enter: send"
+    "  ·  Tab: Point to edit  ·  Ctrl/Cmd+Z: undo  ·  Done / Esc: preview"
 )
