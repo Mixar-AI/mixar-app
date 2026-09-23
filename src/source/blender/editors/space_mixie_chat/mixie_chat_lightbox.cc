@@ -6,9 +6,10 @@
  * \ingroup spmixiechat
  *
  * Capture lightbox: click a capture tile in the steps block and the image
- * opens large over the chat — scrim, the image fit to the region, its
- * caption and position, ‹ › to step through every capture of that bubble.
- * ESC, a click anywhere off a control, or the ✕ closes it.
+ * opens large over the chat — the image fit to the region, its caption and
+ * position, ‹ › to step through every capture of that bubble. ESC, a click
+ * anywhere off a control, or the ✕ closes it. No scrim: the chat behind is
+ * left exactly as it is (the user asked for no darkening).
  *
  * Screen-space, drawn after the messages (like the past-chats overlay) and
  * modal for this region while open. All state is on MixieChatRuntime; the
@@ -52,8 +53,6 @@
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
-/* Open animation (scrim + image fade). */
-#define LIGHTBOX_ANIM_SECONDS 0.16
 /* Region inset around the image (pre-UI-scale). */
 #define LIGHTBOX_MARGIN 28.0f
 /* Reserved band above the image (close button) and below it (caption). */
@@ -61,12 +60,8 @@ namespace blender {
 #define LIGHTBOX_BOTTOM_BAND 40.0f
 /* Control chips: close (top-right) and prev / next (left / right middle). */
 #define LIGHTBOX_CHIP 30.0f
-#define LIGHTBOX_CHIP_RADIUS 8.0f
 #define LIGHTBOX_TEXT_PX 13.0f
 
-static const float LIGHTBOX_SCRIM[4] = {0.02f, 0.03f, 0.04f, 0.82f};
-static const float LIGHTBOX_CHIP_BG[4] = {1.0f, 1.0f, 1.0f, 0.08f};
-static const float LIGHTBOX_CHIP_BG_HOVER[4] = {1.0f, 1.0f, 1.0f, 0.18f};
 static const float LIGHTBOX_INK[4] = {0.94f, 0.95f, 0.96f, 0.92f};
 static const float LIGHTBOX_INK_DIM[4] = {0.94f, 0.95f, 0.96f, 0.6f};
 
@@ -114,9 +109,8 @@ static void lightbox_draw_glyph_chip(const rctf &chip,
                                      bool hovered,
                                      int font_id)
 {
-  const float radius = LIGHTBOX_CHIP_RADIUS * UI_SCALE_FAC;
-  chat_ui_draw_rounded_rect(&chip, radius, hovered ? LIGHTBOX_CHIP_BG_HOVER : LIGHTBOX_CHIP_BG);
-
+  /* Glyph only, no chip fill: a filled rect drew as a solid white square on
+   * the region and hid the glyph. Hover is the brighter ink. */
   BLF_size(font_id, LIGHTBOX_TEXT_PX * 1.15f * UI_SCALE_FAC);
   rcti bb;
   BLF_boundbox(font_id, glyph, strlen(glyph), &bb);
@@ -214,28 +208,8 @@ void mixie_chat_draw_lightbox(const bContext *C, ARegion *region)
   const float winx = float(region->winx);
   const float winy = float(region->winy);
 
-  /* Open fade. */
-  const double now = BLI_time_now_seconds();
-  float ease = 1.0f;
-  if (rt->lightbox_anim_start > 0.0) {
-    const double t = (now - rt->lightbox_anim_start) / LIGHTBOX_ANIM_SECONDS;
-    ease = std::clamp(float(t), 0.0f, 1.0f);
-    ease = 1.0f - (1.0f - ease) * (1.0f - ease);
-    if (t < 1.0) {
-      ED_region_tag_redraw(region);
-    }
-  }
 
   GPU_blend(GPU_BLEND_ALPHA);
-
-  /* Scrim over the whole region. */
-  {
-    rctf full;
-    BLI_rctf_init(&full, 0.0f, winx, 0.0f, winy);
-    const float scrim[4] = {LIGHTBOX_SCRIM[0], LIGHTBOX_SCRIM[1], LIGHTBOX_SCRIM[2],
-                            LIGHTBOX_SCRIM[3] * ease};
-    chat_ui_draw_rounded_rect(&full, 0.0f, scrim);
-  }
 
   /* Image box: the region minus the margin and the two text bands. */
   const float margin = LIGHTBOX_MARGIN * scale;
@@ -255,8 +229,6 @@ void mixie_chat_draw_lightbox(const bContext *C, ARegion *region)
   const int font_id = BLF_default();
   if (ok) {
     rt->lightbox_image_bounds = drawn;
-    const float line[4] = {1.0f, 1.0f, 1.0f, 0.18f * ease};
-    chat_ui_draw_rounded_rect_outline(&drawn, 0.0f, line, 1.0f * scale);
   }
   else {
     /* The file is gone (media pruned): say so instead of a bare scrim. */
