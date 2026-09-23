@@ -8,8 +8,9 @@
  * Capture lightbox: click a capture tile in the steps block and the image
  * opens large over the chat — the image fit to the region, its caption and
  * position, ‹ › to step through every capture of that bubble. ESC, a click
- * anywhere off a control, or the ✕ closes it. No scrim: the chat behind is
- * left exactly as it is (the user asked for no darkening).
+ * anywhere off a control, or the ✕ closes it. The scrim behind the image is
+ * drawn at full strength on the very first frame: an eased fade-in read as
+ * a delay next to an image that appears at once.
  *
  * Screen-space, drawn after the messages (like the past-chats overlay) and
  * modal for this region while open. All state is on MixieChatRuntime; the
@@ -62,6 +63,7 @@ namespace blender {
 #define LIGHTBOX_CHIP 30.0f
 #define LIGHTBOX_TEXT_PX 13.0f
 
+static const float LIGHTBOX_SCRIM[4] = {0.02f, 0.03f, 0.04f, 0.86f};
 static const float LIGHTBOX_INK[4] = {0.94f, 0.95f, 0.96f, 0.92f};
 static const float LIGHTBOX_INK_DIM[4] = {0.94f, 0.95f, 0.96f, 0.6f};
 
@@ -210,6 +212,13 @@ void mixie_chat_draw_lightbox(const bContext *C, ARegion *region)
 
 
   GPU_blend(GPU_BLEND_ALPHA);
+
+  /* Scrim over the whole region, instantly: no fade (see the file comment). */
+  {
+    rctf full;
+    BLI_rctf_init(&full, 0.0f, winx, 0.0f, winy);
+    chat_ui_draw_rounded_rect(&full, 0.0f, LIGHTBOX_SCRIM);
+  }
 
   /* Image box: the region minus the margin and the two text bands. */
   const float margin = LIGHTBOX_MARGIN * scale;
