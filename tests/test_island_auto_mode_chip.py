@@ -29,7 +29,6 @@ DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
 STATE_CC = (CPP / "agent_ui_state.cc").read_text(encoding="utf-8")
 LAYOUT_CC = (CPP / "agent_ui_layout.cc").read_text(encoding="utf-8")
 LAYOUT_HH = (CPP / "agent_ui_layout.hh").read_text(encoding="utf-8")
-CHIP_FIT_HH = (CPP / "agent_ui_chip_fit.hh").read_text(encoding="utf-8")
 DRAW_HH = (CPP / "agent_ui_draw.hh").read_text(encoding="utf-8")
 MOTION_HH = (CPP / "agent_ui_motion.hh").read_text(encoding="utf-8")
 THEME_HH = (CPP / "agent_ui_theme.hh").read_text(encoding="utf-8")
@@ -153,14 +152,9 @@ def test_layout_places_auto_right_of_voice_and_closes_the_gap_without_it():
     assert "#define AGENT_CHIP_AUTO_W" in THEME_HH
     fit = _function_body(LAYOUT_CC, "void agent_ui_layout_fit_controls(")
     assert fit.index("place(layout.chip_voice") < fit.index("place(layout.chip_auto")
-    assert "in.voice_available = state.voice_available;" in fit
+    assert "state.voice_available ?" in fit
     assert "if (w <= 0) { rect = {}; return; }" in fit
-    assert "AGENT_SWITCH_W * u" in fit
-    # Measurement lives in the pure fitter (tests/test_island_voice_and_sketch_pill.py
-    # sweeps it): no Voice chip, no width, so Auto closes the gap.
-    forms = _function_body(CHIP_FIT_HH, "inline void agent_chip_forms(")
-    assert "if (in.voice_available) {" in forms
-    assert 'width("Auto", m.switch_w)' in forms
+    assert 'width("Auto", AGENT_SWITCH_W)' in fit
     assert 'agent_ui_layout_fit_controls(*r_layout, *r_state)' in BUBBLE_CC
 
 

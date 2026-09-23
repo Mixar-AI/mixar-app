@@ -310,7 +310,7 @@ void mixie_chat_render_messages(const bContext *C,
             ml.content_width + 2.0f * ml.style.h_padding + 4.0f * UI_SCALE_FAC;
 
         if (ml.slot_steps_height > 0.0f) {
-          chat_ui_draw_steps_block(&ml.style, &ml,
+          chat_ui_draw_steps_block(bmain, &ml.style, &ml,
                                    ml.bubble_x,
                                    stack_y - ml.slot_steps_height,
                                    block_width,

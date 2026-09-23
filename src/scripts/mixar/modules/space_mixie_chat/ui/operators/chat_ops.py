@@ -176,20 +176,6 @@ class MIXIE_CHAT_OT_send_message(Operator):
             except Exception:  # Optional ink must never discard the user's words.
                 logger.debug("Could not flush viewport ink for send", exc_info=True)
 
-        # An empty Send while the agent's asset picker is up ANSWERS with the
-        # selected pick — the best match unless a tile was clicked — exactly
-        # as the picker's "Use This Asset" does. Pressing Send (or Enter) on
-        # the highlighted tile is how people accept it; it used to warn.
-        if not message_text and is_awaiting_input and not self.message_override:
-            from ...core import asset_picker
-            live = asset_picker.live_asset_picker(scene)
-            if live is not None and live.picks:
-                selected = getattr(context.window_manager, asset_picker.SELECTED_PROP, "") or ""
-                pick = next((p for p in live.picks if p.value == selected), live.picks[0])
-                metrics.stop_timer('send_message_total')
-                return bpy.ops.mixie_chat.select_slot_action(
-                    bubble_id=live.bubble_id, action_value=pick.value)
-
         if not message_text and (is_modify or is_awaiting_input or len(pending_attachments) == 0):
             self.report({'WARNING'}, "Cannot send empty message")
             return {'CANCELLED'}

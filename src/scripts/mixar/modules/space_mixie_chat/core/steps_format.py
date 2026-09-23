@@ -6,46 +6,36 @@
 No bpy imports — kept dependency-free so it is unit-testable outside Blender
 and reusable by both the slot processor and the dev-data mock.
 """
-from collections import Counter
 from collections.abc import Iterable
 
-# Kind -> (singular phrase, plural phrase). Declaration order here defines the
-# left-to-right order of the rendered summary. Must match the kind enum order
-# in chat_slot_types.MixieChatStepItem. First words are lowercase; the joined
-# summary's leading character is capitalized in format_steps_summary so a
-# standalone non-READ summary (e.g. "wrote 1 file") still reads correctly.
-_KIND_PHRASES = [
-    ("READ", "read {n} file", "read {n} files"),
-    ("WRITE", "wrote {n} file", "wrote {n} files"),
-    ("COMMAND", "ran {n} command", "ran {n} commands"),
-    ("SEARCH", "ran {n} search", "ran {n} searches"),
-    ("TOOL", "used {n} tool", "used {n} tools"),
-]
-
-_VALID_KINDS = {entry[0] for entry in _KIND_PHRASES}
+# Step kinds, in the enum order of chat_slot_types.MixieChatStepItem (the C++
+# side reads that enum as an int index to pick the row glyph).
+_VALID_KINDS = {"READ", "WRITE", "COMMAND", "SEARCH", "TOOL"}
 _VALID_STATUS = {"PENDING", "RUNNING", "DONE", "FAILED"}
 
 
-def format_steps_summary(kinds: Iterable[str]) -> str:
-    """Build a human summary like "Read 2 files · ran 1 command".
+def format_steps_summary(kinds: Iterable[str], image_count: int = 0) -> str:
+    """Build the collapsed header, e.g. "5 tools called" / "5 tools called · 3 images".
+
+    Deliberately NOT a per-kind breakdown ("Read 2 files · ran 1 command"):
+    the agent's tools are Blender scripts, not files and shells, and the
+    breakdown read as noise. The expanded rows carry the specifics.
 
     Args:
         kinds: iterable of kind identifier strings (e.g. "READ", "COMMAND").
-            Unknown identifiers are ignored.
+            Unknown identifiers are ignored; the count is what matters.
+        image_count: number of image tiles captured during these steps.
 
     Returns:
         Summary string, or "" when there are no recognized kinds.
     """
-    counts = Counter(kinds)
-    parts = []
-    for kind, singular, plural in _KIND_PHRASES:
-        n = counts.get(kind, 0)
-        if n <= 0:
-            continue
-        phrase = (singular if n == 1 else plural).format(n=n)
-        parts.append(phrase)
-    result = " · ".join(parts)
-    return result[:1].upper() + result[1:] if result else ""
+    n = sum(1 for kind in kinds if kind in _VALID_KINDS)
+    if n <= 0:
+        return ""
+    summary = f"{n} tool{'s' if n != 1 else ''} called"
+    if image_count > 0:
+        summary += f" · {image_count} image{'s' if image_count != 1 else ''}"
+    return summary
 
 
 def normalize_step_item(item_data: dict) -> dict:
@@ -104,18 +94,46 @@ def infer_step_kind(tool_name: str) -> str:
     return "TOOL"
 
 
-def humanize_tool_name(tool_name: str) -> str:
-    """Turn a snake_case tool name into a row label: "create_cube" -> "Create cube".
+# Friendly, past-tense labels for the backend tools the user should be able
+# to recognise. The RAW tool name is never shown: an unknown name falls back
+# to the script classifier and then to the generic "Tool call" the result
+# counts refine on finish. Keep this table small and human — it is UI copy.
+_TOOL_LABELS = {
+    "render_viewport": "Captured viewport",
+    "render_viewport_final": "Rendered final image",
+    "render_final": "Rendered final image",
+    "render_multiview": "Captured views",
+    "inspect_mesh_seams": "Inspected seams",
+    "inspect_uv_map": "Inspected UV layout",
+    "inspect_geometry": "Measured geometry",
+    "inspect_spatial_constraints": "Checked placement",
+    "correct_spatial_placement": "Corrected placement",
+    "import_terrain_asset": "Imported asset",
+    "list_terrain_assets": "Browsed asset library",
+    "place_camera": "Placed camera",
+    "scene_overview": "Inspected scene",
+    "critique_scene": "Reviewed the scene",
+}
 
-    The backend sends "unknown" when a script has no tool name, and
-    "execute_bpy_script" for generated scripts whose name says nothing about
-    the action — both fall back to the generic label so the script classifier
-    / result counts label the row by what it actually did.
+# Tools whose row is a capture: the tile(s) under the row ARE the result, so
+# the finish pass never overwrites the label with object counts.
+CAPTURE_TOOLS = frozenset({
+    "render_viewport", "render_viewport_final", "render_final",
+    "render_multiview", "inspect_mesh_seams", "inspect_uv_map",
+})
+
+
+def humanize_tool_name(tool_name: str) -> str:
+    """Row label for a backend tool name — a friendly phrase, never the name.
+
+    "render_viewport" -> "Captured viewport". Names not in the table (the
+    backend sends "unknown" when a script has no tool name and
+    "execute_bpy_script" for generated scripts) fall back to the generic
+    label so the script classifier / result counts label the row by what
+    it actually did.
     """
-    words = (tool_name or "").replace("_", " ").strip()
-    if not words or words.lower() in ("unknown", "execute bpy script"):
-        return "Tool call"
-    return words[:1].upper() + words[1:]
+    key = (tool_name or "").strip().lower()
+    return _TOOL_LABELS.get(key, "Tool call")
 
 
 def is_internal_step(tool_name: str, request_id: str = "") -> bool:
@@ -148,6 +166,17 @@ def classify_script_action(script: str) -> str:
     # Rendering is unmistakable and never modeling.
     if "ops.render.render" in s or "render.render(" in s or "render_still" in s:
         return "Rendered scene"
+    # UV work is unmistakable too, and it edits with bmesh / ops.mesh (which
+    # the geometry guard below would otherwise catch): the rows are how the
+    # user follows a UV pass — "Marked seams" -> "Unwrapped mesh" -> "Packed
+    # UV islands". Checked in pipeline order so a script doing all three is
+    # labelled by its last stage.
+    if "pack_islands" in s or "uv.pack" in s:
+        return "Packed UV islands"
+    if "uv.unwrap" in s or "uv.smart_project" in s or "unwrap(" in s:
+        return "Unwrapped mesh"
+    if "mark_seam" in s or "seam = true" in s or ".seam=true" in s:
+        return "Marked seams"
     # If the script builds geometry, it's modeling — let the counts label it.
     creates_geometry = any(k in s for k in (
         "primitive_", "ops.mesh.", "meshes.new", "bmesh", "curves.new",
@@ -247,10 +276,61 @@ def _result_label(created: int, modified: int, deleted: int):
     return "Updated scene", _summarize_object_counts(created, modified, deleted)
 
 
+_CAPTURE_LABELS = frozenset(_TOOL_LABELS[name] for name in CAPTURE_TOOLS)
+
+
 def _refresh_summary(bubble) -> None:
+    images = getattr(bubble, "image_items", None)
+    image_count = sum(1 for img in (images or ()) if getattr(img, "step_id", "")) if images is not None else 0
     bubble.steps_summary = format_steps_summary(
-        row.kind for row in bubble.step_items
+        (row.kind for row in bubble.step_items), image_count
     )
+
+
+# Mirrors SLOT_MAX_IMAGE_ITEMS in mixie_chat_ui_types.hh: the native layout
+# copies at most this many image items per bubble, oldest first, so anything
+# past it would be invisible. Drop the OLDEST step tiles to stay under it.
+MAX_STEP_IMAGES_PER_BUBBLE = 32
+
+
+def attach_step_images(bubble, request_id: str, records: list) -> int:
+    """Add image tiles for the step `request_id` to the bubble's image_items.
+
+    `records` are {local_path, width, height, caption} dicts (capture_store).
+    Tiles are tagged with `step_id` so the native steps block draws them
+    under their own row; backend-owned gallery images (no step_id) are left
+    alone. Returns the number of tiles added.
+    """
+    if not records:
+        return 0
+    items = bubble.image_items
+    added = 0
+    for rec in records:
+        path = rec.get("local_path") or ""
+        if not path:
+            continue
+        img = items.add()
+        img.step_id = request_id or ""
+        img.local_path = path
+        img.url = ""
+        img.thumbnail_url = ""
+        img.alt = rec.get("caption") or ""
+        img.caption = rec.get("caption") or ""
+        img.width = float(rec.get("width") or 0)
+        img.height = float(rec.get("height") or 0)
+        added += 1
+    # Enforce the native cap on step tiles, oldest first.
+    step_indices = [i for i, img in enumerate(items) if img.step_id]
+    overflow = len(step_indices) - MAX_STEP_IMAGES_PER_BUBBLE
+    for idx in reversed(step_indices[:max(overflow, 0)]):
+        items.remove(idx)
+    if added:
+        _refresh_summary(bubble)
+    return added
+
+
+def step_image_count(bubble, request_id: str) -> int:
+    return sum(1 for img in bubble.image_items if img.step_id == request_id)
 
 
 def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = "") -> None:
@@ -314,7 +394,10 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
             # set at begin) and show the object counts beside it; only synthesize
             # a label from the counts when the row is still the generic
             # "Tool call".
-            if label and label != "Tool call":
+            if label in _CAPTURE_LABELS:
+                # A capture's result is the tile(s) drawn under the row.
+                row.target = ""
+            elif label and label != "Tool call":
                 row.target = _summarize_object_counts(nc, nm, nd)
             else:
                 row.label, row.target = _result_label(nc, nm, nd)
@@ -357,4 +440,7 @@ def apply_steps_to_bubble(bubble, steps_data: dict) -> None:
         applied_kinds.append(norm["kind"])
 
     explicit = steps_data.get("summary") or ""
-    bubble.steps_summary = explicit if explicit else format_steps_summary(applied_kinds)
+    if explicit:
+        bubble.steps_summary = explicit
+    else:
+        _refresh_summary(bubble)

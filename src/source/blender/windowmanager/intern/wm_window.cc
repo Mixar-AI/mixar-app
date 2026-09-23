@@ -1948,21 +1948,6 @@ static void ghost_event_proc_timestamp_warning(const GHOST_IEvent *ghost_event)
 }
 #endif /* !NDEBUG */
 
-/* Mixar: depth of the resize re-entry below (handlers, notifiers and drawing
- * run from inside the OS resize callback). On macOS that callback sits inside
- * `-[NSWindow _resizeWithEvent:]`, whose autorelease pool is ABOVE the Metal
- * render boundary `wm_window_events_process` opened. `GPU_render_step(true)`
- * (`render.opengl`) drains that boundary's pool, popping AppKit's with it, and
- * AppKit aborts with "Invalid or prematurely-freed autorelease pool". Python
- * reads this as `WindowManager.mixar_window_resizing` and defers such renders
- * to the main loop. */
-static int g_mixar_resize_dispatch_depth = 0;
-
-bool Mixar_window_resize_dispatch_active()
-{
-  return g_mixar_resize_dispatch_depth > 0;
-}
-
 /**
  * Called by ghost, here we handle events for windows themselves or send to event system.
  *
@@ -2160,12 +2145,10 @@ static bool ghost_event_proc(const GHOST_IEvent *ghost_event, GHOST_TUserDataPtr
 #if defined(__APPLE__) || defined(WIN32)
           /* MACOS and WIN32 don't return to the main-loop while resize. */
           int dummy_sleep_ms = 0;
-          g_mixar_resize_dispatch_depth++;
           wm_window_timers_process(C, &dummy_sleep_ms);
           wm_event_do_handlers(C);
           wm_event_do_notifiers(C);
           wm_draw_update(C);
-          g_mixar_resize_dispatch_depth--;
 #endif
         }
       }

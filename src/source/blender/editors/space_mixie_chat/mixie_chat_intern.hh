@@ -366,11 +366,15 @@ float chat_ui_wrapped_first_line_center(int font_size,
                                         float wrap_width,
                                         float rect_ymin);
 
-/* Agent steps block (mixie_chat_steps.cc) */
+/* Agent steps block (mixie_chat_steps.cc). Capture tiles — the bubble's
+ * step-tagged image items — draw under their step row when the block is
+ * expanded; calc and draw share the tile row layout (tile height is fixed,
+ * width follows the image's recorded aspect). */
 float chat_ui_calc_steps_block_height(const ChatBubbleStyle *style,
                                       const MessageLayoutData *layout,
                                       float content_width);
-void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
+void chat_ui_draw_steps_block(Main *bmain,
+                              const ChatBubbleStyle *style,
                               MessageLayoutData *layout,
                               float x,
                               float y,
@@ -473,6 +477,20 @@ float chat_ui_draw_image_attachment(Main *bmain,
                                     float max_width,
                                     const ChatImageStyle *style);
 
+/* Fitted image: draw `image_path` centered and aspect-fit inside `box`
+ * (mixie_chat_ui_attachments.cc). Shared by the steps-block capture tiles
+ * and the lightbox. `r_drawn` receives the rect actually painted. */
+bool chat_ui_draw_image_fitted(Main *bmain,
+                               const char *image_path,
+                               int image_source,
+                               const rctf *box,
+                               rctf *r_drawn);
+bool chat_ui_image_pixel_size(Main *bmain,
+                              const char *image_path,
+                              int image_source,
+                              int *r_width,
+                              int *r_height);
+
 /* Action buttons */
 void chat_ui_draw_action_buttons(float bubble_x,
                                  float bubble_y,
@@ -561,6 +579,17 @@ bool mixie_chat_handle_scroll_indicator_click(struct SpaceMixieChat *smixie,
 void chat_ui_get_button_bg_color(float out_color[4]);
 void chat_ui_get_button_text_color(float out_color[4]);
 void chat_ui_get_label_color(float out_color[4]);
+
+/* Capture lightbox (mixie_chat_lightbox.cc). Opens on a click on a steps
+ * block capture tile; screen-space, modal for this region while open
+ * (ESC / click-away close, ← → step through the bubble's tiles). State
+ * lives entirely in MixieChatRuntime — nothing crosses to Python. */
+void mixie_chat_draw_lightbox(const bContext *C, ARegion *region);
+bool mixie_chat_lightbox_handle_event(bContext *C, const wmEvent *event);
+bool mixie_chat_lightbox_cursor(
+    wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
+void mixie_chat_lightbox_open(struct SpaceMixieChat *smixie, const char *bubble_id, int image_index);
+void mixie_chat_lightbox_close(struct SpaceMixieChat *smixie);
 
 /* Past-chats overlay (mixie_chat_history_overlay.cc). Drawn screen-space
  * on top of the message area; modal for this region while open (consumes
@@ -659,9 +688,6 @@ bool mixie_chat_handle_steps_click(bContext *C,
 /* Drag-and-drop (mixie_chat_dragdrop.cc) */
 void MIXIE_CHAT_OT_drop_image(wmOperatorType *ot);
 void mixie_chat_dropboxes();
-/* An asset-picker tile dropped into a 3D viewport (mixie_chat_asset_picker_drop.cc). */
-void MIXIE_CHAT_OT_drop_asset_pick(wmOperatorType *ot);
-void mixie_chat_asset_pick_dropboxes();
 
 /* Floating agent bubble overlay (mixie_chat_agent_bubble.cc).
  * The status pill is drawn INSIDE this same popup as a top-row boxed

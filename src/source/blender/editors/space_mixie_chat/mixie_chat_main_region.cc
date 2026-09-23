@@ -36,8 +36,6 @@
 #include "GPU_framebuffer.hh"
 #include "UI_view2d.hh"
 
-#include "ED_mixie_chat_asset_picker.hh"
-
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_footer_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -88,6 +86,13 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
    * suppresses hover on everything behind its scrim. */
   if (rt->history_overlay_active &&
       mixie_chat_history_cursor(win, rt, region, float(mval[0]), float(mval[1])))
+  {
+    return;
+  }
+
+  /* Capture lightbox is modal while open — same contract. */
+  if (rt->lightbox_active &&
+      mixie_chat_lightbox_cursor(win, rt, region, float(mval[0]), float(mval[1])))
   {
     return;
   }
@@ -230,6 +235,23 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
           any_hovered = true;
         }
       }
+      /* Capture tiles under the rows open the lightbox: hand cursor +
+       * a brighter frame on hover. Bounds are zero while collapsed. */
+      for (int i = 0; i < layout.slot_image_count; i++) {
+        ImageSlotData &img = layout.slot_images[i];
+        if (img.step_id[0] == '\0') {
+          continue;
+        }
+        const bool was_hovered = img.is_hovered;
+        img.is_hovered = img.bounds.xmax > img.bounds.xmin &&
+                         BLI_rctf_isect_pt(&img.bounds, mouse_x, mouse_y);
+        if (was_hovered != img.is_hovered) {
+          needs_redraw = true;
+        }
+        if (img.is_hovered) {
+          any_hovered = true;
+        }
+      }
     }
     if (layout.has_thinking &&
         BLI_rctf_isect_pt(&layout.thinking_header_bounds, mouse_x, mouse_y))
@@ -307,15 +329,7 @@ static bool mixie_chat_dispatch_is_live(const bContext *C)
   {
     return true;
   }
-  if (!STREQ(ident, "AGENT")) {
-    return false;
-  }
-  /* A pending asset question replaces the transcript with the island's
-   * Library-style picker (agent_ui_asset_picker.cc), which builds its tiles
-   * and actions as uiBlock buttons in this same region. The message rects
-   * are dropped while it shows, but the scroll indicator and empty-prompt
-   * hits are not rect-cached — stand down exactly as on a pane tab. */
-  return !mixie_chat_asset_picker_shown(C, nullptr);
+  return STREQ(ident, "AGENT");
 }
 
 int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
@@ -343,6 +357,12 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
    * click-away close), wheel/trackpad scroll, and ESC. Cheap no-op when
    * closed (runtime flag check, no RNA reads). */
   if (mixie_chat_history_handle_event(C, event)) {
+    return WM_UI_HANDLER_BREAK;
+  }
+
+  /* 0c. Capture lightbox — modal while open: consumes clicks (click-away
+   * close), wheel, ESC and the arrow keys. Cheap no-op when closed. */
+  if (mixie_chat_lightbox_handle_event(C, event)) {
     return WM_UI_HANDLER_BREAK;
   }
 
@@ -574,6 +594,9 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region)
 {
   mixie_chat_clear_background();
   mixie_chat_draw_messages(C, region);
+  /* Capture lightbox — screen-space over the messages, under the history /
+   * rules / ink overlays (which are mutually exclusive with it in practice). */
+  mixie_chat_draw_lightbox(C, region);
   /* Past-chats overlay — drawn last (screen-space) so it sits on top of
    * messages, the empty state, and the View2D scrollbar. */
   mixie_chat_draw_history_overlay(C, region);

@@ -130,6 +130,7 @@ void init_image_item_property_cache(PointerRNA *item_ptr) {
   g_image_props.local_path = RNA_struct_find_property(item_ptr, "local_path");
   g_image_props.width = RNA_struct_find_property(item_ptr, "width");
   g_image_props.height = RNA_struct_find_property(item_ptr, "height");
+  g_image_props.step_id = RNA_struct_find_property(item_ptr, "step_id");
   g_image_props.initialized = true;
 }
 

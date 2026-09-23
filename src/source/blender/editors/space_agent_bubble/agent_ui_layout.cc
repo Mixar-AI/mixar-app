@@ -407,44 +407,70 @@ void agent_ui_layout_build(const int window_w,
                                  AGENT_CHIP_H);
 }
 
-/* Measure every form of every chip actually shown — Done, the drawing intent,
- * Voice's Stop/ECG or status, a long model name — and let #agent_chip_fit pick
- * the forms, so the row never runs under Send. See agent_ui_chip_fit.hh. */
+/* Fit the labels actually shown, including Done, the drawing intent and Voice status.
+ * Drawing controls and Send remain visible. Two things shorten, in this order: the
+ * model chip walks its own compact ladder (and disappears), then the
+ * secondary reference label drops to "Reference". */
 void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state)
 {
   const float u = layout.scale;
   const float size = AGENT_CHIP_FONT * agent_ui_text_unit();
   const float gap = AGENT_CHIP_GAP * u;
-
-  AgentChipRowInputs in;
-  in.scribble_available = state.scribble_available;
-  in.scribble_armed = state.scribble_armed;
-  in.mark_count = state.mark_count;
-  in.mark_intent = state.mark_intent;
-  in.voice_available = state.voice_available;
-  in.voice_listening = state.voice_listening;
-  in.voice_capturing = state.voice_capturing;
-  in.voice_status = state.voice_status;
-  in.model_available = state.model_available;
-  in.model_label = state.model_label;
-  const AgentChipMetrics metrics{AGENT_CHIP_ICON * u,
-                                 AGENT_CHIP_ICON_GAP * u,
-                                 AGENT_CHIP_PAD_X * u,
-                                 AGENT_SWITCH_W * u,
-                                 AGENT_CHIP_CLEAR_W * u,
-                                 AGENT_CHIP_WAVE_W * u,
-                                 size};
-  AgentChipForms chips[AGENT_CHIP_SLOT_COUNT];
-  agent_chip_forms(
-      in, metrics, [&](const char *label) { return ui::mixar_text_width(label, size); }, chips);
-
+  const float padding = 3.0f * AGENT_CHIP_ICON_GAP * u;
+  auto width = [&](const char *label, const float icon) {
+    return ui::mixar_text_width(label, size) + icon * u + padding + 2.0f;
+  };
+  const char *annotation = state.scribble_armed ? "Done" : "Sketch";
+  const float annotate_w = state.scribble_available ? width(annotation, AGENT_CHIP_ICON) : 0;
+  const float voice_w = state.voice_available ?
+                            width(state.voice_listening ? state.voice_status : "Voice", AGENT_CHIP_ICON) : 0;
+  const float auto_w = width("Auto", AGENT_SWITCH_W) + AGENT_CHIP_PAD_X * u;
+  const float reading_w = (state.scribble_armed || state.mark_count) ?
+                              width(state.mark_intent[0] ? state.mark_intent : "Auto detect", AGENT_CHIP_ICON) : 0;
+  const float clear_w = state.mark_count && !state.scribble_armed ? AGENT_CHIP_CLEAR_W * u : 0;
+  const float rest_fixed = annotate_w + voice_w + auto_w + reading_w + clear_w +
+                     gap * (2 + (annotate_w > 0) + (voice_w > 0) + (reading_w > 0) + (clear_w > 0));
   const float span = layout.btn_generate.xmin - layout.chip_upload.xmin;
-  const AgentChipFit fit = agent_chip_fit(chips, span, gap);
-  layout.compact_reference = fit.compact_reference;
-  std::copy_n(fit.form, int(AGENT_CHIP_SLOT_COUNT), layout.chip_form);
-  const int model_form = fit.form[AGENT_CHIP_SLOT_MODEL];
-  layout.model_form = model_form < 3 ? AgentModelChipForm(model_form) : AgentModelChipForm::Icon;
+  /* Upload Reference's hard floor: its picture mark and nothing else. */
+  const float upload_floor = AGENT_CHIP_ICON * u + padding;
 
+  /* Model chip. It draws out of the SAME budget as every other chip, so a
+   * long model name must not be what pushes Upload Reference off the row.
+   * Two passes over its compact ladder: first insisting the compact
+   * "Reference" label still fits, then settling for Upload's icon-only
+   * floor. If even the icon-only chip cannot buy that, the model chip is
+   * dropped for this width (the footer picker still has it). */
+  const char *model_label = state.model_label[0] ? state.model_label : "Mixie";
+  const float model_chevron = (AGENT_CHIP_ICON * 0.7f + AGENT_CHIP_ICON_GAP) * u;
+  const float model_ladder[3] = {
+      width(model_label, AGENT_CHIP_ICON) + model_chevron,
+      width(model_label, AGENT_CHIP_ICON),
+      upload_floor,
+  };
+  const float model_floors[2] = {width("Reference", AGENT_CHIP_ICON), upload_floor};
+  float model_w = 0.0f;
+  layout.model_form = AgentModelChipForm::Icon;
+  if (state.model_available) {
+    for (const float floor_w : model_floors) {
+      for (int i = 0; i < 3; i++) {
+        if (span - (rest_fixed + model_ladder[i] + gap) >= floor_w) {
+          model_w = model_ladder[i];
+          layout.model_form = AgentModelChipForm(i);
+          break;
+        }
+      }
+      if (model_w > 0.0f) {
+        break;
+      }
+    }
+  }
+
+  const float rest = rest_fixed + (model_w > 0.0f ? model_w + gap : 0.0f);
+  const float upload_budget = span - rest;
+  layout.compact_reference = width("Upload Reference", AGENT_CHIP_ICON) > upload_budget;
+  const float upload_w = std::max(upload_floor,
+      std::min(width(layout.compact_reference ? "Reference" : "Upload Reference", AGENT_CHIP_ICON),
+               upload_budget));
   float x = layout.chip_upload.xmin;
   auto place = [&](rctf &rect, const float w) {
     if (w <= 0) { rect = {}; return; }
@@ -452,13 +478,13 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
     rect.xmax = x + w;
     x += w + gap;
   };
-  place(layout.chip_upload, fit.width[AGENT_CHIP_SLOT_UPLOAD]);
-  place(layout.chip_scribble, fit.width[AGENT_CHIP_SLOT_SCRIBBLE]);
-  place(layout.chip_voice, fit.width[AGENT_CHIP_SLOT_VOICE]);
-  place(layout.chip_auto, fit.width[AGENT_CHIP_SLOT_AUTO]);
-  place(layout.chip_model, fit.width[AGENT_CHIP_SLOT_MODEL]);
-  place(layout.chip_reading, fit.width[AGENT_CHIP_SLOT_READING]);
-  place(layout.chip_clear, fit.width[AGENT_CHIP_SLOT_CLEAR]);
+  place(layout.chip_upload, upload_w);
+  place(layout.chip_scribble, annotate_w);
+  place(layout.chip_voice, voice_w);
+  place(layout.chip_auto, auto_w);
+  place(layout.chip_model, model_w);
+  place(layout.chip_reading, reading_w);
+  place(layout.chip_clear, clear_w);
 }
 
 /** \} */

@@ -19,7 +19,6 @@ BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
 DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
 STATE_CC = (CPP / "agent_ui_state.cc").read_text(encoding="utf-8")
 LAYOUT_CC = (CPP / "agent_ui_layout.cc").read_text(encoding="utf-8")
-CHIP_FIT_HH = (CPP / "agent_ui_chip_fit.hh").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
 ICONS_CC = (CPP / "agent_ui_icons.cc").read_text(encoding="utf-8")
 DRAW_HH = (CPP / "agent_ui_draw.hh").read_text(encoding="utf-8")
@@ -180,12 +179,7 @@ def test_handwriting_has_explicit_header_control_with_shared_geometry():
 
 
 def test_chip_widths_fit_mark_counts_voice_status_and_auto_switch():
-    # The pure fitter measures the labels actually shown (Done, the Voice
-    # status or Stop + trace, Auto with its switch); the layout feeds it state.
-    assert 'in.scribble_armed ? "Done" : "Sketch"' in CHIP_FIT_HH
-    assert 'width("Auto", m.switch_w)' in CHIP_FIT_HH
-    assert "width(in.voice_status, m.icon)" in CHIP_FIT_HH
-    assert 'width("Stop", m.icon)' in CHIP_FIT_HH
-    assert "in.voice_status = state.voice_status;" in LAYOUT_CC
-    assert "in.scribble_armed = state.scribble_armed;" in LAYOUT_CC
+    assert 'state.scribble_armed ? "Done" : "Sketch"' in LAYOUT_CC
+    assert 'width("Auto", AGENT_SWITCH_W)' in LAYOUT_CC
+    assert 'state.voice_listening ? state.voice_status : "Voice"' in LAYOUT_CC
     assert 'agent_ui_layout_fit_controls(*r_layout, *r_state)' in BUBBLE_CC

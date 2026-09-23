@@ -21,31 +21,26 @@ def test_empty_returns_empty_string():
     assert format_steps_summary([]) == ""
 
 
-def test_single_read():
-    assert format_steps_summary(["READ"]) == "Read 1 file"
+def test_single_tool():
+    assert format_steps_summary(["READ"]) == "1 tool called"
 
 
-def test_read_and_command():
-    # One file read, one command run.
-    assert format_steps_summary(["READ", "COMMAND"]) == "Read 1 file · ran 1 command"
-
-
-def test_pluralization_and_grouping():
-    # Two reads, two commands -> pluralized, grouped, kind order preserved.
-    summary = format_steps_summary(["READ", "COMMAND", "READ", "COMMAND"])
-    assert summary == "Read 2 files · ran 2 commands"
-
-
-def test_all_kinds_order():
-    summary = format_steps_summary(["READ", "WRITE", "COMMAND", "SEARCH", "TOOL"])
-    assert summary == (
-        "Read 1 file · wrote 1 file · ran 1 command · "
-        "ran 1 search · used 1 tool"
-    )
+def test_counts_every_kind_without_a_breakdown():
+    """The header is a plain count — never "Read 2 files · ran 1 command":
+    the agent's tools are Blender scripts, and the per-kind phrasing read as
+    noise. The rows carry the specifics."""
+    assert format_steps_summary(["READ", "COMMAND"]) == "2 tools called"
+    assert format_steps_summary(["READ", "WRITE", "COMMAND", "SEARCH", "TOOL"]) == "5 tools called"
 
 
 def test_unknown_kind_ignored():
-    assert format_steps_summary(["READ", "NOPE"]) == "Read 1 file"
+    assert format_steps_summary(["READ", "NOPE"]) == "1 tool called"
+
+
+def test_summary_counts_images():
+    assert format_steps_summary(["READ"], image_count=1) == "1 tool called · 1 image"
+    assert format_steps_summary(["READ", "TOOL"], image_count=3) == "2 tools called · 3 images"
+    assert format_steps_summary([], image_count=3) == ""
 
 
 # --- normalize_step_item (pure, no bpy) ----------------------------------
@@ -94,9 +89,21 @@ class _FakeColl(list):
     # list.clear() already matches Blender collection .clear()
 
 
+class _FakeImageColl(list):
+    def add(self):
+        item = _FakeStep()
+        item.step_id = ""
+        self.append(item)
+        return item
+
+    def remove(self, index):
+        del self[index]
+
+
 class _FakeBubble:
     def __init__(self):
         self.step_items = _FakeColl()
+        self.image_items = _FakeImageColl()
         self.steps_summary = ""
 
 
@@ -119,7 +126,7 @@ def test_apply_steps_replaces_items_and_computes_summary():
     assert bubble.step_items[0].kind == "READ"
     assert bubble.step_items[1].kind == "COMMAND"
     assert bubble.step_items[1].detail == "3 passed"
-    assert bubble.steps_summary == "Read 1 file · ran 1 command"
+    assert bubble.steps_summary == "2 tools called"
 
 
 def test_apply_steps_uses_explicit_summary_when_given():
@@ -162,10 +169,11 @@ def test_begin_step_adds_running_row_and_updates_summary():
     row = bubble.step_items[0]
     assert row.item_id == "req-1"
     assert row.kind == "TOOL"
-    assert row.label == "Create cube"
+    # An unknown tool name is never shown raw — the counts label it on finish.
+    assert row.label == "Tool call"
     assert row.status == "RUNNING"
     assert row.detail == ""
-    assert bubble.steps_summary == "Used 1 tool"
+    assert bubble.steps_summary == "1 tool called"
 
 
 def test_finish_step_marks_done_with_count_and_no_stdout():
@@ -226,6 +234,66 @@ def test_finish_step_updates_most_recent_matching_row():
 def test_humanize_unknown_tool_name_falls_back():
     assert steps_format.humanize_tool_name("unknown") == "Tool call"
     assert steps_format.humanize_tool_name("") == "Tool call"
+    # The raw snake_case name is never the label.
+    assert steps_format.humanize_tool_name("inspect_spatial_constraints") == "Checked placement"
+    assert steps_format.humanize_tool_name("some_new_tool") == "Tool call"
+
+
+def test_known_tools_get_friendly_labels():
+    h = steps_format.humanize_tool_name
+    assert h("render_viewport") == "Captured viewport"
+    assert h("inspect_mesh_seams") == "Inspected seams"
+    assert h("inspect_geometry") == "Measured geometry"
+    assert h("RENDER_VIEWPORT") == "Captured viewport"
+
+
+def test_capture_row_keeps_label_and_no_count_target():
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(bubble, "r1", "render_viewport")
+    assert bubble.step_items[0].kind == "READ"
+    steps_format.finish_step_on_bubble(
+        bubble, "r1", {"success": True, "modified_objects": ["Camera"]})
+    assert bubble.step_items[0].label == "Captured viewport"
+    assert bubble.step_items[0].target == ""
+
+
+def test_attach_step_images_tags_tiles_and_updates_summary():
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(bubble, "r1", "render_viewport")
+    added = steps_format.attach_step_images(bubble, "r1", [
+        {"local_path": "/tmp/a.jpg", "width": 1024, "height": 768, "caption": "persp"},
+        {"local_path": "", "width": 0, "height": 0, "caption": "skipped"},
+    ])
+    assert added == 1
+    tile = bubble.image_items[0]
+    assert tile.step_id == "r1"
+    assert tile.local_path == "/tmp/a.jpg"
+    assert tile.width == 1024.0 and tile.height == 768.0
+    assert tile.caption == "persp"
+    assert steps_format.step_image_count(bubble, "r1") == 1
+    assert bubble.steps_summary == "1 tool called · 1 image"
+
+
+def test_attach_step_images_drops_oldest_past_cap_and_keeps_gallery():
+    bubble = _FakeBubble()
+    gallery = bubble.image_items.add()  # backend-owned, no step_id
+    gallery.local_path = "/tmp/gallery.png"
+    cap = steps_format.MAX_STEP_IMAGES_PER_BUBBLE
+    for n in range(cap + 3):
+        steps_format.attach_step_images(
+            bubble, f"r{n}", [{"local_path": f"/tmp/{n}.jpg"}])
+    tiles = [img for img in bubble.image_items if img.step_id]
+    assert len(tiles) == cap
+    assert tiles[0].step_id == "r3"          # the three oldest were dropped
+    assert tiles[-1].step_id == f"r{cap + 2}"
+    assert bubble.image_items[0].local_path == "/tmp/gallery.png"
+
+
+def test_classify_uv_scripts():
+    c = steps_format.classify_script_action
+    assert c("for e in bm.edges: e.seam = True\nbpy.ops.mesh.mark_seam()") == "Marked seams"
+    assert c("bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.02)") == "Unwrapped mesh"
+    assert c("bpy.ops.uv.pack_islands(margin=0.01)") == "Packed UV islands"
 
 
 def test_finish_step_detail_is_object_names_not_stdout():
@@ -298,7 +366,7 @@ def test_inspected_scene_stays_read_kind_for_execute_script():
         "objs=[o.name for o in bpy.data.objects]; print(objs)")
     assert bubble.step_items[0].label == "Inspected scene"
     assert bubble.step_items[0].kind == "READ"
-    assert bubble.steps_summary.startswith("Read")
+    assert bubble.steps_summary == "1 tool called"
     steps_format.finish_step_on_bubble(bubble, "r1", {"success": True})
     assert bubble.step_items[0].kind == "READ"
     item = steps_format.normalize_step_item(
@@ -317,11 +385,20 @@ def test_begin_step_uses_script_action_when_tool_name_unknown():
     assert bubble.step_items[0].target == ""
 
 
-def test_real_tool_name_takes_priority_over_script():
+def test_known_tool_name_takes_priority_over_script():
     bubble = _FakeBubble()
     steps_format.begin_step_on_bubble(
-        bubble, "r1", "apply_pbr_texture", "bpy.ops.render.render()")
-    assert bubble.step_items[0].label == "Apply pbr texture"
+        bubble, "r1", "inspect_geometry", "bpy.ops.render.render()")
+    assert bubble.step_items[0].label == "Measured geometry"
+
+
+def test_unknown_tool_name_defers_to_script():
+    """A tool the label table does not know is never shown by name — the
+    script classifier labels the row instead."""
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(
+        bubble, "r1", "apply_pbr_texture", "bpy.ops.render.render(write_still=True)")
+    assert bubble.step_items[0].label == "Rendered scene"
 
 
 def test_execute_bpy_script_treated_as_generic_tool_name():

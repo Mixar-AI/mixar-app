@@ -426,6 +426,22 @@ bool mixie_chat_handle_steps_click(bContext *C,
 
   for (const MessageLayoutData &layout : layout_cache) {
     if (layout.has_steps) {
+      /* Capture tiles (drawn under their rows while expanded) open the
+       * lightbox. Tested first: a tile sits inside the block, never on a
+       * row's own text line, and its bounds are zero while collapsed. */
+      if (!layout.steps_collapsed) {
+        for (int i = 0; i < layout.slot_image_count; i++) {
+          const ImageSlotData &img = layout.slot_images[i];
+          if (img.step_id[0] == '\0' || img.bounds.xmax <= img.bounds.xmin) {
+            continue;
+          }
+          if (BLI_rctf_isect_pt(&img.bounds, view_x, view_y)) {
+            mixie_chat_lightbox_open(smixie, layout.bubble_id, i);
+            ED_region_tag_redraw(region);
+            return true;
+          }
+        }
+      }
       /* Expanded rows with detail toggle their own second level. */
       if (!layout.steps_collapsed) {
         for (int i = 0; i < layout.slot_step_count; i++) {

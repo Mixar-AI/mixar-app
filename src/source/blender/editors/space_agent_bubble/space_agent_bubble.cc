@@ -29,8 +29,6 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
-#include "BKE_global.hh"
-#include "BKE_main.hh"
 #include "BKE_report.hh"
 #include "BKE_screen.hh"
 
@@ -72,13 +70,11 @@
 #include "UI_interface_layout.hh"
 
 #include "ED_mixar_glass.hh"
-#include "ED_mixie_chat_asset_picker.hh"
 
 #include "agent_bubble_glass.hh"
 #include "agent_bubble_intern.hh"
 #include "agent_bubble_references.hh"
 #include "agent_bubble_size.hh"
-#include "agent_ui_asset_picker.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
 #include "agent_ui_layout.hh"
@@ -678,10 +674,8 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     agent_bubble_rect_to_region(region, layout->chip_voice, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.voice_toggle",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-              state->voice_capturing ?
-                  "Stop dictating and insert the words (or release Option/Alt). Shift-click cancels" :
               state->voice_listening ?
-                  "Click to cancel voice input" :
+                  "Release Option/Alt to finish, or click to stop. Shift-click cancels" :
                   "Hold left Option (Mac) or left Alt (Windows) in a text field to dictate, release to finish. Click to start or stop; Shift-click cancels");
   }
 
@@ -814,15 +808,6 @@ bool ED_agent_bubble_is_resting_pill(const bContext *C)
   const wmWindow *win = CTX_wm_window(C);
   return g_bubble_minimised && win && g_pill_ghostwin &&
          win->runtime->ghostwin == g_pill_ghostwin;
-}
-
-void agent_bubble_return_key_to_host()
-{
-#if defined(__APPLE__) || defined(_WIN32)
-  if (g_host_ghostwin != nullptr) {
-    Mixar_WindowMakeKey(g_host_ghostwin);
-  }
-#endif
 }
 
 /**
@@ -1139,52 +1124,6 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
         else if (tab_probe.active_tab == AGENT_TAB_GENERATIONS) {
           agent_ui_generations_draw(C, region, panel_region, u);
         }
-      }
-      return;
-    }
-  }
-
-  /* A pending asset question (the agent found several close matches in the
-   * user's trained library) replaces the transcript with ONLY its picks, as a
-   * Library-style grid — `agent_ui_asset_picker.cc`. It is drawn exactly like
-   * a pane tab: the transcript's per-message rects are dropped (its hit tests
-   * are a cache) and the chat's click dispatch stands down on the same
-   * predicate (`mixie_chat_main_region.cc`). The composer below stays, so a
-   * typed answer still works — and an EMPTY send accepts the selected pick
-   * (`chat_ops.py`). Answering clears the question and the transcript
-   * returns on the next draw; nothing has to be torn down. The user's own
-   * modal surfaces (rules, past chats, ink) are not replaced —
-   * `mixie_chat_asset_picker_shown` stands down while one is open. */
-  {
-    MixieAssetPicker picker;
-    if (mixie_chat_asset_picker_shown(C, &picker)) {
-      /* Closing edges of the chat's modal runtimes, as the empty state runs
-       * them: with visibility false they draw nothing and only reset. */
-      mixie_chat_draw_ink_overlay(C, region);
-      mixie_chat_draw_rules_overlay(C, region);
-      mixie_chat_draw_history_overlay(C, region);
-      agent_bubble_clear_chat_layout_cache(C);
-      agent_bubble_fill_region_backdrop(region);
-      AgentIslandState state;
-      AgentIslandLayout layout;
-      if (agent_bubble_island_begin(C, region, &state, &layout)) {
-        agent_ui_draw_island(region, &layout, &state);
-        agent_bubble_island_end();
-        /* The TRANSCRIPT slice, not the whole panel: with a conversation the
-         * composer strip and the chip row live in the TOOLS region below,
-         * and the region scissor keeps only this band. The pane tabs draw on
-         * `layout.panel` because the composer collapses under them; here it
-         * stays, and a foot-anchored "Use This Asset" laid out against the
-         * panel's bottom fell into the TOOLS band and was never seen. */
-        rctf picker_region = layout.transcript;
-        BLI_rctf_translate(&picker_region,
-                           -float(region->winrct.xmin),
-                           -float(region->winrct.ymin));
-        const float u = layout.scale;
-        if (agent_bubble_references_visible(C)) {
-          picker_region.xmax = float(region->winx) - 6.0f * u;
-        }
-        agent_ui_asset_picker_draw(C, region, picker_region, u, picker);
       }
       return;
     }
@@ -1981,51 +1920,6 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 #define AGENT_BUBBLE_PILL_HEIGHT_LARGE 44
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE 22.0f
 
-/* While viewport Sketch is armed the resting pill is where typing lands, so it
- * grows a little and carries a Voice button and a blinking caret
- * (agent_ui_pill_draft.cc). Aspect stays above 4 for the elongated painter. */
-#define AGENT_BUBBLE_PILL_WIDTH_SKETCH 352
-#define AGENT_BUBBLE_PILL_HEIGHT_SKETCH 52
-#define AGENT_BUBBLE_PILL_CORNER_RADIUS_SKETCH 26.0f
-
-/* The resting pill currently wears the Sketch size. Seats and the user's
- * remembered offset are stored for the default LARGE pill; the helpers below
- * convert, keeping the pill's bottom-centre wherever it was seated. */
-static bool g_pill_rest_sketch = false;
-[[maybe_unused]] static int pill_rest_width()
-{
-  return g_pill_rest_sketch ? AGENT_BUBBLE_PILL_WIDTH_SKETCH : AGENT_BUBBLE_PILL_WIDTH_LARGE;
-}
-[[maybe_unused]] static int pill_rest_height()
-{
-  return g_pill_rest_sketch ? AGENT_BUBBLE_PILL_HEIGHT_SKETCH : AGENT_BUBBLE_PILL_HEIGHT_LARGE;
-}
-[[maybe_unused]] static float pill_rest_radius()
-{
-  return g_pill_rest_sketch ? AGENT_BUBBLE_PILL_CORNER_RADIUS_SKETCH :
-                              AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE;
-}
-/** Top-left shift of the current resting pill from a LARGE one on the same seat. */
-[[maybe_unused]] static int pill_rest_dx()
-{
-  return (AGENT_BUBBLE_PILL_WIDTH_LARGE - pill_rest_width()) / 2;
-}
-[[maybe_unused]] static int pill_rest_dy()
-{
-  return AGENT_BUBBLE_PILL_HEIGHT_LARGE - pill_rest_height();
-}
-/** Viewport Sketch is armed (`wm.mixar_mark_armed`); absent reads as off. */
-[[maybe_unused]] static bool pill_sketch_wanted(wmWindowManager *wm)
-{
-  if (wm == nullptr) {
-    return false;
-  }
-  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixar_mark_armed");
-  return prop && RNA_property_type(prop) == PROP_BOOLEAN &&
-         RNA_property_boolean_get(&wm_ptr, prop);
-}
-
 /* Duration (seconds) of the minimise glide animation — pill slides
  * + grows from above-bubble to centre-bottom while the bubble
  * fades out. ~0.28 s is the upper end of "responsive" UI motion;
@@ -2105,17 +1999,15 @@ static void pill_seat_on_host()
     return;
   }
   if (g_pill_user_placed) {
-    Mixar_WindowAnchorAtParentOffset(g_pill_ghostwin,
-                                     g_host_ghostwin,
-                                     g_pill_user_offset_x + pill_rest_dx(),
-                                     g_pill_user_offset_y + pill_rest_dy());
+    Mixar_WindowAnchorAtParentOffset(
+        g_pill_ghostwin, g_host_ghostwin, g_pill_user_offset_x, g_pill_user_offset_y);
     return;
   }
   if (g_bubble_seat_valid) {
     Mixar_WindowAnchorAtParentOffset(
         g_pill_ghostwin, g_host_ghostwin,
-        g_bubble_seat_x + (g_bubble_seat_width - pill_rest_width()) / 2,
-        g_bubble_seat_y + g_bubble_seat_height - pill_rest_height());
+        g_bubble_seat_x + (g_bubble_seat_width - AGENT_BUBBLE_PILL_WIDTH_LARGE) / 2,
+        g_bubble_seat_y + g_bubble_seat_height - AGENT_BUBBLE_PILL_HEIGHT_LARGE);
     return;
   }
   Mixar_WindowAnchorAtParentCentreBottom(
@@ -2152,7 +2044,7 @@ int ED_agent_bubble_pill_band_px(const wmWindow *host)
 {
   void *ghost = (host != nullptr && host->runtime != nullptr) ? host->runtime->ghostwin : nullptr;
   const float scale = host_pixels_per_point(ghost);
-  return scale > 0.0f ? int(roundf(pill_rest_height() * scale)) : 0;
+  return scale > 0.0f ? int(roundf(AGENT_BUBBLE_PILL_HEIGHT_LARGE * scale)) : 0;
 }
 
 static void pill_remember_user_seat()
@@ -2163,9 +2055,8 @@ static void pill_remember_user_seat()
   int ox = 0;
   int oy = 0;
   if (Mixar_WindowGetParentOffset(g_pill_ghostwin, g_host_ghostwin, &ox, &oy)) {
-    /* Stored for the LARGE pill, whatever size is resting there now. */
-    g_pill_user_offset_x = ox - pill_rest_dx();
-    g_pill_user_offset_y = oy - pill_rest_dy();
+    g_pill_user_offset_x = ox;
+    g_pill_user_offset_y = oy;
   }
 }
 
@@ -2507,7 +2398,6 @@ void ED_agent_bubble_windows_closed()
   g_bubble_expanded = false;
   g_bubble_pad_active = false;
   g_pad_saved_valid = false;
-  g_pill_rest_sketch = false;
 #if defined(__APPLE__) || defined(_WIN32)
   /* The Cinema seat globals only exist where the seat can be set — see the
    * platform guard on their declarations and on the seat functions. */
@@ -2858,12 +2748,7 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
   GPU_matrix_pop();
 
   if (pill_w > pill_h * 4.0f) {
-    /* The Sketch caret's blink edge and the live ECG share the cat's one timer. */
-    agent_ui_cat_schedule(win,
-                          region,
-                          g_host_ghostwin,
-                          std::min(agent_ui_cat_motion_next_frame(region),
-                                   agent_ui_pill_draft_next_frame()));
+    agent_ui_cat_schedule(win, region, g_host_ghostwin, agent_ui_cat_motion_next_frame(region));
   }
   else {
     agent_ui_cat_scheduler_forget(region);
@@ -2977,8 +2862,10 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
   if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {
     if (start_minimised) {
       if (g_pill_ghostwin != nullptr) {
-        g_pill_rest_sketch = pill_sketch_wanted(CTX_wm_manager(C));
-        pill_set_size(C, pill_rest_width(), pill_rest_height(), pill_rest_radius());
+        pill_set_size(C,
+                      AGENT_BUBBLE_PILL_WIDTH_LARGE,
+                      AGENT_BUBBLE_PILL_HEIGHT_LARGE,
+                      AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
       }
       if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
         pill_seat_on_host();
@@ -3336,8 +3223,10 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * minimised flag. */
     if (start_minimised) {
       Mixar_WindowSetHidesOnDeactivate(g_bubble_ghostwin, false);
-      g_pill_rest_sketch = pill_sketch_wanted(CTX_wm_manager(C));
-      pill_set_size(C, pill_rest_width(), pill_rest_height(), pill_rest_radius());
+      pill_set_size(C,
+                    AGENT_BUBBLE_PILL_WIDTH_LARGE,
+                    AGENT_BUBBLE_PILL_HEIGHT_LARGE,
+                    AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
 #ifdef _WIN32
       /* Win32: re-parent pill directly bubble→host so it's never
        * an unowned visible window (avoids Alt+Tab race).  Then
@@ -3665,8 +3554,8 @@ static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOpera
       int oy = 0;
       if (Mixar_WindowGetParentOffset(g_pill_ghostwin, g_host_ghostwin, &ox, &oy)) {
         g_pill_user_placed = true;
-        g_pill_user_offset_x = ox - pill_rest_dx();
-        g_pill_user_offset_y = oy - pill_rest_dy();
+        g_pill_user_offset_x = ox;
+        g_pill_user_offset_y = oy;
         Mixar_WindowAnchorAtParentOffset(g_pill_ghostwin, g_host_ghostwin, ox, oy);
       }
     }
@@ -3776,22 +3665,20 @@ static void minimise_anim_finish(void *user_data)
   }
   g_bubble_minimise_pending = false;
   if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
-    /* Sketch minimises the island: arrive at the Sketch size, not a step later. */
-    g_pill_rest_sketch = G_MAIN && pill_sketch_wanted(
-                                       static_cast<wmWindowManager *>(G_MAIN->wm.first));
 #ifdef _WIN32
-    Mixar_WindowSetCornerRadius(g_pill_ghostwin, pill_rest_radius());
+    Mixar_WindowSetCornerRadius(g_pill_ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
     if (g_pill_user_placed) {
       /* The user's own seat: only the size changes here, the offset anchor
        * places it. */
-      Mixar_WindowForceSize(g_pill_ghostwin, pill_rest_width(), pill_rest_height());
+      Mixar_WindowForceSize(
+          g_pill_ghostwin, AGENT_BUBBLE_PILL_WIDTH_LARGE, AGENT_BUBBLE_PILL_HEIGHT_LARGE);
     }
     else {
       Mixar_WindowAnimateFrameToCentreBottomOfWindow(
           g_pill_ghostwin,
           g_host_ghostwin,
-          pill_rest_width(),
-          pill_rest_height(),
+          AGENT_BUBBLE_PILL_WIDTH_LARGE,
+          AGENT_BUBBLE_PILL_HEIGHT_LARGE,
           AGENT_BUBBLE_PILL_BOTTOM_MARGIN,
           /*duration=*/0.0f);
     }
@@ -3803,8 +3690,10 @@ static void minimise_anim_finish(void *user_data)
      * draw sizes itself from Mixar_WindowGetContentPixelSize and repaints on
      * every composite via draw_overlay, so skipping the wmWindow layout sync
      * is safe for this surface. */
-    Mixar_WindowForceSize(g_pill_ghostwin, pill_rest_width(), pill_rest_height());
-    Mixar_WindowSetCornerRadius(g_pill_ghostwin, pill_rest_radius());
+    Mixar_WindowForceSize(g_pill_ghostwin,
+                          AGENT_BUBBLE_PILL_WIDTH_LARGE,
+                          AGENT_BUBBLE_PILL_HEIGHT_LARGE);
+    Mixar_WindowSetCornerRadius(g_pill_ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
     pill_seat_on_host();
     Mixar_WindowAnimateAlphaTo(g_pill_ghostwin, 1.0f, 0.18f);
 #endif
@@ -3871,20 +3760,6 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
     }
     else if (!handwriting && g_bubble_pad_active) {
       agent_bubble_pad_restore(C);
-    }
-  }
-
-  /* Sketch pill: arming or ending Sketch while the pill rests grows or shrinks
-   * it in place, bottom-centre fixed. Edge-detected here for the same reason
-   * as the pad; the minimise finish seats a pill that arrives mid-Sketch. */
-  if (g_bubble_minimised && !g_bubble_minimise_pending && g_pill_ghostwin != nullptr &&
-      g_host_ghostwin != nullptr)
-  {
-    const bool sketch = pill_sketch_wanted(CTX_wm_manager(C));
-    if (sketch != g_pill_rest_sketch) {
-      g_pill_rest_sketch = sketch;
-      pill_set_size(C, pill_rest_width(), pill_rest_height(), pill_rest_radius());
-      pill_seat_on_host();
     }
   }
 
@@ -4107,7 +3982,6 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
                   AGENT_BUBBLE_PILL_WIDTH,
                   AGENT_BUBBLE_PILL_HEIGHT,
                   AGENT_BUBBLE_PILL_CORNER_RADIUS);
-    g_pill_rest_sketch = false;
     Mixar_WindowSetParent(g_pill_ghostwin, g_bubble_ghostwin);
     Mixar_WindowPositionAboveParent(g_pill_ghostwin,
                                     g_bubble_ghostwin,
@@ -4294,7 +4168,6 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_bubble_toggle_expand);
   WM_operatortype_append(MIXAR_OT_bubble_set_bg_color);
   WM_operatortype_append(MIXAR_OT_bubble_tab_locked);
-  WM_operatortype_append(MIXAR_OT_bubble_pill_voice);
   WM_operatortype_append(MIXAR_OT_queue_navigate);
   WM_operatortype_append(MIXAR_OT_generations_navigate);
   WM_operatortype_append(MIXAR_OT_reference_scroll);
@@ -4488,7 +4361,6 @@ void ED_spacetype_agent_bubble()
   agent_ui_pill_draft_qa_register();
   agent_bubble_references_qa_register();
   agent_ui_generations_qa_register();
-  agent_ui_asset_picker_qa_register();
 }
 
 /** \} */

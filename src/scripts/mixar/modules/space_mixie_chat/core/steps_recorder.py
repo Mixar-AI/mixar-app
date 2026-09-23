@@ -16,7 +16,13 @@ Runs on the main thread only (called from the executor timer callback).
 from mixar.config.logging_config import get_logger
 
 from ..constants import TEMP_PLACEHOLDER_PREFIX
-from .steps_format import begin_step_on_bubble, finish_step_on_bubble, is_internal_step
+from .capture_store import save_captures
+from .steps_format import (
+    attach_step_images,
+    begin_step_on_bubble,
+    finish_step_on_bubble,
+    is_internal_step,
+)
 from .ui_utils import bump_layout_epoch, redraw_chat_areas
 
 logger = get_logger(__name__)
@@ -73,16 +79,57 @@ def record_step_start(scene, request_id: str, tool_name: str, script: str = "") 
         logger.debug("[STEPS] step-start recording failed", exc_info=True)
 
 
-def record_step_end(scene, request_id: str, result: dict) -> None:
-    """Complete the step row for `request_id` from the execution result."""
+def record_step_end(scene, request_id: str, result: dict, session_id: str = "") -> None:
+    """Complete the step row for `request_id` from the execution result.
+
+    A capture result (viewport render, seam / UV inspection, final render)
+    also lands as image tiles under the row: the bytes are written to the
+    session's media dir and referenced from the bubble's image_items.
+    """
     try:
         bubble = _find_bubble_with_step(scene, request_id)
         if bubble is None:
             return
-        if finish_step_on_bubble(bubble, request_id, result or {}):
+        result = result or {}
+        if finish_step_on_bubble(bubble, request_id, result):
             from .cat_activity import note_step_completed
             note_step_completed(scene, bubble, request_id)
+        _attach_captures(scene, bubble, request_id, result, session_id)
         bump_layout_epoch(scene)
         redraw_chat_areas()
     except Exception:
         logger.debug("[STEPS] step-end recording failed", exc_info=True)
+
+
+def record_step_captures(scene, request_id: str, result: dict, session_id: str = "") -> None:
+    """Attach capture tiles to an ALREADY finished step row.
+
+    The final render (`render_viewport(quality="final")`) replies late: the
+    executor closes the row with the deferral marker and the pixels arrive
+    minutes later from preview_deferral's poller. This hangs them under the
+    same row by request id.
+    """
+    try:
+        bubble = _find_bubble_with_step(scene, request_id)
+        if bubble is None:
+            return
+        _attach_captures(scene, bubble, request_id, result or {}, session_id)
+        bump_layout_epoch(scene)
+        redraw_chat_areas()
+    except Exception:
+        logger.debug("[STEPS] late capture recording failed", exc_info=True)
+
+
+def _attach_captures(scene, bubble, request_id: str, result: dict, session_id: str) -> None:
+    """Write the result's images to disk and hang them under the step row."""
+    if not result.get("success"):
+        return
+    if not session_id:
+        session_id = getattr(scene, "mixie_session_id", "") or ""
+    try:
+        records = save_captures(session_id, request_id, result)
+        if records:
+            added = attach_step_images(bubble, request_id, records)
+            logger.debug("[STEPS] %d capture tile(s) for %s", added, request_id)
+    except Exception:
+        logger.debug("[STEPS] capture tile recording failed", exc_info=True)

@@ -357,15 +357,6 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
     r_state->voice_listening = read_bool_prop(&wm_ptr, "mixie_chat_voice_listening");
     read_string_prop(&wm_ptr, "mixie_chat_voice_status", r_state->voice_status, sizeof(r_state->voice_status));
-    /* "Listening" is core/voice.py's recording state (pinned by
-     * tests/test_voice_stop_control.py); only then is the click a Stop. */
-    r_state->voice_capturing = r_state->voice_listening &&
-                               STREQ(r_state->voice_status, "Listening");
-    PropertyRNA *level = RNA_struct_find_property(&wm_ptr, "mixie_chat_voice_level");
-    r_state->voice_level = (r_state->voice_capturing && level &&
-                            RNA_property_type(level) == PROP_FLOAT) ?
-                               std::clamp(RNA_property_float_get(&wm_ptr, level), 0.0f, 1.0f) :
-                               0.0f;
   }
   /* Hosted model pick — the WindowManager mirror the Python half writes
    * (byok preference state). A build whose Python half has not landed, or

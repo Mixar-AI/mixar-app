@@ -127,14 +127,7 @@ def test_pill_draw_schedules_one_native_frame_without_self_redraw():
     draw_start = BUBBLE_CC.index("void agent_bubble_header_region_draw")
     draw_end = BUBBLE_CC.index("agent_bubble_header_region_draw_overlay", draw_start)
     draw_body = BUBBLE_CC[draw_start:draw_end]
-    # One native timer: the cat's next useful frame, or sooner only for the
-    # Sketch pill's caret blink edge / live ECG (agent_ui_pill_draft.cc).
-    schedule = draw_body[draw_body.index("agent_ui_cat_schedule(") :]
-    schedule = schedule[: schedule.index(";")]
-    assert "g_host_ghostwin" in schedule
-    assert "std::min(agent_ui_cat_motion_next_frame(region)" in schedule
-    assert "agent_ui_pill_draft_next_frame())" in schedule
-    assert draw_body.count("agent_ui_cat_schedule(") == 1
+    assert "agent_ui_cat_schedule(win, region, g_host_ghostwin, agent_ui_cat_motion_next_frame(region))" in draw_body
     assert "ED_region_tag_redraw(region)" not in draw_body
     assert "agent_ui_cat_scheduler_forget(region)" in draw_body
 

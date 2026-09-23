@@ -49,7 +49,6 @@ from mixar.modules.scribble_mark.constants import (
     MIN_SAMPLE_DIST_PX,
 )
 from mixar.modules.scribble_mark.core import (
-    freeze,
     gesture,
     marks as mark_store,
     overlay,
@@ -206,11 +205,6 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             return {"RUNNING_MODAL"}
 
         if event.type == "TIMER":
-            if freeze.window_resizing(context):
-                # Re-freezing renders, which aborts macOS from inside a resize
-                # (see freeze.window_resizing). The still stretches until the
-                # first main-loop tick, which re-freezes and then commits.
-                return {"PASS_THROUGH"}
             if not self._refreeze_if_resized(context, region):
                 self._disarm(context)
                 self._finish(context)

@@ -429,6 +429,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       img.local_path[0] = '\0';
       img.width = 0.0f;
       img.height = 0.0f;
+      img.step_id[0] = '\0';
       img.is_hovered = false;
       memset(&img.bounds, 0, sizeof(img.bounds));
 
@@ -443,8 +444,12 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       if (g_image_props.height) {
         img.height = RNA_property_float_get(&image_ptr, g_image_props.height);
       }
+      read_rna_string_bounded(&image_ptr, g_image_props.step_id, img.step_id, sizeof(img.step_id));
 
-      if (img.height > 0.0f) {
+      /* Step-tagged tiles are measured and drawn by the steps block
+       * (chat_ui_calc_steps_block_height); only backend gallery images
+       * count toward the (reserved, undrawn) images slot height. */
+      if (img.height > 0.0f && img.step_id[0] == '\0') {
         layout->slot_images_height += img.height;
       }
 

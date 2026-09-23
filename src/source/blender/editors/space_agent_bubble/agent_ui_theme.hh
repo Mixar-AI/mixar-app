@@ -300,10 +300,6 @@ namespace blender {
 #define AGENT_CHIP_SCRIBBLE_W 150
 /* Voice: mic glyph + "Listening" fits. */
 #define AGENT_CHIP_VOICE_W 118
-/* While capturing, Voice reads "Stop" beside a stop square and a live ECG
- * trace this wide (about one and a half icons). The idle chip reserves the
- * same width, so starting and stopping dictation never shifts the row. */
-#define AGENT_CHIP_WAVE_W 30
 /* Auto: "Auto" label + a sliding ON/OFF switch, right of Voice. The switch
  * is the backend's per-turn `auto_mode` flag — on, the agent decides every
  * open choice itself instead of asking the user. */

@@ -106,6 +106,7 @@ struct ChatImageItemProps {
   PropertyRNA *local_path;
   PropertyRNA *width;
   PropertyRNA *height;
+  PropertyRNA *step_id;
   bool initialized;
 };
 
@@ -581,6 +582,24 @@ struct MixieChatRuntime {
    * (rebuilt per draw; rows scrolled out of view keep their offscreen
    * bounds — hit tests additionally require history_list_bounds). */
   blender::Vector<HistoryRowHit> history_rows;
+
+  /* -- Capture lightbox (mixie_chat_lightbox.cc) ------------------------ */
+
+  /** Lightbox: open state. The gallery is the step-tagged image tiles of
+   * ONE bubble (`lightbox_bubble_id`), `lightbox_index` the one shown.
+   * Modal for this region while open (ESC / click-away / arrows). */
+  bool lightbox_active = false;
+  char lightbox_bubble_id[128] = "";
+  int lightbox_index = 0;
+  double lightbox_anim_start = 0.0;
+
+  /** Lightbox: hit rects in region pixels, rebuilt per draw. */
+  rctf lightbox_image_bounds = {0, 0, 0, 0};
+  rctf lightbox_close_bounds = {0, 0, 0, 0};
+  rctf lightbox_prev_bounds = {0, 0, 0, 0};
+  rctf lightbox_next_bounds = {0, 0, 0, 0};
+  /** Lightbox: hovered control (0 none, 1 close, 2 prev, 3 next). */
+  int lightbox_hover = 0;
 
   /* -- Project-rules overlay (mixie_chat_rules_overlay.cc) ------------- */
 

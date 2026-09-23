@@ -603,10 +603,8 @@ def _world_bbox(objs):
     return pts
 
 
-def add_asset_to_scene(context, library, blend_file, asset_name, asset_type,
-                       location=None):
-    """Append the asset (object OR collection) at the 3D cursor — or, with
-    ``location``, base-centred on that world point (a viewport drop). Returns
+def add_asset_to_scene(context, library, blend_file, asset_name, asset_type):
+    """Append the asset (object OR collection) at the 3D cursor. Returns
     (ok, message)."""
     import mathutils
 
@@ -678,13 +676,11 @@ def add_asset_to_scene(context, library, blend_file, asset_name, asset_type,
             except Exception:
                 pass  # fall back to the instancer-aware bbox below
 
-        # Move so the aggregate footprint's bottom-centre sits at the 3D cursor
-        # (or the drop point).
+        # Move so the aggregate footprint's bottom-centre sits at the 3D cursor.
         member_set = set(members)
         roots = [o for o in members if o.parent is None or o.parent not in member_set]
         pts = _world_bbox(members)
-        cursor = (mathutils.Vector(location) if location is not None
-                  else context.scene.cursor.location.copy())
+        cursor = context.scene.cursor.location
         if pts:
             xs = [p.x for p in pts]
             ys = [p.y for p in pts]

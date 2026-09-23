@@ -28,6 +28,8 @@
 #include "BLI_string.h"
 #include "BLI_sys_types.h"
 
+#include "BKE_main.hh"
+
 #include "BLF_api.hh"
 
 #include "GPU_state.hh"
@@ -56,6 +58,14 @@ namespace blender {
 /* Disclosure chevron size + gap (pre-UI-scale), shared with thinking. */
 #define CHAT_CHEVRON_SIZE 12.0f
 #define CHAT_CHEVRON_GAP 6.0f
+/* Capture tiles under a step row (pre-UI-scale): fixed height, width from
+ * the image's aspect, wrapped into as many tile rows as the width needs. */
+#define STEPS_TILE_HEIGHT 84.0f
+#define STEPS_TILE_GAP 6.0f
+#define STEPS_TILE_TOP_GAP 6.0f
+#define STEPS_TILE_RADIUS 6.0f
+#define STEPS_TILE_MIN_ASPECT 0.75f
+#define STEPS_TILE_MAX_ASPECT 1.7f
 
 /* -------------------------------------------------------------------- */
 /** \name Shared chevron (also used by the thinking dropdown)
@@ -150,6 +160,112 @@ static float steps_row_text_width(const StepItemSlotData &step, float content_wi
 }
 
 /* -------------------------------------------------------------------- */
+/** \name Capture tiles (shared by calc + draw)
+ * \{ */
+
+static float steps_tile_height()
+{
+  return STEPS_TILE_HEIGHT * UI_SCALE_FAC;
+}
+
+/* Tile width from the recorded pixel size (steps_recorder stores the
+ * capture's width/height); an image with no metadata is laid out 4:3. The
+ * aspect is clamped so one panoramic capture cannot swallow a whole row. */
+static float steps_tile_width(const ImageSlotData &img)
+{
+  float aspect = 4.0f / 3.0f;
+  if (img.width > 0.0f && img.height > 0.0f) {
+    aspect = img.width / img.height;
+  }
+  aspect = std::clamp(aspect, STEPS_TILE_MIN_ASPECT, STEPS_TILE_MAX_ASPECT);
+  return steps_tile_height() * aspect;
+}
+
+static bool steps_tile_belongs(const ImageSlotData &img, const StepItemSlotData &step)
+{
+  return img.step_id[0] != '\0' && img.local_path[0] != '\0' &&
+         STREQ(img.step_id, step.id);
+}
+
+/* Wrap the step's tiles into rows of `avail_width`. Returns the total block
+ * height (0 when the step has no tiles) — the sum of tile rows plus the gap
+ * above the first. When `layout_out` is non-null every tile's bounds are
+ * written relative to (x0, top) — top is the y of the block's upper edge. */
+static float steps_tiles_layout(MessageLayoutData *layout,
+                                const StepItemSlotData &step,
+                                float avail_width,
+                                float x0,
+                                float top,
+                                bool write_bounds)
+{
+  const float th = steps_tile_height();
+  const float gap = STEPS_TILE_GAP * UI_SCALE_FAC;
+  float cursor_x = 0.0f;
+  int rows = 0;
+  bool any = false;
+
+  for (int i = 0; i < layout->slot_image_count; i++) {
+    ImageSlotData &img = layout->slot_images[i];
+    if (!steps_tile_belongs(img, step)) {
+      continue;
+    }
+    const float tw = std::min(steps_tile_width(img), avail_width);
+    if (!any || cursor_x + tw > avail_width + 0.5f) {
+      rows++;
+      cursor_x = 0.0f;
+    }
+    any = true;
+    if (write_bounds) {
+      const float row_top = top - STEPS_TILE_TOP_GAP * UI_SCALE_FAC - float(rows - 1) * (th + gap);
+      img.bounds.xmin = x0 + cursor_x;
+      img.bounds.xmax = img.bounds.xmin + tw;
+      img.bounds.ymax = row_top;
+      img.bounds.ymin = row_top - th;
+    }
+    cursor_x += tw + gap;
+  }
+  if (!any) {
+    return 0.0f;
+  }
+  return STEPS_TILE_TOP_GAP * UI_SCALE_FAC + float(rows) * th + float(rows - 1) * gap;
+}
+
+static void steps_tiles_clear_bounds(MessageLayoutData *layout)
+{
+  for (int i = 0; i < layout->slot_image_count; i++) {
+    ImageSlotData &img = layout->slot_images[i];
+    if (img.step_id[0] != '\0') {
+      memset(&img.bounds, 0, sizeof(img.bounds));
+      img.is_hovered = false;
+    }
+  }
+}
+
+static void steps_draw_tile(Main *bmain, const ChatBubbleStyle &card, ImageSlotData &img)
+{
+  const float radius = STEPS_TILE_RADIUS * UI_SCALE_FAC;
+  /* Tile bed: a quiet dark well so a letterboxed capture still reads as one
+   * rounded tile, then the pixels, then a hairline that brightens on hover. */
+  const float bed[4] = {0.0f, 0.0f, 0.0f, 0.28f};
+  chat_ui_draw_rounded_rect(&img.bounds, radius, bed);
+
+  rctf inset = img.bounds;
+  const float pad = 1.0f * UI_SCALE_FAC;
+  inset.xmin += pad;
+  inset.xmax -= pad;
+  inset.ymin += pad;
+  inset.ymax -= pad;
+  chat_ui_draw_image_fitted(bmain, img.local_path, /*source=*/0, &inset, nullptr);
+
+  const float alpha = img.is_hovered ? 0.85f : 0.28f;
+  const float line[4] = {card.text_color[0], card.text_color[1], card.text_color[2],
+                         card.text_color[3] * alpha};
+  chat_ui_draw_rounded_rect_outline(&img.bounds, radius, line, 1.0f * UI_SCALE_FAC);
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name Height calculation
  * \{ */
 
@@ -191,6 +307,11 @@ float chat_ui_calc_steps_block_height(const ChatBubbleStyle *style,
       chat_ui_calc_text_bounds(step.detail, detail_width, style->font_size, 0, &dw, &dh);
       height += STEPS_DETAIL_GAP * UI_SCALE_FAC + dh;
     }
+
+    /* Capture tiles ride under their row whenever the block is expanded
+     * (no per-row disclosure: the tiles ARE the row's result). */
+    height += steps_tiles_layout(const_cast<MessageLayoutData *>(layout), step,
+                                 detail_width, 0.0f, 0.0f, false);
   }
   return height;
 }
@@ -201,7 +322,8 @@ float chat_ui_calc_steps_block_height(const ChatBubbleStyle *style,
 /** \name Drawing
  * \{ */
 
-void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
+void chat_ui_draw_steps_block(Main *bmain,
+                              const ChatBubbleStyle *style,
                               MessageLayoutData *layout,
                               float x,
                               float y,
@@ -263,6 +385,8 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
   layout->steps_header_bounds.ymax = card_rect.ymax;
 
   if (layout->steps_collapsed) {
+    /* Collapsed tiles are not click targets. */
+    steps_tiles_clear_bounds(layout);
     return;
   }
 
@@ -385,6 +509,19 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
       chat_ui_draw_text_wrapped(step.detail, &detail_rect, card.font_size, 0, dim);
 
       cursor = detail_bottom;
+    }
+
+    /* Capture tiles: the images this step produced, indented with the text. */
+    const float tiles_h = steps_tiles_layout(layout, step, detail_width,
+                                             x + card.h_padding + text_indent, cursor, true);
+    if (tiles_h > 0.0f) {
+      for (int k = 0; k < layout->slot_image_count; k++) {
+        ImageSlotData &img = layout->slot_images[k];
+        if (steps_tile_belongs(img, step)) {
+          steps_draw_tile(bmain, card, img);
+        }
+      }
+      cursor -= tiles_h;
     }
   }
 }

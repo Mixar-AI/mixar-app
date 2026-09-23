@@ -23,8 +23,6 @@
 
 #include "BLI_rect.h"
 
-#include "agent_ui_chip_fit.hh"
-
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
@@ -136,9 +134,6 @@ struct AgentIslandLayout {
    * to carry it without eating Upload Reference. */
   rctf chip_model;
   AgentModelChipForm model_form;
-  /* Form each chip was fitted at (#agent_chip_fit): 0 is the full label; a
-   * higher index sheds text down to the chip's icon. Painters read this. */
-  int chip_form[AGENT_CHIP_SLOT_COUNT];
   rctf chip_reading;
   rctf chip_clear;
   rctf btn_generate;

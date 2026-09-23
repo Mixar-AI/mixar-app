@@ -369,7 +369,7 @@ def _process_one_request() -> Optional[float]:
 
     # Complete the step row with status / touched objects / output.
     if chat_scene:
-        record_step_end(chat_scene, req.request_id, result_dict)
+        record_step_end(chat_scene, req.request_id, result_dict, req.session_id)
 
     # Main-thread work for this script is done — the liveness probe reports
     # idle from here on.
