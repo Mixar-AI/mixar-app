@@ -250,9 +250,6 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
         raise ValueError("The target input is no longer available")
     if from_node_id == to_node_id or _path_exists(scene, to_node_id, from_node_id):
         raise ValueError("Connections cannot create a cycle")
-    source_action = getattr(action_node_by_id(scene, from_node_id), 'action_type', '')
-    if target.action_type == source_action == 'ASSEMBLE':
-        raise ValueError("An Assemble card cannot feed another Assemble card")
     accepted = {item for item in socket.accepted_types.split(",") if item}
     if source_type not in accepted:
         raise ValueError(f"This input does not accept {source_type.lower()} nodes")
@@ -404,10 +401,9 @@ _ACCEPTED_SOURCE_TYPES = {
     'RETOPOLOGY': {'MESH'},
     'MESH_SEGMENT': {'MESH'},
     'AUTO_RIG': {'MESH'},
-    'ASSEMBLE': {'MESH'},
 }
 
-MESH_FEATURE_ACTIONS = frozenset({'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE'})
+MESH_FEATURE_ACTIONS = frozenset({'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'})
 
 
 def _graph_node_by_id(scene, node_id: str):
@@ -470,8 +466,6 @@ def create_connected_action(
                 else "Create Video needs at least one selected image or video"
             )
 
-    source_ids = [item.node_id for item in sources]  # the add may reallocate their collection
-    anchor = _source_right_and_center(sources) if sources else None
     node = scene.mixie_moodboard_action_nodes.add()
     node.node_id = new_node_id()
     node.action_type = action_type
@@ -481,7 +475,7 @@ def create_connected_action(
         node.position_x = float(drop_position[0])
         node.position_y = float(drop_position[1]) - node.height * 0.5
     elif sources:
-        right, center_y = anchor
+        right, center_y = _source_right_and_center(sources)
         node.position_x = right + ACTION_NODE_GAP
         node.position_y = center_y - node.height * 0.5
     else:
@@ -492,8 +486,8 @@ def create_connected_action(
     node.selected = True
     scene.mixie_moodboard_active_node_id = node.node_id
     try:
-        for source_id in source_ids:
-            connect_to_next_input(scene, source_id, node.node_id)
+        for item in sources:
+            connect_to_next_input(scene, item.node_id, node.node_id)
     except ValueError:
         # Wiring the fresh card failed (e.g. the catalog has not published its
         # sockets yet). Leave no orphan: the operator reports the failure, and
@@ -502,8 +496,13 @@ def create_connected_action(
             link = scene.mixie_moodboard_links[link_index]
             if link.from_node_id == node.node_id or link.to_node_id == node.node_id:
                 scene.mixie_moodboard_links.remove(link_index)
-        node_index = next((index for index, item in enumerate(scene.mixie_moodboard_action_nodes)
-                           if item.node_id == node.node_id), None)
+        node_index = next(
+            (
+                index for index, existing in enumerate(scene.mixie_moodboard_action_nodes)
+                if existing.node_id == node.node_id
+            ),
+            None,
+        )
         if node_index is not None:
             scene.mixie_moodboard_action_nodes.remove(node_index)
         if scene.mixie_moodboard_active_node_id == node.node_id:

@@ -187,37 +187,12 @@ static void draw_draft_hint(PointerRNA *node, const rctf &rect)
   const float center_x = BLI_rctf_cent_x(&rect);
   const float center_y = BLI_rctf_cent_y(&rect);
   const float max_width = std::max(60.0f, BLI_rctf_size_x(&rect) - 56.0f);
-  const int action_type = RNA_enum_get(node, "action_type");
-  /* ASSEMBLE is append-only action index 11; local, with per-part Settings. */
-  if (action_type == 11) {
-    draw_text_centered_clipped(
-        "Attach parts to the body", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
-    draw_text_centered_clipped(
-        "Slots and sizes in Settings", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
-    return;
-  }
   /* CHARACTER_PARTS is append-only action index 10; it has no prompt field. */
-  if (action_type == 10) {
+  if (RNA_enum_get(node, "action_type") == 10) {
     draw_text_centered_clipped(
         "Mask the source image", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
     draw_text_centered_clipped(
         "Choose components in Settings", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
-    return;
-  }
-  /* Promptless mesh cards draw no prompt field for the default hint to name. */
-  if (!RNA_boolean_get(node, "show_prompt")) {
-    draw_text_centered_clipped(
-        "Uses the connected input", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
-    draw_text_centered_clipped(
-        "Select it to run", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
-    return;
-  }
-  /* MODEL_3D (index 2) builds from its connected image; a prompt is extra. */
-  if (action_type == 2 && !prompt[0]) {
-    draw_text_centered_clipped(
-        "Turns one connected image into 3D", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
-    draw_text_centered_clipped(
-        "Prompt optional", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
     return;
   }
   if (prompt[0]) {
@@ -404,8 +379,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
           }
         }
         else if (state == 0 && !has_visual) {
-          /* CHARACTER_PARTS (10) and ASSEMBLE (11) keep the centre free. */
-          if (!controls_visible || action_type == 10 || action_type == 11) {
+          if (!controls_visible || RNA_enum_get(&node, "action_type") == 10) {
             draw_draft_hint(&node, rect);
           }
         }

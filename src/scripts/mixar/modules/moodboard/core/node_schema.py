@@ -16,7 +16,6 @@ from ..constants import (
     GRAPH_SOCKET_ID_MAXLEN,
     GRAPH_WIDGET_MAXLEN,
 )
-from .assemble_schema import reset_assemble_parameters, sync_assemble_schema
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +45,6 @@ _OUTPUT_TYPES = {
     # not offer PBR / retopo / segment / rig on a splat world.
     'WORLD_LABS': 'SPLAT',
     'CHARACTER_PARTS': 'MESH',
-    'ASSEMBLE': 'MESH',
 }
 
 _MESH_FEATURE_CAPABILITY = {
@@ -72,8 +70,7 @@ _MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
 # Mesh-only operations take no text guidance (Retopology, Mesh Segmentation and
 # Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
 # keeps it — Tripo texturing accepts a texture prompt.
-_PROMPTLESS_ACTION_TYPES = frozenset(
-    {'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS', 'ASSEMBLE'})
+_PROMPTLESS_ACTION_TYPES = frozenset({'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS'})
 # PBR texturing accepts a single style/reference image OR exactly four
 # turnaround views, so the node offers up to four optional image sockets.
 _PBR_MAX_IMAGE_REFS = 4
@@ -94,7 +91,7 @@ def services_for_action(action_type: str, services) -> list:
         # The mesh node imports segmented part meshes (Part decomposition).
         return [service for service in services if service.get("key") == 'hunyuan_part']
     if action_type != 'MODEL_3D':
-        return [] if action_type == 'ASSEMBLE' else list(services)  # ASSEMBLE is local
+        return list(services)
     return [
         service for service in services
         if service.get("key") in _MODEL_3D_SERVICE_KEYS
@@ -103,8 +100,6 @@ def services_for_action(action_type: str, services) -> list:
 
 def _capability_for_action(action_type: str) -> str:
     """Local capability map (kept inline to avoid a UI-layer import cycle)."""
-    if action_type == 'ASSEMBLE':
-        return None
     if action_type == 'VIDEO_GEN':
         return "video_gen"
     if action_type == 'VIDEO_UPSCALE':
@@ -452,8 +447,6 @@ def restore_node_selection(node) -> None:
 
 def sync_node_schema(_scene, node) -> None:
     """Rebuild node-local controls from its selected catalog model."""
-    if node.action_type == 'ASSEMBLE':
-        return sync_assemble_schema(_scene, node)
     service_key = node_service_key(node)
     model_slug = node_model_slug(node)
     try:
@@ -660,8 +653,6 @@ def reset_node_parameters(node) -> None:
     saved value is discarded), then re-evaluates ``visible_if``. The prompt is
     intentionally left untouched — it is user text, not a catalog parameter.
     """
-    if node.action_type == 'ASSEMBLE':
-        return reset_assemble_parameters(node)
     service_key = node_service_key(node)
     model_slug = node_model_slug(node)
     try:

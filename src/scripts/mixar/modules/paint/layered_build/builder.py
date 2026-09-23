@@ -13,7 +13,7 @@ import bpy
 from .download import prefetch_urls
 from .manifest import collect_asset_urls, validate_manifest
 from .pbr_layer import build_base_pbr_layer
-from .procedural_layer import add_procedural_detail_layer
+from .procedural_layer import add_procedural_detail_layer, set_uniform_scale
 # Import paths match pbr_layer.py's own imports (both live at paint/layered_build/).
 from ..core.node.node_utils import get_active_mpaint_node
 from ..core.io.connections.layer_connections import reconnect_mp_nodes
@@ -83,7 +83,48 @@ def _move_base_to_bottom(base_name: str, n_details: int) -> None:
         print(f"[layered_build] reorder (base to bottom) failed: {e}")
 
 
-def build_layered_material(manifest: dict, obj=None):
+def _active_uv_name(obj) -> str:
+    layers = getattr(getattr(obj, "data", None), "uv_layers", None)
+    active = getattr(layers, "active", None) if layers else None
+    return getattr(active, "name", "") or ""
+
+
+def _set_active_uv(obj, name: str) -> None:
+    layers = getattr(getattr(obj, "data", None), "uv_layers", None)
+    if not name or not layers or name not in layers:
+        return
+    try:
+        layers.active = layers[name]
+    except Exception as e:  # never fail a build over the UV selection
+        print(f"[layered_build] could not activate UV map {name!r}: {e}")
+
+
+def build_layered_material(
+    manifest: dict,
+    obj=None,
+    uv_name: str = "",
+    bake_uv_name: str = "",
+    tiling=None,
+    mask_tiling=None,
+):
+    """Build the manifest's layer stack in ``obj``'s ACTIVE material.
+
+    Args:
+        manifest: Validated layered-material manifest.
+        obj: Target mesh (made active). Defaults to the active object.
+        uv_name: UV map the tileable layers (base PBR, procedural details and
+            their image masks) sample. It is the object's active UV map for the
+            duration of the build — new layers default to it — and the prior
+            active map is restored afterwards so later paint layers keep using
+            the authoring map. Empty keeps the active map (legacy).
+        bake_uv_name: UV map BAKED geometry masks are baked into; defaults to
+            the active map from before the build (a bake needs the authoring
+            unwrap, never an overlapping tiling map).
+        tiling: Base layer repeats per UV unit. ``None`` uses the manifest's
+            legacy ``scale.base_tiling``. Details multiply it by their own
+            ``scale_multiplier``.
+        mask_tiling: Repeats per UV unit of IMAGE masks (``None`` = 1.0).
+    """
     obj = obj or bpy.context.view_layer.objects.active
     if obj is None or obj.type != 'MESH':
         raise RuntimeError("build_layered_material requires an active MESH object")
@@ -109,9 +150,23 @@ def build_layered_material(manifest: dict, obj=None):
     for url in (u for u in optional if u in errors):
         print(f"[layered_build] mask asset prefetch failed (non-fatal): {url}: {errors[url]}")
 
+    authoring_uv = _active_uv_name(obj)
+    bake_uv = bake_uv_name or authoring_uv
+    tile_uv = uv_name if uv_name and uv_name in obj.data.uv_layers else authoring_uv
+    _set_active_uv(obj, tile_uv)
+    try:
+        return _build_stack(manifest, obj, tile_uv, bake_uv, tiling, mask_tiling)
+    finally:
+        _set_active_uv(obj, authoring_uv)
+
+
+def _build_stack(manifest, obj, tile_uv, bake_uv, tiling, mask_tiling):
     _ensure_paint_material(obj)
 
-    base_tiling = (manifest.get("scale") or {}).get("base_tiling", 1.0)
+    base_tiling = tiling
+    if base_tiling is None:
+        base_tiling = (manifest.get("scale") or {}).get("base_tiling", 1.0)
+    base_tiling = float(base_tiling)
 
     # Layers authored base-first (index 0 = bottom). Build base first.
     layers = sorted(manifest["layers"], key=lambda l: l["index"])
@@ -124,10 +179,12 @@ def build_layered_material(manifest: dict, obj=None):
     # Capture the name now — building details mutates mp.layers and invalidates refs.
     base_name = layer.name
 
-    # Coordinated scale on the base.
+    # Coordinated scale on the base. Written through the layer tree's input
+    # socket: enabling uniform scale creates that socket from the value at the
+    # time and links it to the Mapping node, so a plain attribute write after
+    # it never reached the shader (every build rendered at scale 1.0).
     mult = base_layer_spec.get("scale_multiplier", 1.0)
-    layer.enable_uniform_scale = True
-    layer.uniform_scale_value = base_tiling * mult
+    set_uniform_scale(layer, base_tiling * float(mult))
 
     # Build the PROCEDURAL detail layers ON TOP of the base, by construction.
     # A new layer is inserted at mp.active_layer_index (core add_new_layer, layer
@@ -135,11 +192,6 @@ def build_layered_material(manifest: dict, obj=None):
     # TOP (0) before each detail: each detail lands above the base and pushes the base
     # down. Building in ascending manifest order leaves the highest-index detail on top
     # and the base at the bottom — no post-hoc reordering needed.
-    uv_name = ""
-    me = getattr(obj, "data", None)
-    if me is not None and getattr(me, "uv_layers", None) and me.uv_layers.active:
-        uv_name = me.uv_layers.active.name
-
     node = get_active_mpaint_node(obj)
     mp = node.node_tree.mp if node else None
 
@@ -149,7 +201,13 @@ def build_layered_material(manifest: dict, obj=None):
             continue
         if mp is not None:
             mp.active_layer_index = 0  # insert this detail at the very top
-        if add_procedural_detail_layer(spec, base_tiling, uv_name=uv_name):
+        if add_procedural_detail_layer(
+            spec,
+            base_tiling,
+            uv_name=tile_uv,
+            bake_uv_name=bake_uv,
+            mask_tiling=mask_tiling,
+        ):
             built += 1
 
     # Safety net: guarantee the base ends below the details even if a creation path

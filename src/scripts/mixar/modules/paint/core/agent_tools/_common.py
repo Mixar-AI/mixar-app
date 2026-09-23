@@ -128,39 +128,16 @@ def _is_finished(result) -> bool:
 
 
 def _ensure_basic_uv_map(obj) -> bool:
-    """Create a simple box-projected UV map for primitive meshes without UVs."""
-    mesh = getattr(obj, "data", None)
-    if mesh is None or getattr(obj, "type", "") != "MESH":
-        return False
-    if len(getattr(mesh, "uv_layers", [])) > 0:
-        return False
-    if not getattr(mesh, "vertices", None) or not getattr(mesh, "polygons", None):
-        return False
+    """Give a UV-less mesh a box-projected authoring UV map.
 
+    The map keeps square texels (one scale for every axis, object scale
+    included) and packs each face direction into its own cell, so textures do
+    not stretch and bakes do not overlap. Backend templates import this name.
+    """
     try:
-        uv_layer = mesh.uv_layers.new(name="UVMap")
-        coords = [vertex.co for vertex in mesh.vertices]
-        mins = [min(co[i] for co in coords) for i in range(3)]
-        maxs = [max(co[i] for co in coords) for i in range(3)]
-        spans = [max(maxs[i] - mins[i], 1e-6) for i in range(3)]
+        from .real_scale_uv import create_authoring_uv
 
-        for poly in mesh.polygons:
-            dominant_axis = max(range(3), key=lambda axis: abs(poly.normal[axis]))
-            if dominant_axis == 0:
-                axis_u, axis_v = 1, 2
-            elif dominant_axis == 1:
-                axis_u, axis_v = 0, 2
-            else:
-                axis_u, axis_v = 0, 1
-            for loop_index in poly.loop_indices:
-                vertex_index = mesh.loops[loop_index].vertex_index
-                co = mesh.vertices[vertex_index].co
-                uv_layer.data[loop_index].uv = (
-                    (co[axis_u] - mins[axis_u]) / spans[axis_u],
-                    (co[axis_v] - mins[axis_v]) / spans[axis_v],
-                )
-        mesh.update()
-        return True
+        return create_authoring_uv(obj)
     except Exception:
         logger.debug("Could not create basic UV map for %s", getattr(obj, "name", ""), exc_info=True)
         return False
@@ -259,6 +236,11 @@ def _find_mpaint_node(obj):
     mat = obj.active_material
     if not getattr(mat, "use_nodes", False) or not getattr(mat, "node_tree", None):
         return None
+    # Every shader tree carries an ``mp`` pointer, so prefer the group whose
+    # tree is flagged as the paint stack over the first group found.
+    strict = _find_mpaint_node_for_material(mat)
+    if strict is not None:
+        return strict
     for node in mat.node_tree.nodes:
         if node.type == "GROUP" and node.node_tree and hasattr(node.node_tree, "mp"):
             return node

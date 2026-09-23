@@ -444,7 +444,6 @@ NODE_TEMPLATES = (
     ('AUTO_RIG', "Auto Rig", 'ARMATURE_DATA', 'animate'),
     ('MESH_REFERENCE', "Add Mesh", 'OUTLINER_OB_MESH', None),
     ('CHARACTER_PARTS', "Character Parts", 'OUTLINER_OB_ARMATURE', 'character_parts'),
-    ('CHARACTER_SHEET_3D', "Character Sheet to 3D", 'COMMUNITY', 'model_gen'),
 )
 
 # Display-only explanations when a catalog omits help. Match captions, never

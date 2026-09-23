@@ -90,7 +90,6 @@ class _ActionNode:
         self.prompt = ""
         self.views_per_component = 3
         self.include_full_context = False
-        self.requires_reference = False
         self.service_key_id = ""
         self.service_label = ""
         self.model_slug = ""

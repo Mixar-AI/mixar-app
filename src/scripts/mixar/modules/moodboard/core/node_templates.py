@@ -13,12 +13,9 @@ from .node_graph import (
     ensure_media_node_ids,
     node_output_type,
 )
-from .workflow_templates import is_workflow, workflow_available
 
 
 def template_available(template_id):
-    if is_workflow(template_id):
-        return workflow_available(template_id, template_available)
     template = next((item for item in NODE_TEMPLATES if item[0] == template_id), None)
     return template is not None and (
         template[3] is None or capability_available(template[3], action_type=template_id)
@@ -71,23 +68,15 @@ def media_under_drop(scene, template_id, point):
     return None
 
 
-def create_template(scene, template_id, center, *, exact_position=False, source_node_id=""):
+def create_template(scene, template_id, center, *, exact_position=False):
     """Create a draft at a drop point, or find free space for a click.
 
     An exact drop onto a compatible media card attaches to that card and sits
     to its right so the noodle stays visible. Exact drops on empty canvas keep
     the release point. Clicks still spiral to free space.
-
-    A workflow template builds a framed graph of drafts instead and returns
-    its frame (which carries a position and size like a card).
     """
     if not template_available(template_id):
         raise ValueError("This template needs an available generation model. Check your connection.")
-    if is_workflow(template_id):
-        from .character_sheet_workflow import build_character_sheet_workflow, resolve_sheet_sources
-
-        sources = resolve_sheet_sources(scene, center, exact_position, source_node_id)
-        return build_character_sheet_workflow(scene, sources=sources, center=center)
 
     from .asset_nodes import create_empty_mesh_node, find_free_asset_position
 

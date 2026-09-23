@@ -21,11 +21,10 @@ from mixar.modules.common.utils.mixie_space_utils import (
 from mixar.modules.moodboard.core import node_layout
 
 from .moodboard_menu_actions import (
+    MESH_CONTINUATIONS as _MESH_CONTINUATIONS,
     capability_available as _capability_available,
     connected_action as _connected_action,
-    draw_character_sheet_entry as _draw_character_sheet_entry,
     link_drop_anchor as _link_drop_anchor,
-    mesh_continuations_for as _mesh_continuations_for,
     mesh_source_id as _mesh_source_id,
 )
 
@@ -113,11 +112,9 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     )
                     toggle.node_id = action_node.node_id
                 else:
-                    # Assemble is local: same run operator, its own verb
-                    # (matching the card's button).
                     run = layout.operator(
                         "mixie.moodboard_run_action_node",
-                        text="Assemble" if action_node.action_type == 'ASSEMBLE' else "Generate",
+                        text="Generate",
                         icon='PLAY',
                     )
                     run.node_id = action_node.node_id
@@ -180,8 +177,6 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                             'WORLD',
                             action_node.node_id,
                         )
-                    if template_available('CHARACTER_SHEET_3D'):
-                        _draw_character_sheet_entry(layout, action_node.node_id)
                 if can_continue and _capability_available("video_gen"):
                     _connected_action(
                         layout,
@@ -206,11 +201,12 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         mesh_source = _mesh_source_id(scene)
         if mesh_source:
             drew_mesh = False
-            for action_type, text, icon, _capability in _mesh_continuations_for(scene, mesh_source):
-                if not drew_mesh:
-                    layout.label(text="Continue in 3D")
-                    drew_mesh = True
-                _connected_action(layout, action_type, text, icon, mesh_source)
+            for action_type, text, icon, capability in _MESH_CONTINUATIONS:
+                if _capability_available(capability):
+                    if not drew_mesh:
+                        layout.label(text="Continue in 3D")
+                        drew_mesh = True
+                    _connected_action(layout, action_type, text, icon, mesh_source)
             if drew_mesh:
                 layout.separator()
 
@@ -224,9 +220,6 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             _connected_action(row, 'MODEL_3D', "Generate to 3D", 'MESH_DATA')
             if selected_stills > 0 and template_available('CHARACTER_PARTS'):
                 _connected_action(layout, 'CHARACTER_PARTS', "Character Parts", 'OUTLINER_OB_ARMATURE')
-            # Click path: the selected stills are the sheet(s) the workflow reads.
-            if selected_stills > 0 and template_available('CHARACTER_SHEET_3D'):
-                _draw_character_sheet_entry(layout)
             if selected_stills > 0 and _capability_available("world_labs"):
                 _connected_action(
                     layout, 'WORLD_LABS', "Generate Splat", 'WORLD'

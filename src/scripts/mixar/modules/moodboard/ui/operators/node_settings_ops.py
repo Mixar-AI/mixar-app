@@ -98,12 +98,6 @@ def _draw_settings(layout, node, scene=None):
     running = node.state in {'QUEUED', 'RUNNING'}
     if running:
         layout.label(text="Settings are locked while generating", icon='LOCKED')
-    # Assemble has no catalog model: its settings are per-part attachment rows.
-    if scene is not None and node.action_type == 'ASSEMBLE':
-        from ..assemble_node_drawer import draw_assemble_node
-
-        draw_assemble_node(layout, scene, node)
-        return
 
     settings = draw_section_box(layout)
     settings.enabled = not running

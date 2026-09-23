@@ -117,3 +117,38 @@ def test_valid_bake_types_match_backend_vocabulary():
     (AO/CAVITY/DUST/POINTINESS) and the paint module's bake_type_items identifiers."""
     assert mod._VALID_BAKE_TYPES == {"AO", "CAVITY", "POINTINESS", "DUST"}
     assert set(mod._BAKE_CONFIG) == mod._VALID_BAKE_TYPES | {"BEVEL_MASK"}
+
+
+def _recording_entity_setter(monkeypatch):
+    calls = []
+    common_entity = types.ModuleType("paint.utils.common_entity")
+    common_entity.set_entity_prop_value = lambda entity, prop, value: calls.append((entity, prop, value))
+    monkeypatch.setitem(sys.modules, "paint.utils", types.ModuleType("paint.utils"))
+    monkeypatch.setitem(sys.modules, "paint.utils.common_entity", common_entity)
+    return calls
+
+
+def test_uniform_scale_is_written_where_the_shader_reads_it(monkeypatch):
+    """Enabling uniform scale creates the node input at 1.0; a plain attribute
+    write after that never reached it, so every layer rendered at scale 1.0."""
+    calls = _recording_entity_setter(monkeypatch)
+    layer = types.SimpleNamespace(enable_uniform_scale=False)
+    mod.set_uniform_scale(layer, 3)
+    assert layer.enable_uniform_scale is True
+    assert calls == [(layer, "uniform_scale_value", 3.0)]
+    assert not hasattr(layer, "uniform_scale_value")
+
+
+def test_mask_repeats_follow_the_mapping_direction(monkeypatch):
+    """Masks get TEXTURE Mapping nodes (inverse transform): 4 repeats = scale 0.25."""
+    calls = _recording_entity_setter(monkeypatch)
+    vector_type = {"value": "TEXTURE"}
+    mappings = types.ModuleType("paint.core.layer.mappings")
+    mappings.get_entity_mapping = lambda entity: types.SimpleNamespace(vector_type=vector_type["value"])
+    monkeypatch.setitem(sys.modules, "paint.core.layer", types.ModuleType("paint.core.layer"))
+    monkeypatch.setitem(sys.modules, "paint.core.layer.mappings", mappings)
+    mask = types.SimpleNamespace(enable_uniform_scale=False)
+    mod.set_mask_repeats(mask, 4.0)
+    vector_type["value"] = "POINT"
+    mod.set_mask_repeats(mask, 4.0)
+    assert calls == [(mask, "uniform_scale_value", 0.25), (mask, "uniform_scale_value", 4.0)]

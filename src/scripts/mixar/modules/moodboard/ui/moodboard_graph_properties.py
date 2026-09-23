@@ -64,8 +64,6 @@ _MESH_FEATURE_CAPABILITY = {
 
 
 def capability_for_action(action_type: str) -> str:
-    if action_type == 'ASSEMBLE':
-        return None
     if action_type in {'IMAGE_GEN', 'MASK_DETAIL'}:
         return "image_gen"
     if action_type == 'VIDEO_GEN':
@@ -168,8 +166,6 @@ def refresh_node_dropdown_labels(node) -> None:
     """Cache the Mode/Model dropdown labels (read by the C++ node overlay)."""
     node.service_label = _service_label_for_slug(node.action_type, node.service_key_id)
     node.model_label = _model_label_for_slug(node.service_key_id, node.model_slug)
-    if node.action_type == 'ASSEMBLE':  # local: the settings button opens its part rows
-        node.service_label, node.model_label = "", "Attachment settings"
 
 
 _SUPPRESS_ENUM_MIRROR = False
@@ -395,10 +391,6 @@ class MixieMoodboardActionNode(PropertyGroup):
         name="Show Prompt",
         description="This node type takes a text prompt",
         default=True,
-    )
-    requires_reference: BoolProperty(
-        name="Requires Reference", default=False,
-        description="Refuse to generate without a connected reference image",
     )
     model: EnumProperty(
         name="Model",

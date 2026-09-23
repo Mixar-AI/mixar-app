@@ -155,10 +155,19 @@ def inspect_paint_layer_stack(object_name: str = "") -> dict:
         return {"success": False, "error": "No Mixar Paint node found on object", "object_name": obj.name}
     mp = node.node_tree.mp
     layers = [_layer_summary(mp, layer, index) for index, layer in enumerate(mp.layers)]
+    material = obj.active_material
+    scale = {}
+    tile = material.get("mixar_tile_size_m") if material is not None else None
+    if tile:
+        # Layers on the real-scale UV read uniform_scale as repeats per metre.
+        scale = {"tile_size_m": round(float(tile), 4),
+                 "real_scale_uv": str(material.get("mixar_real_scale_uv") or "")}
     return {
         "success": True,
         "object_name": obj.name,
-        "material_name": getattr(obj.active_material, "name", ""),
+        "material_name": getattr(material, "name", ""),
+        "slot_index": int(getattr(obj, "active_material_index", 0)),
+        **scale,
         "active_layer_index": mp.active_layer_index,
         "layer_count": len(mp.layers),
         "channel_count": len(mp.channels),

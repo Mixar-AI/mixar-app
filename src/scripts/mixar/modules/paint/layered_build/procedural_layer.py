@@ -75,7 +75,43 @@ def sanitize_blend_type(bt) -> str:
     return "MIX"
 
 
-def add_procedural_detail_layer(layer_spec: dict, base_tiling: float, uv_name: str = "") -> bool:
+def set_uniform_scale(entity, value: float) -> None:
+    """Enable uniform scale on a layer/mask and write it where the shader reads it.
+
+    Enabling uniform scale creates the entity's ``uniform_scale_value`` input
+    socket on the layer tree (seeded from the value at that moment) and links
+    it to the Mapping node. The shader reads that socket, so the value must go
+    through ``set_entity_prop_value`` — a plain attribute write only changes
+    the RNA mirror and leaves the rendered scale at its old value.
+    """
+    from ..utils.common_entity import set_entity_prop_value
+
+    entity.enable_uniform_scale = True
+    set_entity_prop_value(entity, "uniform_scale_value", float(value))
+
+
+def set_mask_repeats(mask, repeats: float) -> None:
+    """Make a mask repeat ``repeats`` times per UV unit.
+
+    Layer Mapping nodes are POINT (scale N = N repeats) but ``add_new_mask``
+    creates TEXTURE Mapping nodes, which apply the inverse transform (scale N
+    = 1/N repeats), so the value written depends on the node's vector type.
+    """
+    from ..core.layer.mappings import get_entity_mapping
+
+    mapping = get_entity_mapping(mask)
+    inverse = getattr(mapping, "vector_type", "TEXTURE") == "TEXTURE"
+    value = 1.0 / float(repeats) if inverse else float(repeats)
+    set_uniform_scale(mask, value)
+
+
+def add_procedural_detail_layer(
+    layer_spec: dict,
+    base_tiling: float,
+    uv_name: str = "",
+    bake_uv_name: str = "",
+    mask_tiling=None,
+) -> bool:
     """Register the inline script, add a PROCEDURAL layer, set blend/opacity/scale, bake masks.
 
     Returns True on success. The new layer is created on the active object and becomes
@@ -85,11 +121,15 @@ def add_procedural_detail_layer(layer_spec: dict, base_tiling: float, uv_name: s
         layer_spec: Dict with keys: name, blend_type, opacity, scale_multiplier,
                     material (dict with material_id + script), masks (list of dicts).
         base_tiling: Tiling value from the PBR manifest; multiplied by scale_multiplier.
-        uv_name: UV map name passed to the bake operator (may be empty string).
+        uv_name: UV map IMAGE masks sample (may be empty string).
+        bake_uv_name: UV map BAKED masks are baked into; defaults to ``uv_name``.
+            A bake needs the authoring unwrap, never an overlapping tiling map.
+        mask_tiling: Repeats per UV unit of IMAGE masks; ``None`` keeps 1.0.
 
     Returns:
         True on success, False if the script is missing or no active mpaint node found.
     """
+    bake_uv_name = bake_uv_name or uv_name
     material = layer_spec.get("material") or {}
     script = material.get("script")
     if not script:
@@ -136,9 +176,8 @@ def add_procedural_detail_layer(layer_spec: dict, base_tiling: float, uv_name: s
     # Opacity (intensity_value is the MLayer opacity float 0–1)
     layer.intensity_value = float(layer_spec.get("opacity", 1.0))
 
-    # Tiling / uniform scale
-    layer.enable_uniform_scale = True
-    layer.uniform_scale_value = base_tiling * float(layer_spec.get("scale_multiplier", 1.0))
+    # Tiling / uniform scale (through the shader-facing socket; see set_uniform_scale).
+    set_uniform_scale(layer, base_tiling * float(layer_spec.get("scale_multiplier", 1.0)))
 
     # Masks restrict WHERE the detail shows so it doesn't cover the whole base.
     # IMAGE masks are generated grunge/weathering maps (geometry-independent, reliable);
@@ -148,7 +187,12 @@ def add_procedural_detail_layer(layer_spec: dict, base_tiling: float, uv_name: s
         if mtype == "IMAGE" and mask.get("image_url"):
             try:
                 img = load_image(mask["image_url"], non_color=True)
-                add_new_mask(layer, f"{name} Mask", 'IMAGE', 'UV', uv_name, image=img)
+                new_mask = add_new_mask(layer, f"{name} Mask", 'IMAGE', 'UV', uv_name, image=img)
+                if mask_tiling is not None and new_mask is not None:
+                    try:
+                        set_mask_repeats(new_mask, mask_tiling)
+                    except Exception as e:  # scale is cosmetic; keep the mask
+                        print(f"[layered_build] mask scale for '{name}' failed: {e}")
                 reconnect_layer_nodes(layer)
                 rearrange_layer_nodes(layer)
                 reconnect_mp_nodes(layer.id_data)
@@ -178,7 +222,7 @@ def add_procedural_detail_layer(layer_spec: dict, base_tiling: float, uv_name: s
                     name=f"{name} {label} Mask",
                     target_type='MASK',
                     type=bake_type,
-                    uv_map=uv_name,
+                    uv_map=bake_uv_name,
                     width=_MASK_BAKE_RES,
                     height=_MASK_BAKE_RES,
                     **_BAKE_CONFIG[bake_type],

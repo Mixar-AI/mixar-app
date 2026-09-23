@@ -111,7 +111,6 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
     )
 
     def execute(self, context):
-        from mixar.modules.moodboard.core.assemble_schema import assemble_summary
         from mixar.modules.moodboard.core.node_execution import (
             mark_run_failed,
             run_action_node,
@@ -140,7 +139,7 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
                 context.area.tag_redraw()
             return {'FINISHED'}
         try:
-            job = run_action_node(context, node, self)
+            run_action_node(context, node, self)
         except Exception as exc:
             # A node that is genuinely generating keeps its state; marking a
             # live job FAILED (e.g. on this second click) is a false alarm.
@@ -149,9 +148,7 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
             if context.area:
                 context.area.tag_redraw()
             return {'CANCELLED'}
-        # ASSEMBLE runs locally and queues nothing (run_action_node -> None).
-        message = assemble_summary(node) if job is None else "Node added to the generation queue"
-        self.report({'INFO'}, message)
+        self.report({'INFO'}, "Node added to the generation queue")
         if context.area:
             context.area.tag_redraw()
         return {'FINISHED'}

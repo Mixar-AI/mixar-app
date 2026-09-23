@@ -103,15 +103,6 @@ void MIXAR_OT_bubble_set_bg_color(wmOperatorType *ot);
  * mixar.bubble_tab_locked. */
 void MIXAR_OT_bubble_tab_locked(wmOperatorType *ot);
 
-/* Voice button on the minimised Sketch pill: claims a pill click that lands on
- * the button and toggles dictation. Python idname: mixar.bubble_pill_voice
- * (asked first by the pill gesture in bubble_header_drag_op.py). */
-void MIXAR_OT_bubble_pill_voice(wmOperatorType *ot);
-
-/* Make the host window key again (macOS/Windows; no-op elsewhere), so typing
- * over a frozen Sketch viewport continues after a pill control is clicked. */
-void agent_bubble_return_key_to_host();
-
 /** \} */
 
 }  // namespace blender

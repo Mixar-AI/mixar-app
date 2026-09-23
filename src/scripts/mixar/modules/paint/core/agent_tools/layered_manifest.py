@@ -31,8 +31,25 @@ def apply_layered_material_manifest(
     object_names=None,
     shared_material: bool = True,
     material_name: str = "",
+    material_slot_targets=None,
 ) -> dict:
-    """Build a layered manifest and apply it to targets."""
+    """Build a layered manifest and apply it to targets.
+
+    With ``material_slot_targets`` (``[{"object_name", "slot_indices"}]``) the
+    build goes into a FRESH datablock assigned to exactly those slots, at the
+    manifest's real-world tile size (``layered_slots``); ``object_names`` is
+    then ignored. Without it this is the legacy whole-object apply.
+    """
+    if material_slot_targets:
+        from .layered_slots import apply_manifest_to_slots
+
+        return apply_manifest_to_slots(
+            manifest,
+            material_slot_targets,
+            shared_material=shared_material,
+            material_name=material_name,
+        )
+
     targets, missing = _resolve_mesh_objects(object_names)
     if not targets:
         return {

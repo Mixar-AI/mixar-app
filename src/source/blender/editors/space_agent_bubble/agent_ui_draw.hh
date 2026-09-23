@@ -77,11 +77,6 @@ struct AgentIslandState {
   bool voice_available;
   char voice_status[32];
   bool voice_listening;     /* A dictation session is up. */
-  /* The microphone is recording (status "Listening"): the control reads
-   * Stop and shows the live ECG trace. False while permission is pending or
-   * the transcript is finishing — clicking then cancels, not stops. */
-  bool voice_capturing;
-  float voice_level;        /* Smoothed input level 0..1 while capturing. */
 
   /* Auto mode (scene.mixie_chat_auto_mode, space_mixie_chat/ui/properties/
    * chat_props.py). While set, every send carries `auto_mode: true` and the
