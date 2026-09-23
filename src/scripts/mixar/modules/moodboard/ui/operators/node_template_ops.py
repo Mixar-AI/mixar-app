@@ -6,12 +6,18 @@
 import bpy
 from bpy.types import Operator
 
-from ...constants import NODE_TEMPLATES
+from ...constants import GRAPH_NODE_ID_MAXLEN, NODE_TEMPLATES
 from ...core.canvas_context import (
     find_moodboard_canvas_region,
     is_moodboard_context,
     redraw_moodboard_canvases,
 )
+from ...core.workflow_templates import WORKFLOW_TEMPLATES, is_workflow
+
+
+def _template_description(key, label):
+    return (WORKFLOW_TEMPLATES.get(key, {}).get('description')
+            or "Add an editable " + label.lower() + " node")
 
 
 class MIXIE_OT_moodboard_add_template(Operator):
@@ -21,13 +27,17 @@ class MIXIE_OT_moodboard_add_template(Operator):
     bl_options = {'UNDO'}
 
     template: bpy.props.EnumProperty(
-        items=[(key, label, "Add an editable " + label.lower() + " node", icon, index)
+        items=[(key, label, _template_description(key, label), icon, index)
                for index, (key, label, icon, _capability) in enumerate(NODE_TEMPLATES)],
         options={'SKIP_SAVE'},
     )
     from_drop: bpy.props.BoolProperty(default=False, options={'HIDDEN', 'SKIP_SAVE'})
     drop_x: bpy.props.FloatProperty(options={'HIDDEN', 'SKIP_SAVE'})
     drop_y: bpy.props.FloatProperty(options={'HIDDEN', 'SKIP_SAVE'})
+    # A continuation from an image output names its image; workflows read it.
+    source_node_id: bpy.props.StringProperty(
+        default="", maxlen=GRAPH_NODE_ID_MAXLEN, options={'HIDDEN', 'SKIP_SAVE'},
+    )
 
     @classmethod
     def poll(cls, context):
@@ -44,12 +54,15 @@ class MIXIE_OT_moodboard_add_template(Operator):
                   region.view2d.region_to_view(region.width * .5, region.height * .5))
         try:
             node = create_template(context.scene, self.template, center,
-                                   exact_position=self.from_drop)
+                                   exact_position=self.from_drop,
+                                   source_node_id=self.source_node_id)
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
             return {'CANCELLED'}
         context.scene.mixie_moodboard_link_drop_active = False
-        if not self.from_drop:
+        # Drops never pan or zoom, except a workflow: its frame is far larger
+        # than the view and would otherwise land mostly off-screen.
+        if not self.from_drop or is_workflow(self.template):
             ensure_moodboard_region_visible(
                 node.position_x, node.position_y, node.width, node.height,
             )

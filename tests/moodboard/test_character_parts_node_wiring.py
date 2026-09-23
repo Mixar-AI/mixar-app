@@ -24,7 +24,7 @@ def test_append_only_character_type_and_mesh_output():
     assert [item[0] for item in ACTION_TYPES] == [
         'IMAGE_GEN', 'VIDEO_GEN', 'MODEL_3D', 'MASK_DETAIL', 'PBR_GEN',
         'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'VIDEO_UPSCALE', 'WORLD_LABS',
-        'CHARACTER_PARTS',
+        'CHARACTER_PARTS', 'ASSEMBLE',
     ]
     assert output_type_for_action('CHARACTER_PARTS') == 'MESH'
     assert capability_for_action('CHARACTER_PARTS') == 'character_parts'

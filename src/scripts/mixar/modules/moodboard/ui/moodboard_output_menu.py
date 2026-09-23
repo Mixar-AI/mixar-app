@@ -16,10 +16,11 @@ from ..core.node_templates import template_available
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 
 from .moodboard_menu_actions import (
-    MESH_CONTINUATIONS,
     capability_available,
     connected_action,
+    draw_character_sheet_entry,
     link_drop_anchor,
+    mesh_continuations_for,
 )
 
 
@@ -58,6 +59,9 @@ class MIXIE_MT_moodboard_output_menu(Menu):
             connected_action(layout, 'CHARACTER_PARTS', "Character Parts",
                              'OUTLINER_OB_ARMATURE', source_id, drop)
             added = True
+        if source_type == 'IMAGE' and template_available('CHARACTER_SHEET_3D'):
+            draw_character_sheet_entry(layout, source_id, drop)
+            added = True
         if source_type == 'IMAGE' and capability_available("world_labs"):
             connected_action(
                 layout, 'WORLD_LABS', "Generate Splat", 'WORLD', source_id, drop
@@ -78,13 +82,12 @@ class MIXIE_MT_moodboard_output_menu(Menu):
         # right-click "Continue in 3D" section.
         if source_type == 'MESH':
             drew_mesh = False
-            for action_type, text, icon, capability in MESH_CONTINUATIONS:
-                if capability_available(capability):
-                    if not drew_mesh:
-                        layout.label(text="Continue in 3D")
-                        drew_mesh = True
-                    connected_action(layout, action_type, text, icon, source_id, drop)
-                    added = True
+            for action_type, text, icon, _capability in mesh_continuations_for(scene, source_id):
+                if not drew_mesh:
+                    layout.label(text="Continue in 3D")
+                    drew_mesh = True
+                connected_action(layout, action_type, text, icon, source_id, drop)
+                added = True
         if not added:
             layout.label(text="No compatible continuation", icon='INFO')
 
