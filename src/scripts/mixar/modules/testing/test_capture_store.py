@@ -103,3 +103,31 @@ def test_prune_keeps_newest(tmp_path, monkeypatch):
     removed = capture_store.prune_captures("s", keep=4)
     assert removed == 2
     assert sorted(os.listdir(target)) == ["r2_0.jpg", "r3_0.jpg", "r4_0.jpg", "r5_0.jpg"]
+
+
+def test_fetch_backend_image_caches_by_id_and_sniffs_type(tmp_path, monkeypatch):
+    monkeypatch.setattr(os.path, "expanduser", lambda p: p.replace("~", str(tmp_path)))
+    calls = []
+
+    def fetch(session_id, image_id):
+        calls.append((session_id, image_id))
+        return _PNG
+
+    image_id = "a" * 16
+    path = capture_store.fetch_backend_image("sess", image_id, fetch=fetch)
+    assert path and path.endswith(f"{image_id}.png") and open(path, "rb").read() == _PNG
+    # Content-addressed: the second call never hits the network.
+    assert capture_store.fetch_backend_image("sess", image_id, fetch=fetch) == path
+    assert calls == [("sess", image_id)]
+
+
+def test_fetch_backend_image_rejects_bad_ids_and_failures(tmp_path, monkeypatch):
+    monkeypatch.setattr(os.path, "expanduser", lambda p: p.replace("~", str(tmp_path)))
+    assert capture_store.fetch_backend_image("sess", "../etc", fetch=lambda s, i: _PNG) is None
+    assert capture_store.fetch_backend_image("", "a" * 16, fetch=lambda s, i: _PNG) is None
+    assert capture_store.fetch_backend_image("sess", "b" * 16, fetch=lambda s, i: None) is None
+
+    def boom(s, i):
+        raise RuntimeError("offline")
+
+    assert capture_store.fetch_backend_image("sess", "c" * 16, fetch=boom) is None

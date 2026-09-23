@@ -228,6 +228,14 @@ class MixieChatStepItem(PropertyGroup):
         description="Whether this row's detail is expanded",
         default=False
     )
+    call_id: StringProperty(
+        name="Call ID",
+        description="Backend tool-call id (the LangChain run id). Sent on the "
+                    "script RPC as agent_ctx.call_id and on the backend's "
+                    "activity payload, so both views of one call share a row",
+        default="",
+        maxlen=63
+    )
 
 
 classes = (

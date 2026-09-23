@@ -333,29 +333,133 @@ def step_image_count(bubble, request_id: str) -> int:
     return sum(1 for img in bubble.image_items if img.step_id == request_id)
 
 
-def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = "") -> None:
-    """Append a RUNNING step row for a tool call that just started executing.
+# Labels that say nothing about WHAT happened — a more specific one (from the
+# script classifier, the result counts, or the backend) always replaces them.
+_GENERIC_LABELS = frozenset({"", "Tool call", "Ran a script"})
+
+
+def _find_row_by_call_id(bubble, call_id: str):
+    if not call_id:
+        return None
+    for i in range(len(bubble.step_items) - 1, -1, -1):
+        row = bubble.step_items[i]
+        if getattr(row, "call_id", "") == call_id:
+            return row
+    return None
+
+
+def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = "",
+                         call_id: str = "") -> None:
+    """Start (or adopt) the step row for a tool call whose script just began.
 
     Duck-typed like apply_steps_to_bubble — used by the live recorder when a
     `blender.execute_script` request begins on the main thread. The label
-    prefers a real backend tool name, then the script-inferred action, then a
-    generic placeholder the result counts will refine on finish.
+    prefers a friendly name for a known backend tool, then the script-inferred
+    action, then a generic placeholder the result counts will refine on finish.
+
+    `call_id` is the backend tool-call id the RPC carried. When the backend's
+    `activity` payload for that call already opened a row, this ADOPTS it —
+    re-keyed to `request_id` so the result lands on it — instead of adding a
+    second row for the same call.
     """
-    row = bubble.step_items.add()
+    row = _find_row_by_call_id(bubble, call_id)
+    adopted = row is not None
+    if row is None:
+        row = bubble.step_items.add()
     row.item_id = request_id or ""
-    row.kind = infer_step_kind(tool_name)
+    row.call_id = call_id or ""
+    kind = infer_step_kind(tool_name)
     label = humanize_tool_name(tool_name)
     if label == "Tool call":
         classified = classify_script_action(script)
         if classified:
             label = classified
     if label == "Inspected scene":
-        row.kind = "READ"
+        kind = "READ"
+    # An adopted row keeps a specific backend label over our generic guess.
+    if adopted and label in _GENERIC_LABELS and getattr(row, "label", "") not in _GENERIC_LABELS:
+        label = row.label
+    else:
+        row.kind = kind
     row.label = label
     row.target = ""
     row.detail = ""
     row.status = "RUNNING"
     _refresh_summary(bubble)
+
+
+_ACTIVITY_STATUS = {"running": "RUNNING", "done": "DONE", "failed": "FAILED"}
+
+
+def apply_activity_to_bubble(bubble, activity: dict):
+    """Merge one backend `activity` payload into the bubble's step rows.
+
+    Keyed on `call_id`: the row a script RPC opened for the same call (see
+    begin_step_on_bubble) is updated in place, otherwise a new row is added
+    with `item_id` = `call_id` (tools that never run a script: view_image,
+    delegate_tasks, load_skill, worker-side tools …).
+
+    Returns the row, or None when the payload is unusable. The caller decides
+    what to do with `activity["images"]` (see images_to_fetch).
+    """
+    call_id = str(activity.get("call_id") or "")
+    if not call_id:
+        return None
+    row = _find_row_by_call_id(bubble, call_id)
+    created = row is None
+    if created:
+        row = bubble.step_items.add()
+        row.item_id = call_id
+        row.call_id = call_id
+        row.kind = "READ" if activity.get("kind") == "read" else "TOOL"
+        row.label = ""
+        row.target = ""
+        row.detail = ""
+        row.status = "PENDING"
+        row.expanded = False
+
+    # The backend names the row it opened (and refines it on `done`: "Viewed
+    # an image" -> "Viewed 2 images"); a row the script path opened keeps its
+    # own (classifier / result-count) label unless that one is generic.
+    backend_owned = created or getattr(row, "item_id", "") == call_id
+    label = str(activity.get("label") or "")
+    if label and (backend_owned or getattr(row, "label", "") in _GENERIC_LABELS):
+        row.label = label
+
+    status = _ACTIVITY_STATUS.get(str(activity.get("status") or "").lower())
+    if status == "RUNNING":
+        # Never regress a row the script path already finished.
+        if row.status not in ("DONE", "FAILED"):
+            row.status = "RUNNING"
+    elif status == "DONE":
+        if row.status != "FAILED":
+            row.status = "DONE"
+    elif status == "FAILED":
+        row.status = "FAILED"
+        row.label = "Failed"
+        row.target = ""
+        row.detail = str(activity.get("error") or "")[:500]
+    _refresh_summary(bubble)
+    return row
+
+
+def images_to_fetch(bubble, row, activity: dict) -> list:
+    """The backend image refs of `activity` that this bubble has no tile for.
+
+    A capture the client made itself is already a tile under the row (the
+    bytes came through its own script reply), so a row that already holds
+    tiles takes nothing from the backend — the same pixels under a different
+    (backend-side) id would only duplicate it. Rows with no tiles (view_image,
+    a worker's capture that reached us only by reference) fetch every ref.
+    Returns [{"id", "label"}].
+    """
+    refs = [r for r in (activity.get("images") or [])
+            if isinstance(r, dict) and r.get("id")]
+    if not refs or row is None:
+        return []
+    if step_image_count(bubble, row.item_id) > 0:
+        return []
+    return [{"id": str(r["id"]), "label": str(r.get("label") or "")} for r in refs]
 
 
 def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:

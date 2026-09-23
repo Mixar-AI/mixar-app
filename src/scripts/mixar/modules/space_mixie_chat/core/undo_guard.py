@@ -96,6 +96,7 @@ def _snapshot_single_scene(scene):
                     'detail': step.detail,
                     'status': step.status,
                     'expanded': step.expanded,
+                    'call_id': step.call_id,
                 }
                 for step in msg.step_items
             ],
@@ -189,6 +190,7 @@ def _restore_single_scene(scene, snapshot):
             step.detail = step_data['detail']
             step.status = step_data['status']
             step.expanded = step_data['expanded']
+            step.call_id = step_data.get('call_id', '')
 
         # Thinking block + state.
         msg.thinking_text = msg_data.get('thinking_text', '')

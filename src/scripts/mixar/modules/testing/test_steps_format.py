@@ -418,3 +418,97 @@ def test_is_internal_step_hides_underscore_names_and_notifications():
     assert not steps_format.is_internal_step("execute_bpy_script", "req-1")
     assert not steps_format.is_internal_step("merge_lane_results")
     assert not steps_format.is_internal_step("", "")
+
+
+# --- backend activity payloads merge on call_id ---------------------------
+
+def _activity(call_id, status, label, tool="view_image", kind="read", images=None, error=""):
+    data = {"type": "activity", "bubble_id": "b", "call_id": call_id, "tool": tool,
+            "status": status, "label": label, "kind": kind}
+    if images is not None:
+        data["images"] = images
+    if error:
+        data["error"] = error
+    return data
+
+
+def test_activity_opens_row_for_a_tool_without_a_script():
+    bubble = _FakeBubble()
+    row = steps_format.apply_activity_to_bubble(
+        bubble, _activity("c1", "running", "Viewed an image"))
+    assert row.item_id == "c1" and row.call_id == "c1"
+    assert row.status == "RUNNING" and row.kind == "READ" and row.label == "Viewed an image"
+    steps_format.apply_activity_to_bubble(
+        bubble, _activity("c1", "done", "Viewed 2 images", images=[{"id": "a" * 16, "label": "x"}]))
+    assert len(bubble.step_items) == 1
+    assert bubble.step_items[0].status == "DONE"
+    assert bubble.step_items[0].label == "Viewed 2 images"
+    assert bubble.steps_summary == "1 tool called"
+
+
+def test_script_row_adopts_backend_row_on_call_id_and_keeps_specific_label():
+    """Backend activity (running) arrives first, then the script RPC for the
+    same call: one row, re-keyed to the request id, with the classifier's
+    specific label over the backend's generic one."""
+    bubble = _FakeBubble()
+    steps_format.apply_activity_to_bubble(
+        bubble, _activity("c2", "running", "Ran a script", tool="execute_bpy_script", kind="tool"))
+    steps_format.begin_step_on_bubble(
+        bubble, "req-9", "execute_bpy_script", "objs=[o.name for o in bpy.data.objects]", call_id="c2")
+    assert len(bubble.step_items) == 1
+    row = bubble.step_items[0]
+    assert row.item_id == "req-9" and row.call_id == "c2"
+    assert row.label == "Inspected scene" and row.kind == "READ"
+    # The backend's `done` for the same call merges, never duplicates, and a
+    # generic backend label does not overwrite the specific one.
+    steps_format.apply_activity_to_bubble(
+        bubble, _activity("c2", "done", "Ran a script", tool="execute_bpy_script", kind="tool"))
+    assert len(bubble.step_items) == 1 and row.label == "Inspected scene"
+    assert steps_format.finish_step_on_bubble(bubble, "req-9", {"success": True}) is True
+
+
+def test_script_row_first_then_activity_merges_and_specific_backend_label_wins_over_generic():
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(bubble, "req-1", "unknown", "x = 1", call_id="c3")
+    assert bubble.step_items[0].label == "Tool call"
+    steps_format.apply_activity_to_bubble(
+        bubble, _activity("c3", "done", "Corrected placement", tool="correct_spatial_placement", kind="tool"))
+    assert len(bubble.step_items) == 1
+    assert bubble.step_items[0].label == "Corrected placement"
+
+
+def test_activity_running_never_regresses_a_finished_row():
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(bubble, "req-1", "render_viewport", call_id="c4")
+    steps_format.finish_step_on_bubble(bubble, "req-1", {"success": True})
+    steps_format.apply_activity_to_bubble(bubble, _activity("c4", "running", "Captured viewport"))
+    assert bubble.step_items[0].status == "DONE"
+
+
+def test_activity_failed_sets_error_detail():
+    bubble = _FakeBubble()
+    row = steps_format.apply_activity_to_bubble(
+        bubble, _activity("c5", "failed", "Delegated a task", tool="delegate_tasks", error="bad brief"))
+    assert row.status == "FAILED" and row.label == "Failed" and row.detail == "bad brief"
+
+
+def test_activity_without_call_id_is_ignored():
+    bubble = _FakeBubble()
+    assert steps_format.apply_activity_to_bubble(bubble, {"status": "done"}) is None
+    assert len(bubble.step_items) == 0
+
+
+def test_images_to_fetch_skips_rows_that_already_hold_local_tiles():
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(bubble, "req-1", "render_viewport", call_id="c6")
+    steps_format.attach_step_images(bubble, "req-1", [{"local_path": "/tmp/a.jpg"}])
+    row = steps_format.apply_activity_to_bubble(
+        bubble, _activity("c6", "done", "Captured viewport", images=[{"id": "a" * 16, "label": "persp"}]))
+    assert steps_format.images_to_fetch(bubble, row, _activity(
+        "c6", "done", "Captured viewport", images=[{"id": "a" * 16, "label": "persp"}])) == []
+    # A row with no tiles (view_image) fetches every ref.
+    row2 = steps_format.apply_activity_to_bubble(
+        bubble, _activity("c7", "done", "Viewed 2 images"))
+    refs = [{"id": "b" * 16, "label": "top"}, {"id": "c" * 16}, {"nope": 1}]
+    assert steps_format.images_to_fetch(bubble, row2, _activity("c7", "done", "x", images=refs)) == [
+        {"id": "b" * 16, "label": "top"}, {"id": "c" * 16, "label": ""}]

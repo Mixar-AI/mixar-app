@@ -16,11 +16,13 @@ Runs on the main thread only (called from the executor timer callback).
 from mixar.config.logging_config import get_logger
 
 from ..constants import TEMP_PLACEHOLDER_PREFIX
-from .capture_store import save_captures
+from .capture_store import fetch_backend_image, save_captures
 from .steps_format import (
+    apply_activity_to_bubble,
     attach_step_images,
     begin_step_on_bubble,
     finish_step_on_bubble,
+    images_to_fetch,
     is_internal_step,
 )
 from .ui_utils import bump_layout_epoch, redraw_chat_areas
@@ -53,8 +55,20 @@ def _find_bubble_with_step(scene, request_id: str):
     return None
 
 
-def record_step_start(scene, request_id: str, tool_name: str, script: str = "") -> None:
-    """Append a RUNNING step row for a tool call that is about to execute."""
+def _find_bubble_by_id(scene, bubble_id: str):
+    messages = getattr(scene, "mixie_chat_messages", None)
+    if not messages or not bubble_id:
+        return None
+    for idx in range(len(messages) - 1, -1, -1):
+        msg = messages[idx]
+        if msg.bubble_id == bubble_id:
+            return msg
+    return None
+
+
+def record_step_start(scene, request_id: str, tool_name: str, script: str = "",
+                      call_id: str = "") -> None:
+    """Append (or adopt) the RUNNING step row for a tool call about to execute."""
     try:
         # Internal executions ("_"-prefixed names: verification snapshots,
         # polling loops, lane plumbing) and notification pushes are backend
@@ -67,7 +81,7 @@ def record_step_start(scene, request_id: str, tool_name: str, script: str = "") 
             return
         from .cat_activity import clear_activity
         clear_activity(scene)
-        begin_step_on_bubble(bubble, request_id, tool_name, script)
+        begin_step_on_bubble(bubble, request_id, tool_name, script, call_id=call_id)
         # A new tool step starting means the agent has moved on from its current
         # reasoning — collapse the live thinking panel to "Thought for Ns" so it
         # appears progressively rather than only at the very end of the turn.
@@ -133,3 +147,67 @@ def _attach_captures(scene, bubble, request_id: str, result: dict, session_id: s
             logger.debug("[STEPS] %d capture tile(s) for %s", added, request_id)
     except Exception:
         logger.debug("[STEPS] capture tile recording failed", exc_info=True)
+
+
+def record_activity(scene, activity: dict) -> None:
+    """Apply a backend ``activity`` payload (one per tool call) to the chat.
+
+    Rows merge on ``call_id`` with the ones the script path opened; images
+    the bubble has no tile for are fetched off the main thread from
+    ``GET /agent/images/{session}/{id}`` and attached when they land.
+    """
+    try:
+        bubble = _find_bubble_by_id(scene, str(activity.get("bubble_id") or ""))
+        if bubble is None:
+            bubble = _find_active_agent_bubble(scene)
+        if bubble is None:
+            return
+        row = apply_activity_to_bubble(bubble, activity)
+        if row is None:
+            return
+        from .cat_activity import clear_activity, note_step_completed
+        if row.status == "RUNNING":
+            clear_activity(scene)
+        elif row.status == "DONE":
+            note_step_completed(scene, bubble, row.item_id)
+        wanted = images_to_fetch(bubble, row, activity)
+        if wanted:
+            session_id = getattr(scene, "mixie_session_id", "") or ""
+            _fetch_activity_images(scene, bubble.bubble_id, row.item_id, session_id, wanted)
+        bump_layout_epoch(scene)
+        redraw_chat_areas()
+    except Exception:
+        logger.debug("[STEPS] activity recording failed", exc_info=True)
+
+
+def _fetch_activity_images(scene, bubble_id: str, step_id: str, session_id: str,
+                           refs: list) -> None:
+    """Download the refs on a worker thread, then attach the tiles on main."""
+    import threading
+
+    from .main_thread_executor import run_on_main_thread
+
+    def work():
+        records = []
+        for ref in refs:
+            path = fetch_backend_image(session_id, ref["id"])
+            if path:
+                records.append({"local_path": path, "width": 0, "height": 0,
+                                "caption": ref.get("label") or ""})
+        if not records:
+            return
+
+        def attach():
+            try:
+                target = _find_bubble_by_id(scene, bubble_id)
+                if target is None:
+                    return
+                attach_step_images(target, step_id, records)
+                bump_layout_epoch(scene)
+                redraw_chat_areas()
+            except Exception:
+                logger.debug("[STEPS] attaching fetched tiles failed", exc_info=True)
+
+        run_on_main_thread(attach)
+
+    threading.Thread(target=work, daemon=True, name="MixarActivityImages").start()

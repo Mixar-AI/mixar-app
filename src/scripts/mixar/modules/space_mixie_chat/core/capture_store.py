@@ -180,3 +180,66 @@ def prune_captures(session_id: str, keep: int = CAPTURE_KEEP_PER_SESSION) -> int
         except OSError:
             pass
     return removed
+
+
+# ── Backend-held images ─────────────────────────────────────────────────────
+
+IMAGE_ENDPOINT = "api/v1/agent/images"
+_MAGIC = ((b"\xff\xd8\xff", ".jpg"), (b"\x89PNG", ".png"), (b"RIFF", ".webp"))
+
+
+def _ext_from_bytes(data: bytes) -> str:
+    for magic, ext in _MAGIC:
+        if data.startswith(magic):
+            return ext
+    return ".jpg"
+
+
+def backend_image_path(session_id: str, image_id: str) -> str | None:
+    """The cached file for a backend image id, or None when not fetched yet."""
+    target = captures_dir(session_id)
+    for _magic, ext in _MAGIC:
+        path = os.path.join(target, f"{image_id}{ext}")
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def _http_fetch(session_id: str, image_id: str) -> bytes | None:
+    """GET the bytes through the shared authenticated HTTP client."""
+    from mixar.modules.common.api.client import get_http_client
+    response = get_http_client().get(f"{IMAGE_ENDPOINT}/{session_id}/{image_id}", timeout=20)
+    raw = getattr(response, "data", None)
+    if not isinstance(raw, (bytes, bytearray)):
+        raw = getattr(getattr(response, "raw", None), "content", None)
+    return bytes(raw) if isinstance(raw, (bytes, bytearray)) and raw else None
+
+
+def fetch_backend_image(session_id: str, image_id: str, fetch=None) -> str | None:
+    """Ensure the backend image `image_id` is on disk; return its path.
+
+    Content-addressed: an id already cached is never fetched again. `fetch`
+    (session_id, image_id) -> bytes|None is injectable for tests; the default
+    goes through the app's authenticated HTTP client. Never raises.
+    """
+    if not session_id or not re.fullmatch(r"[0-9a-f]{8,64}", image_id or ""):
+        return None
+    cached = backend_image_path(session_id, image_id)
+    if cached:
+        return cached
+    try:
+        data = (fetch or _http_fetch)(session_id, image_id)
+    except Exception:
+        return None
+    if not data:
+        return None
+    target = captures_dir(session_id)
+    try:
+        os.makedirs(target, exist_ok=True)
+        path = os.path.join(target, f"{image_id}{_ext_from_bytes(data)}")
+        with open(path, "wb") as f:
+            f.write(data)
+    except OSError:
+        return None
+    prune_captures(session_id)
+    return path
