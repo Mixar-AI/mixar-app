@@ -89,6 +89,46 @@ result={{'toast':t['rect'], 'cards':[a['rect'] for a in agents], 'visible_toasts
 ''')
 
 
+def view_queue_over_short_stack(qa, out):
+    """The queue toast over ONE card: its controls sit inside the panel band.
+
+    That band used to claim every press over the card column (a bottom-aligned
+    overlap clips X only), so View Queue and the close X did nothing.
+    """
+    qa.eval("wm=bpy.context.window_manager\nwm.mixar_bubble_tab='AGENT'\n"
+            "result=str(bpy.ops.mixar.bubble_minimise())")
+    qa.wait("any(w.get('value') for w in drv.find(surface='pill_cat'))", timeout=10)
+    qa.eval(IMPORTS + "store.push('info','Generation in progress','marked_palm_TrunkAndFronds',"
+            "id='qa-view-queue',ttl_ms=0,"
+            "actions=[NotificationAction('View Queue','mixie.queue_view',style='primary')])\n"
+            "result=True")
+    settle(qa)
+    qa.step('queue_toast_sits_in_the_panel_band', qa.eval, '''
+hit=drv.find_one(surface='toast_action',value='qa-view-queue')
+panel=next(r for r in hit['_area'].regions if r.type=='EXECUTE')
+x0,y0,x1,y1=hit['rect']
+band=[panel.x,panel.y,panel.x+panel.width,panel.y+panel.height]
+assert band[0]<=x0 and x1<=band[2] and band[1]<=y0 and y1<=band[3], (hit['rect'],band)
+result={'action':hit['rect'],'panel_band':band}
+''')
+    capture(qa, out, 'short-stack-view-queue-hover',
+            {'surface': 'toast_action', 'value': 'qa-view-queue'})
+    qa.click(surface='toast_action', value='qa-view-queue')
+    qa.wait("bpy.context.window_manager.mixar_bubble_tab=='QUEUE' and "
+            "not any(w.get('value') for w in drv.find(surface='pill_cat'))", timeout=10)
+    qa.step('view_queue_opens_the_island_queue', lambda: True)
+    # The island is its own OS window; the main-window capture cannot show it.
+    qa.cmd('snap', path=str(out / 'short-stack-island-queue.png'),
+           target={'area_type': 'AGENT_BUBBLE', 'text': 'Generation queue'}, margin=800)
+    qa.click(surface='toast_close', value='qa-view-queue')
+    qa.wait("not __import__('mixar.modules.common.notifications.store',fromlist=['get_notification_store'])"
+            ".get_notification_store().contains('qa-view-queue')", timeout=10)
+    qa.step('short_stack_toast_dismiss', lambda: True)
+    qa.eval("bpy.ops.mixar.bubble_minimise()\n"
+            "bpy.context.window_manager.mixar_bubble_tab='AGENT'\nresult=True")
+    settle(qa)
+
+
 def run(qa):
     out = Path(os.environ['QA_SCENARIO_OUT']).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -181,6 +221,7 @@ result=True
     qa.wait('bpy.context.window_manager.mixar_agent_cards_active==1', timeout=10)
     settle(qa)
     qa.step('surviving_card_reflows', assert_lane, qa, 1)
+    view_queue_over_short_stack(qa, out)
     qa.click(surface='agent_panel_dismiss', index=0)
     qa.wait('bpy.context.window_manager.mixar_agent_cards_active==0', timeout=10)
     settle(qa)

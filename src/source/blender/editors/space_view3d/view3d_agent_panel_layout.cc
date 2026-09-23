@@ -21,19 +21,20 @@
 namespace blender {
 /** Publish the card column as the region's View2D extent.
  *
- * This is what makes the panel clickable at all. For an overlapping side
- * region `ED_region_contains_xy` does NOT stop at `winrct`: it runs
- * `ED_region_overlap_isect_y_with_margin`, which bails immediately when
+ * This is what makes the panel clickable at all. For an overlapping region
+ * `ED_region_contains_xy` does NOT stop at `winrct`: it bails immediately when
  * `v2d.mask` is degenerate and otherwise tests the event against `v2d.tot`.
  * A custom-drawn region that never sets up a View2D therefore has an empty
  * mask and is transparent to every event — the keymap resolves, the operator
  * polls fine, and no wheel or click ever arrives, with nothing logged.
  *
  * Publishing the CARD COLUMN rather than the whole region is also what the
- * surface wants: the panel is as tall as the area, so anything below the last
- * card stays viewport, and an orbit drag started there still reaches the 3D
- * view. `cur` is set equal to `mask` so the region→view mapping is the
- * identity and `tot` can be given in region pixels. */
+ * surface wants. The region is taller than its cards, and `ED_region_contains_xy`
+ * clips it on BOTH axes (a stock BOTTOM-aligned overlap clips X only), so the
+ * band above the cards stays viewport: an orbit drag started there reaches the
+ * 3D view and the notifications stacked there receive their own presses.
+ * `cur` is set equal to `mask` so the region→view mapping is the identity and
+ * `tot` can be given in region pixels. */
 static void agent_panel_view2d_sync(const ARegion *region, const rcti &column)
 {
   View2D *v2d = &const_cast<ARegion *>(region)->v2d;
