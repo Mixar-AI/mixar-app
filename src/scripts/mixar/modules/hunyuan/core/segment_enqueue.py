@@ -253,7 +253,6 @@ def enqueue_segment_jobs(
             fail_message="Mesh segmentation failed",
             on_imported=segment_on_imported,
             scene_flag=SEGMENT_SCENE_FLAG,
-            batch_popup_title="Mesh segmentation batch complete",
         )
         if job is not None:
             enqueued.append(job)
@@ -311,5 +310,4 @@ def enqueue_smart_segment_job(
         fail_message="Smart segmentation failed",
         on_imported=segment_on_imported,
         scene_flag=SMART_SEGMENT_SCENE_FLAG,
-        batch_popup_title="Smart segmentation complete",
     )

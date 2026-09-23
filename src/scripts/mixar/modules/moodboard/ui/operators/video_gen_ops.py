@@ -120,7 +120,6 @@ class MIXIE_OT_video_gen_generate(Operator):
                 video_inputs=video_inputs,
                 max_video_duration_seconds=limits["max_video_seconds"],
                 scene_flag="mixie_video_gen_is_generating",
-                batch_popup_title="Video Generation Complete",
             )
         except Exception as exc:
             self.report({'ERROR'}, f"Failed to start video generation: {exc}")

@@ -217,7 +217,6 @@ def _get_scene_gen_listener():
         "mixie_segment_to_3d_is_generating",
         on_start=_on_start,
         on_finish=_on_finish,
-        batch_popup_title="Scene generation complete",
     )
     return _scene_gen_listener
 

@@ -302,7 +302,6 @@ def _run_video(context, node, operator):
         video_inputs=video_inputs,
         max_video_duration_seconds=limits["max_video_seconds"],
         scene_flag="mixie_video_gen_is_generating",
-        batch_popup_title="Video Generation Complete",
         on_imported=hook,
     )
     return job, params

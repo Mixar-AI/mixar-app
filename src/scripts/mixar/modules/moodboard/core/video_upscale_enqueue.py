@@ -98,7 +98,6 @@ def enqueue_video_upscale(
         video_key_field=VIDEO_KEY_FIELD,
         single_video_key=True,
         scene_flag=scene_flag,
-        batch_popup_title="Video Upscale Complete",
         on_imported=on_imported,
     )
 

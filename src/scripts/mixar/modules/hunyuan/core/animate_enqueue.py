@@ -244,7 +244,6 @@ def enqueue_rig_jobs(
         on_imported=_rig_on_imported,
         import_options=_ANIMATE_IMPORT_OPTIONS,
         scene_flag=ANIMATE_SCENE_FLAG,
-        batch_popup_title="Auto Rig complete",
     )
     return [job] if job is not None else []
 
@@ -286,5 +285,4 @@ def enqueue_retarget_job(
         fail_message="Animate failed",
         import_options=_ANIMATE_IMPORT_OPTIONS,
         scene_flag=ANIMATE_SCENE_FLAG,
-        batch_popup_title="Animate complete",
     )
