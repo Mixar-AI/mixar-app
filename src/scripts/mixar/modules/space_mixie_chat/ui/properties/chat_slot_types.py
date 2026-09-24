@@ -110,6 +110,14 @@ class MixieChatActionItem(PropertyGroup):
         default="",
         maxlen=32
     )
+    score: FloatProperty(
+        name="Match Score",
+        description="Search similarity 0-1 from the backend (-1 = not sent); "
+                    "drawn as the picker's match percentage",
+        default=-1.0,
+        min=-1.0,
+        max=1.0,
+    )
 
 
 class MixieChatImageItem(PropertyGroup):

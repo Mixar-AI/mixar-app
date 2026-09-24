@@ -696,6 +696,9 @@ bool mixie_chat_handle_steps_click(bContext *C,
 /* Drag-and-drop (mixie_chat_dragdrop.cc) */
 void MIXIE_CHAT_OT_drop_image(wmOperatorType *ot);
 void mixie_chat_dropboxes();
+/* An asset-picker tile dropped into a 3D viewport (mixie_chat_asset_picker_drop.cc). */
+void MIXIE_CHAT_OT_drop_asset_pick(wmOperatorType *ot);
+void mixie_chat_asset_pick_dropboxes();
 
 /* Floating agent bubble overlay (mixie_chat_agent_bubble.cc).
  * The status pill is drawn INSIDE this same popup as a top-row boxed

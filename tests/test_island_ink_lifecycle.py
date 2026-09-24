@@ -75,13 +75,17 @@ def test_the_empty_state_still_runs_the_ink_closing_edge():
         BUBBLE_CC, "static void agent_bubble_island_region_draw"
     )
     # Once for the open canvas (it replaces the field), once on the branch
-    # that builds the field — the latter is the closing edge, and it draws
-    # nothing because visibility is false on that branch by construction.
-    assert body.count("mixie_chat_draw_ink_overlay(C, region);") == 2, (
-        "the empty-state field branch must still call the overlay, or "
-        "rt->ink_overlay_active is never cleared and an invisible canvas "
-        "keeps consuming the field's events"
+    # that builds the field and once on the asset-picker branch (it replaces
+    # the transcript) — the latter two are closing edges, and they draw
+    # nothing because visibility is false on those branches by construction.
+    assert body.count("mixie_chat_draw_ink_overlay(C, region);") == 3, (
+        "the empty-state field branch and the asset-picker branch must still "
+        "call the overlay, or rt->ink_overlay_active is never cleared and an "
+        "invisible canvas keeps consuming the field's / picker's events"
     )
+    picker = body[body.index("mixie_chat_asset_picker_shown(C, &picker)"):
+                  body.index("agent_ui_asset_picker_draw(")]
+    assert "mixie_chat_draw_ink_overlay(C, region);" in picker
 
 
 def test_the_overlay_is_the_only_writer_of_the_latch():

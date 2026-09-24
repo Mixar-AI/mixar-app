@@ -36,6 +36,8 @@
 #include "GPU_framebuffer.hh"
 #include "UI_view2d.hh"
 
+#include "ED_mixie_chat_asset_picker.hh"
+
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_footer_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -345,7 +347,15 @@ static bool mixie_chat_dispatch_is_live(const bContext *C)
   {
     return true;
   }
-  return STREQ(ident, "AGENT");
+  if (!STREQ(ident, "AGENT")) {
+    return false;
+  }
+  /* A pending asset question replaces the transcript with the island's
+   * Library-style picker (agent_ui_asset_picker.cc), which builds its tiles
+   * and actions as uiBlock buttons in this same region. The message rects
+   * are dropped while it shows, but the scroll indicator and empty-prompt
+   * hits are not rect-cached — stand down exactly as on a pane tab. */
+  return !mixie_chat_asset_picker_shown(C, nullptr);
 }
 
 int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/)
