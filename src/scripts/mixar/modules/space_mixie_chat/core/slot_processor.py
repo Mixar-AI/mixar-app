@@ -603,8 +603,22 @@ class SlotEventProcessor:
             bubble: Message PropertyGroup
             images: List of dicts with url, alt, caption, thumbnail_url, width, height
         """
-        # Clear existing items
+        # Replace the backend-owned gallery only. Tiles tagged with a step_id
+        # were recorded locally by steps_recorder from this client's own
+        # captures and are not the backend's to replace.
+        kept = [
+            {
+                "url": img.url, "alt": img.alt, "caption": img.caption,
+                "thumbnail_url": img.thumbnail_url, "local_path": img.local_path,
+                "width": img.width, "height": img.height, "step_id": img.step_id,
+            }
+            for img in bubble.image_items if img.step_id
+        ]
         bubble.image_items.clear()
+        for data in kept:
+            img = bubble.image_items.add()
+            for key, value in data.items():
+                setattr(img, key, value)
 
         # Add new items
         for img_data in images:

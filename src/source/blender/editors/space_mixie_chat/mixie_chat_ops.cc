@@ -26,6 +26,7 @@ void mixie_chat_operatortypes()
   WM_operatortype_append(MIXIE_CHAT_OT_voice_start);
   WM_operatortype_append(MIXIE_CHAT_OT_voice_stop);
   WM_operatortype_append(MIXIE_CHAT_OT_voice_poll);
+  WM_operatortype_append(MIXIE_CHAT_OT_lightbox);
 }
 
 void mixie_chat_keymap(wmKeyConfig *keyconf)

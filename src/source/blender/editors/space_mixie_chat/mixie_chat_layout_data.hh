@@ -60,6 +60,7 @@ struct ChatMessageProps {
   PropertyRNA *step_items;
   PropertyRNA *steps_summary;
   PropertyRNA *steps_collapsed;
+  PropertyRNA *images_collapsed;
 
   /* Thinking dropdown (finalized) */
   PropertyRNA *thinking_text;
@@ -106,6 +107,7 @@ struct ChatImageItemProps {
   PropertyRNA *local_path;
   PropertyRNA *width;
   PropertyRNA *height;
+  PropertyRNA *step_id;
   bool initialized;
 };
 
@@ -269,6 +271,19 @@ struct MessageLayoutData {
   bool steps_collapsed;
   char steps_summary[256];
   rctf steps_header_bounds;  /* block header hit area */
+
+  /* "Viewed N images" block: the bubble's step-tagged capture tiles, drawn
+   * under the steps block with its own collapse state (mixie_chat_steps.cc). */
+  bool images_collapsed;
+  float slot_gallery_height;
+  rctf images_header_bounds;
+  bool images_header_hovered;
+  /* One row of the NEWEST tiles; the rest sit behind a "+N" chip that opens
+   * the lightbox (which still steps through every tile). */
+  int gallery_hidden;            /* tiles not shown in the row */
+  int gallery_first_hidden;      /* slot_images index the chip opens */
+  rctf gallery_more_bounds;      /* the chip's hit area, zero when none */
+  bool gallery_more_hovered;
 
   /* Thinking block. When thinking_active, it renders as a LIVE pinned panel
    * (spinner + streaming FIFO text); when finalized it collapses to the

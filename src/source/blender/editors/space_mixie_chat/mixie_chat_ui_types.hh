@@ -299,7 +299,10 @@ struct ImageSlotData {
   char thumbnail_url[1024];
   char local_path[1024];
   float width, height;
-  rctf bounds;
+  /* item_id of the step row that produced this image (a capture tile drawn
+   * under its row in the steps block); empty for a backend gallery image. */
+  char step_id[64];
+  rctf bounds; /* tile hit area (View2D coords), zero when not drawn */
   bool is_hovered;
 };
 
@@ -350,7 +353,8 @@ struct StepItemSlotData {
 /* Maximum items per slot */
 #define SLOT_MAX_TODO_ITEMS 50
 #define SLOT_MAX_ACTION_ITEMS 10
-#define SLOT_MAX_IMAGE_ITEMS 20
+/* Mirrors steps_format.MAX_STEP_IMAGES_PER_BUBBLE — keep in sync. */
+#define SLOT_MAX_IMAGE_ITEMS 32
 #define SLOT_MAX_STEP_ITEMS 50
 #define SLOT_MAX_LOADER_TEXTS 8
 

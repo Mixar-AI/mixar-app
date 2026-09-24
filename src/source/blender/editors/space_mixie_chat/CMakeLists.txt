@@ -30,6 +30,7 @@ set(SRC
   mixie_chat_history_chrome.cc
   mixie_chat_history_events.cc
   mixie_chat_history_overlay.cc
+  mixie_chat_lightbox.cc
   mixie_chat_history_rows.cc
   mixie_chat_history_util.cc
   mixie_chat_hit_testing.cc

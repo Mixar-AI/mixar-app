@@ -92,6 +92,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
     return;
   }
 
+
   /* Check scroll-to-bottom indicator (screen-space, checked before View2D transform) */
   if (rt->scroll_indicator_visible) {
     float mouse_x = float(mval[0]);
@@ -231,6 +232,45 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
         }
       }
     }
+    /* "Viewed N images": the header toggles, the tiles open the lightbox
+     * (hand cursor + a brighter frame on hover; bounds zero while collapsed). */
+    if (layout.slot_gallery_height > 0.0f) {
+      const bool was_header = layout.images_header_hovered;
+      layout.images_header_hovered =
+          layout.images_header_bounds.xmax > layout.images_header_bounds.xmin &&
+          BLI_rctf_isect_pt(&layout.images_header_bounds, mouse_x, mouse_y);
+      if (was_header != layout.images_header_hovered) {
+        needs_redraw = true;
+      }
+      if (layout.images_header_hovered) {
+        any_hovered = true;
+      }
+      const bool was_more = layout.gallery_more_hovered;
+      layout.gallery_more_hovered = !layout.images_collapsed &&
+          layout.gallery_more_bounds.xmax > layout.gallery_more_bounds.xmin &&
+          BLI_rctf_isect_pt(&layout.gallery_more_bounds, mouse_x, mouse_y);
+      if (was_more != layout.gallery_more_hovered) {
+        needs_redraw = true;
+      }
+      if (layout.gallery_more_hovered) {
+        any_hovered = true;
+      }
+      for (int i = 0; i < layout.slot_image_count; i++) {
+        ImageSlotData &img = layout.slot_images[i];
+        if (img.step_id[0] == '\0') {
+          continue;
+        }
+        const bool was_hovered = img.is_hovered;
+        img.is_hovered = !layout.images_collapsed && img.bounds.xmax > img.bounds.xmin &&
+                         BLI_rctf_isect_pt(&img.bounds, mouse_x, mouse_y);
+        if (was_hovered != img.is_hovered) {
+          needs_redraw = true;
+        }
+        if (img.is_hovered) {
+          any_hovered = true;
+        }
+      }
+    }
     if (layout.has_thinking &&
         BLI_rctf_isect_pt(&layout.thinking_header_bounds, mouse_x, mouse_y))
     {
@@ -345,6 +385,7 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
   if (mixie_chat_history_handle_event(C, event)) {
     return WM_UI_HANDLER_BREAK;
   }
+
 
   if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
     ScrArea *area = CTX_wm_area(C);
