@@ -249,6 +249,16 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
       if (layout.images_header_hovered) {
         any_hovered = true;
       }
+      const bool was_more = layout.gallery_more_hovered;
+      layout.gallery_more_hovered = !layout.images_collapsed &&
+          layout.gallery_more_bounds.xmax > layout.gallery_more_bounds.xmin &&
+          BLI_rctf_isect_pt(&layout.gallery_more_bounds, mouse_x, mouse_y);
+      if (was_more != layout.gallery_more_hovered) {
+        needs_redraw = true;
+      }
+      if (layout.gallery_more_hovered) {
+        any_hovered = true;
+      }
       for (int i = 0; i < layout.slot_image_count; i++) {
         ImageSlotData &img = layout.slot_images[i];
         if (img.step_id[0] == '\0') {

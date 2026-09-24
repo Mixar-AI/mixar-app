@@ -125,6 +125,10 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     layout->slot_gallery_height = 0.0f;
     layout->images_header_hovered = false;
     memset(&layout->images_header_bounds, 0, sizeof(layout->images_header_bounds));
+    layout->gallery_hidden = 0;
+    layout->gallery_first_hidden = -1;
+    layout->gallery_more_hovered = false;
+    memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
     return false;
   }
 
@@ -345,6 +349,10 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
   layout->slot_gallery_height = 0.0f;
   layout->images_header_hovered = false;
   memset(&layout->images_header_bounds, 0, sizeof(layout->images_header_bounds));
+  layout->gallery_hidden = 0;
+  layout->gallery_first_hidden = -1;
+  layout->gallery_more_hovered = false;
+  memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
   if (g_msg_props.images_collapsed) {
     layout->images_collapsed =
         RNA_property_boolean_get(msg_ptr, g_msg_props.images_collapsed);

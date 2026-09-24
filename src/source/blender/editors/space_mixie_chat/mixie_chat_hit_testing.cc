@@ -441,6 +441,14 @@ bool mixie_chat_handle_steps_click(bContext *C,
           }
         }
       }
+      const rctf &mb = layout.gallery_more_bounds;
+      if (!layout.images_collapsed && mb.xmax > mb.xmin && layout.gallery_first_hidden >= 0 &&
+          BLI_rctf_isect_pt(&mb, view_x, view_y))
+      {
+        mixie_chat_lightbox_open(smixie, layout.bubble_id, layout.gallery_first_hidden);
+        ED_region_tag_redraw(region);
+        return true;
+      }
       const rctf &gb = layout.images_header_bounds;
       if (gb.xmax > gb.xmin && BLI_rctf_isect_pt(&gb, view_x, view_y)) {
         return dispatch_toggle(C, region, "mixie_chat.toggle_images",

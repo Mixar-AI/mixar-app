@@ -195,9 +195,13 @@ static int gallery_tile_count(const MessageLayoutData *layout)
   return n;
 }
 
-/* Wrap the bubble's capture tiles into rows of `avail_width`. Returns the
- * total height (0 with no tiles) — the tile rows plus the gap above the first.
- * When `write_bounds` every tile's bounds are written relative to (x0, top). */
+/* Lay the bubble's capture tiles out as ONE row of the NEWEST ones that fit,
+ * oldest-to-newest left to right, with a "+N" chip at the right end for the
+ * rest (a long run takes dozens of captures; a wall of tiles was overwhelming).
+ * Returns the block height (0 with no tiles). When `write_bounds`, every
+ * shown tile's bounds are written relative to (x0, top); hidden tiles get zero
+ * bounds; `gallery_hidden` / `gallery_first_hidden` / `gallery_more_bounds`
+ * describe the chip. */
 static float gallery_tiles_layout(MessageLayoutData *layout,
                                   float avail_width,
                                   float x0,
@@ -206,38 +210,98 @@ static float gallery_tiles_layout(MessageLayoutData *layout,
 {
   const float th = steps_tile_height();
   const float gap = STEPS_TILE_GAP * UI_SCALE_FAC;
-  float cursor_x = 0.0f;
-  int rows = 0;
-  bool any = false;
+  const float chip_w = STEPS_TILE_HEIGHT * 0.75f * UI_SCALE_FAC;
 
+  int indices[SLOT_MAX_IMAGE_ITEMS];
+  int count = 0;
   for (int i = 0; i < layout->slot_image_count; i++) {
-    ImageSlotData &img = layout->slot_images[i];
-    if (!gallery_tile(img)) {
-      continue;
+    if (gallery_tile(layout->slot_images[i])) {
+      indices[count++] = i;
     }
-    const float tw = std::min(steps_tile_width(img), avail_width);
-    if (!any || cursor_x + tw > avail_width + 0.5f) {
-      rows++;
-      cursor_x = 0.0f;
+  }
+  if (count == 0) {
+    return 0.0f;
+  }
+
+  /* Take from the newest end until the row is full. When anything is left
+   * over, the chip needs its own slot. */
+  int shown = 0;
+  float used = 0.0f;
+  for (int k = count - 1; k >= 0; k--) {
+    const float tw = std::min(steps_tile_width(layout->slot_images[indices[k]]), avail_width);
+    const bool more_after = (k > 0);
+    const float reserve = more_after ? chip_w + gap : 0.0f;
+    if (shown > 0 && used + tw + reserve > avail_width + 0.5f) {
+      break;
     }
-    any = true;
-    if (write_bounds) {
-      const float row_top = top - STEPS_TILE_TOP_GAP * UI_SCALE_FAC - float(rows - 1) * (th + gap);
+    used += tw + gap;
+    shown++;
+  }
+  const int hidden = count - shown;
+  layout->gallery_hidden = hidden;
+  layout->gallery_first_hidden = hidden > 0 ? indices[hidden - 1] : -1;
+
+  if (write_bounds) {
+    const float row_top = top - STEPS_TILE_TOP_GAP * UI_SCALE_FAC;
+    float cursor_x = 0.0f;
+    for (int k = 0; k < count; k++) {
+      ImageSlotData &img = layout->slot_images[indices[k]];
+      if (k < hidden) {
+        memset(&img.bounds, 0, sizeof(img.bounds));
+        img.is_hovered = false;
+        continue;
+      }
+      const float tw = std::min(steps_tile_width(img), avail_width);
       img.bounds.xmin = x0 + cursor_x;
       img.bounds.xmax = img.bounds.xmin + tw;
       img.bounds.ymax = row_top;
       img.bounds.ymin = row_top - th;
+      cursor_x += tw + gap;
     }
-    cursor_x += tw + gap;
+    if (hidden > 0) {
+      layout->gallery_more_bounds.xmin = x0 + cursor_x;
+      layout->gallery_more_bounds.xmax = layout->gallery_more_bounds.xmin + chip_w;
+      layout->gallery_more_bounds.ymax = row_top;
+      layout->gallery_more_bounds.ymin = row_top - th;
+    }
+    else {
+      memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
+    }
   }
-  if (!any) {
-    return 0.0f;
+  return STEPS_TILE_TOP_GAP * UI_SCALE_FAC + th;
+}
+
+static void gallery_draw_more_chip(const ChatBubbleStyle &card, MessageLayoutData *layout)
+{
+  const rctf &chip = layout->gallery_more_bounds;
+  if (chip.xmax <= chip.xmin) {
+    return;
   }
-  return STEPS_TILE_TOP_GAP * UI_SCALE_FAC + float(rows) * th + float(rows - 1) * gap;
+  const float radius = STEPS_TILE_RADIUS * UI_SCALE_FAC;
+  const float bed[4] = {1.0f, 1.0f, 1.0f, layout->gallery_more_hovered ? 0.14f : 0.07f};
+  chat_ui_draw_rounded_rect(&chip, radius, bed);
+  const float line[4] = {card.text_color[0], card.text_color[1], card.text_color[2],
+                         card.text_color[3] * (layout->gallery_more_hovered ? 0.85f : 0.28f)};
+  chat_ui_draw_rounded_rect_outline(&chip, radius, line, 1.0f * UI_SCALE_FAC);
+
+  char label[16];
+  BLI_snprintf(label, sizeof(label), "+%d", layout->gallery_hidden);
+  const int font_id = BLF_default();
+  BLF_size(font_id, card.font_size);
+  rcti bb;
+  BLF_boundbox(font_id, label, strlen(label), &bb);
+  const float gx = chip.xmin + (BLI_rctf_size_x(&chip) - float(BLI_rcti_size_x(&bb))) * 0.5f - float(bb.xmin);
+  const float gy = chip.ymin + (BLI_rctf_size_y(&chip) - float(BLI_rcti_size_y(&bb))) * 0.5f - float(bb.ymin);
+  float ink[4] = {card.text_color[0], card.text_color[1], card.text_color[2], card.text_color[3] * 0.85f};
+  BLF_color4fv(font_id, ink);
+  BLF_position(font_id, gx, gy, 0.0f);
+  BLF_draw(font_id, label, strlen(label));
 }
 
 static void steps_tiles_clear_bounds(MessageLayoutData *layout)
 {
+  memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
+  layout->gallery_more_hovered = false;
   for (int i = 0; i < layout->slot_image_count; i++) {
     ImageSlotData &img = layout->slot_images[i];
     if (img.step_id[0] != '\0') {
@@ -595,10 +659,11 @@ void chat_ui_draw_images_block(Main *bmain,
   gallery_tiles_layout(layout, avail, x + card.h_padding + chevron_indent, header_bottom, true);
   for (int k = 0; k < layout->slot_image_count; k++) {
     ImageSlotData &img = layout->slot_images[k];
-    if (gallery_tile(img)) {
+    if (gallery_tile(img) && img.bounds.xmax > img.bounds.xmin) {
       steps_draw_tile(bmain, card, img);
     }
   }
+  gallery_draw_more_chip(card, layout);
 }
 
 /** \} */

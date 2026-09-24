@@ -278,6 +278,12 @@ struct MessageLayoutData {
   float slot_gallery_height;
   rctf images_header_bounds;
   bool images_header_hovered;
+  /* One row of the NEWEST tiles; the rest sit behind a "+N" chip that opens
+   * the lightbox (which still steps through every tile). */
+  int gallery_hidden;            /* tiles not shown in the row */
+  int gallery_first_hidden;      /* slot_images index the chip opens */
+  rctf gallery_more_bounds;      /* the chip's hit area, zero when none */
+  bool gallery_more_hovered;
 
   /* Thinking block. When thinking_active, it renders as a LIVE pinned panel
    * (spinner + streaming FIFO text); when finalized it collapses to the
