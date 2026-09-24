@@ -164,6 +164,16 @@ def _force_workspace_rebuild(target):
     window.workspace = target
 
 
+def _schedule_object_mode() -> None:
+    """Arm the bootstrap's Object Mode reset for the workspace just entered."""
+    try:
+        from mixar.bootstrap import workflow_module
+
+        workflow_module.schedule_object_mode_reset()
+    except Exception as exc:  # noqa: BLE001 — the switch matters more than the reset
+        _logger.debug("object mode reset scheduling failed: %s", exc)
+
+
 def _kick_slider_animation() -> None:
     """Start the topbar slider's frame pump BEFORE the workspace switch.
 
@@ -214,6 +224,11 @@ class MIXAR_OT_set_ui_mode_ai(Operator):
         # overlays on gets cleaned up on entry.
         configure_basic_workspace_chrome()
         _force_workspace_rebuild(target)
+        # Zen has no mode selector, so a user arriving from Edit/Sculpt/
+        # Texture Paint must land in Object Mode. The workspace msgbus arms
+        # the same reset; this call covers a switch that did not go through
+        # the RNA setter (already on Zen with one workspace).
+        _schedule_object_mode()
         _redraw_topbar(context)
         # Now that we're in Zen Mode, unblock the onboarding gate, then
         # (re)start the tour so it owns the welcome card in THIS workspace

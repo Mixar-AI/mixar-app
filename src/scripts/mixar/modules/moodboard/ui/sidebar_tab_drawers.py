@@ -19,7 +19,7 @@ from .sidebar_ui_helpers import (
     draw_status_badge, draw_image_info_card,
 )
 from mixar.modules.moodboard.constants import SEP_INTRA, GENERATE_BUTTON_SCALE_Y
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import selected_reference_still_entries
 
 
 # ---------------------------------------------------------------------------
@@ -31,15 +31,9 @@ def _draw_segment_to_3d(layout, context):
     scene = context.scene
     state = scene.mixie_edit_tool_state
 
-    # Find first selected moodboard image
-    selected_idx = -1
-    selected_item = None
-    if hasattr(scene, 'mixie_moodboard_images'):
-        for i, img_item in enumerate(scene.mixie_moodboard_images):
-            if img_item.selected and is_still_item(img_item):
-                selected_idx = i
-                selected_item = img_item
-                break
+    # Index comes from the same walk as the still — RNA wrappers are not `is`.
+    entries = selected_reference_still_entries(scene)
+    selected_idx, selected_item = entries[0] if entries else (-1, None)
 
     if selected_idx < 0 or not selected_item:
         box = layout.box()

@@ -30,6 +30,9 @@ struct bContext;
 struct AgentIslandState {
   char status_text[64];     /* Status pill label, from the state enum's UI name. */
   bool status_busy;         /* Lights the pill's dot. */
+  /* Background work with the turn itself idle (an open run's workers): lights
+   * the same dot without claiming the agent is busy. */
+  bool status_active;
   MixieCatActivity cat_activity;
   MixieCatCatch cat_catch;  /* Live flight aim; ignored unless activity is Catching. */
   const void *cat_scene;    /* Reset transient expression when the scene changes. */
@@ -39,6 +42,7 @@ struct AgentIslandState {
    * conversation has none. */
   char last_prompt[160];          /* Card header — the current session's history title. */
   char input_text[512];           /* Current composer input / recognized scribble text. */
+  char sketch_prompt[512];        /* UTF-8 tail of the live draft for the resting pill. */
   const char *placeholder;  /* Drawn only while the input is empty. */
   bool prompt_empty;
   /* The primary button reads Stop instead of Send: busy AND nothing typed.
@@ -58,22 +62,41 @@ struct AgentIslandState {
   float credits_remaining;
   bool splat_is_new;        /* Draws the NEW badge on the Gaussian Splat tab. */
 
-  /* Scribble (modules/scribble_mark + the chat ink canvas). The composer chip
-   * mirrors what the chat and bubble headers show: pressed while EITHER half is
-   * up, the DRAFT mark count riding with the next message, and how that ink is
-   * read. Absent until Python registers mixar.scribble_toggle. */
+  /* Sketch reflects the viewport freeze and DRAFT marks. Handwriting is
+   * an independent, explicitly opened prompt input method. */
   bool scribble_available;
-  bool scribble_armed;      /* Viewport freeze up, or the chat ink canvas open. */
+  bool scribble_armed;      /* Viewport annotation only. */
+  bool handwriting_available;
   bool ink_visible;         /* The chat handwriting canvas is open. */
   int mark_count;           /* DRAFT marks queued for the next message. */
-  char mark_intent[32];     /* UI name of wm.mixar_mark_intent (Auto / Sketch / Marks). */
+  char mark_intent[32];     /* UI name: Auto detect / Draw to build / Point to edit. */
 
   /* Voice input (space_mixie_chat/core/voice.py). Absent until Python
    * registers mixie_chat.voice_toggle, which it does only on platforms with a
    * recogniser — so no surface ever draws a dead microphone. */
   bool voice_available;
+  char voice_status[32];
   bool voice_listening;     /* A dictation session is up. */
+  /* The microphone is recording (status "Listening"): the control reads
+   * Stop and shows the live ECG trace. False while permission is pending or
+   * the transcript is finishing — clicking then cancels, not stops. */
+  bool voice_capturing;
+  float voice_level;        /* Smoothed input level 0..1 while capturing. */
 
+  /* Auto mode (scene.mixie_chat_auto_mode, space_mixie_chat/ui/properties/
+   * chat_props.py). While set, every send carries `auto_mode: true` and the
+   * agent decides open choices itself instead of asking. The composer chip's
+   * switch thumb sits on the ON side. */
+  bool auto_mode;
+
+  /* Hosted agent model pick, mirrored onto the WindowManager by the Python
+   * half (byok). `model_available` is false until those properties are
+   * registered — the chip is then not laid out or drawn at all, rather than
+   * offering a menu that does not exist yet. `model_byok_active` means the
+   * user's own API key overrides the hosted pick, so the chip is inert. */
+  bool model_available;
+  bool model_byok_active;
+  char model_label[96];
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */
@@ -96,6 +119,8 @@ void agent_ui_draw_island(ARegion *region,
 
 /** Fixed-geometry chrome, with region-owned native interaction feedback. */
 void agent_ui_draw_tab_strip(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
+void agent_ui_draw_handwriting_control(ARegion *region, const AgentIslandLayout *layout,
+                                       const AgentIslandState *state);
 void agent_ui_draw_chip_row(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
 
 /** Translucent moodboard dot grid overlay covering the normal text input field during scribble. */

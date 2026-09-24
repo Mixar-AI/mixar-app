@@ -16,6 +16,7 @@ from .core.trust import (
     collect_extra_ca_certs,
     get_trust_report,
     install_trust_store,
+    server_ssl_context,
     user_certs_dir,
 )
 
@@ -34,6 +35,7 @@ __all__ = [
     "log_network_failure",
     "network_diagnostics",
     "redact_proxy_url",
+    "server_ssl_context",
     "user_certs_dir",
     "validate_proxy_url",
 ]

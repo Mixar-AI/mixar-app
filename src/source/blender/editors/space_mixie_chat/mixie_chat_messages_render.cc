@@ -471,8 +471,7 @@ void mixie_chat_render_messages(const bContext *C,
         }
       }
     }
-    /* Feedback stars intentionally keep the default cursor — the fill
-     * preview is their hover affordance (see mixie_chat_main_region_cursor). */
+    /* Feedback votes highlight on hover without changing the island cursor. */
     if (any_button_hovered) {
       break;
     }

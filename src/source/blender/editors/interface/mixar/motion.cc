@@ -146,7 +146,8 @@ void mixar_button_motion_update(Button &button, ARegion *region)
   }
   const bool pressed =
       !toggle && (button.flag & UI_SELECT) &&
-      ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block, ButtonType::Popover);
+      ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block,
+           ButtonType::Popover, ButtonType::Pulldown);
   mixar_motion_step(
       motion.hover, (button.flag & UI_HOVER) ? 1.0f : 0.0f, mixar_motion::hover_seconds, region);
   mixar_motion_step(motion.press,

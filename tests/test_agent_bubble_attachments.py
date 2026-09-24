@@ -56,10 +56,10 @@ def _function_body(src: str, signature: str) -> str:
 
 
 class TestChatDropPollAcceptsTheBubble:
-    def test_poll_names_both_spacetypes(self):
+    def test_poll_accepts_only_the_bubble(self):
         src = DRAGDROP.read_text(encoding="utf-8")
         body = _function_body(src, "static bool mixie_chat_image_drop_poll(")
-        assert "SPACE_MIXIE_CHAT" in body
+        assert "SPACE_MIXIE_CHAT" not in body
         assert "SPACE_AGENT_BUBBLE" in body, (
             "the bubble reuses the chat's region init and so carries these "
             "dropboxes; rejecting its spacetype silently drops every file"

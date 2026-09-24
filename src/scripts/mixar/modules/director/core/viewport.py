@@ -9,6 +9,7 @@ from __future__ import annotations
 import bpy
 
 from ..constants import DIRECTOR_CAMERA_BASENAME
+from .frame_math import write_preview_range
 
 
 _VIEW_STATES: dict[int, dict] = {}
@@ -116,6 +117,16 @@ def remember_view(context, scene) -> None:
             for name in ("show_text",)
             if hasattr(getattr(space, "overlay", None), name)
         },
+        # Directing scopes the PREVIEW RANGE to the active shot's beats
+        # (`release_preview_range`), which is a scene setting the user may have
+        # been using themselves. Without this the session leaves their scene
+        # with a preview range they never set, and playback silently confined
+        # to the last shot they looked at.
+        "preview_range": {
+            name: getattr(scene, name)
+            for name in ("use_preview_range", "frame_preview_start", "frame_preview_end")
+            if hasattr(scene, name)
+        },
     }
 
 
@@ -177,7 +188,22 @@ def enter_camera_view(context, camera, *, remember: bool = True):
     context.scene.camera = camera
     if hasattr(space, "camera"):
         space.camera = camera
+    # PERSPECTIVE first, then the camera. Blender remembers the projection a
+    # camera view was entered FROM and returns to it when the view is orbited
+    # back out, so entering straight from the aerial view's ORTHO left every
+    # later pan and orbit orthographic — the scene flattened out and nothing
+    # in Cinema Mode said why. The camera's own projection is unaffected: this
+    # is the VIEW, not `camera.data.type`.
+    if space.region_3d.view_perspective != 'PERSP':
+        space.region_3d.view_perspective = 'PERSP'
     space.region_3d.view_perspective = 'CAMERA'
+    # "Lock Camera to View" ON, for the whole session. In Cinema Mode the
+    # camera IS what the director is moving, so a viewport orbit, pan or
+    # dolly inside the frame has to move it — that is the mode, not a side
+    # effect. (It is also what lets walk drive the camera; `invoke_walk` no
+    # longer has to turn it on for itself.) The wheel aimed at a Cinema card
+    # is handled where it belongs, by `mixar.director_scroll_cameras`
+    # absorbing it over the columns, rather than by taking the lock away.
     space.lock_camera = True
     # Camera view, free-fly exploration and the aerial view are mutually
     # exclusive; every path back into a camera (shot switch, keyframe jump,
@@ -198,7 +224,10 @@ def enter_free_view(context):
         raise RuntimeError("No 3D viewport is available")
     _window, area, _region, space = target
     space.lock_camera = False
-    if space.region_3d.view_perspective == 'CAMERA':
+    # Any projection that is not perspective, not just the camera's. Guarding
+    # on CAMERA alone left the aerial view's ORTHO in place on the way out of
+    # it, which is a free view that cannot show depth.
+    if space.region_3d.view_perspective != 'PERSP':
         space.region_3d.view_perspective = 'PERSP'
     area.tag_redraw()
     return target
@@ -254,6 +283,11 @@ def invoke_explore_walk(context):
     Generated worlds import at a scale where orbit/zoom alone cannot reach
     an interior vantage point comfortably; walk is the travel tool. The
     shot camera stays untouched — Add Camera Here captures the view later.
+
+    BLENDER'S walk, not the Cinema one: Explore flies the VIEWPORT, and the
+    Cinema walk drives the shot camera through the world matrix. They are
+    different subjects, and free-flying a viewport is exactly what
+    `view3d.walk` is for.
     """
     target = enter_free_view(context)
     window, area, region, space = target
@@ -297,6 +331,21 @@ def restore_view(context, scene) -> None:
         region_3d.view_location = state["view_location"]
         region_3d.view_rotation = state["view_rotation"]
         region_3d.view_distance = state["view_distance"]
+    # Hand the scene's preview range back: directing scoped it to a shot's
+    # beats, and leaving it that way confines the user's own playback to
+    # whichever shot they happened to look at last.
+    preview = state.get("preview_range", {})
+    write_preview_range(
+        scene, preview.get("frame_preview_start"), preview.get("frame_preview_end")
+    )
+    if "use_preview_range" in preview:
+        # Last: the flag decides whether the range above is even in force,
+        # and every write here is an undo push and a file dirty flag.
+        try:
+            if getattr(scene, "use_preview_range") != preview["use_preview_range"]:
+                scene.use_preview_range = preview["use_preview_range"]
+        except (AttributeError, TypeError):
+            pass
     area.tag_redraw()
 
 
@@ -323,8 +372,41 @@ def level_camera_horizon(camera) -> bool:
     return True
 
 
+def set_walk_active(context, running: bool) -> None:
+    """Publish whether Blender's own walk is running.
+
+    The Cinema top strip swaps its shortcut hints on this: at rest it
+    advertises only O, I and N, and while walking it advertises walk's own
+    keys. A hint is a promise, so the flag has to be the truth — set when
+    the supervisor attaches and cleared on every exit, including a cancel.
+    """
+    state = getattr(getattr(context, "scene", None), "mixar_director", None)
+    if state is None:
+        return
+    try:
+        if state.walk_active != running:
+            state.walk_active = running
+    except (AttributeError, ReferenceError):
+        pass
+
+
+#: The Cinema walk's operator id. Native (`view3d_director_walk.cc`), and
+#: NOT `view3d.walk`: Blender's own turns the camera on every mouse motion
+#: and exits on a left click, which makes the one gesture a director reaches
+#: for — click and drag to look — the gesture that ends the walk. See that
+#: file for why it is a small native modal rather than a fork of upstream's.
+WALK_OPERATOR = "MIXAR_OT_director_walk"
+
+#: Blender's own walk, which EXPLORE runs: Explore flies the viewport, and
+#: free-flying a viewport is exactly what `view3d.walk` is for. The two ids
+#: are not interchangeable — a supervisor watching the wrong one sees "walk
+#: finished" on its first modal event and tears the session down underneath
+#: a walk that is still running.
+NATIVE_WALK_OPERATOR = "VIEW3D_OT_walk"
+
+
 def invoke_walk(context, camera):
-    """Invoke Blender's native WASD walk navigation in camera view.
+    """Invoke the Cinema walk in camera view.
 
     Returns ``(result, target)`` where target is the ``(window, area,
     region, space)`` tuple the walk was started in, so callers can
@@ -332,6 +414,9 @@ def invoke_walk(context, camera):
     """
     target = enter_camera_view(context, camera, remember=False)
     window, area, region, space = target
+    # Walk drives the camera THROUGH the view, so it needs the lock.
+    # `enter_camera_view` above already holds it on for the whole session;
+    # this is belt and braces for a viewport that was not entered through it.
     space.lock_camera = True
     state = getattr(context.scene, "mixar_director", None)
     if state is not None and getattr(state, "level_horizon", False):
@@ -342,7 +427,7 @@ def invoke_walk(context, camera):
         region=region,
         space_data=space,
     ):
-        return bpy.ops.view3d.walk('INVOKE_DEFAULT'), target
+        return bpy.ops.mixar.director_walk('INVOKE_DEFAULT'), target
 
 
 def select_camera_object(context, camera) -> None:

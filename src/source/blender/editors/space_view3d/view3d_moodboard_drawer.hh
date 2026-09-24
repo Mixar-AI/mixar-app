@@ -27,19 +27,29 @@
  * a poll, so the open board is the same surface as SPACE_MIXIE. The region
  * type's `keymapflag` stays 0: a shut overlay must not steal viewport pan.
  * View3D `TOOL_PROPS` has no edge azone — the sash would cover the open grip.
- * Event routing uses `view3d_moodboard_drawer_contains_xy`: only the grip and
+ * Event routing uses `view3d_moodboard_drawer_contains_xy`: only the grip, narrow resize edge and
  * the painted panel slice belong to this region; the scissored remainder is
- * the viewport. The grip keymap is grip-only (no canvas LEFTMOUSE), polled
- * onto the handle, and registered before `ui::region_handlers_add`.
+ * the viewport. The grip keymap has priority over canvas UI; its invoke passes through
+ * outside the handle and resize edge.
  */
 
 #pragma once
 
+#include "BLI_listbase_iterator.hh"
 #include "BLI_rect.h"
+#include "BLI_string.h"
 
+#include "BKE_context.hh"
+#include "BKE_screen.hh"
+
+#include "DNA_screen_types.h"
 #include "DNA_space_types.h"
+#include "DNA_windowmanager_types.h"
+#include "DNA_workspace_types.h"
 
 #include "ED_moodboard_drawer.hh"
+
+#include "WM_api.hh"
 
 struct ARegion;
 struct ARegionType;
@@ -61,6 +71,8 @@ namespace blender {
 /** Rendered drawer amount, 0 (closed) .. 1 (open), read from the Python-owned
  * `wm.mixar_moodboard_drawer_amount`. Returns 0 when the property is missing. */
 float view3d_moodboard_drawer_amount(const bContext *C);
+/** The same value without a context, for region init (window manager only). */
+float view3d_moodboard_drawer_amount_wm(const wmWindowManager *wm);
 
 /** Write the rendered amount. Does not move the drawer's target, so a caller
  * that wants the value to stick must set the target as well. */
@@ -105,6 +117,53 @@ void view3d_moodboard_drawer_size_sync(wmWindowManager *wm, ScrArea *area, ARegi
 /** The live drawer region for `area`, or null when it is polled out (not Zen
  * Mode, or the area has not been laid out yet). */
 ARegion *view3d_moodboard_drawer_region_find(const ScrArea *area);
+
+inline bool view3d_moodboard_drawer_workspace_is_zen(const WorkSpace *workspace)
+{
+  return workspace != nullptr && STREQ(workspace->id.name + 2, "Zen Mode");
+}
+
+/** Zen Mode View3D that hosts the drawer: the context area if it qualifies,
+ * otherwise any window's matching View3D. `~` uses this so the toggle does
+ * not require the mouse to sit in the 3D viewport. */
+inline ScrArea *view3d_moodboard_drawer_area_find(const bContext *C)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (wm == nullptr) {
+    return nullptr;
+  }
+  if (view3d_moodboard_drawer_workspace_is_zen(CTX_wm_workspace(C))) {
+    if (ScrArea *area = CTX_wm_area(C)) {
+      if (view3d_moodboard_drawer_region_find(area) != nullptr) {
+        return area;
+      }
+    }
+  }
+  for (wmWindow &win : wm->windows) {
+    if (!view3d_moodboard_drawer_workspace_is_zen(WM_window_get_active_workspace(&win))) {
+      continue;
+    }
+    const bScreen *screen = WM_window_get_active_screen(&win);
+    if (screen == nullptr) {
+      continue;
+    }
+    for (ScrArea &area : screen->areabase) {
+      if (view3d_moodboard_drawer_region_find(&area) != nullptr) {
+        return &area;
+      }
+    }
+  }
+  return nullptr;
+}
+
+/** Drawer region on the context area, or on #view3d_moodboard_drawer_area_find. */
+inline ARegion *view3d_moodboard_drawer_region_from_context(const bContext *C)
+{
+  if (ARegion *region = view3d_moodboard_drawer_region_find(CTX_wm_area(C))) {
+    return region;
+  }
+  return view3d_moodboard_drawer_region_find(view3d_moodboard_drawer_area_find(C));
+}
 
 /** Window-space rect of the grip for the current RNA amount, or false when
  * there is no grip to draw or click. */
@@ -152,6 +211,8 @@ void view3d_moodboard_drawer_region_ensure(wmWindowManager *wm, ScrArea *area);
 /** `view3d.moodboard_drawer_{update,reveal,toggle,set,grip}`. */
 void view3d_moodboard_drawer_operatortypes();
 void view3d_moodboard_drawer_keymap(wmKeyConfig *keyconf);
+/** Attach the `~` toggle map. Call first on View3D WINDOW and the drawer. */
+void view3d_moodboard_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *region);
 
 /** Export the panel and grip as QA harness targets. */
 void view3d_moodboard_drawer_qa_targets_register();

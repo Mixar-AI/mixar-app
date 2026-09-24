@@ -16,6 +16,7 @@ notification, not just queue ones — the bounds dict is populated for all
 visible toasts regardless of source.
 """
 
+import ast
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -33,6 +34,22 @@ import pytest
 
 from mixar.modules.agent_viewport_lock.ui.operators import viewport_block_op as VBO
 from mixar.modules.common.notifications import toast_renderer as TR
+
+
+@pytest.fixture(autouse=True)
+def _real_operator(monkeypatch):
+    # Root conftest mocks bpy.types.Operator. Compile the actual class body
+    # with a plain base so these assertions execute modal logic, not a mock.
+    tree = ast.parse(Path(VBO.__file__).read_text())
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+               and n.name == "MIXAR_OT_agent_viewport_block")
+    cls.bases = [ast.Name(id="object", ctx=ast.Load())]
+    module = ast.fix_missing_locations(ast.Module(body=[cls], type_ignores=[]))
+    namespace = dict(VBO.__dict__)
+    exec(compile(module, VBO.__file__, "exec"), namespace)
+    monkeypatch.setattr(VBO, cls.name, namespace[cls.name])
+    # Methods read their isolated globals; forward the patchable probe.
+    namespace["is_agent_executing"] = lambda: VBO.is_agent_executing()
 
 REGION_PTR = 0xBEEF
 # Region sits at (100, 50) in the window; a toast control at region-local
@@ -119,9 +136,11 @@ class _FakeRegion:
 
 
 def _context_with_view3d(region):
-    area = SimpleNamespace(type='VIEW_3D', regions=[region])
+    area = SimpleNamespace(type='VIEW_3D', regions=[region],
+                           mixar_moodboard_contains=lambda x, y: False,
+                           mixar_header_contains=lambda x, y: False)
     return SimpleNamespace(
-        window=SimpleNamespace(screen=SimpleNamespace(areas=[area])),
+        window=SimpleNamespace(screen=SimpleNamespace(areas=[area]), modal_operators={}),
     )
 
 
@@ -186,3 +205,65 @@ def test_hit_test_failure_falls_back_to_blocking(monkeypatch):
 
     monkeypatch.setattr(TR, "point_in_any_toast_control", _boom)
     assert _run_modal(_event(), monkeypatch) == {"RUNNING_MODAL"}
+
+
+def test_new_lock_yields_to_existing_read_only_workspace_viewer(monkeypatch):
+    monkeypatch.setattr(VBO, "is_agent_executing", lambda: True)
+    context = _context_with_view3d(_FakeRegion())
+    context.window.modal_operators['VIEW3D_OT_workspace_viewer'] = object()
+    op = VBO.MIXAR_OT_agent_viewport_block()
+    assert op.modal(context, _event(on_control=False)) == {"PASS_THROUGH"}
+    context.window.modal_operators.clear()
+    assert op.modal(context, _event(on_control=False)) == {"RUNNING_MODAL"}
+
+
+@pytest.mark.parametrize("event_type,value", [
+    ("LEFTMOUSE", "PRESS"), ("LEFTMOUSE", "RELEASE"),
+    ("RIGHTMOUSE", "PRESS"), ("G", "PRESS"), ("X", "PRESS"),
+])
+@pytest.mark.parametrize("on_board", [True, False])
+def test_drawer_input_passes_while_viewport_stays_locked(monkeypatch, event_type, value, on_board):
+    monkeypatch.setattr(VBO, "is_agent_executing", lambda: True)
+    region = SimpleNamespace(type="WINDOW", x=0, y=0, width=1200, height=800)
+    hits = []
+
+    def contains(x, y):
+        hits.append((x, y))
+        return on_board
+
+    area = SimpleNamespace(type="VIEW_3D", regions=[region], mixar_moodboard_contains=contains,
+                           mixar_header_contains=lambda x, y: False)
+    context = SimpleNamespace(window=SimpleNamespace(
+        screen=SimpleNamespace(areas=[area]), modal_operators={}))
+    event = SimpleNamespace(type=event_type, value=value, mouse_x=900, mouse_y=400)
+    result = VBO.MIXAR_OT_agent_viewport_block().modal(context, event)
+    assert result == ({"PASS_THROUGH"} if on_board else {"RUNNING_MODAL"})
+    assert hits == [(900, 400)]
+
+
+@pytest.mark.parametrize("modal_name", (
+    "VIEW3D_OT_moodboard_drawer_grip",
+    "MIXIE_OT_moodboard_select_image",
+    "MIXIE_OT_moodboard_graph_select",
+    "MIXIE_OT_moodboard_frame_select",
+    "MIXIE_OT_moodboard_box_select",
+))
+def test_captured_drag_release_outside_board_reaches_older_modal(monkeypatch, modal_name):
+    monkeypatch.setattr(VBO, "is_agent_executing", lambda: True)
+    context = _context_with_view3d(_FakeRegion())
+    context.window.modal_operators[modal_name] = object()
+    op = VBO.MIXAR_OT_agent_viewport_block()
+    assert op.modal(context, _event(value='RELEASE', on_control=False)) == {"PASS_THROUGH"}
+    for event_type in ('LEFTMOUSE', 'RIGHTMOUSE', 'G'):
+        assert op.modal(context, _event(type=event_type, on_control=False)) == {"RUNNING_MODAL"}
+
+
+def test_armed_mask_tool_does_not_unlock_viewport_mouse_input(monkeypatch):
+    monkeypatch.setattr(VBO, "is_agent_executing", lambda: True)
+    context = _context_with_view3d(_FakeRegion())
+    context.window.modal_operators['MIXIE_OT_moodboard_box_mask_tool'] = object()
+    op = VBO.MIXAR_OT_agent_viewport_block()
+    for event_type, value in (('LEFTMOUSE', 'RELEASE'), ('LEFTMOUSE', 'PRESS'),
+                              ('RIGHTMOUSE', 'PRESS')):
+        assert op.modal(context, _event(type=event_type, value=value,
+                                       on_control=False)) == {"RUNNING_MODAL"}

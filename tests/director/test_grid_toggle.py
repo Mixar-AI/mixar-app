@@ -130,16 +130,18 @@ def test_the_operator_needs_a_3d_view_but_never_a_shot():
 def test_the_chip_sits_left_of_the_eyedropper_at_the_strip_gap():
     assert "rctf grid = {eyedrop.xmin - (CINEMA_STRIP_GAP + CINEMA_PHONE_H) * u," in TOP
     assert "eyedrop.xmin - CINEMA_STRIP_GAP * u," in TOP
-    # The hints yield to the leftmost control, which is now the grid chip.
-    assert "const float controls_left = grid.xmin;" in TOP
+    # The hints yield to the leftmost control, which is the walk chip now
+    # that one sits left of the grid (tests/director/test_walk_navigation.py).
+    assert "rctf walk = {grid.xmin - (CINEMA_STRIP_GAP + CINEMA_PHONE_H) * u," in TOP
+    assert "const float controls_left = walk.xmin;" in TOP
     assert "const float controls_left = eyedrop.xmin;" not in TOP
     assert "std::min(controls_left, float(region->winx))" in TOP
-    # Drawn under the leftmost control's own guard, alongside the others.
+    # Each chip is dropped on its OWN edge. Gating all three on the leftmost
+    # one's meant a stage too narrow for the walk chip took the grid chip and
+    # the eyedropper with it, though both still fitted.
+    assert "if (eyedrop.xmin > 0.0f) {" in TOP
     assert "if (grid.xmin > 0.0f) {" in TOP
-    draw = TOP[TOP.index("if (grid.xmin > 0.0f) {") :]
-    assert draw.index("grid_chip(block, C, region, grid);") < draw.index(
-        "track_eyedropper(block, region, eyedrop, &shot_ptr, editable);"
-    )
+    assert "if (walk.xmin > 0.0f) {" in TOP
 
 
 def test_the_chip_reads_the_floor_flag_and_records_the_action_it_performs():
@@ -155,8 +157,8 @@ def test_the_chip_reads_the_floor_flag_and_records_the_action_it_performs():
     # round at the row radius like every other strip chip.
     assert "cinema_panel(chip, CINEMA_ROW_RADIUS * u, top, bottom);" in chip
     assert "cinema_fill(chip, CINEMA_ROW_RADIUS * u, off);" in chip
-    assert "CINEMA_COL_ROW_TOP" in chip and "CINEMA_COL_ROW_BOTTOM" in chip
-    assert "CINEMA_COL_PHONE" in chip
+    assert "CinemaRowTop" in chip and "CinemaRowBottom" in chip
+    assert "CinemaPhone" in chip
 
 
 def test_the_chip_is_never_disabled_with_the_shot():
@@ -164,6 +166,7 @@ def test_the_chip_is_never_disabled_with_the_shot():
     assert "director_overlay_disable_button" not in chip
     assert "editable" not in chip
     assert re.search(r"grid_chip\(block, C, region, grid\);", TOP)
-    # The other strip controls keep their gating untouched.
+    # The other strip control keeps its gating untouched. (Interpolation
+    # moved to the timeline dock, beside the keyframes it describes.)
     assert "track_eyedropper(block, region, eyedrop, &shot_ptr, editable);" in TOP
-    assert "interpolation_dropdown(block, C, region, interp, &shot_ptr, editable);" in TOP
+    assert "interpolation_dropdown" not in TOP

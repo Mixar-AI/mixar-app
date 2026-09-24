@@ -24,6 +24,11 @@ namespace blender {
 /* Base UI unit height (unscaled pixels) */
 #define FOOTER_UI_UNIT_BASE 20
 
+/* Left text inset the native Text widget applies while editing
+ * (UI_TEXT_MARGIN_X in interface_intern.hh, which is private to the
+ * interface module): button_text_padding() = round(0.4 * U.widget_unit). */
+#define FOOTER_TEXT_MARGIN_X 0.4f
+
 /* Minimum number of visible text lines in the multi-line input field */
 #define FOOTER_INPUT_LINE_COUNT 3
 
@@ -102,6 +107,16 @@ inline int footer_attachment_rows(int count, int columns)
 
 /* Dropdown internal padding (horizontal) */
 #define FOOTER_DROPDOWN_PADDING_BASE 8
+
+/* Agent model picker width — sized for a "Claude Sonnet 4.6"-length label.
+ * It is a ceiling, not a demand: a narrow footer clips it (the widget elides
+ * its own text) and drops it below FOOTER_MODEL_BUTTON_MIN_BASE rather than
+ * letting it collide with the attach button. */
+#define FOOTER_MODEL_BUTTON_WIDTH_BASE 150
+
+/* Below this the label carries no information, so the control is not drawn.
+ * The Agent island keeps its own model chip either way. */
+#define FOOTER_MODEL_BUTTON_MIN_BASE 54
 
 /* Style guide button width */
 #define FOOTER_STYLE_BUTTON_WIDTH_BASE 90

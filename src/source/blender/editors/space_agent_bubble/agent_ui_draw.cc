@@ -38,369 +38,17 @@
 
 #include "agent_bubble_intern.hh"
 #include "agent_ui_draw.hh"
+#include "agent_ui_draw_primitives.hh"
 #include "agent_ui_icons.hh"
 #include "agent_ui_layout.hh"
 #include "agent_ui_motion.hh"
 #include "agent_ui_pill_cat.hh"
+#include "agent_ui_pill_draft.hh"
 #include "agent_ui_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
-namespace {
-
-/* -------------------------------------------------------------------- */
-/** \name Shape helpers
- * \{ */
-
-void fill_round(const rctf *rect, const float radius, const float col[4])
-{
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(rect, true, radius, col);
-}
-
-void outline_round(const rctf *rect, const float radius, const float col[4])
-{
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv(rect, false, radius, col);
-}
-
-/**
- * One liquid-glass pane, in the caller's pixel space.
- *
- * `radius` is always explicit px: the panes here are capsules and cards whose
- * radius comes from the layout or the window, not from the role. The role
- * supplies the palette and the metrics.
- *
- * The drop shadow is OFF unless asked for, and the reason is the pill: its
- * window IS its capsule, so a shadow grown outward from the pane would be
- * clipped by the window at best and leave a hard edge where the clip falls at
- * worst — `tests/test_agent_bubble_pill_paint.py` pins that nothing the pill
- * paints may fall outside it. Only a pane with room around it inside its own
- * window passes `true`.
- *
- * Native frost passes tint=false: the common sheen and rim finish the pane
- * without stacking another coloured bed on top of AppKit or Acrylic.
- */
-void glass_fill_round(const rctf *rect,
-                      const ui::eMixarGlassRole role,
-                      const float radius,
-                      const bool shadow = false,
-                      const bool specular = false,
-                      const bool tint = true,
-                      const bool rim = true)
-{
-  rcti pane;
-  BLI_rcti_rctf_copy(&pane, rect);
-  ui::MixarGlassStyle style;
-  style.role = role;
-  style.radius = radius;
-  style.draw_shadow = shadow;
-  style.draw_specular = specular;
-  style.draw_tint = tint;
-  style.draw_rim = rim;
-  ui::mixar_glass_draw(pane, style);
-}
-
-/**
- * Rounded rect filled with a two-stop ramp along an ARBITRARY axis.
- *
- * `ui::draw_roundbox_4fv_ex` can only shade vertically. The minimised pill's
- * logo chip ramps diagonally — its axis runs from the chip's top-right down and
- * to the left — and shading that vertically loses the horizontal falloff
- * entirely, which is most of the effect.
- *
- * So the fill is a triangle fan with per-vertex colour, sampled at
- * t = clamp(dot(p - a, b - a) / |b - a|^2, 0, 1). A raw fan is rasterised with
- * no coverage anti-aliasing, so its rim carries its own half-pixel feather
- * (see `aa` below) — the chip has nothing drawn over its edge, and without the
- * feather it drew visibly stair-stepped.
- */
-void fill_round_gradient(const rctf *rect,
-                         const float radius,
-                         const float c0[4],
-                         const float c1[4],
-                         const float a[2],
-                         const float b[2])
-{
-  const float abx = b[0] - a[0];
-  const float aby = b[1] - a[1];
-  const float len_sq = abx * abx + aby * aby;
-  if (len_sq <= 0.0f) {
-    fill_round(rect, radius, c0);
-    return;
-  }
-
-  /* Corner arcs tessellated FROM the radius rather than at a fixed count: 8
-   * segments is fine on a small chip and visibly polygonal on the minimised
-   * pill's capsule and logo chip, where the radius runs to tens of pixels. */
-  constexpr int ARC_MAX = 32;
-  constexpr int RIM_MAX = (ARC_MAX + 1) * 4;
-
-  const float x0 = rect->xmin;
-  const float x1 = rect->xmax;
-  const float y0 = rect->ymin;
-  const float y1 = rect->ymax;
-  const float r = std::min(radius, std::min((x1 - x0), (y1 - y0)) * 0.5f);
-  const int arc = std::clamp(int(std::ceil(r)), 8, ARC_MAX);
-
-  /* Half-pixel feather. The fan is rasterised without coverage AA, so its rim
-   * steps against whatever is behind it — on the minimised pill that is the
-   * opaque bed, and the capsule and its logo chip drew visibly stair-stepped
-   * (the capsule's faint rim stroke is at alpha 0.14 and covers nothing, and
-   * the idle chip carries no stroke at all). So the solid fan is pulled half a
-   * pixel INSIDE the nominal edge and a ring of quads carries the colour from
-   * there to half a pixel outside at zero alpha, putting the visual edge back
-   * exactly where it was with a one-pixel ramp across it. */
-  const float aa = (r > 0.5f) ? 0.5f : 0.0f;
-
-  float rim[RIM_MAX][2];
-  float nrm[RIM_MAX][2];
-  int n = 0;
-  /* Corner centres walked ANTICLOCKWISE from bottom-right, each sweeping the
-   * quadrant that starts at `base`. Centre order and angle order have to agree
-   * — pairing a bottom-left centre with a bottom-right quadrant folds the
-   * polygon in on itself and the fill stops covering the card. */
-  const float cx[4] = {x1 - r, x1 - r, x0 + r, x0 + r};
-  const float cy[4] = {y0 + r, y1 - r, y1 - r, y0 + r};
-  for (int corner = 0; corner < 4; corner++) {
-    const float base = float(M_PI) * -0.5f + float(corner) * float(M_PI) * 0.5f;
-    for (int i = 0; i <= arc; i++) {
-      const float ang = base + (float(M_PI) * 0.5f) * (float(i) / float(arc));
-      const float cs = std::cos(ang);
-      const float sn = std::sin(ang);
-      nrm[n][0] = cs;
-      nrm[n][1] = sn;
-      rim[n][0] = cx[corner] + cs * r;
-      rim[n][1] = cy[corner] + sn * r;
-      n++;
-    }
-  }
-
-  auto sample = [&](const float px, const float py, float out[4]) {
-    float t = ((px - a[0]) * abx + (py - a[1]) * aby) / len_sq;
-    t = std::clamp(t, 0.0f, 1.0f);
-    for (int i = 0; i < 4; i++) {
-      out[i] = c0[i] + (c1[i] - c0[i]) * t;
-    }
-  };
-
-  GPUVertFormat *format = immVertexFormat();
-  const uint pos = GPU_vertformat_attr_add(
-      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-  const uint col = GPU_vertformat_attr_add(
-      format, "color", blender::gpu::VertAttrType::SFLOAT_32_32_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_SMOOTH_COLOR);
-
-  /* The feather only reads as a ramp under alpha blending; callers that paint
-   * an opaque bed first (the pill) would otherwise write the zero-alpha outer
-   * ring straight into the framebuffer. */
-  const GPUBlend blend_prev = GPU_blend_get();
-  if (aa > 0.0f) {
-    GPU_blend(GPU_BLEND_ALPHA);
-  }
-
-  immBegin(GPU_PRIM_TRI_FAN, n + 2);
-  float c[4];
-  const float mid_x = (x0 + x1) * 0.5f;
-  const float mid_y = (y0 + y1) * 0.5f;
-  sample(mid_x, mid_y, c);
-  immAttr4fv(col, c);
-  immVertex2f(pos, mid_x, mid_y);
-  for (int i = 0; i < n; i++) {
-    sample(rim[i][0], rim[i][1], c);
-    immAttr4fv(col, c);
-    immVertex2f(pos, rim[i][0] - nrm[i][0] * aa, rim[i][1] - nrm[i][1] * aa);
-  }
-  /* Close the fan back onto its first rim vertex. */
-  sample(rim[0][0], rim[0][1], c);
-  immAttr4fv(col, c);
-  immVertex2f(pos, rim[0][0] - nrm[0][0] * aa, rim[0][1] - nrm[0][1] * aa);
-  immEnd();
-
-  if (aa > 0.0f) {
-    immBegin(GPU_PRIM_TRI_STRIP, (n + 1) * 2);
-    for (int i = 0; i <= n; i++) {
-      const int k = (i == n) ? 0 : i;
-      sample(rim[k][0], rim[k][1], c);
-      immAttr4fv(col, c);
-      immVertex2f(pos, rim[k][0] - nrm[k][0] * aa, rim[k][1] - nrm[k][1] * aa);
-      const float fade[4] = {c[0], c[1], c[2], 0.0f};
-      immAttr4fv(col, fade);
-      immVertex2f(pos, rim[k][0] + nrm[k][0] * aa, rim[k][1] + nrm[k][1] * aa);
-    }
-    immEnd();
-  }
-
-  immUnbindProgram();
-
-  if (aa > 0.0f) {
-    GPU_blend(blend_prev);
-  }
-}
-
-/**
- * The card's border, drawn as a credits meter.
- *
- * A full bright ring means a full allowance; as credits are spent the lit part
- * retreats and the spent part is drawn at a lower opacity, so the border reads as a
- * percentage strip running around the card rather than as decoration.
- *
- * The ring starts at the top-left corner and runs CLOCKWISE. That start point
- * is deliberate: it is the corner the eye already goes to, so the gap opens
- * where it is legible instead of behind the chip row.
- *
- * `remaining` outside [0,1] means "unknown" and draws the ring whole — an
- * empty-looking border on an account whose balance simply has not loaded yet
- * would read as a rendering bug, not as information.
- */
-void draw_card_border_meter(const rctf *rect,
-                            const float radius,
-                            const float width,
-                            const float lit[4],
-                            const float spent[4],
-                            const float remaining)
-{
-  /* The BAND only. This used to fill the whole card rect in both branches and
-   * rely on an opaque gradient painted afterwards to hide the interior; the
-   * card's bed is a translucent pane now, so a whole-rect fill shows straight
-   * through it and the card's middle reads as a flat wash. The ring form also
-   * paints the corner arcs, which the four straight runs below never did. */
-  const bool unknown = (remaining < 0.0f || remaining >= 1.0f);
-  const float *band = unknown ? lit : spent;
-  ui::draw_roundbox_corner_set(ui::CNR_ALL);
-  ui::draw_roundbox_4fv_ex(rect, nullptr, nullptr, 1.0f, band, width, radius);
-
-  if (unknown) {
-    return;
-  }
-
-  /* Perimeter walked as four straight runs; the corner arcs are short enough at
-   * this radius that folding them into the adjacent runs is imperceptible, and
-   * it keeps the meter's arithmetic to one dimension. */
-  const float w = BLI_rctf_size_x(rect);
-  const float h = BLI_rctf_size_y(rect);
-  const float total = (w + h) * 2.0f;
-  const float lit_len = total * remaining;
-
-  /* Each run is (start distance along the perimeter, length, rect builder). */
-  struct Run {
-    float len;
-    int axis; /* 0 = along the top, 1 = down the right, 2 = along the bottom, 3 = up the left */
-  };
-  const Run runs[4] = {{w, 0}, {h, 1}, {w, 2}, {h, 3}};
-
-  float walked = 0.0f;
-  for (const Run &run : runs) {
-    if (walked >= lit_len) {
-      break;
-    }
-    const float take = std::min(run.len, lit_len - walked);
-    const float t = take / run.len;
-    rctf seg;
-    switch (run.axis) {
-      case 0: /* top, left -> right */
-        seg.xmin = rect->xmin;
-        seg.xmax = rect->xmin + w * t;
-        seg.ymin = rect->ymax - width;
-        seg.ymax = rect->ymax;
-        break;
-      case 1: /* right, top -> bottom */
-        seg.xmin = rect->xmax - width;
-        seg.xmax = rect->xmax;
-        seg.ymin = rect->ymax - h * t;
-        seg.ymax = rect->ymax;
-        break;
-      case 2: /* bottom, right -> left */
-        seg.xmin = rect->xmax - w * t;
-        seg.xmax = rect->xmax;
-        seg.ymin = rect->ymin;
-        seg.ymax = rect->ymin + width;
-        break;
-      default: /* left, bottom -> top */
-        seg.xmin = rect->xmin;
-        seg.xmax = rect->xmin + width;
-        seg.ymin = rect->ymin;
-        seg.ymax = rect->ymin + h * t;
-        break;
-    }
-    fill_round(&seg, width * 0.5f, lit);
-    walked += take;
-  }
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Text helpers
- *
- * `chat_ui_draw_label` positions by baseline. The island positions almost
- * everything by optical centre instead, so these measure first. Measuring is
- * cheap next to the alternative: the account card learned the hard way that
- * BLF clips without an ellipsis, so a label that outgrows its slot vanishes
- * mid-word with no runtime signal at all.
- * \{ */
-
-int island_font()
-{
-  return BLF_default();
-}
-
-float text_width(const char *text, const float size)
-{
-  const int font = island_font();
-  BLF_size(font, size);
-  return BLF_width(font, text, strlen(text));
-}
-
-/** Draw \a text with its left edge at \a x and its ink centred on \a cy. */
-void label_left(const char *text, const float x, const float cy, const float size,
-                const float col[4])
-{
-  if (!text || text[0] == '\0') {
-    return;
-  }
-  const int font = island_font();
-  BLF_size(font, size);
-  /* Blender's widget text pass sets BLF_CLIPPING on the default font and does
-   * not always leave it off. Any label drawn afterwards — the placeholder is
-   * drawn after the uiBlocks on purpose — then gets clipped to that widget's
-   * rect and vanishes silently, which is exactly how it presents: no error,
-   * no glyphs. Clear it before every island label. */
-  BLF_disable(font, BLF_CLIPPING);
-
-  rcti box;
-  BLF_boundbox(font, text, strlen(text), &box);
-  const float baseline = cy - float(box.ymin + box.ymax) * 0.5f;
-
-  BLF_color4fv(font, col);
-  BLF_position(font, x, baseline, 0.0f);
-  BLF_draw(font, text, strlen(text));
-}
-
-/** Draw \a text centred on (cx, cy). */
-void label_centre(const char *text, const float cx, const float cy, const float size,
-                  const float col[4])
-{
-  if (!text || text[0] == '\0') {
-    return;
-  }
-  label_left(text, cx - text_width(text, size) * 0.5f, cy, size, col);
-}
-
-/** Draw \a text with its right edge at \a x. */
-void label_right(const char *text, const float x, const float cy, const float size,
-                 const float col[4])
-{
-  if (!text || text[0] == '\0') {
-    return;
-  }
-  label_left(text, x - text_width(text, size), cy, size, col);
-}
-
-/** \} */
-
-}  // namespace
 
 /* -------------------------------------------------------------------- */
 /** \name Island
@@ -410,6 +58,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
                                const float height,
                                const AgentIslandState *state)
 {
+  agent_ui_pill_draft_clear();
   /* Sized from the WINDOW, not the region: the pill's header region comes back
    * taller than the window it lives in, and centring on the region's height
    * put the label and dot above the visible area while the corner radius blew
@@ -423,15 +72,15 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
   /* ELONGATED resting pill (aspect says which window shape this is): the
    * minimised bubble's whole identity — dim last-prompt preview + Mixie the
    * cat on a green gradient chip (Frame 1533210248.svg, mascot in
-   * agent_ui_pill_cat.cc). When working (busy or active queue jobs), it
-   * shows an animated activity dot and moving progress dots on the status
-   * label. Clicking it expands the
+   * agent_ui_pill_cat.cc). When working (busy, delegated workers or active queue jobs), it
+   * shows an animated activity dot and a fixed-width activity field on the
+   * status label. Clicking it expands the
    * island; dragging it moves it (the pill gesture in
    * agent_bubble/ui/operators/bubble_header_drag_op.py). */
   if (w > h * 4.0f) {
     const float u = h / 85.0f; /* design pill is 85 artboard units tall */
     const bool is_working = mixie_cat_is_working(state->cat_activity) &&
-                            (state->status_busy || state->queue_count > 0);
+                            (state->status_busy || state->status_active || state->queue_count > 0);
     const double now = BLI_time_now_seconds();
     const float pulse = is_working ?
                             (0.5f + 0.5f * float(std::sin(now * 3.2))) :
@@ -504,7 +153,13 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     const float text_size = agent_ui_body_font_size();
     const float text_x = 28.0f * u;
 
-    if (is_working) {
+    if (state->scribble_armed) {
+      /* Sketch: the pill is where typing over the viewport lands — the draft,
+       * a blinking caret and a Voice button (the window is also a little
+       * larger while armed; see pill_rest_size in space_agent_bubble.cc). */
+      agent_ui_draw_pill_draft(*state, text_x, chip.xmin - 12.0f * u, h, text_size, u);
+    }
+    else if (is_working) {
       /* Pulsing indicator dot on the left. */
       const float dot_cx = text_x + 5.0f * u;
       const float dot_cy = h * 0.5f;
@@ -517,7 +172,9 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
       ripple.xmax = dot_cx + rip_r;
       ripple.ymin = dot_cy - rip_r;
       ripple.ymax = dot_cy + rip_r;
-      const float rip_col[4] = {0.0f, 1.0f, 0.549f, (1.0f - pulse) * 0.45f};
+      float rip_col[4];
+      ui::mixar_theme_color_f(ui::MixarThemeSlot::AgentBorder, rip_col);
+      rip_col[3] = (1.0f - pulse) * 0.45f;
       fill_round(&ripple, rip_r, rip_col);
 
       /* Solid active dot. */
@@ -526,16 +183,29 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
       dot.xmax = dot_cx + dot_r;
       dot.ymin = dot_cy - dot_r;
       dot.ymax = dot_cy + dot_r;
-      const float dot_col[4] = {0.0f, 1.0f, 0.549f, 0.95f};
+      float dot_col[4];
+      ui::mixar_theme_color_f(ui::MixarThemeSlot::AgentBorder, dot_col);
+      dot_col[3] = 0.95f;
       fill_round(&dot, dot_r, dot_col);
 
       /* Trailing dots animation: 0, 1, 2, 3 dots on a 1.6s cycle. */
       const int dot_count = int(fmod(now * 2.5, 4.0));
-      char dots[5] = "";
-      for (int i = 0; i < dot_count; i++) {
-        dots[i] = '.';
+      /* Fixed 3-slot activity field. U+00B7 and U+0020 both advance 400/2000 em
+       * in Manrope (BLF_default), and BLF measures the sum of advances, so the
+       * field's width never changes and the preview after it cannot shift. A
+       * '.' is 440 and WOULD shift it; U+2007/U+2008 are not in Manrope at all. */
+      char dots[3 * 2 + 1];
+      char *d = dots;
+      for (int i = 0; i < 3; i++) {
+        if (i < dot_count) {
+          *d++ = '\xc2';
+          *d++ = '\xb7';
+        }
+        else {
+          *d++ = ' ';
+        }
       }
-      dots[dot_count] = '\0';
+      *d = '\0';
 
       const char *base_status = mixie_cat_activity_name(state->cat_activity);
       char label[160];
@@ -587,9 +257,9 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
 
   agent_ui_pill_cat_clear();
 
-  const float accent[4] = AGENT_COL_ACCENT;
+  MIXAR_THEME_LOAD(accent, AgentAccent);
   const float dim_dot[4] = {0.076f, 0.219f, 0.132f, 1.0f};
-  const float text_dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(text_dim, TextSecondary);
 
   /* The pill owns its whole window, so it is drawn from the region's size
    * rather than the artboard's rect — the window is sized to the artboard's
@@ -628,7 +298,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f);
   }
   GPU_blend(GPU_BLEND_ALPHA);
-  fill_round(&dot, dot_r, state->status_busy ? accent : dim_dot);
+  fill_round(&dot, dot_r, (state->status_busy || state->status_active) ? accent : dim_dot);
   const float text_x = w * (float(AGENT_PILL_LABEL_X - AGENT_PILL_X) / float(AGENT_PILL_W));
   const float text_size = agent_ui_body_font_size();
   const std::string status_label = ui::mixar_fit_text(
@@ -649,14 +319,14 @@ void agent_ui_draw_island(ARegion *region,
 
   const float u = layout->scale;
 
-  const float surface[4] = AGENT_COL_SURFACE;
+  MIXAR_THEME_LOAD(surface, Canvas);
   const ui::MixarGlassTokens glass = ui::mixar_glass_tokens(ui::MIXAR_GLASS_PILL);
   const float *border = glass.rim;
-  const float accent[4] = AGENT_COL_ACCENT;
-  const float glyph[4] = AGENT_COL_GLYPH;
-  const float text[4] = AGENT_COL_TEXT;
-  const float strong[4] = AGENT_COL_TEXT_STRONG;
-  const float text_dim[4] = AGENT_COL_TEXT_DIM;
+  MIXAR_THEME_LOAD(accent, AgentAccent);
+  MIXAR_THEME_LOAD(glyph, Glyph);
+  MIXAR_THEME_LOAD(text, Text);
+  MIXAR_THEME_LOAD(strong, TextStrong);
+  MIXAR_THEME_LOAD(text_dim, TextSecondary);
 
   GPU_blend(GPU_BLEND_ALPHA);
 
@@ -692,8 +362,7 @@ void agent_ui_draw_island(ARegion *region,
                    /*tint=*/!agent_bubble_island_bed_is_transparent(),
                    /*rim=*/false);
 
-  /* Card header row is tab-scoped: the chat's discs / session title
-   * belong to the Agent tab; other tabs title the card after themselves. */
+  /* Session actions stay available without repeating the active tab title. */
   const bool agent_tab = layout->tabs[AGENT_TAB_AGENT].active;
   if (agent_tab) {
     /* Header buttons: an accent disc with a lighter glyph on top. */
@@ -710,25 +379,28 @@ void agent_ui_draw_island(ARegion *region,
     fill_round(&layout->hdr_history,
                BLI_rctf_size_x(&layout->hdr_history) * 0.5f,
                history_fill);
-    agent_ui_icon_draw(AGENT_ICON_CLOCK, &layout->hdr_history, glyph, history_fill);
+    agent_ui_header_icon_draw(AGENT_ICON_CLOCK, &layout->hdr_history, glyph, history_fill);
 
     fill_round(&layout->hdr_new_chat,
                BLI_rctf_size_x(&layout->hdr_new_chat) * 0.5f,
                new_chat_fill);
-    agent_ui_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, new_chat_fill);
+    agent_ui_header_icon_draw(AGENT_ICON_PLUS, &layout->hdr_new_chat, glyph, new_chat_fill);
 
-    /* Turn checkpoints: same disc, a counter-clockwise arrow glyph. Opens
-     * the MIXIE_CHAT_MT_checkpoints menu (space_mixie_chat/ui/operators/
-     * checkpoint_ops.py) — the island has no Python header to host it. */
+    /* Turn checkpoints: same disc, a counter-clockwise arrow glyph. Runs
+     * mixie_chat.show_checkpoints (space_mixie_chat/ui/operators/
+     * checkpoint_ops.py), the native card — the island has no Python header
+     * to host a button. */
     fill_round(&layout->hdr_checkpoints,
                BLI_rctf_size_x(&layout->hdr_checkpoints) * 0.5f,
                checkpoints_fill);
-    agent_ui_icon_draw(AGENT_ICON_RESTORE, &layout->hdr_checkpoints, glyph, checkpoints_fill);
+    agent_ui_header_icon_draw(AGENT_ICON_RESTORE, &layout->hdr_checkpoints, glyph, checkpoints_fill);
+
+    agent_ui_draw_handwriting_control(region, layout, state);
 
     if (state->ink_visible) {
-      /* Scribble text output window over the new chat topbar */
-      const float left_limit = layout->hdr_checkpoints.xmax + 16.0f * u;
-      const float right_limit = layout->card.xmax - 23.0f * u;
+      /* Handwriting text output window over the new chat topbar */
+      const float left_limit = layout->hdr_rules.xmax + 16.0f * u;
+      const float right_limit = layout->hdr_handwriting.xmin - 16.0f * u;
       const float max_w = right_limit - left_limit;
       const float cx = layout->hdr_title_cx;
       const float cy = layout->hdr_title_y;
@@ -736,7 +408,7 @@ void agent_ui_draw_island(ARegion *region,
 
       char disp[512];
       BLI_strncpy(disp,
-                  state->input_text[0] ? state->input_text : "Scribble to type...",
+                  state->input_text[0] ? state->input_text : "Write your prompt here...",
                   sizeof(disp));
       for (char *c = disp; *c; c++) {
         if (*c == '\n' || *c == '\r') {
@@ -747,7 +419,7 @@ void agent_ui_draw_island(ARegion *region,
       const float font_size = 18.0f * agent_ui_text_unit();
       const float text_w = text_width(disp, font_size);
       const float pad_x = 18.0f * u;
-      const float win_w = std::clamp(text_w + pad_x * 2.0f, 220.0f * u, max_w);
+      const float win_w = std::min(text_w + pad_x * 2.0f, std::max(0.0f, max_w));
 
       rctf text_win;
       text_win.xmin = cx - win_w * 0.5f;
@@ -779,39 +451,6 @@ void agent_ui_draw_island(ARegion *region,
       const float *text_col = state->input_text[0] ? col_active : col_dim;
       label_centre(disp, cx, cy, font_size, text_col);
     }
-    else if (state->title[0] != '\0') {
-      /* Overlay-centred: omitted when empty so the header discs keep
-       * their artboard seats and no reserved title slot remains. */
-      label_centre(state->title,
-                   layout->hdr_title_cx,
-                   layout->hdr_title_y,
-                   AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
-                   strong);
-    }
-
-  }
-  else {
-    const char *tab_title = "";
-    if (layout->tabs[AGENT_TAB_QUEUE].active) {
-      tab_title = "Queue";
-    }
-    else if (layout->tabs[AGENT_TAB_3D].active) {
-      tab_title = "3D";
-    }
-    else if (layout->tabs[AGENT_TAB_MEDIA].active) {
-      tab_title = "Media";
-    }
-    else if (layout->tabs[AGENT_TAB_SPLAT].active) {
-      tab_title = "Gaussian Splat";
-    }
-    else if (layout->tabs[AGENT_TAB_GENERATIONS].active) {
-      tab_title = "Library";
-    }
-    label_centre(tab_title,
-                 layout->hdr_title_cx,
-                 layout->hdr_title_y,
-                 AGENT_HDR_TITLE_FONT * agent_ui_text_unit(),
-                 strong);
   }
 
   /* --- Inner panel --- */

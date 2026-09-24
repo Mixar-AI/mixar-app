@@ -8,7 +8,8 @@ from bpy.props import FloatProperty, IntProperty
 from bpy.types import Operator
 
 from ...core.frame_math import clamp_frame_delta
-from ...core.shot_api import active_shot, refresh_manifest, scope_preview_range
+from ...core.frame_math import write_preview_range
+from ...core.shot_api import active_shot, refresh_manifest, release_preview_range
 from ...core.timeline import move_single_beat, shift_camera_beats
 from ...core.viewport import enter_camera_view
 
@@ -61,8 +62,9 @@ class MIXAR_OT_director_drag_strip(Operator):
                     rebuild_manifest=False,
                 )
             scene.frame_end = self._original_frame_end
-            scene.frame_preview_start = self._original_preview_start
-            scene.frame_preview_end = self._original_preview_end
+            write_preview_range(
+                scene, self._original_preview_start, self._original_preview_end
+            )
             scene.frame_set(self._original_current_frame)
             shot.manifest_json = self._original_manifest
         except (ReferenceError, RuntimeError, ValueError):
@@ -189,8 +191,9 @@ class MIXAR_OT_director_drag_beat(Operator):
                     rebuild_manifest=False,
                 )
             scene.frame_end = self._original_frame_end
-            scene.frame_preview_start = self._original_preview_start
-            scene.frame_preview_end = self._original_preview_end
+            write_preview_range(
+                scene, self._original_preview_start, self._original_preview_end
+            )
             scene.frame_set(self._original_current_frame)
             shot.manifest_json = self._original_manifest
         except (ReferenceError, RuntimeError, ValueError):
@@ -271,7 +274,7 @@ class MIXAR_OT_director_drag_beat(Operator):
                     max(int(beat.frame) for beat in shot.beats),
                 )
                 refresh_manifest(context.scene, shot)
-                scope_preview_range(context.scene, shot)
+                release_preview_range(context.scene)
                 context.view_layer.update()
             except Exception as exc:
                 self.report({'ERROR'}, f"Could not move keyframe: {exc}")

@@ -105,3 +105,18 @@ def feature_label(
         or (service or "").strip()
         or (feature_key or "").strip()
     )
+
+
+def stackable_job_identity(display: str) -> tuple[str, str]:
+    """Unique queue dedup key plus the readable title for surfaces.
+
+    ``FeatureQueue.submit`` rejects a second job with the same ``label`` while
+    the first is still active. Interactive 3D submits intentionally stack
+    (same reference image, another model), so each gets a short uuid suffix on
+    the label while ``display_label`` keeps the clean name the Queue UI and
+    toasts show — the same pattern Image Gen agent batches already use.
+    """
+    import uuid
+
+    clean = (display or "").strip() or "3D model"
+    return f"{clean} [{uuid.uuid4().hex[:4]}]", clean

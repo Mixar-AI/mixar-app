@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Main cat follows real chat/voice/queue RNA; local fixtures, zero credits.
+"""Main cat follows chat, voice, queue and open-run RNA; local fixtures, zero credits.
 
 QA_HARNESS=/path/to/harness QA_SCENARIO_OUT=/tmp/cat-activity \
     python3 tests/qa/cat_activity_e2e.py
@@ -20,8 +20,9 @@ sys.path.insert(0, str(Path(os.environ['QA_HARNESS'])/'scenarios'))
 from lib import run_scenario
 from compact_agent_bubble_e2e import _hover_off, _hover_on
 from zen_motion_capture import contact_sheet, preview
-from cat_activity_evidence import compare_faces
+from cat_activity_evidence import compare_faces, verify_balanced_eyes
 from cat_catch_evidence import capture_catch
+from cat_motion import verify as verify_pupil_motion
 
 
 def _record(output, activity):
@@ -41,6 +42,7 @@ def _record(output, activity):
     agent = next(m for m in scene.mixie_chat_messages if m.bubble_id == 'qa-cat-agent')
     scene.mixie_chat_state = 'IDLE'
     scene.mixie_chat_is_busy = False
+    scene.mixie_run_open = False
     wm.mixie_chat_voice_listening = False
     processor = get_slot_processor()
     def event(**slots):
@@ -61,6 +63,11 @@ def _record(output, activity):
                 'read_scene' if activity == 'Reading' else 'execute_script')
         if activity == 'Responding':
             event(content={'set': 'The scene is ready.'})
+    elif activity == 'Delegated work':
+        scene.mixie_run_open = True
+        # A delegated run can keep working after the orchestrator goes idle.
+        # Historical reasoning must not mask that activity.
+        agent.thinking_active = True
     elif activity == 'Waiting for you':
         scene.mixie_chat_state = 'AWAITING_INPUT'
         scene.mixie_chat_is_busy = True
@@ -152,12 +159,29 @@ def _producer_reactions():
     assert drv.find_one(surface='pill_cat')['value'] == 'Waiting for you'
     checks.append('waiting overrides response reaction')
     session.set_state(scene, SessionState.IDLE)
+    scene.mixie_run_open = True
+    yield .35
+    assert not scene.mixie_chat_is_busy
+    assert drv.find_one(surface='pill_cat')['value'] == 'Working'
+    for state, label in ((SessionState.AWAITING_INPUT, 'Waiting for you'),
+                         (SessionState.OFFLINE, 'Offline')):
+        session.set_state(scene, state)
+        yield .35
+        assert drv.find_one(surface='pill_cat')['value'] == label
+    session.set_state(scene, SessionState.IDLE)
+    yield .35
+    assert drv.find_one(surface='pill_cat')['value'] == 'Working'
+    scene.mixie_run_open = False
+    yield .35
+    assert drv.find_one(surface='pill_cat')['value'] == 'Idle'
+    checks.append('delegated work animates until run close; waiting/offline still win')
     return checks
 
 
 def capture(qa, out, activity):
     frames=qa.eval(inspect.getsource(_record)+f'\nresult=_record({str(out)!r},{activity!r})')
-    assert all(frame['activity']==activity for frame in frames), frames
+    expected = 'Working' if activity == 'Delegated work' else activity
+    assert all(frame['activity']==expected for frame in frames), frames
     assert len({tuple(frame['rect']) for frame in frames}) == 1
     signatures=[]
     for frame in frames:
@@ -167,8 +191,9 @@ def capture(qa, out, activity):
     preview(frames, out/'motion.gif')
     contact_sheet(frames, out/'frames.png')
     (out/'samples.json').write_text(json.dumps(frames, indent=2)+'\n')
+    motion = verify_pupil_motion(frames, emerald=True) if expected == 'Working' else None
     return dict(activity=activity, frames=len(frames), appearances=len(set(signatures)),
-                rect=frames[-1]['rect'])
+                rect=frames[-1]['rect'], eyes=verify_balanced_eyes(frames), pupil_motion=motion)
 
 
 def run(qa):
@@ -180,7 +205,7 @@ def run(qa):
 scene=drv.main_window().scene
 wm=bpy.context.window_manager
 result=dict(state=scene.mixie_chat_state, busy=scene.mixie_chat_is_busy,
-            voice=wm.mixie_chat_voice_listening)
+            voice=wm.mixie_chat_voice_listening, run_open=scene.mixie_run_open)
 user=scene.mixie_chat_messages.add()
 user.bubble_id='qa-cat-user'
 user.sender='USER'
@@ -195,7 +220,7 @@ bpy.ops.mixar.bubble_minimise()
         qa.eval('def settle():\n    yield .4\n    return True\nresult=settle()')
         results={'producer_reactions': qa.step('producer_reactions', qa.eval,
             inspect.getsource(_producer_reactions)+'\nresult=_producer_reactions()')}
-        for activity in ('Idle','Thinking','Reading','Working','Generating','Responding',
+        for activity in ('Idle','Thinking','Reading','Working','Delegated work','Generating','Responding',
                          'Waiting for you','Listening','Connecting','Offline','Idle'):
             name=activity.lower().replace(' ','-')
             results[name]=qa.step(name,capture,qa,out/name,activity)
@@ -215,6 +240,7 @@ scene=drv.main_window().scene
 wm=bpy.context.window_manager
 scene.mixie_chat_state={saved['state']!r}
 scene.mixie_chat_is_busy={saved['busy']!r}
+scene.mixie_run_open={saved['run_open']!r}
 wm.mixie_chat_voice_listening={saved['voice']!r}
 for i in reversed(range(len(scene.mixie_chat_messages))):
     if scene.mixie_chat_messages[i].bubble_id in ('qa-cat-user','qa-cat-agent'):

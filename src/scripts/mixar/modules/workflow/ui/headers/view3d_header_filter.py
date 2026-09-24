@@ -2,51 +2,22 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""3D viewport header & tool-panel filter for the dual-mode UI system.
+"""Zen-only viewport scene toolbar and Move/Rotate/Scale tool strip.
 
-Monkey-patches:
-- VIEW3D_HT_header.draw         → floating liquid-glass Wireframe /
-                                   Solid / Material Preview / Rendered
-                                   strip plus the shading popover in
-                                   Zen Mode AND on the Texturing /
-                                   Texture Paint workspaces. Zen Mode
-                                   also parks a guides chip (grid +
-                                   relationship lines) beside that strip.
-- VIEW3D_HT_tool_header.draw    → renders nothing in Zen mode (empty strip).
-- VIEW3D_PT_tools_active.draw   → only Move / Rotate / Scale in Zen mode,
-                                   as one vertically centred group.
-
-The left T-panel used to be left alone: an even earlier build emptied it
-completely and losing tool access made Zen Mode useless for anything beyond
-viewing. The design resolves that tension instead of re-emptying it — Zen
-keeps exactly the three transform tools (the design's centre-left strip), so
-the canvas stays calm AND the viewport stays usable. Modes that have no
-transform tools at all (sculpt / paint, where the toolbar IS the brush list)
-fall through to the stock toolbar rather than rendering an empty strip.
-
-We patch the contents instead of hiding the regions because hiding regions
-gives Blender's collapsed-region arrow that lets the user expand them again
-— that defeats the "calm canvas" goal of Zen mode.
-
-Mode check uses context.workspace.name, not the global ui_mode preference.
-This is workspace-driven so the right rendering happens regardless of which
-window is active or whether a workspace switch is mid-flight, and so the
-"AI Mode" workspace tab in Engine mode renders as a regular Pro workspace
-(the Zen-only tool strip does NOT apply there). The Mixar viewport header
-also applies on the Texturing / Texture Paint workspace tabs.
+The header uses native controls with reference-matched toolbar presentation.
+The tool header remains empty. Engine workspaces, including Texturing, keep
+Blender's original headers and tools. Workspace identity owns this filtering,
+so a global preference cannot remove controls from a different editor.
 """
 
 import bpy
 
 from mixar.config.logging_config import get_logger
 
-from ...constants import (
-    BASIC_WORKSPACE_NAME,
-    TEXTURING_WORKSPACE_NAMES,
-    ZEN_TRANSFORM_TOOL_IDS,
-)
+from ...constants import BASIC_WORKSPACE_NAME, ZEN_TRANSFORM_TOOL_IDS
 from ...core import viewport_guides
 from ..operators import zen_tool_toggle
+from . import zen_scene_controls
 
 _logger = get_logger(__name__)
 
@@ -58,6 +29,13 @@ _original_tools_active_draw = None
 # 138 px tall for three buttons at 1x (46 px each) and the widget unit is
 # 20 px there, so 2.3 reproduces it. Blender's stock toolbar uses 1.75.
 _ZEN_TOOL_SCALE_Y = 2.3
+
+# One toolbar icon column. `UI_TOOLBAR_COLUMN` is 1.25 * 32 px and the
+# widget unit is 20 px, so two units is the column the glyphs were drawn
+# for. The tools panel root is itself a column and stretches every child
+# to the region width; without this the glass pane (radius = half the
+# short side) becomes a horizontal capsule and the glyphs sit on its left.
+_ZEN_TOOL_UNITS_X = 2.0
 
 _DEFAULT_FALLBACK_TOOL = "builtin.select"
 """Safety net for `VIEW3D_PT_tools_active.tool_fallback_id`, which is
@@ -71,32 +49,9 @@ def _is_basic_workspace(context) -> bool:
     return ws is not None and ws.name == BASIC_WORKSPACE_NAME
 
 
-def _is_texturing_workspace(context) -> bool:
-    """True if this window is on Mixar's texture-painting workspace."""
-    ws = getattr(context, "workspace", None)
-    return ws is not None and ws.name in TEXTURING_WORKSPACE_NAMES
-
-
-def _uses_mixar_viewport_header(context) -> bool:
-    """Zen and Texturing share the Mixar viewport header.
-
-    The tool-header empty-strip and the Move/Rotate/Scale toolbar stay
-    Zen-only: Texturing still needs stock paint/brush chrome in those
-    regions. Cinema Mode keeps its own C++ overlays and does not pass
-    through here.
-    """
-    return _is_basic_workspace(context) or _is_texturing_workspace(context)
-
-
 def _patched_header_draw(self, context):
-    """Replacement for VIEW3D_HT_header.draw.
-
-    Zen and Texturing: a floating Move/Rotate/Scale-style liquid-glass
-    strip of Wireframe / Solid / Material Preview / Rendered plus the
-    shading options popover. The header region itself has no bar. Other
-    Engine workspaces: defer to the original draw.
-    """
-    if not _uses_mixar_viewport_header(context):
+    """Draw the Zen scene toolbar; retain the full stock header elsewhere."""
+    if not _is_basic_workspace(context):
         if _original_header_draw is not None:
             _original_header_draw(self, context)
         return
@@ -107,36 +62,42 @@ def _patched_header_draw(self, context):
         return
     shading = view.shading
 
-    # No editor-type chooser and no full-width header chrome: the header
-    # overlaps the viewport and clears transparent, so this cluster is a
-    # floating group. Spacer parks it on the right.
+    # Equal side lanes keep the shading cluster centered. Narrow windows
+    # move scene settings into native popovers instead of clipping controls.
+    width = context.region.width / max(context.preferences.system.ui_scale, 0.01)
+    compact = width < 1420
+    left = layout.row(align=False)
+    left.ui_units_x = 31 if not compact else 18
+    zen_scene_controls.draw_left(left, context, compact=compact)
     layout.separator_spacer()
 
-    # Keep native RNA enum buttons: available modes depend on the render
-    # engine (Workbench has no Material Preview). The Zen painter supplies
-    # one glass pane without replacing RNA selection, tooltips or dispatch.
-    # The popover stays outside the aligned group. Zen also parks a guides
-    # chip beside that strip (same cluster wiring as the popover) so floor
-    # grid + relationship lines flip as one view-state toggle. That chip is
-    # a Zen surface with its own aligned row: one cell, so the shared glass
-    # painter gives it a round chip of the strip's material, and `depress`
-    # paints the same circular selected wash a chosen shading icon gets.
-    # A toggle is not a shading mode, so it stays out of the enum capsule.
+    # The reference's compact X-ray chip and native shading enum share the
+    # centered lane. RNA still filters the available modes for each engine.
     cluster = layout.row(align=False)
+    chip = cluster.mixar_surface(theme="ZEN").row(align=True)
+    chip.enabled = shading.type in {"SOLID", "WIREFRAME"}
+    xray_prop = "show_xray_wireframe" if shading.type == "WIREFRAME" else "show_xray"
+    chip.prop(shading, xray_prop, text="", icon="XRAY", toggle=True)
+    chip.mixar_style(component="TOOLBAR", variant="GHOST")
     surface = cluster.mixar_surface(theme="ZEN")
     row = surface.row(align=True)
     row.prop(shading, "type", text="", expand=True)
+    row.popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")
+    row.mixar_style(component="TOOLBAR", variant="GHOST", all_items=True)
+
+    layout.separator_spacer()
+    right = layout.row(align=False)
+    right.ui_units_x = 31 if not compact else 18
+    right.alignment = "RIGHT"
+    zen_scene_controls.draw_right(right, context, compact=compact)
+
+
+def _draw_zen_guides(self, context):
     if _is_basic_workspace(context):
-        cluster.separator(factor=0.4)
-        chip = cluster.mixar_surface(theme="ZEN").row(align=True)
-        chip.operator(
-            "mixar.zen_toggle_guides",
-            text="",
-            icon="GRID",
-            depress=viewport_guides.guides_shown(view),
+        self.layout.operator(
+            "mixar.zen_toggle_guides", text="Grid & Relationship Lines", icon="GRID",
+            depress=viewport_guides.guides_shown(context.space_data),
         )
-    cluster.separator(factor=0.4)
-    cluster.popover(panel="VIEW3D_PT_shading", text="")
 
 
 def _patched_tool_header_draw(self, context):
@@ -293,10 +254,16 @@ def _patched_tools_active_draw(self, context):
     if gap > 0.0:
         layout.separator(factor=gap)
 
-    surface = layout.mixar_surface(theme="ZEN")
+    # A column child of the tools panel is stretched to the region width.
+    # A left-aligned row keeps this icon column at `_ZEN_TOOL_UNITS_X`
+    # instead, packed against the left edge where the glyphs already sit.
+    row = layout.row(align=False)
+    row.alignment = "LEFT"
+    surface = row.mixar_surface(theme="ZEN")
     # align=True is load-bearing: it sets `alignnr` so C++ paints one glass
     # pane for the column instead of three separate pills.
     col = surface.column(align=True)
+    col.ui_units_x = _ZEN_TOOL_UNITS_X
     col.scale_y = _ZEN_TOOL_SCALE_Y
     fallback_idname = _fallback_tool_idname()
     resolves = _tool_resolves(cls, context)
@@ -315,6 +282,11 @@ def install_view3d_header_filter():
     """Install the viewport header, tool-header & toolbar filters. Idempotent."""
     global _original_header_draw, _original_tool_header_draw
     global _original_tools_active_draw
+
+    shading_panel = getattr(bpy.types, "VIEW3D_PT_shading", None)
+    if shading_panel is not None:
+        shading_panel.remove(_draw_zen_guides)
+        shading_panel.append(_draw_zen_guides)
 
     header_cls = getattr(bpy.types, "VIEW3D_HT_header", None)
     if header_cls is None:
@@ -351,6 +323,10 @@ def uninstall_view3d_header_filter():
     """
     global _original_header_draw, _original_tool_header_draw
     global _original_tools_active_draw
+
+    shading_panel = getattr(bpy.types, "VIEW3D_PT_shading", None)
+    if shading_panel is not None:
+        shading_panel.remove(_draw_zen_guides)
 
     header_cls = getattr(bpy.types, "VIEW3D_HT_header", None)
     if header_cls is not None and _original_header_draw is not None:

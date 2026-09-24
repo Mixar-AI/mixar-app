@@ -115,11 +115,11 @@ def quiet(monkeypatch):
     def _refresh(_scene, _shot):
         calls.refreshed += 1
 
-    def _scope(_scene, _shot):
+    def _scope(_scene):
         calls.scoped += 1
 
     monkeypatch.setattr(retime, "refresh_manifest", _refresh)
-    monkeypatch.setattr(retime, "scope_preview_range", _scope)
+    monkeypatch.setattr(retime, "release_preview_range", _scope)
     return calls
 
 
@@ -318,15 +318,16 @@ def test_failure_restores_the_preview_range_toggle(monkeypatch):
         lambda animated_id: tuple(getattr(animated_id, "curves", ())),
     )
 
-    def _scope(inner_scene, _shot):
-        # The real helper switches the preview range on to loop the shot's
-        # own beats.
+    def _scope(inner_scene):
+        # Stands in for any helper that writes the toggle at all: the point
+        # is that a FAILED retime leaves it as the user had it, whichever
+        # way the real one moves it.
         inner_scene.use_preview_range = True
 
     def _boom(_scene, _shot):
         raise RuntimeError("manifest")
 
-    monkeypatch.setattr(retime, "scope_preview_range", _scope)
+    monkeypatch.setattr(retime, "release_preview_range", _scope)
     monkeypatch.setattr(retime, "refresh_manifest", _boom)
 
     with pytest.raises(RuntimeError):
@@ -389,7 +390,16 @@ def test_timeline_drags_record_timing(quiet):
 
 def test_every_frame_writer_records_time_base():
     capture = _read("core/capture.py")
-    assert "beat.frame = target_frame\n        note_beat_timing(shot, beat)" in capture
+    # The append path is the only one that writes a frame, and it records the
+    # time base on the very next line. Re-keying the playhead's own beat
+    # (Auto Key) writes no frame at all, so it needs no time base either.
+    appended = capture.split("beat = shot.beats.add()", 1)[1]
+    assert "beat.frame = target_frame\n" in appended
+    frame_write, _, rest = appended.partition("beat.frame = target_frame\n")
+    assert rest.lstrip().startswith("note_beat_timing(shot, beat)")
+    replaced = capture.split("if existing_index >= 0:", 1)[1].split("else:", 1)[0]
+    assert ".frame" not in replaced
+    assert "note_beat_timing" not in replaced
 
     beat_sync = _read("core/beat_sync.py")
     assert "beat.frame = frame\n        note_beat_timing(shot, beat)" in beat_sync
@@ -416,8 +426,9 @@ def test_every_frame_writer_records_time_base():
 
 
 def test_speed_update_is_load_safe_and_skips_locked_shots():
-    properties = _read("ui/properties/director_properties.py")
-    update = properties.split("def _on_speed_update", 1)[1].split("\ndef ", 1)[0]
+    # The update callbacks live beside the rest of the logic (500-line rule).
+    updates = _read("core/property_updates.py")
+    update = updates.split("def _on_speed_update", 1)[1].split("\ndef ", 1)[0]
     assert "if self.state != 'DRAFT':\n        return" in update
     assert "apply_shot_speed(scene, self)" in update
     assert "try:" in update and "except Exception:" in update

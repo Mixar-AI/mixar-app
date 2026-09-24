@@ -19,7 +19,6 @@ from bpy.props import IntProperty, StringProperty
 from mixar.config.logging_config import get_logger
 
 from ...constants import (
-    FEEDBACK_STATUS_FAILED,
     FEEDBACK_STATUS_RECEIVED,
     FEEDBACK_STATUS_SENDING,
 )
@@ -63,25 +62,25 @@ def _enqueue_feedback_post(post) -> None:
     _feedback_post_queue.put(post)
 
 
-def _post_feedback_async(scene, payload: dict, on_complete=None) -> bool:
-    """Feedback locks only after the backend confirms persistence."""
+def _post_feedback_async(scene, payload: dict) -> None:
+    """Best-effort delivery in click order; outcomes never change the UI."""
     from ...core.session import get_session_manager
     from mixar.modules.common.agent_rpc.client import request
     sid = get_session_manager().get_session_id(scene)
     if not sid:
-        return False
+        logger.debug('Feedback skipped: no session')
+        return
     def post():
-        success = False
         try:
             result = request('feedback', {**payload, 'session_id': sid}, mutation=True)
-            success = isinstance(result, dict) and result.get('status') == 'success'
+            if not isinstance(result, dict) or result.get('status') != 'success':
+                logger.debug('Feedback was not accepted')
         except Exception as exc:
-            logger.warning('Feedback could not be saved: %s', exc)
-        if on_complete:
-            from ...core.main_thread_executor import run_on_main_thread
-            run_on_main_thread(lambda: on_complete(success))
-    _enqueue_feedback_post(post)
-    return True
+            logger.debug('Feedback could not be saved: %s', exc)
+    try:
+        _enqueue_feedback_post(post)
+    except Exception as exc:
+        logger.debug('Feedback could not be queued: %s', exc)
 
 
 def _find_feedback_message(scene, bubble_id: str):
@@ -94,55 +93,34 @@ def _find_feedback_message(scene, bubble_id: str):
 
 def _queue_feedback_comment(scene, msg) -> tuple[bool, str]:
     """Validate and queue a comment submission for one feedback message."""
+    if not msg.feedback_visible:
+        return False, "Feedback is available only on the latest response"
     comment = msg.feedback_comment.strip()
     validation_error = validate_feedback_comment(
         msg.feedback_rating,
         comment,
-        msg.feedback_comment_submitting,
+        msg.feedback_comment_submitting or msg.feedback_status == FEEDBACK_STATUS_SENDING,
     )
     if validation_error:
         return False, validation_error
 
     bubble_id = msg.bubble_id
     rating = int(msg.feedback_rating)
-    msg.feedback_comment_submitting = True
-    msg.feedback_status = FEEDBACK_STATUS_SENDING
+    msg.feedback_comment_submitting = False
+    msg.feedback_comment = ""
+    msg.feedback_comment_expanded = False
+    msg.feedback_submitted_comment = comment
+    # Legacy RNA value now means locally submitted, not server-confirmed.
+    msg.feedback_status = FEEDBACK_STATUS_RECEIVED
 
-    def _complete(success: bool) -> None:
-        current = _find_feedback_message(scene, bubble_id)
-        if current is None:
-            return
-        current.feedback_comment_submitting = False
-        if success:
-            current.feedback_comment = ""
-            current.feedback_comment_expanded = False
-            current.feedback_submitted_comment = comment
-            current.feedback_status = FEEDBACK_STATUS_RECEIVED
-        else:
-            # Keep the authored text editable so a transient backend/network
-            # failure is retryable without asking the user to reconstruct it.
-            current.feedback_comment = comment
-            current.feedback_comment_expanded = True
-            current.feedback_status = FEEDBACK_STATUS_FAILED
-        _bump_layout_epoch(scene)
-        redraw_chat_areas()
-
-    queued = _post_feedback_async(
+    _post_feedback_async(
         scene,
         {
             "bubble_id": bubble_id,
             "rating": rating,
             "comment": comment,
         },
-        on_complete=_complete,
     )
-    if not queued:
-        msg.feedback_comment_submitting = False
-        msg.feedback_comment = comment
-        msg.feedback_comment_expanded = True
-        msg.feedback_status = FEEDBACK_STATUS_FAILED
-        _bump_layout_epoch(scene)
-        return False, "Could not queue feedback. Please try again."
 
     _bump_layout_epoch(scene)
     logger.info(
@@ -289,17 +267,14 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
         # "continue" message instead — the classifier's deterministic
         # continuation guard re-runs only the unfinished lanes.
         if self.action_value == "retry_failed_tasks":
-            from ...core.parked_resume import send_continue
+            from ...core.parked_resume import can_send_continue
+            from ...core.retry_action import schedule_retry
             scene = context.scene
-            if not send_continue(scene):
+            if not can_send_continue(scene):
                 self.report({'WARNING'},
                             "Chat is busy — wait for the current turn to finish")
                 return {'CANCELLED'}
-            for msg in scene.mixie_chat_messages:
-                if getattr(msg, "bubble_id", "") == self.bubble_id:
-                    msg.action_items.clear()
-                    break
-            redraw_chat_areas()
+            schedule_retry(scene, self.bubble_id)
             return {'FINISHED'}
 
         # Check connection before dispatching
@@ -643,13 +618,28 @@ class MIXIE_CHAT_OT_toggle_plan_mode(Operator):
         scene.mixie_chat_plan_enabled = not scene.mixie_chat_plan_enabled
 
         for area in context.screen.areas:
-            if area.type == 'MIXIE_CHAT':
+            if area.type == 'AGENT_BUBBLE':
                 area.tag_redraw()
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_toggle_auto_mode(Operator):
+    """Auto mode: the agent decides every open choice itself instead of asking you"""
+    bl_idname = "mixie_chat.toggle_auto_mode"
+    bl_label = "Toggle Auto Mode"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    def execute(self, context):
+        scene = context.scene
+        scene.mixie_chat_auto_mode = not scene.mixie_chat_auto_mode
+        # The island composer lives in its own window: redraw every chat
+        # surface, not just this window's screen.
+        redraw_chat_areas()
+        return {'FINISHED'}
+
+
 class MIXIE_CHAT_OT_set_feedback_rating(Operator):
-    """Set star rating for an agent response"""
+    """Vote on an agent response using the existing rating wire format"""
     bl_idname = "mixie_chat.set_feedback_rating"
     bl_label = "Rate Response"
     bl_options = {'REGISTER', 'INTERNAL'}
@@ -661,7 +651,7 @@ class MIXIE_CHAT_OT_set_feedback_rating(Operator):
     )
     rating: IntProperty(
         name="Rating",
-        description="Star rating (1-5)",
+        description="Response rating (thumbs down=1, thumbs up=5)",
         default=0,
         min=1,
         max=5,
@@ -674,54 +664,24 @@ class MIXIE_CHAT_OT_set_feedback_rating(Operator):
         for msg in scene.mixie_chat_messages:
             bid = getattr(msg, 'bubble_id', '')
             if bid and bid == bubble_id:
-                # Submitted feedback is locked — no revisions once a rating
-                # is in flight or accepted (only idle/failed accept clicks).
-                if msg.feedback_status in (
-                    FEEDBACK_STATUS_SENDING,
-                    FEEDBACK_STATUS_RECEIVED,
-                ):
-                    logger.info(
-                        f"Feedback rating ignored (locked): "
-                        f"bubble_id={bubble_id}"
-                    )
+                if not msg.feedback_visible or not 1 <= rating <= 5:
                     return {'CANCELLED'}
+                if (msg.feedback_status == FEEDBACK_STATUS_SENDING
+                        or msg.feedback_comment_submitting):
+                    return {'CANCELLED'}
+                if (msg.feedback_status == FEEDBACK_STATUS_RECEIVED
+                        and msg.feedback_rating == rating):
+                    return {'FINISHED'}
                 msg.feedback_rating = rating
                 logger.info(
                     f"Feedback rating set: bubble_id={bubble_id}, "
                     f"rating={rating}"
                 )
-                def _complete(success: bool) -> None:
-                    current = _find_feedback_message(scene, bubble_id)
-                    if (
-                        current is None
-                        or current.feedback_comment_submitting
-                        or current.feedback_status != FEEDBACK_STATUS_SENDING
-                    ):
-                        # A newer comment submission owns the visible state.
-                        return
-                    current.feedback_status = (
-                        FEEDBACK_STATUS_RECEIVED
-                        if success else FEEDBACK_STATUS_FAILED
-                    )
-                    _bump_layout_epoch(scene)
-                    redraw_chat_areas()
-
-                queued = _post_feedback_async(
-                    scene,
-                    {
-                        "bubble_id": bubble_id,
-                        "rating": rating,
-                    },
-                    on_complete=_complete,
-                )
-                if queued:
-                    msg.feedback_status = FEEDBACK_STATUS_SENDING
-                else:
-                    msg.feedback_status = FEEDBACK_STATUS_FAILED
-                # Open the comment field right away so text feedback is
-                # discoverable — there is no separate toggle to find.
-                if not msg.feedback_comment_submitting:
-                    msg.feedback_comment_expanded = True
+                payload = {"bubble_id": bubble_id, "rating": rating}
+                if msg.feedback_submitted_comment:
+                    payload["comment"] = msg.feedback_submitted_comment
+                msg.feedback_status = FEEDBACK_STATUS_RECEIVED
+                _post_feedback_async(scene, payload)
                 _bump_layout_epoch(scene)
                 redraw_chat_areas()
                 return {'FINISHED'}
@@ -742,18 +702,12 @@ class MIXIE_CHAT_OT_toggle_feedback_comment(Operator):
         for msg in scene.mixie_chat_messages:
             bid = getattr(msg, 'bubble_id', '')
             if bid and bid == self.bubble_id:
-                was_expanded = msg.feedback_comment_expanded
-                # Auto-submit on collapse if comment is non-empty
-                if was_expanded and msg.feedback_comment.strip():
-                    queued, error = _queue_feedback_comment(scene, msg)
-                    if not queued:
-                        self.report({'WARNING'}, error)
-                        msg.feedback_comment_expanded = True
-                        redraw_chat_areas()
-                        return {'CANCELLED'}
-                else:
-                    msg.feedback_comment_expanded = not was_expanded
-                    _bump_layout_epoch(scene)
+                if (not msg.feedback_visible or not 1 <= msg.feedback_rating <= 5
+                        or msg.feedback_status == FEEDBACK_STATUS_SENDING
+                        or msg.feedback_comment_submitting):
+                    return {'CANCELLED'}
+                msg.feedback_comment_expanded = not msg.feedback_comment_expanded
+                _bump_layout_epoch(scene)
                 redraw_chat_areas()
                 return {'FINISHED'}
 
@@ -774,6 +728,10 @@ class MIXIE_CHAT_OT_submit_feedback_comment(Operator):
         for msg in scene.mixie_chat_messages:
             bid = getattr(msg, 'bubble_id', '')
             if bid and bid == self.bubble_id:
+                if msg.feedback_status == FEEDBACK_STATUS_SENDING or msg.feedback_comment_submitting:
+                    return {'CANCELLED'}
+                if not msg.feedback_visible:
+                    return {'CANCELLED'}
                 if not msg.feedback_comment.strip():
                     msg.feedback_comment_expanded = False
                     _bump_layout_epoch(scene)
@@ -790,6 +748,26 @@ class MIXIE_CHAT_OT_submit_feedback_comment(Operator):
 
         logger.warning(f"Feedback comment: bubble_id '{self.bubble_id}' not found")
         return {'CANCELLED'}
+
+class MIXIE_CHAT_OT_cancel_feedback_comment(Operator):
+    """Discard the comment draft without posting feedback"""
+    bl_idname = "mixie_chat.cancel_feedback_comment"
+    bl_label = "Cancel Comment"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    bubble_id: StringProperty(name="Bubble ID", default="")
+
+    def execute(self, context):
+        scene = context.scene
+        msg = _find_feedback_message(scene, self.bubble_id)
+        if msg is None or msg.feedback_comment_submitting or msg.feedback_status == FEEDBACK_STATUS_SENDING:
+            return {'CANCELLED'}
+        msg.feedback_comment = ""
+        msg.feedback_comment_expanded = False
+        _bump_layout_epoch(scene)
+        redraw_chat_areas()
+        return {'FINISHED'}
+
 
 class MIXIE_CHAT_OT_cancel_generation(Operator):
     """Cancel the active generation"""
@@ -846,7 +824,7 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
 
         # Redraw
         for area in context.screen.areas:
-            if area.type in ('MIXIE_CHAT', 'MIXIE'):
+            if area.type in ('AGENT_BUBBLE', 'MIXIE'):
                 area.tag_redraw()
 
         return {'FINISHED'}
@@ -946,9 +924,11 @@ classes = (
     MIXIE_CHAT_OT_select_slot_action,
     MIXIE_CHAT_OT_insert_prompt_text,
     MIXIE_CHAT_OT_toggle_plan_mode,
+    MIXIE_CHAT_OT_toggle_auto_mode,
     MIXIE_CHAT_OT_set_feedback_rating,
     MIXIE_CHAT_OT_toggle_feedback_comment,
     MIXIE_CHAT_OT_submit_feedback_comment,
+    MIXIE_CHAT_OT_cancel_feedback_comment,
     MIXIE_CHAT_OT_cancel_generation,
     MIXIE_CHAT_OT_toggle_steps,
     MIXIE_CHAT_OT_toggle_step_row,

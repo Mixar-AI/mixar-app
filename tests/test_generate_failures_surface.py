@@ -46,6 +46,7 @@ GENERATE_OPERATORS = {
     "mixie.smart_segment_generate": "segment_gen_ops.py",
     "mixie.mesh_segment_submit": "mesh_segment_ops.py",
     "mixie.video_gen_generate": "video_gen_ops.py",
+    "mixie.video_upscale_generate": "video_upscale_ops.py",
     "mixie.world_labs_generate": "world_labs_ops.py",
     "mixie.scene_recon_generate": "scene_recon_ops.py",
 }

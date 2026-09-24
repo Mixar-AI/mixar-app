@@ -16,7 +16,7 @@ side of the contract:
   * ``WindowManager.mixie_chat_history_visible`` — overlay visibility.
     Toggled by ``MIXIE_CHAT_OT_show_history`` (header clock button);
     the C++ side also clears it on ESC / click-away / row open.
-  * ``WindowManager.mixie_chat_history_entries`` — runtime mirror of the
+  * ``WindowManager.mixie_chat_history_entries`` (ui/properties/history_props.py) — runtime mirror of the
     on-disk store (title in ``name``, ``session_id``, precomputed short
     ``when`` label). Rebuilt by ``sync_history_entries()`` whenever the
     overlay opens and after deletions; the C++ overlay only reads it.
@@ -31,9 +31,8 @@ backend conversation (its LangGraph checkpoint) — nothing is re-uploaded.
 
 from datetime import datetime, timezone
 
-import bpy
-from bpy.props import BoolProperty, CollectionProperty, StringProperty
-from bpy.types import Operator, PropertyGroup
+from bpy.props import StringProperty
+from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 
@@ -45,42 +44,6 @@ from ...core.ui_utils import redraw_chat_areas
 from .session_ops import send_cancel_request_async
 
 logger = get_logger(__name__)
-
-
-# =============================================================================
-# Runtime mirror of the on-disk history (read by the C++ overlay)
-# =============================================================================
-
-class MixieChatHistoryEntry(PropertyGroup):
-    """One archived session row for the C++ history overlay.
-
-    ``name`` (inherited) holds the chat title.
-    """
-    session_id: StringProperty(
-        name="Session ID",
-        description="Archived session identifier",
-        default="",
-    )
-    archived_at: StringProperty(
-        name="Archived At",
-        description="ISO timestamp of the last archive",
-        default="",
-    )
-    when: StringProperty(
-        name="When",
-        description="Short relative-time label ('now', '5m', '3h', "
-                    "'2d', 'Jul 11') precomputed at sync time — the C++ "
-                    "overlay renders it verbatim",
-        default="",
-    )
-    group: StringProperty(
-        name="Group",
-        description="Date-bucket label ('Today', 'Yesterday', ...) "
-                    "precomputed at sync time — the C++ overlay draws a "
-                    "section header whenever it changes between "
-                    "consecutive (newest-first) rows",
-        default="",
-    )
 
 
 def _group_label(iso_ts: str) -> str:
@@ -154,7 +117,9 @@ class MIXIE_CHAT_OT_show_history(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        opening = not wm.mixie_chat_history_visible
+        # Already showing chats: close. Showing checkpoints (same card,
+        # other mode): switch to chats, do not close.
+        opening = not (wm.mixie_chat_history_visible and wm.mixie_chat_history_mode == 'CHATS')
         if opening:
             sync_history_entries(context)
             # The past-chats, project-rules and scribble overlays are all
@@ -168,6 +133,10 @@ class MIXIE_CHAT_OT_show_history(Operator):
                 from ...core.scribble import flush_pending_ink
                 flush_pending_ink()
                 wm.mixie_chat_ink_visible = False
+        if opening:
+            wm.mixie_chat_history_mode = 'CHATS'
+            wm.mixie_chat_history_notice = ""
+            wm.mixie_chat_history_locked = False
         wm.mixie_chat_history_visible = opening
         redraw_chat_areas()
         return {'FINISHED'}
@@ -292,51 +261,12 @@ class MIXIE_CHAT_OT_delete_history_session(Operator):
 
 
 # =============================================================================
-# Registration (module register()/unregister() — the bootstrap UI loader
-# prefers these over the bare `classes` fallback; needed here because of
-# the WindowManager properties)
+# Registration — the WindowManager mirror properties live in
+# ui/properties/history_props.py (registered first by the UI loader).
 # =============================================================================
 
 classes = (
-    MixieChatHistoryEntry,
     MIXIE_CHAT_OT_show_history,
     MIXIE_CHAT_OT_open_history_session,
     MIXIE_CHAT_OT_delete_history_session,
 )
-
-
-def register():
-    for cls in classes:
-        try:
-            bpy.utils.register_class(cls)
-        except ValueError:
-            pass  # already registered (module reload)
-
-    # Runtime mirror of ~/.mixar/chat_history read by the C++ overlay.
-    # Session state, never persisted.
-    bpy.types.WindowManager.mixie_chat_history_entries = CollectionProperty(
-        type=MixieChatHistoryEntry,
-        name="Chat History Entries",
-        options={'SKIP_SAVE'},
-    )
-    # Overlay visibility — written here (header toggle) and by the C++
-    # overlay (ESC / click-away / row open all clear it).
-    bpy.types.WindowManager.mixie_chat_history_visible = BoolProperty(
-        name="Chat History Visible",
-        description="Whether the past-chats overlay is open",
-        default=False,
-        options={'SKIP_SAVE'},
-    )
-
-
-def unregister():
-    for attr in ("mixie_chat_history_entries", "mixie_chat_history_visible"):
-        try:
-            delattr(bpy.types.WindowManager, attr)
-        except Exception:
-            pass
-    for cls in reversed(classes):
-        try:
-            bpy.utils.unregister_class(cls)
-        except Exception:
-            pass

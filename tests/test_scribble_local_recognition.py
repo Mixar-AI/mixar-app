@@ -27,7 +27,7 @@ if str(SCRIPTS) not in sys.path:
 
 CHAT = ROOT / "src/source/blender/editors/space_mixie_chat"
 INK_INTERN_HH = (CHAT / "mixie_chat_ink_intern.hh").read_text(encoding="utf-8")
-SPACE_CC = (CHAT / "space_mixie_chat.cc").read_text(encoding="utf-8")
+SPACE_CC = (CHAT / "mixie_chat_ops.cc").read_text(encoding="utf-8")
 CHAT_CMAKE = (CHAT / "CMakeLists.txt").read_text(encoding="utf-8")
 LOCAL_CC = (CHAT / "mixie_chat_ink_local.cc").read_text(encoding="utf-8")
 VISION_MM = (ROOT / "src/intern/ghost/intern/GHOST_MixarVisionCocoa.mm").read_text(encoding="utf-8")

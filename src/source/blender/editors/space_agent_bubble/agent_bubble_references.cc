@@ -6,6 +6,9 @@
 #include "BKE_context.hh"
 #include "BKE_global.hh"
 #include "BKE_main.hh"
+#include "BKE_image.hh"
+#include "BKE_lib_id.hh"
+#include "BKE_report.hh"
 #include "BKE_screen.hh"
 #include "BLI_listbase.h"
 #include "DNA_scene_types.h"
@@ -13,10 +16,12 @@
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 #include "ED_screen.hh"
+#include "ED_image.hh"
 #include "ED_moodboard_attachment.hh"
 #include "ED_space_api.hh"
 #include "GPU_state.hh"
 #include "RNA_access.hh"
+#include "RNA_define.hh"
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_mixar.hh"
@@ -35,13 +40,7 @@ void footer_thumbnails_draw_image(Main *, const char *, int, float, float, float
 
 int agent_bubble_reference_count(const bContext *C)
 {
-  Scene *scene = CTX_data_scene(C);
-  if (!scene) {
-    return 0;
-  }
-  PointerRNA ptr = RNA_id_pointer_create(&scene->id);
-  PropertyRNA *prop = RNA_struct_find_property(&ptr, "mixie_chat_pending_attachments");
-  return prop ? RNA_property_collection_length(&ptr, prop) : 0;
+  return int(agent_bubble_reference_items(CTX_data_scene(C), CTX_wm_manager(C)).size());
 }
 
 bool agent_bubble_references_visible(const bContext *C)
@@ -53,8 +52,7 @@ bool agent_bubble_references_visible(const bContext *C)
   }
   AgentIslandState state;
   agent_ui_state_gather(C, &state);
-  return state.active_tab == AGENT_TAB_AGENT && !state.ink_visible &&
-         agent_bubble_reference_count(C) > 0;
+  return !state.ink_visible && agent_bubble_reference_count(C) > 0;
 }
 
 float agent_bubble_reference_fraction(wmWindowManager *wm)
@@ -147,7 +145,9 @@ void agent_bubble_references_draw(const bContext *C,
                                                  agent_bubble_reference_count(C),
                                                  agent_bubble_reference_fraction(wm));
   ui::Block *block = ui::block_begin(C, region, "agent_references", ui::EmbossType::None);
-  agent_bubble_send_button(C, region, block, layout, state);
+  if (state.active_tab == AGENT_TAB_AGENT) {
+    agent_bubble_send_button(C, region, block, layout, state);
+  }
   /* The same neutral hairline as the Library column separators. */
   pane_column_divider(1, g.view.ymin, g.view.ymax, u);
   int old_scissor[4];
@@ -157,39 +157,34 @@ void agent_bubble_references_draw(const bContext *C,
               int(g.view.ymin),
               int(BLI_rctf_size_x(&g.view)),
               int(BLI_rctf_size_y(&g.view)));
-  PointerRNA scene = RNA_id_pointer_create(&CTX_data_scene(C)->id);
+  const auto items = agent_bubble_reference_items(CTX_data_scene(C), wm);
   int index = 0;
-  RNA_BEGIN (&scene, item, "mixie_chat_pending_attachments") {
+  for (const AgentReference &item : items) {
     const rctf image = image_rect(g, index++);
     if (image.ymin - 28 * u > g.view.ymax || image.ymax < g.view.ymin) {
       continue;
     }
-    const std::string path = RNA_string_get(&item, "image_path");
-    const std::string name = RNA_string_get(&item, "display_name");
-    PropertyRNA *source_prop = RNA_struct_find_property(&item, "image_source");
-    const char *source = nullptr;
-    RNA_property_enum_identifier(const_cast<bContext *>(C),
-                                 &item,
-                                 source_prop,
-                                 RNA_property_enum_get(&item, source_prop),
-                                 &source);
+    const std::string &path = item.path;
+    const std::string &name = item.name;
+    const char *source = item.source.c_str();
+    const bool generation = state.active_tab != AGENT_TAB_AGENT;
     const float plate[4] = {0.08f, 0.09f, 0.085f, 0.25f};
     GPU_blend(GPU_BLEND_ALPHA);
     pane_fill_round(&image, 10 * u, plate);
-    if (source && (STREQ(source, "FILE") || STREQ(source, "BLEND_DATA"))) {
+    if (generation || STREQ(source, "FILE") || STREQ(source, "BLEND_DATA")) {
       footer_thumbnails_draw_image(CTX_data_main(C),
                                    path.c_str(),
-                                   STREQ(source, "BLEND_DATA"),
+                                   generation || STREQ(source, "BLEND_DATA"),
                                    image.xmin,
                                    image.ymin,
                                    g.image_size);
     }
     rctf visible_image;
-    if (source && STREQ(source, "BLEND_DATA") &&
+    if ((generation || STREQ(source, "BLEND_DATA")) &&
         BLI_rctf_isect(&image, &g.view, &visible_image)) {
       ED_moodboard_attachment_target(C, region, path.c_str(), visible_image);
     }
-    const float dim[4] = AGENT_COL_TEXT_DIM;
+    MIXAR_THEME_LOAD(dim, TextSecondary);
     const auto caption = ui::mixar_fit_text(
         name.c_str(),
         g.image_size,
@@ -197,6 +192,19 @@ void agent_bubble_references_draw(const bContext *C,
     GPU_blend(GPU_BLEND_ALPHA);
     pane_label_left(
         caption.c_str(), image.xmin, image.ymin - 16 * u, 15 * agent_ui_text_unit(), dim);
+    if (item.sketch && BLI_rctf_isect(&image, &g.view, &visible_image)) {
+      ui::Button *preview = uiDefButO(block,
+                                      ui::ButtonType::But,
+                                      "mixar.preview_sketch",
+                                      wm::OpCallContext::ExecDefault,
+                                      "",
+                                      int(visible_image.xmin),
+                                      int(visible_image.ymin),
+                                      int(BLI_rctf_size_x(&visible_image)),
+                                      int(BLI_rctf_size_y(&visible_image)),
+                                      "View sketch larger. Add instructions in chat, then Send");
+      RNA_string_set(ui::button_operator_ptr_ensure(preview), "image_name", path.c_str());
+    }
     rctf close = {
         image.xmax - 30 * u, image.xmax - 2 * u, image.ymax - 30 * u, image.ymax - 2 * u};
     if (close.ymin >= g.view.ymin && close.ymax <= g.view.ymax) {
@@ -204,7 +212,8 @@ void agent_bubble_references_draw(const bContext *C,
       pane_fill_round(&close, 14 * u, back);
       ui::Button *button = uiDefIconButO(block,
                                          ui::ButtonType::But,
-                                         "mixie_chat.remove_attachment",
+                                         generation ? "mixar.pane_remove_reference" :
+                                                      "mixie_chat.remove_attachment",
                                          wm::OpCallContext::ExecDefault,
                                          ICON_X,
                                          int(close.xmin),
@@ -215,10 +224,10 @@ void agent_bubble_references_draw(const bContext *C,
       PointerRNA *props = ui::button_operator_ptr_ensure(button);
       RNA_string_set(props, "attachment_path", path.c_str());
       RNA_string_set(props, "attachment_source", source ? source : "");
-      ui::mixar_button_tooltip_owned(button, ("Remove " + name).c_str());
+      ui::mixar_button_tooltip_owned(
+          button, item.sketch ? "Discard this sketch and its queued drawing" : ("Remove " + name).c_str());
     }
   }
-  RNA_END;
   GPU_scissor(UNPACK4(old_scissor));
   GPU_scissor_test(false);
   PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
@@ -255,19 +264,13 @@ void qa_targets(const wmWindow *win,
   {
     return;
   }
-  PointerRNA scene = RNA_id_pointer_create(&win->scene->id);
-  PropertyRNA *prop = RNA_struct_find_property(&scene, "mixie_chat_pending_attachments");
-  if (!prop) {
-    return;
-  }
   if (!G_MAIN || G_MAIN->wm.is_empty()) {
     return;
   }
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
+  const auto items = agent_bubble_reference_items(win->scene, wm);
   const auto g = agent_bubble_reference_geometry(
-      win,
-      region,
-      RNA_property_collection_length(&scene, prop),
-      agent_bubble_reference_fraction(static_cast<wmWindowManager *>(G_MAIN->wm.first)));
+      win, region, int(items.size()), agent_bubble_reference_fraction(wm));
   auto append = [&](const char *surface,
                     const std::string &text,
                     const std::string &path,
@@ -284,24 +287,59 @@ void qa_targets(const wmWindow *win,
   };
   append("reference_column", "Attached references", "", -1, g.view);
   int index = 0;
-  RNA_BEGIN (&scene, item, "mixie_chat_pending_attachments") {
+  for (const AgentReference &item : items) {
     const rctf image = image_rect(g, index);
     rctf visible;
     if (BLI_rctf_isect(&image, &g.view, &visible)) {
       append("reference_preview",
-             RNA_string_get(&item, "display_name"),
-             RNA_string_get(&item, "image_path"),
+             item.name,
+             item.path,
              index,
              visible);
     }
     index++;
   }
-  RNA_END;
 }
 }  // namespace
 
 void agent_bubble_references_qa_register()
 {
   Mixar_qa_register_target_provider(SPACE_AGENT_BUBBLE, qa_targets);
+}
+
+static wmOperatorStatus preview_sketch_exec(bContext *C, wmOperator *op)
+{
+  Main *bmain = CTX_data_main(C);
+  const std::string name = RNA_string_get(op->ptr, "image_name");
+  Image *image = reinterpret_cast<Image *>(BKE_libblock_find_name(bmain, ID_IM, name.c_str()));
+  if (!image) {
+    BKE_report(op->reports, RPT_WARNING, "Sketch preview is unavailable. Draw again to retry");
+    return OPERATOR_CANCELLED;
+  }
+  const rcti rect = {0, 1000, 0, 720};
+  if (!WM_window_open(C, "Sketch Preview", &rect, SPACE_IMAGE, false, false, true,
+                      WIN_ALIGN_PARENT_CENTER, nullptr, nullptr)) {
+    BKE_report(op->reports, RPT_ERROR, "Could not open the sketch preview");
+    return OPERATOR_CANCELLED;
+  }
+  ScrArea *area = CTX_wm_area(C);
+  SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first);
+  ED_space_image_set(bmain, sima, image, false);
+  ARegion *region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
+  CTX_wm_region_set(C, region);
+  WM_operator_name_call(C, "IMAGE_OT_view_all", wm::OpCallContext::ExecDefault, nullptr, nullptr);
+  ED_area_tag_redraw(area);
+  return OPERATOR_FINISHED;
+}
+
+void MIXAR_OT_preview_sketch(wmOperatorType *ot)
+{
+  ot->name = "Preview Sketch";
+  ot->idname = "MIXAR_OT_preview_sketch";
+  ot->description = "Open the completed drawing in a larger preview. Close it to return to chat";
+  ot->exec = preview_sketch_exec;
+  ot->poll = ED_operator_screenactive;
+  PropertyRNA *prop = RNA_def_string(ot->srna, "image_name", nullptr, 0, "Sketch", "Image to preview");
+  RNA_def_property_flag(prop, PROP_SKIP_SAVE);
 }
 }  // namespace blender

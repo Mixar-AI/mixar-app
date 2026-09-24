@@ -256,9 +256,6 @@ static eSpace_Type rna_Space_refine_reverse(StructRNA *srna)
   if (srna == RNA_SpaceMixie) {
     return SPACE_MIXIE;
   }
-  if (srna == RNA_SpaceMixieChat) {
-    return SPACE_MIXIE_CHAT;
-  }
   if (srna == RNA_SpaceAgentBubble) {
     return SPACE_AGENT_BUBBLE;
   }

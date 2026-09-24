@@ -4,7 +4,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from ..constants import SessionState, STATE_LABELS
+from ..constants import SessionState, STATE_LABELS, VIDEO_ATTACHMENT_REJECTED
+from .attachment_validation import pending_video_attachments
 from .session import get_session_manager
 
 HINT_QUEUED = 'queued'
@@ -21,7 +22,17 @@ class OutgoingMessage:
     user_message: object = None
 
 
+def model_change_pending(scene):
+    from mixar.modules.byok.core.preference_state import mutation_pending
+    return getattr(scene, 'mixie_chat_mode', '') not in {'GENERATE', 'LIBRARY'} and mutation_pending()
+
+
 def can_send(scene):
+    if pending_video_attachments(scene):
+        return False, VIDEO_ATTACHMENT_REJECTED
+    if model_change_pending(scene):
+        from mixar.modules.byok.core.preference_state import PENDING_MESSAGE
+        return False, PENDING_MESSAGE
     from .turn_checkpoints import rewind_in_flight
     if rewind_in_flight():
         return False, 'Restoring a checkpoint…'
@@ -80,6 +91,10 @@ def send_user_message(scene, msg):
         imported_object_names=msg.imported_object_names,
         project_context=msg.project_context, mark_context=msg.mark_context,
         user_message=msg.user_message, interjecting=interjecting,
+        # The composer's Auto switch. Read here, on the ONE path a fresh turn
+        # and an interjection share, so both carry it; an input answer
+        # (start_input_stream above) is not a turn and never does.
+        auto_mode=bool(getattr(scene, 'mixie_chat_auto_mode', False)),
     )
     if ok:
         mark_rules_sent(scene)

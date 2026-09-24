@@ -87,3 +87,23 @@ def test_legacy_action_fallback(monkeypatch):
     assert animation.action_fcurves(tree) is curves
     assert animation.remove_fcurves(tree, {"location"}) == 1
     assert curves == []
+
+
+@pytest.mark.parametrize('slot', [4, 9, None])
+def test_bound_reader_covers_all_layers_and_strips_without_borrowing(slot):
+    a, b, c, foreign, legacy = (object() for _ in range(5))
+    action = NS(fcurves=[legacy], layers=[
+        NS(strips=[NS(channelbags=[NS(slot_handle=4, fcurves=[a]),
+                                   NS(slot_handle=9, fcurves=[foreign])]),
+                   NS(channelbags=[NS(slot_handle=4, fcurves=[b])])]),
+        NS(strips=[NS(channelbags=[NS(slot_handle=4, fcurves=[c])])]),
+    ])
+    binding = NS(action=action, action_slot=NS(handle=slot) if slot else None)
+    assert animation.bound_fcurves(binding) == {4: (a, b, c), 9: (foreign,), None: ()}[slot]
+
+
+def test_bound_reader_handles_legacy_and_missing_actions():
+    curve = object()
+    assert animation.bound_fcurves(NS(action=NS(fcurves=[curve]))) == (curve,)
+    assert animation.bound_fcurves(NS(action=None)) == ()
+    assert animation.bound_fcurves(None) == ()

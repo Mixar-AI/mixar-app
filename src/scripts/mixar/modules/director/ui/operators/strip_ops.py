@@ -111,6 +111,15 @@ class MIXAR_OT_director_strip_menu(Operator):
             layout.operator_context = 'INVOKE_DEFAULT'
             if draft:
                 if beat_index >= 0:
+                    # Duplicate first: it is the one that CREATES something,
+                    # and a destructive row should never be the default the
+                    # cursor lands on.
+                    copy = layout.operator(
+                        "mixar.director_duplicate_beats",
+                        text=f"Duplicate Keyframe {beat_index + 1}",
+                        icon='DUPLICATE',
+                    )
+                    copy.indices = str(beat_index)
                     delete = layout.operator(
                         "mixar.director_remove_beat",
                         text=f"Delete Keyframe {beat_index + 1}",

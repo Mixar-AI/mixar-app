@@ -18,6 +18,36 @@ logger = get_logger(__name__)
 # Global list to track registered keymaps for cleanup
 addon_keymaps = []
 
+# Active text fields own hold detection. Only the release fallback is global:
+# Option/Alt outside a field keeps native editor bindings.
+_VOICE_PTT_KEYMAPS = (
+    ('User Interface', 'EMPTY', 'WINDOW'),
+    ('Agent Chat', 'AGENT_BUBBLE', 'WINDOW'),
+    ('Window', 'EMPTY', 'WINDOW'),
+)
+
+
+def _register_voice_push_to_talk(kc):
+    """Release owned holds regardless of modifiers; never claim global Alt presses."""
+    from ..constants import VOICE_INPUT_SUPPORTED
+    if not VOICE_INPUT_SUPPORTED:
+        return
+    for name, space_type, region_type in _VOICE_PTT_KEYMAPS:
+        km = kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
+        for idname, value in (
+            ('mixie_chat.voice_push_to_talk_release', 'RELEASE'),
+        ):
+            kmi = km.keymap_items.new(
+                idname,
+                type='LEFT_ALT',
+                value=value,
+                head=True,
+                repeat=False,
+                any=True,
+            )
+            addon_keymaps.append((km, kmi))
+    logger.debug("Registered hold-Option/Alt push-to-talk")
+
 
 def register():
     """Register keymap for Mixie Chat space."""
@@ -64,7 +94,7 @@ def register():
         addon_keymaps.append((km_window, kmi))
 
         # Register Mixie Chat space-specific shortcuts
-        km_mixie = kc.keymaps.new(name='Mixie Chat', space_type='MIXIE_CHAT', region_type='WINDOW')
+        km_mixie = kc.keymaps.new(name='Agent Chat', space_type='AGENT_BUBBLE', region_type='WINDOW')
 
         # Paste image from clipboard: Cmd+Shift+V (macOS) or Ctrl+Shift+V (Windows/Linux)
         if is_macos:
@@ -95,7 +125,7 @@ def register():
         # Two reasons this binding has to live in the addon keyconfig and has
         # to point at mixie_chat.paste rather than mixie_chat.paste_image:
         #
-        # 1. The C-registered copies of this chord (space_mixie_chat.cc and
+        # 1. The C-registered copies of this chord (mixie_chat_ops.cc and
         #    space_agent_bubble.cc) sit in the default keyconfig, which the
         #    GUI keyconfig preset reload wipes — the same finding as
         #    select_text/copy above. Addon-keyconfig items survive it.
@@ -144,18 +174,14 @@ def register():
         logger.debug("Registered Escape shortcut for abort")
 
         # Text selection (click-drag) + copy (Cmd/Ctrl+C) in the message area.
-        # The C-side "Mixie Chat" keymap registers both (space_mixie_chat.cc),
+        # The C-side "Agent Chat" keymap registers both (mixie_chat_ops.cc),
         # but the GUI keyconfig preset reload wipes items from all C-registered
         # keymaps in the default config, so those bindings go dead in GUI
         # sessions — the same finding as the agent_scene_strip keymap. The
         # addon-keyconfig items here survive the reload and are merged into the
-        # same "Mixie Chat" keymap that mixie_chat_main_region_init installs on
-        # the message region of BOTH the docked chat and the Agent Bubble
-        # (the bubble reuses that region init), so selection and copy work in
-        # both surfaces. Without the select_text binding, a click-drag in the
-        # bubble's message area fell through to the global LEFTMOUSE
-        # mixar.bubble_header_drag binding and moved the whole window instead
-        # of selecting text.
+        # same "Agent Chat" keymap that mixie_chat_main_region_init installs on
+        # the floating bubble's transcript. This also prevents message drags
+        # from falling through to the global window-drag gesture.
         kmi_select = km_mixie.keymap_items.new(
             'mixie_chat.select_text',
             type='LEFTMOUSE',
@@ -179,6 +205,8 @@ def register():
             )
         addon_keymaps.append((km_mixie, kmi_copy))
         logger.debug("Registered select-text and copy shortcuts for chat")
+
+        _register_voice_push_to_talk(kc)
 
 
 def unregister():

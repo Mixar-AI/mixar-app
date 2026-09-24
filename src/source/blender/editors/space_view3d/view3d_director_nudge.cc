@@ -55,6 +55,7 @@
 #include "WM_types.hh"
 
 #include "view3d_director.hh"
+#include "view3d_director_camera_move.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
@@ -62,23 +63,13 @@ namespace blender {
 /** \name Contract Constants
  * \{ */
 
-/** Identifiers are frozen: `keymap.py` sets `direction` on every item. */
-enum DirectorNudgeDirection {
-  NUDGE_FORWARD = 0,
-  NUDGE_BACK = 1,
-  NUDGE_LEFT = 2,
-  NUDGE_RIGHT = 3,
-  NUDGE_UP = 4,
-  NUDGE_DOWN = 5,
-};
-
 static const EnumPropertyItem nudge_direction_items[] = {
-    {NUDGE_FORWARD, "FORWARD", 0, "Forward", "Move the camera along its view direction"},
-    {NUDGE_BACK, "BACK", 0, "Back", "Move the camera against its view direction"},
-    {NUDGE_LEFT, "LEFT", 0, "Left", "Strafe the camera left"},
-    {NUDGE_RIGHT, "RIGHT", 0, "Right", "Strafe the camera right"},
-    {NUDGE_UP, "UP", 0, "Up", "Raise the camera along the world Z axis"},
-    {NUDGE_DOWN, "DOWN", 0, "Down", "Lower the camera along the world Z axis"},
+    {DIRECTOR_MOVE_FORWARD, "FORWARD", 0, "Forward", "Move the camera along its view direction"},
+    {DIRECTOR_MOVE_BACK, "BACK", 0, "Back", "Move the camera against its view direction"},
+    {DIRECTOR_MOVE_LEFT, "LEFT", 0, "Left", "Strafe the camera left"},
+    {DIRECTOR_MOVE_RIGHT, "RIGHT", 0, "Right", "Strafe the camera right"},
+    {DIRECTOR_MOVE_UP, "UP", 0, "Up", "Raise the camera along the world Z axis"},
+    {DIRECTOR_MOVE_DOWN, "DOWN", 0, "Down", "Lower the camera along the world Z axis"},
     {0, nullptr, 0, nullptr, nullptr},
 };
 
@@ -89,7 +80,6 @@ constexpr double NUDGE_MAX_STEP_SECONDS = 0.1;
 /** Grace after the last release so quick re-taps stay one undo step. */
 constexpr double NUDGE_RELEASE_GRACE_SECONDS = 0.15;
 /** Blender's preference is the one answer to "how fast is WASD". */
-constexpr float NUDGE_DEFAULT_WALK_SPEED = 3.0f;
 /** Gap that turns a repeated key into a fresh press for the locked report. */
 constexpr double NUDGE_LOCKED_REPORT_GAP_SECONDS = 0.15;
 /** What a single tap is worth: a press-and-release inside one event batch
@@ -109,88 +99,13 @@ struct DirectorNudgeData {
   Object *camera = nullptr;
   /** Running WORLD matrix: rotation never changes, only the translation. */
   float4x4 matrix;
-  /** Bitmask over #DirectorNudgeDirection. */
+  /** Bitmask over #DirectorMoveDirection. */
   unsigned int held = 0;
   double last_tick = 0.0;
   double idle_since = 0.0;
   bool moved = false;
   wmTimer *timer = nullptr;
 };
-
-/** Key -> direction, the SAME mapping `keymap.py` binds. */
-static int nudge_direction_from_key(const int event_type)
-{
-  switch (event_type) {
-    case EVT_WKEY:
-      return NUDGE_FORWARD;
-    case EVT_SKEY:
-      return NUDGE_BACK;
-    case EVT_AKEY:
-      return NUDGE_LEFT;
-    case EVT_DKEY:
-      return NUDGE_RIGHT;
-    case EVT_EKEY:
-      return NUDGE_UP;
-    case EVT_QKEY:
-      return NUDGE_DOWN;
-    default:
-      return -1;
-  }
-}
-
-static unsigned int nudge_bit(const int direction)
-{
-  return 1u << unsigned(direction);
-}
-
-/** The active shot's camera; `r_locked` reports the take's LOCKED state. */
-static Object *nudge_shot_camera(Scene *scene, bool *r_locked)
-{
-  /* One resolver for every native camera writer (nudge, aerial map, its
-   * placement modal), so they can never disagree on which object moves. */
-  return view3d_director_shot_camera(scene, r_locked);
-}
-
-static float nudge_walk_speed()
-{
-  const float speed = U.walk_navigation.walk_speed;
-  return speed > 0.0f ? speed : NUDGE_DEFAULT_WALK_SPEED;
-}
-
-/**
- * Unit world-space direction for every held key. W/S and A/D ride the
- * camera's own axes — forward is its local -Z, the way walk flies with
- * gravity off — while Q/E move on world Z. The SUM is normalised so a
- * diagonal (two keys held) travels at walk speed rather than faster.
- */
-static float3 nudge_direction_vector(const float4x4 &matrix, const unsigned int held)
-{
-  const float3 right = math::normalize(matrix.x_axis());
-  const float3 forward = -math::normalize(matrix.z_axis());
-  const float3 up(0.0f, 0.0f, 1.0f);
-
-  float3 sum(0.0f);
-  if (held & nudge_bit(NUDGE_FORWARD)) {
-    sum += forward;
-  }
-  if (held & nudge_bit(NUDGE_BACK)) {
-    sum -= forward;
-  }
-  if (held & nudge_bit(NUDGE_RIGHT)) {
-    sum += right;
-  }
-  if (held & nudge_bit(NUDGE_LEFT)) {
-    sum -= right;
-  }
-  if (held & nudge_bit(NUDGE_UP)) {
-    sum += up;
-  }
-  if (held & nudge_bit(NUDGE_DOWN)) {
-    sum -= up;
-  }
-  /* Opposed keys cancel; a diagonal is normalised back to walk speed. */
-  return math::normalize(sum);
-}
 
 /** \} */
 
@@ -251,7 +166,7 @@ static wmOperatorStatus director_nudge_invoke(bContext *C,
                                               const wmEvent * /*event*/)
 {
   bool locked = false;
-  Object *camera = nudge_shot_camera(CTX_data_scene(C), &locked);
+  Object *camera = director_move_camera(CTX_data_scene(C), &locked);
   if (!camera) {
     /* Absorbed: the key must not fall through to its Blender meaning. */
     return OPERATOR_CANCELLED;
@@ -272,7 +187,7 @@ static wmOperatorStatus director_nudge_invoke(bContext *C,
   DirectorNudgeData *data = MEM_new<DirectorNudgeData>(__func__);
   data->camera = camera;
   data->matrix = camera->object_to_world();
-  data->held = nudge_bit(RNA_enum_get(op->ptr, "direction"));
+  data->held = director_move_bit(RNA_enum_get(op->ptr, "direction"));
   data->last_tick = BLI_time_now_seconds();
   data->timer = WM_event_timer_add(
       CTX_wm_manager(C), CTX_wm_window(C), TIMER, NUDGE_TIMER_STEP);
@@ -291,11 +206,11 @@ static void nudge_apply(bContext *C,
                         const unsigned int held,
                         const double seconds)
 {
-  const float3 direction = nudge_direction_vector(data->matrix, held);
+  const float3 direction = director_move_vector(data->matrix, held);
   if (seconds <= 0.0 || math::length_squared(direction) == 0.0f) {
     return;
   }
-  data->matrix.location() += direction * (nudge_walk_speed() * float(seconds));
+  data->matrix.location() += direction * (director_walk_speed() * float(seconds));
   /* Written through the WORLD matrix so a parented camera moves the distance
    * asked for rather than the distance its parent's transform makes of it;
    * `use_compat` keeps Euler continuity with the current rotation. */
@@ -322,7 +237,7 @@ static wmOperatorStatus director_nudge_tick(bContext *C, wmOperator *op, Directo
   }
 
   bool locked = false;
-  Object *camera = nudge_shot_camera(CTX_data_scene(C), &locked);
+  Object *camera = director_move_camera(CTX_data_scene(C), &locked);
   if (camera != data->camera || locked) {
     /* Shot switched, camera removed, or the take got locked mid-hold. */
     return director_nudge_finish(C, op);
@@ -353,7 +268,7 @@ static wmOperatorStatus director_nudge_modal(bContext *C, wmOperator *op, const 
     return OPERATOR_PASS_THROUGH;
   }
 
-  const int direction = nudge_direction_from_key(event->type);
+  const int direction = director_move_from_key(event->type);
   if (direction < 0) {
     /* Not ours: the viewport keeps working underneath (orbit, zoom, ...). */
     return OPERATOR_PASS_THROUGH;
@@ -366,11 +281,11 @@ static wmOperatorStatus director_nudge_modal(bContext *C, wmOperator *op, const 
     }
     /* OS auto-repeat re-sends PRESS for a held key; only a FRESH press is
      * worth a tap step — after that the timer owns the motion. */
-    const unsigned int bit = nudge_bit(direction);
+    const unsigned int bit = director_move_bit(direction);
     if ((data->held & bit) == 0) {
       data->held |= bit;
       bool locked = false;
-      Object *camera = nudge_shot_camera(CTX_data_scene(C), &locked);
+      Object *camera = director_move_camera(CTX_data_scene(C), &locked);
       if (camera == data->camera && !locked) {
         nudge_apply(C, data, camera, bit, NUDGE_TAP_SECONDS);
       }
@@ -379,7 +294,7 @@ static wmOperatorStatus director_nudge_modal(bContext *C, wmOperator *op, const 
   }
   if (event->val == KM_RELEASE) {
     /* Releases are taken regardless of modifiers so a key can never stick. */
-    data->held &= ~nudge_bit(direction);
+    data->held &= ~director_move_bit(direction);
     if (data->held == 0) {
       data->idle_since = BLI_time_now_seconds();
     }
@@ -407,7 +322,7 @@ static void MIXAR_OT_director_nudge_camera(wmOperatorType *ot)
   RNA_def_enum(ot->srna,
                "direction",
                nudge_direction_items,
-               NUDGE_FORWARD,
+               DIRECTOR_MOVE_FORWARD,
                "Direction",
                "Direction the first press moves the camera in");
 }
@@ -422,6 +337,8 @@ void view3d_director_operatortypes()
 {
   WM_operatortype_append(MIXAR_OT_director_nudge_camera);
   WM_operatortype_append(MIXAR_OT_director_place_camera);
+  WM_operatortype_append(MIXAR_OT_director_scroll_cameras);
+  WM_operatortype_append(MIXAR_OT_director_walk);
 }
 
 /** \} */

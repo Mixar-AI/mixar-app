@@ -426,8 +426,14 @@ void add_actions(Layout *layout)
   top.scale_y_set(ROW_ACTION);
   add_action(&top, "MIXIE_CHAT_OT_open_dashboard", "Dashboard", MixarCardIcon::Grid,
              MixarCardElement::CardButton);
-  add_action(&top, "MIXAR_BYOK_OT_open_dialog", "AI Provider Settings", MixarCardIcon::Sliders,
-             MixarCardElement::CardButton);
+
+  /* Share the chat model picker's dialog and account state. Full width keeps
+   * the label readable; invoke is required because execute is a no-op. */
+  Layout &settings = grid.row(true);
+  settings.scale_y_set(ROW_ACTION);
+  settings.operator_context_set(wm::OpCallContext::InvokeDefault);
+  add_action(&settings, "MIXAR_BYOK_OT_open_dialog", "AI Provider Settings",
+             MixarCardIcon::Sliders, MixarCardElement::CardButton);
 
   Layout &bottom = grid.row(true);
   bottom.scale_y_set(ROW_ACTION);

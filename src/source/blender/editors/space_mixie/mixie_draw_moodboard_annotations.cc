@@ -14,6 +14,27 @@
 
 namespace blender::ed::mixie {
 
+/* Semicircle samples, built once. Each cap rotates this table by its start
+ * angle instead of calling cos/sin sixteen times per end per redraw. */
+struct CapUnitCircle {
+  float cos_v[17];
+  float sin_v[17];
+  CapUnitCircle()
+  {
+    for (int i = 0; i <= 16; i++) {
+      const float angle = float(M_PI) * float(i) / 16.0f;
+      cos_v[i] = std::cos(angle);
+      sin_v[i] = std::sin(angle);
+    }
+  }
+};
+
+static const CapUnitCircle &cap_unit_circle()
+{
+  static const CapUnitCircle circle;
+  return circle;
+}
+
 /* A connected ribbon keeps joins closed on every GPU backend. Separate outer
  * strips fade over one physical pixel; caps use the same coverage, without
  * overlapping translucent discs at every sampled point. */
@@ -65,9 +86,12 @@ static void draw_stroke_ribbon(const Vector<float2> &points,
   }
   const auto cap = [&](const float2 center, const float start) {
     constexpr int segments = 16;
+    const float start_cos = std::cos(start);
+    const float start_sin = std::sin(start);
+    const CapUnitCircle &circle = cap_unit_circle();
     const auto direction = [&](const int i) {
-      const float angle = start + float(M_PI) * float(i) / segments;
-      return float2(std::cos(angle), std::sin(angle));
+      return float2(start_cos * circle.cos_v[i] - start_sin * circle.sin_v[i],
+                    start_sin * circle.cos_v[i] + start_cos * circle.sin_v[i]);
     };
     immBegin(GPU_PRIM_TRIS, segments * 3);
     for (int i = 0; i < segments; i++) {

@@ -24,7 +24,7 @@ void agent_bubble_references_region_init(wmWindowManager *wm, ARegion *region)
   ui::region_handlers_add(&region->runtime->handlers);
   WM_event_add_dropbox_handler(
       &region->runtime->handlers,
-      WM_dropboxmap_find("Mixie Chat Footer", SPACE_MIXIE_CHAT, RGN_TYPE_TOOLS));
+      WM_dropboxmap_find("Agent Chat Composer", SPACE_AGENT_BUBBLE, RGN_TYPE_TOOLS));
 }
 
 namespace {

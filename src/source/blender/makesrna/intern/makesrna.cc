@@ -4200,16 +4200,11 @@ static void rna_generate(BlenderRNA *brna, FILE *f, const char *filename, const 
   fprintf(f, "#include \"RNA_prototypes.hh\"\n\n");
   fprintf(f, "#include \"rna_prototypes_gen.hh\"\n\n");
 
-  if (filename) {
+  /* Mixar's WM extension owns no structs: its runtime helpers belong only
+   * in rna_wm_gen.cc, alongside the Window/WindowManager property wrappers. */
+  if (filename && !STREQ(filename, "rna_wm_mixar.cc")) {
     fprintf(f, "#include \"%s\"\n", filename);
-    /* Mixar: rna_wm_mixar.cc adds properties to the Window struct
-     * defined in rna_wm.cc. Properties on Window are emitted into
-     * rna_wm_gen.cc, so its auto-generated wrappers need to see
-     * the helper functions defined in rna_wm_mixar.cc. Inject the
-     * include here so those helpers are visible. The helpers are
-     * ``static`` so the duplicate inclusion (in rna_wm_mixar_gen.cc
-     * too) doesn't cause linker conflicts. */
-    if (filename != nullptr && strcmp(filename, "rna_wm.cc") == 0) {
+    if (STREQ(filename, "rna_wm.cc")) {
       fprintf(f, "#include \"rna_wm_mixar.cc\"\n");
     }
   }

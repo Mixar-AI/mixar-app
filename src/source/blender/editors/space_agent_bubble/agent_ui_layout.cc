@@ -27,6 +27,8 @@
 #include "UI_mixar.hh"
 
 #include "agent_ui_layout.hh"
+#include "agent_ui_draw.hh"
+#include "BLI_string.h"
 #include "agent_ui_text.hh"
 #include "agent_ui_theme.hh"
 
@@ -85,7 +87,8 @@ struct TabMetric {
 const TabMetric g_tab_metrics[AGENT_TAB_COUNT] = {
     {AGENT_TAB_X_AGENT, AGENT_TAB_W_AGENT, "Agent"},
     {AGENT_TAB_X_3D, AGENT_TAB_W_3D, "3D"},
-    {AGENT_TAB_X_MEDIA, AGENT_TAB_W_MEDIA, "Media"},
+    {AGENT_TAB_X_IMAGE, AGENT_TAB_W_IMAGE, "Image"},
+    {AGENT_TAB_X_VIDEO, AGENT_TAB_W_VIDEO, "Video"},
     {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, "Gaussian Splat"},
     {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, "Library"},
     {AGENT_TAB_X_QUEUE, AGENT_TAB_W_QUEUE, "Queue"},
@@ -147,6 +150,11 @@ float agent_ui_composer_strip_h(const int visual_lines)
   return float(AGENT_INPUT_H * lines);
 }
 
+float agent_ui_panel_top(const AgentTabId tab)
+{
+  return tab == AGENT_TAB_AGENT ? float(AGENT_PANEL_Y) : float(AGENT_CARD_Y + 12);
+}
+
 void agent_ui_layout_build(const int window_w,
                            const int window_h,
                            AgentTabId active_tab,
@@ -184,6 +192,7 @@ void agent_ui_layout_build(const int window_w,
    * derived from it so the pad re-flows instead of overflowing. */
   const float island_w = pad ? (region_w / u) : float(AGENT_ISLAND_W);
   const float card_w = island_w - AGENT_CARD_X * 2.0f;
+  const float panel_y = agent_ui_panel_top(active_tab);
   const float panel_w = card_w - (AGENT_PANEL_X - AGENT_CARD_X) * 2.0f;
   /* Artboard y that sits at the window's top edge: the tab strip normally;
    * the pad has no strip and starts just above its card. */
@@ -197,7 +206,7 @@ void agent_ui_layout_build(const int window_w,
    * stretches with the window, so a compact default shorter than the
    * 521-unit artboard is valid — requiring AGENT_ISLAND_H painted the
    * island black and hid every tab/chip. Same floor as the Scribble pad. */
-  const float min_h = (AGENT_PANEL_Y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
+  const float min_h = (panel_y - top_du + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
                        AGENT_CARD_PAD_BOTTOM) *
                       u;
   if (pad) {
@@ -330,8 +339,12 @@ void agent_ui_layout_build(const int window_w,
   r_layout->hdr_history = f.disc(AGENT_HDR_BTN1_CX, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_new_chat = f.disc(AGENT_HDR_BTN2_CX, hdr_cy, AGENT_HDR_BTN_R);
   r_layout->hdr_checkpoints = f.disc(AGENT_HDR_BTN3_CX, hdr_cy, AGENT_HDR_BTN_R);
+  r_layout->hdr_rules = f.disc(AGENT_HDR_BTN4_CX, hdr_cy, AGENT_HDR_BTN_R);
 
-  r_layout->hdr_title_cx = f.x(AGENT_CARD_X + card_w * 0.5f);
+  const float handwriting_cx = AGENT_CARD_X + card_w - AGENT_SEG_X - AGENT_HDR_BTN_R;
+  r_layout->hdr_handwriting = f.disc(handwriting_cx, hdr_cy, AGENT_HDR_BTN_R);
+  r_layout->hdr_title_cx = (r_layout->hdr_rules.xmax +
+                            r_layout->hdr_handwriting.xmin) * 0.5f;
   r_layout->hdr_title_y = f.y(AGENT_CARD_Y + AGENT_CARD_HEADER_H * 0.5f);
 
   /* --- Inner panel, and the stack that hangs off the card's foot --- */
@@ -340,8 +353,8 @@ void agent_ui_layout_build(const int window_w,
    * has at the sides (artboard: card ends 569, panel 563). Mirroring the
    * card-top offset here instead left a 76-unit band of bare card gradient
    * under every pane — the "green strip" under the prompt box. */
-  const float panel_h = card_bottom - AGENT_PANEL_Y - (AGENT_PANEL_X - AGENT_CARD_X);
-  r_layout->panel = f.box(AGENT_PANEL_X, AGENT_PANEL_Y, panel_w, panel_h);
+  const float panel_h = card_bottom - panel_y - (AGENT_PANEL_X - AGENT_CARD_X);
+  r_layout->panel = f.box(AGENT_PANEL_X, panel_y, panel_w, panel_h);
 
   const float chip_y = card_bottom - AGENT_CARD_PAD_BOTTOM - AGENT_CHIP_H;
 
@@ -358,15 +371,15 @@ void agent_ui_layout_build(const int window_w,
    * prompts to a single line. */
   const float strip_h = agent_ui_composer_strip_h(input_lines);
   const float input_y = has_transcript ? (chip_y - AGENT_INPUT_GAP - strip_h) :
-                                         AGENT_PANEL_Y;
+                                         panel_y;
   r_layout->input = f.box(input_x,
                           input_y,
                           input_w,
                           chip_y - AGENT_INPUT_GAP - input_y);
   r_layout->transcript = f.box(AGENT_PANEL_X,
-                               AGENT_PANEL_Y,
+                               panel_y,
                                panel_w,
-                               input_y - AGENT_TRANSCRIPT_GAP - AGENT_PANEL_Y);
+                               input_y - AGENT_TRANSCRIPT_GAP - panel_y);
   r_layout->prompt_x = f.x(AGENT_PROMPT_X);
   /* Optical centre of the first line's ink box, not its baseline — the
    * painter centres every label the same way. */
@@ -374,38 +387,78 @@ void agent_ui_layout_build(const int window_w,
 
   /* --- Chip row ---
    * The mode toggle is gone (there is only Agent mode), so Upload Reference
-   * takes the row's left edge where the toggle sat. */
-  auto chip_extra = [&](const char *label, const float base_w) {
-    return std::max(0.0f, ui::mixar_text_width(label, text_size) / u + AGENT_CHIP_ICON +
-                             3.0f * AGENT_CHIP_ICON_GAP + 2.0f / u - base_w);
-  };
-  const float upload_extra = chip_extra("Upload Reference", AGENT_CHIP_UPLOAD_W);
-  const float scribble_extra = chip_extra("Scribble", AGENT_CHIP_SCRIBBLE_W);
-  const float voice_extra = chip_extra("Listening", AGENT_CHIP_VOICE_W);
-  const float row_extra = upload_extra + scribble_extra + voice_extra;
-  const float row_base = AGENT_CHIP_UPLOAD_W + AGENT_CHIP_SCRIBBLE_W + AGENT_CHIP_VOICE_W +
-                         AGENT_CHIP_READING_W + AGENT_CHIP_CLEAR_W + 5.0f * AGENT_CHIP_GAP;
-  const float row_spare = std::max(
-      0.0f, card_w - 2.0f * AGENT_SEG_X - AGENT_BTN_GENERATE_W - row_base);
-  const float row_growth = row_extra > 0.0f ? std::min(1.0f, row_spare / row_extra) : 0.0f;
-  const float upload_w = AGENT_CHIP_UPLOAD_W + upload_extra * row_growth;
-  const float scribble_w = AGENT_CHIP_SCRIBBLE_W + scribble_extra * row_growth;
-  const float voice_w = AGENT_CHIP_VOICE_W + voice_extra * row_growth;
-  r_layout->chip_upload = f.box(AGENT_SEG_X, chip_y, upload_w, AGENT_CHIP_H);
-  const float scribble_x = AGENT_SEG_X + upload_w + AGENT_CHIP_GAP;
-  r_layout->chip_scribble = f.box(scribble_x, chip_y, scribble_w, AGENT_CHIP_H);
-  const float voice_x = scribble_x + scribble_w + AGENT_CHIP_GAP;
-  r_layout->chip_voice = f.box(voice_x, chip_y, voice_w, AGENT_CHIP_H);
-  const float reading_x = voice_x + voice_w + AGENT_CHIP_GAP;
-  r_layout->chip_reading = f.box(reading_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
-  r_layout->chip_clear = f.box(
-      reading_x + AGENT_CHIP_READING_W + AGENT_CHIP_GAP, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);
+   * takes the row's left edge where the toggle sat. Left to right: Upload
+   * Reference, Scribble, Voice, Auto, Model, then the two conditional
+   * Scribble chips; Send is pinned to the right inset. */
+  const float scribble_x = AGENT_SEG_X + AGENT_CHIP_UPLOAD_W + AGENT_CHIP_GAP;
+  r_layout->chip_upload = f.box(AGENT_SEG_X, chip_y, AGENT_CHIP_UPLOAD_W, AGENT_CHIP_H);
+  r_layout->chip_scribble = f.box(scribble_x, chip_y, AGENT_CHIP_SCRIBBLE_W, AGENT_CHIP_H);
+  r_layout->chip_voice = f.box(scribble_x, chip_y, AGENT_CHIP_VOICE_W, AGENT_CHIP_H);
+  r_layout->chip_auto = f.box(scribble_x, chip_y, AGENT_CHIP_AUTO_W, AGENT_CHIP_H);
+  r_layout->chip_model = f.box(scribble_x, chip_y, AGENT_CHIP_MODEL_W, AGENT_CHIP_H);
+  r_layout->model_form = AgentModelChipForm::Full;
+  r_layout->chip_reading = f.box(scribble_x, chip_y, AGENT_CHIP_READING_W, AGENT_CHIP_H);
+  r_layout->chip_clear = f.box(scribble_x, chip_y, AGENT_CHIP_CLEAR_W, AGENT_CHIP_H);
   /* Generate keeps the artboard's right inset against whatever card width
    * this layout has (AGENT_BTN_GENERATE_X generalised to `card_w`). */
   r_layout->btn_generate = f.box(card_w - AGENT_SEG_X - AGENT_BTN_GENERATE_W,
                                  chip_y,
                                  AGENT_BTN_GENERATE_W,
                                  AGENT_CHIP_H);
+}
+
+/* Measure every form of every chip actually shown — Done, the drawing intent,
+ * Voice's Stop/ECG or status, a long model name — and let #agent_chip_fit pick
+ * the forms, so the row never runs under Send. See agent_ui_chip_fit.hh. */
+void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandState &state)
+{
+  const float u = layout.scale;
+  const float size = AGENT_CHIP_FONT * agent_ui_text_unit();
+  const float gap = AGENT_CHIP_GAP * u;
+
+  AgentChipRowInputs in;
+  in.scribble_available = state.scribble_available;
+  in.scribble_armed = state.scribble_armed;
+  in.mark_count = state.mark_count;
+  in.mark_intent = state.mark_intent;
+  in.voice_available = state.voice_available;
+  in.voice_listening = state.voice_listening;
+  in.voice_capturing = state.voice_capturing;
+  in.voice_status = state.voice_status;
+  in.model_available = state.model_available;
+  in.model_label = state.model_label;
+  const AgentChipMetrics metrics{AGENT_CHIP_ICON * u,
+                                 AGENT_CHIP_ICON_GAP * u,
+                                 AGENT_CHIP_PAD_X * u,
+                                 AGENT_SWITCH_W * u,
+                                 AGENT_CHIP_CLEAR_W * u,
+                                 AGENT_CHIP_WAVE_W * u,
+                                 size};
+  AgentChipForms chips[AGENT_CHIP_SLOT_COUNT];
+  agent_chip_forms(
+      in, metrics, [&](const char *label) { return ui::mixar_text_width(label, size); }, chips);
+
+  const float span = layout.btn_generate.xmin - layout.chip_upload.xmin;
+  const AgentChipFit fit = agent_chip_fit(chips, span, gap);
+  layout.compact_reference = fit.compact_reference;
+  std::copy_n(fit.form, int(AGENT_CHIP_SLOT_COUNT), layout.chip_form);
+  const int model_form = fit.form[AGENT_CHIP_SLOT_MODEL];
+  layout.model_form = model_form < 3 ? AgentModelChipForm(model_form) : AgentModelChipForm::Icon;
+
+  float x = layout.chip_upload.xmin;
+  auto place = [&](rctf &rect, const float w) {
+    if (w <= 0) { rect = {}; return; }
+    rect.xmin = x;
+    rect.xmax = x + w;
+    x += w + gap;
+  };
+  place(layout.chip_upload, fit.width[AGENT_CHIP_SLOT_UPLOAD]);
+  place(layout.chip_scribble, fit.width[AGENT_CHIP_SLOT_SCRIBBLE]);
+  place(layout.chip_voice, fit.width[AGENT_CHIP_SLOT_VOICE]);
+  place(layout.chip_auto, fit.width[AGENT_CHIP_SLOT_AUTO]);
+  place(layout.chip_model, fit.width[AGENT_CHIP_SLOT_MODEL]);
+  place(layout.chip_reading, fit.width[AGENT_CHIP_SLOT_READING]);
+  place(layout.chip_clear, fit.width[AGENT_CHIP_SLOT_CLEAR]);
 }
 
 /** \} */

@@ -2,13 +2,16 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Texture-painting spaces are workspace layout, not Editor Type items.
+"""Texture-painting spaces are switchable editors under their own heading.
 
-The five Mixar texturing editors stay registered — saved screens and
-Python ``bl_space_type`` depend on the identifiers — but they must not
-appear in the generic space switcher. Zen Mode and Cinema Mode keep their
-chrome off that menu the same way; dumping "Texturing Layers" next to
-"3D Viewport" let users replace any editor with a side panel.
+Every editor in the Texturing workspace has to stay swappable, so each of
+the five Mixar texturing spaces keeps the stock Editor Type dropdown in its
+header and is offered in that menu — grouped under a "Texturing" heading
+rather than scattered through "General". Only the Agent Bubble, top bar and
+status bar stay off the menu: those are not editors a user can switch to.
+
+The 3D viewport on those workspaces keeps Blender's full header too; the
+floating glass shading strip is Zen Mode's alone.
 
 ``bpy`` is a MagicMock in this suite, so these are source-level contracts.
 """
@@ -23,6 +26,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "src" / "scripts"
 RNA_SCREEN = ROOT / "src/source/blender/makesrna/intern/rna_screen.cc"
 RNA_SPACE = ROOT / "src/source/blender/makesrna/intern/rna_space.cc"
+ZEN_CHROME = ROOT / (
+    "src/source/blender/editors/interface/interface_mixar_zen_chrome.cc"
+)
 HEADER_FILTER = (
     SCRIPTS / "mixar" / "modules" / "workflow" / "ui" / "headers" /
     "view3d_header_filter.py"
@@ -69,20 +75,39 @@ def _itemf_skip_list(source: str) -> str:
     return body[elem:end]
 
 
-def test_texturing_spaces_are_skipped_in_the_editor_type_menu():
+def _space_type_enum(source: str) -> str:
+    start = source.index("const EnumPropertyItem rna_enum_space_type_items[] = {")
+    return source[start:source.index("\n};", start)]
+
+
+def test_texturing_spaces_are_offered_in_the_editor_type_menu():
     skip = _itemf_skip_list(_read(RNA_SCREEN))
     for space in TEXTURING_SPACES:
-        assert space in skip, f"{space} is still offered in the Editor Type menu"
-    for space in ("SPACE_TOPBAR", "SPACE_STATUSBAR", "SPACE_AGENT_BUBBLE"):
-        assert space in skip
+        assert space not in skip, f"{space} is still hidden from the Editor Type menu"
 
 
-def test_moodboard_and_chat_stay_in_the_editor_type_menu():
-    """Those are first-class editors, not Texturing workspace layout."""
+def test_only_non_editor_spaces_stay_off_the_editor_type_menu():
+    """Top bar, status bar and the Agent Bubble are never switchable."""
     skip = _itemf_skip_list(_read(RNA_SCREEN))
     tokens = set(re.findall(r"SPACE_[A-Z0-9_]+", skip))
-    assert "SPACE_MIXIE" not in tokens
-    assert "SPACE_MIXIE_CHAT" not in tokens
+    assert tokens == {"SPACE_TOPBAR", "SPACE_STATUSBAR", "SPACE_AGENT_BUBBLE"}
+
+
+def test_texturing_spaces_sit_under_their_own_menu_heading():
+    """A "Texturing" heading groups all five, after General's entries."""
+    enum = _space_type_enum(_read(RNA_SPACE))
+    heading = 'RNA_ENUM_ITEM_HEADING(N_("Texturing"), nullptr)'
+    assert heading in enum
+    section = enum[enum.index(heading):]
+    # The section ends at the next heading.
+    next_heading = section.index("RNA_ENUM_ITEM_HEADING", 1)
+    section = section[:next_heading]
+    for space in TEXTURING_SPACES:
+        assert space in section, f"{space} is not under the Texturing heading"
+    # Headings the texturing block must not be folded back into.
+    general = enum[enum.index('RNA_ENUM_ITEM_HEADING(N_("General")'):enum.index(heading)]
+    for space in TEXTURING_SPACES:
+        assert space not in general
 
 
 def test_texturing_spaces_stay_registered_in_the_static_enum():
@@ -98,63 +123,58 @@ def test_texturing_spaces_stay_registered_in_the_static_enum():
         assert identifier in enum
 
 
-def test_texturing_headers_do_not_draw_the_space_switcher():
+def test_texturing_headers_draw_the_space_switcher():
     for path in HEADER_FILES:
         src = _read(path)
-        assert "layout.template_header(" not in src, (
-            f"{path.name} still calls template_header(), which would put "
-            "the stock Editor Type dropdown back on a dedicated panel"
+        assert "layout.template_header()" in src, (
+            f"{path.name} lost template_header(), so that editor can no "
+            "longer be switched to another space"
         )
 
 
-def test_texturing_headers_keep_a_title_instead_of_the_switcher():
+def test_texturing_headers_keep_a_title_beside_the_switcher():
     for path, title in zip(HEADER_FILES, HEADER_TITLES, strict=True):
-        assert title in _read(path), f"{path.name} lost its Mixar title chrome"
+        src = _read(path)
+        assert title in src, f"{path.name} lost its Mixar title chrome"
+        assert src.index("layout.template_header()") < src.index(title), (
+            f"{path.name} draws its title before the Editor Type dropdown"
+        )
 
 
-def test_texturing_workspace_names_match_the_analytics_allowlist():
+def test_texturing_workspace_names_stay_on_the_analytics_allowlist():
     from mixar.modules.common.analytics import constants as analytics
-    from mixar.modules.workflow.constants import TEXTURING_WORKSPACE_NAMES
 
-    assert TEXTURING_WORKSPACE_NAMES == frozenset({"Texturing", "Texture Paint"})
-    assert TEXTURING_WORKSPACE_NAMES <= analytics.WORKSPACE_NAME_ALLOWLIST
+    assert {"Texturing", "Texture Paint"} <= analytics.WORKSPACE_NAME_ALLOWLIST
 
 
-def test_texturing_viewport_header_uses_zen_shading_strip():
-    """The 3D header on Texturing matches Zen's glass shading strip.
+def test_texturing_viewport_keeps_the_stock_blender_header():
+    """Only Zen Mode replaces VIEW3D_HT_header with the glass strip.
 
-    Paint/brush chrome stays on the stock tool-header and toolbar — those
-    patches remain Zen-only. The four shading icons sit on a Zen aligned
-    row so they share the Move/Rotate/Scale PILL pane; VIEW3D_PT_shading
-    stays outside that group.
+    Texturing is an Engine workspace: its 3D viewport needs the Editor Type
+    dropdown, the menus and the mode selector, so the patch defers to the
+    original draw there.
     """
     src = _read(HEADER_FILTER)
     header = src.split("def _patched_header_draw", 1)[1].split(
-        "def _patched_tool_header_draw", 1
-    )[0]
-    tool_header = src.split("def _patched_tool_header_draw", 1)[1].split(
         "def _tool_helper", 1
     )[0]
-    toolbar = src.split("def _patched_tools_active_draw", 1)[1].split(
-        "def install_view3d_header_filter", 1
-    )[0]
 
-    assert "_uses_mixar_viewport_header(context)" in header
-    assert "template_header" not in header
+    assert "if not _is_basic_workspace(context):" in header
+    assert "_original_header_draw(self, context)" in header
+    assert "_uses_mixar_viewport_header" not in src
+    assert "_is_texturing_workspace" not in src
+    assert "TEXTURING_WORKSPACE_NAMES" not in src
+    # The Zen strip itself is unchanged: RNA owns engine filtering, enum
+    # descriptions and native selection.
     assert 'cluster.mixar_surface(theme="ZEN")' in header
-    # RNA owns engine filtering, enum descriptions and native selection.
     assert 'row.prop(shading, "type", text="", expand=True)' in header
     assert '"wm.context_set_enum"' not in header
     assert "_ZEN_SHADING_TYPES" not in src
-    assert 'popover(panel="VIEW3D_PT_shading", text="")' in header
+    assert 'popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")' in header
     assert "VIEWPORT_PILL" not in header
-    assert "_is_basic_workspace(context)" in tool_header
-    assert "_uses_mixar_viewport_header" not in tool_header
-    assert "_is_basic_workspace(context)" in toolbar
-    assert "_uses_mixar_viewport_header" not in toolbar
 
 
-def test_mixar_viewport_header_covers_zen_and_texturing():
+def test_mixar_viewport_header_is_zen_only():
     from mixar.modules.workflow.ui.headers import view3d_header_filter as HEADER
 
     zen = SimpleNamespace(workspace=SimpleNamespace(name="Zen Mode"))
@@ -163,13 +183,27 @@ def test_mixar_viewport_header_covers_zen_and_texturing():
     layout = SimpleNamespace(workspace=SimpleNamespace(name="Layout"))
     missing = SimpleNamespace(workspace=None)
 
-    assert HEADER._uses_mixar_viewport_header(zen) is True
-    assert HEADER._uses_mixar_viewport_header(texturing) is True
-    assert HEADER._uses_mixar_viewport_header(paint) is True
-    assert HEADER._uses_mixar_viewport_header(layout) is False
-    assert HEADER._uses_mixar_viewport_header(missing) is False
+    assert HEADER._is_basic_workspace(zen) is True
     assert HEADER._is_basic_workspace(texturing) is False
-    assert HEADER._is_texturing_workspace(zen) is False
+    assert HEADER._is_basic_workspace(paint) is False
+    assert HEADER._is_basic_workspace(layout) is False
+    assert HEADER._is_basic_workspace(missing) is False
+
+
+def test_only_zen_floats_its_viewport_chrome():
+    """The C++ bed must not clear the Texturing header transparent.
+
+    A transparent clear plus forced region overlap is what turned that
+    header into a floating strip; with the full header back it has to stay
+    on the stock opaque path.
+    """
+    chrome = _read(ZEN_CHROME)
+    predicate = chrome.split(
+        "static bool mixar_workspace_name_floats_viewport_chrome", 1
+    )[1].split("}", 1)[0]
+    assert 'STREQ(name, "Zen Mode")' in predicate
+    assert "Texturing" not in predicate
+    assert "Texture Paint" not in predicate
 
 
 def test_zen_workspace_load_does_not_coerce_shading_type():

@@ -104,6 +104,9 @@ bool UI_mixar_card_element_is_button(MixarCardElement element);
  */
 void UI_mixar_cinema_row_tag(Button *but, MixarCinemaRowKind kind);
 
+/** Style the last item in this layout with the Cinema popup row painter. */
+void UI_layout_mixar_cinema_row(Layout *layout, MixarCinemaRowKind kind);
+
 /**
  * Mark the operator button \a but so that a double-click or Ctrl+click on
  * it starts editing the no-emboss Text button under the cursor instead

@@ -20,6 +20,10 @@ def _read(relative: str) -> str:
     return (DIRECTOR / relative).read_text(encoding="utf-8")
 
 
+def _read_cc(relative: str) -> str:
+    return (VIEW3D / relative).read_text(encoding="utf-8")
+
+
 def test_director_state_is_persistent_but_session_flag_is_not():
     source = _read("ui/properties/director_properties.py")
 
@@ -33,8 +37,12 @@ def test_camera_beats_key_native_data_and_pack_stills():
     capture = _read("core/capture.py")
     media_import = MOODBOARD_IMPORT.read_text(encoding="utf-8")
 
-    assert 'camera.keyframe_insert(data_path="location"' in capture
-    assert 'camera.data.keyframe_insert(data_path="lens"' in capture
+    # Through the one keying contract (`core/keying.py`), which owns the
+    # channel list a beat and its retime both depend on.
+    assert "key_camera_pose(camera, frame)" in capture
+    keying = _read("core/keying.py")
+    assert 'camera.keyframe_insert(data_path="location"' in keying
+    assert 'camera.data.keyframe_insert(data_path="lens"' in keying
     assert "repair_rotation_continuity(camera)" in capture
     assert "bpy.ops.render.opengl" in capture
     # Capture packs the still into the blend but never boards it — stills reach
@@ -57,7 +65,12 @@ def test_rotation_continuity_is_repaired_on_every_key_writing_path():
     # every action that evaluates an in-between camera pose.
     assert capture.count("repair_rotation_continuity(camera)") == 2
     assert "repair_rotation_continuity(shot.camera)" in preview
+    # The render job serves shots AND bare animated cameras through one
+    # RenderTarget, but only the SHOT starter repairs its camera: a bare
+    # Export-to-Moodboard camera is the user's own animation and a render
+    # button must never rewrite its keys.
     assert "repair_rotation_continuity(shot.camera)" in render
+    assert "repair_rotation_continuity(target.camera)" not in render
     assert "repair_rotation_continuity(shot.camera)" in shot_api
     # Character Turn presets key through matrix_world too (a 90 degree turn
     # must never play as a 270 degree spin the other way).
@@ -76,18 +89,26 @@ def test_video_handoff_remains_catalog_driven_and_provider_neutral():
     handoff = _read("core/handoff.py")
 
     assert "get_video_generation_limits" in handoff
-    # Tab labels are catalog-driven: the handoff must resolve the Video
-    # Gen tab's current category through get_tab_category("video_gen")
-    # with the literal only as the offline fallback.
-    assert 'get_tab_category("video_gen", "Video Gen")' in handoff
-    assert "region.active_panel_category = category" in handoff
+    assert "agent_bubble_open_window()" in handoff
+    assert "wm.mixar_bubble_tab = 'VIDEO'" in handoff
+    assert "active_panel_category" not in handoff
     assert "seedance" not in handoff.lower()
 
 
 def test_director_has_no_n_panel_implementation():
+    """The DIRECTING surface is native; no Python panel duplicates it.
+
+    Scope is the Director viewport experience. The camera-first Export to
+    Moodboard popup is deliberately NOT part of it — it exists for users who
+    never enter Director, is hosted in the topbar (`TOPBAR`/`HEADER`, drawn
+    only when `wm.call_panel` opens it) and is asserted below to never reach
+    a View3D region. Everything else stays native.
+    """
     panel_path = DIRECTOR / "ui/panels/director_panel.py"
     python_sources = "\n".join(
-        path.read_text(encoding="utf-8") for path in DIRECTOR.rglob("*.py")
+        path.read_text(encoding="utf-8")
+        for path in DIRECTOR.rglob("*.py")
+        if "camera_export" not in path.name
     )
 
     assert not panel_path.exists()
@@ -99,6 +120,14 @@ def test_director_has_no_n_panel_implementation():
     # Every popup is native now; no Python panel/popover survives.
     assert not (DIRECTOR / "ui/panels/render_popover.py").exists()
     assert "bl_region_type = 'HEADER'" not in python_sources
+
+    # The one Python panel in the module is the camera export popup, and it
+    # must stay out of the viewport that the native surface owns.
+    export_panel = (
+        DIRECTOR / "ui/panels/camera_export_panel.py"
+    ).read_text(encoding="utf-8")
+    assert "bl_space_type = 'TOPBAR'" in export_panel
+    assert "VIEW_3D" not in export_panel
 
 
 def test_incremental_install_cannot_retain_removed_director_panel():
@@ -181,8 +210,20 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
     )
     assert "MIXAR_OT_director_send_keyframes" in popup_render
     surface = _native_surface()
-    assert "MIXAR_OT_director_toggle_timeline" in surface
-    assert "MIXAR_OT_director_toggle_immersive" in surface
+    # The dock's quiet icon row is gone (collapse timeline, immersive,
+    # explore, add-camera). The timeline stays open, so collapse survives
+    # only as the compact rail's recovery button for a file saved while it
+    # was collapsed; immersive and explore are reachable from the rail and
+    # the search, not from the designed dock.
+    dock = (VIEW3D / "view3d_director_cinema_dock.cc").read_text(encoding="utf-8")
+    for gone in (
+        "MIXAR_OT_director_toggle_timeline",
+        "MIXAR_OT_director_toggle_immersive",
+        "MIXAR_OT_director_explore",
+        "MIXAR_OT_director_new_shot",
+    ):
+        assert gone not in dock, gone
+    assert "MIXAR_OT_director_toggle_timeline" in overlay
     assert "mixar.director_pick_camera" in surface_ops
     assert "mixar.director_set_active_shot" in surface_ops
     assert "mixar.director_open_editor" not in surface_ops
@@ -213,11 +254,18 @@ def test_native_surface_uses_timeline_camera_dropdown_without_top_switcher():
     assert '"MIXAR_OT_director_new_shot"' in surface
     assert '"MIXAR_OT_director_start"' in surface
     assert "mixar.director_pick_camera" in surface_ops
-    assert "latest_shot_index_for_camera" in surface_ops
+    # The never-reassign rule moved into `core/shot_api.adopt_camera`, so the
+    # row click and entering Cinema Mode adopt a camera the same way.
+    assert "adopt_camera(scene, camera)" in surface_ops
+    shot_api = _read("core/shot_api.py")
+    assert "latest_shot_index_for_camera(state, camera)" in shot_api.split(
+        "def adopt_camera("
+    )[1]
     assert "view3d_director_active_shot_pointer" in state
-    assert "enter_camera_view(context or bpy.context, camera, remember=False)" in properties
+    updates = _read("core/property_updates.py")
+    assert "enter_camera_view(context or bpy.context, camera, remember=False)" in updates
     assert "update=_on_active_shot_change" in properties
-    assert "scope_preview_range(scene, shot)" in properties
+    assert "release_preview_range(scene)" in updates
 
 
 def test_native_timeline_tracks_playback_and_real_beat_span():
@@ -247,12 +295,16 @@ def test_native_timeline_has_flow_style_strip_drag_and_horizontal_zoom():
     interaction = (
         VIEW3D / "view3d_director_timeline_interaction.cc"
     ).read_text(encoding="utf-8")
+    # The ruler and playhead have their own translation unit (500-line rule).
+    timeline_ruler = (
+        VIEW3D / "view3d_director_timeline_ruler.cc"
+    ).read_text(encoding="utf-8")
     timeline_ops = _read("ui/operators/timeline_ops.py")
     timeline_core = _read("core/timeline.py")
 
     assert "STRIP_COLOR" in timeline_draw
-    assert "major_tick_seconds" in timeline_draw
-    assert 'BLI_snprintf(label, sizeof(label), "%.2f", seconds)' in timeline_draw
+    assert "major_tick_frames" in timeline_ruler
+    assert 'BLI_snprintf(label, sizeof(label), "%.2f", seconds)' in timeline_ruler
     assert "ICON_CAMERA_DATA" in timeline_draw
     assert "MOUSEZOOM" in interaction
     assert "MOUSEPAN" in interaction
@@ -350,10 +402,13 @@ def test_orphaned_keyframes_prune_when_native_keys_deleted_elsewhere():
     # they must request reconciliation explicitly or a natively keyed
     # camera keeps an empty strip until an unrelated edit ticks the watcher.
     assert "def request_reconcile" in beat_sync
+    # The callbacks live in core/property_updates.py (500-line rule); the
+    # declarations that wire them up stay in the properties module.
+    updates = _read("core/property_updates.py")
     properties = _read("ui/properties/director_properties.py")
     # One definition plus the three switch paths: shot activation, camera
     # assignment, and directing entry.
-    assert properties.count("_request_beat_reconcile()") == 4
+    assert updates.count("_request_beat_reconcile()") == 4
     assert "update=_on_directing_update" in properties
 
 
@@ -367,16 +422,18 @@ def test_camera_switches_hand_the_selection_to_the_new_camera():
     Animation presets).
     """
     viewport = _read("core/viewport.py")
-    properties = _read("ui/properties/director_properties.py")
+    updates = _read("core/property_updates.py")
     session = _read("ui/operators/session_ops.py")
 
     assert "def select_camera_object" in viewport
     # Precise mode reuses the one selection helper.
     assert "select_camera_object(context, camera)" in viewport
     # Both switch callbacks select, gated on an active directing session.
-    assert properties.count("select_camera_object(") == 2
-    # Session entry selects explicitly: is_directing is still False there.
-    assert session.count("select_camera_object(") == 3
+    assert updates.count("select_camera_object(") == 2
+    # Session entry selects explicitly: the import, plus every entry
+    # operator that puts the view into a camera — Cinema Mode, Start
+    # Directing, New Shot and New Take.
+    assert session.count("select_camera_object(") == 4
     # enter_camera_view runs on every capture — it never touches selection.
     enter_view = viewport.split("def enter_camera_view", 1)[1]
     enter_view = enter_view.split("\ndef ", 1)[0]
@@ -389,8 +446,37 @@ def test_capture_shortcut_survives_gui_keyconfig_reload():
     assert 'keyconfigs", None), "addon"' in keymap
     assert 'name="3D View"' in keymap
     assert '"mixar.director_capture_beat"' in keymap
-    assert "type='F'" in keymap
     assert "head=True" in keymap
+
+
+def test_capture_is_bound_to_i_in_a_keymap_dispatched_before_object_mode():
+    """Insert Keyframe is I, and I is taken.
+
+    Blender's default keymap gives I to ``anim.keyframe_insert`` in "Object
+    Mode", and View3D walks its WINDOW handlers head to tail: mode keymaps,
+    then "3D View Generic", then "3D View". An item parked only in "3D View"
+    would never be asked, so the capture is registered in the same two keymaps
+    as the Aerial toggle ("Object Mode" + "3D View").
+    """
+    keymap = _read("ui/keymap.py")
+
+    block = keymap.split('"mixar.director_capture_beat"', 1)[1]
+    block = block.split("addon_keymaps.append", 1)[0]
+    assert "type='I'" in block
+    assert "type='F'" not in keymap
+
+    # The loop it is registered through must be the one covering Object Mode.
+    preamble = keymap.split('"mixar.director_capture_beat"', 1)[0]
+    loop = preamble.rsplit("for keymap_name", 1)[1]
+    assert "_NAVIGATE_KEYMAPS" in loop
+    assert '("Object Mode"' in keymap
+
+
+def test_the_keycap_hint_matches_the_live_binding():
+    """A painted hint is a promise; never paint a key the keymap does not bind."""
+    top = _read_cc("view3d_director_cinema_top.cc")
+    assert '{0.0f, {"I"}, 1, "Insert keyframe", false}' in top
+    assert '{"F"}' not in top
 
 
 def test_capture_still_works_on_video_output_scenes():
@@ -449,8 +535,19 @@ def test_navigate_supervises_walk_for_esc_and_cursor_reset():
     camera_ops = _read("ui/operators/camera_ops.py")
     viewport = _read("core/viewport.py")
 
+    # Explore flies the VIEWPORT, so it keeps Blender's own walk; the Cinema
+    # walk drives the shot camera and is native
+    # (tests/director/test_cinema_walk.py).
     assert "return bpy.ops.view3d.walk('INVOKE_DEFAULT'), target" in viewport
-    assert '"VIEW3D_OT_walk"' in camera_ops
+    assert "return bpy.ops.mixar.director_walk('INVOKE_DEFAULT'), target" in viewport
+    assert 'WALK_OPERATOR = "MIXAR_OT_director_walk"' in viewport
+    assert 'NATIVE_WALK_OPERATOR = "VIEW3D_OT_walk"' in viewport
+    # Each supervisor watches the walk it actually started. Watching the
+    # other one reads as "already finished" on the first modal event, and
+    # the supervisor tears the session down under a running walk.
+    assert "_walk_operator = WALK_OPERATOR" in camera_ops
+    assert "_walk_operator = NATIVE_WALK_OPERATOR" in camera_ops
+    assert "modal_operators.get(operator)" in camera_ops
     assert "modal_operators" in camera_ops
     assert "'ESC'" in camera_ops
     assert "_exit_pose" in camera_ops
@@ -472,9 +569,9 @@ def test_directing_absorbs_object_editing_shortcuts():
     sees a key an earlier one binds. Every guard must therefore live in the
     keymap that dispatches first for its key, and all of them are poll-gated
     on ``is_directing`` so each key falls back to its native meaning the
-    moment the Director surface closes. Director binds no ``N``/``O``
-    shortcuts: they can never win against those earlier keymaps, so the
-    buttons carry no key hints either.
+    moment the Director surface closes. ``N`` stays guarded: walking is on
+    Blender's own ``Shift``+`` ` `` instead, because N is the sidebar and a
+    key that universal is not one a mode may take.
     """
     keymap = _read("ui/keymap.py")
     camera_ops = _read("ui/operators/camera_ops.py")
@@ -513,7 +610,7 @@ def test_cinema_mode_pill_sits_in_the_topbar_right_region():
     misses.
     """
     header = _read("ui/headers/director_header.py")
-    properties = _read("ui/properties/director_properties.py")
+    updates = _read("core/property_updates.py")
 
     assert "TOPBAR_HT_upper_bar" in header
     assert "TOPBAR_MT_editor_menus" not in header
@@ -523,7 +620,7 @@ def test_cinema_mode_pill_sits_in_the_topbar_right_region():
     assert "mixar.director_enter" in header
     assert "mixar.director_finish" in header
     assert "_move_profile_chip_last" in header
-    assert '"global_areas"' in properties
+    assert '"global_areas"' in updates
 
 
 def test_tool_rail_has_accent_highlight_and_grouping():
@@ -774,37 +871,58 @@ def test_director_native_files_follow_the_module_size_limit():
         assert len(path.read_text(encoding="utf-8").splitlines()) <= 500, path.name
 
 
-def test_camera_nudge_keys_beat_the_eyedropper_and_the_block_guard():
-    """W/A/S/D/Q/E move the shot camera, and only inside Cinema Mode.
+def test_the_walk_keys_are_absorbed_rather_than_left_to_blender():
+    """W/A/S/D/Q/E do NOTHING in Cinema Mode until a walk is running.
 
-    The hint strip advertises these keys at rest, but Blender binds them
-    elsewhere: `UI_OT_eyedropper_depth` owns E in the global "User
-    Interface" keymap (and its modal then swallows the NEXT key, which is
-    what made Q look dead too), and our own `director_block_input` guard sat
-    ahead of the nudge on S — addon-vs-addon ordering inside one keymap does
-    not follow registration order the way addon-vs-default does. "User
-    Interface" is the one keymap dispatched ahead of both, so the binding
-    lives there FIRST.
+    Holding them on the shot camera for a whole session is a mode the
+    director never asked to be in, so the nudge that used to own them is
+    unbound. Letting them fall back to Blender is worse than absorbing them
+    on this surface — A selects everything, W cycles the active tool, Q opens
+    the quick favourites pie, and E starts `UI_OT_eyedropper_depth`, whose
+    modal grabs the pointer and then swallows the NEXT key too (which is what
+    made Q look dead).
 
-    Being global is only safe because the poll scopes it: directing, in a
-    SPACE_VIEW3D WINDOW region. The poll must NOT also require a camera — it
-    is what decides whether the key is ABSORBED, and a take with no camera
-    (or a locked one) still has to swallow S rather than leak it to
-    `transform.resize`; `invoke` handles those cases. The operator is the
-    native modal in `view3d_director_nudge.cc`.
+    The eyedropper owns E from the global "User Interface" keymap, the one
+    keymap dispatched ahead of the mode keymaps, so the guard has to live
+    there FIRST. Being global is only safe because the guard's poll scopes
+    itself to a 3D viewport's WINDOW region — otherwise it would eat W, A, S
+    and D in every editor in the app for as long as a session is directing.
     """
     keymap = _read("ui/keymap.py")
-    nudge = (VIEW3D / "view3d_director_nudge.cc").read_text(encoding="utf-8")
+    camera_ops = _read("ui/operators/camera_ops.py")
 
+    assert "_WALK_KEYS = ('W', 'A', 'S', 'D', 'Q', 'E')" in keymap
     ui_kbd = keymap.index('("User Interface"')
-    object_mode = keymap.index('("Object Mode"', keymap.index("_NUDGE_KEYMAPS"))
-    assert ui_kbd < object_mode, "User Interface must come first in _NUDGE_KEYMAPS"
+    object_mode = keymap.index('("Object Mode"', keymap.index("_WALK_KEYMAPS"))
+    assert ui_kbd < object_mode, "User Interface must come first in _WALK_KEYMAPS"
+    walk_block = keymap[keymap.index("for key in _WALK_KEYS:"):]
+    assert '"mixar.director_block_input"' in walk_block[: walk_block.index("addon_keymaps.append")]
 
-    assert 'ot->idname = "MIXAR_OT_director_nudge_camera";' in nudge
-    assert "ot->poll = director_nudge_poll;" in nudge
-    poll = nudge[nudge.index("static bool director_nudge_poll(bContext *C)"):]
-    poll = poll[: poll.index("\n}\n") + 3]
-    assert "view3d_director_is_directing(CTX_data_scene(C))" in poll
-    assert "area->spacetype == SPACE_VIEW3D" in poll
-    assert "region->regiontype == RGN_TYPE_WINDOW" in poll
-    assert "camera" not in poll.lower(), "the poll must not require a camera"
+    poll = camera_ops[camera_ops.index("class MIXAR_OT_director_block_input"):]
+    poll = poll[: poll.index("\n\nclass ")]
+    assert "state.is_directing" in poll
+    assert "area.type == 'VIEW_3D'" in poll
+    assert "region.type == 'WINDOW'" in poll
+
+
+def test_walking_is_a_button_because_every_key_was_taken():
+    """Not a reimplementation of walking — `view3d.walk` itself, started from
+    the top strip's Walk chip.
+
+    It has no shortcut on purpose. `N` is the sidebar, and `Shift`+`` ` `` —
+    Blender's own walk binding — is already Mixar's Zen moodboard drawer
+    (`moodboard/ui/keymap.py`). A mode-specific action does not get to take a
+    key the rest of the app is using.
+    """
+    keymap = _read("ui/keymap.py")
+    camera_ops = _read("ui/operators/camera_ops.py")
+    top = (VIEW3D / "view3d_director_cinema_top.cc").read_text(encoding="utf-8")
+
+    assert "_WALK_KEY = " not in keymap
+    assert "ACCENT_GRAVE" not in keymap
+    assert '"MIXAR_OT_director_navigate"' in top, "the chip is the entry point"
+
+    # And it is Blender's walk underneath.
+    viewport = _read("core/viewport.py")
+    assert "bpy.ops.view3d.walk('INVOKE_DEFAULT')" in viewport
+    assert 'bl_idname = "mixar.director_navigate"' in camera_ops

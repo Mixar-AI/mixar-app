@@ -170,7 +170,7 @@ void footer_thumbnails_draw_image(Main *bmain,
                                    ibuf->x,
                                    ibuf->y,
                                    blender::gpu::TextureFormat::UNORM_8_8_8_8,
-                                   false,
+                                   true,
                                    ibuf->byte_buffer.data,
                                    draw_w / float(ibuf->x),
                                    draw_h / float(ibuf->y), nullptr);

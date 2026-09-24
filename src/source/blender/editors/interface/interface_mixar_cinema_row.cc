@@ -133,11 +133,14 @@ constexpr float CHIP_WASH = 0.6f;
 
 void draw_chip(const rctf &row, const float radius, const float alpha)
 {
+  uchar row_top[4], row_bottom[4];
+  themed(MixarThemeSlot::CinemaRowTop, ROW_TOP, row_top);
+  themed(MixarThemeSlot::CinemaRowBottom, ROW_BOTTOM, row_bottom);
   mixar_card_glass_round(&row, radius, MIXAR_GLASS_CHIP, alpha);
 
   float top[4], bottom[4];
-  mixar_card_to_float(ROW_TOP, top);
-  mixar_card_to_float(ROW_BOTTOM, bottom);
+  mixar_card_to_float(row_top, top);
+  mixar_card_to_float(row_bottom, bottom);
   top[3] *= CHIP_WASH * alpha;
   bottom[3] *= CHIP_WASH * alpha;
   const float inset = 1.0f * UI_SCALE_FAC;
@@ -194,7 +197,7 @@ void draw_label(const uiFontStyle &fs,
 bool draw_leading_icon(
     const Button *but, const rcti *rect, rcti &text, const float label_w, const float alpha)
 {
-  if (but->icon == ICON_NONE) {
+  if (ELEM(but->icon, ICON_NONE, ICON_BLANK1)) {
     return false;
   }
   /* The stock 16px glyph, vertically centred, then the label after it —
@@ -227,20 +230,35 @@ void draw_option(Button *but,
   }
 
   const float selected = kind == MixarCinemaRowKind::Action ? 1.0f : motion.selected;
+  uchar text_off[4], text_on[4], text_disabled[4];
+  themed(MixarThemeSlot::CinemaRowTextOff, TEXT_OFF, text_off);
+  themed(MixarThemeSlot::CinemaRowTextOn, TEXT_ON, text_on);
+  themed(MixarThemeSlot::CinemaRowTextDisabled, TEXT_DISABLED, text_disabled);
   uchar col[4];
   for (int i = 0; i < 4; i++) {
-    col[i] = disabled ? TEXT_DISABLED[i] :
-                        uchar(float(TEXT_OFF[i]) + (float(TEXT_ON[i]) - TEXT_OFF[i]) * selected);
+    col[i] = disabled ? text_disabled[i] :
+                        uchar(float(text_off[i]) + (float(text_on[i]) - text_off[i]) * selected);
   }
   rcti text = *rect;
   text.xmin += int(TEXT_PAD * UI_SCALE_FAC);
   text.xmax -= int(TEXT_PAD * UI_SCALE_FAC);
+  /* Python-authored option menus retain Blender's submenu behavior. Their
+   * shared row painter also owns the trailing disclosure affordance. */
+  const bool submenu = ELEM(but->type, ButtonType::Menu, ButtonType::Block, ButtonType::Pulldown);
+  if (submenu) {
+    const float icon_size = ICON_DEFAULT_HEIGHT * UI_SCALE_FAC;
+    text.xmax -= int(icon_size);
+    icon_draw_alpha(float(text.xmax),
+                    float(rect->ymin) + (float(BLI_rcti_size_y(rect)) - icon_size) * 0.5f,
+                    ICON_RIGHTARROW, disabled ? 0.4f : 0.9f);
+  }
   const uiFontStyle fs = row_font();
   const char *label = row_label(but);
   const float label_w = fontstyle_string_width(&fs, label);
   const bool icon_drawn = draw_leading_icon(but, rect, text, label_w, disabled ? 0.4f : 0.9f);
   draw_label(
-      fs, &text, label, col, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(), pad_slack());
+      fs, &text, label, col, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(),
+      submenu ? 0.0f : pad_slack());
 }
 
 }  // namespace mixar_cinema_row

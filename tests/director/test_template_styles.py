@@ -33,7 +33,7 @@ def _run_move(monkeypatch, move, lens=50.0):
     )
     scene.frame_set = lambda frame: setattr(scene, "frame_current", frame)
     camera = SimpleNamespace(matrix_world=None, data=SimpleNamespace(lens=lens))
-    shot = SimpleNamespace(scene_ref=scene, camera=camera, beats=_Collection())
+    shot = SimpleNamespace(id_data=scene, camera=camera, beats=_Collection())
     captured = []
 
     def _capture(_context, target_shot, _seconds):

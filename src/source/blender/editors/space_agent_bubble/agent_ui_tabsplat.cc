@@ -75,7 +75,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
   if (!available) {
     /* Fail closed, like the moodboard drawer: message only, no controls —
      * a bundled client must never resurrect a disabled Marble model. */
-    const float *dim = ui::mixar_tokens::zen.secondary;
+    const float *dim = ui::mixar_tokens::mixar_zen().secondary;
     pane_label_centre("World Labs catalog settings are unavailable",
                        BLI_rctf_cent_x(&panel),
                        BLI_rctf_cent_y(&panel),
@@ -105,6 +105,10 @@ void agent_ui_tabsplat_draw(const bContext *C,
   SplatPaneRects rects;
   splat_pane_rects_build(
       panel, u, state.model_label.c_str(), mode_items, mode_count, lod_items, lod_count, &rects);
+  /* Live queue label sizes Generate (and the thumbs' right edge) before paint. */
+  char gen_label[32];
+  pane_queue_label(gen_label, sizeof(gen_label), state.active_jobs, state.generating);
+  rects.btn_generate = pane_generate_rect(rects.prompt_box, u, gen_label);
 
   splat_pane_paint(C, state, rects, u);
 
@@ -124,9 +128,6 @@ void agent_ui_tabsplat_draw(const bContext *C,
   };
   int bx, by;
   short bw, bh;
-
-  pane_settings_button(block, panel.xmax - PANE_INSET_X * u,
-                       panel.ymax - PANE_STRIP_TOP * u, u, SPLAT_SERVICE_KEY, state.model_slug);
 
   /* A compact fallback reads the complete live enum, including choices beyond
    * the segment buffer. Native popup menus own choice navigation and editing. */
@@ -290,9 +291,8 @@ void agent_ui_tabsplat_draw(const bContext *C,
   }
 
   /* Generate and Enter share the owner-based dispatcher. One native button
-   * owns both appearance and enabled state. Queue activity is informational. */
-  char gen_label[32];
-  pane_queue_label(gen_label, sizeof(gen_label), state.active_jobs);
+   * owns both appearance and enabled state. Queue activity is informational.
+   * `gen_label` / `btn_generate` were sized before paint (see above). */
   if (rects.prompt_ok) {
     rect_args(rects.btn_generate, &bx, &by, &bw, &bh);
     ui::Button *but = uiDefButO(block,

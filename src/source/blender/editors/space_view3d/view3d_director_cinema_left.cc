@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <cstring>
 
 #include "BLI_rect.h"
@@ -69,13 +70,72 @@ void lens_label(const bContext *C, char *label, const int size)
     BLI_strncpy(label, "Panoramic", size);
     return;
   }
-  /* Millimetres, never FOV degrees — the Director contract. */
-  BLI_snprintf(label, size, "%dmm Lens", int(std::round(camera->lens)));
+  /* Millimetres, never FOV degrees — the Director contract. The row is
+   * already captioned "Camera lens", so the value is just the length. */
+  BLI_snprintf(label, size, "%dmm", int(std::round(camera->lens)));
 }
 
-bool ratio_is(const int w, const int h, const int rw, const int rh)
+/** The active camera's depth-of-field settings, through RNA. */
+bool active_camera_dof(const bContext *C, PointerRNA *r_dof)
 {
-  return int64_t(w) * rh == int64_t(h) * rw;
+  const Scene *scene = CTX_data_scene(C);
+  Object *camera = scene ? scene->camera : nullptr;
+  if (camera == nullptr || camera->type != OB_CAMERA || camera->data == nullptr) {
+    return false;
+  }
+  PointerRNA data_ptr = RNA_id_pointer_create(static_cast<ID *>(camera->data));
+  PropertyRNA *prop = RNA_struct_find_property(&data_ptr, "dof");
+  if (prop == nullptr) {
+    return false;
+  }
+  *r_dof = RNA_property_pointer_get(&data_ptr, prop);
+  return r_dof->data != nullptr;
+}
+
+/** ``f/8 · Suzanne``, ``f/2.8 · 4.2m``, or ``Off``. */
+void dof_label(const bContext *C, char *label, const int size)
+{
+  PointerRNA dof = {};
+  if (!active_camera_dof(C, &dof)) {
+    BLI_strncpy(label, "No camera", size);
+    return;
+  }
+  PropertyRNA *use_prop = RNA_struct_find_property(&dof, "use_dof");
+  if (use_prop == nullptr || !RNA_property_boolean_get(&dof, use_prop)) {
+    /* The one word that matters: everything is sharp. */
+    BLI_strncpy(label, "Off", size);
+    return;
+  }
+  char stop[16] = "";
+  PropertyRNA *fstop_prop = RNA_struct_find_property(&dof, "aperture_fstop");
+  if (fstop_prop != nullptr) {
+    const double fstop = double(RNA_property_float_get(&dof, fstop_prop));
+    /* f/8, not f/8.0: nobody quotes a stop to a decimal it does not need.
+     * Two calls rather than a ternary format string, which is the one shape
+     * a printf-checked helper cannot verify. */
+    if (std::fabs(fstop - std::round(fstop)) < 0.05) {
+      BLI_snprintf(stop, sizeof(stop), "f/%.0f", fstop);
+    }
+    else {
+      BLI_snprintf(stop, sizeof(stop), "f/%.1f", fstop);
+    }
+  }
+  PropertyRNA *focus_prop = RNA_struct_find_property(&dof, "focus_object");
+  const Object *focus = nullptr;
+  if (focus_prop != nullptr) {
+    const PointerRNA target = RNA_property_pointer_get(&dof, focus_prop);
+    focus = static_cast<const Object *>(target.data);
+  }
+  if (focus != nullptr) {
+    /* What it is focused ON says more than how far away that happens to be,
+     * and it is the value that keeps being true while the subject moves. */
+    BLI_snprintf(label, size, "%s · %s", stop, focus->id.name + 2);
+    return;
+  }
+  PropertyRNA *distance_prop = RNA_struct_find_property(&dof, "focus_distance");
+  const double distance = distance_prop ? double(RNA_property_float_get(&dof, distance_prop)) :
+                                          0.0;
+  BLI_snprintf(label, size, "%s · %.1fm", stop, distance);
 }
 
 void aspect_label(const bContext *C, char *label, const int size)
@@ -87,57 +147,29 @@ void aspect_label(const bContext *C, char *label, const int size)
   }
   const int w = scene->r.xsch;
   const int h = scene->r.ysch;
-  if (ratio_is(w, h, 3, 2)) {
-    BLI_strncpy(label, "Photography 3:2", size);
-  }
-  else if (ratio_is(w, h, 4, 3)) {
-    BLI_strncpy(label, "Smartphone 4:3", size);
-  }
-  else if (ratio_is(w, h, 16, 9)) {
-    BLI_strncpy(label, "Video TV 16:9", size);
-  }
-  else if (ratio_is(w, h, 185, 100)) {
-    BLI_strncpy(label, "Cinema 1.85:1", size);
-  }
-  else if (ratio_is(w, h, 239, 100)) {
-    BLI_strncpy(label, "Cinema 2.39:1", size);
-  }
-  else if (ratio_is(w, h, 9, 16)) {
-    BLI_strncpy(label, "Social 9:16", size);
-  }
-  else if (ratio_is(w, h, 1, 1)) {
-    BLI_strncpy(label, "Square 1:1", size);
-  }
-  else {
-    BLI_snprintf(label, size, "%d x %d", w, h);
-  }
-}
-
-/** What "Export to moodboard" will produce, summarised for the Output row. */
-void output_label(const bContext *C, char *label, const int size)
-{
-  PointerRNA shot_ptr;
-  if (!view3d_director_active_shot_pointer(CTX_data_scene(const_cast<bContext *>(C)), &shot_ptr)) {
-    BLI_strncpy(label, "Png Sequence", size);
+  /* The RATIO and nothing else. A director reads "2.39:1"; "Cinema 2.39:1"
+   * is the same information plus a claim the ratios did not support — two of
+   * the old labels named one medium at two different ratios. Mirrors
+   * ASPECT_PRESETS in `director/constants.py`. */
+  if (w <= 0 || h <= 0) {
+    BLI_strncpy(label, "—", size);
     return;
   }
-  PropertyRNA *prop = RNA_struct_find_property(&shot_ptr, "render_output_types");
-  const int flags = prop ? RNA_property_enum_get(&shot_ptr, prop) : 0;
-  /* No guide kind selected means the export is keyframe stills only. */
-  if (flags == 0) {
-    BLI_strncpy(label, "Png Sequence", size);
-    return;
+  const int divisor = std::gcd(w, h);
+  const int rw = w / divisor;
+  const int rh = h / divisor;
+  /* Above TIDY_DENOMINATOR a reduced ratio stops reading as a ratio — 1.85:1
+   * reduces to 37:20 and 2.39:1 to 239:100, and neither is how anyone says
+   * it. Mirrors `ratio_label` in `director/core/aspect.py`. */
+  constexpr int TIDY_DENOMINATOR = 16;
+  if (std::min(rw, rh) <= TIDY_DENOMINATOR) {
+    BLI_snprintf(label, size, "%d:%d", rw, rh);
   }
-  const char *first = (flags & 1) ? "Beauty" : ((flags & 2) ? "Clay" : "Depth");
-  int count = 0;
-  for (int bit = 0; bit < 3; bit++) {
-    count += (flags & (1 << bit)) ? 1 : 0;
-  }
-  if (count > 1) {
-    BLI_snprintf(label, size, "%s +%d Video", first, count - 1);
+  else if (rw >= rh) {
+    BLI_snprintf(label, size, "%.2f:1", double(rw) / double(rh));
   }
   else {
-    BLI_snprintf(label, size, "%s Video", first);
+    BLI_snprintf(label, size, "1:%.2f", double(rh) / double(rw));
   }
 }
 
@@ -158,13 +190,13 @@ void dropdown_row(ui::Block *block,
                   const bool enabled)
 {
   const float u = cinema_unit();
-  const float caption_col[4] = CINEMA_COL_CAPTION;
-  const float value_col[4] = CINEMA_COL_VALUE;
-  const float top[4] = CINEMA_COL_ROW_TOP;
-  const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+  MIXAR_THEME_LOAD(caption_col, CinemaRowCaption);
+  MIXAR_THEME_LOAD(value_col, CinemaRowTextOn);
+  MIXAR_THEME_LOAD(top, CinemaRowTop);
+  MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
 
   const rctf row = cinema_design_rect(
-      region, cinema_margin(region) + 13.0f, design_y, CINEMA_ROW_W, CINEMA_ROW_H);
+      region, cinema_margin(region) + CINEMA_CARD_PAD, design_y, CINEMA_ROW_W, CINEMA_ROW_H);
   /* Caption sits 12 design px above the row. */
   cinema_text_left(caption,
                    row.xmin,
@@ -174,13 +206,18 @@ void dropdown_row(ui::Block *block,
 
   /* The same row class as the My Cameras list: height, radius, gradient. */
   cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);
-  cinema_text_left(value,
-                   row.xmin + 12.0f * u,
-                   BLI_rctf_cent_y(&row),
-                   CINEMA_FONT_VALUE * u,
-                   value_col);
+  /* Measured: `dof_label` builds "f/2.8 · <focus object>", and a long object
+   * name used to run under the chevron and out of the card. */
+  const float value_x = row.xmin + 12.0f * u;
+  const float chevron_x = row.xmax - 18.0f * u;
+  cinema_text_left_fitted(value,
+                          value_x,
+                          BLI_rctf_cent_y(&row),
+                          CINEMA_FONT_VALUE * u,
+                          chevron_x - 9.0f * u - value_x,
+                          value_col);
   const float chevron[4] = {0.851f, 0.851f, 0.851f, 1.0f};
-  cinema_chevron(row.xmax - 18.0f * u, BLI_rctf_cent_y(&row), 9.0f * u, chevron);
+  cinema_chevron(chevron_x, BLI_rctf_cent_y(&row), 9.0f * u, chevron);
 
   ui::Button *but = cinema_popup_button(block, popup, row, tooltip, CinemaPopupSlot::Row);
   director_overlay_disable_button(but, !enabled);
@@ -201,19 +238,20 @@ void template_row(ui::Block *block,
   /* List rows advance by CINEMA_LIST_PITCH; a taller row overlaps the next
    * one and the later-created button wins the shared band. */
   const rctf row = cinema_design_rect(
-      region, cinema_margin(region) + 13.0f, design_y, CINEMA_ROW_W, cinema_list_row_h());
+      region, cinema_margin(region) + CINEMA_CARD_PAD, design_y, CINEMA_ROW_W, cinema_list_row_h());
   if (active) {
-    const float top[4] = CINEMA_COL_ROW_TOP;
-    const float bottom[4] = CINEMA_COL_ROW_BOTTOM;
+    MIXAR_THEME_LOAD(top, CinemaRowTop);
+    MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
     cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);
   }
-  const float on[4] = CINEMA_COL_VALUE;
-  const float off[4] = CINEMA_COL_DIM;
-  cinema_text_left(label,
-                   row.xmin + 12.0f * u,
-                   BLI_rctf_cent_y(&row),
-                   CINEMA_FONT_VALUE * u,
-                   active ? on : off);
+  MIXAR_THEME_LOAD(on, CinemaRowTextOn);
+  MIXAR_THEME_LOAD(off, CinemaRowTextDisabled);
+  cinema_text_left_fitted(label,
+                          row.xmin + 12.0f * u,
+                          BLI_rctf_cent_y(&row),
+                          CINEMA_FONT_VALUE * u,
+                          BLI_rctf_size_x(&row) - 24.0f * u,
+                          active ? on : off);
 
   cinema_qa_record(region, row, "director_template", identifier, -1);
   ui::Button *but = cinema_op_button(
@@ -241,10 +279,16 @@ void cinema_draw_left_panel(ui::Block *block,
   /* Records are cleared once per draw by the overlay, before the top strip
    * (which publishes the eyedropper and interpolation rects) — not here. */
   const float u = cinema_unit();
-  const float label_col[4] = CINEMA_COL_CAPTION;
+  MIXAR_THEME_LOAD(label_col, CinemaRowCaption);
   const bool editable = state.has_camera && !state.locked;
 
-  /* Card 1 — output settings: three captioned rows at CINEMA_ROW_PITCH. */
+  /* Card 1 — output settings: three captioned rows at CINEMA_ROW_PITCH.
+   *
+   * The third used to be "Output", summarising what Export to Moodboard would
+   * produce and opening the very popup the Export button opens — it said
+   * nothing the export surface does not say better at the moment of use. Its
+   * slot now holds Depth of Field, which is an output decision too and was
+   * the one camera control the Cinema surface could not reach at all. */
   const rctf card1 = cinema_design_rect(region, cinema_margin(region), 208.0f, CINEMA_PANEL_W, 220.0f);
   cinema_glass_panel(card1, CINEMA_PANEL_RADIUS * u);
 
@@ -269,21 +313,21 @@ void cinema_draw_left_panel(ui::Block *block,
                "Choose the lens type and focal length",
                editable);
 
-  output_label(C, label, sizeof(label));
+  dof_label(C, label, sizeof(label));
   dropdown_row(block,
                region,
-               "Output",
+               "Depth of Field",
                label,
                242.0f + CINEMA_ROW_PITCH * 2.0f,
-               view3d_director_render_popup_create,
-               "Choose what Export to Moodboard produces",
-               state.has_shot);
+               view3d_director_dof_popup_create,
+               "Choose what stays sharp and how much of the shot is blurred",
+               editable);
 
   /* Card 2 — template styles. */
   const rctf card2 = cinema_design_rect(region, cinema_margin(region), 439.0f, CINEMA_PANEL_W, 220.0f);
   cinema_glass_panel(card2, CINEMA_PANEL_RADIUS * u);
   cinema_text_left("Template Style",
-                   card2.xmin + 13.0f * u,
+                   card2.xmin + CINEMA_CARD_PAD * u,
                    card2.ymax - 22.0f * u,
                    CINEMA_FONT_LABEL * u,
                    label_col);
@@ -316,7 +360,7 @@ void cinema_draw_left_panel(ui::Block *block,
   const TemplateRow rows[] = {
       {"None", "NONE", first_template_y},
       {"Handheld camera", "HANDHELD", first_template_y + CINEMA_LIST_PITCH},
-      {"Z- Fixed", "Z_FIXED", first_template_y + CINEMA_LIST_PITCH * 2.0f},
+      {"Z-Fixed", "Z_FIXED", first_template_y + CINEMA_LIST_PITCH * 2.0f},
       {"Dolly Zoom", "DOLLY_ZOOM", first_template_y + CINEMA_LIST_PITCH * 3.0f},
       {"Crane", "CRANE", first_template_y + CINEMA_LIST_PITCH * 4.0f},
   };
@@ -336,13 +380,16 @@ void cinema_draw_left_panel(ui::Block *block,
       region, cinema_margin(region), CINEMA_SPEED_CARD_Y, CINEMA_PANEL_W, CINEMA_SPEED_CARD_H);
   cinema_glass_panel(card3, CINEMA_PANEL_RADIUS * u);
   cinema_text_left("Speed",
-                   card3.xmin + 13.0f * u,
+                   card3.xmin + CINEMA_CARD_PAD * u,
                    card3.ymax - 20.0f * u,
                    CINEMA_FONT_LABEL * u,
                    label_col);
 
+  /* The meter is the card's content, so it takes the card's own inset and
+   * width — it used to start 3 px right of the caption above it. */
   const rctf meter = cinema_design_rect(
-      region, cinema_margin(region) + 16.0f, CINEMA_SPEED_CARD_Y + 40.0f, 213.0f, 16.0f);
+      region, cinema_margin(region) + CINEMA_CARD_PAD, CINEMA_SPEED_CARD_Y + 40.0f,
+      CINEMA_ROW_W, 16.0f);
   /* The meter IS the slider's painted track, so it has to light over the
    * property's OWN range (CINEMA_SPEED_MIN/MAX, mirroring SPEED_MIN/MAX in
    * `director/constants.py`) and in the direction the slider travels:

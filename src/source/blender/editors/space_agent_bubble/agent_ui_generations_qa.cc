@@ -36,19 +36,35 @@ void targets(const wmWindow * /*win*/,
       const std::string path = RNA_string_get(button->opptr, "data_path");
       const bool tile = path == "window_manager.mixar_generations_selected";
       const bool library = path == "window_manager.mixar_generations_library";
-      if (!tile && !library) {
+      const bool filter = path == "window_manager.mixar_generations_filter";
+      const bool source = path == "window_manager.mixar_generations_source";
+      if (!tile && !library && !filter && !source) {
         continue;
       }
       MixarQATarget target;
-      target.surface = tile ? "library_tile" : "library_source";
+      target.surface = tile ? "library_tile" :
+                       library ? "library_source" :
+                       filter ? "library_filter" : "library_source_kind";
       target.value = RNA_string_get(button->opptr, "value");
       if (library && target.value.empty()) {
         target.value = RNA_string_get(&wm, "mixar_generations_library");
       }
       target.text = target.value;
-      target.sel = target.value == RNA_string_get(&wm,
-                                                  tile ? "mixar_generations_selected" :
-                                                         "mixar_generations_library");
+      const char *property = tile ? "mixar_generations_selected" :
+                             library ? "mixar_generations_library" :
+                             filter ? "mixar_generations_filter" : "mixar_generations_source";
+      if (tile || library) {
+        target.sel = target.value == RNA_string_get(&wm, property);
+      }
+      else {
+        const char *identifier = nullptr;
+        RNA_property_enum_identifier(nullptr,
+                                     &wm,
+                                     RNA_struct_find_property(&wm, property),
+                                     RNA_enum_get(&wm, property),
+                                     &identifier);
+        target.sel = identifier && target.value == identifier;
+      }
       ui::button_to_pixelrect(&target.rect_win, region, &block, button.get());
       BLI_rcti_translate(&target.rect_win, region->winrct.xmin, region->winrct.ymin);
       if (BLI_rcti_isect(&target.rect_win, &region->winrct, &target.rect_win)) {

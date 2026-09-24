@@ -71,6 +71,32 @@ TEST(MixarStyle, ExplicitNativeScopeAndUnsupportedType)
   EXPECT_EQ(button.type, ButtonType::Text);
 }
 
+TEST(MixarStyle, ToolbarStylingStaysInItsSubtreeAndPreservesRNAValues)
+{
+  Block block;
+  uiStyle style{};
+  Layout &root = block_layout(
+      &block, LayoutDirection::Vertical, LayoutType::Panel, 0, 0, 400, 10, 0, &style);
+  Layout &group = root.row(true);
+  Layout &sibling = root.row(false);
+  for (int i = 0; i < 3; i++) {
+    auto button = std::make_unique<Button>();
+    button->type = ButtonType::Row;
+    button->hardmax = 3 + i * 11;
+    button->layout = i == 1 ? &sibling : &group;
+    block.buttons_ptrs.append(std::move(button));
+  }
+  mixar_style_last(&group, MixarComponent::Toolbar, MixarVariant::Ghost, true);
+  for (int i = 0; i < 3; i++) {
+    const Button &button = *block.buttons_ptrs[i];
+    EXPECT_EQ(button.hardmax, 3 + i * 11);
+    EXPECT_EQ(button.type, ButtonType::Row);
+    EXPECT_EQ(button.mixar_style.component,
+              i == 1 ? MixarComponent::None : MixarComponent::Toolbar);
+  }
+  block_layout_free(&block);
+}
+
 TEST(MixarStyle, CompatibilityPayloadIsBounded)
 {
   Button button;

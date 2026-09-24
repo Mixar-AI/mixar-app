@@ -1549,13 +1549,22 @@ void view3d_draw_region_info(const bContext *C, ARegion *region)
   }
 
   if ((v3d->flag2 & V3D_HIDE_OVERLAYS) == 0) {
-    /* Mixar: Zen's transform tools are centered on the left and its shading
-     * strip sits on the right. Neither covers the upper-left corner. Anchor
-     * the native info stack to that corner, without changing the visible rect
-     * used by navigation gizmos, sidebars or other viewport overlays. */
+    /* Zen's scene toolbar covers the top edge. Keep the native info stack
+     * below a visible top header, but do not indent for the transform tools. */
     const bool zen_info = ui::mixar_workspace_is_zen(C);
     int xoffset = (zen_info ? 0 : rect->xmin) + (0.5f * U.widget_unit);
     int yoffset = (zen_info ? region->winy - 1 : rect->ymax) - (0.1f * U.widget_unit);
+    if (zen_info) {
+      for (const ARegion &header : CTX_wm_area(C)->regionbase) {
+        if (header.regiontype == RGN_TYPE_HEADER && header.runtime->visible &&
+            RGN_ALIGN_ENUM_FROM_MASK(header.alignment) == RGN_ALIGN_TOP)
+        {
+          yoffset = std::min(yoffset,
+                            int(header.winrct.ymin - region->winrct.ymin -
+                                0.1f * U.widget_unit));
+        }
+      }
+    }
 
     const uiFontStyle *fstyle = UI_FSTYLE_WIDGET;
     ui::fontstyle_set(fstyle);

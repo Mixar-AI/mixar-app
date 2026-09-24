@@ -2,10 +2,32 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 #include "../interface_intern.hh"
+#include "BLI_string.h"
+#include "RNA_access.hh"
 #include "UI_mixar.hh"
 #include <algorithm>
 
 namespace blender::ui {
+
+bool mixar_multiline_input_rect(const Button &button, const rcti &bounds, rcti &text_rect)
+{
+  /* Compact composers keep their native line budget. Tall editors need enough
+   * room for the input's curved corners, for placeholder, selection and caret
+   * alike. Work from the original bounds, never add to native left-only padding. */
+  if (button.mixar_style.theme != MixarTheme::Zen ||
+      button.mixar_style.component != MixarComponent::Input ||
+      (button.rnaprop && STREQ(RNA_property_identifier(button.rnaprop), "mixie_chat_input")) ||
+      BLI_rcti_size_y(&bounds) <= 2 * UI_UNIT_Y)
+  {
+    return false;
+  }
+  const int padding = std::min(
+      int(mixar_density_metrics(MixarDensity::Compact, UI_SCALE_FAC).padding),
+      std::max(0, BLI_rcti_size_x(&bounds) / 4));
+  text_rect = bounds;
+  BLI_rcti_pad(&text_rect, -padding, -padding);
+  return true;
+}
 
 int64_t mixar_button_count(const Layout *layout)
 {
@@ -15,8 +37,14 @@ int64_t mixar_button_count(const Layout *layout)
 static bool supports(const Button &button, const MixarComponent component)
 {
   switch (component) {
+    case MixarComponent::Toolbar:
+      return ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Pulldown,
+                  ButtonType::Popover, ButtonType::Label, ButtonType::Row,
+                  ButtonType::Num, ButtonType::NumSlider, ButtonType::Toggle,
+                  ButtonType::IconToggle);
     case MixarComponent::Action:
-      return button.type == ButtonType::But;
+      return ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block,
+                  ButtonType::Popover, ButtonType::Pulldown);
     case MixarComponent::GlassTool:
       return button.icon != ICON_NONE && button.str.empty() &&
              ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block,
@@ -66,7 +94,8 @@ void mixar_style_button(Button *button,
   }
 }
 
-void mixar_style_last(Layout *layout, const MixarComponent component, const MixarVariant variant)
+void mixar_style_last(Layout *layout, const MixarComponent component, const MixarVariant variant,
+                      const bool all_items, const bool selected)
 {
   auto &buttons = layout->block()->buttons_ptrs;
   for (int64_t i = buttons.size(); i-- > 0;) {
@@ -76,11 +105,17 @@ void mixar_style_last(Layout *layout, const MixarComponent component, const Mixa
       owner = owner->parent();
     }
     if (!owner) {
-      return;
+      if (!all_items) {
+        return;
+      }
+      continue;
     }
     if (supports(*button, component)) {
       mixar_style_button(button, component, variant);
-      return;
+      mixar_button_lit_set(button, selected);
+      if (!all_items) {
+        return;
+      }
     }
   }
 }
@@ -144,6 +179,8 @@ const char *mixar_component_name(const MixarComponent component)
       return "label";
     case MixarComponent::GlassTool:
       return "glass_tool";
+    case MixarComponent::Toolbar:
+      return "toolbar";
     case MixarComponent::LegacyCard:
       return "legacy_card";
     default:

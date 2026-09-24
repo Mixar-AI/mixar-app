@@ -16,7 +16,7 @@ from bpy.props import CollectionProperty, EnumProperty, IntProperty, StringPrope
 from bpy.types import Operator, OperatorFileListElement
 from bpy_extras.io_utils import ImportHelper
 
-from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS
+from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS, VIDEO_ATTACHMENT_REJECTED
 from ...core import (
     cleanup_loaded_file_image,
     cleanup_loaded_file_images,
@@ -134,7 +134,7 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
         sync_bubble_attachment_size_deferred(force_attachment_height=True)
 
         for area in context.screen.areas:
-            if area.type == 'MIXIE_CHAT':
+            if area.type == 'AGENT_BUBBLE':
                 for region in area.regions:
                     if region.type == 'TOOLS':
                         region.tag_redraw()
@@ -217,6 +217,9 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
             return {'CANCELLED'}
 
         image = bpy.data.images[image_name]
+        if image.source == 'MOVIE':
+            self.report({'WARNING'}, VIDEO_ATTACHMENT_REJECTED)
+            return {'CANCELLED'}
         if not image.has_data:
             self.report({'WARNING'}, "Image has no pixel data")
             return {'CANCELLED'}
@@ -281,6 +284,10 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
             return {'CANCELLED'}
 
         att = attachments[index]
+        if getattr(att, "scribble_view", ""):
+            from mixar.modules.scribble_mark.core import preview
+            preview.discard_view(context.scene, context.window_manager, att.scribble_view)
+            return {'FINISHED'}
         name = att.display_name
         image_path = att.image_path
         image_source = att.image_source
@@ -336,9 +343,6 @@ class MIXIE_CHAT_OT_clear_attachments(Operator):
         return len(context.scene.mixie_chat_pending_attachments) > 0
 
     def execute(self, context):
-        # Clear is explicit: still-selected board references must stay removed.
-        from mixar.modules.moodboard.core.chat_sync import consume_selection
-        consume_selection(context.scene)
         paths = [
             att.image_path
             for att in context.scene.mixie_chat_pending_attachments

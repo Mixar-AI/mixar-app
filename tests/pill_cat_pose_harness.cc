@@ -20,6 +20,9 @@ using blender::MIXIE_GAZE_HOLD_END;
 using blender::MIXIE_GAZE_OUT_END;
 using blender::MIXIE_GAZE_PERIOD;
 using blender::MIXIE_GAZE_REST_END;
+using blender::MIXIE_ROLL_PERIOD;
+using blender::MIXIE_ROLL_SPAN;
+using blender::MIXIE_ROLL_START;
 
 static void emit(const char *label, const blender::MixieCatPose &p)
 {
@@ -48,7 +51,12 @@ int main()
   emit("idle_home", mixie_cat_eval_pose(home_t, false));
   emit("working_open", mixie_cat_eval_pose(open_t, true));
   emit("working_hold", mixie_cat_eval_pose(hold_a, true));
-  emit("working_glance_clock", mixie_cat_eval_pose(glance_t, true));
+  const double roll_up = (MIXIE_ROLL_START + 0.25 * MIXIE_ROLL_SPAN) * MIXIE_ROLL_PERIOD;
+  const double roll_left = (MIXIE_ROLL_START + 0.50 * MIXIE_ROLL_SPAN) * MIXIE_ROLL_PERIOD;
+  const double roll_rest = 0.80 * MIXIE_ROLL_PERIOD;
+  emit("working_roll_up", mixie_cat_eval_pose(roll_up, true));
+  emit("working_roll_left", mixie_cat_eval_pose(roll_left, true));
+  emit("working_roll_rest", mixie_cat_eval_pose(roll_rest, true));
 
   return 0;
 }

@@ -7,8 +7,10 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_utildefines.h"
+#include "BLI_listbase.h"
 
 #include "DNA_screen_types.h"
+#include "DNA_space_types.h"
 
 #include "UI_mixar_custom_motion.hh"
 #include "UI_mixar_motion.hh"
@@ -40,6 +42,7 @@ MixieCatPose agent_ui_cat_motion_sample(ARegion *region,
                                         const MixieCatCatch &incoming)
 {
   if (!region->regiondata) {
+    region->flag |= RGN_FLAG_TEMP_REGIONDATA;
     region->regiondata = MEM_new<AgentIslandMotion>("Agent island motion");
   }
   auto &motion = *static_cast<AgentIslandMotion *>(region->regiondata);
@@ -92,6 +95,7 @@ AgentIslandFeedback agent_ui_motion_sample(ARegion *region,
     return {0.0f, 0.0f, float(selected)};
   }
   if (!region->regiondata) {
+    region->flag |= RGN_FLAG_TEMP_REGIONDATA;
     region->regiondata = MEM_new<AgentIslandMotion>("Agent island motion");
   }
   auto &motion = static_cast<AgentIslandMotion *>(region->regiondata)->controls[int(control)];
@@ -145,5 +149,26 @@ void agent_ui_motion_region_free(ARegion *region)
 void *agent_ui_motion_region_duplicate(void * /*regiondata*/)
 {
   return nullptr;
+}
+
+void agent_ui_motion_blend_read_after_liblink(BlendLibReader * /*reader*/,
+                                            ID *parent_id,
+                                            SpaceLink *sl)
+{
+  /* Older files stored motion pointers without TEMP_REGIONDATA. Their active
+   * regions live on the area, not SpaceLink, and must be cleared before any
+   * region free/draw callback can see the foreign pointer. */
+  auto *screen = reinterpret_cast<bScreen *>(parent_id);
+  ListBaseT<ARegion> *regions = &sl->regionbase;
+  for (ScrArea &area : screen->areabase) {
+    if (area.spacedata.first == sl) {
+      regions = &area.regionbase;
+      break;
+    }
+  }
+  for (ARegion &region : *regions) {
+    region.regiondata = nullptr;
+    region.flag |= RGN_FLAG_TEMP_REGIONDATA;
+  }
 }
 }  // namespace blender

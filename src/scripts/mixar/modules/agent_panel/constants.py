@@ -19,8 +19,14 @@ AGENT_TASK_MAXLEN = 256
 #: Backend task id — the identity the diff-update matches on.
 AGENT_TASK_ID_MAXLEN = 64
 
-#: Below this many tasks the turn is not a parallel fan-out and the panel
-#: stays closed: one task is just the chat's own todo line repeated.
+#: Below this many tasks a turn with NO OPEN RUN is not a parallel fan-out and
+#: the panel stays closed: one task is just the chat's own todo line repeated,
+#: and a lone finished task would pop the panel only to dismiss itself.
+#:
+#: While the run IS open the minimum does not apply: the orchestrator ends its
+#: turn right after delegating, so a batch of one — the first task, or the one
+#: task a later acceptance adds — is ordinary, and its worker then builds for
+#: minutes with the card as the only indicator the user has.
 MIN_CARDS_FOR_PANEL = 2
 
 #: Cards visible before the stack scrolls (the reference design's three).

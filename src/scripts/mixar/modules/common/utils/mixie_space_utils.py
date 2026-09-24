@@ -66,29 +66,24 @@ def show_generation_error(scene, prefix, message, generating_attr, error_attr):
 
 
 def count_selected_moodboard_images(scene):
-    """Return the number of selected still images on the moodboard."""
-    if not hasattr(scene, 'mixie_moodboard_images'):
-        return 0
-    return sum(
-        1 for item in scene.mixie_moodboard_images
-        if item.selected and item.image and item.image.source != 'MOVIE'
-    )
+    """Return the number of selected stills, including selected node results."""
+    from mixar.modules.moodboard.core.media_utils import selected_reference_stills
+
+    return len(selected_reference_stills(scene))
 
 
 def get_first_selected_moodboard_image(scene):
-    """Return the first selected still-image datablock, or None."""
-    if hasattr(scene, 'mixie_moodboard_images'):
-        for item in scene.mixie_moodboard_images:
-            if item.selected and item.image and item.image.source != 'MOVIE':
-                return item.image
-    return None
+    """Return the first selected still datablock, including node results."""
+    from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
+
+    return first_selected_reference_still(scene)
 
 
 def get_selected_moodboard_items(scene):
     """Return counts of selected moodboard items.
 
     Returns:
-        Tuple of (images, textboxes, groups).
+        Tuple of (images, textboxes, frames).
     """
     images = (
         sum(1 for img in scene.mixie_moodboard_images if img.selected)
@@ -98,11 +93,11 @@ def get_selected_moodboard_items(scene):
         sum(1 for tb in scene.mixie_moodboard_textboxes if tb.selected)
         if hasattr(scene, 'mixie_moodboard_textboxes') else 0
     )
-    groups = (
-        sum(1 for grp in scene.mixie_moodboard_groups if grp.selected)
-        if hasattr(scene, 'mixie_moodboard_groups') else 0
+    frames = (
+        sum(1 for frame in scene.mixie_moodboard_frames if frame.selected)
+        if hasattr(scene, 'mixie_moodboard_frames') else 0
     )
-    return (images, textboxes, groups)
+    return (images, textboxes, frames)
 
 
 def redraw_mixie_areas() -> None:

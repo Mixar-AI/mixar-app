@@ -391,7 +391,11 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
 
     bubble_id = add_slot_loader(scene, loader_text)
 
-    label = img.name if img else ((prompt or model)[:40])
+    from mixar.modules.common.job_queue.core.labels import stackable_job_identity
+
+    label, display_label = stackable_job_identity(
+        img.name if img else ((prompt or model)[:40])
+    )
     try:
         from mixar.modules.common.job_queue import enqueue_generation
 
@@ -402,6 +406,7 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
             model=model,
             payload=payload,
             label=label,
+            display_label=display_label,
             fail_message="3D model generation failed",
             scene_flag=scene_flag,
             **route_extra,

@@ -31,7 +31,6 @@
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
 
-#include "ED_mixar_glass.hh"
 #include "ED_screen.hh"
 
 #include "GPU_framebuffer.hh"
@@ -40,7 +39,11 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_interface_c.hh"
+#include "UI_interface_icons.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
@@ -53,15 +56,6 @@
 namespace blender {
 
 namespace {
-
-/* Match the editor's opaque black canvas, framed as a Mixar overlay.
- * The rim is the moodboard glass row's resting stroke, not brand green. */
-constexpr float DRAWER_FILL[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-constexpr float DRAWER_FILL_EDGE[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-constexpr float DRAWER_BORDER[4] = {0.380f, 0.390f, 0.420f, 0.58f};
-
-constexpr float TAB_LABEL[4] = {0.94f, 0.96f, 0.94f, 1.0f};
-constexpr float EMPTY_HINT[4] = {0.55f, 0.56f, 0.58f, 1.0f};
 
 void clear_tab_gutter(const int width, const int height)
 {
@@ -76,58 +70,6 @@ void clear_tab_gutter(const int width, const int height)
   immRectf(pos, 0.0f, 0.0f, float(width), float(height));
   immUnbindProgram();
   GPU_blend(GPU_BLEND_ALPHA);
-}
-
-void draw_centered_line(const int font,
-                        const char *text,
-                        const float cx,
-                        const float y,
-                        const float color[4])
-{
-  /* Native toolbar labels use clipping on this shared font. The canvas hint
-   * owns its bounds, and must not inherit the last button's text rectangle. */
-  BLF_disable(font, BLF_CLIPPING);
-  BLF_color4fv(font, color);
-  BLF_position(font, cx - 0.5f * BLF_width(font, text, strlen(text)), y, 0.0f);
-  BLF_draw(font, text, strlen(text));
-  BLF_batch_draw_flush();
-}
-
-void draw_empty_hint(const bContext *C, const ARegion *region, const int offset)
-{
-  Scene *scene = CTX_data_scene(C);
-  if (!scene) {
-    return;
-  }
-  PointerRNA ptr = RNA_id_pointer_create(&scene->id);
-  for (const char *name : {"mixie_moodboard_images", "mixie_moodboard_action_nodes",
-                           "mixie_moodboard_textboxes", "mixie_moodboard_annotations"})
-  {
-    PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
-    if (prop && RNA_property_collection_length(&ptr, prop) > 0) {
-      return;
-    }
-  }
-
-  /* Empty-canvas LEFTMOUSE still deselects and starts box-select (or
-   * passes through to Mixie). Add is drop, the Open Image/Video menu,
-   * paste, or Cmd/Ctrl+I — never a click on this hint. Do not paint a
-   * plus or "click anywhere" copy; both read as a control that is not
-   * there. */
-  const float cx = float(offset) + 0.5f * float(region->winx - offset);
-  const float cy = 0.5f * float(region->winy);
-  const int font = BLF_default();
-  /* Graph cards use 17 for the headline and 13 for the secondary hint.
-   * The empty board is the headline: 13 read as chrome, not the CTA. */
-  BLF_size(font, 17.0f * UI_SCALE_FAC);
-  const float available = float(region->winx - offset) - 24.0f * UI_SCALE_FAC;
-  const char *hint = available < 210.0f * UI_SCALE_FAC ? "Drop media" :
-                                                                  "Drop references here";
-  const float text_width = BLF_width(font, hint, strlen(hint));
-  if (available > 0.0f && text_width > available) {
-    BLF_size(font, 17.0f * UI_SCALE_FAC * available / text_width);
-  }
-  draw_centered_line(font, hint, cx, cy, EMPTY_HINT);
 }
 
 /** Paint the labeled Moodboard tab with its flat inner edge at `x_right`. */
@@ -150,12 +92,11 @@ void draw_grip(const float x_right, const float y_centre)
   const int clip_w = int(std::ceil(x_right)) - pane.xmin;
   if (clip_w > 0 && BLI_rcti_size_y(&pane) > 0) {
     GPU_scissor(pane.xmin, pane.ymin, clip_w, BLI_rcti_size_y(&pane));
-    ui::MixarGlassStyle style;
-    style.role = ui::MIXAR_GLASS_MOODBOARD_TAB;
-    style.radius = radius;
-    style.draw_shadow = false;
-    style.draw_specular = false;
-    ui::mixar_glass_draw(pane, style);
+    rctf tab;
+    BLI_rctf_rcti_copy(&tab, &pane);
+    ui::mixar_fill_round(tab, radius, ui::mixar_tokens::mixar_zen().action);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&tab, false, radius, ui::mixar_tokens::mixar_zen().border);
   }
   GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
 
@@ -165,7 +106,7 @@ void draw_grip(const float x_right, const float y_centre)
   const size_t label_len = strlen(label);
   const float text_w = BLF_width(font, label, label_len);
   const float text_h = BLF_height_max(font);
-  BLF_color4fv(font, TAB_LABEL);
+  BLF_color4fv(font, ui::mixar_tokens::mixar_zen().text);
   BLF_enable(font, BLF_ROTATION);
   BLF_rotation(font, float(M_PI_2));
   BLF_position(font,
@@ -175,50 +116,6 @@ void draw_grip(const float x_right, const float y_centre)
   BLF_draw(font, label, label_len);
   BLF_rotation(font, 0.0f);
   BLF_disable(font, BLF_ROTATION);
-}
-
-/** Host the Python add-media / add-text tools on the open drawer.
- *
- * The Mixie T-panel builds those controls in
- * `moodboard_toolbar.draw_moodboard_add_tools`; this path draws the same
- * `VIEW3D_PT_moodboard_drawer_add_tools` panel into a pixel-space block so the
- * drawer View2D (canvas pan/zoom) is never rewritten by `ED_region_panels`. */
-void draw_add_tools(const bContext *C, ARegion *region, const int panel_xmin)
-{
-  if (view3d_moodboard_drawer_display_amount(C) < VIEW3D_MOODBOARD_DRAWER_CANVAS_MIN_AMOUNT) {
-    return;
-  }
-  PanelType *pt = WM_paneltype_find("VIEW3D_PT_moodboard_drawer_add_tools", false);
-  if (pt == nullptr || (pt->poll && !pt->poll(C, pt))) {
-    return;
-  }
-
-  const float scale = UI_SCALE_FAC;
-  const int pad = int(std::round(12.0f * scale));
-  const int available = region->winx - panel_xmin - 2 * pad;
-  if (available <= 0) {
-    return;
-  }
-  /* Keep the icon tools on the left edge at every drawer width and zoom. */
-  const int width = std::min(available, int(std::round(40.0f * scale)));
-  const int x = panel_xmin + pad;
-  const int y = region->winy - pad;
-
-  ui::Block *block = ui::block_begin(
-      C, region, "moodboard_drawer_add_tools", ui::EmbossType::Emboss);
-  ui::Layout &layout = ui::block_layout(block,
-                                        ui::LayoutDirection::Vertical,
-                                        ui::LayoutType::Panel,
-                                        x,
-                                        y,
-                                        width,
-                                        0,
-                                        0,
-                                        ui::style_get_dpi());
-  ui::UI_paneltype_draw(const_cast<bContext *>(C), pt, &layout);
-  ui::block_layout_resolve(block);
-  ui::block_end(C, block);
-  ui::block_draw(C, block);
 }
 
 }  // namespace
@@ -310,10 +207,10 @@ void view3d_moodboard_drawer_region_draw(const bContext *C, ARegion *region)
                                   0.5f * (panel.xmax - panel.xmin));
     ui::draw_roundbox_corner_set(ui::CNR_TOP_LEFT | ui::CNR_BOTTOM_LEFT);
     ui::draw_roundbox_4fv_ex(&panel,
-                             /*inner1 (right)*/ DRAWER_FILL,
-                             /*inner2 (left)*/ DRAWER_FILL_EDGE,
+                             /*inner1 (right)*/ ui::mixar_tokens::mixar_zen().canvas,
+                             /*inner2 (left)*/ ui::mixar_tokens::mixar_zen().canvas,
                              /*shade_dir*/ 0.0f,
-                             DRAWER_BORDER,
+                             ui::mixar_tokens::mixar_zen().border,
                              U.pixelsize,
                              radius);
 
@@ -336,8 +233,6 @@ void view3d_moodboard_drawer_region_draw(const bContext *C, ARegion *region)
     region->v2d.cur.xmax += delta;
     ED_region_pixelspace(region);
     GPU_scissor(panel_xmin, 0, winx - panel_xmin, winy);
-    draw_empty_hint(C, region, panel_xmin);
-    draw_add_tools(C, region, panel_xmin);
 
     /* View2D scrollers/inline controls can widen the scissor. Keep the
      * gutter transparent above and below the protruding tab. */

@@ -19,11 +19,11 @@ next edit.
 """
 
 import os
+import uuid
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import CHAT_RULES_MAXLEN
-from .rules import parse_rules, serialize_rules
+from .rules import parse_rules, serialize_rules, rules_fit_store
 
 logger = get_logger(__name__)
 
@@ -43,7 +43,7 @@ def load_global_rules() -> list:
             return []
         with open(path, "r", encoding="utf-8") as fh:
             raw = fh.read()
-        return parse_rules(raw)
+        return parse_rules(raw, scope="global")
     except Exception:
         logger.warning("global rules store unreadable: %s", path, exc_info=True)
         return []
@@ -56,16 +56,23 @@ def save_global_rules(rules: list) -> bool:
     leaves a truncated store behind.
     """
     raw = serialize_rules(rules)
-    if len(raw.encode('utf-8')) > CHAT_RULES_MAXLEN - 1:
+    if not rules_fit_store(rules, raw):
         return False
     path = _store_path()
+    tmp = path + "." + uuid.uuid4().hex + ".tmp"
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as fh:
+        with open(tmp, "x", encoding="utf-8") as fh:
             fh.write(raw if raw else "[]")
         os.replace(tmp, path)
         return True
     except OSError:
         logger.error("failed to write global rules store: %s", path, exc_info=True)
         return False
+    finally:
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            logger.debug("failed to remove rules temporary file", exc_info=True)

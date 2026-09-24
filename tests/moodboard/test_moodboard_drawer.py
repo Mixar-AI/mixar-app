@@ -55,6 +55,7 @@ def test_drawer_sources_stay_under_the_house_line_cap():
         VIEW3D / "view3d_moodboard_drawer.cc",
         VIEW3D / "view3d_moodboard_drawer_draw.cc",
         VIEW3D / "view3d_moodboard_drawer_ops.cc",
+        VIEW3D / "view3d_moodboard_drawer_state.cc",
     ):
         lines = len(path.read_text(encoding="utf-8").splitlines())
         assert lines <= 500, f"{path.name} is {lines} lines"
@@ -67,11 +68,26 @@ def test_canvas_active_amount_is_one_number():
     assert _define_float(mixie, "MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT") == 0.98
 
 
+def test_first_open_width_is_about_thirty_five_percent_of_the_viewport():
+    geom = _read(DRAWER_GEOM)
+    assert _define_float(geom, "VIEW3D_MOODBOARD_DRAWER_WIDTH_FRACTION") == 0.35
+    assert _define_float(geom, "VIEW3D_MOODBOARD_DRAWER_WIDTH") == 340
+    resize = _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer_resize.cc"))
+    assert "mixar_moodboard_drawer_width_ready" in resize
+    body = _fn(resize, "void view3d_moodboard_drawer_size_sync(")
+    assert "VIEW3D_MOODBOARD_DRAWER_WIDTH_FRACTION" in body
+    assert "drawer_width_ready" in body
+    props = _read(
+        ROOT / "src/scripts/mixar/modules/moodboard/ui/moodboard_drawer_props.py"
+    )
+    assert "mixar_moodboard_drawer_width_ready" in props
+
+
 def test_visual_hit_is_only_the_grip_and_painted_slice():
     """RIGHT overlap clips Y only; the whole overlay must not eat the viewport."""
     geom = _strip_comments(_read(DRAWER_GEOM))
     body = _fn(geom, "inline bool view3d_moodboard_drawer_contains_xy(")
-    assert "view3d_moodboard_drawer_grip_contains_xy" in body
+    assert "view3d_moodboard_drawer_resize_contains_xy" in body
     assert "view3d_moodboard_drawer_panel_rect_for" in body
     panel = _fn(geom, "inline bool view3d_moodboard_drawer_panel_rect_for(")
     assert "0.001f" in panel
@@ -123,15 +139,21 @@ def test_drawer_region_hosts_mixie_and_view2d_behind_an_open_poll():
 
 
 def test_grip_handler_beats_ui_and_only_answers_on_the_handle():
-    """Grip map first, then UI, then Mixie — a selected card cannot steal close."""
+    """`~` first, then grip, then UI, then Mixie — a selected card cannot steal close."""
     body = _fn(
         _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer.cc")),
         "void view3d_moodboard_drawer_region_init(",
     )
-    grip = body.index("view3d_moodboard_drawer_grip_handler_poll")
+    toggle = body.index("view3d_moodboard_drawer_toggle_handlers_add")
+    grip = body.index("WM_event_add_keymap_handler_priority")
     ui = body.index("region_handlers_add")
     canvas = body.index("view3d_moodboard_drawer_canvas_handler_poll")
-    assert grip < ui < canvas
+    # Both UI and priority keymaps prepend; registration order is reversed.
+    assert ui < grip < toggle < canvas
+    invoke = _fn(_strip_comments(_read(VIEW3D / "view3d_moodboard_drawer_ops.cc")),
+                 "static wmOperatorStatus drawer_grip_invoke(")
+    assert "drawer_grip_hit(C, event->xy)" in invoke
+    assert "return OPERATOR_PASS_THROUGH" in invoke
 
 
 def test_drawer_region_type_does_not_take_view2d_keymapflag():
@@ -141,6 +163,16 @@ def test_drawer_region_type_does_not_take_view2d_keymapflag():
         "void view3d_moodboard_drawer_region_register(",
     )
     assert "art->keymapflag = 0;" in body
+
+
+def test_viewport_cursor_honors_drawer_edge_after_canvas_view_changes():
+    source = _strip_comments(_read(VIEW3D / "space_view3d.cc"))
+    body = _fn(source, "static void view3d_main_region_cursor(")
+    assert body.index("view3d_moodboard_drawer_resize_contains_xy") < body.index(
+        "WM_cursor_set_from_tool")
+    assert "drawer->runtime->visible" in body
+    assert "WM_CURSOR_X_MOVE" in body
+    assert "art->cursor = view3d_main_region_cursor;\n  art->event_cursor = true;" in source
 
 
 def test_drawer_grip_keymap_is_grip_only():
@@ -158,6 +190,67 @@ def test_drawer_grip_keymap_is_grip_only():
     assert "Moodboard Drawer Grip" in py
     assert "_bind_moodboard_pointer(km_drawer)" not in py
     assert "_bind_moodboard_pointer(km)" in py
+    assert "mixie.moodboard_annotation_erase" in py
+
+
+def test_tilde_toggles_drawer_in_c_and_addon():
+    """`~` is AccentGrave on the dedicated View3D map (first on the
+    viewport), the Window map (header / topbar), and addon 3D View
+    (beats the View pie after a preset reload). Poll finds the Zen
+    drawer instead of requiring CTX_wm_area to be the 3D view.
+    """
+    ops = _read(VIEW3D / "view3d_moodboard_drawer_ops.cc")
+    core = _read(VIEW3D / "view3d_moodboard_drawer.cc")
+    space = _read(VIEW3D / "space_view3d.cc")
+    py = _read(ROOT / "src/scripts/mixar/modules/moodboard/ui/keymap.py")
+
+    keymap = _fn(_strip_comments(ops), "void view3d_moodboard_drawer_keymap(")
+    assert '"Moodboard Drawer"' in keymap
+    assert '"Window"' in keymap
+    assert "EVT_ACCENTGRAVEKEY" in keymap
+    assert "KM_SHIFT" in keymap
+    assert "VIEW3D_OT_moodboard_drawer_toggle" in keymap
+    assert '"Moodboard Drawer Grip"' in keymap
+
+    poll = _fn(_strip_comments(ops), "static bool drawer_op_poll(")
+    assert "view3d_moodboard_drawer_area_find" in poll
+
+    attach = _fn(_strip_comments(core), "void view3d_moodboard_drawer_toggle_handlers_add(")
+    assert '"Moodboard Drawer"' in attach
+    assert "WM_event_add_keymap_handler_priority" in attach
+    assert "view3d_moodboard_drawer_toggle_handlers_add(wm, region)" in space
+
+    assert "def _bind_drawer_toggle(" in py
+    assert py.count("_bind_drawer_toggle(") == 4  # def + Drawer + Window + 3D View
+    assert "view3d.moodboard_drawer_toggle" in py
+    assert "'Moodboard Drawer'" in py
+    assert "'Window'" in py
+    assert "'3D View'" in py
+    assert "shift" in py[py.index("def _bind_drawer_toggle(") : py.index("def _ensure_addon_keymap(")]
+
+
+def test_macos_grave_key_is_accent_grave():
+    """The physical `~` key must arrive as AccentGrave. Upstream #if 0's
+    kVK_ANSI_Grave and only maps the '`' character, so Shift+` is Unknown.
+    """
+    cocoa = _read(ROOT / "src/intern/ghost/intern/GHOST_SystemCocoa.mm")
+    convert = _fn(cocoa, "static GHOST_TKey convertKey(")
+    ansi_off = convert.index("#if 0")
+    ansi_end = convert.index("#endif", ansi_off)
+    live = convert[ansi_end:]
+    assert "case kVK_ANSI_Grave:" in live
+    assert "GHOST_kKeyAccentGrave" in live[live.index("case kVK_ANSI_Grave:") :][:200]
+    assert "case '~':" in convert
+    assert "GHOST_kKeyAccentGrave" in convert[convert.index("case '~':") :][:200]
+
+
+def test_user_close_releases_annotate_and_erase():
+    body = _fn(
+        _strip_comments(_read(VIEW3D / "view3d_moodboard_drawer_ops.cc")),
+        "static void drawer_release_annotate(",
+    )
+    assert "mixie_moodboard_annotating" in body
+    assert "mixie_moodboard_erasing" in body
 
 
 def test_grip_click_flips_target_and_escape_restores_invoke_state():
@@ -176,6 +269,15 @@ def test_canvas_qa_targets_register_on_the_drawer_host():
     source = _strip_comments(_read(MIXIE / "mixie_moodboard_qa_targets.cc"))
     assert "Mixar_qa_register_target_provider(SPACE_VIEW3D" in source
     assert "MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT" in source
+
+
+def test_external_grip_teardown_restores_modal_cursor():
+    source = _read(VIEW3D / "view3d_moodboard_drawer_ops.cc")
+    registration = _fn(source, "static void VIEW3D_OT_moodboard_drawer_grip(")
+    assert "ot->cancel = drawer_grip_cancel;" in registration
+    cancel = _fn(source, "static void drawer_grip_cancel(")
+    assert "if (wmWindow *win = CTX_wm_window(C))" in cancel
+    assert "WM_cursor_modal_restore(win);" in cancel
 
 
 def test_drawer_slide_is_time_based_and_redraws_only_the_region():
@@ -242,40 +344,23 @@ def test_file_and_image_id_drop_payloads_cannot_contaminate_one_another():
         assert f'RNA_string_set(drop->ptr, "{name}", "")' not in body
 
 
-def test_the_drawer_tab_is_a_labeled_glass_pane():
-    """The green glass tab retains its label and shared hit geometry."""
+def test_the_drawer_tab_uses_shared_palette_and_hit_geometry():
     draw = _read(VIEW3D / "view3d_moodboard_drawer_draw.cc")
     assert 'const char *label = "Moodboard";' in draw
-    assert "MIXAR_GLASS_MOODBOARD_TAB" in draw
-    assert "mixar_glass_draw" in draw
+    assert "ui::mixar_tokens::mixar_zen().action" in draw
+    assert "view3d_moodboard_drawer_grip_rect_for" in draw
     assert "GRIP_DOT" not in draw
-    assert "GRIP_BORDER" not in draw
-    assert "Drop references here" in draw
-    assert "BLF_size(font, 17.0f * UI_SCALE_FAC)" in draw
-    assert "BLF_size(font, 13.0f * UI_SCALE_FAC)" not in draw
-    assert "Click anywhere" not in draw
-    assert "EMPTY_PLUS" not in draw
 
 
-def test_drawer_hosts_the_same_add_tools_row_as_the_mixie_toolbar():
-    """Open-media + Add Text come from one Python builder; the drawer hosts it."""
-    toolbar = _read(ROOT / "src/scripts/mixar/modules/moodboard/ui/moodboard_toolbar.py")
+def test_drawer_hosts_the_same_canvas_chrome_as_the_editor():
     draw = _read(VIEW3D / "view3d_moodboard_drawer_draw.cc")
-
-    assert "def draw_moodboard_add_tools(layout, context):" in toolbar
-    assert "def draw_moodboard_open_media_tool(layout," in toolbar
-    assert "def draw_moodboard_add_text_tool(layout," in toolbar
-    assert 'bl_idname = "VIEW3D_PT_moodboard_drawer_add_tools"' in toolbar
-    assert "draw_moodboard_add_tools(self.layout, context)" in toolbar
-    assert "draw_moodboard_open_media_tool(col)" in toolbar
-    assert "draw_moodboard_add_text_tool(col)" in toolbar
-    assert "VIEW3D_PT_moodboard_drawer_add_tools," in toolbar
-
-    assert 'WM_paneltype_find("VIEW3D_PT_moodboard_drawer_add_tools"' in draw
-    assert "ui::UI_paneltype_draw" in draw
-    assert "draw_add_tools(C, region, panel_xmin)" in draw
-    # Must not call the panel-region path (comment mentions it as the anti-pattern).
-    assert "ED_region_panels(" not in _strip_comments(draw)
+    chrome = _read(MIXIE / "mixie_draw_moodboard_chrome.cc")
+    panels = _read(ROOT / "src/scripts/mixar/modules/moodboard/ui/panels/canvas_chrome.py")
+    assert "mixie_moodboard_canvas_draw(C, region)" in draw
+    assert "WM_paneltype_find(panel_id, false)" in chrome
+    assert "ui::UI_paneltype_draw" in chrome
+    assert "draw_moodboard_add_tools(self.layout, context)" in panels
+    assert "ED_region_panels(" not in _strip_comments(chrome)
 
 
 def test_slide_preserves_the_canvas_aspect_correction_for_hit_testing():

@@ -77,6 +77,7 @@
 #include "DEG_depsgraph_build.hh"
 
 #include "view3d_agent_panel.hh"
+#include "view3d_workspace_viewer.hh"
 #include "view3d_director.hh"
 #include "view3d_intern.hh" /* own include */
 #include "view3d_moodboard_drawer.hh"
@@ -381,6 +382,16 @@ static void view3d_main_region_init(wmWindowManager *wm, ARegion *region)
    * toast button clicks are captured before viewport interactions. */
   view3d_toast_click_register(region);
 
+  /* `~` toggles the Zen moodboard drawer. First so Object Mode and the
+   * View pie never see the key while the operator polls. */
+  view3d_moodboard_drawer_toggle_handlers_add(wm, region);
+
+  /* Cinema Mode paints its columns INTO this region, so a wheel over a card
+   * is a wheel over the viewport. Decided here, before `view3d.zoom` — a
+   * keymap item has to get past the mode keymaps, the tool keymap and the UI
+   * layer first, and never did. */
+  view3d_director_cinema_region_init(region);
+
   /* object ops. */
 
   /* important to be before Pose keymap since they can both be enabled at once */
@@ -563,6 +574,7 @@ static void view3d_widgets()
 static void view3d_main_region_free(ARegion *region)
 {
   /* The Director aerial map's GPU buffers, if this region drew them. */
+  view3d_workspace_viewer_region_free(region);
   view3d_director_minimap_region_free(region);
 
   RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
@@ -1017,6 +1029,16 @@ static void view3d_main_region_message_subscribe(const wmRegionMessageSubscribeP
 /** Concept is to retrieve cursor type contextless. */
 static void view3d_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region)
 {
+  /* Screen cursor selection uses View2D contents for overlapping regions.
+   * It can select WINDOW over the drawer after canvas changes; honor the
+   * same sash geometry as input routing before applying viewport tools. */
+  const ARegion *drawer = view3d_moodboard_drawer_region_find(area);
+  if (drawer && drawer->runtime->visible && win->runtime->eventstate &&
+      view3d_moodboard_drawer_resize_contains_xy(area, drawer, win->runtime->eventstate->xy))
+  {
+    WM_cursor_set(win, WM_CURSOR_X_MOVE);
+    return;
+  }
   if (WM_cursor_set_from_tool(win, area, region)) {
     return;
   }
@@ -1713,6 +1735,7 @@ void ED_spacetype_view3d()
   art->listener = view3d_main_region_listener;
   art->message_subscribe = view3d_main_region_message_subscribe;
   art->cursor = view3d_main_region_cursor;
+  art->event_cursor = true;
   art->lock = REGION_DRAW_LOCK_ALL;
   BLI_addhead(&st->regiontypes, art);
 
@@ -1816,6 +1839,7 @@ void ED_spacetype_view3d()
 
   /* QA harness: export the parallel agent cards as targets (Mixar). */
   view3d_agent_panel_qa_targets_register();
+  view3d_workspace_viewer_qa_register();
 
   /* Mixar: the Zen Mode sliding moodboard drawer — region, operators,
    * keymap and QA targets. */

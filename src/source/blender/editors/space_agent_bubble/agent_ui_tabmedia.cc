@@ -6,13 +6,14 @@
 /** \file
  * \ingroup spagentbubble
  *
- * Media tab pane — the moodboard's Image Gen / Video Gen re-skinned as
+ * Image and Video tab panes — the moodboard's Image Gen / Video Gen re-skinned as
  * island chips. All state/operators are the moodboard tabs' own (see
  * agent_ui_tabmedia.hh); param chips project the catalog param group at
  * `wm.mixar_genparams_<service>__<model>` — no param names hardcoded.
  */
 
 #include "agent_ui_text.hh"
+#include "agent_bubble_references.hh"
 
 #include <algorithm>
 #include <cstdio>
@@ -76,19 +77,18 @@ void agent_ui_tabmedia_draw(const bContext *C,
   }
 
   /* Overflow and unavailable copy use the shared secondary text tone. */
-  const float *col_dim = ui::mixar_tokens::zen.secondary;
+  const float *col_dim = ui::mixar_tokens::mixar_zen().secondary;
 
   const float font = PANE_FONT * agent_ui_text_unit();
   const float font_sub = PANE_FONT_SUB * agent_ui_text_unit();
   const float left = band.xmin + PANE_INSET_X * u;
   const float right = band.xmax - PANE_INSET_X * u;
 
-  /* ---- Sub-tab state (wm.mixar_bubble_media_kind). ---- */
+  /* The header tab is the single source of Image/Video selection. */
   PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-  char kind_id[64] = "IMAGE";
-  char kind_label[64] = "";
-  media_read_enum(C, &wm_ptr, "mixar_bubble_media_kind", kind_id, kind_label);
-  const bool video = STREQ(kind_id, "VIDEO");
+  char tab_id[64] = "IMAGE", tab_label[64] = "";
+  media_read_enum(C, &wm_ptr, "mixar_bubble_tab", tab_id, tab_label);
+  const bool video = STREQ(tab_id, "VIDEO");
 
   /* ---- Tab group + catalog identity. ---- */
   PointerRNA tab_ptr = {};
@@ -124,30 +124,15 @@ void agent_ui_tabmedia_draw(const bContext *C,
   /* Shared panel wash (pane kit). */
   pane_wash_paint(panel, u);
 
-  /* ---- Row 1: Image Generation / Video Generation segmented. ---- */
-  const float seg_top = band.ymax - PANE_STRIP_TOP * u;
-  /* Settings occupies the same row as 3D/Splat. Centre the track in the
-   * remaining width so the native Settings chip is not painted over. */
-  const float settings_reserve = group_ok ? (PANE_SETTINGS_W + PANE_CHIP_GAP) * u : 0.0f;
-  const char *seg_labels[2] = {"Image Generation", "Video Generation"};
-  rctf seg_rects[2];
-  {
-    /* Widths from the measured labels, track centred in the remaining strip. */
-    rctf probe[2];
-    const rctf track_probe = pane_segmented_layout(0.0f, seg_top, seg_labels, 2, u, probe);
-    const float track_w = BLI_rctf_size_x(&track_probe);
-    const float track_max = right - settings_reserve;
-    float x0 = (left + track_max) * 0.5f - track_w * 0.5f;
-    x0 = std::clamp(x0, left, std::max(left, track_max - track_w));
-    pane_segmented_layout(x0, seg_top, seg_labels, 2, u, seg_rects);
-  }
-
   /* ---- Params rows: model dropdown + catalog chips, wrap to 2 rows. ---- */
   MediaParamChip chips[MEDIA_MAX_CHIPS + 1];
   int chip_count = 0;
   int param_total = 0;
+  const bool video_unavailable = video && (!tab_ok || !group_ok);
 
-  if (tab_ok) {
+  /* A catalog-only pane has no usable model controls until its group exists.
+   * Leave the strip for the unavailable hint instead of drawing over it. */
+  if (tab_ok && !video_unavailable) {
     /* Model dropdown first (on the Scene tab group, like the moodboard). */
     MediaParamChip &model_chip = chips[chip_count++];
     model_chip = {};
@@ -189,10 +174,10 @@ void agent_ui_tabmedia_draw(const bContext *C,
 
   /* Lay chips out, wrapping once — but never past the floor that reserves
    * the prompt box (kit contract): the box is claimed FIRST and the chips
-   * elide into "+N more" rather than pushing the prompt out of existence
+   * stop at the available space instead of pushing the prompt out of existence
    * while Generate stays armed. */
   const float chip_h_px = PANE_ROW_H * u;
-  float row_y = seg_top - PANE_ROW_PITCH * u;
+  float row_y = band.ymax - PANE_STRIP_TOP * u;
   /* Never lifted above the first chip row's own bottom — the box would climb
    * over the chips it is supposed to sit under. */
   const float params_floor = std::min(pane_params_floor(panel, u), row_y - chip_h_px);
@@ -216,7 +201,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
   row_y = flow.y_top;
 
   /* Video catalog-only unavailable state. */
-  const bool video_unavailable = video && (!tab_ok || !group_ok);
   if (video_unavailable) {
     pane_label_centre("Video generation needs the live catalog",
                    (band.xmin + band.xmax) * 0.5f,
@@ -258,7 +242,8 @@ void agent_ui_tabmedia_draw(const bContext *C,
   bx = capture.xmax + PANE_CHIP_GAP * u;
 
 
-  /* Generate — "Queued..." while this half has work in the unified queue.
+  /* Generate — "Queued..." / "Generating..." while this half has work in the
+   * unified queue.
    *
    * NOT the legacy `scene.mixie_{imagegen,video_gen}_is_generating` flags: the
    * Image Gen tab's own operator passes no `scene_flag` to
@@ -266,13 +251,16 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * button never acknowledged a click. The queue mirror is where the job
    * actually is. `service_key` is what this half submits (the mode's catalog
    * service, or image_gen/video_gen). */
-  const int active_jobs = pane_active_job_count(C, service_key);
+  int running_jobs = 0;
+  const int active_jobs = pane_active_job_count(C, service_key, &running_jobs);
   /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
    * the point — so an active job is INFORMATION (the label carries the
    * count), never a lock. Only a missing prompt field or an unusable
    * catalog can disarm it. */
   const bool can_generate = tab_ok && !video_unavailable && prompt_ok;
-  generate = pane_generate_rect(prompt_box, u);
+  char gen_label[32];
+  pane_queue_label(gen_label, sizeof(gen_label), active_jobs, running_jobs > 0);
+  generate = pane_generate_rect(prompt_box, u, gen_label);
 
   /* ---- Controls. Two blocks, the composer's split: unembossed operator /
    * dropdown buttons, embossed prompt field. ---- */
@@ -280,31 +268,6 @@ void agent_ui_tabmedia_draw(const bContext *C,
       C, region, "agent_island_media", blender::ui::EmbossType::None);
   ui::Block *field_block = ui::block_begin(
       C, region, "agent_island_media_field", blender::ui::EmbossType::Emboss);
-
-  if (group_ok) {
-    pane_settings_button(block, right, seg_top, u, service_key, model_id);
-  }
-
-  /* Sub-tab halves. */
-  for (int i = 0; i < 2; i++) {
-    ui::Button *but = uiDefButO(block,
-                                ui::ButtonType::But,
-                                "wm.context_set_enum",
-                                blender::wm::OpCallContext::InvokeDefault,
-                                seg_labels[i],
-                                int(seg_rects[i].xmin),
-                                int(seg_rects[i].ymin),
-                                short(BLI_rctf_size_x(&seg_rects[i])),
-                                short(BLI_rctf_size_y(&seg_rects[i])),
-                                i == 0 ? "Image generation" : "Video generation");
-    ui::mixar_style_button(but, ui::MixarComponent::Segment, ui::MixarVariant::Primary, u, agent_ui_text_unit());
-    ui::mixar_button_lit_set(but, i == (video ? 1 : 0));
-    if (but) {
-      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
-      RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_media_kind");
-      RNA_string_set(op_ptr, "value", i == 0 ? "IMAGE" : "VIDEO");
-    }
-  }
 
   /* Param chips. */
   for (int i = 0; i < shown; i++) {
@@ -358,19 +321,19 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * Video half: Video Gen has no reference property of its own — its
    * references ARE the selected board media — so it always previews those. */
   {
-    Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
-    const int ref_count = media_collect_reference_images(
-        C, tab_ok ? &tab_ptr : nullptr, video, ref_images, PANE_REF_THUMB_MAX);
-    pane_ref_thumbs_paint(ref_images,
-                          ref_count,
-                          bx + PANE_REF_THUMB_GAP * u,
-                          bottom_y,
-                          bottom_h,
-                          generate.xmin - PANE_CHIP_GAP * u,
-                          u);
+    if (!agent_bubble_references_visible(C)) {
+      Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
+      const int ref_count = media_collect_reference_images(
+          C, tab_ok ? &tab_ptr : nullptr, video, ref_images, PANE_REF_THUMB_MAX);
+      pane_ref_thumbs_paint(ref_images,
+                            ref_count,
+                            bx + PANE_REF_THUMB_GAP * u,
+                            bottom_y,
+                            bottom_h,
+                            generate.xmin - PANE_CHIP_GAP * u,
+                            u);
+    }
   }
-  char gen_label[32];
-  pane_queue_label(gen_label, sizeof(gen_label), active_jobs);
   /* Newest operator report, above the box — the island has no status bar, so
    * without this a refusal ("No image selected in moodboard") is silent. Kit
    * helper: one definition for all three panes. */
@@ -390,7 +353,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
       int(upload.ymin),
       short(BLI_rctf_size_x(&upload)),
       short(BLI_rctf_size_y(&upload)),
-      video ? "Import selected reference stills for the video" : "Add reference images from disk");
+      video ? "Add reference images and videos from disk" : "Add reference images from disk");
 
   ui::mixar_style_button(
       upload_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());

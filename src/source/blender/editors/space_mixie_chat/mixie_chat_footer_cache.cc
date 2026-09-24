@@ -53,7 +53,8 @@ static FooterCache g_footer_cache = {FooterThemeCache{}, {}, 0, -1, false};
 
 /**
  * Get theme version for cache invalidation.
- * Simple heuristic: pointer address changes if theme is modified.
+ * Detect replacement of the theme allocation. In-place edits are invalidated
+ * by the chat region's NC_WINDOW listener.
  */
 static uintptr_t get_theme_version()
 {

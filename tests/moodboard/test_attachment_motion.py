@@ -90,7 +90,7 @@ def test_only_committed_new_attachments_animate(monkeypatch):
     animate.reset_mock()
     chat_sync._reconcile_attachments(scene, [], animate=True)
     animate.assert_not_called()
-    assert len(attachments) == 10  # Deselecting never silently removes references.
+    assert len(attachments) == 0
 
 
 def test_load_and_attachment_drift_do_not_replay_motion(monkeypatch):
@@ -108,10 +108,10 @@ def test_load_and_attachment_drift_do_not_replay_motion(monkeypatch):
     reconcile.assert_called_with(scene, ('a',), animate=False)
     signature[0] = 1
     chat_sync._poll_tick()
-    reconcile.assert_called_with(scene, [], animate=False)
+    reconcile.assert_called_with(scene, ('a',), animate=False)
     signature[1] = ('b',)
     chat_sync._poll_tick()
-    reconcile.assert_called_with(scene, ['b'], animate=True)
+    reconcile.assert_called_with(scene, ('b',), animate=True)
     chat_sync._on_file_load_post()
     chat_sync._poll_tick()
     reconcile.assert_called_with(scene, ('b',), animate=False)

@@ -66,6 +66,7 @@
 #include "WM_types.hh"
 #include "wm.hh"
 #include "wm_draw.hh"
+#include "wm_draw_mixar_glass.hh"
 #include "wm_event_system.hh"
 #include "wm_surface.hh"
 #include "wm_window.hh"
@@ -626,7 +627,8 @@ static const char *wm_area_name(const ScrArea *area)
     SPACE_NAME(SPACE_STATUSBAR);
     SPACE_NAME(SPACE_SPREADSHEET);
     SPACE_NAME(SPACE_MIXIE);
-    SPACE_NAME(SPACE_MIXIE_CHAT);
+    SPACE_NAME(SPACE_MIXIE_CHAT_DEPRECATED);
+    SPACE_NAME(SPACE_AGENT_BUBBLE);
     SPACE_NAME(SPACE_MIXAR_LAYERS);
     SPACE_NAME(SPACE_MIXAR_PROPERTIES);
     SPACE_NAME(SPACE_MIXAR_ASSETS);
@@ -1338,6 +1340,10 @@ static void wm_draw_window(bContext *C, wmWindow *win)
     }
   }
 
+  /* Only real presents capture/composite frost; offscreen screenshots call
+   * wm_draw_window_onscreen directly and must not replace the live host cache. */
+  wm_draw_mixar_glass(CTX_wm_manager(C), win);
+
   screen->do_draw = false;
 
   GPU_context_end_frame(static_cast<GPUContext *>(win->runtime->gpuctx));
@@ -1674,6 +1680,8 @@ void wm_draw_update(bContext *C)
   GPU_render_step();
 
   BKE_image_free_unused_gpu_textures();
+
+  wm_draw_mixar_glass_update(wm);
 
 #ifdef WITH_METAL_BACKEND
   /* Reset drawable to ensure GPU context activation happens at least once per frame if only a

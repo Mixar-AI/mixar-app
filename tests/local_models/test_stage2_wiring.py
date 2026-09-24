@@ -222,3 +222,20 @@ def test_logout_clears_local_state_and_stops_server():
     assert "orchestrator.on_logout()" in body
     assert "local_provider.clear()" in body
     assert "wipe_transient_state(wm)" in body
+
+
+def test_handshake_reports_the_machine_the_geometry_budget_is_sized_from():
+    """The backend refuses to guess: no block means "assume 16 GB", which is
+    what a 64 GB workstation would be needlessly held to."""
+    import sys as _sys
+
+    from mixar.modules.space_mixie_chat.core.jsonrpc_frames import HANDSHAKE_OK
+
+    client = _client()
+    client._ws = _FakeWS()
+    assert client._perform_handshake() == HANDSHAKE_OK
+    machine = json.loads(client._ws.sent[0])["params"]["machine"]
+    assert set(machine) == {"memory_bytes", "gpu_memory_bytes", "platform"}
+    assert machine["platform"] == _sys.platform
+    if _sys.platform != "win32":
+        assert machine["memory_bytes"] > 1024**3

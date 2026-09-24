@@ -21,13 +21,17 @@ INTERFACE = ROOT / "src/source/blender/editors/interface"
 DIRECTOR = ROOT / "src/scripts/mixar/modules/director"
 WORKFLOW = ROOT / "src/scripts/mixar/modules/workflow"
 
-HEADER = (VIEW3D / "view3d_director_cinema.hh").read_text(encoding="utf-8")
+#: Geometry and palette live in their own header now; the API stayed put.
+HEADER = (VIEW3D / "view3d_director_cinema_tokens.hh").read_text(encoding="utf-8")
+CINEMA_HH = (VIEW3D / "view3d_director_cinema.hh").read_text(encoding="utf-8")
 PAINT = (VIEW3D / "view3d_director_cinema_paint.cc").read_text(encoding="utf-8")
 LAYOUT = (VIEW3D / "view3d_director_cinema_layout.cc").read_text(encoding="utf-8")
 LEFT = (VIEW3D / "view3d_director_cinema_left.cc").read_text(encoding="utf-8")
 RIGHT = (VIEW3D / "view3d_director_cinema_right.cc").read_text(encoding="utf-8")
+CAMERAS = (VIEW3D / "view3d_director_cinema_cameras.cc").read_text(encoding="utf-8")
 DOCK = (VIEW3D / "view3d_director_cinema_dock.cc").read_text(encoding="utf-8")
 TOP = (VIEW3D / "view3d_director_cinema_top.cc").read_text(encoding="utf-8")
+PHONE = (VIEW3D / "view3d_director_cinema_phone.cc").read_text(encoding="utf-8")
 TIMELINE = (VIEW3D / "view3d_director_timeline.cc").read_text(encoding="utf-8")
 TOPBAR = (INTERFACE / "interface_mixar_topbar.cc").read_text(encoding="utf-8")
 MOTION = (INTERFACE / "mixar/motion.cc").read_text(encoding="utf-8")
@@ -92,12 +96,14 @@ def test_the_resolution_operator_still_scales_the_short_side():
 
 
 def test_list_row_height_is_clamped_to_the_pitch():
-    assert "std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH)" in LAYOUT
+    # And a GAP under the pitch, so consecutive rows stop touching.
+    assert "std::min(CINEMA_ROW_H, CINEMA_LIST_PITCH - CINEMA_LIST_GAP)" in LAYOUT
+    assert _define("CINEMA_LIST_GAP") > 0.0
     # Both lists draw through the clamp; a raw CINEMA_ROW_H row overlaps the
     # next one, and the later-created ui::Button wins the shared band.
-    assert "cinema_list_row_h()" in RIGHT
+    assert "cinema_list_row_h()" in CAMERAS
     assert "cinema_list_row_h()" in LEFT
-    assert "const float row_h = CINEMA_ROW_H * u;" not in RIGHT
+    assert "const float row_h = CINEMA_ROW_H * u;" not in CAMERAS
 
 
 def test_rows_never_exceed_the_list_pitch():
@@ -201,7 +207,7 @@ def test_the_stage_spans_the_columns_and_hosts_the_gizmos():
     # the Mixar mark. It is chrome only.
     assert "brand_chip(" in TOP
     assert "ICON_MIXAR_ICON" in TOP
-    assert "CINEMA_COL_BRAND_TOP" in TOP
+    assert "CinemaBrandTop" in TOP
     assert (
         "brand_chip(cinema_design_rect(region, margin, STRIP_Y, CINEMA_PANEL_W, CINEMA_PHONE_H))"
         in TOP
@@ -228,7 +234,7 @@ def test_the_banner_chip_is_inert_and_only_on_the_wide_surface():
 
 def test_the_columns_place_their_lowest_cards_through_those_constants():
     assert "CINEMA_SPEED_CARD_Y, CINEMA_PANEL_W, CINEMA_SPEED_CARD_H" in LEFT
-    assert "CINEMA_EXPORT_Y, CINEMA_PANEL_W, CINEMA_EXPORT_H" in RIGHT
+    assert "column_card(region, CINEMA_EXPORT_Y, CINEMA_EXPORT_H)" in RIGHT
 
 
 # -------------------------------------------------------------------------
@@ -248,10 +254,11 @@ def test_dock_row_is_gated_on_the_viewport_region_not_the_dock():
 def test_compact_dock_keeps_the_controls_with_no_other_home():
     assert "cinema_draw_dock_compact" in TIMELINE
     compact = DOCK[DOCK.index("void cinema_draw_dock_compact") :]
-    # Collapse / immersive / explore and the transport exist ONLY on the dock;
-    # dropping the row wholesale would strand them.
+    # The transport exists ONLY on the dock; dropping the row wholesale would
+    # strand it. Everything else the compact layout needs is on the viewport
+    # rail, which is what draws below the fit gate.
     assert "draw_transport(" in compact
-    assert "draw_mode_tools(block, region, state, cy, /*full=*/false)" in compact
+    assert "draw_primary_action(" not in compact
     # Stale QA records from a previous wide draw must not survive.
     assert "cinema_qa_begin(region)" in compact
 
@@ -262,14 +269,16 @@ def test_compact_dock_keeps_the_controls_with_no_other_home():
 
 def test_frame_fields_yield_to_the_transport():
     assert "transport_right_edge(region)" in DOCK
-    assert "fields_fit" in DOCK
-    guard = re.search(r"if \(scene != nullptr && fields_fit\) \{", DOCK)
+    # The pair shrinks to FIELD_MIN_W before it gives up (they used to be
+    # dropped whole at the first pixel they did not fit at full width —
+    # tests/director/test_dock_frame_fields.py).
+    guard = re.search(r"if \(field_w < FIELD_MIN_W \* u\) \{\n    return start_x;", DOCK)
     assert guard is not None
     # Both fields live behind the one guard: dropping only Start would leave a
     # lone End field hanging off the transport.
     fields = DOCK[guard.end() :]
-    assert fields.index('"frame_end"') < fields.index("}\n\nvoid cinema_draw_dock_compact")
-    assert fields.index('"frame_start"') < fields.index("}\n\nvoid cinema_draw_dock_compact")
+    assert fields.index('"frame_end"') < fields.index("draw_transport(")
+    assert fields.index('"frame_start"') < fields.index("draw_transport(")
 
 
 # -------------------------------------------------------------------------
@@ -296,23 +305,56 @@ def test_aerial_is_not_bound_globally():
     assert '"3D View"' in block
 
 
+#: Blender's own `View3D Walk Modal` keys. The strip may advertise these
+#: while a walk is running because walk itself binds them — that is the whole
+#: point of handing N to `view3d.walk` rather than reimplementing walking.
+_BLENDER_WALK_KEYS = set("WASDQE")
+
+
+def _hint_keys(array: str) -> set[str]:
+    """Single-glyph keycaps painted by one of the top strip's hint sets."""
+    block = TOP.split(f"const Hint {array}[", 1)[1].split("};", 1)[0]
+    return set(re.findall(r'"([A-Z])"', block))
+
+
+def _director_bound_keys() -> set[str]:
+    bound = set(re.findall(r"type='([A-Z])',", KEYMAP))
+    walk_keys = re.search(r"_WALK_KEYS = \((.*?)\)", KEYMAP)
+    if walk_keys is not None:
+        bound |= set(re.findall(r"'([A-Z])'", walk_keys.group(1)))
+    walk_key = re.search(r"_WALK_KEY = '([A-Z])'", KEYMAP)
+    if walk_key is not None:
+        bound.add(walk_key.group(1))
+    return bound
+
+
 def test_every_painted_keycap_has_a_binding():
-    keys = set(re.findall(r'\{"([A-Z])"', TOP))
-    bound = set(re.findall(r"\('([A-Z])', \"", KEYMAP)) | set(
-        re.findall(r"type='([A-Z])',", KEYMAP)
-    )
-    assert keys <= bound, f"painted but unbound: {sorted(keys - bound)}"
+    """A hint is a promise, and the strip makes two different sets of them.
+
+    At rest it may only advertise keys the Director keymap binds itself.
+    While walking it advertises walk's OWN keys, which Blender binds, plus
+    the one exit Director adds to walk's modal keymap.
+    """
+    bound = _director_bound_keys()
+    resting = _hint_keys("resting_hints")
+    assert resting <= bound, f"painted but unbound: {sorted(resting - bound)}"
+
+    walking = _hint_keys("walking_hints")
+    promised = bound | _BLENDER_WALK_KEYS
+    assert walking <= promised, f"painted but unbound: {sorted(walking - promised)}"
 
 
 # -------------------------------------------------------------------------
 # 8. The camera list always shows the active shot.
 
 
-def test_camera_list_windows_around_the_active_shot():
-    assert "cinema_list_window_start(shot_count, active_index)" in RIGHT
-    assert "CINEMA_LIST_PITCH * float(slot)" in RIGHT
-    assert "const int max_rows = 4;" not in RIGHT
-    assert "the rest scrolls out of view" not in RIGHT
+def test_camera_list_windows_around_the_live_camera():
+    # The window snaps to the live camera when it changes; a deliberate
+    # scroll owns it after that (tests/director/test_camera_list_scroll.py).
+    assert "cinema_list_window_start(count, active_index)" in CAMERAS
+    assert "CINEMA_LIST_PITCH * float(slot)" in CAMERAS
+    assert "const int max_rows = 4;" not in CAMERAS
+    assert "the rest scrolls out of view" not in CAMERAS
 
 
 def test_window_start_clamps_into_range():
@@ -359,11 +401,11 @@ def test_topbar_state_is_read_from_the_payload_only(painter):
     assert toggle_types is not None
     for toggle in ("Toggle", "ToggleN", "IconToggle", "IconToggleN", "Checkbox", "CheckboxN", "Row", "ListRow"):
         assert f"ButtonType::{toggle}" in toggle_types.group(1)
-    for action in ("But", "Menu", "Block", "Popover"):
+    for action in ("But", "Menu", "Block", "Popover", "Pulldown"):
         assert f"ButtonType::{action}," not in toggle_types.group(1)
     assert "selected = style.lit || native_selection || cinema_selection" in sampler
     assert "pressed = !toggle && (button.flag & UI_SELECT)" in sampler
-    assert "ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block, ButtonType::Popover)" in sampler
+    assert "ELEM(button.type, ButtonType::But, ButtonType::Menu, ButtonType::Block, ButtonType::Popover, ButtonType::Pulldown)" in sampler
 
 
 def test_every_rounded_control_shares_the_row_radius():
@@ -373,10 +415,21 @@ def test_every_rounded_control_shares_the_row_radius():
     assert "cinema_panel(track, CINEMA_ROW_RADIUS * u, track_top, track_bottom);" in RIGHT
     assert "cinema_fill(export_rect, CINEMA_ROW_RADIUS * u, export_col);" in RIGHT
     assert "CINEMA_PANEL_RADIUS * u, track_top" not in RIGHT
-    assert "cinema_fill(rect, CINEMA_ROW_RADIUS * u, phone_bg);" in TOP
-    assert "cinema_panel(row, CINEMA_ROW_RADIUS * u, top, bottom);" in TOP
+    # The phone hand-off moved to its own file when it stopped being paint
+    # and became the Virtual Camera's live entry point; it still rounds
+    # like the strip it sits in, in both of its states.
+    assert "cinema_fill(rect, CINEMA_ROW_RADIUS * u, bg);" in PHONE
+    assert "cinema_fill(rect, CINEMA_ROW_RADIUS * u, on);" in PHONE
+    assert PHONE.count("CINEMA_ROW_RADIUS * u") == 3
     assert TOP.count("CINEMA_ROW_RADIUS * cinema_unit()") == 2
+    # The dock's 26px chips (the interpolation dropdown that joined them from
+    # the strip) and its frame fields cap to a pill; so does the ruler's unit
+    # switch, which now lives in its own file.
     assert DOCK.count("std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f)") == 2
+    ruler = (VIEW3D / "view3d_director_cinema_dock_ruler.cc").read_text(encoding="utf-8")
+    assert "std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&track) * 0.5f)" in ruler
+    # The selected cell rounds inside the track it sits in.
+    assert "std::min(radius, BLI_rctf_size_y(&cell) * 0.5f)" in ruler
 
 
 def test_hints_start_on_the_gate_and_the_phone_sits_over_the_right_column():
@@ -398,9 +451,9 @@ def test_hints_start_on_the_gate_and_the_phone_sits_over_the_right_column():
 
 
 def test_captions_use_the_dimmer_caption_colour():
-    assert "const float caption_col[4] = CINEMA_COL_CAPTION;" in LEFT
-    assert "const float label_col[4] = CINEMA_COL_CAPTION;" in LEFT
-    assert "const float label_col[4] = CINEMA_COL_CAPTION;" in RIGHT
+    assert "MIXAR_THEME_LOAD(caption_col, CinemaRowCaption);" in LEFT
+    assert "MIXAR_THEME_LOAD(label_col, CinemaRowCaption);" in LEFT
+    assert "MIXAR_THEME_LOAD(label_col, CinemaRowCaption);" in CAMERAS
 
 
 def test_popup_rows_paint_as_the_surface_row_class():
@@ -475,9 +528,14 @@ def test_popups_size_to_their_bar_and_round_every_corner():
     render = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
     assert "director_popup_width(arg" in interp and "director_popup_width(arg" in render
     assert "g_popup_bar_width[int(slot)]" in PAINT
-    for name, slot in (("left", "Row"), ("top", "Strip"), ("right", "Export")):
+    # One slot per BAR CLASS, not per file: Interpolation kept the Strip slot
+    # when it moved from the top strip to the timeline dock.
+    for name, slot in (("left", "Row"), ("dock", "Strip"), ("right", "Export")):
         text = (VIEW3D / f"view3d_director_cinema_{name}.cc").read_text(encoding="utf-8")
         assert f"CinemaPopupSlot::{slot}" in text, name
+    assert "CinemaPopupSlot::" not in (
+        VIEW3D / "view3d_director_cinema_top.cc"
+    ).read_text(encoding="utf-8")
     widgets = (INTERFACE / "interface_widgets.cc").read_text(encoding="utf-8")
     assert "block_flag & (BLOCK_POPUP | BLOCK_MIXAR_ROUND_ALL)" in widgets
     header = (ROOT / "src/source/blender/editors/include/UI_interface_c.hh").read_text(encoding="utf-8")
@@ -509,7 +567,11 @@ def test_transport_steps_are_triangle_plus_inner_dot():
     step triangle ~8.5 x 9.5, dot ~4.5, centres 36 apart, one muted grey) —
     the hit box must never decide how big a glyph paints, which is how the
     triangles came out twice too tall, half as wide, and near-white."""
-    glyph = DOCK[DOCK.index("void transport_glyph(") :]
+    # The transport has its own translation unit (500-line rule).
+    transport = (VIEW3D / "view3d_director_cinema_dock_transport.cc").read_text(
+        encoding="utf-8"
+    )
+    glyph = transport[transport.index("void transport_glyph(") :]
     glyph = glyph[: glyph.index("\n}\n")]
     # Orientation: apex outward, dot on the inner (play-facing) side.
     assert "const float outer = cx + dir * total * 0.5f;" in glyph
@@ -518,8 +580,8 @@ def test_transport_steps_are_triangle_plus_inner_dot():
     assert "stop" not in glyph
 
     def dock_const(name: str) -> float:
-        match = re.search(rf"^constexpr float {name} = (-?[0-9.]+)f;", DOCK, re.M)
-        assert match is not None, f"{name} is not a constexpr in the dock"
+        match = re.search(rf"^constexpr float {name} = (-?[0-9.]+)f;", transport, re.M)
+        assert match is not None, f"{name} is not a constexpr in the transport"
         return float(match.group(1))
 
     # Explicit glyph tokens: the play is a squat near-equilateral triangle
@@ -533,7 +595,7 @@ def test_transport_steps_are_triangle_plus_inner_dot():
     assert dock_const("TRANSPORT_SIZE") == 26.0
     assert dock_const("TRANSPORT_GAP") == 18.0
     # The glyph sizes itself from the tokens, never from the slot box.
-    assert "PLAY_SCALE" not in DOCK
+    assert "PLAY_SCALE" not in transport
     assert "BLI_rctf_size_y(&box)" not in glyph
     assert "BLI_rctf_size_x(&box)" not in glyph
     for token in ("PLAY_H", "STEP_H", "DOT_D", "STEP_GAP", "GLYPH_ASPECT"):
@@ -541,9 +603,9 @@ def test_transport_steps_are_triangle_plus_inner_dot():
     # One muted grey for all three glyphs (pause included): RGB 135 / 255.
     assert re.search(
         r"^constexpr float TRANSPORT_COL\[4\] = \{0\.53f, 0\.53f, 0\.53f, 1\.0f\};",
-        DOCK,
+        transport,
         re.M,
     )
     assert "const float *col = TRANSPORT_COL;" in glyph
-    assert "0.878f" not in DOCK
+    assert "0.878f" not in transport
     assert re.search(r"const float col\[4\] = \{", glyph) is None

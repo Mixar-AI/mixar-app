@@ -16,6 +16,8 @@ from typing import Optional
 
 import bpy
 
+from .attachment_validation import is_video_attachment
+
 from mixar.config.logging_config import get_logger
 
 from ..constants import (
@@ -23,6 +25,8 @@ from ..constants import (
     MAX_IMAGE_SIZE_BYTES,
     SUPPORTED_IMAGE_FORMATS,
     THUMBNAIL_SIZE,
+    VIDEO_ATTACHMENT_REJECTED,
+    VIDEO_FILE_FORMATS,
 )
 
 logger = get_logger(__name__)
@@ -243,6 +247,8 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
 
     # Check file extension
     ext = os.path.splitext(filepath)[1].lower()
+    if ext in VIDEO_FILE_FORMATS:
+        return False, VIDEO_ATTACHMENT_REJECTED
     if ext not in SUPPORTED_IMAGE_FORMATS:
         return False, f"Unsupported format: {ext}. Supported: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
 
@@ -362,6 +368,10 @@ def encode_attachment_for_upload(
     Returns:
         ``(base64_string, mime_type)``, or ``None`` on error.
     """
+    if is_video_attachment(image_path_or_name, source):
+        logger.warning(VIDEO_ATTACHMENT_REJECTED)
+        return None
+
     from .attachment_compression import (
         compress_blend_image_for_chat,
         compress_file_for_chat,
@@ -438,7 +448,7 @@ def get_blend_images() -> list[dict]:
     images = []
     for image in bpy.data.images:
         # Skip render results and viewer images
-        if image.type in {'RENDER_RESULT', 'COMPOSITING'}:
+        if image.type in {'RENDER_RESULT', 'COMPOSITING'} or image.source == 'MOVIE':
             continue
 
         images.append({

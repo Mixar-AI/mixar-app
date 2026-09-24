@@ -2,20 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Arming, disarming, and tidying Scribble.
-
-The toggle is the feature's one entry point, and it lives in the chat
-composer next to the other ways of showing the agent something. It arms
-BOTH surfaces at once — handwriting over the chat, marks over the frozen
-viewport — through ``core/scribble_mode.py``, which is also what every
-other exit (Esc, send) goes through, so the two halves cannot drift apart.
-
-Disarming the viewport half works by clearing ``wm.mixar_mark_armed`` — the
-running modal watches that flag and stops. There is deliberately no second
-mechanism: a "stop the modal" call that could disagree with the flag is
-exactly how a viewport ends up blocked with nothing left running to
-unblock it.
-"""
+"""Viewport annotation controls; prompt input methods remain independent."""
 
 from __future__ import annotations
 
@@ -29,31 +16,27 @@ logger = get_logger(__name__)
 
 
 class MIXAR_OT_scribble_toggle(Operator):
-    """Scribble: write in the chat to type, draw on the viewport to point"""
+    """Draw on the viewport while typing or dictating the prompt."""
 
     bl_idname = "mixar.scribble_toggle"
-    bl_label = "Scribble"
+    bl_label = "Sketch Viewport"
     bl_description = (
-        "Scribble with a stylus or the mouse. Writing over the chat is "
-        "converted to text in the message box; drawing on the frozen 3D "
-        "viewport marks what you mean, and the marks are sent with your "
-        "message already resolved against the scene"
+        "Draw what to build or circle what to change on the 3D view. "
+        "The Agent minimizes and shows your typed instructions. "
+        "Enter sends; Escape or Done opens the drawing preview"
     )
     bl_options = {"REGISTER"}
 
     def execute(self, context):
         wm = context.window_manager
         if scribble_mode.is_armed(wm):
-            # One exit for both halves: the canvas converts what is still
-            # on it and lowers; the freeze modal sees the flag drop on its
-            # next event and finishes, committing anything half-drawn.
-            scribble_mode.disarm(wm)
+            from mixar.modules.scribble_mark.core import pending
+            pending.flush(context)
+            scribble_mode.disarm_marks(wm)
             overlay.tag_redraw()
             return {"FINISHED"}
 
         if not scribble_mode.arm(context, report=self.report):
-            self.report({"WARNING"},
-                        "Nothing to scribble on — open a 3D viewport or the chat")
             return {"CANCELLED"}
         return {"FINISHED"}
 
@@ -77,24 +60,19 @@ class MIXAR_OT_scribble_mark_undo(Operator):
             return {"CANCELLED"}
         overlay.pop_settled()
         mark_store.refresh_reading(context.scene, context.window_manager)
+        if not scribble_mode.is_armed(context.window_manager):
+            from mixar.modules.scribble_mark.core import preview
+            preview.sync(context.scene)
         overlay.tag_redraw()
         return {"FINISHED"}
 
 
 class MIXAR_OT_scribble_mark_clear(Operator):
-    """Discard the queued marks and release what they created
-
-    QUEUED, not every mark. Both surfaces that offer this — the chat header
-    and the island chip — show the DRAFT count beside it and the island's
-    tooltip says "Discard the queued marks", so a user looking at "2" and
-    clicking the X means those two. Removing the SENT marks of earlier turns
-    as well would take with them the vertex groups and cameras the
-    conversation still names, which is the same thing ``remove_last`` used to
-    do through the adjacent button.
-    """
+    """Discard unsent drawings and previews, preserving earlier sent marks."""
 
     bl_idname = "mixar.scribble_mark_clear"
-    bl_label = "Clear Marks"
+    bl_label = "Discard Sketch"
+    bl_description = "Remove the unsent drawing and its preview from this message"
     bl_options = {"REGISTER"}
 
     @classmethod
@@ -102,7 +80,9 @@ class MIXAR_OT_scribble_mark_clear(Operator):
         return mark_store.count(context.scene, drafts_only=True) > 0
 
     def execute(self, context):
-        removed = mark_store.clear(context.scene, drafts_only=True)
+        removed = mark_store.clear(context.scene, drafts_only=True, keep_view=_live_view_name())
+        from mixar.modules.scribble_mark.core import preview
+        preview.sync(context.scene)
         overlay.reset()
         wm = context.window_manager
         # The reading override described ink that no longer exists.

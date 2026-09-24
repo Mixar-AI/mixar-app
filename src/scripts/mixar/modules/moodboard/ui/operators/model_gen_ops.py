@@ -20,7 +20,7 @@ import base64 as _b64
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
 
 logger = get_logger(__name__)
 
@@ -46,7 +46,6 @@ def _routing(service_key):
             feature_key=FEATURE_MODEL_3D,
             fail_message="3D model generation failed",
             scene_flag="mixie_image_to_3d_is_generating",
-            batch_popup_title="Image to 3D batch complete",
         )
     if service_key == "image_to_3d":
         # on_imported is set by the operator (mesh naming + normalization),
@@ -55,7 +54,6 @@ def _routing(service_key):
             feature_key=FEATURE_IMAGE_TO_3D_PRO,
             fail_message="Image to 3D failed",
             scene_flag="mixie_image_to_3d_is_generating",
-            batch_popup_title="Image to 3D batch complete",
         )
     if service_key == "hunyuan_rapid":
         return dict(
@@ -90,11 +88,7 @@ class MIXIE_OT_model_gen_generate(Operator):
         """Input image from the shared image-source UI (or None)."""
         scene = context.scene
         if getattr(tab, 'use_selected_image', False):
-            if hasattr(scene, 'mixie_moodboard_images'):
-                for item in scene.mixie_moodboard_images:
-                    if item.selected and is_still_item(item):
-                        return item.image
-            return None
+            return first_selected_reference_still(scene)
         return getattr(tab, 'reference_image', None)
 
     def _turnaround_payload(self, context, image, service_key, model):
@@ -252,7 +246,11 @@ class MIXIE_OT_model_gen_generate(Operator):
         # --- Enqueue ---
         route = _routing(service_key)
         feature_key = route.pop("feature_key")
-        label = image.name if image else ((prompt or model)[:40])
+        from mixar.modules.common.job_queue.core.labels import stackable_job_identity
+
+        label, display_label = stackable_job_identity(
+            image.name if image else ((prompt or model)[:40])
+        )
 
         # Name the imported mesh from the input image (or a prompt slug for
         # text-to-3D) and normalize its placement. Overrides any service
@@ -275,6 +273,7 @@ class MIXIE_OT_model_gen_generate(Operator):
                 model=model,
                 payload=payload,
                 label=label,
+                display_label=display_label,
                 **route,
             )
             if not job:

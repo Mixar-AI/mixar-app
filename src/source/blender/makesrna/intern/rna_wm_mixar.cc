@@ -32,8 +32,8 @@
  *
  * The table entry for this file is registered in Mixar's overlay
  * of ``makesrna.cc`` (right after ``rna_wm.cc``). That same overlay
- * also injects an extra ``#include "rna_wm_mixar.cc"`` into the
- * generated ``rna_wm_gen.cc`` so the helper functions below are
+ * includes the runtime helpers only in the generated ``rna_wm_gen.cc``
+ * (not the empty ``rna_wm_mixar_gen.cc``) so the functions below are
  * visible to the auto-generated property wrappers for Window
  * (which are emitted into rna_wm_gen.cc because Window itself was
  * registered in rna_wm.cc).
@@ -112,6 +112,12 @@ static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *v
 /* Defined in windowmanager/intern/wm_{event_system,window}.cc (Mixar overlay). */
 void Mixar_qa_simulate_file_drop(bContext *C, wmWindow *win, int x, int y, Span<const char *> paths);
 void Mixar_qa_simulate_file_drag(bContext *C, wmWindow *win, const char *filepath);
+bool Mixar_window_resize_dispatch_active();
+
+static bool rna_WindowManager_mixar_window_resizing_get(PointerRNA * /*ptr*/)
+{
+  return Mixar_window_resize_dispatch_active();
+}
 
 static void rna_Window_mixar_qa_drag_file(
     wmWindow *win, bContext *C, ReportList *reports, const char *filepath)
@@ -348,6 +354,17 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         "QA UI Dump",
         "JSON snapshot of all live UI widgets (labels, operators, properties, "
         "window-space rects, state) for the Mixar QA harness");
+
+    /* Timers and modal handlers also run from inside the OS resize callback
+     * (see wm_window.cc). A viewport render there crashes macOS. */
+    prop = RNA_def_property(srna_wm, "mixar_window_resizing", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_window_resizing_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(
+        prop,
+        "Window Resizing",
+        "Handlers are running from inside an OS window resize. Defer viewport "
+        "renders (render.opengl) until this is False");
   }
 }
 

@@ -2006,6 +2006,107 @@ static void rna_def_userdef_theme_ui_gradient(BlenderRNA *brna)
   RNA_def_property_update(prop, 0, "rna_userdef_theme_update");
 }
 
+struct MixarRnaColor {
+  const char *id;
+  const char *name;
+  const char *desc;
+  float value[4];
+};
+
+static void rna_def_mixar_theme_colors(StructRNA *srna, const MixarRnaColor *colors, int count)
+{
+  for (int i = 0; i < count; i++) {
+    PropertyRNA *prop = RNA_def_property(srna, colors[i].id, PROP_FLOAT, PROP_COLOR_GAMMA);
+    RNA_def_property_float_sdna(prop, nullptr, colors[i].id);
+    RNA_def_property_array(prop, 4);
+    RNA_def_property_float_array_default(prop, colors[i].value);
+    RNA_def_property_ui_text(prop, colors[i].name, colors[i].desc);
+    RNA_def_property_update(prop, 0, "rna_userdef_theme_update");
+  }
+}
+
+static const MixarRnaColor mixar_theme_ui_colors[] = {
+    {"mixar_canvas", "Canvas", "Shared canvas and page background", {18.0f / 255.0f, 18.0f / 255.0f, 18.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_panel", "Panel", "Raised panel and wash top", {45.0f / 255.0f, 45.0f / 255.0f, 45.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_input", "Input", "Prompt and text-field bed", {18.0f / 255.0f, 18.0f / 255.0f, 18.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_control", "Control", "Parameter chip and control track", {49.0f / 255.0f, 49.0f / 255.0f, 49.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_selected", "Selected", "Selected chip, thumb and hover wash", {72.0f / 255.0f, 72.0f / 255.0f, 72.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_text", "Text", "Primary label", {226.0f / 255.0f, 226.0f / 255.0f, 226.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_text_strong", "Text Strong", "Titles and active labels", {255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_text_secondary", "Text Secondary", "Inactive and caption text", {117.0f / 255.0f, 117.0f / 255.0f, 117.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_border", "Border", "Neutral control outline", {65.0f / 255.0f, 65.0f / 255.0f, 65.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_focus", "Focus", "Shared accent, focus ring and hover", {0.0f / 255.0f, 192.0f / 255.0f, 199.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_primary", "Primary", "Generate and export action", {26.0f / 255.0f, 64.0f / 255.0f, 38.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_danger", "Danger", "Destructive and error accent", {224.0f / 255.0f, 72.0f / 255.0f, 72.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_warning", "Warning", "Warning accent", {224.0f / 255.0f, 160.0f / 255.0f, 48.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_action", "Action", "Secondary action chip", {29.0f / 255.0f, 29.0f / 255.0f, 29.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_glyph", "Glyph", "Header glyph", {228.0f / 255.0f, 228.0f / 255.0f, 228.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_chip", "Chip", "Chip track", {29.0f / 255.0f, 29.0f / 255.0f, 29.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_chip_active", "Chip Active", "Selected segment thumb", {50.0f / 255.0f, 50.0f / 255.0f, 50.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_gray_800", "Gray 800", "Input and dropdown fill", {31.0f / 255.0f, 31.0f / 255.0f, 31.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_gray_700", "Gray 700", "Toggle off track", {42.0f / 255.0f, 42.0f / 255.0f, 42.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_border_strong", "Border Strong", "Widget and card outline", {46.0f / 255.0f, 46.0f / 255.0f, 46.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_bg", "Background", "Raised card bed", {20.0f / 255.0f, 20.0f / 255.0f, 20.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_fg_1", "Foreground 1", "Primary widget text", {230.0f / 255.0f, 230.0f / 255.0f, 230.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_fg_2", "Foreground 2", "Secondary widget text", {200.0f / 255.0f, 200.0f / 255.0f, 200.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_fg_3", "Foreground 3", "Section label", {140.0f / 255.0f, 140.0f / 255.0f, 140.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_fg_4", "Foreground 4", "Muted glyph", {90.0f / 255.0f, 90.0f / 255.0f, 90.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_pane_wash", "Pane Wash", "Pane wash bottom", {19.0f / 255.0f, 20.0f / 255.0f, 19.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_pane_pill_dim", "Pane Pill Dim", "Recessed value pill", {60.0f / 255.0f, 60.0f / 255.0f, 60.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_pane_pill_on", "Pane Pill On", "On-state pill", {71.0f / 255.0f, 71.0f / 255.0f, 71.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_brand", "Brand", "Toast primary action", {52.0f / 255.0f, 199.0f / 255.0f, 110.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_brand_text", "Brand Text", "Text on the brand action", {13.0f / 255.0f, 19.0f / 255.0f, 15.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_queue", "Queue", "Queue pill and speed-off", {66.0f / 255.0f, 66.0f / 255.0f, 66.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_queue_count", "Queue Count", "Queue count chip", {108.0f / 255.0f, 108.0f / 255.0f, 108.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_slider_track", "Slider Track", "Zen/Engine slider track", {29.0f / 255.0f, 29.0f / 255.0f, 29.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_slider_thumb", "Slider Thumb", "Zen/Engine slider thumb", {57.0f / 255.0f, 57.0f / 255.0f, 57.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_slider_thumb_hover", "Slider Thumb Hover", "Zen/Engine thumb hover", {70.0f / 255.0f, 70.0f / 255.0f, 70.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_slider_label", "Slider Label", "Zen/Engine slider label", {255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_pill_fill", "Cinema Pill Fill", "Cinema mode pill at rest", {14.0f / 255.0f, 14.0f / 255.0f, 14.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_pill_border", "Cinema Pill Border", "Cinema mode pill hairline", {63.0f / 255.0f, 63.0f / 255.0f, 63.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_pill_on_a", "Cinema Pill On A", "Cinema mode pill gradient start", {32.0f / 255.0f, 88.0f / 255.0f, 54.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_pill_on_b", "Cinema Pill On B", "Cinema mode pill gradient end", {58.0f / 255.0f, 132.0f / 255.0f, 87.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_pill_border_on", "Cinema Pill Border On", "Cinema mode pill active hairline", {87.0f / 255.0f, 176.0f / 255.0f, 124.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_pill_label", "Cinema Pill Label", "Cinema mode pill label at rest", {80.0f / 255.0f, 80.0f / 255.0f, 80.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_pill_label_on", "Cinema Pill Label On", "Cinema mode pill label when active", {255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_viewport_fill", "Viewport Pill Fill", "Shading pill fill", {5.0f / 255.0f, 5.0f / 255.0f, 5.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_viewport_border", "Viewport Pill Border", "Shading pill hairline", {103.0f / 255.0f, 103.0f / 255.0f, 103.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_viewport_label", "Viewport Pill Label", "Shading pill label at rest", {115.0f / 255.0f, 115.0f / 255.0f, 115.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_viewport_label_on", "Viewport Pill Label On", "Shading pill label when active", {222.0f / 255.0f, 222.0f / 255.0f, 222.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_profile_fill", "Profile Fill", "Account chip fill", {27.0f / 255.0f, 27.0f / 255.0f, 27.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_profile_label", "Profile Label", "Account chip label", {236.0f / 255.0f, 236.0f / 255.0f, 236.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_profile_avatar", "Profile Avatar", "Account avatar disc", {60.0f / 255.0f, 60.0f / 255.0f, 60.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_profile_glyph", "Profile Glyph", "Account avatar glyph", {210.0f / 255.0f, 210.0f / 255.0f, 210.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_row_top", "Cinema Row Top", "Cinema row gradient top", {88.0f / 255.0f, 88.0f / 255.0f, 88.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_row_bottom", "Cinema Row Bottom", "Cinema row gradient bottom", {36.0f / 255.0f, 36.0f / 255.0f, 36.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_row_hover", "Cinema Row Hover", "Cinema slider hover track", {46.0f / 255.0f, 46.0f / 255.0f, 46.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_row_track", "Cinema Row Track", "Cinema slider resting track", {38.0f / 255.0f, 38.0f / 255.0f, 38.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_row_text_on", "Cinema Row Text On", "Cinema value text", {255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_row_text_off", "Cinema Row Text Off", "Cinema row text at rest", {180.0f / 255.0f, 180.0f / 255.0f, 180.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_row_text_disabled", "Cinema Row Text Disabled", "Disabled cinema row text", {99.0f / 255.0f, 99.0f / 255.0f, 99.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_row_caption", "Cinema Row Caption", "Cinema caption text", {102.0f / 255.0f, 102.0f / 255.0f, 102.0f / 255.0f, 217.0f / 255.0f}},
+    {"mixar_cinema_row_slider_on", "Cinema Row Slider On", "Cinema slider fill", {42.0f / 255.0f, 121.0f / 255.0f, 73.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_card_top", "Cinema Card Top", "Cinema card gradient top", {34.0f / 255.0f, 35.0f / 255.0f, 35.0f / 255.0f, 245.0f / 255.0f}},
+    {"mixar_cinema_card_bottom", "Cinema Card Bottom", "Cinema card gradient bottom", {11.0f / 255.0f, 11.0f / 255.0f, 11.0f / 255.0f, 245.0f / 255.0f}},
+    {"mixar_cinema_label", "Cinema Label", "Cinema field label", {128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_dimmer", "Cinema Dimmer", "Cinema dimmer", {55.0f / 255.0f, 55.0f / 255.0f, 55.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_keycap", "Cinema Keycap", "Cinema keycap", {100.0f / 255.0f, 100.0f / 255.0f, 100.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_phone", "Cinema Phone", "Cinema phone chip", {56.0f / 255.0f, 56.0f / 255.0f, 56.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_chip", "Cinema Chip", "Cinema chip", {80.0f / 255.0f, 80.0f / 255.0f, 80.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_brand_top", "Cinema Brand Top", "Cinema brand gradient top", {11.0f / 255.0f, 49.0f / 255.0f, 26.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_brand_bottom", "Cinema Brand Bottom", "Cinema brand gradient bottom", {15.0f / 255.0f, 15.0f / 255.0f, 15.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_cinema_gate_fill", "Cinema Gate Fill", "Cinema gate wash", {217.0f / 255.0f, 217.0f / 255.0f, 217.0f / 255.0f, 18.0f / 255.0f}},
+    {"mixar_widget_border", "Widget Border", "Card outline", {38.0f / 255.0f, 38.0f / 255.0f, 38.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_ink", "Ink", "Text on a bright action", {10.0f / 255.0f, 10.0f / 255.0f, 10.0f / 255.0f, 255.0f / 255.0f}},
+    {"mixar_sunken", "Sunken", "Quota and sunken track", {15.0f / 255.0f, 15.0f / 255.0f, 15.0f / 255.0f, 255.0f / 255.0f}},
+};
+
+static const MixarRnaColor mixar_theme_agent_colors[] = {
+    {"agent_border", "Island Border", "Agent island border", {0.0f / 255.0f, 255.0f / 255.0f, 140.0f / 255.0f, 255.0f / 255.0f}},
+    {"agent_tab_active", "Island Tab Active", "Agent island active tab", {24.0f / 255.0f, 62.0f / 255.0f, 37.0f / 255.0f, 255.0f / 255.0f}},
+    {"agent_accent", "Island Accent", "Agent island accent", {43.0f / 255.0f, 124.0f / 255.0f, 75.0f / 255.0f, 255.0f / 255.0f}},
+};
+
 static void rna_def_userdef_theme_ui(BlenderRNA *brna)
 {
   StructRNA *srna;
@@ -2369,6 +2470,8 @@ static void rna_def_userdef_theme_ui(BlenderRNA *brna)
       prop, "Icon Border", "Control the intensity of the border around themes icons");
   RNA_def_property_ui_range(prop, 0.0, 1.0, 0.1, 2);
   RNA_def_property_update(prop, 0, "rna_userdef_theme_update_icons");
+
+  rna_def_mixar_theme_colors(srna, mixar_theme_ui_colors, ARRAY_SIZE(mixar_theme_ui_colors));
 }
 
 /* Asset Shelf region */
@@ -4543,8 +4646,8 @@ static void rna_def_userdef_theme_space_mixie_chat(BlenderRNA *brna)
   RNA_def_property_ui_text(prop, "Thumbnail Border", "Border color for image thumbnails");
   RNA_def_property_update(prop, 0, "rna_userdef_theme_update");
 
-  static const float default_send_icon_gradient_start[4] = {0.3f, 0.5f, 0.9f, 1.0f};
-  static const float default_send_icon_gradient_end[4] = {0.6f, 0.2f, 0.8f, 1.0f};
+  static const float default_send_icon_gradient_start[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 1.0f};
+  static const float default_send_icon_gradient_end[4] = {5.0f / 255.0f, 146.0f / 255.0f, 170.0f / 255.0f, 15.0f / 255.0f};
   static const float default_send_arrow_color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
   prop = RNA_def_property(srna, "chat_send_icon_gradient_start", PROP_FLOAT, PROP_COLOR_GAMMA);
@@ -4828,6 +4931,8 @@ static void rna_def_userdef_theme_space_agent_bubble(BlenderRNA *brna)
   RNA_def_property_ui_text(
       prop, "Background Opacity", "Opacity of the window background (lower = more frosted glass)");
   RNA_def_property_update(prop, 0, "rna_userdef_theme_update");
+
+  rna_def_mixar_theme_colors(srna, mixar_theme_agent_colors, ARRAY_SIZE(mixar_theme_agent_colors));
 }
 
 static void rna_def_userdef_theme_space_mixie(BlenderRNA *brna)
@@ -4844,14 +4949,14 @@ static void rna_def_userdef_theme_space_mixie(BlenderRNA *brna)
   rna_def_userdef_theme_spaces_main(srna);
 
   /* Default colors - RGBA float arrays */
-  static const float default_input_bg[4] = {0.24f, 0.24f, 0.24f, 0.7f};  /* Semi-transparent dark gray */
-  static const float default_input_text[4] = {1.0f, 1.0f, 1.0f, 1.0f};  /* White text */
-  static const float default_input_border[4] = {0.39f, 0.39f, 0.39f, 1.0f};  /* Gray border */
-  static const float default_button_bg[4] = {0.31f, 0.31f, 0.31f, 0.78f};  /* Slightly lighter gray */
-  static const float default_button_text[4] = {1.0f, 1.0f, 1.0f, 1.0f};  /* White text */
-  static const float default_button_hover[4] = {0.39f, 0.55f, 0.71f, 1.0f};  /* Light blue hover */
-  static const float default_panel_bg[4] = {0.18f, 0.18f, 0.18f, 0.9f};  /* Darker than inputs */
-  static const float default_label_text[4] = {0.78f, 0.78f, 0.78f, 1.0f};  /* Light gray labels */
+  static const float default_input_bg[4] = {31.0f / 255.0f, 31.0f / 255.0f, 31.0f / 255.0f, 230.0f / 255.0f};
+  static const float default_input_text[4] = {226.0f / 255.0f, 226.0f / 255.0f, 226.0f / 255.0f, 1.0f};
+  static const float default_input_border[4] = {46.0f / 255.0f, 46.0f / 255.0f, 46.0f / 255.0f, 1.0f};
+  static const float default_button_bg[4] = {42.0f / 255.0f, 42.0f / 255.0f, 42.0f / 255.0f, 1.0f};
+  static const float default_button_text[4] = {226.0f / 255.0f, 226.0f / 255.0f, 226.0f / 255.0f, 1.0f};
+  static const float default_button_hover[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 1.0f};
+  static const float default_panel_bg[4] = {18.0f / 255.0f, 18.0f / 255.0f, 18.0f / 255.0f, 230.0f / 255.0f};
+  static const float default_label_text[4] = {226.0f / 255.0f, 226.0f / 255.0f, 226.0f / 255.0f, 1.0f};
 
   /* Text Input Colors */
   prop = RNA_def_property(srna, "moodboard_input_background", PROP_FLOAT, PROP_COLOR_GAMMA);
@@ -4913,14 +5018,14 @@ static void rna_def_userdef_theme_space_mixie(BlenderRNA *brna)
   RNA_def_property_update(prop, 0, "rna_userdef_theme_update");
 
   /* Sidebar Tab Bar Colors */
-  static const float default_tab_accent[4] = {112.0f/255, 198.0f/255, 45.0f/255, 99.0f/255};  /* #70C62D63 */
-  static const float default_tab_strip_bg[4] = {0.08f, 0.08f, 0.10f, 0.95f};      /* Near-black */
-  static const float default_tab_inactive[4] = {0.14f, 0.14f, 0.16f, 0.6f};       /* Dark subtle */
+  static const float default_tab_accent[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 1.0f};
+  static const float default_tab_strip_bg[4] = {18.0f / 255.0f, 18.0f / 255.0f, 18.0f / 255.0f, 242.0f / 255.0f};
+  static const float default_tab_inactive[4] = {29.0f / 255.0f, 29.0f / 255.0f, 29.0f / 255.0f, 153.0f / 255.0f};
   static const float default_tab_text_active[4] = {1.0f, 1.0f, 1.0f, 1.0f};       /* White */
-  static const float default_tab_text_inactive[4] = {0.627f, 0.627f, 0.667f, 1.0f}; /* Dimmed gray */
-  static const float default_tab_glow[4] = {112.0f/255, 198.0f/255, 45.0f/255, 0.15f};  /* Accent glow */
-  static const float default_tab_highlight[4] = {1.0f, 1.0f, 1.0f, 0.18f};        /* Glass highlight */
-  static const float default_tab_indicator[4] = {1.0f, 1.0f, 1.0f, 0.4f};         /* Edge bar */
+  static const float default_tab_text_inactive[4] = {117.0f / 255.0f, 117.0f / 255.0f, 117.0f / 255.0f, 1.0f};
+  static const float default_tab_glow[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 38.0f / 255.0f};
+  static const float default_tab_highlight[4] = {1.0f, 1.0f, 1.0f, 46.0f / 255.0f};
+  static const float default_tab_indicator[4] = {1.0f, 1.0f, 1.0f, 102.0f / 255.0f};
 
   prop = RNA_def_property(srna, "mixar_tab_accent", PROP_FLOAT, PROP_COLOR_GAMMA);
   RNA_def_property_float_sdna(prop, nullptr, "mixar_tab_accent");
@@ -4979,8 +5084,8 @@ static void rna_def_userdef_theme_space_mixie(BlenderRNA *brna)
   RNA_def_property_update(prop, 0, "rna_userdef_theme_update");
 
   /* Action Button & Toggle Colors */
-  static const float default_action_button[4] = {0.0f, 0.0f, 0.0f, 1.0f};                          /* #000000FF */
-  static const float default_toggle_active[4] = {112.0f/255, 198.0f/255, 45.0f/255, 99.0f/255};   /* #70C62D63 */
+  static const float default_action_button[4] = {26.0f / 255.0f, 64.0f / 255.0f, 38.0f / 255.0f, 1.0f};
+  static const float default_toggle_active[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 1.0f};
 
   prop = RNA_def_property(srna, "mixar_action_button", PROP_FLOAT, PROP_COLOR_GAMMA);
   RNA_def_property_float_sdna(prop, nullptr, "mixar_action_button");
@@ -5040,7 +5145,6 @@ static void rna_def_userdef_themes(BlenderRNA *brna)
       {8, "TEXT_EDITOR", ICON_TEXT, "Text Editor", ""},
       {21, "TOPBAR", ICON_TOPBAR, "Top Bar", ""},
       {7, "SEQUENCE_EDITOR", ICON_SEQUENCE, "Video Sequencer", ""},
-      {24, "MIXIE_CHAT", ICON_CONSOLE, "Mixie Chat", ""},
       {28, "MIXIE", ICON_NONE, "Moodboard", ""},
       {27, "AGENT_BUBBLE", ICON_CONSOLE, "Agent Bubble", ""},
       {18, "BONE_COLOR_SETS", ICON_COLOR, "Bone Color Sets", ""},

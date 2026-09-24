@@ -67,7 +67,7 @@ static const float INK_COL_STROKE[4] = CHAT_ACCENT_LIVE;
 static SpaceMixieChat *ink_space_from_area(ScrArea *area)
 {
   if (!area || !area->spacedata.first ||
-      (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE))
+      (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return nullptr;
   }
@@ -467,7 +467,7 @@ void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region)
       hint_text = "Canvas full — pause to convert";
     }
     else if (rt->ink_point_count == 0) {
-      hint_text = "Scribble — write here with your pen";
+      hint_text = "Handwriting — write your prompt";
     }
     else {
       hint_text = "Pause to convert · Enter converts now · Esc closes";

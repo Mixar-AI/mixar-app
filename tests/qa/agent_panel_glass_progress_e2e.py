@@ -22,7 +22,6 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario
-from agent_panel_cards_e2e import _click_at, _centre
 
 SPACE = "space=next(a.spaces.active for a in drv.main_window().screen.areas if a.type=='VIEW_3D')\n"
 HELPERS = "ns=bpy.app.driver_namespace['task_card_glass_qa']\n"
@@ -121,6 +120,22 @@ def verify_transparency(dark, bright):
     return {'dark_pixel': old, 'bright_pixel': new}
 
 
+def verify_labels(frame):
+    """Every running/pending pane must retain visible neutral task lettering."""
+    counts = {}
+    with Image.open(frame['path']) as image:
+        for task, rect in frame['rects'].items():
+            width, height = rect[2] - rect[0], rect[3] - rect[1]
+            left = int(rect[0] + width * .2) - frame['bounds'][0]
+            right = int(rect[0] + width * .85) - frame['bounds'][0]
+            top = frame['bounds'][3] - int(rect[1] + height * .75)
+            bottom = frame['bounds'][3] - int(rect[1] + height * .25)
+            pixels = image.convert('RGB').crop((left, top, right, bottom)).getdata()
+            counts[task] = sum(min(p) > 150 and max(p) - min(p) < 45 for p in pixels)
+            assert counts[task] > 20, (task, 'task label missing', counts[task])
+    return counts
+
+
 def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/task-card-glass')).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -137,9 +152,12 @@ def run(qa):
         qa.step('seed_tasks', mirror, qa, ITEMS, clear=True)
         qa.wait("len(drv.find(surface='agent_panel_progress'))==3", timeout=15)
         settle(qa)
+        qa.step('running_and_pending_have_x', qa.eval,
+                "assert len(drv.find(surface='agent_panel_dismiss'))==3\nresult=True")
         frames = qa.step('record_progress', qa.eval,
                          HELPERS + f"result=ns['_record']({str(out / 'frames')!r})")
         qa.step('verify_progress_pixels_and_state', verify_motion, frames, out)
+        qa.step('running_and_pending_labels_visible', verify_labels, frames[-1])
         dark = capture(qa, out/'dark.png')
         qa.eval(SPACE + "space.shading.background_color=(.8,.8,.8)\n"
                 "for a in drv.main_window().screen.areas: a.tag_redraw()")
@@ -154,14 +172,19 @@ def run(qa):
         settle(qa)
         reordered = progress(qa)
         assert all(reordered[t] >= before[t] for t in before), (before, reordered)
-        qa.step('eye_click', _click_at, qa, *_centre(qa, 'agent_panel_eye', 1))
-        qa.wait("any(t['text']=='Playing around with textures.' for t in drv.find(surface='agent_panel_card'))")
+        qa.step('main_tasks_have_no_eyes', qa.eval,
+                "assert not drv.find(surface='agent_panel_eye')\nresult=True")
 
         failed = [dict(ITEMS[0], status='failed'), ITEMS[1], ITEMS[2]]
         mirror(qa, failed)
         settle(qa)
         assert progress(qa)['glass-a'] == 0
         capture(qa, out/'failed.png')
+        qa.step('failed_x_click', qa.click, surface='agent_panel_dismiss', index=0)
+        qa.wait("'glass-a' not in [c.task_id for c in bpy.context.window_manager.mixar_agent_cards]", timeout=5)
+        # Explicitly reset this fixture fan-out so a dismissed id can be retried.
+        mirror(qa, failed, clear=True)
+        settle(qa)
         mirror(qa, ITEMS)
         settle(qa, .2)
         assert .08 <= progress(qa)['glass-a'] < .15, 'Retry inherited its old progress'
@@ -175,12 +198,12 @@ def run(qa):
         # Removal starts the surviving rows' 200ms reflow. Resolve the click
         # target after that move, so an old rectangle cannot race the gesture.
         settle(qa)
-        qa.step('dismiss_click', _click_at, qa, *_centre(qa, 'agent_panel_dismiss', 0))
+        qa.step('running_x_click', qa.click, surface='agent_panel_dismiss', index=0)
         # A fan-out already on screen retains its last card until dismissed;
         # the two-task threshold applies to incoming todo snapshots.
         qa.wait("[c.task_id for c in bpy.context.window_manager.mixar_agent_cards]==['glass-c']", timeout=5)
         settle(qa)
-        qa.step('dismiss_last_click', _click_at, qa, *_centre(qa, 'agent_panel_dismiss', 0))
+        qa.step('pending_x_click', qa.click, surface='agent_panel_dismiss', index=0)
         qa.wait("not drv.find(surface='agent_panel_card')", timeout=5)
 
         mirror(qa, ITEMS, clear=True)

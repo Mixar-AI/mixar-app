@@ -90,62 +90,6 @@ void cinema_outline(const rctf &rect,
   ui::draw_roundbox_4fv_ex(&rect, nullptr, nullptr, 1.0f, color, width, radius);
 }
 
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Text
- * \{ */
-
-namespace {
-
-/** Baseline that centres \a text's ink box on \a center_y. */
-float baseline_for(const int font, const char *text, const float center_y)
-{
-  rcti box;
-  BLF_boundbox(font, text, strlen(text), &box);
-  return center_y - float(box.ymin + box.ymax) * 0.5f;
-}
-
-}  // namespace
-
-float cinema_text_width(const char *text, const float size)
-{
-  if (text == nullptr || text[0] == '\0') {
-    return 0.0f;
-  }
-  const int font = BLF_default();
-  BLF_size(font, size);
-  return BLF_width(font, text, strlen(text));
-}
-
-void cinema_text_left(
-    const char *text, const float x, const float center_y, const float size, const float col[4])
-{
-  if (text == nullptr || text[0] == '\0') {
-    return;
-  }
-  const int font = BLF_default();
-  BLF_size(font, size);
-  /* The surface clips with its own rects; BLF's clipping is left over from
-   * whichever widget drew last and would crop these labels. */
-  BLF_disable(font, BLF_CLIPPING);
-  BLF_color4fv(font, col);
-  BLF_position(font, x, baseline_for(font, text, center_y), 0.0f);
-  BLF_draw(font, text, strlen(text));
-}
-
-void cinema_text_center(
-    const char *text, const float cx, const float center_y, const float size, const float col[4])
-{
-  cinema_text_left(text, cx - cinema_text_width(text, size) * 0.5f, center_y, size, col);
-}
-
-void cinema_text_right(
-    const char *text, const float right, const float cy, const float size, const float col[4])
-{
-  cinema_text_left(text, right - cinema_text_width(text, size), cy, size, col);
-}
-
 void cinema_chevron(const float cx, const float cy, const float size, const float col[4])
 {
   /* Solid triangle, the design's ▼. Drawn from the roundbox helper's sibling
@@ -178,18 +122,36 @@ void cinema_triangle(
   immUnbindProgram();
 }
 
-void cinema_keycap(const float x, const float y, const char *letter)
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Keycaps and meters
+ * \{ */
+
+float cinema_keycap_width(const char *label)
 {
   const float u = cinema_unit();
-  const rctf cap = {x, x + CINEMA_KEYCAP_W * u, y, y + CINEMA_KEYCAP_H * u};
-  const float fill[4] = CINEMA_COL_KEYCAP;
+  return std::max(CINEMA_KEYCAP_W * u,
+                  cinema_text_width(label, CINEMA_KEYCAP_FONT * u) +
+                      CINEMA_KEYCAP_PAD * 2.0f * u);
+}
+
+float cinema_keycap(const float x, const float y, const char *letter)
+{
+  const float u = cinema_unit();
+  /* A single glyph keeps the square cap; a word ("Shift", "Mouse") widens
+   * it rather than spilling out of one. */
+  const float width = cinema_keycap_width(letter);
+  const rctf cap = {x, x + width, y, y + CINEMA_KEYCAP_H * u};
+  MIXAR_THEME_LOAD(fill, CinemaKeycap);
   const float glyph[4] = {1.0f, 1.0f, 1.0f, 1.0f};
   cinema_fill(cap, CINEMA_KEYCAP_RADIUS * u, fill);
   cinema_text_center(letter,
                      BLI_rctf_cent_x(&cap),
                      BLI_rctf_cent_y(&cap),
-                     11.0f * u,
+                     CINEMA_KEYCAP_FONT * u,
                      glyph);
+  return width;
 }
 
 void cinema_tick_meter(const rctf &rect, const int count, const int filled)
@@ -200,8 +162,8 @@ void cinema_tick_meter(const rctf &rect, const int count, const int filled)
   const float u = cinema_unit();
   const float tick_w = 3.0f * u;
   const float pitch = BLI_rctf_size_x(&rect) / float(count);
-  const float off[4] = CINEMA_COL_SPEED_OFF;
-  const float on[4] = CINEMA_COL_SPEED_ON;
+  MIXAR_THEME_LOAD(off, Queue);
+  MIXAR_THEME_LOAD(on, CinemaRowSliderOn);
   for (int index = 0; index < count; index++) {
     rctf tick;
     tick.xmin = rect.xmin + pitch * float(index);
@@ -328,11 +290,34 @@ const std::vector<CinemaQARecord> &cinema_qa_records()
 /** \name Hit areas
  * \{ */
 
+namespace {
+
+/**
+ * The painted rect as whole pixels that CONTAIN it.
+ *
+ * Paint is float and a uiBut's box is int, so truncating both corners lost
+ * up to a pixel on each edge of every control on the surface — which is a
+ * whole control when the control is a 3 px scroll track. Floor the origin,
+ * ceil the far edge.
+ */
+rcti hit_box(const rctf &rect)
+{
+  rcti box;
+  box.xmin = int(std::floor(rect.xmin));
+  box.ymin = int(std::floor(rect.ymin));
+  box.xmax = int(std::ceil(rect.xmax));
+  box.ymax = int(std::ceil(rect.ymax));
+  return box;
+}
+
+}  // namespace
+
 ui::Button *cinema_op_button(ui::Block *block,
                         const char *operator_id,
                         const rctf &rect,
                         const char *tooltip)
 {
+  const rcti box = hit_box(rect);
   /* The panel already painted the control. The native button owns input and
    * a transparent, bounded feedback overlay over precisely those pixels. */
   ui::block_emboss_set(block, blender::ui::EmbossType::None);
@@ -341,13 +326,36 @@ ui::Button *cinema_op_button(ui::Block *block,
                              operator_id,
                              blender::wm::OpCallContext::InvokeRegionWin,
                              ICON_NONE,
-                             int(rect.xmin),
-                             int(rect.ymin),
-                             int(BLI_rctf_size_x(&rect)),
-                             int(BLI_rctf_size_y(&rect)),
+                             box.xmin,
+                             box.ymin,
+                             BLI_rcti_size_x(&box),
+                             BLI_rcti_size_y(&box),
                              tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
   ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
+  return but;
+}
+
+ui::Button *cinema_blocker(ui::Block *block, const rctf &rect, const char *tooltip)
+{
+  const rcti box = hit_box(rect);
+  /* No operator: a plain button that answers a click by doing nothing. What
+   * it is for is STOPPING the click — an opaque card the surface paints has
+   * to swallow presses on its own background, or they reach whatever keymap
+   * item is polling the pixels behind it. */
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::Button *but = ui::uiDefBut(block,
+                                 ui::ButtonType::But,
+                                 "",
+                                 box.xmin,
+                                 box.ymin,
+                                 short(BLI_rcti_size_x(&box)),
+                                 short(BLI_rcti_size_y(&box)),
+                                 nullptr,
+                                 0.0f,
+                                 0.0f,
+                                 tooltip);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
   return but;
 }
 
@@ -357,6 +365,7 @@ ui::Button *cinema_icon_button(ui::Block *block,
                                const rctf &rect,
                                const char *tooltip)
 {
+  const rcti box = hit_box(rect);
   /* Emboss::None draws the icon and nothing else; the chip behind it is the
    * caller's paint. */
   ui::block_emboss_set(block, blender::ui::EmbossType::None);
@@ -365,10 +374,10 @@ ui::Button *cinema_icon_button(ui::Block *block,
                                   operator_id,
                                   blender::wm::OpCallContext::InvokeRegionWin,
                                   icon,
-                                  int(rect.xmin),
-                                  int(rect.ymin),
-                                  int(BLI_rctf_size_x(&rect)),
-                                  int(BLI_rctf_size_y(&rect)),
+                                  box.xmin,
+                                  box.ymin,
+                                  BLI_rcti_size_x(&box),
+                                  BLI_rcti_size_y(&box),
                                   tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
   ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
@@ -389,15 +398,16 @@ ui::Button *cinema_popup_button(ui::Block *block,
 {
   float *width = &g_popup_bar_width[int(slot)];
   *width = BLI_rctf_size_x(&rect);
+  const rcti box = hit_box(rect);
   ui::block_emboss_set(block, blender::ui::EmbossType::None);
   ui::Button *but = uiDefIconBlockBut(block,
                                       block_func,
                                       width,
                                       ICON_NONE,
-                                      int(rect.xmin),
-                                      int(rect.ymin),
-                                      short(BLI_rctf_size_x(&rect)),
-                                      short(BLI_rctf_size_y(&rect)),
+                                      box.xmin,
+                                      box.ymin,
+                                      short(BLI_rcti_size_x(&box)),
+                                      short(BLI_rcti_size_y(&box)),
                                       tooltip);
   ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
   ui::mixar_style_button(but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());

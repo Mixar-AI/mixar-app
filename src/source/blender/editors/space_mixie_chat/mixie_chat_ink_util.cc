@@ -249,8 +249,11 @@ void mixie_chat_ink_commit(bContext *C, ARegion *region, MixieChatRuntime *rt)
     if (ot) {
       PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
       RNA_string_set(&op_ptr, "strokes_json", payload.c_str());
-      WM_operator_name_call_ptr(
-          C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+      /* Through the guard: this function goes on to clear `rt`, which is the
+       * REGION's runtime, and a save taken by the operator closes the Agent
+       * Bubble windows first — so the raw call could return with `region`
+       * and `rt` already freed. */
+      mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
       WM_operator_properties_free(&op_ptr);
     }
   }
@@ -355,7 +358,7 @@ void mixie_chat_ink_flush_all_surfaces(bContext *C)
     }
     for (ScrArea &area_ref : screen->areabase) {
       ScrArea *area = &area_ref;
-      if (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE) {
+      if (area->spacetype != SPACE_AGENT_BUBBLE) {
         continue;
       }
       SpaceMixieChat *smixie = static_cast<SpaceMixieChat *>(area->spacedata.first);
@@ -420,12 +423,14 @@ static wmOperatorStatus ink_release_composer_exec(bContext *C, wmOperator * /*op
     }
     for (ScrArea &area_ref : screen->areabase) {
       ScrArea *area = &area_ref;
-      if (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE) {
+      if (area->spacetype != SPACE_AGENT_BUBBLE) {
         continue;
       }
       for (ARegion &region_ref : area->regionbase) {
         ARegion *region = &region_ref;
-        if (region->regiontype == RGN_TYPE_TOOLS) {
+        if (region->regiontype == RGN_TYPE_TOOLS ||
+            (area->spacetype == SPACE_AGENT_BUBBLE && region->regiontype == RGN_TYPE_WINDOW))
+        {
           ui::UI_region_free_active_but_all(C, region);
         }
       }

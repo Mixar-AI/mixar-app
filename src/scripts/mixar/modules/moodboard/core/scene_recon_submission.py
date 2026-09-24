@@ -89,9 +89,9 @@ def submit_recon_job(scene, sidebar_tab, image_bytes,
             if imported_obj and save_to_library and asset_library_path:
                 try:
                     from mixar.modules.moodboard.core.scene_asset_exporter import (
-                        export_object_to_asset_library,
+                        schedule_object_export,
                     )
-                    export_object_to_asset_library(imported_obj, label, asset_library_path)
+                    schedule_object_export(imported_obj, label, asset_library_path)
                 except Exception as e:
                     logger.error("Asset export error for '%s': %s", label, e)
         except Exception as e:

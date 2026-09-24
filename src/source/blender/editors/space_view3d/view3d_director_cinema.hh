@@ -23,6 +23,16 @@
 #include <vector>
 #include "DNA_vec_types.h"
 
+/* `ui::BlockCreateFunc` (below, #cinema_popup_button) is a type ALIAS, so it
+ * cannot be forward-declared the way `ui::Block` and `ui::Button` are. This
+ * header carried neither the include nor the alias and worked only because
+ * every file that used it happened to include `UI_interface_c.hh` first; the
+ * one that did not failed to compile with "'BlockCreateFunc': is not a member
+ * of 'blender::ui'". A header pays for the names it uses. */
+#include "UI_interface_c.hh"
+/* Geometry and palette; see that file for why they are separate. */
+#include "view3d_director_cinema_tokens.hh"
+#include "UI_mixar_theme.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -35,128 +45,6 @@ struct Block;
 struct Button;
 }
 struct DirectorViewState;
-
-/* -------------------------------------------------------------------- */
-/** \name Design tokens (design px @1x)
- * \{ */
-
-/** Design y of the viewport's top edge in the export's window mock. */
-#define CINEMA_VIEWPORT_TOP 85.0f
-
-/* Panels. */
-#define CINEMA_PANEL_W 245.0f
-#define CINEMA_PANEL_RADIUS 19.0f
-#define CINEMA_MARGIN 70.0f     /* Window edge -> panel edge, at design width. */
-#define CINEMA_MARGIN_MIN 20.0f /* Floor when the viewport is narrower. */
-#define CINEMA_GATE_MIN_W 180.0f /* Clear width kept between the two columns. */
-/**
- * Smallest fit the designed surface is allowed to shrink to before the compact
- * rail takes over. The design is fitted to the region (see #cinema_fit_scale):
- * a laptop viewport that cannot hold it at 1x shows it at, say, 0.8x — the
- * mock itself is a 0.8x render — rather than a different UI.
- */
-#define CINEMA_SCALE_MIN 0.6f
-
-/* Rows inside a panel. */
-/* ONE row class for every rounded control — dropdown rows, list rows,
- * segment tracks, the strip's chips and dropdown, the dock's chips and fields
- * — so the design reads as one system: same height, same radius, same
- * gradient. Cards keep CINEMA_PANEL_RADIUS. */
-#define CINEMA_ROW_W 216.0f
-#define CINEMA_ROW_H 32.0f
-#define CINEMA_ROW_RADIUS 14.0f
-#define CINEMA_ROW_PITCH 68.0f  /* Labelled dropdown to the next one. */
-#define CINEMA_LIST_PITCH 32.0f /* Template / camera list rows. */
-/** Rows a list can show before it has to window around the live one. */
-#define CINEMA_LIST_MAX_ROWS 4
-
-/* Top strip. */
-#define CINEMA_KEYCAP_W 17.0f
-#define CINEMA_KEYCAP_H 19.0f
-#define CINEMA_KEYCAP_RADIUS 4.0f
-/** Hint groups start at the camera gate's left edge and pack at this gap. */
-#define CINEMA_HINT_GAP 26.0f
-#define CINEMA_PHONE_W 260.0f
-#define CINEMA_PHONE_H 32.0f
-/* The strip's controls flow right-to-left from the stage's right edge: phone,
- * interpolation dropdown, tracking eyedropper. The phone collapses to an
- * icon chip (CINEMA_PHONE_H square) when the hints would otherwise run into
- * the controls. */
-#define CINEMA_INTERP_W 150.0f
-#define CINEMA_STRIP_GAP 10.0f
-/* The Mixar banner chip above the left column: a CINEMA_PANEL_W pill on the
- * strip band (row class height and radius), inert. */
-#define CINEMA_BRAND_PAD 10.0f         /* Pill edge -> logo chip. */
-#define CINEMA_BRAND_LOGO 22.0f        /* Round logo chip diameter. */
-#define CINEMA_BRAND_MARK 14.0f        /* Mixar mark edge inside the logo chip. */
-#define CINEMA_BRAND_GAP 8.0f          /* Logo -> wordmark -> mode name. */
-#define CINEMA_BRAND_VERSION_PAD 12.0f /* Pill's right edge -> "V1". */
-
-/* Right panel. Cards stack from CINEMA_COLUMN_TOP at CINEMA_CARD_GAP so the
- * column's foot lands on the same design y as the left column's. */
-#define CINEMA_CARD_GAP 11.0f
-#define CINEMA_CAMERAS_H 200.0f
-#define CINEMA_PREVIEW_H 178.0f
-#define CINEMA_SEGMENT_H 32.0f
-#define CINEMA_EXPORT_H 48.0f
-
-/* The columns' top edge and the stage's inset from them. The stage (the
- * working area between the columns that the camera gate is fitted to) spans
- * exactly the columns' vertical extent: from here down to
- * #cinema_content_bottom(). */
-#define CINEMA_COLUMN_TOP 206.0f
-#define CINEMA_STAGE_INSET 18.0f
-/** Gap between the camera gate's foot and the chat bar (the resting pill),
- * and between the chat bar's foot and the timeline's top border. */
-#define CINEMA_CHAT_GAP 10.0f
-/** Inset of the fitted camera border inside the stage. */
-#define CINEMA_GATE_PAD 6.0f
-
-/* Lowest content in either column. The height gate is DERIVED from these, so
- * moving a card down moves the gate with it instead of silently laying the
- * Speed slider and the Export button out below the region. */
-#define CINEMA_SPEED_CARD_Y 670.0f
-#define CINEMA_SPEED_CARD_H 70.0f
-#define CINEMA_EXPORT_Y 692.0f
-
-/* Speed bounds. These MIRROR SPEED_MIN / SPEED_MAX in `director/constants.py`,
- * the `shot.speed` RNA property's own limits and therefore the slider's
- * travel; keep the two in step. The slider rests in the middle at 0 (the
- * timing as captured); right contracts the shot, left expands it. */
-#define CINEMA_SPEED_MIN -1.0f
-#define CINEMA_SPEED_MAX 1.0f
-
-/* Type sizes. */
-#define CINEMA_FONT_LABEL 12.0f /* "Aspect Ratio", "My Cameras", hints. */
-#define CINEMA_FONT_VALUE 13.0f /* Dropdown values, list rows. */
-#define CINEMA_FONT_TITLE 15.0f /* Dock "Duration". */
-
-/* Palette. */
-#define CINEMA_COL_CARD_TOP {0.133f, 0.137f, 0.137f, 0.96f}    /* #222323 — tracks, not card beds */
-#define CINEMA_COL_CARD_BOTTOM {0.043f, 0.043f, 0.043f, 0.96f} /* #0B0B0B — tracks, not card beds */
-#define CINEMA_COL_ROW_TOP {0.345f, 0.345f, 0.345f, 1.0f}      /* #585858 */
-#define CINEMA_COL_ROW_BOTTOM {0.141f, 0.141f, 0.141f, 1.0f}   /* #242424 */
-#define CINEMA_COL_LABEL {0.502f, 0.502f, 0.502f, 1.0f}        /* #808080 */
-/** Dropdown captions and card titles: darker and a little translucent. */
-#define CINEMA_COL_CAPTION {0.40f, 0.40f, 0.40f, 0.85f}
-#define CINEMA_COL_VALUE {1.0f, 1.0f, 1.0f, 1.0f}
-#define CINEMA_COL_DIM {0.388f, 0.388f, 0.388f, 1.0f}    /* #636363 */
-#define CINEMA_COL_DIMMER {0.216f, 0.216f, 0.216f, 1.0f} /* #373737 */
-#define CINEMA_COL_KEYCAP {0.392f, 0.392f, 0.392f, 1.0f} /* #646464 */
-#define CINEMA_COL_PHONE {0.220f, 0.220f, 0.220f, 1.0f}  /* #383838 */
-#define CINEMA_COL_CHIP {0.314f, 0.314f, 0.314f, 1.0f}   /* #505050 */
-#define CINEMA_COL_EXPORT {0.102f, 0.251f, 0.149f, 1.0f} /* #1A4026 */
-#define CINEMA_COL_BRAND_TOP {0.043f, 0.192f, 0.102f, 1.0f}    /* #0B311A */
-#define CINEMA_COL_BRAND_BOTTOM {0.059f, 0.059f, 0.059f, 1.0f} /* #0F0F0F */
-/** The banner's logo chip: the Agent island's own chip ramp. */
-#define CINEMA_COL_LOGO_TOP {0.125f, 0.345f, 0.212f, 1.0f}    /* #205836 */
-#define CINEMA_COL_LOGO_BOTTOM {0.227f, 0.518f, 0.341f, 1.0f} /* #3A8457 */
-#define CINEMA_COL_GATE_FILL {0.851f, 0.851f, 0.851f, 0.07f}
-#define CINEMA_COL_GATE_LINE {0.247f, 0.247f, 0.247f, 1.0f} /* #3F3F3F */
-#define CINEMA_COL_SPEED_ON {0.165f, 0.475f, 0.286f, 1.0f}  /* #2A7949 */
-#define CINEMA_COL_SPEED_OFF {0.259f, 0.259f, 0.259f, 1.0f} /* #424242 */
-
-/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Shared painters (view3d_director_cinema_paint.cc)
@@ -204,26 +92,30 @@ float cinema_content_bottom();
  * as the navigation gizmo then keep their stock placement.
  */
 bool cinema_stage_rect(const bContext *C, const ARegion *region, rctf *r_rect);
-
 /**
- * Height of one list row, in design px.
+ * Whether a region-space point lands on one of the two COLUMNS of cards.
  *
- * Clamped to #CINEMA_LIST_PITCH: rows advance by the pitch, and a taller row
- * overlaps its neighbour. The overlapping button is created LAST and
- * `ui_but_find_mouse_over_ex` walks a block backwards, so the bottom band of
- * every row would activate the entry BELOW it — and #cinema_qa_record would
- * publish that same wrong rect.
+ * The complement of #cinema_stage_rect over the columns' own band. The
+ * surface paints and never hit-tests, so this is what lets a wheel over a
+ * painted card be absorbed instead of reaching the viewport behind it.
+ * False below #CINEMA_SCALE_MIN, where the compact rail is drawn instead.
  */
+bool cinema_columns_contain(const bContext *C, const ARegion *region, int x, int y);
+
+/** Height of one list row, in design px. Kept under #CINEMA_LIST_PITCH by
+ * #CINEMA_LIST_GAP: rows advance by the pitch, and a taller row overlaps its
+ * neighbour — the overlapping button is created LAST and
+ * `ui_but_find_mouse_over_ex` walks a block backwards, so the bottom band of
+ * every row would activate the entry BELOW it, and #cinema_qa_record would
+ * publish that same wrong rect. */
 float cinema_list_row_h();
 
 /** First row to draw so \a active stays visible in a #CINEMA_LIST_MAX_ROWS window. */
 int cinema_list_window_start(int count, int active);
 
-/**
- * Rect from the design's WINDOW coordinates, anchored to the region's top.
+/** Rect from the design's WINDOW coordinates, anchored to the region's top.
  * The design mock includes the app chrome, so #CINEMA_VIEWPORT_TOP is the
- * design y at which the viewport region begins.
- */
+ * design y at which the viewport region begins. */
 rctf cinema_design_rect(const ARegion *region, float x, float y, float w, float h);
 
 /** Vertically graded rounded panel — rows, tracks and chips stay flat. */
@@ -243,6 +135,14 @@ void cinema_text_center(const char *text, float cx, float center_y, float size, 
 void cinema_text_right(const char *text, float right, float cy, float size, const float col[4]);
 float cinema_text_width(const char *text, float size);
 
+/** Same, ellipsised to \a max_width. The surface paints into fixed cards and
+ * nothing else measures, so a long camera name or focus-object name ran out
+ * of its row and off the card. */
+void cinema_text_left_fitted(
+    const char *text, float x, float center_y, float size, float max_width, const float col[4]);
+void cinema_text_center_fitted(
+    const char *text, float cx, float center_y, float size, float max_width, const float col[4]);
+
 /** Down chevron used by every dropdown row. */
 void cinema_chevron(float cx, float cy, float size, const float col[4]);
 
@@ -253,7 +153,11 @@ void cinema_chevron(float cx, float cy, float size, const float col[4]);
 void cinema_triangle(float x, float cy, float dx, float half_h, const float col[4]);
 
 /** Keycap glyph (19x21 rounded chip with a centred letter). */
-void cinema_keycap(float x, float y, const char *letter);
+/** Returns the width drawn: a square cap for one glyph, fitted for a word. */
+float cinema_keycap(float x, float y, const char *letter);
+
+/** The width #cinema_keycap would draw for \a label, without drawing it. */
+float cinema_keycap_width(const char *label);
 
 /**
  * Discrete tick meter, `filled` of `count` lit on the design's green ramp.
@@ -299,11 +203,9 @@ ui::Button *cinema_op_button(ui::Block *block,
                         const rctf &rect,
                         const char *tooltip);
 
-/**
- * Which bar a popup opens from. The popup's rows take the bar's width
- * (#director_popup_width) so a list never runs past the block it hangs
- * from; one slot per bar class keeps the pointer handed to the popup stable.
- */
+/** Which bar a popup opens from: its rows take that bar's width
+ * (#director_popup_width), and one slot per bar class keeps the pointer
+ * handed to the popup stable. */
 enum class CinemaPopupSlot : int { Row = 0, Strip = 1, Export = 2, Count };
 
 /**
@@ -315,6 +217,11 @@ ui::Button *cinema_popup_button(ui::Block *block,
                            const rctf &rect,
                            const char *tooltip,
                            CinemaPopupSlot slot);
+
+/** Invisible click CATCHER, no operator. An opaque card the surface paints
+ * has to swallow presses on its own background, or they reach whatever
+ * keymap item is polling the pixels behind it. */
+ui::Button *cinema_blocker(ui::Block *block, const rctf &rect, const char *tooltip);
 
 /** Icon-only operator button over painted chrome (the icon is the label). */
 ui::Button *cinema_icon_button(ui::Block *block,
@@ -365,84 +272,94 @@ void cinema_draw_left_panel(ui::Block *block,
                             const ARegion *region,
                             const DirectorViewState &state);
 
+/** Drop \a region's remembered gate fit. Keyed on the raw pointer, so a
+ * record that outlives its region would answer for whatever is allocated at
+ * that address next — and suppress the refit that region needs. */
+void cinema_gate_release(const ARegion *region);
+
 /** Timeline dock: the panel behind the control row and ruler. */
 void cinema_draw_dock_panel(const ARegion *region);
 
-/** Timeline dock: Duration units, transport, frame range, mode tools. */
+/** The dock's Ruler title and unit switch; returns the next group's x. */
+float cinema_draw_ruler_group(
+    ui::Block *block, const bContext *C, const ARegion *region, float start_x, float cy);
+
+/** Timeline dock, wide layout: the control row and the actions row. */
 void cinema_draw_dock_controls(ui::Block *block,
                                const bContext *C,
                                const ARegion *region,
                                const DirectorViewState &state,
                                bool playing);
 
-/**
- * Timeline dock, compact layout: transport plus the mode tools that have no
- * other home. Drawn instead of #cinema_draw_dock_controls when the viewport
- * is below the wide-surface gate, where the old rail owns the chrome.
- */
+/** Timeline dock, compact layout: the transport alone. Drawn instead of
+ * #cinema_draw_dock_controls below the wide-surface gate, where the old rail
+ * owns the chrome. */
 void cinema_draw_dock_compact(ui::Block *block,
                               const ARegion *region,
                               const DirectorViewState &state,
                               bool playing);
 
-/** Height the dock's control row occupies, in region px. */
-float cinema_dock_control_height();
+/** Timeline dock: the centred transport (`_dock_transport.cc`). Both dock
+ * layouts draw it — it exists nowhere else — and the other groups keep clear
+ * of it by asking for its right edge, since it is load-bearing. */
+void cinema_draw_transport(ui::Block *block,
+                           const ARegion *region,
+                           const DirectorViewState &state,
+                           float cy,
+                           bool playing);
+
+/** Right edge of the centred transport group, in region px. */
+float cinema_transport_right_edge(const ARegion *region);
+
+/** Timeline dock, actions row (`_dock_actions.cc`): Auto Key and Add
+ * Keyframe, centred as a group under the transport on \a cy. */
+void cinema_draw_dock_actions(ui::Block *block,
+                              const ARegion *region,
+                              const DirectorViewState &state,
+                              float cy);
+
+/** Height the dock's controls occupy, in region px. \a full is the wide
+ * surface, which draws the actions row too; the compact dock has only the
+ * control row, its rail already carrying the actions. */
+float cinema_dock_control_height(bool full);
+
+/**
+ * "My Cameras" (view3d_director_cinema_cameras.cc): the SCENE's cameras, the
+ * Add Camera chip, in-place rename and per-row delete. The list is read from
+ * the scene each draw — a shot-based list could not show the scene's own
+ * default camera, nor follow a camera added or deleted outside Director — and
+ * the live row is `scene->camera`, so the highlight follows a change made
+ * anywhere. \a card is the card rect the right column laid out.
+ */
+void cinema_draw_camera_list(ui::Block *block,
+                             const bContext *C,
+                             const ARegion *region,
+                             const DirectorViewState &state,
+                             const rctf &card);
+
+/**
+ * Whether region px (\a x, \a y) is over the camera rows the painter
+ * published this frame AND the list actually overflows. The scroll operator's
+ * poll is the card's only hit test — the surface itself never hit-tests.
+ */
+bool cinema_camera_list_contains(const ARegion *region, int x, int y);
+
+/** Row pitch in REGION px as the card last drew it; 0 before any draw.
+ * A trackpad gesture turns its pixels into rows with this rather than
+ * re-deriving the card's layout. */
+float cinema_camera_list_row_pitch();
+
+/** Scroll the published camera list by \a delta rows; false when it cannot. */
+bool cinema_camera_list_scroll(int delta);
+
+/** Drop \a region's published camera-list rect (no rows drawn this frame). */
+void cinema_camera_list_release(const ARegion *region);
 
 /** Cameras, aerial map, fps/resolution, export. */
 void cinema_draw_right_panel(ui::Block *block,
                              const bContext *C,
                              const ARegion *region,
                              const DirectorViewState &state);
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Aerial map (view3d_director_minimap.cc)
- *
- * The right column's preview card is a LIVE top-down orthographic render of
- * the scene (world XY, +X right, +Y up) with the shot camera marked on it.
- * The render is an offscreen pass cached in a file-static and re-run only
- * when the map's world extents, the depsgraph or the card size change; the
- * marker, the track-target dot and the caption are painted every redraw.
- * The painter publishes its pixel<->world transform so the placement modal
- * (`MIXAR_OT_director_place_camera`, bound to LEFTMOUSE in
- * `director/ui/keymap.py`) can map a press back to world XY. No invisible
- * button is laid over the map: a uiBut would swallow the press before the
- * keymap sees it.
- * \{ */
-
-/** Paint the card at \a card (design `PREVIEW_Y`, `CINEMA_PREVIEW_H`). */
-void cinema_draw_minimap(ui::Block *block,
-                         const bContext *C,
-                         const ARegion *region,
-                         const DirectorViewState &state,
-                         const rctf &card);
-
-/**
- * World XY under region-local pixel (\a x, \a y) on \a region's map, clamped
- * to the map's placeable area. False when \a region drew no map this frame.
- */
-bool view3d_director_minimap_world_from_region_px(const ARegion *region,
-                                                  int x,
-                                                  int y,
-                                                  float r_xy[2]);
-
-/** Whether region-local pixel (\a x, \a y) lies on \a region's drawn map. */
-bool view3d_director_minimap_contains(const ARegion *region, int x, int y);
-
-/**
- * Drop the map's transform for \a region, and with \a free_gpu (only from a
- * draw, where a GPU context is bound) free its render buffers when \a region
- * owns them. Called by the overlay on every draw that shows no map.
- */
-void view3d_director_minimap_release(const ARegion *region, bool free_gpu);
-
-/**
- * Queue every GPU buffer for release and forget the transform. Needs no GPU
- * context: the queue is flushed by the next map draw or by
- * #view3d_director_minimap_region_free.
- */
-void view3d_director_minimap_free();
 
 /** \} */
 

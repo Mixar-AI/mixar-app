@@ -6,9 +6,10 @@
 
 Pose is the shipped `mixie_cat_eval_pose` (header-only, compiled into a
 tiny harness — not reimplemented here). Idle is a close–hold–open blink
-and a gaze that leaves centre then returns; working is the same face
-with a squint, not a bounce clip. The Mixar mark is gone from the
-elongated pill; the compact pill clears the cat QA target.
+and a gaze that leaves centre then returns; working keeps the eyes open
+and rolls the pupils in a paused circle, not a squint or bounce clip.
+The Mixar mark is gone from the elongated pill; the compact pill clears
+the cat QA target.
 """
 
 from __future__ import annotations
@@ -122,18 +123,26 @@ def test_idle_gaze_leaves_centre_and_returns():
     assert abs(samples["idle_open"]["look_x"]) < 0.02
 
 
-def test_working_keeps_blinking_and_looking_around_without_bouncing():
+def test_working_rolls_the_eyes_instead_of_squinting():
     samples = pose_samples()
     idle = samples["idle_open"]
     work = samples["working_open"]
-    assert work["openness"] < idle["openness"] - 0.2
+    assert abs(work["openness"] - idle["openness"]) < 0.05
+    assert work["openness"] > 0.9
     assert abs(work["bounce"]) < 0.012
     assert abs(idle["bounce"]) < 0.012
-    assert abs(samples["working_glance_clock"]["look_x"]) > 0.25
-    assert abs(samples["working_glance_clock"]["look_y"]) > 0.15
+    up = samples["working_roll_up"]
+    left = samples["working_roll_left"]
+    rest = samples["working_roll_rest"]
+    assert up["look_y"] > 0.35
+    assert abs(up["look_x"]) < 0.20
+    assert left["look_x"] < -0.45
+    assert abs(left["look_y"]) < 0.20
+    assert abs(rest["look_x"]) < 0.08
+    assert abs(rest["look_y"]) < 0.16
     hold = samples["working_hold"]["openness"]
     assert hold < 0.15
-    assert work["openness"] - hold > 0.15
+    assert work["openness"] - hold > 0.7
 
 
 def test_cat_paint_stays_inside_the_chip():
@@ -147,6 +156,11 @@ def test_cat_paint_stays_inside_the_chip():
         re.MULTILINE,
     )
     assert outward == [], outward
+
+
+def test_gaze_does_not_squeeze_one_eye_in_the_painter():
+    eyes = CAT_CC[CAT_CC.index("void draw_eyes"):CAT_CC.index("static void draw_cat_pose")]
+    assert "side * pose.look_x" not in eyes
 
 
 def test_qa_target_reads_the_painted_chip():

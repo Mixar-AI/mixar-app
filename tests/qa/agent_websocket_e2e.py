@@ -103,8 +103,8 @@ def run(qa):
             'result = True')
     qa.wait("any(t.get('status') == 'cancelled' for t in "
             "drv.ws_checks.get('status', {}).get('turns', {}).values())", timeout=45)
-    qa.click(surface='chat_star', index=4)
-    qa.wait(f'any(m.feedback_rating == 4 and m.feedback_status == 2 for m in {SCENE}.mixie_chat_messages)', timeout=45)
+    qa.click(surface='chat_feedback_vote', text='Thumbs up')
+    qa.wait(f'any(m.feedback_rating == 5 and m.feedback_status == 2 for m in {SCENE}.mixie_chat_messages)', timeout=45)
     snap(qa, 'feedback')
     return {'backend': endpoint, 'cube': name, 'scene': cube, 'replay_marker_count': 1, 'cancelled': True}
 

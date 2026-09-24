@@ -48,13 +48,9 @@ def test_enum_value_4_stays_reserved():
 def test_every_mode_dropdown_binds_the_same_property():
     """Nothing may draw its own hand-rolled mode list, or unlisting the item
     in one place would leave Library on screen in another."""
-    footer = _read(
-        ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_footer.cc"
-    )
     bubble_footer = _read(BUBBLE / "ui/panels/footer_panel.py")
     bubble_menu = _read(BUBBLE / "ui/menus/agent_bubble_menu.py")
 
-    assert 'RNA_struct_find_property(&scene_ptr, "mixie_chat_mode")' in footer
     assert 'prop(scene, "mixie_chat_mode"' in bubble_footer
     assert 'prop(scene, "mixie_chat_mode"' in bubble_menu
 

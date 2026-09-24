@@ -15,13 +15,16 @@
 namespace blender::ui {
 bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bounds)
 {
+  if (button.mixar_style.component == MixarComponent::Toolbar) {
+    return mixar_toolbar_draw(button, colors, bounds);
+  }
   using namespace mixar_tokens;
   const auto &style = button.mixar_style;
   const float u = style.unit > 0.0f ? style.unit : UI_SCALE_FAC * 0.65f;
   const bool disabled = (button.flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
   const MixarInteraction motion = mixar_button_motion(button);
-  const bool selected = style.lit || (button.type != ButtonType::But &&
-                                      (button.flag & (UI_SELECT | UI_SELECT_DRAW)));
+  const bool selected = style.lit || (button.flag & UI_SELECT_DRAW) ||
+                        (button.type != ButtonType::But && (button.flag & UI_SELECT));
   const bool editing = button.editstr != nullptr;
   rctf rect = {float(bounds.xmin), float(bounds.xmax), float(bounds.ymin), float(bounds.ymax)};
   const bool input = style.component == MixarComponent::Input;
@@ -42,41 +45,42 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     }
     return button.icon != ICON_NONE;
   }
-  const float *background = input ? zen.input : zen.control;
+  const float *background = input ? mixar_zen().input : mixar_zen().control;
   if (style.component == MixarComponent::Surface) {
-    background = button.type == ButtonType::But ? zen.action : zen.panel;
+    background = button.type == ButtonType::But ? mixar_zen().action : mixar_zen().panel;
   }
-  const float *foreground = disabled ? zen.secondary : zen.text;
+  const float *foreground = disabled ? mixar_zen().secondary : mixar_zen().text;
   if (style.component == MixarComponent::Action) {
     switch (style.variant) {
       case MixarVariant::Primary:
-        background = zen.primary;
+        background = mixar_zen().primary;
         break;
       case MixarVariant::Secondary:
-        background = zen.action;
+        background = mixar_zen().action;
         break;
       case MixarVariant::Ghost:
-        background = zen.canvas;
+        background = mixar_zen().canvas;
         break;
       case MixarVariant::Danger:
-        background = zen.danger;
+        background = mixar_zen().danger;
         break;
     }
-    foreground = disabled ? zen.secondary : zen.strong;
+    foreground = disabled ? mixar_zen().secondary : mixar_zen().strong;
   }
   if (style.component == MixarComponent::Segment ||
       (style.component == MixarComponent::Toggle && style.unit == 0.0f))
   {
-    background = zen.control;
-    foreground = disabled || !selected ? zen.secondary : zen.text;
+    background = mixar_zen().control;
+    foreground = disabled || !selected ? mixar_zen().secondary : mixar_zen().text;
   }
   float fill[4];
   copy_v4_v4(fill, background);
-  if (style.component == MixarComponent::Segment ||
+  if (style.component == MixarComponent::Action ||
+      style.component == MixarComponent::Segment ||
       (style.component == MixarComponent::Toggle && style.unit == 0.0f) ||
       (style.component == MixarComponent::Surface && button.type == ButtonType::But))
   {
-    interp_v4_v4v4(fill, background, zen.selected, motion.selected);
+    interp_v4_v4v4(fill, background, mixar_zen().selected, motion.selected);
   }
   if (!input) {
     for (int i = 0; i < 3; i++) {
@@ -85,7 +89,21 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     }
   }
   if (!label) {
-    mixar_fill_round(rect, radius * u * (input ? 2.0f : 1.0f), fill);
+    const float corner_radius = std::min(radius * u * (input ? 2.0f : 1.0f),
+                                        0.5f * std::min(BLI_rctf_size_x(&rect),
+                                                        BLI_rctf_size_y(&rect)));
+    mixar_fill_round(rect, corner_radius, fill);
+    /* Persistent tool selection is distinct from hover/press, including
+     * operator depress and menu buttons carrying an explicit active state. */
+    if (style.component == MixarComponent::Action && !disabled && motion.selected > 0.0f) {
+      float outline[4];
+      copy_v4_v4(outline, mixar_zen().focus);
+      outline[3] *= motion.selected;
+      rctf inset = rect;
+      BLI_rctf_pad(&inset, -U.pixelsize, -U.pixelsize);
+      draw_roundbox_corner_set(CNR_ALL);
+      draw_roundbox_4fv(&inset, false, std::max(0.0f, corner_radius - U.pixelsize), outline);
+    }
     if (button.type == ButtonType::NumSlider && !editing) {
       const double range = double(button.softmax) - double(button.softmin);
       const float fraction =
@@ -95,12 +113,13 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
       rctf progress = rect;
       progress.xmax = progress.xmin + BLI_rctf_size_x(&rect) * fraction;
       if (fraction > 0.0f) {
-        mixar_fill_round(progress, radius * u, zen.selected);
+        mixar_fill_round(progress, radius * u, mixar_zen().selected);
       }
     }
     if (editing || (button.flag & BUT_REDALERT)) {
+      draw_roundbox_corner_set(CNR_ALL);
       draw_roundbox_4fv(
-          &rect, false, radius * u, (button.flag & BUT_REDALERT) ? zen.danger : zen.focus);
+          &rect, false, corner_radius, (button.flag & BUT_REDALERT) ? mixar_zen().danger : mixar_zen().focus);
     }
   }
   for (int i = 0; i < 4; i++) {
@@ -108,7 +127,12 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   }
   /* Native text owns RNA formatting, icons, selection, caret and IME. Explicit
    * island controls use their already-resolved artboard font. */
-  if (style.unit == 0.0f || input || style.component == MixarComponent::Number) {
+  /* Icon-only actions use native centering and DPI sizing, just like the
+   * equivalent Python layout controls. Artboard text padding belongs to
+   * icon-and-label rows and would shift a square action's glyph to the side. */
+  if (style.unit == 0.0f || input || style.component == MixarComponent::Number ||
+      (style.component == MixarComponent::Action && button.icon && button.str.empty()))
+  {
     return true;
   }
   /* Explicit surfaces host feature-owned content. The button retains its
@@ -129,11 +153,11 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     rctf thumb = off;
     thumb.xmin = off.xmin + (on.xmin - off.xmin) * motion.selected;
     thumb.xmax = off.xmax + (on.xmax - off.xmax) * motion.selected;
-    mixar_fill_round(thumb, radius * u, zen.selected);
+    mixar_fill_round(thumb, radius * u, mixar_zen().selected);
     mixar_label_left(
-        "ON", on.xmin + 10 * u, cy, text_style, selected ? foreground : zen.secondary);
+        "ON", on.xmin + 10 * u, cy, text_style, selected ? foreground : mixar_zen().secondary);
     mixar_label_left(
-        "OFF", off.xmin + 10 * u, cy, text_style, selected ? zen.secondary : foreground);
+        "OFF", off.xmin + 10 * u, cy, text_style, selected ? mixar_zen().secondary : foreground);
     right = start - gap * u;
   }
   if (style.component == MixarComponent::Dropdown) {

@@ -16,6 +16,10 @@ class MIXIE_MT_canvas_annotations(Menu):
         layout.operator("mixie.moodboard_annotate_canvas", text=(
             "Exit Annotate" if context.window_manager.mixie_moodboard_annotating else "Annotate"
         ), icon="GREASEPENCIL")
+        layout.operator("mixie.moodboard_erase_canvas", text=(
+            "Exit Erase" if getattr(context.window_manager, "mixie_moodboard_erasing", False)
+            else "Erase"
+        ), icon="ERASER")
         state = context.scene.mixie_edit_tool_state
         layout.prop(state, "annotation_color", text="Color")
         layout.prop(state, "annotation_width", text="Width")

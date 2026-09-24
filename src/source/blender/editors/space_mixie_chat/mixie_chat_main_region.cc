@@ -37,6 +37,7 @@
 #include "UI_view2d.hh"
 
 #include "mixie_chat_intern.hh"
+#include "mixie_chat_footer_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
@@ -175,21 +176,17 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
     }
 
 
-    /* Feedback stars hover. Locked (in-flight or accepted) feedback is not
-     * interactive, so it gets no hover affordance either. */
-    const bool feedback_locked = layout.feedback_status == FEEDBACK_STATUS_SENDING ||
-                                 layout.feedback_status == FEEDBACK_STATUS_RECEIVED;
+    /* Only in-flight feedback is locked; accepted votes remain switchable. */
+    const bool feedback_locked = layout.feedback_status == FEEDBACK_STATUS_SENDING;
     if (layout.has_feedback) {
-      /* Stars keep the DEFAULT cursor: the fill preview is the hover
-       * affordance, and flipping to the hand while sweeping the row reads as
-       * flicker. So hover only drives needs_redraw, never any_hovered. */
-      for (int i = 0; i < FEEDBACK_STAR_COUNT; i++) {
-        FeedbackStarData &star = layout.feedback_stars[i];
-        bool was_hovered = star.is_hovered;
-        bool has_bounds = star.bounds.xmax > star.bounds.xmin;
-        star.is_hovered = !feedback_locked && has_bounds &&
-                          BLI_rctf_isect_pt(&star.bounds, mouse_x, mouse_y);
-        if (was_hovered != star.is_hovered) {
+      /* Vote buttons highlight on hover; the island keeps its default cursor. */
+      for (int i = 0; i < FEEDBACK_VOTE_COUNT; i++) {
+        FeedbackVoteData &vote = layout.feedback_votes[i];
+        bool was_hovered = vote.is_hovered;
+        bool has_bounds = vote.bounds.xmax > vote.bounds.xmin;
+        vote.is_hovered = !feedback_locked && has_bounds &&
+                          BLI_rctf_isect_pt(&vote.bounds, mouse_x, mouse_y);
+        if (was_hovered != vote.is_hovered) {
           needs_redraw = true;
         }
       }
@@ -197,7 +194,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
       bool was_comment_hovered = layout.feedback_comment_hovered;
       bool has_comment_bounds = layout.feedback_comment_bounds.xmax >
                                 layout.feedback_comment_bounds.xmin;
-      layout.feedback_comment_hovered = has_comment_bounds &&
+      layout.feedback_comment_hovered = !feedback_locked && has_comment_bounds &&
           BLI_rctf_isect_pt(&layout.feedback_comment_bounds, mouse_x, mouse_y);
       if (was_comment_hovered != layout.feedback_comment_hovered) {
         needs_redraw = true;
@@ -285,7 +282,7 @@ static bool mixie_chat_dispatch_is_live(const bContext *C)
     return false;
   }
   if (area->spacetype != SPACE_AGENT_BUBBLE) {
-    return area->spacetype == SPACE_MIXIE_CHAT;
+    return false;
   }
 
   wmWindowManager *wm = CTX_wm_manager(C);
@@ -347,8 +344,7 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
      * compatible spacedata struct (see DNA_space_types.h on
      * SpaceAgentBubble). The cast below works for both. */
     if (!area || !region ||
-        (area->spacetype != SPACE_MIXIE_CHAT &&
-         area->spacetype != SPACE_AGENT_BUBBLE))
+        (area->spacetype != SPACE_AGENT_BUBBLE))
     {
       return WM_UI_HANDLER_CONTINUE;
     }
@@ -368,7 +364,7 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
     }
 
     /* 2. Empty prompt clicks */
-    if (mixie_chat_handle_empty_prompt_click(C, mx, my)) {
+    if (mixie_chat_handle_empty_prompt_click(C, region, mx, my)) {
       return WM_UI_HANDLER_BREAK;
     }
 
@@ -419,23 +415,13 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
               PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
               RNA_string_set(&op_ptr, "bubble_id", layout.bubble_id);
               RNA_string_set(&op_ptr, "action_value", bubble.option_text);
-              WM_operator_name_call_ptr(
-                  C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+              mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
               WM_operator_properties_free(&op_ptr);
-              ED_region_tag_redraw(region);
               return WM_UI_HANDLER_BREAK;
             }
           }
         }
       }
-    }
-
-    /* 8. Scribble auto-open: a stylus press that reached this point hit no
-     * interactive chat target — pen users write, they don't drag-select
-     * transcript text. The press itself seeds the first ink stroke.
-     * Mouse presses fall through to text selection / View2D as before. */
-    if (mixie_chat_ink_try_auto_open(C, event)) {
-      return WM_UI_HANDLER_BREAK;
     }
 
     /* Let text selection / View2D scrolling handle it */
@@ -522,12 +508,12 @@ void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region)
 
   /* Register Mixie Chat keymap for text selection (modal drag) and copy. */
   wmKeyMap *mixie_keymap = WM_keymap_ensure(
-      wm->runtime->defaultconf, "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
+      wm->runtime->defaultconf, "Agent Chat", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
   WM_event_add_keymap_handler(&region->runtime->handlers, mixie_keymap);
 
   /* Register dropbox handler for image drag-and-drop. */
   ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
-      "Mixie Chat", SPACE_MIXIE_CHAT, RGN_TYPE_WINDOW);
+      "Agent Chat", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
   WM_event_add_dropbox_handler(static_cast<ListBaseT<wmEventHandler> *>(&region->runtime->handlers),
                                static_cast<ListBaseT<wmDropBox> *>(dropboxes));
 }
@@ -683,6 +669,12 @@ void mixie_chat_main_region_listener(const wmRegionListenerParams *params)
    * worked in the viewport (selection, frame changes, bakes, renders) —
    * a large part of the perceived bubble lag. */
   switch (wmn->category) {
+    case NC_WINDOW:
+      /* Theme RNA edits mutate the same bTheme in place. Pointer identity
+       * cannot invalidate these cached values; the generic listener already
+       * schedules the redraw that will refresh them. */
+      footer_cache_invalidate();
+      break;
     case NC_SPACE:
       /* Redraw on our space notifier OR the agent bubble's, since
        * SPACE_AGENT_BUBBLE reuses this listener (layout-compatible

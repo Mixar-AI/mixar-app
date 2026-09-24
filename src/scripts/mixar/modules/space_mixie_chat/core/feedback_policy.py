@@ -16,7 +16,7 @@ def validate_feedback_comment(
     if not comment.strip():
         return "Feedback comment is empty"
     if not 1 <= int(rating) <= 5:
-        return "Choose a star rating before submitting feedback"
+        return "Choose a vote before submitting feedback"
     if submitting:
         return "Feedback is already being submitted"
     return None

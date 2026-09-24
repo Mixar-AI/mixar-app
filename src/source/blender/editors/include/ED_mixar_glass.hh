@@ -188,13 +188,15 @@ void mixar_glass_draw(const rcti &rect,
  * to a non-opaque BGRA8 CAMetalLayer. Blender's UI blend already produces
  * premultiplied framebuffer pixels, which present copies without multiplying
  * alpha again. Replacement beds must premultiply their own RGB.
- * Windows uses Desktop Acrylic when DWM accepts it (Windows 11 22621+).
+ * Windows enables the translucent UI bed here; wm_draw_mixar_glass composites
+ * a live, GPU-blurred parent framebuffer beneath it before presenting opaque
+ * pixels. Frost therefore does not depend on the driver's DWM alpha handling.
  * Failure, missing framebuffer alpha or high contrast keeps an opaque bed.
  * DwmEnableBlurBehindWindow is an alpha path, not a Windows 10 blur fallback.
- * Keep the rounded HWND region to clip native frost as well as GPU content.
+ * Keep the rounded HWND region to clip the final GPU composition.
  * Requests are retried after delayed native-view creation.
  *
- * \return true only when native frost and alpha composition are available.
+ * \return true when the platform permits a translucent UI bed.
  */
 bool mixar_glass_window_apply_translucency(void *ghostwin, bool enable);
 

@@ -1664,7 +1664,6 @@ static void icon_source_edit_cb(std::string &svg)
     const size_t group_check = svg.rfind("<g", id_start);
 
     size_t element_start, element_end;
-    bool is_stop = false;
 
     if (stop_check != std::string::npos &&
         (group_check == std::string::npos || stop_check > group_check)) {
@@ -1679,7 +1678,6 @@ static void icon_source_edit_cb(std::string &svg)
         g_start = id_start + 1;
         continue;
       }
-      is_stop = true;
     }
     else if (group_check != std::string::npos) {
       /* This is a group element */

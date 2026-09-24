@@ -22,6 +22,10 @@ class Texture;
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
 
+struct wmKeyConfig;
+void mixie_chat_operatortypes();
+void mixie_chat_keymap(wmKeyConfig *keyconf);
+
 struct ARegion;
 struct bContext;
 struct Main;
@@ -38,15 +42,6 @@ struct wmWindowManager;
 /* -------------------------------------------------------------------- */
 /** \name Region Callbacks
  * \{ */
-
-/* Header region callbacks */
-void mixie_chat_header_region_init(wmWindowManager *wm, ARegion *region);
-void mixie_chat_header_region_draw(const bContext *C, ARegion *region);
-
-/* Footer region callbacks */
-void mixie_chat_footer_region_init(wmWindowManager *wm, ARegion *region);
-void mixie_chat_footer_region_layout(const bContext *C, ARegion *region);
-void mixie_chat_footer_region_draw(const bContext *C, ARegion *region);
 
 /* Main region callbacks (mixie_chat_main_region.cc) */
 void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region);
@@ -144,9 +139,6 @@ void mixie_chat_render_feedback(const bContext *C,
                                 PointerRNA *msg_ptr,
                                 const ChatLayoutMetrics &metrics,
                                 const MessageLayoutData &layout);
-/* Vertical gap between the message's last content row and the feedback stars.
- * Shared by the layout pass and the render pass so they always agree. */
-float chat_ui_get_feedback_top_gap(const ChatLayoutMetrics &metrics);
 /* Pixel height for the in-progress feedback comment input, wrap-measured with
  * the exact widget_draw_text_multiline() font and line-height math so the
  * button grows one widget line at a time (Shift+Enter multi-line). Clamped to
@@ -619,21 +611,13 @@ bool mixie_chat_ink_handle_event(bContext *C, const wmEvent *event);
 bool mixie_chat_ink_cursor(
     wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
 void mixie_chat_ink_set_visible(bContext *C, bool visible);
-bool mixie_chat_ink_try_auto_open(bContext *C, const wmEvent *event);
-/** Open from a PEN STROKE that started on the composer (interface_handlers.cc
- * text-edit hooks — the footer region handler never gets those presses; the
- * caller then exits editing via BUTTON_STATE_EXIT). Seeds the first stroke
- * from the press point. Window coordinates. */
-bool mixie_chat_ink_composer_stylus_stroke(bContext *C,
-                                           const int press_xy[2],
-                                           const int cur_xy[2],
-                                           float pressure);
 void mixie_chat_ink_footer_handler_register(ARegion *region);
 /** Region-exit cleanup for the idle-commit timer (window close / file load
  * would otherwise leave the process-global wmTimer pointer dangling). */
 void mixie_chat_ink_idle_timer_remove(wmWindowManager *wm);
 void MIXIE_CHAT_OT_ink_flush(wmOperatorType *ot);
 void MIXIE_CHAT_OT_ink_release_composer(wmOperatorType *ot);
+void MIXIE_CHAT_OT_focus_composer(wmOperatorType *ot);
 /* On-device recognition (mixie_chat_ink_local.cc): start one batch / pop one result. */
 void MIXIE_CHAT_OT_ink_recognize_local(wmOperatorType *ot);
 void MIXIE_CHAT_OT_ink_local_poll(wmOperatorType *ot);
@@ -643,6 +627,14 @@ void MIXIE_CHAT_OT_voice_stop(wmOperatorType *ot);
 void MIXIE_CHAT_OT_voice_poll(wmOperatorType *ot);
 
 /* Hit testing and click handlers (mixie_chat_hit_testing.cc) */
+/* Region-level handlers call operators that may close the window owning
+ * `region` (see mixie_chat_call_operator_and_redraw). Never touch `region`
+ * after an operator call without this check. */
+bool mixie_chat_region_is_alive(const bContext *C, const ARegion *region);
+void mixie_chat_call_operator_and_redraw(bContext *C,
+                                          ARegion *region,
+                                          wmOperatorType *ot,
+                                          PointerRNA *op_ptr);
 bool mixie_chat_handle_slot_action_click(bContext *C,
                                           ARegion *region,
                                           float mouse_x,
@@ -655,7 +647,8 @@ bool mixie_chat_handle_feedback_click(bContext *C,
                                       ARegion *region,
                                       float mouse_x,
                                       float mouse_y);
-bool mixie_chat_handle_empty_prompt_click(bContext *C, float mouse_x, float mouse_y);
+bool mixie_chat_handle_empty_prompt_click(
+    bContext *C, ARegion *region, float mouse_x, float mouse_y);
 bool mixie_chat_handle_steps_click(bContext *C,
                                    ARegion *region,
                                    float mouse_x,
@@ -673,6 +666,9 @@ void mixie_chat_dropboxes();
  * agent_bubble_menu.py — so it inherits the bubble's position, drag
  * behavior, and ESC dismissal automatically. */
 void MIXIE_CHAT_OT_agent_bubble_show(wmOperatorType *ot);
+/* mixie_chat_document_ops.cc: re-title the open document without writing it. */
+void MIXIE_CHAT_OT_retitle_document(wmOperatorType *ot);
+void MIXIE_CHAT_OT_undo_stamp(wmOperatorType *ot);
 
 /* Property cache, layout data, runtime state: see mixie_chat_layout_data.hh */
 

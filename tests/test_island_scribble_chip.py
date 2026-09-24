@@ -19,6 +19,7 @@ BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
 DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
 STATE_CC = (CPP / "agent_ui_state.cc").read_text(encoding="utf-8")
 LAYOUT_CC = (CPP / "agent_ui_layout.cc").read_text(encoding="utf-8")
+CHIP_FIT_HH = (CPP / "agent_ui_chip_fit.hh").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
 ICONS_CC = (CPP / "agent_ui_icons.cc").read_text(encoding="utf-8")
 DRAW_HH = (CPP / "agent_ui_draw.hh").read_text(encoding="utf-8")
@@ -62,10 +63,10 @@ def test_chip_is_gated_on_the_toggle_being_registered():
     assert 'WM_operatortype_find("MIXAR_OT_scribble_toggle", true)' in STATE_CC
 
 
-def test_reading_and_clear_chips_only_exist_while_marks_are_queued():
+def test_reading_is_available_while_drawing_and_clear_only_after_done():
     body = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
     reading = body.index('"wm.context_menu_enum"')
-    count_gate = body.rindex("state->mark_count > 0", 0, reading)
+    count_gate = body.rindex("state->scribble_armed || state->mark_count > 0", 0, reading)
     assert count_gate < reading
     clear = body.index('"mixar.scribble_mark_clear"')
     armed_gate = body.rindex("!state->scribble_armed", 0, clear)
@@ -78,7 +79,8 @@ def test_attachment_column_does_not_overlap_the_scribble_chips():
     assert "footer_thumbnails_draw_image" not in body
     references = (CPP / "agent_bubble_references.cc").read_text()
     visible = _function_body(references, "bool agent_bubble_references_visible(")
-    assert "state.active_tab == AGENT_TAB_AGENT && !state.ink_visible" in visible
+    assert "!state.ink_visible" in visible
+    assert "agent_bubble_reference_count(C) > 0" in visible
     assert "RGN_TYPE_UI" in references
 
 
@@ -86,11 +88,11 @@ def test_attachment_column_does_not_overlap_the_scribble_chips():
 # State is READ from the Python-registered properties, exactly as the headers.
 # ---------------------------------------------------------------------------
 
-def test_armed_means_either_half_is_up():
+def test_annotate_state_is_independent_of_handwriting():
     gather = _function_body(STATE_CC, "void agent_ui_state_gather(")
     assert '"mixie_chat_ink_visible"' in gather
     assert '"mixar_mark_armed"' in gather
-    assert "r_state->ink_visible ||" in gather
+    assert 'r_state->scribble_armed = read_bool_prop(&wm_ptr, "mixar_mark_armed");' in gather
 
 
 def test_only_draft_marks_are_counted():
@@ -113,7 +115,7 @@ def test_chip_row_paints_scribble_in_the_island_unit():
     assert "AGENT_ICON_PEN" in body
     assert "AgentIslandControl::Scribble" in body
     assert "layout->chip_scribble, state->scribble_armed" in body
-    assert '"Scribble · %d"' in body
+    assert 'state->scribble_armed ? "Done" : "Sketch"' in body
     assert "AGENT_ICON_CROSS" in body
     assert "AGENT_ICON_CHEVRON_DOWN" in body
 
@@ -131,7 +133,7 @@ def test_new_glyphs_keep_count_last():
 
 
 def test_layout_places_scribble_right_of_upload():
-    assert "AGENT_SEG_X + upload_w + AGENT_CHIP_GAP" in LAYOUT_CC
+    assert "AGENT_SEG_X + AGENT_CHIP_UPLOAD_W + AGENT_CHIP_GAP" in LAYOUT_CC
     for rect in ("chip_scribble", "chip_reading", "chip_clear"):
         assert f"r_layout->{rect} = f.box(" in LAYOUT_CC
 
@@ -164,3 +166,26 @@ def test_empty_state_paints_the_ink_canvas_instead_of_the_field():
     assert "mixie_chat_draw_ink_overlay(C, region);" in canvas_branch
     assert "uiDefButR" not in canvas_branch
     assert "void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);" in BUBBLE_CC
+
+
+def test_handwriting_has_explicit_header_control_with_shared_geometry():
+    body = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_header(")
+    assert '"mixie_chat.ink_toggle"' in body
+    assert "layout->hdr_handwriting" in body
+    assert "state->handwriting_available" in body
+    paint = _function_body(DRAW_CC, "void agent_ui_draw_handwriting_control(")
+    assert "layout->hdr_handwriting" in paint
+    assert "agent_ui_header_icon_draw(AGENT_ICON_SIGNATURE" in paint
+    assert "Type instead" not in paint
+
+
+def test_chip_widths_fit_mark_counts_voice_status_and_auto_switch():
+    # The pure fitter measures the labels actually shown (Done, the Voice
+    # status or Stop + trace, Auto with its switch); the layout feeds it state.
+    assert 'in.scribble_armed ? "Done" : "Sketch"' in CHIP_FIT_HH
+    assert 'width("Auto", m.switch_w)' in CHIP_FIT_HH
+    assert "width(in.voice_status, m.icon)" in CHIP_FIT_HH
+    assert 'width("Stop", m.icon)' in CHIP_FIT_HH
+    assert "in.voice_status = state.voice_status;" in LAYOUT_CC
+    assert "in.scribble_armed = state.scribble_armed;" in LAYOUT_CC
+    assert 'agent_ui_layout_fit_controls(*r_layout, *r_state)' in BUBBLE_CC

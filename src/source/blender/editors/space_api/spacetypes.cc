@@ -95,7 +95,6 @@ void ED_spacetypes_init()
 
   ED_spacetype_baking();  /* Register Baking space */
   ED_spacetype_texture_sets();  /* Register Texture Sets space */
-  ED_spacetype_mixie_chat();  /* Register Mixie Chat space */
   ED_spacetype_agent_bubble();  /* Register floating Agent Bubble space */
 
   /* Register operator types for screen and all spaces. */

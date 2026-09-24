@@ -13,7 +13,6 @@
  */
 
 #include <algorithm>
-#include <cmath>
 
 #include "BKE_context.hh"
 
@@ -88,6 +87,21 @@ void director_popup_block_end(ui::Block *block)
   ui::block_bounds_set_normal(block, director_popup_pad());
   /* A detached chip under its bar: all four corners round. */
   ui::block_flag_enable(block, ui::BLOCK_MIXAR_ROUND_ALL);
+  /* STAYS OPEN until the pointer leaves it or something outside is clicked.
+   *
+   * Without this a Director popup closed on the first row pressed, which made
+   * every one of them a one-setting-per-open affair: switch Depth of Field on
+   * and it vanished before the f-stop could be touched; pick Orthographic and
+   * it vanished before the scale could be. These are settings panels, not
+   * menus picking one item.
+   *
+   * A block-button popup is created with `can_refresh` false
+   * (`interface_handlers.cc`, the `popup_block_create` call in
+   * `button_activate_init`), so it cannot re-lay itself after a click. That
+   * is the other half of the contract, and the reason the popups that stay
+   * open draw every row they might need up front rather than branching on a
+   * value a row inside them can change. */
+  ui::block_flag_enable(block, ui::BLOCK_KEEP_OPEN);
 }
 
 void director_popup_state(ui::Button *but, const bool active, const bool enabled)
@@ -159,133 +173,6 @@ ui::Button *popup_op_button(ui::Block *block,
       block, operator_id, icon, label, x, y, width, height, tooltip);
 }
 
-/**
- * One cell of a segmented group: the row state (BUT_ACTIVE_DEFAULT carries
- * "active", BUT_DISABLED "locked"), then the Segment kind on top so the
- * cells on this baseline paint as one hover-expanding group. The cells are
- * laid out as equal parts of the row; their hit rects never change (a block
- * popup is not refreshable), only the painted widths do.
- */
-void popup_segment_state(ui::Button *but, const bool active, const bool enabled)
-{
-  director_popup_state(but, active, enabled);
-  ui::UI_mixar_cinema_row_tag(but, ui::MixarCinemaRowKind::Segment);
-}
-
-/* -------------------------------------------------------------------- */
-/* Lens: projection type plus photographic focal-length presets. */
-
-ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
-{
-  ui::Block *block = director_popup_block_begin(C, region, __func__);
-  DirectorPopupData data;
-  if (!director_popup_data_get(C, &data) || !data.camera) {
-    director_popup_section_label(block, "No active shot camera", 0, UI_UNIT_X * 10);
-    director_popup_block_end(block);
-    return block;
-  }
-
-  const int width = director_popup_width(arg, UI_UNIT_X * 12);
-  const int row_h = int(UI_UNIT_Y * 1.15f);
-  const int gap = int(UI_UNIT_Y * 0.3f);
-  int y = 0;
-
-  struct LensType {
-    const char *identifier;
-    const char *label;
-    short camera_type;
-  };
-  const LensType types[] = {
-      {"PERSP", "Perspective", CAM_PERSP},
-      {"ORTHO", "Orthographic", CAM_ORTHO},
-      {"PANO", "Panoramic", CAM_PANO},
-  };
-  const int segment_w = width / 3;
-  y -= row_h;
-  for (int index = 0; index < 3; index++) {
-    ui::Button *but = popup_op_button(block,
-                                 "MIXAR_OT_director_set_lens_type",
-                                 ICON_NONE,
-                                 types[index].label,
-                                 index * segment_w,
-                                 y,
-                                 segment_w,
-                                 row_h,
-                                 "Switch the lens projection");
-    RNA_enum_set_identifier(
-        C, ui::button_operator_ptr_ensure(but), "lens_type", types[index].identifier);
-    popup_segment_state(but, data.camera->type == types[index].camera_type, data.editable);
-  }
-  y -= gap;
-
-  if (data.camera->type == CAM_PERSP) {
-    struct LensPreset {
-      int mm;
-      const char *label;
-    };
-    const LensPreset presets[] = {
-        {18, "Ultra Wide  ·  18mm"},
-        {24, "Wide  ·  24mm"},
-        {35, "Classic  ·  35mm"},
-        {50, "Standard  ·  50mm"},
-        {85, "Portrait  ·  85mm"},
-        {135, "Telephoto  ·  135mm"},
-    };
-    for (const LensPreset &preset : presets) {
-      y -= row_h;
-      ui::Button *but = popup_op_button(block,
-                                   "MIXAR_OT_director_set_lens",
-                                   ICON_NONE,
-                                   preset.label,
-                                   0,
-                                   y,
-                                   width,
-                                   row_h,
-                                   "Apply this photographic focal length");
-      RNA_int_set(ui::button_operator_ptr_ensure(but), "lens_mm", preset.mm);
-      director_popup_state(but, std::abs(data.camera->lens - float(preset.mm)) < 0.5f, data.editable);
-    }
-    y -= gap + row_h;
-    ui::Button *slider = ui::uiDefButR(block,
-                              ui::ButtonType::NumSlider,
-                              "Focal Length",
-                              0,
-                              y,
-                              short(width),
-                              short(row_h),
-                              &data.camera_data_ptr,
-                              "lens",
-                              0,
-                              0,
-                              0,
-                              std::nullopt);
-    director_popup_state(slider, false, data.editable);
-  }
-  else {
-    y -= gap + row_h;
-    const bool ortho = data.camera->type == CAM_ORTHO;
-    const std::optional<blender::StringRef> value_label =
-        ortho ? std::optional<blender::StringRef>("Scale") : std::nullopt;
-    ui::Button *value = ui::uiDefButR(block,
-                             ortho ? ui::ButtonType::NumSlider : ui::ButtonType::Menu,
-                             value_label,
-                             0,
-                             y,
-                             short(width),
-                             short(row_h),
-                             &data.camera_data_ptr,
-                             ortho ? "ortho_scale" : "panorama_type",
-                             0,
-                             0,
-                             0,
-                             std::nullopt);
-    director_popup_state(value, false, data.editable);
-  }
-
-  director_popup_block_end(block);
-  return block;
-}
-
 /* -------------------------------------------------------------------- */
 /* Aspect: named output formats. */
 
@@ -306,18 +193,20 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
     int ratio_width;
     int ratio_height;
   };
+  /* Ratios only — mirrors ASPECT_PRESETS in `director/constants.py`. */
   const AspectPreset presets[] = {
-      {"PHOTO", "Photography / DSLR  ·  3:2", 3, 2},
-      {"SMARTPHONE", "Smartphones  ·  4:3", 4, 3},
-      {"WIDE", "Video / TV  ·  16:9", 16, 9},
-      {"CINEMA_185", "Cinema  ·  1.85:1", 185, 100},
-      {"CINEMA_239", "Cinema  ·  2.39:1", 239, 100},
-      {"VERTICAL", "Social media  ·  9:16", 9, 16},
-      {"SQUARE", "Square  ·  1:1", 1, 1},
+      {"PHOTO", "3:2", 3, 2},
+      {"SMARTPHONE", "4:3", 4, 3},
+      {"WIDE", "16:9", 16, 9},
+      {"CINEMA_185", "1.85:1", 185, 100},
+      {"CINEMA_239", "2.39:1", 239, 100},
+      {"VERTICAL", "9:16", 9, 16},
+      {"SQUARE", "1:1", 1, 1},
   };
   const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
   int y = 0;
+  bool matched = false;
   for (const AspectPreset &preset : presets) {
     y -= row_h;
     ui::Button *but = popup_op_button(block,
@@ -334,7 +223,65 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
     const bool active = int64_t(scene->r.xsch) * preset.ratio_height ==
                         int64_t(scene->r.ysch) * preset.ratio_width;
     director_popup_state(but, active, data.editable);
+    matched |= active;
   }
+
+  /* A ratio the presets do not cover, edited HERE.
+   *
+   * It used to be a single row running an operator with
+   * `invoke_props_dialog`, which is Blender's stock dialog — grey chrome,
+   * OK/Cancel, nothing like the glass popup it was opened from. A ratio is
+   * two numbers, and the popup already stays open, so the two numbers live in
+   * it: `state.custom_aspect_x/y` as ordinary RNA fields, and one row that
+   * applies them. The caption is lit when nothing above matched, so the
+   * section still REPORTS that the frame is on a custom shape. */
+  const int gap = int(UI_UNIT_Y * 0.25f);
+  const int label_h = int(UI_UNIT_Y * 0.85f);
+  y -= gap + label_h;
+  director_popup_section_label(block, matched ? "Custom" : "Custom (in use)", y, width);
+
+  y -= row_h;
+  const int half_w = (width - gap) / 2;
+  ui::Button *ratio_x = ui::uiDefButR(block,
+                                      ui::ButtonType::Num,
+                                      "",
+                                      0,
+                                      y,
+                                      short(half_w),
+                                      short(row_h),
+                                      &data.state_ptr,
+                                      "custom_aspect_x",
+                                      0,
+                                      0,
+                                      0,
+                                      "Width side of the ratio");
+  director_popup_state(ratio_x, false, data.editable);
+  ui::Button *ratio_y = ui::uiDefButR(block,
+                                      ui::ButtonType::Num,
+                                      "",
+                                      half_w + gap,
+                                      y,
+                                      short(width - half_w - gap),
+                                      short(row_h),
+                                      &data.state_ptr,
+                                      "custom_aspect_y",
+                                      0,
+                                      0,
+                                      0,
+                                      "Height side of the ratio");
+  director_popup_state(ratio_y, false, data.editable);
+
+  y -= gap + row_h;
+  ui::Button *custom = popup_op_button(block,
+                                       "MIXAR_OT_director_set_custom_aspect",
+                                       ICON_NONE,
+                                       "Frame at this ratio",
+                                       0,
+                                       y,
+                                       width,
+                                       row_h,
+                                       "Frame this camera at the ratio above");
+  director_popup_state(custom, !matched, data.editable);
 
   director_popup_block_end(block);
   return block;
@@ -456,11 +403,6 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void *arg)
 }
 
 }  // namespace
-
-ui::Block *view3d_director_lens_popup_create(bContext *C, ARegion *region, void *arg)
-{
-  return lens_popup_create(C, region, arg);
-}
 
 ui::Block *view3d_director_aspect_popup_create(bContext *C, ARegion *region, void *arg)
 {

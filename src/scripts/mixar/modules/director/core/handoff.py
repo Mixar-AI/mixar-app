@@ -23,11 +23,21 @@ def _selected_prompt(shot) -> str:
 
 def _validate_reference_limit(shot) -> None:
     try:
+        import bpy
+
         from mixar.modules.moodboard.core.video_generation_catalog import (
             get_video_generation_limits,
+            selected_video_model_slug,
         )
 
-        limits = get_video_generation_limits("video_gen")
+        # Against the SELECTED model, not the service's widest: Video Gen
+        # serves several models and their reference ceilings differ by more
+        # than 3x, and this check exists so a shot fails here rather than
+        # after every keyframe has been uploaded.
+        scene = getattr(bpy.context, "scene", None)
+        limits = get_video_generation_limits(
+            "video_gen", selected_video_model_slug(scene)
+        )
     except Exception:
         limits = None
     if limits is not None and len(shot.beats) > limits["max_images"]:
@@ -48,36 +58,20 @@ def select_shot_beats(scene, shot) -> int:
 
 
 def focus_video_generation(context) -> bool:
-    """Open the visible Moodboard area on its Video Gen category."""
-    focused = False
-    for window in getattr(context.window_manager, "windows", ()):
-        screen = getattr(window, "screen", None)
-        for area in getattr(screen, "areas", ()):
-            if area.type != 'MIXIE':
-                continue
-            space = area.spaces.active
-            if hasattr(space, "mixie_mode"):
-                space.mixie_mode = 'MOODBOARD'
-            if hasattr(space, "show_region_ui"):
-                space.show_region_ui = True
-            region = next(
-                (item for item in area.regions if item.type == 'UI'),
-                None,
-            )
-            if region is not None and hasattr(region, "active_panel_category"):
-                # Tab labels are catalog-driven — resolve the Video Gen
-                # tab's current category instead of hardcoding it.
-                try:
-                    from mixar.modules.moodboard.ui.moodboard_sidebar_panels import (
-                        get_tab_category,
-                    )
-                    category = get_tab_category("video_gen", "Video Gen")
-                except Exception:
-                    category = "Video Gen"
-                region.active_panel_category = category
-            area.tag_redraw()
-            focused = True
-    return focused
+    """Open the island's Video form, which shares the prepared prompt/references."""
+    import bpy
+
+    wm = getattr(context, 'window_manager', None)
+    if wm is None or not hasattr(wm, 'mixar_bubble_tab'):
+        return False
+    try:
+        if bpy.ops.mixar.agent_bubble_open_window() != {'FINISHED'}:
+            return False
+        # Opening restores the pill's previous tab; select Video afterwards.
+        wm.mixar_bubble_tab = 'VIDEO'
+    except Exception:
+        return False
+    return True
 
 
 def prepare_video_generation(context, shot) -> tuple[int, bool]:

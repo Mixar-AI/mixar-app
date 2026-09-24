@@ -5,6 +5,11 @@
 version = 1
 
 [[annotations]]
+path = "docs/development/windows-glass-validation/*.png"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
 path = [
   ".env.example",
   ".gitignore",
@@ -82,6 +87,13 @@ path = [
   "src/release/windows/icons/winmixar.ico",
   "src/release/windows/icons/winmixarfile.ico",
   "src/scripts/mixar/modules/onboarding/assets/mixar_logo.png",
+  "docs/development/moodboard-add-mesh-node/*.png",
+  "docs/development/agent-window-spacing/*.png",
+  "docs/development/evidence/sketch-preview/*.png",
+  "docs/development/agent-stack-notifications/*.png",
+  "docs/development/zen-toolbar-alignment/*.png",
+  "docs/development/library-responsive-layout/*.png",
+  "docs/development/director-auto-key/*.png",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
@@ -91,6 +103,14 @@ SPDX-License-Identifier = "LicenseRef-Mixar-Brand"
 path = [
   "docs/open-source/asset-provenance-review.csv",
   "docs/open-source/audit/**",
+  "docs/development/moodboard-add-mesh-node/verdict.json",
+  "docs/development/agent-window-spacing/verdict.json",
+  "docs/development/evidence/sketch-preview/*.json",
+  "docs/development/agent-stack-notifications/verdict.json",
+  "docs/development/agent-stack-notifications/review-verdict.json",
+  "docs/development/zen-toolbar-alignment/verdict.json",
+  "docs/development/library-responsive-layout/verdict.json",
+  "docs/development/director-auto-key/verdict.json",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"

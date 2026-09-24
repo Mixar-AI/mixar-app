@@ -304,16 +304,15 @@ struct ImageSlotData {
 };
 
 /**
- * Feedback star hit-test data.
- * One per star in the feedback rating row.
+ * Feedback vote hit-test data, sharing the copy action row.
  */
-struct FeedbackStarData {
+struct FeedbackVoteData {
   rctf bounds;
-  int star_index; /* 1-5 */
+  int rating; /* thumbs up=5, thumbs down=1 */
   bool is_hovered;
 };
 
-#define FEEDBACK_STAR_COUNT 5
+#define FEEDBACK_VOTE_COUNT 2
 
 /* Display cap for the read-only accepted-comment copy kept in layout data.
  * The RNA property allows 2000 chars; the inline confirmation truncates. */

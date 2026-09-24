@@ -20,6 +20,7 @@ import bpy
 from mathutils import Vector
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.render_coordinator import core as render_slot
 
 logger = get_logger(__name__)
 
@@ -212,7 +213,16 @@ class LinkedBlend:
             logger.debug("[PreviewRender] Could not free linked library: %s", e)
 
 
-def render_to_jpeg(scene, out_path):
+def render_to_jpeg(scene, out_path, render_token=None):
+    with render_slot.reserve("asset-thumbnail", render_token) as token:
+        render_slot.phase(token, "rendering")
+        try:
+            return _render_to_jpeg(scene, out_path)
+        finally:
+            render_slot.phase(token, "finalizing")
+
+
+def _render_to_jpeg(scene, out_path):
     """Render the staged scene straight to ``out_path`` as JPEG. True on success."""
     orig_format = scene.render.image_settings.file_format
     orig_quality = scene.render.image_settings.quality
@@ -230,7 +240,12 @@ def render_to_jpeg(scene, out_path):
         scene.render.image_settings.quality = orig_quality
 
 
-def render_to_image(scene, image_name, pack=True):
+def render_to_image(scene, image_name, pack=True, render_token=None):
+    with render_slot.reserve("asset-thumbnail", render_token) as token:
+        return _render_to_image(scene, image_name, pack, token)
+
+
+def _render_to_image(scene, image_name, pack, token):
     """Render the scene and load the result back as a bpy image.
 
     Datablock-producing wrapper around ``render_to_jpeg``, for callers that
@@ -247,7 +262,7 @@ def render_to_image(scene, image_name, pack=True):
         tempfile.gettempdir(), f"{safe_temp_filename(image_name)}.jpg"
     )
     try:
-        if not render_to_jpeg(scene, temp_path):
+        if not render_to_jpeg(scene, temp_path, render_token=token):
             return None
         existing = bpy.data.images.get(image_name)
         if existing:
@@ -290,8 +305,10 @@ class PreviewRenderRig:
     hidden from the render. Exposes `.camera` for frame_camera().
     """
 
-    def __init__(self, scene, size=512):
+    def __init__(self, scene, size=512, render_token=None):
         self.scene = scene
+        self.token = render_token
+        self._reservation = None
         self.size = size
         self.camera = None
         self._orig = None
@@ -299,6 +316,15 @@ class PreviewRenderRig:
         self._hidden = []
 
     def __enter__(self):
+        self._reservation = render_slot.reserve("asset-preview-rig", self.token)
+        self.token = self._reservation.__enter__()
+        try:
+            return self._setup()
+        except BaseException:
+            self.__exit__(None, None, None)
+            raise
+
+    def _setup(self):
         scene = self.scene
         self._orig = {
             'engine': scene.render.engine,
@@ -310,9 +336,9 @@ class PreviewRenderRig:
         }
 
         try:
-            scene.render.engine = 'BLENDER_EEVEE_NEXT'
-        except Exception:
             scene.render.engine = 'BLENDER_EEVEE'
+        except Exception:
+            scene.render.engine = 'BLENDER_EEVEE_NEXT'
         scene.render.resolution_x = self.size
         scene.render.resolution_y = self.size
         scene.render.resolution_percentage = 100
@@ -348,6 +374,13 @@ class PreviewRenderRig:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            self._restore()
+        finally:
+            self._reservation.__exit__(exc_type, exc_value, traceback)
+        return False
+
+    def _restore(self):
         scene = self.scene
         for obj in self._hidden:
             if obj.name in bpy.data.objects:

@@ -304,21 +304,13 @@ class TestResolutionHonesty:
 # =============================================================================
 
 class TestFrameAttachments:
-    def test_both_a_clean_and_an_annotated_frame_are_offered(self):
-        """Burning the ink into the only image means every downstream
-        generation faithfully reproduces the cyan loop."""
-        text = source("src/scripts/mixar/modules/scribble_mark/core/chat_bridge.py")
-        marker = text.index("for name in (")
-        assert "annotated" in text[marker:marker + 200]
-        assert "frame_name" in text[marker:marker + 200]
+    def test_clean_companions_are_only_encoded_for_the_agent(self):
+        text = source("src/scripts/mixar/modules/space_mixie_chat/ui/operators/chat_ops.py")
+        assert 'outgoing_attachments = chat_bridge.preview.outgoing_attachments(scene)' in text
+        history = text[text.index('# Copy attachments to message history'):text.index('# Clear input field')]
+        assert 'for att in pending_attachments:' in history
+        assert 'outgoing_attachments' not in history
 
-    def test_the_annotated_frame_is_queued_first(self):
-        """Under a tight attachment cap the marked frame is the one carrying
-        information the agent cannot get any other way."""
-        text = source("src/scripts/mixar/modules/scribble_mark/core/chat_bridge.py")
-        marker = text.index("for name in (")
-        line = text[marker:text.index("\n", marker)]
-        assert line.index("annotated") < line.index("frame_name")
 
     def test_annotation_flips_v_for_pil(self):
         """The payload is v bottom-up; PIL rows are top-down. Skipping the
@@ -335,6 +327,7 @@ def test_no_module_file_exceeds_the_line_limit(path):
 
 
 class TestVisibleControlsAndRecovery:
+    HEADER = "src/scripts/mixar/modules/agent_bubble/ui/header.py"
     """A mode whose boundaries and recovery are invisible is the first thing
     users trip on with ink tools (arXiv:2607.21468 found exactly this: people
     could not tell which mode they were in, and asked for visible controls and
@@ -343,7 +336,6 @@ class TestVisibleControlsAndRecovery:
 
     OVERLAY = "src/scripts/mixar/modules/scribble_mark/core/overlay.py"
     MODAL = "src/scripts/mixar/modules/scribble_mark/ui/operators/mark_draw_ops.py"
-    HEADER = "src/scripts/mixar/modules/space_mixie_chat/ui/header.py"
 
     def test_the_frozen_frame_carries_a_hint(self):
         text = source(self.OVERLAY)
@@ -360,14 +352,14 @@ class TestVisibleControlsAndRecovery:
 
     def test_the_hint_names_the_way_back(self):
         from mixar.modules.scribble_mark.constants import MARK_HINT_MARKED
-        assert "Backspace" in MARK_HINT_MARKED
+        assert "Ctrl/Cmd+Z" in MARK_HINT_MARKED
 
     def test_undo_is_reachable_from_inside_the_freeze(self):
         """Bound in the modal rather than a keymap: the freeze already owns
         every event over the region, and a GUI keyconfig reload wipes
         C-registered keymap items."""
         text = source(self.MODAL)
-        assert "BACK_SPACE" in text
+        assert 'event.type == "Z"' in text
         assert "_undo_last" in text
 
     def test_undo_prefers_the_half_drawn_stroke(self):
@@ -379,9 +371,9 @@ class TestVisibleControlsAndRecovery:
         assert body.index("self._ink") < body.index("remove_last")
 
     def test_queued_marks_can_be_cleared_without_re_arming(self):
-        text = source(self.HEADER)
+        text = source("src/source/blender/editors/space_agent_bubble/space_agent_bubble.cc")
         assert "mixar.scribble_mark_clear" in text
-        assert "not armed" in text
+        assert "!state->scribble_armed" in text
 
 
 class TestReviewFindings:
@@ -508,9 +500,9 @@ class TestReviewFindings:
         assert "freeze.release" in release
 
 
-class TestOneScribbleMode:
+class TestIndependentScribbleTools:
     """Handwriting over the chat becomes text, ink over the viewport becomes
-    marks, and the two halves enter and leave together. Pinned at the source
+    marks, with independent lifetimes and a shared Send flush. Pinned at the source
     level because every seam here is a Blender operator or a wmTimer."""
 
     MODAL = "src/scripts/mixar/modules/scribble_mark/ui/operators/mark_draw_ops.py"
@@ -520,73 +512,49 @@ class TestOneScribbleMode:
     INK = "src/scripts/mixar/modules/space_mixie_chat/core/scribble.py"
     INK_OPS = "src/scripts/mixar/modules/space_mixie_chat/ui/operators/ink_ops.py"
     HEADERS = (
-        "src/scripts/mixar/modules/space_mixie_chat/ui/header.py",
         "src/scripts/mixar/modules/agent_bubble/ui/header.py",
     )
 
-    def test_there_is_exactly_one_scribble_control(self):
-        """Two grease-pencil buttons — one for text, one for marks — is the
-        two-mode UI this feature exists to remove."""
+    def test_annotation_and_handwriting_have_distinct_controls(self):
         for header in self.HEADERS:
             text = source(header)
             assert text.count("mixar.scribble_toggle") == 1, header
-            assert "toggle_scribble" not in text, header
-            assert "scribble_mark_toggle" not in text, header
-        assert "toggle_scribble" not in source(self.INK_OPS)
+            assert text.count("mixie_chat.ink_toggle") == 1, header
 
     def test_the_toggle_arms_and_disarms_through_the_coordinator(self):
         text = source(self.ARM)
         body = text[text.index("class MIXAR_OT_scribble_toggle"):text.index("class MIXAR_OT_scribble_mark_undo")]
         assert "scribble_mode.arm(" in body
-        assert "scribble_mode.disarm(" in body
+        assert "scribble_mode.disarm_marks(" in body
 
-    def test_the_control_shows_either_half_as_armed(self):
+    def test_the_annotate_control_shows_only_viewport_state(self):
         for header in self.HEADERS:
             text = source(header)
             block = text[text.index("mixar.scribble_toggle") - 600:text.index("mixar.scribble_toggle")]
-            assert "mixar_mark_armed" in block and "mixie_chat_ink_visible" in block, header
+            assert "mixar_mark_armed" in block and "mixie_chat_ink_visible" not in block, header
 
     def test_the_freeze_passes_timer_events_through(self):
         """A window-level modal that swallows every TIMER starves the chat
         canvas's idle-commit timer: with a docked chat in the same window,
         handwriting would never convert while the viewport was frozen."""
         text = source(self.MODAL)
-        timer = text[text.index('if event.type == "TIMER":'):text.index("# Esc is the ONE binding")]
+        timer = text[text.index('if event.type == "TIMER":'):text.index("# A pen-up")]
         assert 'return {"PASS_THROUGH"}' in timer
         assert 'return {"RUNNING_MODAL"}' not in timer
 
-    def test_only_esc_is_bound_window_wide(self):
-        """This is a WINDOW-level modal, so it is offered every event in the
-        window — including keys meant for the Outliner, the Properties editor
-        or a docked chat. Everything but Esc (the promised way out) and the
-        pen-up that closes an open stroke must sit BELOW the region test, or
-        Delete in the Outliner silently undoes a mark and reports "Mark
-        removed", and Tab in the Properties editor flips the ink reading."""
+    def test_all_drawing_keys_are_scoped_to_viewport(self):
         text = source(self.MODAL)
         modal = text[text.index("def modal"):text.index("def cancel")]
         gate = modal.index('if not inside:')
-        for binding, name in (('"BACK_SPACE"', "undo"), ('"TAB"', "reading flip")):
-            assert modal.index(binding) > gate, (
-                f"the {name} binding is handled before the region test — it "
-                f"would fire for the whole window"
-            )
-        assert modal.index('event.type == "ESC"') < gate, (
-            "Esc is the way out and must work from anywhere"
-        )
+        for key in ('prompt_input.handle', '"TAB"', '"ESC"'):
+            assert modal.index(key) > gate
+        assert modal.index('and self._ink.drawing') < gate
 
-    def test_the_freeze_follows_the_canvas_down(self):
-        """Esc or the close X over the chat canvas are C++ paths the modal
-        never sees; it polls the flag on its timer instead."""
+    def test_freeze_lifetime_does_not_follow_handwriting(self):
         text = source(self.MODAL)
-        invoke = text[text.index("def invoke"):text.index("def modal")]
-        assert "_ink_linked = scribble_mode.ink_open" in invoke
-        timer = text[text.index('if event.type == "TIMER":'):text.index("# Esc is the ONE binding")]
-        assert "_ink_linked and not scribble_mode.ink_open" in timer
-
-    def test_every_freeze_exit_lowers_the_canvas(self):
-        text = source(self.MODAL)
-        finish = text[text.index("def _finish"):]
-        assert "scribble_mode.close_ink" in finish[:1200]
+        assert "_ink_linked" not in text
+        assert "scribble_mode.close_ink" not in text
+        assert "scribble_mode.ink_open" not in text
 
     def test_the_send_waits_for_handwriting_before_the_empty_check(self):
         """A prompt written entirely by hand is EMPTY until its last batch
@@ -598,7 +566,7 @@ class TestOneScribbleMode:
 
     def test_the_send_leaves_both_halves(self):
         text = source(self.BRIDGE)
-        body = text[text.index("def finish_send"):text.index("# ====")]
+        body = text[text.index("def finish_send"):]
         assert "scribble_mode.disarm" in body
         assert "mixar_mark_armed = False" not in body, "the coordinator owns the flag"
 

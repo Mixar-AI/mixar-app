@@ -40,6 +40,7 @@ PY_PROPS = (
 
 HEADER = SPACE_VIEW3D / "view3d_agent_panel.hh"
 CARDS = SPACE_VIEW3D / "view3d_agent_panel_cards.cc"
+LAYOUT = SPACE_VIEW3D / "view3d_agent_panel_layout.cc"
 SYNC = SPACE_VIEW3D / "view3d_agent_panel_sync.cc"
 DRAW = SPACE_VIEW3D / "view3d_agent_panel_draw.cc"
 OPS = SPACE_VIEW3D / "view3d_agent_panel_ops.cc"
@@ -124,14 +125,14 @@ class TestOneLayoutOwner:
             )
 
     def test_the_scroll_offset_is_applied_in_the_layout_pass(self):
-        text = CARDS.read_text()
+        text = LAYOUT.read_text()
         layout = text[text.index("void view3d_agent_panel_layout_cards") :]
         assert "runtime->scroll" in layout, (
             "scroll must move the rects themselves, or draw and hit-test disagree"
         )
 
     def test_the_reveal_animation_is_applied_in_the_layout_pass(self):
-        text = CARDS.read_text()
+        text = LAYOUT.read_text()
         layout = text[text.index("void view3d_agent_panel_layout_cards") :]
         assert "card.slide.sample" in layout, (
             "a card animating in must be clickable where it is drawn"
@@ -149,19 +150,15 @@ class TestColumnClip:
     has to mean the card column, not the region."""
 
     def test_the_layout_pass_defines_the_column(self):
-        text = CARDS.read_text()
+        text = LAYOUT.read_text()
         layout = text[text.index("void view3d_agent_panel_layout_cards") :]
         assert "runtime->column_rect" in layout
 
     def test_the_chevron_exists_only_when_there_is_more_to_see(self):
-        """It is the discoverable half of scrolling. Keyed on the card count,
-        not on `scroll_max` alone: a short viewport squeezes the column and
-        gives a non-zero `scroll_max` at three cards or fewer, and a chevron
-        beside a stack that plainly shows everything reads as a bug. Both
-        conditions hold, so it is also never a dead control."""
-        text = CARDS.read_text()
+        """Even a short viewport must offer a way to reach clipped cards."""
+        text = LAYOUT.read_text()
         layout = text[text.index("void view3d_agent_panel_layout_cards") :]
-        assert "n > AGENT_PANEL_VISIBLE_CARDS && runtime->scroll_max > 0.0f" in layout
+        assert "if (runtime->scroll_max > 0.0f)" in layout
         assert "runtime->chevron_rect" in layout
 
     def test_the_hit_extent_covers_the_cards_and_the_chevron(self):
@@ -169,7 +166,7 @@ class TestColumnClip:
         event against `v2d.tot` and bails when `v2d.mask` is degenerate — a
         custom-drawn region that never sets up a View2D is transparent to
         every event, with the keymap resolving and nothing arriving."""
-        text = CARDS.read_text()
+        text = LAYOUT.read_text()
         assert "agent_panel_view2d_sync" in text
         sync = text[text.index("static void agent_panel_view2d_sync") :]
         assert "v2d->mask" in sync and "v2d->tot" in sync
@@ -181,7 +178,7 @@ class TestColumnClip:
             assert "view3d_agent_panel_card_visible(" in path.read_text(), (
                 f"{path.name} must ask the shared test, not re-derive bounds"
             )
-        assert "runtime->column_rect" in CARDS.read_text()
+        assert "runtime->column_rect" in LAYOUT.read_text()
 
     def test_nothing_culls_against_the_region_height(self):
         for path in (DRAW, QA):

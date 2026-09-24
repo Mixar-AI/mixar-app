@@ -12,104 +12,8 @@
 
 #include "GPU_immediate_util.hh"
 
-#include <unordered_map>
-
 namespace blender::ed::mixie {
 
-/* -------------------------------------------------------------------- */
-/** \name sRGB Texture Cache
- *
- * On macOS Metal, the immDrawPixelsTexScaledFullSize fallback creates and
- * destroys temporary GPU textures every frame.  This causes Metal command-
- * buffer stalls that lock up or crash the application (especially after
- * duplicating images, which increases the per-frame texture churn).
- *
- * We cache a UNORM_8_8_8_8 texture per Image* so sRGB pixel bytes are
- * stored as-is (no sRGB-to-linear conversion), matching the visual output
- * of the old immDrawPixelsTexScaledFullSize path without per-frame churn.
- * \{ */
-
-struct CachedImageTex {
-  blender::gpu::Texture *tex;
-  int width;
-  int height;
-  int frame;
-  uint64_t last_used_frame;
-};
-
-static std::unordered_map<Image *, CachedImageTex> s_srgb_tex_cache;
-static uint64_t s_cache_frame = 0;
-
-/* Shared with the attachment ribbon; raw sRGB bytes preserve the board's colors. */
-blender::gpu::Texture *mixie_moodboard_srgb_texture(Image *image, ImageUser *image_user)
-{
-  auto it = s_srgb_tex_cache.find(image);
-  const int requested_frame = image_user ? image_user->framenr : 0;
-
-  void *lock;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, image_user, &lock);
-  if (!ibuf || ibuf->x <= 0 || ibuf->y <= 0) {
-    BKE_image_release_ibuf(image, ibuf, lock);
-    return nullptr;
-  }
-
-  /* A >8-bit movie frame (e.g. a 10-bit HEVC video-gen result) decodes to a
-   * scene-linear float buffer with NO byte buffer, which this byte cache
-   * cannot upload — node previews then drew nothing (a black tile). Convert
-   * to display bytes once per decoded frame; the byte buffer lands on the
-   * movie-cache ibuf, so a paused frame pays this exactly once. */
-  if (ibuf->byte_buffer.data == nullptr && ibuf->float_buffer.data != nullptr) {
-    IMB_byte_from_float(ibuf);
-  }
-
-  /* Return cached texture if dimensions still match. */
-  if (it != s_srgb_tex_cache.end()) {
-    if (ibuf->x == it->second.width && ibuf->y == it->second.height) {
-      it->second.last_used_frame = s_cache_frame;
-      if (it->second.frame == requested_frame) {
-        BKE_image_release_ibuf(image, ibuf, lock);
-        return it->second.tex;
-      }
-      if (ibuf->byte_buffer.data) {
-        GPU_texture_update(it->second.tex, GPU_DATA_UBYTE, ibuf->byte_buffer.data);
-        it->second.frame = requested_frame;
-        BKE_image_release_ibuf(image, ibuf, lock);
-        return it->second.tex;
-      }
-    }
-    /* Stale dimensions, or a frame this byte cache cannot represent. */
-    GPU_texture_free(it->second.tex);
-    s_srgb_tex_cache.erase(it);
-  }
-
-  /* Create UNORM texture from raw byte data (no sRGB conversion). */
-  blender::gpu::Texture *tex = nullptr;
-  if (ibuf->byte_buffer.data) {
-    eGPUTextureUsage usage = GPU_TEXTURE_USAGE_GENERAL;
-    tex = GPU_texture_create_2d(
-        "moodboard_srgb", ibuf->x, ibuf->y, 1,
-        blender::gpu::TextureFormat::UNORM_8_8_8_8, usage, nullptr);
-    if (tex) {
-      GPU_texture_update(tex, GPU_DATA_UBYTE, ibuf->byte_buffer.data);
-      s_srgb_tex_cache[image] = {tex, ibuf->x, ibuf->y, requested_frame, s_cache_frame};
-    }
-  }
-
-  BKE_image_release_ibuf(image, ibuf, lock);
-  return tex;
-}
-
-void mixie_moodboard_free_texture_cache()
-{
-  for (auto &[_, entry] : s_srgb_tex_cache) {
-    if (entry.tex) {
-      GPU_texture_free(entry.tex);
-    }
-  }
-  s_srgb_tex_cache.clear();
-}
-
-/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name GPU Texture Drawing Helper
@@ -169,14 +73,17 @@ void mixie_draw_moodboard_media_preview(Image *image, const rctf &bounds)
   const float x = BLI_rctf_cent_x(&bounds) - width * 0.5f, y = BLI_rctf_cent_y(&bounds) - height * 0.5f;
   draw_gpu_texture_quad(texture, x, y, width, height);
 }
-/** Draw a screen-size-stable play/pause affordance over a movie frame. */
+/** Draw the play/pause affordance centred on a movie frame. */
 void mixie_draw_moodboard_video_overlay(View2D *v2d,
-                                       const float center_x,
-                                       const float center_y,
-                                       const bool is_playing)
+                                        const rctf &media_rect,
+                                        const bool is_playing)
 {
-  const float view_scale = std::max(ui::view2d_scale_get_x(v2d), 0.001f);
-  const float radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+  /* Radius comes from the shared definition the hit-tests use: a fixed screen
+   * size, capped against the tile so zooming out shrinks it with the video
+   * instead of leaving a button that swallows the frame. */
+  const float radius = moodboard_video_play_radius(v2d, media_rect);
+  const float center_x = BLI_rctf_cent_x(&media_rect);
+  const float center_y = BLI_rctf_cent_y(&media_rect);
   GPU_blend(GPU_BLEND_ALPHA);
   GPUVertFormat *format = immVertexFormat();
   const uint pos = GPU_vertformat_attr_add(
@@ -233,7 +140,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
     return;
   }
 
-  s_cache_frame++;
+  mixie_moodboard_texture_cache_frame_begin();
 
   /* Draw each moodboard image at its position with scale */
   CollectionPropertyIterator iter{};
@@ -470,10 +377,8 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
         }
 
         if (media_drawn && image->source == IMA_SRC_MOVIE) {
-          mixie_draw_moodboard_video_overlay(v2d,
-                                      pos_x + drawn_width * 0.5f,
-                                      pos_y + drawn_height * 0.5f,
-                                      video_is_playing);
+          const rctf media_rect = {pos_x, pos_x + drawn_width, pos_y, pos_y + drawn_height};
+          mixie_draw_moodboard_video_overlay(v2d, media_rect, video_is_playing);
         }
       }
     }
@@ -483,16 +388,7 @@ void mixie_draw_moodboard_images(const bContext *C, View2D *v2d)
 
   RNA_property_collection_end(&iter);
 
-  /* Evict sRGB cache entries not used this frame (image removed / deleted). */
-  for (auto it = s_srgb_tex_cache.begin(); it != s_srgb_tex_cache.end();) {
-    if (it->second.last_used_frame != s_cache_frame) {
-      GPU_texture_free(it->second.tex);
-      it = s_srgb_tex_cache.erase(it);
-    }
-    else {
-      ++it;
-    }
-  }
+  mixie_moodboard_texture_cache_frame_end();
 }
 
 /** \} */

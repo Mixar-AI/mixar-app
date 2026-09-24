@@ -13,12 +13,25 @@ camera navigation (orbit / pan / zoom, including Mac trackpad
 gestures) and leaves every other editor (chat, moodboard, sidebars,
 properties) fully interactive.
 
+The Zen Moodboard drawer overlaps the viewport WINDOW rectangle. Its
+painted canvas, resize edge and grip must pass through before checking that rectangle;
+native hit testing keeps this aligned with the slide, resize and UI scale.
+The drawer's transparent remainder remains locked viewport space.
+
 Notification toasts draw INSIDE the viewport but are conceptually a
 layer above it, so a left-press landing on a toast control is passed
 through too — otherwise no toast could be dismissed or actioned for the
 whole duration of an agent turn (window modal handlers run before the
 region's toast UI handler, so this modal is the only place that can
 yield).
+
+The viewport's top header (the Zen scene toolbar) overlaps the WINDOW
+rectangle too. It is chrome, not canvas: an event Blender would route to
+one of its controls passes through (native ``Area.mixar_header_contains``,
+the event system's own overlap query), so render, shading, playback and
+export stay usable and the halo frames the canvas below it. Empty toolbar
+space between controls falls through to the canvas in Blender, so it stays
+locked here.
 
 The Parallel Agents panel (the worker cards docked bottom-left of the
 viewport, VIEW_3D EXECUTE region) is another such layer: its cards exist
@@ -56,6 +69,16 @@ logger = get_logger(__name__)
 # Module-level guard so the bootstrap tick doesn't stack multiple
 # modal instances. Set True on invoke, cleared on finish/cancel.
 _running = False
+
+# These native mouse-capture operators consume LEFTMOUSE RELEASE and finish.
+# Armed tools and keyboard transforms are deliberately not included.
+_MOODBOARD_MOUSE_DRAGS = (
+    "VIEW3D_OT_moodboard_drawer_grip",
+    "MIXIE_OT_moodboard_select_image",
+    "MIXIE_OT_moodboard_graph_select",
+    "MIXIE_OT_moodboard_frame_select",
+    "MIXIE_OT_moodboard_box_select",
+)
 
 
 def is_running() -> bool:
@@ -109,6 +132,13 @@ class MIXAR_OT_agent_viewport_block(Operator):
             self._finish(context)
             return {"FINISHED"}
 
+        # A lock can start after a workspace viewer (the orchestrator resumes
+        # while its workers are still building). Let that read-only modal own
+        # input in either handler order; it consumes edits behind the preview.
+        win = context.window
+        if win and win.modal_operators.get('VIEW3D_OT_workspace_viewer') is not None:
+            return {"PASS_THROUGH"}
+
         et = event.type
 
         if et in NAV_PASS_TYPES or et in VIEW_KEY_PASS_TYPES:
@@ -116,6 +146,13 @@ class MIXAR_OT_agent_viewport_block(Operator):
 
         # Only intercept when the pointer is over a 3D viewport canvas.
         if et in BLOCK_MOUSE_TYPES or et in BLOCK_KEY_TYPES:
+            # If the lock started during a drag, it precedes that older modal.
+            # Deliver its captured release even outside the board so the drag
+            # can end. Never unlock a fresh viewport press or an armed tool.
+            if (et == 'LEFTMOUSE' and event.value == 'RELEASE' and win
+                    and any(win.modal_operators.get(name) is not None
+                            for name in _MOODBOARD_MOUSE_DRAGS)):
+                return {"PASS_THROUGH"}
             region = self._view3d_region_under_pointer(context, event)
             if region is not None:
                 # Notifications float above the locked viewport: let the
@@ -157,6 +194,10 @@ class MIXAR_OT_agent_viewport_block(Operator):
         for area in win.screen.areas:
             if area.type != 'VIEW_3D':
                 continue
+            if area.mixar_moodboard_contains(mx, my):
+                return None
+            if area.mixar_header_contains(mx, my):
+                return None
             for region in area.regions:
                 if region.type != 'WINDOW':
                     continue

@@ -80,12 +80,10 @@ def test_the_params_strip_never_returns_a_bottom_below_its_floor():
     )
 
 
-def test_hidden_parameters_remain_reachable_through_settings():
-    for source in (TAB3D, MEDIA):
-        assert "pane_settings_button(" in source
-    assert "PANE_SETTINGS_W" in TAB3D
-    assert "PANE_SETTINGS_W" in MEDIA
-    assert "PANE_SETTINGS_W" in SPLAT_PAINT
+def test_generation_strips_reclaim_the_settings_shortcut_space():
+    for source in (TAB3D, MEDIA, SPLAT, SPLAT_PAINT):
+        assert "pane_settings_button(" not in source
+        assert "PANE_SETTINGS_W" not in source
     assert "pane_schema_param_visible(" in TAB3D_PARAMS
     media_util = (CPP / "agent_ui_tabmedia_util.cc").read_text(encoding="utf-8")
     splat = (CPP / "agent_ui_tabsplat.cc").read_text(encoding="utf-8")
@@ -126,6 +124,28 @@ def test_bottom_row_and_generate_use_shared_composer_geometry():
     generate = _function(KIT_CC, "rctf pane_generate_rect(")
     assert "composer_layout(box, u).action_bottom" in bottom
     assert "layout.action_bottom" in generate and "layout.action_top" in generate
+    # Busy labels ("Generating (N)") must grow the chip — sizing against the
+    # idle "Generate" string alone clips the live wording.
+    assert "pane_action_chip_w(text, false, u)" in generate or "pane_action_chip_w(label" in generate
+    assert 'const char *text = (label && label[0]) ? label : "Generate"' in generate
+
+
+def test_generation_panes_size_generate_from_the_live_queue_label():
+    """Thumbs stop at Generate's left edge, so every pane must measure that
+    edge from the same live label the button paints — or "Generating (N)"
+    grows over the reference previews."""
+    for name, source in (
+        ("agent_ui_tab3d.cc", TAB3D),
+        ("agent_ui_tabmedia.cc", MEDIA),
+        ("agent_ui_tabsplat.cc", SPLAT),
+    ):
+        assert "pane_queue_label(" in source, name
+        assert "gen_label" in source, name
+        assert "pane_generate_rect(" in source and "gen_label" in source, name
+    # Splat paint still lays the idle chip; tabsplat.cc resizes it from the
+    # live label before paint so thumbs see the wider edge.
+    assert "pane_generate_rect(rects.prompt_box, u, gen_label)" in SPLAT
+    assert "pane_generate_rect(r->prompt_box, u)" in SPLAT_PAINT
 
 
 def test_all_generation_fields_use_the_shared_reservation():
@@ -144,9 +164,9 @@ def test_truncated_text_gets_an_ellipsis():
     """A bare chop reads as a DIFFERENT string: "ReproCone" rendered as
     "ReproCon" looked like the wrong result, not a shortened name."""
     body = _function(KIT_CC, "void pane_fit_text(")
-    # The compatibility buffer still only shrinks; Unicode fitting is shared.
+    # The compatibility buffer uses allocation capacity; Unicode fitting is shared.
     assert "fitted.size() < capacity" in body
-    assert "mixar_fit_text(text, max_w, size)" in body
+    assert "mixar_fit_text(text, max_w + 0.001f, size)" in body
     shared = (CPP.parent / "interface/mixar/text.cc").read_text()
     assert 'const char *ellipsis = "…"' in shared
     # The cut must land on a codepoint boundary. This used to be a hand-rolled

@@ -224,11 +224,16 @@ def test_the_drop_anchor_is_cleared_at_every_other_menu_entry_point():
     stale anchor would spawn the next card on top of it."""
     ops = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph.cc")
 
-    drag_start = ops.split("static wmOperatorStatus graph_select_invoke(")[1].split(
+    # Both link-drag starts (the output handle, and detaching an existing link
+    # from an input) go through one helper, so the clear cannot be forgotten by
+    # one of them.
+    drag_start = ops.split("static wmOperatorStatus start_link_drag(")[1].split(
         "return OPERATOR_RUNNING_MODAL;"
     )[0]
-    assert "moodboard_graph_clear_link_drop_anchor(&scene_ptr);" in drag_start
-    context = ops.split("static wmOperatorStatus graph_context_invoke(")[1]
+    assert "moodboard_graph_clear_link_drop_anchor(scene_ptr);" in drag_start
+
+    # The context menu is its own unit now (500-line rule).
+    context = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_context.cc")
     assert "moodboard_graph_clear_link_drop_anchor(&scene_ptr);" in context
 
 
@@ -242,13 +247,16 @@ def test_link_drop_state_is_registered_and_unregistered():
     ):
         assert registration.count(f"'{name}'") >= 1, f"{name} is never unregistered"
     # x/y are registered through the shared axis loop.
-    assert "f'mixie_moodboard_link_drop_{axis}'" in registration
+    # The transient canvas-interaction props live in their own module now
+    # (500-line rule); the teardown list stays with the rest of the teardown.
+    transient = _read(MOODBOARD / "ui/moodboard_graph_transient_props.py")
+    assert "f'mixie_moodboard_link_drop_{axis}'" in transient
     assert "'mixie_moodboard_link_drop_active'," in registration
 
 
 def _menu_draw_ast():
     """The output menu's ``draw`` body, parsed."""
-    tree = ast.parse(_read(MOODBOARD / "ui/moodboard_menus.py"))
+    tree = ast.parse(_read(MOODBOARD / "ui/moodboard_output_menu.py"))
     menu = next(
         node for node in tree.body
         if isinstance(node, ast.ClassDef)
@@ -269,7 +277,7 @@ def test_the_continuation_menu_forwards_the_drop_anchor_to_every_entry():
         node for node in ast.walk(draw)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
-        and node.func.id == "_connected_action"
+        and node.func.id == "connected_action"
     ]
     assert calls, "the continuation menu offers no actions"
     for call in calls:
@@ -291,12 +299,12 @@ def test_the_create_operator_never_remembers_a_drop_position():
 
 
 def test_the_menu_reads_the_anchor_without_writing_scene_data():
-    """``_link_drop_anchor`` runs from a menu draw, where a write to scene data
+    """``link_drop_anchor`` runs from a menu draw, where a write to scene data
     tags the depsgraph and re-triggers the redraw that called it."""
-    tree = ast.parse(_read(MOODBOARD / "ui/moodboard_menus.py"))
+    tree = ast.parse(_read(MOODBOARD / "ui/moodboard_menu_actions.py"))
     anchor = next(
         node for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name == "_link_drop_anchor"
+        if isinstance(node, ast.FunctionDef) and node.name == "link_drop_anchor"
     )
 
     reads = {

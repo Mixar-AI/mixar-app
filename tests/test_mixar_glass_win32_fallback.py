@@ -3,8 +3,9 @@
 
 """Execute the Win32 glass policy with a controllable DWM implementation.
 
-This validates HRESULT handling and rollback on non-Windows CI. Native Acrylic
-appearance is separately exercised by the GUI harness on a Windows machine.
+This validates HRESULT handling and rollback on non-Windows CI. Native
+see-through (no TransientWindow Acrylic slab) is separately exercised by
+the GUI harness on a Windows machine.
 """
 
 from pathlib import Path
@@ -63,7 +64,7 @@ HRESULT DwmSetWindowAttribute(HWND, DWORD attr, const void *value, DWORD)
   ++calls;
   const DWORD v = *static_cast<const DWORD *>(value);
   if (attr == 38) {
-    if (v == 3 && !material_supported) return -1;
+    if (v != 1 && !material_supported) return -1;
     material = v;
   }
   if (attr == 39) { // DWMWA_REDIRECTIONBITMAP_ALPHA since build 26100.
@@ -105,18 +106,19 @@ int main()
   reset();
   assert(!Mixar_Win32GlassSetEnabled(nullptr, true)); assert(calls == 0);
   assert(Mixar_Win32GlassSetEnabled(window, true));
-  assert(alpha && legacy && extended && material == 3);
+  assert(alpha && legacy && extended && material == 1);
   assert(Mixar_Win32GlassSetEnabled(window, false)); opaque();
-  // Windows 10: legacy alpha succeeds but provides NO material.
+  // Windows 10: no TransientWindow, but legacy alpha is enough to see through.
   reset(); build = 19045; material_supported = false;
-  assert(!Mixar_Win32GlassSetEnabled(window, true)); opaque();
-  // Windows 11 22621: Acrylic exists, but attribute 39 is rejected.
+  assert(Mixar_Win32GlassSetEnabled(window, true));
+  assert(legacy && extended && material == 1);
+  // Windows 11 22621: attribute 39 is rejected; blur-behind still enables alpha.
   reset(); build = 22621;
-  assert(Mixar_Win32GlassSetEnabled(window, true)); assert(legacy && material == 3);
+  assert(Mixar_Win32GlassSetEnabled(window, true)); assert(legacy && material == 1);
   assert(!alpha);
   // Windows 11 26100: the documented attribute is sufficient for alpha.
   reset(); legacy_supported = false;
-  assert(Mixar_Win32GlassSetEnabled(window, true)); assert(alpha && !legacy && material == 3);
+  assert(Mixar_Win32GlassSetEnabled(window, true)); assert(alpha && !legacy && material == 1);
   // Inject failures of both alpha APIs; this is fault coverage, not an OS version.
   reset(); alpha_supported = legacy_supported = false;
   assert(!Mixar_Win32GlassSetEnabled(window, true)); opaque();

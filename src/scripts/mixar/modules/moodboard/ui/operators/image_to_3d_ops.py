@@ -14,7 +14,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.utils.image_utils import compress_for_service
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import selected_reference_stills
 
 logger = get_logger(__name__)
 
@@ -124,10 +124,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         elif sidebar_tab:
             use_selected = getattr(sidebar_tab, 'use_selected_image', False)
             if use_selected:
-                selected = [
-                    item for item in scene.mixie_moodboard_images
-                    if item.selected and is_still_item(item)
-                ]
+                selected = selected_reference_stills(scene)
                 if selected:
                     image = selected[0].image
                 else:
@@ -140,10 +137,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                     return {"CANCELLED"}
         else:
             if hasattr(scene, 'mixie_image_to_3d_use_selected') and scene.mixie_image_to_3d_use_selected:
-                selected = [
-                    item for item in scene.mixie_moodboard_images
-                    if item.selected and is_still_item(item)
-                ]
+                selected = selected_reference_stills(scene)
                 if selected:
                     image = selected[0].image
                 else:
@@ -195,7 +189,13 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 model_front_zrot,
             )
 
-            job_label = image.name if image else model_name
+            from mixar.modules.common.job_queue.core.labels import (
+                stackable_job_identity,
+            )
+
+            job_label, display_label = stackable_job_identity(
+                image.name if image else model_name
+            )
             payload = {}
             if turnaround_payload:
                 payload.update(turnaround_payload)
@@ -212,12 +212,12 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 job_type="model_3d",
                 model=model_name,
                 payload=payload,
-                label=job_label or "model_3d",
+                label=job_label,
+                display_label=display_label,
                 fail_message="3D model generation failed",
                 on_imported=make_model_rename_on_imported(
                     mesh_name, model_front_zrot(model_name)),
                 scene_flag="mixie_image_to_3d_is_generating",
-                batch_popup_title="Image to 3D batch complete",
             )
             if not job:
                 self.report({"ERROR"}, "A duplicate generation is already queued")
@@ -384,7 +384,6 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             on_imported=make_model_rename_on_imported(
                 mesh_name, model_front_zrot(model_name), placement=placement),
             scene_flag="mixie_image_to_3d_is_generating",
-            batch_popup_title="Image to 3D batch complete",
         )
         if not job:
             set_agent_gen_reason(context, "A duplicate 3D generation is already queued")

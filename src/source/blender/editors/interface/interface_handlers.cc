@@ -74,6 +74,7 @@
 #include "BPY_extern_run.hh"
 
 #include "buttons/interface_textbox.hh"
+#include "interface_text_dictation.hh"
 #include "interface_intern.hh"
 #include "interface_mixar_section.hh" /* Mixar: UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_TEST. */
 
@@ -107,87 +108,11 @@ void mixie_chat_mention_active_set(Scene *scene, int index);
 int mixie_chat_mention_active_get(Scene *scene);
 int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
 int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
-/* Mixar Scribble: a PEN STROKE that started on the composer opens the
- * handwriting canvas and seeds its first stroke from the press point (the
- * footer region UI handler never sees presses while the text-edit is active —
- * the active button's window-level modal handler consumes them first).
- * Window coordinates. Defined in editors/space_mixie_chat/
- * mixie_chat_ink_events.cc inside namespace blender, so the prototype lives
- * here, not in blender::ui. */
-bool mixie_chat_ink_composer_stylus_stroke(bContext *C,
-                                           const int press_xy[2],
-                                           const int cur_xy[2],
-                                           float pressure);
 }  // namespace blender
 
 namespace blender::ui {
 
-/* -------------------------------------------------------------------- */
-/** \name Mixar Scribble: pen press bookkeeping for the chat composer
- *
- * A pen press on the composer ARMS a possible stroke and otherwise behaves
- * like any press (the caret lands, editing starts). The canvas opens only if
- * the pen then travels past the drag threshold while held — a TAP is how a
- * pen user focuses the field to type, a STROKE is how they write on it.
- *
- * Everything here is gated on the event TYPE being a mouse button. Blender
- * builds key events from a copy of the window's event state, and that state
- * keeps the `tablet` block of the last button press — so a check of
- * `val == PRESS && tablet.active == STYLUS` alone was also true for every
- * keystroke typed after a pen tap, and Scribble opened on the first letter.
- * \{ */
 
-struct MixiePenPress {
-  const Button *but = nullptr;
-  int xy[2] = {0, 0};
-  float pressure = 1.0f;
-  bool armed = false;
-};
-static MixiePenPress g_mixie_pen_press;
-
-static bool mixie_pen_is_stylus_press(const wmEvent *event)
-{
-  return event->type == LEFTMOUSE && event->val == KM_PRESS &&
-         event->tablet.active == EVT_TABLET_STYLUS;
-}
-
-static void mixie_pen_arm(const Button *but, const wmEvent *event)
-{
-  g_mixie_pen_press.but = but;
-  g_mixie_pen_press.xy[0] = event->xy[0];
-  g_mixie_pen_press.xy[1] = event->xy[1];
-  g_mixie_pen_press.pressure = event->tablet.pressure;
-  g_mixie_pen_press.armed = true;
-}
-
-static void mixie_pen_disarm()
-{
-  g_mixie_pen_press.armed = false;
-  g_mixie_pen_press.but = nullptr;
-}
-
-/* The armed pen has travelled past the (tablet-aware) drag threshold: open
- * the canvas seeded from the press point. The CALLER exits editing via
- * BUTTON_STATE_EXIT — the ink code must not free the active button from
- * inside its own handler. */
-static bool mixie_pen_stroke_open(bContext *C, const Button *but, const wmEvent *event)
-{
-  if (!g_mixie_pen_press.armed || g_mixie_pen_press.but != but) {
-    return false;
-  }
-  if (event->tablet.active != EVT_TABLET_STYLUS) {
-    return false;
-  }
-  if (!WM_event_drag_test(event, g_mixie_pen_press.xy)) {
-    return false;
-  }
-  const int press_xy[2] = {g_mixie_pen_press.xy[0], g_mixie_pen_press.xy[1]};
-  const float pressure = g_mixie_pen_press.pressure;
-  mixie_pen_disarm();
-  return mixie_chat_ink_composer_stylus_stroke(C, press_xy, event->xy, pressure);
-}
-
-/** \} */
 
 static CLG_LogRef LOG = {"ui.handler"};
 
@@ -496,6 +421,7 @@ struct HandleButtonMulti {
  * Data for editing the value of the button as text.
  */
 struct TextEdit {
+  TextDictation dictation;
   /** The currently displayed/edited string, use 'textedit_string_set' to assign new strings. */
   char *edit_string = nullptr;
   /* Maximum string size the button accepts, and as such the maximum size for #edit_string
@@ -4100,7 +4026,7 @@ static Scene *ui_but_mixie_mention_scene(const Button *but)
 static bool mixie_chat_composer_scroll_transcript(bContext *C, const wmEvent *event)
 {
   ScrArea *area = CTX_wm_area(C);
-  if (!area || !ELEM(area->spacetype, SPACE_MIXIE_CHAT, SPACE_AGENT_BUBBLE)) {
+  if (!area || !(area->spacetype == SPACE_AGENT_BUBBLE)) {
     return false;
   }
   ARegion *transcript = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
@@ -4333,6 +4259,7 @@ static void textedit_end(bContext *C, Button *but, HandleButtonData *data)
 {
   TextEdit &text_edit = data->text_edit;
   wmWindow *win = data->window;
+  text_dictation_end(C, data->wm, win, text_edit.dictation);
 
   ED_workspace_status_text(C, nullptr);
 
@@ -4528,17 +4455,26 @@ static int do_but_textedit(
   {
     return WM_UI_HANDLER_BREAK;
   }
-  switch (event->type) {
+  const TextDictationEvent dictation = text_dictation_event(
+      C,
+      but,
+      text_edit.dictation,
+      event,
+      is_ime_composing,
+      but->type == ButtonType::TextBox || ui_but_is_multiline_text(but));
+  if (!dictation.insert.empty()) {
+    changed = textedit_insert_buf(but, text_edit, dictation.insert.c_str(), dictation.insert.size());
+    if (changed) {
+      but->selsta = but->selend = but->pos;
+    }
+    update = bool(but->flag & BUT_TEXTEDIT_UPDATE);
+  }
+  if (dictation.handled) {
+    retval = WM_UI_HANDLER_BREAK;
+  }
+  if (!dictation.handled) switch (event->type) {
     case MOUSEMOVE:
     case MOUSEPAN:
-      /* Mixar Scribble: an armed pen travelling while held (a plain Text
-       * button stays in TEXT_EDITING after do_but_TEX activates it) is
-       * writing — open the canvas from the press point. */
-      if (event->type == MOUSEMOVE && mixie_pen_stroke_open(C, but, event)) {
-        button_activate_state(C, but, BUTTON_STATE_EXIT);
-        retval = WM_UI_HANDLER_BREAK;
-        break;
-      }
       /* Touchpad scroll for multiline text buttons.
        * Accumulate delta to reduce sensitivity — only scroll after enough movement. */
       if (event->type == MOUSEPAN && ui_but_is_multiline_text(but)) {
@@ -4612,6 +4548,7 @@ static int do_but_textedit(
               retval = WM_UI_HANDLER_BREAK;
               break;
             }
+
           }
         }
 
@@ -4654,21 +4591,6 @@ static int do_but_textedit(
             }
           }
         }
-      }
-
-      /* Mixar Scribble: a PEN press on the composer (the mention-scene gate
-       * identifies it) ARMS a possible stroke and then falls through to the
-       * normal caret placement below — a pen tap must still let the user
-       * type. The canvas opens only once the pen travels while held
-       * (do_but_textedit_select / MOUSEMOVE here), seeded from this press.
-       * Checked AFTER the mention rows above so a pen tap still accepts a
-       * suggestion. See the MixiePenPress notes for why the event TYPE is
-       * part of the gate. */
-      if (mixie_pen_is_stylus_press(event) && ui_but_mixie_mention_scene(but) != nullptr) {
-        mixie_pen_arm(but, event);
-      }
-      else if (event->type == LEFTMOUSE && event->val == KM_RELEASE) {
-        mixie_pen_disarm();
       }
 
       /* Allow clicks on extra icons while editing (skip for multiline text —
@@ -4763,8 +4685,7 @@ static int do_but_textedit(
       break;
     }
     case WINDEACTIVATE: {
-      /* Exit text editing when the window loses focus so the cursor
-       * doesn't linger after clicking on another window. */
+      /* Focus loss invalidates the originating dictation target. */
       button_activate_state(C, but, BUTTON_STATE_EXIT);
       retval = WM_UI_HANDLER_BREAK;
       break;
@@ -4774,7 +4695,7 @@ static int do_but_textedit(
     }
   }
 
-  if (event->val == KM_PRESS && !is_ime_composing) {
+  if (event->val == KM_PRESS && !is_ime_composing && !dictation.handled) {
     switch (event->type) {
       case EVT_VKEY:
       case EVT_XKEY:
@@ -4783,9 +4704,7 @@ static int do_but_textedit(
          * path for every text field in Blender — costs no context lookup. */
         const ScrArea *clipboard_area = (event->modifier != 0) ? CTX_wm_area(C) : nullptr;
         const bool is_chat_space = clipboard_area &&
-                                   ELEM(clipboard_area->spacetype,
-                                        SPACE_MIXIE_CHAT,
-                                        SPACE_AGENT_BUBBLE);
+                                   (clipboard_area->spacetype == SPACE_AGENT_BUBBLE);
         if (ui_textedit_clipboard_modifier_match(event, is_chat_space)) {
           if (event->type == EVT_VKEY) {
             if (is_chat_space) {
@@ -4959,8 +4878,7 @@ static int do_but_textedit(
          * floating-overlay editor variant of the chat — same input
          * field, same backend, just a smaller UI — so Enter should
          * submit there too. */
-        bool is_space_chat = (area && (area->spacetype == SPACE_MIXIE_CHAT ||
-                                        area->spacetype == SPACE_AGENT_BUBBLE));
+        bool is_space_chat = (area && (area->spacetype == SPACE_AGENT_BUBBLE));
 
         /* Also check for Quick Prompt property (works in popup dialogs from any space) */
         bool is_quick_prompt = false;
@@ -5354,20 +5272,12 @@ static int do_but_textedit_select(
       break;
     }
     case MOUSEMOVE: {
-      /* Mixar Scribble: an armed pen travelling while held is writing, not
-       * drag-selecting — open the canvas from the press point. */
-      if (mixie_pen_stroke_open(C, but, event)) {
-        button_activate_state(C, but, BUTTON_STATE_EXIT);
-        retval = WM_UI_HANDLER_BREAK;
-        break;
-      }
       textedit_set_cursor_select(but, data, float2(event->xy));
       retval = WM_UI_HANDLER_BREAK;
       break;
     }
     case LEFTMOUSE:
       if (event->val == KM_RELEASE) {
-        mixie_pen_disarm();
         if (textbox) {
           textbox_scroll_to_cursor(textbox);
         }
@@ -5890,6 +5800,18 @@ static bool do_but_ANY_drag_toggle(
 
 static int do_but_BUT(bContext *C, Button *but, HandleButtonData *data, const wmEvent *event)
 {
+  /* Mixar: operator buttons with a drag payload use the native drag threshold.
+   * A release without a drag still invokes the button's ordinary operator. */
+  if (button_drag_is_draggable(but) &&
+      (data->state == BUTTON_STATE_WAIT_DRAG ||
+       (data->state == BUTTON_STATE_HIGHLIGHT && event->type == LEFTMOUSE &&
+        event->val == KM_PRESS && but_contains_point_px_icon(but, data->region, event))))
+  {
+    do_but_EXIT(C, but, data, event);
+    /* The action owns the press: do not also start canvas box selection
+     * while the button is waiting for the drag threshold. */
+    return WM_UI_HANDLER_BREAK;
+  }
 #ifdef USE_DRAG_TOGGLE
   {
     int retval;
@@ -6181,13 +6103,20 @@ static int do_but_TEX(
       else {
         if (!but_extra_operator_icon_mouse_over_get(but, data->region, event)) {
           HandleButtonData *data = but->active;
-          /* Mixar Scribble: the pen press that activates the composer arms a
-           * possible stroke (see MixiePenPress) — this press is consumed here
-           * and never reaches the text-edit handler. */
-          if (mixie_pen_is_stylus_press(event) && ui_but_mixie_mention_scene(but) != nullptr) {
-            mixie_pen_arm(but, event);
-          }
+          const ScrArea *area = CTX_wm_area(C);
           button_activate_state(C, but, BUTTON_STATE_TEXT_EDITING);
+          if (ELEM(event->type, EVT_PADENTER, EVT_RETKEY) &&
+              (but->flag & BUT_TEXTEDIT_UPDATE) && area &&
+              area->spacetype == SPACE_AGENT_BUBBLE &&
+              ui_but_mixie_mention_scene(but) != nullptr)
+          {
+            /* Viewport typing releases the island composer's private edit buffer.
+             * Enter over that highlighted field must submit on this press,
+             * not merely re-enter editing and require another Enter. Reuse
+             * the editing path for Shift+Enter and mention acceptance too.
+             * Popups using the same RNA property keep native Enter activation. */
+            return do_but_textedit(C, block, but, data, event);
+          }
           if (event->type == LEFTMOUSE &&
               (but->type == ButtonType::TextBox || ui_but_mixie_mention_scene(but) != nullptr))
           {
@@ -13809,7 +13738,9 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
    * reference region gets them. Keep text focus while its sibling column scrolls. */
   if (!region_popup && drop_area && drop_area->spacetype == SPACE_AGENT_BUBBLE &&
       ELEM(event->type, WHEELUPMOUSE, WHEELDOWNMOUSE, MOUSEPAN) && but && but->active &&
-      ui_but_mixie_mention_scene(but) &&
+      (ui_but_mixie_mention_scene(but) ||
+       (but->mixar_style.theme == MixarTheme::Zen &&
+        but->mixar_style.component == MixarComponent::Input)) &&
       ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
   {
     for (const ARegion &other : drop_area->regionbase) {
@@ -13829,7 +13760,9 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
     ScrArea *area = CTX_wm_area(C);
     if (!region_popup && area && area->spacetype == SPACE_AGENT_BUBBLE &&
         event->type == LEFTMOUSE && event->val == KM_PRESS && but->active &&
-        ui_but_mixie_mention_scene(but) &&
+        (ui_but_mixie_mention_scene(but) ||
+         (but->mixar_style.theme == MixarTheme::Zen &&
+          but->mixar_style.component == MixarComponent::Input)) &&
         ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
     {
       for (ARegion &action_region : area->regionbase) {

@@ -26,13 +26,6 @@ BASIC_WORKSPACE_NAME = "Zen Mode"
 # user expects (mirrors the startup.blend's default active workspace).
 PRO_DEFAULT_WORKSPACE_NAME = "Layout"
 
-# Engine-mode workspace tabs that host Mixar's layered texture-painting
-# layout. Their custom editor spaces are hidden from the Editor Type
-# menu; the 3D viewport header uses the same glass four-way shading
-# strip (plus the shading popover) as Zen Mode. Names match the
-# analytics allowlist.
-TEXTURING_WORKSPACE_NAMES = frozenset({"Texturing", "Texture Paint"})
-
 # The only tools Zen Mode's left strip surfaces, in design order (top to
 # bottom). Shared with the strip's toggle logic so the buttons and the
 # "is this a transform tool?" test cannot drift apart.

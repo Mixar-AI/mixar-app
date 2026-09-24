@@ -477,10 +477,10 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
                             sizeof(layout->feedback_submitted_comment));
   }
   layout->feedback_submitted_comment_height = 0.0f;
-  for (int i = 0; i < FEEDBACK_STAR_COUNT; i++) {
-    layout->feedback_stars[i].star_index = i + 1;
-    layout->feedback_stars[i].is_hovered = false;
-    memset(&layout->feedback_stars[i].bounds, 0, sizeof(rctf));
+  for (int i = 0; i < FEEDBACK_VOTE_COUNT; i++) {
+    layout->feedback_votes[i].rating = i == 0 ? 5 : 1;
+    layout->feedback_votes[i].is_hovered = false;
+    memset(&layout->feedback_votes[i].bounds, 0, sizeof(rctf));
   }
   memset(&layout->feedback_comment_bounds, 0, sizeof(rctf));
 

@@ -7,8 +7,8 @@
 The chip sits beside the floating Wireframe / Solid / Material Preview /
 Rendered strip and flips floor grid, axes, ortho grid, relationship
 lines, and object extras (the light / camera / empty helpers) together.
-Pressed state mirrors whether any of those guides are visible. Texturing
-keeps the shared shading strip without this chip.
+Pressed state mirrors whether any of those guides are visible. Only Zen
+Mode draws this header at all.
 """
 
 from pathlib import Path
@@ -118,27 +118,13 @@ def test_the_operator_needs_a_3d_view_and_flips_through_core():
 # ui/headers/view3d_header_filter.py
 
 
-def test_the_chip_sits_beside_the_zen_shading_strip_only():
-    header = HEADER.split("def _patched_header_draw", 1)[1].split(
-        "def _patched_tool_header_draw", 1
-    )[0]
-    assert "from ...core import viewport_guides" in HEADER
-    assert 'chip.operator(' in header
-    assert '"mixar.zen_toggle_guides"' in header
-    assert 'icon="GRID"' in header
-    assert "depress=viewport_guides.guides_shown(view)" in header
-    # Zen-only: Texturing keeps the shared shading strip without this chip.
-    assert "if _is_basic_workspace(context):" in header
-    assert header.index("mixar.zen_toggle_guides") < header.index(
-        'popover(panel="VIEW3D_PT_shading"'
-    )
-    # Outside the shading enum capsule — a toggle is not a shading mode — but
-    # inside a Zen surface with its own aligned row, which is what makes the
-    # shared glass painter give it the strip's material as one round chip.
-    assert 'row.prop(shading, "type", text="", expand=True)' in header
-    assert header.index('row.prop(shading, "type"') < header.index("mixar.zen_toggle_guides")
-    assert 'chip = cluster.mixar_surface(theme="ZEN").row(align=True)' in header
-    assert header.index("chip = cluster.mixar_surface") < header.index("chip.operator(")
+def test_guides_remain_in_the_native_shading_popover_in_zen_only():
+    draw = HEADER.split("def _draw_zen_guides", 1)[1].split("def _patched_tool_header_draw", 1)[0]
+    assert "if _is_basic_workspace(context):" in draw
+    assert '"mixar.zen_toggle_guides"' in draw
+    assert "viewport_guides.guides_shown(context.space_data)" in draw
+    assert "shading_panel.append(_draw_zen_guides)" in HEADER
+    assert "shading_panel.remove(_draw_zen_guides)" in HEADER
 
 
 def test_the_glass_painter_accepts_a_standalone_icon_chip():
@@ -152,7 +138,7 @@ def test_the_glass_painter_accepts_a_standalone_icon_chip():
     cell = widgets.split("static bool zen_glass_cell(const Button *but)\n{", 1)[1].split(
         "\n}\n", 1
     )[0]
-    assert "ELEM(but->type, ButtonType::Row, ButtonType::But)" in cell
+    assert "ELEM(but->type, ButtonType::Row, ButtonType::But, ButtonType::Popover)" in cell
     # Still narrow: Zen theme, no Mixar component, icon-only, aligned group.
     assert "but->mixar_style.theme != MixarTheme::Zen || but->alignnr == 0" in cell
     assert "but->mixar_style.component != MixarComponent::None" in cell

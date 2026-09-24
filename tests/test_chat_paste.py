@@ -45,7 +45,7 @@ from mixar.modules.space_mixie_chat.ui.operators import clipboard_ops  # noqa: E
 CPP = ROOT / "src" / "source" / "blender" / "editors"
 KEYMAP_PY = SCRIPTS / "mixar" / "modules" / "space_mixie_chat" / "ui" / "keymap.py"
 HANDLERS_CC = CPP / "interface" / "interface_handlers.cc"
-CHAT_CC = CPP / "space_mixie_chat" / "space_mixie_chat.cc"
+CHAT_CC = CPP / "space_mixie_chat" / "mixie_chat_ops.cc"
 BUBBLE_CC = CPP / "space_agent_bubble" / "space_agent_bubble.cc"
 
 
@@ -92,9 +92,12 @@ class TestClipboardTextAppend:
         assert clipboard_ops.append_clipboard_text_to_input(ctx) is False
         assert ctx.scene.mixie_chat_input == "kept"
 
-    def test_clamps_to_max_message_length(self, monkeypatch):
+    def test_clamps_to_the_composer_maxlen(self, monkeypatch):
+        """The warning must fire at the RNA maxlen of mixie_chat_input, not the
+        larger wire limit — otherwise RNA truncates silently first."""
         monkeypatch.setattr(clipboard_ops, "redraw_chat_areas", lambda: None)
-        limit = clipboard_ops.MAX_MESSAGE_LENGTH
+        limit = clipboard_ops.CHAT_INPUT_MAXLEN
+        assert limit == 10000
         reports = []
         ctx = _fake_context("x" * (limit + 50))
         assert clipboard_ops.append_clipboard_text_to_input(

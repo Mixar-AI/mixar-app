@@ -195,7 +195,7 @@ RENAMING_HOOKS = (
     ("moodboard/core/generation_enqueue.py", "_make_hp_on_imported"),
     ("moodboard/core/generation_enqueue.py", "_make_lp_on_imported"),
     ("moodboard/core/node_execution.py", "_result_hook"),
-    ("moodboard/core/node_execution.py", "_mesh_result_hook"),
+    ("moodboard/core/node_mesh_execution.py", "_mesh_result_hook"),
     ("hunyuan/core/retopology_enqueue.py", "_retopology_on_imported"),
     ("hunyuan/core/retopology_enqueue.py", "_make_tripo_on_imported"),
 )

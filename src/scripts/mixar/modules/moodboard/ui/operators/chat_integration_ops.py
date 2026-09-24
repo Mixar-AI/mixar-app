@@ -6,9 +6,9 @@
 """
 Moodboard Chat Integration Operators
 
-Explicitly attach the current moodboard selection through the same additive
-sync as automatic selection. The toolbar and P binding can reattach a removed
-reference without toggling its board selection; existing references stay put.
+Thin wrappers around ``moodboard.core.chat_sync``. Auto-sync mirrors
+selected moodboard images into the chat composer; this operator is the
+toolbar / ``P`` keymap force-refresh if anything ever desynchronises.
 """
 
 from bpy.types import Operator
@@ -27,33 +27,41 @@ def get_all_image_indices_to_send(scene):
     """
     image_indices = set()
 
-    # Get selected group indices
-    selected_group_indices = set()
-    for i, group in enumerate(scene.mixie_moodboard_groups):
-        if group.selected:
-            selected_group_indices.add(i)
+    # A SELECTED FRAME stands for everything inside it: selecting the frame is
+    # how the user says "this set". The reverse does not hold -- selecting one
+    # picture inside a frame stages that picture alone, because a click on a
+    # member selects the member.
+    selected_frame_ids = {
+        frame.frame_id
+        for frame in getattr(scene, 'mixie_moodboard_frames', ())
+        if frame.selected and frame.frame_id
+    }
 
-    # Get group indices from selected images (group cohesion)
-    for img in scene.mixie_moodboard_images:
-        if img.selected and img.group_index >= 0:
-            selected_group_indices.add(img.group_index)
-
-    # Collect images
     for i, img in enumerate(scene.mixie_moodboard_images):
-        if img.selected and not is_video_item(img):
-            image_indices.add(i)
-        elif img.group_index in selected_group_indices and not is_video_item(img):
-            # Image belongs to a group being sent
+        if is_video_item(img):
+            continue
+        if img.selected or (
+            selected_frame_ids and getattr(img, 'frame_id', '') in selected_frame_ids
+        ):
             image_indices.add(i)
 
     return image_indices
 
 
+def count_selected_videos(scene) -> int:
+    """Selected board videos the chat sync leaves behind."""
+    return sum(
+        1
+        for img in getattr(scene, "mixie_moodboard_images", [])
+        if getattr(img, "selected", False) and is_video_item(img)
+    )
+
+
 class MIXIE_OT_moodboard_send_to_chat(Operator):
-    """Add selected moodboard references without replacing staged references."""
+    """Force the moodboard→chat sync to run immediately."""
     bl_idname = "mixie.moodboard_send_to_chat"
-    bl_label = "Attach Selected to Chat"
-    bl_description = f"Add selected images to chat references ({format_shortcut('P')})"
+    bl_label = "Refresh Chat Attachments"
+    bl_description = f"Refresh moodboard→chat attachment sync ({format_shortcut('P')})"
     bl_options = {'REGISTER'}
 
     @classmethod
@@ -71,28 +79,39 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
         scene = context.scene
         try:
             from mixar.modules.moodboard.core.chat_sync import (
-                consume_selection,
+                force_resync,
                 _reconcile_attachments,
                 _collect_selected_image_names,
             )
-            before = len(scene.mixie_chat_pending_attachments)
             selected = _collect_selected_image_names(scene)
+            force_resync(scene)
             _reconcile_attachments(scene, selected, animate=True)
-            consume_selection(scene)
         except Exception as e:  # noqa: BLE001 — keep the keymap functional
             self.report({'WARNING'}, f"Sync failed: {e}")
             return {'CANCELLED'}
 
-        added = len(scene.mixie_chat_pending_attachments) - before
-        if not selected:
+        selected_count = sum(
+            1 for att in scene.mixie_chat_pending_attachments
+            if getattr(att, "is_moodboard", False)
+        )
+        skipped_videos = count_selected_videos(scene)
+        if skipped_videos:
+            # The sync silently leaves videos on the board (the chat has no
+            # video content part); tell the user instead of doing nothing.
+            self.report(
+                {'WARNING'},
+                f"Skipped {skipped_videos} video"
+                f"{'s' if skipped_videos != 1 else ''}: the agent accepts "
+                "still images only. Use Video Gen on the moodboard for clips",
+            )
+        if selected_count == 0 and not skipped_videos:
             self.report({'INFO'}, "No moodboard images selected")
-        elif added:
+        elif selected_count:
             self.report(
                 {'INFO'},
-                f"Attached {added} reference{'s' if added != 1 else ''}",
+                f"Synced {selected_count} moodboard image"
+                f"{'s' if selected_count != 1 else ''}",
             )
-        else:
-            self.report({'INFO'}, "No new references attached")
         return {'FINISHED'}
 
 
@@ -103,7 +122,7 @@ class MIXIE_CHAT_OT_attach_moodboard_image(Operator):
     bl_idname = "mixie_chat.attach_moodboard_image"
     bl_label = "Attach Selected Moodboard Image"
     bl_description = (
-        f"Add selected images to chat references ({format_shortcut('P')})"
+        f"Refresh moodboard→chat attachment sync ({format_shortcut('P')})"
     )
     bl_options = {'REGISTER'}
 
