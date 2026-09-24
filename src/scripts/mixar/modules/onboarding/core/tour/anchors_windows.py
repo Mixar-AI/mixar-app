@@ -44,9 +44,16 @@ def resolve_window_area_spec(spec: dict) -> Optional["AnchorRect"]:
 
 def _live_offset_and_size(window, host):
     """(dx, dy, w, h) of ``window`` relative to ``host``'s bottom-left, in
-    points, from the windowing system's LIVE client bounds
-    (``Window.mixar_live_client_rect``, Mixar RNA; top-left origin). None
-    when the build lacks it or a window has no native window."""
+    HOST-WINDOW PIXELS, from the windowing system's LIVE geometry. None
+    when the build lacks it or a window has no native window.
+
+    The native calls report in their own unit (macOS points; Windows
+    DPI-scaled logical units for ``mixar_content_rect_in``, pixels for the
+    GHOST bounds), so each result is scaled by the host measured with the
+    SAME call against ``window_rect(host)`` — never ``host.width``, which is
+    points on macOS but pixels on Windows."""
+    from .anchors import window_rect
+    host_px = window_rect(host).width
     # Preferred: the child's content rect in the host's client coordinates,
     # measured natively (exact across window styles; GHOST client bounds
     # subtract a per-style title-bar height and do not share an origin).
@@ -54,8 +61,10 @@ def _live_offset_and_size(window, host):
     if fn is not None:
         try:
             x, y, w, h = fn(host)
-            if w > 0 and h > 0:
-                return (float(x), float(y), float(w), float(h))
+            host_w = host.mixar_content_rect_in(host)[2]
+            if w > 0 and h > 0 and host_w > 0:
+                s = host_px / float(host_w)
+                return (x * s, y * s, w * s, h * s)
         except Exception:  # noqa: BLE001
             pass
     fn = getattr(window, "mixar_live_client_rect", None)
@@ -69,7 +78,8 @@ def _live_offset_and_size(window, host):
         return None
     if wr <= wl or wb <= wt or hr <= hl or hb <= ht:
         return None
-    return (float(wl - hl), float(hb - wb), float(wr - wl), float(wb - wt))
+    s = host_px / float(hr - hl)
+    return ((wl - hl) * s, (hb - wb) * s, (wr - wl) * s, (wb - wt) * s)
 
 
 def resolve_pill_on_host(spec: dict, snapshot) -> Optional["AnchorRect"]:
@@ -90,17 +100,15 @@ def resolve_pill_on_host(spec: dict, snapshot) -> Optional["AnchorRect"]:
     if pill_w is None or host is None:
         return None
     host_rect = window_rect(host)
-    scale = host_rect.width / float(host.width) if host.width else 1.0
     live = _live_offset_and_size(pill_w, host)
     if live is not None:
-        dx, dy, pw, ph = live          # points, relative to the host's bottom-left
+        x0, y0, w, h = live            # host pixels, relative to its bottom-left
     else:
         # Stored positions (stale after an OS re-seat or a native glide).
-        dx = float(pill_w.x) - float(host.x)
-        dy = float(pill_w.y) - float(host.y)
-        pw, ph = float(pill_w.width), float(pill_w.height)
-    x0, y0 = dx * scale, dy * scale
-    w, h = pw * scale, ph * scale
+        scale = host_rect.width / float(host.width) if host.width else 1.0
+        x0 = (float(pill_w.x) - float(host.x)) * scale
+        y0 = (float(pill_w.y) - float(host.y)) * scale
+        w, h = float(pill_w.width) * scale, float(pill_w.height) * scale
     if spec.get("pill_on_host") == "top":
         return AnchorRect(host_rect.window_ptr, x0, y0 + h - 2.0, x0 + w, y0 + h + 2.0)
     return AnchorRect(host_rect.window_ptr, x0, y0, x0 + w, y0 + h)

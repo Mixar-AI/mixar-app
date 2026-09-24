@@ -4,10 +4,13 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Render the interactive tour's placeholder assets:
+# Render the interactive tour's placeholder video:
 #
 #   onboarding/assets/tour/founder_placeholder.mp4   1280x720, 24 fps, H.264 + AAC
-#   onboarding/assets/tour/demo_concept.png          512x512 "concept art"
+#
+# The demo image the tour drops onto the moodboard
+# (``assets/tour/demo_concept.png``) is real artwork, committed as-is; this
+# script never touches it.
 #
 # The video is one title card per beat (beat id + its time range) cut at the
 # timestamps of ``core/tour/beats.py`` — the beat table is imported, so the
@@ -27,7 +30,6 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TOUR_DIR="$REPO_ROOT/src/scripts/mixar/modules/onboarding/core/tour"
 ASSET_DIR="$REPO_ROOT/src/scripts/mixar/modules/onboarding/assets/tour"
 VIDEO_OUT="$ASSET_DIR/founder_placeholder.mp4"
-IMAGE_OUT="$ASSET_DIR/demo_concept.png"
 
 FFMPEG="${FFMPEG:-/opt/homebrew/bin/ffmpeg}"
 FFPROBE="${FFPROBE:-/opt/homebrew/bin/ffprobe}"
@@ -151,49 +153,9 @@ TONE_EXPR="$(cat "$WORK/tone.txt")"
     "$VIDEO_OUT"
 
 # ---------------------------------------------------------------------------
-# 3. The demo "concept art" dropped onto the moodboard during the tour.
-# ---------------------------------------------------------------------------
-"$PYTHON" - "$IMAGE_OUT" "$FONT" <<'PY'
-import math
-import sys
-
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
-
-out, font_path = sys.argv[1:3]
-size = 512
-img = Image.new("RGB", (size, size))
-px = img.load()
-for y in range(size):
-    for x in range(size):
-        t = (x + y) / (2 * size)
-        r = int(58 + (255 - 58) * t * 0.55)
-        g = int(36 + (170 - 36) * (1 - t) * 0.8)
-        b = int(120 + (230 - 120) * (1 - t))
-        px[x, y] = (r, g, b)
-glow = Image.new("RGB", (size, size), (0, 0, 0))
-gd = ImageDraw.Draw(glow)
-gd.ellipse((140, 120, 400, 380), fill=(255, 190, 90))
-glow = glow.filter(ImageFilter.GaussianBlur(48))
-img = Image.blend(img, Image.composite(glow, img, glow.convert("L")), 0.75)
-draw = ImageDraw.Draw(img)
-for i in range(7):
-    a = i / 7 * 2 * math.pi
-    x, y = 256 + 150 * math.cos(a), 256 + 150 * math.sin(a)
-    draw.ellipse((x - 9, y - 9, x + 9, y + 9), fill=(255, 245, 225))
-font = ImageFont.truetype(font_path, 44)
-text = "Demo concept"
-left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
-draw.text(((size - (right - left)) / 2 - left, 420 - top), text, font=font,
-          fill=(255, 255, 255))
-img.save(out, optimize=True)
-PY
-
-# ---------------------------------------------------------------------------
-# 4. Verify.
+# 3. Verify.
 # ---------------------------------------------------------------------------
 echo "--- $VIDEO_OUT"
 "$FFPROBE" -v error -show_entries format=duration,size \
     -show_entries stream=codec_type,codec_name,width,height,r_frame_rate,nb_frames \
     -of default=noprint_wrappers=1 "$VIDEO_OUT"
-echo "--- $IMAGE_OUT"
-"$PYTHON" -c "from PIL import Image; import os, sys; im = Image.open(sys.argv[1]); print(im.size, im.mode, os.path.getsize(sys.argv[1]), 'bytes')" "$IMAGE_OUT"

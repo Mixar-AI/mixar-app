@@ -371,9 +371,8 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
                 live = anchors_windows._live_offset_and_size(w, host)
                 if live is None:
                     return None
-                dx, dy, pw, ph = live
-                scale = anchors.window_rect(host).width / float(host.width) if host.width else 1.0
-                return (dx * scale, dy * scale, (dx + pw) * scale, (dy + ph) * scale)
+                dx, dy, pw, ph = live          # host pixels
+                return (dx, dy, dx + pw, dy + ph)
         except Exception:  # noqa: BLE001
             return None
         return None
