@@ -25,6 +25,7 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar_chrome.hh"
 #include "UI_resources.hh"
 #include "UI_view2d.hh"
 
@@ -317,9 +318,7 @@ void ED_spacetype_topbar()
   /* regions: header */
   art = MEM_new_zeroed<ARegionType>("spacetype topbar header region");
   art->regionid = RGN_TYPE_HEADER;
-  /* Mixar: taller topbar than the shared HEADERY (26px) used by every other
-   * editor header. Topbar-only — tune the +8 to taste. */
-  art->prefsizey = HEADERY + 8;
+  art->prefsizey = ui::mixar_chrome::topbar_height;
   art->prefsizex = UI_UNIT_X * 5; /* Mainly to avoid glitches */
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_VIEW2D | ED_KEYMAP_HEADER;
   art->listener = topbar_header_listener;

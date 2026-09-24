@@ -114,13 +114,17 @@ def _draw_topbar_profile_right(self, context):
     # profile pill so the two clusters don't read as one control.
     layout.separator()
 
+    # The native right-header layout fills the menu-bar height. Reserve room
+    # for its taller account icon so the label remains fully visible.
+    account = layout.row(align=True)
+
     if getattr(wm, 'mixie_chat_is_logged_in', False):
         # Logged in → email pill that opens the profile popover.
         # ui_units_x mirrors the sizing previously used in the mixie
         # chat header so the pill width still grows with the email.
         email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
-        profile_sub = layout.row(align=True)
-        profile_sub.ui_units_x = len(email) * 0.35 + 3.0
+        profile_sub = account.row(align=True)
+        profile_sub.ui_units_x = len(email) * 0.35 + 3.8
         # Native account chip (interface_mixar_topbar.cc): dark slab, label,
         # and a full-height avatar disc at the RIGHT end per the design —
         # which is also why no `icon=` is passed here (Blender would pin it
@@ -138,13 +142,14 @@ def _draw_topbar_profile_right(self, context):
                 profile_sub.popover(
                     panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
     else:
+        account.ui_units_x = 6.4
         # Not logged in → login popover (preferred) with operator fallback
         # for the brief window where the login panel class hasn't
         # finished registering yet.
         if hasattr(bpy.types, 'MIXIE_CHAT_PT_login'):
-            layout.popover(panel="MIXIE_CHAT_PT_login", text="Login", icon='USER')
+            account.popover(panel="MIXIE_CHAT_PT_login", text="Login", icon='USER')
         else:
-            layout.operator("mixie_chat.login", text="Login", icon='USER')
+            account.operator("mixie_chat.login", text="Login", icon='USER')
 
 
 def register():

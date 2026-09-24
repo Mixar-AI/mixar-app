@@ -30,6 +30,7 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
+#include "BKE_screen.hh"
 
 #include "RNA_access.hh"
 
@@ -67,9 +68,7 @@
  * at file scope. */
 extern "C" void UI_mixar_set_drawing_tool_icon(bool);
 
-#ifdef WITH_INPUT_IME
-#  include "WM_types.hh"
-#endif
+#include "WM_types.hh"
 
 namespace blender::ui {
 
@@ -5245,6 +5244,22 @@ static void widget_textbut_custom(Button *but,
   widget_textbut(wcol, rect, state, roundboxalign, zoom);
 }
 
+static void widget_topbar_login(Button *but,
+                                uiWidgetColors *wcol,
+                                rcti *rect,
+                                const WidgetStateInfo *state,
+                                int roundboxalign,
+                                const float zoom)
+{
+  widget_textbut(wcol, rect, state, roundboxalign, zoom);
+  /* Keep the full-height background and hit target, padding only content. */
+  BLI_rcti_pad(rect, -int(6.0f * UI_SCALE_FAC), -int(4.0f * UI_SCALE_FAC));
+  if (but->type == ButtonType::Popover) {
+    widget_menubut_embossn(but, wcol, rect, state, roundboxalign);
+    rect->xmax -= (6 * BLI_rcti_size_y(rect)) / 10;
+  }
+}
+
 static void widget_menuiconbut(uiWidgetColors *wcol,
                                rcti *rect,
                                const WidgetStateInfo * /*state*/,
@@ -7093,6 +7108,16 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
 
   if (wt == nullptr) {
     return;
+  }
+
+  const ScrArea *area = CTX_wm_area(C);
+  if (area && area->spacetype == SPACE_TOPBAR) {
+    const PanelType *panel = but->type == ButtonType::Popover ? button_paneltype_get(but) : nullptr;
+    if ((panel && STREQ(panel->idname, "MIXIE_CHAT_PT_login")) ||
+        (but->optype && STREQ(but->optype->idname, "MIXIE_CHAT_OT_login")))
+    {
+      wt->custom = widget_topbar_login;
+    }
   }
 
   if (mixar_row_editing) {

@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The "Cinema Mode" pill on the right of the topbar.
+"""The Engine-mode "Cinema Mode" pill on the right of the topbar.
+
+Zen draws the same operators in its scene toolbar with TOOLBAR styling.
 
 Appended to ``TOPBAR_HT_upper_bar`` (RIGHT region) rather than to the
 editor-menus list, per the design: the pill sits between the topbar's own
@@ -30,6 +32,9 @@ def draw_director_entry(self, context):
     """Draw the Cinema Mode pill. Right region only."""
     region = getattr(context, "region", None)
     if region is None or region.alignment != 'RIGHT':
+        return
+    # Zen owns this entry in its scene toolbar; Engine retains the global pill.
+    if getattr(context.workspace, "name", "") == "Zen Mode":
         return
 
     state = getattr(context.scene, "mixar_director", None)

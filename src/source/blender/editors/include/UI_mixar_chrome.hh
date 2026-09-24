@@ -13,8 +13,11 @@ namespace blender::ui::mixar_chrome {
  * rect. Island tokens remain Default. */
 inline constexpr MixarDensity density = MixarDensity::Compact;
 
-/** Zen scene toolbar: Compact controls with ten logical pixels above/below. */
-inline constexpr float zen_toolbar_height = 54.0f;
+/** Global menu bar has its own height; editor headers retain their native size. */
+inline constexpr float topbar_height = 36.0f;
+
+/** Zen scene toolbar: 15% shorter bed, with unchanged readable control sizes. */
+inline constexpr float zen_toolbar_height = 54.0f * 0.85f;
 inline constexpr float zen_toolbar_control_height = 34.0f;
 inline constexpr unsigned char toolbar_background[4] = {0, 0, 0, 255};
 inline constexpr unsigned char toolbar_border[4] = {55, 55, 55, 255};

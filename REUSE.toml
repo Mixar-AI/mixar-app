@@ -96,6 +96,7 @@ path = [
   "docs/development/evidence/sketch-preview/*.png",
   "docs/development/agent-stack-notifications/*.png",
   "docs/development/zen-toolbar-alignment/*.png",
+  "docs/development/zen-toolbar-controls/*.png",
   "docs/development/library-responsive-layout/*.png",
   "docs/development/director-auto-key/*.png",
 ]
@@ -113,6 +114,7 @@ path = [
   "docs/development/agent-stack-notifications/verdict.json",
   "docs/development/agent-stack-notifications/review-verdict.json",
   "docs/development/zen-toolbar-alignment/verdict.json",
+  "docs/development/zen-toolbar-controls/*.json",
   "docs/development/library-responsive-layout/verdict.json",
   "docs/development/director-auto-key/verdict.json",
 ]

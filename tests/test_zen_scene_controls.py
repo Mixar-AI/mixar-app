@@ -28,6 +28,25 @@ def test_unknown_engine_and_missing_cycles_have_no_misleading_sample_field():
             SimpleNamespace(render=SimpleNamespace(engine=engine))) is None
 
 
+@pytest.mark.parametrize("engine,owner,prop", [
+    ("CYCLES", "cycles", "preview_samples"),
+    ("BLENDER_EEVEE", "eevee", "taa_samples"),
+    ("BLENDER_WORKBENCH", "display", "viewport_aa"),
+])
+def test_viewport_samples_are_independent_of_final_render(engine, owner, prop):
+    settings = SimpleNamespace(samples=128, preview_samples=16,
+                               taa_render_samples=64, taa_samples=8,
+                               render_aa="32", viewport_aa="8")
+    scene = SimpleNamespace(render=SimpleNamespace(engine=engine),
+                            **{owner: settings})
+    render_owner, render_prop = zen_scene.render_samples_binding(scene)
+    saved = getattr(render_owner, render_prop)
+    viewport_owner, viewport_prop = zen_scene.render_samples_binding(scene, "VIEWPORT")
+    assert (viewport_owner, viewport_prop) == (settings, prop)
+    setattr(viewport_owner, viewport_prop, "16" if engine == "BLENDER_WORKBENCH" else 24)
+    assert getattr(render_owner, render_prop) == saved
+
+
 @pytest.mark.parametrize("original", [None, object()])
 def test_sky_toggle_restores_world_and_reuses_its_own_world(original):
     sky = object()

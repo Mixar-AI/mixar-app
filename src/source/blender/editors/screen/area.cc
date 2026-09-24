@@ -1767,6 +1767,9 @@ static void region_rect_recursive(
     {
       prefsizey = UI_SCALE_FAC * (region->sizey + 0.5f);
     }
+    else if (area->spacetype == SPACE_TOPBAR) {
+      prefsizey = UI_SCALE_FAC * ui::mixar_chrome::topbar_height;
+    }
     else if (ui::mixar_area_floats_viewport_chrome(area)) {
       prefsizey = UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_height;
     }
@@ -4055,8 +4058,11 @@ void ED_region_header_layout(const bContext *C, ARegion *region)
                      is_global ? 4.0f * UI_SCALE_FAC : int(UI_HEADER_OFFSET);
 
   /* Height of buttons and scaling needed to achieve it. */
+  const bool topbar_account = area && area->spacetype == SPACE_TOPBAR &&
+                              RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_RIGHT;
   const int button_height = zen_toolbar ?
                                 UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_control_height :
+                            topbar_account ? region->winy - 4.0f * UI_SCALE_FAC :
                                 UI_UNIT_Y;
   const int buttony = min_ii(button_height, region->winy - 2 * UI_SCALE_FAC);
   const float buttony_scale = buttony / float(UI_UNIT_Y);
@@ -4229,16 +4235,25 @@ int ED_area_footersize()
 int ED_area_global_size_y(const ScrArea *area)
 {
   BLI_assert(ED_area_is_global(area));
+  if (area->spacetype == SPACE_TOPBAR) {
+    return round_fl_to_int(ui::mixar_chrome::topbar_height * UI_SCALE_FAC);
+  }
   return round_fl_to_int(area->global->cur_fixed_height * UI_SCALE_FAC);
 }
 int ED_area_global_min_size_y(const ScrArea *area)
 {
   BLI_assert(ED_area_is_global(area));
+  if (area->spacetype == SPACE_TOPBAR) {
+    return ED_area_global_size_y(area);
+  }
   return round_fl_to_int(area->global->size_min * UI_SCALE_FAC);
 }
 int ED_area_global_max_size_y(const ScrArea *area)
 {
   BLI_assert(ED_area_is_global(area));
+  if (area->spacetype == SPACE_TOPBAR) {
+    return ED_area_global_size_y(area);
+  }
   return round_fl_to_int(area->global->size_max * UI_SCALE_FAC);
 }
 

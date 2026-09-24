@@ -347,7 +347,9 @@ def test_file_and_image_id_drop_payloads_cannot_contaminate_one_another():
 def test_the_drawer_tab_uses_shared_palette_and_hit_geometry():
     draw = _read(VIEW3D / "view3d_moodboard_drawer_draw.cc")
     assert 'const char *label = "Moodboard";' in draw
-    assert "ui::mixar_tokens::mixar_zen().action" in draw
+    assert "MIXAR_THEME_LOAD(outer_green, CinemaPillOnB)" in draw
+    assert "MIXAR_THEME_LOAD(inner_dark, ViewportFill)" in draw
+    assert "draw_roundbox_4fv_ex(&tab, inner_dark, outer_green, 0.0f" in draw
     assert "view3d_moodboard_drawer_grip_rect_for" in draw
     assert "GRIP_DOT" not in draw
 

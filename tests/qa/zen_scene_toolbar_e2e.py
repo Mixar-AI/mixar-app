@@ -75,7 +75,7 @@ r = next(r for r in area.regions if r.type == 'HEADER')
 result = [r.x, r.y, r.width, r.height, bpy.context.preferences.system.ui_scale]
 """)
     x, y, width, height, scale = geometry
-    assert abs(height / scale - 54) <= 1, geometry
+    assert abs(height / scale - 54 * .85) <= 1, geometry
     interactive = [w for w in widgets if w["type"] not in ("Label", "Other")]
     for w in interactive:
         x0, y0, x1, y1 = w["rect"]
@@ -382,6 +382,7 @@ assert os.environ.get('MIXAR_QA') == '1', 'Use an isolated QA profile'
 from mixar.modules.agent_bubble.ui.operators import hover_ops
 hover_ops.unregister()
 bpy.context.preferences.view.show_tooltips=False
+bpy.context.window_manager.mixar_zen_sample_target='RENDER'
 drv.main_window().workspace=bpy.data.workspaces['Zen Mode']
 result=True
 """)

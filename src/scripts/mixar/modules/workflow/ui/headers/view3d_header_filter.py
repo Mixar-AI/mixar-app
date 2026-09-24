@@ -62,18 +62,24 @@ def _patched_header_draw(self, context):
         return
     shading = view.shading
 
-    # Equal side lanes keep the shading cluster centered. Narrow windows
+    # Side lanes reserve space around the shading cluster. Narrow windows
     # move scene settings into native popovers instead of clipping controls.
     width = context.region.width / max(context.preferences.system.ui_scale, 0.01)
-    compact = width < 1420
+    compact = width < 1480
     left = layout.row(align=False)
-    left.ui_units_x = 31 if not compact else 18
+    left.ui_units_x = 33 if not compact else 14
     zen_scene_controls.draw_left(left, context, compact=compact)
     layout.separator_spacer()
 
     # The reference's compact X-ray chip and native shading enum share the
     # centered lane. RNA still filters the available modes for each engine.
     cluster = layout.row(align=False)
+    guides = cluster.mixar_surface(theme="ZEN").row(align=True)
+    guides.operator(
+        "mixar.zen_toggle_guides", text="", icon="GRID",
+        depress=viewport_guides.guides_shown(view),
+    )
+    guides.mixar_style(component="TOOLBAR", variant="GHOST")
     chip = cluster.mixar_surface(theme="ZEN").row(align=True)
     chip.enabled = shading.type in {"SOLID", "WIREFRAME"}
     xray_prop = "show_xray_wireframe" if shading.type == "WIREFRAME" else "show_xray"
@@ -87,7 +93,7 @@ def _patched_header_draw(self, context):
 
     layout.separator_spacer()
     right = layout.row(align=False)
-    right.ui_units_x = 31 if not compact else 18
+    right.ui_units_x = 31 if not compact else 24
     right.alignment = "RIGHT"
     zen_scene_controls.draw_right(right, context, compact=compact)
 

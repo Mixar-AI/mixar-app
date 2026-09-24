@@ -44,6 +44,7 @@
 #include "UI_interface_layout.hh"
 #include "UI_mixar.hh"
 #include "UI_mixar_tokens.hh"
+#include "UI_mixar_theme.hh"
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
@@ -83,7 +84,7 @@ void draw_grip(const float x_right, const float y_centre)
 
   rcti pane;
   pane.xmin = int(std::floor(x_left));
-  pane.xmax = int(std::ceil(x_right + radius));
+  pane.xmax = int(std::ceil(x_right));
   pane.ymin = int(std::floor(y_centre - grip_h * 0.5f));
   pane.ymax = int(std::ceil(y_centre + grip_h * 0.5f));
 
@@ -94,8 +95,13 @@ void draw_grip(const float x_right, const float y_centre)
     GPU_scissor(pane.xmin, pane.ymin, clip_w, BLI_rcti_size_y(&pane));
     rctf tab;
     BLI_rctf_rcti_copy(&tab, &pane);
-    ui::mixar_fill_round(tab, radius, ui::mixar_tokens::mixar_zen().action);
-    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    MIXAR_THEME_LOAD(outer_green, CinemaPillOnB);
+    MIXAR_THEME_LOAD(inner_dark, ViewportFill);
+    /* Fade across the visible tab, reaching near-black at the panel seam.
+     * Only the outer corners round; extending a hidden right cap would leave
+     * the seam partway through the ramp instead of at its dark endpoint. */
+    ui::draw_roundbox_corner_set(ui::CNR_TOP_LEFT | ui::CNR_BOTTOM_LEFT);
+    ui::draw_roundbox_4fv_ex(&tab, inner_dark, outer_green, 0.0f, nullptr, 0.0f, radius);
     ui::draw_roundbox_4fv(&tab, false, radius, ui::mixar_tokens::mixar_zen().border);
   }
   GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);

@@ -6,15 +6,16 @@
 import bpy
 
 
-def render_samples_binding(scene):
-    """Use each engine's final-render setting, including Workbench's AA enum."""
+def render_samples_binding(scene, target="RENDER"):
+    """Bind the selected engine's independent render or viewport setting."""
+    viewport = target == "VIEWPORT"
     engine = scene.render.engine
     if engine == "CYCLES" and hasattr(scene, "cycles"):
-        return scene.cycles, "samples"
+        return scene.cycles, "preview_samples" if viewport else "samples"
     if engine == "BLENDER_EEVEE" and hasattr(scene, "eevee"):
-        return scene.eevee, "taa_render_samples"
+        return scene.eevee, "taa_samples" if viewport else "taa_render_samples"
     if engine == "BLENDER_WORKBENCH":
-        return scene.display, "render_aa"
+        return scene.display, "viewport_aa" if viewport else "render_aa"
     return None
 
 
