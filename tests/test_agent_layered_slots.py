@@ -155,10 +155,11 @@ def test_agent_tools_advertise_their_features():
         if isinstance(node, ast.Assign)
         and any(getattr(t, "id", "") == "AGENT_TOOLS_FEATURES" for t in node.targets)
     )
-    assert features == {"slot_targets": 1, "real_scale": 1, "layer_authoring": 1}
+    assert features == {"slot_targets": 1, "real_scale": 1, "layer_authoring": 1, "map_prefetch": 1}
     exported = (AGENT_TOOLS / "__init__.py").read_text(encoding="utf-8")
     for name in ("apply_layered_material_manifest", "inspect_material_slots", "focus_material_slot",
-                 "add_fill_layer", "add_layer_mask", "set_layer_channel", "add_library_layer"):
+                 "add_fill_layer", "add_layer_mask", "set_layer_channel", "add_library_layer",
+                 "prefetch_layered_maps"):
         assert name in exported, name
 
 

@@ -25,6 +25,7 @@ that converted an existing datablock in place and re-skinned unrelated slots
 from __future__ import annotations
 
 import math
+import time
 
 import bpy
 import numpy as np
@@ -313,8 +314,11 @@ def apply_manifest_to_slots(
     tile_size = manifest_tile_size(manifest)
     created: list = []
     built: dict = {}
+    clock = time.perf_counter()
+    timings: dict = {}
     try:
         uv_name, uv_reports = prepare_real_scale_uvs(targets, tile_size)
+        timings["uv_s"] = round(time.perf_counter() - clock, 3)
         if uv_name:
             tiling, mask_tiling = 1.0 / tile_size, 1.0 / max(tile_size, 1.0)
         else:
@@ -342,6 +346,7 @@ def apply_manifest_to_slots(
                 for index in indices:
                     _put_material(obj, index, material)
                 built[obj.name] = material
+        timings["build_s"] = round(time.perf_counter() - clock - timings["uv_s"], 3)
         applied = []
         for obj, indices in targets:
             snap = snapshots[obj.name]
@@ -363,6 +368,7 @@ def apply_manifest_to_slots(
             applied.append(entry)
         manifest_names = {str(l.get("name") or "") for l in base_layers}
         verification = _verify_slots(targets, built, expected_base, manifest_names)
+        timings["total_s"] = round(time.perf_counter() - clock, 3)
         if not verification["verified"] or not all(
             a["slot_topology_preserved"] and a["polygon_assignments_preserved"] for a in applied
         ):
@@ -396,6 +402,7 @@ def apply_manifest_to_slots(
         "missing": missing,
         "errors": errors,
         "verification": verification,
+        "timings": timings,
         "real_scale": {
             "tile_size_m": tile_size if uv_name else None,
             "uv_map": uv_name or None,

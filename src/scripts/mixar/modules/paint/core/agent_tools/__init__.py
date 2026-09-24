@@ -28,6 +28,7 @@ from .layer_stack import (
 )
 from .layered_manifest import apply_layered_material_manifest
 from .layered_slots import prepare_real_scale_uvs
+from .map_prefetch import prefetch_layered_maps
 from .material_inventory import inspect_material_slots
 from .material_library import (
     enqueue_procedural_material_generation,
@@ -47,8 +48,9 @@ from .real_scale_uv import REAL_SCALE_UV_NAME
 # fresh datablock into exact slots itself; ``real_scale`` — manifests with
 # ``scale.tile_size_m`` render at that physical repeat size;
 # ``layer_authoring`` — material-targeted fill / mask / channel / library
-# layer helpers and the slot inventory.
-AGENT_TOOLS_FEATURES = {"slot_targets": 1, "real_scale": 1, "layer_authoring": 1}
+# layer helpers and the slot inventory; ``map_prefetch`` — maps download in
+# the background before the apply script is sent (``prefetch_layered_maps``).
+AGENT_TOOLS_FEATURES = {"slot_targets": 1, "real_scale": 1, "layer_authoring": 1, "map_prefetch": 1}
 
 __all__ = [
     "AGENT_TOOLS_FEATURES",
@@ -69,6 +71,7 @@ __all__ = [
     "inspect_material_slots",
     "inspect_paint_layer_stack",
     "list_procedural_materials",
+    "prefetch_layered_maps",
     "prepare_real_scale_uvs",
     "prepare_scene_materials",
     "set_layer_channel",

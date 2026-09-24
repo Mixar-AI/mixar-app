@@ -38,14 +38,52 @@ _DEFAULT_BACKOFF_SECONDS = 0.35
 _FAILURE_TTL_SECONDS = 60.0
 _recent_failures: dict = {}
 
+# Background prefetch for the agent apply path: URL -> Event set when its
+# download ends (success or a recorded failure). The backend starts these the
+# moment a finish's maps exist and polls ``prefetch_status`` between other
+# agents' scripts, so the apply script it sends afterwards finds every map on
+# disk and occupies the connection for the build alone, never the network.
+_BACKGROUND_SLOTS = threading.BoundedSemaphore(_PREFETCH_MAX_WORKERS)
+_inflight: dict = {}
+_inflight_lock = threading.Lock()
+
+
+# Query parameters that only authorise a request (S3 presigning). A re-signed
+# URL names the same object, so the cache key leaves them out: the backend
+# re-signs a finish's maps each time it is used, and the maps a background
+# prefetch already stored must still count as cached.
+_SIGNING_PARAMS = ("x-amz-", "awsaccesskeyid", "signature", "expires")
+
+
+def _cache_identity(url: str) -> str:
+    parts = urllib.parse.urlsplit(url)
+    kept = [
+        (k, v) for k, v in urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+        if not k.lower().startswith(_SIGNING_PARAMS)
+    ]
+    return urllib.parse.urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, urllib.parse.urlencode(kept), "")
+    )
+
 
 def _filename_for_url(url: str) -> str:
     base = url.split("?", 1)[0].rsplit("/", 1)[-1] or "asset"
     if "." not in base:
         base += ".png"
-    digest = hashlib.sha1(url.encode()).hexdigest()[:8]
+    digest = hashlib.sha1(_cache_identity(url).encode()).hexdigest()[:8]
     stem, ext = os.path.splitext(base)
     return f"{stem}_{digest}{ext}"
+
+
+def cached_path(url: str, dest_dir: str = None) -> str:
+    """Where ``url`` lands in the local asset cache."""
+    dest_dir = dest_dir or os.path.join(tempfile.gettempdir(), "mixar_layered_build")
+    return os.path.join(dest_dir, _filename_for_url(url))
+
+
+def _is_cached(url: str) -> bool:
+    path = cached_path(url)
+    return os.path.exists(path) and os.path.getsize(path) > 0
 
 
 def _is_retryable_error(exc: BaseException) -> bool:
@@ -77,9 +115,8 @@ def download_to_tempfile(
         raise ValueError(
             f"Refusing to download asset from non-http(s) URL (scheme={scheme!r}): {url!r}"
         )
-    dest_dir = dest_dir or os.path.join(tempfile.gettempdir(), "mixar_layered_build")
-    os.makedirs(dest_dir, exist_ok=True)
-    path = os.path.join(dest_dir, _filename_for_url(url))
+    path = cached_path(url, dest_dir)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     if os.path.exists(path) and os.path.getsize(path) > 0:
         return path
 
@@ -139,6 +176,7 @@ def prefetch_urls(urls, timeout: float = 30.0) -> dict:
 
     def _fetch(url: str):
         try:
+            _wait_inflight(url, timeout)
             download_to_tempfile(url, timeout=timeout)
             return url, None
         except Exception as exc:  # noqa: BLE001 — collected, caller decides severity
@@ -146,6 +184,75 @@ def prefetch_urls(urls, timeout: float = 30.0) -> dict:
 
     with ThreadPoolExecutor(max_workers=min(_PREFETCH_MAX_WORKERS, len(unique))) as pool:
         return {url: err for url, err in pool.map(_fetch, unique) if err}
+
+
+def _wait_inflight(url: str, timeout: float) -> None:
+    """Let a background download of ``url`` finish instead of fetching it twice."""
+    with _inflight_lock:
+        event = _inflight.get(url)
+    if event is not None:
+        event.wait(max(1.0, timeout * _DEFAULT_ATTEMPTS))
+
+
+def _background_fetch(url: str, timeout: float, event: threading.Event) -> None:
+    try:
+        with _BACKGROUND_SLOTS:
+            download_to_tempfile(url, timeout=timeout)
+    except Exception as exc:  # noqa: BLE001 — reported through prefetch_status
+        # A refused scheme raises before download_to_tempfile records it.
+        _recent_failures.setdefault(url, (time.monotonic(), exc))
+    finally:
+        event.set()
+
+
+def start_prefetch(urls, timeout: float = 30.0) -> int:
+    """Start background downloads for the URLs not cached yet; never blocks.
+
+    Idempotent: a URL already on disk or already downloading is skipped.
+    Returns how many downloads were started. Workers do network + disk only.
+    """
+    started = 0
+    for url in dict.fromkeys(u for u in (urls or []) if u):
+        if _is_cached(url):
+            continue
+        with _inflight_lock:
+            event = _inflight.get(url)
+            if event is not None and not event.is_set():
+                continue
+            failed_at, _ = _recent_failures.get(url, (None, None))
+            if failed_at is not None and time.monotonic() - failed_at < _FAILURE_TTL_SECONDS:
+                continue
+            event = threading.Event()
+            _inflight[url] = event
+        threading.Thread(
+            target=_background_fetch, args=(url, timeout, event),
+            name="mixar-map-prefetch", daemon=True,
+        ).start()
+        started += 1
+    return started
+
+
+def prefetch_status(urls) -> dict:
+    """Counts of ready / pending / missing / failed URLs (cheap, main-thread safe)."""
+    unique = list(dict.fromkeys(u for u in (urls or []) if u))
+    ready = pending = missing = 0
+    failed: list[str] = []
+    for url in unique:
+        if _is_cached(url):
+            ready += 1
+            continue
+        with _inflight_lock:
+            event = _inflight.get(url)
+        if event is not None and not event.is_set():
+            pending += 1
+            continue
+        failed_at, error = _recent_failures.get(url, (None, None))
+        if failed_at is not None and time.monotonic() - failed_at < _FAILURE_TTL_SECONDS:
+            failed.append(f"{type(error).__name__}: {str(error)[:160]}")
+            continue
+        missing += 1
+    return {"total": len(unique), "ready": ready, "pending": pending,
+            "missing": missing, "failed": failed}
 
 
 def load_image(url: str, non_color: bool) -> "bpy.types.Image":
