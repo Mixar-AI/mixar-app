@@ -167,6 +167,27 @@ static void rna_Window_mixar_qa_drop_file(
   Mixar_qa_simulate_file_drop(C, win, x, y, paths);
 }
 
+/* Mixar onboarding tour: a real top-bar menu opened under its own button
+ * (editors/interface/mixar/tour_menu.cc). Public popup API, no synthesized input. */
+bool Mixar_tour_menu_open(bContext *C, wmWindow *win, const char *menu_idname);
+bool Mixar_tour_menu_close(wmWindow *win);
+bool Mixar_tour_menu_is_open(wmWindow *win);
+
+static bool rna_Window_mixar_tour_menu_open(wmWindow *win, bContext *C, const char *menu)
+{
+  return Mixar_tour_menu_open(C, win, menu);
+}
+
+static bool rna_Window_mixar_tour_menu_close(wmWindow *win)
+{
+  return Mixar_tour_menu_close(win);
+}
+
+static bool rna_Window_mixar_tour_menu_is_open(wmWindow *win)
+{
+  return Mixar_tour_menu_is_open(win);
+}
+
 /* Mixar: live GHOST client bounds (wm_draw.cc); wmWindow::posx/posy can be stale. */
 bool Mixar_window_live_client_rect(const wmWindow *win, int r_rect[4]);
 
@@ -326,6 +347,30 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     PropertyRNA *parm = RNA_def_int_array(func, "rect", 4, nullptr, INT_MIN, INT_MAX, "Rect",
                                           "left, top, right, bottom", INT_MIN, INT_MAX);
     RNA_def_function_output(func, parm);
+  }
+  /* Onboarding tour: open / close a real top-bar menu under its button. */
+  {
+    FunctionRNA *func = RNA_def_function(srna, "mixar_tour_menu_open",
+                                         "rna_Window_mixar_tour_menu_open");
+    RNA_def_function_flag(func, FUNC_USE_CONTEXT);
+    RNA_def_function_ui_description(
+        func, "Onboarding tour: open a menu under its own pulldown button in this window, "
+              "as a click would; False when the button is not on screen or it is already open");
+    PropertyRNA *parm = RNA_def_string(func, "menu", nullptr, 0, "Menu", "Menu type idname");
+    RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+    parm = RNA_def_boolean(func, "opened", false, "", "");
+    RNA_def_function_return(func, parm);
+
+    func = RNA_def_function(srna, "mixar_tour_menu_close", "rna_Window_mixar_tour_menu_close");
+    RNA_def_function_ui_description(func, "Onboarding tour: close the menu it opened");
+    parm = RNA_def_boolean(func, "closed", false, "", "");
+    RNA_def_function_return(func, parm);
+
+    func = RNA_def_function(srna, "mixar_tour_menu_is_open",
+                            "rna_Window_mixar_tour_menu_is_open");
+    RNA_def_function_ui_description(func, "Onboarding tour: the menu it opened is still up");
+    parm = RNA_def_boolean(func, "open", false, "", "");
+    RNA_def_function_return(func, parm);
   }
   /* This window's client rect inside another window's client coordinates
    * (points, bottom-left origin) — exact across window styles. */

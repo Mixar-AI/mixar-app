@@ -149,6 +149,9 @@ def _area_types_by_ptr() -> dict:
         try:
             for area in screen.areas:
                 out[area.as_pointer()] = area.type
+            # The top bar and status bar are window-level global areas.
+            for area in getattr(window, "global_areas", ()) or ():
+                out[area.as_pointer()] = area.type
         except Exception:  # noqa: BLE001
             continue
     return out

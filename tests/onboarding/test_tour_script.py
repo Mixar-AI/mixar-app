@@ -8,41 +8,48 @@ pauses, what the captions read and where the card sits. ``test_tour_beats``
 pins the table's structural invariants; this file pins the presentation
 pass so a re-timing cannot quietly undo it.
 
-Transcript facts (founder take of 2026-09-18): "Go on, give it a spin."
-ends 16.08 s; "open it up." 24.42; "Check it out." 52.02; "right." 66.62;
-"mode." 92.60; "Let's head back to zen." 103.96; the closing line runs
-106.36–110.0 and the clip ends at 114.27.
+Transcript facts (Naman's take of 2026-09-24, silences over ~0.9 s trimmed,
+2:05): "Go give it a try." ends 19.09 s; "S to scale." 25.86; "Here are key
+shortcuts that will come handy." 26.96–28.66; "Click to open it up." ends
+36.15; "Everything you generate lands in the library." ends 61.50; "…or just
+press tilde." ends 76.58; "flip to engine mode." ends 97.32; the Creator
+Program line runs 112.46–120.70; the closing line 121.45–124.85 and the clip
+ends at 125.70.
 """
 
 from __future__ import annotations
 
 from mixar.modules.onboarding.core.tour import beats as B
 from mixar.modules.onboarding.core.tour import config
+from mixar.modules.onboarding.core.tour import script as S
 from mixar.modules.onboarding.core.tour.beats import MIXAR_INTRO, find_index
 
 BEATS = {b.id: b for b in MIXAR_INTRO.beats}
 GATE_TAIL_MS = 500
+CLIP_END_MS = 125700
 # (gated beat, last word of its line in ms)
 LAST_WORDS = {
-    "viewport-try": 16100,
-    "find-island": 24400,
-    "library-prompt": 52000,
-    "moodboard-prompt": 66600,
-    "engine-prompt": 92600,
+    "viewport-try": 19090,
+    "find-island": 36150,
+    "library-prompt": 61500,
+    "moodboard-prompt": 76600,
+    "engine-prompt": 97320,
 }
 ACT_CAPTIONS = {
     "intro": "Welcome",
     "viewport": "Part 1 · The viewport",
     "viewport-try": "Part 1 · The viewport",
+    "shortcuts": "Part 1 · The viewport",
     "find-island": "Part 2 · Mixie",
     "island-tabs": "Part 2 · Mixie",
     "library-prompt": "Part 2 · Mixie",
     "library": "Part 2 · Mixie",
     "moodboard-prompt": "Part 3 · The moodboard",
     "moodboard-canvas": "Part 3 · The moodboard",
-    "moodboard-tools": "Part 3 · The moodboard",
+    "moodboard-nodes": "Part 3 · The moodboard",
     "engine-prompt": "Part 4 · Zen and Engine",
     "engine-mode": "Part 4 · Zen and Engine",
+    "creator-program": "Creator Program",
     "outro": "You're all set",
 }
 
@@ -54,6 +61,10 @@ def _overlay(beat_id, overlay_id):
     raise AssertionError(f"{beat_id} has no overlay {overlay_id!r}")
 
 
+def _actions(beat_id):
+    return [(at, name, args) for at, name, args in BEATS[beat_id].actions]
+
+
 def test_the_table_is_exactly_these_beats_in_this_order():
     assert [b.id for b in MIXAR_INTRO.beats] == list(ACT_CAPTIONS)
 
@@ -61,6 +72,14 @@ def test_the_table_is_exactly_these_beats_in_this_order():
 def test_one_caption_per_act_held_across_its_beats():
     for beat_id, caption in ACT_CAPTIONS.items():
         assert BEATS[beat_id].label == caption, beat_id
+
+
+def test_beats_tile_the_edited_take_without_gaps():
+    beats = MIXAR_INTRO.beats
+    for prev, nxt in zip(beats, beats[1:]):
+        if prev.gate is None:
+            assert prev.clip_end_ms == nxt.enter_ms, (prev.id, nxt.id)
+    assert beats[-1].clip_end_ms <= CLIP_END_MS
 
 
 def test_gated_beats_pause_half_a_second_after_their_last_word():
@@ -72,6 +91,7 @@ def test_gated_beats_pause_half_a_second_after_their_last_word():
         # The pause lands in the silence before the next line, never on it.
         nxt = MIXAR_INTRO.beats[find_index(MIXAR_INTRO.beats, beat_id) + 1]
         assert b.clip_end_ms < nxt.enter_ms, beat_id
+        assert b.gate.advance_to == nxt.id, beat_id
 
 
 def test_gate_timeouts_are_short_and_the_two_reading_beats_get_longer():
@@ -89,7 +109,6 @@ def test_only_hero_and_half_cards_and_where_they_sit():
     assert BEATS["outro"].card_variant == "hero"
     assert BEATS["moodboard-prompt"].card_placement == B.PLACE_BOTTOM_LEFT
     assert BEATS["engine-mode"].card_placement == B.PLACE_BOTTOM_LEFT
-    # The two hero beats are the only ones that frame the window.
     assert [b.id for b in MIXAR_INTRO.beats if b.hero_dim] == ["intro", "outro"]
 
 
@@ -102,34 +121,55 @@ def test_gated_targets_are_never_fake_clicked():
             if ov.kind == B.OVERLAY_CURSOR:
                 assert ov.click_ms is None, (b.id, ov.id)
     assert _overlay("find-island", "island-hint").text == "Open Mixie"
-    assert _overlay("moodboard-prompt", "grip-hint").text == "Drag the Moodboard tab out"
+    assert _overlay("moodboard-prompt", "grip-hint").text == (
+        "Drag the Moodboard tab out · or press ~")
     assert _overlay("viewport-try", "viewport-hint").text == (
-        "Middle-drag to orbit · scroll to zoom · or drag the axis ball, top right")
+        "Middle-drag to orbit · scroll to zoom · Shift + middle-drag to pan")
+
+
+def test_shortcut_panel_lights_each_key_as_it_is_named():
+    beat = BEATS["shortcuts"]
+    assert beat.gate is None and beat.hide_cursor
+    panel = _overlay("shortcuts", "shortcut-keys")
+    assert panel.kind == B.OVERLAY_KEYS and panel.at_pct is not None
+    named = {keys: ms for keys, _label, ms in panel.rows}
+    # G, R and S light on the word; the rest fill in on "Here are key shortcuts".
+    assert (named["G"], named["R"], named["S"]) == (22420, 23840, 25160)
+    rest = [ms for keys, _l, ms in panel.rows if keys not in ("Click", "G", "R", "S")]
+    assert rest and all(26960 <= ms <= 28660 for ms in rest)
+    assert [ms for _k, _l, ms in panel.rows] == sorted(ms for _k, _l, ms in panel.rows)
+
+
+def test_island_tabs_follow_the_new_tab_names():
+    tabs = [args["tab"] for _at, name, args in _actions("island-tabs") if name == "island_tab"]
+    assert tabs == ["AGENT", "THREE_D", "IMAGE", "VIDEO", "SPLAT", "THREE_D"]
+    # "3D, Image, Video and World Model" are named in one breath.
+    at = {args["tab"]: t for t, name, args in _actions("island-tabs")
+          if name == "island_tab" and t < 54000}
+    assert (at["THREE_D"], at["IMAGE"], at["VIDEO"], at["SPLAT"]) == (50910, 51410, 51910, 52710)
+    assert _overlay("island-tabs", "model-chip-ring").anchor == B.A_MODEL_CHIP
 
 
 def test_a_cursor_crossing_into_the_island_leads_its_click_by_900ms():
     agent = _overlay("island-tabs", "tab-agent")
-    assert agent.appear_ms == 27600 and agent.click_ms == 29000
     assert agent.click_ms - agent.appear_ms >= 900
 
 
-def test_moodboard_tools_reasserts_the_drawer_and_carries_no_hints():
-    tools = BEATS["moodboard-tools"]
-    assert (tools.enter_ms, "drawer_set", {"amount": 1.0}) in tools.actions
-    kinds = {ov.kind for ov in tools.overlays}
-    assert B.OVERLAY_HINT not in kinds
-    assert kinds == {B.OVERLAY_CURSOR, B.OVERLAY_SCRIBBLE}
+def test_library_points_at_linking_your_own_library_then_resets():
+    acts = _actions("library")
+    assert (65270, "library_source", {"source": "LIBRARY"}) in acts
+    assert acts[-1][1:] == ("library_source", {"source": "AI"})
+    assert _overlay("library", "library-add-ring").anchor == B.A_LIBRARY_ADD
+    # A fresh account has no tiles: the first glide needs somewhere to land.
+    assert _overlay("library", "library-tile").at_pct is not None
 
 
-def test_library_glides_first_tile_then_the_island_with_host_fallbacks():
-    first = _overlay("library", "library-tile")
-    second = _overlay("library", "library-sweep")
-    assert first.anchor == {"surface": "library_tile", "area": "AGENT_BUBBLE"}
-    assert (first.appear_ms, first.disappear_ms) == (54500, 58000)
-    assert second.anchor == B.A_ISLAND and second.appear_ms == 58000
-    assert not first.orbit and not second.orbit
-    # A fresh account has no tiles: both need somewhere to land.
-    assert first.at_pct is not None and second.at_pct is not None
+def test_moodboard_canvas_and_nodes_keep_the_drawer_open_without_hints():
+    for beat_id in ("moodboard-canvas", "moodboard-nodes"):
+        b = BEATS[beat_id]
+        assert (b.enter_ms, "drawer_set", {"amount": 1.0}) in b.actions, beat_id
+        assert B.OVERLAY_HINT not in {ov.kind for ov in b.overlays}, beat_id
+    assert _overlay("moodboard-nodes", "node-menu-ring").anchor == B.A_NODE_TEMPLATES_MENU
 
 
 def test_engine_mode_rings_the_full_toolkit_inward():
@@ -137,24 +177,41 @@ def test_engine_mode_rings_the_full_toolkit_inward():
         ring = _overlay("engine-mode", oid)
         assert ring.kind == B.OVERLAY_SCRIBBLE
         assert ring.anchor == {"area": area, "region": "WINDOW"}
-        assert (ring.appear_ms, ring.disappear_ms) == (96000, 101500)
+
+
+def test_creator_program_opens_the_real_help_menu_with_a_callout():
+    acts = _actions("creator-program")
+    names = [name for _at, name, _a in acts]
+    assert names == ["help_menu_open", "help_menu_close"]
+    beat = BEATS["creator-program"]
+    assert beat.enter_ms < acts[0][0] < acts[1][0] < beat.clip_end_ms
+    callout = _overlay("creator-program", "creator-callout")
+    assert callout.kind == B.OVERLAY_CALLOUT
+    assert callout.anchor == B.A_CREATOR_ROW == {"text": "Creator Program", "popup": True}
+    assert callout.side == "right" and callout.title == "Creator Program"
+    assert callout.appear_ms > acts[0][0]
+    # The cursor's click is the menu opening, not a fake click on the row.
+    assert _overlay("creator-program", "help-cursor").click_ms == acts[0][0]
 
 
 def test_outro_cleans_up_in_the_pause_then_shows_the_replay_note():
     outro = BEATS["outro"]
-    assert outro.actions == ((109500, "tour_cleanup", {}),)
+    assert outro.actions == ((123450, "tour_cleanup", {}),)
     note = _overlay("outro", "replay-hint")
     assert note.kind == B.OVERLAY_CAPTION
     assert note.text == "Replay any time from Help → Start tour"
-    assert note.appear_ms == 110200 and note.anchor is None and note.at_pct is None
+    assert note.anchor is None and note.at_pct is None
     assert outro.end_after_wall_ms == config.END_AFTER_WALL_MS == 2500
-    assert outro.clip_end_ms + outro.end_after_wall_ms < 114270
 
 
-def test_caption_helper_builds_an_anchorless_overlay():
-    ov = B._caption("x", "hello", appear=10, disappear=20)
-    assert ov == B.Overlay("x", B.OVERLAY_CAPTION, text="hello", appear_ms=10,
-                           disappear_ms=20)
+def test_overlay_helpers_build_the_expected_overlays():
+    assert S._caption("x", "hello", appear=10, disappear=20) == B.Overlay(
+        "x", B.OVERLAY_CAPTION, text="hello", appear_ms=10, disappear_ms=20)
+    c = S._callout("c", {"text": "Row"}, "T", "Body", footer="F", appear=5)
+    assert (c.kind, c.title, c.text, c.footer, c.side) == (
+        B.OVERLAY_CALLOUT, "T", "Body", "F", "right")
+    k = S._keys("k", "Keys", [("G", "Move", 1)], at_pct=(50, 50))
+    assert k.kind == B.OVERLAY_KEYS and k.rows == (("G", "Move", 1),)
 
 
 def test_controls_and_exit_copy():

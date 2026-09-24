@@ -118,6 +118,18 @@ SCRIBBLE_RADIUS = 10.0
 HINT_FONT_PX = 15
 HINT_BG = (0.09, 0.09, 0.11, 0.92)
 HINT_TEXT = (0.95, 0.95, 0.97, 1.0)
+# Callout box (a beat that introduces something to act on later, e.g. the
+# Creator Program under the Help menu); a click on it opens its URL.
+CALLOUT_TITLE_PX = 17
+CALLOUT_BODY_PX = 14
+CALLOUT_BG = (0.07, 0.07, 0.09, 0.96)
+CREATOR_PROGRAM_URL = "https://www.mixar.app/creator-program"
+# Shortcut panel (keycaps that light as the narration names them).
+KEYS_TITLE_PX = 13
+KEYS_CAP_PX = 13
+KEYS_LABEL_PX = 15
+KEYS_CAP_BG = (0.16, 0.16, 0.19, 1.0)
+KEYS_CAP_EDGE = (1.0, 1.0, 1.0, 0.22)
 HERO_DIM = (0.0, 0.0, 0.0, 0.82)
 # "Your turn": while a beat waits on the user, the main window dims with a
 # spotlight cut around the target, the ring pulses and the starburst shows.

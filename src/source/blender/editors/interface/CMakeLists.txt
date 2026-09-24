@@ -52,6 +52,7 @@ set(SRC
   mixar/components.cc
   mixar/toolbar.cc
   mixar/toolbar.hh
+  mixar/tour_menu.cc
   mixar/custom_motion.cc
   mixar/motion.cc
   interface_mixar_card_button.cc

@@ -28,15 +28,14 @@ import gpu
 from mixar.config.logging_config import get_logger
 
 from . import actions, anchors, config
-from .beats import MIXAR_INTRO, OVERLAY_CAPTION
+from .beats import MIXAR_INTRO
 from .card_motion import CardMotion
-from .overlay_state import (
-    BeatOverlayState, hint_views, scribble_views, views_for_window,
-)
+from .overlay_state import BeatOverlayState
 from .overlays import card as card_ui
 from .overlays import scribble as scribble_ui
 from .overlays.cursor import CursorAnim
 from .runner import STATUS_ENDED, STATUS_GATED
+from .session_draw import SessionDrawMixin
 from .session_input import SessionInputMixin
 from .session_lifecycle import SessionLifecycleMixin
 
@@ -56,7 +55,7 @@ def current():
     return _current
 
 
-class TourSession(SessionLifecycleMixin, SessionInputMixin):
+class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
     def __init__(self, rate: float = 1.0, silent: bool = False,
                  tour=MIXAR_INTRO):
         self.tour = tour
@@ -74,6 +73,7 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin):
         self._host_window_ptr = None
         self._host_region_ptr = None
         self._host_rect = (0, 0, 0, 0)
+        self._card_bounds = (0, 0, 0, 0)  # host minus a header overlapping its top
         self._host_lost = False        # host window has no VIEW_3D right now
         self._ui_scale = 1.0
         self._last_wall = time.monotonic()
@@ -233,7 +233,7 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin):
         if beat is not None and not self._host_lost:
             island = self._island_rect_in_host()
             self._card_target = card_ui.compute_card_layout(
-                beat.card_variant, beat.card_placement, self._host_rect,
+                beat.card_variant, beat.card_placement, self._card_bounds,
                 self._ui_scale, island_rect=island,
             )
         target = self._card_target.card if self._card_target is not None else None
@@ -320,10 +320,30 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin):
     def _refresh_host(self, window, region) -> None:
         r = anchors.region_rect(window, region)
         self._host_rect = (r.xmin, r.ymin, r.xmax, r.ymax)
+        self._card_bounds = self._unobstructed_host(window, region, self._host_rect)
         try:
             self._ui_scale = float(bpy.context.preferences.system.ui_scale)
         except Exception:  # noqa: BLE001
             self._ui_scale = 1.0
+
+    @staticmethod
+    def _unobstructed_host(window, region, host_rect):
+        """``host_rect`` minus any header strip that overlaps its top: the
+        Zen scene toolbar paints over the viewport (region overlap) after
+        the host region, so a card placed at the top would slide under it."""
+        xmin, ymin, xmax, ymax = host_rect
+        try:
+            area = next(a for a in window.screen.areas
+                        if any(r.as_pointer() == region.as_pointer() for r in a.regions))
+            for other in area.regions:
+                if other.type not in ("HEADER", "TOOL_HEADER") or other.height <= 1:
+                    continue
+                o = anchors.region_rect(window, other)
+                if o.ymax > ymax - 1 and o.ymin < ymax and o.ymin > ymin:
+                    ymax = min(ymax, o.ymin)
+        except Exception:  # noqa: BLE001
+            pass
+        return (xmin, ymin, xmax, ymax)
 
     def _island_rect_in_host(self):
         """The island's VISIBLE footprint in host-window pixels, so the card
@@ -379,14 +399,6 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin):
         except Exception as exc:  # noqa: BLE001
             logger.debug("Tour: draw failed: %s", exc)
 
-    def _gate_pulse(self) -> float:
-        """Breathing alpha for a gated ring (1.0 when not gated)."""
-        if not self._gated:
-            return 1.0
-        period = max(0.1, config.GATE_RING_PULSE_SECONDS)
-        wave = 0.5 * (1.0 + math.sin(2.0 * math.pi * time.monotonic() / period))
-        return config.GATE_RING_PULSE_MIN + (1.0 - config.GATE_RING_PULSE_MIN) * wave
-
     def _draw_window_layer(self, window_ptr, is_host: bool, film_ok: bool = True) -> None:
         beat = self.runner.beat if self.runner else None
         if beat is None or self._host_lost:
@@ -434,51 +446,6 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin):
             if self.exit_confirm and self._exit_layout is not None:
                 card_ui.draw_exit_confirm(self._exit_layout, ui_scale=self._ui_scale,
                                           hover=self.hover)
-
-    def _draw_overlays(self, window_ptr, window_rect) -> None:
-        views = views_for_window(self._views, window_ptr)
-        pulse = self._gate_pulse()
-        for v in scribble_views(views):
-            scribble_ui.draw_scribble(v.rect, v.reveal, alpha=v.alpha * pulse,
-                                      ui_scale=self._ui_scale, bounds=window_rect,
-                                      starburst=self._gated)
-        # Hints paint in EVERY region (clipped to each), like the rings:
-        # an overlapping region such as the moodboard drawer paints after
-        # the viewport, so a pill drawn only by the host region would be
-        # buried under it.
-        for v in hint_views(views):
-            scribble_ui.draw_hint(v.overlay.text, v.rect, window_rect,
-                                  ui_scale=self._ui_scale,
-                                  alpha=min(1.0, v.reveal * 2) * v.alpha,
-                                  side=v.overlay.side, accent=self._gated)
-        flash = self._gate_flash
-        if flash is not None and flash[1] == window_ptr:
-            t = (time.monotonic() - flash[2]) / max(0.05, config.GATE_DONE_FLASH_SECONDS)
-            if t < 1.0:
-                scribble_ui.draw_success_flash(flash[0], t, ui_scale=self._ui_scale,
-                                               bounds=window_rect)
-        # The fake cursor is the actor of automatic beats only; while the
-        # user is asked to act, their own pointer is the only cursor.
-        if not self._gated:
-            self.cursor.draw(window_ptr)
-
-    def _draw_captions(self) -> None:
-        """Anchorless ``caption`` overlays of the current beat sit centred
-        under the card (``overlay_state`` ignores them: no rect)."""
-        beat = self.runner.beat
-        ms = self.runner.last_ms
-        now = time.monotonic()
-        for ov in beat.overlays:
-            if ov.kind != OVERLAY_CAPTION or not ov.text:
-                continue
-            if ov.appear_ms is not None and ms < ov.appear_ms:
-                continue
-            if ov.disappear_ms is not None and ms >= ov.disappear_ms:
-                continue
-            first = self.overlay_state.first_visible_wall.setdefault(ov.id, now)
-            reveal = min(1.0, (now - first) / max(0.05, config.SCRIBBLE_REVEAL_SECONDS))
-            card_ui.draw_caption_under(self._card_layout, ov.text, self._ui_scale,
-                                       min(1.0, reveal * 2) * self.card_motion.alpha)
 
     def _window_rect(self, window_ptr):
         window = anchors.window_by_ptr(window_ptr)

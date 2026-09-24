@@ -15,7 +15,9 @@ anchor rects and wall time; it never resolves anything itself.
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from .beats import OVERLAY_CURSOR, OVERLAY_HINT, OVERLAY_SCRIBBLE, Beat
+from .beats import (
+    OVERLAY_CALLOUT, OVERLAY_CURSOR, OVERLAY_HINT, OVERLAY_KEYS, OVERLAY_SCRIBBLE, Beat,
+)
 from .config import OVERLAY_FADE_SECONDS, SCRIBBLE_REVEAL_SECONDS
 
 
@@ -176,3 +178,11 @@ def scribble_views(views):
 
 def hint_views(views):
     return [v for v in views if v.overlay.kind == OVERLAY_HINT]
+
+
+def callout_views(views):
+    return [v for v in views if v.overlay.kind == OVERLAY_CALLOUT]
+
+
+def keys_views(views):
+    return [v for v in views if v.overlay.kind == OVERLAY_KEYS]

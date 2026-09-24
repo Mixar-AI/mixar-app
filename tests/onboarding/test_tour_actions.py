@@ -51,13 +51,13 @@ def _clean(monkeypatch):
 # --- snapshot / restore -----------------------------------------------------
 
 def test_snapshot_reads_mode_drawer_island_and_tab(monkeypatch):
-    wm = SimpleNamespace(mixar_moodboard_drawer_amount=0.0, mixar_bubble_tab="MEDIA")
+    wm = SimpleNamespace(mixar_moodboard_drawer_amount=0.0, mixar_bubble_tab="IMAGE")
     monkeypatch.setattr(actions, "get_ui_mode", lambda: "pro")
     monkeypatch.setattr(actions, "_wm", lambda: wm)
     monkeypatch.setattr(actions, "_resting_pill_visible", lambda: True)
     snap = actions.snapshot_state()
     assert snap == {"ui_mode": "pro", "drawer_amount": 0.0,
-                    "island": "pill", "bubble_tab": "MEDIA"}
+                    "island": "pill", "bubble_tab": "IMAGE"}
 
 
 def test_snapshot_island_expanded_then_none(monkeypatch):
@@ -81,13 +81,13 @@ def test_restore_round_trip_puts_everything_back(monkeypatch):
     monkeypatch.setattr(actions, "pill_supported", lambda: True)
     monkeypatch.setattr(actions, "_bubble_windows", lambda: [object()])
     snap = {"ui_mode": "pro", "drawer_amount": 0.0, "island": "pill",
-            "bubble_tab": "MEDIA"}
+            "bubble_tab": "IMAGE"}
     assert actions.restore_state(snap) is True
     # Mode switch runs under the legacy-restart suppression.
     assert ("mixar.set_ui_mode_pro", {}, True) in ops.calls
     assert "mixar.bubble_minimise" in ops.paths()
     assert drawer == [{"amount": 0.0}]
-    assert tabs == [{"tab": "MEDIA"}]
+    assert tabs == [{"tab": "IMAGE"}]
     assert actions.suppress_legacy_restart is False
 
 

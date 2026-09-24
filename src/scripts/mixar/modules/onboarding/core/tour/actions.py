@@ -56,7 +56,7 @@ _logger = get_logger(__name__)
 suppress_legacy_restart = False
 
 DEMO_PROMPT = "Add a small campfire next to the cabin"
-TAB_IDS = ("AGENT", "THREE_D", "MEDIA", "SPLAT", "GENERATIONS", "QUEUE")
+TAB_IDS = ("AGENT", "THREE_D", "IMAGE", "VIDEO", "SPLAT", "GENERATIONS", "QUEUE")
 ISLAND_EXPANDED_MIN_HEIGHT = 160   # px; the pill is 25/44 logical, the bubble >= 230
 ISLAND_OPEN_SETTLE_S = 1.0         # pill_cat appears on the pill's first draw
 A_PILL_CAT = {"surface": "pill_cat"}
@@ -386,6 +386,11 @@ _ACTIONS = {
     "ui_mode": ui_mode,
     "tour_cleanup": tour_cleanup,
 }
+
+# Library source + Creator Program Help menu (split out for size).
+from .actions_extra import EXTRA_ACTIONS  # noqa: E402
+
+_ACTIONS.update(EXTRA_ACTIONS)
 
 
 def run(name: str, args: dict) -> bool:

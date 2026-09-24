@@ -42,6 +42,11 @@ DRAW_TARGETS = (
     ("SpaceMixieChat", "WINDOW"),
 )
 
+# The modal's timer runs at 30 Hz; if it has not ticked for this long, a
+# popup is holding the event loop and the app-timer ticker takes over.
+FALLBACK_TICK_AFTER_S = 0.12
+FALLBACK_TICK_INTERVAL_S = 1.0 / 30.0
+
 # Endings the user chose or reached: the tour has been seen.
 DELIBERATE_ENDINGS = ("completed", "exited")
 
@@ -84,6 +89,7 @@ class SessionLifecycleMixin:
                                      on_end=self._on_runner_end)
             self._install_draw_handlers()
             self.running = True
+            self._start_fallback_ticker()
             session_mod._current = self
             self._started_wall = time.monotonic()
             self._last_wall = self._started_wall
@@ -132,6 +138,11 @@ class SessionLifecycleMixin:
         self.running = False
         beat_id = self.runner.beat.id if (self.runner and self.runner.beat) else ""
         self._remove_draw_handlers()
+        try:
+            from . import actions_extra
+            actions_extra.reset_transients()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Tour: transient reset skipped: %s", exc)
         try:
             if self.runner is not None and self.runner.status != STATUS_ENDED:
                 self.runner.status = STATUS_ENDED
@@ -194,6 +205,29 @@ class SessionLifecycleMixin:
         # this flag, fades the card out and stops.
         self.completed = True
         self._end_requested = True
+
+    # -- fallback ticker -------------------------------------------------
+
+    def _start_fallback_ticker(self) -> None:
+        """An open popup menu (the Help menu the tour opens) takes every
+        window event, the modal's timer included. ``bpy.app.timers`` run
+        outside event dispatch, so this keeps the tour ticking — video,
+        overlays, the menu's own close — whenever the modal has gone quiet."""
+        def _fallback():
+            if not self.running:
+                return None
+            if time.monotonic() - self._last_wall > FALLBACK_TICK_AFTER_S:
+                try:
+                    self.tick()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("Tour: fallback tick failed: %r", exc)
+                    self.stop("error")
+                    return None
+            return FALLBACK_TICK_INTERVAL_S if self.running else None
+        try:
+            bpy.app.timers.register(_fallback, first_interval=FALLBACK_TICK_INTERVAL_S)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Tour: fallback ticker unavailable: %s", exc)
 
     # -- draw handlers ---------------------------------------------------
 

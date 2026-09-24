@@ -599,12 +599,20 @@ class TOPBAR_MT_window(Menu):
 class TOPBAR_MT_help(Menu):
     bl_label = "Help"
 
-    def draw(self, _context):
+    def draw(self, context):
         layout = self.layout
 
         layout.operator("wm.url_open", text="About Mixar", icon='INFO').url = "https://www.mixar.app/about"
         layout.operator("wm.url_open", text="Documentation", icon='HELP').url = "https://www.mixar.app/docs"
         layout.operator("wm.url_open", text="Report a Bug", icon='URL').url = "https://www.mixar.app/bug-report"
+        layout.separator()
+        # The onboarding tour opens this menu with the row highlighted while
+        # it talks about the program (WindowManager ID property it sets).
+        wm = context.window_manager
+        highlighted = wm is not None and wm.get("mixar_tour_highlight") == "creator_program"
+        layout.operator(
+            "wm.url_open", text="Creator Program", icon='COMMUNITY', depress=highlighted,
+        ).url = "https://www.mixar.app/creator-program"
 
 
 class TOPBAR_MT_file_context_menu(Menu):

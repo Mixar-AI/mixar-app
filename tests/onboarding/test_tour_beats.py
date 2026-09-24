@@ -108,6 +108,11 @@ def test_mixar_intro_anchors_are_none_or_non_empty():
             if ov.kind == B.OVERLAY_CAPTION:
                 # Drawn under the card by the session: never positioned.
                 assert ov.anchor is None and ov.at_pct is None, (b.id, ov.id)
+            elif ov.kind == B.OVERLAY_CALLOUT:
+                # Sits beside a real widget (a row of the open Help menu).
+                assert ov.anchor and ov.title, (b.id, ov.id)
+            elif ov.kind == B.OVERLAY_KEYS:
+                assert ov.rows and ov.at_pct is not None, (b.id, ov.id)
             elif ov.anchor is None:
                 # An un-anchored overlay needs a fallback position.
                 assert ov.at_pct is not None, (b.id, ov.id)
@@ -119,7 +124,7 @@ def test_mixar_intro_overlay_windows_sit_inside_their_beat():
         assert len(ids) == len(set(ids)), b.id
         for ov in b.overlays:
             assert ov.kind in (B.OVERLAY_CURSOR, B.OVERLAY_SCRIBBLE, B.OVERLAY_HINT,
-                               B.OVERLAY_CAPTION)
+                               B.OVERLAY_CAPTION, B.OVERLAY_CALLOUT, B.OVERLAY_KEYS)
             if ov.appear_ms is not None:
                 assert b.enter_ms <= ov.appear_ms <= b.clip_end_ms, (b.id, ov.id)
             if ov.disappear_ms is not None:
