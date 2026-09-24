@@ -83,6 +83,23 @@ def test_capture_failure_never_raises(tc):
     assert tc.m.list_checkpoints("sess-1") == []
 
 
+def test_capture_keeps_a_snapshot_saved_with_pack_errors(tc):
+    # Autopack + a missing texture: Blender writes the copy, then bpy.ops
+    # raises for the "Unable to pack file" reports. The checkpoint must stay.
+    real_save = tc.bpy.ops.wm.save_as_mainfile.side_effect
+
+    def save_then_report(**kw):
+        real_save(**kw)
+        raise RuntimeError("Error: Unable to pack file, source path '/c/x.png' not found")
+
+    tc.bpy.ops.wm.save_as_mainfile.side_effect = save_then_report
+    record = tc.m.capture(_scene(), "x")
+    assert record is not None
+    assert [r["id"] for r in tc.m.list_checkpoints("sess-1")] == [record["id"]]
+    assert os.path.isfile(tc.m._file_path(record))
+    assert not [f for f in os.listdir(tc.m.session_dir("sess-1")) if f.endswith(".tmp.mixar")]
+
+
 def test_bind_request_persists_the_command_id(tc):
     scene = _scene()
     record = tc.m.capture(scene, "one")
