@@ -135,6 +135,7 @@ void mixie_chat_render_messages(const bContext *C,
       float msg_top = layout.y_pos + layout.bubble_height + metrics.label_height;
       float msg_bottom = layout.y_pos - layout.slot_todo_height -
                          layout.slot_actions_height - layout.slot_steps_height -
+                         layout.slot_gallery_height -
                          layout.thinking_height - layout.feedback_row_height -
                          layout.feedback_submitted_comment_height -
                          layout.feedback_comment_input_height - action_zone_h;
@@ -373,6 +374,9 @@ void mixie_chat_render_messages(const bContext *C,
         }
         if (layout.slot_steps_height > 0.0f) {
           action_btn_y -= metrics.bubble_spacing + layout.slot_steps_height;
+        }
+        if (layout.slot_gallery_height > 0.0f) {
+          action_btn_y -= metrics.bubble_spacing + layout.slot_gallery_height;
         }
         if (layout.thinking_height > 0.0f) {
           action_btn_y -= metrics.bubble_spacing + layout.thinking_height;
