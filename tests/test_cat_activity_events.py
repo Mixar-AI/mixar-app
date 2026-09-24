@@ -153,3 +153,39 @@ def test_native_bridge_properties_are_transient_decimal_strings():
     assert source.count('StringProperty(') == 2
     assert source.count("options={'HIDDEN', 'SKIP_SAVE'}") == 2
     assert 'FloatProperty' not in source
+
+
+def _bubble(bubble_id):
+    return Bubble(sender='AGENT', bubble_id=bubble_id, step_items=Rows(),
+                  thinking_active=False, thinking_text='', thinking_collapsed=True,
+                  thinking_start_time=0.0, thinking_duration_ms=0, ephemeral='',
+                  content='', text='', images_collapsed=False)
+
+
+def test_script_row_joins_the_bubble_its_activity_opened(fixture):
+    """The backend's `running` activity opens the row on the steps bubble; the
+    script RPC for the same call lands on THAT row, not on the newest bubble
+    (a text bubble that opened in between)."""
+    scene, steps_bubble, _, _ = fixture
+    steps_recorder.record_activity(scene, {'bubble_id': 'current', 'call_id': 'call-1',
+                                           'tool': 'execute_bpy_script', 'status': 'running',
+                                           'label': 'Ran a script', 'kind': 'tool'})
+    scene.mixie_chat_messages.append(_bubble('later-text'))
+    steps_recorder.record_step_start(scene, 'req-1', 'execute_bpy_script', call_id='call-1')
+    assert len(steps_bubble.step_items) == 1
+    assert steps_bubble.step_items[0].item_id == 'req-1'
+    assert scene.mixie_chat_messages[-1].step_items == []
+
+
+def test_activity_result_joins_the_row_the_script_opened(fixture):
+    """The RPC beat the stream line: its row sits on the bubble that was newest
+    then. The activity for the same call merges into it wherever it is, even
+    when stamped with another bubble id."""
+    scene, first, _, _ = fixture
+    steps_recorder.record_step_start(scene, 'req-1', 'execute_bpy_script', call_id='call-1')
+    scene.mixie_chat_messages.append(_bubble('later-text'))
+    steps_recorder.record_activity(scene, {'bubble_id': 'later-text', 'call_id': 'call-1',
+                                           'tool': 'execute_bpy_script', 'status': 'done',
+                                           'label': 'Ran a script', 'kind': 'tool'})
+    assert len(first.step_items) == 1
+    assert scene.mixie_chat_messages[-1].step_items == []

@@ -55,6 +55,26 @@ def _find_bubble_with_step(scene, request_id: str):
     return None
 
 
+def _find_bubble_with_call(scene, call_id: str):
+    """Return the bubble holding a step row for backend `call_id`, or None.
+
+    The two views of one tool call — the backend's `activity` payload and the
+    script RPC the tool dispatched — arrive on different paths in no fixed
+    order. Whichever lands second joins the row the first one opened, on THAT
+    bubble, instead of the newest bubble (which may be a text bubble that
+    opened in between and would then draw the step beneath its text).
+    """
+    messages = getattr(scene, "mixie_chat_messages", None)
+    if not messages or not call_id:
+        return None
+    for idx in range(len(messages) - 1, -1, -1):
+        msg = messages[idx]
+        for row in msg.step_items:
+            if getattr(row, "call_id", "") == call_id:
+                return msg
+    return None
+
+
 def _find_bubble_by_id(scene, bubble_id: str):
     messages = getattr(scene, "mixie_chat_messages", None)
     if not messages or not bubble_id:
@@ -75,7 +95,7 @@ def record_step_start(scene, request_id: str, tool_name: str, script: str = "",
         # bookkeeping — the user only sees steps that do something for them.
         if is_internal_step(tool_name, request_id):
             return
-        bubble = _find_active_agent_bubble(scene)
+        bubble = _find_bubble_with_call(scene, call_id) or _find_active_agent_bubble(scene)
         if bubble is None:
             logger.debug("[STEPS] No agent bubble for %s, skipping row", tool_name)
             return
@@ -170,7 +190,9 @@ def record_activity(scene, activity: dict) -> None:
     ``GET /agent/images/{session}/{id}`` and attached when they land.
     """
     try:
-        bubble = _find_bubble_by_id(scene, str(activity.get("bubble_id") or ""))
+        bubble = _find_bubble_with_call(scene, str(activity.get("call_id") or ""))
+        if bubble is None:
+            bubble = _find_bubble_by_id(scene, str(activity.get("bubble_id") or ""))
         if bubble is None:
             bubble = _find_active_agent_bubble(scene)
         if bubble is None:
