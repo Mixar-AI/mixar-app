@@ -40,6 +40,8 @@
 #include "WM_types.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Selection State Helpers
@@ -50,8 +52,7 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
   ScrArea *area = CTX_wm_area(C);
   /* SPACE_AGENT_BUBBLE has a layout-compatible spacedata struct
    * (see DNA_space_types.h), so this cast is valid for both. */
-  if (area && (area->spacetype == SPACE_MIXIE_CHAT ||
-               area->spacetype == SPACE_AGENT_BUBBLE))
+  if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
     return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }
@@ -114,7 +115,8 @@ char *mixie_chat_get_selected_text(const bContext *C)
     if (sel_len <= 0) {
       return nullptr;
     }
-    char *selected = static_cast<char *>(MEM_mallocN(size_t(sel_len) + 1, "chat_selected_text"));
+    char *selected = static_cast<char *>(
+        MEM_new_uninitialized(size_t(sel_len) + 1, "chat_selected_text"));
     memcpy(selected, seg_text + sel_start, size_t(sel_len));
     selected[sel_len] = '\0';
     return selected;
@@ -148,16 +150,16 @@ char *mixie_chat_get_selected_text(const bContext *C)
 
   /* Dynamically allocate text buffer based on actual string length */
   int text_len = RNA_property_string_length(&msg_ptr, text_prop);
-  char *text_buffer = static_cast<char *>(MEM_mallocN(text_len + 1, "chat_text"));
+  char *text_buffer = static_cast<char *>(MEM_new_uninitialized(text_len + 1, "chat_text"));
   RNA_property_string_get(&msg_ptr, text_prop, text_buffer);
 
   /* If content is empty, try text as fallback */
   if (text_len == 0) {
-    MEM_freeN(text_buffer);
+    MEM_delete_void(static_cast<void *>(text_buffer));
     PropertyRNA *fallback_prop = RNA_struct_find_property(&msg_ptr, "text");
     if (fallback_prop) {
       text_len = RNA_property_string_length(&msg_ptr, fallback_prop);
-      text_buffer = static_cast<char *>(MEM_mallocN(text_len + 1, "chat_text"));
+      text_buffer = static_cast<char *>(MEM_new_uninitialized(text_len + 1, "chat_text"));
       RNA_property_string_get(&msg_ptr, fallback_prop, text_buffer);
     }
   }
@@ -172,17 +174,17 @@ char *mixie_chat_get_selected_text(const bContext *C)
 
   int sel_len = sel_end - sel_start;
   if (sel_len <= 0) {
-    MEM_freeN(text_buffer);
+    MEM_delete_void(static_cast<void *>(text_buffer));
     return nullptr;
   }
 
   /* Copy selected substring */
-  char *selected = static_cast<char *>(MEM_mallocN(sel_len + 1, "chat_selected_text"));
+  char *selected = static_cast<char *>(MEM_new_uninitialized(sel_len + 1, "chat_selected_text"));
   memcpy(selected, text_buffer + sel_start, sel_len);
   selected[sel_len] = '\0';
 
   /* Free dynamically allocated text buffer */
-  MEM_freeN(text_buffer);
+  MEM_delete_void(static_cast<void *>(text_buffer));
 
   return selected;
 }
@@ -320,6 +322,19 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
     return OPERATOR_CANCELLED;
   }
 
+  /* The island's single region also hosts its header and composer. A press
+   * outside the message view band is theirs (the header's "+" is a
+   * ui::Button that fires on RELEASE, so its PRESS reaches this keymap): the
+   * hit-tests below convert region pixels to View2D coordinates, and a
+   * header click mapped onto a capture tile of the still-loaded previous
+   * session and opened the lightbox — a blocking modal — over the new chat. */
+  {
+    MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
+    if (rt->view_band_valid && !BLI_rcti_isect_pt(&rt->view_band, event->mval[0], event->mval[1])) {
+      return OPERATOR_CANCELLED | OPERATOR_PASS_THROUGH;
+    }
+  }
+
   /* Check for scroll-to-bottom indicator click first (screen-space) */
   if (mixie_chat_handle_scroll_indicator_click(
           smixie, region, float(event->mval[0]), float(event->mval[1])))
@@ -329,7 +344,9 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
   }
 
   /* Check for empty prompt clicks first (when chat is empty) */
-  if (mixie_chat_handle_empty_prompt_click(C, float(event->mval[0]), float(event->mval[1]))) {
+  if (mixie_chat_handle_empty_prompt_click(
+        C, region, float(event->mval[0]), float(event->mval[1])))
+  {
     return OPERATOR_FINISHED;
   }
 
@@ -368,6 +385,11 @@ static wmOperatorStatus mixie_chat_select_invoke(bContext *C, wmOperator *op, co
      * handlers, and in the Agent Bubble the global LEFTMOUSE binding starts
      * a window drag from inside the message card. */
     if (mixie_chat_pos_in_message_bubble(C, region, event->mval)) {
+      return OPERATOR_FINISHED;
+    }
+    /* Canvas is up: a miss must not PASS_THROUGH to the Agent Bubble's
+     * WINDOW-level LEFTMOUSE (mixar.bubble_header_drag). */
+    if (mixie_chat_ensure_runtime(smixie)->ink_overlay_active) {
       return OPERATOR_FINISHED;
     }
     /* Clicked outside any message — pass the event through so handlers
@@ -496,7 +518,7 @@ static wmOperatorStatus mixie_chat_copy_exec(bContext *C, wmOperator * /*op*/)
   }
 
   WM_clipboard_text_set(selected, false);
-  MEM_freeN(selected);
+  MEM_delete_void(static_cast<void *>(selected));
 
   return OPERATOR_FINISHED;
 }
@@ -514,3 +536,4 @@ void MIXIE_CHAT_OT_copy(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

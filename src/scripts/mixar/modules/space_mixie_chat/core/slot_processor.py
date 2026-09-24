@@ -34,7 +34,7 @@ def _fast_set(bubble, prop_name: str, value) -> None:
     Attribute assignment on Python-registered properties routes through
     ``rna_property_update`` which, for ID-properties, tags the owning
     Scene's depsgraph (TRANSFORM|GEOMETRY|PARAMETERS) and broadcasts
-    ``NC_WINDOW`` + ``NC_ID`` notifiers — i.e. every streamed SSE chunk
+    ``NC_WINDOW`` + ``NC_ID`` notifiers — i.e. every streamed agent chunk
     forced a full-app redraw and a scene re-evaluation. Subscript
     assignment writes the same underlying ID-property storage (the RNA
     reads used by the C++ renderer see it identically) but skips that
@@ -83,6 +83,11 @@ def finalize_turn(scene) -> None:
     - Collapses each bubble's live thinking into the "Thought for Ns" dropdown.
     - Marks any still-RUNNING tool steps DONE so their animation settles.
     - Hides lingering loaders.
+    - Settles the Parallel Agents cards — unless the RUN is still open: the
+      orchestrator ends its turn right after delegating and the workers on
+      those cards keep building between turns, so their clocks and progress
+      keep running; ``SessionManager.set_run`` settles them when the run
+      closes (``run_status: completed``, a cancel, abort).
     A retry then starts from a clean, settled transcript instead of interleaving
     with a half-finished turn.
     """
@@ -100,12 +105,20 @@ def finalize_turn(scene) -> None:
         if getattr(msg, "loader_visible", False):
             msg.loader_visible = False
 
+    from .session import get_session_manager
+    if not get_session_manager().run_open(scene):
+        try:
+            from mixar.modules.agent_panel.core.cards import settle_running
+            settle_running()
+        except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
+            logger.debug("Agent panel settle failed", exc_info=True)
+
     _bump_layout_epoch(scene)
 
 
 class SlotEventProcessor:
     """
-    Processes slot-based SSE events for chat bubble rendering.
+    Processes slot-based agent events for chat bubble rendering.
 
     Slot events contain a bubble_id and one or more slot updates:
     - loader: Animated loading indicator with rotating messages
@@ -134,11 +147,6 @@ class SlotEventProcessor:
             event_data: Event dict with bubble_id and slot updates
             scene: The Blender scene to operate on
         """
-        # First slot event - reset drop count
-        if self._session.get_state(scene) == SessionState.BUSY:
-            from .queue_processor import reset_sse_drop_count
-            reset_sse_drop_count()
-
         bubble_id = event_data.get("bubble_id")
         if not bubble_id:
             logger.warning("[SLOT] Event missing bubble_id, skipping")
@@ -154,6 +162,7 @@ class SlotEventProcessor:
         slot_handlers = [
             ("questions", lambda: self._apply_questions_slot(bubble, event_data["questions"])),
             ("interrupt_id", lambda: self._apply_interrupt_id_slot(bubble, event_data["interrupt_id"])),
+            ("question_ref", lambda: self._apply_question_ref_slot(bubble, event_data["question_ref"])),
             ("input_type", lambda: self._apply_input_type_slot(bubble, event_data["input_type"], scene)),
             ("interrupt_context", lambda: self._apply_interrupt_context_slot(bubble, event_data["interrupt_context"])),
             ("loader", lambda: self._apply_loader_slot(bubble, event_data["loader"], scene)),
@@ -198,6 +207,14 @@ class SlotEventProcessor:
     @staticmethod
     def _apply_interrupt_id_slot(bubble: Any, interrupt_id: str) -> None:
         bubble.interrupt_id = interrupt_id or ""
+
+    @staticmethod
+    def _apply_question_ref_slot(bubble: Any, ref: Any) -> None:
+        """Harness v3 durable question identity (run/task/question ids only)."""
+        import json as _json
+        ref = ref if isinstance(ref, dict) else {}
+        keep = {k: str(ref[k])[:120] for k in ("run_id", "task_id", "question_id") if ref.get(k)}
+        bubble.question_ref = _json.dumps(keep) if keep else ""
 
     def _get_or_create_bubble(self, bubble_id: str, scene) -> Optional[Any]:
         """
@@ -303,6 +320,8 @@ class SlotEventProcessor:
 
         self._reparse_content_markdown(bubble, is_append=("append" in content_data))
         if scene is not None:
+            from .cat_activity import note_content
+            note_content(scene, content_data)
             _bump_layout_epoch(scene)
 
     def _reparse_content_markdown(self, bubble: Any, is_append: bool) -> None:
@@ -369,6 +388,8 @@ class SlotEventProcessor:
         from .thinking_lifecycle import apply_ephemeral_to_bubble
 
         finalized = apply_ephemeral_to_bubble(bubble, ephemeral_data, time.time())
+        from .cat_activity import note_ephemeral
+        note_ephemeral(scene, ephemeral_data)
         if finalized:
             # The dropdown is a new block — force a C++ layout rebuild.
             _bump_layout_epoch(scene)
@@ -390,14 +411,14 @@ class SlotEventProcessor:
         # 'confirm' is the Yes/No/Cancel prompt (request_user_input's fourth
         # input_type). Its omission here is why the actions slot grew a
         # derive-the-state-from-the-buttons fallback: without it a confirm
-        # decayed to Idle on SSE-complete with its buttons still on screen,
+        # decayed to Idle on turn completion with its buttons still on screen,
         # and typed text went to /agent/chat instead of answering the question.
         if input_type in ('text', 'choice', 'confirm', 'approval',
                           'file_save', 'file_open'):
             # Agent has paused for the user — free-form text, a choice
             # button, or an approval button. All three use AWAITING_INPUT:
-            # the state survives SSE stream completion (see
-            # _handle_sse_complete_internal), so the status pill reads
+            # the state survives agent stream completion (see
+            # _handle_agent_complete_internal), so the status pill reads
             # "Awaiting input" instead of decaying BUSY -> IDLE while the
             # question is still on screen. Text typed while a choice /
             # approval prompt is up is routed as an input response
@@ -465,6 +486,14 @@ class SlotEventProcessor:
         if status_counts['IN_PROGRESS'] > 0:
             self._start_loader_timer()
 
+        # The same task list drives the Parallel Agents panel. Fail-soft: a
+        # mirror failure must never break the chat's own todo rendering.
+        try:
+            from mixar.modules.agent_panel.core.cards import mirror_todo_items
+            mirror_todo_items(bubble.todo_items)
+        except Exception:  # noqa: BLE001
+            logger.debug("Agent panel mirror failed", exc_info=True)
+
     def _apply_steps_slot(self, bubble: Any, steps_data: dict, scene) -> None:
         """
         Apply steps slot update (full replacement of the steps block).
@@ -489,10 +518,17 @@ class SlotEventProcessor:
         Args:
             bubble: Message PropertyGroup
             actions: List of dicts with label, value, style, and (for
-                asset-picker options) asset_name/library/blend_file/asset_type
+                asset-picker options) asset_name/library/blend_file/asset_type/score
             scene: The Blender scene (for asset-picker preview generation)
         """
         from . import asset_choice_previews
+        from . import asset_picker
+
+        # An agent asset question shows the top five picks, never more — the
+        # island's Library-style picker grid is sized for exactly those.
+        # input_type is applied before actions in the same event.
+        if getattr(bubble, "input_type", "") == "choice":
+            actions = asset_picker.cap_asset_actions(actions)
 
         prev_count = len(bubble.action_items)
 
@@ -527,6 +563,10 @@ class SlotEventProcessor:
             action.library = action_data.get("library") or ""
             action.blend_file = action_data.get("blend_file") or ""
             action.asset_type = action_data.get("asset_type") or ""
+            score = action_data.get("score")
+            action.score = (float(score)
+                            if isinstance(score, (int, float)) and not isinstance(score, bool)
+                            and 0.0 <= score <= 1.0 else -1.0)
             if action.asset_name and action.blend_file:
                 has_asset_options = True
 
@@ -536,6 +576,11 @@ class SlotEventProcessor:
         # .blend preview first, render fallback) — thumbnails pop in per tick.
         if has_asset_options and scene is not None:
             asset_choice_previews.schedule(scene, bubble)
+        # A pending asset question takes over the island's Agent tab as a
+        # Library-style grid (core/asset_picker.py): start on the best match
+        # and bring that tab forward.
+        if has_asset_options:
+            asset_picker.present(bubble)
 
         # Buttons alone must NEVER drive the session state — _apply_input_type_slot
         # is the one owner of the AWAITING_INPUT transition. Every paused turn
@@ -545,8 +590,8 @@ class SlotEventProcessor:
         # "Retry failed tasks" chip (turn_actions, graph already at END), the
         # credits-upgrade CTA, the turn-resume prompt, and the locally replayed
         # batched-choice cards. Deriving the state here flipped those into
-        # AWAITING_INPUT, which SSE-complete deliberately refuses to reset
-        # (queue_processor._handle_sse_complete_internal), stranding the pill on
+        # AWAITING_INPUT, which turn completion deliberately refuses to reset
+        # (queue_processor._handle_agent_complete_internal), stranding the pill on
         # "Awaiting Input" and making the retry chip's own IDLE-only handler
         # reject the click the chip exists to make.
 
@@ -558,8 +603,22 @@ class SlotEventProcessor:
             bubble: Message PropertyGroup
             images: List of dicts with url, alt, caption, thumbnail_url, width, height
         """
-        # Clear existing items
+        # Replace the backend-owned gallery only. Tiles tagged with a step_id
+        # were recorded locally by steps_recorder from this client's own
+        # captures and are not the backend's to replace.
+        kept = [
+            {
+                "url": img.url, "alt": img.alt, "caption": img.caption,
+                "thumbnail_url": img.thumbnail_url, "local_path": img.local_path,
+                "width": img.width, "height": img.height, "step_id": img.step_id,
+            }
+            for img in bubble.image_items if img.step_id
+        ]
         bubble.image_items.clear()
+        for data in kept:
+            img = bubble.image_items.add()
+            for key, value in data.items():
+                setattr(img, key, value)
 
         # Add new items
         for img_data in images:

@@ -116,14 +116,8 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
                            RNA_property_boolean_get(&img_item_ptr, flip_vertical_prop) :
                            false;
 
-  /* Calculate display size */
-  void *lock;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-  float display_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
-  float display_height = (ibuf && ibuf->x > 0 && ibuf->y > 0) ?
-                             (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale :
-                             MOODBOARD_IMAGE_BASE_SIZE * scale;
-  BKE_image_release_ibuf(image, ibuf, lock);
+  const float display_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
+  const float display_height = display_width * mixie_moodboard_image_aspect(image);
 
   /* Normalize box coordinates (handle drag in any direction) */
   float norm_x1 = std::min(box_x1, box_x2);
@@ -203,7 +197,7 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
     immEnd();
 
     /* Draw crop handles: L-shaped corners + edge midpoint lines */
-    float inv_zoom = 1.0f / UI_view2d_scale_get_x(v2d);
+    float inv_zoom = 1.0f / ui::view2d_scale_get_x(v2d);
     float corner_len = 20.0f * inv_zoom;   /* Length of each L arm */
     float edge_len = 14.0f * inv_zoom;     /* Length of edge midpoint lines */
     float mid_x = (crop_x1 + crop_x2) / 2;

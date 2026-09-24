@@ -17,6 +17,7 @@ import math
 
 from .capture import capture_beat
 from .frame_math import frames_per_beat
+from .shot_api import shot_scene
 
 # (key, label, tooltip)
 CAMERA_MOVES = (
@@ -24,6 +25,11 @@ CAMERA_MOVES = (
     ("ORBIT_RIGHT", "Orbit Right", "Arc right around the subject, keeping it framed"),
     ("DOLLY_IN", "Dolly In", "Move toward the subject along the view direction"),
     ("DOLLY_OUT", "Dolly Out", "Move away from the subject along the view direction"),
+    (
+        "DOLLY_ZOOM",
+        "Dolly Zoom",
+        "Dolly in while widening the lens so the subject holds its size (Vertigo)",
+    ),
     ("CRANE_UP", "Crane Up", "Rise above the subject while keeping it framed"),
     ("CRANE_DOWN", "Crane Down", "Descend toward the ground while keeping it framed"),
     ("PAN_LEFT", "Pan Left", "Rotate the camera left in place"),
@@ -100,8 +106,8 @@ def move_poses(scene, camera, move: str):
             offset = rotation @ (location - pivot)
             poses.append(_aim_at(pivot + offset, pivot))
         return poses
-    if move in {"DOLLY_IN", "DOLLY_OUT"}:
-        sign = 1.0 if move == "DOLLY_IN" else -1.0
+    if move in {"DOLLY_IN", "DOLLY_OUT", "DOLLY_ZOOM"}:
+        sign = -1.0 if move == "DOLLY_OUT" else 1.0
         target = matrix.copy()
         target.translation = location + forward * (distance * _DOLLY_FACTOR * sign)
         return [target]
@@ -119,6 +125,17 @@ def move_poses(scene, camera, move: str):
     raise ValueError(f"Unknown camera move '{move}'")
 
 
+def lens_scale(move: str) -> float:
+    """Focal-length factor a move applies at its target pose.
+
+    A dolly zoom keeps the subject the same size on screen while the
+    background perspective warps: apparent size goes as focal / distance,
+    so dollying to ``(1 - _DOLLY_FACTOR)`` of the subject distance widens
+    the lens by the same factor. Every other move leaves the lens alone.
+    """
+    return 1.0 - _DOLLY_FACTOR if move == "DOLLY_ZOOM" else 1.0
+
+
 def apply_camera_move(context, shot, state, move: str) -> list[int]:
     """Capture the current pose plus each target pose as sparse keyframes.
 
@@ -127,7 +144,7 @@ def apply_camera_move(context, shot, state, move: str) -> list[int]:
     reallocates the collection and invalidates any beat reference taken
     before it.
     """
-    scene = shot.scene_ref or context.scene
+    scene = shot_scene(shot, context.scene)
     camera = shot.camera
     poses = move_poses(scene, camera, move)
     stride = frames_per_beat(
@@ -141,10 +158,16 @@ def apply_camera_move(context, shot, state, move: str) -> list[int]:
         # Anchor the move where the camera stands right now, unless the
         # playhead already sits on a captured keyframe of this shot.
         frames.append(int(capture_beat(context, shot, state.beat_seconds).frame))
+    scale = lens_scale(move)
+    # The lens is keyed by capture_beat alongside the pose, so a dolly zoom
+    # only has to set it before each target capture.
+    start_lens = float(camera.data.lens) if scale != 1.0 else None
     for pose in poses:
         if frames:
             scene.frame_set(frames[-1] + stride)
         camera.matrix_world = pose
+        if start_lens is not None:
+            camera.data.lens = max(1.0, start_lens * scale)
         context.view_layer.update()
         frames.append(int(capture_beat(context, shot, state.beat_seconds).frame))
     return frames

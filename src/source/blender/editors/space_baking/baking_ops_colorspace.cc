@@ -19,6 +19,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -32,8 +33,7 @@ namespace blender::ed::baking {
 static wmOperatorStatus pixels_to_srgb_exec(bContext *C, wmOperator *op)
 {
   /* Get RNA properties. */
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -53,7 +53,7 @@ static wmOperatorStatus pixels_to_srgb_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   /* Convert linear to sRGB. */
 #ifdef _OPENMP
@@ -89,8 +89,7 @@ static wmOperatorStatus pixels_to_srgb_exec(bContext *C, wmOperator *op)
 static wmOperatorStatus pixels_to_linear_exec(bContext *C, wmOperator *op)
 {
   /* Get RNA properties. */
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -110,7 +109,7 @@ static wmOperatorStatus pixels_to_linear_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   /* Convert sRGB to linear. */
 #ifdef _OPENMP
@@ -146,8 +145,7 @@ static wmOperatorStatus pixels_to_linear_exec(bContext *C, wmOperator *op)
 static wmOperatorStatus batch_srgb_to_linear_exec(bContext *C, wmOperator *op)
 {
   /* Get RNA properties. */
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -167,7 +165,7 @@ static wmOperatorStatus batch_srgb_to_linear_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const int total_pixels = width * height;
 
   /* Convert sRGB to linear for selected channels. */
@@ -207,8 +205,7 @@ static wmOperatorStatus batch_srgb_to_linear_exec(bContext *C, wmOperator *op)
 static wmOperatorStatus batch_linear_to_srgb_exec(bContext *C, wmOperator *op)
 {
   /* Get RNA properties. */
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -228,7 +225,7 @@ static wmOperatorStatus batch_linear_to_srgb_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const int total_pixels = width * height;
 
   /* Convert linear to sRGB for selected channels. */
@@ -263,6 +260,10 @@ static wmOperatorStatus batch_linear_to_srgb_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -279,7 +280,7 @@ void BAKING_OT_pixels_to_srgb(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "start_x", 0, 0, 32768, "Start X", "", 0, 32768);
@@ -300,7 +301,7 @@ void BAKING_OT_pixels_to_linear(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "start_x", 0, 0, 32768, "Start X", "", 0, 32768);
@@ -321,7 +322,7 @@ void BAKING_OT_batch_srgb_to_linear(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_boolean(ot->srna, "convert_r", true, "Convert Red", "");
@@ -341,7 +342,7 @@ void BAKING_OT_batch_linear_to_srgb(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_boolean(ot->srna, "convert_r", true, "Convert Red", "");
@@ -350,3 +351,4 @@ void BAKING_OT_batch_linear_to_srgb(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

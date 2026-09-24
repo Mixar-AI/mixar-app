@@ -12,12 +12,22 @@
 
 #pragma once
 
+#include <algorithm>
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Layout Constants
  * \{ */
 
 /* Base UI unit height (unscaled pixels) */
 #define FOOTER_UI_UNIT_BASE 20
+
+/* Left text inset the native Text widget applies while editing
+ * (UI_TEXT_MARGIN_X in interface_intern.hh, which is private to the
+ * interface module): button_text_padding() = round(0.4 * U.widget_unit). */
+#define FOOTER_TEXT_MARGIN_X 0.4f
 
 /* Minimum number of visible text lines in the multi-line input field */
 #define FOOTER_INPUT_LINE_COUNT 3
@@ -29,12 +39,39 @@
 #define FOOTER_MAX_HEIGHT 1000
 
 /* Maximum attachments per message. Matches MAX_ATTACHMENTS_PER_MESSAGE
- * in the Python side (space_mixie_chat/constants.py); the backend
- * can't process more in a single turn. */
-#define FOOTER_MAX_ATTACHMENTS 5
+ * in the Python side (space_mixie_chat/constants.py). Thumbnails wrap
+ * onto extra rows when a single row would overflow the footer width. */
+#define FOOTER_MAX_ATTACHMENTS 10
 
 /* Maximum attachment collection size for sanity checking */
 #define FOOTER_MAX_ATTACHMENT_COUNT 100
+
+/** How many thumbnail columns fit in `available_width` (same units as size/spacing). */
+inline int footer_attachment_columns(int available_width,
+                                     int thumb_size,
+                                     int spacing,
+                                     int count)
+{
+  if (count <= 0 || thumb_size <= 0) {
+    return 1;
+  }
+  if (available_width <= thumb_size) {
+    return 1;
+  }
+  const int gap = std::max(0, spacing);
+  const int stride = thumb_size + gap;
+  return std::max(1, std::min(count, (available_width + gap) / stride));
+}
+
+/** Row count for a wrapped thumbnail strip. */
+inline int footer_attachment_rows(int count, int columns)
+{
+  if (count <= 0) {
+    return 0;
+  }
+  const int cols = std::max(1, columns);
+  return (count + cols - 1) / cols;
+}
 
 /** \} */
 
@@ -70,6 +107,16 @@
 
 /* Dropdown internal padding (horizontal) */
 #define FOOTER_DROPDOWN_PADDING_BASE 8
+
+/* Agent model picker width — sized for a "Claude Sonnet 4.6"-length label.
+ * It is a ceiling, not a demand: a narrow footer clips it (the widget elides
+ * its own text) and drops it below FOOTER_MODEL_BUTTON_MIN_BASE rather than
+ * letting it collide with the attach button. */
+#define FOOTER_MODEL_BUTTON_WIDTH_BASE 150
+
+/* Below this the label carries no information, so the control is not drawn.
+ * The Agent island keeps its own model chip either way. */
+#define FOOTER_MODEL_BUTTON_MIN_BASE 54
 
 /* Style guide button width */
 #define FOOTER_STYLE_BUTTON_WIDTH_BASE 90
@@ -114,3 +161,5 @@
 #define FOOTER_DEFAULT_MAIN_GAP 4.0f
 
 /** \} */
+
+}  // namespace blender

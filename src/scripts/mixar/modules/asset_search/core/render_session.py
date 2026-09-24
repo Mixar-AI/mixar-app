@@ -23,6 +23,7 @@ from pathlib import Path
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.render_coordinator import core as render_slot
 from mixar.modules.asset_search.utils.preview_render import (
     LinkedBlend,
     PreviewRenderRig,
@@ -191,8 +192,7 @@ class RenderSession:
     # -- lifecycle -------------------------------------------------------
 
     def start(self):
-        self._rig = PreviewRenderRig(self.context.scene, size=512)
-        self._rig.__enter__()
+        """Scene setup is item-scoped so modal ticks never retain a preview rig."""
 
     def finish(self):
         self._linked.release()
@@ -221,7 +221,9 @@ class RenderSession:
 
         started = _time.monotonic()
         attempted = 0
-        while not self.done:
+        while not self.done and attempted < count:
+            if render_slot.busy():
+                break
             item = self.items[self.index]
             self.index += 1
             attempted += 1
@@ -276,7 +278,12 @@ class RenderSession:
 
         # No usable thumbnail — a render needs a real local copy.
         self._linked.release()
-        self._render_appended(item, info, img_name, out_path)
+        with PreviewRenderRig(self.context.scene, size=512) as rig:
+            self._rig = rig
+            try:
+                self._render_appended(item, info, img_name, out_path)
+            finally:
+                self._rig = None
 
     def _render_appended(self, item, info, img_name, out_path):
         """Append the asset, render it, and clean the local copy up.
@@ -303,7 +310,7 @@ class RenderSession:
                 scene.collection.objects.link(obj)
                 bpy.context.view_layer.update()
                 frame_camera(self._rig.camera, [obj])
-                rendered = render_to_jpeg(scene, out_path)
+                rendered = render_to_jpeg(scene, out_path, render_token=self._rig.token)
                 scene.collection.objects.unlink(obj)
             finally:
                 if obj.name in bpy.data.objects:
@@ -321,7 +328,7 @@ class RenderSession:
                     self.failures.append((self.current_label, "empty collection"))
                     return
                 frame_camera(self._rig.camera, objects)
-                rendered = render_to_jpeg(scene, out_path)
+                rendered = render_to_jpeg(scene, out_path, render_token=self._rig.token)
             finally:
                 if coll.name in bpy.data.collections:
                     if coll.name in {c.name for c in scene.collection.children}:

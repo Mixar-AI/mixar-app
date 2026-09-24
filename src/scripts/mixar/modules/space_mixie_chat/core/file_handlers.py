@@ -28,38 +28,12 @@ logger = get_logger(__name__)
 
 
 def _send_abort_request(session_id: str) -> None:
-    """Send abort request to backend (runs in background thread)."""
+    """Cancel the backend run through the authenticated agent socket."""
+    from mixar.modules.common.agent_rpc.client import request
     try:
-        import httpx
-        from mixar.config.config import get_server_url
-
-        base_url = get_server_url()
-
-        from .message_helpers import get_auth_token
-        auth_token = get_auth_token()
-
-        if not auth_token:
-            logger.warning("No auth token available for file-load abort request")
-            return
-
-        url = f"{base_url}/api/v1/blender/agent/cancel"
-        headers = {"Authorization": f"Bearer {auth_token}"}
-        payload = {"session_id": session_id}
-
-        with httpx.Client(timeout=5.0) as client:
-            response = client.post(url, json=payload, headers=headers)
-
-            if response.status_code == 200:
-                logger.info(
-                    "Backend session aborted on file load: %s", session_id[:8]
-                )
-            else:
-                logger.warning(
-                    "Failed to abort backend session on file load: HTTP %d",
-                    response.status_code,
-                )
-    except Exception as e:
-        logger.error("Failed to send abort request on file load: %s", e)
+        request('cancel', {'session_id': session_id}, mutation=True)
+    except Exception as exc:
+        logger.warning('Agent cancellation could not be confirmed: %s', exc)
 
 
 @persistent
@@ -72,21 +46,32 @@ def _on_load_pre(*_args) -> None:
     from .export_destination import clear_all_destinations
     from .import_source import clear_all_sources
     from .session import get_session_manager
+    from .turn_checkpoints import is_restoring
+
+    if is_restoring():
+        # A turn-checkpoint restore reads a snapshot of THIS session while it
+        # is idle (core/turn_checkpoints.py): the session continues, nothing
+        # to abort.
+        logger.info("load_pre: turn checkpoint restore in progress, session kept")
+        return
 
     clear_all_destinations()
     clear_all_sources()
 
     session = get_session_manager()
 
-    # Collect session IDs from active scenes before cleanup
+    # Collect session IDs from active scenes before cleanup. A scene whose
+    # turn is IDLE but whose run is still open has workers building on the
+    # backend — that run is aborted too.
     active_session_ids = []
     for scene in bpy.data.scenes:
         state = session.get_state(scene)
         if state in (SessionState.BUSY, SessionState.MODIFYING,
-                     SessionState.AWAITING_INPUT):
+                     SessionState.AWAITING_INPUT) or session.run_open(scene):
             sid = session.get_session_id(scene)
             if sid:
                 active_session_ids.append(sid)
+            session.set_run(scene, "", False)
             session.set_state(scene, SessionState.IDLE)
 
     if not active_session_ids:
@@ -97,17 +82,17 @@ def _on_load_pre(*_args) -> None:
         f"load_pre: aborting {len(active_session_ids)} active agent session(s)"
     )
 
-    # Stop all SSE streams
-    from .sse_handler import cleanup_all_sse_handlers
-    cleanup_all_sse_handlers()
+    # Stop all agent streams
+    from .turn_transport import cleanup_all_turn_handlers
+    cleanup_all_turn_handlers()
 
     # Flush queued tool scripts
     from .main_thread_executor import cleanup as flush_executor_queue
     flush_executor_queue()
 
-    # Clean up the SSE event queue and timer
-    from .queue_processor import cleanup_sse_queue
-    cleanup_sse_queue()
+    # Clean up the agent event queue and timer
+    from .queue_processor import cleanup_event_queue
+    cleanup_event_queue()
 
     # Stop loader animations
     from .animation_manager import stop_loader_animation
@@ -145,6 +130,11 @@ def _on_load_post(*_args) -> None:
     offered back on 'AGENT' instead of a mode the user can no longer see.
     """
     import bpy as _bpy
+
+    # load_pre stops the old file's event consumer. The socket can stay live,
+    # so resume consumption without requiring another connection or UI send.
+    from .turn_events import arm
+    arm()
 
     for scene in _bpy.data.scenes:
         try:

@@ -10,7 +10,6 @@ Public surface:
         # Helpers for concrete queue implementations
         get_queue_with_listener,
         create_scene_flag_listener,
-        show_batch_summary_popup,
         download_images_to_moodboard,
         extract_image_urls,
     )
@@ -25,7 +24,6 @@ from .core.helpers import (
     create_scene_flag_listener,
     extract_image_urls,
     get_queue_with_listener,
-    show_batch_summary_popup,
 )
 
 __all__ = (
@@ -45,5 +43,4 @@ __all__ = (
     "download_images_to_moodboard",
     "extract_image_urls",
     "get_queue_with_listener",
-    "show_batch_summary_popup",
 )

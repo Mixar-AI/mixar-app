@@ -13,8 +13,13 @@ import bpy
 from bpy.types import Operator
 
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
+from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import (
+    first_selected_reference_still,
+    selected_reference_still_entries,
+    selected_reference_stills,
+)
 
 
 # =============================================================================
@@ -32,27 +37,21 @@ class MIXIE_OT_segment_to_3d_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        if not context.space_data or context.space_data.type != 'MIXIE':
+        if not is_moodboard_context(context):
             return False
         # Require at least one image selected
         scene = context.scene
-        if hasattr(scene, 'mixie_moodboard_images'):
-            for img_item in scene.mixie_moodboard_images:
-                if img_item.selected and is_still_item(img_item):
-                    return True
-        return False
+        return bool(selected_reference_stills(scene))
 
     def invoke(self, context, event):
         return context.window_manager.invoke_popup(self, width=450)
 
     def _get_selected_image(self, context):
-        """Get the first selected image and its index"""
-        scene = context.scene
-        if hasattr(scene, 'mixie_moodboard_images'):
-            for i, img_item in enumerate(scene.mixie_moodboard_images):
-                if img_item.selected and is_still_item(img_item):
-                    return i, img_item
-        return -1, None
+        """Get the first selected image and its collection index."""
+        entries = selected_reference_still_entries(context.scene)
+        if not entries:
+            return -1, None
+        return entries[0]
 
     def draw(self, context):
         layout = self.layout
@@ -168,7 +167,7 @@ class MIXIE_OT_scene_recon_popup(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def invoke(self, context, event):
         sidebar = context.scene.mixie_moodboard_sidebar
@@ -222,13 +221,10 @@ class MIXIE_OT_scene_recon_popup(Operator):
         row.label(text="Use Selected Moodboard Image")
 
         if tab.use_selected_image:
-            selected = [
-                item for item in scene.mixie_moodboard_images
-                if item.selected and is_still_item(item)
-            ]
-            if selected:
+            img = first_selected_reference_still(scene)
+            if img:
                 row = box_col.row()
-                row.label(text=f"Selected: {selected[0].image.name}", icon='CHECKMARK')
+                row.label(text=f"Selected: {img.name}", icon='CHECKMARK')
             else:
                 row = box_col.row()
                 row.label(text="No image selected in moodboard", icon='ERROR')
@@ -278,7 +274,7 @@ class MIXIE_OT_scene_recon_generate_and_close(Operator):
     def poll(cls, context):
         if not MIXIE_SPACE_AVAILABLE:
             return False
-        return context.space_data and context.space_data.type == 'MIXIE'
+        return is_moodboard_context(context)
 
     def execute(self, context):
         bpy.ops.mixie.scene_recon_generate()

@@ -38,6 +38,8 @@
 
 #include "mixie_chat_history_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name RNA Readers (Python-owned WindowManager data)
@@ -54,11 +56,46 @@ static void history_read_string(PointerRNA *ptr, PropertyRNA *prop, char *buf, i
   int len = 0;
   char *value = RNA_property_string_get_alloc(ptr, prop, fixed, sizeof(fixed), &len);
   if (value) {
-    BLI_strncpy(buf, value, buf_maxncpy);
+    BLI_strncpy_utf8(buf, value, buf_maxncpy); /* titles may hold multi-byte text */
     if (value != fixed) {
-      MEM_freeN(value);
+      MEM_delete_void(static_cast<void *>(value));
     }
   }
+}
+
+HistoryMode mixie_chat_history_read_mode(wmWindowManager *wm)
+{
+  if (!wm) {
+    return HistoryMode::Chats;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixie_chat_history_mode");
+  if (!prop) {
+    return HistoryMode::Chats;
+  }
+  return RNA_property_enum_get(&wm_ptr, prop) == 1 ? HistoryMode::Checkpoints :
+                                                      HistoryMode::Chats;
+}
+
+bool mixie_chat_history_read_locked(wmWindowManager *wm)
+{
+  if (!wm) {
+    return false;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixie_chat_history_locked");
+  return prop ? RNA_property_boolean_get(&wm_ptr, prop) : false;
+}
+
+void mixie_chat_history_read_notice(wmWindowManager *wm, char *buf, int buf_maxncpy)
+{
+  buf[0] = '\0';
+  if (!wm) {
+    return;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixie_chat_history_notice");
+  history_read_string(&wm_ptr, prop, buf, buf_maxncpy);
 }
 
 bool mixie_chat_history_read_visible(wmWindowManager *wm)
@@ -87,6 +124,7 @@ void mixie_chat_history_read_entries(wmWindowManager *wm,
   PropertyRNA *p_sid = nullptr;
   PropertyRNA *p_when = nullptr;
   PropertyRNA *p_group = nullptr;
+  PropertyRNA *p_action = nullptr;
 
   CollectionPropertyIterator iter;
   RNA_property_collection_begin(&wm_ptr, entries_prop, &iter);
@@ -98,12 +136,14 @@ void mixie_chat_history_read_entries(wmWindowManager *wm,
       p_sid = RNA_struct_find_property(&item_ptr, "session_id");
       p_when = RNA_struct_find_property(&item_ptr, "when");
       p_group = RNA_struct_find_property(&item_ptr, "group");
+      p_action = RNA_struct_find_property(&item_ptr, "action");
     }
     HistoryDrawEntry entry;
     history_read_string(&item_ptr, p_name, entry.title, sizeof(entry.title));
     history_read_string(&item_ptr, p_sid, entry.session_id, sizeof(entry.session_id));
     history_read_string(&item_ptr, p_when, entry.when, sizeof(entry.when));
     history_read_string(&item_ptr, p_group, entry.group, sizeof(entry.group));
+    history_read_string(&item_ptr, p_action, entry.action, sizeof(entry.action));
     if (entry.session_id[0] != '\0') {
       r_items.append(entry);
     }
@@ -125,22 +165,28 @@ void mixie_chat_history_reset_runtime(MixieChatRuntime *rt)
   rt->history_confirm_id[0] = '\0';
 }
 
+void mixie_chat_history_dispatch_id_op(bContext *C,
+                                       ARegion *region,
+                                       const char *op_idname,
+                                       const char *prop_name,
+                                       const char *id)
+{
+  wmOperatorType *ot = WM_operatortype_find(op_idname, true);
+  if (!ot || id[0] == '\0') {
+    return;
+  }
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
+  RNA_string_set(&op_ptr, prop_name, id);
+  mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
+  WM_operator_properties_free(&op_ptr);
+}
+
 void mixie_chat_history_dispatch_session_op(bContext *C,
                                             ARegion *region,
                                             const char *op_idname,
                                             const char *session_id)
 {
-  wmOperatorType *ot = WM_operatortype_find(op_idname, true);
-  if (!ot || session_id[0] == '\0') {
-    return;
-  }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
-  RNA_string_set(&op_ptr, "session_id", session_id);
-  WM_operator_name_call_ptr(
-      C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
-  WM_operator_properties_free(&op_ptr);
-  ED_region_tag_redraw(region);
+  mixie_chat_history_dispatch_id_op(C, region, op_idname, "session_id", session_id);
 }
 
 /** \} */
@@ -220,3 +266,4 @@ void hist_draw_x_glyph(float cx, float cy, float half, const float color[4], flo
 }
 
 /** \} */
+}  // namespace blender

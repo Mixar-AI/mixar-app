@@ -3,34 +3,49 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""
-Moodboard Toolbar Panel
-
-Left T-panel toolbar with core moodboard actions:
-  • Add Image  — add an existing or new image from disk
-  • Add Text   — add a text box to the canvas
-  • Crop       — crop the selected image
-  • Mask Tools — popover with Box Mask, Lasso, and Magic Select
-  • Lasso      — direct Multi-Lasso Mask shortcut (primary gaming-workflow
-                 action; replaces the hidden Annotate button for now)
-  • Rotate     — rotate selected image 90° clockwise
-  • Send to Chat — send selected image(s) to Mixie Chat
-"""
+"""Shared canvas tools and their native media/mask/annotation menus."""
 
 import bpy
-from bpy.types import Menu, Panel
+from bpy.types import Menu
 
 
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 
 
-# Icon shown for each mask tool state
-_MASK_TOOL_ICONS = {
-    "BOX_MASK": "SELECT_SET",
-    "LASSO": "OUTLINER_DATA_GP_LAYER",
-    "MAGIC_SELECT": "SNAP_FACE",
-}
-_MASK_ICON_DEFAULT = "MOD_MASK"
+def draw_moodboard_add_tools(layout, context):
+    """One neutral, token-styled rail in both canvas hosts."""
+    surface = layout.mixar_surface(theme="ZEN", density="COMPACT")
+    surface.operator_context = "INVOKE_DEFAULT"
+    col = surface.column()
+    col.scale_x = 1.6
+    col.scale_y = 1.6
+
+    def action(op, icon="NONE", **kwargs):
+        row = col.row()
+        row.operator(op, text="", icon=icon, **kwargs)
+        row.mixar_style(component="ACTION", variant="SECONDARY")
+
+    row = col.row()
+    row.menu("MIXIE_MT_add_image_menu", text="", icon="FILE_FOLDER")
+    row.mixar_style(component="ACTION", variant="SECONDARY")
+    action("mixie.moodboard_add_textbox", "FONT_DATA")
+    action("mixie.moodboard_annotate_canvas", "GREASEPENCIL",
+           depress=context.window_manager.mixie_moodboard_annotating)
+    erasing = bool(getattr(context.window_manager, "mixie_moodboard_erasing", False))
+    if erasing or getattr(context.scene, "mixie_moodboard_annotations", None):
+        action("mixie.moodboard_erase_canvas", "ERASER", depress=erasing)
+    row = col.row()
+    row.enabled = any(item.selected and item.image and item.image.source != 'MOVIE'
+                      for item in context.scene.mixie_moodboard_images)
+    row.menu("MIXIE_MT_mask_tools", text="", icon="MOD_MASK")
+    edit_state = getattr(context.scene, "mixie_edit_tool_state", None)
+    mask_active = getattr(edit_state, "active_tool", "NONE") in {
+        "BOX_MASK", "LASSO", "MAGIC_SELECT",
+    }
+    row.mixar_style(component="ACTION", variant="SECONDARY", selected=mask_active)
+    row = col.row()
+    row.menu("MIXIE_MT_canvas_board", text="", icon="DOWNARROW_HLT")
+    row.mixar_style(component="ACTION", variant="SECONDARY")
 
 
 # A Menu (not a popover) so it auto-dismisses the instant an option is
@@ -40,13 +55,13 @@ _MASK_ICON_DEFAULT = "MOD_MASK"
 # NOTE: kept as a comment, not a docstring — a Menu's docstring is shown
 # as the button tooltip, and this rationale isn't meant for users.
 class MIXIE_MT_add_image_menu(Menu):
-    """Dropdown menu with media-adding options."""
+    """Add media or selected scene meshes"""
 
     bl_idname = "MIXIE_MT_add_image_menu"
-    bl_label = "Add Media"
+    bl_label = "Add References"
 
     def draw(self, context):
-        layout = self.layout
+        layout = self.layout.mixar_surface(theme="ZEN", density="COMPACT")
         # INVOKE_DEFAULT so each operator's invoke() runs (opening its
         # file browser / search popup) rather than executing headless.
         layout.operator_context = "INVOKE_DEFAULT"
@@ -60,23 +75,27 @@ class MIXIE_MT_add_image_menu(Menu):
             text="Add Existing Media",
             icon='IMAGE_DATA',
         )
+        layout.separator()
+        layout.operator("mixie.moodboard_add_template", text="Add Mesh",
+                        icon='OUTLINER_OB_MESH').template = 'MESH_REFERENCE'
+        layout.operator("mixie.add_selected_mesh_to_moodboard",
+                        text="Add Selected Meshes", icon='OUTLINER_OB_MESH')
 
 
-class MIXIE_PT_mask_tools_popover(Panel):
-    """
-    Popover panel with all mask selection tools.
-    Opened by clicking the single Mask Tools button in the toolbar.
-    """
+# Selecting a tool starts a blocking modal. A menu closes before invoking it;
+# a keep-open popover otherwise survives behind the modal and steals the next
+# toolbar click when the drawing gesture finishes. The docstring is the tooltip.
+class MIXIE_MT_mask_tools(Menu):
+    """Image mask selection tools"""
 
-    bl_idname = "MIXIE_PT_mask_tools_popover"
+    bl_idname = "MIXIE_MT_mask_tools"
     bl_label = "Mask Tools"
-    bl_space_type = "MIXIE" if MIXIE_SPACE_AVAILABLE else "VIEW_3D"
-    bl_region_type = "HEADER"
-    bl_ui_units_x = 9
-    bl_options = {"INSTANCED"}
 
     def draw(self, context):
-        layout = self.layout
+        layout = self.layout.mixar_surface(theme="ZEN", density="COMPACT")
+        # The drawer is TOOL_PROPS; the default INVOKE_REGION_WIN would
+        # dispatch these modals in the unrelated 3D viewport WINDOW.
+        layout.operator_context = "INVOKE_DEFAULT"
         scene = context.scene
 
         active_tool = "NONE"
@@ -122,178 +141,7 @@ class MIXIE_PT_mask_tools_popover(Panel):
             layout.label(text="Select an image first", icon="INFO")
 
 
-class MIXIE_PT_annotation_tools_popover(Panel):
-    """Freehand annotation settings and actions for one selected image."""
-
-    bl_idname = "MIXIE_PT_annotation_tools_popover"
-    bl_label = "Annotate"
-    bl_space_type = "MIXIE" if MIXIE_SPACE_AVAILABLE else "VIEW_3D"
-    bl_region_type = "HEADER"
-    bl_ui_units_x = 10
-    bl_options = {"INSTANCED"}
-
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-        state = scene.mixie_edit_tool_state
-        selected = [
-            item
-            for item in scene.mixie_moodboard_images
-            if item.selected and item.image
-        ]
-        image_item = selected[0] if len(selected) == 1 else None
-
-        col = layout.column(align=True)
-        col.enabled = image_item is not None
-        col.operator(
-            "mixie.moodboard_annotate_tool",
-            text="Draw Stroke",
-            icon="BRUSH_DATA",
-            depress=(state.active_tool == "ANNOTATE"),
-        )
-        col.separator(factor=0.4)
-        col.prop(state, "annotation_color", text="Color")
-        col.prop(state, "annotation_width", text="Width", slider=True)
-
-        if image_item is not None:
-            col.separator(factor=0.4)
-            col.prop(image_item, "show_annotations", text="Show Annotations")
-            row = col.row(align=True)
-            row.enabled = bool(image_item.annotations)
-            row.operator(
-                "mixie.moodboard_undo_annotation",
-                text="Undo Last",
-                icon="LOOP_BACK",
-            )
-            row.operator(
-                "mixie.moodboard_clear_annotations",
-                text="Clear",
-                icon="TRASH",
-            )
-            col.label(
-                text=f"{len(image_item.annotations)} stroke(s)",
-                icon="INFO",
-            )
-        else:
-            layout.separator(factor=0.3)
-            layout.label(text="Select exactly one image", icon="INFO")
-
-        if state.active_tool == "ANNOTATE":
-            layout.separator(factor=0.3)
-            layout.label(text="Drag once; release to finish", icon="MOUSE_LMB")
-            layout.label(text="Esc cancels the active stroke", icon="EVENT_ESC")
-
-
-class MIXIE_PT_moodboard_toolbar(Panel):
-    """Moodboard tools panel in the T-panel (left toolbar) region"""
-
-    bl_label = ""
-    bl_idname = "MIXIE_PT_moodboard_toolbar"
-    bl_space_type = "MIXIE" if MIXIE_SPACE_AVAILABLE else "VIEW_3D"
-    bl_region_type = "TOOLS"
-    bl_options = {"HIDE_HEADER"}
-
-    @classmethod
-    def poll(cls, context):
-        """Only show in Moodboard mode."""
-        if not MIXIE_SPACE_AVAILABLE:
-            return False
-        smixie = context.space_data
-        return (
-            smixie
-            and hasattr(smixie, "mixie_mode")
-            and smixie.mixie_mode == "MOODBOARD"
-        )
-
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-
-        active_tool = "NONE"
-        if hasattr(scene, "mixie_edit_tool_state"):
-            active_tool = scene.mixie_edit_tool_state.active_tool
-
-        has_selected_image = False
-        if hasattr(scene, "mixie_moodboard_images"):
-            has_selected_image = any(
-                img.selected and img.image and img.image.source != 'MOVIE'
-                for img in scene.mixie_moodboard_images
-            )
-
-        layout.separator(factor=0.5)
-
-        col = layout.column(align=True)
-
-        # ── Add Image (menu) ──────────────────────────────────────────
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.menu(
-            "MIXIE_MT_add_image_menu",
-            text="",
-            icon="FILE_FOLDER",
-        )
-
-        col.separator(factor=0.6)
-
-        # ── Mask Tools (single popover) ────────────────────────────────
-        # Icon reflects the currently active mask tool for instant feedback.
-        mask_icon = _MASK_TOOL_ICONS.get(active_tool, _MASK_ICON_DEFAULT)
-        any_mask_active = active_tool in _MASK_TOOL_ICONS
-
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.enabled = has_selected_image
-        row.popover(
-            panel="MIXIE_PT_mask_tools_popover",
-            text="",
-            icon=mask_icon,
-        )
-
-        col.separator(factor=0.6)
-
-        # ── Multi-Lasso Mask (direct shortcut) ────────────────────────
-        # The Annotate button/popover lived here; hidden for now — lasso
-        # segmentation is the primary gaming-workflow action, so it gets
-        # the slot. Annotation operators and the popover stay registered
-        # (moodboard UX overhaul will revisit this toolbar).
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.enabled = has_selected_image
-        row.operator(
-            "mixie.moodboard_lasso_tool",
-            text="",
-            icon="OUTLINER_DATA_GP_LAYER",
-            depress=(active_tool == "LASSO"),
-        )
-
-        col.separator(factor=0.6)
-
-        # ── Add Text ───────────────────────────────────────────────────
-        row = col.row(align=True)
-        row.scale_x = 1.5
-        row.scale_y = 1.5
-        row.operator("mixie.moodboard_add_textbox", text="", icon="FONT_DATA")
-
-        # "Send to Mixie Chat" toolbar button removed — moodboard
-        # selection auto-mirrors into the chat composer's attachments
-        # via the polling sync in moodboard.core.chat_sync. The
-        # operator and ``P`` keymap remain for muscle memory but the
-        # toolbar entry was redundant and confusing.
-
-        layout.separator(factor=0.5)
-
-
-# Only include panels if MIXIE space is available
 classes = (
-    (
-        MIXIE_MT_add_image_menu,
-        MIXIE_PT_mask_tools_popover,
-        MIXIE_PT_annotation_tools_popover,
-        MIXIE_PT_moodboard_toolbar,
-    )
-    if MIXIE_SPACE_AVAILABLE
-    else ()
-)
+    MIXIE_MT_add_image_menu,
+    MIXIE_MT_mask_tools,
+) if MIXIE_SPACE_AVAILABLE else ()

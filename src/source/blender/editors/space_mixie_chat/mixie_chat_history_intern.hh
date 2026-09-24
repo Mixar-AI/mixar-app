@@ -6,7 +6,9 @@
  * \ingroup spmixiechat
  *
  * Shared internals of the past-chats overlay, split across:
- *   - mixie_chat_history_overlay.cc  (panel layout + drawing)
+ *   - mixie_chat_history_overlay.cc  (panel layout, search, the draw frame)
+ *   - mixie_chat_history_chrome.cc   (scrim, card, header, footer, empty state)
+ *   - mixie_chat_history_rows.cc     (rows, hit rects, scrollbar)
  *   - mixie_chat_history_events.cc   (clicks, keys, scroll, cursor)
  *   - mixie_chat_history_util.cc     (RNA readers, text/glyph helpers)
  */
@@ -16,6 +18,10 @@
 #include <cstddef>
 
 #include "BLI_vector.hh"
+
+#include "DNA_vec_types.h"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct ARegion;
 struct bContext;
@@ -90,10 +96,80 @@ struct HistoryDrawEntry {
   char when[24];
   char group[32];
   char session_id[128];
+  /** Checkpoints: the armed-row prompt ("Revert turns 3–5?"), from Python. */
+  char action[48];
 };
+
+/** One row or section header of the display list the overlay builds. */
+struct HistoryDisplayItem {
+  int entry_index;   /* index into the entries, -1 = group header */
+  const char *group; /* header label (points into the entries vector) */
+  float content_top; /* px offset from content top, grows downward */
+  float height;
+};
+
+/** The measured layout of one draw, filled by mixie_chat_history_overlay.cc
+ * and consumed by the chrome and rows files. Screen-space, region-local. */
+struct HistoryDrawFrame {
+  MixieChatRuntime *rt = nullptr;
+  const blender::Vector<HistoryDrawEntry> *entries = nullptr;
+  const blender::Vector<HistoryDisplayItem> *items = nullptr;
+  const char *current_id = "";
+  const char *notice = "";
+  const char *footer_lines[3] = {nullptr, nullptr, nullptr};
+  int footer_count = 0;
+  int filtered_count = 0;
+  int entries_count = 0;
+  bool checkpoints = false;
+  bool locked = false;
+  bool store_empty = false;
+  bool no_matches = false;
+  int font_id = 0;
+  int title_px = 0;
+  int meta_px = 0;
+  int group_px = 0;
+  int header_px = 0;
+  float scale = 1.0f;
+  float pad = 0.0f;
+  float header_h = 0.0f;
+  float footer_line_h = 0.0f;
+  float slide = 0.0f;
+  float ease = 1.0f;
+  float panel_x = 0.0f;
+  float panel_w = 0.0f;
+  float list_top = 0.0f;
+  float list_bottom = 0.0f;
+  float view_h = 0.0f;
+  float content_h = 0.0f;
+  float max_scroll = 0.0f;
+  float mouse_x = -1000.0f;
+  float mouse_y = -1000.0f;
+  int winx = 0;
+  int winy = 0;
+  rctf panel = {0.0f, 0.0f, 0.0f, 0.0f}; /* already slid */
+};
+
+/* mixie_chat_history_chrome.cc */
+void mixie_chat_history_draw_chrome(const HistoryDrawFrame &f);
+void mixie_chat_history_draw_empty(const HistoryDrawFrame &f);
+/* mixie_chat_history_rows.cc */
+void mixie_chat_history_draw_rows(const HistoryDrawFrame &f);
+
+/* The card lists past chats or the session's turn checkpoints; Python sets
+ * the mode (WindowManager.mixie_chat_history_mode) when it opens the card.
+ * Checkpoints: no search, rows arm-to-confirm (the prompt names the turns
+ * the click reverts or reapplies), a footer explains the model, and a
+ * locked card (agent busy) shows the reason. */
+enum class HistoryMode { Chats = 0, Checkpoints = 1 };
+inline constexpr float HIST_FOOTER_LINE_HEIGHT = 17.0f;
+inline constexpr float HIST_FOOTER_PAD = 6.0f;
+inline constexpr float HIST_CHECKPOINT_TITLE_INDENT = 12.0f;
 
 /* mixie_chat_history_util.cc */
 
+HistoryMode mixie_chat_history_read_mode(wmWindowManager *wm);
+bool mixie_chat_history_read_locked(wmWindowManager *wm);
+void mixie_chat_history_read_notice(wmWindowManager *wm, char *buf, int buf_maxncpy);
 bool mixie_chat_history_read_visible(wmWindowManager *wm);
 void mixie_chat_history_read_entries(wmWindowManager *wm,
                                      blender::Vector<HistoryDrawEntry> &r_items);
@@ -104,6 +180,12 @@ void mixie_chat_history_dispatch_session_op(bContext *C,
                                             ARegion *region,
                                             const char *op_idname,
                                             const char *session_id);
+/** Same, for an operator whose single string property is `prop_name`. */
+void mixie_chat_history_dispatch_id_op(bContext *C,
+                                       ARegion *region,
+                                       const char *op_idname,
+                                       const char *prop_name,
+                                       const char *id);
 
 void hist_draw_label(
     const char *text, int font_id, int font_px, float x, float baseline_y, const float color[4]);
@@ -114,3 +196,4 @@ void hist_text_ellipsis(
 void hist_draw_x_glyph(float cx, float cy, float half, const float color[4], float scale);
 
 /** \} */
+}  // namespace blender

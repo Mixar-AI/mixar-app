@@ -25,3 +25,8 @@ BASIC_WORKSPACE_NAME = "Zen Mode"
 # Blender's stock default first tab, so Engine mode opens where a Blender
 # user expects (mirrors the startup.blend's default active workspace).
 PRO_DEFAULT_WORKSPACE_NAME = "Layout"
+
+# The only tools Zen Mode's left strip surfaces, in design order (top to
+# bottom). Shared with the strip's toggle logic so the buttons and the
+# "is this a transform tool?" test cannot drift apart.
+ZEN_TRANSFORM_TOOL_IDS = ("builtin.move", "builtin.rotate", "builtin.scale")

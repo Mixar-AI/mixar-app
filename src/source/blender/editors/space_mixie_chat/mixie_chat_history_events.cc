@@ -32,6 +32,8 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
+#include "BKE_global.hh"
+#include "BKE_main.hh"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -46,6 +48,8 @@
 
 #include "mixie_chat_history_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Helpers
@@ -123,6 +127,31 @@ static void history_open_row(bContext *C, ARegion *region, MixieChatRuntime *rt,
 
 /** Arm-to-confirm delete of a row: first call arms (red "Delete?"),
  * second call on the same row dispatches the delete operator. */
+/** Checkpoints card: first click on a row arms it (the accent prompt names
+ * the turns it reverts or reapplies), a second click on the same row acts and
+ * closes the card. The Python operator is called in EXEC (the arm step IS the
+ * confirmation). Which list the row sits in decides what the click does; a
+ * row is never in both, so there is no "already here" case to refuse. */
+static void history_arm_or_restore_row(bContext *C, ARegion *region, MixieChatRuntime *rt, int index)
+{
+  if (index < 0 || index >= int(rt->history_rows.size())) {
+    return;
+  }
+  char checkpoint_id[128];
+  BLI_strncpy(checkpoint_id, rt->history_rows[index].session_id, sizeof(checkpoint_id));
+  if (STREQ(rt->history_confirm_id, checkpoint_id)) {
+    rt->history_confirm_id[0] = '\0';
+    mixie_chat_history_set_visible(C, false);
+    mixie_chat_history_dispatch_id_op(
+        C, region, "mixie_chat.restore_checkpoint", "checkpoint_id", checkpoint_id);
+  }
+  else {
+    BLI_strncpy(rt->history_confirm_id, checkpoint_id, sizeof(rt->history_confirm_id));
+    rt->history_sel = index;
+    ED_region_tag_redraw(region);
+  }
+}
+
 static void history_arm_or_delete_row(bContext *C, ARegion *region, MixieChatRuntime *rt, int index)
 {
   if (index < 0 || index >= int(rt->history_rows.size())) {
@@ -156,7 +185,12 @@ bool mixie_chat_history_cursor(
 
   bool needs_redraw = false;
   bool any_hovered = false;
-  const bool in_list = BLI_rctf_isect_pt(&rt->history_list_bounds, mouse_x, mouse_y);
+  /* A locked checkpoints card (agent busy) dims its rows and ignores clicks;
+   * the hand cursor must not promise otherwise. */
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
+  const bool locked = (mixie_chat_history_read_mode(wm) == HistoryMode::Checkpoints) &&
+                      mixie_chat_history_read_locked(wm);
+  const bool in_list = !locked && BLI_rctf_isect_pt(&rt->history_list_bounds, mouse_x, mouse_y);
   for (HistoryRowHit &row : rt->history_rows) {
     const bool was_hovered = row.is_hovered;
     const bool was_delete = row.delete_hovered;
@@ -191,7 +225,9 @@ bool mixie_chat_history_cursor(
 static bool history_handle_key(bContext *C,
                                ARegion *region,
                                MixieChatRuntime *rt,
-                               const wmEvent *event)
+                               const wmEvent *event,
+                               const bool checkpoints,
+                               const bool locked)
 {
   const int row_count = int(rt->history_rows.size());
 
@@ -217,6 +253,12 @@ static bool history_handle_key(bContext *C,
       /* Enter opens the keyboard selection; while searching with no
        * selection it opens the first (best) match. */
       int index = rt->history_sel;
+      if (checkpoints) {
+        if (!locked) {
+          history_arm_or_restore_row(C, region, rt, index);
+        }
+        return true;
+      }
       if (index < 0 && rt->history_search[0] != '\0' && row_count > 0) {
         index = 0;
       }
@@ -252,7 +294,9 @@ static bool history_handle_key(bContext *C,
     }
 
     case EVT_DELKEY:
-      history_arm_or_delete_row(C, region, rt, rt->history_sel);
+      if (!checkpoints) {
+        history_arm_or_delete_row(C, region, rt, rt->history_sel);
+      }
       return true;
 
     case EVT_BACKSPACEKEY: {
@@ -271,8 +315,9 @@ static bool history_handle_key(bContext *C,
       break;
   }
 
-  /* Printable input appends to the always-focused search query. */
-  if (event->utf8_buf[0] != '\0' && uchar(event->utf8_buf[0]) >= 32 &&
+  /* Printable input appends to the always-focused search query (the
+   * checkpoints card has no search). */
+  if (!checkpoints && event->utf8_buf[0] != '\0' && uchar(event->utf8_buf[0]) >= 32 &&
       (event->modifier & (KM_CTRL | KM_ALT | KM_OSKEY)) == 0)
   {
     const int char_len = BLI_str_utf8_size_safe(event->utf8_buf);
@@ -298,7 +343,7 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
   ScrArea *area = CTX_wm_area(C);
   ARegion *region = CTX_wm_region(C);
   if (!area || !region || !area->spacedata.first ||
-      (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE))
+      (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return false;
   }
@@ -308,9 +353,12 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
     return false;
   }
 
+  wmWindowManager *wm = CTX_wm_manager(C);
+  const bool checkpoints = (mixie_chat_history_read_mode(wm) == HistoryMode::Checkpoints);
+  const bool locked = checkpoints && mixie_chat_history_read_locked(wm);
   if (ISKEYBOARD(event->type)) {
     if (event->val == KM_PRESS) {
-      return history_handle_key(C, region, rt, event);
+      return history_handle_key(C, region, rt, event, checkpoints, locked);
     }
     return true; /* Consume releases too — the overlay is modal. */
   }
@@ -363,7 +411,12 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
     bool over_delete = false;
     const int index = history_hit_row(rt, mx, my, &over_delete);
     if (index >= 0) {
-      if (over_delete) {
+      if (checkpoints) {
+        if (!locked) {
+          history_arm_or_restore_row(C, region, rt, index);
+        }
+      }
+      else if (over_delete) {
         rt->history_sel = index;
         history_arm_or_delete_row(C, region, rt, index);
       }
@@ -385,3 +438,4 @@ bool mixie_chat_history_handle_event(bContext *C, const wmEvent *event)
 }
 
 /** \} */
+}  // namespace blender

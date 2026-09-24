@@ -15,7 +15,12 @@ from typing import Optional
 
 import bpy
 
-from .constants import TIMER_INTERVAL, TOASTS_VISIBLE_WM_PROP
+from .constants import (
+    ANIMATION_INTERVAL,
+    FADE_DURATION_MS,
+    TIMER_INTERVAL,
+    TOASTS_VISIBLE_WM_PROP,
+)
 
 _timer_lock = threading.Lock()
 _timer_active = False
@@ -61,10 +66,15 @@ def _toast_tick() -> Optional[float]:
 
     if remaining > 0:
         visible = store.get_visible()
-        # If all remaining toasts are sticky, use a slower tick rate
-        all_sticky = all(item.is_sticky for item in visible)
+        # Wake at the next fade boundary, then paint every frame only while
+        # fading. Expiry polling must not quantize a short dissolve to 1–2 frames.
+        fades_in = [item.remaining_ms - FADE_DURATION_MS
+                    for item in visible if not item.is_sticky]
         _tag_redraw_view3d()
-        return TIMER_INTERVAL * 5 if all_sticky else TIMER_INTERVAL
+        if not fades_in:
+            return TIMER_INTERVAL * 5
+        until_fade = min(fades_in) / 1000.0
+        return max(ANIMATION_INTERVAL, min(TIMER_INTERVAL, until_fade))
 
     # No more toasts — stop the timer and remove the draw handler
     with _timer_lock:
@@ -109,8 +119,16 @@ def ensure_toast_timer_running() -> None:
     bpy.app.timers.register(_start_on_main, first_interval=0)
 
 
-def cleanup_toast_timer() -> None:
-    """Unregister the timer and draw handler, and clear all notifications."""
+def cleanup_toast_timer(app_exit: bool = False) -> None:
+    """Unregister the timer and draw handler, and clear all notifications.
+
+    ``app_exit=True`` marks the atexit path: Python finalizes AFTER
+    ``BKE_blender_free()`` (see WM_exit_ex), so ``bpy.data`` and the
+    spacetype draw-handler registries are already freed — writing the WM
+    visibility flag or removing the draw handler there is a use-after-free
+    segfault, and neither matters for a dying process. Only silence the
+    timer and drop the pure-Python store.
+    """
     global _timer_active
 
     with _timer_lock:
@@ -119,10 +137,11 @@ def cleanup_toast_timer() -> None:
     if bpy.app.timers.is_registered(_toast_tick):
         bpy.app.timers.unregister(_toast_tick)
 
-    _set_toasts_visible_flag(False)
+    if not app_exit:
+        _set_toasts_visible_flag(False)
 
-    from .toast_renderer import remove_draw_handler
-    remove_draw_handler()
+        from .toast_renderer import remove_draw_handler
+        remove_draw_handler()
 
     from .store import get_notification_store
     get_notification_store().reset()

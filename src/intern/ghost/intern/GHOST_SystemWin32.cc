@@ -12,6 +12,7 @@
 
 #include "GHOST_EventDragnDrop.hh"
 #include "GHOST_EventTrackpad.hh"
+#include "GHOST_MixarGlassWin32.hh"
 #include "GHOST_SystemWin32.hh"
 
 #ifndef _WIN32_IE
@@ -326,29 +327,20 @@ GHOST_IContext *GHOST_SystemWin32::createOffscreenContext(GHOST_GPUSettings gpu_
 #ifdef WITH_OPENGL_BACKEND
     case GHOST_kDrawingContextTypeOpenGL: {
 
-      /* OpenGL needs a dummy window to create a context on windows. */
-      HWND wnd = CreateWindowA("STATIC",
-                               "MixarGLEW",
-                               WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
-                               0,
-                               0,
-                               64,
-                               64,
-                               nullptr,
-                               nullptr,
-                               GetModuleHandle(nullptr),
-                               nullptr);
-
-      HDC mHDC = GetDC(wnd);
-      HDC prev_hdc = wglGetCurrentDC();
+      /* MIXAR TODO(5.2): the offscreen dummy window (previously created here as
+       * "BlenderGLEW", branded "MixarGLEW" in the 5.0 overlay) moved into
+       * GHOST_ContextWGL.cc (OffscreenWindowHandle constructor), which Mixar does
+       * not overlay. The hidden helper window is never user-visible; overlay
+       * GHOST_ContextWGL.cc if the branding rename is still wanted. */
       HGLRC prev_context = wglGetCurrentContext();
+      HDC prev_hdc = wglGetCurrentDC();
 
       for (int minor = 6; minor >= 3; --minor) {
-        GHOST_Context *context = new GHOST_ContextWGL(
+        GHOST_ContextWGL *context = new GHOST_ContextWGL(
             context_params_offscreen,
             true,
-            wnd,
-            mHDC,
+            nullptr,
+            nullptr,
             WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
             4,
             minor,
@@ -625,7 +617,9 @@ GHOST_TCapabilityFlag GHOST_SystemWin32::getCapabilities() const
            * it's possible another modifier could be optionally used in it's place. */
           GHOST_kCapabilityKeyboardHyperKey |
           /* No support yet for cursors generated on demand. */
-          GHOST_kCapabilityCursorGenerator));
+          GHOST_kCapabilityCursorGenerator |
+          /* No support for window path meta-data. */
+          GHOST_kCapabilityWindowPath));
 }
 
 GHOST_TSuccess GHOST_SystemWin32::init()
@@ -712,6 +706,7 @@ GHOST_TKey GHOST_SystemWin32::processSpecialKey(short vKey, short /*scanCode*/) 
       key = GHOST_kKeySlash;
       break;
     case u'`':
+    case u'~':
     case u'²':
       key = GHOST_kKeyAccentGrave;
       break;
@@ -929,9 +924,9 @@ GHOST_TKey GHOST_SystemWin32::convertKey(short vKey, short scanCode, short exten
   return key;
 }
 
-GHOST_EventButton *GHOST_SystemWin32::processButtonEvent(GHOST_TEventType type,
-                                                         GHOST_WindowWin32 *window,
-                                                         GHOST_TButton mask)
+std::unique_ptr<GHOST_EventButton> GHOST_SystemWin32::processButtonEvent(GHOST_TEventType type,
+                                                                         GHOST_WindowWin32 *window,
+                                                                         GHOST_TButton mask)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
 
@@ -944,8 +939,8 @@ GHOST_EventButton *GHOST_SystemWin32::processButtonEvent(GHOST_TEventType type,
     DWORD msgPos = ::GetMessagePos();
     int msgPosX = GET_X_LPARAM(msgPos);
     int msgPosY = GET_Y_LPARAM(msgPos);
-    system->pushEvent(
-        new GHOST_EventCursor(event_ms, GHOST_kEventCursorMove, window, msgPosX, msgPosY, td));
+    system->pushEvent(std::make_unique<GHOST_EventCursor>(
+        event_ms, GHOST_kEventCursorMove, window, msgPosX, msgPosY, td));
 
     if (type == GHOST_kEventButtonDown) {
       WINTAB_PRINTF("HWND %p OS button down\n", window->getHWND());
@@ -956,7 +951,7 @@ GHOST_EventButton *GHOST_SystemWin32::processButtonEvent(GHOST_TEventType type,
   }
 
   window->updateMouseCapture(type == GHOST_kEventButtonDown ? MousePressed : MouseReleased);
-  return new GHOST_EventButton(event_ms, type, window, mask, td);
+  return std::make_unique<GHOST_EventButton>(event_ms, type, window, mask, td);
 }
 
 void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
@@ -989,7 +984,7 @@ void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
         }
 
         wt->mapWintabToSysCoordinates(info.x, info.y, info.x, info.y);
-        system->pushEvent(new GHOST_EventCursor(
+        system->pushEvent(std::make_unique<GHOST_EventCursor>(
             info.time, GHOST_kEventCursorMove, window, info.x, info.y, info.tabletData));
 
         break;
@@ -1035,12 +1030,12 @@ void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
           /* Move cursor to button location, to prevent incorrect cursor position when
            * transitioning from unsynchronized Win32 to Wintab cursor control. */
           wt->mapWintabToSysCoordinates(info.x, info.y, info.x, info.y);
-          system->pushEvent(new GHOST_EventCursor(
+          system->pushEvent(std::make_unique<GHOST_EventCursor>(
               info.time, GHOST_kEventCursorMove, window, info.x, info.y, info.tabletData));
 
           window->updateMouseCapture(MousePressed);
-          system->pushEvent(
-              new GHOST_EventButton(info.time, info.type, window, info.button, info.tabletData));
+          system->pushEvent(std::make_unique<GHOST_EventButton>(
+              info.time, info.type, window, info.button, info.tabletData));
 
           mouseMoveHandled = true;
         }
@@ -1081,8 +1076,8 @@ void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
 
           WINTAB_PRINTF(" ... associated to system button\n");
           window->updateMouseCapture(MouseReleased);
-          system->pushEvent(
-              new GHOST_EventButton(info.time, info.type, window, info.button, info.tabletData));
+          system->pushEvent(std::make_unique<GHOST_EventButton>(
+              info.time, info.type, window, info.button, info.tabletData));
         }
         else {
           WINTAB_PRINTF(" ... but no system button\n");
@@ -1101,8 +1096,8 @@ void GHOST_SystemWin32::processWintabEvent(GHOST_WindowWin32 *window)
     int y = GET_Y_LPARAM(pos);
     GHOST_TabletData td = wt->getLastTabletData();
 
-    system->pushEvent(
-        new GHOST_EventCursor(getMessageTime(system), GHOST_kEventCursorMove, window, x, y, td));
+    system->pushEvent(std::make_unique<GHOST_EventCursor>(
+        getMessageTime(system), GHOST_kEventCursorMove, window, x, y, td));
   }
 }
 
@@ -1127,12 +1122,12 @@ void GHOST_SystemWin32::processPointerEvent(
       /* Coalesced pointer events are reverse chronological order, reorder chronologically.
        * Only contiguous move events are coalesced. */
       for (uint32_t i = pointerInfo.size(); i-- > 0;) {
-        system->pushEvent(new GHOST_EventCursor(pointerInfo[i].time,
-                                                GHOST_kEventCursorMove,
-                                                window,
-                                                pointerInfo[i].pixelLocation.x,
-                                                pointerInfo[i].pixelLocation.y,
-                                                pointerInfo[i].tabletData));
+        system->pushEvent(std::make_unique<GHOST_EventCursor>(pointerInfo[i].time,
+                                                              GHOST_kEventCursorMove,
+                                                              window,
+                                                              pointerInfo[i].pixelLocation.x,
+                                                              pointerInfo[i].pixelLocation.y,
+                                                              pointerInfo[i].tabletData));
       }
 
       /* Leave event unhandled so that system cursor is moved. */
@@ -1141,17 +1136,17 @@ void GHOST_SystemWin32::processPointerEvent(
     }
     case WM_POINTERDOWN: {
       /* Move cursor to point of contact because GHOST_EventButton does not include position. */
-      system->pushEvent(new GHOST_EventCursor(pointerInfo[0].time,
-                                              GHOST_kEventCursorMove,
-                                              window,
-                                              pointerInfo[0].pixelLocation.x,
-                                              pointerInfo[0].pixelLocation.y,
-                                              pointerInfo[0].tabletData));
-      system->pushEvent(new GHOST_EventButton(pointerInfo[0].time,
-                                              GHOST_kEventButtonDown,
-                                              window,
-                                              pointerInfo[0].buttonMask,
-                                              pointerInfo[0].tabletData));
+      system->pushEvent(std::make_unique<GHOST_EventCursor>(pointerInfo[0].time,
+                                                            GHOST_kEventCursorMove,
+                                                            window,
+                                                            pointerInfo[0].pixelLocation.x,
+                                                            pointerInfo[0].pixelLocation.y,
+                                                            pointerInfo[0].tabletData));
+      system->pushEvent(std::make_unique<GHOST_EventButton>(pointerInfo[0].time,
+                                                            GHOST_kEventButtonDown,
+                                                            window,
+                                                            pointerInfo[0].buttonMask,
+                                                            pointerInfo[0].tabletData));
       window->updateMouseCapture(MousePressed);
 
       /* Mark event handled so that mouse button events are not generated. */
@@ -1160,11 +1155,11 @@ void GHOST_SystemWin32::processPointerEvent(
       break;
     }
     case WM_POINTERUP: {
-      system->pushEvent(new GHOST_EventButton(pointerInfo[0].time,
-                                              GHOST_kEventButtonUp,
-                                              window,
-                                              pointerInfo[0].buttonMask,
-                                              pointerInfo[0].tabletData));
+      system->pushEvent(std::make_unique<GHOST_EventButton>(pointerInfo[0].time,
+                                                            GHOST_kEventButtonUp,
+                                                            window,
+                                                            pointerInfo[0].buttonMask,
+                                                            pointerInfo[0].tabletData));
       window->updateMouseCapture(MouseReleased);
 
       /* Mark event handled so that mouse button events are not generated. */
@@ -1178,8 +1173,8 @@ void GHOST_SystemWin32::processPointerEvent(
   }
 }
 
-GHOST_EventCursor *GHOST_SystemWin32::processCursorEvent(GHOST_WindowWin32 *window,
-                                                         const int32_t screen_co[2])
+std::unique_ptr<GHOST_EventCursor> GHOST_SystemWin32::processCursorEvent(
+    GHOST_WindowWin32 *window, const int32_t screen_co[2])
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
 
@@ -1256,12 +1251,12 @@ GHOST_EventCursor *GHOST_SystemWin32::processCursorEvent(GHOST_WindowWin32 *wind
     y_screen += y_accum;
   }
 
-  return new GHOST_EventCursor(getMessageTime(system),
-                               GHOST_kEventCursorMove,
-                               window,
-                               x_screen,
-                               y_screen,
-                               GHOST_TABLET_DATA_NONE);
+  return std::make_unique<GHOST_EventCursor>(getMessageTime(system),
+                                             GHOST_kEventCursorMove,
+                                             window,
+                                             x_screen,
+                                             y_screen,
+                                             GHOST_TABLET_DATA_NONE);
 }
 
 void GHOST_SystemWin32::processWheelEventVertical(GHOST_WindowWin32 *window,
@@ -1282,7 +1277,7 @@ void GHOST_SystemWin32::processWheelEventVertical(GHOST_WindowWin32 *window,
   acc = abs(acc);
 
   while (acc >= WHEEL_DELTA) {
-    system->pushEvent(new GHOST_EventWheel(
+    system->pushEvent(std::make_unique<GHOST_EventWheel>(
         getMessageTime(system), window, GHOST_kEventWheelAxisVertical, direction));
     acc -= WHEEL_DELTA;
   }
@@ -1308,20 +1303,21 @@ void GHOST_SystemWin32::processWheelEventHorizontal(GHOST_WindowWin32 *window,
   acc = abs(acc);
 
   while (acc >= WHEEL_DELTA) {
-    system->pushEvent(new GHOST_EventWheel(
+    system->pushEvent(std::make_unique<GHOST_EventWheel>(
         getMessageTime(system), window, GHOST_kEventWheelAxisHorizontal, direction));
     acc -= WHEEL_DELTA;
   }
   system->wheel_delta_accum_horizontal_ = acc * direction;
 }
 
-GHOST_EventKey *GHOST_SystemWin32::processKeyEvent(GHOST_WindowWin32 *window, RAWINPUT const &raw)
+std::unique_ptr<GHOST_EventKey> GHOST_SystemWin32::processKeyEvent(GHOST_WindowWin32 *window,
+                                                                   RAWINPUT const &raw)
 {
   const char vk = raw.data.keyboard.VKey;
   bool key_down = false;
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
   GHOST_TKey key = system->hardKey(raw, &key_down);
-  GHOST_EventKey *event;
+  std::unique_ptr<GHOST_EventKey> event;
 
   /* Scan code (device-dependent identifier for the key on the keyboard) for the Alt key.
    * https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#scan-codes */
@@ -1406,12 +1402,12 @@ GHOST_EventKey *GHOST_SystemWin32::processKeyEvent(GHOST_WindowWin32 *window, RA
     }
 #endif /* WITH_INPUT_IME */
 
-    event = new GHOST_EventKey(getMessageTime(system),
-                               key_down ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
-                               window,
-                               key,
-                               is_repeat,
-                               utf8_char);
+    event = std::make_unique<GHOST_EventKey>(getMessageTime(system),
+                                             key_down ? GHOST_kEventKeyDown : GHOST_kEventKeyUp,
+                                             window,
+                                             key,
+                                             is_repeat,
+                                             utf8_char);
 
 #if 0 /* we already get this info via EventPrinter. */
     GHOST_PRINTF("%c\n", ascii);
@@ -1424,14 +1420,15 @@ GHOST_EventKey *GHOST_SystemWin32::processKeyEvent(GHOST_WindowWin32 *window, RA
   return event;
 }
 
-GHOST_Event *GHOST_SystemWin32::processWindowSizeEvent(GHOST_WindowWin32 *window)
+std::unique_ptr<GHOST_Event> GHOST_SystemWin32::processWindowSizeEvent(GHOST_WindowWin32 *window)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
-  GHOST_Event *sizeEvent = new GHOST_Event(getMessageTime(system), GHOST_kEventWindowSize, window);
+  auto sizeEvent = std::make_unique<GHOST_Event>(
+      getMessageTime(system), GHOST_kEventWindowSize, window);
 
   /* We get WM_SIZE before we fully init. Do not dispatch before we are continuously resizing. */
   if (window->in_live_resize_) {
-    system->pushEvent(sizeEvent);
+    system->pushEvent(std::move(sizeEvent));
     system->dispatchEvents();
     return nullptr;
   }
@@ -1440,8 +1437,8 @@ GHOST_Event *GHOST_SystemWin32::processWindowSizeEvent(GHOST_WindowWin32 *window
   return sizeEvent;
 }
 
-GHOST_Event *GHOST_SystemWin32::processWindowEvent(GHOST_TEventType type,
-                                                   GHOST_WindowWin32 *window)
+std::unique_ptr<GHOST_Event> GHOST_SystemWin32::processWindowEvent(GHOST_TEventType type,
+                                                                   GHOST_WindowWin32 *window)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
 
@@ -1452,16 +1449,16 @@ GHOST_Event *GHOST_SystemWin32::processWindowEvent(GHOST_TEventType type,
     system->getWindowManager()->setWindowInactive(window);
   }
 
-  return new GHOST_Event(getMessageTime(system), type, window);
+  return std::make_unique<GHOST_Event>(getMessageTime(system), type, window);
 }
 
 #ifdef WITH_INPUT_IME
-GHOST_Event *GHOST_SystemWin32::processImeEvent(GHOST_TEventType type,
-                                                GHOST_WindowWin32 *window,
-                                                const GHOST_TEventImeData *data)
+std::unique_ptr<GHOST_Event> GHOST_SystemWin32::processImeEvent(GHOST_TEventType type,
+                                                                GHOST_WindowWin32 *window,
+                                                                const GHOST_TEventImeData *data)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
-  return new GHOST_EventIME(getMessageTime(system), type, window, data);
+  return std::make_unique<GHOST_EventIME>(getMessageTime(system), type, window, data);
 }
 #endif
 
@@ -1473,7 +1470,7 @@ GHOST_TSuccess GHOST_SystemWin32::pushDragDropEvent(GHOST_TEventType eventType,
                                                     void *data)
 {
   GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)getSystem();
-  return system->pushEvent(new GHOST_EventDragnDrop(
+  return system->pushEvent(std::make_unique<GHOST_EventDragnDrop>(
       getMessageTime(system), eventType, draggedObjectType, window, mouseX, mouseY, data));
 }
 
@@ -1618,7 +1615,8 @@ void GHOST_SystemWin32::processTrackpad()
   system->getCursorPosition(cursor_x, cursor_y);
 
   if (trackpad_info.x != 0 || trackpad_info.y != 0) {
-    system->pushEvent(new GHOST_EventTrackpad(getMessageTime(system),
+    system->pushEvent(
+        std::make_unique<GHOST_EventTrackpad>(getMessageTime(system),
                                               active_window,
                                               GHOST_kTrackpadEventScroll,
                                               cursor_x,
@@ -1628,20 +1626,20 @@ void GHOST_SystemWin32::processTrackpad()
                                               trackpad_info.isScrollDirectionInverted));
   }
   if (trackpad_info.scale != 0) {
-    system->pushEvent(new GHOST_EventTrackpad(getMessageTime(system),
-                                              active_window,
-                                              GHOST_kTrackpadEventMagnify,
-                                              cursor_x,
-                                              cursor_y,
-                                              trackpad_info.scale,
-                                              0,
-                                              false));
+    system->pushEvent(std::make_unique<GHOST_EventTrackpad>(getMessageTime(system),
+                                                            active_window,
+                                                            GHOST_kTrackpadEventMagnify,
+                                                            cursor_x,
+                                                            cursor_y,
+                                                            trackpad_info.scale,
+                                                            0,
+                                                            false));
   }
 }
 
 LRESULT WINAPI GHOST_SystemWin32::s_wndProc(HWND hwnd, uint msg, WPARAM wParam, LPARAM lParam)
 {
-  GHOST_Event *event = nullptr;
+  std::unique_ptr<GHOST_Event> event = nullptr;
   bool eventHandled = false;
 
   LRESULT lResult = 0;
@@ -2416,7 +2414,7 @@ LRESULT WINAPI GHOST_SystemWin32::s_wndProc(HWND hwnd, uint msg, WPARAM wParam, 
   }
 
   if (event) {
-    system->pushEvent(event);
+    system->pushEvent(std::move(event));
     eventHandled = true;
   }
 
@@ -2524,11 +2522,13 @@ GHOST_TSuccess GHOST_SystemWin32::hasClipboardImage(void) const
             WCHAR lpszFile[MAX_PATH] = {0};
             DragQueryFileW(hDrop, 0, lpszFile, MAX_PATH);
             char *filepath = alloc_utf_8_from_16(lpszFile, 0);
-            ImBuf *ibuf = IMB_load_image_from_filepath(filepath,
-                                                       IB_byte_data | IB_multilayer | IB_test);
+            blender::ImBuf *ibuf = blender::IMB_load_image_from_filepath(
+                filepath,
+                blender::ImBufFlags::ByteData | blender::ImBufFlags::MultiLayer |
+                    blender::ImBufFlags::Test);
             free(filepath);
             if (ibuf) {
-              IMB_freeImBuf(ibuf);
+              blender::IMB_freeImBuf(ibuf);
               result = GHOST_kSuccess;
             }
           }
@@ -2561,7 +2561,8 @@ static uint *getClipboardImageFilepath(int *r_width, int *r_height)
   }
 
   if (filepath) {
-    ImBuf *ibuf = IMB_load_image_from_filepath(filepath, IB_byte_data | IB_multilayer);
+    blender::ImBuf *ibuf = blender::IMB_load_image_from_filepath(
+        filepath, blender::ImBufFlags::ByteData | blender::ImBufFlags::MultiLayer);
     free(filepath);
     if (ibuf) {
       *r_width = ibuf->x;
@@ -2569,9 +2570,9 @@ static uint *getClipboardImageFilepath(int *r_width, int *r_height)
       const uint64_t byte_count = static_cast<uint64_t>(ibuf->x) * ibuf->y * 4;
       uint *rgba = static_cast<uint *>(malloc(byte_count));
       if (rgba) {
-        memcpy(rgba, ibuf->byte_buffer.data, byte_count);
+        memcpy(rgba, ibuf->byte_data(), byte_count);
       }
-      IMB_freeImBuf(ibuf);
+      blender::IMB_freeImBuf(ibuf);
       return rgba;
     }
   }
@@ -2608,26 +2609,38 @@ static uint *getClipboardImageDibV5(int *r_width, int *r_height)
   *r_width = width;
   *r_height = height;
 
-  DWORD ColorMasks[4];
-  ColorMasks[0] = bitmapV5Header->bV5RedMask ? bitmapV5Header->bV5RedMask : 0xff;
-  ColorMasks[1] = bitmapV5Header->bV5GreenMask ? bitmapV5Header->bV5GreenMask : 0xff00;
-  ColorMasks[2] = bitmapV5Header->bV5BlueMask ? bitmapV5Header->bV5BlueMask : 0xff0000;
-  ColorMasks[3] = bitmapV5Header->bV5AlphaMask ? bitmapV5Header->bV5AlphaMask : 0xff000000;
-
-  /* Bit shifts needed for the ColorMasks. */
-  DWORD ColorShifts[4];
-  for (int i = 0; i < 4; i++) {
-    _BitScanForward(&ColorShifts[i], ColorMasks[i]);
-  }
-
   uchar *source = (uchar *)buffer;
   uint *rgba = (uint *)malloc(uint64_t(width) * height * 4);
   uint8_t *target = (uint8_t *)rgba;
 
   if (bitmapV5Header->bV5Compression == BI_BITFIELDS && bitcount == 32) {
+    /* It is unclear from the MSDN documentation whether or not the 3 RGB mask values are always
+     * written as part of the main BITMAPV5HEADER header or if they are included after the
+     * structure. In reality there are applications (Windows Snipping Tool) that write both,
+     * and there are applications (Krita, Paint.NET) that only set the header values. Handle
+     * both by checking against our expected size. */
+    const SIZE_T mask_size = sizeof(DWORD) * 3;
+    const SIZE_T actual_size = GlobalSize(hGlobal);
+    const SIZE_T expected_size = offset + (SIZE_T(width) * height * 4);
+    if (expected_size == actual_size - mask_size) {
+      source += mask_size; /* Skip redundant color masks. */
+    }
+
+    DWORD ColorMasks[4];
+    ColorMasks[0] = bitmapV5Header->bV5RedMask ? bitmapV5Header->bV5RedMask : 0xff;
+    ColorMasks[1] = bitmapV5Header->bV5GreenMask ? bitmapV5Header->bV5GreenMask : 0xff00;
+    ColorMasks[2] = bitmapV5Header->bV5BlueMask ? bitmapV5Header->bV5BlueMask : 0xff0000;
+    ColorMasks[3] = bitmapV5Header->bV5AlphaMask ? bitmapV5Header->bV5AlphaMask : 0xff000000;
+
+    /* Bit shifts needed for the ColorMasks. */
+    DWORD ColorShifts[4];
+    for (int i = 0; i < 4; i++) {
+      _BitScanForward(&ColorShifts[i], ColorMasks[i]);
+    }
+
     for (int h = 0; h < height; h++) {
       for (int w = 0; w < width; w++, target += 4, source += 4) {
-        DWORD *pix = (DWORD *)source;
+        const DWORD *pix = (DWORD *)source;
         target[0] = uint8_t((*pix & ColorMasks[0]) >> ColorShifts[0]);
         target[1] = uint8_t((*pix & ColorMasks[1]) >> ColorShifts[1]);
         target[2] = uint8_t((*pix & ColorMasks[2]) >> ColorShifts[2]);
@@ -2638,7 +2651,7 @@ static uint *getClipboardImageDibV5(int *r_width, int *r_height)
   else if (bitmapV5Header->bV5Compression == BI_RGB && bitcount == 32) {
     for (int h = 0; h < height; h++) {
       for (int w = 0; w < width; w++, target += 4, source += 4) {
-        RGBQUAD *quad = (RGBQUAD *)source;
+        const RGBQUAD *quad = (RGBQUAD *)source;
         target[0] = uint8_t(quad->rgbRed);
         target[1] = uint8_t(quad->rgbGreen);
         target[2] = uint8_t(quad->rgbBlue);
@@ -2651,7 +2664,7 @@ static uint *getClipboardImageDibV5(int *r_width, int *r_height)
     int slack = bytes_per_row - (width * 3);
     for (int h = 0; h < height; h++, source += slack) {
       for (int w = 0; w < width; w++, target += 4, source += 3) {
-        RGBTRIPLE *triple = (RGBTRIPLE *)source;
+        const RGBTRIPLE *triple = (RGBTRIPLE *)source;
         target[0] = uint8_t(triple->rgbtRed);
         target[1] = uint8_t(triple->rgbtGreen);
         target[2] = uint8_t(triple->rgbtBlue);
@@ -2679,16 +2692,16 @@ static uint *getClipboardImageImBuf(int *r_width, int *r_height, UINT format)
 
   uint *rgba = nullptr;
 
-  ImBuf *ibuf = IMB_load_image_from_memory(
-      (uchar *)pMem, GlobalSize(hGlobal), IB_byte_data, "<clipboard>");
+  blender::ImBuf *ibuf = blender::IMB_load_image_from_memory(
+      (uchar *)pMem, GlobalSize(hGlobal), blender::ImBufFlags::ByteData, "<clipboard>");
 
   if (ibuf) {
     *r_width = ibuf->x;
     *r_height = ibuf->y;
     const uint64_t byte_count = uint64_t(ibuf->x) * ibuf->y * 4;
     rgba = (uint *)malloc(byte_count);
-    memcpy(rgba, ibuf->byte_buffer.data, byte_count);
-    IMB_freeImBuf(ibuf);
+    memcpy(rgba, ibuf->byte_data(), byte_count);
+    blender::IMB_freeImBuf(ibuf);
   }
 
   GlobalUnlock(hGlobal);
@@ -2788,31 +2801,34 @@ static bool putClipboardImagePNG(uint *rgba, int width, int height)
   UINT cf = RegisterClipboardFormat("PNG");
 
   /* Load buffer into ImBuf, convert to PNG. */
-  ImBuf *ibuf = IMB_allocFromBuffer(reinterpret_cast<uint8_t *>(rgba), nullptr, width, height, 32);
-  ibuf->ftype = IMB_FTYPE_PNG;
+  blender::ImBuf *ibuf = blender::IMB_allocFromBuffer(
+      reinterpret_cast<uint8_t *>(rgba), nullptr, width, height, 32);
+  ibuf->ftype = blender::IMB_FTYPE_PNG;
   ibuf->foptions.quality = 15;
-  if (!IMB_save_image(ibuf, "<memory>", IB_byte_data | IB_mem)) {
-    IMB_freeImBuf(ibuf);
+  blender::Vector<uint8_t> encoded = blender::IMB_save_image_to_buffer(
+      ibuf, blender::ImBufFlags::ByteData);
+  if (encoded.is_empty()) {
+    blender::IMB_freeImBuf(ibuf);
     return false;
   }
 
-  HGLOBAL hMem = GlobalAlloc(GHND, ibuf->encoded_buffer_size);
+  HGLOBAL hMem = GlobalAlloc(GHND, encoded.size());
   if (!hMem) {
-    IMB_freeImBuf(ibuf);
+    blender::IMB_freeImBuf(ibuf);
     return false;
   }
 
   LPVOID pMem = GlobalLock(hMem);
   if (!pMem) {
-    IMB_freeImBuf(ibuf);
+    blender::IMB_freeImBuf(ibuf);
     GlobalFree(hMem);
     return false;
   }
 
-  memcpy(pMem, ibuf->encoded_buffer.data, ibuf->encoded_buffer_size);
+  memcpy(pMem, encoded.data(), encoded.size());
 
   GlobalUnlock(hMem);
-  IMB_freeImBuf(ibuf);
+  blender::IMB_freeImBuf(ibuf);
 
   if (!SetClipboardData(cf, hMem)) {
     GlobalFree(hMem);
@@ -3197,6 +3213,100 @@ struct MixarDragState {
 };
 static std::unordered_map<HWND, MixarDragState> s_drag_states;
 
+/* Corner radius requested through Mixar_WindowSetCornerRadius, plus the window
+ * size the region was last built for.
+ *
+ * macOS implements that call as a Core Animation mask
+ * (`layer.cornerRadius` + `masksToBounds`) over a non-opaque window, so the
+ * area outside the radius is genuinely transparent and the pill's capsule is
+ * all the user sees. Windows has no Core Animation mask for a GPU window.
+ * Mixar requests an alpha channel on the on-screen WGL context (and a
+ * non-opaque Vulkan swapchain when frost is enabled) so DWM can honour
+ * client alpha. Without that channel the pill's own near-black bed showed
+ * as a hard rectangle around the capsule wherever the viewport behind it
+ * was not equally dark.
+ *
+ * The Win32 way to make a window non-rectangular is a window region, so that
+ * is what this is: the same radius, applied as the window's actual shape. */
+struct MixarCornerShape {
+  float radius; /* logical (96-DPI) units, as passed by the caller */
+  int applied_w, applied_h;
+};
+static std::unordered_map<HWND, MixarCornerShape> s_corner_shapes;
+
+/* (Re)build the window region for `hwnd` from its stored radius. Cheap to call
+ * on every WM_WINDOWPOSCHANGED: it returns immediately unless the window size
+ * actually changed since the region was last built. */
+static void mixar_window_apply_corner_region(HWND hwnd, bool force)
+{
+  /* The GPU wash and DWM see-through cover the entire client. Keep the
+   * rounded window region even when GPU alpha is available, or frost
+   * outside the painted pill makes a rectangular halo. */
+  auto it = s_corner_shapes.find(hwnd);
+  if (it == s_corner_shapes.end()) {
+    return;
+  }
+  RECT wr;
+  if (!GetWindowRect(hwnd, &wr)) {
+    return;
+  }
+  const int w = wr.right - wr.left;
+  const int h = wr.bottom - wr.top;
+  if (w <= 0 || h <= 0) {
+    return;
+  }
+  MixarCornerShape &shape = it->second;
+  if (!force && shape.applied_w == w && shape.applied_h == h) {
+    return;
+  }
+  shape.applied_w = w;
+  shape.applied_h = h;
+
+  if (shape.radius <= 0.0f) {
+    SetWindowRgn(hwnd, NULL, TRUE);
+    return;
+  }
+
+  /* The radius arrives in logical units, like Mixar_WindowForceSize's size.
+   * Read the DPI off the HWND rather than the GHOST handle — this also runs
+   * from the subclass proc, which only has the window. */
+  UINT dpi = 96;
+  if (HMODULE user32 = GetModuleHandleA("user32.dll")) {
+    using GetDpiForWindowFn = UINT(WINAPI *)(HWND);
+    auto get_dpi_for_window = reinterpret_cast<GetDpiForWindowFn>(
+        GetProcAddress(user32, "GetDpiForWindow"));
+    if (get_dpi_for_window) {
+      const UINT win_dpi = get_dpi_for_window(hwnd);
+      if (win_dpi > 0) {
+        dpi = win_dpi;
+      }
+    }
+  }
+  int r = (int)(shape.radius * (float(dpi) / 96.0f) + 0.5f);
+  /* A capsule is radius == half the short side; clamping here means a caller
+   * can pass the design's own rx and get the same shape it drew. */
+  const int r_max = ((w < h) ? w : h) / 2;
+  if (r > r_max) {
+    r = r_max;
+  }
+  if (r < 1) {
+    SetWindowRgn(hwnd, NULL, TRUE);
+    return;
+  }
+
+  /* CreateRoundRectRgn's bottom-right is exclusive and its last two arguments
+   * are the ELLIPSE size, i.e. twice the radius. */
+  HRGN rgn = CreateRoundRectRgn(0, 0, w + 1, h + 1, r * 2 + 1, r * 2 + 1);
+  if (rgn == NULL) {
+    return;
+  }
+  /* Ownership transfers only when the call succeeds; on failure the region is
+   * still ours and must be freed rather than leaked. */
+  if (!SetWindowRgn(hwnd, rgn, TRUE)) {
+    DeleteObject(rgn);
+  }
+}
+
 static int mixar_resize_border_px(HWND hwnd)
 {
   UINT dpi = 96;
@@ -3279,8 +3389,16 @@ static LRESULT CALLBACK mixar_min_size_subclass_proc(
     }
     return 0;
   }
+  else if (uMsg == WM_WINDOWPOSCHANGED) {
+    /* Every resize path lands here — Mixar_WindowForceSize, a user drag on the
+     * island's resize border, GHOST's own setState. Rebuilding is a no-op
+     * unless the size actually changed, so this cannot loop on the redraw
+     * SetWindowRgn triggers. */
+    mixar_window_apply_corner_region(hwnd, /*force=*/false);
+  }
   else if (uMsg == WM_NCDESTROY) {
     s_min_sizes.erase(hwnd);
+    s_corner_shapes.erase(hwnd);
     s_drag_states.erase(hwnd);
     s_chromeless_windows.erase(hwnd);
     s_resizable_chromeless_windows.erase(hwnd);
@@ -3359,6 +3477,23 @@ extern "C" void Mixar_WindowForceSize(void *window_handle, int width, int height
   SetWindowPos(hwnd, NULL, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
+/* Windows 11 paints a 1px border around every top-level window, WS_POPUP
+ * overlays included, and DWM draws it outside anything the GL surface can
+ * reach. On the Agent pill that border traced the window's RECTANGLE around a
+ * capsule drawn with a half-height radius, so the resting pill read as a
+ * lozenge sitting inside a bright box (the corner areas themselves are the
+ * pill's own near-black bed, which is within a value of the viewport behind
+ * it — the border line was the whole of what showed).
+ *
+ * DWMWA_BORDER_COLOR (34) with DWMWA_COLOR_NONE removes it. Pre-22H2 Windows
+ * fails the call silently, exactly as it already does for the corner
+ * preference attribute below. */
+static void mixar_window_remove_dwm_border(HWND hwnd)
+{
+  COLORREF none = 0xFFFFFFFE; /* DWMWA_COLOR_NONE */
+  DwmSetWindowAttribute(hwnd, 34 /*DWMWA_BORDER_COLOR*/, &none, sizeof(none));
+}
+
 extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
@@ -3376,6 +3511,7 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
     exStyle &= ~WS_EX_APPWINDOW;
     s_chromeless_windows.insert(hwnd);
     s_resizable_chromeless_windows.insert(hwnd);
+    mixar_window_remove_dwm_border(hwnd);
     /* Install subclass to intercept WM_STYLECHANGING — prevents GHOST
      * or other code from re-adding WS_CAPTION / stripping TOOLWINDOW. */
     SetWindowSubclass(hwnd, mixar_min_size_subclass_proc, 1, 0);
@@ -3387,6 +3523,9 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
     exStyle |= WS_EX_APPWINDOW;
     s_chromeless_windows.erase(hwnd);
     s_resizable_chromeless_windows.erase(hwnd);
+    /* A window that gets its frame back must get its rectangle back too. */
+    s_corner_shapes.erase(hwnd);
+    SetWindowRgn(hwnd, NULL, TRUE);
   }
   SetWindowLongPtr(hwnd, GWL_STYLE, style);
   SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle);
@@ -3409,6 +3548,7 @@ extern "C" void Mixar_WindowSetBorderless(void *window_handle)
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   s_chromeless_windows.insert(hwnd);
   s_resizable_chromeless_windows.erase(hwnd);
+  mixar_window_remove_dwm_border(hwnd);
   SetWindowSubclass(hwnd, mixar_min_size_subclass_proc, 1, 0);
 }
 
@@ -3420,38 +3560,124 @@ extern "C" void Mixar_WindowSetCornerRadius(void *window_handle, float radius)
   /* Win11 22H2+ supports DWMWA_WINDOW_CORNER_PREFERENCE (attr 33).
    * On older Windows this call silently fails — acceptable no-op. */
   enum { DWMWCP_DEFAULT = 0, DWMWCP_DONOTROUND = 1, DWMWCP_ROUND = 2, DWMWCP_ROUNDSMALL = 3 };
-  DWORD pref = (radius > 0.0f) ? DWMWCP_ROUND : DWMWCP_DONOTROUND;
+  /* DONOTROUND even when we do want rounding: the shape below is ours, and
+   * DWM's own preference only offers its ~8px radius, which on the pill drew a
+   * near-square outline around a capsule with a 28.5px one. */
+  DWORD pref = DWMWCP_DONOTROUND;
   DwmSetWindowAttribute(hwnd, 33 /*DWMWA_WINDOW_CORNER_PREFERENCE*/, &pref, sizeof(pref));
+
+  /* Re-asserted here because this runs after every pill/island resize, and a
+   * SWP_FRAMECHANGED from a style change can restore the default border. */
+  mixar_window_remove_dwm_border(hwnd);
+
+  /* The shape itself. Rebuilt whenever the window resizes (WM_WINDOWPOSCHANGED
+   * in mixar_min_size_subclass_proc), so a later Mixar_WindowForceSize that is
+   * not followed by another SetCornerRadius call cannot leave a stale region
+   * clipping the content. */
+  auto it = s_corner_shapes.find(hwnd);
+  if (it == s_corner_shapes.end()) {
+    s_corner_shapes[hwnd] = MixarCornerShape{radius, 0, 0};
+  }
+  else {
+    it->second.radius = radius;
+  }
+  mixar_window_apply_corner_region(hwnd, /*force=*/true);
 }
 
-extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
+extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
+
+/* Does this window's framebuffer carry an alpha channel DWM can composite?
+ *
+ * OpenGL: GHOST_WindowWin32 now requests 8 alpha bits, but the driver may
+ * still hand back a format without them — read the chosen PFD, never assume.
+ * Vulkan: WGL DescribePixelFormat is meaningless; the swapchain's supported
+ * composite-alpha flags are the channel. Without alpha bits DWM composites
+ * the client opaque no matter what the shader writes. */
+extern "C" bool Mixar_WindowHasAlphaChannel(void *window_handle)
 {
   HWND hwnd = mixar_get_hwnd(window_handle);
-  if (!hwnd) return;
-
-  /* Extend the DWM frame into the entire client area so the DWM
-   * compositor respects per-pixel alpha from the GPU clear colour.
-   * Wherever we render with alpha < 1, the window becomes
-   * semi-transparent (see-through to the desktop / windows behind).
-   * No blur effect — just transparency. */
-  MARGINS margins = {-1, -1, -1, -1};
-  if (!enable) {
-    margins = {0, 0, 0, 0};
+  if (!hwnd) {
+    return false;
   }
-  DwmExtendFrameIntoClientArea(hwnd, &margins);
+#ifdef WITH_VULKAN_BACKEND
+  GHOST_WindowWin32 *win32 = static_cast<GHOST_WindowWin32 *>(window_handle);
+  if (win32->getDrawingContextType() == GHOST_kDrawingContextTypeVulkan) {
+    GHOST_Context *context = win32->getContext();
+    if (context == nullptr) {
+      return false;
+    }
+    return static_cast<GHOST_ContextVK *>(context)->mixar_supports_non_opaque_composite_alpha();
+  }
+#endif
+  HDC hdc = GetDC(hwnd);
+  if (!hdc) {
+    return false;
+  }
+  bool has_alpha = false;
+  const int format = GetPixelFormat(hdc);
+  if (format != 0) {
+    PIXELFORMATDESCRIPTOR pfd = {};
+    if (DescribePixelFormat(hdc, format, sizeof(pfd), &pfd) != 0) {
+      has_alpha = (pfd.cAlphaBits > 0);
+    }
+  }
+  ReleaseDC(hwnd, hdc);
+  return has_alpha;
+}
 
-  /* DwmEnableBlurBehindWindow with a 1×1 region tells the DWM "this
-   * window participates in per-pixel alpha compositing" without
-   * adding any visible blur.  The 1×1 region is a well-known trick:
-   * fEnable=TRUE triggers the DWM to look at alpha, and the tiny
-   * region means the actual Gaussian blur is negligible. */
-  HRGN rgn = CreateRectRgn(0, 0, 1, 1);
-  DWM_BLURBEHIND bb = {};
-  bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
-  bb.fEnable = enable ? TRUE : FALSE;
-  bb.hRgnBlur = rgn;
-  DwmEnableBlurBehindWindow(hwnd, &bb);
-  DeleteObject(rgn);
+/* Ask DWM to composite this window's client alpha, so a fragment drawn with
+ * alpha 0 shows what is behind the window and the anti-aliased edge of a shape
+ * drawn into it survives to the screen. This is the Win32 counterpart of the
+ * non-opaque NSWindow the Cocoa side already uses, and it is what lets the
+ * Agent pill's capsule have a smooth silhouette rather than the hard circle a
+ * window region rasterises.
+ *
+ * Keep the rounded region: the wash covers the whole client, so alpha
+ * alone cannot clip the silhouette to the capsule. */
+extern "C" void Mixar_WindowSetPerPixelAlpha(void *window_handle, bool enable)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) {
+    return;
+  }
+  if (enable && !Mixar_WindowHasAlphaChannel(window_handle)) {
+    return; /* Caller keeps the region fallback. */
+  }
+  Mixar_WindowSetBlurBehind(window_handle, enable);
+  mixar_window_apply_corner_region(hwnd, /*force=*/true);
+}
+
+extern "C" bool Mixar_WindowSetBlurBehind(void *window_handle, bool enable)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) {
+    return false;
+  }
+  if (enable && !Mixar_WindowHasAlphaChannel(window_handle)) {
+    Mixar_Win32GlassSetEnabled(hwnd, false);
+    return false;
+  }
+  const bool dwm_ok = Mixar_Win32GlassSetEnabled(hwnd, enable);
+#ifdef WITH_VULKAN_BACKEND
+  GHOST_WindowWin32 *win32 = static_cast<GHOST_WindowWin32 *>(window_handle);
+  if (win32->getDrawingContextType() == GHOST_kDrawingContextTypeVulkan) {
+    GHOST_Context *context = win32->getContext();
+    if (context != nullptr) {
+      GHOST_ContextVK *vk = static_cast<GHOST_ContextVK *>(context);
+      if (!vk->mixar_set_premultiplied_composite_alpha(enable && dwm_ok)) {
+        if (enable && dwm_ok) {
+          Mixar_Win32GlassSetEnabled(hwnd, false);
+          return false;
+        }
+      }
+    }
+    else if (enable && dwm_ok) {
+      Mixar_Win32GlassSetEnabled(hwnd, false);
+      return false;
+    }
+  }
+#endif
+  return dwm_ok;
 }
 
 extern "C" void Mixar_WindowMakeKey(void *window_handle)
@@ -3579,6 +3805,32 @@ extern "C" bool Mixar_WindowIsVisible(void *window_handle)
   HWND hwnd = mixar_get_hwnd(window_handle);
   if (!hwnd) return false;
   return ::IsWindowVisible(hwnd) != FALSE;
+}
+
+extern "C" bool Mixar_WindowCanAnimate(void *window_handle)
+{
+  /* The caller must first resolve this handle from a live wmWindow. Preserve
+   * the normal draw loop's visibility contract; only animation uses this. */
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd) {
+    return false;
+  }
+  /* Owned popups can retain WS_VISIBLE while their host is minimized. Do not
+   * use activation or keyboard focus: the dock also animates beside the host. */
+  for (HWND current = hwnd; current != nullptr; current = GetWindow(current, GW_OWNER)) {
+    if (!IsWindow(current) || !IsWindowVisible(current) || IsIconic(current)) {
+      return false;
+    }
+    BYTE alpha = 255;
+    DWORD flags = 0;
+    if ((GetWindowLongPtr(current, GWL_EXSTYLE) & WS_EX_LAYERED) &&
+        GetLayeredWindowAttributes(current, nullptr, &alpha, &flags) &&
+        (flags & LWA_ALPHA) && alpha <= 2)
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 extern "C" void Mixar_WindowOrderFront(void *window_handle)
@@ -3790,6 +4042,124 @@ extern "C" void Mixar_WindowAnchorAtParentCentreBottom(void *child_handle,
    * this the pill can end up behind the host in Z-order. */
   SetWindowPos(child, HWND_TOP, 0, 0, 0, 0,
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+}
+
+/* Anchor `child` at a fixed OFFSET from `parent`'s top-left — logical
+ * 96-DPI units, y-down, the convention the Cocoa counterpart shares — and
+ * keep it there across parent moves and resizes. This is the minimised
+ * pill's seat once the user has dragged it: RELATIVE_OFFSET tracking, which
+ * Mixar_WindowEndDrag already updates after a drag and which clamps the
+ * child inside the parent on every reposition. */
+extern "C" void Mixar_WindowAnchorAtParentOffset(void *child_handle,
+                                                 void *parent_handle,
+                                                 int offset_x,
+                                                 int offset_y)
+{
+  HWND child = mixar_get_hwnd(child_handle);
+  HWND parent = mixar_get_hwnd(parent_handle);
+  if (!child || !parent) return;
+
+  float scale = mixar_get_dpi_scale_from_ghost(child_handle);
+  int dx = (int)(offset_x * scale);
+  int dy = (int)(offset_y * scale);
+
+  SetWindowLongPtr(child, GWLP_HWNDPARENT, (LONG_PTR)parent);
+  s_child_windows.insert(child);
+  mixar_install_parent_hook(child, parent, MIXAR_TRACK_RELATIVE_OFFSET, 0, dx, dy);
+
+  auto it = s_parent_tracks.find(child);
+  if (it != s_parent_tracks.end()) {
+    mixar_reposition_child(it->second);
+  }
+
+  /* Same Z-order guard as the centre-bottom anchor. */
+  SetWindowPos(child, HWND_TOP, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+}
+
+/* Where `child` currently sits relative to `parent`, in the convention
+ * Mixar_WindowAnchorAtParentOffset takes (logical units from the parent's
+ * top-left to the child's top-left, y-down). False when either HWND is
+ * gone. */
+extern "C" bool Mixar_WindowGetParentOffset(void *child_handle,
+                                            void *parent_handle,
+                                            int *r_offset_x,
+                                            int *r_offset_y)
+{
+  HWND child = mixar_get_hwnd(child_handle);
+  HWND parent = mixar_get_hwnd(parent_handle);
+  if (!child || !parent || !r_offset_x || !r_offset_y) return false;
+
+  RECT pr, cr;
+  if (!GetWindowRect(parent, &pr) || !GetWindowRect(child, &cr)) return false;
+
+  float scale = mixar_get_dpi_scale_from_ghost(child_handle);
+  if (scale <= 0.0f) scale = 1.0f;
+  *r_offset_x = (int)((cr.left - pr.left) / scale);
+  *r_offset_y = (int)((cr.top - pr.top) / scale);
+  return true;
+}
+
+/* Mixar: child client rect in the parent's client coordinates (logical
+ * 96-DPI units, bottom-left origin) — the Windows twin of the Cocoa helper. */
+extern "C" bool Mixar_WindowGetContentRectInParent(void *child_handle,
+                                                   void *parent_handle,
+                                                   int *r_x,
+                                                   int *r_y,
+                                                   int *r_w,
+                                                   int *r_h)
+{
+  HWND child = mixar_get_hwnd(child_handle);
+  HWND parent = mixar_get_hwnd(parent_handle);
+  if (!child || !parent || !r_x || !r_y || !r_w || !r_h) return false;
+  RECT pc, cc;
+  POINT po = {0, 0}, co = {0, 0};
+  if (!GetClientRect(parent, &pc) || !GetClientRect(child, &cc)) return false;
+  if (!ClientToScreen(parent, &po) || !ClientToScreen(child, &co)) return false;
+  float scale = mixar_get_dpi_scale_from_ghost(child_handle);
+  if (scale <= 0.0f) scale = 1.0f;
+  const int parent_h = pc.bottom - pc.top;
+  const int child_h = cc.bottom - cc.top;
+  *r_x = (int)((co.x - po.x) / scale);
+  /* Screen y grows downward; express the child's bottom edge from the parent's bottom. */
+  *r_y = (int)(((po.y + parent_h) - (co.y + child_h)) / scale);
+  *r_w = (int)((cc.right - cc.left) / scale);
+  *r_h = (int)(child_h / scale);
+  return true;
+}
+
+/* Logical (96-DPI) client size — the units Mixar_WindowForceSize takes. */
+extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *r_width, int *r_height)
+{
+  HWND hwnd = mixar_get_hwnd(window_handle);
+  if (!hwnd || !r_width || !r_height) return false;
+  RECT rc;
+  if (!GetClientRect(hwnd, &rc)) return false;
+  float scale = mixar_get_dpi_scale_from_ghost(window_handle);
+  if (scale <= 0.0f) scale = 1.0f;
+  *r_width = (int)((rc.right - rc.left) / scale);
+  *r_height = (int)((rc.bottom - rc.top) / scale);
+  return true;
+}
+
+/* Move `child` so its top-left sits `offset` (logical units, y-down) from
+ * `parent`'s top-left. Position only — re-seat the parent tracking
+ * (Mixar_WindowSetParentTracked) afterwards so the RELATIVE_OFFSET hook
+ * follows from the new place instead of snapping back to the old one. */
+extern "C" void Mixar_WindowPlaceInParent(void *child_handle,
+                                          void *parent_handle,
+                                          int offset_x,
+                                          int offset_y)
+{
+  HWND child = mixar_get_hwnd(child_handle);
+  HWND parent = mixar_get_hwnd(parent_handle);
+  if (!child || !parent) return;
+  RECT pr;
+  if (!GetWindowRect(parent, &pr)) return;
+  float scale = mixar_get_dpi_scale_from_ghost(child_handle);
+  int x = pr.left + (int)(offset_x * scale);
+  int y = pr.top + (int)(offset_y * scale);
+  SetWindowPos(child, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
 /* ---- Win32 animation engine ----------------------------------------- */
@@ -4086,6 +4456,30 @@ extern "C" bool Mixar_WindowHasChildWindow(void *parent_handle)
     }
   }
   return false;
+}
+
+extern "C" bool Mixar_WindowContainsScreenCursor(void *window_handle, int margin_pt)
+{
+  /* Hover detection for the agent bubble's pill/expand behaviour (see the
+   * Cocoa counterpart). Screen coordinates throughout. */
+  if (window_handle == nullptr) {
+    return false;
+  }
+  GHOST_WindowWin32 *win32_window = static_cast<GHOST_WindowWin32 *>(window_handle);
+  HWND hwnd = win32_window->getHWND();
+  if (hwnd == nullptr || !IsWindowVisible(hwnd)) {
+    return false;
+  }
+  POINT pt;
+  if (!GetCursorPos(&pt)) {
+    return false;
+  }
+  RECT rect;
+  if (!GetWindowRect(hwnd, &rect)) {
+    return false;
+  }
+  InflateRect(&rect, margin_pt, margin_pt);
+  return PtInRect(&rect, pt) != 0;
 }
 
 extern "C" void Mixar_WindowGetContentPixelSize(

@@ -44,16 +44,15 @@ def _draw_mode_menu_entry(self, context):
 
 
 def install_mode_menu_hook():
-    """Append the mode toggle to the editor-menus draw. Idempotent."""
-    global _appended
-    if _appended:
-        return
-    parent = getattr(bpy.types, "TOPBAR_MT_editor_menus", None)
-    if parent is None:
-        _logger.warning("TOPBAR_MT_editor_menus not found; skipping mode menu hook")
-        return
-    parent.append(_draw_mode_menu_entry)
-    _appended = True
+    """No-op: the mode switch is the topbar SLIDER now.
+
+    `mode_filter_header._draw_mode_slider` draws a centred Zen/Engine
+    segmented control with an animated thumb, so a second switch beside
+    File / Edit / Render / Window / Help would be a duplicate. The draw
+    function below is kept (and still correct) so the menu entry can be
+    restored by re-enabling this hook alone.
+    """
+    return
 
 
 def uninstall_mode_menu_hook():

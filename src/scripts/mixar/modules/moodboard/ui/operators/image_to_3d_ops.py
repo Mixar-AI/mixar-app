@@ -14,7 +14,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.utils.image_utils import compress_for_service
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import selected_reference_stills
 
 logger = get_logger(__name__)
 
@@ -52,6 +52,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
     # Agent-chosen name for the imported mesh; empty falls back to the input
     # image name, then a prompt slug (see generation_enqueue.derive_model_name).
     name: bpy.props.StringProperty(default="")
+    # Where the import lands, as JSON (job_queue.core.placement). Applied by
+    # the post-import hook, so the agent's turn need not outlive the job.
+    placement: bpy.props.StringProperty(default="")
 
     # Trellis-specific
     texture_size: bpy.props.IntProperty(default=0, min=0, max=4096)
@@ -88,7 +91,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             # "which model?" ask); empty means the catalog default.
             model_name = self.model.strip() or _get_default_model_3d()
             if not model_name:
-                self.report({"WARNING"}, "No models available - please wait for models to load")
+                self.report({"ERROR"}, "No models available - please wait for models to load")
                 return {"CANCELLED"}
         else:
             if sidebar_tab:
@@ -103,7 +106,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 model_name = _get_default_model_3d()
 
             if not model_name or model_name in ("LOADING", "ERROR", "NONE", ""):
-                self.report({"WARNING"}, "Please wait for models to load or check connection")
+                self.report({"ERROR"}, "Please wait for models to load or check connection")
                 return {"CANCELLED"}
 
         # Get the input image based on context
@@ -113,46 +116,40 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             if hasattr(scene, 'mixie_image_to_3d_image'):
                 image = scene.mixie_image_to_3d_image
                 if not image:
-                    self.report({"WARNING"}, "Please attach an image in chat")
+                    self.report({"ERROR"}, "Please attach an image in chat")
                     return {"CANCELLED"}
             else:
-                self.report({"WARNING"}, "No input image available")
+                self.report({"ERROR"}, "No input image available")
                 return {"CANCELLED"}
         elif sidebar_tab:
             use_selected = getattr(sidebar_tab, 'use_selected_image', False)
             if use_selected:
-                selected = [
-                    item for item in scene.mixie_moodboard_images
-                    if item.selected and is_still_item(item)
-                ]
+                selected = selected_reference_stills(scene)
                 if selected:
                     image = selected[0].image
                 else:
-                    self.report({"WARNING"}, "Please select an image in the moodboard")
+                    self.report({"ERROR"}, "Please select an image in the moodboard")
                     return {"CANCELLED"}
             else:
                 image = getattr(sidebar_tab, 'reference_image', None)
                 if not image:
-                    self.report({"WARNING"}, "Please add an input image")
+                    self.report({"ERROR"}, "Please add an input image")
                     return {"CANCELLED"}
         else:
             if hasattr(scene, 'mixie_image_to_3d_use_selected') and scene.mixie_image_to_3d_use_selected:
-                selected = [
-                    item for item in scene.mixie_moodboard_images
-                    if item.selected and is_still_item(item)
-                ]
+                selected = selected_reference_stills(scene)
                 if selected:
                     image = selected[0].image
                 else:
-                    self.report({"WARNING"}, "No image selected in moodboard")
+                    self.report({"ERROR"}, "No image selected in moodboard")
                     return {"CANCELLED"}
             elif hasattr(scene, 'mixie_image_to_3d_image'):
                 image = scene.mixie_image_to_3d_image
                 if not image:
-                    self.report({"WARNING"}, "No input image selected")
+                    self.report({"ERROR"}, "No input image selected")
                     return {"CANCELLED"}
             else:
-                self.report({"WARNING"}, "No input image available")
+                self.report({"ERROR"}, "No input image available")
                 return {"CANCELLED"}
 
         # Turnaround sheets: the detect-views endpoint already split this
@@ -192,7 +189,13 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 model_front_zrot,
             )
 
-            job_label = image.name if image else model_name
+            from mixar.modules.common.job_queue.core.labels import (
+                stackable_job_identity,
+            )
+
+            job_label, display_label = stackable_job_identity(
+                image.name if image else model_name
+            )
             payload = {}
             if turnaround_payload:
                 payload.update(turnaround_payload)
@@ -209,15 +212,15 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 job_type="model_3d",
                 model=model_name,
                 payload=payload,
-                label=job_label or "model_3d",
+                label=job_label,
+                display_label=display_label,
                 fail_message="3D model generation failed",
                 on_imported=make_model_rename_on_imported(
                     mesh_name, model_front_zrot(model_name)),
                 scene_flag="mixie_image_to_3d_is_generating",
-                batch_popup_title="Image to 3D batch complete",
             )
             if not job:
-                self.report({"WARNING"}, "A duplicate generation is already queued")
+                self.report({"ERROR"}, "A duplicate generation is already queued")
                 return {"CANCELLED"}
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")
@@ -367,6 +370,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             derive_model_name, make_model_rename_on_imported, model_front_zrot,
         )
         mesh_name = derive_model_name(img, prompt or "", explicit=self.name)
+        from mixar.modules.common.job_queue.core.placement import parse_placement
+        placement = parse_placement(self.placement)
 
         job = enqueue_generation(
             kind="glb",
@@ -377,9 +382,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             label=job_label,
             fail_message="3D model generation failed",
             on_imported=make_model_rename_on_imported(
-                mesh_name, model_front_zrot(model_name)),
+                mesh_name, model_front_zrot(model_name), placement=placement),
             scene_flag="mixie_image_to_3d_is_generating",
-            batch_popup_title="Image to 3D batch complete",
         )
         if not job:
             set_agent_gen_reason(context, "A duplicate 3D generation is already queued")

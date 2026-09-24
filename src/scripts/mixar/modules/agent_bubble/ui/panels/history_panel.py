@@ -87,44 +87,42 @@ def _wrap_lines(text: str, max_chars: int) -> list[str]:
     return out
 
 
-def _draw_feedback_stars(parent_layout, msg) -> None:
-    """Render a 5-star feedback row + inline comment under an agent message."""
+def _draw_feedback_votes(parent_layout, msg) -> None:
+    """Fallback panel uses the same latest-response votes and comment operators."""
     bubble_id = getattr(msg, 'bubble_id', '')
-    if not bubble_id:
+    if not bubble_id or not getattr(msg, 'feedback_visible', False):
         return
-
     rating = getattr(msg, 'feedback_rating', 0)
+    sending = getattr(msg, 'feedback_status', 0) == 1
     row = parent_layout.row(align=True)
-    row.scale_x = 1.4
-    row.scale_y = 0.9
-    for i in range(1, 6):
-        icon = 'SOLO_ON' if i <= rating else 'SOLO_OFF'
-        op = row.operator(
-            "mixie_chat.set_feedback_rating",
-            text="", icon=icon,
-        )
+    row.enabled = not sending
+    for value, label in ((5, "👍"), (1, "👎")):
+        op = row.operator("mixie_chat.set_feedback_rating", text=label,
+                          depress=rating == value)
         op.bubble_id = bubble_id
-        op.rating = i
-
-    # Comment toggle button
-    comment = getattr(msg, 'feedback_comment', '')
+        op.rating = value
     expanded = getattr(msg, 'feedback_comment_expanded', False)
-    comment_icon = 'TEXT' if comment else 'GREASEPENCIL'
-    op = row.operator(
-        "mixie_chat.toggle_feedback_comment",
-        text="", icon=comment_icon, depress=expanded,
-    )
-    op.bubble_id = bubble_id
-
-    # Inline comment field when expanded
+    if rating:
+        op = row.operator("mixie_chat.toggle_feedback_comment",
+                          text="Close" if expanded else "Comment")
+        op.bubble_id = bubble_id
+    status = getattr(msg, 'feedback_status', 0)
+    if status == 1:
+        parent_layout.label(text="Sending feedback...")
+    elif status == 3:
+        parent_layout.label(text="Couldn't send. Please try again.", icon='ERROR')
     if expanded:
-        comment_row = parent_layout.row(align=True)
-        comment_row.prop(msg, "feedback_comment", text="")
-        submit_op = comment_row.operator(
-            "mixie_chat.submit_feedback_comment",
-            text="", icon='CHECKMARK',
-        )
-        submit_op.bubble_id = bubble_id
+        editor = parent_layout.column(align=True)
+        editor.enabled = not sending
+        editor.prop(msg, "feedback_comment", text="")
+        actions = editor.row(align=True)
+        for operator, label in (("submit_feedback_comment", "Save"),
+                                ("cancel_feedback_comment", "Cancel")):
+            op = actions.operator("mixie_chat." + operator, text=label)
+            op.bubble_id = bubble_id
+    elif getattr(msg, 'feedback_submitted_comment', ''):
+        for line in _wrap_lines(msg.feedback_submitted_comment, _WRAP_WIDTH):
+            parent_layout.label(text=line)
 
 
 def _draw_message(parent_layout, sender: str, wrapped: list[str]) -> None:
@@ -231,9 +229,9 @@ class AGENT_BUBBLE_PT_history(Panel):
                     # an ellipsis bubble as the typing indicator.
                     wrapped = ["…"]
                 _draw_message(history, sender, wrapped)
-                # Show feedback stars after agent messages when visible
+                # Show feedback votes after agent messages when visible
                 if sender != "USER" and getattr(msg, 'feedback_visible', False):
-                    _draw_feedback_stars(history, msg)
+                    _draw_feedback_votes(history, msg)
                 history.separator(factor=0.3)
                 rendered += 1
             except Exception as e:  # noqa: BLE001 — never blank the whole panel

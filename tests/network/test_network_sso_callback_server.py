@@ -53,11 +53,16 @@ def test_silent_peer_does_not_block_real_callback(server):
         time.sleep(0.3)
         replies.append(_get(port, "/?code=abc123&state=expected-state"))
 
-    threading.Thread(target=real_callback, daemon=True).start()
+    callback = threading.Thread(target=real_callback, daemon=True)
+    callback.start()
     started = time.monotonic()
     code = sso.wait_for_code(srv, state, timeout=8)
     elapsed = time.monotonic() - started
     silent.close()
+    # wait_for_code returns the moment the server reads the code; the reply
+    # lands in `replies` only after the server closes the socket, so join
+    # before asserting or the check races the callback thread.
+    callback.join(timeout=5)
 
     assert code == "abc123"
     assert elapsed < 5, f"real callback starved behind a silent peer ({elapsed:.1f}s)"

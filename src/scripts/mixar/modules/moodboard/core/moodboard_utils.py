@@ -152,22 +152,29 @@ def get_moodboard_viewport_center() -> tuple[float, float]:
     Return the canvas coordinates at the centre of the currently visible
     moodboard viewport.
 
-    Iterates over all windows/screens looking for a MIXIE area that has a
-    WINDOW region with a view2d.  Converts the pixel centre of that region to
-    canvas (view) coordinates and returns them.
+    Iterates over all windows/screens looking for a MIXIE WINDOW region or the
+    Zen VIEW_3D drawer (`TOOL_PROPS`) once it is open. Converts the pixel
+    centre of that region to canvas (view) coordinates and returns them.
 
     Falls back to (0.0, 0.0) when no suitable region can be found (e.g. when
     called from a background thread before any MIXIE area has been opened).
     """
     try:
-        for window in bpy.context.window_manager.windows:
+        wm = bpy.context.window_manager
+        drawer_live = float(getattr(wm, "mixar_moodboard_drawer_amount", 0.0)) >= 0.98
+        for window in wm.windows:
             for area in window.screen.areas:
-                if area.type != 'MIXIE':
+                want = None
+                if area.type == "MIXIE":
+                    want = "WINDOW"
+                elif drawer_live and area.type == "VIEW_3D":
+                    want = "TOOL_PROPS"
+                if want is None:
                     continue
                 for region in area.regions:
-                    if region.type != 'WINDOW':
+                    if region.type != want or region.width <= 1:
                         continue
-                    if not hasattr(region, 'view2d'):
+                    if not hasattr(region, "view2d"):
                         continue
                     view2d = region.view2d
                     cx = region.width / 2.0
@@ -259,6 +266,38 @@ def place_new_moodboard_item(
         )
     ensure_moodboard_region_visible(item.position_x, item.position_y, disp_w, disp_h)
     stamp_moodboard_item_added(item)
+    _adopt_into_frame(scene, item)
+
+
+def _adopt_into_frame(scene, item) -> None:
+    """A new item landing inside a frame joins it.
+
+    Dropping a file into a frame is the same gesture as dragging one in, so it
+    has the same outcome -- resolved through the ONE membership rule
+    (``core/frames``) rather than a second copy of it here. An explicit
+    ``frame_id`` set by the caller wins and is left alone. Best-effort: a
+    failure here must never block placing the item.
+    """
+    if getattr(item, "frame_id", ""):
+        return
+    try:
+        from .frames import _is_node_owned, frame_at_point, item_rect
+
+        # Not a frame's to adopt. A generation result is placed BEFORE it is
+        # marked node-owned, so `frame_members` is what catches that case.
+        if _is_node_owned(item):
+            return
+        from .frame_geometry import rect_center
+
+        rect = item_rect(item)
+        if rect is None:
+            return
+        center_x, center_y = rect_center(rect)
+        frame_id = frame_at_point(scene, center_x, center_y)
+        if frame_id:
+            item.frame_id = frame_id
+    except Exception:  # noqa: BLE001 — placement must never fail on this
+        pass
 
 
 def validate_selection_region(state, min_size=0.01):

@@ -135,4 +135,9 @@ def recomposite_display_image(img_item):
         )
 
     img_item.display_image.pixels.foreach_set(result_pixels.flatten())
+    # foreach_set marks Blender's partial image updates, but the moodboard's
+    # warm GPU cache tracks the depsgraph image stamp. Refresh the byte buffer
+    # and tag the Image ID so every subsequent mask is uploaded to that cache.
+    img_item.display_image.update()
+    img_item.display_image.update_tag()
     img_item.display_image.pack()

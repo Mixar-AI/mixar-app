@@ -28,6 +28,7 @@
 
 #include "RNA_access.hh"
 
+#include "mixie_draw_moodboard_intern.hh"
 #include "mixie_intern.hh"
 
 namespace blender::ed::mixie {
@@ -90,15 +91,14 @@ void mixie_draw_sam3d_preview_thumbnail(Image *image,
 
   /* Set up image drawing.
    * Use GPU_SHADER_3D_IMAGE to display without color management transformations. */
-  IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+  PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
 
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
 
   /* Choose the appropriate buffer */
   if (ibuf->float_buffer.data) {
     /* Draw float buffer */
-    immDrawPixelsTexScaledFullSize(&state,
-                                   float(x),
+    drawer.draw(float(x),
                                    float(y),
                                    ibuf->x,
                                    ibuf->y,
@@ -106,15 +106,11 @@ void mixie_draw_sam3d_preview_thumbnail(Image *image,
                                    true,
                                    ibuf->float_buffer.data,
                                    float(width) / float(ibuf->x),
-                                   float(height) / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   float(height) / float(ibuf->y), nullptr);
   }
   else if (ibuf->byte_buffer.data) {
     /* Draw byte buffer */
-    immDrawPixelsTexScaledFullSize(&state,
-                                   float(x),
+    drawer.draw(float(x),
                                    float(y),
                                    ibuf->x,
                                    ibuf->y,
@@ -122,10 +118,7 @@ void mixie_draw_sam3d_preview_thumbnail(Image *image,
                                    false,
                                    ibuf->byte_buffer.data,
                                    float(width) / float(ibuf->x),
-                                   float(height) / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   float(height) / float(ibuf->y), nullptr);
   }
 
   GPU_blend(GPU_BLEND_NONE);
@@ -249,15 +242,14 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
 
       /* Set up image drawing.
        * Use GPU_SHADER_3D_IMAGE to display without color management transformations. */
-      IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+      PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
 
       GPU_blend(GPU_BLEND_ALPHA_PREMULT);
 
       /* Choose the appropriate buffer */
       if (ibuf->float_buffer.data) {
         /* Draw float buffer */
-        immDrawPixelsTexScaledFullSize(&state,
-                                       display_x,
+        drawer.draw(display_x,
                                        display_y,
                                        ibuf->x,
                                        ibuf->y,
@@ -265,15 +257,11 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
                                        true,
                                        ibuf->float_buffer.data,
                                        display_width / img_width,
-                                       display_height / img_height,
-                                       1.0f,
-                                       1.0f,
-                                       nullptr);
+                                       display_height / img_height, nullptr);
       }
       else if (ibuf->byte_buffer.data) {
         /* Draw byte buffer */
-        immDrawPixelsTexScaledFullSize(&state,
-                                       display_x,
+        drawer.draw(display_x,
                                        display_y,
                                        ibuf->x,
                                        ibuf->y,
@@ -281,10 +269,7 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
                                        false,
                                        ibuf->byte_buffer.data,
                                        display_width / img_width,
-                                       display_height / img_height,
-                                       1.0f,
-                                       1.0f,
-                                       nullptr);
+                                       display_height / img_height, nullptr);
       }
 
       GPU_blend(GPU_BLEND_NONE);
@@ -394,17 +379,13 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
             continue;
           }
 
-          /* Calculate thumbnail dimensions maintaining aspect ratio */
-          void *lock;
-          ImBuf *ibuf = BKE_image_acquire_ibuf(history_image, nullptr, &lock);
-          int thumb_width = PREVIEW_THUMB_HEIGHT; /* Default to square */
-
-          if (ibuf && ibuf->x > 0 && ibuf->y > 0) {
-            /* Maintain aspect ratio, fit to height */
-            float aspect_ratio = float(ibuf->x) / float(ibuf->y);
-            thumb_width = int(PREVIEW_THUMB_HEIGHT * aspect_ratio);
+          /* Layout only — the thumbnail draw still reads pixels itself. */
+          int thumb_width = PREVIEW_THUMB_HEIGHT;
+          int src_x = 0;
+          int src_y = 0;
+          if (mixie_moodboard_image_size(history_image, nullptr, &src_x, &src_y) && src_y > 0) {
+            thumb_width = int(PREVIEW_THUMB_HEIGHT * (float(src_x) / float(src_y)));
           }
-          BKE_image_release_ibuf(history_image, ibuf, lock);
 
           /* Check if we have space for this thumbnail */
           if (current_x + thumb_width > region_width - PREVIEW_PADDING) {

@@ -180,6 +180,13 @@ def _get_status(scene) -> PillStatus:
         # avoids the visual collision.
         return PillStatus("Awaiting Input", "blue", 'QUESTION')
 
+    # The orchestrator ended its turn but the run is open: workers are still
+    # building and the backend will start the next turn itself. Not "Running"
+    # (nothing to stop, the composer is free) and not "Idle" (work is going
+    # on). The viewport lock stays down — it keys on BUSY/MODIFYING.
+    if getattr(scene, "mixie_run_open", False) is True:
+        return PillStatus("Working", "green", 'RECORD_ON')
+
     # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
     # enqueues a multi-minute generation, answers in chat and drops to IDLE
     # while the job runs — at which point every surface claimed nothing was
@@ -461,6 +468,49 @@ class AGENT_BUBBLE_HT_header(Header):
                 icon='TEXT',
                 emboss=False,
                 depress=bool(getattr(wm, 'mixie_chat_rules_visible', False)),
+            )
+
+        # Viewport annotation is independent of prompt input.
+        if hasattr(bpy.types, 'MIXAR_OT_scribble_toggle') and not agent_running:
+            wm = context.window_manager
+            mark_count = 0
+            if scene is not None:
+                mark_count = sum(1 for m in (getattr(scene, 'mixar_marks', ()) or ())
+                                 if m.state == 'DRAFT')
+            armed = bool(getattr(wm, 'mixar_mark_armed', False))
+            right_controls.operator(
+                "mixar.scribble_toggle",
+                text=str(mark_count) if mark_count else "",
+                icon='GREASEPENCIL',
+                emboss=False,
+                depress=armed,
+            )
+            # The reading (marks vs one sketch), visible and flippable
+            # wherever the count is — see space_mixie_chat/ui/header.py.
+            if mark_count and hasattr(wm, 'mixar_mark_intent'):
+                right_controls.prop(
+                    wm, "mixar_mark_intent", text="", icon_only=True,
+                    emboss=False,
+                )
+
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_ink_toggle'):
+            right_controls.operator(
+                "mixie_chat.ink_toggle", text="Handwriting", icon='FONT_DATA',
+                depress=bool(getattr(wm, 'mixie_chat_ink_visible', False)),
+            )
+
+        # Voice — the same toggle the chat header binds; registered only on
+        # platforms with a recogniser, so hasattr is the platform gate.
+        # The tooltip is the operator description (hold Option/Alt, release to finish).
+        if hasattr(bpy.types, 'MIXIE_CHAT_OT_voice_toggle') and not agent_running:
+            wm = context.window_manager
+            listening = bool(getattr(wm, 'mixie_chat_voice_listening', False))
+            right_controls.operator(
+                "mixie_chat.voice_toggle",
+                text="",
+                icon='REC' if listening else 'PLAY_SOUND',
+                emboss=False,
+                depress=listening,
             )
 
 

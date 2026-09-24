@@ -40,6 +40,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_rules_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name RNA Bridge (Python-owned properties)
@@ -58,7 +60,7 @@ static void rules_read_string(PointerRNA *ptr, PropertyRNA *prop, char *buf, int
   if (value) {
     BLI_strncpy_utf8(buf, value, size_t(buf_maxncpy));
     if (value != fixed) {
-      MEM_freeN(value);
+      MEM_delete_void(static_cast<void *>(value));
     }
   }
 }
@@ -134,18 +136,15 @@ void mixie_chat_rules_dispatch_op(
   if (!ot) {
     return;
   }
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   if (index >= 0) {
     RNA_int_set(&op_ptr, "index", index);
   }
   if (text != nullptr) {
     RNA_string_set(&op_ptr, "text", text);
   }
-  WM_operator_name_call_ptr(
-      C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
+  mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);
   WM_operator_properties_free(&op_ptr);
-  ED_region_tag_redraw(region);
 }
 
 void mixie_chat_rules_reset_runtime(MixieChatRuntime *rt)
@@ -392,3 +391,4 @@ void rules_draw_edit_glyph(float cx, float cy, float half, const float color[4],
 }
 
 /** \} */
+}  // namespace blender

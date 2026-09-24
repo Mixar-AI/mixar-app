@@ -22,6 +22,12 @@
  */
 
 #include "mixie_draw_moodboard_intern.hh"
+#include "mixie_moodboard_canvas.hh"
+
+#include "UI_mixar.hh"
+#include "UI_mixar_tokens.hh"
+#include "mixie_moodboard_chrome.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 #include "UI_interface_c.hh"
 
@@ -93,7 +99,9 @@ bool is_rect_in_view(View2D *v2d, float x, float y, float w, float h)
 /** \name View2D Setup for Moodboard
  * \{ */
 
-void mixie_moodboard_region_set_view2d(ARegion *region)
+/* File-local: the drawer's cross-module entry point is
+ * `mixie_moodboard_canvas_draw()`, which rebuilds the view itself. */
+static void mixie_moodboard_region_set_view2d(ARegion *region)
 {
   View2D *v2d = &region->v2d;
 
@@ -144,8 +152,8 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
    * screen-space density. */
   const float grid_step = MOODBOARD_GRID_SPACING;
   const float dot_radius = MOODBOARD_GRID_DOT_RADIUS;
-  const float view_scale = std::min(UI_view2d_scale_get_x(v2d),
-                                    UI_view2d_scale_get_y(v2d));
+  const float view_scale = std::min(ui::view2d_scale_get_x(v2d),
+                                    ui::view2d_scale_get_y(v2d));
   const float dot_diameter_px = dot_radius * 2.0f * view_scale;
 
   /* A regular grid below pixel resolution produces circular Moire bands as
@@ -158,7 +166,8 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
           (MOODBOARD_GRID_DOT_FADE_END_PX - MOODBOARD_GRID_DOT_FADE_START_PX),
       0.0f,
       1.0f);
-  const float grid_color[4] = {0.45f, 0.45f, 0.45f, grid_alpha};
+  const float *border = ui::mixar_tokens::mixar_zen().border;
+  const float grid_color[4] = {border[0], border[1], border[2], grid_alpha * 0.65f};
 
   /* Calculate the visible grid bounds. */
   float view_min_x = v2d->cur.xmin;
@@ -185,6 +194,19 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
   immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
   immUniformColor4fv(grid_color);
 
+  /* Every dot is the same disc at a different centre, so the rim offsets are
+   * loop-invariant: resolve the unit circle once instead of four trig calls
+   * per segment per dot. A default-width drawer shows ~700 dots, which cost
+   * ~34k `cosf`/`sinf` per frame before this and 24 after. */
+  float rim_x[MOODBOARD_GRID_DOT_SEGMENTS + 1];
+  float rim_y[MOODBOARD_GRID_DOT_SEGMENTS + 1];
+  for (int segment = 0; segment <= MOODBOARD_GRID_DOT_SEGMENTS; segment++) {
+    const float angle = (2.0f * float(M_PI) * float(segment)) /
+                        float(MOODBOARD_GRID_DOT_SEGMENTS);
+    rim_x[segment] = cosf(angle) * dot_radius;
+    rim_y[segment] = sinf(angle) * dot_radius;
+  }
+
   /* Filled discs avoid the varying subpixel coverage of GPU point primitives,
    * which otherwise creates visible Moire groupings. */
   immBegin(GPU_PRIM_TRIS, dot_count * MOODBOARD_GRID_DOT_SEGMENTS * 3);
@@ -194,17 +216,9 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
       const float center_x = float(column) * grid_step;
 
       for (int segment = 0; segment < MOODBOARD_GRID_DOT_SEGMENTS; segment++) {
-        const float angle_a = (2.0f * float(M_PI) * float(segment)) /
-                              float(MOODBOARD_GRID_DOT_SEGMENTS);
-        const float angle_b = (2.0f * float(M_PI) * float(segment + 1)) /
-                              float(MOODBOARD_GRID_DOT_SEGMENTS);
         immVertex2f(pos, center_x, center_y);
-        immVertex2f(pos,
-                    center_x + cosf(angle_a) * dot_radius,
-                    center_y + sinf(angle_a) * dot_radius);
-        immVertex2f(pos,
-                    center_x + cosf(angle_b) * dot_radius,
-                    center_y + sinf(angle_b) * dot_radius);
+        immVertex2f(pos, center_x + rim_x[segment], center_y + rim_y[segment]);
+        immVertex2f(pos, center_x + rim_x[segment + 1], center_y + rim_y[segment + 1]);
       }
     }
   }
@@ -219,16 +233,26 @@ static void mixie_draw_moodboard_grid(View2D *v2d)
 /** \name Selection Overlay Drawing
  * \{ */
 
+void moodboard_draw_surface(const rctf &rect, const float radius)
+{
+  ui::mixar_fill_round(rect, radius, ui::mixar_tokens::mixar_zen().panel);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&rect, false, radius, ui::mixar_tokens::mixar_zen().border);
+}
+
 void mixie_draw_moodboard_media_frame(
     const float x, const float y, const float w, const float h, const bool selected)
 {
   const float padding = MOODBOARD_MEDIA_FRAME_PADDING;
   const rctf frame = {x - padding, x + w + padding, y - padding, y + h + padding};
-  const float background[4] = {0.105f, 0.105f, 0.11f, 0.99f};
-  const float border[4] = {0.38f, 0.39f, 0.42f, selected ? 0.92f : 0.58f};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&frame, true, MOODBOARD_MEDIA_FRAME_RADIUS, background);
-  UI_draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
+  moodboard_draw_surface(frame, MOODBOARD_MEDIA_FRAME_RADIUS);
+  /* Only the SELECTED frame brightens its rim; the RESTING one is the token
+   * row's, so both the media frame and the node card share one resting look. */
+  if (selected) {
+    const float *border = ui::mixar_tokens::mixar_zen().focus;
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&frame, false, MOODBOARD_MEDIA_FRAME_RADIUS, border);
+  }
 }
 
 void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float w, float h)
@@ -256,35 +280,39 @@ void mixie_draw_moodboard_selection_overlay(View2D *v2d, float x, float y, float
   immVertex2f(pos, x, y + h);
   immEnd();
 
-  /* Draw resize handles */
-  float handle_size_px = 12.0f;
-  float handle_size = handle_size_px / UI_view2d_scale_get_x(v2d);
-
-  /* 8 handle positions: 4 corners + 4 edge midpoints */
-  float handle_positions[8][2] = {
-      {x, y},                 /* 0: Bottom-left */
-      {x + w / 2, y},         /* 1: Bottom-center */
-      {x + w, y},             /* 2: Bottom-right */
-      {x + w, y + h / 2},     /* 3: Right-center */
-      {x + w, y + h},         /* 4: Top-right */
-      {x + w / 2, y + h},     /* 5: Top-center */
-      {x, y + h},             /* 6: Top-left */
-      {x, y + h / 2}          /* 7: Left-center */
-  };
-
-  immUniformColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-  for (int i = 0; i < 8; i++) {
-    immRectf(pos,
-             handle_positions[i][0] - handle_size / 2,
-             handle_positions[i][1] - handle_size / 2,
-             handle_positions[i][0] + handle_size / 2,
-             handle_positions[i][1] + handle_size / 2);
-  }
+  mixie_draw_moodboard_resize_handles(v2d, pos, x, y, w, h);
 
   GPU_line_width(1.0f);
   GPU_blend(GPU_BLEND_NONE);
 
   immUnbindProgram();
+}
+
+void mixie_draw_moodboard_resize_handles(
+    View2D *v2d, const uint pos, const float x, const float y, const float w, const float h)
+{
+  /* FOUR corner squares, from the ONE definition the hit-test reads
+   * (`moodboard_resize_handle_positions`), so the squares the user aims at and
+   * the region that responds cannot drift apart. The four edge midpoints this
+   * replaces meant "stretch one axis" -- a distortion nobody asks of a picture
+   * or a generated result -- and they crowded the corners that do the work.
+   *
+   * A fixed SCREEN size converted through the view scale: a handle is an
+   * affordance, not part of the picture, so it stays the same size to aim at
+   * at every zoom. */
+  const float handle_size = MOODBOARD_RESIZE_HANDLE_PX / ui::view2d_scale_get_x(v2d);
+  const rctf rect = {x, x + w, y, y + h};
+  float handles[MOODBOARD_RESIZE_HANDLE_COUNT][2];
+  moodboard_resize_handle_positions(rect, handles);
+
+  immUniformColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+  for (int i = 0; i < MOODBOARD_RESIZE_HANDLE_COUNT; i++) {
+    immRectf(pos,
+             handles[i][0] - handle_size / 2,
+             handles[i][1] - handle_size / 2,
+             handles[i][0] + handle_size / 2,
+             handles[i][1] + handle_size / 2);
+  }
 }
 
 /** \} */
@@ -306,15 +334,35 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   /* Setup View2D for infinite canvas */
   View2D *v2d = &region->v2d;
 
-  UI_view2d_view_ortho(v2d);
+  ui::view2d_view_ortho(v2d);
 
   /* Draw grid background */
   mixie_draw_moodboard_grid(v2d);
 
-  /* One rect/link cache for every graph pass of this frame. Each pass
-   * building its own re-acquired every image's ImBuf (aspect lookup) several
-   * times per redraw — at the generating-glow repaint rate that was the
-   * dominant per-frame cost on a large board. */
+  /* Paint the complete board beneath floating chrome and overlapping panels.
+   * Framing margins must never cut a vertical strip out of a panned card. */
+  int previous_scissor[4];
+  GPU_scissor_get(previous_scissor);
+  rcti content = moodboard_canvas_draw_rect(C);
+  const rcti host_scissor = {previous_scissor[0], previous_scissor[0] + previous_scissor[2],
+                            previous_scissor[1], previous_scissor[1] + previous_scissor[3]};
+  if (BLI_rcti_isect(&content, &host_scissor, &content)) {
+    GPU_scissor(content.xmin, content.ymin,
+                BLI_rcti_size_x(&content), BLI_rcti_size_y(&content));
+  }
+  else {
+    GPU_scissor(0, 0, 0, 0);
+  }
+
+  /* Canvas frames come next, UNDERNEATH every other pass. A frame is a
+   * translucent wash over a region of the board, so drawing it after the
+   * media and the cards (which is where the old group pass sat) would tint
+   * the very results the user is looking at. Its NAME is painted much later,
+   * in the screen-space pass, so a member can never cover it. */
+  mixie_draw_moodboard_frames(C, v2d);
+
+  /* One rect/link cache for every graph pass of this frame. Aspect comes
+   * from the draw-stamp size cache, so a warm tile does not lock an ImBuf. */
   MoodboardGraphCache graph_cache;
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
   moodboard_graph_cache_build(&scene_ptr, &graph_cache);
@@ -331,17 +379,33 @@ void mixie_draw_moodboard_mode(const bContext *C, ARegion *region)
   /* Draw moodboard text boxes */
   mixie_draw_moodboard_textboxes(C, v2d);
 
-  /* Draw moodboard groups */
-  mixie_draw_moodboard_groups(C, v2d);
+  /* Board marks sit over its content and share its pan/zoom and host scissor. */
+  mixie_draw_moodboard_canvas_annotations(&scene_ptr, v2d);
 
   /* Draw edit tool overlay */
   mixie_draw_edit_tool_overlay(C, v2d);
 
+  BLF_batch_draw_flush();
+  GPU_scissor(previous_scissor[0], previous_scissor[1],
+              previous_scissor[2], previous_scissor[3]);
+
   /* Reset view */
-  UI_view2d_view_restore(C);
+  ui::view2d_view_restore(C);
 
   /* Draw View2D scrollers */
-  UI_view2d_scrollers_draw(v2d, nullptr);
+  ui::view2d_scrollers_draw(v2d, nullptr);
+  mixie_moodboard_chrome_draw(C, region);
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Public host bridge
+ * \{ */
+
+void mixie_moodboard_canvas_draw(const bContext *C, ARegion *region)
+{
+  mixie_draw_moodboard_mode(C, region);
 }
 
 /** \} */

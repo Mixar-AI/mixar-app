@@ -126,6 +126,13 @@ class ConnectionManager:
             # Access instance_id to trigger generation if needed
             instance_id = session.instance_id
             logger.info(f"ConnectionManager initialized with instance_id: {instance_id[:8]}...")
+            # Harness v3: document identity / epoch handlers + the run-active
+            # WindowManager flag (main thread — initialize() runs on a timer).
+            try:
+                from mixar.modules.common.agent_execution import document as _v3doc
+                _v3doc.register()
+            except Exception as e:
+                logger.warning(f"v3 document identity registration skipped: {e}")
             return True
 
         except Exception as e:
@@ -235,6 +242,20 @@ class ConnectionManager:
 
                 client.send_request(JSONRPCMethod.JOB_SYNC, {}, _on_job_sync_result)
 
+                # The mirror of job.sync: jobs that reached a terminal state
+                # while this socket was down still owe the agent a
+                # generation.agent_result callback. Retry every stamped job
+                # across all queues now that a connected client exists.
+                # Marshalled to the main thread — on_connected runs on the
+                # WebSocket thread and the sweep walks live queue state.
+                def _sweep_agent_results():
+                    from ...common.job_queue.core.agent_results import (
+                        report_all_agent_results,
+                    )
+                    report_all_agent_results()
+
+                run_on_main_thread(_sweep_agent_results)
+
                 # #1258: a turn that outlived the disconnect is invisible to
                 # the user — ask the server which local sessions have a turn
                 # still running, or abandoned unwatched by the drain, and
@@ -247,9 +268,9 @@ class ConnectionManager:
                 # while the main thread is adding and removing lane scenes,
                 # and iterating that ListBase concurrently is a segfault.
                 try:
-                    from .turn_resume import check_orphaned_turns
+                    from .turn_events import reconnect
 
-                    run_on_main_thread(check_orphaned_turns)
+                    run_on_main_thread(reconnect)
                 except Exception:
                     logger.exception("orphaned-turn check failed (non-fatal)")
 
@@ -290,7 +311,7 @@ class ConnectionManager:
             # terminal. Anything else is a transient drop the client will
             # auto-reconnect from, so a running agent turn (BUSY / MODIFYING /
             # AWAITING_INPUT) must survive it: the turn streams over its own
-            # SSE connection and the backend keeps executing — wiping its
+            # backend task and the backend keeps executing — wiping its
             # state here made the client refuse every post-reconnect script
             # with "Agent session not active" while showing an idle pill.
             terminal = reason == DISCONNECT_REASON_AUTH_FAILED
@@ -310,6 +331,7 @@ class ConnectionManager:
             tool_name: str = "unknown",
             session_id: str = "",
             agent_ctx: Optional[dict] = None,
+            envelope: Optional[dict] = None,
         ) -> Optional[dict]:
             """Queue script for main thread execution (non-blocking)."""
             if not session.has_active_session():
@@ -320,16 +342,11 @@ class ConnectionManager:
                 return {"success": False, "error": "Agent session not active"}
 
             from .main_thread_executor import queue_script_request
-            if request_id:
-                queue_script_request(
-                    script, request_id, tool_name, session_id, agent_ctx
-                )
-                return None
-            else:
-                queue_script_request(
-                    script, "notification", tool_name, session_id, agent_ctx
-                )
-                return None
+            queue_script_request(
+                script, request_id or "notification", tool_name, session_id,
+                agent_ctx, envelope=envelope,
+            )
+            return None
 
         def on_tool_start(params: dict):
             """Handle tool start notification."""
@@ -359,6 +376,16 @@ class ConnectionManager:
             """Backend asked this (parent) instance to manage its sandbox child."""
             from mixar.bootstrap.sandbox_supervisor import handle_sandbox_control
             return handle_sandbox_control(params)
+
+        def on_execution_request(method: str, params: dict, request_id) -> None:
+            """Harness v3 agent.execution.* — main-thread work, deferred reply."""
+            from mixar.modules.common.agent_execution.handlers import handle_execution_request
+            return handle_execution_request(method, params, request_id)
+
+        def on_turn_event(method: str, params: dict) -> None:
+            """agent.turn.* — a backend-started turn streamed over the socket."""
+            from .turn_events import handle_turn_notification
+            handle_turn_notification(method, params)
 
         def on_llm_request(params: dict, request_id) -> None:
             """Relay one backend llm.request to the user's local model server.
@@ -493,6 +520,8 @@ class ConnectionManager:
             on_sandbox_control=on_sandbox_control,
             on_llm_request=on_llm_request,
             on_addon_project_request=on_addon_project_request,
+            on_execution_request=on_execution_request,
+            on_turn_event=on_turn_event,
         )
 
         # Connect
@@ -527,6 +556,9 @@ class ConnectionManager:
         # Update session state unless Blender is already in restricted
         # shutdown, where bpy.data.scenes is no longer available.
         if update_session_state:
+            # A deliberate disconnect is terminal for the runs too: no
+            # socket, no wake-ups, and the next connect starts clean.
+            session.clear_all_runs()
             session.set_all_scenes_state(SessionState.OFFLINE)
             self._is_shutting_down = False
 

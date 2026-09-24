@@ -22,8 +22,10 @@
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_markdown_intern.hh"
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
-/* Parsed-segment cache lives in mixie_chat_markdown_parse.cc
+/* Parsed-segment cache lives in mixie_chat_markdown_cache.cc
  * (markdown_segments_get_cached in mixie_chat_markdown_intern.hh). */
 
 /* -------------------------------------------------------------------- */
@@ -557,3 +559,4 @@ const char *chat_ui_markdown_segment_text(const char *metadata_json,
 }
 
 /** \} */
+}  // namespace blender

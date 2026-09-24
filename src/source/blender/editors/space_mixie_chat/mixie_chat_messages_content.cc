@@ -17,6 +17,7 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_rect.h"
+#include "BLI_string.h"
 
 #include "BKE_main.hh"
 
@@ -25,6 +26,8 @@
 #include "UI_interface.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Message Content Rendering
@@ -35,13 +38,19 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                                         int text_len,
                                         const char *display_text)
 {
+  /* The user's own message is the chat's one real card, so its bed is a glass
+   * pane (§ MIXAR_GLASS_CHAT). Everything else that shares this fill stays
+   * flat: the agent's prose has no bed at all, the block containers hand over a
+   * colour on purpose, and an error card keeps its red. */
+  const bool glass_bed = layout.is_user && !layout.is_error;
+
   if (layout.is_slot_based && text_len == 0) {
     /* Get content text - read fresh from RNA property since it may have been updated */
     char *slot_content = nullptr;
     int slot_content_len = g_msg_props.content ?
         RNA_property_string_length(msg_ptr, g_msg_props.content) : 0;
     if (slot_content_len > 0) {
-      slot_content = static_cast<char *>(MEM_mallocN(slot_content_len + 1, "slot_content"));
+      slot_content = static_cast<char *>(MEM_new_uninitialized(slot_content_len + 1, "slot_content"));
       RNA_property_string_get(msg_ptr, g_msg_props.content, slot_content);
     }
 
@@ -52,7 +61,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       if (g_msg_props.metadata) {
         int meta_len = RNA_property_string_length(msg_ptr, g_msg_props.metadata);
         if (meta_len > 0) {
-          slot_meta_d = static_cast<char *>(MEM_mallocN(meta_len + 1, "slot_meta_d"));
+          slot_meta_d = static_cast<char *>(MEM_new_uninitialized(meta_len + 1, "slot_meta_d"));
           RNA_property_string_get(msg_ptr, g_msg_props.metadata, slot_meta_d);
           slot_draw_md = chat_ui_has_markdown_segments(slot_meta_d);
         }
@@ -65,8 +74,14 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         bubble_rect.xmax = layout.bubble_x + layout.bubble_width;
         bubble_rect.ymin = layout.y_pos;
         bubble_rect.ymax = layout.y_pos + layout.bubble_height;
-        chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius,
-                                  layout.style.bg_color);
+        if (glass_bed) {
+          chat_ui_draw_glass_pane(&bubble_rect, layout.style.corner_radius,
+                                  layout.style.bg_color[3]);
+        }
+        else {
+          chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius,
+                                    layout.style.bg_color);
+        }
 
         /* Neutral structural rail for the agent's prose blocks — quiet ground;
          * the single live accent belongs to the streaming blocks only. */
@@ -86,11 +101,12 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         /* Fallback: plain text bubble */
         chat_ui_draw_bubble(&layout.style, slot_content, layout.bubble_x,
                             layout.y_pos, layout.bubble_width,
-                            layout.bubble_height, layout.content_width);
+                            layout.bubble_height, layout.content_width,
+                            0.0f, glass_bed);
       }
 
       if (slot_meta_d) {
-        MEM_freeN(slot_meta_d);
+        MEM_delete_void(static_cast<void *>(slot_meta_d));
       }
     } else if (layout.has_ephemeral) {
       /* Ephemeral text - read fresh from RNA and draw with FIFO scrolling */
@@ -98,7 +114,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       int eph_len = g_msg_props.ephemeral ?
           RNA_property_string_length(msg_ptr, g_msg_props.ephemeral) : 0;
       if (eph_len > 0) {
-        fresh_ephemeral = static_cast<char *>(MEM_mallocN(eph_len + 1, "eph_draw"));
+        fresh_ephemeral = static_cast<char *>(MEM_new_uninitialized(eph_len + 1, "eph_draw"));
         RNA_property_string_get(msg_ptr, g_msg_props.ephemeral, fresh_ephemeral);
       }
       const char *eph_text = fresh_ephemeral ? fresh_ephemeral : "";
@@ -122,7 +138,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                                     layout.bubble_height,
                                     layout.content_width);
       if (fresh_ephemeral) {
-        MEM_freeN(fresh_ephemeral);
+        MEM_delete_void(static_cast<void *>(fresh_ephemeral));
       }
     } else if (layout.has_loader) {
       /* Loader only - spinner + current loader text */
@@ -149,7 +165,8 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                chat_anim_frame(CHAT_ANIM_SPINNER, spin_idx), loader_text);
       chat_ui_draw_bubble(&layout.style, loader_buf, layout.bubble_x,
                           layout.y_pos, layout.bubble_width,
-                          layout.bubble_height, layout.content_width);
+                          layout.bubble_height, layout.content_width,
+                          0.0f, glass_bed);
     } else if (layout.has_todo || layout.has_actions || layout.has_steps ||
                layout.has_thinking) {
       /* Block-only message - no main bubble, the blocks render below */
@@ -157,12 +174,13 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       /* Fallback: empty bubble */
       chat_ui_draw_bubble(&layout.style, "", layout.bubble_x,
                           layout.y_pos, layout.bubble_width,
-                          layout.bubble_height, layout.content_width);
+                          layout.bubble_height, layout.content_width,
+                          0.0f, glass_bed);
     }
 
     /* Free slot content if allocated */
     if (slot_content) {
-      MEM_freeN(slot_content);
+      MEM_delete_void(static_cast<void *>(slot_content));
     }
   }
   /* Legacy text-based message rendering */
@@ -172,7 +190,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
     if (g_msg_props.metadata) {
       int meta_len = RNA_property_string_length(msg_ptr, g_msg_props.metadata);
       if (meta_len > 0) {
-        meta_buf = static_cast<char *>(MEM_mallocN(meta_len + 1, "meta_draw"));
+        meta_buf = static_cast<char *>(MEM_new_uninitialized(meta_len + 1, "meta_draw"));
         RNA_property_string_get(msg_ptr, g_msg_props.metadata, meta_buf);
       }
     }
@@ -184,7 +202,13 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       bubble_rect.xmax = layout.bubble_x + layout.bubble_width;
       bubble_rect.ymin = layout.y_pos;
       bubble_rect.ymax = layout.y_pos + layout.bubble_height;
-      chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius, layout.style.bg_color);
+      if (glass_bed) {
+        chat_ui_draw_glass_pane(&bubble_rect, layout.style.corner_radius,
+                                layout.style.bg_color[3]);
+      }
+      else {
+        chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius, layout.style.bg_color);
+      }
 
       /* Teal left accent bar for the agent's content / Plan block (this is the
        * path agent markdown actually takes — text mirrors content, so text_len
@@ -208,13 +232,43 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       chat_ui_draw_bubble(&layout.style, display_text, layout.bubble_x,
                           layout.y_pos, layout.bubble_width,
                           layout.bubble_height, layout.content_width,
-                          layout.attachments_height);
+                          layout.attachments_height, glass_bed);
     }
 
     if (meta_buf) {
-      MEM_freeN(meta_buf);
+      MEM_delete_void(static_cast<void *>(meta_buf));
     }
   }
 }
 
 /** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Sender Label
+ * \{ */
+
+const char *mixie_chat_sender_label(const MessageLayoutData &layout, PointerRNA *msg_ptr)
+{
+  if (layout.is_error) {
+    return "Error";
+  }
+  if (!layout.is_user) {
+    return "Mixie";
+  }
+  /* A user message sent into a running turn (an interjection) carries its
+   * delivery state until the backend's `joined` ack clears the hint. */
+  static char label_buf[64];
+  if (g_msg_props.delivery_hint) {
+    char hint[40] = "";
+    const int hint_len = RNA_property_string_length(msg_ptr, g_msg_props.delivery_hint);
+    if (hint_len > 0 && hint_len < int(sizeof(hint))) {
+      RNA_property_string_get(msg_ptr, g_msg_props.delivery_hint, hint);
+      SNPRINTF(label_buf, "You (%s)", hint);
+      return label_buf;
+    }
+  }
+  return "You";
+}
+
+/** \} */
+}  // namespace blender

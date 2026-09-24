@@ -200,6 +200,13 @@ def enqueue_retopology_jobs(
     Each object is exported individually as GLB. Files exceeding the
     backend size limit are skipped with a warning.
     """
+    from mixar.modules.common.job_queue.core.agent_batches import agent_generation_batch
+
+    with agent_generation_batch(context):
+        return _enqueue_retopology_jobs(context, objects, shared, operator)
+
+
+def _enqueue_retopology_jobs(context, objects, shared, operator):
     enqueued: list = []
     is_tripo = shared.get("model", "hunyuan") == "tripo"
     max_size = (
@@ -276,7 +283,6 @@ def _enqueue_hunyuan(obj, shared, file_bytes, filename):
         fail_message="Retopology failed",
         on_imported=_retopology_on_imported,
         scene_flag="mixie_retopology_is_generating",
-        batch_popup_title="Retopology batch complete",
     )
 
 
@@ -322,5 +328,4 @@ def _enqueue_tripo(obj, shared, file_bytes, filename):
         fail_message="Retopology failed",
         on_imported=_make_tripo_on_imported(bake),
         scene_flag="mixie_retopology_is_generating",
-        batch_popup_title="Retopology batch complete",
     )

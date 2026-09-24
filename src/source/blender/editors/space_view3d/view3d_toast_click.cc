@@ -27,10 +27,15 @@
 #include "ED_screen.hh"
 
 #include "RNA_access.hh"
+#include "UI_interface_c.hh"
 
 #include "WM_api.hh"
 
 #include "view3d_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
+void view3d_toast_qa_register();
 
 /* Set by the Python toast timer (toast_timer.py) while any toast is visible.
  * Must stay in sync with TOASTS_VISIBLE_WM_PROP in notifications/constants.py. */
@@ -62,10 +67,14 @@ static bool toast_call_mouse_op(bContext *C, const wmEvent *event, const char *i
     return false;
   }
 
-  PointerRNA op_ptr;
-  WM_operator_properties_create_ptr(&op_ptr, ot);
+  PointerRNA op_ptr = WM_operator_properties_create_ptr(ot);
   RNA_int_set(&op_ptr, "mouse_x", event->mval[0]);
   RNA_int_set(&op_ptr, "mouse_y", event->mval[1]);
+  if (STREQ(idname, "notification.toast_scroll")) {
+    const float delta = event->type == MOUSEPAN ? float(WM_event_absolute_delta_y(event)) :
+                        (event->type == WHEELUPMOUSE ? -40.0f : 40.0f) * UI_SCALE_FAC;
+    RNA_float_set(&op_ptr, "delta", delta);
+  }
 
   wmOperatorStatus result = WM_operator_name_call_ptr(
       C, ot, blender::wm::OpCallContext::ExecDefault, &op_ptr, nullptr);
@@ -78,7 +87,10 @@ static int view3d_toast_ui_handler(bContext *C, const wmEvent *event, void * /*u
 {
   const bool is_press = (event->type == LEFTMOUSE && event->val == KM_PRESS);
   const bool is_move = (event->type == MOUSEMOVE);
-  if (!is_press && !is_move) {
+  const bool is_scroll = event->type == MOUSEPAN ||
+                         (ELEM(event->type, WHEELUPMOUSE, WHEELDOWNMOUSE) &&
+                          event->val == KM_PRESS);
+  if (!is_press && !is_move && !is_scroll) {
     return WM_UI_HANDLER_CONTINUE;
   }
 
@@ -86,6 +98,11 @@ static int view3d_toast_ui_handler(bContext *C, const wmEvent *event, void * /*u
   ARegion *region = CTX_wm_region(C);
   if (!area || area->spacetype != SPACE_VIEW3D || !region) {
     return WM_UI_HANDLER_CONTINUE;
+  }
+
+  if (is_scroll) {
+    return toast_any_visible(C) && toast_call_mouse_op(C, event, "notification.toast_scroll") ?
+               WM_UI_HANDLER_BREAK : WM_UI_HANDLER_CONTINUE;
   }
 
   if (is_move) {
@@ -112,6 +129,7 @@ static void view3d_toast_ui_handler_remove(bContext * /*C*/, void * /*userdata*/
 
 void view3d_toast_click_register(ARegion *region)
 {
+  view3d_toast_qa_register();
   WM_event_remove_ui_handler(&region->runtime->handlers,
                              view3d_toast_ui_handler,
                              view3d_toast_ui_handler_remove,
@@ -124,3 +142,4 @@ void view3d_toast_click_register(ARegion *region)
                           nullptr,
                           eWM_EventHandlerFlag(0));
 }
+}  // namespace blender

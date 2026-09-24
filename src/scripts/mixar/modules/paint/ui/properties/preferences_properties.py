@@ -144,6 +144,22 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         update=_save_on_update,
     )
 
+    default_render_device: EnumProperty(
+        name="Default Render Device",
+        description=(
+            "Device Cycles renders on, including the agent's verification render. "
+            "Auto and GPU enable the machine's Metal/CUDA/OptiX/HIP device once at "
+            "startup; CPU leaves Cycles on the CPU"
+        ),
+        items=[
+            ('AUTO', "Auto", "Use the GPU when one is available, otherwise the CPU"),
+            ('GPU', "GPU", "Always render on the GPU when one is available"),
+            ('CPU', "CPU", "Always render on the CPU"),
+        ],
+        default='AUTO',
+        update=_save_on_update,
+    )
+
     # ========== DEFAULT LAYER/NODE OPTIONS ==========
 
     enable_baked_outside_by_default: BoolProperty(

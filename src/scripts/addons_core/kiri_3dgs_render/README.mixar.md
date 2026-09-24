@@ -46,12 +46,23 @@ Omitted from vendoring:
   (Blender maps the bundled scripts dir to `addons_core`, not `addons`).
 
 One asset is transformed: `assets/3DGS Render APPEND V4.blend` (the
-geometry-nodes group + material + HQ object the import operator appends)
+geometry-nodes groups + material + HQ/Wire objects the addon appends)
 is NOT in the upstream git repo (gitignored; release-zip-only, upstream
-ships it uncompressed at 190 MB). We vendor a losslessly recompressed
-resave (Blender `save_as_mainfile(compress=True)` from the Mixar build,
-62 MB) — `wm.append` reads it identically; validated end-to-end (import,
-modifiers, proxy, render).
+ships it uncompressed at 190 MB). We vendor a stripped, compressed resave
+(6.7 MB): upstream's file also carries KIRI's demo scene, whose four sample
+splat objects (`Faces to 3DGS`, `Faces to 3DGS.001`, `Points to 3DGS`,
+`Point Edit cubone` — flamingo/cubone point clouds) were ~150 MB of mesh
+data that nothing ever appends. Those objects and their meshes were removed
+(their only users were the demo collections and the demo Camera's DOF focus)
+and the file saved with `save_as_mainfile(compress=True)`. Every node group,
+material, image and appended object is unchanged — verified by appending
+each one from the old and new file and diffing the result, and by running
+the real import (`sna.dgs_render_import_ply_e0a3a`) + proxy
+(`sna.dgs_render_create_proxy_from_mesh_d5b41`) operators against both.
+The only ID that no longer survives the save is `KIRI_3DGS_Animate_GNborken`,
+an orphaned broken copy used solely by a deleted demo object's modifier and
+never referenced by the addon. On a vendor bump, re-apply the same strip
+(delete those demo objects + meshes, compressed save).
 
 ## Render model (why a splat can look like a green point cloud)
 

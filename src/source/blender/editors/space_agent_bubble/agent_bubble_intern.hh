@@ -11,17 +11,39 @@
 
 #pragma once
 
+#include "BLI_rect.h"
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct bContext;
 struct wmOperatorType;
+struct wmEvent;
+bool agent_bubble_should_dismiss(bContext *C, const wmEvent *event, void *bubble, void *pill);
 struct wmWindowManager;
 
 /* -------------------------------------------------------------------- */
 /** \name Header Region (status pill)
  * \{ */
 
+/* True only after native frost and framebuffer alpha are both available.
+ * Unsupported systems retain opaque beds. */
+bool agent_bubble_pill_bed_is_transparent();
+
+/* Replace a straight RGBA wash with premultiplied framebuffer pixels. */
+void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4]);
+
+/* Same capability decision for the expanded island's region beds. */
+bool agent_bubble_island_bed_is_transparent();
+
 void agent_bubble_header_region_init(wmWindowManager *wm, ARegion *region);
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region);
+
+void agent_bubble_composer_focus_request(bContext *C, void *ghost_window);
+void agent_bubble_composer_focus_tick(bContext *C, void *ghost_window, bool minimised);
+void agent_bubble_composer_focus_if_pending(bContext *C);
+bool agent_bubble_composer_has_focused_draft(const bContext *C, void *ghost_window);
 
 /** \} */
 
@@ -76,4 +98,20 @@ void MIXAR_OT_bubble_toggle_expand(wmOperatorType *ot);
  * mixar.bubble_set_bg_color(r, g, b, a). */
 void MIXAR_OT_bubble_set_bg_color(wmOperatorType *ot);
 
+/* Sketch / Voice tab lock. The strip stays clickable so the press does
+ * not fall through to the window drag. Python idname:
+ * mixar.bubble_tab_locked. */
+void MIXAR_OT_bubble_tab_locked(wmOperatorType *ot);
+
+/* Voice button on the minimised Sketch pill: claims a pill click that lands on
+ * the button and toggles dictation. Python idname: mixar.bubble_pill_voice
+ * (asked first by the pill gesture in bubble_header_drag_op.py). */
+void MIXAR_OT_bubble_pill_voice(wmOperatorType *ot);
+
+/* Make the host window key again (macOS/Windows; no-op elsewhere), so typing
+ * over a frozen Sketch viewport continues after a pill control is clicked. */
+void agent_bubble_return_key_to_host();
+
 /** \} */
+
+}  // namespace blender

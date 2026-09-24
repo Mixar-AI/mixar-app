@@ -6,46 +6,36 @@
 No bpy imports — kept dependency-free so it is unit-testable outside Blender
 and reusable by both the slot processor and the dev-data mock.
 """
-from collections import Counter
 from collections.abc import Iterable
 
-# Kind -> (singular phrase, plural phrase). Declaration order here defines the
-# left-to-right order of the rendered summary. Must match the kind enum order
-# in chat_slot_types.MixieChatStepItem. First words are lowercase; the joined
-# summary's leading character is capitalized in format_steps_summary so a
-# standalone non-READ summary (e.g. "wrote 1 file") still reads correctly.
-_KIND_PHRASES = [
-    ("READ", "read {n} file", "read {n} files"),
-    ("WRITE", "wrote {n} file", "wrote {n} files"),
-    ("COMMAND", "ran {n} command", "ran {n} commands"),
-    ("SEARCH", "ran {n} search", "ran {n} searches"),
-    ("TOOL", "used {n} tool", "used {n} tools"),
-]
-
-_VALID_KINDS = {entry[0] for entry in _KIND_PHRASES}
+# Step kinds, in the enum order of chat_slot_types.MixieChatStepItem (the C++
+# side reads that enum as an int index to pick the row glyph).
+_VALID_KINDS = {"READ", "WRITE", "COMMAND", "SEARCH", "TOOL"}
 _VALID_STATUS = {"PENDING", "RUNNING", "DONE", "FAILED"}
 
 
-def format_steps_summary(kinds: Iterable[str]) -> str:
-    """Build a human summary like "Read 2 files · ran 1 command".
+def format_steps_summary(kinds: Iterable[str], image_count: int = 0) -> str:
+    """Build the collapsed header, e.g. "5 tools called".
+
+    Deliberately NOT a per-kind breakdown ("Read 2 files · ran 1 command"):
+    the agent's tools are Blender scripts, not files and shells, and the
+    breakdown read as noise. The expanded rows carry the specifics. Images
+    are NOT counted here: they have their own "Viewed N images" block under
+    the steps (mixie_chat_steps.cc), with its own collapse state.
 
     Args:
         kinds: iterable of kind identifier strings (e.g. "READ", "COMMAND").
-            Unknown identifiers are ignored.
+            Unknown identifiers are ignored; the count is what matters.
+        image_count: accepted for compatibility; not shown.
 
     Returns:
         Summary string, or "" when there are no recognized kinds.
     """
-    counts = Counter(kinds)
-    parts = []
-    for kind, singular, plural in _KIND_PHRASES:
-        n = counts.get(kind, 0)
-        if n <= 0:
-            continue
-        phrase = (singular if n == 1 else plural).format(n=n)
-        parts.append(phrase)
-    result = " · ".join(parts)
-    return result[:1].upper() + result[1:] if result else ""
+    del image_count
+    n = sum(1 for kind in kinds if kind in _VALID_KINDS)
+    if n <= 0:
+        return ""
+    return f"{n} tool{'s' if n != 1 else ''} called"
 
 
 def normalize_step_item(item_data: dict) -> dict:
@@ -64,10 +54,15 @@ def normalize_step_item(item_data: dict) -> dict:
     status = (item_data.get("status") or "done").upper()
     if status not in _VALID_STATUS:
         status = "DONE"
+    label = item_data.get("label") or ""
+    # Inspection is an observation. execute_script otherwise lands on COMMAND
+    # and the native row paints the filled act glyph — a highlighted button.
+    if label == "Inspected scene":
+        kind = "READ"
     return {
         "item_id": item_data.get("id") or "",
         "kind": kind,
-        "label": item_data.get("label") or "",
+        "label": label,
         "target": item_data.get("target") or "",
         "detail": item_data.get("detail") or "",
         "status": status,
@@ -99,18 +94,46 @@ def infer_step_kind(tool_name: str) -> str:
     return "TOOL"
 
 
-def humanize_tool_name(tool_name: str) -> str:
-    """Turn a snake_case tool name into a row label: "create_cube" -> "Create cube".
+# Friendly, past-tense labels for the backend tools the user should be able
+# to recognise. The RAW tool name is never shown: an unknown name falls back
+# to the script classifier and then to the generic "Tool call" the result
+# counts refine on finish. Keep this table small and human — it is UI copy.
+_TOOL_LABELS = {
+    "render_viewport": "Captured viewport",
+    "render_viewport_final": "Rendered final image",
+    "render_final": "Rendered final image",
+    "render_multiview": "Captured views",
+    "inspect_mesh_seams": "Inspected seams",
+    "inspect_uv_map": "Inspected UV layout",
+    "inspect_geometry": "Measured geometry",
+    "inspect_spatial_constraints": "Checked placement",
+    "correct_spatial_placement": "Corrected placement",
+    "import_terrain_asset": "Imported asset",
+    "list_terrain_assets": "Browsed asset library",
+    "place_camera": "Placed camera",
+    "scene_overview": "Inspected scene",
+    "critique_scene": "Reviewed the scene",
+}
 
-    The backend sends "unknown" when a script has no tool name, and
-    "execute_bpy_script" for generated scripts whose name says nothing about
-    the action — both fall back to the generic label so the script classifier
-    / result counts label the row by what it actually did.
+# Tools whose row is a capture: the tile(s) under the row ARE the result, so
+# the finish pass never overwrites the label with object counts.
+CAPTURE_TOOLS = frozenset({
+    "render_viewport", "render_viewport_final", "render_final",
+    "render_multiview", "inspect_mesh_seams", "inspect_uv_map",
+})
+
+
+def humanize_tool_name(tool_name: str) -> str:
+    """Row label for a backend tool name — a friendly phrase, never the name.
+
+    "render_viewport" -> "Captured viewport". Names not in the table (the
+    backend sends "unknown" when a script has no tool name and
+    "execute_bpy_script" for generated scripts) fall back to the generic
+    label so the script classifier / result counts label the row by what
+    it actually did.
     """
-    words = (tool_name or "").replace("_", " ").strip()
-    if not words or words.lower() in ("unknown", "execute bpy script"):
-        return "Tool call"
-    return words[:1].upper() + words[1:]
+    key = (tool_name or "").strip().lower()
+    return _TOOL_LABELS.get(key, "Tool call")
 
 
 def is_internal_step(tool_name: str, request_id: str = "") -> bool:
@@ -143,6 +166,17 @@ def classify_script_action(script: str) -> str:
     # Rendering is unmistakable and never modeling.
     if "ops.render.render" in s or "render.render(" in s or "render_still" in s:
         return "Rendered scene"
+    # UV work is unmistakable too, and it edits with bmesh / ops.mesh (which
+    # the geometry guard below would otherwise catch): the rows are how the
+    # user follows a UV pass — "Marked seams" -> "Unwrapped mesh" -> "Packed
+    # UV islands". Checked in pipeline order so a script doing all three is
+    # labelled by its last stage.
+    if "pack_islands" in s or "uv.pack" in s:
+        return "Packed UV islands"
+    if "uv.unwrap" in s or "uv.smart_project" in s or "unwrap(" in s:
+        return "Unwrapped mesh"
+    if "mark_seam" in s or "seam = true" in s or ".seam=true" in s:
+        return "Marked seams"
     # If the script builds geometry, it's modeling — let the counts label it.
     creates_geometry = any(k in s for k in (
         "primitive_", "ops.mesh.", "meshes.new", "bmesh", "curves.new",
@@ -242,33 +276,219 @@ def _result_label(created: int, modified: int, deleted: int):
     return "Updated scene", _summarize_object_counts(created, modified, deleted)
 
 
+_CAPTURE_LABELS = frozenset(_TOOL_LABELS[name] for name in CAPTURE_TOOLS)
+
+
 def _refresh_summary(bubble) -> None:
+    images = getattr(bubble, "image_items", None)
+    image_count = sum(1 for img in (images or ()) if getattr(img, "step_id", "")) if images is not None else 0
     bubble.steps_summary = format_steps_summary(
-        row.kind for row in bubble.step_items
+        (row.kind for row in bubble.step_items), image_count
     )
 
 
-def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = "") -> None:
-    """Append a RUNNING step row for a tool call that just started executing.
+# Mirrors SLOT_MAX_IMAGE_ITEMS in mixie_chat_ui_types.hh: the native layout
+# copies at most this many image items per bubble, oldest first, so anything
+# past it would be invisible. Drop the OLDEST step tiles to stay under it.
+MAX_STEP_IMAGES_PER_BUBBLE = 32
+
+
+def attach_step_images(bubble, request_id: str, records: list) -> int:
+    """Add image tiles for the step `request_id` to the bubble's image_items.
+
+    `records` are {local_path, width, height, caption} dicts (capture_store).
+    Tiles are tagged with `step_id` (provenance, and what `images_to_fetch`
+    keys on); the native side draws every tagged tile of the bubble in ONE
+    "Viewed N images" block under the steps, opened for the bubble that most
+    recently received a tile (see steps_recorder). Backend-owned gallery
+    images (no step_id) are left alone. Returns the number of tiles added.
+    """
+    if not records:
+        return 0
+    items = bubble.image_items
+    # One tile per file per bubble. A re-served capture (the backend hands back
+    # the same image refs for an identical render of an unchanged scene) and a
+    # download of a capture already saved locally must not show the same
+    # picture twice.
+    present = {_tile_key(img.local_path) for img in items if img.step_id and img.local_path}
+    added = 0
+    for rec in records:
+        path = rec.get("local_path") or ""
+        key = _tile_key(path)
+        if not path or key in present:
+            continue
+        present.add(key)
+        img = items.add()
+        img.step_id = request_id or ""
+        img.local_path = path
+        img.url = ""
+        img.thumbnail_url = ""
+        img.alt = rec.get("caption") or ""
+        img.caption = rec.get("caption") or ""
+        img.width = float(rec.get("width") or 0)
+        img.height = float(rec.get("height") or 0)
+        added += 1
+    # Enforce the native cap on step tiles, oldest first.
+    step_indices = [i for i, img in enumerate(items) if img.step_id]
+    overflow = len(step_indices) - MAX_STEP_IMAGES_PER_BUBBLE
+    for idx in reversed(step_indices[:max(overflow, 0)]):
+        items.remove(idx)
+    if added:
+        if hasattr(bubble, "images_collapsed"):
+            bubble.images_collapsed = False
+        _refresh_summary(bubble)
+    return added
+
+
+def _tile_key(path: str) -> str:
+    """Identity of a tile file: its basename without extension. A backend
+    image is saved as ``<image id>.<ext>``, so the same id is one tile."""
+    base = (path or "").replace("\\", "/").rsplit("/", 1)[-1]
+    return base.rsplit(".", 1)[0] if "." in base else base
+
+
+def bubble_has_image_id(bubble, image_id: str) -> bool:
+    return any(img.step_id and _tile_key(img.local_path) == image_id for img in bubble.image_items)
+
+
+def step_image_count(bubble, request_id: str) -> int:
+    return sum(1 for img in bubble.image_items if img.step_id == request_id)
+
+
+# Labels that say nothing about WHAT happened — a more specific one (from the
+# script classifier, the result counts, or the backend) always replaces them.
+_GENERIC_LABELS = frozenset({"", "Tool call", "Ran a script"})
+
+
+def _find_row_by_call_id(bubble, call_id: str):
+    if not call_id:
+        return None
+    for i in range(len(bubble.step_items) - 1, -1, -1):
+        row = bubble.step_items[i]
+        if getattr(row, "call_id", "") == call_id:
+            return row
+    return None
+
+
+def begin_step_on_bubble(bubble, request_id: str, tool_name: str, script: str = "",
+                         call_id: str = "") -> None:
+    """Start (or adopt) the step row for a tool call whose script just began.
 
     Duck-typed like apply_steps_to_bubble — used by the live recorder when a
     `blender.execute_script` request begins on the main thread. The label
-    prefers a real backend tool name, then the script-inferred action, then a
-    generic placeholder the result counts will refine on finish.
+    prefers a friendly name for a known backend tool, then the script-inferred
+    action, then a generic placeholder the result counts will refine on finish.
+
+    `call_id` is the backend tool-call id the RPC carried. When the backend's
+    `activity` payload for that call already opened a row, this ADOPTS it —
+    re-keyed to `request_id` so the result lands on it — instead of adding a
+    second row for the same call.
     """
-    row = bubble.step_items.add()
+    row = _find_row_by_call_id(bubble, call_id)
+    adopted = row is not None
+    if row is None:
+        row = bubble.step_items.add()
     row.item_id = request_id or ""
-    row.kind = infer_step_kind(tool_name)
+    row.call_id = call_id or ""
+    kind = infer_step_kind(tool_name)
     label = humanize_tool_name(tool_name)
     if label == "Tool call":
         classified = classify_script_action(script)
         if classified:
             label = classified
+    if label == "Inspected scene":
+        kind = "READ"
+    # An adopted row keeps a specific backend label over our generic guess.
+    if adopted and label in _GENERIC_LABELS and getattr(row, "label", "") not in _GENERIC_LABELS:
+        label = row.label
+    else:
+        row.kind = kind
     row.label = label
     row.target = ""
     row.detail = ""
     row.status = "RUNNING"
     _refresh_summary(bubble)
+
+
+_ACTIVITY_STATUS = {"running": "RUNNING", "done": "DONE", "failed": "FAILED"}
+
+
+def apply_activity_to_bubble(bubble, activity: dict):
+    """Merge one backend `activity` payload into the bubble's step rows.
+
+    Keyed on `call_id`: the row a script RPC opened for the same call (see
+    begin_step_on_bubble) is updated in place, otherwise a new row is added
+    with `item_id` = `call_id` (tools that never run a script: view_image,
+    delegate_tasks, load_skill, worker-side tools …).
+
+    Returns the row, or None when the payload is unusable. The caller decides
+    what to do with `activity["images"]` (see images_to_fetch).
+    """
+    call_id = str(activity.get("call_id") or "")
+    if not call_id:
+        return None
+    row = _find_row_by_call_id(bubble, call_id)
+    created = row is None
+    if created:
+        row = bubble.step_items.add()
+        row.item_id = call_id
+        row.call_id = call_id
+        row.kind = "READ" if activity.get("kind") == "read" else "TOOL"
+        row.label = ""
+        row.target = ""
+        row.detail = ""
+        row.status = "PENDING"
+        row.expanded = False
+
+    # The backend names the row it opened (and refines it on `done`: "Viewed
+    # an image" -> "Viewed 2 images"); a row the script path opened keeps its
+    # own (classifier / result-count) label unless that one is generic.
+    backend_owned = created or getattr(row, "item_id", "") == call_id
+    label = str(activity.get("label") or "")
+    if label and (backend_owned or getattr(row, "label", "") in _GENERIC_LABELS):
+        row.label = label
+
+    status = _ACTIVITY_STATUS.get(str(activity.get("status") or "").lower())
+    if status == "RUNNING":
+        # Never regress a row the script path already finished.
+        if row.status not in ("DONE", "FAILED"):
+            row.status = "RUNNING"
+    elif status == "DONE":
+        if row.status != "FAILED":
+            row.status = "DONE"
+    elif status == "FAILED":
+        row.status = "FAILED"
+        row.label = "Failed"
+        row.target = ""
+        row.detail = str(activity.get("error") or "")[:500]
+    _refresh_summary(bubble)
+    return row
+
+
+def images_to_fetch(bubble, row, activity: dict) -> list:
+    """The backend image refs of `activity` that this bubble has no tile for.
+
+    A capture the client made itself is already a tile under the row (the
+    bytes came through its own script reply), so a row that already holds
+    tiles takes nothing from the backend — the same pixels under a different
+    (backend-side) id would only duplicate it. Rows with no tiles (view_image,
+    a worker's capture that reached us only by reference) fetch every ref.
+    Returns [{"id", "label"}].
+    """
+    refs = [r for r in (activity.get("images") or [])
+            if isinstance(r, dict) and r.get("id")]
+    if not refs or row is None:
+        return []
+    if str(activity.get("tool") or "") == "view_image":
+        # Reopens images that already exist: earlier captures (already tiles)
+        # or the user's references. Never a new picture.
+        return []
+    if step_image_count(bubble, row.item_id) > 0:
+        return []
+    # An id the bubble already holds (a re-served capture, a second view of
+    # the same image) is not fetched or attached again.
+    return [{"id": str(r["id"]), "label": str(r.get("label") or "")}
+            for r in refs if not bubble_has_image_id(bubble, str(r["id"]))]
 
 
 def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
@@ -295,14 +515,22 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
             nc, nm, nd = len(created), len(modified), len(deleted)
             label = getattr(row, "label", "")
             # An "Inspected scene" guess that actually changed objects was wrong
-            # — fall back to the accurate count label.
+            # — fall back to the accurate count label. The row is no longer an
+            # observation, so drop the READ kind that kept it looking like a
+            # label rather than a command.
             if label == "Inspected scene" and (nc or nm or nd):
                 label = "Tool call"
+                row.kind = "TOOL"
+            elif label == "Inspected scene":
+                row.kind = "READ"
             # Keep a meaningful label (real tool name or script-inferred action,
             # set at begin) and show the object counts beside it; only synthesize
             # a label from the counts when the row is still the generic
             # "Tool call".
-            if label and label != "Tool call":
+            if label in _CAPTURE_LABELS:
+                # A capture's result is the tile(s) drawn under the row.
+                row.target = ""
+            elif label and label != "Tool call":
                 row.target = _summarize_object_counts(nc, nm, nd)
             else:
                 row.label, row.target = _result_label(nc, nm, nd)
@@ -345,4 +573,7 @@ def apply_steps_to_bubble(bubble, steps_data: dict) -> None:
         applied_kinds.append(norm["kind"])
 
     explicit = steps_data.get("summary") or ""
-    bubble.steps_summary = explicit if explicit else format_steps_summary(applied_kinds)
+    if explicit:
+        bubble.steps_summary = explicit
+    else:
+        _refresh_summary(bubble)

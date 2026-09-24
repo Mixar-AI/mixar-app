@@ -9,6 +9,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+namespace blender {
+#endif
+
 /**
  * Scaling factor for all UI elements, based on the "Resolution Scale" user preference and the
  * DPI/OS Scale of each monitor. This is a read-only, run-time value calculated by
@@ -234,7 +238,8 @@ typedef struct ThemeUI {
   /* Transparent Grid */
   unsigned char transparent_checker_primary[4], transparent_checker_secondary[4];
   unsigned char transparent_checker_size;
-  char _pad1[5];
+  unsigned char link[4];
+  char _pad1[1];
 
   float icon_alpha;
   float icon_saturation;
@@ -282,6 +287,82 @@ typedef struct ThemeUI {
   unsigned char panel_text[4];
   unsigned char panel_active[4];
 
+  /* Mixar shared UI colors. Zero means "unset" and falls back in the resolver. */
+  unsigned char mixar_canvas[4]; /* Canvas #121212ff */
+  unsigned char mixar_panel[4]; /* Panel #2d2d2dff */
+  unsigned char mixar_input[4]; /* Input #121212ff */
+  unsigned char mixar_control[4]; /* Control #313131ff */
+  unsigned char mixar_selected[4]; /* Selected #484848ff */
+  unsigned char mixar_text[4]; /* Text #e2e2e2ff */
+  unsigned char mixar_text_strong[4]; /* Text Strong #ffffffff */
+  unsigned char mixar_text_secondary[4]; /* Text Secondary #757575ff */
+  unsigned char mixar_border[4]; /* Border #414141ff */
+  unsigned char mixar_focus[4]; /* Focus #00c0c7ff */
+  unsigned char mixar_primary[4]; /* Primary #1a4026ff */
+  unsigned char mixar_danger[4]; /* Danger #e04848ff */
+  unsigned char mixar_warning[4]; /* Warning #e0a030ff */
+  unsigned char mixar_action[4]; /* Action #1d1d1dff */
+  unsigned char mixar_glyph[4]; /* Glyph #e4e4e4ff */
+  unsigned char mixar_chip[4]; /* Chip #1d1d1dff */
+  unsigned char mixar_chip_active[4]; /* Chip Active #323232ff */
+  unsigned char mixar_gray_800[4]; /* Gray 800 #1f1f1fff */
+  unsigned char mixar_gray_700[4]; /* Gray 700 #2a2a2aff */
+  unsigned char mixar_border_strong[4]; /* Border Strong #2e2e2eff */
+  unsigned char mixar_bg[4]; /* Background #141414ff */
+  unsigned char mixar_fg_1[4]; /* Foreground 1 #e6e6e6ff */
+  unsigned char mixar_fg_2[4]; /* Foreground 2 #c8c8c8ff */
+  unsigned char mixar_fg_3[4]; /* Foreground 3 #8c8c8cff */
+  unsigned char mixar_fg_4[4]; /* Foreground 4 #5a5a5aff */
+  unsigned char mixar_pane_wash[4]; /* Pane Wash #131413ff */
+  unsigned char mixar_pane_pill_dim[4]; /* Pane Pill Dim #3c3c3cff */
+  unsigned char mixar_pane_pill_on[4]; /* Pane Pill On #474747ff */
+  unsigned char mixar_brand[4]; /* Brand #34c76eff */
+  unsigned char mixar_brand_text[4]; /* Brand Text #0d130fff */
+  unsigned char mixar_queue[4]; /* Queue #424242ff */
+  unsigned char mixar_queue_count[4]; /* Queue Count #6c6c6cff */
+  unsigned char mixar_slider_track[4]; /* Slider Track #1d1d1dff */
+  unsigned char mixar_slider_thumb[4]; /* Slider Thumb #393939ff */
+  unsigned char mixar_slider_thumb_hover[4]; /* Slider Thumb Hover #464646ff */
+  unsigned char mixar_slider_label[4]; /* Slider Label #ffffffff */
+  unsigned char mixar_cinema_pill_fill[4]; /* Cinema Pill Fill #0e0e0eff */
+  unsigned char mixar_cinema_pill_border[4]; /* Cinema Pill Border #3f3f3fff */
+  unsigned char mixar_cinema_pill_on_a[4]; /* Cinema Pill On A #205836ff */
+  unsigned char mixar_cinema_pill_on_b[4]; /* Cinema Pill On B #3a8457ff */
+  unsigned char mixar_cinema_pill_border_on[4]; /* Cinema Pill Border On #57b07cff */
+  unsigned char mixar_cinema_pill_label[4]; /* Cinema Pill Label #505050ff */
+  unsigned char mixar_cinema_pill_label_on[4]; /* Cinema Pill Label On #ffffffff */
+  unsigned char mixar_viewport_fill[4]; /* Viewport Pill Fill #050505ff */
+  unsigned char mixar_viewport_border[4]; /* Viewport Pill Border #676767ff */
+  unsigned char mixar_viewport_label[4]; /* Viewport Pill Label #737373ff */
+  unsigned char mixar_viewport_label_on[4]; /* Viewport Pill Label On #dededeff */
+  unsigned char mixar_profile_fill[4]; /* Profile Fill #1b1b1bff */
+  unsigned char mixar_profile_label[4]; /* Profile Label #ecececff */
+  unsigned char mixar_profile_avatar[4]; /* Profile Avatar #3c3c3cff */
+  unsigned char mixar_profile_glyph[4]; /* Profile Glyph #d2d2d2ff */
+  unsigned char mixar_cinema_row_top[4]; /* Cinema Row Top #585858ff */
+  unsigned char mixar_cinema_row_bottom[4]; /* Cinema Row Bottom #242424ff */
+  unsigned char mixar_cinema_row_hover[4]; /* Cinema Row Hover #2e2e2eff */
+  unsigned char mixar_cinema_row_track[4]; /* Cinema Row Track #262626ff */
+  unsigned char mixar_cinema_row_text_on[4]; /* Cinema Row Text On #ffffffff */
+  unsigned char mixar_cinema_row_text_off[4]; /* Cinema Row Text Off #b4b4b4ff */
+  unsigned char mixar_cinema_row_text_disabled[4]; /* Cinema Row Text Disabled #636363ff */
+  unsigned char mixar_cinema_row_caption[4]; /* Cinema Row Caption #666666d9 */
+  unsigned char mixar_cinema_row_slider_on[4]; /* Cinema Row Slider On #2a7949ff */
+  unsigned char mixar_cinema_card_top[4]; /* Cinema Card Top #222323f5 */
+  unsigned char mixar_cinema_card_bottom[4]; /* Cinema Card Bottom #0b0b0bf5 */
+  unsigned char mixar_cinema_label[4]; /* Cinema Label #808080ff */
+  unsigned char mixar_cinema_dimmer[4]; /* Cinema Dimmer #373737ff */
+  unsigned char mixar_cinema_keycap[4]; /* Cinema Keycap #646464ff */
+  unsigned char mixar_cinema_phone[4]; /* Cinema Phone #383838ff */
+  unsigned char mixar_cinema_chip[4]; /* Cinema Chip #505050ff */
+  unsigned char mixar_cinema_brand_top[4]; /* Cinema Brand Top #0b311aff */
+  unsigned char mixar_cinema_brand_bottom[4]; /* Cinema Brand Bottom #0f0f0fff */
+  unsigned char mixar_cinema_gate_fill[4]; /* Cinema Gate Fill #d9d9d912 */
+  unsigned char mixar_widget_border[4]; /* Widget Border #262626ff */
+  unsigned char mixar_ink[4]; /* Ink #0a0a0aff */
+  unsigned char mixar_sunken[4]; /* Sunken #0f0f0fff */
+  unsigned char _pad_mixar[4]; /* Padding for 8-byte alignment */
+
 } ThemeUI;
 
 /* try to put them all in one, if needed a special struct can be created as well
@@ -313,7 +394,8 @@ typedef struct ThemeSpace {
   unsigned char shade2[4];
 
   unsigned char hilite[4];
-  unsigned char grid[4];
+  unsigned char grid[4], grid_major[4];
+  float grid_axis_brightness;
 
   unsigned char view_overlay[4];
 
@@ -342,7 +424,8 @@ typedef struct ThemeSpace {
   unsigned char nurb_sel_uline[4], nurb_sel_vline[4];
 
   /** Dope-sheet. */
-  unsigned char ds_ipoline[4];
+  unsigned char anim_interpolation_linear[4], anim_interpolation_constant[4],
+      anim_interpolation_other[4];
   /** Keyframe border. */
   unsigned char keyborder[4], keyborder_select[4];
   char _pad4[3];
@@ -399,8 +482,10 @@ typedef struct ThemeSpace {
   unsigned char camera_passepartout[4];
   unsigned char _pad1[2];
 
+  unsigned char gp_wire_edit[4];
   unsigned char gp_vertex_size;
   unsigned char gp_vertex[4], gp_vertex_select[4];
+  char _pad11[12];
 
   unsigned char preview_back[4];
   unsigned char preview_stitch_face[4];
@@ -551,6 +636,12 @@ typedef struct ThemeSpace {
   /** Moodboard sizing parameters (optional but useful) */
   float moodboard_input_border_width;       /* Border width for inputs */
   float moodboard_corner_radius;            /* Corner radius for panels */
+
+  /* Agent island colors, read from space_agent_bubble. */
+  unsigned char agent_border[4]; /* Island Border #00ff8cff */
+  unsigned char agent_tab_active[4]; /* Island Tab Active #183e25ff */
+  unsigned char agent_accent[4]; /* Island Accent #2b7c4bff */
+  unsigned char _pad_agent[4]; /* Padding for 8-byte alignment */
 } ThemeSpace;
 
 /* Viewport Background Gradient Types. */
@@ -654,3 +745,7 @@ typedef struct bTheme {
   (CHECK_TYPE_INLINE(btheme, bTheme *), &((btheme)->space_properties))
 #define UI_THEMESPACE_END(btheme) \
   (CHECK_TYPE_INLINE(btheme, bTheme *), (&((btheme)->space_agent_bubble) + 1))
+
+#ifdef __cplusplus
+}  // namespace blender
+#endif

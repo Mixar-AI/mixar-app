@@ -69,24 +69,41 @@ class MIXIE_CHAT_OT_capture_screenshot(Operator):
             original_filepath = scene.render.filepath
             original_resolution_x = scene.render.resolution_x
             original_resolution_y = scene.render.resolution_y
+            settings = scene.render.image_settings
+            original_format = settings.file_format
+            original_media = getattr(settings, "media_type", None)
 
-            # Set screenshot settings
-            scene.render.filepath = screenshot_path
+            try:
+                # Set screenshot settings
+                scene.render.filepath = screenshot_path
 
-            # Get viewport dimensions
-            for region in view3d_area.regions:
-                if region.type == 'WINDOW':
-                    scene.render.resolution_x = region.width
-                    scene.render.resolution_y = region.height
-                    break
+                # media_type BEFORE file_format: on Blender 5 a scene whose
+                # output is FFMPEG rejects PNG outright, so this failed on any
+                # scene configured for video or left that way by Director's
+                # guide render. Both sibling capture paths document the order.
+                if original_media is not None:
+                    settings.media_type = "IMAGE"
+                settings.file_format = "PNG"
 
-            # Render screenshot using OpenGL
-            bpy.ops.render.opengl(write_still=True, view_context=True)
+                # Get viewport dimensions
+                for region in view3d_area.regions:
+                    if region.type == 'WINDOW':
+                        scene.render.resolution_x = region.width
+                        scene.render.resolution_y = region.height
+                        break
 
-            # Restore original settings
-            scene.render.filepath = original_filepath
-            scene.render.resolution_x = original_resolution_x
-            scene.render.resolution_y = original_resolution_y
+                # Render screenshot using OpenGL
+                bpy.ops.render.opengl(write_still=True, view_context=True)
+            finally:
+                # Restore original settings. This used to sit after the render
+                # rather than in a finally, so a failed capture left the user's
+                # own output path, resolution and format clobbered.
+                scene.render.filepath = original_filepath
+                scene.render.resolution_x = original_resolution_x
+                scene.render.resolution_y = original_resolution_y
+                if original_media is not None:
+                    settings.media_type = original_media
+                settings.file_format = original_format
 
             # Check if file was created
             if not os.path.exists(screenshot_path):

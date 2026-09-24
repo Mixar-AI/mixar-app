@@ -28,7 +28,7 @@ from mixar.modules.moodboard.core.scene_recon_submission import (
 )
 from mixar.modules.common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from mixar.modules.moodboard.core.generate_progress import start_progress, reset_progress
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import selected_reference_stills
 
 logger = get_logger(__name__)
 
@@ -229,13 +229,9 @@ class MIXIE_OT_scene_recon_generate(Operator):
 
         if use_selected:
             # Use first selected moodboard image
-            selected = [
-                item
-                for item in scene.mixie_moodboard_images
-                if item.selected and is_still_item(item)
-            ]
+            selected = selected_reference_stills(scene)
             if not selected:
-                self.report({"WARNING"}, "Please select an image in the moodboard")
+                self.report({"ERROR"}, "Please select an image in the moodboard")
                 return {"CANCELLED"}
 
             try:
@@ -259,7 +255,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
                 prompt = getattr(sidebar_tab, 'prompt', '').strip()
                 if not prompt:
                     self.report(
-                        {"WARNING"},
+                        {"ERROR"},
                         "Please select an input image or describe a scene"
                     )
                     return {"CANCELLED"}
@@ -276,7 +272,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
         )
 
         if not success:
-            self.report({"WARNING"}, "Failed to submit job (already generating?)")
+            self.report({"ERROR"}, "Failed to submit job (already generating?)")
             return {"CANCELLED"}
 
         from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
@@ -397,7 +393,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
                     scene.mixie_scene_recon_error = message
                     for window in bpy.context.window_manager.windows:
                         for area in window.screen.areas:
-                            if area.type in ("MIXIE", "MIXIE_CHAT"):
+                            if area.type in ("MIXIE", "AGENT_BUBBLE"):
                                 area.tag_redraw()
                 except Exception:
                     pass

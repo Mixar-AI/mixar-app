@@ -61,43 +61,24 @@ def test_claims_are_one_shot_per_app_run():
 # --- backend ask fails quiet ------------------------------------------------
 
 def test_fetch_parked_report_parses_success(monkeypatch):
-    sent = {}
-
-    def _post(url, json=None, headers=None, timeout=None):
-        sent["url"] = url
-        sent["json"] = json
-        sent["auth"] = headers["Authorization"]
-        return _Resp(payload={"status": "success", "has_parked": True,
-                              "open_count": 2, "auto_eligible": True})
-
-    monkeypatch.setattr(httpx, "post", _post)
-    report = PR.fetch_parked_report("https://api.test", "tok", "sess-1")
-    assert report["has_parked"] is True
-    assert sent["url"].endswith("/api/v1/blender/agent/parked-turn")
-    assert sent["json"] == {"session_id": "sess-1"}
-    assert sent["auth"] == "Bearer tok"
+    from mixar.modules.common.agent_rpc import client
+    sent = []
+    def request(method, payload, **kwargs):
+        sent.append((method, payload, kwargs))
+        return {'status':'success', 'has_parked':True, 'open_count':2, 'auto_eligible':True}
+    monkeypatch.setattr(client, 'request', request)
+    report = PR.fetch_parked_report('unused', 'unused', 'sess-1')
+    assert report['has_parked']
+    assert sent == [('parked_turn', {'session_id':'sess-1'}, {'mutation':True, 'timeout':15.0})]
 
 
-@pytest.mark.parametrize(
-    "resp",
-    [
-        _Resp(status_code=403),
-        _Resp(status_code=500),
-        _Resp(status_code=200, payload={"status": "failure"}),
-        _Resp(status_code=200, boom=True),
-    ],
-)
-def test_fetch_parked_report_fails_quiet(monkeypatch, resp):
-    monkeypatch.setattr(httpx, "post", lambda *a, **k: resp)
-    assert PR.fetch_parked_report("https://api.test", "tok", "sess-1") is None
-
-
-def test_fetch_parked_report_network_error_is_none(monkeypatch):
-    def _boom(*a, **k):
-        raise httpx.ConnectError("down")
-
-    monkeypatch.setattr(httpx, "post", _boom)
-    assert PR.fetch_parked_report("https://api.test", "tok", "sess-1") is None
+@pytest.mark.parametrize('status', [401, 403, 500, 503])
+def test_fetch_parked_report_fails_quiet(monkeypatch, status):
+    from mixar.modules.common.agent_rpc import client
+    def fail(*args, **kwargs):
+        raise client.AgentRPCError('unavailable', status)
+    monkeypatch.setattr(client, 'request', fail)
+    assert PR.fetch_parked_report('unused', 'unused', 'sess-1') is None
 
 
 # --- continue sender ----------------------------------------------------------
@@ -106,9 +87,10 @@ def _scene(state="IDLE"):
     return SimpleNamespace(mixie_chat_input="")
 
 
-def _fake_session(state):
+def _fake_session(state, run_open=False):
     return SimpleNamespace(
-        get_state=lambda sc: getattr(SessionState, state)
+        get_state=lambda sc: getattr(SessionState, state),
+        run_open=lambda sc: run_open,
     )
 
 
@@ -204,39 +186,47 @@ def test_ask_ignores_non_parked_sessions(monkeypatch):
 
 # --- the retry chip click path -------------------------------------------------
 
-def _chip(monkeypatch, send_ok):
-    from mixar.modules.space_mixie_chat.ui.operators import (
-        chat_special_ops as OPS,
-    )
+@pytest.mark.parametrize("idle", [False, True])
+def test_retry_chip_schedules_only_when_idle(monkeypatch, idle):
+    from mixar.modules.space_mixie_chat.ui.operators import chat_special_ops as ops
+    from mixar.modules.space_mixie_chat.core import retry_action
 
     calls = []
-    monkeypatch.setattr(PR, "send_continue",
-                        lambda scene: calls.append(scene) or send_ok)
-    monkeypatch.setattr(OPS, "redraw_chat_areas", lambda: None)
-    op = OPS.MIXIE_CHAT_OT_select_slot_action()
-    op.report = lambda *args, **kwargs: None
+    monkeypatch.setattr(PR, "can_send_continue", lambda scene: idle)
+    monkeypatch.setattr(retry_action, "schedule_retry", lambda *args: calls.append(args))
+    op = ops.MIXIE_CHAT_OT_select_slot_action()
+    op.report = lambda *args: None
     op.bubble_id = "b1"
     op.action_value = "retry_failed_tasks"
-    return op, calls
+    scene = SimpleNamespace()
+    assert op.execute(SimpleNamespace(scene=scene)) == ({'FINISHED'} if idle else {'CANCELLED'})
+    assert calls == ([(scene, "b1")] if idle else [])
 
 
-def test_retry_chip_sends_continue_and_consumes_chip(monkeypatch):
-    from mixar.modules.space_mixie_chat.ui.operators import (
-        chat_special_ops as OPS,
-    )
-
-    op, calls = _chip(monkeypatch, send_ok=True)
-    msg = SimpleNamespace(bubble_id="b1", action_items=MagicMock())
-    scene = SimpleNamespace(mixie_chat_messages=[msg])
-    assert op.execute(SimpleNamespace(scene=scene)) == {'FINISHED'}
-    assert calls == [scene]  # the continue goes through the chat sender
-    msg.action_items.clear.assert_called_once()  # consumed on success
+def test_retry_chip_never_sends_inside_the_click_handler():
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[1] / (
+        "src/scripts/mixar/modules/space_mixie_chat/ui/operators/chat_special_ops.py")
+    body = src.read_text().split('if self.action_value == "retry_failed_tasks":', 1)[1]
+    body = body.split("# Check connection before dispatching", 1)[0]
+    assert "schedule_retry(scene, self.bubble_id)" in body
+    assert "send_continue(" not in body.replace("can_send_continue(", "")
 
 
-def test_retry_chip_keeps_chip_when_chat_busy(monkeypatch):
-    op, calls = _chip(monkeypatch, send_ok=False)
-    msg = SimpleNamespace(bubble_id="b1", action_items=MagicMock())
-    scene = SimpleNamespace(mixie_chat_messages=[msg])
-    assert op.execute(SimpleNamespace(scene=scene)) == {'CANCELLED'}
-    assert calls == [scene]
-    msg.action_items.clear.assert_not_called()  # clickable again once idle
+def test_native_retry_dispatchers_use_the_shared_lifetime_guard():
+    """Retry and legacy option clicks share the guard tested in
+    test_mixie_chat_operator_dispatch_guard.py, including safe redraw after
+    operators that leave the region alive.
+    """
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / "src/source/blender/editors/space_mixie_chat"
+    source = (root / "mixie_chat_hit_testing.cc").read_text()
+    for name in ("dispatch_slot_action", "dispatch_toggle"):
+        body = source.split(f"static bool {name}(", 1)[1].split("\n}\n", 1)[0]
+        assert "mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);" in body
+        assert "WM_operator_name_call_ptr(" not in body
+    source = (root / "mixie_chat_main_region.cc").read_text()
+    body = source.split('RNA_string_set(&op_ptr, "action_value", bubble.option_text);', 1)[1]
+    body = body.split("return WM_UI_HANDLER_BREAK;", 1)[0]
+    assert "mixie_chat_call_operator_and_redraw(C, region, ot, &op_ptr);" in body
+    assert "ED_region_tag_redraw(region)" not in body

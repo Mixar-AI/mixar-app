@@ -2,13 +2,15 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Viewport toast that tracks unified-queue activity from enqueue to drain.
+"""Viewport toasts that track unified-queue activity from enqueue to drain.
 
-One toast, one stable id, three phases:
+One sticky toast under one stable id, plus one completion toast per feature:
 
-  * work outstanding  -> STICKY "N generations in progress" + View Queue
-  * queue drained     -> transient "N generations ready" + View Queue
-  * nothing succeeded -> dismissed (each failure already toasted itself)
+  * work outstanding    -> STICKY "N generations in progress" + View Queue
+  * a feature finishes  -> transient "<Feature> complete" / "4 succeeded"
+                           + View Queue, in the same bottom-left lane
+  * queue drained       -> the sticky toast is dismissed
+  * nothing succeeded   -> no completion toast (each failure toasted itself)
 
 This used to be an 8 s auto-fading "generation queued" confirmation, which
 covered the enqueue instant and nothing after it. The failure mode it left
@@ -18,28 +20,39 @@ app says nothing is happening, while a multi-minute paid job is running. The
 sticky phase keeps both the fact and the way to check it on screen for the
 whole wait.
 
+The per-feature completion toast replaces the "<Feature> batch complete"
+popup menu that used to open over the viewport: the same facts (which
+feature, how many succeeded / failed / were cancelled) now arrive as a
+notification the moment THAT feature's jobs are done, even while another
+feature is still running. A feature is its catalog capability label, so the
+wording follows the backend catalog ("Image to 3D", "Auto Rig").
+
 Counts are DERIVED from the live queue snapshots on every refresh, not
 accumulated in a burst counter. That is what makes the number self-correcting
 across the paths a counter got wrong: jobs enqueued minutes apart, jobs that
 fail while others still run, and a queue cleared underneath the toast.
 
 Re-push discipline: ``FeatureQueue._notify()`` fires on every state change
-AND on the 0.5 s download-progress tick, so the toast is only re-pushed when
-its rendered text actually changes — a push replaces the store item wholesale
-and would otherwise restart the renderer's fade bookkeeping twice a second.
+AND on the 0.5 s download-progress tick, so the sticky toast is only
+re-pushed when its rendered text actually changes — a push replaces the
+store item wholesale and would otherwise restart the renderer's fade
+bookkeeping twice a second. A completion toast is pushed exactly once, when
+its feature's last job leaves the active states.
 """
 
 from ..constants import (
     QUEUE_ACTIVE_TOAST_TTL_MS,
+    QUEUE_DONE_TOAST_ID_PREFIX,
     QUEUE_READY_TOAST_TTL_MS,
     QUEUE_TOAST_ID,
 )
 
-# Job ids seen active since the queue last drained — the batch the completion
-# summary reports on. Ids (not counts) because a job's outcome is only known
-# later, and the batch must not double-count a job that _notify() visits many
-# times.
-_batch_ids: set = set()
+# Job id -> feature label for every job seen active since its feature last
+# reported — the batches the completion toasts report on. Ids (not counts)
+# because a job's outcome is only known later, and a batch must not
+# double-count a job that _notify() visits many times. The label is resolved
+# once, when the job is first seen, so a feature's jobs stay one group.
+_batch: dict = {}
 
 # Label of the most recently enqueued job, used as the toast body.
 _latest_label = ""
@@ -59,8 +72,8 @@ _suppressed = False
 
 def reset_state() -> None:
     """Forget all toast state (tests / defensive re-init)."""
-    global _batch_ids, _latest_label, _last_key, _showing_active, _suppressed
-    _batch_ids = set()
+    global _batch, _latest_label, _last_key, _showing_active, _suppressed
+    _batch = {}
     _latest_label = ""
     _last_key = ""
     _showing_active = False
@@ -87,6 +100,20 @@ def _job_label(job) -> str:
     return getattr(job, "display_label", "") or getattr(job, "label", "") or ""
 
 
+def _feature_label(job) -> str:
+    """Catalog capability label ("Image to 3D"), "" when it can't answer.
+
+    Same lookup as the Agent Bubble pill (``active_queue_activity``): a raw
+    key like ``mesh_segment`` in a toast title reads as a bug, so a catalog
+    miss falls back to generic "Generation ready" wording instead.
+    """
+    from .labels import catalog_feature_label
+    return catalog_feature_label(
+        getattr(job, "origin_capability_key", ""),
+        getattr(job, "service", "") or getattr(job, "job_type", ""),
+    )
+
+
 def notify_job_enqueued(job) -> None:
     """Record an accepted submit and refresh the toast.
 
@@ -101,7 +128,7 @@ def notify_job_enqueued(job) -> None:
 
 
 def refresh_from_queues() -> None:
-    """Recompute the toast from live queue state. Safe to call often."""
+    """Recompute the toasts from live queue state. Safe to call often."""
     global _showing_active, _suppressed
 
     try:
@@ -109,12 +136,21 @@ def refresh_from_queues() -> None:
     except Exception:
         return
 
+    jobs = {}
     active = 0
     for queue in all_queues():
         for job in queue.snapshot():
+            jobs[job.id] = job
             if job.state in ACTIVE_JOB_STATES:
                 active += 1
-                _batch_ids.add(job.id)
+                if job.id not in _batch:
+                    _batch[job.id] = _feature_label(job)
+
+    finished = _finished_features(jobs, ACTIVE_JOB_STATES)
+    if finished:
+        _request_usage_refresh()
+        for label, job_ids in finished.items():
+            _push_feature_summary(label, [jobs.get(i) for i in job_ids])
 
     if active:
         # A sticky toast never expires, so if ours is gone the user closed it.
@@ -125,8 +161,27 @@ def refresh_from_queues() -> None:
             _push_active(active)
         return
 
-    if _batch_ids:
-        _push_summary()
+    if _last_key or _showing_active:
+        _drain()
+
+
+def _finished_features(jobs: dict, active_states) -> dict:
+    """``{feature label: [job ids]}`` for batches with no job still active.
+
+    Pops those jobs from the batch so each feature reports exactly once; a
+    later job of the same feature starts a fresh batch. A job missing from
+    every snapshot (its queue was cleared) counts as finished.
+    """
+    still_active = {
+        label for job_id, label in _batch.items()
+        if job_id in jobs and jobs[job_id].state in active_states
+    }
+    finished: dict = {}
+    for job_id, label in list(_batch.items()):
+        if label not in still_active:
+            finished.setdefault(label, []).append(job_id)
+            del _batch[job_id]
+    return finished
 
 
 def _push_active(count: int) -> None:
@@ -152,16 +207,22 @@ def _push_active(count: int) -> None:
     )
 
 
-def _push_summary() -> None:
-    """Queue drained — replace the sticky toast with a completion summary."""
-    global _batch_ids, _last_key, _latest_label, _showing_active, _suppressed
+def _drain() -> None:
+    """Queue drained — the completion toasts carry the outcome now."""
+    global _last_key, _latest_label, _showing_active, _suppressed
 
-    from .job import JobState, TERMINAL_STATES
-    from .queue_manager import all_queues
+    _store().dismiss(QUEUE_TOAST_ID)
+    _last_key = ""
+    _latest_label = ""
+    _showing_active = False
+    # A dismissal applied to the in-progress toast, not to future work.
+    _suppressed = False
 
-    # Generations are what actually spend credits, so a drained queue is the
+
+def _request_usage_refresh() -> None:
+    # Generations are what actually spend credits, so a finished batch is the
     # moment the top-bar meter is most likely to be wrong. Ask for a refresh
-    # on every drain (including all-failed batches — a partial charge still
+    # on every finish (including all-failed batches — a partial charge still
     # moves the balance); the poller's rate floor absorbs bursts.
     try:
         from mixar.modules.common.usage.core import poller as _usage_poller
@@ -170,41 +231,49 @@ def _push_summary() -> None:
     except Exception:  # noqa: BLE001 — the toast must not depend on billing
         pass
 
-    succeeded = 0
-    failed = 0
-    for queue in all_queues():
-        for job in queue.snapshot():
-            if job.id not in _batch_ids:
-                continue
-            if job.state == JobState.SUCCESS:
-                succeeded += 1
-            elif job.state in TERMINAL_STATES:
-                failed += 1
 
-    body = _latest_label
-    _batch_ids = set()
-    _latest_label = ""
-    _last_key = ""
-    _showing_active = False
-    # A dismissal applied to the in-progress toast, not to the whole batch —
-    # the completion summary is new information and clears the suppression.
-    _suppressed = False
+def _outcome_text(succeeded: int, failed: int, cancelled: int) -> str:
+    parts = [f"{succeeded} succeeded"]
+    if failed:
+        parts.append(f"{failed} failed")
+    if cancelled:
+        parts.append(f"{cancelled} cancelled")
+    return ", ".join(parts)
+
+
+def _push_feature_summary(label: str, batch: list) -> None:
+    """One feature's batch finished — raise its completion toast."""
+    from .job import JobState
+
+    succeeded = failed = cancelled = 0
+    for job in batch:
+        if job is None:
+            continue
+        if job.state == JobState.SUCCESS:
+            succeeded += 1
+        elif job.state == JobState.CANCELLED:
+            cancelled += 1
+        elif job.state == JobState.FAILED:
+            failed += 1
 
     if not succeeded:
         # Nothing to celebrate. Failures raised their own high-priority
         # toasts in _notify_failure_toasts(); repeating them here would
         # double-report, and cancellations are self-explanatory.
-        _store().dismiss(QUEUE_TOAST_ID)
         return
 
-    title = "Generation ready" if succeeded == 1 else f"{succeeded} generations ready"
-    if failed:
-        body = f"{failed} failed"
+    if label:
+        title = f"{label} complete"
+    else:
+        title = (
+            "Generation ready" if succeeded == 1
+            else f"{succeeded} generations ready"
+        )
     _store().push(
         "success",
         title,
-        body=body,
+        body=_outcome_text(succeeded, failed, cancelled),
         ttl_ms=QUEUE_READY_TOAST_TTL_MS,
-        id=QUEUE_TOAST_ID,
+        id=f"{QUEUE_DONE_TOAST_ID_PREFIX}{label}",
         actions=[_view_queue_action()],
     )

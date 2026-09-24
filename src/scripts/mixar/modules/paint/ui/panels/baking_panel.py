@@ -17,12 +17,18 @@ from ...core.node.get_nodes import get_layer_source
 
 
 class BAKING_HT_header(Header):
-    """Header for the Baking space (hosts the space-switch dropdown)."""
+    """Title bar for the Baking space.
+
+    Draws ``template_header()``: every editor in the Texturing workspace
+    stays swappable, so this space keeps the stock Editor Type dropdown and
+    appears under the menu's "Texturing" heading.
+    """
     bl_space_type = 'BAKING'
 
     def draw(self, context):
         layout = self.layout
         layout.template_header()
+        layout.label(text="Baking")
 
 
 def is_baked_to_layer_type(layer, mp):

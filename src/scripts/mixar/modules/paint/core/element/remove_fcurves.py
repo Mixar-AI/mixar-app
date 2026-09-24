@@ -9,6 +9,8 @@ specific entities in the paint module.
 """
 import re
 
+from mixar.modules.common.utils.animation import action_fcurves
+
 from ...utils.blender_commons import get_active_material
 from ...utils.common import (
     get_channel_index,
@@ -37,10 +39,11 @@ def remove_entity_fcurves(entity):
     mp = tree.mp
     fcurves = get_mp_fcurves(mp)
     drivers = get_mp_drivers(mp)
+    collection = action_fcurves(tree)
 
     for fc in reversed(fcurves):
         if entity.path_from_id() in fc.data_path:
-            tree.animation_data.action.fcurves.remove(fc)
+            collection.remove(fc)
 
     for dr in reversed(drivers):
         if entity.path_from_id() in dr.data_path:
@@ -66,6 +69,7 @@ def remove_channel_fcurves(root_ch):
     # Tree fcurves
     fcurves = get_mp_fcurves(mp)
     drivers = get_mp_drivers(mp)
+    collection = action_fcurves(tree)
 
     for fc in reversed(fcurves):
 
@@ -73,12 +77,12 @@ def remove_channel_fcurves(root_ch):
             mp, index, fc.data_path
         )
         if layer and prop_name != '':
-            tree.animation_data.action.fcurves.remove(fc)
+            collection.remove(fc)
 
         else:
             m = re.match(r'.*\.channels\[' + str(index) + r'\].*', fc.data_path)
             if m:
-                tree.animation_data.action.fcurves.remove(fc)
+                collection.remove(fc)
 
     for dr in reversed(drivers):
         layer, prop_name = get_layer_and_channel_prop_name_from_data_path(
@@ -88,7 +92,7 @@ def remove_channel_fcurves(root_ch):
             tree.animation_data.drivers.remove(dr)
         else:
             m = re.match(r'.*\.channels\[' + str(index) + r'\].*', dr.data_path)
-            if m and index == int(m.group(1)):
+            if m:
                 tree.animation_data.drivers.remove(dr)
 
     # Material fcurves
@@ -115,8 +119,9 @@ def remove_channel_fcurves(root_ch):
             if m and fc not in fcs:
                 fcs.append(fc)
 
+    collection = action_fcurves(mat.node_tree)
     for fc in reversed(fcs):
-        mat.node_tree.animation_data.action.fcurves.remove(fc)
+        collection.remove(fc)
 
     # Delete drivers
     drs = []

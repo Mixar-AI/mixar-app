@@ -19,14 +19,15 @@ BUBBLE = ROOT / "src/source/blender/editors/space_agent_bubble/space_agent_bubbl
 SLOTS = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_slots.cc"
 UI_TYPES = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_ui_types.hh"
 SLOT_PROPS = ROOT / "src/scripts/mixar/modules/space_mixie_chat/ui/properties/chat_slot_types.py"
-CHAT_SPACE = ROOT / "src/source/blender/editors/space_mixie_chat/space_mixie_chat.cc"
 TIMELINE = ROOT / "src/source/blender/editors/space_view3d/view3d_director_timeline.cc"
 MESSAGES = ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_messages.cc"
 
 
 def _fn(src: str, name: str) -> str:
-    start = src.index(name + "(")
-    start = src.rindex("\n", 0, start)
+    # Match a definition, skipping forward declarations before the first body.
+    match = re.search(re.escape(name) + r"\([^;{}]*\)\s*\{", src)
+    assert match, name
+    start = src.rindex("\n", 0, match.start())
     depth = 0
     i = src.index("{", start)
     for j in range(i, len(src)):
@@ -39,38 +40,60 @@ def _fn(src: str, name: str) -> str:
     raise AssertionError(name)
 
 
-def test_bubble_draw_and_layout_only_request_a_resize():
-    src = BUBBLE.read_text()
-    draw = _fn(src, "static void agent_bubble_footer_region_draw")
-    layout = _fn(src, "static void agent_bubble_footer_region_layout")
-    for block in (draw, layout):
-        assert "agent_bubble_sync_footer_window_size(C, region, /*from_draw=*/true)" in block
-        assert "bubble_force_size_and_refresh(" not in block
-        assert "ED_screen_refresh(" not in block
-    sync = _fn(src, "static void agent_bubble_sync_footer_window_size")
-    # The draw-time branch records and notifies; only the exec branch resizes.
-    assert "if (from_draw) {\n      agent_bubble_request_resize(C, target_height, height_floor);" in sync
+def test_bubble_layout_only_requests_a_resize():
+    """A draw or layout callback must never resize an OS window.
+
+    This used to pin agent_bubble_footer_region_{draw,layout} and their
+    sync helper -- three statics nothing referenced, left behind when the
+    island replaced the footer region. The LIVE callback that can ask for a
+    resize is the island's layout pass, so guard that one instead.
+    """
+    src = BUBBLE.read_text(encoding="utf-8")
+    # The dead footer trio must not come back.
+    for gone in (
+        "agent_bubble_footer_region_draw",
+        "agent_bubble_footer_region_layout",
+        "agent_bubble_sync_footer_window_size",
+    ):
+        assert gone not in src, f"{gone} is dead code; do not reintroduce it"
+
+    layout = _fn(src, "static void agent_bubble_island_region_layout")
+    assert "agent_bubble_request_resize(" in layout
+    assert "bubble_force_size_and_refresh(" not in layout
+    assert "Mixar_WindowForceSize" not in layout
+    assert "ED_screen_refresh(" not in layout
+
+    # Requesting only records and notifies; the listener applies it later.
     request = _fn(src, "static void agent_bubble_request_resize")
     assert "WM_event_add_notifier(C, NC_WINDOW, nullptr);" in request
     assert "Mixar_WindowForceSize" not in request and "ED_screen_refresh" not in request
 
 
 def test_bubble_resize_is_applied_from_the_footer_listener_by_tagging():
-    src = BUBBLE.read_text()
+    src = BUBBLE.read_text(encoding="utf-8")
     assert "art->listener = agent_bubble_footer_region_listener;" in src
     listener = _fn(src, "static void agent_bubble_footer_region_listener")
     assert "bubble_apply_window_size(\n      nullptr, nullptr, win" in listener
-    apply = _fn(src, "static void bubble_apply_window_size")
+    # The tagging lives one level down: bubble_apply_window_size force-sizes
+    # and delegates the write to bubble_write_window_size, which the Scribble
+    # pad's re-seat also uses (it must not force-size).
+    assert "bubble_write_window_size(C, wm, w, ghostwin, width, height);" in _fn(
+        src, "static void bubble_apply_window_size"
+    )
+    write = _fn(src, "static void bubble_write_window_size")
     # Without a context the screen is tagged; ED_screen_ensure_updated refreshes.
-    assert "screen->do_refresh = true;" in apply
-    assert "if (C != nullptr && wm != nullptr) {\n      ED_screen_refresh(C, wm, w);" in apply
-    # Operator exec keeps the immediate form.
+    assert "screen->do_refresh = true;" in write
+    assert "if (C != nullptr && wm != nullptr) {\n      ED_screen_refresh(C, wm, w);" in write
+    # develop's operator exec resized inline (/*from_draw=*/false). The island
+    # renders attachments in the composer chip row and sizes for nothing, so the
+    # guard here is stronger: that operator must not resize at all.
     exec_fn = _fn(src, "static wmOperatorStatus mixar_bubble_sync_attachment_size_exec")
-    assert "/*from_draw=*/false" in exec_fn
+    assert "bubble_force_size_and_refresh(" not in exec_fn
+    assert "agent_bubble_sync_footer_window_size(" not in exec_fn
 
 
 def test_slot_string_reads_are_bounded():
-    src = SLOTS.read_text()
+    src = SLOTS.read_text(encoding="utf-8")
     raw = re.findall(r"RNA_property_string_get\(&(\w+), (g_\w+\.\w+), (\S+)\);", src)
     # Only length-guarded fixed-id reads may stay raw (bubble_id / todo.id
     # style, each behind an explicit `< sizeof` check).
@@ -84,19 +107,19 @@ def test_slot_string_reads_are_bounded():
 
 
 def test_image_slot_local_path_maxlen_mirrors_the_c_buffer():
-    props = SLOT_PROPS.read_text()
+    props = SLOT_PROPS.read_text(encoding="utf-8")
     block = props[props.index("local_path: StringProperty("):]
     block = block[: block.index("\n    )")]
     m = re.search(r"maxlen=(\d+)", block)
     assert m, "local_path must declare a maxlen"
-    types = UI_TYPES.read_text()
+    types = UI_TYPES.read_text(encoding="utf-8")
     c = re.search(r"char local_path\[(\d+)\];", types)
     assert c and int(m.group(1)) == int(c.group(1))
 
 
 def test_chat_spaces_null_runtime_on_read():
-    for path, struct in ((CHAT_SPACE, "SpaceMixieChat"), (BUBBLE, "SpaceAgentBubble")):
-        src = path.read_text()
+    for path, struct in ((BUBBLE, "SpaceAgentBubble"),):
+        src = path.read_text(encoding="utf-8")
         assert "st->blend_read_data = " in src
         name = re.search(r"static void (\w+_blend_read_data)\(", src).group(1)
         read = _fn(src, "static void " + name)
@@ -104,7 +127,7 @@ def test_chat_spaces_null_runtime_on_read():
 
 
 def test_director_timeline_timer_has_a_region_exit():
-    src = TIMELINE.read_text()
+    src = TIMELINE.read_text(encoding="utf-8")
     assert "art->exit = director_timeline_region_exit;" in src
     exit_fn = _fn(src, "static void director_timeline_region_exit")
     assert "WM_event_timer_remove(wm, nullptr, g_playback_redraw_timer);" in exit_fn
@@ -112,6 +135,6 @@ def test_director_timeline_timer_has_a_region_exit():
 
 
 def test_code_copy_collector_forgets_a_freed_runtime():
-    src = MESSAGES.read_text()
+    src = MESSAGES.read_text(encoding="utf-8")
     free_fn = _fn(src, "void mixie_chat_free_runtime")
     assert free_fn.index("mixie_chat_code_hits_forget(rt);") < free_fn.index("MEM_delete(rt);")

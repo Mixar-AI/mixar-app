@@ -26,8 +26,11 @@ unreferenced.
 import hashlib
 
 import bpy
+from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.render_coordinator import core as render_slot
+from mixar.modules.common.render_coordinator.constants import RETRY_INTERVAL
 
 from .ui_utils import bump_layout_epoch
 
@@ -42,6 +45,16 @@ RENDER_SIZE = 256
 # Pending work: list of (scene_name, bubble_id, action_value, candidate dict).
 _queue = []
 _timer_running = False
+
+
+@persistent
+def _before_load(_unused, _extra=None):
+    """Nonpersistent timers die on load; discard their work and latch too."""
+    global _timer_running
+    _queue.clear()
+    _timer_running = False
+    if bpy.app.timers.is_registered(_process_next):
+        bpy.app.timers.unregister(_process_next)
 
 
 def image_name_for(candidate):
@@ -90,6 +103,8 @@ def schedule(scene, bubble):
 
     bump_layout_epoch(scene)
     if queued and not _timer_running:
+        if _before_load not in bpy.app.handlers.load_pre:
+            bpy.app.handlers.load_pre.append(_before_load)
         _timer_running = True
         bpy.app.timers.register(_process_next, first_interval=0.05)
     logger.debug(
@@ -106,6 +121,8 @@ def _process_next():
         _timer_running = False
         return None
 
+    if render_slot.busy():
+        return RETRY_INTERVAL
     scene_name, bubble_id, action_value, candidate = _queue.pop(0)
     try:
         name = _generate(candidate)
@@ -165,7 +182,7 @@ def _redraw_chat_regions():
         return
     for window in wm.windows:
         for area in window.screen.areas:
-            if area.type in {'MIXIE_CHAT', 'AGENT_BUBBLE'}:
+            if area.type in {'AGENT_BUBBLE'}:
                 area.tag_redraw()
 
 
@@ -320,9 +337,9 @@ def _generate(candidate):
                 with bpy.context.temp_override(
                     window=win, screen=win.screen, scene=scene
                 ):
-                    img = render_to_image(scene, name, pack=False)
+                    img = render_to_image(scene, name, pack=False, render_token=rig.token)
             else:
-                img = render_to_image(scene, name, pack=False)
+                img = render_to_image(scene, name, pack=False, render_token=rig.token)
         return img.name if img else None
     finally:
         # Remove the appended datablocks — the picker must not mutate the scene.

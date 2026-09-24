@@ -53,7 +53,7 @@ def _tag_chat_and_bubble_areas():
     try:
         for window in bpy.context.window_manager.windows:
             for area in window.screen.areas:
-                if area.type in {'MIXIE_CHAT', 'AGENT_BUBBLE'}:
+                if area.type in {'AGENT_BUBBLE'}:
                     area.tag_redraw()
     except Exception:
         pass
@@ -131,7 +131,7 @@ def redraw_chat_areas():
     try:
         for window in bpy.context.window_manager.windows:
             for area in window.screen.areas:
-                if area.type in {'MIXIE_CHAT', 'AGENT_BUBBLE'}:
+                if area.type in {'AGENT_BUBBLE'}:
                     area.tag_redraw()
                     for region in area.regions:
                         region.tag_redraw()

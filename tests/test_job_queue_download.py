@@ -525,15 +525,21 @@ def queue(monkeypatch):
     QM._sync_watchdog_registered = False
 
 
-def _downloading_job(queue, age_s):
+# time.monotonic() counts from boot, so on a freshly started machine (every CI
+# container) it is smaller than DOWNLOAD_WATCHDOG_DEADLINE_S and "now - age"
+# went negative, silently skipping the deadline check. Pin the clock instead of
+# deriving the stamp from real uptime.
+_WATCHDOG_NOW = 1_000_000.0
+
+
+def _downloading_job(queue, monkeypatch, age_s):
+    monkeypatch.setattr(QM.time, "monotonic", lambda: _WATCHDOG_NOW)
     job = _StubJob(label="job", feature_key="test_download")
     job.state = JobState.RUNNING_DOWNLOAD
     job.backend_job_id = "backend-1"
     # The watchdog ignores a non-positive download_started_at, so the start
-    # stamp has to stay above zero. time.monotonic() counts from boot and is
-    # only a few hundred seconds on a freshly started machine, which made
-    # "now - deadline" go negative and silently skipped the deadline check.
-    job.download_started_at = max(QM.time.monotonic() - age_s, 1e-6)
+    # stamp has to stay above zero.
+    job.download_started_at = max(_WATCHDOG_NOW - age_s, 1e-6)
     queue._jobs.append(job)
     return job
 
@@ -561,7 +567,7 @@ def test_watchdog_fails_a_stranded_download(queue, monkeypatch):
         QM.FeatureQueue, "_cancel_on_backend",
         staticmethod(lambda job_id: cancelled.append(job_id)),
     )
-    job = _downloading_job(queue, C.DOWNLOAD_WATCHDOG_DEADLINE_S + 60)
+    job = _downloading_job(queue, monkeypatch, C.DOWNLOAD_WATCHDOG_DEADLINE_S + 60)
 
     _watchdog_tick(monkeypatch)()
 
@@ -576,7 +582,7 @@ def test_watchdog_leaves_a_healthy_download_alone(queue, monkeypatch):
     """RUNNING_DOWNLOAD used to fall outside every watchdog state set, so the
     watchdog unregistered itself the instant a job started downloading."""
     QM._queues["test_download"] = queue
-    job = _downloading_job(queue, 5.0)
+    job = _downloading_job(queue, monkeypatch, 5.0)
 
     result = _watchdog_tick(monkeypatch)()
 
@@ -587,7 +593,7 @@ def test_watchdog_leaves_a_healthy_download_alone(queue, monkeypatch):
 
 def test_watchdog_retires_when_only_terminal_jobs_remain(queue, monkeypatch):
     QM._queues["test_download"] = queue
-    job = _downloading_job(queue, 5.0)
+    job = _downloading_job(queue, monkeypatch, 5.0)
     job.state = JobState.SUCCESS
 
     assert _watchdog_tick(monkeypatch)() is None
@@ -605,7 +611,7 @@ def test_finish_import_does_not_resurrect_a_failed_job(queue, monkeypatch):
     monkeypatch.setattr(
         QD, "import_file", lambda *a, **k: imported.append(a) or "Cube",
     )
-    job = _downloading_job(queue, 1.0)
+    job = _downloading_job(queue, monkeypatch, 1.0)
     job.state = JobState.FAILED  # watchdog got there first
 
     fd, path = DL.tempfile.mkstemp(suffix=".glb", prefix="mixar_result_")
@@ -617,8 +623,8 @@ def test_finish_import_does_not_resurrect_a_failed_job(queue, monkeypatch):
     assert not os.path.exists(path)
 
 
-def test_finish_failed_keeps_the_first_terminal_verdict(queue):
-    job = _downloading_job(queue, 1.0)
+def test_finish_failed_keeps_the_first_terminal_verdict(queue, monkeypatch):
+    job = _downloading_job(queue, monkeypatch, 1.0)
     job.state = JobState.FAILED
     job.user_message = "Download timed out — please retry"
 
@@ -683,7 +689,7 @@ def test_progress_timer_notifies_only_on_change(queue, monkeypatch):
     monkeypatch.setattr(
         QM.FeatureQueue, "_notify", lambda self: notifies.append(1),
     )
-    job = _downloading_job(queue, 1.0)
+    job = _downloading_job(queue, monkeypatch, 1.0)
 
     queue._start_download_progress_timer(job)
     assert registered
@@ -712,7 +718,7 @@ def test_progress_timer_notifies_only_on_change(queue, monkeypatch):
 
 
 def _nested_func(path, outer, inner):
-    tree = ast.parse(Path(path).read_text())
+    tree = ast.parse(Path(path).read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == outer:
             for child in ast.walk(node):
@@ -760,7 +766,7 @@ def test_bg_download_reaches_the_main_thread_only_via_timers():
 
 
 def test_progress_timer_is_the_main_thread_refresh_path():
-    tree = ast.parse((_CORE / "queue_download.py").read_text())
+    tree = ast.parse((_CORE / "queue_download.py").read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) \
                 and node.name == "_start_download_progress_timer":

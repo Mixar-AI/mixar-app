@@ -9,34 +9,24 @@ Space Mixie Chat Module Constants
 Centralized configuration values for the Mixie Chat module.
 """
 
+import sys
 from enum import Enum
 
 
-# ============================================================================
 # DEVELOPMENT MODE
-# ============================================================================
 
 # Set to True to bypass WebSocket connection and use dummy data for UI dev
 DEV_MODE = False
 
 
-# ============================================================================
 # STARTUP
-# ============================================================================
 
 # Delay before agent connection attempts on startup (seconds)
 STARTUP_DELAY_SECONDS = 1.0
 
-# Safe retry schedule for an agent SSE request that could not establish a TCP
-# connection at all.  ConnectError means the backend never accepted the turn,
-# so retrying cannot duplicate agent work.  Mid-stream/read/write failures are
-# deliberately excluded because their acceptance state is ambiguous.
-SSE_CONNECT_RETRY_DELAYS = (1.0, 2.0, 4.0, 8.0, 15.0)
 
 
-# ============================================================================
 # SCENE ROUTING
-# ============================================================================
 
 # The backend addresses every execute_script with a `session_id` that acts as a
 # scene-routing key (backend: decorator.execute_script_on_instance / services).
@@ -68,9 +58,7 @@ def is_lane_scene(scene) -> bool:
     return getattr(scene, 'mixie_session_id', '').startswith(AGENT_LANE_SESSION_PREFIX)
 
 
-# ============================================================================
 # SESSION STATES
-# ============================================================================
 
 class SessionState(Enum):
     """Session states for the chat workflow.
@@ -115,9 +103,7 @@ STATE_LABELS = {
 }
 
 
-# ============================================================================
 # JSON-RPC 2.0 METHODS (WebSocket communication)
-# ============================================================================
 
 class JSONRPCMethod:
     """JSON-RPC 2.0 method names for WebSocket communication."""
@@ -140,11 +126,22 @@ class JSONRPCMethod:
     LLM_REQUEST = "llm.request"
     # Server -> Client (requests - capability-scoped local add-on workspace)
     ADDON_PROJECT_PREFIX = "addon_project."
+    # Server -> Client (requests - harness v3 execution protocol: activate /
+    # bind_task / status / commit / revoke; handled on the main thread by
+    # mixar.modules.common.agent_execution.handlers, replies deferred)
+    AGENT_EXECUTION_PREFIX = "agent.execution."
 
     # Server -> Client (notifications - no response)
     AGENT_TOOL_START = "agent.tool_start"
     AGENT_TOOL_EXECUTING = "agent.tool_executing"
     AGENT_TOOL_END = "agent.tool_end"
+    # Server -> Client (notifications): a backend-started turn of an open run
+    # (a "wake-up") streamed over the socket instead of an agent event response.
+    # `event` carries exactly one agent event payload dict; `seq` restarts at 0 per
+    # turn, so (turn_id, seq) is the dedupe key. Handled by core/turn_events.
+    AGENT_TURN_STARTED = "agent.turn.started"
+    AGENT_TURN_EVENT = "agent.turn.event"
+    AGENT_TURN_ENDED = "agent.turn.ended"
 
     # Server -> Client (notifications push)
     NOTIFICATIONS_PUSH = "notifications.push"
@@ -155,15 +152,16 @@ class JSONRPCMethod:
     NOTIFICATIONS_GET_UNREAD = "notifications.get_unread"
     JOB_SYNC = "job.sync"
     JOB_GET = "job.get"
-    # Client -> Server (notification - no response): outcome of one
-    # fire-and-forget final render job started by the agent's render_scene
-    # tool; echoes the job_key the kickoff pinned (session/turn identity).
-    RENDER_FINAL_RESULT = "render.final_render_result"
+    # Client -> Server (request - received:true acknowledgement): terminal outcome of
+    # ONE generation the agent enqueued through a client operator. The client
+    # owns submit/poll/download/import, so it is the only party that knows the
+    # final object / image names — this is what saves the agent from polling.
+    # The backend dispatcher drops "agent.*" notifications, hence the
+    # "generation." namespace. Sent by job_queue/core/agent_results.py.
+    GENERATION_AGENT_RESULT = "generation.agent_result"
 
 
-# ============================================================================
 # JSON-RPC ERROR CODES
-# ============================================================================
 
 class JSONRPCErrorCode:
     """Standard and custom JSON-RPC 2.0 error codes."""
@@ -181,9 +179,7 @@ class JSONRPCErrorCode:
     BLENDER_ERROR = -32006
 
 
-# ============================================================================
 # WEBSOCKET CLOSE CODES
-# ============================================================================
 
 # Custom WebSocket close code for authentication failure
 WS_CLOSE_AUTH_FAILED = 4001
@@ -196,26 +192,15 @@ WS_CLOSE_AUTH_FAILED = 4001
 DISCONNECT_REASON_AUTH_FAILED = "Authentication failed - please login again"
 
 
-# ============================================================================
 # WEBSOCKET CONFIGURATION DEFAULTS
-# ============================================================================
 
 DEFAULT_WS_URL_TEMPLATE = "/api/agent/ws"
 DEFAULT_RECONNECT_DELAY = 1.0
 DEFAULT_MAX_RECONNECT_DELAY = 30.0
 DEFAULT_PING_INTERVAL = 15.0
-DEFAULT_QUEUE_POLL_INTERVAL = 0.1
-EXECUTION_POLL_INTERVAL = 0.3  # Slower polling during tool execution
 
-# ============================================================================
-# SSE API ENDPOINTS
-# ============================================================================
+# AGENT FEEDBACK
 
-AGENT_CHAT_ENDPOINT = "/api/v1/blender/agent/chat"
-AGENT_INPUT_ENDPOINT = "/api/v1/blender/agent/input"
-AGENT_ATTACH_ENDPOINT = "/api/v1/blender/agent/chat/attach"
-AGENT_FEEDBACK_ENDPOINT = "/api/v1/blender/agent/feedback"
-AGENT_PARKED_TURN_ENDPOINT = "/api/v1/blender/agent/parked-turn"
 
 # Feedback submission lifecycle shown inline on the rated message.
 # Values are mirrored in C++ (mixie_chat_feedback.cc) — keep in sync.
@@ -224,12 +209,8 @@ FEEDBACK_STATUS_SENDING = 1
 FEEDBACK_STATUS_RECEIVED = 2
 FEEDBACK_STATUS_FAILED = 3
 
-# ============================================================================
 # CONNECTION MANAGER SETTINGS
-# ============================================================================
 
-# Default timeout for HTTP requests (seconds)
-DEFAULT_HTTP_TIMEOUT = 30.0
 
 # WebSocket liveness: the client pings every ~15s and the server answers, so
 # a healthy connection always receives SOMETHING within this window. Zero
@@ -262,34 +243,13 @@ WS_LIVENESS_PROBE_GRACE = 5.0
 # WS_LIVENESS_TIMEOUT and above DEFAULT_PING_INTERVAL.
 WS_UI_STALE_THRESHOLD = 20.0
 
-# SSE read timeout: maximum seconds between BYTES on the stream before
-# httpx declares it dead. The backend emits ": keepalive" comment lines
-# every ~15s whenever the graph is silent (long LLM calls, long tools), so
-# a healthy stream always carries bytes well within this window — a long
-# silence means the TCP connection died (network drop, sleep/resume, NAT
-# rebind). Was 630s (backend 600s tool timeout + margin) before keepalives
-# existed, which left a dead mid-turn stream undetected for 10+ minutes.
-# A false positive is harmless now: a read timeout mid-turn re-attaches via
-# /agent/chat/attach (idempotent replay) instead of failing the turn.
-SSE_READ_TIMEOUT = 75.0
 
-# Re-attach after a mid-turn stream loss: total budget before giving up and
-# failing the turn client-side. The backend keeps a disconnected turn running
-# and buffers its events for replay, so a long outage is still recoverable.
-ATTACH_RETRY_MAX_SECONDS = 900.0
-# Per-attempt backoff; the last delay repeats while the budget lasts.
-ATTACH_RETRY_DELAYS = (1.0, 2.0, 4.0, 8.0, 15.0)
-
-# ============================================================================
 # UI CONSTANTS
-# ============================================================================
 
 CHAT_PLACEHOLDER_TEXT = "Chat messages will appear here..."
 CHAT_INPUT_PLACEHOLDER = "Type your message..."
 
-# ============================================================================
 # PROPERTY DEFAULTS
-# ============================================================================
 
 CHAT_INPUT_DEFAULT = ""
 CHAT_INPUT_MAXLEN = 10000
@@ -300,10 +260,12 @@ CHAT_INPUT_MAXLEN = 10000
 # Must stay in lockstep with RULES_TEXT_MAX / the rules_text buffer in
 # the C++ overlay (mixie_chat_rules_intern.hh / mixie_chat_layout_data.hh).
 CHAT_RULES_MAXLEN = 10000
+# Serialized store has a separate allowance for stable IDs and JSON escaping.
+# Match the backend snapshot envelope (65536 bytes / 512 entries per scope).
+CHAT_RULES_STORE_MAXLEN = 65537
+CHAT_RULES_MAX_ENTRIES = 512
 
-# ============================================================================
 # '@' MENTION AUTOCOMPLETE
-# ============================================================================
 
 # Max suggestion rows in the dropdown. Must match FOOTER_MENTION_MAX_ROWS in
 # mixie_chat_footer_constants.hh — the C++ dropdown never draws more rows.
@@ -317,9 +279,123 @@ MENTION_QUERY_MAXLEN = 96
 # 320-byte buffer (MIXIE_MENTION_INSERT_SIZE) and refuses longer values.
 MENTION_INSERT_MAXLEN = 300
 
-# ============================================================================
+# SCRIBBLE (STYLUS HANDWRITING INPUT)
+
+# Caps on one ink commit, frozen in lockstep with the C++ ink overlay
+# (INK_JSON_MAX / CHAT_INK_MAX_STROKES / CHAT_INK_MAX_POINTS in
+# mixie_chat_ink_intern.hh, which static_asserts the last two). C++ enforces
+# them while capturing; Python re-checks because the two halves ship in the
+# same binary today but a stale payload from a skewed build must be
+# rejected, not rasterized.
+#
+# The byte cap is derived from the point cap, NOT chosen: one serialized
+# point is up to ~17 bytes ("[3840,2160,0.88],"), so a full 4096-point page
+# reaches ~70 KB. Sizing this below INK_JSON_MAX would make a densely
+# written page serialize fine on the C++ side and then be thrown away here,
+# losing the user's handwriting with no way to get it back.
+SCRIBBLE_COMMIT_MAXLEN = 98304
+SCRIBBLE_MAX_STROKES = 64
+SCRIBBLE_MAX_POINTS = 4096
+
+# Idle delay after the last pen-up before C++ dispatches mixie_chat.ink_commit.
+# Informational mirror of the C++ wmTimer (INK_IDLE_COMMIT_SEC) — Python never
+# waits on it. Short on purpose: with on-device recognition this pause IS most
+# of the delay between lifting the pen and seeing text.
+SCRIBBLE_IDLE_COMMIT_MS = 450
+
+# Recognition requests allowed on the wire at once. Each round trip sits at
+# the model's ~1 s floor, and a continuous writer commits a batch every
+# pause; with one slot the composer falls a full round trip further behind
+# the pen at every pause. Text still enters the composer strictly in written
+# order (core/scribble.py holds an early result until its predecessors
+# land). Three: the shorter idle commit produces batches faster than two
+# backend slots drain them; more only adds requests that then wait on each
+# other's order.
+SCRIBBLE_MAX_IN_FLIGHT = 3
+
+# Longest edge (px) of the ink bounding box in the rasterized PNG. Small
+# writing is upscaled to this too: the recognizer reads pixels, not strokes.
+SCRIBBLE_RASTER_MAX_EDGE = 1280
+
+# Blank margin around the ink in the rasterized PNG, in output pixels.
+# Handwriting pushed flush against the frame reads worse.
+SCRIBBLE_RASTER_PADDING = 24
+
+# Floor on BOTH output dimensions of the rasterized PNG. Frozen contract
+# with the backend: core/validators.validate_image 400-rejects any upload
+# under 64x64 before the recognition handler runs, and a thin stroke batch
+# (a single dash, one vertical bar) otherwise scales to a sliver — e.g.
+# 2000x2 px of ink pads and scales to ~1280x31. The minor axis is padded
+# out to this floor with the ink centred.
+SCRIBBLE_RASTER_MIN_EDGE = 64
+
+# Tail of the current composer text sent as the recognition hint — advisory
+# context so a continued sentence is transcribed in keeping with what is
+# already typed.
+SCRIBBLE_HINT_TAIL_CHARS = 200
+
+# On-device recognition (core/scribble_local.py; macOS Vision via the C++
+# mixie_chat.ink_recognize_local operator). Every batch is read locally
+# first — a few hundred ms, offline — and goes to the backend only when the
+# local reading is refused, fails, or is below this confidence. Empty local
+# text is never accepted: that is exactly the batch the stronger model
+# should see.
+SCRIBBLE_LOCAL_MIN_CONFIDENCE = 0.5
+# Poll period of the result pump while local batches are outstanding.
+SCRIBBLE_LOCAL_POLL_S = 0.03
+# A local batch that has not come back by then is failed and sent to the
+# backend, so a hung recogniser can never hang the composer. Measured Vision
+# round trips are 0.1-0.6 s on Apple silicon.
+SCRIBBLE_LOCAL_TIMEOUT_S = 1.5
+
+# How the local copy of the ink is FRAMED for the platform recogniser. The
+# app's raster scales the ink's longest edge to 1280 px for the vision LLM;
+# Vision's text recogniser refuses a one- or two-glyph batch drawn 300+ px
+# tall (line art, not text) and read the same ink perfectly once it was a
+# ~120 px text line with page margins around it — while two- and three-line
+# blocks at that total height still read line by line. So the local copy is
+# the ink scaled DOWN (never up) to this line height, capped at this width,
+# pasted on a white page with these margins.
+SCRIBBLE_LOCAL_LINE_HEIGHT_PX = 120
+SCRIBBLE_LOCAL_MAX_WIDTH_PX = 1400
+SCRIBBLE_LOCAL_PAGE_PAD_X = 160
+SCRIBBLE_LOCAL_PAGE_PAD_Y = 120
+
+# VOICE INPUT CONSTANTS
+# Platforms whose GHOST layer implements the Mixar_Speech* helpers
+# (GHOST_MixarSpeechCocoa.mm). An ALLOWLIST, like the bubble's window
+# controls: a platform earns Voice by having someone write its recogniser,
+# and the operator is not even registered elsewhere, so no surface can draw
+# a dead microphone.
+VOICE_INPUT_SUPPORTED = sys.platform in {"darwin", "win32"}
+
+# Recogniser event kinds — lockstep with SpeechEventKind in
+# GHOST_MixarSpeechCocoa.mm.
+VOICE_EVENT_LISTENING = 1
+VOICE_EVENT_PARTIAL = 2
+VOICE_EVENT_FINAL = 3
+VOICE_EVENT_STOPPED = 4
+VOICE_EVENT_ERROR = 5
+VOICE_EVENT_DENIED = 6
+
+# Poll period of the event pump while a session is up.
+VOICE_EVENT_POLL_S = 0.05
+# After Stop, how long to wait for the recogniser's own STOPPED (which
+# follows its final transcription) before finishing with what we have.
+VOICE_STOP_GRACE_S = 2.0
+# Longest dictation session; the recogniser's own limit is about a minute.
+VOICE_MAX_SESSION_S = 180.0
+# Cloud recording limits come from ready; startup has its own permission/auth
+# budget. Session grace includes the 35-second final wait plus transport slack.
+VOICE_STARTUP_TIMEOUT_S = 240.0
+VOICE_FINAL_TIMEOUT_S = 35.0
+VOICE_SESSION_GRACE_S = 40.0
+VOICE_BUFFER_SECONDS = 20
+# Stable toast id for permission / failure notices (re-pushing replaces).
+VOICE_TOAST_ID = "voice_input"
+VOICE_TOAST_TTL_MS = 5000
+
 # IMAGE ATTACHMENT CONSTANTS
-# ============================================================================
 
 # Ceiling on the SOURCE file a user may attach. Attachments are downscaled and
 # JPEG re-encoded before upload (core/attachment_compression.py), so this no
@@ -329,24 +405,32 @@ MENTION_INSERT_MAXLEN = 300
 # in the compressor, not by this.
 MAX_IMAGE_SIZE_MB = 25
 MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
-SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif'}
+SUPPORTED_IMAGE_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp'}
+# Movie containers the moodboard accepts. The agent chat has no video content
+# part on the wire (agent.chat carries image_url data URLs only), so these are
+# refused with a specific message instead of the generic "Unsupported format".
+VIDEO_FILE_FORMATS = {
+    '.avi', '.avs', '.divx', '.dv', '.flc', '.flv', '.gif', '.m2t', '.m2ts',
+    '.m2v', '.m4v', '.mkv', '.mov', '.movie', '.mp4', '.mpeg', '.mpg', '.mpg2',
+    '.mts', '.mv', '.mxf', '.ogg', '.ogv', '.r3d', '.ts', '.vob', '.webm',
+    '.wmv', '.xvid',
+}
+VIDEO_ATTACHMENT_REJECTED = (
+    "Videos require Video mode. Remove the video to send to Agent."
+)
 THUMBNAIL_SIZE = (128, 128)
-MAX_ATTACHMENTS_PER_MESSAGE = 5
+MAX_ATTACHMENTS_PER_MESSAGE = 10
 
 # Security: Maximum image dimensions to prevent memory exhaustion attacks
 # 16384x16384 is a reasonable max (common GPU texture limit)
 MAX_IMAGE_DIMENSION = 16384
 
-# ============================================================================
 # MESSAGE LENGTH LIMITS
-# ============================================================================
 
 # Maximum length for chat messages to prevent memory/performance issues
 MAX_MESSAGE_LENGTH = 100000  # 100KB of text
 
-# ============================================================================
 # CHAT HISTORY ARCHIVE (core/chat_history.py)
-# ============================================================================
 
 # "New Chat" archives the current conversation to ~/.mixar/chat_history/
 # instead of destroying it. Oldest sessions beyond this cap are pruned.
@@ -357,20 +441,16 @@ CHAT_HISTORY_TITLE_MAXLEN = 48
 # Beyond this, remaining images keep their original (possibly temp) paths.
 CHAT_HISTORY_MEDIA_MAX_BYTES = 50 * 1024 * 1024
 
-# ============================================================================
 # TIMER / EXECUTION CONSTANTS
-# ============================================================================
 
-# Timer interval for SSE queue processing (~60fps for short content)
+# Timer interval for agent event queue processing (~60fps for short content)
 TIMER_INTERVAL = 1 / 60  # ~0.016s
-# Throttled interval when streaming long content (~30fps)
-# Yields more main thread time to Blender's event loop (pinch-to-zoom, etc.)
-TIMER_INTERVAL_THROTTLED = 1 / 30  # ~0.033s
-# Content length threshold (chars) to switch from 60fps to 30fps
-TIMER_THROTTLE_CONTENT_THRESHOLD = 2000
 
 # Timeout threshold for script execution warnings (seconds)
 SCRIPT_TIMEOUT_THRESHOLD = 30.0
+# Longest a render_viewport(quality="final") tool call is held open waiting for
+# its native preview job (core/preview_deferral.py); the job itself keeps going.
+PREVIEW_DEFERRED_MAX_S = 240.0
 
 # Undo checkpoints for agent-executed scripts.
 #
@@ -404,9 +484,7 @@ AGENT_UNDO_GROUP_PER_TURN = False
 # the next script.
 AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN = 8
 
-# ============================================================================
 # SLOT EVENT PROCESSING
-# ============================================================================
 
 # Maximum content.append (streaming text) events processed per timer tick.
 # Higher = text drains faster, but each tick takes longer (blocks main loop).
@@ -416,3 +494,6 @@ STREAMING_BATCH_LIMIT = 8
 # Prefix for temporary placeholder bubble IDs (optimistic UI loading indicator).
 # Used in chat_ops.py (creation) and slot_processor.py (cleanup).
 TEMP_PLACEHOLDER_PREFIX = "temp_placeholder_"
+
+# Let a synchronous tool or final response remain readable between draw frames.
+CAT_ACTIVITY_HOLD_SECONDS = 0.9

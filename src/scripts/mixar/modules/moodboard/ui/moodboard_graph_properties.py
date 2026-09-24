@@ -4,8 +4,6 @@
 
 """Persistent, catalog-driven records for moodboard inference blocks."""
 
-import json
-
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -25,29 +23,24 @@ from mixar.modules.moodboard.constants import (
     GRAPH_LABEL_MAXLEN,
     GRAPH_MODEL_SLUG_MAXLEN,
     GRAPH_NODE_ID_MAXLEN,
+    GRAPH_PROGRESS_MAXLEN,
+    GRAPH_PROMPT_MAXLEN,
     GRAPH_OBJECT_NAMES_MAXLEN,
     GRAPH_SERVICE_KEY_MAXLEN,
     GRAPH_SOCKET_ID_MAXLEN,
     GRAPH_WIDGET_MAXLEN,
 )
-
-
-ACTION_TYPES = (
-    ('IMAGE_GEN', "Generate Image", "Generate or edit an image"),
-    ('VIDEO_GEN', "Generate Video", "Generate a video from image/video references"),
-    ('MODEL_3D', "Generate to 3D", "Generate a 3D asset from one image"),
-    ('MASK_DETAIL', "Multi Lasso Mask",
-     "Generate a detailed image of a lasso-masked region of the source image"),
-    # Mesh -> mesh continuations, chained off a 3D mesh node.
-    ('PBR_GEN', "PBR Generation", "Texture the connected 3D mesh"),
-    ('RETOPOLOGY', "Retopology", "Retopologize the connected 3D mesh"),
-    ('MESH_SEGMENT', "Mesh Segmentation", "Segment the connected 3D mesh into parts"),
-    ('AUTO_RIG', "Auto Rig", "Auto-rig the connected 3D mesh"),
+from mixar.modules.moodboard.ui.moodboard_graph_param_callbacks import (
+    _clamp_parameter_value,  # noqa: F401  (re-exported for back-compat)
+    _enum_label_from_choices,
+    _parameter_changed,
+    _parameter_enum_items,
 )
 
-# Action node types whose input is a 3D mesh (from a connected mesh node) and
-# whose output is a new 3D mesh. Kept here so both the schema and execution
-# layers agree on the set.
+
+from ..core.node_action_types import ACTION_TYPES  # noqa: F401 (public re-export)
+
+# Mesh -> mesh continuations. Schema and execution must share this set.
 MESH_FEATURE_ACTIONS = frozenset(
     {'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'}
 )
@@ -71,10 +64,18 @@ _MESH_FEATURE_CAPABILITY = {
 
 
 def capability_for_action(action_type: str) -> str:
+    if action_type == 'ASSEMBLE':
+        return None
     if action_type in {'IMAGE_GEN', 'MASK_DETAIL'}:
         return "image_gen"
     if action_type == 'VIDEO_GEN':
         return "video_gen"
+    if action_type == 'VIDEO_UPSCALE':
+        return "video_upscale"
+    if action_type == 'WORLD_LABS':
+        return "world_labs"
+    if action_type == 'CHARACTER_PARTS':
+        return "character_parts"
     if action_type in _MESH_FEATURE_CAPABILITY:
         return _MESH_FEATURE_CAPABILITY[action_type]
     return "model_gen"
@@ -163,22 +164,12 @@ def _model_label_for_slug(service_key, model_slug) -> str:
     return str(model_slug)
 
 
-def _enum_label_from_choices(choices_json, value) -> str:
-    if not value:
-        return ""
-    try:
-        for choice in json.loads(choices_json or "[]"):
-            if isinstance(choice, dict) and str(choice.get("value")) == str(value):
-                return str(choice.get("label") or choice.get("value") or "")
-    except (TypeError, ValueError):
-        pass
-    return str(value)
-
-
 def refresh_node_dropdown_labels(node) -> None:
     """Cache the Mode/Model dropdown labels (read by the C++ node overlay)."""
     node.service_label = _service_label_for_slug(node.action_type, node.service_key_id)
     node.model_label = _model_label_for_slug(node.service_key_id, node.model_slug)
+    if node.action_type == 'ASSEMBLE':  # local: the settings button opens its part rows
+        node.service_label, node.model_label = "", "Attachment settings"
 
 
 _SUPPRESS_ENUM_MIRROR = False
@@ -209,27 +200,6 @@ def _service_changed(self, _context):
         self.model = ""
 
 
-def _parameter_changed(self, context):
-    """Re-evaluate backend ``visible_if`` rules for this node's controls."""
-    if self.parameter_type == 'ENUM':
-        self.value_label = _enum_label_from_choices(self.choices_json, self.value_enum)
-    scene = getattr(context, "scene", None) if context else None
-    if scene is None:
-        return
-    try:
-        from mixar.modules.moodboard.core.node_schema import (
-            refresh_node_parameter_visibility,
-        )
-
-        pointer = self.as_pointer()
-        for node in scene.mixie_moodboard_action_nodes:
-            if any(parameter.as_pointer() == pointer for parameter in node.parameters):
-                refresh_node_parameter_visibility(node)
-                break
-    except Exception:
-        pass
-
-
 def _model_changed(self, context):
     if _SUPPRESS_ENUM_MIRROR:
         return
@@ -243,35 +213,6 @@ def _model_changed(self, context):
         sync_node_schema(context.scene, self)
     except Exception:
         pass
-
-
-# Blender does not copy the strings a dynamic ``items`` callback returns, so
-# Python must keep them alive for as long as any button can reference them.
-# This cache is therefore deliberately never evicted: dropping an entry that a
-# live enum still points at is a use-after-free. Growth is bounded in practice
-# by the number of distinct parameter schemas the catalog publishes.
-_ENUM_ITEM_CACHE = {}
-
-
-def _parameter_enum_items(self, _context):
-    raw = str(getattr(self, "choices_json", "") or "[]")
-    cached = _ENUM_ITEM_CACHE.get(raw)
-    if cached is not None:
-        return cached
-    try:
-        choices = json.loads(raw)
-    except (TypeError, ValueError):
-        choices = []
-    items = []
-    for choice in choices if isinstance(choices, list) else []:
-        if not isinstance(choice, dict) or choice.get("value") is None:
-            continue
-        identifier = str(choice["value"])
-        label = str(choice.get("label") or identifier)
-        items.append((identifier, label, label))
-    cached = items or [('NONE', "None", "No choices published")]
-    _ENUM_ITEM_CACHE[raw] = cached
-    return cached
 
 
 class MixieMoodboardNodeParameter(PropertyGroup):
@@ -334,6 +275,8 @@ class MixieMoodboardActionNode(PropertyGroup):
     """One configurable inference block on the moodboard canvas."""
 
     node_id: StringProperty(name="Node ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
+    # Canvas frame membership -- a frame holds cards as readily as pictures.
+    frame_id: StringProperty(name="Frame ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
     action_type: EnumProperty(
         name="Action",
         items=ACTION_TYPES,
@@ -344,7 +287,61 @@ class MixieMoodboardActionNode(PropertyGroup):
     width: FloatProperty(name="Width", default=700.0, min=140.0, max=1400.0)
     height: FloatProperty(name="Height", default=560.0, min=140.0, max=1400.0)
     selected: BoolProperty(name="Selected", default=False)
-    prompt: StringProperty(name="Prompt", default="", maxlen=4096)
+    # Pure UI state, toggled by the floating Edit button on a finished card.
+    # A completed node shows its RESULT: the settings panel and the in-tile
+    # prompt are folded away until this is on. Deliberately not a state change
+    # -- the older "Edit & Run Again" reset `state` to DRAFT to make the prompt
+    # reappear, which threw away the node's real outcome (and its error) just to
+    # open an editor.
+    edit_mode: BoolProperty(
+        name="Edit Mode",
+        description="Show this node's settings and prompt over its result",
+        default=False,
+    )
+    # Shown in the card header. Empty means "use the action type's own name",
+    # which is what makes an unnamed card still identifiable at a glance.
+    label: StringProperty(
+        name="Name",
+        description="Name shown in this node's header; blank uses the node type",
+        default="",
+        maxlen=GRAPH_LABEL_MAXLEN,
+    )
+    # Live queue state for the header's right side ("Queued (#3)", "0:42").
+    # Written by the pulse timer in node_job_bridge, never from a draw callback.
+    progress_text: StringProperty(
+        name="Progress", default="", maxlen=GRAPH_PROGRESS_MAXLEN
+    )
+    prompt: StringProperty(name="Prompt", default="", maxlen=GRAPH_PROMPT_MAXLEN)
+    # Refine / Revert state for the in-tile prompt. On the node, not in a
+    # Python dict, because the card is painted in C++: the draw pass reads
+    # these to choose between Refine, Revert and a disabled button, and it
+    # cannot consult module state to do it.
+    #
+    # SKIP_SAVE on all three: what the user typed before a refinement is a
+    # this-session affordance, and a .blend that reopened offering to
+    # "revert" a prompt to something from a previous session would be
+    # presenting a stale edit as an undo. An interrupted refinement likewise
+    # must not reload as permanently in-flight.
+    prompt_pre_refine: StringProperty(
+        name="Prompt Before Refine",
+        default="",
+        maxlen=GRAPH_PROMPT_MAXLEN,
+        options={'SKIP_SAVE'},
+    )
+    # Distinct from a non-empty prompt_pre_refine: a user may legitimately
+    # revert TO an empty prompt, and "" must not read as "nothing to revert".
+    prompt_refined: BoolProperty(
+        name="Prompt Refined",
+        description="This node's prompt was refined and can be reverted",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+    prompt_refining: BoolProperty(
+        name="Refining Prompt",
+        description="A prompt refinement is in flight for this node",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
     # MASK_DETAIL in-node controls, drawn vertically inside the node card by the
     # C++ layout. Real node props so each mask node is independent; catalog image
     # params come from the node's own `parameters` collection.
@@ -399,6 +396,10 @@ class MixieMoodboardActionNode(PropertyGroup):
         description="This node type takes a text prompt",
         default=True,
     )
+    requires_reference: BoolProperty(
+        name="Requires Reference", default=False,
+        description="Refuse to generate without a connected reference image",
+    )
     model: EnumProperty(
         name="Model",
         description="Generation model supplied by the backend catalog",
@@ -447,17 +448,18 @@ class MixieMoodboardActionNode(PropertyGroup):
 
 
 class MixieMoodboardAssetNode(PropertyGroup):
-    """Canvas representation of generated Blender object(s) — a 3D mesh node.
-
-    Holds the mesh identity (``object_names``) so the mesh-continuation features
-    (PBR / Retopology / Mesh Segmentation / Auto Rig) know which objects to
-    select and submit. ``preview_object`` renders the 3D thumbnail on the card.
-    """
+    """Live mesh reference, or a legacy generated asset resolved by object name."""
 
     node_id: StringProperty(name="Node ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
+    # Canvas frame membership -- a frame holds cards as readily as pictures.
+    frame_id: StringProperty(name="Frame ID", default="", maxlen=GRAPH_NODE_ID_MAXLEN)
     title: StringProperty(name="Title", default="3D Asset", maxlen=GRAPH_LABEL_MAXLEN)
     object_names: StringProperty(
         name="Object Names", default="", maxlen=GRAPH_OBJECT_NAMES_MAXLEN
+    )
+    scene_mesh_reference: BoolProperty(
+        name="Scene Mesh Reference", default=False,
+        description="Use the live object pointer; a removed source must not bind by name",
     )
     preview_object: PointerProperty(name="3D Preview", type=Object)
     position_x: FloatProperty(name="Position X", default=0.0)

@@ -23,6 +23,7 @@ from mixar.config.logging_config import get_logger
 
 from ...core.enumerate import list_user_plugins
 from ...core.importer import import_all
+from ...constants import PLUGIN_IMPORT_TOAST_ID, PLUGIN_IMPORT_TOAST_TTL_MS
 from ...core.source_select import select_source
 
 logger = get_logger(__name__)
@@ -151,48 +152,48 @@ class MIXIE_OT_import_blender_plugins(Operator):
         first_fail = next(
             (o for o in summary.items if o.message), None
         )
+        reason = ""
         if first_fail is not None:
             reason = f"{first_fail.name}: {first_fail.message}"
             logger.warning("Plugin import first failure — %s", reason)
             state.last_summary += f"\n{reason}"
 
-        _popup_summary(summary)
+        _notify_summary(summary, reason)
         report_level = "WARNING" if (summary.failed or summary.enable_failed) else "INFO"
         self.report({report_level}, msg)
         return {"FINISHED"}
 
 
-def _popup_summary(summary) -> None:
-    """Schedule a one-shot result popup (main thread, next tick)."""
+def _notify_summary(summary, first_failure: str = "") -> None:
+    """Report the import outcome as a viewport notification.
 
-    def _draw(self_menu, context):
-        layout = self_menu.layout
-        layout.label(text=f"Imported: {summary.imported}", icon="CHECKMARK")
-        if summary.already_present:
-            layout.label(
-                text=f"Already in Mixar: {summary.already_present}", icon="FILE_TICK"
-            )
-        layout.label(text=f"Enabled: {summary.enabled}", icon="PLUGIN")
-        if summary.failed:
-            layout.label(text=f"Failed to copy: {summary.failed}", icon="ERROR")
-        if summary.enable_failed:
-            layout.label(
-                text=f"Couldn't enable: {summary.enable_failed}", icon="ERROR"
-            )
+    Same bottom-left toast lane as every other alert. A clean import fades on
+    its own; any failure stays until dismissed and names the first reason.
+    """
+    lines = [f"Imported: {summary.imported}"]
+    if summary.already_present:
+        lines.append(f"Already in Mixar: {summary.already_present}")
+    lines.append(f"Enabled: {summary.enabled}")
+    if summary.failed:
+        lines.append(f"Failed to copy: {summary.failed}")
+    if summary.enable_failed:
+        lines.append(f"Couldn't enable: {summary.enable_failed}")
 
-    def _popup():
-        try:
-            bpy.context.window_manager.popup_menu(
-                _draw, title="Blender Plugin Import", icon="PLUGIN"
-            )
-        except Exception:
-            pass
-        return None
-
+    had_failure = bool(summary.failed or summary.enable_failed)
+    if had_failure and first_failure:
+        lines.append(first_failure)
     try:
-        bpy.app.timers.register(_popup, first_interval=0.0)
-    except Exception:
-        pass
+        from mixar.modules.common.notifications import get_notification_store
+
+        get_notification_store().push(
+            "warning" if had_failure else "success",
+            "Blender Plugin Import",
+            body="\n".join(lines),
+            ttl_ms=0 if had_failure else PLUGIN_IMPORT_TOAST_TTL_MS,
+            id=PLUGIN_IMPORT_TOAST_ID,
+        )
+    except Exception as e:  # noqa: BLE001 — self.report still carries it
+        logger.debug("plugin import notification failed: %s", e)
 
 
 classes = (

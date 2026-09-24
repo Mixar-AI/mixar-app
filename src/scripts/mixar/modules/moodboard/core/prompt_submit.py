@@ -114,6 +114,7 @@ PROMPT_TAB_DISPATCH = {
     "MixieMoodboardTabImageTo3DProps": _model_gen_operator,
     "MixieMoodboardTabMeshSegmentProps": _static("mixie.mesh_segment_submit"),
     "MixieMoodboardTabVideoGenProps": _static("mixie.video_gen_generate"),
+    "MixieMoodboardTabVideoUpscaleProps": _static("mixie.video_upscale_generate"),
     "MixieMoodboardTabWorldLabsProps": _static("mixie.world_labs_generate"),
     "MixieMoodboardTabSceneReconProps": _static("mixie.scene_recon_generate"),
 }

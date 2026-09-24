@@ -25,12 +25,13 @@
 #include "WM_api.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
 {
   ScrArea *area = CTX_wm_area(C);
-  if (area && (area->spacetype == SPACE_MIXIE_CHAT ||
-               area->spacetype == SPACE_AGENT_BUBBLE))
+  if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
     return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }
@@ -49,7 +50,7 @@ bool mixie_chat_handle_action_button_click(bContext *C,
   const blender::Vector<MessageLayoutData> &layout_cache = mixie_chat_get_layout_cache(smixie);
 
   View2D *v2d = &region->v2d;
-  UI_view2d_region_to_view(v2d, mouse_x, mouse_y, &mouse_x, &mouse_y);
+  ui::view2d_region_to_view(v2d, mouse_x, mouse_y, &mouse_x, &mouse_y);
 
   for (const MessageLayoutData &layout : layout_cache) {
     if (layout.action_button_count == 0) {
@@ -85,7 +86,7 @@ bool mixie_chat_handle_action_button_click(bContext *C,
       rt->copy_feedback_time = BLI_time_now_seconds();
     }
     if (todo_text) {
-      MEM_freeN(todo_text);
+      MEM_delete_void(static_cast<void *>(todo_text));
     }
     ED_region_tag_redraw(region);
     return true;
@@ -93,3 +94,4 @@ bool mixie_chat_handle_action_button_click(bContext *C,
 
   return false;
 }
+}  // namespace blender

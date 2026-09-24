@@ -10,12 +10,18 @@ from bpy.types import Header
 
 
 class TEXTURE_SETS_HT_header(Header):
-    """Header for the Texture Sets space."""
+    """Title bar for the Texture Sets space.
+
+    Draws ``template_header()``: every editor in the Texturing workspace
+    stays swappable, so this space keeps the stock Editor Type dropdown and
+    appears under the menu's "Texturing" heading.
+    """
     bl_space_type = 'TEXTURE_SETS'
 
     def draw(self, context):
         layout = self.layout
         layout.template_header()
+        layout.label(text="Texture Sets")
 
         layout.separator_spacer()
 

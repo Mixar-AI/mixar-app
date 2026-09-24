@@ -1,0 +1,287 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+"""Reference-image operators for the agent island's category panes.
+
+Two small operators the island's C++ panes bind:
+
+- ``mixar.pane_capture_viewport`` — screenshot the 3D viewport (the same
+  ``render.opengl(view_context=True)`` capture the chat attachment flow uses,
+  see ``space_mixie_chat/ui/operators/screenshot_ops.py``) and attach the
+  still as the ACTIVE pane's reference:
+
+  * Image  -> ``tab_imagegen.reference_images`` (the exact add the
+    moodboard's ``mixie.imagegen_upload_reference`` performs: packed image,
+    boarded unselected, mirrored into the tab's reference collection).
+  * Video  -> boarded as a SELECTED moodboard item — Video Gen's
+    references ARE the selected board media
+    (``get_selected_moodboard_media_inputs``).
+  * Gaussian Splat -> ``tab_world_labs.reference_image`` with
+    ``use_selected_image`` switched off so the capture is what submits.
+
+- ``mixar.pane_video_upload_reference`` — file picker that imports images and videos
+  onto the moodboard AS SELECTED, feeding Video Gen's native selection-based
+  reference flow. (The moodboard Video Gen tab has no upload property — its
+  references are the board selection, so "upload a reference" for video
+  means "board it selected".)
+
+Runs entirely on the main thread; the capture must be dispatched from a
+window whose screen may lack a 3D viewport (the bubble), so the viewport is
+resolved across ALL windows and the OpenGL render runs under a
+``temp_override`` of that window/area/region.
+"""
+
+import glob
+import logging
+import os
+import time
+
+import bpy
+from bpy.types import Operator
+
+logger = logging.getLogger(__name__)
+
+_CAPTURE_BASENAME = "mixar_pane_capture"
+
+
+def _find_view3d():
+    """(window, area, region) of the first 3D viewport across all windows."""
+    wm = bpy.context.window_manager
+    for window in wm.windows:
+        screen = window.screen
+        if screen is None:
+            continue
+        for area in screen.areas:
+            if area.type != 'VIEW_3D':
+                continue
+            for region in area.regions:
+                if region.type == 'WINDOW':
+                    return window, area, region
+    return None, None, None
+
+
+def _capture_viewport_to_file(context):
+    """OpenGL-render the 3D viewport to a PNG; returns the path or None."""
+    from mixar.modules.space_mixie_chat.core.image_utils import (
+        get_mixar_screenshots_dir,
+    )
+
+    window, area, region = _find_view3d()
+    if window is None:
+        return None
+
+    screenshots_dir = get_mixar_screenshots_dir()
+    timestamp = int(time.time() * 1000)
+    path = os.path.join(
+        screenshots_dir, f"{_CAPTURE_BASENAME}_{os.getpid()}_{timestamp}.png"
+    )
+
+    # Keep only the last few captures from this session.
+    old = sorted(
+        glob.glob(
+            os.path.join(screenshots_dir, f"{_CAPTURE_BASENAME}_{os.getpid()}_*.png")
+        )
+    )
+    for old_file in old[:-5]:
+        try:
+            os.remove(old_file)
+        except OSError:
+            pass
+
+    scene = window.scene
+    render = scene.render
+    settings = render.image_settings
+    original_filepath = render.filepath
+    original_x = render.resolution_x
+    original_y = render.resolution_y
+    original_percentage = render.resolution_percentage
+    original_format = settings.file_format
+    original_media = getattr(settings, "media_type", None)
+    try:
+        render.filepath = path
+        render.resolution_x = region.width
+        render.resolution_y = region.height
+        # Anything but 100% and the capture is not the size of the region the
+        # user is looking at.
+        render.resolution_percentage = 100
+        # media_type BEFORE file_format: on Blender 5 a scene whose output is
+        # FFMPEG rejects PNG outright, so this died on any scene that had been
+        # through Director's guide render or that the user simply configured
+        # for video. Both sibling capture paths (scribble_mark/core/freeze.py,
+        # director/core/capture.py) document the same ordering; this one was
+        # written without it.
+        if original_media is not None:
+            settings.media_type = "IMAGE"
+        settings.file_format = "PNG"
+        with context.temp_override(window=window, area=area, region=region):
+            bpy.ops.render.opengl(write_still=True, view_context=True)
+    finally:
+        render.filepath = original_filepath
+        render.resolution_x = original_x
+        render.resolution_y = original_y
+        render.resolution_percentage = original_percentage
+        if original_media is not None:
+            settings.media_type = original_media
+        settings.file_format = original_format
+
+    return path if os.path.exists(path) else None
+
+
+def _attach_to_imagegen(scene, img, filepath):
+    """The exact reference-add mixie.imagegen_upload_reference performs."""
+    from mixar.modules.moodboard.core.moodboard_utils import (
+        place_new_moodboard_item,
+    )
+
+    tab = scene.mixie_moodboard_sidebar.tab_imagegen
+
+    mb_item = scene.mixie_moodboard_images.add()
+    mb_item.image = img
+    mb_item.scale = 1.0
+    place_new_moodboard_item(scene, mb_item)
+    mb_item.selected = False
+
+    ref_item = tab.reference_images.add()
+    ref_item.image = img
+    ref_item.moodboard_index = len(scene.mixie_moodboard_images) - 1
+    ref_item.display_name = img.name
+    if img.size[0] > 0 and img.size[1] > 0:
+        ref_item.display_resolution = f"{img.size[0]} x {img.size[1]}"
+    else:
+        ref_item.display_resolution = "Unknown"
+    ref_item.display_path = filepath
+    if hasattr(tab, "use_reference_images"):
+        # Uploaded/captured refs are used with board-selection mode OFF.
+        tab.use_reference_images = False
+
+
+def _attach_to_board_selected(scene, filepath):
+    """Board the file as a SELECTED item (Video Gen's reference source)."""
+    from mixar.modules.moodboard.core.media_import import (
+        load_media_file_to_board,
+    )
+
+    item = load_media_file_to_board(scene, filepath)
+    if item is not None:
+        item.selected = True
+    return item
+
+
+class MIXAR_OT_pane_capture_viewport(Operator):
+    """Capture the 3D viewport and attach it as the pane's reference image"""
+
+    bl_idname = "mixar.pane_capture_viewport"
+    bl_label = "Capture Viewport"
+    bl_description = (
+        "Screenshot the 3D viewport and attach it as a reference image for "
+        "the current generation tab"
+    )
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.scene is not None
+
+    def execute(self, context):
+        scene = context.scene
+        wm = context.window_manager
+        tab = getattr(wm, "mixar_bubble_tab", 'AGENT')
+
+        try:
+            path = _capture_viewport_to_file(context)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Viewport capture failed: %r", exc)
+            self.report({'ERROR'}, f"Viewport capture failed: {exc}")
+            return {'CANCELLED'}
+        if path is None:
+            self.report({'WARNING'}, "No 3D viewport found to capture")
+            return {'CANCELLED'}
+
+        sidebar = getattr(scene, "mixie_moodboard_sidebar", None)
+        if sidebar is None:
+            self.report({'WARNING'}, "Moodboard sidebar properties unavailable")
+            return {'CANCELLED'}
+
+        try:
+            if tab == 'VIDEO':
+                if _attach_to_board_selected(scene, path) is None:
+                    raise RuntimeError("could not board the capture")
+            else:
+                img = bpy.data.images.load(path, check_existing=False)
+                img.name = "Viewport Capture"
+                img.pack()
+                if tab == 'SPLAT':
+                    wl = sidebar.tab_world_labs
+                    wl.reference_image = img
+                    if hasattr(wl, "use_selected_image"):
+                        wl.use_selected_image = False
+                else:
+                    # Image (and any future pane defaults here).
+                    _attach_to_imagegen(scene, img, path)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Could not attach viewport capture: %r", exc)
+            self.report({'ERROR'}, f"Could not attach capture: {exc}")
+            return {'CANCELLED'}
+
+        self.report({'INFO'}, "Viewport captured as reference")
+        for window in wm.windows:
+            for area in window.screen.areas:
+                if area.type == 'AGENT_BUBBLE':
+                    area.tag_redraw()
+        return {'FINISHED'}
+
+
+class MIXAR_OT_pane_video_upload_reference(Operator):
+    """Upload image and video references for video generation"""
+
+    bl_idname = "mixar.pane_video_upload_reference"
+    bl_label = "Upload Video References"
+    bl_description = (
+        "Import image and video files onto the moodboard as selected references for "
+        "video generation"
+    )
+    bl_options = {'REGISTER', 'UNDO'}
+
+    filepath: bpy.props.StringProperty(subtype='FILE_PATH')
+    files: bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement)
+    directory: bpy.props.StringProperty(subtype='DIR_PATH')
+    filter_glob: bpy.props.StringProperty(
+        default=";".join(f"*{ext}" for ext in sorted(
+            set(bpy.path.extensions_image) | set(bpy.path.extensions_movie))),
+        options={'HIDDEN'},
+    )
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        scene = context.scene
+        added = 0
+        paths = [os.path.join(self.directory, file.name) for file in self.files if file.name]
+        for filepath in paths or [self.filepath]:
+            try:
+                filepath = os.path.abspath(os.path.realpath(filepath))
+            except (OSError, ValueError):
+                continue
+            if not os.path.isfile(filepath):
+                continue
+            try:
+                if _attach_to_board_selected(scene, filepath) is not None:
+                    added += 1
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Video reference import failed: %r", exc)
+        if added == 0:
+            self.report({'WARNING'}, "No valid image or video references added")
+            return {'CANCELLED'}
+        self.report(
+            {'INFO'},
+            f"Added {added} selected reference{'s' if added != 1 else ''}",
+        )
+        return {'FINISHED'}
+
+
+classes = (
+    MIXAR_OT_pane_capture_viewport,
+    MIXAR_OT_pane_video_upload_reference,
+)

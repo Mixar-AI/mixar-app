@@ -11,6 +11,8 @@ viewer outputs.
 
 import re
 
+from mixar.modules.common.utils.animation import assigned_fcurves
+
 from ......config.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -83,7 +85,7 @@ def check_layer_tree_ios(layer, tree=None, remove_props=False, hard_reset=False)
         # Example: nodes["Group.003"].inputs[9].default_value'
 
         if root_tree.animation_data.action:
-            for fc in root_tree.animation_data.action.fcurves:
+            for fc in assigned_fcurves(root_tree):
                 m = re.match(r'^nodes\["' + layer_node.name + r'"\]\.inputs\[(\d+)\]\.default_value$', fc.data_path)
                 if m:
                     inp = layer_node.inputs[int(m.group(1))]

@@ -2,9 +2,58 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Send captured keyframes to the Moodboard as a shot-tagged group."""
+"""Send a shot to the Moodboard: its keyframe images and its videos.
+
+Export to Moodboard is ONE action over what the director chose — the
+keyframe images, any of the three videos, or both. `export_plan` is the one
+statement of what that action will send, so the popup's label and the
+operator can never disagree about it.
+"""
 
 from __future__ import annotations
+
+from dataclasses import dataclass
+
+#: Videos animate between keyframes, so a shot needs two to have any motion.
+MIN_VIDEO_KEYFRAMES = 2
+
+
+@dataclass(frozen=True)
+class ExportPlan:
+    images: int
+    videos: int
+    #: Why no video will be rendered although some were chosen, or "".
+    video_blocker: str = ""
+
+    @property
+    def anything(self) -> bool:
+        return bool(self.images or self.videos)
+
+
+def export_plan(shot, *, rendering: bool = False) -> ExportPlan:
+    """What Export to Moodboard would send for *shot* right now."""
+    images = 0
+    if getattr(shot, "export_images", True):
+        images = sum(1 for beat in shot.beats if getattr(beat, "image", None) is not None)
+    chosen = len(set(shot.render_output_types))
+    blocker = ""
+    if chosen and rendering:
+        blocker = "Videos are already rendering"
+    elif chosen and len({int(beat.frame) for beat in shot.beats}) < MIN_VIDEO_KEYFRAMES:
+        blocker = "Videos need two or more keyframes"
+    return ExportPlan(images=images, videos=0 if blocker else chosen, video_blocker=blocker)
+
+
+def plan_label(plan: ExportPlan) -> str:
+    """The action's label: what will actually be sent."""
+    parts = []
+    if plan.images:
+        parts.append(f"{plan.images} Image{'s' if plan.images != 1 else ''}")
+    if plan.videos:
+        parts.append(f"{plan.videos} Video{'s' if plan.videos != 1 else ''}")
+    if not parts:
+        return "Nothing to Send"
+    return "Send " + " + ".join(parts)
 
 
 def send_keyframes_to_board(scene, shot) -> int:

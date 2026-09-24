@@ -25,6 +25,10 @@ FEATURE_HUNYUAN_UV = "hunyuan_uv"
 FEATURE_MODEL_3D = "model_3d"
 FEATURE_IMAGEGEN = "imagegen"
 FEATURE_VIDEO_GEN = "video_gen"
+# Video Upscale (FLUX Video Upscale on fal) — one source movie in, an upscaled
+# movie out. Its own queue bucket so the Video Gen footer never reports an
+# upscale as a generation in progress.
+FEATURE_VIDEO_UPSCALE = "video_upscale"
 FEATURE_LOOKDEV360 = "lookdev360"
 # PBR Generation (Tripo /v3/models/texture) — client queue bucket. Distinct
 # from FEATURE_LOOKDEV360 (self-hosted Hunyuan PBR maps → fill layers): this
@@ -105,9 +109,15 @@ QUEUE_TOAST_ID = "jobq_enqueued"
 # action the whole time.
 QUEUE_ACTIVE_TOAST_TTL_MS = 0
 
-# Completion summary shown when the queue drains. Transient — it reports a
-# finished fact, and the results themselves are already in the scene.
+# Completion toast shown when a feature's jobs finish ("Image to 3D complete",
+# "4 succeeded"). Transient — it reports a finished fact, and the results
+# themselves are already in the scene.
 QUEUE_READY_TOAST_TTL_MS = 10000
+
+# Completion toasts are keyed per feature (catalog capability label) under
+# this prefix, so a second Image to 3D batch replaces the first one's toast
+# while an Auto Rig completion shown beside it is left alone.
+QUEUE_DONE_TOAST_ID_PREFIX = "jobq_done:"
 
 # Backwards-compatible alias — the id string is unchanged.
 ENQUEUE_TOAST_ID = QUEUE_TOAST_ID
@@ -138,6 +148,7 @@ __all__ = (
     "FEATURE_MODEL_3D",
     "FEATURE_IMAGEGEN",
     "FEATURE_VIDEO_GEN",
+    "FEATURE_VIDEO_UPSCALE",
     "FEATURE_LOOKDEV360",
     "FEATURE_PBR_GEN",
     "FEATURE_SCENE_GEN",
@@ -151,6 +162,7 @@ __all__ = (
     "QUEUE_TOAST_ID",
     "QUEUE_ACTIVE_TOAST_TTL_MS",
     "QUEUE_READY_TOAST_TTL_MS",
+    "QUEUE_DONE_TOAST_ID_PREFIX",
     "ENQUEUE_TOAST_ID",
     "LOG_PREFIX",
 )

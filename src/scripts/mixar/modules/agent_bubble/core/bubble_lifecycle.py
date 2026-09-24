@@ -170,7 +170,9 @@ def _load_autoshow_tick_inner():
         if closed:
             return 0.25  # let close settle before invoke
 
-    if _try_invoke_bubble(start_minimised=False):
+    # The resting state is the floating pill — the full island only ever
+    # appears from a hover/click, never as the first thing on screen.
+    if _try_invoke_bubble(start_minimised=True):
         logger.info(
             "agent_bubble: shown after file load on attempt %d",
             _st.load_autoshow_attempts,
@@ -191,7 +193,15 @@ def _load_autoshow_tick_inner():
 
 @persistent
 def on_save_pre(_dummy_arg) -> None:
-    """Prevent runtime bubble/pill windows from being serialized."""
+    """Prevent runtime bubble/pill windows from being serialized.
+
+    Runs for EVERY save, snapshot copies included: the native writer only
+    unlinks bubble windows, their screens would still be written, and a file
+    read (a turn checkpoint restore) must never find a live bubble window to
+    free. A save started from a bubble click therefore closes the island under
+    that click; the chat's native dispatchers tolerate it
+    (mixie_chat_call_operator_and_redraw re-checks the region before use).
+    """
     closed = close_restored_agent_bubble_windows()
     _st.closed_for_save = closed > 0
     if closed:

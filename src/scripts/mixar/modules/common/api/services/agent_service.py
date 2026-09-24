@@ -1,92 +1,54 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""Agent settings over HTTP: BYOK credentials and the provider/model catalog.
 
+Settings are NOT agent traffic. They rode the agent WebSocket for a while, and
+``agent_rpc.get_client()`` raises the moment that socket is absent or
+un-handshaken — so the post-login settings fetch, which fires on the same tick
+that merely *initiates* the connection, failed on every cold start and the AI
+Provider Settings dialog showed "Not configured" over a credential that was
+stored and in use. The client needs settings before the agent exists, which is
+what plain HTTP gives it.
+
+The backend serves both surfaces (``modules/agent/api/routes/agent_settings.py``
+and the ``byok.*`` / ``credentials.*`` WebSocket commands); this client uses HTTP
+only. Chat, input, cancel, streaming and replay stay on the socket via
+``common/agent_rpc``.
 """
-Agent API Service.
 
-Handles /api/v1/agent endpoints for AI/ML features.
-"""
-
-from typing import Any, Callable, Dict, Optional
+from typing import Optional
 
 from ..constants import APIModule
-from ..request_queue import AsyncResponse
 from ..response import APIResponse
 from .base_service import BaseService
 
 
 class AgentService(BaseService):
-    """
-    Agent service for AI/ML operations.
-
-    Endpoints:
-    - GET /context-script - Get context collector script
-    - POST /process - Process agent request
-    - GET /models - List available models
-    """
+    """Endpoints under /api/v1/agent (settings only)."""
 
     @property
     def module(self) -> APIModule:
         return APIModule.AGENT
 
-    # ========================================================================
-    # SYNC METHODS
-    # ========================================================================
+    # --- Model catalog -----------------------------------------------------
 
-    def get_context_script(self) -> APIResponse:
+    def list_models(self, etag: Optional[str] = None) -> APIResponse:
+        """GET /agent/models — providers + models for the dropdowns.
+
+        Pass the stored ``etag`` to revalidate: an unchanged catalog answers 304
+        with an empty body, which is the caller's signal to keep what it has.
+
+        NOTE for callers: ``APIResponse.success`` is ``response.ok``, which is
+        True at 304 — check the status code BEFORE the success flag or you will
+        swap a live catalog for an empty payload.
         """
-        Fetch the context collector script from server.
+        headers = {"If-None-Match": etag} if etag else None
+        return self.get("models", headers=headers)
 
-        Returns:
-            APIResponse with script content
-        """
-        return self.get("context-script")
-
-    def process(
-        self,
-        prompt: str,
-        context: Optional[Dict[str, Any]] = None,
-        model: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None,
-    ) -> APIResponse:
-        """
-        Submit a request to the agent for processing.
-
-        Args:
-            prompt: User prompt/request
-            context: Context data from Blender
-            model: Model to use (optional)
-            options: Additional options
-
-        Returns:
-            APIResponse with processing result
-        """
-        payload = {"prompt": prompt}
-        if context:
-            payload["context"] = context
-        if model:
-            payload["model"] = model
-        if options:
-            payload["options"] = options
-
-        return self.post("process", json=payload)
-
-    def list_models(self) -> APIResponse:
-        """
-        List available agent models.
-
-        Returns:
-            APIResponse with list of models
-        """
-        return self.get("models")
-
-    # ========================================================================
-    # BYOK — Bring-Your-Own-Key credentials
-    # ========================================================================
+    # --- BYOK credentials --------------------------------------------------
 
     def get_credentials(self) -> APIResponse:
-        """GET /agent/credentials — fetch current BYOK state for the user."""
+        """GET /agent/credentials — current BYOK state for the user."""
         return self.get("credentials")
 
     def save_credentials_all(
@@ -99,21 +61,18 @@ class AgentService(BaseService):
     ) -> APIResponse:
         """PUT /agent/byok — upsert BYOK config across all agent roles.
 
-        Uses the backend's single-value BYOK wrapper, which fans one
-        provider/model/key out to the default + per-agent roles and returns
-        the same {items, byok_active} shape as GET /agent/credentials.
+        Uses the backend's single-value wrapper, which fans one
+        provider/model/key out to the default + per-agent roles and returns the
+        same {items, byok_active} shape as GET /agent/credentials.
 
-        Server validates the key with the provider (200ms–15s) before storing.
-        Atomic: on any failure, previous state (if any) is preserved.
+        The server validates the key with the provider (200ms-15s) before
+        storing. Atomic: on any failure the previous state is preserved.
 
-        ``base_url`` / ``supports_vision`` are only included when provided
-        (used by the "local" provider to register the relay target) —
-        omitting them keeps the payload byte-identical for older backends.
+        ``base_url`` / ``supports_vision`` are sent only when provided (the
+        "local" provider registering its relay target) — omitting them keeps the
+        payload byte-identical for older backends.
         """
-        payload = {
-            "provider": provider,
-            "model": model,
-        }
+        payload = {"provider": provider, "model": model}
         if api_key is not None:
             payload["api_key"] = api_key
         if base_url is not None:
@@ -126,106 +85,64 @@ class AgentService(BaseService):
         """DELETE /agent/credentials/all — remove BYOK config. Always 200."""
         return self.delete("credentials/all")
 
-    # ========================================================================
-    # ASYNC METHODS
-    # ========================================================================
+    # --- Hosted model preference -------------------------------------------
+    #
+    # The pick is a STORED PREFERENCE, resolved server-side when a turn starts.
+    # `/agent/chat` and `/agent/input` carry no model field — do not add one.
+    #
+    # The desktop client saves exactly one pick, under ``role="default"``; the
+    # backend fans it out. The per-agent roles (chat, orchestrator, worker, …)
+    # exist in the API but have no desktop surface.
 
-    def get_context_script_async(
+    def get_model_preference(self) -> APIResponse:
+        """GET /agent/model-preference — the account's saved pick.
+
+        ``Cache-Control: no-store`` server-side and always 200 for an authed
+        user; the response carries ``byok_active`` alongside the items, which is
+        what disables the picker. Never cached to disk — it is per-account and
+        cheap.
+        """
+        return self.get("model-preference")
+
+    def put_model_preference(
         self,
-        on_success: Optional[Callable[[APIResponse], None]] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
-        on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-    ) -> str:
+        provider: str,
+        model: str,
+        role: str = "default",
+        thinking_level: Optional[str] = None,
+    ) -> APIResponse:
+        """PUT /agent/model-preference — save the pick.
+
+        ``thinking_level`` is omitted from the payload entirely when None (the
+        model's own default), so the bytes stay identical for a backend that
+        predates the field — the same treatment `save_credentials_all` gives
+        base_url / supports_vision.
+
+        400 = ineligible model or a thinking level the model does not offer
+        (message prefixed "Model not available: " for model errors);
+        422 = schema, e.g. a BYOK-only provider.
         """
-        Fetch the context collector script asynchronously.
+        payload = {"provider": provider, "model": model, "role": role}
+        if thinking_level is not None:
+            payload["thinking_level"] = thinking_level
+        return self.put("model-preference", json=payload)
 
-        Args:
-            on_success: Callback for successful response
-            on_error: Callback for errors
-            on_complete: Callback with full AsyncResponse
+    def delete_model_preference(self, role: str = "default") -> APIResponse:
+        """DELETE /agent/model-preference/{role} — 200, or 404 if unset.
 
-        Returns:
-            Request ID for tracking
+        The role is not validated server-side; an unknown one simply 404s.
         """
-        return self.get_async(
-            "context-script",
-            on_success=on_success,
-            on_error=on_error,
-            on_complete=on_complete,
-        )
+        return self.delete(f"model-preference/{role}")
 
-    def process_async(
-        self,
-        prompt: str,
-        context: Optional[Dict[str, Any]] = None,
-        model: Optional[str] = None,
-        options: Optional[Dict[str, Any]] = None,
-        on_success: Optional[Callable[[APIResponse], None]] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
-        on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-    ) -> str:
-        """
-        Submit a request to the agent for processing asynchronously.
-
-        Args:
-            prompt: User prompt/request
-            context: Context data from Blender
-            model: Model to use (optional)
-            options: Additional options
-            on_success: Callback for successful response
-            on_error: Callback for errors
-            on_complete: Callback with full AsyncResponse
-
-        Returns:
-            Request ID for tracking
-        """
-        payload = {"prompt": prompt}
-        if context:
-            payload["context"] = context
-        if model:
-            payload["model"] = model
-        if options:
-            payload["options"] = options
-
-        return self.post_async(
-            "process",
-            json=payload,
-            on_success=on_success,
-            on_error=on_error,
-            on_complete=on_complete,
-        )
-
-    def list_models_async(
-        self,
-        on_success: Optional[Callable[[APIResponse], None]] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
-        on_complete: Optional[Callable[[AsyncResponse], None]] = None,
-    ) -> str:
-        """
-        List available agent models asynchronously.
-
-        Args:
-            on_success: Callback for successful response
-            on_error: Callback for errors
-            on_complete: Callback with full AsyncResponse
-
-        Returns:
-            Request ID for tracking
-        """
-        return self.get_async(
-            "models",
-            on_success=on_success,
-            on_error=on_error,
-            on_complete=on_complete,
-        )
+    def delete_model_preferences(self) -> APIResponse:
+        """DELETE /agent/model-preference — clear every role. `{"removed": n}`."""
+        return self.delete("model-preference")
 
 
-# Singleton instance
-_agent_service: Optional[AgentService] = None
+_agent_service = None
 
 
-def get_agent_service() -> AgentService:
-    """Get the global AgentService instance."""
+def get_agent_service():
     global _agent_service
     if _agent_service is None:
         _agent_service = AgentService()

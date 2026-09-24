@@ -19,6 +19,8 @@
 #include "RNA_access.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name RNA String Helpers
@@ -45,7 +47,7 @@ static void read_rna_string_bounded(PointerRNA *ptr,
   char *buf = RNA_property_string_get_alloc(ptr, prop, dst, int(dstsize), nullptr);
   if (buf != dst) {
     BLI_strncpy(dst, buf, dstsize);
-    MEM_freeN(buf);
+    MEM_delete_void(static_cast<void *>(buf));
   }
 }
 
@@ -119,6 +121,14 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     layout->thinking_text[0] = '\0';
     memset(&layout->steps_header_bounds, 0, sizeof(layout->steps_header_bounds));
     memset(&layout->thinking_header_bounds, 0, sizeof(layout->thinking_header_bounds));
+    layout->images_collapsed = false;
+    layout->slot_gallery_height = 0.0f;
+    layout->images_header_hovered = false;
+    memset(&layout->images_header_bounds, 0, sizeof(layout->images_header_bounds));
+    layout->gallery_hidden = 0;
+    layout->gallery_first_hidden = -1;
+    layout->gallery_more_hovered = false;
+    memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
     return false;
   }
 
@@ -144,7 +154,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       RNA_property_string_length(msg_ptr, g_msg_props.ephemeral) : 0;
   layout->has_ephemeral = ephemeral_len > 0;
   if (ephemeral_len > 0) {
-    char *eph_probe = static_cast<char *>(MEM_mallocN(ephemeral_len + 1, "eph_probe"));
+    char *eph_probe = static_cast<char *>(MEM_new_uninitialized(ephemeral_len + 1, "eph_probe"));
     RNA_property_string_get(msg_ptr, g_msg_props.ephemeral, eph_probe);
     const char *p = eph_probe;
     while (*p == ' ' || *p == '\n' || *p == '\t' || *p == '\r') {
@@ -153,7 +163,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     if (*p == '{' || *p == '[') {
       layout->has_ephemeral = false;
     }
-    MEM_freeN(eph_probe);
+    MEM_delete_void(static_cast<void *>(eph_probe));
   }
 
   /* Check todo items collection */
@@ -199,7 +209,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     if (g_msg_props.loader_texts) {
       int texts_len = RNA_property_string_length(msg_ptr, g_msg_props.loader_texts);
       if (texts_len > 0) {
-        char *texts_json = static_cast<char *>(MEM_mallocN(texts_len + 1, "loader_texts"));
+        char *texts_json = static_cast<char *>(MEM_new_uninitialized(texts_len + 1, "loader_texts"));
         RNA_property_string_get(msg_ptr, g_msg_props.loader_texts, texts_json);
 
         /* Simple JSON array parsing - just count texts for now */
@@ -223,7 +233,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
             ptr++;
           }
         }
-        MEM_freeN(texts_json);
+        MEM_delete_void(static_cast<void *>(texts_json));
       }
     }
   }
@@ -231,14 +241,14 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
   /* Read content text if present */
   if (layout->has_content) {
     int content_len = RNA_property_string_length(msg_ptr, g_msg_props.content);
-    layout->content_text = static_cast<char *>(MEM_mallocN(content_len + 1, "content_text"));
+    layout->content_text = static_cast<char *>(MEM_new_uninitialized(content_len + 1, "content_text"));
     RNA_property_string_get(msg_ptr, g_msg_props.content, layout->content_text);
   }
 
   /* Read ephemeral text if present */
   if (layout->has_ephemeral) {
     int ephemeral_len = RNA_property_string_length(msg_ptr, g_msg_props.ephemeral);
-    layout->ephemeral_text = static_cast<char *>(MEM_mallocN(ephemeral_len + 1, "ephemeral_text"));
+    layout->ephemeral_text = static_cast<char *>(MEM_new_uninitialized(ephemeral_len + 1, "ephemeral_text"));
     RNA_property_string_get(msg_ptr, g_msg_props.ephemeral, layout->ephemeral_text);
   }
 
@@ -335,6 +345,18 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
     layout->steps_collapsed =
         RNA_property_boolean_get(msg_ptr, g_msg_props.steps_collapsed);
   }
+  layout->images_collapsed = false;
+  layout->slot_gallery_height = 0.0f;
+  layout->images_header_hovered = false;
+  memset(&layout->images_header_bounds, 0, sizeof(layout->images_header_bounds));
+  layout->gallery_hidden = 0;
+  layout->gallery_first_hidden = -1;
+  layout->gallery_more_hovered = false;
+  memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
+  if (g_msg_props.images_collapsed) {
+    layout->images_collapsed =
+        RNA_property_boolean_get(msg_ptr, g_msg_props.images_collapsed);
+  }
   read_rna_string_bounded(msg_ptr, g_msg_props.steps_summary, layout->steps_summary,
                           sizeof(layout->steps_summary));
   if (layout->has_steps && g_msg_props.step_items) {
@@ -395,7 +417,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
           sizeof(layout->thinking_text), nullptr);
       if (tbuf != layout->thinking_text) {
         BLI_strncpy(layout->thinking_text, tbuf, sizeof(layout->thinking_text));
-        MEM_freeN(tbuf);
+        MEM_delete_void(static_cast<void *>(tbuf));
       }
     }
     if (g_msg_props.thinking_collapsed) {
@@ -427,6 +449,7 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       img.local_path[0] = '\0';
       img.width = 0.0f;
       img.height = 0.0f;
+      img.step_id[0] = '\0';
       img.is_hovered = false;
       memset(&img.bounds, 0, sizeof(img.bounds));
 
@@ -441,8 +464,12 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
       if (g_image_props.height) {
         img.height = RNA_property_float_get(&image_ptr, g_image_props.height);
       }
+      read_rna_string_bounded(&image_ptr, g_image_props.step_id, img.step_id, sizeof(img.step_id));
 
-      if (img.height > 0.0f) {
+      /* Step-tagged tiles are measured and drawn by the steps block
+       * (chat_ui_calc_steps_block_height); only backend gallery images
+       * count toward the (reserved, undrawn) images slot height. */
+      if (img.height > 0.0f && img.step_id[0] == '\0') {
         layout->slot_images_height += img.height;
       }
 
@@ -475,10 +502,10 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
                             sizeof(layout->feedback_submitted_comment));
   }
   layout->feedback_submitted_comment_height = 0.0f;
-  for (int i = 0; i < FEEDBACK_STAR_COUNT; i++) {
-    layout->feedback_stars[i].star_index = i + 1;
-    layout->feedback_stars[i].is_hovered = false;
-    memset(&layout->feedback_stars[i].bounds, 0, sizeof(rctf));
+  for (int i = 0; i < FEEDBACK_VOTE_COUNT; i++) {
+    layout->feedback_votes[i].rating = i == 0 ? 5 : 1;
+    layout->feedback_votes[i].is_hovered = false;
+    memset(&layout->feedback_votes[i].bounds, 0, sizeof(rctf));
   }
   memset(&layout->feedback_comment_bounds, 0, sizeof(rctf));
 
@@ -486,3 +513,4 @@ bool populate_slot_layout_data(PointerRNA *msg_ptr, MessageLayoutData *layout) {
 }
 
 /** \} */
+}  // namespace blender

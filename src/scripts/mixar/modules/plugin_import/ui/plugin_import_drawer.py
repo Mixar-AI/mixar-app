@@ -6,13 +6,9 @@
 
 This is the ONE definition of the checklist UI, and Preferences >
 Add-ons is its only host. It stays a standalone drawer rather than being
-folded into that panel file for two reasons: the panel reaches it
-through a ``prepend`` hook onto an upstream class (so there is no panel
-body of our own to put it in), and onboarding's step-7 card is a second,
-deliberately different presentation of the same flow — a GPU-painted
-card that imports everything in one click, because a card cannot host
-Blender widgets. Keeping the checklist addressable on its own keeps
-those two surfaces from growing copies of each other.
+folded into that panel file because the panel reaches it through a
+``prepend`` hook onto an upstream class, so there is no panel body of our
+own to put it in.
 
 Takes a plain ``layout``, so it works in any space.
 """

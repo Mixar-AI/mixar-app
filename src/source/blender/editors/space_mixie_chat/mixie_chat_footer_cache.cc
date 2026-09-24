@@ -24,6 +24,8 @@
 #include "mixie_chat_footer_constants.hh"
 #include "mixie_chat_footer_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Footer Cache Storage
@@ -51,7 +53,8 @@ static FooterCache g_footer_cache = {FooterThemeCache{}, {}, 0, -1, false};
 
 /**
  * Get theme version for cache invalidation.
- * Simple heuristic: pointer address changes if theme is modified.
+ * Detect replacement of the theme allocation. In-place edits are invalidated
+ * by the chat region's NC_WINDOW listener.
  */
 static uintptr_t get_theme_version()
 {
@@ -379,3 +382,4 @@ int footer_cache_get_attachment_count(Scene *scene)
 }
 
 /** \} */
+}  // namespace blender

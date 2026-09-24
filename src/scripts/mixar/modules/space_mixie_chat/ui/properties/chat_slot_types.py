@@ -110,6 +110,14 @@ class MixieChatActionItem(PropertyGroup):
         default="",
         maxlen=32
     )
+    score: FloatProperty(
+        name="Match Score",
+        description="Search similarity 0-1 from the backend (-1 = not sent); "
+                    "drawn as the picker's match percentage",
+        default=-1.0,
+        min=-1.0,
+        max=1.0,
+    )
 
 
 class MixieChatImageItem(PropertyGroup):
@@ -160,6 +168,14 @@ class MixieChatImageItem(PropertyGroup):
         description="Image height in pixels from backend metadata",
         default=0.0,
         min=0.0
+    )
+    step_id: StringProperty(
+        name="Step ID",
+        description="item_id of the step row that produced this image; empty "
+                    "for a backend-owned gallery image. Tagged tiles draw under "
+                    "their step in the steps block (mixie_chat_steps.cc)",
+        default="",
+        maxlen=63
     )
 
 
@@ -219,6 +235,14 @@ class MixieChatStepItem(PropertyGroup):
         name="Expanded",
         description="Whether this row's detail is expanded",
         default=False
+    )
+    call_id: StringProperty(
+        name="Call ID",
+        description="Backend tool-call id (the LangChain run id). Sent on the "
+                    "script RPC as agent_ctx.call_id and on the backend's "
+                    "activity payload, so both views of one call share a row",
+        default="",
+        maxlen=63
     )
 
 

@@ -19,7 +19,10 @@ from mixar.modules.moodboard.constants import (
     HINT_SCALE_Y,
 )
 from mixar.modules.common.utils.ui_utils import draw_multiline_text_input
-from mixar.modules.moodboard.core.media_utils import is_still_item
+from mixar.modules.moodboard.core.media_utils import (
+    first_selected_reference_still,
+    selected_reference_stills,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -28,15 +31,12 @@ from mixar.modules.moodboard.core.media_utils import is_still_item
 
 def draw_section_box(layout, label=None, icon='NONE', action_op=None,
                      action_icon='FILE_FOLDER'):
-    """Create a styled section box, return an aligned column.
-
-    Uses the custom Mixar section widget (C++ rendered, accent border + shadow)
-    when available, falls back to standard box() otherwise.
-    """
-    if hasattr(layout, 'mixar_section'):
-        box = layout.mixar_section()
-    else:
-        box = layout.box()
+    """Create a neutral shared-UI section, matching the island's controls."""
+    if hasattr(layout, 'mixar_surface'):
+        layout = layout.mixar_surface(theme='ZEN', density='COMPACT')
+    box = layout.box()
+    if hasattr(box, 'mixar_style'):
+        box.mixar_style(component='SURFACE')
     col = box.column()
     if label:
         if action_op:
@@ -90,26 +90,19 @@ def draw_hint(col, text, icon='NONE'):
 # ---------------------------------------------------------------------------
 
 def focus_segments_panel(context):
-    """Surface the panel hosting the Segments to 3D UI.
+    """Preserve shared Segments to 3D form state without opening an N-panel.
 
-    Used by the moodboard segmentation tools (magic select, box/lasso
-    mask) so their results are visible where the Generate button lives.
-    Post-split catalogs host Segments to 3D in the dedicated "Character
-    Parts" tab; pre-split catalogs (and offline) keep it as the Scene Gen
-    tab's ``scene_gen`` mode, so the pre-split path still selects that mode
-    (the enum item doesn't exist offline — silently skipped). The target
-    category is resolved through ``get_tab_category()`` so it follows catalog
-    label renames rather than a hardcoded string. Never raises.
+    Legacy/pre-split catalogs host this form in Scene Gen's ``scene_gen``
+    mode. Segmentation operators keep that selection for programmatic users;
+    the retired standalone sidebar must never be reopened. Never raises.
     """
     capability = "scene_gen"
-    fallback_label = "Scene Gen"
     try:
         from mixar.bootstrap.generation_catalog_cache import (
             get_services, is_loaded,
         )
         if is_loaded() and get_services("character_parts"):
             capability = "character_parts"
-            fallback_label = "Character Parts"
     except Exception:
         pass
     if capability == "scene_gen":
@@ -120,22 +113,6 @@ def focus_segments_panel(context):
                 sidebar.tab_scene_recon.mode = 'scene_gen'
             except Exception:
                 pass  # catalog not loaded / capability disabled
-    try:
-        space = context.space_data
-        if hasattr(space, 'show_region_ui'):
-            space.show_region_ui = True
-        area = context.area
-        region = next(
-            (r for r in area.regions if r.type == 'UI'), None,
-        ) if area else None
-        if region and hasattr(region, 'active_panel_category'):
-            from mixar.bootstrap.analytics_module import note_programmatic_panel_change
-            from .moodboard_sidebar_panels import get_tab_category
-            category = get_tab_category(capability, fallback_label)
-            note_programmatic_panel_change(region, category)
-            region.active_panel_category = category
-    except Exception:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -144,8 +121,13 @@ def focus_segments_panel(context):
 
 def draw_prompt_section(layout, prop_owner, label="Prompt",
                         icon='TEXT', action_op=None, action_icon='FILE_FOLDER',
-                        min_lines=2, max_lines=5):
-    """Boxed prompt input with label and optional action button. Returns col."""
+                        min_lines=2, max_lines=5, refine=True):
+    """Boxed prompt input with label and optional action button. Returns col.
+
+    Every sidebar prompt comes through here, which is why the Refine / Revert
+    row is added here rather than in each drawer (see ``prompt_refine_drawer``
+    — a tab with no target entry simply gets no row).
+    """
     box = layout.mixar_section() if hasattr(layout, 'mixar_section') else layout.box()
     col = box.column()
     col.label(text=label, icon=icon)
@@ -159,6 +141,10 @@ def draw_prompt_section(layout, prop_owner, label="Prompt",
     else:
         draw_multiline_text_input(col, prop_owner, "prompt",
                                   min_lines=min_lines, max_lines=max_lines)
+
+    if refine:
+        from .prompt_refine_drawer import draw_prompt_refine_row
+        draw_prompt_refine_row(col, prop_owner)
     return col
 
 
@@ -167,13 +153,8 @@ def draw_prompt_section(layout, prop_owner, label="Prompt",
 # ---------------------------------------------------------------------------
 
 def get_selected_moodboard_image(context):
-    """Return first selected moodboard image or None."""
-    scene = context.scene
-    if hasattr(scene, 'mixie_moodboard_images'):
-        for item in scene.mixie_moodboard_images:
-            if item.selected and is_still_item(item):
-                return item.image
-    return None
+    """Return first selected still, including a selected node's result."""
+    return first_selected_reference_still(getattr(context, "scene", None))
 
 
 def get_image_to_3d_input_image(context):
@@ -216,12 +197,9 @@ def draw_moodboard_image_toggle(col, prop_owner, context, *, multi=False):
     if prop_owner.use_selected_image:
         if multi:
             shown = 0
-            scene = context.scene
-            if hasattr(scene, 'mixie_moodboard_images'):
-                for item in scene.mixie_moodboard_images:
-                    if item.selected and is_still_item(item):
-                        draw_image_info_card(col, item.image)
-                        shown += 1
+            for item in selected_reference_stills(context.scene):
+                draw_image_info_card(col, item.image)
+                shown += 1
             if shown == 0:
                 row = col.row()
                 row.label(text="No image selected in moodboard", icon='ERROR')
@@ -303,79 +281,13 @@ def draw_styled_progress(layout, data, prop, text="Generating..."):
     row.prop(data, prop, text=text, slider=True)
 
 
-# ---------------------------------------------------------------------------
-# Image thumbnails
-# ---------------------------------------------------------------------------
-
-def _get_preview_icon_id(image):
-    """Return the preview icon_id for a Blender image, ensuring it exists."""
-    if not image:
-        return 0
-    # preview_ensure() must be called before .preview is usable —
-    # without it, .preview may be None even for loaded images.
-    image.preview_ensure()
-    if image.preview:
-        return image.preview.icon_id or 0
-    return 0
-
-
-def draw_image_thumbnail(layout, image, scale=3.0):
-    """Draw an image preview thumbnail using Blender's template_icon.
-
-    Returns True if a thumbnail was drawn, False if fallback label was used.
-    """
-    icon_id = _get_preview_icon_id(image)
-    if icon_id:
-        layout.template_icon(icon_value=icon_id, scale=scale)
-        return True
-    layout.label(text=image.name if image else "No image", icon='IMAGE_DATA')
-    return False
-
-
-def draw_image_info_card(layout, image, remove_op=None, remove_op_props=None,
-                         display_name=None, display_resolution=None):
-    """Draw a compact image card with preview icon, name, resolution, and remove button.
-
-    Args:
-        layout: Parent layout.
-        image: Blender Image datablock (or None).
-        remove_op: Optional operator idname for the X button.
-        remove_op_props: Optional dict of properties to set on the remove operator.
-        display_name: Override name (falls back to image.name).
-        display_resolution: Override resolution string (falls back to WxH from image).
-    """
-    if not image:
-        layout.label(text="No image", icon='IMAGE_DATA')
-        return
-
-    box = layout.box()
-    row = box.row(align=True)
-
-    # Preview icon on the left
-    icon_id = _get_preview_icon_id(image)
-    if icon_id:
-        row.template_icon(icon_value=icon_id, scale=1.8)
-
-    # Name + resolution details
-    info_col = row.column(align=True)
-    name = display_name or image.name
-    info_col.label(text=name)
-
-    res = display_resolution
-    if not res and image.size[0] > 0:
-        res = f"{image.size[0]} x {image.size[1]}"
-    if res:
-        sub = info_col.row()
-        sub.scale_y = 0.75
-        sub.label(text=res, icon='FULLSCREEN_ENTER')
-
-    # Remove button on the right
-    if remove_op:
-        op = row.operator(remove_op, text="", icon='X')
-        if remove_op_props:
-            for k, v in remove_op_props.items():
-                setattr(op, k, v)
-
+# Preview-backed image drawing lives in its own module (500-line rule); it is
+# re-exported here because seven drawers import it from this one.
+from .sidebar_image_helpers import (  # noqa: E402
+    _get_preview_icon_id,
+    draw_image_info_card,
+    draw_image_thumbnail,
+)
 
 # ---------------------------------------------------------------------------
 # Generate footers

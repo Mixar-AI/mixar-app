@@ -12,12 +12,13 @@ without blocking Blender's main thread.
 import threading
 import time
 import uuid
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, Optional
 
 from .constants import DEFAULT_POOL_SIZE
+from .core.worker_pool import HTTPWorkerPool
 
 
 class RequestPriority(Enum):
@@ -77,11 +78,12 @@ class HTTPExecutor:
         """Initialize executor state."""
         if self._initialized:
             return
-        self._pool: Optional[ThreadPoolExecutor] = None
+        self._pool: Optional[HTTPWorkerPool] = None
         self._pool_size = DEFAULT_POOL_SIZE
         self._pending_futures: Dict[str, Future] = {}
         self._lock = threading.Lock()
         self._shutdown = False
+        self._stopped = threading.Event()
         self._initialized = True
 
     def start(self, pool_size: Optional[int] = None) -> None:
@@ -93,33 +95,34 @@ class HTTPExecutor:
         """
         self._initialize()
 
-        if self._pool is not None:
-            return
-
-        if pool_size is not None:
-            self._pool_size = pool_size
-
-        self._shutdown = False
-        self._pool = ThreadPoolExecutor(
-            max_workers=self._pool_size,
-            thread_name_prefix="MixarAPI",
-        )
+        with self._lock:
+            if self._pool is not None:
+                return
+            if pool_size is not None:
+                self._pool_size = pool_size
+            self._stopped = threading.Event()
+            self._pool = HTTPWorkerPool(max_workers=self._pool_size)
+            self._shutdown = False
 
     def stop(self, wait: bool = False) -> None:
         """
         Stop the executor and optionally wait for pending requests.
 
         Args:
-            wait: Whether to wait for pending requests to complete
+            wait: Drain requests and deliver their completion callbacks before
+                  returning. If False, cancel queued work and drop completions.
         """
-        self._shutdown = True
-
-        if self._pool is not None:
-            self._pool.shutdown(wait=wait, cancel_futures=not wait)
-            self._pool = None
-
         with self._lock:
+            self._shutdown = True
+            stopped = self._stopped
+            if not wait:
+                stopped.set()
+            pool, self._pool = self._pool, None
             self._pending_futures.clear()
+        if pool is not None:
+            pool.shutdown(wait=wait, cancel_futures=not wait)
+        # A callback may have started a new pool while the old one drained.
+        stopped.set()
 
     @property
     def is_running(self) -> bool:
@@ -145,28 +148,30 @@ class HTTPExecutor:
         Raises:
             RuntimeError: If executor is not running
         """
-        if not self.is_running:
-            raise RuntimeError("HTTPExecutor is not running. Call start() first.")
-
-        def _execute():
-            result = None
-            exception = None
-            try:
-                result = request.callable()
-            except Exception as e:
-                exception = e
-            finally:
-                # Clean up tracking
-                with self._lock:
-                    self._pending_futures.pop(request.request_id, None)
-                # Invoke completion callback
-                on_complete(request.request_id, result, exception)
-
-        future = self._pool.submit(_execute)
-
+        # Capture this lifecycle: restarting the singleton must not re-enable
+        # callbacks from a request that was still running when stop() returned.
         with self._lock:
+            if not self.is_running:
+                raise RuntimeError("HTTPExecutor is not running. Call start() first.")
+            stopped = self._stopped
+            future = self._pool.submit(request.callable)
             self._pending_futures[request.request_id] = future
 
+        def _complete(completed):
+            with self._lock:
+                if self._pending_futures.get(request.request_id) is completed:
+                    self._pending_futures.pop(request.request_id)
+            if stopped.is_set() or completed.cancelled():
+                return
+            try:
+                result = completed.result()
+            except Exception as exc:
+                on_complete(request.request_id, None, exc)
+            else:
+                on_complete(request.request_id, result, None)
+
+        # add_done_callback also handles a request finishing before registration.
+        future.add_done_callback(_complete)
         return request.request_id
 
     def cancel(self, request_id: str) -> bool:

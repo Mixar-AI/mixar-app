@@ -21,16 +21,20 @@
 #include <vector>
 
 #include "DNA_image_types.h"
+#include "DNA_ID.h"
 #include "DNA_scene_types.h"
 
 #include "BKE_context.hh"
 #include "BKE_image.hh"
+#include "BKE_lib_id.hh"
+#include "BKE_report.hh"
 
 #include "BLI_math_vector.h"
 
 #include "CLG_log.h"
 
 #include "RNA_access.hh"
+#include "RNA_define.hh"
 
 #include "WM_api.hh"
 
@@ -51,6 +55,41 @@ constexpr float SRGB_LINEAR_THRESHOLD = 0.03928f;
 constexpr float LINEAR_SRGB_THRESHOLD = 0.0031308f;
 constexpr float PI = 3.14159265358979323846f;
 constexpr int CHANNELS = 4;
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Image Operator Properties
+ * \{ */
+
+/**
+ * Blender operators cannot own ID pointer properties. Pass the image datablock name through
+ * RNA and resolve it immediately when the operator executes instead.
+ */
+inline Image *image_from_operator(bContext *C, wmOperator *op, const char *property)
+{
+  char image_name[MAX_ID_NAME - 2];
+  RNA_string_get(op->ptr, property, image_name);
+  if (image_name[0] == '\0') {
+    BKE_reportf(op->reports, RPT_ERROR, "Image property '%s' is empty", property);
+    return nullptr;
+  }
+
+  Main *bmain = CTX_data_main(C);
+  Image *image = reinterpret_cast<Image *>(BKE_libblock_find_name(bmain, ID_IM, image_name));
+  if (!image) {
+    BKE_reportf(op->reports, RPT_ERROR, "Image '%s' was not found", image_name);
+  }
+  return image;
+}
+
+inline void define_image_name_property(StructRNA *srna,
+                                       const char *identifier,
+                                       const char *name,
+                                       const char *description = "")
+{
+  RNA_def_string(srna, identifier, nullptr, MAX_ID_NAME - 2, name, description);
+}
 
 /** \} */
 

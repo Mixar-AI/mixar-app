@@ -41,21 +41,20 @@ DEFAULT_TTL_MS = 0
 MAX_VISIBLE_TOASTS = 5
 TOAST_WIDTH = 600
 TOAST_PADDING_X = 34
-TOAST_PADDING_Y = 30
+TOAST_PADDING_Y = 24
 TOAST_MARGIN = 16
 TOAST_CORNER_OFFSET_X = 28
 TOAST_CORNER_OFFSET_Y = 28
-TOAST_CORNER_RADIUS = 18
+# Authored at 2x: match AGENT_PANEL_CARD_RADIUS (12 UI units).
+TOAST_CORNER_RADIUS = 24
 
-# -- Typography -------------------------------------------------------------
-TITLE_FONT_SIZE = 24
-BODY_FONT_SIZE = 18
-ACTION_URL_FONT_SIZE = 16
+# Weight changes preserve the native widget font size.
+EMPHASIS_FONT_FILE = 'Manrope-ExtraBold.ttf'
 
 # -- Close button -----------------------------------------------------------
-CLOSE_BUTTON_SIZE = 36
-CLOSE_BUTTON_RADIUS = 18
-CLOSE_ICON_FONT_SIZE = 20
+# Match the task card's 28-unit target and 6-unit edge inset.
+CLOSE_BUTTON_SIZE = 56
+CLOSE_BUTTON_INSET = 12
 
 # -- Badge dot --------------------------------------------------------------
 BADGE_RADIUS = 7
@@ -65,16 +64,11 @@ BUTTON_HEIGHT = 48
 BUTTON_PADDING_X = 26
 BUTTON_GAP = 12
 BUTTON_CORNER_RADIUS = 10
-BUTTON_FONT_SIZE = 18
-# Primary CTA (e.g. "Upgrade") renders larger and in Manrope ExtraBold.
-PRIMARY_BUTTON_FONT_SIZE = 24
 BUTTON_BORDER_WIDTH = 1.0
-# Bundled static Manrope ExtraBold, loaded via blf for primary CTA labels.
-EXTRABOLD_FONT_FILE = "Manrope-ExtraBold.ttf"
 
 # -- Mixar brand ------------------------------------------------------------
 # The brand green used for primary CTAs, with near-black text for contrast.
-# Matches the onboarding Continue button / highlight accent.
+# Matches the onboarding tour's accent (rings, hints, progress bar).
 MIXAR_BRAND_GREEN = (0.205, 0.780, 0.430, 1.0)
 MIXAR_BRAND_GREEN_TEXT = (0.05, 0.075, 0.060, 1.0)
 
@@ -86,7 +80,8 @@ PRESS_FLASH_DURATION = 0.12
 TOASTS_VISIBLE_WM_PROP = "mixar_toasts_visible"
 
 # -- Animation --------------------------------------------------------------
-FADE_DURATION_MS = 300
+FADE_DURATION_MS = 200
+ANIMATION_INTERVAL = 1.0 / 60.0
 TIMER_INTERVAL = 0.2
 
 # -- REST -------------------------------------------------------------------
@@ -108,6 +103,28 @@ def _rgba(color, alpha_override=None):
     return (r, g, b, a)
 
 
+_TEXT_FALLBACK = (226 / 255, 226 / 255, 226 / 255, 1.0)
+_STRONG_FALLBACK = (1.0, 1.0, 1.0, 1.0)
+_FOCUS_FALLBACK = (0.0, 192 / 255, 199 / 255, 1.0)
+_DANGER_FALLBACK = (224 / 255, 72 / 255, 72 / 255, 1.0)
+
+
+def _theme_rgba(ui, name, fallback):
+    """Read one theme color, falling back when it is missing or still zero.
+
+    The read is capped at four channels: under the pytest bpy stub a missing
+    attribute is a MagicMock, and iterating it would not stop.
+    """
+    try:
+        color = getattr(ui, name)
+        channels = [float(color[index]) for index in range(4)]
+    except (TypeError, ValueError, AttributeError, IndexError):
+        return fallback
+    if channels == [0.0, 0.0, 0.0, 0.0]:
+        return fallback
+    return tuple(channels)
+
+
 def get_toast_colors(ntype: NotificationType) -> dict:
     """Resolve toast colors from the active Blender theme.
 
@@ -123,7 +140,7 @@ def get_toast_colors(ntype: NotificationType) -> dict:
 
     # -- Base from tooltip widget --
     bg = _rgba(tooltip.inner, alpha_override=0.94)
-    text = _rgba(tooltip.text, alpha_override=1.0)
+    text = _theme_rgba(ui, "mixar_text", _TEXT_FALLBACK)
     dim_text = (*text[:3], 0.55)
 
     # -- Badge from semantic state colors --
@@ -143,22 +160,24 @@ def get_toast_colors(ntype: NotificationType) -> dict:
     close_icon = (*text[:3], 0.9)
 
     # -- Action buttons --
-    # Primary CTA uses the fixed Mixar brand green (not theme-derived) so the
-    # action always reads on-brand regardless of the active Blender theme.
-    primary_bg = MIXAR_BRAND_GREEN
-    primary_text = MIXAR_BRAND_GREEN_TEXT
+    # Primary follows the shared brand slot. The constants stay the fallback
+    # when the theme field is still zero.
+    primary_bg = _theme_rgba(ui, "mixar_brand", MIXAR_BRAND_GREEN)
+    primary_text = _theme_rgba(ui, "mixar_brand_text", MIXAR_BRAND_GREEN_TEXT)
     # Secondary buttons: subtle text-tinted fill + border so they read as
     # buttons on any theme (the old inner-color fill vanished on the card).
     secondary_bg = (*text[:3], 0.10)
     secondary_text = text
     secondary_border = (*text[:3], 0.30)
-    danger_bg = _rgba(state.error, alpha_override=1.0)
+    danger_bg = _theme_rgba(ui, "mixar_danger", _DANGER_FALLBACK)
     danger_text = (1.0, 1.0, 1.0, 1.0)
     filled_border = (1.0, 1.0, 1.0, 0.20)
 
     return {
         "bg": bg,
         "text": text,
+        "title": _theme_rgba(ui, "mixar_text_strong", _STRONG_FALLBACK),
+        "link": _theme_rgba(ui, "mixar_focus", _FOCUS_FALLBACK),
         "dim_text": dim_text,
         "badge": badge,
         "close_bg": close_bg,

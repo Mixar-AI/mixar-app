@@ -28,6 +28,9 @@
 
 #include "BKE_screen.hh"
 
+#include "BLI_string.h"
+#include "BLI_vector.hh"
+
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 
@@ -36,22 +39,28 @@
 #include "UI_view2d.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_card_paint.hh"
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
+#include "interface_mixar_tab_rects.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_theme.hh"
 
 #include "UI_interface_layout.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
-uiLayout *UI_layout_mixar_section(uiLayout *layout)
+Layout *UI_layout_mixar_section(Layout *layout)
 {
-  uiLayout &box = layout->box();
-  uiBlock *block = layout->block();
+  Layout &box = layout->box();
+  Block *block = layout->block();
 
   /* Walk backwards through the block's buttons to find the Roundbox button
    * that was just created by box(). It should be the most recently added. */
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    uiBut *but = block->buttons[i].get();
-    if (but->type == ButType::Roundbox) {
-      but->flag2 |= UI_BUT2_MIXAR_SECTION;
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
+    if (but->type == ButtonType::Roundbox) {
+      mixar_style_button(but, MixarComponent::Surface);
       break;
     }
   }
@@ -59,54 +68,54 @@ uiLayout *UI_layout_mixar_section(uiLayout *layout)
   return &box;
 }
 
-void UI_layout_mixar_mark_last_dropdown(uiLayout *layout)
+void UI_layout_mixar_mark_last_dropdown(Layout *layout)
 {
-  uiBlock *block = layout->block();
+  Block *block = layout->block();
 
   /* Walk backwards to find the most recently created Menu button. */
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    uiBut *but = block->buttons[i].get();
-    if (ELEM(but->type, ButType::Menu, ButType::Block, ButType::Popover)) {
-      but->flag2 |= UI_BUT2_MIXAR_DROPDOWN;
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
+    if (ELEM(but->type, ButtonType::Menu, ButtonType::Block, ButtonType::Popover)) {
+      mixar_style_button(but, MixarComponent::Dropdown);
       break;
     }
   }
 }
 
-void UI_layout_mixar_mark_last_action(uiLayout *layout)
+void UI_layout_mixar_mark_last_action(Layout *layout)
 {
-  uiBlock *block = layout->block();
+  Block *block = layout->block();
 
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    uiBut *but = block->buttons[i].get();
-    if (but->type == ButType::But) {
-      but->flag2 |= UI_BUT2_MIXAR_ACTION;
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
+    if (but->type == ButtonType::But) {
+      mixar_style_button(but, MixarComponent::Action);
       break;
     }
   }
 }
 
-void UI_layout_mixar_mark_last_toggle(uiLayout *layout)
+void UI_layout_mixar_mark_last_toggle(Layout *layout)
 {
-  uiBlock *block = layout->block();
+  Block *block = layout->block();
 
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    uiBut *but = block->buttons[i].get();
-    if (ELEM(but->type, ButType::Checkbox, ButType::CheckboxN)) {
-      but->flag2 |= UI_BUT2_MIXAR_TOGGLE;
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
+    if (ELEM(but->type, ButtonType::Checkbox, ButtonType::CheckboxN)) {
+      mixar_style_button(but, MixarComponent::Toggle);
       break;
     }
   }
 }
 
-void UI_layout_mixar_mark_last_input(uiLayout *layout)
+void UI_layout_mixar_mark_last_input(Layout *layout)
 {
-  uiBlock *block = layout->block();
+  Block *block = layout->block();
 
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    uiBut *but = block->buttons[i].get();
-    if (but->type == ButType::Text) {
-      but->flag2 |= UI_BUT2_MIXAR_INPUT;
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
+    if (but->type == ButtonType::Text) {
+      mixar_style_button(but, MixarComponent::Input);
       break;
     }
   }
@@ -121,24 +130,38 @@ void UI_layout_mixar_mark_last_input(uiLayout *layout)
  * `mark_last` in `interface_mixar_profile_card.cc`; they live here with
  * the other mark-last helpers to keep that file inside the size rule. */
 
-void UI_layout_mixar_card_tag_last(uiLayout *layout,
+void UI_layout_mixar_card_tag_last(Layout *layout,
                                    const MixarCardElement element,
                                    const float payload)
 {
-  uiBlock *block = layout->block();
-  if (block->buttons.is_empty()) {
+  Block *block = layout->block();
+  if (block->buttons_ptrs.is_empty()) {
     return;
   }
-  uiBut *but = block->buttons[block->buttons.size() - 1].get();
-  UI_BUT2_MIXAR_CARD_SET(but);
-  /* `hardmin`/`hardmax` are inert on the label and operator buttons
-   * tagged here — neither carries a data pointer or RNA property (see
-   * the rationale on `mark_last` in `interface_mixar_profile_card.cc`). */
-  but->hardmin = float(int(element));
-  but->hardmax = payload;
+  Button *but = block->buttons_ptrs[block->buttons_ptrs.size() - 1].get();
+  mixar_style_card(but, element, payload);
 }
 
-void UI_layout_mixar_card_style_last_button(uiLayout *layout,
+void UI_layout_mixar_cinema_row(Layout *layout, const MixarCinemaRowKind kind)
+{
+  Block *block = layout->block();
+  if (block->buttons_ptrs.is_empty()) {
+    return;
+  }
+  Button *but = block->buttons_ptrs.last().get();
+  Layout *owner = but->layout;
+  while (owner && owner != layout) {
+    owner = owner->parent();
+  }
+  if (!owner || !ELEM(but->type, ButtonType::But, ButtonType::Menu,
+                      ButtonType::Block, ButtonType::Pulldown, ButtonType::Label)) {
+    return;
+  }
+  UI_mixar_cinema_row_tag(but, kind);
+  block_flag_enable(block, BLOCK_MIXAR_ROUND_ALL);
+}
+
+void UI_layout_mixar_card_style_last_button(Layout *layout,
                                             const MixarCardElement element,
                                             const bool active_default)
 {
@@ -147,15 +170,13 @@ void UI_layout_mixar_card_style_last_button(uiLayout *layout,
      * over a live hit area — refuse rather than draw a broken button. */
     return;
   }
-  uiBlock *block = layout->block();
-  for (int i = int(block->buttons.size()) - 1; i >= 0; i--) {
-    uiBut *but = block->buttons[i].get();
-    if (but->type != ButType::But) {
+  Block *block = layout->block();
+  for (int i = int(block->buttons_ptrs.size()) - 1; i >= 0; i--) {
+    Button *but = block->buttons_ptrs[i].get();
+    if (but->type != ButtonType::But) {
       continue;
     }
-    UI_BUT2_MIXAR_CARD_SET(but);
-    but->hardmin = float(int(element));
-    but->hardmax = 0.0f; /* MixarCardIcon::None — the painter centres the label. */
+    mixar_style_card(but, element, 0.0f);
     /* Set *or clear*: `template_popup_confirm` hands its cancel button
      * the active-default flag when nothing else holds it yet, so a
      * dialog styling that button afterwards must be able to take the
@@ -163,10 +184,10 @@ void UI_layout_mixar_card_style_last_button(uiLayout *layout,
      * is also the native OK/Cancel suppression contract — see
      * #wm_block_dialog_create. */
     if (active_default) {
-      UI_but_flag_enable(but, UI_BUT_ACTIVE_DEFAULT);
+      button_flag_enable(but, BUT_ACTIVE_DEFAULT);
     }
     else {
-      UI_but_flag_disable(but, UI_BUT_ACTIVE_DEFAULT);
+      button_flag_disable(but, BUT_ACTIVE_DEFAULT);
     }
     break;
   }
@@ -190,22 +211,23 @@ static void ubyte4_to_float4(float dst[4], const unsigned char src[4])
 
 void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_active)
 {
+  Vector<MixarCategoryTabRect> tab_rects;
   const bool is_left = RGN_ALIGN_ENUM_FROM_MASK(region->alignment) != RGN_ALIGN_RIGHT;
   View2D *v2d = &region->v2d;
-  const uiStyle *style = UI_style_get();
+  const uiStyle *style = style_get();
   const uiFontStyle *fstyle = &style->widget;
-  UI_fontstyle_set(fstyle);
+  fontstyle_set(fstyle);
   const int fontid = fstyle->uifont_id;
   float fstyle_points = fstyle->points;
   const float aspect = BLI_listbase_is_empty(&region->runtime->uiblocks) ?
                             1.0f :
-                            ((uiBlock *)region->runtime->uiblocks.first)->aspect;
+                            ((Block *)region->runtime->uiblocks.first)->aspect;
   const float zoom = 1.0f / aspect;
   const float dpi_fac = UI_SCALE_FAC;
   const int px = U.pixelsize;
 
   /* Read all colors from the theme (space_mixie in bTheme). */
-  const bTheme *btheme = UI_GetTheme();
+  const bTheme *btheme = theme::theme_get();
   const ThemeSpace *ts = &btheme->space_mixie;
 
   float col_accent[4], col_strip_bg[4], col_inactive[4];
@@ -223,14 +245,14 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
 
   /* Fallback defaults when theme colors are uninitialized (all zero from old .blend files). */
   if (col_accent[0] == 0.0f && col_accent[1] == 0.0f && col_accent[2] == 0.0f) {
-    col_accent[0] = 0.0f/255; col_accent[1] = 192.0f/255; col_accent[2] = 199.0f/255; col_accent[3] = 1.0f; /* #00C0C7 accent */
-    col_strip_bg[0] = 0.08f; col_strip_bg[1] = 0.08f; col_strip_bg[2] = 0.10f; col_strip_bg[3] = 0.95f;
-    col_inactive[0] = 0.14f; col_inactive[1] = 0.14f; col_inactive[2] = 0.16f; col_inactive[3] = 0.6f;
+    col_accent[0] = 0.0f; col_accent[1] = 192.0f / 255.0f; col_accent[2] = 199.0f / 255.0f; col_accent[3] = 1.0f;
+    col_strip_bg[0] = 18.0f / 255.0f; col_strip_bg[1] = 18.0f / 255.0f; col_strip_bg[2] = 18.0f / 255.0f; col_strip_bg[3] = 242.0f / 255.0f;
+    col_inactive[0] = 29.0f / 255.0f; col_inactive[1] = 29.0f / 255.0f; col_inactive[2] = 29.0f / 255.0f; col_inactive[3] = 153.0f / 255.0f;
     col_text_active[0] = col_text_active[1] = col_text_active[2] = col_text_active[3] = 1.0f;
-    col_text_inactive[0] = col_text_inactive[1] = 0.627f; col_text_inactive[2] = 0.667f; col_text_inactive[3] = 1.0f;
-    col_glow[0] = 112.0f/255; col_glow[1] = 198.0f/255; col_glow[2] = 45.0f/255; col_glow[3] = 0.15f;
-    col_highlight[0] = col_highlight[1] = col_highlight[2] = 1.0f; col_highlight[3] = 0.18f;
-    col_indicator[0] = col_indicator[1] = col_indicator[2] = 1.0f; col_indicator[3] = 0.4f;
+    col_text_inactive[0] = col_text_inactive[1] = col_text_inactive[2] = 117.0f / 255.0f; col_text_inactive[3] = 1.0f;
+    col_glow[0] = col_accent[0]; col_glow[1] = col_accent[1]; col_glow[2] = col_accent[2]; col_glow[3] = 38.0f / 255.0f;
+    col_highlight[0] = col_highlight[1] = col_highlight[2] = 1.0f; col_highlight[3] = 46.0f / 255.0f;
+    col_indicator[0] = col_indicator[1] = col_indicator[2] = 1.0f; col_indicator[3] = 102.0f / 255.0f;
   }
 
   /* Wider tabs than default for more breathing room. */
@@ -243,7 +265,7 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
 
   BLF_enable(fontid, BLF_ROTATION);
   BLF_rotation(fontid, is_left ? M_PI_2 : -M_PI_2);
-  ui_fontscale(&fstyle_points, aspect);
+  fontscale(&fstyle_points, aspect);
   BLF_size(fontid, fstyle_points * UI_SCALE_FAC);
 
   /* Tab strip position. */
@@ -253,8 +275,11 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
   int y_ofs = tab_v_pad;
 
   /* Calculate tab rectangles. */
-  LISTBASE_FOREACH (PanelCategoryDyn *, pc_dyn, &region->runtime->panels_category) {
-    rcti *rct = &pc_dyn->rect;
+  for (PanelCategoryDyn &pc_dyn_iter : region->runtime->panels_category) {
+    PanelCategoryDyn *pc_dyn = &pc_dyn_iter;
+    MixarCategoryTabRect tab = {};
+    STRNCPY(tab.idname, pc_dyn->idname);
+    rcti *rct = &tab.rect;
     const char *category_id_draw = IFACE_(pc_dyn->idname);
     const int category_width = round_fl_to_int(
         BLF_width(fontid, category_id_draw, BLF_DRAW_STR_DUMMY_MAX));
@@ -265,16 +290,16 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
     rct->ymax = v2d->mask.ymax - y_ofs;
 
     y_ofs += category_width + tab_v_pad + (tab_v_pad_text * 2);
+    tab_rects.append(tab);
   }
 
   /* Scrolling. */
   const int max_scroll = std::max(y_ofs - BLI_rcti_size_y(&v2d->mask), 0);
   const int scroll = std::clamp(region->category_scroll, 0, max_scroll);
   region->category_scroll = scroll;
-  LISTBASE_FOREACH (PanelCategoryDyn *, pc_dyn, &region->runtime->panels_category) {
-    rcti *rct = &pc_dyn->rect;
-    rct->ymin += scroll;
-    rct->ymax += scroll;
+  for (MixarCategoryTabRect &tab : tab_rects) {
+    tab.rect.ymin += scroll;
+    tab.rect.ymax += scroll;
   }
 
   /* --- Draw background strip --- */
@@ -287,8 +312,8 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
         float(v2d->mask.ymin),
         float(v2d->mask.ymax),
     };
-    UI_draw_roundbox_corner_set(UI_CNR_NONE);
-    UI_draw_roundbox_4fv(&bg_rect, true, 0.0f, col_strip_bg);
+    draw_roundbox_corner_set(CNR_NONE);
+    draw_roundbox_4fv(&bg_rect, true, 0.0f, col_strip_bg);
 
     /* Subtle accent line along the panel-facing edge. */
     const float edge_color[4] = {col_accent[0], col_accent[1], col_accent[2], 0.12f};
@@ -302,7 +327,7 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
       edge_rect = {float(rct_xmin), float(rct_xmin) + edge_w,
                     float(v2d->mask.ymin), float(v2d->mask.ymax)};
     }
-    UI_draw_roundbox_4fv(&edge_rect, true, 0.0f, edge_color);
+    draw_roundbox_4fv(&edge_rect, true, 0.0f, edge_color);
   }
 
   /* If area is too small, don't show any active. */
@@ -312,8 +337,11 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
   GPU_line_smooth(true);
 
   /* --- Draw each tab --- */
-  LISTBASE_FOREACH (PanelCategoryDyn *, pc_dyn, &region->runtime->panels_category) {
-    const rcti *rct = &pc_dyn->rect;
+  int tab_index = -1;
+  for (PanelCategoryDyn &pc_dyn_iter : region->runtime->panels_category) {
+    PanelCategoryDyn *pc_dyn = &pc_dyn_iter;
+    tab_index++;
+    const rcti *rct = &tab_rects[tab_index].rect;
 
     if (rct->ymin > v2d->mask.ymax) {
       continue;
@@ -335,25 +363,33 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
     tab_rect.ymin = float(rct->ymin);
     tab_rect.ymax = float(rct->ymax);
 
+    /* Both tab beds are panes: a tab sits ON the strip, so it takes the kit's
+     * #MIXAR_GLASS_CHIP material — no shadow and no specular, because a chip
+     * may not cast its own (and the streak is the one layer the painter clips
+     * with a region-px scissor). The strip itself stays FLAT: a band flush to
+     * the region edge has no silhouette for a rim to trace. */
+    mixar_card_glass_round(&tab_rect, tab_radius, MIXAR_GLASS_CHIP);
+
     if (is_active) {
-      /* Active tab: --mx-accent-soft fill (#00C0C7 @ ~13%) + teal outline;
-       * the teal label (drawn below) carries the accent. Design-agent spec.
-       * col_glow / col_highlight are intentionally left unused. */
-      const float active_bg[4] = {0.0f, 192.0f / 255.0f, 199.0f / 255.0f, 0.13f};
-      UI_draw_roundbox_corner_set(UI_CNR_ALL);
-      UI_draw_roundbox_4fv(&tab_rect, true, tab_radius, active_bg);
+      /* Active tab: the pane, then --mx-accent-soft (#00C0C7 @ ~13%) and the
+       * teal outline over it; the teal label (drawn below) carries the accent.
+       * Design-agent spec. col_glow / col_highlight stay intentionally unused. */
+      const float active_bg[4] = {col_accent[0], col_accent[1], col_accent[2], 0.13f};
+      draw_roundbox_corner_set(CNR_ALL);
+      draw_roundbox_4fv(&tab_rect, true, tab_radius, active_bg);
 
       const float active_outline[4] = {col_accent[0], col_accent[1], col_accent[2], 0.45f};
-      UI_draw_roundbox_4fv(&tab_rect, false, tab_radius, active_outline);
+      draw_roundbox_4fv(&tab_rect, false, tab_radius, active_outline);
     }
     else {
-      /* --- Inactive tab: subtle dark fill --- */
-      UI_draw_roundbox_corner_set(UI_CNR_ALL);
-      UI_draw_roundbox_4fv(&tab_rect, true, tab_radius, col_inactive);
+      /* --- Inactive tab: the design's own bed washes over the pane, then its
+       * whisper of an outline against the family rim. --- */
+      draw_roundbox_corner_set(CNR_ALL);
+      draw_roundbox_4fv(&tab_rect, true, tab_radius, col_inactive);
 
       /* Very subtle outline. */
       const float outline_color[4] = {1.0f, 1.0f, 1.0f, 0.04f};
-      UI_draw_roundbox_4fv(&tab_rect, false, tab_radius, outline_color);
+      draw_roundbox_4fv(&tab_rect, false, tab_radius, outline_color);
     }
 
     /* --- Tab text --- */
@@ -397,12 +433,14 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
 
     /* Extend hit area to region edge. */
     if (is_left) {
-      pc_dyn->rect.xmin = v2d->mask.xmin;
+      tab_rects[tab_index].rect.xmin = v2d->mask.xmin;
     }
     else {
-      pc_dyn->rect.xmax = v2d->mask.xmax;
+      tab_rects[tab_index].rect.xmax = v2d->mask.xmax;
     }
   }
+
+  mixar_category_tabs_store(region, std::move(tab_rects));
 
   GPU_blend(GPU_BLEND_NONE);
   GPU_line_smooth(false);
@@ -411,3 +449,4 @@ void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_a
 
 #undef MIXAR_TAB_PAD_TEXT
 #undef MIXAR_TAB_PAD_BETWEEN
+}  // namespace blender::ui

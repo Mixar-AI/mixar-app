@@ -19,6 +19,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -31,8 +32,7 @@ namespace blender::ed::baking {
 
 static wmOperatorStatus multiply_rgb_by_alpha_exec(bContext *C, wmOperator *op)
 {
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -51,7 +51,7 @@ static wmOperatorStatus multiply_rgb_by_alpha_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
 #ifdef _OPENMP
 #  pragma omp parallel for if (region_height > 64)
@@ -82,8 +82,7 @@ static wmOperatorStatus multiply_rgb_by_alpha_exec(bContext *C, wmOperator *op)
 
 static wmOperatorStatus divide_rgb_by_alpha_exec(bContext *C, wmOperator *op)
 {
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -102,7 +101,7 @@ static wmOperatorStatus divide_rgb_by_alpha_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
 #ifdef _OPENMP
 #  pragma omp parallel for if (region_height > 64)
@@ -132,6 +131,10 @@ static wmOperatorStatus divide_rgb_by_alpha_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -147,7 +150,7 @@ void BAKING_OT_multiply_rgb_by_alpha(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "start_x", 0, 0, 32768, "Start X", "", 0, 32768);
@@ -167,7 +170,7 @@ void BAKING_OT_divide_rgb_by_alpha(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "start_x", 0, 0, 32768, "Start X", "", 0, 32768);
@@ -177,3 +180,4 @@ void BAKING_OT_divide_rgb_by_alpha(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

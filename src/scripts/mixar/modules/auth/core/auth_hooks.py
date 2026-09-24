@@ -70,3 +70,63 @@ def maybe_show_onboarding(email: str) -> None:
         maybe_show_for_user(email)
     except Exception as exc:
         logger.warning(f"Onboarding hook failed: {exc}")
+
+
+def refresh_agent_settings():
+    """Refresh BYOK credential state + the provider/model catalog after auth.
+
+    Kept separate from `refresh_generation_caches` on purpose: agent settings
+    and the generation catalog have independent failure domains and independent
+    owners, and folding them together would make a generation-catalog test fail
+    for a BYOK reason.
+
+    Both fetches are plain HTTP, so this is the whole trigger — there is no
+    socket to wait for. That is the point of the transport: the credential fetch
+    used to ride the agent WebSocket and lost the race against its own connect
+    on every cold start.
+    """
+    try:
+        from mixar.modules.byok.core import credential_state
+
+        credential_state.refresh()
+    except Exception as e:
+        logger.warning(f"BYOK state refresh failed: {e}")
+    try:
+        from mixar.modules.byok.core import models_cache
+
+        models_cache.refresh()
+    except Exception as e:
+        logger.warning(f"Agent models catalog refresh failed: {e}")
+    try:
+        from mixar.modules.byok.core import preference_state
+
+        preference_state.refresh()
+    except Exception as e:
+        logger.warning(f"Agent model preference refresh failed: {e}")
+
+
+def invalidate_agent_settings():
+    """Clear BYOK state, the catalog (memory and disk) and the model pick.
+
+    The SINGLE owner of all three on logout. Clearing any of them from a second
+    place gives a worker still in flight two orderings to win in — see the note
+    in `space_mixie_chat/ui/operators/auth_ops.py`.
+    """
+    try:
+        from mixar.modules.byok.core import credential_state
+
+        credential_state.clear()
+    except Exception as e:
+        logger.warning(f"BYOK state clear failed: {e}")
+    try:
+        from mixar.modules.byok.core import models_cache
+
+        models_cache.clear()
+    except Exception as e:
+        logger.warning(f"Agent models catalog clear failed: {e}")
+    try:
+        from mixar.modules.byok.core import preference_state
+
+        preference_state.clear()
+    except Exception as e:
+        logger.warning(f"Agent model preference clear failed: {e}")

@@ -180,7 +180,9 @@ if(WIN32)
     ${MIXAR_LEGACY_UPGRADES_WXS}
   )
   set(CPACK_WIX_UI_REF "WixUI_Blender")
-  set(CPACK_WIX_LIGHT_EXTRA_FLAGS -dcl:medium)
+  # Highest cabinet compression (LZX): a smaller MSI for a slower `light` link
+  # step. Decompression cost at install time is negligible.
+  set(CPACK_WIX_LIGHT_EXTRA_FLAGS -dcl:high)
 endif()
 
 set(CPACK_PACKAGE_EXECUTABLES "mixar-launcher" "Mixar ${MAJOR_VERSION}.${MINOR_VERSION}")
@@ -190,7 +192,7 @@ include(CPack)
 
 # Target for build_archive.py script, to automatically pass along
 # version, revision, platform, build directory
-macro(add_package_archive packagename extension)
+function(add_package_archive packagename extension)
   set(build_archive python ${CMAKE_SOURCE_DIR}/build_files/package_spec/build_archive.py)
   set(package_output ${CMAKE_BINARY_DIR}/release/${packagename}.${extension})
 
@@ -201,9 +203,7 @@ macro(add_package_archive packagename extension)
     COMMAND ${build_archive} ${packagename} ${extension} bin release
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
-  unset(build_archive)
-  unset(package_output)
-endmacro()
+endfunction()
 
 if(APPLE)
   add_package_archive(

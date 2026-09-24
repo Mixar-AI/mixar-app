@@ -176,6 +176,34 @@ if defined BUILD_WITH_NINJA (
     )
 )
 
+REM --- CUDA / OptiX Selection ---
+REM MIXAR_CUDA and MIXAR_CUDA_BINARIES come from .env via settings.bat and are
+REM interpreted by cmake\mixar_overrides.cmake, which is the ONE place that
+REM decides. Normalize them here so the cache check can clear stale toolkit
+REM discovery when CUDA becomes available after a CPU-only configure.
+REM settings.bat's .env reader keeps everything after the "=", so strip a
+REM trailing "# comment" and any spaces from these three before anyone (here or
+REM CMake, which inherits them) reads them. Deliberately NOT done in the .env
+REM reader itself: a DEV_BYPASS_PASSWORD is allowed to contain a "#".
+if defined MIXAR_CUDA for /f "tokens=1 delims=#" %%V in ("%MIXAR_CUDA%") do set "MIXAR_CUDA=%%V"
+if defined MIXAR_CUDA_BINARIES for /f "tokens=1 delims=#" %%V in ("%MIXAR_CUDA_BINARIES%") do set "MIXAR_CUDA_BINARIES=%%V"
+if defined MIXAR_CUDA_ARCH for /f "tokens=1 delims=#" %%V in ("%MIXAR_CUDA_ARCH%") do set "MIXAR_CUDA_ARCH=%%V"
+if defined MIXAR_CUDA set "MIXAR_CUDA=%MIXAR_CUDA: =%"
+if defined MIXAR_CUDA_BINARIES set "MIXAR_CUDA_BINARIES=%MIXAR_CUDA_BINARIES: =%"
+
+set "CUDA_WANT=ON"
+for %%F in (0 off no n false) do if /i "%MIXAR_CUDA%"=="%%F" set "CUDA_WANT=OFF"
+set "CUBIN_WANT=ON"
+for %%F in (0 off no n false) do if /i "%MIXAR_CUDA_BINARIES%"=="%%F" set "CUBIN_WANT=OFF"
+if "%CUDA_WANT%"=="OFF" set "CUBIN_WANT=OFF"
+
+set "CUDA_CMAKE_ARGS="
+if "%CUDA_WANT%"=="OFF" (
+    echo CUDA/OptiX   : disabled by MIXAR_CUDA=%MIXAR_CUDA%
+    set "CUDA_CMAKE_ARGS=-DWITH_CYCLES_DEVICE_CUDA=OFF -DWITH_CYCLES_CUDA_BINARIES=OFF -DWITH_CYCLES_DEVICE_OPTIX=OFF"
+    goto :cuda_cache_check
+)
+
 REM --- CUDA Toolkit Detection ---
 set "CUDA_FOUND="
 if defined CUDA_PATH (
@@ -197,11 +225,17 @@ if defined CUDA_FOUND (
     "!CUDA_TOOLKIT_ROOT!\bin\nvcc.exe" --version 2>nul | findstr /C:"release"
     REM Set CUDA_PATH so CMake's find_package(CUDA) auto-detects the toolkit.
     set "CUDA_PATH=!CUDA_TOOLKIT_ROOT!"
-    set "CUDA_CMAKE_ARGS="
+    if "%CUBIN_WANT%"=="OFF" (
+        echo CUDA binaries: skipped by MIXAR_CUDA_BINARIES=%MIXAR_CUDA_BINARIES%
+        set "CUDA_CMAKE_ARGS=-DWITH_CYCLES_CUDA_BINARIES=OFF"
+    )
 ) else (
     echo Warning: CUDA toolkit not found. CUDA support will be disabled.
     echo   Install from: https://developer.nvidia.com/cuda-downloads
-    set "CUDA_CMAKE_ARGS=-DWITH_CYCLES_DEVICE_CUDA=OFF"
+    REM No nvcc means no cubins either - the overrides force both ON.
+    set "CUDA_WANT=OFF"
+    set "CUBIN_WANT=OFF"
+    set "CUDA_CMAKE_ARGS=-DWITH_CYCLES_DEVICE_CUDA=OFF -DWITH_CYCLES_CUDA_BINARIES=OFF"
 )
 
 REM --- OptiX SDK Detection ---
@@ -222,17 +256,35 @@ if defined OPTIX_FOUND (
     set "CUDA_CMAKE_ARGS=!CUDA_CMAKE_ARGS! -DWITH_CYCLES_DEVICE_OPTIX=OFF"
 )
 
-REM --- CUDA Cache Invalidation ---
-REM Force reconfigure when CUDA was enabled in overrides but the existing cache was built without it.
-if defined CUDA_FOUND (
-    if exist "%BUILD_ENV_DIR%\CMakeCache.txt" (
-        findstr /C:"WITH_CYCLES_DEVICE_CUDA:BOOL=ON" "%BUILD_ENV_DIR%\CMakeCache.txt" >nul 2>&1
-        if !ERRORLEVEL! neq 0 (
-            echo Detected cache without CUDA support, forcing reconfigure...
+:cuda_cache_check
+REM --- CUDA Cache Check ---
+REM Turning CUDA ON where the cache says OFF WIPES the cache, because the
+REM toolkit was found this run and every cached CUDA_*-NOTFOUND has to go.
+REM Every other mismatch is just a flipped .env, so it re-runs configure IN
+REM PLACE: object files survive and only the Cycles GPU targets rebuild -
+REM a wipe there would charge a full Blender rebuild for a one-line setting.
+set "FORCE_RECONFIGURE="
+if exist "%BUILD_ENV_DIR%\CMakeCache.txt" (
+    set "CUDA_CACHED=OFF"
+    findstr /C:"WITH_CYCLES_DEVICE_CUDA:BOOL=ON" "%BUILD_ENV_DIR%\CMakeCache.txt" >nul 2>&1
+    if !ERRORLEVEL! equ 0 set "CUDA_CACHED=ON"
+    set "CUBIN_CACHED=OFF"
+    findstr /C:"WITH_CYCLES_CUDA_BINARIES:BOOL=ON" "%BUILD_ENV_DIR%\CMakeCache.txt" >nul 2>&1
+    if !ERRORLEVEL! equ 0 set "CUBIN_CACHED=ON"
+    if not "!CUDA_CACHED!"=="%CUDA_WANT%" set "FORCE_RECONFIGURE=1"
+    if not "!CUBIN_CACHED!"=="%CUBIN_WANT%" set "FORCE_RECONFIGURE=1"
+    set "CUDA_WIPE="
+    if "%CUDA_WANT%"=="ON" if "!CUDA_CACHED!"=="OFF" set "CUDA_WIPE=1"
+    if defined FORCE_RECONFIGURE (
+        echo Cache has CUDA=!CUDA_CACHED! binaries=!CUBIN_CACHED!, want CUDA=%CUDA_WANT% binaries=%CUBIN_WANT%
+        if defined CUDA_WIPE (
+            echo Cache was configured without a CUDA toolkit, wiping it...
             del /q "%BUILD_ENV_DIR%\CMakeCache.txt" 2>nul
             rmdir /s /q "%BUILD_ENV_DIR%\CMakeFiles" 2>nul
             if defined BUILD_WITH_NINJA del /q "%BUILD_ENV_DIR%\build.ninja" 2>nul
             echo CUDA cache invalidated.
+        ) else (
+            echo Re-running CMake configure in place ^(object files are kept^)...
         )
     )
 )
@@ -265,39 +317,27 @@ if defined BUILD_WITH_NINJA (
     )
 )
 
-REM --- [5/8] CMake Configure (once) ---
-REM Following upstream pattern (upstream/build_files/windows/configure_ninja.cmd):
-REM   if NOT EXIST build.ninja set MUST_CONFIGURE=1
-REM Configure only when build files don't exist; subsequent runs skip straight to build.
-echo [5/8] Checking CMake configuration...
-set "MUST_CONFIGURE=0"
-if defined BUILD_WITH_NINJA (
-    if not exist "%BUILD_ENV_DIR%\build.ninja" set "MUST_CONFIGURE=1"
-) else (
-    if not exist "%BUILD_ENV_DIR%\Blender.sln" set "MUST_CONFIGURE=1"
+REM --- [5/8] CMake Configure ---
+REM Always configure after overlay, as build.sh does. Restored upstream CMake
+REM files can be older than build.ninja, so Ninja's timestamp check alone can
+REM keep compiling targets removed by a branch switch. Object files survive.
+echo [5/8] Configuring CMake...
+echo   Blender: %BLENDER_BUILD_ENV%   Mixar: %MIXAR_ENV%   Platform: %PLATFORM%
+
+cmake -C "%CMAKE_DIR%\mixar_overrides.cmake" ^
+    %CMAKE_GENERATOR_ARGS% ^
+    -S "%SOURCE_DIR%" ^
+    -B "%BUILD_ENV_DIR%" ^
+    -DCMAKE_BUILD_TYPE=%BLENDER_BUILD_ENV% ^
+    -DWITH_WINDOWS_RELEASE_PDB=OFF ^
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ^
+    %CUDA_CMAKE_ARGS%
+
+if %ERRORLEVEL% neq 0 (
+    echo Error: CMake configuration failed
+    exit /b 1
 )
-
-if "%MUST_CONFIGURE%"=="1" (
-    echo Configuring CMake...
-    echo   Blender: %BLENDER_BUILD_ENV%   Mixar: %MIXAR_ENV%   Platform: %PLATFORM%
-
-    cmake -C "%CMAKE_DIR%\mixar_overrides.cmake" ^
-        %CMAKE_GENERATOR_ARGS% ^
-        -S "%SOURCE_DIR%" ^
-        -B "%BUILD_ENV_DIR%" ^
-        -DCMAKE_BUILD_TYPE=%BLENDER_BUILD_ENV% ^
-        -DWITH_WINDOWS_RELEASE_PDB=OFF ^
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ^
-        %CUDA_CMAKE_ARGS%
-
-    if !ERRORLEVEL! neq 0 (
-        echo Error: CMake configuration failed
-        exit /b 1
-    )
-    echo [5/8] CMake configuration complete at %TIME%
-) else (
-    echo [5/8] CMake already configured — skipping ^(delete %BUILD_ENV_DIR% to reconfigure^)
-)
+echo [5/8] CMake configuration complete at %TIME%
 
 REM --- [6/8] Build ---
 echo [6/8] Building...

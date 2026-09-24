@@ -435,7 +435,7 @@ class TestCardGlyphs:
         """A button built without an icon silently centres its label,
         which is only correct for the two kinds that want it."""
         source = CARD_CC.read_text(encoding="utf-8")
-        for glyph in ("Grid", "Sliders", "Document", "Alert", "Cross"):
+        for glyph in ("Grid", "Document", "Alert", "Cross"):
             assert "MixarCardIcon::%s" % glyph in source, glyph
 
 
@@ -443,7 +443,7 @@ class TestCardSizingContract:
     """The card suppresses the stock text pass and paints with its own
     font scale and padding, but `uiLayout` still sizes every button from
     the default widget font. Anything the painter spends beyond that
-    estimate is clipped by `UI_fontstyle_draw` with no ellipsis — the
+    estimate is clipped by `fontstyle_draw` with no ellipsis — the
     failure mode is a label quietly reading "Log" instead of "Logout",
     which no runtime signal reports."""
 
@@ -501,7 +501,7 @@ class TestCardSizingContract:
         """`UI_mixar_card_element_get` range-checks the tag it reads back.
         Bounding on a real kind means the next kind appended to the enum
         reads as None and draws as a blank row."""
-        header = CARD_HH.read_text(encoding="utf-8")
+        header = (CARD_HH.parent.parent / "include/UI_mixar_types.hh").read_text(encoding="utf-8")
         kinds = header[header.index("enum class MixarCardElement"):]
         kinds = kinds[: kinds.index("};")]
         assert kinds.rstrip().rstrip(",").endswith("Count"), (

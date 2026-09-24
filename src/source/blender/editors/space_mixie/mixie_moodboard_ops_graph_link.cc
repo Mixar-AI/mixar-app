@@ -25,8 +25,7 @@ static wmOperatorStatus call_connect_operator(bContext *C,
   if (!ot) {
     return OPERATOR_CANCELLED;
   }
-  PointerRNA props;
-  WM_operator_properties_create_ptr(&props, ot);
+  PointerRNA props = WM_operator_properties_create_ptr(ot);
   RNA_string_set(&props, "from_node_id", from_node_id);
   RNA_string_set(&props, "to_node_id", target.node_id);
   /* Empty when the drop landed on a card rather than one of its sockets: the
@@ -77,11 +76,10 @@ static wmOperatorStatus call_output_menu(bContext *C,
     return OPERATOR_CANCELLED;
   }
   RNA_property_string_set(scene_ptr, source, source_node_id);
-  PointerRNA props;
-  WM_operator_properties_create_ptr(&props, menu_type);
+  PointerRNA props = WM_operator_properties_create_ptr(menu_type);
   RNA_string_set(&props, "name", "MIXIE_MT_moodboard_output_menu");
   const wmOperatorStatus status = WM_operator_name_call_ptr(
-      C, menu_type, blender::wm::OpCallContext::InvokeRegionWin, &props, event);
+      C, menu_type, blender::wm::OpCallContext::InvokeDefault, &props, event);
   WM_operator_properties_free(&props);
   return status;
 }
@@ -122,18 +120,82 @@ static bool graph_drop_card_target(PointerRNA *scene_ptr,
   return true;
 }
 
+bool moodboard_graph_detach_input(bContext *C,
+                                  PointerRNA *scene_ptr,
+                                  View2D *v2d,
+                                  const wmEvent *event,
+                                  char *r_from_node_id,
+                                  const int from_node_id_maxncpy)
+{
+  /* Pressing a CONNECTED input picks its link up rather than selecting the
+   * card: the same gesture then rewires it (release on another socket) or drops
+   * it (release on canvas). Without this there was no way to detach an input at
+   * all -- the only removal was clicking the noodle itself, a 9px hit on a
+   * Bezier. */
+  MoodboardGraphSocketHit hit{};
+  if (!moodboard_find_input_socket_under_mouse(
+          scene_ptr, v2d, event->mval[0], event->mval[1], &hit))
+  {
+    return false;
+  }
+
+  /* Only an OCCUPIED socket detaches; an empty one is not a handle for
+   * anything and must fall through to the card's own press handling. */
+  PropertyRNA *links = RNA_struct_find_property(scene_ptr, "mixie_moodboard_links");
+  const int link_count = links ? RNA_property_collection_length(scene_ptr, links) : 0;
+  for (int index = 0; index < link_count; index++) {
+    PointerRNA link;
+    RNA_property_collection_lookup_int(scene_ptr, links, index, &link);
+    char to_node[MIXIE_GRAPH_ID_BUF];
+    char to_socket[MIXIE_GRAPH_ID_BUF];
+    mixie_rna_string_get_clamped(&link, "to_node_id", to_node, sizeof(to_node));
+    mixie_rna_string_get_clamped(&link, "to_socket", to_socket, sizeof(to_socket));
+    if (!STREQ(to_node, hit.node_id) || !STREQ(to_socket, hit.socket_id)) {
+      continue;
+    }
+    /* The noodle now hangs from the ORIGINAL source, which is what makes the
+     * drag feel like picking the existing link up rather than drawing a new
+     * one from the input. */
+    mixie_rna_string_get_clamped(
+        &link, "from_node_id", r_from_node_id, from_node_id_maxncpy);
+
+    /* Removing a collection element is done by the Python operator: it also
+     * re-evaluates socket visibility (a repeatable group has to collapse the
+     * slot it just freed) and gives the removal an undo step. */
+    wmOperatorType *ot = WM_operatortype_find("MIXIE_OT_moodboard_disconnect_input", false);
+    if (!ot) {
+      return false;
+    }
+    PointerRNA props = WM_operator_properties_create_ptr(ot);
+    RNA_string_set(&props, "node_id", hit.node_id);
+    RNA_string_set(&props, "socket_id", hit.socket_id);
+    WM_operator_name_call_ptr(
+        C, ot, blender::wm::OpCallContext::ExecDefault, &props, event);
+    WM_operator_properties_free(&props);
+    return true;
+  }
+  return false;
+}
+
 wmOperatorStatus moodboard_graph_link_release(bContext *C,
                                               PointerRNA *scene_ptr,
                                               View2D *v2d,
                                               const wmEvent *event,
                                               const char *from_node_id,
-                                              const bool moved)
+                                              const bool moved,
+                                              const bool detached)
 {
   MoodboardGraphSocketHit target{};
   if (moodboard_find_input_socket_under_mouse(
           scene_ptr, v2d, event->mval[0], event->mval[1], &target))
   {
     return call_connect_operator(C, from_node_id, target, event);
+  }
+  if (detached) {
+    /* The link was removed when the drag began, so letting go anywhere that is
+     * not a socket IS the disconnect. Offering the continuation menu here would
+     * answer "remove this input" with "shall I add a node?". */
+    return OPERATOR_FINISHED;
   }
   if (!moved) {
     /* A plain click on the output handle: no noodle was pulled anywhere, so
@@ -143,7 +205,7 @@ wmOperatorStatus moodboard_graph_link_release(bContext *C,
   }
 
   float drop_x, drop_y;
-  UI_view2d_region_to_view(v2d, event->mval[0], event->mval[1], &drop_x, &drop_y);
+  ui::view2d_region_to_view(v2d, event->mval[0], event->mval[1], &drop_x, &drop_y);
 
   /* Missed the sockets but landed on an inference card: continue into it
    * through its first free compatible input, the way the socket drop would

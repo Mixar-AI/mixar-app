@@ -5,14 +5,18 @@
 /** \file
  * \ingroup spview3d
  *
- * Flow-style ruler, camera strip, beat handles, and playhead drawing.
+ * The dock's layout and its camera strip: the label column, the tinted span
+ * of the camera's keys, the native keys and the rings on keyframes with an
+ * image.
  */
 
 #include <algorithm>
 #include <array>
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 #include "BLF_api.hh"
 
@@ -31,78 +35,64 @@
 #include "UI_resources.hh"
 
 #include "view3d_director_timeline.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
-constexpr float RULER_COLOR[4] = {0.43f, 0.43f, 0.45f, 1.0f};
-constexpr float TIME_COLOR[4] = {0.66f, 0.65f, 0.67f, 1.0f};
-constexpr float STRIP_COLOR[4] = {1.0f, 0.72f, 0.48f, 1.0f};
-constexpr float STRIP_HOVER_COLOR[4] = {1.0f, 0.76f, 0.54f, 1.0f};
-constexpr float HANDLE_COLOR[4] = {1.0f, 0.83f, 0.69f, 1.0f};
-constexpr float HANDLE_ACTIVE_COLOR[4] = {1.0f, 0.90f, 0.80f, 1.0f};
-constexpr float STRIP_TEXT_COLOR[4] = {1.0f, 0.98f, 0.96f, 1.0f};
-constexpr float PLAYHEAD_COLOR[4] = {0.68f, 0.86f, 0.98f, 1.0f};
-constexpr float PLAYHEAD_TEXT_COLOR[4] = {0.035f, 0.045f, 0.055f, 1.0f};
+/* The take's span is a TINT of a light grey with a firm edge in it. It is
+ * the neutral the keys are read against: a tinted bar of its own hue (it was
+ * the strip's orange) competed with the green key dots for the same row, and
+ * a solid bar turned them to mush outright. */
+constexpr float STRIP_COLOR[4] = {0.82f, 0.83f, 0.85f, 0.62f};
+constexpr float STRIP_FILL_COLOR[4] = {0.82f, 0.83f, 0.85f, 0.13f};
+constexpr float STRIP_HOVER_FILL_COLOR[4] = {0.82f, 0.83f, 0.85f, 0.22f};
+constexpr float LABEL_TEXT_COLOR[4] = {1.0f, 0.98f, 0.96f, 1.0f};
+/** A thin ring around a keyframe that carries a captured image. */
+constexpr float STILL_RING_COLOR[4] = {1.0f, 1.0f, 1.0f, 0.78f};
+/** The box-select rubber band. */
+constexpr float BOX_FILL_COLOR[4] = {1.0f, 1.0f, 1.0f, 0.08f};
+constexpr float BOX_LINE_COLOR[4] = {1.0f, 1.0f, 1.0f, 0.45f};
 
-void draw_rect(
-    const float x1, const float y1, const float x2, const float y2, const float color[4])
-{
-  GPUVertFormat *format = immVertexFormat();
-  const uint pos = GPU_vertformat_attr_add(
-      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformColor4fv(color);
-  immRectf(pos, x1, y1, x2, y2);
-  immUnbindProgram();
-}
-
-void draw_round_rect(const rctf &rect, const float radius, const float color[4])
-{
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, true, radius, color);
-}
-
-void draw_text(
-    const char *text, const float x, const float y, const float size, const float color[4])
-{
-  const int font = BLF_default();
-  BLF_size(font, size);
-  BLF_color4fv(font, color);
-  BLF_position(font, x, y, 0.0f);
-  BLF_draw(font, text, strlen(text));
-  GPU_blend(GPU_BLEND_ALPHA);
-}
-
-float text_width(const char *text, const float size)
-{
-  const int font = BLF_default();
-  BLF_size(font, size);
-  return BLF_width(font, text, strlen(text));
-}
-
-void draw_camera_icon(const float x, const float y, const float size)
+void draw_icon(const float x, const float y, const int icon, const float size)
 {
   const uchar color[4] = {255, 250, 245, 255};
-  UI_icon_draw_ex(
-      x, y, ICON_CAMERA_DATA, 16.0f / size, 1.0f, 0.0f, color, false, UI_NO_ICON_OVERLAY_TEXT);
+  ui::icon_draw_ex(x, y, icon, 16.0f / size, 1.0f, 0.0f, color, false, UI_NO_ICON_OVERLAY_TEXT);
   GPU_blend(GPU_BLEND_ALPHA);
+}
+
+/**
+ * The frames the dock fits: every key the camera carries and every beat.
+ * Falls back to the scene's start, so an empty shot opens on it.
+ */
+void content_range(const DirectorViewState &state, float *r_first, float *r_last)
+{
+  float first = float(state.scene_frame_start);
+  float last = first;
+  bool any = director_timeline_camera_key_range(state.shot_camera, &first, &last);
+  if (!state.beats.is_empty()) {
+    first = any ? std::min(first, float(state.frame_start)) : float(state.frame_start);
+    last = any ? std::max(last, float(state.frame_end)) : float(state.frame_end);
+    any = true;
+  }
+  *r_first = first;
+  *r_last = last;
 }
 
 void reset_view(const DirectorViewState &state, DirectorTimelineRuntime *runtime)
 {
   const float fps = std::max(state.fps, 0.001f);
-  const int first = state.beats.is_empty() ? state.scene_frame_start : state.frame_start;
-  const int last = state.beats.is_empty() ? state.scene_frame_start : state.frame_end;
-  runtime->view_start_frame = float(std::min(state.scene_frame_start, first));
-  runtime->view_span_frames = std::max(fps * 5.0f, float(last) + fps - runtime->view_start_frame);
+  float first, last;
+  content_range(state, &first, &last);
+  runtime->view_start_frame = std::min(float(state.scene_frame_start), std::floor(first));
+  runtime->view_span_frames = std::max(fps * 5.0f,
+                                       std::ceil(last) + fps - runtime->view_start_frame);
   runtime->view_initialized = true;
   runtime->view_user_modified = false;
 }
 
 void sync_view(const DirectorViewState &state, DirectorTimelineRuntime *runtime)
 {
-  const int first = state.beats.is_empty() ? state.scene_frame_start : state.frame_start;
-  const int last = state.beats.is_empty() ? state.scene_frame_start : state.frame_end;
   const int count = int(state.beats.size());
   const bool shot_changed = runtime->shot_identity != state.shot_identity;
   /* Shot or beat-count changes are new content and may need a re-fit.
@@ -115,197 +105,227 @@ void sync_view(const DirectorViewState &state, DirectorTimelineRuntime *runtime)
   {
     reset_view(state, runtime);
   }
+  if (shot_changed) {
+    /* A box started over another shot's keys selects nothing of this one. */
+    runtime->box_arming = false;
+    runtime->box_dragging = false;
+  }
   runtime->shot_identity = state.shot_identity;
-  runtime->content_first = first;
-  runtime->content_last = last;
   runtime->content_count = count;
 }
 
-float major_tick_seconds(const float pixels_per_second)
+/** \a text cut down with an ellipsis until it fits \a max_width. */
+std::string fit_text(const std::string &text, const float size, const float max_width)
 {
-  constexpr std::array<float, 15> steps = {0.1f,
-                                           0.2f,
-                                           0.5f,
-                                           1.0f,
-                                           2.0f,
-                                           5.0f,
-                                           10.0f,
-                                           15.0f,
-                                           30.0f,
-                                           60.0f,
-                                           120.0f,
-                                           300.0f,
-                                           600.0f,
-                                           1800.0f,
-                                           3600.0f};
-  for (const float step : steps) {
-    if (step * pixels_per_second >= 86.0f * UI_SCALE_FAC) {
-      return step;
+  if (director_timeline_text_width(text.c_str(), size) <= max_width) {
+    return text;
+  }
+  std::string cut = text;
+  while (!cut.empty()) {
+    /* Drop a whole UTF-8 sequence, never half of one. */
+    size_t len = cut.size() - 1;
+    while (len > 0 && (uchar(cut[len]) & 0xC0) == 0x80) {
+      len--;
+    }
+    cut.resize(len);
+    const std::string candidate = cut + "\xe2\x80\xa6" /* U+2026 */;
+    if (director_timeline_text_width(candidate.c_str(), size) <= max_width) {
+      return candidate;
     }
   }
-  return steps.back();
+  return std::string();
 }
 
-void draw_ruler(const DirectorViewState &state,
-                const DirectorTimelineRuntime &runtime,
-                const float ruler_y)
-{
-  const float width = BLI_rctf_size_x(&runtime.viewport_bounds);
-  const float fps = std::max(state.fps, 0.001f);
-  const float pixels_per_second = width * fps / runtime.view_span_frames;
-  const float major_seconds = major_tick_seconds(pixels_per_second);
-  const int divisions = major_seconds * pixels_per_second >= 150.0f * UI_SCALE_FAC ? 10 : 5;
-  const float minor_seconds = major_seconds / float(divisions);
-  const float start_seconds = (runtime.view_start_frame - state.scene_frame_start) / fps;
-  const float end_seconds = start_seconds + runtime.view_span_frames / fps;
-  const float first_tick = std::ceil(start_seconds / minor_seconds) * minor_seconds;
-
-  for (float seconds = first_tick; seconds <= end_seconds + minor_seconds * 0.25f;
-       seconds += minor_seconds)
-  {
-    const float frame = state.scene_frame_start + seconds * fps;
-    const float t = (frame - runtime.view_start_frame) / runtime.view_span_frames;
-    const float x = runtime.viewport_bounds.xmin + t * width;
-    const float major_index = std::round(seconds / major_seconds);
-    const bool is_major = std::abs(seconds - major_index * major_seconds) < minor_seconds * 0.15f;
-    if (is_major) {
-      draw_rect(x,
-                ruler_y - 4.0f * UI_SCALE_FAC,
-                x + UI_SCALE_FAC,
-                ruler_y + 11.0f * UI_SCALE_FAC,
-                RULER_COLOR);
-      char label[32];
-      if (major_seconds < 1.0f) {
-        BLI_snprintf(label, sizeof(label), "%.1fs", seconds);
-      }
-      else {
-        BLI_snprintf(label, sizeof(label), "%.0fs", seconds);
-      }
-      draw_text(label,
-                x - 8.0f * UI_SCALE_FAC,
-                ruler_y + 15.0f * UI_SCALE_FAC,
-                11.0f * UI_SCALE_FAC,
-                TIME_COLOR);
-    }
-    else {
-      const float dot = std::max(2.0f, 2.5f * UI_SCALE_FAC);
-      const rctf dot_rect = {
-          x - dot * 0.5f, x + dot * 0.5f, ruler_y - dot * 0.5f, ruler_y + dot * 0.5f};
-      draw_round_rect(dot_rect, dot * 0.5f, RULER_COLOR);
-    }
-  }
-}
-
-void draw_strip(const DirectorViewState &state,
+/**
+ * The camera's name in its own column left of the keys — the Timeline's
+ * channel list. It used to sit INSIDE the bar, where a key on every frame
+ * drew straight over it.
+ */
+void draw_label(const DirectorViewState &state,
                 DirectorTimelineRuntime *runtime,
                 const float strip_y,
                 const float strip_h)
 {
-  runtime->beat_hits.clear();
-  BLI_rctf_init(&runtime->strip_bounds, 0.0f, 0.0f, 0.0f, 0.0f);
-  if (state.beats.is_empty()) {
+  const rctf &label = runtime->label_bounds;
+  const float u = UI_SCALE_FAC;
+  const float font_size = 12.0f * u;
+  const float icon_size = 16.0f * u;
+  const float text_x = label.xmin + icon_size + 6.0f * u;
+  if (!state.has_camera || label.xmax - text_x <= 0.0f) {
     return;
   }
-  const float width = BLI_rctf_size_x(&runtime->viewport_bounds);
-  const auto frame_x = [&](const float frame) {
-    return runtime->viewport_bounds.xmin +
-           (frame - runtime->view_start_frame) / runtime->view_span_frames * width;
-  };
-  float raw_start = frame_x(float(state.frame_start));
-  float raw_end = frame_x(float(state.frame_end));
-  if (state.beats.size() == 1) {
-    raw_start -= 9.0f * UI_SCALE_FAC;
-    raw_end += 9.0f * UI_SCALE_FAC;
-  }
-  const float visible_start = std::max(raw_start, runtime->viewport_bounds.xmin);
-  const float visible_end = std::min(raw_end, runtime->viewport_bounds.xmax);
-  if (visible_end <= visible_start) {
-    return;
-  }
-  runtime->strip_bounds = {visible_start, visible_end, strip_y, strip_y + strip_h};
-  const float *strip_color = runtime->strip_hovered ? STRIP_HOVER_COLOR : STRIP_COLOR;
-  draw_round_rect(runtime->strip_bounds, 7.0f * UI_SCALE_FAC, strip_color);
+  draw_icon(label.xmin, strip_y + (strip_h - icon_size) * 0.5f, ICON_CAMERA_DATA, icon_size);
+  const std::string name = fit_text(state.camera_name, font_size, label.xmax - text_x);
+  director_timeline_draw_text(name.c_str(),
+                              text_x,
+                              strip_y + (strip_h - font_size) * 0.5f + 1.0f * u,
+                              font_size,
+                              LABEL_TEXT_COLOR);
+}
 
-  const float font_size = 12.0f * UI_SCALE_FAC;
-  const float icon_size = 16.0f * UI_SCALE_FAC;
-  const float label_x = visible_start + 27.0f * UI_SCALE_FAC;
-  const float label_width = icon_size + 7.0f * UI_SCALE_FAC +
-                            text_width(state.camera_name.c_str(), font_size);
-  if (visible_end - label_x > label_width) {
-    draw_camera_icon(label_x, strip_y + (strip_h - icon_size) * 0.5f, icon_size);
-    draw_text(state.camera_name.c_str(),
-              label_x + icon_size + 7.0f * UI_SCALE_FAC,
-              strip_y + (strip_h - font_size) * 0.5f + 1.0f * UI_SCALE_FAC,
-              font_size,
-              STRIP_TEXT_COLOR);
-  }
-
-  const float handle_w = std::max(9.0f, 11.0f * UI_SCALE_FAC);
-  const float hit_pad = 10.0f * UI_SCALE_FAC;
-  for (const DirectorBeatView &beat : state.beats) {
-    const float x = frame_x(float(beat.frame));
-    const float hit_xmin = x - hit_pad;
-    const float hit_xmax = x + hit_pad;
-    /* Keep a partly-visible handle hittable. The last keyframe sits on the
-     * strip's right edge; dropping it when its centre crosses xmax made
-     * that handle undraggable. */
-    if (hit_xmax < runtime->viewport_bounds.xmin ||
-        hit_xmin > runtime->viewport_bounds.xmax)
-    {
-      continue;
+/** Put each beat on its key column, for its ring and the right-click menu. */
+void attach_beats(const DirectorViewState &state, DirectorTimelineRuntime *runtime)
+{
+  for (DirectorTimelineKeyHit &hit : runtime->key_hits) {
+    for (const DirectorBeatView &beat : state.beats) {
+      if (std::abs(float(beat.frame) - hit.frame) <= 0.5f) {
+        hit.beat = beat.index;
+        hit.beat_has_still = beat.has_still;
+        break;
+      }
     }
-    const rctf handle = {x - handle_w * 0.5f, x + handle_w * 0.5f, strip_y, strip_y + strip_h};
-    const bool highlighted = beat.index == state.active_beat_index ||
-                             beat.index == runtime->hovered_beat;
-    draw_round_rect(handle, handle_w * 0.48f, highlighted ? HANDLE_ACTIVE_COLOR : HANDLE_COLOR);
-    DirectorTimelineBeatHit hit;
-    hit.bounds = {hit_xmin,
-                  hit_xmax,
-                  strip_y - 4.0f * UI_SCALE_FAC,
-                  strip_y + strip_h + 4.0f * UI_SCALE_FAC};
-    hit.index = beat.index;
-    runtime->beat_hits.append(hit);
   }
 }
 
-void draw_playhead(const DirectorViewState &state,
-                   const DirectorTimelineRuntime &runtime,
-                   const float bottom,
-                   const float top)
+/**
+ * A thin ring around each keyframe that carries a captured image — the ones
+ * Export to Moodboard sends as Keyframe Images.
+ *
+ * The key itself already says it is a keyframe and not a recorded sample
+ * (Blender's key types draw differently); the ring adds only what the key
+ * cannot. It used to be an icon chip jammed against the bar's top edge,
+ * which read as a rendering glitch. Rings are thinned when zoomed out so they
+ * never chain into one another.
+ */
+void draw_still_rings(const DirectorTimelineRuntime &runtime, const float cy)
 {
-  const float width = BLI_rctf_size_x(&runtime.viewport_bounds);
-  const float x = runtime.viewport_bounds.xmin + (state.frame_current - runtime.view_start_frame) /
-                                                     runtime.view_span_frames * width;
-  if (x < runtime.viewport_bounds.xmin || x > runtime.viewport_bounds.xmax) {
+  const float u = UI_SCALE_FAC;
+  const float radius = 8.0f * u;
+  bool any = false;
+  for (const DirectorTimelineKeyHit &hit : runtime.key_hits) {
+    any |= hit.beat >= 0 && hit.beat_has_still;
+  }
+  if (!any) {
     return;
   }
-  const float pill_h = 25.0f * UI_SCALE_FAC;
-  const float pill_y = top - pill_h;
-  draw_rect(x - 0.5f * UI_SCALE_FAC,
-            bottom,
-            x + 0.5f * UI_SCALE_FAC,
-            pill_y + 2.0f * UI_SCALE_FAC,
-            PLAYHEAD_COLOR);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_POLYLINE_UNIFORM_COLOR);
+  float viewport[4];
+  GPU_viewport_size_get_f(viewport);
+  immUniform2fv("viewportSize", &viewport[2]);
+  immUniform1f("lineWidth", std::max(1.0f, 1.25f * u));
+  immUniformColor4fv(STILL_RING_COLOR);
+  float last_x = -FLT_MAX;
+  for (const DirectorTimelineKeyHit &hit : runtime.key_hits) {
+    if (hit.beat < 0 || !hit.beat_has_still || hit.x - last_x < radius * 2.0f + 2.0f * u) {
+      continue;
+    }
+    last_x = hit.x;
+    imm_draw_circle_wire_2d(pos, hit.x, cy, radius, 24);
+  }
+  immUnbindProgram();
+}
 
-  char label[32];
-  const float seconds = (state.frame_current - state.scene_frame_start) /
-                        std::max(state.fps, 0.001f);
-  BLI_snprintf(label, sizeof(label), "%.2f", seconds);
-  const float font_size = 12.0f * UI_SCALE_FAC;
-  const float pill_w = text_width(label, font_size) + 22.0f * UI_SCALE_FAC;
-  const float center = std::clamp(x,
-                                  runtime.viewport_bounds.xmin + pill_w * 0.5f,
-                                  runtime.viewport_bounds.xmax - pill_w * 0.5f);
-  const rctf pill = {center - pill_w * 0.5f, center + pill_w * 0.5f, pill_y, top};
-  draw_round_rect(pill, pill_h * 0.42f, PLAYHEAD_COLOR);
-  draw_text(label,
-            center - text_width(label, font_size) * 0.5f,
-            pill_y + (pill_h - font_size) * 0.5f,
-            font_size,
-            PLAYHEAD_TEXT_COLOR);
+void draw_strip(const ARegion *region,
+                const DirectorViewState &state,
+                DirectorTimelineRuntime *runtime,
+                const float strip_y,
+                const float strip_h)
+{
+  runtime->key_hits.clear();
+  BLI_rctf_init(&runtime->strip_bounds, 0.0f, 0.0f, 0.0f, 0.0f);
+  const float u = UI_SCALE_FAC;
+  /* From the dock's inner edge to just short of the keys: the gap is wider
+   * than half a key mark, so a key on the view's first frame stays clear. */
+  runtime->label_bounds = {runtime->viewport_bounds.xmin - (DIRECTOR_LABEL_W - 6.0f) * u,
+                           runtime->viewport_bounds.xmin - 12.0f * u,
+                           strip_y,
+                           strip_y + strip_h};
+  draw_label(state, runtime, strip_y, strip_h);
+
+  float first = 0.0f;
+  float last = 0.0f;
+  bool any = director_timeline_collect_keys(
+      state.shot_camera, runtime, strip_y, strip_h, &first, &last);
+  attach_beats(state, runtime);
+  for (const DirectorBeatView &beat : state.beats) {
+    first = any ? std::min(first, float(beat.frame)) : float(beat.frame);
+    last = any ? std::max(last, float(beat.frame)) : float(beat.frame);
+    any = true;
+  }
+  const float cy = strip_y + strip_h * 0.5f;
+  if (any) {
+    /* The span covers what the camera is animated over — its first key to
+     * its last, the recorded samples as well as the beats — padded so an end
+     * key, and the image ring around it, sit inside the rounded ends. */
+    const float width = BLI_rctf_size_x(&runtime->viewport_bounds);
+    const auto frame_x = [&](const float frame) {
+      return runtime->viewport_bounds.xmin +
+             (frame - runtime->view_start_frame) / runtime->view_span_frames * width;
+    };
+    const float pad = 13.0f * u;
+    const float visible_start = std::max(frame_x(first) - pad, runtime->viewport_bounds.xmin);
+    const float visible_end = std::min(frame_x(last) + pad, runtime->viewport_bounds.xmax);
+    if (visible_end > visible_start) {
+      runtime->strip_bounds = {visible_start, visible_end, strip_y, strip_y + strip_h};
+      ui::draw_roundbox_corner_set(ui::CNR_ALL);
+      ui::draw_roundbox_4fv_ex(&runtime->strip_bounds,
+                               runtime->strip_hovered ? STRIP_HOVER_FILL_COLOR : STRIP_FILL_COLOR,
+                               nullptr,
+                               1.0f,
+                               STRIP_COLOR,
+                               std::max(1.0f, u),
+                               7.0f * u);
+    }
+  }
+  /* The image rings, then every key the camera carries — each one a handle —
+   * on top, so a ring can never cover a key. */
+  draw_still_rings(*runtime, cy);
+  director_timeline_draw_keys(*runtime, region, cy);
 }
 
 }  // namespace
+
+/* -------------------------------------------------------------------- */
+/** \name Shared paint primitives
+ *
+ * The dock draws in two translation units — this one paints the strip and
+ * its keyframes, `view3d_director_timeline_ruler.cc` paints the ruler and
+ * the playhead — and both need these. Declared in the timeline header so
+ * neither file grows a second copy that can drift.
+ * \{ */
+
+void director_timeline_draw_rect(
+    const float x1, const float y1, const float x2, const float y2, const float color[4])
+{
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  immUniformColor4fv(color);
+  immRectf(pos, x1, y1, x2, y2);
+  immUnbindProgram();
+}
+
+void director_timeline_draw_round_rect(const rctf &rect,
+                                      const float radius,
+                                      const float color[4])
+{
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&rect, true, radius, color);
+}
+
+void director_timeline_draw_text(
+    const char *text, const float x, const float y, const float size, const float color[4])
+{
+  const int font = BLF_default();
+  BLF_size(font, size);
+  BLF_color4fv(font, color);
+  BLF_position(font, x, y, 0.0f);
+  BLF_draw(font, text, strlen(text));
+  GPU_blend(GPU_BLEND_ALPHA);
+}
+
+float director_timeline_text_width(const char *text, const float size)
+{
+  const int font = BLF_default();
+  BLF_size(font, size);
+  return BLF_width(font, text, strlen(text));
+}
+
+/** \} */
 
 void view3d_director_timeline_draw_content(const ARegion *region,
                                            const DirectorViewState &state,
@@ -315,16 +335,66 @@ void view3d_director_timeline_draw_content(const ARegion *region,
                                            const int content_top)
 {
   sync_view(state, runtime);
-  runtime->viewport_bounds = {float(margin + 8.0f * UI_SCALE_FAC),
-                              float(region->winx - margin - 8.0f * UI_SCALE_FAC),
+  const float u = UI_SCALE_FAC;
+  /* The camera's label owns a column of its own on the left; the keys start
+   * past it, so none can ever draw over the name. */
+  runtime->viewport_bounds = {float(margin) + DIRECTOR_LABEL_W * u,
+                              float(region->winx - margin) - 26.0f * u,
                               float(margin),
                               float(content_top)};
-  const float strip_y = float(margin) + 7.0f * UI_SCALE_FAC;
-  const float strip_h = std::min(36.0f * UI_SCALE_FAC,
-                                 BLI_rctf_size_y(&runtime->viewport_bounds) * 0.40f);
-  const float ruler_y = strip_y + strip_h + 17.0f * UI_SCALE_FAC;
+  /* Bottom-up: ruler ticks on the dock floor, labels above them, then the
+   * camera strip — and the playhead's frame pill keeps a band of its own at
+   * the top.
+   *
+   * The pill used to be drawn into the same band as the strip, so scrubbing
+   * dragged it across the keyframe handles: a rounded grey chip sliding over
+   * the very markers the director is trying to aim at. The playhead LINE
+   * still crosses them, which is what a playhead is for; only the label moved
+   * out of their way. */
+  const float tick_base = float(margin) + 10.0f * u;
+  /* The ruler's tick and label band, from the same tokens the ruler draws
+   * with, then the 12 px label itself. */
+  const float label_top = tick_base +
+                          (DIRECTOR_RULER_TICK_H + DIRECTOR_RULER_LABEL_GAP) * u +
+                          12.0f * u;
+  const float available = float(content_top) - label_top - 8.0f * u;
+  /* The strip is LOAD-BEARING: the keyframes live on it, and a strip of zero
+   * height takes every keyframe with it. So the pill's band is what gives way
+   * when the dock is short, and the strip keeps a floor below which it would
+   * not read as a row at all — the pill overlapping it again is the lesser
+   * failure, and only happens on a dock dragged smaller than its own
+   * preferred size. (`VIEW3D_DIRECTOR_TIMELINE_HEIGHT` is sized so the full
+   * layout fits; `tests/director/test_timeline_layout.py` does that
+   * arithmetic so the budget can never silently go to zero again.) */
+  const float pill_band = (DIRECTOR_PLAYHEAD_PILL_H + DIRECTOR_PLAYHEAD_PILL_GAP) * u;
+  float strip_h = std::min(DIRECTOR_STRIP_H * u, available - pill_band);
+  if (strip_h < DIRECTOR_STRIP_MIN_H * u) {
+    strip_h = std::clamp(available, DIRECTOR_STRIP_MIN_H * u, DIRECTOR_STRIP_H * u);
+  }
+  const float strip_y = label_top + 6.0f * u;
+  /* Everything under the strip is the ruler row, and the ruler row is the
+   * only place the playhead can be dragged from. */
+  runtime->ruler_bounds = {runtime->viewport_bounds.xmin,
+                           runtime->viewport_bounds.xmax,
+                           runtime->viewport_bounds.ymin,
+                           strip_y - 2.0f * u};
 
-  draw_ruler(state, *runtime, ruler_y);
-  draw_strip(state, runtime, strip_y, strip_h);
-  draw_playhead(state, *runtime, float(margin), float(content_top));
+  director_timeline_draw_ruler(state, *runtime, tick_base);
+  draw_strip(region, state, runtime, strip_y, strip_h);
+  director_timeline_draw_playhead(
+      state, runtime, tick_base, float(content_top) - 6.0f * u);
+  /* Last of the content, so it dims the whole stack at once. */
+  director_timeline_draw_range_scrim(
+      state, *runtime, runtime->viewport_bounds.ymin, float(content_top));
+
+  /* The box-select rubber band, over everything it is selecting — including
+   * the scrim, since a selection is a live gesture and must stay legible. */
+  rctf box;
+  if (director_timeline_box_rect(*runtime, &box)) {
+    director_timeline_draw_round_rect(box, 2.0f * u, BOX_FILL_COLOR);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv_ex(
+        &box, nullptr, nullptr, 1.0f, BOX_LINE_COLOR, std::max(1.0f, u), 2.0f * u);
+  }
 }
+}  // namespace blender

@@ -23,6 +23,8 @@ from .node_graph import (
     input_media_items,
 )
 from .node_job_bridge import ensure_graph_listener
+from .node_mesh_execution import _MESH_FEATURE_ROUTING, _run_mesh_feature
+from .node_run_helpers import grow_owner_frame, label_image_name, require_upstream_results
 from .node_schema import collect_node_params, node_model_slug, node_service_key
 
 logger = get_logger(__name__)
@@ -69,8 +71,10 @@ def _result_hook(scene_name: str, node_id: str, kind: str,
             create_asset_result(scene, node, ", ".join(resolved or names))
         elif kind == 'IMAGE':
             connect_image_results(scene, node, result_names)
+            grow_owner_frame(scene, node)
         else:
             connect_video_result(scene, node, result_names)
+            grow_owner_frame(scene, node)
 
     return _hook
 
@@ -97,6 +101,8 @@ def _run_image(context, node, operator):
         item for item in input_media_items(context.scene, node)
         if is_still_item(item)
     ]
+    if getattr(node, "requires_reference", False) and not references:
+        raise ValueError("Connect your character sheet to this card first")
     model_spec = get_model(service_key, model) or {}
     # Fail closed: a catalog that publishes no reference limit takes no
     # references. Guessing a client-side default here would burn a queue slot
@@ -117,6 +123,9 @@ def _run_image(context, node, operator):
     payload = {"prompt": prompt, "params": params}
     if reference_b64:
         payload["reference_images_b64"] = reference_b64
+    name = label_image_name(node)  # the backend names the result image after the card
+    if name:
+        payload["image_name"] = name
 
     ensure_graph_listener(FEATURE_IMAGEGEN)
     hook = _result_hook(context.scene.name, node.node_id, 'IMAGE')
@@ -259,13 +268,13 @@ def _run_video(context, node, operator):
     ]
     images = [item for item in descriptions if item["media_type"] == "IMAGE"]
     videos = [item for item in descriptions if item["media_type"] == "VIDEO"]
-    limits = get_video_generation_limits(service_key)
+    limits = get_video_generation_limits(service_key, model)
     if limits is None:
         raise ValueError("Video generation catalog config is incomplete")
     params = collect_node_params(node)
-    from .video_generation_catalog import seedance_reference_count_error
+    from .video_generation_catalog import video_reference_count_error
 
-    count_error = seedance_reference_count_error(
+    count_error = video_reference_count_error(
         limits,
         image_count=len(images),
         video_count=len(videos),
@@ -301,7 +310,6 @@ def _run_video(context, node, operator):
         video_inputs=video_inputs,
         max_video_duration_seconds=limits["max_video_seconds"],
         scene_flag="mixie_video_gen_is_generating",
-        batch_popup_title="Video Generation Complete",
         on_imported=hook,
     )
     return job, params
@@ -426,199 +434,6 @@ def _run_mask_detail(context, node, operator):
     return job, params
 
 
-_MESH_FEATURE_ROUTING = {
-    'PBR_GEN': {
-        'capability': 'pbr_generation',
-        'feature_key': 'pbr_generation',
-        'scene_flag': 'mixie_pbr_gen_is_generating',
-    },
-    'RETOPOLOGY': {
-        'capability': 'retopology',
-        'feature_key': 'retopology',
-        'scene_flag': 'mixie_retopology_is_generating',
-    },
-    'MESH_SEGMENT': {
-        'capability': 'mesh_segmentation',
-        'feature_key': 'hunyuan_part',
-        'scene_flag': 'mixie_hunyuan_part_is_generating',
-    },
-    'AUTO_RIG': {
-        'capability': 'animate',
-        'feature_key': 'animate',
-        'scene_flag': 'mixie_animate_is_generating',
-        'import_options': {"bone_heuristic": "BLENDER", "guess_original_bind_pose": False},
-    },
-}
-
-
-def _mesh_result_hook(scene_name: str, node_id: str,
-                      texture_finalize: bool = False, base_name: str = ""):
-    """Embed the imported result mesh INTO the producing node.
-
-    Like Generate 3D, the feature node's generate UI is replaced by the result
-    thumbnail (``create_asset_result`` sets ``preview_object`` + ``result_names``),
-    rather than spawning a separate asset node. The node stays a MESH source so
-    it can be chained onward.
-
-    When *texture_finalize* is set (PBR Generation), the imported mesh is renamed
-    (pose kept) and its material/images cleaned up + packed map split, then the
-    node binds to the FINAL name.
-    """
-    def _hook(job, object_names: str):
-        scene = bpy.data.scenes.get(scene_name)
-        if scene is None:
-            return
-        node = action_node_by_id(scene, node_id)
-        if node is None:
-            return
-        from .node_graph import create_asset_result
-
-        result = object_names
-        if texture_finalize:
-            try:
-                from mixar.modules.common.job_queue.core.model_io import (
-                    rename_imported_object,
-                )
-                from mixar.modules.moodboard.core.imported_pbr_layers import (
-                    convert_imported_material_to_paint_layers,
-                )
-                from mixar.modules.moodboard.core.generation_enqueue import (
-                    _sanitize_label,
-                )
-                target = base_name or _sanitize_label(job.label)
-                final = rename_imported_object(object_names, target)
-                convert_imported_material_to_paint_layers(final or target)
-                if final:
-                    result = final
-            except Exception as e:
-                logger.warning(
-                    "[TextureGen] node PBR post-import processing failed: %s", e)
-
-        create_asset_result(scene, node, result)
-        return result  # see AsyncGLBJob.on_imported
-
-    return _hook
-
-
-def _attach_pbr_reference_images(scene, node, payload, operator):
-    """Attach connected reference image(s) to a PBR texture payload.
-
-    Mirrors ``enqueue_pbr_texture_job``'s guidance precedence: exactly four
-    connected images become Tripo's turnaround views (by input order); one to
-    three become a single reference image (the first). The mesh input is
-    resolved separately and never appears here (``input_media_items`` yields
-    only still images, not mesh nodes).
-    """
-    from mixar.modules.common.utils.image_utils import compress_image_for_upload
-
-    images = [
-        item.image for item in input_media_items(scene, node)
-        if is_still_item(item)
-    ]
-    if not images:
-        return
-    if len(images) == 4:
-        payload["reference_images_b64"] = [
-            base64.b64encode(compress_image_for_upload(img)).decode()
-            for img in images
-        ]
-        return
-    if len(images) > 1 and operator is not None:
-        operator.report(
-            {'WARNING'},
-            "PBR uses the first connected reference; connect exactly four for "
-            "turnaround views",
-        )
-    payload["reference_image_bytes_b64"] = base64.b64encode(
-        compress_image_for_upload(images[0])
-    ).decode()
-
-
-def _run_mesh_feature(context, node, operator):
-    """Run a mesh -> mesh continuation (PBR / Retopology / Segment / Auto Rig).
-
-    The input mesh comes from the connected 3D node; the result imports as a new
-    standalone 3D asset node linked from this feature node. PBR additionally
-    accepts optional reference image(s) from its image sockets.
-    """
-    import base64
-
-    from mixar.modules.common.generation_params import (
-        assemble_payload,
-        resolve_model_slug,
-        resolve_service_key,
-    )
-    from mixar.modules.common.job_queue.core.model_io import export_selected_mesh
-    from .node_graph import input_source_object_names
-
-    routing = _MESH_FEATURE_ROUTING[node.action_type]
-    capability = routing['capability']
-    service_key = resolve_service_key(capability, node_service_key(node))
-    if not service_key:
-        raise ValueError("This 3D feature is unavailable in the generation catalog")
-    model = resolve_model_slug(service_key, node_model_slug(node))
-    if not model:
-        raise ValueError("No enabled model is available for this feature")
-
-    names = input_source_object_names(context.scene, node)
-    objects = [bpy.data.objects.get(name) for name in names]
-    objects = [obj for obj in objects if obj is not None]
-    meshes = [obj for obj in objects if obj.type == 'MESH']
-    if not meshes:
-        raise ValueError("Connect this node to a 3D mesh node")
-
-    # Export the exact source objects, not whatever the user last clicked.
-    view_layer = context.view_layer
-    try:
-        for obj in view_layer.objects:
-            obj.select_set(False)
-        for obj in objects:
-            if obj.name in view_layer.objects:
-                obj.select_set(True)
-        view_layer.objects.active = meshes[0]
-    except (AttributeError, RuntimeError) as exc:
-        raise ValueError(f"Could not select the source mesh: {exc}")
-
-    file_bytes, filename = export_selected_mesh(context, "GLB")
-    payload = {
-        "file_bytes_b64": base64.b64encode(file_bytes).decode(),
-        "file_filename": filename,
-    }
-    if node.action_type == 'PBR_GEN':
-        _attach_pbr_reference_images(context.scene, node, payload, operator)
-    params = collect_node_params(node)
-    prompt = node.prompt.strip()
-    if prompt:
-        params["prompt"] = prompt
-    payload = assemble_payload(service_key, params, payload, model)
-
-    ensure_graph_listener(routing['feature_key'])
-    hook = _mesh_result_hook(
-        context.scene.name, node.node_id,
-        texture_finalize=(node.action_type == 'PBR_GEN'),
-        base_name=meshes[0].name,
-    )
-    extra = {}
-    if routing.get('import_options'):
-        extra['import_options'] = routing['import_options']
-    job = enqueue_generation(
-        kind="glb",
-        feature_key=routing['feature_key'],
-        job_type=service_key,
-        model=model,
-        payload=payload,
-        label=meshes[0].name,
-        display_label=node.action_type.replace('_', ' ').title(),
-        origin_capability_key=capability,
-        graph_node_id=node.node_id,
-        fail_message="3D generation failed",
-        scene_flag=routing['scene_flag'],
-        on_imported=hook,
-        **extra,
-    )
-    return job, params
-
-
 def mark_run_failed(node, message: str) -> bool:
     """Record a submit failure on a node, unless it is genuinely generating.
 
@@ -639,12 +454,30 @@ def run_action_node(context, node, operator):
     if node.state in {'QUEUED', 'RUNNING'}:
         raise ValueError("This node is already running")
     node.error = ""
+    require_upstream_results(context.scene, node)
     if node.action_type == 'IMAGE_GEN':
         job, params = _run_image(context, node, operator)
     elif node.action_type == 'VIDEO_GEN':
         job, params = _run_video(context, node, operator)
+    elif node.action_type == 'VIDEO_UPSCALE':
+        from .video_upscale_enqueue import run_video_upscale_node
+
+        job, params = run_video_upscale_node(context, node)
+    elif node.action_type == 'WORLD_LABS':
+        from .world_labs_enqueue import run_world_labs_node
+
+        job, params = run_world_labs_node(context, node)
+    elif node.action_type == 'CHARACTER_PARTS':
+        from .character_parts_node import run_character_parts_node
+
+        job, params = run_character_parts_node(context, node)
     elif node.action_type == 'MASK_DETAIL':
         job, params = _run_mask_detail(context, node, operator)
+    elif node.action_type == 'ASSEMBLE':
+        from .assemble_node import run_assemble_node
+
+        run_assemble_node(context, node)
+        return None
     elif node.action_type in _MESH_FEATURE_ROUTING:
         job, params = _run_mesh_feature(context, node, operator)
     else:

@@ -34,6 +34,7 @@ import bpy
 from mixar.config.logging_config import get_logger
 
 from .downloader import download_file  # noqa: F401  (re-export)
+from .uv_layer_names import normalize_object_uv_layer_names
 
 logger = get_logger(__name__)
 
@@ -349,6 +350,25 @@ def _set_origin_bottom_and_center(mesh_obj):
     mesh_obj.location = (0, 0, 0)
 
 
+def _normalize_generated_uv_names(mesh_obj):
+    """Canonical UV-map name on a GENERATED mesh (never a user's own mesh).
+
+    GLB engines land as ``UV Map`` (glTF stores no layer names); an FBX
+    engine (Tripo Quad) carries the vendor's ``tripo____``. Best-effort —
+    a rename failure must never fail the import.
+    """
+    try:
+        renames = normalize_object_uv_layer_names(mesh_obj)
+    except Exception as e:
+        logger.warning(
+            "[ModelIO] UV map rename skipped for '%s': %s", mesh_obj.name, e)
+        return
+    if renames:
+        logger.info(
+            "[ModelIO] UV map(s) renamed on '%s': %s", mesh_obj.name,
+            ", ".join(f"{old!r} -> {new!r}" for old, new in renames))
+
+
 def rename_generated_model(object_names_str, target_name, front_zrot=0.0):
     """Rename + normalize a Model Gen import, per provider mesh shape.
 
@@ -404,6 +424,7 @@ def rename_generated_model(object_names_str, target_name, front_zrot=0.0):
         mesh_obj.name = target_name
         if mesh_obj.data:
             mesh_obj.data.name = mesh_obj.name
+        _normalize_generated_uv_names(mesh_obj)
         # Derive the Empty name from the mesh's ACTUAL name (post collision
         # suffix), so a ``car`` -> ``car.001`` clash keeps ``empty_car.001``
         # rather than a mismatched ``empty_car``.
@@ -439,6 +460,7 @@ def rename_generated_model(object_names_str, target_name, front_zrot=0.0):
     mesh_obj.name = target_name
     if mesh_obj.data:
         mesh_obj.data.name = mesh_obj.name
+    _normalize_generated_uv_names(mesh_obj)
     # Face -Y before normalization; transform_apply then bakes the rotation.
     if zrot is not None:
         mesh_obj.matrix_world = zrot @ mesh_obj.matrix_world

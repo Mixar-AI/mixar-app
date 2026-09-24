@@ -1,0 +1,8 @@
+<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600">
+  <g transform="rotate(45 800 800)" fill="#fff">
+    <path d="M610 130H990A180 180 0 0 1 1170 310V950H430V310A180 180 0 0 1 610 130Z"/>
+    <path d="M430 1050H1170V1290A180 180 0 0 1 990 1470H610A180 180 0 0 1 430 1290Z"/>
+  </g>
+</svg>

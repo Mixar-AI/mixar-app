@@ -15,6 +15,7 @@ arm_autoshow helper that schedules the timer.
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.tour import tour_running
 from mixar.modules.agent_bubble.core.bubble_lifecycle import (
     has_agent_bubble_windows,
     is_agent_bubble_window,
@@ -105,6 +106,14 @@ def autoshow_bubble():
 
 
 def _autoshow_bubble_inner():
+    if tour_running():
+        # The tour drives the island itself; stop the retry loop rather
+        # than re-opening the island under its overlays.
+        logger.info("agent_bubble: interactive tour running, autoshow stopped")
+        _st.autoshow_attempts = 0
+        _st.autoshow_start_minimised = False
+        return None
+
     _st.autoshow_attempts += 1
 
     try:
@@ -138,7 +147,11 @@ def _autoshow_bubble_inner():
 
 
 def arm_autoshow(reset: bool = True, start_minimised: bool = False) -> None:
-    """Arm (or re-arm) the auto-show timer. Idempotent."""
+    """Arm (or re-arm) the auto-show timer. Idempotent. A no-op while the
+    interactive tour runs — it opens and minimises the island itself."""
+    if tour_running():
+        logger.debug("agent_bubble: interactive tour running, autoshow not armed")
+        return
     if reset:
         _st.autoshow_attempts = 0
     _st.autoshow_start_minimised = start_minimised

@@ -12,38 +12,38 @@
 #pragma once
 
 #include "BLI_sys_types.h" /* uchar, for the card flag accessors below. */
+namespace blender {
+struct ARegion;
+}  // namespace blender
 
-struct uiLayout;
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
+
+struct Layout;
 
 /* -------------------------------------------------------------------- */
-/* Custom flag2 bits — checked in interface_widgets.cc widget dispatch.  */
+/* Appearance lives in Button::mixar_style. Native flag2 bits are untouched. */
 
-/** Marks a Roundbox button as a Mixar section (styled box container). */
-#define UI_BUT2_MIXAR_SECTION (1 << 2)
-/** Marks a Menu button as a Mixar dropdown (styled enum selector). */
-#define UI_BUT2_MIXAR_DROPDOWN (1 << 3)
-/** Marks a But (operator) button as a Mixar action button (accent CTA). */
-#define UI_BUT2_MIXAR_ACTION (1 << 4)
-/** Marks a Checkbox button as a Mixar toggle switch (pill-shaped). */
-#define UI_BUT2_MIXAR_TOGGLE (1 << 5)
-/** Marks a Text button as a Mixar styled input (visible border + focus glow). */
-#define UI_BUT2_MIXAR_INPUT (1 << 6)
 /**
- * Marks any button as an element of the Mixar account card; the element
- * kind lives in `uiBut::hardmin` (see #MixarCardElement).
+ * Marks an operator `But` whose double-click or Ctrl+click hands off to the
+ * no-emboss Text button laid over it (a My Cameras rename), the way a
+ * UI-list row hands its rename to the label above it — see the Mixar hook
+ * in `do_but_BUT` (interface_handlers.cc) and
+ * #UI_mixar_button_double_click_edits_label.
  *
- * NOTE: `uiBut::flag2` is a signed `char`, and this is bit 7 — its sign
- * bit, and the last one free (upstream owns 0-1, Mixar 2-6). Always set
- * and test it through #UI_BUT2_MIXAR_CARD_SET / #UI_BUT2_MIXAR_CARD_TEST
- * so the value round-trips through `uchar` instead of relying on
- * implementation-defined narrowing. If a further bit is ever needed,
- * widen the field rather than adding another sign-bit special case.
+ * `flag2` (above) and `Button::flag` have no free bit, so this lives in
+ * `Button::drawflag`: upstream's anonymous draw-flag enum ends at
+ * `BUT_ICON_INVERT = 1 << 27` and the field is an `int`, so bit 30 is the
+ * safe claim (28/29 left for upstream growth, 31 is the sign bit).
+ * Draw flags survive the per-redraw block rebuild on the active button
+ * (`but_update_old_active_from_new` keeps the old button's own bits).
  */
-#define UI_BUT2_MIXAR_CARD (1 << 7)
+#define UI_BUT_DRAW_MIXAR_DBLCLICK_EDITS_LABEL (1 << 30)
 
-#define UI_BUT2_MIXAR_CARD_SET(but) \
-  ((but)->flag2 = char(uchar((but)->flag2) | uchar(UI_BUT2_MIXAR_CARD)))
-#define UI_BUT2_MIXAR_CARD_TEST(but) ((uchar((but)->flag2) & uchar(UI_BUT2_MIXAR_CARD)) != 0)
+#define UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_SET(but) \
+  ((but)->drawflag |= UI_BUT_DRAW_MIXAR_DBLCLICK_EDITS_LABEL)
+#define UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_TEST(but) \
+  (((but)->drawflag & UI_BUT_DRAW_MIXAR_DBLCLICK_EDITS_LABEL) != 0)
 
 /* -------------------------------------------------------------------- */
 /* Layout helpers                                                        */
@@ -52,38 +52,37 @@ struct uiLayout;
  * Create a styled section box layout.
  * \return Sub-layout to place items in, identical API to layout.box().
  */
-uiLayout *UI_layout_mixar_section(uiLayout *layout);
+Layout *UI_layout_mixar_section(Layout *layout);
 
 /**
  * Mark the most recently created Menu/Block/Popover button in the layout's
- * block with #UI_BUT2_MIXAR_DROPDOWN so it renders with custom styling.
+ * block with a Dropdown descriptor so it renders with custom styling.
  *
  * Call this immediately after layout->prop() for an enum property.
  */
-void UI_layout_mixar_mark_last_dropdown(uiLayout *layout);
+void UI_layout_mixar_mark_last_dropdown(Layout *layout);
 
 /**
  * Mark the most recently created But (operator) button with
- * #UI_BUT2_MIXAR_ACTION so it renders as an accent action button.
+ * an Action descriptor so it renders as an accent action button.
  */
-void UI_layout_mixar_mark_last_action(uiLayout *layout);
+void UI_layout_mixar_mark_last_action(Layout *layout);
 
 /**
  * Mark the most recently created Checkbox button with
- * #UI_BUT2_MIXAR_TOGGLE so it renders as a pill-shaped toggle switch.
+ * a Toggle descriptor so it renders as a pill-shaped toggle switch.
  */
-void UI_layout_mixar_mark_last_toggle(uiLayout *layout);
+void UI_layout_mixar_mark_last_toggle(Layout *layout);
 
 /**
  * Mark the most recently created Text button with
- * #UI_BUT2_MIXAR_INPUT so it renders with visible border and focus glow.
+ * an Input descriptor so it renders with visible border and focus glow.
  */
-void UI_layout_mixar_mark_last_input(uiLayout *layout);
+void UI_layout_mixar_mark_last_input(Layout *layout);
 
 /* -------------------------------------------------------------------- */
 /* Custom panel category tab drawing for MIXIE space                     */
 
-struct ARegion;
 
 /**
  * Draw a custom styled panel category tab bar for the MIXIE space.
@@ -91,3 +90,21 @@ struct ARegion;
  * dark background, accent-blue active pill with glow, subtle inactive tabs.
  */
 void UI_panel_category_draw_all_mixar(ARegion *region, const char *category_id_active);
+/**
+ * Idname of the Mixar-drawn category tab under  mval (region-relative),
+ * or null. Rects are recorded by #UI_panel_category_draw_all_mixar at draw
+ * time; used by the MIXAR click hook in interface_panel.cc.
+ */
+const char *UI_mixar_panel_category_find_at(const ARegion *region, const int mval[2]);
+/**
+ * Region-relative hit rect recorded for the Mixar-drawn tab `idname` in
+ * `region`, exactly as #UI_mixar_panel_category_find_at tests it. False when
+ * the region never drew the strip. Used by the QA harness inspector
+ * (interface_qa_inspect.cc) so `panel_tab` targets read the strip's own
+ * geometry instead of re-deriving it.
+ */
+bool UI_mixar_panel_category_tab_rect_get(const ARegion *region,
+                                          const char *idname,
+                                          rcti *r_rect);
+
+}  // namespace blender::ui

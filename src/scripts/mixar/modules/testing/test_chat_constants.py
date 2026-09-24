@@ -103,10 +103,10 @@ class TestImageConstants(unittest.TestCase):
             MAX_IMAGE_SIZE_MB, MAX_IMAGE_SIZE_BYTES,
             MAX_IMAGE_DIMENSION, MAX_ATTACHMENTS_PER_MESSAGE,
         )
-        self.assertEqual(MAX_IMAGE_SIZE_MB, 10)
-        self.assertEqual(MAX_IMAGE_SIZE_BYTES, 10 * 1024 * 1024)
+        self.assertEqual(MAX_IMAGE_SIZE_MB, 25)
+        self.assertEqual(MAX_IMAGE_SIZE_BYTES, 25 * 1024 * 1024)
         self.assertEqual(MAX_IMAGE_DIMENSION, 16384)
-        self.assertEqual(MAX_ATTACHMENTS_PER_MESSAGE, 5)
+        self.assertEqual(MAX_ATTACHMENTS_PER_MESSAGE, 10)
 
     def test_supported_formats(self):
         from mixar.modules.space_mixie_chat.constants import SUPPORTED_IMAGE_FORMATS
@@ -137,21 +137,10 @@ class TestWebSocketConstants(unittest.TestCase):
         self.assertGreater(DEFAULT_MAX_RECONNECT_DELAY, DEFAULT_RECONNECT_DELAY)
         self.assertGreater(DEFAULT_PING_INTERVAL, 0)
 
-    def test_agent_chat_endpoint(self):
-        from mixar.modules.space_mixie_chat.constants import AGENT_CHAT_ENDPOINT
-        self.assertIn("/agent/chat", AGENT_CHAT_ENDPOINT)
-
-    def test_agent_input_endpoint(self):
-        from mixar.modules.space_mixie_chat.constants import AGENT_INPUT_ENDPOINT
-        self.assertIn("/agent/input", AGENT_INPUT_ENDPOINT)
-
-    def test_sse_read_timeout(self):
-        # Must comfortably exceed the backend's ~15s SSE keepalive cadence
-        # (so a healthy-but-quiet stream never trips it) while staying far
-        # below the old 630s that left a dead mid-turn stream undetected
-        # for 10+ minutes.
-        from mixar.modules.space_mixie_chat.constants import SSE_READ_TIMEOUT
-        self.assertEqual(SSE_READ_TIMEOUT, 75.0)
+    def test_agent_transport_has_no_legacy_http_fallback(self):
+        from mixar.modules.space_mixie_chat import constants
+        for name in ('AGENT_CHAT_ENDPOINT', 'AGENT_INPUT_ENDPOINT', 'SSE_READ_TIMEOUT'):
+            self.assertFalse(hasattr(constants, name), name)
 
 
 class TestUIConstants(unittest.TestCase):

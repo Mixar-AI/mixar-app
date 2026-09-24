@@ -16,7 +16,7 @@ from bpy.props import CollectionProperty, EnumProperty, IntProperty, StringPrope
 from bpy.types import Operator, OperatorFileListElement
 from bpy_extras.io_utils import ImportHelper
 
-from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS
+from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS, VIDEO_ATTACHMENT_REJECTED
 from ...core import (
     cleanup_loaded_file_image,
     cleanup_loaded_file_images,
@@ -40,13 +40,14 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
 
     # ImportHelper settings
     filter_glob: StringProperty(
-        default="*.png;*.jpg;*.jpeg;*.bmp;*.tiff;*.tif;*.obj",
+        default=";".join(f"*{ext}" for ext in sorted(SUPPORTED_IMAGE_FORMATS | {'.obj'})),
         options={'HIDDEN'}
     )
 
     # Multi-file selection support
-    files: CollectionProperty(type=OperatorFileListElement)
-    directory: StringProperty(subtype='DIR_PATH')
+    files: CollectionProperty(type=OperatorFileListElement, options={'HIDDEN', 'SKIP_SAVE'})
+    directory: StringProperty(subtype='DIR_PATH', options={'HIDDEN', 'SKIP_SAVE'})
+    filepath: StringProperty(subtype='FILE_PATH', options={'HIDDEN', 'SKIP_SAVE'})
 
     @classmethod
     def poll(cls, context):
@@ -69,6 +70,7 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
             filepaths = [self.filepath]
 
         added = 0
+        rejected = 0
         for filepath in filepaths:
             if len(attachments) >= MAX_ATTACHMENTS_PER_MESSAGE:
                 self.report({'WARNING'},
@@ -80,18 +82,19 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
             # attachment records the imported object names. Skip the moodboard
             # mirror — the board is image-only.
             if is_model_file(filepath):
+                # A re-drop must not import another scene object before we
+                # discover that its attachment already exists.
+                if any(att.image_source == 'MODEL_FILE' and
+                       os.path.realpath(att.image_path) == os.path.realpath(filepath)
+                       for att in attachments):
+                    continue
                 result = import_model_attachment(filepath)
                 if not result.get("success"):
+                    rejected += 1
                     self.report(
                         {'WARNING'},
                         f"Skipped {os.path.basename(filepath)}: {result.get('error')}",
                     )
-                    continue
-                already = any(
-                    att.image_path == filepath and att.image_source == 'MODEL_FILE'
-                    for att in attachments
-                )
-                if already:
                     continue
                 attachment = attachments.add()
                 attachment.image_path = filepath
@@ -104,6 +107,10 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
                 continue
 
             is_valid, error = validate_image_file(filepath)
+            if not is_valid:
+                rejected += 1
+                self.report({'WARNING'}, f"Cannot add {os.path.basename(filepath)}: {error}")
+                continue
 
             # Skip duplicates — a FILE pill for the same path, or a board
             # pill (moodboard-origin BLEND_DATA) whose image was loaded
@@ -119,14 +126,15 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
             added += 1
 
         if added == 0:
-            self.report({'WARNING'}, "No new images added")
+            if not rejected:
+                self.report({'INFO'}, "These references are already attached")
             return {'CANCELLED'}
 
         redraw_chat_areas()
         sync_bubble_attachment_size_deferred(force_attachment_height=True)
 
         for area in context.screen.areas:
-            if area.type == 'MIXIE_CHAT':
+            if area.type == 'AGENT_BUBBLE':
                 for region in area.regions:
                     if region.type == 'TOOLS':
                         region.tag_redraw()
@@ -162,8 +170,12 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
     image_name: EnumProperty(
         name="Image",
         description="Select image from blend file",
-        items=get_blend_images_enum
+        items=get_blend_images_enum,
+        options={'SKIP_SAVE'},
     )
+    # Native Image-ID drags carry an exact name; a dynamic picker enum may
+    # change order or omit an entry while the drop is being dispatched.
+    dropped_image_name: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
 
     @classmethod
     def poll(cls, context):
@@ -186,7 +198,8 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
         layout.prop(self, "image_name")
 
     def execute(self, context):
-        if self.image_name == 'NONE':
+        image_name = self.dropped_image_name or self.image_name
+        if image_name == 'NONE':
             self.report({'WARNING'}, "No image selected")
             return {'CANCELLED'}
 
@@ -194,28 +207,36 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
 
         # Check if already added
         for att in scene.mixie_chat_pending_attachments:
-            if att.image_path == self.image_name and att.image_source == 'BLEND_DATA':
+            if att.image_path == image_name and att.image_source == 'BLEND_DATA':
                 self.report({'WARNING'}, "Image already added")
                 return {'CANCELLED'}
 
         # Verify image exists and has data
-        if self.image_name not in bpy.data.images:
+        if image_name not in bpy.data.images:
             self.report({'ERROR'}, "Image not found in blend file")
             return {'CANCELLED'}
 
-        image = bpy.data.images[self.image_name]
+        image = bpy.data.images[image_name]
+        if image.source == 'MOVIE':
+            self.report({'WARNING'}, VIDEO_ATTACHMENT_REJECTED)
+            return {'CANCELLED'}
         if not image.has_data:
             self.report({'WARNING'}, "Image has no pixel data")
             return {'CANCELLED'}
 
+        if image.filepath and find_attachment_for_file(
+                scene.mixie_chat_pending_attachments, image.filepath) is not None:
+            self.report({'INFO'}, "Image already attached")
+            return {'CANCELLED'}
+
         # Add to pending attachments
         attachment = scene.mixie_chat_pending_attachments.add()
-        attachment.image_path = self.image_name
+        attachment.image_path = image_name
         attachment.image_source = 'BLEND_DATA'
-        attachment.display_name = get_image_display_name(self.image_name, 'BLEND_DATA')
+        attachment.display_name = get_image_display_name(image_name, 'BLEND_DATA')
 
         # Attached images are also board images.
-        mirror_attachment_to_moodboard(scene, self.image_name, 'BLEND_DATA')
+        mirror_attachment_to_moodboard(scene, image_name, 'BLEND_DATA')
 
         # Notify UI to refresh
         redraw_chat_areas()
@@ -237,6 +258,8 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
         default=0,
         min=0
     )
+    attachment_path: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
+    attachment_source: StringProperty(options={'HIDDEN', 'SKIP_SAVE'})
 
     @classmethod
     def poll(cls, context):
@@ -246,12 +269,25 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
 
     def execute(self, context):
         attachments = context.scene.mixie_chat_pending_attachments
+        index = self.index
+        if self.attachment_path:
+            # A drawn button may outlive a collection reorder. Resolve its
+            # owned identity at click time instead of removing a new neighbor.
+            index = next((i for i, att in enumerate(attachments)
+                          if att.image_path == self.attachment_path and
+                          att.image_source == self.attachment_source), -1)
+            if index < 0:
+                return {'CANCELLED'}
 
-        if self.index < 0 or self.index >= len(attachments):
+        if index < 0 or index >= len(attachments):
             self.report({'ERROR'}, "Invalid attachment index")
             return {'CANCELLED'}
 
-        att = attachments[self.index]
+        att = attachments[index]
+        if getattr(att, "scribble_view", ""):
+            from mixar.modules.scribble_mark.core import preview
+            preview.discard_view(context.scene, context.window_manager, att.scribble_view)
+            return {'FINISHED'}
         name = att.display_name
         image_path = att.image_path
         image_source = att.image_source
@@ -283,7 +319,7 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
                     "moodboard deselect skipped: %s", e, exc_info=True
                 )
 
-        attachments.remove(self.index)
+        attachments.remove(index)
         if image_source == 'FILE':
             cleanup_loaded_file_image(image_path)
 

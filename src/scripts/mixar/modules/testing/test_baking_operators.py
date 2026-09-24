@@ -101,8 +101,8 @@ def test_pixel_operations():
 
     # Test copy_image_pixels
     result = bpy.ops.baking.copy_image_pixels(
-        src_image=src_image,
-        dest_image=dst_image,
+        src_image=src_image.name,
+        dest_image=dst_image.name,
         width=256,
         height=256
     )
@@ -114,8 +114,8 @@ def test_pixel_operations():
 
     # Test copy_image_channel_pixels (copy R channel to G channel)
     result = bpy.ops.baking.copy_image_channel_pixels(
-        src_image=src_image,
-        dest_image=dst_image,
+        src_image=src_image.name,
+        dest_image=dst_image.name,
         width=256,
         height=256,
         src_channel=0,  # R
@@ -125,7 +125,7 @@ def test_pixel_operations():
 
     # Test set_image_pixels
     result = bpy.ops.baking.set_image_pixels(
-        image=dst_image,
+        image=dst_image.name,
         width=256,
         height=256,
         value=0.75
@@ -144,7 +144,7 @@ def test_colorspace_operations():
 
     # Convert to linear
     result = bpy.ops.baking.pixels_to_linear(
-        image=srgb_image,
+        image=srgb_image.name,
         width=256,
         height=256
     )
@@ -156,7 +156,7 @@ def test_colorspace_operations():
 
     # Convert back to sRGB
     result = bpy.ops.baking.pixels_to_srgb(
-        image=srgb_image,
+        image=srgb_image.name,
         width=256,
         height=256
     )
@@ -177,7 +177,7 @@ def test_alpha_operations():
 
     # Multiply RGB by alpha (premultiply)
     result = bpy.ops.baking.multiply_rgb_by_alpha(
-        image=alpha_image,
+        image=alpha_image.name,
         width=256,
         height=256
     )
@@ -189,7 +189,7 @@ def test_alpha_operations():
 
     # Divide RGB by alpha (unpremultiply)
     result = bpy.ops.baking.divide_rgb_by_alpha(
-        image=alpha_image,
+        image=alpha_image.name,
         width=256,
         height=256
     )
@@ -210,7 +210,7 @@ def test_filter_operations():
 
     # Test Gaussian blur
     result = bpy.ops.baking.gaussian_blur(
-        image=blur_image,
+        image=blur_image.name,
         width=256,
         height=256,
         radius=5,
@@ -221,7 +221,7 @@ def test_filter_operations():
     # Test box blur
     blur_image2 = create_gradient_image("test_box_blur", 256, 256)
     result = bpy.ops.baking.box_blur(
-        image=blur_image2,
+        image=blur_image2.name,
         width=256,
         height=256,
         radius=3
@@ -231,7 +231,7 @@ def test_filter_operations():
     # Test bilateral filter
     bilateral_image = create_checkerboard_image("test_bilateral", 256, 256, 16)
     result = bpy.ops.baking.bilateral_filter(
-        image=bilateral_image,
+        image=bilateral_image.name,
         width=256,
         height=256,
         radius=5,
@@ -243,7 +243,7 @@ def test_filter_operations():
     # Test FXAA
     fxaa_image = create_checkerboard_image("test_fxaa", 256, 256, 32)
     result = bpy.ops.baking.fxaa(
-        image=fxaa_image,
+        image=fxaa_image.name,
         width=256,
         height=256
     )
@@ -271,7 +271,7 @@ def test_morphology_operations():
 
     # Test dilate
     result = bpy.ops.baking.dilate(
-        image=morph_image,
+        image=morph_image.name,
         width=256,
         height=256,
         radius=3,
@@ -293,7 +293,7 @@ def test_morphology_operations():
     erode_image.pixels[:] = pixels
 
     result = bpy.ops.baking.erode(
-        image=erode_image,
+        image=erode_image.name,
         width=256,
         height=256,
         radius=2,
@@ -304,7 +304,7 @@ def test_morphology_operations():
     # Test sobel edge detection
     edge_image = create_checkerboard_image("test_edges", 256, 256, 32)
     result = bpy.ops.baking.sobel_edge_detect(
-        image=edge_image,
+        image=edge_image.name,
         width=256,
         height=256
     )
@@ -322,7 +322,7 @@ def test_statistics_operations():
 
     # Test get_image_minmax
     result = bpy.ops.baking.get_image_minmax(
-        image=stats_image,
+        image=stats_image.name,
         width=256,
         height=256
     )
@@ -343,7 +343,7 @@ def test_statistics_operations():
     norm_image.pixels[:] = pixels
 
     result = bpy.ops.baking.normalize_image(
-        image=norm_image,
+        image=norm_image.name,
         width=256,
         height=256,
         target_min=0.0,
@@ -369,7 +369,7 @@ def test_normal_map_operations():
 
     # Test height_to_normal
     result = bpy.ops.baking.height_to_normal(
-        image=height_image,
+        image=height_image.name,
         width=256,
         height=256,
         strength=1.0
@@ -387,8 +387,8 @@ def test_normal_map_operations():
 
     # Test blend_normal_maps
     result = bpy.ops.baking.blend_normal_maps(
-        base_image=base_normal,
-        detail_image=detail_normal,
+        base_image=base_normal.name,
+        detail_image=detail_normal.name,
         width=256,
         height=256,
         detail_strength=0.5
@@ -414,8 +414,8 @@ def test_blend_operations():
         base_image = create_test_image("test_blend_base", 256, 256, (0.2, 0.4, 0.6, 1.0))
 
         result = bpy.ops.baking.blend_images(
-            base_image=base_image,
-            blend_image=overlay_image,
+            base_image=base_image.name,
+            blend_image=overlay_image.name,
             width=256,
             height=256,
             opacity=0.5,
@@ -433,7 +433,7 @@ def test_blend_operations():
     before = list(dither_image.pixels[512:516])  # Sample a pixel
 
     result = bpy.ops.baking.dither_image(
-        image=dither_image,
+        image=dither_image.name,
         width=256,
         height=256,
         amount=0.01,

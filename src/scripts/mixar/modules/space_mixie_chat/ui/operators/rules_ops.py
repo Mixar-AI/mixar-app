@@ -44,9 +44,9 @@ class MIXIE_CHAT_OT_add_rules(Operator):
     bl_idname = "mixie_chat.add_rules"
     bl_label = "Add Rules"
     bl_description = (
-        "Define rules the Mixie agent must always follow. Enabled rules "
-        "are sent along with the first message of every new chat; global "
-        "rules apply in every Mixar file"
+        "Define rules for Mixie. Changes apply on your next message or "
+        "answer; global rules apply in every Mixar file. Your current "
+        "request takes priority over project and global rules"
     )
     bl_options = {'INTERNAL'}
 
@@ -67,10 +67,16 @@ class MIXIE_CHAT_OT_add_rules(Operator):
                 if raw:
                     scene.mixie_chat_rules = raw
             sync_rule_entries(context)
-            # The rules and past-chats overlays are both modal over the
-            # same chat surface — only one may be open at a time.
+            # The rules, past-chats and scribble overlays are all modal over
+            # the same chat surface — only one may be open at a time.
             if getattr(wm, 'mixie_chat_history_visible', False):
                 wm.mixie_chat_history_visible = False
+            if getattr(wm, 'mixie_chat_ink_visible', False):
+                # Convert un-committed strokes before closing the canvas —
+                # the C++ closing edge cannot dispatch the commit itself.
+                from ...core.scribble import flush_pending_ink
+                flush_pending_ink()
+                wm.mixie_chat_ink_visible = False
         wm.mixie_chat_rules_visible = opening
         redraw_chat_areas()
         return {'FINISHED'}

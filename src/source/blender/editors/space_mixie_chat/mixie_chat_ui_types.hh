@@ -13,6 +13,8 @@
 #pragma once
 
 #include "BLI_rect.h"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name UI Element Types
@@ -297,21 +299,23 @@ struct ImageSlotData {
   char thumbnail_url[1024];
   char local_path[1024];
   float width, height;
-  rctf bounds;
+  /* item_id of the step row that produced this image (a capture tile drawn
+   * under its row in the steps block); empty for a backend gallery image. */
+  char step_id[64];
+  rctf bounds; /* tile hit area (View2D coords), zero when not drawn */
   bool is_hovered;
 };
 
 /**
- * Feedback star hit-test data.
- * One per star in the feedback rating row.
+ * Feedback vote hit-test data, sharing the copy action row.
  */
-struct FeedbackStarData {
+struct FeedbackVoteData {
   rctf bounds;
-  int star_index; /* 1-5 */
+  int rating; /* thumbs up=5, thumbs down=1 */
   bool is_hovered;
 };
 
-#define FEEDBACK_STAR_COUNT 5
+#define FEEDBACK_VOTE_COUNT 2
 
 /* Display cap for the read-only accepted-comment copy kept in layout data.
  * The RNA property allows 2000 chars; the inline confirmation truncates. */
@@ -349,7 +353,8 @@ struct StepItemSlotData {
 /* Maximum items per slot */
 #define SLOT_MAX_TODO_ITEMS 50
 #define SLOT_MAX_ACTION_ITEMS 10
-#define SLOT_MAX_IMAGE_ITEMS 20
+/* Mirrors steps_format.MAX_STEP_IMAGES_PER_BUBBLE — keep in sync. */
+#define SLOT_MAX_IMAGE_ITEMS 32
 #define SLOT_MAX_STEP_ITEMS 50
 #define SLOT_MAX_LOADER_TEXTS 8
 
@@ -374,3 +379,4 @@ struct StepItemSlotData {
    CHAT_CORNER_BOTTOM_RIGHT)
 
 /** \} */
+}  // namespace blender

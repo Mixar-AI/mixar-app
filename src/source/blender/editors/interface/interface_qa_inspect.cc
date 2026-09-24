@@ -22,10 +22,12 @@
 
 #include "DNA_screen_types.h"
 #include "DNA_windowmanager_types.h"
+#include "ED_agent_bubble_motion.hh"
 
 #include "BKE_screen.hh"
 
 #include "RNA_access.hh"
+#include "UI_mixar.hh"
 
 #include "UI_interface_c.hh"
 
@@ -33,7 +35,12 @@
 #include "WM_types.hh"
 
 #include "interface_intern.hh"
+#include "interface_mixar_multiline_qa.hh"
+#include "interface_mixar_section.hh"
 #include "interface_qa_inspect.hh"
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct MixarQAProviderEntry {
   int spacetype;
@@ -98,62 +105,63 @@ void json_str(std::string &out, const char *key, const std::string &value)
   out += '"';
 }
 
-const char *but_type_name(const ButType type)
+const char *but_type_name(const blender::ui::ButtonType type)
 {
+  using blender::ui::ButtonType;
   switch (type) {
-    case ButType::But:
+    case ButtonType::But:
       return "But";
-    case ButType::Row:
+    case ButtonType::Row:
       return "Row";
-    case ButType::Text:
+    case ButtonType::Text:
       return "Text";
-    case ButType::Menu:
+    case ButtonType::Menu:
       return "Menu";
-    case ButType::ButMenu:
+    case ButtonType::ButMenu:
       return "ButMenu";
-    case ButType::Num:
+    case ButtonType::Num:
       return "Num";
-    case ButType::NumSlider:
+    case ButtonType::NumSlider:
       return "NumSlider";
-    case ButType::Toggle:
+    case ButtonType::Toggle:
       return "Toggle";
-    case ButType::ToggleN:
+    case ButtonType::ToggleN:
       return "ToggleN";
-    case ButType::IconToggle:
+    case ButtonType::IconToggle:
       return "IconToggle";
-    case ButType::IconToggleN:
+    case ButtonType::IconToggleN:
       return "IconToggleN";
-    case ButType::ButToggle:
+    case ButtonType::ButToggle:
       return "ButToggle";
-    case ButType::Checkbox:
+    case ButtonType::Checkbox:
       return "Checkbox";
-    case ButType::CheckboxN:
+    case ButtonType::CheckboxN:
       return "CheckboxN";
-    case ButType::Color:
+    case ButtonType::Color:
       return "Color";
-    case ButType::Tab:
+    case ButtonType::Tab:
       return "Tab";
-    case ButType::Popover:
+    case ButtonType::Popover:
       return "Popover";
-    case ButType::Scroll:
+    case ButtonType::Scroll:
       return "Scroll";
-    case ButType::Block:
+    case ButtonType::Block:
       return "Block";
-    case ButType::Label:
+    case ButtonType::Label:
       return "Label";
-    case ButType::Pulldown:
+    case ButtonType::Pulldown:
       return "Pulldown";
-    case ButType::ListBox:
+    case ButtonType::ListBox:
       return "ListBox";
-    case ButType::ListRow:
+    case ButtonType::ListRow:
       return "ListRow";
-    case ButType::SearchMenu:
+    case ButtonType::SearchMenu:
       return "SearchMenu";
-    case ButType::HotkeyEvent:
+    case ButtonType::HotkeyEvent:
       return "HotkeyEvent";
-    case ButType::Image:
+    case ButtonType::Image:
       return "Image";
-    case ButType::Progress:
+    case ButtonType::Progress:
       return "Progress";
     default:
       return "Other";
@@ -185,25 +193,59 @@ void qa_emit_custom_targets(std::string &out,
 {
   std::vector<MixarQATarget> targets;
 
-  /* Sidebar category tabs (the vertical "Image Gen / Video Gen / ..." strip):
-   * drawn by the panel-category system, not uiButs — export their stored
-   * rects so tab switching is a semantic click. */
+  /* Sidebar category tabs (the vertical "Image Gen / Video Gen / ..." strip).
+   * Since Blender 5.2 these are real ``ButtonType::Tab`` buttons in the
+   * region's ``panel_category_tabs`` block (``panel_category_tabs_draw_all``),
+   * each bound to ``Region.active_panel_category`` with ``hardmax`` set to the
+   * category index — the same lookup upstream's own
+   * ``panel_category_show_active_tab`` performs. The generic widget loop below
+   * already lists them as plain Tab widgets, but their label is translated and
+   * abbreviated in compact mode, so keep exporting the stable ``panel_tab``
+   * surface keyed on the untranslated category idname. The Mixie sidebar never
+   * builds that block: area.cc routes it to Mixar's own GPU strip, whose click
+   * hit-rects are recorded at draw time — read those through
+   * ``UI_mixar_panel_category_tab_rect_get``, never re-derive the layout. */
   if (region->runtime != nullptr &&
       !BLI_listbase_is_empty(&region->runtime->panels_category))
   {
-    const char *active = UI_panel_category_active_get(const_cast<ARegion *>(region),
-                                                     false);
-    LISTBASE_FOREACH (const PanelCategoryDyn *, pc, &region->runtime->panels_category)
-    {
-      MixarQATarget t;
-      t.surface = "panel_tab";
-      t.text = pc->idname;
-      t.sel = (active != nullptr && STREQ(active, pc->idname));
-      t.rect_win.xmin = region->winrct.xmin + pc->rect.xmin;
-      t.rect_win.xmax = region->winrct.xmin + pc->rect.xmax;
-      t.rect_win.ymin = region->winrct.ymin + pc->rect.ymin;
-      t.rect_win.ymax = region->winrct.ymin + pc->rect.ymax;
-      targets.push_back(std::move(t));
+    /* `lookup_default_as`, never `lookup_as`: the latter asserts the key exists
+     * and dereferences a null slot in release builds, and the Mixie sidebar
+     * draws its own category strip without ever creating this block. */
+    const blender::ui::Block *tabs = region->runtime->block_name_map.lookup_default_as(
+        "panel_category_tabs", nullptr);
+    const char *active = blender::ui::panel_category_active_get(const_cast<ARegion *>(region),
+                                                                false);
+    int index = 0;
+    for (const PanelCategoryDyn &pc : region->runtime->panels_category) {
+      /* Region-relative pixels from either source. */
+      rcti pix;
+      bool found = false;
+      if (tabs != nullptr) {
+        for (const std::unique_ptr<blender::ui::Button> &but_ptr : tabs->buttons_ptrs) {
+          const blender::ui::Button *but = but_ptr.get();
+          if (but->type != blender::ui::ButtonType::Tab || int(but->hardmax) != index) {
+            continue;
+          }
+          blender::ui::button_to_pixelrect(&pix, region, tabs, but);
+          found = true;
+          break;
+        }
+      }
+      else {
+        found = blender::ui::UI_mixar_panel_category_tab_rect_get(region, pc.idname, &pix);
+      }
+      if (found) {
+        MixarQATarget t;
+        t.surface = "panel_tab";
+        t.text = pc.idname;
+        t.sel = (active != nullptr && STREQ(active, pc.idname));
+        t.rect_win.xmin = region->winrct.xmin + pix.xmin;
+        t.rect_win.xmax = region->winrct.xmin + pix.xmax;
+        t.rect_win.ymin = region->winrct.ymin + pix.ymin;
+        t.rect_win.ymax = region->winrct.ymin + pix.ymax;
+        targets.push_back(std::move(t));
+      }
+      index++;
     }
   }
 
@@ -273,18 +315,28 @@ void qa_dump_region(std::string &out,
     return;
   }
 
-  LISTBASE_FOREACH (const uiBlock *, block, &region->runtime->uiblocks) {
-    for (const std::unique_ptr<uiBut> &but_ptr : block->buttons) {
-      const uiBut *but = but_ptr.get();
-      if (but->flag & UI_HIDDEN) {
+  for (const blender::ui::Block &block : region->runtime->uiblocks) {
+    /* NOTE: deliberately NOT filtered on `block.active`. That flag means
+     * "rebuilt during the current free-inactive pass", not "on screen": every
+     * region that is not mid-redraw carries live blocks with it clear, and
+     * filtering on it dropped ~95% of the UI (measured: 11 widgets instead of
+     * several hundred, the whole topbar and island missing). The stale-block
+     * problem it was meant to solve needs a real liveness stamp instead. */
+    for (const std::unique_ptr<blender::ui::Button> &but_ptr : block.buttons_ptrs) {
+      const blender::ui::Button *but = but_ptr.get();
+      if (but->flag & blender::ui::UI_HIDDEN) {
         continue;
       }
-      if (ELEM(but->type, ButType::Sepr, ButType::SeprLine)) {
+      if (ELEM(but->type, blender::ui::ButtonType::Sepr, blender::ui::ButtonType::SeprLine)) {
         continue;
       }
 
       rcti pix;
-      ui_but_to_pixelrect(&pix, region, block, but);
+      blender::ui::button_to_pixelrect(&pix, region, &block, but);
+      const rcti layout_pix = pix;
+      if (!blender::ui::mixar_block_clip_pixelrect(region, &block, &pix)) {
+        continue;
+      }
 
       /* Region-space pixels -> window pixels (origin bottom-left), the same
        * space ``Window.event_simulate`` consumes. Clipped to the region so a
@@ -312,15 +364,15 @@ void qa_dump_region(std::string &out,
       if (is_popup) {
         out += "\"popup\":true,";
       }
-      if (block->panel != nullptr) {
-        const Panel *panel = block->panel;
+      if (block.panel != nullptr) {
+        const Panel *panel = block.panel;
         const char *panel_id = (panel->type != nullptr) ? panel->type->idname :
                                                           panel->panelname;
         json_str(out, "panel", panel_id ? panel_id : "");
         out += ',';
       }
-      if (!block->name.empty()) {
-        json_str(out, "block", block->name);
+      if (!block.name.empty()) {
+        json_str(out, "block", block.name);
         out += ',';
       }
 
@@ -329,6 +381,16 @@ void qa_dump_region(std::string &out,
       out += "\",";
 
       const std::string &text = but->drawstr.empty() ? but->str : but->drawstr;
+      json_str(out, "mixar_component", blender::ui::mixar_component_name(but->mixar_style.component));
+      out += ',';
+      json_str(out, "mixar_theme", blender::ui::mixar_theme_name(but->mixar_style.theme));
+      out += ',';
+      json_str(out, "mixar_variant", blender::ui::mixar_variant_name(but->mixar_style.variant));
+      out += ',';
+      const auto motion = blender::ui::mixar_button_motion(*but);
+      out += "\"mixar_motion\":{\"hover\":" + std::to_string(motion.hover) +
+             ",\"press\":" + std::to_string(motion.press) +
+             ",\"selected\":" + std::to_string(motion.selected) + "},";
       json_str(out, "text", text);
       out += ',';
       if (!but->tip.is_empty()) {
@@ -357,12 +419,19 @@ void qa_dump_region(std::string &out,
 
       out += "\"rect\":[" + std::to_string(rect.xmin) + ',' + std::to_string(rect.ymin) +
              ',' + std::to_string(rect.xmax) + ',' + std::to_string(rect.ymax) + "],";
+      if (block.mixar_clip_rect) {
+        out += "\"layout_rect\":[" + std::to_string(region->winrct.xmin + layout_pix.xmin) +
+               ',' + std::to_string(region->winrct.ymin + layout_pix.ymin) +
+               ',' + std::to_string(region->winrct.xmin + layout_pix.xmax) +
+               ',' + std::to_string(region->winrct.ymin + layout_pix.ymax) + "],";
+      }
 
       out += std::string("\"enabled\":") +
-             (((but->flag & UI_BUT_DISABLED) == 0) ? "true" : "false");
-      if (but->flag & UI_SELECT) {
+             (((but->flag & blender::ui::BUT_DISABLED) == 0) ? "true" : "false");
+      if (but->flag & blender::ui::UI_SELECT) {
         out += ",\"sel\":true";
       }
+      out += blender::ui::mixar_text_edit_qa_json(*but, *region);
       out += '}';
     }
   }
@@ -375,9 +444,20 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
   std::string out;
   out.reserve(1 << 16);
 
-  out += "{\"windows\":[";
+  const auto motion_stats = blender::ui::mixar_motion_stats();
+  const auto cat_stats = ED_agent_bubble_motion_stats();
+  out += "{\"motion\":{\"pending_regions\":" + std::to_string(motion_stats.pending_regions) +
+         ",\"ticks\":" + std::to_string(motion_stats.ticks) +
+         ",\"redraws\":" + std::to_string(motion_stats.redraws) + "},\"mascot\":{\"ticks\":" +
+         std::to_string(cat_stats.ticks) + ",\"redraws\":" + std::to_string(cat_stats.redraws) +
+         ",\"fast_frames\":" + std::to_string(cat_stats.fast_frames) +
+         ",\"quiet_frames\":" + std::to_string(cat_stats.quiet_frames) +
+         ",\"scheduled\":" + (cat_stats.scheduled ? "true" : "false") +
+         ",\"awaiting_draw\":" + (cat_stats.awaiting_draw ? "true" : "false") +
+         ",\"next_frame_seconds\":" + std::to_string(cat_stats.next_frame_seconds) + "},\"windows\":[";
   bool first_win = true;
-  LISTBASE_FOREACH (const wmWindow *, win, &wm->windows) {
+  for (const wmWindow &win_ref : wm->windows) {
+    const wmWindow *win = &win_ref;
     if (!first_win) {
       out += ',';
     }
@@ -389,27 +469,30 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
   out += "],\n\"widgets\":[";
 
   bool first_widget = true;
-  LISTBASE_FOREACH (const wmWindow *, win, &wm->windows) {
+  for (const wmWindow &win_ref : wm->windows) {
+    const wmWindow *win = &win_ref;
     const bScreen *screen = WM_window_get_active_screen(win);
     if (screen == nullptr) {
       continue;
     }
-    LISTBASE_FOREACH (const ScrArea *, area, &screen->areabase) {
-      LISTBASE_FOREACH (const ARegion *, region, &area->regionbase) {
-        qa_dump_region(out, first_widget, win, area, region, false);
+    for (const ScrArea &area : screen->areabase) {
+      for (const ARegion &region : area.regionbase) {
+        qa_dump_region(out, first_widget, win, &area, &region, false);
       }
     }
     /* Global areas: topbar / statusbar. */
-    LISTBASE_FOREACH (const ScrArea *, area, &win->global_areas.areabase) {
-      LISTBASE_FOREACH (const ARegion *, region, &area->regionbase) {
-        qa_dump_region(out, first_widget, win, area, region, false);
+    for (const ScrArea &area : win->global_areas.areabase) {
+      for (const ARegion &region : area.regionbase) {
+        qa_dump_region(out, first_widget, win, &area, &region, false);
       }
     }
     /* Screen-level temporary regions: popups, menus, dropdowns, tooltips. */
-    LISTBASE_FOREACH (const ARegion *, region, &screen->regionbase) {
-      qa_dump_region(out, first_widget, win, nullptr, region, true);
+    for (const ARegion &region : screen->regionbase) {
+      qa_dump_region(out, first_widget, win, nullptr, &region, true);
     }
   }
   out += "\n]}";
   return out;
 }
+
+}  // namespace blender

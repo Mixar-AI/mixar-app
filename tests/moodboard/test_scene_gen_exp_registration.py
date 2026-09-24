@@ -12,11 +12,11 @@ COMMON_JOB_QUEUE = ROOT / "src/scripts/mixar/modules/common/job_queue"
 
 
 def read(relative_path: str) -> str:
-    return (MOODBOARD_UI / relative_path).read_text()
+    return (MOODBOARD_UI / relative_path).read_text(encoding="utf-8")
 
 
 def read_job_queue(relative_path: str) -> str:
-    return (COMMON_JOB_QUEUE / relative_path).read_text()
+    return (COMMON_JOB_QUEUE / relative_path).read_text(encoding="utf-8")
 
 
 def identifiers(source: str) -> set[str]:

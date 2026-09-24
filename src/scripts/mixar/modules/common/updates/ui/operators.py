@@ -18,8 +18,45 @@ suite's ``bpy`` mock an operator body never runs.
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.tour import tour_running
 
 logger = get_logger(__name__)
+
+# While the interactive onboarding tour runs, the restart prompt would
+# open a dialog over the tour's card; re-check on this cadence instead.
+TOUR_RETRY_SECONDS = 30.0
+
+
+def _reinvoke_restart_prompt():
+    """Timer: bring the restart prompt back once the tour is over.
+
+    It keeps repeating while the tour runs instead of re-invoking the
+    operator: the operator's own deferral would find this timer still
+    registered (Blender drops it only after the callback returns ``None``)
+    and schedule nothing, so the prompt would never come back."""
+    if tour_running():
+        return TOUR_RETRY_SECONDS
+    try:
+        window = next(iter(bpy.context.window_manager.windows), None)
+        if window is not None:
+            with bpy.context.temp_override(window=window, screen=window.screen):
+                bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
+        else:
+            bpy.ops.mixar.restart_to_update("INVOKE_DEFAULT")
+    except Exception:  # noqa: BLE001 — operator may be unavailable
+        logger.error("Could not re-open the restart prompt", exc_info=True)
+    return None
+
+
+def _defer_restart_prompt_for_tour() -> None:
+    if not bpy.app.timers.is_registered(_reinvoke_restart_prompt):
+        bpy.app.timers.register(
+            _reinvoke_restart_prompt, first_interval=TOUR_RETRY_SECONDS,
+        )
+    logger.info(
+        "Restart prompt deferred: onboarding tour running (retry in %.0fs)",
+        TOUR_RETRY_SECONDS,
+    )
 
 
 class MIXAR_OT_restart_to_update(bpy.types.Operator):
@@ -36,6 +73,11 @@ class MIXAR_OT_restart_to_update(bpy.types.Operator):
     )
 
     def invoke(self, context, event):
+        if tour_running():
+            _defer_restart_prompt_for_tour()
+            self.report({"INFO"}, "Mixar will ask to update once the tour ends")
+            return {"CANCELLED"}
+
         routed = self._route(context)
         if routed is not None:
             return routed

@@ -59,53 +59,36 @@ def reset_guards() -> None:
         _resumed_sessions.clear()
 
 
-def fetch_parked_report(base_url: str, token: str, session_id: str,
-                        timeout: float = 15.0) -> dict | None:
-    """Ask the backend about one session. None on ANY failure — a broken
-    parked-check must never look like a park (fail toward silence)."""
-    import httpx
-
-    from ..constants import AGENT_PARKED_TURN_ENDPOINT
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
+def fetch_parked_report(base_url: str, token: str, session_id: str, timeout: float = 15.0):
+    """Read the parked-turn report over WS; failures never look like a park."""
+    from mixar.modules.common.agent_rpc.client import request
     try:
-        resp = httpx.post(
-            f"{base_url}{AGENT_PARKED_TURN_ENDPOINT}",
-            json={"session_id": session_id},
-            headers=headers,
-            timeout=timeout,
-        )
+        return request('parked_turn', {'session_id': session_id}, mutation=True, timeout=timeout)
     except Exception as exc:
-        logger.debug(f"[PARKED] check failed for {session_id[:8]}: {exc}")
+        logger.debug('Parked-turn check unavailable: %s', exc)
         return None
-    if resp.status_code != 200:
-        logger.debug(
-            f"[PARKED] check HTTP {resp.status_code} for {session_id[:8]}"
-        )
-        return None
-    try:
-        data = resp.json()
-    except Exception:
-        return None
-    if not isinstance(data, dict) or data.get("status") != "success":
-        return None
-    return data
 
 
-def send_continue(scene) -> bool:
-    """Send the bare continuation message through the normal chat send path
-    (full guards: state, connection, optimistic UI). IDLE-only by design: a
-    retry while a turn is live would race the running build."""
-    import bpy
-
+def can_send_continue(scene) -> bool:
+    """IDLE and no open run: a retry while a turn is live would race the
+    running build."""
     from ..constants import SessionState
     from .session import get_session_manager
 
     session = get_session_manager()
-    if session.get_state(scene) != SessionState.IDLE:
+    return session.get_state(scene) == SessionState.IDLE and not session.run_open(scene)
+
+
+def send_continue(scene) -> bool:
+    """Send the bare continuation message through the normal chat send path
+    (full guards: state, connection, optimistic UI). IDLE-only by design.
+
+    Callers inside a native click handler must NOT call this directly: the
+    send can tear the island windows down, freeing the region that handler
+    still holds. Defer it to a ``bpy.app.timers`` tick instead."""
+    import bpy
+
+    if not can_send_continue(scene):
         return False
     previous = scene.mixie_chat_input
     scene.mixie_chat_input = CONTINUE_MESSAGE
@@ -133,7 +116,7 @@ def _fire_resume(scene_name: str, open_count: int) -> None:
     if scene is None:
         return
     session = get_session_manager()
-    if session.get_state(scene) != SessionState.IDLE:
+    if session.get_state(scene) != SessionState.IDLE or session.run_open(scene):
         return
     notice = scene.mixie_chat_messages.add()
     notice.sender = 'AGENT'
@@ -173,7 +156,8 @@ def schedule_after_connect(base_url: str) -> None:
                 sid = session.get_session_id(sc)
                 if not sid:
                     continue
-                if session.get_state(sc) != SessionState.IDLE:
+                # An open run is live work, not a park.
+                if session.get_state(sc) != SessionState.IDLE or session.run_open(sc):
                     continue
                 if not claim_check(sid):
                     continue

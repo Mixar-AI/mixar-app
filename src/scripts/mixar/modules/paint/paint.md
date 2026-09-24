@@ -791,47 +791,16 @@ ui_constants.py                 # UI constants
 ---
 
 ## procedural_materials/
-Procedural material definitions (organized by category).
-```
-__init__.py
-material_registry.py            # Material registration
-test_compatibility.py           # Compatibility testing
-```
+Procedural material registry. The library is served by the backend catalog
+(`matgen_client`, scripts cached on demand in the user cache dir); no material
+scripts or thumbnails ship with the app. The user's own AI-generated materials
+are persisted in the user data dir by `matgen_persistence`.
 
-### Material Categories
-- `filtered_asphalt_matplus/` - Asphalt materials
-- `filtered_bricks_matplus/` - Brick materials
-- `filtered_ceramic_matplus/` - Ceramic materials
-- `filtered_concrete_matplus/` - Concrete materials
-- `filtered_dirt_matplus/` - Dirt materials
-- `filtered_fabric_matplus/` - Fabric materials
-- `filtered_floor_matplus/` - Floor materials
-- `filtered_food_matplus/` - Food materials
-- `filtered_fx_matplus/` - FX materials
-- `filtered_glass_matplus/` - Glass materials
-- `filtered_grass_matplus/` - Grass materials
-- `filtered_ground_matplus/` - Ground materials
-- `filtered_human_matplus/` - Human materials
-- `filtered_ice_matplus/` - Ice materials
-- `filtered_leather_matplus/` - Leather materials
-- `filtered_liquid_matplus/` - Liquid materials
-- `filtered_marble_matplus/` - Marble materials
-- `filtered_metal_matplus/` - Metal materials
-- `filtered_organic_matplus/` - Organic materials
-- `filtered_ornaments_matplus/` - Ornament materials
-- `filtered_paper_matplus/` - Paper materials
-- `filtered_paving_matplus/` - Paving materials
-- `filtered_plaster_matplus/` - Plaster materials
-- `filtered_plastic_matplus/` - Plastic materials
-- `filtered_rock_matplus/` - Rock materials
-- `filtered_roofing_matplus/` - Roofing materials
-- `filtered_rust_matplus/` - Rust materials
-- `filtered_sand_matplus/` - Sand materials
-- `filtered_stone_matplus/` - Stone materials
-- `filtered_tech_matplus/` - Tech materials
-- `filtered_tiles_matplus/` - Tile materials
-- `filtered_wood_matplus/` - Wood materials
-- `thumbnails_transparent/` - Material thumbnails
+### Contents
+- `material_registry.py` - registry + server catalog / script loading
+- `matgen_client.py`, `matgen_fetcher.py`, `matgen_persistence.py`, `matgen_queue.py` - MatGen catalog/script client, auth/cache helpers, persistence of generated materials, unified-queue job
+- `script_preprocessor.py` - generated-script compatibility fixes
+- `tests/` - in-tree suite (see `pytest.ini`)
 
 ---
 

@@ -25,14 +25,21 @@ State machine lives on WindowManager (see ui/properties/byok_props.py);
 operators and async flow live in byok_ops.py. This module only draws.
 """
 
-from ...core import model_suggestions
+from mixar.modules.common.ui.constants import (
+    CARD_ROW_CTA,
+    CARD_ROW_DIVIDER,
+    CARD_ROW_FIELD,
+    CARD_ROW_HEADING,
+)
 
-# Row heights (uiLayout.scale_y), mirroring the profile card's rhythm
-# (`ROW_*` in interface_mixar_profile_card.cc).
-HEADER_SCALE_Y = 1.6
-FIELD_SCALE_Y = 1.45
-ACTION_SCALE_Y = 1.7
-DIVIDER_SCALE_Y = 0.6
+from ...core import catalog_labels, model_suggestions
+
+# Row heights (uiLayout.scale_y). Match chrome ``card_row_*``.
+# Footer actions use the CTA recipe (1.7), not the profile action rows (1.9).
+HEADER_SCALE_Y = CARD_ROW_HEADING
+FIELD_SCALE_Y = CARD_ROW_FIELD
+ACTION_SCALE_Y = CARD_ROW_CTA
+DIVIDER_SCALE_Y = CARD_ROW_DIVIDER
 
 # Word-wrap width for inline error text (Blender labels don't wrap).
 ERROR_WRAP_CHARS = 72
@@ -151,21 +158,12 @@ def dismiss_button(layout, text="Cancel", kind='GHOST', default=False):
 
 
 # ---------------------------------------------------------------------------
-# Catalog label lookups (raw IDs only as a fallback)
+# Catalog label lookups (raw IDs only as a fallback) — shared with the picker
+# menu's BYOK note, so they live bpy-free in `core/catalog_labels`.
 # ---------------------------------------------------------------------------
 
-def lookup_provider_label(provider_id):
-    for pid, plabel, _desc in model_suggestions.get_provider_items():
-        if pid == provider_id:
-            return plabel
-    return provider_id
-
-
-def lookup_model_label(provider_id, model_id):
-    for mid, mlabel, _desc in model_suggestions.get_model_items(provider_id):
-        if mid == model_id:
-            return mlabel
-    return model_id
+lookup_provider_label = catalog_labels.lookup_provider_label
+lookup_model_label = catalog_labels.lookup_model_label
 
 
 def _wrap(text, width):

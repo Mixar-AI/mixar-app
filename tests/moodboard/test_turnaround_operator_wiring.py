@@ -46,7 +46,7 @@ _GENERATE_OPS = ("model_gen_ops.py", "image_to_3d_ops.py")
 
 def _turnaround_method(filename):
     """The `_turnaround_payload` FunctionDef node from *filename*."""
-    tree = ast.parse((_OPERATORS / filename).read_text())
+    tree = ast.parse((_OPERATORS / filename).read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and \
                 node.name == "_turnaround_payload":
@@ -248,7 +248,7 @@ _DETECT = Path(__file__).resolve().parents[2] / (
 
 def _ingest_function():
     """The `_add_panels_to_moodboard` FunctionDef node."""
-    tree = ast.parse(_DETECT.read_text())
+    tree = ast.parse(_DETECT.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and \
                 node.name == "_add_panels_to_moodboard":

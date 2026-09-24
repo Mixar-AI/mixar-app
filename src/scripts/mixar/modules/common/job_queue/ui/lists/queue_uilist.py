@@ -61,19 +61,10 @@ _feature_label = feature_label
 
 
 def _model_label(service: str, model: str) -> str:
-    """Backend catalog model label, with exact submitted-slug fallback."""
-    model_slug = (model or "").strip()
-    if not model_slug:
-        return ""
-    try:
-        from mixar.bootstrap.generation_catalog_cache import get_model
+    """Backend catalog model label — shared definition in core/labels.py."""
+    from mixar.modules.common.job_queue.core.labels import model_label
 
-        catalog_model = get_model((service or "").strip(), model_slug)
-        if catalog_model and catalog_model.get("label"):
-            return catalog_model["label"]
-    except Exception:
-        pass
-    return model_slug
+    return model_label(service, model)
 
 
 def _generation_model_label(service: str, model: str) -> str:

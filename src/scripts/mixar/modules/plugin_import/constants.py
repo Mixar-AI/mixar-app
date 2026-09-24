@@ -68,3 +68,12 @@ WINDOWS_BLENDER_BASE = ("Blender Foundation", "Blender")
 
 # Linux (XDG): ~/.config/blender
 LINUX_BLENDER_BASE = (".config", "blender")
+
+
+# ---------------------------------------------------------------------------
+# Result notification
+# ---------------------------------------------------------------------------
+# One stable id, so a re-run replaces the previous result instead of stacking.
+PLUGIN_IMPORT_TOAST_ID = "plugin_import_summary"
+# A clean import fades on its own; a result with failures stays (ttl 0).
+PLUGIN_IMPORT_TOAST_TTL_MS = 10000

@@ -7,8 +7,8 @@
  *
  * Mixar account card — layout construction.
  *
- * Builds the profile dropdown's contents through the ordinary #uiLayout
- * API and tags each item with #UI_BUT2_MIXAR_CARD so widget dispatch
+ * Builds the profile dropdown's contents through the ordinary #Layout
+ * API and tags each item with dedicated style metadata so widget dispatch
  * routes it to the card's own drawing (see
  * `interface_mixar_profile_card_draw.cc`).
  *
@@ -40,13 +40,17 @@
 
 #include "UI_interface_c.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar_chrome.hh"
 #include "UI_resources.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_icons.hh"
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_profile_card.hh"
+#include "UI_mixar.hh"
 #include "interface_mixar_section.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
 namespace {
 
@@ -84,12 +88,12 @@ constexpr bool CARD_SHOW_CREDIT_FIGURES = false;
  * height (and the roundbox clamp takes it to h/2), which draws every
  * action as a lozenge. At #ROW_ACTION the same radius is roughly a
  * quarter of the height and reads as the intended rounded rect. */
-constexpr float ROW_HEADING = 1.6f;
+constexpr float ROW_HEADING = mixar_chrome::card_row_heading;
 constexpr float ROW_USAGE_BAR = 1.5f;
-constexpr float ROW_CTA = 1.7f;
-constexpr float ROW_ACTION = 1.9f;
-constexpr float ROW_LOGOUT = 1.7f;
-constexpr float ROW_DIVIDER = 0.6f;
+constexpr float ROW_CTA = mixar_chrome::card_row_cta;
+constexpr float ROW_ACTION = mixar_chrome::card_row_action;
+constexpr float ROW_LOGOUT = mixar_chrome::card_row_cta;
+constexpr float ROW_DIVIDER = mixar_chrome::card_row_divider;
 
 /* -------------------------------------------------------------------- */
 /* Measuring                                                             */
@@ -100,7 +104,7 @@ constexpr float ROW_DIVIDER = 0.6f;
  * The card suppresses the stock text pass and draws with its own font
  * scale and padding, but the *layout* still sizes each button from the
  * default widget font — so anything the painter spends beyond that
- * estimate comes off the end of the string. #UI_fontstyle_draw clips to
+ * estimate comes off the end of the string. #fontstyle_draw clips to
  * the rect through #BLF_clipping with no ellipsis, so the overflow is
  * silent: "Logout" simply renders as "Log".
  *
@@ -119,7 +123,7 @@ float card_units_for_text(const char *text,
     return chrome_px / float(UI_UNIT_X);
   }
   const uiFontStyle fs = mixar_card_font(scale, weight);
-  const float width = float(UI_fontstyle_string_width(&fs, text));
+  const float width = float(fontstyle_string_width(&fs, text));
   return (width + chrome_px) / float(UI_UNIT_X);
 }
 
@@ -127,23 +131,14 @@ float card_units_for_text(const char *text,
 /* Tagging                                                               */
 
 /** Tag the most recently created button as a card element. */
-void mark_last(uiLayout *layout, const MixarCardElement element, const float payload = 0.0f)
+void mark_last(Layout *layout, const MixarCardElement element, const float payload = 0.0f)
 {
-  uiBlock *block = layout->block();
-  if (block->buttons.is_empty()) {
+  Block *block = layout->block();
+  if (block->buttons_ptrs.is_empty()) {
     return;
   }
-  uiBut *but = block->buttons[block->buttons.size() - 1].get();
-  UI_BUT2_MIXAR_CARD_SET(but);
-  /* `hardmin`/`hardmax` are inert on the label and operator buttons used
-   * here — neither carries a data pointer or RNA property, so
-   * `ui_but_value_get()` returns before reading them, and the
-   * `hardmin <= hardmax` assertion in `ui_but_update_ex()` is scoped to
-   * Num/Scroll/NumSlider. */
-  but->hardmin = float(int(element));
-  /* For buttons the payload is the #MixarCardIcon; for the quota bar it
-   * is the fill fraction. */
-  but->hardmax = payload;
+  Button *but = block->buttons_ptrs.last().get();
+  mixar_style_card(but, element, payload);
 }
 
 /* -------------------------------------------------------------------- */
@@ -175,7 +170,7 @@ void read_string(PointerRNA *ptr, const char *name, char *dst, const int dst_max
   char *value = RNA_property_string_get_alloc(ptr, prop, dst, dst_maxncpy, &len);
   if (value != nullptr && value != dst) {
     BLI_strncpy(dst, value, dst_maxncpy);
-    MEM_freeN(value);
+    MEM_delete_void(static_cast<void *>(value));
   }
 }
 
@@ -252,19 +247,19 @@ void format_credits(const int value, char *dst, const int dst_maxncpy)
   dst[out] = '\0';
 }
 
-void add_divider(uiLayout *layout)
+void add_divider(Layout *layout)
 {
-  uiLayout &row = layout->row(false);
+  Layout &row = layout->row(false);
   row.scale_y_set(ROW_DIVIDER);
   row.label("", ICON_NONE);
   mark_last(&row, MixarCardElement::Divider);
 }
 
-void add_header(uiLayout *layout, const AccountInfo &info)
+void add_header(Layout *layout, const AccountInfo &info)
 {
-  uiLayout &row = layout->row(false);
+  Layout &row = layout->row(false);
 
-  uiLayout &names = row.column(true);
+  Layout &names = row.column(true);
   names.alignment_set(blender::ui::LayoutAlign::Left);
 
   char greeting[192];
@@ -275,7 +270,7 @@ void add_header(uiLayout *layout, const AccountInfo &info)
     /* No name and no email yet — greet without a dangling comma. */
     BLI_strncpy(greeting, IFACE_("Welcome !"), sizeof(greeting));
   }
-  uiLayout &heading_row = names.row(false);
+  Layout &heading_row = names.row(false);
   /* Just enough headroom for the oversized glyphs; taller than this and
    * the vertical centring opens a dead gap above the email line. */
   heading_row.scale_y_set(ROW_HEADING);
@@ -299,7 +294,7 @@ void add_header(uiLayout *layout, const AccountInfo &info)
     else {
       SNPRINTF(chip_text, IFACE_("%s Plan"), info.plan_name);
     }
-    uiLayout &chip = row.row(false);
+    Layout &chip = row.row(false);
     chip.alignment_set(blender::ui::LayoutAlign::Right);
     /* Pin the chip to what it actually paints, so the greeting beside it
      * gets every remaining pixel instead of an even split. */
@@ -310,7 +305,7 @@ void add_header(uiLayout *layout, const AccountInfo &info)
   }
 }
 
-void add_usage(uiLayout *layout, const AccountInfo &info)
+void add_usage(Layout *layout, const AccountInfo &info)
 {
   if (!info.usage_ready) {
     /* Nothing fetched yet — say so instead of drawing an empty bar that
@@ -331,15 +326,15 @@ void add_usage(uiLayout *layout, const AccountInfo &info)
      * reassuring number. Mirrors `state.format_remaining_label`. */
     SNPRINTF(pct, "%d%%", int(info.remaining_pct));
 
-    uiLayout &bar_row = layout->row(false);
+    Layout &bar_row = layout->row(false);
     bar_row.scale_y_set(ROW_USAGE_BAR);
     bar_row.label(pct, ICON_NONE);
     mark_last(&bar_row, MixarCardElement::UsageBar, factor);
   }
 
-  uiLayout &foot = layout->row(false);
+  Layout &foot = layout->row(false);
 
-  uiLayout &cta = foot.row(false);
+  Layout &cta = foot.row(false);
   cta.alignment_set(blender::ui::LayoutAlign::Left);
   /* Scaled, not unit-sized: only `scale_y` reaches the button itself, and
    * the CTA at stock height is the flattest lozenge on the card. */
@@ -373,7 +368,7 @@ void add_usage(uiLayout *layout, const AccountInfo &info)
     return;
   }
 
-  uiLayout &meta = foot.row(false);
+  Layout &meta = foot.row(false);
   meta.alignment_set(blender::ui::LayoutAlign::Right);
 
   char meta_text[96];
@@ -410,7 +405,7 @@ void add_usage(uiLayout *layout, const AccountInfo &info)
  * (#UI_mixar_card_icon_draw), because the stock set is weighted for
  * toolbars and out-shouts the labels at card scale.
  */
-void add_action(uiLayout *layout,
+void add_action(Layout *layout,
                 const char *op_idname,
                 const char *label,
                 const MixarCardIcon icon,
@@ -423,18 +418,24 @@ void add_action(uiLayout *layout,
   mark_last(layout, element, float(int(icon)));
 }
 
-void add_actions(uiLayout *layout)
+void add_actions(Layout *layout)
 {
-  uiLayout &grid = layout->column(false);
+  Layout &grid = layout->column(false);
 
-  uiLayout &top = grid.row(true);
+  Layout &top = grid.row(true);
   top.scale_y_set(ROW_ACTION);
   add_action(&top, "MIXIE_CHAT_OT_open_dashboard", "Dashboard", MixarCardIcon::Grid,
              MixarCardElement::CardButton);
-  add_action(&top, "MIXAR_BYOK_OT_open_dialog", "AI Provider Settings", MixarCardIcon::Sliders,
-             MixarCardElement::CardButton);
 
-  uiLayout &bottom = grid.row(true);
+  /* Share the chat model picker's dialog and account state. Full width keeps
+   * the label readable; invoke is required because execute is a no-op. */
+  Layout &settings = grid.row(true);
+  settings.scale_y_set(ROW_ACTION);
+  settings.operator_context_set(wm::OpCallContext::InvokeDefault);
+  add_action(&settings, "MIXAR_BYOK_OT_open_dialog", "AI Provider Settings",
+             MixarCardIcon::Sliders, MixarCardElement::CardButton);
+
+  Layout &bottom = grid.row(true);
   bottom.scale_y_set(ROW_ACTION);
 
   if (WM_operatortype_find("WM_OT_url_open", true) != nullptr) {
@@ -448,9 +449,9 @@ void add_actions(uiLayout *layout)
   }
 }
 
-void add_logout(uiLayout *layout)
+void add_logout(Layout *layout)
 {
-  uiLayout &row = layout->row(false);
+  Layout &row = layout->row(false);
   row.scale_y_set(ROW_LOGOUT);
   /* Deliberately NOT centre-aligned: that collapses the row to the
    * layout's estimate of the label alone, leaving the painter's icon and
@@ -466,23 +467,21 @@ void add_logout(uiLayout *layout)
 /* -------------------------------------------------------------------- */
 /* Public API                                                            */
 
-MixarCardElement UI_mixar_card_element_get(const uiBut *but)
+MixarCardElement UI_mixar_card_element_get(const Button *but)
 {
-  if (but == nullptr || !UI_BUT2_MIXAR_CARD_TEST(but)) {
-    return MixarCardElement::None;
-  }
-  const int value = int(but->hardmin);
-  if (value <= int(MixarCardElement::None) || value >= int(MixarCardElement::Count)) {
-    return MixarCardElement::None;
-  }
-  return MixarCardElement(value);
+  return but && but->mixar_style.component == MixarComponent::LegacyCard &&
+             but->mixar_style.card < MixarCardElement::Count ?
+             but->mixar_style.card : MixarCardElement::None;
 }
 
-void UI_layout_mixar_profile_card(uiLayout *layout, bContext *C)
+void UI_layout_mixar_profile_card(Layout *layout, bContext *C)
 {
   const AccountInfo info = read_account(C);
 
-  uiLayout &card = layout->column(false);
+  Layout &card = layout->column(false);
+  MixarScope scope = card.mixar_scope();
+  scope.density = mixar_chrome::density;
+  card.mixar_scope_set(scope);
 
   add_header(&card, info);
   card.separator(0.6f);
@@ -493,3 +492,4 @@ void UI_layout_mixar_profile_card(uiLayout *layout, bContext *C)
   add_divider(&card);
   add_logout(&card);
 }
+}  // namespace blender::ui

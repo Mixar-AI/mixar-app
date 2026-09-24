@@ -5,7 +5,10 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
+
+namespace blender {
 
 /** \file
  * \ingroup bke
@@ -19,7 +22,7 @@
  */
 
 /** Blender major and minor version. */
-#define BLENDER_VERSION 500
+#define BLENDER_VERSION 502
 /** Blender patch version for bug-fix releases. */
 #define BLENDER_VERSION_PATCH 0
 /** Blender release cycle stage: alpha/beta/rc/release. */
@@ -33,18 +36,18 @@
  * Pre-versioning files (saved before this system) will read as 0.
  * Bump MIXAR_FILE_SUBVERSION when adding new versioning blocks. */
 #define MIXAR_FILE_VERSION 100
-#define MIXAR_FILE_SUBVERSION 3
+#define MIXAR_FILE_SUBVERSION 4
 
 /* Minimum Mixar version that can read files saved by this version.
  * Older Mixar builds will show a forward-compatibility warning. */
 #define MIXAR_FILE_MIN_VERSION 100
 
 /** Blender release type suffix. LTS or blank. */
-#define BLENDER_VERSION_SUFFIX
+#define BLENDER_VERSION_SUFFIX LTS
 
 /* Blender file format version. */
 #define BLENDER_FILE_VERSION BLENDER_VERSION
-#define BLENDER_FILE_SUBVERSION 118
+#define BLENDER_FILE_SUBVERSION 44
 
 /* Minimum Blender version that supports reading file written with the current
  * version. Older Blender versions will test this and cancel loading the file, showing a warning to
@@ -57,16 +60,16 @@
 #define BLENDER_FILE_MIN_SUBVERSION 85
 
 /** User readable version string. */
-const char *BKE_blender_version_string(void);
+const char *BKE_blender_version_string();
 
 /** As above but does not show patch version. */
-const char *BKE_blender_version_string_compact(void);
+const char *BKE_blender_version_string_compact();
 
 /** Returns true when version cycle is alpha, otherwise (beta, rc) returns false. */
-bool BKE_blender_version_is_alpha(void);
+bool BKE_blender_version_is_alpha();
 
 /** Returns true when version suffix is LTS, otherwise returns false. */
-bool BKE_blender_version_is_lts(void);
+bool BKE_blender_version_is_lts();
 
 /**
  * Fill in given string buffer with user-readable formatted file version and subversion (if
@@ -82,3 +85,5 @@ void BKE_blender_version_blendfile_string_from_values(char *str_buff,
                                                       const size_t str_buff_maxncpy,
                                                       const short file_version,
                                                       const short file_subversion);
+
+}  // namespace blender
