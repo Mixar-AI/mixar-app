@@ -540,6 +540,14 @@ if(WITH_PYTHON)
     set(FREESTYLE_EXCLUDE_CONDITIONAL "_freestyle/*")  # Dummy, won't do anything.
   endif()
 
+  # Mixar: the onboarding tour's placeholder video plays only when the founder
+  # recording is absent, so ship one, never both.
+  if(EXISTS "${CMAKE_SOURCE_DIR}/scripts/mixar/modules/onboarding/assets/tour/founder.mp4")
+    set(MIXAR_TOUR_PLACEHOLDER_EXCLUDE "onboarding/assets/tour/founder_placeholder.mp4")
+  else()
+    set(MIXAR_TOUR_PLACEHOLDER_EXCLUDE "_founder_placeholder_kept.mp4")  # Dummy.
+  endif()
+
   install(
     DIRECTORY ${CMAKE_SOURCE_DIR}/scripts
     DESTINATION ${TARGETDIR_VER}
@@ -561,6 +569,7 @@ if(WITH_PYTHON)
     # the legacy embedded suite and the in-tree `tests/` packages.
     PATTERN "mixar/modules/testing" EXCLUDE
     REGEX "/scripts/mixar/.+/tests$" EXCLUDE
+    PATTERN "${MIXAR_TOUR_PLACEHOLDER_EXCLUDE}" EXCLUDE
   )
 
   if(WITH_PYTHON_MODULE)
@@ -577,6 +586,7 @@ if(WITH_PYTHON)
     )
   endif()
   unset(FREESTYLE_EXCLUDE_CONDITIONAL)
+  unset(MIXAR_TOUR_PLACEHOLDER_EXCLUDE)
 
   if(WITH_DRACO)
     install(

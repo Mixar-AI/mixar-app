@@ -68,7 +68,7 @@ BUTTON_BORDER_WIDTH = 1.0
 
 # -- Mixar brand ------------------------------------------------------------
 # The brand green used for primary CTAs, with near-black text for contrast.
-# Matches the onboarding Continue button / highlight accent.
+# Matches the onboarding tour's accent (rings, hints, progress bar).
 MIXAR_BRAND_GREEN = (0.205, 0.780, 0.430, 1.0)
 MIXAR_BRAND_GREEN_TEXT = (0.05, 0.075, 0.060, 1.0)
 

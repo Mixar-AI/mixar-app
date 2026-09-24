@@ -51,6 +51,21 @@ from mixar.modules.common.analytics.bubble_events import capture_bubble_state
 # any surface that draws these without checking the platform first.
 
 
+def _tour_wants_exit_dialog() -> bool:
+    """While the interactive tour runs, Escape in the island asks the tour
+    to exit (its dialog lives in the main window) instead of minimising
+    the island the tour is pointing at. Missing module → False."""
+    try:
+        from mixar.modules.onboarding.core.tour import session as tour_session
+        live = tour_session.current()
+        if live is None or not live.running:
+            return False
+        live.request_exit_confirm()
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
 class MIXAR_OT_bubble_close(Operator):
     bl_idname = "mixar.bubble_close"
     bl_label = "Minimise"
@@ -65,6 +80,8 @@ class MIXAR_OT_bubble_close(Operator):
         return space is not None and space.type == 'AGENT_BUBBLE'
 
     def execute(self, context):
+        if _tour_wants_exit_dialog():
+            return {'FINISHED'}
         # Mark the bubble as user-dismissed so the workspace-change
         # autoshow doesn't immediately re-open it.
         try:
@@ -147,6 +164,8 @@ class MIXAR_OT_bubble_toggle_minimise(Operator):
         return BUBBLE_WINDOW_CONTROLS_SUPPORTED
 
     def execute(self, context):
+        if _tour_wants_exit_dialog():
+            return {'FINISHED'}
         # bubble_minimise returns FINISHED when it actually minimises, and
         # CANCELLED when there is no bubble or it is already a pill.
         try:

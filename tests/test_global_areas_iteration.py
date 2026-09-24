@@ -35,9 +35,8 @@ USERS = [
     "common/updates/ui/topbar_badge.py",
     "common/usage/core/poller.py",
     "director/ui/properties/director_properties.py",
-    "onboarding/core/tour_driver.py",
-    "onboarding/core/overlay/highlight.py",
-    "onboarding/core/overlay/overlay_renderer.py",
+    "onboarding/core/tour/anchors.py",
+    "onboarding/core/tour/session_lifecycle.py",
 ]
 
 

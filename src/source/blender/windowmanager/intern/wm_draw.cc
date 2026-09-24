@@ -1833,3 +1833,63 @@ void WM_draw_region_viewport_unbind(ARegion *region)
 /** \} */
 
 }  // namespace blender
+
+/* -------------------------------------------------------------------- */
+/** \name Mixar: live window client bounds
+ *
+ * `wmWindow::posx/posy` are refreshed only from GHOST move/size events, so a
+ * window the OS re-seated at creation (dock, menu bar) or one Mixar moves
+ * natively (the Agent island's pill glide) reports a stale position. The
+ * onboarding tour needs the island's TRUE footprint in the main window's
+ * pixels to draw around it, so this asks GHOST directly.
+ * \{ */
+
+namespace blender {
+
+bool Mixar_window_live_client_rect(const wmWindow *win, int r_rect[4])
+{
+  if (win == nullptr || win->runtime == nullptr || win->runtime->ghostwin == nullptr) {
+    return false;
+  }
+  const GHOST_IWindow *ghost_window = static_cast<const GHOST_IWindow *>(
+      win->runtime->ghostwin);
+  GHOST_Rect rect;
+  ghost_window->getClientBounds(rect);
+  r_rect[0] = rect.l_;
+  r_rect[1] = rect.t_;
+  r_rect[2] = rect.r_;
+  r_rect[3] = rect.b_;
+  return true;
+}
+
+#if defined(__APPLE__) || defined(_WIN32)
+extern "C" bool Mixar_WindowGetContentRectInParent(void *child_handle,
+                                                   void *parent_handle,
+                                                   int *r_x,
+                                                   int *r_y,
+                                                   int *r_w,
+                                                   int *r_h);
+#endif
+
+/* `win`'s client rect in `host`'s client coordinates (points, bottom-left
+ * origin): (x, y, w, h). Exact across window styles because it compares
+ * native content rects, unlike GHOST client bounds (see above). */
+bool Mixar_window_content_rect_in(const wmWindow *win, const wmWindow *host, int r_rect[4])
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  if (win == nullptr || host == nullptr || win->runtime == nullptr || host->runtime == nullptr ||
+      win->runtime->ghostwin == nullptr || host->runtime->ghostwin == nullptr)
+  {
+    return false;
+  }
+  return Mixar_WindowGetContentRectInParent(
+      win->runtime->ghostwin, host->runtime->ghostwin, &r_rect[0], &r_rect[1], &r_rect[2], &r_rect[3]);
+#else
+  UNUSED_VARS(win, host, r_rect);
+  return false;
+#endif
+}
+
+}  // namespace blender
+
+/** \} */
