@@ -30,9 +30,12 @@ except (AttributeError, TypeError, KeyError):
 def show_generation_error(scene, prefix, message, generating_attr, error_attr):
     """Schedule error display on the main thread (safe to call from background threads).
 
+    The error is raised as a viewport notification (bottom-left toast lane),
+    like every other alert — not as a popup menu under the cursor.
+
     Args:
         scene: The Blender scene.
-        prefix: Feature name for the popup title (e.g. "Image Gen").
+        prefix: Feature name for the notification title (e.g. "Image Gen").
         message: Error message to display.
         generating_attr: Scene bool property to set False
             (e.g. "mixie_imagegen_is_generating").
@@ -51,18 +54,23 @@ def show_generation_error(scene, prefix, message, generating_attr, error_attr):
                 for area in window.screen.areas:
                     if area.type == 'MIXIE':
                         area.tag_redraw()
-
-            def draw_error(self_inner, context):
-                self_inner.layout.label(text=message)
-
-            bpy.context.window_manager.popup_menu(
-                draw_error, title=f"{prefix} Error", icon='ERROR'
-            )
         except Exception:
             pass
+        push_error_notification(f"{prefix} failed", message)
         return None
 
     bpy.app.timers.register(_show, first_interval=0)
+
+
+def push_error_notification(title, message):
+    """Raise a sticky error toast in the viewport notification lane."""
+    try:
+        from mixar.modules.common.notifications import get_notification_store
+        get_notification_store().push(
+            "error", title, body=message, priority="high",
+        )
+    except Exception as e:  # noqa: BLE001 — the log line above still records it
+        logger.debug("error notification failed: %s", e)
 
 
 def count_selected_moodboard_images(scene):
