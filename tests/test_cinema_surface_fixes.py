@@ -567,12 +567,14 @@ def test_popups_size_to_their_bar_and_round_every_corner():
 
 
 def test_output_popup_rows_are_styled_and_toggles_keep_their_value():
-    """The Export popup's kind toggles and action rows paint as CinemaRows.
-    A Row (enum-flag toggle) keeps its VALUE in hardmax, so the tag must not
-    write its payload there — that clobbered the bit each toggle set."""
+    """The Export popup's video toggles and its one action row paint as
+    CinemaRows. A Row (enum-flag toggle) keeps its VALUE in hardmax, so the
+    tag must not write its payload there — that clobbered the bit each toggle
+    set."""
     render = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
     assert "UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Option)" in render
-    assert render.count("ui::MixarCinemaRowKind::Action") == 2
+    # One send action (tests/director/test_export_popup.py).
+    assert render.count("ui::MixarCinemaRowKind::Action") == 1
     row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
     tag = row[row.index("void UI_mixar_cinema_row_tag(") :]
     tag = tag[: tag.index("\n}\n")]

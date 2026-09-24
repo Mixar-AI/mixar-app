@@ -211,16 +211,21 @@ class MixarDirectorShot(PropertyGroup):
         items=CAMERA_TEMPLATE_ITEMS,
         default="NONE",
     )
+    export_images: BoolProperty(
+        name="Keyframe Images",
+        description="Add each keyframe's captured image to the Moodboard",
+        default=True,
+    )
     render_output_types: EnumProperty(
-        name="Video Renders",
-        description="Shot videos to render and add to the Moodboard",
+        name="Videos",
+        description="Videos of this shot to render into the Moodboard",
         items=SHOT_RENDER_OUTPUT_ITEMS,
         options={'ENUM_FLAG'},
         default={'CLAY'},
     )
     render_resolution_percentage: IntProperty(
-        name="Resolution",
-        description="Percentage of the scene output resolution used for shot videos",
+        name="Video Size",
+        description="Size of the videos, as a percentage of the scene's output size",
         default=50,
         min=25,
         max=100,

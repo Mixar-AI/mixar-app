@@ -103,10 +103,9 @@ def test_native_surface_hosts_the_export_popup_natively():
     """Export to Moodboard is a native block popup like the lens dropdown.
 
     The Python popover and its `mixar.director_show_render` opener are gone.
-    Presentation stays native (kind toggles and the resolution slider bind
-    shot RNA directly); behavior keeps its single Python owner because the
-    action rows invoke `mixar.director_send_keyframes` and
-    `mixar.director_render_videos`.
+    Presentation stays native (the toggles and the size cells bind shot RNA
+    directly); behavior keeps its single Python owner because the one Send
+    action invokes `mixar.director_export_to_moodboard`.
     """
     overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(
         encoding="utf-8"
@@ -122,18 +121,20 @@ def test_native_surface_hosts_the_export_popup_natively():
     assert "show_render" not in operators
     assert '"render_output_types"' in popup
     assert '"render_resolution_percentage"' in popup
+    assert '"export_images"' in popup
     assert '"render_status"' in popup
-    assert '"MIXAR_OT_director_render_videos"' in popup
-    assert "to Moodboard" in popup
-    # Multi-select contract: picking a render kind must not dismiss the
-    # popup (KEEP_OPEN); only click-outside, Esc, or an action closes it —
-    # Export/Render via their explicit close callback, since KEEP_OPEN would
-    # otherwise keep the popup up after the action too.
+    assert '"MIXAR_OT_director_export_to_moodboard"' in popup
+    assert "class MIXAR_OT_director_export_to_moodboard" in operators
+    # Multi-select contract: a toggle must not dismiss the popup
+    # (KEEP_OPEN); only click-outside, Esc, or the Send action closes it —
+    # via its explicit close callback, since KEEP_OPEN would otherwise keep
+    # the popup up after the action too.
     assert "BLOCK_KEEP_OPEN" in popup
     assert "render_popup_close" in popup
     assert "popup_menu_retval_set" in popup
     assert "classes = (" in operators
     assert "MIXAR_OT_director_render_videos," in operators
+    assert "MIXAR_OT_director_export_to_moodboard," in operators
 
 
 def test_native_export_is_a_single_moodboard_menu():
@@ -150,7 +151,9 @@ def test_native_export_is_a_single_moodboard_menu():
     assert '"Export to Moodboard"' in overlay
     assert '"MIXAR_OT_director_send_keyframes"' not in overlay
     assert '"MIXAR_OT_director_send_video"' not in overlay
-    # Keyframe export now lives inside the Export popup.
-    assert '"MIXAR_OT_director_send_keyframes"' in popup
+    # Keyframe images go through the popup's one Send action; the images-only
+    # operator stays for scripts.
+    assert '"MIXAR_OT_director_export_to_moodboard"' in popup
+    assert '"MIXAR_OT_director_send_keyframes"' not in popup
     assert "MIXAR_OT_director_send_keyframes," in capture_ops
     assert "director_send_moodboard" not in capture_ops

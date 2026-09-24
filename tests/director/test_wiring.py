@@ -208,7 +208,7 @@ def test_native_surface_reaches_the_phase_zero_directing_actions():
     popup_render = (VIEW3D / "view3d_director_popup_render.cc").read_text(
         encoding="utf-8"
     )
-    assert "MIXAR_OT_director_send_keyframes" in popup_render
+    assert "MIXAR_OT_director_export_to_moodboard" in popup_render
     surface = _native_surface()
     # The dock's quiet icon row is gone (collapse timeline, immersive,
     # explore, add-camera). The timeline stays open, so collapse survives

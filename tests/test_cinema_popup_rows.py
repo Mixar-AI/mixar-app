@@ -179,7 +179,8 @@ def test_lens_type_cells_are_a_segment_group():
 def test_section_labels_tag_caption_so_every_popup_gets_the_look():
     label = _function(POPUP, "void director_popup_section_label(")
     assert "ui::UI_mixar_cinema_row_tag(label, ui::MixarCinemaRowKind::Caption);" in label
-    # The Output popup's "On Moodboard" entries are captions with their icon.
+    # The Output popup's "already on the Moodboard" line is a caption with
+    # its icon.
     assert "ui::UI_mixar_cinema_row_tag(entry, ui::MixarCinemaRowKind::Caption);" in RENDER
     assert "ICON_FILE_MOVIE" in RENDER
 
@@ -195,12 +196,15 @@ def test_director_popup_state_picks_the_kind_from_the_button_type():
     assert "ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option" in state
 
 
-def test_output_popup_resolution_slider_is_tagged_by_hand():
+def test_output_popup_video_size_is_a_segment_group():
+    """Draft / Half / Full cells, not a percentage slider whose meaning was a
+    caption away; the pixel size they make is the caption right under them."""
     render = _function(RENDER, "ui::Block *render_popup_create(")
-    assert "ui::UI_mixar_cinema_row_tag(resolution, ui::MixarCinemaRowKind::Slider);" in render
-    # Summary caption directly under the slider; widths untouched.
-    slider_at = render.index('"render_resolution_percentage"')
-    summary_at = render.index("y -= label_h;", slider_at)
+    assert "ui::UI_mixar_cinema_row_tag(cell, ui::MixarCinemaRowKind::Segment);" in render
+    assert "director_popup_state(cell, percent == size.percent, !running);" in render
+    assert "ui::ButtonType::NumSlider" not in render
+    cells_at = render.index('"render_resolution_percentage"')
+    summary_at = render.index("y -= label_h;", cells_at)
     assert "director_popup_section_label(block, summary, y, width);" in render[summary_at:]
     assert "director_popup_width(arg, UI_UNIT_X * 12)" in render
     assert "ui::BLOCK_KEEP_OPEN" in render and "render_popup_close" in render

@@ -185,25 +185,37 @@ GUIDANCE_STRENGTH_ITEMS = (
     ("EXPRESSIVE", "Expressive", "Allow more interpretation between keyframes", 2),
 )
 
+# The three videos Export to Moodboard renders. Named for what each LOOKS
+# like — "Beauty Preview" is compositing jargon, and "guides" said nothing
+# about what arrives on the board.
 SHOT_RENDER_OUTPUT_ITEMS = (
     (
         "BEAUTY",
-        "Beauty Preview",
-        "Material-color preview with studio lighting",
+        "Color",
+        "The scene's own materials under studio lighting",
         1,
     ),
     (
         "CLAY",
         "Clay",
-        "Neutral clay preview that emphasizes shape and motion",
+        "Plain gray surfaces, so shape and motion read on their own",
         2,
     ),
     (
         "DEPTH",
         "Depth",
-        "Normalized camera-depth guide with near geometry shown brighter",
+        "A depth map: nearer surfaces brighter",
         4,
     ),
+)
+
+# Video size presets, as percentages of the scene's output size. The popup
+# shows them as three cells and states the pixel size they make; the native
+# copy in `view3d_director_popup_render.cc` must match.
+VIDEO_SIZE_PRESETS = (
+    (25, "Draft", "A quarter of the output size: fastest"),
+    (50, "Half", "Half the output size"),
+    (100, "Full", "The full output size: slowest"),
 )
 
 
