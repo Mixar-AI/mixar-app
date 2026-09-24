@@ -6,8 +6,7 @@
  * \ingroup spmixiechat
  *
  * Capture lightbox: click a capture tile in the steps block and the image
- * opens large over the chat — the image fit to the region, its caption and
- * position, ‹ › to step through every capture of that bubble. ESC, a click
+ * opens large over the chat — the image fit to the region and its position, ‹ › to step through every capture of that bubble. ESC, a click
  * anywhere off a control, or the ✕ closes it. The scrim behind the image is
  * drawn at full strength on the very first frame: an eased fade-in read as
  * a delay next to an image that appears at once.
@@ -251,40 +250,19 @@ void mixie_chat_draw_lightbox(const bContext *C, ARegion *region)
     BLF_draw(font_id, missing, strlen(missing));
   }
 
-  /* Caption band, anchored to the REGION (not the image, which may be tiny
-   * in a narrow window): the counter takes the right end first, the caption
-   * gets whatever width is left and is cut with an ellipsis. */
+  /* Counter only, at the right end of the region. The capture's label is the
+   * backend's internal name ("render_viewport hero 900x700 focus ...") and
+   * says nothing a user needs. */
   {
     BLF_size(font_id, LIGHTBOX_TEXT_PX * scale);
     const float baseline = margin + (LIGHTBOX_BOTTOM_BAND * scale - float(BLF_height_max(font_id))) * 0.5f +
                            -float(BLF_descender(font_id));
-    const float band_left = margin;
-    const float band_right = winx - margin;
-
     char counter[32];
     BLI_snprintf(counter, sizeof(counter), "%d / %d", rt->lightbox_index + 1, count);
     const float cw = BLF_width(font_id, counter, strlen(counter));
     BLF_color4fv(font_id, LIGHTBOX_INK_DIM);
-    BLF_position(font_id, band_right - cw, baseline, 0.0f);
+    BLF_position(font_id, winx - margin - cw, baseline, 0.0f);
     BLF_draw(font_id, counter, strlen(counter));
-
-    const char *caption = img.caption[0] ? img.caption : (img.alt[0] ? img.alt : "Capture");
-    const float caption_max = band_right - cw - 12.0f * scale - band_left;
-    char clipped[600];
-    BLI_strncpy(clipped, caption, sizeof(clipped));
-    if (caption_max > 0.0f && BLF_width(font_id, clipped, strlen(clipped)) > caption_max) {
-      const char *ellipsis = "\xE2\x80\xA6";
-      const float ew = BLF_width(font_id, ellipsis, strlen(ellipsis));
-      const size_t fit = BLF_width_to_strlen(font_id, clipped, strlen(clipped),
-                                             std::max(0.0f, caption_max - ew), nullptr);
-      clipped[fit] = '\0';
-      BLI_strncat(clipped, ellipsis, sizeof(clipped));
-    }
-    if (caption_max > 0.0f) {
-      BLF_color4fv(font_id, LIGHTBOX_INK);
-      BLF_position(font_id, band_left, baseline, 0.0f);
-      BLF_draw(font_id, clipped, strlen(clipped));
-    }
   }
 
   /* Close chip, top-right of the region. */
