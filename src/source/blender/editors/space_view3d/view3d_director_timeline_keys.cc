@@ -15,7 +15,8 @@
  * the Timeline does, and every one of them is a real handle: a click, a
  * drag, a box and a delete act on Blender's own keys
  * (`mixar.director_*_keys`). A Director beat is metadata ON a column, drawn
- * as a badge over its key (view3d_director_timeline_draw.cc).
+ * as a ring around its key when it carries an image
+ * (view3d_director_timeline_draw.cc).
  *
  * The marks are Blender's own: the keylist the Dope Sheet builds for an
  * object row (`ob_to_keylist`: the object's action and its camera data's, so

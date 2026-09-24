@@ -5,8 +5,9 @@
 /** \file
  * \ingroup spview3d
  *
- * The dock's layout and its camera strip: the label column, the bar over the
- * camera's key range, the native keys and the beats' badges on them.
+ * The dock's layout and its camera strip: the label column, the tinted span
+ * of the camera's keys, the native keys and the rings on keyframes with an
+ * image.
  */
 
 #include <algorithm>
@@ -39,13 +40,16 @@ namespace blender {
 
 namespace {
 
-constexpr float STRIP_COLOR[4] = {1.0f, 0.72f, 0.48f, 1.0f};
-constexpr float STRIP_HOVER_COLOR[4] = {1.0f, 0.76f, 0.54f, 1.0f};
+/* The take's span is a TINT of the strip's orange with a firm edge in it.
+ * A solid orange bar put every key on orange — the Timeline's own key
+ * colours (white keyframes, green recorded samples) are drawn for a dark
+ * background and turned to mush on it. */
+constexpr float STRIP_COLOR[4] = {1.0f, 0.72f, 0.48f, 0.62f};
+constexpr float STRIP_FILL_COLOR[4] = {1.0f, 0.72f, 0.48f, 0.13f};
+constexpr float STRIP_HOVER_FILL_COLOR[4] = {1.0f, 0.72f, 0.48f, 0.22f};
 constexpr float LABEL_TEXT_COLOR[4] = {1.0f, 0.98f, 0.96f, 1.0f};
-/** A beat's badge: a dark chip over its key, green while the key is
- * selected, so the badge never reads as a second, separate handle. */
-constexpr float BADGE_FILL_COLOR[4] = {0.10f, 0.07f, 0.05f, 0.92f};
-constexpr float BADGE_SELECTED_COLOR[4] = {0.13f, 0.60f, 0.33f, 1.0f};
+/** A thin ring around a keyframe that carries a captured image. */
+constexpr float STILL_RING_COLOR[4] = {1.0f, 1.0f, 1.0f, 0.78f};
 /** The box-select rubber band. */
 constexpr float BOX_FILL_COLOR[4] = {1.0f, 1.0f, 1.0f, 0.08f};
 constexpr float BOX_LINE_COLOR[4] = {1.0f, 1.0f, 1.0f, 0.45f};
@@ -159,7 +163,7 @@ void draw_label(const DirectorViewState &state,
                               LABEL_TEXT_COLOR);
 }
 
-/** Put each beat on its key column, for the badge and the right-click menu. */
+/** Put each beat on its key column, for its ring and the right-click menu. */
 void attach_beats(const DirectorViewState &state, DirectorTimelineRuntime *runtime)
 {
   for (DirectorTimelineKeyHit &hit : runtime->key_hits) {
@@ -174,34 +178,44 @@ void attach_beats(const DirectorViewState &state, DirectorTimelineRuntime *runti
 }
 
 /**
- * A badge over every key that carries a Director beat: a picture for a beat
- * with a captured still, a camera for one without. Drawn in the strip's
- * upper band so it never covers the key mark, and thinned when zoomed out so
- * badges never pile onto one another.
+ * A thin ring around each keyframe that carries a captured image — the ones
+ * Export to Moodboard sends as Keyframe Images.
+ *
+ * The key itself already says it is a keyframe and not a recorded sample
+ * (Blender's key types draw differently); the ring adds only what the key
+ * cannot. It used to be an icon chip jammed against the bar's top edge,
+ * which read as a rendering glitch. Rings are thinned when zoomed out so they
+ * never chain into one another.
  */
-void draw_beat_badges(const DirectorTimelineRuntime &runtime,
-                      const float strip_y,
-                      const float strip_h)
+void draw_still_rings(const DirectorTimelineRuntime &runtime, const float cy)
 {
   const float u = UI_SCALE_FAC;
-  const float badge = 11.0f * u;
-  const float icon = 9.0f * u;
-  const float top = strip_y + strip_h;
-  const float bottom = top - badge;
+  const float radius = 8.0f * u;
+  bool any = false;
+  for (const DirectorTimelineKeyHit &hit : runtime.key_hits) {
+    any |= hit.beat >= 0 && hit.beat_has_still;
+  }
+  if (!any) {
+    return;
+  }
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_POLYLINE_UNIFORM_COLOR);
+  float viewport[4];
+  GPU_viewport_size_get_f(viewport);
+  immUniform2fv("viewportSize", &viewport[2]);
+  immUniform1f("lineWidth", std::max(1.0f, 1.25f * u));
+  immUniformColor4fv(STILL_RING_COLOR);
   float last_x = -FLT_MAX;
   for (const DirectorTimelineKeyHit &hit : runtime.key_hits) {
-    if (hit.beat < 0 || hit.x - last_x < badge + 2.0f * u) {
+    if (hit.beat < 0 || !hit.beat_has_still || hit.x - last_x < radius * 2.0f + 2.0f * u) {
       continue;
     }
     last_x = hit.x;
-    const rctf chip = {hit.x - badge * 0.5f, hit.x + badge * 0.5f, bottom, top};
-    director_timeline_draw_round_rect(
-        chip, 3.0f * u, hit.selected ? BADGE_SELECTED_COLOR : BADGE_FILL_COLOR);
-    draw_icon(hit.x - icon * 0.5f,
-              bottom + (badge - icon) * 0.5f,
-              hit.beat_has_still ? ICON_IMAGE_DATA : ICON_CAMERA_DATA,
-              icon);
+    imm_draw_circle_wire_2d(pos, hit.x, cy, radius, 24);
   }
+  immUnbindProgram();
 }
 
 void draw_strip(const ARegion *region,
@@ -233,29 +247,33 @@ void draw_strip(const ARegion *region,
   }
   const float cy = strip_y + strip_h * 0.5f;
   if (any) {
-    /* The bar spans what the camera is animated over — its first key to its
-     * last, the recorded samples as well as the beats — padded so the end
-     * keys sit inside it rather than on its rounded ends. */
+    /* The span covers what the camera is animated over — its first key to
+     * its last, the recorded samples as well as the beats — padded so an end
+     * key, and the image ring around it, sit inside the rounded ends. */
     const float width = BLI_rctf_size_x(&runtime->viewport_bounds);
     const auto frame_x = [&](const float frame) {
       return runtime->viewport_bounds.xmin +
              (frame - runtime->view_start_frame) / runtime->view_span_frames * width;
     };
-    const float pad = 9.0f * u;
+    const float pad = 13.0f * u;
     const float visible_start = std::max(frame_x(first) - pad, runtime->viewport_bounds.xmin);
     const float visible_end = std::min(frame_x(last) + pad, runtime->viewport_bounds.xmax);
     if (visible_end > visible_start) {
       runtime->strip_bounds = {visible_start, visible_end, strip_y, strip_y + strip_h};
-      director_timeline_draw_round_rect(runtime->strip_bounds,
-                                        7.0f * u,
-                                        runtime->strip_hovered ? STRIP_HOVER_COLOR :
-                                                                 STRIP_COLOR);
+      ui::draw_roundbox_corner_set(ui::CNR_ALL);
+      ui::draw_roundbox_4fv_ex(&runtime->strip_bounds,
+                               runtime->strip_hovered ? STRIP_HOVER_FILL_COLOR : STRIP_FILL_COLOR,
+                               nullptr,
+                               1.0f,
+                               STRIP_COLOR,
+                               std::max(1.0f, u),
+                               7.0f * u);
     }
   }
-  /* Every key the camera carries, each one a handle, then the beats' badges
-   * over their keys. */
+  /* The image rings, then every key the camera carries — each one a handle —
+   * on top, so a ring can never cover a key. */
+  draw_still_rings(*runtime, cy);
   director_timeline_draw_keys(*runtime, region, cy);
-  draw_beat_badges(*runtime, strip_y, strip_h);
 }
 
 }  // namespace

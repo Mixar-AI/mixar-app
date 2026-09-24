@@ -39,7 +39,7 @@ struct DirectorTimelineKeyHit {
   /** The column's `eBezTriple_KeyframeType`, for the mark's shape. */
   int key_type = 0;
   /** The active shot's beat on this column, or -1. A beat is metadata on its
-   * key, drawn as a badge over it. */
+   * key; one with a captured image is ringed. */
   int beat = -1;
   bool beat_has_still = false;
 };

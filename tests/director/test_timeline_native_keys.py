@@ -8,8 +8,8 @@ A recorded take keys every frame the timeline plays (`core/record.py`, the
 `JITTER` key type) but mints beats only at the shot's cadence. The strip once
 drew beats alone; then it drew every key but let only the beats be clicked,
 so most of what it showed could not be touched. Every key column is a real
-key now, selected, dragged and deleted as Blender's own, and a beat is a
-badge on its key.
+key now, selected, dragged and deleted as Blender's own, and a keyframe that
+carries an image is ringed.
 """
 
 from __future__ import annotations
@@ -73,12 +73,12 @@ def test_they_are_drawn_with_the_timelines_shader_and_sizes():
     assert "immBegin(GPU_PRIM_POINTS, int(runtime.key_hits.size()));" in painter
 
 
-def test_the_strip_order_is_bar_keys_badges():
+def test_the_strip_order_is_span_rings_keys():
     strip = _block(DRAW, "void draw_strip(")
-    fill = strip.index("director_timeline_draw_round_rect(runtime->strip_bounds")
+    fill = strip.index("ui::draw_roundbox_4fv_ex(&runtime->strip_bounds,")
+    rings = strip.index("draw_still_rings(*runtime, cy);")
     keys = strip.index("director_timeline_draw_keys(*runtime, region, cy);")
-    badges = strip.index("draw_beat_badges(*runtime, strip_y, strip_h);")
-    assert fill < keys < badges
+    assert fill < rings < keys
     # Keys draw with no beats at all — a first take still recording.
     assert "if (state.beats.is_empty())" not in strip
 
