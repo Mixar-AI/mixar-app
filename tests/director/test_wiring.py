@@ -300,7 +300,6 @@ def test_native_timeline_has_flow_style_strip_drag_and_horizontal_zoom():
         VIEW3D / "view3d_director_timeline_ruler.cc"
     ).read_text(encoding="utf-8")
     timeline_ops = _read("ui/operators/timeline_ops.py")
-    timeline_core = _read("core/timeline.py")
 
     assert "STRIP_COLOR" in timeline_draw
     assert "major_tick_frames" in timeline_ruler
@@ -313,60 +312,65 @@ def test_native_timeline_has_flow_style_strip_drag_and_horizontal_zoom():
     assert '"mixar.director_scrub"' in interaction
     assert "class MIXAR_OT_director_scrub" in timeline_ops
     assert "self._original_frame" in timeline_ops
-    assert "shift_camera_beats" in timeline_ops
-    assert "point.handle_left[0] += delta" in timeline_core
-    assert "point.handle_right[0] += delta" in timeline_core
-    assert "refresh_manifest(context.scene, shot)" in timeline_ops
+    # The bar spans every key, so the strip drag moves every key.
+    assert "KeyDrag(scene, shot.camera, everything=True)" in timeline_ops
+    key_drag = _read("core/key_drag.py")
+    assert "left[2 * index] = left_x + delta" in key_drag
+    assert "right[2 * index] = right_x + delta" in key_drag
+    assert "refresh_manifest(self.scene, shot)" in key_drag
 
 
-def test_single_keyframe_is_draggable_along_the_timeline():
-    """Pressing a keyframe marker retimes it, not just jumps the playhead.
+def test_every_key_is_draggable_along_the_timeline():
+    """Pressing any key — a recorded sample as much as a beat — selects it,
+    views it and drags the selected keys (`mixar.director_drag_keys`).
 
-    A draft beat can be dragged: the modal jumps the playhead on invoke (so a
-    click that never moves still just views the keyframe, matching the old
-    jump behaviour) and slides the beat plus its matching native camera keys
-    on MOUSEMOVE. A single beat is clamped to stay between its time-neighbours
-    because two Director keys must never share a frame. First and last
-    handles stay draggable too — see test_timeline_drag.py. Locked shots stay
-    view-only: the C++ handler only starts the drag when the shot is unlocked
-    and otherwise falls back to jump_beat.
+    A press that never moves still just views the key, as the old beat jump
+    did. A locked shot stays view-only: the operator selects and views, then
+    finishes without starting the modal. First and last keys stay draggable
+    too — see test_timeline_drag.py.
     """
-    timeline_ops = _read("ui/operators/timeline_ops.py")
-    timeline_core = _read("core/timeline.py")
+    key_ops = _read("ui/operators/key_ops.py")
     interaction = (
         VIEW3D / "view3d_director_timeline_interaction.cc"
     ).read_text(encoding="utf-8")
 
-    assert "class MIXAR_OT_director_drag_beat" in timeline_ops
-    assert "MIXAR_OT_director_drag_beat" in timeline_ops.split("classes = (", 1)[1]
-    assert "move_single_beat" in timeline_ops
-    assert "def move_single_beat" in timeline_core
-    assert '"mixar.director_drag_beat"' in interaction
-    assert "begin_beat_drag" in interaction
-    # Locked shots never start the drag; jump_beat is the view-only fallback.
-    assert "!state.locked && begin_beat_drag" in interaction
-    assert '"mixar.director_jump_beat"' in interaction
+    assert "class MIXAR_OT_director_drag_keys" in key_ops
+    assert "MIXAR_OT_director_drag_keys" in key_ops.split("classes = (", 1)[1]
+    assert "KeyDrag(context.scene, camera)" in key_ops
+    assert '"mixar.director_drag_keys"' in interaction
+    assert "begin_key_drag(C, event, runtime, *key)" in interaction
+    invoke = key_ops.split("def invoke(self, context, event):", 1)[1].split("def _release", 1)[0]
+    assert "_view_column(context, shot, self.frame)" in invoke
+    assert "if shot.state != 'DRAFT':" in invoke
+    # The beat-only drags are gone.
+    assert '"mixar.director_drag_beat"' not in interaction
+    assert '"mixar.director_jump_beat"' not in interaction
 
 
 def test_keyframes_delete_from_timeline_with_standard_keys():
-    """X / Delete / Backspace over the timeline remove a keyframe.
+    """X / Delete / Backspace over the timeline delete keys.
 
     While directing, `mixar.director_block_input` (the Object Mode / WINDOW
     keymap guard) swallows X/Del to protect scene objects, but it never sees
     keys pressed over the timeline's own CHANNELS region. So the native
-    timeline handler deletes its own keyframe: the one under the cursor, else
-    the one under the playhead, else the active one — through the existing
-    `mixar.director_remove_beat` operator. Locked takes stay read-only.
+    timeline handler deletes: the selected keys, else the key under the
+    cursor, else the one under the playhead — `mixar.director_delete_keys`.
+    Locked takes stay read-only.
     """
     interaction = (
         VIEW3D / "view3d_director_timeline_interaction.cc"
     ).read_text(encoding="utf-8")
+    key_ops = _read("ui/operators/key_ops.py")
 
     for key in ("EVT_XKEY", "EVT_DELKEY", "EVT_BACKSPACEKEY"):
         assert key in interaction, key
-    assert "beat_to_delete" in interaction
-    assert '"mixar.director_remove_beat"' in interaction
+    assert '"mixar.director_delete_keys"' in interaction
+    assert "delete_keys(C, key)" in interaction
     assert "state.has_shot && !state.locked" in interaction
+    execute = key_ops.split("class MIXAR_OT_director_delete_keys", 1)[1]
+    assert "if not has_selected_keys(camera):" in execute
+    assert "float(context.scene.frame_current)" in execute
+    assert "drop_beats_without_keys(context.scene, camera)" in execute
 
 
 def test_orphaned_keyframes_prune_when_native_keys_deleted_elsewhere():
@@ -388,7 +392,8 @@ def test_orphaned_keyframes_prune_when_native_keys_deleted_elsewhere():
     assert "@persistent" in beat_sync
     assert "def prune_orphaned_beats" in beat_sync
     assert "from .capture import remove_beat" in beat_sync
-    assert "remove_beat(scene, shot, index)" in beat_sync
+    # The key went natively; the beat's metadata follows it and nothing else.
+    assert "remove_beat(scene, shot, index, delete_keys=False)" in beat_sync
     # Detect in the handler, mutate in the timer (never mutate in the handler).
     assert "bpy.app.timers.register(_sync_timer" in beat_sync
     # Never destroy a beat + its still on a MOVE (native count stays equal).
@@ -775,7 +780,7 @@ def test_timeline_strip_can_split_and_delete():
     anim_curves = _read("core/anim_curves.py")
     handheld_source = _read("core/handheld.py")
     timeline_source = _read("core/timeline.py")
-    assert "common.utils.animation import assigned_fcurves, remove_fcurves" in anim_curves
+    assert "common.utils.animation import action_fcurves, assigned_fcurves, remove_fcurves" in anim_curves
     assert "action.fcurves" not in capture
     assert "action.fcurves" not in handheld_source
     assert "assigned_fcurves" in handheld_source

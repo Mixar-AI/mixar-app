@@ -2,11 +2,12 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Keyframes read as keyframes on the camera strip.
+"""Keys, beat badges and the camera label read on the strip.
 
-They were rounded pills in #FFD4B0 drawn on a #FFB87A strip — two shades of
-the same orange, which is no contrast at all. They are diamonds with a dark
-outline now, the shape every Blender editor marks a key with.
+The keys are Blender's own keyframe shapes (`view3d_director_timeline_keys.cc`).
+What Director adds on top has to stay legible over the orange bar: the badge
+a beat wears on its key, and the camera's name, which lives in its own
+column so no key can draw over it.
 """
 
 from __future__ import annotations
@@ -15,9 +16,9 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DRAW = (
-    ROOT / "src/source/blender/editors/space_view3d/view3d_director_timeline_draw.cc"
-).read_text(encoding="utf-8")
+VIEW3D = ROOT / "src/source/blender/editors/space_view3d"
+DRAW = (VIEW3D / "view3d_director_timeline_draw.cc").read_text(encoding="utf-8")
+RUNTIME = (VIEW3D / "view3d_director_timeline.hh").read_text(encoding="utf-8")
 
 
 def _color(name: str) -> tuple[float, ...]:
@@ -36,46 +37,57 @@ def _contrast(a, b) -> float:
     return max(la, lb) / min(la, lb)
 
 
-def test_the_mark_is_a_diamond():
-    assert "void draw_diamond(" in DRAW
-    assert "GPU_PRIM_TRI_FAN" in DRAW
-    loop = DRAW[DRAW.index("for (const DirectorBeatView &beat : state.beats)") :]
-    assert "draw_diamond(x, cy, radius, fill);" in loop
-    # The old near-invisible pill.
-    assert "draw_round_rect(handle," not in DRAW
+def _block(start: str) -> str:
+    body = DRAW[DRAW.index(start) :]
+    return body[: body.index("\n}\n") + 3]
 
 
-def test_every_mark_carries_an_outline():
-    """A fill alone is two shades of the strip's own orange."""
-    assert "void draw_diamond_outline(" in DRAW
-    loop = DRAW[DRAW.index("for (const DirectorBeatView &beat : state.beats)") :]
-    assert "draw_diamond_outline(x," in loop
-    assert loop.index("draw_diamond(x,") < loop.index("draw_diamond_outline(x,")
+def test_the_old_beat_diamonds_are_gone():
+    """Beats are not a second set of handles any more."""
+    assert "draw_diamond" not in DRAW
+    assert "HANDLE_COLOR" not in DRAW
 
 
-def test_the_outline_contrasts_with_the_strip_it_sits_on():
-    """This is the property that was missing, so it is the one pinned."""
+def test_the_badge_contrasts_with_the_strip():
     strip = _color("STRIP_COLOR")
-    assert _contrast(_color("HANDLE_OUTLINE_COLOR"), strip) >= 4.5
-    # And the fill is legible against its own outline.
-    assert _contrast(_color("HANDLE_COLOR"), _color("HANDLE_OUTLINE_COLOR")) >= 4.5
+    assert _contrast(_color("BADGE_FILL_COLOR"), strip) >= 4.5
 
 
-def test_the_old_fill_really_was_invisible():
-    """Guards the regression: the previous pair were the same orange."""
-    assert _contrast((1.0, 0.83, 0.69), _color("STRIP_COLOR")) < 1.5
+def test_a_selected_keys_badge_says_so():
+    assert _color("BADGE_SELECTED_COLOR") != _color("BADGE_FILL_COLOR")
+    badges = _block("void draw_beat_badges(")
+    assert "hit.selected ? BADGE_SELECTED_COLOR : BADGE_FILL_COLOR" in badges
 
 
-def test_a_selected_key_is_a_different_colour_not_just_a_brighter_one():
-    """The active keyframe and a hover are already lit, so "lit" cannot also
-    mean selected."""
-    selected = _color("HANDLE_SELECTED_COLOR")
-    assert selected != _color("HANDLE_ACTIVE_COLOR")
-    assert _contrast(selected, _color("HANDLE_ACTIVE_COLOR")) >= 1.5
+def test_the_badge_says_whether_there_is_a_still():
+    badges = _block("void draw_beat_badges(")
+    assert "hit.beat_has_still ? ICON_IMAGE_DATA : ICON_CAMERA_DATA" in badges
 
 
-def test_the_mark_never_outgrows_the_strip_carrying_it():
-    loop = DRAW[DRAW.index("for (const DirectorBeatView &beat : state.beats)") :]
-    assert "std::min(handle_w * 0.75f, strip_h * 0.42f)" in loop
-    # ... and never shrinks to nothing on a short dock.
-    assert "std::max(5.0f * UI_SCALE_FAC," in loop
+def test_the_badge_never_leaves_the_strip_or_covers_the_key():
+    badges = _block("void draw_beat_badges(")
+    # Its top IS the strip's top; 11 px leaves the centre row to the key.
+    assert "const float top = strip_y + strip_h;" in badges
+    assert "const float badge = 11.0f * u;" in badges
+
+
+def test_badges_thin_out_instead_of_piling_up():
+    badges = _block("void draw_beat_badges(")
+    assert "hit.x - last_x < badge + 2.0f * u" in badges
+
+
+def test_the_label_has_a_column_of_its_own():
+    """It sat inside the bar, where a key on every frame drew straight over
+    it. The keys now start past it."""
+    assert "constexpr float DIRECTOR_LABEL_W = 104.0f;" in RUNTIME
+    assert "runtime->viewport_bounds = {float(margin) + DIRECTOR_LABEL_W * u," in DRAW
+    strip = _block("void draw_strip(")
+    assert "runtime->viewport_bounds.xmin - 12.0f * u," in strip
+    assert "draw_label(state, runtime, strip_y, strip_h);" in strip
+
+
+def test_a_long_name_is_cut_not_overflowed():
+    fit = _block("std::string fit_text(")
+    assert '"\\xe2\\x80\\xa6" /* U+2026 */' in fit
+    # Never half a UTF-8 sequence.
+    assert "(uchar(cut[len]) & 0xC0) == 0x80" in fit

@@ -296,47 +296,42 @@ def test_the_operator_falls_back_to_the_keyframe_in_hand():
 
 
 def _shift_d_block() -> str:
-    return SELECT.split("EVT_DKEY", 1)[1].split("/* ---- Delete", 1)[0]
+    return SELECT.split("bool duplicate_selected(", 1)[1].split("\n}\n", 1)[0]
 
 
 def test_shift_d_is_the_gesture():
     """The one the Dope Sheet and the viewport both train."""
     assert "EVT_DKEY && event->val == KM_PRESS && (event->modifier & KM_SHIFT)" in SELECT
+    gesture = SELECT.split("EVT_DKEY", 1)[1][:300]
+    assert "!state.locked" in gesture
+    assert "duplicate_selected(C, runtime, event)" in gesture
     block = _shift_d_block()
     assert '"mixar.director_duplicate_beats"' in block
-    assert "!state.locked" in block
+    # The beats duplicated are the ones on the selected KEYS.
+    assert "view3d_director_timeline_selection(C, &beats)" in block
 
 
 def test_the_copies_go_straight_into_a_drag():
     """A duplicate that lands a beat further on and stops there is one the
     director then has to go and find; what they wanted was this pose, HERE."""
     block = _shift_d_block()
-    assert '"mixar.director_drag_beats"' in block
+    assert '"mixar.director_drag_keys"' in block
     assert block.index('"mixar.director_duplicate_beats"') < block.index(
-        '"mixar.director_drag_beats"'
+        '"mixar.director_drag_keys"'
     )
-    # The drag needs the event to anchor on, and the frames-per-pixel the
-    # view is at — the same two the click-drag path passes.
+    # The drag moves the selection as it stands — no key to click — at the
+    # frames-per-pixel the view is at, anchored on the event.
+    assert 'RNA_boolean_set(&drag_ptr, "use_frame", false);' in block
     assert "runtime->view_span_frames / width" in block
-    assert "event)" in block
+    assert "&drag_ptr, event)" in block
 
 
 def test_the_copies_become_the_selection():
-    """They are appended, so they are every index past the old count."""
-    block = _shift_d_block()
-    assert "const int before = beat_count;" in block
-    assert "RNA_property_collection_length(&shot_ptr, beats)" in block
-    assert "for (int index = before; index < after; index++)" in block
-    assert "runtime->selected.append(index);" in block
-
-
-def test_the_selection_survives_the_count_change():
-    """`director_timeline_selection_sync` drops the selection whenever the
-    beat count moves, which would pull it out from under the drag."""
-    block = _shift_d_block()
-    assert "runtime->content_count = after;" in block
-    sync = SELECT.split("void director_timeline_selection_sync(", 1)[1].split("\n}\n", 1)[0]
-    assert "runtime->content_count != beat_count" in sync
+    """The operator selects the copies' keys, so the drag moves them and
+    nothing else — and the Timeline shows them selected too."""
+    body = OPS.split("class MIXAR_OT_director_duplicate_beats", 1)[1]
+    assert "select_columns(shot.camera, [int(beat.frame) for beat in created], 'SET')" in body
+    assert body.index("select_columns(") > body.index("duplicate_beats(scene, shot, selected")
 
 
 def test_the_strip_menu_offers_it_before_delete():

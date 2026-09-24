@@ -18,7 +18,7 @@ from ...core.dof import clear_focus_object, set_focus_object
 from ...core.interpolation import apply_interpolation
 from ...core.selection import parse_indices
 from ...core.shot_api import active_shot
-from ...core.tracking import frame_target, pick_object_under_cursor
+from ...core.tracking import pick_object_under_cursor
 from ...core.viewport import find_view3d_context
 from ..track_pick_overlay import disable as disable_hover
 from ..track_pick_overlay import enable as enable_hover
@@ -252,17 +252,11 @@ class MIXAR_OT_director_pick_track_target(Operator):
                 return {'CANCELLED'}
             self.report({'INFO'}, f"Focused on {target.name}")
             return {'FINISHED'}
+        # Tracking only AIMS: the constraint turns the camera to the target.
+        # Where the camera stands and how much of the frame the subject fills
+        # stay the director's — the pick never moves the camera or its lens.
         shot.track_target = target
-        # The constraint aims the camera; it says nothing about how much of
-        # the frame the subject fills. Picking a distant object aimed
-        # correctly and left it a speck, which reads as a broken eyedropper.
-        framed = frame_target(shot.camera, target)
-        self.report(
-            {'INFO'},
-            f"Camera tracks and frames {target.name}"
-            if framed
-            else f"Camera tracks {target.name}",
-        )
+        self.report({'INFO'}, f"Camera tracks {target.name}")
         return {'FINISHED'}
 
 

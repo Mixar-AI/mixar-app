@@ -174,6 +174,9 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
     DirectorBeatView beat;
     beat.index = index;
     beat.frame = director_int(&beat_ptr, "frame", scene->r.sfra);
+    if (PropertyRNA *image_prop = director_prop(&beat_ptr, "image")) {
+      beat.has_still = RNA_property_pointer_get(&beat_ptr, image_prop).data != nullptr;
+    }
     r_state->beats.append(beat);
   }
 

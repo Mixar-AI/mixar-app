@@ -41,6 +41,8 @@ constexpr int VIEW3D_DIRECTOR_TIMELINE_HEIGHT = 219;
 struct DirectorBeatView {
   int frame = 0;
   int index = 0;
+  /** The beat carries a captured still; the dock's badge says so. */
+  bool has_still = false;
 };
 
 struct DirectorViewState {
