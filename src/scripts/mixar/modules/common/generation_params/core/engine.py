@@ -51,6 +51,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
+from .bounds import integer_bounds, numeric_bounds
 from ..constants import (
     FLOAT_TYPES,
     PARAM_ATTR_PREFIX,
@@ -58,8 +59,8 @@ from ..constants import (
     TYPE_INTEGER,
     UNBOUNDED_FLOAT_MAX,
     UNBOUNDED_FLOAT_MIN,
-    UNBOUNDED_INT_MAX,
-    UNBOUNDED_INT_MIN,
+    VISIBLE_IF_ATTR,
+    VISIBLE_IF_MAXLEN,
     WM_ATTR_PREFIX,
 )
 
@@ -147,29 +148,31 @@ def _make_prop(param_name: str, spec: dict):
         )
 
     if ptype == TYPE_INTEGER:
-        pmin = spec.get("min")
-        pmax = spec.get("max")
+        # int() truncation admits values a fractional catalog bound excludes,
+        # and int() of a non-finite bound raises out of register_class.
+        pmin, pmax, pdefault = integer_bounds(spec)
         return (
             IntProperty(
                 name=label,
                 description=description,
-                default=int(default) if default is not None else 0,
-                min=int(pmin) if pmin is not None else UNBOUNDED_INT_MIN,
-                max=int(pmax) if pmax is not None else UNBOUNDED_INT_MAX,
+                default=pdefault,
+                min=pmin,
+                max=pmax,
             ),
             None,
         )
 
     if ptype in FLOAT_TYPES:
-        pmin = spec.get("min")
-        pmax = spec.get("max")
+        pmin, pmax, pdefault = numeric_bounds(
+            spec, float, UNBOUNDED_FLOAT_MIN, UNBOUNDED_FLOAT_MAX, 0.0
+        )
         return (
             FloatProperty(
                 name=label,
                 description=description,
-                default=float(default) if default is not None else 0.0,
-                min=float(pmin) if pmin is not None else UNBOUNDED_FLOAT_MIN,
-                max=float(pmax) if pmax is not None else UNBOUNDED_FLOAT_MAX,
+                default=pdefault,
+                min=pmin,
+                max=pmax,
             ),
             None,
         )
@@ -202,6 +205,18 @@ def _build_group(service_key: str, model_slug: str, parameters: dict):
             continue
         annotations[attr] = prop
         schema[param_name] = {"spec": spec, "attr": attr, "value_map": value_map}
+
+    from bpy.props import StringProperty
+
+    from .visible_if import encode_visible_if_table
+
+    annotations[VISIBLE_IF_ATTR] = StringProperty(
+        name="",
+        description="Catalog visible_if keyed by RNA attribute",
+        default=encode_visible_if_table(schema),
+        maxlen=VISIBLE_IF_MAXLEN,
+        options={"HIDDEN", "SKIP_SAVE"},
+    )
 
     cls = type(
         f"MIXAR_PG_genparams_{_sanitize(service_key)}__{_sanitize(model_slug)}",
@@ -391,6 +406,8 @@ def is_param_visible(
         return False
     condition = spec.get("visible_if")
     if condition:
+        if not isinstance(condition, dict):
+            return False
         for other_name, expected in condition.items():
             other_entry = schema.get(other_name)
             if other_entry is None:

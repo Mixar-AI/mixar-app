@@ -1,0 +1,410 @@
+/* SPDX-FileCopyrightText: 2026 Mixar Authors
+ * SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/** \file
+ * \ingroup spagentbubble
+ *
+ * Image and Video tab panes — the moodboard's Image Gen / Video Gen re-skinned as
+ * island chips. All state/operators are the moodboard tabs' own (see
+ * agent_ui_tabmedia.hh); param chips project the catalog param group at
+ * `wm.mixar_genparams_<service>__<model>` — no param names hardcoded.
+ */
+
+#include "agent_ui_text.hh"
+#include "agent_bubble_references.hh"
+
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+
+#include "BLF_api.hh"
+
+#include "BLI_rect.h"
+#include "BLI_string.h"
+#include "BLI_utildefines.h"
+
+#include "BKE_context.hh"
+
+#include "DNA_scene_types.h"
+#include "DNA_screen_types.h"
+#include "DNA_windowmanager_types.h"
+
+#include "GPU_state.hh"
+
+#include "RNA_access.hh"
+
+#include "UI_interface.hh"
+#include "UI_interface_c.hh"
+#include "UI_interface_layout.hh"
+#include "UI_mixar.hh"
+#include "UI_mixar_layout.hh"
+#include "UI_mixar_tokens.hh"
+#include "UI_resources.hh"
+
+#include "WM_api.hh"
+#include "WM_types.hh"
+
+#include "agent_ui_pane_kit.hh"
+#include "agent_ui_tabmedia.hh"
+#include "agent_ui_tabmedia_intern.hh"
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
+/* -------------------------------------------------------------------- */
+/** \name Draw
+ * \{ */
+
+void agent_ui_tabmedia_draw(const bContext *C,
+                            ARegion *region,
+                            const rctf &panel,
+                            const float u)
+{
+  Scene *scene = CTX_data_scene(C);
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!scene || !wm) {
+    return;
+  }
+
+  /* Drawable band: the panel clipped to this region's framebuffer. */
+  rctf band = panel;
+  band.ymin = std::max(band.ymin, 0.0f);
+  band.ymax = std::min(band.ymax, float(BLI_rcti_size_y(&region->winrct) + 1));
+  if (BLI_rctf_size_y(&band) < 120.0f * u) {
+    return;
+  }
+
+  /* Overflow and unavailable copy use the shared secondary text tone. */
+  const float *col_dim = ui::mixar_tokens::mixar_zen().secondary;
+
+  const float font = PANE_FONT * agent_ui_text_unit();
+  const float font_sub = PANE_FONT_SUB * agent_ui_text_unit();
+  const float left = band.xmin + PANE_INSET_X * u;
+  const float right = band.xmax - PANE_INSET_X * u;
+
+  /* The header tab is the single source of Image/Video selection. */
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  char tab_id[64] = "IMAGE", tab_label[64] = "";
+  media_read_enum(C, &wm_ptr, "mixar_bubble_tab", tab_id, tab_label);
+  const bool video = STREQ(tab_id, "VIDEO");
+
+  /* ---- Tab group + catalog identity. ---- */
+  PointerRNA tab_ptr = {};
+  const bool tab_ok = media_sidebar_tab_ptr(
+      scene, video ? "tab_video_gen" : "tab_imagegen", &tab_ptr);
+
+  char mode_id[64] = "", mode_label[64] = "";
+  char model_id[64] = "", model_label[64] = "";
+  if (tab_ok) {
+    media_read_enum(C, &tab_ptr, "mode", mode_id, mode_label);
+    media_read_enum(C, &tab_ptr, "model", model_id, model_label);
+  }
+  const char *service_fallback = video ? "video_gen" : "image_gen";
+  const char *service_key = media_ident_is_placeholder(mode_id) ? service_fallback : mode_id;
+
+  /* Catalog params group on WindowManager. */
+  PointerRNA group_ptr = {};
+  bool group_ok = false;
+  if (!media_ident_is_placeholder(model_id)) {
+    char svc[64], mdl[64], attr[160];
+    media_sanitize_key(service_key, svc, sizeof(svc));
+    media_sanitize_key(model_id, mdl, sizeof(mdl));
+    SNPRINTF(attr, "mixar_genparams_%s__%s", svc, mdl);
+    PropertyRNA *group_prop = RNA_struct_find_property(&wm_ptr, attr);
+    if (group_prop && RNA_property_type(group_prop) == PROP_POINTER) {
+      group_ptr = RNA_property_pointer_get(&wm_ptr, group_prop);
+      group_ok = group_ptr.data != nullptr;
+    }
+  }
+
+  GPU_blend(GPU_BLEND_ALPHA);
+
+  /* Shared panel wash (pane kit). */
+  pane_wash_paint(panel, u);
+
+  /* ---- Params rows: model dropdown + catalog chips, wrap to 2 rows. ---- */
+  MediaParamChip chips[MEDIA_MAX_CHIPS + 1];
+  int chip_count = 0;
+  int param_total = 0;
+  const bool video_unavailable = video && (!tab_ok || !group_ok);
+
+  /* A catalog-only pane has no usable model controls until its group exists.
+   * Leave the strip for the unavailable hint instead of drawing over it. */
+  if (tab_ok && !video_unavailable) {
+    /* Model dropdown first (on the Scene tab group, like the moodboard). */
+    MediaParamChip &model_chip = chips[chip_count++];
+    model_chip = {};
+    model_chip.kind = MediaChipKind::Enum;
+    model_chip.on_wm_group = false;
+    BLI_strncpy(model_chip.prop_id, "model", sizeof(model_chip.prop_id));
+    model_chip.label = "Model";
+    model_chip.value = model_label[0] ? model_label : "Loading...";
+
+    if (group_ok) {
+      chip_count += media_gather_param_chips(
+          C,
+          &group_ptr, chips + chip_count, MEDIA_MAX_CHIPS - chip_count, &param_total);
+    }
+    else if (!video) {
+      /* Image Gen's catalog-not-loaded fallback: the legacy enums on the tab
+       * group, mirroring the moodboard drawer's fallback branch. */
+      const char *legacy[3] = {"style", "aspect_ratio", "resolution"};
+      for (const char *prop_id : legacy) {
+        if (chip_count >= MEDIA_MAX_CHIPS) {
+          break;
+        }
+        char ident[64], label[64];
+        PointerRNA tab_copy = tab_ptr;
+        if (!media_read_enum(C, &tab_copy, prop_id, ident, label)) {
+          continue;
+        }
+        MediaParamChip &chip = chips[chip_count++];
+        chip = {};
+        chip.kind = MediaChipKind::Enum;
+        chip.on_wm_group = false;
+        BLI_strncpy(chip.prop_id, prop_id, sizeof(chip.prop_id));
+        PropertyRNA *prop = RNA_struct_find_property(&tab_ptr, prop_id);
+        chip.label = prop ? RNA_property_ui_name(prop) : prop_id;
+        chip.value = label;
+      }
+    }
+  }
+
+  /* Lay chips out, wrapping once — but never past the floor that reserves
+   * the prompt box (kit contract): the box is claimed FIRST and the chips
+   * stop at the available space instead of pushing the prompt out of existence
+   * while Generate stays armed. */
+  const float chip_h_px = PANE_ROW_H * u;
+  float row_y = band.ymax - PANE_STRIP_TOP * u;
+  /* Never lifted above the first chip row's own bottom — the box would climb
+   * over the chips it is supposed to sit under. */
+  const float params_floor = std::min(pane_params_floor(panel, u), row_y - chip_h_px);
+  ui::MixarFlow flow;
+  flow.x = flow.x0 = left;
+  flow.x_max = right;
+  flow.y_top = row_y;
+  flow.y_floor = std::max(params_floor, row_y - PANE_ROW_PITCH * u - chip_h_px);
+  flow.row_height = chip_h_px;
+  flow.row_pitch = PANE_ROW_PITCH * u;
+  flow.gap = PANE_CHIP_GAP * u;
+  int shown = 0;
+  for (int i = 0; i < chip_count; i++) {
+    ui::MixarFlowRect rect;
+    if (!flow.place(media_chip_width(chips[i], u, font, font_sub), rect)) {
+      break;
+    }
+    chips[i].rect = {rect.xmin, rect.xmax, rect.ymin, rect.ymax};
+    shown++;
+  }
+  row_y = flow.y_top;
+
+  /* Video catalog-only unavailable state. */
+  if (video_unavailable) {
+    pane_label_centre("Video generation needs the live catalog",
+                   (band.xmin + band.xmax) * 0.5f,
+                   row_y - chip_h_px * 0.5f,
+                   font,
+                   col_dim);
+  }
+
+  /* ---- Prompt box: strip bottom -> panel bottom (kit contract), bottom
+   * row INSIDE the box foot like every other pane. ---- */
+
+  const float strip_bottom = std::max(row_y - chip_h_px, params_floor);
+  rctf prompt_box = pane_prompt_box_rect(panel, strip_bottom, u);
+  const bool prompt_fits = pane_prompt_fits(prompt_box, u);
+  /* Generate is a PAID action and must never submit a prompt the user cannot
+   * see or edit, so it is armed only where the field is actually drawn. */
+  const bool prompt_ok = prompt_fits && tab_ok &&
+                         RNA_struct_find_property(&tab_ptr, "prompt") != nullptr;
+  pane_prompt_box_paint(prompt_box, u);
+  const float bottom_h = PANE_ROW_H * u;
+  const float bottom_y = pane_bottom_row_ymin(prompt_box, u);
+
+  /* Upload / capture / refs / generate chip geometry (kit metrics; painted
+   * AFTER the embossed field block below — its chrome covers earlier
+   * pixels). */
+  rctf upload = {}, capture = {}, generate = {};
+  const float upload_w = pane_action_chip_w("Upload Reference", true, u);
+  const float capture_w = pane_action_chip_w("Capture Viewport", false, u);
+  float bx = prompt_box.xmin + PANE_BOTTOM_IN_L * u;
+  /* Both halves upload: the image half into tab_imagegen's reference
+   * collection, the video half onto the moodboard AS SELECTED (Video Gen's
+   * references ARE the board selection). */
+  upload = {bx, bx + upload_w, bottom_y, bottom_y + bottom_h};
+  bx = upload.xmax + PANE_CHIP_GAP * u;
+  /* Capture Viewport: LIVE — mixar.pane_capture_viewport screenshots the 3D
+   * viewport and attaches the still as this tab's reference (image half:
+   * reference collection; video half: boarded selected). */
+  capture = {bx, bx + capture_w, bottom_y, bottom_y + bottom_h};
+  bx = capture.xmax + PANE_CHIP_GAP * u;
+
+
+  /* Generate — "Queued..." / "Generating..." while this half has work in the
+   * unified queue.
+   *
+   * NOT the legacy `scene.mixie_{imagegen,video_gen}_is_generating` flags: the
+   * Image Gen tab's own operator passes no `scene_flag` to
+   * `enqueue_generation`, so nothing on this pane's path ever set them and the
+   * button never acknowledged a click. The queue mirror is where the job
+   * actually is. `service_key` is what this half submits (the mode's catalog
+   * service, or image_gen/video_gen). */
+  int running_jobs = 0;
+  const int active_jobs = pane_active_job_count(C, service_key, &running_jobs);
+  /* A live job does NOT disarm Generate. This is a QUEUE — stacking jobs is
+   * the point — so an active job is INFORMATION (the label carries the
+   * count), never a lock. Only a missing prompt field or an unusable
+   * catalog can disarm it. */
+  const bool can_generate = tab_ok && !video_unavailable && prompt_ok;
+  char gen_label[32];
+  pane_queue_label(gen_label, sizeof(gen_label), active_jobs, running_jobs > 0);
+  generate = pane_generate_rect(prompt_box, u, gen_label);
+
+  /* ---- Controls. Two blocks, the composer's split: unembossed operator /
+   * dropdown buttons, embossed prompt field. ---- */
+  ui::Block *block = ui::block_begin(
+      C, region, "agent_island_media", blender::ui::EmbossType::None);
+  ui::Block *field_block = ui::block_begin(
+      C, region, "agent_island_media_field", blender::ui::EmbossType::Emboss);
+
+  /* Param chips. */
+  for (int i = 0; i < shown; i++) {
+    const MediaParamChip &chip = chips[i];
+    PointerRNA *owner = chip.on_wm_group ? &group_ptr : &tab_ptr;
+    char data_path[256];
+    if (chip.on_wm_group) {
+      char svc[64], mdl[64];
+      media_sanitize_key(service_key, svc, sizeof(svc));
+      media_sanitize_key(model_id, mdl, sizeof(mdl));
+      SNPRINTF(data_path, "window_manager.mixar_genparams_%s__%s.%s", svc, mdl, chip.prop_id);
+    }
+    else {
+      SNPRINTF(data_path,
+               "scene.mixie_moodboard_sidebar.%s.%s",
+               video ? "tab_video_gen" : "tab_imagegen",
+               chip.prop_id);
+    }
+    media_param_chip_control(block, chip, owner, data_path, u);
+  }
+
+  /* Prompt field over the prompt box. */
+  if (prompt_ok) {
+    /* The kit's top strip: ghost text top-left, caret at text height. */
+    const rctf field = pane_prompt_field_rect(prompt_box, u);
+    ui::Button *input = uiDefButR(field_block, ui::ButtonType::Text, "",
+                             int(field.xmin), int(field.ymin),
+                             short(BLI_rctf_size_x(&field)),
+                             short(BLI_rctf_size_y(&field)),
+                             &tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
+    ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
+    if (input) {
+      ui::button_placeholder_set(input, "Describe your scene here...");
+      ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      ui::button_flag_enable(input, ui::BUT_TEXTEDIT_UPDATE);
+    }
+  }
+
+  /* Keep native field/action block order while using disjoint rectangles. */
+  ui::block_end(C, field_block);
+  ui::block_draw(C, field_block);
+
+  GPU_blend(GPU_BLEND_ALPHA);
+  /* Reference preview — REAL thumbnails of whatever this half will actually
+   * SUBMIT (design: small previews, never a "N refs" count), the same way the
+   * Agent tab previews its pending attachments.
+   *
+   * Image half: `use_reference_images` ON means the board selection is the
+   * source and OFF means the tab's own uploads are (imagegen_ops.py reads it
+   * exactly this way, and the uploader flips it off when it adds one).
+   * Video half: Video Gen has no reference property of its own — its
+   * references ARE the selected board media — so it always previews those. */
+  {
+    if (!agent_bubble_references_visible(C)) {
+      Image *ref_images[PANE_REF_THUMB_MAX] = {nullptr};
+      const int ref_count = media_collect_reference_images(
+          C, tab_ok ? &tab_ptr : nullptr, video, ref_images, PANE_REF_THUMB_MAX);
+      pane_ref_thumbs_paint(ref_images,
+                            ref_count,
+                            bx + PANE_REF_THUMB_GAP * u,
+                            bottom_y,
+                            bottom_h,
+                            generate.xmin - PANE_CHIP_GAP * u,
+                            u);
+    }
+  }
+  /* Newest operator report, above the box — the island has no status bar, so
+   * without this a refusal ("No image selected in moodboard") is silent. Kit
+   * helper: one definition for all three panes. */
+  pane_report_line_draw(C, prompt_box, u);
+  GPU_blend(GPU_BLEND_NONE);
+
+  /* Upload — per half: the image tab's own reference-collection uploader,
+   * or the video flow's board-as-selected import. */
+  ui::Button *upload_button = uiDefIconTextButO(
+      block,
+      ui::ButtonType::But,
+      video ? "mixar.pane_video_upload_reference" : "mixie.imagegen_upload_reference",
+      blender::wm::OpCallContext::InvokeDefault,
+      ICON_IMAGE_DATA,
+      "Upload Reference",
+      int(upload.xmin),
+      int(upload.ymin),
+      short(BLI_rctf_size_x(&upload)),
+      short(BLI_rctf_size_y(&upload)),
+      video ? "Add reference images and videos from disk" : "Add reference images from disk");
+
+  ui::mixar_style_button(
+      upload_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
+
+  /* Capture Viewport -> this tab's reference. */
+  ui::Button *capture_button = uiDefButO(block,
+                                         ui::ButtonType::But,
+                                         "mixar.pane_capture_viewport",
+                                         blender::wm::OpCallContext::InvokeDefault,
+                                         "Capture Viewport",
+                                         int(capture.xmin),
+                                         int(capture.ymin),
+                                         short(BLI_rctf_size_x(&capture)),
+                                         short(BLI_rctf_size_y(&capture)),
+                                         "Screenshot the 3D viewport as a reference image");
+
+  ui::mixar_style_button(
+      capture_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
+
+  /* Generate goes through the SAME dispatcher Enter does
+   * (`MIXIE_OT_moodboard_prompt_generate` -> `core/prompt_submit.py`), keyed
+   * on the tab PropertyGroup's own RNA identifier — the string
+   * interface_handlers.cc forwards. Hardcoding `mixie.imagegen_generate` here
+   * made click and keypress submit DIFFERENT paid generations: the image
+   * half's `depth_to_image` mode, which this pane's own dropdown exposes,
+   * routes to `mixie.lookdev_generate`. */
+  {
+    ui::Button *but = uiDefButO(block,
+                                ui::ButtonType::But,
+                                "mixie.moodboard_prompt_generate",
+                                blender::wm::OpCallContext::InvokeDefault,
+                                gen_label,
+                                int(generate.xmin),
+                                int(generate.ymin),
+                                short(BLI_rctf_size_x(&generate)),
+                                short(BLI_rctf_size_y(&generate)),
+                                video ? "Generate a video" : "Generate images");
+    ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u, agent_ui_text_unit());
+    if (but && !can_generate) {
+      ui::button_flag_enable(but, ui::BUT_DISABLED);
+    }
+    if (but && tab_ok) {
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
+      RNA_string_set(op_ptr, "owner_type", RNA_struct_identifier(tab_ptr.type));
+    }
+  }
+
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
+}
+
+/** \} */
+
+}  // namespace blender

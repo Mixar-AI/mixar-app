@@ -161,14 +161,16 @@ class MIXIE_OT_hunyuan_remove_multi_view(Operator):
 # ============================================================================
 
 
-def _has_active_view_set(context) -> bool:
-    """True when the Model Gen tab holds a multi-view set ready to submit."""
-    from mixar.modules.moodboard.core.turnaround_views import get_active_group
+def _pro_turnaround_group(context, image) -> str:
+    """The multi-view set bound to *image* as its frontal image, or "".
 
+    Never the tab's active set: an unrelated image must not inherit it.
+    """
+    from mixar.modules.moodboard.core.turnaround_binding import group_id_for_main_image
     try:
-        return bool(get_active_group(context.scene))
+        return group_id_for_main_image(context.scene, image) if image is not None else ""
     except Exception:
-        return False
+        return ""
 
 
 class MIXIE_OT_hunyuan_generate(Operator):
@@ -188,9 +190,12 @@ class MIXIE_OT_hunyuan_generate(Operator):
     # Agent-chosen name for the imported mesh (Pro / Rapid direct paths);
     # empty falls back to the input image name, then a prompt slug.
     name: StringProperty(default="")
-    # Redundant now that an active view set is signal enough (see execute) —
-    # kept so an explicit agent call still reads clearly and still FAILS LOUDLY
-    # when no set exists, instead of quietly generating from one image.
+    # Where the import lands, as JSON (job_queue.core.placement); applied by
+    # the post-import hook so the agent's turn need not outlive the job.
+    placement: StringProperty(default="")
+    # Optional: a set bound to image_name as its main (turnaround_main_group)
+    # is used automatically; True makes the call FAIL LOUDLY when the image
+    # has no bound set, instead of quietly generating from one image.
     multi_view: BoolProperty(default=False)
     model_version: StringProperty(default="3.0")
     enable_pbr: BoolProperty(default=False)
@@ -354,11 +359,11 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # made the whole feature depend on the caller remembering: an agent
         # that generated from a sheet whose views had been detected in an
         # EARLIER turn had no trigger to pass the flag, and the job went out
-        # as a lone base64 image with every crop silently dropped. An active
-        # set on the tab is now signal enough — the user assembled it for
-        # exactly this job. Clearing the set is how you opt out.
+        # as a lone base64 image with every crop silently dropped. A set bound
+        # to THIS image as its main is signal enough; the tab's active set is
+        # not (an unrelated image would inherit another subject's views).
         turnaround = None
-        if self.multi_view or _has_active_view_set(context):
+        if self.multi_view or _pro_turnaround_group(context, image):
             turnaround = self._resolve_turnaround(context, image)
 
         if image is None and not prompt:
@@ -377,16 +382,19 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # queue row reads like the user's intent — see image_to_3d_ops for
         # the same reasoning.
         label = (prompt[:40] if prompt else None) or (image.name if image else "3D")
-        enqueue_pro_job(
-            image=image, shared=shared, label=label, turnaround=turnaround,
-            mesh_name=self.name)
+        from mixar.modules.common.job_queue.core.placement import parse_placement
+        if enqueue_pro_job(
+                image=image, shared=shared, label=label, turnaround=turnaround,
+                mesh_name=self.name, placement=parse_placement(self.placement)) is None:
+            raise ValueError(f"A 3D job labelled '{label}' is already queued"
+                             " — wait for it or change the prompt/name")
 
     def _resolve_turnaround(self, context, image):
-        """Multi-view payload built from *image* plus the tab's view set.
+        """Multi-view payload built from *image* plus the set bound to it.
 
         *image* is the vendor's single frontal image; the companion angles
-        come from the Model Gen tab's active multi-view set (the set holds
-        companions only, so there is nothing on *image* to look it up from).
+        come from the set it is the main image of (``turnaround_main_group``),
+        never from the Model Gen tab's active set.
 
         Raises ValueError (caught by execute -> reported + CANCELLED) when the
         request cannot be honoured. Never falls back to a single-image job:
@@ -396,20 +404,16 @@ class MIXIE_OT_hunyuan_generate(Operator):
         from mixar.modules.moodboard.core.turnaround_payload import (
             build_multi_view_payload,
         )
-        from mixar.modules.moodboard.core.turnaround_views import (
-            get_active_group,
-        )
 
         if image is None:
             raise ValueError("multi_view=True requires an image_name")
 
-        group_id = get_active_group(context.scene)
+        group_id = _pro_turnaround_group(context, image)
         if not group_id:
             raise ValueError(
-                "No multi-view set is active — run "
-                "mixie.moodboard_detect_views on the sheet first, or add "
-                "views with mixie.moodboard_add_selected_views"
-            )
+                f"'{image.name}' is not the main image of a detected multi-view "
+                "set — run mixie.moodboard_detect_views on the sheet and pass "
+                "its main_image_name")
 
         # Same duplicate handling the sidebar path uses. No model slug is
         # needed: which angles a model accepts is catalog capability, not
@@ -466,16 +470,20 @@ class MIXIE_OT_hunyuan_generate(Operator):
         )
         mesh_name = derive_model_name(
             image, prompt if has_prompt else "", explicit=self.name)
-        enqueue_generation(
+        from mixar.modules.common.job_queue.core.placement import parse_placement
+        if enqueue_generation(
             kind="glb",
             feature_key=FEATURE_HUNYUAN_RAPID,
             job_type=HUNYUAN_RAPID_JOB_TYPE,
             model=HUNYUAN_RAPID_MODEL,
             payload=payload,
             label=label,
-            on_imported=make_model_rename_on_imported(mesh_name),
+            on_imported=make_model_rename_on_imported(
+                mesh_name, placement=parse_placement(self.placement)),
             scene_flag="mixie_hunyuan_rapid_is_generating",
-        )
+        ) is None:
+            raise ValueError(f"A 3D job labelled '{label}' is already queued"
+                             " — wait for it or change the prompt/name")
 
     def _submit_topology_direct(self, context):
         """Retopologize a single named mesh object from explicit params (agent).
@@ -592,13 +600,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
         use_moodboard = getattr(pro, 'use_selected_image', False)
 
         if use_moodboard:
-            scene = context.scene
-            selected = []
-            if hasattr(scene, 'mixie_moodboard_images'):
-                selected = [
-                    item for item in scene.mixie_moodboard_images
-                    if item.selected and item.image
-                ]
+            from mixar.modules.moodboard.core.media_utils import selected_reference_stills
+
+            selected = selected_reference_stills(context.scene)
             if not selected:
                 raise ValueError("No image selected in moodboard")
             for item in selected:

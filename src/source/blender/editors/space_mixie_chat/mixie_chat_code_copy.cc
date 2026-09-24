@@ -48,6 +48,9 @@
 
 #include "mixie_chat_intern.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 /* Chip geometry (unscaled px). */
 #define CODE_CHIP_SIZE 18.0f
 #define CODE_CHIP_MARGIN 4.0f
@@ -70,8 +73,7 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
 {
   ScrArea *area = CTX_wm_area(C);
   /* SPACE_AGENT_BUBBLE has a layout-compatible spacedata struct. */
-  if (area && (area->spacetype == SPACE_MIXIE_CHAT ||
-               area->spacetype == SPACE_AGENT_BUBBLE))
+  if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
     return static_cast<SpaceMixieChat *>(area->spacedata.first);
   }
@@ -299,12 +301,13 @@ const char *mixie_chat_message_segment_text(const bContext *C,
     return nullptr;
   }
 
-  char *meta_buf = static_cast<char *>(MEM_mallocN(size_t(meta_len) + 1, "code_copy_meta"));
+  char *meta_buf = static_cast<char *>(
+      MEM_new_uninitialized(size_t(meta_len) + 1, "code_copy_meta"));
   RNA_property_string_get(&msg_ptr, meta_prop, meta_buf);
   /* The parse cache keys on content, so the text stays valid after the
    * buffer is freed (it points into the cached segments). */
   const char *text = chat_ui_markdown_segment_text(meta_buf, seg_index, code_only);
-  MEM_freeN(meta_buf);
+  MEM_delete_void(static_cast<void *>(meta_buf));
   return text;
 }
 
@@ -320,7 +323,7 @@ bool mixie_chat_handle_code_copy_click(bContext *C,
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
 
   float view_x, view_y;
-  UI_view2d_region_to_view(&region->v2d, int(mouse_x), int(mouse_y), &view_x, &view_y);
+  ui::view2d_region_to_view(&region->v2d, int(mouse_x), int(mouse_y), &view_x, &view_y);
 
   for (const CodeCopyHit &hit : rt->code_copy_hits) {
     if (!BLI_rctf_isect_pt(&hit.bounds, view_x, view_y)) {
@@ -342,3 +345,5 @@ bool mixie_chat_handle_code_copy_click(bContext *C,
 }
 
 /** \} */
+
+}  // namespace blender

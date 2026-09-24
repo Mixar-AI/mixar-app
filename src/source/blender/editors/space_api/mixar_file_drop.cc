@@ -16,6 +16,9 @@
 
 #include "mixar_file_drop.hh"
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 static bool mixar_file_drop_poll(bContext * /*C*/, wmDrag *drag, const wmEvent * /*event*/)
 {
   return drag->type == WM_DRAG_PATH && WM_drag_get_path_file_type(drag) == FILE_TYPE_MIXAR;
@@ -28,7 +31,7 @@ static void mixar_file_drop_copy(bContext * /*C*/, wmDrag *drag, wmDropBox *drop
 
 void ED_dropboxes_mixar_file()
 {
-  ListBase *dropboxes = WM_dropboxmap_find("Window", SPACE_EMPTY, RGN_TYPE_WINDOW);
+  ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find("Window", SPACE_EMPTY, RGN_TYPE_WINDOW);
   WM_dropbox_add(dropboxes,
                  "WM_OT_drop_blend_file",
                  mixar_file_drop_poll,
@@ -36,3 +39,5 @@ void ED_dropboxes_mixar_file()
                  nullptr,
                  nullptr);
 }
+
+}  // namespace blender

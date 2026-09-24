@@ -366,7 +366,13 @@ class HTTPClient:
             try:
                 response_data = response.json()
             except Exception:
-                response_data = response.text
+                content_type = response.headers.get("Content-Type", "")
+                if content_type and not (content_type.startswith("text/")
+                                         or "json" in content_type or "xml" in content_type):
+                    # Binary body (image, archive blob): never charset-sniff megabytes.
+                    response_data = response.content
+                else:
+                    response_data = response.text
 
             return APIResponse(
                 success=response.ok,
@@ -377,17 +383,24 @@ class HTTPClient:
                 raw=response,
             )
 
-        except requests.exceptions.Timeout:
+        # `from e` is load-bearing, not tidiness. classify_network_error walks
+        # __cause__/__context__ to tell a TLS-inspection failure from a proxy
+        # refusal from DNS from a plain timeout, and every one of those
+        # signatures lives in the requests exception being wrapped here. Drop
+        # the cause and the classifier sees only "Failed to connect to <url>",
+        # returns NET-UNKNOWN, and the caller emits exactly the generic
+        # "unable to connect" string the network contract bans.
+        except requests.exceptions.Timeout as e:
             self._log("error", f"Request timeout: {url}")
-            raise TimeoutError(f"Request to {url} timed out")
+            raise TimeoutError(f"Request to {url} timed out") from e
         except requests.exceptions.ConnectionError as e:
             self._log("error", f"Connection error: {e}")
-            raise ConnectionError(f"Failed to connect to {url}")
+            raise ConnectionError(f"Failed to connect to {url}") from e
         except HTTPClientError:
             raise
         except Exception as e:
             self._log("error", f"Request error: {e}")
-            raise HTTPClientError(str(e))
+            raise HTTPClientError(str(e)) from e
 
     # Convenience methods
     def get(self, endpoint: str, **kwargs) -> APIResponse:

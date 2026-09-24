@@ -103,9 +103,12 @@ def _selected_media(scene, action_type: str):
         item for item in scene.mixie_moodboard_images
         if item.selected and getattr(item, "image", None) is not None
     ]
-    if action_type in {'IMAGE_GEN', 'MODEL_3D'}:
+    if action_type in {'IMAGE_GEN', 'MODEL_3D', 'WORLD_LABS', 'CHARACTER_PARTS'}:
         selected = [item for item in selected if is_still_item(item)]
-    if action_type == 'MODEL_3D':
+    if action_type == 'VIDEO_UPSCALE':
+        # One movie in: the node has a single video socket.
+        selected = [item for item in selected if not is_still_item(item)]
+    if action_type in {'MODEL_3D', 'VIDEO_UPSCALE', 'WORLD_LABS', 'CHARACTER_PARTS'}:
         return selected[:1]
     return selected
 
@@ -178,7 +181,10 @@ def node_output_type(scene, node_id: str) -> str:
     action = action_node_by_id(scene, node_id)
     if action is not None:
         return output_type_for_action(action.action_type)
-    if asset_node_by_id(scene, node_id) is not None:
+    asset = asset_node_by_id(scene, node_id)
+    if asset is not None:
+        if getattr(asset, 'scene_mesh_reference', False):
+            return 'MESH' if mesh_source_object_names(scene, node_id) else ''
         return 'MESH'
     return ''
 
@@ -244,6 +250,9 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
         raise ValueError("The target input is no longer available")
     if from_node_id == to_node_id or _path_exists(scene, to_node_id, from_node_id):
         raise ValueError("Connections cannot create a cycle")
+    source_action = getattr(action_node_by_id(scene, from_node_id), 'action_type', '')
+    if target.action_type == source_action == 'ASSEMBLE':
+        raise ValueError("An Assemble card cannot feed another Assemble card")
     accepted = {item for item in socket.accepted_types.split(",") if item}
     if source_type not in accepted:
         raise ValueError(f"This input does not accept {source_type.lower()} nodes")
@@ -388,13 +397,17 @@ _ACCEPTED_SOURCE_TYPES = {
     'IMAGE_GEN': {'IMAGE'},
     'MODEL_3D': {'IMAGE'},
     'VIDEO_GEN': {'IMAGE', 'VIDEO'},
+    'VIDEO_UPSCALE': {'VIDEO'},
+    'WORLD_LABS': {'IMAGE'},
+    'CHARACTER_PARTS': {'IMAGE'},
     'PBR_GEN': {'MESH'},
     'RETOPOLOGY': {'MESH'},
     'MESH_SEGMENT': {'MESH'},
     'AUTO_RIG': {'MESH'},
+    'ASSEMBLE': {'MESH'},
 }
 
-MESH_FEATURE_ACTIONS = frozenset({'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG'})
+MESH_FEATURE_ACTIONS = frozenset({'PBR_GEN', 'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'ASSEMBLE'})
 
 
 def _graph_node_by_id(scene, node_id: str):
@@ -413,6 +426,7 @@ def create_connected_action(
     action_type: str,
     source_node_id: str = "",
     drop_position: tuple[float, float] | None = None,
+    allow_empty: bool = False,
 ):
     """Create a continuation node and wire it to its source.
 
@@ -420,6 +434,10 @@ def create_connected_action(
     When given it wins over the source-relative placement: the user already
     said where the node goes, so the card is centred on that point with its
     input edge under the cursor.
+
+    ``allow_empty`` lets the Shift+A "Add Node" menu drop a standalone node the
+    user wires up afterwards (the node-editor way). Without it, creating one of
+    these types from nothing is a user error and raises.
     """
     # Operator context, so the migrating write is safe here — and required,
     # since the new node's links key off media ids.
@@ -436,9 +454,15 @@ def create_connected_action(
             sources = [source]
     if not sources and not mesh_feature:
         sources = _selected_media(scene, action_type)
-    if not sources:
+    if not sources and not allow_empty:
         if mesh_feature:
             raise ValueError("Connect this from a 3D mesh node")
+        if action_type == 'VIDEO_UPSCALE':
+            raise ValueError("Upscale Video needs one selected video")
+        if action_type == 'CHARACTER_PARTS':
+            raise ValueError("Character Parts needs one selected image with component masks")
+        if action_type == 'WORLD_LABS':
+            raise ValueError("Generate Splat needs one selected image")
         if action_type != 'IMAGE_GEN':
             raise ValueError(
                 "Generate to 3D needs one selected image"
@@ -446,6 +470,8 @@ def create_connected_action(
                 else "Create Video needs at least one selected image or video"
             )
 
+    source_ids = [item.node_id for item in sources]  # the add may reallocate their collection
+    anchor = _source_right_and_center(sources) if sources else None
     node = scene.mixie_moodboard_action_nodes.add()
     node.node_id = new_node_id()
     node.action_type = action_type
@@ -455,7 +481,7 @@ def create_connected_action(
         node.position_x = float(drop_position[0])
         node.position_y = float(drop_position[1]) - node.height * 0.5
     elif sources:
-        right, center_y = _source_right_and_center(sources)
+        right, center_y = anchor
         node.position_x = right + ACTION_NODE_GAP
         node.position_y = center_y - node.height * 0.5
     else:
@@ -466,8 +492,8 @@ def create_connected_action(
     node.selected = True
     scene.mixie_moodboard_active_node_id = node.node_id
     try:
-        for item in sources:
-            connect_to_next_input(scene, item.node_id, node.node_id)
+        for source_id in source_ids:
+            connect_to_next_input(scene, source_id, node.node_id)
     except ValueError:
         # Wiring the fresh card failed (e.g. the catalog has not published its
         # sockets yet). Leave no orphan: the operator reports the failure, and
@@ -476,13 +502,8 @@ def create_connected_action(
             link = scene.mixie_moodboard_links[link_index]
             if link.from_node_id == node.node_id or link.to_node_id == node.node_id:
                 scene.mixie_moodboard_links.remove(link_index)
-        node_index = next(
-            (
-                index for index, existing in enumerate(scene.mixie_moodboard_action_nodes)
-                if existing.node_id == node.node_id
-            ),
-            None,
-        )
+        node_index = next((index for index, item in enumerate(scene.mixie_moodboard_action_nodes)
+                           if item.node_id == node.node_id), None)
         if node_index is not None:
             scene.mixie_moodboard_action_nodes.remove(node_index)
         if scene.mixie_moodboard_active_node_id == node.node_id:
@@ -804,6 +825,13 @@ def mesh_source_object_names(scene, node_id: str) -> list:
         return [name.strip() for name in action.result_names.split(",") if name.strip()]
     asset = asset_node_by_id(scene, node_id)
     if asset is not None:
+        preview = getattr(asset, "preview_object", None)
+        if preview is not None:
+            from .mesh_sources import is_scene_mesh
+
+            return [preview.name] if is_scene_mesh(scene, preview) else []
+        if getattr(asset, 'scene_mesh_reference', False):
+            return []
         return [name.strip() for name in asset.object_names.split(",") if name.strip()]
     return []
 
@@ -827,5 +855,3 @@ def input_source_object_names(scene, action_node) -> list:
         if names:
             return names
     return []
-
-

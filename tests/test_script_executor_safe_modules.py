@@ -101,3 +101,46 @@ def test_globals_returns_filtered_snapshot_for_transaction_guard(executor):
         "has_open": False,
         "copy_did_not_mutate_globals": True,
     }
+
+
+@pytest.mark.parametrize('failure', [AttributeError, RuntimeError, ValueError])
+@pytest.mark.parametrize('failed_index', [0, 1])
+@pytest.mark.parametrize('failed_phases', [{0}, {1}, {0, 1}])
+def test_fingerprint_failure_preserves_inventory_and_known_edits(
+        executor, monkeypatch, failure, failed_index, failed_phases):
+    from copy import deepcopy
+    from types import SimpleNamespace as NS
+
+    module = sys.modules[executor.__class__.__module__]
+    objects = [NS(name=name, type='EMPTY', location=(0, 0, 0),
+                  rotation_euler=(0, 0, 0), scale=(1, 1, 1), material_slots=[])
+               for name in ('first', 'middle', 'last')]
+    monkeypatch.setattr(module, 'bpy', NS(data=NS(objects=objects, materials=[NS(name='Mat')])))
+    phase = 0
+    changed = False
+
+    def fingerprint(obj, cache):
+        if obj is objects[failed_index] and phase in failed_phases:
+            raise failure('injected unreadable RNA')
+        return 'edited' if changed and obj.name == 'last' else 'original'
+
+    monkeypatch.setattr(module, 'animation_fingerprint', fingerprint)
+    before = executor._capture_scene_state()
+    phase = 1
+    after = executor._capture_scene_state()
+    for state in (before, after):
+        assert set(state['objects']) == {'first', 'middle', 'last'}
+        assert state['materials'] == {'Mat'}
+    saved = deepcopy((before, after))
+    assert executor._detect_changes(before, after) == {'created': [], 'deleted': [], 'modified': []}
+    assert (before, after) == saved
+    objects[failed_index].location = (1, 0, 0)
+    changed = True
+    changes = executor._detect_changes(before, executor._capture_scene_state())
+    assert set(changes['modified']) == {objects[failed_index].name, 'last'}
+    assert not changes['created'] and not changes['deleted']
+    removed = objects.pop(2)
+    objects.append(NS(name='new', type='EMPTY', location=(0, 0, 0),
+                      rotation_euler=(0, 0, 0), scale=(1, 1, 1), material_slots=[]))
+    changes = executor._detect_changes(before, executor._capture_scene_state())
+    assert changes['created'] == ['new'] and changes['deleted'] == [removed.name]

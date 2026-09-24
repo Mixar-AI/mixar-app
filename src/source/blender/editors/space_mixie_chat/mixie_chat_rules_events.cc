@@ -58,6 +58,8 @@
 
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_rules_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Edit Helpers
@@ -225,7 +227,7 @@ static void rules_paste(ARegion *region, MixieChatRuntime *rt)
   if (out > 0) {
     rules_insert(region, rt, buf, out);
   }
-  MEM_freeN(buf);
+  MEM_delete_void(static_cast<void *>(buf));
 }
 
 /** Move the caret one visual line up/down, preserving the goal column. */
@@ -573,7 +575,7 @@ bool mixie_chat_rules_handle_event(bContext *C, const wmEvent *event)
   ScrArea *area = CTX_wm_area(C);
   ARegion *region = CTX_wm_region(C);
   if (!area || !region || !area->spacedata.first ||
-      (area->spacetype != SPACE_MIXIE_CHAT && area->spacetype != SPACE_AGENT_BUBBLE))
+      (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return false;
   }
@@ -691,9 +693,13 @@ bool mixie_chat_rules_handle_event(bContext *C, const wmEvent *event)
           ED_region_tag_redraw(region);
         }
         else if (BLI_rctf_isect_pt(&row.scope_bounds, mx, my)) {
-          /* Scope chip: flip global <-> this-file. The move reorders the
-           * unified list, so cancel any in-place edit first — its index
-           * would go stale. */
+          const rctf global_bounds = mixie_chat_rules_scope_choice_bounds(row.scope_bounds, true);
+          const bool global = BLI_rctf_isect_pt(&global_bounds, mx, my);
+          if (global == row.is_global) {
+            return true; /* Selecting the active scope preserves the current edit. */
+          }
+          /* A scope change reorders the unified list, so cancel any edit
+           * first: its index would become stale. */
           rt->rules_confirm_delete = -1;
           if (rt->rules_editing_index >= 0) {
             rules_reset_composer(rt);
@@ -726,3 +732,4 @@ bool mixie_chat_rules_handle_event(bContext *C, const wmEvent *event)
 }
 
 /** \} */
+}  // namespace blender

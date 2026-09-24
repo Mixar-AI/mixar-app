@@ -24,6 +24,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -34,12 +35,11 @@ namespace blender::ed::baking {
 /** \name Get Image MinMax Operator
  * \{ */
 
-static wmOperatorStatus get_image_minmax_exec(bContext * /*C*/, wmOperator *op)
+static wmOperatorStatus get_image_minmax_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("get_image_minmax");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "get_image_minmax: no image provided");
@@ -59,7 +59,7 @@ static wmOperatorStatus get_image_minmax_exec(bContext * /*C*/, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  const float *pixels = ibuf->float_buffer.data;
+  const float *pixels = ibuf->float_data_for_write();
   const int total_pixels = width * height;
 
   float min_val = std::numeric_limits<float>::max();
@@ -99,8 +99,7 @@ static wmOperatorStatus normalize_image_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("normalize_image");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "normalize_image: no image provided");
@@ -123,7 +122,7 @@ static wmOperatorStatus normalize_image_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const int total_pixels = width * height;
 
   /* First pass: find min/max. */
@@ -177,6 +176,10 @@ static wmOperatorStatus normalize_image_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -192,7 +195,7 @@ void BAKING_OT_get_image_minmax(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 
@@ -215,7 +218,7 @@ void BAKING_OT_normalize_image(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "target_min", 0.0f, -FLT_MAX, FLT_MAX, "Target Min", "", 0.0f, 1.0f);
@@ -223,3 +226,4 @@ void BAKING_OT_normalize_image(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

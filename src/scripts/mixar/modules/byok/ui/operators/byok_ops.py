@@ -27,13 +27,14 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.ui.constants import CARD_DIALOG_WIDTH
 
-from ...core import byok_client, model_suggestions
+from ...core import byok_client, credential_state, model_suggestions, models_cache
+from ...core import preference_state
 from . import byok_dialog_ui
 from .byok_state_ops import (
     _apply_cached_state,
     _clear_cached_state,
-    _on_models_catalog_done,
     _redraw_mixie_chat_areas,
 )
 
@@ -60,6 +61,31 @@ def _wipe_form_secrets(wm):
 # ---------------------------------------------------------------------------
 # Dialog entry point
 # ---------------------------------------------------------------------------
+
+def _dialog_host_window(context):
+    """The main window the dialog should open over, or None to stay put.
+
+    An Agent Bubble window (island or pill) is a small always-on-top overlay:
+    a props dialog opened there is clipped to its height. Prefer the window
+    with the most areas that is NOT a bubble — the primary workspace window.
+    """
+    try:
+        from mixar.modules.agent_bubble.core.bubble_lifecycle import (
+            is_agent_bubble_window,
+        )
+    except Exception:  # noqa: BLE001 — stripped builds: stay in place
+        return None
+    try:
+        if not is_agent_bubble_window(context.window):
+            return None
+        candidates = [w for w in context.window_manager.windows
+                      if not is_agent_bubble_window(w) and w.screen.areas]
+    except Exception:  # noqa: BLE001
+        return None
+    if not candidates:
+        return None
+    return max(candidates, key=lambda w: len(w.screen.areas))
+
 
 class MIXAR_BYOK_OT_open_dialog(Operator):
     """Configure your own API provider and key for the Mixar agent"""
@@ -108,7 +134,7 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # dropdown becomes populated by the time the user picks. (Belt-
         # and-suspenders — the auth login hook normally fires this already.)
         if not model_suggestions.is_loaded():
-            byok_client.fetch_models_catalog(on_done=_on_models_catalog_done)
+            models_cache.refresh()
         # Local provider: refresh the managed-model item cache and prefill
         # mode/model from the last registration (cheap; guarded — the local
         # runtime module may be unavailable in stripped builds).
@@ -120,7 +146,18 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # invoke_props_dialog (not invoke_popup) so the dialog redraws
         # continuously — state flips from SAVING → IDLE / ERROR during
         # the async save must be visible without user interaction.
-        return wm.invoke_props_dialog(self, width=640)
+        #
+        # Both the profile and chat picker open this shared dialog. A popup
+        # block in the Agent Bubble's ~460px window would be clipped over the
+        # composer, so host it in the main window instead.
+        # Override the WINDOW only: the bubble's screen is a temporary one and
+        # `temp_override(screen=...)` refuses it outright ("Overriding context
+        # with an active temporary screen isn't supported").
+        host = _dialog_host_window(context)
+        if host is not None and host != context.window:
+            with context.temp_override(window=host):
+                return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
+        return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
 
     def execute(self, context):
         # No-op: Save / Remove are their own operators, invoked from draw().
@@ -190,7 +227,7 @@ class MIXAR_BYOK_OT_save(Operator):
             provider=provider,
             model=model,
             api_key=api_key,
-            on_done=_on_save_done,
+            on_done=_save_callback(),
         )
         return {'FINISHED'}
 
@@ -212,7 +249,7 @@ class MIXAR_BYOK_OT_save(Operator):
             provider='openrouter',
             model=model,
             api_key=api_key,
-            on_done=_on_save_done,
+            on_done=_save_callback(),
         )
         return {'FINISHED'}
 
@@ -220,9 +257,9 @@ class MIXAR_BYOK_OT_save(Operator):
         """Local save: managed requires the supervised server healthy;
         custom pings the user's server off-thread first. Both end in the
         same PUT /agent/byok (with base_url + supports_vision) and the
-        shared _on_save_done callback."""
+        shared save callback."""
         from . import byok_local_ops
-        result = byok_local_ops.execute_local(self, wm, on_done=_on_save_done)
+        result = byok_local_ops.execute_local(self, wm, on_done=_save_callback())
         _redraw_mixie_chat_areas()
         return result
 
@@ -245,7 +282,7 @@ class MIXAR_BYOK_OT_save(Operator):
             provider='codex',
             model=model,
             api_key=bundle,
-            on_done=_on_save_done,
+            on_done=_save_callback(),
         )
         return {'FINISHED'}
 
@@ -269,13 +306,31 @@ def _deregister_local_if_switched_away(active_provider):
         logger.warning("Local deregistration skipped: %s", e)
 
 
-def _on_save_done(success: bool, data, err):
+def _save_callback():
+    """Bind the submit-time credential epoch into the save callback.
+
+    The PUT is async; if the user logs out before it lands, the echo must not
+    write the logged-out account's provider back into the mirror.
+    """
+    epoch = credential_state.current_epoch()
+
+    def _done(success: bool, data, err):
+        _on_save_done(success, data, err, epoch=epoch)
+
+    return _done
+
+
+def _on_save_done(success: bool, data, err, epoch=None):
     """Main-thread save callback."""
     try:
         wm = bpy.context.window_manager
         if success:
-            _apply_cached_state(wm, data or {})
+            applied = _apply_cached_state(wm, data or {}, epoch)
             _wipe_form_secrets(wm)
+            if not applied:
+                logger.debug("BYOK save landed after logout; echo dropped")
+                return
+            preference_state.refresh()
             # SAVED, not IDLE: the dialog shows an explicit recap with a
             # single Done button, so the user never has to wonder
             # whether the save landed.
@@ -411,6 +466,7 @@ def _on_delete_done(success: bool, removed_count: int, err):
         if success:
             _clear_cached_state(wm)
             _wipe_form_secrets(wm)
+            preference_state.refresh()
             # REMOVED, not IDLE — explicit recap, same as the save path.
             wm.byok_dialog_state = 'REMOVED'
             wm.byok_last_error = ''

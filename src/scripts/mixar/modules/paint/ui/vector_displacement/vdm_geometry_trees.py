@@ -245,10 +245,12 @@ def get_vdm_loader_geotree(
         links.new(tangent2object.outputs[0], intensity_multiplier.inputs[0])
 
         links.new(start.outputs[0], offset_capture.inputs[0])
-        links.new(intensity_multiplier.outputs[0], offset_capture.inputs[1])
+        # Blender 5.2 added a Selection socket at index 1; the captured item is
+        # addressed by the name given to capture_items.new() above.
+        links.new(intensity_multiplier.outputs[0], offset_capture.inputs["Vector"])
 
         links.new(offset_capture.outputs[0], offset.inputs[0])
-        links.new(offset_capture.outputs[1], offset.inputs[3])
+        links.new(offset_capture.outputs["Vector"], offset.inputs[3])
 
         links.new(offset.outputs[0], end.inputs[0])
 

@@ -46,14 +46,21 @@ def test_clicking_a_node_preview_toggles_playback_before_the_move_modal():
     ops = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph.cc")
 
     invoke = ops.split("static wmOperatorStatus graph_select_invoke(")[1]
-    toggle_at = invoke.find("moodboard_toggle_video_playback")
+    toggle_at = invoke.find("moodboard_graph_node_video_click")
     modal_at = invoke.find("WM_event_add_modal_handler(C, op);\n  return OPERATOR_RUNNING_MODAL")
     assert toggle_at != -1, "node previews never reach the playback toggle"
     # The node-move branch has no drag threshold, so it would slide the card on
     # the first mouse-move of the very click that started playback.
     assert modal_at == -1 or toggle_at < modal_at
-    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" in invoke
-    assert "KM_DBL_CLICK" in invoke
+
+    # The gesture itself lives in its own unit (500-line rule); the play radius
+    # comes from the ONE shared definition the draw pass uses, so the target
+    # cannot drift off the glyph at any zoom.
+    video = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_video.cc")
+    assert "moodboard_video_play_radius(v2d, preview_bounds)" in video
+    assert "MOODBOARD_VIDEO_PLAY_RADIUS_PX" not in video
+    assert "double_click" in video
+    assert "moodboard_toggle_video_playback" in video
 
 
 def test_asset_double_click_still_selects_objects_rather_than_playing():
@@ -63,7 +70,7 @@ def test_asset_double_click_still_selects_objects_rather_than_playing():
 
     invoke = ops.split("static wmOperatorStatus graph_select_invoke(")[1]
     asset_branch = invoke.find("MIXIE_OT_moodboard_select_asset_objects")
-    play_branch = invoke.find("moodboard_toggle_video_playback")
+    play_branch = invoke.find("moodboard_graph_node_video_click")
     assert asset_branch != -1 and play_branch != -1
     assert "if (kind == GRAPH_ASSET)" in invoke
     assert asset_branch < play_branch
@@ -82,7 +89,7 @@ def test_node_preview_resolver_returns_a_media_index_not_a_node_index():
     """``moodboard_toggle_video_playback`` and the hover monitor both key on an
     index into ``mixie_moodboard_images``; a node index would silently
     mismatch."""
-    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
+    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_hit.cc")
 
     resolver = geometry.split("int moodboard_find_node_preview_video_under_mouse(")[1]
     assert "moodboard_find_embedded_media_index" in resolver
@@ -97,7 +104,8 @@ def test_preview_bounds_have_a_single_definition():
     draw = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph.cc")
     header = _read(SPACE_MIXIE / "mixie_intern.hh")
 
-    assert "void moodboard_graph_node_preview_bounds(" in geometry
+    hit = _read(SPACE_MIXIE / "mixie_moodboard_graph_hit.cc")
+    assert "void moodboard_graph_node_preview_bounds(" in hit
     assert "MOODBOARD_GRAPH_PREVIEW_INSET" in header
     assert "moodboard_graph_node_preview_bounds(rect, &preview_bounds)" in draw
 
@@ -127,9 +135,11 @@ def test_export_reaches_media_owned_by_a_selected_node():
     assert "selected_exportable_media" in menus
     assert "row.enabled = bool(exportable_media)" in menus
 
-    resolver = media_utils.split("def selected_exportable_media(scene)")[1].split("\ndef ")[0]
+    resolver = media_utils.split("def selected_exportable_media_entries(scene)")[1].split("\ndef ")[0]
     assert "mixie_moodboard_action_nodes" in resolver
     assert "embedded_node_id" in resolver
+    wrapper = media_utils.split("def selected_exportable_media(scene)")[1].split("\ndef ")[0]
+    assert "selected_exportable_media_entries" in wrapper
 
 
 def test_in_place_edits_stay_keyed_on_direct_selection():

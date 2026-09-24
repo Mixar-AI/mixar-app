@@ -62,6 +62,9 @@ def _get_status(scene) -> tuple[str, str]:
         return "Running", 'RECORD_ON'
     if state == "AWAITING_INPUT":
         return "Awaiting Input", 'QUESTION'
+    if getattr(scene, "mixie_run_open", False) is True:
+        # Turn over, run open: workers still build between turns.
+        return "Working", 'RECORD_ON'
     return "Idle", 'RECORD_OFF'
 
 

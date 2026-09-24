@@ -19,6 +19,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -32,10 +33,8 @@ namespace blender::ed::baking {
 static wmOperatorStatus copy_image_pixels_exec(bContext *C, wmOperator *op)
 {
   /* Get RNA properties. */
-  PointerRNA src_image_ptr = RNA_pointer_get(op->ptr, "src_image");
-  PointerRNA dest_image_ptr = RNA_pointer_get(op->ptr, "dest_image");
-  Image *src_image = static_cast<Image *>(src_image_ptr.data);
-  Image *dest_image = static_cast<Image *>(dest_image_ptr.data);
+  Image *src_image = image_from_operator(C, op, "src_image");
+  Image *dest_image = image_from_operator(C, op, "dest_image");
 
   if (!src_image || !dest_image) {
     return OPERATOR_CANCELLED;
@@ -68,8 +67,8 @@ static wmOperatorStatus copy_image_pixels_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *src_pixels = src_ibuf->float_buffer.data;
-  float *dest_pixels = dest_ibuf->float_buffer.data;
+  float *src_pixels = src_ibuf->float_data_for_write();
+  float *dest_pixels = dest_ibuf->float_data_for_write();
 
   /* Fast path: full image copy with matching dimensions. */
   if (start_x == 0 && start_y == 0 && src_start_x == 0 && src_start_y == 0 &&
@@ -111,10 +110,8 @@ static wmOperatorStatus copy_image_pixels_exec(bContext *C, wmOperator *op)
 static wmOperatorStatus copy_image_channel_pixels_exec(bContext *C, wmOperator *op)
 {
   /* Get RNA properties. */
-  PointerRNA src_image_ptr = RNA_pointer_get(op->ptr, "src_image");
-  PointerRNA dest_image_ptr = RNA_pointer_get(op->ptr, "dest_image");
-  Image *src_image = static_cast<Image *>(src_image_ptr.data);
-  Image *dest_image = static_cast<Image *>(dest_image_ptr.data);
+  Image *src_image = image_from_operator(C, op, "src_image");
+  Image *dest_image = image_from_operator(C, op, "dest_image");
 
   if (!src_image || !dest_image) {
     return OPERATOR_CANCELLED;
@@ -152,8 +149,8 @@ static wmOperatorStatus copy_image_channel_pixels_exec(bContext *C, wmOperator *
     return OPERATOR_CANCELLED;
   }
 
-  const float *src_pixels = src_ibuf->float_buffer.data;
-  float *dest_pixels = dest_ibuf->float_buffer.data;
+  const float *src_pixels = src_ibuf->float_data_for_write();
+  float *dest_pixels = dest_ibuf->float_data_for_write();
 
   /* Copy channel data. */
 #ifdef _OPENMP
@@ -194,8 +191,7 @@ static wmOperatorStatus copy_image_channel_pixels_exec(bContext *C, wmOperator *
 static wmOperatorStatus set_image_pixels_exec(bContext *C, wmOperator *op)
 {
   /* Get RNA properties. */
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     return OPERATOR_CANCELLED;
@@ -220,7 +216,7 @@ static wmOperatorStatus set_image_pixels_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
   const float r = color[0], g = color[1], b = color[2], a = color[3];
 
   /* Fill pixels. */
@@ -252,6 +248,10 @@ static wmOperatorStatus set_image_pixels_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -268,8 +268,8 @@ void BAKING_OT_copy_image_pixels(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "src_image", "Image", "Source Image", "");
-  RNA_def_pointer(ot->srna, "dest_image", "Image", "Destination Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "src_image", "Source Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "dest_image", "Destination Image");
   RNA_def_int(ot->srna, "src_width", 1024, 1, 32768, "Source Width", "", 1, 32768);
   RNA_def_int(ot->srna, "src_height", 1024, 1, 32768, "Source Height", "", 1, 32768);
   RNA_def_int(ot->srna, "dest_width", 1024, 1, 32768, "Destination Width", "", 1, 32768);
@@ -294,8 +294,8 @@ void BAKING_OT_copy_image_channel_pixels(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "src_image", "Image", "Source Image", "");
-  RNA_def_pointer(ot->srna, "dest_image", "Image", "Destination Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "src_image", "Source Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "dest_image", "Destination Image");
   RNA_def_int(ot->srna, "src_width", 1024, 1, 32768, "Source Width", "", 1, 32768);
   RNA_def_int(ot->srna, "src_height", 1024, 1, 32768, "Source Height", "", 1, 32768);
   RNA_def_int(ot->srna, "dest_width", 1024, 1, 32768, "Destination Width", "", 1, 32768);
@@ -323,7 +323,7 @@ void BAKING_OT_set_image_pixels(wmOperatorType *ot)
   ot->flag = 0;
 
   /* RNA properties. */
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "start_x", 0, 0, 32768, "Start X", "", 0, 32768);
@@ -335,3 +335,4 @@ void BAKING_OT_set_image_pixels(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

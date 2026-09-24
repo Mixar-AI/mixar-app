@@ -28,6 +28,8 @@
 #include "BLI_string.h"
 #include "BLI_sys_types.h"
 
+#include "BKE_main.hh"
+
 #include "BLF_api.hh"
 
 #include "GPU_state.hh"
@@ -39,6 +41,8 @@
 #include "mixie_chat_intern.hh"
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Vertical gap between consecutive rows. */
 #define STEPS_ROW_GAP 6.0f
@@ -54,6 +58,14 @@
 /* Disclosure chevron size + gap (pre-UI-scale), shared with thinking. */
 #define CHAT_CHEVRON_SIZE 12.0f
 #define CHAT_CHEVRON_GAP 6.0f
+/* Capture tiles under a step row (pre-UI-scale): fixed height, width from
+ * the image's aspect, wrapped into as many tile rows as the width needs. */
+#define STEPS_TILE_HEIGHT 84.0f
+#define STEPS_TILE_GAP 6.0f
+#define STEPS_TILE_TOP_GAP 6.0f
+#define STEPS_TILE_RADIUS 6.0f
+#define STEPS_TILE_MIN_ASPECT 0.75f
+#define STEPS_TILE_MAX_ASPECT 1.7f
 
 /* -------------------------------------------------------------------- */
 /** \name Shared chevron (also used by the thinking dropdown)
@@ -91,7 +103,7 @@ void chat_ui_draw_chevron(float x, float center_y, bool collapsed, const float c
                          uchar(color[2] * 255.0f),
                          uchar(color[3] * 255.0f)};
   GPU_blend(GPU_BLEND_ALPHA);
-  UI_icon_draw_ex(x,
+  ui::icon_draw_ex(x,
                   icon_y,
                   collapsed ? ICON_TRIA_RIGHT : ICON_TRIA_DOWN,
                   16.0f / icon_px,
@@ -148,6 +160,183 @@ static float steps_row_text_width(const StepItemSlotData &step, float content_wi
 }
 
 /* -------------------------------------------------------------------- */
+/** \name Capture tiles (shared by calc + draw)
+ * \{ */
+
+static float steps_tile_height()
+{
+  return STEPS_TILE_HEIGHT * UI_SCALE_FAC;
+}
+
+/* Tile width from the recorded pixel size (steps_recorder stores the
+ * capture's width/height); an image with no metadata is laid out 4:3. The
+ * aspect is clamped so one panoramic capture cannot swallow a whole row. */
+static float steps_tile_width(const ImageSlotData &img)
+{
+  float aspect = 4.0f / 3.0f;
+  if (img.width > 0.0f && img.height > 0.0f) {
+    aspect = img.width / img.height;
+  }
+  aspect = std::clamp(aspect, STEPS_TILE_MIN_ASPECT, STEPS_TILE_MAX_ASPECT);
+  return steps_tile_height() * aspect;
+}
+
+static bool gallery_tile(const ImageSlotData &img)
+{
+  return img.step_id[0] != '\0' && img.local_path[0] != '\0';
+}
+
+static int gallery_tile_count(const MessageLayoutData *layout)
+{
+  int n = 0;
+  for (int i = 0; i < layout->slot_image_count; i++) {
+    n += gallery_tile(layout->slot_images[i]);
+  }
+  return n;
+}
+
+/* Lay the bubble's capture tiles out as ONE row of the NEWEST ones that fit,
+ * NEWEST FIRST left to right (the latest capture is the one the user wants to
+ * see; the lightbox counts down from it), with a "+N" chip at the right end
+ * for the rest (a long run takes dozens of captures; a wall was overwhelming).
+ * Returns the block height (0 with no tiles). When `write_bounds`, every
+ * shown tile's bounds are written relative to (x0, top); hidden tiles get zero
+ * bounds; `gallery_hidden` / `gallery_first_hidden` / `gallery_more_bounds`
+ * describe the chip. */
+static float gallery_tiles_layout(MessageLayoutData *layout,
+                                  float avail_width,
+                                  float x0,
+                                  float top,
+                                  bool write_bounds)
+{
+  const float th = steps_tile_height();
+  const float gap = STEPS_TILE_GAP * UI_SCALE_FAC;
+  const float chip_w = STEPS_TILE_HEIGHT * 0.75f * UI_SCALE_FAC;
+
+  int indices[SLOT_MAX_IMAGE_ITEMS];
+  int count = 0;
+  for (int i = 0; i < layout->slot_image_count; i++) {
+    if (gallery_tile(layout->slot_images[i])) {
+      indices[count++] = i;
+    }
+  }
+  if (count == 0) {
+    return 0.0f;
+  }
+
+  /* Take from the newest end until the row is full. When anything is left
+   * over, the chip needs its own slot. */
+  int shown = 0;
+  float used = 0.0f;
+  for (int k = count - 1; k >= 0; k--) {
+    const float tw = std::min(steps_tile_width(layout->slot_images[indices[k]]), avail_width);
+    const bool more_after = (k > 0);
+    const float reserve = more_after ? chip_w + gap : 0.0f;
+    if (shown > 0 && used + tw + reserve > avail_width + 0.5f) {
+      break;
+    }
+    used += tw + gap;
+    shown++;
+  }
+  const int hidden = count - shown;
+  layout->gallery_hidden = hidden;
+  layout->gallery_first_hidden = hidden > 0 ? indices[hidden - 1] : -1;
+
+  if (write_bounds) {
+    const float row_top = top - STEPS_TILE_TOP_GAP * UI_SCALE_FAC;
+    float cursor_x = 0.0f;
+    for (int k = 0; k < hidden; k++) {
+      ImageSlotData &img = layout->slot_images[indices[k]];
+      memset(&img.bounds, 0, sizeof(img.bounds));
+      img.is_hovered = false;
+    }
+    for (int k = count - 1; k >= hidden; k--) { /* newest first */
+      ImageSlotData &img = layout->slot_images[indices[k]];
+      const float tw = std::min(steps_tile_width(img), avail_width);
+      img.bounds.xmin = x0 + cursor_x;
+      img.bounds.xmax = img.bounds.xmin + tw;
+      img.bounds.ymax = row_top;
+      img.bounds.ymin = row_top - th;
+      cursor_x += tw + gap;
+    }
+    if (hidden > 0) {
+      layout->gallery_more_bounds.xmin = x0 + cursor_x;
+      layout->gallery_more_bounds.xmax = layout->gallery_more_bounds.xmin + chip_w;
+      layout->gallery_more_bounds.ymax = row_top;
+      layout->gallery_more_bounds.ymin = row_top - th;
+    }
+    else {
+      memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
+    }
+  }
+  return STEPS_TILE_TOP_GAP * UI_SCALE_FAC + th;
+}
+
+static void gallery_draw_more_chip(const ChatBubbleStyle &card, MessageLayoutData *layout)
+{
+  const rctf &chip = layout->gallery_more_bounds;
+  if (chip.xmax <= chip.xmin) {
+    return;
+  }
+  const float radius = STEPS_TILE_RADIUS * UI_SCALE_FAC;
+  const float bed[4] = {1.0f, 1.0f, 1.0f, layout->gallery_more_hovered ? 0.14f : 0.07f};
+  chat_ui_draw_rounded_rect(&chip, radius, bed);
+  const float line[4] = {card.text_color[0], card.text_color[1], card.text_color[2],
+                         card.text_color[3] * (layout->gallery_more_hovered ? 0.85f : 0.28f)};
+  chat_ui_draw_rounded_rect_outline(&chip, radius, line, 1.0f * UI_SCALE_FAC);
+
+  char label[16];
+  BLI_snprintf(label, sizeof(label), "+%d", layout->gallery_hidden);
+  const int font_id = BLF_default();
+  BLF_size(font_id, card.font_size);
+  rcti bb;
+  BLF_boundbox(font_id, label, strlen(label), &bb);
+  const float gx = chip.xmin + (BLI_rctf_size_x(&chip) - float(BLI_rcti_size_x(&bb))) * 0.5f - float(bb.xmin);
+  const float gy = chip.ymin + (BLI_rctf_size_y(&chip) - float(BLI_rcti_size_y(&bb))) * 0.5f - float(bb.ymin);
+  float ink[4] = {card.text_color[0], card.text_color[1], card.text_color[2], card.text_color[3] * 0.85f};
+  BLF_color4fv(font_id, ink);
+  BLF_position(font_id, gx, gy, 0.0f);
+  BLF_draw(font_id, label, strlen(label));
+}
+
+static void steps_tiles_clear_bounds(MessageLayoutData *layout)
+{
+  memset(&layout->gallery_more_bounds, 0, sizeof(layout->gallery_more_bounds));
+  layout->gallery_more_hovered = false;
+  for (int i = 0; i < layout->slot_image_count; i++) {
+    ImageSlotData &img = layout->slot_images[i];
+    if (img.step_id[0] != '\0') {
+      memset(&img.bounds, 0, sizeof(img.bounds));
+      img.is_hovered = false;
+    }
+  }
+}
+
+static void steps_draw_tile(Main *bmain, const ChatBubbleStyle &card, ImageSlotData &img)
+{
+  const float radius = STEPS_TILE_RADIUS * UI_SCALE_FAC;
+  /* Tile bed: a quiet dark well so a letterboxed capture still reads as one
+   * rounded tile, then the pixels, then a hairline that brightens on hover. */
+  const float bed[4] = {0.0f, 0.0f, 0.0f, 0.28f};
+  chat_ui_draw_rounded_rect(&img.bounds, radius, bed);
+
+  rctf inset = img.bounds;
+  const float pad = 1.0f * UI_SCALE_FAC;
+  inset.xmin += pad;
+  inset.xmax -= pad;
+  inset.ymin += pad;
+  inset.ymax -= pad;
+  chat_ui_draw_image_fitted(bmain, img.local_path, /*source=*/0, &inset, nullptr);
+
+  const float alpha = img.is_hovered ? 0.85f : 0.28f;
+  const float line[4] = {card.text_color[0], card.text_color[1], card.text_color[2],
+                         card.text_color[3] * alpha};
+  chat_ui_draw_rounded_rect_outline(&img.bounds, radius, line, 1.0f * UI_SCALE_FAC);
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name Height calculation
  * \{ */
 
@@ -189,7 +378,30 @@ float chat_ui_calc_steps_block_height(const ChatBubbleStyle *style,
       chat_ui_calc_text_bounds(step.detail, detail_width, style->font_size, 0, &dw, &dh);
       height += STEPS_DETAIL_GAP * UI_SCALE_FAC + dh;
     }
+
   }
+  return height;
+}
+
+/* "Viewed N images": header (chevron + muted label) plus, when expanded, the
+ * wrapped tile rows. Zero when the bubble holds no capture tile. */
+float chat_ui_calc_images_block_height(const ChatBubbleStyle *style,
+                                       const MessageLayoutData *layout,
+                                       float content_width)
+{
+  const int count = gallery_tile_count(layout);
+  if (count <= 0) {
+    return 0.0f;
+  }
+  const int font_id = BLF_default();
+  BLF_size(font_id, style->font_size);
+  const float line_height = float(BLF_height_max(font_id));
+  float height = line_height + style->v_padding * 2.0f;
+  if (layout->images_collapsed) {
+    return height;
+  }
+  const float avail = content_width - chat_ui_chevron_indent();
+  height += gallery_tiles_layout(const_cast<MessageLayoutData *>(layout), avail, 0.0f, 0.0f, false);
   return height;
 }
 
@@ -199,13 +411,15 @@ float chat_ui_calc_steps_block_height(const ChatBubbleStyle *style,
 /** \name Drawing
  * \{ */
 
-void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
+void chat_ui_draw_steps_block(Main *bmain,
+                              const ChatBubbleStyle *style,
                               MessageLayoutData *layout,
                               float x,
                               float y,
                               float bubble_width,
                               float content_width)
 {
+  (void)bmain; /* tiles moved to chat_ui_draw_images_block; kept for the call site */
   /* Flat block: no filled card — the tools section reads as flat agent content
    * (only user messages are pills). A hairline divider at the top separates it
    * from the prose above without a heavy box. */
@@ -283,18 +497,6 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
     const float row_top = cursor - gap;
     const float row_bottom = row_top - rh;
 
-    /* Subtle hover highlight behind the row (cursor loop sets is_hovered). */
-    if (step.is_hovered) {
-      float hover_col[4];
-      chat_ui_get_button_hover_color(hover_col);
-      rctf hover_rect;
-      hover_rect.xmin = x + 4.0f * UI_SCALE_FAC;
-      hover_rect.xmax = x + bubble_width - 4.0f * UI_SCALE_FAC;
-      hover_rect.ymin = row_bottom - 2.0f * UI_SCALE_FAC;
-      hover_rect.ymax = row_top + 2.0f * UI_SCALE_FAC;
-      chat_ui_draw_rounded_rect(&hover_rect, 4.0f * UI_SCALE_FAC, hover_col);
-    }
-
     /* Kind glyph on the row's first text line. State is the ONLY use of
      * color here: running = the single live accent, failed = a muted ✕,
      * settled = quiet gray — a finished list reads uniformly calm. */
@@ -342,12 +544,26 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
     row_rect.xmax = row_rect.xmin + steps_row_text_width(step, content_width);
     row_rect.ymin = row_bottom;
     row_rect.ymax = row_top;
-    chat_ui_draw_text_wrapped(row_text, &row_rect, card.font_size, 0, card.text_color);
+    /* Process history stays flat. Observation rows (read/search, including
+     * "Inspected scene") are labels — same muted ink as the header, never a
+     * hover brighten. Only actionable disclosures (acted rows with detail)
+     * brighten on hover. Never paint the shared button-hover fill. */
+    const bool observe = step.kind == 0 || step.kind == 3;
+    const bool disclose = step.detail[0] != '\0';
+    float row_color[4];
+    std::copy_n(card.text_color, 4, row_color);
+    if (observe) {
+      row_color[3] *= 0.65f;
+    }
+    else {
+      row_color[3] *= step.is_hovered && disclose ? 1.0f : 0.85f;
+    }
+    chat_ui_draw_text_wrapped(row_text, &row_rect, card.font_size, 0, row_color);
 
-    /* Trailing disclosure chevron — every row with detail (object names) is
-     * independently expandable, pinned to the content's right edge and on
-     * the same text-anchored center as the kind glyph. */
-    if (step.detail[0] != '\0') {
+    /* Trailing disclosure chevron — acted rows with detail (object names)
+     * are independently expandable. Observation labels omit it so they do
+     * not read as a control. */
+    if (disclose && !observe) {
       const float dim_chev[4] = {card.text_color[0], card.text_color[1],
                                  card.text_color[2], card.text_color[3] * 0.6f};
       const float chev_x = x + card.h_padding + content_width -
@@ -385,4 +601,71 @@ void chat_ui_draw_steps_block(const ChatBubbleStyle *style,
   }
 }
 
+static void gallery_label(int count, char *buf, size_t buf_len)
+{
+  BLI_snprintf(buf, buf_len, count == 1 ? "Viewed %d image" : "Viewed %d images", count);
+}
+
+void chat_ui_draw_images_block(Main *bmain,
+                               const ChatBubbleStyle *style,
+                               MessageLayoutData *layout,
+                               float x,
+                               float y,
+                               float bubble_width,
+                               float content_width)
+{
+  const int count = gallery_tile_count(layout);
+  if (count <= 0 || layout->slot_gallery_height <= 0.0f) {
+    steps_tiles_clear_bounds(layout);
+    memset(&layout->images_header_bounds, 0, sizeof(layout->images_header_bounds));
+    return;
+  }
+  const ChatBubbleStyle &card = *style;
+  const float tools_accent[4] = CHAT_ACCENT_TOOLS;
+  chat_ui_draw_accent_bar(x, y, layout->slot_gallery_height, tools_accent, UI_SCALE_FAC);
+
+  const int font_id = BLF_default();
+  BLF_size(font_id, card.font_size);
+  const float line_height = float(BLF_height_max(font_id));
+  const float chevron_indent = chat_ui_chevron_indent();
+
+  /* Header: same muted voice as the steps header, brighter when hovered. */
+  float header_col[4] = {card.text_color[0], card.text_color[1], card.text_color[2],
+                         card.text_color[3] * (layout->images_header_hovered ? 0.9f : 0.65f)};
+  char label[64];
+  gallery_label(count, label, sizeof(label));
+  const float block_top = y + layout->slot_gallery_height;
+  const float header_top = block_top - card.v_padding;
+  const float header_bottom = header_top - line_height;
+  const float header_center = chat_ui_wrapped_first_line_center(
+      card.font_size, label, content_width - chevron_indent, header_bottom);
+  chat_ui_draw_chevron(x + card.h_padding, header_center, layout->images_collapsed, header_col);
+  rctf header_rect;
+  header_rect.xmin = x + card.h_padding + chevron_indent;
+  header_rect.xmax = x + card.h_padding + content_width;
+  header_rect.ymin = header_bottom;
+  header_rect.ymax = header_top;
+  chat_ui_draw_text_wrapped(label, &header_rect, card.font_size, 0, header_col);
+
+  layout->images_header_bounds.xmin = x;
+  layout->images_header_bounds.xmax = x + bubble_width;
+  layout->images_header_bounds.ymin = layout->images_collapsed ? y : header_bottom;
+  layout->images_header_bounds.ymax = block_top;
+
+  if (layout->images_collapsed) {
+    steps_tiles_clear_bounds(layout);
+    return;
+  }
+  const float avail = content_width - chevron_indent;
+  gallery_tiles_layout(layout, avail, x + card.h_padding + chevron_indent, header_bottom, true);
+  for (int k = 0; k < layout->slot_image_count; k++) {
+    ImageSlotData &img = layout->slot_images[k];
+    if (gallery_tile(img) && img.bounds.xmax > img.bounds.xmin) {
+      steps_draw_tile(bmain, card, img);
+    }
+  }
+  gallery_draw_more_chip(card, layout);
+}
+
 /** \} */
+}  // namespace blender

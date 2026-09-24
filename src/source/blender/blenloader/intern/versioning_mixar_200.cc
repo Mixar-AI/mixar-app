@@ -22,15 +22,20 @@
 
 #include "versioning_common.hh"
 #include "versioning_mixar_200.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 void blo_do_versions_mixar(Main *bmain)
 {
   /* Pre-versioning files have mixar_versionfile == 0.
    * All existing migrations must run on those files. */
   if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 1)) {
-    LISTBASE_FOREACH (bScreen *, screen, &bmain->screens) {
-      LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-        LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
+    for (bScreen &screen_iter : bmain->screens) {
+      bScreen *screen = &screen_iter;
+      for (ScrArea &area_iter : screen->areabase) {
+        ScrArea *area = &area_iter;
+        for (SpaceLink &sl_iter : area->spacedata) {
+          SpaceLink *sl = &sl_iter;
 
           /* Remap old Mixar space type values (24-31) to new range (100-107).
            * The enum values were moved to avoid collisions with upstream Blender. */
@@ -42,13 +47,13 @@ void blo_do_versions_mixar(Main *bmain)
             case 28: sl->spacetype = SPACE_EMPTY; break;  /* Was SPACE_MIXAR_UV_PROPERTIES */
             case 29: sl->spacetype = SPACE_BAKING; break;
             case 30: sl->spacetype = SPACE_TEXTURE_SETS; break;
-            case 31: sl->spacetype = SPACE_MIXIE_CHAT; break;
+            case 31: sl->spacetype = SPACE_EMPTY; break;  /* Removed standalone chat. */
             default: break;
           }
 
           /* Add TOOLS region to MIXIE spaces (ensures toolbar region exists). */
           if (sl->spacetype == SPACE_MIXIE) {
-            ListBase *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+            ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
                                                                    &sl->regionbase;
             if (ARegion *new_tools = do_versions_add_region_if_not_found(
                     regionbase, RGN_TYPE_TOOLS, "tools region", RGN_TYPE_UI))
@@ -66,9 +71,12 @@ void blo_do_versions_mixar(Main *bmain)
    * stored in the bundled startup file keep their saved (header-less) regions
    * and the space switcher dropdown stays hidden. */
   if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 2)) {
-    LISTBASE_FOREACH (bScreen *, screen, &bmain->screens) {
-      LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-        LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
+    for (bScreen &screen_iter : bmain->screens) {
+      bScreen *screen = &screen_iter;
+      for (ScrArea &area_iter : screen->areabase) {
+        ScrArea *area = &area_iter;
+        for (SpaceLink &sl_iter : area->spacedata) {
+          SpaceLink *sl = &sl_iter;
           if (!ELEM(sl->spacetype,
                     SPACE_MIXAR_PROPERTIES,
                     SPACE_MIXAR_ASSETS,
@@ -77,7 +85,7 @@ void blo_do_versions_mixar(Main *bmain)
             continue;
           }
 
-          ListBase *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
                                                                  &sl->regionbase;
           ARegion *new_header = do_versions_add_region_if_not_found(
               regionbase, RGN_TYPE_HEADER, "header for texturing space", RGN_TYPE_WINDOW);
@@ -101,13 +109,16 @@ void blo_do_versions_mixar(Main *bmain)
    * is no longer registered, so `direct_link_area()` already falls those
    * areas back to SPACE_EMPTY on read. */
   if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 3)) {
-    LISTBASE_FOREACH (bScreen *, screen, &bmain->screens) {
-      LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-        LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
+    for (bScreen &screen_iter : bmain->screens) {
+      bScreen *screen = &screen_iter;
+      for (ScrArea &area_iter : screen->areabase) {
+        ScrArea *area = &area_iter;
+        for (SpaceLink &sl_iter : area->spacedata) {
+          SpaceLink *sl = &sl_iter;
           if (sl->spacetype != SPACE_VIEW3D) {
             continue;
           }
-          ListBase *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
                                                                  &sl->regionbase;
           if (ARegion *strip = do_versions_add_region_if_not_found(
                   regionbase, RGN_TYPE_EXECUTE, "agent scene strip region",
@@ -121,5 +132,39 @@ void blo_do_versions_mixar(Main *bmain)
     }
   }
 
+  /* The Agent Scene Strip became the Parallel Agents panel: same
+   * RGN_TYPE_EXECUTE region, still bottom-aligned but now sized for a stack
+   * of cards rather than a row of tiles. Files saved with the strip carry its
+   * stored size in their screen data, which wins over the region type's own
+   * preference, so zero it and let `prefsizey` be re-taken. */
+  if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 4)) {
+    for (bScreen &screen_iter : bmain->screens) {
+      bScreen *screen = &screen_iter;
+      for (ScrArea &area_iter : screen->areabase) {
+        ScrArea *area = &area_iter;
+        for (SpaceLink &sl_iter : area->spacedata) {
+          SpaceLink *sl = &sl_iter;
+          if (sl->spacetype != SPACE_VIEW3D) {
+            continue;
+          }
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+                                                                           &sl->regionbase;
+          for (ARegion &region_iter : *regionbase) {
+            ARegion *region = &region_iter;
+            if (region->regiontype != RGN_TYPE_EXECUTE) {
+              continue;
+            }
+            region->alignment = RGN_ALIGN_BOTTOM;
+            /* Stored sizes came from the tile strip. Zero them so the region
+             * takes `prefsizey` from its type on the next layout. */
+            region->sizex = 0;
+            region->sizey = 0;
+          }
+        }
+      }
+    }
+  }
+
   /* Future versioning blocks go here, guarded by MAIN_MIXAR_VERSION_FILE_ATLEAST. */
 }
+}  // namespace blender

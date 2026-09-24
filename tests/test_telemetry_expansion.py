@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Telemetry-expansion tests: draft abandonment, session start, workspace
-switching, the rejection window, native import shims and the onboarding
-funnel. Plain test functions only (no pytest fixtures) — this file also runs
+switching, the rejection window and native import shims (the onboarding
+tour's funnel lives in ``tests/onboarding/test_tour_telemetry.py``). Plain
+test functions only (no pytest fixtures) — this file also runs
 under the fixture-free in-Blender runner. Split out of
 ``test_usage_analytics.py`` to respect the repo's 500-line file budget."""
 
@@ -306,55 +307,6 @@ def test_native_import_wrapper_captures_initiated_without_filepath() -> None:
         "import.initiated", {"format": "OBJ", "via": "file_menu"})
     assert "filepath" not in emit.call_args.args[1]
     assert invoked == [('INVOKE_DEFAULT',)]
-
-
-# ---------------------------------------------------------------------------
-# Onboarding funnel
-# ---------------------------------------------------------------------------
-
-def _onboarding_transition(previous_step, to_step, opted_out):
-    # The onboarding core package pulls in GPU-drawing modules at import
-    # time; stub them like conftest stubs bpy (MagicMock so attribute
-    # imports such as batch_for_shader resolve).
-    from unittest.mock import MagicMock
-    for name in ("gpu", "gpu.state", "gpu.shader", "gpu.types", "gpu.matrix",
-                 "gpu_extras", "gpu_extras.batch", "blf"):
-        if name not in sys.modules:
-            sys.modules[name] = MagicMock(name=name)
-    from mixar.modules.onboarding.core import state
-    from mixar.modules.onboarding import constants as ob_constants
-
-    tour_driver = ModuleType("tour_driver")
-    tour_driver.apply_step = lambda *args, **kwargs: None
-    wm = SimpleNamespace()
-    setattr(wm, ob_constants.WM_PROP_STEP, previous_step)
-    setattr(wm, ob_constants.WM_PROP_OPTED_OUT, opted_out)
-    context = SimpleNamespace(
-        window_manager=wm, scene=SimpleNamespace(mixie_chat_user_id=""))
-    with (
-        patch.dict(sys.modules,
-                   {"mixar.modules.onboarding.core.tour_driver": tour_driver}),
-        patch("mixar.modules.common.analytics.capture.capture") as emit,
-    ):
-        state.transition_to(to_step, context)
-    return [(call.args[0], call.args[1]) for call in emit.call_args_list]
-
-
-def test_onboarding_transition_emits_step_changed() -> None:
-    events = _onboarding_transition("WELCOME", "INFO_MOODBOARD", False)
-    assert ("onboarding.step_changed",
-            {"from_step": "WELCOME", "to_step": "INFO_MOODBOARD"}) in events
-    assert all(name != "onboarding.finished" for name, _ in events)
-
-
-def test_onboarding_finish_distinguishes_completed_from_skipped() -> None:
-    completed = _onboarding_transition("COMPLETION", "DONE", False)
-    assert ("onboarding.finished",
-            {"outcome": "completed", "last_step": "COMPLETION"}) in completed
-
-    skipped = _onboarding_transition("WELCOME", "DONE", True)
-    assert ("onboarding.finished",
-            {"outcome": "skipped", "last_step": "WELCOME"}) in skipped
 
 
 # ---------------------------------------------------------------------------

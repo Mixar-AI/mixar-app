@@ -16,6 +16,8 @@
 #include "BLI_vector.hh"
 
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 struct PointerRNA;
 struct PropertyRNA;
@@ -58,12 +60,16 @@ struct ChatMessageProps {
   PropertyRNA *step_items;
   PropertyRNA *steps_summary;
   PropertyRNA *steps_collapsed;
+  PropertyRNA *images_collapsed;
 
   /* Thinking dropdown (finalized) */
   PropertyRNA *thinking_text;
   PropertyRNA *thinking_active;
   PropertyRNA *thinking_duration_ms;
   PropertyRNA *thinking_collapsed;
+  /* USER bubbles: short delivery note appended to the sender label
+   * ("You (queued)") while an interjection awaits the backend's ack. */
+  PropertyRNA *delivery_hint;
 
   bool initialized;
 };
@@ -101,6 +107,7 @@ struct ChatImageItemProps {
   PropertyRNA *local_path;
   PropertyRNA *width;
   PropertyRNA *height;
+  PropertyRNA *step_id;
   bool initialized;
 };
 
@@ -247,7 +254,7 @@ struct MessageLayoutData {
   bool has_feedback;       /* feedback_visible is true */
   int feedback_rating;     /* 0=unrated, 1-5 */
   float feedback_row_height;
-  FeedbackStarData feedback_stars[FEEDBACK_STAR_COUNT];
+  FeedbackVoteData feedback_votes[FEEDBACK_VOTE_COUNT];
   rctf feedback_comment_bounds;
   bool feedback_comment_hovered;
   bool feedback_comment_expanded;  /* inline comment field visible */
@@ -264,6 +271,19 @@ struct MessageLayoutData {
   bool steps_collapsed;
   char steps_summary[256];
   rctf steps_header_bounds;  /* block header hit area */
+
+  /* "Viewed N images" block: the bubble's step-tagged capture tiles, drawn
+   * under the steps block with its own collapse state (mixie_chat_steps.cc). */
+  bool images_collapsed;
+  float slot_gallery_height;
+  rctf images_header_bounds;
+  bool images_header_hovered;
+  /* One row of the NEWEST tiles; the rest sit behind a "+N" chip that opens
+   * the lightbox (which still steps through every tile). */
+  int gallery_hidden;            /* tiles not shown in the row */
+  int gallery_first_hidden;      /* slot_images index the chip opens */
+  rctf gallery_more_bounds;      /* the chip's hit area, zero when none */
+  bool gallery_more_hovered;
 
   /* Thinking block. When thinking_active, it renders as a LIVE pinned panel
    * (spinner + streaming FIFO text); when finalized it collapses to the
@@ -315,6 +335,8 @@ const blender::Vector<MessageLayoutData> &mixie_chat_get_layout_cache(
  * Call when space is destroyed to prevent leaks.
  */
 void mixie_chat_clear_layout_cache(struct SpaceMixieChat *smixie);
+/* Same, but keeps the vector's buffer for the rebuild that follows. */
+void mixie_chat_clear_layout_cache_for_rebuild(struct SpaceMixieChat *smixie);
 
 /**
  * Reset property caches to prevent stale pointers.
@@ -372,7 +394,9 @@ struct HistoryRowHit {
    * downward). Keyboard navigation uses it to scroll a selected row into
    * view without re-deriving the grouped layout. */
   float content_top = 0.0f;
-  char session_id[128] = "";
+  char session_id[128] = ""; /* chat session id, or the checkpoint id */
+  char title[200] = "";      /* row label, exported as a QA target */
+  char group[32] = "";       /* section the row sits in (QA target detail) */
 };
 
 /** \} */
@@ -436,6 +460,16 @@ struct MixieChatRuntime {
 
   /** Previous window Y size for resize detection. */
   int prev_winy;
+
+  /** Optional view band: when valid, the message view occupies only this
+   * region-local sub-rect instead of the whole region. Set per-frame by the
+   * Agent Bubble island (whose single region also hosts the composer and
+   * header) before calling mixie_chat_draw_messages; never set by the chat
+   * editor, whose main region IS the message area. Drives the View2D mask,
+   * the wrap width, and every winx/winy-derived scroll clamp, so wheel
+   * scrolling and scrollers operate on the visible band, not the window. */
+  bool view_band_valid = false;
+  rcti view_band = {0, 0, 0, 0};
 
   /** Layout cache invalidation: previous message count. */
   int prev_msg_count = 0;
@@ -510,6 +544,10 @@ struct MixieChatRuntime {
   /** History overlay: visibility mirrored from the Python-registered
    * WindowManager bool during draw (events check this, never RNA). */
   bool history_overlay_active = false;
+  /** History overlay: mode (HistoryMode) of the last draw, so switching the
+   * open card between chats and checkpoints resets the search, scroll and
+   * armed row like opening it does. -1 = not drawn yet. */
+  int history_mode_last = -1;
 
   /** History overlay: panel bounds in region pixels (click-away test). */
   rctf history_panel_bounds = {0, 0, 0, 0};
@@ -647,7 +685,51 @@ struct MixieChatRuntime {
    * the caret-follow helper after edits). */
   float rules_editor_scroll = 0.0f;
   float rules_editor_view_h = 0.0f;
+
+  /* -- Scribble ink overlay (mixie_chat_ink_overlay.cc) ---------------- */
+
+  /** Ink overlay: visibility mirrored from the Python-registered
+   * WindowManager bool during draw (events check this, never RNA). The
+   * event-side auto-open paths (stylus press on the composer / on empty
+   * chat background) pre-latch it so the very first press already draws
+   * ink — the draw only runs its opening init when it sees the RNA flag
+   * flip while this is still false. */
+  bool ink_overlay_active = false;
+
+  /** Ink overlay: flat stroke store. Points are region-local pixels
+   * (y up) + pressure 0..1; strokes index into the point array via
+   * ink_stroke_starts. Caps are a frozen contract with the Python
+   * validator (SCRIBBLE_MAX_STROKES / SCRIBBLE_MAX_POINTS). */
+  float ink_points[4096][3];
+  int ink_stroke_starts[64];
+  int ink_point_count = 0;
+  int ink_stroke_count = 0;
+
+  /** Ink overlay: true between pen-down and pen-up of the stroke being
+   * captured (the live stroke is ink_stroke_count - 1). */
+  bool ink_stroke_live = false;
+
+  /** Ink overlay: wall time of the last pen-up — the idle-commit timer
+   * converts pending strokes INK_IDLE_COMMIT_SEC after it. */
+  double ink_last_penup_time = 0.0;
+
+  /** Ink overlay: point-store-full latch, so the "canvas full" hint draws
+   * once instead of re-triggering per denied sample. */
+  bool ink_store_full = false;
+
+  /** Ink overlay: chrome hit rects + hover state (hint-bar buttons). */
+  rctf ink_close_bounds = {0, 0, 0, 0};
+  rctf ink_clear_bounds = {0, 0, 0, 0};
+  bool ink_close_hovered = false;
+  bool ink_clear_hovered = false;
+
+  /** Ink overlay: open animation start time (0 = not animating). */
+  double ink_anim_start = 0.0;
 };
+
+/** Ink stroke store capacities (the array sizes above). */
+inline constexpr int CHAT_INK_MAX_POINTS = 4096;
+inline constexpr int CHAT_INK_MAX_STROKES = 64;
 
 /**
  * Get or create runtime for a SpaceMixieChat instance.
@@ -661,3 +743,4 @@ MixieChatRuntime *mixie_chat_ensure_runtime(struct SpaceMixieChat *smixie);
 void mixie_chat_free_runtime(struct SpaceMixieChat *smixie);
 
 /** \} */
+}  // namespace blender

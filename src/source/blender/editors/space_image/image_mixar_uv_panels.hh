@@ -11,6 +11,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct ARegion;
 struct ARegionType;
 struct bContext;
@@ -44,3 +47,5 @@ extern float mixar_uv_size_target[2];
 extern int mixar_uv_pivot_point;
 extern float mixar_uv_cursor_edit[2];
 extern float mixar_uv_arrange_margin;
+
+}  // namespace blender

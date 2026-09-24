@@ -67,3 +67,28 @@ def clamp_frame_delta(
     lower = int(minimum_frame) - min(values)
     upper = int(maximum_frame) - max(values)
     return min(max(int(requested_delta), lower), upper)
+
+
+def write_preview_range(scene, start, end) -> None:
+    """Set the preview range without letting the RNA clamp eat an edge.
+
+    Blender clamps `frame_preview_start` to the CURRENT end and
+    `frame_preview_end` to the current start, so one write in either order
+    silently loses an edge whenever the window being written does not
+    overlap the one already there — a restore that hands back a range above
+    the scoped one keeps the scoped start. Start, end, start always lands
+    both: the first write gets as far as the old end allows, the second
+    opens the end, and the third finishes the start off.
+    """
+    for name, value in (
+        ("frame_preview_start", start),
+        ("frame_preview_end", end),
+        ("frame_preview_start", start),
+    ):
+        if value is None:
+            continue
+        try:
+            if getattr(scene, name) != value:
+                setattr(scene, name, value)
+        except (AttributeError, TypeError):
+            pass

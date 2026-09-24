@@ -42,6 +42,12 @@ class SceneGenQueueJob(Job):
     _on_download_failed: Optional[Callable] = field(default=None, repr=False)
     _objects: list = field(default_factory=list, repr=False)
     _processing_started: bool = False
+    _on_imported: Optional[Callable] = field(default=None, repr=False)
+
+    def on_imported(self, object_names: str) -> None:
+        super().on_imported(object_names)
+        if self._on_imported is not None:
+            self._on_imported(self, object_names)
 
     def submit(self, on_success, on_error) -> None:
         from mixar.modules.common.api.services.job_queue_service import (
@@ -154,8 +160,20 @@ class SceneGenQueueJob(Job):
                     failures.append(f"Object {object_id} import timed out")
 
             def _finish_cb():
+                # A watchdog failure or queue clear can retire the run after
+                # an object imported but before this main-thread callback.
+                # Never revive that terminal job through custom-success.
+                if self.state != JobState.RUNNING_DOWNLOAD:
+                    return None
                 if imported_names:
-                    on_done(", ".join(imported_names))
+                    names = ", ".join(imported_names)
+                    try:
+                        self.on_imported(names)
+                    except Exception as exc:
+                        logger.error("[SceneGen] result attachment failed: %s", exc)
+                        on_error("Could not attach Character Parts results to their node")
+                        return None
+                    on_done(names)
                 else:
                     on_error("; ".join(failures) or "SceneGen import failed")
                 return None
@@ -199,7 +217,6 @@ def _get_scene_gen_listener():
         "mixie_segment_to_3d_is_generating",
         on_start=_on_start,
         on_finish=_on_finish,
-        batch_popup_title="Scene generation complete",
     )
     return _scene_gen_listener
 
@@ -228,12 +245,22 @@ def enqueue_scene_gen_job(
     payload: dict,
     on_object_ready: Optional[Callable] = None,
     on_download_failed: Optional[Callable] = None,
+    on_imported: Optional[Callable] = None,
+    model: Optional[str] = None,
+    graph_node_id: str = "",
+    scene_name: str = "",
 ) -> Optional[SceneGenQueueJob]:
     from mixar.modules.common.generation_params import catalog_default_model
 
     # The model slug is server data. No catalog means we do not know which
     # rows are enabled, so refuse rather than submit a remembered literal.
-    model = catalog_default_model(SCENE_GEN_JOB_TYPE)
+    if model is None:
+        model = catalog_default_model(SCENE_GEN_JOB_TYPE)
+    else:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        if not get_model(SCENE_GEN_JOB_TYPE, model):
+            model = None
     if not model:
         logger.warning(
             "[SceneGen] no catalog model for service '%s' — cannot submit "
@@ -250,6 +277,10 @@ def enqueue_scene_gen_job(
         payload=payload,
         _on_object_ready=on_object_ready,
         _on_download_failed=on_download_failed,
+        _on_imported=on_imported,
+        graph_node_id=graph_node_id,
+        scene_name=scene_name,
+        origin_capability_key=_hosting_capability(),
     )
     queue = get_queue_with_listener(FEATURE_SCENE_GEN, _get_scene_gen_listener())
     # Non-emitting marker only — the backend emits generation.submitted

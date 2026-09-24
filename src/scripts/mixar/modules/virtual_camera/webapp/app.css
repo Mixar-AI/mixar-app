@@ -1,0 +1,136 @@
+/* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Mixar Virtual Camera — phone control surface */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  height: 100%; overflow: hidden; background: #000; color: #e8e8e8;
+  font-family: -apple-system, "SF Pro", "Segoe UI", Roboto, sans-serif;
+  touch-action: none; overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none;
+}
+.hidden { display: none !important; }
+
+/* ---- Connect gate ---- */
+.gate {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(120% 120% at 50% 0%, #16181d 0%, #000 70%);
+  z-index: 50;
+}
+.gate-card { text-align: center; padding: 24px; max-width: 340px; }
+.gate-logo { font-size: 13px; letter-spacing: 6px; color: #6ee7a0; font-weight: 700; }
+.gate-title { font-size: 28px; font-weight: 700; margin: 6px 0 14px; }
+.gate-status { font-size: 14px; color: #9aa0a8; min-height: 20px; margin-bottom: 18px; }
+.gate-hint { font-size: 12px; color: #6b7078; margin-top: 18px; line-height: 1.5; }
+.btn-primary {
+  appearance: none; border: 0; border-radius: 14px; padding: 14px 44px;
+  font-size: 17px; font-weight: 600; color: #04150b; background: #6ee7a0;
+}
+.btn-primary:active { filter: brightness(0.85); }
+
+/* ---- Main surface ---- */
+.main { position: fixed; inset: 0; }
+.stream {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; background: #000; pointer-events: none;
+}
+.stream-off {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #3a3f46; font-size: 14px; letter-spacing: 1px; pointer-events: none;
+}
+
+/* ---- Top bar ---- */
+.topbar {
+  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center;
+  gap: 8px; padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
+  background: linear-gradient(#000c, #0000); z-index: 10;
+}
+.topbar-spacer { flex: 1; }
+.conn-dot { width: 10px; height: 10px; border-radius: 50%; background: #e05252; flex: none; }
+.conn-dot.ok { background: #6ee7a0; }
+.camera-select {
+  appearance: none; background: #ffffff14; color: #e8e8e8; border: 1px solid #ffffff22;
+  border-radius: 9px; padding: 6px 10px; font-size: 13px; max-width: 38vw;
+}
+.frame-readout { font-variant-numeric: tabular-nums; font-size: 13px; color: #9aa0a8; }
+.btn-chip, .btn-record {
+  appearance: none; border: 1px solid #ffffff22; background: #ffffff14; color: #e8e8e8;
+  border-radius: 9px; min-width: 38px; height: 34px; font-size: 15px;
+}
+.btn-chip:active { background: #ffffff2e; }
+.btn-record { color: #e05252; font-size: 18px; }
+.btn-record.on { background: #e05252; color: #fff; animation: recpulse 1.2s infinite; }
+@keyframes recpulse { 50% { filter: brightness(0.7); } }
+
+/* ---- Mid bar ---- */
+.midbar {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 52px); left: 0; right: 0;
+  display: flex; justify-content: center; gap: 10px; z-index: 9; pointer-events: none;
+}
+.btn-pill {
+  pointer-events: auto; appearance: none; border: 1px solid #ffffff22;
+  background: #00000080; color: #cfd3d8; border-radius: 999px;
+  padding: 7px 16px; font-size: 13px; backdrop-filter: blur(6px);
+}
+.btn-pill.on { border-color: #6ee7a0; color: #6ee7a0; }
+
+/* ---- Lens rail ---- */
+.lens-rail {
+  position: absolute; right: calc(env(safe-area-inset-right, 0px) + 10px);
+  top: 50%; transform: translateY(-50%); display: flex; flex-direction: column;
+  align-items: center; gap: 8px; z-index: 8;
+}
+.lens-value { font-size: 12px; color: #6ee7a0; font-variant-numeric: tabular-nums; }
+.vslider {
+  writing-mode: vertical-lr; direction: rtl;
+  width: 36px; height: 34vh; accent-color: #6ee7a0;
+}
+.lens-presets { display: flex; flex-direction: column; gap: 6px; }
+.btn-preset {
+  appearance: none; border: 1px solid #ffffff22; background: #00000080; color: #9aa0a8;
+  border-radius: 8px; width: 36px; height: 26px; font-size: 11px;
+}
+.btn-preset:active { color: #6ee7a0; border-color: #6ee7a0; }
+
+/* ---- Joysticks ---- */
+.joy-zone {
+  position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  width: 42vw; max-width: 260px; height: 38vh; max-height: 230px; z-index: 8;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+}
+.joy-left { left: calc(env(safe-area-inset-left, 0px) + 10px); }
+.joy-right { right: calc(env(safe-area-inset-right, 0px) + 58px); }
+.joy-base {
+  width: 118px; height: 118px; border-radius: 50%;
+  border: 1.5px solid #ffffff2a; background: #ffffff0a; position: relative;
+}
+.joy-knob {
+  position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; border-radius: 50%;
+  background: #ffffff2e; border: 1.5px solid #ffffff55;
+  transform: translate(-50%, -50%); transition: transform 60ms linear;
+}
+.joy-zone.active .joy-knob { background: #6ee7a066; border-color: #6ee7a0; transition: none; }
+.joy-label { margin-top: 8px; font-size: 10px; letter-spacing: 2px; color: #5a6068; text-transform: uppercase; }
+
+/* ---- Settings sheet ---- */
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: #101318f2; border-radius: 18px 18px 0 0; backdrop-filter: blur(10px);
+  padding: 8px 18px calc(env(safe-area-inset-bottom, 0px) + 16px);
+}
+.sheet-grab { width: 44px; height: 5px; border-radius: 3px; background: #ffffff2e; margin: 6px auto 12px; }
+.sheet-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
+.sheet-row label { flex: 0 0 40%; font-size: 13px; color: #cfd3d8; }
+.sheet-row input[type="range"] { flex: 1; accent-color: #6ee7a0; }
+.sheet-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: #6ee7a0; }
+.sheet-row span { flex: 0 0 58px; text-align: right; font-size: 12px; color: #9aa0a8; font-variant-numeric: tabular-nums; }
+.sheet-hint { font-size: 11px; color: #6b7078; padding-top: 6px; line-height: 1.45; }
+
+/* ---- Toast ---- */
+.toast {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 96px);
+  left: 50%; transform: translateX(-50%); z-index: 30;
+  background: #101318f2; border: 1px solid #ffffff22; color: #e8e8e8;
+  border-radius: 10px; padding: 9px 16px; font-size: 13px; max-width: 80vw; text-align: center;
+}

@@ -31,7 +31,8 @@ class TOPBAR_HT_upper_bar(Header):
 
         TOPBAR_MT_editor_menus.draw_collapsible(context, layout)
 
-        layout.separator(type='LINE')
+        # Space (not LINE) so Help keeps its trailing gap without a divider.
+        layout.separator()
 
         if not screen.show_fullscreen:
             layout.template_ID_tabs(window, "workspace", new="workspace.add", menu="TOPBAR_MT_workspace_menu")
@@ -173,17 +174,21 @@ class TOPBAR_MT_file(Menu):
         layout.separator()
 
         layout.operator_context = 'EXEC_AREA' if context.blend_data.is_saved else 'INVOKE_AREA'
-        layout.operator("wm.save_mainfile", text="Save", icon='FILE_TICK')
+        layout.operator("wm.save_mainfile", text="Save", icon='FILE_TICK').show_save_modified_images_dialog = True
 
         layout.operator_context = 'INVOKE_AREA'
-        layout.operator("wm.save_as_mainfile", text="Save As...")
+        layout.operator("wm.save_as_mainfile", text="Save As...").show_save_modified_images_dialog = True
         layout.operator_context = 'INVOKE_AREA'
-        layout.operator("wm.save_as_mainfile", text="Save Copy...").copy = True
+        save_copy = layout.operator("wm.save_as_mainfile", text="Save Copy...")
+        save_copy.copy = True
+        save_copy.show_save_modified_images_dialog = True
 
         sub = layout.row()
         sub.enabled = context.blend_data.is_saved
         sub.operator_context = 'EXEC_AREA'
-        sub.operator("wm.save_mainfile", text="Save Incremental").incremental = True
+        save_incremental = sub.operator("wm.save_mainfile", text="Save Incremental")
+        save_incremental.incremental = True
+        save_incremental.show_save_modified_images_dialog = True
 
         layout.separator()
 
@@ -573,14 +578,14 @@ class TOPBAR_MT_window(Menu):
 
         layout.separator()
 
-        layout.operator("screen.screenshot")
+        layout.operator("screen.screenshot", text="Save Screenshot...")
 
         # Showing the status in the area doesn't work well in this case.
         # - From the top-bar, the text replaces the file-menu (not so bad but strange).
         # - From menu-search it replaces the area that the user may want to screen-shot.
         # Setting the context to screen causes the status to show in the global status-bar.
         with operator_context(layout, 'INVOKE_SCREEN'):
-            layout.operator("screen.screenshot_area")
+            layout.operator("screen.screenshot_area", text="Save Screenshot (Editor)...")
 
         if sys.platform[:3] == "win":
             layout.separator()
@@ -594,12 +599,20 @@ class TOPBAR_MT_window(Menu):
 class TOPBAR_MT_help(Menu):
     bl_label = "Help"
 
-    def draw(self, _context):
+    def draw(self, context):
         layout = self.layout
 
-        layout.operator("wm.url_open", text="About Mixar", icon='INFO').url = "https://www.mixar.app/about"
+        layout.operator("wm.url_open", text="Tutorials", icon='FILE_MOVIE').url = "https://www.youtube.com/@Mixar3D"
         layout.operator("wm.url_open", text="Documentation", icon='HELP').url = "https://www.mixar.app/docs"
         layout.operator("wm.url_open", text="Report a Bug", icon='URL').url = "https://www.mixar.app/bug-report"
+        layout.separator()
+        # The onboarding tour opens this menu with the row highlighted while
+        # it talks about the program (WindowManager ID property it sets).
+        wm = context.window_manager
+        highlighted = wm is not None and wm.get("mixar_tour_highlight") == "creator_program"
+        layout.operator(
+            "wm.url_open", text="Creator Program", icon='COMMUNITY', depress=highlighted,
+        ).url = "https://www.mixar.app/creator-program"
 
 
 class TOPBAR_MT_file_context_menu(Menu):
@@ -753,8 +766,10 @@ class TOPBAR_PT_name_marker(Panel):
     @staticmethod
     def is_using_pose_markers(context):
         sd = context.space_data
-        return (sd.type == 'DOPESHEET_EDITOR' and sd.mode in {'ACTION', 'SHAPEKEY'} and
-                sd.show_pose_markers and context.active_action)
+        return (
+            sd.type == 'DOPESHEET_EDITOR' and sd.mode in {'ACTION', 'SHAPEKEY'} and
+            sd.show_pose_markers and context.active_action
+        )
 
     @staticmethod
     def is_using_sequencer(context):

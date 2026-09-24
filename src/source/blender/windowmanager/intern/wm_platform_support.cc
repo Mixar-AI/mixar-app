@@ -27,6 +27,8 @@
 
 #include "CLG_log.h"
 
+namespace blender {
+
 #define WM_PLATFORM_SUPPORT_TEXT_SIZE 1024
 
 static CLG_LogRef LOG = {"gpu.platform"};
@@ -253,3 +255,5 @@ bool WM_platform_support_perform_checks()
 
   return result;
 }
+
+}  // namespace blender

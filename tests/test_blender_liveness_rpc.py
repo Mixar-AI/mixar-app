@@ -27,14 +27,14 @@ CONSTANTS = ROOT / "src/scripts/mixar/modules/space_mixie_chat/constants.py"
 
 
 def test_liveness_method_and_capability_declared():
-    constants = CONSTANTS.read_text()
+    constants = CONSTANTS.read_text(encoding="utf-8")
     assert 'BLENDER_LIVENESS = "blender.liveness"' in constants
-    client = CLIENT.read_text()
+    client = "\n".join((CLIENT.parent / name).read_text(encoding="utf-8") for name in ("jsonrpc_client.py", "socket_connection.py", "socket_dispatch.py", "socket_requests.py"))
     assert '"liveness",' in client  # handshake capability
 
 
 def test_liveness_is_dispatched_and_answers_without_bpy_or_main_thread():
-    client = CLIENT.read_text()
+    client = "\n".join((CLIENT.parent / name).read_text(encoding="utf-8") for name in ("jsonrpc_client.py", "socket_connection.py", "socket_dispatch.py", "socket_requests.py"))
     assert "elif method == JSONRPCMethod.BLENDER_LIVENESS:" in client
     assert "self._handle_liveness(request_id)" in client
     offset = client.index("def _handle_liveness")
@@ -47,15 +47,16 @@ def test_liveness_is_dispatched_and_answers_without_bpy_or_main_thread():
 
 
 def test_inflight_tracker_is_set_and_cleared_around_execute():
-    handlers = HANDLERS.read_text()
+    handlers = HANDLERS.read_text(encoding="utf-8")
     assert "def get_inflight_script" in handlers
     offset = handlers.index("def _process_one_request")
     block = handlers[offset:]
-    assert "_set_inflight(tool_name, request_id, session_id)" in block
+    assert "_set_inflight(req.tool_name, req.request_id, req.session_id)" in block
     assert "_clear_inflight()" in block
-    # set happens before execute, clear before the response leaves.
-    assert block.index("_set_inflight(") < block.index("executor.execute(script)")
-    assert block.index("_clear_inflight()") < block.index("client.queue_response(request_id, result_dict)")
+    # set happens before execute, clear before the response leaves. Execution
+    # and the reply go through the shared pump helpers (harness v3 PR 1).
+    assert block.index("_set_inflight(") < block.index("pump.execute_request(req, executor")
+    assert block.rindex("_clear_inflight()") < block.index("pump.respond(get_jsonrpc_client(), req, result_dict)")
 
 
 def _load_handlers_module(monkeypatch):

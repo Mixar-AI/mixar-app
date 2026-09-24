@@ -42,6 +42,12 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
     """Invoke every known cleanup_/stop_ entry point in dependency order."""
     # 1. Stop producers first (operator-facing cleanup), then drain consumers.
     try:
+        from mixar.modules.space_mixie_chat.core.voice import shutdown
+        _safe("stop_dictation", shutdown, app_exit=(reason == "atexit"))
+    except ImportError:
+        pass
+
+    try:
         from mixar.bootstrap.analytics_module import capture_session_ended
         _safe("capture_session_ended", capture_session_ended, reason)
     except ImportError:
@@ -54,10 +60,11 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
         pass
 
     try:
-        from mixar.modules.space_mixie_chat.core.sse_handler import (
-            cleanup_all_sse_handlers,
+        from mixar.modules.space_mixie_chat.core.turn_transport import (
+            cleanup_all_turn_handlers,
         )
-        _safe("cleanup_all_sse_handlers", cleanup_all_sse_handlers)
+        _safe("cleanup_all_turn_handlers", cleanup_all_turn_handlers,
+              app_exit=(reason == "atexit"))
     except ImportError:
         pass
 
@@ -73,7 +80,10 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
         from mixar.modules.common.notifications.toast_timer import (
             cleanup_toast_timer,
         )
-        _safe("cleanup_toast_timer", cleanup_toast_timer)
+        # On the atexit path bpy.data is already freed (BPY_python_end runs
+        # after BKE_blender_free), so the toast cleanup must skip its RNA
+        # write and draw-handler removal or it segfaults on quit.
+        _safe("cleanup_toast_timer", cleanup_toast_timer, app_exit=(reason == "atexit"))
     except ImportError:
         pass
 
@@ -118,6 +128,15 @@ def _run_all_cleanups(reason: str = "atexit") -> None:
     try:
         from mixar.modules.local_models.core.server_supervisor import stop_all
         _safe("stop_local_model_server", stop_all)
+    except ImportError:
+        pass
+
+    # 6. Stop the agent models catalog scheduling main-thread work. Flag-only:
+    #    BPY_python_end runs after BKE_blender_free(), so an atexit hook that
+    #    touched bpy data would be a use-after-free (tests/test_shutdown_hooks_atexit.py).
+    try:
+        from mixar.modules.byok.core.models_cache import mark_shutdown
+        _safe("stop_agent_models_cache", mark_shutdown)
     except ImportError:
         pass
 

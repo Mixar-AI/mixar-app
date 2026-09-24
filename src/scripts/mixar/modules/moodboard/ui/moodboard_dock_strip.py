@@ -7,7 +7,7 @@
 Moodboard Dock Strip
 
 Bottom footer bar showing active job progress.
-Feature buttons have moved to the right Generate panel (N-panel, UI region).
+Generation controls live on canvas nodes and in the Agent island.
 """
 
 import bpy

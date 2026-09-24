@@ -18,6 +18,8 @@
  */
 
 #include <climits>
+#include <cstdint>
+#include <cmath>
 #include <cstring>
 
 #include "MEM_guardedalloc.h"
@@ -27,11 +29,14 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_context.hh"
+#include "BKE_global.hh"
+#include "BKE_main.hh"
 #include "BKE_report.hh"
 #include "BKE_screen.hh"
 
 #include "ED_screen.hh"
 #include "ED_space_api.hh"
+#include "ED_moodboard_attachment.hh"
 
 #include "WM_api.hh"
 #include "WM_keymap.hh"
@@ -51,7 +56,44 @@
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
 
+#include "GPU_framebuffer.hh"
+#include "GPU_immediate.hh"
+#include "GPU_immediate_util.hh"
+#include "GPU_matrix.hh"
+#include "UI_view2d.hh"
+#include "BLI_string.h"
+#include "BLI_time.h"
+
+#include "BLF_api.hh"
+
+#include "GPU_state.hh"
+
+#include "UI_interface_c.hh"
+#include "UI_interface_layout.hh"
+
+#include "ED_mixar_glass.hh"
+#include "ED_mixie_chat_asset_picker.hh"
+
+#include "agent_bubble_glass.hh"
 #include "agent_bubble_intern.hh"
+#include "agent_bubble_references.hh"
+#include "agent_bubble_size.hh"
+#include "agent_ui_asset_picker.hh"
+#include "agent_ui_draw.hh"
+#include "agent_ui_generations.hh"
+#include "agent_ui_layout.hh"
+#include "agent_ui_motion.hh"
+#include "agent_ui_cat_scheduler.hh"
+#include "agent_ui_pill_cat.hh"
+#include "agent_ui_pill_draft.hh"
+#include "agent_ui_queue.hh"
+#include "agent_ui_tab3d.hh"
+#include "agent_ui_tabsplat.hh"
+#include "agent_ui_tabmedia.hh"
+#include "agent_ui_theme.hh"
+
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* Slim region sizing + bubble window dimensions.
  *
@@ -71,16 +113,45 @@
  * fits a 1-line composer + the action row comfortably; the wrapper's
  * internal scroll handles overflow when the input grows. */
 #define AGENT_BUBBLE_FOOTER_HEIGHT 90
-#define AGENT_BUBBLE_DEFAULT_WIDTH 400
-/* Default content height: footer (~90 px) + header (~18 px) + body for
- * chat history. 350 px gives ~240 px of scroll area — a compact bubble
- * the user can grow via drag/expand. This is also the OS resize floor
- * (AGENT_BUBBLE_MIN_HEIGHT below). */
-#define AGENT_BUBBLE_DEFAULT_HEIGHT 350
-#define AGENT_BUBBLE_MIN_WIDTH AGENT_BUBBLE_DEFAULT_WIDTH
-#define AGENT_BUBBLE_MIN_HEIGHT AGENT_BUBBLE_DEFAULT_HEIGHT
-#define AGENT_BUBBLE_ATTACHMENT_HEIGHT_DELTA 100
-#define AGENT_BUBBLE_EXPANDED_HEIGHT 700
+/* Island chrome slabs, logical px at the default 560-wide window (island
+ * units x 560/1310). Re-synced to the live width each frame by the composer
+ * region's layout callback. */
+#define AGENT_BUBBLE_TOP_CHROME_HEIGHT 64
+#define AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT 63
+/* Open defaults are 10% larger than the previous 616x209 / 616x370 cut.
+ * Logical OS units keep the same physical footprint across backing scales. */
+#define AGENT_BUBBLE_DEFAULT_WIDTH 678
+/* Empty-state height: chrome plus a short whole-panel prompt. Shorter than
+ * the artboard so the island does not cover the viewport before a
+ * conversation exists. Manual resizing retains the earlier, smaller floor. */
+#define AGENT_BUBBLE_DEFAULT_HEIGHT 230
+/* Matches the empty-state window. Region sizey is unscaled: Blender
+ * multiplies it by UI_SCALE_FAC, so an already-scaled AGENT_DU(...) value
+ * would double-scale and the region would come back twice the window. */
+#define AGENT_BUBBLE_ISLAND_HEIGHT_PX 230
+/* The island's three slabs, unscaled. Top = pill + tab strip + card header,
+ * bottom = input line + chip row; the transcript takes what is left. */
+/* Slab heights are artboard UNITS; the layout converts them with the same
+ * window-derived ratio the island uses, because region->sizey is unscaled
+ * while the island is laid out in winrct (physical) space. Hard-coding them in
+ * unscaled pixels made every slab half the height its content needed. */
+#define AGENT_BUBBLE_SLAB_TOP_UNITS 149
+#define AGENT_BUBBLE_SLAB_BOTTOM_UNITS 133
+#define AGENT_BUBBLE_SLAB_TOP_PX 64
+#define AGENT_BUBBLE_SLAB_BOTTOM_PX 57
+/* Blender enforces a minimum height on the main (WINDOW) region. If the two
+ * slabs claim the whole window it does not shrink to zero — it OVERLAPS them,
+ * and the overlap both repaints the slab's pixels every frame (the blink) and
+ * covers the top of the input field (the missing text). So the empty-state
+ * slab takes everything EXCEPT that reserve. */
+#define AGENT_BUBBLE_WINDOW_MIN_PX 52
+/* Extra height applied once a conversation exists, so the transcript has
+ * room without a permanently tall slab over the viewport. */
+#define AGENT_BUBBLE_TRANSCRIPT_HEIGHT 177
+#define AGENT_BUBBLE_MIN_WIDTH 560
+#define AGENT_BUBBLE_MIN_HEIGHT 190
+#define AGENT_BUBBLE_ATTACHMENT_HEIGHT_DELTA 80
+#define AGENT_BUBBLE_EXPANDED_HEIGHT 432
 #define AGENT_BUBBLE_BODY_MIN_HEIGHT 120
 #define AGENT_BUBBLE_AUTOGROW_SLACK 12
 #ifdef _WIN32
@@ -90,9 +161,9 @@
 #endif
 #define AGENT_BUBBLE_AUTOGROW_TOP_RESERVE 46
 
-/* Visual corner-rounding for the bubble window — soft floating
- * popup silhouette per the Figma. */
-#define AGENT_BUBBLE_CORNER_RADIUS 12.0f
+/* Window radius tracks the card (~14 px at the 0.7 compact width) so the
+ * island's rounded corners are not clipped square by a tighter frame. */
+#define AGENT_BUBBLE_CORNER_RADIUS 14.0f
 
 /* Mixar overlay functions — see GHOST_SystemCocoa.mm (macOS) and
  * GHOST_SystemWin32.cc (Windows). Declared here as extern "C" so we
@@ -101,6 +172,9 @@
  * won't exist; guard the call sites with the platform macro. */
 #if defined(__APPLE__) || defined(_WIN32)
 extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless);
+extern "C" bool Mixar_WindowContainsScreenCursor(void *window_handle, int margin_pt);
+extern "C" void Mixar_WindowFloatIn(void *window_handle, int rise_pt, float duration);
+extern "C" void Mixar_WindowFloatOut(void *window_handle, int sink_pt, float duration);
 extern "C" void Mixar_WindowForceSize(void *window_handle, int width, int height);
 extern "C" void Mixar_WindowSetCornerRadius(void *window_handle, float radius);
 extern "C" void Mixar_WindowSetMinContentSize(void *window_handle,
@@ -138,13 +212,25 @@ extern "C" void Mixar_WindowSnapToCentreBottomOfWindow(void *child_handle,
 extern "C" void Mixar_WindowAnchorAtParentCentreBottom(void *child_handle,
                                                        void *parent_handle,
                                                        int margin_bottom);
+extern "C" void Mixar_WindowAnchorAtParentOffset(void *child_handle,
+                                                 void *parent_handle,
+                                                 int offset_x,
+                                                 int offset_y);
+extern "C" bool Mixar_WindowGetParentOffset(void *child_handle,
+                                            void *parent_handle,
+                                            int *r_offset_x,
+                                            int *r_offset_y);
+extern "C" bool Mixar_WindowGetContentSize(void *window_handle, int *r_width, int *r_height);
+extern "C" void Mixar_WindowPlaceInParent(void *child_handle,
+                                          void *parent_handle,
+                                          int offset_x,
+                                          int offset_y);
 extern "C" void Mixar_WindowAnimateFrameToCentreBottomOfWindow(
     void *child_handle, void *parent_handle,
     int new_width, int new_height, int margin_bottom, float duration);
 extern "C" void Mixar_WindowAnimateAlphaTo(
     void *window_handle, float target_alpha, float duration);
 extern "C" void Mixar_WindowSetAlpha(void *window_handle, float alpha);
-extern "C" void Mixar_WindowSetBlurBehind(void *window_handle, bool enable);
 extern "C" void Mixar_WindowMakeKey(void *window_handle);
 extern "C" void Mixar_WindowMarkAsFloatingDock(void *window_handle);
 extern "C" void Mixar_DispatchMainAfter(float delay_seconds,
@@ -154,34 +240,81 @@ extern "C" void Mixar_WindowGetContentPixelSize(
     void *window_handle, int *r_width, int *r_height);
 extern "C" int Mixar_WindowGetMaxHeightToScreenTop(
     void *window_handle, int reserve_top);
+
 #endif
 
-/* Mixie chat's custom-drawn region callbacks. We reuse them
- * verbatim for the agent bubble's TOOLS (footer) and WINDOW (main /
- * chat history) regions so the bubble looks AND behaves identically
- * to the chat editor — including the dynamic region resize on
- * Shift+Enter that keeps the footer's action row visible, and the
- * native message rendering / scrolling / selection / hover tracking
- * for the chat history.
- *
- * The functions read from scene.mixie_chat_input / mixie_chat_mode
- * / mixie_chat_messages (global Scene properties), so they work
- * outside SPACE_MIXIE_CHAT without modification. Linker resolution
- * comes via bf_editor_space_mixie_chat in CMakeLists.txt LIB list.
- *
- * NOT extern "C" — these are C++ symbols, so the forward
- * declarations below MUST match the original signatures exactly
- * (no defaulted args, no namespace) for name mangling to resolve. */
+void agent_bubble_replace_frost_wash(const rctf *rect, const float rgba[4])
+{
+  const GPUBlend blend_prev = GPU_blend_get();
+  GPU_color_mask(true, true, true, true);
+  GPU_blend(GPU_BLEND_NONE);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(
+      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  const float premul[4] = {rgba[0] * rgba[3], rgba[1] * rgba[3], rgba[2] * rgba[3], rgba[3]};
+  immUniformColor4fv(premul);
+  immRectf(pos, rect->xmin, rect->ymin, rect->xmax, rect->ymax);
+  immUnbindProgram();
+  GPU_blend(blend_prev);
+}
+
+/* Framebuffer clears and replacement fills need the same premultiplied bed as
+ * the pill. Zero alpha with nonzero RGB brightens the transcript on Metal. */
+static void agent_bubble_island_panel_color(float r_rgba[4])
+{
+  if (agent_bubble_island_bed_is_transparent()) {
+    const float wash[4] = AGENT_COL_GLASS_WASH;
+    r_rgba[0] = wash[0] * wash[3];
+    r_rgba[1] = wash[1] * wash[3];
+    r_rgba[2] = wash[2] * wash[3];
+    r_rgba[3] = wash[3];
+    return;
+  }
+  MIXAR_THEME_LOAD(surface, Canvas);
+  r_rgba[0] = surface[0];
+  r_rgba[1] = surface[1];
+  r_rgba[2] = surface[2];
+  r_rgba[3] = surface[3];
+}
+
+/* Agent transcript callbacks live in bf_editor_space_mixie_chat with the
+ * shared renderer, input and connection contracts. The island owns its own
+ * composer and chrome; there is no standalone chat editor. */
 struct ScrArea;
 struct wmWindow;
 struct wmRegionListenerParams;
 struct SpaceMixieChat;
 
-void mixie_chat_footer_region_init(wmWindowManager *wm, ARegion *region);
-void mixie_chat_footer_region_layout(const bContext *C, ARegion *region);
-void mixie_chat_footer_region_draw(const bContext *C, ARegion *region);
+void mixie_chat_operatortypes();
+void mixie_chat_keymap(wmKeyConfig *keyconf);
+void mixie_chat_dropboxes();
+void mixie_chat_qa_targets_register();
 
 void mixie_chat_main_region_init(wmWindowManager *wm, ARegion *region);
+/* Message + overlay painters, called directly by the transcript region so it
+ * can paint the island's card underneath them (mixie_chat_main_region_draw
+ * clears the background first, which would wipe the card out). */
+void mixie_chat_draw_messages(const bContext *C, ARegion *region);
+int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void *userdata);
+void mixie_chat_ui_handler_remove(bContext *C, void *userdata);
+void mixie_chat_set_view_band(SpaceMixieChat *smixie, const rcti *band);
+void mixie_chat_reapply_view_band(SpaceMixieChat *smixie, ARegion *region);
+void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region);
+/* Scribble ink canvas painter (mixie_chat_ink_overlay.cc). Drawn directly by
+ * the transcript region in the EMPTY state, where the whole-panel field would
+ * otherwise cover the canvas the user is writing on. */
+bool mixie_chat_ink_read_visible(wmWindowManager *wm);
+bool mixie_chat_rules_read_visible(wmWindowManager *wm);
+bool mixie_chat_history_read_visible(wmWindowManager *wm);
+void mixie_chat_draw_rules_overlay(const bContext *C, ARegion *region);
+void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region);
+void mixie_chat_draw_ink_strokes_for_region(const bContext *C, ARegion *region);
+void mixie_chat_ink_draw_canvas(
+    const rctf *rect, float scale, float origin_x, float origin_y, float ease);
+ARegion *mixie_chat_ink_area_main_region(ScrArea *area);
+void mixie_chat_ink_footer_handler_register(ARegion *region);
+void mixie_chat_ink_header_handler_register(ARegion *region);
 void mixie_chat_main_region_layout(const bContext *C, ARegion *region);
 void mixie_chat_main_region_draw(const bContext *C, ARegion *region);
 void mixie_chat_main_region_exit(wmWindowManager *wm, ARegion *region);
@@ -192,6 +325,19 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
  * agent_bubble_free — safe because SpaceAgentBubble is layout-
  * compatible with SpaceMixieChat (see DNA_space_types.h). */
 void mixie_chat_free_runtime(struct SpaceMixieChat *smixie);
+void mixie_chat_clear_property_caches();
+void footer_cache_clear();
+
+/* Drops the cached per-message rects. The transcript rebuilds them on its
+ * next draw (an empty cache is itself a rebuild trigger), so this is only
+ * ever a cost, never a loss. */
+void mixie_chat_clear_layout_cache(struct SpaceMixieChat *smixie);
+
+/* interface_mixar_drag_query.cc — ui::Button is private to the interface module,
+ * so the "is this press already owned by a button waiting to drag?" question
+ * has to be asked over there. Declared here rather than included: the header
+ * lives inside editors/interface. */
+bool UI_mixar_region_active_but_is_draggable(ARegion *region);
 
 /* Static state used by the minimise / restore / expand-toggle ops.
  *
@@ -206,7 +352,16 @@ void mixie_chat_free_runtime(struct SpaceMixieChat *smixie);
  * no-op). */
 static void *g_bubble_ghostwin = nullptr;
 static void *g_pill_ghostwin = nullptr;
+/* One-shot: has this bubble already been grown to make room for a
+ * conversation? Reset when the bubble window closes. */
+#if defined(__APPLE__) || defined(_WIN32)
+static void agent_bubble_request_resize(const bContext *C, int target_height, int height_floor);
+#endif
+static bool g_bubble_grown_for_chat = false;
 static bool g_bubble_minimised = false;
+/* Delayed AppKit completions may outlive a restore or a newer collapse. */
+static uintptr_t g_bubble_motion_generation = 0;
+static bool g_bubble_minimise_pending = false;
 static bool g_bubble_expanded = false;
 static bool g_bubble_had_pending_attachments = false;
 static int g_bubble_last_min_height = 0;
@@ -218,11 +373,46 @@ static int g_bubble_last_min_height = 0;
  * pinned to a screen coordinate. nullptr until the first open. */
 static void *g_host_ghostwin = nullptr;
 
+/* Where the user last put the minimised pill: an offset from the host
+ * window's top-left in logical points (y-down, the convention the
+ * Mixar_Window*ParentOffset helpers share on both platforms), valid once
+ * the user has dragged the pill (`g_pill_user_placed`). Every path that
+ * seats the pill for the minimised state reads these through
+ * pill_seat_on_host(); until the first drag the seat is the design's
+ * centre-bottom. Deliberately NOT cleared with the window pointers on
+ * close/free: a file load recreates the island's windows around the same
+ * host, and the seat the user chose is still where they expect it. */
+static bool g_pill_user_placed = false;
+static int g_pill_user_offset_x = 0;
+static int g_pill_user_offset_y = 0;
+/* Expanded geometry in host-relative logical points. Both forms share the
+ * bottom-center seat; moving the host between collapse and restore is safe. */
+static bool g_bubble_seat_valid = false;
+static int g_bubble_seat_x = 0, g_bubble_seat_y = 0;
+static int g_bubble_seat_width = 0, g_bubble_seat_height = 0;
+
+
+/* Handwriting PAD. While the handwriting canvas is open the island is re-seated as a tall,
+ * narrow writing pad on the host window's right third, so the 3D viewport
+ * stays clear for sketching; the frame it had before is restored on disarm.
+ * Driven by the hover tick's edge on `mixie_chat_ink_read_visible` — the
+ * ONE place that already polls the mode from C++, so every arm/disarm path
+ * (chip, header toggle, Esc, send, the freeze modal dying) is covered
+ * without Python plumbing. The saved frame is an offset from the host's
+ * top-left plus a logical size, so a host that moved meanwhile still gets
+ * the island back where it was relative to it. */
+static bool g_bubble_pad_active = false;
+static bool g_pad_saved_valid = false;
+static int g_pad_saved_w = 0;
+static int g_pad_saved_h = 0;
+static int g_pad_saved_off_x = 0;
+static int g_pad_saved_off_y = 0;
+
 /* Custom background colour for the agent bubble.  Set via the
  * mixar.bubble_set_bg_color operator.  The override is pushed into
  * the shared mixie_chat draw functions via
  * mixie_chat_set_bg_override / mixie_chat_clear_bg_override —
- * see mixie_chat_main_region.cc and mixie_chat_footer.cc. */
+ * see mixie_chat_main_region.cc. */
 static bool g_bubble_bg_custom = false;
 static float g_bubble_bg_color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 
@@ -235,20 +425,1078 @@ void mixie_chat_clear_bg_override();
 /* Wrapper draw callbacks that push the custom bg colour into the
  * shared mixie_chat draw path, then clear it afterwards so the
  * regular mixie_chat editor is unaffected. */
-static void agent_bubble_main_region_draw(const bContext *C, ARegion *region)
+/* -------------------------------------------------------------------- */
+/** \name Agent Island
+ *
+ * The island replaces the bubble's former header/body/footer stack: one
+ * custom-drawn region paints the status pill, the tab strip and the card,
+ * exactly as the artboard draws them. The old regions are left registered
+ * but hidden, so nothing else in this file has to learn about the change.
+ * \{ */
+
+/**
+ * Transparent Blender buttons laid over the painted island.
+ *
+ * Deliberately real `ui::Button`s rather than a bespoke click operator: that way
+ * typing, the caret, selection, IME, hover, tooltips and Enter-to-send are all
+ * Blender's existing machinery, and every control invokes an operator the chat
+ * already owns. Nothing here implements behaviour — it only positions.
+ *
+ * Emboss is None so the buttons contribute no pixels; the island's own painter
+ * has already drawn every chip, pill and disc underneath them.
+ */
+/**
+ * Region init for the island.
+ *
+ * Deliberately NOT mixie_chat_main_region_init. That one installs the chat's
+ * own click dispatch ahead of Blender's ui::Block handler, and its comment says
+ * exactly what that costs: "if a chat hit-target ever overlaps a ui::Block
+ * button, the click will be stolen from the button". The island is nothing but
+ * ui::Block buttons over a painted surface, so it takes the ui::Block handler and
+ * nothing else — no chat hit dispatch, no "Mixie Chat" selection keymap, no
+ * View2D (the island does not scroll).
+ */
+
+/* Defined below with the other island plumbing; the controls need them here. */
+static void agent_bubble_rect_to_region(
+    const ARegion *region, const rctf &src, int *r_x, int *r_y, short *r_w, short *r_h);
+
+/** Card-header controls. They live in the top slab's region. */
+
+/**
+ * Composer controls — input field, mode toggle, upload and Generate. They live
+ * in the bottom slab's region.
+ *
+ * Two blocks on purpose: the operator buttons are unembossed so they add no
+ * pixels over the chips the island has painted, but the prompt field cannot be.
+ * `ui_do_but_TEX` ignores a plain click on an unembossed text button (Blender
+ * reserves LEFTMOUSE there, entering text editing only on Ctrl+click), and
+ * activating it on init does not hold — the button is rebuilt every redraw and
+ * comes back inactive.
+ */
+/** Card-header controls: tab strip + (on the Agent tab) history / new chat. */
+static void agent_bubble_island_controls_header(const bContext *C,
+                                                ARegion *region,
+                                                const AgentIslandLayout *layout,
+                                                const AgentIslandState *state)
 {
-  /* The main body (RGN_TYPE_WINDOW) resolves TH_BACK to
-   * space_agent_bubble.back, which is the "Window Background" colour
-   * in the Agent Bubble theme.  Push it as an override so the shared
-   * mixie_chat draw path uses the agent-bubble colour, not the
-   * mixie-chat one. */
-  bTheme *btheme = UI_GetTheme();
-  const unsigned char *bk = btheme->space_agent_bubble.back;
-  float body_bg[4] = {bk[0] / 255.0f, bk[1] / 255.0f, bk[2] / 255.0f, bk[3] / 255.0f};
-  mixie_chat_set_bg_override(body_bg);
-  mixie_chat_main_region_draw(C, region);
-  mixie_chat_clear_bg_override();
+  ui::Block *block = ui::block_begin(
+      C, region, "agent_island_hdr", blender::ui::EmbossType::None);
+  int bx, by;
+  short bw, bh;
+
+  /* Tab strip — stock wm.context_set_enum on wm.mixar_bubble_tab, the same
+   * pattern as the mode toggle. Only the tabs with real content are wired;
+   * the painter draws the rest as inert. */
+  const struct {
+    AgentTabId tab;
+    const char *value;
+    const char *tip;
+  } tab_buttons[] = {
+      {AGENT_TAB_AGENT, "AGENT", "Agent chat"},
+      {AGENT_TAB_3D, "THREE_D", "3D generation"},
+      {AGENT_TAB_IMAGE, "IMAGE", "Image generation"},
+      {AGENT_TAB_VIDEO, "VIDEO", "Video generation"},
+      {AGENT_TAB_SPLAT, "SPLAT", "Gaussian Splat world generation"},
+      {AGENT_TAB_GENERATIONS, "GENERATIONS",
+       "Your generations and connected asset libraries"},
+      {AGENT_TAB_QUEUE, "QUEUE", "Generation queue"},
+  };
+  for (const auto &tb : tab_buttons) {
+    if (layout->pad) {
+      /* The Scribble pad has no tab strip — a zero-size button would still
+       * be a button. Forcing the Agent tab at pad-apply time is what keeps
+       * the card on the chat while the strip is away. */
+      break;
+    }
+    agent_bubble_rect_to_region(region, layout->tabs[tb.tab].pill, &bx, &by, &bw, &bh);
+    /* Sketch and Voice own the viewport. A disabled button does not eat the
+     * click, and this strip is in the HEADER, so a press with no button
+     * falls through to the window drag. Keep a real button that refuses. */
+    if ((state->scribble_armed || state->voice_listening) && state->active_tab != tb.tab) {
+      const char *locked_tip = (state->scribble_armed && state->voice_listening) ?
+                                   "Finish sketching or dictating before switching tabs" :
+                               state->scribble_armed ?
+                                   "Finish sketching before switching tabs" :
+                                   "Finish dictating before switching tabs";
+      uiDefButO(block, ui::ButtonType::But, "mixar.bubble_tab_locked",
+                blender::wm::OpCallContext::InvokeDefault, "",
+                bx, by, bw, bh, locked_tip);
+      continue;
+    }
+    ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
+                           blender::wm::OpCallContext::InvokeDefault, "",
+                           bx, by, bw, bh, tb.tip);
+    if (but) {
+      PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
+      RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_tab");
+      RNA_string_set(op_ptr, "value", tb.value);
+    }
+  }
+
+  if (state->active_tab == AGENT_TAB_AGENT) {
+    if (state->handwriting_available) {
+      agent_bubble_rect_to_region(region, layout->hdr_handwriting, &bx, &by, &bw, &bh);
+      uiDefButO(block, ui::ButtonType::But, "mixie_chat.ink_toggle",
+                blender::wm::OpCallContext::InvokeDefault,
+                "", bx, by, bw, bh,
+                state->ink_visible ? "Return to typing; keep viewport annotations" :
+                                     "Open handwriting to turn written words into prompt text");
+    }
+    agent_bubble_rect_to_region(region, layout->hdr_history, &bx, &by, &bw, &bh);
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_history",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              "Chat history");
+    agent_bubble_rect_to_region(region, layout->hdr_new_chat, &bx, &by, &bw, &bh);
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.new_session",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              "New chat");
+    /* Turn checkpoints: the Python menu lists the snapshots taken before
+     * each turn of this chat; a row restores scene and chat to that point. */
+    agent_bubble_rect_to_region(region, layout->hdr_checkpoints, &bx, &by, &bw, &bh);
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_checkpoints",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              "Checkpoints — go back to an earlier turn of this chat");
+    agent_bubble_rect_to_region(region, layout->hdr_rules, &bx, &by, &bw, &bh);
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_rules",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+                  "Rules — edit project and global rules for the agent");
+  }
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
 }
+
+static void agent_bubble_island_controls_bottom(const bContext *C,
+                                                ARegion *region,
+                                                const AgentIslandLayout *layout,
+                                                const AgentIslandState *state)
+{
+  Scene *scene = CTX_data_scene(C);
+  if (!scene) {
+    return;
+  }
+  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+
+  ui::Block *block = ui::block_begin(
+      C, region, "agent_island", blender::ui::EmbossType::None);
+  ui::Block *field_block = ui::block_begin(
+      C, region, "agent_island_field", blender::ui::EmbossType::Emboss);
+
+  int bx, by;
+  short bw, bh;
+
+  /* --- Prompt field ---
+   * Bound to the same scene.mixie_chat_input the chat footer uses, with the
+   * same ui::BUT_TEXTEDIT_UPDATE flag — that is what makes Enter submit, via
+   * the property's own update callback. */
+  /* Exactly ONE field box, always. The WINDOW region hosts the whole-panel
+   * field only in the empty state with the canvas DOWN; a strip here then
+   * would be a second box for the same property. While the canvas is up that
+   * field is not built, so the strip is the only composer there is — and
+   * without it a landed transcription has nowhere to appear. */
+  const bool window_hosts_field = !state->has_transcript && !state->ink_visible;
+  PropertyRNA *input_prop = window_hosts_field ?
+                                nullptr :
+                                RNA_struct_find_property(&scene_ptr, "mixie_chat_input");
+  if (input_prop && !state->ink_visible) {
+    /* Clamp the field to its region. The panel can be taller than the slab
+     * (Blender reserves a minimum for the main region), and a ui::Button whose rect
+     * runs past its region does not simply get cropped — it stops drawing its
+     * text at all, which is what made the ghost text and typing invisible. */
+    agent_bubble_rect_to_region(region, layout->input, &bx, &by, &bw, &bh);
+    /* Clamp to this region — the empty-state field spans the whole panel,
+     * whose top edge lies a min-height sliver above the TOOLS region, and a
+     * ui::Button poking past its region stops drawing its text entirely. */
+    {
+      const int region_h = BLI_rcti_size_y(&region->winrct) + 1;
+      if (by < 0) {
+        bh = short(bh + by);
+        by = 0;
+      }
+      if (by + bh > region_h) {
+        bh = short(region_h - by);
+      }
+    }
+    ui::Button *input_but = uiDefButR(field_block, ui::ButtonType::Text, "", bx, by, bw, bh,
+                                 &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
+                                 nullptr);
+    if (input_but) {
+      /* Placeholder on the BUTTON: painting it separately put the ghost text at
+       * the artboard's x while Blender drew the caret at the field's own text
+       * origin — two places for one thing. */
+      ui::button_placeholder_set(input_but, state->placeholder);
+      ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
+    }
+  }
+
+  agent_bubble_rect_to_region(region, layout->chip_upload, &bx, &by, &bw, &bh);
+  /* Same operator the old chat footer's attach button used —
+   * `mixie_chat.add_image` opens nothing on its own. */
+  uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_image_from_file",
+            blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+            "Attach a reference image");
+
+  /* --- Scribble chips, right of Upload ---
+   * The same operators the chat header binds (space_mixie_chat/ui/header.py):
+   * the toggle arms viewport annotation only; the reading dropdown is
+   * a stock wm.context_menu_enum over wm.mixar_mark_intent (the panes' own
+   * dropdown idiom), and Clear is mixar.scribble_mark_clear. */
+  if (state->scribble_available) {
+    agent_bubble_rect_to_region(region, layout->chip_scribble, &bx, &by, &bw, &bh);
+    uiDefButO(block, ui::ButtonType::But, "mixar.scribble_toggle",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              state->scribble_armed ?
+                  "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send" :
+                  "Draw what to build or circle what to change. Click Done to preview, then Send");
+
+    if (state->scribble_armed || state->mark_count > 0) {
+      agent_bubble_rect_to_region(region, layout->chip_reading, &bx, &by, &bw, &bh);
+      ui::Button *reading_but = uiDefButO(
+          block, ui::ButtonType::But, "wm.context_menu_enum",
+          blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+          "Draw to build creates the shape you sketch. Point to edit shows where "
+          "to apply your chat instructions. Tab switches while drawing");
+      if (reading_but) {
+        PointerRNA *op_ptr = ui::button_operator_ptr_ensure(reading_but);
+        RNA_string_set(op_ptr, "data_path", "window_manager.mixar_mark_intent");
+      }
+
+      if (!state->scribble_armed) {
+        agent_bubble_rect_to_region(region, layout->chip_clear, &bx, &by, &bw, &bh);
+        uiDefButO(block, ui::ButtonType::But, "mixar.scribble_mark_clear",
+                  blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+                  "Discard the unsent drawing and its preview");
+      }
+    }
+  }
+
+  /* --- Voice, right of Scribble ---
+   * The one toggle every surface binds (space_mixie_chat/ui/operators/
+   * voice_ops.py); registered only where the platform has a recogniser. */
+  if (state->voice_available) {
+    agent_bubble_rect_to_region(region, layout->chip_voice, &bx, &by, &bw, &bh);
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.voice_toggle",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              state->voice_capturing ?
+                  "Stop dictating and insert the words (or release Option/Alt). Shift-click cancels" :
+              state->voice_listening ?
+                  "Click to cancel voice input" :
+                  "Hold left Option (Mac) or left Alt (Windows) in a text field to dictate, release to finish. Click to start or stop; Shift-click cancels");
+  }
+
+  /* --- Auto, right of Voice ---
+   * Flips scene.mixie_chat_auto_mode (space_mixie_chat/ui/operators/
+   * chat_special_ops.py); core/composer_send.py stamps the flag on every
+   * send while it is set. Nothing is persisted server-side. */
+  agent_bubble_rect_to_region(region, layout->chip_auto, &bx, &by, &bw, &bh);
+  uiDefButO(block, ui::ButtonType::But, "mixie_chat.toggle_auto_mode",
+            blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+            state->auto_mode ?
+                "Auto mode is on: the agent decides open choices itself and never asks. "
+                "Click to let it ask again" :
+                "Auto mode: the agent decides open choices itself instead of asking you, "
+                "and lists its decisions in the summary");
+
+  /* --- Model, right of Auto ---
+   * Pops the Python menu that owns the whole picker (catalog projection,
+   * preference state, the PUT); C++ only draws the chip and reads the
+   * WindowManager mirror. A pulldown is anchored to this chip. A free popup
+   * opened downward from the cursor on this bottom row, and its last item
+   * covered Upload Reference. The chip is absent until the Python half
+   * registers the mirror, and an empty rect means the width budget dropped it. */
+  if (state->model_available && BLI_rctf_size_x(&layout->chip_model) > 0.0f) {
+    agent_bubble_rect_to_region(region, layout->chip_model, &bx, &by, &bw, &bh);
+    uiDefMenuBut(
+        block,
+        [](bContext *C, ui::Layout *menu_layout, void * /*arg*/) {
+          MenuType *mt = WM_menutype_find("MIXIE_CHAT_MT_agent_model", false);
+          if (mt != nullptr) {
+            ui::menutype_draw(C, mt, menu_layout);
+          }
+        },
+        nullptr,
+        "",
+        bx,
+        by,
+        bw,
+        bh,
+        state->model_byok_active ?
+            "Your own API key is in use, and it decides the model. Open this menu "
+            "and pick \"Change or remove my API key\" to choose a hosted model again" :
+            "Choose which model the agent runs on");
+  }
+
+  if (!agent_bubble_references_visible(C)) {
+    agent_bubble_send_button(C, region, block, *layout, *state);
+  }
+
+  ui::block_end(C, field_block);
+  ui::block_draw(C, field_block);
+  if (input_prop) {
+    /* The field exists this frame; consume a restore focus request now
+     * rather than waiting on the 0.1s hover pump. */
+    agent_bubble_composer_focus_if_pending(const_cast<bContext *>(C));
+  }
+
+  /* The canvas continues over the composer, so a stroke that runs off the
+   * transcript does not stop at the region seam.
+   *
+   * It covers this region's whole share of the PANEL — full panel width, from
+   * the region's top edge down to the chip row. Pinned to the input line's own
+   * rect instead, it left a strip of bare panel above it and another below,
+   * and sat six pixels inside the transcript's left and right edges: three
+   * straight lines ruled across the Scribble pad exactly where the writing
+   * surface was supposed to be continuous. The chips below are controls, not
+   * writing surface, and keep their own ground.
+   *
+   * The lattice is anchored at the TRANSCRIPT region's origin — the same
+   * offset mixie_chat_draw_ink_strokes_for_region uses for the strokes — so
+   * the dots line up across the seam instead of restarting at this region's
+   * corner. */
+  if (state->ink_visible) {
+    int panel_x, panel_y;
+    short panel_w, panel_h;
+    agent_bubble_rect_to_region(region, layout->panel, &panel_x, &panel_y, &panel_w, &panel_h);
+    int chip_x, chip_y;
+    short chip_w, chip_h;
+    agent_bubble_rect_to_region(region, layout->chip_upload, &chip_x, &chip_y, &chip_w, &chip_h);
+
+    rctf canvas;
+    BLI_rctf_init(&canvas,
+                  float(panel_x),
+                  float(panel_x + panel_w),
+                  float(chip_y + chip_h),
+                  float(BLI_rcti_size_y(&region->winrct) + 1));
+    if (canvas.xmax > canvas.xmin && canvas.ymax > canvas.ymin) {
+      float ox = 0.0f;
+      float oy = 0.0f;
+      if (ScrArea *area = CTX_wm_area(C)) {
+        if (const ARegion *main_region = mixie_chat_ink_area_main_region(area)) {
+          ox = float(main_region->winrct.xmin - region->winrct.xmin);
+          oy = float(main_region->winrct.ymin - region->winrct.ymin);
+        }
+      }
+      mixie_chat_ink_draw_canvas(&canvas, UI_SCALE_FAC, ox, oy, 1.0f);
+    }
+  }
+
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
+}
+
+/** True when this draw belongs to the small floating status-pill window.
+ *
+ * Identity first: the Scribble pad narrows the island well below the pill's
+ * old width heuristic, which would have routed every island draw to the pill
+ * capsule (and painted a miniature island into the pill). The width test
+ * survives only for a bubble whose pill was never created. */
+static bool agent_bubble_window_is_pill(const bContext *C)
+{
+  const wmWindow *win = CTX_wm_window(C);
+  if (!win) {
+    return true;
+  }
+  if (g_pill_ghostwin != nullptr && win->runtime->ghostwin != nullptr) {
+    return win->runtime->ghostwin == g_pill_ghostwin;
+  }
+  return WM_window_native_pixel_x(win) < AGENT_BUBBLE_MIN_WIDTH;
+}
+
+bool ED_agent_bubble_is_attachment_destination(const wmWindow *window)
+{
+  return window && !g_bubble_minimise_pending &&
+         window->runtime->ghostwin == (g_bubble_minimised ? g_pill_ghostwin : g_bubble_ghostwin);
+}
+
+bool ED_agent_bubble_is_resting_pill(const bContext *C)
+{
+  const wmWindow *win = CTX_wm_window(C);
+  return g_bubble_minimised && win && g_pill_ghostwin &&
+         win->runtime->ghostwin == g_pill_ghostwin;
+}
+
+void agent_bubble_return_key_to_host()
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  if (g_host_ghostwin != nullptr) {
+    Mixar_WindowMakeKey(g_host_ghostwin);
+  }
+#endif
+}
+
+/**
+ * Scribble pad unit ratio for `win`: 0 when the island is not padded, else
+ * the factor that turns the width-derived island unit into the unit the
+ * island has at its DEFAULT width. The pad is narrower than the island, and
+ * a unit derived from ITS width would shrink every label and chip with it —
+ * a writing pad whose composer text got smaller as the pad got narrower.
+ * Logical width comes from the OS window, so a pad the user resized by hand
+ * keeps the same unit too.
+ */
+static float agent_bubble_pad_ratio(const wmWindow *win)
+{
+  if (!g_bubble_pad_active || !win || win->runtime->ghostwin != g_bubble_ghostwin) {
+    return 0.0f;
+  }
+  int logical_w = 0;
+  int logical_h = 0;
+#if defined(__APPLE__) || defined(_WIN32)
+  if (!Mixar_WindowGetContentSize(win->runtime->ghostwin, &logical_w, &logical_h)) {
+    logical_w = 0;
+  }
+#endif
+  if (logical_w <= 0) {
+    logical_w = win->sizex;
+  }
+  if (logical_w <= 0) {
+    return 0.0f;
+  }
+  return float(AGENT_BUBBLE_DEFAULT_WIDTH) / float(logical_w);
+}
+
+/** Backdrop for ONE region — never a framebuffer-wide clear.
+ *
+ * The bed covers every pixel of the region every frame. On a translucent
+ * window the write replaces the previous pixels with a premultiplied wash;
+ * ordinary alpha blending cannot lower a previous opaque destination alpha.
+ * The native compositor places the wash over its frost. The opaque path still
+ * fills the rect so a composite in the resize gap cannot show a bare
+ * backdrop. */
+static void agent_bubble_fill_region_backdrop(const ARegion *region)
+{
+  rctf r;
+  r.xmin = 0.0f;
+  r.ymin = 0.0f;
+  r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
+  r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
+  if (agent_bubble_island_bed_is_transparent()) {
+    /* A replacement bed, unlike alpha blending, must premultiply itself. */
+    const float wash[4] = AGENT_COL_GLASS_WASH;
+    agent_bubble_replace_frost_wash(&r, wash);
+    return;
+  }
+  const float backdrop[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+  GPU_blend(GPU_BLEND_NONE);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&r, true, 0.0f, backdrop);
+}
+
+/**
+ * Drop the chat's cached message rects for the bubble's space.
+ *
+ * The island's WINDOW region is shared between the transcript and the panes,
+ * and the chat's hit tests read a cache the pane never refreshes. Leaving it
+ * populated on a pane tab is what let a click land on the copy chip of a
+ * message that is no longer drawn.
+ */
+static void agent_bubble_clear_chat_layout_cache(const bContext *C)
+{
+  ScrArea *area = CTX_wm_area(C);
+  if (!area || area->spacetype != SPACE_AGENT_BUBBLE) {
+    return;
+  }
+  if (SpaceMixieChat *smixie = static_cast<SpaceMixieChat *>(area->spacedata.first)) {
+    mixie_chat_clear_layout_cache(smixie);
+  }
+}
+
+/**
+ * Resolve the island against the whole window without changing GPU state.
+ * The drawing wrapper below translates each region's slice into place.
+ *
+ * Every region paints the entire island; each one's scissor keeps only its own
+ * band. That is what lets the card enclose the transcript without any code
+ * cutting the card into pieces — there is still exactly one layout and one
+ * painter.
+ */
+bool agent_bubble_island_layout_get(const bContext *C,
+                                      AgentIslandState *r_state,
+                                      AgentIslandLayout *r_layout)
+{
+  const wmWindow *win = CTX_wm_window(C);
+  if (!win) {
+    return false;
+  }
+
+  /* The island belongs to the BUBBLE window only.
+   *
+   * ED_area_init recreates any region the spacetype registers, so the pill's
+   * area keeps growing the island's slabs back after they are pruned. With a
+   * self-calibrating scale the island is "valid" at any size, so it happily
+   * drew a miniature of itself into the 180x50 pill — that is the grey slab
+   * that alternated with the status capsule and read as the pill blinking. */
+  if (agent_bubble_window_is_pill(C)) {
+    return false;
+  }
+
+  agent_ui_state_gather(C, r_state);
+  /* WM_window_native_pixel_*, deliberately.
+   *
+   * These report double wmWindow::sizex/sizey on a retina display, and that
+   * factor is exactly the one the region's own drawing space uses — swapping
+   * in win->sizex/sizey (which look "correct" next to the Python-reported
+   * region sizes) makes the island vanish entirely. The two spaces are not
+   * interchangeable here; verify any change to this line by LOOKING at the
+   * bubble, not by comparing numbers. */
+  /* The input collapses to a strip whenever the WINDOW region is NOT hosting
+   * the whole-panel field — with a transcript, and equally while the ink
+   * canvas is up, because that field is deliberately not built then (its
+   * embossed chrome would cover the canvas). Passing has_transcript alone
+   * left the empty state laying the field across the whole panel while
+   * nothing drew it, so the island had NO composer at all: handwriting was
+   * recognized and written to mixie_chat_input with no box on screen to show
+   * it, and it only appeared once Scribble was closed. */
+  const bool input_is_strip = r_state->has_transcript || r_state->ink_visible;
+  /* Scribble pad: the unit comes from the island's default width (the pad
+   * is narrower, its text must not be), the geometry from the pad's own. */
+  const float pad_ratio = agent_bubble_pad_ratio(win);
+  const int px_w = WM_window_native_pixel_x(win);
+  const int unit_w = (pad_ratio > 0.0f) ? int(float(px_w) * pad_ratio + 0.5f) : px_w;
+  const int pad_real_w = (pad_ratio > 0.0f) ? px_w : 0;
+  const int input_lines = input_is_strip ?
+                              agent_ui_composer_visual_lines(
+                                  r_state->input_text,
+                                  agent_ui_composer_wrap_width_px(unit_w, pad_real_w)) :
+                              1;
+  agent_ui_layout_build(unit_w,
+                        WM_window_native_pixel_y(win),
+                        AgentTabId(r_state->active_tab),
+                        r_state->agent_mode,
+                        input_is_strip,
+                        r_layout,
+                        pad_real_w,
+                        input_lines);
+  agent_ui_layout_fit_controls(*r_layout, *r_state);
+  if (agent_bubble_references_visible(C)) {
+    r_layout->input.xmax = float(px_w) - AGENT_REFERENCE_COLUMN_W * r_layout->scale -
+                           16.0f * r_layout->scale;
+  }
+  if (!r_layout->valid) {
+    return false;
+  }
+
+  return true;
+}
+
+static bool agent_bubble_island_begin(const bContext *C, const ARegion *region,
+                                     AgentIslandState *r_state, AgentIslandLayout *r_layout)
+{
+  if (!agent_bubble_island_layout_get(C, r_state, r_layout)) {
+    return false;
+  }
+  GPU_matrix_push();
+  GPU_matrix_translate_2f(-float(region->winrct.xmin), -float(region->winrct.ymin));
+  return true;
+}
+
+static void agent_bubble_island_end()
+{
+  GPU_matrix_pop();
+}
+
+/** Window-space rect -> this region's local coordinates, for ui::Button placement. */
+static void agent_bubble_rect_to_region(const ARegion *region,
+                                        const rctf &src,
+                                        int *r_x,
+                                        int *r_y,
+                                        short *r_w,
+                                        short *r_h)
+{
+  *r_x = int(src.xmin) - region->winrct.xmin;
+  *r_y = int(src.ymin) - region->winrct.ymin;
+  *r_w = short(BLI_rctf_size_x(&src));
+  *r_h = short(BLI_rctf_size_y(&src));
+}
+
+/* Defined further down, next to the other window-sizing helpers; the island's
+ * layout pass needs it before that point. */
+static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width, int height);
+#if defined(__APPLE__) || defined(_WIN32)
+static void bubble_sync_wm_window_size(bContext *C,
+                                       void *ghostwin,
+                                       int fallback_width,
+                                       int fallback_height);
+#endif
+static void agent_bubble_sync_chrome_sizes(const bContext *C);
+
+/* -------------------------------------------------------------------- */
+/** \name Island regions
+ *
+ * The island is one design cut into three regions so the transcript can live
+ * INSIDE the card and scroll: the messages need a real RGN_TYPE_WINDOW (they
+ * are drawn by mixie chat's renderer, which owns the whole region and its
+ * View2D and cannot be confined to a sub-rect).
+ *
+ *   CHANNELS (top)  status pill, tab strip, card header
+ *   WINDOW  (mid)   the card's inner panel — transcript, scrollable
+ *   TOOLS   (bottom) input line, chip row, card foot
+ *
+ * All three paint the SAME layout, built in window space and translated by
+ * each region's own origin; the region scissor keeps only its band. So the
+ * card's border, gradient and panel stay one continuous drawing.
+ * \{ */
+
+/**
+ * Grow the bubble once, the first time a conversation exists, so the
+ * transcript band has room. Layout pass, not draw — no writes while painting.
+ */
+static void agent_bubble_island_region_layout(const bContext *C, ARegion * /*region*/)
+{
+  const Scene *scene = CTX_data_scene(C);
+  wmWindow *win = CTX_wm_window(C);
+  if (!scene || !win || !win->runtime->ghostwin) {
+    return;
+  }
+  if (agent_bubble_window_is_pill(C)) {
+    return;
+  }
+
+  PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+  PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+  const bool has_conversation =
+      messages && RNA_property_collection_length(&scene_ptr, messages) > 0;
+
+  /* Not while padded: the grow-once would drag the pad back to the island's
+   * default width. The latch stays unset so it still fires once the pad has
+   * been restored. */
+  const bool overlay_open = mixie_chat_rules_read_visible(CTX_wm_manager(C)) ||
+                            mixie_chat_history_read_visible(CTX_wm_manager(C));
+  if ((has_conversation || overlay_open) && !g_bubble_grown_for_chat && !g_bubble_pad_active) {
+    g_bubble_grown_for_chat = true;
+#if defined(__APPLE__) || defined(_WIN32)
+    const int floor = AGENT_BUBBLE_DEFAULT_HEIGHT + AGENT_BUBBLE_TRANSCRIPT_HEIGHT;
+    if (win->sizey < floor) {
+      agent_bubble_request_resize(C, floor, floor);
+    }
+#endif
+  }
+
+  /* NO per-tab resizing: the window jumping sizes between tabs read as
+   * inconsistency. Panes adapt to the window instead — each computes its
+   * params strip first and gives the prompt box whatever remains (the pane
+   * kit's layout contract), and the user resizes if they want more room. */
+}
+
+/* The transcript region's layout: the grow-once latch above, then the chat
+ * editor's own layout pass (View2D setup, auto-scroll bookkeeping). */
+static void agent_bubble_transcript_region_layout(const bContext *C, ARegion *region)
+{
+  agent_bubble_island_region_layout(C, region);
+  if (!agent_bubble_window_is_pill(C)) {
+    agent_bubble_sync_chrome_sizes(C);
+    mixie_chat_main_region_layout(C, region);
+  }
+}
+
+static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
+{
+  /* Never paint into the pill's window — its own header draws the capsule. */
+  if (agent_bubble_window_is_pill(C)) {
+    return;
+  }
+
+  /* Queue tab: the card shows the unified job queue instead of the chat. */
+  {
+    AgentIslandState tab_probe;
+    agent_ui_state_gather(C, &tab_probe);
+    if (tab_probe.active_tab != AGENT_TAB_AGENT) {
+      /* The transcript is not drawn below, so its per-message rects would
+       * otherwise stay live over the pane that replaced it — the chat's hit
+       * tests are a CACHE, not a re-derivation, and every one of them walks
+       * it. Dropping it here is what makes a stale copy chip unhittable even
+       * if some other path reaches the chat dispatch. Idempotent: the cache
+       * is empty from the second frame of a pane tab onward. */
+      agent_bubble_clear_chat_layout_cache(C);
+      agent_bubble_fill_region_backdrop(region);
+      AgentIslandState state;
+      AgentIslandLayout layout;
+      if (agent_bubble_island_begin(C, region, &state, &layout)) {
+        agent_ui_draw_island(region, &layout, &state);
+        agent_bubble_island_end();
+        rctf panel_region = layout.panel;
+        BLI_rctf_translate(&panel_region,
+                           -float(region->winrct.xmin),
+                           -float(region->winrct.ymin));
+        /* The layout's unit — width-derived normally, the island's default
+         * unit on the Scribble pad — never a second derivation here. */
+        const float u = layout.scale;
+        if (agent_bubble_references_visible(C)) {
+          panel_region.xmax = float(region->winx) - 6.0f * u;
+        }
+        if (tab_probe.active_tab == AGENT_TAB_QUEUE) {
+          agent_ui_queue_draw(C, region, panel_region, u);
+        }
+        else if (tab_probe.active_tab == AGENT_TAB_SPLAT) {
+          agent_ui_tabsplat_draw(C, region, panel_region, u);
+        }
+        else if (ELEM(tab_probe.active_tab, AGENT_TAB_IMAGE, AGENT_TAB_VIDEO)) {
+          agent_ui_tabmedia_draw(C, region, panel_region, u);
+        }
+        else if (tab_probe.active_tab == AGENT_TAB_3D) {
+          agent_ui_tab3d_draw(C, region, panel_region, u);
+        }
+        else if (tab_probe.active_tab == AGENT_TAB_GENERATIONS) {
+          agent_ui_generations_draw(C, region, panel_region, u);
+        }
+      }
+      return;
+    }
+  }
+
+  /* A pending asset question (the agent found several close matches in the
+   * user's trained library) replaces the transcript with ONLY its picks, as a
+   * Library-style grid — `agent_ui_asset_picker.cc`. It is drawn exactly like
+   * a pane tab: the transcript's per-message rects are dropped (its hit tests
+   * are a cache) and the chat's click dispatch stands down on the same
+   * predicate (`mixie_chat_main_region.cc`). The composer below stays, so a
+   * typed answer still works — and an EMPTY send accepts the selected pick
+   * (`chat_ops.py`). Answering clears the question and the transcript
+   * returns on the next draw; nothing has to be torn down. The user's own
+   * modal surfaces (rules, past chats, ink) are not replaced —
+   * `mixie_chat_asset_picker_shown` stands down while one is open. */
+  {
+    MixieAssetPicker picker;
+    if (mixie_chat_asset_picker_shown(C, &picker)) {
+      /* Closing edges of the chat's modal runtimes, as the empty state runs
+       * them: with visibility false they draw nothing and only reset. */
+      mixie_chat_draw_ink_overlay(C, region);
+      mixie_chat_draw_rules_overlay(C, region);
+      mixie_chat_draw_history_overlay(C, region);
+      agent_bubble_clear_chat_layout_cache(C);
+      agent_bubble_fill_region_backdrop(region);
+      AgentIslandState state;
+      AgentIslandLayout layout;
+      if (agent_bubble_island_begin(C, region, &state, &layout)) {
+        agent_ui_draw_island(region, &layout, &state);
+        agent_bubble_island_end();
+        /* The TRANSCRIPT slice, not the whole panel: with a conversation the
+         * composer strip and the chip row live in the TOOLS region below,
+         * and the region scissor keeps only this band. The pane tabs draw on
+         * `layout.panel` because the composer collapses under them; here it
+         * stays, and a foot-anchored "Use This Asset" laid out against the
+         * panel's bottom fell into the TOOLS band and was never seen. */
+        rctf picker_region = layout.transcript;
+        BLI_rctf_translate(&picker_region,
+                           -float(region->winrct.xmin),
+                           -float(region->winrct.ymin));
+        const float u = layout.scale;
+        if (agent_bubble_references_visible(C)) {
+          picker_region.xmax = float(region->winx) - 6.0f * u;
+        }
+        agent_ui_asset_picker_draw(C, region, picker_region, u, picker);
+      }
+      return;
+    }
+  }
+
+  /* The transcript region IS the card's inner panel: the chat editor's whole
+   * proven draw path (messages, overlays, View2D scrolling) runs against this
+   * region unmodified. With no conversation the region is only the min-height
+   * sliver above the whole-panel input field — paint bare panel fill, no chat
+   * (the ghost text is the design's empty state, not the greeting). */
+  float panel_bg[4];
+  agent_bubble_island_panel_color(panel_bg);
+  bool draw_chat = false;
+  if (const Scene *scene = CTX_data_scene(C)) {
+    PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+    PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+    draw_chat = messages && RNA_property_collection_length(&scene_ptr, messages) > 0;
+  }
+  /* Scribble's ink canvas is painted at the end of mixie_chat_main_region_draw,
+   * so with a transcript it simply appears over the messages. With NO
+   * transcript this region is the whole-panel prompt field, an embossed
+   * ui::Button whose chrome would cover the canvas — so while the canvas is
+   * open the field is not built at all and the canvas is painted over the
+   * bare panel instead. Events already reach the ink handler: this region
+   * runs the chat editor's own mixie_chat_main_region_init. */
+  AgentIslandState empty_probe;
+  agent_ui_state_gather(C, &empty_probe);
+  const bool ink_canvas_open = empty_probe.ink_visible;
+  if (draw_chat || mixie_chat_rules_read_visible(CTX_wm_manager(C)) ||
+      mixie_chat_history_read_visible(CTX_wm_manager(C)))
+  {
+    mixie_chat_set_bg_override(panel_bg);
+    mixie_chat_main_region_draw(C, region);
+    mixie_chat_clear_bg_override();
+  }
+  else if (ink_canvas_open) {
+    mixie_chat_draw_rules_overlay(C, region);
+    rctf r;
+    r.xmin = 0.0f;
+    r.ymin = 0.0f;
+    r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
+    r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
+    GPU_blend(GPU_BLEND_NONE);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    if (agent_bubble_island_bed_is_transparent()) {
+      /* Roundboxes enable alpha blending internally; the native bed must
+       * replace its pixels, just as it does for the empty prompt. */
+      agent_bubble_fill_region_backdrop(region);
+    }
+    else {
+      ui::draw_roundbox_4fv(&r, true, 0.0f, panel_bg);
+    }
+    mixie_chat_draw_ink_overlay(C, region);
+  }
+  else {
+    /* Empty state: this region IS the whole-panel input field. Paint the
+     * panel fill, then lay the embossed field ui::Button over the full region —
+     * mixie_chat_main_region_init installed UI_region_handlers, so the block
+     * dispatches normally. The composer skips its input strip in this state
+     * (agent_bubble_island_controls_bottom), keeping exactly ONE field box.
+     *
+     * The canvas's CLOSING edge is run here first. mixie_chat_draw_ink_overlay
+     * is the only writer of rt->ink_overlay_active, and with a transcript it
+     * runs unconditionally at the end of mixie_chat_main_region_draw — but in
+     * this state nothing draws the chat, so skipping it once the canvas is
+     * down left the latch stuck at true: mixie_chat_ink_handle_event then
+     * consumed every press and keystroke over the field for an invisible
+     * canvas, and the stylus auto-open (which stands down while "already
+     * open") never fired again. With visibility false the call draws nothing
+     * — it resets the runtime and drops the idle timer, which is the point. */
+    mixie_chat_draw_ink_overlay(C, region);
+    agent_bubble_fill_region_backdrop(region);
+    /* Clear modal runtimes on the closing edge before restoring the field. */
+    mixie_chat_draw_rules_overlay(C, region);
+    mixie_chat_draw_history_overlay(C, region);
+
+    rctf r;
+    r.xmin = 0.0f;
+    r.ymin = 0.0f;
+    r.xmax = float(BLI_rcti_size_x(&region->winrct) + 1);
+    r.ymax = float(BLI_rcti_size_y(&region->winrct) + 1);
+    GPU_blend(GPU_BLEND_NONE);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    float fill[4];
+    agent_bubble_island_panel_color(fill);
+    if (!agent_bubble_island_bed_is_transparent()) {
+      ui::draw_roundbox_4fv(&r, true, 0.0f, fill);
+    }
+
+    Scene *scene_mut = CTX_data_scene(C);
+    if (scene_mut) {
+      PointerRNA scene_ptr = RNA_id_pointer_create(&scene_mut->id);
+      if (RNA_struct_find_property(&scene_ptr, "mixie_chat_input")) {
+        ui::Block *field_block = ui::block_begin(
+            C, region, "agent_island_field_panel", blender::ui::EmbossType::Emboss);
+        const int rw = BLI_rcti_size_x(&region->winrct) + 1;
+        const int rh = BLI_rcti_size_y(&region->winrct) + 1;
+        /* Panel side margins so the field's chrome aligns with the chips. */
+        AgentIslandState st;
+        AgentIslandLayout lay;
+        int fx = 0;
+        short fw = short(rw);
+        if (agent_bubble_island_begin(C, region, &st, &lay)) {
+          agent_bubble_island_end(); /* only needed the layout */
+          fx = int(lay.input.xmin) - region->winrct.xmin;
+          fw = short(BLI_rctf_size_x(&lay.input));
+        }
+        /* Whole-region field — the design's "the panel IS the prompt".
+         * Blender's multiline text path (Text + TEXTEDIT_UPDATE + tall rect)
+         * renders top-left with a text-height caret, so full height is
+         * correct; a top-strip variant read as "just a thin bar". */
+        ui::Button *input_but = uiDefButR(field_block, ui::ButtonType::Text, "",
+                                     fx, 0, fw, short(rh),
+                                     &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
+                                     nullptr);
+        if (input_but) {
+          ui::button_placeholder_set(input_but, empty_probe.placeholder);
+          ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+          ui::button_flag_enable(input_but, ui::BUT_TEXTEDIT_UPDATE);
+          /* Emboss is required for clicks, but its default inner is opaque
+           * #121212. When frost is showing, recolour the chrome as a wash
+           * (but->col[3] == 0 means "no override", so this cannot be 0). */
+          if (agent_bubble_island_bed_is_transparent()) {
+            const uchar wash[4] = AGENT_COL_GLASS_FIELD_UCHAR;
+            ui::button_color_set(input_but, wash);
+          }
+        }
+        ui::block_end(C, field_block);
+        ui::block_draw(C, field_block);
+        agent_bubble_composer_focus_if_pending(const_cast<bContext *>(C));
+      }
+    }
+  }
+
+  /* Side frame: the card gradient's edges and the credits ring cross this
+   * region. Paint the full island restricted to the two side strips outside
+   * the panel, so the border stays one continuous drawing with the chrome
+   * regions above and below. */
+  AgentIslandState state;
+  AgentIslandLayout layout;
+  if (agent_bubble_island_begin(C, region, &state, &layout)) {
+    const float region_w = float(BLI_rcti_size_x(&region->winrct) + 1);
+    const float region_h = float(BLI_rcti_size_y(&region->winrct) + 1);
+    const float left_w = layout.panel.xmin - float(region->winrct.xmin);
+    const float right_x = layout.panel.xmax - float(region->winrct.xmin);
+    GPU_scissor_test(true);
+    if (left_w > 0.0f) {
+      GPU_scissor(0, 0, int(left_w), int(region_h));
+      agent_ui_draw_island(region, &layout, &state);
+    }
+    if (right_x < region_w) {
+      GPU_scissor(int(right_x), 0, int(region_w - right_x) + 1, int(region_h));
+      agent_ui_draw_island(region, &layout, &state);
+    }
+    GPU_scissor_test(false);
+    agent_bubble_island_end();
+  }
+}
+
+/**
+ * Keep the chrome slabs sized to the island scale. The island's unit is
+ * width-derived (window_w / 1310 artboard units), so a width change must
+ * re-derive both slab heights; region->sizey is in LOGICAL px (Blender
+ * multiplies by the window scale). Runs on the TOOLS region's layout pass,
+ * which also syncs the HEADER — headers get no layout callback of their own.
+ */
+static void agent_bubble_sync_chrome_sizes(const bContext *C)
+{
+  wmWindow *win = CTX_wm_window(C);
+  ScrArea *area = CTX_wm_area(C);
+  if (!win || !area || agent_bubble_window_is_pill(C)) {
+    return;
+  }
+  agent_bubble_references_sync(C);
+  const float scale = UI_SCALE_FAC > 0.0f ? UI_SCALE_FAC : 1.0f;
+  /* Same unit rule as agent_ui_layout_build, including the Scribble pad's
+   * default-width unit — a slab sized from the pad's own width would leave
+   * the composer strip too short for the text it must show. */
+  const float pad_ratio = agent_bubble_pad_ratio(win);
+  const float u_logical = (float(WM_window_native_pixel_x(win)) / scale) /
+                          float(AGENT_ISLAND_W) * ((pad_ratio > 0.0f) ? pad_ratio : 1.0f);
+  /* Top chrome: island top -> panel top. Bottom: panel-bottom gap + input
+   * strip + gap + chip row + card foot padding. Same unit math as
+   * agent_ui_layout_build — keep in sync with the AGENT_* tokens. Runs from
+   * the WINDOW region's layout: the TOOLS region can bootstrap-collapse to
+   * 1px (too small -> invisible -> its own layout never runs), so it cannot
+   * be trusted to fix itself. */
+  AgentIslandState tab_probe;
+  agent_ui_state_gather(C, &tab_probe);
+  const int panel_top = int(agent_ui_panel_top(AgentTabId(tab_probe.active_tab)));
+  /* The pad has no tab strip: its top band is just the card header. */
+  const int top_units = (pad_ratio > 0.0f) ?
+                            (panel_top - (AGENT_CARD_Y - AGENT_PAD_TOP_INSET)) :
+                            (panel_top - AGENT_ISLAND_TOP);
+  /* Strip height is filled in after state gather — a 1-line default here
+   * would leave TOOLS short of a 2–4 line draft and clip the extra lines. */
+  int bottom_units = AGENT_TRANSCRIPT_GAP + AGENT_INPUT_H + AGENT_INPUT_GAP + AGENT_CHIP_H +
+                     AGENT_CARD_PAD_BOTTOM;
+
+  /* With no conversation the field IS the panel, so the TOOLS region grows to
+   * cover everything below the header except the sliver Blender reserves as
+   * the WINDOW region's minimum (painted as bare panel fill). */
+  bool has_conversation = false;
+  if (const Scene *scene = CTX_data_scene(C)) {
+    PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+    PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+    has_conversation = messages &&
+                       RNA_property_collection_length(&scene_ptr, messages) > 0;
+  }
+  const int header_logical = int(float(top_units) * u_logical + 0.5f);
+  const int win_logical_h = int(float(WM_window_native_pixel_y(win)) / scale);
+  /* With no conversation the whole-panel field lives in the WINDOW region
+   * (which then spans exactly the panel above the chips — one box, no
+   * sliver), so TOOLS holds only the chip row + card foot. */
+  const int bottom_units_empty = AGENT_INPUT_GAP + AGENT_CHIP_H + AGENT_CARD_PAD_BOTTOM;
+
+  /* Non-Agent tabs draw their entire pane inside the WINDOW region — panes
+   * like the 3D tab pin rows to the panel FOOT, which the Agent tab's TOOLS
+   * band would clip — so TOOLS keeps only the card-foot sliver there. */
+  const bool agent_tab_active = (tab_probe.active_tab == AGENT_TAB_AGENT);
+  const bool wants_input_strip = has_conversation || tab_probe.ink_visible;
+  if (wants_input_strip) {
+    const int native_w = WM_window_native_pixel_x(win);
+    const int unit_w = (pad_ratio > 0.0f) ? int(float(native_w) * pad_ratio + 0.5f) : native_w;
+    const int pad_real_w = (pad_ratio > 0.0f) ? native_w : 0;
+    const int input_lines = agent_ui_composer_visual_lines(
+        tab_probe.input_text, agent_ui_composer_wrap_width_px(unit_w, pad_real_w));
+    const int strip_units = int(agent_ui_composer_strip_h(input_lines) + 0.5f);
+    bottom_units = AGENT_TRANSCRIPT_GAP + strip_units + AGENT_INPUT_GAP + AGENT_CHIP_H +
+                   AGENT_CARD_PAD_BOTTOM;
+  }
+  (void)win_logical_h;
+  for (ARegion &other_ref : area->regionbase) {
+    ARegion *other = &other_ref;
+    int want = 0;
+    if (other->regiontype == RGN_TYPE_HEADER) {
+      want = header_logical;
+    }
+    else if (other->regiontype == RGN_TYPE_TOOLS) {
+      int units;
+      if (agent_tab_active) {
+        /* The short "chips + foot" band is only right when the WINDOW region
+         * actually hosts the whole-panel field. While the ink canvas is up it
+         * does not (that field is not built, its chrome would cover the
+         * canvas), so TOOLS must make room for the input strip — otherwise
+         * the strip clamps to zero height inside a band with no space for it
+         * and the island has no composer at all, which is how a landed
+         * handwriting transcription ended up with nowhere to be seen. */
+        units = wants_input_strip ? bottom_units : bottom_units_empty;
+      }
+      else {
+        units = 4; /* Card foot only — the pane owns everything above. */
+      }
+      want = int(float(units) * u_logical + 0.5f);
+    }
+    if (want > 0 && other->sizey != want) {
+      other->sizey = want;
+      other->flag &= ~(RGN_FLAG_TOO_SMALL | RGN_FLAG_HIDDEN);
+      ED_area_tag_region_size_update(area, other);
+    }
+  }
+}
+
+static void agent_bubble_composer_region_layout(const bContext *C, ARegion * /*region*/)
+{
+  agent_bubble_sync_chrome_sizes(C);
+}
+
+static void agent_bubble_composer_region_draw(const bContext *C, ARegion *region)
+{
+  if (agent_bubble_window_is_pill(C)) {
+    return;
+  }
+  agent_bubble_fill_region_backdrop(region);
+  AgentIslandState state;
+  AgentIslandLayout layout;
+  if (!agent_bubble_island_begin(C, region, &state, &layout)) {
+    return;
+  }
+  agent_ui_draw_island(region, &layout, &state);
+  agent_bubble_island_end();
+  if (state.active_tab == AGENT_TAB_AGENT) {
+    agent_bubble_island_controls_bottom(C, region, &layout, &state);
+
+    if (state.ink_visible) {
+      mixie_chat_draw_ink_strokes_for_region(C, region);
+    }
+  }
+}
+
+static void agent_bubble_references_region_draw(const bContext *C, ARegion *region)
+{
+  if (!agent_bubble_references_visible(C)) {
+    return;
+  }
+  agent_bubble_fill_region_backdrop(region);
+  AgentIslandState state;
+  AgentIslandLayout layout;
+  if (agent_bubble_island_begin(C, region, &state, &layout)) {
+    agent_ui_draw_island(region, &layout, &state);
+    agent_bubble_island_end();
+    agent_bubble_references_draw(C, region, layout, state);
+  }
+}
+
+static void agent_bubble_composer_region_init(wmWindowManager * /*wm*/, ARegion *region)
+{
+  ui::region_handlers_add(&region->runtime->handlers);
+  mixie_chat_ink_footer_handler_register(region);
+}
+
+/** \} */
 
 static int agent_bubble_height_floor_for_attachments(const int attachment_count)
 {
@@ -257,16 +1505,30 @@ static int agent_bubble_height_floor_for_attachments(const int attachment_count)
 }
 
 #if defined(__APPLE__) || defined(_WIN32)
+static AgentBubbleSize bubble_fit_to_host(int width, int height)
+{
+  AgentBubbleSize host{};
+  if (g_host_ghostwin) {
+    Mixar_WindowGetContentSize(g_host_ghostwin, &host.width, &host.height);
+  }
+  return agent_bubble_fit_size({width, height}, host);
+}
+
 static void bubble_set_min_content_size(void *ghostwin, const int min_height)
 {
   if (ghostwin == nullptr) {
     return;
   }
+  /* The Scribble pad sets its own constraints (narrower than the island's
+   * minimum width, taller than its maximum height); this per-frame sync must
+   * not put the island's back while the pad is up. */
+  if (g_bubble_pad_active && ghostwin == g_bubble_ghostwin) {
+    return;
+  }
   /* Skip the AppKit/Win32 calls when the constraints are already in
-   * effect. This function runs from the footer's layout AND draw
-   * callbacks (agent_bubble_sync_footer_window_size), i.e. twice per
-   * frame while the bubble repaints — two cross-runtime window calls
-   * per frame for values that almost never change.
+   * effect. This runs from the island's layout callback on every repaint —
+   * a cross-runtime window call per frame for values that almost never
+   * change.
    *
    * The cache MUST be invalidated whenever Mixar_WindowForceSize runs:
    * force-size clears both contentMinSize and contentMaxSize to allow
@@ -278,49 +1540,50 @@ static void bubble_set_min_content_size(void *ghostwin, const int min_height)
     return;
   }
   g_bubble_last_min_height = min_height;
-  Mixar_WindowSetMinContentSize(ghostwin, AGENT_BUBBLE_MIN_WIDTH, min_height);
+  const AgentBubbleSize minimum = bubble_fit_to_host(AGENT_BUBBLE_MIN_WIDTH, min_height);
+  Mixar_WindowSetMinContentSize(ghostwin, minimum.width, minimum.height);
+  /* Native screen bounds constrain resizing; the preset is not a maximum.
+   * Only AppKit keeps a content maximum that has to be cleared — Win32's
+   * default ptMaxTrackSize is already the monitor work area and the Mixar
+   * overlay never narrows it, so there is no Windows counterpart to call. */
 #ifdef __APPLE__
-  /* Cap the maximum height so the bubble can't grow taller than the
-   * expanded size.  Width is unconstrained (like Windows) so the user
-   * can widen the bubble freely. */
-  const int max_h = (min_height > AGENT_BUBBLE_EXPANDED_HEIGHT) ? min_height
-                                                                 : AGENT_BUBBLE_EXPANDED_HEIGHT;
-  Mixar_WindowSetMaxContentSize(ghostwin, 0, max_h);
+  Mixar_WindowSetMaxContentSize(ghostwin, 0, 0);
 #endif
 }
 
 /* A resize the footer's draw/layout callback asked for, applied later by
- * agent_bubble_footer_region_listener. Draw callbacks must never resize the
- * OS window or re-run ED_screen_refresh themselves: the region draw pass
- * has the bubble's framebuffer bound and is iterating area->regionbase, so
- * a refresh from inside it re-enters region init for the region on the
- * stack, recomputes every winrct under a viewport still set from the old
- * rects, and resizes the GL window mid-present — the nvoglv64 access
- * violations wm_draw.cc documents for this window. */
+ * agent_bubble_footer_region_listener. Draw and layout callbacks must never
+ * resize the OS window or re-run ED_screen_refresh themselves: that pass has
+ * the bubble's framebuffer bound and is iterating area->regionbase, so a
+ * refresh from inside it re-enters region init for the region on the stack,
+ * recomputes every winrct under a viewport still set from the old rects, and
+ * resizes the GL window mid-present — the nvoglv64 access violations
+ * wm_draw.cc documents for this window. */
 static int g_bubble_pending_resize_height = 0;
 static int g_bubble_pending_resize_floor = 0;
 
-/* Push a new bubble size onto the OS window, the wmWindow and its screen
- * verts. `C` may be null: the screen is then only TAGGED (`do_refresh`) and
- * the event loop runs ED_screen_refresh itself in ED_screen_ensure_updated
- * later in the same pass — the form the footer listener uses, because a
- * listener carries no context. With a context (operator exec) the refresh
- * is immediate, as before. */
-static void bubble_apply_window_size(
-    bContext *C, wmWindowManager *wm, wmWindow *w, void *ghostwin, int width, int height)
+/**
+ * Write a window's size through Blender's layout pass (wmWindow size, screen
+ * verts, area init) so the next draw lays out at the new dimensions instead
+ * of one event-loop iteration later. `C` may be null: the screen is then only
+ * TAGGED (`do_refresh`) and the event loop runs ED_screen_refresh itself in
+ * ED_screen_ensure_updated later in the same pass — the form the listener
+ * uses, because a listener carries no context.
+ *
+ * `fallback_width`/`fallback_height` are LOGICAL points, like every
+ * Mixar_Window* size — they stand in when the pixel query fails.
+ */
+static void bubble_write_window_size(bContext *C,
+                                     wmWindowManager *wm,
+                                     wmWindow *w,
+                                     void *ghostwin,
+                                     const int fallback_width,
+                                     const int fallback_height)
 {
-  if (ghostwin == nullptr || w == nullptr) {
+  if (w == nullptr || ghostwin == nullptr) {
     return;
   }
-
-  Mixar_WindowForceSize(ghostwin, width, height);
-  /* Force-size cleared the OS min/max constraints — invalidate the
-   * cache so the next bubble_set_min_content_size re-applies them. */
-  g_bubble_last_min_height = 0;
-  bubble_set_min_content_size(ghostwin, AGENT_BUBBLE_MIN_HEIGHT);
-
-  /* BACKING pixels (0 when the query fails). `width`/`height` — like
-   * every Mixar_Window* size — are LOGICAL points. */
+  /* BACKING pixels (0 when the query fails). */
   int pixel_width = 0;
   int pixel_height = 0;
   Mixar_WindowGetContentPixelSize(ghostwin, &pixel_width, &pixel_height);
@@ -341,12 +1604,10 @@ static void bubble_apply_window_size(
      * past the right edge. Attaching an image was the usual trigger,
      * because that is what re-runs this force-size. */
     const int native_x = WM_window_native_pixel_x(w);
-    const float fac = (w->sizex > 0 && native_x > 0) ?
-                          float(native_x) / float(w->sizex) :
-                          1.0f;
+    const float fac = (w->sizex > 0 && native_x > 0) ? float(native_x) / float(w->sizex) : 1.0f;
 
-    int logical_width = width;
-    int logical_height = height;
+    int logical_width = fallback_width;
+    int logical_height = fallback_height;
     if (pixel_width > 0 && pixel_height > 0) {
       logical_width = int(float(pixel_width) / fac);
       logical_height = int(float(pixel_height) / fac);
@@ -392,6 +1653,27 @@ static void bubble_apply_window_size(
   }
 }
 
+/* Force a new size onto the OS window, then write it through Blender. */
+static void bubble_apply_window_size(
+    bContext *C, wmWindowManager *wm, wmWindow *w, void *ghostwin, int width, int height)
+{
+  if (ghostwin == nullptr || w == nullptr) {
+    return;
+  }
+
+  if (ghostwin == g_bubble_ghostwin && !g_bubble_pad_active) {
+    const AgentBubbleSize fitted = bubble_fit_to_host(width, height);
+    width = fitted.width;
+    height = fitted.height;
+  }
+  Mixar_WindowForceSize(ghostwin, width, height);
+  /* Force-size cleared the OS min/max constraints — invalidate the
+   * cache so the next bubble_set_min_content_size re-applies them. */
+  g_bubble_last_min_height = 0;
+  bubble_set_min_content_size(ghostwin, AGENT_BUBBLE_MIN_HEIGHT);
+  bubble_write_window_size(C, wm, w, ghostwin, width, height);
+}
+
 static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width, int height)
 {
   if (ghostwin == nullptr) {
@@ -401,16 +1683,40 @@ static void bubble_force_size_and_refresh(bContext *C, void *ghostwin, int width
   if (wm == nullptr) {
     return;
   }
-  LISTBASE_FOREACH (wmWindow *, w, &wm->windows) {
-    if (w->ghostwin == ghostwin) {
+  for (wmWindow &w_iter : wm->windows) {
+    wmWindow *w = &w_iter;
+    if (w->runtime->ghostwin == ghostwin) {
       bubble_apply_window_size(C, wm, w, ghostwin, width, height);
       break;
     }
   }
 }
 
+/**
+ * The Scribble pad re-seats the island natively and then only needs Blender's
+ * idea of the size brought back in line — no force-size, so the pad's own
+ * OS constraints stay exactly as it set them.
+ */
+static void bubble_sync_wm_window_size(bContext *C,
+                                       void *ghostwin,
+                                       const int fallback_width,
+                                       const int fallback_height)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (wm == nullptr) {
+    return;
+  }
+  for (wmWindow &w_iter : wm->windows) {
+    wmWindow *w = &w_iter;
+    if (w->runtime->ghostwin == ghostwin) {
+      bubble_write_window_size(C, wm, w, ghostwin, fallback_width, fallback_height);
+      break;
+    }
+  }
+}
+
 /* Called from the footer draw/layout pass: record the wanted size and wake
- * the event loop; the footer listener applies it. */
+ * the event loop; the listener applies it. */
 static void agent_bubble_request_resize(const bContext *C, int target_height, int height_floor)
 {
   g_bubble_pending_resize_height = target_height;
@@ -420,17 +1726,21 @@ static void agent_bubble_request_resize(const bContext *C, int target_height, in
 }
 #endif
 
-/* Footer region listener: apply a resize the draw/layout pass asked for.
- * Runs from wm_event_do_notifiers — nothing bound, no region draw on the
- * stack — and only tags the screen; the same pass then refreshes it. */
+/* Region listener: apply a resize the draw/layout pass asked for. Runs from
+ * wm_event_do_notifiers — nothing bound, no region draw on the stack —
+ * and only tags the screen; the same pass then refreshes it. Registered on
+ * the island's TOOLS region, which replaced the footer it was written for. */
 static void agent_bubble_footer_region_listener(const wmRegionListenerParams *params)
 {
+  agent_bubble_glass_region_listener(params);
 #if defined(__APPLE__) || defined(_WIN32)
   if (g_bubble_pending_resize_height <= 0) {
     return;
   }
   wmWindow *win = params->window;
-  if (win == nullptr || win->ghostwin == nullptr || win->ghostwin != g_bubble_ghostwin) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr ||
+      win->runtime->ghostwin != g_bubble_ghostwin)
+  {
     return;
   }
   const int target_height = g_bubble_pending_resize_height;
@@ -441,8 +1751,9 @@ static void agent_bubble_footer_region_listener(const wmRegionListenerParams *pa
     return;
   }
   bubble_apply_window_size(
-      nullptr, nullptr, win, win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, target_height);
-  bubble_set_min_content_size(win->ghostwin, height_floor);
+      nullptr, nullptr, win, win->runtime->ghostwin, win->sizex,
+      std::max(target_height, int(win->sizey)));
+  bubble_set_min_content_size(win->runtime->ghostwin, height_floor);
 #else
   (void)params;
 #endif
@@ -466,143 +1777,21 @@ static int agent_bubble_pending_attachment_count(const bContext *C)
 
 static int agent_bubble_collapsed_height_for_current_attachments(const bContext *C)
 {
-  return agent_bubble_height_floor_for_attachments(agent_bubble_pending_attachment_count(C));
-}
-
-/* `from_draw`: called from the footer's layout/draw callback, where the
- * resize must be REQUESTED (agent_bubble_request_resize) and never applied
- * inline; operator exec passes false and resizes immediately. */
-static void agent_bubble_sync_footer_window_size(const bContext *C,
-                                                 ARegion *region,
-                                                 const bool from_draw)
-{
-#if defined(__APPLE__) || defined(_WIN32)
-  wmWindow *win = CTX_wm_window(C);
-  ARegion *sync_region = region;
-  if (win == nullptr || win->ghostwin == nullptr || win->ghostwin != g_bubble_ghostwin) {
-    wmWindowManager *wm = CTX_wm_manager(C);
-    if (wm != nullptr) {
-      LISTBASE_FOREACH (wmWindow *, candidate, &wm->windows) {
-        if (candidate->ghostwin != g_bubble_ghostwin) {
-          continue;
-        }
-        win = candidate;
-        sync_region = nullptr;
-        bScreen *screen = WM_window_get_active_screen(win);
-        if (screen != nullptr && BLI_listbase_is_single(&screen->areabase)) {
-          ScrArea *area = static_cast<ScrArea *>(screen->areabase.first);
-          if (area != nullptr && area->spacetype == SPACE_AGENT_BUBBLE) {
-            LISTBASE_FOREACH (ARegion *, candidate_region, &area->regionbase) {
-              if (candidate_region->regiontype == RGN_TYPE_TOOLS) {
-                sync_region = candidate_region;
-                break;
-              }
-            }
-          }
-        }
-        break;
-      }
+  int height = agent_bubble_height_floor_for_attachments(agent_bubble_pending_attachment_count(C));
+  /* Open and restore share this floor. Grow-once only fires once per
+   * process, so without the transcript delta here a minimised chat
+   * restored at the empty 190 px height and stayed there. */
+  if (const Scene *scene = CTX_data_scene(C)) {
+    PointerRNA scene_ptr = RNA_id_pointer_create(&const_cast<Scene *>(scene)->id);
+    PropertyRNA *messages = RNA_struct_find_property(&scene_ptr, "mixie_chat_messages");
+    if (messages && RNA_property_collection_length(&scene_ptr, messages) > 0) {
+      height += AGENT_BUBBLE_TRANSCRIPT_HEIGHT;
     }
   }
-  if (win == nullptr || win->ghostwin == nullptr || win->ghostwin != g_bubble_ghostwin ||
-      g_bubble_minimised)
-  {
-    return;
-  }
-
-  const int attachment_count = agent_bubble_pending_attachment_count(C);
-  const int height_floor = agent_bubble_height_floor_for_attachments(attachment_count);
-  bubble_set_min_content_size(win->ghostwin, height_floor);
-
-  const bool has_attachments = (attachment_count > 0);
-  const bool was_had_pending = g_bubble_had_pending_attachments;
-
-  if (!has_attachments) {
-    g_bubble_had_pending_attachments = false;
-  }
-
-  /* Compute required height from the footer's actual sizey so that
-   * multi-line text input grows the window even without attachments. */
-  int required_height = height_floor;
-  if (sync_region != nullptr) {
-    required_height = sync_region->sizey + AGENT_BUBBLE_HEADER_HEIGHT +
-                      AGENT_BUBBLE_BODY_MIN_HEIGHT + AGENT_BUBBLE_AUTOGROW_SLACK;
-  }
-
-  if (has_attachments) {
-    g_bubble_had_pending_attachments = true;
-    required_height += AGENT_BUBBLE_ATTACHMENT_AUTOGROW_EXTRA;
-  }
-
-  /* Already big enough — skip resize. */
-  if (required_height <= win->sizey + AGENT_BUBBLE_AUTOGROW_SLACK &&
-      win->sizey >= height_floor) {
-    return;
-  }
-
-  int target_height = (required_height > height_floor) ? required_height : height_floor;
-
-  /* Clamp to screen boundary. */
-  const int max_height = Mixar_WindowGetMaxHeightToScreenTop(
-      win->ghostwin, AGENT_BUBBLE_AUTOGROW_TOP_RESERVE);
-  if (max_height > 0 && target_height > max_height) {
-    target_height = max_height;
-  }
-
-  if (target_height > win->sizey ||
-      (has_attachments && !was_had_pending && !g_bubble_expanded))
-  {
-    if (from_draw) {
-      agent_bubble_request_resize(C, target_height, height_floor);
-    }
-    else {
-      bubble_force_size_and_refresh(
-          const_cast<bContext *>(C), win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, target_height);
-      bubble_set_min_content_size(win->ghostwin, height_floor);
-    }
-  }
-#else
-  (void)C;
-  (void)region;
-  (void)from_draw;
-#endif
+  return height;
 }
 
-static void agent_bubble_footer_region_draw(const bContext *C, ARegion *region)
-{
-  agent_bubble_sync_footer_window_size(C, region, /*from_draw=*/true);
 
-  /* Read footer background from the Agent Bubble theme.  The colour is
-   * stored as uchar[4] (0-255) and the override API expects float (0-1).
-   * If the theme field is still at its zero-init default (alpha == 0),
-   * fall back to the space's main `back` colour. */
-  bTheme *btheme = UI_GetTheme();
-  const unsigned char *fb = btheme->space_agent_bubble.chat_footer_bg;
-  float footer_bg[4];
-  if (fb[3] == 0) {
-    const unsigned char *bk = btheme->space_agent_bubble.back;
-    footer_bg[0] = bk[0] / 255.0f;
-    footer_bg[1] = bk[1] / 255.0f;
-    footer_bg[2] = bk[2] / 255.0f;
-    footer_bg[3] = bk[3] / 255.0f;
-  }
-  else {
-    footer_bg[0] = fb[0] / 255.0f;
-    footer_bg[1] = fb[1] / 255.0f;
-    footer_bg[2] = fb[2] / 255.0f;
-    footer_bg[3] = fb[3] / 255.0f;
-  }
-  mixie_chat_set_bg_override(footer_bg);
-
-  mixie_chat_footer_region_draw(C, region);
-  mixie_chat_clear_bg_override();
-}
-
-static void agent_bubble_footer_region_layout(const bContext *C, ARegion *region)
-{
-  mixie_chat_footer_region_layout(C, region);
-  agent_bubble_sync_footer_window_size(C, region, /*from_draw=*/true);
-}
 
 
 /* Resize the pill window AND keep Blender's wmWindow / area / region
@@ -627,6 +1816,8 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 #if defined(__APPLE__) || defined(_WIN32)
   Mixar_WindowForceSize(g_pill_ghostwin, width, height);
   Mixar_WindowSetCornerRadius(g_pill_ghostwin, radius);
+  /* Queue setup if this window has not reached the event-loop listener yet. */
+  agent_bubble_glass_request(C, g_pill_ghostwin, true);
 #else
   (void)width;
   (void)height;
@@ -659,8 +1850,9 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
   if (wm == nullptr) {
     return;
   }
-  LISTBASE_FOREACH (wmWindow *, w, &wm->windows) {
-    if (w->ghostwin != g_pill_ghostwin) {
+  for (wmWindow &w_iter : wm->windows) {
+    wmWindow *w = &w_iter;
+    if (w->runtime->ghostwin != g_pill_ghostwin) {
       continue;
     }
     w->sizex = pixel_width;
@@ -713,7 +1905,8 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
     /* region->sizey is in unscaled units (Blender multiplies by
      * UI_SCALE_FAC internally) — pass the point value here, not
      * the pixel value. */
-    LISTBASE_FOREACH (ARegion *, region, &area->regionbase) {
+    for (ARegion &region_iter : area->regionbase) {
+      ARegion *region = &region_iter;
       if (region->regiontype == RGN_TYPE_HEADER) {
         region->sizey = height;
         break;
@@ -728,7 +1921,9 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
 /* Margin (px) between the pill's bottom and the screen's visible
  * frame bottom when the bubble is minimised and the pill snaps to
  * the centre-bottom of the screen. */
-#define AGENT_BUBBLE_PILL_BOTTOM_MARGIN 24
+/* Resting pill floats well clear of the host's bottom edge (Higgsfield sits
+ * its pill above the timeline, not glued to the frame). */
+#define AGENT_BUBBLE_PILL_BOTTOM_MARGIN 72
 
 /* Bottom margin used when snapping the FULL bubble window to the
  * centre-bottom of the screen at first open (and on subsequent
@@ -765,34 +1960,363 @@ static void pill_set_size(bContext *C, int width, int height, float radius)
  *     is a child window above the bubble's top-left and only shows
  *     the live status; it should be a quiet status indicator, not
  *     compete with the chat for attention.
- *   * LARGE (160×44, radius 22) — when the bubble is MINIMISED. The
+ *   * LARGE (304×44, radius 22) — when the bubble is MINIMISED. The
  *     pill is the only thing the user sees, anchored at the host's
  *     centre-bottom; it doubles as the click target to restore the
- *     bubble, so it needs a substantial size + readable text.
+ *     bubble, so it needs a readable preview without becoming a bar.
  *
  * The pill is created at SMALL size on first open, then resized
  * via Mixar_WindowForceSize + Mixar_WindowSetCornerRadius on every
  * minimise / restore transition (including the start_minimised
  * branch of the open op). */
-#define AGENT_BUBBLE_PILL_WIDTH 148
-#define AGENT_BUBBLE_PILL_HEIGHT 28
+/* The artboard's status pill: 135 x 38 units at the 1.5x export factor. */
+#define AGENT_BUBBLE_PILL_WIDTH 90
+#define AGENT_BUBBLE_PILL_HEIGHT 25
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS 14.0f
 
-#define AGENT_BUBBLE_PILL_WIDTH_LARGE 184
+/* Elongated resting pill: last-prompt preview + Mixie the cat on its chip.
+ * Compact cut of the 643x85 export; aspect stays above 4 so the elongated
+ * painter runs. Radius is half the height — a true capsule. */
+#define AGENT_BUBBLE_PILL_WIDTH_LARGE 304
 #define AGENT_BUBBLE_PILL_HEIGHT_LARGE 44
 #define AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE 22.0f
+
+/* While viewport Sketch is armed the resting pill is where typing lands, so it
+ * grows a little and carries a Voice button and a blinking caret
+ * (agent_ui_pill_draft.cc). Aspect stays above 4 for the elongated painter. */
+#define AGENT_BUBBLE_PILL_WIDTH_SKETCH 352
+#define AGENT_BUBBLE_PILL_HEIGHT_SKETCH 52
+#define AGENT_BUBBLE_PILL_CORNER_RADIUS_SKETCH 26.0f
+
+/* The resting pill currently wears the Sketch size. Seats and the user's
+ * remembered offset are stored for the default LARGE pill; the helpers below
+ * convert, keeping the pill's bottom-centre wherever it was seated. */
+static bool g_pill_rest_sketch = false;
+[[maybe_unused]] static int pill_rest_width()
+{
+  return g_pill_rest_sketch ? AGENT_BUBBLE_PILL_WIDTH_SKETCH : AGENT_BUBBLE_PILL_WIDTH_LARGE;
+}
+[[maybe_unused]] static int pill_rest_height()
+{
+  return g_pill_rest_sketch ? AGENT_BUBBLE_PILL_HEIGHT_SKETCH : AGENT_BUBBLE_PILL_HEIGHT_LARGE;
+}
+[[maybe_unused]] static float pill_rest_radius()
+{
+  return g_pill_rest_sketch ? AGENT_BUBBLE_PILL_CORNER_RADIUS_SKETCH :
+                              AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE;
+}
+/** Top-left shift of the current resting pill from a LARGE one on the same seat. */
+[[maybe_unused]] static int pill_rest_dx()
+{
+  return (AGENT_BUBBLE_PILL_WIDTH_LARGE - pill_rest_width()) / 2;
+}
+[[maybe_unused]] static int pill_rest_dy()
+{
+  return AGENT_BUBBLE_PILL_HEIGHT_LARGE - pill_rest_height();
+}
+/** Viewport Sketch is armed (`wm.mixar_mark_armed`); absent reads as off. */
+[[maybe_unused]] static bool pill_sketch_wanted(wmWindowManager *wm)
+{
+  if (wm == nullptr) {
+    return false;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixar_mark_armed");
+  return prop && RNA_property_type(prop) == PROP_BOOLEAN &&
+         RNA_property_boolean_get(&wm_ptr, prop);
+}
 
 /* Duration (seconds) of the minimise glide animation — pill slides
  * + grows from above-bubble to centre-bottom while the bubble
  * fades out. ~0.28 s is the upper end of "responsive" UI motion;
  * shorter feels jumpy, longer feels sluggish. */
-#define AGENT_BUBBLE_MINIMISE_ANIM_DURATION 0.28f
+/* Ease-out-quint float in/out: quick to ~90%%, soft settle. Expand slightly
+ * longer than collapse — an entrance can savour its settle, an exit should
+ * get out of the way. */
+#define AGENT_BUBBLE_MINIMISE_ANIM_DURATION 0.20f
+#define AGENT_BUBBLE_EXPAND_ANIM_DURATION 0.26f
+#define AGENT_BUBBLE_FLOAT_RISE_PT 18
 /* Gap (px) between the bottom of the pill and the top of the
  * bubble — small visual separation matching the Figma where the
  * pill floats slightly above the main bubble. */
 #define AGENT_BUBBLE_PILL_GAP 6
 
 #if defined(__APPLE__) || defined(_WIN32)
+/**
+ * Seat the MINIMISED pill on the host and keep it there across host moves
+ * and resizes: at the seat the user gave it by dragging (an offset anchor),
+ * else at the design's centre-bottom. The one place the resting seat is
+ * decided — a re-minimise that anchored centre-bottom directly used to snap
+ * a pill the user had moved straight back to the default. Falls back to the
+ * screen when no host window is known (opened from an unusual context).
+ */
+/* Cinema Mode dock seat. While the Cinema surface draws, the resting pill
+ * is the design's chat bar under the camera gate: the View3D overlay hands
+ * over the seat's bottom y in the host's WINDOW PIXELS (the only coordinate
+ * it has) and the pill is anchored centre-bottom with that margin. The
+ * margin is measured from the host's CONTENT bottom, which is why this goes
+ * through the centre-bottom anchor and not the offset one: parent offsets
+ * are measured from the FRAME top (see the pad's insets), and converting a
+ * content-relative y to a frame offset needs the title bar height, which
+ * no helper reports. It outranks the user-placed seat only while it is
+ * valid; leaving Cinema Mode restores whatever seat rule applied before.
+ * Cleared with the window pointers on close. */
+static bool g_pill_cinema_seat_valid = false;
+static void *g_pill_cinema_host = nullptr;
+static int g_pill_cinema_bottom_px = 0;
+
+static float host_pixels_per_point(void *host)
+{
+  int lw = 0, lh = 0, pw = 0, ph = 0;
+  if (host == nullptr || !Mixar_WindowGetContentSize(host, &lw, &lh) || lw <= 0) {
+    return 0.0f;
+  }
+  Mixar_WindowGetContentPixelSize(host, &pw, &ph);
+  return pw > 0 ? float(pw) / float(lw) : 0.0f;
+}
+
+static bool pill_cinema_margin(int *r_margin_bottom)
+{
+  if (!g_pill_cinema_seat_valid || g_host_ghostwin == nullptr ||
+      g_pill_cinema_host != g_host_ghostwin)
+  {
+    return false;
+  }
+  const float scale = host_pixels_per_point(g_host_ghostwin);
+  if (scale <= 0.0f) {
+    return false;
+  }
+  *r_margin_bottom = int(roundf(float(g_pill_cinema_bottom_px) / scale));
+  return true;
+}
+
+static void pill_seat_on_host()
+{
+  if (g_pill_ghostwin == nullptr) {
+    return;
+  }
+  if (g_host_ghostwin == nullptr) {
+    Mixar_WindowSnapToCentreBottom(g_pill_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
+    return;
+  }
+  int cinema_margin = 0;
+  if (pill_cinema_margin(&cinema_margin)) {
+    Mixar_WindowAnchorAtParentCentreBottom(g_pill_ghostwin, g_host_ghostwin, cinema_margin);
+    return;
+  }
+  if (g_pill_user_placed) {
+    Mixar_WindowAnchorAtParentOffset(g_pill_ghostwin,
+                                     g_host_ghostwin,
+                                     g_pill_user_offset_x + pill_rest_dx(),
+                                     g_pill_user_offset_y + pill_rest_dy());
+    return;
+  }
+  if (g_bubble_seat_valid) {
+    Mixar_WindowAnchorAtParentOffset(
+        g_pill_ghostwin, g_host_ghostwin,
+        g_bubble_seat_x + (g_bubble_seat_width - pill_rest_width()) / 2,
+        g_bubble_seat_y + g_bubble_seat_height - pill_rest_height());
+    return;
+  }
+  Mixar_WindowAnchorAtParentCentreBottom(
+      g_pill_ghostwin, g_host_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
+}
+
+/**
+ * Record where the user-placed pill currently sits relative to the host, so
+ * the next minimise seats it there again. Called when the pill LEAVES its
+ * resting seat (restore) and when a drag ends on the platform that reports
+ * one (Win32; an AppKit window-server drag ends silently, so the restore
+ * read is what remembers a macOS drag). No-op until the user has dragged
+ * the pill — the default centre-bottom seat must keep re-centring on host
+ * resizes, which a captured fixed offset would not.
+ */
+void ED_agent_bubble_set_cinema_seat(const wmWindow *host, const bool valid, const int bottom_y_px)
+{
+  void *ghost = (host != nullptr && host->runtime != nullptr) ? host->runtime->ghostwin : nullptr;
+  const bool changed = (valid != g_pill_cinema_seat_valid) ||
+                       (valid && (ghost != g_pill_cinema_host || bottom_y_px != g_pill_cinema_bottom_px));
+  if (!changed) {
+    return;
+  }
+  g_pill_cinema_seat_valid = valid && ghost != nullptr;
+  g_pill_cinema_host = g_pill_cinema_seat_valid ? ghost : nullptr;
+  g_pill_cinema_bottom_px = bottom_y_px;
+  /* A pill already resting moves to (or back from) the dock seat at once. */
+  if (g_bubble_minimised && g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
+    pill_seat_on_host();
+  }
+}
+
+int ED_agent_bubble_pill_band_px(const wmWindow *host)
+{
+  void *ghost = (host != nullptr && host->runtime != nullptr) ? host->runtime->ghostwin : nullptr;
+  const float scale = host_pixels_per_point(ghost);
+  return scale > 0.0f ? int(roundf(pill_rest_height() * scale)) : 0;
+}
+
+static void pill_remember_user_seat()
+{
+  if (!g_pill_user_placed || g_pill_ghostwin == nullptr || g_host_ghostwin == nullptr) {
+    return;
+  }
+  int ox = 0;
+  int oy = 0;
+  if (Mixar_WindowGetParentOffset(g_pill_ghostwin, g_host_ghostwin, &ox, &oy)) {
+    /* Stored for the LARGE pill, whatever size is resting there now. */
+    g_pill_user_offset_x = ox - pill_rest_dx();
+    g_pill_user_offset_y = oy - pill_rest_dy();
+  }
+}
+
+static void bubble_restore_seat(int width, int height)
+{
+  if (!g_host_ghostwin || !g_bubble_ghostwin) {
+    return;
+  }
+  if (g_pill_user_placed) {
+    pill_remember_user_seat();
+    Mixar_WindowAnchorAtParentOffset(
+        g_bubble_ghostwin, g_host_ghostwin,
+        g_pill_user_offset_x + (AGENT_BUBBLE_PILL_WIDTH_LARGE - width) / 2,
+        g_pill_user_offset_y + AGENT_BUBBLE_PILL_HEIGHT_LARGE - height);
+  }
+  else if (g_bubble_seat_valid) {
+    Mixar_WindowAnchorAtParentOffset(
+        g_bubble_ghostwin, g_host_ghostwin,
+        g_bubble_seat_x + (g_bubble_seat_width - width) / 2,
+        g_bubble_seat_y + g_bubble_seat_height - height);
+  }
+  else {
+    Mixar_WindowSnapToCentreBottomOfWindow(
+        g_bubble_ghostwin, g_host_ghostwin, AGENT_BUBBLE_BOTTOM_MARGIN);
+  }
+}
+
+/* Scribble pad frame, in logical px. The pad takes the host's right third,
+ * from under the topbar to above the status bar, a small gap off the right
+ * edge. Narrower hosts clamp the pad to what the layout will still draw. */
+#define AGENT_BUBBLE_PAD_MIN_WIDTH 616
+#define AGENT_BUBBLE_PAD_MIN_HEIGHT 420
+#define AGENT_BUBBLE_PAD_TOP_INSET 56
+/* Measured from the host's FRAME top but sized from its CONTENT height, so
+ * the effective bottom gap is this plus the host's title bar. */
+#define AGENT_BUBBLE_PAD_BOTTOM_INSET 16
+#define AGENT_BUBBLE_PAD_SIDE_INSET 12
+
+/** Keep the island following the host from wherever it now sits. */
+static void bubble_rebaseline_host_tracking()
+{
+  if (g_bubble_ghostwin == nullptr || g_host_ghostwin == nullptr) {
+    return;
+  }
+#ifdef _WIN32
+  Mixar_WindowSetParentTracked(g_bubble_ghostwin, g_host_ghostwin);
+#else
+  Mixar_WindowSetParentPlain(g_bubble_ghostwin, g_host_ghostwin);
+#endif
+}
+
+/**
+ * Re-seat the open island as the Scribble PAD: the host's right third, tall,
+ * on the Agent tab. Saves the frame it leaves so the disarm can put it back.
+ * No-op while minimised (the pill is not in the viewport's way) or without a
+ * host window to measure against.
+ */
+static void agent_bubble_pad_apply(bContext *C)
+{
+  if (g_bubble_pad_active || g_bubble_ghostwin == nullptr || g_bubble_minimised ||
+      g_host_ghostwin == nullptr)
+  {
+    return;
+  }
+  int host_w = 0;
+  int host_h = 0;
+  if (!Mixar_WindowGetContentSize(g_host_ghostwin, &host_w, &host_h) || host_w <= 0 ||
+      host_h <= 0)
+  {
+    return;
+  }
+
+  /* Remember where the island was, relative to the host. */
+  int cur_w = 0;
+  int cur_h = 0;
+  g_pad_saved_valid = Mixar_WindowGetContentSize(g_bubble_ghostwin, &cur_w, &cur_h) &&
+                      cur_w > 0 && cur_h > 0 &&
+                      Mixar_WindowGetParentOffset(
+                          g_bubble_ghostwin, g_host_ghostwin, &g_pad_saved_off_x, &g_pad_saved_off_y);
+  g_pad_saved_w = cur_w;
+  g_pad_saved_h = cur_h;
+
+  int pad_w = std::max(host_w / 3, AGENT_BUBBLE_PAD_MIN_WIDTH);
+  pad_w = std::min(pad_w, std::max(host_w - AGENT_BUBBLE_PAD_SIDE_INSET * 2, 1));
+  int pad_h = host_h - AGENT_BUBBLE_PAD_TOP_INSET - AGENT_BUBBLE_PAD_BOTTOM_INSET;
+  pad_h = std::max(pad_h, std::min(AGENT_BUBBLE_PAD_MIN_HEIGHT, host_h));
+  const int off_x = host_w - pad_w - AGENT_BUBBLE_PAD_SIDE_INSET;
+  const int off_y = AGENT_BUBBLE_PAD_TOP_INSET;
+
+  /* Flag first: the per-frame constraint sync stands down on it. */
+  g_bubble_pad_active = true;
+
+  /* The pad has no tab strip, so the card must be showing the chat. */
+  if (wmWindowManager *wm = CTX_wm_manager(C)) {
+    PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+    if (RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab")) {
+      RNA_enum_set_identifier(C, &wm_ptr, "mixar_bubble_tab", "AGENT");
+    }
+  }
+
+  /* Constraints both sides of the resize: Win32 enforces the minimum size
+   * inside SetWindowPos (so the pad's must be in place BEFORE), while the
+   * Cocoa force-size resets min/max to permissive values (so they go back
+   * AFTER). */
+  Mixar_WindowSetMinContentSize(
+      g_bubble_ghostwin, AGENT_BUBBLE_PAD_MIN_WIDTH, AGENT_BUBBLE_PAD_MIN_HEIGHT);
+  Mixar_WindowForceSize(g_bubble_ghostwin, pad_w, pad_h);
+  g_bubble_last_min_height = 0;
+  Mixar_WindowSetMinContentSize(
+      g_bubble_ghostwin, AGENT_BUBBLE_PAD_MIN_WIDTH, AGENT_BUBBLE_PAD_MIN_HEIGHT);
+#ifdef __APPLE__
+  Mixar_WindowSetMaxContentSize(g_bubble_ghostwin, 0, 0);
+#endif
+  bubble_sync_wm_window_size(C, g_bubble_ghostwin, pad_w, pad_h);
+  Mixar_WindowPlaceInParent(g_bubble_ghostwin, g_host_ghostwin, off_x, off_y);
+  bubble_rebaseline_host_tracking();
+}
+
+/**
+ * Put the island back where it was before the pad. Safe to call when the pad
+ * is not up; a pad that was minimised meanwhile only drops the flag — the
+ * restore path sizes and seats the island itself.
+ */
+static void agent_bubble_pad_restore(bContext *C)
+{
+  if (!g_bubble_pad_active) {
+    return;
+  }
+  g_bubble_pad_active = false;
+  if (g_bubble_ghostwin == nullptr || g_bubble_minimised) {
+    return;
+  }
+  const int collapsed = agent_bubble_collapsed_height_for_current_attachments(C);
+  const int w = g_pad_saved_valid ? g_pad_saved_w : AGENT_BUBBLE_DEFAULT_WIDTH;
+  const int h = g_pad_saved_valid ? std::max(g_pad_saved_h, collapsed) : collapsed;
+  /* Re-applies the island's own min/max as it goes. */
+  bubble_force_size_and_refresh(C, g_bubble_ghostwin, w, h);
+  bubble_set_min_content_size(g_bubble_ghostwin, collapsed);
+  if (g_host_ghostwin != nullptr) {
+    if (g_pad_saved_valid) {
+      Mixar_WindowPlaceInParent(
+          g_bubble_ghostwin, g_host_ghostwin, g_pad_saved_off_x, g_pad_saved_off_y);
+    }
+    else {
+      Mixar_WindowSnapToCentreBottomOfWindow(
+          g_bubble_ghostwin, g_host_ghostwin, AGENT_BUBBLE_BOTTOM_MARGIN);
+    }
+    bubble_rebaseline_host_tracking();
+  }
+}
+
 /* Saved .mixar files can restore the agent bubble's wmWindow instances
  * before this operator runs. Those windows did not pass through the
  * live create path, so their OS window styles can come back as regular
@@ -810,8 +2334,9 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
   void *repaired_bubble = nullptr;
   void *repaired_pill = nullptr;
 
-  LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
-    if (win->ghostwin == nullptr) {
+  for (wmWindow &win_iter : wm->windows) {
+    wmWindow *win = &win_iter;
+    if (win->runtime->ghostwin == nullptr) {
       continue;
     }
 
@@ -826,7 +2351,8 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
     }
 
     bool has_body_or_footer = false;
-    LISTBASE_FOREACH (ARegion *, region, &area->regionbase) {
+    for (ARegion &region_iter : area->regionbase) {
+      ARegion *region = &region_iter;
       if (ELEM(region->regiontype, RGN_TYPE_WINDOW, RGN_TYPE_TOOLS)) {
         has_body_or_footer = true;
         break;
@@ -835,52 +2361,56 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
 
     if (has_body_or_footer) {
 #ifdef __APPLE__
-      Mixar_WindowMarkAsFloatingDock(win->ghostwin);
+      Mixar_WindowMarkAsFloatingDock(win->runtime->ghostwin);
 #endif
-      Mixar_WindowSetChromeless(win->ghostwin, true);
-      Mixar_WindowSetFloatingLevel(win->ghostwin);
-      Mixar_WindowSetHidesOnDeactivate(win->ghostwin, true);
-      Mixar_WindowSetCornerRadius(win->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
+      Mixar_WindowSetChromeless(win->runtime->ghostwin, true);
+      Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
+      Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
+      Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
+      agent_bubble_glass_reset(win->runtime->ghostwin);
+      agent_bubble_glass_request(C, win->runtime->ghostwin, false);
       const int collapsed_height = agent_bubble_collapsed_height_for_current_attachments(C);
       bubble_force_size_and_refresh(
-          C, win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
-      bubble_set_min_content_size(win->ghostwin, collapsed_height);
+          C, win->runtime->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
+      bubble_set_min_content_size(win->runtime->ghostwin, collapsed_height);
 #ifdef _WIN32
       if (g_host_ghostwin != nullptr) {
-        Mixar_WindowSetParentTracked(win->ghostwin, g_host_ghostwin);
+        Mixar_WindowSetParentTracked(win->runtime->ghostwin, g_host_ghostwin);
       }
 #endif
 #ifdef __APPLE__
       if (g_host_ghostwin != nullptr) {
-        Mixar_WindowSetParentPlain(win->ghostwin, g_host_ghostwin);
+        Mixar_WindowSetParentPlain(win->runtime->ghostwin, g_host_ghostwin);
       }
-      Mixar_WindowOrderFront(win->ghostwin);
+      Mixar_WindowOrderFront(win->runtime->ghostwin);
 #endif
       /* Snap the bubble back to the host's centre-bottom so the
        * "Open Agent" button always brings it to a predictable location
        * — even if the user previously dragged it off-screen or onto
        * another monitor. Mirrors the first-open and restore paths. */
       if (g_host_ghostwin != nullptr) {
-        Mixar_WindowSnapToCentreBottomOfWindow(win->ghostwin,
+        Mixar_WindowSnapToCentreBottomOfWindow(win->runtime->ghostwin,
                                                g_host_ghostwin,
                                                AGENT_BUBBLE_BOTTOM_MARGIN);
       }
-      g_bubble_ghostwin = win->ghostwin;
+      g_bubble_ghostwin = win->runtime->ghostwin;
       g_bubble_minimised = false;
-      repaired_bubble = win->ghostwin;
+      repaired_bubble = win->runtime->ghostwin;
       found_bubble = true;
     }
     else {
 #ifdef __APPLE__
-      Mixar_WindowMarkAsFloatingDock(win->ghostwin);
+      Mixar_WindowMarkAsFloatingDock(win->runtime->ghostwin);
 #endif
-      Mixar_WindowSetBorderless(win->ghostwin);
-      Mixar_WindowSetFloatingLevel(win->ghostwin);
-      Mixar_WindowSetHidesOnDeactivate(win->ghostwin, true);
-      Mixar_WindowSetCornerRadius(win->ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS);
-      Mixar_WindowSetMinContentSize(win->ghostwin, 40, 20);
-      g_pill_ghostwin = win->ghostwin;
-      repaired_pill = win->ghostwin;
+      Mixar_WindowSetBorderless(win->runtime->ghostwin);
+      agent_bubble_glass_reset(win->runtime->ghostwin);
+      agent_bubble_glass_request(C, win->runtime->ghostwin, true);
+      Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
+      Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
+      Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS);
+      Mixar_WindowSetMinContentSize(win->runtime->ghostwin, 40, 20);
+      g_pill_ghostwin = win->runtime->ghostwin;
+      repaired_pill = win->runtime->ghostwin;
     }
   }
 
@@ -893,6 +2423,24 @@ static bool agent_bubble_repair_existing_windows(bContext *C)
   }
 
   return found_bubble;
+}
+#else /* !(defined(__APPLE__) || defined(_WIN32)) */
+
+/* No native window anchoring on this platform, so the resting pill is
+ * unreachable (the minimise/restore operators are compiled out) and there is
+ * no pill to seat under the Cinema gate: the seat is a no-op and the band it
+ * would occupy is zero. Both functions are declared unconditionally in
+ * ED_space_api.hh and called unconditionally by the cross-platform Cinema
+ * gate, so they need a definition on every platform or the link fails. */
+void ED_agent_bubble_set_cinema_seat(const wmWindow * /*host*/,
+                                     bool /*valid*/,
+                                     int /*bottom_y_px*/)
+{
+}
+
+int ED_agent_bubble_pill_band_px(const wmWindow * /*host*/)
+{
+  return 0;
 }
 #endif
 
@@ -907,12 +2455,26 @@ static bool agent_bubble_window_contains_space(const wmWindow *win)
     return false;
   }
 
-  LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
+  for (ScrArea &area_iter : screen->areabase) {
+    ScrArea *area = &area_iter;
     if (area->spacetype == SPACE_AGENT_BUBBLE) {
       return true;
     }
   }
   return false;
+}
+
+wmWindow *ED_agent_bubble_host_window_get(wmWindowManager *wm)
+{
+  if (wm == nullptr || g_host_ghostwin == nullptr) {
+    return nullptr;
+  }
+  for (wmWindow &win : wm->windows) {
+    if (win.runtime->ghostwin == g_host_ghostwin) {
+      return &win;
+    }
+  }
+  return nullptr;
 }
 
 /**
@@ -934,17 +2496,37 @@ static bool agent_bubble_window_contains_space(const wmWindow *win)
  */
 void ED_agent_bubble_windows_closed()
 {
+  agent_bubble_glass_reset();
+  agent_ui_cat_scheduler_forget();
+  ++g_bubble_motion_generation;
+  g_bubble_minimise_pending = false;
+  g_bubble_grown_for_chat = false;
   g_bubble_ghostwin = nullptr;
   g_pill_ghostwin = nullptr;
   g_bubble_minimised = false;
   g_bubble_expanded = false;
+  g_bubble_pad_active = false;
+  g_pad_saved_valid = false;
+  g_pill_rest_sketch = false;
+#if defined(__APPLE__) || defined(_WIN32)
+  /* The Cinema seat globals only exist where the seat can be set — see the
+   * platform guard on their declarations and on the seat functions. */
+  g_bubble_seat_valid = false;
+  g_pill_cinema_seat_valid = false;
+  g_pill_cinema_host = nullptr;
+#endif
 }
 
 void ED_agent_bubble_window_freed(const void *ghostwin)
 {
+  agent_ui_cat_scheduler_window_freed(ghostwin);
+  if (ghostwin == g_host_ghostwin || ghostwin == g_bubble_ghostwin) {
+    agent_ui_cat_scheduler_forget();
+  }
   if (ghostwin == nullptr) {
     return;
   }
+  agent_bubble_glass_reset(ghostwin);
   /* Match by GHOST pointer, not by space type: this runs from
    * wm_window_free() for EVERY window, including teardown paths that never
    * pass through wm_window_close() — replacing the window-manager on file
@@ -952,9 +2534,14 @@ void ED_agent_bubble_window_freed(const void *ghostwin)
    * host windows directly. Any cached pointer equal to the dying GHOST
    * window is about to dangle; clear exactly those. */
   if (ghostwin == g_bubble_ghostwin) {
+    ++g_bubble_motion_generation;
+    g_bubble_minimise_pending = false;
+    g_bubble_seat_valid = false;
     g_bubble_ghostwin = nullptr;
     g_bubble_minimised = false;
     g_bubble_expanded = false;
+    g_bubble_pad_active = false;
+    g_pad_saved_valid = false;
   }
   if (ghostwin == g_pill_ghostwin) {
     g_pill_ghostwin = nullptr;
@@ -986,7 +2573,8 @@ static int agent_bubble_close_all_windows(bContext *C)
   bool closed_one = true;
   while (closed_one) {
     closed_one = false;
-    LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
+    for (wmWindow &win_iter : wm->windows) {
+      wmWindow *win = &win_iter;
       if (!agent_bubble_window_contains_space(win)) {
         continue;
       }
@@ -1013,8 +2601,8 @@ static int agent_bubble_close_all_windows(bContext *C)
     else {
       /* Fallback: pick the first remaining window. */
       wmWindow *first = static_cast<wmWindow *>(wm->windows.first);
-      if (first != nullptr && first->ghostwin != nullptr) {
-        Mixar_WindowMakeKey(first->ghostwin);
+      if (first != nullptr && first->runtime->ghostwin != nullptr) {
+        Mixar_WindowMakeKey(first->runtime->ghostwin);
       }
     }
   }
@@ -1033,7 +2621,8 @@ static int agent_bubble_close_all_windows(bContext *C)
    * to the first surviving non-bubble window so we never dereference a freed
    * pointer in CTX_wm_window_set. */
   bool ctx_win_alive = false;
-  LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
+  for (wmWindow &win_iter : wm->windows) {
+    wmWindow *win = &win_iter;
     if (win == ctx_win) {
       ctx_win_alive = true;
       break;
@@ -1041,7 +2630,8 @@ static int agent_bubble_close_all_windows(bContext *C)
   }
   if (!ctx_win_alive) {
     ctx_win = nullptr;
-    LISTBASE_FOREACH (wmWindow *, win, &wm->windows) {
+    for (wmWindow &win_iter : wm->windows) {
+      wmWindow *win = &win_iter;
       if (!agent_bubble_window_contains_space(win)) {
         ctx_win = win;
         break;
@@ -1062,7 +2652,7 @@ static int agent_bubble_close_all_windows(bContext *C)
 static SpaceLink *agent_bubble_create(const ScrArea * /*area*/, const Scene * /*scene*/)
 {
   ARegion *region;
-  SpaceAgentBubble *sbubble = MEM_callocN<SpaceAgentBubble>("initagentbubble");
+  SpaceAgentBubble *sbubble = MEM_new<SpaceAgentBubble>("initagentbubble");
   sbubble->spacetype = SPACE_AGENT_BUBBLE;
   /* Mirror SpaceMixieChat init — sel_message_index = -1 means no
    * active selection. The struct is laid out identically to
@@ -1082,6 +2672,21 @@ static SpaceLink *agent_bubble_create(const ScrArea * /*area*/, const Scene * /*
   BLI_addtail(&sbubble->regionbase, region);
   region->regiontype = RGN_TYPE_HEADER;
   region->alignment = RGN_ALIGN_TOP;
+  /* Island top chrome: tab strip + card header row. VISIBLE — the transcript
+   * needs its own WINDOW region (the chat renderer owns a whole region and
+   * its View2D; confining it to a scissored band re-implemented scrolling
+   * badly), so the chrome above it lives here. Height is re-synced to the
+   * island scale every frame by agent_bubble_composer_region_layout; this is
+   * only the first-frame default. The pill window reuses this region for the
+   * status capsule (its repair path prunes the others). */
+  region->sizey = AGENT_BUBBLE_TOP_CHROME_HEIGHT;
+
+  region = BKE_area_region_new();
+  BLI_addtail(&sbubble->regionbase, region);
+  region->regiontype = RGN_TYPE_UI;
+  region->alignment = RGN_ALIGN_RIGHT;
+  region->sizex = 150;
+  region->flag |= RGN_FLAG_HIDDEN;
 
   /* Footer — bottom — input field + send button.
    * Use RGN_TYPE_TOOLS instead of RGN_TYPE_FOOTER because footer regions
@@ -1096,7 +2701,9 @@ static SpaceLink *agent_bubble_create(const ScrArea * /*area*/, const Scene * /*
   BLI_addtail(&sbubble->regionbase, region);
   region->regiontype = RGN_TYPE_TOOLS;
   region->alignment = RGN_ALIGN_BOTTOM;
-  region->sizey = AGENT_BUBBLE_FOOTER_HEIGHT;
+  /* Island bottom chrome: input strip + chip row + card foot. VISIBLE — see
+   * the HEADER note above; height re-synced per frame. */
+  region->sizey = AGENT_BUBBLE_BOTTOM_CHROME_HEIGHT;
 
   /* Main — scrollable chat history.
    *
@@ -1122,6 +2729,10 @@ static void agent_bubble_free(SpaceLink *sl)
    * safe: same field offsets. */
   SpaceMixieChat *smixie = reinterpret_cast<SpaceMixieChat *>(sl);
   mixie_chat_free_runtime(smixie);
+  /* The bubble now owns the shared caches formerly cleared by the standalone
+   * editor. A surviving bubble/pill rebuilds them on its next draw. */
+  footer_cache_clear();
+  mixie_chat_clear_property_caches();
 
   /* NOTE: Do NOT clear g_bubble_ghostwin / g_pill_ghostwin /
    * g_host_ghostwin here. This callback fires for EVERY
@@ -1148,7 +2759,7 @@ static void agent_bubble_init(wmWindowManager * /*wm*/, ScrArea * /*area*/)
 
 static SpaceLink *agent_bubble_duplicate(SpaceLink *sl)
 {
-  SpaceAgentBubble *new_sbubble = static_cast<SpaceAgentBubble *>(MEM_dupallocN(sl));
+  SpaceAgentBubble *new_sbubble = static_cast<SpaceAgentBubble *>(MEM_dupalloc_void(sl));
   new_sbubble->runtime = nullptr;
   return (SpaceLink *)new_sbubble;
 }
@@ -1162,13 +2773,125 @@ static SpaceLink *agent_bubble_duplicate(SpaceLink *sl)
 void agent_bubble_header_region_init(wmWindowManager * /*wm*/, ARegion *region)
 {
   ED_region_header_init(region);
+  mixie_chat_ink_header_handler_register(region);
+  /* The resting capsule consists entirely of HEADER, unlike the open
+   * composer's WINDOW/TOOLS regions. Its drop poll checks native identity. */
+  ListBaseT<wmDropBox> *dropboxes = WM_dropboxmap_find(
+      "Agent Bubble Pill", SPACE_AGENT_BUBBLE, RGN_TYPE_HEADER);
+  WM_event_add_dropbox_handler(&region->runtime->handlers, dropboxes);
 }
 
 void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
 {
+  /* Two windows share this region type: the BUBBLE's header is the island's
+   * top chrome (tab strip + card header row), the PILL's header is the status
+   * capsule. */
+  if (!agent_bubble_window_is_pill(C)) {
+    agent_bubble_fill_region_backdrop(region);
+    AgentIslandState state;
+    AgentIslandLayout layout;
+    if (agent_bubble_island_begin(C, region, &state, &layout)) {
+      agent_ui_draw_island(region, &layout, &state);
+      agent_bubble_island_end();
+      agent_bubble_island_controls_header(C, region, &layout, &state);
+
+      if (state.active_tab == AGENT_TAB_AGENT && state.ink_visible) {
+        mixie_chat_draw_ink_strokes_for_region(C, region);
+      }
+    }
+    return;
+  }
+
+  /* PILL path below.
+   *
+   * Structured so that EVERY code path paints the capsule. The earlier shape
+   * cleared the framebuffer first and bailed if the window context or the OS
+   * size query was missing — those frames composited as the bare window
+   * backdrop, a flat theme-grey flash alternating with the capsule, i.e. the
+   * pill "blinking". Size comes from the OS when available (wmWindow/region
+   * rects for this window are never updated after Mixar_WindowForceSize) and
+   * falls back to the region rect, which always exists. */
+  float pill_w = float(BLI_rcti_size_x(&region->winrct) + 1);
+  float pill_h = float(BLI_rcti_size_y(&region->winrct) + 1);
+  const wmWindow *win = CTX_wm_window(C);
+  if (win && win->runtime->ghostwin) {
+    int os_w = 0;
+    int os_h = 0;
+#if defined(__APPLE__) || defined(_WIN32)
+    Mixar_WindowGetContentPixelSize(win->runtime->ghostwin, &os_w, &os_h);
+#endif
+    if (os_w > 0 && os_h > 0) {
+      pill_w = float(os_w);
+      pill_h = float(os_h);
+    }
+  }
+
+  /* The pill's region rect hangs below the window (winrct.ymin is negative —
+   * the rects were laid out for the temp-window size and never updated), so
+   * region-local (0,0) is NOT the window's bottom-left. Two consequences,
+   * both fixed here: rows of the region outside the capsule showed the bare
+   * backdrop (paint a bed over the WHOLE region first), and the capsule drawn
+   * at region-local origin landed shifted down (translate so it is drawn in
+   * window coordinates). */
+  rctf region_rect;
+  region_rect.xmin = 0.0f;
+  region_rect.xmax = float(region->winx);
+  region_rect.ymin = 0.0f;
+  region_rect.ymax = float(region->winy);
+  /* Replace the complete region with the premultiplied native-frost wash. */
+  const float wash[4] = AGENT_COL_GLASS_WASH;
+  const float bed[4] = {0.02f, 0.02f, 0.02f, 1.0f};
+  if (agent_bubble_pill_bed_is_transparent()) {
+    agent_bubble_replace_frost_wash(&region_rect, wash);
+  }
+  else {
+    GPU_blend(GPU_BLEND_NONE);
+    ui::draw_roundbox_corner_set(ui::CNR_ALL);
+    ui::draw_roundbox_4fv(&region_rect, true, 0.0f, bed);
+  }
+
+  AgentIslandState state;
+  agent_ui_state_gather(C, &state);
+  GPU_matrix_push();
+  GPU_matrix_translate_2f(float(-region->winrct.xmin), float(-region->winrct.ymin));
+  agent_ui_draw_status_pill(region, pill_w, pill_h, &state);
+  GPU_matrix_pop();
+
+  if (pill_w > pill_h * 4.0f) {
+    /* The Sketch caret's blink edge and the live ECG share the cat's one timer. */
+    agent_ui_cat_schedule(win,
+                          region,
+                          g_host_ghostwin,
+                          std::min(agent_ui_cat_motion_next_frame(region),
+                                   agent_ui_pill_draft_next_frame()));
+  }
+  else {
+    agent_ui_cat_scheduler_forget(region);
+  }
+
+  return;
   /* Header TH_BACK resolves to ts->header from the Agent Bubble theme,
    * so no manual override is needed here. */
   ED_region_header(C, region);
+}
+
+/* Overlay pass — runs on EVERY window composite, drawing straight into the
+ * window framebuffer (wm_draw_window_onscreen), unlike the regular draw which
+ * paints into a cached per-region offscreen buffer that is then blitted.
+ * That cached buffer is freed whenever Blender thinks the region resized and
+ * is only repainted on the next tagged redraw — in the gap, composites
+ * blitted NOTHING for this region and the pill flashed as the bare window
+ * backdrop. Painting the capsule here as well means every composite shows a
+ * pill no matter what state the region buffer is in. wm_region_draw_overlay
+ * calls wmViewport(&region->winrct) first, which already establishes the
+ * region pixel-space ortho the pill painter expects. */
+static void agent_bubble_header_region_draw_overlay(const bContext *C, ARegion *region)
+{
+  /* Only the pill needs the every-composite repaint; re-running the bubble's
+   * header path here would rebuild its ui::Block outside the normal draw. */
+  if (agent_bubble_window_is_pill(C)) {
+    agent_bubble_header_region_draw(C, region);
+  }
 }
 
 /** \} */
@@ -1227,11 +2950,11 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
    * bubble has focus) — we only want a "main" window pointer here. */
   {
     wmWindow *invoker = CTX_wm_window(C);
-    if (invoker != nullptr && invoker->ghostwin != nullptr &&
-        invoker->ghostwin != g_bubble_ghostwin &&
-        invoker->ghostwin != g_pill_ghostwin)
+    if (invoker != nullptr && invoker->runtime->ghostwin != nullptr &&
+        invoker->runtime->ghostwin != g_bubble_ghostwin &&
+        invoker->runtime->ghostwin != g_pill_ghostwin)
     {
-      g_host_ghostwin = invoker->ghostwin;
+      g_host_ghostwin = invoker->runtime->ghostwin;
     }
   }
 
@@ -1254,14 +2977,11 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
   if (g_bubble_ghostwin != nullptr && g_bubble_minimised) {
     if (start_minimised) {
       if (g_pill_ghostwin != nullptr) {
-        pill_set_size(C,
-                      AGENT_BUBBLE_PILL_WIDTH_LARGE,
-                      AGENT_BUBBLE_PILL_HEIGHT_LARGE,
-                      AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
+        g_pill_rest_sketch = pill_sketch_wanted(CTX_wm_manager(C));
+        pill_set_size(C, pill_rest_width(), pill_rest_height(), pill_rest_radius());
       }
       if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
-        Mixar_WindowAnchorAtParentCentreBottom(
-            g_pill_ghostwin, g_host_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
+        pill_seat_on_host();
 #ifdef __APPLE__
         Mixar_WindowOrderFront(g_pill_ghostwin);
 #endif
@@ -1269,40 +2989,16 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
       return OPERATOR_FINISHED;
     }
 
-    if (g_host_ghostwin != nullptr) {
-      Mixar_WindowSnapToCentreBottomOfWindow(g_bubble_ghostwin,
-                                             g_host_ghostwin,
-                                             AGENT_BUBBLE_BOTTOM_MARGIN);
-    }
-    const int collapsed_height = agent_bubble_collapsed_height_for_current_attachments(C);
-    bubble_force_size_and_refresh(
-        C, g_bubble_ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
-    bubble_set_min_content_size(g_bubble_ghostwin, collapsed_height);
-    /* Re-arm hidesOnDeactivate AND re-attach to host BEFORE showing
-     * (mirrors restore_exec) — avoids Win32 Alt+Tab race. */
-    Mixar_WindowSetHidesOnDeactivate(g_bubble_ghostwin, true);
-    if (g_host_ghostwin != nullptr) {
-#ifdef _WIN32
-      Mixar_WindowSetParentTracked(g_bubble_ghostwin, g_host_ghostwin);
-#else
-      Mixar_WindowSetParentPlain(g_bubble_ghostwin, g_host_ghostwin);
-#endif
-    }
-    Mixar_WindowOrderFront(g_bubble_ghostwin);
-    /* Re-parent pill directly from host → bubble (no detach step)
-     * so it's never an unowned visible window. */
-    if (g_pill_ghostwin != nullptr) {
-      pill_set_size(C,
-                    AGENT_BUBBLE_PILL_WIDTH,
-                    AGENT_BUBBLE_PILL_HEIGHT,
-                    AGENT_BUBBLE_PILL_CORNER_RADIUS);
-      Mixar_WindowSetParent(g_pill_ghostwin, g_bubble_ghostwin);
-      Mixar_WindowPositionAboveParent(g_pill_ghostwin,
-                                      g_bubble_ghostwin,
-                                      /*offset_x=*/0,
-                                      /*offset_y=*/AGENT_BUBBLE_PILL_GAP);
-    }
-    g_bubble_minimised = false;
+    return WM_operator_name_call(C, "MIXAR_OT_bubble_restore",
+                                 wm::OpCallContext::ExecDefault, nullptr, nullptr);
+  }
+
+  /* An OPEN island belongs to the user. A pill-only autoshow that lands
+   * while it is open (the file-load retry tick, a workspace change) used to
+   * fall through WM_window_open's dedup into the start_minimised block below
+   * and collapse the chat mid-conversation — read as "the island minimises
+   * on its own". Leave it exactly as it is. */
+  if (start_minimised && g_bubble_ghostwin != nullptr && !g_bubble_minimised) {
     return OPERATOR_FINISHED;
   }
 #endif
@@ -1333,7 +3029,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
   }
 
 #if defined(__APPLE__) || defined(_WIN32)
-  if (win->ghostwin != nullptr) {
+  if (win->runtime->ghostwin != nullptr) {
 #ifdef __APPLE__
     /* Tag this NSWindow as a non-blocking floating dock so
      * hasDialogWindow() exempts it from the modal-dialog gate.
@@ -1342,19 +3038,19 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * bubble is open — meaning viewport shortcuts and mixie chat
      * typing receive no keystrokes. Must be set BEFORE any user
      * interaction (clicking back on the main window). */
-    Mixar_WindowMarkAsFloatingDock(win->ghostwin);
+    Mixar_WindowMarkAsFloatingDock(win->runtime->ghostwin);
 
     /* Pin the bubble to its parent's Space so it doesn't leak onto
      * another Space when the user swipes away from a full-screen
      * Mixar (the three-finger gesture / Mission Control). Without
      * this the floating bubble surfaces on top of whatever window is
      * in the Space the user switched to. See Mixar_WindowBindToParentSpace. */
-    Mixar_WindowBindToParentSpace(win->ghostwin);
+    Mixar_WindowBindToParentSpace(win->runtime->ghostwin);
 #endif
 
     /* Strip traffic lights + title bar. Safe to call on the dedup-
      * reused window too — chromeless state persists. */
-    Mixar_WindowSetChromeless(win->ghostwin, true);
+    Mixar_WindowSetChromeless(win->runtime->ghostwin, true);
 
     /* Pin the bubble to NSFloatingWindowLevel so it stays visible
      * above the rest of Mixar's interface no matter where the user
@@ -1362,20 +3058,24 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * to do this but kept losing the bubble behind the main window
      * across various click scenarios — Floating level is the
      * reliable OS-level mechanism. */
-    Mixar_WindowSetFloatingLevel(win->ghostwin);
+    Mixar_WindowSetFloatingLevel(win->runtime->ghostwin);
 
     /* Hide the bubble when Mixar deactivates (user alt-tabs to
      * another app). Without this, the floating level keeps the
      * bubble visible above other apps' windows too — the
      * cross-app leak the user reported. AppKit handles the
      * orderOut/orderFront automatically based on app activation. */
-    Mixar_WindowSetHidesOnDeactivate(win->ghostwin, true);
+    Mixar_WindowSetHidesOnDeactivate(win->runtime->ghostwin, true);
 
     /* Round the window corners to match the Figma's soft popup look.
      * Done after Chromeless so the title-bar style mask is already
      * settled — corner-rounding sets opaque=NO + clearColor which
      * doesn't play nicely with subsequent style-mask changes. */
-    Mixar_WindowSetCornerRadius(win->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
+    Mixar_WindowSetCornerRadius(win->runtime->ghostwin, AGENT_BUBBLE_CORNER_RADIUS);
+    /* Order matters on macOS: rounding is what makes the window non-opaque,
+     * and this asks the platform to give that opacity up. */
+    agent_bubble_glass_reset(win->runtime->ghostwin);
+    agent_bubble_glass_request(C, win->runtime->ghostwin, false);
 
     /* Force the actual NSWindow size to our requested dimensions.
      * Without this, WM_window_open's std::max-with-{200,150} clamping
@@ -1384,8 +3084,8 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * asked for, causing the footer to collapse). */
     const int collapsed_height = agent_bubble_collapsed_height_for_current_attachments(C);
     bubble_force_size_and_refresh(
-        C, win->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
-    bubble_set_min_content_size(win->ghostwin, collapsed_height);
+        C, win->runtime->ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, collapsed_height);
+    bubble_set_min_content_size(win->runtime->ghostwin, collapsed_height);
 
     /* Anchor the bubble at the centre-bottom of Mixar's HOST
      * window (not the screen). WM_window_open used
@@ -1399,25 +3099,25 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * builds that snapped to the screen put the bubble visually
      * "below Mixar" if Mixar didn't fill the screen. */
     if (g_host_ghostwin != nullptr) {
-      Mixar_WindowSnapToCentreBottomOfWindow(win->ghostwin,
+      Mixar_WindowSnapToCentreBottomOfWindow(win->runtime->ghostwin,
                                              g_host_ghostwin,
                                              AGENT_BUBBLE_BOTTOM_MARGIN);
     }
     else {
-      Mixar_WindowSnapToCentreBottom(win->ghostwin,
+      Mixar_WindowSnapToCentreBottom(win->runtime->ghostwin,
                                      AGENT_BUBBLE_BOTTOM_MARGIN);
     }
 
     /* Pin the OS-level minimum to the current collapsed bubble size so the
      * attachment-aware layout is also the smallest manually resizable layout. */
-    bubble_set_min_content_size(win->ghostwin, collapsed_height);
+    bubble_set_min_content_size(win->runtime->ghostwin, collapsed_height);
 
     /* Stash the bubble's ghostwin pointer so the
      * minimise / restore / expand ops can address it later
      * regardless of which window the user invokes them from. Reset
      * the minimised flag because a freshly-opened bubble starts
      * visible. */
-    g_bubble_ghostwin = win->ghostwin;
+    g_bubble_ghostwin = win->runtime->ghostwin;
     g_bubble_minimised = false;
     g_bubble_expanded = false;
     g_bubble_had_pending_attachments = false;
@@ -1464,7 +3164,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      *      tracks the bubble's position automatically when the user
      *      drags the bubble around the screen, and closes when the
      *      bubble closes. */
-    if (!Mixar_WindowHasChildWindow(win->ghostwin)) {
+    if (!Mixar_WindowHasChildWindow(win->runtime->ghostwin)) {
       rcti pill_rect;
       pill_rect.xmin = 0;
       pill_rect.ymin = 0;
@@ -1513,12 +3213,14 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
             while (region != nullptr) {
               ARegion *next = region->next;
               if (region->regiontype == RGN_TYPE_WINDOW ||
-                  region->regiontype == RGN_TYPE_TOOLS)
+                  region->regiontype == RGN_TYPE_TOOLS ||
+                  region->regiontype == RGN_TYPE_CHANNELS ||
+                  region->regiontype == RGN_TYPE_UI)
               {
                 ED_region_exit(C, region);
                 BLI_remlink(&pill_area->regionbase, region);
                 BKE_area_region_free(st, region);
-                MEM_freeN(region);
+                MEM_delete_void(static_cast<void *>(region));
               }
               else if (region->regiontype == RGN_TYPE_HEADER) {
                 /* Stretch the HEADER to fill the entire pill window.
@@ -1527,6 +3229,10 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
                  * every header to ED_area_headersize). */
                 region->sizey = AGENT_BUBBLE_PILL_HEIGHT;
                 region->flag &= ~RGN_FLAG_DYNAMIC_SIZE;
+                /* The BUBBLE hides its HEADER — the island paints that band
+                 * itself. On the PILL this region is the whole window, and it
+                 * is what draws the status pill, so it has to be visible. */
+                region->flag &= ~RGN_FLAG_HIDDEN;
               }
               region = next;
             }
@@ -1537,18 +3243,18 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
           }
         }
 
-        if (pill_win->ghostwin != nullptr) {
+        if (pill_win->runtime->ghostwin != nullptr) {
 #ifdef __APPLE__
           /* Tag the pill as a non-blocking floating dock too — same
            * reason as the bubble: keeps hasDialogWindow() from
            * blocking the main window's key-window eligibility. */
-          Mixar_WindowMarkAsFloatingDock(pill_win->ghostwin);
+          Mixar_WindowMarkAsFloatingDock(pill_win->runtime->ghostwin);
 
           /* Pin the pill to its parent's Space too — when the bubble
            * is minimised the pill is detached and re-parented onto the
            * host window, so it must carry the same Space-binding to
            * avoid leaking onto another Space in full-screen Mixar. */
-          Mixar_WindowBindToParentSpace(pill_win->ghostwin);
+          Mixar_WindowBindToParentSpace(pill_win->runtime->ghostwin);
 #endif
 
           /* Borderless (NOT chromeless): chromeless leaves the
@@ -1558,46 +3264,48 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
            * reported). Borderless removes the title bar entirely so
            * the pill's contentView fills the frame with a single
            * solid colour. */
-          Mixar_WindowSetBorderless(pill_win->ghostwin);
+          Mixar_WindowSetBorderless(pill_win->runtime->ghostwin);
+          agent_bubble_glass_reset(pill_win->runtime->ghostwin);
+          agent_bubble_glass_request(C, pill_win->runtime->ghostwin, true);
 
           /* Pin the pill to floating level too. As a child window of
            * the bubble it'd inherit the bubble's level, but when the
            * user minimises the bubble we detach the pill and need
            * it to stay above other windows on its own. */
-          Mixar_WindowSetFloatingLevel(pill_win->ghostwin);
+          Mixar_WindowSetFloatingLevel(pill_win->runtime->ghostwin);
 
           /* Pill also hides when Mixar deactivates — same anti-leak
            * treatment as the bubble. */
-          Mixar_WindowSetHidesOnDeactivate(pill_win->ghostwin, true);
+          Mixar_WindowSetHidesOnDeactivate(pill_win->runtime->ghostwin, true);
 
           /* Half-height corner radius gives a true pill silhouette
            * (fully rounded left + right ends) rather than a small
            * rounded rectangle. */
-          Mixar_WindowSetCornerRadius(pill_win->ghostwin,
+          Mixar_WindowSetCornerRadius(pill_win->runtime->ghostwin,
                                       AGENT_BUBBLE_PILL_CORNER_RADIUS);
 
           /* Override macOS contentMinSize so setFrame can shrink to
            * the small pill dimensions. 40×20 is well below our 80×26
            * target so the resize isn't clamped. */
-          Mixar_WindowSetMinContentSize(pill_win->ghostwin, 40, 20);
-          Mixar_WindowForceSize(pill_win->ghostwin,
+          Mixar_WindowSetMinContentSize(pill_win->runtime->ghostwin, 40, 20);
+          Mixar_WindowForceSize(pill_win->runtime->ghostwin,
                                 AGENT_BUBBLE_PILL_WIDTH,
                                 AGENT_BUBBLE_PILL_HEIGHT);
 
           /* Position pill above bubble's top-left, with the gap. */
-          Mixar_WindowPositionAboveParent(pill_win->ghostwin,
-                                          win->ghostwin,
+          Mixar_WindowPositionAboveParent(pill_win->runtime->ghostwin,
+                                          win->runtime->ghostwin,
                                           /*offset_x=*/0,
                                           /*offset_y=*/AGENT_BUBBLE_PILL_GAP);
 
           /* Attach as macOS child window — pill follows bubble's
            * frame automatically and closes with it. */
-          Mixar_WindowSetParent(pill_win->ghostwin, win->ghostwin);
+          Mixar_WindowSetParent(pill_win->runtime->ghostwin, win->runtime->ghostwin);
 
           /* Stash the pill ghostwin too — needed by the minimise /
            * restore ops which detach + re-attach the pill from the
            * bubble. */
-          g_pill_ghostwin = pill_win->ghostwin;
+          g_pill_ghostwin = pill_win->runtime->ghostwin;
         }
       }
     }
@@ -1628,17 +3336,14 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
      * minimised flag. */
     if (start_minimised) {
       Mixar_WindowSetHidesOnDeactivate(g_bubble_ghostwin, false);
-      pill_set_size(C,
-                    AGENT_BUBBLE_PILL_WIDTH_LARGE,
-                    AGENT_BUBBLE_PILL_HEIGHT_LARGE,
-                    AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
+      g_pill_rest_sketch = pill_sketch_wanted(CTX_wm_manager(C));
+      pill_set_size(C, pill_rest_width(), pill_rest_height(), pill_rest_radius());
 #ifdef _WIN32
       /* Win32: re-parent pill directly bubble→host so it's never
        * an unowned visible window (avoids Alt+Tab race).  Then
        * detach bubble from host and hide it. */
       if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
-        Mixar_WindowAnchorAtParentCentreBottom(
-            g_pill_ghostwin, g_host_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
+        pill_seat_on_host();
       }
       if (g_host_ghostwin != nullptr) {
         Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
@@ -1654,25 +3359,11 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
       }
 #endif
       Mixar_WindowOrderOut(g_bubble_ghostwin);
-      if (g_pill_ghostwin != nullptr) {
-        if (g_host_ghostwin != nullptr) {
-          /* Same anchor helper as the manual minimise path — installs
-           * Move + Resize observers on the host so the pill stays
-           * pinned to the host's centre-bottom across drags (within
-           * a monitor, across monitors) and host resizes. */
-          Mixar_WindowAnchorAtParentCentreBottom(
-              g_pill_ghostwin,
-              g_host_ghostwin,
-              AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
-        }
-        else {
-          /* No host window known (e.g. opened from an unusual context):
-           * fall back to screen-relative snapping so the pill is at
-           * least visible somewhere predictable. */
-          Mixar_WindowSnapToCentreBottom(g_pill_ghostwin,
-                                         AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
-        }
-      }
+      /* Same seat as the manual minimise path: anchored to the host (its
+       * Move + Resize observers keep the pill pinned across drags within a
+       * monitor, across monitors, and host resizes), or screen-snapped when
+       * no host window is known. */
+      pill_seat_on_host();
       g_bubble_minimised = true;
     }
 
@@ -1760,7 +3451,7 @@ void MIXAR_OT_agent_bubble_purge_windows(wmOperatorType *ot)
 static wmOperatorStatus mixar_bubble_set_size_exec(bContext *C, wmOperator *op)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->ghostwin == nullptr) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr) {
     return OPERATOR_CANCELLED;
   }
 
@@ -1768,9 +3459,11 @@ static wmOperatorStatus mixar_bubble_set_size_exec(bContext *C, wmOperator *op)
   const int height = RNA_int_get(op->ptr, "height");
 
 #if defined(__APPLE__) || defined(_WIN32)
-  bubble_force_size_and_refresh(C, win->ghostwin, width, height);
+  bubble_force_size_and_refresh(C, win->runtime->ghostwin, width, height);
+  bubble_set_min_content_size(win->runtime->ghostwin,
+                              agent_bubble_collapsed_height_for_current_attachments(C));
 #  ifdef __APPLE__
-  Mixar_WindowOrderFront(win->ghostwin);
+  Mixar_WindowOrderFront(win->runtime->ghostwin);
 #  endif
 #else
   /* Non-macOS: best-effort no-op for now. Windows / Linux GHOST
@@ -1827,8 +3520,9 @@ static void agent_bubble_force_redraw(bContext *C)
   if (wm == nullptr) {
     return;
   }
-  LISTBASE_FOREACH (wmWindow *, w, &wm->windows) {
-    if (w->ghostwin != g_bubble_ghostwin) {
+  for (wmWindow &w_iter : wm->windows) {
+    wmWindow *w = &w_iter;
+    if (w->runtime->ghostwin != g_bubble_ghostwin) {
       continue;
     }
     bScreen *screen = WM_window_get_active_screen(w);
@@ -1847,27 +3541,20 @@ static void agent_bubble_force_redraw(bContext *C)
 static wmOperatorStatus mixar_bubble_sync_attachment_size_exec(bContext *C, wmOperator *op)
 {
 #if defined(__APPLE__) || defined(_WIN32)
-  const bool force_attachment_height = RNA_boolean_get(op->ptr, "force_attachment_height");
-  if (force_attachment_height && g_bubble_ghostwin != nullptr && !g_bubble_minimised &&
-      !g_bubble_expanded)
-  {
-    /* Use 1 (not the actual count) because this fires before the
-     * pending attachment list is updated — we just need the "has
-     * attachments" height floor to pre-size the bubble. */
-    const int height = agent_bubble_height_floor_for_attachments(1);
-    bubble_force_size_and_refresh(C, g_bubble_ghostwin, AGENT_BUBBLE_DEFAULT_WIDTH, height);
-    bubble_set_min_content_size(g_bubble_ghostwin, height);
-    g_bubble_had_pending_attachments = true;
-    return OPERATOR_FINISHED;
-  }
-  agent_bubble_sync_footer_window_size(C, CTX_wm_region(C), /*from_draw=*/false);
-  /* Always force a redraw — agent_bubble_sync_footer_window_size
-   * may early-return without tagging when the bubble is already the
-   * right size, but the footer thumbnails still need rendering. */
+  /* ISLAND ARCHITECTURE: attachments no longer drive window sizing. The old
+   * footer pre-sized the bubble for a thumbnail strip; the island renders
+   * pending attachments in a scrollable column above Send, so no extra
+   * window height is needed. The legacy force-size here was also the
+   * "attach an image and the whole chat bugs out" bug: it re-applied the
+   * pre-island layout constants (and on retina ended up doubling the window
+   * to 1748x896). The operator survives for its Python callers, now only
+   * tagging a redraw so the reference column updates immediately. */
+  (void)op;
   agent_bubble_force_redraw(C);
   return OPERATOR_FINISHED;
 #else
   (void)C;
+  (void)op;
   return OPERATOR_CANCELLED;
 #endif
 }
@@ -1900,15 +3587,91 @@ void MIXAR_OT_bubble_sync_attachment_size(wmOperatorType *ot)
  * delta-based implementation laggy.
  * \{ */
 
+/** Either half of Scribble is up: the viewport freeze (`wm.mixar_mark_armed`)
+ *  or the chat ink canvas (`wm.mixie_chat_ink_visible`). Both are
+ *  Python-registered WindowManager bools; absent reads as off. Defined
+ *  here so begin-drag can refuse a writing-pad press. */
+static bool agent_bubble_scribble_active(const bContext *C)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm) {
+    return false;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  for (const char *name : {"mixar_mark_armed", "mixie_chat_ink_visible"}) {
+    PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, name);
+    if (prop && RNA_property_type(prop) == PROP_BOOLEAN &&
+        RNA_property_boolean_get(&wm_ptr, prop))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 static wmOperatorStatus mixar_bubble_window_begin_drag_exec(bContext *C, wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->ghostwin == nullptr) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr) {
+    return OPERATOR_CANCELLED;
+  }
+
+  /* Content owns text selection, scrolling and asset gestures. A press
+   * passed through by a region handler must never turn into a window move.
+   * The resting pill also uses HEADER, so its click/drag gesture is retained. */
+  const ARegion *region = CTX_wm_region(C);
+  if (region == nullptr || region->regiontype != RGN_TYPE_HEADER) {
+    return OPERATOR_CANCELLED;
+  }
+
+  /* Stand down when the button under the cursor is waiting to start its own
+   * drag — a Library asset tile. Blender answers a press over a
+   * draggable button with WM_UI_HANDLER_CONTINUE (`ui_do_but_EXIT`) so a
+   * region keymap can still select, which is the only reason that press ever
+   * reaches the WINDOW-level LEFTMOUSE binding this operator hangs off. Taking
+   * it here hands the gesture to AppKit's native window drag, which swallows
+   * every following mouse-move, so the tile's asset drag never begins and the
+   * window moves instead. */
+  if (UI_mixar_region_active_but_is_draggable(CTX_wm_region(C))) {
+    return OPERATOR_CANCELLED;
+  }
+
+  /* The writing PAD is the island WINDOW (and header/composer seams). A
+   * LEFTMOUSE that the ink handler did not BREAK — overlay not latched
+   * yet, a HEADER press outside the docked-chat button band, select_text
+   * PASS_THROUGH on empty canvas — reaches this WINDOW-level binding and
+   * AppKit's performWindowDragWithEvent: swallows the moves handwriting
+   * needs. Stand down for the whole Scribble mode, same poll the pad uses. */
+  if (mixie_chat_ink_read_visible(CTX_wm_manager(C))) {
     return OPERATOR_CANCELLED;
   }
 
 #if defined(__APPLE__) || defined(_WIN32)
-  Mixar_WindowBeginDrag(win->ghostwin);
+  if (win->runtime->ghostwin == g_pill_ghostwin) {
+    /* Only the MINIMISED resting pill is movable. The small status pill
+     * above the open island is re-seated on the island's every move and
+     * resize (Mixar_WindowSetParent's observers), so a drag there would
+     * fight the anchor; refusing hands the gesture back to the Python op,
+     * which then treats it as neither a click nor a drag. */
+    if (!g_bubble_minimised) {
+      return OPERATOR_CANCELLED;
+    }
+    /* Switch the pill from the centre-bottom anchor to following the host
+     * at ITS OWN offset BEFORE the drag moves it: the centre-bottom
+     * observers would snap it straight back on the host's next move, and
+     * the offset anchor is what adopts the drag as the new seat. */
+    if (g_host_ghostwin != nullptr) {
+      int ox = 0;
+      int oy = 0;
+      if (Mixar_WindowGetParentOffset(g_pill_ghostwin, g_host_ghostwin, &ox, &oy)) {
+        g_pill_user_placed = true;
+        g_pill_user_offset_x = ox - pill_rest_dx();
+        g_pill_user_offset_y = oy - pill_rest_dy();
+        Mixar_WindowAnchorAtParentOffset(g_pill_ghostwin, g_host_ghostwin, ox, oy);
+      }
+    }
+  }
+  Mixar_WindowBeginDrag(win->runtime->ghostwin);
 #endif
 
   return OPERATOR_FINISHED;
@@ -1926,11 +3689,11 @@ static wmOperatorStatus mixar_bubble_window_update_drag_exec(bContext *C,
                                                              wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->ghostwin == nullptr) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr) {
     return OPERATOR_CANCELLED;
   }
 #ifdef _WIN32
-  Mixar_WindowUpdateDrag(win->ghostwin);
+  Mixar_WindowUpdateDrag(win->runtime->ghostwin);
 #endif
   return OPERATOR_FINISHED;
 }
@@ -1947,11 +3710,14 @@ static wmOperatorStatus mixar_bubble_window_end_drag_exec(bContext *C,
                                                           wmOperator * /*op*/)
 {
   wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->ghostwin == nullptr) {
+  if (win == nullptr || win->runtime->ghostwin == nullptr) {
     return OPERATOR_CANCELLED;
   }
 #ifdef _WIN32
-  Mixar_WindowEndDrag(win->ghostwin);
+  Mixar_WindowEndDrag(win->runtime->ghostwin);
+  if (win->runtime->ghostwin == g_pill_ghostwin && g_bubble_minimised) {
+    pill_remember_user_seat();
+  }
 #endif
   return OPERATOR_FINISHED;
 }
@@ -1977,7 +3743,9 @@ void MIXAR_OT_bubble_window_end_drag(wmOperatorType *ot)
  *     bubble, snap the now-orphan pill to the centre-bottom of the
  *     screen. Sets g_bubble_minimised = true.
  *   * MIXAR_OT_bubble_restore — invoked by clicking the pill while
- *     minimised. orderFront the bubble (it remembers its frame),
+ *     minimised (a press that does not travel past the drag threshold;
+ *     one that does moves the pill instead — bubble_header_drag_op.py).
+ *     orderFront the bubble (it remembers its frame),
  *     re-attach the pill as a child window (Mixar_WindowSetParent
  *     also re-positions it above the parent's top-left). Clears
  *     g_bubble_minimised. No-op when not minimised.
@@ -1999,23 +3767,46 @@ void MIXAR_OT_bubble_window_end_drag(wmOperatorType *ot)
  * pointers directly. Defined as a plain C function (not a lambda
  * with capture) because Mixar_DispatchMainAfter takes a function
  * pointer. */
-static void minimise_anim_finish(void * /*user_data*/)
+static void minimise_anim_finish(void *user_data)
 {
+  if (reinterpret_cast<uintptr_t>(user_data) != g_bubble_motion_generation ||
+      !g_bubble_minimised)
+  {
+    return;
+  }
+  g_bubble_minimise_pending = false;
   if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
+    /* Sketch minimises the island: arrive at the Sketch size, not a step later. */
+    g_pill_rest_sketch = G_MAIN && pill_sketch_wanted(
+                                       static_cast<wmWindowManager *>(G_MAIN->wm.first));
 #ifdef _WIN32
-    Mixar_WindowSetCornerRadius(g_pill_ghostwin, AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
-    Mixar_WindowAnimateFrameToCentreBottomOfWindow(
-        g_pill_ghostwin,
-        g_host_ghostwin,
-        AGENT_BUBBLE_PILL_WIDTH_LARGE,
-        AGENT_BUBBLE_PILL_HEIGHT_LARGE,
-        AGENT_BUBBLE_PILL_BOTTOM_MARGIN,
-        /*duration=*/0.0f);
-    Mixar_WindowAnchorAtParentCentreBottom(
-        g_pill_ghostwin, g_host_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
+    Mixar_WindowSetCornerRadius(g_pill_ghostwin, pill_rest_radius());
+    if (g_pill_user_placed) {
+      /* The user's own seat: only the size changes here, the offset anchor
+       * places it. */
+      Mixar_WindowForceSize(g_pill_ghostwin, pill_rest_width(), pill_rest_height());
+    }
+    else {
+      Mixar_WindowAnimateFrameToCentreBottomOfWindow(
+          g_pill_ghostwin,
+          g_host_ghostwin,
+          pill_rest_width(),
+          pill_rest_height(),
+          AGENT_BUBBLE_PILL_BOTTOM_MARGIN,
+          /*duration=*/0.0f);
+    }
+    pill_seat_on_host();
 #else
-    Mixar_WindowAnchorAtParentCentreBottom(
-        g_pill_ghostwin, g_host_ghostwin, AGENT_BUBBLE_PILL_BOTTOM_MARGIN);
+    /* The pill is fully faded out here — resize to the elongated shape and
+     * seat it at the resting spot while nothing is visible, then fade in.
+     * Native-only resize (no bContext in this callback): the pill's HEADER
+     * draw sizes itself from Mixar_WindowGetContentPixelSize and repaints on
+     * every composite via draw_overlay, so skipping the wmWindow layout sync
+     * is safe for this surface. */
+    Mixar_WindowForceSize(g_pill_ghostwin, pill_rest_width(), pill_rest_height());
+    Mixar_WindowSetCornerRadius(g_pill_ghostwin, pill_rest_radius());
+    pill_seat_on_host();
+    Mixar_WindowAnimateAlphaTo(g_pill_ghostwin, 1.0f, 0.18f);
 #endif
   }
   if (g_bubble_ghostwin != nullptr) {
@@ -2025,12 +3816,140 @@ static void minimise_anim_finish(void * /*user_data*/)
 }
 #endif
 
+/* -------------------------------------------------------------------- */
+/** \name Island heartbeat and outside-click dismissal
+ *
+ * The heartbeat maintains focus, Scribble and mascot scheduling. Pointer
+ * movement never dismisses the island; WM delivers actual button presses.
+ * \{ */
+
+void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  if (!g_bubble_minimised && g_bubble_ghostwin &&
+      agent_bubble_should_dismiss(C, event, g_bubble_ghostwin, g_pill_ghostwin) &&
+      !agent_bubble_scribble_active(C))
+  {
+    WM_operator_name_call(C, "MIXAR_OT_bubble_minimise",
+                          blender::wm::OpCallContext::ExecDefault, nullptr, nullptr);
+  }
+#endif
+}
+
+static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /*op*/)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  if (g_bubble_ghostwin && !g_bubble_minimised && !g_bubble_pad_active) {
+    int width = 0, height = 0;
+    if (Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height)) {
+      const AgentBubbleSize fitted = bubble_fit_to_host(width, height);
+      if (fitted.width != width || fitted.height != height) {
+        bubble_force_size_and_refresh(C, g_bubble_ghostwin, fitted.width, fitted.height);
+        int host_w = 0, host_h = 0, x = 0, y = 0;
+        if (Mixar_WindowGetContentSize(g_host_ghostwin, &host_w, &host_h) &&
+            Mixar_WindowGetParentOffset(g_bubble_ghostwin, g_host_ghostwin, &x, &y))
+        {
+          Mixar_WindowPlaceInParent(
+              g_bubble_ghostwin, g_host_ghostwin,
+              std::clamp(x, 24, std::max(24, host_w - fitted.width - 24)),
+              std::clamp(y, 64, std::max(64, host_h - fitted.height - 48)));
+        }
+      }
+    }
+  }
+  agent_bubble_composer_focus_tick(C, g_bubble_ghostwin, g_bubble_minimised);
+  /* Handwriting pad: open -> the open island becomes the writing pad on the
+   * host's right third; disarm -> it goes back. Edge-detected here because
+   * this tick is the one C++ poll of the mode that every arm/disarm path
+   * reaches (the chip, the header toggle, Esc in the freeze, the send).
+   * Before the cooldown gate: the pad must not wait on a minimise/restore
+   * settling. */
+  {
+    const bool handwriting = mixie_chat_ink_read_visible(CTX_wm_manager(C));
+    if (handwriting && !g_bubble_pad_active) {
+      agent_bubble_pad_apply(C);
+    }
+    else if (!handwriting && g_bubble_pad_active) {
+      agent_bubble_pad_restore(C);
+    }
+  }
+
+  /* Sketch pill: arming or ending Sketch while the pill rests grows or shrinks
+   * it in place, bottom-centre fixed. Edge-detected here for the same reason
+   * as the pad; the minimise finish seats a pill that arrives mid-Sketch. */
+  if (g_bubble_minimised && !g_bubble_minimise_pending && g_pill_ghostwin != nullptr &&
+      g_host_ghostwin != nullptr)
+  {
+    const bool sketch = pill_sketch_wanted(CTX_wm_manager(C));
+    if (sketch != g_pill_rest_sketch) {
+      g_pill_rest_sketch = sketch;
+      pill_set_size(C, pill_rest_width(), pill_rest_height(), pill_rest_radius());
+      pill_seat_on_host();
+    }
+  }
+
+  agent_ui_cat_scheduler_sync(CTX_wm_manager(C), g_pill_ghostwin, g_bubble_minimised);
+
+  return OPERATOR_FINISHED;
+#else
+  return OPERATOR_CANCELLED;
+#endif
+}
+
+/**
+ * Nothing to maintain until the island has a window of its own.
+ *
+ * The Python pump (hover_ops.py) gates its tick on `op.poll()`, and without a
+ * poll callback that is unconditionally true — a full `bpy.ops` invocation ten
+ * times a second for the whole session, bubble or no bubble. On a platform
+ * outside the `Mixar_Window*` allowlist (see agent_bubble/constants.py) the
+ * exec body below is a bare OPERATOR_CANCELLED, so the poll is simply false.
+ */
+static bool mixar_bubble_hover_tick_poll(bContext * /*C*/)
+{
+#if defined(__APPLE__) || defined(_WIN32)
+  return g_bubble_ghostwin != nullptr || g_pill_ghostwin != nullptr;
+#else
+  return false;
+#endif
+}
+
+void MIXAR_OT_bubble_hover_tick(wmOperatorType *ot)
+{
+  ot->name = "Island Tick";
+  ot->idname = "MIXAR_OT_bubble_hover_tick";
+  ot->description = "Maintain island focus, Scribble and animation";
+  ot->exec = mixar_bubble_hover_tick_exec;
+  ot->poll = mixar_bubble_hover_tick_poll;
+  ot->flag = OPTYPE_INTERNAL;
+}
+
+/** \} */
+
 static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*op*/)
 {
 #if defined(__APPLE__) || defined(_WIN32)
   if (g_bubble_ghostwin == nullptr || g_bubble_minimised) {
     return OPERATOR_CANCELLED;
   }
+  if (g_bubble_pad_active) {
+    agent_bubble_pad_restore(C);
+  }
+  if (g_host_ghostwin) {
+    g_bubble_seat_valid = Mixar_WindowGetParentOffset(
+        g_bubble_ghostwin, g_host_ghostwin, &g_bubble_seat_x, &g_bubble_seat_y) &&
+        Mixar_WindowGetContentSize(
+            g_bubble_ghostwin, &g_bubble_seat_width, &g_bubble_seat_height);
+    g_pill_user_placed = false;
+  }
+  g_bubble_minimised = true;
+  g_bubble_minimise_pending = true;
+  const uintptr_t generation = ++g_bubble_motion_generation;
+  /* A padded island that minimises leaves the pad: the restore path sizes
+   * and seats the island itself, and the tick re-applies the pad if Scribble
+   * is still armed when it comes back. */
+  g_bubble_pad_active = false;
+  g_pad_saved_valid = false;
 
   /* Disarm AppKit's hidesOnDeactivate so the bubble stays hidden
    * across alt-tab cycles (macOS). */
@@ -2043,12 +3962,10 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
     Mixar_WindowDetachFromParent(g_bubble_ghostwin, g_host_ghostwin);
   }
 #else
-  if (g_pill_ghostwin != nullptr) {
-    pill_set_size(C,
-                  AGENT_BUBBLE_PILL_WIDTH_LARGE,
-                  AGENT_BUBBLE_PILL_HEIGHT_LARGE,
-                  AGENT_BUBBLE_PILL_CORNER_RADIUS_LARGE);
-  }
+  /* Do NOT resize the pill here: ForceSize grows the frame from its current
+   * origin, so the still-visible pill flashed as a wide slab hanging off to
+   * the left before the anchor dropped it into the seat. It fades out at its
+   * small size; the finish callback resizes + seats it while invisible. */
   /* macOS: detach pill from bubble first (AppKit cascades hide to
    * child windows — the pill must be detached before the bubble
    * hides or it will vanish too). */
@@ -2065,27 +3982,28 @@ static wmOperatorStatus mixar_bubble_minimise_exec(bContext *C, wmOperator * /*o
    * so just hide the bubble and finish synchronously. The pill was
    * already re-parented to host above, so minimise_anim_finish
    * just hides the bubble and resets alpha. */
-  minimise_anim_finish(nullptr);
+  minimise_anim_finish(reinterpret_cast<void *>(generation));
 #else
-  /* macOS: animate the pill glide + bubble fade, then schedule the
-   * finish callback via dispatch_after. */
-  if (g_pill_ghostwin != nullptr && g_host_ghostwin != nullptr) {
-    Mixar_WindowAnimateFrameToCentreBottomOfWindow(
-        g_pill_ghostwin,
-        g_host_ghostwin,
-        AGENT_BUBBLE_PILL_WIDTH_LARGE,
-        AGENT_BUBBLE_PILL_HEIGHT_LARGE,
-        AGENT_BUBBLE_PILL_BOTTOM_MARGIN,
-        AGENT_BUBBLE_MINIMISE_ANIM_DURATION);
+  /* macOS: the bubble sinks + fades (FLIP layer animation); the pill
+   * CROSSFADES to its resting seat — a long frame glide runs on AppKit's
+   * legacy NSAnimation timer and reads ~30fps, while a fade has no motion to
+   * be choppy. Fade it out here; the finish callback seats it and fades it
+   * back in. */
+  if (g_pill_ghostwin != nullptr) {
+    Mixar_WindowAnimateAlphaTo(g_pill_ghostwin, 0.0f, 0.08f);
   }
-  Mixar_WindowAnimateAlphaTo(g_bubble_ghostwin, 0.0f,
-                             AGENT_BUBBLE_MINIMISE_ANIM_DURATION);
+  Mixar_WindowFloatOut(
+      g_bubble_ghostwin, AGENT_BUBBLE_FLOAT_RISE_PT, AGENT_BUBBLE_MINIMISE_ANIM_DURATION);
   Mixar_DispatchMainAfter(AGENT_BUBBLE_MINIMISE_ANIM_DURATION,
                           minimise_anim_finish,
-                          /*user_data=*/nullptr);
+                          reinterpret_cast<void *>(generation));
 #endif
 
   g_bubble_minimised = true;
+  /* Minimise returns typing to the viewport, including an armed sketch modal. */
+  if (g_host_ghostwin != nullptr) {
+    Mixar_WindowMakeKey(g_host_ghostwin);
+  }
   return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
@@ -2114,35 +4032,38 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
   if (g_bubble_ghostwin == nullptr || !g_bubble_minimised) {
     return OPERATOR_FINISHED;
   }
-
-  /* Snap the bubble to the host's centre-bottom BEFORE bringing it
-   * forward. orderFront alone restores the bubble at its old frame
-   * origin — fine when the host hasn't moved, but if the user
-   * dragged Mixar to another monitor between minimise and restore,
-   * the bubble pops back on the original monitor while the pill is
-   * sitting on the new one. Snapping first makes the bubble appear
-   * wherever the host currently lives. */
-  if (g_host_ghostwin != nullptr) {
-    Mixar_WindowSnapToCentreBottomOfWindow(g_bubble_ghostwin,
-                                           g_host_ghostwin,
-                                           AGENT_BUBBLE_BOTTOM_MARGIN);
-  }
+  [[maybe_unused]] const bool reversing = g_bubble_minimise_pending;
+  ++g_bubble_motion_generation;
+  g_bubble_minimise_pending = false;
 
   /* Reset attachment state so the auto-resize fires again on restore
    * if images are already attached (e.g. user attached, minimised, restored). */
   g_bubble_had_pending_attachments = false;
   g_bubble_last_min_height = 0;
 
-  /* Ensure the bubble is fully opaque — minimise may have set alpha
-   * to 0 (macOS fade animation or Win32 immediate alpha set). */
+  int width = AGENT_BUBBLE_DEFAULT_WIDTH, height = 0;
+  Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height);
   bubble_force_size_and_refresh(
       C,
       g_bubble_ghostwin,
-      AGENT_BUBBLE_DEFAULT_WIDTH,
-      agent_bubble_collapsed_height_for_current_attachments(C));
+      std::max(width, AGENT_BUBBLE_MIN_WIDTH),
+      std::max(height, agent_bubble_collapsed_height_for_current_attachments(C)));
   bubble_set_min_content_size(
       g_bubble_ghostwin, agent_bubble_collapsed_height_for_current_attachments(C));
+
+  Mixar_WindowGetContentSize(g_bubble_ghostwin, &width, &height);
+  bubble_restore_seat(width, height);
+#ifdef __APPLE__
+  /* Animated expand: the bubble fades IN from the alpha the minimise fade
+   * left it at, mirroring the minimise animation (the pill's glide up to its
+   * above-bubble seat is animated below). Alpha is set to 0 first so a
+   * restore after a non-animated hide doesn't pop. */
+  if (!reversing) {
+    Mixar_WindowSetAlpha(g_bubble_ghostwin, 0.0f);
+  }
+#else
   Mixar_WindowSetAlpha(g_bubble_ghostwin, 1.0f);
+#endif
 
   /* Re-arm hidesOnDeactivate so the bubble hides/shows with the
    * app on alt-tab (macOS).  Do this before showing. */
@@ -2164,24 +4085,45 @@ static wmOperatorStatus mixar_bubble_restore_exec(bContext *C, wmOperator * /*op
 
   /* Show the bubble (now it already has an owner). */
   Mixar_WindowOrderFront(g_bubble_ghostwin);
+#ifdef __APPLE__
+  /* Entrance: rise into the seat while fading in — position-only animation,
+   * so Blender never re-layouts mid-flight. */
+  Mixar_WindowFloatIn(
+      g_bubble_ghostwin, AGENT_BUBBLE_FLOAT_RISE_PT, AGENT_BUBBLE_EXPAND_ANIM_DURATION);
+#endif
 
   /* Re-parent the pill directly from host → bubble.  This changes
    * GWLP_HWNDPARENT atomically (host→bubble) so the pill is NEVER
    * a visible window with no owner — avoiding the Alt+Tab race.
    * The old host tracking hook is overwritten by the new one. */
   if (g_pill_ghostwin != nullptr) {
+    /* The pill is leaving its resting seat: remember where the user had it
+     * before it is resized and re-parented onto the island. */
+    pill_remember_user_seat();
+#ifdef __APPLE__
+    Mixar_WindowSetAlpha(g_pill_ghostwin, 0.0f);
+#endif
     pill_set_size(C,
                   AGENT_BUBBLE_PILL_WIDTH,
                   AGENT_BUBBLE_PILL_HEIGHT,
                   AGENT_BUBBLE_PILL_CORNER_RADIUS);
+    g_pill_rest_sketch = false;
     Mixar_WindowSetParent(g_pill_ghostwin, g_bubble_ghostwin);
     Mixar_WindowPositionAboveParent(g_pill_ghostwin,
                                     g_bubble_ghostwin,
                                     /*offset_x=*/0,
                                     /*offset_y=*/AGENT_BUBBLE_PILL_GAP);
+#ifdef __APPLE__
+    /* Crossfade into the small status-pill seat while the island rises. */
+    Mixar_WindowAnimateAlphaTo(g_pill_ghostwin, 1.0f, AGENT_BUBBLE_EXPAND_ANIM_DURATION);
+#endif
   }
 
   g_bubble_minimised = false;
+  /* The pill owns the click, but the island must own subsequent typing.
+   * Win32 OrderFront deliberately shows without activation. */
+  Mixar_WindowMakeKey(g_bubble_ghostwin);
+  agent_bubble_composer_focus_request(C, g_bubble_ghostwin);
   return OPERATOR_FINISHED;
 #else
   return OPERATOR_CANCELLED;
@@ -2292,6 +4234,22 @@ static wmOperatorStatus mixar_bubble_set_bg_color_exec(bContext * /*C*/, wmOpera
   return OPERATOR_FINISHED;
 }
 
+static wmOperatorStatus mixar_bubble_tab_locked_exec(bContext * /*C*/, wmOperator *op)
+{
+  BKE_report(op->reports,
+             RPT_WARNING,
+             "Finish sketching or dictating before switching tabs");
+  return OPERATOR_CANCELLED;
+}
+
+void MIXAR_OT_bubble_tab_locked(wmOperatorType *ot)
+{
+  ot->name = "Tab Locked";
+  ot->idname = "MIXAR_OT_bubble_tab_locked";
+  ot->description = "Tabs stay on this one while sketching or dictating";
+  ot->exec = mixar_bubble_tab_locked_exec;
+}
+
 void MIXAR_OT_bubble_set_bg_color(wmOperatorType *ot)
 {
   ot->name = "Set Agent Bubble Background Colour";
@@ -2307,8 +4265,22 @@ void MIXAR_OT_bubble_set_bg_color(wmOperatorType *ot)
 
 /** \} */
 
+static void agent_bubble_main_region_init(wmWindowManager *wm, ARegion *region)
+{
+  /* Keymaps run in registration order. Queue navigation precedes transcript
+   * View2D; poll passes other tabs through without changing chat scrolling. */
+  wmKeyMap *keymap = WM_keymap_ensure(
+      wm->runtime->defaultconf, "Agent Bubble Queue", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+  WM_event_add_keymap_handler(&region->runtime->handlers, keymap);
+  keymap = WM_keymap_ensure(
+      wm->runtime->defaultconf, "Agent Bubble Library", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+  WM_event_add_keymap_handler(&region->runtime->handlers, keymap);
+  mixie_chat_main_region_init(wm, region);
+}
+
 static void agent_bubble_operatortypes()
 {
+  mixie_chat_operatortypes();
   WM_operatortype_append(MIXAR_OT_agent_bubble_show_window);
   WM_operatortype_append(MIXAR_OT_agent_bubble_purge_windows);
   WM_operatortype_append(MIXAR_OT_bubble_set_size);
@@ -2317,13 +4289,24 @@ static void agent_bubble_operatortypes()
   WM_operatortype_append(MIXAR_OT_bubble_window_update_drag);
   WM_operatortype_append(MIXAR_OT_bubble_window_end_drag);
   WM_operatortype_append(MIXAR_OT_bubble_minimise);
+  WM_operatortype_append(MIXAR_OT_bubble_hover_tick);
   WM_operatortype_append(MIXAR_OT_bubble_restore);
   WM_operatortype_append(MIXAR_OT_bubble_toggle_expand);
   WM_operatortype_append(MIXAR_OT_bubble_set_bg_color);
+  WM_operatortype_append(MIXAR_OT_bubble_tab_locked);
+  WM_operatortype_append(MIXAR_OT_bubble_pill_voice);
+  WM_operatortype_append(MIXAR_OT_queue_navigate);
+  WM_operatortype_append(MIXAR_OT_generations_navigate);
+  WM_operatortype_append(MIXAR_OT_reference_scroll);
+  WM_operatortype_append(MIXAR_OT_preview_sketch);
 }
 
 static void agent_bubble_keymap(wmKeyConfig *keyconf)
 {
+  mixie_chat_keymap(keyconf);
+  WM_keymap_ensure(keyconf, "Agent Bubble Library", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+  WM_keymap_ensure(keyconf, "Agent Bubble Queue", SPACE_AGENT_BUBBLE, RGN_TYPE_WINDOW);
+  WM_keymap_ensure(keyconf, "Agent Bubble References", SPACE_AGENT_BUBBLE, RGN_TYPE_UI);
   /* Ensure all three region keymap categories exist on the default
    * keyconfig so the Python addon-keyconfig registrations in
    * mixar.bootstrap.agent_bubble_module attach to keymaps Blender's
@@ -2374,7 +4357,7 @@ static void agent_bubble_space_blend_write(BlendWriter *writer, SpaceLink *sl)
   /* Don't save runtime pointer — regenerated on load. */
   void *runtime_backup = sbubble->runtime;
   sbubble->runtime = nullptr;
-  BLO_write_struct(writer, SpaceAgentBubble, sl);
+  writer->write_struct_cast<SpaceAgentBubble>(sl);
   sbubble->runtime = runtime_backup;
 }
 
@@ -2408,8 +4391,10 @@ void ED_spacetype_agent_bubble()
   st->duplicate = agent_bubble_duplicate;
   st->operatortypes = agent_bubble_operatortypes;
   st->keymap = agent_bubble_keymap;
+  st->dropboxes = mixie_chat_dropboxes;
   st->blend_write = agent_bubble_space_blend_write;
   st->blend_read_data = agent_bubble_space_blend_read_data;
+  st->blend_read_after_liblink = agent_ui_motion_blend_read_after_liblink;
 
   /* Main region — REUSES MIXIE CHAT'S CUSTOM-DRAWN MESSAGE LIST.
    *
@@ -2434,15 +4419,20 @@ void ED_spacetype_agent_bubble()
    * consumes LEFTMOUSE before our text-selection / option-chip
    * keymap can see it. The custom region's init function attaches
    * the appropriate handlers itself. */
-  art = MEM_callocN<ARegionType>("spacetype agent_bubble main region");
+  art = MEM_new_zeroed<ARegionType>("spacetype agent_bubble main region");
   art->regionid = RGN_TYPE_WINDOW;
+  /* The transcript region — the chat editor's own proven init/layout/draw
+   * (View2D scrolling, text selection, overlays), with only the island's
+   * side-frame painted on top. keymapflag 0 mirrors the chat editor:
+   * mixie_chat_main_region_init installs its handlers itself, in its own
+   * order. */
   art->keymapflag = 0;
-  art->init = mixie_chat_main_region_init;
-  art->layout = mixie_chat_main_region_layout;
-  art->draw = agent_bubble_main_region_draw;
+  art->init = agent_bubble_main_region_init;
+  art->layout = agent_bubble_transcript_region_layout;
+  art->draw = agent_bubble_island_region_draw;
+  art->cursor = mixie_chat_main_region_cursor;
   art->exit = mixie_chat_main_region_exit; /* Stop the animation frame pump */
   art->listener = mixie_chat_main_region_listener;
-  art->cursor = mixie_chat_main_region_cursor;
   /* Run the cursor callback on every mouse move, not just on region entry or
    * explicit refresh (region_cursor_set_ex gates on this flag). This keeps
    * history rows, option bubbles, stars, chips, and links responsive while
@@ -2450,44 +4440,56 @@ void ED_spacetype_agent_bubble()
   art->event_cursor = true;
   BLI_addhead(&st->regiontypes, art);
 
+  art = MEM_new_zeroed<ARegionType>("agent reference column");
+  art->regionid = RGN_TYPE_UI;
+  art->keymapflag = 0;
+  art->init = agent_bubble_references_region_init;
+  art->draw = agent_bubble_references_region_draw;
+  art->listener = agent_bubble_footer_region_listener;
+  art->free = agent_ui_motion_region_free;
+  art->duplicate = agent_ui_motion_region_duplicate;
+  BLI_addhead(&st->regiontypes, art);
+
   /* Header region (status pill). */
-  art = MEM_callocN<ARegionType>("spacetype agent_bubble header region");
+  art = MEM_new_zeroed<ARegionType>("spacetype agent_bubble header region");
   art->regionid = RGN_TYPE_HEADER;
   art->prefsizey = AGENT_BUBBLE_HEADER_HEIGHT;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_HEADER;
   art->init = agent_bubble_header_region_init;
   art->draw = agent_bubble_header_region_draw;
+  art->free = agent_ui_motion_region_free;
+  art->duplicate = agent_ui_motion_region_duplicate;
+  art->draw_overlay = agent_bubble_header_region_draw_overlay;
+  art->listener = agent_bubble_glass_region_listener;
   BLI_addhead(&st->regiontypes, art);
 
-  /* Footer region — REUSES MIXIE CHAT'S CUSTOM-DRAWN FOOTER.
-   *
-   * The Python panel-based footer (AGENT_BUBBLE_PT_footer) was
-   * limited to a static prefsizey, so multi-line input grown via
-   * Shift+Enter pushed the action row (Mode + paperclip + send) off
-   * the bottom. Mixie chat's footer region has its own
-   * region->sizey-recalculation logic in mixie_chat_footer_region_layout
-   * that grows the region as input lines grow, keeping the action
-   * row pinned to the bottom. Reusing the same callbacks gives the
-   * agent bubble the identical behaviour AND look (custom GPU draw,
-   * attachment thumbnails, send-button glow, plan-mode toggle, …).
-   *
-   * The Python AGENT_BUBBLE_PT_footer registration becomes inert —
-   * mixie_chat_footer_region_init does NOT call ED_region_panels_init,
-   * so the panel system isn't set up for this region; Python panels
-   * registered for AGENT_BUBBLE TOOLS never get a draw call. */
-  art = MEM_callocN<ARegionType>("spacetype agent_bubble footer region");
+  /* TOOLS region: the island's bottom chrome — input strip, chip row, card
+   * foot. Plain ui::Block interaction (ED_KEYMAP_UI installs the ui region
+   * handler); its layout callback re-syncs both chrome slabs to the island
+   * scale. */
+  art = MEM_new_zeroed<ARegionType>("spacetype agent_bubble footer region");
   art->regionid = RGN_TYPE_TOOLS;
-  art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FOOTER;
-  art->init = mixie_chat_footer_region_init;
-  art->layout = agent_bubble_footer_region_layout;
-  art->draw = agent_bubble_footer_region_draw;
+  art->keymapflag = ED_KEYMAP_UI;
+  art->init = agent_bubble_composer_region_init;
+  art->layout = agent_bubble_composer_region_layout;
+  art->draw = agent_bubble_composer_region_draw;
+  art->free = agent_ui_motion_region_free;
+  art->duplicate = agent_ui_motion_region_duplicate;
+  /* develop's deferred-resize listener. The footer it was written for is
+   * gone; TOOLS is the region that replaced it, and the listener only acts on
+   * a resize the footer sizing path requested. */
   art->listener = agent_bubble_footer_region_listener;
-  /* No prefsizey — mixie chat's layout callback computes the height
-   * dynamically based on input line count + pending attachments, so
-   * a static prefsizey would be overridden every layout pass. */
   BLI_addhead(&st->regiontypes, art);
 
   BKE_spacetype_register(std::move(st));
+
+  mixie_chat_qa_targets_register();
+  agent_ui_pill_cat_qa_register();
+  agent_ui_pill_draft_qa_register();
+  agent_bubble_references_qa_register();
+  agent_ui_generations_qa_register();
+  agent_ui_asset_picker_qa_register();
 }
 
 /** \} */
+}  // namespace blender

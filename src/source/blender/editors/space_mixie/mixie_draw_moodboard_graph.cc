@@ -8,13 +8,16 @@
  */
 
 #include "mixie_draw_moodboard_intern.hh"
+#include "mixie_moodboard_node_layout.hh"
 
 #include <cmath>
 
 #include "BKE_curve.hh"
 
 #include "BLI_string.h"
-#include "BLI_time.h"
+
+#include "DNA_theme_types.h"   /* UI_SCALE_FAC */
+#include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
 
 #include "GPU_immediate_util.hh"
 
@@ -90,40 +93,20 @@ void mixie_draw_moodboard_links(const bContext *C,
   }
 }
 
-static void draw_card_background(const rctf &rect, const bool selected)
+/* Canvas-space text has to carry UI_SCALE_FAC itself. Widget labels get it via
+ * the style, so without this every painted hint rendered at a fraction of the
+ * size of the buttons beside it -- most visibly the card header and the
+ * "Generating..." state. Zoom is applied by the view matrix on top, exactly as
+ * it is for widgets. */
+static float canvas_font_size(const float size)
 {
-  const float background[4] = {0.105f, 0.105f, 0.11f, 0.99f};
-  const float border[4] = {0.38f, 0.39f, 0.42f, selected ? 0.92f : 0.58f};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv(&rect, true, 22.0f, background);
-  UI_draw_roundbox_4fv(&rect, false, 22.0f, border);
-}
-
-static void draw_running_glow(const rctf &rect)
-{
-  /* Subtle "generating" pulse while a node is QUEUED/RUNNING: an accent border
-   * that breathes in alpha plus a faint outset halo. Kept deliberately dim —
-   * never a harsh bright ring. The Python pulse timer
-   * (node_job_bridge.ensure_pulse_timer) supplies the continuous redraws; the
-   * wall clock supplies the phase (~2.9s breathe). */
-  const float pulse = 0.5f + 0.5f * float(std::sin(BLI_time_now_seconds() * 2.2));
-  const float accent[3] = {0.32f, 0.72f, 0.55f}; /* muted Mixar green */
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  rctf halo = rect;
-  halo.xmin -= 3.0f;
-  halo.ymin -= 3.0f;
-  halo.xmax += 3.0f;
-  halo.ymax += 3.0f;
-  const float halo_color[4] = {accent[0], accent[1], accent[2], 0.05f + 0.10f * pulse};
-  UI_draw_roundbox_4fv(&halo, false, 25.0f, halo_color);
-  const float border[4] = {accent[0], accent[1], accent[2], 0.24f + 0.30f * pulse};
-  UI_draw_roundbox_4fv(&rect, false, 22.0f, border);
+  return size * UI_SCALE_FAC;
 }
 
 static void draw_text(const char *text, const float x, const float y, const float size, const float alpha)
 {
   const int font_id = BLF_default();
-  BLF_size(font_id, size);
+  BLF_size(font_id, canvas_font_size(size));
   BLF_color4f(font_id, 0.94f, 0.95f, 0.98f, alpha);
   BLF_position(font_id, x, y, 0.0f);
   BLF_draw(font_id, text, strlen(text));
@@ -135,17 +118,6 @@ static const char *state_label(const int state)
   return labels[std::clamp(state, 0, 5)];
 }
 
-static void draw_text_centered(
-    const char *text, const float center_x, const float y, const float size, const float alpha)
-{
-  const int font_id = BLF_default();
-  BLF_size(font_id, size);
-  const float width = BLF_width(font_id, text, strlen(text));
-  BLF_color4f(font_id, 0.94f, 0.95f, 0.98f, alpha);
-  BLF_position(font_id, center_x - width * 0.5f, y, 0.0f);
-  BLF_draw(font_id, text, strlen(text));
-}
-
 static void draw_text_centered_clipped_col(const char *text,
                                            const float center_x,
                                            const float y,
@@ -155,7 +127,7 @@ static void draw_text_centered_clipped_col(const char *text,
                                            const float alpha)
 {
   const int font_id = BLF_default();
-  BLF_size(font_id, size);
+  BLF_size(font_id, canvas_font_size(size));
   const char *ellipsis = "...";
   size_t draw_len = strlen(text);
   float draw_width = BLF_width(font_id, text, draw_len);
@@ -215,6 +187,39 @@ static void draw_draft_hint(PointerRNA *node, const rctf &rect)
   const float center_x = BLI_rctf_cent_x(&rect);
   const float center_y = BLI_rctf_cent_y(&rect);
   const float max_width = std::max(60.0f, BLI_rctf_size_x(&rect) - 56.0f);
+  const int action_type = RNA_enum_get(node, "action_type");
+  /* ASSEMBLE is append-only action index 11; local, with per-part Settings. */
+  if (action_type == 11) {
+    draw_text_centered_clipped(
+        "Attach parts to the body", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+    draw_text_centered_clipped(
+        "Slots and sizes in Settings", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+    return;
+  }
+  /* CHARACTER_PARTS is append-only action index 10; it has no prompt field. */
+  if (action_type == 10) {
+    draw_text_centered_clipped(
+        "Mask the source image", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+    draw_text_centered_clipped(
+        "Choose components in Settings", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+    return;
+  }
+  /* Promptless mesh cards draw no prompt field for the default hint to name. */
+  if (!RNA_boolean_get(node, "show_prompt")) {
+    draw_text_centered_clipped(
+        "Uses the connected input", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+    draw_text_centered_clipped(
+        "Select it to run", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+    return;
+  }
+  /* MODEL_3D (index 2) builds from its connected image; a prompt is extra. */
+  if (action_type == 2 && !prompt[0]) {
+    draw_text_centered_clipped(
+        "Turns one connected image into 3D", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+    draw_text_centered_clipped(
+        "Prompt optional", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+    return;
+  }
   if (prompt[0]) {
     draw_text_centered_clipped(prompt, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
     draw_text_centered_clipped(
@@ -261,9 +266,12 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
   Scene *scene = CTX_data_scene(C);
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
   float zoom_x, zoom_y;
-  UI_view2d_scale_get(v2d, &zoom_x, &zoom_y);
-  /* Canvas-unit labels stop being legible below this; skip the draw cost. */
-  const bool socket_labels_readable = 13.0f * zoom_x >= 7.0f;
+  ui::view2d_scale_get(v2d, &zoom_x, &zoom_y);
+  /* Sockets name themselves on the SELECTED node, and on every node while a
+   * noodle is in flight: mid-drag is precisely when "what does this accept?"
+   * is the question, and selection is no help because the node being aimed at
+   * is usually not the selected one. */
+  const bool dragging_link = moodboard_graph_link_drag_active(scene);
 
   PropertyRNA *actions = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_action_nodes");
   if (actions) {
@@ -282,13 +290,18 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
         /* One definition of "the floating controls are on screen", shared by
          * every hint below — the toolbar pass uses the same gate, so exactly
          * one of the two draws in any given spot. */
-        const bool controls_visible =
-            selected &&
-            BLI_rctf_size_x(&rect) * zoom_x >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_X &&
-            BLI_rctf_size_y(&rect) * zoom_y >= MOODBOARD_GRAPH_CONTROLS_MIN_PX_Y;
-        draw_card_background(rect, selected);
+        rcti controls_rect;
+        const bool controls_visible = moodboard_node_controls_rect(C, v2d, &node, &controls_rect);
+        const float corner_radius = moodboard_card_corner_radius(v2d, &node);
+        moodboard_draw_card_background(rect, selected, corner_radius);
+        /* Corner resize handles, like a selected reference picture's -- only
+         * while SELECTED, and never on MASK_DETAIL, whose square card is
+         * deliberately not resizable. */
+        if (selected && !moodboard_node_is_mask_detail(&node)) {
+          moodboard_draw_node_resize_handles(v2d, rect);
+        }
         if (ELEM(state, 1, 2)) { /* QUEUED or RUNNING */
-          draw_running_glow(rect);
+          moodboard_draw_running_glow(rect, corner_radius);
         }
         char node_id[MIXIE_GRAPH_ID_BUF];
         mixie_rna_string_get_clamped(&node, "node_id", node_id, sizeof(node_id));
@@ -311,17 +324,19 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
           const bool connected =
               cache && cache->occupied_inputs.contains(
                            moodboard_graph_socket_key(node_id, socket_id));
-          moodboard_draw_socket(socket_x,
+          const float radius = moodboard_graph_input_radius_px(&node, socket_index, v2d);
+          moodboard_draw_socket(v2d, socket_x,
                                 socket_y,
                                 moodboard_socket_type_color(accepted),
                                 connected,
-                                RNA_boolean_get(&socket, "required"));
-          if (selected && socket_labels_readable) {
-            moodboard_draw_socket_label(&socket, socket_x, socket_y);
+                                RNA_boolean_get(&socket, "required"), radius);
+          if ((selected || dragging_link) && radius >= 5 * UI_SCALE_FAC &&
+              BLI_rctf_size_x(&rect) * zoom_x >= 80 * UI_SCALE_FAC) {
+            moodboard_draw_socket_label(v2d, &socket, socket_x, socket_y, radius);
           }
         }
         const int action_type = RNA_enum_get(&node, "action_type");
-        moodboard_draw_output_handle(rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+        moodboard_draw_output_handle(v2d, rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
                                      BLI_rctf_cent_y(&rect),
                                      moodboard_action_output_color(action_type));
 
@@ -360,10 +375,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
                * no way to start it. Same affordance as an uploaded movie. */
               bool is_playing = false;
               moodboard_video_playback_frame(tile_image, &is_playing);
-              mixie_draw_moodboard_video_overlay(v2d,
-                                                 BLI_rctf_cent_x(&preview_bounds),
-                                                 BLI_rctf_cent_y(&preview_bounds),
-                                                 is_playing);
+              mixie_draw_moodboard_video_overlay(v2d, preview_bounds, is_playing);
             }
           }
         }
@@ -392,7 +404,8 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
           }
         }
         else if (state == 0 && !has_visual) {
-          if (!controls_visible) {
+          /* CHARACTER_PARTS (10) and ASSEMBLE (11) keep the centre free. */
+          if (!controls_visible || action_type == 10 || action_type == 11) {
             draw_draft_hint(&node, rect);
           }
         }
@@ -416,39 +429,12 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
       if (is_rect_in_view(
               v2d, rect.xmin, rect.ymin, BLI_rctf_size_x(&rect), BLI_rctf_size_y(&rect)))
       {
-        draw_card_background(rect, RNA_boolean_get(&node, "selected"));
-        moodboard_draw_output_handle(rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+        moodboard_draw_card_background(rect, RNA_boolean_get(&node, "selected"),
+                                      moodboard_card_corner_radius(v2d, &node));
+        moodboard_draw_output_handle(v2d, rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
                                      BLI_rctf_cent_y(&rect),
                                      moodboard_mesh_output_color());
-        char title[MIXIE_GRAPH_LABEL_BUF];
-        mixie_rna_string_get_clamped(&node, "title", title, sizeof(title));
-        /* 3D mesh node: the object preview icon is drawn in the node-UI pass
-         * (like action nodes' 3D results). Here we lay down its dark backdrop
-         * and a title strip; nodes without a preview object still show text. */
-        PointerRNA object_ptr = RNA_pointer_get(&node, "preview_object");
-        if (object_ptr.data) {
-          rctf preview_bounds = {
-              rect.xmin + 8.0f, rect.xmax - 8.0f, rect.ymin + 8.0f, rect.ymax - 44.0f};
-          GPUVertFormat *format = immVertexFormat();
-          const uint pos = GPU_vertformat_attr_add(
-              format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-          immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-          immUniformColor4f(0.025f, 0.027f, 0.032f, 1.0f);
-          immRectf(pos,
-                   preview_bounds.xmin,
-                   preview_bounds.ymin,
-                   preview_bounds.xmax,
-                   preview_bounds.ymax);
-          immUnbindProgram();
-          draw_text(title, rect.xmin + 18.0f, rect.ymax - 30.0f, 15.0f, 0.9f);
-        }
-        else {
-          char names[MIXIE_GRAPH_NAMES_BUF];
-          mixie_rna_string_get_clamped(&node, "object_names", names, sizeof(names));
-          draw_text("3D Result", rect.xmin + 28.0f, rect.ymax - 44.0f, 16.0f, 0.58f);
-          draw_text(title, rect.xmin + 28.0f, rect.ymax - 82.0f, 22.0f, 1.0f);
-          draw_text(names, rect.xmin + 28.0f, rect.ymax - 120.0f, 15.0f, 0.65f);
-        }
+        /* Title, placeholder and preview share the screen-space node pass. */
       }
       RNA_property_collection_next(&iter);
     }
@@ -480,7 +466,7 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
         {
           PointerRNA image_ptr = RNA_pointer_get(&media, "image");
           Image *image = static_cast<Image *>(image_ptr.data);
-          moodboard_draw_output_handle(media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
+          moodboard_draw_output_handle(v2d, media_rect->xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
                                        BLI_rctf_cent_y(media_rect),
                                        moodboard_media_output_color(image));
         }
@@ -489,6 +475,9 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
     }
     RNA_property_collection_end(&iter);
   }
+
+  /* Last, so it sits over the cards rather than under one. */
+  moodboard_draw_graph_notice(&scene_ptr);
 
   mixie_draw_moodboard_graph_controls(C, v2d, cache);
 }

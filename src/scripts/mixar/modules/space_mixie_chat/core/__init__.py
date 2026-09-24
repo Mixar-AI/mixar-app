@@ -6,7 +6,7 @@
 Core functionality for Mixie Chat module.
 
 Provides session management, event processing, JSON-RPC client,
-SSE handling, and script execution.
+turn delivery, and script execution.
 """
 
 from .connection_manager import ConnectionManager, get_connection_manager
@@ -33,13 +33,13 @@ from .jsonrpc_client import (
 )
 from .queue_processor import EventProcessor, get_event_processor
 from .session import SessionManager, get_session_manager
-from .sse_handler import (
-    SSEEvent,
-    SSEStreamHandler,
-    cleanup_all_sse_handlers,
-    cleanup_sse_handler,
-    create_sse_handler,
-    get_sse_handler,
+from .turn_transport import (
+    AgentEvent,
+    TurnTransport,
+    cleanup_all_turn_handlers,
+    cleanup_turn_handler,
+    create_turn_handler,
+    get_turn_handler,
 )
 
 __all__ = [
@@ -57,13 +57,13 @@ __all__ = [
     "create_jsonrpc_client",
     "get_jsonrpc_client",
     "cleanup_jsonrpc_client",
-    # SSE Handler
-    "SSEStreamHandler",
-    "SSEEvent",
-    "create_sse_handler",
-    "get_sse_handler",
-    "cleanup_sse_handler",
-    "cleanup_all_sse_handlers",
+    # Turn transport
+    "TurnTransport",
+    "AgentEvent",
+    "create_turn_handler",
+    "get_turn_handler",
+    "cleanup_turn_handler",
+    "cleanup_all_turn_handlers",
     # Executor
     "ScriptExecutor",
     "ExecutionResult",

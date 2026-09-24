@@ -23,12 +23,17 @@
 #include "GPU_state.hh"
 
 #include "UI_interface_c.hh"
+#include "UI_mixar_chrome.hh"
+#include "UI_mixar_motion.hh"
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_icons.hh"
 #include "interface_mixar_card_paint.hh"
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
+#include "UI_mixar_theme.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender::ui {
 
 /* Buttons — background, glyph and label are all drawn here             */
 
@@ -41,11 +46,11 @@
  * middle of a wide button. Owning both lets the glyph and label travel
  * as one group.
  */
-void UI_mixar_card_button_draw(uiBut *but,
+void UI_mixar_card_button_draw(Button *but,
                                rcti *rect,
                                const MixarCardElement element,
-                               const bool is_hover,
-                               const bool is_active)
+                               const bool /*is_hover*/,
+                               const bool /*is_active*/)
 {
   rctf box;
   mixar_card_rect_to_rctf(rect, &box);
@@ -59,20 +64,41 @@ void UI_mixar_card_button_draw(uiBut *but,
   box.ymax -= inset;
 
   const float rad = MX_R_MD * UI_SCALE_FAC;
+  const MixarInteraction motion = mixar_button_motion(*but);
+  const auto hover_alpha = [&](const float rest, const float hovered) {
+    return rest + (hovered - rest) * motion.hover;
+  };
 
   GPU_blend(GPU_BLEND_ALPHA);
 
-  const uchar *text_col = MX_FG_1;
-  const uchar *icon_col = MX_FG_2;
+  uchar accent_u[4], danger_u[4], fg1_u[4], fg2_u[4], fg4_u[4], border_strong_u[4];
+  mixar_theme_copy_u(MixarThemeSlot::Focus, MX_ACCENT, accent_u);
+  mixar_theme_copy_u(MixarThemeSlot::Danger, MX_DANGER, danger_u);
+  mixar_theme_copy_u(MixarThemeSlot::Fg1, MX_FG_1, fg1_u);
+  mixar_theme_copy_u(MixarThemeSlot::Fg2, MX_FG_2, fg2_u);
+  mixar_theme_copy_u(MixarThemeSlot::Fg4, MX_FG_4, fg4_u);
+  mixar_theme_copy_u(MixarThemeSlot::BorderStrong, MX_BORDER_STRONG, border_strong_u);
+
+  const uchar *text_col = fg1_u;
+  const uchar *icon_col = fg2_u;
 
   switch (element) {
     case MixarCardElement::AccentButton: {
       /* Reads as a filled button, not an outline: it is the one place on
        * the card asking for a decision, so it carries real weight. */
-      mixar_card_fill_round(&box, rad, MX_ACCENT, is_hover ? 0.32f : 0.22f);
-      mixar_card_outline_round(&box, rad, MX_ACCENT, is_hover ? 0.85f : 0.55f);
-      text_col = MX_ACCENT;
-      icon_col = MX_ACCENT;
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP);
+      mixar_card_fill_round(
+          &box,
+          rad,
+          accent_u,
+          hover_alpha(mixar_chrome::card_accent_fill, mixar_chrome::card_accent_fill_hover));
+      mixar_card_outline_round(
+          &box,
+          rad,
+          accent_u,
+          hover_alpha(mixar_chrome::card_accent_outline, mixar_chrome::card_accent_outline_hover));
+      text_col = accent_u;
+      icon_col = accent_u;
       break;
     }
     case MixarCardElement::DangerButton: {
@@ -80,40 +106,48 @@ void UI_mixar_card_button_draw(uiBut *but,
        * legible as the destructive-ish corner of the grid, and no more —
        * at full danger weight it was the loudest thing on the card and
        * pulled the eye off Buy Credits. */
-      mixar_card_fill_round(&box, rad, is_hover ? MX_GRAY_700 : MX_GRAY_800);
-      mixar_card_fill_round(&box, rad, MX_DANGER, is_hover ? 0.18f : 0.12f);
-      mixar_card_outline_round(&box, rad, MX_DANGER, is_hover ? 0.55f : 0.35f);
-      icon_col = MX_DANGER;
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP);
+      mixar_card_fill_round(
+          &box,
+          rad,
+          danger_u,
+          hover_alpha(mixar_chrome::card_danger_fill, mixar_chrome::card_danger_fill_hover));
+      mixar_card_outline_round(
+          &box,
+          rad,
+          danger_u,
+          hover_alpha(mixar_chrome::card_danger_outline, mixar_chrome::card_danger_outline_hover));
+      icon_col = danger_u;
       break;
     }
     case MixarCardElement::GhostButton: {
       /* Borderless until touched, so the logout strip stays quiet. */
-      if (is_hover) {
-        mixar_card_fill_round(&box, rad, MX_GRAY_800);
+      if (motion.hover > 0.0f) {
+        mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP, motion.hover);
       }
-      text_col = MX_FG_2;
-      icon_col = MX_FG_4;
+      text_col = fg2_u;
+      icon_col = fg4_u;
       break;
     }
     case MixarCardElement::CardButton:
     default: {
-      mixar_card_fill_round(&box, rad, is_hover ? MX_GRAY_700 : MX_GRAY_800);
-      mixar_card_outline_round(&box, rad, MX_BORDER_STRONG, 1.0f);
+      mixar_card_glass_round(&box, rad, MIXAR_GLASS_CHIP, hover_alpha(0.85f, 1.0f));
+      mixar_card_outline_round(&box, rad, border_strong_u, mixar_chrome::card_outline);
       break;
     }
   }
 
-  if (is_active) {
-    /* Blender has no press transform; approximate the dip with a wash. */
-    const float dim[4] = {0.0f, 0.0f, 0.0f, 0.15f};
-    UI_draw_roundbox_corner_set(UI_CNR_ALL);
-    UI_draw_roundbox_4fv(&box, true, rad, dim);
+  if (motion.press > 0.0f) {
+    /* A bounded wash gives press feedback without moving the hit geometry. */
+    const float dim[4] = {0.0f, 0.0f, 0.0f, mixar_chrome::card_press_wash * motion.press};
+    draw_roundbox_corner_set(CNR_ALL);
+    draw_roundbox_4fv(&box, true, rad, dim);
   }
 
   /* --- Contents --------------------------------------------------------- */
-  const MixarCardIcon icon = MixarCardIcon(std::max(0, int(but->hardmax)));
-  const uiFontStyle fs = mixar_card_font(1.0f, 0);
-  UI_fontstyle_set(&fs);
+  const MixarCardIcon icon = but->mixar_style.icon;
+  const uiFontStyle fs = mixar_card_font(mixar_chrome::card_action_label_scale, 0);
+  fontstyle_set(&fs);
 
   const float label_w = but->drawstr.empty() ?
                             0.0f :
@@ -126,7 +160,7 @@ void UI_mixar_card_button_draw(uiBut *but,
    * (#mixar_card_button_chrome), so the nominal padding normally fits.
    * When it cannot — a row whose width the layout capped, a translation
    * longer than the measurement, a tiny UI scale — spend the padding
-   * down before the glyphs, because #UI_fontstyle_draw clips without an
+   * down before the glyphs, because #fontstyle_draw clips without an
    * ellipsis and a silently shortened label reads as a wrong word. */
   const float box_w = box.xmax - box.xmin;
   const float content_w = label_w + (has_icon ? icon_size + icon_gap : 0.0f);
@@ -153,11 +187,8 @@ void UI_mixar_card_button_draw(uiBut *but,
 
   if (!but->drawstr.empty()) {
     rcti text_rect;
-    BLI_rcti_init(&text_rect,
-                  int(x),
-                  int(box.xmax - pad),
-                  int(box.ymin),
-                  int(box.ymax));
+    BLI_rcti_init(&text_rect, int(x), int(box.xmax - pad), int(box.ymin), int(box.ymax));
     mixar_card_draw_text(fs, &text_rect, but->drawstr.c_str(), text_col, UI_STYLE_TEXT_LEFT);
   }
 }
+}  // namespace blender::ui

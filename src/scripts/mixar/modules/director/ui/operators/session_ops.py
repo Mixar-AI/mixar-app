@@ -9,6 +9,7 @@ from bpy.types import Operator
 
 from ...core.shot_api import (
     active_shot,
+    adopt_camera,
     create_new_take,
     create_shot,
     lock_shot,
@@ -21,6 +22,35 @@ from ...core.viewport import (
     restore_view,
     select_camera_object,
 )
+
+
+def _existing_camera(context, shot):
+    """The camera Cinema Mode should open on: this shot's, else the scene's.
+
+    Never creates one — entering the mode must not add a datablock to the
+    file, and the surface's own empty state offers "+ Add Camera".
+    """
+    if shot is not None and shot.camera is not None:
+        return shot.camera
+    camera = context.scene.camera
+    return camera if camera is not None and camera.type == 'CAMERA' else None
+
+
+def _start_walking(operator, context) -> None:
+    """Hand the camera to Blender's walk as the mode opens.
+
+    Cinema Mode is camera work, so the director should already be flying when
+    the surface appears rather than having to reach for the Walk chip first.
+    Best effort by design: no camera, a locked take or a viewport that
+    refuses the modal all just leave the mode open and not walking, which the
+    chip and the hint strip then say.
+    """
+    if getattr(context.scene.mixar_director, "walk_active", False):
+        return
+    try:
+        bpy.ops.mixar.director_navigate('INVOKE_DEFAULT')
+    except Exception as exc:  # noqa: BLE001 — entering must never fail on this
+        operator.report({'INFO'}, f"Walk navigation not started: {exc}")
 
 
 def _camera_for_start(context, shot):
@@ -48,7 +78,8 @@ class MIXAR_OT_director_enter(Operator):
     """Open Director as a clean, mode-level viewport experience"""
 
     bl_idname = "mixar.director_enter"
-    bl_label = "Director"
+    # User-facing name only; the idname stays `director_*` (frozen contract).
+    bl_label = "Cinema Mode"
     bl_description = "Open the cinematic camera-directing workspace"
     bl_options = {'REGISTER'}
 
@@ -61,9 +92,40 @@ class MIXAR_OT_director_enter(Operator):
         except Exception as exc:
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
+        # Directing FIRST, so the adoption below runs with the session live:
+        # `_on_active_shot_change` only enters the camera view and selects the
+        # camera while `is_directing`.
         state.is_directing = True
         state.timeline_expanded = True
         state.navigation_mode = 'NAVIGATE'
+        state.walk_active = False
+
+        # Look through the last active camera, and ADOPT it as the active
+        # shot. Looking without adopting left the session with no shot at
+        # all, which every shot-gated control reads as "nothing to do" — the
+        # Walk chip came up greyed out and the My Cameras row never lit, on a
+        # surface that was plainly looking through that very camera.
+        #
+        # Not a toggle: Cinema Mode is framed work, so the view is put INTO
+        # the camera whatever it was showing — `enter_camera_view` writes
+        # `view_perspective` directly rather than calling
+        # `view3d.view_camera`, which would flip a viewport that already was
+        # in camera view back out of it.
+        camera = _existing_camera(context, active_shot(context.scene))
+        if camera is not None:
+            adopt_camera(context.scene, camera)
+            try:
+                enter_camera_view(context, camera)
+            except Exception as exc:
+                self.report({'WARNING'}, str(exc))
+            else:
+                # Gizmos and transform hotkeys follow the selection, so every
+                # deliberate switch of the directed camera hands it over.
+                select_camera_object(context, camera)
+        # Last, so the walk starts on a camera that is already adopted,
+        # selected and looked through — its poll needs the shot the adoption
+        # above creates.
+        _start_walking(self, context)
         return {'FINISHED'}
 
 
@@ -102,6 +164,7 @@ class MIXAR_OT_director_start(Operator):
         state.is_directing = True
         state.timeline_expanded = True
         state.navigation_mode = 'NAVIGATE'
+        state.walk_active = False
         self.report({'INFO'}, f"Directing {shot.name}, take {shot.version}")
         return {'FINISHED'}
 
@@ -152,6 +215,10 @@ class MIXAR_OT_director_finish(Operator):
         state = context.scene.mixar_director
         _leave_immersive(context, state)
         state.is_directing = False
+        # A supervisor that never reached its exit (a file load, an
+        # exception) would otherwise leave the strip advertising walk's keys
+        # for the rest of the session.
+        state.walk_active = False
         restore_view(context, context.scene)
         return {'FINISHED'}
 

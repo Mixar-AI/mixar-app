@@ -8,6 +8,7 @@
  * \brief Moodboard box select operator
  */
 
+#include "mixie_draw_moodboard_intern.hh"
 #include "mixie_moodboard_ops_common.hh"
 
 namespace blender::ed::mixie {
@@ -111,6 +112,36 @@ static bool select_rect_items(PointerRNA *scene_ptr,
   return changed;
 }
 
+/* Frames, selected only when the box CONTAINS one whole. See the call site. */
+static bool select_frames_in_box(PointerRNA *scene_ptr,
+                                 const int select_mode,
+                                 const float box_min_x,
+                                 const float box_min_y,
+                                 const float box_max_x,
+                                 const float box_max_y)
+{
+  PropertyRNA *frames = RNA_struct_find_property(scene_ptr, "mixie_moodboard_frames");
+  if (!frames) {
+    return false;
+  }
+  bool changed = false;
+  CollectionPropertyIterator iter{};
+  RNA_property_collection_begin(scene_ptr, frames, &iter);
+  while (iter.valid) {
+    PropertyRNA *selected = RNA_struct_find_property(&iter.ptr, "selected");
+    if (selected) {
+      rctf rect;
+      moodboard_frame_rect(&iter.ptr, &rect);
+      const bool contained = rect.xmin >= box_min_x && rect.xmax <= box_max_x &&
+                             rect.ymin >= box_min_y && rect.ymax <= box_max_y;
+      changed |= apply_selection_mode(&iter.ptr, selected, select_mode, contained);
+    }
+    RNA_property_collection_next(&iter);
+  }
+  RNA_property_collection_end(&iter);
+  return changed;
+}
+
 static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
 {
   Scene *scene = CTX_data_scene(C);
@@ -130,22 +161,37 @@ static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
   int box_height = std::abs(rect.ymax - rect.ymin);
   const int CLICK_THRESHOLD = 10;
 
-  /* Handle click (tiny box) as deselect all */
+  View2D *v2d = &region->v2d;
+
+  /* Handle click (tiny box): deselect all, then let a frame under the cursor
+   * claim it. */
   if (box_width <= CLICK_THRESHOLD && box_height <= CLICK_THRESHOLD) {
     if (select_mode == SEL_OP_SET) {
       PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+      /* Cards too: the box itself selects them (see select_rect_items below),
+       * so the click that clears the box's result has to clear the same set. */
       moodboard_deselect_all(&scene_ptr);
+      moodboard_graph_deselect_nodes(&scene_ptr);
+      /* A click on a frame's empty INTERIOR selects the FRAME. The press
+       * itself had to pass through -- it is also how a member is grabbed and
+       * how a marquee inside a frame starts -- so this branch, which is the
+       * one place that knows the gesture ended as a click and not a drag, is
+       * where the frame gets its selection. Dragging a frame still only works
+       * from its border or title strip, which is the whole point of the split:
+       * the frame is clickable everywhere and movable by its edge. */
+      float click_x, click_y;
+      ui::view2d_region_to_view(v2d, rect.xmin, rect.ymin, &click_x, &click_y);
+      moodboard_frame_select_at_point(
+          &scene_ptr, click_x, click_y, ui::view2d_scale_get_x(v2d));
       ED_area_tag_redraw(CTX_wm_area(C));
     }
     return OPERATOR_FINISHED;
   }
 
-  View2D *v2d = &region->v2d;
-
   /* Convert region coordinates to view coordinates */
   float view_x1, view_y1, view_x2, view_y2;
-  UI_view2d_region_to_view(v2d, rect.xmin, rect.ymin, &view_x1, &view_y1);
-  UI_view2d_region_to_view(v2d, rect.xmax, rect.ymax, &view_x2, &view_y2);
+  ui::view2d_region_to_view(v2d, rect.xmin, rect.ymin, &view_x1, &view_y1);
+  ui::view2d_region_to_view(v2d, rect.xmax, rect.ymax, &view_x2, &view_y2);
 
   /* Normalize box bounds (handle any drag direction) */
   float box_min_x = std::min(view_x1, view_x2);
@@ -190,14 +236,8 @@ static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
       float pos_y = RNA_property_float_get(&item_ptr, pos_y_prop);
       float scale = RNA_property_float_get(&item_ptr, scale_prop);
 
-      /* Calculate image bounds */
-      void *lock;
-      ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-      float img_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
-      float img_height = (ibuf && ibuf->x > 0 && ibuf->y > 0) ?
-                             (MOODBOARD_IMAGE_BASE_SIZE * float(ibuf->y) / float(ibuf->x)) * scale :
-                             MOODBOARD_IMAGE_BASE_SIZE * scale;
-      BKE_image_release_ibuf(image, ibuf, lock);
+      const float img_width = MOODBOARD_IMAGE_BASE_SIZE * scale;
+      const float img_height = img_width * mixie_moodboard_image_aspect(image);
 
       bool intersects = box_intersects_aabb(
           box_min_x, box_min_y, box_max_x, box_max_y, pos_x, pos_y, pos_x + img_width, pos_y + img_height);
@@ -221,6 +261,16 @@ static wmOperatorStatus moodboard_box_select_exec(bContext *C, wmOperator *op)
                                  box_max_x,
                                  box_max_y);
   }
+
+  /* Frames need CONTAINMENT, not intersection, and are therefore not in the
+   * loop above. A marquee drawn inside a frame to pick a few of its pictures
+   * overlaps the frame by definition; selecting it too would put a frame in
+   * the selection the user never aimed at -- and a selected frame carries all
+   * of its members, so the next drag would move the entire set instead of the
+   * three things they picked. A box that swallows a frame whole is
+   * unambiguous, so that is the one case that selects it. */
+  changed |= select_frames_in_box(
+      &scene_ptr, select_mode, box_min_x, box_min_y, box_max_x, box_max_y);
 
   /* A box may select multiple nodes, so no single graph node remains active. */
   if (RNA_struct_find_property(&scene_ptr, "mixie_moodboard_active_node_id")) {
@@ -264,6 +314,9 @@ static void moodboard_box_select_cancel(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Operator Registration (C linkage)
  * \{ */
@@ -287,3 +340,4 @@ void MIXIE_OT_moodboard_box_select(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

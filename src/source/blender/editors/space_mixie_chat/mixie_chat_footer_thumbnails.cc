@@ -18,6 +18,7 @@
 
 #include "BKE_image.hh"
 #include "BKE_main.hh"
+#include "BKE_lib_id.hh"
 
 #include "DNA_ID.h"
 #include "DNA_image_types.h"
@@ -35,6 +36,8 @@
 
 #include "mixie_chat_footer_intern.hh"
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Image Loading
@@ -60,27 +63,17 @@ Image *footer_thumbnails_load_image(Main *bmain, const char *path, int source)
     return static_cast<Image *>(BLI_findstring(&bmain->images, path, offsetof(ID, name) + 2));
   }
   else {
-    /* FILE - load from disk with caching */
-    const char *basename = BLI_path_basename(path);
-
-    /* Check if already loaded to avoid redundant disk I/O */
-    Image *existing = static_cast<Image *>(
-        BLI_findstring(&bmain->images, basename, offsetof(ID, name) + 2));
-    if (existing) {
-      return existing;
-    }
-
-    /* Defensive: verify file exists before attempting to load */
-    if (!BLI_exists(path)) {
-      fprintf(stderr, "Mixie Chat: Image file not found: %s\n", path);
-      return nullptr;
-    }
-
+    /* Match the full source path, not its basename: different references
+     * frequently share names such as image.png. This also reuses packed
+     * images after their temporary source file has disappeared. */
     Image *img = BKE_image_load_exists(bmain, path);
     if (!img) {
       fprintf(stderr, "Mixie Chat: Failed to load image: %s\n", path);
       return nullptr;
     }
+    /* The load helper adds a user even for cache hits. Painting owns no ID
+     * reference, so balance that increment on every lookup. */
+    id_us_min(&img->id);
     /* File-based images (photos, screenshots) are virtually always
      * sRGB-encoded.  Without this tag Blender treats the byte data as
      * scene-linear, producing washed-out / shifted thumbnails. */
@@ -157,12 +150,11 @@ void footer_thumbnails_draw_image(Main *bmain,
   float draw_y = y + (size - draw_h) * 0.5f;
 
   /* Draw using raw pixel upload — bypasses colorspace conversion. */
-  IMMDrawPixelsTexState state = immDrawPixelsTexSetup(GPU_SHADER_3D_IMAGE);
+  PixelBitmapDrawer drawer(GPU_SHADER_3D_IMAGE);
   GPU_blend(GPU_BLEND_ALPHA_PREMULT);
 
   if (ibuf->float_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&state,
-                                   draw_x,
+    drawer.draw(draw_x,
                                    draw_y,
                                    ibuf->x,
                                    ibuf->y,
@@ -170,25 +162,18 @@ void footer_thumbnails_draw_image(Main *bmain,
                                    true,
                                    ibuf->float_buffer.data,
                                    draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   draw_h / float(ibuf->y), nullptr);
   }
   else if (ibuf->byte_buffer.data) {
-    immDrawPixelsTexScaledFullSize(&state,
-                                   draw_x,
+    drawer.draw(draw_x,
                                    draw_y,
                                    ibuf->x,
                                    ibuf->y,
                                    blender::gpu::TextureFormat::UNORM_8_8_8_8,
-                                   false,
+                                   true,
                                    ibuf->byte_buffer.data,
                                    draw_w / float(ibuf->x),
-                                   draw_h / float(ibuf->y),
-                                   1.0f,
-                                   1.0f,
-                                   nullptr);
+                                   draw_h / float(ibuf->y), nullptr);
   }
 
   GPU_blend(GPU_BLEND_NONE);
@@ -224,10 +209,11 @@ void footer_thumbnails_draw_border(float x, float y, float size, const float col
   rect.ymax = y + size;
 
   /* Set all corners to be rounded */
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
 
   /* Draw unfilled rounded box (border only) */
-  UI_draw_roundbox_4fv(&rect, false, border_radius, color);
+  ui::draw_roundbox_4fv(&rect, false, border_radius, color);
 }
 
 /** \} */
+}  // namespace blender

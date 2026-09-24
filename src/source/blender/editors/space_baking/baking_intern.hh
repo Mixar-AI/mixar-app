@@ -11,6 +11,9 @@
 
 #pragma once
 
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
+
 struct wmOperatorType;
 
 /* -------------------------------------------------------------------- */
@@ -90,3 +93,5 @@ void BAKING_OT_get_image_minmax(wmOperatorType *ot);
 void BAKING_OT_normalize_image(wmOperatorType *ot);
 
 /** \} */
+
+}  // namespace blender

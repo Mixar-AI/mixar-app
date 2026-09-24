@@ -23,10 +23,15 @@ from .sandbox_validator import _BLOCKED_DUNDER_ATTRS
 # raw obj.__dict__ without passing through the dunder guard, so `vars(json)`
 # (or any injected module) exposes the real __builtins__ dict -> eval/exec.
 # `dir` stays (returns attribute-name strings only, no object handles).
+# `type` IS included: `class` statements remain impossible (`__build_class__` is
+# absent) and a class object reached via type(x) exposes only `mro()` plus
+# dunders the guard already blocks, so it grants no reach that x itself lacks.
+# Still excluded: super, __build_class__, input, breakpoint, vars, eval, exec,
+# compile, __import__, globals (a filtered snapshot is injected in executor.py).
 SAFE_BUILTIN_NAMES = frozenset({
     # Type constructors
     'bool', 'bytearray', 'bytes', 'complex', 'dict', 'float', 'frozenset',
-    'int', 'list', 'object', 'set', 'slice', 'str', 'tuple',
+    'int', 'list', 'object', 'set', 'slice', 'str', 'tuple', 'type',
     # Iteration/sequences
     'all', 'any', 'enumerate', 'filter', 'iter', 'len', 'map', 'max',
     'min', 'next', 'range', 'reversed', 'sorted', 'sum', 'zip',
@@ -38,6 +43,14 @@ SAFE_BUILTIN_NAMES = frozenset({
     'print', 'repr', 'format', 'ascii', 'bin', 'hex', 'oct', 'chr', 'ord',
     # Other safe functions
     'callable', 'hash', 'id', 'len', 'staticmethod', 'classmethod', 'property',
+    # Exceptions -- agent scripts need these to write try/except at all.
+    # Without them a script raising or catching anything failed with
+    # "name 'ImportError' is not defined" and only learned it after a full
+    # model round trip (Langfuse trace 9d8d834c burned ~115s on exactly this,
+    # plus "name 'type' is not defined" for `type(x)` checks).
+    'Exception', 'ValueError', 'KeyError', 'TypeError', 'IndexError',
+    'AttributeError', 'RuntimeError', 'ImportError', 'ZeroDivisionError',
+    'StopIteration', 'FileNotFoundError', 'OSError', 'PermissionError',
 })
 
 
@@ -58,18 +71,8 @@ def get_safe_builtins() -> dict:
     safe_builtins['True'] = True
     safe_builtins['False'] = False
     safe_builtins['None'] = None
-    # Include common exceptions for error handling
-    safe_builtins['Exception'] = Exception
-    safe_builtins['ValueError'] = ValueError
-    safe_builtins['TypeError'] = TypeError
-    safe_builtins['KeyError'] = KeyError
-    safe_builtins['IndexError'] = IndexError
-    safe_builtins['AttributeError'] = AttributeError
-    safe_builtins['RuntimeError'] = RuntimeError
-    safe_builtins['StopIteration'] = StopIteration
-    safe_builtins['FileNotFoundError'] = FileNotFoundError
-    safe_builtins['OSError'] = OSError
-    safe_builtins['PermissionError'] = PermissionError
+    # Exception classes come from SAFE_BUILTIN_NAMES above (single source of
+    # truth) -- the comprehension picks them up like any other builtin.
 
     # __import__ is intentionally excluded from SAFE_BUILTIN_NAMES.
     # Instead, a restricted __import__ is injected in execute() that only

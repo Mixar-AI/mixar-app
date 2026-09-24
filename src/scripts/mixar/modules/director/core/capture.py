@@ -13,28 +13,16 @@ import uuid
 import bpy
 
 from .frame_math import frames_per_beat, next_beat_frame
-from .rotation_curves import repair_euler_rotation_continuity
-from .shot_api import refresh_manifest, scope_preview_range
+from .keying import key_camera_pose
+from .retime import note_beat_timing
+from .rotation_curves import repair_rotation_continuity, rotation_data_path
+from .shot_api import refresh_manifest, release_preview_range, shot_scene
 from .viewport import enter_camera_view, find_view3d_context
 
 
-def _rotation_data_path(camera) -> str:
-    if camera.rotation_mode == 'QUATERNION':
-        return "rotation_quaternion"
-    if camera.rotation_mode == 'AXIS_ANGLE':
-        return "rotation_axis_angle"
-    return "rotation_euler"
-
-
 def _key_camera(camera, frame: int) -> None:
-    camera.keyframe_insert(data_path="location", frame=frame, group="Director")
-    camera.keyframe_insert(
-        data_path=_rotation_data_path(camera),
-        frame=frame,
-        group="Director",
-    )
-    camera.data.keyframe_insert(data_path="lens", frame=frame, group="Director")
-    repair_euler_rotation_continuity(camera)
+    key_camera_pose(camera, frame)
+    repair_rotation_continuity(camera)
 
 
 def _delete_camera_keys(camera, frame: int) -> None:
@@ -44,14 +32,14 @@ def _delete_camera_keys(camera, frame: int) -> None:
         return
     for target, data_path in (
         (camera, "location"),
-        (camera, _rotation_data_path(camera)),
+        (camera, rotation_data_path(camera)),
         (camera.data, "lens"),
     ):
         try:
             target.keyframe_delete(data_path=data_path, frame=frame)
         except (RuntimeError, TypeError):
             pass
-    repair_euler_rotation_continuity(camera)
+    repair_rotation_continuity(camera)
 
 
 _CAMERA_MOTION_PATHS = {
@@ -192,12 +180,45 @@ def _render_viewport_still(context, scene, camera, display_name: str):
             pass
 
 
-def capture_beat(context, shot, beat_seconds: float):
-    """Capture the live camera pose at the next sparse timeline keyframe."""
+def _discard_still(scene, image, shot=None) -> None:
+    """Drop a replaced capture's packed still if nothing else wants it.
+
+    Auto Key re-keys the same beat over and over while a director nudges a
+    camera, and each capture renders a fresh still. Without this the
+    superseded ones pile up in ``bpy.data.images`` — packed, orphaned, and
+    carried into the saved file. A still that was exported to the moodboard,
+    or that another beat still points at, is left alone.
+    """
+    if image is None:
+        return
+    board = getattr(scene, "mixie_moodboard_images", None)
+    if board is not None and any(item.image == image for item in board):
+        return
+    if shot is not None and any(beat.image == image for beat in shot.beats):
+        return
+    if getattr(image, "users", 0) != 0:
+        return
+    try:
+        bpy.data.images.remove(image)
+    except Exception:
+        # A still that cannot be freed is a leak, never a failed capture.
+        pass
+
+
+def capture_beat(context, shot, beat_seconds: float, *, replace_existing: bool = False):
+    """Capture the live camera pose at the next sparse timeline keyframe.
+
+    With ``replace_existing`` the playhead's own keyframe is RE-KEYED rather
+    than a new one appended beyond it. That is what Auto Key needs: the
+    director nudges the camera, looks at it, nudges again — all at one frame —
+    and every adjustment must refine that frame's pose, not march a new
+    keyframe forward through the shot. It is Blender's own auto-key rule.
+    Manual capture keeps the append, which is the repeat-capture quick flow.
+    """
     if shot.state != 'DRAFT':
         raise ValueError("Create a new take before editing a locked shot")
     camera = shot.camera
-    scene = shot.scene_ref or context.scene
+    scene = shot_scene(shot, context.scene)
     if camera is None or camera.type != 'CAMERA':
         raise ValueError("Choose a camera before capturing a keyframe")
 
@@ -215,18 +236,37 @@ def capture_beat(context, shot, beat_seconds: float):
     # start or already holds a beat (the repeat-capture quick flow).
     taken = {int(beat.frame) for beat in shot.beats}
     target_frame = int(scene.frame_current)
-    if target_frame < scene.frame_start or target_frame in taken:
+    if target_frame < scene.frame_start or (
+        target_frame in taken and not replace_existing
+    ):
         target_frame = next_beat_frame(
             taken,
             frame_start=scene.frame_start,
             stride=stride,
         )
+    # Resolved against the frame the keyframe will ACTUALLY land on. The
+    # fallback above can move it — a beat left behind the scene's start is
+    # the case — and an index resolved before the move points at a beat on
+    # a different frame, whose still would then be replaced with a render
+    # of a pose that was keyed somewhere else.
+    existing_index = -1
+    if replace_existing:
+        for index, beat in enumerate(shot.beats):
+            if int(beat.frame) == target_frame:
+                existing_index = index
+                break
+    # Parking on the frame being keyed, and forcing the pose back onto the
+    # camera, are this function doing its job — not a camera being flown.
+    # `core/record.py` would otherwise hear every one of them.
+    from .record import suspend_recording
+
     try:
-        scene.frame_set(target_frame)
+        with suspend_recording():
+            scene.frame_set(target_frame)
         camera.matrix_world = world_matrix
         camera.data.lens = lens
         context.view_layer.update()
-        number = len(shot.beats) + 1
+        number = existing_index + 1 if existing_index >= 0 else len(shot.beats) + 1
         image = _render_viewport_still(
             context,
             scene,
@@ -234,38 +274,63 @@ def capture_beat(context, shot, beat_seconds: float):
             f"{shot.name} · Keyframe {number:02d}",
         )
         _key_camera(camera, target_frame)
+        from .interpolation import apply_interpolation
+
+        # The beat for this key is not on `shot.beats` yet, so the frame is
+        # named explicitly; the rest of the shot's keys come from its beats.
+        apply_interpolation(shot, target_frame)
         if shot.handheld:
             # The first capture creates the F-curves noise can attach to.
             from .handheld import refresh_handheld
 
             refresh_handheld(shot)
-        beat = shot.beats.add()
-        beat.beat_id = uuid.uuid4().hex
-        beat.frame = target_frame
-        beat.image = image
-        shot.active_beat_index = len(shot.beats) - 1
+        if existing_index >= 0:
+            # Re-keying the playhead's own beat: `keyframe_insert` already
+            # overwrote the camera's keys at this frame, so only the beat's
+            # still is stale. Its id and timing are what the strip, the
+            # manifest and the Speed slider identify it by, and they stay.
+            beat = shot.beats[existing_index]
+            superseded = beat.image
+            beat.image = image
+            shot.active_beat_index = existing_index
+            _discard_still(scene, superseded, shot)
+        else:
+            beat = shot.beats.add()
+            beat.beat_id = uuid.uuid4().hex
+            beat.frame = target_frame
+            note_beat_timing(shot, beat)
+            beat.image = image
+            shot.active_beat_index = len(shot.beats) - 1
         scene.frame_end = max(scene.frame_end, target_frame)
         refresh_manifest(scene, shot)
-        scope_preview_range(scene, shot)
+        release_preview_range(scene)
 
         from .auto_key import mark_captured
 
         mark_captured(shot)
         return beat
     except Exception:
-        scene.frame_set(original_frame)
+        with suspend_recording():
+            scene.frame_set(original_frame)
         camera.matrix_world = world_matrix
         camera.data.lens = lens
         raise
 
 
-def remove_beat(scene, shot, index: int) -> bool:
-    """Remove one sparse keyframe, its camera keys, and its moodboard capture."""
+def remove_beat(scene, shot, index: int, *, delete_keys: bool = True) -> bool:
+    """Remove one sparse keyframe, its camera keys, and its moodboard capture.
+
+    ``delete_keys=False`` removes the beat alone, for a caller that has
+    already dealt with the keys under it (a native key delete, or a drag
+    that replaced them) — and then never purges the camera, whose remaining
+    keys are ones the director kept.
+    """
     if shot.state != 'DRAFT' or index < 0 or index >= len(shot.beats):
         return False
     beat = shot.beats[index]
     image = beat.image
-    _delete_camera_keys(shot.camera, beat.frame)
+    if delete_keys:
+        _delete_camera_keys(shot.camera, beat.frame)
 
     if image is not None and hasattr(scene, "mixie_moodboard_images"):
         for item_index in range(len(scene.mixie_moodboard_images) - 1, -1, -1):
@@ -274,17 +339,10 @@ def remove_beat(scene, shot, index: int) -> bool:
     shot.beats.remove(index)
     shot.active_beat_index = min(index, max(0, len(shot.beats) - 1))
 
-    if image is not None:
-        still_used = any(
-            item.image == image for item in scene.mixie_moodboard_images
-        ) if hasattr(scene, "mixie_moodboard_images") else False
-        if not still_used and getattr(image, "users", 0) == 0:
-            try:
-                bpy.data.images.remove(image)
-            except Exception:
-                pass
+    _discard_still(scene, image, shot)
     if (
-        not shot.beats
+        delete_keys
+        and not shot.beats
         and shot.camera is not None
         and not camera_shared_elsewhere(scene, shot)
     ):
@@ -292,5 +350,5 @@ def remove_beat(scene, shot, index: int) -> bool:
         # instead of whatever stray keys per-frame deletion missed.
         purge_camera_animation(shot.camera)
     refresh_manifest(scene, shot)
-    scope_preview_range(scene, shot)
+    release_preview_range(scene)
     return True

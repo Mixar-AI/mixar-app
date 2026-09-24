@@ -130,7 +130,7 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
   }
 
   /* Copy pixels - fast C++ loop */
-  float *dst_pixels = crop_ibuf->float_buffer.data;
+  float *dst_pixels = crop_ibuf->float_data_for_write();
   bool src_has_float = (src_ibuf->float_buffer.data != nullptr);
 
   for (int y = 0; y < crop_height; y++) {
@@ -142,7 +142,7 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
       if (src_has_float) {
         /* Source is float */
         int src_idx = (src_y * src_width + src_x) * 4;
-        float *src_pixels = src_ibuf->float_buffer.data;
+        float *src_pixels = src_ibuf->float_data_for_write();
         dst_pixels[dst_idx + 0] = src_pixels[src_idx + 0];
         dst_pixels[dst_idx + 1] = src_pixels[src_idx + 1];
         dst_pixels[dst_idx + 2] = src_pixels[src_idx + 2];
@@ -151,7 +151,7 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
       else if (src_ibuf->byte_buffer.data) {
         /* Source is byte, convert to float */
         int src_idx = (src_y * src_width + src_x) * 4;
-        uchar *src_bytes = src_ibuf->byte_buffer.data;
+        uchar *src_bytes = src_ibuf->byte_data_for_write();
         dst_pixels[dst_idx + 0] = src_bytes[src_idx + 0] / 255.0f;
         dst_pixels[dst_idx + 1] = src_bytes[src_idx + 1] / 255.0f;
         dst_pixels[dst_idx + 2] = src_bytes[src_idx + 2] / 255.0f;
@@ -203,7 +203,10 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
   RNA_boolean_set(&new_item_ptr, "flip_vertical", orig_flip_v);
   RNA_boolean_set(&new_item_ptr, "selected", true);
   RNA_int_set(&new_item_ptr, "z_order", orig_z_order + 1);
-  RNA_int_set(&new_item_ptr, "group_index", -1);
+  /* A crop result is a NEW item and belongs to no frame until it is
+   * dropped into one; membership is resolved from geometry at drop time
+   * (core/frames.py), never inherited from the source. */
+  RNA_string_set(&new_item_ptr, "frame_id", "");
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, crop_image);
   WM_event_add_notifier(C, NC_SPACE | ND_SPACE_MIXIE, nullptr);
@@ -216,6 +219,9 @@ static wmOperatorStatus moodboard_crop_image_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Operator Registration (C linkage)
  * \{ */
@@ -239,3 +245,4 @@ void MIXIE_OT_moodboard_crop_image(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

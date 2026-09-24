@@ -23,6 +23,7 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
+#include "RNA_prototypes.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -37,8 +38,7 @@ static wmOperatorStatus dilate_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("dilate");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "dilate: no image provided");
@@ -61,7 +61,7 @@ static wmOperatorStatus dilate_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   std::vector<float> temp(width * height * CHANNELS);
   std::copy(pixels, pixels + width * height * CHANNELS, temp.begin());
@@ -106,8 +106,7 @@ static wmOperatorStatus erode_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("erode");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "erode: no image provided");
@@ -130,7 +129,7 @@ static wmOperatorStatus erode_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   std::vector<float> temp(width * height * CHANNELS);
   std::copy(pixels, pixels + width * height * CHANNELS, temp.begin());
@@ -175,8 +174,7 @@ static wmOperatorStatus sobel_edge_detect_exec(bContext *C, wmOperator *op)
 {
   ScopedTimer timer("sobel_edge_detect");
 
-  PointerRNA image_ptr = RNA_pointer_get(op->ptr, "image");
-  Image *image = static_cast<Image *>(image_ptr.data);
+  Image *image = image_from_operator(C, op, "image");
 
   if (!image) {
     CLOG_WARN(LOG_BAKING, "sobel_edge_detect: no image provided");
@@ -196,7 +194,7 @@ static wmOperatorStatus sobel_edge_detect_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = ibuf->float_buffer.data;
+  float *pixels = ibuf->float_data_for_write();
 
   std::vector<float> temp(width * height * CHANNELS);
   std::copy(pixels, pixels + width * height * CHANNELS, temp.begin());
@@ -249,6 +247,10 @@ static wmOperatorStatus sobel_edge_detect_exec(bContext *C, wmOperator *op)
 
 }  // namespace blender::ed::baking
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender
+ * (wmOperatorType and the decls in baking_ops_common.hh moved there). */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Registration (C linkage)
  * \{ */
@@ -264,7 +266,7 @@ void BAKING_OT_dilate(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 1, 1, 50, "Radius", "", 1, 50);
@@ -282,7 +284,7 @@ void BAKING_OT_erode(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 1, 1, 50, "Radius", "", 1, 50);
@@ -300,9 +302,10 @@ void BAKING_OT_sobel_edge_detect(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  RNA_def_pointer(ot->srna, "image", "Image", "Image", "");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 }
 
 /** \} */
+}  // namespace blender

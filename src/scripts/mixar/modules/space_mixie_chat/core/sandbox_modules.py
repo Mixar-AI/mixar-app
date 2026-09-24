@@ -16,10 +16,158 @@ Blocked capabilities:
   imports them is rejected by the restricted __import__ in executor.py.
 - tempfile: NamedTemporaryFile, mkdtemp, and all creation functions
 - base64: only b64encode and b64decode are allowed
+- string: everything except Formatter -- string.Formatter().get_field()
+  resolves "0.__class__.__base__.__subclasses__" against the REAL getattr and
+  hands back the object, walking straight past the dunder guard
 - open(): write mode restricted to temp directory only
 """
 
 import builtins
+import types
+
+
+# ---------------------------------------------------------------------------
+# Cross-package module leaks
+# ---------------------------------------------------------------------------
+#
+# Denying `import os` is not enough: an *allowed* module can bind another
+# module as an ordinary attribute, and a plain attribute name never trips the
+# AST dunder guard. These all reached the real `os` with no dunder access at
+# all, and the last one reaches `builtins.exec`:
+#
+#     random._os.system(...)                      # _os IS the os module
+#     fractions.sys.modules['os']
+#     statistics.sys.modules['os']
+#     datetime.sys.modules['os']
+#     collections._sys.modules['os']
+#     re.enum.sys.modules['os']
+#     fractions.sys.modules['builtins'].exec(...)
+#
+# Rather than denylisting those names (the next stdlib release adds more), a
+# module attribute is allowed only when it belongs to the SAME top-level
+# package as the module the script was handed. So `collections.abc`,
+# `numpy.linalg` and `mixar.modules.paint.*` keep working, while anything that
+# crosses a package boundary -- `os`, `sys`, `ctypes`, `builtins`, `codecs` --
+# is refused at the first hop.
+#
+# The wrapped module is held in a closure, not on the instance: the proxy has
+# `__slots__ = ()` so there is no attribute to read it back out of, and the
+# closure itself is only reachable through `__closure__`/`__globals__`, which
+# the AST validator blocks.
+
+# Harmless, purely informational module dunders. Everything else -- including
+# __dict__, __loader__, __spec__, __builtins__ and the path-leaking __file__ --
+# is refused by the proxy.
+_MODULE_INFO_DUNDERS = frozenset({"__name__", "__doc__", "__version__", "__all__"})
+
+# Same-package children that are NOT safe, because they exist to reach outside
+# Python. The cross-package rule below cannot see these: `numpy.ctypeslib` is
+# genuinely part of numpy, but `numpy.ctypeslib.load_library(...)` RETURNS a
+# live `ctypes.CDLL` -- a plain function return, no module hop and no dunder,
+# so neither the module guard nor the AST guard sees it. Verified: it loads
+# libc and calls into it from inside the sandbox.
+_DENIED_SUBMODULES = frozenset({
+    "numpy.ctypeslib",   # -> ctypes.CDLL
+    "numpy.f2py",        # compiles and loads native extensions
+    "numpy.distutils",   # build machinery: compilers, subprocesses
+    "numpy.testing",     # pytest bootstrapping
+})
+
+# Same-package ATTRIBUTES that are not safe for the same reason -- they run
+# Python from disk. `bpy.utils` is the live case: it is the module every agent
+# script already reaches through, and these turn it into an arbitrary-code
+# loader without leaving the `bpy` package.
+_DENIED_ATTRS = {
+    "bpy.utils": frozenset({
+        "execfile",
+        "load_scripts",
+        "load_scripts_extensions",
+        "modules_from_path",
+        "register_submodule_factory",
+    }),
+}
+
+_SAFE_MODULE_CACHE: dict = {}
+
+
+def safe_module(module, root: str = None):
+    """Wrap ``module`` so it cannot hand out modules from other packages."""
+    # A stand-in module (the test suite's mocked `bpy`/`mathutils`) may not
+    # carry __name__. Fall back to an empty root, which allows no module
+    # attribute at all -- the safe direction.
+    name = getattr(module, "__name__", "") or ""
+    if not isinstance(name, str):
+        name = ""
+    root = root or name.partition(".")[0]
+    key = (id(module), root)
+    cached = _SAFE_MODULE_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    prefix = (root + ".") if root else "\0"
+
+    class _SandboxedModule:
+        __slots__ = ()
+
+        def __getattr__(self, attr):
+            # `__slots__ = ()` means there is no instance dict, so a dunder
+            # falls through to here and would forward to the module's own --
+            # `json.__dict__['codecs']` walks straight back out, and
+            # `__file__` leaks a local filesystem path. The AST guard already
+            # blocks the escape dunders in scripts; refuse them here too so
+            # the proxy is safe on its own, keeping only the informational
+            # ones scripts legitimately read.
+            if (
+                attr.startswith("__")
+                and attr.endswith("__")
+                and attr not in _MODULE_INFO_DUNDERS
+            ):
+                raise AttributeError(
+                    f"{name}.{attr} is not available in the sandbox."
+                )
+            if attr in _DENIED_ATTRS.get(name, ()):
+                raise AttributeError(
+                    f"{name}.{attr} is not available in the sandbox: it runs "
+                    f"Python from outside the script."
+                )
+            # Refuse by NAME, before the fetch. A denied child should never be
+            # imported at all, and several of these are lazy attributes whose
+            # import has side effects (numpy resolves numpy.ctypeslib through
+            # a module-level __getattr__).
+            if f"{name}.{attr}" in _DENIED_SUBMODULES:
+                raise AttributeError(
+                    f"{name}.{attr} is not available in the sandbox: it "
+                    f"bridges out of Python."
+                )
+            value = getattr(module, attr)
+            if isinstance(value, types.ModuleType):
+                child = getattr(value, "__name__", "")
+                if child in _DENIED_SUBMODULES:
+                    # An alias under another attribute name.
+                    raise AttributeError(
+                        f"{name}.{attr} is not available in the sandbox: "
+                        f"'{child}' bridges out of Python."
+                    )
+                if child == root or child.startswith(prefix):
+                    return safe_module(value, root)
+                raise AttributeError(
+                    f"{name}.{attr} is not available in the sandbox: it is the "
+                    f"'{child}' module, outside the '{root}' package."
+                )
+            return value
+
+        def __dir__(self):
+            return [
+                a for a in dir(module)
+                if not isinstance(getattr(module, a, None), types.ModuleType)
+            ]
+
+        def __repr__(self):
+            return f"<sandboxed module {name!r}>"
+
+    proxy = _SandboxedModule()
+    _SAFE_MODULE_CACHE[key] = proxy
+    return proxy
 
 
 class RestrictedTempfile:
@@ -51,6 +199,33 @@ class RestrictedBase64:
         raise AttributeError(
             f"base64.{name} is not available in the sandbox. "
             f"Allowed: b64encode, b64decode"
+        )
+
+
+class RestrictedString:
+    """Restricted string module: constants + Template, but no Formatter.
+
+    string.Formatter().get_field("0.__class__.__base__.__subclasses__", [x], {})
+    performs the attribute walk in C with the real getattr and returns the
+    OBJECT, not a rendered string -- a complete bypass of the sandbox's dunder
+    guard. Nothing else in the module resolves attributes by name.
+    """
+
+    _ALLOWED = (
+        "Template", "capwords", "ascii_letters", "ascii_lowercase",
+        "ascii_uppercase", "digits", "hexdigits", "octdigits", "printable",
+        "punctuation", "whitespace",
+    )
+
+    def __init__(self):
+        import string as _string
+        for _name in self._ALLOWED:
+            setattr(self, _name, getattr(_string, _name))
+
+    def __getattr__(self, name):
+        raise AttributeError(
+            f"string.{name} is not available in the sandbox. "
+            f"Allowed: {', '.join(self._ALLOWED)}"
         )
 
 
@@ -214,4 +389,5 @@ class RestrictedUrllib:
 # Singleton instances (created once at module load)
 RESTRICTED_TEMPFILE = RestrictedTempfile()
 RESTRICTED_BASE64 = RestrictedBase64()
+RESTRICTED_STRING = RestrictedString()
 RESTRICTED_URLLIB = RestrictedUrllib()

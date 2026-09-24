@@ -30,9 +30,12 @@ except (AttributeError, TypeError, KeyError):
 def show_generation_error(scene, prefix, message, generating_attr, error_attr):
     """Schedule error display on the main thread (safe to call from background threads).
 
+    The error is raised as a viewport notification (bottom-left toast lane),
+    like every other alert — not as a popup menu under the cursor.
+
     Args:
         scene: The Blender scene.
-        prefix: Feature name for the popup title (e.g. "Image Gen").
+        prefix: Feature name for the notification title (e.g. "Image Gen").
         message: Error message to display.
         generating_attr: Scene bool property to set False
             (e.g. "mixie_imagegen_is_generating").
@@ -51,44 +54,44 @@ def show_generation_error(scene, prefix, message, generating_attr, error_attr):
                 for area in window.screen.areas:
                     if area.type == 'MIXIE':
                         area.tag_redraw()
-
-            def draw_error(self_inner, context):
-                self_inner.layout.label(text=message)
-
-            bpy.context.window_manager.popup_menu(
-                draw_error, title=f"{prefix} Error", icon='ERROR'
-            )
         except Exception:
             pass
+        push_error_notification(f"{prefix} failed", message)
         return None
 
     bpy.app.timers.register(_show, first_interval=0)
 
 
+def push_error_notification(title, message):
+    """Raise a sticky error toast in the viewport notification lane."""
+    try:
+        from mixar.modules.common.notifications import get_notification_store
+        get_notification_store().push(
+            "error", title, body=message, priority="high",
+        )
+    except Exception as e:  # noqa: BLE001 — the log line above still records it
+        logger.debug("error notification failed: %s", e)
+
+
 def count_selected_moodboard_images(scene):
-    """Return the number of selected still images on the moodboard."""
-    if not hasattr(scene, 'mixie_moodboard_images'):
-        return 0
-    return sum(
-        1 for item in scene.mixie_moodboard_images
-        if item.selected and item.image and item.image.source != 'MOVIE'
-    )
+    """Return the number of selected stills, including selected node results."""
+    from mixar.modules.moodboard.core.media_utils import selected_reference_stills
+
+    return len(selected_reference_stills(scene))
 
 
 def get_first_selected_moodboard_image(scene):
-    """Return the first selected still-image datablock, or None."""
-    if hasattr(scene, 'mixie_moodboard_images'):
-        for item in scene.mixie_moodboard_images:
-            if item.selected and item.image and item.image.source != 'MOVIE':
-                return item.image
-    return None
+    """Return the first selected still datablock, including node results."""
+    from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
+
+    return first_selected_reference_still(scene)
 
 
 def get_selected_moodboard_items(scene):
     """Return counts of selected moodboard items.
 
     Returns:
-        Tuple of (images, textboxes, groups).
+        Tuple of (images, textboxes, frames).
     """
     images = (
         sum(1 for img in scene.mixie_moodboard_images if img.selected)
@@ -98,11 +101,11 @@ def get_selected_moodboard_items(scene):
         sum(1 for tb in scene.mixie_moodboard_textboxes if tb.selected)
         if hasattr(scene, 'mixie_moodboard_textboxes') else 0
     )
-    groups = (
-        sum(1 for grp in scene.mixie_moodboard_groups if grp.selected)
-        if hasattr(scene, 'mixie_moodboard_groups') else 0
+    frames = (
+        sum(1 for frame in scene.mixie_moodboard_frames if frame.selected)
+        if hasattr(scene, 'mixie_moodboard_frames') else 0
     )
-    return (images, textboxes, groups)
+    return (images, textboxes, frames)
 
 
 def redraw_mixie_areas() -> None:

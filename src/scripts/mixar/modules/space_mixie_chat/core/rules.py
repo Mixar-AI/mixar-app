@@ -2,22 +2,17 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Project Rules — store format and first-message injection.
+"""Scoped Rules stores, stable IDs, snapshots and legacy message prefixes.
 
-Rules live in ``scene.mixie_chat_rules`` (ui/properties/rules_props.py),
-persist with the .mixar file, and are prepended ONLY to the wire message of
-the send that opens a new session. The optimistic user bubble keeps the raw
-prompt — rules never clutter the visible transcript.
-
-Store format: a compact JSON list of ``{"text": str, "enabled": bool}``
-entries — the rules overlay presents each entry as its own card with an
-enable/disable toggle. A legacy plain-text value (pre-list builds) parses
-as a single enabled rule; the first structural edit rewrites it as JSON.
-Only ENABLED rules are concatenated onto the wire.
+File rules persist in scene.mixie_chat_rules; globals live in rules_global.
+Snapshots include disabled entries. Legacy prefixes contain enabled text only
+and change on a first send or when the ruleset changes, never in the visible
+user bubble. Legacy text/list stores migrate IDs on their next mutation.
 """
 
 import hashlib
 import json
+import uuid
 
 from mixar.config.logging_config import get_logger
 
@@ -52,8 +47,8 @@ RULES_REMOVED_NOTE = (
 RULES_END_MARKER = "[END PROJECT RULES]"
 
 
-def parse_rules(raw: str) -> list:
-    """Parse the persisted store into ``[{"text": ..., "enabled": ...}]``.
+def parse_rules(raw: str, scope: str = "project") -> list:
+    """Parse entries into ``[{"id": ..., "text": ..., "enabled": ...}]``.
 
     Accepts the JSON list format and, for backward compatibility, a legacy
     plain-text value (returned as a single enabled rule). Never raises.
@@ -66,30 +61,51 @@ def parse_rules(raw: str) -> list:
             data = json.loads(raw)
             if isinstance(data, list):
                 rules = []
+                occurrences = {}
                 for item in data:
                     if not isinstance(item, dict):
                         continue
                     text = str(item.get("text", "")).strip()
                     if text:
-                        rules.append(
-                            {"text": text, "enabled": bool(item.get("enabled", True))}
-                        )
+                        occurrence = occurrences.get(text, 0)
+                        occurrences[text] = occurrence + 1
+                        rule_id = item.get("id")
+                        if not isinstance(rule_id, str) or not rule_id:
+                            rule_id = legacy_rule_id(scope, text, occurrence)
+                        rules.append({"id": rule_id, "text": text,
+                                      "enabled": bool(item.get("enabled", True))})
                 return rules
         except (ValueError, TypeError):
             logger.debug("rules store parse failed; treating as legacy text")
-    return [{"text": raw, "enabled": True}]
+    return [{"id": legacy_rule_id(scope, raw, 0), "text": raw, "enabled": True}]
+
+
+def legacy_rule_id(scope: str, text: str, occurrence: int) -> str:
+    """Stable until first mutation persists IDs; unrelated rules cannot shift it."""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, json.dumps(
+        ["mixar-rule-v1", scope, text, occurrence], ensure_ascii=False)))
 
 
 def serialize_rules(rules: list) -> str:
     """Serialize the rule list back into the compact JSON store string."""
     payload = [
-        {"text": r["text"], "enabled": bool(r.get("enabled", True))}
+        {"id": r.get("id") or str(uuid.uuid4()),
+         "text": r["text"], "enabled": bool(r.get("enabled", True))}
         for r in rules
         if str(r.get("text", "")).strip()
     ]
     if not payload:
         return ""
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def rules_fit_store(rules: list, raw: str) -> bool:
+    """Budget user text separately from migration IDs and JSON metadata."""
+    from ..constants import CHAT_RULES_MAXLEN, CHAT_RULES_STORE_MAXLEN, CHAT_RULES_MAX_ENTRIES
+
+    return (len(rules) <= CHAT_RULES_MAX_ENTRIES
+            and sum(len(r["text"].encode("utf-8")) for r in rules) < CHAT_RULES_MAXLEN
+            and len(raw.encode("utf-8")) < CHAT_RULES_STORE_MAXLEN)
 
 
 def get_raw_rules(scene) -> str:
@@ -111,6 +127,13 @@ def get_raw_rules(scene) -> str:
     except Exception:
         logger.debug("rules fallback scan failed", exc_info=True)
     return ""
+
+
+def rules_snapshot(scene) -> dict:
+    """Complete scoped state; empty lists explicitly clear remembered rules."""
+    from .rules_global import load_global_rules
+    return {"version": 1, "global": load_global_rules(),
+            "project": parse_rules(get_raw_rules(scene))}
 
 
 def get_project_rules(scene) -> str:

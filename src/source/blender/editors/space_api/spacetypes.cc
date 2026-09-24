@@ -60,6 +60,8 @@
 #include "io_ops.hh"
 #include "mixar_file_drop.hh"
 
+namespace blender {
+
 void ED_spacetypes_init()
 {
   using namespace blender::ed;
@@ -93,7 +95,6 @@ void ED_spacetypes_init()
 
   ED_spacetype_baking();  /* Register Baking space */
   ED_spacetype_texture_sets();  /* Register Texture Sets space */
-  ED_spacetype_mixie_chat();  /* Register Mixie Chat space */
   ED_spacetype_agent_bubble();  /* Register floating Agent Bubble space */
 
   /* Register operator types for screen and all spaces. */
@@ -127,12 +128,12 @@ void ED_spacetypes_init()
   ED_operatortypes_io();
   ED_operatortypes_edutils();
 
-  ED_operatortypes_view2d();
-  ED_operatortypes_ui();
+  ui::ED_operatortypes_view2d();
+  ui::operatortypes_ui();
 
   ED_screen_user_menu_register();
 
-  ED_uilisttypes_ui();
+  ui::uilisttypes_ui();
 
   /* Gizmo types. */
   ED_gizmotypes_button_2d();
@@ -183,7 +184,7 @@ void ED_spacemacros_init()
   ED_operatormacros_nla();
 
   /* Register dropboxes (can use macros). */
-  ED_dropboxes_ui();
+  ui::dropboxes_ui();
   for (const std::unique_ptr<SpaceType> &type : BKE_spacetypes_list()) {
     if (type->dropboxes) {
       type->dropboxes();
@@ -215,19 +216,14 @@ void ED_spacetypes_keymap(wmKeyConfig *keyconf)
   ED_keymap_marker(keyconf);
   sculpt_paint::keymap_sculpt(keyconf);
 
-  ED_keymap_view2d(keyconf);
-  ED_keymap_ui(keyconf);
+  ui::ED_keymap_view2d(keyconf);
+  ui::keymap_ui(keyconf);
 
   transform::keymap_transform(keyconf);
 
   for (const std::unique_ptr<SpaceType> &type : BKE_spacetypes_list()) {
     if (type->keymap) {
       type->keymap(keyconf);
-    }
-    LISTBASE_FOREACH (ARegionType *, region_type, &type->regiontypes) {
-      if (region_type->keymap) {
-        region_type->keymap(keyconf);
-      }
     }
   }
 }
@@ -248,7 +244,7 @@ void *ED_region_draw_cb_activate(ARegionType *art,
                                  void *customdata,
                                  int type)
 {
-  RegionDrawCB *rdc = MEM_callocN<RegionDrawCB>(__func__);
+  RegionDrawCB *rdc = MEM_new_zeroed<RegionDrawCB>(__func__);
 
   BLI_addtail(&art->drawcalls, rdc);
   rdc->draw = draw;
@@ -260,10 +256,10 @@ void *ED_region_draw_cb_activate(ARegionType *art,
 
 bool ED_region_draw_cb_exit(ARegionType *art, void *handle)
 {
-  LISTBASE_FOREACH (RegionDrawCB *, rdc, &art->drawcalls) {
-    if (rdc == (RegionDrawCB *)handle) {
-      BLI_remlink(&art->drawcalls, rdc);
-      MEM_freeN(rdc);
+  for (RegionDrawCB &rdc : art->drawcalls) {
+    if (&rdc == static_cast<RegionDrawCB *>(handle)) {
+      BLI_remlink(&art->drawcalls, &rdc);
+      MEM_delete(&rdc);
       return true;
     }
   }
@@ -272,9 +268,9 @@ bool ED_region_draw_cb_exit(ARegionType *art, void *handle)
 
 static void ed_region_draw_cb_draw(const bContext *C, ARegion *region, ARegionType *art, int type)
 {
-  LISTBASE_FOREACH_MUTABLE (RegionDrawCB *, rdc, &art->drawcalls) {
-    if (rdc->type == type) {
-      rdc->draw(C, region, rdc->customdata);
+  for (RegionDrawCB &rdc : art->drawcalls.items_mutable()) {
+    if (rdc.type == type) {
+      rdc.draw(C, region, rdc.customdata);
     }
   }
 }
@@ -284,20 +280,22 @@ void ED_region_draw_cb_draw(const bContext *C, ARegion *region, int type)
   ed_region_draw_cb_draw(C, region, region->runtime->type, type);
 }
 
-void ED_region_surface_draw_cb_draw(ARegionType *art, int type)
+void ED_region_surface_draw_cb_draw(const bContext *C, ARegionType *art, int type)
 {
-  ed_region_draw_cb_draw(nullptr, nullptr, art, type);
+  ed_region_draw_cb_draw(C, nullptr, art, type);
 }
 
 void ED_region_draw_cb_remove_by_type(ARegionType *art, void *draw_fn, void (*free)(void *))
 {
-  LISTBASE_FOREACH_MUTABLE (RegionDrawCB *, rdc, &art->drawcalls) {
-    if (rdc->draw == draw_fn) {
+  for (RegionDrawCB &rdc : art->drawcalls.items_mutable()) {
+    if (rdc.draw == draw_fn) {
       if (free) {
-        free(rdc->customdata);
+        free(rdc.customdata);
       }
-      BLI_remlink(&art->drawcalls, rdc);
-      MEM_freeN(rdc);
+      BLI_remlink(&art->drawcalls, &rdc);
+      MEM_delete(&rdc);
     }
   }
 }
+
+}  // namespace blender

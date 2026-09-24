@@ -11,9 +11,10 @@ from bpy.types import Operator
 from ...core.board_export import send_keyframes_to_board
 from ...core.capture import capture_beat, remove_beat
 from ...core.handoff import prepare_video_generation
-from ...core.rotation_curves import repair_euler_rotation_continuity
-from ...core.shot_api import active_shot
-from ...core.viewport import enter_camera_view
+from ...core.playback import arm_single_play, disarm
+from ...core.rotation_curves import repair_rotation_continuity
+from ...core.shot_api import active_shot, release_preview_range
+from ...core.viewport import enter_camera_view, find_view3d_context
 
 
 class MIXAR_OT_director_capture_beat(Operator):
@@ -48,7 +49,9 @@ class MIXAR_OT_director_capture_beat(Operator):
 
 
 class MIXAR_OT_director_toggle_auto_key(Operator):
-    """Toggle automatic keyframe capture after every camera move"""
+    """Toggle Blender's Auto Keying (the Timeline's record button): a
+    keyframe after every camera move, and a recorded take while the timeline
+    plays"""
 
     bl_idname = "mixar.director_toggle_auto_key"
     bl_label = "Auto Key"
@@ -64,7 +67,8 @@ class MIXAR_OT_director_toggle_auto_key(Operator):
         state.auto_key = not state.auto_key
         self.report(
             {'INFO'},
-            "Auto Key on: every camera move captures a keyframe"
+            "Auto Key on: a keyframe after every camera move, and a "
+            "recorded take while the timeline plays"
             if state.auto_key
             else "Auto Key off",
         )
@@ -111,34 +115,85 @@ class MIXAR_OT_director_remove_beat(Operator):
 
 
 class MIXAR_OT_director_preview(Operator):
-    """Play the camera animation between the first and last sparse keyframes"""
+    """Play the scene range to review or record a camera take"""
 
     bl_idname = "mixar.director_preview"
     bl_label = "Preview Shot"
-    bl_description = "Play this shot between its first and last keyframes"
+    bl_description = "Play the scene range; Auto Key records live camera moves"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @staticmethod
+    def _toggle_playback(context):
+        """Start or stop the player ANCHORED ON THE VIEWPORT.
+
+        Blender redraws the region playback was started from, plus whatever
+        the Playback popover's `redraws_flag` adds — which is nothing by
+        default. This button lives in the timeline dock, a region of its own,
+        so starting the player from it ran the shot into a viewport that never
+        redrew: the frames advanced and the picture did not move. Pressing
+        Space works because the pointer is over the viewport, and that IS the
+        region it starts from.
+
+        Falling back to the bare call keeps a headless or viewport-less
+        session working rather than refusing to play at all.
+        """
+        target = find_view3d_context(context)
+        if target is None:
+            return bpy.ops.screen.animation_play()
+        window, area, region, space = target
+        with context.temp_override(
+            window=window, area=area, region=region, space_data=space
+        ):
+            return bpy.ops.screen.animation_play()
+
     def execute(self, context):
-        shot = active_shot(context.scene)
-        if shot is None or not shot.beats:
-            return {'CANCELLED'}
         scene = context.scene
+        screen = getattr(context, "screen", None)
+        if getattr(screen, "is_animation_playing", False):
+            # Stopping stays available even before a recording has any beats.
+            disarm()
+            try:
+                return self._toggle_playback(context)
+            except Exception as exc:
+                self.report({'ERROR'}, str(exc))
+                return {'CANCELLED'}
+        shot = active_shot(context.scene)
+        if shot is None or shot.camera is None:
+            return {'CANCELLED'}
         frames = sorted({beat.frame for beat in shot.beats})
-        if len(frames) < 2:
+        can_record = scene.mixar_director.auto_key and shot.state == 'DRAFT'
+        if len(frames) < 2 and not can_record:
             self.report({'INFO'}, "Capture at least two keyframes to preview")
             return {'CANCELLED'}
-        repair_euler_rotation_continuity(shot.camera)
-        scene.use_preview_range = True
-        scene.frame_preview_start = frames[0]
-        scene.frame_preview_end = frames[-1]
-        if not context.screen.is_animation_playing:
-            scene.frame_set(scene.frame_preview_start)
+        repair_rotation_continuity(shot.camera)
+        # The SCENE's range, not the beats'. Preview used to clamp the
+        # preview range to the first and last keyframe, so it looped between
+        # two of them however long the scene was and the dock's own Start and
+        # End fields did nothing. Those fields are what a director sets, so
+        # they are what plays.
+        release_preview_range(scene)
+        start_frame = int(scene.frame_start)
+        end_frame = int(scene.frame_end)
+        scene.frame_set(start_frame)
+        # A director reviewing a shot wants to SEE it, once — Blender's player
+        # otherwise wraps at the end of the range and runs forever
+        # (`core/playback.py` stops it on the end frame).
+        arm_single_play(scene, start_frame, end_frame)
         try:
             enter_camera_view(context, shot.camera, remember=False)
-            return bpy.ops.screen.animation_play()
+            result = self._toggle_playback(context)
         except Exception as exc:
+            disarm()
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
+        if 'FINISHED' not in result:
+            # A refusal used to be returned verbatim and read as success by
+            # everything upstream, so a Preview that never started looked
+            # exactly like one that did.
+            disarm()
+            self.report({'ERROR'}, "The animation player would not start")
+            return {'CANCELLED'}
+        return result
 
 
 class MIXAR_OT_director_send_video(Operator):
@@ -163,7 +218,7 @@ class MIXAR_OT_director_send_video(Operator):
         else:
             self.report(
                 {'INFO'},
-                f"Selected {count} keyframes; open Moodboard > Video Gen",
+                f"Selected {count} keyframes; open Agent island > Video",
             )
         return {'FINISHED'}
 

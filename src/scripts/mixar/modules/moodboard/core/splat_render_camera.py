@@ -262,7 +262,10 @@ def enable_render_updates(objects) -> None:
             # display mode (Socket_50: 0 = camera updates, 1 = disabled,
             # 2 = point cloud).
             obj["update_rot_to_cam"] = True
-            obj.modifiers[SPLAT_GN_MODIFIER]["Socket_50"] = 0
+            if not _set_socket_value(obj.modifiers[SPLAT_GN_MODIFIER], "Socket_50", 0):
+                logger.warning(
+                    "[SplatRender] Socket_50 missing on %s — KIRI socket layout drift?", obj.name
+                )
             # KIRI "HQ Mode (Blended Alpha)": ordered alpha via the Sorter GN.
             # Under the default DITHERED/hashed transparency 500k overlapping
             # soft quads render as milky noise; BLENDED + back-to-front
@@ -357,6 +360,22 @@ def _projection_matrix(cam, width, height, scale_x=1.0, scale_y=1.0):
     return m
 
 
+def _set_socket_value(mod, socket_id, value) -> bool:
+    """Write a geometry-nodes modifier input value.
+
+    Blender 5.2 removed modifier ID-property item access (``mod["Socket_N"]``
+    raises TypeError); input values live on the node-group-generated
+    ``mod.properties.inputs.<Socket_N>.value`` struct instead. Returns False
+    when the socket is missing (KIRI tree not loaded / layout drift).
+    """
+    inputs = getattr(getattr(mod, "properties", None), "inputs", None)
+    sock = getattr(inputs, socket_id, None) if inputs is not None else None
+    if sock is None:
+        return False
+    sock.value = value
+    return True
+
+
 def push_camera_to_splats(scene, depsgraph=None) -> int:
     """Write the scene camera's matrices into every enabled splat. Returns count."""
     camera = scene.camera
@@ -390,10 +409,10 @@ def push_camera_to_splats(scene, depsgraph=None) -> int:
         mod = obj.modifiers[SPLAT_GN_MODIFIER]
         for col in range(4):
             for row in range(4):
-                mod[f"Socket_{_VIEW_BASE + col * 4 + row}"] = view[row][col]
-                mod[f"Socket_{_PROJ_BASE + col * 4 + row}"] = proj[row][col]
-        mod["Socket_34"] = float(width)
-        mod["Socket_35"] = float(height)
+                _set_socket_value(mod, f"Socket_{_VIEW_BASE + col * 4 + row}", view[row][col])
+                _set_socket_value(mod, f"Socket_{_PROJ_BASE + col * 4 + row}", proj[row][col])
+        _set_socket_value(mod, "Socket_34", float(width))
+        _set_socket_value(mod, "Socket_35", float(height))
         obj.update_tag(refresh={"DATA"})
     return len(splats)
 

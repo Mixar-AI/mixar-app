@@ -1,0 +1,189 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Two island contracts that only bite in the built app.
+
+Both are source-level, in the style of the other island tests: this is a
+GPU/window-manager surface with no importable Python half.
+
+1. **The ink canvas's closing edge must run in the island's EMPTY state.**
+   ``mixie_chat_draw_ink_overlay`` is the ONE writer of
+   ``rt->ink_overlay_active``. With a transcript it runs unconditionally at
+   the end of ``mixie_chat_main_region_draw``; with none, the island draws
+   its own whole-panel field instead and nothing calls it — so once the
+   canvas closed the latch stayed true and ``mixie_chat_ink_handle_event``
+   went on eating every press and keystroke for a canvas that was no longer
+   drawn.
+
+2. **A Generate that paints disabled must not still submit.** The Splat pane
+   dimmed its button and labelled it "Queued..." while a world_labs job was
+   live, while the control layout armed it on ``prompt_ok`` alone — a paid
+   generation from a button that looked unavailable. Paint and arm are now
+   written from the same expression, and the label comes from the kit.
+"""
+
+from pathlib import Path
+
+CPP = Path(__file__).resolve().parents[1] / "src/source/blender/editors/space_agent_bubble"
+BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
+SPLAT_PAINT_CC = (CPP / "agent_ui_tabsplat_paint.cc").read_text(encoding="utf-8")
+SPLAT_CC = (CPP / "agent_ui_tabsplat.cc").read_text(encoding="utf-8")
+TAB3D_CC = (CPP / "agent_ui_tab3d.cc").read_text(encoding="utf-8")
+MEDIA_CC = (CPP / "agent_ui_tabmedia.cc").read_text(encoding="utf-8")
+GEN_DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
+PANE_KIT_CC = (CPP / "agent_ui_pane_kit.cc").read_text(encoding="utf-8")
+
+
+def _strip_comments(source: str) -> str:
+    """Drop /* */ and // comments — a contract is about code, and the prose
+    explaining a fix routinely quotes the very expression it removed."""
+    out, i, n = [], 0, len(source)
+    while i < n:
+        if source.startswith("/*", i):
+            end = source.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+        elif source.startswith("//", i):
+            end = source.find("\n", i)
+            i = n if end < 0 else end
+        else:
+            out.append(source[i])
+            i += 1
+    return "".join(out)
+
+
+def _function_body(source: str, signature_start: str) -> str:
+    start = source.index(signature_start)
+    open_brace = source.index("{", start)
+    depth = 0
+    for i in range(open_brace, len(source)):
+        if source[i] == "{":
+            depth += 1
+        elif source[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start : i + 1]
+    raise AssertionError(f"unterminated function: {signature_start}")
+
+
+# ---------------------------------------------------------------------------
+# 1. The canvas closing edge
+# ---------------------------------------------------------------------------
+
+def test_the_empty_state_still_runs_the_ink_closing_edge():
+    body = _function_body(
+        BUBBLE_CC, "static void agent_bubble_island_region_draw"
+    )
+    # Once for the open canvas (it replaces the field), once on the branch
+    # that builds the field and once on the asset-picker branch (it replaces
+    # the transcript) — the latter two are closing edges, and they draw
+    # nothing because visibility is false on those branches by construction.
+    assert body.count("mixie_chat_draw_ink_overlay(C, region);") == 3, (
+        "the empty-state field branch and the asset-picker branch must still "
+        "call the overlay, or rt->ink_overlay_active is never cleared and an "
+        "invisible canvas keeps consuming the field's / picker's events"
+    )
+    picker = body[body.index("mixie_chat_asset_picker_shown(C, &picker)"):
+                  body.index("agent_ui_asset_picker_draw(")]
+    assert "mixie_chat_draw_ink_overlay(C, region);" in picker
+
+
+def test_the_overlay_is_the_only_writer_of_the_latch():
+    overlay_cc = (
+        Path(__file__).resolve().parents[1]
+        / "src/source/blender/editors/space_mixie_chat/mixie_chat_ink_overlay.cc"
+    ).read_text(encoding="utf-8")
+    events_cc = (
+        Path(__file__).resolve().parents[1]
+        / "src/source/blender/editors/space_mixie_chat/mixie_chat_ink_events.cc"
+    ).read_text(encoding="utf-8")
+    # The draw pass owns the falling edge; the event side only ever pre-latches
+    # it TRUE when it opens the canvas itself. A `= false` on the event side
+    # would be a second, competing owner.
+    assert "rt->ink_overlay_active = visible;" in overlay_cc
+    assert "ink_overlay_active = false" not in events_cc, (
+        "the falling edge has one owner — the draw pass"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 2. Paint and arm agree, in every pane
+# ---------------------------------------------------------------------------
+
+def test_the_splat_generate_uses_one_native_control_for_paint_and_input():
+    body = _function_body(SPLAT_CC, "void agent_ui_tabsplat_draw")
+    generate = body[body.index("if (rects.prompt_ok) {"):]
+    generate = generate[:generate.index("/* Prompt field")]
+    assert '"mixie.moodboard_prompt_generate"' in generate
+    assert "MixarComponent::Action" in generate
+    assert "RNA_struct_identifier(state.tab.type)" in generate
+    assert "pane_generate_paint(" not in SPLAT_PAINT_CC
+    assert "active_jobs" not in generate, "queue activity must not disable submission"
+
+
+def test_every_pane_labels_its_queue_through_the_kit():
+    for name, text in (("splat", SPLAT_CC), ("3D", TAB3D_CC), ("media", MEDIA_CC)):
+        assert "pane_queue_label(" in text, f"{name} pane hand-rolls its queue label"
+    body = _function_body(SPLAT_CC, "void agent_ui_tabsplat_draw")
+    call = body[body.index('"mixie.moodboard_prompt_generate"'):]
+    assert "gen_label" in call[:call.index(";")]
+
+
+def test_the_splat_arm_side_ignores_the_live_job_count():
+    body = _function_body(SPLAT_CC, "void agent_ui_tabsplat_draw")
+    generate = body[body.index("if (rects.prompt_ok) {"):]
+    generate = generate[:generate.index("/* Prompt field")]
+    assert "active_jobs" not in generate
+    assert "BUT_DISABLED" not in generate
+
+
+# ---------------------------------------------------------------------------
+# 3. A two-line caption resumes where the first line actually ended
+# ---------------------------------------------------------------------------
+
+def test_the_second_line_skips_the_ellipsis_not_three_real_bytes():
+    """`pane_fit_text` appends a 3-byte U+2026 at its cut, so `strlen()` of
+    the fitted head overshoots the bytes of the ORIGINAL it consumed. Taking
+    the tail from `text + strlen(r_a)` dropped three real bytes and could
+    start inside a multi-byte character."""
+    assert '"…"' in (Path(__file__).resolve().parents[1] / "src/source/blender/editors/interface/mixar/text.cc").read_text(), (
+        "pane_fit_text no longer writes U+2026 — the detail column's "
+        "compensation below is keyed to it"
+    )
+    body = _strip_comments(_function_body(GEN_DETAIL_CC, "void wrap_two_lines"))
+    assert "text + strlen(r_a)" not in body, (
+        "the fitted head carries an ellipsis; its length is not the offset "
+        "into the source string"
+    )
+    assert "ellipsis_len" in body and "text + head" in body
+
+
+# ---------------------------------------------------------------------------
+# 4. There is ALWAYS exactly one composer
+# ---------------------------------------------------------------------------
+
+def test_the_empty_state_keeps_a_composer_while_the_canvas_is_up():
+    """The whole-panel field is the empty state's input, but it is NOT built
+    while the ink canvas is open (its chrome would cover the canvas). Sizing
+    the TOOLS band and laying out the input off `has_transcript` alone left
+    that state with NO composer at all: handwriting was recognized and
+    written to `mixie_chat_input` with no box on screen to show it, and it
+    surfaced only once Scribble was closed."""
+    body = _strip_comments(BUBBLE_CC)
+    # The input collapses to a strip whenever the WINDOW field is suppressed.
+    assert "input_is_strip = r_state->has_transcript || r_state->ink_visible" in body
+    # The band must make room for that strip, or it clamps to zero height.
+    assert "wants_input_strip = has_conversation || tab_probe.ink_visible" in body
+    # And the strip is built exactly when the WINDOW is not hosting the field.
+    assert ("window_hosts_field = !state->has_transcript && !state->ink_visible"
+            in body)
+
+
+def test_the_two_composers_are_mutually_exclusive():
+    """Exactly ONE field box, always — the WINDOW whole-panel field and the
+    TOOLS strip must never both be built for the same property."""
+    body = _strip_comments(BUBBLE_CC)
+    # WINDOW builds its field only when the canvas is down (else-branch of
+    # `ink_canvas_open`), and TOOLS builds its strip only when WINDOW does not.
+    assert "window_hosts_field ?" in body
+    assert "nullptr :" in body

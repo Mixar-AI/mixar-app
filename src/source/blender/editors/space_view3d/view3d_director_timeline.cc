@@ -38,13 +38,13 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "view3d_director_cinema.hh"
 #include "view3d_director_timeline.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
-constexpr float DOCK_BG[4] = {0.105f, 0.108f, 0.115f, 1.0f};
-constexpr float PANEL_BG[4] = {0.195f, 0.195f, 0.195f, 1.0f};
-constexpr float PANEL_BORDER[4] = {0.27f, 0.27f, 0.28f, 1.0f};
 constexpr double PLAYBACK_REDRAW_INTERVAL = 1.0 / 30.0;
 
 wmTimer *g_playback_redraw_timer = nullptr;
@@ -80,253 +80,6 @@ static void director_timeline_region_exit(wmWindowManager *wm, ARegion * /*regio
   g_playback_redraw_timer = nullptr;
 }
 
-void draw_rect(
-    const float x1, const float y1, const float x2, const float y2, const float color[4])
-{
-  GPUVertFormat *format = immVertexFormat();
-  const uint pos = GPU_vertformat_attr_add(
-      format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformColor4fv(color);
-  immRectf(pos, x1, y1, x2, y2);
-  immUnbindProgram();
-}
-
-void draw_dock_panel(const ARegion *region, const int margin)
-{
-  UI_ThemeClearColor(TH_BACK);
-  draw_rect(0.0f, 0.0f, float(region->winx), float(region->winy), DOCK_BG);
-  const rctf panel = {
-      float(margin), float(region->winx - margin), float(margin), float(region->winy - margin)};
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv_ex(
-      &panel, PANEL_BG, nullptr, 1.0f, PANEL_BORDER, UI_SCALE_FAC, 12.0f * UI_SCALE_FAC);
-}
-
-uiBut *operator_button(uiBlock *block,
-                       const char *operator_id,
-                       const int icon,
-                       const char *label,
-                       const int x,
-                       const int y,
-                       const int width,
-                       const int height,
-                       const char *tooltip)
-{
-  if (label && label[0]) {
-    if (icon == ICON_NONE) {
-      return uiDefButO(block,
-                       ButType::But,
-                       operator_id,
-                       blender::wm::OpCallContext::InvokeRegionWin,
-                       label,
-                       x,
-                       y,
-                       width,
-                       height,
-                       tooltip);
-    }
-    return uiDefIconTextButO(block,
-                             ButType::But,
-                             operator_id,
-                             blender::wm::OpCallContext::InvokeRegionWin,
-                             icon,
-                             label,
-                             x,
-                             y,
-                             width,
-                             height,
-                             tooltip);
-  }
-  return uiDefIconButO(block,
-                       ButType::But,
-                       operator_id,
-                       blender::wm::OpCallContext::InvokeRegionWin,
-                       icon,
-                       x,
-                       y,
-                       width,
-                       height,
-                       tooltip);
-}
-
-void disable_button(uiBut *button, const bool disabled)
-{
-  if (button && disabled) {
-    UI_but_flag_enable(button, UI_BUT_DISABLED);
-  }
-}
-
-void draw_transport(uiBlock *block,
-                    const ARegion *region,
-                    const DirectorViewState &state,
-                    const bool playing,
-                    const int y,
-                    const int size,
-                    const int gap)
-{
-  const int group_w = size * 3 + gap * 2;
-  int x = (region->winx - group_w) / 2;
-  uiBut *previous = operator_button(block,
-                                    "MIXAR_OT_director_previous_beat",
-                                    ICON_PREV_KEYFRAME,
-                                    "",
-                                    x,
-                                    y,
-                                    size,
-                                    size,
-                                    "Previous keyframe");
-  x += size + gap;
-  uiBut *play = operator_button(block,
-                                "MIXAR_OT_director_preview",
-                                playing ? ICON_PAUSE : ICON_PLAY,
-                                "",
-                                x,
-                                y,
-                                size,
-                                size,
-                                playing ? "Pause shot preview" : "Preview this shot");
-  x += size + gap;
-  uiBut *next = operator_button(block,
-                                "MIXAR_OT_director_next_beat",
-                                ICON_NEXT_KEYFRAME,
-                                "",
-                                x,
-                                y,
-                                size,
-                                size,
-                                "Next keyframe");
-  const bool no_beats = state.beats.is_empty();
-  disable_button(previous, no_beats);
-  disable_button(play, state.beats.size() < 2 || state.frame_end <= state.frame_start);
-  disable_button(next, no_beats);
-}
-
-void draw_control_row(uiBlock *block,
-                      const ARegion *region,
-                      const DirectorViewState &state,
-                      const bool playing,
-                      const int margin,
-                      const int unit,
-                      const int gap)
-{
-  const int y = region->winy - margin - unit * 2 - gap;
-  const int button_h = unit * 2;
-  const bool compact = region->winx < int(980.0f * UI_SCALE_FAC);
-  int x = margin + gap * 2;
-
-  const int camera_w = compact ? button_h : unit * 8;
-  if (state.has_shot) {
-    /* Switch between per-camera shots (each its own timeline) rather than
-     * reassigning one shot's camera, which collapsed every camera onto one
-     * strip. Wide shows the active camera's name; compact shows the icon. */
-    operator_button(block,
-                    "MIXAR_OT_director_pick_camera",
-                    ICON_CAMERA_DATA,
-                    compact ? "" : state.camera_name.c_str(),
-                    x,
-                    y,
-                    camera_w,
-                    button_h,
-                    "Switch to another camera or shot");
-  }
-  else {
-    operator_button(block,
-                    "MIXAR_OT_director_start",
-                    ICON_CAMERA_DATA,
-                    compact ? "" : "Create Camera",
-                    x,
-                    y,
-                    camera_w,
-                    button_h,
-                    "Create a camera and start directing");
-  }
-  x += camera_w + gap;
-  operator_button(block,
-                  "MIXAR_OT_director_new_shot",
-                  ICON_ADD,
-                  "",
-                  x,
-                  y,
-                  button_h,
-                  button_h,
-                  "Add a new shot camera from this view");
-  x += button_h + gap * 2;
-
-  /* Navigate/Precise deliberately removed from the timeline dock — they
-   * duplicated the camera-gate controls (artist feedback). They now live only
-   * on the live camera gate. Explore keeps its dock home instead: the gate
-   * draws only in camera view, so it cannot host a control that is used
-   * while free-flying outside the camera. */
-  if (state.has_shot) {
-    /* Unlike Navigate, Explore works on locked takes: flying the viewport
-     * touches no camera, and Add Camera Here starts a fresh shot anyway.
-     * That is the escape hatch for huge imported worlds — travel first,
-     * then plant a camera where the frame is right. */
-    uiBut *explore = operator_button(block,
-                                     "MIXAR_OT_director_explore",
-                                     ICON_NONE,
-                                     "Explore",
-                                     x,
-                                     y,
-                                     unit * 5,
-                                     button_h,
-                                     "Fly the scene freely without moving the shot camera; "
-                                     "Add Camera Here then starts a new shot at that view");
-    if (state.explore_mode) {
-      UI_but_flag_enable(explore, UI_BUT_ACTIVE_DEFAULT);
-    }
-  }
-
-  draw_transport(block, region, state, playing, y, button_h, gap);
-
-  int right = region->winx - margin - gap * 2;
-  operator_button(block,
-                  "MIXAR_OT_director_toggle_timeline",
-                  ICON_X,
-                  "",
-                  right - button_h,
-                  y,
-                  button_h,
-                  button_h,
-                  "Collapse timeline");
-  right -= button_h + gap;
-  operator_button(block,
-                  "MIXAR_OT_director_toggle_immersive",
-                  ICON_FULLSCREEN_ENTER,
-                  "",
-                  right - button_h,
-                  y,
-                  button_h,
-                  button_h,
-                  "Toggle immersive Director view");
-  right -= button_h + gap * 2;
-
-  if (!state.beats.is_empty()) {
-    operator_button(block,
-                    "MIXAR_OT_director_send_keyframes",
-                    ICON_EXPORT,
-                    compact ? "" : "Send to Moodboard",
-                    right - (compact ? button_h : unit * 7),
-                    y,
-                    compact ? button_h : unit * 7,
-                    button_h,
-                    "Group this shot's keyframes on the Moodboard");
-    right -= (compact ? button_h : unit * 7) + gap;
-  }
-  uiBut *capture = operator_button(
-      block,
-      state.locked ? "MIXAR_OT_director_new_take" : "MIXAR_OT_director_capture_beat",
-      state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT,
-      compact ? "" : (state.locked ? "New Take" : "Add Keyframe"),
-      right - (compact ? button_h : unit * 6),
-      y,
-      compact ? button_h : unit * 6,
-      button_h,
-      state.locked ? "Start an editable child take" : "Capture the live camera pose (F)");
-  disable_button(capture, !state.has_camera);
-}
-
 bool director_timeline_poll(const RegionPollParams *params)
 {
   DirectorViewState state;
@@ -344,24 +97,49 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
     return;
   }
+  /* CLEAR FIRST. This is an ordinary opaque region (RGN_TYPE_CHANNELS is not
+   * in View3D's overlap set), so nothing clears its framebuffer for us, and
+   * the dock's own panel is translucent glass inset 8 px from the edges.
+   * Without this the previous frame stays underneath and every redraw
+   * composites onto it: the ruler, the keyframes and the transport all leave
+   * ghosts of where they used to be, and the inset border never repaints at
+   * all. Every other channel/footer region in Blender opens the same way. */
+  ui::theme::frame_buffer_clear(TH_BACK);
   ED_region_pixelspace(region);
   GPU_blend(GPU_BLEND_ALPHA);
   const int margin = std::max(6, int(8.0f * UI_SCALE_FAC));
   const int unit = std::max(18, int(20.0f * UI_SCALE_FAC));
-  const int gap = std::max(4, int(5.0f * UI_SCALE_FAC));
   const bool playing = ED_screen_animation_playing(CTX_wm_manager(C)) != nullptr;
   playback_redraw_timer_update(C, playing);
-  draw_dock_panel(region, margin);
+  /* The unit is the VIEWPORT's fit, not this one-row dock's. */
+  ScrArea *area = CTX_wm_area(C);
+  const ARegion *main_region = area ? BKE_area_find_region_type(area, RGN_TYPE_WINDOW) : nullptr;
+  cinema_unit_begin(main_region);
+  cinema_qa_begin(region);
+  cinema_draw_dock_panel(region);
 
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "mixar_director_timeline", blender::ui::EmbossType::Emboss);
-  UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
-  draw_control_row(block, region, state, playing, margin, unit, gap);
+  ui::block_theme_style_set(block, ui::BLOCK_THEME_STYLE_POPUP);
+  /* Same as the viewport surface: the Interpolation popup refreshes. */
+  ui::block_flag_enable(block, ui::BLOCK_MIXAR_POPUPS_REFRESH);
+  /* The designed dock row is half of the wide surface, so it is gated on the
+   * SAME test the columns use — and that test reads the VIEWPORT region, not
+   * this dock (whose own height is one control row). Below the gate the old
+   * viewport rail draws instead, and the two together stacked duplicate
+   * controls on one screen. */
+  const bool full = main_region != nullptr && cinema_surface_fits(main_region);
+  if (full) {
+    cinema_draw_dock_controls(block, C, region, state, playing);
+  }
+  else {
+    cinema_draw_dock_compact(block, region, state, playing);
+  }
   DirectorTimelineRuntime *runtime = view3d_director_timeline_runtime_ensure(region);
-  const int content_top = region->winy - margin - unit * 2 - gap * 2;
+  const int content_top = region->winy - int(cinema_dock_control_height(full));
   view3d_director_timeline_draw_content(region, state, runtime, margin, unit, content_top);
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
   GPU_blend(GPU_BLEND_NONE);
 }
 
@@ -379,9 +157,20 @@ void director_timeline_listener(const wmRegionListenerParams *params)
 
 void view3d_director_timeline_region_ensure(ScrArea *area)
 {
-  if (!area || area->spacetype != SPACE_VIEW3D ||
-      BKE_area_find_region_type(area, RGN_TYPE_CHANNELS))
-  {
+  if (!area || area->spacetype != SPACE_VIEW3D) {
+    return;
+  }
+
+  if (ARegion *existing = BKE_area_find_region_type(area, RGN_TYPE_CHANNELS)) {
+    /* A layout saved by an earlier build carries THAT build's height, and
+     * nothing else ever revisits it — the height below is only ever written
+     * when the region is created. The dock's height is fixed, so ANY other
+     * height is put back: a short one would collapse the keyframe strip, and
+     * a tall one is a resize from a build that still allowed dragging it. */
+    if (existing->sizey != VIEW3D_DIRECTOR_TIMELINE_HEIGHT) {
+      existing->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
+    }
+    existing->flag |= RGN_FLAG_NO_USER_RESIZE;
     return;
   }
 
@@ -409,7 +198,9 @@ void view3d_director_timeline_region_ensure(ScrArea *area)
    * View3D region type because RGN_TYPE_FOOTER ignores custom heights. */
   region->alignment = RGN_ALIGN_BOTTOM;
   region->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
-  region->flag |= RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_POLL_FAILED;
+  /* Fixed height: `area.cc` gives this region no edge action zone, and the
+   * flag makes `region_scale` put the size back should anything start one. */
+  region->flag |= RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_POLL_FAILED | RGN_FLAG_NO_USER_RESIZE;
   /* The normal type-assignment pass preceded this callback. Without this,
    * ED_area_init() dereferences a null runtime type while visiting the newly
    * inserted region. */
@@ -418,7 +209,7 @@ void view3d_director_timeline_region_ensure(ScrArea *area)
 
 void view3d_director_timeline_region_register(SpaceType *st)
 {
-  ARegionType *art = MEM_callocN<ARegionType>("spacetype view3d director timeline region");
+  ARegionType *art = MEM_new_zeroed<ARegionType>("spacetype view3d director timeline region");
   art->regionid = RGN_TYPE_CHANNELS;
   art->prefsizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
   art->keymapflag = ED_KEYMAP_UI | ED_KEYMAP_FRAMES;
@@ -434,8 +225,9 @@ void view3d_director_timeline_region_register(SpaceType *st)
   /* Keep the old type readable long enough for SpaceType.init to migrate it.
    * Without a registered type, opening a .blend saved by the first Director
    * build would fail before view3d_director_timeline_region_ensure() runs. */
-  art = MEM_callocN<ARegionType>("spacetype view3d legacy director timeline region");
+  art = MEM_new_zeroed<ARegionType>("spacetype view3d legacy director timeline region");
   art->regionid = RGN_TYPE_FOOTER;
   art->poll = director_timeline_poll;
   BLI_addhead(&st->regiontypes, art);
 }
+}  // namespace blender

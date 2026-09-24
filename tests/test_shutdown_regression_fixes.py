@@ -11,7 +11,7 @@ SRC = ROOT / "src" / "scripts" / "mixar"
 
 
 def read_src(relative_path: str) -> str:
-    return (SRC / relative_path).read_text()
+    return (SRC / relative_path).read_text(encoding="utf-8")
 
 
 def test_lookdev360_unregister_skips_unregistered_classes():
@@ -46,7 +46,7 @@ def test_agent_bubble_pill_regions_exit_before_free():
     source = (
         ROOT / "src" / "source" / "blender" / "editors"
         / "space_agent_bubble" / "space_agent_bubble.cc"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     remove_block_start = source.index("DELETE (don't just hide) the WINDOW + TOOLS")
     remove_block = source[
         remove_block_start:source.index("ED_area_init(C, pill_win, pill_area);")

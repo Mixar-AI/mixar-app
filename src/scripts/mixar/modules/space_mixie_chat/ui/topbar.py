@@ -6,7 +6,7 @@
 """
 Mixar Profile Dropdown — injected into Blender's main top bar.
 
-The user-profile dropdown (Dashboard / About / Docs / Logout) used to
+The user-profile dropdown (Dashboard / AI Provider Settings / Docs / Logout) used to
 live in the Mixie Chat editor header. It's been promoted to the global
 top bar (`TOPBAR_HT_upper_bar`, RIGHT region) so it's reachable from
 every editor — including the floating Agent Bubble — and so the Mixie
@@ -67,16 +67,15 @@ class MIXAR_PT_profile(Panel):
 
     @staticmethod
     def _draw_fallback_menu(context, layout) -> None:
-        wm = context.window_manager
-
         layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
 
-        if hasattr(bpy.types, 'MIXAR_BYOK_OT_open_dialog'):
-            byok_icon = 'KEY_HLT' if getattr(wm, 'byok_is_active', False) else 'PREFERENCES'
-            layout.operator(
-                "mixar_byok.open_dialog",
-                text="AI Provider Settings",
-                icon=byok_icon,
+        # Same dialog and WindowManager state as the chat model picker.
+        if hasattr(bpy.types, "MIXAR_BYOK_OT_open_dialog"):
+            settings = layout.row()
+            settings.operator_context = 'INVOKE_DEFAULT'
+            settings.operator(
+                "mixar_byok.open_dialog", text="AI Provider Settings",
+                icon='KEY_HLT' if context.window_manager.byok_is_active else 'PREFERENCES',
             )
 
         layout.separator()
@@ -115,30 +114,42 @@ def _draw_topbar_profile_right(self, context):
     # profile pill so the two clusters don't read as one control.
     layout.separator()
 
+    # The native right-header layout fills the menu-bar height. Reserve room
+    # for its taller account icon so the label remains fully visible.
+    account = layout.row(align=True)
+
     if getattr(wm, 'mixie_chat_is_logged_in', False):
         # Logged in → email pill that opens the profile popover.
         # ui_units_x mirrors the sizing previously used in the mixie
         # chat header so the pill width still grows with the email.
         email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
-        profile_sub = layout.row(align=True)
-        profile_sub.ui_units_x = len(email) * 0.35 + 2.5
-        # Green avatar disc with the account initial; 0 means the
-        # generator failed (e.g. Pillow missing) → stock USER icon.
-        avatar_id = avatar_icon.get_avatar_icon_id(email)
-        if avatar_id:
-            profile_sub.popover(
-                panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
+        profile_sub = account.row(align=True)
+        profile_sub.ui_units_x = len(email) * 0.35 + 3.8
+        # Native account chip (interface_mixar_topbar.cc): dark slab, label,
+        # and a full-height avatar disc at the RIGHT end per the design —
+        # which is also why no `icon=` is passed here (Blender would pin it
+        # to the left slot). The disc carries the stock person glyph: with no
+        # profile picture set, the placeholder social platforms use reads
+        # better than a generated initial.
+        profile_sub.popover(panel="MIXAR_PT_profile", text=email)
+        if hasattr(profile_sub, "mixar_topbar_element"):
+            profile_sub.mixar_topbar_element(kind='PROFILE_PILL', active=True)
         else:
-            profile_sub.popover(
-                panel="MIXAR_PT_profile", text=email, icon='USER')
+            # Older build without the widget: keep an icon so the chip still
+            # reads as an account control.
+            avatar_id = avatar_icon.get_avatar_icon_id(email)
+            if avatar_id:
+                profile_sub.popover(
+                    panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
     else:
+        account.ui_units_x = 6.4
         # Not logged in → login popover (preferred) with operator fallback
         # for the brief window where the login panel class hasn't
         # finished registering yet.
         if hasattr(bpy.types, 'MIXIE_CHAT_PT_login'):
-            layout.popover(panel="MIXIE_CHAT_PT_login", text="Login", icon='USER')
+            account.popover(panel="MIXIE_CHAT_PT_login", text="Login", icon='USER')
         else:
-            layout.operator("mixie_chat.login", text="Login", icon='USER')
+            account.operator("mixie_chat.login", text="Login", icon='USER')
 
 
 def register():

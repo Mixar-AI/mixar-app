@@ -18,6 +18,6 @@ def test_agents_doc_delegates_to_canonical_claude_doc():
     if not agents.exists():
         pytest.skip("AGENTS.md not present (public build)")
 
-    text = agents.read_text()
+    text = agents.read_text(encoding="utf-8")
     assert "CLAUDE.md" in text
     assert "Codex Sonnet" not in text

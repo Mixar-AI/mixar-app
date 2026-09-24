@@ -4,13 +4,14 @@
 
 """A running render never blocks the agent.
 
-The agent's final render is fire-and-forget on Blender's job thread and the
-render evaluates its OWN depsgraph, so the agent keeps running scripts and the
-user keeps working while it goes — exactly what a user's F12 does with Lock
+The agent's preview render runs on Blender's job thread and the render
+evaluates its OWN depsgraph, so the agent keeps running scripts and the user
+keeps working while it goes — exactly what a user's F12 does with Lock
 Interface off. 3.4.2 briefly HELD every sandbox script while a RENDER job was
 alive (then failed it after 20 s) and forced ``render.use_lock_interface`` on,
 which froze every UI handler for the whole render. Both are gone and pinned
-absent here; the thread-marshalling fixes from the same audit stay.
+absent here; the thread-marshalling fixes from the same audit stay, and the
+preview module inherits the same rules (docs/render-job-contract.md).
 """
 
 import importlib.util
@@ -23,6 +24,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 CHAT_ROOT = ROOT / "src/scripts/mixar/modules/space_mixie_chat"
+PREVIEW = CHAT_ROOT / "core/preview_render.py"
 
 
 # --------------------------------------------------------------------------
@@ -129,10 +131,26 @@ def test_render_probe_helper_is_gone():
     assert not (ROOT / "src/scripts/mixar/modules/common/utils/render_jobs.py").exists()
 
 
+def test_final_render_operator_is_gone():
+    """The backend's render_scene tool was deleted; nothing can invoke the
+    fire-and-forget final render any more, so it does not exist."""
+    assert not (CHAT_ROOT / "ui/operators/agent_final_render_ops.py").exists()
+    for path in (
+        CHAT_ROOT / "constants.py",
+        CHAT_ROOT / "core/executor.py",
+        CHAT_ROOT / "core/executor_handlers.py",
+        CHAT_ROOT / "core/main_thread_executor.py",
+    ):
+        text = path.read_text()
+        assert "agent_final_render" not in text, path
+        assert "final_render_result" not in text, path
+
+
 def test_contract_doc_exists_and_is_linked():
     """docs/render-job-contract.md is the write-up the code comments point at;
-    it must exist, describe both retired guards, and be reachable from the
-    agent guides and the two modules that implement the contract."""
+    it must exist, describe both retired guards and the held-open preview
+    flow, and be reachable from the agent guides and the modules that
+    implement the contract."""
     doc = ROOT / "docs/render-job-contract.md"
     assert doc.exists()
     text = doc.read_text()
@@ -142,92 +160,51 @@ def test_contract_doc_exists_and_is_linked():
         "render_complete",
         "splat_render_camera",
         "tests/test_render_job_guard.py",
+        "mixie_chat.agent_preview_render",
+        "__deferred_preview__",
+        "preview_deferral",
     ):
         assert needle in text, needle
+    assert "agent_final_render" not in text
     for path in (
-        "CLAUDE.md",
+        ".claude/rules/private-docs-map.md",
         "AGENTS.md",
+        "docs/modules/agent-execution.md",
         "src/scripts/mixar/modules/space_mixie_chat/core/main_thread_executor.py",
-        "src/scripts/mixar/modules/space_mixie_chat/ui/operators/agent_final_render_ops.py",
+        "src/scripts/mixar/modules/space_mixie_chat/core/preview_render.py",
     ):
         assert "docs/render-job-contract.md" in (ROOT / path).read_text(), path
 
 
 # --------------------------------------------------------------------------
-# agent_final_render_ops: Lock Interface is the user's, never forced
+# preview_render: Lock Interface and Preferences are the user's, never forced
 # --------------------------------------------------------------------------
 
 
-def _ops_module():
-    for dep in ("keyring", "websocket", "requests", "jwt", "sentry_sdk"):
-        sys.modules.setdefault(dep, MagicMock(name=dep))
-    from mixar.modules.space_mixie_chat.ui.operators import agent_final_render_ops
-
-    return agent_final_render_ops
-
-
-class _Render:
-    """Attribute writes are recorded so a stray lock write is visible."""
-
-    def __init__(self, lock):
-        object.__setattr__(self, "writes", [])
-        self.engine = "BLENDER_EEVEE_NEXT"
-        self.resolution_percentage = 100
-        self.filepath = "/tmp/x"
-        self.image_settings = MagicMock()
-        self.image_settings.file_format = "PNG"
-        self.use_lock_interface = lock
-        object.__setattr__(self, "writes", [])
-
-    def __setattr__(self, name, value):
-        self.writes.append(name)
-        object.__setattr__(self, name, value)
+def test_preview_never_writes_the_lock_or_preferences():
+    src = PREVIEW.read_text()
+    assert "use_lock_interface" not in src
+    assert "preferences.addons" not in src
+    assert "compute_device_type" not in src
 
 
-def _scene(lock=False):
-    scene = MagicMock()
-    scene.render = _Render(lock)
-    scene.world = None
-    return scene
+def test_preview_start_has_no_synchronous_render_path():
+    src = PREVIEW.read_text()
+    assert src.count("bpy.ops.render.render(") == 1
+    assert 'bpy.ops.render.render("INVOKE_DEFAULT", write_still=False)' in src
+    assert "EXEC_DEFAULT" not in src
 
 
-@pytest.mark.parametrize("lock", [False, True])
-def test_final_render_leaves_lock_interface_alone(monkeypatch, lock):
-    ops = _ops_module()
-    fake_bpy = MagicMock(name="bpy")
-    fake_bpy.data.lights = []
-    fake_bpy.data.materials = []
-    monkeypatch.setattr(ops, "bpy", fake_bpy)
-    monkeypatch.setattr(ops, "_resolve_engine", lambda engine: None)
-
-    scene = _scene(lock=lock)
-    saved, _note, _orig, _capped = ops._apply_settings(
-        scene, "current", 0, 0, "current", "/tmp/out.png"
-    )
-    assert scene.render.use_lock_interface is lock
-    assert "lock" not in saved
-    assert "use_lock_interface" not in scene.render.writes
-
-    ops._restore_settings(scene, saved)
-    assert scene.render.use_lock_interface is lock
-    assert "use_lock_interface" not in scene.render.writes
-
-
-def test_restore_ignores_a_3_4_2_saved_dict_with_a_lock_key():
-    """A job dict persisted by the 3.4.2 operator still restores cleanly and
-    does not resurrect the lock write."""
-    ops = _ops_module()
-    scene = _scene(lock=False)
-    ops._restore_settings(
-        scene, {"engine": "CYCLES", "rp": 50, "fp": "/tmp/a", "ff": "PNG", "lock": True}
-    )
-    assert scene.render.use_lock_interface is False
-    assert "use_lock_interface" not in scene.render.writes
-
-
-def test_final_render_operator_never_writes_the_lock():
-    src = (CHAT_ROOT / "ui/operators/agent_final_render_ops.py").read_text()
-    assert "use_lock_interface =" not in src
+def test_preview_render_handlers_only_schedule_a_timer():
+    """render_complete / render_cancel fire on the job thread: the handler
+    bodies register a timer and touch nothing else."""
+    src = PREVIEW.read_text()
+    start = src.index("def _schedule(")
+    end = src.index("def _before_load(")
+    block = src[start:end]
+    assert "bpy.app.timers.register" in block
+    for forbidden in ("bpy.data", "view_layer", "save_render", "setattr("):
+        assert forbidden not in block, forbidden
 
 
 # --------------------------------------------------------------------------
@@ -244,7 +221,8 @@ def test_orphaned_turn_check_is_marshalled_to_the_main_thread():
     start = src.index("def on_connected()")
     end = src.index("def on_disconnected(", start)
     block = src[start:end]
-    assert "run_on_main_thread(check_orphaned_turns)" in block
+    assert "run_on_main_thread(reconnect)" in block
+    assert "check_orphaned_turns()" in (CHAT_ROOT / "core/turn_events.py").read_text()
     assert "\n                    check_orphaned_turns()\n" not in block
 
 

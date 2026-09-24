@@ -24,10 +24,11 @@ No top-level ``bpy`` import — everything except :func:`refresh_rules_ui`
 is pure logic, unit-testable outside Blender.
 """
 
+import uuid
+
 from mixar.config.logging_config import get_logger
 
-from ..constants import CHAT_RULES_MAXLEN
-from .rules import get_raw_rules, parse_rules, serialize_rules
+from .rules import get_raw_rules, parse_rules, serialize_rules, rules_snapshot, rules_fit_store
 from .rules_global import load_global_rules, save_global_rules
 
 logger = get_logger(__name__)
@@ -46,6 +47,7 @@ def list_unified(scene) -> list:
     for rule in load_global_rules():
         unified.append({
             "index": len(unified),
+            "id": rule["id"],
             "text": rule["text"],
             "enabled": rule["enabled"],
             "scope": SCOPE_GLOBAL,
@@ -53,6 +55,7 @@ def list_unified(scene) -> list:
     for rule in parse_rules(get_raw_rules(scene)):
         unified.append({
             "index": len(unified),
+            "id": rule["id"],
             "text": rule["text"],
             "enabled": rule["enabled"],
             "scope": SCOPE_PROJECT,
@@ -60,16 +63,17 @@ def list_unified(scene) -> list:
     return unified
 
 
-def resolve_rule(scene, index: int):
-    """Map a unified index onto ``(is_global, store_list, local_index)``.
-
-    Returns None when the index is stale (store edited from elsewhere
-    since the caller last listed).
-    """
+def resolve_rule(scene, index: int = -1, rule_id=None):
+    """Resolve a stable ID, or a legacy UI index; ambiguous IDs fail closed."""
     globals_ = load_global_rules()
+    projects = parse_rules(get_raw_rules(scene))
+    if rule_id is not None:
+        matches = [(is_global, rules, local)
+                   for is_global, rules in ((True, globals_), (False, projects))
+                   for local, rule in enumerate(rules) if rule["id"] == rule_id]
+        return matches[0] if len(matches) == 1 else None
     if 0 <= index < len(globals_):
         return True, globals_, index
-    projects = parse_rules(get_raw_rules(scene))
     local = index - len(globals_)
     if 0 <= local < len(projects):
         return False, projects, local
@@ -79,10 +83,14 @@ def resolve_rule(scene, index: int):
 def write_project_rules(scene, rules: list) -> bool:
     """Serialize + persist the FILE rule list; False when over the cap."""
     raw = serialize_rules(rules)
-    if len(raw.encode('utf-8')) > CHAT_RULES_MAXLEN - 1:
+    if not rules_fit_store(rules, raw):
         return False
-    scene.mixie_chat_rules = raw  # RNA update callback mirrors across scenes
-    return True
+    try:
+        scene.mixie_chat_rules = raw  # RNA callback mirrors across scenes
+        return True
+    except (AttributeError, RuntimeError, TypeError):
+        logger.exception("failed to save project rules")
+        return False
 
 
 def save_store(scene, is_global: bool, rules: list) -> bool:
@@ -95,11 +103,12 @@ def save_store(scene, is_global: bool, rules: list) -> bool:
 # Mutations — each returns {"success", "error", "rules": <fresh list>}
 # =============================================================================
 
-_ERR_FULL = "Rules store is full — remove or shorten a rule first"
+_ERR_FULL = "Rules could not be saved — store may be full or unavailable"
 
 
 def _result(scene, success: bool, error: str = "") -> dict:
-    out = {"success": success, "rules": list_unified(scene)}
+    out = {"success": success, "rules": list_unified(scene),
+           "rules_snapshot": rules_snapshot(scene)}
     if error:
         out["error"] = error
     return out
@@ -114,20 +123,21 @@ def add_rule(scene, text: str, scope: str = SCOPE_PROJECT) -> dict:
                        f"Unknown scope {scope!r} — use 'project' or 'global'")
     is_global = (scope == SCOPE_GLOBAL)
     rules = load_global_rules() if is_global else parse_rules(get_raw_rules(scene))
-    rules.append({"text": text, "enabled": True})
+    rules.append({"id": str(uuid.uuid4()), "text": text, "enabled": True})
     if not save_store(scene, is_global, rules):
         return _result(scene, False, _ERR_FULL)
     return _result(scene, True)
 
 
-def update_rule(scene, index: int, text=None, enabled=None, scope=None) -> dict:
+def update_rule(scene, index: int = -1, text=None, enabled=None, scope=None,
+                rule_id=None) -> dict:
     if text is None and enabled is None and scope is None:
         return _result(scene, False,
                        "Nothing to change — pass text, enabled, and/or scope")
-    resolved = resolve_rule(scene, index)
+    resolved = resolve_rule(scene, index, rule_id=rule_id)
     if resolved is None:
         return _result(scene, False,
-                       f"Rule index {index} does not exist — see the current list")
+                       f"Rule {rule_id if rule_id is not None else index} is missing or ambiguous — list rules again")
     is_global, rules, local = resolved
 
     if text is not None:
@@ -155,27 +165,35 @@ def update_rule(scene, index: int, text=None, enabled=None, scope=None) -> dict:
         dest = load_global_rules()
         dest.append(rule)
         if not save_global_rules(dest):
-            return _result(scene, False, "Global rules are full")
+            return _result(scene, False, "Global rules could not be saved — store may be full or unavailable")
     else:
         dest = parse_rules(get_raw_rules(scene))
         dest.append(rule)
         if not write_project_rules(scene, dest):
-            return _result(scene, False, "This file's rules are full")
+            return _result(scene, False, "File rules could not be saved — store may be full or unavailable")
     # The two stores are disjoint, so the destination write above cannot
     # have invalidated the in-memory source list — pop and persist it.
     rules.pop(local)
-    save_store(scene, is_global, rules)
+    if not save_store(scene, is_global, rules):
+        # Undo the destination append if source removal fails; report any
+        # rollback failure honestly instead of claiming the move succeeded.
+        rollback_ok = save_store(scene, want_global, dest[:-1])
+        error = "Rule move failed; original rule was kept"
+        if not rollback_ok:
+            error += "; destination rollback failed, so a duplicate may remain"
+        return _result(scene, False, error)
     return _result(scene, True)
 
 
-def remove_rule(scene, index: int) -> dict:
-    resolved = resolve_rule(scene, index)
+def remove_rule(scene, index: int = -1, rule_id=None) -> dict:
+    resolved = resolve_rule(scene, index, rule_id=rule_id)
     if resolved is None:
         return _result(scene, False,
-                       f"Rule index {index} does not exist — see the current list")
+                       f"Rule {rule_id if rule_id is not None else index} is missing or ambiguous — list rules again")
     is_global, rules, local = resolved
     rules.pop(local)
-    save_store(scene, is_global, rules)
+    if not save_store(scene, is_global, rules):
+        return _result(scene, False, "Rule could not be removed — store is unavailable")
     return _result(scene, True)
 
 
@@ -225,18 +243,27 @@ def run_agent_tool(scene, tool_name: str, params: dict) -> dict:
     params = params or {}
     if tool_name == "list_rules":
         rules = list_unified(scene)
-        return {"success": True, "rules": rules, "count": len(rules)}
+        return {"success": True, "rules": rules, "count": len(rules),
+                "rules_snapshot": rules_snapshot(scene)}
+
+    index = -1
+    if tool_name in ("update_rule", "remove_rule") and params.get("rule_id") is None:
+        try:
+            index = int(params.get("index", -1))
+        except (TypeError, ValueError):
+            return _result(scene, False, "Supply a rule_id or a valid rule index")
 
     if tool_name == "add_rule":
         result = add_rule(scene, params.get("text", ""),
                           params.get("scope", SCOPE_PROJECT))
     elif tool_name == "update_rule":
-        result = update_rule(scene, int(params.get("index", -1)),
+        result = update_rule(scene, index,
                              text=params.get("text"),
                              enabled=params.get("enabled"),
-                             scope=params.get("scope"))
+                             scope=params.get("scope"), rule_id=params.get("rule_id"))
     elif tool_name == "remove_rule":
-        result = remove_rule(scene, int(params.get("index", -1)))
+        result = remove_rule(scene, index,
+                             rule_id=params.get("rule_id"))
     else:
         return {"success": False, "error": f"unknown rules tool: {tool_name}"}
 

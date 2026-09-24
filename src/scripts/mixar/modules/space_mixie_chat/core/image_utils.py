@@ -16,6 +16,8 @@ from typing import Optional
 
 import bpy
 
+from .attachment_validation import is_video_attachment
+
 from mixar.config.logging_config import get_logger
 
 from ..constants import (
@@ -23,6 +25,8 @@ from ..constants import (
     MAX_IMAGE_SIZE_BYTES,
     SUPPORTED_IMAGE_FORMATS,
     THUMBNAIL_SIZE,
+    VIDEO_ATTACHMENT_REJECTED,
+    VIDEO_FILE_FORMATS,
 )
 
 logger = get_logger(__name__)
@@ -97,6 +101,8 @@ def _is_path_safe(filepath: str) -> tuple[bool, str]:
     # Allow temp directories (on macOS /var/folders resolves to /private/var/folders)
     import tempfile
     allowed_roots = [os.path.realpath(tempfile.gettempdir())]
+    if os.name == 'posix':
+        allowed_roots.append(os.path.realpath('/tmp'))
     try:
         import bpy
         if bpy.app.tempdir:
@@ -236,16 +242,21 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
     if not is_safe:
         return False, error
 
-    if not os.path.exists(filepath):
-        return False, "File does not exist"
+    if not os.path.isfile(filepath):
+        return False, "File does not exist or is not a regular file"
 
     # Check file extension
     ext = os.path.splitext(filepath)[1].lower()
+    if ext in VIDEO_FILE_FORMATS:
+        return False, VIDEO_ATTACHMENT_REJECTED
     if ext not in SUPPORTED_IMAGE_FORMATS:
         return False, f"Unsupported format: {ext}. Supported: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
 
     # Check file size
-    file_size = os.path.getsize(filepath)
+    try:
+        file_size = os.path.getsize(filepath)
+    except OSError:
+        return False, "File is no longer accessible"
     if file_size > MAX_IMAGE_SIZE_BYTES:
         size_mb = file_size / (1024 * 1024)
         max_mb = MAX_IMAGE_SIZE_BYTES / (1024 * 1024)
@@ -261,7 +272,8 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
                         f"Image dimensions too large: {width}x{height} "
                         f"(max {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION})"
                     )
-        except (OSError, IOError) as e:
+                img.verify()
+        except (OSError, ValueError, SyntaxError, PILImage.DecompressionBombError) as e:
             return False, f"Could not read image: {e}"
 
     return True, ""
@@ -356,6 +368,10 @@ def encode_attachment_for_upload(
     Returns:
         ``(base64_string, mime_type)``, or ``None`` on error.
     """
+    if is_video_attachment(image_path_or_name, source):
+        logger.warning(VIDEO_ATTACHMENT_REJECTED)
+        return None
+
     from .attachment_compression import (
         compress_blend_image_for_chat,
         compress_file_for_chat,
@@ -432,7 +448,7 @@ def get_blend_images() -> list[dict]:
     images = []
     for image in bpy.data.images:
         # Skip render results and viewer images
-        if image.type in {'RENDER_RESULT', 'COMPOSITING'}:
+        if image.type in {'RENDER_RESULT', 'COMPOSITING'} or image.source == 'MOVIE':
             continue
 
         images.append({

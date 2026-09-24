@@ -13,6 +13,8 @@
 #include "RNA_access.hh"
 
 #include "mixie_chat_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Property Cache Globals
@@ -69,12 +71,14 @@ void init_message_property_cache(PointerRNA *msg_ptr) {
   g_msg_props.step_items = RNA_struct_find_property(msg_ptr, "step_items");
   g_msg_props.steps_summary = RNA_struct_find_property(msg_ptr, "steps_summary");
   g_msg_props.steps_collapsed = RNA_struct_find_property(msg_ptr, "steps_collapsed");
+  g_msg_props.images_collapsed = RNA_struct_find_property(msg_ptr, "images_collapsed");
   g_msg_props.thinking_text = RNA_struct_find_property(msg_ptr, "thinking_text");
   g_msg_props.thinking_active = RNA_struct_find_property(msg_ptr, "thinking_active");
   g_msg_props.thinking_duration_ms =
       RNA_struct_find_property(msg_ptr, "thinking_duration_ms");
   g_msg_props.thinking_collapsed =
       RNA_struct_find_property(msg_ptr, "thinking_collapsed");
+  g_msg_props.delivery_hint = RNA_struct_find_property(msg_ptr, "delivery_hint");
 
   g_msg_props.initialized = true;
 
@@ -127,6 +131,7 @@ void init_image_item_property_cache(PointerRNA *item_ptr) {
   g_image_props.local_path = RNA_struct_find_property(item_ptr, "local_path");
   g_image_props.width = RNA_struct_find_property(item_ptr, "width");
   g_image_props.height = RNA_struct_find_property(item_ptr, "height");
+  g_image_props.step_id = RNA_struct_find_property(item_ptr, "step_id");
   g_image_props.initialized = true;
 }
 
@@ -162,3 +167,4 @@ void mixie_chat_clear_property_caches() {
 }
 
 /** \} */
+}  // namespace blender

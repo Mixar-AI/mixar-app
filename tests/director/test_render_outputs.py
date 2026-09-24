@@ -78,10 +78,70 @@ def test_render_job_builds_movies_and_restores_temporary_scene_state():
     assert "bpy.app.handlers.render_cancel" in job
     assert "bpy.app.handlers.render_write" in job
     assert "restore_render_settings(" in job
-    assert "_queue_next_pass(shot)" in job
+    assert "_queue_next_pass(target)" in job
     assert "_start_next_pass_when_idle" in job
     assert 'bpy.app.is_job_running("RENDER")' in job
     assert "return _NEXT_PASS_POLL_SECONDS" in job
+
+
+def _beauty_scene(engine="BLENDER_EEVEE", cycles_samples=4096, eevee_samples=4096):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        render=SimpleNamespace(engine=engine),
+        eevee=SimpleNamespace(taa_render_samples=eevee_samples),
+        cycles=SimpleNamespace(samples=cycles_samples),
+        # No splats: the splat guard walks the scene's objects.
+        objects=(),
+    )
+
+
+def test_the_color_pass_is_a_render_not_a_workbench_guide():
+    """Workbench's MATERIAL colour mode paints each object's VIEWPORT DISPLAY
+    colour — no textures, no lights, no world — so the Color video came out as
+    the Clay pass with a tint. It renders with the scene's real engine now."""
+    from mixar.modules.director.core.render_passes import beauty_engine
+
+    # A scene parked on Workbench has nothing to show: fall back to EEVEE.
+    assert beauty_engine("BLENDER_WORKBENCH") == "BLENDER_EEVEE"
+    assert beauty_engine("") == "BLENDER_EEVEE"
+    # A real engine is KEPT — Cycles because a panoramic shot renders in
+    # nothing else (`core/panoramic.py`).
+    assert beauty_engine("BLENDER_EEVEE") == "BLENDER_EEVEE"
+    assert beauty_engine("CYCLES") == "CYCLES"
+
+    passes = _read("core/render_passes.py")
+    assert "shading.color_type = 'MATERIAL'" not in passes
+    # The guides stay Workbench; only Color overrides the engine.
+    assert "render.engine = 'BLENDER_WORKBENCH'" in passes
+    assert "scene_engine = scene.render.engine" in passes
+    assert passes.index("scene_engine = scene.render.engine") < passes.index(
+        "_configure_common(scene, target, frame_start, frame_end, path)"
+    )
+
+
+def test_the_color_pass_caps_samples_and_restores_them():
+    from mixar.modules.director.core import render_passes
+
+    scene = _beauty_scene(engine="BLENDER_EEVEE")
+    render_passes._configure_beauty(scene, scene.render.engine)
+    assert scene.render.engine == "BLENDER_EEVEE"
+    assert scene.eevee.taa_render_samples == render_passes.BEAUTY_EEVEE_SAMPLES
+
+    cycles_scene = _beauty_scene(engine="CYCLES")
+    render_passes._configure_beauty(cycles_scene, cycles_scene.render.engine)
+    assert cycles_scene.render.engine == "CYCLES"
+    assert cycles_scene.cycles.samples == render_passes.BEAUTY_CYCLES_SAMPLES
+
+    # A scene already under the cap keeps its own count.
+    modest = _beauty_scene(engine="BLENDER_EEVEE", eevee_samples=8)
+    render_passes._configure_beauty(modest, modest.render.engine)
+    assert modest.eevee.taa_render_samples == 8
+
+    # Both are snapshotted, so the user's scene comes back.
+    source = _read("core/render_passes.py")
+    assert '"cycles": _property_snapshot(' in source
+    assert 'for name, value in saved.get("cycles", {}).items():' in source
 
 
 def test_completed_movies_are_persisted_and_placed_on_originating_moodboard():
@@ -103,10 +163,9 @@ def test_native_surface_hosts_the_export_popup_natively():
     """Export to Moodboard is a native block popup like the lens dropdown.
 
     The Python popover and its `mixar.director_show_render` opener are gone.
-    Presentation stays native (kind toggles and the resolution slider bind
-    shot RNA directly); behavior keeps its single Python owner because the
-    action rows invoke `mixar.director_send_keyframes` and
-    `mixar.director_render_videos`.
+    Presentation stays native (the toggles and the size cells bind shot RNA
+    directly); behavior keeps its single Python owner because the one Send
+    action invokes `mixar.director_export_to_moodboard`.
     """
     overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(
         encoding="utf-8"
@@ -122,18 +181,20 @@ def test_native_surface_hosts_the_export_popup_natively():
     assert "show_render" not in operators
     assert '"render_output_types"' in popup
     assert '"render_resolution_percentage"' in popup
+    assert '"export_images"' in popup
     assert '"render_status"' in popup
-    assert '"MIXAR_OT_director_render_videos"' in popup
-    assert "to Moodboard" in popup
-    # Multi-select contract: picking a render kind must not dismiss the
-    # popup (KEEP_OPEN); only click-outside, Esc, or an action closes it —
-    # Export/Render via their explicit close callback, since KEEP_OPEN would
-    # otherwise keep the popup up after the action too.
-    assert "UI_BLOCK_KEEP_OPEN" in popup
+    assert '"MIXAR_OT_director_export_to_moodboard"' in popup
+    assert "class MIXAR_OT_director_export_to_moodboard" in operators
+    # Multi-select contract: a toggle must not dismiss the popup
+    # (KEEP_OPEN); only click-outside, Esc, or the Send action closes it —
+    # via its explicit close callback, since KEEP_OPEN would otherwise keep
+    # the popup up after the action too.
+    assert "BLOCK_KEEP_OPEN" in popup
     assert "render_popup_close" in popup
-    assert "UI_popup_menu_retval_set" in popup
+    assert "popup_menu_retval_set" in popup
     assert "classes = (" in operators
     assert "MIXAR_OT_director_render_videos," in operators
+    assert "MIXAR_OT_director_export_to_moodboard," in operators
 
 
 def test_native_export_is_a_single_moodboard_menu():
@@ -150,7 +211,9 @@ def test_native_export_is_a_single_moodboard_menu():
     assert '"Export to Moodboard"' in overlay
     assert '"MIXAR_OT_director_send_keyframes"' not in overlay
     assert '"MIXAR_OT_director_send_video"' not in overlay
-    # Keyframe export now lives inside the Export popup.
-    assert '"MIXAR_OT_director_send_keyframes"' in popup
+    # Keyframe images go through the popup's one Send action; the images-only
+    # operator stays for scripts.
+    assert '"MIXAR_OT_director_export_to_moodboard"' in popup
+    assert '"MIXAR_OT_director_send_keyframes"' not in popup
     assert "MIXAR_OT_director_send_keyframes," in capture_ops
     assert "director_send_moodboard" not in capture_ops

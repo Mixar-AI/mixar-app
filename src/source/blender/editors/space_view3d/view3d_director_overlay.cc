@@ -11,46 +11,38 @@
 #include <algorithm>
 #include <cstring>
 
-#include "BLF_api.hh"
-
 #include "BLI_rect.h"
 
 #include "BKE_context.hh"
 
 #include "DNA_object_types.h"
+#include "DNA_scene_types.h"
 
 #include "ED_screen.hh"
 
 #include "GPU_state.hh"
 
+#include "RNA_access.hh"
+
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_mixar.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
+#include "view3d_director_cinema.hh"
+#include "view3d_director_cinema_phone.hh"
+#include "view3d_director_minimap.hh"
 #include "view3d_director_overlay_intern.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 namespace {
 
-constexpr float PANEL_COLOR[4] = {0.055f, 0.058f, 0.066f, 0.94f};
 constexpr float PANEL_BORDER[4] = {0.28f, 0.29f, 0.33f, 0.8f};
 constexpr float TEXT_MUTED[4] = {0.70f, 0.71f, 0.75f, 1.0f};
 
-void draw_centered_text(const char *text,
-                        const float center_x,
-                        const float baseline_y,
-                        const float size,
-                        const float color[4])
-{
-  const int font_id = BLF_default();
-  BLF_size(font_id, size);
-  BLF_color4fv(font_id, color);
-  const float width = BLF_width(font_id, text, strlen(text));
-  BLF_position(font_id, center_x - width * 0.5f, baseline_y, 0.0f);
-  BLF_draw(font_id, text, strlen(text));
-}
-
-void draw_tool_rail(uiBlock *block,
+void draw_tool_rail(ui::Block *block,
                     const bContext *C,
                     const ARegion *region,
                     const DirectorViewState &state,
@@ -58,7 +50,7 @@ void draw_tool_rail(uiBlock *block,
                     const int gap)
 {
   struct Tool {
-    uiBlockCreateFunc block_func;
+    ui::BlockCreateFunc block_func;
     int icon;
     const char *tooltip;
     bool group_above;
@@ -98,17 +90,20 @@ void draw_tool_rail(uiBlock *block,
   const int slot = unit * 2 + gap;
   const int rail_h = button_count * slot - gap + group_count * group_gap;
   const int rail_x = gap * 2;
-  const int rail_y = std::max((region->winy - rail_h) / 2, gap * 3);
+  /* Centred when it fits; otherwise TOP-aligned, because a rail centred on
+   * a region shorter than itself runs off both ends and the first tool — the
+   * one the mode is about — goes off the top. */
+  const int rail_y = rail_h + gap * 3 <= region->winy ? (region->winy - rail_h) / 2 :
+                                                        region->winy - rail_h - gap * 2;
 
   int y = rail_y + rail_h - unit * 2;
   for (int index = 0; index < button_count; index++) {
     if (tools[index].group_above) {
       y -= group_gap;
     }
-    uiBut *button = uiDefIconBlockBut(block,
+    ui::Button *button = ui::uiDefIconBlockBut(block,
                                       tools[index].block_func,
                                       nullptr,
-                                      0,
                                       tools[index].icon,
                                       rail_x,
                                       y,
@@ -122,7 +117,7 @@ void draw_tool_rail(uiBlock *block,
   }
 }
 
-void draw_empty_state(uiBlock *block, const ARegion *region, const int unit, const int gap)
+void draw_empty_state(ui::Block *block, const ARegion *region, const int unit, const int gap)
 {
   const int panel_w = std::min(unit * 22, region->winx - gap * 12);
   const int panel_h = unit * 8;
@@ -131,19 +126,24 @@ void draw_empty_state(uiBlock *block, const ARegion *region, const int unit, con
   director_overlay_panel_draw(
       {float(x), float(x + panel_w), float(y), float(y + panel_h)}, 16.0f * UI_SCALE_FAC);
 
+  /* Through the surface's own painter: centred on the line rather than on a
+   * baseline the caller guesses, and MEASURED — the blurb is a full sentence
+   * at 12 px and used to run out of a panel this narrow. */
   const float white[4] = {0.96f, 0.96f, 0.98f, 1.0f};
-  draw_centered_text("Direct your first camera shot",
-                     float(region->winx) * 0.5f,
-                     float(y + panel_h - unit * 2),
-                     18.0f * UI_SCALE_FAC,
-                     white);
-  draw_centered_text(
-      "Explore the scene, frame a moment, then capture only the "
-      "keyframes that matter.",
-      float(region->winx) * 0.5f,
-      float(y + panel_h - unit * 4),
-      12.0f * UI_SCALE_FAC,
-      TEXT_MUTED);
+  const float text_w = float(panel_w) - float(gap) * 4.0f;
+  cinema_text_center_fitted("Direct your first camera shot",
+                            float(x + panel_w / 2),
+                            float(y + panel_h - unit * 2),
+                            18.0f * UI_SCALE_FAC,
+                            text_w,
+                            white);
+  cinema_text_center_fitted("Explore the scene, frame a moment, then capture only the "
+                            "keyframes that matter.",
+                            float(x + panel_w / 2),
+                            float(y + panel_h - unit * 4),
+                            12.0f * UI_SCALE_FAC,
+                            text_w,
+                            TEXT_MUTED);
   director_overlay_operator_button(block,
                                    "MIXAR_OT_director_start",
                                    ICON_VIEW_CAMERA,
@@ -155,7 +155,8 @@ void draw_empty_state(uiBlock *block, const ARegion *region, const int unit, con
                                    "Create a camera aligned to this view and start directing");
 }
 
-void draw_context_actions(uiBlock *block,
+void draw_context_actions(ui::Block *block,
+                          const bContext *C,
                           const ARegion *region,
                           const DirectorViewState &state,
                           const int unit,
@@ -206,26 +207,39 @@ void draw_context_actions(uiBlock *block,
         action_w,
         unit * 2,
         state.locked ? "Create an editable child of this locked take" :
-                       "Key this camera pose and capture its reference frame (F)");
-    if (!state.locked) {
-      /* Blender's timeline auto-key flips RECORD_OFF to RECORD_ON when armed
-       * (rna_scene.cc ui_icon); mirror that instead of a static REC glyph. */
-      uiBut *auto_key = director_overlay_operator_button(
-          block,
-          "MIXAR_OT_director_toggle_auto_key",
-          state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF,
-          "",
-          action_x + action_w + gap,
-          action_y,
-          unit * 2,
-          unit * 2,
-          "Auto Key: capture a keyframe automatically after every camera move");
-      if (state.auto_key) {
-        UI_but_flag_enable(auto_key, UI_BUT_ACTIVE_DEFAULT);
-      }
+                       "Key this camera pose and capture its reference frame (I)");
+    Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
+    if (!state.locked && scene != nullptr) {
+      /* Blender's own Auto Keying toggle, as on the dock: an RNA toggle on
+       * the property the Timeline's record button flips, drawn with the
+       * glyph that button uses (RECORD_OFF, RECORD_ON when armed). */
+      PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+      PointerRNA tool_settings_ptr = RNA_pointer_get(&scene_ptr, "tool_settings");
+      uiDefIconButR(block,
+                    ui::ButtonType::Toggle,
+                    state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF,
+                    action_x + action_w + gap,
+                    action_y,
+                    short(unit * 2),
+                    short(unit * 2),
+                    &tool_settings_ptr,
+                    "use_keyframe_insert_auto",
+                    0,
+                    0.0f,
+                    0.0f,
+                    state.auto_key ? "Auto Keying is on (the Timeline's record button)" :
+                                     "Auto Keying (the Timeline's record button): key the "
+                                     "camera automatically after every move");
     }
   }
 
+  /* The bottom row, left and right. Both are anchored to their own corner,
+   * and on a viewport too narrow to hold the pair the EXPORT gives way — the
+   * timeline chip is the only way back to the dock, so it is the one that
+   * cannot be dropped. */
+  const int timeline_w = unit * 7;
+  const int export_w = unit * 11;
+  const bool bottom_row_fits = region->winx > timeline_w + export_w + gap * 6;
   if (!state.timeline_expanded) {
     /* Bottom-left corner: centering collided with the right-anchored
      * Export to Moodboard button on narrow viewports. */
@@ -235,23 +249,23 @@ void draw_context_actions(uiBlock *block,
                                      "Timeline",
                                      gap * 2,
                                      gap * 2,
-                                     unit * 7,
+                                     timeline_w,
                                      unit * 2,
                                      "Expand the shot timeline");
   }
 
-  if (!state.beats.is_empty()) {
+  if (!state.beats.is_empty() && (bottom_row_fits || state.timeline_expanded)) {
     /* One combined export menu: keyframe stills and rendered Beauty/Clay/Depth
      * guides both reach the Moodboard from here. A native block popup like the
      * lens dropdown — the Python popover looked foreign over the calm surface.
      * Video Gen was removed from this cluster. */
-    uiDefBlockBut(block,
+    ui::uiDefBlockBut(block,
                   view3d_director_render_popup_create,
                   nullptr,
                   "Export to Moodboard",
-                  region->winx - unit * 11 - gap * 2,
+                  region->winx - export_w - gap * 2,
                   gap * 2,
-                  short(unit * 11),
+                  short(export_w),
                   short(unit * 2),
                   "Export keyframes and rendered guides to the Moodboard");
   }
@@ -261,11 +275,11 @@ void draw_context_actions(uiBlock *block,
 
 void director_overlay_panel_draw(const rctf &rect, const float radius)
 {
-  UI_draw_roundbox_corner_set(UI_CNR_ALL);
-  UI_draw_roundbox_4fv_ex(&rect, PANEL_COLOR, nullptr, 1.0f, PANEL_BORDER, UI_SCALE_FAC, radius);
+  cinema_glass_panel(rect, radius);
+  cinema_outline(rect, radius, PANEL_BORDER, UI_SCALE_FAC);
 }
 
-uiBut *director_overlay_operator_button(uiBlock *block,
+ui::Button *director_overlay_operator_button(ui::Block *block,
                                         const char *operator_id,
                                         const int icon,
                                         const char *label,
@@ -275,9 +289,10 @@ uiBut *director_overlay_operator_button(uiBlock *block,
                                         const int height,
                                         const char *tooltip)
 {
+  ui::Button *button;
   if (label && label[0]) {
-    return uiDefIconTextButO(block,
-                             ButType::But,
+    button = ui::uiDefIconTextButO(block,
+                             ui::ButtonType::But,
                              operator_id,
                              blender::wm::OpCallContext::InvokeRegionWin,
                              icon,
@@ -288,8 +303,9 @@ uiBut *director_overlay_operator_button(uiBlock *block,
                              height,
                              tooltip);
   }
-  return uiDefIconButO(block,
-                       ButType::But,
+  else {
+    button = ui::uiDefIconButO(block,
+                       ui::ButtonType::But,
                        operator_id,
                        blender::wm::OpCallContext::InvokeRegionWin,
                        icon,
@@ -298,12 +314,15 @@ uiBut *director_overlay_operator_button(uiBlock *block,
                        width,
                        height,
                        tooltip);
+  }
+  ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
+  return button;
 }
 
-void director_overlay_disable_button(uiBut *button, const bool disabled)
+void director_overlay_disable_button(ui::Button *button, const bool disabled)
 {
   if (disabled && button) {
-    UI_but_flag_enable(button, UI_BUT_DISABLED);
+    ui::button_flag_enable(button, ui::BUT_DISABLED);
   }
 }
 
@@ -311,28 +330,72 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
 {
   DirectorViewState state;
   if (!view3d_director_state_read(CTX_data_scene(C), &state) || !state.active) {
+    cinema_release_chat_seat(C);
+    /* Director left: the aerial map's render buffers go with it (a GPU
+     * context is bound here), and its click transform must not outlive the
+     * card. Owner-guarded so another viewport's draw never frees them. */
+    view3d_director_minimap_release(region, /*free_gpu=*/true);
+    /* Same rule for the camera list's published rect: a poll must never be
+     * answered by a card that is no longer on screen — and for the gate's
+     * remembered fit, which is keyed on this region's pointer. */
+    cinema_camera_list_release(region);
+    cinema_gate_release(region);
     return;
   }
 
   ED_region_pixelspace(region);
   GPU_blend(GPU_BLEND_ALPHA);
+  cinema_unit_begin(region);
+  /* Records from a previous wide draw must not outlive a compact one. */
+  cinema_qa_begin(region);
 
   const int unit = std::max(18, int(20.0f * UI_SCALE_FAC));
   const int gap = std::max(4, int(6.0f * UI_SCALE_FAC));
-  uiBlock *block = UI_block_begin(
+  ui::Block *block = ui::block_begin(
       C, region, "mixar_director_overlay", blender::ui::EmbossType::Emboss);
-  UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
+  ui::block_theme_style_set(block, ui::BLOCK_THEME_STYLE_POPUP);
+  /* The popups opened from here are settings panels that stay open: each
+   * re-lays itself after a row runs, so a new choice shows at once. */
+  ui::block_flag_enable(block, ui::BLOCK_MIXAR_POPUPS_REFRESH);
 
-  view3d_director_frame_controls_draw(block, C, region, state, unit, gap);
-  if (region->winy > unit * 18) {
-    draw_tool_rail(block, C, region, state, unit, gap);
+  /* Cinema Mode surface (the designed shell): a top strip and two anchored
+   * columns replace the old floating rail and its popovers. The rail's
+   * content did not disappear — the lens/aspect/moves/export popups are the
+   * same native blocks, now opened from named rows instead of icon buttons.
+   *
+   * Needs room for both columns plus the gate between them; below that the
+   * old compact controls are still the honest fallback. */
+  if (cinema_surface_fits(region)) {
+    /* No empty-state card here: it would sit on top of the two columns, and
+     * the right column's own "+ Add Camera" is the same first action. The
+     * camera gate is the frame: fitted to the stage, no chrome around it. */
+    cinema_fit_camera_gate(C, region);
+    cinema_draw_top_strip(block, C, region, state);
+    cinema_draw_left_panel(block, C, region, state);
+    cinema_draw_right_panel(block, C, region, state);
+    /* Last, so the pairing card sits above both columns and the gate. */
+    cinema_draw_phone_card(block, C, region);
   }
-  if (!state.has_shot) {
-    draw_empty_state(block, region, unit, gap);
+  else {
+    cinema_release_chat_seat(C);
+    /* Compact rail: no card, so no click target — but keep the render
+     * cached, a second viewport below the fit gate must not thrash it. */
+    view3d_director_minimap_release(region, /*free_gpu=*/false);
+    cinema_camera_list_release(region);
+    /* The rail draws no gate, so the wide layout must refit when it returns. */
+    cinema_gate_release(region);
+    view3d_director_frame_controls_draw(block, C, region, state, unit, gap);
+    if (region->winy > unit * 18) {
+      draw_tool_rail(block, C, region, state, unit, gap);
+    }
+    if (!state.has_shot) {
+      draw_empty_state(block, region, unit, gap);
+    }
+    draw_context_actions(block, C, region, state, unit, gap);
   }
-  draw_context_actions(block, region, state, unit, gap);
 
-  UI_block_end(C, block);
-  UI_block_draw(C, block);
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
   GPU_blend(GPU_BLEND_NONE);
 }
+}  // namespace blender

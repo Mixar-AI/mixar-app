@@ -73,6 +73,26 @@ def catalog_feature_label(origin_capability_key: str, service: str) -> str:
     return ""
 
 
+def model_label(service: str, model: str) -> str:
+    """Backend catalog model label, with exact submitted-slug fallback.
+
+    The one definition — the queue UIList and the agent island's Queue tab
+    mirror both use it, so the two surfaces can never disagree on a name.
+    """
+    model_slug = (model or "").strip()
+    if not model_slug:
+        return ""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+
+        catalog_model = get_model((service or "").strip(), model_slug)
+        if catalog_model and catalog_model.get("label"):
+            return catalog_model["label"]
+    except Exception:
+        pass
+    return model_slug
+
+
 def feature_label(
     origin_capability_key: str,
     service: str,
@@ -85,3 +105,18 @@ def feature_label(
         or (service or "").strip()
         or (feature_key or "").strip()
     )
+
+
+def stackable_job_identity(display: str) -> tuple[str, str]:
+    """Unique queue dedup key plus the readable title for surfaces.
+
+    ``FeatureQueue.submit`` rejects a second job with the same ``label`` while
+    the first is still active. Interactive 3D submits intentionally stack
+    (same reference image, another model), so each gets a short uuid suffix on
+    the label while ``display_label`` keeps the clean name the Queue UI and
+    toasts show — the same pattern Image Gen agent batches already use.
+    """
+    import uuid
+
+    clean = (display or "").strip() or "3D model"
+    return f"{clean} [{uuid.uuid4().hex[:4]}]", clean

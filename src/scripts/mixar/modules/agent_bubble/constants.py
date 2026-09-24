@@ -24,3 +24,14 @@ import sys
 # controls by having someone write its window helpers; anything else stays
 # opted out and inherits no dead buttons.
 BUBBLE_WINDOW_CONTROLS_SUPPORTED = sys.platform in {"darwin", "win32"}
+
+# How far (window pixels) a press on the pill window may travel and still be
+# a CLICK. Past it the press becomes a DRAG that moves the pill. The pill's
+# press is decided by how it ends, never at PRESS time — see
+# ui/operators/bubble_header_drag_op.py.
+PILL_DRAG_THRESHOLD_PX = 4
+# A pill press that has not become a click or a drag within this many
+# seconds is abandoned: its RELEASE went to another window (a restore
+# re-parents the pill mid-press), and a later release must not toggle the
+# island that the user has meanwhile opened and is typing in.
+PILL_CLICK_MAX_SECONDS = 1.5

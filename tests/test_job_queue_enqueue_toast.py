@@ -14,8 +14,11 @@ The contract these pin, in order of why they exist:
   * it is not re-pushed when nothing changed (``_notify`` fires twice a
     second during downloads).
   * a user dismissal is respected until the next enqueue.
-  * draining the queue replaces it with a transient completion summary, and
-    an all-failed batch dismisses instead (failures self-toast already).
+  * each feature's batch raises its own transient "<Feature> complete"
+    toast the moment ITS jobs finish — the notification that replaced the
+    "<Feature> batch complete" popup menu — and draining the queue dismisses
+    the sticky toast. An all-failed batch raises no completion toast
+    (failures self-toast already).
 
 Also covers the toast's "View Queue" action working without area context
 (toast buttons fire from a bpy.app.timers callback where context.area is
@@ -37,6 +40,7 @@ install_bpy_mock()
 
 from mixar.modules.common.job_queue.constants import (
     QUEUE_ACTIVE_TOAST_TTL_MS,
+    QUEUE_DONE_TOAST_ID_PREFIX,
     QUEUE_READY_TOAST_TTL_MS,
     QUEUE_TOAST_ID,
 )
@@ -74,8 +78,24 @@ def _toast(store):
     return items[0] if items else None
 
 
-def _job(label="ImageGen: a hero"):
-    return _InertJob(label=label)
+def _job(label="ImageGen: a hero", service=""):
+    return _InertJob(label=label, service=service)
+
+
+def _done_toasts(store):
+    """Completion toasts, newest first."""
+    return [
+        i for i in store.get_visible()
+        if i.id.startswith(QUEUE_DONE_TOAST_ID_PREFIX)
+    ]
+
+
+def _catalog(monkeypatch, labels):
+    """Resolve feature labels from ``service`` the way the catalog would."""
+    monkeypatch.setattr(
+        QM_LABELS, "catalog_feature_label",
+        lambda cap, svc: labels.get(svc, ""),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -177,47 +197,98 @@ def test_dismissal_respected_until_next_enqueue(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Drain phase
+# Completion phase
 # ---------------------------------------------------------------------------
 
 
-def test_drain_replaces_sticky_toast_with_transient_summary(monkeypatch):
+def test_drain_dismisses_sticky_and_raises_feature_completion(monkeypatch):
     queue = _queue()
     store = _setup(monkeypatch, queues=[queue])
+    _catalog(monkeypatch, {"image_to_3d": "Image to 3D"})
 
-    first, second = _job("job-a"), _job("job-b")
-    queue.submit(first)
-    queue.submit(second)
-
-    first.state = JobState.SUCCESS
-    second.state = JobState.SUCCESS
+    jobs = [_job(f"job-{n}", service="image_to_3d") for n in range(4)]
+    for job in jobs:
+        queue.submit(job)
+    for job in jobs:
+        job.state = JobState.SUCCESS
     queue._notify()
 
-    item = _toast(store)
-    assert item.title == "2 generations ready"
+    assert _toast(store) is None  # the sticky in-progress toast is gone
+    [item] = _done_toasts(store)
+    assert item.title == "Image to 3D complete"
+    assert item.body == "4 succeeded"
+    assert item.type.value == "success"
     assert item.ttl_ms == QUEUE_READY_TOAST_TTL_MS
     assert not item.is_sticky
     assert item.actions[0].operator == "mixie.queue_view"
 
 
-def test_summary_reports_partial_failure(monkeypatch):
+def test_each_feature_reports_when_its_own_jobs_finish(monkeypatch):
+    """The screenshot case: Image to 3D finishes while Auto Rig still runs."""
+    a, b = _queue("feat_a"), _queue("feat_b")
+    store = _setup(monkeypatch, queues=[a, b])
+    _catalog(monkeypatch, {"image_to_3d": "Image to 3D", "auto_rig": "Auto Rig"})
+
+    models = [_job(f"model-{n}", service="image_to_3d") for n in range(4)]
+    rig = _job("rig-0", service="auto_rig")
+    for job in models:
+        a.submit(job)
+    b.submit(rig)
+
+    for job in models:
+        job.state = JobState.SUCCESS
+    a._notify()
+
+    [done] = _done_toasts(store)
+    assert (done.title, done.body) == ("Image to 3D complete", "4 succeeded")
+    assert _toast(store).title == "Generation in progress"  # rig still runs
+
+    rig.state = JobState.SUCCESS
+    b._notify()
+
+    titles = [(i.title, i.body) for i in _done_toasts(store)]
+    assert titles == [
+        ("Auto Rig complete", "1 succeeded"),
+        ("Image to 3D complete", "4 succeeded"),
+    ]
+    assert _toast(store) is None
+
+
+def test_completion_reports_failed_and_cancelled_counts(monkeypatch):
     queue = _queue()
     store = _setup(monkeypatch, queues=[queue])
+    _catalog(monkeypatch, {"image_to_3d": "Image to 3D"})
 
-    ok, bad = _job("job-a"), _job("job-b")
-    queue.submit(ok)
-    queue.submit(bad)
+    ok, bad, stopped = (_job(n, service="image_to_3d") for n in "abc")
+    for job in (ok, bad, stopped):
+        queue.submit(job)
 
     ok.state = JobState.SUCCESS
     bad.state = JobState.FAILED
+    stopped.state = JobState.CANCELLED
     queue._notify()
 
-    item = _toast(store)
-    assert item.title == "Generation ready"
-    assert item.body == "1 failed"
+    [item] = _done_toasts(store)
+    assert item.body == "1 succeeded, 1 failed, 1 cancelled"
 
 
-def test_all_failed_batch_dismisses_instead_of_summarising(monkeypatch):
+def test_catalog_miss_falls_back_to_generic_wording(monkeypatch):
+    """A raw key like ``mesh_segment`` in a title reads as a bug."""
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+    _catalog(monkeypatch, {})
+
+    first, second = _job("job-a"), _job("job-b")
+    queue.submit(first)
+    queue.submit(second)
+    first.state = second.state = JobState.SUCCESS
+    queue._notify()
+
+    [item] = _done_toasts(store)
+    assert (item.title, item.body) == ("2 generations ready", "2 succeeded")
+
+
+def test_all_failed_batch_raises_no_completion_toast(monkeypatch):
     """Each failure already raised its own toast — don't double-report."""
     queue = _queue()
     store = _setup(monkeypatch, queues=[queue])
@@ -228,9 +299,12 @@ def test_all_failed_batch_dismisses_instead_of_summarising(monkeypatch):
     queue._notify()
 
     assert _toast(store) is None
+    assert _done_toasts(store) == []
+    failure = [i for i in store.get_visible() if i.type.value == "error"]
+    assert len(failure) == 1
 
 
-def test_summary_fires_once_then_stays_quiet(monkeypatch):
+def test_completion_fires_once_then_stays_quiet(monkeypatch):
     queue = _queue()
     store = _setup(monkeypatch, queues=[queue])
 
@@ -238,11 +312,32 @@ def test_summary_fires_once_then_stays_quiet(monkeypatch):
     queue.submit(job)
     job.state = JobState.SUCCESS
     queue._notify()
-    assert _toast(store).title == "Generation ready"
+    assert _done_toasts(store)[0].title == "Generation ready"
 
     store.clear_all()
     queue._notify()
+    assert _done_toasts(store) == []
     assert _toast(store) is None
+
+
+def test_next_batch_of_a_feature_replaces_its_completion_toast(monkeypatch):
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+    _catalog(monkeypatch, {"image_to_3d": "Image to 3D"})
+
+    first = _job("job-a", service="image_to_3d")
+    queue.submit(first)
+    first.state = JobState.SUCCESS
+    queue._notify()
+
+    second, third = (_job(n, service="image_to_3d") for n in ("job-b", "job-c"))
+    queue.submit(second)
+    queue.submit(third)
+    second.state = third.state = JobState.SUCCESS
+    queue._notify()
+
+    [item] = _done_toasts(store)
+    assert item.body == "2 succeeded"  # a fresh count, not 3
 
 
 def test_new_batch_after_drain_starts_a_fresh_count(monkeypatch):
@@ -258,6 +353,21 @@ def test_new_batch_after_drain_starts_a_fresh_count(monkeypatch):
     item = _toast(store)
     assert item.title == "Generation in progress"
     assert item.body == "job-b"
+
+
+def test_dismissed_sticky_still_gets_its_completion(monkeypatch):
+    """Closing the progress toast is not a request to miss the outcome."""
+    queue = _queue()
+    store = _setup(monkeypatch, queues=[queue])
+
+    job = _job("job-a")
+    queue.submit(job)
+    store.dismiss(QUEUE_TOAST_ID)
+    queue._notify()
+
+    job.state = JobState.SUCCESS
+    queue._notify()
+    assert _done_toasts(store)[0].title == "Generation ready"
 
 
 # ---------------------------------------------------------------------------
@@ -337,73 +447,24 @@ def test_activity_is_empty_when_the_queue_is_idle(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def _fake_area(area_type=None, width=100, height=100):
-    # Default to the space type the Queue panel actually registers in
-    # (MIXIE when the Mixar space exists, VIEW_3D otherwise).
-    if area_type is None:
-        area_type = QO.QUEUE_AREA_TYPE
-    return SimpleNamespace(
-        type=area_type,
-        width=width,
-        height=height,
-        spaces=SimpleNamespace(active=SimpleNamespace(show_region_ui=False)),
-        regions=[SimpleNamespace(type='UI', active_panel_category="")],
-        tag_redraw=lambda: None,
-    )
-
-
-def _fake_context(area, windows):
-    return SimpleNamespace(
-        area=area,
-        window_manager=SimpleNamespace(
-            windows=[
-                SimpleNamespace(screen=SimpleNamespace(areas=areas))
-                for areas in windows
-            ],
-        ),
-    )
-
-
-def test_find_largest_queue_area_picks_biggest_of_right_type():
-    small = _fake_area(width=10, height=10)
-    big = _fake_area(width=200, height=100)
-    other = _fake_area(area_type="OTHER_SPACE", width=500, height=500)
-    ctx = _fake_context(None, [[small, other], [big]])
-    assert QO.find_largest_queue_area(ctx) is big
-
-
-def test_queue_view_falls_back_when_no_area_context():
-    area = _fake_area()
-    ctx = _fake_context(None, [[area]])
-    result = QO.MIXIE_OT_queue_view.execute(SimpleNamespace(), ctx)
+def test_queue_view_without_area_opens_island(monkeypatch):
+    context = SimpleNamespace(area=None)
+    seen = []
+    monkeypatch.setattr(QO, '_show_island_queue_tab', lambda ctx: seen.append(ctx) or True)
+    result = QO.MIXIE_OT_queue_view.execute(SimpleNamespace(), context)
     assert result == {'FINISHED'}
-    assert area.spaces.active.show_region_ui is True
-    assert area.regions[0].active_panel_category == "Queue"
+    assert seen == [context]
 
 
-def test_queue_view_redirects_wrong_area_type_to_queue_area():
-    # A toast clicked in a 3D viewport must not touch that viewport's
-    # sidebar — the "Queue" category only exists in the queue area type.
-    clicked = _fake_area(area_type="OTHER_SPACE")
-    target = _fake_area()
-    ctx = _fake_context(clicked, [[clicked, target]])
-    result = QO.MIXIE_OT_queue_view.execute(SimpleNamespace(), ctx)
-    assert result == {'FINISHED'}
-    assert clicked.regions[0].active_panel_category == ""
-    assert target.regions[0].active_panel_category == "Queue"
-
-
-def test_queue_view_uses_context_area_when_already_right_type():
-    area = _fake_area()
-    bigger_elsewhere = _fake_area(width=999, height=999)
-    ctx = _fake_context(area, [[area, bigger_elsewhere]])
-    result = QO.MIXIE_OT_queue_view.execute(SimpleNamespace(), ctx)
-    assert result == {'FINISHED'}
-    assert area.regions[0].active_panel_category == "Queue"
-    assert bigger_elsewhere.regions[0].active_panel_category == ""
-
-
-def test_queue_view_cancels_when_no_queue_area_anywhere():
-    ctx = _fake_context(None, [[]])
-    result = QO.MIXIE_OT_queue_view.execute(SimpleNamespace(), ctx)
-    assert result == {'CANCELLED'}
+def test_queue_view_reports_unavailable_island_without_touching_sidebar(monkeypatch):
+    region = SimpleNamespace(active_panel_category='')
+    space = SimpleNamespace(show_region_ui=False)
+    context = SimpleNamespace(area=SimpleNamespace(
+        type='MIXIE', regions=[region], spaces=SimpleNamespace(active=space)))
+    reports = []
+    monkeypatch.setattr(QO, '_show_island_queue_tab', lambda ctx: False)
+    operator = SimpleNamespace(report=lambda severity, text: reports.append((severity, text)))
+    assert QO.MIXIE_OT_queue_view.execute(operator, context) == {'CANCELLED'}
+    assert reports == [({'WARNING'}, 'The Agent island Queue is unavailable')]
+    assert region.active_panel_category == ''
+    assert not space.show_region_ui

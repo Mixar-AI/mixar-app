@@ -37,15 +37,12 @@ def on_prompt_error(scene, sidebar_tab, message):
                 for area in window.screen.areas:
                     if area.type == "MIXIE":
                         area.tag_redraw()
-
-            def draw_error(self_inner, context):
-                self_inner.layout.label(text=message)
-
-            bpy.context.window_manager.popup_menu(
-                draw_error, title="Scene Reconstruction Error", icon="ERROR"
-            )
         except Exception:
             pass
+        from mixar.modules.common.utils.mixie_space_utils import (
+            push_error_notification,
+        )
+        push_error_notification("Scene Reconstruction failed", message)
         return None
 
     bpy.app.timers.register(_show, first_interval=0)
@@ -89,9 +86,9 @@ def submit_recon_job(scene, sidebar_tab, image_bytes,
             if imported_obj and save_to_library and asset_library_path:
                 try:
                     from mixar.modules.moodboard.core.scene_asset_exporter import (
-                        export_object_to_asset_library,
+                        schedule_object_export,
                     )
-                    export_object_to_asset_library(imported_obj, label, asset_library_path)
+                    schedule_object_export(imported_obj, label, asset_library_path)
                 except Exception as e:
                     logger.error("Asset export error for '%s': %s", label, e)
         except Exception as e:
@@ -139,21 +136,10 @@ def submit_recon_job(scene, sidebar_tab, image_bytes,
                 logger.debug("Asset filler not available, keeping bbox placeholders")
 
     def on_error(error_msg):
+        # A failed queue job already raised its own error notification
+        # (FeatureQueue._notify_failure_toasts); a second alert here would
+        # report the same failure twice.
         logger.error("%s", error_msg)
-
-        def _show():
-            try:
-                def draw_error(self_inner, context):
-                    self_inner.layout.label(text=error_msg)
-
-                bpy.context.window_manager.popup_menu(
-                    draw_error, title="Scene Reconstruction Error", icon="ERROR"
-                )
-            except Exception:
-                pass
-            return None
-
-        bpy.app.timers.register(_show, first_interval=0)
 
     def on_download_failed(index, label, error):
         logger.error("Object %s ('%s') download failed: %s", index, label, error)

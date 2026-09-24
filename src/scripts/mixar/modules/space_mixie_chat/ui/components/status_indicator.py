@@ -18,6 +18,7 @@ def draw_connection_status(
     layout,
     state: SessionState,
     is_connecting: bool = False,
+    run_open: bool = False,
 ) -> None:
     """
     Draw connection status indicator.
@@ -26,10 +27,15 @@ def draw_connection_status(
         layout: Blender UI layout
         state: Current session state
         is_connecting: Whether currently attempting to connect
+        run_open: The backend run is still open (workers build while the
+            orchestrator's turn is IDLE)
     """
     row = layout.row(align=True)
 
-    if state == SessionState.IDLE:
+    if state == SessionState.IDLE and run_open:
+        row.label(text="", icon='SORTTIME')
+        row.label(text="Working")
+    elif state == SessionState.IDLE:
         row.label(text="", icon='CHECKMARK')  # Connected
         row.label(text="Connected")
     elif state == SessionState.CONNECTING or is_connecting:

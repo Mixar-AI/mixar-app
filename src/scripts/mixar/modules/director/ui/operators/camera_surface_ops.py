@@ -8,6 +8,7 @@ from bpy.props import EnumProperty
 from bpy.types import Operator
 
 from ...constants import LENS_TYPE_ITEMS
+from ...core.panoramic import show_panoramic_lens
 from ...core.shot_api import active_shot, refresh_manifest
 
 
@@ -44,6 +45,10 @@ class MIXAR_OT_director_set_lens_type(Operator):
         if shot is None or camera is None:
             return {'CANCELLED'}
         camera.data.type = self.lens_type
+        if self.lens_type == 'PANO':
+            # Only Cycles draws a panoramic camera; see `core/panoramic.py`.
+            for problem in show_panoramic_lens(context):
+                self.report({'WARNING'}, problem)
         if shot.beats:
             refresh_manifest(context.scene, shot)
         if context.area is not None:

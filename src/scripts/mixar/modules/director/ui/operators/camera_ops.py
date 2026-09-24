@@ -9,12 +9,16 @@ from bpy.props import EnumProperty, IntProperty
 from bpy.types import Operator
 
 from ...constants import ASPECT_PRESETS
+from ...core.aspect import apply_ratio, remember_camera_ratio
 from ...core.shot_api import active_shot, refresh_manifest
 from ...core.viewport import (
+    NATIVE_WALK_OPERATOR,
+    WALK_OPERATOR,
     enter_camera_view,
     enter_precise_mode,
     invoke_explore_walk,
     invoke_walk,
+    set_walk_active,
 )
 
 
@@ -23,6 +27,27 @@ def _editable_shot(context):
     if shot is None or shot.state != 'DRAFT' or shot.camera is None:
         return None
     return shot
+
+
+# The walk-aim overlay's handle, module-level like `track_pick_overlay`'s. It
+# used to live only on the operator instance, so a supervisor that never reached
+# _finish -- a file load ending the modal, an exception -- left the handler
+# installed with nothing able to reach it, and the next walk stacked another.
+# The stale one keeps drawing against a dead region pointer, which a recycled
+# address turns into a reticle painted forever.
+_walk_draw_handle = None
+
+
+def _remove_walk_aim() -> None:
+    """Drop the overlay if one is installed. Safe to call any number of times."""
+    global _walk_draw_handle
+    if _walk_draw_handle is None:
+        return
+    try:
+        bpy.types.SpaceView3D.draw_handler_remove(_walk_draw_handle, 'WINDOW')
+    except (ValueError, ReferenceError, RuntimeError):
+        pass  # already gone with its space type
+    _walk_draw_handle = None
 
 
 def _draw_walk_aim(region_pointer):
@@ -73,11 +98,28 @@ class _WalkSupervisor:
     of mouse steering that can be anywhere, including outside the window,
     and it stays invisible until wiggled. Supervision fixes the exit for
     every walk the Director starts: an aim reticle marks the focus while
-    the pointer is hidden, Esc stops in place instead of walk's native
-    snap-back (the pose captured at the Esc press is re-applied after
-    walk's revert), and the cursor is warped back to the middle of the
-    viewport on every exit so it is always visible and where the eye is.
+    the pointer is hidden, Esc stops Explore in place instead of Blender
+    walk's native snap-back (the pose captured at the Esc press is
+    re-applied after walk's revert), and the cursor is warped back to the
+    middle of the viewport on every exit so it is always visible and where
+    the eye is.
+
+    Subclasses declare WHICH walk they supervise: Navigate drives the shot
+    camera through the Cinema walk, Explore free-flies the viewport with
+    Blender's own. Watching the wrong id reads as "the walk already ended"
+    on the first modal event, so the supervisor cleans up and returns
+    FINISHED while the walk it was supervising is still flying.
     """
+
+    #: Overridden by Explore. Not a constructor argument: Blender builds
+    #: operator instances itself.
+    _walk_operator = WALK_OPERATOR
+    #: Does Esc end the walk being supervised? Blender's own walk (Explore)
+    #: cancels on it; the Cinema walk (Navigate) does not — its Walk chip is
+    #: the one switch. Snapshotting a pose on an Esc that ends nothing would
+    #: re-apply that stale pose whenever the chip later stops the walk,
+    #: throwing away everything driven since.
+    _esc_stops_walk = False
 
     def _supervise(self, context, window, area, region) -> None:
         self._window = window
@@ -87,15 +129,19 @@ class _WalkSupervisor:
         self._timer = context.window_manager.event_timer_add(
             0.05, window=window,
         )
-        self._draw_handle = bpy.types.SpaceView3D.draw_handler_add(
+        global _walk_draw_handle
+        _remove_walk_aim()  # a previous supervisor that never reached _finish
+        _walk_draw_handle = bpy.types.SpaceView3D.draw_handler_add(
             _draw_walk_aim, (region.as_pointer(),), 'WINDOW', 'POST_PIXEL',
         )
+        self._draw_handle = _walk_draw_handle
         context.window_manager.modal_handler_add(self)
+        set_walk_active(context, True)
         area.tag_redraw()
 
     def modal(self, context, event):
         if self._walk_running():
-            if event.type == 'ESC' and event.value == 'PRESS':
+            if self._esc_stops_walk and event.type == 'ESC' and event.value == 'PRESS':
                 # Native walk cancel snaps back to where the walk began.
                 # Directors expect Esc to simply stop here, so keep this
                 # pose and re-apply it after walk's revert.
@@ -119,13 +165,7 @@ class _WalkSupervisor:
         pass
 
     def _walk_running(self) -> bool:
-        modal_operators = getattr(self._window, "modal_operators", None)
-        if modal_operators is None:
-            return False
-        try:
-            return modal_operators.get("VIEW3D_OT_walk") is not None
-        except (AttributeError, ReferenceError):
-            return False
+        return _walk_running_in(self._window, self._walk_operator)
 
     def _finish(self, context, *, reset_cursor: bool = True) -> None:
         if self._exit_pose is not None:
@@ -135,10 +175,13 @@ class _WalkSupervisor:
             context.window_manager.event_timer_remove(self._timer)
             self._timer = None
         if self._draw_handle is not None:
-            bpy.types.SpaceView3D.draw_handler_remove(
-                self._draw_handle, 'WINDOW',
-            )
+            _remove_walk_aim()
             self._draw_handle = None
+        # `lock_camera` is NOT released here. It is the Cinema Mode contract
+        # now — "Lock Camera to View" stays on for the session, because the
+        # camera is what the director is moving — and walk only borrowed
+        # something the mode already holds.
+        set_walk_active(context, False)
         if reset_cursor:
             # The pointer reappears wherever the OS left it — often off in
             # a corner or outside the window; hand it back in the middle of
@@ -156,13 +199,22 @@ class _WalkSupervisor:
             pass
 
 
-class MIXAR_OT_director_navigate(_WalkSupervisor, Operator):
-    """Rough-in the camera with Blender's native WASD walk navigation"""
+def _walk_running_in(window, operator: str = WALK_OPERATOR) -> bool:
+    modal_operators = getattr(window, "modal_operators", None)
+    if modal_operators is None:
+        return False
+    try:
+        return modal_operators.get(operator) is not None
+    except (AttributeError, ReferenceError):
+        return False
 
+
+class MIXAR_OT_director_navigate(_WalkSupervisor, Operator):
     bl_idname = "mixar.director_navigate"
     bl_label = "Navigate"
     bl_description = (
-        "Move the camera with WASD and mouse; click to confirm, Esc to stop"
+        "Walk the camera with WASD; hold the left mouse button to look, Shift "
+        "to sprint, Alt to creep. Click again to stop"
     )
 
     @classmethod
@@ -171,8 +223,19 @@ class MIXAR_OT_director_navigate(_WalkSupervisor, Operator):
         return bool(state and state.is_directing and _editable_shot(context))
 
     def invoke(self, context, _event):
+        state = context.scene.mixar_director
+        if _walk_running_in(context.window):
+            # The chip is a TOGGLE and always was, in everything but its
+            # behaviour: it paints lit while walking and publishes "stop" to
+            # the QA harness. Starting a second walk on top of the first is
+            # what it actually did — two modals both eating WASD, and Esc
+            # stopping only the top one. It was unreachable while the walk
+            # owned every event in the window; it stopped being unreachable
+            # the moment the surface became clickable during a walk.
+            state.walk_stop_requested = True
+            return {'FINISHED'}
         shot = _editable_shot(context)
-        context.scene.mixar_director.navigation_mode = 'NAVIGATE'
+        state.navigation_mode = 'NAVIGATE'
         try:
             result, target = invoke_walk(context, shot.camera)
         except Exception as exc:
@@ -210,6 +273,8 @@ class MIXAR_OT_director_navigate(_WalkSupervisor, Operator):
         state = getattr(context.scene, "mixar_director", None)
         if state is None or not state.auto_key or not state.is_directing:
             return
+        if getattr(getattr(context, "screen", None), "is_animation_playing", False):
+            return  # The recorder owns the running take; never render a still here.
         shot = _editable_shot(context)
         if shot is None or shot.camera != self._camera:
             return
@@ -224,7 +289,9 @@ class MIXAR_OT_director_navigate(_WalkSupervisor, Operator):
         try:
             from ...core.capture import capture_beat
 
-            beat = capture_beat(context, shot, state.beat_seconds)
+            beat = capture_beat(
+                context, shot, state.beat_seconds, replace_existing=True
+            )
         except Exception as exc:
             self.report({'WARNING'}, f"Auto Key could not capture: {exc}")
             return
@@ -236,6 +303,10 @@ class MIXAR_OT_director_explore(_WalkSupervisor, Operator):
 
     bl_idname = "mixar.director_explore"
     bl_label = "Explore"
+    # Explore flies the VIEWPORT with Blender's own walk, not the camera
+    # with the Cinema one — and that walk's Esc cancels, snapping back.
+    _walk_operator = NATIVE_WALK_OPERATOR
+    _esc_stops_walk = True
     bl_description = (
         "Leave the camera view and fly the scene with WASD and the mouse; "
         "frame a spot, then Add Camera Here starts a new shot there"
@@ -322,7 +393,23 @@ class MIXAR_OT_director_block_input(Operator):
     @classmethod
     def poll(cls, context):
         state = getattr(context.scene, "mixar_director", None)
-        return bool(state and state.is_directing)
+        if not (state and state.is_directing):
+            return False
+        # Scoped to a 3D viewport's WINDOW region BY THE POLL, not only by
+        # the keymaps it sits in. The walk keys are guarded from the global
+        # "User Interface" keymap — the one place that beats the eyedropper's
+        # global E — and a guard reachable from every editor would eat W, A,
+        # S and D anywhere in the app for as long as a session is directing.
+        # Everything else parks in 3D-viewport keymaps already, so this only
+        # ever narrows what was already true for them.
+        area = getattr(context, "area", None)
+        region = getattr(context, "region", None)
+        return bool(
+            area is not None
+            and area.type == 'VIEW_3D'
+            and region is not None
+            and region.type == 'WINDOW'
+        )
 
     def invoke(self, _context, _event):
         return {'FINISHED'}
@@ -393,12 +480,16 @@ class MIXAR_OT_director_set_aspect(Operator):
         shot = _editable_shot(context)
         if shot is None:
             return {'CANCELLED'}
-        _label, width, height = ASPECT_PRESETS[self.preset]
-        render = context.scene.render
-        render.resolution_x = width
-        render.resolution_y = height
-        render.pixel_aspect_x = 1.0
-        render.pixel_aspect_y = 1.0
+        _label, ratio_w, ratio_h = ASPECT_PRESETS[self.preset]
+        # The ratio belongs to THIS camera. Blender has one render size and it
+        # is the scene's, so the choice is remembered on the camera and mirrored
+        # into the scene while that camera is live — otherwise picking 2.39:1
+        # for the hero shot silently reshaped the 9:16 cutdown beside it.
+        remember_camera_ratio(shot.camera, ratio_w, ratio_h)
+        # Applied over the scene's CURRENT short side: the aspect is the shape
+        # of the frame and the resolution segment is its quality, and writing a
+        # pixel size made the two fight.
+        apply_ratio(context.scene, ratio_w, ratio_h)
         if shot.beats:
             refresh_manifest(context.scene, shot)
         return {'FINISHED'}
@@ -413,4 +504,3 @@ classes = (
     MIXAR_OT_director_set_lens,
     MIXAR_OT_director_set_aspect,
 )
-

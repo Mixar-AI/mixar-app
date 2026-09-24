@@ -9,9 +9,23 @@
 
 #pragma once
 
+namespace blender {
+
 struct ARegion;
 struct ARegionType;
 struct bContext;
+struct wmEvent;
+struct wmWindow;
+struct wmWindowManager;
+
+/* Observe an outside press without consuming the destination window event. */
+void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event);
+
+/* Exact native-window identity; the open island's small status pill is excluded. */
+bool ED_agent_bubble_is_resting_pill(const bContext *C);
+
+/* Resolve the live native host; reparenting need not change wmWindow::parent. */
+wmWindow *ED_agent_bubble_host_window_get(wmWindowManager *wm);
 
 /* Only called once on startup. storage is global in BKE kernel listbase. */
 void ED_spacetypes_init();
@@ -49,7 +63,6 @@ void ED_spacetype_mixar_assets();  /* Mixar Assets space */
 
 void ED_spacetype_baking();  /* Texturing Baking space */
 void ED_spacetype_texture_sets();  /* Texture Sets space */
-void ED_spacetype_mixie_chat();  /* Mixie Chat space for Mixar */
 void ED_spacetype_agent_bubble();  /* Floating Agent Bubble overlay editor for Mixar */
 
 /* Mixar: reset the Agent Bubble's cached native-window pointers (bubble/
@@ -63,6 +76,16 @@ void ED_spacetype_agent_bubble();  /* Floating Agent Bubble overlay editor for M
  * call even when no bubble window was ever opened. */
 void ED_agent_bubble_windows_closed();
 
+/* Mixar: Cinema Mode's chat bar IS the resting Agent pill, seated under the
+ * camera gate. The View3D overlay hands over the seat (its bottom y in the
+ * host's window pixels; the pill is centred on the host) while the Cinema
+ * surface draws and clears it otherwise; a resting pill moves at once, an
+ * open island takes the seat at its next minimise. `ED_agent_bubble_pill_band_px`
+ * is the resting pill's height in that host's window pixels, so the gate
+ * can leave room for it. */
+void ED_agent_bubble_set_cinema_seat(const wmWindow *host, bool valid, int bottom_y_px);
+int ED_agent_bubble_pill_band_px(const wmWindow *host);
+
 /* Mixar: notify the Agent Bubble cache that a native GHOST window is being
  * destroyed. Clears whichever cached pointer (bubble / pill / host) matches
  * `ghostwin`, so the cache can never dangle regardless of the teardown path.
@@ -71,11 +94,11 @@ void ED_agent_bubble_windows_closed();
  * window-manager on file load (#wm_close_and_free) and application exit. */
 void ED_agent_bubble_window_freed(const void *ghostwin);
 
-namespace blender::ed::vse {
+namespace ed::vse {
 void ED_spacetype_sequencer();
 }
 
-namespace blender::ed::spreadsheet {
+namespace ed::spreadsheet {
 void register_spacetype();
 }
 
@@ -101,6 +124,8 @@ void *ED_region_draw_cb_activate(ARegionType *art,
                                  void *customdata,
                                  int type);
 void ED_region_draw_cb_draw(const bContext *C, ARegion *region, int type);
-void ED_region_surface_draw_cb_draw(ARegionType *art, int type);
+void ED_region_surface_draw_cb_draw(const bContext *C, ARegionType *art, int type);
 bool ED_region_draw_cb_exit(ARegionType *art, void *handle);
 void ED_region_draw_cb_remove_by_type(ARegionType *art, void *draw_fn, void (*free)(void *));
+
+}  // namespace blender

@@ -8,10 +8,13 @@
  */
 
 #include "mixie_draw_moodboard_intern.hh"
+#include "mixie_moodboard_graph_geometry.hh"
 
 #include "BKE_curve.hh"
 
 #include "BLI_string.h"
+#include "DNA_theme_types.h"
+#include "DNA_userdef_types.h"
 
 namespace blender::ed::mixie {
 
@@ -37,7 +40,7 @@ void mixie_rna_property_string_get_clamped(PointerRNA *ptr,
   char *value = RNA_property_string_get_alloc(ptr, prop, nullptr, 0, &allocated_length);
   if (value) {
     BLI_strncpy(dst, value, dst_maxncpy);
-    MEM_freeN(value);
+    MEM_delete_void(static_cast<void *>(value));
   }
 }
 
@@ -50,25 +53,24 @@ void mixie_rna_string_get_clamped(PointerRNA *ptr,
       ptr, RNA_struct_find_property(ptr, name), dst, dst_maxncpy);
 }
 
-struct LinkDragPreview {
-  /* Keyed on the scene's session UID rather than its pointer: a raw Scene *
-   * kept in a static outlives the scene across a file load, and a freshly
-   * allocated Scene landing on the same address would resurrect a stale drag
-   * preview. Session UIDs are never reused within a session. */
-  uint32_t scene_uid = 0;
-  bool active = false;
-  float x1 = 0.0f;
-  float y1 = 0.0f;
-  float x2 = 0.0f;
-  float y2 = 0.0f;
-};
-
-static LinkDragPreview g_link_drag;
-
-static uint32_t scene_drag_uid(const Scene *scene)
+float moodboard_video_play_radius(View2D *v2d, const rctf &media_rect)
 {
-  return scene ? scene->id.session_uid : 0;
+  /* Fixed pixel size, converted into canvas units so it stays the same size on
+   * screen at every zoom -- until that would leave it covering the frame it
+   * sits on. Zoomed far out a 28px button is most of a small tile, which is
+   * exactly how it came to read as "the play button grows as you zoom out", so
+   * it is capped against the tile's shorter side and shrinks with it from
+   * there. Both hit-tests call this too, so the target never leaves the glyph. */
+  const float view_scale = std::max(ui::view2d_scale_get_x(v2d), 0.001f);
+  const float screen_radius = MOODBOARD_VIDEO_PLAY_RADIUS_PX / view_scale;
+  const float shorter_side = std::min(BLI_rctf_size_x(&media_rect),
+                                      BLI_rctf_size_y(&media_rect));
+  if (shorter_side <= 0.0f) {
+    return screen_radius;
+  }
+  return std::min(screen_radius, shorter_side * MOODBOARD_VIDEO_PLAY_MAX_FRACTION);
 }
+
 
 std::string moodboard_graph_socket_key(const char *node_id, const char *socket_id)
 {
@@ -76,7 +78,7 @@ std::string moodboard_graph_socket_key(const char *node_id, const char *socket_i
   return std::string(node_id) + "|" + socket_id;
 }
 
-static bool string_prop_equals(PointerRNA *ptr, const char *name, const char *value)
+bool moodboard_graph_string_prop_equals(PointerRNA *ptr, const char *name, const char *value)
 {
   PropertyRNA *prop = RNA_struct_find_property(ptr, name);
   if (!prop || RNA_property_type(prop) != PROP_STRING) {
@@ -106,7 +108,7 @@ static bool rect_from_collection(PointerRNA *scene_ptr,
   CollectionPropertyIterator iter{};
   RNA_property_collection_begin(scene_ptr, collection, &iter);
   while (iter.valid) {
-    if (string_prop_equals(&iter.ptr, "node_id", node_id)) {
+    if (moodboard_graph_string_prop_equals(&iter.ptr, "node_id", node_id)) {
       r_rect->xmin = RNA_float_get(&iter.ptr, "position_x");
       r_rect->ymin = RNA_float_get(&iter.ptr, "position_y");
       r_rect->xmax = r_rect->xmin + RNA_float_get(&iter.ptr, "width");
@@ -123,20 +125,14 @@ static bool rect_from_collection(PointerRNA *scene_ptr,
   return false;
 }
 
-static bool media_rect(PointerRNA *item, rctf *r_rect)
+bool moodboard_graph_media_rect(PointerRNA *item, rctf *r_rect)
 {
   PointerRNA image_ptr = RNA_pointer_get(item, "image");
   Image *image = static_cast<Image *>(image_ptr.data);
   if (!image) {
     return false;
   }
-  float aspect = 1.0f;
-  void *lock = nullptr;
-  ImBuf *ibuf = BKE_image_acquire_ibuf(image, nullptr, &lock);
-  if (ibuf && ibuf->x > 0) {
-    aspect = float(ibuf->y) / float(ibuf->x);
-  }
-  BKE_image_release_ibuf(image, ibuf, lock);
+  const float aspect = mixie_moodboard_image_aspect(image);
   const float width = MOODBOARD_IMAGE_BASE_SIZE * RNA_float_get(item, "scale");
   r_rect->xmin = RNA_float_get(item, "position_x");
   r_rect->ymin = RNA_float_get(item, "position_y");
@@ -154,7 +150,9 @@ static bool media_rect_from_id(PointerRNA *scene_ptr, const char *node_id, rctf 
   CollectionPropertyIterator iter{};
   RNA_property_collection_begin(scene_ptr, items, &iter);
   while (iter.valid) {
-    if (string_prop_equals(&iter.ptr, "node_id", node_id) && media_rect(&iter.ptr, r_rect)) {
+    if (moodboard_graph_string_prop_equals(&iter.ptr, "node_id", node_id) &&
+        moodboard_graph_media_rect(&iter.ptr, r_rect))
+    {
       RNA_property_collection_end(&iter);
       return true;
     }
@@ -215,6 +213,40 @@ bool moodboard_graph_action_socket_position(PointerRNA *node,
   return true;
 }
 
+float moodboard_graph_input_radius_px(PointerRNA *node,
+                                       const int socket_index,
+                                       const View2D *v2d)
+{
+  const float base = moodboard_socket_radius_px(v2d);
+  float x, y;
+  if (!moodboard_graph_action_socket_position(node, socket_index, &x, &y)) {
+    return base;
+  }
+  /* Read the real visible socket centres; labels, links and hit tests keep
+   * those positions even when adjacent rings need to shrink at overview. */
+  float nearest_spacing = 2.0f * (base + UI_SCALE_FAC);
+  const float scale_y = std::abs(ui::view2d_scale_get_y(v2d));
+  PropertyRNA *sockets = RNA_struct_find_property(node, "input_sockets");
+  const int count = sockets ? RNA_property_collection_length(node, sockets) : 0;
+  /* Only visible neighbours can be closest. Avoid resolving every position:
+   * each lookup scans visibility, making an all-pairs radius pass cubic. */
+  for (const int direction : {-1, 1}) {
+    for (int index = socket_index + direction; index >= 0 && index < count; index += direction) {
+      PointerRNA socket;
+      RNA_property_collection_lookup_int(node, sockets, index, &socket);
+      if (!RNA_boolean_get(&socket, "visible")) {
+        continue;
+      }
+      float other_x, other_y;
+      if (moodboard_graph_action_socket_position(node, index, &other_x, &other_y)) {
+        nearest_spacing = std::min(nearest_spacing, std::abs(other_y - y) * scale_y);
+      }
+      break;
+    }
+  }
+  return std::min(base, std::max(1.0f, nearest_spacing * 0.5f - UI_SCALE_FAC));
+}
+
 static bool socket_position_in_node(PointerRNA *node,
                                     const char *socket_id,
                                     float *r_x,
@@ -225,7 +257,7 @@ static bool socket_position_in_node(PointerRNA *node,
   for (int index = 0; index < count; index++) {
     PointerRNA socket;
     RNA_property_collection_lookup_int(node, sockets, index, &socket);
-    if (string_prop_equals(&socket, "socket_id", socket_id)) {
+    if (moodboard_graph_string_prop_equals(&socket, "socket_id", socket_id)) {
       return moodboard_graph_action_socket_position(node, index, r_x, r_y);
     }
   }
@@ -295,9 +327,9 @@ void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cac
 {
   /* One pass over the three collections, reused by every link. Resolving each
    * endpoint independently meant re-scanning the whole image collection per
-   * link — and acquiring that image's ImBuf again just to read its aspect —
-   * which made link drawing O(links * images) with a locked buffer acquire in
-   * the inner loop, every redraw. */
+   * link — and locking that image's buffer again just to read its aspect —
+   * which made link drawing O(links * images) every redraw. Aspect now comes
+   * from mixie_moodboard_image_aspect, so a warm tile does not take the lock. */
   cache->outputs.clear();
   cache->action_nodes.clear();
   cache->occupied_inputs.clear();
@@ -326,7 +358,7 @@ void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cac
       char node_id[MIXIE_GRAPH_ID_BUF];
       mixie_rna_string_get_clamped(&iter.ptr, "node_id", node_id, sizeof(node_id));
       rctf rect{};
-      if (node_id[0] != '\0' && media_rect(&iter.ptr, &rect)) {
+      if (node_id[0] != '\0' && moodboard_graph_media_rect(&iter.ptr, &rect)) {
         cache->outputs.add_overwrite(node_id, rect);
       }
       RNA_property_collection_next(&iter);
@@ -403,365 +435,6 @@ bool moodboard_graph_link_endpoints(PointerRNA *scene_ptr,
   }
   return output_position(scene_ptr, from_id, r_x1, r_y1) &&
          input_position(scene_ptr, to_id, to_socket, r_x2, r_y2);
-}
-
-static float point_segment_distance_squared(const float px,
-                                            const float py,
-                                            const float ax,
-                                            const float ay,
-                                            const float bx,
-                                            const float by)
-{
-  const float dx = bx - ax;
-  const float dy = by - ay;
-  const float length_squared = dx * dx + dy * dy;
-  const float t = length_squared > 0.0f ?
-                      std::clamp(((px - ax) * dx + (py - ay) * dy) / length_squared,
-                                 0.0f,
-                                 1.0f) :
-                      0.0f;
-  const float offset_x = px - (ax + t * dx);
-  const float offset_y = py - (ay + t * dy);
-  return offset_x * offset_x + offset_y * offset_y;
-}
-
-int moodboard_find_link_under_mouse(PointerRNA *scene_ptr,
-                                    View2D *v2d,
-                                    const int mouse_region_x,
-                                    const int mouse_region_y,
-                                    const float max_distance_px)
-{
-  PropertyRNA *links = RNA_struct_find_property(scene_ptr, "mixie_moodboard_links");
-  if (!links) {
-    return -1;
-  }
-  float nearest = max_distance_px * max_distance_px;
-  int nearest_index = -1;
-  int index = 0;
-  /* Same one-pass cache the draw path uses; without it each link re-scans the
-   * whole image collection and re-acquires an ImBuf just to read an aspect. */
-  MoodboardGraphCache cache;
-  moodboard_graph_cache_build(scene_ptr, &cache);
-  CollectionPropertyIterator iter{};
-  RNA_property_collection_begin(scene_ptr, links, &iter);
-  while (iter.valid) {
-    float x1, y1, x2, y2;
-    if (moodboard_graph_link_endpoints(scene_ptr, &iter.ptr, &x1, &y1, &x2, &y2, &cache)) {
-      float coords[MOODBOARD_GRAPH_LINK_RESOLUTION + 1][2];
-      moodboard_graph_link_curve_coords(x1, y1, x2, y2, coords);
-      float previous_x, previous_y;
-      UI_view2d_view_to_region_fl(v2d, coords[0][0], coords[0][1], &previous_x, &previous_y);
-      for (int segment = 1; segment <= MOODBOARD_GRAPH_LINK_RESOLUTION; segment++) {
-        float current_x, current_y;
-        UI_view2d_view_to_region_fl(
-            v2d, coords[segment][0], coords[segment][1], &current_x, &current_y);
-        const float distance = point_segment_distance_squared(float(mouse_region_x),
-                                                              float(mouse_region_y),
-                                                              previous_x,
-                                                              previous_y,
-                                                              current_x,
-                                                              current_y);
-        if (distance <= nearest) {
-          nearest = distance;
-          nearest_index = index;
-        }
-        previous_x = current_x;
-        previous_y = current_y;
-      }
-    }
-    index++;
-    RNA_property_collection_next(&iter);
-  }
-  RNA_property_collection_end(&iter);
-  return nearest_index;
-}
-
-static bool region_socket_hit(View2D *v2d,
-                              const int mouse_x,
-                              const int mouse_y,
-                              const float socket_x,
-                              const float socket_y)
-{
-  float region_x, region_y;
-  UI_view2d_view_to_region_fl(v2d, socket_x, socket_y, &region_x, &region_y);
-  const float dx = float(mouse_x) - region_x;
-  const float dy = float(mouse_y) - region_y;
-  /* The drawn socket is CANVAS-sized (it zooms), so the clickable disc must
-   * follow the view scale — a fixed pixel radius left the rim of a zoomed-in
-   * socket unclickable. The floor keeps zoomed-out sockets grabbable. */
-  const float scale = std::max(UI_view2d_scale_get_x(v2d), 0.001f);
-  const float radius = std::max(MOODBOARD_GRAPH_SOCKET_RADIUS * scale, 9.0f) + 5.0f;
-  return dx * dx + dy * dy <= radius * radius;
-}
-
-static bool collection_output_hit(PointerRNA *scene_ptr,
-                                  View2D *v2d,
-                                  const char *collection_name,
-                                  const int mouse_x,
-                                  const int mouse_y,
-                                  MoodboardGraphSocketHit *r_hit)
-{
-  PropertyRNA *collection = RNA_struct_find_property(scene_ptr, collection_name);
-  const int count = collection ? RNA_property_collection_length(scene_ptr, collection) : 0;
-  for (int index = count - 1; index >= 0; index--) {
-    PointerRNA node;
-    RNA_property_collection_lookup_int(scene_ptr, collection, index, &node);
-    rctf rect{};
-    rect.xmin = RNA_float_get(&node, "position_x");
-    rect.ymin = RNA_float_get(&node, "position_y");
-    rect.xmax = rect.xmin + RNA_float_get(&node, "width");
-    rect.ymax = rect.ymin + RNA_float_get(&node, "height");
-    const float output_x = rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
-    if (region_socket_hit(v2d, mouse_x, mouse_y, output_x, BLI_rctf_cent_y(&rect))) {
-      mixie_rna_string_get_clamped(
-          &node, "node_id", r_hit->node_id, sizeof(r_hit->node_id));
-      BLI_strncpy(r_hit->socket_id, "output", sizeof(r_hit->socket_id));
-      r_hit->x = output_x;
-      r_hit->y = BLI_rctf_cent_y(&rect);
-      return true;
-    }
-  }
-  return false;
-}
-
-bool moodboard_find_output_socket_under_mouse(PointerRNA *scene_ptr,
-                                               View2D *v2d,
-                                               const int mouse_x,
-                                               const int mouse_y,
-                                               MoodboardGraphSocketHit *r_hit)
-{
-  if (collection_output_hit(scene_ptr,
-                            v2d,
-                            "mixie_moodboard_action_nodes",
-                            mouse_x,
-                            mouse_y,
-                            r_hit) ||
-      collection_output_hit(scene_ptr,
-                            v2d,
-                            "mixie_moodboard_asset_nodes",
-                            mouse_x,
-                            mouse_y,
-                            r_hit))
-  {
-    return true;
-  }
-  PropertyRNA *media = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
-  const int count = media ? RNA_property_collection_length(scene_ptr, media) : 0;
-  for (int index = count - 1; index >= 0; index--) {
-    PointerRNA item;
-    RNA_property_collection_lookup_int(scene_ptr, media, index, &item);
-    PropertyRNA *embedded = RNA_struct_find_property(&item, "embedded_node_id");
-    if (embedded && RNA_property_string_length(&item, embedded) > 0) {
-      continue;
-    }
-    /* Media that never got a graph id (a board saved before the migration ran)
-     * has no addressable output: a hit would start a link drag whose
-     * from_node_id is empty, minting a permanently unresolvable link. */
-    PropertyRNA *id_prop = RNA_struct_find_property(&item, "node_id");
-    if (!id_prop || RNA_property_string_length(&item, id_prop) == 0) {
-      continue;
-    }
-    rctf rect{};
-    if (media_rect(&item, &rect) &&
-        region_socket_hit(v2d,
-                          mouse_x,
-                          mouse_y,
-                          rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET,
-                          BLI_rctf_cent_y(&rect)))
-    {
-      mixie_rna_string_get_clamped(
-          &item, "node_id", r_hit->node_id, sizeof(r_hit->node_id));
-      BLI_strncpy(r_hit->socket_id, "output", sizeof(r_hit->socket_id));
-      r_hit->x = rect.xmax + MOODBOARD_GRAPH_SOCKET_OFFSET;
-      r_hit->y = BLI_rctf_cent_y(&rect);
-      return true;
-    }
-  }
-  return false;
-}
-
-bool moodboard_find_input_socket_under_mouse(PointerRNA *scene_ptr,
-                                              View2D *v2d,
-                                              const int mouse_x,
-                                              const int mouse_y,
-                                              MoodboardGraphSocketHit *r_hit)
-{
-  PropertyRNA *nodes = RNA_struct_find_property(scene_ptr, "mixie_moodboard_action_nodes");
-  const int node_count = nodes ? RNA_property_collection_length(scene_ptr, nodes) : 0;
-  for (int node_index = node_count - 1; node_index >= 0; node_index--) {
-    PointerRNA node;
-    RNA_property_collection_lookup_int(scene_ptr, nodes, node_index, &node);
-    PropertyRNA *sockets = RNA_struct_find_property(&node, "input_sockets");
-    const int socket_count = sockets ? RNA_property_collection_length(&node, sockets) : 0;
-    for (int socket_index = 0; socket_index < socket_count; socket_index++) {
-      float x, y;
-      if (!moodboard_graph_action_socket_position(&node, socket_index, &x, &y)) {
-        continue;
-      }
-      if (!region_socket_hit(v2d, mouse_x, mouse_y, x, y)) {
-        continue;
-      }
-      PointerRNA socket;
-      RNA_property_collection_lookup_int(&node, sockets, socket_index, &socket);
-      mixie_rna_string_get_clamped(
-          &node, "node_id", r_hit->node_id, sizeof(r_hit->node_id));
-      mixie_rna_string_get_clamped(
-          &socket, "socket_id", r_hit->socket_id, sizeof(r_hit->socket_id));
-      r_hit->x = x;
-      r_hit->y = y;
-      return true;
-    }
-  }
-  return false;
-}
-
-static int find_node_in_collection(PointerRNA *scene_ptr,
-                                   const char *collection_name,
-                                   const float mouse_x,
-                                   const float mouse_y,
-                                   rctf *r_rect)
-{
-  PropertyRNA *collection = RNA_struct_find_property(scene_ptr, collection_name);
-  const int count = collection ? RNA_property_collection_length(scene_ptr, collection) : 0;
-  for (int index = count - 1; index >= 0; index--) {
-    PointerRNA node;
-    RNA_property_collection_lookup_int(scene_ptr, collection, index, &node);
-    rctf rect{};
-    rect.xmin = RNA_float_get(&node, "position_x");
-    rect.ymin = RNA_float_get(&node, "position_y");
-    rect.xmax = rect.xmin + RNA_float_get(&node, "width");
-    rect.ymax = rect.ymin + RNA_float_get(&node, "height");
-    if (BLI_rctf_isect_pt(&rect, mouse_x, mouse_y)) {
-      if (r_rect) {
-        *r_rect = rect;
-      }
-      return index;
-    }
-  }
-  return -1;
-}
-
-void moodboard_graph_node_preview_bounds(const rctf &node_rect, rctf *r_bounds)
-{
-  /* Single source of truth for the preview rect. The draw path, the floating
-   * toolbar and the playback hit-test all need it; recomputing the inset in
-   * each would let the play button's pixels and its click region drift apart
-   * without anything failing loudly. */
-  r_bounds->xmin = node_rect.xmin + MOODBOARD_GRAPH_PREVIEW_INSET;
-  r_bounds->xmax = node_rect.xmax - MOODBOARD_GRAPH_PREVIEW_INSET;
-  r_bounds->ymin = node_rect.ymin + MOODBOARD_GRAPH_PREVIEW_INSET;
-  r_bounds->ymax = node_rect.ymax - MOODBOARD_GRAPH_PREVIEW_INSET;
-}
-
-int moodboard_find_embedded_media_index(PointerRNA *scene_ptr, const char *node_id)
-{
-  if (!node_id || node_id[0] == '\0') {
-    return -1;
-  }
-  PropertyRNA *media = RNA_struct_find_property(scene_ptr, "mixie_moodboard_images");
-  const int count = media ? RNA_property_collection_length(scene_ptr, media) : 0;
-  for (int index = 0; index < count; index++) {
-    PointerRNA item;
-    RNA_property_collection_lookup_int(scene_ptr, media, index, &item);
-    if (string_prop_equals(&item, "embedded_node_id", node_id)) {
-      return index;
-    }
-  }
-  return -1;
-}
-
-int moodboard_find_node_preview_video_under_mouse(PointerRNA *scene_ptr,
-                                                 const float mouse_x,
-                                                 const float mouse_y,
-                                                 rctf *r_node_rect)
-{
-  /* Returns an index into `mixie_moodboard_images`, the same space
-   * `moodboard_toggle_video_playback` and the hover monitor use. Returning a
-   * node index here would make the hover monitor stop playback on the first
-   * mouse-move, because it compares against `playback.item_index`. */
-  rctf rect{};
-  const int node_index = moodboard_find_action_node_under_mouse(
-      scene_ptr, mouse_x, mouse_y, &rect);
-  if (node_index < 0) {
-    return -1;
-  }
-  PropertyRNA *nodes = RNA_struct_find_property(scene_ptr, "mixie_moodboard_action_nodes");
-  PointerRNA node;
-  if (!nodes || !RNA_property_collection_lookup_int(scene_ptr, nodes, node_index, &node)) {
-    return -1;
-  }
-  char node_id[MIXIE_GRAPH_ID_BUF];
-  mixie_rna_string_get_clamped(&node, "node_id", node_id, sizeof(node_id));
-  const int media_index = moodboard_find_embedded_media_index(scene_ptr, node_id);
-  if (media_index < 0 || !moodboard_item_is_video(scene_ptr, media_index)) {
-    return -1;
-  }
-  if (r_node_rect) {
-    *r_node_rect = rect;
-  }
-  return media_index;
-}
-
-int moodboard_find_action_node_under_mouse(PointerRNA *scene_ptr,
-                                           const float mouse_x,
-                                           const float mouse_y,
-                                           rctf *r_rect)
-{
-  return find_node_in_collection(
-      scene_ptr, "mixie_moodboard_action_nodes", mouse_x, mouse_y, r_rect);
-}
-
-int moodboard_find_asset_node_under_mouse(PointerRNA *scene_ptr,
-                                          const float mouse_x,
-                                          const float mouse_y,
-                                          rctf *r_rect)
-{
-  return find_node_in_collection(
-      scene_ptr, "mixie_moodboard_asset_nodes", mouse_x, mouse_y, r_rect);
-}
-
-static bool link_drag_matches(const Scene *scene)
-{
-  const uint32_t uid = scene_drag_uid(scene);
-  return g_link_drag.active && uid != 0 && g_link_drag.scene_uid == uid;
-}
-
-void moodboard_graph_link_drag_begin(Scene *scene, const float x, const float y)
-{
-  g_link_drag = {scene_drag_uid(scene), true, x, y, x, y};
-}
-
-void moodboard_graph_link_drag_update(Scene *scene, const float x, const float y)
-{
-  if (link_drag_matches(scene)) {
-    g_link_drag.x2 = x;
-    g_link_drag.y2 = y;
-  }
-}
-
-void moodboard_graph_link_drag_end(Scene *scene)
-{
-  if (link_drag_matches(scene)) {
-    g_link_drag = {};
-  }
-}
-
-void moodboard_graph_link_drag_reset()
-{
-  g_link_drag = {};
-}
-
-bool moodboard_graph_link_drag_preview(
-    Scene *scene, float *r_x1, float *r_y1, float *r_x2, float *r_y2)
-{
-  if (!link_drag_matches(scene)) {
-    return false;
-  }
-  *r_x1 = g_link_drag.x1;
-  *r_y1 = g_link_drag.y1;
-  *r_x2 = g_link_drag.x2;
-  *r_y2 = g_link_drag.y2;
-  return true;
 }
 
 }  // namespace blender::ed::mixie

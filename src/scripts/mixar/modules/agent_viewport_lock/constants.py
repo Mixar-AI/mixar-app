@@ -58,7 +58,7 @@ VIEW_KEY_PASS_TYPES = frozenset({
     "NUMPAD_5", "NUMPAD_6", "NUMPAD_7", "NUMPAD_8", "NUMPAD_9",
     "NUMPAD_PERIOD", "NUMPAD_PLUS", "NUMPAD_MINUS",
     "HOME",          # frame all
-    "ACCENT_GRAVE",  # view pie menu
+    "ACCENT_GRAVE",  # 3D View's stock View pie / Zen moodboard drawer toggle (never the Mixie node pie: that is Ctrl+Tab only)
 })
 
 # Events CONSUMED when the pointer is over a 3D viewport — clicks and

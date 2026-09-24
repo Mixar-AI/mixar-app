@@ -124,7 +124,7 @@ def register():
     # so the timer safety check — hasattr(wm, 'mixar_matgen_status') — passes)
     register_wm_props()
 
-    # Fetch catalog from server; falls back to local files if unavailable
+    # Fetch catalog from server; the user's generated materials load locally
     try:
         material_registry.load_server_catalog()
     except Exception as e:

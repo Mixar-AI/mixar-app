@@ -30,11 +30,8 @@ Wires the floating agent bubble into Blender's startup:
    — whether it's been closed entirely or minimised to the status
    pill — no matter how the auto-show pipeline ends up.
 
-The C++ operator that actually shows the popup is registered by the
-SpaceMixieChat editor's spacetype init (mixie_chat_operatortypes in
-space_mixie_chat.cc) — that path runs during Blender startup, before any
-Python addon. So by the time anything in this file runs, bpy.ops.mixie_chat
-.agent_bubble_show is callable.
+Native agent operators are registered by the Agent Bubble spacetype before
+Python bootstrap; the shared implementations live in mixie_chat_ops.cc.
 """
 
 import sys
@@ -43,6 +40,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.tour import tour_running
 from mixar.modules.agent_bubble.core import pill_icons
 from mixar.modules.agent_bubble.core.bubble_autoshow import (
     arm_autoshow as _arm_autoshow,
@@ -151,6 +149,11 @@ def _streaming_redraw_tick():
 
 def _on_workspace_change() -> None:
     """msgbus callback: workspace changed → autoshow the bubble."""
+    if tour_running():
+        # The tour's own Zen/Engine switches bounce the workspace; it
+        # re-opens the island itself, on its own schedule.
+        logger.debug("agent_bubble: workspace change ignored, tour running")
+        return
     if _has_agent_bubble_windows():
         logger.debug(
             "agent_bubble: workspace change preserved existing bubble/pill state"
@@ -297,21 +300,14 @@ def _draw_topbar_open_agent(self, context):
     if region is None or region.alignment != 'RIGHT':
         return
     layout = self.layout
+
     layout.separator()
     # SPARKLE is a Mixar color SVG icon (UI_icons.hh MIXIE CHAT block);
     # fall back to the old bulb on builds that predate it.
-    try:
-        layout.operator(
-            "mixar.agent_bubble_open_window",
-            text="Open Mixie",
-            icon='SPARKLE',
-        )
-    except TypeError:
-        layout.operator(
-            "mixar.agent_bubble_open_window",
-            text="Open Mixie",
-            icon='OUTLINER_OB_LIGHT',
-        )
+    # No "Open Mixie" button in either mode: the chat's own floating pill is
+    # the way in, and a second door to the same room only crowded the topbar.
+    # The update BADGE below stays — it is the only persistent signal that an
+    # update is waiting (see docs/seamless-updates.md).
 
     # Update badge — appears just right of Open Mixie whenever an update
     # is known; clicking re-shows the sticky update toast.

@@ -14,12 +14,18 @@ from bpy.types import Header, Panel
 
 
 class MIXAR_ASSETS_HT_header(Header):
-    """Header for the Mixar Assets space (hosts the space-switch dropdown)."""
+    """Title bar for the Mixar Assets space.
+
+    Draws ``template_header()``: every editor in the Texturing workspace
+    stays swappable, so this space keeps the stock Editor Type dropdown and
+    appears under the menu's "Texturing" heading.
+    """
     bl_space_type = 'MIXAR_ASSETS'
 
     def draw(self, context):
         layout = self.layout
         layout.template_header()
+        layout.label(text="Assets")
 
 
 class MIXAR_ASSETS_PT_main(Panel):

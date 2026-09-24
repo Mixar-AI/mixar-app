@@ -24,7 +24,7 @@ from ..utils import material_preview_manager
 
 logger = get_logger(__name__)
 
-_THUMBNAIL_SCALE = 8.0   # template_icon scale for showcase renders
+_THUMBNAIL_SCALE = 8.0   # template_icon scale for catalog thumbnails
 _GRID_COLUMNS    = 3
 _MAX_LABEL_LEN   = 20
 

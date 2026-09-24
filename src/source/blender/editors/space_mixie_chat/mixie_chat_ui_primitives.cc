@@ -25,7 +25,11 @@
 #include "GPU_state.hh"
 #include "GPU_texture.hh"
 
+#include "ED_mixar_glass.hh"
+
 #include "mixie_chat_ui_types.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 /* -------------------------------------------------------------------- */
 /** \name Constants
@@ -202,6 +206,25 @@ void chat_ui_draw_rounded_rect_bordered(const rctf *rect,
   chat_ui_draw_rounded_rect(rect, radius, fill_color);
 }
 
+/* The glass counterpart of #chat_ui_draw_rounded_rect: the same bed geometry,
+ * but tinted by the MIXAR_GLASS_CHAT token row. `alpha` fades the whole pane —
+ * `bg_color`'s RGB is deliberately not read, so a call site cannot pick its own
+ * tint. The message area is drawn through the View2D matrix (see
+ * mixie_chat_render_messages), so the painter's specular streak — the one layer
+ * it clips with a region-px scissor — cannot be placed from here and is off;
+ * the bed, gloss, refraction wash and rim all draw through that matrix fine. */
+void chat_ui_draw_glass_pane(const rctf *rect, const float radius, const float alpha)
+{
+  rcti pane;
+  BLI_rcti_rctf_copy(&pane, rect);
+  ui::MixarGlassStyle style;
+  style.role = ui::MIXAR_GLASS_CHAT;
+  style.radius = radius;
+  style.alpha = alpha;
+  style.draw_specular = false;
+  ui::mixar_glass_draw(pane, style);
+}
+
 void chat_ui_draw_accent_bar(float x,
                              float y_bottom,
                              float height,
@@ -282,7 +305,10 @@ struct TextBoundsCacheEntry {
   float height = 0.0f;
 };
 
-#define TEXT_BOUNDS_CACHE_SLOTS 512 /* power of two, ~24 KB total */
+/* A streaming turn remeasures every message. 512 slots aliased a long
+ * transcript back onto itself (collision == full BLF measure). 4096 is
+ * ~192 KB and keeps a few thousand segments direct-mapped. */
+#define TEXT_BOUNDS_CACHE_SLOTS 4096 /* power of two */
 
 static TextBoundsCacheEntry g_text_bounds_cache[TEXT_BOUNDS_CACHE_SLOTS];
 
@@ -875,3 +901,4 @@ void chat_ui_calc_image_bounds(int tex_width,
 }
 
 /** \} */
+}  // namespace blender

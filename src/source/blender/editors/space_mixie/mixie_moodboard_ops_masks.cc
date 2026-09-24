@@ -127,7 +127,7 @@ static wmOperatorStatus moodboard_generate_box_mask_exec(bContext *C, wmOperator
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = mask_ibuf->float_buffer.data;
+  float *pixels = mask_ibuf->float_data_for_write();
 
   for (int y = 0; y < height; y++) {
     float ny = float(y) / float(height);
@@ -208,7 +208,7 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
   }
 
   /* Extract polygon coordinates into array */
-  float *polygon = (float *)MEM_mallocN(sizeof(float) * num_points * 2, "lasso_polygon");
+  float *polygon = (float *)MEM_new_uninitialized(sizeof(float) * num_points * 2, "lasso_polygon");
 
   CollectionPropertyIterator iter;
   RNA_property_collection_begin(&state_ptr, lasso_points_prop, &iter);
@@ -225,14 +225,14 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
   /* Get source image from moodboard collection (scene_ptr already declared above) */
   PropertyRNA *images_prop = RNA_struct_find_property(&scene_ptr, "mixie_moodboard_images");
   if (!images_prop) {
-    MEM_freeN(polygon);
+    MEM_delete_void(static_cast<void *>(polygon));
     BKE_report(op->reports, RPT_ERROR, "Moodboard images collection not found");
     return OPERATOR_CANCELLED;
   }
 
   int image_count = RNA_property_collection_length(&scene_ptr, images_prop);
   if (image_index < 0 || image_index >= image_count) {
-    MEM_freeN(polygon);
+    MEM_delete_void(static_cast<void *>(polygon));
     BKE_report(op->reports, RPT_ERROR, "Invalid image index");
     return OPERATOR_CANCELLED;
   }
@@ -245,7 +245,7 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
   Image *src_image = (Image *)image_ptr.data;
 
   if (!src_image) {
-    MEM_freeN(polygon);
+    MEM_delete_void(static_cast<void *>(polygon));
     BKE_report(op->reports, RPT_ERROR, "Source image not found");
     return OPERATOR_CANCELLED;
   }
@@ -254,7 +254,7 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
   void *lock;
   ImBuf *ibuf = BKE_image_acquire_ibuf(src_image, nullptr, &lock);
   if (!ibuf) {
-    MEM_freeN(polygon);
+    MEM_delete_void(static_cast<void *>(polygon));
     BKE_report(op->reports, RPT_ERROR, "Could not acquire image buffer");
     return OPERATOR_CANCELLED;
   }
@@ -279,7 +279,7 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
                                               false,
                                               false);
   if (!mask_image) {
-    MEM_freeN(polygon);
+    MEM_delete_void(static_cast<void *>(polygon));
     BKE_report(op->reports, RPT_ERROR, "Could not create mask image");
     return OPERATOR_CANCELLED;
   }
@@ -287,13 +287,13 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
   /* Generate mask pixels - this is the fast C++ part */
   ImBuf *mask_ibuf = BKE_image_acquire_ibuf(mask_image, nullptr, &lock);
   if (!mask_ibuf || !mask_ibuf->float_buffer.data) {
-    MEM_freeN(polygon);
+    MEM_delete_void(static_cast<void *>(polygon));
     BKE_image_release_ibuf(mask_image, mask_ibuf, lock);
     BKE_report(op->reports, RPT_ERROR, "Could not acquire mask buffer");
     return OPERATOR_CANCELLED;
   }
 
-  float *pixels = mask_ibuf->float_buffer.data;
+  float *pixels = mask_ibuf->float_data_for_write();
 
   for (int y = 0; y < height; y++) {
     float ny = float(y) / float(height);
@@ -311,7 +311,7 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
     }
   }
 
-  MEM_freeN(polygon);
+  MEM_delete_void(static_cast<void *>(polygon));
 
   /* Mark image as dirty so it updates */
   BKE_image_mark_dirty(mask_image, mask_ibuf);
@@ -344,6 +344,9 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
 
 }  // namespace blender::ed::mixie
 
+
+/* Mixar 5.2 port: operator registrations live in namespace blender. */
+namespace blender {
 /* -------------------------------------------------------------------- */
 /** \name Operator Registration (C linkage)
  * \{ */
@@ -385,3 +388,4 @@ void MIXIE_OT_moodboard_generate_lasso_mask(wmOperatorType *ot)
 }
 
 /** \} */
+}  // namespace blender

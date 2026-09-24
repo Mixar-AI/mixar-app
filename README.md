@@ -3,11 +3,11 @@
 
 # Mixar
 
-Mixar is an AI-powered 3D content creation tool built as a custom fork of [Blender](https://www.blender.org) 5.0. It adds an AI chat agent that can drive Blender, a layered texture-painting system, AI-assisted 3D generation, and a set of Mixar-native editor spaces — while keeping everything you already use from Blender.
+Mixar is an AI-powered 3D content creation tool built as a custom fork of [Blender](https://www.blender.org) 5.2. It adds an AI chat agent that can drive Blender, a layered texture-painting system, AI-assisted 3D generation, and a set of Mixar-native editor spaces — while keeping everything you already use from Blender.
 
 This repository is the source for the **Mixar desktop app** (the Blender-side client). Mixar's hosted AI backend remains a separate, closed-source service; the app talks to it over the network.
 
-> **Project status:** v2.0.0 — first public source release. Built on Blender 5.0.
+> **Project status:** v2.0.0 — first public source release. Built on Blender 5.2.
 
 ---
 
@@ -43,7 +43,7 @@ Mixar is a Blender fork with a custom overlay, so building it = building Blender
 
 ### Prerequisites
 
-You need everything required to build Blender 5.0 itself. Follow Blender's official build instructions for your platform first, and confirm a clean Blender build works before adding Mixar:
+You need everything required to build Blender 5.2 itself. Follow Blender's official build instructions for your platform first, and confirm a clean Blender build works before adding Mixar:
 
 - macOS / Linux / Windows — see <https://developer.blender.org/docs/handbook/building_blender/>
 
@@ -104,7 +104,7 @@ include pytest by default.
 Mixar uses an overlay pattern so version upgrades from upstream Blender stay clean:
 
 ```text
-upstream/               Blender 5.0 source (git submodule)
+upstream/               Blender 5.2 source (git submodule)
 src/                    Mixar's overlay source — Python addon + C++ additions
 source/                 Generated working tree: upstream/ copied here, then src/ rsync'd on top
 build/<env>/            CMake build directory
@@ -117,6 +117,11 @@ build/<env>/            CMake build directory
    - generates `source/source/creator/mixar_env_config.h` from `.env`
    - configures and builds via CMake
    - installs Python packages into the embedded Blender Python
+
+On Windows, both overlay passes replace files when their timestamps or sizes
+differ, even when upstream is older than a previous branch's override. Every
+build reruns CMake after the overlay so restored CMake files remove stale
+targets; existing object files are retained for incremental compilation.
 
 ---
 

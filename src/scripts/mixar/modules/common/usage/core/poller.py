@@ -108,11 +108,33 @@ def _mirror_to_rna(snapshot: state.UsageSnapshot) -> None:
         logger.debug("usage meter: RNA mirror failed: %s", exc)
 
 
+def _refresh_agent_models_on_tier_change(previous: state.UsageSnapshot,
+                                         current: state.UsageSnapshot) -> None:
+    """Revalidate the agent models catalog after a plan change.
+
+    ``eligible`` in that catalog is derived from the caller's tier, so an
+    upgrade or downgrade changes which models the picker may offer without
+    anything else noticing. `state.tier_changed` holds the (pure) rule; the call
+    lives here because the poller is the module that already owns bpy and the
+    main thread.
+    """
+    if not state.tier_changed(previous, current):
+        return
+    try:
+        from mixar.modules.byok.core import models_cache
+
+        models_cache.refresh()
+    except Exception as exc:  # noqa: BLE001 — never break the meter
+        logger.debug("usage meter: agent models refresh failed: %s", exc)
+
+
 def _apply_snapshot(snapshot: state.UsageSnapshot) -> None:
     """Main-thread write-back. Registered as a one-shot timer."""
+    previous = state.get_snapshot()
     state.set_snapshot(snapshot)
     _mirror_to_rna(snapshot)
     _tag_topbar_redraw()
+    _refresh_agent_models_on_tier_change(previous, snapshot)
 
 
 def _schedule_apply(snapshot: state.UsageSnapshot) -> None:

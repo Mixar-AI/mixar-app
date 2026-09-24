@@ -56,6 +56,8 @@ extern "C" void Mixar_FloatingDocksSuppressForModal();
 extern "C" void Mixar_FloatingDocksRestoreAfterModal();
 #endif
 
+namespace blender {
+
 /* -------------------------------------------------------------------- */
 /** \name Splash Screen
  * \{ */
@@ -79,42 +81,42 @@ static void wm_mixar_floating_docks_restore_after_modal_free(void * /*arg*/)
   wm_mixar_floating_docks_restore_after_modal();
 }
 
-static void wm_block_splash_close(bContext *C, void *arg_block, void * /*arg*/)
+static void wm_block_splash_close(bContext *C, ui::Block *block)
 {
   wmWindow *win = CTX_wm_window(C);
-  UI_popup_block_close(C, win, static_cast<uiBlock *>(arg_block));
+  popup_block_close(C, win, block);
   wm_mixar_floating_docks_restore_after_modal();
 }
 
-static void wm_block_splash_add_label(uiBlock *block, const char *label, int x, int y)
+static void wm_block_splash_add_label(ui::Block *block, const char *label, int x, int y)
 {
   if (!(label && label[0])) {
     return;
   }
 
-  UI_block_emboss_set(block, blender::ui::EmbossType::None);
+  block_emboss_set(block, ui::EmbossType::None);
 
-  uiBut *but = uiDefBut(
-      block, ButType::Label, 0, label, 0, y, x, UI_UNIT_Y, nullptr, 0, 0, std::nullopt);
-  UI_but_drawflag_disable(but, UI_BUT_TEXT_LEFT);
-  UI_but_drawflag_enable(but, UI_BUT_TEXT_RIGHT);
+  ui::Button *but = uiDefBut(
+      block, ui::ButtonType::Label, label, 0, y, x, UI_UNIT_Y, nullptr, 0, 0, std::nullopt);
+  button_drawflag_disable(but, ui::BUT_TEXT_LEFT);
+  button_drawflag_enable(but, ui::BUT_TEXT_RIGHT);
 
   /* Regardless of theme, this text should always be bright white. */
   uchar color[4] = {255, 255, 255, 255};
-  UI_but_color_set(but, color);
+  button_color_set(but, color);
 
-  UI_block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  block_emboss_set(block, ui::EmbossType::Emboss);
 }
 
 #ifndef WITH_HEADLESS
 static void wm_block_splash_image_roundcorners_add(ImBuf *ibuf)
 {
-  uchar *rct = ibuf->byte_buffer.data;
+  uchar *rct = ibuf->byte_data_for_write();
   if (!rct) {
     return;
   }
 
-  bTheme *btheme = UI_GetTheme();
+  bTheme *btheme = ui::theme::theme_get();
   const float roundness = btheme->tui.wcol_menu_back.roundness * UI_SCALE_FAC;
   const int size = roundness * 20;
 
@@ -172,26 +174,26 @@ static ImBuf *wm_block_splash_image(int width, int *r_height)
             U.app_template, template_directory, sizeof(template_directory)))
     {
       BLI_path_join(splash_filepath, sizeof(splash_filepath), template_directory, "splash.png");
-      ibuf = IMB_load_image_from_filepath(splash_filepath, IB_byte_data);
+      ibuf = IMB_load_image_from_filepath(splash_filepath, ImBufFlags::ByteData);
     }
   }
 
   if (ibuf == nullptr) {
     const char *custom_splash_path = BLI_getenv("BLENDER_CUSTOM_SPLASH");
     if (custom_splash_path) {
-      ibuf = IMB_load_image_from_filepath(custom_splash_path, IB_byte_data);
+      ibuf = IMB_load_image_from_filepath(custom_splash_path, ImBufFlags::ByteData);
     }
   }
 
   if (ibuf == nullptr) {
-    const uchar *splash_data = (const uchar *)datatoc_splash_png;
+    const uchar *splash_data = reinterpret_cast<const uchar *>(datatoc_splash_png);
     size_t splash_data_size = datatoc_splash_png_size;
     ibuf = IMB_load_image_from_memory(
-        splash_data, splash_data_size, IB_byte_data, "<splash screen>");
+        splash_data, splash_data_size, ImBufFlags::ByteData, "<splash screen>");
   }
 
   if (ibuf) {
-    ibuf->planes = 32; /* The image might not have an alpha channel. */
+    ibuf->color_mode = ImColorMode::RGBA; /* The image might not have an alpha channel. */
     height = (width * ibuf->y) / ibuf->x;
     if (width != ibuf->x || height != ibuf->y) {
       IMB_scale(ibuf, width, height, IMBScaleFilter::Box, false);
@@ -220,14 +222,14 @@ static ImBuf *wm_block_splash_banner_image(int *r_width,
 
   const char *custom_splash_path = BLI_getenv("BLENDER_CUSTOM_SPLASH_BANNER");
   if (custom_splash_path) {
-    ibuf = IMB_load_image_from_filepath(custom_splash_path, IB_byte_data);
+    ibuf = IMB_load_image_from_filepath(custom_splash_path, ImBufFlags::ByteData);
   }
 
   if (!ibuf) {
     return nullptr;
   }
 
-  ibuf->planes = 32; /* The image might not have an alpha channel. */
+  ibuf->color_mode = ImColorMode::RGBA; /* The image might not have an alpha channel. */
 
   width = ibuf->x;
   height = ibuf->y;
@@ -276,15 +278,15 @@ static void wm_block_splash_close_on_fileselect(bContext *C, void *arg1, void * 
 
   /* Check for the event as this will run before the new window/area has been created. */
   bool has_fileselect = false;
-  LISTBASE_FOREACH (const wmEvent *, event, &win->runtime->event_queue) {
-    if (event->type == EVT_FILESELECT) {
+  for (const wmEvent &event : win->runtime->event_queue) {
+    if (event.type == EVT_FILESELECT) {
       has_fileselect = true;
       break;
     }
   }
 
   if (has_fileselect) {
-    wm_block_splash_close(C, arg1, nullptr);
+    wm_block_splash_close(C, static_cast<ui::Block *>(arg1));
   }
 }
 
@@ -311,17 +313,17 @@ static int is_using_macos_rosetta()
 }
 #endif /* __APPLE__ */
 
-static uiBlock *wm_block_splash_create(bContext *C, ARegion *region, void * /*arg*/)
+static ui::Block *wm_block_splash_create(bContext *C, ARegion *region, void * /*arg*/)
 {
-  const uiStyle *style = UI_style_get_dpi();
+  const uiStyle *style = ui::style_get_dpi();
 
-  uiBlock *block = UI_block_begin(C, region, "splash", blender::ui::EmbossType::Emboss);
+  ui::Block *block = block_begin(C, region, "splash", ui::EmbossType::Emboss);
 
-  /* Note on #UI_BLOCK_NO_WIN_CLIP, the window size is not always synchronized
+  /* Note on #BLOCK_NO_WIN_CLIP, the window size is not always synchronized
    * with the OS when the splash shows, window clipping in this case gives
    * ugly results and clipping the splash isn't useful anyway, just disable it #32938. */
-  UI_block_flag_enable(block, UI_BLOCK_LOOP | UI_BLOCK_KEEP_OPEN | UI_BLOCK_NO_WIN_CLIP);
-  UI_block_theme_style_set(block, UI_BLOCK_THEME_STYLE_POPUP);
+  block_flag_enable(block, ui::BLOCK_LOOP | ui::BLOCK_KEEP_OPEN | ui::BLOCK_NO_WIN_CLIP);
+  block_theme_style_set(block, ui::BLOCK_THEME_STYLE_POPUP);
 
   int splash_width = style->widget.points * 75 * UI_SCALE_FAC;
   CLAMP_MAX(splash_width, WM_window_native_pixel_x(CTX_wm_window(C)) * 0.7f);
@@ -332,10 +334,10 @@ static uiBlock *wm_block_splash_create(bContext *C, ARegion *region, void * /*ar
   ImBuf *ibuf = wm_block_splash_image(splash_width, &splash_height);
   /* This should never happen, if it does - don't crash. */
   if (LIKELY(ibuf)) {
-    uiBut *but = uiDefButImage(
+    ui::Button *but = uiDefButImage(
         block, ibuf, 0, 0.5f * U.widget_unit, splash_width, splash_height, nullptr);
 
-    UI_but_func_set(but, wm_block_splash_close, block, nullptr);
+    button_func_set(but, [block](bContext &C) { wm_block_splash_close(&C, block); });
 
     wm_block_splash_add_label(block,
                               BKE_blender_version_string(),
@@ -351,41 +353,41 @@ static uiBlock *wm_block_splash_create(bContext *C, ARegion *region, void * /*ar
   ImBuf *bannerbuf = wm_block_splash_banner_image(
       &banner_width, &banner_height, splash_width, splash_height);
   if (bannerbuf) {
-    uiBut *banner_but = uiDefButImage(
+    ui::Button *banner_but = uiDefButImage(
         block, bannerbuf, 0, 0.5f * U.widget_unit, banner_width, banner_height, nullptr);
 
-    UI_but_func_set(banner_but, wm_block_splash_close, block, nullptr);
+    button_func_set(banner_but, [block](bContext &C) { wm_block_splash_close(&C, block); });
   }
 
   const int layout_margin_x = UI_SCALE_FAC * 26;
-  uiLayout &layout = blender::ui::block_layout(block,
-                                               blender::ui::LayoutDirection::Vertical,
-                                               blender::ui::LayoutType::Panel,
-                                               layout_margin_x,
-                                               0,
-                                               splash_width - (layout_margin_x * 2),
-                                               UI_SCALE_FAC * 110,
-                                               0,
-                                               style);
+  ui::Layout &layout = ui::block_layout(block,
+                                        ui::LayoutDirection::Vertical,
+                                        ui::LayoutType::Panel,
+                                        layout_margin_x,
+                                        0,
+                                        splash_width - (layout_margin_x * 2),
+                                        UI_SCALE_FAC * 110,
+                                        0,
+                                        style);
 
   MenuType *mt;
 
   /* Draw setup screen if no preferences have been saved yet. */
-  if (!blender::bke::preferences::exists()) {
+  if (!bke::preferences::exists()) {
     mt = WM_menutype_find("WM_MT_splash_quick_setup", true);
 
-    /* The #UI_BLOCK_QUICK_SETUP flag prevents the button text from being left-aligned,
-     * as it is for all menus due to the #UI_BLOCK_LOOP flag, see in #ui_def_but. */
-    UI_block_flag_enable(block, UI_BLOCK_QUICK_SETUP);
+    /* The #BLOCK_QUICK_SETUP flag prevents the button text from being left-aligned,
+     * as it is for all menus due to the #BLOCK_LOOP flag, see in #ui_def_but. */
+    block_flag_enable(block, ui::BLOCK_QUICK_SETUP);
   }
   else {
     mt = WM_menutype_find("WM_MT_splash", true);
   }
 
-  UI_block_func_set(block, wm_block_splash_close_on_fileselect, block, nullptr);
+  block_func_set(block, wm_block_splash_close_on_fileselect, block, nullptr);
 
   if (mt) {
-    UI_menutype_draw(C, mt, &layout);
+    ui::menutype_draw(C, mt, &layout);
   }
 
 /* Displays a warning if blender is being emulated via Rosetta (macOS) or XTA (Windows) */
@@ -397,16 +399,17 @@ static uiBlock *wm_block_splash_create(bContext *C, ARegion *region, void * /*ar
   if (proc_id && strncmp(proc_id, "ARM", 3) == 0)
 #  endif
   {
-    layout.separator(2.0f, LayoutSeparatorType::Line);
+    layout.separator(2.0f, ui::LayoutSeparatorType::Line);
 
-    uiLayout *row = &layout.row(true);
-    row->label(RPT_("Intel binary detected. Expect reduced performance."), ICON_ERROR);
+    /* Mixar: plain warning row — no Blender-docs "Learn More" link. */
+    ui::Layout &row = layout.row(true);
+    row.label(RPT_("Intel binary detected. Expect reduced performance."), ICON_ERROR);
 
     layout.separator();
   }
 #endif
 
-  UI_block_bounds_set_centered(block, 0);
+  block_bounds_set_centered(block, 0);
 
   return block;
 }
@@ -416,7 +419,7 @@ static wmOperatorStatus wm_splash_invoke(bContext *C,
                                          const wmEvent * /*event*/)
 {
   wm_mixar_floating_docks_suppress_for_modal();
-  UI_popup_block_invoke(
+  ui::popup_block_invoke(
       C, wm_block_splash_create, nullptr, wm_mixar_floating_docks_restore_after_modal_free);
 
   return OPERATOR_FINISHED;
@@ -433,3 +436,5 @@ void WM_OT_splash(wmOperatorType *ot)
 }
 
 /** \} */
+
+}  // namespace blender

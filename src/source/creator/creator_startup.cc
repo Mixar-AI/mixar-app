@@ -10,7 +10,15 @@
 #include <string.h>
 
 #ifdef _WIN32
+/* Mixar 5.2 port: Blender 5.2 compiles every target with WIN32_LEAN_AND_MEAN, which
+ * drops wincrypt.h (CryptAcquireContext/CryptGenRandom) and shellapi.h (ShellExecuteA)
+ * from windows.h. Undefine it here like upstream's creator.cc / winstuff.cc do. */
+#ifdef WIN32_LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
+#include <shellapi.h>
+#include <wincrypt.h>
 #include <winhttp.h>
 #include <bcrypt.h>
 #pragma comment(lib, "winhttp.lib")
@@ -31,6 +39,13 @@
 #include <unistd.h>
 #include <openssl/sha.h>
 #endif
+
+/* Mixar 5.2 port: creator code stays in the global namespace; blender::
+ * symbols (BKE_appdir etc.) are reached through a using-directive. Declare
+ * the namespace first — depending on platform, no Blender header may have
+ * been included yet at this point. */
+namespace blender {}
+using namespace blender;
 
 // Response data structure for curl callback
 struct CurlResponse {
@@ -1144,5 +1159,3 @@ bool show_startup_dialog(void) {
     return true;
 }
 #endif
-
-

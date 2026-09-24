@@ -10,12 +10,16 @@
 
 #include <algorithm>
 
+#include "ANIM_keyframing.hh"
+
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
 #include "RNA_access.hh"
 
 #include "view3d_director.hh"
+/* Mixar 5.2 port: namespace wrap. */
+namespace blender {
 
 static PropertyRNA *director_prop(PointerRNA *ptr, const char *name)
 {
@@ -54,6 +58,22 @@ bool view3d_director_state_pointer(Scene *scene, PointerRNA *r_state_ptr)
   return r_state_ptr->data != nullptr;
 }
 
+bool view3d_director_is_directing(Scene *scene)
+{
+  PointerRNA state_ptr;
+  return view3d_director_state_pointer(scene, &state_ptr) &&
+         director_bool(&state_ptr, "is_directing", false);
+}
+
+int view3d_director_navigation_mode(Scene *scene)
+{
+  PointerRNA state_ptr;
+  if (!view3d_director_state_pointer(scene, &state_ptr)) {
+    return -1;
+  }
+  return director_enum(&state_ptr, "navigation_mode", -1);
+}
+
 static bool director_active_shot_pointer_from_state(PointerRNA *state_ptr, PointerRNA *r_shot_ptr)
 {
   PropertyRNA *shots_prop = director_prop(state_ptr, "shots");
@@ -73,6 +93,25 @@ bool view3d_director_active_shot_pointer(Scene *scene, PointerRNA *r_shot_ptr)
          director_active_shot_pointer_from_state(&state_ptr, r_shot_ptr);
 }
 
+Object *view3d_director_shot_camera(Scene *scene, bool *r_locked)
+{
+  *r_locked = false;
+  PointerRNA shot_ptr;
+  if (!view3d_director_active_shot_pointer(scene, &shot_ptr)) {
+    return nullptr;
+  }
+  /* `state` is an enum whose LOCKED item is index 1 (see `SHOT_STATE_ITEMS`). */
+  *r_locked = director_enum(&shot_ptr, "state", 0) == 1;
+
+  PropertyRNA *camera_prop = director_prop(&shot_ptr, "camera");
+  if (!camera_prop) {
+    return nullptr;
+  }
+  PointerRNA camera_ptr = RNA_property_pointer_get(&shot_ptr, camera_prop);
+  Object *camera = static_cast<Object *>(camera_ptr.data);
+  return (camera && camera->type == OB_CAMERA) ? camera : nullptr;
+}
+
 bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
 {
   *r_state = DirectorViewState{};
@@ -84,11 +123,18 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   r_state->available = true;
   r_state->active = director_bool(&state_ptr, "is_directing", false);
   r_state->timeline_expanded = director_bool(&state_ptr, "timeline_expanded", true);
-  r_state->auto_key = director_bool(&state_ptr, "auto_key", false);
+  /* Auto Key IS Blender's Auto Keying (the Timeline's record button), read
+   * the way Blender reads it rather than back through the Python proxy. */
+  r_state->auto_key = animrig::is_autokey_on(scene);
+  r_state->recording = director_bool(&state_ptr, "recording", false);
+  r_state->walking = director_bool(&state_ptr, "walk_active", false);
+  /* `ruler_unit` is an enum whose FRAMES item is index 0. */
+  r_state->ruler_frames = director_enum(&state_ptr, "ruler_unit", 1) == 0;
   r_state->frame_current = scene->r.cfra;
   r_state->frame_start = scene->r.sfra;
   r_state->frame_end = scene->r.efra;
   r_state->scene_frame_start = scene->r.sfra;
+  r_state->scene_frame_end = scene->r.efra;
   r_state->fps = (scene->r.frs_sec_base > 0.0f) ? float(scene->r.frs_sec) / scene->r.frs_sec_base :
                                                   24.0f;
 
@@ -108,6 +154,7 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
     Object *camera = static_cast<Object *>(camera_ptr.data);
     if (camera && camera->type == OB_CAMERA) {
       r_state->has_camera = true;
+      r_state->shot_camera = camera;
       r_state->camera_name = camera->id.name + 2;
     }
   }
@@ -115,6 +162,7 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   const int navigation_mode = director_enum(&state_ptr, "navigation_mode", 0);
   r_state->navigate_mode = navigation_mode == 0;
   r_state->explore_mode = navigation_mode == 2;
+  r_state->aerial_mode = navigation_mode == 3;
   PropertyRNA *beats_prop = director_prop(&shot_ptr, "beats");
   const int beat_count = beats_prop ? RNA_property_collection_length(&shot_ptr, beats_prop) : 0;
   r_state->beats.reserve(beat_count);
@@ -126,6 +174,9 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
     DirectorBeatView beat;
     beat.index = index;
     beat.frame = director_int(&beat_ptr, "frame", scene->r.sfra);
+    if (PropertyRNA *image_prop = director_prop(&beat_ptr, "image")) {
+      beat.has_still = RNA_property_pointer_get(&beat_ptr, image_prop).data != nullptr;
+    }
     r_state->beats.append(beat);
   }
 
@@ -140,3 +191,4 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   }
   return true;
 }
+}  // namespace blender

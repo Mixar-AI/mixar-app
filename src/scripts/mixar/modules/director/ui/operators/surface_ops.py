@@ -8,7 +8,7 @@ import bpy
 from bpy.props import IntProperty, StringProperty
 from bpy.types import Operator
 
-from ...core.shot_api import active_shot, create_shot, latest_shot_index_for_camera
+from ...core.shot_api import active_shot, adopt_camera
 from ...core.viewport import enter_camera_view
 
 
@@ -23,12 +23,41 @@ def _redraw(context) -> None:
 
 
 def _jump_relative(context, offset: int):
+    """Step the playhead to the neighbouring keyframe of the active shot.
+
+    The step is taken from ``scene.frame_current``, NOT from
+    ``shot.active_beat_index``. The index is only ever written by a deliberate
+    jump, so scrubbing the ruler, dragging a handle, retiming with the Speed
+    slider, or playing the shot all leave it pointing somewhere the playhead is
+    not — and a "previous keyframe" click then stepped from that stale index or,
+    once it had been clamped to an end, reported success and moved nothing.
+    That is the arrows "sometimes" doing nothing.
+
+    Beats are searched in FRAME order because the collection keeps insertion
+    order, which a retime or a handle drag reorders in time but not in the
+    collection.
+    """
     shot = active_shot(context.scene)
     if shot is None or not shot.beats:
         return {'CANCELLED'}
-    index = min(max(shot.active_beat_index + offset, 0), len(shot.beats) - 1)
+    scene = context.scene
+    current = int(scene.frame_current)
+    ordered = sorted(
+        ((int(beat.frame), index) for index, beat in enumerate(shot.beats)),
+    )
+    if offset < 0:
+        candidates = [pair for pair in ordered if pair[0] < current]
+        target = candidates[-1] if candidates else None
+    else:
+        candidates = [pair for pair in ordered if pair[0] > current]
+        target = candidates[0] if candidates else None
+    if target is None:
+        # No keyframe that way — the same answer Blender's own keyframe jump
+        # gives at the ends of a channel.
+        return {'CANCELLED'}
+    frame, index = target
     shot.active_beat_index = index
-    context.scene.frame_set(shot.beats[index].frame)
+    scene.frame_set(frame)
     enter_camera_view(context, shot.camera, remember=False)
     return {'FINISHED'}
 
@@ -118,14 +147,11 @@ class MIXAR_OT_director_pick_camera(Operator):
         camera = bpy.data.objects.get(self.camera_name)
         if state is None or camera is None or camera.type != 'CAMERA':
             return {'CANCELLED'}
-        # Each camera is its own shot/timeline. Switch to the shot that already
-        # directs this camera, or start a fresh shot for one that has none,
-        # instead of reassigning (which collapsed every camera onto one strip).
-        index = latest_shot_index_for_camera(state, camera)
-        if index >= 0:
-            state.active_shot_index = index
-            return {'FINISHED'}
-        create_shot(scene, camera)
+        # Each camera is its own shot/timeline. `adopt_camera` switches to the
+        # shot that already directs this one, or starts a fresh shot for a
+        # camera with none — never reassigning, which collapsed every camera
+        # onto one strip. Entering Cinema Mode adopts through the same rule.
+        adopt_camera(scene, camera)
         return {'FINISHED'}
 
     def invoke(self, context, _event):

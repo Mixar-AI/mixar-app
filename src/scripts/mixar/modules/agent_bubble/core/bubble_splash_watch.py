@@ -17,6 +17,7 @@ import time as _time
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.tour import tour_running
 from mixar.modules.agent_bubble.core.bubble_autoshow import arm_autoshow
 from mixar.modules.agent_bubble.core.bubble_lifecycle import (
     has_agent_bubble_windows,
@@ -33,6 +34,12 @@ _splash_watch_started_ts: float | None = None
 def splash_watch_tick():
     """Wait for splash dismissal, then arm the autoshow."""
     global _splash_watch_started_ts
+
+    if tour_running():
+        # The tour opens and minimises the island itself; an autoshow
+        # arriving mid-tour would re-open it under the tour's overlays.
+        logger.info("agent_bubble: interactive tour running, autoshow not armed")
+        return None
 
     try:
         from mixar.bootstrap import splash_menu

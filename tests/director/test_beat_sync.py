@@ -58,18 +58,19 @@ def sync(monkeypatch):
     )
     monkeypatch.setattr(
         beat_sync,
-        "scope_preview_range",
-        lambda scene, shot: calls.scoped.append(shot),
+        "release_preview_range",
+        lambda scene: calls.scoped.append(scene),
     )
     monkeypatch.setattr(
         beat_sync,
         "_ensure_timer",
         lambda: setattr(calls, "timer_started", calls.timer_started + 1),
     )
-    monkeypatch.setitem(beat_sync._state, "key", None)
-    monkeypatch.setitem(beat_sync._state, "count", None)
-    monkeypatch.setitem(beat_sync._state, "prune", False)
-    monkeypatch.setitem(beat_sync._state, "adopt", False)
+    monkeypatch.setattr(
+        beat_sync, "repair_rotation_continuity", lambda camera: 0
+    )
+    for key, value in beat_sync._INITIAL_STATE.items():
+        monkeypatch.setitem(beat_sync._state, key, value)
     return calls
 
 
@@ -95,7 +96,7 @@ def test_native_keys_the_strip_never_saw_become_beats(sync, monkeypatch):
     assert all(beat.image is None for beat in shot.beats)
     assert shot.active_beat_index == 1
     assert scene.frame_end == 58
-    assert sync.refreshed == [shot] and sync.scoped == [shot]
+    assert sync.refreshed == [shot] and sync.scoped == [scene]
 
 
 def test_frames_claimed_by_shots_sharing_the_camera_stay_put(
@@ -198,3 +199,106 @@ def test_switching_shots_resets_the_count_baseline(sync, monkeypatch):
     beat_sync._on_depsgraph_update(scene, None)
     assert beat_sync._state["prune"] is False
     assert beat_sync._state["adopt"] is True
+
+
+def test_a_live_recording_is_not_reconciled(sync, monkeypatch):
+    shot = _shot(SimpleNamespace(name="Camera"))
+    scene = _scene(shot)
+    scene.mixar_director.is_directing = True
+    scene.mixar_director.recording = True
+    monkeypatch.setattr(beat_sync, "active_shot", lambda _scene: shot)
+    _native(monkeypatch, {1, 2, 3, 4})
+    assert beat_sync._watchable_shot(scene) is None
+
+
+def test_recorded_samples_do_not_become_beats_after_reopening(sync, monkeypatch):
+    from mixar.modules.director.core import anim_curves
+
+    camera = SimpleNamespace(data=None)
+    points = [SimpleNamespace(co=(f, 0), type='JITTER') for f in range(2, 25)]
+    points += [SimpleNamespace(co=(f, 0), type='KEYFRAME') for f in (1, 25, 50)]
+    monkeypatch.setattr(
+        anim_curves, "assigned_fcurves",
+        lambda _id: [SimpleNamespace(data_path='location', keyframe_points=points)],
+    )
+    shot = _shot(camera, frames=(1, 25))
+    # A separate native I-key edit still gets adopted.
+    assert beat_sync.adopt_native_keyframes(_scene(shot), shot) == 1
+    assert [b.frame for b in shot.beats] == [1, 25, 50]
+    # Export/render ranges continue to see the complete performance.
+    assert anim_curves.camera_key_frames(camera) == set(range(1, 26)) | {50}
+
+
+# -------------------------------------------------------------------------
+# A beat is metadata on its key: it follows the key wherever it moves.
+
+
+def _timer_context(monkeypatch, scene, *, transforming=False):
+    windows = []
+    if transforming:
+        windows.append(
+            SimpleNamespace(modal_operators={"TRANSFORM_OT_transform": object()})
+        )
+    monkeypatch.setattr(
+        beat_sync.bpy,
+        "context",
+        SimpleNamespace(scene=scene, window_manager=SimpleNamespace(windows=windows)),
+    )
+
+
+def test_a_move_in_the_timeline_carries_the_beat_to_its_key(sync, monkeypatch):
+    """A MOVE keeps the count, so it adopts and prunes nothing — the beat
+    follows its key instead, however many updates the gesture took."""
+    camera = SimpleNamespace(name="Camera")
+    shot = _shot(camera, frames=(1, 25))
+    scene = _scene(shot)
+    monkeypatch.setattr(beat_sync, "_watchable_shot", lambda _scene: shot)
+    monkeypatch.setattr(beat_sync, "note_beat_timing", lambda shot, beat: None)
+
+    _native(monkeypatch, {1, 25})
+    beat_sync._on_depsgraph_update(scene, None)
+    for frames in ({1, 30}, {1, 36}, {1, 40}):  # one drag, three updates
+        _native(monkeypatch, frames)
+        beat_sync._on_depsgraph_update(scene, None)
+    assert beat_sync._state["follow"] is True
+    assert beat_sync._state["prune"] is False
+
+    _timer_context(monkeypatch, scene)
+    assert beat_sync._sync_timer() is None
+    assert [beat.frame for beat in shot.beats] == [1, 40]
+    assert beat_sync._state["synced"] == {1, 40}
+
+
+def test_the_timer_waits_out_a_running_grab(sync, monkeypatch):
+    """Mid-grab the frame set is not the one the director lets go on."""
+    camera = SimpleNamespace(name="Camera")
+    shot = _shot(camera, frames=(1, 25))
+    scene = _scene(shot)
+    beat_sync._state["follow"] = True
+    _timer_context(monkeypatch, scene, transforming=True)
+    assert beat_sync._sync_timer() == beat_sync._TIMER_INTERVAL
+    # Still owed.
+    assert beat_sync._state["follow"] is True
+
+
+def test_a_dock_edit_holds_the_watcher_and_rebaselines_on_release(sync, monkeypatch):
+    camera = SimpleNamespace(name="Camera")
+    shot = _shot(camera, frames=(1, 25))
+    scene = _scene(shot)
+    monkeypatch.setattr(beat_sync, "_watchable_shot", lambda _scene: shot)
+    monkeypatch.setattr(beat_sync, "_held", False)
+    _native(monkeypatch, {1, 25})
+    beat_sync._on_depsgraph_update(scene, None)
+
+    beat_sync.hold(True)
+    # Mid-drag the count dips: never read as a deletion while held.
+    _native(monkeypatch, {1})
+    beat_sync._on_depsgraph_update(scene, None)
+    assert beat_sync._state["prune"] is False
+    _timer_context(monkeypatch, scene)
+    assert beat_sync._sync_timer() == beat_sync._TIMER_INTERVAL
+
+    beat_sync.hold(False)
+    assert beat_sync._state["key"] is None
+    assert beat_sync._state["synced"] is None
+    assert beat_sync._state["follow"] is False

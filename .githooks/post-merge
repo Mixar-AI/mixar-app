@@ -1,0 +1,24 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Same job as post-checkout, for the path that hook cannot see.
+#
+# `git pull` / `git merge` advances HEAD without ever running post-checkout, so
+# a merge that brings in a different HEAD:upstream (e.g. pulling a branch that
+# moved from Blender 5.0 to 5.2) left upstream/ and its lib/* submodules on the
+# old commit with a clean `git status` and no warning. `git rebase` ends in a
+# real checkout and is already covered by post-checkout.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+# ORIG_HEAD is the pre-merge commit; it only feeds the BLENDER_VERSION warning,
+# so an absent one simply skips that check.
+prev_head="$(git rev-parse --verify --quiet ORIG_HEAD || true)"
+
+source "$ROOT_DIR/.githooks/lib/sync_upstream_pin.sh"
+sync_upstream_pin "post-merge" "$prev_head" "HEAD"

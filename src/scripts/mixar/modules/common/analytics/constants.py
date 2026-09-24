@@ -29,9 +29,11 @@ EVENT_WORKSPACE = "workspace.switched"
 EVENT_DRAFT_ABANDONED = "moodboard.draft_abandoned"
 EVENT_OUTPUT_LANDED = "generation.output_landed"
 EVENT_GENERATION_REJECTED = "generation.rejected"
-EVENT_ONBOARDING_STARTED = "onboarding.started"
-EVENT_ONBOARDING_STEP = "onboarding.step_changed"
-EVENT_ONBOARDING_FINISHED = "onboarding.finished"
+# The video-narrated onboarding tour (onboarding/core/tour); its steps are
+# beat ids.
+EVENT_TOUR_STARTED = "onboarding.tour_started"
+EVENT_TOUR_STEP = "onboarding.tour_step"
+EVENT_TOUR_FINISHED = "onboarding.tour_finished"
 EVENT_UPDATE_DOWNLOAD = "update.download_finished"
 EVENT_UPDATE_STARTED = "update.install_started"
 EVENT_UPDATE_RESULT = "update.install_result"
@@ -75,5 +77,7 @@ IGNORED_OPERATORS = frozenset({
     "mixar.agent_viewport_block",
     "mixar.bubble_block_context_menu",
     "mixar.bubble_header_drag",
-    "mixar.onboarding_card",
+    # The tour modal: one long-running operator whose funnel is the
+    # onboarding.tour_* events.
+    "mixar.onboarding_tour",
 })

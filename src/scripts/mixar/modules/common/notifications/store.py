@@ -85,7 +85,9 @@ class NotificationItem:
             return 1.0
         if remaining <= 0:
             return 0.0
-        return remaining / FADE_DURATION_MS
+        # Ease-out departure: most opacity falls early and the final frames
+        # settle softly, matching the native Zen surface exits.
+        return (remaining / FADE_DURATION_MS) ** 3
 
 
 class NotificationStore:
@@ -164,16 +166,29 @@ class NotificationStore:
             dismissible=dismissible,
         )
 
+        # While the interactive onboarding tour runs, park the toast: it
+        # would land over the tour's card or spotlight. tour_defer flushes
+        # it through admit() the moment the tour stops.
+        from . import tour_defer
+        if tour_defer.tour_running():
+            tour_defer.defer(item)
+            return nid
+
+        self.admit(item)
+        return nid
+
+    def admit(self, item: NotificationItem) -> None:
+        """Make a built item live: dedupe by id, restart its TTL from now
+        and ensure the toast timer is running."""
+        item.created_at = time.time()
         with self._lock:
             # Deduplicate by id
-            self._items = [i for i in self._items if i.id != nid]
+            self._items = [i for i in self._items if i.id != item.id]
             self._items.append(item)
 
         # Start the toast timer on main thread (deferred import to avoid cycles)
         from .toast_timer import ensure_toast_timer_running
         ensure_toast_timer_running()
-
-        return nid
 
     def push_from_server(self, data: dict) -> str:
         """Convenience wrapper that unpacks the server notification payload.
@@ -224,10 +239,14 @@ class NotificationStore:
         dismissed it" — a sticky item never expires, so its absence after a
         push can only mean dismissal. ``get_visible()`` can't answer this: it
         caps at MAX_VISIBLE_TOASTS, so a held-but-not-rendered item reads as
-        gone.
+        gone. An item parked while the onboarding tour runs counts as held:
+        it has not been dismissed, only not shown yet.
         """
         with self._lock:
-            return any(i.id == nid and not i.is_expired for i in self._items)
+            if any(i.id == nid and not i.is_expired for i in self._items):
+                return True
+        from . import tour_defer
+        return tour_defer.is_deferred(nid)
 
     def expire_old(self) -> int:
         """Remove expired items. Returns count of remaining items."""
@@ -253,7 +272,9 @@ class NotificationStore:
     # ------------------------------------------------------------------
 
     def dismiss(self, nid: str) -> Optional[str]:
-        """Remove a notification by id. Returns its server_id if present."""
+        """Remove a notification by id, parked ones included, so a toast
+        dismissed during the tour never resurfaces after it. Returns its
+        server_id if present."""
         with self._lock:
             server_id = None
             for i in self._items:
@@ -261,7 +282,11 @@ class NotificationStore:
                     server_id = i.server_id
                     break
             self._items = [i for i in self._items if i.id != nid]
-            return server_id
+        from . import tour_defer
+        parked = tour_defer.drop(nid)
+        if server_id is None and parked is not None:
+            server_id = parked.server_id
+        return server_id
 
     def clear_all(self) -> None:
         """Remove all notifications."""
@@ -269,8 +294,13 @@ class NotificationStore:
             self._items.clear()
 
     def reset(self) -> None:
-        """Full reset — clear items."""
+        """Full reset — clear items, parked ones included."""
         self.clear_all()
+        try:
+            from . import tour_defer
+            tour_defer.reset()
+        except Exception:  # noqa: BLE001 — partial teardown
+            pass
 
 
 def get_notification_store() -> NotificationStore:

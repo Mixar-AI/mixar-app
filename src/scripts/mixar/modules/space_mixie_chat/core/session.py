@@ -35,15 +35,27 @@ class SessionManager:
     - scene.mixie_session_id: Persistent session identifier
 
     The _active_scenes class set tracks which scene names have active
-    sessions (BUSY/MODIFYING/AWAITING_INPUT). This is safe to read
-    from background threads (CPython GIL protects set membership checks).
+    sessions (BUSY/MODIFYING/AWAITING_INPUT, or an open run). This is safe
+    to read from background threads (CPython GIL protects set membership
+    checks).
+
+    Run state lives next to turn state: a backend run spans turns (the
+    orchestrator answers "in progress" and ends its turn while workers keep
+    building), so a scene whose turn is IDLE can still own an open run —
+    ``scene.mixie_run_open`` / ``scene.mixie_run_id``, written only by
+    ``set_run`` on the main thread.
     """
 
     _instance: Optional["SessionManager"] = None
     # Thread-safe tracking of active scenes for background thread checks.
-    # Updated only on main thread via set_state(). Read from any thread.
+    # Updated only on main thread via set_state()/set_run(). Read from any
+    # thread.
     _active_scenes: set = set()
     _active_scenes_lock = threading.Lock()
+    # Turn states during which the backend may address scripts to the scene.
+    _ACTIVE_TURN_STATES = frozenset(
+        {SessionState.BUSY, SessionState.MODIFYING, SessionState.AWAITING_INPUT}
+    )
 
     def __new__(cls) -> "SessionManager":
         if cls._instance is None:
@@ -91,6 +103,10 @@ class SessionManager:
         old_str = scene.mixie_chat_state
         new_str = state.value.upper()
 
+        if old_str != new_str or state != SessionState.BUSY:
+            from .cat_activity import reset_for_state
+            reset_for_state(scene, new_str)
+
         if old_str == new_str:
             return
 
@@ -100,7 +116,7 @@ class SessionManager:
         if hasattr(scene, 'mixie_chat_is_busy'):
             scene.mixie_chat_is_busy = (state == SessionState.BUSY)
 
-        active_states = {SessionState.BUSY, SessionState.MODIFYING, SessionState.AWAITING_INPUT}
+        active_states = SessionManager._ACTIVE_TURN_STATES
         is_active = state in active_states
         was_active = old_str in {s.value.upper() for s in active_states}
 
@@ -120,16 +136,93 @@ class SessionManager:
             elif not is_active:
                 scene.mixie_chat_active_turn_mode = ''
 
-        # Update active scenes tracking (thread-safe)
-        scene_name = scene.name
-        with SessionManager._active_scenes_lock:
-            if is_active:
-                SessionManager._active_scenes.add(scene_name)
-            else:
-                SessionManager._active_scenes.discard(scene_name)
+        # A new RUN starts with an empty Parallel Agents panel: the previous
+        # run's cards stay up after it ends (so its outcome is readable) and
+        # a turn that never fans out would otherwise leave them there. A
+        # wake-up turn of an open run keeps the cards — its workers are the
+        # ones on them.
+        if is_active and not was_active and not SessionManager.run_open(scene):
+            try:
+                from mixar.modules.agent_panel.core.cards import clear_cards
+                clear_cards()
+            except Exception:  # noqa: BLE001 — the panel never blocks a turn
+                pass
+
+        SessionManager._sync_active_scene(scene, is_active)
 
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"STATE CHANGE [{scene_name}]: {old_str} -> {new_str}")
+            logger.debug(f"STATE CHANGE [{scene.name}]: {old_str} -> {new_str}")
+
+    @staticmethod
+    def _sync_active_scene(scene, turn_active: bool) -> None:
+        """Keep ``_active_scenes`` = scenes with an active turn OR an open run.
+
+        Background worker scripts of an open run arrive while the
+        orchestrator is idle; counting the run here is what lets
+        ``has_active_session`` accept them instead of refusing with
+        "Agent session not active".
+        """
+        active = turn_active or SessionManager.run_open(scene)
+        with SessionManager._active_scenes_lock:
+            if active:
+                SessionManager._active_scenes.add(scene.name)
+            else:
+                SessionManager._active_scenes.discard(scene.name)
+
+    # ========================================================================
+    # Run state (a backend run spans turns)
+    # ========================================================================
+
+    @staticmethod
+    def run_open(scene) -> bool:
+        """True while the scene's backend run is open (workers may still build)."""
+        # `is True`: a BoolProperty is always a bool; anything else (a mock,
+        # a missing property) is not an open run.
+        return scene is not None and getattr(scene, 'mixie_run_open', False) is True
+
+    @staticmethod
+    def set_run(scene, run_id: str, open: bool) -> None:
+        """Single writer of the run state. Must be called from the main thread.
+
+        ``open=True`` records ``run_id`` and keeps the scene active for worker
+        scripts even when its turn is IDLE; ``open=False`` closes it (the id
+        is dropped — a closed run is never addressed again).
+        """
+        if not scene or not hasattr(scene, 'mixie_run_open'):
+            return
+        open = bool(open)
+        run_id = (run_id or "") if open else ""
+        changed = (
+            bool(scene.mixie_run_open) != open
+            or (getattr(scene, 'mixie_run_id', "") or "") != run_id
+        )
+        was_open = bool(scene.mixie_run_open)
+        scene.mixie_run_open = open
+        if hasattr(scene, 'mixie_run_id'):
+            scene.mixie_run_id = run_id
+        turn_active = SessionManager.get_state(scene) in SessionManager._ACTIVE_TURN_STATES
+        SessionManager._sync_active_scene(scene, turn_active)
+        if was_open and not open:
+            # The run is over (completed, cancelled, aborted): no card may keep
+            # working. A turn end alone does not settle them — the workers on
+            # the cards outlive the orchestrator's turn (finalize_turn skips
+            # the settle while the run is open).
+            try:
+                from mixar.modules.agent_panel.core.cards import settle_running
+                settle_running()
+            except Exception:  # noqa: BLE001 — the panel never blocks the run
+                pass
+        if changed and logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                f"RUN [{scene.name}]: {'open' if open else 'closed'} {run_id[:8]}"
+            )
+
+    @classmethod
+    def clear_all_runs(cls) -> None:
+        """Close the run on every scene. Main thread only."""
+        import bpy
+        for scene in bpy.data.scenes:
+            cls.set_run(scene, "", False)
 
     @staticmethod
     def get_session_id(scene) -> str:
@@ -183,6 +276,8 @@ class SessionManager:
             logger.warning("No scene for start_session")
             return ""
 
+        from .cat_activity import clear_activity
+        clear_activity(scene)
         if not scene.mixie_session_id:
             scene.mixie_session_id = str(uuid.uuid4())
             logger.debug(f"NEW SESSION [{scene.name}]: session_id={scene.mixie_session_id[:8]}")
@@ -239,8 +334,11 @@ class SessionManager:
         Args:
             scene: bpy.types.Scene instance
         """
+        from .cat_activity import clear_activity
+        clear_activity(scene)
         if scene and hasattr(scene, 'mixie_session_id'):
             scene.mixie_session_id = ""
+        SessionManager.set_run(scene, "", False)
         logger.info("SESSION ID CLEARED: next message will create new session")
 
     @staticmethod
@@ -250,8 +348,11 @@ class SessionManager:
         Args:
             scene: bpy.types.Scene instance
         """
+        from .cat_activity import clear_activity
+        clear_activity(scene)
         if scene and hasattr(scene, 'mixie_session_id'):
             scene.mixie_session_id = ""
+        SessionManager.set_run(scene, "", False)
         SessionManager.set_state(scene, SessionState.IDLE)
 
     def clear_streaming(self) -> None:
@@ -266,18 +367,19 @@ class SessionManager:
     def has_active_session(cls) -> bool:
         """Check if any scene has an active agent session. Thread-safe.
 
-        Safe to call from any thread (WebSocket, SSE background).
+        Safe to call from any thread (WebSocket, socket background).
         Used by connection_manager.on_script_execute to gate tool execution.
 
         Returns:
-            True if at least one scene is BUSY/MODIFYING/AWAITING_INPUT
+            True if at least one scene is BUSY/MODIFYING/AWAITING_INPUT or
+            owns an open run (its workers build while the orchestrator idles)
         """
         with cls._active_scenes_lock:
             return len(cls._active_scenes) > 0
 
     # States a transport (WebSocket) drop may downgrade to OFFLINE. The active
     # turn states — BUSY / MODIFYING / AWAITING_INPUT — are deliberately
-    # excluded: the agent turn lives on its own SSE/HTTP connection and keeps
+    # excluded: the agent turn lives on its own backend task and keeps
     # running through a WS blip, so its state must survive the reconnect.
     _DISCONNECT_DOWNGRADABLE = frozenset({SessionState.IDLE, SessionState.CONNECTING})
 
@@ -294,13 +396,16 @@ class SessionManager:
         every backend script was refused with "Agent session not active"
         while the status pill showed Connected/idle — the backend kept
         grinding whole build waves against those refusals (backend trace
-        b0c909ab). The turn's lifecycle is owned by the SSE stream
+        b0c909ab). The turn's lifecycle is owned by the agent stream
         (queue_processor), not by the WS transport.
 
         A TERMINAL disconnect (``terminal=True`` — auth failure, reconnection
-        stopped) wipes every scene to OFFLINE, as before.
+        stopped) wipes every scene to OFFLINE and closes its run, as before.
+        A transient drop preserves run state: the backend defers wake-ups
+        while the socket is down and fires them on the next handshake.
         """
         if terminal:
+            cls.clear_all_runs()
             cls.set_all_scenes_state(SessionState.OFFLINE)
         else:
             cls.set_all_scenes_state(

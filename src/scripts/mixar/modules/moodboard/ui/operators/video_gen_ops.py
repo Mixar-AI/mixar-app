@@ -16,7 +16,7 @@ class MIXIE_OT_video_gen_generate(Operator):
 
     bl_idname = "mixie.video_gen_generate"
     bl_label = "Generate Video"
-    bl_description = "Generate a Seedance video from text and selected references"
+    bl_description = "Generate a video from text and selected moodboard references"
     bl_options = {'REGISTER'}
 
     def execute(self, context):
@@ -37,7 +37,7 @@ class MIXIE_OT_video_gen_generate(Operator):
 
         prompt = str(getattr(tab, "prompt", "") or "").strip()
         if not prompt:
-            self.report({'WARNING'}, "Enter a video prompt")
+            self.report({'ERROR'}, "Enter a video prompt")
             return {'CANCELLED'}
 
         service_key = resolve_service_key(
@@ -56,23 +56,25 @@ class MIXIE_OT_video_gen_generate(Operator):
             build_image_reference_inputs,
             build_video_reference_inputs,
             get_video_generation_limits,
-            seedance_reference_count_error,
+            video_reference_count_error,
         )
 
-        limits = get_video_generation_limits(service_key)
+        # Model-aware: H3's reference ceilings are far tighter than Seedance's
+        # and everything below this line uploads.
+        limits = get_video_generation_limits(service_key, model)
         if limits is None:
             self.report({'ERROR'}, "Video generation catalog config is incomplete")
             return {'CANCELLED'}
 
         params = collect_params(service_key, model)
-        count_error = seedance_reference_count_error(
+        count_error = video_reference_count_error(
             limits,
             image_count=len(refs["images"]),
             video_count=len(refs["videos"]),
             image_mode=(params or {}).get("image_mode"),
         )
         if count_error:
-            self.report({'WARNING'}, count_error)
+            self.report({'ERROR'}, count_error)
             return {'CANCELLED'}
         if not refs["all_video_sources_available"]:
             self.report({'ERROR'}, "A selected video was moved or deleted")
@@ -95,7 +97,7 @@ class MIXIE_OT_video_gen_generate(Operator):
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
         except Exception as exc:
-            logger.exception("Could not prepare Seedance image references")
+            logger.exception("Could not prepare video image references")
             self.report({'ERROR'}, f"Could not prepare image references: {exc}")
             return {'CANCELLED'}
 
@@ -118,13 +120,12 @@ class MIXIE_OT_video_gen_generate(Operator):
                 video_inputs=video_inputs,
                 max_video_duration_seconds=limits["max_video_seconds"],
                 scene_flag="mixie_video_gen_is_generating",
-                batch_popup_title="Video Generation Complete",
             )
         except Exception as exc:
             self.report({'ERROR'}, f"Failed to start video generation: {exc}")
             return {'CANCELLED'}
         if job is None:
-            self.report({'WARNING'}, "A duplicate video generation is already queued")
+            self.report({'ERROR'}, "A duplicate video generation is already queued")
             return {'CANCELLED'}
 
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued

@@ -32,10 +32,10 @@ class MIXAR_LAYERS_HT_header(Header):
         layout = self.layout
         wm = context.window_manager
 
-        # Editor-type switch dropdown (consistent with the other texturing spaces)
+        # Editor Type dropdown: every editor in the Texturing workspace
+        # stays swappable, and this space is listed under the menu's
+        # "Texturing" heading.
         layout.template_header()
-
-        # Title on the left
         layout.label(text="Layers")
 
         # Check if mixar_ui exists
