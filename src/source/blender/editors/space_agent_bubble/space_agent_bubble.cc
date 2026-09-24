@@ -72,11 +72,13 @@
 #include "UI_interface_layout.hh"
 
 #include "ED_mixar_glass.hh"
+#include "ED_mixie_chat_asset_picker.hh"
 
 #include "agent_bubble_glass.hh"
 #include "agent_bubble_intern.hh"
 #include "agent_bubble_references.hh"
 #include "agent_bubble_size.hh"
+#include "agent_ui_asset_picker.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_generations.hh"
 #include "agent_ui_layout.hh"
@@ -1137,6 +1139,52 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
         else if (tab_probe.active_tab == AGENT_TAB_GENERATIONS) {
           agent_ui_generations_draw(C, region, panel_region, u);
         }
+      }
+      return;
+    }
+  }
+
+  /* A pending asset question (the agent found several close matches in the
+   * user's trained library) replaces the transcript with ONLY its picks, as a
+   * Library-style grid — `agent_ui_asset_picker.cc`. It is drawn exactly like
+   * a pane tab: the transcript's per-message rects are dropped (its hit tests
+   * are a cache) and the chat's click dispatch stands down on the same
+   * predicate (`mixie_chat_main_region.cc`). The composer below stays, so a
+   * typed answer still works — and an EMPTY send accepts the selected pick
+   * (`chat_ops.py`). Answering clears the question and the transcript
+   * returns on the next draw; nothing has to be torn down. The user's own
+   * modal surfaces (rules, past chats, ink) are not replaced —
+   * `mixie_chat_asset_picker_shown` stands down while one is open. */
+  {
+    MixieAssetPicker picker;
+    if (mixie_chat_asset_picker_shown(C, &picker)) {
+      /* Closing edges of the chat's modal runtimes, as the empty state runs
+       * them: with visibility false they draw nothing and only reset. */
+      mixie_chat_draw_ink_overlay(C, region);
+      mixie_chat_draw_rules_overlay(C, region);
+      mixie_chat_draw_history_overlay(C, region);
+      agent_bubble_clear_chat_layout_cache(C);
+      agent_bubble_fill_region_backdrop(region);
+      AgentIslandState state;
+      AgentIslandLayout layout;
+      if (agent_bubble_island_begin(C, region, &state, &layout)) {
+        agent_ui_draw_island(region, &layout, &state);
+        agent_bubble_island_end();
+        /* The TRANSCRIPT slice, not the whole panel: with a conversation the
+         * composer strip and the chip row live in the TOOLS region below,
+         * and the region scissor keeps only this band. The pane tabs draw on
+         * `layout.panel` because the composer collapses under them; here it
+         * stays, and a foot-anchored "Use This Asset" laid out against the
+         * panel's bottom fell into the TOOLS band and was never seen. */
+        rctf picker_region = layout.transcript;
+        BLI_rctf_translate(&picker_region,
+                           -float(region->winrct.xmin),
+                           -float(region->winrct.ymin));
+        const float u = layout.scale;
+        if (agent_bubble_references_visible(C)) {
+          picker_region.xmax = float(region->winx) - 6.0f * u;
+        }
+        agent_ui_asset_picker_draw(C, region, picker_region, u, picker);
       }
       return;
     }
@@ -4440,6 +4488,7 @@ void ED_spacetype_agent_bubble()
   agent_ui_pill_draft_qa_register();
   agent_bubble_references_qa_register();
   agent_ui_generations_qa_register();
+  agent_ui_asset_picker_qa_register();
 }
 
 /** \} */
