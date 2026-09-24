@@ -147,6 +147,8 @@ MIXAR_INTRO = Tour(
                      ("Shift+A", "Add an object", 27173),
                      ("Tab", "Edit mode", 27493),
                      ("Mod+Z", "Undo", 27793),
+                     ("Shift+M", "Open Mixie", 28093),
+                     ("Opt", "Push to talk (hold)", 28393),
                  ), at_pct=(80, 52), appear=19793),
              )),
         # -- Act 2: Mixie ("See the little island…" 29.85; "open it up." ends 36.15)

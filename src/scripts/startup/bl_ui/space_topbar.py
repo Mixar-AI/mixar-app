@@ -602,7 +602,7 @@ class TOPBAR_MT_help(Menu):
     def draw(self, context):
         layout = self.layout
 
-        layout.operator("wm.url_open", text="About Mixar", icon='INFO').url = "https://www.mixar.app/about"
+        layout.operator("wm.url_open", text="Tutorials", icon='FILE_MOVIE').url = "https://www.youtube.com/@Mixar3D"
         layout.operator("wm.url_open", text="Documentation", icon='HELP').url = "https://www.mixar.app/docs"
         layout.operator("wm.url_open", text="Report a Bug", icon='URL').url = "https://www.mixar.app/bug-report"
         layout.separator()

@@ -47,6 +47,7 @@ def test_shortcut_panel_stays_inside_its_bounds_and_rows_light_in_order():
     assert keys.row_state(100, 150) == "lit"
     assert keys.row_state(100, 100 + keys.KEY_LIT_MS) == "done"
     assert keys._caps("Mod+Z")[0] in ("Cmd", "Ctrl")
+    assert keys._caps("Opt") in (["Option"], ["Alt"])
 
 
 def test_help_menu_has_the_creator_program_entry_highlighted_by_the_tour():

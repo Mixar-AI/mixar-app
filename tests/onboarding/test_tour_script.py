@@ -138,6 +138,10 @@ def test_shortcut_panel_lights_each_key_as_it_is_named():
     rest = [ms for keys, _l, ms in panel.rows if keys not in ("Click", "G", "R", "S")]
     assert rest and all(26893 <= ms <= 28593 for ms in rest)
     assert [ms for _k, _l, ms in panel.rows] == sorted(ms for _k, _l, ms in panel.rows)
+    # Mixar's own two: Shift+M opens Mixie; hold Option/Alt to talk.
+    labels = {keys: label for keys, label, _ms in panel.rows}
+    assert labels["Shift+M"] == "Open Mixie"
+    assert labels["Opt"] == "Push to talk (hold)"
 
 
 def test_island_tabs_follow_the_new_tab_names():

@@ -39,6 +39,8 @@ KEY_LIT_MS = 1400        # accent glow after a key is named
 DIM_ALPHA = 0.32         # rows not yet named
 
 MOD_KEY = "Cmd" if sys.platform == "darwin" else "Ctrl"
+ALT_KEY = "Option" if sys.platform == "darwin" else "Alt"
+_PLATFORM_KEYS = {"Mod": MOD_KEY, "Opt": ALT_KEY}
 
 
 def _with_alpha(color: tuple, alpha: float) -> tuple:
@@ -46,8 +48,9 @@ def _with_alpha(color: tuple, alpha: float) -> tuple:
 
 
 def _caps(keys: str) -> list:
-    """``"Shift+A"`` → ``["Shift", "A"]``; ``"Mod"`` becomes Cmd / Ctrl."""
-    return [MOD_KEY if k == "Mod" else k for k in keys.split("+") if k]
+    """``"Shift+A"`` → ``["Shift", "A"]``; ``"Mod"`` becomes Cmd / Ctrl and
+    ``"Opt"`` Option / Alt, per platform."""
+    return [_PLATFORM_KEYS.get(k, k) for k in keys.split("+") if k]
 
 
 def keys_layout(title: str, rows: tuple, center: tuple, bounds: tuple,
