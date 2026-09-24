@@ -102,8 +102,10 @@ def _keys(id_, title, rows, at_pct, appear=None, disappear=None):
 MIXAR_INTRO = Tour(
     id="mixar-intro",
     title="Welcome to Mixar",
-    # Timed to the founder take of 2026-09-24 (Naman), silences over ~0.9 s
-    # trimmed to ~0.75 s (2:05). Every enter_ms is the first word of that
+    # Timed to the founder take of 2026-09-24 (Naman, colour-corrected),
+    # silences over ~0.9 s trimmed to ~0.75 s on the source's frame grid
+    # (2:05.4). Seconds quoted in the comments below are the uncorrected
+    # edit's and run up to ~0.1 s late. Every enter_ms is the first word of that
     # line minus ~150 ms; a gated beat's clip_end_ms is the last word
     # + 500 ms so the pause lands in the natural silence (the jump then seeks
     # to the next line). Captions name the ACT and hold across its beats.
@@ -113,13 +115,13 @@ MIXAR_INTRO = Tour(
              hide_cursor=True, hero_dim=True,
              actions=((0, "ensure_zen", {}),)),
         # -- Act 1: the viewport ("This is your viewport…" 7.74 s) -----------
-        Beat("viewport", 7590, 18060, "half", PLACE_BOTTOM_LEFT,
+        Beat("viewport", 7590, 18037, "half", PLACE_BOTTOM_LEFT,
              label="Part 1 · The viewport",
              overlays=(
                  _cursor("viewport-orbit", A_VIEWPORT, appear=9200, orbit=True),
              )),
         # "Go give it a try." 18.21–19.09 s, then the tour waits.
-        Beat("viewport-try", 18060, 19590, "half", PLACE_BOTTOM_LEFT,
+        Beat("viewport-try", 18037, 19567, "half", PLACE_BOTTOM_LEFT,
              label="Part 1 · The viewport",
              overlays=(
                  _hint("viewport-hint",
@@ -132,31 +134,31 @@ MIXAR_INTRO = Tour(
         # scale. Here are key shortcuts that will come handy." 19.84–28.66 s.
         # Each keycap row lights as it is named; the rest fill in on "Here
         # are key shortcuts".
-        Beat("shortcuts", 19690, 29700, "half", PLACE_BOTTOM_LEFT,
+        Beat("shortcuts", 19643, 29650, "half", PLACE_BOTTOM_LEFT,
              label="Part 1 · The viewport",
              hide_cursor=True,
              overlays=(
                  _keys("shortcut-keys", "Handy shortcuts", (
-                     ("Click", "Select", 19840),
-                     ("G", "Move", 22420),
-                     ("R", "Rotate", 23840),
-                     ("S", "Scale", 25160),
-                     ("X", "Delete", 26960),
-                     ("Shift+A", "Add an object", 27240),
-                     ("Tab", "Edit mode", 27560),
-                     ("Mod+Z", "Undo", 27860),
-                 ), at_pct=(80, 52), appear=19840),
+                     ("Click", "Select", 19793),
+                     ("G", "Move", 22373),
+                     ("R", "Rotate", 23793),
+                     ("S", "Scale", 25113),
+                     ("X", "Delete", 26893),
+                     ("Shift+A", "Add an object", 27173),
+                     ("Tab", "Edit mode", 27493),
+                     ("Mod+Z", "Undo", 27793),
+                 ), at_pct=(80, 52), appear=19793),
              )),
         # -- Act 2: Mixie ("See the little island…" 29.85; "open it up." ends 36.15)
         # The cursor glides to the pill and rests there: the click is the
         # user's (a fake click on a gated target would read as "done").
-        Beat("find-island", 29700, 36650, "half", PLACE_BOTTOM_LEFT,
+        Beat("find-island", 29650, 36600, "half", PLACE_BOTTOM_LEFT,
              label="Part 2 · Mixie",
-             actions=((29700, "island_open", {}),),
+             actions=((29650, "island_open", {}),),
              overlays=(
-                 _scribble("island-ring", A_PILL_ON_HOST, appear=30400),
-                 _cursor("island-cursor", A_PILL_TOP_ON_HOST, appear=31000),
-                 _hint("island-hint", "Open Mixie", A_PILL_ON_HOST, appear=33000),
+                 _scribble("island-ring", A_PILL_ON_HOST, appear=30350),
+                 _cursor("island-cursor", A_PILL_TOP_ON_HOST, appear=30950),
+                 _hint("island-hint", "Open Mixie", A_PILL_ON_HOST, appear=32950),
              ),
              gate=Gate("island_expanded", "island-tabs", anchor=A_PILL,
                        auto_advance_wall_ms=8000,
@@ -166,35 +168,35 @@ MIXAR_INTRO = Tour(
         # models and tweak parameters" 54.11–57.79. The tabs named in one
         # breath flip under a moving cursor; the pane then settles on 3D with
         # its model picker ringed.
-        Beat("island-tabs", 36750, 58950, "half", PLACE_BOTTOM_RIGHT,
+        Beat("island-tabs", 36683, 58877, "half", PLACE_BOTTOM_RIGHT,
              label="Part 2 · Mixie",
              actions=(
-                 (36750, "island_expand", {}),
-                 (39100, "island_tab", {"tab": "AGENT"}),
-                 (50910, "island_tab", {"tab": "THREE_D"}),
-                 (51410, "island_tab", {"tab": "IMAGE"}),
-                 (51910, "island_tab", {"tab": "VIDEO"}),
-                 (52710, "island_tab", {"tab": "SPLAT"}),
-                 (54000, "island_tab", {"tab": "THREE_D"}),
+                 (36683, "island_expand", {}),
+                 (39033, "island_tab", {"tab": "AGENT"}),
+                 (50847, "island_tab", {"tab": "THREE_D"}),
+                 (51347, "island_tab", {"tab": "IMAGE"}),
+                 (51847, "island_tab", {"tab": "VIDEO"}),
+                 (52647, "island_tab", {"tab": "SPLAT"}),
+                 (53937, "island_tab", {"tab": "THREE_D"}),
              ),
              overlays=(
-                 _cursor("tab-agent", A_TAB_AGENT, appear=37500, click=39100, disappear=50300),
-                 _scribble("tab-agent-ring", A_TAB_AGENT, appear=39100, disappear=50300),
-                 _cursor("tab-3d", A_TAB_3D, appear=50300, click=50910, disappear=51200),
-                 _cursor("tab-image", A_TAB_IMAGE, appear=51200, click=51410, disappear=51700),
-                 _cursor("tab-video", A_TAB_VIDEO, appear=51700, click=51910, disappear=52300),
-                 _cursor("tab-splat", A_TAB_SPLAT, appear=52300, click=52710, disappear=53700),
-                 _scribble("tab-splat-ring", A_TAB_SPLAT, appear=52710, disappear=53800),
-                 _cursor("model-chip", A_MODEL_CHIP, appear=53700, click=54110),
-                 _scribble("model-chip-ring", A_MODEL_CHIP, appear=54200),
+                 _cursor("tab-agent", A_TAB_AGENT, appear=37433, click=39033, disappear=50237),
+                 _scribble("tab-agent-ring", A_TAB_AGENT, appear=39033, disappear=50237),
+                 _cursor("tab-3d", A_TAB_3D, appear=50237, click=50847, disappear=51137),
+                 _cursor("tab-image", A_TAB_IMAGE, appear=51137, click=51347, disappear=51637),
+                 _cursor("tab-video", A_TAB_VIDEO, appear=51637, click=51847, disappear=52237),
+                 _cursor("tab-splat", A_TAB_SPLAT, appear=52237, click=52647, disappear=53637),
+                 _scribble("tab-splat-ring", A_TAB_SPLAT, appear=52647, disappear=53737),
+                 _cursor("model-chip", A_MODEL_CHIP, appear=53637, click=54047),
+                 _scribble("model-chip-ring", A_MODEL_CHIP, appear=54137),
              )),
         # "Everything you generate lands in the library." 59.10–61.50 s
-        Beat("library-prompt", 58950, 62000, "half", PLACE_BOTTOM_RIGHT,
+        Beat("library-prompt", 58877, 61927, "half", PLACE_BOTTOM_RIGHT,
              label="Part 2 · Mixie",
              overlays=(
-                 _scribble("library-ring", A_TAB_LIBRARY, appear=59300),
-                 _cursor("library-cursor", A_TAB_LIBRARY, appear=59700),
-                 _hint("library-hint", "Open Library", A_TAB_LIBRARY, appear=60500),
+                 _scribble("library-ring", A_TAB_LIBRARY, appear=59227),
+                 _cursor("library-cursor", A_TAB_LIBRARY, appear=59627),
+                 _hint("library-hint", "Open Library", A_TAB_LIBRARY, appear=60427),
              ),
              gate=Gate("bubble_tab:GENERATIONS", "library", anchor=A_TAB_LIBRARY,
                        auto_advance_wall_ms=10000,
@@ -203,128 +205,128 @@ MIXAR_INTRO = Tour(
         # own library…" 65.27 · "…thus saving you credits." ends 71.05. The
         # rail flips to the connected asset libraries, where "Add Library…"
         # lives, and back to the generations grid at the end of the line.
-        Beat("library", 62100, 71650, "half", PLACE_BOTTOM_RIGHT,
+        Beat("library", 62030, 71570, "half", PLACE_BOTTOM_RIGHT,
              label="Part 2 · Mixie",
              actions=(
-                 (62100, "island_tab", {"tab": "GENERATIONS"}),
-                 (62100, "library_source", {"source": "AI"}),
-                 (65270, "library_source", {"source": "LIBRARY"}),
-                 (71400, "library_source", {"source": "AI"}),
+                 (62030, "island_tab", {"tab": "GENERATIONS"}),
+                 (62030, "library_source", {"source": "AI"}),
+                 (65200, "library_source", {"source": "LIBRARY"}),
+                 (71330, "library_source", {"source": "AI"}),
              ),
              overlays=(
-                 _cursor("library-tile", A_LIBRARY_TILE, appear=62500, disappear=64700,
+                 _cursor("library-tile", A_LIBRARY_TILE, appear=62430, disappear=64630,
                          at_pct=(70, 40)),
-                 _cursor("library-assets", A_LIBRARY_SOURCE_ASSETS, appear=64700,
-                         click=65270, disappear=66000),
-                 _cursor("library-add", A_LIBRARY_ADD, appear=66000),
-                 _scribble("library-add-ring", A_LIBRARY_ADD, appear=66300),
+                 _cursor("library-assets", A_LIBRARY_SOURCE_ASSETS, appear=64630,
+                         click=65200, disappear=65930),
+                 _cursor("library-add", A_LIBRARY_ADD, appear=65930),
+                 _scribble("library-add-ring", A_LIBRARY_ADD, appear=66230),
              )),
         # -- Act 3: the moodboard ("Ideas start in 2D…" 71.80; "tilde." ends 76.58)
-        Beat("moodboard-prompt", 71650, 77100, "half", PLACE_BOTTOM_LEFT,
+        Beat("moodboard-prompt", 71570, 77020, "half", PLACE_BOTTOM_LEFT,
              label="Part 3 · The moodboard",
              overlays=(
-                 _scribble("grip-ring", A_DRAWER_GRIP, appear=72300),
-                 _cursor("grip-cursor", A_DRAWER_GRIP, appear=72800),
+                 _scribble("grip-ring", A_DRAWER_GRIP, appear=72220),
+                 _cursor("grip-cursor", A_DRAWER_GRIP, appear=72720),
                  _hint("grip-hint", "Drag the Moodboard tab out · or press ~", A_DRAWER_GRIP,
-                       appear=74600, side="left"),
+                       appear=74520, side="left"),
              ),
              gate=Gate("drawer_open", "moodboard-canvas", anchor=A_DRAWER_GRIP,
                        auto_advance_wall_ms=8000,
                        auto_action=("drawer_set", {"amount": 1.0}))),
         # "It's a canvas for your reference, concepts…" 77.33 · "drop images,
         # videos" 80.91 · "sketches" 82.89 · ends 84.39
-        Beat("moodboard-canvas", 77180, 85040, "half", PLACE_TOP_LEFT,
+        Beat("moodboard-canvas", 77077, 84937, "half", PLACE_TOP_LEFT,
              label="Part 3 · The moodboard",
              actions=(
-                 (77180, "drawer_set", {"amount": 1.0}),
-                 (77800, "moodboard_add_demo_image", {}),
+                 (77077, "drawer_set", {"amount": 1.0}),
+                 (77697, "moodboard_add_demo_image", {}),
              ),
              overlays=(
-                 _scribble("canvas-ring", A_DRAWER_PANEL, appear=77500, disappear=80500),
-                 _cursor("canvas-cursor", A_MOODBOARD_MEDIA, appear=78600, orbit=True,
-                         disappear=80500, at_pct=(88, 55)),
-                 _cursor("tool-media", A_DRAWER_ADD_MEDIA, appear=80500, click=81150,
-                         disappear=82600),
-                 _scribble("tool-media-ring", A_DRAWER_ADD_MEDIA, appear=81150,
-                           disappear=82700),
-                 _cursor("tool-annotate", A_DRAWER_ANNOTATE, appear=82600, click=82890),
-                 _scribble("tool-annotate-ring", A_DRAWER_ANNOTATE, appear=82890),
+                 _scribble("canvas-ring", A_DRAWER_PANEL, appear=77397, disappear=80397),
+                 _cursor("canvas-cursor", A_MOODBOARD_MEDIA, appear=78497, orbit=True,
+                         disappear=80397, at_pct=(88, 55)),
+                 _cursor("tool-media", A_DRAWER_ADD_MEDIA, appear=80397, click=81047,
+                         disappear=82497),
+                 _scribble("tool-media-ring", A_DRAWER_ADD_MEDIA, appear=81047,
+                           disappear=82597),
+                 _cursor("tool-annotate", A_DRAWER_ANNOTATE, appear=82497, click=82787),
+                 _scribble("tool-annotate-ring", A_DRAWER_ANNOTATE, appear=82787),
              )),
         # "You can even build node graphs for using generative models similar
         # to ComfyUI." 85.19–89.63: the template shortcuts, then the "+" menu.
-        Beat("moodboard-nodes", 85040, 90230, "half", PLACE_TOP_LEFT,
+        Beat("moodboard-nodes", 84937, 90130, "half", PLACE_TOP_LEFT,
              label="Part 3 · The moodboard",
-             actions=((85040, "drawer_set", {"amount": 1.0}),),
+             actions=((84937, "drawer_set", {"amount": 1.0}),),
              overlays=(
-                 _cursor("node-template", A_NODE_TEMPLATE, appear=85400, click=86450,
-                         disappear=88200),
-                 _scribble("node-template-ring", A_NODE_TEMPLATE, appear=86450,
-                           disappear=88300),
-                 _cursor("node-menu", A_NODE_TEMPLATES_MENU, appear=88200),
-                 _scribble("node-menu-ring", A_NODE_TEMPLATES_MENU, appear=88400),
+                 _cursor("node-template", A_NODE_TEMPLATE, appear=85297, click=86347,
+                         disappear=88097),
+                 _scribble("node-template-ring", A_NODE_TEMPLATE, appear=86347,
+                           disappear=88197),
+                 _cursor("node-menu", A_NODE_TEMPLATES_MENU, appear=88097),
+                 _scribble("node-menu-ring", A_NODE_TEMPLATES_MENU, appear=88297),
              )),
         # -- Act 4: Zen vs Engine ("Right now, we are in Zen mode…" 90.38;
         # "flip to engine mode." ends 97.32)
-        Beat("engine-prompt", 90230, 97820, "half", PLACE_BOTTOM_CENTER,
+        Beat("engine-prompt", 90130, 97720, "half", PLACE_BOTTOM_CENTER,
              label="Part 4 · Zen and Engine",
-             actions=((90230, "drawer_set", {"amount": 0.0}),),
+             actions=((90130, "drawer_set", {"amount": 0.0}),),
              overlays=(
-                 _scribble("zen-now-ring", A_ZEN_BUTTON, appear=91900, disappear=94300),
-                 _scribble("engine-ring", A_ENGINE_BUTTON, appear=94700),
-                 _cursor("engine-cursor", A_ENGINE_BUTTON, appear=95100),
+                 _scribble("zen-now-ring", A_ZEN_BUTTON, appear=91800, disappear=94200),
+                 _scribble("engine-ring", A_ENGINE_BUTTON, appear=94600),
+                 _cursor("engine-cursor", A_ENGINE_BUTTON, appear=95000),
                  _hint("engine-hint", "Switch to Engine mode", A_ENGINE_BUTTON,
-                       appear=96500),
+                       appear=96400),
              ),
              gate=Gate("ui_mode:PRO", "engine-mode", anchor=A_ENGINE_BUTTON,
                        auto_advance_wall_ms=8000,
                        auto_action=("ui_mode", {"mode": "PRO"}))),
         # "It has the full Blender workspace, all the panels…" 98.07 ·
         # "Mixie works in both" 106.94 · "Let's head back to Zen mode." 110.49–111.71
-        Beat("engine-mode", 97920, 112310, "half", PLACE_BOTTOM_LEFT,
+        Beat("engine-mode", 97817, 112217, "half", PLACE_BOTTOM_LEFT,
              label="Part 4 · Zen and Engine",
              actions=(
-                 (97920, "ui_mode", {"mode": "PRO"}),
-                 (111400, "ui_mode", {"mode": "AI"}),
+                 (97817, "ui_mode", {"mode": "PRO"}),
+                 (111310, "ui_mode", {"mode": "AI"}),
              ),
              overlays=(
-                 _scribble("engine-toolkit-ring", A_PROPERTIES_EDITOR, appear=98600,
-                           disappear=105200),
-                 _scribble("engine-outliner-ring", A_OUTLINER, appear=98600,
-                           disappear=105200),
-                 _scribble("mixie-both-ring", A_ISLAND, appear=106800, disappear=109900),
-                 _cursor("zen-cursor", A_ZEN_BUTTON, appear=110300, click=111390),
-                 _scribble("zen-ring", A_ZEN_BUTTON, appear=110800),
+                 _scribble("engine-toolkit-ring", A_PROPERTIES_EDITOR, appear=98497,
+                           disappear=105097),
+                 _scribble("engine-outliner-ring", A_OUTLINER, appear=98497,
+                           disappear=105097),
+                 _scribble("mixie-both-ring", A_ISLAND, appear=106700, disappear=109800),
+                 _cursor("zen-cursor", A_ZEN_BUTTON, appear=110210, click=111300),
+                 _scribble("zen-ring", A_ZEN_BUTTON, appear=110710),
              )),
         # "We also are running a creative partner program where you get
         # inference credits, become part of the community that shapes the
         # future of AI and 3D." 112.46–120.70. The REAL Help menu opens
         # under its button with the Creator Program row highlighted, and a
         # callout beside the row says what it is.
-        Beat("creator-program", 112310, 121300, "half", PLACE_BOTTOM_LEFT,
+        Beat("creator-program", 112217, 121223, "half", PLACE_BOTTOM_LEFT,
              label="Creator Program",
              actions=(
-                 (113860, "help_menu_open", {}),
-                 (121100, "help_menu_close", {}),
+                 (113767, "help_menu_open", {}),
+                 (121007, "help_menu_close", {}),
              ),
              overlays=(
-                 _cursor("help-cursor", A_HELP_MENU, appear=112700, click=113860,
-                         disappear=114100),
+                 _cursor("help-cursor", A_HELP_MENU, appear=112607, click=113767,
+                         disappear=114007),
                  _callout("creator-callout", A_CREATOR_ROW, "Creator Program",
                           "Inference credits, and a place in the community shaping "
                           "the future of AI and 3D.",
-                          footer="Help ▸ Creator Program", appear=114300),
+                          footer="Help ▸ Creator Program", appear=114207),
              )),
         # "That's it. You know where everything is. Now let's make 3D
         # together." 121.45–124.85 s; the clip ends at 125.70. Cleanup lands
         # in the pause after "everything is", then the card fades out over
         # the replay note (END_AFTER_WALL_MS) while the moodboard stays open.
-        Beat("outro", 121300, 125400, "hero", PLACE_CENTER,
+        Beat("outro", 121223, 125323, "hero", PLACE_CENTER,
              label="You're all set",
              hide_cursor=True, hero_dim=True,
-             actions=((123450, "tour_cleanup", {}),),
+             actions=((123373, "tour_cleanup", {}),),
              overlays=(
                  _caption("replay-hint", "Replay any time from Help → Start tour",
-                          appear=124900),
+                          appear=124823),
              )),
     ),
 )

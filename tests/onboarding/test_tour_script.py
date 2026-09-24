@@ -8,13 +8,13 @@ pauses, what the captions read and where the card sits. ``test_tour_beats``
 pins the table's structural invariants; this file pins the presentation
 pass so a re-timing cannot quietly undo it.
 
-Transcript facts (Naman's take of 2026-09-24, silences over ~0.9 s trimmed,
-2:05): "Go give it a try." ends 19.09 s; "S to scale." 25.86; "Here are key
-shortcuts that will come handy." 26.96–28.66; "Click to open it up." ends
-36.15; "Everything you generate lands in the library." ends 61.50; "…or just
-press tilde." ends 76.58; "flip to engine mode." ends 97.32; the Creator
-Program line runs 112.46–120.70; the closing line 121.45–124.85 and the clip
-ends at 125.70.
+Transcript facts (Naman's colour-corrected take of 2026-09-24, silences over
+~0.9 s trimmed on the source frame grid, 2:05.4): "Go give it a try." ends
+19.07 s; G, R, S at 22.37 / 23.79 / 25.11; "Here are key shortcuts that will
+come handy." 26.89–28.59; "Click to open it up." ends 36.10; "Everything you
+generate lands in the library." ends 61.43; "…or just press tilde." ends
+76.50; "flip to engine mode." ends 97.22; the closing line ends 124.77 and
+the clip ends at 125.40.
 """
 
 from __future__ import annotations
@@ -26,14 +26,14 @@ from mixar.modules.onboarding.core.tour.beats import MIXAR_INTRO, find_index
 
 BEATS = {b.id: b for b in MIXAR_INTRO.beats}
 GATE_TAIL_MS = 500
-CLIP_END_MS = 125700
+CLIP_END_MS = 125400
 # (gated beat, last word of its line in ms)
 LAST_WORDS = {
-    "viewport-try": 19090,
-    "find-island": 36150,
-    "library-prompt": 61500,
-    "moodboard-prompt": 76600,
-    "engine-prompt": 97320,
+    "viewport-try": 19067,
+    "find-island": 36100,
+    "library-prompt": 61427,
+    "moodboard-prompt": 76520,
+    "engine-prompt": 97220,
 }
 ACT_CAPTIONS = {
     "intro": "Welcome",
@@ -134,9 +134,9 @@ def test_shortcut_panel_lights_each_key_as_it_is_named():
     assert panel.kind == B.OVERLAY_KEYS and panel.at_pct is not None
     named = {keys: ms for keys, _label, ms in panel.rows}
     # G, R and S light on the word; the rest fill in on "Here are key shortcuts".
-    assert (named["G"], named["R"], named["S"]) == (22420, 23840, 25160)
+    assert (named["G"], named["R"], named["S"]) == (22373, 23793, 25113)
     rest = [ms for keys, _l, ms in panel.rows if keys not in ("Click", "G", "R", "S")]
-    assert rest and all(26960 <= ms <= 28660 for ms in rest)
+    assert rest and all(26893 <= ms <= 28593 for ms in rest)
     assert [ms for _k, _l, ms in panel.rows] == sorted(ms for _k, _l, ms in panel.rows)
 
 
@@ -145,8 +145,8 @@ def test_island_tabs_follow_the_new_tab_names():
     assert tabs == ["AGENT", "THREE_D", "IMAGE", "VIDEO", "SPLAT", "THREE_D"]
     # "3D, Image, Video and World Model" are named in one breath.
     at = {args["tab"]: t for t, name, args in _actions("island-tabs")
-          if name == "island_tab" and t < 54000}
-    assert (at["THREE_D"], at["IMAGE"], at["VIDEO"], at["SPLAT"]) == (50910, 51410, 51910, 52710)
+          if name == "island_tab" and t < 53900}
+    assert (at["THREE_D"], at["IMAGE"], at["VIDEO"], at["SPLAT"]) == (50847, 51347, 51847, 52647)
     assert _overlay("island-tabs", "model-chip-ring").anchor == B.A_MODEL_CHIP
 
 
@@ -157,7 +157,7 @@ def test_a_cursor_crossing_into_the_island_leads_its_click_by_900ms():
 
 def test_library_points_at_linking_your_own_library_then_resets():
     acts = _actions("library")
-    assert (65270, "library_source", {"source": "LIBRARY"}) in acts
+    assert (65200, "library_source", {"source": "LIBRARY"}) in acts
     assert acts[-1][1:] == ("library_source", {"source": "AI"})
     assert _overlay("library", "library-add-ring").anchor == B.A_LIBRARY_ADD
     # A fresh account has no tiles: the first glide needs somewhere to land.
@@ -196,7 +196,7 @@ def test_creator_program_opens_the_real_help_menu_with_a_callout():
 
 def test_outro_cleans_up_in_the_pause_then_shows_the_replay_note():
     outro = BEATS["outro"]
-    assert outro.actions == ((123450, "tour_cleanup", {}),)
+    assert outro.actions == ((123373, "tour_cleanup", {}),)
     note = _overlay("outro", "replay-hint")
     assert note.kind == B.OVERLAY_CAPTION
     assert note.text == "Replay any time from Help → Start tour"
