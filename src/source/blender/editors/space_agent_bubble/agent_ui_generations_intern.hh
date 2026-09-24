@@ -268,6 +268,10 @@ struct GenGridMetrics {
 };
 
 rctf gen_rct(const GenBox &box);
+/** The measured resolver input for \a panel — shared with the asset picker
+ * (`agent_ui_asset_picker.cc`), which resolves the same frame with its own
+ * labels so it reads as this pane. */
+GenResolveInput agent_ui_generations_input(const rctf &panel, float u);
 GenFrame agent_ui_generations_frame(const rctf &panel, float u);
 
 GenGridMetrics agent_ui_generations_grid_metrics(const GenFrame &frame, const GenPaneData &data);

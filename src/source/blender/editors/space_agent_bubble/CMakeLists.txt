@@ -24,6 +24,9 @@ set(SRC
   agent_bubble_references_navigation.cc
   agent_bubble_interaction.cc
   agent_bubble_pill_voice.cc
+  agent_ui_asset_picker.cc
+  agent_ui_asset_picker_detail.cc
+  agent_ui_asset_picker_qa.cc
   agent_ui_draw.cc
   agent_ui_draw_primitives.hh
   agent_ui_controls_paint.cc
@@ -63,6 +66,9 @@ set(SRC
   agent_bubble_intern.hh
   agent_bubble_references.hh
   agent_bubble_glass.hh
+  agent_ui_asset_picker.hh
+  agent_ui_asset_picker_intern.hh
+  agent_ui_asset_picker_layout.hh
   agent_ui_draw.hh
   agent_ui_generations.hh
   agent_ui_generations_clip.hh
