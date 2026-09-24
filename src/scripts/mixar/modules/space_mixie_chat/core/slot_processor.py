@@ -518,10 +518,17 @@ class SlotEventProcessor:
         Args:
             bubble: Message PropertyGroup
             actions: List of dicts with label, value, style, and (for
-                asset-picker options) asset_name/library/blend_file/asset_type
+                asset-picker options) asset_name/library/blend_file/asset_type/score
             scene: The Blender scene (for asset-picker preview generation)
         """
         from . import asset_choice_previews
+        from . import asset_picker
+
+        # An agent asset question shows the top five picks, never more — the
+        # island's Library-style picker grid is sized for exactly those.
+        # input_type is applied before actions in the same event.
+        if getattr(bubble, "input_type", "") == "choice":
+            actions = asset_picker.cap_asset_actions(actions)
 
         prev_count = len(bubble.action_items)
 
@@ -556,6 +563,10 @@ class SlotEventProcessor:
             action.library = action_data.get("library") or ""
             action.blend_file = action_data.get("blend_file") or ""
             action.asset_type = action_data.get("asset_type") or ""
+            score = action_data.get("score")
+            action.score = (float(score)
+                            if isinstance(score, (int, float)) and not isinstance(score, bool)
+                            and 0.0 <= score <= 1.0 else -1.0)
             if action.asset_name and action.blend_file:
                 has_asset_options = True
 
@@ -565,6 +576,11 @@ class SlotEventProcessor:
         # .blend preview first, render fallback) — thumbnails pop in per tick.
         if has_asset_options and scene is not None:
             asset_choice_previews.schedule(scene, bubble)
+        # A pending asset question takes over the island's Agent tab as a
+        # Library-style grid (core/asset_picker.py): start on the best match
+        # and bring that tab forward.
+        if has_asset_options:
+            asset_picker.present(bubble)
 
         # Buttons alone must NEVER drive the session state — _apply_input_type_slot
         # is the one owner of the AWAITING_INPUT transition. Every paused turn

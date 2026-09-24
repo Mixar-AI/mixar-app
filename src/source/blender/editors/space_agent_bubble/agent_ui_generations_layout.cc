@@ -29,7 +29,7 @@ rctf gen_rct(const GenBox &box)
   return rect;
 }
 
-GenFrame agent_ui_generations_frame(const rctf &panel, const float u)
+GenResolveInput agent_ui_generations_input(const rctf &panel, const float u)
 {
   GenResolveInput in{};
   in.panel_xmin = panel.xmin;
@@ -70,7 +70,12 @@ GenFrame agent_ui_generations_frame(const rctf &panel, const float u)
   in.row_gap_design = GEN_ROW_GAP * u;
   in.lib_row_design = GEN_LIB_ROW_H * u;
   in.max_cols = GEN_COLS;
-  return agent_ui_generations_resolve(in);
+  return in;
+}
+
+GenFrame agent_ui_generations_frame(const rctf &panel, const float u)
+{
+  return agent_ui_generations_resolve(agent_ui_generations_input(panel, u));
 }
 
 }  // namespace blender

@@ -14,6 +14,7 @@ void mixie_chat_operatortypes()
   WM_operatortype_append(MIXIE_CHAT_OT_select_text);
   WM_operatortype_append(MIXIE_CHAT_OT_copy);
   WM_operatortype_append(MIXIE_CHAT_OT_drop_image);
+  WM_operatortype_append(MIXIE_CHAT_OT_drop_asset_pick);
   WM_operatortype_append(MIXIE_CHAT_OT_agent_bubble_show);
   WM_operatortype_append(MIXIE_CHAT_OT_retitle_document);
   WM_operatortype_append(MIXIE_CHAT_OT_undo_stamp);

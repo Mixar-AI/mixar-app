@@ -18,6 +18,8 @@ set(SRC
   mixie_chat_ops.cc
   mixie_chat_action_buttons.cc
   mixie_chat_agent_bubble.cc
+  mixie_chat_asset_picker.cc
+  mixie_chat_asset_picker_drop.cc
   mixie_chat_document_ops.cc
   mixie_chat_code_copy.cc
   mixie_chat_composer_focus.cc
