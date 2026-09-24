@@ -1320,6 +1320,16 @@ static bool region_azone_edge_poll(const ScrArea *area,
     return false;
   }
 
+  /* Mixar Cinema Mode timeline dock: View3D `CHANNELS` is used by nothing
+   * else, and the dock's height is FIXED (`VIEW3D_DIRECTOR_TIMELINE_HEIGHT`).
+   * `RGN_FLAG_NO_USER_RESIZE` alone only restores the size when a drag ends —
+   * the edge still offers a resize cursor, the dock still stretches while
+   * dragged, and a drag past the collapse threshold hides it — so the edge is
+   * not offered at all. */
+  if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_CHANNELS) {
+    return false;
+  }
+
   /* Same area, the hidden N-panel's reveal tab. `region_azone_tab_plus` pins
    * it to the area's top-right corner, which in Zen Mode is inside the
    * drawer's painted panel whenever it is open and on the navigation gizmo

@@ -256,7 +256,8 @@ static SpaceLink *view3d_create(const ScrArea * /*area*/, const Scene *scene)
   region->regiontype = RGN_TYPE_CHANNELS;
   region->alignment = RGN_ALIGN_BOTTOM;
   region->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;
-  region->flag = RGN_FLAG_TEMP_REGIONDATA;
+  /* Fixed height; see `view3d_director_timeline_region_ensure`. */
+  region->flag = RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_NO_USER_RESIZE;
 
   /* Sliding moodboard drawer (Mixar): Zen Mode hosts the whole moodboard
    * canvas on the right edge, slid in and out by a grip. TOOL_PROPS is in the

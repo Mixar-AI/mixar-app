@@ -124,6 +124,11 @@ constexpr float DIRECTOR_STRIP_MIN_H = 18.0f;
 constexpr float DIRECTOR_PLAYHEAD_PILL_H = 25.0f;
 /** Clear space between that band and the keyframe strip below it. */
 constexpr float DIRECTOR_PLAYHEAD_PILL_GAP = 6.0f;
+/** The ruler's major tick, and the clear space from its top to the label
+ * baseline. The ruler draws them and the layout reserves them, so they are
+ * one pair of tokens rather than a literal in each file. */
+constexpr float DIRECTOR_RULER_TICK_H = 20.0f;
+constexpr float DIRECTOR_RULER_LABEL_GAP = 8.0f;
 
 /* -------------------------------------------------------------------- */
 /** \name Shared paint primitives (view3d_director_timeline_draw.cc)

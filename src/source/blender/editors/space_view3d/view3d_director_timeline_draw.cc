@@ -293,7 +293,11 @@ void view3d_director_timeline_draw_content(const ARegion *region,
    * still crosses them, which is what a playhead is for; only the label moved
    * out of their way. */
   const float tick_base = float(margin) + 10.0f * u;
-  const float label_top = tick_base + 36.0f * u + 12.0f * u;
+  /* The ruler's tick and label band, from the same tokens the ruler draws
+   * with, then the 12 px label itself. */
+  const float label_top = tick_base +
+                          (DIRECTOR_RULER_TICK_H + DIRECTOR_RULER_LABEL_GAP) * u +
+                          12.0f * u;
   const float available = float(content_top) - label_top - 8.0f * u;
   /* The strip is LOAD-BEARING: the keyframes live on it, and a strip of zero
    * height takes every keyframe with it. So the pill's band is what gives way

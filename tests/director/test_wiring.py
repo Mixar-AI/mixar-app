@@ -523,14 +523,17 @@ def test_splat_scene_stills_capture_through_a_real_render():
 
 
 def test_navigate_supervises_walk_for_esc_and_cursor_reset():
-    """Esc must stop navigation in place and the pointer must come back.
+    """Esc must stop Explore in place and the pointer must come back.
 
-    Native walk maps Esc to CANCEL, which snaps the camera back to its
-    pre-walk pose, and it releases the pointer wherever the grab began. The
-    Navigate operator wraps the running walk in its own modal handler: it
+    Blender's walk (Explore's) maps Esc to CANCEL, which snaps the view back
+    to its pre-walk pose, and it releases the pointer wherever the grab
+    began. The supervisor wraps the running walk in its own modal handler: it
     re-applies the pose captured at the Esc press once walk's revert has run,
     warps the cursor back to the middle of the viewport on every exit, and
-    draws an aim marker while the pointer is hidden.
+    draws an aim marker while the pointer is hidden. The Cinema walk
+    (Navigate) has no Esc at all — its Walk chip is the one switch — so it
+    must not snapshot one: that stale pose would be re-applied when the chip
+    later stops the walk.
     """
     camera_ops = _read("ui/operators/camera_ops.py")
     viewport = _read("core/viewport.py")
@@ -551,6 +554,14 @@ def test_navigate_supervises_walk_for_esc_and_cursor_reset():
     assert "modal_operators" in camera_ops
     assert "'ESC'" in camera_ops
     assert "_exit_pose" in camera_ops
+    assert "if self._esc_stops_walk and event.type == 'ESC'" in camera_ops
+    supervisor = camera_ops.split("class _WalkSupervisor", 1)[1].split("\nclass ", 1)[0]
+    assert "_esc_stops_walk = False" in supervisor
+    explore = camera_ops.split("class MIXAR_OT_director_explore", 1)[1].split("\nclass ", 1)[0]
+    assert "_esc_stops_walk = True" in explore
+    navigate = camera_ops.split("class MIXAR_OT_director_navigate", 1)[1].split("\nclass ", 1)[0]
+    assert "_esc_stops_walk" not in navigate
+    assert "Esc" not in navigate.split("bl_description", 1)[1].split(")", 1)[0]
     assert "{'PASS_THROUGH'}" in camera_ops
     assert "cursor_warp" in camera_ops
     assert "_draw_walk_aim" in camera_ops

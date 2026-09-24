@@ -26,16 +26,17 @@ struct bContext;
 struct wmOperatorType;
 
 /**
- * The dock's preferred height.
+ * The dock's height — FIXED, not a preference: the user cannot resize it.
  *
  * It has to hold the whole stack: the dock's control row, the playhead's
  * band, the camera strip, and the ruler's ticks and labels. At 164 it did
  * not — the strip's height is what the layout took the shortfall out of, and
  * it went to ZERO, taking every keyframe on it with it.
  * `tests/director/test_timeline_layout.py` does that arithmetic against the
- * layout's own constants so the budget can never silently collapse again.
+ * layout's own constants so the budget can never silently collapse again;
+ * this is exactly the height at which the strip is whole, with no slack.
  */
-constexpr int VIEW3D_DIRECTOR_TIMELINE_HEIGHT = 248;
+constexpr int VIEW3D_DIRECTOR_TIMELINE_HEIGHT = 219;
 
 struct DirectorBeatView {
   int frame = 0;

@@ -71,8 +71,10 @@ def walk(qa):
 
 
 def stop_walk(qa):
+    # The Walk chip is the only way out: Esc and right-click no longer stop
+    # the Cinema walk. Its second click is the toggle's stop.
     stage(qa)
-    qa.press('ESC')
+    qa.click(surface='director_walk', value='stop')
     qa.wait('not ' + STATE + '.walk_active', timeout=8)
 
 

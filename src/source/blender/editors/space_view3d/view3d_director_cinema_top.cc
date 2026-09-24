@@ -47,6 +47,16 @@ namespace {
 /** Design y of the strip's control row (the phone button's top). */
 constexpr float STRIP_Y = 159.0f;
 
+/* Alt is Option on a Mac keyboard: name the key the user can see, as the
+ * Sketch talk hint does (`scribble_mark/constants.py`). A macro rather than a
+ * constant so the Walk chip's tooltip stays one string literal
+ * (`ui::Button::tip` is non-owning). */
+#ifdef __APPLE__
+#  define WALK_SLOW_KEY "Option"
+#else
+#  define WALK_SLOW_KEY "Alt"
+#endif
+
 /**
  * Mixar banner chip: the brand gradient pill with the round logo chip, the
  * "mixar" wordmark, the mode name and the version. INERT — no button, no QA
@@ -174,7 +184,9 @@ void grid_chip(ui::Block *block, const bContext *C, const ARegion *region, const
  * Walk chip: starts and stops the Cinema walk, lit while one is running.
  *
  * The ONLY way in, and on purpose: both keys that fitted were already
- * somebody else's (`director/ui/keymap.py` records which).
+ * somebody else's (`director/ui/keymap.py` records which). And the only way
+ * OUT: Esc and the right button used to stop the walk too, so the chip was
+ * one of three switches for one state. Now its lit state is the whole truth.
  *
  * It is a TOGGLE. It always looked like one — lit while walking, publishing
  * "stop" to the harness — and for a while it was not one: the walk owned
@@ -182,8 +194,13 @@ void grid_chip(ui::Block *block, const bContext *C, const ARegion *region, const
  * nobody found out. Once the walk stopped swallowing events
  * (`director_pointer_on_stage`), a second click started a SECOND walk on top
  * of the first. `MIXAR_OT_director_navigate` now asks the running walk to
- * finish instead (`walk_stop_requested`). Esc and the right button still
- * stop it; the LEFT button does not, because that is the look handle.
+ * finish instead (`walk_stop_requested`).
+ *
+ * The glyph is a walking figure (`ICON_ARMATURE_DATA`, Blender's stick
+ * figure). It was the pan hand, which names the viewport's own Move — a
+ * different gesture — rather than driving the camera on foot. The compact
+ * rail's Animation button carries the same glyph, but the rail only draws
+ * when this strip does not, so the two never share a screen.
  */
 void walk_chip(ui::Block *block,
                const ARegion *region,
@@ -203,11 +220,11 @@ void walk_chip(ui::Block *block,
   /* Both tooltips are literals: `ui::Button::tip` is non-owning. */
   cinema_icon_button(block,
                      "MIXAR_OT_director_navigate",
-                     ICON_VIEW_PAN,
+                     ICON_ARMATURE_DATA,
                      chip,
-                     walking ? "Stop walking (Esc or right-click also stop)" :
-                               "Walk the camera: W A S D, Q E, Shift to sprint, "
-                               "hold the left button to look");
+                     walking ? "Stop walking" :
+                               "Walk the camera: W A S D, Q E, Shift to sprint, " WALK_SLOW_KEY
+                               " to creep, hold the left button to look. Click again to stop");
   cinema_qa_record(region, chip, "director_walk", walking ? "stop" : "start", -1);
 }
 
@@ -233,8 +250,9 @@ void cinema_draw_top_strip(ui::Block *block,
    * shortcut at all — it is the Walk chip below, because both keys that
    * fitted were already somebody else's (see `director/ui/keymap.py`) — so
    * at rest there is nothing else to promise. While a walk runs, the keys
-   * are the Cinema walk's and the strip says so, down to Shift for the
-   * sprint, the left button that aims, and the Esc that stops it.
+   * are the Cinema walk's and the strip says so, down to the left button
+   * that aims and Shift / Alt for the sprint and the creep. There is no key
+   * that stops it: the Walk chip, lit beside these hints, is the way out.
    *
    * A hint here is a promise — never paint one without the matching keymap
    * item, in whichever state paints it. */
@@ -246,22 +264,21 @@ void cinema_draw_top_strip(ui::Block *block,
     bool stacked; /* WASD draws W above ASD. */
   };
   constexpr int RESTING_HINTS = 2;
-  constexpr int WALKING_HINTS = 5;
+  constexpr int WALKING_HINTS = 4;
   const Hint resting_hints[RESTING_HINTS] = {
       {0.0f, {"O"}, 1, "Aerial view", false},
       {0.0f, {"I"}, 1, "Insert keyframe", false},
   };
+  /* Most useful first: a row too narrow for all of them drops from the END,
+   * so the speed modifiers — refinements — are what give way first. */
   const Hint walking_hints[WALKING_HINTS] = {
       {0.0f, {"W", "A", "S", "D"}, 4, "Move around", true},
       {0.0f, {"Q", "E"}, 2, "Up / down", false},
-      {0.0f, {"Shift"}, 1, "Move faster", false},
       {0.0f, {"LMB"}, 1, "Hold to look", false},
-      {0.0f, {"Esc"}, 1, "Done", false},
+      {0.0f, {"Shift", WALK_SLOW_KEY}, 2, "Faster / slower", false},
   };
-  /* Groups pack at CINEMA_HINT_GAP from the camera gate's left edge (the
-   * stage inset by the gate's pad), so the hints line up with the frame and
-   * clear the banner chip above the left column. `x` is resolved here from
-   * the measured label widths. */
+  /* Groups pack at CINEMA_HINT_GAP from the row's left edge. `x` is resolved
+   * here from the measured label widths, once the row's span is known. */
   const Hint *source = state.walking ? walking_hints : resting_hints;
   const int hint_count = state.walking ? WALKING_HINTS : RESTING_HINTS;
   Hint hints[WALKING_HINTS] = {};
@@ -286,25 +303,50 @@ void cinema_draw_top_strip(ui::Block *block,
     return width;
   };
   const float margin = cinema_margin(region);
-  /* The fitted camera border's left edge, in design px. The border can be
-   * height-limited and sit inside the stage, so read the real one; the
-   * stage's own gate edge is only the fallback outside camera view. */
-  float gate_left = margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET + CINEMA_GATE_PAD;
-  float gate_right = float(region->winx) / u - (margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET +
-                                                 CINEMA_GATE_PAD);
+  /* Each group's width, and what the whole row needs: the hints, the 12 px
+   * they keep clear of the chips, and the three chips (walk, grid, eyedropper)
+   * with the two gaps between them. Design px. */
+  float hint_w[WALKING_HINTS];
+  float row_need = 12.0f + CINEMA_PHONE_H * 3.0f + CINEMA_STRIP_GAP * 2.0f;
+  for (int index = 0; index < hint_count; index++) {
+    hint_w[index] = caps_design_w(hints[index]) + 8.0f +
+                    cinema_text_width(hints[index].label, CINEMA_FONT_LABEL * u) / u;
+    row_need += hint_w[index] + (index > 0 ? CINEMA_HINT_GAP : 0.0f);
+  }
+  /* The row's span, in design px. Hints start on its left edge and the chips
+   * end on its right, so on a wide frame they line up with the camera border.
+   *
+   * It used to BE the border, and the border is the ASPECT's width: a 9:16
+   * frame is far narrower than the row, so every hint group was dropped and
+   * the strip went blank. So the border is where the row starts from, not
+   * what bounds it — when the frame is too narrow, the row widens evenly
+   * about the frame's centre. It never runs past the STAGE (the space between
+   * the columns: the banner chip and the phone button sit beyond it), which
+   * is also the whole span outside camera view. */
+  const float stage_inset = margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET + CINEMA_GATE_PAD;
+  const float stage_left = stage_inset;
+  const float stage_right = float(region->winx) / u - stage_inset;
+  float row_left = stage_left;
+  float row_right = stage_right;
   rctf border;
   if (cinema_camera_gate_rect(C, region, &border)) {
-    gate_left = border.xmin / u;
-    gate_right = border.xmax / u;
+    row_left = border.xmin / u;
+    row_right = border.xmax / u;
+    const float missing = row_need - (row_right - row_left);
+    if (missing > 0.0f) {
+      row_left -= missing * 0.5f;
+      row_right += missing * 0.5f;
+    }
+    row_left = std::max(row_left, stage_left);
+    row_right = std::min(row_right, stage_right);
   }
   /* Design x where each hint ends; the controls decide what fits from it. */
   float hint_end[WALKING_HINTS];
-  float next_x = gate_left;
+  float next_x = row_left;
   for (int index = 0; index < hint_count; index++) {
     Hint &hint = hints[index];
     hint.x = next_x;
-    hint_end[index] = hint.x + caps_design_w(hint) + 8.0f +
-                      cinema_text_width(hint.label, CINEMA_FONT_LABEL * u) / u;
+    hint_end[index] = hint.x + hint_w[index];
     next_x = hint_end[index] + CINEMA_HINT_GAP;
   }
 
@@ -322,13 +364,13 @@ void cinema_draw_top_strip(ui::Block *block,
                       float(region->winx) - margin * u,
                       band.ymin,
                       band.ymax};
-  /* Grid chip and eyedropper, right-to-left from the camera frame's right
-   * edge, so the last chip's edge lines up with the frame.
+  /* Walk chip, grid chip and eyedropper, right-to-left from the row's right
+   * edge, so on a wide frame the last chip's edge lines up with the frame.
    *
    * The Interpolation dropdown used to sit out here too. It is how the camera
    * eases BETWEEN KEYFRAMES, and it now lives in the timeline dock beside the
    * keyframes it describes (`view3d_director_cinema_dock.cc`). */
-  const float strip_right = gate_right * u;
+  const float strip_right = row_right * u;
   rctf eyedrop = {strip_right - CINEMA_PHONE_H * u, strip_right, band.ymin, band.ymax};
   rctf grid = {eyedrop.xmin - (CINEMA_STRIP_GAP + CINEMA_PHONE_H) * u,
                eyedrop.xmin - CINEMA_STRIP_GAP * u,

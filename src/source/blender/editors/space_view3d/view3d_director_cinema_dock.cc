@@ -54,13 +54,13 @@ namespace {
 
 /* Design px. */
 constexpr float ROW_H = 30.0f;
-constexpr float ROW_TOP_GAP = 18.0f;
+constexpr float ROW_TOP_GAP = 12.0f;
 /** The actions row under it, and the clear space between the two. SUB_ROW_H
  * is that row's height and must match `ACTION_H` in `_dock_actions.cc`, which
  * is the pill drawn on it; `tests/director/test_dock_actions_row.py` pins
  * the pair so the row can never be shorter than what it holds. */
 constexpr float SUB_ROW_H = 30.0f;
-constexpr float SUB_ROW_GAP = 10.0f;
+constexpr float SUB_ROW_GAP = 6.0f;
 constexpr float SIDE_PAD = 26.0f;
 /** The interpolation dropdown beside them; fits "Sinusoidal" plus a chevron. */
 constexpr float INTERP_W = 118.0f;
