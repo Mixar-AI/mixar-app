@@ -8,7 +8,9 @@
  * Capture lightbox: click a capture tile in the steps block and the image
  * opens large over the WHOLE WINDOW — scrim, the image fit to the window,
  * "n / N", ‹ › (and ← →) through every capture of that bubble. ESC, a click
- * anywhere off a control, or the ✕ closes it.
+ * anywhere off a control, or the ✕ closes it. Captures are numbered in the
+ * order they were taken and the gallery row leads with the NEWEST, so
+ * "next" (›, →) walks to OLDER captures: 32 / 32, 31 / 32 … 1 / 32.
  *
  * A modal operator (MIXIE_CHAT_OT_lightbox) with a window draw callback
  * (WM_draw_cb_activate, the pattern of space_mixie/mixie_attachment_flight.cc):
@@ -311,13 +313,13 @@ static wmOperatorStatus lightbox_modal(bContext *C, wmOperator *op, const wmEven
         return OPERATOR_FINISHED;
       case EVT_LEFTARROWKEY:
       case EVT_UPARROWKEY:
-        lightbox_step(data, -1);
+        lightbox_step(data, +1); /* newer */
         lightbox_redraw(C, win);
         return OPERATOR_RUNNING_MODAL;
       case EVT_RIGHTARROWKEY:
       case EVT_DOWNARROWKEY:
       case EVT_SPACEKEY:
-        lightbox_step(data, +1);
+        lightbox_step(data, -1); /* older */
         lightbox_redraw(C, win);
         return OPERATOR_RUNNING_MODAL;
       default:
@@ -341,12 +343,12 @@ static wmOperatorStatus lightbox_modal(bContext *C, wmOperator *op, const wmEven
 
   if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
     switch (lightbox_hit(data, mx, my)) {
-      case 2:
-        lightbox_step(data, -1);
+      case 2: /* ‹ newer */
+        lightbox_step(data, +1);
         lightbox_redraw(C, win);
         return OPERATOR_RUNNING_MODAL;
-      case 3:
-        lightbox_step(data, +1);
+      case 3: /* › older */
+        lightbox_step(data, -1);
         lightbox_redraw(C, win);
         return OPERATOR_RUNNING_MODAL;
       default:
