@@ -110,6 +110,8 @@ def test_hovered_segment_cell_is_as_wide_as_its_label_and_others_share_the_rest(
     assert "if (group.hovered < 0 || group.count < 2) {\n    return self->rect;" in cell
     # Hit rects stay the block's; the reason is documented at the top.
     assert "can_refresh" in SEGMENT
+    # A refresh follows a row that RAN, never a hover (tests/director/test_popup_refresh.py).
+    assert "never\n * on hover" in SEGMENT
     assert "SEGMENT_MIN_W = mixar_chrome::cinema_row_segment_min_w" in ROW
     assert "cinema_row_segment_min_w = 28.0f" in CHROME
 
@@ -123,6 +125,45 @@ def test_segment_cell_paints_only_itself_and_reads_active_from_the_flag():
     # Labels shorten with an ellipsis instead of losing glyphs.
     label = _function(ROW, "void draw_label(")
     assert "text_clip_middle_ex(&fs, clipped, okwidth, minwidth, sizeof(clipped), '\\0');" in label
+
+
+def test_every_segment_cell_paints_a_resting_track():
+    """A cell that painted nothing while unlit turned a three-up row into
+    loose words with one chip somewhere among them."""
+    draw = _function(SEGMENT, "void draw_segment(")
+    assert "themed(MixarThemeSlot::CinemaRowTrack, TRACK, track);" in draw
+    assert "mixar_card_fill_round(&row, rad, track," in draw
+    assert draw.index("mixar_card_fill_round(&row, rad, track,") < draw.index(
+        "draw_chip(row, rad, motion.selected)"
+    )
+
+
+def test_an_explicit_segment_tag_beats_the_type_derivation():
+    """The export popup's size cells are Row buttons bound to RNA; without
+    this they derive back to Option and drop out of their own group."""
+    kind_get = _function(ROW, "MixarCinemaRowKind UI_mixar_cinema_row_kind_get(")
+    early = kind_get.index("return MixarCinemaRowKind::Segment;")
+    assert early < kind_get.index("switch (but->type)")
+    assert "but->mixar_style.cinema == MixarCinemaRowKind::Segment" in kind_get
+
+
+def test_a_standalone_toggle_shows_its_off_state():
+    """A Toggle in a settings popup is a switch, not a list option: unlit it
+    is still a row. List options (a dropdown's items) keep the plain text."""
+    option = _function(ROW, "void draw_option(")
+    assert "ButtonType::Toggle,\n                                       ButtonType::ToggleN," in option
+    assert "themed(MixarThemeSlot::CinemaRowTrack, TRACK, track);" in option
+
+
+def test_the_action_row_is_a_filled_accent_pill():
+    """The one thing a popup DOES must not read as a caption."""
+    option = _function(ROW, "void draw_option(")
+    assert "const bool action = kind == MixarCinemaRowKind::Action;" in option
+    assert "themed(MixarThemeSlot::CinemaRowSliderOn, SLIDER_ON, fill);" in option
+    assert "mixar_card_fill_round(&row, rad, fill," in option
+    # Icon and label are one centred group on the pill.
+    assert "const float group_w = icon_w + label_w;" in option
+    assert "text.xmin = int(center - group_w * 0.5f);" in option
 
 
 def test_labels_shrink_the_pad_to_a_floor_before_ellipsising():
@@ -144,7 +185,10 @@ def test_labels_shrink_the_pad_to_a_floor_before_ellipsising():
     # value gives nothing.
     option = _function(ROW, "void draw_option(")
     normalized = " ".join(option.split())
-    assert "icon_drawn ? 0.0f : pad_slack(), submenu ? 0.0f : pad_slack()" in normalized
+    assert (
+        "(icon_drawn || action) ? 0.0f : pad_slack(), (submenu || action) ? 0.0f : pad_slack()"
+        in normalized
+    )
     # A submenu arrow owns the right edge. Reserve its actual icon width
     # before measuring/clipping text, and never recover that space as padding.
     assert "ELEM(but->type, ButtonType::Menu, ButtonType::Block, ButtonType::Pulldown)" in option
@@ -177,7 +221,8 @@ def test_lens_type_cells_are_a_segment_group():
 def test_section_labels_tag_caption_so_every_popup_gets_the_look():
     label = _function(POPUP, "void director_popup_section_label(")
     assert "ui::UI_mixar_cinema_row_tag(label, ui::MixarCinemaRowKind::Caption);" in label
-    # The Output popup's "On Moodboard" entries are captions with their icon.
+    # The Output popup's "already on the Moodboard" line is a caption with
+    # its icon.
     assert "ui::UI_mixar_cinema_row_tag(entry, ui::MixarCinemaRowKind::Caption);" in RENDER
     assert "ICON_FILE_MOVIE" in RENDER
 
@@ -193,12 +238,15 @@ def test_director_popup_state_picks_the_kind_from_the_button_type():
     assert "ui::MixarCinemaRowKind::Active : ui::MixarCinemaRowKind::Option" in state
 
 
-def test_output_popup_resolution_slider_is_tagged_by_hand():
+def test_output_popup_video_size_is_a_segment_group():
+    """Draft / Half / Full cells, not a percentage slider whose meaning was a
+    caption away; the pixel size they make is the caption right under them."""
     render = _function(RENDER, "ui::Block *render_popup_create(")
-    assert "ui::UI_mixar_cinema_row_tag(resolution, ui::MixarCinemaRowKind::Slider);" in render
-    # Summary caption directly under the slider; widths untouched.
-    slider_at = render.index('"render_resolution_percentage"')
-    summary_at = render.index("y -= label_h;", slider_at)
+    assert "ui::UI_mixar_cinema_row_tag(cell, ui::MixarCinemaRowKind::Segment);" in render
+    assert "director_popup_state(cell, percent == size.percent, !running);" in render
+    assert "ui::ButtonType::NumSlider" not in render
+    cells_at = render.index('"render_resolution_percentage"')
+    summary_at = render.index("y -= label_h;", cells_at)
     assert "director_popup_section_label(block, summary, y, width);" in render[summary_at:]
     assert "director_popup_width(arg, UI_UNIT_X * 12)" in render
     assert "ui::BLOCK_KEEP_OPEN" in render and "render_popup_close" in render

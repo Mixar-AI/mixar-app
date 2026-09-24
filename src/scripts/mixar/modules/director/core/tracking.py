@@ -175,31 +175,11 @@ def pick_object_under_cursor(context, region, region_3d, coord):
 
 
 # -------------------------------------------------------------------------
-# Framing the picked object.
+# The picked object's extent.
 #
-# The Track To constraint aims the camera at the target's ORIGIN, which is
-# where it points but says nothing about how much of the frame the object
-# fills: picking a distant object aimed the camera correctly and left it a
-# speck, which reads as "the eyedropper isn't working". So a pick also dollies
-# the camera along its existing line to the target until the object's bounding
-# sphere fits the frame, the way View Selected does.
-#
-# The camera is moved along the line it is ALREADY on, so the pick changes how
-# much of the frame the object fills and nothing else — not the angle the
-# director chose.
-
-
-def fit_distance(radius: float, half_fov: float, margin: float = 1.15) -> float:
-    """Distance at which a sphere of *radius* fits a frame of *half_fov*.
-
-    ``margin`` leaves air around the subject; 1.0 would have it touch the
-    frame edges. Pure trigonometry so the rounding is pinned without Blender.
-    """
-    from math import tan
-
-    radius = max(float(radius), 1e-4)
-    half_fov = min(max(float(half_fov), 1e-3), 1.5533)  # < 89 degrees
-    return radius * margin / tan(half_fov)
+# Tracking itself only aims; nothing here moves the camera or touches its
+# lens. Depth of field reads the sphere's centre to focus on the middle of a
+# picked subject rather than its origin (`core/dof.py`).
 
 
 def world_bounding_sphere(obj):
@@ -221,56 +201,3 @@ def world_bounding_sphere(obj):
     centre = sum(corners, Vector((0.0, 0.0, 0.0))) / len(corners)
     radius = max((corner - centre).length for corner in corners)
     return centre, radius
-
-
-def _half_fov(camera) -> float:
-    """Half the camera's NARROWER field of view, in radians.
-
-    The narrower axis is what clips a subject first, so fitting to it is what
-    guarantees the whole object is in frame.
-    """
-    from math import atan2
-
-    data = camera.data
-    sensor = min(float(data.sensor_width), float(data.sensor_height))
-    if data.sensor_fit == 'VERTICAL':
-        sensor = float(data.sensor_height)
-    elif data.sensor_fit == 'HORIZONTAL':
-        sensor = float(data.sensor_width)
-    lens = max(float(data.lens), 1e-3)
-    return atan2(sensor * 0.5, lens)
-
-
-def frame_target(camera, target) -> bool:
-    """Dolly *camera* along its line to *target* until the object fits.
-
-    Returns whether the camera moved. Never raises: it runs from the
-    eyedropper's modal, where a target with no geometry or a degenerate
-    distance must simply leave the camera alone.
-    """
-    from mathutils import Vector
-
-    try:
-        sphere = world_bounding_sphere(target)
-        if sphere is None:
-            return False
-        centre, radius = sphere
-        if radius <= 1e-4:
-            return False
-        matrix = camera.matrix_world
-        position = matrix.translation.copy()
-        direction = centre - position
-        if direction.length <= 1e-4:
-            return False
-        distance = fit_distance(radius, _half_fov(camera))
-        # Along the line the camera is already on: the pick changes how much
-        # of the frame the subject fills, not the angle the director chose.
-        new_position = centre - direction.normalized() * distance
-        if (new_position - position).length <= 1e-4:
-            return False
-        moved = matrix.copy()
-        moved.translation = Vector(new_position)
-        camera.matrix_world = moved
-    except (AttributeError, ReferenceError, TypeError, ValueError, ZeroDivisionError):
-        return False
-    return True

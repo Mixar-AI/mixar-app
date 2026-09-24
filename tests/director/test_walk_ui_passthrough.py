@@ -146,3 +146,38 @@ def test_the_walk_ends_with_the_viewport_it_started_in():
     workspace switch, or the area closed."""
     tick = _block(WALK, "wmOperatorStatus director_walk_tick(")
     assert "CTX_wm_area(C) == nullptr" in tick
+
+
+def test_a_region_laid_over_the_viewport_keeps_its_own_presses():
+    """Zen Mode floats the View3D header and tool header OVER the viewport,
+    inside its rect, so the rect test alone handed presses on their buttons to
+    the walk: the options row above the stage could not be clicked while
+    walking. The stage test asks the question event dispatch asks — which
+    region is visually under the pointer — and only its own region is the
+    stage."""
+    stage = _stage()
+    assert "ED_area_find_region_xy_visual(area, RGN_TYPE_ANY, event->xy) != region" in stage
+    assert '#include "ED_screen.hh"' in MOVE
+    # After the rect test (cheap) and before the button/card tests.
+    assert stage.index("BLI_rcti_isect_pt(&region->winrct") < stage.index(
+        "ED_area_find_region_xy_visual"
+    ) < stage.index("region_but_find_rect_over")
+
+
+def test_a_timeline_move_is_not_undone_by_the_next_key():
+    """The walk drives a running matrix. A scrub, a keyframe jump or playback
+    moved the camera under it, and the next W snapped the camera back to
+    where the walk last left it — so the timeline looked dead mid-walk. A
+    burst (the first key, or a look-drag with no key held) starts from the
+    camera's own pose."""
+    resync = _block(WALK, "bool walk_resync(")
+    assert "data->matrix = camera->object_to_world();" in resync
+    # Never through a stale pointer: the camera is re-resolved first.
+    assert "director_move_camera(CTX_data_scene(C), &locked)" in resync
+    assert resync.index("camera != data->camera") < resync.index("object_to_world()")
+    modal = _block(WALK, "wmOperatorStatus director_walk_modal(")
+    assert "if (data->held == 0 && !walk_resync(C, data)) {" in modal
+    assert "if (data->held == 0 && !data->looking && !walk_resync(C, data)) {" in modal
+    # A key already held is mid-burst: no re-read there.
+    press = modal[modal.index("if (event->val == KM_PRESS) {\n    /* Only from the STAGE.") :]
+    assert press.index("walk_resync") < press.index("data->held |= bit;")

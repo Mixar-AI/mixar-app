@@ -328,6 +328,17 @@ enum {
    * The Cinema Mode dropdown lists are detached chips under their bar.
    */
   BLOCK_MIXAR_ROUND_ALL = 1 << 28,
+  /**
+   * Mixar: every block popup opened from a button in THIS block is created
+   * refreshable (`can_refresh`), so it re-lays itself after each row it runs
+   * and shows what that row just changed. Upstream creates every block-button
+   * popup non-refreshable, which is right for a menu that closes on its first
+   * pick and wrong for the Cinema Mode settings popups (`BLOCK_KEEP_OPEN`),
+   * whose highlighted chips and values stayed as they were when opened until
+   * the popup was closed and opened again. Set on the Cinema overlay and dock
+   * blocks; honoured in `button_activate_init` (interface_handlers.cc).
+   */
+  BLOCK_MIXAR_POPUPS_REFRESH = 1 << 29,
 };
 
 /** #PopupBlockHandle.menuretval */

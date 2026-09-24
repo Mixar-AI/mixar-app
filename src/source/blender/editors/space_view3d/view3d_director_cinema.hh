@@ -38,6 +38,7 @@
 namespace blender {
 
 struct ARegion;
+struct PointerRNA;
 struct bContext;
 
 namespace ui {
@@ -230,6 +231,20 @@ ui::Button *cinema_icon_button(ui::Block *block,
                                const rctf &rect,
                                const char *tooltip);
 
+/**
+ * Icon-only RNA boolean over painted chrome: the button IS the property, so
+ * any other button bound to it anywhere in Blender is the same switch (the
+ * dock's Auto Key and the Timeline's record button). A plain Toggle, not an
+ * IconToggle, so \a icon is drawn as given and the caller picks the glyph
+ * from the state it paints.
+ */
+ui::Button *cinema_prop_toggle(ui::Block *block,
+                               PointerRNA *ptr,
+                               const char *prop_name,
+                               int icon,
+                               const rctf &rect,
+                               const char *tooltip);
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -314,6 +329,7 @@ float cinema_transport_right_edge(const ARegion *region);
 /** Timeline dock, actions row (`_dock_actions.cc`): Auto Key and Add
  * Keyframe, centred as a group under the transport on \a cy. */
 void cinema_draw_dock_actions(ui::Block *block,
+                              const bContext *C,
                               const ARegion *region,
                               const DirectorViewState &state,
                               float cy);

@@ -30,7 +30,7 @@ PROPERTIES = (DIRECTOR / "ui/properties/director_properties.py").read_text(encod
 TRACK_OPS = (DIRECTOR / "ui/operators/track_ops.py").read_text(encoding="utf-8")
 DOCK = (VIEW3D / "view3d_director_cinema_dock.cc").read_text(encoding="utf-8")
 POPUP = (VIEW3D / "view3d_director_popup_interp.cc").read_text(encoding="utf-8")
-SELECT = (VIEW3D / "view3d_director_timeline_select.cc").read_text(encoding="utf-8")
+KEYS = (VIEW3D / "view3d_director_timeline_keys.cc").read_text(encoding="utf-8")
 
 
 def _beat(frame, value=BEAT_INTERPOLATION_DEFAULT):
@@ -184,14 +184,16 @@ def test_handing_back_to_the_shot_needs_a_selection():
 # The surface.
 
 
-def test_the_selection_is_read_from_the_docks_own_region():
-    """The chip and the popup both need it and neither draws in the dock —
-    a popup has a temporary region of its own."""
-    body = SELECT.split("bool view3d_director_timeline_selection(", 1)[1].split("\n}\n", 1)[0]
-    assert "BKE_area_find_region_type(const_cast<ScrArea *>(area), RGN_TYPE_CHANNELS)" in body
-    # Read-only: never allocate a runtime onto a region that has not drawn.
-    assert "view3d_director_timeline_runtime_ensure" not in body
-    assert "dock->regiondata == nullptr" in body
+def test_the_selection_is_the_beats_on_selected_keys():
+    """The chip and the popup act on beats, and a beat is selected when its
+    key is. The selection is Blender's own, read from the camera's keys on
+    every call — so one made in the Timeline counts too, and nothing in a
+    region runtime can go stale."""
+    body = KEYS.split("bool view3d_director_timeline_selection(", 1)[1].split("\n}\n", 1)[0]
+    assert "view3d_director_state_read(CTX_data_scene(C), &state)" in body
+    assert "BEZT_ISSEL_ANY(&fcu.bezt[i])" in body
+    assert "r_selected->append(beat.index);" in body
+    assert "regiondata" not in body
 
 
 def test_the_chip_reads_the_selection_and_says_mixed():

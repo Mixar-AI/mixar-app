@@ -56,17 +56,36 @@ def test_the_panel_is_still_inset_so_the_clear_is_load_bearing():
     assert "cinema_glass_panel(" in panel
 
 
-def test_a_saved_layout_is_raised_to_the_current_height():
+def test_a_saved_layout_is_put_back_to_the_fixed_height():
     """`sizey` is written only when the region is created, so a workspace
-    saved by an earlier build kept that build's height forever — and the
-    keyframe strip has a content minimum, not a preference."""
+    saved by an earlier build kept that build's height forever. The height is
+    fixed now, so a short one (the strip collapses) and a tall one (a drag
+    from a build that still allowed it) are both put back."""
     ensure = TIMELINE.split("void view3d_director_timeline_region_ensure(", 1)[1]
     ensure = ensure.split("\nvoid ", 1)[0]
-    assert "existing->sizey < VIEW3D_DIRECTOR_TIMELINE_HEIGHT" in ensure
-    assert "existing->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;" in ensure
-    # ... and a taller one is the user's own resize.
+    assert "existing->sizey != VIEW3D_DIRECTOR_TIMELINE_HEIGHT" in ensure
+    assert "existing->sizey < VIEW3D_DIRECTOR_TIMELINE_HEIGHT" not in ensure
     assert "existing->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;" in ensure
     assert ensure.count("existing->sizey =") == 1
+    # A saved region gets the flag too, not only a newly created one.
+    assert "existing->flag |= RGN_FLAG_NO_USER_RESIZE;" in ensure
+
+
+def test_the_user_cannot_resize_the_dock():
+    """No edge action zone, so there is no resize cursor, no stretch while
+    dragging and no drag-to-collapse; the flag is the backstop that makes
+    `region_scale` put the size back should anything start one."""
+    ensure = TIMELINE.split("void view3d_director_timeline_region_ensure(", 1)[1]
+    assert "RGN_FLAG_NO_USER_RESIZE" in ensure.split("region->sizey = VIEW3D_DIRECTOR_TIMELINE_HEIGHT;", 1)[1]
+    space = (VIEW3D / "space_view3d.cc").read_text(encoding="utf-8")
+    created = space.split("region->regiontype = RGN_TYPE_CHANNELS;", 1)[1].split("BKE_area_region_new()", 1)[0]
+    assert "RGN_FLAG_NO_USER_RESIZE" in created
+    area = (ROOT / "src/source/blender/editors/screen/area.cc").read_text(encoding="utf-8")
+    poll = area.split("static bool region_azone_edge_poll(", 1)[1].split("\n}\n", 1)[0]
+    assert (
+        "if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_CHANNELS) {"
+        in poll
+    )
 
 
 def test_the_region_is_created_once():

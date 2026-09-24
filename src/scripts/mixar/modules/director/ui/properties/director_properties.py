@@ -33,6 +33,7 @@ from ...constants import (
 )
 from ...core.property_updates import (
     _activate_shot_camera,
+    _get_auto_key,
     _get_range_end_seconds,
     _get_range_start_seconds,
     _set_range_end_seconds,
@@ -46,6 +47,7 @@ from ...core.property_updates import (
     _on_speed_update,
     _on_track_target_update,
     _redraw_director_surface,
+    _set_auto_key,
     _track_target_poll,
 )
 
@@ -209,16 +211,21 @@ class MixarDirectorShot(PropertyGroup):
         items=CAMERA_TEMPLATE_ITEMS,
         default="NONE",
     )
+    export_images: BoolProperty(
+        name="Keyframe Images",
+        description="Add each keyframe's captured image to the Moodboard",
+        default=True,
+    )
     render_output_types: EnumProperty(
-        name="Video Renders",
-        description="Shot videos to render and add to the Moodboard",
+        name="Videos",
+        description="Videos of this shot to render into the Moodboard",
         items=SHOT_RENDER_OUTPUT_ITEMS,
         options={'ENUM_FLAG'},
         default={'CLAY'},
     )
     render_resolution_percentage: IntProperty(
-        name="Resolution",
-        description="Percentage of the scene output resolution used for shot videos",
+        name="Video Size",
+        description="Size of the videos, as a percentage of the scene's output size",
         default=50,
         min=25,
         max=100,
@@ -397,15 +404,6 @@ class MixarDirectorState(PropertyGroup):
         precision=1,
         subtype='TIME',
     )
-    show_trajectory: BoolProperty(
-        name="Path",
-        description=(
-            "Draw the shot camera's trajectory over the scene while "
-            "directing — keyframes in green, the playhead position in blue"
-        ),
-        default=True,
-        update=_redraw_director_surface,
-    )
     level_horizon: BoolProperty(
         name="Fix Z",
         description=(
@@ -433,13 +431,16 @@ class MixarDirectorState(PropertyGroup):
         options={'SKIP_SAVE'},
         update=_redraw_director_surface,
     )
+    # Blender's own Auto Keying, not a copy of it: see
+    # `core/property_updates.py` (`_get_auto_key` / `_set_auto_key`).
     auto_key: BoolProperty(
-        name="Auto Key",
+        name="Auto Keying",
         description=(
-            "Automatically capture a keyframe after every camera move "
-            "instead of pressing F or Capture Keyframe"
+            "Blender's Auto Keying (the Timeline's record button): key the "
+            "camera after every move, and record a take while the timeline plays"
         ),
-        default=False,
+        get=_get_auto_key,
+        set=_set_auto_key,
         update=_redraw_director_surface,
     )
 

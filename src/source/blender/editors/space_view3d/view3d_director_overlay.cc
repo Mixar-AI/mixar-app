@@ -16,10 +16,13 @@
 #include "BKE_context.hh"
 
 #include "DNA_object_types.h"
+#include "DNA_scene_types.h"
 
 #include "ED_screen.hh"
 
 #include "GPU_state.hh"
+
+#include "RNA_access.hh"
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
@@ -153,6 +156,7 @@ void draw_empty_state(ui::Block *block, const ARegion *region, const int unit, c
 }
 
 void draw_context_actions(ui::Block *block,
+                          const bContext *C,
                           const ARegion *region,
                           const DirectorViewState &state,
                           const int unit,
@@ -204,26 +208,28 @@ void draw_context_actions(ui::Block *block,
         unit * 2,
         state.locked ? "Create an editable child of this locked take" :
                        "Key this camera pose and capture its reference frame (I)");
-    if (!state.locked) {
-      /* Blender's timeline auto-key flips RECORD_OFF to RECORD_ON when armed
-       * (rna_scene.cc ui_icon); mirror that instead of a static REC glyph. */
-      ui::Button *auto_key = director_overlay_operator_button(
-          block,
-          "MIXAR_OT_director_toggle_auto_key",
-          state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF,
-          "",
-          action_x + action_w + gap,
-          action_y,
-          unit * 2,
-          unit * 2,
-          /* The same two tooltips the dock's chip uses: one control, one
-           * sentence, whichever layout is drawing it. */
-          state.auto_key ?
-              "Auto Key is on: every camera move captures a keyframe" :
-              "Auto Key: capture a keyframe automatically after every camera move");
-      if (state.auto_key) {
-        ui::button_flag_enable(auto_key, ui::BUT_ACTIVE_DEFAULT);
-      }
+    Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
+    if (!state.locked && scene != nullptr) {
+      /* Blender's own Auto Keying toggle, as on the dock: an RNA toggle on
+       * the property the Timeline's record button flips, drawn with the
+       * glyph that button uses (RECORD_OFF, RECORD_ON when armed). */
+      PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+      PointerRNA tool_settings_ptr = RNA_pointer_get(&scene_ptr, "tool_settings");
+      uiDefIconButR(block,
+                    ui::ButtonType::Toggle,
+                    state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF,
+                    action_x + action_w + gap,
+                    action_y,
+                    short(unit * 2),
+                    short(unit * 2),
+                    &tool_settings_ptr,
+                    "use_keyframe_insert_auto",
+                    0,
+                    0.0f,
+                    0.0f,
+                    state.auto_key ? "Auto Keying is on (the Timeline's record button)" :
+                                     "Auto Keying (the Timeline's record button): key the "
+                                     "camera automatically after every move");
     }
   }
 
@@ -348,6 +354,9 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
   ui::Block *block = ui::block_begin(
       C, region, "mixar_director_overlay", blender::ui::EmbossType::Emboss);
   ui::block_theme_style_set(block, ui::BLOCK_THEME_STYLE_POPUP);
+  /* The popups opened from here are settings panels that stay open: each
+   * re-lays itself after a row runs, so a new choice shows at once. */
+  ui::block_flag_enable(block, ui::BLOCK_MIXAR_POPUPS_REFRESH);
 
   /* Cinema Mode surface (the designed shell): a top strip and two anchored
    * columns replace the old floating rail and its popovers. The rail's
@@ -382,7 +391,7 @@ void view3d_director_overlay_draw(const bContext *C, ARegion *region)
     if (!state.has_shot) {
       draw_empty_state(block, region, unit, gap);
     }
-    draw_context_actions(block, region, state, unit, gap);
+    draw_context_actions(block, C, region, state, unit, gap);
   }
 
   ui::block_end(C, block);

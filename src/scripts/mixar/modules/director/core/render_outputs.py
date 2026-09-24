@@ -44,7 +44,7 @@ from .render_spec import ordered_render_kinds, render_frame_bounds
 logger = get_logger(__name__)
 
 _KIND_LABELS = {
-    "BEAUTY": "Beauty Preview",
+    "BEAUTY": "Color",
     "CLAY": "Clay",
     "DEPTH": "Depth",
 }

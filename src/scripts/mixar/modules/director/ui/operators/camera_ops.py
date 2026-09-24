@@ -29,8 +29,8 @@ def _editable_shot(context):
     return shot
 
 
-# The walk-aim overlay's handle, module-level like trajectory_overlay's. It used
-# to live only on the operator instance, so a supervisor that never reached
+# The walk-aim overlay's handle, module-level like `track_pick_overlay`'s. It
+# used to live only on the operator instance, so a supervisor that never reached
 # _finish -- a file load ending the modal, an exception -- left the handler
 # installed with nothing able to reach it, and the next walk stacked another.
 # The stale one keeps drawing against a dead region pointer, which a recycled
@@ -98,10 +98,11 @@ class _WalkSupervisor:
     of mouse steering that can be anywhere, including outside the window,
     and it stays invisible until wiggled. Supervision fixes the exit for
     every walk the Director starts: an aim reticle marks the focus while
-    the pointer is hidden, Esc stops in place instead of walk's native
-    snap-back (the pose captured at the Esc press is re-applied after
-    walk's revert), and the cursor is warped back to the middle of the
-    viewport on every exit so it is always visible and where the eye is.
+    the pointer is hidden, Esc stops Explore in place instead of Blender
+    walk's native snap-back (the pose captured at the Esc press is
+    re-applied after walk's revert), and the cursor is warped back to the
+    middle of the viewport on every exit so it is always visible and where
+    the eye is.
 
     Subclasses declare WHICH walk they supervise: Navigate drives the shot
     camera through the Cinema walk, Explore free-flies the viewport with
@@ -113,6 +114,12 @@ class _WalkSupervisor:
     #: Overridden by Explore. Not a constructor argument: Blender builds
     #: operator instances itself.
     _walk_operator = WALK_OPERATOR
+    #: Does Esc end the walk being supervised? Blender's own walk (Explore)
+    #: cancels on it; the Cinema walk (Navigate) does not — its Walk chip is
+    #: the one switch. Snapshotting a pose on an Esc that ends nothing would
+    #: re-apply that stale pose whenever the chip later stops the walk,
+    #: throwing away everything driven since.
+    _esc_stops_walk = False
 
     def _supervise(self, context, window, area, region) -> None:
         self._window = window
@@ -134,7 +141,7 @@ class _WalkSupervisor:
 
     def modal(self, context, event):
         if self._walk_running():
-            if event.type == 'ESC' and event.value == 'PRESS':
+            if self._esc_stops_walk and event.type == 'ESC' and event.value == 'PRESS':
                 # Native walk cancel snaps back to where the walk began.
                 # Directors expect Esc to simply stop here, so keep this
                 # pose and re-apply it after walk's revert.
@@ -206,8 +213,8 @@ class MIXAR_OT_director_navigate(_WalkSupervisor, Operator):
     bl_idname = "mixar.director_navigate"
     bl_label = "Navigate"
     bl_description = (
-        "Walk the camera with WASD; hold the left mouse button to look. "
-        "Click again, or press Esc, to stop"
+        "Walk the camera with WASD; hold the left mouse button to look, Shift "
+        "to sprint, Alt to creep. Click again to stop"
     )
 
     @classmethod
@@ -297,8 +304,9 @@ class MIXAR_OT_director_explore(_WalkSupervisor, Operator):
     bl_idname = "mixar.director_explore"
     bl_label = "Explore"
     # Explore flies the VIEWPORT with Blender's own walk, not the camera
-    # with the Cinema one.
+    # with the Cinema one — and that walk's Esc cancels, snapping back.
     _walk_operator = NATIVE_WALK_OPERATOR
+    _esc_stops_walk = True
     bl_description = (
         "Leave the camera view and fly the scene with WASD and the mouse; "
         "frame a spot, then Add Camera Here starts a new shot there"

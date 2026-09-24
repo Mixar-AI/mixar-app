@@ -52,12 +52,20 @@ class TestTheTopbarPillsArePanes:
         assert "mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, 0.84f + 0.16f * emphasis);" in body
 
     def test_the_lit_cinema_pill_keeps_its_opaque_green_state(self) -> None:
-        """Selection animates the green ramp to opaque; hover cannot select it."""
+        """Selection animates the green to opaque; hover cannot select it."""
         body = self._body("void draw_cinema_pill(")
-        assert "top[3] = bottom[3] = motion.selected;" in body
-        assert "draw_roundbox_4fv_ex(&pill, top, bottom, 1.0f, nullptr, 0.0f, rad);" in body
-        assert "mixar_card_to_float(pill_on_a, bottom);" in body
-        assert "mixar_card_to_float(pill_on_b, top);" in body
+        assert "fill[3] = motion.selected;" in body
+        assert "draw_roundbox_4fv(&pill, true, rad, fill);" in body
+        assert "mixar_card_to_float(pill_on, fill);" in body
+
+    def test_the_cinema_pill_has_no_gradient(self) -> None:
+        """One green, one label colour per state: the ramps were decoration on
+        a control whose only job is to say on or off."""
+        body = self._body("void draw_cinema_pill(")
+        assert "draw_roundbox_4fv_ex(" not in body
+        assert "CinemaPillOnA" not in body
+        assert "draw_label_gradient" not in body
+        assert "draw_label_centred(rect, but->drawstr.c_str(), label, label_scale);" in body
 
     def test_the_viewport_pills_alpha_dims_the_whole_pane(self) -> None:
         """Dim and lit are one alpha, so it must scale every layer.

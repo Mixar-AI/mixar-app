@@ -6,11 +6,11 @@
 
 Every keyed pose — a captured beat, a re-keyed beat, a recorded take frame —
 writes the SAME three channels into the same group, because a beat and the
-native keys under it are one thing. `core/timeline.py` retimes a beat by
-finding the keys sitting on its frame (`_director_keyframes`), so a beat
-whose pose is only partly keyed is a beat that comes apart the first time it
-is dragged: the channels that had keys move and the ones that did not stay
-behind.
+native keys under it are one thing. The Speed retime moves a beat by
+finding the keys sitting on its frame (`core/timeline.py`,
+`_director_keyframes`), so a beat whose pose is only partly keyed is a beat
+that comes apart the first time it is retimed: the channels that had keys
+move and the ones that did not stay behind.
 
 That coupling is also why Blender's three keying preferences are deliberately
 NOT honoured here. Each of them is right for Blender's model and wrong for

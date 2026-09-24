@@ -70,9 +70,9 @@ _WALK_KEYS = ('W', 'A', 'S', 'D', 'Q', 'E')
 
 # Walking has NO keyboard shortcut, and that is deliberate.
 #
-# It is opened from the Walk chip in the Cinema top strip
-# (`view3d_director_cinema_top.cc:walk_chip`) and left the way Blender's own
-# walk is always left: Esc to stop, or a click to confirm.
+# It is opened AND closed from the Walk chip in the Cinema top strip
+# (`view3d_director_cinema_top.cc:walk_chip`) — the one switch, so neither
+# Esc nor the right button stops it (`view3d_director_walk.cc`).
 #
 # Two keys were tried and both were somebody else's. `N` is the sidebar — one
 # of the few shortcuts every Blender user has in their fingers. `Shift`+`` ` ``

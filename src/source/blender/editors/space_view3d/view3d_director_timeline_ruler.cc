@@ -271,8 +271,8 @@ void director_timeline_draw_ruler(const DirectorViewState &state,
   const float origin = state.ruler_frames ? 0.0f : float(state.scene_frame_start);
   const float first_tick = origin + std::ceil((view_start - origin) / minor) * minor;
 
-  const float major_h = 26.0f * u;
-  const float label_y = tick_base + major_h + 10.0f * u;
+  const float major_h = DIRECTOR_RULER_TICK_H * u;
+  const float label_y = tick_base + major_h + DIRECTOR_RULER_LABEL_GAP * u;
 
   for (float frame = first_tick; frame <= view_end + minor * 0.25f; frame += minor) {
     /* Nothing before the scene starts: a scene beginning on frame 1 must not

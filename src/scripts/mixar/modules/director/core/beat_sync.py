@@ -4,26 +4,35 @@
 
 """Reconcile Director beats with the native camera keys they mirror.
 
-The timeline strip and its orange handles are drawn from the ``beats``
-collection, but a keyframe's actual pose lives in native camera F-curves.
-Editing those keys in the Dope Sheet or Timeline editor never touches the
-``beats``, so the strip can drift from the animation in both directions:
-deleted keys leave orphaned handles and stale manifest poses, while keys
-inserted natively (I-key, native auto-keying, pasted curves) animate the
-camera through a strip that shows nothing.
+A beat is metadata ON a native key column — its still, its timing, its
+manifest pose — and the camera's keys are what the dock and the Timeline
+both show. Editing keys in the Dope Sheet or Timeline never touches the
+``beats``, so without this the two drift apart: a deleted key leaves an
+orphaned beat, a key inserted natively (I-key, native auto-keying, pasted
+curves) is a pose Director has no beat for, and a key moved in time leaves
+its beat — and the still badge the dock draws on it — behind.
 
-A depsgraph handler watches the native Director key count while directing.
-A drop below the beat count (a genuine deletion — never a move, which keeps
-the count) prunes orphaned beats through the ordinary ``remove_beat`` path;
-growth — or a shot freshly under watch — adopts keys the strip has never
-seen as beats of the active draft shot, mirroring the native timeline's
-insertion behavior. Any change to WHICH frames carry keys (including a
-move, which reorders the chronological chain) re-runs the rotation
-continuity filter: natively written keys never pass ``capture_beat``, so
-this is the only place their representation gets aligned. Following
-``auto_key``: the handler only *detects*, the debounced timer *mutates*,
+A depsgraph handler watches the native Director key frames while directing
+(recorded ``JITTER`` samples excluded: they are motion, not beats), and a
+debounced timer reconciles, in order:
+
+- **follow** — the frames changed: each key that vanished is paired, in time
+  order, with one that appeared, and the beat on it moves there. A grab or
+  a scale in any editor keeps time order, so the pairing is the move.
+- **prune** — beats still without a key at their frame lose their metadata
+  only (``remove_beat(..., delete_keys=False)``): the keys are already gone,
+  and a beat's own delete would purge the samples the director kept.
+- **adopt** — keys the strip has never seen become beats of the active draft
+  shot, mirroring the native timeline's insertion behaviour.
+- **repair** — any change to which frames carry keys re-runs the rotation
+  continuity filter: natively written keys never pass ``capture_beat``.
+
+Following ``auto_key``: the handler only *detects*, the timer *mutates*,
 because editing scene data inside ``depsgraph_update_post`` is unsafe
-(re-entrancy / crashes).
+(re-entrancy / crashes). The timer also waits out a running transform — a
+grab passes keys over one another, and the frame set mid-gesture is not the
+one the director lets go on — and ``hold`` stands it down while the dock's
+own edits keep their beats on their keys themselves.
 """
 
 from __future__ import annotations
@@ -48,11 +57,19 @@ _INITIAL_STATE = {
     "key": None,
     "count": None,
     "frames": None,
+    # The frames the beats were last reconciled against: what `follow` pairs
+    # the current frames with, however many updates a gesture took.
+    "synced": None,
+    "follow": False,
     "prune": False,
     "adopt": False,
     "repair": False,
 }
+#: The modal a grab or scale in any animation editor runs as.
+_TRANSFORM_MODAL = "TRANSFORM_OT_transform"
 _state = dict(_INITIAL_STATE)
+#: Set while a dock edit rewrites keys and beats together (`hold`).
+_held = False
 
 
 def _native_key_frames(camera) -> set[int]:
@@ -85,9 +102,41 @@ def prune_orphaned_beats(scene, shot) -> int:
 
     removed = 0
     for index in sorted(orphans, reverse=True):
-        if remove_beat(scene, shot, index):
+        # The key went natively; the beat follows it and nothing else.
+        if remove_beat(scene, shot, index, delete_keys=False):
             removed += 1
     return removed
+
+
+def follow_moved_keys(scene, camera, before, after) -> int:
+    """Move each beat whose key moved in another editor onto the key.
+
+    *before* and *after* are the native key frames the beats were last
+    reconciled against and the ones there are now. Vanished frames pair
+    with appeared ones in time order — a grab or a scale keeps order, so the
+    pairing IS the move. Anything else (a count that changed with it) is
+    left to prune and adopt.
+    """
+    if not before or not after:
+        return 0
+    vanished = sorted(set(before) - set(after))
+    appeared = sorted(set(after) - set(before))
+    if not vanished or len(vanished) != len(appeared):
+        return 0
+    targets = dict(zip(vanished, appeared))
+    moved = 0
+    from .native_keys import camera_shots
+
+    for shot in camera_shots(scene, camera):
+        followed = [beat for beat in shot.beats if int(beat.frame) in targets]
+        for beat in followed:
+            beat.frame = targets[int(beat.frame)]
+        for beat in sorted(followed, key=lambda item: int(item.frame)):
+            note_beat_timing(shot, beat)
+        if followed:
+            moved += len(followed)
+            refresh_manifest(scene, shot)
+    return moved
 
 
 def adopt_native_keyframes(scene, shot) -> int:
@@ -152,11 +201,14 @@ def _redraw() -> None:
 
 @persistent
 def _on_depsgraph_update(scene, _depsgraph) -> None:
+    if _held:
+        return
     shot = _watchable_shot(scene)
     if shot is None:
         _state["key"] = None
         _state["count"] = None
         _state["frames"] = None
+        _state["synced"] = None
         return
     # Counts are only comparable while the same camera stays under watch;
     # switching shots resets the baseline instead of faking an edit.
@@ -169,13 +221,20 @@ def _on_depsgraph_update(scene, _depsgraph) -> None:
     _state["key"] = key
     _state["count"] = count
     _state["frames"] = frames
+    if previous_frames is None:
+        _state["synced"] = frames
+    elif frames != previous_frames:
+        # Which frames changed is worked out against `synced` when the timer
+        # runs, so a gesture spread over many updates pairs as one move.
+        _state["follow"] = True
+        _ensure_timer()
     # A drop below the beat count is a deletion the timeline hasn't followed.
     if previous is not None and count < previous and count < len(shot.beats):
         _state["prune"] = True
         _ensure_timer()
     # Growth — or a shot freshly under watch — may carry native keys the
     # strip has never seen. An unchanged count is a MOVE and adopts nothing:
-    # the moved key's beat still exists, only its frame went stale.
+    # its beat follows it instead.
     if count and (previous is None or count > previous):
         _state["adopt"] = True
         _ensure_timer()
@@ -187,18 +246,38 @@ def _on_depsgraph_update(scene, _depsgraph) -> None:
         _ensure_timer()
 
 
+def _transforming() -> bool:
+    """Whether a grab or scale is running in any window."""
+    window_manager = getattr(bpy.context, "window_manager", None)
+    for window in getattr(window_manager, "windows", ()):
+        modal = getattr(window, "modal_operators", None)
+        if modal is not None and modal.get(_TRANSFORM_MODAL) is not None:
+            return True
+    return False
+
+
 def _sync_timer():
-    prune, adopt, repair = _state["prune"], _state["adopt"], _state["repair"]
-    _state["prune"] = _state["adopt"] = _state["repair"] = False
-    if not (prune or adopt or repair):
+    if _held or _transforming():
+        # Keep what was flagged; it is still owed once the gesture lets go.
+        return _TIMER_INTERVAL
+    follow, prune = _state["follow"], _state["prune"]
+    adopt, repair = _state["adopt"], _state["repair"]
+    _state["follow"] = _state["prune"] = _state["adopt"] = _state["repair"] = False
+    if not (follow or prune or adopt or repair):
         return None
     scene = getattr(bpy.context, "scene", None)
     shot = _watchable_shot(scene) if scene is not None else None
     if shot is None:
         return None
-    pruned = adopted = repaired = 0
+    followed = pruned = adopted = repaired = 0
     try:
-        if prune:
+        if follow:
+            followed = follow_moved_keys(
+                scene, shot.camera, _state["synced"], _native_key_frames(shot.camera)
+            )
+        # After follow: a moved key's beat is on its key again, and only a
+        # beat with no key anywhere is an orphan.
+        if prune or follow:
             pruned = prune_orphaned_beats(scene, shot)
         if adopt:
             adopted = adopt_native_keyframes(scene, shot)
@@ -207,16 +286,19 @@ def _sync_timer():
     except Exception:
         logger.exception("Beat sync could not reconcile native keyframes")
         return None
-    if pruned or adopted or repaired:
+    frames = _native_key_frames(shot.camera)
+    _state["count"] = len(frames)
+    _state["frames"] = frames
+    _state["synced"] = frames
+    if followed or pruned or adopted or repaired:
+        if followed:
+            logger.info("Beat sync moved %s keyframe(s) with their keys", followed)
         if pruned:
             logger.info("Beat sync pruned %s orphaned keyframe(s)", pruned)
         if adopted:
             logger.info("Beat sync adopted %s native keyframe(s)", adopted)
         if repaired:
             logger.info("Beat sync realigned %s rotation key(s)", repaired)
-        frames = _native_key_frames(shot.camera)
-        _state["count"] = len(frames)
-        _state["frames"] = frames
         _redraw()
     return None
 
@@ -237,8 +319,25 @@ def request_reconcile() -> None:
     the timer still gates on an active directing session.
     """
     _state["key"] = None
+    # A fresh baseline: nothing that moved before it is a move to follow.
+    _state["synced"] = None
+    _state["follow"] = False
     _state["adopt"] = True
     _ensure_timer()
+
+
+def hold(active: bool) -> None:
+    """Stand the watcher down while a dock edit moves keys and beats together.
+
+    A key drag passes moved keys over unselected ones, so mid-drag the native
+    key count dips and recovers — a drop the watcher would read as a
+    deletion and prune a beat for. The edit keeps its beats on their keys
+    itself; letting go re-baselines from whatever it left.
+    """
+    global _held
+    _held = bool(active)
+    if not _held:
+        request_reconcile()
 
 
 def register() -> None:
@@ -248,9 +347,11 @@ def register() -> None:
 
 
 def unregister() -> None:
+    global _held
     handlers = bpy.app.handlers.depsgraph_update_post
     if _on_depsgraph_update in handlers:
         handlers.remove(_on_depsgraph_update)
     if bpy.app.timers.is_registered(_sync_timer):
         bpy.app.timers.unregister(_sync_timer)
     _state.update(_INITIAL_STATE)
+    _held = False

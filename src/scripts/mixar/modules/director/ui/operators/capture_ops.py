@@ -49,8 +49,9 @@ class MIXAR_OT_director_capture_beat(Operator):
 
 
 class MIXAR_OT_director_toggle_auto_key(Operator):
-    """Toggle automatic keyframing: a keyframe after every camera move, and a
-    recorded take while the timeline plays"""
+    """Toggle Blender's Auto Keying (the Timeline's record button): a
+    keyframe after every camera move, and a recorded take while the timeline
+    plays"""
 
     bl_idname = "mixar.director_toggle_auto_key"
     bl_label = "Auto Key"

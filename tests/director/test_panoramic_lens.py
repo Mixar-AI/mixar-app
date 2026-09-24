@@ -153,3 +153,77 @@ def test_repicking_the_live_projection_does_not_close():
     body = body[: body.index("\n  y -= gap;")]
     close_at = body.index("button_func_set(but, lens_popup_close")
     assert body.rindex("if (!live) {", 0, close_at) > body.index("const bool live =")
+
+
+# ---- picking Panoramic shows it: Cycles + Rendered shading -----------------
+
+from types import SimpleNamespace  # noqa: E402
+
+from mixar.modules.director.core import panoramic  # noqa: E402
+
+OPS = (
+    ROOT / "src/scripts/mixar/modules/director/ui/operators/camera_surface_ops.py"
+).read_text(encoding="utf-8")
+
+
+class _Render:
+    def __init__(self, engine: str, *, cycles_available: bool = True) -> None:
+        self._engine = engine
+        self._cycles_available = cycles_available
+
+    @property
+    def engine(self) -> str:
+        return self._engine
+
+    @engine.setter
+    def engine(self, value: str) -> None:
+        if value == "CYCLES" and not self._cycles_available:
+            # What Blender raises for an enum item that is not registered.
+            raise TypeError("enum \"CYCLES\" not found in ('BLENDER_EEVEE', 'BLENDER_WORKBENCH')")
+        self._engine = value
+
+
+def _context(engine: str = "BLENDER_EEVEE", *, cycles_available: bool = True):
+    shading = SimpleNamespace(type='SOLID')
+    space = SimpleNamespace(shading=shading)
+    redraws = []
+    area = SimpleNamespace(
+        type='VIEW_3D',
+        regions=[SimpleNamespace(type='WINDOW')],
+        spaces=SimpleNamespace(active=space),
+        tag_redraw=lambda: redraws.append(True),
+    )
+    context = SimpleNamespace(
+        scene=SimpleNamespace(render=_Render(engine, cycles_available=cycles_available)),
+        area=area,
+        window=SimpleNamespace(),
+    )
+    return context, shading, redraws
+
+
+def test_picking_panoramic_switches_to_cycles_and_rendered_shading():
+    context, shading, redraws = _context()
+    assert panoramic.show_panoramic_lens(context) == []
+    assert context.scene.render.engine == "CYCLES"
+    assert shading.type == 'RENDERED'
+    assert redraws
+
+
+def test_without_cycles_the_viewport_is_left_alone_and_the_reason_reported():
+    """Rendered shading without Cycles is EEVEE — the plain perspective this
+    exists to avoid — so nothing is switched and the operator can say why."""
+    context, shading, _redraws = _context(cycles_available=False)
+    problems = panoramic.show_panoramic_lens(context)
+    assert problems and "Cycles" in problems[0]
+    assert context.scene.render.engine == "BLENDER_EEVEE"
+    assert shading.type == 'SOLID'
+
+
+def test_the_lens_operator_switches_only_for_panoramic():
+    body = OPS[OPS.index("class MIXAR_OT_director_set_lens_type") :]
+    body = body[: body.index("\nclass ")] if "\nclass " in body else body
+    assert "if self.lens_type == 'PANO':" in body
+    assert "show_panoramic_lens(context)" in body
+    assert "self.report({'WARNING'}, problem)" in body
+    # After the projection is set, so the switch follows a real change.
+    assert body.index("camera.data.type = self.lens_type") < body.index("show_panoramic_lens(")
