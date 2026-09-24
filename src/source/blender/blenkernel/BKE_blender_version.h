@@ -28,8 +28,8 @@ namespace blender {
 /** Blender release cycle stage: alpha/beta/rc/release. */
 #define BLENDER_VERSION_CYCLE release
 
-#define MIXAR_VERSION 304
-#define MIXAR_VERSION_PATCH 10
+#define MIXAR_VERSION 400
+#define MIXAR_VERSION_PATCH 0
 #define MIXAR_VERSION_CYCLE release
 
 /* Mixar file format version, stored in FileGlobal.
@@ -43,7 +43,7 @@ namespace blender {
 #define MIXAR_FILE_MIN_VERSION 100
 
 /** Blender release type suffix. LTS or blank. */
-#define BLENDER_VERSION_SUFFIX LTS
+#define BLENDER_VERSION_SUFFIX
 
 /* Blender file format version. */
 #define BLENDER_FILE_VERSION BLENDER_VERSION
