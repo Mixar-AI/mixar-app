@@ -52,10 +52,10 @@ from .beats import A_TAB_AGENT
 _logger = get_logger(__name__)
 
 # Read by workflow/ui/operators/ui_mode_ops.py: while True, a mode switch
-# does not restart the legacy card onboarding on top of the running tour.
+# does not schedule the tour again on top of the tour's own mode switches
+# (including the pre-tour mode it restores after an interruption).
 suppress_legacy_restart = False
 
-DEMO_PROMPT = "Add a small campfire next to the cabin"
 TAB_IDS = ("AGENT", "THREE_D", "IMAGE", "VIDEO", "SPLAT", "GENERATIONS", "QUEUE")
 ISLAND_EXPANDED_MIN_HEIGHT = 160   # px; the pill is 25/44 logical, the bubble >= 230
 ISLAND_OPEN_SETTLE_S = 1.0         # pill_cat appears on the pill's first draw
@@ -341,19 +341,6 @@ def moodboard_add_demo_image(_args: dict) -> bool:
     return True
 
 
-def sidebar_tab(args: dict) -> bool:
-    category = str(args.get("category", "") or "")
-    if not category:
-        return False
-    try:
-        from mixar.modules.onboarding.core import tour_driver
-        tour_driver.switch_sidebar_category(category)
-    except Exception as exc:  # noqa: BLE001
-        _logger.warning("tour actions: sidebar_tab(%s) failed: %s", category, exc)
-        return False
-    return True
-
-
 def ui_mode(args: dict) -> bool:
     mode = str(args.get("mode", "AI")).upper()
     wanted = {"AI": UI_MODE_AI, "PRO": UI_MODE_PRO}.get(mode)
@@ -382,7 +369,6 @@ _ACTIONS = {
     "island_tab": island_tab,
     "drawer_set": drawer_set,
     "moodboard_add_demo_image": moodboard_add_demo_image,
-    "sidebar_tab": sidebar_tab,
     "ui_mode": ui_mode,
     "tour_cleanup": tour_cleanup,
 }

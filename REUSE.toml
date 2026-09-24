@@ -86,7 +86,6 @@ path = [
   "src/release/freedesktop/icons/symbolic/apps/mixar-symbolic.svg",
   "src/release/windows/icons/winmixar.ico",
   "src/release/windows/icons/winmixarfile.ico",
-  "src/scripts/mixar/modules/onboarding/assets/mixar_logo.png",
   "docs/development/moodboard-add-mesh-node/*.png",
   "docs/development/agent-window-spacing/*.png",
   "docs/development/evidence/sketch-preview/*.png",

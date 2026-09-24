@@ -50,14 +50,6 @@ class MIXAR_OT_onboarding_tour(Operator):
         if tour_session.is_running():
             self.report({"INFO"}, "The tour is already running")
             return {"CANCELLED"}
-        # A legacy info card left on screen would swallow clicks.
-        try:
-            from mixar.modules.onboarding.ui.operators import card_modal_op
-            if card_modal_op.is_card_active():
-                card_modal_op.close_active_card()
-        except Exception:  # noqa: BLE001
-            pass
-
         from mixar.modules.onboarding.core.tour import anchors
         window, area, region = anchors.host_region()
         if window is None:

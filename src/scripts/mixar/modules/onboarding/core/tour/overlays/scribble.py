@@ -11,7 +11,8 @@ Interactive tour — hand-drawn marks and hints.
   strokes appear one by one, like ink being laid down.
 * ``draw_hint`` — a small dark pill with a short label under (or over) an
   anchor.
-* ``draw_dim`` — the film behind hero beats.
+* ``draw_spotlight_dim`` — the film behind hero beats and "your turn"
+  gates, with the target and the video card left bright.
 
 Strokes are thin rotated quads through the ``UNIFORM_COLOR`` shader, so
 nothing here depends on the viewport-size uniform of the polyline shader.
@@ -28,9 +29,9 @@ from mixar.modules.common.notifications.toast_renderer_shapes import (
     draw_rect,
     draw_rounded_rect,
 )
-from mixar.modules.onboarding.core.overlay.highlight import _draw_rounded_ring
 
 from .. import config
+from .ring import draw_rounded_ring
 from .text import draw_text, text_height, text_width
 
 logger = get_logger(__name__)
@@ -159,7 +160,7 @@ def draw_scribble(rect: tuple, reveal: float, alpha: float = 1.0,
         ring_alpha = alpha * reveal
         bottom = _with_alpha(config.ACCENT, ring_alpha)
         top = _with_alpha(_lighter(config.ACCENT), ring_alpha)
-        _draw_rounded_ring(
+        draw_rounded_ring(
             x, y, w, h,
             config.SCRIBBLE_THICKNESS * ui_scale,
             config.SCRIBBLE_RADIUS * ui_scale,
@@ -272,7 +273,7 @@ def draw_success_flash(rect: tuple, t: float, ui_scale: float = 1.0,
     if w <= 0 or h <= 0:
         return
     a = 1.0 - t
-    _draw_rounded_ring(x, y, w, h, config.SCRIBBLE_THICKNESS * ui_scale,
+    draw_rounded_ring(x, y, w, h, config.SCRIBBLE_THICKNESS * ui_scale,
                        config.SCRIBBLE_RADIUS * ui_scale + grow,
                        _with_alpha(config.ACCENT, a), _with_alpha(_lighter(config.ACCENT), a))
 
@@ -297,21 +298,6 @@ def _subtract(rects: list, hole: tuple) -> list:
     return out
 
 
-def draw_dim_with_holes(rect: tuple, holes, color: tuple, pad: float = 0.0) -> None:
-    """Dim ``rect`` except the given holes (each padded by ``pad``). Used
-    for the "your turn" film: the target AND the video card stay bright,
-    whichever region happens to paint the film over them."""
-    pieces = [tuple(rect)]
-    for hole in holes:
-        if hole is None:
-            continue
-        hx0, hy0, hx1, hy1 = hole
-        pieces = _subtract(pieces, (hx0 - pad, hy0 - pad, hx1 + pad, hy1 + pad))
-    for (x0, y0, x1, y1) in pieces:
-        if x1 > x0 and y1 > y0:
-            draw_rect(x0, y0, x1 - x0, y1 - y0, color)
-
-
 def draw_spotlight_dim(rect: tuple, hole: tuple, color: tuple = config.GATE_DIM,
                        pad: float = 0.0, keep=()) -> None:
     """Dim ``rect`` except a window of light around ``hole`` (padded) and
@@ -326,11 +312,3 @@ def draw_spotlight_dim(rect: tuple, hole: tuple, color: tuple = config.GATE_DIM,
     for (x0, y0, x1, y1) in pieces:
         if x1 > x0 and y1 > y0:
             draw_rect(x0, y0, x1 - x0, y1 - y0, color)
-
-
-def draw_dim(rect: tuple, color: tuple = config.HERO_DIM) -> None:
-    """Full-rect film (hero beats)."""
-    xmin, ymin, xmax, ymax = rect
-    if xmax <= xmin or ymax <= ymin or color[3] <= 0.0:
-        return
-    draw_rect(xmin, ymin, xmax - xmin, ymax - ymin, color)

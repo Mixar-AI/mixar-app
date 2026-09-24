@@ -187,10 +187,10 @@ class SessionLifecycleMixin:
 
     def _mark_seen(self) -> None:
         try:
-            from mixar.modules.onboarding.core import state as legacy_state
-            legacy_state._mark_current_user_seen()
+            from mixar.modules.onboarding.core import mark_current_user_seen
+            mark_current_user_seen()
         except Exception as exc:  # noqa: BLE001
-            logger.debug("Tour: mark-seen skipped: %s", exc)
+            logger.warning("Tour: could not mark the tour seen: %s", exc)
 
     # -- runner callbacks ------------------------------------------------
 
@@ -290,8 +290,22 @@ class SessionLifecycleMixin:
 
     @staticmethod
     def _tag_redraw_all() -> None:
+        """Redraw every area of every window, including the global ones
+        (top bar, status bar; Mixar's ``Window.global_areas`` RNA) whose
+        regions are tagged one by one so a ring on a top-bar button lands
+        without the pointer having to wake that region."""
         try:
-            from mixar.modules.onboarding.core.overlay import overlay_renderer
-            overlay_renderer.tag_redraw_all()
+            windows = bpy.data.window_managers[0].windows
         except Exception:  # noqa: BLE001
-            pass
+            return
+        for window in windows:
+            areas = list(window.screen.areas) if window.screen is not None else []
+            areas.extend(getattr(window, "global_areas", None) or [])
+            for area in areas:
+                try:
+                    area.tag_redraw()
+                    if area.type == "TOPBAR":
+                        for region in area.regions:
+                            region.tag_redraw()
+                except Exception:  # noqa: BLE001
+                    pass

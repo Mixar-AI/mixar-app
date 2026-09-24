@@ -119,11 +119,10 @@ HINT_FONT_PX = 15
 HINT_BG = (0.09, 0.09, 0.11, 0.92)
 HINT_TEXT = (0.95, 0.95, 0.97, 1.0)
 # Callout box (a beat that introduces something to act on later, e.g. the
-# Creator Program under the Help menu); a click on it opens its URL.
+# Creator Program row of the open Help menu).
 CALLOUT_TITLE_PX = 17
 CALLOUT_BODY_PX = 14
 CALLOUT_BG = (0.07, 0.07, 0.09, 0.96)
-CREATOR_PROGRAM_URL = "https://www.mixar.app/creator-program"
 # Shortcut panel (keycaps that light as the narration names them).
 KEYS_TITLE_PX = 13
 KEYS_CAP_PX = 13

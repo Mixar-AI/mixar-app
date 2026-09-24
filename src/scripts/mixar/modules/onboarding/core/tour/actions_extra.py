@@ -105,14 +105,6 @@ def help_menu_close(_args: dict) -> bool:
         return False
 
 
-def help_menu_is_open() -> bool:
-    window = anchors.main_window()
-    try:
-        return bool(window is not None and window.mixar_tour_menu_is_open())
-    except Exception:  # noqa: BLE001
-        return False
-
-
 def reset_transients() -> None:
     """Close the tour's menu, drop the highlight, put the Library back on
     the generations grid if the tour moved it."""

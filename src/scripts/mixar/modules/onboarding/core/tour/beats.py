@@ -72,13 +72,11 @@ A_TAB_SPLAT = {"op": "wm.context_set_enum", "tip": "Gaussian Splat world generat
 A_TAB_LIBRARY = {"op": "wm.context_set_enum",
                  "tip": "Your generations and connected asset libraries",
                  "area": "AGENT_BUBBLE"}
-A_COMPOSER = {"prop": "mixie_chat_input", "area": "AGENT_BUBBLE"}
 A_DRAWER_GRIP = {"surface": "moodboard_drawer_grip"}
 A_DRAWER_PANEL = {"surface": "moodboard_drawer_panel"}
 A_MOODBOARD_MEDIA = {"surface": "moodboard_media"}
-# The drawer's vertical glass tool capsule: add media / text / annotate.
+# The drawer's tool rail: add media / annotate.
 A_DRAWER_ADD_MEDIA = {"tip": "Add media or selected scene meshes", "area": "VIEW_3D"}
-A_DRAWER_TEXT = {"op": "mixie.moodboard_add_textbox", "area": "VIEW_3D"}
 A_DRAWER_ANNOTATE = {"op": "mixie.moodboard_annotate_canvas", "area": "VIEW_3D"}
 A_ENGINE_BUTTON = {"op": "mixar.set_ui_mode_pro"}
 A_ZEN_BUTTON = {"op": "mixar.set_ui_mode_ai"}

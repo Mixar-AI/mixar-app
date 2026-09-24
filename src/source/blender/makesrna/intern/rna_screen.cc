@@ -417,20 +417,6 @@ static void rna_View2D_view_to_region(View2D *v2d, float x, float y, bool clip, 
   }
 }
 
-/* Mixar: read-only access to the View2D total (content) rect. For
- * panel regions this is the laid-out panel-stack extent set by
- * `UI_panels_end` / `UI_view2d_totRect_set`, which lets Python
- * overlays (the onboarding highlight) measure the real rendered
- * panel bounds instead of hardcoding per-panel heights. */
-static void rna_View2D_tot_rect_get(PointerRNA *ptr, float *values)
-{
-  const View2D *v2d = static_cast<const View2D *>(ptr->data);
-  values[0] = v2d->tot.xmin;
-  values[1] = v2d->tot.xmax;
-  values[2] = v2d->tot.ymin;
-  values[3] = v2d->tot.ymax;
-}
-
 static const char *rna_Screen_statusbar_info_get(bScreen * /*screen*/, Main *bmain, bContext *C)
 {
   return ED_info_statusbar_string(bmain, CTX_data_scene(C), CTX_data_view_layer(C));
@@ -619,20 +605,11 @@ static void rna_def_view2d_api(StructRNA *srna)
 static void rna_def_view2d(BlenderRNA *brna)
 {
   StructRNA *srna;
-  PropertyRNA *prop;
+  // PropertyRNA *prop;
 
   srna = RNA_def_struct(brna, "View2D", nullptr);
   RNA_def_struct_ui_text(srna, "View2D", "Scroll and zoom for a 2D region");
   RNA_def_struct_sdna(srna, "View2D");
-
-  /* Mixar: total (content) rect in view-space coordinates as
-   * (xmin, xmax, ymin, ymax) — convert with `view_to_region()`. */
-  prop = RNA_def_property(srna, "tot_rect", PROP_FLOAT, PROP_NONE);
-  RNA_def_property_array(prop, 4);
-  RNA_def_property_float_funcs(prop, "rna_View2D_tot_rect_get", nullptr, nullptr);
-  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
-  RNA_def_property_ui_text(
-      prop, "Total Rect", "Extent of the region's content in view-space (xmin, xmax, ymin, ymax)");
 
   /* TODO: more View2D properties could be exposed here (read-only). */
 

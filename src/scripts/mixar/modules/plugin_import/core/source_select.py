@@ -13,7 +13,7 @@ Splits the two questions callers actually ask, which
 Newest-by-version-number is the wrong answer to the second one. Blender
 creates a version's config dir on first launch, so immediately after an
 upgrade the newest dir exists and is empty while every plugin the user
-cares about is still under the previous version. Onboarding must not
+cares about is still under the previous version. Plugin import must not
 tell someone with a fully populated Blender 5.0 that no Blender was
 found because an empty 5.1 exists.
 
