@@ -7,7 +7,9 @@ Notification System
 
 Thread-safe notification store with GPU/BLF toast rendering in the
 3D viewport. Push notifications from any thread; they are displayed
-as auto-dismissing toasts in the top-right corner.
+as toasts in the viewport's bottom-left lane, above the agent stack.
+This is the one surface for alerts — completions, failures and refusals
+are pushed here, never opened as popup menus under the cursor.
 
 Usage::
 

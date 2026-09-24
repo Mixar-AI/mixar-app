@@ -172,8 +172,19 @@ def capture(scene, label: str, *, kind: str = "turn", session_id: str = "", prot
         # project's own folder, which is where a restore re-titles it. The
         # Agent Bubble's save_pre purge closes the island for this save like
         # any other; it is re-shown after the save.
-        bpy.ops.wm.save_as_mainfile(filepath=tmp, copy=True, compress=True,
-                                    relative_remap=False)
+        # A document with Automatically Pack Resources on packs every image
+        # during this save, and each image whose file is missing on disk
+        # ("Unable to pack file ... not found", e.g. an FBX whose textures
+        # stayed on another machine) is an RPT_ERROR that bpy.ops turns into
+        # RuntimeError after the file was still written. The snapshot on
+        # disk is the truth: keep it, only give up when nothing was saved.
+        try:
+            bpy.ops.wm.save_as_mainfile(filepath=tmp, copy=True, compress=True,
+                                        relative_remap=False)
+        except RuntimeError as e:
+            if not os.path.isfile(tmp):
+                raise
+            logger.warning(f"Turn checkpoint saved with report errors: {e}")
         if not os.path.isfile(tmp):
             logger.warning("Turn checkpoint: nothing written")
             return None

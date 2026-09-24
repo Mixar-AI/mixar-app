@@ -277,7 +277,10 @@ Before every fresh turn `chat_ops.send_message` captures the whole document with
 `save_as_mainfile(copy=True)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
 as the `turn` record "before turn N" (sha256-deduplicated files, newest 20 per
 session) and binds the record to the turn's command id once the send is
-accepted. The Agent Bubble's `save_pre` purge closes the island for this save
+accepted. A document with Automatically Pack Resources on reports an error per
+image missing on disk while packing; Blender still writes the copy, so the
+capture keeps a snapshot that exists after such a `RuntimeError` and only
+gives up when nothing was written. The Agent Bubble's `save_pre` purge closes the island for this save
 like any other (bubble screens must never reach a file, and a later restore's
 read must never find a live bubble window to free); the island is re-shown
 after the save. A send started from a bubble click therefore closes the window

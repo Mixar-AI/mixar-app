@@ -17,20 +17,18 @@ logger = get_logger(__name__)
 
 
 def _ensure_registry_loaded() -> None:
+    """Make sure the user's own AI-generated materials are registered.
+
+    The library itself comes from the backend catalog (fetched when the paint
+    UI registers); no material scripts ship with the app, so the only local
+    source is the user's generated-material catalog.
+    """
     if material_registry.get_all_materials():
         return
-    for loader_name in (
-        "load_showcase_v7_materials",
-        "load_showcase_v8_materials",
-        "load_showcase_substance_materials",
-        "load_matgen_materials",
-    ):
-        loader = getattr(material_registry, loader_name, None)
-        if callable(loader):
-            try:
-                loader()
-            except Exception:
-                logger.warning("Failed procedural material loader: %s", loader_name, exc_info=True)
+    try:
+        material_registry.load_matgen_materials()
+    except Exception:
+        logger.warning("Failed to load generated procedural materials", exc_info=True)
 
 
 def _material_summary(material) -> dict:

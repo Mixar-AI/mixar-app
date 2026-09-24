@@ -140,6 +140,31 @@ def run(qa):
     qa.wait("not drv.find(surface='workspace_viewer_scene')")
     qa.step('reopen', qa.click, surface='agent_panel_eye', value='viewer-0')
     qa.wait("bool(drv.find(surface='workspace_viewer_scene'))")
+    # The viewer is a window-level modal: it must claim only its own viewport
+    # region. A press on the Moodboard grip (an overlapping TOOL_PROPS region)
+    # reaches the drawer, which opens while the preview stays up.
+    grip = qa.find(surface='moodboard_drawer_grip')
+    drawer_checked = bool(grip)
+    if grip:
+        gx, gy = ((grip[0]['rect'][0] + grip[0]['rect'][2]) // 2,
+                  (grip[0]['rect'][1] + grip[0]['rect'][3]) // 2)
+        qa.step('drawer_opens_over_viewer', qa.cmd, 'click_xy', x=gx, y=gy)
+        qa.wait("bpy.context.window_manager.mixar_moodboard_drawer_amount>0.5", timeout=10)
+        qa.eval("assert drv.find(surface='workspace_viewer_scene')\nresult=True")
+        qa.snap(str(out/'drawer-over-viewer.png'))
+        grip = qa.find(surface='moodboard_drawer_grip')
+        gx, gy = ((grip[0]['rect'][0] + grip[0]['rect'][2]) // 2,
+                  (grip[0]['rect'][1] + grip[0]['rect'][3]) // 2)
+        qa.cmd('click_xy', x=gx, y=gy)
+        qa.wait("bpy.context.window_manager.mixar_moodboard_drawer_amount<0.02", timeout=10)
+        qa.eval("assert drv.find(surface='workspace_viewer_scene')\nresult=True")
+    # A click on the viewport outside the preview and its agent bar dismisses
+    # the viewer, so a covered close button can never strand the user.
+    image = qa.find(surface='workspace_viewer_scene')[0]['rect']
+    qa.step('outside_click_closes', qa.cmd, 'click_xy', x=image[0] - 30, y=image[1] + 10)
+    qa.wait("not drv.find(surface='workspace_viewer_scene')")
+    qa.click(surface='agent_panel_eye', value='viewer-0')
+    qa.wait("bool(drv.find(surface='workspace_viewer_scene'))")
     qa.step('escape', qa.press, 'ESC')
     qa.wait("not drv.find(surface='workspace_viewer_scene')")
     qa.click(surface='agent_panel_eye', value='viewer-0')
@@ -156,7 +181,8 @@ def run(qa):
             "    if s.name.startswith('Viewer QA'): bpy.data.scenes.remove(s)\nresult=True")
     return {'paid_requests': 0, 'live_updates': True, 'switching': True,
             'workspace_only': True, 'locked_viewport': True, 'deletion': True,
-            'escape': True, 'new_run_cleanup': True, 'screenshots': str(out)}
+            'escape': True, 'outside_click': True, 'drawer_pass_through': drawer_checked,
+            'new_run_cleanup': True, 'screenshots': str(out)}
 
 
 if __name__ == '__main__':

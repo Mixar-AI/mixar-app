@@ -4,9 +4,10 @@
 
 """A drained generation batch raises no "<Feature> batch complete" popup.
 
-Batch completion feedback is the queue-activity toast ("N generations ready",
+Batch completion feedback is the per-feature completion toast in the
+bottom-left notification lane ("Image to 3D complete" / "4 succeeded",
 ``core/enqueue_toast.py``) plus the per-job failure toast; the popup menu that
-used to open over the viewport repeated both.
+used to open under the cursor carried the same facts.
 """
 
 import ast

@@ -180,7 +180,9 @@ if(WIN32)
     ${MIXAR_LEGACY_UPGRADES_WXS}
   )
   set(CPACK_WIX_UI_REF "WixUI_Blender")
-  set(CPACK_WIX_LIGHT_EXTRA_FLAGS -dcl:medium)
+  # Highest cabinet compression (LZX): a smaller MSI for a slower `light` link
+  # step. Decompression cost at install time is negligible.
+  set(CPACK_WIX_LIGHT_EXTRA_FLAGS -dcl:high)
 endif()
 
 set(CPACK_PACKAGE_EXECUTABLES "mixar-launcher" "Mixar ${MAJOR_VERSION}.${MINOR_VERSION}")

@@ -196,8 +196,9 @@ static int gallery_tile_count(const MessageLayoutData *layout)
 }
 
 /* Lay the bubble's capture tiles out as ONE row of the NEWEST ones that fit,
- * oldest-to-newest left to right, with a "+N" chip at the right end for the
- * rest (a long run takes dozens of captures; a wall of tiles was overwhelming).
+ * NEWEST FIRST left to right (the latest capture is the one the user wants to
+ * see; the lightbox counts down from it), with a "+N" chip at the right end
+ * for the rest (a long run takes dozens of captures; a wall was overwhelming).
  * Returns the block height (0 with no tiles). When `write_bounds`, every
  * shown tile's bounds are written relative to (x0, top); hidden tiles get zero
  * bounds; `gallery_hidden` / `gallery_first_hidden` / `gallery_more_bounds`
@@ -244,13 +245,13 @@ static float gallery_tiles_layout(MessageLayoutData *layout,
   if (write_bounds) {
     const float row_top = top - STEPS_TILE_TOP_GAP * UI_SCALE_FAC;
     float cursor_x = 0.0f;
-    for (int k = 0; k < count; k++) {
+    for (int k = 0; k < hidden; k++) {
       ImageSlotData &img = layout->slot_images[indices[k]];
-      if (k < hidden) {
-        memset(&img.bounds, 0, sizeof(img.bounds));
-        img.is_hovered = false;
-        continue;
-      }
+      memset(&img.bounds, 0, sizeof(img.bounds));
+      img.is_hovered = false;
+    }
+    for (int k = count - 1; k >= hidden; k--) { /* newest first */
+      ImageSlotData &img = layout->slot_images[indices[k]];
       const float tw = std::min(steps_tile_width(img), avail_width);
       img.bounds.xmin = x0 + cursor_x;
       img.bounds.xmax = img.bounds.xmin + tw;

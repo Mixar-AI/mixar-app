@@ -471,16 +471,20 @@ def _execute_send_message():
 
 
 def _report_send_refused(reason: str) -> None:
-    """Surface a refused Enter-send (timer context: no operator to report on)."""
+    """Surface a refused Enter-send (timer context: no operator to report on).
+
+    Raised as a viewport notification in the shared bottom-left lane, like
+    every other alert, rather than a popup menu under the cursor.
+    """
     logger.warning("Message not sent: %s", reason)
     try:
-        wm = bpy.context.window_manager
-        wm.popup_menu(
-            lambda self, _ctx: self.layout.label(text=reason),
-            title="Message not sent",
-            icon='INFO',
+        from mixar.modules.common.notifications import get_notification_store
+        # One stable id: repeated Enters replace the toast, never stack it.
+        get_notification_store().push(
+            "warning", "Message not sent", body=reason,
+            ttl_ms=6000, id="mixie_chat_send_refused",
         )
-    except Exception:  # noqa: BLE001 — a popup needs a window; the log suffices
+    except Exception:  # noqa: BLE001 — the log line above still records it
         pass
 
 
