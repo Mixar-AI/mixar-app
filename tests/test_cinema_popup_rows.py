@@ -127,6 +127,45 @@ def test_segment_cell_paints_only_itself_and_reads_active_from_the_flag():
     assert "text_clip_middle_ex(&fs, clipped, okwidth, minwidth, sizeof(clipped), '\\0');" in label
 
 
+def test_every_segment_cell_paints_a_resting_track():
+    """A cell that painted nothing while unlit turned a three-up row into
+    loose words with one chip somewhere among them."""
+    draw = _function(SEGMENT, "void draw_segment(")
+    assert "themed(MixarThemeSlot::CinemaRowTrack, TRACK, track);" in draw
+    assert "mixar_card_fill_round(&row, rad, track," in draw
+    assert draw.index("mixar_card_fill_round(&row, rad, track,") < draw.index(
+        "draw_chip(row, rad, motion.selected)"
+    )
+
+
+def test_an_explicit_segment_tag_beats_the_type_derivation():
+    """The export popup's size cells are Row buttons bound to RNA; without
+    this they derive back to Option and drop out of their own group."""
+    kind_get = _function(ROW, "MixarCinemaRowKind UI_mixar_cinema_row_kind_get(")
+    early = kind_get.index("return MixarCinemaRowKind::Segment;")
+    assert early < kind_get.index("switch (but->type)")
+    assert "but->mixar_style.cinema == MixarCinemaRowKind::Segment" in kind_get
+
+
+def test_a_standalone_toggle_shows_its_off_state():
+    """A Toggle in a settings popup is a switch, not a list option: unlit it
+    is still a row. List options (a dropdown's items) keep the plain text."""
+    option = _function(ROW, "void draw_option(")
+    assert "ButtonType::Toggle,\n                                       ButtonType::ToggleN," in option
+    assert "themed(MixarThemeSlot::CinemaRowTrack, TRACK, track);" in option
+
+
+def test_the_action_row_is_a_filled_accent_pill():
+    """The one thing a popup DOES must not read as a caption."""
+    option = _function(ROW, "void draw_option(")
+    assert "const bool action = kind == MixarCinemaRowKind::Action;" in option
+    assert "themed(MixarThemeSlot::CinemaRowSliderOn, SLIDER_ON, fill);" in option
+    assert "mixar_card_fill_round(&row, rad, fill," in option
+    # Icon and label are one centred group on the pill.
+    assert "const float group_w = icon_w + label_w;" in option
+    assert "text.xmin = int(center - group_w * 0.5f);" in option
+
+
 def test_labels_shrink_the_pad_to_a_floor_before_ellipsising():
     """A three-up "Beauty" is a few px too wide for the TEXT_PAD inset; it
     must take the padding back (down to TEXT_PAD_MIN) and draw whole, and
@@ -146,7 +185,10 @@ def test_labels_shrink_the_pad_to_a_floor_before_ellipsising():
     # value gives nothing.
     option = _function(ROW, "void draw_option(")
     normalized = " ".join(option.split())
-    assert "icon_drawn ? 0.0f : pad_slack(), submenu ? 0.0f : pad_slack()" in normalized
+    assert (
+        "(icon_drawn || action) ? 0.0f : pad_slack(), (submenu || action) ? 0.0f : pad_slack()"
+        in normalized
+    )
     # A submenu arrow owns the right edge. Reserve its actual icon width
     # before measuring/clipping text, and never recover that space as padding.
     assert "ELEM(but->type, ButtonType::Menu, ButtonType::Block, ButtonType::Pulldown)" in option

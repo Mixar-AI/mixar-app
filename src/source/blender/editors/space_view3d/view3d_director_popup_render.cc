@@ -14,6 +14,12 @@
  * Preview", "T1", "camera beats") with a percentage slider whose meaning was
  * a caption away.
  *
+ * The two three-up rows are segmented GROUPS — cells edge to edge, each with
+ * a resting track and a centred label — and the send is a filled accent pill.
+ * They were option rows with a leading icon that fit in "Clay" and not in
+ * "Color" or "Depth", labels left-aligned inside their own third, and a send
+ * that was bare text: a panel of loose words with one chip among them.
+ *
  * Presentation only: the toggles and the size cells bind shot RNA directly,
  * and the action runs the Python-owned `mixar.director_export_to_moodboard`.
  * What it sends is `core/board_export.export_plan`; `send_plan` below is its
@@ -73,20 +79,6 @@ void director_but_tooltip_owned(ui::Button *but, const char *text)
 }
 
 
-int render_kind_icon(const char *identifier)
-{
-  if (STREQ(identifier, "BEAUTY")) {
-    return ICON_SHADING_RENDERED;
-  }
-  if (STREQ(identifier, "CLAY")) {
-    return ICON_MESH_UVSPHERE;
-  }
-  if (STREQ(identifier, "DEPTH")) {
-    return ICON_IMAGE_ZDEPTH;
-  }
-  return ICON_NONE;
-}
-
 /* The block is KEEP_OPEN so the toggles multi-select; the Send action still
  * has to dismiss the popup, which KEEP_OPEN otherwise prevents. */
 void render_popup_close(bContext * /*C*/, void *arg_block, void * /*arg2*/)
@@ -96,14 +88,19 @@ void render_popup_close(bContext * /*C*/, void *arg_block, void * /*arg2*/)
 
 /* Enum-flag rows bound straight to `render_output_types`: a Row button whose
  * value is one flag bit draws pushed while the bit is set and XORs it on
- * click (native PROP_ENUM_FLAG behavior), so selection needs no operator. */
+ * click (native PROP_ENUM_FLAG behavior), so selection needs no operator.
+ *
+ * They are the cells of ONE segmented group — three cells edge to edge, each
+ * with a resting track and a centred label, more than one of which may be
+ * lit. They were Option rows with a leading icon, which fit in "Clay" and not
+ * in "Color" or "Depth", so the row read as a chip with two loose words
+ * beside it. */
 int draw_kind_toggles(bContext *C,
                       ui::Block *block,
                       DirectorPopupData &data,
                       const bool running,
                       const int y,
-                      const int width,
-                      const int gap)
+                      const int width)
 {
   PropertyRNA *kinds_prop = RNA_struct_find_property(&data.shot_ptr, "render_output_types");
   if (!kinds_prop) {
@@ -115,7 +112,15 @@ int draw_kind_toggles(bContext *C,
   RNA_property_enum_items(C, &data.shot_ptr, kinds_prop, &items, &items_count, &free_items);
   const int flags = RNA_property_enum_get(&data.shot_ptr, kinds_prop);
   const int row_h = int(UI_UNIT_Y * 1.15f);
-  const int third_w = (width - gap * 2) / 3;
+
+  int usable = 0;
+  for (int index = 0; index < items_count; index++) {
+    usable += int(items[index].identifier && items[index].identifier[0]);
+  }
+  /* Edge to edge, as the size cells below: each spans from its own edge to
+   * the next one's, so integer division never leaves the last one short. */
+  const int cells = std::max(usable, 1);
+  const auto cell_x = [width, cells](const int index) { return (width * index) / cells; };
 
   int enabled_count = 0;
   int drawn = 0;
@@ -123,22 +128,21 @@ int draw_kind_toggles(bContext *C,
     if (!items[index].identifier || !items[index].identifier[0]) {
       continue;
     }
-    ui::Button *toggle = ui::uiDefIconTextButR_prop(block,
+    ui::Button *toggle = ui::uiDefButR_prop(block,
                                            ui::ButtonType::Row,
-                                           render_kind_icon(items[index].identifier),
                                            items[index].name,
-                                           drawn * (third_w + gap),
+                                           cell_x(drawn),
                                            y,
-                                           short(third_w),
+                                           short(cell_x(drawn + 1) - cell_x(drawn)),
                                            short(row_h),
                                            &data.shot_ptr,
                                            kinds_prop,
                                            -1,
                                            0,
                                            float(items[index].value),
-                                           nullptr);
+                                           std::nullopt);
     director_but_tooltip_owned(toggle, items[index].description);
-    ui::UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Option);
+    ui::UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Segment);
     if (running) {
       ui::button_flag_enable(toggle, ui::BUT_DISABLED);
     }
@@ -293,7 +297,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
   y -= gap + label_h;
   director_popup_section_label(block, "Videos", y, width);
   y -= row_h;
-  const int chosen_videos = draw_kind_toggles(C, block, data, running, y, width, gap);
+  const int chosen_videos = draw_kind_toggles(C, block, data, running, y, width);
 
   y -= inner_gap + row_h;
   const int percent = RNA_int_get(&data.shot_ptr, "render_resolution_percentage");

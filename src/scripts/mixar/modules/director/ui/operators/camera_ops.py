@@ -29,8 +29,8 @@ def _editable_shot(context):
     return shot
 
 
-# The walk-aim overlay's handle, module-level like trajectory_overlay's. It used
-# to live only on the operator instance, so a supervisor that never reached
+# The walk-aim overlay's handle, module-level like `track_pick_overlay`'s. It
+# used to live only on the operator instance, so a supervisor that never reached
 # _finish -- a file load ending the modal, an exception -- left the handler
 # installed with nothing able to reach it, and the next walk stacked another.
 # The stale one keeps drawing against a dead region pointer, which a recycled

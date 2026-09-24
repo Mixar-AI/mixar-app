@@ -796,34 +796,21 @@ def test_timeline_strip_can_split_and_delete():
     assert '"mixar.director_strip_menu"' in interaction
 
 
-def test_camera_trajectory_overlay_is_curve_sampled_and_cached():
-    """The 3D path overlay must never scrub the scene to sample itself.
+def test_no_camera_path_is_drawn_over_the_scene():
+    """Director draws NO trajectory curve in the viewport.
 
-    Samples come from evaluating the camera's location F-curves directly
-    (pure curve math, handheld modifiers included) through the slotted-
-    action-safe helper, cached behind an animation signature; only the
-    one-point playhead marker recomputes per redraw. Drawn always-on-top
-    in the timeline strip's orange with green keyframe dots and the
-    timeline-playhead blue marker, gated by the Path toggle in the Camera
-    popup's Guides row.
+    The shot's path used to be sampled from the camera's location F-curves
+    and drawn always-on-top as a `POST_VIEW` GPU handler, gated by a "Path"
+    toggle in the Camera popup's Guides row. The lines read as scene
+    geometry; the camera's motion is the dock's strip and Blender's own
+    motion paths, not an overlay of ours.
     """
-    trajectory = _read("core/trajectory.py")
-    overlay = _read("ui/trajectory_overlay.py")
-    properties = _read("ui/properties/director_properties.py")
+    assert not (DIRECTOR / "ui/trajectory_overlay.py").exists()
+    assert not (DIRECTOR / "core/trajectory.py").exists()
     popup_shot = (VIEW3D / "view3d_director_popup_shot.cc").read_text(encoding="utf-8")
-
-    assert "from .anim_curves import assigned_fcurves" in trajectory
-    assert ".evaluate(frame)" in trajectory
-    assert "frame_set(" not in trajectory
-    assert "def _signature" in trajectory
-    assert "MAX_SAMPLES" in trajectory
-    assert "'POST_VIEW'" in overlay
-    assert "POLYLINE_UNIFORM_COLOR" in overlay
-    assert "depth_test_set('NONE')" in overlay
-    assert "PATH_COLOR" in overlay and "BEAT_COLOR" in overlay
-    assert "show_trajectory" in overlay
-    assert "show_trajectory: BoolProperty" in properties
-    assert '"show_trajectory"' in popup_shot
+    assert "show_trajectory" not in _read("ui/properties/director_properties.py")
+    assert "show_trajectory" not in popup_shot
+    assert "POLYLINE_UNIFORM_COLOR" not in popup_shot
 
 
 def test_handheld_is_noise_modifiers_not_keyframes():

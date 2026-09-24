@@ -84,6 +84,66 @@ def test_render_job_builds_movies_and_restores_temporary_scene_state():
     assert "return _NEXT_PASS_POLL_SECONDS" in job
 
 
+def _beauty_scene(engine="BLENDER_EEVEE", cycles_samples=4096, eevee_samples=4096):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        render=SimpleNamespace(engine=engine),
+        eevee=SimpleNamespace(taa_render_samples=eevee_samples),
+        cycles=SimpleNamespace(samples=cycles_samples),
+        # No splats: the splat guard walks the scene's objects.
+        objects=(),
+    )
+
+
+def test_the_color_pass_is_a_render_not_a_workbench_guide():
+    """Workbench's MATERIAL colour mode paints each object's VIEWPORT DISPLAY
+    colour — no textures, no lights, no world — so the Color video came out as
+    the Clay pass with a tint. It renders with the scene's real engine now."""
+    from mixar.modules.director.core.render_passes import beauty_engine
+
+    # A scene parked on Workbench has nothing to show: fall back to EEVEE.
+    assert beauty_engine("BLENDER_WORKBENCH") == "BLENDER_EEVEE"
+    assert beauty_engine("") == "BLENDER_EEVEE"
+    # A real engine is KEPT — Cycles because a panoramic shot renders in
+    # nothing else (`core/panoramic.py`).
+    assert beauty_engine("BLENDER_EEVEE") == "BLENDER_EEVEE"
+    assert beauty_engine("CYCLES") == "CYCLES"
+
+    passes = _read("core/render_passes.py")
+    assert "shading.color_type = 'MATERIAL'" not in passes
+    # The guides stay Workbench; only Color overrides the engine.
+    assert "render.engine = 'BLENDER_WORKBENCH'" in passes
+    assert "scene_engine = scene.render.engine" in passes
+    assert passes.index("scene_engine = scene.render.engine") < passes.index(
+        "_configure_common(scene, target, frame_start, frame_end, path)"
+    )
+
+
+def test_the_color_pass_caps_samples_and_restores_them():
+    from mixar.modules.director.core import render_passes
+
+    scene = _beauty_scene(engine="BLENDER_EEVEE")
+    render_passes._configure_beauty(scene, scene.render.engine)
+    assert scene.render.engine == "BLENDER_EEVEE"
+    assert scene.eevee.taa_render_samples == render_passes.BEAUTY_EEVEE_SAMPLES
+
+    cycles_scene = _beauty_scene(engine="CYCLES")
+    render_passes._configure_beauty(cycles_scene, cycles_scene.render.engine)
+    assert cycles_scene.render.engine == "CYCLES"
+    assert cycles_scene.cycles.samples == render_passes.BEAUTY_CYCLES_SAMPLES
+
+    # A scene already under the cap keeps its own count.
+    modest = _beauty_scene(engine="BLENDER_EEVEE", eevee_samples=8)
+    render_passes._configure_beauty(modest, modest.render.engine)
+    assert modest.eevee.taa_render_samples == 8
+
+    # Both are snapshotted, so the user's scene comes back.
+    source = _read("core/render_passes.py")
+    assert '"cycles": _property_snapshot(' in source
+    assert 'for name, value in saved.get("cycles", {}).items():' in source
+
+
 def test_completed_movies_are_persisted_and_placed_on_originating_moodboard():
     job = _read("core/render_outputs.py")
     media_import = MOODBOARD_IMPORT.read_text(encoding="utf-8")

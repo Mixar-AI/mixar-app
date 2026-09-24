@@ -9,9 +9,15 @@
  * (#MixarCinemaRowKind::Segment).
  *
  * A group is N equal cells on one baseline (the lens popup's Perspective /
- * Orthographic / Panoramic). The cells are too narrow for their labels, so
- * while one is hovered it is PAINTED wide enough for its whole label and
- * the others share what is left, in order.
+ * Orthographic / Panoramic, the export popup's video kinds and sizes). Every
+ * cell paints a resting track and the live one the graded chip, so the group
+ * reads as one switch; labels are centred and no cell carries an icon, since
+ * an icon that fits in one cell and not in its neighbour is what made the
+ * export popup's three-up rows read as loose words.
+ *
+ * The cells are too narrow for their labels, so while one is hovered it is
+ * PAINTED wide enough for its whole label and the others share what is left,
+ * in order.
  *
  * Why the painter and not a re-layout: a native block popup opened from a
  * dropdown (`uiDefIconBlockBut`) is re-laid at most after a row RUNS (the
@@ -180,6 +186,14 @@ void draw_segment(Button *but, const rcti *rect)
   const float inset = 1.0f * UI_SCALE_FAC;
   BLI_rctf_pad(&row, -inset, -inset);
   const float rad = row_radius(row);
+  /* Every cell carries a resting track, so the group reads as a switch with
+   * N cells rather than as loose words with one chip somewhere among them —
+   * an unlit cell used to paint nothing at all. */
+  if (motion.selected < 1.0f) {
+    uchar track[4];
+    themed(MixarThemeSlot::CinemaRowTrack, TRACK, track);
+    mixar_card_fill_round(&row, rad, track, (1.0f - motion.selected) * (disabled ? 0.5f : 1.0f));
+  }
   const float hover = 0.9f * motion.hover + (1.0f - 0.9f * motion.hover) * motion.press;
   draw_hover(row, rad, hover * (1.0f - motion.selected));
   if (motion.selected > 0.0f) {

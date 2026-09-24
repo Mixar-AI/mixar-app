@@ -39,8 +39,13 @@ ALLOWED = {
     "DEG_ITER_OBJECT_FLAG_LINKED_DIRECTLY",
     "DEG_ITER_OBJECT_FLAG_LINKED_VIA_SET",
     "DEG_ITER_OBJECT_FLAG_VISIBLE",
-    # A header included for its types only.
+    # Headers included for their types only.
     "GPU_shader_shared_utils",
+    "GPU_shader_shared",
+    # The dock paints its keys as green dots rather than the theme's key-type
+    # diamonds, so it sets the keyframe shader's shape flag itself
+    # (GPU_shader_shared.hh, `GPUKeyframeShapes`).
+    "GPU_KEYFRAME_SHAPE_CIRCLE",
     # Referenced in a comment about which operator a keymap item replaces.
     "WM_OT_context_set_int",
     # The dock's native keys (`view3d_director_timeline_keys.cc`): the keylist

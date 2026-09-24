@@ -4,10 +4,10 @@
 
 """Keys, image rings and the camera label read on the strip.
 
-The keys are Blender's own keyframe shapes (`view3d_director_timeline_keys.cc`),
-coloured for a dark background — so the take's span under them is a TINT with
-a firm edge, never a solid orange that turns green samples and white
-keyframes to mush. What Director adds stays out of the keys' way: a thin ring
+The keys are green dots in Director's accent (`view3d_director_timeline_keys.cc`)
+— so the take's span under them is a neutral grey TINT with a firm edge, never
+a solid bar of a hue of its own, which turned the marks on it to mush. What
+Director adds stays out of the keys' way: a thin ring
 around a keyframe that carries an image, and the camera's name in a column
 of its own.
 """
@@ -61,6 +61,8 @@ def test_the_span_is_a_tint_with_a_firm_edge():
     # ...with an edge that still says where the take starts and ends.
     assert edge[3] >= 0.5
     assert fill[:3] == edge[:3] == hover[:3]
+    # Neutral grey: a hue of its own would compete with the green key dots.
+    assert max(fill[:3]) - min(fill[:3]) <= 0.06
     strip = _block("void draw_strip(")
     assert "ui::draw_roundbox_4fv_ex(&runtime->strip_bounds," in strip
     assert "runtime->strip_hovered ? STRIP_HOVER_FILL_COLOR : STRIP_FILL_COLOR," in strip

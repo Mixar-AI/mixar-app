@@ -20,11 +20,12 @@
  *
  * The marks are Blender's own: the keylist the Dope Sheet builds for an
  * object row (`ob_to_keylist`: the object's action and its camera data's, so
- * lens keys count too), drawn through `draw_keyframe_shape` and the keyframe
- * shader, so the shapes, per-type sizes, theme colours and the selection are
- * exactly the Timeline's. The only thing that differs is the transform: the
- * dock has no View2D, so each column is placed with the dock's own
- * frame->pixel mapping, in the pixel space the dock already draws in.
+ * lens keys count too), drawn through the keyframe shader, so the per-type
+ * sizes and the selection are exactly the Timeline's. Two things differ. The
+ * transform: the dock has no View2D, so each column is placed with the dock's
+ * own frame->pixel mapping, in the pixel space the dock already draws in. And
+ * the mark: a green DOT in Director's accent rather than the theme's
+ * per-key-type diamonds (`emit_key_dot`).
  */
 
 #include <algorithm>
@@ -49,6 +50,7 @@
 #include "ED_keyframes_keylist.hh"
 
 #include "GPU_immediate.hh"
+#include "GPU_shader_shared.hh"
 #include "GPU_state.hh"
 
 #include "UI_interface.hh"
@@ -63,6 +65,57 @@ namespace {
 /** A beat's frame is an integer; its key is the column that rounds to it
  * (`BEAT_EPSILON` in `core/native_keys.py`, which matches the same way). */
 constexpr float BEAT_EPSILON = 0.5f;
+
+/* Director's key is a GREEN DOT, not the Timeline's white diamond: the dock
+ * is one camera's row on a neutral grey span, so the marks carry Director's
+ * own accent and the theme's per-type colours (white keyframes, green jitter
+ * samples) would only say which recorder wrote them. Selection is the
+ * brighter green — the shape never changes, so a dense take still reads. */
+constexpr uchar KEY_FILL[4] = {40, 179, 102, 255};
+constexpr uchar KEY_FILL_SELECTED[4] = {104, 240, 152, 255};
+/** The dark rim that holds a dot off the span behind it. */
+constexpr uchar KEY_OUTLINE[4] = {10, 26, 18, 210};
+constexpr uchar KEY_OUTLINE_SELECTED[4] = {255, 255, 255, 235};
+
+/**
+ * One key column as a dot, in the keyframe shader's vertex attributes.
+ *
+ * `draw_keyframe_shape` would read the fill from the THEME's key-type slots,
+ * which is the one thing the dock does differently; its per-type size scaling
+ * is kept, so recorded samples stay smaller than the keys a capture wrote.
+ */
+void emit_key_dot(const float x,
+                  const float y,
+                  float size,
+                  const bool selected,
+                  const eBezTriple_KeyframeType key_type,
+                  const KeyframeShaderBindings &sh_bindings)
+{
+  switch (key_type) {
+    case BEZT_KEYTYPE_BREAKDOWN:
+      size *= 0.85f;
+      break;
+    case BEZT_KEYTYPE_MOVEHOLD:
+      size *= 0.925f;
+      break;
+    case BEZT_KEYTYPE_EXTREME:
+      size *= 1.2f;
+      break;
+    case BEZT_KEYTYPE_JITTER:
+      size *= 0.8f;
+      break;
+    case BEZT_KEYTYPE_GENERATED:
+      size *= 0.75f;
+      break;
+    case BEZT_KEYTYPE_KEYFRAME:
+      break;
+  }
+  immAttr1f(sh_bindings.size_id, size);
+  immAttr4ubv(sh_bindings.color_id, selected ? KEY_FILL_SELECTED : KEY_FILL);
+  immAttr4ubv(sh_bindings.outline_color_id, selected ? KEY_OUTLINE_SELECTED : KEY_OUTLINE);
+  immAttr1u(sh_bindings.flags_id, uint32_t(GPU_KEYFRAME_SHAPE_CIRCLE));
+  immVertex2f(sh_bindings.pos_id, x, y);
+}
 
 /** Every F-curve the dock draws for \a camera: the object's and its data's —
  * the same two `ob_to_keylist` gathers for an object row. */
@@ -167,16 +220,12 @@ void director_timeline_draw_keys(const DirectorTimelineRuntime &runtime,
    * `draw_keyframe_shape` scales it per key type, as it does there. */
   const float icon_size = float(U.widget_unit) * 0.5f;
   for (const DirectorTimelineKeyHit &hit : runtime.key_hits) {
-    draw_keyframe_shape(hit.x,
-                        cy,
-                        icon_size,
-                        hit.selected,
-                        eBezTriple_KeyframeType(hit.key_type),
-                        KEYFRAME_SHAPE_BOTH,
-                        1.0f,
-                        &sh_bindings,
-                        KEYFRAME_HANDLE_NONE,
-                        KEYFRAME_EXTREME_NONE);
+    emit_key_dot(hit.x,
+                 cy,
+                 icon_size,
+                 hit.selected,
+                 eBezTriple_KeyframeType(hit.key_type),
+                 sh_bindings);
   }
 
   immEnd();

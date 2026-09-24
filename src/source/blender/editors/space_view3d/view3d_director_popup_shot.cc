@@ -261,13 +261,16 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     y -= gap + label_h;
     director_popup_section_label(block, "Guides", y, width);
     y -= row_h;
-    const int third_w = (width - gap * 2) / 3;
+    /* Two guides, both Blender's own camera overlays. The third cell was a
+     * "Path" toggle for a Director-drawn trajectory curve over the scene;
+     * the curve is gone, so the row is a half each. */
+    const int half_guide_w = (width - gap) / 2;
     ui::Button *thirds = ui::uiDefButR(block,
                               ui::ButtonType::Toggle,
                               "Thirds",
                               0,
                               y,
-                              short(third_w),
+                              short(half_guide_w),
                               short(row_h),
                               &data.camera_data_ptr,
                               "show_composition_thirds",
@@ -279,9 +282,9 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     ui::Button *safe = ui::uiDefButR(block,
                             ui::ButtonType::Toggle,
                             "Safe Areas",
-                            third_w + gap,
+                            half_guide_w + gap,
                             y,
-                            short(third_w),
+                            short(width - half_guide_w - gap),
                             short(row_h),
                             &data.camera_data_ptr,
                             "show_safe_areas",
@@ -290,20 +293,6 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                             0,
                             std::nullopt);
     director_popup_state(safe, false, true);
-    ui::Button *path = ui::uiDefButR(block,
-                            ui::ButtonType::Toggle,
-                            "Path",
-                            (third_w + gap) * 2,
-                            y,
-                            short(width - (third_w + gap) * 2),
-                            short(row_h),
-                            &data.state_ptr,
-                            "show_trajectory",
-                            0,
-                            0,
-                            0,
-                            std::nullopt);
-    director_popup_state(path, false, true);
   }
 
   director_popup_block_end(block);

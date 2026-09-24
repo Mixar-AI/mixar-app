@@ -32,6 +32,13 @@ def _block(source: str, start: str) -> str:
     return body[: body.index("\n}\n") + 3]
 
 
+def _color(source: str, name: str) -> list[float]:
+    """The components of a `constexpr uchar NAME[4] = {...};` literal."""
+    marker = f"{name}[4] = {{"
+    body = source[source.index(marker) + len(marker) :]
+    return [float(part.strip().rstrip("f")) for part in body[: body.index("}")].split(",")]
+
+
 def test_the_keys_are_blenders_own_keylist():
     """The object row of a Dope Sheet summary: the object's action and its
     camera data's, so lens keys count too."""
@@ -65,12 +72,30 @@ def test_the_bar_spans_the_keylists_ends():
 def test_they_are_drawn_with_the_timelines_shader_and_sizes():
     painter = _block(KEYS, "void director_timeline_draw_keys(")
     assert "immBindBuiltinProgram(GPU_SHADER_KEYFRAME_SHAPE);" in painter
-    assert "draw_keyframe_shape(hit.x," in painter
+    assert "emit_key_dot(hit.x," in painter
     assert "eBezTriple_KeyframeType(hit.key_type)," in painter
     assert "hit.selected," in painter
     # The Timeline's key size (`channel_ui_data_init`).
     assert "float(U.widget_unit) * 0.5f" in painter
     assert "immBegin(GPU_PRIM_POINTS, int(runtime.key_hits.size()));" in painter
+
+
+def test_a_key_is_a_green_dot_not_a_themed_diamond():
+    """The dock is one camera's row on a neutral grey span: the marks carry
+    Director's accent, and the theme's per-type key colours would only say
+    which recorder wrote them."""
+    dot = _block(KEYS, "void emit_key_dot(")
+    assert "GPU_KEYFRAME_SHAPE_CIRCLE" in dot
+    assert "selected ? KEY_FILL_SELECTED : KEY_FILL" in dot
+    # The per-type SIZE scaling is still the Timeline's.
+    assert "case BEZT_KEYTYPE_JITTER:" in dot and "size *= 0.8f;" in dot
+    # Green, and the selected one brighter.
+    fill = _color(KEYS, "KEY_FILL")
+    selected = _color(KEYS, "KEY_FILL_SELECTED")
+    assert fill[1] > fill[0] and fill[1] > fill[2]
+    assert selected[1] > fill[1]
+    # Nothing reads the theme's key-type slots any more.
+    assert "draw_keyframe_shape(" not in KEYS
 
 
 def test_the_strip_order_is_span_rings_keys():

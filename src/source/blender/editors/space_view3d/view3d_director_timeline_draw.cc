@@ -40,13 +40,13 @@ namespace blender {
 
 namespace {
 
-/* The take's span is a TINT of the strip's orange with a firm edge in it.
- * A solid orange bar put every key on orange — the Timeline's own key
- * colours (white keyframes, green recorded samples) are drawn for a dark
- * background and turned to mush on it. */
-constexpr float STRIP_COLOR[4] = {1.0f, 0.72f, 0.48f, 0.62f};
-constexpr float STRIP_FILL_COLOR[4] = {1.0f, 0.72f, 0.48f, 0.13f};
-constexpr float STRIP_HOVER_FILL_COLOR[4] = {1.0f, 0.72f, 0.48f, 0.22f};
+/* The take's span is a TINT of a light grey with a firm edge in it. It is
+ * the neutral the keys are read against: a tinted bar of its own hue (it was
+ * the strip's orange) competed with the green key dots for the same row, and
+ * a solid bar turned them to mush outright. */
+constexpr float STRIP_COLOR[4] = {0.82f, 0.83f, 0.85f, 0.62f};
+constexpr float STRIP_FILL_COLOR[4] = {0.82f, 0.83f, 0.85f, 0.13f};
+constexpr float STRIP_HOVER_FILL_COLOR[4] = {0.82f, 0.83f, 0.85f, 0.22f};
 constexpr float LABEL_TEXT_COLOR[4] = {1.0f, 0.98f, 0.96f, 1.0f};
 /** A thin ring around a keyframe that carries a captured image. */
 constexpr float STILL_RING_COLOR[4] = {1.0f, 1.0f, 1.0f, 0.78f};

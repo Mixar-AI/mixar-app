@@ -14,7 +14,7 @@ Two handlers because they draw in two spaces — the outline is world geometry
 region the modal started in: a second viewport must not paint a hover the user
 is not making there.
 
-The handles are module-level, like `trajectory_overlay`'s, so a modal that
+The handles are module-level, so a modal that
 never reaches its exit — a file load ending it, an exception — cannot strand a
 handler with nothing able to reach it.
 """

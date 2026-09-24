@@ -404,15 +404,6 @@ class MixarDirectorState(PropertyGroup):
         precision=1,
         subtype='TIME',
     )
-    show_trajectory: BoolProperty(
-        name="Path",
-        description=(
-            "Draw the shot camera's trajectory over the scene while "
-            "directing — keyframes in green, the playhead position in blue"
-        ),
-        default=True,
-        update=_redraw_director_surface,
-    )
     level_horizon: BoolProperty(
         name="Fix Z",
         description=(

@@ -572,7 +572,10 @@ def test_output_popup_rows_are_styled_and_toggles_keep_their_value():
     tag must not write its payload there — that clobbered the bit each toggle
     set."""
     render = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
-    assert "UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Option)" in render
+    # The three video kinds are the cells of one segmented group (an Option
+    # row with a leading icon fit "Clay" and not "Color", so the row read as
+    # loose words); the tag still writes no value.
+    assert "UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Segment)" in render
     # One send action (tests/director/test_export_popup.py).
     assert render.count("ui::MixarCinemaRowKind::Action") == 1
     row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")

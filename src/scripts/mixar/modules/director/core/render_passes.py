@@ -2,7 +2,18 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Temporary Blender render configuration for Director motion guides."""
+"""Temporary Blender render configuration for Director motion guides.
+
+Three passes, two of them guides and one a real render. **Clay** and **Depth**
+are Workbench: a single-colour surface and a normalised Z map, which is
+exactly what a guide is for. **Color is a render** — the scene's own engine,
+materials, textures, lights and world, through the scene's own view transform.
+
+It used to be Workbench with `color_type = 'MATERIAL'`, which paints each
+object's *viewport display colour*: no textures, no lights, no world. The
+Color video came out as the Clay pass with a tint, which is the one thing it
+must never be.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +26,31 @@ from mixar.config.logging_config import get_logger
 
 
 logger = get_logger(__name__)
+
+#: The engine the Color pass falls back to when the scene is itself parked on
+#: Workbench (a Zen scene, or a shot set up for viewport speed).
+BEAUTY_FALLBACK_ENGINE = 'BLENDER_EEVEE'
+#: EEVEE samples for the Color video: enough to settle anti-aliasing without
+#: making a guide video a long wait.
+BEAUTY_EEVEE_SAMPLES = 32
+#: Cycles is only ever kept because the scene is already on it — a panoramic
+#: camera renders in nothing else (`core/panoramic.py`) — so the pass caps the
+#: sample count rather than inheriting a final-render one.
+BEAUTY_CYCLES_SAMPLES = 64
+
+
+def beauty_engine(scene_engine: str) -> str:
+    """The engine the Color video renders with, given the scene's own.
+
+    The scene's engine is KEPT whenever it is a real one: Cycles stays Cycles
+    (a panoramic shot renders in nothing else) and EEVEE stays EEVEE. Only a
+    scene sitting on Workbench — which has no textures, lights or world to
+    give — falls back, and it falls back to EEVEE.
+    """
+    engine = str(scene_engine or "")
+    if not engine or engine == 'BLENDER_WORKBENCH':
+        return BEAUTY_FALLBACK_ENGINE
+    return engine
 
 
 def _safe_set(owner, name: str, value) -> None:
@@ -58,6 +94,12 @@ def snapshot_render_settings(scene, view_layer) -> dict:
         "eevee": _property_snapshot(
             scene.eevee,
             ("taa_render_samples",),
+        ),
+        # The Color pass keeps a Cycles scene on Cycles and caps its samples.
+        # Absent without the add-on, which `_property_snapshot` handles.
+        "cycles": _property_snapshot(
+            getattr(scene, "cycles", None),
+            ("samples",),
         ),
         "render": _property_snapshot(
             render,
@@ -129,6 +171,8 @@ def restore_render_settings(
         _safe_set(scene.render, name, value)
     for name, value in saved.get("eevee", {}).items():
         _safe_set(scene.eevee, name, value)
+    for name, value in saved.get("cycles", {}).items():
+        _safe_set(getattr(scene, "cycles", None), name, value)
     for name, value in saved["image"].items():
         _safe_set(scene.render.image_settings, name, value)
     for name, value in saved["ffmpeg"].items():
@@ -264,29 +308,47 @@ def _scene_has_splats(scene) -> bool:
     return scene_has_splats(scene)
 
 
+def _configure_beauty(scene, scene_engine: str) -> None:
+    """Make the Color pass a real render of the scene as it is.
+
+    The view transform, the world, the lights and every material stay the
+    scene's own — the only things touched are the engine (when the scene is on
+    Workbench, which cannot show any of them) and the sample count, which a
+    guide video does not need a final render's worth of.
+    """
+    engine = beauty_engine(scene_engine)
+    if engine != 'CYCLES' and _scene_has_splats(scene):
+        # Gaussians are the splat material's attribute-driven node tree, which
+        # only a real engine evaluates; the splat_render_camera handlers push
+        # per-frame camera matrices into the GN during the render and those
+        # scenes run with Lock Interface.
+        engine = BEAUTY_FALLBACK_ENGINE
+    scene.render.engine = engine
+    if engine == 'CYCLES':
+        cycles = getattr(scene, "cycles", None)
+        samples = getattr(cycles, "samples", 0) or BEAUTY_CYCLES_SAMPLES
+        _safe_set(cycles, "samples", min(int(samples), BEAUTY_CYCLES_SAMPLES))
+        return
+    samples = getattr(scene.eevee, "taa_render_samples", 0) or BEAUTY_EEVEE_SAMPLES
+    _safe_set(scene.eevee, "taa_render_samples", min(int(samples), BEAUTY_EEVEE_SAMPLES))
+
+
 def configure_render_pass(scene, view_layer, target, kind: str, path: str) -> str:
-    """Configure one Workbench or normalized-depth movie pass.
+    """Configure one movie pass: the Color render, or a Workbench guide.
 
     The span comes from the TARGET, which froze it when the job started — a
     Director shot resolves it from its beats and a plain camera from its own
     keys or the scene range, and neither may drift mid-render.
     """
     frame_start, frame_end = target.frame_start, target.frame_end
+    # Read before `_configure_common` puts the scene on Workbench for the
+    # guides: Color renders with the engine the scene actually uses.
+    scene_engine = scene.render.engine
     _configure_common(scene, target, frame_start, frame_end, path)
     view_layer.use_pass_z = kind == "DEPTH"
     shading = scene.display.shading
     if kind == "BEAUTY":
-        shading.color_type = 'MATERIAL'
-        shading.show_specular_highlight = True
-        if _scene_has_splats(scene):
-            # Workbench cannot evaluate the splat material's attribute-driven
-            # node tree — gaussians come out as flat grey cards. EEVEE renders
-            # them correctly (the splat_render_camera handlers push per-frame
-            # camera matrices into the GN during the render, and splat scenes
-            # run with Lock Interface). Modest TAA samples: this is a guide
-            # video, and gaussian quads are emission-flat anyway.
-            scene.render.engine = 'BLENDER_EEVEE'
-            scene.eevee.taa_render_samples = 16
+        _configure_beauty(scene, scene_engine)
         return ""
     shading.color_type = 'SINGLE'
     shading.single_color = (0.58, 0.58, 0.58)

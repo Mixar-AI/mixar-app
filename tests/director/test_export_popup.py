@@ -111,6 +111,23 @@ def test_one_action_and_no_jargon():
     assert "Keyframe Images (%d)" in render
 
 
+def test_both_three_up_rows_are_one_segmented_group_each():
+    """They were Option rows with a leading icon that fit in "Clay" and not
+    in "Color" or "Depth", each label left-aligned in its own third — a chip
+    with loose words beside it. Cells now run edge to edge, carry a resting
+    track and centre their labels."""
+    kinds = POPUP[POPUP.index("int draw_kind_toggles(") :]
+    kinds = kinds[: kinds.index("\n}\n")]
+    assert "ui::UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Segment);" in kinds
+    assert "(width * index) / cells" in kinds
+    # No icons in a cell: one that fits in one label and not the next is what
+    # made the row look broken.
+    assert "render_kind_icon" not in POPUP
+    assert "uiDefIconTextButR_prop" not in POPUP
+    # The size cells are the other group.
+    assert POPUP.count("ui::MixarCinemaRowKind::Segment") == 2
+
+
 def test_the_videos_are_named_for_what_they_look_like():
     names = [item[1] for item in constants.SHOT_RENDER_OUTPUT_ITEMS]
     assert names == ["Color", "Clay", "Depth"]
