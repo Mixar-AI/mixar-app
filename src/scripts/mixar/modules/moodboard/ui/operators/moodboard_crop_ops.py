@@ -236,6 +236,7 @@ class MIXIE_OT_moodboard_apply_crop(Operator):
             return {'CANCELLED'}
 
         # Call the C++ accelerated operator
+        before = set(bpy.data.images.keys())
         bpy.ops.mixie.moodboard_crop_image(
             image_index=state.target_image_index,
             x1=x1,
@@ -243,6 +244,15 @@ class MIXIE_OT_moodboard_apply_crop(Operator):
             x2=x2,
             y2=y2
         )
+        # The C++ result is an unpacked generated float image with no file
+        # behind it: saved as-is, the crop comes back blank after reload.
+        for image in bpy.data.images:
+            if image.name in before or image.source != 'GENERATED':
+                continue
+            try:
+                image.pack()
+            except RuntimeError:
+                pass
 
         reset_tool_state(state, context)
         self.report({'INFO'}, "Cropped image (C++ accelerated)")

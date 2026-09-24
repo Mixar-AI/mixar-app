@@ -99,6 +99,7 @@ _NODE_FIELDS = (
     "params_json",
     "views_per_component",
     "include_full_context",
+    "requires_reference",
 )
 
 # Never copied. A duplicate inheriting ``job_id`` would make two cards claim one

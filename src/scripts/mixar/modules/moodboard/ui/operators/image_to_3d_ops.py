@@ -218,7 +218,6 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 on_imported=make_model_rename_on_imported(
                     mesh_name, model_front_zrot(model_name)),
                 scene_flag="mixie_image_to_3d_is_generating",
-                batch_popup_title="Image to 3D batch complete",
             )
             if not job:
                 self.report({"ERROR"}, "A duplicate generation is already queued")
@@ -385,7 +384,6 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             on_imported=make_model_rename_on_imported(
                 mesh_name, model_front_zrot(model_name), placement=placement),
             scene_flag="mixie_image_to_3d_is_generating",
-            batch_popup_title="Image to 3D batch complete",
         )
         if not job:
             set_agent_gen_reason(context, "A duplicate 3D generation is already queued")

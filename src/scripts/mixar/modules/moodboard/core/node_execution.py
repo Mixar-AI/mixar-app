@@ -24,6 +24,7 @@ from .node_graph import (
 )
 from .node_job_bridge import ensure_graph_listener
 from .node_mesh_execution import _MESH_FEATURE_ROUTING, _run_mesh_feature
+from .node_run_helpers import grow_owner_frame, label_image_name, require_upstream_results
 from .node_schema import collect_node_params, node_model_slug, node_service_key
 
 logger = get_logger(__name__)
@@ -70,8 +71,10 @@ def _result_hook(scene_name: str, node_id: str, kind: str,
             create_asset_result(scene, node, ", ".join(resolved or names))
         elif kind == 'IMAGE':
             connect_image_results(scene, node, result_names)
+            grow_owner_frame(scene, node)
         else:
             connect_video_result(scene, node, result_names)
+            grow_owner_frame(scene, node)
 
     return _hook
 
@@ -98,6 +101,8 @@ def _run_image(context, node, operator):
         item for item in input_media_items(context.scene, node)
         if is_still_item(item)
     ]
+    if getattr(node, "requires_reference", False) and not references:
+        raise ValueError("Connect your character sheet to this card first")
     model_spec = get_model(service_key, model) or {}
     # Fail closed: a catalog that publishes no reference limit takes no
     # references. Guessing a client-side default here would burn a queue slot
@@ -118,6 +123,9 @@ def _run_image(context, node, operator):
     payload = {"prompt": prompt, "params": params}
     if reference_b64:
         payload["reference_images_b64"] = reference_b64
+    name = label_image_name(node)  # the backend names the result image after the card
+    if name:
+        payload["image_name"] = name
 
     ensure_graph_listener(FEATURE_IMAGEGEN)
     hook = _result_hook(context.scene.name, node.node_id, 'IMAGE')
@@ -302,7 +310,6 @@ def _run_video(context, node, operator):
         video_inputs=video_inputs,
         max_video_duration_seconds=limits["max_video_seconds"],
         scene_flag="mixie_video_gen_is_generating",
-        batch_popup_title="Video Generation Complete",
         on_imported=hook,
     )
     return job, params
@@ -447,6 +454,7 @@ def run_action_node(context, node, operator):
     if node.state in {'QUEUED', 'RUNNING'}:
         raise ValueError("This node is already running")
     node.error = ""
+    require_upstream_results(context.scene, node)
     if node.action_type == 'IMAGE_GEN':
         job, params = _run_image(context, node, operator)
     elif node.action_type == 'VIDEO_GEN':
@@ -465,6 +473,11 @@ def run_action_node(context, node, operator):
         job, params = run_character_parts_node(context, node)
     elif node.action_type == 'MASK_DETAIL':
         job, params = _run_mask_detail(context, node, operator)
+    elif node.action_type == 'ASSEMBLE':
+        from .assemble_node import run_assemble_node
+
+        run_assemble_node(context, node)
+        return None
     elif node.action_type in _MESH_FEATURE_ROUTING:
         job, params = _run_mesh_feature(context, node, operator)
     else:

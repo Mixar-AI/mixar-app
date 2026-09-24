@@ -647,8 +647,8 @@ class FeatureQueue(DownloadMixin):
         """Surface a viewport toast once for each newly-FAILED job.
 
         A uniform safety net so a failed paid generation is never silent —
-        previously only features whose listener passed ``batch_popup_title``
-        showed any feedback, so Image Gen / Lookdev / Hunyuan UV / Texture
+        previously only features with a batch summary popup showed any
+        feedback, so Image Gen / Lookdev / Hunyuan UV / Texture
         Edit failures were invisible unless the Queue panel was open.
         """
         for job in self._jobs:

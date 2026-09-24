@@ -15,6 +15,7 @@
 #include "agent_ui_layout.hh"
 #include "agent_ui_motion.hh"
 #include "agent_ui_theme.hh"
+#include "agent_ui_voice_paint.hh"
 
 namespace blender {
 namespace {
@@ -50,6 +51,14 @@ void chip_content(const rctf &rect, AgentIcon glyph, const char *label,
   rctf icon{x, x + edge, cy - edge * 0.5f, cy + edge * 0.5f};
   agent_ui_icon_draw(glyph, &icon, color, fill);
   label_left(fitted.c_str(), x + edge + gap, cy, size, color);
+}
+/** A chip fitted down to its icon (#agent_chip_fit): the mark, centred. */
+void chip_icon(const rctf &rect, AgentIcon glyph, float edge, const float color[4], const float fill[4])
+{
+  const float cx = BLI_rctf_cent_x(&rect);
+  const float cy = BLI_rctf_cent_y(&rect);
+  const rctf icon{cx - edge * 0.5f, cx + edge * 0.5f, cy - edge * 0.5f, cy + edge * 0.5f};
+  agent_ui_icon_draw(glyph, &icon, color, fill);
 }
 }  // namespace
 
@@ -277,8 +286,13 @@ void agent_ui_draw_chip_row(ARegion *region,
         scribble_fill);
     fill_round(&layout->chip_scribble, radius, scribble_fill);
     const char *label = state->scribble_armed ? "Done" : "Sketch";
-    chip_content(layout->chip_scribble, AGENT_ICON_PEN, label,
-                 size, icon_edge, icon_gap, text, scribble_fill);
+    if (layout->chip_form[AGENT_CHIP_SLOT_SCRIBBLE] > 0) {
+      chip_icon(layout->chip_scribble, AGENT_ICON_PEN, icon_edge, text, scribble_fill);
+    }
+    else {
+      chip_content(layout->chip_scribble, AGENT_ICON_PEN, label,
+                   size, icon_edge, icon_gap, text, scribble_fill);
+    }
 
     if (state->scribble_armed || state->mark_count > 0) {
       float reading_fill[4];
@@ -289,8 +303,14 @@ void agent_ui_draw_chip_row(ARegion *region,
           reading_fill);
       fill_round(&layout->chip_reading, radius, reading_fill);
       const float cy = BLI_rctf_cent_y(&layout->chip_reading);
-      const char *reading = state->mark_intent[0] ? state->mark_intent : "Auto detect";
-      label_left(reading, layout->chip_reading.xmin + pad, cy, size, text);
+      /* Elided to the room left of the chevron: a narrow row fits this chip
+       * down to a couple of glyphs rather than running it into the next one. */
+      const std::string reading = ui::mixar_fit_text(
+          state->mark_intent[0] ? state->mark_intent : "Auto detect",
+          std::max(0.0f, BLI_rctf_size_x(&layout->chip_reading) - pad * 2.0f -
+                             icon_edge * 0.7f - icon_gap),
+          size);
+      label_left(reading.c_str(), layout->chip_reading.xmin + pad, cy, size, text);
       rctf chevron = layout->chip_reading;
       chevron.xmax -= pad;
       chevron.xmin = chevron.xmax - icon_edge * 0.7f;
@@ -318,7 +338,9 @@ void agent_ui_draw_chip_row(ARegion *region,
   }
 
   /* Voice, right of Scribble: lit in the accent while a dictation session is
-   * up. Only drawn when the toggle exists (see AgentIslandState). */
+   * up. Capturing reads Stop beside a stop square and the live ECG trace;
+   * permission and finishing keep their status word. Only drawn when the
+   * toggle exists (see AgentIslandState). */
   if (state->voice_available) {
     MIXAR_THEME_LOAD(accent, AgentAccent);
     float voice_fill[4];
@@ -329,9 +351,18 @@ void agent_ui_draw_chip_row(ARegion *region,
             region, AgentIslandControl::Voice, layout->chip_voice, state->voice_listening),
         voice_fill);
     fill_round(&layout->chip_voice, radius, voice_fill);
-    chip_content(layout->chip_voice, AGENT_ICON_MIC,
-                 state->voice_listening ? state->voice_status : "Voice",
-                 size, icon_edge, icon_gap, text, voice_fill);
+    agent_ui_draw_voice_chip(region,
+                             layout->chip_voice,
+                             layout->chip_form[AGENT_CHIP_SLOT_VOICE],
+                             state->voice_capturing,
+                             state->voice_listening ? state->voice_status : "Voice",
+                             state->voice_level,
+                             size,
+                             icon_edge,
+                             icon_gap,
+                             AGENT_CHIP_WAVE_W * u,
+                             text,
+                             voice_fill);
   }
 
   /* Auto, right of Voice: an "Auto" label and a sliding ON/OFF switch. The
@@ -353,10 +384,11 @@ void agent_ui_draw_chip_row(ARegion *region,
     const float switch_w = AGENT_SWITCH_W * u;
     const float switch_h = AGENT_SWITCH_H * u;
     const float inset = AGENT_SWITCH_INSET * u;
-    const rctf track{layout->chip_auto.xmax - pad - switch_w,
-                     layout->chip_auto.xmax - pad,
-                     cy - switch_h * 0.5f,
-                     cy + switch_h * 0.5f};
+    /* Fitted down to the switch alone, it centres and the word goes. */
+    const bool switch_only = layout->chip_form[AGENT_CHIP_SLOT_AUTO] > 0;
+    const float track_x = switch_only ? BLI_rctf_cent_x(&layout->chip_auto) - switch_w * 0.5f :
+                                        layout->chip_auto.xmax - pad - switch_w;
+    const rctf track{track_x, track_x + switch_w, cy - switch_h * 0.5f, cy + switch_h * 0.5f};
     float track_fill[4];
     agent_ui_motion_color(track_off, accent, {0.0f, 0.0f, feedback.selected}, track_fill);
     fill_round(&track, switch_h * 0.5f, track_fill);
@@ -366,13 +398,15 @@ void agent_ui_draw_chip_row(ARegion *region,
     const rctf thumb{thumb_x, thumb_x + thumb_d, track.ymin + inset, track.ymax - inset};
     fill_round(&thumb, thumb_d * 0.5f, text);
 
-    float label_col[4];
-    agent_ui_motion_color(text_dim, text, {0.0f, 0.0f, feedback.selected}, label_col);
-    const std::string label = ui::mixar_fit_text(
-        "Auto",
-        std::max(0.0f, track.xmin - icon_gap - (layout->chip_auto.xmin + pad)),
-        size);
-    label_left(label.c_str(), layout->chip_auto.xmin + pad, cy, size, label_col);
+    if (!switch_only) {
+      float label_col[4];
+      agent_ui_motion_color(text_dim, text, {0.0f, 0.0f, feedback.selected}, label_col);
+      const std::string label = ui::mixar_fit_text(
+          "Auto",
+          std::max(0.0f, track.xmin - icon_gap - (layout->chip_auto.xmin + pad)),
+          size);
+      label_left(label.c_str(), layout->chip_auto.xmin + pad, cy, size, label_col);
+    }
   }
 
   /* Model, right of Auto: which hosted model the agent runs on. The label is

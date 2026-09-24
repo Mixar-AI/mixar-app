@@ -154,8 +154,10 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     const float text_x = 28.0f * u;
 
     if (state->scribble_armed) {
-      agent_ui_draw_pill_draft(state->sketch_prompt, text_x, chip.xmin - 16.0f * u,
-                              h, text_size, state->voice_status);
+      /* Sketch: the pill is where typing over the viewport lands — the draft,
+       * a blinking caret and a Voice button (the window is also a little
+       * larger while armed; see pill_rest_size in space_agent_bubble.cc). */
+      agent_ui_draw_pill_draft(*state, text_x, chip.xmin - 12.0f * u, h, text_size, u);
     }
     else if (is_working) {
       /* Pulsing indicator dot on the left. */

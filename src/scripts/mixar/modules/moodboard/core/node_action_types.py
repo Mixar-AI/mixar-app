@@ -18,4 +18,5 @@ ACTION_TYPES = (
     # APPEND ONLY: enum persists as an index; C++ ACTION_OUTPUT_KINDS is order-pinned.
     ('WORLD_LABS', "Generate Splat", "Generate a Gaussian splat from a prompt or image"),
     ('CHARACTER_PARTS', "Character Parts", "Generate 3D parts from the connected image masks"),
+    ('ASSEMBLE', "Assemble Character", "Attach generated parts to a rigged or plain body, locally"),
 )

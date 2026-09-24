@@ -49,7 +49,6 @@ def enqueue_generation(
     single_video_key: bool = False,
     # Listener options
     scene_flag: str = "",
-    batch_popup_title: str = "",
     listener: Optional[Callable] = None,
 ) -> Optional[Job]:
     """Build a generic Job and submit it to the queue.
@@ -81,8 +80,6 @@ def enqueue_generation(
     scene_flag : str
         If set and no explicit *listener*, auto-creates a
         ``create_scene_flag_listener`` for this property.
-    batch_popup_title : str
-        Passed to ``create_scene_flag_listener`` if auto-created.
     listener : callable, optional
         Explicit queue listener (takes priority over *scene_flag*).
 
@@ -151,9 +148,7 @@ def enqueue_generation(
 
     resolved_listener = listener
     if resolved_listener is None and scene_flag:
-        resolved_listener = create_scene_flag_listener(
-            scene_flag, batch_popup_title=batch_popup_title,
-        )
+        resolved_listener = create_scene_flag_listener(scene_flag)
 
     if resolved_listener is not None:
         queue = get_queue_with_listener(feature_key, resolved_listener)

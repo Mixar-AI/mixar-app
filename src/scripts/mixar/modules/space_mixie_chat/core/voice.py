@@ -294,6 +294,7 @@ def _tick():
             data = aud._mixar_capture_read(s.capture)
             if data:
                 s.transport.feed(data)
+                _publish_level(s, data)
             if time.monotonic() - s.recording_at >= s.max_seconds - .25:
                 stop()
         for _ in range(32):
@@ -359,12 +360,30 @@ def _focus_composer(session):
                 return
 
 
+def _publish_level(session, data):
+    """Feed the live Voice trace (island chip and Sketch pill) from this chunk.
+
+    Presentation only: a failure here must never end the dictation."""
+    import bpy
+    from .voice_input import level
+    try:
+        session.level = level.next_level(getattr(session, 'level', 0.0), data)
+        wm = bpy.context.window_manager
+        published = float(getattr(wm, 'mixie_chat_voice_level', 0.0))
+        if hasattr(wm, 'mixie_chat_voice_level') and level.should_write(published, session.level):
+            wm.mixie_chat_voice_level = session.level
+    except Exception as exc:  # noqa: BLE001
+        logger.debug('Voice level update skipped: %s', exc)
+
+
 def _status(text):
     import bpy
     wm = bpy.context.window_manager
     if wm and hasattr(wm, 'mixie_chat_voice_listening'):
         wm.mixie_chat_voice_listening = bool(text)
         wm.mixie_chat_voice_status = text
+        if text != 'Listening' and hasattr(wm, 'mixie_chat_voice_level'):
+            wm.mixie_chat_voice_level = 0.0
     from .voice_input import fields
     if not text or (_session and getattr(_session, 'field_token', '')):
         fields.show_status(text)

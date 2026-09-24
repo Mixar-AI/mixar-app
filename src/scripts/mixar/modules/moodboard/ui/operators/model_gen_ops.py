@@ -46,7 +46,6 @@ def _routing(service_key):
             feature_key=FEATURE_MODEL_3D,
             fail_message="3D model generation failed",
             scene_flag="mixie_image_to_3d_is_generating",
-            batch_popup_title="Image to 3D batch complete",
         )
     if service_key == "image_to_3d":
         # on_imported is set by the operator (mesh naming + normalization),
@@ -55,7 +54,6 @@ def _routing(service_key):
             feature_key=FEATURE_IMAGE_TO_3D_PRO,
             fail_message="Image to 3D failed",
             scene_flag="mixie_image_to_3d_is_generating",
-            batch_popup_title="Image to 3D batch complete",
         )
     if service_key == "hunyuan_rapid":
         return dict(

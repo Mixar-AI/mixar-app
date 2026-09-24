@@ -66,15 +66,14 @@ def get_queue_with_listener(feature_key: str, listener) -> FeatureQueue:
 def create_scene_flag_listener(
     property_name: str,
     *,
-    batch_popup_title: str = "",
     on_start=None,
     on_finish=None,
 ):
     """Create a queue listener that syncs a scene bool property.
 
     Sets ``scene.<property_name> = True`` when work starts, ``False``
-    when it finishes.  If ``batch_popup_title`` is provided, fires a
-    one-shot batch summary popup at the active→idle transition.
+    when it finishes.  Batch completion feedback is the queue-activity
+    toast's job (``core/enqueue_toast.py``), not this listener's.
 
     Parameters
     ----------
@@ -86,7 +85,7 @@ def create_scene_flag_listener(
 
     # Queue-level edge tracker. The flag lives per-scene but the queue (and this
     # listener) is shared, so a single active/idle bool drives the once-per-batch
-    # on_start/on_finish hooks and the summary popup.
+    # on_start/on_finish hooks.
     edge = {"active": False}
 
     _ACTIVE_STATES = frozenset(
@@ -162,58 +161,11 @@ def create_scene_flag_listener(
                     except Exception:
                         pass
 
-            if batch_popup_title:
-                succeeded = sum(
-                    1 for j in snapshot if j.state == JobState.SUCCESS
-                )
-                failed = sum(
-                    1 for j in snapshot if j.state == JobState.FAILED
-                )
-                cancelled = sum(
-                    1 for j in snapshot if j.state == JobState.CANCELLED
-                )
-                if (succeeded + failed + cancelled) > 0:
-                    show_batch_summary_popup(
-                        batch_popup_title, succeeded, failed, cancelled,
-                    )
-
     # Stable dedupe identity: this factory returns a NEW closure on every
     # enqueue, but all closures for the same scene property are the same logical
     # listener and must attach only once (see get_queue_with_listener).
     _on_queue_changed._mixar_listener_key = f"scene_flag:{property_name}"
     return _on_queue_changed
-
-
-# ---------------------------------------------------------------------------
-# Batch summary popup
-# ---------------------------------------------------------------------------
-
-
-def show_batch_summary_popup(
-    title: str, succeeded: int, failed: int, cancelled: int,
-) -> None:
-    """Schedule a one-shot popup summarising a completed batch."""
-
-    def _draw(self_menu, context):
-        layout = self_menu.layout
-        layout.label(text=f"Succeeded: {succeeded}", icon='CHECKMARK')
-        if failed:
-            layout.label(text=f"Failed: {failed}", icon='ERROR')
-        if cancelled:
-            layout.label(text=f"Cancelled: {cancelled}", icon='CANCEL')
-
-    def _popup():
-        try:
-            wm = bpy.context.window_manager
-            wm.popup_menu(_draw, title=title, icon='INFO')
-        except Exception:
-            pass
-        return None  # one-shot
-
-    try:
-        bpy.app.timers.register(_popup, first_interval=0.0)
-    except Exception:
-        pass
 
 
 # ---------------------------------------------------------------------------
