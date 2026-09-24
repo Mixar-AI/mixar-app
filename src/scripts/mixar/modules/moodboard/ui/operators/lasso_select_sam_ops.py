@@ -24,6 +24,7 @@ from ...constants import LASSO_MIN_POINTS
 from ...core.scene_segment_manager import get_scene_segment_manager
 from ...core.segment_overlay import recomposite_display_image
 from ...core.canvas_context import redraw_moodboard_canvases
+from ...core.mask_tool_feedback import clear_status, set_status, toast_failure
 
 
 _redraw_all = redraw_moodboard_canvases
@@ -37,6 +38,7 @@ def _reset_lasso_state(state):
     state.active_tool = 'NONE'
     state.target_image_index = -1
     state.lasso_creates_nodes = False
+    clear_status()
 
 
 def _create_segment_from_mask(
@@ -337,11 +339,10 @@ class MIXIE_OT_lasso_select_sam(Operator):
         # Check if image is uploaded
         if not manager.is_ready(img_item.image):
             # Queue upload first — capture lasso points before the async callback
+            # The upload is folded into this one wait; the user is never
+            # told to wait for it separately.
             state.lasso_select_pending = True
-            if manager.is_uploading(img_item.image):
-                self.report({'INFO'}, "Waiting for image upload...")
-            else:
-                self.report({'INFO'}, "Uploading image for refinement...")
+            set_status("Refining lasso selection…")
 
             target_idx = state.target_image_index
             # Capture loops now so the closure has stable copies.
@@ -364,8 +365,9 @@ class MIXIE_OT_lasso_select_sam(Operator):
                         _reset_lasso_state(state)
                         logger.error("[LassoSelectSAM] Failed to create mask after upload")
                 else:
-                    _reset_lasso_state(state)
                     logger.error("[LassoSelectSAM] Upload failed: %s", message)
+                    toast_failure(message, upload=True)
+                    _reset_lasso_state(state)
                 _redraw_all()
 
             manager.queue_upload(img_item.image, img_item=img_item,
@@ -430,6 +432,7 @@ def _perform_mask_segmentations(
         error_msg = message or "Unknown error"
         if "timed out" in error_msg.lower():
             logger.error("[LassoSelectSAM] %s", error_msg)
+            toast_failure(error_msg)
             _reset_lasso_state(state)
             _redraw_all()
             return
@@ -437,12 +440,8 @@ def _perform_mask_segmentations(
             logger.error("[LassoSelectSAM] Job expired, re-uploading and retrying...")
             _upload_and_retry_lasso(scene, target_idx, masks, outlines, index)
             return
-        elif "402" in error_msg or "credit" in error_msg.lower():
-            logger.error("[LassoSelectSAM] Insufficient credits for segmentation")
-        elif "no object" in error_msg.lower() or "empty" in error_msg.lower():
-            logger.warning("[LassoSelectSAM] No object detected in lasso region")
-        else:
-            logger.error("[LassoSelectSAM] Refinement failed: %s", error_msg)
+        logger.warning("[LassoSelectSAM] Refinement failed: %s", error_msg)
+        toast_failure(error_msg)
 
         # A failed loop should not prevent later loops from appearing.
         _perform_mask_segmentations(scene, target_idx, masks, outlines, index + 1)
@@ -450,6 +449,7 @@ def _perform_mask_segmentations(
     img_item = scene.mixie_moodboard_images[target_idx]
     manager = get_scene_segment_manager()
     state.lasso_select_pending = True
+    set_status("Refining lasso selection…")
     manager.request_mask_segmentation(
         image=img_item.image,
         mask_bytes=masks[index],
@@ -472,6 +472,7 @@ def _upload_and_retry_lasso(scene, target_idx, masks, outlines, index):
             )
         else:
             logger.debug("[LassoSelectSAM] Re-upload failed: %s", message)
+            toast_failure(message, upload=True)
             _reset_lasso_state(state)
             _redraw_all()
 

@@ -109,6 +109,17 @@ class MoodboardEditToolState(PropertyGroup):
         options={'SKIP_SAVE'},
     )
 
+    # The queued / in-flight Magic Select click, image-relative (0-1). The
+    # C++ tool painter draws a marker there that pulses while `_pending`.
+    magic_select_point_x: FloatProperty(name="Magic Select Point X", default=0.0)
+    magic_select_point_y: FloatProperty(name="Magic Select Point Y", default=0.0)
+    magic_select_has_point: BoolProperty(
+        name="Magic Select Has Point",
+        description="A click is queued or being segmented; draw its marker",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+
     # Box Select SAM state
     box_select_pending: BoolProperty(
         name="Box Select SAM Pending",
