@@ -163,6 +163,18 @@ wmOperatorStatus modal(bContext *C, wmOperator *op, const wmEvent *event)
     ED_region_tag_redraw(v.region);
     return OPERATOR_RUNNING_MODAL;
   }
+  // This is a WINDOW-level modal handler, so it sees every event before any
+  // region does. Claim only what lands on the viewer's own 3D viewport region
+  // (the visual lookup honours overlap, so the Moodboard drawer, toolbar and
+  // headers painted over the viewport resolve to themselves). Everything
+  // else — the topbar mode slider, the drawer, the island, other areas —
+  // must keep working while the preview is open; swallowing it left the user
+  // stuck once the drawer slid over the close button.
+  if (!ISTIMER(event->type) &&
+      ED_area_find_region_xy_visual(v.area, RGN_TYPE_ANY, event->xy) != v.region)
+  {
+    return OPERATOR_PASS_THROUGH;
+  }
   const int x = event->xy[0] - v.region->winrct.xmin;
   const int y = event->xy[1] - v.region->winrct.ymin;
   if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
@@ -181,6 +193,13 @@ wmOperatorStatus modal(bContext *C, wmOperator *op, const wmEvent *event)
           break;
         }
       }
+    }
+    else if (!BLI_rcti_isect_pt(&v.image, x, y)) {
+      // Outside the preview and its bar: dismiss, the same way the agent
+      // island collapses on an outside click. The press is consumed rather
+      // than passed on so the dismissing click cannot orbit the scene.
+      finish(C, op);
+      return OPERATOR_FINISHED;
     }
     v.scroll = std::clamp(v.scroll, 0.0f, v.scroll_max);
     ED_region_tag_redraw(v.region);
@@ -207,7 +226,8 @@ void register_operator(wmOperatorType *ot)
 {
   ot->name = "View Agent Workspace";
   ot->idname = "VIEW3D_OT_workspace_viewer";
-  ot->description = "Watch this agent's separate scene; Escape closes the preview";
+  ot->description =
+      "Watch this agent's separate scene; Escape or a click outside closes the preview";
   ot->invoke = invoke;
   ot->modal = modal;
   ot->cancel = cancel;
