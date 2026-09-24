@@ -29,7 +29,10 @@ how the press ENDS rather than acted on at PRESS time:
   * released without travelling ``PILL_DRAG_THRESHOLD_PX`` — a CLICK: the
     minimised pill restores the island (``mixar.bubble_restore_user``), the
     status pill above an open island minimises it. The pill does not open
-    on hover; outside mouse presses dismiss the island.
+    on hover; outside mouse presses dismiss the island. One exception: a
+    click on the Sketch pill's Voice button toggles dictation instead
+    (``mixar.bubble_pill_voice``, which hit-tests the painted button natively
+    and declines every other click).
   * travelled past the threshold — a DRAG: ``mixar.bubble_window_begin_drag``
     moves the pill window (AppKit takes the gesture over on macOS; the modal
     drives ``update_drag``/``end_drag`` on Windows). The C++ side refuses the
@@ -59,6 +62,16 @@ def _is_pill_window(area) -> bool:
     """The pill window has only a HEADER region (WINDOW and TOOLS are removed
     at creation in space_agent_bubble.cc); the island always has TOOLS."""
     return not any(r.type == 'TOOLS' for r in area.regions)
+
+
+def _pill_voice_claimed() -> bool:
+    """True when the click landed on the Sketch pill's Voice button and started
+    or stopped dictation. The native operator owns the hit test (the painter's
+    own rectangle); off the button, or off a resting Sketch pill, it declines."""
+    try:
+        return bpy.ops.mixar.bubble_pill_voice('INVOKE_DEFAULT') == {'FINISHED'}
+    except Exception:  # noqa: BLE001 - poll refusal, or a build without the button
+        return False
 
 
 class MIXAR_OT_bubble_header_drag(Operator):
@@ -215,7 +228,10 @@ class MIXAR_OT_bubble_header_drag(Operator):
     def _pill_click(self, context):
         """Toggle: minimise if the island is open, restore if minimised.
 
-        bubble_minimise returns CANCELLED when already minimised."""
+        bubble_minimise returns CANCELLED when already minimised. The Sketch
+        pill's Voice button is asked first and keeps the pill resting."""
+        if _pill_voice_claimed():
+            return {'FINISHED'}
         try:
             result = bpy.ops.mixar.bubble_minimise()
             if result == {'CANCELLED'}:

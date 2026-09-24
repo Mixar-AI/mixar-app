@@ -293,11 +293,15 @@ void moodboard_add_node_tile_controls(ui::Block *block,
       }
     }
 
+    /* ASSEMBLE (append-only action index 11) runs locally: it queues nothing,
+     * so it must not inherit the run operator's "add to the queue" tooltip. */
+    const bool assemble = RNA_enum_get(node, "action_type") == 11;
+    const char *run_label = assemble ? "Assemble" : "Generate";
     ui::Button *generate = ui::uiDefButO(block,
                                          ui::ButtonType::But,
                                          "MIXIE_OT_moodboard_run_action_node",
                                          blender::wm::OpCallContext::ExecDefault,
-                                         "Generate",
+                                         run_label,
                                          tile.xmax - margin - generate_w,
                                          tile.ymin + margin,
                                          generate_w,
@@ -306,6 +310,11 @@ void moodboard_add_node_tile_controls(ui::Block *block,
     ui::mixar_style_button(generate, ui::MixarComponent::Action,
                           ui::MixarVariant::Primary, UI_SCALE_FAC * 0.65f);
     RNA_string_set(ui::button_operator_ptr_ensure(generate), "node_id", node_id);
+    if (assemble) {
+      moodboard_set_node_tooltip(generate,
+                                 "Assemble\n\nAttach the connected parts to the body, "
+                                 "locally. Uses no credits.");
+    }
   }
 }
 
