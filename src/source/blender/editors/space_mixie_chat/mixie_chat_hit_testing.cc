@@ -435,7 +435,7 @@ bool mixie_chat_handle_steps_click(bContext *C,
             continue;
           }
           if (BLI_rctf_isect_pt(&img.bounds, view_x, view_y)) {
-            mixie_chat_lightbox_open(smixie, layout.bubble_id, i);
+            mixie_chat_lightbox_open(C, layout.bubble_id, i);
             ED_region_tag_redraw(region);
             return true;
           }
@@ -445,7 +445,7 @@ bool mixie_chat_handle_steps_click(bContext *C,
       if (!layout.images_collapsed && mb.xmax > mb.xmin && layout.gallery_first_hidden >= 0 &&
           BLI_rctf_isect_pt(&mb, view_x, view_y))
       {
-        mixie_chat_lightbox_open(smixie, layout.bubble_id, layout.gallery_first_hidden);
+        mixie_chat_lightbox_open(C, layout.bubble_id, layout.gallery_first_hidden);
         ED_region_tag_redraw(region);
         return true;
       }

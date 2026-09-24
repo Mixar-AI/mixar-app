@@ -592,16 +592,12 @@ void chat_ui_get_button_bg_color(float out_color[4]);
 void chat_ui_get_button_text_color(float out_color[4]);
 void chat_ui_get_label_color(float out_color[4]);
 
-/* Capture lightbox (mixie_chat_lightbox.cc). Opens on a click on a steps
- * block capture tile; screen-space, modal for this region while open
- * (ESC / click-away close, ← → step through the bubble's tiles). State
- * lives entirely in MixieChatRuntime — nothing crosses to Python. */
-void mixie_chat_draw_lightbox(const bContext *C, ARegion *region);
-bool mixie_chat_lightbox_handle_event(bContext *C, const wmEvent *event);
-bool mixie_chat_lightbox_cursor(
-    wmWindow *win, MixieChatRuntime *rt, ARegion *region, float mouse_x, float mouse_y);
-void mixie_chat_lightbox_open(struct SpaceMixieChat *smixie, const char *bubble_id, int image_index);
-void mixie_chat_lightbox_close(struct SpaceMixieChat *smixie);
+/* Capture lightbox (mixie_chat_lightbox.cc): a modal operator drawing over
+ * the WHOLE window through a window draw callback. Opened from a capture tile
+ * or the "+N" chip; ESC / click-away / ✕ close, ← → step through the bubble's
+ * tiles. Nothing crosses to Python. */
+void MIXIE_CHAT_OT_lightbox(wmOperatorType *ot);
+void mixie_chat_lightbox_open(bContext *C, const char *bubble_id, int image_index);
 
 /* Past-chats overlay (mixie_chat_history_overlay.cc). Drawn screen-space
  * on top of the message area; modal for this region while open (consumes
