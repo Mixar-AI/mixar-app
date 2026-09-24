@@ -22,6 +22,7 @@ from typing import List
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.tour import tour_running
 
 logger = get_logger(__name__)
 
@@ -29,16 +30,6 @@ FLUSH_POLL_S = 1.0
 
 _lock = threading.Lock()
 _deferred: List = []
-
-
-def tour_running() -> bool:
-    """True while the interactive tour owns the screen; a missing or
-    half-loaded tour package reads as "not running"."""
-    try:
-        from mixar.modules.onboarding.core.tour import session as tour_session
-        return bool(tour_session.is_running())
-    except Exception:  # noqa: BLE001
-        return False
 
 
 def defer(item) -> None:
@@ -56,6 +47,22 @@ def defer(item) -> None:
 def deferred_count() -> int:
     with _lock:
         return len(_deferred)
+
+
+def is_deferred(nid: str) -> bool:
+    """True when a toast with this id is parked (still owed a showing)."""
+    with _lock:
+        return any(i.id == nid for i in _deferred)
+
+
+def drop(nid: str):
+    """Discard a parked toast so it is never shown. Returns the dropped
+    item, or ``None`` when nothing with that id was parked."""
+    with _lock:
+        for idx, item in enumerate(_deferred):
+            if item.id == nid:
+                return _deferred.pop(idx)
+    return None
 
 
 def flush_deferred() -> int:

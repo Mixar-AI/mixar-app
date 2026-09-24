@@ -239,10 +239,14 @@ class NotificationStore:
         dismissed it" — a sticky item never expires, so its absence after a
         push can only mean dismissal. ``get_visible()`` can't answer this: it
         caps at MAX_VISIBLE_TOASTS, so a held-but-not-rendered item reads as
-        gone.
+        gone. An item parked while the onboarding tour runs counts as held:
+        it has not been dismissed, only not shown yet.
         """
         with self._lock:
-            return any(i.id == nid and not i.is_expired for i in self._items)
+            if any(i.id == nid and not i.is_expired for i in self._items):
+                return True
+        from . import tour_defer
+        return tour_defer.is_deferred(nid)
 
     def expire_old(self) -> int:
         """Remove expired items. Returns count of remaining items."""
@@ -268,7 +272,9 @@ class NotificationStore:
     # ------------------------------------------------------------------
 
     def dismiss(self, nid: str) -> Optional[str]:
-        """Remove a notification by id. Returns its server_id if present."""
+        """Remove a notification by id, parked ones included, so a toast
+        dismissed during the tour never resurfaces after it. Returns its
+        server_id if present."""
         with self._lock:
             server_id = None
             for i in self._items:
@@ -276,7 +282,11 @@ class NotificationStore:
                     server_id = i.server_id
                     break
             self._items = [i for i in self._items if i.id != nid]
-            return server_id
+        from . import tour_defer
+        parked = tour_defer.drop(nid)
+        if server_id is None and parked is not None:
+            server_id = parked.server_id
+        return server_id
 
     def clear_all(self) -> None:
         """Remove all notifications."""

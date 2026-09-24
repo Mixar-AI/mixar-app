@@ -18,6 +18,7 @@ suite's ``bpy`` mock an operator body never runs.
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.tour import tour_running
 
 logger = get_logger(__name__)
 
@@ -26,19 +27,15 @@ logger = get_logger(__name__)
 TOUR_RETRY_SECONDS = 30.0
 
 
-def _tour_running() -> bool:
-    """True while the interactive onboarding tour owns the screen; a
-    missing or half-loaded tour package reads as "not running"."""
-    try:
-        from mixar.modules.onboarding.core.tour import session as tour_session
-        return bool(tour_session.is_running())
-    except Exception:  # noqa: BLE001
-        return False
-
-
 def _reinvoke_restart_prompt():
-    """One-shot timer: bring the restart prompt back once the tour is over
-    (the operator re-checks and reschedules itself if it is not)."""
+    """Timer: bring the restart prompt back once the tour is over.
+
+    It keeps repeating while the tour runs instead of re-invoking the
+    operator: the operator's own deferral would find this timer still
+    registered (Blender drops it only after the callback returns ``None``)
+    and schedule nothing, so the prompt would never come back."""
+    if tour_running():
+        return TOUR_RETRY_SECONDS
     try:
         window = next(iter(bpy.context.window_manager.windows), None)
         if window is not None:
@@ -76,7 +73,7 @@ class MIXAR_OT_restart_to_update(bpy.types.Operator):
     )
 
     def invoke(self, context, event):
-        if _tour_running():
+        if tour_running():
             _defer_restart_prompt_for_tour()
             self.report({"INFO"}, "Mixar will ask to update once the tour ends")
             return {"CANCELLED"}

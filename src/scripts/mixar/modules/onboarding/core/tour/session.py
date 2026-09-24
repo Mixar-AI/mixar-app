@@ -134,6 +134,11 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
 
         if not self.exit_confirm and not self._host_lost:
             self.runner.tick()
+            # Enter a beat the runner just advanced to BEFORE checking its
+            # gate: entry clears flags such as viewport_interacted, so input
+            # given during the previous (demo) beat cannot pass the new ask.
+            if self.running:
+                self._sync_beat()
             self._check_gate(now)
         if not self.running:
             return

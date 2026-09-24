@@ -62,3 +62,29 @@ def test_push_outside_tour_is_unchanged(monkeypatch):
     monkeypatch.setattr(tour_defer, "tour_running", lambda: False)
     store.push("info", "Now", id="t3")
     assert "t3" in _ids(store) and tour_defer.deferred_count() == 0
+
+
+def test_parked_toast_is_held_and_dismissable(monkeypatch):
+    """A toast parked by the tour still counts as held (not user-dismissed),
+    and dismissing it drops the parked copy so it never shows later."""
+    store = get_notification_store()
+    store.reset()
+    monkeypatch.setattr(tour_defer, "tour_running", lambda: True)
+    store.push("info", "Queued", id="t4", ttl_ms=0)
+    assert store.contains("t4")
+    assert store.dismiss("t4") is None
+    assert not store.contains("t4")
+    assert tour_defer.deferred_count() == 0
+
+    monkeypatch.setattr(tour_defer, "tour_running", lambda: False)
+    tour_defer.flush_deferred()
+    assert "t4" not in _ids(store)
+
+
+def test_dismiss_returns_parked_server_id(monkeypatch):
+    store = get_notification_store()
+    store.reset()
+    monkeypatch.setattr(tour_defer, "tour_running", lambda: True)
+    store.push_from_server({"id": 42, "title": "Hello"})
+    assert store.dismiss("42") == "42"
+    assert tour_defer.deferred_count() == 0

@@ -17,6 +17,7 @@ import time as _time
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.tour import tour_running
 from mixar.modules.agent_bubble.core.bubble_autoshow import arm_autoshow
 from mixar.modules.agent_bubble.core.bubble_lifecycle import (
     has_agent_bubble_windows,
@@ -30,21 +31,11 @@ SPLASH_GRACE_S = 5.0
 _splash_watch_started_ts: float | None = None
 
 
-def _tour_running() -> bool:
-    """True while the interactive onboarding tour owns the island; a
-    missing or half-loaded tour package reads as "not running"."""
-    try:
-        from mixar.modules.onboarding.core.tour import session as tour_session
-        return bool(tour_session.is_running())
-    except Exception:  # noqa: BLE001
-        return False
-
-
 def splash_watch_tick():
     """Wait for splash dismissal, then arm the autoshow."""
     global _splash_watch_started_ts
 
-    if _tour_running():
+    if tour_running():
         # The tour opens and minimises the island itself; an autoshow
         # arriving mid-tour would re-open it under the tour's overlays.
         logger.info("agent_bubble: interactive tour running, autoshow not armed")

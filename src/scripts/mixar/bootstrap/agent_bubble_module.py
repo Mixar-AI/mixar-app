@@ -40,6 +40,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils.tour import tour_running
 from mixar.modules.agent_bubble.core import pill_icons
 from mixar.modules.agent_bubble.core.bubble_autoshow import (
     arm_autoshow as _arm_autoshow,
@@ -146,19 +147,9 @@ def _streaming_redraw_tick():
         return _STREAMING_TICK_IDLE
 
 
-def _tour_running() -> bool:
-    """True while the interactive onboarding tour owns the island; a
-    missing or half-loaded tour package reads as "not running"."""
-    try:
-        from mixar.modules.onboarding.core.tour import session as tour_session
-        return bool(tour_session.is_running())
-    except Exception:  # noqa: BLE001
-        return False
-
-
 def _on_workspace_change() -> None:
     """msgbus callback: workspace changed → autoshow the bubble."""
-    if _tour_running():
+    if tour_running():
         # The tour's own Zen/Engine switches bounce the workspace; it
         # re-opens the island itself, on its own schedule.
         logger.debug("agent_bubble: workspace change ignored, tour running")

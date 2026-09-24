@@ -88,11 +88,8 @@ def _interactive_tour_active() -> bool:
             return True
     except Exception:  # noqa: BLE001 — ImportError or a half-loaded package
         pass
-    try:
-        from mixar.modules.onboarding.core.tour import session as tour_session
-        return bool(tour_session.is_running())
-    except Exception:  # noqa: BLE001 — not written yet, or not running
-        return False
+    from mixar.modules.common.utils.tour import tour_running
+    return tour_running()
 
 
 def _restart_onboarding_after_mode():
