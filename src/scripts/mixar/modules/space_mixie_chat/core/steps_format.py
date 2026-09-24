@@ -306,11 +306,18 @@ def attach_step_images(bubble, request_id: str, records: list) -> int:
     if not records:
         return 0
     items = bubble.image_items
+    # One tile per file per bubble. A re-served capture (the backend hands back
+    # the same image refs for an identical render of an unchanged scene) and a
+    # download of a capture already saved locally must not show the same
+    # picture twice.
+    present = {_tile_key(img.local_path) for img in items if img.step_id and img.local_path}
     added = 0
     for rec in records:
         path = rec.get("local_path") or ""
-        if not path:
+        key = _tile_key(path)
+        if not path or key in present:
             continue
+        present.add(key)
         img = items.add()
         img.step_id = request_id or ""
         img.local_path = path
@@ -331,6 +338,17 @@ def attach_step_images(bubble, request_id: str, records: list) -> int:
             bubble.images_collapsed = False
         _refresh_summary(bubble)
     return added
+
+
+def _tile_key(path: str) -> str:
+    """Identity of a tile file: its basename without extension. A backend
+    image is saved as ``<image id>.<ext>``, so the same id is one tile."""
+    base = (path or "").replace("\\", "/").rsplit("/", 1)[-1]
+    return base.rsplit(".", 1)[0] if "." in base else base
+
+
+def bubble_has_image_id(bubble, image_id: str) -> bool:
+    return any(img.step_id and _tile_key(img.local_path) == image_id for img in bubble.image_items)
 
 
 def step_image_count(bubble, request_id: str) -> int:
@@ -463,7 +481,10 @@ def images_to_fetch(bubble, row, activity: dict) -> list:
         return []
     if step_image_count(bubble, row.item_id) > 0:
         return []
-    return [{"id": str(r["id"]), "label": str(r.get("label") or "")} for r in refs]
+    # An id the bubble already holds (a re-served capture, a second view of
+    # the same image) is not fetched or attached again.
+    return [{"id": str(r["id"]), "label": str(r.get("label") or "")}
+            for r in refs if not bubble_has_image_id(bubble, str(r["id"]))]
 
 
 def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:

@@ -515,3 +515,20 @@ def test_images_to_fetch_skips_rows_that_already_hold_local_tiles():
     refs = [{"id": "b" * 16, "label": "top"}, {"id": "c" * 16}, {"nope": 1}]
     assert steps_format.images_to_fetch(bubble, row2, _activity("c7", "done", "x", images=refs)) == [
         {"id": "b" * 16, "label": "top"}, {"id": "c" * 16, "label": ""}]
+
+
+def test_the_same_image_file_is_one_tile_per_bubble():
+    """A re-served capture hands back the same refs; a download of a capture
+    already saved locally names the same id. Neither shows the picture twice."""
+    bubble = _FakeBubble()
+    steps_format.begin_step_on_bubble(bubble, "r1", "render_viewport")
+    assert steps_format.attach_step_images(bubble, "r1", [{"local_path": "/c/aaaaaaaaaaaaaaaa.jpg"}]) == 1
+    steps_format.begin_step_on_bubble(bubble, "r2", "render_viewport")
+    assert steps_format.attach_step_images(bubble, "r2", [{"local_path": "/c/aaaaaaaaaaaaaaaa.jpg"},
+                                                          {"local_path": "/c/bbbbbbbbbbbbbbbb.png"}]) == 1
+    assert [steps_format._tile_key(i.local_path) for i in bubble.image_items] == ["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb"]
+    # A ref the bubble already holds is not fetched again either.
+    row = steps_format.apply_activity_to_bubble(bubble, _activity("c9", "done", "Captured viewport"))
+    refs = [{"id": "aaaaaaaaaaaaaaaa", "label": "same"}, {"id": "cccccccccccccccc", "label": "new"}]
+    assert steps_format.images_to_fetch(bubble, row, _activity("c9", "done", "x", images=refs)) == [
+        {"id": "cccccccccccccccc", "label": "new"}]

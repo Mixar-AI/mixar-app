@@ -292,7 +292,11 @@ void mixie_chat_render_messages(const bContext *C,
         }
       }
 
+      /* The gallery is in this gate too: a bubble with tiles but no steps
+       * block was counted by the layout and never drawn — a blank band the
+       * view could scroll into. */
       if (layout.is_slot_based && (layout.slot_steps_height > 0.0f ||
+                                   layout.slot_gallery_height > 0.0f ||
                                    layout.thinking_height > 0.0f)) {
         MessageLayoutData &ml = const_cast<MessageLayoutData &>(layout);
 
