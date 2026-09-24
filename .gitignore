@@ -230,5 +230,3 @@ scripts/audit_out/
 # Local Azure signing metadata (values come from env vars / secrets in CI)
 scripts/windows/codesign-tools/metadata.json
 
-# Interactive tour: the founder recording is delivered separately, never committed.
-src/scripts/mixar/modules/onboarding/assets/tour/founder.mp4
