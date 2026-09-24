@@ -10,6 +10,8 @@
 
 #include <algorithm>
 
+#include "ANIM_keyframing.hh"
+
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
@@ -121,7 +123,9 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
   r_state->available = true;
   r_state->active = director_bool(&state_ptr, "is_directing", false);
   r_state->timeline_expanded = director_bool(&state_ptr, "timeline_expanded", true);
-  r_state->auto_key = director_bool(&state_ptr, "auto_key", false);
+  /* Auto Key IS Blender's Auto Keying (the Timeline's record button), read
+   * the way Blender reads it rather than back through the Python proxy. */
+  r_state->auto_key = animrig::is_autokey_on(scene);
   r_state->recording = director_bool(&state_ptr, "recording", false);
   r_state->walking = director_bool(&state_ptr, "walk_active", false);
   /* `ruler_unit` is an enum whose FRAMES item is index 0. */
@@ -150,6 +154,7 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
     Object *camera = static_cast<Object *>(camera_ptr.data);
     if (camera && camera->type == OB_CAMERA) {
       r_state->has_camera = true;
+      r_state->shot_camera = camera;
       r_state->camera_name = camera->id.name + 2;
     }
   }
@@ -169,6 +174,9 @@ bool view3d_director_state_read(Scene *scene, DirectorViewState *r_state)
     DirectorBeatView beat;
     beat.index = index;
     beat.frame = director_int(&beat_ptr, "frame", scene->r.sfra);
+    if (PropertyRNA *image_prop = director_prop(&beat_ptr, "image")) {
+      beat.has_still = RNA_property_pointer_get(&beat_ptr, image_prop).data != nullptr;
+    }
     r_state->beats.append(beat);
   }
 

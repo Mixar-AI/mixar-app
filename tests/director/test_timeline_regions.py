@@ -44,8 +44,8 @@ def test_scrubbing_is_scoped_to_that_band():
 def test_a_press_in_the_body_starts_a_box_select():
     branch = _press_branch()
     assert "director_timeline_box_begin(runtime, event);" in branch
-    # Order: handles, the tick itself, the strip, the ruler row, the body.
-    assert branch.index("beat_index >= 0") < branch.index("director_timeline_playhead_grab")
+    # Order: keys, the tick itself, the strip, the ruler row, the body.
+    assert branch.index("if (key != nullptr)") < branch.index("director_timeline_playhead_grab")
     assert branch.index("director_timeline_playhead_grab") < branch.index("runtime->strip_bounds")
     assert branch.index("runtime->strip_bounds") < branch.index("runtime->ruler_bounds")
     assert branch.index("runtime->ruler_bounds") < branch.index("director_timeline_box_begin")
@@ -67,7 +67,7 @@ def test_grabbing_the_tick_scrubs_from_anywhere_in_the_dock():
     assert "begin_scrub(C, event, region, runtime)" in branch
     # Keyframes still win where the line crosses them: they are the
     # precision target, the playhead is 10 px wide.
-    assert branch.index("beat_index >= 0") < branch.index("director_timeline_playhead_grab")
+    assert branch.index("if (key != nullptr)") < branch.index("director_timeline_playhead_grab")
     # And a grab within a few pixels of the line is never a strip retime.
     assert branch.index("director_timeline_playhead_grab") < branch.index("begin_strip_drag")
 
@@ -121,7 +121,7 @@ def test_a_click_that_never_dragged_clears_the_selection():
     body = body[: body.index("ED_region_tag_redraw(region);")]
     assert "const bool dragged =" in body
     assert "else if (!runtime->box_extend) {" in body
-    assert "runtime->selected.clear();" in body
+    assert 'select_keys(C, {}, "NONE");' in body
 
 
 def test_a_box_let_go_outside_the_region_still_closes():

@@ -17,8 +17,11 @@
  *   still frame however much the pointer moves.
  * - **A left click confirms and exits.** That makes the one gesture a
  *   director reaches for — click and drag to look — the gesture that ends
- *   the walk. Here the left button is the look handle and never an exit;
- *   Esc or the right button end it.
+ *   the walk. Here the left button is the look handle and never an exit —
+ *   and neither is anything else on the keyboard or mouse: Esc and the right
+ *   button are not exits either. The top strip's Walk chip is the ONE switch
+ *   that starts and stops a walk, so its lit state can never disagree with
+ *   whether one is running.
  * - **It owns every event in the window.** A modal handler runs before the
  *   regions do, so a walk that answers RUNNING_MODAL to each one leaves the
  *   whole surface dead: no card highlights, no tooltip, no button can be
@@ -36,18 +39,20 @@
  * hold-to-move nudge integrates W/A/S/D/Q/E at Blender's walk speed through
  * the world matrix as one undo step — so this is that, kept alive between
  * key presses, plus mouse-look. It shares the direction math with the nudge
- * (`view3d_director_camera_move.hh`) so a key can never mean two things.
+ * (`view3d_director_camera_move.hh`) so a key can never mean two things;
+ * the mouse-look's own math is `view3d_director_walk_aim.cc`.
  *
  * What it deliberately keeps from Blender: the walk SPEED preference, Shift
- * to sprint, and the local -Z / world-Z axis split. What it does not have:
- * gravity, jumping and teleport, none of which a camera does.
+ * to sprint, Alt to creep, and the local -Z / world-Z axis split. What it
+ * does not have: gravity, jumping and teleport, none of which a camera does.
  *
  * Python still owns the session around it (`MIXAR_OT_director_navigate`
  * supervises the exit, publishes `walk_active` for the top strip's hints and
  * captures a keyframe when Auto Key is on), exactly as it did around
- * `view3d.walk`. It also STOPS it: the strip's Walk chip is a toggle, and
- * `walk_stop_requested` is how the second click reaches a modal Python
- * cannot cancel (#director_walk_stop_requested).
+ * `view3d.walk`. It also STOPS it — and is the only thing that does, short
+ * of leaving the mode or losing the camera: the strip's Walk chip is a
+ * toggle, and `walk_stop_requested` is how the second click reaches a modal
+ * Python cannot cancel (#director_walk_stop_requested).
  */
 
 #include <algorithm>
@@ -96,45 +101,9 @@ constexpr double WALK_TIMER_STEP = 1.0 / 60.0;
 constexpr double WALK_MAX_STEP_SECONDS = 0.1;
 /** Shift sprints, the way Blender's own walk does. */
 constexpr float WALK_FAST_FACTOR = 4.0f;
-/** Radians of turn per pixel of drag. ~0.11 degrees: a full turn is a
- * comfortable sweep of the arm rather than a flick of the wrist. */
-constexpr float WALK_LOOK_PER_PIXEL = 0.002f;
-/** How close to straight up or down the aim may come, as |forward . Z|.
- * Past this the basis degenerates and the frame rolls. */
-constexpr float WALK_PITCH_LIMIT = 0.995f;
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Vector helpers
- *
- * Spelled out rather than reached for: `math::cross` and `math::dot` are not
- * used anywhere else in this overlay, and a name that does not resolve costs
- * a build rather than a review comment.
- * \{ */
-
-float3 cross3(const float3 &a, const float3 &b)
-{
-  return float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
-}
-
-float dot3(const float3 &a, const float3 &b)
-{
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-float length3(const float3 &v)
-{
-  return std::sqrt(math::length_squared(v));
-}
-
-/** Rodrigues: \a v turned \a angle radians about \a axis (already unit). */
-float3 rotate_about(const float3 &v, const float3 &axis, const float angle)
-{
-  const float c = std::cos(angle);
-  const float s = std::sin(angle);
-  return v * c + cross3(axis, v) * s + axis * (dot3(axis, v) * (1.0f - c));
-}
+/** Alt creeps, the way Blender's own walk does: the sprint's inverse, for
+ * the last few centimetres of a framing. */
+constexpr float WALK_SLOW_FACTOR = 1.0f / WALK_FAST_FACTOR;
 
 /** \} */
 
@@ -179,74 +148,71 @@ void walk_commit(bContext *C, DirectorWalkData *data, Object *camera)
   data->moved = true;
 }
 
+/**
+ * The speed modifier held on \a event: Shift sprints, Alt creeps. Shift wins
+ * when both are held, as it does in Blender's own walk. Read from the
+ * modifier state rather than from key events, so the Alt press itself is
+ * never claimed and still reaches whatever else listens for it.
+ */
+float walk_speed_factor(const wmEvent *event)
+{
+  if ((event->modifier & KM_SHIFT) != 0) {
+    return WALK_FAST_FACTOR;
+  }
+  if ((event->modifier & KM_ALT) != 0) {
+    return WALK_SLOW_FACTOR;
+  }
+  return 1.0f;
+}
+
 /** Travel \a seconds' worth along the held directions. */
 void walk_move(bContext *C,
                DirectorWalkData *data,
                Object *camera,
                const double seconds,
-               const bool fast)
+               const float speed_factor)
 {
   const float3 direction = director_move_vector(data->matrix, data->held);
   if (seconds <= 0.0 || math::length_squared(direction) == 0.0f) {
     return;
   }
-  const float speed = director_walk_speed() * (fast ? WALK_FAST_FACTOR : 1.0f);
+  const float speed = director_walk_speed() * speed_factor;
   data->matrix.location() += direction * (speed * float(seconds));
   walk_commit(C, data, camera);
 }
 
 /**
- * Aim the camera by \a dx / \a dy pixels of drag: yaw about WORLD Z so the
- * horizon never tilts, pitch about the camera's own right axis.
+ * Take the camera's own pose back before a move or a look begins.
  *
- * The basis is written through the axis accessors, the same shape as the
- * `location()` this file already assigns through. Each axis keeps its
- * original length, so a scaled camera is aimed rather than reset.
+ * The walk integrates into a running matrix rather than reading the camera
+ * each tick, because a tick can land before the depsgraph has evaluated the
+ * last one's write. But between bursts nothing of the walk's is in flight,
+ * and the camera may have been moved by something else: a scrub or a
+ * keyframe jump in the timeline, playback, a paired phone, an undo. Driving
+ * on from the running matrix snapped the camera back to wherever the walk
+ * last left it, so using the timeline mid-walk was undone by the next W.
+ *
+ * False when the camera is no longer the walk's to move (a shot switch, a
+ * deleted camera, a locked take): the caller ends the walk rather than read
+ * through a stale pointer.
  */
+bool walk_resync(bContext *C, DirectorWalkData *data)
+{
+  bool locked = false;
+  Object *camera = director_move_camera(CTX_data_scene(C), &locked);
+  if (camera == nullptr || camera != data->camera || locked) {
+    return false;
+  }
+  data->matrix = camera->object_to_world();
+  return true;
+}
+
+/** Aim by \a dx / \a dy pixels of drag (#director_walk_aim), then write it. */
 void walk_look(bContext *C, DirectorWalkData *data, Object *camera, const float dx, const float dy)
 {
-  if (dx == 0.0f && dy == 0.0f) {
-    return;
+  if (director_walk_aim(data->matrix, dx, dy)) {
+    walk_commit(C, data, camera);
   }
-  const float3 x_axis = data->matrix.x_axis();
-  const float3 y_axis = data->matrix.y_axis();
-  const float3 z_axis = data->matrix.z_axis();
-  const float sx = length3(x_axis);
-  const float sy = length3(y_axis);
-  const float sz = length3(z_axis);
-  if (sx <= 0.0f || sy <= 0.0f || sz <= 0.0f) {
-    return;
-  }
-
-  const float3 world_z(0.0f, 0.0f, 1.0f);
-  /* Multiplied by the reciprocal rather than divided: scalar multiplication
-   * is the form this overlay already uses on a `float3`. */
-  float3 right = x_axis * (1.0f / sx);
-  float3 forward = -(z_axis * (1.0f / sz));
-
-  const float yaw = -dx * WALK_LOOK_PER_PIXEL;
-  right = math::normalize(rotate_about(right, world_z, yaw));
-  forward = math::normalize(rotate_about(forward, world_z, yaw));
-
-  const float pitch = dy * WALK_LOOK_PER_PIXEL;
-  const float3 pitched = math::normalize(rotate_about(forward, right, pitch));
-  /* Refuse the last few degrees rather than clamping into them: a clamp that
-   * lands exactly on the pole leaves the basis degenerate and the frame
-   * rolls when the drag continues. */
-  if (std::abs(dot3(pitched, world_z)) < WALK_PITCH_LIMIT) {
-    forward = pitched;
-  }
-
-  const float3 back = -forward;
-  const float3 up = math::normalize(cross3(back, right));
-  /* Through the axis accessors, the way `location()` is already written to
-   * here. `ptr()` is NOT the way: it yields `float[4][4]`, so binding it to
-   * a `float *` and indexing flat does not compile — and the one API that
-   * wants it (`BKE_object_apply_mat4`) takes the 2D form. */
-  data->matrix.x_axis() = right * sx;
-  data->matrix.y_axis() = up * sy;
-  data->matrix.z_axis() = back * sz;
-  walk_commit(C, data, camera);
 }
 
 /** \} */
@@ -342,7 +308,7 @@ bool director_walk_stop_requested(bContext *C)
 wmOperatorStatus director_walk_tick(bContext *C,
                                     wmOperator *op,
                                     DirectorWalkData *data,
-                                    const bool fast)
+                                    const float speed_factor)
 {
   if (director_walk_stop_requested(C)) {
     return director_walk_finish(C, op);
@@ -361,8 +327,8 @@ wmOperatorStatus director_walk_tick(bContext *C,
   const double dt = std::clamp(now - data->last_tick, 0.0, WALK_MAX_STEP_SECONDS);
   data->last_tick = now;
   if (data->held == 0) {
-    /* Standing still is a state, not an exit: the walk runs until Esc or the
-     * right button, so a director can stop, look, and drive on. */
+    /* Standing still is a state, not an exit: the walk runs until the Walk
+     * chip stops it, so a director can stop, look, and drive on. */
     return OPERATOR_RUNNING_MODAL;
   }
   bool locked = false;
@@ -371,7 +337,7 @@ wmOperatorStatus director_walk_tick(bContext *C,
     /* Shot switched, camera removed, or the take got locked mid-walk. */
     return director_walk_finish(C, op);
   }
-  walk_move(C, data, camera, dt, fast);
+  walk_move(C, data, camera, dt, speed_factor);
   return OPERATOR_RUNNING_MODAL;
 }
 
@@ -386,15 +352,17 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
     if (event->customdata != data->timer) {
       return OPERATOR_PASS_THROUGH;
     }
-    return director_walk_tick(C, op, data, (event->modifier & KM_SHIFT) != 0);
+    return director_walk_tick(C, op, data, walk_speed_factor(event));
   }
 
-  /* Esc and the right button end it. The LEFT button deliberately does not:
-   * it is the look handle, and confirming on it made the one gesture a
-   * director reaches for the gesture that quit. */
-  if (ELEM(event->type, EVT_ESCKEY, RIGHTMOUSE) && event->val == KM_PRESS) {
-    return director_walk_finish(C, op);
-  }
+  /* No key or button ends the walk; the Walk chip is the one switch.
+   *
+   * Esc and the right button used to, alongside the chip — so the chip's lit
+   * state was one of three ways the walk could end, and the mode's default
+   * state (Cinema Mode opens walking) was one stray Esc from gone. They pass
+   * through now like every other key the walk does not use. The LEFT button
+   * never ended it either: it is the look handle, and confirming on it made
+   * the one gesture a director reaches for the gesture that quit. */
 
   if (event->type == LEFTMOUSE) {
     if (event->val == KM_PRESS) {
@@ -403,6 +371,9 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
          * look-drag. Passing it through is what keeps the whole surface
          * usable while the walk runs. */
         return OPERATOR_PASS_THROUGH;
+      }
+      if (data->held == 0 && !walk_resync(C, data)) {
+        return director_walk_finish(C, op);
       }
       data->looking = true;
       return OPERATOR_RUNNING_MODAL;
@@ -450,6 +421,11 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
     if (!director_pointer_on_stage(C, event)) {
       return OPERATOR_PASS_THROUGH;
     }
+    /* The first key of a burst, with no look-drag running either: nothing
+     * of the walk's is in flight, so the camera's own pose is the truth. */
+    if (data->held == 0 && !data->looking && !walk_resync(C, data)) {
+      return director_walk_finish(C, op);
+    }
     data->held |= bit;
     return OPERATOR_RUNNING_MODAL;
   }
@@ -474,8 +450,8 @@ void MIXAR_OT_director_walk(wmOperatorType *ot)
   ot->name = "Walk Camera";
   ot->idname = "MIXAR_OT_director_walk";
   ot->description =
-      "Drive the shot camera: W A S D to move, Q E for height, Shift to sprint, hold the "
-      "left mouse button to look. Esc or right-click to stop";
+      "Drive the shot camera: W A S D to move, Q E for height, Shift to sprint, Alt to "
+      "creep, hold the left mouse button to look. The Walk button starts and stops it";
 
   ot->invoke = director_walk_invoke;
   ot->modal = director_walk_modal;

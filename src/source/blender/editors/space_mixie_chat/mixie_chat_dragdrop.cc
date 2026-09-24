@@ -275,6 +275,10 @@ void mixie_chat_dropboxes()
                  mixie_chat_image_drop_copy,
                  nullptr,
                  nullptr);
+
+  /* The asset picker's tile drag lands in a 3D viewport
+   * (mixie_chat_asset_picker_drop.cc). */
+  mixie_chat_asset_pick_dropboxes();
 }
 
 /** \} */

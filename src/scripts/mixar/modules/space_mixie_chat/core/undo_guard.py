@@ -67,6 +67,15 @@ def _snapshot_single_scene(scene):
                     'label': action.label,
                     'value': action.value,
                     'style': action.style,
+                    # Asset-picker identity: without it an undo while the
+                    # question is pending collapses the Library-style picker
+                    # back to plain text buttons (core/asset_picker.py).
+                    'asset_name': action.asset_name,
+                    'library': action.library,
+                    'blend_file': action.blend_file,
+                    'asset_type': action.asset_type,
+                    'score': action.score,
+                    'image': action.image,
                 }
                 for action in msg.action_items
             ],
@@ -79,6 +88,7 @@ def _snapshot_single_scene(scene):
                     'local_path': img.local_path,
                     'width': img.width,
                     'height': img.height,
+                    'step_id': img.step_id,
                 }
                 for img in msg.image_items
             ],
@@ -86,6 +96,7 @@ def _snapshot_single_scene(scene):
             # these, an undo restores messages with the plan but no "Used N tools".
             'steps_summary': msg.steps_summary,
             'steps_collapsed': msg.steps_collapsed,
+            'images_collapsed': msg.images_collapsed,
             'step_items': [
                 {
                     'item_id': step.item_id,
@@ -95,6 +106,7 @@ def _snapshot_single_scene(scene):
                     'detail': step.detail,
                     'status': step.status,
                     'expanded': step.expanded,
+                    'call_id': step.call_id,
                 }
                 for step in msg.step_items
             ],
@@ -164,6 +176,9 @@ def _restore_single_scene(scene, snapshot):
             action.label = action_data['label']
             action.value = action_data['value']
             action.style = action_data['style']
+            for key in ('asset_name', 'library', 'blend_file', 'asset_type', 'score', 'image'):
+                if key in action_data:
+                    setattr(action, key, action_data[key])
 
         for img_data in msg_data['image_items']:
             img = msg.image_items.add()
@@ -174,10 +189,12 @@ def _restore_single_scene(scene, snapshot):
             img.local_path = img_data['local_path']
             img.width = img_data['width']
             img.height = img_data['height']
+            img.step_id = img_data.get('step_id', '')
 
         # Steps block + state (.get for snapshots taken before this field existed).
         msg.steps_summary = msg_data.get('steps_summary', '')
         msg.steps_collapsed = msg_data.get('steps_collapsed', True)
+        msg.images_collapsed = msg_data.get('images_collapsed', False)
         for step_data in msg_data.get('step_items', []):
             step = msg.step_items.add()
             step.item_id = step_data['item_id']
@@ -187,6 +204,7 @@ def _restore_single_scene(scene, snapshot):
             step.detail = step_data['detail']
             step.status = step_data['status']
             step.expanded = step_data['expanded']
+            step.call_id = step_data.get('call_id', '')
 
         # Thinking block + state.
         msg.thinking_text = msg_data.get('thinking_text', '')

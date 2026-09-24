@@ -151,3 +151,19 @@ def test_hit_testing_is_untouched_by_the_readout():
     assert "gzt->screen_bounds_get = gizmo_axis_screen_bounds_get;" in NAVIGATE_TYPE_CC
     assert "float i_best_len_sq = FLT_MAX;" in NAVIGATE_TYPE_CC
 
+
+def test_cinema_mode_draws_no_navigation_cluster():
+    """Cinema Mode removes the whole group — the axis globe, zoom, move, the
+    camera-view toggle and the lock-camera-to-view toggle — through the one
+    poll every one of them shares, so none can come back on its own."""
+    poll = NAVIGATE_CC.split("static bool WIDGETGROUP_navigate_poll(", 1)[1].split("\n}\n", 1)[0]
+    assert "if (view3d_director_is_directing(CTX_data_scene(C))) {" in poll
+    directing = poll[poll.index("view3d_director_is_directing") :]
+    assert directing.split("}", 1)[0].strip().endswith("return false;")
+    # The user's own hide flags are still asked first.
+    assert poll.index("V3D_GIZMO_HIDE_NAVIGATE") < poll.index("view3d_director_is_directing")
+    assert '#include "view3d_director.hh"' in NAVIGATE_CC
+    # And the stage-parking the cluster used to need is gone with it.
+    assert "cinema_stage_rect" not in NAVIGATE_CC
+    assert "cinema_unit" not in NAVIGATE_CC
+

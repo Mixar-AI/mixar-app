@@ -12,6 +12,7 @@ state says so out loud, and that both menu entry points actually exist.
 """
 
 from pathlib import Path
+import re
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -321,7 +322,7 @@ def test_camera_keys_have_one_definition_shared_with_the_beat_strip():
     # zero-curve read would report every animated camera as unanimated. The
     # channelbag resolution lives once, in the shared helper Director's
     # anim_curves re-exports.
-    assert "common.utils.animation import assigned_fcurves" in curves
+    assert re.search(r"common\.utils\.animation import [^\n]*\bassigned_fcurves\b", curves)
     shared = (SCRIPTS / "mixar/modules/common/utils/animation.py").read_text(
         encoding="utf-8"
     )

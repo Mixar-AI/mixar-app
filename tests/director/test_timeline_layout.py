@@ -48,6 +48,11 @@ def _control_height(u: float, full: bool = True) -> float:
     return height
 
 
+def _ruler_band(u: float) -> float:
+    """The ruler's tick + label gap, from the tokens the ruler draws with."""
+    return (_const(TIMELINE_HH, "DIRECTOR_RULER_TICK_H") + _const(TIMELINE_HH, "DIRECTOR_RULER_LABEL_GAP")) * u
+
+
 def _strip_height(region_h: float, scale: float = 1.0) -> float:
     """Re-run the draw function's own budget at `UI_SCALE_FAC == scale`."""
     u = scale
@@ -55,7 +60,7 @@ def _strip_height(region_h: float, scale: float = 1.0) -> float:
     content_top = region_h - control
     margin = max(6.0, int(8.0 * u))
     tick_base = margin + 10.0 * u
-    label_top = tick_base + 36.0 * u + 12.0 * u
+    label_top = tick_base + _ruler_band(u) + 12.0 * u
     available = content_top - label_top - 8.0 * u
     pill_band = (_const(TIMELINE_HH, "DIRECTOR_PLAYHEAD_PILL_H") + _const(TIMELINE_HH, "DIRECTOR_PLAYHEAD_PILL_GAP")) * u
     strip = min(_const(TIMELINE_HH, "DIRECTOR_STRIP_H") * u, available - pill_band)
@@ -74,7 +79,7 @@ def test_the_old_region_height_is_what_broke_it():
     assert _region_height() > 164
     u = 1.0
     control = _control_height(u)
-    label_top = max(6.0, int(8.0 * u)) + 10.0 * u + 36.0 * u + 12.0 * u
+    label_top = max(6.0, int(8.0 * u)) + 10.0 * u + _ruler_band(u) + 12.0 * u
     pill_band = (_const(TIMELINE_HH, "DIRECTOR_PLAYHEAD_PILL_H") + _const(TIMELINE_HH, "DIRECTOR_PLAYHEAD_PILL_GAP")) * u
     naive = min(
         _const(TIMELINE_HH, "DIRECTOR_STRIP_H") * u,
@@ -83,11 +88,27 @@ def test_the_old_region_height_is_what_broke_it():
     assert naive == 0.0
 
 
-def test_a_dock_dragged_smaller_still_shows_a_strip():
-    """The pill's band is what gives way; the strip keeps a floor, because a
-    strip of zero height takes every keyframe with it."""
+def test_a_dock_squeezed_smaller_still_shows_a_strip():
+    """The user can no longer drag the dock, but an area too short for it
+    still squeezes it. The pill's band is what gives way; the strip keeps a
+    floor, because a strip of zero height takes every keyframe with it."""
     for region_h in range(120, _region_height() + 1, 4):
         assert _strip_height(region_h) >= _const(TIMELINE_HH, "DIRECTOR_STRIP_MIN_H")
+
+
+def test_the_preferred_height_has_no_slack():
+    """The dock is FIXED at this height, so it is exactly the budget: one
+    pixel less and the strip would give way."""
+    assert _strip_height(_region_height() - 1) < _const(TIMELINE_HH, "DIRECTOR_STRIP_H")
+
+
+def test_the_ruler_draws_the_band_the_layout_reserves():
+    """A literal in the layout and another in the ruler is how the two drift."""
+    ruler = (VIEW3D / "view3d_director_timeline_ruler.cc").read_text(encoding="utf-8")
+    assert "const float major_h = DIRECTOR_RULER_TICK_H * u;" in ruler
+    assert "tick_base + major_h + DIRECTOR_RULER_LABEL_GAP * u" in ruler
+    assert "(DIRECTOR_RULER_TICK_H + DIRECTOR_RULER_LABEL_GAP) * u" in DRAW
+    assert "36.0f * u" not in DRAW
 
 
 def test_the_strip_is_load_bearing_in_the_source_too():
@@ -104,9 +125,8 @@ def test_the_region_asks_for_the_raised_height():
 
 def test_the_actions_row_was_paid_for_in_region_height():
     """A row added above the content is height taken FROM the content, and
-    the strip is where the layout takes any shortfall. A saved layout shorter
-    than this is raised back to it by
-    `view3d_director_timeline_region_ensure`."""
+    the strip is where the layout takes any shortfall. A saved layout of any
+    other height is put back to it by `view3d_director_timeline_region_ensure`."""
     # At the new preferred height the strip is whole; at the height that was
     # enough before the row existed, it no longer would be.
     assert _strip_height(_region_height()) == _const(TIMELINE_HH, "DIRECTOR_STRIP_H")

@@ -137,6 +137,7 @@ class _ShotSnapshot:
         "shot_id",
         "prompt",
         "guidance_strength",
+        "export_images",
         "render_output_types",
         "render_resolution_percentage",
         "handheld",
@@ -150,6 +151,7 @@ class _ShotSnapshot:
         self.shot_id = shot.shot_id
         self.prompt = shot.prompt
         self.guidance_strength = shot.guidance_strength
+        self.export_images = bool(getattr(shot, "export_images", True))
         self.render_output_types = set(shot.render_output_types)
         self.render_resolution_percentage = int(shot.render_resolution_percentage)
         self.handheld = bool(shot.handheld)
@@ -174,6 +176,7 @@ def create_shot(scene, camera, *, parent=None):
         shot.parent_shot_id = parent.shot_id
         shot.prompt = parent.prompt
         shot.guidance_strength = parent.guidance_strength
+        shot.export_images = parent.export_images
         shot.render_output_types = set(parent.render_output_types)
         shot.render_resolution_percentage = parent.render_resolution_percentage
         # The take shares the parent's camera keys, so the Speed slider must
@@ -221,6 +224,7 @@ def split_shot(scene, shot, frame: int):
     new_shot = create_shot(scene, camera)
     new_shot.prompt = carried.prompt
     new_shot.guidance_strength = carried.guidance_strength
+    new_shot.export_images = carried.export_images
     new_shot.render_output_types = set(carried.render_output_types)
     new_shot.render_resolution_percentage = carried.render_resolution_percentage
     # Set before any beat exists: the speed update retimes nothing, and the

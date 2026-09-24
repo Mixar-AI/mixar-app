@@ -857,6 +857,25 @@ class MIXIE_CHAT_OT_toggle_steps(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_toggle_images(Operator):
+    """Collapse / expand the 'Viewed N images' block of an agent bubble"""
+    bl_idname = "mixie_chat.toggle_images"
+    bl_label = "Toggle Images Block"
+    bl_options = {'REGISTER'}
+
+    bubble_id: StringProperty(name="Bubble ID", default="")
+
+    def execute(self, context):
+        scene = context.scene
+        msg = _find_bubble(scene, self.bubble_id)
+        if msg is None:
+            return {'CANCELLED'}
+        msg.images_collapsed = not msg.images_collapsed
+        _bump_layout_epoch(scene)
+        redraw_chat_areas()
+        return {'FINISHED'}
+
+
 class MIXIE_CHAT_OT_toggle_step_row(Operator):
     """Expand / collapse a single step row's detail"""
     bl_idname = "mixie_chat.toggle_step_row"
@@ -931,6 +950,7 @@ classes = (
     MIXIE_CHAT_OT_cancel_feedback_comment,
     MIXIE_CHAT_OT_cancel_generation,
     MIXIE_CHAT_OT_toggle_steps,
+    MIXIE_CHAT_OT_toggle_images,
     MIXIE_CHAT_OT_toggle_step_row,
     MIXIE_CHAT_OT_toggle_thinking,
     MIXIE_CHAT_OT_dev_stream_demo,

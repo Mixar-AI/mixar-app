@@ -100,7 +100,23 @@ def _tick() -> Optional[float]:
     logger.info("%s %s: %s after %.1fs", pending["req"].tool_name, key,
                 result.get("status"), elapsed)
     _respond(pending["req"], result)
+    _record_late_capture(pending["req"], result)
     return None
+
+
+def _record_late_capture(req, result: dict) -> None:
+    """The finished final render becomes a capture tile under its step row
+    (steps_recorder) — the row itself closed when the request was parked."""
+    if not result.get("success"):
+        return
+    try:
+        scene = getattr(bpy.context, "scene", None)
+        if scene is None:
+            return
+        from .steps_recorder import record_step_captures
+        record_step_captures(scene, req.request_id, result, req.session_id)
+    except Exception:
+        logger.debug("late capture tile skipped", exc_info=True)
 
 
 def defer_response(req, key: str) -> bool:

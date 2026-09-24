@@ -11,9 +11,9 @@
  * decorative rounded frame with the camera border floating inside it. The
  * frame is gone; instead the camera view's zoom and pan are set so the
  * border itself fills that area. The fit runs from the overlay draw but
- * only when the layout changed (region size, stage rect, camera), so it is
- * a one-off write per layout, not a per-frame fight with the director's own
- * zooming and panning.
+ * only when the layout changed (region size, stage rect, camera, or the
+ * camera frame's shape), so it is a one-off write per layout, not a
+ * per-frame fight with the director's own zooming and panning.
  */
 
 #include <algorithm>
@@ -24,6 +24,10 @@
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 
+#include "DNA_ID.h"
+#include "DNA_camera_types.h"
+#include "DNA_object_types.h"
+#include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_view3d_types.h"
 #include "DNA_windowmanager_types.h"
@@ -47,6 +51,16 @@ struct GateFit {
   int winy = 0;
   rcti stage = {};
   const void *camera = nullptr;
+  /** The camera FRAME's shape: render size, pixel aspect and the lens's
+   * sensor fit. Each reshapes the border at the same zoom, so an aspect
+   * change (16:9 -> 9:16) that nothing else keyed kept the old ratio's zoom —
+   * the portrait frame overflowed the stage until a resize (dragging the
+   * dock, say) happened to re-run the fit. */
+  int render_x = 0;
+  int render_y = 0;
+  float pixel_x = 0.0f;
+  float pixel_y = 0.0f;
+  int sensor_fit = -1;
 };
 
 std::vector<GateFit> g_fits;
@@ -54,6 +68,8 @@ std::vector<GateFit> g_fits;
 bool fit_matches(const GateFit &a, const GateFit &b)
 {
   return a.winx == b.winx && a.winy == b.winy && a.camera == b.camera &&
+         a.render_x == b.render_x && a.render_y == b.render_y && a.pixel_x == b.pixel_x &&
+         a.pixel_y == b.pixel_y && a.sensor_fit == b.sensor_fit &&
          BLI_rcti_compare(&a.stage, &b.stage);
 }
 
@@ -126,6 +142,13 @@ void cinema_fit_camera_gate(const bContext *C, ARegion *region)
   fit.winy = region->winy;
   BLI_rcti_rctf_copy(&fit.stage, &stage);
   fit.camera = v3d->camera;
+  fit.render_x = scene->r.xsch;
+  fit.render_y = scene->r.ysch;
+  fit.pixel_x = scene->r.xasp;
+  fit.pixel_y = scene->r.yasp;
+  if (v3d->camera->type == OB_CAMERA && v3d->camera->data != nullptr) {
+    fit.sensor_fit = id_cast<const Camera *>(v3d->camera->data)->sensor_fit;
+  }
   GateFit *record = nullptr;
   for (GateFit &item : g_fits) {
     if (item.region == region) {

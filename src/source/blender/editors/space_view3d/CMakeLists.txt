@@ -67,9 +67,11 @@ set(SRC
   view3d_director_state.cc
   view3d_director_qa_targets.cc
   view3d_director_walk.cc
+  view3d_director_walk_aim.cc
   view3d_director_timeline.cc
   view3d_director_timeline_draw.cc
   view3d_director_timeline_interaction.cc
+  view3d_director_timeline_keys.cc
   view3d_director_timeline_select.cc
   view3d_director_timeline_ruler.cc
   view3d_draw.cc

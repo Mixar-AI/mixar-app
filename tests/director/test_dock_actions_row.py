@@ -100,26 +100,49 @@ def test_the_label_carries_the_disabled_state():
     assert "director_overlay_disable_button(but, !enabled);" in draw
 
 
+def _chip() -> str:
+    chip = ACTIONS[ACTIONS.index("void auto_key_chip(") :]
+    return chip[: chip.index("\n}\n")]
+
+
 def test_the_chip_reads_as_armed_not_as_pressed():
     """Green fill for armed, the way every other state chip on the surface
     reads — and it flips RECORD_OFF to RECORD_ON, which is what Blender's own
     timeline does (`rna_scene.cc` ui_icon)."""
-    chip = ACTIONS[ACTIONS.index("void state_chip(") :]
-    chip = chip[: chip.index("\n}\n")]
+    chip = _chip()
     assert "if (armed) {" in chip
     assert "MIXAR_THEME_LOAD(on, Primary);" in chip
+    assert "armed ? ICON_RECORD_ON : ICON_RECORD_OFF" in chip
+    assert "auto_key_chip(block, C, region, chip, state);" in _draw()
 
-    draw = _draw()
-    assert "state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF" in draw
-    assert '"MIXAR_OT_director_toggle_auto_key"' in draw
+
+def test_the_chip_is_blenders_own_auto_keying():
+    """The Timeline's record button and this chip are ONE switch: an RNA
+    toggle on `tool_settings.use_keyframe_insert_auto`, not a Director flag
+    behind a Director operator."""
+    chip = _chip()
+    assert 'RNA_pointer_get(&scene_ptr, "tool_settings")' in chip
+    assert '"use_keyframe_insert_auto"' in chip
+    assert "cinema_prop_toggle(" in chip
+    assert "MIXAR_OT_director_toggle_auto_key" not in ACTIONS
+    paint = (VIEW3D / "view3d_director_cinema_paint.cc").read_text(encoding="utf-8")
+    toggle = paint[paint.index("ui::Button *cinema_prop_toggle(") :]
+    toggle = toggle[: toggle.index("\n}\n")]
+    # A plain Toggle, so the caller's glyph is drawn as given.
+    assert "ui::ButtonType::Toggle," in toggle
+    assert "uiDefIconButR(" in toggle
+    # The compact rail's copy of the chip is the same property.
+    overlay = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
+    assert '"use_keyframe_insert_auto"' in overlay
+    assert "MIXAR_OT_director_toggle_auto_key" not in overlay
 
 
 def test_it_says_when_a_take_is_actually_going_down():
     """One switch, and it tells you which half of itself is running. The
     status is published by the recorder, never by a second button."""
-    draw = _draw()
-    assert "state.recording ? ICON_REC" in draw
-    assert "Recording a take" in draw
+    chip = _chip()
+    assert "state.recording ? ICON_REC" in chip
+    assert "Recording a take" in chip
 
 
 def test_there_is_no_second_auto_key_switch():
@@ -130,13 +153,18 @@ def test_there_is_no_second_auto_key_switch():
 
 
 def test_the_state_reaches_the_painter():
-    assert 'r_state->auto_key = director_bool(&state_ptr, "auto_key", false);' in STATE
+    """Read the way Blender reads it, not back through the Python proxy."""
+    assert "r_state->auto_key = animrig::is_autokey_on(scene);" in STATE
+    assert '#include "ANIM_keyframing.hh"' in STATE
+    assert '"auto_key"' not in STATE
 
 
 def test_every_control_is_published_for_qa():
     assert 'cinema_qa_record(region, pill, "director_capture"' in _draw()
-    assert 'cinema_qa_record(region, chip, surface, armed ? "on" : "off", -1);' in ACTIONS
-    assert '"director_auto_key"' in ACTIONS
+    assert (
+        'cinema_qa_record(region, chip, "director_auto_key", armed ? "on" : "off", -1);'
+        in ACTIONS
+    )
 
 
 def test_the_anonymous_icon_row_is_gone():

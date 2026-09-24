@@ -317,13 +317,20 @@ def capture_beat(context, shot, beat_seconds: float, *, replace_existing: bool =
         raise
 
 
-def remove_beat(scene, shot, index: int) -> bool:
-    """Remove one sparse keyframe, its camera keys, and its moodboard capture."""
+def remove_beat(scene, shot, index: int, *, delete_keys: bool = True) -> bool:
+    """Remove one sparse keyframe, its camera keys, and its moodboard capture.
+
+    ``delete_keys=False`` removes the beat alone, for a caller that has
+    already dealt with the keys under it (a native key delete, or a drag
+    that replaced them) — and then never purges the camera, whose remaining
+    keys are ones the director kept.
+    """
     if shot.state != 'DRAFT' or index < 0 or index >= len(shot.beats):
         return False
     beat = shot.beats[index]
     image = beat.image
-    _delete_camera_keys(shot.camera, beat.frame)
+    if delete_keys:
+        _delete_camera_keys(shot.camera, beat.frame)
 
     if image is not None and hasattr(scene, "mixie_moodboard_images"):
         for item_index in range(len(scene.mixie_moodboard_images) - 1, -1, -1):
@@ -334,7 +341,8 @@ def remove_beat(scene, shot, index: int) -> bool:
 
     _discard_still(scene, image, shot)
     if (
-        not shot.beats
+        delete_keys
+        and not shot.beats
         and shot.camera is not None
         and not camera_shared_elsewhere(scene, shot)
     ):

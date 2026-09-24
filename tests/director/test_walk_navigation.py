@@ -55,11 +55,24 @@ def test_walking_advertises_the_walks_own_keys():
     block = _hint_block("walking_hints")
     assert '{"W", "A", "S", "D"}' in block
     assert '{"Q", "E"}' in block
-    assert '"Shift"' in block and "Move faster" in block
     assert '{"LMB"}' in block and "Hold to look" in block
-    assert '{"Esc"}' in block and "Done" in block, (
-        "the way out has to be on screen while the pointer is hidden"
-    )
+    # The sprint and the creep share one group, the way Q and E do.
+    assert '{"Shift", WALK_SLOW_KEY}, 2, "Faster / slower"' in block
+    assert "WALKING_HINTS = 4" in TOP
+
+
+def test_no_key_is_promised_as_the_way_out():
+    """No key stops the walk — the lit Walk chip beside the hints is the way
+    out — so a keycap for one would be a promise the walk does not keep."""
+    block = _hint_block("walking_hints")
+    assert '"Esc"' not in block and "Done" not in block
+
+
+def test_the_slow_key_is_named_as_the_keyboard_labels_it():
+    """Alt is Option on a Mac keyboard, as the Sketch talk hint says too."""
+    assert '#  define WALK_SLOW_KEY "Option"' in TOP
+    assert '#  define WALK_SLOW_KEY "Alt"' in TOP
+    assert TOP.index("#ifdef __APPLE__") < TOP.index('#  define WALK_SLOW_KEY "Option"')
 
 
 def test_the_strip_chooses_its_set_from_the_live_state():
@@ -206,7 +219,10 @@ def test_the_strip_carries_a_walk_chip():
     """A keyboard-only entry point is not one a director discovers."""
     chip = TOP.split("void walk_chip(", 1)[1].split("\n}\n", 1)[0]
     assert '"MIXAR_OT_director_navigate"' in chip
-    assert "ICON_VIEW_PAN" in chip
+    # A camera: the chip drives the shot camera. Not the pan hand (the
+    # viewport's own Move) and not the stick figure (an armature).
+    assert "ICON_VIEW_CAMERA," in chip
+    assert "ICON_VIEW_PAN" not in chip and "ICON_ARMATURE_DATA" not in chip
     assert 'cinema_qa_record(region, chip, "director_walk"' in chip
     # Lit while a walk is running, like the grid chip's on state.
     assert "MIXAR_THEME_LOAD(on, Primary);" in chip
@@ -214,6 +230,9 @@ def test_the_strip_carries_a_walk_chip():
     # toggle — lit, publishing "stop" — and was not one; a second click
     # started a second walk once the surface became clickable during one.
     assert "Stop walking" in chip
+    # ... and it is the ONLY way out, so it no longer points at others.
+    assert "Esc" not in chip.split("cinema_icon_button(", 1)[1]
+    assert "right-click" not in chip
     assert 'cinema_qa_record(region, chip, "director_walk", walking ? "stop" : "start", -1);' in chip
 
 

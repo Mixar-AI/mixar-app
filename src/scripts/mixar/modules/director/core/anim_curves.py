@@ -7,10 +7,11 @@
 from __future__ import annotations
 
 from ..constants import RECORDED_KEY_TYPE
-from ...common.utils.animation import assigned_fcurves, remove_fcurves
+from ...common.utils.animation import action_fcurves, assigned_fcurves, remove_fcurves
 
 __all__ = (
     "CAMERA_MOTION_PATHS",
+    "action_fcurves",
     "assigned_fcurves",
     "camera_key_frames",
     "remove_fcurves",

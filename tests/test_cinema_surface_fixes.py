@@ -199,9 +199,10 @@ def test_the_stage_spans_the_columns_and_hosts_the_gizmos():
     assert "BKE_screen_view3d_zoom_from_fac(fac * scale)" in GATE
     OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
     assert "cinema_fit_camera_gate(C, region);" in OVERLAY
+    # The navigation gizmos no longer park in the stage: Cinema Mode draws
+    # none (tests/test_view3d_navigate_gizmo.py pins the poll).
     GIZMO = (VIEW3D / "view3d_gizmo_navigate.cc").read_text(encoding="utf-8")
-    assert "cinema_stage_rect(C, region, &stage)" in GIZMO
-    assert "rect_adjusted.xmax = int(stage.xmax - pad)" in GIZMO
+    assert "cinema_stage_rect" not in GIZMO
     # The Mixar banner chip sits above the left column: the column's width
     # from the side margin, on the strip band, in the brand gradient with
     # the Mixar mark. It is chrome only.
@@ -433,15 +434,37 @@ def test_every_rounded_control_shares_the_row_radius():
 
 
 def test_hints_start_on_the_gate_and_the_phone_sits_over_the_right_column():
-    # Hints align with the fitted camera border's left edge: the stage inset
-    # by the SAME pad the gate fit uses, so nothing draws above the left column.
-    assert "gate_left = margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET + CINEMA_GATE_PAD;" in TOP
-    # ... but the drawn border can be height-limited and sit inside the
-    # stage, so the live border wins when there is one.
+    # The row never leaves the STAGE: the stage inset by the SAME pad the
+    # gate fit uses, so nothing draws above either column. Outside camera
+    # view the stage is the whole span.
+    assert "const float stage_inset = margin + CINEMA_PANEL_W + CINEMA_STAGE_INSET + CINEMA_GATE_PAD;" in TOP
+    assert "row_left = std::max(row_left, stage_left);" in TOP
+    assert "row_right = std::min(row_right, stage_right);" in TOP
+    # On a wide frame the row starts from the live border's edges ...
     assert "if (cinema_camera_gate_rect(C, region, &border)) {" in TOP
-    assert "gate_left = border.xmin / u;" in TOP
-    assert "float next_x = gate_left;" in TOP
+    assert "row_left = border.xmin / u;" in TOP
+    assert "row_right = border.xmax / u;" in TOP
+    assert "float next_x = row_left;" in TOP
     assert "next_x = hint_end[index] + CINEMA_HINT_GAP;" in TOP
+    assert "const float strip_right = row_right * u;" in TOP
+
+
+def test_a_narrow_frame_widens_the_hint_row_instead_of_blanking_it():
+    """A 9:16 border is far narrower than the row, and bounding the row by it
+    dropped every hint group. The row widens evenly about the frame's centre
+    by what it is missing — hints, their clearance, and the three chips."""
+    body = TOP.split("void cinema_draw_top_strip(", 1)[1]
+    assert "float row_need = 12.0f + CINEMA_PHONE_H * 3.0f + CINEMA_STRIP_GAP * 2.0f;" in body
+    assert "row_need += hint_w[index] + (index > 0 ? CINEMA_HINT_GAP : 0.0f);" in body
+    assert "const float missing = row_need - (row_right - row_left);" in body
+    assert "row_left -= missing * 0.5f;" in body
+    assert "row_right += missing * 0.5f;" in body
+    # Widened BEFORE the clamp, so the stage still bounds it.
+    assert body.index("row_left -= missing * 0.5f;") < body.index(
+        "row_left = std::max(row_left, stage_left);"
+    )
+    # The groups are measured once and packed from the same widths.
+    assert "hint_end[index] = hint.x + hint_w[index];" in body
     GATE = (VIEW3D / "view3d_director_cinema_gate.cc").read_text(encoding="utf-8")
     assert "BLI_rctf_pad(&target, -CINEMA_GATE_PAD * u, -CINEMA_GATE_PAD * u);" in GATE
     # The phone hand-off spans the right column, in the strip row.
@@ -494,9 +517,10 @@ def test_the_chat_bar_is_the_resting_pill_seated_under_the_gate():
     # columns' top; it is sized to the width between the columns.
     assert "stage.ymin = pill_top + chat_gap;" in GATE
     assert "const float dy = target.ymax - border.ymax;" in GATE
-    # The strip's controls hang off the drawn frame's right edge.
-    assert "gate_right = border.xmax / u;" in TOP
-    assert "const float strip_right = gate_right * u;" in TOP
+    # The strip's controls hang off the row's right edge, which is the drawn
+    # frame's when the frame is wide enough for the row.
+    assert "row_right = border.xmax / u;" in TOP
+    assert "const float strip_right = row_right * u;" in TOP
     assert GATE.index("ED_agent_bubble_set_cinema_seat(win,") < GATE.index("GateFit fit;")
     OVERLAY = (VIEW3D / "view3d_director_overlay.cc").read_text(encoding="utf-8")
     assert OVERLAY.count("cinema_release_chat_seat(C);") == 2
@@ -543,12 +567,17 @@ def test_popups_size_to_their_bar_and_round_every_corner():
 
 
 def test_output_popup_rows_are_styled_and_toggles_keep_their_value():
-    """The Export popup's kind toggles and action rows paint as CinemaRows.
-    A Row (enum-flag toggle) keeps its VALUE in hardmax, so the tag must not
-    write its payload there — that clobbered the bit each toggle set."""
+    """The Export popup's video toggles and its one action row paint as
+    CinemaRows. A Row (enum-flag toggle) keeps its VALUE in hardmax, so the
+    tag must not write its payload there — that clobbered the bit each toggle
+    set."""
     render = (VIEW3D / "view3d_director_popup_render.cc").read_text(encoding="utf-8")
-    assert "UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Option)" in render
-    assert render.count("ui::MixarCinemaRowKind::Action") == 2
+    # The three video kinds are the cells of one segmented group (an Option
+    # row with a leading icon fit "Clay" and not "Color", so the row read as
+    # loose words); the tag still writes no value.
+    assert "UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Segment)" in render
+    # One send action (tests/director/test_export_popup.py).
+    assert render.count("ui::MixarCinemaRowKind::Action") == 1
     row = (INTERFACE / "interface_mixar_cinema_row.cc").read_text(encoding="utf-8")
     tag = row[row.index("void UI_mixar_cinema_row_tag(") :]
     tag = tag[: tag.index("\n}\n")]

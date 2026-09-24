@@ -223,13 +223,37 @@ void draw_option(Button *but,
   const bool disabled = (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
   const rctf row = row_rect(rect);
   const float rad = row_radius(row);
+  const bool action = kind == MixarCinemaRowKind::Action;
+  /* A standalone SWITCH shows its off state: a toggle that paints nothing
+   * while off ("Keyframe Images (3)" in the export popup) is a line of text
+   * with no hint that it can be clicked. A list option — a row of a dropdown,
+   * where the list itself is the affordance — keeps the plain-text off. */
+  const bool switchy = !action && ELEM(but->type,
+                                       ButtonType::Toggle,
+                                       ButtonType::ToggleN,
+                                       ButtonType::IconToggle,
+                                       ButtonType::IconToggleN);
+  if (switchy && motion.selected < 1.0f) {
+    uchar track[4];
+    themed(MixarThemeSlot::CinemaRowTrack, TRACK, track);
+    mixar_card_fill_round(&row, rad, track, (1.0f - motion.selected) * (disabled ? 0.5f : 1.0f));
+  }
+  if (action) {
+    /* The one thing a popup DOES is a filled pill in the surface's accent —
+     * the same green the Export button that opened it is painted in. It used
+     * to be bare white text on the popup's back, which read as a caption
+     * rather than the button the whole panel builds up to. */
+    uchar fill[4];
+    themed(MixarThemeSlot::CinemaRowSliderOn, SLIDER_ON, fill);
+    mixar_card_fill_round(&row, rad, fill, disabled ? 0.35f : 1.0f);
+  }
   const float hover = 0.9f * motion.hover + (1.0f - 0.9f * motion.hover) * motion.press;
-  draw_hover(row, rad, hover * (1.0f - motion.selected));
-  if (motion.selected > 0.0f) {
+  draw_hover(row, rad, hover * (1.0f - (action ? 0.0f : motion.selected)));
+  if (!action && motion.selected > 0.0f) {
     draw_chip(row, rad, motion.selected);
   }
 
-  const float selected = kind == MixarCinemaRowKind::Action ? 1.0f : motion.selected;
+  const float selected = action ? 1.0f : motion.selected;
   uchar text_off[4], text_on[4], text_disabled[4];
   themed(MixarThemeSlot::CinemaRowTextOff, TEXT_OFF, text_off);
   themed(MixarThemeSlot::CinemaRowTextOn, TEXT_ON, text_on);
@@ -255,10 +279,28 @@ void draw_option(Button *but,
   const uiFontStyle fs = row_font();
   const char *label = row_label(but);
   const float label_w = fontstyle_string_width(&fs, label);
+  if (action) {
+    /* Icon and label are ONE centred group on the pill: an icon pinned to the
+     * left edge with centred text beside it reads as neither. */
+    const float icon_w = ELEM(but->icon, ICON_NONE, ICON_BLANK1) ?
+                             0.0f :
+                             (ICON_DEFAULT_HEIGHT + mixar_chrome::cinema_row_icon_gap) *
+                                 UI_SCALE_FAC;
+    const float group_w = icon_w + label_w;
+    if (group_w <= float(BLI_rcti_size_x(&text))) {
+      const float center = (float(rect->xmin) + float(rect->xmax)) * 0.5f;
+      text.xmin = int(center - group_w * 0.5f);
+      text.xmax = int(std::ceil(center + group_w * 0.5f));
+    }
+  }
   const bool icon_drawn = draw_leading_icon(but, rect, text, label_w, disabled ? 0.4f : 0.9f);
-  draw_label(
-      fs, &text, label, col, UI_STYLE_TEXT_LEFT, icon_drawn ? 0.0f : pad_slack(),
-      submenu ? 0.0f : pad_slack());
+  draw_label(fs,
+             &text,
+             label,
+             col,
+             UI_STYLE_TEXT_LEFT,
+             (icon_drawn || action) ? 0.0f : pad_slack(),
+             (submenu || action) ? 0.0f : pad_slack());
 }
 
 }  // namespace mixar_cinema_row
@@ -286,6 +328,14 @@ bool UI_mixar_cinema_row_carries_value(const Button *but)
 
 MixarCinemaRowKind UI_mixar_cinema_row_kind_get(const Button *but)
 {
+  /* A cell of a segmented group is a GROUP member first: a cell bound
+   * straight to RNA (the export popup's Draft / Half / Full is a Row on
+   * `render_resolution_percentage`) would otherwise derive back to a plain
+   * Option below and paint left-aligned with nothing around it, while the
+   * operator-backed cells beside it stayed a group. The tag wins. */
+  if (but->mixar_style.cinema == MixarCinemaRowKind::Segment) {
+    return MixarCinemaRowKind::Segment;
+  }
   switch (but->type) {
     case ButtonType::Num:
     case ButtonType::NumSlider:

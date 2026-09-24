@@ -5573,7 +5573,11 @@ static void block_open_begin(bContext *C, Button *but, HandleButtonData *data)
   }
 
   if (func || handlefunc) {
-    data->menu = popup_block_create(C, data->region, but, func, handlefunc, arg, nullptr, false);
+    /* Mixar: a block that asks for it opens refreshable popups; see
+     * #BLOCK_MIXAR_POPUPS_REFRESH. Upstream always passes false here. */
+    const bool can_refresh = (but->block->flag & BLOCK_MIXAR_POPUPS_REFRESH) != 0;
+    data->menu = popup_block_create(
+        C, data->region, but, func, handlefunc, arg, nullptr, can_refresh);
     if (but->block->handle) {
       data->menu->popup = but->block->handle->popup;
     }

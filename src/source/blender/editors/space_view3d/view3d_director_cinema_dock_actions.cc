@@ -23,6 +23,12 @@
  * and something is driving it (`core/record.py`). The chip says which it is
  * doing, because a take being laid down is worth seeing.
  *
+ * And that one switch IS Blender's: the chip is an RNA toggle on
+ * `scene.tool_settings.use_keyframe_insert_auto`, the property the Timeline's
+ * record button flips. It used to be a Director-only flag behind a Director
+ * operator, so the Timeline could show auto-keying off while Cinema Mode had
+ * it on, and Blender's own auto-keying never fired for a Cinema session.
+ *
  * Split from `view3d_director_cinema_dock.cc` along the seam the dock's
  * layout already uses — one file per group — and to keep that file inside the
  * module size limit.
@@ -34,7 +40,12 @@
 
 #include "BLI_rect.h"
 
+#include "BKE_context.hh"
+
+#include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
+
+#include "RNA_access.hh"
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
@@ -56,23 +67,21 @@ constexpr float ACTION_KEY_GAP = 8.0f;
 /** Clear space between the chips and the button they qualify. */
 constexpr float ACTION_GAP = 12.0f;
 /**
- * One armed-state chip: Record, or Auto Key.
+ * The Auto Key chip: Blender's Auto Keying toggle over the surface's chrome.
  *
  * Green fill says ARMED, which is how every other state chip on this surface
- * reads (the grid chip, the tracking eyedropper, the walk chip). Both chips
- * are the same painter because they are the same kind of control — a mode
- * the camera is in, not an action that just fired.
+ * reads (the grid chip, the tracking eyedropper, the walk chip). The button
+ * is an RNA toggle on the scene's tool settings (#cinema_prop_toggle), so a
+ * click is Blender flipping its own property, with its own notifier and undo,
+ * exactly as the Timeline's record button does.
  */
-void state_chip(ui::Block *block,
-                const ARegion *region,
-                const rctf &chip,
-                const bool armed,
-                const bool enabled,
-                const char *operator_id,
-                const int icon,
-                const char *surface,
-                const char *tooltip)
+void auto_key_chip(ui::Block *block,
+                   const bContext *C,
+                   const ARegion *region,
+                   const rctf &chip,
+                   const DirectorViewState &state)
 {
+  const bool armed = state.auto_key;
   if (armed) {
     MIXAR_THEME_LOAD(on, Primary);
     cinema_fill(chip, BLI_rctf_size_y(&chip) * 0.5f, on);
@@ -82,15 +91,35 @@ void state_chip(ui::Block *block,
     MIXAR_THEME_LOAD(bottom, CinemaRowBottom);
     cinema_panel(chip, BLI_rctf_size_y(&chip) * 0.5f, top, bottom);
   }
-  cinema_qa_record(region, chip, surface, armed ? "on" : "off", -1);
-  /* Tooltips are literals: `ui::Button::tip` is non-owning. */
-  ui::Button *but = cinema_icon_button(block, operator_id, icon, chip, tooltip);
-  director_overlay_disable_button(but, !enabled);
+  cinema_qa_record(region, chip, "director_auto_key", armed ? "on" : "off", -1);
+  Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
+  if (scene == nullptr) {
+    return;
+  }
+  PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
+  PointerRNA tool_settings_ptr = RNA_pointer_get(&scene_ptr, "tool_settings");
+  /* Blender's own timeline flips RECORD_OFF to RECORD_ON when auto-keying is
+   * armed (`rna_scene.cc` ui_icon); REC says a take is actually going down,
+   * which `state.recording` publishes from the recorder. Tooltips are
+   * literals: `ui::Button::tip` is non-owning. */
+  ui::Button *but = cinema_prop_toggle(
+      block,
+      &tool_settings_ptr,
+      "use_keyframe_insert_auto",
+      state.recording ? ICON_REC : (armed ? ICON_RECORD_ON : ICON_RECORD_OFF),
+      chip,
+      state.recording ? "Recording a take: every frame the timeline plays is keyed" :
+      armed ? "Auto Keying is on (the Timeline's record button): a keyframe after every "
+              "camera move, and a recorded take while the timeline plays" :
+              "Auto Keying (the Timeline's record button): key the camera automatically "
+              "after every move, and record a take while the timeline plays");
+  director_overlay_disable_button(but, !state.has_camera);
 }
 
 }  // namespace
 
 void cinema_draw_dock_actions(ui::Block *block,
+                              const bContext *C,
                               const ARegion *region,
                               const DirectorViewState &state,
                               const float cy)
@@ -123,21 +152,7 @@ void cinema_draw_dock_actions(ui::Block *block,
      * when auto-keying is armed (`rna_scene.cc` ui_icon), and mirroring that
      * is what makes the chip read as armed rather than just-pressed. */
     const rctf chip = {x, x + ACTION_H * u, cy - half, cy + half};
-    state_chip(block,
-               region,
-               chip,
-               state.auto_key,
-               state.has_camera,
-               "MIXAR_OT_director_toggle_auto_key",
-               state.recording ? ICON_REC :
-                                 (state.auto_key ? ICON_RECORD_ON : ICON_RECORD_OFF),
-               "director_auto_key",
-               state.recording ?
-                   "Recording a take: every frame the timeline plays is keyed" :
-               state.auto_key ?
-                   "Auto Key is on: a keyframe after every camera move, and a "
-                   "recorded take while the timeline plays" :
-                   "Auto Key: capture a keyframe automatically after every camera move");
+    auto_key_chip(block, C, region, chip, state);
     x += (ACTION_H + ACTION_GAP) * u;
   }
 

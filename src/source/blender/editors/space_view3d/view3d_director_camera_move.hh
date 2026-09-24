@@ -49,6 +49,13 @@ float3 director_move_vector(const float4x4 &matrix, unsigned int held);
 /** Blender's own walk speed, with a fallback for an unset preference. */
 float director_walk_speed();
 
+/**
+ * The Cinema walk's mouse-look (`view3d_director_walk_aim.cc`): turn
+ * \a matrix by \a dx / \a dy pixels of drag — yaw about world Z, pitch about
+ * its own right axis, refusing the poles. False when nothing changed.
+ */
+bool director_walk_aim(float4x4 &matrix, float dx, float dy);
+
 /** The active shot's camera; \a r_locked reports the take's LOCKED state.
  * One resolver for every native camera writer, so they can never disagree
  * on which object moves. */

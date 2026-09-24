@@ -201,6 +201,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
     layout.slot_actions_height = 0.0f;
     layout.slot_images_height = 0.0f;
     layout.slot_steps_height = 0.0f;
+    layout.slot_gallery_height = 0.0f;
     layout.thinking_height = 0.0f;
     layout.is_markdown_content = false;
     bool is_slot_msg = populate_slot_layout_data(&msg_ptr, &layout);
@@ -427,6 +428,11 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
         layout.slot_steps_height =
             chat_ui_calc_steps_block_height(&style, &layout, content_width);
       }
+      /* "Viewed N images": the bubble's capture tiles, under the steps. */
+      if (is_slot_msg && layout.has_images && layout.slot_image_count > 0) {
+        layout.slot_gallery_height =
+            chat_ui_calc_images_block_height(&style, &layout, content_width);
+      }
 
       /* Live activity line vs finalized dropdown.
        * - Live single line ONLY for a content bubble with a running loader
@@ -465,6 +471,10 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       if (layout.slot_steps_height > 0.0f) {
         total_height += metrics.bubble_spacing;
         total_height += layout.slot_steps_height;
+      }
+      if (layout.slot_gallery_height > 0.0f) {
+        total_height += metrics.bubble_spacing;
+        total_height += layout.slot_gallery_height;
       }
       if (layout.thinking_height > 0.0f) {
         total_height += metrics.bubble_spacing;
@@ -561,6 +571,10 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
     if (layout.slot_steps_height > 0.0f) {
       y_pos -= metrics.bubble_spacing;
       y_pos -= layout.slot_steps_height;
+    }
+    if (layout.slot_gallery_height > 0.0f) {
+      y_pos -= metrics.bubble_spacing;
+      y_pos -= layout.slot_gallery_height;
     }
 
     if (layout.thinking_height > 0.0f) {

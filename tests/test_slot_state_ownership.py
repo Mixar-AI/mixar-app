@@ -33,6 +33,11 @@ ROOT = Path(__file__).parents[1]
 SLOT_PROCESSOR = ROOT / (
     "src/scripts/mixar/modules/space_mixie_chat/core/slot_processor.py"
 )
+# Pure Python (bpy only imported lazily inside ``present``), so the REAL module
+# is loaded into the stub tree rather than a stand-in.
+ASSET_PICKER = ROOT / (
+    "src/scripts/mixar/modules/space_mixie_chat/core/asset_picker.py"
+)
 
 # Every input_type the backend's request_user_input / gate paths can emit.
 # Mirrors modules/agent/tools/domains/user_input.py plus the two file pickers.
@@ -73,6 +78,7 @@ class _Item:
         self.library = ""
         self.blend_file = ""
         self.asset_type = ""
+        self.score = -1.0
 
 
 class _Collection(list):
@@ -139,7 +145,13 @@ def _load_processor(session):
     # The stubs must stay in sys.modules for the whole test: slot_processor
     # imports asset_choice_previews lazily, inside the actions slot itself.
     saved = {k: sys.modules.get(k) for k in injected}
+    saved["slot_iso.core.asset_picker"] = sys.modules.get("slot_iso.core.asset_picker")
     sys.modules.update(injected)
+    picker_spec = importlib.util.spec_from_file_location("slot_iso.core.asset_picker", ASSET_PICKER)
+    picker = importlib.util.module_from_spec(picker_spec)
+    sys.modules["slot_iso.core.asset_picker"] = picker
+    picker_spec.loader.exec_module(picker)
+    core.asset_picker = picker
     spec = importlib.util.spec_from_file_location(
         "slot_iso.core.slot_processor", SLOT_PROCESSOR
     )

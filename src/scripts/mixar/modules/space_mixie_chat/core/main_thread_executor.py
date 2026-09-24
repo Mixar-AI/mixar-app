@@ -350,7 +350,8 @@ def _process_one_request() -> Optional[float]:
     from .steps_recorder import record_step_start, record_step_end
     chat_scene = target_scene if target_scene else getattr(bpy.context, "scene", None)
     if chat_scene:
-        record_step_start(chat_scene, req.request_id, req.tool_name, req.script)
+        record_step_start(chat_scene, req.request_id, req.tool_name, req.script,
+                          call_id=str((req.agent_ctx or {}).get("call_id") or ""))
 
     executor = get_executor()
     # Skip if previous script is still executing (should not normally happen
@@ -369,7 +370,7 @@ def _process_one_request() -> Optional[float]:
 
     # Complete the step row with status / touched objects / output.
     if chat_scene:
-        record_step_end(chat_scene, req.request_id, result_dict)
+        record_step_end(chat_scene, req.request_id, result_dict, req.session_id)
 
     # Main-thread work for this script is done — the liveness probe reports
     # idle from here on.
