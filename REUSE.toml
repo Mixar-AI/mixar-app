@@ -42,8 +42,6 @@ SPDX-License-Identifier = "GPL-2.0-or-later"
 [[annotations]]
 path = [
   "src/scripts/mixar/modules/onboarding/assets/**",
-  "src/scripts/mixar/modules/paint/procedural_materials/**/*.json",
-  "src/scripts/mixar/modules/paint/procedural_materials/**/*.png",
   "src/scripts/mixar/modules/testing/*.json",
   "src/scripts/mixar/modules/texel_density/texel/*.json",
   "src/scripts/startup/bl_app_templates_system/**/*.blend",
