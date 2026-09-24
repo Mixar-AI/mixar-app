@@ -511,9 +511,9 @@ def test_images_to_fetch_skips_rows_that_already_hold_local_tiles():
         "c6", "done", "Captured viewport", images=[{"id": "a" * 16, "label": "persp"}])) == []
     # A row with no tiles (view_image) fetches every ref.
     row2 = steps_format.apply_activity_to_bubble(
-        bubble, _activity("c7", "done", "Viewed 2 images"))
+        bubble, _activity("c7", "done", "Inspected UV layout", tool="inspect_uv_map"))
     refs = [{"id": "b" * 16, "label": "top"}, {"id": "c" * 16}, {"nope": 1}]
-    assert steps_format.images_to_fetch(bubble, row2, _activity("c7", "done", "x", images=refs)) == [
+    assert steps_format.images_to_fetch(bubble, row2, _activity("c7", "done", "x", tool="inspect_uv_map", images=refs)) == [
         {"id": "b" * 16, "label": "top"}, {"id": "c" * 16, "label": ""}]
 
 
@@ -528,7 +528,14 @@ def test_the_same_image_file_is_one_tile_per_bubble():
                                                           {"local_path": "/c/bbbbbbbbbbbbbbbb.png"}]) == 1
     assert [steps_format._tile_key(i.local_path) for i in bubble.image_items] == ["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb"]
     # A ref the bubble already holds is not fetched again either.
-    row = steps_format.apply_activity_to_bubble(bubble, _activity("c9", "done", "Captured viewport"))
+    row = steps_format.apply_activity_to_bubble(bubble, _activity("c9", "done", "Captured viewport", tool="render_viewport"))
     refs = [{"id": "aaaaaaaaaaaaaaaa", "label": "same"}, {"id": "cccccccccccccccc", "label": "new"}]
-    assert steps_format.images_to_fetch(bubble, row, _activity("c9", "done", "x", images=refs)) == [
+    assert steps_format.images_to_fetch(bubble, row, _activity("c9", "done", "x", tool="render_viewport", images=refs)) == [
         {"id": "cccccccccccccccc", "label": "new"}]
+
+
+def test_view_image_refs_are_never_fetched():
+    bubble = _FakeBubble()
+    row = steps_format.apply_activity_to_bubble(bubble, _activity("c10", "done", "Viewed 2 images"))
+    refs = [{"id": "d" * 16, "label": "old capture"}]
+    assert steps_format.images_to_fetch(bubble, row, _activity("c10", "done", "x", images=refs)) == []

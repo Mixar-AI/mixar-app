@@ -479,6 +479,10 @@ def images_to_fetch(bubble, row, activity: dict) -> list:
             if isinstance(r, dict) and r.get("id")]
     if not refs or row is None:
         return []
+    if str(activity.get("tool") or "") == "view_image":
+        # Reopens images that already exist: earlier captures (already tiles)
+        # or the user's references. Never a new picture.
+        return []
     if step_image_count(bubble, row.item_id) > 0:
         return []
     # An id the bubble already holds (a re-served capture, a second view of
