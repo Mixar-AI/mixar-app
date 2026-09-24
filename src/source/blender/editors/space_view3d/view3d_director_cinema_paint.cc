@@ -414,6 +414,36 @@ ui::Button *cinema_popup_button(ui::Block *block,
   return but;
 }
 
+ui::Button *cinema_prop_toggle(ui::Block *block,
+                               PointerRNA *ptr,
+                               const char *prop_name,
+                               const int icon,
+                               const rctf &rect,
+                               const char *tooltip)
+{
+  const rcti box = hit_box(rect);
+  ui::block_emboss_set(block, blender::ui::EmbossType::None);
+  ui::Button *but = uiDefIconButR(block,
+                                  ui::ButtonType::Toggle,
+                                  icon,
+                                  box.xmin,
+                                  box.ymin,
+                                  short(BLI_rcti_size_x(&box)),
+                                  short(BLI_rcti_size_y(&box)),
+                                  ptr,
+                                  prop_name,
+                                  0,
+                                  0.0f,
+                                  0.0f,
+                                  tooltip);
+  ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
+  if (but != nullptr) {
+    ui::mixar_style_button(
+        but, ui::MixarComponent::Surface, ui::MixarVariant::Ghost, cinema_unit());
+  }
+  return but;
+}
+
 /** \} */
 
 }  // namespace blender

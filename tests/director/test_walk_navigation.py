@@ -219,9 +219,10 @@ def test_the_strip_carries_a_walk_chip():
     """A keyboard-only entry point is not one a director discovers."""
     chip = TOP.split("void walk_chip(", 1)[1].split("\n}\n", 1)[0]
     assert '"MIXAR_OT_director_navigate"' in chip
-    # A walking figure, not the pan hand (which is the viewport's own Move).
-    assert "ICON_ARMATURE_DATA," in chip
-    assert "ICON_VIEW_PAN" not in chip
+    # A camera: the chip drives the shot camera. Not the pan hand (the
+    # viewport's own Move) and not the stick figure (an armature).
+    assert "ICON_VIEW_CAMERA," in chip
+    assert "ICON_VIEW_PAN" not in chip and "ICON_ARMATURE_DATA" not in chip
     assert 'cinema_qa_record(region, chip, "director_walk"' in chip
     # Lit while a walk is running, like the grid chip's on state.
     assert "MIXAR_THEME_LOAD(on, Primary);" in chip

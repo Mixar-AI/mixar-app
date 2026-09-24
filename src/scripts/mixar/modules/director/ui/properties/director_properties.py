@@ -33,6 +33,7 @@ from ...constants import (
 )
 from ...core.property_updates import (
     _activate_shot_camera,
+    _get_auto_key,
     _get_range_end_seconds,
     _get_range_start_seconds,
     _set_range_end_seconds,
@@ -46,6 +47,7 @@ from ...core.property_updates import (
     _on_speed_update,
     _on_track_target_update,
     _redraw_director_surface,
+    _set_auto_key,
     _track_target_poll,
 )
 
@@ -433,13 +435,16 @@ class MixarDirectorState(PropertyGroup):
         options={'SKIP_SAVE'},
         update=_redraw_director_surface,
     )
+    # Blender's own Auto Keying, not a copy of it: see
+    # `core/property_updates.py` (`_get_auto_key` / `_set_auto_key`).
     auto_key: BoolProperty(
-        name="Auto Key",
+        name="Auto Keying",
         description=(
-            "Automatically capture a keyframe after every camera move "
-            "instead of pressing F or Capture Keyframe"
+            "Blender's Auto Keying (the Timeline's record button): key the "
+            "camera after every move, and record a take while the timeline plays"
         ),
-        default=False,
+        get=_get_auto_key,
+        set=_set_auto_key,
         update=_redraw_director_surface,
     )
 

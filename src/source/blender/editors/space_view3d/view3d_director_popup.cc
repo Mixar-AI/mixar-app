@@ -95,12 +95,14 @@ void director_popup_block_end(ui::Block *block)
    * it vanished before the scale could be. These are settings panels, not
    * menus picking one item.
    *
-   * A block-button popup is created with `can_refresh` false
-   * (`interface_handlers.cc`, the `popup_block_create` call in
-   * `button_activate_init`), so it cannot re-lay itself after a click. That
-   * is the other half of the contract, and the reason the popups that stay
-   * open draw every row they might need up front rather than branching on a
-   * value a row inside them can change. */
+   * The other half of the contract: a popup that stays open has to show what
+   * its rows just changed. Upstream creates every block-button popup with
+   * `can_refresh` false, so a lit chip or a value stayed as it was when the
+   * popup opened until it was closed and opened again (Depth of Field was
+   * where that was reported). The Cinema overlay and dock blocks carry
+   * `BLOCK_MIXAR_POPUPS_REFRESH`, which `button_activate_init` turns into a
+   * refreshable popup: after every row runs it is rebuilt from its create
+   * function. Rows may therefore follow a value a row inside changes. */
   ui::block_flag_enable(block, ui::BLOCK_KEEP_OPEN);
 }
 

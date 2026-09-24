@@ -73,6 +73,9 @@ struct DirectorViewState {
   int scene_frame_end = 0;
   float fps = 24.0f;
   const void *shot_identity = nullptr;
+  /** The active shot's camera, for this draw only: the dock draws its native
+   * keys (`view3d_director_timeline_keys.cc`). Null without one. */
+  Object *shot_camera = nullptr;
   std::string camera_name = "Camera";
   blender::Vector<DirectorBeatView> beats;
 };

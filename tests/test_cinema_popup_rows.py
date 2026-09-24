@@ -110,6 +110,8 @@ def test_hovered_segment_cell_is_as_wide_as_its_label_and_others_share_the_rest(
     assert "if (group.hovered < 0 || group.count < 2) {\n    return self->rect;" in cell
     # Hit rects stay the block's; the reason is documented at the top.
     assert "can_refresh" in SEGMENT
+    # A refresh follows a row that RAN, never a hover (tests/director/test_popup_refresh.py).
+    assert "never\n * on hover" in SEGMENT
     assert "SEGMENT_MIN_W = mixar_chrome::cinema_row_segment_min_w" in ROW
     assert "cinema_row_segment_min_w = 28.0f" in CHROME
 

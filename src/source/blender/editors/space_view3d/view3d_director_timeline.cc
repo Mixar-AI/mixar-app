@@ -121,6 +121,8 @@ void director_timeline_draw(const bContext *C, ARegion *region)
   ui::Block *block = ui::block_begin(
       C, region, "mixar_director_timeline", blender::ui::EmbossType::Emboss);
   ui::block_theme_style_set(block, ui::BLOCK_THEME_STYLE_POPUP);
+  /* Same as the viewport surface: the Interpolation popup refreshes. */
+  ui::block_flag_enable(block, ui::BLOCK_MIXAR_POPUPS_REFRESH);
   /* The designed dock row is half of the wide surface, so it is gated on the
    * SAME test the columns use — and that test reads the VIEWPORT region, not
    * this dock (whose own height is one control row). Below the gate the old

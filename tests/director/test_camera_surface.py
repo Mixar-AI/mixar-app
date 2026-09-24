@@ -177,8 +177,10 @@ def test_auto_key_captures_after_camera_moves():
     assert "move_in_progress()" in auto_key
     assert "_reset(key=key, frame=frame, sig=sig)" in auto_key
     assert "auto_key.register()" in watch
-    assert '"auto_key"' in state_cc
-    assert "MIXAR_OT_director_toggle_auto_key" in overlay
+    # Blender's own Auto Keying, read natively (tests/director/test_dock_actions_row.py).
+    assert "animrig::is_autokey_on(scene)" in state_cc
+    # The compact rail binds the same RNA property the Timeline does.
+    assert '"use_keyframe_insert_auto"' in overlay
     # Native timeline record icons, not a static REC glyph.
     assert "ICON_RECORD_ON : ICON_RECORD_OFF" in overlay
 

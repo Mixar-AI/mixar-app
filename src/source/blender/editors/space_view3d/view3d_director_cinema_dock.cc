@@ -383,7 +383,7 @@ void cinema_draw_dock_controls(ui::Block *block,
 
   /* -------- Actions, centred on their own row under it -------- */
   cinema_draw_dock_actions(
-      block, region, state, row_ymin - (SUB_ROW_GAP + SUB_ROW_H * 0.5f) * u);
+      block, C, region, state, row_ymin - (SUB_ROW_GAP + SUB_ROW_H * 0.5f) * u);
 }
 
 void cinema_draw_dock_compact(ui::Block *block,

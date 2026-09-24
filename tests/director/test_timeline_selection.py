@@ -247,7 +247,7 @@ def test_a_selected_handle_is_ringed_not_merely_lit():
 
 def test_the_rubber_band_is_drawn_over_what_it_selects():
     content = DRAW[DRAW.index("void view3d_director_timeline_draw_content(") :]
-    assert content.index("draw_strip(state, runtime") < content.index(
+    assert content.index("draw_strip(region, state, runtime") < content.index(
         "director_timeline_box_rect(*runtime, &box)"
     )
     assert "BOX_FILL_COLOR" in DRAW and "BOX_LINE_COLOR" in DRAW

@@ -196,11 +196,12 @@ void grid_chip(ui::Block *block, const bContext *C, const ARegion *region, const
  * of the first. `MIXAR_OT_director_navigate` now asks the running walk to
  * finish instead (`walk_stop_requested`).
  *
- * The glyph is a walking figure (`ICON_ARMATURE_DATA`, Blender's stick
- * figure). It was the pan hand, which names the viewport's own Move — a
- * different gesture — rather than driving the camera on foot. The compact
- * rail's Animation button carries the same glyph, but the rail only draws
- * when this strip does not, so the two never share a screen.
+ * The glyph is Blender's camera-view camera (`ICON_VIEW_CAMERA`): what the
+ * chip drives is the shot camera, seen through. It was the pan hand, which
+ * names the viewport's own Move, and then a walking figure, which read as
+ * the armature it is. The compact rail's Camera button carries the same
+ * glyph, but the rail only draws when this strip does not, so the two never
+ * share a screen.
  */
 void walk_chip(ui::Block *block,
                const ARegion *region,
@@ -220,7 +221,7 @@ void walk_chip(ui::Block *block,
   /* Both tooltips are literals: `ui::Button::tip` is non-owning. */
   cinema_icon_button(block,
                      "MIXAR_OT_director_navigate",
-                     ICON_ARMATURE_DATA,
+                     ICON_VIEW_CAMERA,
                      chip,
                      walking ? "Stop walking" :
                                "Walk the camera: W A S D, Q E, Shift to sprint, " WALK_SLOW_KEY

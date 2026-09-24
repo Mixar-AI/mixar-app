@@ -21,6 +21,8 @@
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
 
+#include "ED_screen.hh"
+
 #include "UI_interface_c.hh"
 
 #include "WM_types.hh"
@@ -146,6 +148,17 @@ bool director_pointer_on_stage(bContext *C, const wmEvent *event)
     return false;
   }
   if (!BLI_rcti_isect_pt(&region->winrct, event->xy[0], event->xy[1])) {
+    return false;
+  }
+  /* The region Blender itself would hand this event to. A header, tool
+   * header or sidebar laid OVER the viewport sits inside the viewport's own
+   * rect — Zen Mode floats the View3D header and tool header this way — so
+   * the rect test alone let the walk take presses meant for their buttons,
+   * and the options row above the stage could not be clicked while walking.
+   * Asking the same question event dispatch asks
+   * (`wm_event_do_handlers_area_regions`) keeps every region that is not the
+   * viewport its own. */
+  if (ED_area_find_region_xy_visual(area, RGN_TYPE_ANY, event->xy) != region) {
     return false;
   }
   const int x = event->xy[0] - region->winrct.xmin;

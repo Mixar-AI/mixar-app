@@ -50,8 +50,8 @@ namespace {
  * One cell of a segmented group: the row state (BUT_ACTIVE_DEFAULT carries
  * "active", BUT_DISABLED "locked"), then the Segment kind on top so the
  * cells on this baseline paint as one hover-expanding group. The cells are
- * laid out as equal parts of the row; their hit rects never change (a block
- * popup is not refreshable), only the painted widths do.
+ * laid out as equal parts of the row; their hit rects never change on hover
+ * (a refresh happens only after a row runs), only the painted widths do.
  */
 void popup_segment_state(ui::Button *but, const bool active, const bool enabled)
 {
@@ -161,20 +161,17 @@ int panorama_fields(ui::Block *block,
   return y;
 }
 
-/* A projection switch DISMISSES the popup, and that is what makes it
- * possible to show one projection's controls at a time.
+/* A projection switch DISMISSES the popup, and the popup shows one
+ * projection's controls at a time.
  *
- * The popup is KEEP_OPEN and a block-button popup cannot re-lay itself
- * (`can_refresh` is false for it — `interface_handlers.cc`, the
- * `popup_block_create` call in `button_activate_init`), so rows drawn for
- * the live projection would still be the old projection's the moment the
- * segment above switched it. The previous answer was to draw Perspective's
- * rows AND Orthographic's, always, captioned — which put a focal length, a
- * preset ladder and an orthographic scale on screen together and left the
- * director to work out which half applied. Closing on the switch is the
- * honest one: picking a projection is picking a mode, the row's own value
- * label already reads it back ("Orthographic", "50mm"), and reopening shows
- * that projection's controls and nothing else. */
+ * Drawing Perspective's rows AND Orthographic's, always, captioned, put a
+ * focal length, a preset ladder and an orthographic scale on screen together
+ * and left the director to work out which half applied. Picking a
+ * projection is picking a mode: the row's own value label reads it back
+ * ("Orthographic", "50mm") and reopening shows that projection's controls.
+ * The popup could re-lay in place now (`BLOCK_MIXAR_POPUPS_REFRESH`), but
+ * closing also clears the view for what a Panoramic pick switches — Cycles
+ * and the Rendered viewport (`director/core/panoramic.py`). */
 void lens_popup_close(bContext * /*C*/, void *arg_block, void * /*arg2*/)
 {
   ui::popup_menu_retval_set(static_cast<ui::Block *>(arg_block), ui::RETURN_OK, true);
@@ -317,11 +314,10 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
   }
 
   if (data.camera->type == CAM_PANO) {
-    /* Panoramic's fields are defined by `panorama_type`, which is a menu
-     * INSIDE this popup, so they are the one set of rows that can still go
-     * stale: changing the panorama type needs the popup reopened to show
-     * that type's parameters. The projection segments above cannot go stale,
-     * because switching projection closes the popup. */
+    /* Panoramic's fields are defined by `panorama_type`, a menu INSIDE this
+     * popup. The popup re-lays itself after a row runs
+     * (`BLOCK_MIXAR_POPUPS_REFRESH`), so picking a panorama type shows that
+     * type's parameters at once; it used to need the popup reopened. */
     y -= gap + label_h;
     director_popup_section_label(block, "Panoramic", y, width);
     y -= gap + row_h;

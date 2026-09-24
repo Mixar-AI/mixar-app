@@ -43,6 +43,14 @@ ALLOWED = {
     "GPU_shader_shared_utils",
     # Referenced in a comment about which operator a keymap item replaces.
     "WM_OT_context_set_int",
+    # The dock's native keys (`view3d_director_timeline_keys.cc`): the keylist
+    # API exactly as `channel_list_*` in upstream keyframes_draw.cc drives it
+    # (ED_keyframes_keylist.hh at the pinned 5.2 commit).
+    "ED_keylist_array",
+    "ED_keylist_array_len",
+    "ED_keylist_create",
+    "ED_keylist_free",
+    "ED_keylist_prepare_for_direct_access",
 }
 
 _PREFIXES = "UI|GPU|BKE|ED|WM|BLI|MEM|RNA|BLF|DEG|DRW"

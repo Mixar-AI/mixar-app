@@ -18,6 +18,7 @@
 namespace blender {
 
 struct ARegion;
+struct Object;
 struct bContext;
 struct wmEvent;
 struct wmWindowManager;
@@ -140,6 +141,17 @@ constexpr float DIRECTOR_RULER_LABEL_GAP = 8.0f;
 
 void director_timeline_draw_rect(float x1, float y1, float x2, float y2, const float color[4]);
 void director_timeline_draw_round_rect(const rctf &rect, float radius, const float color[4]);
+
+/**
+ * The shot camera's native keys on the strip row centred on \a cy, drawn the
+ * way the Timeline draws them (`view3d_director_timeline_keys.cc`): Blender's
+ * keylist and keyframe shader, placed with the dock's frame->pixel mapping.
+ * View-only marks under the beat handles. No-op without a camera.
+ */
+void director_timeline_draw_native_keys(Object *camera,
+                                        const DirectorTimelineRuntime &runtime,
+                                        const ARegion *region,
+                                        float cy);
 void director_timeline_draw_text(
     const char *text, float x, float y, float size, const float color[4]);
 float director_timeline_text_width(const char *text, float size);

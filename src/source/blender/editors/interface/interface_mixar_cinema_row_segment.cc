@@ -14,10 +14,12 @@
  * the others share what is left, in order.
  *
  * Why the painter and not a re-layout: a native block popup opened from a
- * dropdown (`uiDefIconBlockBut`) is never refreshed — `can_refresh` is
- * false for it (`interface_handlers.cc`, the `popup_menu_create` call in
- * `button_activate_init`'s menu branch) — so the block cannot re-lay its
- * buttons on hover. The HIT rects therefore stay the original equal cells;
+ * dropdown (`uiDefIconBlockBut`) is re-laid at most after a row RUNS (the
+ * Cinema surface opens its popups with `can_refresh` set,
+ * `BLOCK_MIXAR_POPUPS_REFRESH`, honoured in `button_activate_init`), never
+ * on hover — and a re-layout
+ * under the pointer would move the very hit rect it is over. The HIT rects
+ * therefore stay the original equal cells;
  * only the painted cells move. The hovered cell grows OUTWARD from its own
  * cell (leftmost grows right, middle both ways, rightmost left) and always
  * contains its hit rect, so the pointer never leaves the cell it is

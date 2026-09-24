@@ -133,14 +133,19 @@ void sync_view(const DirectorViewState &state, DirectorTimelineRuntime *runtime)
   runtime->content_count = count;
 }
 
-void draw_strip(const DirectorViewState &state,
+void draw_strip(const ARegion *region,
+                const DirectorViewState &state,
                 DirectorTimelineRuntime *runtime,
                 const float strip_y,
                 const float strip_h)
 {
   runtime->beat_hits.clear();
   BLI_rctf_init(&runtime->strip_bounds, 0.0f, 0.0f, 0.0f, 0.0f);
+  const float key_cy = strip_y + strip_h * 0.5f;
   if (state.beats.is_empty()) {
+    /* No beats yet — a first take still recording, or keys set outside
+     * Director — but the camera's own keys still show, as in the Timeline. */
+    director_timeline_draw_native_keys(state.shot_camera, *runtime, region, key_cy);
     return;
   }
   const float width = BLI_rctf_size_x(&runtime->viewport_bounds);
@@ -157,11 +162,15 @@ void draw_strip(const DirectorViewState &state,
   const float visible_start = std::max(raw_start, runtime->viewport_bounds.xmin);
   const float visible_end = std::min(raw_end, runtime->viewport_bounds.xmax);
   if (visible_end <= visible_start) {
+    director_timeline_draw_native_keys(state.shot_camera, *runtime, region, key_cy);
     return;
   }
   runtime->strip_bounds = {visible_start, visible_end, strip_y, strip_y + strip_h};
   const float *strip_color = runtime->strip_hovered ? STRIP_HOVER_COLOR : STRIP_COLOR;
   director_timeline_draw_round_rect(runtime->strip_bounds, 7.0f * UI_SCALE_FAC, strip_color);
+  /* Every key the camera carries — a recorded take keys each frame — over
+   * the strip and under the beat handles, so the beats stay the handles. */
+  director_timeline_draw_native_keys(state.shot_camera, *runtime, region, key_cy);
 
   const float font_size = 12.0f * UI_SCALE_FAC;
   const float icon_size = 16.0f * UI_SCALE_FAC;
@@ -321,7 +330,7 @@ void view3d_director_timeline_draw_content(const ARegion *region,
                            strip_y - 2.0f * u};
 
   director_timeline_draw_ruler(state, *runtime, tick_base);
-  draw_strip(state, runtime, strip_y, strip_h);
+  draw_strip(region, state, runtime, strip_y, strip_h);
   director_timeline_draw_playhead(
       state, runtime, tick_base, float(content_top) - 6.0f * u);
   /* Last of the content, so it dims the whole stack at once. */

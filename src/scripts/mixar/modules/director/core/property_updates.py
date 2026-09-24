@@ -244,3 +244,37 @@ def _get_range_end_seconds(self) -> float:
 
 def _set_range_end_seconds(self, value: float) -> None:
     _range_seconds_set(self, "frame_end", value)
+
+
+# ---------------------------------------------------------------------------
+# Auto Key IS Blender's Auto Keying switch.
+#
+# It was a Director-only flag, so the Timeline's record button and the Cinema
+# dock's chip were two switches for one idea — Cinema Mode could key while the
+# Timeline said auto-keying was off, and Blender's own auto-keying never ran
+# for a Cinema session. The property is a proxy now: reading and writing it
+# reads and writes `tool_settings.use_keyframe_insert_auto`, and every Director
+# reader (the recorder, the stillness debounce, the walk's exit capture) keeps
+# asking `state.auto_key`.
+
+
+def _tool_settings(state):
+    try:
+        return getattr(state.id_data, "tool_settings", None)
+    except (AttributeError, ReferenceError):
+        return None
+
+
+def _get_auto_key(self) -> bool:
+    return bool(getattr(_tool_settings(self), "use_keyframe_insert_auto", False))
+
+
+def _set_auto_key(self, value: bool) -> None:
+    tool_settings = _tool_settings(self)
+    if tool_settings is None:
+        return
+    try:
+        tool_settings.use_keyframe_insert_auto = bool(value)
+    except (AttributeError, ReferenceError, TypeError):
+        pass
+

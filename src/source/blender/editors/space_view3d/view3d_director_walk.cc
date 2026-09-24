@@ -181,6 +181,32 @@ void walk_move(bContext *C,
   walk_commit(C, data, camera);
 }
 
+/**
+ * Take the camera's own pose back before a move or a look begins.
+ *
+ * The walk integrates into a running matrix rather than reading the camera
+ * each tick, because a tick can land before the depsgraph has evaluated the
+ * last one's write. But between bursts nothing of the walk's is in flight,
+ * and the camera may have been moved by something else: a scrub or a
+ * keyframe jump in the timeline, playback, a paired phone, an undo. Driving
+ * on from the running matrix snapped the camera back to wherever the walk
+ * last left it, so using the timeline mid-walk was undone by the next W.
+ *
+ * False when the camera is no longer the walk's to move (a shot switch, a
+ * deleted camera, a locked take): the caller ends the walk rather than read
+ * through a stale pointer.
+ */
+bool walk_resync(bContext *C, DirectorWalkData *data)
+{
+  bool locked = false;
+  Object *camera = director_move_camera(CTX_data_scene(C), &locked);
+  if (camera == nullptr || camera != data->camera || locked) {
+    return false;
+  }
+  data->matrix = camera->object_to_world();
+  return true;
+}
+
 /** Aim by \a dx / \a dy pixels of drag (#director_walk_aim), then write it. */
 void walk_look(bContext *C, DirectorWalkData *data, Object *camera, const float dx, const float dy)
 {
@@ -346,6 +372,9 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
          * usable while the walk runs. */
         return OPERATOR_PASS_THROUGH;
       }
+      if (data->held == 0 && !walk_resync(C, data)) {
+        return director_walk_finish(C, op);
+      }
       data->looking = true;
       return OPERATOR_RUNNING_MODAL;
     }
@@ -391,6 +420,11 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
      * press over a card or a text field goes to the card or the field. */
     if (!director_pointer_on_stage(C, event)) {
       return OPERATOR_PASS_THROUGH;
+    }
+    /* The first key of a burst, with no look-drag running either: nothing
+     * of the walk's is in flight, so the camera's own pose is the truth. */
+    if (data->held == 0 && !data->looking && !walk_resync(C, data)) {
+      return director_walk_finish(C, op);
     }
     data->held |= bit;
     return OPERATOR_RUNNING_MODAL;
