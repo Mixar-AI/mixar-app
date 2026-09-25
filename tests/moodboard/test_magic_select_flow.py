@@ -93,6 +93,44 @@ def test_expired_job_requeues_the_point_unless_a_newer_click_waits():
     assert flow.point == (0.8, 0.8)
 
 
+def test_second_expiry_in_a_row_gives_up_instead_of_looping():
+    """Box and Lasso re-upload once; Magic Select must not loop forever when
+    the service keeps forgetting the image (each lap re-uploads it)."""
+    flow = MagicSelectFlow(upload_ready=True)
+    flow.click(0.2, 0.2)
+    point = flow.segment_started()
+    assert flow.upload_expired(point) == UPLOAD
+    assert flow.upload_done(True) == SEGMENT
+    assert flow.segment_started() == point
+    assert flow.upload_expired(point) == IDLE
+    assert flow.point is None and flow.upload == "failed" and not flow.segmenting
+    # The operator reports the failure and finishes the request; nothing waits.
+    assert flow.segment_done(False) == IDLE and not flow.pending
+
+
+def test_expiry_budget_resets_per_request_and_a_newer_click_restarts_the_upload():
+    flow = MagicSelectFlow(upload_ready=True)
+    flow.click(0.2, 0.2)
+    point = flow.segment_started()
+    flow.upload_expired(point)
+    flow.upload_done(True)
+    flow.segment_started()
+    flow.segment_done(True)  # the retry succeeded: budget restored
+    assert not flow.retried_expiry
+
+    flow.click(0.5, 0.5)
+    point = flow.segment_started()
+    flow.upload_expired(point)
+    flow.upload_done(True)
+    flow.segment_started()
+    flow.click(0.8, 0.8)  # newer click waits while the retry expires again
+    assert flow.upload_expired(point) == IDLE
+    assert flow.point == (0.8, 0.8)
+    # The upload was given up on, so the waiting click must start a fresh one.
+    assert flow.segment_done(False) == UPLOAD
+    assert flow.upload == "uploading" and flow.pending
+
+
 def test_status_text_follows_the_wait():
     flow = MagicSelectFlow(upload_ready=False)
     assert flow.status_text() == flow_mod.STATUS_READY

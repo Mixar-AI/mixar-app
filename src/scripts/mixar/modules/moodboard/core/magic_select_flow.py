@@ -45,6 +45,9 @@ class MagicSelectFlow:
         self.segmenting = False
         self.point: Optional[Point] = None
         self.found_once = False
+        # One re-upload per request, like Box and Lasso: a service that keeps
+        # forgetting the image must surface as a failure, not an endless loop.
+        self.retried_expiry = False
 
     # -- queries ---------------------------------------------------------
 
@@ -101,18 +104,34 @@ class MagicSelectFlow:
     def segment_done(self, success: bool) -> str:
         """The segmentation callback. Returns SEGMENT when a newer click waits."""
         self.segmenting = False
+        self.retried_expiry = False
         if success:
             self.found_once = True
         if self.point is None:
             return IDLE
         if self.upload == "ready":
             return SEGMENT
+        if self.upload in ("idle", "failed"):
+            # Nothing is uploading (the last upload was given up on), so the
+            # waiting click has to start one itself.
+            self.upload = "uploading"
+            return UPLOAD
         return WAIT
 
     def upload_expired(self, point: Point) -> str:
         """The service forgot the image mid-request: put the point back and
-        re-upload. A click that arrived meanwhile keeps precedence."""
+        re-upload once. A click that arrived meanwhile keeps precedence.
+
+        A second expiry in a row for the same request gives up: the upload is
+        marked failed, the point is dropped, and IDLE tells the operator to
+        report the failure (``segment_done`` then restarts the upload if a
+        newer click is waiting)."""
         self.segmenting = False
+        if self.retried_expiry:
+            self.retried_expiry = False
+            self.upload = "failed"
+            return IDLE
+        self.retried_expiry = True
         if self.point is None:
             self.point = point
         self.upload = "uploading"

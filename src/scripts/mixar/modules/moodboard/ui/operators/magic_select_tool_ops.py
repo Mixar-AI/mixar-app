@@ -202,18 +202,24 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
             if not created:
                 error_msg = message or "Unknown error"
                 if error_msg == "expired":
-                    logger.debug("[MagicSelect] Job expired, re-uploading and retrying...")
-                    flow.upload_expired((click_x, click_y))
-                    self._start_upload(img_item)
-                    self._sync(state)
-                    return
-                if success:
+                    # One re-upload per request; a second expiry falls through
+                    # to a failure toast instead of looping upload → expired.
+                    if flow.upload_expired((click_x, click_y)) == flow_mod.UPLOAD:
+                        logger.debug("[MagicSelect] Job expired, re-uploading and retrying...")
+                        # Re-fetch: the collection may have been rebuilt meanwhile.
+                        self._start_upload(self._img_item())
+                        self._sync(state)
+                        return
+                    error_msg = "The service lost the uploaded image twice. Try again."
+                elif success:
                     error_msg = "The returned mask could not be read"
                 logger.warning("[MagicSelect] Segmentation failed: %s", error_msg)
                 toast_failure(error_msg)
             action = flow.segment_done(created)
             if action == flow_mod.SEGMENT:
                 self._perform_segmentation(state)
+            elif action == flow_mod.UPLOAD:
+                self._start_upload(self._img_item())
             elif flow.point is None:
                 _mark_point(state, None)
             self._sync(state)
