@@ -109,6 +109,7 @@ struct AgentIslandLayout {
   rctf hdr_handwriting; /* Signature disc — explicit handwriting, separate from Sketch. */
   rctf hdr_checkpoints; /* Turn checkpoints — restore an earlier turn. */
   rctf hdr_rules; /* Rules text-document icon, beside Checkpoints. */
+  rctf hdr_scenes; /* Scene tabs — which tab this chat is, jump to another. */
   float hdr_title_cx;
   float hdr_title_y;
 

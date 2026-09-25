@@ -343,7 +343,10 @@ class MIXIE_CHAT_MT_agent_bubble(Menu):
             draw_project_controls(layout, scene)
 
 
+from .scene_tabs_menu import MIXIE_CHAT_MT_scene_tabs  # noqa: E402
+
 classes = (
     MIXIE_CHAT_UL_history,
     MIXIE_CHAT_MT_agent_bubble,
+    MIXIE_CHAT_MT_scene_tabs,
 )

@@ -395,11 +395,23 @@ void agent_ui_draw_island(ARegion *region,
                checkpoints_fill);
     agent_ui_header_icon_draw(AGENT_ICON_RESTORE, &layout->hdr_checkpoints, glyph, checkpoints_fill);
 
+    /* Scene tabs (parallel scenes): the same disc with the cube glyph. Runs
+     * mixie_chat.show_scene_tabs, which pops the MIXIE_CHAT_MT_scene_tabs
+     * menu — this chat's tab and every other tab with its agent status. */
+    float scenes_fill[4];
+    agent_ui_motion_color(accent, accent,
+                          agent_ui_motion_sample(region, AgentIslandControl::Scenes, layout->hdr_scenes),
+                          scenes_fill);
+    fill_round(&layout->hdr_scenes,
+               BLI_rctf_size_x(&layout->hdr_scenes) * 0.5f,
+               scenes_fill);
+    agent_ui_header_icon_draw(AGENT_ICON_MESH, &layout->hdr_scenes, glyph, scenes_fill);
+
     agent_ui_draw_handwriting_control(region, layout, state);
 
     if (state->ink_visible) {
       /* Handwriting text output window over the new chat topbar */
-      const float left_limit = layout->hdr_rules.xmax + 16.0f * u;
+      const float left_limit = layout->hdr_scenes.xmax + 16.0f * u;
       const float right_limit = layout->hdr_handwriting.xmin - 16.0f * u;
       const float max_w = right_limit - left_limit;
       const float cx = layout->hdr_title_cx;

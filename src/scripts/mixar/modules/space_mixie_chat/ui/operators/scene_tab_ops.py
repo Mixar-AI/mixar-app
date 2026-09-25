@@ -267,6 +267,22 @@ class MIXIE_CHAT_OT_reorder_scene_tab(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_show_scene_tabs(Operator):
+    """Pop the scene-tab menu from the island header: this chat's tab,
+    every other tab with its agent status, and New scene."""
+
+    bl_idname = "mixie_chat.show_scene_tabs"
+    bl_label = "Scene tabs"
+    bl_description = "This chat's scene tab; jump to another tab or open a new one"
+    bl_options = {'INTERNAL'}
+
+    def invoke(self, context, event):
+        return bpy.ops.wm.call_menu(name="MIXIE_CHAT_MT_scene_tabs")
+
+    def execute(self, context):
+        return bpy.ops.wm.call_menu(name="MIXIE_CHAT_MT_scene_tabs")
+
+
 class MIXIE_CHAT_OT_close_scene_tab(Operator):
     """Close a scene tab (stops its agent first)"""
 
@@ -295,4 +311,5 @@ classes = (
     MIXIE_CHAT_OT_switch_scene_tab,
     MIXIE_CHAT_OT_reorder_scene_tab,
     MIXIE_CHAT_OT_close_scene_tab,
+    MIXIE_CHAT_OT_show_scene_tabs,
 )
