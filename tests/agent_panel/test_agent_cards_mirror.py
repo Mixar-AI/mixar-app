@@ -324,6 +324,17 @@ class TestAgentNaming:
         assert not name[:-1].endswith(" ")  # no trailing space before the ellipsis
         assert len(name) <= 36
 
+    def test_an_identifier_task_name_reads_as_prose(self):
+        assert cards_mod.derive_agent_name("gaming_pc") == "Gaming PC"
+        assert cards_mod.derive_agent_name("back_window_left") == "Back window left"
+        assert cards_mod.derive_agent_name("oak-table") == "Oak table"
+        assert cards_mod.derive_agent_name("backWindowLeft") == "Back window left"
+        assert cards_mod.derive_agent_name("chair_2") == "Chair 2"
+        assert cards_mod.derive_agent_name("sofa") == "Sofa"
+
+    def test_a_prose_task_keeps_its_underscores(self):
+        assert cards_mod.derive_agent_name("Rename the_mesh.") == "Rename the_mesh"
+
     def test_an_empty_task_still_names_the_agent(self):
         assert cards_mod.derive_agent_name("") == "Agent"
         assert cards_mod.derive_agent_name("   ") == "Agent"
