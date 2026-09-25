@@ -430,17 +430,11 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         rctf bed;
         BLI_rctf_rcti_copy(&bed, &thumb);
         draw_pill(bed, zen.panel, 6.0f * scale);
-        Scene *scene = reinterpret_cast<Scene *>(BKE_libblock_find_name(CTX_data_main(C), ID_SCE, card.scene_name.c_str()));
-        if (scene != nullptr) {
-          ScenesDrawerThumb &t = runtime->thumbs[card.scene_name];
-          const View3D *host = static_cast<const View3D *>(area ? area->spacedata.first : nullptr);
-          view3d_scenes_drawer_thumb_render(t, scene, host, BLI_rcti_size_x(&thumb) + 1,
-                                            BLI_rcti_size_y(&thumb) + 1, card.is_active ? 0.5 : 1.5);
-          if (t.has_render) {
-            GPU_viewport_draw_to_screen_ex(t.viewport, 0, &thumb, true, true);
-            ED_region_pixelspace(region);
-            GPU_blend(GPU_BLEND_ALPHA);
-          }
+        auto found = runtime->thumbs.find(card.scene_name);
+        if (found != runtime->thumbs.end() && found->second.has_render) {
+          GPU_viewport_draw_to_screen_ex(found->second.viewport, 0, &thumb, true, true);
+          ED_region_pixelspace(region);
+          GPU_blend(GPU_BLEND_ALPHA);
         }
       }
       card.thumb_rect.xmin = thumb.xmin + region->winrct.xmin;
@@ -548,6 +542,32 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
   }
 
   GPU_blend(GPU_BLEND_NONE);
+
+  /* Thumbnails render LAST, after every pixel of chrome: an offscreen scene
+   * draw in the middle of the pass left whatever was painted after it
+   * invisible for the frame (a fresh tab stayed a blank card). A render only
+   * lands on screen on the next frame, which it asks for. */
+  if (panel_visible && runtime) {
+    const View3D *host = static_cast<const View3D *>(area ? area->spacedata.first : nullptr);
+    const int thumb_w = int(THUMB_W * scale) + 1;
+    const int thumb_h = int(THUMB_H * scale) + 1;
+    bool rendered = false;
+    for (const ScenesDrawerCard &card : runtime->cards) {
+      Scene *scene = reinterpret_cast<Scene *>(
+          BKE_libblock_find_name(CTX_data_main(C), ID_SCE, card.scene_name.c_str()));
+      if (scene == nullptr) {
+        continue;
+      }
+      ScenesDrawerThumb &t = runtime->thumbs[card.scene_name];
+      const double before = t.last_render_time;
+      view3d_scenes_drawer_thumb_render(t, scene, host, thumb_w, thumb_h,
+                                        card.is_active ? 0.5 : 1.5);
+      rendered |= (t.last_render_time != before);
+    }
+    if (rendered) {
+      ED_region_tag_redraw(region);
+    }
+  }
 }
 
 }  // namespace blender

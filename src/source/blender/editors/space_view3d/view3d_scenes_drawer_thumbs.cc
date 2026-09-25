@@ -166,6 +166,13 @@ void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &t,
   int viewport[4], scissor[4];
   GPU_viewport_size_get_i(viewport);
   GPU_scissor_get(scissor);
+  /* The offscreen scene draw leaves depth testing, depth writes and face
+   * culling as the engines set them; the card's pill, name and glyphs drawn
+   * after it in the same frame are flat 2D and were dropped by the depth
+   * test on the frames a thumbnail rendered. Restore the region's state. */
+  const GPUDepthTest depth_test = GPU_depth_test_get();
+  const bool depth_mask = GPU_depth_mask_get();
+  const GPUFaceCullTest face_cull = GPU_face_culling_get();
   GPU_offscreen_bind(t.offscreen, true);
   ED_view3d_draw_offscreen_simple(deps, scene, &shading, nullptr, type, MINIMAP_HIDDEN_TYPES, 0, w, h,
                                   V3D_OFSDRAW_SHOW_GRIDFLOOR, view, projection, 0.01f, clip_end, 0,
@@ -176,6 +183,10 @@ void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &t,
   }
   GPU_viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
   GPU_scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+  GPU_depth_test(depth_test);
+  GPU_depth_mask(depth_mask);
+  GPU_face_culling(face_cull);
+  GPU_blend(GPU_BLEND_ALPHA);
   t.has_render = true;
   t.render_failed = false;
   t.update_count = DEG_get_update_count(deps);
