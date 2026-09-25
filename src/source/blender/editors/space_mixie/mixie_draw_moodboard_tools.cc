@@ -5,8 +5,12 @@
 
 /** \file
  * \ingroup spmixie
- * \brief Moodboard edit tool overlay drawing (crop/mask/lasso) for Mixie space
+ * \brief Moodboard edit tool overlay drawing (crop/mask/lasso/magic select) for Mixie space
  */
+
+#include "BLI_time.h"
+
+#include "GPU_immediate_util.hh"
 
 #include "mixie_draw_moodboard_intern.hh"
 
@@ -386,6 +390,44 @@ void mixie_draw_edit_tool_overlay(const bContext *C, View2D *v2d)
           }
         }
 
+        GPU_line_width(1.0f);
+      }
+    }
+  }
+  else if (active_tool == 4) {
+    /* MAGIC SELECT - the queued / in-flight click. A dot marks the point the
+     * user chose; a ring breathes around it while the request is pending so
+     * the wait for the upload plus the segmentation reads as one live step
+     * rather than a dead canvas (Python redraws at 15 fps only while
+     * pending). Fixed screen size at every zoom, like the play button. */
+    PropertyRNA *has_point_prop = RNA_struct_find_property(&state_ptr, "magic_select_has_point");
+    PropertyRNA *point_x_prop = RNA_struct_find_property(&state_ptr, "magic_select_point_x");
+    PropertyRNA *point_y_prop = RNA_struct_find_property(&state_ptr, "magic_select_point_y");
+    PropertyRNA *pending_prop = RNA_struct_find_property(&state_ptr, "magic_select_pending");
+    if (has_point_prop && point_x_prop && point_y_prop &&
+        RNA_property_boolean_get(&state_ptr, has_point_prop))
+    {
+      const float rel_x = RNA_property_float_get(&state_ptr, point_x_prop);
+      const float rel_y = RNA_property_float_get(&state_ptr, point_y_prop);
+      const float cx = pos_x + rel_x * display_width;
+      const float cy = pos_y + rel_y * display_height;
+      const float view_scale = std::max(ui::view2d_scale_get_x(v2d), 0.001f);
+      const float px = 1.0f / view_scale;
+      const bool pending = pending_prop && RNA_property_boolean_get(&state_ptr, pending_prop);
+
+      /* Accent teal (#00C0C7) on a dark halo so it reads on any artwork. */
+      immUniformColor4f(0.02f, 0.02f, 0.025f, 0.55f);
+      imm_draw_circle_fill_2d(pos, cx, cy, 7.0f * px, 24);
+      immUniformColor4f(0.0f, 0.75f, 0.78f, 1.0f);
+      imm_draw_circle_fill_2d(pos, cx, cy, 4.0f * px, 24);
+
+      if (pending) {
+        const double period = 1.1;
+        const float phase = float(std::fmod(BLI_time_now_seconds(), period) / period);
+        const float ring = (8.0f + 14.0f * phase) * px;
+        GPU_line_width(2.0f);
+        immUniformColor4f(0.0f, 0.75f, 0.78f, 0.9f * (1.0f - phase));
+        imm_draw_circle_wire_2d(pos, cx, cy, ring, 32);
         GPU_line_width(1.0f);
       }
     }

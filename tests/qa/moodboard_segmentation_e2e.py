@@ -34,11 +34,23 @@ class FixtureSAM:
     def __init__(self):
         self.calls = []
         self.fail_next = False
-    def is_ready(self, image): return True
+        # Simulates a slow upload: the tool must accept a click meanwhile and
+        # run it once the upload lands (one action, one wait).
+        self.upload_delay = 0.0
+        self.uploads = 0
+    def is_ready(self, image): return self.upload_delay == 0.0
     def is_uploading(self, image): return False
     def get_uploaded_image_size(self, image): return tuple(image.size)
     def queue_upload(self, image, img_item=None, on_complete=None):
-        if on_complete: on_complete(True, 'QA fixture ready')
+        self.uploads += 1
+        if not on_complete: return True
+        if self.upload_delay == 0.0:
+            on_complete(True, 'QA fixture ready')
+            return True
+        def done():
+            on_complete(True, 'QA fixture ready')
+            return None
+        bpy.app.timers.register(done, first_interval=self.upload_delay)
         return True
     def answer(self, kind, image, payload, callback):
         self.calls.append({'kind':kind, 'payload':payload if kind != 'lasso' else len(payload)})
@@ -176,12 +188,32 @@ def exercise(qa, node_id, host):
     qa.click(surface='moodboard_media', text=node_id, area_type=host)
     qa.wait(f'not {STATE}.magic_select_pending', timeout=4)
     assert_segments(qa, node_id, count+4)
+    assert not qa.eval(f'result={STATE}.magic_select_has_point'), 'marker survived a failure'
+    assert qa.eval(f"result={STATE}.active_tool") == 'MAGIC_SELECT', 'a failure must keep the tool active for a retry'
     qa.press('ESC')
     qa.wait(f"{STATE}.active_tool == 'NONE'", timeout=4)
 
+    # One action, one wait: a click that lands while the upload is still in
+    # flight is KEPT (marker shown, pending) and runs once the upload lands.
+    qa.eval('drv._qa_sam.upload_delay=1.2; result=True')
+    uploads = qa.eval('result=drv._qa_sam.uploads')
+    activate(qa, 'magic_select', host)
+    qa.wait(f'drv._qa_sam.uploads == {uploads + 1}', timeout=4)
+    qa.click(surface='moodboard_media', text=node_id, area_type=host)
+    assert qa.eval(f'result={STATE}.magic_select_pending'), 'click during upload was dropped'
+    assert qa.eval(f'result={STATE}.magic_select_has_point'), 'queued click has no marker'
+    snapshot(qa, f'{host}-magic-queued-click', host)
+    assert_segments(qa, node_id, count+5)
+    qa.wait(f'not {STATE}.magic_select_pending', timeout=6)
+    assert not qa.eval(f'result={STATE}.magic_select_has_point')
+    snapshot(qa, f'{host}-magic-queued-result', host)
+    qa.press('ESC')
+    qa.wait(f"{STATE}.active_tool == 'NONE'", timeout=4)
+    qa.eval('drv._qa_sam.upload_delay=0.0; result=True')
+
     activate(qa, 'box_mask', host)
     gesture(qa, node_id, host, [(.3,.3),(.5,.5)], cancel=True)
-    assert_segments(qa, node_id, count+4)
+    assert_segments(qa, node_id, count+5)
     qa.wait(f"{STATE}.active_tool == 'NONE'", timeout=4)
     calls = qa.eval('result=len(drv._qa_sam.calls)')
     activate(qa, 'box_mask', host)
