@@ -49,8 +49,9 @@ class SessionManager:
     _instance: Optional["SessionManager"] = None
     # Thread-safe tracking of active scenes for background thread checks.
     # Updated only on main thread via set_state()/set_run(). Read from any
-    # thread.
-    _active_scenes: set = set()
+    # thread. Maps scene name -> chat session id, so a script for ONE tab is
+    # admitted by ITS session while other tabs are idle (parallel scenes).
+    _active_scenes: dict = {}
     _active_scenes_lock = threading.Lock()
     # Turn states during which the backend may address scripts to the scene.
     _ACTIVE_TURN_STATES = frozenset(
@@ -144,7 +145,7 @@ class SessionManager:
         if is_active and not was_active and not SessionManager.run_open(scene):
             try:
                 from mixar.modules.agent_panel.core.cards import clear_cards
-                clear_cards()
+                clear_cards(scene=scene)
             except Exception:  # noqa: BLE001 — the panel never blocks a turn
                 pass
 
@@ -163,11 +164,11 @@ class SessionManager:
         "Agent session not active".
         """
         active = turn_active or SessionManager.run_open(scene)
+        session_id = getattr(scene, 'mixie_session_id', "") or ""
         with SessionManager._active_scenes_lock:
+            SessionManager._active_scenes.pop(scene.name, None)
             if active:
-                SessionManager._active_scenes.add(scene.name)
-            else:
-                SessionManager._active_scenes.discard(scene.name)
+                SessionManager._active_scenes[scene.name] = session_id or scene.name
 
     # ========================================================================
     # Run state (a backend run spans turns)
@@ -209,7 +210,7 @@ class SessionManager:
             # the settle while the run is open).
             try:
                 from mixar.modules.agent_panel.core.cards import settle_running
-                settle_running()
+                settle_running(scene=scene)
             except Exception:  # noqa: BLE001 — the panel never blocks the run
                 pass
         if changed and logger.isEnabledFor(logging.DEBUG):
@@ -364,18 +365,31 @@ class SessionManager:
     # ========================================================================
 
     @classmethod
-    def has_active_session(cls) -> bool:
-        """Check if any scene has an active agent session. Thread-safe.
+    def has_active_session(cls, session_id: str = "") -> bool:
+        """Is THIS chat session (or, with no id, any session) active? Thread-safe.
 
         Safe to call from any thread (WebSocket, socket background).
         Used by connection_manager.on_script_execute to gate tool execution.
 
+        Args:
+            session_id: the request's chat session. Empty, ``agent:<conn>`` or
+                ``agentlane:<token>`` (a worker lane; its parent is resolved on
+                the main thread by the executor) fall back to "any session".
+
         Returns:
-            True if at least one scene is BUSY/MODIFYING/AWAITING_INPUT or
+            True if the session's scene is BUSY/MODIFYING/AWAITING_INPUT or
             owns an open run (its workers build while the orchestrator idles)
         """
         with cls._active_scenes_lock:
-            return len(cls._active_scenes) > 0
+            if not session_id or session_id.startswith(("agent:", "agentlane:")):
+                return len(cls._active_scenes) > 0
+            return session_id in cls._active_scenes.values()
+
+    @classmethod
+    def active_session_ids(cls) -> list:
+        """Session ids with a live turn or open run. Thread-safe."""
+        with cls._active_scenes_lock:
+            return [sid for sid in cls._active_scenes.values() if sid]
 
     # States a transport (WebSocket) drop may downgrade to OFFLINE. The active
     # turn states — BUSY / MODIFYING / AWAITING_INPUT — are deliberately

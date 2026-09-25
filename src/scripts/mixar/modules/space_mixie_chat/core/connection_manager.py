@@ -334,7 +334,8 @@ class ConnectionManager:
             envelope: Optional[dict] = None,
         ) -> Optional[dict]:
             """Queue script for main thread execution (non-blocking)."""
-            if not session.has_active_session():
+            request_sid = (agent_ctx or {}).get("chat_session_id") or session_id or ""
+            if not session.has_active_session(request_sid):
                 logger.warning(
                     "Rejecting script %s (id: %s) — no active agent session",
                     tool_name, request_id,
@@ -440,7 +441,7 @@ class ConnectionManager:
 
             if not request_id:
                 return None
-            if not session.has_active_session():
+            if not session.has_active_session(str((params or {}).get("session_id") or "")):
                 return {"success": False, "error": {
                     "code": "session_inactive",
                     "message": "Agent session not active",

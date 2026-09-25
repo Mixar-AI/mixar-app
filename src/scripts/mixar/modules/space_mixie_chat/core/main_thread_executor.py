@@ -257,6 +257,19 @@ def _stop_timer_if_idle() -> Optional[float]:
         return None
 
 
+def _request_session_id(req) -> str:
+    """The chat session a queued script belongs to: the agent context's chat
+    session, else the routing key; a worker lane maps to its parent session
+    (``mixar_workspace_main_session`` on the lane scene). Main thread only."""
+    sid = str((req.agent_ctx or {}).get("chat_session_id") or req.session_id or "")
+    if sid.startswith("agentlane:"):
+        for scene in bpy.data.scenes:
+            if getattr(scene, "mixie_session_id", "") == sid:
+                parent = scene.get("mixar_workspace_main_session", "") if hasattr(scene, "get") else ""
+                return str(parent or sid)
+    return sid
+
+
 def _reject_stale_session(req: ExecutionRequest) -> None:
     """Drop a script queued for a session that is no longer active."""
     logger.warning(
@@ -324,7 +337,7 @@ def _process_one_request() -> Optional[float]:
     # Safety net: reject scripts that were queued just before load_pre
     # flushed the queue (narrow race window).
     from .session import get_session_manager
-    if not get_session_manager().has_active_session():
+    if not get_session_manager().has_active_session(_request_session_id(req)):
         _reject_stale_session(req)
         return _stop_timer_if_idle()
 

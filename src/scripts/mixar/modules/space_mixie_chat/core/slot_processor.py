@@ -109,7 +109,7 @@ def finalize_turn(scene) -> None:
     if not get_session_manager().run_open(scene):
         try:
             from mixar.modules.agent_panel.core.cards import settle_running
-            settle_running()
+            settle_running(scene=scene)
         except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
             logger.debug("Agent panel settle failed", exc_info=True)
 
@@ -168,7 +168,7 @@ class SlotEventProcessor:
             ("loader", lambda: self._apply_loader_slot(bubble, event_data["loader"], scene)),
             ("content", lambda: self._apply_content_slot(bubble, event_data["content"], scene)),
             ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"], scene)),
-            ("todo", lambda: self._apply_todo_slot(bubble, event_data["todo"])),
+            ("todo", lambda: self._apply_todo_slot(bubble, event_data["todo"], scene)),
             ("steps", lambda: self._apply_steps_slot(bubble, event_data["steps"], scene)),
             ("actions", lambda: self._apply_actions_slot(bubble, event_data["actions"], scene)),
             ("images", lambda: self._apply_images_slot(bubble, event_data["images"])),
@@ -446,13 +446,14 @@ class SlotEventProcessor:
         # the native open dialog can filter. Never a path.
         bubble.import_formats = str(context.get("formats") or "")[:120]
 
-    def _apply_todo_slot(self, bubble: Any, todo_items: list) -> None:
+    def _apply_todo_slot(self, bubble: Any, todo_items: list, scene=None) -> None:
         """
         Apply todo slot update (full replacement of todo items).
 
         Args:
             bubble: Message PropertyGroup
             todo_items: List of dicts with id, text, status
+            scene: the chat scene the list belongs to (parallel scenes)
         """
         prev_count = len(bubble.todo_items)
 
@@ -490,7 +491,7 @@ class SlotEventProcessor:
         # mirror failure must never break the chat's own todo rendering.
         try:
             from mixar.modules.agent_panel.core.cards import mirror_todo_items
-            mirror_todo_items(bubble.todo_items)
+            mirror_todo_items(bubble.todo_items, scene=scene)
         except Exception:  # noqa: BLE001
             logger.debug("Agent panel mirror failed", exc_info=True)
 

@@ -311,7 +311,7 @@ def _card_settle(monkeypatch):
     from mixar.modules.agent_panel.core import cards
 
     calls = []
-    monkeypatch.setattr(cards, "settle_running", lambda: calls.append(True))
+    monkeypatch.setattr(cards, "settle_running", lambda scene=None: calls.append(True))
     return calls
 
 

@@ -152,7 +152,7 @@ class TestExecutorHoldsForPrefetch:
         monkeypatch.setattr(
             sess,
             "get_session_manager",
-            lambda: SimpleNamespace(has_active_session=lambda: True),
+            lambda: SimpleNamespace(has_active_session=lambda session_id="": True),
         )
         sent = []
         monkeypatch.setattr(
