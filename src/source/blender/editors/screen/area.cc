@@ -1544,8 +1544,14 @@ static void mixar_floating_headers_clip(const ARegion *region, rcti *overlap_rem
 static void region_overlap_fix(ScrArea *area, ARegion *region)
 {
   /* Its transparent gutter and painted slice have their own visual hit test.
-   * Stacking the drawer beside the N-panel detaches its closed grip from the edge. */
-  if (view3d_moodboard_drawer_is_overlay(area, region)) {
+   * Stacking the drawer beside the N-panel detaches its closed grip from the edge.
+   * The Scenes drawer is the same kind of overlay on the left: without this
+   * exemption the parallel-agents band (a BOTTOM overlap, sized only while
+   * worker cards show) intersects it and the "left overlapping bottom" rule
+   * below collapses the drawer for the whole turn. */
+  if (view3d_moodboard_drawer_is_overlay(area, region) ||
+      view3d_scenes_drawer_is_overlay(area, region))
+  {
     return;
   }
   /* find overlapping previous region on same place */
@@ -1553,7 +1559,9 @@ static void region_overlap_fix(ScrArea *area, ARegion *region)
   int align1 = 0;
   const int align = RGN_ALIGN_ENUM_FROM_MASK(region->alignment);
   for (region_iter = region->prev; region_iter; region_iter = region_iter->prev) {
-    if (view3d_moodboard_drawer_is_overlay(area, region_iter)) {
+    if (view3d_moodboard_drawer_is_overlay(area, region_iter) ||
+        view3d_scenes_drawer_is_overlay(area, region_iter))
+    {
       continue;
     }
     if (region_is_hidden(region_iter)) {
