@@ -47,12 +47,14 @@ static void rna_Region_mixar_draw_glass(ARegion *region,
   }
   const rcti rect = {bounds[0], bounds[2], bounds[1], bounds[3]};
   ui::MixarGlassStyle style;
-  /* Notifications carry paragraphs over arbitrary viewport colors. The menu
-   * material keeps their text readable even over a white scene background. */
-  style.role = ui::MIXAR_GLASS_MENU;
+  /* Notifications stack directly above the agent task cards and usually
+   * report the same work, so they share the cards' translucent PANEL material
+   * (see #glass_pane in view3d_agent_panel_draw.cc) rather than an opaque
+   * menu bed. Like the cards, no drop shadow: the two stacks must read as one
+   * column, and a shadow under only the toasts set them apart. */
+  style.role = ui::MIXAR_GLASS_PANEL;
   style.radius = radius;
   style.alpha = alpha;
-  style.draw_shadow = true;
   ui::mixar_glass_draw(rect, style);
 }
 #else
@@ -60,7 +62,7 @@ static void rna_def_region_mixar_glass(StructRNA *srna)
 {
   FunctionRNA *func = RNA_def_function(srna, "mixar_draw_glass", "rna_Region_mixar_draw_glass");
   RNA_def_function_ui_description(
-      func, "Draw the shared neutral glass material during a POST_PIXEL draw callback");
+      func, "Draw the agent task cards' glass material during a POST_PIXEL draw callback");
   RNA_def_function_flag(func, FUNC_USE_CONTEXT | FUNC_USE_REPORTS);
   PropertyRNA *parm = RNA_def_int_vector(func, "bounds", 4, nullptr, INT_MIN, INT_MAX,
                                         "Bounds", "Region pixels: xmin, ymin, xmax, ymax",
