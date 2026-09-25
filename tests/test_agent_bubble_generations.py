@@ -52,7 +52,8 @@ DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
 #: The pane is five translation units; a name may live in any of them.
 LIBRARIES_CC = (CPP / "agent_ui_generations_libraries.cc").read_text(encoding="utf-8")
 NAV_CC = (CPP / "agent_ui_generations_navigation.cc").read_text(encoding="utf-8")
-ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC + LIBRARIES_CC + NAV_CC
+SELECTION_CC = (CPP / "agent_ui_generations_selection.cc").read_text(encoding="utf-8")
+ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC + LIBRARIES_CC + NAV_CC + SELECTION_CC
 INTERN_HH = (CPP / "agent_ui_generations_intern.hh").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
 DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
@@ -106,15 +107,16 @@ def _op_self(**fields):
 
 @pytest.mark.parametrize("name", generations_props.PROP_NAMES)
 def test_every_pane_property_is_read_by_the_cpp(name):
-    assert f'"{name}"' in DATA_CC, (
+    assert f'"{name}"' in DATA_CC + SELECTION_CC, (
         f"{name} is registered but the pane never reads it — a property the "
         "C++ does not know about is state nothing can change"
     )
 
 
 #: Written by Python, not by a control in the pane — the archiver bumps the
-#: revision so the pane knows to re-read a library it has already cached.
-_WRITTEN_BY_PYTHON = {"mixar_generations_revision"}
+#: revision so the pane knows to re-read a library it has already cached, and
+#: ``mixar.generations_select`` writes the multi-selection on Ctrl/Cmd-click.
+_WRITTEN_BY_PYTHON = {"mixar_generations_revision", "mixar_generations_multi"}
 
 
 @pytest.mark.parametrize(
@@ -540,7 +542,7 @@ def test_the_tile_operator_survives_the_preview_button():
     """A preview-tile button carries no operator of its own, so the click
     action has to be attached afterwards (the asset shelf's pattern)."""
     assert "button_operator_set(but" in GRID_CC
-    assert 'WM_operatortype_find("wm.context_set_string"' in GRID_CC
+    assert 'WM_operatortype_find("mixar.generations_select"' in GRID_CC
 
 
 def test_a_library_write_bumps_the_pane_revision():

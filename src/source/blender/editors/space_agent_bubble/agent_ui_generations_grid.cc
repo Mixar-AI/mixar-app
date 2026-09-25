@@ -26,6 +26,10 @@
  * Images and videos are deliberately NOT draggable: there is nothing sane to
  * drop a still into a 3D scene as, and a drag that silently does nothing is
  * worse than no drag. Their action lives in the detail column instead.
+ *
+ * Every tile selects through `mixar.generations_select`, whose invoke reads
+ * Ctrl/Cmd/Shift to toggle the tile into a multi-selection; each selected
+ * tile gets a ring.
  */
 
 #include "agent_ui_text.hh"
@@ -39,6 +43,8 @@
 #include "BLI_rect.h"
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
+
+#include "BKE_icons.hh"
 
 #include "DNA_ID.h"
 #include "DNA_asset_types.h"
@@ -120,6 +126,34 @@ void draw_placeholder(const rctf &box, const AgentIcon icon)
   agent_ui_icon_draw(icon, &glyph, col, bg);
 }
 
+/** A connected folder's image/video: its deferred `bpy.utils.previews`
+ * thumbnail, requested here (only for tiles on screen) and painted once the
+ * threaded read has produced pixels; the kind's glyph until then. */
+void draw_file_thumb(const bContext *C, const GenItem &item, const rctf &box)
+{
+  const AgentIcon glyph = item.kind == GEN_ITEM_VIDEO ? AGENT_ICON_VIDEO : AGENT_ICON_IMAGE;
+  if (item.icon_id == 0) {
+    draw_placeholder(box, glyph);
+    return;
+  }
+  ui::icon_ensure_deferred(C, item.icon_id, true);
+  const Icon *icon = BKE_icon_get(item.icon_id);
+  const PreviewImage *prv = (icon && icon->obj_type == ICON_DATA_PREVIEW) ?
+                                static_cast<const PreviewImage *>(icon->obj) :
+                                nullptr;
+  if (!prv || prv->rect[ICON_SIZE_PREVIEW] == nullptr) {
+    draw_placeholder(box, glyph);
+    return;
+  }
+  const float size = std::min(BLI_rctf_size_x(&box), BLI_rctf_size_y(&box));
+  ui::icon_draw_preview(BLI_rctf_cent_x(&box) - size * 0.5f,
+                        BLI_rctf_cent_y(&box) - size * 0.5f,
+                        item.icon_id,
+                        1.0f,
+                        1.0f,
+                        int(size));
+}
+
 }  // namespace
 
 bool agent_ui_generations_asset_has_preview(const bContext *C, const GenItem &item)
@@ -168,7 +202,12 @@ void agent_ui_generations_thumb(const bContext *C,
     }
     case GEN_ITEM_IMAGE:
     case GEN_ITEM_VIDEO:
-      pane_image_thumb_draw(item.image, box);
+      if (item.image) {
+        pane_image_thumb_draw(item.image, box);
+      }
+      else {
+        draw_file_thumb(C, item, box);
+      }
       break;
     case GEN_ITEM_SPLAT:
       /* No preview exists for a splat world — what the viewport shows is
@@ -188,9 +227,9 @@ void agent_ui_generations_grid(const bContext *C,
                                const GenFrame &frame,
                                const GenPaneData &data,
                                const GenGridMetrics &grid,
-                               rctf *r_selected_tile)
+                               std::vector<rctf> *r_selected_tiles)
 {
-  BLI_rctf_init(r_selected_tile, 0.0f, 0.0f, 0.0f, 0.0f);
+  r_selected_tiles->clear();
 
   MIXAR_THEME_LOAD(text, Text);
   MIXAR_THEME_LOAD(dim, TextSecondary);
@@ -207,9 +246,10 @@ void agent_ui_generations_grid(const bContext *C,
 
   if (data.count == 0) {
     const char *empty = data.loading ? "Loading assets…" :
-                                       (data.source == GEN_SOURCE_LIBRARY ?
-                                            "No assets in this library yet" :
-                                            "Your generations will appear here");
+                        data.source != GEN_SOURCE_LIBRARY ? "Your generations will appear here" :
+                        data.lib_names.empty() ? "Add a folder to see its images, videos and 3D assets" :
+                        data.filter != GEN_FILTER_ALL ? "Nothing of this kind here" :
+                                                        "No images, videos or 3D assets here yet";
     pane_label_centre(empty,
                       (frame.grid_x + frame.grid_right) * 0.5f,
                       (panel.ymin + panel.ymax) * 0.5f,
@@ -230,9 +270,9 @@ void agent_ui_generations_grid(const bContext *C,
     /* Paint full-size images under the viewport scissor, including partial rows. */
     agent_ui_generations_thumb(C, item, tile, frame.u);
 
-    if (STREQ(item.key, data.selected)) {
-      /* The caller paints the selection ring under the same viewport clip. */
-      *r_selected_tile = tile;
+    if (agent_ui_generations_is_selected(data, item.key)) {
+      /* The caller paints the selection rings under the same viewport clip. */
+      r_selected_tiles->push_back(tile);
     }
 
     /* Caption: type and age share the first line (both are short). The name
@@ -277,8 +317,9 @@ void agent_ui_generations_grid(const bContext *C,
     tile.ymin = tile.ymax - grid.tile;
 
     const char *tip = (item.kind == GEN_ITEM_ASSET) ?
-                          "Click to inspect, or drag into the viewport" :
-                          "Click to inspect";
+                          "Click to inspect, Ctrl/Cmd-click to select several, or drag "
+                          "into the viewport" :
+                          "Click to inspect, Ctrl/Cmd-click to select several";
     /* Keep Blender's PreviewTile event path for asset drag, but paint the
      * preview above: a clipped native button must not squeeze its image. */
     rctf hit;
@@ -300,7 +341,7 @@ void agent_ui_generations_grid(const bContext *C,
                                 0.0f,
                                 tip);
       if (but) {
-        if (wmOperatorType *ot = WM_operatortype_find("wm.context_set_string", true)) {
+        if (wmOperatorType *ot = WM_operatortype_find("mixar.generations_select", true)) {
           ui::button_operator_set(but, ot, blender::wm::OpCallContext::InvokeDefault);
         }
       }
@@ -308,7 +349,7 @@ void agent_ui_generations_grid(const bContext *C,
     else {
       but = uiDefButO(block,
                       ui::ButtonType::But,
-                      "wm.context_set_string",
+                      "mixar.generations_select",
                       blender::wm::OpCallContext::InvokeDefault,
                       "",
                       int(hit.xmin),
@@ -320,6 +361,8 @@ void agent_ui_generations_grid(const bContext *C,
     if (but) {
       pane_but_tooltip_owned(but, (std::string(item.name) + " — " + tip).c_str());
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
+      /* `data_path` is informational on this operator: it keeps the shared
+       * button identity and the QA provider reading this as the tile. */
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_generations_selected");
       RNA_string_set(op_ptr, "value", item.key);
       ui::button_func_identity_compare_set(but, agent_ui_generations_button_identity);

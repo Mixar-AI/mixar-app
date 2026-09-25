@@ -29,17 +29,94 @@ delegates to a flow that already exists:
   boarded — that is where the pane found it — so "add" would be a no-op and
   "select" is the honest verb.
 
+- A folder's images and videos (``core/library_media.py``) go onto the
+  moodboard through the board's own ``load_media_file_to_board`` — the same
+  loader the moodboard's Add Media uses — because a picture has no meaning as
+  a 3D drop and the board is where every reference lives.
+- Ctrl/Cmd/Shift-click builds a multi-selection
+  (``mixar_generations_multi``); "Add N" then adds every selected folder
+  file to the board and every selected 3D asset to the scene in one step.
+- Removing a library only DISCONNECTS it (Blender's own
+  ``preferences.asset_library_remove``); the folder and its files stay on
+  disk, so it is undone by connecting the folder again.
+
 No operator here writes anything the user did not ask for by clicking it.
 """
 
 import logging
 import os
+import re
 
 import bpy
-from bpy.props import StringProperty
+from bpy.props import BoolProperty, StringProperty
 from bpy.types import Operator
 
 logger = logging.getLogger(__name__)
+
+#: Must match ``asset_search/constants.py:GENERATION_LIBRARY_NAME``.
+GENERATIONS_LIBRARY_NAME = "Mixar Generations"
+
+#: ``<dir>/<file>.blend/<IDType>/<name>`` — an asset's library-relative
+#: identifier, with either separator (Windows builds it with ``\\``).
+_ASSET_RELID = re.compile(r"^(.*?\.blend)[\\/]([^\\/]+)[\\/](.+)$", re.I)
+
+
+def _refresh_media(context, *, force=True):
+    try:
+        from mixar.modules.agent_bubble.core import library_media
+
+        library_media.refresh(context, force=force)
+    except Exception:  # noqa: BLE001 — the listing catches up on the next pump
+        logger.debug("[Generations] media refresh failed", exc_info=True)
+
+
+def selected_keys(wm) -> list:
+    """Every selected tile key, active one last; empty when none."""
+    multi = [k for k in (getattr(wm, "mixar_generations_multi", "") or "").split("\n") if k]
+    active = getattr(wm, "mixar_generations_selected", "") or ""
+    if not multi:
+        return [active] if active else []
+    if active in multi:
+        multi.remove(active)
+        multi.append(active)
+    return multi
+
+
+def toggle_selection(wm, key: str) -> None:
+    """Add *key* to the selection, or take it out if it is already in."""
+    keys = selected_keys(wm)
+    if key in keys:
+        keys.remove(key)
+        active = keys[-1] if keys else ""
+    else:
+        keys.append(key)
+        active = key
+    wm.mixar_generations_multi = "\n".join(keys) if len(keys) > 1 else ""
+    wm.mixar_generations_selected = active
+
+
+def resolve_asset_key(key: str, libraries):
+    """``(blend_path, id_dir, name)`` for an ``asset:<lib>:<relid>`` key.
+
+    *libraries* maps a library name to its folder. None when the key is not an
+    asset, names an unknown library, or does not parse.
+    """
+    if not key.startswith("asset:"):
+        return None
+    lib_name, sep, relid = key[len("asset:"):].partition(":")
+    folder = libraries.get(lib_name) if sep else None
+    match = _ASSET_RELID.match(relid) if folder else None
+    if not match:
+        return None
+    return os.path.join(folder, match.group(1)), match.group(2), match.group(3)
+
+
+def _library_folders():
+    try:
+        libs = bpy.context.preferences.filepaths.asset_libraries
+    except Exception:  # noqa: BLE001 — no preferences in a background run
+        return {}
+    return {lib.name: bpy.path.abspath(lib.path or "") for lib in libs}
 
 
 def _registered_library_paths():
@@ -108,6 +185,7 @@ class MIXAR_OT_generations_add_library(Operator):
         name = _registered_library_paths().get(os.path.normcase(path), "")
         if name:
             context.window_manager.mixar_generations_library = name
+        _refresh_media(context)
         self.report({'INFO'}, f"Connected '{name or os.path.basename(path)}'")
         return {'FINISHED'}
 
@@ -236,8 +314,158 @@ class MIXAR_OT_generations_open_folder(Operator):
         return {'FINISHED'}
 
 
+class MIXAR_OT_generations_remove_library(Operator):
+    """Disconnect a library folder from Mixar (its files stay on disk)."""
+
+    bl_idname = "mixar.generations_remove_library"
+    bl_label = "Remove Library"
+    bl_description = (
+        "Remove this folder from your libraries. Nothing is deleted from disk; "
+        "add the folder again to bring it back"
+    )
+    bl_options = {'REGISTER'}
+
+    library_name: StringProperty(name="Library", default="")
+
+    def execute(self, context):
+        name = (self.library_name or "").strip()
+        if not name:
+            self.report({'ERROR'}, "No library chosen")
+            return {'CANCELLED'}
+        if name == GENERATIONS_LIBRARY_NAME:
+            # The auto-archive: removing it would only have it re-registered
+            # on the next generation, and AI generations shows it anyway.
+            self.report({'ERROR'}, "Mixar Generations is managed automatically")
+            return {'CANCELLED'}
+        try:
+            libs = context.preferences.filepaths.asset_libraries
+        except Exception:  # noqa: BLE001
+            self.report({'ERROR'}, "Preferences are not available")
+            return {'CANCELLED'}
+        index = next((i for i, lib in enumerate(libs) if lib.name == name), -1)
+        if index < 0:
+            self.report({'ERROR'}, f"'{name}' is no longer connected")
+            return {'CANCELLED'}
+        try:
+            bpy.ops.preferences.asset_library_remove(index=index)
+        except Exception as exc:  # noqa: BLE001 — surface, never swallow
+            logger.exception("[Generations] Could not remove asset library")
+            self.report({'ERROR'}, f"Could not remove the library: {exc}")
+            return {'CANCELLED'}
+        wm = context.window_manager
+        if getattr(wm, "mixar_generations_library", "") == name:
+            wm.mixar_generations_library = ""
+        wm.mixar_generations_selected = ""
+        wm.mixar_generations_multi = ""
+        _refresh_media(context)
+        self.report({'INFO'}, f"Removed '{name}' (files were not deleted)")
+        return {'FINISHED'}
+
+
+class MIXAR_OT_generations_select(Operator):
+    """Select a Library tile; Ctrl/Cmd/Shift-click selects several."""
+
+    bl_idname = "mixar.generations_select"
+    bl_label = "Select"
+    bl_description = "Click to inspect; Ctrl/Cmd or Shift-click to select several"
+    bl_options = {'INTERNAL'}
+
+    # ``data_path`` is carried (never read) so the pane's shared button
+    # identity and the QA provider recognise this as the selection button,
+    # exactly as they did the stock ``wm.context_set_string`` it replaces.
+    data_path: StringProperty(default="window_manager.mixar_generations_selected",
+                              options={'HIDDEN', 'SKIP_SAVE'})
+    value: StringProperty(name="Key", default="", options={'SKIP_SAVE'})
+    extend: BoolProperty(name="Extend", default=False, options={'SKIP_SAVE'})
+
+    def invoke(self, context, event):
+        self.extend = bool(event.ctrl or event.oskey or event.shift)
+        return self.execute(context)
+
+    def execute(self, context):
+        wm = context.window_manager
+        key = self.value or ""
+        if self.extend and key:
+            toggle_selection(wm, key)
+        else:
+            wm.mixar_generations_multi = ""
+            wm.mixar_generations_selected = key
+        return {'FINISHED'}
+
+
+class MIXAR_OT_generations_clear_selection(Operator):
+    """Deselect every Library tile."""
+
+    bl_idname = "mixar.generations_clear_selection"
+    bl_label = "Clear Selection"
+    bl_description = "Deselect every tile"
+    bl_options = {'INTERNAL'}
+
+    def execute(self, context):
+        wm = context.window_manager
+        wm.mixar_generations_multi = ""
+        wm.mixar_generations_selected = ""
+        return {'FINISHED'}
+
+
+class MIXAR_OT_generations_add_selected(Operator):
+    """Add the selected folder media to the moodboard and assets to the scene."""
+
+    bl_idname = "mixar.generations_add_selected"
+    bl_label = "Add Selected"
+    bl_description = (
+        "Add the selected images and videos to the moodboard, and the selected "
+        "3D assets to the scene"
+    )
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        from mixar.modules.agent_bubble.core.spawn_asset import spawn_library_asset
+        from mixar.modules.moodboard.core.media_import import load_media_file_to_board
+
+        keys = selected_keys(context.window_manager)
+        if not keys:
+            self.report({'WARNING'}, "Nothing is selected")
+            return {'CANCELLED'}
+        folders = _library_folders()
+        boarded = spawned = 0
+        failed = []
+        for key in keys:
+            if key.startswith("file:"):
+                path = key[len("file:"):]
+                ok = os.path.isfile(path) and load_media_file_to_board(context.scene, path)
+                boarded += 1 if ok else 0
+                if not ok:
+                    failed.append(os.path.basename(path))
+                continue
+            asset = resolve_asset_key(key, folders)
+            if asset is None:
+                continue
+            ok, _message = spawn_library_asset(context, *asset)
+            spawned += 1 if ok else 0
+            if not ok:
+                failed.append(asset[2])
+        parts = []
+        if boarded:
+            parts.append(f"{boarded} to the moodboard")
+        if spawned:
+            parts.append(f"{spawned} to the scene")
+        if failed:
+            shown = ", ".join(failed[:3]) + ("…" if len(failed) > 3 else "")
+            parts.append(f"could not add {shown}")
+        if not boarded and not spawned:
+            self.report({'ERROR'}, "Nothing could be added" + (f": {shown}" if failed else ""))
+            return {'CANCELLED'}
+        self.report({'WARNING'} if failed else {'INFO'}, "Added " + "; ".join(parts))
+        return {'FINISHED'}
+
+
 classes = (
     MIXAR_OT_generations_add_library,
+    MIXAR_OT_generations_remove_library,
+    MIXAR_OT_generations_select,
+    MIXAR_OT_generations_clear_selection,
+    MIXAR_OT_generations_add_selected,
     MIXAR_OT_generations_add_asset,
     MIXAR_OT_generations_select_media,
     MIXAR_OT_generations_select_splat,

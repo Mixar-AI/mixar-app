@@ -62,7 +62,7 @@ class AssetRepresentation;
 #define GEN_RAIL_DOT_R 3
 #define GEN_RAIL_LABEL_X 28 /* Pill left -> label ink. */
 
-/* Library rows under the rail (Asset Library source only — the design leaves
+/* Library rows under the rail (My Libraries source only — the design leaves
  * this column empty, and "connect a library" is what it is for). */
 #define GEN_LIB_ROW_H 38
 #define GEN_LIB_ROW_PITCH 42
@@ -183,10 +183,13 @@ enum GenSource {
   GEN_SOURCE_LIBRARY,
 };
 
+/** Room for a `file:` key, which carries the file's absolute path. */
+#define GEN_KEY_LEN 1100
+
 struct GenItem {
   GenItemKind kind;
   /** Stable identity for selection — survives a refilter and a re-gather. */
-  char key[128];
+  char key[GEN_KEY_LEN];
   char name[96];
   char type_label[64];
   char model_label[64];
@@ -201,6 +204,10 @@ struct GenItem {
    * ever loads, and only the tiles actually on screen should ask. */
   blender::asset_system::AssetRepresentation *asset;
   Image *image;
+  /** A folder file's deferred thumbnail (`bpy.utils.previews`), else 0.
+   * Set only for IMAGE/VIDEO items found in a connected folder, which have
+   * no Image datablock — `image` stays null for them. */
+  int icon_id;
   char path[1024]; /* Containing .blend (asset) or media file (image/video). */
   /** For an asset: the ID-type folder inside that .blend ("Object",
    * "Collection", …), which is what `wm.append` addresses a datablock by. */
@@ -220,7 +227,10 @@ struct GenPaneData {
   GenFilter filter;
   bool newest_first;
   /** Selected item's key; empty when nothing is selected. */
-  char selected[128];
+  char selected[GEN_KEY_LEN];
+  /** Every selected key when Ctrl/Cmd-click selected more than one
+   * (`mixar_generations_multi`); empty for a single selection. */
+  std::vector<std::string> multi;
   /** Asset-library rail: the library name being browsed ("" = all of them). */
   char library[64];
   /** Percentage scroll positions (0–100), independent of chat and selection. */
@@ -229,7 +239,8 @@ struct GenPaneData {
   /** True while an asset list is still reading — the grid says so. */
   bool loading;
 
-  /** Registered asset libraries, for the rail's connect list. */
+  /** Connected asset libraries for the rail, "Mixar Generations" excluded:
+   * the AI generations source already shows it. */
   std::vector<std::string> lib_names;
 };
 
@@ -302,9 +313,9 @@ void agent_ui_generations_scrollbar(ui::Block *block,
 /**
  * Paint the visible rows and lay their buttons into \a block.
  *
- * \a r_selected_tile receives the selected tile's rect, or an empty rect when
- * no visible row is selected. The caller paints the selection ring under
- * the same viewport clip as the tile.
+ * \a r_selected_tiles receives the rect of every visible selected tile (one
+ * for a single selection, several for a Ctrl/Cmd-click multi-selection). The
+ * caller paints the selection rings under the same viewport clip as the tiles.
  */
 void agent_ui_generations_grid(const bContext *C,
                                ui::Block *block,
@@ -312,7 +323,7 @@ void agent_ui_generations_grid(const bContext *C,
                                const GenFrame &frame,
                                const GenPaneData &data,
                                const GenGridMetrics &grid,
-                               rctf *r_selected_tile);
+                               std::vector<rctf> *r_selected_tiles);
 
 /** \} */
 
@@ -348,11 +359,39 @@ double gen_blend_mtime(const char *path);
 /** \name Passes
  * \{ */
 
+/** Append the images/videos `core/library_media.py` found in the connected
+ * folders (`wm.mixar_generations_files`); \a only_name limits it to one
+ * library. Lives with the rail in `agent_ui_generations_libraries.cc`. */
+void agent_ui_generations_gather_files(const bContext *C,
+                                       GenPaneData *data,
+                                       const char *only_name);
+
 /** Read the WM state and fill \a r_data with the filtered, sorted items. */
 void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data);
 
 /** Index of #GenPaneData::selected within the gathered items, or -1. */
 int agent_ui_generations_selected_index(const GenPaneData &data);
+
+/** Split `mixar_generations_multi` into #GenPaneData::multi
+ * (`agent_ui_generations_selection.cc`). */
+void agent_ui_generations_read_multi(PointerRNA *wm_ptr, GenPaneData *data);
+
+/** The detail column for a multi-selection: how many of what, and one
+ * "Add N" action (`agent_ui_generations_selection.cc`). */
+void agent_ui_generations_detail_multi(ui::Block *block,
+                                       const rctf &panel,
+                                       const GenFrame &frame,
+                                       const GenPaneData &data);
+
+/** Is \a key part of the selection (single or multi)? */
+bool agent_ui_generations_is_selected(const GenPaneData &data, const char *key);
+
+/** A folder file (IMAGE/VIDEO with no Image datablock) rather than board media. */
+inline bool gen_item_is_file(const GenItem &item)
+{
+  return (item.kind == GEN_ITEM_IMAGE || item.kind == GEN_ITEM_VIDEO) && !item.image &&
+         item.path[0];
+}
 
 /** Paint + lay out the detail column. \a block is the pane's own ui::Block. */
 void agent_ui_generations_detail(const bContext *C,

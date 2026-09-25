@@ -180,6 +180,21 @@ void build_actions(const GenItem &item, ActionSpec r_actions[2])
       break;
     case GEN_ITEM_IMAGE:
     case GEN_ITEM_VIDEO:
+      if (gen_item_is_file(item)) {
+        /* A picture in a connected folder: the board is where references
+         * live, and the same operator adds a whole multi-selection. */
+        r_actions[0] = {"Add to Moodboard",
+                        "mixar.generations_add_selected",
+                        {nullptr, nullptr, nullptr},
+                        {nullptr, nullptr, nullptr},
+                        "Add this to the moodboard (Ctrl/Cmd-click tiles to add several)"};
+        r_actions[1] = {"Open Folder",
+                        "mixar.generations_open_folder",
+                        {"path", nullptr, nullptr},
+                        {item.path, nullptr, nullptr},
+                        "Show this file in the file browser"};
+        break;
+      }
       /* The image is already on the board — that is where this pane found
        * it — so the useful verb is "select", which is how the board's
        * selection becomes a reference everywhere else. */
@@ -234,13 +249,24 @@ void agent_ui_generations_detail(const bContext *C,
   const float col_w = frame.detail_w;
   const float gap = frame.block_gap;
 
+  if (data.multi.size() > 1) {
+    agent_ui_generations_detail_multi(block, panel, frame, data);
+    return;
+  }
   const int index = agent_ui_generations_selected_index(data);
   if (index < 0) {
-    pane_label_centre(data.count > 0 ? "Select a generation" : "Nothing selected",
+    const float cy = (panel.ymin + panel.ymax) * 0.5f;
+    pane_label_centre(data.count > 0 ? "Select an item" : "Nothing selected",
                       x0 + col_w * 0.5f,
-                      (panel.ymin + panel.ymax) * 0.5f,
+                      cy + (data.count > 0 ? frame.font_meta * 0.75f : 0.0f),
                       frame.font_meta,
                       dim);
+    if (data.count > 0) {
+      char hint[96];
+      BLI_strncpy(hint, "Ctrl/Cmd-click to select several", sizeof(hint));
+      pane_fit_text(hint, col_w, frame.font_meta);
+      pane_label_centre(hint, x0 + col_w * 0.5f, cy - frame.font_meta * 0.75f, frame.font_meta, dim);
+    }
     return;
   }
   const GenItem &item = data.items[index];
