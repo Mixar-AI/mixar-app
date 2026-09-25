@@ -40,6 +40,7 @@
 #include "ED_asset_shelf.hh"
 #include "ED_buttons.hh"
 #include "ED_moodboard_drawer.hh"
+#include "ED_scenes_drawer.hh"
 #include "ED_screen.hh"
 #include "ED_screen_types.hh"
 #include "ED_space_api.hh"
@@ -1319,6 +1320,10 @@ static bool region_azone_edge_poll(const ScrArea *area,
   if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_TOOL_PROPS) {
     return false;
   }
+  /* Mixar Scenes drawer: the same fixed-width overlay on the LEFT edge. */
+  if (area->spacetype == SPACE_VIEW3D && region->regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE) {
+    return false;
+  }
 
   /* Mixar Cinema Mode timeline dock: View3D `CHANNELS` is used by nothing
    * else, and the dock's height is FIXED (`VIEW3D_DIRECTOR_TIMELINE_HEIGHT`).
@@ -1661,7 +1666,9 @@ bool ED_region_is_overlap(const int spacetype, const int regiontype)
                   RGN_TYPE_ASSET_SHELF_HEADER,
                   /* Mixar: agent scene strip draws a transparent background so
                    * its tiles float over the viewport. */
-                  RGN_TYPE_EXECUTE);
+                  RGN_TYPE_EXECUTE,
+                  /* Mixar: the Scenes drawer overlays the left edge. */
+                  VIEW3D_SCENES_DRAWER_REGION_TYPE);
 
     case SPACE_IMAGE:
       return ELEM(regiontype,
@@ -1892,10 +1899,22 @@ static void region_rect_recursive(
         winrct->xmax -= int(std::ceil(VIEW3D_MOODBOARD_DRAWER_GRIP_WIDTH * UI_SCALE_FAC));
       }
     }
+    /* The mirror on the left: leave a lane for the Scenes tab beside the
+     * toolbar so the grip never covers its buttons. */
+    if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_TOOLS &&
+        region->overlap && alignment == RGN_ALIGN_LEFT)
+    {
+      const ARegion *scenes = BKE_area_find_region_type(area, VIEW3D_SCENES_DRAWER_REGION_TYPE);
+      if (scenes && !(scenes->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED))) {
+        winrct->xmin += int(std::ceil(VIEW3D_SCENES_DRAWER_GRIP_WIDTH * UI_SCALE_FAC));
+      }
+    }
     /* Allocate the drawer against the viewport, independent of sidebars, and
      * leave their allocation unchanged. Floating headers still bound its height. */
     rcti drawer_remainder;
-    if (view3d_moodboard_drawer_is_overlay(area, region)) {
+    if (view3d_moodboard_drawer_is_overlay(area, region) ||
+        view3d_scenes_drawer_is_overlay(area, region))
+    {
       drawer_remainder = *remainder;
       mixar_floating_headers_clip(region, &drawer_remainder);
       winrct = &drawer_remainder;

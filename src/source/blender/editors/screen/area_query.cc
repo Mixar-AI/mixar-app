@@ -16,6 +16,7 @@
 #include "BLI_utildefines.h"
 
 #include "ED_moodboard_drawer.hh"
+#include "ED_scenes_drawer.hh"
 #include "ED_screen.hh"
 
 #include "UI_interface.hh"
@@ -67,6 +68,12 @@ bool ED_region_overlap_isect_any_xy(const ScrArea *area, const int event_xy[2])
      * overlap hit. The scissored remainder is the viewport (drops, orbit). */
     if (area->spacetype == SPACE_VIEW3D && region.regiontype == RGN_TYPE_TOOL_PROPS) {
       if (view3d_moodboard_drawer_contains_xy(area, &region, event_xy)) {
+        return true;
+      }
+      continue;
+    }
+    if (area->spacetype == SPACE_VIEW3D && region.regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE) {
+      if (view3d_scenes_drawer_contains_xy(area, &region, event_xy)) {
         return true;
       }
       continue;
@@ -233,6 +240,15 @@ ARegion *ED_area_find_region_xy_visual(const ScrArea *area,
       }
     }
   }
+  if (area->spacetype == SPACE_VIEW3D && ELEM(regiontype, RGN_TYPE_ANY, VIEW3D_SCENES_DRAWER_REGION_TYPE)) {
+    for (ARegion &region : area->regionbase) {
+      if (region.regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE && region.overlap &&
+          region.runtime->visible && view3d_scenes_drawer_contains_xy(area, &region, event_xy))
+      {
+        return &region;
+      }
+    }
+  }
 
   /* Check overlapped regions first. */
   for (ARegion &region : area->regionbase) {
@@ -245,6 +261,12 @@ ARegion *ED_area_find_region_xy_visual(const ScrArea *area,
        * painted slice; everything else is the viewport behind it. */
       if (area->spacetype == SPACE_VIEW3D && region.regiontype == RGN_TYPE_TOOL_PROPS) {
         if (view3d_moodboard_drawer_contains_xy(area, &region, event_xy)) {
+          return &region;
+        }
+        continue;
+      }
+      if (area->spacetype == SPACE_VIEW3D && region.regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE) {
+        if (view3d_scenes_drawer_contains_xy(area, &region, event_xy)) {
           return &region;
         }
         continue;

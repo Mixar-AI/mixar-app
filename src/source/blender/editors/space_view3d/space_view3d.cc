@@ -81,6 +81,7 @@
 #include "view3d_director.hh"
 #include "view3d_intern.hh" /* own include */
 #include "view3d_moodboard_drawer.hh"
+#include "view3d_scenes_drawer.hh"
 #include "view3d_navigate.hh"
 
 namespace blender {
@@ -331,8 +332,9 @@ static void view3d_init(wmWindowManager *wm, ScrArea *area)
 {
   /* Startup files and user workspaces may predate the Director region. */
   view3d_director_timeline_region_ensure(area);
-  /* Likewise the moodboard drawer. */
+  /* Likewise the moodboard drawer, and the Scenes drawer on the left edge. */
   view3d_moodboard_drawer_region_ensure(wm, area);
+  view3d_scenes_drawer_region_ensure(wm, area);
 }
 
 static void view3d_exit(wmWindowManager * /*wm*/, ScrArea *area)
@@ -386,6 +388,8 @@ static void view3d_main_region_init(wmWindowManager *wm, ARegion *region)
   /* `~` toggles the Zen moodboard drawer. First so Object Mode and the
    * View pie never see the key while the operator polls. */
   view3d_moodboard_drawer_toggle_handlers_add(wm, region);
+  /* Ctrl+` toggles the Scenes drawer on the left edge. */
+  view3d_scenes_drawer_toggle_handlers_add(wm, region);
 
   /* Cinema Mode paints its columns INTO this region, so a wheel over a card
    * is a wheel over the viewport. Decided here, before `view3d.zoom` — a
@@ -1036,6 +1040,13 @@ static void view3d_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *reg
   const ARegion *drawer = view3d_moodboard_drawer_region_find(area);
   if (drawer && drawer->runtime->visible && win->runtime->eventstate &&
       view3d_moodboard_drawer_resize_contains_xy(area, drawer, win->runtime->eventstate->xy))
+  {
+    WM_cursor_set(win, WM_CURSOR_X_MOVE);
+    return;
+  }
+  const ARegion *scenes = view3d_scenes_drawer_region_find(area);
+  if (scenes && scenes->runtime->visible && win->runtime->eventstate &&
+      view3d_scenes_drawer_resize_contains_xy(area, scenes, win->runtime->eventstate->xy))
   {
     WM_cursor_set(win, WM_CURSOR_X_MOVE);
     return;
@@ -1713,6 +1724,7 @@ void ED_spacetype_view3d()
     /* Mixar: the moodboard drawer's grip, bound on the drawer region's own
      * keymap so it never competes with `view3d.select`. */
     view3d_moodboard_drawer_keymap(keyconf);
+    view3d_scenes_drawer_keymap(keyconf);
   };
   st->dropboxes = view3d_dropboxes;
   st->gizmos = view3d_widgets;
@@ -1847,6 +1859,10 @@ void ED_spacetype_view3d()
   view3d_moodboard_drawer_region_register(st.get());
   view3d_moodboard_drawer_operatortypes();
   view3d_moodboard_drawer_qa_targets_register();
+  /* Mixar: the Scenes drawer (parallel scene tabs), the left-edge mirror. */
+  view3d_scenes_drawer_region_register(st.get());
+  view3d_scenes_drawer_operatortypes();
+  view3d_scenes_drawer_qa_targets_register();
 
   WM_menutype_add(MEM_new<MenuType>(__func__, ed::geometry::node_group_operator_assets_menu()));
   WM_menutype_add(
