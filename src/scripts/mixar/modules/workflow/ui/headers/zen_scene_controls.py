@@ -95,11 +95,13 @@ def draw_scenes_button(surface, context, *, compact):
         scene_name = scene_name[:12] + "…" if len(scene_name) > 14 else scene_name
     label = ("● " if attention else "") + scene_name
     scenes = surface.row()
-    scenes.ui_units_x = 3.0 if compact else 6.4
-    scenes.operator("view3d.scenes_drawer_toggle", text=label if not compact else "",
+    # Icon-only when compact: the toolbar's width is fixed, and a wider button
+    # here squeezes "Add" into "Ad".
+    scenes.ui_units_x = 1.8 if compact else 5.0
+    scenes.operator("view3d.scenes_drawer_toggle", text="" if compact else label,
                     icon="COLLAPSEMENU")
     style(scenes, "PRIMARY" if attention else "SECONDARY")
-    surface.separator(factor=0.6)
+    surface.separator(factor=0.4)
 
 
 def draw_left(layout, context, *, compact):
