@@ -166,3 +166,13 @@ def test_send_selection_copies_objects_and_data(live_bpy):
     copy = linked[0]
     assert copy is not obj and copy.data is not mesh and copy.data.materials[0] is not mat
     assert ops.send_selection_to_scene(source, source, [obj]) == []
+
+
+def test_new_tab_inherits_the_signed_in_account():
+    from types import SimpleNamespace as NS
+    source = NS(name="A", mixie_chat_user_id="me@mixar.app", mixie_chat_credits=42, mixie_chat_model="m")
+    fresh = NS(name="B", mixie_chat_user_id="", mixie_chat_credits=0, mixie_chat_model="")
+    ops.inherit_account(source, fresh)
+    assert (fresh.mixie_chat_user_id, fresh.mixie_chat_credits, fresh.mixie_chat_model) == ("me@mixar.app", 42, "m")
+    ops.inherit_account(None, fresh)  # no source: untouched
+    assert fresh.mixie_chat_user_id == "me@mixar.app"

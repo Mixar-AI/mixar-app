@@ -85,28 +85,8 @@ def draw_sky(layout, context):
         style(button, "GHOST")
 
 
-def draw_scenes_button(surface, context, *, compact):
-    """The Scenes drawer toggle: the active scene's name behind a hamburger,
-    with a dot while another tab needs the user (parallel scenes)."""
-    wm = context.window_manager
-    attention = bool(getattr(wm, "mixar_scene_tabs_attention", False))
-    scene_name = context.scene.name if context.scene is not None else ""
-    if compact or len(scene_name) > 14:
-        scene_name = scene_name[:12] + "…" if len(scene_name) > 14 else scene_name
-    label = ("● " if attention else "") + scene_name
-    scenes = surface.row()
-    # Icon-only when compact: the toolbar's width is fixed, and a wider button
-    # here squeezes "Add" into "Ad".
-    scenes.ui_units_x = 1.8 if compact else 5.0
-    scenes.operator("view3d.scenes_drawer_toggle", text="" if compact else label,
-                    icon="COLLAPSEMENU")
-    style(scenes, "PRIMARY" if attention else "SECONDARY")
-    surface.separator(factor=0.4)
-
-
 def draw_left(layout, context, *, compact):
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
-    draw_scenes_button(surface, context, compact=compact)
     add = surface.row()
     add.ui_units_x = 3.4 if compact else 5.8
     add.menu("VIEW3D_MT_add", text="Add" if compact else "Add Objects")

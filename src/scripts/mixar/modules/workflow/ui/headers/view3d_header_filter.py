@@ -40,7 +40,7 @@ _ZEN_TOOL_UNITS_X = 2.0
 _DEFAULT_FALLBACK_TOOL = "builtin.select"
 
 # Gap between the scene toolbar and the Move / Rotate / Scale pill, at 1x.
-_ZEN_TOOL_TOP_GAP_PX = 14.0
+_ZEN_TOOL_TOP_GAP_PX = 3.0  # lines its top up with the "User Perspective" text
 """Safety net for `VIEW3D_PT_tools_active.tool_fallback_id`, which is
 `"builtin.select"` (Tweak, the stock first tool). Only used if the panel has
 not been registered yet — the attribute is read live when it is."""

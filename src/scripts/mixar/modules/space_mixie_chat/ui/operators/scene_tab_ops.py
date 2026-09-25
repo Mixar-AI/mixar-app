@@ -114,12 +114,31 @@ def _unique_name(base: str) -> str:
     return name
 
 
+#: Login identity the auth flow stamps on the scene it signed in from; a new
+#: tab inherits it, or the profile chip and credits read blank there.
+ACCOUNT_PROPS = ("mixie_chat_user_id", "mixie_chat_credits", "mixie_chat_model")
+
+
+def inherit_account(source, scene) -> None:
+    """Copy the signed-in identity from ``source`` onto a new tab's scene."""
+    if source is None or source is scene:
+        return
+    for prop in ACCOUNT_PROPS:
+        try:
+            setattr(scene, prop, getattr(source, prop))
+        except Exception:  # noqa: BLE001 — a missing property on either side is fine
+            pass
+
+
 def new_scene_tab(name: str = "") -> object:
     """Create an empty tab, connect it, show it everywhere. Returns the scene."""
     existing = ordered_tabs()
+    source = getattr(getattr(bpy.context, "window", None), "scene", None) or (existing[0] if existing else None)
     scene = bpy.data.scenes.new(_unique_name((name or "").strip() or "Scene"))
-    # A fresh tab: no session yet (minted on the first message), no chat.
+    # A fresh tab: no session yet (minted on the first message), no chat, but
+    # the same signed-in account as the tab it was opened from.
     scene.mixie_session_id = ""
+    inherit_account(source, scene)
     session = get_session_manager()
     live = _connection_live()
     if live:
