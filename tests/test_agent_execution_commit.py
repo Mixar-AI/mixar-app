@@ -69,7 +69,14 @@ class FakeBpy:
         self.fail_load = fail_load
         self.loads = []
         self.data = SimpleNamespace(collections=FakeCollections(), libraries=SimpleNamespace(load=self._load))
-        scene = SimpleNamespace(collection=FakeCollection("Scene Collection"), camera="CAM", name="Scene")
+        scene = SimpleNamespace(collection=FakeCollection("Scene Collection"), camera="CAM", name="Scene",
+                                mixie_session_id="s1")
+        # A second, unrelated scene tab: the commit must never land in it even
+        # when it is the context scene.
+        other = SimpleNamespace(collection=FakeCollection("Scene Collection"), camera="CAM2", name="Other",
+                                mixie_session_id="s2")
+        self.data.scenes = [other, scene]
+        self.other = other
         self.user = [FakeObj("UserCube")]
         self.user[0].selected = True
         self.context = SimpleNamespace(
@@ -354,3 +361,22 @@ def test_identity_placement_reports_not_applied(env):
     none = commit.append_collection(_params(env, operation_id="op-2", payload_hash="ph-2"),
                                     bpy_module=env.bpy, journal=env.journal)
     assert none["receipt"]["placement"] is None and none["receipt"]["placement_applied"] is False
+
+
+def test_the_commit_lands_in_the_sessions_scene_not_the_context_scene(env):
+    """The user is looking at another tab while the run's worker delivers."""
+    env.bpy.context.scene = env.bpy.other
+    out = commit.append_collection(_params(env), bpy_module=env.bpy, journal=env.journal)
+    assert out["success"]
+    own = env.bpy.data.scenes[1]
+    assert own.collection.children.get("Mixie Agent") is not None
+    assert env.bpy.other.collection.children.get("Mixie Agent") is None
+
+
+def test_a_session_without_a_unique_scene_refuses_the_commit(env):
+    env.bpy.data.scenes[0].mixie_session_id = "s1"          # a Scene copy duplicated the tag
+    out = commit.append_collection(_params(env), bpy_module=env.bpy, journal=env.journal)
+    assert out["error_type"] == "stale_scene" and env.bpy.loads == []
+    env.bpy.data.scenes = []                                # the tab was closed
+    out = commit.append_collection(_params(env), bpy_module=env.bpy, journal=env.journal)
+    assert out["error_type"] == "stale_scene"

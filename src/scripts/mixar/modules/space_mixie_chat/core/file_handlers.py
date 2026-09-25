@@ -172,6 +172,8 @@ def register():
         bpy.app.handlers.load_post.append(_on_load_post)
     if not bpy.app.timers.is_registered(_sanitize_once):
         bpy.app.timers.register(_sanitize_once, first_interval=0.5)
+    from .scene_identity import register as register_scene_identity
+    register_scene_identity()
     logger.debug("File load handlers registered")
 
 
@@ -191,4 +193,6 @@ def unregister():
             bpy.app.timers.unregister(_sanitize_once)
     except Exception:
         pass
+    from .scene_identity import unregister as unregister_scene_identity
+    unregister_scene_identity()
     logger.debug("File load handlers unregistered")

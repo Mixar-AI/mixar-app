@@ -77,7 +77,10 @@ def activate(params: dict, journal=None, identity_fn=None) -> dict:
         return {"success": False, "error": "unsupported protocol_version",
                 "error_type": "unsupported_protocol"}
     journal = journal or get_journal()
-    identity_fn = identity_fn or document.document_identity
+    if identity_fn is None:
+        # The run's scene is the session's scene (Scene.mixie_session_id),
+        # whatever the window shows when the activate arrives.
+        identity_fn = lambda: document.document_identity(session_id=session_id)  # noqa: E731
     prior = _by_session.get(session_id)
     known = max(prior.turn_epoch if prior else -1, journal.run_epoch(session_id))
     if prior is not None and prior.run_id == run_id and prior.turn_epoch == epoch:
@@ -123,6 +126,11 @@ def check_document_current(binding: RunBinding, identity: dict):
         return "stale_document", "document changed since this run activated"
     if _int(identity.get("document_epoch")) != binding.document_epoch:
         return "stale_epoch", "document epoch changed since this run activated"
+    live_scene = identity.get("scene_id")
+    if binding.scene_id and live_scene != binding.scene_id:
+        # The session's scene is gone, duplicated, or another scene answered:
+        # a commit now would land in the wrong tab.
+        return "stale_scene", "the run's scene is no longer the scene it activated on"
     return None
 
 

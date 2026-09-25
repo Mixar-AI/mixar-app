@@ -90,10 +90,32 @@ def ensure_scene_id(scene) -> Optional[str]:
     return _ensure_prop(scene, SCENE_ID_PROP)
 
 
-def document_identity(scene=None, bpy=None) -> dict:
-    """Identity block returned on activate and checked on commit."""
+def scene_for_session(session_id: str, bpy=None):
+    """The ONE scene tagged with this chat session id, else None.
+
+    Zero matches (the scene was closed) and several matches (a Scene copy
+    duplicated the tag) both return None: a run must never guess its scene."""
+    if not session_id:
+        return None
     bpy = bpy or _bpy()
-    if scene is None:
+    try:
+        scenes = list(getattr(bpy.data, "scenes", None) or [])
+    except Exception:
+        return None
+    matches = [s for s in scenes if str(getattr(s, "mixie_session_id", "") or "") == session_id]
+    return matches[0] if len(matches) == 1 else None
+
+
+def document_identity(scene=None, bpy=None, session_id: str = "") -> dict:
+    """Identity block returned on activate and checked on commit.
+
+    With ``session_id`` the scene is the session's own scene, never the one
+    the window shows; a session whose scene cannot be resolved yields a
+    ``scene_id`` of None, which the commit fence refuses."""
+    bpy = bpy or _bpy()
+    if scene is None and session_id:
+        scene = scene_for_session(session_id, bpy)
+    elif scene is None:
         try:
             scene = bpy.context.scene
         except Exception:

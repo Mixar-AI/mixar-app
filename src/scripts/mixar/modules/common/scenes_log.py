@@ -7,8 +7,9 @@
 One INFO line per scene event in the app log, grep-able by tag and session id,
 plus a per-session JSONL dossier under ``~/.mixar/scenes-dossier/<session_id>/``
 (override the root with ``MIXAR_SCENES_DOSSIER_DIR``; set it to ``0`` to disable)
-so a failing tab can be read from the filesystem. The backend writes the same
-record shape (``modules/agent/diagnostics/scenes.py``) and
+so a failing tab can be read from the filesystem. Lives in ``common`` so both the chat add-on and
+``common/agent_execution`` can log. The backend writes the same record shape
+(``modules/agent/diagnostics/scenes.py``) and
 ``scripts/scenes_dossier.sh`` merges both by time.
 
 Events: ``route.pin`` / ``route.restore`` / ``route.reject``, ``tab.new``,

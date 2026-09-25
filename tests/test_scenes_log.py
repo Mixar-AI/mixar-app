@@ -5,26 +5,19 @@
 import json
 import os
 import sys
-import types
 
 import pytest
 
 
+_SRC_SCRIPTS = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "scripts"))
+if _SRC_SCRIPTS not in sys.path:
+    sys.path.insert(0, _SRC_SCRIPTS)
+
+
 @pytest.fixture
-def scenes_log(monkeypatch):
-    """Import the module with the mixar logging config stubbed out."""
-    import logging
-    cfg = types.ModuleType("mixar.config.logging_config")
-    cfg.get_logger = lambda name=None, level=None: logging.getLogger(name or "test")
-    monkeypatch.setitem(sys.modules, "mixar.config.logging_config", cfg)
-    sys.modules.pop("mixar.modules.space_mixie_chat.core.scenes_log", None)
-    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sys.path.insert(0, os.path.join(here, "core"))
-    try:
-        import scenes_log  # noqa: PLC0415
-        yield scenes_log
-    finally:
-        sys.path.pop(0)
+def scenes_log():
+    from mixar.modules.common import scenes_log as module  # noqa: PLC0415
+    return module
 
 
 class _Scene:

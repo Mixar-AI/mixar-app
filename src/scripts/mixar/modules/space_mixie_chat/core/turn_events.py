@@ -114,6 +114,10 @@ def _resolve(sid):
     if len(scenes) == 1:
         _bindings[sid] = _scene_id(scenes[0])
         return scenes[0]
+    if len(scenes) > 1:
+        from mixar.modules.common.scenes_log import slog
+        slog('route.reject', None, session_id=sid, reason='ambiguous_events',
+             scenes=', '.join(s.name for s in scenes))
     return None
 
 

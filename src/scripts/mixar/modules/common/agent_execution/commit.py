@@ -16,10 +16,12 @@ Main thread only. ``bpy_module`` is injectable for tests.
 from __future__ import annotations
 
 import time
+from contextlib import nullcontext
 from typing import Optional
 
 from mixar.config.logging_config import get_logger
 
+from ..scenes_log import slog
 from . import bindings, document
 from .artifacts import ArtifactError, resolve
 from .journal import APPLIED, PREPARED, RUNNING, UNKNOWN, get_journal
@@ -66,12 +68,13 @@ def _foreground_busy(bpy) -> Optional[str]:
 class _ViewState:
     """Capture and restore selection / active object / camera around the publish."""
 
-    def __init__(self, bpy):
+    def __init__(self, bpy, scene=None):
         self.bpy = bpy
+        self.scene = scene
         try:
             self.active = bpy.context.view_layer.objects.active
             self.selected = [o for o in bpy.context.selected_objects]
-            self.camera = bpy.context.scene.camera
+            self.camera = (scene if scene is not None else bpy.context.scene).camera
         except Exception:
             self.active, self.selected, self.camera = None, [], None
 
@@ -86,14 +89,21 @@ class _ViewState:
                 except Exception:
                     pass
             bpy.context.view_layer.objects.active = self.active
-            if bpy.context.scene.camera is not self.camera:
-                bpy.context.scene.camera = self.camera
+            scene = self.scene if self.scene is not None else bpy.context.scene
+            if scene.camera is not self.camera:
+                scene.camera = self.camera
         except Exception:
             logger.debug("view state restore skipped", exc_info=True)
 
 
-def _target_collection(bpy, name: str):
-    scene = bpy.context.scene
+def _scene_override(bpy, scene):
+    """Run the publish with ``scene`` as the context scene (a no-op on a bpy
+    without ``temp_override``, e.g. the test double)."""
+    override = getattr(getattr(bpy, "context", None), "temp_override", None)
+    return override(scene=scene) if callable(override) else nullcontext()
+
+
+def _target_collection(bpy, name: str, scene):
     existing = scene.collection.children.get(name)
     if existing is not None:
         return existing
@@ -155,8 +165,15 @@ def append_collection(params: dict, *, bpy_module=None, journal=None) -> dict:
                 state=existing["state"],
             )
 
-    identity = document.document_identity(bpy=bpy)
     binding = bindings.for_run(run_id)
+    # The commit lands in the SESSION's scene, never in the scene the window
+    # shows: with several scene tabs open those differ.
+    scene = document.scene_for_session(binding.session_id, bpy) if binding is not None else None
+    if scene is None:
+        slog("commit.target", None, session_id=getattr(binding, "session_id", ""), run=run_id,
+             op=operation_id, outcome="refused", reason="no unique scene for session")
+        return _err("stale_scene", "no unique scene is tagged with this run's session")
+    identity = document.document_identity(scene=scene, bpy=bpy)
     if binding is not None and (existing is None or existing["state"] == PREPARED):
         refused = bindings.check_document_current(binding, identity)
         if refused is not None:
@@ -185,10 +202,10 @@ def append_collection(params: dict, *, bpy_module=None, journal=None) -> dict:
     journal.op_set_state(operation_id, RUNNING)
 
     # 5. the short publish — no yielding between the final check and the link
-    view = _ViewState(bpy)
+    view = _ViewState(bpy, scene)
     created: list[str] = []
     try:
-        with document.commit_scope():
+        with document.commit_scope(), _scene_override(bpy, scene):
             with bpy.data.libraries.load(path, link=False) as (data_from, data_to):
                 if collection_name not in list(data_from.collections):
                     raise ArtifactError("artifact_missing",
@@ -197,7 +214,7 @@ def append_collection(params: dict, *, bpy_module=None, journal=None) -> dict:
             appended = data_to.collections[0]
             if appended is None:
                 raise ArtifactError("artifact_missing", "append produced no collection")
-            target = _target_collection(bpy, target_name)
+            target = _target_collection(bpy, target_name, scene)
             if appended.name not in [c.name for c in target.children]:
                 target.children.link(appended)
             created = [o.name for o in appended.all_objects]
@@ -229,18 +246,20 @@ def append_collection(params: dict, *, bpy_module=None, journal=None) -> dict:
         "placement": placement,
     }
     journal.op_set_state(operation_id, APPLIED, receipt)
-    _record_history(bpy, params, receipt)
+    slog("commit.target", scene, run=run_id, op=operation_id, outcome="applied",
+         collection=applied_name, objects=len(created))
+    _record_history(bpy, params, receipt, scene)
     return {"success": True, "state": APPLIED, "receipt": receipt}
 
 
-def _record_history(bpy, params: dict, receipt: dict) -> None:
+def _record_history(bpy, params: dict, receipt: dict, scene=None) -> None:
     """Attribute the publish to the agent in operation history (fail-soft)."""
     try:
         from mixar.modules.operation_history.core import store as _op_store
         from mixar.modules.operation_history.core.record import build_agent_record
         from mixar.modules.operation_history.core.scene_key import get_scene_history_id
 
-        scene = bpy.context.scene
+        scene = scene if scene is not None else bpy.context.scene
         _op_store.append_operation(
             build_agent_record(
                 tool_name="agent_commit",
