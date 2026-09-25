@@ -41,6 +41,8 @@ _user_foreground_scene_name: str = ""
 # exactly this scene (a user viewing tab B while tab A's agent runs stays on
 # B); the tracked foreground scene above is only the fallback when it is gone.
 _restore_scene_name: str = ""
+# The session whose pin the next restore undoes (its dossier gets the restore).
+_restore_session_id: str = ""
 # Read by the backend's render template: a window screenshot while the pin has
 # flipped window.scene without a redraw would show the previous scene's pixels.
 ROUTE_SWITCHED_KEY = "mixie_route_switched"
@@ -98,7 +100,7 @@ def route_request(
     switch happens) when a per-scene session matches no scene, matches more
     than one, or cannot be pinned because no window exists.
     """
-    global _user_foreground_scene_name, _restore_scene_name
+    global _user_foreground_scene_name, _restore_scene_name, _restore_session_id
     target_scene = None
     window, window_kind = _window()
     if not is_non_scene_routing_session(session_id):
@@ -135,6 +137,7 @@ def route_request(
             _restore_scene_name = (
                 current.name if current is not None and not is_lane_scene(current) else ""
             )
+            _restore_session_id = session_id
             window.scene = target_scene
             logger.debug(f"Switched to scene '{target_scene.name}' for script execution")
             slog("route.pin", target_scene, target=target_scene.name,
@@ -161,7 +164,7 @@ def restore_after(did_switch: bool) -> None:
     if restore_scene is not None and window.scene != restore_scene:
         try:
             window.scene = restore_scene
-            slog("route.restore", restore_scene, to=restore_scene.name)
+            slog("route.restore", None, session_id=_restore_session_id, to=restore_scene.name)
         except Exception:
             pass  # Scene may have been deleted by the script
 

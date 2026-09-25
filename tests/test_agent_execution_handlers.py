@@ -29,6 +29,7 @@ IDENTITY = {"document_id": "doc", "document_epoch": 0, "scene_id": "sc", "scene_
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     monkeypatch.setenv("MIXAR_AGENT_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("MIXAR_SCENES_DOSSIER_DIR", "0")   # never write ~/.mixar from tests
     jmod.set_journal(jmod.Journal(str(tmp_path / "j.sqlite")))
     bindings.reset()
     monkeypatch.setattr(document, "set_run_active", lambda f: None)
