@@ -119,6 +119,14 @@ static bool rna_WindowManager_mixar_window_resizing_get(PointerRNA * /*ptr*/)
   return Mixar_window_resize_dispatch_active();
 }
 
+/* Defined in windowmanager/intern/wm_splash_screen.cc (Mixar overlay). */
+bool Mixar_splash_is_open();
+
+static bool rna_WindowManager_mixar_splash_open_get(PointerRNA * /*ptr*/)
+{
+  return Mixar_splash_is_open();
+}
+
 static void rna_Window_mixar_qa_drag_file(
     wmWindow *win, bContext *C, ReportList *reports, const char *filepath)
 {
@@ -410,6 +418,17 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         "Window Resizing",
         "Handlers are running from inside an OS window resize. Defer viewport "
         "renders (render.opengl) until this is False");
+
+    /* The splash popup is alive (set on invoke, cleared by the popup's free
+     * callback on every close path). An idle splash stops redrawing, so
+     * Python cannot infer this from draw timestamps. */
+    prop = RNA_def_property(srna_wm, "mixar_splash_open", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_splash_open_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(prop,
+                             "Splash Open",
+                             "The startup splash popup is on screen; it closes on a button, "
+                             "a click outside it or Escape");
   }
 }
 

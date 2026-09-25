@@ -35,14 +35,8 @@ _splash_last_drawn_ts: float = 0.0
 SPLASH_VISIBLE_WINDOW_S = 2.0
 _module_load_ts: float = time.monotonic()
 _SPLASH_STARTUP_GRACE_S = 3.0  # assume splash is coming for first 3s
-# "Splash is gone" window for onboarding_can_start() when the splash was
-# exited WITHOUT a mode-pick (Esc / click-outside / About links) — the
-# common first-run path where the user dismisses the splash and signs in.
-# Kept just above is_splash_visible()'s staleness window so onboarding
-# starts promptly after dismissal (was 20s, which delayed onboarding ~10s+
-# after sign-in). Firing a touch early behind a rare idle-but-open popup
-# only costs the tour's opening seconds, and ``maybe_show_for_user`` never
-# schedules it twice.
+# Draw-staleness "splash is gone" window for onboarding_can_start(), used
+# only on builds without the native ``WindowManager.mixar_splash_open``.
 _SPLASH_GONE_FALLBACK_S = 2.5
 
 
@@ -64,7 +58,8 @@ def is_splash_visible() -> bool:
 # mode (Start with Zen Mode / Engine Mode — see workflow.ui_mode_ops).
 # A static, still-open popup stops redrawing, so draw-staleness alone
 # can't tell "dismissed" from "idle but on screen". Onboarding keys off
-# this explicit signal so the tour never starts *behind* an open splash.
+# this explicit signal (and the native splash-open flag) so the tour never
+# starts *behind* an open splash.
 _splash_mode_chosen = False
 
 
@@ -74,24 +69,43 @@ def notify_mode_chosen() -> None:
     _splash_mode_chosen = True
 
 
+def _native_splash_open():
+    """``WindowManager.mixar_splash_open`` (set while the splash popup is
+    alive, cleared on every close path), or None on a build without it."""
+    try:
+        wm = bpy.context.window_manager
+        if wm is None:
+            return None
+        return bool(wm.mixar_splash_open)
+    except Exception:
+        return None
+
+
 def onboarding_can_start() -> bool:
     """True once it's safe to start the onboarding tour.
 
-    Stricter than :func:`is_splash_visible` on purpose: the tour must only
-    start *after* the user has left the splash, so its opening beat isn't
-    lost behind the splash or to the mode-pick click.
+    The tour must only start *after* the user has left the splash — by a
+    button or a click outside it — so its opening beat isn't lost behind
+    the splash or to the dismissing click.
 
-    * User picked a mode → splash is gone, go.
-    * Splash disabled in prefs → no splash to wait for; defer to the
-      normal visibility heuristic once startup grace has passed.
-    * Splash exited without a mode-pick (Esc / click-outside / About) →
-      start once it has stopped drawing for _SPLASH_GONE_FALLBACK_S. This
-      is the common first-run path (dismiss splash, sign in), so it must
-      be prompt. An early start behind a rare idle-open popup only costs
-      the tour's opening seconds.
-    * Splash never drew (Blender suppresses it when opening a .blend
-      directly) → start once the startup grace has passed.
+    * The native flag (``WindowManager.mixar_splash_open``) is authoritative:
+      while the popup is alive, wait, however long it sits idle. An idle
+      splash stops redrawing, so draw-staleness would read it as closed.
+    * Splash closed (or never opened) → go once it has drawn, a mode was
+      picked, or the startup grace has passed (Blender suppresses the
+      splash on some launch paths, e.g. opening a .blend directly; waiting
+      for a splash that never comes would block the tour forever).
+    * Builds without the native flag fall back to draw staleness.
     """
+    native_open = _native_splash_open()
+    if native_open is not None:
+        if native_open:
+            return False
+        return (
+            _splash_mode_chosen
+            or _splash_last_drawn_ts != 0.0
+            or (time.monotonic() - _module_load_ts) >= _SPLASH_STARTUP_GRACE_S
+        )
     if _splash_mode_chosen:
         return True
     try:
@@ -102,12 +116,6 @@ def onboarding_can_start() -> bool:
         pass
     if _splash_last_drawn_ts != 0.0:
         return (time.monotonic() - _splash_last_drawn_ts) >= _SPLASH_GONE_FALLBACK_S
-    # Never drew at all: Blender suppresses the splash on some launch paths
-    # (opening a .blend directly, `blender file.blend`) while show_splash
-    # stays True. Waiting for a draw that will never come would block the
-    # tour forever (and leave the 0.3s onboarding timer polling for the
-    # whole session) — once the startup grace has passed, treat the splash
-    # as absent.
     return (time.monotonic() - _module_load_ts) >= _SPLASH_STARTUP_GRACE_S
 
 
