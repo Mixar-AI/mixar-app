@@ -267,6 +267,60 @@ class MIXIE_CHAT_OT_reorder_scene_tab(Operator):
         return {'FINISHED'}
 
 
+def send_selection_to_scene(source, target, objects) -> list:
+    """Copy ``objects`` (and their object data and materials, Shift-D
+    semantics) from ``source`` into ``target``'s root collection. The only
+    cross-tab path: tabs never share datablocks, so nothing an agent does in
+    one tab can reach the copy. Returns the new objects' names."""
+    if target is None or target is source or is_lane_scene(target):
+        return []
+    made = []
+    for obj in objects:
+        try:
+            copy = obj.copy()
+            if getattr(obj, "data", None) is not None:
+                copy.data = obj.data.copy()
+                slots = getattr(copy.data, "materials", None)
+                if slots is not None:
+                    for index, material in enumerate(list(slots)):
+                        if material is not None:
+                            slots[index] = material.copy()
+            target.collection.objects.link(copy)
+            made.append(copy.name)
+        except Exception as error:  # noqa: BLE001
+            logger.warning("send to scene skipped %s: %s", getattr(obj, "name", "?"), error)
+    slog("tab.send", scene=source, target=target.name, count=len(made))
+    return made
+
+
+class MIXIE_CHAT_OT_send_to_scene_tab(Operator):
+    """Copy the selected objects into another scene tab (duplicates, never
+    links: the tabs stay independent)."""
+
+    bl_idname = "mixie_chat.send_to_scene_tab"
+    bl_label = "Send Selection to Scene"
+    bl_description = "Copy the selected objects (with their mesh and materials) into another tab"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    scene_name: StringProperty(name="Scene", default="", options={'SKIP_SAVE'})
+
+    @classmethod
+    def poll(cls, context):
+        return bool(getattr(context, "selected_objects", None))
+
+    def execute(self, context):
+        target = bpy.data.scenes.get(self.scene_name)
+        if target is None or target is context.scene:
+            self.report({'WARNING'}, "Pick another scene tab")
+            return {'CANCELLED'}
+        made = send_selection_to_scene(context.scene, target, list(context.selected_objects))
+        if not made:
+            self.report({'WARNING'}, "Nothing was copied")
+            return {'CANCELLED'}
+        self.report({'INFO'}, f"Copied {len(made)} object(s) to {target.name}")
+        return {'FINISHED'}
+
+
 class MIXIE_CHAT_OT_show_scene_tabs(Operator):
     """Pop the scene-tab menu from the island header: this chat's tab,
     every other tab with its agent status, and New scene."""
@@ -312,4 +366,5 @@ classes = (
     MIXIE_CHAT_OT_reorder_scene_tab,
     MIXIE_CHAT_OT_close_scene_tab,
     MIXIE_CHAT_OT_show_scene_tabs,
+    MIXIE_CHAT_OT_send_to_scene_tab,
 )

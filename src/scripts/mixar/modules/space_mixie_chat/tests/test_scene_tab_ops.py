@@ -139,3 +139,30 @@ def test_reorder_moves_a_tab_and_new_tabs_take_the_last_slot(rig):
     assert ops.reorder_scene_tab(rig.lane, 0) is False
     assert ops.reorder_scene_tab(b, 99) is True
     assert [s.name for s in ops.ordered_tabs()] == ["C", "Scene", "B"]
+
+
+def test_send_selection_copies_objects_and_data(live_bpy):
+    """Row 3.4: a send is a duplicate (object, data, materials), never a link."""
+    from types import SimpleNamespace as NS
+
+    class Copyable:
+        def __init__(self, name, **kw):
+            self.name = name
+            self.__dict__.update(kw)
+
+        def copy(self):
+            clone = Copyable(self.name + ".001", **{k: v for k, v in self.__dict__.items() if k != "name"})
+            return clone
+
+    linked = []
+    source = _scene(name="A", session_id="sa")
+    target = _scene(name="B", session_id="sb")
+    target.collection = NS(objects=NS(link=lambda o: linked.append(o)))
+    mat = Copyable("Mat")
+    mesh = Copyable("Mesh", materials=[mat])
+    obj = Copyable("Cube", data=mesh)
+    made = ops.send_selection_to_scene(source, target, [obj])
+    assert made == ["Cube.001"] and len(linked) == 1
+    copy = linked[0]
+    assert copy is not obj and copy.data is not mesh and copy.data.materials[0] is not mat
+    assert ops.send_selection_to_scene(source, source, [obj]) == []

@@ -61,6 +61,25 @@ class MIXIE_CHAT_MT_scene_tabs(Menu):
         if tabs:
             layout.separator()
         layout.operator("mixie_chat.new_scene_tab", text="New scene", icon='ADD')
+        others = [t for t in tabs if shown is None or t.scene_name != shown.name]
+        if others and getattr(context, "selected_objects", None):
+            layout.menu("MIXIE_CHAT_MT_send_to_scene_tab", text="Send selection to", icon='DUPLICATE')
 
 
-classes = (MIXIE_CHAT_MT_scene_tabs,)
+class MIXIE_CHAT_MT_send_to_scene_tab(Menu):
+    """The other tabs, as targets for a copy of the selection."""
+
+    bl_idname = "MIXIE_CHAT_MT_send_to_scene_tab"
+    bl_label = "Send selection to"
+
+    def draw(self, context):
+        layout = self.layout
+        shown = getattr(context, "scene", None)
+        for tab in list(getattr(context.window_manager, "mixar_scene_tabs", []) or []):
+            if shown is not None and tab.scene_name == shown.name:
+                continue
+            op = layout.operator("mixie_chat.send_to_scene_tab", text=tab.scene_name, icon='SCENE_DATA')
+            op.scene_name = tab.scene_name
+
+
+classes = (MIXIE_CHAT_MT_scene_tabs, MIXIE_CHAT_MT_send_to_scene_tab)
