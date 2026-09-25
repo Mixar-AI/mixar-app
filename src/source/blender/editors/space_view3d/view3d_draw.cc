@@ -1553,6 +1553,18 @@ void view3d_draw_region_info(const bContext *C, ARegion *region)
      * below a visible top header, but do not indent for the transform tools. */
     const bool zen_info = ui::mixar_workspace_is_zen(C);
     int xoffset = (zen_info ? 0 : rect->xmin) + (0.5f * U.widget_unit);
+    if (zen_info) {
+      /* The floating transform pill sits at the top of the left edge; start
+       * the info stack just past it instead of under it. */
+      for (const ARegion &tools : CTX_wm_area(C)->regionbase) {
+        if (tools.regiontype == RGN_TYPE_TOOLS && tools.overlap && tools.runtime->visible &&
+            tools.winx > 1)
+        {
+          xoffset = std::max(xoffset,
+                             int(tools.winrct.xmax - region->winrct.xmin + 0.5f * U.widget_unit));
+        }
+      }
+    }
     int yoffset = (zen_info ? region->winy - 1 : rect->ymax) - (0.1f * U.widget_unit);
     if (zen_info) {
       for (const ARegion &header : CTX_wm_area(C)->regionbase) {

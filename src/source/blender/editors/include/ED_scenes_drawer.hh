@@ -111,12 +111,12 @@ struct ScenesDrawerRuntime {
 #define VIEW3D_SCENES_DRAWER_MIN_WIDTH 160
 /** Clickable/drawn width of the labeled Scenes tab. */
 #define VIEW3D_SCENES_DRAWER_GRIP_WIDTH 22.0f
-/** Vertical extent of the Scenes tab. Shorter than the moodboard grip: the
- * left edge also carries the floating navigation pill, so this tab sits in
- * the upper third of the area, out of that pill's way. */
-#define VIEW3D_SCENES_DRAWER_GRIP_HEIGHT 84.0f
+/** Vertical extent of the Scenes tab: the moodboard grip's, centred like it,
+ * so the two tabs mirror each other. The floating navigation pill sits at
+ * the top of the left edge, out of the way. */
+#define VIEW3D_SCENES_DRAWER_GRIP_HEIGHT 144.0f
 /** Fraction of the area height (from the bottom) at which the tab is centred. */
-#define VIEW3D_SCENES_DRAWER_GRIP_FRACTION 0.70f
+#define VIEW3D_SCENES_DRAWER_GRIP_FRACTION 0.50f
 /** Corner radius of the panel chrome. */
 #define VIEW3D_SCENES_DRAWER_RADIUS 14.0f
 /** Inset of the rounded panel from the grip line. */

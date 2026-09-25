@@ -1907,16 +1907,6 @@ static void region_rect_recursive(
         winrct->xmax -= int(std::ceil(VIEW3D_MOODBOARD_DRAWER_GRIP_WIDTH * UI_SCALE_FAC));
       }
     }
-    /* The mirror on the left: leave a lane for the Scenes tab beside the
-     * toolbar so the grip never covers its buttons. */
-    if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_TOOLS &&
-        region->overlap && alignment == RGN_ALIGN_LEFT)
-    {
-      const ARegion *scenes = BKE_area_find_region_type(area, VIEW3D_SCENES_DRAWER_REGION_TYPE);
-      if (scenes && !(scenes->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED))) {
-        winrct->xmin += int(std::ceil(VIEW3D_SCENES_DRAWER_GRIP_WIDTH * UI_SCALE_FAC));
-      }
-    }
     /* Allocate the drawer against the viewport, independent of sidebars, and
      * leave their allocation unchanged. Floating headers still bound its height. */
     rcti drawer_remainder;

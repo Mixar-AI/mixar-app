@@ -55,6 +55,11 @@ static void drawer_tag_redraw(bContext *C)
   if (ARegion *window = BKE_area_find_region_type(area, RGN_TYPE_WINDOW)) {
     ED_region_tag_redraw_editor_overlays(window);
   }
+  /* The transform pill steps aside while the drawer is open (Python skips
+   * its draw); it lives in the TOOLS region, which must repaint too. */
+  if (ARegion *tools = BKE_area_find_region_type(area, RGN_TYPE_TOOLS)) {
+    ED_region_tag_redraw(tools);
+  }
 }
 
 static ScenesDrawerRuntime *drawer_runtime(const bContext *C)

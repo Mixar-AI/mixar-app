@@ -38,6 +38,9 @@ _ZEN_TOOL_SCALE_Y = 2.3
 _ZEN_TOOL_UNITS_X = 2.0
 
 _DEFAULT_FALLBACK_TOOL = "builtin.select"
+
+# Gap between the scene toolbar and the Move / Rotate / Scale pill, at 1x.
+_ZEN_TOOL_TOP_GAP_PX = 14.0
 """Safety net for `VIEW3D_PT_tools_active.tool_fallback_id`, which is
 `"builtin.select"` (Tweak, the stock first tool). Only used if the panel has
 not been registered yet — the attribute is read live when it is."""
@@ -179,7 +182,7 @@ def _tool_resolves(panel_cls, context):
 
 
 def _zen_tool_top_gap(context, tool_count: int) -> float:
-    """Separator factor that vertically centres `tool_count` buttons.
+    """Separator factor that parks the tool pill at the top of its region.
 
     Panels are content-sized, so `separator_spacer()` — which only
     distributes leftover space, and only in horizontal layouts — cannot
@@ -201,10 +204,12 @@ def _zen_tool_top_gap(context, tool_count: int) -> float:
     ui_scale = getattr(system, "ui_scale", 1.0) or 1.0
     pixel_size = getattr(system, "pixel_size", 1.0) or 1.0
 
-    widget_unit = round(18.0 * ui_scale) + 2.0 * pixel_size
-    group_height = tool_count * widget_unit * _ZEN_TOOL_SCALE_Y
-    gap_px = (region.height - group_height) * 0.5
-    if gap_px <= 0.0:
+    del pixel_size, tool_count  # measured only for the centred layout this replaced
+    # The pill sits at the TOP of the left edge (just under the scene
+    # toolbar): the centred slot is the Scenes drawer's, mirroring the
+    # Moodboard tab on the right. A small breath keeps it off the header.
+    gap_px = _ZEN_TOOL_TOP_GAP_PX * ui_scale
+    if region.height <= gap_px:
         return 0.0
     return gap_px / (6.0 * ui_scale)
 
@@ -236,6 +241,12 @@ def _patched_tools_active_draw(self, context):
     if not _is_basic_workspace(context):
         if _original_tools_active_draw is not None:
             _original_tools_active_draw(self, context)
+        return
+
+    # The Scenes drawer slides out over this strip's corner; while it is
+    # open the pill would paint on top of the first card, so it steps aside.
+    wm = getattr(context, "window_manager", None)
+    if float(getattr(wm, "mixar_scenes_drawer_amount", 0.0) or 0.0) > 0.02:
         return
 
     items = []
