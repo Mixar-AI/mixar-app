@@ -20,7 +20,11 @@ from . import turn_cursor
 
 logger = get_logger(__name__)
 _LOCK = threading.Lock()
-_inbox = deque()
+# One FIFO per session (scene tab), drained round-robin so a tab streaming
+# a long answer never starves another tab's turn events (parallel scene
+# tabs, Phase 2). Ordering WITHIN a session is untouched.
+_inbox: dict = {}
+_inbox_last = ''
 _inbox_bytes = 0
 _overflow = set()
 _bindings = {}
@@ -76,10 +80,8 @@ def reopen(scene):
     if not sid:
         return
     with _LOCK:
-        retained = [item for item in _inbox if item[1].get('session_id') != sid]
-        _inbox.clear()
-        _inbox.extend(retained)
-        _inbox_bytes = sum(item[2] for item in retained)
+        for item in _inbox.pop(sid, ()):
+            _inbox_bytes -= item[2]
         _overflow.discard(sid)
     for tid, turn in list(_turns.items()):
         if turn.session_id == sid:
@@ -96,13 +98,36 @@ def handle_turn_notification(method, params):
     if not isinstance(params, dict):
         return
     size = len(json.dumps(params).encode('utf-8'))
+    sid = str(params.get('session_id') or '')
     with _LOCK:
-        if len(_inbox) >= _MAX_ITEMS or _inbox_bytes + size > _MAX_BYTES:
+        lane = _inbox.get(sid)
+        # The item cap is per session: one flooding tab overflows itself only.
+        if (lane is not None and len(lane) >= _MAX_ITEMS) or _inbox_bytes + size > _MAX_BYTES:
             if len(_overflow) < 32:
-                _overflow.add(str(params.get('session_id') or ''))
+                _overflow.add(sid)
             return
-        _inbox.append((method, params, size))
+        if lane is None:
+            lane = _inbox[sid] = deque()
+        lane.append((method, params, size))
         _inbox_bytes += size
+
+
+def _pop_round_robin():
+    """Next event, from the session after the last served one. Under _LOCK."""
+    global _inbox_bytes, _inbox_last
+    keys = [key for key, lane in _inbox.items() if lane]
+    if not keys:
+        return None
+    if _inbox_last in keys:
+        cut = keys.index(_inbox_last) + 1
+        keys = keys[cut:] + keys[:cut]
+    key = keys[0]
+    item = _inbox[key].popleft()
+    if not _inbox[key]:
+        _inbox.pop(key, None)
+    _inbox_bytes -= item[2]
+    _inbox_last = key
+    return item
 
 
 def _resolve(sid):
@@ -122,16 +147,15 @@ def _resolve(sid):
 
 
 def _drain():
-    global _inbox_bytes
     deadline = time.monotonic() + 0.004
     for _ in range(64):
         if time.monotonic() >= deadline:
             break
         with _LOCK:
-            if not _inbox:
-                break
-            method, params, size = _inbox.popleft()
-            _inbox_bytes -= size
+            item = _pop_round_robin()
+        if item is None:
+            break
+        method, params, _size = item
         try:
             _consume(method, params)
         except Exception:
@@ -140,7 +164,10 @@ def _drain():
         overflowed = list(_overflow)
         _overflow.clear()
     if overflowed:
-        reconnect()  # Also recovers a dropped start or command acknowledgement.
+        # Only the overflowed sessions replay from their cursors; the other
+        # tabs' deliveries were never dropped. (Also recovers a dropped start
+        # or command acknowledgement of those sessions.)
+        reconnect(session_ids=overflowed)
     return 0.02
 
 
@@ -327,15 +354,19 @@ def _replay_unavailable(scene, turn):
     turn.complete = True
 
 
-def reconnect():
-    """Resume every interrupted delivery from its rendered cursor, main thread."""
+def reconnect(session_ids=None):
+    """Resume every interrupted delivery from its rendered cursor, main thread.
+    With ``session_ids``, only those sessions' turns and commands."""
     arm()
+    wanted = None if session_ids is None else set(session_ids)
     for turn in list(_turns.values()):
+        if wanted is not None and turn.session_id not in wanted:
+            continue
         if not turn.complete and turn.session_id not in _blocked:
             _request_replay(turn)
     from mixar.modules.common.agent_rpc.client import call
     for command_id, (sid, _) in list(_commands.items()):
-        if sid in _blocked:
+        if sid in _blocked or (wanted is not None and sid not in wanted):
             continue
         def received(result, cid=command_id, session_id=sid):
             if result.get('state') == 'complete':
@@ -403,11 +434,12 @@ def shutdown(app_exit=False):
 
 
 def reset():
-    global _inbox_bytes
+    global _inbox_bytes, _inbox_last
     with _LOCK:
         _inbox.clear()
         _overflow.clear()
         _inbox_bytes = 0
+        _inbox_last = ''
     _turns.clear()
     _commands.clear()
     _bindings.clear()

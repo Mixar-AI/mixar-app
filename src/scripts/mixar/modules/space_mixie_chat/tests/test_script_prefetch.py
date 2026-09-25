@@ -37,6 +37,11 @@ for _dep in ("keyring", "websocket", "requests", "jwt", "sentry_sdk"):
     sys.modules.setdefault(_dep, MagicMock(name=_dep))
 
 from mixar.modules.space_mixie_chat.core import script_prefetch  # noqa: E402
+from mixar.modules.common.agent_execution.request import ExecutionRequest  # noqa: E402
+
+
+def _put(ex, legacy_tuple):
+    assert ex._enqueue(ExecutionRequest.from_legacy(legacy_tuple))
 from mixar.modules.paint.layered_build import download as download_mod  # noqa: E402
 
 
@@ -179,10 +184,11 @@ class TestExecutorHoldsForPrefetch:
         # Skip scene routing: empty session follows the active window; None
         # window short-circuits every bpy.context branch.
         monkeypatch.setattr(ex, "bpy", SimpleNamespace(context=SimpleNamespace(window=None)))
-        monkeypatch.setattr(ex, "_held", None)
         monkeypatch.setattr(ex, "_execution_gate_until", 0.0)
-        while not ex._request_queue.empty():
-            ex._request_queue.get_nowait()
+        with ex._lanes_lock:
+            ex._lanes.clear()
+            ex._queued = 0
+            ex._last_lane = ""
         return ex, sent, executed
 
     def test_holds_then_executes_when_ready(self, executor_mod):
@@ -196,12 +202,12 @@ class TestExecutorHoldsForPrefetch:
                 return self.is_ready
 
         pf = FakePrefetch()
-        ex._request_queue.put_nowait(("req-1", "print('apply')", "create_layered_material", "", None, pf))
+        _put(ex, ("req-1", "print('apply')", "create_layered_material", "", None, pf))
 
         # Assets still downloading: held, nothing executed, timer keeps ticking.
         assert ex._process_one_request() is not None
         assert executed == [] and sent == []
-        assert ex._held is not None
+        assert ex._lanes[""].held is not None
         assert ex.has_pending_requests()
 
         # Assets ready: executes and responds exactly once.
@@ -209,11 +215,59 @@ class TestExecutorHoldsForPrefetch:
         ex._process_one_request()
         assert executed == ["print('apply')"]
         assert sent == [("req-1", {"success": True})]
-        assert ex._held is None
+        assert not ex.has_pending_requests()
 
     def test_script_without_prefetch_runs_immediately(self, executor_mod):
         ex, sent, executed = executor_mod
-        ex._request_queue.put_nowait(("req-2", "print('now')", "execute_bpy_script", "", None, None))
+        _put(ex, ("req-2", "print('now')", "execute_bpy_script", "", None, None))
         ex._process_one_request()
         assert executed == ["print('now')"]
         assert sent == [("req-2", {"success": True})]
+
+    def test_a_held_prefetch_blocks_only_its_own_tab(self, executor_mod):
+        """Parallel scene tabs: tab A's texture download must not park tab B."""
+        ex, sent, executed = executor_mod
+
+        class FakePrefetch:
+            is_ready = False
+
+            def ready(self):
+                return self.is_ready
+
+        pf = FakePrefetch()
+        _put(ex, ("a-1", "print('A apply')", "create_layered_material", "", {"chat_session_id": "A"}, pf))
+        _put(ex, ("b-1", "print('B')", "execute_bpy_script", "", {"chat_session_id": "B"}, None))
+        ex._process_one_request()
+        assert executed == ["print('B')"]
+        assert ex._lanes["A"].held is not None and ex.has_pending_requests()
+        pf.is_ready = True
+        ex._process_one_request()
+        assert executed == ["print('B')", "print('A apply')"]
+        assert [rid for rid, _ in sent] == ["b-1", "a-1"]
+
+    def test_tabs_are_served_round_robin(self, executor_mod):
+        """A queue of tab-A scripts delays a tab-B script by at most one script,
+        and the tick after a tab switch has no 0.5 s breather."""
+        ex, sent, executed = executor_mod
+        for n in range(3):
+            _put(ex, (f"a-{n}", f"print('A{n}')", "execute_bpy_script", "", {"chat_session_id": "A"}, None))
+        _put(ex, ("b-0", "print('B0')", "execute_bpy_script", "", {"chat_session_id": "B"}, None))
+        _put(ex, ("lane-0", "print('A lane')", "execute_bpy_script", "",
+                  {"chat_session_id": "A"}, None))
+        intervals = [ex._process_one_request() for _ in range(5)]
+        assert executed == ["print('A0')", "print('B0')", "print('A1')", "print('A2')", "print('A lane')"]
+        # A0 -> (B pending) short tick; B0 -> short; A1 -> A2 same tab: breather.
+        assert intervals[0] < 0.1 and intervals[1] < 0.1 and intervals[2] == 0.50
+        assert intervals[-1] is None and not ex.has_pending_requests()
+
+    def test_flush_session_drops_only_that_tab(self, executor_mod):
+        ex, sent, executed = executor_mod
+        _put(ex, ("a-0", "print('A0')", "execute_bpy_script", "", {"chat_session_id": "A"}, None))
+        _put(ex, ("b-0", "print('B0')", "execute_bpy_script", "", {"chat_session_id": "B"}, None))
+        _put(ex, ("a-1", "print('A1')", "execute_bpy_script", "", {"chat_session_id": "A"}, None))
+        assert ex.flush_session("A") == 2
+        assert sorted(rid for rid, _ in sent) == ["a-0", "a-1"]
+        assert all(not res.get("success") for _, res in sent)
+        ex._process_one_request()
+        assert executed == ["print('B0')"]
+        assert not ex.has_pending_requests()

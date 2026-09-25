@@ -45,16 +45,91 @@ logger = get_logger(__name__)
 # existing callers/tests.
 _resolve_agent_context_ids = pump.resolve_agent_context_ids
 
-# Request queue of ExecutionRequest values from the WebSocket thread. A
-# request's `prefetch` is a ScriptAssetPrefetch handle (or None) — heavy
-# texture-apply scripts start downloading their assets the moment they are
-# queued, and the timer holds them (UI responsive) until the cache is warm.
-_request_queue: queue.Queue = queue.Queue(maxsize=1000)
+# One FIFO per scene tab (chat session), served round-robin one script per
+# tick: a long build in one tab delays another tab's script by at most the
+# script executing right now (parallel scene tabs, Phase 2). A worker lane's
+# scripts queue under its tab (``agent_ctx.chat_session_id``). A request's
+# `prefetch` is a ScriptAssetPrefetch handle (or None) — heavy texture-apply
+# scripts start downloading their assets the moment they are queued, and the
+# tick holds them at the head of THEIR tab's lane (UI responsive, other tabs
+# unaffected) until the cache is warm.
+class _Lane:
+    __slots__ = ("queue", "held")
 
-# Head-of-queue request waiting for its asset prefetch. Dequeued but not yet
-# executed — strict FIFO is preserved (later scripts wait behind it). Main
-# thread only.
-_held: Optional[ExecutionRequest] = None
+    def __init__(self) -> None:
+        self.queue: queue.Queue = queue.Queue()
+        # Head request waiting for its asset prefetch: dequeued, not executed;
+        # FIFO within the lane is preserved.
+        self.held: Optional[ExecutionRequest] = None
+
+    def pending(self) -> bool:
+        return self.held is not None or not self.queue.empty()
+
+
+_lanes: dict[str, _Lane] = {}
+# The WebSocket thread enqueues, the main thread serves and flushes.
+_lanes_lock = threading.Lock()
+_MAX_QUEUED = 1000
+_queued = 0  # requests across every lane (queued + held), under _lanes_lock
+# Lane served by the previous tick: round-robin starts after it, and a
+# different lane next means no 0.5 s breather.
+_last_lane: str = ""
+
+
+def _lane_key(req: ExecutionRequest) -> str:
+    """The tab a request queues under. Thread-safe: no bpy (the WebSocket
+    thread enqueues), so a worker lane without an agent context keys by its
+    own lane session — still one FIFO per agent."""
+    return str((req.agent_ctx or {}).get("chat_session_id") or req.session_id or "")
+
+
+def _enqueue(req: ExecutionRequest) -> bool:
+    global _queued
+    with _lanes_lock:
+        if _queued >= _MAX_QUEUED:
+            return False
+        _lanes.setdefault(_lane_key(req), _Lane()).queue.put_nowait(req)
+        _queued += 1
+    return True
+
+
+def _pending() -> bool:
+    with _lanes_lock:
+        return any(lane.pending() for lane in _lanes.values())
+
+
+def _other_lane_pending(served: str) -> bool:
+    with _lanes_lock:
+        return any(key != served and lane.pending() for key, lane in _lanes.items())
+
+
+def _take_next() -> tuple[Optional[ExecutionRequest], str, str]:
+    """Advance the lanes by at most one request, round-robin from the lane
+    after the last served one. Returns ``(request, status, lane)``: a request
+    for READY / PREFETCH_*; HOLDING when every lane with work is waiting on
+    a prefetch; EMPTY when nothing is queued. Main thread only."""
+    global _queued
+    holding = False
+    with _lanes_lock:
+        keys = list(_lanes)
+        if _last_lane in keys:
+            cut = keys.index(_last_lane) + 1
+            keys = keys[cut:] + keys[:cut]
+        for key in keys:
+            lane = _lanes[key]
+            req, lane.held, status = pump.take_next(lane.queue, lane.held)
+            if status == pump.EMPTY:
+                if not lane.pending():
+                    _lanes.pop(key, None)
+                continue
+            if status == pump.HOLDING:
+                holding = True
+                continue
+            _queued -= 1
+            if not lane.pending():
+                _lanes.pop(key, None)
+            return req, status, key
+    return None, (pump.HOLDING if holding else pump.EMPTY), ""
 
 # Timer state. _timer_active is read/written from both the WebSocket thread
 # (queue_script_request) and the main thread (_process_one_request); every
@@ -184,17 +259,15 @@ def queue_script_request(
         prefetch=maybe_start_prefetch(script, tool_name),
         envelope=ExecutionEnvelope.parse(envelope),
     )
-    try:
-        _request_queue.put_nowait(req)
-    except queue.Full:
+    if not _enqueue(req):
         logger.warning(f"Request queue full, dropping {tool_name} (id: {request_id})")
         return
     _ensure_timer_running()
 
 
 def has_pending_requests() -> bool:
-    """Check if there are pending script requests (queued or held)."""
-    return _held is not None or not _request_queue.empty()
+    """Check if there are pending script requests (queued or held, any tab)."""
+    return _pending()
 
 
 def gate_execution(delay: float = 0.05) -> None:
@@ -251,7 +324,7 @@ def _stop_timer_if_idle() -> Optional[float]:
     """
     global _timer_active
     with _timer_lock:
-        if _held is not None or not _request_queue.empty():
+        if _pending():
             return TIMER_INTERVAL
         _timer_active = False
         return None
@@ -303,8 +376,8 @@ def _process_one_request() -> Optional[float]:
     Returns:
         Interval for next call if more requests, None to stop timer
     """
-    global _held
-    if _held is None and _request_queue.empty():
+    global _last_lane
+    if not _pending():
         stop = _stop_timer_if_idle()
         if stop is None:
             return None  # No more requests, stop timer
@@ -319,15 +392,20 @@ def _process_one_request() -> Optional[float]:
     if time.monotonic() < _execution_gate_until:
         return TIMER_INTERVAL
 
-    req, _held, status = pump.take_next(_request_queue, _held)
+    req, status, lane = _take_next()
     if status == pump.EMPTY:
         return _stop_timer_if_idle()
     if status == pump.HOLDING:
-        # The script's texture assets are still downloading in the
-        # background. Keep holding it — this tick cost one flag check, so
-        # the UI stays fully responsive — and check again shortly. FIFO is
-        # preserved: everything behind it waits too.
+        # Every tab with work is waiting on a texture prefetch. Keep holding
+        # — this tick cost one flag check, so the UI stays fully responsive
+        # — and check again shortly. FIFO within each tab is preserved.
         return TIMER_INTERVAL
+    if lane != _last_lane:
+        if _last_lane:
+            from mixar.modules.common.scenes_log import slog
+            slog("queue.switch", None, session_id=lane, previous=_last_lane[:8],
+                 tool=req.tool_name)
+        _last_lane = lane
     if status in (pump.PREFETCH_FAILED, pump.PREFETCH_EXPIRED):
         refusal = pump.prefetch_refusal(req, status)
         logger.warning("Refusing %s (id: %s): %s", req.tool_name, req.request_id, refusal["error"])
@@ -399,9 +477,11 @@ def _process_one_request() -> Optional[float]:
         from .jsonrpc_client import get_jsonrpc_client
         pump.respond(get_jsonrpc_client(), req, result_dict)
 
-    # Continue timer if more requests pending
-    if not _request_queue.empty():
-        return 0.50  # 500ms between executions (safe for edit mode operations)
+    # Continue timer if more requests pending. The same tab back-to-back
+    # keeps the 500 ms breather (safe for edit mode operations); another
+    # tab's script gets the next tick — round-robin serves it first.
+    if _pending():
+        return TIMER_INTERVAL if _other_lane_pending(lane) else 0.50
 
     return _stop_timer_if_idle()  # Stop timer when queue empty
 
@@ -452,15 +532,29 @@ def flush_session(session_id: str) -> int:
     tab); every other tab's scripts stay queued. Main thread only. Returns
     the number dropped, each answered with an error so the backend never
     waits on it."""
-    kept, dropped = [], []
-    while True:
-        try:
-            req = _request_queue.get_nowait()
-        except queue.Empty:
-            break
-        (dropped if _request_session_id(req) == session_id else kept).append(req)
-    for req in kept:
-        _request_queue.put(req)
+    global _queued
+    dropped = []
+
+    def _mine(req) -> bool:
+        return _lane_key(req) == session_id or _request_session_id(req) == session_id
+
+    with _lanes_lock:
+        for key, lane in list(_lanes.items()):
+            kept = []
+            while True:
+                try:
+                    req = lane.queue.get_nowait()
+                except queue.Empty:
+                    break
+                (dropped if _mine(req) else kept).append(req)
+            for req in kept:
+                lane.queue.put(req)
+            if lane.held is not None and _mine(lane.held):
+                dropped.append(lane.held)
+                lane.held = None
+            if not lane.pending():
+                _lanes.pop(key, None)
+        _queued -= len(dropped)
     for req in dropped:
         try:
             _send_error_response(req.request_id, "Agent session not active")
@@ -479,7 +573,7 @@ def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
     With ``session_id``: only that session's queued scripts are dropped and
     the executor keeps running for the other tabs.
     """
-    global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested, _held
+    global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested, _queued, _last_lane
 
     if session_id:
         flush_session(session_id)
@@ -500,7 +594,6 @@ def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
         pass
 
     _execution_gate_until = 0.0
-    _held = None  # drop a prefetch-held request along with the queue
     # A held-open preview tool call belongs to the flushed session/connection.
     try:
         from .preview_deferral import fail_pending
@@ -508,11 +601,10 @@ def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
     except Exception:
         logger.debug("preview deferral flush skipped", exc_info=True)
 
-    # Clear request queue
-    while not _request_queue.empty():
-        try:
-            _request_queue.get_nowait()
-        except queue.Empty:
-            break
+    # Clear every tab's lane, prefetch-held requests included.
+    with _lanes_lock:
+        _lanes.clear()
+        _queued = 0
+        _last_lane = ""
 
     logger.debug("Main thread executor cleaned up")

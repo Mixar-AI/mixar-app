@@ -194,6 +194,7 @@ class ScriptExecutor(HandlerCleanupMixin):
         self._current_session = session_id or ""
         # Capture scene state before execution
         before_state = self._capture_scene_state()
+        mode_before = self._interaction_mode()
 
         # Push undo step BEFORE the script runs, so the first push of a turn
         # captures the pre-turn scene. Granularity (per script up to the
@@ -412,6 +413,11 @@ class ScriptExecutor(HandlerCleanupMixin):
             logger.error("Script execution failed: %s\n%s", e, result.traceback)
 
         finally:
+            # Mode hygiene: a script that left Edit/Sculpt/... mode open would
+            # leave the window in it for the next script — another tab's, once
+            # tabs interleave — and for the user. Restore before the routing
+            # pin is lifted, while the window still shows the script's scene.
+            self._restore_object_mode(mode_before)
             self._execution_lock.release()
 
             # Clean up any handlers the script may have installed
@@ -436,6 +442,36 @@ class ScriptExecutor(HandlerCleanupMixin):
         result.deleted_objects = changes["deleted"]
 
         return result
+
+    @staticmethod
+    def _interaction_mode() -> str:
+        try:
+            return str(bpy.context.mode or "")
+        except Exception:  # noqa: BLE001
+            return ""
+
+    def _restore_object_mode(self, mode_before: str) -> bool:
+        """Return to Object mode when a script changed the interaction mode.
+
+        Only a script that STARTED in Object mode is undone this way: a user
+        who was sculpting keeps their mode. Returns True when a mode_set ran.
+        """
+        if mode_before != "OBJECT":
+            return False
+        mode_after = self._interaction_mode()
+        if not mode_after or mode_after == "OBJECT":
+            return False
+        try:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Object mode restore skipped: %s", exc)
+            return False
+        try:
+            from mixar.modules.common.scenes_log import slog
+            slog("mode.restored", None, session_id=self._current_session, left_in=mode_after)
+        except Exception:  # noqa: BLE001
+            pass
+        return True
 
     def _capture_scene_state(self) -> dict:
         """Capture current scene state for change detection."""

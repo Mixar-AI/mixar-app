@@ -183,9 +183,49 @@ def test_bounded_ingress_returns_without_waiting(env, monkeypatch):
     started()
     event(0)
     event(1)
-    assert len(events._inbox) == 2
+    assert sum(len(lane) for lane in events._inbox.values()) == 2
     events._drain()
     assert env.replay == [0]
+
+
+def _second_tab(live_bpy):
+    other = _scene(session_id='sid2')
+    other.mixie_run_open, other.mixie_run_id = True, 'run2'
+    live_bpy.data.scenes.append(other)
+    events.bind(other)
+    return other
+
+
+def test_tabs_drain_round_robin(env, live_bpy):
+    """A tab streaming many events never starves another tab's events; order
+    within a tab is untouched (parallel scene tabs)."""
+    _second_tab(live_bpy)
+    started()
+    started(tid='turn2', sid='sid2', run='run2')
+    for seq in range(3):
+        events.handle_turn_notification('agent.turn.event', {
+            'session_id': 'sid', 'turn_id': 'turn', 'seq': seq, 'event': {'type': 'text', 'n': seq},
+        })
+    events.handle_turn_notification('agent.turn.event', {
+        'session_id': 'sid2', 'turn_id': 'turn2', 'seq': 0, 'event': {'type': 'text', 'n': 'B0'},
+    })
+    events._drain()
+    assert [p.get('n') for p in env.rendered] == [0, 'B0', 1, 2]
+    assert not events._inbox
+
+
+def test_overflow_replays_only_the_flooding_tab(env, live_bpy, monkeypatch):
+    _second_tab(live_bpy)
+    calls = []
+    monkeypatch.setattr(events, 'reconnect', lambda session_ids=None: calls.append(session_ids))
+    monkeypatch.setattr(events, '_MAX_ITEMS', 1)
+    started()
+    started(tid='turn2', sid='sid2', run='run2')
+    events.handle_turn_notification('agent.turn.event', {
+        'session_id': 'sid2', 'turn_id': 'turn2', 'seq': 0, 'event': {'type': 'text'},
+    })
+    events._drain()
+    assert calls == [['sid2']]
 
 
 def test_begin_turn_clears_stale_placeholder(monkeypatch, live_bpy):
