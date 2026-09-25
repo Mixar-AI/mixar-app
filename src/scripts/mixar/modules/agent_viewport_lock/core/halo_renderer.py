@@ -11,9 +11,11 @@ a turn — a Mixar-green analogue of Claude-for-Chrome's working halo.
 The glow is four edge gradients (opaque at the edge, fading to clear
 toward the centre), so the middle of the viewport stays unobstructed.
 
-The glow frames the canvas BELOW any overlapping top header (the Zen
-scene toolbar), so the toolbar reads as chrome outside the locked area
-rather than something the halo washes over.
+In Zen the glow frames the canvas BELOW the scene toolbar, whose opaque
+bed hides the canvas beneath it, so the toolbar reads as chrome outside
+the locked area. Every other header (Engine workspaces, Zen's empty tool
+header) is transparent over the canvas, so the scene shows through it and
+the glow must span the full region or the mesh pokes out above the halo.
 
 Drawn only when ``state_probe.is_agent_executing()`` is True; the
 bootstrap tick tags the viewport for redraw at ~20fps during that
@@ -43,6 +45,7 @@ from mixar.modules.agent_viewport_lock.core.state_probe import (
     is_agent_executing,
 )
 from mixar.modules.common.utils.ui_utils import top_header_overlap_px
+from mixar.modules.workflow.constants import BASIC_WORKSPACE_NAME
 
 logger = get_logger(__name__)
 
@@ -54,6 +57,14 @@ def _ui_scale() -> float:
         return float(bpy.context.preferences.system.ui_scale)
     except Exception:
         return 1.0
+
+
+def _opaque_header_inset(area, region) -> int:
+    """Height hidden by an opaque header bed: only Zen's scene toolbar."""
+    workspace = getattr(bpy.context, "workspace", None)
+    if workspace is None or workspace.name != BASIC_WORKSPACE_NAME:
+        return 0
+    return top_header_overlap_px(area, region, region_types={'HEADER'})
 
 
 def _breathing_alpha() -> float:
@@ -125,7 +136,7 @@ def _draw_callback() -> None:
         if region is None or region.type != 'WINDOW':
             return
         band = HALO_BAND * _ui_scale()
-        height = region.height - top_header_overlap_px(area, region)
+        height = region.height - _opaque_header_inset(area, region)
         _draw_inner_glow(
             float(region.width), float(height),
             band, _breathing_alpha(),

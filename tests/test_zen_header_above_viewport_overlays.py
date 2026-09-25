@@ -4,6 +4,9 @@
 
 """The Zen scene toolbar stays above the agent halo, the lock and the sketch hint.
 
+Only Zen's scene toolbar is opaque. Engine headers are transparent over the
+canvas, so the halo spans the full region there (the mesh shows through).
+
 In Zen the View3D HEADER overlaps the top of the WINDOW region and paints an
 opaque bed after it. Overlays anchored to the region top were therefore either
 washed over the toolbar (the halo's top band), blocking it (the input lock's
@@ -110,10 +113,32 @@ def test_header_hit_test_is_native_and_registered():
     assert "rna_screen_mixar_header.hh" in (intern / "CMakeLists.txt").read_text()
 
 
-def test_halo_frames_the_canvas_below_the_header():
+TOOL_HEADER = _region("TOOL_HEADER", y=570, height=26)
+
+
+@pytest.mark.parametrize("workspace, regions, expected", [
+    # Zen's scene toolbar paints an opaque bed: frame the canvas below it.
+    ("Zen Mode", (TOP_HEADER,), 54),
+    # Zen's empty tool header is transparent, so the scene shows through it.
+    ("Zen Mode", (TOP_HEADER, TOOL_HEADER), 54),
+    # Engine headers are transparent over the canvas; the mesh is visible
+    # behind them, so the halo must span the full region.
+    ("Layout", (TOP_HEADER,), 0),
+    ("Layout", (TOP_HEADER, TOOL_HEADER), 0),
+    ("Texturing", (TOP_HEADER,), 0),
+])
+def test_halo_insets_only_for_the_opaque_zen_toolbar(
+        monkeypatch, workspace, regions, expected):
+    from mixar.modules.agent_viewport_lock.core import halo_renderer as H
+    context = SimpleNamespace(workspace=SimpleNamespace(name=workspace))
+    monkeypatch.setattr(H, "bpy", SimpleNamespace(context=context))
+    assert H._opaque_header_inset(_area(*regions), WIN) == expected
+
+
+def test_halo_height_uses_the_opaque_header_inset():
     source = (ROOT / "src/scripts/mixar/modules/agent_viewport_lock/core/"
               "halo_renderer.py").read_text()
-    assert "region.height - top_header_overlap_px(area, region)" in source
+    assert "region.height - _opaque_header_inset(area, region)" in source
 
 
 def test_sketch_hint_is_anchored_below_the_header(monkeypatch):
