@@ -377,10 +377,10 @@ static int filelist_geticon_file_type_ex(const FileList *filelist,
     }
   }
 
+  if (typeflag & FILE_TYPE_MIXAR) {
+    return ICON_FILE_BLEND;
+  }
   if (typeflag & FILE_TYPE_BLENDER) {
-    if (strstr(file->relpath, ".mixar")) {
-      return ICON_FILE_BLEND;
-    }
     return (is_main || file->preview_icon_id) ? ICON_FILE_BLEND : ICON_BLENDER;
   }
   if (typeflag & FILE_TYPE_BLENDER_BACKUP) {
@@ -568,14 +568,17 @@ static void filelist_cache_preview_runf(TaskPool *__restrict pool, void *taskdat
   //  printf("%s: %d - %s - %p\n", __func__, preview->index, preview->path, preview->img);
   BLI_assert(preview->flags &
              (FILE_TYPE_IMAGE | FILE_TYPE_MOVIE | FILE_TYPE_FTFONT | FILE_TYPE_BLENDER |
-              FILE_TYPE_OBJECT_IO | FILE_TYPE_BLENDER_BACKUP | FILE_TYPE_BLENDERLIB));
+              FILE_TYPE_MIXAR | FILE_TYPE_OBJECT_IO | FILE_TYPE_BLENDER_BACKUP |
+              FILE_TYPE_BLENDERLIB));
   BLI_assert((preview->flags & FILE_TYPE_ASSET_ONLINE) == 0);
 
   if (preview->flags & FILE_TYPE_IMAGE) {
     source = THB_SOURCE_IMAGE;
   }
-  else if (preview->flags & (FILE_TYPE_BLENDER | FILE_TYPE_BLENDER_BACKUP | FILE_TYPE_BLENDERLIB))
+  else if (preview->flags & (FILE_TYPE_BLENDER | FILE_TYPE_MIXAR | FILE_TYPE_BLENDER_BACKUP |
+                              FILE_TYPE_BLENDERLIB))
   {
+    /* A `.mixar` project is a `.blend` on disk, embedded thumbnail included. */
     source = THB_SOURCE_BLEND;
   }
   else if (preview->flags & FILE_TYPE_MOVIE) {
@@ -690,7 +693,7 @@ static bool filelist_file_preview_load_poll(const FileDirEntry *entry)
 
   if (!(entry->typeflag &
         (FILE_TYPE_IMAGE | FILE_TYPE_MOVIE | FILE_TYPE_FTFONT | FILE_TYPE_OBJECT_IO |
-         FILE_TYPE_BLENDER | FILE_TYPE_BLENDER_BACKUP | FILE_TYPE_BLENDERLIB)))
+         FILE_TYPE_BLENDER | FILE_TYPE_MIXAR | FILE_TYPE_BLENDER_BACKUP | FILE_TYPE_BLENDERLIB)))
   {
     return false;
   }
@@ -1906,6 +1909,7 @@ int ED_file_extension_icon(const char *path)
   const int type = ED_path_extension_type(path);
 
   switch (type) {
+    case FILE_TYPE_MIXAR:
     case FILE_TYPE_BLENDER:
       return ICON_FILE_BLEND;
     case FILE_TYPE_BLENDER_BACKUP:
