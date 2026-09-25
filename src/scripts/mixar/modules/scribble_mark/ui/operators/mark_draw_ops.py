@@ -382,8 +382,17 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             return
 
         if mark_store.count(context.scene, drafts_only=True) >= MAX_MARKS_PER_TURN:
-            self.report({"WARNING"},
-                        f"Only {MAX_MARKS_PER_TURN} marks per message")
+            # The cap bounds marks, never ink: past it the group JOINS the
+            # newest mark of this freeze instead of vanishing as it settles.
+            world = resolve.strokes_world(context, region, self._rv3d(context), strokes)
+            if mark_store.join_newest(context.scene, self._session.view_name,
+                                      self._session.region_size, strokes,
+                                      world) is not None:
+                overlay.push_settled(strokes)
+            else:
+                self.report({"WARNING"},
+                            f"Only {MAX_MARKS_PER_TURN} marks per message")
+            mark_store.refresh_reading(context.scene, context.window_manager)
             overlay.tag_redraw()
             return
 

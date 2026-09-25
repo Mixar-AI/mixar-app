@@ -234,6 +234,23 @@ def _ground_fallback(region, rv3d, polygon, anchor, sample_count):
     }
 
 
+def strokes_world(context, region, rv3d, strokes):
+    """World paths for a stroke group joining an existing mark, or None.
+
+    ``marks.join_newest`` keeps the mark's resolution and only needs the new
+    lines placed. None when there is no view or depsgraph to cast against —
+    the join still keeps the ink, it just carries no world path.
+    """
+    if rv3d is None:
+        return None
+    try:
+        depsgraph = context.evaluated_depsgraph_get()
+        return _strokes_world(context.scene, depsgraph, region, rv3d, strokes)
+    except Exception as exc:  # noqa: BLE001 — a bad sample is not a bad session
+        logger.warning("Scribble mark: joined strokes left unplaced: %s", exc)
+        return None
+
+
 def _strokes_world(scene, depsgraph, region, rv3d, strokes):
     """Each stroke as a short world-space path, or None when none were given.
 

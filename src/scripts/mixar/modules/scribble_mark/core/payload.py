@@ -96,19 +96,86 @@ def build_mark(mark_id, view_name, reading, region_width, region_height,
         "gesture": reading.get("gesture"),
         "closed": bool(reading.get("closed")),
         "region": region,
-        # Shape-preserving, not uniform: these are the ink the annotated
-        # frame is drawn from and the sketch block is read from, so the
-        # budget has to be spent on the corners a stroke turns on rather
-        # than evenly along a trace whose straight runs say nothing.
-        "strokes": [
-            to_normalized(simplify_shape(list(s), MARK_STROKE_MAX_POINTS),
-                          region_width, region_height)
-            for s in (strokes or ()) if s
-        ],
+        "strokes": _stored_strokes(strokes, region_width, region_height),
     }
     if resolved is not None:
         mark["resolved"] = resolved
     return mark
+
+
+def _stored_strokes(strokes, region_width, region_height):
+    """Raw strokes as a mark stores them: normalized, shape-preserving.
+
+    Not uniform: these are the ink the annotated frame is drawn from and the
+    sketch block is read from, so the budget has to be spent on the corners
+    a stroke turns on rather than evenly along a trace whose straight runs
+    say nothing.
+    """
+    return [
+        to_normalized(simplify_shape(list(s), MARK_STROKE_MAX_POINTS),
+                      region_width, region_height)
+        for s in (strokes or ()) if s
+    ]
+
+
+def extend_mark(mark, strokes, region_width, region_height, strokes_world=None):
+    """*mark* with one more stroke group folded into its ink.
+
+    How a group drawn past ``MAX_MARKS_PER_TURN`` is kept (``marks.join_newest``):
+    a sketch drawn one line per pause is one mark per line, and refusing the
+    group past the cap made every further line vanish as it settled. The gesture,
+    region and resolution stay those of the group that made the mark; only
+    the ink grows. ``joined`` records each folded group's stroke count so an
+    undo takes back one group, not the whole mark (``retract_join``).
+
+    ``resolved.strokes_world`` stays index-aligned with ``strokes`` — the
+    sketch block pairs them by position — so a gap is padded with empty
+    paths. A mark with no ``resolved`` block ("we did not look") does not
+    gain one from the join.
+
+    Raises:
+        ValueError: when the group has no ink, or on a zero-sized region.
+    """
+    kept = [i for i, s in enumerate(strokes or ()) if s]
+    if not kept:
+        raise ValueError("no ink to join")
+    added = _stored_strokes([strokes[i] for i in kept], region_width, region_height)
+
+    out = copy.deepcopy(mark)
+    before = list(out.get("strokes") or [])
+    out["strokes"] = before + added
+    out["joined"] = list(out.get("joined") or []) + [len(added)]
+
+    resolved = out.get("resolved")
+    if isinstance(resolved, dict):
+        world = list(resolved.get("strokes_world") or [])[:len(before)]
+        world += [_no_path() for _ in range(len(before) - len(world))]
+        given = list(strokes_world or [])
+        world += [given[i] if i < len(given) else _no_path() for i in kept]
+        resolved["strokes_world"] = world
+    return out
+
+
+def retract_join(mark):
+    """*mark* without its newest folded group, or None when it has none."""
+    joined = list(mark.get("joined") or [])
+    if not joined:
+        return None
+    out = copy.deepcopy(mark)
+    keep = max(0, len(out.get("strokes") or []) - int(joined.pop()))
+    out["strokes"] = list(out.get("strokes") or [])[:keep]
+    resolved = out.get("resolved")
+    if isinstance(resolved, dict) and resolved.get("strokes_world") is not None:
+        resolved["strokes_world"] = list(resolved["strokes_world"])[:keep]
+    if joined:
+        out["joined"] = joined
+    else:
+        out.pop("joined", None)
+    return out
+
+
+def _no_path():
+    return {"points": [], "on": None}
 
 
 def build_payload(marks, views, surface=SURFACE_VIEW3D, intent_override=None):
@@ -149,6 +216,7 @@ def _wire_mark(mark):
     """
     out = copy.deepcopy(mark)
     strokes = out.pop("strokes", None) or []
+    out.pop("joined", None)
     out["stroke_count"] = len(strokes)
     resolved = out.get("resolved")
     if isinstance(resolved, dict):
