@@ -111,8 +111,12 @@ struct ScenesDrawerRuntime {
 #define VIEW3D_SCENES_DRAWER_MIN_WIDTH 160
 /** Clickable/drawn width of the labeled Scenes tab. */
 #define VIEW3D_SCENES_DRAWER_GRIP_WIDTH 22.0f
-/** Vertical extent of the Scenes tab, centred in the area. */
-#define VIEW3D_SCENES_DRAWER_GRIP_HEIGHT 120.0f
+/** Vertical extent of the Scenes tab. Shorter than the moodboard grip: the
+ * left edge also carries the floating navigation pill, so this tab sits in
+ * the upper third of the area, out of that pill's way. */
+#define VIEW3D_SCENES_DRAWER_GRIP_HEIGHT 84.0f
+/** Fraction of the area height (from the bottom) at which the tab is centred. */
+#define VIEW3D_SCENES_DRAWER_GRIP_FRACTION 0.70f
 /** Corner radius of the panel chrome. */
 #define VIEW3D_SCENES_DRAWER_RADIUS 14.0f
 /** Inset of the rounded panel from the grip line. */
@@ -162,7 +166,9 @@ inline bool view3d_scenes_drawer_grip_rect_for(const ScrArea *area,
   const float open_right = float(region->winrct.xmax) - pad;
   const float shut_right = float(region->winrct.xmin) + grip_w;
   const float grip_right = shut_right + amount * (open_right - shut_right);
-  const float centre_y = 0.5f * float(area->totrct.ymin + area->totrct.ymax);
+  const float centre_y = float(area->totrct.ymin) +
+                         VIEW3D_SCENES_DRAWER_GRIP_FRACTION *
+                             float(area->totrct.ymax - area->totrct.ymin);
 
   r_rect->xmin = int(std::lround(grip_right - grip_w));
   r_rect->xmax = int(std::lround(grip_right));

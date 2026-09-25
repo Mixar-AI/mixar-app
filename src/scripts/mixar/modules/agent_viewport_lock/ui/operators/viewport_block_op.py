@@ -196,6 +196,11 @@ class MIXAR_OT_agent_viewport_block(Operator):
                 continue
             if area.mixar_moodboard_contains(mx, my):
                 return None
+            # The Scenes drawer (parallel scene tabs) floats over the canvas
+            # on the left; switching or adding a tab mid-turn is the point.
+            contains_scenes = getattr(area, "mixar_scenes_drawer_contains", None)
+            if contains_scenes is not None and contains_scenes(mx, my):
+                return None
             if area.mixar_header_contains(mx, my):
                 return None
             for region in area.regions:
