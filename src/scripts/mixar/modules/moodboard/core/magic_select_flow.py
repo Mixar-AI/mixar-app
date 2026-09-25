@@ -88,6 +88,9 @@ class MagicSelectFlow:
         if not success:
             self.upload = "failed"
             self.point = None
+            # A failed re-upload ends this request; the next click's request
+            # must get its own retry budget.
+            self.retried_expiry = False
             return IDLE
         self.upload = "ready"
         if self.point is not None and not self.segmenting:

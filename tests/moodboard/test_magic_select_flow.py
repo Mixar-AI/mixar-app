@@ -131,6 +131,20 @@ def test_expiry_budget_resets_per_request_and_a_newer_click_restarts_the_upload(
     assert flow.upload == "uploading" and flow.pending
 
 
+def test_failed_retry_upload_restores_the_next_requests_expiry_budget():
+    flow = MagicSelectFlow(upload_ready=True)
+    flow.click(0.2, 0.2)
+    point = flow.segment_started()
+    assert flow.upload_expired(point) == UPLOAD
+    assert flow.upload_done(False) == IDLE  # the one allowed re-upload failed
+    assert not flow.retried_expiry and not flow.pending
+
+    assert flow.click(0.6, 0.6) == UPLOAD  # a fresh request on the same activation
+    flow.upload_done(True)
+    point = flow.segment_started()
+    assert flow.upload_expired(point) == UPLOAD  # it gets its own single retry
+
+
 def test_status_text_follows_the_wait():
     flow = MagicSelectFlow(upload_ready=False)
     assert flow.status_text() == flow_mod.STATUS_READY
