@@ -103,6 +103,7 @@ set(SRC
   view3d_scenes_drawer_qa.cc
   view3d_scenes_drawer_resize.cc
   view3d_scenes_drawer_state.cc
+  view3d_scenes_drawer_thumbs.cc
   view3d_navigate.cc
   view3d_navigate_fly.cc
   view3d_navigate_smoothview.cc

@@ -40,6 +40,8 @@
 #include "WM_api.hh"
 
 struct ARegion;
+struct Scene;
+struct View3D;
 struct ARegionType;
 struct ScrArea;
 struct SpaceType;
@@ -142,6 +144,11 @@ bool view3d_scenes_drawer_grip_handler_poll(const wmWindow *win,
                                             const wmEvent *event);
 
 void view3d_scenes_drawer_region_register(SpaceType *st);
+
+/** Thumbnails (`view3d_scenes_drawer_thumbs.cc`). */
+void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &thumb, Scene *scene, const View3D *host,
+                                       int width, int height, double min_interval);
+void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &thumb);
 void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area);
 
 /** \} */

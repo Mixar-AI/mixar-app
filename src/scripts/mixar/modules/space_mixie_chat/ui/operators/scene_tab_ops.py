@@ -25,7 +25,7 @@ Design: docs/agent/parallel-scene-tabs/ (mixar-backend).
 from __future__ import annotations
 
 import bpy
-from bpy.props import StringProperty
+from bpy.props import IntProperty, StringProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
@@ -37,6 +37,42 @@ from ...core import get_connection_manager, get_session_manager
 logger = get_logger(__name__)
 
 PENDING_CLOSE_PROP = "mixie_pending_close"
+#: Custom property holding a tab's position in the drawer (saved with the file).
+ORDER_PROP = "mixar_tab_order"
+
+
+def tab_order(scene) -> int:
+    try:
+        return int(scene.get(ORDER_PROP, 1_000_000))
+    except Exception:  # noqa: BLE001
+        return 1_000_000
+
+
+def ordered_tabs() -> list:
+    """The user's tabs in drawer order: explicit order first, then name."""
+    return sorted(real_scenes(), key=lambda s: (tab_order(s), s.name))
+
+
+def renumber_tabs(tabs=None) -> None:
+    for index, scene in enumerate(tabs if tabs is not None else ordered_tabs()):
+        try:
+            scene[ORDER_PROP] = index
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def reorder_scene_tab(scene, index: int) -> bool:
+    """Move ``scene`` to position ``index`` among the tabs. False for a lane."""
+    if scene is None or is_lane_scene(scene):
+        return False
+    tabs = ordered_tabs()
+    if scene not in tabs:
+        return False
+    tabs.remove(scene)
+    tabs.insert(max(0, min(int(index), len(tabs))), scene)
+    renumber_tabs(tabs)
+    slog("tab.reorder", scene, index=index, order=[s.name for s in tabs])
+    return True
 
 
 def real_scenes() -> list:
@@ -80,6 +116,7 @@ def _unique_name(base: str) -> str:
 
 def new_scene_tab(name: str = "") -> object:
     """Create an empty tab, connect it, show it everywhere. Returns the scene."""
+    existing = ordered_tabs()
     scene = bpy.data.scenes.new(_unique_name((name or "").strip() or "Scene"))
     # A fresh tab: no session yet (minted on the first message), no chat.
     scene.mixie_session_id = ""
@@ -90,6 +127,7 @@ def new_scene_tab(name: str = "") -> object:
     else:
         session.set_disconnected(scene)
     switch_all_windows(scene)
+    renumber_tabs(existing + [scene])      # the new tab takes the last slot
     slog("tab.new", scene, connected=live, tabs=len(real_scenes()))
     return scene
 
@@ -213,6 +251,22 @@ class MIXIE_CHAT_OT_switch_scene_tab(Operator):
         return {'FINISHED'}
 
 
+class MIXIE_CHAT_OT_reorder_scene_tab(Operator):
+    """Move a scene tab to a position in the drawer"""
+
+    bl_idname = "mixie_chat.reorder_scene_tab"
+    bl_label = "Reorder Scene"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    scene_name: StringProperty(name="Scene", default="", options={'SKIP_SAVE'})
+    index: IntProperty(name="Index", default=0, min=0, options={'SKIP_SAVE'})
+
+    def execute(self, context):
+        if not reorder_scene_tab(bpy.data.scenes.get(self.scene_name), self.index):
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+
 class MIXIE_CHAT_OT_close_scene_tab(Operator):
     """Close a scene tab (stops its agent first)"""
 
@@ -239,5 +293,6 @@ class MIXIE_CHAT_OT_close_scene_tab(Operator):
 classes = (
     MIXIE_CHAT_OT_new_scene_tab,
     MIXIE_CHAT_OT_switch_scene_tab,
+    MIXIE_CHAT_OT_reorder_scene_tab,
     MIXIE_CHAT_OT_close_scene_tab,
 )

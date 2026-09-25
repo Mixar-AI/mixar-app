@@ -45,6 +45,21 @@ STATUS_ITEMS = (
 #: cleared when the tab is shown.
 _finished_unseen: dict = {}
 _last_status: dict = {}
+#: Signature of the last list written, so a redraw is only asked for on change.
+_last_signature: tuple = ()
+
+
+def _tag_zen_viewports() -> None:
+    """Repaint the drawer: its region listens for scene/window notifiers, but a
+    timer-driven list change sends none."""
+    wm = getattr(bpy.context, 'window_manager', None)
+    for window in (getattr(wm, 'windows', None) or ()):
+        screen = window.screen
+        if screen is None:
+            continue
+        for area in screen.areas:
+            if area.type == 'VIEW_3D':
+                area.tag_redraw()
 
 
 class MixarSceneTab(PropertyGroup):
@@ -146,7 +161,6 @@ def _shown_scene():
 
 def refresh_scene_tabs() -> int:
     """Rebuild ``wm.mixar_scene_tabs`` from the live scenes. Main thread."""
-    from ...constants import is_lane_scene
     wm = getattr(bpy.context, 'window_manager', None)
     if wm is None or not hasattr(wm, "mixar_scene_tabs"):
         return 0
@@ -154,9 +168,8 @@ def refresh_scene_tabs() -> int:
     tabs = wm.mixar_scene_tabs
     tabs.clear()
     attention_any = False
-    for scene in bpy.data.scenes:
-        if is_lane_scene(scene):
-            continue
+    from ..operators.scene_tab_ops import ordered_tabs
+    for scene in ordered_tabs():
         sid = getattr(scene, "mixie_session_id", "") or ""
         status = _status_of(scene)
         is_active = scene is shown
@@ -180,6 +193,12 @@ def refresh_scene_tabs() -> int:
         tab.attention = attention
     if wm.mixar_scene_tabs_attention != attention_any:
         wm.mixar_scene_tabs_attention = attention_any
+    global _last_signature
+    signature = tuple((t.scene_name, t.session_id, t.status, t.last_text, t.workers_done,
+                       t.workers_total, t.is_active, t.attention) for t in tabs)
+    if signature != _last_signature:
+        _last_signature = signature
+        _tag_zen_viewports()
     return len(tabs)
 
 

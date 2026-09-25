@@ -16,6 +16,27 @@ from mixar.modules.space_mixie_chat.core.session import SessionManager
 from mixar.modules.space_mixie_chat.ui.operators import scene_tab_ops as ops
 
 
+class _TabScene(SimpleNamespace):
+    """A scene double with custom-property access (the tab order lives there)."""
+
+    def get(self, key, default=None):
+        return self.__dict__.get(key, default)
+
+    def __setitem__(self, key, value):
+        self.__dict__[key] = value
+
+    def __hash__(self):
+        return id(self)
+
+    def __eq__(self, other):
+        return self is other
+
+
+def _tab_scene(name, session_id=""):
+    base = _scene(name, session_id=session_id)
+    return _TabScene(**base.__dict__)
+
+
 class _Scenes(list):
     def get(self, name):
         return next((s for s in self if s.name == name), None)
@@ -24,7 +45,7 @@ class _Scenes(list):
         return any(s.name == name for s in self) if isinstance(name, str) else list.__contains__(self, name)
 
     def new(self, name):
-        s = _scene(name, session_id="")
+        s = _tab_scene(name)
         s.mixie_chat_state = "OFFLINE"
         self.append(s)
         return s
@@ -107,3 +128,14 @@ def test_close_of_a_running_tab_is_refused_offline(rig, monkeypatch):
     monkeypatch.setattr(ops, "_connection_live", lambda: False)
     closed, reason = ops.close_scene_tab(b)
     assert closed is False and "Reconnect" in reason and rig.scenes.get("B") is not None
+
+
+def test_reorder_moves_a_tab_and_new_tabs_take_the_last_slot(rig):
+    b = ops.new_scene_tab("B")
+    c = ops.new_scene_tab("C")
+    assert [s.name for s in ops.ordered_tabs()] == ["Scene", "B", "C"]
+    assert ops.reorder_scene_tab(c, 0) is True
+    assert [s.name for s in ops.ordered_tabs()] == ["C", "Scene", "B"]
+    assert ops.reorder_scene_tab(rig.lane, 0) is False
+    assert ops.reorder_scene_tab(b, 99) is True
+    assert [s.name for s in ops.ordered_tabs()] == ["C", "Scene", "B"]

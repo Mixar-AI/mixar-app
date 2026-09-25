@@ -28,12 +28,15 @@
 #include "BLI_string.h"
 
 #include "BKE_context.hh"
+#include "BKE_lib_id.hh"
+#include "BKE_main.hh"
 #include "BKE_screen.hh"
 
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_userdef_types.h"
+#include "DNA_view3d_types.h"
 #include "DNA_windowmanager_types.h"
 
 #include "ED_agent_panel.hh"
@@ -43,6 +46,7 @@
 #include "GPU_framebuffer.hh"
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
+#include "GPU_viewport.hh"
 
 #include "RNA_access.hh"
 
@@ -70,6 +74,8 @@ constexpr float NEW_W = 96.0f;
 constexpr float NEW_H = 24.0f;
 constexpr float CLOSE_SIZE = 22.0f;
 constexpr float PILL_H = 16.0f;
+constexpr float THUMB_W = 78.0f;
+constexpr float THUMB_H = 44.0f;
 
 void read_string(PointerRNA *ptr, const char *name, std::string &out)
 {
@@ -367,6 +373,18 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 
     /* Cards, top to bottom. Anything past the bottom is clipped (no scroll). */
     sync_cards(C, runtime);
+    for (auto it = runtime->thumbs.begin(); it != runtime->thumbs.end();) {
+      const std::string &name = it->first;
+      const bool listed = std::any_of(runtime->cards.begin(), runtime->cards.end(),
+                                      [&](const ScenesDrawerCard &c) { return c.scene_name == name; });
+      if (listed) {
+        ++it;
+      }
+      else {
+        view3d_scenes_drawer_thumb_free(it->second);
+        it = runtime->thumbs.erase(it);
+      }
+    }
     float y_top = header_top - HEADER_H * scale - CARD_GAP * scale;
     const int count = int(runtime->cards.size());
     for (int i = 0; i < count; i++) {
@@ -401,7 +419,36 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         ui::draw_roundbox_4fv(&rect, false, CARD_RADIUS * scale, zen.selected);
       }
 
-      const float inner_x = rect.xmin + 12.0f * scale;
+      /* Thumbnail: the scene rendered natively into a small offscreen, blitted
+       * here; a scene that has never been evaluated shows a dark bed. */
+      rcti thumb;
+      thumb.xmin = int(rect.xmin + 8.0f * scale);
+      thumb.xmax = thumb.xmin + int(THUMB_W * scale);
+      thumb.ymax = int(rect.ymax - 8.0f * scale);
+      thumb.ymin = thumb.ymax - int(THUMB_H * scale);
+      {
+        rctf bed;
+        BLI_rctf_rcti_copy(&bed, &thumb);
+        draw_pill(bed, zen.panel, 6.0f * scale);
+        Scene *scene = reinterpret_cast<Scene *>(BKE_libblock_find_name(CTX_data_main(C), ID_SCE, card.scene_name.c_str()));
+        if (scene != nullptr) {
+          ScenesDrawerThumb &t = runtime->thumbs[card.scene_name];
+          const View3D *host = static_cast<const View3D *>(area ? area->spacedata.first : nullptr);
+          view3d_scenes_drawer_thumb_render(t, scene, host, BLI_rcti_size_x(&thumb) + 1,
+                                            BLI_rcti_size_y(&thumb) + 1, card.is_active ? 0.5 : 1.5);
+          if (t.has_render) {
+            GPU_viewport_draw_to_screen_ex(t.viewport, 0, &thumb, true, true);
+            ED_region_pixelspace(region);
+            GPU_blend(GPU_BLEND_ALPHA);
+          }
+        }
+      }
+      card.thumb_rect.xmin = thumb.xmin + region->winrct.xmin;
+      card.thumb_rect.xmax = thumb.xmax + region->winrct.xmin;
+      card.thumb_rect.ymin = thumb.ymin + region->winrct.ymin;
+      card.thumb_rect.ymax = thumb.ymax + region->winrct.ymin;
+
+      const float inner_x = float(thumb.xmax) + 10.0f * scale;
       const float close_w = (count > 1) ? CLOSE_SIZE * scale : 0.0f;
       rctf close_rect;
       close_rect.xmax = rect.xmax - 8.0f * scale;
@@ -444,7 +491,7 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 
       /* The agent's last line. */
       BLF_size(font, 11.0f * scale);
-      draw_elided(font, card.last_text, inner_x, rect.ymin + 12.0f * scale,
+      draw_elided(font, card.last_text, inner_x, rect.ymin + 10.0f * scale,
                   rect.xmax - 12.0f * scale - inner_x, zen.secondary);
 
       /* Close glyph (never on the last remaining tab). */
@@ -469,6 +516,21 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         card.close_rect = {};
       }
       y_top = y_bottom - CARD_GAP * scale;
+    }
+
+    /* Reorder drag: an insertion line above the slot the card would land in. */
+    if (runtime->drag_index >= 0 && runtime->drag_target >= 0 &&
+        runtime->drag_target < int(runtime->cards.size()) && runtime->drag_target != runtime->drag_index)
+    {
+      const ScenesDrawerCard &slot = runtime->cards[runtime->drag_target];
+      const float line_y = float(slot.rect.ymax - region->winrct.ymin) + 0.5f * CARD_GAP * scale +
+                           (runtime->drag_target > runtime->drag_index ? -(CARD_H + CARD_GAP) * scale : 0.0f);
+      rctf line;
+      line.xmin = x0;
+      line.xmax = x1;
+      line.ymin = line_y - 1.5f * scale;
+      line.ymax = line_y + 1.5f * scale;
+      draw_pill(line, zen.primary, 1.5f * scale);
     }
 
     /* Keep the gutter right of the panel transparent, then the tab on top. */

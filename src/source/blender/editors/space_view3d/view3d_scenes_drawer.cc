@@ -302,6 +302,10 @@ static void drawer_region_free(ARegion *region)
   if (region->regiondata != nullptr) {
     ScenesDrawerRuntime *runtime = static_cast<ScenesDrawerRuntime *>(region->regiondata);
     runtime->tick_timer = nullptr;
+    for (auto &item : runtime->thumbs) {
+      view3d_scenes_drawer_thumb_free(item.second);
+    }
+    runtime->thumbs.clear();
     MEM_delete(runtime);
     region->regiondata = nullptr;
   }

@@ -313,7 +313,8 @@ static void VIEW3D_OT_scenes_drawer_grip(wmOperatorType *ot)
 /** Run a `mixie_chat.*` operator with an optional `scene_name` property. The
  * scene tabs are Python's (the Director split: native surfaces read RNA and
  * invoke Python operators), so nothing here touches a Scene directly. */
-static bool drawer_call_python(bContext *C, const char *idname, const char *scene_name)
+static bool drawer_call_python(bContext *C, const char *idname, const char *scene_name,
+                               const int index = -1)
 {
   wmOperatorType *ot = WM_operatortype_find(idname, true);
   if (ot == nullptr) {
@@ -322,6 +323,9 @@ static bool drawer_call_python(bContext *C, const char *idname, const char *scen
   PointerRNA props = WM_operator_properties_create_ptr(ot);
   if (scene_name != nullptr && RNA_struct_find_property(&props, "scene_name") != nullptr) {
     RNA_string_set(&props, "scene_name", scene_name);
+  }
+  if (index >= 0 && RNA_struct_find_property(&props, "index") != nullptr) {
+    RNA_int_set(&props, "index", index);
   }
   const wmOperatorStatus status = WM_operator_name_call_ptr(
       C, ot, wm::OpCallContext::ExecDefault, &props, nullptr);
@@ -348,7 +352,19 @@ static int drawer_card_at(const ScenesDrawerRuntime *runtime, const int xy[2], b
   return -1;
 }
 
-static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator * /*op*/, const wmEvent *event)
+/** The slot a pointer at `y` (window px) would drop a dragged card into. */
+static int drawer_drop_slot(const ScenesDrawerRuntime *runtime, const int y)
+{
+  const int count = int(runtime->cards.size());
+  for (int i = 0; i < count; i++) {
+    if (y >= BLI_rcti_cent_y(&runtime->cards[i].rect)) {
+      return i;
+    }
+  }
+  return count > 0 ? count - 1 : 0;
+}
+
+static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator *op, const wmEvent *event)
 {
   ARegion *region = CTX_wm_region(C);
   ScenesDrawerRuntime *runtime = region ? static_cast<ScenesDrawerRuntime *>(region->regiondata) :
@@ -376,22 +392,105 @@ static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator * /*op*/, co
                OPERATOR_FINISHED :
                OPERATOR_PASS_THROUGH;
   }
-  const std::string scene_name = runtime->cards[index].scene_name;
-  drawer_call_python(
-      C, close ? "MIXIE_CHAT_OT_close_scene_tab" : "MIXIE_CHAT_OT_switch_scene_tab", scene_name.c_str());
-  WM_event_add_notifier(C, NC_SCENE, nullptr);
+  if (close) {
+    drawer_call_python(C, "MIXIE_CHAT_OT_close_scene_tab", runtime->cards[index].scene_name.c_str());
+    WM_event_add_notifier(C, NC_SCENE, nullptr);
+    ED_region_tag_redraw(region);
+    return OPERATOR_FINISHED;
+  }
+  /* A press on a card: a release in place switches to it, a vertical drag
+   * reorders it. Decided in the modal. */
+  RNA_int_set(op->ptr, "start_y", event->xy[1]);
+  RNA_int_set(op->ptr, "card", index);
+  RNA_boolean_set(op->ptr, "dragged", false);
+  runtime->drag_index = index;
+  runtime->drag_target = -1;
+  WM_event_add_modal_handler(C, op);
+  return OPERATOR_RUNNING_MODAL;
+}
+
+static void drawer_drag_end(ScenesDrawerRuntime *runtime, ARegion *region)
+{
+  runtime->drag_index = -1;
+  runtime->drag_target = -1;
   ED_region_tag_redraw(region);
-  return OPERATOR_FINISHED;
+}
+
+static wmOperatorStatus drawer_click_modal(bContext *C, wmOperator *op, const wmEvent *event)
+{
+  ARegion *region = CTX_wm_region(C);
+  ScenesDrawerRuntime *runtime = region ? static_cast<ScenesDrawerRuntime *>(region->regiondata) :
+                                          nullptr;
+  const int index = RNA_int_get(op->ptr, "card");
+  if (runtime == nullptr || index < 0 || index >= int(runtime->cards.size())) {
+    if (runtime) {
+      drawer_drag_end(runtime, region);
+    }
+    return OPERATOR_CANCELLED;
+  }
+  switch (event->type) {
+    case MOUSEMOVE: {
+      const int dy = event->xy[1] - RNA_int_get(op->ptr, "start_y");
+      if (!RNA_boolean_get(op->ptr, "dragged") &&
+          std::abs(dy) <= VIEW3D_SCENES_DRAWER_CARD_DRAG_THRESHOLD)
+      {
+        break;
+      }
+      RNA_boolean_set(op->ptr, "dragged", true);
+      const int target = drawer_drop_slot(runtime, event->xy[1]);
+      if (target != runtime->drag_target) {
+        runtime->drag_target = target;
+        ED_region_tag_redraw(region);
+      }
+      break;
+    }
+    case LEFTMOUSE:
+      if (event->val == KM_RELEASE) {
+        const std::string scene_name = runtime->cards[index].scene_name;
+        if (RNA_boolean_get(op->ptr, "dragged")) {
+          const int target = drawer_drop_slot(runtime, event->xy[1]);
+          if (target != index) {
+            drawer_call_python(C, "MIXIE_CHAT_OT_reorder_scene_tab", scene_name.c_str(), target);
+          }
+        }
+        else {
+          drawer_call_python(C, "MIXIE_CHAT_OT_switch_scene_tab", scene_name.c_str());
+        }
+        drawer_drag_end(runtime, region);
+        WM_event_add_notifier(C, NC_SCENE, nullptr);
+        return OPERATOR_FINISHED;
+      }
+      break;
+    case EVT_ESCKEY:
+      drawer_drag_end(runtime, region);
+      return OPERATOR_CANCELLED;
+    default:
+      break;
+  }
+  return OPERATOR_RUNNING_MODAL;
+}
+
+static void drawer_click_cancel(bContext *C, wmOperator * /*op*/)
+{
+  ARegion *region = CTX_wm_region(C);
+  if (ScenesDrawerRuntime *runtime = region ? static_cast<ScenesDrawerRuntime *>(region->regiondata) : nullptr) {
+    drawer_drag_end(runtime, region);
+  }
 }
 
 static void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot)
 {
   ot->name = "Scenes Drawer Click";
   ot->idname = "VIEW3D_OT_scenes_drawer_click";
-  ot->description = "Open, switch to or close a scene tab in the scenes drawer";
+  ot->description = "Open, switch to, reorder or close a scene tab in the scenes drawer";
   ot->invoke = drawer_click_invoke;
+  ot->modal = drawer_click_modal;
+  ot->cancel = drawer_click_cancel;
   ot->poll = drawer_op_poll;
   ot->flag = 0;
+  RNA_def_int(ot->srna, "start_y", 0, 0, 100000, "Start Y", "", 0, 100000);
+  RNA_def_int(ot->srna, "card", -1, -1, 1024, "Card", "", -1, 1024);
+  RNA_def_boolean(ot->srna, "dragged", false, "Dragged", "");
 }
 
 static wmOperatorStatus drawer_hover_invoke(bContext *C, wmOperator * /*op*/, const wmEvent *event)

@@ -20,6 +20,7 @@
 
 #include <cmath>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "BLI_rect.h"
@@ -29,6 +30,8 @@
 #include "DNA_theme_types.h"
 #include "DNA_userdef_types.h"
 
+struct GPUOffScreen;
+struct GPUViewport;
 struct wmTimer;
 
 namespace blender {
@@ -57,6 +60,19 @@ struct ScenesDrawerCard {
   bool attention = false;
   rcti rect = {};
   rcti close_rect = {};
+  rcti thumb_rect = {};
+};
+
+/** A scene rendered into a small offscreen for its card (see
+ * `view3d_scenes_drawer_thumbs.cc`). Owned by the region runtime. */
+struct ScenesDrawerThumb {
+  GPUOffScreen *offscreen = nullptr;
+  GPUViewport *viewport = nullptr;
+  bool has_render = false;
+  bool render_failed = false;
+  uint64_t update_count = 0;
+  double last_render_time = 0.0;
+  int draw_type = -1;
 };
 
 /** Last painted slide and layout, stored on the drawer region's `regiondata`. */
@@ -77,6 +93,12 @@ struct ScenesDrawerRuntime {
   int hover = -1;
   bool hover_close = false;
   bool hover_new = false;
+  /** A card press in flight: the pressed card and, once dragged past the
+   * threshold, the slot the pointer is over (an insertion line is drawn). */
+  int drag_index = -1;
+  int drag_target = -1;
+  /** Thumbnails by scene name; entries for scenes no longer listed are freed. */
+  std::unordered_map<std::string, ScenesDrawerThumb> thumbs;
 };
 
 /** Factory width fallback (unscaled UI units) before the first View3D layout
@@ -97,6 +119,8 @@ struct ScenesDrawerRuntime {
 #define VIEW3D_SCENES_DRAWER_PAD 6.0f
 /** Mouse travel, in pixels, past which a grip press counts as a drag. */
 #define VIEW3D_SCENES_DRAWER_DRAG_THRESHOLD 4
+/** Vertical travel, in pixels, past which a card press becomes a reorder drag. */
+#define VIEW3D_SCENES_DRAWER_CARD_DRAG_THRESHOLD 6
 /** Slide amount at which the cards accept clicks and QA targets attach. */
 #define VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT 0.98f
 /** Open/close ease duration (wall clock, not per tick). */
