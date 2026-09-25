@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 from ..constants import (
+    FREE_BILLING_INTERVAL,
     SEVERITY_CRITICAL,
     SEVERITY_OK,
     SEVERITY_WARNING,
@@ -45,6 +46,10 @@ class UsageSnapshot:
     has_subscription: bool = False
     plan_slug: str = ""
     plan_name: str = ""
+    #: ``"monthly"`` / ``"yearly"`` / ``"trial"`` / ``"free"`` — the backend's
+    #: reading of what the allocation is. ``"free"`` is a free-tier account
+    #: metered against its lifetime grants (sign-up bonus, referrals).
+    billing_interval: str = ""
     #: Credits consumed this cycle, as a percentage of the allocation.
     usage_pct: float = 0.0
     credits_remaining: int = 0
@@ -64,6 +69,12 @@ class UsageSnapshot:
         return (self.plan_slug or "").lower().startswith(TRIAL_SLUG_PREFIX)
 
     @property
+    def is_free(self) -> bool:
+        """A free-tier account with credits to show — there is a bar, but
+        no plan behind it, so the CTA stays "See Plans"."""
+        return self.has_subscription and self.billing_interval == FREE_BILLING_INTERVAL
+
+    @property
     def remaining_pct(self) -> float:
         """Percentage of the cycle allocation still available."""
         return max(0.0, min(100.0, 100.0 - self.usage_pct))
@@ -73,7 +84,12 @@ class UsageSnapshot:
         """Whether "Buy credits" applies — mirrors the web dashboard's
         ``canTopUpCredits`` and the server rule behind ``/subscriptions
         /credit-topup``: subscribed, not on trial, not cancelling."""
-        return self.has_subscription and not self.is_trial and not self.is_cancelling
+        return (
+            self.has_subscription
+            and not self.is_free
+            and not self.is_trial
+            and not self.is_cancelling
+        )
 
 
 #: The empty snapshot — also what a logged-out client reads.
@@ -199,6 +215,7 @@ def snapshot_from_payload(
         has_subscription=True,
         plan_slug=str(data.get("plan_slug") or ""),
         plan_name=str(data.get("plan_name") or ""),
+        billing_interval=str(data.get("billing_interval") or "").lower(),
         usage_pct=max(0.0, min(100.0, _coerce_float(data.get("usage_pct")))),
         credits_remaining=max(0, balance),
         credits_total=max(0, total),
@@ -213,8 +230,11 @@ def snapshot_free_tier(
 ) -> UsageSnapshot:
     """Snapshot for the 404 ("No active subscription") case.
 
-    A free account has no allocation, so there is no percentage to show —
-    the UI switches to an upgrade affordance instead of a meter.
+    A free account that was never granted a credit has nothing to meter, so
+    there is no percentage to show — the UI switches to an upgrade
+    affordance instead of a meter. (A free account WITH a sign-up bonus or
+    referral credits answers 200 with ``billing_interval == "free"`` and
+    goes through :func:`snapshot_from_payload` like any plan.)
     """
     return UsageSnapshot(
         has_subscription=False,
@@ -235,6 +255,7 @@ def snapshot_error(message: str, now: Optional[float] = None) -> UsageSnapshot:
         has_subscription=previous.has_subscription,
         plan_slug=previous.plan_slug,
         plan_name=previous.plan_name,
+        billing_interval=previous.billing_interval,
         usage_pct=previous.usage_pct,
         credits_remaining=previous.credits_remaining,
         credits_total=previous.credits_total,
