@@ -295,7 +295,7 @@ def _begin_scene_turn(scene, run_id):
     if run_id:
         session.set_run(scene, run_id, True)
     add_turn_placeholder(scene)
-    get_executor().begin_agent_turn()
+    get_executor().begin_agent_turn(getattr(scene, "mixie_session_id", "") or "")
     session.set_state(scene, SessionState.BUSY)
 
 
@@ -320,7 +320,7 @@ def _replay_unavailable(scene, turn):
     processor = get_event_processor()
     processor._clear_loader_bubbles(scene)
     from .executor import get_executor
-    get_executor().end_agent_turn()
+    get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
     get_session_manager().set_run(scene, '', False)
     get_session_manager().set_state(scene, SessionState.IDLE)
     add_agent_message(scene, 'The connection lost part of this response. The task was not restarted. Check the scene before continuing.')

@@ -69,37 +69,45 @@ class ScriptExecutor(HandlerCleanupMixin):
     """
 
     # Agent turn tracking for undo checkpoints (see AGENT_UNDO_* constants)
-    _in_agent_turn: bool = False
-    _undo_pushes_this_turn: int = 0          # SUCCESSFUL pushes so far
-    _undo_failure_logged_this_turn: bool = False
+    # One entry per chat session (parallel scenes): session id -> [successful
+    # pushes this turn, failure already logged]. Blender's undo stack itself
+    # is document-wide; only the per-turn caps are per session.
+    _turns: dict = {}
+    #: the session whose script is executing (set by ``execute``)
+    _current_session: str = ""
 
     def __init__(self):
         """Initialize the executor."""
         self._last_scene_state: Optional[dict] = None
         self._execution_lock = threading.Lock()
 
-    def begin_agent_turn(self) -> None:
+    @property
+    def _in_agent_turn(self) -> bool:
+        return self._current_session in self._turns
+
+    def _turn(self) -> Optional[list]:
+        return self._turns.get(self._current_session)
+
+    def begin_agent_turn(self, session_id: str = "") -> None:
         """Signal the start of an agent turn (multi-tool sequence).
 
         Idempotent: the queue processor calls it for every streamed event,
         so the turn begins with the first one and the per-turn undo counters
         reset exactly once per turn.
         """
-        if not self._in_agent_turn:
-            self._in_agent_turn = True
-            self._reset_turn_undo_state()
-            logger.debug("Agent turn started")
+        if session_id not in self._turns:
+            self._turns[session_id] = [0, False]
+            logger.debug("Agent turn started (%s)", session_id[:8])
 
-    def end_agent_turn(self) -> None:
-        """Signal the end of an agent turn."""
-        if self._in_agent_turn:
-            self._in_agent_turn = False
-            self._reset_turn_undo_state()
-            logger.debug("Agent turn ended")
-
-    def _reset_turn_undo_state(self) -> None:
-        self._undo_pushes_this_turn = 0
-        self._undo_failure_logged_this_turn = False
+    def end_agent_turn(self, session_id: Optional[str] = None) -> None:
+        """Signal the end of an agent turn. ``None`` ends every session's."""
+        if session_id is None:
+            if self._turns:
+                self._turns.clear()
+                logger.debug("Agent turns ended (all)")
+            return
+        if self._turns.pop(session_id, None) is not None:
+            logger.debug("Agent turn ended (%s)", session_id[:8])
 
     def _should_push_undo(self, grouping: bool = None) -> bool:
         """Whether THIS script should push an undo checkpoint.
@@ -117,10 +125,11 @@ class ScriptExecutor(HandlerCleanupMixin):
         group_per_turn = (
             AGENT_UNDO_GROUP_PER_TURN if grouping is None else grouping
         )
-        if not self._in_agent_turn:
+        turn = self._turn()
+        if turn is None:
             return True
         limit = 1 if group_per_turn else AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN
-        return self._undo_pushes_this_turn < limit
+        return turn[0] < limit
 
     def _push_undo_checkpoint(self) -> bool:
         """Push an undo checkpoint; retry once inside an explicit window
@@ -149,19 +158,21 @@ class ScriptExecutor(HandlerCleanupMixin):
         turn silently having no checkpoint) and it is logged — once per turn,
         because a context that cannot push will fail for every script in it.
         """
+        turn = self._turn()
         if self._push_undo_checkpoint():
-            if self._in_agent_turn:
-                self._undo_pushes_this_turn += 1
+            if turn is not None:
+                turn[0] += 1
             return True
-        if not self._in_agent_turn or not self._undo_failure_logged_this_turn:
+        if turn is None or not turn[1]:
             logger.warning(
                 "Undo checkpoint failed - this script's changes may not be "
                 "individually undoable"
             )
-            self._undo_failure_logged_this_turn = True
+            if turn is not None:
+                turn[1] = True
         return False
 
-    def execute(self, script: str, push_undo: bool = True) -> ExecutionResult:
+    def execute(self, script: str, push_undo: bool = True, session_id: str = "") -> ExecutionResult:
         """
         Execute a bpy script safely.
 
@@ -180,6 +191,7 @@ class ScriptExecutor(HandlerCleanupMixin):
                 error="Previous script still executing",
             )
 
+        self._current_session = session_id or ""
         # Capture scene state before execution
         before_state = self._capture_scene_state()
 

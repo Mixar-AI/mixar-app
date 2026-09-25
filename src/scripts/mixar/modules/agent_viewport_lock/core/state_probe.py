@@ -48,12 +48,20 @@ def is_agent_executing(scene=None) -> bool:
         # objects) runs its scripts live on this Blender: the lock stands up
         # for exactly as long as one is bound. Legacy turns keep the lock.
         try:
+            from mixar.modules.common.agent_execution import bindings
             from mixar.modules.common.agent_execution.document import (
                 foreground_tasks_active,
                 run_active,
             )
             if run_active():
-                return foreground_tasks_active() > 0
+                # Per tab: only THIS scene's run and its foreground tasks
+                # lock this viewport; a tab without a v3 run stands down.
+                binding = bindings.live_binding_for_scene(scene)
+                if binding is not None:
+                    return foreground_tasks_active(binding.run_id) > 0
+                if getattr(scene, "mixie_session_id", "") or "":
+                    return False          # a tagged tab without a v3 run
+                return foreground_tasks_active() > 0   # untagged scene: legacy
         except Exception:
             pass
         if (getattr(scene, "mixie_chat_active_turn_mode", "") or "") != "AGENT":

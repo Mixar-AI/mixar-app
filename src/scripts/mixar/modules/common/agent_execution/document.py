@@ -166,8 +166,11 @@ def commit_in_progress() -> bool:
 _foreground_tasks: set = set()   # {(run_id, task_id)}
 
 
-def foreground_tasks_active() -> int:
-    return len(_foreground_tasks)
+def foreground_tasks_active(run_id: Optional[str] = None) -> int:
+    """Bound foreground tasks — of one run when ``run_id`` is given."""
+    if run_id is None:
+        return len(_foreground_tasks)
+    return sum(1 for key in _foreground_tasks if key[0] == str(run_id))
 
 
 def set_foreground_task(run_id: str, task_id: str, active: bool) -> int:

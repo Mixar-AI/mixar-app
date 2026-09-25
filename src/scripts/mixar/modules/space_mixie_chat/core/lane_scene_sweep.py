@@ -94,7 +94,16 @@ def _remove_lane_scene(lane) -> bool:
     return True
 
 
-def sweep_leaked_lane_scenes() -> int:
+def lane_parent_session(scene) -> str:
+    """The chat session a lane belongs to (``mixar_workspace_main_session``,
+    stamped by the backend's workspace script), else ``""``."""
+    try:
+        return str(scene.get("mixar_workspace_main_session", "") or "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def sweep_leaked_lane_scenes(parent_session_id: str = "") -> int:
     """Remove every leaked ``agentlane:*`` scene. Main thread only, fail-soft.
 
     No-ops while an agent session is still active — lanes are only "leaked"
@@ -104,10 +113,26 @@ def sweep_leaked_lane_scenes() -> int:
 
     from .session import get_session_manager
 
-    if get_session_manager().has_active_session():
-        return 0
+    # A lane is leaked once ITS parent chat session is no longer active; other
+    # tabs' running agents keep their lanes (parallel scenes). A lane with no
+    # parent stamp keeps the old rule: swept only while no session is active.
+    from mixar.modules.common.scenes_log import slog
 
-    lanes = [s for s in bpy.data.scenes if _is_leaked_lane_scene(s)]
+    session = get_session_manager()
+    any_active = session.has_active_session()
+    lanes = []
+    for s in bpy.data.scenes:
+        if not _is_leaked_lane_scene(s):
+            continue
+        parent = lane_parent_session(s)
+        if parent_session_id and parent != parent_session_id:
+            continue
+        if parent and session.has_active_session(parent):
+            continue
+        if not parent and any_active:
+            continue
+        slog("sweep.lane", None, session_id=parent, lane=s.name)
+        lanes.append(s)
     removed = 0
     for lane in lanes:
         name = getattr(lane, "name", "?")
@@ -121,7 +146,7 @@ def sweep_leaked_lane_scenes() -> int:
     return removed
 
 
-def schedule_lane_scene_sweep(delay: float = 0.5) -> None:
+def schedule_lane_scene_sweep(delay: float = 0.5, parent_session_id: str = "") -> None:
     """Run the sweep shortly, on the main thread via a one-shot app timer.
 
     The small delay lets the teardown path that scheduled us fully settle
@@ -133,7 +158,7 @@ def schedule_lane_scene_sweep(delay: float = 0.5) -> None:
 
     def _run():
         try:
-            sweep_leaked_lane_scenes()
+            sweep_leaked_lane_scenes(parent_session_id)
         except Exception:
             logger.warning("Lane scene sweep failed", exc_info=True)
         return None  # one-shot

@@ -646,10 +646,13 @@ class SlotEventProcessor:
         if not scene or not hasattr(scene, 'mixie_chat_messages'):
             return
 
-        # Check if any bubble still has loader visible
-        for msg in scene.mixie_chat_messages:
-            if msg.loader_visible:
-                return
+        # Check if any bubble in ANY scene still has a loader (the timer is
+        # one per app; another tab may still be streaming).
+        import bpy as _bpy
+        for s in _bpy.data.scenes:
+            for msg in getattr(s, "mixie_chat_messages", ()):
+                if msg.loader_visible:
+                    return
 
         # No active loaders, stop timer
         from .animation_manager import stop_loader_animation

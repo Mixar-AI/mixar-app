@@ -45,10 +45,13 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
         success_message: Message to show on success
     """
     # Cancel existing poll for the same attribute to prevent duplicates
-    existing = _active_polls.get(is_generating_attr)
+    # Keyed by (scene, attribute): two tabs generating the same kind at once
+    # each keep their own poll.
+    poll_key = (scene.name, is_generating_attr)
+    existing = _active_polls.get(poll_key)
     if existing and bpy.app.timers.is_registered(existing):
         bpy.app.timers.unregister(existing)
-        logger.debug("Cancelled existing poll for %s", is_generating_attr)
+        logger.debug("Cancelled existing poll for %s", poll_key)
 
     poll_count = [0]
     # Hold the scene by name, not by reference: the poll can outlive the
@@ -62,7 +65,7 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
 
         scene = bpy.data.scenes.get(scene_name)
         if scene is None:
-            _active_polls.pop(is_generating_attr, None)
+            _active_polls.pop(poll_key, None)
             logger.debug(
                 "Scene %r gone; stopping poll for %s", scene_name, is_generating_attr
             )
@@ -72,7 +75,7 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
             # Safety net only (see _POLL_TIMEOUT_S). The job may well still
             # be alive in the queue, so don't claim it failed — point at
             # the Queue panel instead of asking the user to retry.
-            _active_polls.pop(is_generating_attr, None)
+            _active_polls.pop(poll_key, None)
             _hide_loader(scene, bubble_id)
             add_agent_message(
                 scene,
@@ -82,7 +85,7 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
             return None
 
         if not getattr(scene, is_generating_attr, False):
-            _active_polls.pop(is_generating_attr, None)
+            _active_polls.pop(poll_key, None)
             _hide_loader(scene, bubble_id)
 
             error = getattr(scene, error_attr, "")
@@ -96,7 +99,7 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
 
         return _POLL_INTERVAL
 
-    _active_polls[is_generating_attr] = _poll_completion
+    _active_polls[poll_key] = _poll_completion
     bpy.app.timers.register(_poll_completion, first_interval=_POLL_FIRST_INTERVAL)
 
 

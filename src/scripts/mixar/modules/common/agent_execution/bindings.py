@@ -99,11 +99,10 @@ def activate(params: dict, journal=None, identity_fn=None) -> dict:
     if epoch <= known:
         return {"success": False, "error": f"turn_epoch {epoch} is not newer than {known}",
                 "error_type": "stale_epoch"}
-    # Newer epoch wins: revoke whatever was active for this session.
+    # Newer epoch wins: revoke whatever was active for this session (and its
+    # foreground tasks); other tabs' runs and tasks are untouched.
     if prior is not None:
         _revoke_binding(prior, journal)
-    # A new run starts with no foreground task in flight.
-    document.clear_foreground_tasks()
     identity = identity_fn()
     binding = RunBinding(
         run_id=run_id, session_id=session_id, turn_epoch=epoch,
@@ -161,6 +160,17 @@ def _revoke_binding(binding: RunBinding, journal) -> None:
     document.clear_foreground_tasks(binding.run_id)
 
 
+def any_run_active() -> bool:
+    return any(not b.revoked for b in _by_session.values())
+
+
+def live_binding_for_scene(scene) -> Optional[RunBinding]:
+    """The unrevoked run bound to ``scene``'s chat session, if any."""
+    sid = str(getattr(scene, "mixie_session_id", "") or "") if scene is not None else ""
+    binding = _by_session.get(sid) if sid else None
+    return binding if binding is not None and not binding.revoked else None
+
+
 def revoke(params: dict, journal=None) -> dict:
     """Stop further effects for a run, or mark one task finished.
 
@@ -187,7 +197,8 @@ def revoke(params: dict, journal=None) -> dict:
     else:
         _revoke_binding(binding, journal)
         if _by_session.get(binding.session_id) is binding:
-            document.set_run_active(False)
+            # The WindowManager flag means "some tab has a live v3 run".
+            document.set_run_active(any_run_active())
     return {"success": True, "known": True,
             "foreground_tasks": document.foreground_tasks_active()}
 

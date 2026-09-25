@@ -248,9 +248,10 @@ class DownloadMixin:
                     "generation_prompt",
                     str(getattr(job, "payload", {}).get("prompt") or ""),
                 )
-            obj_names = import_file(
-                filepath, file_type, import_options,
-            )
+            with _pinned_scene(job.scene_name):
+                obj_names = import_file(
+                    filepath, file_type, import_options,
+                )
             job.on_imported(obj_names)
             job.state = JobState.SUCCESS
             _record_output_landed(job, file_type, obj_names, resolve_uids=True)
@@ -304,3 +305,43 @@ class DownloadMixin:
         self._notify()
         self._pump()
         return None  # one-shot
+
+
+class _pinned_scene:
+    """Import into the job's originating scene, whatever tab the window shows.
+
+    Importers link into ``context.scene``; the window's scene is flipped for
+    the import and restored afterwards (the same pin the agent script path
+    uses). A job whose scene is gone imports nowhere: it fails.
+    """
+
+    def __init__(self, scene_name):
+        self.scene_name = scene_name or ""
+        self.window = None
+        self.shown = None
+
+    def __enter__(self):
+        if not self.scene_name:
+            return self
+        target = bpy.data.scenes.get(self.scene_name)
+        if target is None:
+            raise RuntimeError(f"originating scene {self.scene_name!r} no longer exists")
+        wm = bpy.context.window_manager
+        self.window = getattr(bpy.context, "window", None) or next(iter(wm.windows), None)
+        if self.window is not None and self.window.scene is not target:
+            self.shown = self.window.scene
+            self.window.scene = target
+            try:
+                from mixar.modules.common.scenes_log import slog
+                slog("gen.deliver", target, target=target.name, was=getattr(self.shown, "name", ""))
+            except Exception:  # noqa: BLE001
+                pass
+        return self
+
+    def __exit__(self, *exc):
+        if self.window is not None and self.shown is not None:
+            try:
+                self.window.scene = self.shown
+            except Exception:  # noqa: BLE001
+                pass
+        return False

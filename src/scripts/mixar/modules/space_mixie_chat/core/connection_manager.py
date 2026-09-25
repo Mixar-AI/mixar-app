@@ -59,8 +59,12 @@ def handle_server_notification(params: dict) -> None:
         from .main_thread_executor import run_on_main_thread
 
         def _add_chat_notice(p=params):
+            from mixar.modules.common.agent_execution.document import scene_for_session
+
             from .credits_notice import add_credit_upgrade_chat_message
+            # The notice belongs to the tab whose turn ran out of credits.
             add_credit_upgrade_chat_message(
+                scene=scene_for_session(str(p.get("session_id") or "")),
                 title=p.get("title"),
                 body=p.get("body", p.get("message")),
                 action_url=p.get("action_url"),

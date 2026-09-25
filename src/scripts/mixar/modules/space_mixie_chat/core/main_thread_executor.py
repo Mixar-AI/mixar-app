@@ -281,7 +281,7 @@ def _reject_stale_session(req: ExecutionRequest) -> None:
     # for an agentlane:* workspace — sweep leaked lane scenes ourselves.
     try:
         from .lane_scene_sweep import schedule_lane_scene_sweep
-        schedule_lane_scene_sweep()
+        schedule_lane_scene_sweep(parent_session_id=_request_session_id(req))
     except Exception:
         logger.debug("lane scene sweep scheduling skipped", exc_info=True)
 
@@ -447,13 +447,43 @@ def resume() -> None:
     _shutdown_requested = False
 
 
-def cleanup(shutdown: bool = False) -> None:
+def flush_session(session_id: str) -> int:
+    """Drop the queued scripts of ONE chat session (New Chat / Abort on that
+    tab); every other tab's scripts stay queued. Main thread only. Returns
+    the number dropped, each answered with an error so the backend never
+    waits on it."""
+    kept, dropped = [], []
+    while True:
+        try:
+            req = _request_queue.get_nowait()
+        except queue.Empty:
+            break
+        (dropped if _request_session_id(req) == session_id else kept).append(req)
+    for req in kept:
+        _request_queue.put(req)
+    for req in dropped:
+        try:
+            _send_error_response(req.request_id, "Agent session not active")
+        except Exception:  # noqa: BLE001
+            pass
+    if dropped:
+        logger.info("Flushed %d queued script(s) of session %s", len(dropped), session_id[:8])
+    return len(dropped)
+
+
+def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
     """
     Clean up executor state.
 
     Call on addon unregister or disconnect to clean up pending requests.
+    With ``session_id``: only that session's queued scripts are dropped and
+    the executor keeps running for the other tabs.
     """
     global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested, _held
+
+    if session_id:
+        flush_session(session_id)
+        return
 
     if shutdown:
         _shutdown_requested = True

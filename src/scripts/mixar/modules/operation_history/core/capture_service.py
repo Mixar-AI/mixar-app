@@ -46,7 +46,7 @@ _TICK_SECONDS = 0.5
 _MIN_TICK_SECONDS = 0.1
 
 
-def should_capture(state) -> bool:
+def should_capture(state, scene=None) -> bool:
     """Manual edits are captured whenever the agent is not driving the scene.
 
     Harness v3: a v3 run's worker-class tasks never drive the foreground
@@ -60,12 +60,17 @@ def should_capture(state) -> bool:
     if state not in _AGENT_ACTIVE:
         return True
     try:
+        from mixar.modules.common.agent_execution import bindings as _v3bind
         from mixar.modules.common.agent_execution import document as _v3doc
-        return (
-            _v3doc.run_active()
-            and not _v3doc.commit_in_progress()
-            and _v3doc.foreground_tasks_active() == 0
-        )
+        if not _v3doc.run_active() or _v3doc.commit_in_progress():
+            return False
+        if scene is not None and (getattr(scene, "mixie_session_id", "") or ""):
+            # Per tab: this scene's own run decides (parallel scenes).
+            binding = _v3bind.live_binding_for_scene(scene)
+            if binding is None:
+                return False
+            return _v3doc.foreground_tasks_active(binding.run_id) == 0
+        return _v3doc.foreground_tasks_active() == 0
     except Exception:
         return False
 
@@ -393,7 +398,7 @@ def _capture_tick():
 def _record_undo(scene, idname, label):
     try:
         sid = get_scene_history_id(scene)
-        if not should_capture(get_session_manager().get_state(scene)):
+        if not should_capture(get_session_manager().get_state(scene), scene):
             return
         store.append_operation(build_manual_record(
             scene_delta=None, op_idname=idname, label=label, category=CAT_UNDO, session_id=sid))

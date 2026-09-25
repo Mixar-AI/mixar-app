@@ -168,8 +168,8 @@ class MIXIE_CHAT_OT_new_session(Operator):
         from ...core.queue_processor import cleanup_event_queue_for_scene
         cleanup_event_queue_for_scene(scene_name)
 
-        # 3. Flush queued tool scripts
-        flush_executor_queue()
+        # 3. Flush THIS session's queued tool scripts (other tabs keep theirs)
+        flush_executor_queue(session_id=old_session_id or None)
 
         # 4. Tell the backend to cancel the old session
         if old_session_id:
@@ -212,7 +212,7 @@ class MIXIE_CHAT_OT_new_session(Operator):
         # leaked (their backend removal scripts were dropped as stale).
         try:
             from ...core.lane_scene_sweep import schedule_lane_scene_sweep
-            schedule_lane_scene_sweep()
+            schedule_lane_scene_sweep(parent_session_id=old_session_id or "")
         except Exception as e:
             logger.debug(f"lane scene sweep scheduling skipped: {e}")
 
@@ -285,14 +285,14 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         from ...core.queue_processor import cleanup_event_queue_for_scene
         cleanup_event_queue_for_scene(scene_name)
 
-        # 3. Flush queued tool scripts (global — scripts aren't scene-tagged)
-        flush_executor_queue()
+        # 3. Flush THIS session's queued tool scripts (other tabs keep theirs)
+        flush_executor_queue(session_id=session.get_session_id(scene) or None)
 
         # 3b. End the executor's undo turn: the drained queue may have held
         # the stream's complete/error event, so nothing else would end it and
         # the next turn would inherit this one's checkpoint budget.
         from ...core.executor import get_executor
-        get_executor().end_agent_turn()
+        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
 
         # 4. Finalize in-progress loader bubble(s) on this scene
         self._finalize_loader_bubble(context)
