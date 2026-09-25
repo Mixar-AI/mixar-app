@@ -140,8 +140,10 @@ def route_request(
             _restore_session_id = session_id
             window.scene = target_scene
             logger.debug(f"Switched to scene '{target_scene.name}' for script execution")
-            slog("route.pin", target_scene, target=target_scene.name,
-                 was=getattr(current, "name", ""), window=window_kind, tool=tool_name)
+        # Every routed script leaves a dossier row, switched or not: the tab on
+        # screen runs its own scripts without a flip, and that is worth seeing.
+        slog("route.pin", target_scene, target=target_scene.name,
+             was=getattr(current, "name", ""), switched=did_switch, window=window_kind, tool=tool_name)
     _set_route_switched(did_switch)
     return target_scene, did_switch, None
 
