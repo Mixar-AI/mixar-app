@@ -130,15 +130,72 @@ def inherit_account(source, scene) -> None:
             pass
 
 
+#: Blender's startup file placement for the camera and the key light, so a
+#: new tab starts like a new file does (minus the cube).
+_DEFAULT_CAMERA = ((7.3589, -6.9258, 4.9583), (1.1093, 0.0, 0.8149))
+_DEFAULT_LIGHT = ((4.0762, 1.0055, 5.9039), (0.6503, 0.0553, 1.8664), 1000.0)
+
+
+def inherit_settings(source, scene) -> None:
+    """Render, colour, unit and frame settings of the source tab, and its OWN
+    copy of the world: tabs never share datablocks, so a world tweak in one
+    tab cannot reach another."""
+    if source is None or source is scene:
+        return
+    try:
+        scene.render.engine = source.render.engine
+        scene.render.resolution_x = source.render.resolution_x
+        scene.render.resolution_y = source.render.resolution_y
+        scene.render.resolution_percentage = source.render.resolution_percentage
+        scene.render.fps = source.render.fps
+        scene.frame_start, scene.frame_end = source.frame_start, source.frame_end
+        scene.unit_settings.system = source.unit_settings.system
+        scene.unit_settings.scale_length = source.unit_settings.scale_length
+        scene.view_settings.view_transform = source.view_settings.view_transform
+        scene.view_settings.look = source.view_settings.look
+    except Exception as error:  # noqa: BLE001
+        logger.debug("new tab settings partly inherited: %s", error)
+    try:
+        world = getattr(source, "world", None)
+        scene.world = world.copy() if world is not None else None
+    except Exception as error:  # noqa: BLE001
+        logger.debug("new tab world not copied: %s", error)
+
+
+def furnish_scene(scene) -> list:
+    """A camera and a light where a new Blender file puts them; the camera
+    becomes the scene camera. Returns the objects made."""
+    made = []
+    try:
+        cam_data = bpy.data.cameras.new("Camera")
+        camera = bpy.data.objects.new("Camera", cam_data)
+        camera.location, camera.rotation_euler = _DEFAULT_CAMERA
+        scene.collection.objects.link(camera)
+        scene.camera = camera
+        made.append(camera)
+        light_data = bpy.data.lights.new("Light", 'POINT')
+        light_data.energy = _DEFAULT_LIGHT[2]
+        light = bpy.data.objects.new("Light", light_data)
+        light.location, light.rotation_euler = _DEFAULT_LIGHT[0], _DEFAULT_LIGHT[1]
+        scene.collection.objects.link(light)
+        made.append(light)
+    except Exception as error:  # noqa: BLE001
+        logger.warning("new tab could not be furnished: %s", error)
+    return made
+
+
 def new_scene_tab(name: str = "") -> object:
-    """Create an empty tab, connect it, show it everywhere. Returns the scene."""
+    """Create a tab that starts like a new file (camera, light, the source
+    tab's settings), connect it, show it everywhere. Returns the scene."""
     existing = ordered_tabs()
     source = getattr(getattr(bpy.context, "window", None), "scene", None) or (existing[0] if existing else None)
     scene = bpy.data.scenes.new(_unique_name((name or "").strip() or "Scene"))
     # A fresh tab: no session yet (minted on the first message), no chat, but
-    # the same signed-in account as the tab it was opened from.
+    # the same signed-in account and settings as the tab it was opened from.
     scene.mixie_session_id = ""
     inherit_account(source, scene)
+    inherit_settings(source, scene)
+    furnish_scene(scene)
     session = get_session_manager()
     live = _connection_live()
     if live:

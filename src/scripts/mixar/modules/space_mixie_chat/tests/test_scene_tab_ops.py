@@ -176,3 +176,29 @@ def test_new_tab_inherits_the_signed_in_account():
     assert (fresh.mixie_chat_user_id, fresh.mixie_chat_credits, fresh.mixie_chat_model) == ("me@mixar.app", 42, "m")
     ops.inherit_account(None, fresh)  # no source: untouched
     assert fresh.mixie_chat_user_id == "me@mixar.app"
+
+
+def test_furnish_scene_adds_camera_and_light(monkeypatch, live_bpy):
+    from types import SimpleNamespace as NS
+    linked = []
+    made_objects = []
+
+    class Data:
+        def __init__(self, name, **kw):
+            self.name = name
+            self.__dict__.update(kw)
+
+    def new_object(name, data):
+        obj = NS(name=name, data=data, location=None, rotation_euler=None)
+        made_objects.append(obj)
+        return obj
+
+    monkeypatch.setattr(ops.bpy, "data", NS(
+        cameras=NS(new=lambda name: Data(name)),
+        lights=NS(new=lambda name, kind: Data(name, kind=kind, energy=0.0)),
+        objects=NS(new=new_object),
+    ), raising=False)
+    scene = NS(collection=NS(objects=NS(link=lambda o: linked.append(o.name))), camera=None)
+    made = ops.furnish_scene(scene)
+    assert [o.name for o in made] == ["Camera", "Light"] and linked == ["Camera", "Light"]
+    assert scene.camera is made[0] and made[1].data.energy == 1000.0
