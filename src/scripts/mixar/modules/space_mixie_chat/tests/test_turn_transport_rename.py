@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """A scene renamed mid-turn keeps its turn handler (plan row 1.9)."""
 
 from _open_run_support import _scene, clean_state, live_bpy  # noqa: F401
