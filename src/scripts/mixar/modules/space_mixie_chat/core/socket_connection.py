@@ -253,8 +253,16 @@ class SocketConnection:
         request_id = f"handshake_{self._next_request_id()}"
 
         params = {
-            "blender_version": self._blender_version,
-            "addon_version": self._addon_version,
+            # Omitted (not sent as a placeholder) when the build's version is
+            # unknown: the backend then judges the stored users.client_version.
+            **{
+                key: value
+                for key, value in (
+                    ("blender_version", self._blender_version),
+                    ("addon_version", self._addon_version),
+                )
+                if value
+            },
             # "local_llm": this client can execute llm.request relays against
             # a local model server (modules/local_models) — the backend only
             # sends them when the user's BYOK provider is "local".
