@@ -50,6 +50,16 @@ def register():
     kc = wm.keyconfigs.addon
     if not kc:
         return
+    # The guarded-undo item carries an operator property; `kmi.properties` is
+    # None until the Python operator class is registered (UI discovery runs
+    # after this timer's first ticks), so wait for it rather than register a
+    # half map (the Cmd variants were missing on the first stress run).
+    try:
+        bpy.ops.mixie_chat.guarded_undo.idname()
+    except Exception:  # noqa: BLE001 — not registered yet
+        if not bpy.app.timers.is_registered(register):
+            bpy.app.timers.register(register, first_interval=0.2)
+        return
     # `head=True` prepends, so the LAST registered item runs FIRST: the
     # resize sash must see the press before the card click.
     grip = _ensure(kc, 'Scenes Drawer Grip', 'VIEW_3D', 'NAVIGATION_BAR')
@@ -70,7 +80,9 @@ def register():
     screen = _ensure(kc, 'Screen', 'EMPTY')
     for mods in ({'ctrl': True}, {'oskey': True}):
         _add(screen, 'mixie_chat.guarded_undo', 'Z', 'PRESS', **mods)
-        _add(screen, 'mixie_chat.guarded_undo', 'Z', 'PRESS', shift=True, **mods).properties.redo = True
+        redo = _add(screen, 'mixie_chat.guarded_undo', 'Z', 'PRESS', shift=True, **mods)
+        if redo.properties is not None:
+            redo.properties.redo = True
     logger.debug("Scenes drawer keymap registered (%d items)", len(addon_keymaps))
 
 
