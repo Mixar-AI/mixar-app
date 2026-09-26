@@ -8,7 +8,7 @@ default addon_version "1.0.0", the backend turned it into X-Client-Version,
 and every agent command on the newest build was refused as outdated.
 
 Requires the QA app logged into a LOCAL backend (127.0.0.1:8000) as a
-superuser: the scenario raises the release floor above the running build
+superuser (any loopback port): the scenario raises the release floor above the running build
 through PATCH /updates/releases, proves the chat is refused with the update
 bubble, restores the floor and proves the chat works again. Two cheap model
 turns. QA_HARNESS=... QA_SCENARIO_OUT=/tmp/version-gate-qa \
@@ -18,6 +18,7 @@ import json
 import os
 import sys
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -108,7 +109,7 @@ def run(qa):
     qa.cmd('wait_login', timeout=90)
     qa.wait(f'{SCENE}.mixie_chat_state == "IDLE"', timeout=45)
     backend = qa.eval('from mixar.config.config import get_config\nresult = get_config().get("backend_url")')
-    if backend not in ('http://localhost:8000', 'http://127.0.0.1:8000'):
+    if urllib.parse.urlsplit(backend).hostname not in ('localhost', '127.0.0.1'):
         raise ScenarioFail(f'Expected local backend, got {backend}')
 
     # 1. The handshake carries the running build's version — the same value
