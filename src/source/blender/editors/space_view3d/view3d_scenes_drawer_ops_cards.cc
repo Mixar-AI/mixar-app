@@ -140,6 +140,10 @@ static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator *op, const w
    * reorders it. Decided in the modal. */
   RNA_int_set(op->ptr, "start_y", event->xy[1]);
   RNA_int_set(op->ptr, "card", index);
+  /* The card is remembered by SCENE, not by index: the list is rebuilt from
+   * the tab mirror on every draw, and a tab created, closed or reordered
+   * mid-drag (a script, the refresh tick) would shift the indices. */
+  RNA_string_set(op->ptr, "scene", runtime->cards[index].scene_name.c_str());
   RNA_boolean_set(op->ptr, "dragged", false);
   runtime->drag_index = index;
   runtime->drag_target = -1;
@@ -154,18 +158,34 @@ static void drawer_drag_end(ScenesDrawerRuntime *runtime, ARegion *region)
   ED_region_tag_redraw(region);
 }
 
+/* The current index of the card the drag started on, or -1 when its tab is
+ * gone (a bounds check alone would act on whichever card took its slot). */
+static int drawer_card_index_of(const ScenesDrawerRuntime *runtime, const char *scene_name)
+{
+  for (int i = 0; i < int(runtime->cards.size()); i++) {
+    if (runtime->cards[i].scene_name == scene_name) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 static wmOperatorStatus drawer_click_modal(bContext *C, wmOperator *op, const wmEvent *event)
 {
   ARegion *region = CTX_wm_region(C);
   ScenesDrawerRuntime *runtime = region ? static_cast<ScenesDrawerRuntime *>(region->regiondata) :
                                           nullptr;
-  const int index = RNA_int_get(op->ptr, "card");
-  if (runtime == nullptr || index < 0 || index >= int(runtime->cards.size())) {
+  char scene_prop[MAX_ID_NAME];
+  RNA_string_get(op->ptr, "scene", scene_prop);
+  const int index = runtime ? drawer_card_index_of(runtime, scene_prop) : -1;
+  if (runtime == nullptr || index < 0) {
     if (runtime) {
       drawer_drag_end(runtime, region);
     }
     return OPERATOR_CANCELLED;
   }
+  /* Keep the drag highlight on the right card if the list shifted. */
+  runtime->drag_index = index;
   switch (event->type) {
     case MOUSEMOVE: {
       const int dy = event->xy[1] - RNA_int_get(op->ptr, "start_y");
@@ -231,6 +251,7 @@ void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot)
   ot->flag = 0;
   RNA_def_int(ot->srna, "start_y", 0, 0, 100000, "Start Y", "", 0, 100000);
   RNA_def_int(ot->srna, "card", -1, -1, 1024, "Card", "", -1, 1024);
+  RNA_def_string(ot->srna, "scene", nullptr, MAX_ID_NAME, "Scene", "The tab the press landed on");
   RNA_def_boolean(ot->srna, "dragged", false, "Dragged", "");
 }
 

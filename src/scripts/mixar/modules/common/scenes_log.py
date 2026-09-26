@@ -80,14 +80,37 @@ def slog(event: str, scene: Any = None, session_id: str | None = None, **fields:
     _append_dossier(event, sid, scene_name, fields)
 
 
+def _safe_folder_id(root: str, sid: str) -> bool:
+    """Is ``sid`` a single folder name under ``root``?
+
+    The id comes from ``scene.mixie_session_id``, a property saved in the
+    .blend, so a crafted file controls it. `.` is legal inside an id; dots
+    alone ("..") would join to the parent. `:` is legal too (lane ids are
+    ``agentlane:{parent}:{n}``), but a single letter before the first colon
+    is a Windows drive ("D:x", "D:.."), which ``ntpath.join`` treats as a
+    path of its own; an absolute id likewise. The joined path is checked to
+    still lie inside ``root``, whatever the platform's join rules.
+    """
+    if not sid or (set(sid) - _SAFE_ID) or not sid.strip("."):
+        return False
+    head, sep, _tail = sid.partition(":")
+    if sep and len(head) == 1:
+        return False
+    if os.path.isabs(sid) or os.path.splitdrive(sid)[0]:
+        return False
+    try:
+        root_abs = os.path.abspath(root)
+        joined = os.path.abspath(os.path.join(root_abs, sid))
+        return os.path.commonpath([root_abs, joined]) == root_abs and joined != root_abs
+    except ValueError:
+        return False
+
+
 def _append_dossier(event: str, sid: str, scene_name: Any, fields: dict[str, Any]) -> None:
     root = dossier_root()
     if not root:
         return
-    # `.` is legal inside an id; an id of dots alone ("..") would join to the
-    # parent folder, so it is filed as unrouted like any unsafe id.
-    safe = bool(sid) and not (set(sid) - _SAFE_ID) and bool(sid.strip("."))
-    folder_name = sid if safe else _UNROUTED
+    folder_name = sid if _safe_folder_id(root, sid) else _UNROUTED
     try:
         folder = os.path.join(root, folder_name)
         os.makedirs(folder, exist_ok=True)

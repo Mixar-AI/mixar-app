@@ -391,6 +391,31 @@ class SessionManager:
             return session_id in cls._active_scenes.values()
 
     @classmethod
+    def prune_missing_scenes(cls, scene_names=None) -> list:
+        """Drop ``_active_scenes`` entries whose scene no longer exists.
+
+        Entries are otherwise removed only by ``set_state`` / ``set_run`` on a
+        live scene. A scene deleted while BUSY through any other path (the
+        Outliner, ``bpy.data.scenes.remove`` in a script, an undo past its
+        creation) never reaches IDLE, and a stale entry would report "an
+        agent is still running" forever — blocking checkpoint restore and
+        re-raising the undo banner. Main thread only (reads ``bpy.data``
+        unless ``scene_names`` is given). Returns the pruned names.
+        """
+        if scene_names is None:
+            try:
+                import bpy
+                scene_names = {s.name for s in bpy.data.scenes}
+            except Exception:  # noqa: BLE001
+                return []
+        names = set(scene_names)
+        with cls._active_scenes_lock:
+            gone = [name for name in cls._active_scenes if name not in names]
+            for name in gone:
+                cls._active_scenes.pop(name, None)
+        return gone
+
+    @classmethod
     def active_session_ids(cls) -> list:
         """Session ids with a live turn or open run. Thread-safe."""
         with cls._active_scenes_lock:

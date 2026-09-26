@@ -49,3 +49,20 @@ def test_slog_never_raises(tmp_path, monkeypatch, scenes_log):
     bad.write_text("x")
     monkeypatch.setenv("MIXAR_SCENES_DOSSIER_DIR", str(bad))
     scenes_log.slog("sweep.lane", _Scene("L", "../escape"), parent="sess-a")
+
+
+@pytest.mark.parametrize("sid", ["D:x", "D:..", "c:agentlane", "/etc/x", "..", "..."])
+def test_slog_files_path_shaped_ids_as_unrouted(tmp_path, monkeypatch, scenes_log, sid):
+    """A session id is saved in the .blend, so a crafted file controls it: a
+    Windows drive ("D:x"), an absolute path or dots alone never leave the
+    dossier root."""
+    monkeypatch.setenv("MIXAR_SCENES_DOSSIER_DIR", str(tmp_path))
+    scenes_log.slog("route.pin", _Scene("S", sid))
+    assert (tmp_path / "_unrouted" / "events.jsonl").exists()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["_unrouted"]
+
+
+def test_slog_keeps_lane_ids_with_colons(tmp_path, monkeypatch, scenes_log):
+    monkeypatch.setenv("MIXAR_SCENES_DOSSIER_DIR", str(tmp_path))
+    scenes_log.slog("route.pin", _Scene("S", "agentlane:sess-a:2"))
+    assert (tmp_path / "agentlane:sess-a:2" / "events.jsonl").exists()

@@ -113,9 +113,25 @@ def _on_depsgraph_update(*_args) -> None:
     if count == _last_scene_count:
         return
     grew = _last_scene_count >= 0 and count > _last_scene_count
+    shrank = _last_scene_count >= 0 and count < _last_scene_count
     _last_scene_count = count
     if grew:
         _schedule_dedupe()
+    if shrank:
+        _prune_active_sessions()
+
+
+def _prune_active_sessions() -> None:
+    """A scene deleted outside `close_scene_tab` (Outliner, a script, undo)
+    never reaches IDLE: drop its active-session entry here, on the main
+    thread, so `has_active_session` stops reporting a running agent."""
+    try:
+        from .session import SessionManager
+        gone = SessionManager.prune_missing_scenes()
+        if gone:
+            logger.info("active-session entries pruned for deleted scenes: %s", gone)
+    except Exception:  # noqa: BLE001
+        logger.debug("active-session prune failed", exc_info=True)
 
 
 def _dedupe_later():
@@ -143,6 +159,7 @@ def _on_load_post(*_args) -> None:
     except Exception:  # noqa: BLE001
         _last_scene_count = -1
     dedupe_session_ids()
+    _prune_active_sessions()
 
 
 def register() -> None:

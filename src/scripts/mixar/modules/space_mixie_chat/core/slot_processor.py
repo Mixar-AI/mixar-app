@@ -113,7 +113,33 @@ def finalize_turn(scene) -> None:
         except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
             logger.debug("Agent panel settle failed", exc_info=True)
 
+    _restore_turn_mode(scene)
     _bump_layout_epoch(scene)
+
+
+def _restore_turn_mode(scene) -> None:
+    """Leave the tab in Object mode when its turn began there (see
+    ``SceneStateMixin.restore_turn_mode``): the window is pinned to the tab
+    for the mode_set, exactly as a script is, and released after."""
+    session_id = getattr(scene, "mixie_session_id", "") or ""
+    if not session_id:
+        return
+    try:
+        from .main_thread_executor import get_executor
+        from .main_thread_routing import restore_after, route_request
+        executor = get_executor()
+        if not executor.__dict__.get("_turn_start_modes", {}).get(session_id):
+            return
+        target, did_switch, error = route_request(session_id, "mode_restore", "turn-end")
+        if error or target is None:
+            executor.__dict__.get("_turn_start_modes", {}).pop(session_id, None)
+            return
+        try:
+            executor.restore_turn_mode(session_id)
+        finally:
+            restore_after(did_switch)
+    except Exception:  # noqa: BLE001 — mode hygiene never blocks turn cleanup
+        logger.debug("turn-end mode restore skipped", exc_info=True)
 
 
 class SlotEventProcessor:

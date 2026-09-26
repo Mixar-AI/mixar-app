@@ -202,3 +202,84 @@ def test_furnish_scene_adds_camera_and_light(monkeypatch, live_bpy):
     made = ops.furnish_scene(scene)
     assert [o.name for o in made] == ["Camera", "Light"] and linked == ["Camera", "Light"]
     assert scene.camera is made[0] and made[1].data.energy == 1000.0
+
+
+def test_close_of_a_background_tab_leaves_the_shown_tab_alone(rig, monkeypatch):
+    """Tabs [Scene, B, C], windows on C: closing B moves nothing — only a
+    window showing the closed scene has to move (Blender refuses to remove
+    a window's current scene)."""
+    import sys
+    b = ops.new_scene_tab("B")
+    c = ops.new_scene_tab("C")
+    for w in rig.windows:
+        w.scene = c
+    monkeypatch.setitem(sys.modules, "mixar.modules.space_mixie_chat.core.chat_history", MagicMock())
+    monkeypatch.setitem(sys.modules, "mixar.modules.space_mixie_chat.core.lane_scene_sweep", MagicMock())
+    monkeypatch.setitem(sys.modules, "mixar.modules.agent_panel.core.cards", MagicMock())
+    assert ops.close_scene_tab(b) == (True, "")
+    assert all(w.scene is c for w in rig.windows)
+    # A window that WAS on the closed tab moves to a neighbour.
+    rig.windows[0].scene = c
+    assert ops.close_scene_tab(c) == (True, "")
+    assert all(w.scene is not c for w in rig.windows)
+
+
+def test_send_selection_never_leaves_a_copy_bound_to_the_source_tab(live_bpy):
+    """``Object.copy`` is shallow: parent, constraint targets and modifier
+    objects still point at the originals. They are remapped onto copies when
+    the target was copied too, and dropped otherwise."""
+    from types import SimpleNamespace as NS
+
+    class Matrix:
+        def __init__(self, tag):
+            self.tag = tag
+
+        def copy(self):
+            return Matrix(self.tag)
+
+    class Copyable:
+        def __init__(self, name, **kw):
+            self.name = name
+            self.__dict__.update(kw)
+
+        def copy(self):
+            clone = Copyable(self.name + ".001", **{k: v for k, v in self.__dict__.items() if k != "name"})
+            clone.constraints = [NS(**c.__dict__) for c in self.__dict__.get("constraints", [])]
+            clone.modifiers = [NS(**m.__dict__) for m in self.__dict__.get("modifiers", [])]
+            return clone
+
+    linked = []
+    source = _scene(name="A", session_id="sa")
+    target = _scene(name="B", session_id="sb")
+    target.collection = NS(objects=NS(link=lambda o: linked.append(o)))
+    root = Copyable("Root", parent=None, matrix_world=Matrix("root"), constraints=[], modifiers=[])
+    stranger = Copyable("Stranger", parent=None, matrix_world=Matrix("stranger"))
+    child = Copyable("Child", parent=root, matrix_world=Matrix("child"),
+                     constraints=[NS(target=stranger), NS(target=root)],
+                     modifiers=[NS(object=root), NS(mirror_object=stranger)])
+    made = ops.send_selection_to_scene(source, target, [root, child])
+    assert made == ["Root.001", "Child.001"]
+    root_copy, child_copy = linked
+    assert child_copy.parent is root_copy
+    assert child_copy.constraints[1].target is root_copy
+    assert child_copy.constraints[0].target is None          # stranger stayed in the source tab
+    assert child_copy.modifiers[0].object is root_copy
+    assert child_copy.modifiers[1].mirror_object is None
+    # A copy whose parent was not sent keeps its world transform, unparented.
+    only_child = ops.send_selection_to_scene(source, target, [child])
+    assert only_child == ["Child.001"]
+    lone = linked[-1]
+    assert lone.parent is None and lone.matrix_world.tag == "child"
+
+
+def test_active_sessions_are_pruned_for_scenes_deleted_elsewhere(rig):
+    """A scene deleted while BUSY through the Outliner or a script never
+    reaches IDLE; its entry would say "an agent is still running" forever."""
+    b = rig.scenes.new("B"); b.mixie_session_id = "sess-b"
+    SessionManager.set_state(b, SessionState.BUSY)
+    assert SessionManager.has_active_session("sess-b")
+    rig.scenes.remove(b)
+    assert SessionManager.prune_missing_scenes() == ["B"]
+    assert not SessionManager.has_active_session("sess-b")
+    assert not SessionManager.has_active_session()
+    assert SessionManager.prune_missing_scenes() == []

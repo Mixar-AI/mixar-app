@@ -80,11 +80,14 @@ def real_scenes() -> list:
     return [s for s in bpy.data.scenes if not is_lane_scene(s)]
 
 
-def switch_all_windows(scene) -> None:
-    """Show ``scene`` in every window (main and companions)."""
+def switch_all_windows(scene, showing=None) -> None:
+    """Show ``scene`` in every window (main and companions) — or, with
+    ``showing``, only in the windows that currently show that scene."""
     for wm in bpy.data.window_managers:
         for window in wm.windows:
             try:
+                if showing is not None and window.scene is not showing:
+                    continue
                 if window.scene is not scene:
                     window.scene = scene
             except Exception:  # noqa: BLE001 — a companion mid-teardown
@@ -266,10 +269,11 @@ def close_scene_tab(scene, report=None) -> tuple[bool, str]:
     except Exception:  # noqa: BLE001 — never block the close
         logger.warning("Could not archive the chat before closing the scene", exc_info=True)
 
-    # Move every window off the scene first: Blender refuses to remove a
-    # window's current scene.
+    # Move the windows showing the scene off it first: Blender refuses to
+    # remove a window's current scene. A window on another tab stays there —
+    # closing a background tab never changes what the user is looking at.
     neighbour = next((s for s in tabs if s is not scene), None)
-    switch_all_windows(neighbour)
+    switch_all_windows(neighbour, showing=scene)
     slog("tab.switch", neighbour, was=scene.name, reason="close")
 
     # The tab's cards and worker lanes go with it, then the scene.
@@ -347,10 +351,17 @@ def send_selection_to_scene(source, target, objects) -> list:
     """Copy ``objects`` (and their object data and materials, Shift-D
     semantics) from ``source`` into ``target``'s root collection. The only
     cross-tab path: tabs never share datablocks, so nothing an agent does in
-    one tab can reach the copy. Returns the new objects' names."""
+    one tab can reach the copy. Returns the new objects' names.
+
+    ``Object.copy`` is shallow: the parent, constraint targets and modifier
+    objects still point at the originals. Every such reference is remapped
+    onto the copy of its target when that was copied too, and dropped
+    otherwise (the parent is dropped keeping the world transform) — a copy
+    that still followed an object in the source tab would move with it.
+    """
     if target is None or target is source or is_lane_scene(target):
         return []
-    made = []
+    copies = {}
     for obj in objects:
         try:
             copy = obj.copy()
@@ -362,11 +373,72 @@ def send_selection_to_scene(source, target, objects) -> list:
                         if material is not None:
                             slots[index] = material.copy()
             target.collection.objects.link(copy)
-            made.append(copy.name)
+            copies[obj] = copy
         except Exception as error:  # noqa: BLE001
             logger.warning("send to scene skipped %s: %s", getattr(obj, "name", "?"), error)
+    for obj, copy in copies.items():
+        _remap_object_references(obj, copy, copies)
+    made = [copy.name for copy in copies.values()]
     slog("tab.send", scene=source, target=target.name, count=len(made))
     return made
+
+
+def _remap_object_references(original, copy, copies) -> None:
+    """Point ``copy``'s parent, constraints and modifiers at copies, never at
+    the source tab's objects (see ``send_selection_to_scene``)."""
+    parent = getattr(copy, "parent", None)
+    if parent is not None:
+        if parent in copies:
+            copy.parent = copies[parent]
+        else:
+            try:
+                world = original.matrix_world.copy()
+                copy.parent = None
+                copy.matrix_world = world
+            except Exception:  # noqa: BLE001 — a double without matrices
+                copy.parent = None
+    for holder in _object_pointer_holders(copy):
+        for name in _object_pointer_props(holder):
+            try:
+                pointed = getattr(holder, name)
+            except Exception:  # noqa: BLE001
+                continue
+            if pointed is None or pointed is copy:
+                continue
+            replacement = copies.get(pointed)
+            if replacement is None and pointed in copies.values():
+                continue
+            try:
+                setattr(holder, name, replacement)
+            except Exception:  # noqa: BLE001 — a read-only pointer
+                logger.debug("could not remap %s.%s", holder, name, exc_info=True)
+
+
+def _object_pointer_holders(obj):
+    for collection_name in ("constraints", "modifiers"):
+        try:
+            yield from list(getattr(obj, collection_name, None) or [])
+        except Exception:  # noqa: BLE001
+            continue
+
+
+def _object_pointer_props(holder) -> list:
+    """The RNA pointer properties of a constraint / modifier that hold an
+    Object (``target``, ``object``, ``mirror_object``, ``pole_target``…)."""
+    names = []
+    try:
+        for prop in holder.bl_rna.properties:
+            if prop.type != 'POINTER' or prop.is_readonly:
+                continue
+            fixed = getattr(prop, "fixed_type", None)
+            if fixed is not None and getattr(fixed, "identifier", "") == "Object":
+                names.append(prop.identifier)
+    except Exception:  # noqa: BLE001 — a double without RNA
+        for name in ("target", "object", "pole_target", "mirror_object",
+                     "offset_object", "origin", "curve", "object_from", "object_to"):
+            if hasattr(holder, name):
+                names.append(name)
+    return names
 
 
 class MIXIE_CHAT_OT_send_to_scene_tab(Operator):

@@ -316,22 +316,39 @@ def _job_session_id(job) -> str:
 
 
 def resolve_job_scene(scene_name: str, session_id: str = ""):
-    """The scene a job was submitted from: by the name captured at submit,
-    else by its chat session — a scene tab renamed while a multi-minute job
-    ran is still the same tab. A job without a session (a manual enqueue)
-    falls back to the scene the window shows, as it always did; an agent
-    job whose tab is gone returns None and fails rather than landing in
-    another tab."""
-    target = bpy.data.scenes.get(scene_name) if scene_name else None
-    if target is None and session_id:
+    """The scene a job was submitted from.
+
+    An agent job (``session_id`` set) resolves by its chat session: a tab
+    renamed while a multi-minute job ran is still the same tab, and a tab
+    closed and its name reused by a NEW tab is not — the name is accepted
+    only when that scene still carries the session. A job whose tab is gone
+    returns None and fails rather than landing in another tab. A manual
+    enqueue (no session, no scene name) falls back to the scene the window
+    shows, as it always did; a manual job WITH a scene name whose scene is
+    gone also returns None.
+    """
+    target = None
+    if session_id:
         try:
             from mixar.modules.common.agent_execution.document import scene_for_session
             target = scene_for_session(session_id, bpy)
         except Exception:  # noqa: BLE001
             target = None
-    if target is None and not session_id:
-        target = getattr(bpy.context, "scene", None)
-    return target
+        if target is None and scene_name:
+            named = bpy.data.scenes.get(scene_name)
+            if named is not None and _scene_session(named) == session_id:
+                target = named
+        return target
+    if scene_name:
+        return bpy.data.scenes.get(scene_name)
+    return getattr(bpy.context, "scene", None)
+
+
+def _scene_session(scene) -> str:
+    try:
+        return str(getattr(scene, "mixie_session_id", "") or "")
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 class _pinned_scene:

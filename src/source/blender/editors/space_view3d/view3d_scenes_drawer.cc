@@ -264,9 +264,28 @@ void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *regi
   WM_event_add_keymap_handler_priority(&region->runtime->handlers, keymap, 0);
 }
 
+/* The area a drawer region belongs to: `ARegionType.init` gets no area, and
+ * the width clamp needs one (a stored width from a wide window must not eat a
+ * narrower area's whole viewport). */
+static ScrArea *drawer_region_area(const wmWindowManager *wm, const ARegion *region)
+{
+  for (const wmWindow &win : wm->windows) {
+    const bScreen *screen = WM_window_get_active_screen(&win);
+    if (screen == nullptr) {
+      continue;
+    }
+    for (ScrArea &area : screen->areabase) {
+      if (BLI_findindex(&area.regionbase, region) != -1) {
+        return &area;
+      }
+    }
+  }
+  return nullptr;
+}
+
 void view3d_scenes_drawer_region_init(wmWindowManager *wm, ARegion *region)
 {
-  view3d_scenes_drawer_size_sync(wm, nullptr, region);
+  view3d_scenes_drawer_size_sync(wm, drawer_region_area(wm, region), region);
   view3d_scenes_drawer_runtime_ensure(wm, region);
 
   /* No View2D canvas: the cards are laid out from the region rect each draw.

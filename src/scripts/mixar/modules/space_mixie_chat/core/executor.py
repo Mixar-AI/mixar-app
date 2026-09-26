@@ -414,11 +414,11 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             logger.error("Script execution failed: %s\n%s", e, result.traceback)
 
         finally:
-            # Mode hygiene: a script that left Edit/Sculpt/... mode open would
-            # leave the window in it for the next script — another tab's, once
-            # tabs interleave — and for the user. Restore before the routing
-            # pin is lifted, while the window still shows the script's scene.
-            self._restore_object_mode(mode_before)
+            # Mode hygiene happens at the END of the turn (`restore_turn_mode`,
+            # from `finalize_turn`), never between scripts: a script may leave
+            # the tab in Edit / Sculpt / Texture Paint mode on purpose for the
+            # next one. Here only the mode the turn started in is noted.
+            self.note_turn_mode(session_id, mode_before)
             self._execution_lock.release()
 
             # Clean up any handlers the script may have installed

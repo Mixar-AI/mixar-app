@@ -137,3 +137,24 @@ def test_matgen_forwards_context_captured_at_construction(monkeypatch):
         "turn_id": "request-matgen",
         "instance_id": "instance-matgen",
     }
+
+
+def test_transport_ids_map_to_the_routed_scenes_chat_session(monkeypatch):
+    """Older backends send no chat_session_id: the request carries the
+    connection id or a worker lane id. Turns and the undo-checkpoint cap are
+    keyed by the scene's session, and the pump runs with the window pinned
+    to the script's scene, so that scene's id is the owner."""
+    from mixar.modules.common.agent_execution import pump
+
+    bpy = sys.modules["bpy"]
+    monkeypatch.setattr(bpy.context, "scene", SimpleNamespace(mixie_session_id="sess-owner"),
+                        raising=False)
+    assert pump.owning_chat_session("agent:conn-1") == "sess-owner"
+    assert pump.owning_chat_session("agentlane:sess-owner:2") == "sess-owner"
+    assert pump.owning_chat_session("") == "sess-owner"
+    assert pump.owning_chat_session("sess-real") == "sess-real"
+    assert pump.resolve_agent_context_ids({"turn_id": "t"}, "agent:conn-1", "r") == ("sess-owner", "t")
+    assert pump.resolve_agent_context_ids(None, "agentlane:x:1", "r") == ("sess-owner", "r")
+
+    monkeypatch.setattr(bpy.context, "scene", SimpleNamespace(mixie_session_id=""), raising=False)
+    assert pump.owning_chat_session("agent:conn-1") == "agent:conn-1"

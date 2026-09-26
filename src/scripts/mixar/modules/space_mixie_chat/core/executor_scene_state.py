@@ -21,6 +21,9 @@ class SceneStateMixin:
     """Mixed into ``ScriptExecutor``; reads ``self._current_session``."""
 
     _current_session: str = ""
+    # Per chat session: the interaction mode the FIRST script of the turn
+    # found (see `note_turn_mode`). Cleared by `restore_turn_mode`.
+    _turn_start_modes: dict
 
     @staticmethod
     def _interaction_mode() -> str:
@@ -29,12 +32,26 @@ class SceneStateMixin:
         except Exception:  # noqa: BLE001
             return ""
 
-    def _restore_object_mode(self, mode_before: str) -> bool:
-        """Return to Object mode when a script changed the interaction mode.
+    def note_turn_mode(self, session_id: str, mode_before: str) -> None:
+        """Remember the mode a turn started in, once per session.
 
-        Only a script that STARTED in Object mode is undone this way: a user
-        who was sculpting keeps their mode. Returns True when a mode_set ran.
+        A script may leave the tab in Edit / Sculpt / Texture Paint mode on
+        purpose — a later script of the same turn expects to find it there —
+        so nothing is restored between scripts. The mode is put back at the
+        END of the turn (`restore_turn_mode`), and only when the turn began in
+        Object mode: a user who was sculpting keeps their mode.
         """
+        modes = self.__dict__.setdefault("_turn_start_modes", {})
+        modes.setdefault(session_id or "", mode_before)
+
+    def restore_turn_mode(self, session_id: str) -> bool:
+        """Return the session's tab to Object mode at the end of its turn.
+
+        Called with the window pinned to that tab (the routing pin). Returns
+        True when a mode_set ran.
+        """
+        modes = self.__dict__.setdefault("_turn_start_modes", {})
+        mode_before = modes.pop(session_id or "", None)
         if mode_before != "OBJECT":
             return False
         mode_after = self._interaction_mode()
@@ -47,7 +64,7 @@ class SceneStateMixin:
             return False
         try:
             from mixar.modules.common.scenes_log import slog
-            slog("mode.restored", None, session_id=self._current_session, left_in=mode_after)
+            slog("mode.restored", None, session_id=session_id, left_in=mode_after)
         except Exception:  # noqa: BLE001
             pass
         return True

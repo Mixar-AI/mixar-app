@@ -98,16 +98,42 @@ def prefetch_refusal(req: ExecutionRequest, status: str) -> dict:
     return {"success": False, "error": msg, "error_type": status}
 
 
+_NON_CHAT_PREFIXES = ("agent:", "agentlane:")
+
+
+def owning_chat_session(session_id: str) -> str:
+    """Map a transport id to the chat session that owns the routed scene.
+
+    Older backends send no ``chat_session_id``: the request carries only the
+    connection id (``agent:<conn>``) or a worker lane id
+    (``agentlane:<parent>:<n>``). Turns and their undo-checkpoint cap are
+    keyed by ``scene.mixie_session_id``, and the pump runs after routing
+    pinned the window to the script's scene, so that scene's id is the
+    owner. A real chat session id passes through; outside Blender the id
+    is returned as is.
+    """
+    sid = str(session_id or "")
+    if sid and not sid.startswith(_NON_CHAT_PREFIXES):
+        return sid
+    try:
+        import bpy  # noqa: PLC0415 — importable outside Blender
+
+        owner = str(getattr(bpy.context.scene, "mixie_session_id", "") or "")
+    except Exception:  # noqa: BLE001
+        owner = ""
+    return owner or sid
+
+
 def resolve_agent_context_ids(
     agent_ctx: Optional[dict], session_id: str, request_id: str
 ) -> tuple[str, str]:
     """Provenance ids (chat session, turn), retaining compatibility with older backends."""
     if isinstance(agent_ctx, dict):
         return (
-            agent_ctx.get("chat_session_id", session_id),
+            owning_chat_session(agent_ctx.get("chat_session_id") or session_id),
             agent_ctx.get("turn_id", request_id),
         )
-    return session_id, request_id
+    return owning_chat_session(session_id), request_id
 
 
 def _attach_scene_cost(result_dict: dict) -> None:

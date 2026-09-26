@@ -122,17 +122,31 @@ def _snapshot_single_scene(scene):
     return messages
 
 
+def _snapshot_key(scene) -> str:
+    """The key a scene's snapshot is filed under: its chat session id when
+    it has one, else its name. Every scene tab is auto-named from its first
+    prompt, so an undo past that rename restores the OLD name — a snapshot
+    filed by name would then miss and the tab's transcript would not come
+    back. The session id survives the rename."""
+    sid = getattr(scene, 'mixie_session_id', '') or ''
+    return f"session:{sid}" if sid else f"name:{scene.name}"
+
+
 def _snapshot_all_scenes():
     """Snapshot chat messages from ALL scenes.
 
-    Returns a dict of {scene_name: [messages]} so each scene's messages
-    can be restored to the correct scene after undo/redo, even if the
-    active scene changes during the operation.
+    Returns a dict of {key: [messages]} (see `_snapshot_key`) so each
+    scene's messages can be restored to the correct scene after undo/redo,
+    even if the active scene changes or a scene is renamed.
     """
     snapshots = {}
     for scene in bpy.data.scenes:
         if hasattr(scene, 'mixie_chat_messages'):
-            snapshots[scene.name] = _snapshot_single_scene(scene)
+            snapshot = _snapshot_single_scene(scene)
+            snapshots[_snapshot_key(scene)] = snapshot
+            # A scene that had no session id at snapshot time but gains one
+            # after the undo (or the reverse) still restores by name.
+            snapshots.setdefault(f"name:{scene.name}", snapshot)
     return snapshots
 
 
@@ -216,8 +230,11 @@ def _restore_single_scene(scene, snapshot):
 def _restore_all_scenes(snapshots):
     """Restore chat messages to ALL scenes from a snapshot dict."""
     for scene in bpy.data.scenes:
-        if scene.name in snapshots:
-            _restore_single_scene(scene, snapshots[scene.name])
+        snapshot = snapshots.get(_snapshot_key(scene))
+        if snapshot is None:
+            snapshot = snapshots.get(f"name:{scene.name}")
+        if snapshot is not None:
+            _restore_single_scene(scene, snapshot)
 
 
 # -- Handlers ----------------------------------------------------------------
