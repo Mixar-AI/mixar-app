@@ -46,6 +46,8 @@
 #include "GPU_state.hh"
 #include "GPU_viewport.hh"
 
+#include "WM_mixar.hh"
+
 #include "view3d_director_minimap.hh"
 #include "view3d_scenes_drawer.hh"
 
@@ -104,6 +106,12 @@ void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &t,
                                        const double min_interval)
 {
   if (!scene || w < 8 || h < 8 || ED_view3d_draw_offscreen_check_nested()) {
+    return;
+  }
+  /* The region draw runs from inside the OS resize callback on macOS and
+   * Windows; a viewport render there is the crash CLAUDE.md's resize rule
+   * describes. Keep the previous thumbnail; the next draw re-renders. */
+  if (Mixar_window_resize_dispatch_active()) {
     return;
   }
   ViewLayer *layer = static_cast<ViewLayer *>(scene->view_layers.first);

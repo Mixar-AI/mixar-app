@@ -37,11 +37,12 @@ for _dep in ("keyring", "websocket", "requests", "jwt", "sentry_sdk"):
     sys.modules.setdefault(_dep, MagicMock(name=_dep))
 
 from mixar.modules.space_mixie_chat.core import script_prefetch  # noqa: E402
+from mixar.modules.space_mixie_chat.core import script_lanes as lanes  # noqa: E402
 from mixar.modules.common.agent_execution.request import ExecutionRequest  # noqa: E402
 
 
 def _put(ex, legacy_tuple):
-    assert ex._enqueue(ExecutionRequest.from_legacy(legacy_tuple))
+    assert lanes.enqueue(ExecutionRequest.from_legacy(legacy_tuple))
 from mixar.modules.paint.layered_build import download as download_mod  # noqa: E402
 
 
@@ -185,10 +186,7 @@ class TestExecutorHoldsForPrefetch:
         # window short-circuits every bpy.context branch.
         monkeypatch.setattr(ex, "bpy", SimpleNamespace(context=SimpleNamespace(window=None)))
         monkeypatch.setattr(ex, "_execution_gate_until", 0.0)
-        with ex._lanes_lock:
-            ex._lanes.clear()
-            ex._queued = 0
-            ex._last_lane = ""
+        lanes.clear()
         return ex, sent, executed
 
     def test_holds_then_executes_when_ready(self, executor_mod):
@@ -207,7 +205,7 @@ class TestExecutorHoldsForPrefetch:
         # Assets still downloading: held, nothing executed, timer keeps ticking.
         assert ex._process_one_request() is not None
         assert executed == [] and sent == []
-        assert ex._lanes[""].held is not None
+        assert lanes.held("") is not None
         assert ex.has_pending_requests()
 
         # Assets ready: executes and responds exactly once.
@@ -239,7 +237,7 @@ class TestExecutorHoldsForPrefetch:
         _put(ex, ("b-1", "print('B')", "execute_bpy_script", "", {"chat_session_id": "B"}, None))
         ex._process_one_request()
         assert executed == ["print('B')"]
-        assert ex._lanes["A"].held is not None and ex.has_pending_requests()
+        assert lanes.held("A") is not None and ex.has_pending_requests()
         pf.is_ready = True
         ex._process_one_request()
         assert executed == ["print('B')", "print('A apply')"]
@@ -271,3 +269,15 @@ class TestExecutorHoldsForPrefetch:
         ex._process_one_request()
         assert executed == ["print('B0')"]
         assert not ex.has_pending_requests()
+
+    def test_cleanup_with_an_empty_session_id_keeps_every_other_tab(self, executor_mod):
+        """A tab that has not sent its first message (session id "") owns no
+        scripts: New Chat / close on it must not take the global reset that
+        wipes the other tabs' queued scripts without an error reply."""
+        ex, sent, executed = executor_mod
+        _put(ex, ("a-0", "print('A0')", "execute_bpy_script", "", {"chat_session_id": "A"}, None))
+        _put(ex, ("b-0", "print('B0')", "execute_bpy_script", "", {"chat_session_id": "B"}, None))
+        ex.cleanup(session_id="")
+        assert sent == [] and ex.has_pending_requests() and lanes.count() == 2
+        ex.cleanup(session_id=None)
+        assert not ex.has_pending_requests() and lanes.count() == 0

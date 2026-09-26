@@ -84,7 +84,10 @@ def _append_dossier(event: str, sid: str, scene_name: Any, fields: dict[str, Any
     root = dossier_root()
     if not root:
         return
-    folder_name = sid if sid and not (set(sid) - _SAFE_ID) else _UNROUTED
+    # `.` is legal inside an id; an id of dots alone ("..") would join to the
+    # parent folder, so it is filed as unrouted like any unsafe id.
+    safe = bool(sid) and not (set(sid) - _SAFE_ID) and bool(sid.strip("."))
+    folder_name = sid if safe else _UNROUTED
     try:
         folder = os.path.join(root, folder_name)
         os.makedirs(folder, exist_ok=True)

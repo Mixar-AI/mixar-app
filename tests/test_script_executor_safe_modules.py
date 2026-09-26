@@ -124,7 +124,9 @@ def test_fingerprint_failure_preserves_inventory_and_known_edits(
             raise failure('injected unreadable RNA')
         return 'edited' if changed and obj.name == 'last' else 'original'
 
-    monkeypatch.setattr(module, 'animation_fingerprint', fingerprint)
+    from mixar.modules.space_mixie_chat.core import executor_scene_state
+    monkeypatch.setattr(executor_scene_state, 'bpy', module.bpy)
+    monkeypatch.setattr(executor_scene_state, 'animation_fingerprint', fingerprint)
     before = executor._capture_scene_state()
     phase = 1
     after = executor._capture_scene_state()

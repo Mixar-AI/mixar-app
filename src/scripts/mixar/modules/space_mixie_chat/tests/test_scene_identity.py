@@ -57,12 +57,19 @@ def test_the_bound_scene_wins_over_the_shorter_name(scenes):
 
 
 def test_depsgraph_hook_only_scans_when_the_scene_count_grows(scenes, monkeypatch):
-    calls = []
+    """The handler only notices growth; the scan (property writes) runs from
+    a timer, never inside the depsgraph handler."""
+    calls, timers = [], []
     monkeypatch.setattr(scene_identity, "dedupe_session_ids", lambda: calls.append(1))
+    monkeypatch.setattr(scene_identity.bpy.app.timers, "is_registered", lambda fn: False)
+    monkeypatch.setattr(scene_identity.bpy.app.timers, "register",
+                        lambda fn, first_interval=0.0: timers.append(fn))
     scene_identity._last_scene_count = -1
     scene_identity._on_depsgraph_update()          # first sight: record, no scan
     scene_identity._on_depsgraph_update()          # unchanged: nothing
     assert calls == []
     scene_identity._last_scene_count = 2
-    scene_identity._on_depsgraph_update()          # grew 2 -> 3: scan
+    scene_identity._on_depsgraph_update()          # grew 2 -> 3: schedule the scan
+    assert calls == [] and len(timers) == 1
+    assert timers[0]() is None                     # the timer scans once and stops
     assert calls == [1]

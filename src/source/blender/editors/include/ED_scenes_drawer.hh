@@ -85,6 +85,9 @@ struct ScenesDrawerRuntime {
   bool slide_held = false;
   /** TIMERNOTIFIER that tags this region; owned by the window manager. */
   wmTimer *tick_timer = nullptr;
+  /** A thumbnail rendered during the last draw pass: the listener tags the
+   * region again, since a redraw tagged from inside the pass is dropped. */
+  bool redraw_pending = false;
   /** Layout of the last draw pass (window pixels). */
   std::vector<ScenesDrawerCard> cards;
   rcti new_rect = {};

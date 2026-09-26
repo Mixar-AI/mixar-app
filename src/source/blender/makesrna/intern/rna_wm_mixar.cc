@@ -50,6 +50,8 @@
 
 #include "BLI_listbase.h"
 
+#include "WM_mixar.hh"
+
 #ifdef RNA_RUNTIME
 #  include <algorithm>
 #  include <cstring>
@@ -112,7 +114,7 @@ static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *v
 /* Defined in windowmanager/intern/wm_{event_system,window}.cc (Mixar overlay). */
 void Mixar_qa_simulate_file_drop(bContext *C, wmWindow *win, int x, int y, Span<const char *> paths);
 void Mixar_qa_simulate_file_drag(bContext *C, wmWindow *win, const char *filepath);
-bool Mixar_window_resize_dispatch_active();
+/* `Mixar_window_resize_dispatch_active` comes from WM_mixar.hh. */
 
 static bool rna_WindowManager_mixar_window_resizing_get(PointerRNA * /*ptr*/)
 {

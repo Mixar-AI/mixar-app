@@ -144,7 +144,7 @@ def test_ending_a_turn_resets_the_checkpoint_budget(executor_module, monkeypatch
     # begin is idempotent: a second call mid-turn must NOT reset the budget.
     assert executor._push_undo_for_script() is True
     executor.begin_agent_turn()
-    assert executor._undo_pushes_this_turn == 1
+    assert executor._turns[""][0] == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -249,7 +249,7 @@ def test_failed_push_never_aborts_is_retried_and_logged_once_per_turn(
     # Failures are not counted, so every script retried (no windows exist, so
     # each attempt is exactly one failed undo_push call).
     assert _undo_pushes(bpy_mod) == 3
-    assert executor._undo_pushes_this_turn == 0
+    assert executor._turns[""][0] == 0
     # ...but the warning is logged once for the turn, not per script.
     warnings = [
         call for call in fake_logger.warning.mock_calls
@@ -283,19 +283,19 @@ def _method_body(source: str, name: str) -> str:
 def test_turn_boundaries_are_wired_in_the_stream_pipeline():
     queue_processor = (_CORE_ROOT / "queue_processor.py").read_text(encoding="utf-8")
     # Begin: the first streamed event of a turn.
-    assert "begin_agent_turn()" in _method_body(queue_processor, "_handle_agent_event_internal")
+    assert "begin_agent_turn(" in _method_body(queue_processor, "_handle_agent_event_internal")
     # End: however the stream stops.
     for handler in (
         "_handle_agent_complete_internal",
         "_handle_inband_error",
         "_handle_agent_error_internal",
     ):
-        assert "end_agent_turn()" in _method_body(queue_processor, handler), handler
+        assert "end_agent_turn(" in _method_body(queue_processor, handler), handler
 
     # A user abort drains the queue (and with it the complete/error event),
     # so it must end the turn itself; so must a file load.
     session_ops = (_CHAT_ROOT / "ui" / "operators" / "session_ops.py").read_text(encoding="utf-8")
     abort = session_ops[session_ops.index("class MIXIE_CHAT_OT_abort_session"):]
-    assert "end_agent_turn()" in abort
+    assert "end_agent_turn(" in abort
     file_handlers = (_CORE_ROOT / "file_handlers.py").read_text(encoding="utf-8")
     assert "end_agent_turn()" in file_handlers

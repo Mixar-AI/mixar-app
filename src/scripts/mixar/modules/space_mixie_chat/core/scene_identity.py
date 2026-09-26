@@ -12,7 +12,9 @@ keeps the original and turns every copy into a fresh, empty chat.
 
 Runs after a file loads and whenever the scene count changes
 (``depsgraph_update_post``; a length compare, so it costs nothing on the
-ordinary update storm).
+ordinary update storm). The handler itself only notices the growth: the
+property writes of a detach run from a ``bpy.app.timers`` callback, never
+inside the depsgraph handler (the handler-pattern rule).
 """
 
 from __future__ import annotations
@@ -113,6 +115,23 @@ def _on_depsgraph_update(*_args) -> None:
     grew = _last_scene_count >= 0 and count > _last_scene_count
     _last_scene_count = count
     if grew:
+        _schedule_dedupe()
+
+
+def _dedupe_later():
+    """Timer body: one scan, then the timer unregisters (returns None)."""
+    try:
+        dedupe_session_ids()
+    except Exception:  # noqa: BLE001 — a failed scan must not kill the timer host
+        logger.debug("session dedupe failed", exc_info=True)
+    return None
+
+
+def _schedule_dedupe() -> None:
+    try:
+        if not bpy.app.timers.is_registered(_dedupe_later):
+            bpy.app.timers.register(_dedupe_later, first_interval=0.0)
+    except Exception:  # noqa: BLE001 — no timer host (tests, shutdown): scan inline
         dedupe_session_ids()
 
 

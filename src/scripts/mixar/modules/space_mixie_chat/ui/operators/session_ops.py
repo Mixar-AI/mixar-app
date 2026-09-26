@@ -169,7 +169,7 @@ class MIXIE_CHAT_OT_new_session(Operator):
         cleanup_event_queue_for_scene(scene_name)
 
         # 3. Flush THIS session's queued tool scripts (other tabs keep theirs)
-        flush_executor_queue(session_id=old_session_id or None)
+        flush_executor_queue(session_id=old_session_id)
 
         # 4. Tell the backend to cancel the old session
         if old_session_id:
@@ -286,7 +286,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         cleanup_event_queue_for_scene(scene_name)
 
         # 3. Flush THIS session's queued tool scripts (other tabs keep theirs)
-        flush_executor_queue(session_id=session.get_session_id(scene) or None)
+        flush_executor_queue(session_id=session.get_session_id(scene) or "")
 
         # 3b. End the executor's undo turn: the drained queue may have held
         # the stream's complete/error event, so nothing else would end it and

@@ -241,19 +241,25 @@ bool view3d_scenes_drawer_grip_rect(const bContext *C, rcti *r_rect)
 static void drawer_region_listener(const wmRegionListenerParams *params)
 {
   /* Tag here: `wm_draw.cc` wipes a redraw tagged from inside the draw pass. */
-  const ScenesDrawerRuntime *runtime = static_cast<const ScenesDrawerRuntime *>(
-      params->region->regiondata);
+  ScenesDrawerRuntime *runtime = static_cast<ScenesDrawerRuntime *>(params->region->regiondata);
   if (runtime != nullptr && runtime->slide_started_at > 0.0) {
     ED_region_tag_redraw(params->region);
     if (ARegion *window = BKE_area_find_region_type(params->area, RGN_TYPE_WINDOW)) {
       ED_region_tag_redraw_editor_overlays(window);
     }
   }
+  /* A thumbnail rendered in the last pass lands on screen only with another
+   * draw; the pass queued an `ND_SPACE_SCENES_DRAWER` notifier to get here. */
+  if (runtime != nullptr && runtime->redraw_pending) {
+    runtime->redraw_pending = false;
+    ED_region_tag_redraw(params->region);
+  }
   const wmNotifier *notifier = params->notifier;
   /* Scene switches, chat state and the Python tab mirror all arrive as
    * scene / window-manager notifications; a repaint is one cheap RNA walk. */
   if (ELEM(notifier->category, NC_SCENE, NC_WM, NC_WINDOW, NC_SCREEN) ||
-      (notifier->category == NC_SPACE && notifier->data == ND_SPACE_MIXIE))
+      (notifier->category == NC_SPACE &&
+       ELEM(notifier->data, ND_SPACE_MIXIE, ND_SPACE_SCENES_DRAWER)))
   {
     ED_region_tag_redraw(params->region);
   }

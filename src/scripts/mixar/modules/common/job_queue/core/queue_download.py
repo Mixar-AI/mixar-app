@@ -248,7 +248,7 @@ class DownloadMixin:
                     "generation_prompt",
                     str(getattr(job, "payload", {}).get("prompt") or ""),
                 )
-            with _pinned_scene(job.scene_name):
+            with _pinned_scene(job.scene_name, _job_session_id(job)):
                 obj_names = import_file(
                     filepath, file_type, import_options,
                 )
@@ -307,6 +307,28 @@ class DownloadMixin:
         return None  # one-shot
 
 
+def _job_session_id(job) -> str:
+    ref = getattr(job, "agent_ref", None) or {}
+    try:
+        return str(ref.get("session_id") or "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def resolve_job_scene(scene_name: str, session_id: str = ""):
+    """The scene a job was submitted from: by the name captured at submit,
+    else by its chat session — a scene tab renamed while a multi-minute job
+    ran is still the same tab. None when neither finds it."""
+    target = bpy.data.scenes.get(scene_name) if scene_name else None
+    if target is None and session_id:
+        try:
+            from mixar.modules.common.agent_execution.document import scene_for_session
+            target = scene_for_session(session_id, bpy)
+        except Exception:  # noqa: BLE001
+            target = None
+    return target
+
+
 class _pinned_scene:
     """Import into the job's originating scene, whatever tab the window shows.
 
@@ -315,15 +337,16 @@ class _pinned_scene:
     uses). A job whose scene is gone imports nowhere: it fails.
     """
 
-    def __init__(self, scene_name):
+    def __init__(self, scene_name, session_id: str = ""):
         self.scene_name = scene_name or ""
+        self.session_id = session_id or ""
         self.window = None
         self.shown = None
 
     def __enter__(self):
-        if not self.scene_name:
+        if not self.scene_name and not self.session_id:
             return self
-        target = bpy.data.scenes.get(self.scene_name)
+        target = resolve_job_scene(self.scene_name, self.session_id)
         if target is None:
             raise RuntimeError(f"originating scene {self.scene_name!r} no longer exists")
         wm = bpy.context.window_manager

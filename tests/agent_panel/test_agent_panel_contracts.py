@@ -332,7 +332,7 @@ class TestFinishedCardsLeave:
         fn = cards_py[cards_py.index("def begin_dismiss") :]
         fn = fn[: fn.index("\ndef ")]
         assert "card.dismissing = True" in fn
-        assert "_schedule_exit(task_id, dwell=0.0)" in fn, (
+        assert "_schedule_exit(task_id, sessions.projected_sid(), dwell=0.0)" in fn, (
             "a dismissal is a direct answer to a click and leaves at once"
         )
         assert "dismiss_card" not in fn, "the row must not go on the click"

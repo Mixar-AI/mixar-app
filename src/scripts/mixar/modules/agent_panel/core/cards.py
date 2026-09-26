@@ -40,6 +40,8 @@ from ..constants import (
     AGENT_TASK_MAXLEN,
     MIN_CARDS_FOR_PANEL,
 )
+from . import card_sessions as sessions
+from .card_sessions import _sessions, project_foreground  # noqa: F401 — re-exported
 
 logger = get_logger(__name__)
 
@@ -54,31 +56,7 @@ _STATUS_FROM_TODO = {
 
 _TERMINAL = frozenset({'DONE', 'FAILED'})
 
-#: Task ids whose card left the mirror during the current fan-out — a user
-#: dismissal or the auto-exit of a finished card. ``dismiss_card`` removes the
-#: row, but the backend keeps streaming the same task list, so a later
-#: membership rebuild would re-add the card that just left. Scoped to the
-#: fan-out: ``clear_cards`` resets it, so an id is never silently hidden in a
-#: later turn (synthetic ``idx:N`` ids recur).
-#:
-#: A dismissal only holds for a task that is FINISHED. When the orchestrator
-#: reopens one (``send_to_worker``) the backend streams it back as
-#: PENDING/IN_PROGRESS — that is new work, not the card the user waved away, so
-#: ``_survives_dismissal`` revives it.
-_dismissed_task_ids: set[str] = set()
-
-#: Bumped every time a task id is revived. A pending exit timer captures the
-#: epoch it was scheduled under and does nothing when it no longer matches, so
-#: the timer armed for the previous completion cannot remove the new card.
-_exit_epoch: dict[str, int] = {}
-
-#: Parallel scenes: the LAST task list of every chat session (session id ->
-#: card records). The WindowManager mirror the C++ panel reads is a projection
-#: of ONE of them — the tab the window shows — so a background tab's workers
-#: never overwrite the visible panel, and switching tabs swaps the panel.
-_sessions: dict[str, list[dict]] = {}
-_projected_sid: str = ""
-_WATCH_INTERVAL_S = 0.5
+#: Per-tab dismissal memory and stored task lists live in `card_sessions`.
 
 
 def derive_agent_name(task_label: str) -> str:
@@ -126,13 +104,13 @@ def _normalize(todo_items: Iterable[Any]) -> list[dict]:
     return out
 
 
-def _revive(task_id: str) -> None:
+def _revive(mem: sessions.TabMemory, task_id: str) -> None:
     """A dismissed id is working again: forget the dismissal, void its timer."""
-    _dismissed_task_ids.discard(task_id)
-    _exit_epoch[task_id] = _exit_epoch.get(task_id, 0) + 1
+    mem.dismissed.discard(task_id)
+    mem.exit_epoch[task_id] = mem.exit_epoch.get(task_id, 0) + 1
 
 
-def _survives_dismissal(rec: dict) -> bool:
+def _survives_dismissal(mem: sessions.TabMemory, rec: dict) -> bool:
     """Keep ``rec`` unless it is a still-finished card that already left.
 
     The backend streams the whole task list every update, so a dismissed id
@@ -141,11 +119,11 @@ def _survives_dismissal(rec: dict) -> bool:
     RUNNING means the orchestrator reopened the task, and the card comes back.
     """
     task_id = rec["task_id"]
-    if task_id not in _dismissed_task_ids:
+    if task_id not in mem.dismissed:
         return True
     if rec["status"] in _TERMINAL:
         return False
-    _revive(task_id)
+    _revive(mem, task_id)
     return True
 
 
@@ -159,57 +137,9 @@ def _run_open(scene=None) -> bool:
     try:
         from mixar.modules.space_mixie_chat.core.session import SessionManager
 
-        return SessionManager.run_open(scene if scene is not None else _foreground_scene())
+        return SessionManager.run_open(scene if scene is not None else sessions.foreground_scene())
     except Exception:  # noqa: BLE001 — the panel never depends on the chat
         return False
-
-
-def _foreground_scene():
-    """The scene the user is looking at (the window's), else the context scene."""
-    window = getattr(bpy.context, "window", None)
-    scene = getattr(window, "scene", None) if window is not None else None
-    return scene if scene is not None else getattr(bpy.context, "scene", None)
-
-
-def _sid_of(scene) -> str:
-    return (getattr(scene, "mixie_session_id", "") or "") if scene is not None else ""
-
-
-def _foreground_sid() -> str:
-    return _sid_of(_foreground_scene())
-
-
-def _watch_foreground():
-    """Timer: keep the mirror on the visible tab; stops once nothing is stored."""
-    try:
-        project_foreground()
-    except Exception:  # noqa: BLE001 — the panel never breaks the app
-        logger.debug("card projection failed", exc_info=True)
-    return _WATCH_INTERVAL_S if _sessions else None
-
-
-def _ensure_watch() -> None:
-    try:
-        if not bpy.app.timers.is_registered(_watch_foreground):
-            bpy.app.timers.register(_watch_foreground, first_interval=_WATCH_INTERVAL_S)
-    except Exception:  # noqa: BLE001
-        pass
-
-
-def project_foreground() -> None:
-    """Show the visible tab's cards. A no-op while the tab has not changed."""
-    global _projected_sid
-    sid = _foreground_sid()
-    if sid == _projected_sid:
-        return
-    _projected_sid = sid
-    _dismissed_task_ids.clear()
-    _exit_epoch.clear()
-    records = _sessions.get(sid)
-    if records:
-        mirror_todo_items(list(records), scene=_foreground_scene())
-    else:
-        _clear_mirror()
 
 
 def _window_manager() -> Optional[Any]:
@@ -260,26 +190,28 @@ def mirror_todo_items(todo_items: Iterable[Any], scene=None) -> int:
     parallel fan-out). Fail-soft: a mirror failure must never break the chat
     slot that called it.
     """
-    global _projected_sid
+    if _window_manager() is None:
+        return 0
+    records = _normalize(todo_items)
+    sid = sessions.sid_of(scene) if scene is not None else sessions.foreground_sid()
+    sessions.store(sid, records)
+    if sid != sessions.foreground_sid():
+        return len(records)
+    sessions.mark_projected(sid)
+    return apply_records(records, sid, scene)
+
+
+def apply_records(records: list[dict], sid: str, scene=None) -> int:
+    """Project one tab's card records onto the mirror (the tab is in front)."""
     wm = _window_manager()
     if wm is None:
         return 0
-
-    records = _normalize(todo_items)
-    sid = _sid_of(scene) if scene is not None else _foreground_sid()
-    _sessions[sid] = [dict(rec) for rec in records]
-    _ensure_watch()
-    if sid != _foreground_sid():
-        return len(records)
-    if _projected_sid != sid:
-        _projected_sid = sid
-        _dismissed_task_ids.clear()
-        _exit_epoch.clear()
-    if _dismissed_task_ids:
+    mem = sessions.memory(sid)
+    if mem.dismissed:
         # The backend streams the whole task list, including the ones that
         # already left the panel; drop them before the membership diff so a
         # rebuild cannot resurrect a card that was clicked or slid away.
-        records = [rec for rec in records if _survives_dismissal(rec)]
+        records = [rec for rec in records if _survives_dismissal(mem, rec)]
     if not records or (len(records) < MIN_CARDS_FOR_PANEL and not _run_open(scene)):
         # The minimum keeps a one-task TURN off the viewport; while the RUN is
         # open every task on the list is a delegated worker, and a batch of
@@ -321,14 +253,14 @@ def mirror_todo_items(todo_items: Iterable[Any], scene=None) -> int:
             card.dismissing = dismissing.get(rec["task_id"], False)
             _stamp_clocks(card, rec["status"], now)
             if rec["status"] == 'DONE' and not was_done and not card.dismissing:
-                _schedule_exit(card.task_id)
+                _schedule_exit(card.task_id, sid)
     else:
         for card, rec in zip(cards, records):
             if card.status != rec["status"]:
                 card.status = rec["status"]
                 _stamp_clocks(card, rec["status"], now)
                 if rec["status"] == 'DONE':
-                    _schedule_exit(card.task_id)
+                    _schedule_exit(card.task_id, sid)
             if card.name != rec["name"]:
                 card.name = rec["name"]
             if card.task != rec["task"]:
@@ -357,12 +289,12 @@ def begin_dismiss(task_id: str) -> bool:
     if card.dismissing:
         return True  # already on its way out; a second click is a no-op
     card.dismissing = True
-    _schedule_exit(task_id, dwell=0.0)
+    _schedule_exit(task_id, sessions.projected_sid(), dwell=0.0)
     _tag_panel_redraw()
     return True
 
 
-def _schedule_exit(task_id: str, dwell: float = DONE_CARD_DWELL_S) -> None:
+def _schedule_exit(task_id: str, sid: str, dwell: float = DONE_CARD_DWELL_S) -> None:
     """Remove a card once it has had time to slide out.
 
     Python owns the removal and C++ owns the slide, timed from its own first
@@ -374,12 +306,14 @@ def _schedule_exit(task_id: str, dwell: float = DONE_CARD_DWELL_S) -> None:
     if not task_id:
         return
 
-    epoch = _exit_epoch.get(task_id, 0)
+    mem = sessions.memory(sid)
+    epoch = mem.exit_epoch.get(task_id, 0)
 
     def _fire():
-        if _exit_epoch.get(task_id, 0) != epoch:
-            # The task was reopened after this timer was armed: the card on
-            # screen belongs to the new attempt, not the finished one.
+        if mem.exit_epoch.get(task_id, 0) != epoch or sessions.projected_sid() != sid:
+            # The task was reopened after this timer was armed (the card on
+            # screen belongs to the new attempt), or another tab is in front
+            # and a same-named card there is not this one.
             return None
         wm = _window_manager()
         if wm is None:
@@ -417,17 +351,16 @@ def clear_cards(scene=None, *, reset_dismissals: bool = True) -> int:
 
     With ``scene``: forget that tab's stored cards, and only touch the visible
     panel when that tab is the one on screen. Without: the visible tab."""
-    sid = _sid_of(scene) if scene is not None else _foreground_sid()
-    _sessions.pop(sid, None)
-    if scene is not None and sid != _foreground_sid():
+    sid = sessions.sid_of(scene) if scene is not None else sessions.foreground_sid()
+    sessions.forget(sid, reset_dismissals=reset_dismissals)
+    if scene is not None and sid != sessions.foreground_sid():
         return 0
-    return _clear_mirror(reset_dismissals=reset_dismissals)
+    return clear_mirror(reset_dismissals=reset_dismissals)
 
 
-def _clear_mirror(*, reset_dismissals: bool = True) -> int:
+def clear_mirror(*, reset_dismissals: bool = True) -> int:
     if reset_dismissals:
-        _dismissed_task_ids.clear()
-        _exit_epoch.clear()
+        sessions.memory(sessions.projected_sid()).reset()
     wm = _window_manager()
     if wm is None:
         return 0
@@ -459,11 +392,11 @@ def settle_running(scene=None) -> None:
     With ``scene``: that tab's run ended. Its stored cards settle; the visible
     panel changes only when that tab is the one on screen.
     """
-    sid = _sid_of(scene) if scene is not None else _foreground_sid()
-    for rec in _sessions.get(sid) or ():
+    sid = sessions.sid_of(scene) if scene is not None else sessions.foreground_sid()
+    for rec in sessions.records(sid) or ():
         if rec.get("status") not in _TERMINAL:
             rec["status"] = 'FAILED'
-    if scene is not None and sid != _foreground_sid():
+    if scene is not None and sid != sessions.foreground_sid():
         return
     wm = _window_manager()
     if wm is None:
@@ -509,7 +442,7 @@ def dismiss_card(task_id: str) -> bool:
     if len(kept) == len(cards):
         return False
 
-    _dismissed_task_ids.add(task_id)
+    sessions.memory(sessions.projected_sid()).dismissed.add(task_id)
     cards.clear()
     for rec in kept:
         card = cards.add()

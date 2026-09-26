@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "BLI_listbase_iterator.hh"
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -50,6 +52,8 @@ struct wmEvent;
 struct wmKeyConfig;
 struct wmWindow;
 struct wmWindowManager;
+struct wmOperatorType;
+struct PointerRNA;
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -154,11 +158,46 @@ void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area);
 /** \} */
 
 /* -------------------------------------------------------------------- */
+/** \name Draw widgets (`view3d_scenes_drawer_draw_widgets.cc`)
+ * \{ */
+
+namespace view3d_scenes_drawer {
+
+void read_string(PointerRNA *ptr, const char *name, std::string &out);
+int read_int(PointerRNA *ptr, const char *name, int fallback);
+bool read_bool(PointerRNA *ptr, const char *name);
+/** Pull the tab list Python keeps on the WindowManager into the runtime,
+ * keeping the previous rects until this pass lays them out again. */
+void sync_cards(const bContext *C, ScenesDrawerRuntime *runtime);
+void with_alpha(const float src[4], float alpha, float r_out[4]);
+void draw_elided(int font_id,
+                 const std::string &text,
+                 float x,
+                 float baseline_y,
+                 float max_width,
+                 const float color[4]);
+const char *status_label(ScenesDrawerTabStatus status);
+const float *status_color(ScenesDrawerTabStatus status);
+void clear_tab_gutter(int xmin, int width, int height);
+/** Paint the labeled Scenes tab with its flat inner edge at `x_left`. */
+void draw_grip(float x_left, float y_centre);
+void draw_pill(const rctf &rect, const float fill[4], float radius);
+
+}  // namespace view3d_scenes_drawer
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name Operators, keymap, QA
  * \{ */
 
-/** `view3d.scenes_drawer_{update,reveal,toggle,set,grip,click}`. */
+/** `view3d.scenes_drawer_{update,reveal,toggle,set,grip,click,hover}`. */
 void view3d_scenes_drawer_operatortypes();
+/** Shared by the two operator files (`_ops.cc`, `_ops_cards.cc`). */
+bool view3d_scenes_drawer_op_poll(bContext *C);
+bool view3d_scenes_drawer_grip_hit(const bContext *C, const int xy[2]);
+void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot);
+void VIEW3D_OT_scenes_drawer_hover(wmOperatorType *ot);
 void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf);
 /** Attach the Ctrl+` toggle map. Call first on View3D WINDOW and the drawer. */
 void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *region);

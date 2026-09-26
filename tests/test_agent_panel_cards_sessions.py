@@ -21,7 +21,7 @@ if _SRC_SCRIPTS not in sys.path:
 for _dep in ("keyring", "websocket", "requests", "jwt", "sentry_sdk"):
     sys.modules.setdefault(_dep, MagicMock(name=_dep))
 
-from mixar.modules.agent_panel.core import cards  # noqa: E402
+from mixar.modules.agent_panel.core import card_sessions, cards  # noqa: E402
 
 
 class _Card(SimpleNamespace):
@@ -41,20 +41,21 @@ def _scene(name, sid):
 
 @pytest.fixture
 def rig(monkeypatch):
-    bpy = sys.modules["bpy"]
     wm = SimpleNamespace(mixar_agent_cards=_Cards(), mixar_agent_cards_active=0,
                          mixar_agent_cards_generation=0, windows=[])
     a, b = _scene("A", "sess-a"), _scene("B", "sess-b")
     window = SimpleNamespace(scene=a)
-    monkeypatch.setattr(bpy.context, "window_manager", wm, raising=False)
-    monkeypatch.setattr(bpy.context, "window", window, raising=False)
-    monkeypatch.setattr(bpy.context, "scene", a, raising=False)
-    monkeypatch.setattr(bpy.app.timers, "is_registered", lambda fn: True, raising=False)
+    # Patch the bpy the MODULES hold: the root conftest installs a fresh bpy
+    # stub per test file, so sys.modules["bpy"] can be a different object.
+    for bpy in {id(cards.bpy): cards.bpy, id(card_sessions.bpy): card_sessions.bpy}.values():
+        monkeypatch.setattr(bpy.context, "window_manager", wm, raising=False)
+        monkeypatch.setattr(bpy.context, "window", window, raising=False)
+        monkeypatch.setattr(bpy.context, "scene", a, raising=False)
+        monkeypatch.setattr(bpy.app.timers, "is_registered", lambda fn: True, raising=False)
     monkeypatch.setattr(cards, "_run_open", lambda scene=None: True)
-    cards._sessions.clear()
-    cards._projected_sid = ""
-    cards._dismissed_task_ids.clear()
-    cards._exit_epoch.clear()
+    card_sessions._sessions.clear()
+    card_sessions._memory.clear()
+    card_sessions._projected_sid = ""
     wm.mixar_agent_cards.clear()
     return SimpleNamespace(wm=wm, a=a, b=b, window=window)
 
@@ -106,3 +107,33 @@ def test_clearing_the_visible_tab_closes_the_panel_and_a_tab_with_nothing_shows_
     rig.window.scene = rig.a
     cards.project_foreground()
     assert len(rig.wm.mixar_agent_cards) == 0
+
+
+def test_switching_back_keeps_real_ids_and_running_status(rig):
+    """Stored records are card records already: re-projecting them must not
+    run them through the todo normalizer again (which knows only todo keys
+    and todo statuses — the ids became ``idx:N`` and RUNNING fell to PENDING)."""
+    cards.mirror_todo_items(_items(("Build the island", "in_progress"), ("Cabinets", "pending")), scene=rig.a)
+    cards.mirror_todo_items(_items(("Rig the arm", "in_progress"), ("Skin", "pending")), scene=rig.b)
+    rig.window.scene = rig.b
+    cards.project_foreground()
+    rig.window.scene = rig.a
+    cards.project_foreground()
+    assert [(c.task_id, c.status) for c in rig.wm.mixar_agent_cards] == [("t0", "RUNNING"), ("t1", "PENDING")]
+    assert [r["task_id"] for r in card_sessions._sessions["sess-a"]] == ["t0", "t1"]
+
+
+def test_a_dismissal_survives_a_round_trip_through_another_tab(rig):
+    cards.mirror_todo_items(_items(("Build the island", "done"), ("Cabinets", "in_progress")), scene=rig.a)
+    cards.mirror_todo_items(_items(("Rig the arm", "in_progress"), ("Skin", "pending")), scene=rig.b)
+    assert cards.dismiss_card("t0")
+    assert [c.task_id for c in rig.wm.mixar_agent_cards] == ["t1"]
+    rig.window.scene = rig.b
+    cards.project_foreground()
+    assert [c.task_id for c in rig.wm.mixar_agent_cards] == ["t0", "t1"]     # B's own t0 shows
+    rig.window.scene = rig.a
+    cards.project_foreground()
+    assert [c.task_id for c in rig.wm.mixar_agent_cards] == ["t1"]           # A's t0 stays dismissed
+    # The next snapshot of A still carries t0 as DONE: filtered, not resurrected.
+    cards.mirror_todo_items(_items(("Build the island", "done"), ("Cabinets", "in_progress")), scene=rig.a)
+    assert [c.task_id for c in rig.wm.mixar_agent_cards] == ["t1"]

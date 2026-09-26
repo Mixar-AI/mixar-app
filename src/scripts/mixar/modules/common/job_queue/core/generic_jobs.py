@@ -245,6 +245,7 @@ class SyncImageJob(Job):
             base_name=self.base_name or self._server_image_name,
             scene_name=self.scene_name,
             should_apply=lambda: self.state == JobState.RUNNING_DOWNLOAD,
+            session_id=str((self.agent_ref or {}).get("session_id") or ""),
         )
         return True
 

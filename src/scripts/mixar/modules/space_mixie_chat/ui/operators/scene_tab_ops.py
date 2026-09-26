@@ -230,7 +230,7 @@ def stop_scene_tab(scene, sid: str) -> None:
     session = get_session_manager()
     cleanup_turn_handler(scene.name)
     cleanup_event_queue_for_scene(scene.name)
-    flush_executor_queue(session_id=sid or None)
+    flush_executor_queue(session_id=sid)
     get_executor().end_agent_turn(sid)
     session.set_run(scene, "", False)
     session.set_state(scene, SessionState.IDLE)
