@@ -159,15 +159,9 @@ def _run_model_3d(context, node, operator):
     from mixar.modules.common.utils.image_utils import compress_image_for_upload
     from mixar.modules.moodboard.ui.operators.model_gen_ops import _routing
 
-    inputs = input_media_items(context.scene, node)
-    stills = [item for item in inputs if is_still_item(item)]
-    if len(stills) != 1:
-        detail = "connect one image" if not stills else "connect only one image"
-        raise ValueError(
-            f"Generate to 3D needs exactly one image connection ({detail}; "
-            f"found {len(stills)})"
-        )
-    image = stills[0].image
+    from .model_3d_views import build_view_socket_payload, split_model_3d_inputs
+
+    image, views = split_model_3d_inputs(context.scene, node)
 
     service_key = resolve_service_key("model_gen", node_service_key(node))
     if not service_key:
@@ -178,13 +172,18 @@ def _run_model_3d(context, node, operator):
     if not model:
         raise ValueError("No enabled 3D generation model is available")
 
-    turnaround = None
     # A multi-view set that cannot be honoured raises a TERMINAL ValueError and
     # is deliberately allowed to propagate: degrading to a single image would
     # build the model from less data than the user believes they supplied.
+    # Connected view sockets are the set; with none, the image's board set is.
     from .turnaround_views import build_active_group_payload
 
-    result = build_active_group_payload(context.scene, image, service_key, model)
+    turnaround = None
+    result = (
+        build_view_socket_payload(context.scene, image, views, service_key, model)
+        if views
+        else build_active_group_payload(context.scene, image, service_key, model)
+    )
     if result is not None:
         turnaround, warnings = result
         for warning in warnings:

@@ -513,6 +513,11 @@ def create_connected_action(
 
 
 def input_media_items(scene, action_node) -> list:
+    return [item for _link, item in input_media_links(scene, action_node)]
+
+
+def input_media_links(scene, action_node) -> list:
+    """``(link, media_item)`` pairs for the node's connections, in input order."""
     links = sorted(
         (
             link for link in scene.mixie_moodboard_links
@@ -524,7 +529,7 @@ def input_media_items(scene, action_node) -> list:
     for link in links:
         item = media_item_by_id(scene, link.from_node_id)
         if item is not None:
-            resolved.append(item)
+            resolved.append((link, item))
             continue
         source_action = action_node_by_id(scene, link.from_node_id)
         if source_action is None:
@@ -536,7 +541,7 @@ def input_media_items(scene, action_node) -> list:
         # (Generate to 3D) rejected a perfectly valid single connection.
         media = _action_node_output_media(scene, source_action)
         if media is not None:
-            resolved.append(media)
+            resolved.append((link, media))
     return resolved
 
 
