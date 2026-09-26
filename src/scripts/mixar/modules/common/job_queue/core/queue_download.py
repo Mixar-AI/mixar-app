@@ -248,9 +248,10 @@ class DownloadMixin:
                     "generation_prompt",
                     str(getattr(job, "payload", {}).get("prompt") or ""),
                 )
-            obj_names = import_file(
-                filepath, file_type, import_options,
-            )
+            with _pinned_scene(job.scene_name, _job_session_id(job)):
+                obj_names = import_file(
+                    filepath, file_type, import_options,
+                )
             job.on_imported(obj_names)
             job.state = JobState.SUCCESS
             _record_output_landed(job, file_type, obj_names, resolve_uids=True)
@@ -304,3 +305,88 @@ class DownloadMixin:
         self._notify()
         self._pump()
         return None  # one-shot
+
+
+def _job_session_id(job) -> str:
+    ref = getattr(job, "agent_ref", None) or {}
+    try:
+        return str(ref.get("session_id") or "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def resolve_job_scene(scene_name: str, session_id: str = ""):
+    """The scene a job was submitted from.
+
+    An agent job (``session_id`` set) resolves by its chat session: a tab
+    renamed while a multi-minute job ran is still the same tab, and a tab
+    closed and its name reused by a NEW tab is not — the name is accepted
+    only when that scene still carries the session. A job whose tab is gone
+    returns None and fails rather than landing in another tab. A manual
+    enqueue (no session, no scene name) falls back to the scene the window
+    shows, as it always did; a manual job WITH a scene name whose scene is
+    gone also returns None.
+    """
+    target = None
+    if session_id:
+        try:
+            from mixar.modules.common.agent_execution.document import scene_for_session
+            target = scene_for_session(session_id, bpy)
+        except Exception:  # noqa: BLE001
+            target = None
+        if target is None and scene_name:
+            named = bpy.data.scenes.get(scene_name)
+            if named is not None and _scene_session(named) == session_id:
+                target = named
+        return target
+    if scene_name:
+        return bpy.data.scenes.get(scene_name)
+    return getattr(bpy.context, "scene", None)
+
+
+def _scene_session(scene) -> str:
+    try:
+        return str(getattr(scene, "mixie_session_id", "") or "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+class _pinned_scene:
+    """Import into the job's originating scene, whatever tab the window shows.
+
+    Importers link into ``context.scene``; the window's scene is flipped for
+    the import and restored afterwards (the same pin the agent script path
+    uses). A job whose scene is gone imports nowhere: it fails.
+    """
+
+    def __init__(self, scene_name, session_id: str = ""):
+        self.scene_name = scene_name or ""
+        self.session_id = session_id or ""
+        self.window = None
+        self.shown = None
+
+    def __enter__(self):
+        if not self.scene_name and not self.session_id:
+            return self
+        target = resolve_job_scene(self.scene_name, self.session_id)
+        if target is None:
+            raise RuntimeError(f"originating scene {self.scene_name!r} no longer exists")
+        wm = bpy.context.window_manager
+        self.window = getattr(bpy.context, "window", None) or next(iter(wm.windows), None)
+        if self.window is not None and self.window.scene is not target:
+            self.shown = self.window.scene
+            self.window.scene = target
+            try:
+                from mixar.modules.common.scenes_log import slog
+                slog("gen.deliver", target, target=target.name, was=getattr(self.shown, "name", ""))
+            except Exception:  # noqa: BLE001
+                pass
+        return self
+
+    def __exit__(self, *exc):
+        if self.window is not None and self.shown is not None:
+            try:
+                self.window.scene = self.shown
+            except Exception:  # noqa: BLE001
+                pass
+        return False

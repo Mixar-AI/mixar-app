@@ -38,6 +38,7 @@ _ZEN_TOOL_SCALE_Y = 2.3
 _ZEN_TOOL_UNITS_X = 2.0
 
 _DEFAULT_FALLBACK_TOOL = "builtin.select"
+
 """Safety net for `VIEW3D_PT_tools_active.tool_fallback_id`, which is
 `"builtin.select"` (Tweak, the stock first tool). Only used if the panel has
 not been registered yet — the attribute is read live when it is."""
@@ -192,6 +193,8 @@ def _zen_tool_top_gap(context, tool_count: int) -> float:
       px in a column (`interface_layout.cc`).
 
     Approximate to within the panel's own top padding, which is a few px.
+    The TOOLS region is laid out against the viewport, so the pill stays
+    centred when the Scenes drawer pushes the viewport right.
     """
     region = getattr(context, "region", None)
     if region is None:
@@ -348,6 +351,12 @@ def uninstall_view3d_header_filter():
     if tools_cls is not None and _original_tools_active_draw is not None:
         tools_cls.draw = _original_tools_active_draw
         _original_tools_active_draw = None
+
+    try:
+        from ...core import scenes_toggle_icons
+        scenes_toggle_icons.unregister()
+    except Exception:  # noqa: BLE001 — teardown never raises
+        pass
 
 
 classes = ()

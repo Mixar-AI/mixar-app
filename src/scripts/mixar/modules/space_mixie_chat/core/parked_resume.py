@@ -92,12 +92,24 @@ def send_continue(scene) -> bool:
         return False
     previous = scene.mixie_chat_input
     scene.mixie_chat_input = CONTINUE_MESSAGE
+    # The send operator reads context.scene: pin the parked tab's scene for
+    # the call so a background tab resumes into ITS chat, then restore.
+    window = getattr(bpy.context, "window", None) or next(iter(bpy.context.window_manager.windows), None)
+    shown = getattr(window, "scene", None) if window is not None else None
     try:
+        if window is not None and shown is not scene:
+            window.scene = scene
         result = bpy.ops.mixie_chat.send_message('EXEC_DEFAULT')
     except Exception as exc:
         logger.warning(f"[PARKED] continue send failed: {exc}")
         scene.mixie_chat_input = previous
         return False
+    finally:
+        if window is not None and shown is not None and window.scene is not shown:
+            try:
+                window.scene = shown
+            except Exception:  # noqa: BLE001
+                pass
     if result != {'FINISHED'}:
         scene.mixie_chat_input = previous
         return False
@@ -196,4 +208,4 @@ def _ask(base_url: str, token: str,
         )
         run_on_main_thread(lambda n=scene_name, c=open_count:
                            _fire_resume(n, c))
-        return  # one scene, one resume — never two streams from one event
+        # Every parked tab resumes (claim_resume keeps it one per session).

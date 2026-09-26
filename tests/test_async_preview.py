@@ -290,7 +290,9 @@ def test_sandbox_preserves_exact_callbacks_but_removes_impostors(monkeypatch):
 
 def test_script_executor_inherits_the_handler_cleanup():
     src = (CHAT_ROOT / "core/executor.py").read_text()
-    assert "class ScriptExecutor(HandlerCleanupMixin)" in src
+    import re
+    bases = re.search(r"class ScriptExecutor\(([^)]*)\)", src).group(1)
+    assert "HandlerCleanupMixin" in bases
     assert "_HANDLER_NAMES" not in src
     assert "agent_final_render" not in src
 

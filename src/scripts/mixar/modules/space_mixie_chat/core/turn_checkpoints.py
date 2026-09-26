@@ -270,6 +270,10 @@ def can_restore(scene):
         return False, "Wait for the agent to finish"
     if session.run_open(scene):
         return False, "The agent is still building"
+    if session.has_active_session():
+        # The snapshot replaces EVERY scene; another tab's live run would be
+        # overwritten mid-build.
+        return False, "Another tab's agent is still running"
     return True, ""
 
 
