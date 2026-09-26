@@ -398,7 +398,14 @@ class FeatureQueue(DownloadMixin):
         # whatever is active when a later notification fires.
         if not job.scene_name:
             try:
-                scene = getattr(bpy.context, "scene", None)
+                scene = None
+                if ref and ref.get("session_id"):
+                    # An agent job belongs to its session's scene (parallel
+                    # scenes: never the tab the user happens to be viewing).
+                    from mixar.modules.common.agent_execution.document import scene_for_session
+                    scene = scene_for_session(str(ref.get("session_id") or ""), bpy)
+                if scene is None:
+                    scene = getattr(bpy.context, "scene", None)
                 if scene is not None:
                     job.scene_name = scene.name
             except Exception:

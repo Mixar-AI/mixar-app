@@ -59,8 +59,12 @@ def handle_server_notification(params: dict) -> None:
         from .main_thread_executor import run_on_main_thread
 
         def _add_chat_notice(p=params):
+            from mixar.modules.common.agent_execution.document import scene_for_session
+
             from .credits_notice import add_credit_upgrade_chat_message
+            # The notice belongs to the tab whose turn ran out of credits.
             add_credit_upgrade_chat_message(
+                scene=scene_for_session(str(p.get("session_id") or "")),
                 title=p.get("title"),
                 body=p.get("body", p.get("message")),
                 action_url=p.get("action_url"),
@@ -335,7 +339,8 @@ class ConnectionManager:
             envelope: Optional[dict] = None,
         ) -> Optional[dict]:
             """Queue script for main thread execution (non-blocking)."""
-            if not session.has_active_session():
+            request_sid = (agent_ctx or {}).get("chat_session_id") or session_id or ""
+            if not session.has_active_session(request_sid):
                 logger.warning(
                     "Rejecting script %s (id: %s) — no active agent session",
                     tool_name, request_id,
@@ -441,7 +446,7 @@ class ConnectionManager:
 
             if not request_id:
                 return None
-            if not session.has_active_session():
+            if not session.has_active_session(str((params or {}).get("session_id") or "")):
                 return {"success": False, "error": {
                     "code": "session_inactive",
                     "message": "Agent session not active",
