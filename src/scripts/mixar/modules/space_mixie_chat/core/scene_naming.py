@@ -26,11 +26,13 @@ _LEAD_FILLER = frozenset({
     "a", "an", "the", "please", "can", "could", "you", "i", "want", "would",
     "like", "to", "me", "my", "make", "create", "build", "generate", "add",
     "model", "let", "lets", "let's", "need", "now", "hi", "hello", "hey",
+    "of", "some", "new", "simple", "quick", "just", "also", "then",
 })
 #: A cut at the width limit must not end on one of these ("Table With").
 _TRAIL_FILLER = frozenset({
     "with", "of", "named", "and", "a", "an", "the", "to", "for", "in", "on",
     "at", "by", "from", "that", "which", "or", "into", "onto",
+    "then", "do", "so", "but", "as", "is", "it", "this", "these", "my",
 })
 _WORD = re.compile(r"[A-Za-z0-9][A-Za-z0-9'_\-]*")
 TAB_NAME_MAXLEN = 24
