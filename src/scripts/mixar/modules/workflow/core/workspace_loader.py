@@ -6,17 +6,14 @@
 
 from __future__ import annotations
 
-import os
-
 import bpy
 
-from mixar.config.config import UI_MODE_AI, UI_MODE_PRO, get_ui_mode
+from mixar.config.config import UI_MODE_AI, UI_MODE_PRO
 from mixar.config.logging_config import get_logger
 
 from ..constants import (
     AI_WORKSPACE_NAME,
     BASIC_WORKSPACE_NAME,
-    FACTORY_STARTUP_FILE,
     PRO_DEFAULT_WORKSPACE_NAME,
 )
 
@@ -58,63 +55,22 @@ def _pick_basic_template() -> "bpy.types.WorkSpace | None":
     return next(iter(bpy.data.workspaces), None)
 
 
-def _factory_startup_path() -> "str | None":
-    """Path of the bundled startup file that carries Mixar's Zen layout."""
-    try:
-        path = bpy.utils.system_resource('DATAFILES', path=FACTORY_STARTUP_FILE)
-    except Exception:  # noqa: BLE001 — resource lookup must never break Zen
-        return None
-    return path if path and os.path.isfile(path) else None
-
-
-def _append_factory_basic_workspace() -> "bpy.types.WorkSpace | None":
-    """Append the canonical Zen Mode workspace from the bundled startup file.
-
-    Opening a .blend with its UI replaces every workspace, and a file from
-    stock Blender has no Zen Mode. Duplicating whatever is active then would
-    clone that file's layout into Zen, so the factory copy wins. The append
-    runs without changing the active workspace (splash-safe); screen UI
-    pointers are not append dependencies, so no scene data comes along.
-    """
-    path = _factory_startup_path()
-    if path is None:
-        return None
-    try:
-        with bpy.data.libraries.load(path, link=False) as (data_from, data_to):
-            if BASIC_WORKSPACE_NAME in data_from.workspaces:
-                data_to.workspaces = [BASIC_WORKSPACE_NAME]
-    except Exception as e:  # noqa: BLE001 — fall back to duplication
-        _logger.warning("Appending factory Zen Mode workspace failed: %s", e)
-        return None
-    appended = next((ws for ws in data_to.workspaces if ws is not None), None)
-    if appended is None:
-        return None
-    if appended.name != BASIC_WORKSPACE_NAME:
-        appended.name = BASIC_WORKSPACE_NAME
-    _logger.info("Restored Zen Mode workspace from %s", path)
-    return appended
-
-
 def ensure_basic_workspace() -> bool:
     """Materialize the Zen Mode workspace if missing. Returns True if it
     exists (or was just created) afterwards.
 
-    The canonical layout is appended from the bundled startup file, so a
-    .blend opened from stock Blender (whose workspaces replace Mixar's)
-    never leaks its layout into Zen Mode. Only when that file is missing
-    does it fall back to duplicating a template workspace via
-    bpy.ops.workspace.duplicate. The duplicate operator switches the active
-    workspace to the new one as a side effect; we restore the previous
-    workspace afterwards so callers see the same active workspace as before.
+    Duplicates a template workspace via bpy.ops.workspace.duplicate so the
+    new workspace is layout-independent — edits to it won't bleed into the
+    AI Mode tab in Engine mode, and deleting AI Mode in Engine mode won't break
+    Zen Mode. The duplicate operator switches the active workspace to the
+    new one as a side effect; we restore the previous workspace afterwards
+    so callers see the same active workspace as before.
 
-    Called lazily from MIXAR_OT_set_ui_mode_ai and after a file load (not
-    from the startup timer) because the workspace bouncing required by the
-    duplicate operator would tear down the startup splash popup.
+    Called lazily from MIXAR_OT_set_ui_mode_ai (not from the startup timer)
+    because the workspace bouncing required by the duplicate operator
+    would tear down the startup splash popup.
     """
     if bpy.data.workspaces.get(BASIC_WORKSPACE_NAME) is not None:
-        return True
-
-    if _append_factory_basic_workspace() is not None:
         return True
 
     window = bpy.context.window
@@ -245,31 +201,6 @@ def configure_basic_workspace_chrome() -> None:
                     # for workspaces saved while a past build disabled it.
                     if not space.overlay.show_extras:
                         space.overlay.show_extras = True
-
-
-def restore_zen_after_file_open() -> bool:
-    """Keep a Zen Mode user in Mixar's Zen layout after opening a file.
-
-    Engine Mode gives an opened file full control of the workspaces; Zen
-    Mode is a Mixar surface, so a file that lands on one of its own
-    workspaces while the persisted mode is Zen is switched back to the
-    (restored, if missing) Zen Mode workspace. Returns True on a switch.
-    """
-    if get_ui_mode() != UI_MODE_AI:
-        return False
-    wm = bpy.context.window_manager
-    window = bpy.context.window
-    if window is None and wm is not None and wm.windows:
-        window = wm.windows[0]
-    if window is None or window.workspace is None:
-        return False
-    if window.workspace.name == BASIC_WORKSPACE_NAME:
-        return False
-    if not ensure_basic_workspace():
-        return False
-    configure_basic_workspace_chrome()
-    window.workspace = bpy.data.workspaces[BASIC_WORKSPACE_NAME]
-    return True
 
 
 def apply_ui_mode(mode: str) -> bool:
