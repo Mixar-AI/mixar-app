@@ -78,8 +78,8 @@ constexpr float NEW_W = 96.0f;
 constexpr float NEW_H = 24.0f;
 constexpr float CLOSE_SIZE = 22.0f;
 constexpr float PILL_H = 16.0f;
-constexpr float THUMB_W = 78.0f;
-constexpr float THUMB_H = 44.0f;
+constexpr float THUMB_W = VIEW3D_SCENES_DRAWER_THUMB_W;
+constexpr float THUMB_H = VIEW3D_SCENES_DRAWER_THUMB_H;
 
 }  // namespace
 
@@ -401,36 +401,6 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 
   GPU_blend(GPU_BLEND_NONE);
 
-  /* Thumbnails render LAST, after every pixel of chrome: an offscreen scene
-   * draw in the middle of the pass left whatever was painted after it
-   * invisible for the frame (a fresh tab stayed a blank card). A render only
-   * lands on screen on the next frame, which it asks for. */
-  if (panel_visible && runtime) {
-    const View3D *host = static_cast<const View3D *>(area ? area->spacedata.first : nullptr);
-    const int thumb_w = int(THUMB_W * scale) + 1;
-    const int thumb_h = int(THUMB_H * scale) + 1;
-    bool rendered = false;
-    for (const ScenesDrawerCard &card : runtime->cards) {
-      Scene *scene = reinterpret_cast<Scene *>(
-          BKE_libblock_find_name(CTX_data_main(C), ID_SCE, card.scene_name.c_str()));
-      if (scene == nullptr) {
-        continue;
-      }
-      ScenesDrawerThumb &t = runtime->thumbs[card.scene_name];
-      const double before = t.last_render_time;
-      view3d_scenes_drawer_thumb_render(t, scene, host, thumb_w, thumb_h,
-                                        card.is_active ? 0.5 : 1.5);
-      rendered |= (t.last_render_time != before);
-    }
-    if (rendered && !runtime->redraw_pending) {
-      /* `ED_region_tag_redraw` here is a no-op: the region carries
-       * RGN_DRAWING and `wm_draw.cc` clears `do_draw` right after this pass.
-       * Flag the runtime and queue the drawer's own notifier; the region
-       * listener tags the redraw from the next event loop. */
-      runtime->redraw_pending = true;
-      WM_event_add_notifier(const_cast<bContext *>(C), NC_SPACE | ND_SPACE_SCENES_DRAWER, nullptr);
-    }
-  }
 }
 
 }  // namespace blender

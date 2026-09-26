@@ -52,6 +52,7 @@ struct wmKeyConfig;
 struct wmWindow;
 struct wmWindowManager;
 struct wmOperatorType;
+struct Main;
 struct PointerRNA;
 
 /* Mixar 5.2 port: namespace wrap. */
@@ -151,8 +152,9 @@ bool view3d_scenes_drawer_is_open(const ARegion *region);
 void view3d_scenes_drawer_region_register(SpaceType *st);
 
 /** Thumbnails (`view3d_scenes_drawer_thumbs.cc`). */
-void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &thumb, Scene *scene, const View3D *host,
-                                       int width, int height, double min_interval);
+void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &thumb, Main *bmain, const wmWindowManager *wm,
+                                       Scene *scene, const View3D *host, int w, int h,
+                                       double min_interval);
 void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &thumb);
 void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area);
 

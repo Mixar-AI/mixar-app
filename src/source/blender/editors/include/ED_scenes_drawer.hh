@@ -122,6 +122,9 @@ struct ScenesDrawerRuntime {
 #define VIEW3D_SCENES_DRAWER_DRAG_THRESHOLD 4
 /** Vertical travel, in pixels, past which a card press becomes a reorder drag. */
 #define VIEW3D_SCENES_DRAWER_CARD_DRAG_THRESHOLD 6
+/** Card thumbnail size (unscaled UI units), shared by draw and the refresh operator. */
+#define VIEW3D_SCENES_DRAWER_THUMB_W 78.0f
+#define VIEW3D_SCENES_DRAWER_THUMB_H 44.0f
 /** One wheel notch scrolls the card list by one card pitch (unscaled). */
 #define VIEW3D_SCENES_DRAWER_SCROLL_STEP 68.0f
 /** Slide amount at which the cards accept clicks and QA targets attach. */

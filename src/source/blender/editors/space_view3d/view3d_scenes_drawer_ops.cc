@@ -22,6 +22,10 @@
 #include "BLI_string.h"
 
 #include "BKE_context.hh"
+#include "UI_interface_c.hh"
+#include "DNA_view3d_types.h"
+#include "BKE_main.hh"
+#include "BKE_lib_id.hh"
 #include "BKE_screen.hh"
 
 #include "DNA_screen_types.h"
@@ -180,6 +184,53 @@ static void VIEW3D_OT_scenes_drawer_set(wmOperatorType *ot)
                 "Intent to settle on afterwards; negative leaves it alone", -1.0f, 1.0f);
 }
 
+/* --- Thumbnails -------------------------------------------------------- */
+
+static wmOperatorStatus drawer_thumbs_exec(bContext *C, wmOperator * /*op*/)
+{
+  ScrArea *area = view3d_scenes_drawer_area_find(C);
+  ARegion *region = view3d_scenes_drawer_region_find(area);
+  ScenesDrawerRuntime *runtime = region ? static_cast<ScenesDrawerRuntime *>(region->regiondata) :
+                                          nullptr;
+  if (area == nullptr || region == nullptr || runtime == nullptr || (region->flag & RGN_FLAG_HIDDEN) ||
+      runtime->amount < VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT)
+  {
+    return OPERATOR_CANCELLED;
+  }
+  const View3D *host = static_cast<const View3D *>(area->spacedata.first);
+  const float scale = UI_SCALE_FAC;
+  const int thumb_w = int(VIEW3D_SCENES_DRAWER_THUMB_W * scale) + 1;
+  const int thumb_h = int(VIEW3D_SCENES_DRAWER_THUMB_H * scale) + 1;
+  Main *bmain = CTX_data_main(C);
+  bool rendered = false;
+  for (const ScenesDrawerCard &card : runtime->cards) {
+    Scene *scene = reinterpret_cast<Scene *>(
+        BKE_libblock_find_name(bmain, ID_SCE, card.scene_name.c_str()));
+    if (scene == nullptr) {
+      continue;
+    }
+    ScenesDrawerThumb &t = runtime->thumbs[card.scene_name];
+    const double before = t.last_render_time;
+    view3d_scenes_drawer_thumb_render(t, bmain, CTX_wm_manager(C), scene, host, thumb_w, thumb_h,
+                                      card.is_active ? 0.5 : 1.5);
+    rendered |= (t.last_render_time != before);
+  }
+  if (rendered) {
+    ED_region_tag_redraw(region);
+  }
+  return OPERATOR_FINISHED;
+}
+
+static void VIEW3D_OT_scenes_drawer_thumbs(wmOperatorType *ot)
+{
+  ot->name = "Refresh Scenes Drawer Thumbnails";
+  ot->idname = "VIEW3D_OT_scenes_drawer_thumbs";
+  ot->description = "Evaluate and render the scene tab thumbnails that changed (timer-driven)";
+  ot->exec = drawer_thumbs_exec;
+  ot->poll = view3d_scenes_drawer_op_poll;
+  ot->flag = OPTYPE_INTERNAL;
+}
+
 /* --- Edge resize ------------------------------------------------------ */
 
 bool view3d_scenes_drawer_edge_hit(const bContext *C, const int xy[2])
@@ -274,6 +325,7 @@ void view3d_scenes_drawer_operatortypes()
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_click);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_hover);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_scroll);
+  WM_operatortype_append(VIEW3D_OT_scenes_drawer_thumbs);
 }
 
 void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf)

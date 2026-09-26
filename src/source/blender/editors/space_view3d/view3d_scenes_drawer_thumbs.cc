@@ -23,11 +23,13 @@
 #include "BLI_math_geom.h"
 #include "BLI_math_matrix.h"
 #include "BLI_math_matrix.hh"
+#include "BLI_listbase_iterator.hh"
 #include "BLI_math_rotation.h"
 #include "BLI_rect.h"
 #include "BLI_time.h"
 
 #include "BKE_context.hh"
+#include "BKE_main.hh"
 #include "BKE_object.hh"
 #include "BKE_scene.hh"
 #include "BKE_screen.hh"
@@ -38,6 +40,7 @@
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_view3d_types.h"
+#include "DNA_windowmanager_types.h"
 
 #include "ED_screen.hh"
 #include "ED_view3d_offscreen.hh"
@@ -46,6 +49,7 @@
 #include "GPU_state.hh"
 #include "GPU_viewport.hh"
 
+#include "WM_api.hh"
 #include "WM_mixar.hh"
 
 #include "view3d_director_minimap.hh"
@@ -99,32 +103,45 @@ void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &t)
 }
 
 void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &t,
+                                       Main *bmain,
+                                       const wmWindowManager *wm,
                                        Scene *scene,
                                        const View3D *host,
                                        const int w,
                                        const int h,
                                        const double min_interval)
 {
-  if (!scene || w < 8 || h < 8 || ED_view3d_draw_offscreen_check_nested()) {
+  if (!scene || !bmain || w < 8 || h < 8 || ED_view3d_draw_offscreen_check_nested()) {
     return;
   }
-  /* The region draw runs from inside the OS resize callback on macOS and
-   * Windows; a viewport render there is the crash CLAUDE.md's resize rule
-   * describes. Keep the previous thumbnail; the next draw re-renders. */
+  /* Called from a timer-driven operator, which on macOS and Windows can run
+   * inside the OS resize callback; a viewport render there is the crash
+   * CLAUDE.md's resize rule describes. Keep the previous thumbnail. */
   if (Mixar_window_resize_dispatch_active()) {
     return;
   }
   ViewLayer *layer = static_cast<ViewLayer *>(scene->view_layers.first);
-  Depsgraph *deps = layer ? BKE_scene_get_depsgraph(scene, layer) : nullptr;
-  if (!deps || DEG_get_update_count(deps) == 0) {
+  Depsgraph *deps = layer ? BKE_scene_ensure_depsgraph(bmain, scene, layer) : nullptr;
+  if (!deps) {
     return;
   }
-  /* A tab that is not on screen keeps a depsgraph that a workspace rebuild
-   * (Zen <-> Engine mode) or a routed script can leave half-evaluated;
-   * workbench's SceneState::init dereferenced it and the app went down
-   * (2026-09-26 13:09, "mark seams" turn + UI mode switch). Draw from a
-   * fully evaluated graph only; the card keeps its last thumbnail otherwise. */
-  if (!DEG_is_fully_evaluated(deps)) {
+  /* A tab that is not on screen is evaluated by nobody: a workspace rebuild
+   * (Zen <-> Engine mode) or a routed script leaves its depsgraph tagged and
+   * its card would stay blank. Evaluate it here — operator context, never the
+   * draw callback (the same rule the workspace viewer follows) — unless a
+   * window shows it, in which case the event loop already does. */
+  bool visible_elsewhere = false;
+  if (wm) {
+    for (const wmWindow &window : wm->windows) {
+      visible_elsewhere |= WM_window_get_active_scene(&window) == scene;
+    }
+  }
+  if (!visible_elsewhere && (DEG_id_type_any_updated(deps) || DEG_get_update_count(deps) == 0)) {
+    BKE_scene_graph_update_tagged(deps, bmain);
+  }
+  if (DEG_get_update_count(deps) == 0 || !DEG_is_fully_evaluated(deps)) {
+    /* Still not drawable (workbench's SceneState::init dereferences a
+     * half-evaluated graph): the card keeps its last thumbnail. */
     return;
   }
   const eDrawType type = (host && host->shading.type >= OB_MATERIAL) ? OB_MATERIAL : OB_SOLID;

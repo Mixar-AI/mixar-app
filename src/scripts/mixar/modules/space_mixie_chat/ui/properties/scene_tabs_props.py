@@ -21,6 +21,8 @@ All properties are SKIP_SAVE: a slide in progress and a projection of live
 state are never scene data.
 """
 
+import time
+
 import bpy
 from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProperty,
                        IntProperty, StringProperty)
@@ -96,12 +98,37 @@ def _view3d_override():
     return None
 
 
+_THUMBS_INTERVAL = 1.0
+_last_thumbs = 0.0
+
+
+def _refresh_thumbs(amount: float) -> None:
+    """Card thumbnails are rendered here, from the timer, never in the drawer's
+    draw pass: the operator evaluates a background tab's depsgraph itself
+    (a workspace rebuild or a routed script leaves it tagged and nobody else
+    evaluates a scene no window shows) and renders only the cards that changed."""
+    global _last_thumbs
+    now = time.monotonic()
+    if amount < 0.98 or now - _last_thumbs < _THUMBS_INTERVAL:
+        return
+    _last_thumbs = now
+    override = _view3d_override()
+    if override is None:
+        return
+    try:
+        with bpy.context.temp_override(**override):
+            bpy.ops.view3d.scenes_drawer_thumbs()
+    except Exception as error:  # noqa: BLE001
+        logger.debug("Scenes drawer thumbnails unavailable: %s", error)
+
+
 def _drawer_tick():
     window_manager = getattr(bpy.context, 'window_manager', None)
     if window_manager is None:
         return _IDLE_INTERVAL
     amount = float(window_manager.mixar_scenes_drawer_amount)
     target = float(window_manager.mixar_scenes_drawer_target)
+    _refresh_thumbs(amount)
     if amount == target:
         return _IDLE_INTERVAL
     override = _view3d_override()
