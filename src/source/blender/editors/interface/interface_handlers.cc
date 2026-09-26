@@ -5084,6 +5084,22 @@ static int do_but_textedit(
         }
         retval = WM_UI_HANDLER_BREAK;
         break;
+      case EVT_ACCENTGRAVEKEY: {
+        /* Mixar: Ctrl+` toggles the Scenes drawer from anywhere, the chat
+         * composer included. Text editing swallows every event, and on macOS
+         * GHOST keeps the typed character for Ctrl chords (it strips it for
+         * Cmd only), so the backtick was inserted instead. Alt stays out:
+         * Ctrl+Alt is AltGr, which types. */
+        if ((event->modifier & KM_CTRL) && (event->modifier & (KM_ALT | KM_OSKEY)) == 0) {
+          WM_operator_name_call(C,
+                                "VIEW3D_OT_scenes_drawer_toggle",
+                                blender::wm::OpCallContext::ExecDefault,
+                                nullptr,
+                                event);
+          retval = WM_UI_HANDLER_BREAK;
+        }
+        break;
+      }
       case EVT_ZKEY: {
         /* Ctrl-Z or Ctrl-Shift-Z: Undo/Redo (allowing for OS-Key on Apple). */
 
