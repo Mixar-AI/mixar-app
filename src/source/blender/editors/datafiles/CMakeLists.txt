@@ -583,6 +583,8 @@ if(WITH_BLENDER)
       meta_plane
       mixar_icon
       paperclip
+      notification_sound
+      notification_sound_off
       eraser
       submit_arrow
       modifier
