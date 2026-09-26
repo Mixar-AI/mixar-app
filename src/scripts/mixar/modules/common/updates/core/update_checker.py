@@ -140,6 +140,17 @@ def get_runtime_version() -> Optional[str]:
     return version
 
 
+def get_runtime_blender_version() -> Optional[str]:
+    """Upstream Blender version of the running binary (``bpy.app.version``),
+    for the agent handshake; ``None`` outside Blender."""
+    try:
+        import bpy
+
+        return ".".join(str(c) for c in bpy.app.version) or None
+    except Exception:
+        return None
+
+
 # ============================================================================
 # Parse API response
 # ============================================================================
