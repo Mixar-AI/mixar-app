@@ -6,7 +6,7 @@
 """
 Mixar Profile Dropdown — injected into Blender's main top bar.
 
-The user-profile dropdown (Dashboard / AI Provider Settings / Docs / Logout) used to
+The user-profile dropdown (Dashboard / Refer a Friend / AI Provider Settings / Docs / Logout) used to
 live in the Mixie Chat editor header. It's been promoted to the global
 top bar (`TOPBAR_HT_upper_bar`, RIGHT region) so it's reachable from
 every editor — including the floating Agent Bubble — and so the Mixie
@@ -68,6 +68,10 @@ class MIXAR_PT_profile(Panel):
     @staticmethod
     def _draw_fallback_menu(context, layout) -> None:
         layout.operator("mixie_chat.open_dashboard", text="Dashboard", icon='URL')
+        if hasattr(bpy.types, "MIXAR_OT_refer_friend"):
+            refer = layout.row()
+            refer.operator_context = 'INVOKE_DEFAULT'
+            refer.operator("mixar.refer_friend", text="Refer a Friend", icon='FUND')
 
         # Same dialog and WindowManager state as the chat model picker.
         if hasattr(bpy.types, "MIXAR_BYOK_OT_open_dialog"):

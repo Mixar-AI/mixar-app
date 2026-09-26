@@ -152,7 +152,7 @@ void mixar_style_card(Button *button, const MixarCardElement element, const floa
   style.card = element;
   style.lit = payload >= 0.5f;
   style.progress = std::clamp(payload, 0.0f, 1.0f);
-  style.icon = MixarCardIcon(std::clamp(int(payload), 0, int(MixarCardIcon::Cross)));
+  style.icon = MixarCardIcon(std::clamp(int(payload), 0, int(MixarCardIcon::Gift)));
   if (!style.explicit_theme) {
     style.theme = MixarTheme::LegacyMixar;
   }

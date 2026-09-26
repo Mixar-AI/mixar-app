@@ -132,6 +132,8 @@ enum class MixarCardIcon : uint8_t {
   Alert,
   /** Diagonal cross — sign out. */
   Cross,
+  /** Wrapped box with a ribbon — refer a friend. */
+  Gift,
 };
 
 struct MixarScope {
