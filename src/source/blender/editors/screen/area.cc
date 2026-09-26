@@ -1544,14 +1544,8 @@ static void mixar_floating_headers_clip(const ARegion *region, rcti *overlap_rem
 static void region_overlap_fix(ScrArea *area, ARegion *region)
 {
   /* Its transparent gutter and painted slice have their own visual hit test.
-   * Stacking the drawer beside the N-panel detaches its closed grip from the edge.
-   * The Scenes drawer is the same kind of overlay on the left: without this
-   * exemption the parallel-agents band (a BOTTOM overlap, sized only while
-   * worker cards show) intersects it and the "left overlapping bottom" rule
-   * below collapses the drawer for the whole turn. */
-  if (view3d_moodboard_drawer_is_overlay(area, region) ||
-      view3d_scenes_drawer_is_overlay(area, region))
-  {
+   * Stacking the drawer beside the N-panel detaches its closed grip from the edge. */
+  if (view3d_moodboard_drawer_is_overlay(area, region)) {
     return;
   }
   /* find overlapping previous region on same place */
@@ -1559,9 +1553,7 @@ static void region_overlap_fix(ScrArea *area, ARegion *region)
   int align1 = 0;
   const int align = RGN_ALIGN_ENUM_FROM_MASK(region->alignment);
   for (region_iter = region->prev; region_iter; region_iter = region_iter->prev) {
-    if (view3d_moodboard_drawer_is_overlay(area, region_iter) ||
-        view3d_scenes_drawer_is_overlay(area, region_iter))
-    {
+    if (view3d_moodboard_drawer_is_overlay(area, region_iter)) {
       continue;
     }
     if (region_is_hidden(region_iter)) {
@@ -1674,9 +1666,7 @@ bool ED_region_is_overlap(const int spacetype, const int regiontype)
                   RGN_TYPE_ASSET_SHELF_HEADER,
                   /* Mixar: agent scene strip draws a transparent background so
                    * its tiles float over the viewport. */
-                  RGN_TYPE_EXECUTE,
-                  /* Mixar: the Scenes drawer overlays the left edge. */
-                  VIEW3D_SCENES_DRAWER_REGION_TYPE);
+                  RGN_TYPE_EXECUTE);
 
     case SPACE_IMAGE:
       return ELEM(regiontype,
@@ -1910,9 +1900,7 @@ static void region_rect_recursive(
     /* Allocate the drawer against the viewport, independent of sidebars, and
      * leave their allocation unchanged. Floating headers still bound its height. */
     rcti drawer_remainder;
-    if (view3d_moodboard_drawer_is_overlay(area, region) ||
-        view3d_scenes_drawer_is_overlay(area, region))
-    {
+    if (view3d_moodboard_drawer_is_overlay(area, region)) {
       drawer_remainder = *remainder;
       mixar_floating_headers_clip(region, &drawer_remainder);
       winrct = &drawer_remainder;
@@ -1982,6 +1970,14 @@ static void region_rect_recursive(
         winrct->xmin = region->winrct.xmax + 1;
       }
       BLI_rcti_sanitize(winrct);
+      /* Mixar: the Scenes drawer is a normal region (it pushes the viewport),
+       * but Zen's scene toolbar is a floating header that took no space from
+       * the remainder: start the drawer's own rect below it. */
+      if (area->spacetype == SPACE_VIEW3D && region->regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE &&
+          !region->overlap && ui::mixar_area_floats_viewport_chrome(area))
+      {
+        mixar_floating_headers_clip(region, &region->winrct);
+      }
     }
   }
   else if (ELEM(alignment, RGN_ALIGN_VSPLIT, RGN_ALIGN_HSPLIT)) {

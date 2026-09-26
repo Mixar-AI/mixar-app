@@ -1,8 +1,9 @@
 /* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
-/** QA targets for the Scenes drawer: the drawer's own input geometry plus the
- * scene cards the last draw pass laid out. */
+/** QA targets for the Scenes drawer: the panel, its resize sash and the scene
+ * cards the last draw pass laid out. The toolbar toggle is an ordinary button
+ * (`view3d.scenes_drawer_toggle`), found by its operator. */
 #include <algorithm>
 #include "BLI_string.h"
 #include "DNA_windowmanager_types.h"
@@ -47,27 +48,14 @@ void drawer_qa_targets(const wmWindow *win,
   char amount_text[32];
   SNPRINTF(amount_text, "%.3f", amount);
 
-  rcti grip;
-  if (view3d_scenes_drawer_grip_rect_for(area, region, amount, &grip)) {
-    push(grip, "scenes_drawer_grip", "drawer_grip", amount_text, -1);
-  }
   rcti panel;
   if (view3d_scenes_drawer_panel_rect_for(area, region, amount, &panel)) {
     push(panel, "scenes_drawer_panel", "scenes_drawer", amount_text, 0);
   }
   rcti edge;
   if (view3d_scenes_drawer_edge_rect_for(area, region, amount, &edge)) {
-    rcti upper = edge;
-    rcti lower = edge;
-    upper.ymin = std::max(edge.ymin, grip.ymax + 1);
-    lower.ymax = std::min(edge.ymax, grip.ymin - 1);
     const char *cursor = win->cursor == WM_CURSOR_X_MOVE ? "RESIZE_X" : "OTHER";
-    if (BLI_rcti_size_y(&upper) > 0) {
-      push(upper, "scenes_drawer_edge", "Resize Scenes", cursor, 0);
-    }
-    if (BLI_rcti_size_y(&lower) > 0) {
-      push(lower, "scenes_drawer_edge", "Resize Scenes", cursor, 1);
-    }
+    push(edge, "scenes_drawer_edge", "Resize Scenes", cursor, 0);
   }
   if (amount < VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT) {
     return;

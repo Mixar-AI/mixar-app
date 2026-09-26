@@ -5,10 +5,12 @@
 /** \file
  * \ingroup edscr
  *
- * Hit geometry for the Zen Mode Scenes drawer: the mirror image of the
- * moodboard drawer (`ED_moodboard_drawer.hh`), docked to the LEFT edge of the
- * 3D View. Lives in `editors/include` so screen event routing and the View3D
- * drawer share one expression without a screen → space_view3d link.
+ * Hit geometry for the Zen Mode Scenes drawer, docked to the LEFT edge of the
+ * 3D View. Unlike the moodboard drawer (`ED_moodboard_drawer.hh`, an overlay)
+ * it is a normal region that pushes the viewport right as it opens; a toolbar
+ * button toggles it. Lives in `editors/include` so screen event routing and
+ * the View3D drawer share one expression without a screen → space_view3d
+ * link.
  *
  * The drawer lists the scene tabs of the parallel-scenes feature (one Blender
  * Scene + one agent chat each). Python owns the list
@@ -48,7 +50,7 @@ enum class ScenesDrawerTabStatus : int8_t {
 };
 
 /** One painted scene card, cached by the draw pass for hit tests and QA. All
- * rects are WINDOW pixels, like the grip. */
+ * rects are WINDOW pixels. */
 struct ScenesDrawerCard {
   std::string scene_name;
   std::string session_id;
@@ -81,8 +83,6 @@ struct ScenesDrawerRuntime {
   /** Wall-clock start of the current ease; 0 while not time-animating. */
   double slide_started_at = 0.0;
   float slide_start_amount = 0.0f;
-  /** True while the grip is dragging: update must not start an ease. */
-  bool slide_held = false;
   /** TIMERNOTIFIER that tags this region; owned by the window manager. */
   wmTimer *tick_timer = nullptr;
   /** A thumbnail rendered during the last draw pass: the listener tags the
@@ -112,24 +112,16 @@ struct ScenesDrawerRuntime {
 #define VIEW3D_SCENES_DRAWER_WIDTH_FRACTION 0.26f
 /** Pulls smaller than this settle closed; all larger widths stay put. */
 #define VIEW3D_SCENES_DRAWER_MIN_WIDTH 160
-/** Clickable/drawn width of the labeled Scenes tab. */
-#define VIEW3D_SCENES_DRAWER_GRIP_WIDTH 22.0f
-/** Vertical extent of the Scenes tab: the moodboard grip's, centred like it,
- * so the two tabs mirror each other. The floating navigation pill sits at
- * the top of the left edge, out of the way. */
-#define VIEW3D_SCENES_DRAWER_GRIP_HEIGHT 144.0f
-/** Fraction of the area height (from the bottom) at which the tab is centred. */
-#define VIEW3D_SCENES_DRAWER_GRIP_FRACTION 0.50f
-/** Corner radius of the panel chrome. */
-#define VIEW3D_SCENES_DRAWER_RADIUS 14.0f
-/** Inset of the rounded panel from the grip line. */
-#define VIEW3D_SCENES_DRAWER_PAD 6.0f
-/** Mouse travel, in pixels, past which a grip press counts as a drag. */
+/** Half-width of the resize sash on the panel's right edge, unscaled px. */
+#define VIEW3D_SCENES_DRAWER_EDGE_PAD 4.0f
+/** Mouse travel, in pixels, past which an edge press counts as a drag. */
 #define VIEW3D_SCENES_DRAWER_DRAG_THRESHOLD 4
 /** Vertical travel, in pixels, past which a card press becomes a reorder drag. */
 #define VIEW3D_SCENES_DRAWER_CARD_DRAG_THRESHOLD 6
 /** Slide amount at which the cards accept clicks and QA targets attach. */
 #define VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT 0.98f
+/** Slide amount at or below which the region is hidden (zero width). */
+#define VIEW3D_SCENES_DRAWER_SHUT_AMOUNT 0.01f
 /** Open/close ease duration (wall clock, not per tick). */
 #define VIEW3D_SCENES_DRAWER_SLIDE_SECONDS 0.28f
 
@@ -143,71 +135,27 @@ inline float view3d_scenes_drawer_runtime_amount(const ARegion *region)
   return runtime != nullptr ? runtime->amount : 0.0f;
 }
 
-/** The drawer floats above the toolbar instead of stacking beside it. */
-inline bool view3d_scenes_drawer_is_overlay(const ScrArea *area, const ARegion *region)
-{
-  return area->spacetype == SPACE_VIEW3D &&
-         region->regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE && region->overlap;
-}
-
-inline bool view3d_scenes_drawer_grip_rect_for(const ScrArea *area,
-                                               const ARegion *region,
-                                               const float amount,
-                                               rcti *r_rect)
-{
-  if (area == nullptr || region == nullptr || area->spacetype != SPACE_VIEW3D) {
-    return false;
-  }
-
-  const float scale = UI_SCALE_FAC;
-  const float grip_w = VIEW3D_SCENES_DRAWER_GRIP_WIDTH * scale;
-  const float grip_h = VIEW3D_SCENES_DRAWER_GRIP_HEIGHT * scale;
-  const float pad = VIEW3D_SCENES_DRAWER_PAD * scale;
-
-  /* The grip protrudes to the RIGHT; its flat left edge joins the panel.
-   * Paint, hit-test and QA all read these same animated edges. */
-  const float open_right = float(region->winrct.xmax) - pad;
-  const float shut_right = float(region->winrct.xmin) + grip_w;
-  const float grip_right = shut_right + amount * (open_right - shut_right);
-  const float centre_y = float(area->totrct.ymin) +
-                         VIEW3D_SCENES_DRAWER_GRIP_FRACTION *
-                             float(area->totrct.ymax - area->totrct.ymin);
-
-  r_rect->xmin = int(std::lround(grip_right - grip_w));
-  r_rect->xmax = int(std::lround(grip_right));
-  r_rect->ymin = int(std::lround(centre_y - grip_h * 0.5f));
-  r_rect->ymax = int(std::lround(centre_y + grip_h * 0.5f));
-  return BLI_rcti_size_x(r_rect) > 0;
-}
-
+/**
+ * The panel is the whole region: a normal (non-overlapping) left-aligned
+ * region whose width is the open width times the slide amount, so the
+ * viewport is pushed right as it opens. Shut, the region is hidden.
+ */
 inline bool view3d_scenes_drawer_panel_rect_for(const ScrArea *area,
                                                 const ARegion *region,
                                                 const float amount,
                                                 rcti *r_rect)
 {
-  rcti grip;
-  if (amount <= 0.001f || !view3d_scenes_drawer_grip_rect_for(area, region, amount, &grip)) {
-    return false;
-  }
-  *r_rect = region->winrct;
-  r_rect->xmax = grip.xmin;
-  return BLI_rcti_size_x(r_rect) > 2;
-}
-
-inline bool view3d_scenes_drawer_grip_contains_xy(const ScrArea *area,
-                                                  const ARegion *region,
-                                                  const int xy[2])
-{
-  rcti grip;
-  if (!view3d_scenes_drawer_grip_rect_for(
-          area, region, view3d_scenes_drawer_runtime_amount(region), &grip))
+  if (area == nullptr || region == nullptr || area->spacetype != SPACE_VIEW3D ||
+      region->regiontype != VIEW3D_SCENES_DRAWER_REGION_TYPE ||
+      (region->flag & RGN_FLAG_HIDDEN) || amount <= 0.001f)
   {
     return false;
   }
-  return BLI_rcti_isect_pt_v(&grip, xy);
+  *r_rect = region->winrct;
+  return BLI_rcti_size_x(r_rect) > 2;
 }
 
-/** A narrow sash around the open panel's leading (right) edge, excluding rounded ends. */
+/** The resize sash: a narrow strip inside the open panel's right edge. */
 inline bool view3d_scenes_drawer_edge_rect_for(const ScrArea *area,
                                                const ARegion *region,
                                                const float amount,
@@ -218,13 +166,9 @@ inline bool view3d_scenes_drawer_edge_rect_for(const ScrArea *area,
   {
     return false;
   }
-  const int edge = r_rect->xmax;
-  const int pad = int(std::lround(4.0f * UI_SCALE_FAC));
-  r_rect->xmin = edge - pad;
-  r_rect->xmax = edge + pad;
-  r_rect->ymin += int(VIEW3D_SCENES_DRAWER_RADIUS * UI_SCALE_FAC);
-  r_rect->ymax -= int(VIEW3D_SCENES_DRAWER_RADIUS * UI_SCALE_FAC);
-  return BLI_rcti_size_y(r_rect) > 0;
+  const int pad = int(std::lround(2.0f * VIEW3D_SCENES_DRAWER_EDGE_PAD * UI_SCALE_FAC));
+  r_rect->xmin = r_rect->xmax - pad;
+  return BLI_rcti_size_x(r_rect) > 0 && BLI_rcti_size_y(r_rect) > 0;
 }
 
 inline bool view3d_scenes_drawer_resize_contains_xy(const ScrArea *area,
@@ -232,31 +176,16 @@ inline bool view3d_scenes_drawer_resize_contains_xy(const ScrArea *area,
                                                     const int xy[2])
 {
   rcti edge;
-  return view3d_scenes_drawer_grip_contains_xy(area, region, xy) ||
-         (view3d_scenes_drawer_edge_rect_for(
-              area, region, view3d_scenes_drawer_runtime_amount(region), &edge) &&
-          BLI_rcti_isect_pt_v(&edge, xy));
+  return view3d_scenes_drawer_edge_rect_for(
+             area, region, view3d_scenes_drawer_runtime_amount(region), &edge) &&
+         BLI_rcti_isect_pt_v(&edge, xy);
 }
 
-/**
- * The region is a resizable overlay; only the grip, resize edge and painted panel
- * slice are interactive. The scissored remainder is the viewport behind.
- */
+/** True on the visible panel (the region's own pixels; nothing else is it). */
 inline bool view3d_scenes_drawer_contains_xy(const ScrArea *area,
                                              const ARegion *region,
                                              const int xy[2])
 {
-  if (area == nullptr || region == nullptr || area->spacetype != SPACE_VIEW3D ||
-      region->regiontype != VIEW3D_SCENES_DRAWER_REGION_TYPE)
-  {
-    return false;
-  }
-  if (!BLI_rcti_isect_pt_v(&region->winrct, xy)) {
-    return false;
-  }
-  if (view3d_scenes_drawer_resize_contains_xy(area, region, xy)) {
-    return true;
-  }
   rcti panel;
   return view3d_scenes_drawer_panel_rect_for(
              area, region, view3d_scenes_drawer_runtime_amount(region), &panel) &&

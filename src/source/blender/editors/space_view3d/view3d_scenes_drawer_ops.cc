@@ -5,14 +5,17 @@
 /** \file
  * \ingroup spview3d
  *
- * Operators and keymap for the Zen Mode sliding Scenes drawer. Slide, grip
- * and set mirror the moodboard drawer. The card operators (`click`, `hover`)
- * are in `view3d_scenes_drawer_ops_cards.cc`; registration and the keymap
- * for all of them are here.
+ * Operators and keymap for the Zen Mode sliding Scenes drawer: the slide
+ * (update / reveal / toggle / set) and the resize sash on the panel's right
+ * edge. The card operators (`click`, `hover`) are in
+ * `view3d_scenes_drawer_ops_cards.cc`; registration and the keymap for all
+ * of them are here. The region's width follows every amount write
+ * (`view3d_scenes_drawer_layout_sync`), which is how the viewport is pushed.
  */
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 #include "BLI_listbase_iterator.hh"
 #include "BLI_rect.h"
@@ -55,8 +58,8 @@ static void drawer_tag_redraw(bContext *C)
   if (ARegion *window = BKE_area_find_region_type(area, RGN_TYPE_WINDOW)) {
     ED_region_tag_redraw_editor_overlays(window);
   }
-  /* The transform pill steps aside while the drawer is open (Python skips
-   * its draw); it lives in the TOOLS region, which must repaint too. */
+  /* The transform pill (TOOLS region) is re-laid out against the pushed
+   * viewport; make sure it repaints on the same frame. */
   if (ARegion *tools = BKE_area_find_region_type(area, RGN_TYPE_TOOLS)) {
     ED_region_tag_redraw(tools);
   }
@@ -64,8 +67,8 @@ static void drawer_tag_redraw(bContext *C)
 
 static ScenesDrawerRuntime *drawer_runtime(const bContext *C)
 {
-  ARegion *region = view3d_scenes_drawer_region_from_context(C);
-  return region != nullptr ? static_cast<ScenesDrawerRuntime *>(region->regiondata) : nullptr;
+  return view3d_scenes_drawer_runtime_ensure(CTX_wm_manager(C),
+                                             view3d_scenes_drawer_region_from_context(C));
 }
 
 bool view3d_scenes_drawer_op_poll(bContext *C)
@@ -75,13 +78,13 @@ bool view3d_scenes_drawer_op_poll(bContext *C)
 
 /* --- Slide ------------------------------------------------------------ */
 
+/* One tick of the ease, driven by the Python timer while amount != target
+ * (`scene_tabs_props._drawer_tick`, 60 Hz): writes the eased amount into RNA,
+ * which sizes the region and tags the area layout — the viewport shifts on
+ * the next draw. */
 static wmOperatorStatus drawer_update_exec(bContext *C, wmOperator * /*op*/)
 {
   const ScenesDrawerRuntime *runtime = drawer_runtime(C);
-  if (runtime != nullptr && runtime->slide_held) {
-    return OPERATOR_FINISHED;
-  }
-
   const float target = view3d_scenes_drawer_target(C) != 0 ? 1.0f : 0.0f;
   if ((runtime == nullptr || runtime->slide_started_at <= 0.0) &&
       std::fabs(view3d_scenes_drawer_amount(C) - target) >= 0.002f)
@@ -177,140 +180,88 @@ static void VIEW3D_OT_scenes_drawer_set(wmOperatorType *ot)
                 "Intent to settle on afterwards; negative leaves it alone", -1.0f, 1.0f);
 }
 
-/* --- Grip ------------------------------------------------------------- */
+/* --- Edge resize ------------------------------------------------------ */
 
-bool view3d_scenes_drawer_grip_hit(const bContext *C, const int xy[2])
+bool view3d_scenes_drawer_edge_hit(const bContext *C, const int xy[2])
 {
   return view3d_scenes_drawer_resize_contains_xy(CTX_wm_area(C), CTX_wm_region(C), xy);
 }
 
-static wmOperatorStatus drawer_grip_invoke(bContext *C, wmOperator *op, const wmEvent *event)
+static wmOperatorStatus drawer_edge_invoke(bContext *C, wmOperator *op, const wmEvent *event)
 {
-  if (!view3d_scenes_drawer_grip_hit(C, event->xy)) {
+  if (!view3d_scenes_drawer_edge_hit(C, event->xy)) {
     return OPERATOR_PASS_THROUGH;
   }
-
   RNA_int_set(op->ptr, "start_xy", event->xy[0]);
-  RNA_float_set(op->ptr, "start_amount", view3d_scenes_drawer_display_amount(C));
-  RNA_int_set(op->ptr, "start_target", view3d_scenes_drawer_target(C));
   RNA_float_set(op->ptr, "start_width", view3d_scenes_drawer_width(CTX_wm_manager(C)));
-  const ARegion *region = CTX_wm_region(C);
-  const float inset = (VIEW3D_SCENES_DRAWER_GRIP_WIDTH + VIEW3D_SCENES_DRAWER_PAD) * UI_SCALE_FAC;
-  RNA_float_set(op->ptr, "start_travel",
-                view3d_scenes_drawer_display_amount(C) * (region->winx - 1 - inset));
   RNA_boolean_set(op->ptr, "dragged", false);
-  RNA_boolean_set(op->ptr, "edge_resize",
-                  !view3d_scenes_drawer_grip_contains_xy(CTX_wm_area(C), region, event->xy));
-
   WM_cursor_modal_set(CTX_wm_window(C), WM_CURSOR_X_MOVE);
   WM_event_add_modal_handler(C, op);
   return OPERATOR_RUNNING_MODAL;
 }
 
-static wmOperatorStatus drawer_grip_modal(bContext *C, wmOperator *op, const wmEvent *event)
+static wmOperatorStatus drawer_edge_modal(bContext *C, wmOperator *op, const wmEvent *event)
 {
   switch (event->type) {
     case MOUSEMOVE: {
-      const int start_xy = RNA_int_get(op->ptr, "start_xy");
-      const int dx = event->xy[0] - start_xy;
-
+      const int dx = event->xy[0] - RNA_int_get(op->ptr, "start_xy");
       if (!RNA_boolean_get(op->ptr, "dragged") &&
           std::abs(dx) <= VIEW3D_SCENES_DRAWER_DRAG_THRESHOLD)
       {
         break;
       }
       RNA_boolean_set(op->ptr, "dragged", true);
-      view3d_scenes_drawer_slide_hold(C);
-
-      /* Left edge: dragging RIGHT opens / widens, dragging left shuts. */
-      const float inset = (VIEW3D_SCENES_DRAWER_GRIP_WIDTH + VIEW3D_SCENES_DRAWER_PAD) *
-                          UI_SCALE_FAC;
-      const float max_width = BLI_rcti_size_x(&CTX_wm_area(C)->totrct) + 1;
-      const float min_width = std::min(float(VIEW3D_SCENES_DRAWER_MIN_WIDTH) * UI_SCALE_FAC,
-                                       max_width);
-      const float min_travel = RNA_boolean_get(op->ptr, "edge_resize") ?
-                                   std::max(min_width - 1 - inset, 0.0f) :
-                                   0.0f;
-      const float travel = std::clamp(RNA_float_get(op->ptr, "start_travel") + dx,
-                                      min_travel,
-                                      std::max(max_width - 1 - inset, min_travel));
-      const float width = std::max(travel + 1 + inset, min_width);
-      view3d_scenes_drawer_width_set(C, width / UI_SCALE_FAC);
-      view3d_scenes_drawer_amount_set(C, travel / std::max(width - 1 - inset, 1.0f));
+      /* Dragging RIGHT widens. The width alone changes; the drawer stays open
+       * and the region (and the viewport beside it) follow the new width. */
+      const float area_width = float(BLI_rcti_size_x(&CTX_wm_area(C)->totrct) + 1) /
+                               UI_SCALE_FAC;
+      const float max_width = std::max(area_width - float(VIEW3D_SCENES_DRAWER_MIN_WIDTH),
+                                       float(VIEW3D_SCENES_DRAWER_MIN_WIDTH));
+      const float width = std::clamp(
+          RNA_float_get(op->ptr, "start_width") + float(dx) / UI_SCALE_FAC,
+          float(VIEW3D_SCENES_DRAWER_MIN_WIDTH),
+          max_width);
+      view3d_scenes_drawer_width_set(C, width);
       drawer_tag_redraw(C);
       break;
     }
-
     case LEFTMOUSE:
       if (event->val == KM_RELEASE) {
-        if (RNA_boolean_get(op->ptr, "dragged")) {
-          const bool open = view3d_scenes_drawer_amount(C) >= 0.999f;
-          view3d_scenes_drawer_slide_stop(C);
-          if (open) {
-            view3d_scenes_drawer_amount_set(C, 1.0f);
-          }
-          else {
-            const float width = view3d_scenes_drawer_width(CTX_wm_manager(C));
-            const float start_width = RNA_float_get(op->ptr, "start_width");
-            const float amount = view3d_scenes_drawer_amount(C) * width / start_width;
-            view3d_scenes_drawer_width_set(C, start_width);
-            view3d_scenes_drawer_amount_set(C, amount);
-            if (amount > 0.0f) {
-              view3d_scenes_drawer_slide_begin(C);
-            }
-          }
-          view3d_scenes_drawer_target_set(C, open ? 1 : 0);
-        }
-        else if (!RNA_boolean_get(op->ptr, "edge_resize")) {
-          view3d_scenes_drawer_slide_begin(C);
-          view3d_scenes_drawer_target_set(C, view3d_scenes_drawer_target(C) != 0 ? 0 : 1);
-        }
-        drawer_tag_redraw(C);
         WM_cursor_modal_restore(CTX_wm_window(C));
         return OPERATOR_FINISHED;
       }
       break;
-
     case EVT_ESCKEY:
-      view3d_scenes_drawer_slide_stop(C);
       view3d_scenes_drawer_width_set(C, RNA_float_get(op->ptr, "start_width"));
-      view3d_scenes_drawer_amount_set(C, RNA_float_get(op->ptr, "start_amount"));
-      view3d_scenes_drawer_target_set(C, RNA_int_get(op->ptr, "start_target"));
       drawer_tag_redraw(C);
       WM_cursor_modal_restore(CTX_wm_window(C));
       return OPERATOR_FINISHED;
-
     default:
       break;
   }
   return OPERATOR_RUNNING_MODAL;
 }
 
-static void drawer_grip_cancel(bContext *C, wmOperator * /*op*/)
+static void drawer_edge_cancel(bContext *C, wmOperator * /*op*/)
 {
   if (wmWindow *win = CTX_wm_window(C)) {
     WM_cursor_modal_restore(win);
   }
 }
 
-static void VIEW3D_OT_scenes_drawer_grip(wmOperatorType *ot)
+static void VIEW3D_OT_scenes_drawer_edge(wmOperatorType *ot)
 {
-  ot->name = "Scenes Drawer Grip";
-  ot->idname = "VIEW3D_OT_scenes_drawer_grip";
-  ot->description = "Drag the edge or tab to resize; click the tab to toggle the scenes drawer";
-  ot->invoke = drawer_grip_invoke;
-  ot->modal = drawer_grip_modal;
-  ot->cancel = drawer_grip_cancel;
+  ot->name = "Scenes Drawer Edge";
+  ot->idname = "VIEW3D_OT_scenes_drawer_edge";
+  ot->description = "Drag the panel's right edge to resize the scenes drawer";
+  ot->invoke = drawer_edge_invoke;
+  ot->modal = drawer_edge_modal;
+  ot->cancel = drawer_edge_cancel;
   ot->poll = view3d_scenes_drawer_op_poll;
   ot->flag = 0;
-
   RNA_def_int(ot->srna, "start_xy", 0, 0, 100000, "Start X", "", 0, 100000);
-  RNA_def_float(ot->srna, "start_amount", 0.0f, 0.0f, 1.0f, "Start Amount", "", 0.0f, 1.0f);
-  RNA_def_int(ot->srna, "start_target", 0, 0, 1, "Start Target", "", 0, 1);
   RNA_def_float(ot->srna, "start_width", 300.0f, 1.0f, 100000.0f, "Start Width", "", 1.0f, 100000.0f);
-  RNA_def_float(ot->srna, "start_travel", 0.0f, 0.0f, 100000.0f, "Start Travel", "", 0.0f, 100000.0f);
   RNA_def_boolean(ot->srna, "dragged", false, "Dragged", "");
-  RNA_def_boolean(ot->srna, "edge_resize", false, "Edge Resize", "");
 }
 
 void view3d_scenes_drawer_operatortypes()
@@ -319,7 +270,7 @@ void view3d_scenes_drawer_operatortypes()
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_reveal);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_toggle);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_set);
-  WM_operatortype_append(VIEW3D_OT_scenes_drawer_grip);
+  WM_operatortype_append(VIEW3D_OT_scenes_drawer_edge);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_click);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_hover);
 }
@@ -332,7 +283,7 @@ void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf)
   KeyMapItem_Params press{};
   press.type = LEFTMOUSE;
   press.value = KM_PRESS;
-  WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_grip", &press);
+  WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_edge", &press);
   WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_click", &press);
   KeyMapItem_Params move{};
   move.type = MOUSEMOVE;

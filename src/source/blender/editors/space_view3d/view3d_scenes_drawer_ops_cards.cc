@@ -9,8 +9,8 @@
  * on a scene card (or "+ New scene", or a close glyph) into the Python
  * scene-tab operators (`mixie_chat.new_scene_tab` / `switch_scene_tab` /
  * `close_scene_tab` / `reorder_scene_tab`), a vertical drag reorders, and
- * `hover` tracks the pointer for the highlight. Slide, grip, registration
- * and the keymap are in `view3d_scenes_drawer_ops.cc`.
+ * `hover` tracks the pointer for the highlight. Slide, edge resize,
+ * registration and the keymap are in `view3d_scenes_drawer_ops.cc`.
  */
 
 #include <cstdlib>
@@ -98,8 +98,8 @@ static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator *op, const w
   if (runtime == nullptr || runtime->amount < VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT) {
     return OPERATOR_PASS_THROUGH;
   }
-  if (view3d_scenes_drawer_grip_hit(C, event->xy)) {
-    return OPERATOR_PASS_THROUGH; /* the grip operator owns it */
+  if (view3d_scenes_drawer_edge_hit(C, event->xy)) {
+    return OPERATOR_PASS_THROUGH; /* the edge operator owns it */
   }
   if (runtime->new_visible && BLI_rcti_isect_pt_v(&runtime->new_rect, event->xy)) {
     drawer_call_python(C, "MIXIE_CHAT_OT_new_scene_tab", nullptr);

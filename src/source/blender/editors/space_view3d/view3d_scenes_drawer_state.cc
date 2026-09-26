@@ -82,6 +82,8 @@ void view3d_scenes_drawer_amount_set(bContext *C, const float amount)
       runtime->amount = clamped;
     }
   }
+  /* The region's width IS the amount: the viewport is pushed as it opens. */
+  view3d_scenes_drawer_layout_sync(C);
 }
 
 int view3d_scenes_drawer_target(const bContext *C)

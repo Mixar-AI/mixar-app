@@ -7,7 +7,8 @@
  *
  * Sliding Scenes drawer: state, geometry and region lifecycle. Operators,
  * keymap and QA live in `view3d_scenes_drawer_ops.cc`; painting lives in
- * `view3d_scenes_drawer_draw.cc`. Mirror of `view3d_moodboard_drawer.cc`.
+ * `view3d_scenes_drawer_draw.cc`; the region's width follows the slide in
+ * `view3d_scenes_drawer_resize.cc`.
  */
 
 #include <algorithm>
@@ -48,10 +49,26 @@ namespace blender {
 /** \name State
  * \{ */
 
+ScenesDrawerRuntime *view3d_scenes_drawer_runtime_ensure(wmWindowManager *wm, ARegion *region)
+{
+  if (region == nullptr) {
+    return nullptr;
+  }
+  if (region->regiondata == nullptr) {
+    ScenesDrawerRuntime *runtime = MEM_new<ScenesDrawerRuntime>("scenes drawer runtime");
+    /* Hit tests read `runtime->amount`, which only the draw pass writes; seed
+     * it from the WM property so a re-init (workspace round trip) cannot leave
+     * the cards painted open while the click lands shut. */
+    runtime->amount = std::clamp(view3d_scenes_drawer_amount_wm(wm), 0.0f, 1.0f);
+    region->regiondata = runtime;
+  }
+  return static_cast<ScenesDrawerRuntime *>(region->regiondata);
+}
+
 static ScenesDrawerRuntime *drawer_runtime(const bContext *C)
 {
-  ARegion *region = view3d_scenes_drawer_region_from_context(C);
-  return region != nullptr ? static_cast<ScenesDrawerRuntime *>(region->regiondata) : nullptr;
+  return view3d_scenes_drawer_runtime_ensure(CTX_wm_manager(C),
+                                             view3d_scenes_drawer_region_from_context(C));
 }
 
 static void drawer_tick_timer_ensure(const bContext *C, ScenesDrawerRuntime *runtime)
@@ -87,7 +104,7 @@ float view3d_scenes_drawer_display_amount(const bContext *C)
 {
   const float rna = view3d_scenes_drawer_amount(C);
   const ScenesDrawerRuntime *runtime = drawer_runtime(C);
-  if (runtime == nullptr || runtime->slide_held || runtime->slide_started_at <= 0.0) {
+  if (runtime == nullptr || runtime->slide_started_at <= 0.0) {
     return rna;
   }
   const float target = view3d_scenes_drawer_target(C) != 0 ? 1.0f : 0.0f;
@@ -106,7 +123,6 @@ void view3d_scenes_drawer_slide_begin(bContext *C)
   if (runtime == nullptr) {
     return;
   }
-  runtime->slide_held = false;
   runtime->slide_start_amount = view3d_scenes_drawer_display_amount(C);
   runtime->slide_started_at = BLI_time_now_seconds();
   drawer_tick_timer_ensure(C, runtime);
@@ -116,17 +132,6 @@ void view3d_scenes_drawer_slide_stop(bContext *C)
 {
   ScenesDrawerRuntime *runtime = drawer_runtime(C);
   if (runtime != nullptr) {
-    runtime->slide_started_at = 0.0;
-    runtime->slide_held = false;
-    drawer_tick_timer_remove(CTX_wm_manager(C), runtime);
-  }
-}
-
-void view3d_scenes_drawer_slide_hold(bContext *C)
-{
-  ScenesDrawerRuntime *runtime = drawer_runtime(C);
-  if (runtime != nullptr) {
-    runtime->slide_held = true;
     runtime->slide_started_at = 0.0;
     drawer_tick_timer_remove(CTX_wm_manager(C), runtime);
   }
@@ -162,17 +167,6 @@ bool view3d_scenes_drawer_is_open(const ARegion *region)
   const ScenesDrawerRuntime *runtime = static_cast<const ScenesDrawerRuntime *>(
       region->regiondata);
   return runtime != nullptr && runtime->amount >= VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT;
-}
-
-bool view3d_scenes_drawer_grip_handler_poll(const wmWindow * /*win*/,
-                                            const ScrArea *area,
-                                            const ARegion *region,
-                                            const wmEvent *event)
-{
-  if (event == nullptr || area == nullptr || area->spacetype != SPACE_VIEW3D) {
-    return false;
-  }
-  return view3d_scenes_drawer_resize_contains_xy(area, region, event->xy);
 }
 
 static bool drawer_card_contains_xy(const ScenesDrawerRuntime *runtime, const int xy[2])
@@ -222,16 +216,6 @@ ARegion *view3d_scenes_drawer_region_find(const ScrArea *area)
                                    VIEW3D_SCENES_DRAWER_REGION_TYPE);
 }
 
-bool view3d_scenes_drawer_grip_rect(const bContext *C, rcti *r_rect)
-{
-  const ScrArea *area = CTX_wm_area(C);
-  if (area == nullptr || !view3d_scenes_drawer_zen_active(C)) {
-    return false;
-  }
-  return view3d_scenes_drawer_grip_rect_for(
-      area, view3d_scenes_drawer_region_find(area), view3d_scenes_drawer_amount(C), r_rect);
-}
-
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -267,8 +251,8 @@ static void drawer_region_listener(const wmRegionListenerParams *params)
 
 static bool drawer_region_poll(const RegionPollParams *params)
 {
-  /* The region exists for as long as the drawer *could* be shown: the grip is
-   * painted and clicked on this region. One workspace compare, nothing else. */
+  /* The region exists for as long as the drawer *could* be shown; shut, it is
+   * hidden (zero width). One workspace compare, nothing else. */
   return view3d_scenes_drawer_zen_active(params->context);
 }
 
@@ -282,18 +266,10 @@ void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *regi
 void view3d_scenes_drawer_region_init(wmWindowManager *wm, ARegion *region)
 {
   view3d_scenes_drawer_size_sync(wm, nullptr, region);
-
-  if (region->regiondata == nullptr) {
-    ScenesDrawerRuntime *runtime = MEM_new<ScenesDrawerRuntime>("scenes drawer runtime");
-    /* The grip's hit rect reads `runtime->amount`, which only the draw pass
-     * writes; seed it from the WM property so a re-init (workspace round trip)
-     * cannot leave the tab painted open while the click lands shut. */
-    runtime->amount = std::clamp(view3d_scenes_drawer_amount_wm(wm), 0.0f, 1.0f);
-    region->regiondata = runtime;
-  }
+  view3d_scenes_drawer_runtime_ensure(wm, region);
 
   /* No View2D canvas: the cards are laid out from the region rect each draw.
-   * The grip keymap goes first so nothing painted over it can swallow the
+   * The edge keymap goes first so nothing painted over it can swallow the
    * sash; the click map follows and passes through outside the cards. */
   wmKeyMap *grip_keymap = WM_keymap_ensure(
       wm->runtime->defaultconf, "Scenes Drawer Grip", SPACE_VIEW3D, VIEW3D_SCENES_DRAWER_REGION_TYPE);
@@ -369,7 +345,9 @@ void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area)
 
   region->alignment = RGN_ALIGN_LEFT;
   region->sizex = 0;
-  region->flag |= RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_POLL_FAILED;
+  /* The sash on the panel edge resizes it; Blender's own region-scale zone
+   * (already refused in `region_azone_edge_poll`) must never fight it. */
+  region->flag |= RGN_FLAG_TEMP_REGIONDATA | RGN_FLAG_POLL_FAILED | RGN_FLAG_NO_USER_RESIZE;
   region->runtime->type = BKE_regiontype_from_id(area->type, region->regiontype);
 
   /* Same first-layout answer as the moodboard drawer: poll and size the

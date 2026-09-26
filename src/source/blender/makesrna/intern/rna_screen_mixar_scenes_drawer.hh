@@ -19,8 +19,8 @@ static bool rna_Area_mixar_scenes_drawer_contains(ScrArea *area, const int x, co
     return false;
   }
   for (ARegion &region : area->regionbase) {
-    if (region.regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE && region.overlap &&
-        region.runtime->visible && view3d_scenes_drawer_contains_xy(area, &region, xy))
+    if (region.regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE && region.runtime->visible &&
+        !(region.flag & RGN_FLAG_HIDDEN) && view3d_scenes_drawer_contains_xy(area, &region, xy))
     {
       return true;
     }
@@ -33,7 +33,7 @@ static void rna_def_area_mixar_scenes_drawer(StructRNA *srna)
   FunctionRNA *func = RNA_def_function(
       srna, "mixar_scenes_drawer_contains", "rna_Area_mixar_scenes_drawer_contains");
   RNA_def_function_ui_description(
-      func, "Test window pixel coordinates against the visible Scenes drawer and grip");
+      func, "Test window pixel coordinates against the visible Scenes drawer panel");
   for (const char *axis : {"x", "y"}) {
     PropertyRNA *parm = RNA_def_int(
         func, axis, 0, INT_MIN, INT_MAX, axis, "Window pixel coordinate", INT_MIN, INT_MAX);

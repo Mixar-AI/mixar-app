@@ -5,10 +5,11 @@
 /** \file
  * \ingroup spview3d
  *
- * Painting for the Zen Mode sliding Scenes drawer: the panel chrome (rounded
- * on its right edge, the face it slides in from), the labeled tab on that
- * edge, a "Scenes" header with "+ New scene", and one glass card per scene
- * tab read from the Python-owned `wm.mixar_scene_tabs` collection.
+ * Painting for the Zen Mode sliding Scenes drawer: the panel bed filling the
+ * region (a border down its right edge, the face the viewport meets), a
+ * "Scenes" header with "+ New scene", and one glass card per scene tab read
+ * from the Python-owned `wm.mixar_scene_tabs` collection. The region's width
+ * is the slide (`view3d_scenes_drawer_resize.cc`); this pass only paints.
  *
  * Geometry comes from `ED_scenes_drawer.hh`; every rect painted here is also
  * cached on the region runtime in WINDOW pixels, so the click operator and
@@ -90,19 +91,17 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
     return;
   }
 
-  const float amount = view3d_scenes_drawer_display_amount(C);
+  /* The RNA amount: the operators that write it also set the region's width,
+   * so what is painted here always matches the pixels the region was given. */
+  const float amount = view3d_scenes_drawer_amount(C);
   ScenesDrawerRuntime *runtime = static_cast<ScenesDrawerRuntime *>(region->regiondata);
   if (runtime) {
     runtime->amount = amount;
     runtime->new_visible = false;
   }
 
-  if (region->overlap) {
-    GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f);
-  }
-  else {
-    ui::theme::frame_buffer_clear(TH_BACK);
-  }
+  const ui::mixar_tokens::Palette &zen = ui::mixar_tokens::mixar_zen();
+  GPU_clear_color(zen.canvas[0], zen.canvas[1], zen.canvas[2], 1.0f);
 
   ED_region_pixelspace(region);
   GPU_blend(GPU_BLEND_ALPHA);
@@ -115,43 +114,27 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
   }
 
   const float scale = UI_SCALE_FAC;
-  const ui::mixar_tokens::Palette &zen = ui::mixar_tokens::mixar_zen();
-
-  /* Grip placed from the same expression the hit test and QA use. */
-  float grip_left = 0.0f;
-  float grip_centre_y = 0.5f * float(winy);
   const ScrArea *area = CTX_wm_area(C);
-  rcti grip_win;
-  if (area && view3d_scenes_drawer_grip_rect_for(area, region, amount, &grip_win)) {
-    grip_left = float(grip_win.xmin - region->winrct.xmin);
-    grip_centre_y = 0.5f * float((grip_win.ymin - region->winrct.ymin) +
-                                 (grip_win.ymax - region->winrct.ymin));
-  }
 
   rcti panel_win;
   const bool panel_visible = view3d_scenes_drawer_panel_rect_for(area, region, amount, &panel_win);
 
   if (panel_visible && runtime) {
-    int scissor_prev[4];
-    GPU_scissor_get(scissor_prev);
-    const int panel_xmax = panel_win.xmax - region->winrct.xmin;
-    GPU_scissor(0, 0, panel_xmax, winy);
+    /* The face the viewport meets: one border line down the right edge. */
+    {
+      rctf edge;
+      edge.xmin = float(winx) - U.pixelsize;
+      edge.xmax = float(winx);
+      edge.ymin = 0.0f;
+      edge.ymax = float(winy);
+      draw_pill(edge, zen.border, 0.0f);
+    }
 
-    rctf panel;
-    panel.xmin = 0.0f;
-    panel.xmax = float(panel_xmax);
-    panel.ymin = 0.0f;
-    panel.ymax = float(winy);
-
-    /* Rounded RIGHT edge, square left edge: the drawer meets the area's edge. */
-    const float radius = std::min(VIEW3D_SCENES_DRAWER_RADIUS * scale, 0.5f * (panel.xmax - panel.xmin));
-    ui::draw_roundbox_corner_set(ui::CNR_TOP_RIGHT | ui::CNR_BOTTOM_RIGHT);
-    ui::draw_roundbox_4fv_ex(&panel, zen.canvas, zen.canvas, 0.0f, zen.border, U.pixelsize, radius);
-
-    /* The body slides with the panel: lay everything out from the panel's
-     * moving right edge so an opening drawer reveals cards already in place. */
-    const float open_w = float(winx) - (VIEW3D_SCENES_DRAWER_PAD + VIEW3D_SCENES_DRAWER_GRIP_WIDTH) * scale;
-    const float off = float(panel_xmax) - open_w;   /* <= 0 while sliding in */
+    /* The body is laid out from the region's RIGHT edge at the full open
+     * width, so a drawer sliding open reveals cards already in place. */
+    const float open_w = std::max(
+        float(winx), std::round(view3d_scenes_drawer_open_width(CTX_wm_manager(C), area) * scale));
+    const float off = float(winx) - open_w;   /* <= 0 while sliding in */
     const float x0 = off + SIDE_PAD * scale;
     const float x1 = off + open_w - SIDE_PAD * scale;
     const int font = BLF_default();
@@ -343,18 +326,9 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       draw_pill(line, zen.primary, 1.5f * scale);
     }
 
-    /* Keep the gutter right of the panel transparent, then the tab on top. */
-    GPU_scissor(panel_xmax, 0, winx - panel_xmax, winy);
-    clear_tab_gutter(panel_xmax, winx - panel_xmax, winy);
-    GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
-    ED_region_pixelspace(region);
-    draw_grip(grip_left, grip_centre_y);
   }
-  else {
-    if (runtime) {
-      runtime->cards.clear();
-    }
-    draw_grip(grip_left, grip_centre_y);
+  else if (runtime) {
+    runtime->cards.clear();
   }
 
   GPU_blend(GPU_BLEND_NONE);

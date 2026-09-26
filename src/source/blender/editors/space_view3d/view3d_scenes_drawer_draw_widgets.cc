@@ -7,8 +7,8 @@
  *
  * Widgets of the Zen Mode Scenes drawer's draw pass: the RNA readers that
  * pull `wm.mixar_scene_tabs` into the region runtime, elided text, the status
- * pill palette, the labeled grip tab and the transparent gutter clear. The
- * layout of the pass itself is `view3d_scenes_drawer_draw.cc`.
+ * pill palette and the pill painter. The layout of the pass itself is
+ * `view3d_scenes_drawer_draw.cc`.
  */
 
 #include <algorithm>
@@ -169,64 +169,6 @@ const float *status_color(const ScenesDrawerTabStatus status)
     default:
       return zen.secondary;
   }
-}
-
-void clear_tab_gutter(const int xmin, const int width, const int height)
-{
-  GPU_blend(GPU_BLEND_NONE);
-  GPUVertFormat *format = immVertexFormat();
-  const uint pos = GPU_vertformat_attr_add(format, "pos", blender::gpu::VertAttrType::SFLOAT_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-  immUniformColor4f(0.0f, 0.0f, 0.0f, 0.0f);
-  immRectf(pos, float(xmin), 0.0f, float(xmin + width), float(height));
-  immUnbindProgram();
-  GPU_blend(GPU_BLEND_ALPHA);
-}
-
-/** Paint the labeled Scenes tab with its flat inner edge at `x_left`. */
-void draw_grip(const float x_left, const float y_centre)
-{
-  const float scale = UI_SCALE_FAC;
-  const float grip_w = VIEW3D_SCENES_DRAWER_GRIP_WIDTH * scale;
-  const float grip_h = VIEW3D_SCENES_DRAWER_GRIP_HEIGHT * scale;
-  const float x_right = x_left + grip_w;
-  const float radius = grip_w * 0.5f;
-
-  rcti pane;
-  pane.xmin = int(std::floor(x_left));
-  pane.xmax = int(std::ceil(x_right));
-  pane.ymin = int(std::floor(y_centre - grip_h * 0.5f));
-  pane.ymax = int(std::ceil(y_centre + grip_h * 0.5f));
-
-  int scissor_prev[4];
-  GPU_scissor_get(scissor_prev);
-  const int clip_w = pane.xmax - int(std::floor(x_left));
-  if (clip_w > 0 && BLI_rcti_size_y(&pane) > 0) {
-    GPU_scissor(pane.xmin, pane.ymin, clip_w, BLI_rcti_size_y(&pane));
-    rctf tab;
-    BLI_rctf_rcti_copy(&tab, &pane);
-    MIXAR_THEME_LOAD(outer_green, CinemaPillOnB);
-    MIXAR_THEME_LOAD(inner_dark, ViewportFill);
-    /* Only the outer (right) corners round; the seam with the panel is flat. */
-    ui::draw_roundbox_corner_set(ui::CNR_TOP_RIGHT | ui::CNR_BOTTOM_RIGHT);
-    ui::draw_roundbox_4fv_ex(&tab, outer_green, inner_dark, 0.0f, nullptr, 0.0f, radius);
-    ui::draw_roundbox_4fv(&tab, false, radius, ui::mixar_tokens::mixar_zen().border);
-  }
-  GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
-
-  const int font = BLF_default();
-  BLF_size(font, 12.0f * scale);
-  const char *label = "Scenes";
-  const size_t label_len = strlen(label);
-  const float text_w = BLF_width(font, label, label_len);
-  const float text_h = BLF_height_max(font);
-  BLF_color4fv(font, ui::mixar_tokens::mixar_zen().text);
-  BLF_enable(font, BLF_ROTATION);
-  BLF_rotation(font, float(M_PI_2));
-  BLF_position(font, 0.5f * (x_left + x_right) + text_h * 0.32f, y_centre - text_w * 0.5f, 0.0f);
-  BLF_draw(font, label, label_len);
-  BLF_rotation(font, 0.0f);
-  BLF_disable(font, BLF_ROTATION);
 }
 
 void draw_pill(const rctf &rect, const float fill[4], const float radius)
