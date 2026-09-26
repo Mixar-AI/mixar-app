@@ -45,4 +45,8 @@ echo "Installing scripts using CMake..."
 cmake --build "$BUILD_ENV_DIR" --target install --config "$BLENDER_BUILD_ENV"
 
 echo "Scripts installation complete."
+
+# The install target re-copies the executable ad-hoc signed; restore the
+# stable dev signature (no-op unless MIXAR_DEV_SIGN_ID is set in .env).
+"$SCRIPT_DIR/dev_codesign.sh" "$BUILD_ENV_DIR/bin/Mixar.app/Contents/MacOS/Mixar"
 echo "Run Mixar using: $BUILD_ENV_DIR/bin/Mixar.app/Contents/MacOS/Mixar"
