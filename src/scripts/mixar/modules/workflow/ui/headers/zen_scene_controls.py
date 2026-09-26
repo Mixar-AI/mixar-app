@@ -85,8 +85,28 @@ def draw_sky(layout, context):
         style(button, "GHOST")
 
 
+def draw_scenes_button(surface, context):
+    """The Scenes drawer toggle, first on the toolbar: ``>≡`` opens the tab
+    list, ``≡<`` closes it. Lit while another tab needs the user."""
+    from ...core import scenes_toggle_icons
+
+    wm = context.window_manager
+    drawer_open = int(getattr(wm, "mixar_scenes_drawer_target", 0) or 0) != 0
+    attention = bool(getattr(wm, "mixar_scene_tabs_attention", False))
+    scenes = surface.row()
+    scenes.ui_units_x = 1.8
+    icon = scenes_toggle_icons.icon_id(drawer_open)
+    if icon:
+        scenes.operator("view3d.scenes_drawer_toggle", text="", icon_value=icon)
+    else:
+        scenes.operator("view3d.scenes_drawer_toggle", text="", icon="COLLAPSEMENU")
+    style(scenes, "PRIMARY" if (attention or drawer_open) else "SECONDARY")
+    surface.separator(factor=0.4)
+
+
 def draw_left(layout, context, *, compact):
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
+    draw_scenes_button(surface, context)
     add = surface.row()
     add.ui_units_x = 3.4 if compact else 5.8
     add.menu("VIEW3D_MT_add", text="Add" if compact else "Add Objects")

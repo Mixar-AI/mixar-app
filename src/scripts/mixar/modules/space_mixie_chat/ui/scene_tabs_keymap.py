@@ -7,12 +7,13 @@
 C registers the same items on the default keyconfig
 (``view3d_scenes_drawer_keymap``), but a GUI keyconfig reload wipes that copy
 and the user map never received the C items — the app then logs "empty
-keymap 'Scenes Drawer'" and the grip click does nothing. The addon map is the
+keymap 'Scenes Drawer'" and a card click does nothing. The addon map is the
 binding that survives, exactly as the moodboard drawer's ``keymap.py`` does.
 
 - Scenes Drawer Grip (3D View, NAVIGATION_BAR region = the drawer):
-  LEFTMOUSE → grip (tab / edge) then click (cards); MOUSEMOVE → hover.
-- Scenes Drawer / 3D View / Window: Ctrl+` toggles the drawer.
+  LEFTMOUSE → edge (the resize sash) then click (cards); MOUSEMOVE → hover.
+- Scenes Drawer / 3D View / Window: Ctrl+` toggles the drawer (the toolbar
+  hamburger calls the same operator).
 """
 
 import bpy
@@ -48,12 +49,12 @@ def register():
     kc = wm.keyconfigs.addon
     if not kc:
         return
-    # `head=True` prepends, so the LAST registered item runs FIRST: the grip
-    # (tab and resize sash) must see the press before the card click.
+    # `head=True` prepends, so the LAST registered item runs FIRST: the
+    # resize sash must see the press before the card click.
     grip = _ensure(kc, 'Scenes Drawer Grip', 'VIEW_3D', 'NAVIGATION_BAR')
     _add(grip, 'view3d.scenes_drawer_hover', 'MOUSEMOVE', 'ANY')
     _add(grip, 'view3d.scenes_drawer_click', 'LEFTMOUSE', 'PRESS')
-    _add(grip, 'view3d.scenes_drawer_grip', 'LEFTMOUSE', 'PRESS')
+    _add(grip, 'view3d.scenes_drawer_edge', 'LEFTMOUSE', 'PRESS')
     for name, space in (('Scenes Drawer', 'VIEW_3D'), ('3D View', 'VIEW_3D'), ('Window', 'EMPTY')):
         km = _ensure(kc, name, space)
         _add(km, 'view3d.scenes_drawer_toggle', 'ACCENT_GRAVE', 'PRESS', ctrl=True)
