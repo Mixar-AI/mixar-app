@@ -13,6 +13,7 @@
  * registration and the keymap are in `view3d_scenes_drawer_ops.cc`.
  */
 
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 
@@ -26,6 +27,7 @@
 #include "ED_screen.hh"
 
 #include "RNA_access.hh"
+#include "UI_interface_c.hh"
 #include "RNA_define.hh"
 
 #include "WM_api.hh"
@@ -238,6 +240,55 @@ static wmOperatorStatus drawer_hover_invoke(bContext *C, wmOperator * /*op*/, co
     ED_region_tag_redraw(region);
   }
   return OPERATOR_PASS_THROUGH;
+}
+
+/* --- Scroll ------------------------------------------------------------ */
+
+static wmOperatorStatus drawer_scroll_exec(bContext *C, wmOperator *op)
+{
+  ARegion *region = CTX_wm_region(C);
+  ScenesDrawerRuntime *runtime = region ? static_cast<ScenesDrawerRuntime *>(region->regiondata) :
+                                          nullptr;
+  if (runtime == nullptr || runtime->scroll_max <= 0.0f) {
+    /* Nothing to scroll: the wheel belongs to whatever is behind. */
+    return OPERATOR_PASS_THROUGH;
+  }
+  const float step = VIEW3D_SCENES_DRAWER_SCROLL_STEP * UI_SCALE_FAC;
+  runtime->scroll = std::clamp(
+      runtime->scroll + float(RNA_int_get(op->ptr, "delta")) * step, 0.0f, runtime->scroll_max);
+  ED_region_tag_redraw(region);
+  return OPERATOR_FINISHED;
+}
+
+static wmOperatorStatus drawer_scroll_invoke(bContext *C, wmOperator *op, const wmEvent *event)
+{
+  if (event->type != MOUSEPAN) {
+    return drawer_scroll_exec(C, op);
+  }
+  /* Trackpad: pixel for pixel with the gesture. `WM_event_absolute_delta_y`
+   * already honours the natural-scrolling preference (see the agent panel). */
+  ARegion *region = CTX_wm_region(C);
+  ScenesDrawerRuntime *runtime = region ? static_cast<ScenesDrawerRuntime *>(region->regiondata) :
+                                          nullptr;
+  if (runtime == nullptr || runtime->scroll_max <= 0.0f) {
+    return OPERATOR_PASS_THROUGH;
+  }
+  runtime->scroll = std::clamp(
+      runtime->scroll + float(WM_event_absolute_delta_y(event)), 0.0f, runtime->scroll_max);
+  ED_region_tag_redraw(region);
+  return OPERATOR_FINISHED;
+}
+
+void VIEW3D_OT_scenes_drawer_scroll(wmOperatorType *ot)
+{
+  ot->name = "Scroll Scenes Drawer";
+  ot->idname = "VIEW3D_OT_scenes_drawer_scroll";
+  ot->description = "Scroll the scene tab cards";
+  ot->invoke = drawer_scroll_invoke;
+  ot->exec = drawer_scroll_exec;
+  ot->poll = view3d_scenes_drawer_op_poll;
+  ot->flag = OPTYPE_INTERNAL;
+  RNA_def_int(ot->srna, "delta", 1, -100, 100, "Delta", "Wheel notches, positive scrolls down", -10, 10);
 }
 
 void VIEW3D_OT_scenes_drawer_hover(wmOperatorType *ot)

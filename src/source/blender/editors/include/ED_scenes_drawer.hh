@@ -92,6 +92,10 @@ struct ScenesDrawerRuntime {
   std::vector<ScenesDrawerCard> cards;
   rcti new_rect = {};
   bool new_visible = false;
+  /** Card list scroll, window pixels, 0 = top; `scroll_max` is measured by
+   * the draw pass from the cards that did not fit. */
+  float scroll = 0.0f;
+  float scroll_max = 0.0f;
   /** Card the pointer rests on (index into `cards`), -1 for none. */
   int hover = -1;
   bool hover_close = false;
@@ -118,6 +122,8 @@ struct ScenesDrawerRuntime {
 #define VIEW3D_SCENES_DRAWER_DRAG_THRESHOLD 4
 /** Vertical travel, in pixels, past which a card press becomes a reorder drag. */
 #define VIEW3D_SCENES_DRAWER_CARD_DRAG_THRESHOLD 6
+/** One wheel notch scrolls the card list by one card pitch (unscaled). */
+#define VIEW3D_SCENES_DRAWER_SCROLL_STEP 68.0f
 /** Slide amount at which the cards accept clicks and QA targets attach. */
 #define VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT 0.98f
 /** Slide amount at or below which the region is hidden (zero width). */

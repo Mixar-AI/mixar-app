@@ -273,6 +273,7 @@ void view3d_scenes_drawer_operatortypes()
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_edge);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_click);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_hover);
+  WM_operatortype_append(VIEW3D_OT_scenes_drawer_scroll);
 }
 
 void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf)
@@ -289,6 +290,22 @@ void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf)
   move.type = MOUSEMOVE;
   move.value = KM_ANY;
   WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_hover", &move);
+  /* Wheel notches and the trackpad pan scroll the cards; the operator passes
+   * the event through when nothing overflows. */
+  KeyMapItem_Params wheel_down{};
+  wheel_down.type = WHEELDOWNMOUSE;
+  wheel_down.value = KM_PRESS;
+  wmKeyMapItem *kmi = WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_scroll", &wheel_down);
+  RNA_int_set(kmi->ptr, "delta", 1);
+  KeyMapItem_Params wheel_up{};
+  wheel_up.type = WHEELUPMOUSE;
+  wheel_up.value = KM_PRESS;
+  kmi = WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_scroll", &wheel_up);
+  RNA_int_set(kmi->ptr, "delta", -1);
+  KeyMapItem_Params pan{};
+  pan.type = MOUSEPAN;
+  pan.value = KM_ANY;
+  WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_scroll", &pan);
 
   /* Ctrl+` pairs with the moodboard's ` on the right edge. */
   KeyMapItem_Params key{};

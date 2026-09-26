@@ -197,6 +197,7 @@ bool view3d_scenes_drawer_op_poll(bContext *C);
 bool view3d_scenes_drawer_edge_hit(const bContext *C, const int xy[2]);
 void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_hover(wmOperatorType *ot);
+void VIEW3D_OT_scenes_drawer_scroll(wmOperatorType *ot);
 void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf);
 /** Attach the Ctrl+` toggle map. Call first on View3D WINDOW and the drawer. */
 void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *region);

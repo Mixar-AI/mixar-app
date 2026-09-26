@@ -11,7 +11,8 @@ keymap 'Scenes Drawer'" and a card click does nothing. The addon map is the
 binding that survives, exactly as the moodboard drawer's ``keymap.py`` does.
 
 - Scenes Drawer Grip (3D View, NAVIGATION_BAR region = the drawer):
-  LEFTMOUSE → edge (the resize sash) then click (cards); MOUSEMOVE → hover.
+  LEFTMOUSE → edge (the resize sash) then click (cards); MOUSEMOVE → hover;
+  wheel / trackpad pan → scroll.
 - Scenes Drawer / 3D View / Window: Ctrl+` toggles the drawer (the toolbar
   hamburger calls the same operator).
 """
@@ -55,6 +56,12 @@ def register():
     _add(grip, 'view3d.scenes_drawer_hover', 'MOUSEMOVE', 'ANY')
     _add(grip, 'view3d.scenes_drawer_click', 'LEFTMOUSE', 'PRESS')
     _add(grip, 'view3d.scenes_drawer_edge', 'LEFTMOUSE', 'PRESS')
+    # Wheel notches and the trackpad pan scroll the cards; the operator passes
+    # the event through when nothing overflows. 'TRACKPADPAN' is the Python
+    # name of the C MOUSEPAN event in 5.2 (see agent_panel/ui/keymap.py).
+    _add(grip, 'view3d.scenes_drawer_scroll', 'WHEELDOWNMOUSE', 'PRESS').properties.delta = 1
+    _add(grip, 'view3d.scenes_drawer_scroll', 'WHEELUPMOUSE', 'PRESS').properties.delta = -1
+    _add(grip, 'view3d.scenes_drawer_scroll', 'TRACKPADPAN', 'ANY')
     for name, space in (('Scenes Drawer', 'VIEW_3D'), ('3D View', 'VIEW_3D'), ('Window', 'EMPTY')):
         km = _ensure(kc, name, space)
         _add(km, 'view3d.scenes_drawer_toggle', 'ACCENT_GRAVE', 'PRESS', ctrl=True)

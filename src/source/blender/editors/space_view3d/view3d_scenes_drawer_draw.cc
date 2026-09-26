@@ -170,7 +170,7 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
     runtime->new_rect.ymax = int(new_rect.ymax) + region->winrct.ymin;
     runtime->new_visible = true;
 
-    /* Cards, top to bottom. Anything past the bottom is clipped (no scroll). */
+    /* Cards, top to bottom, scrolled by the wheel when they do not fit. */
     sync_cards(C, runtime);
     for (auto it = runtime->thumbs.begin(); it != runtime->thumbs.end();) {
       const std::string &name = it->first;
@@ -184,13 +184,34 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         it = runtime->thumbs.erase(it);
       }
     }
-    float y_top = header_top - HEADER_H * scale - CARD_GAP * scale;
+    const float list_top = header_top - HEADER_H * scale - CARD_GAP * scale;
     const int count = int(runtime->cards.size());
+    const float content_h = count > 0 ? count * (CARD_H + CARD_GAP) * scale : 0.0f;
+    runtime->scroll_max = std::max(0.0f, content_h - list_top);
+    runtime->scroll = std::clamp(runtime->scroll, 0.0f, runtime->scroll_max);
+    /* The list is clipped under the header so scrolled cards never paint
+     * over "Scenes" and "+ New scene". */
+    int scissor_prev[4];
+    GPU_scissor_get(scissor_prev);
+    GPU_scissor(0, 0, winx, int(list_top + CARD_GAP * scale));
+    float y_top = list_top + runtime->scroll;
     for (int i = 0; i < count; i++) {
       ScenesDrawerCard &card = runtime->cards[i];
       const float y_bottom = y_top - CARD_H * scale;
+      if (y_bottom > list_top + CARD_GAP * scale) {
+        /* Scrolled out above: no rect, so hit tests and QA skip it. */
+        card.rect = {};
+        card.close_rect = {};
+        card.thumb_rect = {};
+        y_top = y_bottom - CARD_GAP * scale;
+        continue;
+      }
       if (y_top < -CARD_H * scale) {
-        break;
+        card.rect = {};
+        card.close_rect = {};
+        card.thumb_rect = {};
+        y_top = y_bottom - CARD_GAP * scale;
+        continue;
       }
       rctf rect;
       rect.xmin = x0;
@@ -214,8 +235,16 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       style.progress_tint[3] = card.status == ScenesDrawerTabStatus::Working ? 0.28f : 0.0f;
       ui::mixar_glass_draw(pane, style);
       if (card.is_active) {
+        /* The shown tab: an accent stripe down the card's left edge and the
+         * selected outline, readable at a glance among idle siblings. */
         ui::draw_roundbox_corner_set(ui::CNR_ALL);
         ui::draw_roundbox_4fv(&rect, false, CARD_RADIUS * scale, zen.selected);
+        rctf stripe;
+        stripe.xmin = rect.xmin + 3.0f * scale;
+        stripe.xmax = stripe.xmin + 3.0f * scale;
+        stripe.ymin = rect.ymin + 12.0f * scale;
+        stripe.ymax = rect.ymax - 12.0f * scale;
+        draw_pill(stripe, zen.primary, 1.5f * scale);
       }
 
       /* Thumbnail: the scene rendered natively into a small offscreen, blitted
@@ -294,7 +323,9 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         ED_agent_panel_draw_close(close_i, 1.0f, runtime->hover == i && runtime->hover_close);
       }
 
-      /* Cache in window pixels for hit tests and QA. */
+      /* Cache in window pixels for hit tests and QA (clipped to the list so a
+       * half-scrolled card cannot be clicked through the header). */
+      rect.ymax = std::min(rect.ymax, list_top + CARD_GAP * scale);
       card.rect.xmin = int(rect.xmin) + region->winrct.xmin;
       card.rect.xmax = int(rect.xmax) + region->winrct.xmin;
       card.rect.ymin = int(rect.ymin) + region->winrct.ymin;
@@ -326,6 +357,21 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       draw_pill(line, zen.primary, 1.5f * scale);
     }
 
+    /* Scroll indicator: a thin track on the right while cards overflow. */
+    if (runtime->scroll_max > 0.0f) {
+      const float track_h = list_top;
+      const float thumb_h = std::max(24.0f * scale, track_h * track_h / (track_h + runtime->scroll_max));
+      const float thumb_top = track_h - (runtime->scroll / runtime->scroll_max) * (track_h - thumb_h);
+      rctf thumb;
+      thumb.xmax = float(winx) - 3.0f * scale;
+      thumb.xmin = thumb.xmax - 3.0f * scale;
+      thumb.ymax = thumb_top;
+      thumb.ymin = thumb_top - thumb_h;
+      float fill[4];
+      with_alpha(zen.secondary, 0.45f, fill);
+      draw_pill(thumb, fill, 1.5f * scale);
+    }
+    GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
   }
   else if (runtime) {
     runtime->cards.clear();
