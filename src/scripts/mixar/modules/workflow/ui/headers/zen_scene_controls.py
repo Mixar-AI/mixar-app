@@ -94,7 +94,7 @@ def draw_scenes_button(surface, context):
     drawer_open = int(getattr(wm, "mixar_scenes_drawer_target", 0) or 0) != 0
     attention = bool(getattr(wm, "mixar_scene_tabs_attention", False))
     scenes = surface.row()
-    scenes.ui_units_x = 1.8
+    scenes.ui_units_x = 2.4
     icon = scenes_toggle_icons.icon_id(drawer_open)
     if icon:
         scenes.operator("view3d.scenes_drawer_toggle", text="", icon_value=icon)

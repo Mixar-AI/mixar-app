@@ -30,6 +30,11 @@ _pcoll = None
 _scheduled = False
 
 
+#: The glyph fills this fraction of the icon square, centred: the rest is
+#: breathing room between the strokes and the button's rounded rectangle.
+_GLYPH_SCALE = 0.72
+
+
 def _segments(open_glyph: bool):
     """Line segments in a 0..1 square, y up: three bars and a chevron."""
     bars_x = (0.42, 0.94) if open_glyph else (0.06, 0.58)
@@ -38,7 +43,11 @@ def _segments(open_glyph: bool):
         chevron = [((0.08, 0.26), (0.28, 0.5)), ((0.28, 0.5), (0.08, 0.74))]
     else:
         chevron = [((0.92, 0.26), (0.72, 0.5)), ((0.72, 0.5), (0.92, 0.74))]
-    return bars + chevron
+
+    def shrink(pt):
+        return (0.5 + (pt[0] - 0.5) * _GLYPH_SCALE, 0.5 + (pt[1] - 0.5) * _GLYPH_SCALE)
+
+    return [(shrink(a), shrink(b)) for a, b in bars + chevron]
 
 
 def _distance(px, py, seg):
@@ -53,7 +62,7 @@ def _distance(px, py, seg):
 def _pixels(open_glyph: bool, size: int = _SIZE):
     """Flat RGBA floats, white strokes on transparent, bottom-up rows."""
     segments = _segments(open_glyph)
-    half = 0.055  # stroke half-width in the unit square (~3.5 px at 32)
+    half = 0.055 * _GLYPH_SCALE  # stroke half-width in the unit square
     out = []
     for row in range(size):
         py = (row + 0.5) / size
@@ -90,7 +99,9 @@ def _write_png(path: str, open_glyph: bool) -> bool:
 
 def _generate():
     global _pcoll
-    folder = os.path.join(tempfile.gettempdir(), "mixar_scenes_toggle_icons")
+    # The folder name carries the glyph revision: a cached PNG from an older
+    # build must not outlive a redesign.
+    folder = os.path.join(tempfile.gettempdir(), "mixar_scenes_toggle_icons_v2")
     os.makedirs(folder, exist_ok=True)
     pcoll = bpy.utils.previews.new()
     for open_glyph, name in _NAMES.items():
