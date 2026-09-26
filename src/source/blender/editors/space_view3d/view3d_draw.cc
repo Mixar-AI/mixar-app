@@ -1552,7 +1552,7 @@ void view3d_draw_region_info(const bContext *C, ARegion *region)
     /* Zen's scene toolbar covers the top edge. Keep the native info stack
      * below a visible top header, but do not indent for the transform tools. */
     const bool zen_info = ui::mixar_workspace_is_zen(C);
-    const int xoffset = (zen_info ? 0 : rect->xmin) + (0.5f * U.widget_unit);
+    int xoffset = (zen_info ? 0 : rect->xmin) + (0.5f * U.widget_unit);
     int yoffset = (zen_info ? region->winy - 1 : rect->ymax) - (0.1f * U.widget_unit);
     if (zen_info) {
       for (const ARegion &header : CTX_wm_area(C)->regionbase) {

@@ -41,7 +41,6 @@ def download_images_to_moodboard(
     base_name: str = "",
     scene_name: str = "",
     should_apply=None,
-    session_id: str = "",
 ) -> None:
     """Download images from URLs in bg thread, add to moodboard on main thread.
 
@@ -174,10 +173,9 @@ def download_images_to_moodboard(
                     return None
 
                 target_scene = None
-                if scene_name or session_id:
+                if scene_name:
                     try:
-                        from .queue_download import resolve_job_scene
-                        target_scene = resolve_job_scene(scene_name, session_id)
+                        target_scene = bpy.data.scenes.get(scene_name)
                     except Exception:
                         target_scene = None
                     if target_scene is None:

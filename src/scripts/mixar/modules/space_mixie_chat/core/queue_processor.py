@@ -122,7 +122,7 @@ class EventProcessor:
         # the turn begins with the first event and ends on stream
         # complete/error below, or on abort / file load).
         from .executor import get_executor
-        get_executor().begin_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().begin_agent_turn()
 
         # In-band terminal error (backend refused the request before any slot
         # streaming — e.g. a text-only model can't accept an attached image, or
@@ -156,10 +156,10 @@ class EventProcessor:
         turn and return to IDLE.
         """
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn()
 
-        # The loader timer walks every scene and stops itself once none shows
-        # a loader (parallel scenes: another tab may still be streaming).
+        from .animation_manager import stop_loader_animation
+        stop_loader_animation()
         self._clear_loader_bubbles(scene)
 
         try:
@@ -193,12 +193,13 @@ class EventProcessor:
         Abort button stays visible (the backend may still be processing).
         """
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn()
 
         logger.error(f"agent stream error: {error_message}")
 
-        # Slot animations: the loader timer stops itself once no scene shows a
-        # loader, so another tab's stream keeps animating.
+        # Stop any running slot animations
+        from .animation_manager import stop_loader_animation
+        stop_loader_animation()
 
         # Hide frozen loader bubbles so the UI doesn't show a stuck spinner
         self._clear_loader_bubbles(scene)
@@ -266,7 +267,7 @@ class EventProcessor:
             # (the sweep re-checks that no session is active before acting).
             try:
                 from .lane_scene_sweep import schedule_lane_scene_sweep
-                schedule_lane_scene_sweep(parent_session_id=getattr(scene, "mixie_session_id", "") or "")
+                schedule_lane_scene_sweep()
             except Exception as e:  # noqa: BLE001
                 logger.debug(f"lane scene sweep scheduling skipped: {e}")
         else:
@@ -359,7 +360,7 @@ class EventProcessor:
         # settles to IDLE or pauses for input (the user's answer starts a new
         # stream, and with it a new turn / fresh checkpoint budget).
         from .executor import get_executor
-        get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+        get_executor().end_agent_turn()
 
         # Don't override AWAITING_INPUT or MODIFYING states
         # (agent is paused on a question — text, choice, or approval —
@@ -388,7 +389,7 @@ class EventProcessor:
             # stale once the session went inactive). Fail-soft, main thread.
             try:
                 from .lane_scene_sweep import schedule_lane_scene_sweep
-                schedule_lane_scene_sweep(parent_session_id=getattr(scene, "mixie_session_id", "") or "")
+                schedule_lane_scene_sweep()
             except Exception as e:  # noqa: BLE001
                 logger.debug(f"lane scene sweep scheduling skipped: {e}")
 

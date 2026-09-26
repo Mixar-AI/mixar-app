@@ -77,9 +77,8 @@ def test_execute_script_handler_passes_envelope_only_when_present():
 
 
 def test_queue_holds_execution_request_with_agent_ctx(monkeypatch):
-    from mixar.modules.space_mixie_chat.core import script_lanes
-
-    script_lanes.clear()
+    while not main_thread_executor._request_queue.empty():
+        main_thread_executor._request_queue.get_nowait()
     monkeypatch.setattr(main_thread_executor, "maybe_start_prefetch", lambda *_: None)
     monkeypatch.setattr(main_thread_executor, "_ensure_timer_running", lambda: None)
     agent_ctx = {"chat_session_id": "chat-3", "turn_id": "turn-3"}
@@ -88,7 +87,7 @@ def test_queue_holds_execution_request_with_agent_ctx(monkeypatch):
         "pass", "transport-3", "test_tool", "scene-route-3", agent_ctx
     )
 
-    queued = script_lanes.LaneQueue().get_nowait()
+    queued = main_thread_executor._request_queue.get_nowait()
     assert isinstance(queued, ExecutionRequest)
     assert queued.as_tuple()[:5] == (
         "transport-3",

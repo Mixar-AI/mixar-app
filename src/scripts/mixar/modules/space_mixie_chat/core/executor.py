@@ -50,10 +50,10 @@ from .executor_handlers import HandlerCleanupMixin
 from .executor_result import ExecutionResult  # noqa: F401 — re-exported
 from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
-from .executor_scene_state import SceneStateMixin
+from .animation_effects import animation_fingerprint, snapshot_properties_changed
 
 
-class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
+class ScriptExecutor(HandlerCleanupMixin):
     """
     Safely executes generated bpy scripts.
 
@@ -64,51 +64,42 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
     - Integrates with Blender's undo system
     - Cleans up bpy.app.handlers installed by scripts (HandlerCleanupMixin,
       which exempts the preview-render callbacks by identity)
-    - Scene snapshot / diff and Object-mode restore (SceneStateMixin)
     - Hardened sandbox: os and pathlib are NOT exposed at all; open, tempfile,
       base64, urllib are restricted wrappers
     """
 
     # Agent turn tracking for undo checkpoints (see AGENT_UNDO_* constants)
-    # One entry per chat session (parallel scenes): session id -> [successful
-    # pushes this turn, failure already logged]. Blender's undo stack itself
-    # is document-wide; only the per-turn caps are per session.
-    _turns: dict = {}
-    #: the session whose script is executing (set by ``execute``)
-    _current_session: str = ""
+    _in_agent_turn: bool = False
+    _undo_pushes_this_turn: int = 0          # SUCCESSFUL pushes so far
+    _undo_failure_logged_this_turn: bool = False
 
     def __init__(self):
         """Initialize the executor."""
         self._last_scene_state: Optional[dict] = None
         self._execution_lock = threading.Lock()
 
-    @property
-    def _in_agent_turn(self) -> bool:
-        return self._current_session in self._turns
-
-    def _turn(self) -> Optional[list]:
-        return self._turns.get(self._current_session)
-
-    def begin_agent_turn(self, session_id: str = "") -> None:
+    def begin_agent_turn(self) -> None:
         """Signal the start of an agent turn (multi-tool sequence).
 
         Idempotent: the queue processor calls it for every streamed event,
         so the turn begins with the first one and the per-turn undo counters
         reset exactly once per turn.
         """
-        if session_id not in self._turns:
-            self._turns[session_id] = [0, False]
-            logger.debug("Agent turn started (%s)", session_id[:8])
+        if not self._in_agent_turn:
+            self._in_agent_turn = True
+            self._reset_turn_undo_state()
+            logger.debug("Agent turn started")
 
-    def end_agent_turn(self, session_id: Optional[str] = None) -> None:
-        """Signal the end of an agent turn. ``None`` ends every session's."""
-        if session_id is None:
-            if self._turns:
-                self._turns.clear()
-                logger.debug("Agent turns ended (all)")
-            return
-        if self._turns.pop(session_id, None) is not None:
-            logger.debug("Agent turn ended (%s)", session_id[:8])
+    def end_agent_turn(self) -> None:
+        """Signal the end of an agent turn."""
+        if self._in_agent_turn:
+            self._in_agent_turn = False
+            self._reset_turn_undo_state()
+            logger.debug("Agent turn ended")
+
+    def _reset_turn_undo_state(self) -> None:
+        self._undo_pushes_this_turn = 0
+        self._undo_failure_logged_this_turn = False
 
     def _should_push_undo(self, grouping: bool = None) -> bool:
         """Whether THIS script should push an undo checkpoint.
@@ -126,11 +117,10 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         group_per_turn = (
             AGENT_UNDO_GROUP_PER_TURN if grouping is None else grouping
         )
-        turn = self._turn()
-        if turn is None:
+        if not self._in_agent_turn:
             return True
         limit = 1 if group_per_turn else AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN
-        return turn[0] < limit
+        return self._undo_pushes_this_turn < limit
 
     def _push_undo_checkpoint(self) -> bool:
         """Push an undo checkpoint; retry once inside an explicit window
@@ -159,21 +149,19 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         turn silently having no checkpoint) and it is logged — once per turn,
         because a context that cannot push will fail for every script in it.
         """
-        turn = self._turn()
         if self._push_undo_checkpoint():
-            if turn is not None:
-                turn[0] += 1
+            if self._in_agent_turn:
+                self._undo_pushes_this_turn += 1
             return True
-        if turn is None or not turn[1]:
+        if not self._in_agent_turn or not self._undo_failure_logged_this_turn:
             logger.warning(
                 "Undo checkpoint failed - this script's changes may not be "
                 "individually undoable"
             )
-            if turn is not None:
-                turn[1] = True
+            self._undo_failure_logged_this_turn = True
         return False
 
-    def execute(self, script: str, push_undo: bool = True, session_id: str = "") -> ExecutionResult:
+    def execute(self, script: str, push_undo: bool = True) -> ExecutionResult:
         """
         Execute a bpy script safely.
 
@@ -192,10 +180,8 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                 error="Previous script still executing",
             )
 
-        self._current_session = session_id or ""
         # Capture scene state before execution
         before_state = self._capture_scene_state()
-        mode_before = self._interaction_mode()
 
         # Push undo step BEFORE the script runs, so the first push of a turn
         # captures the pre-turn scene. Granularity (per script up to the
@@ -414,11 +400,6 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             logger.error("Script execution failed: %s\n%s", e, result.traceback)
 
         finally:
-            # Mode hygiene happens at the END of the turn (`restore_turn_mode`,
-            # from `finalize_turn`), never between scripts: a script may leave
-            # the tab in Edit / Sculpt / Texture Paint mode on purpose for the
-            # next one. Here only the mode the turn started in is noted.
-            self.note_turn_mode(session_id, mode_before)
             self._execution_lock.release()
 
             # Clean up any handlers the script may have installed
@@ -443,6 +424,59 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         result.deleted_objects = changes["deleted"]
 
         return result
+
+    def _capture_scene_state(self) -> dict:
+        """Capture current scene state for change detection."""
+        state = {
+            "objects": {},
+            "materials": set(),
+        }
+
+        try:
+            action_cache = {}
+            for obj in bpy.data.objects:
+                try:
+                    animation = animation_fingerprint(obj, action_cache)
+                except Exception as exc:
+                    logger.warning("Animation snapshot unavailable for %s: %s", obj.name, exc)
+                    animation = None
+                state["objects"][obj.name] = {
+                    "type": obj.type,
+                    "location": tuple(obj.location),
+                    "rotation": tuple(obj.rotation_euler),
+                    "scale": tuple(obj.scale),
+                    "material_count": (
+                        len(obj.material_slots) if hasattr(obj, "material_slots") else 0
+                    ),
+                    "animation": animation,
+                }
+            state["materials"] = set(mat.name for mat in bpy.data.materials)
+
+        except (AttributeError, RuntimeError) as e:
+            logger.debug(f"Warning: Could not capture scene state: {e}")
+
+        return state
+
+    def _detect_changes(self, before: dict, after: dict) -> dict:
+        """Detect what changed between two scene states."""
+        before_objects = set(before.get("objects", {}).keys())
+        after_objects = set(after.get("objects", {}).keys())
+
+        created = list(after_objects - before_objects)
+        deleted = list(before_objects - after_objects)
+
+        modified = []
+        for obj_name in before_objects & after_objects:
+            before_props = before["objects"].get(obj_name, {})
+            after_props = after["objects"].get(obj_name, {})
+            if snapshot_properties_changed(before_props, after_props):
+                modified.append(obj_name)
+
+        return {
+            "created": created,
+            "modified": modified,
+            "deleted": deleted,
+        }
 
 
 # Global executor instance

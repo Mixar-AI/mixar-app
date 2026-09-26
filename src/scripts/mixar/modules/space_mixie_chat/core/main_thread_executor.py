@@ -5,14 +5,18 @@
 """
 Async script execution queue for main thread execution.
 
-The WebSocket thread queues ExecutionRequests (never executes scripts); a
-main-thread timer executes ONE script per tick, so the UI never freezes; the
-response goes straight to the WebSocket client's outbound queue
-(``client.queue_response``) — cross-thread queue polling segfaulted
-Blender's embedded Python.
+Architecture:
+- Request queue: ExecutionRequest values from the WebSocket thread
+- Timer polls request queue, executes ONE script per tick
+- Responses pushed directly to WebSocket client's outbound queue (thread-safe)
 
-Per-tab lanes (one FIFO per chat session, round-robin, prefetch holds) live
-in ``script_lanes``. The take/execute/respond sequence lives in
+This approach is non-blocking and prevents UI freezes by:
+1. WebSocket thread queues requests (never executes scripts)
+2. Timer on main thread polls and executes ONE script per tick
+3. Responses are sent directly via client.queue_response() to avoid
+   cross-thread queue polling (which caused segfaults in Blender's embedded Python)
+
+The take/execute/respond sequence lives in
 ``mixar.modules.common.agent_execution.pump`` and is shared with the headless
 worker pump (``headless/headless_main.py``); scene routing and history live in
 ``main_thread_routing``.
@@ -20,6 +24,7 @@ worker pump (``headless/headless_main.py``); scene routing and history live in
 
 from collections.abc import Callable
 from mixar.config.logging_config import get_logger
+import queue
 import threading
 import time
 from typing import Optional
@@ -31,7 +36,6 @@ from mixar.modules.common.agent_execution.request import ExecutionEnvelope, Exec
 
 from .executor import get_executor
 from .main_thread_routing import archive_history, restore_after, route_request
-from . import script_lanes as lanes
 from .script_prefetch import maybe_start_prefetch
 from ..constants import TIMER_INTERVAL
 
@@ -40,6 +44,17 @@ logger = get_logger(__name__)
 # Provenance-id resolution moved to the shared pump; kept importable here for
 # existing callers/tests.
 _resolve_agent_context_ids = pump.resolve_agent_context_ids
+
+# Request queue of ExecutionRequest values from the WebSocket thread. A
+# request's `prefetch` is a ScriptAssetPrefetch handle (or None) — heavy
+# texture-apply scripts start downloading their assets the moment they are
+# queued, and the timer holds them (UI responsive) until the cache is warm.
+_request_queue: queue.Queue = queue.Queue(maxsize=1000)
+
+# Head-of-queue request waiting for its asset prefetch. Dequeued but not yet
+# executed — strict FIFO is preserved (later scripts wait behind it). Main
+# thread only.
+_held: Optional[ExecutionRequest] = None
 
 # Timer state. _timer_active is read/written from both the WebSocket thread
 # (queue_script_request) and the main thread (_process_one_request); every
@@ -54,11 +69,17 @@ _shutdown_requested = False
 # Execution gate: defer script running so the chat UI can render planning text
 _execution_gate_until: float = 0.0
 
-# Render jobs never gate scripts: the preview render runs on Blender's job
-# thread with its OWN depsgraph, and its tool call is held open by
-# preview_deferral, never by this queue. A hold here (3.4.2) stalled every
-# turn for the whole render; removed in 3.4.4 — do not bring it back for ANY
-# job type (docs/render-job-contract.md has the write-up and pinning tests).
+# Render jobs never gate scripts. The agent's preview render runs on Blender's
+# job thread and evaluates its OWN depsgraph, so the agent keeps working (and
+# the user keeps clicking) while it runs — exactly as a user's F12 does with
+# Lock Interface off. The tool call that started it is held open by
+# preview_deferral (a timer poller), never by this queue. A hold here (3.4.2) parked
+# the head-of-queue script while Blender reported a RENDER job alive, for up
+# to 20 s, then failed it — which stalled every turn for the whole render (the
+# render lane's own post-render verification script included) and turned any
+# render longer than a quick EEVEE preview into a guaranteed failed turn.
+# Removed in 3.4.4; do not bring it back for ANY job type. Full write-up and
+# the pinning tests: docs/render-job-contract.md.
 
 # In-flight script marker for the blender.liveness probe. Set on the main
 # thread around ScriptExecutor.execute() and read from the WebSocket thread:
@@ -163,15 +184,17 @@ def queue_script_request(
         prefetch=maybe_start_prefetch(script, tool_name),
         envelope=ExecutionEnvelope.parse(envelope),
     )
-    if not lanes.enqueue(req):
+    try:
+        _request_queue.put_nowait(req)
+    except queue.Full:
         logger.warning(f"Request queue full, dropping {tool_name} (id: {request_id})")
         return
     _ensure_timer_running()
 
 
 def has_pending_requests() -> bool:
-    """Check if there are pending script requests (queued or held, any tab)."""
-    return lanes.pending()
+    """Check if there are pending script requests (queued or held)."""
+    return _held is not None or not _request_queue.empty()
 
 
 def gate_execution(delay: float = 0.05) -> None:
@@ -228,23 +251,10 @@ def _stop_timer_if_idle() -> Optional[float]:
     """
     global _timer_active
     with _timer_lock:
-        if lanes.pending():
+        if _held is not None or not _request_queue.empty():
             return TIMER_INTERVAL
         _timer_active = False
         return None
-
-
-def _request_session_id(req) -> str:
-    """The chat session a queued script belongs to: the agent context's chat
-    session, else the routing key; a worker lane maps to its parent session
-    (``mixar_workspace_main_session`` on the lane scene). Main thread only."""
-    sid = str((req.agent_ctx or {}).get("chat_session_id") or req.session_id or "")
-    if sid.startswith("agentlane:"):
-        for scene in bpy.data.scenes:
-            if getattr(scene, "mixie_session_id", "") == sid:
-                parent = scene.get("mixar_workspace_main_session", "") if hasattr(scene, "get") else ""
-                return str(parent or sid)
-    return sid
 
 
 def _reject_stale_session(req: ExecutionRequest) -> None:
@@ -258,7 +268,7 @@ def _reject_stale_session(req: ExecutionRequest) -> None:
     # for an agentlane:* workspace — sweep leaked lane scenes ourselves.
     try:
         from .lane_scene_sweep import schedule_lane_scene_sweep
-        schedule_lane_scene_sweep(parent_session_id=_request_session_id(req))
+        schedule_lane_scene_sweep()
     except Exception:
         logger.debug("lane scene sweep scheduling skipped", exc_info=True)
 
@@ -280,7 +290,8 @@ def _process_one_request() -> Optional[float]:
     Returns:
         Interval for next call if more requests, None to stop timer
     """
-    if not lanes.pending():
+    global _held
+    if _held is None and _request_queue.empty():
         stop = _stop_timer_if_idle()
         if stop is None:
             return None  # No more requests, stop timer
@@ -295,19 +306,15 @@ def _process_one_request() -> Optional[float]:
     if time.monotonic() < _execution_gate_until:
         return TIMER_INTERVAL
 
-    req, status, lane = lanes.take_next()
+    req, _held, status = pump.take_next(_request_queue, _held)
     if status == pump.EMPTY:
         return _stop_timer_if_idle()
     if status == pump.HOLDING:
-        # Every tab with work is waiting on a texture prefetch. Keep holding
-        # — this tick cost one flag check, so the UI stays fully responsive
-        # — and check again shortly. FIFO within each tab is preserved.
+        # The script's texture assets are still downloading in the
+        # background. Keep holding it — this tick cost one flag check, so
+        # the UI stays fully responsive — and check again shortly. FIFO is
+        # preserved: everything behind it waits too.
         return TIMER_INTERVAL
-    previous = lanes.switch_to(lane)
-    if previous is not None:
-        from mixar.modules.common.scenes_log import slog
-        slog("queue.switch", None, session_id=lane, previous=previous[:8],
-             tool=req.tool_name)
     if status in (pump.PREFETCH_FAILED, pump.PREFETCH_EXPIRED):
         refusal = pump.prefetch_refusal(req, status)
         logger.warning("Refusing %s (id: %s): %s", req.tool_name, req.request_id, refusal["error"])
@@ -317,7 +324,7 @@ def _process_one_request() -> Optional[float]:
     # Safety net: reject scripts that were queued just before load_pre
     # flushed the queue (narrow race window).
     from .session import get_session_manager
-    if not get_session_manager().has_active_session(_request_session_id(req)):
+    if not get_session_manager().has_active_session():
         _reject_stale_session(req)
         return _stop_timer_if_idle()
 
@@ -379,11 +386,9 @@ def _process_one_request() -> Optional[float]:
         from .jsonrpc_client import get_jsonrpc_client
         pump.respond(get_jsonrpc_client(), req, result_dict)
 
-    # Continue timer if more requests pending. The same tab back-to-back
-    # keeps the 500 ms breather (safe for edit mode operations); another
-    # tab's script gets the next tick — round-robin serves it first.
-    if lanes.pending():
-        return TIMER_INTERVAL if lanes.other_pending(lane) else 0.50
+    # Continue timer if more requests pending
+    if not _request_queue.empty():
+        return 0.50  # 500ms between executions (safe for edit mode operations)
 
     return _stop_timer_if_idle()  # Stop timer when queue empty
 
@@ -429,42 +434,13 @@ def resume() -> None:
     _shutdown_requested = False
 
 
-def flush_session(session_id: str) -> int:
-    """Drop the queued scripts of ONE chat session (New Chat / Abort on that
-    tab); every other tab's scripts stay queued. Main thread only. Returns
-    the number dropped, each answered with an error so the backend never
-    waits on it."""
-
-    def _mine(req) -> bool:
-        return lanes.lane_key(req) == session_id or _request_session_id(req) == session_id
-
-    dropped = lanes.drain(_mine)
-    for req in dropped:
-        try:
-            _send_error_response(req.request_id, "Agent session not active")
-        except Exception:  # noqa: BLE001
-            pass
-    if dropped:
-        logger.info("Flushed %d queued script(s) of session %s", len(dropped), session_id[:8])
-    return len(dropped)
-
-
-def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
+def cleanup(shutdown: bool = False) -> None:
     """
     Clean up executor state.
 
     Call on addon unregister or disconnect to clean up pending requests.
-    With ``session_id`` (not None): only that session's queued scripts are
-    dropped and the executor keeps running for the other tabs. An EMPTY id
-    is a tab that has not sent its first message — it owns no scripts, so
-    nothing is flushed; the global reset is only ever ``session_id=None``.
     """
-    global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested
-
-    if session_id is not None:
-        if session_id:
-            flush_session(session_id)
-        return
+    global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested, _held
 
     if shutdown:
         _shutdown_requested = True
@@ -481,6 +457,7 @@ def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
         pass
 
     _execution_gate_until = 0.0
+    _held = None  # drop a prefetch-held request along with the queue
     # A held-open preview tool call belongs to the flushed session/connection.
     try:
         from .preview_deferral import fail_pending
@@ -488,7 +465,11 @@ def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
     except Exception:
         logger.debug("preview deferral flush skipped", exc_info=True)
 
-    # Clear every tab's lane, prefetch-held requests included.
-    lanes.clear()
+    # Clear request queue
+    while not _request_queue.empty():
+        try:
+            _request_queue.get_nowait()
+        except queue.Empty:
+            break
 
     logger.debug("Main thread executor cleaned up")

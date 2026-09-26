@@ -20,11 +20,7 @@ from . import turn_cursor
 
 logger = get_logger(__name__)
 _LOCK = threading.Lock()
-# One FIFO per session (scene tab), drained round-robin so a tab streaming
-# a long answer never starves another tab's turn events (parallel scene
-# tabs, Phase 2). Ordering WITHIN a session is untouched.
-_inbox: dict = {}
-_inbox_last = ''
+_inbox = deque()
 _inbox_bytes = 0
 _overflow = set()
 _bindings = {}
@@ -80,8 +76,10 @@ def reopen(scene):
     if not sid:
         return
     with _LOCK:
-        for item in _inbox.pop(sid, ()):
-            _inbox_bytes -= item[2]
+        retained = [item for item in _inbox if item[1].get('session_id') != sid]
+        _inbox.clear()
+        _inbox.extend(retained)
+        _inbox_bytes = sum(item[2] for item in retained)
         _overflow.discard(sid)
     for tid, turn in list(_turns.items()):
         if turn.session_id == sid:
@@ -98,36 +96,13 @@ def handle_turn_notification(method, params):
     if not isinstance(params, dict):
         return
     size = len(json.dumps(params).encode('utf-8'))
-    sid = str(params.get('session_id') or '')
     with _LOCK:
-        lane = _inbox.get(sid)
-        # The item cap is per session: one flooding tab overflows itself only.
-        if (lane is not None and len(lane) >= _MAX_ITEMS) or _inbox_bytes + size > _MAX_BYTES:
+        if len(_inbox) >= _MAX_ITEMS or _inbox_bytes + size > _MAX_BYTES:
             if len(_overflow) < 32:
-                _overflow.add(sid)
+                _overflow.add(str(params.get('session_id') or ''))
             return
-        if lane is None:
-            lane = _inbox[sid] = deque()
-        lane.append((method, params, size))
+        _inbox.append((method, params, size))
         _inbox_bytes += size
-
-
-def _pop_round_robin():
-    """Next event, from the session after the last served one. Under _LOCK."""
-    global _inbox_bytes, _inbox_last
-    keys = [key for key, lane in _inbox.items() if lane]
-    if not keys:
-        return None
-    if _inbox_last in keys:
-        cut = keys.index(_inbox_last) + 1
-        keys = keys[cut:] + keys[:cut]
-    key = keys[0]
-    item = _inbox[key].popleft()
-    if not _inbox[key]:
-        _inbox.pop(key, None)
-    _inbox_bytes -= item[2]
-    _inbox_last = key
-    return item
 
 
 def _resolve(sid):
@@ -139,23 +114,20 @@ def _resolve(sid):
     if len(scenes) == 1:
         _bindings[sid] = _scene_id(scenes[0])
         return scenes[0]
-    if len(scenes) > 1:
-        from mixar.modules.common.scenes_log import slog
-        slog('route.reject', None, session_id=sid, reason='ambiguous_events',
-             scenes=', '.join(s.name for s in scenes))
     return None
 
 
 def _drain():
+    global _inbox_bytes
     deadline = time.monotonic() + 0.004
     for _ in range(64):
         if time.monotonic() >= deadline:
             break
         with _LOCK:
-            item = _pop_round_robin()
-        if item is None:
-            break
-        method, params, _size = item
+            if not _inbox:
+                break
+            method, params, size = _inbox.popleft()
+            _inbox_bytes -= size
         try:
             _consume(method, params)
         except Exception:
@@ -164,10 +136,7 @@ def _drain():
         overflowed = list(_overflow)
         _overflow.clear()
     if overflowed:
-        # Only the overflowed sessions replay from their cursors; the other
-        # tabs' deliveries were never dropped. (Also recovers a dropped start
-        # or command acknowledgement of those sessions.)
-        reconnect(session_ids=overflowed)
+        reconnect()  # Also recovers a dropped start or command acknowledgement.
     return 0.02
 
 
@@ -322,7 +291,7 @@ def _begin_scene_turn(scene, run_id):
     if run_id:
         session.set_run(scene, run_id, True)
     add_turn_placeholder(scene)
-    get_executor().begin_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+    get_executor().begin_agent_turn()
     session.set_state(scene, SessionState.BUSY)
 
 
@@ -347,26 +316,22 @@ def _replay_unavailable(scene, turn):
     processor = get_event_processor()
     processor._clear_loader_bubbles(scene)
     from .executor import get_executor
-    get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
+    get_executor().end_agent_turn()
     get_session_manager().set_run(scene, '', False)
     get_session_manager().set_state(scene, SessionState.IDLE)
     add_agent_message(scene, 'The connection lost part of this response. The task was not restarted. Check the scene before continuing.')
     turn.complete = True
 
 
-def reconnect(session_ids=None):
-    """Resume every interrupted delivery from its rendered cursor, main thread.
-    With ``session_ids``, only those sessions' turns and commands."""
+def reconnect():
+    """Resume every interrupted delivery from its rendered cursor, main thread."""
     arm()
-    wanted = None if session_ids is None else set(session_ids)
     for turn in list(_turns.values()):
-        if wanted is not None and turn.session_id not in wanted:
-            continue
         if not turn.complete and turn.session_id not in _blocked:
             _request_replay(turn)
     from mixar.modules.common.agent_rpc.client import call
     for command_id, (sid, _) in list(_commands.items()):
-        if sid in _blocked or (wanted is not None and sid not in wanted):
+        if sid in _blocked:
             continue
         def received(result, cid=command_id, session_id=sid):
             if result.get('state') == 'complete':
@@ -434,12 +399,11 @@ def shutdown(app_exit=False):
 
 
 def reset():
-    global _inbox_bytes, _inbox_last
+    global _inbox_bytes
     with _LOCK:
         _inbox.clear()
         _overflow.clear()
         _inbox_bytes = 0
-        _inbox_last = ''
     _turns.clear()
     _commands.clear()
     _bindings.clear()

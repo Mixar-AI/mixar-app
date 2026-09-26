@@ -40,8 +40,7 @@ class FakeExecutor:
         self.seen = []
         self.context_during = []
 
-    def execute(self, script, session_id=""):
-        # The pump routes every script to its session (parallel scenes).
+    def execute(self, script):
         self.seen.append(script)
         self.context_during.append(ctx_mod.get_agent_execution_context())
         if script == "raise":
@@ -125,7 +124,7 @@ class TestExecuteAndRespond:
         ref = '{"generation_id": "current"}'
         claimed = []
 
-        def execute(script, session_id=""):
+        def execute(script):
             assert "mixar_agent_ref" not in wm
             wm["mixar_agent_ref"] = ref
             if outcome == "accepted":
@@ -244,14 +243,13 @@ class TestRealPrefetchState:
 class TestGuiQueueShape:
     def test_queue_holds_execution_requests(self, monkeypatch):
         from mixar.modules.space_mixie_chat.core import main_thread_executor as mte
-        from mixar.modules.space_mixie_chat.core import script_lanes
-        script_lanes.clear()
+        while not mte._request_queue.empty():
+            mte._request_queue.get_nowait()
         monkeypatch.setattr(mte, "maybe_start_prefetch", lambda *_: None)
         monkeypatch.setattr(mte, "_ensure_timer_running", lambda: None)
         mte.queue_script_request("pass", "t-3", "tool", "scene-3", {"turn_id": "x"},
                                  envelope={"run_id": "r"})
-        # The headless worker reads the lanes through the same queue shape.
-        req = script_lanes.LaneQueue().get_nowait()
+        req = mte._request_queue.get_nowait()
         assert isinstance(req, ExecutionRequest)
         assert (req.request_id, req.session_id, req.agent_ctx) == ("t-3", "scene-3", {"turn_id": "x"})
         assert req.envelope.run_id == "r"

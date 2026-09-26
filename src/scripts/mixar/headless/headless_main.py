@@ -178,8 +178,6 @@ def _run() -> None:
 
     executor = get_executor()
     held = None
-    from mixar.modules.space_mixie_chat.core.script_lanes import LaneQueue
-    lane_queue = LaneQueue()
     connected_logged = False
     last_connected = time.monotonic()
     last_activity = time.monotonic()
@@ -202,10 +200,9 @@ def _run() -> None:
             logger.info("idle > %.0fs with no build; exiting", idle_ttl)
             break
 
-        # MANUAL PUMP — timers do not fire in --background. Scripts land in
-        # the per-session lanes; the queue view hands them over in turn.
+        # MANUAL PUMP — timers do not fire in --background.
         held, worked = pump_once(
-            lane_queue, held, identity, executor, client, mte, pump,
+            mte._request_queue, held, identity, executor, client, mte, pump,
             check_assignment,
         )
         if worked:
