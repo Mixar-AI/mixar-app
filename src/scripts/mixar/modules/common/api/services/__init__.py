@@ -22,6 +22,7 @@ from .update_service import UpdateService, get_update_service
 from .job_queue_service import JobQueueService, get_job_queue_service
 from .subscription_service import SubscriptionService, get_subscription_service
 from .prompt_refine_service import PromptRefineService, get_prompt_refine_service
+from .notifications_service import NotificationsService, get_notifications_service
 
 __all__ = [
     # Base
@@ -65,4 +66,7 @@ __all__ = [
     # Prompt refinement (the Refine button beside a generation prompt)
     "PromptRefineService",
     "get_prompt_refine_service",
+    # Notifications (task-completion sound catalog)
+    "NotificationsService",
+    "get_notifications_service",
 ]

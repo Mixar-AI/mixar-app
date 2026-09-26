@@ -69,6 +69,7 @@ class APIModule(Enum):
     TELEMETRY = "telemetry"
     SUBSCRIPTIONS = "subscriptions"
     PROMPT_REFINE = "prompt-refine"
+    NOTIFICATIONS = "notifications"
 
 
 # ============================================================================

@@ -212,6 +212,8 @@ class SessionManager:
                 settle_running()
             except Exception:  # noqa: BLE001 — the panel never blocks the run
                 pass
+            from .completion_sound import play_completion_sound
+            play_completion_sound()
         if changed and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
                 f"RUN [{scene.name}]: {'open' if open else 'closed'} {run_id[:8]}"
