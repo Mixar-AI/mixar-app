@@ -25,15 +25,27 @@ class TurnTransport:
         # before the placeholder bubble was added can go stale.
         self.last_command_id = ''
 
+    def _scene(self):
+        """The handler's scene: by the name it was created under, else — the
+        user renamed the scene mid-turn — by the session it is streaming for,
+        re-keying the registry under the new name (plan row 1.9)."""
+        import bpy
+        scene = bpy.data.scenes.get(self.scene_name)
+        if scene is None and self._session_id:
+            from mixar.modules.common.agent_execution.document import scene_for_session
+            scene = scene_for_session(self._session_id, bpy)
+            if scene is not None:
+                _rekey(self, scene.name)
+        return scene
+
     @property
     def is_running(self):
         return any(not turn.complete and turn.session_id == self._session_id
                    for turn in turn_events._turns.values())
 
     def _send(self, method, payload, user_message=None, interjecting=False):
-        import bpy
         from .session import get_session_manager
-        scene = bpy.data.scenes.get(self.scene_name)
+        scene = self._scene()
         if scene is None:
             return False
         # Central boundary covers typed sends, choices, modify, and retries.
@@ -130,9 +142,8 @@ class TurnTransport:
         self._running = False
 
     def resume_stream(self, session_id, after_seq=None, auth_token=None):
-        import bpy
         self._session_id = session_id
-        scene = bpy.data.scenes.get(self.scene_name)
+        scene = self._scene()
         if scene is None:
             return False
         turn_events.bind(scene)
@@ -155,8 +166,30 @@ def create_turn_handler(scene_name='', host='', on_event=None, on_error=None, on
     return handler
 
 
+def _rekey(handler, scene_name):
+    for key, value in list(_handlers.items()):
+        if value is handler:
+            _handlers.pop(key, None)
+    handler.scene_name = scene_name
+    _handlers[scene_name] = handler
+
+
 def get_turn_handler(scene_name=''):
-    return _handlers.get(scene_name)
+    handler = _handlers.get(scene_name)
+    if handler is not None or not scene_name:
+        return handler
+    # A renamed scene: find the handler streaming for that scene's session
+    # and re-key it under the new name (plan row 1.9).
+    import bpy
+    scene = bpy.data.scenes.get(scene_name)
+    sid = getattr(scene, 'mixie_session_id', '') if scene is not None else ''
+    if not sid:
+        return None
+    for candidate in list(_handlers.values()):
+        if candidate._session_id == sid:
+            _rekey(candidate, scene_name)
+            return candidate
+    return None
 
 
 def cleanup_turn_handler(scene_name):

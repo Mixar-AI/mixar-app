@@ -28,6 +28,7 @@
 #include "rna_screen_mixar_glass.hh"
 #include "rna_screen_mixar_header.hh"
 #include "rna_screen_mixar_moodboard.hh"
+#include "rna_screen_mixar_scenes_drawer.hh"
 
 namespace blender {
 
@@ -460,6 +461,8 @@ static void rna_def_area_api(StructRNA *srna)
   PropertyRNA *parm;
 
   rna_def_area_mixar_moodboard(srna);
+
+  rna_def_area_mixar_scenes_drawer(srna);
   rna_def_area_mixar_header(srna);
 
   RNA_def_function(srna, "tag_redraw", "ED_area_tag_redraw");

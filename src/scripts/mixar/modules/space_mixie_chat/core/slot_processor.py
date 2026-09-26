@@ -109,11 +109,37 @@ def finalize_turn(scene) -> None:
     if not get_session_manager().run_open(scene):
         try:
             from mixar.modules.agent_panel.core.cards import settle_running
-            settle_running()
+            settle_running(scene=scene)
         except Exception:  # noqa: BLE001 — the panel never blocks turn cleanup
             logger.debug("Agent panel settle failed", exc_info=True)
 
+    _restore_turn_mode(scene)
     _bump_layout_epoch(scene)
+
+
+def _restore_turn_mode(scene) -> None:
+    """Leave the tab in Object mode when its turn began there (see
+    ``SceneStateMixin.restore_turn_mode``): the window is pinned to the tab
+    for the mode_set, exactly as a script is, and released after."""
+    session_id = getattr(scene, "mixie_session_id", "") or ""
+    if not session_id:
+        return
+    try:
+        from .main_thread_executor import get_executor
+        from .main_thread_routing import restore_after, route_request
+        executor = get_executor()
+        if not executor.__dict__.get("_turn_start_modes", {}).get(session_id):
+            return
+        target, did_switch, error = route_request(session_id, "mode_restore", "turn-end")
+        if error or target is None:
+            executor.__dict__.get("_turn_start_modes", {}).pop(session_id, None)
+            return
+        try:
+            executor.restore_turn_mode(session_id)
+        finally:
+            restore_after(did_switch)
+    except Exception:  # noqa: BLE001 — mode hygiene never blocks turn cleanup
+        logger.debug("turn-end mode restore skipped", exc_info=True)
 
 
 class SlotEventProcessor:
@@ -168,7 +194,7 @@ class SlotEventProcessor:
             ("loader", lambda: self._apply_loader_slot(bubble, event_data["loader"], scene)),
             ("content", lambda: self._apply_content_slot(bubble, event_data["content"], scene)),
             ("ephemeral", lambda: self._apply_ephemeral_slot(bubble, event_data["ephemeral"], scene)),
-            ("todo", lambda: self._apply_todo_slot(bubble, event_data["todo"])),
+            ("todo", lambda: self._apply_todo_slot(bubble, event_data["todo"], scene)),
             ("steps", lambda: self._apply_steps_slot(bubble, event_data["steps"], scene)),
             ("actions", lambda: self._apply_actions_slot(bubble, event_data["actions"], scene)),
             ("images", lambda: self._apply_images_slot(bubble, event_data["images"])),
@@ -446,13 +472,14 @@ class SlotEventProcessor:
         # the native open dialog can filter. Never a path.
         bubble.import_formats = str(context.get("formats") or "")[:120]
 
-    def _apply_todo_slot(self, bubble: Any, todo_items: list) -> None:
+    def _apply_todo_slot(self, bubble: Any, todo_items: list, scene=None) -> None:
         """
         Apply todo slot update (full replacement of todo items).
 
         Args:
             bubble: Message PropertyGroup
             todo_items: List of dicts with id, text, status
+            scene: the chat scene the list belongs to (parallel scenes)
         """
         prev_count = len(bubble.todo_items)
 
@@ -490,7 +517,7 @@ class SlotEventProcessor:
         # mirror failure must never break the chat's own todo rendering.
         try:
             from mixar.modules.agent_panel.core.cards import mirror_todo_items
-            mirror_todo_items(bubble.todo_items)
+            mirror_todo_items(bubble.todo_items, scene=scene)
         except Exception:  # noqa: BLE001
             logger.debug("Agent panel mirror failed", exc_info=True)
 
@@ -645,10 +672,13 @@ class SlotEventProcessor:
         if not scene or not hasattr(scene, 'mixie_chat_messages'):
             return
 
-        # Check if any bubble still has loader visible
-        for msg in scene.mixie_chat_messages:
-            if msg.loader_visible:
-                return
+        # Check if any bubble in ANY scene still has a loader (the timer is
+        # one per app; another tab may still be streaming).
+        import bpy as _bpy
+        for s in _bpy.data.scenes:
+            for msg in getattr(s, "mixie_chat_messages", ()):
+                if msg.loader_visible:
+                    return
 
         # No active loaders, stop timer
         from .animation_manager import stop_loader_animation
