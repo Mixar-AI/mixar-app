@@ -40,6 +40,7 @@
 #include "ED_asset_shelf.hh"
 #include "ED_buttons.hh"
 #include "ED_moodboard_drawer.hh"
+#include "ED_scenes_drawer.hh"
 #include "ED_screen.hh"
 #include "ED_screen_types.hh"
 #include "ED_space_api.hh"
@@ -1319,6 +1320,10 @@ static bool region_azone_edge_poll(const ScrArea *area,
   if (area->spacetype == SPACE_VIEW3D && region->regiontype == RGN_TYPE_TOOL_PROPS) {
     return false;
   }
+  /* Mixar Scenes drawer: the same fixed-width overlay on the LEFT edge. */
+  if (area->spacetype == SPACE_VIEW3D && region->regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE) {
+    return false;
+  }
 
   /* Mixar Cinema Mode timeline dock: View3D `CHANNELS` is used by nothing
    * else, and the dock's height is FIXED (`VIEW3D_DIRECTOR_TIMELINE_HEIGHT`).
@@ -1965,6 +1970,14 @@ static void region_rect_recursive(
         winrct->xmin = region->winrct.xmax + 1;
       }
       BLI_rcti_sanitize(winrct);
+      /* Mixar: the Scenes drawer is a normal region (it pushes the viewport),
+       * but Zen's scene toolbar is a floating header that took no space from
+       * the remainder: start the drawer's own rect below it. */
+      if (area->spacetype == SPACE_VIEW3D && region->regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE &&
+          !region->overlap && ui::mixar_area_floats_viewport_chrome(area))
+      {
+        mixar_floating_headers_clip(region, &region->winrct);
+      }
     }
   }
   else if (ELEM(alignment, RGN_ALIGN_VSPLIT, RGN_ALIGN_HSPLIT)) {

@@ -775,3 +775,47 @@ def test_progress_timer_is_the_main_thread_refresh_path():
             assert "self._notify" in chains
             return
     raise AssertionError("_start_download_progress_timer not found")
+
+
+# --------------------------------------------------------------------------
+# Which scene a finished job lands in (parallel scene tabs)
+# --------------------------------------------------------------------------
+
+
+def _tab(name, sid):
+    return SimpleNamespace(name=name, mixie_session_id=sid)
+
+
+@pytest.fixture
+def tabs(monkeypatch):
+    from mixar.modules.common.job_queue.core import queue_download as module
+
+    scenes = {}
+    monkeypatch.setattr(module.bpy.data, "scenes", SimpleNamespace(get=scenes.get), raising=False)
+    monkeypatch.setattr(module.bpy.context, "scene", _tab("Shown", "sess-shown"), raising=False)
+    doc = SimpleNamespace(scene_for_session=lambda sid, _bpy: next(
+        (s for s in scenes.values() if s.mixie_session_id == sid), None))
+    monkeypatch.setitem(sys.modules, "mixar.modules.common.agent_execution.document", doc)
+    return SimpleNamespace(module=module, scenes=scenes)
+
+
+def test_agent_job_follows_its_session_not_a_reused_name(tabs):
+    """The originating tab was closed and a NEW tab took its freed name:
+    the job fails rather than landing in the stranger."""
+    stranger = _tab("Scene 2", "sess-new")
+    tabs.scenes["Scene 2"] = stranger
+    assert tabs.module.resolve_job_scene("Scene 2", "sess-old") is None
+    # The same tab renamed mid-job is still found by its session.
+    renamed = _tab("Kitchen", "sess-old")
+    tabs.scenes["Kitchen"] = renamed
+    assert tabs.module.resolve_job_scene("Scene 2", "sess-old") is renamed
+    # A name match is accepted only when that scene still carries the session.
+    assert tabs.module.resolve_job_scene("Scene 2", "sess-new") is stranger
+
+
+def test_manual_job_falls_back_to_the_shown_scene_only_without_a_name(tabs):
+    assert tabs.module.resolve_job_scene("", "").name == "Shown"
+    assert tabs.module.resolve_job_scene("Gone", "") is None
+    kept = _tab("Kept", "")
+    tabs.scenes["Kept"] = kept
+    assert tabs.module.resolve_job_scene("Kept", "") is kept

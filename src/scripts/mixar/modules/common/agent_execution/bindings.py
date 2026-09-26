@@ -77,7 +77,10 @@ def activate(params: dict, journal=None, identity_fn=None) -> dict:
         return {"success": False, "error": "unsupported protocol_version",
                 "error_type": "unsupported_protocol"}
     journal = journal or get_journal()
-    identity_fn = identity_fn or document.document_identity
+    if identity_fn is None:
+        # The run's scene is the session's scene (Scene.mixie_session_id),
+        # whatever the window shows when the activate arrives.
+        identity_fn = lambda: document.document_identity(session_id=session_id)  # noqa: E731
     prior = _by_session.get(session_id)
     known = max(prior.turn_epoch if prior else -1, journal.run_epoch(session_id))
     if prior is not None and prior.run_id == run_id and prior.turn_epoch == epoch:
@@ -96,11 +99,10 @@ def activate(params: dict, journal=None, identity_fn=None) -> dict:
     if epoch <= known:
         return {"success": False, "error": f"turn_epoch {epoch} is not newer than {known}",
                 "error_type": "stale_epoch"}
-    # Newer epoch wins: revoke whatever was active for this session.
+    # Newer epoch wins: revoke whatever was active for this session (and its
+    # foreground tasks); other tabs' runs and tasks are untouched.
     if prior is not None:
         _revoke_binding(prior, journal)
-    # A new run starts with no foreground task in flight.
-    document.clear_foreground_tasks()
     identity = identity_fn()
     binding = RunBinding(
         run_id=run_id, session_id=session_id, turn_epoch=epoch,
@@ -123,6 +125,11 @@ def check_document_current(binding: RunBinding, identity: dict):
         return "stale_document", "document changed since this run activated"
     if _int(identity.get("document_epoch")) != binding.document_epoch:
         return "stale_epoch", "document epoch changed since this run activated"
+    live_scene = identity.get("scene_id")
+    if binding.scene_id and live_scene != binding.scene_id:
+        # The session's scene is gone, duplicated, or another scene answered:
+        # a commit now would land in the wrong tab.
+        return "stale_scene", "the run's scene is no longer the scene it activated on"
     return None
 
 
@@ -153,6 +160,17 @@ def _revoke_binding(binding: RunBinding, journal) -> None:
     document.clear_foreground_tasks(binding.run_id)
 
 
+def any_run_active() -> bool:
+    return any(not b.revoked for b in _by_session.values())
+
+
+def live_binding_for_scene(scene) -> Optional[RunBinding]:
+    """The unrevoked run bound to ``scene``'s chat session, if any."""
+    sid = str(getattr(scene, "mixie_session_id", "") or "") if scene is not None else ""
+    binding = _by_session.get(sid) if sid else None
+    return binding if binding is not None and not binding.revoked else None
+
+
 def revoke(params: dict, journal=None) -> dict:
     """Stop further effects for a run, or mark one task finished.
 
@@ -179,7 +197,8 @@ def revoke(params: dict, journal=None) -> dict:
     else:
         _revoke_binding(binding, journal)
         if _by_session.get(binding.session_id) is binding:
-            document.set_run_active(False)
+            # The WindowManager flag means "some tab has a live v3 run".
+            document.set_run_active(any_run_active())
     return {"success": True, "known": True,
             "foreground_tasks": document.foreground_tasks_active()}
 
