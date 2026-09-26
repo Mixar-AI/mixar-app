@@ -12,8 +12,16 @@
  * immune to the pin races a screenshot would have: the scene is passed in.
  *
  * Renders are throttled per card and skipped while the depsgraph has not
- * changed, so an idle drawer costs one blit per card per redraw and nothing
- * else.
+ * changed, so an idle drawer costs one textured quad per card per redraw and
+ * nothing else.
+ *
+ * The render runs from a timer-driven operator, outside any window frame, and
+ * the card draws in a later frame. Blitting the render's GPU texture across
+ * that gap came up black on Metal from the second render of a card on (the
+ * first was fine, `--debug` hid it, and no amount of `GPU_finish` helped), so
+ * the render is read back to memory right after it finishes and the draw pass
+ * uploads it into a texture of its own — Blender's own out-of-frame renders
+ * (`ED_view3d_draw_offscreen_imbuf`) read back the same way.
  */
 
 #include <algorithm>
@@ -46,8 +54,10 @@
 #include "ED_view3d_offscreen.hh"
 
 #include "GPU_framebuffer.hh"
+#include "GPU_immediate.hh"
+#include "GPU_shader_builtin.hh"
 #include "GPU_state.hh"
-#include "GPU_viewport.hh"
+#include "GPU_texture.hh"
 
 #include "WM_api.hh"
 #include "WM_mixar.hh"
@@ -91,14 +101,17 @@ static WorldExtents thumb_extents(Depsgraph *depsgraph)
 
 void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &t)
 {
-  if (t.viewport) {
-    GPU_viewport_free(t.viewport);
-  }
   if (t.offscreen) {
     GPU_offscreen_free(t.offscreen);
   }
-  t.viewport = nullptr;
+  if (t.texture) {
+    GPU_texture_free(t.texture);
+  }
   t.offscreen = nullptr;
+  t.texture = nullptr;
+  t.pixels.clear();
+  t.pixels_w = t.pixels_h = 0;
+  t.pixels_dirty = false;
   t.has_render = false;
 }
 
@@ -163,12 +176,6 @@ void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &t,
       t.render_failed = true;
       return;
     }
-    t.viewport = GPU_viewport_create();
-    if (!t.viewport) {
-      view3d_scenes_drawer_thumb_free(t);
-      t.render_failed = true;
-      return;
-    }
   }
   const WorldExtents bounds = thumb_extents(deps);
   const float cx = bounds.any ? BLI_rctf_cent_x(&bounds.xy) : 0;
@@ -207,9 +214,19 @@ void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &t,
   const bool depth_mask = GPU_depth_mask_get();
   const GPUFaceCullTest face_cull = GPU_face_culling_get();
   GPU_offscreen_bind(t.offscreen, true);
+  /* A temporary GPUViewport per render (DRW makes and frees it), display
+   * colour space and overlays merged, so the offscreen holds the finished
+   * picture and nothing survives between renders but the offscreen itself. */
   ED_view3d_draw_offscreen_simple(deps, scene, &shading, nullptr, type, MINIMAP_HIDDEN_TYPES, 0, w, h,
                                   V3D_OFSDRAW_SHOW_GRIDFLOOR, view, projection, 0.01f, clip_end, 0,
-                                  false, true, true, nullptr, false, nullptr, t.offscreen, t.viewport);
+                                  false, true, true, nullptr, true, nullptr, t.offscreen, nullptr);
+  /* Read the picture back while the offscreen is still bound (the read waits
+   * for the render): a few thousand pixels, throttled by `min_interval`. */
+  t.pixels.resize(size_t(w) * size_t(h) * 4);
+  GPU_offscreen_read_color(t.offscreen, GPU_DATA_UBYTE, t.pixels.data());
+  t.pixels_w = w;
+  t.pixels_h = h;
+  t.pixels_dirty = true;
   GPU_offscreen_unbind(t.offscreen, true);
   if (framebuffer) {
     GPU_framebuffer_bind(framebuffer);
@@ -225,6 +242,54 @@ void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &t,
   t.update_count = DEG_get_update_count(deps);
   t.draw_type = type;
   t.last_render_time = now;
+}
+
+void view3d_scenes_drawer_thumb_draw(ScenesDrawerThumb &t, const rcti &rect)
+{
+  if (!t.has_render || t.pixels.empty()) {
+    return;
+  }
+  if (t.texture && (GPU_texture_width(t.texture) != t.pixels_w ||
+                    GPU_texture_height(t.texture) != t.pixels_h))
+  {
+    GPU_texture_free(t.texture);
+    t.texture = nullptr;
+  }
+  if (!t.texture) {
+    t.texture = GPU_texture_create_2d("scenes_drawer_thumb", t.pixels_w, t.pixels_h, 1,
+                                      gpu::TextureFormat::UNORM_8_8_8_8,
+                                      GPU_TEXTURE_USAGE_SHADER_READ, nullptr);
+    if (!t.texture) {
+      return;
+    }
+    t.pixels_dirty = true;
+  }
+  if (t.pixels_dirty) {
+    GPU_texture_update(t.texture, GPU_DATA_UBYTE, t.pixels.data());
+    t.pixels_dirty = false;
+  }
+  /* The render is already in display space and opaque (background drawn). */
+  GPU_blend(GPU_BLEND_NONE);
+  GPUSamplerState sampler = GPUSamplerState::default_sampler();
+  sampler.filtering = GPU_SAMPLER_FILTERING_LINEAR;
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
+  const uint texco = GPU_vertformat_attr_add(format, "texCoord", gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_IMAGE);
+  immBindTextureSampler("image", t.texture, sampler);
+  immBegin(GPU_PRIM_TRI_FAN, 4);
+  immAttr2f(texco, 0.0f, 0.0f);
+  immVertex2f(pos, float(rect.xmin), float(rect.ymin));
+  immAttr2f(texco, 1.0f, 0.0f);
+  immVertex2f(pos, float(rect.xmax + 1), float(rect.ymin));
+  immAttr2f(texco, 1.0f, 1.0f);
+  immVertex2f(pos, float(rect.xmax + 1), float(rect.ymax + 1));
+  immAttr2f(texco, 0.0f, 1.0f);
+  immVertex2f(pos, float(rect.xmin), float(rect.ymax + 1));
+  immEnd();
+  immUnbindProgram();
+  GPU_texture_unbind(t.texture);
+  GPU_blend(GPU_BLEND_ALPHA);
 }
 
 }  // namespace blender

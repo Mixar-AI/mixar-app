@@ -247,8 +247,9 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         draw_pill(stripe, zen.primary, 1.5f * scale);
       }
 
-      /* Thumbnail: the scene rendered natively into a small offscreen, blitted
-       * here; a scene that has never been evaluated shows a dark bed. */
+      /* Thumbnail: the scene rendered natively into a small offscreen by the
+       * timer operator and read back; drawn here from the card's own texture. A
+       * scene that has never been evaluated shows a dark bed. */
       rcti thumb;
       thumb.xmin = int(rect.xmin + 8.0f * scale);
       thumb.xmax = thumb.xmin + int(THUMB_W * scale);
@@ -259,10 +260,8 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         BLI_rctf_rcti_copy(&bed, &thumb);
         draw_pill(bed, zen.panel, 6.0f * scale);
         auto found = runtime->thumbs.find(card.scene_name);
-        if (found != runtime->thumbs.end() && found->second.has_render) {
-          GPU_viewport_draw_to_screen_ex(found->second.viewport, 0, &thumb, true, true);
-          ED_region_pixelspace(region);
-          GPU_blend(GPU_BLEND_ALPHA);
+        if (found != runtime->thumbs.end()) {
+          view3d_scenes_drawer_thumb_draw(found->second, thumb);
         }
       }
       card.thumb_rect.xmin = thumb.xmin + region->winrct.xmin;
@@ -288,10 +287,12 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       pill.ymax = rect.ymax - 11.0f * scale;
       pill.ymin = pill.ymax - PILL_H * scale;
       {
+        /* A solid badge with dark text: the tinted pill with tinted text was
+         * unreadable, above all on a working card's green progress light. */
         float fill[4];
-        with_alpha(status_color(card.status), 0.22f, fill);
+        with_alpha(status_color(card.status), card.status == ScenesDrawerTabStatus::Idle ? 0.6f : 1.0f, fill);
         draw_pill(pill, fill, 0.5f * PILL_H * scale);
-        BLF_color4fv(font, status_color(card.status));
+        BLF_color4fv(font, zen.strong);   /* the accents are dark: light text reads */
         BLF_position(font, pill.xmin + 7.0f * scale, pill.ymin + 4.0f * scale, 0.0f);
         BLF_draw(font, status, strlen(status));
       }
@@ -316,11 +317,15 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       draw_elided(font, card.last_text, inner_x, rect.ymin + 10.0f * scale,
                   rect.xmax - 12.0f * scale - inner_x, zen.secondary);
 
-      /* Close glyph (never on the last remaining tab). */
+      /* Delete control (never on the last remaining tab): a bin, red when
+       * hovered — it removes the whole scene, not just the card. */
       rcti close_i = {};
       if (count > 1) {
         BLI_rcti_rctf_copy(&close_i, &close_rect);
-        ED_agent_panel_draw_close(close_i, 1.0f, runtime->hover == i && runtime->hover_close);
+        const bool hot = runtime->hover == i && runtime->hover_close;
+        float glyph[4];
+        with_alpha(hot ? zen.danger : zen.secondary, hot ? 1.0f : 0.85f, glyph);
+        draw_trash(close_i, scale, glyph);
       }
 
       /* Cache in window pixels for hit tests and QA (clipped to the list so a
@@ -376,6 +381,16 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       line.ymax = line_y + 1.5f * scale;
       if (line_y >= 0.0f) {
         draw_pill(line, zen.primary, 1.5f * scale);
+      }
+    }
+
+    /* The delete control's label, above the cards. */
+    if (runtime->hover >= 0 && runtime->hover < count && runtime->hover_close) {
+      const ScenesDrawerCard &hot = runtime->cards[runtime->hover];
+      if (BLI_rcti_size_x(&hot.close_rect) > 0) {
+        rcti anchor = hot.close_rect;
+        BLI_rcti_translate(&anchor, -region->winrct.xmin, -region->winrct.ymin);
+        draw_hint(anchor, "Delete this scene and its chat", scale);
       }
     }
 

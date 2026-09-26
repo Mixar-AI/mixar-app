@@ -33,8 +33,10 @@
 #include "DNA_userdef_types.h"
 
 struct GPUOffScreen;
-struct GPUViewport;
 struct wmTimer;
+namespace blender::gpu {
+class Texture;
+}
 
 namespace blender {
 
@@ -69,7 +71,17 @@ struct ScenesDrawerCard {
  * `view3d_scenes_drawer_thumbs.cc`). Owned by the region runtime. */
 struct ScenesDrawerThumb {
   GPUOffScreen *offscreen = nullptr;
-  GPUViewport *viewport = nullptr;
+  /** The last render, read back the moment it finished. The render runs from
+   * a timer, outside any window frame; a GPU texture rendered there and read
+   * by the card's blit in a later frame came up black on Metal from the
+   * second render on. Pixels in memory have no such lifetime. */
+  std::vector<unsigned char> pixels;
+  int pixels_w = 0;
+  int pixels_h = 0;
+  /** `pixels` changed since `texture` was last uploaded (draw pass). */
+  bool pixels_dirty = false;
+  /** The card's texture, created and refreshed in the region's draw pass. */
+  blender::gpu::Texture *texture = nullptr;
   bool has_render = false;
   bool render_failed = false;
   uint64_t update_count = 0;

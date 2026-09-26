@@ -156,6 +156,8 @@ void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &thumb, Main *bmain, co
                                        Scene *scene, const View3D *host, int w, int h,
                                        double min_interval);
 void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &thumb);
+/** Draw the last render into `rect` (region pixels, inclusive), uploading it first if new. */
+void view3d_scenes_drawer_thumb_draw(ScenesDrawerThumb &thumb, const rcti &rect);
 void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area);
 
 /** \} */
@@ -183,6 +185,9 @@ void draw_elided(int font_id,
 const char *status_label(ScenesDrawerTabStatus status);
 const float *status_color(ScenesDrawerTabStatus status);
 void draw_pill(const rctf &rect, const float fill[4], float radius);
+/** The card's delete control (a bin) and the hover label beside a control. */
+void draw_trash(const rcti &box, float scale, const float color[4]);
+void draw_hint(const rcti &anchor, const char *text, float scale);
 
 }  // namespace view3d_scenes_drawer
 

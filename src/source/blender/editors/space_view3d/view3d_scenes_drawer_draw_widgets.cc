@@ -21,6 +21,7 @@
 
 #include "BLI_math_base.h"
 #include "BLI_rect.h"
+#include "GPU_shader_builtin.hh"
 #include "BLI_string.h"
 
 #include "BKE_context.hh"
@@ -181,6 +182,73 @@ void draw_pill(const rctf &rect, const float fill[4], const float radius)
 {
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   ui::draw_roundbox_4fv(&rect, true, radius, fill);
+}
+
+static void glyph_line(const float x1, const float y1, const float x2, const float y2,
+                       const float width, const float color[4])
+{
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_POLYLINE_UNIFORM_COLOR);
+  float viewport[4];
+  GPU_viewport_size_get_f(viewport);
+  immUniform2fv("viewportSize", &viewport[2]);
+  immUniform1f("lineWidth", width);
+  immUniformColor4fv(color);
+  immBegin(GPU_PRIM_LINES, 2);
+  immVertex2f(pos, x1, y1);
+  immVertex2f(pos, x2, y2);
+  immEnd();
+  immUnbindProgram();
+}
+
+void draw_trash(const rcti &box, const float scale, const float color[4])
+{
+  /* A bin: lid with a handle, tapered body, two inner lines. The card's
+   * close control deletes the whole scene; the glyph says so. */
+  /* Drawn at 62% of the control's box so it sits like the status badge's
+   * text rather than dominating the card. */
+  const float w = float(BLI_rcti_size_x(&box) + 1) * 0.62f;
+  const float h = float(BLI_rcti_size_y(&box) + 1) * 0.62f;
+  const float x = float(box.xmin) + (float(BLI_rcti_size_x(&box) + 1) - w) * 0.5f;
+  const float y = float(box.ymin) + (float(BLI_rcti_size_y(&box) + 1) - h) * 0.5f;
+  const float line = std::max(1.15f * scale, 1.0f);
+  const float lid_y = y + h * 0.78f;
+  glyph_line(x + w * 0.18f, lid_y, x + w * 0.82f, lid_y, line, color);          /* lid */
+  glyph_line(x + w * 0.40f, lid_y, x + w * 0.44f, y + h * 0.90f, line, color);  /* handle */
+  glyph_line(x + w * 0.56f, y + h * 0.90f, x + w * 0.60f, lid_y, line, color);
+  glyph_line(x + w * 0.44f, y + h * 0.90f, x + w * 0.56f, y + h * 0.90f, line, color);
+  glyph_line(x + w * 0.26f, lid_y, x + w * 0.31f, y + h * 0.16f, line, color);   /* body */
+  glyph_line(x + w * 0.74f, lid_y, x + w * 0.69f, y + h * 0.16f, line, color);
+  glyph_line(x + w * 0.31f, y + h * 0.16f, x + w * 0.69f, y + h * 0.16f, line, color);
+  glyph_line(x + w * 0.44f, y + h * 0.66f, x + w * 0.45f, y + h * 0.28f, line, color);  /* ribs */
+  glyph_line(x + w * 0.56f, y + h * 0.66f, x + w * 0.55f, y + h * 0.28f, line, color);
+}
+
+void draw_hint(const rcti &anchor, const char *text, const float scale)
+{
+  /* A small label to the LEFT of the control it explains (the trash sits at
+   * the card's right edge), drawn after the cards so it floats above them. */
+  const ui::mixar_tokens::Palette &zen = ui::mixar_tokens::mixar_zen();
+  const int font = BLF_default();
+  BLF_size(font, 10.5f * scale);
+  const float tw = BLF_width(font, text, strlen(text));
+  const float th = BLF_height_max(font);
+  rctf box;
+  box.xmax = float(anchor.xmin) - 6.0f * scale;
+  box.xmin = box.xmax - tw - 14.0f * scale;
+  box.ymax = float(anchor.ymax) + 1.0f * scale;
+  box.ymin = box.ymax - th - 8.0f * scale;
+  float fill[4], border[4];
+  with_alpha(zen.panel, 0.98f, fill);
+  with_alpha(zen.border, 1.0f, border);
+  rctf outer = box;
+  BLI_rctf_pad(&outer, U.pixelsize, U.pixelsize);
+  draw_pill(outer, border, 6.0f * scale + U.pixelsize);
+  draw_pill(box, fill, 6.0f * scale);
+  BLF_color4fv(font, zen.strong);
+  BLF_position(font, box.xmin + 7.0f * scale, box.ymin + 5.0f * scale, 0.0f);
+  BLF_draw(font, text, strlen(text));
 }
 
 }  // namespace blender::view3d_scenes_drawer
