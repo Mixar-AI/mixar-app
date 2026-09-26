@@ -68,6 +68,12 @@ int read_int(PointerRNA *ptr, const char *name, const int fallback)
   return prop ? RNA_property_int_get(ptr, prop) : fallback;
 }
 
+int read_enum(PointerRNA *ptr, const char *name, const int fallback)
+{
+  PropertyRNA *prop = RNA_struct_find_property(ptr, name);
+  return prop ? RNA_property_enum_get(ptr, prop) : fallback;
+}
+
 bool read_bool(PointerRNA *ptr, const char *name)
 {
   PropertyRNA *prop = RNA_struct_find_property(ptr, name);
@@ -96,7 +102,7 @@ void sync_cards(const bContext *C, ScenesDrawerRuntime *runtime)
     read_string(&tab_ptr, "scene_name", card.scene_name);
     read_string(&tab_ptr, "session_id", card.session_id);
     read_string(&tab_ptr, "last_text", card.last_text);
-    const int status = read_int(&tab_ptr, "status", 0);
+    const int status = read_enum(&tab_ptr, "status", 0);
     card.status = (status >= 0 && status <= 3) ? ScenesDrawerTabStatus(status) :
                                                  ScenesDrawerTabStatus::Idle;
     card.workers_done = read_int(&tab_ptr, "workers_done", 0);

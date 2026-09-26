@@ -342,19 +342,41 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       y_top = y_bottom - CARD_GAP * scale;
     }
 
-    /* Reorder drag: an insertion line above the slot the card would land in. */
-    if (runtime->drag_index >= 0 && runtime->drag_target >= 0 &&
-        runtime->drag_target < int(runtime->cards.size()) && runtime->drag_target != runtime->drag_index)
+    /* Reorder drag: an insertion line where the card would land — above the
+     * slot's card, or under the last card on screen for a drop past the end.
+     * No line when the drop would leave the order as it is. */
+    const int drop = runtime->drag_target;
+    if (runtime->drag_index >= 0 && drop >= 0 && drop <= count &&
+        drop != runtime->drag_index && drop != runtime->drag_index + 1)
     {
-      const ScenesDrawerCard &slot = runtime->cards[runtime->drag_target];
-      const float line_y = float(slot.rect.ymax - region->winrct.ymin) + 0.5f * CARD_GAP * scale +
-                           (runtime->drag_target > runtime->drag_index ? -(CARD_H + CARD_GAP) * scale : 0.0f);
+      float line_y = 0.0f;
+      if (drop < count) {
+        line_y = float(runtime->cards[drop].rect.ymax - region->winrct.ymin) + 0.5f * CARD_GAP * scale;
+      }
+      else {
+        int last_visible = -1;
+        for (int i = count - 1; i >= 0; i--) {
+          if (BLI_rcti_size_x(&runtime->cards[i].rect) > 0) {
+            last_visible = i;
+            break;
+          }
+        }
+        if (last_visible < 0) {
+          line_y = -1.0f;
+        }
+        else {
+          line_y = float(runtime->cards[last_visible].rect.ymin - region->winrct.ymin) -
+                   0.5f * CARD_GAP * scale;
+        }
+      }
       rctf line;
       line.xmin = x0;
       line.xmax = x1;
       line.ymin = line_y - 1.5f * scale;
       line.ymax = line_y + 1.5f * scale;
-      draw_pill(line, zen.primary, 1.5f * scale);
+      if (line_y >= 0.0f) {
+        draw_pill(line, zen.primary, 1.5f * scale);
+      }
     }
 
     /* Scroll indicator: a thin track on the right while cards overflow. */

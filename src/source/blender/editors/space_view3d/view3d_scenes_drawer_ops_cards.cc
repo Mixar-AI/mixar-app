@@ -80,16 +80,26 @@ static int drawer_card_at(const ScenesDrawerRuntime *runtime, const int xy[2], b
   return -1;
 }
 
-/** The slot a pointer at `y` (window px) would drop a dragged card into. */
-static int drawer_drop_slot(const ScenesDrawerRuntime *runtime, const int y)
+/** The insertion position a pointer at `y` (window px) drops a dragged card
+ * into: "before card i" for the first card whose centre is at or below the
+ * pointer, else after the last card on screen. Cards scrolled out of view
+ * carry an empty rect (centre 0, below every pointer) and are skipped.
+ * Counted with the dragged card still in the list: the release converts it. */
+int view3d_scenes_drawer_drop_slot(const ScenesDrawerRuntime *runtime, const int y)
 {
   const int count = int(runtime->cards.size());
+  int last_visible = -1;
   for (int i = 0; i < count; i++) {
-    if (y >= BLI_rcti_cent_y(&runtime->cards[i].rect)) {
+    const rcti &rect = runtime->cards[i].rect;
+    if ((BLI_rcti_size_x(&rect) <= 0)) {
+      continue;
+    }
+    if (y >= BLI_rcti_cent_y(&rect)) {
       return i;
     }
+    last_visible = i;
   }
-  return count > 0 ? count - 1 : 0;
+  return last_visible + 1;
 }
 
 static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator *op, const wmEvent *event)
@@ -165,7 +175,7 @@ static wmOperatorStatus drawer_click_modal(bContext *C, wmOperator *op, const wm
         break;
       }
       RNA_boolean_set(op->ptr, "dragged", true);
-      const int target = drawer_drop_slot(runtime, event->xy[1]);
+      const int target = view3d_scenes_drawer_drop_slot(runtime, event->xy[1]);
       if (target != runtime->drag_target) {
         runtime->drag_target = target;
         ED_region_tag_redraw(region);
@@ -176,7 +186,10 @@ static wmOperatorStatus drawer_click_modal(bContext *C, wmOperator *op, const wm
       if (event->val == KM_RELEASE) {
         const std::string scene_name = runtime->cards[index].scene_name;
         if (RNA_boolean_get(op->ptr, "dragged")) {
-          const int target = drawer_drop_slot(runtime, event->xy[1]);
+          /* `reorder_scene_tab` removes the card first and inserts at the
+           * index: a slot past the dragged card shifts down by one. */
+          const int slot = view3d_scenes_drawer_drop_slot(runtime, event->xy[1]);
+          const int target = slot > index ? slot - 1 : slot;
           if (target != index) {
             drawer_call_python(C, "MIXIE_CHAT_OT_reorder_scene_tab", scene_name.c_str(), target);
           }

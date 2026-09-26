@@ -166,6 +166,7 @@ namespace view3d_scenes_drawer {
 
 void read_string(PointerRNA *ptr, const char *name, std::string &out);
 int read_int(PointerRNA *ptr, const char *name, int fallback);
+int read_enum(PointerRNA *ptr, const char *name, int fallback);
 bool read_bool(PointerRNA *ptr, const char *name);
 /** Pull the tab list Python keeps on the WindowManager into the runtime,
  * keeping the previous rects until this pass lays them out again. */
@@ -198,6 +199,8 @@ bool view3d_scenes_drawer_edge_hit(const bContext *C, const int xy[2]);
 void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_hover(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_scroll(wmOperatorType *ot);
+/** Insertion position (0..cards) for a drag released at window `y`. */
+int view3d_scenes_drawer_drop_slot(const ScenesDrawerRuntime *runtime, int y);
 void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf);
 /** Attach the Ctrl+` toggle map. Call first on View3D WINDOW and the drawer. */
 void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *region);

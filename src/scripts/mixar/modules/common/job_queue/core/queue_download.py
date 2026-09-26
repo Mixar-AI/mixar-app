@@ -318,7 +318,10 @@ def _job_session_id(job) -> str:
 def resolve_job_scene(scene_name: str, session_id: str = ""):
     """The scene a job was submitted from: by the name captured at submit,
     else by its chat session — a scene tab renamed while a multi-minute job
-    ran is still the same tab. None when neither finds it."""
+    ran is still the same tab. A job without a session (a manual enqueue)
+    falls back to the scene the window shows, as it always did; an agent
+    job whose tab is gone returns None and fails rather than landing in
+    another tab."""
     target = bpy.data.scenes.get(scene_name) if scene_name else None
     if target is None and session_id:
         try:
@@ -326,6 +329,8 @@ def resolve_job_scene(scene_name: str, session_id: str = ""):
             target = scene_for_session(session_id, bpy)
         except Exception:  # noqa: BLE001
             target = None
+    if target is None and not session_id:
+        target = getattr(bpy.context, "scene", None)
     return target
 
 

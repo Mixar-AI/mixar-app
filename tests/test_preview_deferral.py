@@ -199,14 +199,12 @@ def _load_executor(monkeypatch):
 def executor(monkeypatch, deferral):
     module = _load_executor(monkeypatch)
     monkeypatch.setattr(module, "_execution_gate_until", 0.0)
-    monkeypatch.setattr(module, "_held", None)
-    while not module._request_queue.empty():
-        module._request_queue.get_nowait()
+    module.lanes.clear()  # the per-session script lanes (parallel scenes)
     for name, attrs in (
         ("queue_processor", {"drain_pending_events": lambda: None}),
         ("lane_scene_sweep", {"schedule_lane_scene_sweep": lambda: None}),
-        ("steps_recorder", {"record_step_start": lambda *a: None,
-                            "record_step_end": lambda *a: None}),
+        ("steps_recorder", {"record_step_start": lambda *a, **kw: None,
+                            "record_step_end": lambda *a, **kw: None}),
     ):
         stub = ModuleType("mixar.modules.space_mixie_chat.core." + name)
         for attr, value in attrs.items():
@@ -227,7 +225,10 @@ def executor(monkeypatch, deferral):
 
 
 def _queue(module, request_id):
-    module._request_queue.put_nowait((request_id, "x", "render_viewport", "sess", None, None))
+    from mixar.modules.common.agent_execution.request import ExecutionRequest
+
+    module.lanes.enqueue(ExecutionRequest.from_legacy(
+        (request_id, "x", "render_viewport", "sess", None, None)))
 
 
 def test_deferred_result_skips_respond_and_the_queue_keeps_draining(
@@ -239,7 +240,7 @@ def test_deferred_result_skips_respond_and_the_queue_keeps_draining(
         "req-2": {"success": True, "objects": 3},
     }
     monkeypatch.setattr(executor.pump, "execute_request",
-                        lambda req, ex, on_success=None: dict(results[req.request_id]))
+                        lambda req, ex, on_success=None, **_kw: dict(results[req.request_id]))
     _queue(executor, "req-1")
     _queue(executor, "req-2")
 

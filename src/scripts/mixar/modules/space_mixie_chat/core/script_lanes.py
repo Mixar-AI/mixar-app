@@ -21,6 +21,7 @@ drains. Every access to the lane table holds ``_lock``.
 from collections.abc import Callable
 import queue
 import threading
+import time
 from typing import Optional
 
 from mixar.modules.common.agent_execution import pump
@@ -164,3 +165,37 @@ def held(lane: str) -> Optional[ExecutionRequest]:
     with _lock:
         entry = _lanes.get(lane)
         return entry.held if entry is not None else None
+
+
+class LaneQueue:
+    """A ``queue.Queue``-shaped view over the lanes for the headless worker.
+
+    ``bpy.app.timers`` never fire under ``--background``, so the sandbox
+    worker (``headless/headless_main.py``) pumps requests itself through the
+    shared ``pump.take_next``, which only knows ``get`` / ``get_nowait``.
+    This hands it the next READY (or prefetch-failed) request across every
+    lane; a lane still waiting on a prefetch keeps its request and reads as
+    empty, exactly as the main-thread tick treats it.
+    """
+
+    _POLL_S = 0.02
+
+    def get_nowait(self) -> ExecutionRequest:
+        req, _status, lane = take_next()
+        if req is None:
+            raise queue.Empty
+        switch_to(lane)
+        return req
+
+    def get(self, timeout: Optional[float] = None) -> ExecutionRequest:
+        deadline = time.monotonic() + (timeout or 0.0)
+        while True:
+            try:
+                return self.get_nowait()
+            except queue.Empty:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(self._POLL_S)
+
+    def empty(self) -> bool:
+        return count() == 0

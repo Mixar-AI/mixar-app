@@ -59,9 +59,7 @@ def executor(monkeypatch):
     module = _load_executor(monkeypatch)
     # Timer registration is a no-op under the mock; drive ticks by hand.
     monkeypatch.setattr(module, "_execution_gate_until", 0.0)
-    monkeypatch.setattr(module, "_held", None)
-    while not module._request_queue.empty():
-        module._request_queue.get_nowait()
+    module.lanes.clear()  # the per-session script lanes (parallel scenes)
     # drain_pending_events is imported lazily from queue_processor.
     qp = ModuleType("mixar.modules.space_mixie_chat.core.queue_processor")
     qp.drain_pending_events = lambda: None
@@ -70,9 +68,10 @@ def executor(monkeypatch):
 
 
 def _queue(module, request_id="req-1"):
-    module._request_queue.put_nowait(
-        (request_id, "print('x')", "some_tool", "sess", None, None)
-    )
+    from mixar.modules.common.agent_execution.request import ExecutionRequest
+
+    module.lanes.enqueue(ExecutionRequest.from_legacy(
+        (request_id, "print('x')", "some_tool", "sess", None, None)))
 
 
 def _fake_client(monkeypatch):
@@ -109,7 +108,7 @@ def test_script_runs_while_a_render_job_is_alive(executor, monkeypatch):
 
     # Left the queue head and went down the normal path (dropped by the
     # stale-session net, which answers the request) — never parked.
-    assert executor._held is None
+    assert executor.lanes.held("sess") is None
     client.queue_response.assert_called_once()
     req_id, _payload = client.queue_response.call_args[0]
     assert req_id == "req-1"

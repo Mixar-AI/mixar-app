@@ -165,10 +165,15 @@ class SessionManager:
         """
         active = turn_active or SessionManager.run_open(scene)
         session_id = getattr(scene, 'mixie_session_id', "") or ""
+        key = session_id or scene.name
         with SessionManager._active_scenes_lock:
-            SessionManager._active_scenes.pop(scene.name, None)
+            # Keyed by scene name, but a tab can be renamed mid-turn: drop every
+            # entry that maps to this session, whatever name it was filed under.
+            for name, mapped in list(SessionManager._active_scenes.items()):
+                if name == scene.name or mapped == key:
+                    SessionManager._active_scenes.pop(name, None)
             if active:
-                SessionManager._active_scenes[scene.name] = session_id or scene.name
+                SessionManager._active_scenes[scene.name] = key
 
     # ========================================================================
     # Run state (a backend run spans turns)
