@@ -50,16 +50,6 @@ def register():
     kc = wm.keyconfigs.addon
     if not kc:
         return
-    # The guarded-undo item carries an operator property; `kmi.properties` is
-    # None until the Python operator class is registered (UI discovery runs
-    # after this timer's first ticks), so wait for it rather than register a
-    # half map (the Cmd variants were missing on the first stress run).
-    try:
-        bpy.ops.mixie_chat.guarded_undo.idname()
-    except Exception:  # noqa: BLE001 — not registered yet
-        if not bpy.app.timers.is_registered(register):
-            bpy.app.timers.register(register, first_interval=0.2)
-        return
     # `head=True` prepends, so the LAST registered item runs FIRST: the
     # resize sash must see the press before the card click.
     grip = _ensure(kc, 'Scenes Drawer Grip', 'VIEW_3D', 'NAVIGATION_BAR')
@@ -75,18 +65,20 @@ def register():
     for name, space in (('Scenes Drawer', 'VIEW_3D'), ('3D View', 'VIEW_3D'), ('Window', 'EMPTY')):
         km = _ensure(kc, name, space)
         _add(km, 'view3d.scenes_drawer_toggle', 'ACCENT_GRAVE', 'PRESS', ctrl=True)
-    # Undo / redo are held while an agent works in any tab (ui/operators/undo_ops.py):
-    # bound ahead of the stock keys in the Screen map, pass-through when idle.
-    screen = _ensure(kc, 'Screen', 'EMPTY')
-    for mods in ({'ctrl': True}, {'oskey': True}):
-        _add(screen, 'mixie_chat.guarded_undo', 'Z', 'PRESS', **mods)
-        redo = _add(screen, 'mixie_chat.guarded_undo', 'Z', 'PRESS', shift=True, **mods)
-        if redo.properties is not None:
-            redo.properties.redo = True
+    # Undo / redo are held while an agent works in any tab: a window modal, not
+    # a keymap item (the stock Screen binding would run first). Its tick lives
+    # here so it starts with the rest of the scene-tab wiring.
+    from .operators.undo_ops import ensure_shield_timer
+    ensure_shield_timer()
     logger.debug("Scenes drawer keymap registered (%d items)", len(addon_keymaps))
 
 
 def unregister():
+    try:
+        from .operators.undo_ops import stop_shield_timer
+        stop_shield_timer()
+    except Exception:  # noqa: BLE001
+        pass
     for km, kmi in addon_keymaps:
         try:
             km.keymap_items.remove(kmi)
