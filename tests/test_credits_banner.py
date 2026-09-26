@@ -165,16 +165,20 @@ def test_native_operator_is_registered_and_built():
     body = topbar[topbar.index("static void topbar_operatortypes()"):]
     assert "ED_mixar_credits_banner_register();" in body[:body.index("}")]
     cmake = (EDITORS / "interface/CMakeLists.txt").read_text()
-    for name in ("credits_banner.cc", "credits_banner_draw.cc", "credits_banner.hh"):
+    for name in ("credits_banner.cc", "credits_banner_draw.cc", "credits_banner_layout.cc", "credits_banner.hh"):
         assert f"mixar/{name}" in cmake
 
 
 def test_banner_art_ships_small():
-    art = MODULES / "common/notifications/assets/credits_banner.webp"
+    art = MODULES / "common/notifications/assets/mixie_mascot.webp"
     assert art.is_file()
     # Everything under src/scripts ships in the installer.
     assert art.stat().st_size < 400_000
-    assert CB.banner_image_path().endswith("assets/credits_banner.webp")
+    from PIL import Image
+    with Image.open(art) as image:
+        assert image.mode == "RGBA"
+        assert image.getchannel("A").getextrema() == (0, 255)
+    assert CB.banner_image_path().endswith("assets/mixie_mascot.webp")
 
 
 def test_banner_telemetry_is_one_allowlisted_enum(monkeypatch):

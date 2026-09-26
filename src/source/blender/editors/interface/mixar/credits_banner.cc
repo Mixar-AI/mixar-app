@@ -13,19 +13,15 @@
  * handoffs and telemetry stay in one Python place.
  *
  * Input: Esc or a press on the dimmed backdrop dismisses; Enter picks the
- * primary Upgrade; buttons act on release over the button they were
- * pressed on. Foreign timers and window events pass through.
+ * focused action (Upgrade by default); Creator requires a completed slide.
+ * Foreign timers and window events pass through.
  */
 
 #include <algorithm>
-#include <cstring>
 
 #include "MEM_guardedalloc.h"
 
-#include "BLF_api.hh"
-
 #include "BLI_listbase_iterator.hh"
-#include "BLI_math_base.h"
 #include "BLI_rect.h"
 #include "BLI_time.h"
 
@@ -38,8 +34,8 @@
 #include "RNA_access.hh"
 #include "RNA_define.hh"
 
-#include "UI_interface.hh"
 #include "UI_mixar_credits_banner.hh"
+#include "UI_mixar_motion.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -52,11 +48,6 @@ namespace blender {
 namespace ui::credits_banner {
 
 static State *g_state = nullptr;
-
-State *active()
-{
-  return g_state;
-}
 
 const char *target_action(const Target target)
 {
@@ -80,105 +71,13 @@ const char *target_label(const Target target)
     case TARGET_REFER:
       return "Refer a Friend";
     case TARGET_CREATOR:
-      return "Apply to Creator Program";
+      return "Creator Program";
     case TARGET_CLOSE:
       return "Close";
     default:
       return "";
   }
 }
-
-/* -------------------------------------------------------------------- */
-/** \name Layout
- * \{ */
-
-float appear_factor(const State &state, const double now)
-{
-  float t = float(std::clamp((now - state.opened_at) / ENTER_SECONDS, 0.0, 1.0));
-  /* Ease-out back: the card lands with a whisper of overshoot. */
-  const float c = 1.4f;
-  t -= 1.0f;
-  float f = 1.0f + (c + 1.0f) * t * t * t + c * t * t;
-  if (state.closing_at > 0.0) {
-    const float out = float(std::clamp((now - state.closing_at) / EXIT_SECONDS, 0.0, 1.0));
-    f *= 1.0f - out * out;
-  }
-  return std::clamp(f, 0.0f, 1.08f);
-}
-
-Layout layout_compute(const State &state, const float appear)
-{
-  Layout l{};
-  const float winx = float(WM_window_native_pixel_x(state.win));
-  const float winy = float(WM_window_native_pixel_y(state.win));
-  const float s = UI_SCALE_FAC;
-  const float aspect = float(std::max(state.image_h, 1)) / float(std::max(state.image_w, 1));
-
-  /* ~60% of the window, never cramped on small windows, never taller than 90%. */
-  float w = std::max(winx * 0.60f, std::min(760.0f * s, winx * 0.94f));
-  if (w * aspect > winy * 0.90f) {
-    w = winy * 0.90f / aspect;
-  }
-  const float grow = 0.94f + 0.06f * appear; /* overshoot → a touch past 1 */
-  const float cw = w * grow;
-  const float ch = cw * aspect;
-  const float cx = winx * 0.5f;
-  const float cy = winy * 0.5f - (1.0f - std::min(appear, 1.0f)) * ch * 0.04f;
-  BLI_rctf_init(&l.card, cx - cw * 0.5f, cx + cw * 0.5f, cy - ch * 0.5f, cy + ch * 0.5f);
-  l.radius = cw * (44.0f / 1744.0f); /* the art's own corner radius */
-
-  /* Buttons sit in the art's empty bottom band, under its chevron (the art's
-   * frame ends ~20% above its bottom edge). */
-  const float bh = std::clamp(ch * 0.074f, 30.0f * s, 58.0f * s);
-  const float row_w = cw * 0.86f;
-  const float gap = cw * 0.02f;
-  const float bw = (row_w - 2.0f * gap) / 3.0f;
-  const float by = l.card.ymin + ch * 0.098f;
-  for (int i = 0; i < 3; i++) {
-    const float x0 = cx - row_w * 0.5f + float(i) * (bw + gap);
-    BLI_rctf_init(&l.targets[i], x0, x0 + bw, by - bh * 0.5f, by + bh * 0.5f);
-  }
-  l.button_h = bh;
-
-  const rctf &creator = l.targets[TARGET_CREATOR];
-  const float badge_h = bh * 0.42f;
-  const int font = BLF_default();
-  BLF_size(font, badge_h * 0.56f);
-  BLF_character_weight(font, 800);
-  const char *badge_text = "10K+ FOLLOWERS";
-  const float badge_w = BLF_width(font, badge_text, strlen(badge_text)) + badge_h * 1.1f;
-  BLF_character_weight(font, 400);
-  const float badge_xmax = creator.xmax - bh * 0.35f;
-  BLI_rctf_init(&l.badge,
-                badge_xmax - badge_w,
-                badge_xmax,
-                creator.ymax - badge_h * 0.5f,
-                creator.ymax + badge_h * 0.5f);
-
-  const float close = std::clamp(cw * 0.03f, 24.0f * s, 38.0f * s);
-  const float inset = cw * 0.022f;
-  BLI_rctf_init(&l.targets[TARGET_CLOSE],
-                l.card.xmax - inset - close,
-                l.card.xmax - inset,
-                l.card.ymax - inset - close,
-                l.card.ymax - inset);
-  return l;
-}
-
-Target hit_test(const Layout &layout, const float x, const float y)
-{
-  for (int t = 0; t < TARGET_COUNT; t++) {
-    if (BLI_rctf_isect_pt(&layout.targets[t], x, y)) {
-      return Target(t);
-    }
-  }
-  if (BLI_rctf_isect_pt(&layout.badge, x, y)) {
-    return TARGET_CREATOR;
-  }
-  return TARGET_NONE;
-}
-
-/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Operator
@@ -223,6 +122,7 @@ static void choose(bContext *C, State &state, const Target target)
   }
   state.closing_at = BLI_time_now_seconds();
   state.pressed = TARGET_NONE;
+  state.dragging = false;
   WM_cursor_set(state.win, WM_CURSOR_DEFAULT);
 
   wmOperatorType *ot = WM_operatortype_find("MIXAR_OT_credits_banner_action", true);
@@ -258,7 +158,7 @@ static wmOperatorStatus banner_invoke(bContext *C, wmOperator *op, const wmEvent
 
 static void update_hover(State &state, const float mx, const float my)
 {
-  const Layout layout = layout_compute(state, 1.0f);
+  const Layout layout = layout_compute(state, appear_factor(state, BLI_time_now_seconds()));
   const Target hover = hit_test(layout, mx, my);
   if (hover != state.hover) {
     state.hover = hover;
@@ -283,17 +183,30 @@ static wmOperatorStatus banner_modal(bContext *C, wmOperator *op, const wmEvent 
       teardown(C, op);
       return OPERATOR_FINISHED;
     }
+    if (state->returning) {
+      state->slide *= mixar_motion_reduced() ? 0.0f : 0.72f;
+      if (state->slide < 0.001f) {
+        state->slide = 0.0f;
+        state->returning = false;
+      }
+    }
     /* Ease every hover highlight toward its target (~120 ms). */
     for (int t = 0; t < TARGET_COUNT; t++) {
-      const float goal = (state->hover == t) ? 1.0f : 0.0f;
-      state->hover_mix[t] += (goal - state->hover_mix[t]) * 0.22f;
+      const float goal = (state->hover == t || state->focus == t) ? 1.0f : 0.0f;
+      state->hover_mix[t] += (goal - state->hover_mix[t]) *
+                             (mixar_motion_reduced() ? 1.0f : 0.22f);
     }
-    /* Redraw every tick: entrance, button stagger and the Upgrade halo's
-     * breathing all animate. Regions are composited from their buffers. */
+    /* Entrance, hover hint and slider return animate in the window overlay. */
     request_redraw(state->win);
     return OPERATOR_RUNNING_MODAL;
   }
 
+  if (event->type == WINDEACTIVATE) {
+    state->dragging = false;
+    state->pressed = TARGET_NONE;
+    state->returning = true;
+    return OPERATOR_PASS_THROUGH;
+  }
   const bool is_input = ISKEYBOARD(event->type) || ISMOUSE(event->type) ||
                         ISMOUSE_WHEEL(event->type) || ISMOUSE_GESTURE(event->type);
   if (!is_input) {
@@ -308,9 +221,29 @@ static wmOperatorStatus banner_modal(bContext *C, wmOperator *op, const wmEvent 
       if (event->type == EVT_ESCKEY) {
         choose(C, *state, TARGET_CLOSE);
       }
-      else if (ELEM(event->type, EVT_RETKEY, EVT_PADENTER)) {
-        choose(C, *state, TARGET_UPGRADE);
+      else if (event->type == EVT_TABKEY) {
+        /* Keyboard navigation cancels any held mouse gesture. */
+        state->dragging = false;
+        state->pressed = TARGET_NONE;
+        state->slide = 0.0f;
+        state->returning = false;
+        const int step = (event->modifier & KM_SHIFT) ? -1 : 1;
+        state->focus = state->focus == TARGET_NONE ?
+                           (step > 0 ? TARGET_UPGRADE : TARGET_CLOSE) :
+                           (state->focus + step + TARGET_COUNT) % TARGET_COUNT;
       }
+      else if (state->focus == TARGET_CREATOR && ELEM(event->type, EVT_RIGHTARROWKEY, EVT_LEFTARROWKEY)) {
+        state->returning = false;
+        state->slide = std::clamp(state->slide + (event->type == EVT_RIGHTARROWKEY ? 0.2f : -0.2f),
+                                  0.0f, 1.0f);
+      }
+      else if (ELEM(event->type, EVT_RETKEY, EVT_PADENTER, EVT_SPACEKEY)) {
+        const Target target = state->focus == TARGET_NONE ? TARGET_UPGRADE : Target(state->focus);
+        if (target != TARGET_CREATOR || state->slide >= SLIDE_COMPLETE) {
+          choose(C, *state, target);
+        }
+      }
+      request_redraw(state->win);
     }
     return OPERATOR_RUNNING_MODAL;
   }
@@ -321,14 +254,34 @@ static wmOperatorStatus banner_modal(bContext *C, wmOperator *op, const wmEvent 
 
   if (ELEM(event->type, MOUSEMOVE, INBETWEEN_MOUSEMOVE)) {
     update_hover(*state, mx, my);
+    if (state->dragging) {
+      const Layout layout = layout_compute(*state, appear_factor(*state, BLI_time_now_seconds()));
+      state->slide = slider_progress(layout, mx - state->drag_offset);
+      request_redraw(state->win);
+    }
     return OPERATOR_RUNNING_MODAL;
   }
 
   if (event->type == LEFTMOUSE) {
-    const Layout layout = layout_compute(*state, 1.0f);
+    const Layout layout = layout_compute(*state, appear_factor(*state, BLI_time_now_seconds()));
     const Target hit = hit_test(layout, mx, my);
     if (event->val == KM_PRESS) {
-      if (hit != TARGET_NONE) {
+      /* A mouse gesture starts fresh after keyboard-driven progress. */
+      if (state->focus != TARGET_NONE) {
+        state->slide = 0.0f;
+        state->returning = false;
+      }
+      state->focus = TARGET_NONE;
+      if (hit == TARGET_CREATOR) {
+        const rctf thumb = slider_thumb(layout, state->slide);
+        if (BLI_rctf_isect_pt(&thumb, mx, my)) {
+          state->dragging = true;
+          state->returning = false;
+          state->drag_offset = mx - BLI_rctf_cent_x(&thumb);
+          state->pressed = hit;
+        }
+      }
+      else if (hit != TARGET_NONE) {
         state->pressed = hit;
       }
       else if (!BLI_rctf_isect_pt(&layout.card, mx, my)) {
@@ -336,7 +289,17 @@ static wmOperatorStatus banner_modal(bContext *C, wmOperator *op, const wmEvent 
       }
     }
     else if (event->val == KM_RELEASE) {
-      if (hit != TARGET_NONE && hit == state->pressed) {
+      if (state->dragging) {
+        state->slide = slider_progress(layout, mx - state->drag_offset);
+        state->dragging = false;
+        if (state->slide >= SLIDE_COMPLETE && hit == TARGET_CREATOR) {
+          choose(C, *state, TARGET_CREATOR);
+        }
+        else {
+          state->returning = true;
+        }
+      }
+      else if (hit != TARGET_NONE && hit != TARGET_CREATOR && hit == state->pressed) {
         choose(C, *state, hit);
       }
       state->pressed = TARGET_NONE;
@@ -403,7 +366,7 @@ static void qa_targets(const wmWindow *win,
   {
     return;
   }
-  const Layout layout = layout_compute(*state, 1.0f);
+  const Layout layout = layout_compute(*state, appear_factor(*state, BLI_time_now_seconds()));
   for (int t = 0; t < TARGET_COUNT; t++) {
     MixarQATarget target;
     target.surface = "credits_banner";
@@ -415,6 +378,15 @@ static void qa_targets(const wmWindow *win,
     target.window_level = true;
     r_targets.push_back(std::move(target));
   }
+  MixarQATarget thumb;
+  thumb.surface = "credits_banner_slider";
+  thumb.text = creator_hint(*state);
+  thumb.value = std::to_string(state->slide);
+  thumb.detail = state->dragging ? "dragging" : "idle";
+  const rctf thumb_rect = slider_thumb(layout, state->slide);
+  BLI_rcti_rctf_copy_round(&thumb.rect_win, &thumb_rect);
+  thumb.window_level = true;
+  r_targets.push_back(std::move(thumb));
   MixarQATarget card;
   card.surface = "credits_banner_card";
   card.text = state->texture ? "art" : (state->image_failed ? "missing" : "loading");

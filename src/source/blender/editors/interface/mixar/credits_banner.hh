@@ -6,8 +6,8 @@
  *
  * Out-of-credits banner: shared state between the modal operator
  * (credits_banner.cc) and its window draw callback (credits_banner_draw.cc).
- * Layout is a pure function of the window size and the banner image's
- * aspect, so the click handler, the painter and the QA targets can never
+ * Layout is a pure function of window size and UI scale, so the click
+ * handler, the painter and the QA targets can never
  * disagree about where a button is.
  */
 
@@ -43,9 +43,9 @@ const char *target_action(Target target);
 const char *target_label(Target target);
 
 struct Layout {
-  rctf card;                   /* the banner image, window pixels */
+  rctf card;                   /* banner bounds, window pixels */
   rctf targets[TARGET_COUNT];  /* buttons + close chip */
-  rctf badge;                  /* "10K+ followers" chip on the Creator button */
+  rctf art;                    /* centered cat, independent of card geometry */
   float radius;                /* card corner radius */
   float button_h;
 };
@@ -56,14 +56,19 @@ struct State {
   wmTimer *timer = nullptr;
   std::string image_path;
   gpu::Texture *texture = nullptr;
-  int image_w = 1744;
-  int image_h = 1168;
+  int image_w = 0;
+  int image_h = 0;
   bool image_failed = false;
 
   double opened_at = 0.0;
   double closing_at = 0.0; /* 0 while open */
   int hover = TARGET_NONE;
   int pressed = TARGET_NONE;
+  int focus = TARGET_NONE;
+  float slide = 0.0f;
+  float drag_offset = 0.0f;
+  bool dragging = false;
+  bool returning = false;
   float hover_mix[TARGET_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 };
 
@@ -74,6 +79,11 @@ constexpr double EXIT_SECONDS = 0.16;
 /** 0 → 1 appearance factor (eased), folding in the exit animation. */
 float appear_factor(const State &state, double now);
 
+constexpr float SLIDE_COMPLETE = 0.95f;
+rctf slider_thumb(const Layout &layout, float progress);
+float slider_progress(const Layout &layout, float center_x);
+const char *creator_hint(const State &state);
+
 Layout layout_compute(const State &state, float appear);
 Target hit_test(const Layout &layout, float x, float y);
 
@@ -81,9 +91,6 @@ Target hit_test(const Layout &layout, float x, float y);
 void draw(const wmWindow *win, void *customdata);
 /** Free the GPU texture; call with a live GPU context (operator exit). */
 void texture_free(State &state);
-
-/** The banner currently open, if any (one per session). */
-State *active();
 
 }  // namespace ui::credits_banner
 }  // namespace blender

@@ -10,7 +10,7 @@ Replays each trigger and each way out, through the real native banner:
    chat keeps its Upgrade bubble; hover lights the primary button; a click on
    **Upgrade Plan** closes it and reaches the Upgrade destination;
 2. a repeat of a push that carries an id does not reopen it;
-3. **Refer a Friend** and **Apply to Creator Program** reach theirs;
+3. **Refer a Friend** and **Creator Program** reach theirs;
 4. a click inside the card that is not a button keeps it open; Esc closes it;
    a click on the dimmed backdrop closes it;
 5. a job that fails out of credits opens the banner and pushes no error toast;
@@ -114,7 +114,7 @@ def snap(qa, out, name, **kw):
 def open_banner(qa, how, label):
     qa.step(f'{label}_trigger', qa.eval, how)
     qa.step(f'{label}_open', qa.wait, OPEN_EXPR, timeout=10)
-    settle(qa)  # entrance animation (~0.34 s) plus the button stagger
+    settle(qa)  # entrance animation (~0.34 s)
 
 
 def wait_closed(qa):
@@ -158,10 +158,126 @@ def no_credit_toasts(qa, label):
         raise ScenarioFail(f'{label}: credit toasts still pushed: {credit!r}')
 
 
+def slide(qa, fraction):
+    """Use the real thumb and track geometry; leave the destination mocked."""
+    return qa.eval(f"""
+def go():
+    thumb=drv.find_one(surface='credits_banner_slider')
+    track=drv.find_one(surface='credits_banner', value='CREATOR')
+    r=thumb['rect']; t=track['rect']
+    x0=(r[0]+r[2])/2; y=(r[1]+r[3])/2
+    end=t[2]-(x0-t[0])
+    yield from drv.drag_xy_steps(thumb['_win'], x0, y, x0+(end-x0)*{fraction}, y)
+    return True
+result=go()
+""")
+
+
+def hold_slider(qa):
+    return qa.eval("""
+def hold():
+    thumb = drv.find_one(surface='credits_banner_slider')
+    track = drv.find_one(surface='credits_banner', value='CREATOR')
+    r, t = thumb['rect'], track['rect']
+    x0, y = int((r[0] + r[2]) / 2), int((r[1] + r[3]) / 2)
+    x1 = int(t[2] - (x0 - t[0]))
+    win = thumb['_win']
+    drv.move_to(win, x0, y)
+    yield .1
+    win.event_simulate(type='LEFTMOUSE', value='PRESS', x=x0, y=y)
+    yield .1
+    drv.move_to(win, x1, y)
+    yield .15
+    return {'x': x1, 'y': y}
+result = hold()
+""")
+
+
+def release_slider(qa, point):
+    qa.eval(f"""
+def release():
+    win = drv.find_one(surface='credits_banner_slider')['_win']
+    win.event_simulate(type='LEFTMOUSE', value='RELEASE', x={point['x']}, y={point['y']})
+    yield .1
+    return True
+result = release()
+""")
+
+
+def check_slider(qa, out):
+    # The track teaches sliding; clicking either the label or knob cannot navigate.
+    qa.click(surface='credits_banner', value='CREATOR')
+    settle(qa, .25)
+    assert len(qa.eval(TARGETS)) == 4
+    assert qa.eval("result=drv.find(surface='credits_banner_slider')[0]['text']") == 'Slide to continue'
+    snap(qa, out, 'slider_hint', target={'surface': 'credits_banner_card'}, margin=12)
+    qa.click(surface='credits_banner_slider')
+    assert len(qa.eval(TARGETS)) == 4
+    slide(qa, .45)
+    settle(qa, .5)
+    assert float(qa.eval("result=drv.find(surface='credits_banner_slider')[0]['value']")) == 0
+    assert len(qa.eval(TARGETS)) == 4
+
+    # Tab must cancel a held drag; its eventual release cannot open a destination.
+    point = hold_slider(qa)
+    qa.press('TAB')
+    thumb = qa.eval("result=drv.find(surface='credits_banner_slider')[0]")
+    assert thumb['detail'] == 'idle', 'Tab left the mouse drag active'
+    assert float(thumb['value']) == 0
+    release_slider(qa, point)
+    assert len(qa.eval(TARGETS)) == 4
+
+    # A full slide opens exactly once, and only on release.
+    point = hold_slider(qa)
+    assert len(qa.eval(TARGETS)) == 4
+    assert qa.eval("result=drv.find(surface='credits_banner_slider')[0]['text']") == 'Release to continue'
+    snap(qa, out, 'slider_complete', target={'surface': 'credits_banner_card'}, margin=12)
+    release_slider(qa, point)
+    wait_closed(qa)
+
+
+def check_layouts_and_keyboard(qa, out):
+    saved=qa.eval('result=[bpy.context.preferences.view.ui_scale,bpy.context.preferences.view.use_reduce_motion]')
+    try:
+        for scale in (.8, 1.0, 1.25):
+            qa.eval(f'bpy.context.preferences.view.ui_scale={scale}; result=True')
+            open_banner(qa,MANUAL,f'scale_{scale}')
+            qa.eval("""
+card=drv.find_one(surface='credits_banner_card')['rect']
+targets=drv.find(surface='credits_banner')
+assert all(card[0]<=t['rect'][0]<t['rect'][2]<=card[2] and card[1]<=t['rect'][1]<t['rect'][3]<=card[3] for t in targets)
+result=True
+""")
+            if scale != 1.0:  # The initial capture already covers the default scale.
+                snap(qa,out,f'scale_{scale}',target={'surface':'credits_banner_card'},margin=12)
+            qa.press('ESC')
+            wait_closed(qa)
+        qa.eval('bpy.context.preferences.view.use_reduce_motion=True; result=True')
+        open_banner(qa,MANUAL,'keyboard')
+        for _ in range(3):
+            qa.press('TAB')
+        qa.press('RET')
+        assert len(qa.eval(TARGETS)) == 4  # Cannot skip the deliberate confirmation.
+        for _ in range(5):
+            qa.press('RIGHT_ARROW')
+        assert float(qa.eval("result=drv.find(surface='credits_banner_slider')[0]['value']")) >= .95
+        # Returning to the mouse clears completed keyboard progress.
+        qa.click(surface='credits_banner', value='CREATOR')
+        assert float(qa.eval("result=drv.find(surface='credits_banner_slider')[0]['value']")) == 0
+        assert len(qa.eval(TARGETS)) == 4
+        for _ in range(3):
+            qa.press('TAB')
+        for _ in range(5):
+            qa.press('RIGHT_ARROW')
+        qa.press('RET')
+        wait_closed(qa)
+    finally:
+        qa.eval(f'bpy.context.preferences.view.ui_scale={saved[0]}; bpy.context.preferences.view.use_reduce_motion={saved[1]}; result=True')
+
+
 def run(qa):
     out = Path(os.environ.get('QA_SCENARIO_OUT') or
-               Path(__file__).resolve().parents[2] / 'out' /
-               ('credits_banner-' + time.strftime('%Y%m%d-%H%M%S')))
+               Path('/tmp') / ('credits_banner-' + time.strftime('%Y%m%d-%H%M%S')))
     out.mkdir(parents=True, exist_ok=True)
     qa.step('layout_ready', qa.wait,
             "'VIEW_3D' in {a.type for a in drv.main_window().screen.areas}", timeout=30)
@@ -172,8 +288,6 @@ def run(qa):
     qa.step('setup', qa.eval, SETUP)
     snaps = {}
     try:
-        snaps['before'] = snap(qa, out, '00_before')
-
         # 1. Backend push → banner, no toast; chat keeps its bubble.
         open_banner(qa, PUSH % 'qa-push-1', 'push')
         card = qa.eval("result = drv.find(surface='credits_banner_card')")
@@ -185,16 +299,11 @@ def run(qa):
         if not chat:
             raise ScenarioFail('push: chat Upgrade bubble missing')
         snaps['open'] = snap(qa, out, '01_open')
-        snaps['annotated'] = snap(qa, out, '02_annotated',
-                                  annotate={'surface': 'credits_banner'})
         upgrade = target(qa, 'Upgrade Plan')
         hover(qa, upgrade['rect'])
         if not target(qa, 'Upgrade Plan').get('sel'):
             raise ScenarioFail('hover did not light Upgrade Plan')
         snaps['hover_upgrade'] = snap(qa, out, '03_hover_upgrade')
-        creator = target(qa, 'Apply to Creator Program')
-        hover(qa, creator['rect'])
-        snaps['hover_creator'] = snap(qa, out, '04_hover_creator')
         qa.step('click_upgrade', qa.click, surface='credits_banner', text='Upgrade Plan')
         qa.step('upgrade_closed', wait_closed, qa)
         expect_hits(qa, ['UPGRADE'], 'upgrade')
@@ -212,9 +321,7 @@ def run(qa):
         qa.step('click_refer', qa.click, surface='credits_banner', text='Refer a Friend')
         qa.step('refer_closed', wait_closed, qa)
         open_banner(qa, MANUAL, 'creator')
-        qa.step('click_creator', qa.click, surface='credits_banner',
-                text='Apply to Creator Program')
-        qa.step('creator_closed', wait_closed, qa)
+        qa.step('creator_slider',check_slider,qa,out)
         expect_hits(qa, ['UPGRADE', 'REFER', 'CREATOR'], 'secondary')
 
         # 4. Ways out, and a click that is not one.
@@ -238,7 +345,6 @@ def run(qa):
                 'get_notification_store\nget_notification_store().reset()\nresult=True')
         open_banner(qa, JOB_FAILS, 'job')
         no_credit_toasts(qa, 'job')
-        snaps['job'] = snap(qa, out, '05_job_failure')
         qa.press('ESC')
         qa.step('job_closed', wait_closed, qa)
         qa.eval('from mixar.modules.common.notifications import credits_banner as cb\n'
@@ -246,7 +352,13 @@ def run(qa):
         settle(qa, 1.0)
         if qa.eval(TARGETS):
             raise ScenarioFail('burst cooldown did not hold after a close')
-        snaps['after'] = snap(qa, out, '06_after')
+        qa.step('layouts_and_keyboard',check_layouts_and_keyboard,qa,out)
+        expect_hits(qa, ['UPGRADE', 'REFER', 'CREATOR', 'CREATOR'], 'keyboard')
+        open_banner(qa, MANUAL, 'reverse_focus')
+        qa.press('TAB', shift=True)
+        qa.press('RET')
+        wait_closed(qa)
+        expect_hits(qa, ['UPGRADE', 'REFER', 'CREATOR', 'CREATOR'], 'reverse_focus_dismisses')
     finally:
         qa.eval(JOB_CLEANUP)
         qa.eval(TEARDOWN)

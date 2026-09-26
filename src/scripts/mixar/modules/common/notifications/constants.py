@@ -29,7 +29,7 @@ class NotificationType(Enum):
 
 
 # -- Out-of-credits banner (credits_banner.py) ----------------------------
-CREDITS_BANNER_ASSET = "assets/credits_banner.webp"
+CREDITS_BANNER_ASSET = "assets/mixie_mascot.webp"
 # A burst of failures (a batch of jobs, the push plus the chat fallback for
 # one turn) opens the banner once; requests this soon after an open or a
 # close are dropped.

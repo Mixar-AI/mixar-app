@@ -4,9 +4,8 @@
 /** \file
  * \ingroup edinterface
  *
- * Out-of-credits banner painter: a dimmed window, a soft green bloom behind
- * the banner art, the art itself, and three call-to-action buttons seated in
- * the art's bottom band (under its "down" chevron). Everything is drawn in
+ * Out-of-credits card: native heading, centered artwork, two green actions,
+ * and a deliberate slide-to-continue control. Everything is drawn in
  * window pixels by a WM draw callback, so it sits above every editor.
  *
  * Geometry lives in `layout_compute`, shared with the click handler and the
@@ -19,8 +18,6 @@
 
 #include "BLF_api.hh"
 
-#include "BLI_math_base.h"
-#include "BLI_math_vector.h"
 #include "BLI_rect.h"
 #include "BLI_time.h"
 
@@ -33,6 +30,8 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
+#include "UI_mixar_motion.hh"
+#include "UI_resources.hh"
 
 #include "WM_api.hh"
 
@@ -40,16 +39,8 @@
 
 namespace blender::ui::credits_banner {
 
-/* Palette sampled from the banner art: the headline greens and the coins. */
-static const float GREEN_TOP[3] = {0.62f, 0.97f, 0.64f};
-static const float GREEN_BOTTOM[3] = {0.25f, 0.80f, 0.40f};
-static const float GREEN_GLOW[3] = {0.36f, 0.95f, 0.50f};
-static const float GOLD_TOP[3] = {1.00f, 0.86f, 0.42f};
-static const float GOLD_BOTTOM[3] = {0.91f, 0.64f, 0.14f};
-static const float GLASS_TOP[3] = {0.075f, 0.140f, 0.095f};
-static const float GLASS_BOTTOM[3] = {0.035f, 0.070f, 0.048f};
-static const float INK_DARK[3] = {0.02f, 0.08f, 0.04f};
-static const float INK_LIGHT[3] = {0.95f, 0.97f, 0.95f};
+static const float GREEN_TOP[3] = {0.10f, 0.59f, 0.28f};
+static const float GREEN_BOTTOM[3] = {0.025f, 0.25f, 0.10f};
 
 /* -------------------------------------------------------------------- */
 /** \name Texture
@@ -139,13 +130,6 @@ static void rgba(float out[4], const float rgb[3], const float a)
   out[3] = a;
 }
 
-static void mix_rgb(float out[3], const float a[3], const float b[3], const float t)
-{
-  for (int i = 0; i < 3; i++) {
-    out[i] = a[i] + (b[i] - a[i]) * t;
-  }
-}
-
 static rctf expanded(const rctf &r, const float by)
 {
   rctf e = r;
@@ -215,155 +199,97 @@ static void text_centered(const int font,
 /** \name Buttons
  * \{ */
 
-/* Leading glyph per button; all three live in the bundled Noto symbol fonts. */
-static const char *target_glyph(const Target target)
+static float label_size(const Layout &layout)
 {
-  switch (target) {
-    case TARGET_UPGRADE:
-      return "\xE2\x9C\xA6"; /* ✦ */
-    case TARGET_REFER:
-      return "\xE2\x99\xA5"; /* ♥ */
-    case TARGET_CREATOR:
-      return "\xE2\x98\x85"; /* ★ */
-    default:
-      return "";
-  }
+  return layout.button_h * 0.28f;
 }
 
-/** One font size for all three labels: the largest that fits every button. */
-static float label_size(const int font, const Layout &layout)
+/** Draw the supplied vector art in native pixels, preserving its embedded colors. */
+static void draw_icon(const int icon, const float cx, const float cy,
+                      const float size, const float alpha)
 {
-  const float bh = layout.button_h;
-  float size = bh * 0.33f;
-  const float avail = BLI_rctf_size_x(&layout.targets[TARGET_UPGRADE]) - bh * 0.9f;
-  BLF_size(font, size);
-  BLF_character_weight(font, 700);
-  float widest = 0.0f;
-  for (int t = TARGET_UPGRADE; t <= TARGET_CREATOR; t++) {
-    const char *label = target_label(Target(t));
-    widest = std::max(widest, BLF_width(font, label, strlen(label)));
-  }
-  BLF_character_weight(font, 400);
-  if (widest > avail && widest > 0.0f) {
-    size *= avail / widest;
-  }
-  return std::max(size, bh * 0.2f);
+  const float color[4] = {1.0f, 1.0f, 1.0f, alpha};
+  BLF_draw_svg_icon(uint(icon), cx - size * 0.5f, cy - size * 0.5f,
+                    size, color, 0.0f, true, nullptr);
 }
 
-static void draw_button(const State &state,
-                        const Layout &layout,
-                        const Target target,
-                        const float appear,
-                        const float now_s,
-                        const float font_size)
+static void draw_button(const State &state, const Layout &layout, const Target target,
+                        const float alpha)
 {
+  const rctf &r = layout.targets[target];
   const float hover = state.hover_mix[target];
-  const bool pressed = state.pressed == target;
-  const float bh = layout.button_h;
-  rctf r = layout.targets[target];
-
-  /* Staggered rise-in after the card lands, then a small lift on hover. */
-  const float stagger = std::clamp(appear * 1.35f - 0.12f * float(target), 0.0f, 1.0f);
-  const float rise = (1.0f - stagger) * bh * 0.35f - hover * bh * 0.05f;
-  BLI_rctf_translate(&r, 0.0f, -rise);
-  if (pressed) {
-    BLI_rctf_scale(&r, 0.97f);
+  float top[4], bottom[4];
+  const float shade = state.pressed == target ? 0.8f : 1.0f;
+  rgba(top, GREEN_TOP, alpha);
+  rgba(bottom, GREEN_BOTTOM, alpha);
+  for (int i = 0; i < 3; i++) {
+    top[i] = std::min(1.0f, top[i] * shade + hover * 0.045f);
+    bottom[i] *= shade;
   }
-  const float a = stagger;
-  if (a <= 0.001f) {
-    return;
-  }
-  const float radius = bh * 0.5f;
-
-  float top[4], bottom[4], outline[4], ink[4];
-  if (target == TARGET_UPGRADE) {
-    /* Primary: solid green pill with a breathing halo. */
-    const float pulse = 0.5f + 0.5f * std::sin(now_s * float(M_PI) * 2.0f / 2.4f);
-    glow(r, radius, GREEN_GLOW, (0.16f + 0.08f * pulse + 0.14f * hover) * a, bh * 0.55f, 8);
-    const float lift[3] = {0.80f, 1.0f, 0.82f};
-    float t3[3], b3[3];
-    mix_rgb(t3, GREEN_TOP, lift, 0.35f * hover);
-    mix_rgb(b3, GREEN_BOTTOM, GREEN_TOP, 0.25f * hover);
-    rgba(top, t3, a);
-    rgba(bottom, b3, a);
-    const float rim[3] = {0.85f, 1.0f, 0.86f};
-    rgba(outline, rim, 0.55f * a);
-    rgba(ink, INK_DARK, a);
-  }
-  else {
-    /* Secondary: dark glass with a lit rim — green for referral, coin gold
-     * for the Creator Program so it reads as its own, special track. */
-    const float *accent = target == TARGET_CREATOR ? GOLD_TOP : GREEN_TOP;
-    glow(r, radius, accent, (0.05f + 0.13f * hover) * a, bh * 0.45f, 6);
-    float t3[3], b3[3];
-    mix_rgb(t3, GLASS_TOP, accent, 0.10f + 0.10f * hover);
-    mix_rgb(b3, GLASS_BOTTOM, accent, 0.03f + 0.06f * hover);
-    rgba(top, t3, 0.94f * a);
-    rgba(bottom, b3, 0.94f * a);
-    rgba(outline, accent, (0.55f + 0.45f * hover) * a);
-    rgba(ink, INK_LIGHT, a);
-  }
-  round_box(r, radius, top, bottom, outline, std::max(1.0f, bh * 0.028f));
-
-  /* Glass sheen on the upper half. */
-  {
-    rctf sheen = r;
-    BLI_rctf_pad(&sheen, -bh * 0.06f, -bh * 0.06f);
-    sheen.ymin = BLI_rctf_cent_y(&r);
-    const float s_top[4] = {1.0f, 1.0f, 1.0f, (target == TARGET_UPGRADE ? 0.16f : 0.05f) * a};
-    const float s_bot[4] = {1.0f, 1.0f, 1.0f, 0.0f};
-    round_box(sheen, radius * 0.9f, s_top, s_bot);
-  }
-
-  /* Glyph + label, centred together. */
+  const float outline[4] = {0.38f, 0.82f, 0.46f, (0.12f + 0.20f * hover) * alpha};
+  round_box(r, layout.button_h * 0.32f, top, bottom, outline, 1.0f);
   const int font = BLF_default();
+  const float size = label_size(layout);
+  BLF_size(font, size);
   const char *label = target_label(target);
-  const char *glyph = target_glyph(target);
-  BLF_size(font, font_size);
-  BLF_character_weight(font, 700);
-  const float label_w = BLF_width(font, label, strlen(label));
-  BLF_character_weight(font, 400);
-  const float glyph_size = font_size * 1.05f;
-  BLF_size(font, glyph_size);
-  const float glyph_w = BLF_width(font, glyph, strlen(glyph));
-  const float gap = font_size * 0.5f;
-  const float total = glyph_w + gap + label_w;
-  const float x0 = BLI_rctf_cent_x(&r) - total * 0.5f;
+  const float width = BLF_width(font, label, strlen(label));
+  const float center = BLI_rctf_cent_x(&r);
   const float cy = BLI_rctf_cent_y(&r);
+  const float ink[4] = {0.94f, 0.98f, 0.94f, alpha};
+  const float icon_size = size * 1.4f;
+  const float gap = size * 0.35f;
+  text_centered(font, label, center + (icon_size + gap) * 0.5f, cy, ink);
+  draw_icon(target == TARGET_UPGRADE ? ICON_CREDITS_UPGRADE : ICON_CREDITS_REFER,
+            center - (width + gap) * 0.5f, cy, icon_size, alpha);
+}
 
-  float glyph_col[4];
-  if (target == TARGET_CREATOR) {
-    rgba(glyph_col, GOLD_TOP, a);
+static void draw_slider(const State &state, const Layout &layout, const float alpha,
+                        const double now)
+{
+  const rctf &r = layout.targets[TARGET_CREATOR];
+  const float hover = state.hover_mix[TARGET_CREATOR];
+  const float top[4] = {0.055f, 0.055f, 0.055f, alpha};
+  const float bottom[4] = {0.028f, 0.028f, 0.028f, alpha};
+  const float rim[4] = {0.23f, 0.38f, 0.27f, (0.18f + 0.25f * hover) * alpha};
+  round_box(r, layout.button_h * 0.4f, top, bottom, rim, 1.0f);
+  const rctf thumb = slider_thumb(layout, state.slide);
+  const rctf start = slider_thumb(layout, 0.0f);
+  const float text_x = (start.xmax + r.xmax) * 0.5f;
+  const float cy = BLI_rctf_cent_y(&r);
+  const int font = BLF_default();
+  BLF_size(font, label_size(layout) * 0.94f);
+  const char *hint = creator_hint(state);
+  const float available = r.xmax - start.xmax - layout.button_h * 0.1f;
+  const bool resting = strcmp(hint, "Creator Program") == 0;
+  const float icon_size = label_size(layout) * 1.2f;
+  const float icon_space = resting ? icon_size + label_size(layout) * 0.25f : 0.0f;
+  float width = BLF_width(font, hint, strlen(hint));
+  if (width + icon_space > available) {
+    BLF_size(font, label_size(layout) * 0.94f * (available - icon_space) / width);
+    width = BLF_width(font, hint, strlen(hint));
   }
-  else if (target == TARGET_REFER) {
-    rgba(glyph_col, GREEN_TOP, a);
+  // Hint fades in on hover; a restrained shimmer teaches the slide direction.
+  const float pulse = mixar_motion_reduced() ? 1.0f :
+                          0.82f + 0.18f * std::sin(float(now) * 3.5f);
+  const float ink[4] = {0.78f, 0.80f, 0.78f,
+                        alpha * (0.65f + hover * 0.35f) * pulse * (1.0f - state.slide)};
+  text_centered(font, hint, text_x + icon_space * 0.5f, cy, ink);
+  if (resting) {
+    draw_icon(ICON_CREDITS_CREATOR, text_x - (width + icon_space - icon_size) * 0.5f,
+              cy, icon_size, alpha * (1.0f - state.slide));
   }
-  else {
-    copy_v4_v4(glyph_col, ink);
-  }
-  text_centered(font, glyph, x0 + glyph_w * 0.5f, cy, glyph_col);
-  BLF_size(font, font_size);
-  BLF_character_weight(font, 700);
-  text_centered(font, label, x0 + glyph_w + gap + label_w * 0.5f, cy, ink);
-  BLF_character_weight(font, 400);
-
-  /* "10K+ followers" chip hanging on the Creator button's top edge. */
-  if (target == TARGET_CREATOR) {
-    rctf badge = layout.badge;
-    BLI_rctf_translate(&badge, 0.0f, -rise);
-    float b_top[4], b_bot[4];
-    rgba(b_top, GOLD_TOP, a);
-    rgba(b_bot, GOLD_BOTTOM, a);
-    const float shadow[4] = {0.0f, 0.0f, 0.0f, 0.35f * a};
-    rctf drop = badge;
-    BLI_rctf_translate(&drop, 0.0f, -bh * 0.03f);
-    round_box(expanded(drop, bh * 0.02f), BLI_rctf_size_y(&badge), shadow, shadow);
-    round_box(badge, BLI_rctf_size_y(&badge) * 0.5f, b_top, b_bot);
-    const float badge_ink[4] = {0.18f, 0.10f, 0.0f, a};
-    BLF_size(font, BLI_rctf_size_y(&badge) * 0.56f);
-    BLF_character_weight(font, 800);
-    text_centered(font, "10K+ FOLLOWERS", BLI_rctf_cent_x(&badge), BLI_rctf_cent_y(&badge), badge_ink);
-    BLF_character_weight(font, 400);
+  float knob_top[4], knob_bottom[4];
+  rgba(knob_top, GREEN_TOP, alpha);
+  rgba(knob_bottom, GREEN_BOTTOM, alpha);
+  round_box(thumb, layout.button_h * 0.42f, knob_top, knob_bottom);
+  const float nudge = mixar_motion_reduced() || state.dragging ? 0.0f :
+                          hover * layout.button_h * 0.035f * std::sin(float(now) * 4.0f);
+  draw_icon(ICON_CREDITS_SLIDE, BLI_rctf_cent_x(&thumb) + nudge, cy,
+            layout.button_h * 0.48f, alpha);
+  if (state.focus == TARGET_CREATOR || state.slide > 0.01f) {
+    BLF_size(font, label_size(layout));
+    const float caption[4] = {0.72f, 0.76f, 0.72f, alpha};
+    text_centered(font, hint, BLI_rctf_cent_x(&r), r.ymax + layout.button_h * 0.4f, caption);
   }
 }
 
@@ -372,9 +298,9 @@ static void draw_close(const State &state, const Layout &layout, const float app
   const rctf &r = layout.targets[TARGET_CLOSE];
   const float hover = state.hover_mix[TARGET_CLOSE];
   const float size = BLI_rctf_size_x(&r);
-  const float bg[4] = {0.0f, 0.0f, 0.0f, (0.42f + 0.25f * hover) * appear};
+  const float bg[4] = {0.08f, 0.08f, 0.08f, (0.75f + 0.25f * hover) * appear};
   const float rim[4] = {1.0f, 1.0f, 1.0f, (0.14f + 0.30f * hover) * appear};
-  round_box(r, size * 0.5f, bg, bg, rim, std::max(1.0f, size * 0.03f));
+  round_box(r, size * 0.24f, bg, bg, rim, 0.5f);
   const int font = BLF_default();
   BLF_size(font, size * 0.42f);
   const float ink[4] = {1.0f, 1.0f, 1.0f, (0.72f + 0.28f * hover) * appear};
@@ -394,7 +320,7 @@ void draw(const wmWindow *win, void *customdata)
     return;
   }
   const double now = BLI_time_now_seconds();
-  const float motion = appear_factor(*state, now); /* may overshoot 1 */
+  const float motion = appear_factor(*state, now);
   const float appear = std::min(motion, 1.0f);    /* opacity */
   texture_ensure(*state);
   const Layout layout = layout_compute(*state, motion);
@@ -413,50 +339,40 @@ void draw(const wmWindow *win, void *customdata)
     round_box(full, 0.0f, scrim, scrim);
   }
 
-  /* Drop shadow, then a green bloom so the card glows off the dark. */
-  {
-    rctf shadow = layout.card;
-    BLI_rctf_translate(&shadow, 0.0f, -card_w * 0.012f);
-    const float black[3] = {0.0f, 0.0f, 0.0f};
-    glow(shadow, layout.radius, black, 0.55f * appear, card_w * 0.035f, 8);
-    glow(layout.card, layout.radius, GREEN_GLOW, 0.075f * appear, card_w * 0.07f, 10);
-  }
-
+  const float card_h = BLI_rctf_size_y(&layout.card);
+  const float bg[4] = {0.006f, 0.006f, 0.006f, 0.98f * appear};
+  const float rim[4] = {0.18f, 0.18f, 0.18f, 0.7f * appear};
+  round_box(layout.card, layout.radius, bg, bg, rim, 1.0f);
+  // The soft neutral wash keeps the cat legible without a luminous green frame.
+  const float wash[3] = {0.14f, 0.14f, 0.14f};
+  rctf halo = layout.art;
+  BLI_rctf_pad(&halo, -card_w * 0.04f, -card_h * 0.06f);
+  glow(halo, card_w * 0.20f, wash, 0.08f * appear, card_w * 0.12f, 16);
   if (state->texture) {
-    GPU_blend(GPU_BLEND_ALPHA);
-    draw_texture(state->texture, layout.card, appear);
+    rctf art = layout.art;
+    const float aspect = float(state->image_w) / float(std::max(state->image_h, 1));
+    const float height = std::min(BLI_rctf_size_y(&art), BLI_rctf_size_x(&art) / aspect);
+    const float width = height * aspect;
+    art.ymax = art.ymin + height;
+    const float center = BLI_rctf_cent_x(&art);
+    art.xmin = center - width * 0.5f;
+    art.xmax = center + width * 0.5f;
+    draw_texture(state->texture, art, appear);
   }
-  else {
-    /* The art is missing from the install: keep the CTA usable on a plain card. */
-    float top[4], bottom[4], outline[4];
-    rgba(top, GLASS_TOP, appear);
-    rgba(bottom, GLASS_BOTTOM, appear);
-    rgba(outline, GREEN_TOP, 0.6f * appear);
-    round_box(layout.card, layout.radius, top, bottom, outline, 2.0f);
-    const int font = BLF_default();
-    BLF_size(font, card_w * 0.04f);
-    BLF_character_weight(font, 800);
-    const float ink[4] = {INK_LIGHT[0], INK_LIGHT[1], INK_LIGHT[2], appear};
-    text_centered(font,
-                  "You're out of credits",
-                  BLI_rctf_cent_x(&layout.card),
-                  layout.card.ymin + BLI_rctf_size_y(&layout.card) * 0.6f,
-                  ink);
-    BLF_character_weight(font, 400);
-  }
-
-  /* Hairline rim so the rounded card edge stays crisp on the scrim. */
-  {
-    const float clear[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    const float rim[4] = {0.55f, 1.0f, 0.62f, 0.10f * appear};
-    round_box(layout.card, layout.radius, clear, clear, rim, std::max(1.0f, card_w * 0.0008f));
-  }
-
   const int font = BLF_default();
-  const float font_size = label_size(font, layout);
-  for (int t = TARGET_UPGRADE; t <= TARGET_CREATOR; t++) {
-    draw_button(*state, layout, Target(t), appear, float(now - state->opened_at), font_size);
-  }
+  BLF_size(font, card_w * 0.052f);
+  BLF_character_weight(font, 700);
+  const float ink[4] = {0.95f, 0.95f, 0.95f, appear};
+  text_centered(font, "You're all out of credits!", BLI_rctf_cent_x(&layout.card),
+                layout.card.ymax - card_h * 0.145f, ink);
+  BLF_character_weight(font, 400);
+  BLF_size(font, card_w * 0.024f);
+  const float muted[4] = {0.50f, 0.50f, 0.50f, appear};
+  text_centered(font, "Upgrade Plan or Earn Credits?", BLI_rctf_cent_x(&layout.card),
+                layout.card.ymax - card_h * 0.215f, muted);
+  draw_button(*state, layout, TARGET_UPGRADE, appear);
+  draw_button(*state, layout, TARGET_REFER, appear);
+  draw_slider(*state, layout, appear, now - state->opened_at);
   draw_close(*state, layout, appear);
 
   GPU_blend(prev_blend);
