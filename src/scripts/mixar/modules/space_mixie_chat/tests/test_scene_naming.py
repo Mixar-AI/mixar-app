@@ -21,7 +21,9 @@ def test_default_tab_names(name, default):
 
 @pytest.mark.parametrize("prompt, title", [
     ("Create a red cube named QA_A", "Red Cube Named QA_A"),
-    ("please build me a small kitchen table with four chairs", "Small Kitchen Table With"),
+    ("please build me a small kitchen table with four chairs", "Small Kitchen Table"),
+    ("Create a blue uv sphere named T2_Sphere", "Blue Uv Sphere"),
+    ("Build a bookshelf with two shelves and five books", "Bookshelf With Two"),
     ("UV unwrap this creature and pack the islands", "UV Unwrap This Creature"),
     ("a", "A"),
     ("", ""),

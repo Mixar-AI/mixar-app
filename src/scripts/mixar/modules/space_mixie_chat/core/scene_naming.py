@@ -27,6 +27,11 @@ _LEAD_FILLER = frozenset({
     "like", "to", "me", "my", "make", "create", "build", "generate", "add",
     "model", "let", "lets", "let's", "need", "now", "hi", "hello", "hey",
 })
+#: A cut at the width limit must not end on one of these ("Table With").
+_TRAIL_FILLER = frozenset({
+    "with", "of", "named", "and", "a", "an", "the", "to", "for", "in", "on",
+    "at", "by", "from", "that", "which", "or", "into", "onto",
+})
 _WORD = re.compile(r"[A-Za-z0-9][A-Za-z0-9'_\-]*")
 TAB_NAME_MAXLEN = 24
 
@@ -54,6 +59,8 @@ def title_for_prompt(text: str, max_len: int = TAB_NAME_MAXLEN) -> str:
         out.append(piece)
     if not out and words:
         return words[0][:max_len]
+    while len(out) > 1 and out[-1].lower() in _TRAIL_FILLER:
+        out.pop()
     return " ".join(out)
 
 
