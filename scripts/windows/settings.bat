@@ -37,6 +37,8 @@ REM Core environment settings (env var > .env > default)
 if not defined MIXAR_ENV set "MIXAR_ENV=Prod"
 if not defined MIXAR_BACKEND_URL set "MIXAR_BACKEND_URL=https://api.mixar.app"
 if not defined MIXAR_FRONTEND_URL set "MIXAR_FRONTEND_URL=https://www.mixar.app"
+if not defined MIXAR_COMMUNITY_URL set "MIXAR_COMMUNITY_URL=https://community.mixar.app"
+if not defined MIXAR_COMMUNITY_API_URL set "MIXAR_COMMUNITY_API_URL=https://community-api.mixar.app/api/v1"
 
 REM App info (constants)
 if not defined MIXAR_VERSION_PATCH set "MIXAR_VERSION_PATCH=0"

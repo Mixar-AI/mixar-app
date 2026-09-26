@@ -53,12 +53,13 @@ from .workspace import (
     reject_root_addon_files,
     workspace_addons,
 )
+from .publish_service import PublishServiceMixin
 from .workspace_service import WorkspaceServiceMixin
 
 _LEASE_TTL_SECONDS = 24 * 60 * 60
 
 
-class AddonProjectService(WorkspaceServiceMixin):
+class AddonProjectService(WorkspaceServiceMixin, PublishServiceMixin):
     def __init__(self, storage_dir: Path):
         self.storage_dir = Path(storage_dir)
         self.registry = ProjectRegistry(self.storage_dir)

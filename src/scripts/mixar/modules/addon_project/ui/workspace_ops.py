@@ -336,6 +336,12 @@ class MIXAR_MT_addon_project_workspace(Menu):
             props.enabled = False
             props.uninstall = True
             layout.separator()
+            layout.operator(
+                "mixar.addon_project_publish",
+                text=f"Publish {entrypoint} to Community…",
+                icon='WORLD',
+            )
+            layout.separator()
         layout.operator(
             "mixar.addon_project_link",
             text="Link Existing Folder…",

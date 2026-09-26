@@ -32,6 +32,12 @@ class MIXAR_MT_addon_project_more(Menu):
         )
         layout.separator()
         layout.operator(
+            "mixar.addon_project_publish",
+            text="Publish to Community...",
+            icon='WORLD',
+        )
+        layout.separator()
+        layout.operator(
             "mixar.addon_project_unlink",
             text="Unlink Project",
             icon='UNLINKED',

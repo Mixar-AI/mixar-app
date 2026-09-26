@@ -232,6 +232,16 @@ def get_server_url():
     return config.get('backend_url', 'https://api.mixar.app')
 
 
+def get_community_url():
+    """Mixar Community web origin (resolved at build time via env vars)."""
+    return get_config().get('community_url', 'https://community.mixar.app')
+
+
+def get_community_api_url():
+    """Mixar Community API base, e.g. ``https://community-api.mixar.app/api/v1``."""
+    return get_config().get('community_api_url', 'https://community-api.mixar.app/api/v1')
+
+
 def get_dev_bypass_credentials() -> tuple:
     """Return (username, password) for dev bypass login, or ('', '') if disabled.
 
