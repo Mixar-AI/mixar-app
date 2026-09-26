@@ -17,6 +17,7 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_listbase.h"
+#include "BLI_listbase_iterator.hh"
 #include "BLI_math_base.h"
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -318,25 +319,45 @@ void view3d_scenes_drawer_region_register(SpaceType *st)
   BLI_addhead(&st->regiontypes, art);
 }
 
+/** The first non-header region of the area: the drawer goes right before it,
+ * after every header (the floating Zen toolbar clips the drawer's top). */
+static ARegion *drawer_region_anchor(ScrArea *area)
+{
+  for (ARegion &region : area->regionbase) {
+    if (region.regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE) {
+      continue;
+    }
+    if (!ELEM(region.regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER, RGN_TYPE_FOOTER)) {
+      return &region;
+    }
+  }
+  return nullptr;
+}
+
 void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area)
 {
   if (!area || area->spacetype != SPACE_VIEW3D) {
     return;
   }
 
-  ARegion *window_region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
+  /* The drawer takes its width from the area BEFORE the overlapping regions
+   * (TOOLS, UI, the parallel-agents band) are placed: `region_rect_recursive`
+   * resets the overlap remainder only after a non-overlap region, so a drawer
+   * listed after TOOLS left the transform pill at the area's edge, painted
+   * over the cards. Anchor: the first region after the headers. */
+  ARegion *anchor = drawer_region_anchor(area);
   if (ARegion *existing = BKE_area_find_region_type(area, VIEW3D_SCENES_DRAWER_REGION_TYPE)) {
-    if (window_region && existing->next != window_region) {
+    if (anchor && existing->next != anchor) {
       BLI_remlink(&area->regionbase, existing);
-      BLI_insertlinkbefore(&area->regionbase, window_region, existing);
+      BLI_insertlinkbefore(&area->regionbase, anchor, existing);
     }
     view3d_scenes_drawer_size_sync(wm, area, existing);
     return;
   }
 
   ARegion *region = BKE_area_region_new();
-  if (window_region) {
-    BLI_insertlinkbefore(&area->regionbase, window_region, region);
+  if (anchor) {
+    BLI_insertlinkbefore(&area->regionbase, anchor, region);
   }
   else {
     BLI_addtail(&area->regionbase, region);
