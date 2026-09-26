@@ -51,7 +51,7 @@ def handle_server_notification(params: dict) -> None:
         return
 
     if notif_type == "credit_upgrade":
-        # Surface #1 — the sticky "Upgrade" toast (thread-safe store).
+        # Surface #1 — the whole-window out-of-credits banner (thread-safe).
         from ...common.notifications.credit_upgrade import push_credit_upgrade
         push_credit_upgrade(params)
         # Surface #2 — a Mixie chat message with the same CTA. This
@@ -64,6 +64,7 @@ def handle_server_notification(params: dict) -> None:
                 title=p.get("title"),
                 body=p.get("body", p.get("message")),
                 action_url=p.get("action_url"),
+                request_banner=False,
             )
 
         run_on_main_thread(_add_chat_notice)

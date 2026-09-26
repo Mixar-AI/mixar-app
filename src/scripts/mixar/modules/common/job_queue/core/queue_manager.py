@@ -40,7 +40,7 @@ from ..constants import (
     MAX_CONSECUTIVE_POLL_ERRORS,
     MAX_POLL_DURATION,
 )
-from .error_helpers import classify_error
+from .error_helpers import OUT_OF_CREDITS_MESSAGE, classify_error
 from .job import FAILED_BACKEND_STATUSES, Job, JobState, RUNNING_STATES, TERMINAL_STATES
 from .queue_download import DownloadMixin
 
@@ -643,6 +643,16 @@ class FeatureQueue(DownloadMixin):
         except Exception as e:
             logger.debug("%s agent result report failed: %s", LOG_PREFIX, e)
 
+    @staticmethod
+    def _request_credits_banner() -> None:
+        try:
+            from mixar.modules.common.notifications.credits_banner import (
+                request_credits_banner,
+            )
+            request_credits_banner("job")
+        except Exception as e:
+            logger.debug("%s credits banner request failed: %s", LOG_PREFIX, e)
+
     def _notify_failure_toasts(self) -> None:
         """Surface a viewport toast once for each newly-FAILED job.
 
@@ -654,6 +664,11 @@ class FeatureQueue(DownloadMixin):
         for job in self._jobs:
             if job.state == JobState.FAILED and not job._failure_notified:
                 job._failure_notified = True
+                if job.user_message == OUT_OF_CREDITS_MESSAGE:
+                    # The out-of-credits banner is this failure's notice (the
+                    # API client requested it on the 402); no toast on top.
+                    self._request_credits_banner()
+                    continue
                 try:
                     from mixar.modules.common.notifications import (
                         get_notification_store,

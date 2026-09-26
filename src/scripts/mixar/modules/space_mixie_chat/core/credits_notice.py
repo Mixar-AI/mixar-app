@@ -64,6 +64,7 @@ def add_credit_upgrade_chat_message(
     title: str = None,
     body: str = None,
     action_url: str = None,
+    request_banner: bool = True,
 ) -> None:
     """Add (or refresh) a Mixie chat bubble with an "Upgrade" CTA.
 
@@ -75,6 +76,9 @@ def add_credit_upgrade_chat_message(
         title / body: Copy from the backend push (defaults applied if absent).
         action_url: manage-subscription URL; stashed so the shared upgrade
             operator opens the right page even without a preceding toast push.
+        request_banner: Also ask for the out-of-credits banner. False for the
+            backend push, which requests it itself with its notification id
+            (so a reconnect replay stays deduped).
     """
     try:
         from mixar.modules.common.notifications.credit_upgrade import (
@@ -83,6 +87,17 @@ def add_credit_upgrade_chat_message(
         set_pending_upgrade_url(action_url)
     except Exception as e:
         logger.debug(f"credit upgrade url stash skipped: {e}")
+
+    # The banner is the headline; this bubble explains the stopped turn in
+    # the transcript.
+    if request_banner:
+        try:
+            from mixar.modules.common.notifications.credits_banner import (
+                request_credits_banner,
+            )
+            request_credits_banner("chat", action_url=action_url)
+        except Exception as e:
+            logger.debug(f"credits banner request skipped: {e}")
 
     if scene is None:
         scene = getattr(bpy.context, "scene", None)

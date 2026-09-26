@@ -26,6 +26,7 @@
 #include "UI_interface.hh"
 #include "UI_interface_layout.hh"
 #include "UI_mixar_chrome.hh"
+#include "UI_mixar_credits_banner.hh"
 #include "UI_resources.hh"
 #include "UI_view2d.hh"
 
@@ -98,7 +99,12 @@ static void topbar_main_region_init(wmWindowManager *wm, ARegion *region)
   WM_event_add_keymap_handler(&region->runtime->handlers, keymap);
 }
 
-static void topbar_operatortypes() {}
+static void topbar_operatortypes()
+{
+  /* Mixar: the whole-window out-of-credits banner. The top bar is the one
+   * space every main window has, so it hosts the registration. */
+  ED_mixar_credits_banner_register();
+}
 
 static void topbar_keymap(wmKeyConfig * /*keyconf*/) {}
 

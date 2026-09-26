@@ -37,6 +37,10 @@ EVENT_TOUR_FINISHED = "onboarding.tour_finished"
 EVENT_UPDATE_DOWNLOAD = "update.download_finished"
 EVENT_UPDATE_STARTED = "update.install_started"
 EVENT_UPDATE_RESULT = "update.install_result"
+# The whole-window out-of-credits banner: what opened it, and what the user
+# chose (UPGRADE / REFER / CREATOR / DISMISS).
+EVENT_CREDITS_BANNER_SHOWN = "credits.banner_shown"
+EVENT_CREDITS_BANNER_ACTION = "credits.banner_action"
 
 # generation.rejected only fires when an undo / delete lands within this
 # many seconds of a generation or agent output arriving in the scene.
@@ -80,4 +84,6 @@ IGNORED_OPERATORS = frozenset({
     # The tour modal: one long-running operator whose funnel is the
     # onboarding.tour_* events.
     "mixar.onboarding_tour",
+    # The out-of-credits banner's choices: the credits.banner_* events.
+    "mixar.credits_banner_action",
 })

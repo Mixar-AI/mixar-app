@@ -58,6 +58,9 @@ struct MixarQATarget {
   bool enabled = true;
   /** Active/selected state (e.g. the active sidebar category tab). */
   bool sel = false;
+  /** A whole-window overlay exported through a host region: its rect is not
+   * clipped to that region (the out-of-credits banner rides the top bar). */
+  bool window_level = false;
 };
 
 using MixarQATargetProvider = void (*)(const wmWindow *win,

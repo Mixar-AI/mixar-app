@@ -82,5 +82,14 @@ def toast(kind: str, title: str, body: str = "") -> None:
 
 def toast_failure(message: str, *, upload: bool = False) -> None:
     title, body = describe_failure(message, upload=upload)
+    if title == NO_CREDITS_TITLE:
+        # Out of credits gets the whole-window banner, not a toast.
+        try:
+            from ...common.notifications.credits_banner import request_credits_banner
+
+            request_credits_banner("mask_tool")
+            return
+        except Exception as exc:  # noqa: BLE001 — fall back to the toast
+            logger.debug("Mask tool credits banner failed: %s", exc)
     kind = "warning" if title == NO_OBJECT_TITLE else "error"
     toast(kind, title, body)

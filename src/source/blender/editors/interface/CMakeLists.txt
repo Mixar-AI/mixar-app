@@ -53,6 +53,9 @@ set(SRC
   mixar/toolbar.cc
   mixar/toolbar.hh
   mixar/tour_menu.cc
+  mixar/credits_banner.cc
+  mixar/credits_banner.hh
+  mixar/credits_banner_draw.cc
   mixar/custom_motion.cc
   mixar/motion.cc
   interface_mixar_card_button.cc

@@ -28,6 +28,19 @@ class NotificationType(Enum):
     SUCCESS = "success"
 
 
+# -- Out-of-credits banner (credits_banner.py) ----------------------------
+CREDITS_BANNER_ASSET = "assets/credits_banner.webp"
+# A burst of failures (a batch of jobs, the push plus the chat fallback for
+# one turn) opens the banner once; requests this soon after an open or a
+# close are dropped.
+CREDITS_BANNER_BURST_COOLDOWN_S = 20.0
+CREDITS_BANNER_TOUR_POLL_S = 2.0
+# Destinations of the banner's secondary buttons (Upgrade uses the
+# manage-subscription handoff shared with the chat CTA).
+CREDITS_BANNER_REFERRAL_URL = "https://www.mixar.app/app/referrals"
+CREDITS_BANNER_CREATOR_URL = "https://www.mixar.app/creator-program"
+
+
 # Priority -> TTL mapping (ms). 0 = sticky (manual dismiss only).
 PRIORITY_TTL_MS = {
     "low": 0,

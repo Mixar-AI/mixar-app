@@ -47,11 +47,16 @@ _CREDENTIAL_PATTERNS = (
 )
 
 
+# The out-of-credits banner is that failure's notification, so the queue's
+# failure toast recognises this exact message and stands down.
+OUT_OF_CREDITS_MESSAGE = "You're out of credits — upgrade your plan to continue"
+
+
 def classify_error(error) -> str:
     """Return a user-friendly message for a typed exception, or ``""``."""
     # Check InsufficientCreditsError before its HTTPClientError base.
     if isinstance(error, InsufficientCreditsError):
-        return "You're out of credits — upgrade your plan to continue"
+        return OUT_OF_CREDITS_MESSAGE
     if isinstance(error, AuthenticationError):
         return "Authentication required — please sign in"
     if isinstance(error, AuthorizationError):
