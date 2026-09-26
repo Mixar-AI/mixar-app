@@ -65,6 +65,12 @@ def register():
     for name, space in (('Scenes Drawer', 'VIEW_3D'), ('3D View', 'VIEW_3D'), ('Window', 'EMPTY')):
         km = _ensure(kc, name, space)
         _add(km, 'view3d.scenes_drawer_toggle', 'ACCENT_GRAVE', 'PRESS', ctrl=True)
+    # Undo / redo are held while an agent works in any tab (ui/operators/undo_ops.py):
+    # bound ahead of the stock keys in the Screen map, pass-through when idle.
+    screen = _ensure(kc, 'Screen', 'EMPTY')
+    for mods in ({'ctrl': True}, {'oskey': True}):
+        _add(screen, 'mixie_chat.guarded_undo', 'Z', 'PRESS', **mods)
+        _add(screen, 'mixie_chat.guarded_undo', 'Z', 'PRESS', shift=True, **mods).properties.redo = True
     logger.debug("Scenes drawer keymap registered (%d items)", len(addon_keymaps))
 
 
