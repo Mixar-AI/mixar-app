@@ -21,6 +21,11 @@ AI_WORKSPACE_NAME = "AI Mode"
 # visually transparent.
 BASIC_WORKSPACE_NAME = "Zen Mode"
 
+# Bundled startup file (installed under DATAFILES) whose Zen Mode workspace
+# is the canonical layout. Appended whenever the open file has no Zen Mode,
+# e.g. a .blend from stock Blender whose workspaces replaced Mixar's.
+FACTORY_STARTUP_FILE = "startup.mixar"
+
 # Workspace to land on when the user flips into Engine mode. "Layout" is
 # Blender's stock default first tab, so Engine mode opens where a Blender
 # user expects (mirrors the startup.blend's default active workspace).
