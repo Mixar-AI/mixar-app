@@ -24,7 +24,6 @@ from mixar.modules.workflow.constants import (
 )
 from mixar.modules.workflow.core.workspace_loader import (
     configure_basic_workspace_chrome,
-    restore_zen_after_file_open,
 )
 from mixar.modules.workflow.ui.headers.mode_filter_header import (
     install_topbar_filter,
@@ -103,20 +102,6 @@ def _schedule_object_mode_reset() -> None:
         bpy.app.timers.register(_ensure_modeling_workspace_object_mode, first_interval=0.2)
 
 
-def _restore_zen_after_load():
-    """Timer: return a Zen Mode user to Mixar's Zen layout after a file open.
-
-    Deferred out of load_post so the workspace switch happens once the new
-    file's windows are live.
-    """
-    try:
-        if restore_zen_after_file_open():
-            logger.info("workflow: kept Zen Mode after opening a file")
-    except Exception as exc:  # noqa: BLE001 - a timer must never raise
-        logger.debug("workflow: Zen restore after load skipped: %s", exc)
-    return None
-
-
 @persistent
 def _on_load_post(_dummy_arg) -> None:
     """Enforce Zen Mode viewport overlay defaults after every file load.
@@ -133,11 +118,6 @@ def _on_load_post(_dummy_arg) -> None:
         configure_basic_workspace_chrome()
     except Exception as exc:  # noqa: BLE001 - load handler must never raise
         logger.debug("workflow: zen chrome enforcement on load skipped: %s", exc)
-    # Opening a file with its UI replaces every workspace. Engine Mode keeps
-    # the file's; a Zen user goes back to Mixar's Zen layout. The startup /
-    # File > New home file has no filepath and is left to the splash.
-    if bpy.data.filepath and not bpy.app.timers.is_registered(_restore_zen_after_load):
-        bpy.app.timers.register(_restore_zen_after_load, first_interval=0.0)
     # A file saved in Edit/Sculpt mode that reopens into Zen Mode never fires
     # the workspace msgbus, so arm the Object Mode reset here as well.
     _schedule_object_mode_reset()
@@ -199,8 +179,6 @@ def unregister():
     bpy.msgbus.clear_by_owner(_OBJECT_MODE_MSGBUS_OWNER)
     if bpy.app.timers.is_registered(_ensure_modeling_workspace_object_mode):
         bpy.app.timers.unregister(_ensure_modeling_workspace_object_mode)
-    if bpy.app.timers.is_registered(_restore_zen_after_load):
-        bpy.app.timers.unregister(_restore_zen_after_load)
     uninstall_mode_menu_hook()
     uninstall_view3d_header_filter()
     uninstall_topbar_filter()
