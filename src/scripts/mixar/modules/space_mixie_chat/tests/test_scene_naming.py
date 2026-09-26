@@ -38,8 +38,8 @@ def test_a_long_word_is_cut_rather_than_dropped():
         "Supercalifragilisticexpi"
 
 
-def _msg(sender):
-    return SimpleNamespace(sender=sender, text="x")
+def _msg(sender, text="x", loader=False):
+    return SimpleNamespace(sender=sender, text=text, loader_visible=loader)
 
 
 def _scene(name, messages=()):
@@ -49,7 +49,8 @@ def _scene(name, messages=()):
 def test_a_default_tab_takes_its_first_prompt_as_its_name(monkeypatch):
     logged = []
     monkeypatch.setattr(scene_naming, "slog", lambda *a, **kw: logged.append((a, kw)))
-    scene = _scene("Scene.002", [_msg("USER")])   # the optimistic bubble of this very message
+    # The optimistic user bubble and the agent's loader placeholder are already there.
+    scene = _scene("Scene.002", [_msg("USER"), _msg("AGENT", text="", loader=True)])
     assert scene_naming.auto_name_tab(scene, "Build a lighthouse on a rock") == "Lighthouse On A Rock"
     assert scene.name == "Lighthouse On A Rock"
     assert logged and logged[0][0][0] == "tab.autoname"

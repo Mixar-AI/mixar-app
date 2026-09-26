@@ -67,7 +67,12 @@ def is_first_prompt(scene) -> bool:
     except Exception:  # noqa: BLE001
         return False
     users = sum(1 for m in messages if getattr(m, "sender", "") == "USER")
-    agents = sum(1 for m in messages if getattr(m, "sender", "") == "AGENT")
+    # The send path also adds an AGENT loader placeholder (empty text,
+    # loader_visible) before this runs; only a reply with text counts.
+    agents = sum(1 for m in messages
+                 if getattr(m, "sender", "") == "AGENT"
+                 and (getattr(m, "text", "") or "").strip()
+                 and not getattr(m, "loader_visible", False))
     return users <= 1 and agents == 0
 
 
