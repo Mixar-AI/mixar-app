@@ -34,6 +34,11 @@ def _redraw_bubbles(_self, context):
     wm = context.window_manager if context else bpy.context.window_manager
     if wm is None:
         return
+    try:
+        from mixar.modules.common.analytics.journey_events import tab_changed
+        tab_changed(context, wm.mixar_bubble_tab)
+    except Exception:
+        pass
     for window in wm.windows:
         for area in window.screen.areas:
             if area.type == 'AGENT_BUBBLE':
@@ -49,6 +54,8 @@ def register():
         update=_redraw_bubbles,
         options={'SKIP_SAVE'},
     )
+    from mixar.modules.common.analytics.journey_events import tab_changed
+    tab_changed(bpy.context, 'AGENT')
 
 
 def unregister():

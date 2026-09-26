@@ -65,6 +65,7 @@ def _record_output_landed(job: Job, file_type: str, object_names, *,
         from mixar.modules.common.analytics.capture import capture
         from mixar.modules.common.analytics.constants import EVENT_OUTPUT_LANDED
         capture(EVENT_OUTPUT_LANDED, {
+            "job_id": getattr(job, "backend_job_id", "") or "",
             "feature_key": getattr(job, "feature_key", "") or "",
             "service": getattr(job, "service", "")
             or getattr(job, "job_type", "") or "",
