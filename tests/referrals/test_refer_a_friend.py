@@ -97,9 +97,14 @@ def test_every_dialog_state_has_one_default_action():
     """A state without an active-default button brings back the native OK row."""
     dialog = DIALOG_PY.read_text(encoding="utf-8")
     tree = ast.parse(dialog)
+    segments = {
+        n.name: ast.get_source_segment(dialog, n)
+        for n in tree.body if isinstance(n, ast.FunctionDef)
+    }
+    assert "default=True" in segments["_action_pair"]
     for name in ("_footer", "draw_dialog"):
-        fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name)
-        assert "default=True" in ast.get_source_segment(dialog, fn), name
+        segment = segments[name]
+        assert "default=True" in segment or "_action_pair(" in segment, name
 
 
 def test_client_cap_mirrors_backend():

@@ -62,6 +62,20 @@ def _section(layout):
     return layout.mixar_section() if hasattr(layout, 'mixar_section') else layout.box()
 
 
+def _action_pair(layout, dismiss_text, operator_id, text):
+    """Ghost dismiss + accent primary action on one CTA row.
+
+    ``template_popup_confirm`` defines its cancel button with a fixed one-unit
+    width that a plain row honours (clipping "Done" to "Don"); a split column
+    stretches it instead.
+    """
+    row = layout.row()
+    row.scale_y = CARD_ROW_CTA
+    split = row.split(factor=0.3)
+    _dismiss(split.column(), dismiss_text)
+    _op_button(split.column(), operator_id, text, 'ACCENT', default=True)
+
+
 def _divider(layout):
     row = layout.row()
     row.scale_y = CARD_ROW_DIVIDER
@@ -77,10 +91,7 @@ def draw_dialog(layout, wm):
     if state == C.STATE_ERROR:
         card_label(layout, wm.mixar_referral_error or "Couldn't load your invite link",
                    'DANGER')
-        row = layout.row(align=True)
-        row.scale_y = CARD_ROW_CTA
-        _dismiss(row, "Close")
-        _op_button(row, OP_RELOAD, "Try Again", 'ACCENT', default=True)
+        _action_pair(layout, "Close", OP_RELOAD, "Try Again")
         return
 
     _draw_pitch(layout, wm)
@@ -142,17 +153,16 @@ def _draw_emails(layout, wm):
 
 def _footer(layout, busy=""):
     layout.separator(factor=0.9)
-    row = layout.row(align=True)
-    row.scale_y = CARD_ROW_CTA
     if busy:
+        row = layout.row()
+        row.scale_y = CARD_ROW_CTA
         sub = row.row()
         sub.enabled = False
         # Disabled progress pill keeps the default flag (and so keeps the
         # native OK row suppressed) while the request runs.
         _op_button(sub, OP_SEND, busy, 'ACCENT', default=True)
         return
-    _dismiss(row, "Done")
-    _op_button(row, OP_SEND, "Send Invites", 'ACCENT', default=True)
+    _action_pair(layout, "Done", OP_SEND, "Send Invites")
 
 
 # Auto-discovery imports every file under ui/ — nothing to register here.
