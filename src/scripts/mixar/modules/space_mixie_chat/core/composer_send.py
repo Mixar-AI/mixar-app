@@ -64,7 +64,7 @@ def send_user_message(scene, msg):
         return False, str(exc)
     session = get_session_manager()
     state = session.get_state(scene)
-    if state == SessionState.IDLE and not session.get_session_id(scene):
+    if state == SessionState.IDLE:
         # A tab's first prompt names it (parallel scenes): done BEFORE the turn
         # handler exists, so nothing is keyed on the old default name.
         from .scene_naming import auto_name_tab

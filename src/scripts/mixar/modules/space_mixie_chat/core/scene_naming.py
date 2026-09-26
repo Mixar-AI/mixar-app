@@ -9,7 +9,8 @@ drawer say nothing about what is in them. The first message a tab's chat
 sends gives it a name — the opening words of the prompt, title-cased and
 capped — before the turn starts, so every handler that keys on the scene name
 is created with the final name. A tab the user has already renamed keeps its
-name; a tab that already owns a session is never renamed by a later prompt.
+name; only the FIRST prompt of a tab names it (the transcript decides, not
+the session id: the id is minted before the send path runs).
 """
 
 from __future__ import annotations
@@ -56,13 +57,27 @@ def title_for_prompt(text: str, max_len: int = TAB_NAME_MAXLEN) -> str:
     return " ".join(out)
 
 
+def is_first_prompt(scene) -> bool:
+    """True until the tab's transcript holds an agent reply or a second user
+    message. The optimistic user bubble of the message being sent is already
+    in the transcript when the send path runs, so ONE user message counts as
+    the first prompt."""
+    try:
+        messages = list(getattr(scene, "mixie_chat_messages", None) or ())
+    except Exception:  # noqa: BLE001
+        return False
+    users = sum(1 for m in messages if getattr(m, "sender", "") == "USER")
+    agents = sum(1 for m in messages if getattr(m, "sender", "") == "AGENT")
+    return users <= 1 and agents == 0
+
+
 def auto_name_tab(scene, text: str) -> str:
     """Rename a still-default tab after its first prompt. Returns the new
     name, or "" when nothing changed. Blender keeps names unique, so a second
     tab asking for the same thing becomes ``<title>.001``."""
     if scene is None or not is_default_tab_name(getattr(scene, "name", "")):
         return ""
-    if getattr(scene, "mixie_session_id", "") or "":
+    if not is_first_prompt(scene):
         return ""
     title = title_for_prompt(text)
     if not title or title == scene.name:

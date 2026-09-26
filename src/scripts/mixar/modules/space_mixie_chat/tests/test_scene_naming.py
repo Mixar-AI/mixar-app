@@ -38,25 +38,31 @@ def test_a_long_word_is_cut_rather_than_dropped():
         "Supercalifragilisticexpi"
 
 
-def _scene(name, session=""):
-    return SimpleNamespace(name=name, mixie_session_id=session)
+def _msg(sender):
+    return SimpleNamespace(sender=sender, text="x")
+
+
+def _scene(name, messages=()):
+    return SimpleNamespace(name=name, mixie_session_id="sess", mixie_chat_messages=list(messages))
 
 
 def test_a_default_tab_takes_its_first_prompt_as_its_name(monkeypatch):
     logged = []
     monkeypatch.setattr(scene_naming, "slog", lambda *a, **kw: logged.append((a, kw)))
-    scene = _scene("Scene.002")
+    scene = _scene("Scene.002", [_msg("USER")])   # the optimistic bubble of this very message
     assert scene_naming.auto_name_tab(scene, "Build a lighthouse on a rock") == "Lighthouse On A Rock"
     assert scene.name == "Lighthouse On A Rock"
     assert logged and logged[0][0][0] == "tab.autoname"
 
 
-def test_a_renamed_tab_and_a_tab_with_a_session_keep_their_names(monkeypatch):
+def test_a_renamed_tab_and_a_later_prompt_keep_the_name(monkeypatch):
     monkeypatch.setattr(scene_naming, "slog", lambda *a, **kw: None)
-    named = _scene("Kitchen")
+    named = _scene("Kitchen", [_msg("USER")])
     assert scene_naming.auto_name_tab(named, "Build a lighthouse") == ""
     assert named.name == "Kitchen"
-    busy = _scene("Scene", session="sess-1")
-    assert scene_naming.auto_name_tab(busy, "Build a lighthouse") == ""
-    assert busy.name == "Scene"
-    assert scene_naming.auto_name_tab(_scene("Scene"), "") == ""
+    later = _scene("Scene", [_msg("USER"), _msg("AGENT"), _msg("USER")])
+    assert scene_naming.auto_name_tab(later, "Build a lighthouse") == ""
+    assert later.name == "Scene"
+    second = _scene("Scene", [_msg("USER"), _msg("USER")])
+    assert scene_naming.auto_name_tab(second, "Build a lighthouse") == ""
+    assert scene_naming.auto_name_tab(_scene("Scene", [_msg("USER")]), "") == ""
