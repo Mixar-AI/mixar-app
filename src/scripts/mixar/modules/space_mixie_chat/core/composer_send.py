@@ -64,6 +64,11 @@ def send_user_message(scene, msg):
         return False, str(exc)
     session = get_session_manager()
     state = session.get_state(scene)
+    if state == SessionState.IDLE and not session.get_session_id(scene):
+        # A tab's first prompt names it (parallel scenes): done BEFORE the turn
+        # handler exists, so nothing is keyed on the old default name.
+        from .scene_naming import auto_name_tab
+        auto_name_tab(scene, msg.text)
     handler = create_turn_handler(scene_name=scene.name)
     interjecting = is_interjection(scene)
     if state in (SessionState.MODIFYING, SessionState.AWAITING_INPUT):
