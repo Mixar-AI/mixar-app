@@ -81,9 +81,10 @@ def generate_config(version_file: str) -> dict:
         "log_level": _env("MIXAR_LOG_LEVEL", "INFO"),
         "backend_url": _env("MIXAR_BACKEND_URL", "https://api.mixar.app"),
         "frontend_url": _env("MIXAR_FRONTEND_URL", "https://www.mixar.app"),
-        # Mixar Community (separate service; add-on publishing).
-        "community_url": _env("MIXAR_COMMUNITY_URL", "https://community.mixar.app"),
-        "community_api_url": _env("MIXAR_COMMUNITY_API_URL", "https://community-api.mixar.app/api/v1"),
+        # Mixar Community (separate service; add-on publishing). Empty until
+        # the service is deployed: Publish to Community stays disabled.
+        "community_url": _env("MIXAR_COMMUNITY_URL", ""),
+        "community_api_url": _env("MIXAR_COMMUNITY_API_URL", ""),
         "app_info": {
             "version": version,
         },

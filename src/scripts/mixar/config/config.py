@@ -233,13 +233,13 @@ def get_server_url():
 
 
 def get_community_url():
-    """Mixar Community web origin (resolved at build time via env vars)."""
-    return get_config().get('community_url', 'https://community.mixar.app')
+    """Mixar Community web origin; empty when this build has no community service."""
+    return get_config().get('community_url', '') or ''
 
 
 def get_community_api_url():
-    """Mixar Community API base, e.g. ``https://community-api.mixar.app/api/v1``."""
-    return get_config().get('community_api_url', 'https://community-api.mixar.app/api/v1')
+    """Mixar Community API base (``.../api/v1``); empty disables Publish to Community."""
+    return get_config().get('community_api_url', '') or ''
 
 
 def get_dev_bypass_credentials() -> tuple:

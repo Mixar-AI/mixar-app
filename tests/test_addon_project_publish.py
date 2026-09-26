@@ -221,3 +221,12 @@ def test_publish_is_reachable_from_the_file_menu():
     topbar = (ui / "topbar_menu.py").read_text()
     assert "TOPBAR_MT_file.append" in topbar and "MIXAR_MT_addon_project_workspace" in topbar
     assert '"mixar.addon_project_publish"' in (ui / "workspace_ops.py").read_text()
+
+
+def test_publish_is_disabled_when_the_build_has_no_community_service():
+    # Defaults stay empty until the service is deployed, so a normal build
+    # shows a disabled entry instead of one that always ends in a network error.
+    gen = (REPO / "scripts/generate_config.py").read_text()
+    assert '_env("MIXAR_COMMUNITY_API_URL", "")' in gen
+    ops = (REPO / "src/scripts/mixar/modules/addon_project/ui/publish_ops.py").read_text()
+    assert "if not get_community_api_url():" in ops and "poll_message_set" in ops

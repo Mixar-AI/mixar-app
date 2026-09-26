@@ -32,6 +32,11 @@ def _toast(level: str, title: str, body: str = "", url: str = None) -> None:
         pass
 
 
+def _open_url(url: str) -> None:
+    """Open the draft in the browser (module-level so the QA scenario can stub it)."""
+    bpy.ops.wm.url_open(url=url)
+
+
 def _finish_on_main_thread(project_id, package, result, error) -> None:
     """Timer callback: all bpy / storage writes happen here, never on the worker."""
 
@@ -47,7 +52,7 @@ def _finish_on_main_thread(project_id, package, result, error) -> None:
         verb = "Draft created" if result.created else "New version uploaded"
         _toast("success", f"{verb} on Mixar Community", "Finish the listing in your browser", result.web_url)
         try:
-            bpy.ops.wm.url_open(url=result.web_url)
+            _open_url(result.web_url)
         except Exception:
             pass
         return None
@@ -67,6 +72,11 @@ class MIXAR_OT_addon_project_publish(Operator):
 
     @classmethod
     def poll(cls, context):
+        from mixar.config.config import get_community_api_url
+
+        if not get_community_api_url():
+            cls.poll_message_set("Mixar Community isn't available in this build")
+            return False
         if _in_flight.is_set():
             cls.poll_message_set("An upload is already running")
             return False

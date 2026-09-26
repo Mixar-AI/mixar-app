@@ -38,8 +38,9 @@ fi
 export MIXAR_ENV="${MIXAR_ENV:-Prod}"
 export MIXAR_BACKEND_URL="${MIXAR_BACKEND_URL:-https://api.mixar.app}"
 export MIXAR_FRONTEND_URL="${MIXAR_FRONTEND_URL:-https://www.mixar.app}"
-export MIXAR_COMMUNITY_URL="${MIXAR_COMMUNITY_URL:-https://community.mixar.app}"
-export MIXAR_COMMUNITY_API_URL="${MIXAR_COMMUNITY_API_URL:-https://community-api.mixar.app/api/v1}"
+# Mixar Community: empty (Publish to Community disabled) until the service is deployed.
+export MIXAR_COMMUNITY_URL="${MIXAR_COMMUNITY_URL:-}"
+export MIXAR_COMMUNITY_API_URL="${MIXAR_COMMUNITY_API_URL:-}"
 
 # App info (constants)
 export MIXAR_VERSION_PATCH="${MIXAR_VERSION_PATCH:-0}"
