@@ -183,6 +183,20 @@ void glyph_cross(const float cx, const float cy, const float s, const float col[
   diagonal(cx - h, cy + h, cx + h, cy - h, w, col);
 }
 
+/** Box and lid split by a vertical ribbon, a bow disc on top. */
+void glyph_gift(const float cx, const float cy, const float s, const float col[4])
+{
+  const float w = stroke_width(s);
+  const float hw = s * 0.38f;
+  const float lid = cy + s * 0.08f;
+
+  box_outline(cx - hw * 0.86f, cx + hw * 0.86f, cy - s * 0.44f, lid, s * 0.06f, col);
+  box_fill(cx - hw, cx + hw, lid, lid + s * 0.16f, s * 0.05f, col);
+  vrule(cy - s * 0.44f, lid, cx, w, col);
+  disc(cx - s * 0.1f, lid + s * 0.27f, s * 0.09f, col);
+  disc(cx + s * 0.1f, lid + s * 0.27f, s * 0.09f, col);
+}
+
 }  // namespace
 
 void UI_mixar_card_icon_draw(
@@ -210,6 +224,9 @@ void UI_mixar_card_icon_draw(
       break;
     case MixarCardIcon::Cross:
       glyph_cross(cx, cy, size, c);
+      break;
+    case MixarCardIcon::Gift:
+      glyph_gift(cx, cy, size, c);
       break;
     case MixarCardIcon::None:
       break;

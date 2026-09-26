@@ -426,6 +426,9 @@ void add_actions(Layout *layout)
   top.scale_y_set(ROW_ACTION);
   add_action(&top, "MIXIE_CHAT_OT_open_dashboard", "Dashboard", MixarCardIcon::Grid,
              MixarCardElement::CardButton);
+  /* In-app referrals, so an out-of-credit user never has to leave for the web. */
+  add_action(&top, "MIXAR_OT_refer_friend", "Refer a Friend", MixarCardIcon::Gift,
+             MixarCardElement::CardButton);
 
   /* Share the chat model picker's dialog and account state. Full width keeps
    * the label readable; invoke is required because execute is a no-op. */
