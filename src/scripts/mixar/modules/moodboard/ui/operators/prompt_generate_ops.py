@@ -23,6 +23,7 @@ operator from the N-panel.
 
 import bpy
 from bpy.types import Operator
+from mixar.modules.common.analytics.journey_events import generation_attempt, generation_dispatch
 
 
 def _pane_message(text, level_name):
@@ -58,10 +59,12 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             resolve_prompt_generate,
         )
 
+        attempt = generation_attempt(context, self.owner_type)
         operator_id, props = resolve_prompt_generate(
             context.scene, self.owner_type
         )
         if not operator_id:
+            generation_dispatch(context, attempt, 'unknown_owner')
             message = (
                 "No Generate action is registered for this prompt "
                 f"({self.owner_type or 'unknown tab'})"
@@ -73,12 +76,14 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
         try:
             op_callable = getattr(getattr(bpy.ops, module_name), function_name)
         except AttributeError:
+            generation_dispatch(context, attempt, 'unavailable')
             message = f"Operator {operator_id} is not available"
             self.report({'WARNING'}, message)
             _pane_message(message, "LEVEL_WARNING")
             return {'CANCELLED'}
         try:
             if not op_callable.poll():
+                generation_dispatch(context, attempt, 'poll_failed')
                 message = f"{operator_id} cannot run in the current context"
                 self.report({'WARNING'}, message)
                 _pane_message(message, "LEVEL_WARNING")
@@ -87,6 +92,7 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             # Generate button (confirmation dialogs and reports included).
             result = op_callable('INVOKE_DEFAULT', **(props or {}))
         except RuntimeError as exc:
+            generation_dispatch(context, attempt, 'error')
             # bpy_operator.cc gives a nested call its OWN ReportList, so only
             # {'ERROR'} escapes — as a RuntimeError carrying Blender's own
             # "Error: " prefix. Re-report it at ERROR (the generation stopped;
@@ -99,6 +105,7 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             _pane_message(message, "LEVEL_ERROR")
             return {'CANCELLED'}
         if 'CANCELLED' in result:
+            generation_dispatch(context, attempt, 'cancelled')
             # The inner operator refused without raising, so it reported at
             # INFO/WARNING into the OWN ReportList bpy_operator.cc gave the
             # nested call — nothing of it escaped to us or to the user. Say
@@ -107,6 +114,8 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             self.report({'WARNING'}, message)
             _pane_message(message, "LEVEL_WARNING")
             return {'CANCELLED'}
+        generation_dispatch(context, attempt,
+                            'modal_started' if 'RUNNING_MODAL' in result else 'dispatched')
         _pane_message("Generation submitted", "LEVEL_INFO")
         return {'FINISHED'}
 

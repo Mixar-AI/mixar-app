@@ -99,6 +99,7 @@ path = [
   "docs/development/zen-toolbar-controls/*.png",
   "docs/development/library-responsive-layout/*.png",
   "docs/development/director-auto-key/*.png",
+  "docs/development/posthog-blastoff/*.png",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
@@ -117,6 +118,7 @@ path = [
   "docs/development/zen-toolbar-controls/*.json",
   "docs/development/library-responsive-layout/verdict.json",
   "docs/development/director-auto-key/verdict.json",
+  "docs/development/posthog-blastoff/*.json",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
