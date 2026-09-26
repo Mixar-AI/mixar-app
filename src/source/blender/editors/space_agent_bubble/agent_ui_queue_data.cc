@@ -17,15 +17,16 @@ bool state_is(const char *state, const char *name)
   return STREQ(state, name);
 }
 
-/** C++ mirror of the UIList's `_status_word` — one vocabulary, two surfaces. */
-void status_word(const char *state, const char *substate, char r_out[64])
+/** C++ mirror of the UIList's `_status_word` — one vocabulary, two surfaces.
+ * A failed job says why in two words (\a headline, from failure_info.py). */
+void status_word(const char *state, const char *substate, const char *headline, char r_out[64])
 {
   const char *word = "";
   if (state_is(state, "SUCCESS")) {
     word = "Done";
   }
   else if (state_is(state, "FAILED")) {
-    word = "Failed";
+    word = (headline && headline[0]) ? headline : "Failed";
   }
   else if (state_is(state, "CANCELLED")) {
     word = "Cancelled";
@@ -78,6 +79,34 @@ int read_item_int(PointerRNA *item, const char *name)
   return RNA_property_int_get(item, prop);
 }
 
+/** Unbounded string read — failure reasons run to hundreds of characters. */
+static std::string read_item_std_string(PointerRNA *item, const char *name)
+{
+  PropertyRNA *prop = RNA_struct_find_property(item, name);
+  return prop && RNA_property_type(prop) == PROP_STRING ? RNA_property_string_get(item, prop) :
+                                                         std::string();
+}
+
+static void read_failure(PointerRNA *item, QueueFailure &r_failure)
+{
+  read_item_string(item, "job_id", r_failure.job_id, sizeof(r_failure.job_id));
+  read_item_string(item, "feature_key", r_failure.feature_key, sizeof(r_failure.feature_key));
+  read_item_string(item, "error_headline", r_failure.headline, sizeof(r_failure.headline));
+  r_failure.message = read_item_std_string(item, "error_message");
+  if (r_failure.message.empty()) {
+    r_failure.message = read_item_std_string(item, "user_message");
+  }
+  if (r_failure.message.empty()) {
+    r_failure.message = "Generation failed";
+  }
+  r_failure.reason = read_item_std_string(item, "error_reason");
+  r_failure.hint = read_item_std_string(item, "error_hint");
+  r_failure.details = read_item_std_string(item, "error_details");
+  if (r_failure.details.empty()) {
+    r_failure.details = r_failure.message;
+  }
+}
+
 float read_item_float(PointerRNA *item, const char *name)
 {
   PropertyRNA *prop = RNA_struct_find_property(item, name);
@@ -128,6 +157,23 @@ int total_rows(wmWindowManager *wm)
   return queue_items(wm, queue, items) ? RNA_property_collection_length(&queue, items) : 0;
 }
 
+bool active_failure_present(wmWindowManager *wm)
+{
+  PointerRNA queue;
+  PropertyRNA *items;
+  if (!queue_items(wm, queue, items)) {
+    return false;
+  }
+  const int active = read_item_int(&queue, "active_index");
+  PointerRNA item;
+  if (active < 0 || !RNA_property_collection_lookup_int(&queue, items, active, &item)) {
+    return false;
+  }
+  char state[32] = "";
+  read_item_string(&item, "state", state, sizeof(state));
+  return state_is(state, "FAILED");
+}
+
 float offset_get(wmWindowManager *wm)
 {
   PointerRNA ptr = RNA_id_pointer_create(&wm->id);
@@ -156,9 +202,18 @@ QueueData gather_rows(wmWindowManager *wm, const int capacity)
                          state_is(state, "RUNNING_DOWNLOAD");
     const bool pending = state_is(state, "PENDING") || state_is(state, "PAUSED_AUTH");
     const bool done = state_is(state, "SUCCESS");
-    const bool failed = state_is(state, "FAILED") || state_is(state, "CANCELLED");
+    const bool cancelled = state_is(state, "CANCELLED");
+    const bool failed = state_is(state, "FAILED") || cancelled;
     data.active += int(running || pending);
+    data.running += int(running);
+    data.pending += int(pending);
+    data.done += int(done);
+    data.failed += int(failed && !cancelled);
     data.any_terminal |= done || failed;
+    if (index == data.active_index && failed && !cancelled) {
+      data.has_selected_failure = true;
+      read_failure(&item, data.selected_failure);
+    }
     if (index < data.visible.first || index >= data.visible.end()) {
       continue;
     }
@@ -168,19 +223,17 @@ QueueData gather_rows(wmWindowManager *wm, const int capacity)
     row.is_pending = pending;
     row.is_done = done;
     row.is_failed = failed;
+    row.is_cancelled = cancelled;
+    if (failed && !cancelled) {
+      read_failure(&item, row.failure);
+    }
 
     read_item_string(&item, "job_id", row.job_id, sizeof(row.job_id));
     read_item_string(&item, "feature_key", row.feature_key, sizeof(row.feature_key));
 
-    auto read_title = [&](const char *name) -> std::string {
-      PropertyRNA *prop = RNA_struct_find_property(&item, name);
-      return prop && RNA_property_type(prop) == PROP_STRING ?
-                 RNA_property_string_get(&item, prop) :
-                 std::string();
-    };
-    row.title = read_title("display_label");
+    row.title = read_item_std_string(&item, "display_label");
     if (row.title.empty()) {
-      row.title = read_title("label");
+      row.title = read_item_std_string(&item, "label");
     }
     if (row.title.empty()) {
       row.title = "(unnamed)";
@@ -193,7 +246,7 @@ QueueData gather_rows(wmWindowManager *wm, const int capacity)
 
     char substate[64] = "";
     read_item_string(&item, "substate_text", substate, sizeof(substate));
-    status_word(state, substate, row.status);
+    status_word(state, substate, row.failure.headline, row.status);
     read_item_string(&item, "type_label", row.type_label, sizeof(row.type_label));
     read_item_string(&item, "model_label", row.model_label, sizeof(row.model_label));
     row.created_epoch = double(read_item_int(&item, "created_epoch"));

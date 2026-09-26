@@ -77,6 +77,11 @@ class Job:
     state: JobState = JobState.PENDING
     error: str = ""
     user_message: str = ""
+    # Failure explanation beyond the one-line user_message — see
+    # core/failure_info.py (backend class, provider's own words, vendor code).
+    error_class: str = ""
+    error_reason: str = ""
+    vendor_code: str = ""
     # Session-relative clocks (time.monotonic, not epoch) so they survive
     # being round-tripped through a 32-bit ``bpy.props.FloatProperty`` on
     # the scene-side mirror. Epoch seconds (~1.75e9) lose ~128 s of
@@ -263,6 +268,10 @@ class Job:
         if not isinstance(data, dict):
             return
 
+        from .failure_info import apply_backend_failure
+
+        apply_backend_failure(self, data)
+
         if "service" in data:
             service = str(data.get("service") or "").strip()
             if service:
@@ -313,16 +322,19 @@ class Job:
             )
             return ("DONE", result_files)
         if status in FAILED_BACKEND_STATUSES:
-            error = inner.get("error", "")
+            from .failure_info import apply_backend_failure, backend_failure_message
+
+            error = inner.get("error") or ""
             if error:
-                self.error = error
+                self.error = str(error)
             elif status == "CANCELLED":
                 self.error = "Cancelled"
             elif status == "DLQ":
                 self.error = "Job failed permanently after retries"
-            self.user_message = (
-                inner.get("user_message", "") or fail_message
-            )
+            apply_backend_failure(self, inner)
+            if status == "CANCELLED":
+                self.error_class = "cancelled"
+            self.user_message = backend_failure_message(inner, fail_message)
             return ("FAIL", [])
         return ("WAIT", [])
 

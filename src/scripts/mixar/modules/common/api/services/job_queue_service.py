@@ -68,12 +68,18 @@ class JobQueueService(BaseService):
         state = str(data.get("state") or data.get("status") or "").lower()
         status = _STATE_TO_STATUS.get(state, data.get("status") or "")
         error = data.get("error")
+        if isinstance(error, dict):
+            error = error.get("message") or error.get("detail") or str(error)
         user_message = ""
         if status == "CANCELLED":
             user_message = "Generation was cancelled"
             error = error or "Cancelled"
         elif status == "FAILED":
-            user_message = "Generation failed — please try again"
+            # The job queue's ``error`` is already a client-safe, per-class
+            # sentence ("The generation was rejected by the provider's content
+            # policy."); a fixed "Generation failed" here hid it from every
+            # surface, since they all prefer user_message.
+            user_message = str(error or "") or "Generation failed — please try again"
 
         normalized = {
             "job_id": data.get("job_id") or data.get("id"),
@@ -82,6 +88,11 @@ class JobQueueService(BaseService):
             "result": data.get("result"),
             "error": error,
             "user_message": data.get("user_message") or user_message,
+            # Why it failed, in the provider's own (backend-redacted) words,
+            # its class and the provider's error code. None on older backends.
+            "error_class": data.get("error_class"),
+            "error_reason": data.get("error_reason"),
+            "vendor_code": data.get("vendor_code"),
             "version": data.get("version"),
             "attempts": data.get("attempts"),
             "service": data.get("service"),

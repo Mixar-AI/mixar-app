@@ -136,7 +136,7 @@ class Lookdev360Job(Job):
                 self._extract_texture_urls(result)
             return ("DONE", [])
         if status in FAILED_BACKEND_STATUSES:
-            self.error = inner.get("error", "PBR generation failed")
+            self.error = (inner.get("error") or "PBR generation failed")
             self.user_message = inner.get("user_message", "") or "PBR generation failed"
             return ("FAIL", [])
         return ("WAIT", [])

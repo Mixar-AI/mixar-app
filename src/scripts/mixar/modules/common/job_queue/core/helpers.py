@@ -104,6 +104,36 @@ def create_scene_flag_listener(
         except (AttributeError, TypeError):
             pass
 
+    # ``mixie_<x>_is_generating`` pairs with ``mixie_<x>_error``: the chat's
+    # generation poll (space_mixie_chat/core/generation_poller.py) reads it
+    # when the flag drops, and posted SUCCESS for a failed job while nothing
+    # wrote it. Written BEFORE the flag clears, so the poll sees both at once.
+    error_property = (
+        property_name[: -len("_is_generating")] + "_error"
+        if property_name.endswith("_is_generating")
+        else ""
+    )
+
+    def _record_batch_failure(scene, snapshot) -> None:
+        if not error_property or not hasattr(scene, error_property):
+            return
+        from .failure_info import failure_message, failure_reason
+
+        for job in reversed(snapshot):
+            if (
+                job.state == JobState.FAILED
+                and (not job.scene_name or job.scene_name == scene.name)
+                and not getattr(job, "_scene_error_reported", False)
+            ):
+                job._scene_error_reported = True
+                reason = failure_reason(job)
+                text = failure_message(job) + (f" ({reason})" if reason else "")
+                try:
+                    setattr(scene, error_property, text)
+                except (AttributeError, TypeError):
+                    pass
+                return
+
     def _on_queue_changed(queue: FeatureQueue) -> None:
         snapshot = queue.snapshot()
 
@@ -151,6 +181,7 @@ def create_scene_flag_listener(
             cleared = []
             for scene in _iter_scenes():
                 if bool(getattr(scene, property_name, False)):
+                    _record_batch_failure(scene, snapshot)
                     _set_flag(scene, False)
                     cleared.append(scene)
 

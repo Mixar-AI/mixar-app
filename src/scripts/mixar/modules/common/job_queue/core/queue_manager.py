@@ -41,6 +41,7 @@ from ..constants import (
     MAX_POLL_DURATION,
 )
 from .error_helpers import classify_error
+from .failure_info import apply_client_failure, failure_details, failure_message
 from .job import FAILED_BACKEND_STATUSES, Job, JobState, RUNNING_STATES, TERMINAL_STATES
 from .queue_download import DownloadMixin
 
@@ -658,7 +659,8 @@ class FeatureQueue(DownloadMixin):
                     from mixar.modules.common.notifications import (
                         get_notification_store,
                     )
-                    message = job.user_message or job.error or "Generation failed"
+                    # Sentence, the provider's own reason, what to do.
+                    message = failure_details(job, include_ids=False)
                     # display_label strips the agent-batch prefix + dedup hash
                     # ("ImageGen: a hero [3f2a]") that the raw label carries.
                     title = (
@@ -772,8 +774,7 @@ class FeatureQueue(DownloadMixin):
             if self._retry_submit_later(job, error):
                 return
         job.state = JobState.FAILED
-        job.error = str(error)
-        job.user_message = classify_error(error) or "Submission failed"
+        apply_client_failure(job, error, stage="submit")
         self._notify()
         self._pump()
 
@@ -787,7 +788,7 @@ class FeatureQueue(DownloadMixin):
         job.error = str(error)
         if job.submit_attempts >= job.max_submit_attempts:
             job.state = JobState.FAILED
-            job.user_message = classify_error(error) or "Submission failed"
+            apply_client_failure(job, error, stage="submit")
             self._notify()
             self._pump()
             return True
@@ -836,6 +837,8 @@ class FeatureQueue(DownloadMixin):
                 f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
             )
             job.user_message = "Generation timed out — please try again"
+            job.error_class = "timeout"
+            job.error_reason = job.error
             self._notify()
             self._pump()
             return None
@@ -868,8 +871,10 @@ class FeatureQueue(DownloadMixin):
             status, result_files = job.parse_poll_response(response)
         except Exception as e:
             job.state = JobState.FAILED
-            job.error = f"Error parsing poll response: {e}"
-            job.user_message = "Failed to process server response"
+            apply_client_failure(
+                job, e, stage="client",
+                message="Could not read the server's response for this job",
+            )
             self._notify()
             self._pump()
             return
@@ -887,7 +892,7 @@ class FeatureQueue(DownloadMixin):
             if not job.error:
                 job.error = "Job failed on backend"
             if not job.user_message:
-                job.user_message = "Generation failed"
+                job.user_message = failure_message(job)
             self._notify()
             self._pump()
             return
@@ -907,6 +912,8 @@ class FeatureQueue(DownloadMixin):
                 f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
             )
             job.user_message = "Generation timed out — please try again"
+            job.error_class = "timeout"
+            job.error_reason = job.error
         elif job.state == JobState.RUNNING_DOWNLOAD:
             # The worker thread should have failed itself long before this;
             # reaching here means it died without registering either callback.
@@ -917,6 +924,8 @@ class FeatureQueue(DownloadMixin):
                 f"{int(DOWNLOAD_WATCHDOG_DEADLINE_S // 60)} minutes"
             )
             job.user_message = "Download timed out — please retry"
+            job.error_class = "download"
+            job.error_reason = job.error
         else:
             return
         job.state = JobState.FAILED
@@ -933,8 +942,10 @@ class FeatureQueue(DownloadMixin):
         status_code = getattr(error, 'status_code', None)
         if status_code == 404:
             job.state = JobState.FAILED
-            job.error = "Job result expired — please retry"
-            job.user_message = "Job result expired — please retry"
+            apply_client_failure(
+                job, error, stage="client",
+                message="Job result expired — please retry",
+            )
             self._notify()
             self._pump()
             return
@@ -949,11 +960,14 @@ class FeatureQueue(DownloadMixin):
         )
         if job.consecutive_poll_errors >= MAX_CONSECUTIVE_POLL_ERRORS:
             job.state = JobState.FAILED
+            apply_client_failure(job, error, stage="poll")
+            job.user_message = (
+                classify_error(error) or "Lost track of this generation — please retry"
+            )
             job.error = (
                 f"Failed after {MAX_CONSECUTIVE_POLL_ERRORS} "
                 f"consecutive poll errors: {error}"
             )
-            job.user_message = classify_error(error) or "Generation failed — please retry"
             self._notify()
             self._pump()
 

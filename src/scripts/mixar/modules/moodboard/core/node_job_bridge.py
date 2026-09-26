@@ -161,6 +161,15 @@ def sync_graph_jobs(queue) -> None:
             node.job_id = job_id
             changed = True
         error = str(getattr(job, "user_message", "") or getattr(job, "error", "") or "")
+        if state == 'FAILED':
+            # The node draws one line: the sentence plus the provider's reason.
+            from mixar.modules.common.job_queue.core.failure_info import (
+                failure_message,
+                failure_reason,
+            )
+
+            reason = failure_reason(job)
+            error = failure_message(job) + (f" — {reason}" if reason else "")
         if node.error != error:
             node.error = error
             changed = True
