@@ -111,6 +111,14 @@ void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &t,
   if (!deps || DEG_get_update_count(deps) == 0) {
     return;
   }
+  /* A tab that is not on screen keeps a depsgraph that a workspace rebuild
+   * (Zen <-> Engine mode) or a routed script can leave half-evaluated;
+   * workbench's SceneState::init dereferenced it and the app went down
+   * (2026-09-26 13:09, "mark seams" turn + UI mode switch). Draw from a
+   * fully evaluated graph only; the card keeps its last thumbnail otherwise. */
+  if (!DEG_is_fully_evaluated(deps)) {
+    return;
+  }
   const eDrawType type = (host && host->shading.type >= OB_MATERIAL) ? OB_MATERIAL : OB_SOLID;
   if (t.offscreen && (GPU_offscreen_width(t.offscreen) != w || GPU_offscreen_height(t.offscreen) != h)) {
     view3d_scenes_drawer_thumb_free(t);
