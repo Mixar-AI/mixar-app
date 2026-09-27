@@ -357,6 +357,7 @@ void view3d_scenes_drawer_operatortypes()
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_toggle);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_set);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_edge);
+  WM_operatortype_append(VIEW3D_OT_scenes_drawer_selection);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_click);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_hover);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_scroll);
@@ -373,7 +374,23 @@ void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf)
   press.type = LEFTMOUSE;
   press.value = KM_PRESS;
   WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_edge", &press);
+  press.modifier = KM_ANY;
   WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_click", &press);
+  press.value = KM_DBL_CLICK;
+  WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_click", &press);
+  for (const int modifier : {KM_CTRL, KM_OSKEY}) {
+    KeyMapItem_Params select{};
+    select.type = EVT_AKEY;
+    select.value = KM_PRESS;
+    select.modifier = modifier;
+    WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_selection", &select);
+  }
+  for (const int type : {EVT_DELKEY, EVT_BACKSPACEKEY, EVT_ESCKEY}) {
+    KeyMapItem_Params select{};
+    select.type = type;
+    select.value = KM_PRESS;
+    WM_keymap_add_item(grip, "VIEW3D_OT_scenes_drawer_selection", &select);
+  }
   KeyMapItem_Params move{};
   move.type = MOUSEMOVE;
   move.value = KM_ANY;

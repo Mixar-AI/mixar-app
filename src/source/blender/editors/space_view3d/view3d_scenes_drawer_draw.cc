@@ -5,9 +5,8 @@
 /** \file
  * \ingroup spview3d
  *
- * Painting for the Zen Mode sliding Scenes drawer: the panel bed filling the
- * region (a border down its right edge, the face the viewport meets), a
- * "Scenes" header with "+ New scene", and one glass card per scene tab read
+ * Painting for the Scenes panel: an inset rounded bed, a Scenes heading,
+ * one glass card per scene and the original header add button, read
  * from the Python-owned `wm.mixar_scene_tabs` collection. The region's width
  * is the slide (`view3d_scenes_drawer_resize.cc`); this pass only paints.
  *
@@ -71,11 +70,9 @@ namespace {
 /* Layout, unscaled UI units. */
 constexpr float HEADER_H = 40.0f;
 constexpr float SIDE_PAD = 12.0f;
-constexpr float CARD_H = 60.0f;
-constexpr float CARD_GAP = 8.0f;
+constexpr float CARD_H = VIEW3D_SCENES_DRAWER_CARD_H;
+constexpr float CARD_GAP = VIEW3D_SCENES_DRAWER_CARD_GAP;
 constexpr float CARD_RADIUS = 10.0f;
-constexpr float NEW_W = 96.0f;
-constexpr float NEW_H = 24.0f;
 constexpr float CLOSE_SIZE = 22.0f;
 constexpr float PILL_H = 16.0f;
 constexpr float THUMB_W = VIEW3D_SCENES_DRAWER_THUMB_W;
@@ -120,58 +117,29 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
   const bool panel_visible = view3d_scenes_drawer_panel_rect_for(area, region, amount, &panel_win);
 
   if (panel_visible && runtime) {
-    /* The face the viewport meets: one border line down the right edge. */
-    {
-      rctf edge;
-      edge.xmin = float(winx) - U.pixelsize;
-      edge.xmax = float(winx);
-      edge.ymin = 0.0f;
-      edge.ymax = float(winy);
-      draw_pill(edge, zen.border, 0.0f);
-    }
+    rctf panel;
+    BLI_rctf_rcti_copy(&panel, &panel_win);
+    BLI_rctf_translate(&panel, -region->winrct.xmin, -region->winrct.ymin);
+    draw_pill(panel, zen.panel, 10.0f * scale);
+    ui::draw_roundbox_4fv(&panel, false, 10.0f * scale, zen.border);
 
     /* The body is laid out from the region's RIGHT edge at the full open
      * width, so a drawer sliding open reveals cards already in place. */
     const float open_w = std::max(
         float(winx), std::round(view3d_scenes_drawer_open_width(CTX_wm_manager(C), area) * scale));
     const float off = float(winx) - open_w;   /* <= 0 while sliding in */
-    const float x0 = off + SIDE_PAD * scale;
-    const float x1 = off + open_w - SIDE_PAD * scale;
+    const float x0 = off + (SIDE_PAD + VIEW3D_SCENES_DRAWER_PANEL_GAP) * scale;
+    const float x1 = off + open_w - (SIDE_PAD + VIEW3D_SCENES_DRAWER_PANEL_GAP) * scale;
     const int font = BLF_default();
 
-    /* Header: "Scenes" + "+ New scene". */
-    const float header_top = float(winy);
+    /* Read selection before choosing header actions; list geometry stays fixed. */
+    sync_cards(C, runtime);
+    const float header_top = panel.ymax;
     const float header_mid = header_top - 0.5f * HEADER_H * scale;
-    BLF_size(font, 14.0f * scale);
-    BLF_color4fv(font, zen.strong);
-    BLF_position(font, x0, header_mid - 0.35f * BLF_height_max(font), 0.0f);
-    BLF_draw(font, "Scenes", 6);
-
-    rctf new_rect;
-    new_rect.xmax = x1;
-    new_rect.xmin = x1 - NEW_W * scale;
-    new_rect.ymin = header_mid - 0.5f * NEW_H * scale;
-    new_rect.ymax = header_mid + 0.5f * NEW_H * scale;
-    {
-      float fill[4];
-      with_alpha(zen.primary, runtime->hover_new ? 1.0f : 0.85f, fill);
-      draw_pill(new_rect, fill, 0.5f * NEW_H * scale);
-      BLF_size(font, 11.0f * scale);
-      const char *label = "+ New scene";
-      const float tw = BLF_width(font, label, strlen(label));
-      BLF_color4fv(font, zen.strong);
-      BLF_position(font, 0.5f * (new_rect.xmin + new_rect.xmax) - 0.5f * tw,
-                   header_mid - 0.35f * BLF_height_max(font), 0.0f);
-      BLF_draw(font, label, strlen(label));
-    }
-    runtime->new_rect.xmin = int(new_rect.xmin) + region->winrct.xmin;
-    runtime->new_rect.xmax = int(new_rect.xmax) + region->winrct.xmin;
-    runtime->new_rect.ymin = int(new_rect.ymin) + region->winrct.ymin;
-    runtime->new_rect.ymax = int(new_rect.ymax) + region->winrct.ymin;
-    runtime->new_visible = true;
+    draw_header(runtime, region, x0, x1, header_mid, scale);
 
     /* Cards, top to bottom, scrolled by the wheel when they do not fit. */
-    sync_cards(C, runtime);
+    update_card_motion(runtime);
     for (auto it = runtime->thumbs.begin(); it != runtime->thumbs.end();) {
       const std::string &name = it->first;
       const bool listed = std::any_of(runtime->cards.begin(), runtime->cards.end(),
@@ -187,30 +155,37 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
     const float list_top = header_top - HEADER_H * scale - CARD_GAP * scale;
     const int count = int(runtime->cards.size());
     const float content_h = count > 0 ? count * (CARD_H + CARD_GAP) * scale : 0.0f;
-    runtime->scroll_max = std::max(0.0f, content_h - list_top);
+    const float list_bottom = panel.ymin + SIDE_PAD * scale;
+    const float list_height = std::max(0.0f, list_top - list_bottom);
+    runtime->list_rect = {int(x0) + region->winrct.xmin, int(x1) + region->winrct.xmin,
+                          int(list_bottom) + region->winrct.ymin,
+                          int(list_top) + region->winrct.ymin};
+    runtime->scroll_max = std::max(0.0f, content_h - CARD_GAP * scale - list_height);
     runtime->scroll = std::clamp(runtime->scroll, 0.0f, runtime->scroll_max);
-    /* The list is clipped under the header so scrolled cards never paint
-     * over "Scenes" and "+ New scene". */
+    /* Keep header, add button and rounded panel margins clear of scrolling cards. */
     int scissor_prev[4];
     GPU_scissor_get(scissor_prev);
-    GPU_scissor(0, 0, winx, int(list_top + CARD_GAP * scale));
-    float y_top = list_top + runtime->scroll;
+    GPU_scissor(0, int(list_bottom), winx, std::max(0, int(list_height)));
     for (int i = 0; i < count; i++) {
       ScenesDrawerCard &card = runtime->cards[i];
+      if (runtime->drag_target >= 0 && card.scene_uid == runtime->drag_scene) {
+        card.rect = card.close_rect = card.thumb_rect = {};
+        continue; /* The lifted card is painted once, above its moving siblings. */
+      }
+      const float y_top = list_top + runtime->scroll -
+                          runtime->card_rows.at(card.scene_uid) * (CARD_H + CARD_GAP) * scale;
       const float y_bottom = y_top - CARD_H * scale;
-      if (y_bottom > list_top + CARD_GAP * scale) {
+      if (y_bottom >= list_top) {
         /* Scrolled out above: no rect, so hit tests and QA skip it. */
         card.rect = {};
         card.close_rect = {};
         card.thumb_rect = {};
-        y_top = y_bottom - CARD_GAP * scale;
         continue;
       }
-      if (y_top < -CARD_H * scale) {
+      if (y_top <= list_bottom) {
         card.rect = {};
         card.close_rect = {};
         card.thumb_rect = {};
-        y_top = y_bottom - CARD_GAP * scale;
         continue;
       }
       rctf rect;
@@ -235,16 +210,20 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       style.progress_tint[3] = card.status == ScenesDrawerTabStatus::Working ? 0.28f : 0.0f;
       ui::mixar_glass_draw(pane, style);
       if (card.is_active) {
-        /* The shown tab: an accent stripe down the card's left edge and the
-         * selected outline, readable at a glance among idle siblings. */
-        ui::draw_roundbox_corner_set(ui::CNR_ALL);
-        ui::draw_roundbox_4fv(&rect, false, CARD_RADIUS * scale, zen.selected);
+        /* The active row opens toward the canvas with a restrained wash.
+         * Its decoration never changes card hit boxes or viewport drawing. */
+        draw_selection_wash(rect, panel.xmax, float(winx), scale);
         rctf stripe;
         stripe.xmin = rect.xmin + 3.0f * scale;
         stripe.xmax = stripe.xmin + 3.0f * scale;
         stripe.ymin = rect.ymin + 12.0f * scale;
         stripe.ymax = rect.ymax - 12.0f * scale;
         draw_pill(stripe, zen.primary, 1.5f * scale);
+      }
+
+      if (runtime->selected_uids.contains(card.scene_uid)) {
+        ui::draw_roundbox_corner_set(ui::CNR_ALL);
+        ui::draw_roundbox_4fv(&rect, false, CARD_RADIUS * scale, zen.primary);
       }
 
       /* Thumbnail: the scene rendered natively into a small offscreen by the
@@ -327,7 +306,8 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 
       /* Cache in window pixels for hit tests and QA (clipped to the list so a
        * half-scrolled card cannot be clicked through the header). */
-      rect.ymax = std::min(rect.ymax, list_top + CARD_GAP * scale);
+      rect.ymax = std::min(rect.ymax, list_top);
+      rect.ymin = std::max(rect.ymin, list_bottom);
       card.rect.xmin = int(rect.xmin) + region->winrct.xmin;
       card.rect.xmax = int(rect.xmax) + region->winrct.xmin;
       card.rect.ymin = int(rect.ymin) + region->winrct.ymin;
@@ -341,48 +321,30 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       else {
         card.close_rect = {};
       }
-      y_top = y_bottom - CARD_GAP * scale;
+      if (count > 1 && !BLI_rcti_isect(&card.close_rect, &runtime->list_rect, &card.close_rect)) {
+        card.close_rect = {};
+      }
     }
 
-    /* Reorder drag: an insertion line where the card would land — above the
-     * slot's card, or under the last card on screen for a drop past the end.
-     * No line when the drop would leave the order as it is. */
+    draw_drag_preview(runtime, region, scale);
+    runtime->drop_rect = {};
     const int drop = runtime->drag_target;
-    if (runtime->drag_index >= 0 && drop >= 0 && drop <= count &&
+    if (!runtime->drag_settling && list_height >= 4.0f * scale && runtime->drag_index >= 0 && drop >= 0 && drop <= count &&
         drop != runtime->drag_index && drop != runtime->drag_index + 1)
     {
-      float line_y = 0.0f;
-      if (drop < count) {
-        line_y = float(runtime->cards[drop].rect.ymax - region->winrct.ymin) + 0.5f * CARD_GAP * scale;
-      }
-      else {
-        int last_visible = -1;
-        for (int i = count - 1; i >= 0; i--) {
-          if (BLI_rcti_size_x(&runtime->cards[i].rect) > 0) {
-            last_visible = i;
-            break;
-          }
-        }
-        if (last_visible < 0) {
-          line_y = -1.0f;
-        }
-        else {
-          line_y = float(runtime->cards[last_visible].rect.ymin - region->winrct.ymin) -
-                   0.5f * CARD_GAP * scale;
-        }
-      }
-      rctf line;
-      line.xmin = x0;
-      line.xmax = x1;
-      line.ymin = line_y - 1.5f * scale;
-      line.ymax = line_y + 1.5f * scale;
-      if (line_y >= 0.0f) {
-        draw_pill(line, zen.primary, 1.5f * scale);
-      }
+      const int destination = drop > runtime->drag_index ? drop - 1 : drop;
+      const float line_y = list_top + runtime->scroll - destination * (CARD_H + CARD_GAP) * scale +
+                           0.5f * CARD_GAP * scale;
+      const float visible_y = std::clamp(line_y, list_bottom + 2.0f * scale,
+                                        list_top - 2.0f * scale);
+      rctf line = {x0, x1, visible_y - 1.5f * scale, visible_y + 1.5f * scale};
+      draw_pill(line, zen.primary, 1.5f * scale);
+      BLI_rcti_rctf_copy(&runtime->drop_rect, &line);
+      BLI_rcti_translate(&runtime->drop_rect, region->winrct.xmin, region->winrct.ymin);
     }
 
     /* The delete control's label, above the cards. */
-    if (runtime->hover >= 0 && runtime->hover < count && runtime->hover_close) {
+    if (runtime->drag_target < 0 && runtime->hover >= 0 && runtime->hover < count && runtime->hover_close) {
       const ScenesDrawerCard &hot = runtime->cards[runtime->hover];
       if (BLI_rcti_size_x(&hot.close_rect) > 0) {
         rcti anchor = hot.close_rect;
@@ -393,11 +355,11 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 
     /* Scroll indicator: a thin track on the right while cards overflow. */
     if (runtime->scroll_max > 0.0f) {
-      const float track_h = list_top;
+      const float track_h = list_height;
       const float thumb_h = std::max(24.0f * scale, track_h * track_h / (track_h + runtime->scroll_max));
-      const float thumb_top = track_h - (runtime->scroll / runtime->scroll_max) * (track_h - thumb_h);
+      const float thumb_top = list_top - (runtime->scroll / runtime->scroll_max) * (track_h - thumb_h);
       rctf thumb;
-      thumb.xmax = float(winx) - 3.0f * scale;
+      thumb.xmax = panel.xmax - 3.0f * scale;
       thumb.xmin = thumb.xmax - 3.0f * scale;
       thumb.ymax = thumb_top;
       thumb.ymin = thumb_top - thumb_h;
@@ -406,6 +368,7 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       draw_pill(thumb, fill, 1.5f * scale);
     }
     GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
+
   }
   else if (runtime) {
     runtime->cards.clear();

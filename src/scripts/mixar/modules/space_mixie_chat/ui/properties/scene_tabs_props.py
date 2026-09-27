@@ -67,6 +67,7 @@ def _tag_zen_viewports() -> None:
 
 
 class MixarSceneTab(PropertyGroup):
+    scene_uid: StringProperty(options={'SKIP_SAVE'})
     scene_name: StringProperty(name="Scene", default="", options={'SKIP_SAVE'})
     session_id: StringProperty(name="Session", default="", options={'SKIP_SAVE'})
     status: EnumProperty(name="Status", items=STATUS_ITEMS, default='IDLE', options={'SKIP_SAVE'})
@@ -177,7 +178,7 @@ def refresh_scene_tabs() -> int:
         return 0
     shown = _shown_scene()
     tabs = wm.mixar_scene_tabs
-    tabs.clear()
+    records = []
     attention_any = False
     from ..operators.scene_tab_ops import ordered_tabs
     for scene in ordered_tabs():
@@ -194,20 +195,22 @@ def refresh_scene_tabs() -> int:
                 _finished_unseen.pop(sid, None)
         attention = (not is_active) and (status == 'WAITING' or bool(_finished_unseen.get(sid)))
         attention_any = attention_any or attention
-        tab = tabs.add()
-        tab.scene_name = scene.name
-        tab.session_id = sid
-        tab.status = status if status != 'IDLE' or not _finished_unseen.get(sid) else 'DONE'
-        tab.last_text = _last_agent_text(scene)
-        tab.workers_done, tab.workers_total = _workers(sid)
-        tab.is_active = is_active
-        tab.attention = attention
+        done, total = _workers(sid)
+        records.append((str(scene.session_uid), scene.name, sid,
+                        status if status != 'IDLE' or not _finished_unseen.get(sid) else 'DONE',
+                        _last_agent_text(scene), done, total, is_active, attention))
     if wm.mixar_scene_tabs_attention != attention_any:
         wm.mixar_scene_tabs_attention = attention_any
     global _last_signature
-    signature = tuple((t.scene_name, t.session_id, t.status, t.last_text, t.workers_done,
-                       t.workers_total, t.is_active, t.attention) for t in tabs)
-    if signature != _last_signature:
+    signature = tuple(records)
+    if signature != _last_signature or len(tabs) != len(records):
+        fields = ('scene_uid', 'scene_name', 'session_id', 'status', 'last_text',
+                  'workers_done', 'workers_total', 'is_active', 'attention')
+        tabs.clear()
+        for values in records:
+            tab = tabs.add()
+            for field, value in zip(fields, values):
+                setattr(tab, field, value)
         _last_signature = signature
         _tag_zen_viewports()
     return len(tabs)

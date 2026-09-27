@@ -103,6 +103,7 @@ set(SRC
   view3d_scenes_drawer_ops.cc
   view3d_scenes_drawer_ops_cards.cc
   view3d_scenes_drawer_qa.cc
+  view3d_scenes_drawer_selection.cc
   view3d_scenes_drawer_resize.cc
   view3d_scenes_drawer_state.cc
   view3d_scenes_drawer_thumbs.cc

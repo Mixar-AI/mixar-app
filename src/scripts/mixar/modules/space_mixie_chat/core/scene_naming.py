@@ -91,6 +91,9 @@ def auto_name_tab(scene, text: str) -> str:
     tab asking for the same thing becomes ``<title>.001``."""
     if scene is None or not is_default_tab_name(getattr(scene, "name", "")):
         return ""
+    from ..constants import MANUAL_SCENE_NAME_PROP
+    if scene.get(MANUAL_SCENE_NAME_PROP, False):
+        return ""
     if not is_first_prompt(scene):
         return ""
     title = title_for_prompt(text)

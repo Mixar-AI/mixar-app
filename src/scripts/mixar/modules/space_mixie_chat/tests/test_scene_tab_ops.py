@@ -46,6 +46,8 @@ class _Scenes(list):
 
     def new(self, name):
         s = _tab_scene(name)
+        s.session_uid = id(s)
+        s.library = None
         s.mixie_chat_state = "OFFLINE"
         self.append(s)
         return s
@@ -283,3 +285,102 @@ def test_active_sessions_are_pruned_for_scenes_deleted_elsewhere(rig):
     assert not SessionManager.has_active_session("sess-b")
     assert not SessionManager.has_active_session()
     assert SessionManager.prune_missing_scenes() == []
+
+
+# Real helpers rather than mocked Operator classes: bpy Operator is mocked outside the app.
+from mixar.modules.space_mixie_chat.core import scene_tab_edit as edit
+import json
+
+
+def _ids(*scenes):
+    return json.dumps([str(s.session_uid) for s in scenes])
+
+
+def test_manual_rename_keeps_identity_chat_and_order(rig):
+    b = ops.new_scene_tab("B")
+    uid, sid = b.session_uid, b.mixie_session_id
+    assert edit.rename_scene_tab(b, "  Café 🌿  ") == (True, '')
+    assert b.name == 'Café 🌿' and b.session_uid == uid and b.mixie_session_id == sid
+    assert ops.ordered_tabs() == [rig.a, b]
+    assert b.get('mixar_scene_name_manual') is True
+
+
+def test_rename_refuses_empty_and_running_scene(rig):
+    assert edit.rename_scene_tab(rig.a, ' ')[0] is False
+    SessionManager.set_state(rig.a, SessionState.BUSY)
+    assert edit.rename_scene_tab(rig.a, 'Changed')[0] is False
+    assert rig.a.name == 'Scene'
+
+
+def test_batch_uses_identity_after_rename_and_refuses_missing(rig):
+    b = ops.new_scene_tab('B')
+    captured = _ids(b)
+    b.name = 'Renamed'
+    assert edit.resolve_tabs(captured) == ([b], '')
+    rig.scenes.remove(b)
+    replacement = rig.scenes.new('Renamed')
+    assert edit.close_scene_tabs(captured)[0] == 0
+    assert replacement in rig.scenes
+
+
+@pytest.mark.parametrize('payload', ['{}', '[]', '[null]', '["x"]', 'broken'])
+def test_bad_batch_input_is_noop(rig, payload):
+    before = list(rig.scenes)
+    assert edit.close_scene_tabs(payload)[0] == 0
+    assert list(rig.scenes) == before
+
+
+def test_batch_preflight_refuses_offline_running_tab_before_deleting_any(rig, monkeypatch):
+    b = ops.new_scene_tab('B')
+    SessionManager.set_state(b, SessionState.BUSY)
+    monkeypatch.setattr(ops, '_connection_live', lambda: False)
+    assert edit.close_scene_tabs(_ids(rig.a, b))[0] == 0
+    assert rig.a in rig.scenes and b in rig.scenes
+
+
+def test_batch_delete_all_creates_replacement_and_uses_close_cleanup(rig, monkeypatch):
+    b = ops.new_scene_tab('B')
+    captured = _ids(rig.a, b)
+    closed, neighbours = [], []
+    def close(scene, neighbour=None):
+        assert len(ops.real_scenes()) > 1
+        closed.append(scene)
+        neighbours.append(neighbour)
+        rig.scenes.remove(scene)
+        return True, ''
+    monkeypatch.setattr(ops, 'close_scene_tab', close)
+    assert edit.close_scene_tabs(captured) == (2, '')
+    assert closed == [rig.a, b]
+    remaining = ops.real_scenes()
+    assert len(remaining) == 1 and remaining[0] not in closed
+    # Every close targets the survivor: windows never hop through a doomed tab.
+    assert neighbours == [remaining[0], remaining[0]]
+    assert rig.lane in rig.scenes
+    assert all(w.scene is remaining[0] for w in rig.windows)
+
+
+def test_batch_close_moves_windows_straight_to_the_survivor(rig, monkeypatch):
+    b, c = ops.new_scene_tab('B'), ops.new_scene_tab('C')
+    for window in rig.windows:
+        window.scene = rig.a
+    shown = []
+    original = ops.switch_all_windows
+    def spy(scene, showing=None):
+        shown.append(scene)
+        return original(scene, showing=showing)
+    monkeypatch.setattr(ops, 'switch_all_windows', spy)
+    assert edit.close_scene_tabs(_ids(rig.a, b)) == (2, '')
+    assert shown and all(s is c for s in shown), shown
+    assert all(w.scene is c for w in rig.windows)
+
+
+def test_batch_subset_leaves_unselected_scene_and_reports_partial_failure(rig, monkeypatch):
+    b, c = ops.new_scene_tab('B'), ops.new_scene_tab('C')
+    def close(scene, neighbour=None):
+        if scene is c:
+            return False, 'Cannot remove'
+        rig.scenes.remove(scene)
+        return True, ''
+    monkeypatch.setattr(ops, 'close_scene_tab', close)
+    assert edit.close_scene_tabs(_ids(b, c)) == (1, 'Cannot remove')
+    assert rig.a in rig.scenes and c in rig.scenes

@@ -80,6 +80,24 @@ namespace blender {
 
 #ifdef RNA_RUNTIME
 
+/* Blender intentionally disables time-based double-click detection for simulated
+ * events. Queue the native event explicitly, only in an event-simulate QA app. */
+static bool rna_Window_mixar_qa_double_click(wmWindow *win, ReportList *reports, int x, int y)
+{
+  if (!(G.f & G_FLAG_EVENT_SIMULATE)) {
+    BKE_report(reports, RPT_ERROR, "Double-click injection requires event simulation");
+    return false;
+  }
+  wmEvent press{};
+  press.type = LEFTMOUSE;
+  press.val = KM_PRESS;
+  press.xy[0] = x;
+  press.xy[1] = y;
+  wmEvent *event = WM_event_add_simulate(win, &press);
+  event->val = KM_DBL_CLICK;
+  return true;
+}
+
 static void rna_Window_global_areas_begin(CollectionPropertyIterator *iter, PointerRNA *ptr)
 {
   wmWindow *win = (wmWindow *)ptr->data;
@@ -301,6 +319,16 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
                            "Global Areas",
                            "Window-global areas (topbar, statusbar). Mixar extension — "
                            "exposed so onboarding can address the topbar for redraw.");
+
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_qa_double_click", "rna_Window_mixar_qa_double_click");
+    RNA_def_function_flag(func, FUNC_USE_REPORTS);
+    RNA_def_int(func, "x", 0, INT_MIN, INT_MAX, "X", "Window pixel", INT_MIN, INT_MAX);
+    RNA_def_int(func, "y", 0, INT_MIN, INT_MAX, "Y", "Window pixel", INT_MIN, INT_MAX);
+    PropertyRNA *ok = RNA_def_boolean(func, "ok", false, "", "Event queued");
+    RNA_def_function_return(func, ok);
+  }
 
   /* QA harness: simulated OS file drop at a window coordinate — the one input
    * class ``event_simulate`` cannot express. */
