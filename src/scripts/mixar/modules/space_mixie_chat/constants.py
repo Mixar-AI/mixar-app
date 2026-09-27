@@ -497,3 +497,4 @@ TEMP_PLACEHOLDER_PREFIX = "temp_placeholder_"
 
 # Let a synchronous tool or final response remain readable between draw frames.
 CAT_ACTIVITY_HOLD_SECONDS = 0.9
+MANUAL_SCENE_NAME_PROP = "mixar_scene_name_manual"

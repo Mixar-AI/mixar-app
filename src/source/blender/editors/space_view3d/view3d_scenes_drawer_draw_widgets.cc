@@ -21,6 +21,7 @@
 
 #include "BLI_math_base.h"
 #include "BLI_rect.h"
+#include "BLI_time.h"
 #include "GPU_shader_builtin.hh"
 #include "BLI_string.h"
 
@@ -43,6 +44,7 @@
 #include "UI_resources.hh"
 
 #include "view3d_scenes_drawer.hh"
+#include "view3d_scenes_drawer_motion.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::view3d_scenes_drawer {
@@ -100,6 +102,7 @@ void sync_cards(const bContext *C, ScenesDrawerRuntime *runtime)
   while (iter.valid) {
     PointerRNA tab_ptr = iter.ptr;
     ScenesDrawerCard card;
+    read_string(&tab_ptr, "scene_uid", card.scene_uid);
     read_string(&tab_ptr, "scene_name", card.scene_name);
     read_string(&tab_ptr, "session_id", card.session_id);
     read_string(&tab_ptr, "last_text", card.last_text);
@@ -114,6 +117,16 @@ void sync_cards(const bContext *C, ScenesDrawerRuntime *runtime)
     RNA_property_collection_next(&iter);
   }
   RNA_property_collection_end(&iter);
+  std::erase_if(runtime->selected_uids, [&](const std::string &uid) {
+    return std::none_of(runtime->cards.begin(), runtime->cards.end(),
+                        [&](const ScenesDrawerCard &card) { return card.scene_uid == uid; });
+  });
+  if (std::none_of(runtime->cards.begin(), runtime->cards.end(),
+                   [&](const ScenesDrawerCard &card) {
+                     return card.scene_uid == runtime->selection_anchor;
+                   })) {
+    runtime->selection_anchor.clear();
+  }
 }
 
 void with_alpha(const float src[4], const float alpha, float r_out[4])
@@ -249,6 +262,139 @@ void draw_hint(const rcti &anchor, const char *text, const float scale)
   BLF_color4fv(font, zen.strong);
   BLF_position(font, box.xmin + 7.0f * scale, box.ymin + 5.0f * scale, 0.0f);
   BLF_draw(font, text, strlen(text));
+}
+
+void update_card_motion(ScenesDrawerRuntime *runtime)
+{
+  const double now = BLI_time_now_seconds();
+  const double dt = runtime->cards_draw_time > 0.0 ? now - runtime->cards_draw_time : 0.0;
+  runtime->cards_draw_time = now;
+  const bool dragging = runtime->drag_target >= 0 && !runtime->drag_settling;
+  for (int i = 0; i < int(runtime->cards.size()); i++) {
+    if (runtime->cards[i].scene_uid == runtime->drag_scene) {
+      runtime->drag_index = i;
+      break;
+    }
+  }
+  std::unordered_map<std::string, float> rows;
+  for (int i = 0; i < int(runtime->cards.size()); i++) {
+    const auto &uid = runtime->cards[i].scene_uid;
+    const float target = dragging ? reorder_preview_row(i, runtime->drag_index, runtime->drag_target) : i;
+    const auto previous = runtime->card_rows.find(uid);
+    rows[uid] = previous == runtime->card_rows.end() || runtime->drag_target < 0 ?
+                    target : follow_position(previous->second, target, dt);
+  }
+  runtime->card_rows = std::move(rows);
+}
+
+/* Decoration only: the existing list scissor clips this wash, and the original
+ * card rect remains the sole hit target. No drawing crosses into the viewport. */
+void draw_selection_wash(const rctf &card, const float panel_right,
+                         const float region_right, const float scale)
+{
+  const auto &zen = ui::mixar_tokens::mixar_zen();
+  const float radius = 10.0f * scale;
+  const float width = region_right - card.xmin;
+  if (width <= 2.0f * radius) {
+    return;
+  }
+  const auto smooth = [](const float t) { return t * t * (3.0f - 2.0f * t); };
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
+  const uint color = GPU_vertformat_attr_add(format, "color", gpu::VertAttrType::SFLOAT_32_32_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_SMOOTH_COLOR);
+  /* A small fixed strip: no textures, allocations, timers or retained GPU state. */
+  /* Sample the short curves independently of the wide card body, so resizing
+   * cannot reduce a rounded join to one or two straight edges. */
+  constexpr int band_segments = 24;
+  constexpr int segments = 4 * band_segments;
+  const float stops[5] = {card.xmin, card.xmin + radius,
+                          std::max(card.xmin + radius, panel_right - radius),
+                          panel_right, region_right};
+  immBegin(GPU_PRIM_TRI_STRIP, 2 * (segments + 1));
+  for (int i = 0; i <= segments; i++) {
+    const int band = std::min(i / band_segments, 3);
+    const float t = float(i - band * band_segments) / band_segments;
+    const float x = stops[band] + (stops[band + 1] - stops[band]) * t;
+    float inset = 0.0f;
+    if (x < card.xmin + radius) {
+      const float dx = card.xmin + radius - x;
+      inset = radius - std::sqrt(std::max(0.0f, radius * radius - dx * dx));
+    }
+    /* Concave joins open out toward the panel edge, within the row gap. */
+    const float dx = std::clamp(x - (panel_right - radius), 0.0f, radius);
+    const float flare = radius - std::sqrt(std::max(0.0f, radius * radius - dx * dx));
+    const float fade = smooth(std::clamp((x - card.xmin - width * 0.5f) /
+                                            (width * 0.5f), 0.0f, 1.0f));
+    /* Keep the glass/progress visible on the body; cover its right outline
+     * before joining the panel margin, then end at the region canvas color. */
+    const float cover_start = card.xmin + (card.xmax - card.xmin) * 0.65f;
+    const float cover = smooth(std::clamp((x - cover_start) /
+                                             std::max(scale, card.xmax - radius - cover_start),
+                                         0.0f, 1.0f));
+    float fill[4];
+    for (int c = 0; c < 3; c++) {
+      fill[c] = zen.canvas[c] + (zen.primary[c] - zen.canvas[c]) * 0.32f * (1.0f - fade);
+    }
+    fill[3] = 0.28f + 0.72f * cover;
+    immAttr4fv(color, fill);
+    immVertex2f(pos, x, card.ymin + inset - flare);
+    immAttr4fv(color, fill);
+    immVertex2f(pos, x, card.ymax - inset + flare);
+  }
+  immEnd();
+  immUnbindProgram();
+}
+
+void draw_drag_preview(ScenesDrawerRuntime *runtime, ARegion *region, const float scale)
+{
+  runtime->drag_rect = {};
+  if (runtime->drag_target < 0 || BLI_rcti_size_y(&runtime->list_rect) <= 0) {
+    return;
+  }
+  const auto found = std::find_if(runtime->cards.begin(), runtime->cards.end(),
+                                [&](const ScenesDrawerCard &card) {
+                                  return card.scene_uid == runtime->drag_scene;
+                                });
+  if (found == runtime->cards.end()) {
+    return;
+  }
+  const auto &zen = ui::mixar_tokens::mixar_zen();
+  rctf rect;
+  BLI_rctf_rcti_copy(&rect, &runtime->list_rect);
+  BLI_rctf_translate(&rect, -region->winrct.xmin, -region->winrct.ymin);
+  const float height = VIEW3D_SCENES_DRAWER_CARD_H * scale;
+  const float pointer_top = runtime->drag_settling ? runtime->drag_preview_top :
+                                                       runtime->drag_y + runtime->drag_offset_y;
+  rect.ymax = std::clamp(pointer_top - region->winrct.ymin,
+                         std::min(rect.ymin + height, rect.ymax), rect.ymax);
+  rect.ymin = rect.ymax - height;
+  rect.xmin += 4.0f * scale;
+  rect.xmax -= 4.0f * scale;
+  rctf shadow = rect;
+  BLI_rctf_translate(&shadow, 0.0f, -3.0f * scale);
+  BLI_rctf_pad(&shadow, 3.0f * scale, 3.0f * scale);
+  float shade[4];
+  with_alpha(zen.canvas, 0.85f, shade);
+  draw_pill(shadow, shade, 12.0f * scale);
+  draw_pill(rect, zen.panel, 10.0f * scale);
+  ui::draw_roundbox_4fv(&rect, false, 10.0f * scale, zen.strong);
+  rcti thumb = {int(rect.xmin + 8.0f * scale),
+                int(rect.xmin + (8.0f + VIEW3D_SCENES_DRAWER_THUMB_W) * scale),
+                int(rect.ymin + 8.0f * scale), int(rect.ymax - 8.0f * scale)};
+  auto image = runtime->thumbs.find(found->scene_name);
+  if (image != runtime->thumbs.end()) {
+    view3d_scenes_drawer_thumb_draw(image->second, found->scene_name, thumb);
+  }
+  const int font = BLF_default();
+  const float x = thumb.xmax + 10.0f * scale;
+  const float width = rect.xmax - 8.0f * scale - x;
+  BLF_size(font, 12.0f * scale);
+  draw_elided(font, found->scene_name, x, rect.ymax - 24.0f * scale, width, zen.strong);
+  BLF_size(font, 10.0f * scale);
+  draw_elided(font, runtime->drag_settling ? found->last_text : "Release to move", x, rect.ymin + 10.0f * scale, width, zen.secondary);
+  BLI_rcti_rctf_copy(&runtime->drag_rect, &rect);
+  BLI_rcti_translate(&runtime->drag_rect, region->winrct.xmin, region->winrct.ymin);
 }
 
 }  // namespace blender::view3d_scenes_drawer

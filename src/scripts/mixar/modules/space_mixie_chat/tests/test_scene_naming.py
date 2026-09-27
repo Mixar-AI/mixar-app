@@ -48,7 +48,8 @@ def _msg(sender, text="x", loader=False):
 
 
 def _scene(name, messages=()):
-    return SimpleNamespace(name=name, mixie_session_id="sess", mixie_chat_messages=list(messages))
+    return SimpleNamespace(name=name, mixie_session_id="sess", mixie_chat_messages=list(messages),
+                           get=lambda key, default=None: default)
 
 
 def test_a_default_tab_takes_its_first_prompt_as_its_name(monkeypatch):
@@ -72,3 +73,10 @@ def test_a_renamed_tab_and_a_later_prompt_keep_the_name(monkeypatch):
     second = _scene("Scene", [_msg("USER"), _msg("USER")])
     assert scene_naming.auto_name_tab(second, "Build a lighthouse") == ""
     assert scene_naming.auto_name_tab(_scene("Scene", [_msg("USER")]), "") == ""
+
+
+def test_manual_default_name_is_not_overwritten():
+    scene = _scene("Scene 7", [_msg("USER")])
+    scene.get = lambda key, default=None: key == 'mixar_scene_name_manual'
+    assert scene_naming.auto_name_tab(scene, "Build a lighthouse") == ""
+    assert scene.name == "Scene 7"

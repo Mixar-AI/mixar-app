@@ -63,9 +63,34 @@ void drawer_qa_targets(const wmWindow *win,
   if (runtime->new_visible) {
     push(runtime->new_rect, "scenes_drawer_new", "+ New scene", "new_scene_tab", -1);
   }
+  if (!runtime->selected_uids.empty()) {
+    push(runtime->bulk_delete_rect, "scenes_drawer_delete_selected", "Delete selected",
+         std::to_string(runtime->selected_uids.size()), -1);
+    push(runtime->clear_selection_rect, "scenes_drawer_clear_selection", "Clear", "", -1);
+  }
+  if (BLI_rcti_size_x(&runtime->drag_rect) > 0) {
+    /* `drag_scene` is the lifted card's ID session_uid; QA reads its name. */
+    const auto lifted = std::find_if(runtime->cards.begin(), runtime->cards.end(),
+                                     [&](const ScenesDrawerCard &card) {
+                                       return card.scene_uid == runtime->drag_scene;
+                                     });
+    const std::string label = lifted == runtime->cards.end() ? runtime->drag_scene :
+                                                               lifted->scene_name;
+    push(runtime->drag_rect, "scenes_drawer_drag", label, "dragging", runtime->drag_index);
+  }
+  if (BLI_rcti_size_x(&runtime->drop_rect) > 0) {
+    push(runtime->drop_rect, "scenes_drawer_drop", "Move scene here", "insertion", runtime->drag_target);
+  }
   int index = 0;
   for (const ScenesDrawerCard &card : runtime->cards) {
+    if (BLI_rcti_size_x(&card.rect) <= 0) {
+      index++;
+      continue;
+    }
     push(card.rect, "scenes_drawer_card", card.scene_name, card.session_id, index, card.is_active);
+    if (runtime->selected_uids.contains(card.scene_uid)) {
+      push(card.rect, "scenes_drawer_selection", card.scene_name, card.scene_uid, index, true);
+    }
     if (BLI_rcti_size_x(&card.thumb_rect) > 0) {
       push(card.thumb_rect,
            "scenes_drawer_card_thumb",

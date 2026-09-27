@@ -203,6 +203,11 @@ const float *status_color(ScenesDrawerTabStatus status);
 void draw_pill(const rctf &rect, const float fill[4], float radius);
 /** The card's delete control (a bin) and the hover label beside a control. */
 void draw_trash(const rcti &box, float scale, const float color[4]);
+void update_card_motion(ScenesDrawerRuntime *runtime);
+void draw_header(ScenesDrawerRuntime *runtime, ARegion *region,
+                 float x0, float x1, float mid, float scale);
+void draw_selection_wash(const rctf &card, float panel_right, float region_right, float scale);
+void draw_drag_preview(ScenesDrawerRuntime *runtime, ARegion *region, float scale);
 void draw_hint(const rcti &anchor, const char *text, float scale);
 
 }  // namespace view3d_scenes_drawer
@@ -219,6 +224,9 @@ void view3d_scenes_drawer_operatortypes();
 bool view3d_scenes_drawer_op_poll(bContext *C);
 /** True on the resize sash of the context region. */
 bool view3d_scenes_drawer_edge_hit(const bContext *C, const int xy[2]);
+bool view3d_scenes_drawer_selection_click(bContext *C, ARegion *region,
+                                         ScenesDrawerRuntime *runtime, const wmEvent *event);
+void VIEW3D_OT_scenes_drawer_selection(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_hover(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_scroll(wmOperatorType *ot);

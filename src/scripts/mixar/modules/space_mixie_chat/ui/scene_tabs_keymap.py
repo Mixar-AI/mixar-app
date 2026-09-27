@@ -54,7 +54,12 @@ def register():
     # resize sash must see the press before the card click.
     grip = _ensure(kc, 'Scenes Drawer Grip', 'VIEW_3D', 'NAVIGATION_BAR')
     _add(grip, 'view3d.scenes_drawer_hover', 'MOUSEMOVE', 'ANY')
-    _add(grip, 'view3d.scenes_drawer_click', 'LEFTMOUSE', 'PRESS')
+    _add(grip, 'view3d.scenes_drawer_click', 'LEFTMOUSE', 'PRESS', any=True)
+    _add(grip, 'view3d.scenes_drawer_click', 'LEFTMOUSE', 'DOUBLE_CLICK', any=True)
+    for modifier in ('ctrl', 'oskey'):
+        _add(grip, 'view3d.scenes_drawer_selection', 'A', 'PRESS', **{modifier: True})
+    for key in ('DEL', 'BACK_SPACE', 'ESC'):
+        _add(grip, 'view3d.scenes_drawer_selection', key, 'PRESS')
     _add(grip, 'view3d.scenes_drawer_edge', 'LEFTMOUSE', 'PRESS')
     # Wheel notches and the trackpad pan scroll the cards; the operator passes
     # the event through when nothing overflows. 'TRACKPADPAN' is the Python
