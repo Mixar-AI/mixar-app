@@ -25,6 +25,7 @@ repaints from it. Three properties matter and are pinned here:
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -132,10 +133,12 @@ def open_run(monkeypatch):
     so the test drives the same ``SessionManager.run_open`` read the mirror
     does.
     """
-    monkeypatch.setattr(
-        bpy.context.scene, "mixie_run_open", True, raising=False
-    )
-    return bpy.context.scene
+    scene = SimpleNamespace(mixie_run_open=True, mixie_session_id="open-run")
+    # Cards now resolve the visible scene through the per-tab session helper.
+    context = cards_mod.sessions.bpy.context
+    monkeypatch.setattr(context, "window", SimpleNamespace(scene=scene), raising=False)
+    monkeypatch.setattr(context, "scene", scene, raising=False)
+    return scene
 
 
 def _todo(n, status='IN_PROGRESS', prefix="Build part"):

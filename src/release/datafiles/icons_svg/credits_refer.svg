@@ -1,0 +1,15 @@
+<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
+<!-- SPDX-License-Identifier: LicenseRef-Mixar-Brand -->
+<!-- Supplied design artwork; only the canvas is normalized for Blender's SVG renderer. -->
+<svg width="1600" height="1600" viewBox="0 0 1600 1600" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g transform="translate(0 0) scale(57.1428571429)">
+<path d="M16.334 7.23295V11.6663C13.079 11.7247 11.7257 13.078 11.6673 16.333H7.23399C3.73399 16.333 2.33398 14.9331 2.33398 11.4331V7.23295C2.33398 3.73295 3.73399 2.33301 7.23399 2.33301H11.434C14.934 2.33301 16.334 3.73295 16.334 7.23295Z" stroke="#8CE8B1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8.11974 6.84826C7.5014 6.42826 6.68474 6.42829 6.06641 6.87162" stroke="#8CE8B1" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M12.7858 6.84826C12.1674 6.42826 11.3508 6.42829 10.7324 6.87162" stroke="#8CE8B1" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M9.52026 13.323H6.81359C6.46359 13.323 6.18359 13.0429 6.18359 12.6929C6.18359 10.9546 7.59526 9.54297 9.33359 9.54297C10.0803 9.54297 10.7686 9.7996 11.3053 10.2313" stroke="#8CE8B1" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M25.666 16.5669V20.767C25.666 24.267 24.266 25.667 20.766 25.667H16.566C13.066 25.667 11.666 24.267 11.666 20.767V16.3337C11.7243 13.0787 13.0777 11.7253 16.3327 11.667H20.766C24.266 11.667 25.666 13.0669 25.666 16.5669Z" stroke="#8CE8B1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M17.4537 15.8896C16.8354 16.3096 16.0187 16.3095 15.4004 15.8662" stroke="#8CE8B1" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M22.1197 15.8896C21.5014 16.3096 20.6847 16.3095 20.0664 15.8662" stroke="#8CE8B1" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M16.1476 18.877H21.1876C21.5376 18.877 21.8176 19.1569 21.8176 19.5069C21.8176 21.2452 20.4059 22.6569 18.6676 22.6569C16.9292 22.6569 15.5176 21.2452 15.5176 19.5069C15.5176 19.1569 15.7976 18.877 16.1476 18.877Z" stroke="#8CE8B1" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
