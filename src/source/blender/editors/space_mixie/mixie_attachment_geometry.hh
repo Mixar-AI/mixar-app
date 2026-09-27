@@ -13,6 +13,6 @@ float attachment_pixel_scale(const wmWindow *win);
 FlightQuad attachment_desktop_quad(const wmWindow *win, const rctf &rect);
 bool attachment_source(const bContext *C, Image *image, wmWindow **r_window, FlightQuad &quad);
 bool attachment_window_visible(const wmWindow *win);
-bool attachment_resting_target(wmWindow *win, FlightQuad &quad);
+bool attachment_resting_target(wmWindow *win, float aspect, FlightQuad &quad);
 }  // namespace ed::mixie
 }  // namespace blender

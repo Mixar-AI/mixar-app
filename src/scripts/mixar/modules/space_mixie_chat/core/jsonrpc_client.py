@@ -68,8 +68,8 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         host: str,
         connection_id: str,
         token_getter: Optional[Callable[[], Optional[str]]] = None,
-        blender_version: str = "5.0.0",
-        addon_version: str = "1.0.0",
+        blender_version: Optional[str] = None,
+        addon_version: Optional[str] = None,
         reconnect_delay: float = 1.0,
         max_reconnect_delay: float = 30.0,
         ping_interval: float = 15.0,
@@ -413,6 +413,25 @@ def create_jsonrpc_client(
             kwargs["device_id"] = get_device_id()
         except Exception:
             kwargs["device_id"] = None
+
+    # The handshake's addon_version is what the backend's force-update gate
+    # judges every WebSocket agent command by (it becomes X-Client-Version
+    # server-side), so it must be the running build's real version — the
+    # same source PUT /me/client-version reports — never a placeholder. An
+    # unknown version is omitted (None) so the backend falls back to the
+    # stored users.client_version instead of judging a made-up number.
+    if "addon_version" not in kwargs or "blender_version" not in kwargs:
+        try:
+            from ...common.updates.core.update_checker import (
+                get_runtime_blender_version,
+                get_runtime_version,
+            )
+
+            kwargs.setdefault("addon_version", get_runtime_version())
+            kwargs.setdefault("blender_version", get_runtime_blender_version())
+        except Exception:
+            kwargs.setdefault("addon_version", None)
+            kwargs.setdefault("blender_version", None)
 
     _jsonrpc_client = JSONRPCWebSocketClient(host, connection_id, **kwargs)
     return _jsonrpc_client

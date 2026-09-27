@@ -561,6 +561,10 @@ static void agent_bubble_island_controls_header(const bContext *C,
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_rules",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
                   "Rules — edit project and global rules for the agent");
+    agent_bubble_rect_to_region(region, layout->hdr_scenes, &bx, &by, &bw, &bh);
+    uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_scene_tabs",
+              blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
+              "Scene tabs — this chat's scene; jump to another tab or open a new one");
   }
   ui::block_end(C, block);
   ui::block_draw(C, block);
