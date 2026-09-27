@@ -19,7 +19,7 @@ index because a dynamic-items enum has no static string default.
 import bpy
 from bpy.props import BoolProperty, EnumProperty
 
-from ...core import sound_catalog
+from ...core import sound_catalog, sound_feedback
 from ...core.completion_sound import (
     OFF,
     available_sounds,
@@ -63,10 +63,12 @@ def _sound_set(self, value):
     items = _items_cache or _sound_items(self, None)
     if 0 <= value < len(items):
         set_completion_sound(items[value][0])
+        sound_feedback.cancel()
 
 
 def _on_mute_change(self, _context) -> None:
     set_notifications_muted(self.mixar_notifications_muted)
+    sound_feedback.cancel()
 
 
 def _revalidate_catalog() -> float:
@@ -98,6 +100,7 @@ def register():
 
 
 def unregister():
+    sound_feedback.cancel()
     if bpy.app.timers.is_registered(_revalidate_catalog):
         bpy.app.timers.unregister(_revalidate_catalog)
     if hasattr(bpy.types.WindowManager, "mixar_completion_sound"):
