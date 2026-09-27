@@ -16,7 +16,7 @@ import bpy
 from bpy.types import Operator
 
 from ... import constants as C
-from ...core import flow
+from ...core import flow, low_credit
 from ...core.invites import parse_emails
 from . import referral_dialog_ui
 
@@ -40,6 +40,24 @@ def _dialog_host_window(context):
     return max(candidates, key=lambda w: len(w.screen.areas)) if candidates else None
 
 
+class MIXAR_OT_refer_friend_via_profile(Operator):
+    """Open Refer a Friend from the profile card, as the user would"""
+
+    bl_idname = "mixar.refer_friend_via_profile"
+    bl_label = "Refer a Friend"
+    bl_options = {'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        return bool(getattr(context.window_manager, "mixie_chat_is_logged_in", False))
+
+    def execute(self, context):
+        # The low-credit toast's button. The toast goes once the dialog
+        # opens (``mixar.refer_friend`` dismisses it).
+        low_credit.open_via_profile()
+        return {'FINISHED'}
+
+
 class MIXAR_OT_refer_friend(Operator):
     """Share your invite link or email it to friends to earn bonus credits"""
 
@@ -52,6 +70,7 @@ class MIXAR_OT_refer_friend(Operator):
 
     def invoke(self, context, event):
         wm = context.window_manager
+        low_credit.dismiss_toast()
         flow.reset(wm)
         flow.load()
         # invoke_props_dialog (not invoke_popup) so the dialog keeps
@@ -133,6 +152,7 @@ class MIXAR_OT_referral_reload(Operator):
 
 classes = (
     MIXAR_OT_refer_friend,
+    MIXAR_OT_refer_friend_via_profile,
     MIXAR_OT_referral_copy_link,
     MIXAR_OT_referral_send_invites,
     MIXAR_OT_referral_reload,

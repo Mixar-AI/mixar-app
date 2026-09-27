@@ -180,6 +180,7 @@ static void rna_Window_mixar_qa_drop_file(
 bool Mixar_tour_menu_open(bContext *C, wmWindow *win, const char *menu_idname);
 bool Mixar_tour_menu_close(wmWindow *win);
 bool Mixar_tour_menu_is_open(wmWindow *win);
+bool Mixar_tour_popover_open(bContext *C, wmWindow *win, const char *panel_idname);
 
 static bool rna_Window_mixar_tour_menu_open(wmWindow *win, bContext *C, const char *menu)
 {
@@ -194,6 +195,11 @@ static bool rna_Window_mixar_tour_menu_close(wmWindow *win)
 static bool rna_Window_mixar_tour_menu_is_open(wmWindow *win)
 {
   return Mixar_tour_menu_is_open(win);
+}
+
+static bool rna_Window_mixar_tour_popover_open(wmWindow *win, bContext *C, const char *panel)
+{
+  return Mixar_tour_popover_open(C, win, panel);
 }
 
 /* Mixar: live GHOST client bounds (wm_draw.cc); wmWindow::posx/posy can be stale. */
@@ -378,6 +384,16 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
                             "rna_Window_mixar_tour_menu_is_open");
     RNA_def_function_ui_description(func, "Onboarding tour: the menu it opened is still up");
     parm = RNA_def_boolean(func, "open", false, "", "");
+    RNA_def_function_return(func, parm);
+
+    func = RNA_def_function(srna, "mixar_tour_popover_open", "rna_Window_mixar_tour_popover_open");
+    RNA_def_function_flag(func, FUNC_USE_CONTEXT);
+    RNA_def_function_ui_description(
+        func, "Open a header popover under its own button in this window, as a click would; "
+              "False when the button is not on screen or the panel does not poll");
+    parm = RNA_def_string(func, "panel", nullptr, 0, "Panel", "Panel type idname");
+    RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+    parm = RNA_def_boolean(func, "opened", false, "", "");
     RNA_def_function_return(func, parm);
   }
   /* This window's client rect inside another window's client coordinates

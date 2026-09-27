@@ -7735,8 +7735,12 @@ static int do_but_BLOCK(bContext *C, Button *but, HandleButtonData *data, const 
       return WM_UI_HANDLER_BREAK;
     }
 #endif
-    /* regular open menu */
-    if (ELEM(event->type, LEFTMOUSE, EVT_PADENTER, EVT_RETKEY) && event->val == KM_PRESS) {
+    /* regular open menu. Mixar: EVT_BUT_OPEN too (#button_activate_event), so
+     * a header popover can be opened programmatically as a clicked one is;
+     * see `Mixar_tour_popover_open` (mixar/tour_menu.cc). */
+    if (ELEM(event->type, LEFTMOUSE, EVT_PADENTER, EVT_RETKEY, EVT_BUT_OPEN) &&
+        event->val == KM_PRESS)
+    {
       button_activate_state(C, but, BUTTON_STATE_MENU_OPEN);
       return WM_UI_HANDLER_BREAK;
     }

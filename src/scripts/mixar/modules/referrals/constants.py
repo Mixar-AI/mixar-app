@@ -27,3 +27,10 @@ NOTICE_ERROR = 'ERROR'
 
 #: Separators accepted between addresses in the email field.
 EMAIL_SEPARATORS = ",; \t\n"
+
+#: A live drop to this balance or below raises the low-credit toast, whose
+#: button opens Refer a Friend (``core/low_credit.py``).
+LOW_CREDIT_THRESHOLD = 200
+
+#: Fixed toast id: a repeat replaces the toast instead of stacking another.
+LOW_CREDIT_NOTIFICATION_ID = "mixar-low-credit-referral"
