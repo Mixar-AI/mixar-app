@@ -7196,6 +7196,12 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
     }
   }
   else if (mixar_component) {
+    /* Menu actions sit inside the menu's outline; the native text pass below
+     * shares the padded rect, so the icon and label keep their inset too. */
+    const int menu_inset = int(mixar_menu_item_inset(*but));
+    if (menu_inset > 0) {
+      BLI_rcti_pad(rect, -menu_inset, 0);
+    }
     native_text = mixar_component_draw(*but, wt->wcol, *rect);
   }
   else if (ELEM(but->type, ButtonType::Row, ButtonType::Popover) && zen_glass_cell(but)) {
