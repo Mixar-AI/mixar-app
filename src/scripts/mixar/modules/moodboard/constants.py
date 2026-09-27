@@ -274,6 +274,10 @@ LASSO_MIN_POINTS = 3
 SCENE_SEGMENT_REQUEST_TIMEOUT_SECONDS = 120.0
 SCENE_SEGMENT_POLL_INTERVAL_SECONDS = 0.5
 SCENE_SEGMENT_HTTP_TIMEOUT_SECONDS = 30.0
+# The backend proxies the upload to SAM3 with its own 120s timeout
+# (SCENE_SEGMENT_API_TIMEOUT) and answers with the upstream error when that
+# expires; a client timeout equal to it fires first and hides that answer.
+SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS = 135.0
 
 # Freehand annotation defaults. Width is measured in display pixels at the
 # image's base scale and grows with image/canvas zoom.

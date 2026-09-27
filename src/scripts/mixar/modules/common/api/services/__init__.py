@@ -23,6 +23,7 @@ from .job_queue_service import JobQueueService, get_job_queue_service
 from .subscription_service import SubscriptionService, get_subscription_service
 from .prompt_refine_service import PromptRefineService, get_prompt_refine_service
 from .notifications_service import NotificationsService, get_notifications_service
+from .referral_service import ReferralService, get_referral_service
 
 __all__ = [
     # Base
@@ -69,4 +70,7 @@ __all__ = [
     # Notifications (task-completion sound catalog)
     "NotificationsService",
     "get_notifications_service",
+    # Referral rewards (profile card's Refer a Friend)
+    "ReferralService",
+    "get_referral_service",
 ]

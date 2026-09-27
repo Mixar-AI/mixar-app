@@ -12,6 +12,7 @@ from typing import Callable, Optional
 from mixar.config.logging_config import get_logger
 from ...common.api.response import APIResponse
 from ...common.api.services.scene_segment_service import get_scene_segment_service
+from ..constants import SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS
 from .scene_segment_image import compress_image_for_scene_segment
 from .scene_segment_types import (
     JobState,
@@ -117,6 +118,7 @@ class SceneSegmentUploadMixin:
                 filename=f"{image_name}.jpg",
                 on_success=on_success,
                 on_error=on_error,
+                timeout=SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS,
             )
         except Exception as exc:
             self._finish_upload(image_name, state, False, str(exc))

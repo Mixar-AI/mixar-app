@@ -26,7 +26,7 @@ _REVISION_PROP = "mixar_generations_revision"
 
 SOURCE_ITEMS = (
     ('AI', "AI generations", "Everything Mixar has generated for you"),
-    ('LIBRARY', "Asset Library", "Browse and connect Blender asset libraries"),
+    ('LIBRARY', "My Libraries", "Browse the folders you connected: assets, images and videos"),
 )
 
 FILTER_ITEMS = (
@@ -49,6 +49,7 @@ PROP_NAMES = (
     "mixar_generations_filter",
     "mixar_generations_sort",
     "mixar_generations_selected",
+    "mixar_generations_multi",
     "mixar_generations_library",
     "mixar_generations_scroll",
     "mixar_generations_library_scroll",
@@ -96,6 +97,23 @@ def _reset_scroll(self, context):
     _redraw_bubbles(self, context)
 
 
+def _change_scope(self, context):
+    """A new source or library: first row, no carried-over multi-selection.
+
+    Tiles selected in another folder are not on screen any more, so an
+    "Add 5 to Moodboard" that silently includes them would surprise; the
+    connected folders are re-listed so a folder edited on disk shows it.
+    """
+    self.mixar_generations_multi = ""
+    _reset_scroll(self, context)
+    try:
+        from mixar.modules.agent_bubble.core import library_media
+
+        library_media.refresh(context, force=True)
+    except Exception:  # noqa: BLE001 — a failed scan must not block the switch
+        pass
+
+
 def register():
     wm = bpy.types.WindowManager
     wm.mixar_generations_source = EnumProperty(
@@ -103,7 +121,7 @@ def register():
         description="Which collection the Library grid is showing",
         items=SOURCE_ITEMS,
         default='AI',
-        update=_reset_scroll,
+        update=_change_scope,
         options={'SKIP_SAVE'},
     )
     wm.mixar_generations_filter = EnumProperty(
@@ -129,11 +147,21 @@ def register():
         update=_redraw_bubbles,
         options={'SKIP_SAVE'},
     )
+    wm.mixar_generations_multi = StringProperty(
+        name="Selected Items",
+        description=(
+            "Newline-separated keys of every selected tile when more than one "
+            "is selected (Ctrl/Cmd-click); empty for a single selection"
+        ),
+        default="",
+        update=_redraw_bubbles,
+        options={'SKIP_SAVE'},
+    )
     wm.mixar_generations_library = StringProperty(
         name="Browsed Library",
         description="Asset library the grid is limited to (empty means all)",
         default="",
-        update=_reset_scroll,
+        update=_change_scope,
         options={'SKIP_SAVE'},
     )
     wm.mixar_generations_revision = IntProperty(

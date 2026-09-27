@@ -47,20 +47,24 @@ def _encode_image(image) -> str:
     return base64.b64encode(data).decode()
 
 
-def _view_entry(item) -> dict:
+def view_entry(image, view_type: str, s3_key: str = "") -> dict:
     """One ``multi_view_images`` entry for a companion view.
 
     Detected crops forward their S3 key verbatim; manually added views carry
     their pixels inline. The backend accepts a mixed list — job_queue's upload
     stage only touches entries that carry ``image_bytes_b64``.
     """
-    if item.s3_key:
-        return {"s3_key": item.s3_key, "view_type": item.view_type}
+    if s3_key:
+        return {"s3_key": s3_key, "view_type": view_type}
     return {
-        "image_bytes_b64": _encode_image(item.image),
-        "filename": f"{item.view_type}.png",
-        "view_type": item.view_type,
+        "image_bytes_b64": _encode_image(image),
+        "filename": f"{view_type}.png",
+        "view_type": view_type,
     }
+
+
+def _view_entry(item) -> dict:
+    return view_entry(item.image, item.view_type, item.s3_key)
 
 
 def build_multi_view_payload(
@@ -101,7 +105,7 @@ def build_multi_view_payload(
         raise ValueError("Multi-view set has no images")
 
     warnings: List[str] = []
-    payload = _main_fragment(scene, main_image)
+    payload = main_fragment(scene, main_image)
 
     allowed = allowed_view_types(model_slug)
     seen = set()
@@ -129,7 +133,7 @@ def build_multi_view_payload(
     return payload, warnings
 
 
-def _main_fragment(scene, main_image) -> dict:
+def main_fragment(scene, main_image) -> dict:
     """Primary-image half of the payload — S3 key when we have one."""
     item = moodboard_item_for(scene, main_image)
     s3_key = getattr(item, 's3_key', "") if item is not None else ""

@@ -83,3 +83,23 @@ class TestTheCardIsLiquidGlass:
         floor = re.search(r"/\* fallback_alpha \*/\s*([\d.]+)f", row)
         assert 0.3 <= float(floor.group(1)) <= 0.6
 
+
+
+class TestNotificationsShareTheCardGlass:
+    """Toasts stack directly above the cards and usually report the same work
+    (a generation the agents queued), so both read as one translucent column."""
+
+    RNA = ROOT / "src" / "source" / "blender" / "makesrna" / "intern" / "rna_screen_mixar_glass.hh"
+
+    def _toast_glass(self):
+        text = self.RNA.read_text()
+        start = text.index("static void rna_Region_mixar_draw_glass(")
+        return text[start : text.index("\n}\n", start)]
+
+    def test_the_toast_draws_the_panel_glass_role(self):
+        body = self._toast_glass()
+        assert "style.role = ui::MIXAR_GLASS_PANEL;" in body
+        assert "MIXAR_GLASS_MENU" not in body
+
+    def test_the_toast_asks_for_no_shadow_like_the_cards(self):
+        assert "draw_shadow" not in self._toast_glass()

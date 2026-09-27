@@ -582,6 +582,10 @@ if(WITH_BLENDER)
       meta_ellipsoid
       meta_plane
       mixar_icon
+      credits_upgrade
+      credits_slide
+      credits_refer
+      credits_creator
       paperclip
       eraser
       submit_arrow

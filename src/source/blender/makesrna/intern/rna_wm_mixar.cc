@@ -121,6 +121,14 @@ static bool rna_WindowManager_mixar_window_resizing_get(PointerRNA * /*ptr*/)
   return Mixar_window_resize_dispatch_active();
 }
 
+/* Defined in windowmanager/intern/wm_splash_screen.cc (Mixar overlay). */
+bool Mixar_splash_is_open();
+
+static bool rna_WindowManager_mixar_splash_open_get(PointerRNA * /*ptr*/)
+{
+  return Mixar_splash_is_open();
+}
+
 static void rna_Window_mixar_qa_drag_file(
     wmWindow *win, bContext *C, ReportList *reports, const char *filepath)
 {
@@ -174,6 +182,7 @@ static void rna_Window_mixar_qa_drop_file(
 bool Mixar_tour_menu_open(bContext *C, wmWindow *win, const char *menu_idname);
 bool Mixar_tour_menu_close(wmWindow *win);
 bool Mixar_tour_menu_is_open(wmWindow *win);
+bool Mixar_tour_popover_open(bContext *C, wmWindow *win, const char *panel_idname);
 
 static bool rna_Window_mixar_tour_menu_open(wmWindow *win, bContext *C, const char *menu)
 {
@@ -188,6 +197,11 @@ static bool rna_Window_mixar_tour_menu_close(wmWindow *win)
 static bool rna_Window_mixar_tour_menu_is_open(wmWindow *win)
 {
   return Mixar_tour_menu_is_open(win);
+}
+
+static bool rna_Window_mixar_tour_popover_open(wmWindow *win, bContext *C, const char *panel)
+{
+  return Mixar_tour_popover_open(C, win, panel);
 }
 
 /* Mixar: live GHOST client bounds (wm_draw.cc); wmWindow::posx/posy can be stale. */
@@ -373,6 +387,16 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     RNA_def_function_ui_description(func, "Onboarding tour: the menu it opened is still up");
     parm = RNA_def_boolean(func, "open", false, "", "");
     RNA_def_function_return(func, parm);
+
+    func = RNA_def_function(srna, "mixar_tour_popover_open", "rna_Window_mixar_tour_popover_open");
+    RNA_def_function_flag(func, FUNC_USE_CONTEXT);
+    RNA_def_function_ui_description(
+        func, "Open a header popover under its own button in this window, as a click would; "
+              "False when the button is not on screen or the panel does not poll");
+    parm = RNA_def_string(func, "panel", nullptr, 0, "Panel", "Panel type idname");
+    RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+    parm = RNA_def_boolean(func, "opened", false, "", "");
+    RNA_def_function_return(func, parm);
   }
   /* This window's client rect inside another window's client coordinates
    * (points, bottom-left origin) — exact across window styles. */
@@ -412,6 +436,17 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         "Window Resizing",
         "Handlers are running from inside an OS window resize. Defer viewport "
         "renders (render.opengl) until this is False");
+
+    /* The splash popup is alive (set on invoke, cleared by the popup's free
+     * callback on every close path). An idle splash stops redrawing, so
+     * Python cannot infer this from draw timestamps. */
+    prop = RNA_def_property(srna_wm, "mixar_splash_open", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_splash_open_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(prop,
+                             "Splash Open",
+                             "The startup splash popup is on screen; it closes on a button, "
+                             "a click outside it or Escape");
   }
 }
 

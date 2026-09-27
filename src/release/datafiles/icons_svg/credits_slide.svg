@@ -1,0 +1,17 @@
+<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
+<!-- SPDX-License-Identifier: LicenseRef-Mixar-Brand -->
+<!-- Supplied design artwork; only the canvas is normalized for Blender's SVG renderer. -->
+<svg width="1600" height="1600" viewBox="0 0 1600 1600" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g transform="translate(177.777777778 0) scale(59.2592592593)">
+<rect width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect x="5.39453" y="5.39453" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect x="10.7891" y="10.7891" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect x="5.39453" y="16.1836" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect y="21.5781" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect x="5.39453" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect x="10.7891" y="5.39453" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect x="16.1836" y="10.7891" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect x="10.7891" y="16.1836" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+<rect x="5.39453" y="21.5781" width="4.8166" height="4.8166" rx="2.2638" fill="#171717"/>
+</g>
+</svg>

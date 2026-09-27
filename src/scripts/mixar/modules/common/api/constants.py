@@ -70,6 +70,7 @@ class APIModule(Enum):
     SUBSCRIPTIONS = "subscriptions"
     PROMPT_REFINE = "prompt-refine"
     NOTIFICATIONS = "notifications"
+    REFERRALS = "referrals"
 
 
 # ============================================================================

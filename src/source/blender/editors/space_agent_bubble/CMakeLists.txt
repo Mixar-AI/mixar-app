@@ -39,6 +39,7 @@ set(SRC
   agent_ui_generations_libraries.cc
   agent_ui_generations_grid.cc
   agent_ui_generations_read.cc
+  agent_ui_generations_selection.cc
   agent_ui_icons.cc
   agent_ui_tab_icons.cc
   agent_ui_layout.cc
@@ -51,6 +52,7 @@ set(SRC
   agent_ui_pill_draft.cc
   agent_ui_queue_navigation.cc
   agent_ui_queue_data.cc
+  agent_ui_queue_failure.cc
   agent_ui_queue.cc
   agent_ui_tabsplat.cc
   agent_ui_tabsplat_paint.cc

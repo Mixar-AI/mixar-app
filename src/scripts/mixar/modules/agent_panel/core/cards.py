@@ -24,6 +24,7 @@ membership rebuild so a card that survives keeps its clock.
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Any, Iterable, Optional
 
@@ -59,6 +60,41 @@ _TERMINAL = frozenset({'DONE', 'FAILED'})
 #: Per-tab dismissal memory and stored task lists live in `card_sessions`.
 
 
+#: Words kept upper-case when an identifier-shaped label is humanized.
+_ACRONYMS = frozenset({
+    "2d", "3d", "ai", "bg", "cg", "cpu", "fps", "fx", "gpu", "hdr", "hdri", "hud",
+    "id", "ik", "led", "lod", "npc", "pbr", "pc", "rgb", "tv", "ui", "uv", "vfx", "vr",
+})
+
+_SEPARATORS = re.compile(r"[_\-]+")
+_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
+
+
+def humanize_label(label: str) -> str:
+    """``gaming_pc`` -> ``Gaming PC``; a label that is already prose is unchanged.
+
+    The main agent names its agents with identifiers, and a card is read by
+    people. Current backends already send the prose form; this keeps an older
+    backend's raw ``task_name`` from reaching the card.
+    """
+    text = (label or "").strip()
+    if not text or any(ch.isspace() for ch in text):
+        return text
+    if not _SEPARATORS.search(text) and not _CAMEL.search(text):
+        return text[:1].upper() + text[1:]
+    words = [w for part in _SEPARATORS.split(text) for w in _CAMEL.split(part) if w]
+    out = []
+    for i, word in enumerate(words):
+        low = word.lower()
+        if low in _ACRONYMS:
+            out.append(low.upper())
+        elif word.isupper() and len(word) > 1:
+            out.append(word)
+        else:
+            out.append(low.capitalize() if i == 0 else low)
+    return " ".join(out)
+
+
 def derive_agent_name(task_label: str) -> str:
     """A short display name for the agent that owns ``task_label``.
 
@@ -68,7 +104,7 @@ def derive_agent_name(task_label: str) -> str:
     Deriving it here keeps naming a client display concern — the wire contract
     is unchanged.
     """
-    label = (task_label or "").strip()
+    label = humanize_label(task_label)
     if not label:
         return "Agent"
     label = label.rstrip(" .!?:;,")

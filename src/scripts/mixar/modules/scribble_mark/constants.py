@@ -75,8 +75,12 @@ GROUND_MAX_DISTANCE = 1000.0
 #: Draft marks a message may carry. Pointing needs a handful ("move THIS
 #: over THERE" is two), but a SKETCH is chopped into one mark per pen-up
 #: pause, and a road with a few cars and trees is easily fifteen of them —
-#: at the old cap of 8 the second half of the drawing was silently refused.
-MAX_MARKS_PER_TURN = 32
+#: at the old cap of 8 the second half of the drawing was silently refused,
+#: and at 32 a drawing done one line per pause stopped at 32 lines. 128 lets
+#: every line of a detailed drawing be its own mark. The cap bounds MARKS,
+#: never ink: past it a group joins the newest mark of the live freeze
+#: (``marks.join_newest``). Lockstep with the backend's MAX_MARKS.
+MAX_MARKS_PER_TURN = 128
 
 #: Strokes per mark. An arrow is 2 (shaft + head), an X is 2, a quickly drawn
 #: car is 6 or 7. Reaching the cap COMMITS the group and starts a new one
@@ -142,9 +146,12 @@ UV_DECIMALS = 4
 WORLD_DECIMALS = 4
 
 #: Hard cap on the serialized mark payload. Marks ride inside the model's
-#: context, so this is a prompt-budget limit, not a transport one. Sized for
-#: a sketch: thirty-odd ground marks plus the stroke block below.
-MARK_JSON_MAX_BYTES = 40000
+#: context (``read_marks``), so this is a prompt-budget limit, not a transport
+#: one. Sized for a full sketch: MAX_MARKS_PER_TURN one-line marks plus
+#: SKETCH_MAX_STROKES world paths at STROKE_WORLD_POINTS each, with only the
+#: mark outlines shed (~110-125 kB measured, on the ground or over a floor
+#: mesh). At 40 kB a 128-line drawing shed to 16 anchored strokes.
+MARK_JSON_MAX_BYTES = 128000
 
 # =============================================================================
 # SKETCH READING
@@ -180,8 +187,10 @@ SKETCH_CANVAS_MIN_STROKES = 8
 SKETCH_TAP_MAX_UV = 0.012
 
 #: Strokes carried in the payload's sketch block. The LONGEST are kept —
-#: outlines and roads over the dots that detail them.
-SKETCH_MAX_STROKES = 48
+#: outlines and roads over the dots that detail them. Never below
+#: MAX_MARKS_PER_TURN, so a drawing done one line per pause keeps every line
+#: anchored up to the mark cap. Within the backend's MAX_SKETCH_STROKES.
+SKETCH_MAX_STROKES = 128
 
 #: World points per stroke on the wire (thinned further under budget).
 SKETCH_WORLD_POINTS = STROKE_WORLD_POINTS

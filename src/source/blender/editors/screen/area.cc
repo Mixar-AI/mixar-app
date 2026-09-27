@@ -2128,7 +2128,21 @@ static void region_rect_recursive(
   /* After non-overlapping region, all following overlapping regions
    * fit within the remaining space again. */
   if (!region->overlap) {
-    *overlap_remainder = *remainder;
+    if (area->spacetype == SPACE_VIEW3D &&
+        region->regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE)
+    {
+      /* Mixar Scenes drawer: it sits between the headers and TOOLS/UI and only
+       * ever takes WIDTH. A full reset here discarded the tool header's
+       * vertical cut, so in Engine mode (drawer hidden / poll failed, opaque
+       * headers) TOOLS and UI were laid out over the tool header and
+       * `region_overlap_fix` flagged them `RGN_FLAG_TOO_SMALL`: the T and N
+       * panels toggled but never drew. Sync the left edge only, so an open
+       * drawer still pushes the overlapping regions right of it. */
+      overlap_remainder->xmin = remainder->xmin;
+    }
+    else {
+      *overlap_remainder = *remainder;
+    }
   }
 
   BLI_assert(BLI_rcti_is_valid(&region->winrct));
