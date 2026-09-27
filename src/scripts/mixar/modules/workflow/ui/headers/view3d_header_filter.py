@@ -68,7 +68,7 @@ def _patched_header_draw(self, context):
     width = context.region.width / max(context.preferences.system.ui_scale, 0.01)
     compact = width < 1480
     left = layout.row(align=False)
-    left.ui_units_x = 33 if not compact else 14
+    left.ui_units_x = 33 if not compact else 11
     zen_scene_controls.draw_left(left, context, compact=compact)
     layout.separator_spacer()
 
@@ -94,7 +94,7 @@ def _patched_header_draw(self, context):
 
     layout.separator_spacer()
     right = layout.row(align=False)
-    right.ui_units_x = 31 if not compact else 24
+    right.ui_units_x = 29 if not compact else 27
     right.alignment = "RIGHT"
     zen_scene_controls.draw_right(right, context, compact=compact)
 

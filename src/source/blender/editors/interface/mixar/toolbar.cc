@@ -4,6 +4,7 @@
 /** Flat Zen scene-toolbar controls. Native layout, RNA and operators own input. */
 #include "../interface_intern.hh"
 #include "../interface_mixar_card_paint.hh"
+#include "../interface_mixar_cinema_label.hh"
 #include "BLI_math_vector.h"
 #include "BLI_string.h"
 #include "RNA_access.hh"
@@ -152,6 +153,10 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
   if (button.editstr) {
     /* Native caret, selection, numeric parsing, Enter and Escape stay intact. */
     return true;
+  }
+  if (cinema) {
+    mixar_cinema_draw_label(bounds, button.str.c_str(), button.icon, text_color, 0.95f);
+    return false;
   }
   uiFontStyle font = mixar_card_font(ghost && !compact && button.type != ButtonType::Label ?
                                        0.70f : 0.95f, 0);

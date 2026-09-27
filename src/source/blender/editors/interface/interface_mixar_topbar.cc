@@ -13,7 +13,7 @@
  * them out, sizes them and dispatches their clicks — only the pixels are
  * ours. Colours and chrome label scale live in `UI_mixar_chrome.hh`
  * (UI.svg 1x: slider track 225x28 rx7 #1D1D1D with a 106x23 rx7 #393939
- * thumb inset 2px; Cinema pill 150x27 fully rounded, #3F3F3F hairline
+ * thumb inset 2px; Cinema pill 120x27 fully rounded, #3F3F3F hairline
  * border, flat label and flat green fill). Geometry stays on the layout.
  * Compact is the chrome host; these widgets keep the UI.svg sizes rather
  * than Compact's 32-unit control height.
@@ -48,6 +48,7 @@
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_paint.hh"
+#include "interface_mixar_cinema_label.hh"
 #include "interface_mixar_profile_card.hh"
 #include "UI_mixar_theme.hh"
 
@@ -89,6 +90,13 @@ void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *
                       view2d_scale_get_x(&region->v2d);
   BLI_rctf_translate(&left->rect, delta, 0);
   BLI_rctf_translate(&right->rect, delta, 0);
+  /* Keep the native hit rectangles and painted track equally tall, with the
+   * original header center retained at every UI scale. */
+  const float center_y = BLI_rctf_cent_y(&left->rect);
+  const float half_height = mixar_chrome::slider_height * UI_SCALE_FAC * 0.5f /
+                            view2d_scale_get_y(&region->v2d);
+  left->rect.ymin = right->rect.ymin = center_y - half_height;
+  left->rect.ymax = right->rect.ymax = center_y + half_height;
   const float limit = left->rect.xmin - 8.0f * UI_SCALE_FAC;
   for (Button &but : block->buttons()) {
     const bool workspace = but.type == ButtonType::Tab ||
@@ -237,7 +245,7 @@ void draw_cinema_pill(Button *but, const rcti *rect)
   /* One colour: white while directing, a step short of it at rest. */
   uchar label[4];
   blend_color(pill_label_a, pill_label_b, 0.8f + 0.2f * motion.selected, label);
-  draw_label_centred(rect, but->drawstr.c_str(), label, label_scale);
+  mixar_cinema_draw_label(*rect, but->str.c_str(), but->icon, label, label_scale);
 }
 
 /** Zen viewport shading pill: "Solid" / "Rendered". */

@@ -239,6 +239,7 @@ if(WITH_BLENDER)
       brushes_all
       brush_data
       camera_data
+      cinema_reel
       camera_stereo
       cancel
       cancel_large
