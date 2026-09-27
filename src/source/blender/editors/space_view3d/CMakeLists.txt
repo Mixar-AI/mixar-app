@@ -97,6 +97,15 @@ set(SRC
   view3d_moodboard_drawer_qa.cc
   view3d_moodboard_drawer_resize.cc
   view3d_moodboard_drawer_state.cc
+  view3d_scenes_drawer.cc
+  view3d_scenes_drawer_draw.cc
+  view3d_scenes_drawer_draw_widgets.cc
+  view3d_scenes_drawer_ops.cc
+  view3d_scenes_drawer_ops_cards.cc
+  view3d_scenes_drawer_qa.cc
+  view3d_scenes_drawer_resize.cc
+  view3d_scenes_drawer_state.cc
+  view3d_scenes_drawer_thumbs.cc
   view3d_navigate.cc
   view3d_navigate_fly.cc
   view3d_navigate_smoothview.cc
@@ -134,6 +143,7 @@ set(SRC
   view3d_director_minimap.hh
   view3d_intern.hh
   view3d_moodboard_drawer.hh
+  view3d_scenes_drawer.hh
   view3d_navigate.hh
 )
 

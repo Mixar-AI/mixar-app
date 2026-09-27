@@ -6,24 +6,24 @@
 Credit-Upgrade Notification
 
 The backend pushes a ``credit_upgrade`` notification (via ``notifications.push``)
-when a user's credits are exhausted. The client renders a sticky toast with an
-"Upgrade" button wired to ``mixar.open_credit_upgrade``, which opens the
-manage-subscription page in the browser via the seamless auth handoff.
+when a user's credits are exhausted. The client opens the whole-window
+out-of-credits banner (``credits_banner.py``) whose Upgrade button runs
+``mixar.open_credit_upgrade``, which opens the manage-subscription page in the
+browser via the seamless auth handoff.
 
 Mirrors the ``update`` type's pattern: a distinct type the client recognises
-and turns into a toast whose action button targets a client-side operator, so
-the backend never needs to know operator idnames.
+and turns into client-side UI, so the backend never needs to know operator
+idnames.
 """
 
 from typing import Optional
 
 from mixar.config.logging_config import get_logger
 
-from .store import NotificationAction, get_notification_store
-
 logger = get_logger(__name__)
 
-# Fixed id so repeated backend pushes dedupe to a single toast.
+# Id of the retired credit-upgrade toast; the upgrade operator still dismisses
+# it so a toast restored from an older session cannot linger.
 CREDIT_UPGRADE_NOTIFICATION_ID = "mixar-credit-upgrade"
 
 # Sentinel used as a Mixie chat action-button ``value``: the chat slot-action
@@ -56,28 +56,26 @@ def set_pending_upgrade_url(url: Optional[str]) -> None:
 
 
 def push_credit_upgrade(params: dict) -> None:
-    """Show the sticky credit-upgrade toast from a backend push payload.
+    """Open the out-of-credits banner from a backend push payload.
+
+    The banner replaced the sticky "Upgrade" toast this used to push: running
+    out of credits blocks the user's next action, so it gets the whole window
+    rather than a corner of the viewport.
 
     Args:
-        params: The ``notifications.push`` params. Recognised keys: ``title``,
-            ``body``, ``priority``, ``action_url`` (the manage-subscription URL).
+        params: The ``notifications.push`` params. Recognised keys:
+            ``action_url`` (the page the Upgrade button opens: manage
+            subscription for free/trial users, buy credits for paid ones) and
+            an optional ``id`` (the backend sends none today).
     """
     global _pending_upgrade_url
     _pending_upgrade_url = params.get("action_url")
 
-    get_notification_store().push(
-        type_str="credit_upgrade",
-        title=params.get("title", "You're out of credits"),
-        body=params.get("body", "Upgrade your plan to keep generating."),
-        priority=params.get("priority", "high"),
-        id=CREDIT_UPGRADE_NOTIFICATION_ID,
-        dismissible=True,
-        actions=[
-            NotificationAction(
-                label="Upgrade",
-                operator="mixar.open_credit_upgrade",
-                style="primary",
-            ),
-        ],
+    from .credits_banner import request_credits_banner
+
+    request_credits_banner(
+        "push",
+        action_url=params.get("action_url"),
+        push_id=params.get("id") or None,
     )
-    logger.info("Pushed credit-upgrade notification")
+    logger.info("Requested the credits banner for a credit-upgrade push")

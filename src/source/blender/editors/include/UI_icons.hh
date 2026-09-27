@@ -1194,6 +1194,12 @@ DEF_ICON_VECTOR(NODE_SOCKET_INT_VECTOR)
 
 /* add as needed. */
 
+/* Credit-exhaustion actions (keep existing icon identifiers stable). */
+DEF_ICON_COLOR(CREDITS_UPGRADE)
+DEF_ICON_COLOR(CREDITS_SLIDE)
+DEF_ICON_COLOR(CREDITS_REFER)
+DEF_ICON_COLOR(CREDITS_CREATOR)
+
 /* Undefine all types. */
 
 #undef DEF_ICON

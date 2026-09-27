@@ -22,6 +22,7 @@ logger = get_logger(__name__)
 from ...core.scene_segment_manager import get_scene_segment_manager
 from ...core.segment_overlay import recomposite_display_image
 from ...core.canvas_context import redraw_moodboard_canvases
+from ...core.mask_tool_feedback import clear_status, set_status, toast_failure
 
 
 _redraw_all = redraw_moodboard_canvases
@@ -35,6 +36,7 @@ def _reset_box_state(state):
     state.box_select_has_selection = False
     state.box_select_pending = False
     state.active_tool = 'NONE'
+    clear_status()
     state.target_image_index = -1
 
 
@@ -126,11 +128,10 @@ class MIXIE_OT_box_select_sam(Operator):
         # Check if image is uploaded
         if not manager.is_ready(img_item.image):
             # Queue upload first
+            # The upload is folded into this one wait; the user is never
+            # told to wait for it separately.
             state.box_select_pending = True
-            if manager.is_uploading(img_item.image):
-                self.report({'INFO'}, "Waiting for image upload...")
-            else:
-                self.report({'INFO'}, "Uploading image for segmentation...")
+            set_status("Finding object in box…")
 
             target_idx = state.target_image_index
             x1 = min(state.box_start_x, state.box_end_x)
@@ -142,8 +143,9 @@ class MIXIE_OT_box_select_sam(Operator):
                 if success:
                     _perform_box_segmentation(target_idx, x1, y1, x2, y2)
                 else:
-                    state.box_select_pending = False
                     logger.error("[BoxSelectSAM] Upload failed: %s", message)
+                    toast_failure(message, upload=True)
+                    _reset_box_state(state)
                 _redraw_all()
 
             manager.queue_upload(img_item.image, img_item=img_item,
@@ -173,6 +175,7 @@ def _perform_box_segmentation(target_idx, x1, y1, x2, y2, _retry=False):
     state = scene.mixie_edit_tool_state
 
     state.box_select_pending = True
+    set_status("Finding object in box…")
 
     # API uses y=0 at top, Blender uses y=0 at bottom
     # Invert Y coordinates for API
@@ -195,12 +198,8 @@ def _perform_box_segmentation(target_idx, x1, y1, x2, y2, _retry=False):
                 logger.error("[BoxSelectSAM] Job expired, re-uploading and retrying...")
                 _upload_and_retry_box(target_idx, x1, y1, x2, y2)
                 return
-            elif "402" in error_msg or "credit" in error_msg.lower():
-                logger.error("[BoxSelectSAM] Insufficient credits for segmentation")
-            elif "no object" in error_msg.lower() or "empty" in error_msg.lower():
-                logger.warning("[BoxSelectSAM] No object detected in box region")
-            else:
-                logger.error("[BoxSelectSAM] Segmentation failed: %s", error_msg)
+            logger.warning("[BoxSelectSAM] Segmentation failed: %s", error_msg)
+            toast_failure(error_msg)
 
         # Reset state
         _reset_box_state(state)
@@ -228,6 +227,7 @@ def _upload_and_retry_box(target_idx, x1, y1, x2, y2):
             _perform_box_segmentation(target_idx, x1, y1, x2, y2, _retry=True)
         else:
             logger.warning("[BoxSelectSAM] Re-upload failed: %s", message)
+            toast_failure(message, upload=True)
             state = scene.mixie_edit_tool_state
             _reset_box_state(state)
             _redraw_all()

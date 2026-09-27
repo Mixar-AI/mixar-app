@@ -256,7 +256,7 @@ void qa_emit_custom_targets(std::string &out,
   }
   for (const MixarQATarget &t : targets) {
     rcti rect = t.rect_win;
-    if (!qa_clip_to_region(region, &rect)) {
+    if (!t.window_level && !qa_clip_to_region(region, &rect)) {
       continue;
     }
     if (!first_widget) {

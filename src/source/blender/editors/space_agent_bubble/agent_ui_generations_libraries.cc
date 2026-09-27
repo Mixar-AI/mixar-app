@@ -9,6 +9,7 @@
 #include "UI_interface_c.hh"
 #include "WM_types.hh"
 #include "agent_ui_generations_intern.hh"
+#include "agent_ui_icons.hh"
 #include "agent_ui_text.hh"
 #include "agent_ui_theme.hh"
 #include <algorithm>
@@ -16,6 +17,48 @@
 #include "agent_ui_generations_clip.hh"
 
 namespace blender {
+
+void agent_ui_generations_gather_files(const bContext *C,
+                                       GenPaneData *data,
+                                       const char *only_name)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm) {
+    return;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *files = RNA_struct_find_property(&wm_ptr, "mixar_generations_files");
+  if (!files || RNA_property_type(files) != PROP_COLLECTION) {
+    return;
+  }
+  CollectionPropertyIterator iter;
+  RNA_property_collection_begin(&wm_ptr, files, &iter);
+  for (; iter.valid; RNA_property_collection_next(&iter)) {
+    PointerRNA row = iter.ptr;
+    char library[64];
+    char kind[16];
+    gen_read_string(&row, "library", library, sizeof(library));
+    if (only_name && !STREQ(library, only_name)) {
+      continue;
+    }
+    gen_read_string(&row, "kind", kind, sizeof(kind));
+    GenItem &item = data->items.emplace_back();
+    data->count++;
+    item.kind = STREQ(kind, "VIDEO") ? GEN_ITEM_VIDEO : GEN_ITEM_IMAGE;
+    gen_read_string(&row, "path", item.path, sizeof(item.path));
+    gen_read_string(&row, "name", item.name, sizeof(item.name));
+    BLI_snprintf(item.key, sizeof(item.key), "file:%s", item.path);
+    BLI_strncpy(item.type_label,
+                item.kind == GEN_ITEM_VIDEO ? "Video" : "Image",
+                sizeof(item.type_label));
+    BLI_strncpy(item.model_label, library, sizeof(item.model_label));
+    item.icon_id = gen_read_int(&row, "icon_id");
+    item.sort_time = double(gen_read_int(&row, "mtime"));
+    gen_format_age(item.sort_time, item.age);
+  }
+  RNA_property_collection_end(&iter);
+}
+
 GenLibraryMetrics agent_ui_generations_library_metrics(const GenFrame &frame,
                                                        const GenPaneData &data)
 {
@@ -97,12 +140,32 @@ void agent_ui_generations_libraries(
       if (active) {
         pane_fill_round(&r, std::min(GEN_META_RADIUS * u, BLI_rctf_size_y(&r) * 0.35f), bg);
       }
+      /* Remove (×) at the row's right edge: disconnects the folder, never
+       * deletes it — Blender's own `preferences.asset_library_remove`. */
+      const float x_size = std::min(BLI_rctf_size_y(&r), frame.font_lib * 1.6f);
+      rctf x_rect = r;
+      x_rect.xmin = r.xmax - x_size - inner * 0.25f;
+      x_rect.xmax = x_rect.xmin + x_size;
+      x_rect.ymin = BLI_rctf_cent_y(&r) - x_size * 0.5f;
+      x_rect.ymax = x_rect.ymin + x_size;
+      {
+        const float g = x_size * 0.42f;
+        rctf glyph = {BLI_rctf_cent_x(&x_rect) - g * 0.5f,
+                      BLI_rctf_cent_x(&x_rect) + g * 0.5f,
+                      BLI_rctf_cent_y(&x_rect) - g * 0.5f,
+                      BLI_rctf_cent_y(&x_rect) + g * 0.5f};
+        agent_ui_icon_draw(AGENT_ICON_CROSS, &glyph, dim, bg);
+      }
       char label[64];
       BLI_strncpy(label, name.c_str(), sizeof(label));
-      pane_fit_text(label, std::max(1.0f, BLI_rctf_size_x(&r) - 2.0f * inner), frame.font_lib);
+      pane_fit_text(label,
+                    std::max(1.0f, x_rect.xmin - r.xmin - 1.5f * inner),
+                    frame.font_lib);
       pane_label_left(label, r.xmin + inner, BLI_rctf_cent_y(&r), frame.font_lib, active ? text : dim);
       rctf hit;
-      if (!BLI_rctf_isect(&r, &m.view, &hit) || BLI_rctf_size_y(&hit) < 1.0f) {
+      rctf row = r;
+      row.xmax = x_rect.xmin;
+      if (!BLI_rctf_isect(&row, &m.view, &hit) || BLI_rctf_size_y(&hit) < 1.0f) {
         continue;
       }
       ui::Button *but = uiDefButO(block,
@@ -120,6 +183,23 @@ void agent_ui_generations_libraries(
       RNA_string_set(op, "data_path", "window_manager.mixar_generations_library");
       RNA_string_set(op, "value", active ? "" : name.c_str());
       ui::button_func_identity_compare_set(but, agent_ui_generations_button_identity);
+
+      rctf x_hit;
+      if (BLI_rctf_isect(&x_rect, &m.view, &x_hit) && BLI_rctf_size_y(&x_hit) >= 1.0f) {
+        ui::Button *remove = uiDefButO(block,
+                                       ui::ButtonType::But,
+                                       "mixar.generations_remove_library",
+                                       wm::OpCallContext::ExecDefault,
+                                       "",
+                                       int(x_hit.xmin),
+                                       int(x_hit.ymin),
+                                       short(BLI_rctf_size_x(&x_hit)),
+                                       short(BLI_rctf_size_y(&x_hit)),
+                                       "");
+        pane_but_tooltip_owned(
+            remove, ("Remove \"" + name + "\" from your libraries (files stay on disk)").c_str());
+        RNA_string_set(ui::button_operator_ptr_ensure(remove), "library_name", name.c_str());
+      }
     }
   }
   const rctf &r = m.add;
@@ -137,7 +217,7 @@ void agent_ui_generations_libraries(
             int(r.ymin),
             short(BLI_rctf_size_x(&r)),
             short(BLI_rctf_size_y(&r)),
-            "Connect a folder as an asset library");
+            "Connect a folder: its images, videos and 3D assets appear here");
   PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
   agent_ui_generations_scrollbar(
       block, &wm, "mixar_generations_library_scroll", m.scrollbar, BLI_rctf_size_y(&m.view), m.max_scroll);

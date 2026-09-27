@@ -223,7 +223,10 @@ class TestRevealReplaysEveryTurn:
         assert "_bump_generation" in cards_py
         clear = cards_py[cards_py.index("def clear_cards") :]
         clear = clear[: clear.index("\ndef ")]
-        assert "_bump_generation" in clear
+        assert "return clear_mirror(" in clear
+        mirror = cards_py[cards_py.index("def clear_mirror") :]
+        mirror = mirror[: mirror.index("\ndef ")]
+        assert "_bump_generation" in mirror
 
 class TestPollDrivenVisibility:
     def test_a_space_listener_turns_notifiers_into_a_refresh(self):
@@ -332,7 +335,7 @@ class TestFinishedCardsLeave:
         fn = cards_py[cards_py.index("def begin_dismiss") :]
         fn = fn[: fn.index("\ndef ")]
         assert "card.dismissing = True" in fn
-        assert "_schedule_exit(task_id, dwell=0.0)" in fn, (
+        assert "_schedule_exit(task_id, sessions.projected_sid(), dwell=0.0)" in fn, (
             "a dismissal is a direct answer to a click and leaves at once"
         )
         assert "dismiss_card" not in fn, "the row must not go on the click"

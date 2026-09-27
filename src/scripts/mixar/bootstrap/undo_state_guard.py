@@ -35,6 +35,11 @@ _EXPLICIT_PROPS = (
     "mixie_chat_state",
     "mixie_chat_is_busy",
     "mixie_chat_user_has_engaged",
+    # The open backend run and the turn's mode: Ctrl-Z must not "close" a run
+    # whose workers are still building (parallel scenes).
+    "mixie_run_open",
+    "mixie_run_id",
+    "mixie_chat_active_turn_mode",
     "mixar_bubble_history_lines",
     "mixar_bubble_history_active_index",
     # Per-feature transient error / status strings

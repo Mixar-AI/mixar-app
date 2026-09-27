@@ -66,6 +66,18 @@ class MixieQueueItemPG(PropertyGroup):
     substate_text: StringProperty(name="Substate", default="")
     error: StringProperty(name="Error", default="")
     user_message: StringProperty(name="User Message", default="")
+    # Failed-job explanation, resolved once by core/failure_info.py so the
+    # UIList, the island Queue tab (C++) and the copy action all agree:
+    # headline = short status word ("Blocked by content policy"), message =
+    # the one readable line, reason = the provider/backend's own words (empty
+    # when it would repeat the message), hint = what to do, details = all of
+    # it plus support ids, for tooltips and the clipboard.
+    error_class: StringProperty(name="Error Class", default="")
+    error_headline: StringProperty(name="Error Headline", default="")
+    error_message: StringProperty(name="Error Message", default="")
+    error_reason: StringProperty(name="Error Reason", default="")
+    error_hint: StringProperty(name="Error Hint", default="")
+    error_details: StringProperty(name="Error Details", default="")
     created_at: FloatProperty(name="Created At", default=0.0)
     finished_at: FloatProperty(name="Finished At", default=0.0)
     # C++-consumable metadata for the agent island's Queue tab: the catalog
@@ -102,6 +114,32 @@ classes = (
 # Mirror sync — one listener attached to every FeatureQueue; each tick
 # rebuilds the unified list from all queues.
 # ---------------------------------------------------------------------------
+
+
+def _mirror_failure(item, job) -> None:
+    from mixar.modules.common.job_queue.core.job import JobState
+    from mixar.modules.common.job_queue.core import failure_info as fi
+
+    state = getattr(job, "state", None)
+    if state not in (JobState.FAILED, JobState.CANCELLED):
+        for name in ("error_class", "error_headline", "error_message",
+                     "error_reason", "error_hint", "error_details"):
+            if getattr(item, name, ""):
+                setattr(item, name, "")
+        return
+    if state == JobState.CANCELLED:
+        item.error_class = "cancelled"
+        item.error_headline = "Cancelled"
+        item.error_message = "Cancelled"
+        item.error_reason = item.error_hint = ""
+        item.error_details = "Cancelled"
+        return
+    item.error_class = getattr(job, "error_class", "") or ""
+    item.error_headline = fi.failure_headline(job)
+    item.error_message = fi.failure_message(job)
+    item.error_reason = fi.failure_reason(job)
+    item.error_hint = fi.failure_hint(job)
+    item.error_details = fi.failure_details(job)
 
 
 def _sync_mirror(_queue) -> None:
@@ -162,8 +200,9 @@ def _sync_mirror(_queue) -> None:
                 job.state.value if hasattr(job.state, "value") else str(job.state)
             )
             item.substate_text = job.substate_text()
-            item.error = job.error
-            item.user_message = job.user_message
+            item.error = str(job.error or "")
+            item.user_message = str(job.user_message or "")
+            _mirror_failure(item, job)
             item.created_at = getattr(job, "created_at", 0.0)
             item.finished_at = getattr(job, "finished_at", 0.0)
             item.type_label = feature_label(

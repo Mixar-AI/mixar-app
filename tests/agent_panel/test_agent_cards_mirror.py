@@ -25,6 +25,7 @@ repaints from it. Three properties matter and are pinned here:
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -98,18 +99,30 @@ def wm(monkeypatch):
     return fake
 
 
+def _dismissed() -> set:
+    """The visible tab's dismissal memory (per tab since parallel scenes)."""
+    from mixar.modules.agent_panel.core import card_sessions
+
+    return card_sessions.memory(card_sessions.projected_sid()).dismissed
+
+
 @pytest.fixture(autouse=True)
 def _isolate_dismissal_memory():
-    """Empty the module-global dismissal memory around every test.
+    """Empty the per-tab card state around every test.
 
-    ``dismiss_card`` records into a global that outlives a single test; a
+    ``dismiss_card`` records into module state that outlives a single test; a
     leftover id would silently filter another test's todo list.
     """
-    cards_mod._dismissed_task_ids.clear()
-    cards_mod._exit_epoch.clear()
+    from mixar.modules.agent_panel.core import card_sessions
+
+    def reset():
+        card_sessions._sessions.clear()
+        card_sessions._memory.clear()
+        card_sessions._projected_sid = ""
+
+    reset()
     yield
-    cards_mod._dismissed_task_ids.clear()
-    cards_mod._exit_epoch.clear()
+    reset()
 
 
 @pytest.fixture
@@ -120,10 +133,12 @@ def open_run(monkeypatch):
     so the test drives the same ``SessionManager.run_open`` read the mirror
     does.
     """
-    monkeypatch.setattr(
-        bpy.context.scene, "mixie_run_open", True, raising=False
-    )
-    return bpy.context.scene
+    scene = SimpleNamespace(mixie_run_open=True, mixie_session_id="open-run")
+    # Cards now resolve the visible scene through the per-tab session helper.
+    context = cards_mod.sessions.bpy.context
+    monkeypatch.setattr(context, "window", SimpleNamespace(scene=scene), raising=False)
+    monkeypatch.setattr(context, "scene", scene, raising=False)
+    return scene
 
 
 def _todo(n, status='IN_PROGRESS', prefix="Build part"):
@@ -240,7 +255,7 @@ class TestDismissalMemory:
         for _ in range(3):
             assert cards_mod.mirror_todo_items(items) == 0
             assert len(wm.mixar_agent_cards) == 0
-            assert cards_mod._dismissed_task_ids == set(dismissed)
+            assert _dismissed() == set(dismissed)
 
         cards_mod.clear_cards()  # next turn, even though the panel is already empty
         assert cards_mod.mirror_todo_items(items) == count
@@ -323,6 +338,17 @@ class TestAgentNaming:
         assert name.endswith("…")
         assert not name[:-1].endswith(" ")  # no trailing space before the ellipsis
         assert len(name) <= 36
+
+    def test_an_identifier_task_name_reads_as_prose(self):
+        assert cards_mod.derive_agent_name("gaming_pc") == "Gaming PC"
+        assert cards_mod.derive_agent_name("back_window_left") == "Back window left"
+        assert cards_mod.derive_agent_name("oak-table") == "Oak table"
+        assert cards_mod.derive_agent_name("backWindowLeft") == "Back window left"
+        assert cards_mod.derive_agent_name("chair_2") == "Chair 2"
+        assert cards_mod.derive_agent_name("sofa") == "Sofa"
+
+    def test_a_prose_task_keeps_its_underscores(self):
+        assert cards_mod.derive_agent_name("Rename the_mesh.") == "Rename the_mesh"
 
     def test_an_empty_task_still_names_the_agent(self):
         assert cards_mod.derive_agent_name("") == "Agent"
@@ -479,14 +505,14 @@ class TestReopenedTask:
         # The task finishes; its terminal snapshot must not re-add the row.
         assert cards_mod.mirror_todo_items(_todo(3, status='DONE')) == 2
         assert [c.task_id for c in wm.mixar_agent_cards] == ["0", "2"]
-        assert "1" in cards_mod._dismissed_task_ids
+        assert "1" in _dismissed()
 
     def test_reviving_one_card_leaves_its_finished_siblings_dismissed(
         self, wm, open_run
     ):
         self._finish_and_let_exit()
         cards_mod.mirror_todo_items(self._reopened())
-        assert cards_mod._dismissed_task_ids == {"0", "2"}
+        assert _dismissed() == {"0", "2"}
 
     def test_a_pending_exit_timer_does_not_remove_the_revived_card(self, wm):
         """The timer armed for attempt 1 must not fire on attempt 2's card."""

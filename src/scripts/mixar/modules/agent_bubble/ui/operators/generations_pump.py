@@ -11,6 +11,9 @@ Two things on that tab change without any event to notice them:
   threads. The pane paints "Loading assets…" in the meantime and has to be
   repainted when the data lands.
 * A "GENERATING" tile's age line ticks while its job runs.
+* Files appear in a connected folder. While My Libraries is showing, the
+  tick also asks ``core/library_media.py`` to re-list them; that call is
+  throttled and costs one stat per folder when nothing changed.
 
 A redraw tagged from inside a draw callback does not wake Blender's idle
 loop, so the pane cannot drive its own frames — same constraint the chat's
@@ -32,6 +35,13 @@ def _tick():
         wm = bpy.context.window_manager
         if wm is None or getattr(wm, "mixar_bubble_tab", "") != 'GENERATIONS':
             return _TICK_SECONDS
+        if getattr(wm, "mixar_generations_source", "") == 'LIBRARY':
+            try:
+                from mixar.modules.agent_bubble.core import library_media
+
+                library_media.refresh(bpy.context)
+            except Exception:  # noqa: BLE001 — a bad folder must not stop redraws
+                pass
         for window in wm.windows:
             screen = window.screen
             if screen is None:

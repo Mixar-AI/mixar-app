@@ -15,6 +15,13 @@
  * that block: the viewer's pointer is usually far from the top bar and the
  * menu must stay up for the whole line; Escape or a click outside still
  * close it like any popup.
+ *
+ * `Mixar_tour_popover_open` opens a header popover (the profile card, from
+ * the low-credit toast's Refer a Friend button) by activating its own button
+ * and sending it the open event, the path a key accelerator takes. The card
+ * then belongs to the button's handler and lives exactly as a clicked one.
+ * Never attach a popover to a button that is not active: once the header
+ * rebuilds its blocks, the popover's refresh reads the freed button.
  */
 
 #include "../interface_intern.hh"
@@ -130,6 +137,66 @@ bool Mixar_tour_menu_open(bContext *C, wmWindow *win, const char *menu_idname)
   CTX_wm_area_set(C, prev_area);
   CTX_wm_region_set(C, prev_region);
   return true;
+}
+
+static ui::Button *mixar_tour_find_popover_button(wmWindow *win,
+                                                  bScreen *screen,
+                                                  const PanelType *pt,
+                                                  ScrArea **r_area,
+                                                  ARegion **r_region)
+{
+  ED_screen_areas_iter (win, screen, area) {
+    for (ARegion &region : area->regionbase) {
+      if (region.runtime == nullptr) {
+        continue;
+      }
+      for (ui::Block &block : region.runtime->uiblocks) {
+        for (ui::Button &but : block.buttons()) {
+          if (but.type == ui::ButtonType::Popover && ui::button_paneltype_get(&but) == pt) {
+            *r_area = area;
+            *r_region = &region;
+            return &but;
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+bool Mixar_tour_popover_open(bContext *C, wmWindow *win, const char *panel_idname)
+{
+  if (C == nullptr || win == nullptr || panel_idname == nullptr) {
+    return false;
+  }
+  bScreen *screen = WM_window_get_active_screen(win);
+  PanelType *pt = WM_paneltype_find(panel_idname, true);
+  if (screen == nullptr || pt == nullptr) {
+    return false;
+  }
+  ScrArea *area = nullptr;
+  ARegion *region = nullptr;
+  ui::Button *but = mixar_tour_find_popover_button(win, screen, pt, &area, &region);
+  if (but == nullptr) {
+    return false;
+  }
+
+  wmWindow *prev_win = CTX_wm_window(C);
+  ScrArea *prev_area = CTX_wm_area(C);
+  ARegion *prev_region = CTX_wm_region(C);
+  CTX_wm_window_set(C, win);
+  CTX_wm_area_set(C, area);
+  CTX_wm_region_set(C, region);
+
+  const bool opened = !pt->poll || pt->poll(C, pt);
+  if (opened) {
+    ui::button_activate_event(C, region, but);
+  }
+
+  CTX_wm_window_set(C, prev_win);
+  CTX_wm_area_set(C, prev_area);
+  CTX_wm_region_set(C, prev_region);
+  return opened;
 }
 
 bool Mixar_tour_menu_close(wmWindow *win)

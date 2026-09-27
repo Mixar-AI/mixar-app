@@ -111,7 +111,7 @@ class SceneGenExpLabelsJob(Job):
         result = inner.get("result") or {}
 
         if gq_status in FAILED_BACKEND_STATUSES:
-            self.error = inner.get("error", "Label extraction failed")
+            self.error = (inner.get("error") or "Label extraction failed")
             self.user_message = inner.get("user_message", "") or "Label extraction failed"
             return ("FAIL", [])
         if gq_status == "PENDING":

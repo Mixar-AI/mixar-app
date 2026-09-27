@@ -78,12 +78,16 @@ def _display_title(display_label: str, label: str) -> str:
     return title[:1].upper() + title[1:]
 
 
-def _status_word(state: str, substate: str) -> str:
-    """Human-readable state text; the icon alone is not an accessible label."""
+def _status_word(state: str, substate: str, headline: str = "") -> str:
+    """Human-readable state text; the icon alone is not an accessible label.
+
+    A failed job says WHY in two words ("Blocked by content policy",
+    "Out of credits") — ``headline`` from core/failure_info.py.
+    """
     if state == JobState.SUCCESS.value:
         return "Done"
     if state == JobState.FAILED.value:
-        return "Failed"
+        return headline or "Failed"
     if state == JobState.CANCELLED.value:
         return "Cancelled"
     if state == JobState.PAUSED_AUTH.value:
@@ -181,7 +185,7 @@ class MIXIE_UL_unified_queue(UIList):
             metadata_box.label(text=metadata_label)
 
         # -- Row 3: status -------------------------------------------------
-        status_text = _status_word(state, item.substate_text)
+        status_text = _status_word(state, item.substate_text, item.error_headline)
         if status_text:
             col.separator(factor=_QUEUE_STATUS_GAP)
             status_row = col.row(align=True)
@@ -191,13 +195,24 @@ class MIXIE_UL_unified_queue(UIList):
             status_cell.label(text=status_text)
 
         # -- Optional error detail + copy/report actions -------------------
-        if is_failed and (item.user_message or item.error):
+        if is_failed and (item.error_message or item.user_message or item.error):
             col.separator(factor=_QUEUE_ROW_GAP)
             err_row = col.row(align=True)
-            msg_col = err_row.row(align=True)
-            msg_col.active = False
-            msg = item.user_message or sanitize_message(item.error)
-            msg_col.label(text=msg, icon='BLANK1')
+            msg_col = err_row.column(align=True)
+            msg = (
+                item.error_message or item.user_message
+                or sanitize_message(item.error)
+            )
+            msg_col.label(text=msg, icon='ERROR')
+            # The provider's own words, then what the user can do about it.
+            for extra in (
+                f"Reason: {item.error_reason}" if item.error_reason else "",
+                item.error_hint,
+            ):
+                if extra:
+                    line = msg_col.row(align=True)
+                    line.active = False
+                    line.label(text=extra, icon='BLANK1')
             actions = err_row.row(align=True)
             actions.alignment = 'RIGHT'
             op = actions.operator(
