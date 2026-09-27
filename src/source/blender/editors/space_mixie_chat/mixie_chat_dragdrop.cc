@@ -166,12 +166,9 @@ static bool mixie_chat_image_drop_poll(bContext *C,
     if (region && region->regiontype == RGN_TYPE_HEADER) {
       return false;
     }
-    PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
-    PropertyRNA *tab = RNA_struct_find_property(&wm, "mixar_bubble_tab");
-    int agent;
-    if (!tab || !RNA_property_enum_value(C, &wm, tab, "AGENT", &agent) ||
-        RNA_property_enum_get(&wm, tab) != agent)
-    {
+    /* Only a chat tab (Agent, Add-on) has a composer to attach to; a pane
+     * tab rejects the drop rather than feeding a hidden composer. */
+    if (!ED_agent_bubble_tab_shows_chat(C, false)) {
       return false;
     }
   }

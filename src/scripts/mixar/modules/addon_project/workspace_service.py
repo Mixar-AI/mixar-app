@@ -12,7 +12,6 @@ allow_root_package guard and the self-heal key on.
 
 from pathlib import Path
 
-from .errors import AddonProjectError
 from .installer import remove_workspace_root_link
 from .manifest import (
     ensure_manifest,
@@ -26,71 +25,38 @@ from .workspace import (
     ensure_workspace_root,
     get_workspace_root,
     list_workspace_projects,
-    saved_workspace_root_value,
-    set_workspace_root,
-    workspace_path,
 )
 
 
 class WorkspaceServiceMixin:
     def get_workspace_root(self):
         with self._lock:
-            return get_workspace_root(self.storage_dir)
+            return get_workspace_root()
 
     def ensure_workspace_root(self) -> Path:
         with self._lock:
             return ensure_workspace_root(self.storage_dir)
 
-    def set_workspace_root(self, value) -> Path:
-        with self._lock:
-            return set_workspace_root(self.storage_dir, value)
-
     def list_workspace_projects(self) -> list:
         with self._lock:
-            return list_workspace_projects(get_workspace_root(self.storage_dir))
+            return list_workspace_projects(get_workspace_root())
 
     def link_workspace_root(self) -> dict:
-        """Link the workspace root itself as THE project (idempotent).
+        """Link the projects root as THE project (idempotent).
 
-        Writes the ``workspace`` manifest stamp: every allow_root_package
-        guard and the self-heal key on that stamp, so an abandoned old root
-        keeps its guards and a never-stamped folder is never healed.
+        The root is the Preference; a missing folder is created here, so
+        every caller (the first Send, the agent's RPC tools)
+        works with zero questions. Writes the ``workspace`` manifest stamp:
+        every allow_root_package guard and the self-heal key on that stamp,
+        so an abandoned old root keeps its guards and a never-stamped folder
+        is never healed.
         """
         with self._lock:
-            root = get_workspace_root(self.storage_dir)
-            if root is None:
-                raise AddonProjectError(
-                    "workspace_root_missing",
-                    "Choose the add-on projects folder first",
-                )
+            root = ensure_workspace_root(self.storage_dir)
             ensure_manifest(root, allow_root_package=False)
             manifest = mark_workspace_manifest(root)
-            self.registry.register(root.resolve(strict=True), manifest)
+            self.registry.register(root, manifest)
             return self.describe(manifest["project_id"])
-
-    def adopt_workspace_root(self, value) -> dict:
-        """Validate and link a candidate root; persist it only on success.
-
-        A pick that fails to link (project_too_large, broken manifest) must
-        not wedge every later zero-question Send, so the previously saved
-        root is restored on failure.
-        """
-        with self._lock:
-            previous = saved_workspace_root_value(self.storage_dir)
-            set_workspace_root(self.storage_dir, value)
-            try:
-                return self.link_workspace_root()
-            except Exception:
-                if previous:
-                    write_json_atomic(
-                        workspace_path(self.storage_dir), {"root": previous}
-                    )
-                else:
-                    try:
-                        workspace_path(self.storage_dir).unlink()
-                    except OSError:
-                        pass
-                raise
 
     def _heal_workspace_root(self, root: Path, manifest: dict) -> dict:
         """Undo the legacy whole-root install shape. No-op-safe.

@@ -18,10 +18,7 @@
 
 #include "BKE_screen.hh"
 
-#include "BLF_api.hh"
-
 #include "DNA_screen_types.h"
-#include "DNA_userdef_types.h"
 
 #include "UI_interface.hh"
 #include "UI_mixar.hh"
@@ -89,7 +86,8 @@ const TabMetric g_tab_metrics[AGENT_TAB_COUNT] = {
     {AGENT_TAB_X_3D, AGENT_TAB_W_3D, "3D"},
     {AGENT_TAB_X_IMAGE, AGENT_TAB_W_IMAGE, "Image"},
     {AGENT_TAB_X_VIDEO, AGENT_TAB_W_VIDEO, "Video"},
-    {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, "Gaussian Splat"},
+    {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, "Splats"},
+    {AGENT_TAB_X_ADDON, AGENT_TAB_W_ADDON, "Add-on"},
     {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, "Library"},
     {AGENT_TAB_X_QUEUE, AGENT_TAB_W_QUEUE, "Queue"},
 };
@@ -107,52 +105,9 @@ const char *agent_ui_tab_label(const AgentTabId tab)
 /** \name Build
  * \{ */
 
-float agent_ui_composer_wrap_width_px(const int window_w, const int pad_real_w)
-{
-  const bool pad = pad_real_w > 0;
-  const float u = float(window_w) / float(AGENT_ISLAND_W);
-  const float region_w = pad ? float(pad_real_w) : float(window_w);
-  const float island_w = pad ? (region_w / u) : float(AGENT_ISLAND_W);
-  const float card_w = island_w - AGENT_CARD_X * 2.0f;
-  return (card_w - AGENT_SEG_X * 2.0f) * u;
-}
-
-int agent_ui_composer_visual_lines(const char *text, const float wrap_width_px)
-{
-  if (text == nullptr || text[0] == '\0') {
-    return 1;
-  }
-
-  /* Must match widget_draw_text_multiline: native widget font, wrap width
-   * after the 0.4 UI-unit text pad and 4*pixelsize inset. */
-  const int text_pad = int(0.4f * U.widget_unit);
-  const int width = std::max(int(wrap_width_px) - text_pad - int(4.0f * U.pixelsize), 10);
-
-  uiFontStyle fstyle = ui::style_get()->widget;
-  ui::fontstyle_set(&fstyle);
-  const int fontid = fstyle.uifont_id;
-  const int text_len = int(strlen(text));
-  blender::Vector<blender::StringRef> lines = BLF_string_wrap(
-      fontid,
-      blender::StringRef(text, text_len),
-      width,
-      BLFWrapMode(int(BLFWrapMode::Typographical) | int(BLFWrapMode::HardLimit)));
-  int count = int(lines.size());
-  if (text_len > 0 && text[text_len - 1] == '\n') {
-    count++;
-  }
-  return std::clamp(std::max(1, count), 1, AGENT_INPUT_MAX_LINES);
-}
-
-float agent_ui_composer_strip_h(const int visual_lines)
-{
-  const int lines = std::clamp(visual_lines, 1, AGENT_INPUT_MAX_LINES);
-  return float(AGENT_INPUT_H * lines);
-}
-
 float agent_ui_panel_top(const AgentTabId tab)
 {
-  return tab == AGENT_TAB_AGENT ? float(AGENT_PANEL_Y) : float(AGENT_CARD_Y + 12);
+  return agent_ui_tab_shows_chat(tab) ? float(AGENT_PANEL_Y) : float(AGENT_CARD_Y + 12);
 }
 
 void agent_ui_layout_build(const int window_w,
@@ -257,18 +212,18 @@ void agent_ui_layout_build(const int window_w,
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     tabs[i] = g_tab_metrics[i];
     const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W : AGENT_TAB_ICON;
-    const float trailing = i == AGENT_TAB_SPLAT ? badge_w + AGENT_TAB_ICON_GAP : 0.0f;
+    const float trailing = i == AGENT_TAB_ADDON ? badge_w + AGENT_TAB_ICON_GAP : 0.0f;
     const float wanted = ui::mixar_text_width(tabs[i].label, text_size) / u + leading +
                          trailing + 3.0f * AGENT_TAB_ICON_GAP + 2.0f / u;
     tabs[i].w = std::max(tabs[i].w, wanted);
     extra += tabs[i].w - g_tab_metrics[i].w;
   }
-  const float spare = AGENT_TAB_X_GENERATIONS - (AGENT_TAB_X_SPLAT + AGENT_TAB_W_SPLAT) -
+  const float spare = AGENT_TAB_X_GENERATIONS - (AGENT_TAB_X_ADDON + AGENT_TAB_W_ADDON) -
                       6.0f;
   const float growth = extra > 0.0f ? std::min(1.0f, spare / extra) : 0.0f;
   for (int i = 0; i < AGENT_TAB_COUNT; i++) {
     tabs[i].w = g_tab_metrics[i].w + (tabs[i].w - g_tab_metrics[i].w) * growth;
-    if (i > 0 && i <= AGENT_TAB_SPLAT) {
+    if (i > 0 && i <= AGENT_TAB_ADDON) {
       const float gap = g_tab_metrics[i].x -
                         (g_tab_metrics[i - 1].x + g_tab_metrics[i - 1].w);
       tabs[i].x = tabs[i - 1].x + tabs[i - 1].w + gap;

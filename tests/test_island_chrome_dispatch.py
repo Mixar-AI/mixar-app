@@ -31,6 +31,9 @@ BUBBLE_CC = (
 MAIN_REGION_CC = (
     ROOT / "src/source/blender/editors/space_mixie_chat/mixie_chat_main_region.cc"
 ).read_text(encoding="utf-8")
+STATE_CC = (
+    ROOT / "src/source/blender/editors/space_agent_bubble/agent_ui_state.cc"
+).read_text(encoding="utf-8")
 
 
 def _function_body(source: str, signature_start: str) -> str:
@@ -86,9 +89,11 @@ def test_stand_down_reads_the_bubble_tab_by_identifier():
     repoints the moment the item list is reordered.
     """
     body = _function_body(MAIN_REGION_CC, "static bool mixie_chat_dispatch_is_live(")
-    assert '"mixar_bubble_tab"' in body
-    assert 'STREQ(ident, "AGENT")' in body
-    assert "RNA_property_enum_identifier" in body
+    assert "ED_agent_bubble_tab_shows_chat(C, true)" in body
+    predicate = _function_body(STATE_CC, "bool ED_agent_bubble_tab_shows_chat(")
+    assert '"mixar_bubble_tab"' in predicate
+    assert "RNA_property_enum_identifier" in predicate
+    assert "agent_ui_tab_from_identifier(ident)" in predicate
 
 
 def test_stand_down_rejects_non_bubble_spaces():
@@ -108,9 +113,11 @@ def test_stand_down_fails_open_before_python_registers_the_property():
     the whole window during startup.
     """
     body = _function_body(MAIN_REGION_CC, "static bool mixie_chat_dispatch_is_live(")
-    assert body.count("return true;") >= 3, (
+    assert "ED_agent_bubble_tab_shows_chat(C, true)" in body, "unknown must read as live"
+    predicate = _function_body(STATE_CC, "bool ED_agent_bubble_tab_shows_chat(")
+    assert predicate.count("return unknown;") >= 3, (
         "the missing-property, wrong-type and unresolved-identifier branches "
-        "must each fall back to live"
+        "must each fall back to the caller's `unknown`"
     )
 
 
@@ -118,7 +125,9 @@ def test_pane_draw_drops_the_transcript_layout_cache():
     """A pane tab returns before `mixie_chat_main_region_draw`, so the cached
     message rects would otherwise outlive the transcript that produced them."""
     body = _function_body(BUBBLE_CC, "static void agent_bubble_island_region_draw(")
-    branch_at = body.index("if (tab_probe.active_tab != AGENT_TAB_AGENT) {")
+    branch_at = body.index(
+        "if (!agent_ui_tab_shows_chat(AgentTabId(tab_probe.active_tab))) {"
+    )
     branch = body[branch_at:]
     clear_at = branch.index("agent_bubble_clear_chat_layout_cache(C);")
     assert clear_at < branch.index("agent_ui_draw_island("), (

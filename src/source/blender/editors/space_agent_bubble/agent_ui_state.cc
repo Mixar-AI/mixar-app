@@ -52,6 +52,7 @@
 #include "WM_api.hh"
 
 #include "ED_moodboard_attachment.hh"
+#include "ED_space_api.hh"
 
 #include "agent_ui_draw.hh"
 #include "agent_ui_cat_activity.hh"
@@ -196,12 +197,61 @@ int read_queue_count(wmWindowManager *wm)
 
 }  // namespace
 
+AgentTabId agent_ui_tab_from_identifier(const char *identifier)
+{
+  /* Which content the card shows — wm.mixar_bubble_tab, a WindowManager
+   * enum registered in agent_bubble/ui/properties/bubble_tab_props.py.
+   * Match on stable enum IDENTIFIERS, never display names or indices. */
+  const struct {
+    const char *id;
+    AgentTabId tab;
+  } tab_map[] = {
+      {"AGENT", AGENT_TAB_AGENT},
+      {"THREE_D", AGENT_TAB_3D},
+      {"IMAGE", AGENT_TAB_IMAGE},
+      {"VIDEO", AGENT_TAB_VIDEO},
+      {"SPLAT", AGENT_TAB_SPLAT},
+      {"ADDON", AGENT_TAB_ADDON},
+      {"GENERATIONS", AGENT_TAB_GENERATIONS},
+      {"QUEUE", AGENT_TAB_QUEUE},
+  };
+  if (identifier) {
+    for (const auto &m : tab_map) {
+      if (STREQ(identifier, m.id)) {
+        return m.tab;
+      }
+    }
+  }
+  return AGENT_TAB_COUNT;
+}
+
+bool ED_agent_bubble_tab_shows_chat(const bContext *C, const bool unknown)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  if (!wm) {
+    return unknown;
+  }
+  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
+  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab");
+  if (!prop || RNA_property_type(prop) != PROP_ENUM) {
+    return unknown; /* Not registered yet (the card is Agent until then). */
+  }
+  const char *ident = nullptr;
+  if (!RNA_property_enum_identifier(
+          nullptr, &wm_ptr, prop, RNA_property_enum_get(&wm_ptr, prop), &ident) ||
+      ident == nullptr)
+  {
+    return unknown;
+  }
+  return agent_ui_tab_shows_chat(agent_ui_tab_from_identifier(ident));
+}
+
 void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
 {
   *r_state = {};
 
   r_state->active_tab = AGENT_TAB_AGENT;  /* overwritten from wm below */
-  r_state->splat_is_new = true;
+  r_state->addon_is_new = true;
   r_state->placeholder = "Describe your scene here...";
   r_state->agent_mode = true;
 
@@ -211,27 +261,18 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   r_state->cat_scene = scene;
 
   if (wm) {
-    /* Which content the card shows — wm.mixar_bubble_tab, a WindowManager
-     * enum registered in agent_bubble/ui/properties/bubble_tab_props.py.
-     * Falls back to AGENT before Python registers it. */
-    /* Match on stable enum IDENTIFIERS, never display names. */
+    /* Falls back to AGENT before Python registers wm.mixar_bubble_tab. */
     PointerRNA wm_tab_ptr = RNA_id_pointer_create(&wm->id);
-    const struct {
-      const char *id;
-      AgentTabId tab;
-    } tab_map[] = {
-        {"AGENT", AGENT_TAB_AGENT},
-        {"THREE_D", AGENT_TAB_3D},
-        {"IMAGE", AGENT_TAB_IMAGE},
-        {"VIDEO", AGENT_TAB_VIDEO},
-        {"SPLAT", AGENT_TAB_SPLAT},
-        {"GENERATIONS", AGENT_TAB_GENERATIONS},
-        {"QUEUE", AGENT_TAB_QUEUE},
-    };
-    for (const auto &m : tab_map) {
-      if (enum_is(&wm_tab_ptr, "mixar_bubble_tab", m.id)) {
-        r_state->active_tab = m.tab;
-        break;
+    if (PropertyRNA *prop = RNA_struct_find_property(&wm_tab_ptr, "mixar_bubble_tab")) {
+      const char *ident = nullptr;
+      if (RNA_property_type(prop) == PROP_ENUM &&
+          RNA_property_enum_identifier(
+              nullptr, &wm_tab_ptr, prop, RNA_property_enum_get(&wm_tab_ptr, prop), &ident))
+      {
+        const AgentTabId tab = agent_ui_tab_from_identifier(ident);
+        if (tab != AGENT_TAB_COUNT) {
+          r_state->active_tab = tab;
+        }
       }
     }
   }

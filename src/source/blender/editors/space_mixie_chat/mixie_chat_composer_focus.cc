@@ -10,6 +10,7 @@
 #include "DNA_scene_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
+#include "ED_space_api.hh"
 #include "RNA_access.hh"
 #include "UI_interface_c.hh"
 #include "WM_api.hh"
@@ -36,11 +37,7 @@ static wmOperatorStatus focus_composer_exec(bContext *C, wmOperator * /*op*/)
   }
   int composer_region = RGN_TYPE_TOOLS;
   if (area->spacetype == SPACE_AGENT_BUBBLE) {
-    PropertyRNA *tab = RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab");
-    int agent_tab = 0;
-    if (tab && (!RNA_property_enum_value(C, &wm_ptr, tab, "AGENT", &agent_tab) ||
-                RNA_property_enum_get(&wm_ptr, tab) != agent_tab))
-    {
+    if (!ED_agent_bubble_tab_shows_chat(C, true)) {
       return OPERATOR_CANCELLED;
     }
     PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);

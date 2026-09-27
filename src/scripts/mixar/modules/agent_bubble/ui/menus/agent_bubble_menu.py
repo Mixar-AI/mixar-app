@@ -336,12 +336,6 @@ class MIXIE_CHAT_MT_agent_bubble(Menu):
             icon='PLAY',
         )
 
-        if scene is not None:
-            from mixar.modules.addon_project.ui.controls import (
-                draw_project_controls,
-            )
-            draw_project_controls(layout, scene)
-
 
 from .scene_tabs_menu import MIXIE_CHAT_MT_scene_tabs, MIXIE_CHAT_MT_send_to_scene_tab  # noqa: E402
 

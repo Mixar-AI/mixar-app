@@ -131,7 +131,7 @@ def load_manifest(root: Path) -> dict:
         "entrypoint": entrypoint,
         # Schema-compatible extra key: True marks this project as an add-on
         # projects WORKSPACE. Guard decisions key on this stamp, never on a
-        # live comparison with the currently saved workspace.json — an
+        # live comparison with the current Preference root — an
         # abandoned old root keeps its guards, a never-stamped standalone
         # folder is never healed.
         "workspace": bool(payload.get("workspace", False)),

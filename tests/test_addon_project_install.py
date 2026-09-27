@@ -57,7 +57,7 @@ class _AddonUtilsStub:
     def disable(self, *_args, **_kwargs):
         pytest.fail("A disabled add-on must not be disabled")
 
-    def enable(self, name, default_set=False, persistent=False):
+    def enable(self, name, default_set=False, persistent=False, **_kwargs):
         self.enable_calls.append((name, default_set))
         if self.enable_result == "module":
             return sys.modules.get(name) or SimpleNamespace()
@@ -185,7 +185,7 @@ def test_dotted_entrypoint_keeps_dry_run_and_skips_install(tmp_path, monkeypatch
     assert install["reason"] == "dotted_entrypoint"
     assert "top-level module" in install["message"]
     module = sys.modules["studio_tools.nested_addon_sample"]
-    assert module.events == ["register", "unregister"]
+    assert module.events == ["register", "unregister"] * 2
     assert list(addons_dir.iterdir()) == []
     assert stub.enable_calls == []
 

@@ -19,6 +19,7 @@ set(SRC
   space_agent_bubble.cc
   agent_bubble_glass.cc
   agent_bubble_composer.cc
+  agent_ui_composer_metrics.cc
   agent_bubble_references.cc
   agent_bubble_reference_items.cc
   agent_bubble_references_navigation.cc

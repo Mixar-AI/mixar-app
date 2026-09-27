@@ -14,7 +14,7 @@ from .capture import capture
 from .constants import EVENT_GENERATION_ATTEMPT, EVENT_GENERATION_DISPATCH, EVENT_UI_ACTION, EVENT_ISLAND_TAB
 from .preferences import is_enabled
 
-TABS = frozenset({'AGENT', 'THREE_D', 'IMAGE', 'VIDEO', 'SPLAT', 'GENERATIONS', 'QUEUE'})
+TABS = frozenset({'AGENT', 'ADDON', 'THREE_D', 'IMAGE', 'VIDEO', 'SPLAT', 'GENERATIONS', 'QUEUE'})
 OWNERS = {
     'MixieMoodboardTabImageGenProps': ('image_gen', 'tab_imagegen'),
     'MixieMoodboardTabLookdevProps': ('ai_render', 'tab_lookdev'),

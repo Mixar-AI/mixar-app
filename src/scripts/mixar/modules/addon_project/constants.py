@@ -6,6 +6,11 @@
 
 PROTOCOL_VERSION = 1
 CAPABILITY = "addon_project_v1"
+# Advertised beside CAPABILITY: this client answers run_tests and set_entrypoint.
+TESTS_CAPABILITY = "addon_project_tests_v1"
+# Advertised beside both: commit_patch accepts "verify" — the commit reloads
+# and tests every add-on it touched and reverts itself when either fails.
+VERIFY_CAPABILITY = "addon_project_verify_v1"
 MANIFEST_VERSION = 1
 MANIFEST_DIR = ".mixar"
 MANIFEST_FILE = "addon-project.json"
@@ -14,6 +19,9 @@ RPC_DESCRIBE = "addon_project.describe"
 RPC_SEARCH = "addon_project.search"
 RPC_READ = "addon_project.read"
 RPC_STAGE_PATCH = "addon_project.stage_patch"
+# commit_patch: "proposal_id"; optional "verify" (VERIFY_CAPABILITY) runs the
+# reload dry run and the add-on's REQUIRED tests on the main thread before the
+# commit settles — a failure reverts every file and restores the live add-on.
 RPC_COMMIT_PATCH = "addon_project.commit_patch"
 # run_checks accepts an OPTIONAL client-defined "entrypoint" param (validated
 # single-segment module name that must resolve inside the project); it falls
@@ -29,6 +37,11 @@ RPC_HISTORY = "addon_project.history"
 # optional "entrypoint" validated like run_checks' (single top-level module
 # resolving inside the project; falls back to the manifest entrypoint).
 RPC_SET_ENABLED = "addon_project.set_enabled"
+# run_tests: unittest discovery over <entrypoint>/tests (a package), run on the
+# main thread with bpy live in a fresh scene; optional "entrypoint" as above.
+RPC_RUN_TESTS = "addon_project.run_tests"
+# set_entrypoint: "entrypoint" (single top-level module) becomes the active add-on.
+RPC_SET_ENTRYPOINT = "addon_project.set_entrypoint"
 
 RPC_METHODS = frozenset({
     RPC_DESCRIBE,
@@ -40,7 +53,16 @@ RPC_METHODS = frozenset({
     RPC_ROLLBACK,
     RPC_HISTORY,
     RPC_SET_ENABLED,
+    RPC_RUN_TESTS,
+    RPC_SET_ENTRYPOINT,
 })
+
+# The add-on projects root is a Mixar Preference (MixarPaintPreferences.
+# addon_projects_dir, drawn in the Properties editor's Mixar Preferences
+# panel). The default is expanded at use time; the Preference is the ONE
+# source of the root, read by workspace.configured_workspace_root.
+WORKSPACE_ROOT_PREFERENCE = "addon_projects_dir"
+DEFAULT_WORKSPACE_DIR = "~/Mixar Addons"
 
 # One source of truth for the workspace layout convention: describe ships it
 # proactively (the "layout" field) and the workspace_root_layout stage error

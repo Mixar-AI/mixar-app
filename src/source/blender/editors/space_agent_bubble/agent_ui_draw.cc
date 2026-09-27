@@ -363,8 +363,7 @@ void agent_ui_draw_island(ARegion *region,
                    /*rim=*/false);
 
   /* Session actions stay available without repeating the active tab title. */
-  const bool agent_tab = layout->tabs[AGENT_TAB_AGENT].active;
-  if (agent_tab) {
+  if (agent_ui_tab_shows_chat(AgentTabId(state->active_tab))) {
     /* Header buttons: an accent disc with a lighter glyph on top. */
     float history_fill[4], new_chat_fill[4], checkpoints_fill[4];
     agent_ui_motion_color(accent, accent,

@@ -152,7 +152,7 @@ class MIXAR_OT_generations_add_library(Operator):
     def invoke(self, context, _event):
         # A native folder picker, not a props dialog: a dialog opens behind
         # the always-on-top bubble window and looks like nothing happened
-        # (the same finding the add-on project's New Add-on picker records).
+        # (a props dialog is never the right picker under the bubble).
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 

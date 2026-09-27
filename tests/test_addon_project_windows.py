@@ -149,7 +149,7 @@ class _AddonUtils:
     def check(self, name):
         return (False, name in self.enabled)
 
-    def enable(self, name, default_set=False, persistent=False):
+    def enable(self, name, default_set=False, persistent=False, **_kwargs):
         self.enabled.append(name)
         return sys.modules.get(name) or SimpleNamespace(__file__="x")
 
@@ -158,7 +158,7 @@ class _AddonUtils:
 
 
 def test_the_whole_create_an_addon_flow_works_on_this_platform(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, set_addon_projects_root
 ):
     """Link a workspace, commit a new add-on package, install and enable it."""
     import bpy
@@ -168,10 +168,8 @@ def test_the_whole_create_an_addon_flow_works_on_this_platform(
     monkeypatch.setattr(bpy.utils, "user_resource", lambda *a, **k: str(addons_dir))
     monkeypatch.setitem(sys.modules, "addon_utils", _AddonUtils())
 
-    root = tmp_path / "Mixar Addons"
-    root.mkdir()
+    root = set_addon_projects_root(tmp_path / "Mixar Addons")
     service = AddonProjectService(tmp_path / "client_state")
-    service.set_workspace_root(str(root))
     linked = service.link_workspace_root()
     project_id = linked["project_id"]
 

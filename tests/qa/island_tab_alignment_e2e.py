@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """No-credit check of the island's left navigation and right utility tabs.
 
+Clicking Add-on / Agent also pins the tab -> scene.mixie_chat_mode sync.
+
 Run with QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT on an isolated Dev app.
 Uses native button bounds for assertions, clicks and screenshots.
 """
@@ -20,6 +22,7 @@ TABS = {
     'IMAGE': 'Image generation',
     'VIDEO': 'Video generation',
     'SPLAT': 'Gaussian Splat world generation',
+    'ADDON': 'Build a Blender add-on with the agent',
     'GENERATIONS': 'Your generations and connected asset libraries',
     'QUEUE': 'Generation queue',
 }
@@ -37,9 +40,11 @@ def assert_tab_alignment(qa):
     assert abs(left - right) <= 2, (left, right)
     gaps = [b[0] - a[2] for a, b in zip(pills, pills[1:])]
     assert min(gaps) > 0, pills
-    compact = gaps[:4] + gaps[5:]
+    # Left group Agent..Add-on, right group Library/Queue; the spare gap
+    # between the groups is gaps[5].
+    compact = gaps[:5] + gaps[6:]
     assert max(compact) <= width * .01, gaps
-    assert gaps[4] >= max(compact) - 2, gaps
+    assert gaps[5] >= max(compact) - 2, gaps
     assert max(p[1] for p in pills) - min(p[1] for p in pills) <= 2, pills
     return {'width': width, 'outer_margins': [left, right], 'gaps': gaps}
 
@@ -77,6 +82,9 @@ def run(qa):
             qa.click(area_type='AGENT_BUBBLE', text=tip)
             qa.wait(f'bpy.context.window_manager.mixar_bubble_tab=={key!r}', timeout=5)
             qa.step(f'click-{key.lower()}', assert_tab_alignment, qa)
+            if key in ('AGENT', 'ADDON'):
+                mode = 'ADDON_PROJECT' if key == 'ADDON' else 'AGENT'
+                qa.wait(f'bpy.context.scene.mixie_chat_mode=={mode!r}', timeout=5)
         return {'geometry': metrics, 'backend_calls': 0, 'screenshots': str(out)}
     finally:
         qa.eval(f'bpy.context.preferences.view.ui_scale={saved_scale}; '

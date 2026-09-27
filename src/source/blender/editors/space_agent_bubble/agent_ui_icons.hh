@@ -26,6 +26,7 @@ enum AgentIcon {
   AGENT_ICON_AGENT = 0, /* Person in a ring. */
   AGENT_ICON_VIDEO,     /* Video camera. */
   AGENT_ICON_SPLAT,     /* Nine-dot rosette — Gaussian Splat. */
+  AGENT_ICON_ADDON,     /* Puzzle piece — Add-on Project Mode. */
 
   /* Card header. */
   AGENT_ICON_CLOCK,

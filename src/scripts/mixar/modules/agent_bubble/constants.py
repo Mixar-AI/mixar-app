@@ -25,6 +25,15 @@ import sys
 # opted out and inherits no dead buttons.
 BUBBLE_WINDOW_CONTROLS_SUPPORTED = sys.platform in {"darwin", "win32"}
 
+# The island tabs that show the CHAT (transcript + composer), and the
+# ``scene.mixie_chat_mode`` each one puts the chat into. ``wm.mixar_bubble_tab``
+# is the one source of what the card shows; selecting a chat tab writes its
+# mode (``ui/properties/bubble_tab_props.py``) and a loaded file selects the
+# tab of its saved mode (``space_mixie_chat/core/file_handlers.py``). Every
+# other tab is a generation/queue pane and leaves the mode alone. The C++
+# twin is ``agent_ui_tab_shows_chat`` (``agent_ui_layout.hh``).
+CHAT_TAB_MODES = {'AGENT': 'AGENT', 'ADDON': 'ADDON_PROJECT'}
+
 # How far (window pixels) a press on the pill window may travel and still be
 # a CLICK. Past it the press becomes a DRAG that moves the pill. The pill's
 # press is decided by how it ends, never at PRESS time — see

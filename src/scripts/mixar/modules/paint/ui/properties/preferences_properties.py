@@ -10,7 +10,10 @@ from bpy.props import (
     BoolProperty,
     IntProperty,
     EnumProperty,
+    StringProperty,
 )
+
+from mixar.modules.addon_project.constants import DEFAULT_WORKSPACE_DIR
 
 
 def _save_on_update(self, context):
@@ -157,6 +160,22 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
             ('CPU', "CPU", "Always render on the CPU"),
         ],
         default='AUTO',
+        update=_save_on_update,
+    )
+
+    # ========== ADD-ON PROJECTS ==========
+
+    # The ONE source of the Add-on tab's projects root
+    # (addon_project/workspace.py reads it; the name is
+    # constants.WORKSPACE_ROOT_PREFERENCE). Expanded at use time.
+    addon_projects_dir: StringProperty(
+        name="Add-on Projects Folder",
+        description=(
+            "Where the Add-on tab creates new add-ons, one subfolder each; "
+            "created on first use. Already-linked projects keep their folder"
+        ),
+        default=DEFAULT_WORKSPACE_DIR,
+        subtype='DIR_PATH',
         update=_save_on_update,
     )
 
