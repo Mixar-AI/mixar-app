@@ -75,6 +75,18 @@ def test_the_card_offers_copy_repair_and_stop():
         assert f'"{operator_id}"' in source
 
 
+def test_the_card_says_phone_and_computer_share_a_wifi():
+    """The link is a LAN address: a phone on mobile data or a guest network
+    never connects, and the card would sit waiting with no hint why. So the
+    requirement is on the card, under the title, whether it shows the QR or
+    only the link."""
+    source = _phone_source()
+    assert re.search(r'PHONE_SAME_WIFI_HINT = "[^"]*same Wi-Fi[^"]*"', source)
+    card = source[source.index("\nvoid cinema_draw_phone_card"):]
+    hint = card.index("text_center_fitted(PHONE_SAME_WIFI_HINT")
+    assert hint < card.index("if (has_qr) {\n    y -="), "the hint must not depend on the QR"
+
+
 def test_the_n_panel_is_gone():
     panels = list(MODULE.glob("ui/panels/*.py"))
     assert not panels, f"the sidebar panel came back: {panels}"
