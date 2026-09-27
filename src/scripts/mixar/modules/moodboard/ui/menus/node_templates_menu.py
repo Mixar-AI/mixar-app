@@ -20,6 +20,7 @@ class MIXIE_MT_node_templates(Menu):
     def draw(self, context):
         layout = self.layout.mixar_surface(theme='ZEN', density='COMPACT')
         layout.operator_context = 'INVOKE_DEFAULT'
+        layout.operator("mixie.moodboard_add_scene", text="Scene", icon='SCENE_DATA')
         items = available_templates()
         for item in items:
             draw_template(layout, item)
@@ -38,6 +39,8 @@ class MIXIE_MT_canvas_board(Menu):
         layout = self.layout.mixar_surface(theme='ZEN', density='COMPACT')
         layout.operator_context = 'INVOKE_DEFAULT'
         layout.operator("mixie.moodboard_frame", text="Frame All", icon='HOME')
+        layout.operator("mixie.moodboard_share", text="Share Moodboard", icon='URL')
+        layout.operator("mixie.moodboard_explore", text="Explore Moodboards", icon='WORLD')
         layout.menu("MIXIE_MT_moodboard_arrange", icon='NODETREE')
         layout.separator()
         row = layout.row()

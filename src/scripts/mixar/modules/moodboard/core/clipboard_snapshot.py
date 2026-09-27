@@ -63,6 +63,8 @@ IMAGE_FIELDS = (
     "component_source_segment_id",
     "component_name",
     "show_annotations",
+    "scene_node",
+    "scene_title",
 )
 TEXTBOX_FIELDS = (
     "text",

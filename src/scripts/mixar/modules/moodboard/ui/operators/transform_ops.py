@@ -306,6 +306,9 @@ class MIXIE_OT_moodboard_duplicate(Operator):
             orig_img = scene.mixie_moodboard_images[i]
             new_img = scene.mixie_moodboard_images.add()
             new_img.image = orig_img.image
+            new_img.scene_node = getattr(orig_img, 'scene_node', False)
+            new_img.source_scene = getattr(orig_img, 'source_scene', None)
+            new_img.scene_title = getattr(orig_img, 'scene_title', '')
             new_img.position_x = orig_img.position_x
             new_img.position_y = orig_img.position_y
             new_img.scale = orig_img.scale

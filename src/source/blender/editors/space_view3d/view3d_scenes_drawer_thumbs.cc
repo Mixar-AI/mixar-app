@@ -405,6 +405,17 @@ bool view3d_scenes_drawer_snapshot_capture(const bContext *C,
 /** \name Card texture
  * \{ */
 
+bool view3d_scenes_drawer_snapshot_pixels(Main *bmain, const std::string &name,
+                                        std::vector<unsigned char> &pixels, int &w, int &h)
+{
+  store_sync_main(bmain);
+  const auto found = g_store.by_scene.find(name);
+  if (found == g_store.by_scene.end() || found->second.pixels.empty()) { return false; }
+  pixels = found->second.pixels;
+  w = found->second.w;
+  h = found->second.h;
+  return true;
+}
 void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &t)
 {
   if (t.texture) {

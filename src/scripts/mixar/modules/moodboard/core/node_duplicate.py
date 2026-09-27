@@ -336,7 +336,10 @@ def _materialize(scene, data: dict, delta: tuple, image_resolver=None):
     """Create one node from clipboard data, translated by ``delta``."""
     node = scene.mixie_moodboard_action_nodes.add()
     node.node_id = new_node_id()
-    for field, value in data["fields"].items():
+    for field in _NODE_FIELDS:
+        if field not in data["fields"]:
+            continue
+        value = data["fields"][field]
         try:
             setattr(node, field, value)
         except (TypeError, ValueError):

@@ -38,6 +38,18 @@ class MIXIE_MT_moodboard_context_menu(Menu):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+        for item in scene.mixie_moodboard_images:
+            if item.selected and item.scene_node:
+                if item.source_scene and item.image and item.image.get('_mixar_scene_preview_missing'):
+                    layout.label(text="Open the scene, then refresh its preview", icon='INFO')
+                if item.source_scene:
+                    layout.operator("mixie.moodboard_open_scene", icon='SCENE_DATA').node_id = item.node_id
+                else:
+                    layout.label(text="Scene preview; source is not in this project", icon='INFO')
+                if item.source_scene:
+                    layout.operator("mixie.moodboard_refresh_scene", icon='FILE_REFRESH').node_id = item.node_id
+                layout.separator()
+                break
 
         # Check selection state
         selected_images, selected_textboxes, selected_frames = (

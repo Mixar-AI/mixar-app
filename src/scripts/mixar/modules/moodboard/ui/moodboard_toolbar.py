@@ -76,6 +76,7 @@ class MIXIE_MT_add_image_menu(Menu):
             icon='IMAGE_DATA',
         )
         layout.separator()
+        layout.operator("mixie.moodboard_add_scene", text="Add Scene", icon='SCENE_DATA')
         layout.operator("mixie.moodboard_add_template", text="Add Mesh",
                         icon='OUTLINER_OB_MESH').template = 'MESH_REFERENCE'
         layout.operator("mixie.add_selected_mesh_to_moodboard",

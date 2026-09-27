@@ -69,6 +69,10 @@ class MIXIE_HT_header(Header):
         # The 3D Editor / Canvas switcher was redundant with Blender's standard
         # editor-type dropdown to its left, so the header just names the space.
         layout.label(text="Moodboard")
+        row = layout.row(align=True)
+        row.operator_context = 'INVOKE_DEFAULT'
+        row.operator("mixie.moodboard_explore", text="Explore", icon='WORLD')
+        row.operator("mixie.moodboard_share", text="Share", icon='URL')
 
         # Add View menu (commented out)
         # layout.menu("MIXIE_MT_view")

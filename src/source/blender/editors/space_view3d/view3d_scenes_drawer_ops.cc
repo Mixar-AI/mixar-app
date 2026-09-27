@@ -22,6 +22,7 @@
 #include "BLI_string.h"
 
 #include "BKE_context.hh"
+#include "BKE_image.hh"
 #include "UI_interface_c.hh"
 #include "DNA_view3d_types.h"
 #include "BKE_main.hh"
@@ -29,6 +30,9 @@
 #include "BKE_screen.hh"
 
 #include "DNA_screen_types.h"
+#include "DNA_scene_types.h"
+#include "IMB_imbuf.hh"
+#include "IMB_imbuf_types.hh"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
 
@@ -233,7 +237,7 @@ static void VIEW3D_OT_scenes_drawer_thumbs(wmOperatorType *ot)
 /* Called by the Python tab switch BEFORE the windows move to another scene:
  * the leaving tab's last drawn frame becomes its card. Works with the drawer
  * shut too, so the cards have pictures when it opens. */
-static wmOperatorStatus drawer_snapshot_exec(bContext *C, wmOperator * /*op*/)
+static wmOperatorStatus drawer_snapshot_exec(bContext *C, wmOperator *op)
 {
   if (!view3d_scenes_drawer_snapshots_enabled()) {
     return OPERATOR_CANCELLED;
@@ -245,10 +249,34 @@ static wmOperatorStatus drawer_snapshot_exec(bContext *C, wmOperator * /*op*/)
   }
   int thumb_w, thumb_h;
   thumb_size(&thumb_w, &thumb_h);
-  if (!view3d_scenes_drawer_snapshot_capture(
+  char scene_name[256], image_name[256];
+  RNA_string_get(op->ptr, "scene_name", scene_name);
+  RNA_string_get(op->ptr, "image_name", image_name);
+  if (image_name[0]) {
+    /* A board reference needs more detail than the drawer's small cards. */
+    const float scale = std::min(1.0f, 960.0f / std::max<int>({host->winx, host->winy, 1}));
+    thumb_w = std::max(1, int(host->winx * scale));
+    thumb_h = std::max(1, int(host->winy * scale));
+  }
+  if (scene_name[0] == '\0') {
+    STRNCPY(scene_name, CTX_data_scene(C)->id.name + 2);
+  }
+  if (STREQ(scene_name, CTX_data_scene(C)->id.name + 2) &&
+      !view3d_scenes_drawer_snapshot_capture(
           C, host, CTX_data_scene(C), thumb_w, thumb_h, /*force=*/true))
   {
     return OPERATOR_CANCELLED;
+  }
+  if (image_name[0]) {
+    std::vector<unsigned char> pixels;
+    if (!view3d_scenes_drawer_snapshot_pixels(
+            CTX_data_main(C), scene_name, pixels, thumb_w, thumb_h)) {
+      return OPERATOR_CANCELLED;
+    }
+    ImBuf *ibuf = IMB_allocFromBuffer(pixels.data(), nullptr, thumb_w, thumb_h, 4);
+    if (!ibuf) { return OPERATOR_CANCELLED; }
+    BKE_image_add_from_imbuf(CTX_data_main(C), ibuf, image_name);
+    IMB_freeImBuf(ibuf);
   }
   if (ARegion *region = view3d_scenes_drawer_region_find(area)) {
     ED_region_tag_redraw(region);
@@ -264,6 +292,8 @@ static void VIEW3D_OT_scenes_drawer_snapshot(wmOperatorType *ot)
   ot->exec = drawer_snapshot_exec;
   ot->poll = view3d_scenes_drawer_op_poll;
   ot->flag = OPTYPE_INTERNAL;
+  RNA_def_string(ot->srna, "scene_name", nullptr, 256, "Scene", "Cached scene; only the shown scene is captured");
+  RNA_def_string(ot->srna, "image_name", nullptr, 256, "Image", "Optional new image containing the snapshot");
 }
 
 /* --- Edge resize ------------------------------------------------------ */

@@ -94,6 +94,10 @@ class MixieMoodboardSegment(PropertyGroup):
 class MixieMoodboardImage(PropertyGroup):
     """Property group for moodboard reference images"""
 
+    scene_node: BoolProperty(name="Scene Node", default=False)
+    source_scene: PointerProperty(name="Scene", type=bpy.types.Scene)
+    scene_title: StringProperty(name="Scene Title", maxlen=120)
+
     moodboard_item_id: StringProperty(
         name="Moodboard Item ID",
         description="Persistent identity used by component provenance links",

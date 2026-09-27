@@ -23,6 +23,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "BLI_listbase_iterator.hh"
 #include "BLI_rect.h"
@@ -167,6 +168,9 @@ bool view3d_scenes_drawer_snapshot_capture(const bContext *C, ARegion *host_regi
                                            const Scene *scene, int thumb_w, int thumb_h,
                                            bool force);
 bool view3d_scenes_drawer_snapshot_exists(const std::string &scene_name);
+/** Copy cached display pixels for an explicit Moodboard Scene node snapshot. */
+bool view3d_scenes_drawer_snapshot_pixels(Main *bmain, const std::string &scene_name,
+                                        std::vector<unsigned char> &pixels, int &w, int &h);
 /** Drop snapshots of scenes that no longer exist in `bmain`. */
 void view3d_scenes_drawer_snapshot_evict(const Main *bmain);
 void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &thumb);
