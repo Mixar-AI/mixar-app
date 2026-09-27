@@ -114,8 +114,10 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Local QA evidence is not versioned.
+# Local QA evidence is not versioned; keep replay scripts and contracts.
 /docs/development/evidence/
+/docs/development/**/*.png
+/docs/development/**/*.json
 
 # Translations
 *.mo
