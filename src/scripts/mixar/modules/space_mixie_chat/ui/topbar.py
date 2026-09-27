@@ -33,8 +33,7 @@ import bpy
 from bpy.types import Header, Panel
 
 from ..constants import SessionState  # noqa: F401  (kept for parity)
-from ..core import avatar_icon, sound_feedback
-from ..constants import SOUND_FEEDBACK_WIDTHS
+from ..core import avatar_icon
 
 
 class MIXAR_PT_profile(Panel):
@@ -100,31 +99,6 @@ class MIXAR_PT_profile(Panel):
         layout.operator("mixie_chat.logout", text="Logout", icon='PANEL_CLOSE')
 
 
-
-def _draw_sound_toggle(layout, context):
-    wm = context.window_manager
-    if not (hasattr(bpy.types, 'MIXIE_CHAT_OT_toggle_completion_sound') and
-            hasattr(wm, 'mixar_notifications_muted') and
-            hasattr(wm, 'mixar_completion_sound')):
-        return
-    enabled = not wm.mixar_notifications_muted and wm.mixar_completion_sound != 'OFF'
-    fraction = sound_feedback.expansion(
-        reduce_motion=context.preferences.view.use_reduce_motion) if enabled else 0.0
-    closed, opened = SOUND_FEEDBACK_WIDTHS
-    row = layout.mixar_surface(theme='ZEN').row(align=True)
-    row.alignment = 'EXPAND'
-    row.ui_units_x = closed + (opened - closed) * fraction
-    # Native icon-only buttons otherwise retain their fixed one-unit width.
-    row.scale_x = row.ui_units_x if fraction < 0.999 else 1.0
-    # Keep the full label readable; expand first, then reveal it for the hold.
-    row.operator('mixie_chat.toggle_completion_sound',
-                 text='Sound on' if fraction >= 0.999 else '',
-                 icon=('NONE' if fraction >= 0.999 else
-                       'NOTIFICATION_SOUND' if enabled else 'NOTIFICATION_SOUND_OFF'),
-                 depress=enabled)
-    row.mixar_style(component='ACTION', variant='GHOST')
-
-
 def _draw_topbar_profile_right(self, context):
     """Append the profile dropdown / login button to the right side of the top bar.
 
@@ -146,8 +120,6 @@ def _draw_topbar_profile_right(self, context):
 
     # The native right-header layout fills the menu-bar height. Reserve room
     # for its taller account icon so the label remains fully visible.
-    _draw_sound_toggle(layout, context)
-    layout.separator(factor=0.4)
     account = layout.row(align=True)
 
     if getattr(wm, 'mixie_chat_is_logged_in', False):
