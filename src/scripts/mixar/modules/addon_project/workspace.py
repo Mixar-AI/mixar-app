@@ -2,26 +2,36 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Machine-local "add-on projects root" folder (the workspace).
+"""The "add-on projects root" folder (the workspace).
 
-The workspace is a one-time folder pick and is itself THE linked project:
+The root is the Mixar Preference ``addon_projects_dir`` (default
+``~/Mixar Addons``, expanded at use time) and is itself THE linked project:
 every add-on lives as a top-level package inside it and the ACTIVE add-on
-is the manifest entrypoint. Storage sits next to ``registry.json`` in the
-service storage dir and never crosses the wire — the project still travels
-as opaque IDs/leases/revisions through the unchanged ``addon_project_v1``
-contract.
+is the manifest entrypoint. Nothing asks the user for the folder — the
+first project-mode Send creates the default; the Preference field is where
+it is seen and changed. Changing it re-points where NEW add-ons go; an
+already-linked project keeps resolving through the registry's
+project_id → path map. Enable/disable state sits next to
+``registry.json`` in the service storage dir and never crosses the wire —
+the project still travels as opaque IDs/leases/revisions through the
+unchanged ``addon_project_v1`` contract.
 """
 
 import re
 from pathlib import Path
 
-from .constants import IGNORED_PARTS, WORKSPACE_LAYOUT_RULE
+from .constants import (
+    DEFAULT_WORKSPACE_DIR,
+    IGNORED_PARTS,
+    WORKSPACE_LAYOUT_RULE,
+    WORKSPACE_ROOT_PREFERENCE,
+)
 from .errors import AddonProjectError
 from .manifest import _MODULE_RE, _looks_like_addon_source
 from .storage import read_json, write_json_atomic
 
-WORKSPACE_FILE = "workspace.json"
-DEFAULT_WORKSPACE_DIRNAME = "Mixar Addons"
+# v3.4.x kept a hand-picked root here; migrated into the Preference once.
+LEGACY_WORKSPACE_FILE = "workspace.json"
 # Machine-local record of DELIBERATE disables (set_enabled False/uninstall).
 # run_checks only skips auto-enable for stamped entrypoints — a bare
 # link-present-but-not-enabled state also matches stale links and enables
@@ -31,75 +41,87 @@ STATE_FILE = "addon_state.json"
 _TOP_PACKAGE_INIT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)/__init__\.py$")
 
 
-def workspace_path(storage_dir: Path) -> Path:
-    return Path(storage_dir) / WORKSPACE_FILE
+def _preferences():
+    """The Mixar preferences group, or None outside a Blender context."""
+    try:
+        import bpy
 
-
-def get_workspace_root(storage_dir: Path):
-    """Return the saved projects root, or None when unset or missing."""
-    payload = read_json(workspace_path(storage_dir), None)
-    value = payload.get("root") if isinstance(payload, dict) else None
-    if not value or not isinstance(value, str):
+        return getattr(bpy.context.scene, "mixar_paint_preferences", None)
+    except Exception:
         return None
-    root = Path(value)
-    return root if root.is_dir() else None
 
 
-def saved_workspace_root_value(storage_dir: Path) -> str:
-    """The raw saved root string, even when the folder is unavailable."""
-    payload = read_json(workspace_path(storage_dir), None)
-    value = payload.get("root") if isinstance(payload, dict) else None
-    return value if isinstance(value, str) else ""
+def preferred_root_value() -> str:
+    """The raw ``addon_projects_dir`` Preference; "" when unset or unreadable."""
+    value = getattr(_preferences(), WORKSPACE_ROOT_PREFERENCE, "")
+    return value.strip() if isinstance(value, str) else ""
+
+
+def configured_workspace_root() -> Path:
+    """Where NEW add-ons go: the Preference, ``~`` expanded, default when blank."""
+    return Path(preferred_root_value() or DEFAULT_WORKSPACE_DIR).expanduser()
+
+
+def get_workspace_root():
+    """The configured projects root, or None until it exists on disk."""
+    root = configured_workspace_root()
+    return root.resolve() if root.is_dir() else None
+
+
+def _migrate_legacy_root(storage_dir: Path) -> None:
+    """One shot: a root picked in v3.4.x (``workspace.json``) becomes the Preference.
+
+    Runs from operators only (a Preference write is not allowed at draw
+    time). The file goes once its value is in the Preference — or the user
+    already set a different one there — so the Preference stays the one
+    source. Outside a Blender context nothing happens.
+    """
+    path = Path(storage_dir) / LEGACY_WORKSPACE_FILE
+    payload = read_json(path, None)
+    if payload is None:
+        return
+    prefs = _preferences()
+    if prefs is None:
+        return
+    legacy = payload.get("root") if isinstance(payload, dict) else None
+    try:
+        if (
+            isinstance(legacy, str) and legacy and Path(legacy).is_dir()
+            and preferred_root_value() in ("", DEFAULT_WORKSPACE_DIR)
+        ):
+            setattr(prefs, WORKSPACE_ROOT_PREFERENCE, legacy)
+        path.unlink()
+    except (OSError, AttributeError, TypeError, ValueError):
+        pass
 
 
 def ensure_workspace_root(storage_dir: Path) -> Path:
-    """Return the saved root, creating the zero-question default when unset.
+    """Return the configured root, creating it when missing. Idempotent.
 
-    The default is ``~/Mixar Addons`` so a first project-mode Send needs no
-    folder picker; "Change Projects Folder…" in the workspace menu remains
-    the escape hatch. Idempotent. A SAVED root that is currently missing
-    (unmounted drive) raises instead of being silently replaced — the
-    default is created only when nothing was ever saved.
+    Zero questions: the Preference defaults to ``~/Mixar Addons``, so a first
+    project-mode Send needs no folder picker. Structured failures only — a
+    file in the way, or a folder that cannot be created (unmounted drive);
+    each points at Preferences. A root that carries its own ``__init__.py``
+    (a legacy umbrella root) is not refused: the ``allow_root_package``
+    guards keep it from ever becoming the entrypoint.
     """
-    saved = saved_workspace_root_value(storage_dir)
-    if saved:
-        root = Path(saved)
-        if root.is_dir():
-            return root
+    _migrate_legacy_root(storage_dir)
+    root = configured_workspace_root()
+    if root.exists() and not root.is_dir():
+        raise AddonProjectError(
+            "workspace_root_collision",
+            "A file blocks the add-on projects folder; move it, or change "
+            "the folder under Mixar Preferences",
+        )
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        root = root.resolve(strict=True)
+    except OSError:
         raise AddonProjectError(
             "workspace_root_unavailable",
             "Your add-on projects folder is unavailable; reconnect the "
-            "drive, or pick a new folder via Change Projects Folder",
+            "drive, or change the folder under Mixar Preferences",
         )
-    default = Path.home() / DEFAULT_WORKSPACE_DIRNAME
-    if default.exists() and not default.is_dir():
-        raise AddonProjectError(
-            "workspace_root_collision",
-            f"A file named '{DEFAULT_WORKSPACE_DIRNAME}' blocks the default "
-            "add-on projects folder; move it, or pick a folder via Change "
-            "Projects Folder",
-        )
-    default.mkdir(parents=True, exist_ok=True)
-    return set_workspace_root(storage_dir, default)
-
-
-def set_workspace_root(storage_dir: Path, value) -> Path:
-    root = Path(str(value or "")).expanduser()
-    if not root.is_dir():
-        raise AddonProjectError(
-            "invalid_workspace_root",
-            "Choose an existing folder to keep your add-on projects in",
-        )
-    root = root.resolve(strict=True)
-    if (root / "__init__.py").is_file():
-        # Fail closed: adopting an add-on package as the workspace would
-        # immediately collide with the root-layout guards.
-        raise AddonProjectError(
-            "workspace_root_is_addon",
-            "This folder is an add-on; choose its parent folder or another "
-            "location for your add-on projects",
-        )
-    write_json_atomic(workspace_path(storage_dir), {"root": str(root)})
     return root
 
 
@@ -232,17 +254,6 @@ def workspace_addons(root: Path, active_entrypoint: str, storage_dir: Path) -> l
             "disabled_by_user": name in stamps,
         })
     return addons
-
-
-def validate_project_name(name) -> str:
-    """Accept only a single-segment, Python-module-safe folder name."""
-    name = str(name or "").strip()
-    if not name or "." in name or not _MODULE_RE.match(name):
-        raise AddonProjectError(
-            "invalid_project_name",
-            "Use a Python-module-safe add-on name, like my_addon",
-        )
-    return name
 
 
 def list_workspace_projects(root) -> list:

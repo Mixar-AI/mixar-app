@@ -14,8 +14,10 @@
  *    (`asset_search/core/generation_library.py` already writes it), the
  *    scene's generated moodboard media, the splat worlds in the file, and the
  *    jobs still running in the unified queue.
- *  - Asset Library: every registered asset library, browsable here and
- *    connectable from the rail ("+ Add Library…").
+ *  - My Libraries: every folder the user connected, all together or one at
+ *    a time from the rail, connected with "+ Add Library…" and removed with
+ *    each row's ×. Their 3D assets come from Blender's asset list and their
+ *    plain images/videos from `agent_bubble/core/library_media.py`.
  *
  * Nothing here stores anything. The pane is a VIEW over data other modules
  * already own, exactly like the Queue tab is a view over `wm.mixie_queue`.

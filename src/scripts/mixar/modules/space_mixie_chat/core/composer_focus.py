@@ -3,6 +3,8 @@
 """One bounded focus request after a composer surface has been rebuilt."""
 import time
 
+from ...agent_bubble.constants import CHAT_TAB_MODES
+
 
 def after_redraw(context):
     """Return to the originating editor after explicitly closing Handwriting."""
@@ -32,7 +34,7 @@ def after_redraw(context):
                 if area.type not in {'AGENT_BUBBLE'}:
                     return None
                 if (area.type == 'AGENT_BUBBLE'
-                        and getattr(wm, 'mixar_bubble_tab', 'AGENT') != 'AGENT'):
+                        and getattr(wm, 'mixar_bubble_tab', 'AGENT') not in CHAT_TAB_MODES):
                     return None
                 with bpy.context.temp_override(window=window, area=area):
                     if 'FINISHED' in bpy.ops.mixie_chat.focus_composer():

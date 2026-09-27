@@ -147,8 +147,16 @@ namespace blender {
 #define AGENT_TAB_W_IMAGE 123
 #define AGENT_TAB_X_VIDEO 360
 #define AGENT_TAB_W_VIDEO 123
+/** Splats pill: the artboard's 262-wide "Gaussian Splat" pill shrank to the
+ *  Video width once the label became "Splats"; the layout still grows any
+ *  pill whose measured label needs more. */
 #define AGENT_TAB_X_SPLAT 489
-#define AGENT_TAB_W_SPLAT 262
+#define AGENT_TAB_W_SPLAT 123
+/** Add-on Project Mode tab, right of Splats with the left group's 6-unit
+ *  pitch (612 + 6); sized like the Video pill for its short label. It carries
+ *  the NEW badge, so the layout measures the badge into its width. */
+#define AGENT_TAB_X_ADDON 618
+#define AGENT_TAB_W_ADDON 123
 
 /** Right cluster. Library is unmarked and short; width is for that label,
  *  and X holds the 6-unit gap to Queue. */
@@ -164,7 +172,9 @@ namespace blender {
 #define AGENT_QUEUE_COUNT_H 38
 #define AGENT_QUEUE_COUNT_RADIUS 18
 
-/** "NEW" badge on the Gaussian Splat tab: artboard 821,406 57x28 rx14. */
+/** "NEW" badge, now on the Add-on tab (artboard 821,406 57x28 rx14 was its
+ *  Gaussian Splat home; only W/H are read — the painter places it after the
+ *  label of whichever pill owns it). */
 #define AGENT_NEW_BADGE_X 554
 #define AGENT_NEW_BADGE_Y 66
 #define AGENT_NEW_BADGE_W 57
@@ -206,6 +216,7 @@ namespace blender {
 #define AGENT_HDR_BTN2_CX (AGENT_HDR_BTN1_CX + AGENT_HDR_BTN_PITCH)
 #define AGENT_HDR_BTN3_CX (AGENT_HDR_BTN2_CX + AGENT_HDR_BTN_PITCH)
 #define AGENT_HDR_BTN4_CX (AGENT_HDR_BTN3_CX + AGENT_HDR_BTN_PITCH)
+#define AGENT_HDR_BTN5_CX (AGENT_HDR_BTN4_CX + AGENT_HDR_BTN_PITCH)
 #define AGENT_HDR_GLYPH_R 16
 #define AGENT_CARD_HEADER_H (2 * AGENT_HDR_BTN_CY)
 
@@ -328,7 +339,7 @@ namespace blender {
  * \{ */
 
 /* AppKit frost and the Windows live GPU backdrop share the same light wash. */
-#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}
+#define AGENT_COL_GLASS_WASH MIXAR_THEME_BRACE(GlassWash)
 #define AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 48}
 #define AGENT_COL_SURFACE {0.071f, 0.071f, 0.071f, 1.0f}      /* #121212 strip, panel, pill */
 #define AGENT_COL_CHIP {0.114f, 0.114f, 0.114f, 1.0f}         /* #1D1D1D chip track */

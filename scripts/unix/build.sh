@@ -12,6 +12,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/settings.sh"
 
+# GUI terminals can omit Homebrew from PATH even when CMake is installed.
+# Keep an explicitly configured CMake first; only discover a fallback if absent.
+if ! command -v cmake >/dev/null 2>&1 && [ "$(uname -s)" = Darwin ]; then
+    for mixar_cmake_bin in /opt/homebrew/bin /usr/local/bin /Applications/CMake.app/Contents/bin; do
+        if [ -x "$mixar_cmake_bin/cmake" ]; then
+            export PATH="$PATH:$mixar_cmake_bin"
+            break
+        fi
+    done
+fi
+if ! command -v cmake >/dev/null 2>&1; then
+    echo "CMake is required but was not found on PATH. Install CMake, then run make build again." >&2
+    exit 1
+fi
+
 # Use MIXAR_ENV directly from settings.sh (already exported there)
 # Blender always builds in Release mode for optimal performance
 BLENDER_BUILD_ENV="Release"
@@ -267,35 +282,10 @@ fi
 
 # Re-sign the dev build with a stable identity so macOS Keychain "Always
 # Allow" persists across rebuilds (opt-in via MIXAR_DEV_SIGN_ID in .env; see
-# scripts/unix/setup_dev_codesign.sh). Without this the linker's ad-hoc
-# signature changes every build, and Keychain re-prompts for the
-# MixarSafeStorage login tokens on each rebuild. Only the main executable is
-# signed — the process's code identity is what Keychain ACLs match on.
-# Release/notarization signing lives in package.sh and is unaffected.
-if [[ "$PLATFORM" == "macOS" && -n "${MIXAR_DEV_SIGN_ID:-}" ]]; then
-    MIXAR_APP_BINARY="$BUILD_ENV_DIR/bin/Mixar.app/Contents/MacOS/Mixar"
-    # get-task-allow keeps the binary attachable by lldb, matching what an
-    # ad-hoc dev signature allows.
-    DEV_SIGN_ENTITLEMENTS="$BUILD_ENV_DIR/dev_codesign_entitlements.plist"
-    cat > "$DEV_SIGN_ENTITLEMENTS" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>com.apple.security.get-task-allow</key>
-    <true/>
-</dict>
-</plist>
-EOF
-    echo "Signing dev build with identity: $MIXAR_DEV_SIGN_ID"
-    if codesign --force --sign "$MIXAR_DEV_SIGN_ID" \
-        --entitlements "$DEV_SIGN_ENTITLEMENTS" "$MIXAR_APP_BINARY"; then
-        echo "Dev codesign OK — Keychain 'Always Allow' will persist across rebuilds."
-    else
-        echo "Warning: dev codesign failed. The build is still usable, but Keychain"
-        echo "will re-prompt after every rebuild. Create the identity with:"
-        echo "  ./scripts/unix/setup_dev_codesign.sh"
-    fi
+# scripts/unix/setup_dev_codesign.sh). install.sh runs the same step, since the
+# CMake install target re-copies the executable ad-hoc signed.
+if [[ "$PLATFORM" == "macOS" ]]; then
+    "$SCRIPT_DIR/dev_codesign.sh" "$BUILD_ENV_DIR/bin/Mixar.app/Contents/MacOS/Mixar"
 fi
 
 # Done

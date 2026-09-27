@@ -5084,6 +5084,22 @@ static int do_but_textedit(
         }
         retval = WM_UI_HANDLER_BREAK;
         break;
+      case EVT_ACCENTGRAVEKEY: {
+        /* Mixar: Ctrl+` toggles the Scenes drawer from anywhere, the chat
+         * composer included. Text editing swallows every event, and on macOS
+         * GHOST keeps the typed character for Ctrl chords (it strips it for
+         * Cmd only), so the backtick was inserted instead. Alt stays out:
+         * Ctrl+Alt is AltGr, which types. */
+        if ((event->modifier & KM_CTRL) && (event->modifier & (KM_ALT | KM_OSKEY)) == 0) {
+          WM_operator_name_call(C,
+                                "VIEW3D_OT_scenes_drawer_toggle",
+                                blender::wm::OpCallContext::ExecDefault,
+                                nullptr,
+                                event);
+          retval = WM_UI_HANDLER_BREAK;
+        }
+        break;
+      }
       case EVT_ZKEY: {
         /* Ctrl-Z or Ctrl-Shift-Z: Undo/Redo (allowing for OS-Key on Apple). */
 
@@ -7735,8 +7751,12 @@ static int do_but_BLOCK(bContext *C, Button *but, HandleButtonData *data, const 
       return WM_UI_HANDLER_BREAK;
     }
 #endif
-    /* regular open menu */
-    if (ELEM(event->type, LEFTMOUSE, EVT_PADENTER, EVT_RETKEY) && event->val == KM_PRESS) {
+    /* regular open menu. Mixar: EVT_BUT_OPEN too (#button_activate_event), so
+     * a header popover can be opened programmatically as a clicked one is;
+     * see `Mixar_tour_popover_open` (mixar/tour_menu.cc). */
+    if (ELEM(event->type, LEFTMOUSE, EVT_PADENTER, EVT_RETKEY, EVT_BUT_OPEN) &&
+        event->val == KM_PRESS)
+    {
       button_activate_state(C, but, BUTTON_STATE_MENU_OPEN);
       return WM_UI_HANDLER_BREAK;
     }

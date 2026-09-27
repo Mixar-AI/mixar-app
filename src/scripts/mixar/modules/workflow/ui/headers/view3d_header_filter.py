@@ -38,6 +38,7 @@ _ZEN_TOOL_SCALE_Y = 2.3
 _ZEN_TOOL_UNITS_X = 2.0
 
 _DEFAULT_FALLBACK_TOOL = "builtin.select"
+
 """Safety net for `VIEW3D_PT_tools_active.tool_fallback_id`, which is
 `"builtin.select"` (Tweak, the stock first tool). Only used if the panel has
 not been registered yet — the attribute is read live when it is."""
@@ -67,7 +68,7 @@ def _patched_header_draw(self, context):
     width = context.region.width / max(context.preferences.system.ui_scale, 0.01)
     compact = width < 1480
     left = layout.row(align=False)
-    left.ui_units_x = 33 if not compact else 14
+    left.ui_units_x = 36 if not compact else 17
     zen_scene_controls.draw_left(left, context, compact=compact)
     layout.separator_spacer()
 
@@ -93,7 +94,7 @@ def _patched_header_draw(self, context):
 
     layout.separator_spacer()
     right = layout.row(align=False)
-    right.ui_units_x = 31 if not compact else 24
+    right.ui_units_x = 29 if not compact else 27
     right.alignment = "RIGHT"
     zen_scene_controls.draw_right(right, context, compact=compact)
 
@@ -192,6 +193,8 @@ def _zen_tool_top_gap(context, tool_count: int) -> float:
       px in a column (`interface_layout.cc`).
 
     Approximate to within the panel's own top padding, which is a few px.
+    The TOOLS region is laid out against the viewport, so the pill stays
+    centred when the Scenes drawer pushes the viewport right.
     """
     region = getattr(context, "region", None)
     if region is None:

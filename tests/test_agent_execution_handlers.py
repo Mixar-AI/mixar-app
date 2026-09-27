@@ -10,6 +10,7 @@ import sys
 from unittest.mock import MagicMock
 
 import pytest
+from types import SimpleNamespace
 
 _SRC_SCRIPTS = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "scripts"))
 if _SRC_SCRIPTS not in sys.path:
@@ -28,10 +29,13 @@ IDENTITY = {"document_id": "doc", "document_epoch": 0, "scene_id": "sc", "scene_
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     monkeypatch.setenv("MIXAR_AGENT_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("MIXAR_SCENES_DOSSIER_DIR", "0")   # never write ~/.mixar from tests
     jmod.set_journal(jmod.Journal(str(tmp_path / "j.sqlite")))
     bindings.reset()
     monkeypatch.setattr(document, "set_run_active", lambda f: None)
-    monkeypatch.setattr(document, "document_identity", lambda scene=None, bpy=None: dict(IDENTITY))
+    monkeypatch.setattr(document, "document_identity", lambda scene=None, bpy=None, session_id="": dict(IDENTITY))
+    # The stubbed bpy has no scenes; the session's scene is a given here.
+    monkeypatch.setattr(document, "scene_for_session", lambda session_id, bpy=None: SimpleNamespace(name="Scene"))
     yield
     jmod.set_journal(None)
     bindings.reset()

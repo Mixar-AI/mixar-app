@@ -58,7 +58,7 @@ class MIXAR_OT_scene_graph_query(bpy.types.Operator):
         if hasattr(scene, SCENE_GRAPH_RESULT_PROP):
             setattr(scene, SCENE_GRAPH_RESULT_PROP, payload)
         # Marker for the agent script executor to capture.
-        print("__RESULT__" + payload)
+        print("\n__RESULT__" + payload)
 
         if isinstance(result, dict) and "error" in result:
             self.report({'WARNING'}, f"scene_graph: {result['error']}")

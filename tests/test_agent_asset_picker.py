@@ -202,7 +202,10 @@ def test_chat_dispatch_stands_down_while_the_picker_shows():
     src = _read(CHAT / "mixie_chat_main_region.cc")
     live = src[src.index("static bool mixie_chat_dispatch_is_live"):src.index("int mixie_chat_ui_handler")]
     assert "return !mixie_chat_asset_picker_shown(C, nullptr);" in live
-    assert 'if (!STREQ(ident, "AGENT"))' in live
+    # The chat-tab predicate (Agent or Add-on) is asked first; the picker
+    # stand-down applies on whichever chat tab is showing.
+    assert "if (!ED_agent_bubble_tab_shows_chat(C, true))" in live
+    assert live.index("ED_agent_bubble_tab_shows_chat") < live.index("mixie_chat_asset_picker_shown")
     assert "mixie_chat_asset_picker.cc" in _read(CHAT / "CMakeLists.txt")
 
 

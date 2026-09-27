@@ -101,6 +101,14 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
     RNA_float_set(&scene_ptr, "mixie_moodboard_context_y", mouse_y);
   }
 
+  /* Text is painted above cards and sockets, irrespective of selection.
+   * Let the text selector own the same footprint, including Shift-click. */
+  if (moodboard_find_textbox_under_mouse(
+          &scene_ptr, mouse_x, mouse_y, nullptr, nullptr, nullptr, nullptr) >= 0)
+  {
+    return OPERATOR_PASS_THROUGH;
+  }
+
   /* A CONNECTED input socket is a handle for its link. Checked before anything
    * else, because the socket sits on the card and any later test swallows it. */
   char detached_from[MIXIE_GRAPH_ID_BUF];
@@ -135,9 +143,7 @@ static wmOperatorStatus graph_select_invoke(bContext *C,
       return OPERATOR_PASS_THROUGH;
     }
     if (moodboard_find_image_under_mouse(
-            &scene_ptr, mouse_x, mouse_y, nullptr, nullptr, nullptr, nullptr, nullptr) >= 0 ||
-        moodboard_find_textbox_under_mouse(
-            &scene_ptr, mouse_x, mouse_y, nullptr, nullptr, nullptr, nullptr) >= 0)
+            &scene_ptr, mouse_x, mouse_y, nullptr, nullptr, nullptr, nullptr, nullptr) >= 0)
     {
       return OPERATOR_PASS_THROUGH;
     }

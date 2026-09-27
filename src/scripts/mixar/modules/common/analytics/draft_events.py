@@ -324,7 +324,19 @@ def _snapshot_video_upscale(sidebar, _scene) -> dict | None:
     return props
 
 
+def _snapshot_world_labs(sidebar, _scene) -> dict | None:
+    tab = getattr(sidebar, 'tab_world_labs', None)
+    if tab is None:
+        return None
+    prompt = getattr(tab, 'prompt', '') or ''
+    has_reference = bool(getattr(tab, 'reference_image', None))
+    if not prompt and not has_reference:
+        return None
+    return {**_common('world_labs', prompt), 'reference_image_attached': has_reference}
+
+
 _SNAPSHOTTERS = {
+    "world_labs": _snapshot_world_labs,
     "image_gen": _snapshot_image_gen,
     "model_gen": _snapshot_model_gen,
     "texture_gen": _snapshot_texture_gen,
@@ -357,7 +369,7 @@ def snapshot_draft(context, capability: str) -> dict | None:
         return None
 
 
-def capture_draft_abandoned(context, capability: str, dwell_seconds) -> None:
+def capture_draft_abandoned(context, capability: str, dwell_seconds, *, surface=None) -> None:
     """Emit ``moodboard.draft_abandoned`` for a panel the user just left.
 
     Suppressed when the draft is empty, when a generation was submitted
@@ -378,6 +390,8 @@ def capture_draft_abandoned(context, capability: str, dwell_seconds) -> None:
             return
         _last_emitted[capability] = frozen
         properties = dict(snapshot)
+        if surface in {'agent_island', 'moodboard'}:
+            properties['surface'] = surface
         properties["dwell_seconds"] = int(max(0.0, float(dwell_seconds or 0.0)))
         capture(EVENT_DRAFT_ABANDONED, properties, context=context)
     except Exception:

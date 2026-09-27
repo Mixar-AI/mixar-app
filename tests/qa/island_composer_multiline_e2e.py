@@ -43,7 +43,9 @@ def capture(qa, out, name):
     with Image.open(path) as image:
         x = round(x0 + (x1 - x0) * .85)
         y = image.height - round((y0 + y1) / 2)
-        brightness = sum(ImageStat.Stat(image.crop((x-3, y-3, x+4, y+4))).mean[:3]) / 3
+        rgb = ImageStat.Stat(image.crop((x-3, y-3, x+4, y+4))).mean[:3]
+        assert all(abs(c-20) <= 2 for c in rgb), ('Composer must stay charcoal, including focus', rgb)
+        brightness = sum(rgb) / 3
     return {'height': y1-y0, 'fill': brightness, 'rect': f['rect']}
 
 
@@ -53,6 +55,8 @@ def run(qa):
     local = str(Path(__file__).parent)
     qa.eval(f'import sys; sys.path.insert(0,{local!r}); '
             'import chat_send_probe as p; p.install(); result=True')
+    old_color = qa.eval('result=list(bpy.context.preferences.themes[0].mixie_chat.chat_input_bg)')
+    qa.eval('bpy.context.preferences.themes[0].mixie_chat.chat_input_bg=(20/255,20/255,20/255,1); result=True')
     try:
         if qa.find(**FIELD)['total']:
             press(qa, 'ESC')
@@ -109,6 +113,7 @@ def run(qa):
         return {'backend_calls': 0, 'draft_geometry': metrics, 'screenshots': str(out)}
     finally:
         qa.eval('import chat_send_probe as p; p.uninstall(); result=True')
+        qa.eval(f'bpy.context.preferences.themes[0].mixie_chat.chat_input_bg={old_color!r}; result=True')
 
 
 if __name__ == '__main__':

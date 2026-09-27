@@ -10,7 +10,7 @@ def templates_that_fit(available_px, items, *, widths, more_width, gap) -> list:
     """Return the leading templates whose buttons fit beside the + menu.
 
     ``items`` is an ordered sequence of ``(key, label, icon, capability)``
-    tuples (typically mesh first, then ``NODE_TEMPLATES`` shortcuts). ``widths``
+    tuples in shortcut priority order. ``widths``
     contains the measured pixel width of each button, keyed by template ID.
     Reserve the + button and a gap after EVERY shortcut, including the last.
     """
@@ -26,6 +26,8 @@ def templates_that_fit(available_px, items, *, widths, more_width, gap) -> list:
 
 
 def canvas_template_strip_items(items=NODE_TEMPLATES):
-    """Mesh first, then the supplied catalog entries in registry order."""
-    mesh = next(item for item in items if item[0] == 'MESH_REFERENCE')
-    return (mesh,) + tuple(item for item in items if item[0] != 'MESH_REFERENCE')
+    """Lead with 3D, video and mesh; preserve registry order for the rest."""
+    priority = ('MODEL_3D', 'VIDEO_GEN', 'MESH_REFERENCE')
+    items = tuple(items)
+    return (tuple(item for key in priority for item in items if item[0] == key)
+            + tuple(item for item in items if item[0] not in priority))

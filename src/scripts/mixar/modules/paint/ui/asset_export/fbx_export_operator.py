@@ -104,7 +104,9 @@ class MExportFbx(bpy.types.Operator):
         kwargs = settings_to_kwargs(fs, exclude=_EXCLUDE)
 
         try:
-            bpy.ops.export_scene.fbx(filepath=self.filepath, **kwargs)
+            status = bpy.ops.export_scene.fbx(filepath=self.filepath, **kwargs)
+            if 'FINISHED' not in status:
+                raise RuntimeError(f"exporter returned {sorted(status)}")
         except Exception as e:
             logger.error("FBX export failed: %s", e)
             self.report({'ERROR'}, f"Export failed: {e}")

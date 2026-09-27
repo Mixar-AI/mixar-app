@@ -248,13 +248,23 @@ class SocketConnection:
         reply is HANDSHAKE_TRANSIENT and just retries (jsonrpc_frames).
         """
         from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
+        from ...addon_project.constants import TESTS_CAPABILITY as ADDON_PROJECT_TESTS_CAPABILITY
+        from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
 
         params = {
-            "blender_version": self._blender_version,
-            "addon_version": self._addon_version,
+            # Omitted (not sent as a placeholder) when the build's version is
+            # unknown: the backend then judges the stored users.client_version.
+            **{
+                key: value
+                for key, value in (
+                    ("blender_version", self._blender_version),
+                    ("addon_version", self._addon_version),
+                )
+                if value
+            },
             # "local_llm": this client can execute llm.request relays against
             # a local model server (modules/local_models) — the backend only
             # sends them when the user's BYOK provider is "local".
@@ -270,6 +280,8 @@ class SocketConnection:
                 # clients would silently never reply).
                 "liveness",
                 ADDON_PROJECT_CAPABILITY,
+                ADDON_PROJECT_TESTS_CAPABILITY,
+                ADDON_PROJECT_VERIFY_CAPABILITY,
                 # blender.execute_script frames may carry params["envelope"]
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.

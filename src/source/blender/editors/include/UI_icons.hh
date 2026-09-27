@@ -184,6 +184,8 @@ DEF_ICON(ZOOM_SELECTED)
 DEF_ICON_COLOR(MIXAR_ICON)
 DEF_ICON_COLOR(SUBMIT_ARROW)
 DEF_ICON_COLOR(PAPERCLIP)
+DEF_ICON(NOTIFICATION_SOUND)
+DEF_ICON(NOTIFICATION_SOUND_OFF)
 DEF_ICON_COLOR(AGENT)
 DEF_ICON_COLOR(GENERATE)
 DEF_ICON_COLOR(ASK)
@@ -922,6 +924,9 @@ DEF_ICON(USER)
 DEF_ICON(EXPERIMENTAL)
 DEF_ICON(MEMORY)
 
+/* Mixar Cinema Mode: keep within the regular SVG range. */
+DEF_ICON(CINEMA_REEL)
+
 /* The items above are initiated sequentially while the ones that
  * follow are initiated individually. Therefore this item marks
  * the boundary. Add regular SVG icons above this one. */
@@ -1191,6 +1196,12 @@ DEF_ICON_VECTOR(NODE_SOCKET_SOUND)
 DEF_ICON_VECTOR(NODE_SOCKET_INT_VECTOR)
 
 /* add as needed. */
+
+/* Credit-exhaustion actions (keep existing icon identifiers stable). */
+DEF_ICON_COLOR(CREDITS_UPGRADE)
+DEF_ICON_COLOR(CREDITS_SLIDE)
+DEF_ICON_COLOR(CREDITS_REFER)
+DEF_ICON_COLOR(CREDITS_CREATOR)
 
 /* Undefine all types. */
 

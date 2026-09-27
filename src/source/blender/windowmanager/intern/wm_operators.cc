@@ -1560,10 +1560,18 @@ static ui::Block *wm_block_dialog_create(bContext *C, ARegion *region, void *use
 
   int dialog_width = std::max(text_width + int(style->columnspace * 2.5), data->width);
 
+  /* A dialog whose confirm button reads "Yes" is a question, and the answer to
+   * a question is "No", not "Cancel". Derived from the confirm text any caller
+   * of `invoke_props_dialog(confirm_text="Yes")` supplies, so no operator is
+   * named here. Native press/release handling is retained so opening the
+   * dialog cannot also choose an answer. */
+  const char *cancel_text = (data->confirm_text == IFACE_("Yes")) ? IFACE_("No") :
+                                                                    IFACE_("Cancel");
+
   /* Adjust width if the button text is long. */
   const int longest_button_text = std::max(
       BLF_width(style->widget.uifont_id, data->confirm_text.c_str(), BLF_DRAW_STR_DUMMY_MAX),
-      BLF_width(style->widget.uifont_id, IFACE_("Cancel"), BLF_DRAW_STR_DUMMY_MAX));
+      BLF_width(style->widget.uifont_id, cancel_text, BLF_DRAW_STR_DUMMY_MAX));
   dialog_width = std::max(dialog_width, 3 * longest_button_text);
 
   ui::Layout &layout = [&]() -> ui::Layout & {
@@ -1645,7 +1653,7 @@ static ui::Block *wm_block_dialog_create(bContext *C, ARegion *region, void *use
     }
 
     cancel_but = uiDefBut(
-        col_block, ui::ButtonType::But, IFACE_("Cancel"), 0, 0, 0, UI_UNIT_Y, nullptr, 0, 0, "");
+        col_block, ui::ButtonType::But, cancel_text, 0, 0, 0, UI_UNIT_Y, nullptr, 0, 0, "");
 
     if (!windows_layout) {
       split.column(false);

@@ -128,6 +128,11 @@ def _on_load_post(*_args) -> None:
 
     This is also what lands a .blend saved while Library mode was still
     offered back on 'AGENT' instead of a mode the user can no longer see.
+
+    The island tab (``wm.mixar_bubble_tab``, SKIP_SAVE) then follows the
+    loaded scene's mode: an ``ADDON_PROJECT`` file selects the Add-on tab and
+    an ``AGENT`` file leaves a stale Add-on tab for Agent, so the strip never
+    disagrees with the mode the next send will use (``CHAT_TAB_MODES``).
     """
     import bpy as _bpy
 
@@ -153,6 +158,27 @@ def _on_load_post(*_args) -> None:
             logger.debug("chat mode sanitize skipped on %r: %s",
                          getattr(scene, "name", "?"), e)
 
+    _select_tab_for_mode(_bpy.context)
+
+
+def _select_tab_for_mode(context) -> None:
+    """Select the island tab of the active scene's chat mode (see above)."""
+    from ...agent_bubble.constants import CHAT_TAB_MODES
+
+    wm = getattr(context, "window_manager", None)
+    scene = getattr(context, "scene", None)
+    if wm is None or scene is None or not hasattr(wm, "mixar_bubble_tab"):
+        return
+    mode = getattr(scene, "mixie_chat_mode", "")
+    tab = next((t for t, m in CHAT_TAB_MODES.items() if m == mode), None)
+    if tab is None or wm.mixar_bubble_tab == tab:
+        return
+    # Only a chat tab is moved for AGENT; a pane tab stays where the user
+    # left it. ADDON_PROJECT always claims its tab, so the chat that sends
+    # project_context is the one labelled Add-on.
+    if tab == 'ADDON' or wm.mixar_bubble_tab in CHAT_TAB_MODES:
+        wm.mixar_bubble_tab = tab
+
 
 def _sanitize_once():
     """Timer callback: sanitize the file that was open before we registered.
@@ -172,6 +198,8 @@ def register():
         bpy.app.handlers.load_post.append(_on_load_post)
     if not bpy.app.timers.is_registered(_sanitize_once):
         bpy.app.timers.register(_sanitize_once, first_interval=0.5)
+    from .scene_identity import register as register_scene_identity
+    register_scene_identity()
     logger.debug("File load handlers registered")
 
 
@@ -191,4 +219,6 @@ def unregister():
             bpy.app.timers.unregister(_sanitize_once)
     except Exception:
         pass
+    from .scene_identity import unregister as unregister_scene_identity
+    unregister_scene_identity()
     logger.debug("File load handlers unregistered")

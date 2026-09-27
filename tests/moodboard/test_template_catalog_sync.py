@@ -42,7 +42,7 @@ def test_progressive_strip_fits_only_currently_available_templates(monkeypatch):
         capability('video_gen', 'video_gen'),
     ]})
     items = canvas_template_strip_items(available_templates())
-    assert [item[0] for item in items] == ['MESH_REFERENCE', 'VIDEO_GEN']
+    assert [item[0] for item in items] == ['VIDEO_GEN', 'MESH_REFERENCE']
     assert templates_that_fit(
         240, items, widths={item[0]: 100 for item in items}, more_width=32, gap=4,
     ) == list(items)

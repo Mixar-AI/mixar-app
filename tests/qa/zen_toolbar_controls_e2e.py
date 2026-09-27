@@ -111,10 +111,10 @@ def sky_and_drawer(qa):
     scale = qa.eval('result=bpy.context.preferences.system.ui_scale')
     assert all((w['rect'][2] - w['rect'][0]) / scale >= 38 for w in buttons), buttons
     original = qa.eval(SETUP + 'result=scene.world.name if scene.world else None')
-    qa.click(**query, op='MIXAR_OT_zen_set_sky', text='ON')
+    qa.click(**query, op='MIXAR_OT_zen_set_sky')
     assert qa.eval(SETUP + 'result=scene.world == scene.mixar_zen_sky.sky_world')
     snap(qa, 'sky-on')
-    qa.click(**query, op='MIXAR_OT_zen_set_sky', text='OFF')
+    qa.click(**query, op='MIXAR_OT_zen_set_sky')
     assert qa.eval(SETUP + 'result=scene.world.name if scene.world else None') == original
     dismiss(qa, query)
     qa.click(surface='moodboard_drawer_grip')

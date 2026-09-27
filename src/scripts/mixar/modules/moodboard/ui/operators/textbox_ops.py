@@ -19,6 +19,7 @@ from ...core.canvas_context import (
     redraw_moodboard_canvases,
 )
 from ...core.canvas_mark_mode import exit_canvas_mark_mode
+from ...core.first_use import begin_preview, end_preview, mark_started
 from ...core.image_lifecycle import release_moodboard_image_entry
 from ....common.utils.platform_utils import format_shortcut
 from ...constants import (
@@ -96,6 +97,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
         self._region = region
 
         # Create a sample text box and follow the cursor until the user clicks.
+        begin_preview(scene, "mixie_moodboard_textboxes")
         item = scene.mixie_moodboard_textboxes.add()
         item.text = TEXTBOX_TEXT_DEFAULT
         item.width = TEXTBOX_WIDTH_DEFAULT
@@ -128,6 +130,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
             return {'RUNNING_MODAL'}
 
         if event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
+            end_preview(scene, "mixie_moodboard_textboxes", committed=True)
             _tag_moodboard_redraw()
             self.report({'INFO'}, "Added text box (double-click to edit)")
             return {'FINISHED'}
@@ -136,6 +139,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
             boxes = scene.mixie_moodboard_textboxes
             if 0 <= self._tb_index < len(boxes):
                 boxes.remove(self._tb_index)
+            end_preview(scene, "mixie_moodboard_textboxes")
             _tag_moodboard_redraw()
             return {'CANCELLED'}
 
@@ -158,6 +162,7 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
 
         _tag_moodboard_redraw()
 
+        mark_started(scene)
         self.report({'INFO'}, "Added text box to moodboard")
         return {'FINISHED'}
 

@@ -17,7 +17,10 @@ from mixar.modules.uv_editor.common.uv_utils import (
     with_uv_context,
     get_operator_properties,
 )
-from mixar.modules.common.analytics.export_events import capture_export
+from mixar.modules.common.analytics.export_events import (
+    capture_export_initiated,
+    watch_native_completion,
+)
 
 
 class MIXAR_OT_export_uv_layout(Operator):
@@ -46,9 +49,13 @@ class MIXAR_OT_export_uv_layout(Operator):
                 modified=op_props.modified,
                 export_tiles=op_props.export_tiles,
             )
+        # uv.export_layout runs behind its modal file browser: report the
+        # start now and the completion when its registered call lands in
+        # wm.operators (never a path or an image name).
         try:
             size = getattr(op_props, "size", ())
-            capture_export(context, export_format="UV_LAYOUT", success=True, extra={
+            capture_export_initiated(context, "UV_LAYOUT", via="uv_editor")
+            watch_native_completion("UV_LAYOUT", "UV_OT_export_layout", via="uv_editor", extra={
                 "mode": getattr(op_props, "mode", ""),
                 "size_x": int(size[0]), "size_y": int(size[1]),
                 "opacity": float(getattr(op_props, "opacity", 0.0)),

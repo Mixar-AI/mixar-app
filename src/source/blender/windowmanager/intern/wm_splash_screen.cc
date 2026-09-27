@@ -76,8 +76,24 @@ static void wm_mixar_floating_docks_restore_after_modal()
 #endif
 }
 
+/* Mixar: number of splash popups currently alive. Incremented on invoke and
+ * decremented by the popup's free callback, which runs on EVERY close path
+ * (a button, click-outside, Escape, a file load removing the window's
+ * handlers). Python reads it as `WindowManager.mixar_splash_open` so the
+ * onboarding tour waits for a real dismissal: an idle splash stops
+ * redrawing, so draw-staleness cannot tell "closed" from "still open". */
+static int g_mixar_splash_open_count = 0;
+
+bool Mixar_splash_is_open()
+{
+  return g_mixar_splash_open_count > 0;
+}
+
 static void wm_mixar_floating_docks_restore_after_modal_free(void * /*arg*/)
 {
+  if (g_mixar_splash_open_count > 0) {
+    g_mixar_splash_open_count--;
+  }
   wm_mixar_floating_docks_restore_after_modal();
 }
 
@@ -419,6 +435,7 @@ static wmOperatorStatus wm_splash_invoke(bContext *C,
                                          const wmEvent * /*event*/)
 {
   wm_mixar_floating_docks_suppress_for_modal();
+  g_mixar_splash_open_count++;
   ui::popup_block_invoke(
       C, wm_block_splash_create, nullptr, wm_mixar_floating_docks_restore_after_modal_free);
 

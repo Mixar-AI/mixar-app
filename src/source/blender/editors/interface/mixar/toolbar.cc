@@ -14,6 +14,8 @@
 #include "UI_mixar_theme.hh"
 #include "WM_types.hh"
 #include "toolbar.hh"
+#include "scenes_toggle.hh"
+#include "cinema_label.hh"
 
 #include <algorithm>
 #include <string>
@@ -89,6 +91,17 @@ bool mixar_toolbar_sample_range(Button &button)
 
 bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &bounds)
 {
+  if (mixar_scenes_toggle_is_button(button)) {
+    mixar_scenes_toggle_draw(button, bounds);
+    return false;
+  }
+  const uchar *toolbar_background = mixar_theme_color_ptr(MixarThemeSlot::ToolbarBackground);
+  const uchar *toolbar_border = mixar_theme_color_ptr(MixarThemeSlot::ToolbarBorder);
+  const uchar *toolbar_primary = mixar_theme_color_ptr(MixarThemeSlot::ToolbarPrimary);
+  const uchar *toolbar_primary_border = mixar_theme_color_ptr(MixarThemeSlot::ToolbarPrimaryBorder);
+  const uchar *toolbar_text = mixar_theme_color_ptr(MixarThemeSlot::ToolbarText);
+  const uchar *toolbar_muted = mixar_theme_color_ptr(MixarThemeSlot::ToolbarMuted);
+  const uchar *toolbar_selected = mixar_theme_color_ptr(MixarThemeSlot::ToolbarSelected);
   const float u = UI_SCALE_FAC;
   const bool disabled = (button.flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
   const bool primary = button.mixar_style.variant == MixarVariant::Primary;
@@ -114,13 +127,8 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
   const float radius = (compact ? 5.0f : 8.0f) * u;
   if (first) {
     if (cinema) {
-      MIXAR_THEME_LOAD(top, CinemaBrandTop);
-      MIXAR_THEME_LOAD(bottom, CinemaBrandBottom);
-      MIXAR_THEME_LOAD(active, CinemaPillOnB);
-      /* Keep the banner's ramp in both states; brighten its green when active. */
-      interp_v4_v4v4(top, top, active, motion.selected * 0.65f);
-      draw_roundbox_corner_set(CNR_ALL);
-      draw_roundbox_4fv_ex(&group, top, bottom, 1.0f, nullptr, 0.0f, radius);
+      const float emphasis = motion.hover + (1.0f - motion.hover) * motion.press;
+      mixar_cinema_background(group, radius, motion.selected, emphasis);
     }
     else {
       mixar_card_fill_round(&group, radius, primary ? toolbar_primary : toolbar_background);
@@ -139,12 +147,13 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
     rctf feedback = cell;
     const float inset = ghost && !compact ? 4.0f * u : 1.0f * u;
     BLI_rctf_pad(&feedback, -inset, -inset);
-    const uchar *selected = compact ? toolbar_shading_selected :
-                                     primary ? cinema_pill_fill_on_b : toolbar_primary;
+    const uchar *selected = compact ? toolbar_selected :
+                            primary ? mixar_theme_color_ptr(MixarThemeSlot::Selected) :
+                                      toolbar_primary;
     if (motion.selected > 0.0f && !cinema) {
       mixar_card_fill_round(&feedback, 3.0f * u, selected, motion.selected);
     }
-    if (motion.hover > 0.0f) {
+    if (motion.hover > 0.0f && !cinema) {
       mixar_card_fill_round(&feedback, 3.0f * u, toolbar_text, motion.hover * 0.07f);
     }
   }
@@ -205,6 +214,10 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
   }
   /* Standalone actions center their label inside equal horizontal padding.
    * Menus retain their left label and reserved trailing chevron. */
+  if (cinema) {
+    mixar_cinema_label(text, label.c_str(), motion.selected, disabled, button.icon);
+    return false;
+  }
   mixar_card_draw_text(font, &text, label.c_str(), text_color,
                        (ghost || (primary && !menu)) && button.type != ButtonType::Label ?
                            UI_STYLE_TEXT_CENTER : UI_STYLE_TEXT_LEFT);

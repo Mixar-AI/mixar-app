@@ -63,6 +63,8 @@ def test_protocol_v1_surface_is_stable():
         "addon_project.rollback",
         "addon_project.history",
         "addon_project.set_enabled",
+        "addon_project.run_tests",
+        "addon_project.set_entrypoint",
     }
 
 
@@ -393,7 +395,7 @@ def test_blender_reload_exercises_disabled_addon_then_installs_it(tmp_path, monk
             pass
 
         @staticmethod
-        def enable(name, default_set=False, persistent=False):
+        def enable(name, default_set=False, persistent=False, **_kwargs):
             enable_calls.append((name, default_set))
             return sys.modules[name]
 
@@ -404,7 +406,8 @@ def test_blender_reload_exercises_disabled_addon_then_installs_it(tmp_path, monk
     assert result["installed"] is True
     assert result["install"]["success"] is True
     module = sys.modules[module_name]
-    assert module.events == ["register", "unregister"]
+    # Two full cycles: a leak or a double registration shows on the second.
+    assert module.events == ["register", "unregister"] * 2
     target = addons_dir / module_name
     assert is_link(target)
     assert target.resolve() == package.resolve()

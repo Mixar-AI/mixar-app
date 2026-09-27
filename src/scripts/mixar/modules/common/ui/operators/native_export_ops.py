@@ -11,7 +11,11 @@ import sys
 import bpy
 from bpy.types import Operator
 
-from mixar.modules.common.analytics.export_events import capture_export_initiated
+from mixar.modules.common.analytics.export_events import (
+    capture_export_initiated,
+    registered_operator_idname,
+    watch_native_completion,
+)
 
 
 def _resolve_operator(namespace: str, name: str):
@@ -29,7 +33,19 @@ def _execute_export(self, context):
     except Exception:
         pass
     operator = _resolve_operator(self.operator_namespace, self.operator_name)
-    return operator('INVOKE_DEFAULT')
+    result = operator('INVOKE_DEFAULT')
+    # The exporter runs later, behind its modal file browser; its registered
+    # call in wm.operators is the completion signal (export.completed).
+    try:
+        if 'CANCELLED' not in result:
+            watch_native_completion(
+                self.export_format,
+                registered_operator_idname(self.operator_namespace, self.operator_name),
+                via="file_menu",
+            )
+    except Exception:
+        pass
+    return result
 
 
 class MIXAR_OT_export_native_obj(Operator):

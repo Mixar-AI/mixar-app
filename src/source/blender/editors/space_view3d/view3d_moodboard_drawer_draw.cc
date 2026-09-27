@@ -95,7 +95,7 @@ void draw_grip(const float x_right, const float y_centre)
     GPU_scissor(pane.xmin, pane.ymin, clip_w, BLI_rcti_size_y(&pane));
     rctf tab;
     BLI_rctf_rcti_copy(&tab, &pane);
-    MIXAR_THEME_LOAD(outer_green, CinemaPillOnB);
+    MIXAR_THEME_LOAD(outer_green, Selected);
     MIXAR_THEME_LOAD(inner_dark, ViewportFill);
     /* Fade across the visible tab, reaching near-black at the panel seam.
      * Only the outer corners round; extending a hidden right cap would leave
@@ -212,9 +212,11 @@ void view3d_moodboard_drawer_region_draw(const bContext *C, ARegion *region)
     const float radius = std::min(VIEW3D_MOODBOARD_DRAWER_RADIUS * scale,
                                   0.5f * (panel.xmax - panel.xmin));
     ui::draw_roundbox_corner_set(ui::CNR_TOP_LEFT | ui::CNR_BOTTOM_LEFT);
+    float canvas[4];
+    ui::mixar_moodboard_canvas_color(canvas);
     ui::draw_roundbox_4fv_ex(&panel,
-                             /*inner1 (right)*/ ui::mixar_tokens::mixar_zen().canvas,
-                             /*inner2 (left)*/ ui::mixar_tokens::mixar_zen().canvas,
+                             /*inner1 (right)*/ canvas,
+                             /*inner2 (left)*/ canvas,
                              /*shade_dir*/ 0.0f,
                              ui::mixar_tokens::mixar_zen().border,
                              U.pixelsize,

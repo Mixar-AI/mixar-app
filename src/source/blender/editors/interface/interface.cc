@@ -75,6 +75,7 @@
 #include "CLG_log.h"
 
 #include "interface_intern.hh"
+#include "mixar/scenes_toggle.hh"
 #include "mixar/toolbar.hh"
 #include "UI_mixar.hh"
 #include "interface_mixar_profile_card.hh"
@@ -2204,6 +2205,7 @@ void block_end_ex(const bContext *C,
 
   update_flexible_spacing(region, block);
   mixar_topbar_center_mode_slider(C, region, block);
+  mixar_scenes_toggle_layout(region, block);
 
   block->endblock = true;
 }

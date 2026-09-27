@@ -59,3 +59,8 @@ TRIAL_SLUG_PREFIX = "trial"
 #: Dashboard handoff targets for the popover CTAs.
 HANDOFF_TARGET_BUY_CREDITS = "buy-credits"
 HANDOFF_TARGET_PRICING = "pricing"
+
+#: ``billing_interval`` the backend reports for a free-tier account metered
+#: against its lifetime grants (sign-up bonus, referral rewards). Such an
+#: account has a bar but no plan, so it can never top up.
+FREE_BILLING_INTERVAL = "free"

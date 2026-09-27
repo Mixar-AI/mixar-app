@@ -85,6 +85,7 @@ const AgentIcon g_tab_icons[AGENT_TAB_COUNT] = {
     AGENT_ICON_IMAGE,
     AGENT_ICON_VIDEO,
     AGENT_ICON_SPLAT,
+    AGENT_ICON_ADDON,
     AGENT_ICON_COUNT,
     AGENT_ICON_COUNT,
 };
@@ -135,7 +136,7 @@ void agent_ui_draw_tab_strip(ARegion *region,
 
     const bool has_count = queue && state->queue_count > 0;
     const bool has_icon = g_tab_icons[i] != AGENT_ICON_COUNT;
-    const bool has_badge = i == AGENT_TAB_SPLAT && state->splat_is_new;
+    const bool has_badge = i == AGENT_TAB_ADDON && state->addon_is_new;
     const float gap = AGENT_TAB_ICON_GAP * u;
     const float leading = has_count ? BLI_rctf_size_x(&layout->queue_count) + gap :
                           has_icon ? AGENT_TAB_ICON * u + gap : 0.0f;
@@ -189,7 +190,7 @@ void agent_ui_draw_tab_strip(ARegion *region,
       label_left(label.c_str(), start + leading, cy, label_size, label_col);
     }
 
-    if (i == AGENT_TAB_SPLAT && state->splat_is_new) {
+    if (has_badge) {
       fill_round(&badge, AGENT_NEW_BADGE_RADIUS * u, accent);
       label_centre("NEW",
                    BLI_rctf_cent_x(&badge),
@@ -253,9 +254,9 @@ void agent_ui_draw_chip_row(ARegion *region,
   const float icon_gap = AGENT_CHIP_ICON_GAP * u;
   const float icon_edge = AGENT_CHIP_ICON * u;
 
-  /* Composer chips belong to the Agent tab; other tabs fill the card with
+  /* Composer chips belong to the chat tabs; other tabs fill the card with
    * their own content (Queue rows, later panes). */
-  if (layout->tabs[AGENT_TAB_AGENT].active == false) {
+  if (!agent_ui_tab_shows_chat(AgentTabId(state->active_tab))) {
     return;
   }
 

@@ -60,7 +60,7 @@ struct AgentIslandState {
    * (not fetched, or a free account with no allowance) and draws the ring
    * whole, because a border that reads empty would look like a bug. */
   float credits_remaining;
-  bool splat_is_new;        /* Draws the NEW badge on the Gaussian Splat tab. */
+  bool addon_is_new;        /* Draws the NEW badge on the Add-on tab. */
 
   /* Sketch reflects the viewport freeze and DRAFT marks. Handwriting is
    * an independent, explicitly opened prompt input method. */

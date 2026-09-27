@@ -128,6 +128,18 @@ def _refresh_agent_models_on_tier_change(previous: state.UsageSnapshot,
         logger.debug("usage meter: agent models refresh failed: %s", exc)
 
 
+def _notify_low_credit(previous: state.UsageSnapshot,
+                      current: state.UsageSnapshot) -> None:
+    """A live drop to the low-credit threshold offers Refer a Friend in a
+    toast; the rule lives with the dialog it points at."""
+    try:
+        from mixar.modules.referrals.core import low_credit
+
+        low_credit.notify_if_crossed(previous, current)
+    except Exception as exc:  # noqa: BLE001 — never break the meter
+        logger.debug("usage meter: low-credit toast failed: %s", exc)
+
+
 def _apply_snapshot(snapshot: state.UsageSnapshot) -> None:
     """Main-thread write-back. Registered as a one-shot timer."""
     previous = state.get_snapshot()
@@ -135,6 +147,7 @@ def _apply_snapshot(snapshot: state.UsageSnapshot) -> None:
     _mirror_to_rna(snapshot)
     _tag_topbar_redraw()
     _refresh_agent_models_on_tier_change(previous, snapshot)
+    _notify_low_credit(previous, snapshot)
 
 
 def _schedule_apply(snapshot: state.UsageSnapshot) -> None:

@@ -1963,6 +1963,31 @@ bool Mixar_window_resize_dispatch_active()
   return g_mixar_resize_dispatch_depth > 0;
 }
 
+bool Mixar_window_gpu_context_push(const wmWindowManager *wm, wmWindow *win)
+{
+  if (wm == nullptr || win == nullptr || wm->runtime == nullptr || win->runtime == nullptr ||
+      win->runtime->ghostwin == nullptr || win->runtime->gpuctx == nullptr ||
+      wm->runtime->windrawable == win)
+  {
+    return false;
+  }
+  static_cast<GHOST_IWindow *>(win->runtime->ghostwin)->activateDrawingContext();
+  GPU_context_active_set(static_cast<GPUContext *>(win->runtime->gpuctx));
+  return true;
+}
+
+void Mixar_window_gpu_context_pop(const wmWindowManager *wm)
+{
+  wmWindow *win = (wm && wm->runtime) ? wm->runtime->windrawable : nullptr;
+  if (win == nullptr || win->runtime == nullptr || win->runtime->ghostwin == nullptr ||
+      win->runtime->gpuctx == nullptr)
+  {
+    return;
+  }
+  static_cast<GHOST_IWindow *>(win->runtime->ghostwin)->activateDrawingContext();
+  GPU_context_active_set(static_cast<GPUContext *>(win->runtime->gpuctx));
+}
+
 /**
  * Called by ghost, here we handle events for windows themselves or send to event system.
  *

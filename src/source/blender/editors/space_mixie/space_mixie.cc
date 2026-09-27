@@ -45,6 +45,7 @@
 #include "mixie_moodboard_template_drag.hh"
 #include "mixie_moodboard_canvas.hh"
 #include "UI_mixar_tokens.hh"
+#include "UI_mixar_theme.hh"
 #include "ED_moodboard_attachment.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -231,8 +232,9 @@ static void mixie_main_region_init(wmWindowManager *wm, ARegion *region)
 
 static void mixie_main_region_draw(const bContext *C, ARegion *region)
 {
-  /* Both moodboard hosts use the shared Zen canvas palette. */
-  const float *canvas = ui::mixar_tokens::mixar_zen().canvas;
+  /* Both hosts honor the Moodboard background independently of the viewport. */
+  float canvas[4];
+  ui::mixar_moodboard_canvas_color(canvas);
   GPU_clear_color(canvas[0], canvas[1], canvas[2], canvas[3]);
 
   /* Always draw moodboard mode - panels are controlled via scene properties */

@@ -59,6 +59,8 @@ class MIXIE_OT_moodboard_add_template(Operator):
         except ValueError as exc:
             self.report({'WARNING'}, str(exc))
             return {'CANCELLED'}
+        from ...core.first_use import mark_started
+        mark_started(context.scene)
         context.scene.mixie_moodboard_link_drop_active = False
         # Drops never pan or zoom, except a workflow: its frame is far larger
         # than the view and would otherwise land mostly off-screen.

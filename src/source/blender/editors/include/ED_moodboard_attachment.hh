@@ -11,12 +11,17 @@ struct wmOperatorType;
 struct wmWindow;
 /* Reject outgoing island/pill windows during native minimize handoff. */
 bool ED_agent_bubble_is_attachment_destination(const wmWindow *window);
-/* Publish the actual painted thumbnail slot, in region pixels. Presentation
- * only. */
+/* Publish the thumbnail slot and its visible clip, in region pixels. The
+ * ribbon lands on the picture aspect-fit in that slot. Presentation only. */
 void ED_moodboard_attachment_target(const bContext *C,
                                     ARegion *region,
                                     const char *image_name,
-                                    const rctf &rect);
+                                    const rctf &slot,
+                                    const rctf &clip);
+/* True while a ribbon is inbound to this window's slot for the image: the
+ * painter leaves the slot empty until the landed ribbon is retired, then
+ * repaints it in the same pass. */
+bool ED_moodboard_attachment_arriving(const wmWindow *window, const char *image_name);
 void MIXIE_OT_moodboard_attachment_flight(wmOperatorType *ot);
 void mixie_attachment_qa_register();
 /** Live flight the cat can track. Progress uses the existing flight clock;

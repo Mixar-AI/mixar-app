@@ -7,7 +7,7 @@
 The agent gets the frame **twice**: clean, and with the marks on it. That
 split is not tidiness — burning the annotation into the only image you send
 is a real failure. Everything downstream that consumes an image consumes this
-one, and a generation model handed a picture with a cyan loop drawn on it
+one, and a generation model handed a picture with an annotation loop drawn on it
 will faithfully reproduce the loop. It is the same lesson the ordered
 reference-image contract already encodes by keeping ``component_cutout``
 beside ``selection_mask`` instead of merging them.
@@ -16,7 +16,7 @@ The annotated copy exists for the vision half of the agent: it is what lets a
 model *see* what the user circled, in context, at a glance. The clean copy is
 what any generation step should actually work from.
 
-Ink is drawn as a dark casing under a bright core, because a single-colour
+Ink is drawn as a dark casing under a neutral gray core, because a single-colour
 stroke that reads on a light clay render disappears on a dark material
 preview, and the frozen frame can be either.
 
@@ -35,12 +35,12 @@ import os
 import time
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.core.theme_colors import sketch_ink_color
 
 logger = get_logger(__name__)
 
-#: Bright core and dark casing, in PIL's 0-255 RGB.
-INK_CORE = (92, 230, 220)
-INK_CASING = (8, 24, 28)
+#: Neutral gray core and dark casing, in PIL's 0-255 RGB.
+INK_CASING = (20, 20, 20)
 
 #: Casing is this many pixels wider than the core on each side.
 CASING_PAD = 2
@@ -82,16 +82,17 @@ def render_annotated(image, marks, name):
     core_width = max(2, int(round(BASE_WIDTH * scale)))
     casing_width = core_width + CASING_PAD * 2
 
+    ink = tuple(round(c * 255) for c in sketch_ink_color()[:3])
     draw = ImageDraw.Draw(frame)
     for mark in marks:
         for points in _mark_polylines(mark, width, height):
             if len(points) < 2:
-                _draw_dot(draw, points, casing_width, core_width)
+                _draw_dot(draw, points, casing_width, core_width, ink)
                 continue
             # Casing first, core over it — one pass each, so the join between
             # segments does not show the casing through the core.
             draw.line(points, fill=INK_CASING, width=casing_width, joint="curve")
-            draw.line(points, fill=INK_CORE, width=core_width, joint="curve")
+            draw.line(points, fill=ink, width=core_width, joint="curve")
 
     return _pack_result(frame, name)
 
@@ -124,7 +125,7 @@ def _to_pil(points, width, height):
     return [(float(u) * width, (1.0 - float(v)) * height) for u, v in points]
 
 
-def _draw_dot(draw, points, casing_width, core_width):
+def _draw_dot(draw, points, casing_width, core_width, ink):
     """A tap: no outline to trace, so it is drawn as a ring."""
     if not points:
         return
@@ -133,7 +134,7 @@ def _draw_dot(draw, points, casing_width, core_width):
     inner = core_width * 2
     draw.ellipse([x - outer, y - outer, x + outer, y + outer], outline=INK_CASING,
                  width=max(1, casing_width // 2))
-    draw.ellipse([x - inner, y - inner, x + inner, y + inner], outline=INK_CORE,
+    draw.ellipse([x - inner, y - inner, x + inner, y + inner], outline=ink,
                  width=max(1, core_width // 2))
 
 

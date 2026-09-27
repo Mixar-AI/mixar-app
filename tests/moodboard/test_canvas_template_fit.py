@@ -9,10 +9,11 @@ from mixar.modules.moodboard.core.canvas_template_fit import (
 )
 
 
-def test_strip_order_is_mesh_then_generation_shortcuts():
+def test_strip_order_is_3d_video_mesh_then_remaining_shortcuts():
     items = canvas_template_strip_items()
-    assert items[0][0] == 'MESH_REFERENCE'
-    assert [item[0] for item in items[1:4]] == ['IMAGE_GEN', 'MODEL_3D', 'VIDEO_GEN']
+    assert [item[0] for item in items[:4]] == [
+        'MODEL_3D', 'VIDEO_GEN', 'MESH_REFERENCE', 'IMAGE_GEN',
+    ]
 
 
 def test_only_the_plus_menu_fits_in_a_narrow_strip():

@@ -9,6 +9,7 @@ import time
 import uuid
 from pathlib import Path
 
+from .addon_tests import run_addon_tests
 from .checks import run_blender_reload, run_static_checks
 from .constants import (
     PROTOCOL_VERSION,
@@ -23,14 +24,11 @@ from .constants import (
     RPC_SEARCH,
     RPC_SET_ENABLED,
     RPC_STAGE_PATCH,
+    RPC_RUN_TESTS,
+    RPC_SET_ENTRYPOINT,
 )
-from .installer import (
-    addon_is_enabled,
-    addon_link_installed,
-    set_addon_enabled,
-    uninstall_addon,
-)
-from .errors import AddonProjectError, public_error
+from .installer import set_addon_enabled, uninstall_addon
+from .errors import AddonProjectError, VerificationFailed, public_error
 from .indexer import build_index, read_files, search_project
 from .manifest import (
     _MODULE_RE,
@@ -43,11 +41,11 @@ from .manifest import (
 )
 from .registry import ProjectRegistry
 from .transactions import TransactionStore
+from .usage import addon_usage
+from .verify import CommitProof, deliberately_disabled
 from .workspace import (
     clear_disabled,
     created_addon_packages,
-    disabled_entrypoints,
-    enabled_entrypoints,
     mark_disabled,
     record_enabled,
     reject_root_addon_files,
@@ -179,17 +177,17 @@ class AddonProjectService(WorkspaceServiceMixin):
                 )
             return self.transactions.stage(project_id, root, params)
 
-    def commit_patch(self, project_id: str, proposal_id: str) -> dict:
+    def commit_patch(self, project_id: str, proposal_id: str, *, verify=False) -> dict:
+        """Commit one staged proposal. ``verify`` (capability
+        ``addon_project_verify_v1``, main thread) proves every touched add-on
+        in Blender inside the transaction — reload dry run, then its required
+        tests — and reverts the whole commit when the proof fails
+        (``verify.py``)."""
         with self._lock:
             root, manifest = self._resolve(project_id)
             is_workspace = bool(manifest.get("workspace"))
-            created = (
-                created_addon_packages(
-                    self.transactions.proposal_changes(project_id, proposal_id)
-                )
-                if is_workspace
-                else []
-            )
+            changes = self.transactions.proposal_changes(project_id, proposal_id)
+            created = created_addon_packages(changes) if is_workspace else []
             # Scope the commit's static pass exactly like run_checks: a
             # syntax error in an UNRELATED add-on must not block (and roll
             # back) this commit. Workspace projects check the active
@@ -201,9 +199,20 @@ class AddonProjectService(WorkspaceServiceMixin):
                 chosen = manifest.get("entrypoint") or ""
                 if chosen and (root / chosen).is_dir():
                     check_scopes = [(root / chosen, f"{chosen}/")]
-            result = self.transactions.commit(
-                project_id, root, proposal_id, check_scopes=check_scopes
+            proof = (
+                CommitProof(self.storage_dir, root, manifest, changes,
+                            allow_root_package=not is_workspace)
+                if verify else None
             )
+            try:
+                result = self.transactions.commit(
+                    project_id, root, proposal_id, check_scopes=check_scopes,
+                    verify=proof.run if proof else None,
+                )
+            except VerificationFailed as exc:
+                return proof.reverted(exc, build_index(root)[1])
+            if proof:
+                result["live"] = proof.go_live()
             if created:
                 # A commit that CREATES a new add-on package activates it so
                 # the next run_checks (no explicit entrypoint) installs the
@@ -249,31 +258,38 @@ class AddonProjectService(WorkspaceServiceMixin):
                     item["path"] = f"{chosen}/{item['path']}"
             live = None
             if static["success"] and reload_blender:
-                stamped = chosen in disabled_entrypoints(self.storage_dir)
-                native_disable = (
-                    not stamped
-                    and bool(chosen)
-                    and chosen in enabled_entrypoints(self.storage_dir)
-                    and addon_link_installed(root, chosen)
-                    and not addon_is_enabled(chosen)
-                )
-                if native_disable:
-                    # We enabled it once and its link is intact, yet it is
-                    # not enabled: the user disabled it natively in
-                    # Preferences. Honor that — persist the stamp so the
-                    # skip survives future runs.
-                    mark_disabled(self.storage_dir, chosen)
+                # An explicit stamp, or a native Preferences disable of an
+                # add-on we enabled once (persisted as a stamp) — either way
+                # the reload must not force it back on.
                 live = run_blender_reload(
                     root,
                     chosen,
                     allow_root_package=allow_root,
-                    deliberately_disabled=stamped or native_disable,
+                    deliberately_disabled=deliberately_disabled(
+                        self.storage_dir, root, chosen
+                    ),
                 )
                 if chosen and live.get("left_enabled"):
                     record_enabled(self.storage_dir, chosen)
+                    # Where the live add-on shows up, for the agent's answer.
+                    live["usage"] = addon_usage(chosen)
             success = static["success"] and (live is None or live["success"])
             _, revision = build_index(root)
             return {"success": success, "revision": revision, "static": static, "blender_reload": live}
+
+    def run_tests(self, project_id: str, *, entrypoint=None) -> dict:
+        """Run the add-on's own unittest package; ``entrypoint`` as in run_checks."""
+        with self._lock:
+            root, manifest = self._resolve(project_id)
+            allow_root = not bool(manifest.get("workspace"))
+            manifest = refresh_entrypoint(root, manifest, allow_root_package=allow_root)
+            chosen = (
+                self._requested_entrypoint(root, entrypoint, allow_root_package=allow_root)
+                or manifest["entrypoint"]
+            )
+            result = run_addon_tests(root, chosen)
+            _, revision = build_index(root)
+            return {**result, "revision": revision, "entrypoint": chosen}
 
     @staticmethod
     def _requested_entrypoint(root: Path, entrypoint, *, allow_root_package=True):
@@ -339,6 +355,7 @@ class AddonProjectService(WorkspaceServiceMixin):
                 if enabled:
                     clear_disabled(self.storage_dir, chosen)
                     record_enabled(self.storage_dir, chosen)
+                    outcome["usage"] = addon_usage(chosen)
                 else:
                     mark_disabled(self.storage_dir, chosen)
             _, revision = build_index(root)
@@ -381,14 +398,7 @@ class AddonProjectService(WorkspaceServiceMixin):
         if isinstance(value, list):
             return [AddonProjectService._scrub(item, root) for item in value]
         if isinstance(value, dict):
-            return {
-                key: (
-                    "<local traceback omitted>"
-                    if key == "traceback"
-                    else AddonProjectService._scrub(item, root)
-                )
-                for key, item in value.items()
-            }
+            return {key: AddonProjectService._scrub(item, root) for key, item in value.items()}
         return value
 
     def dispatch(self, method: str, params: dict) -> dict:
@@ -417,7 +427,11 @@ class AddonProjectService(WorkspaceServiceMixin):
             elif method == RPC_STAGE_PATCH:
                 result = self.stage_patch(project_id, params)
             elif method == RPC_COMMIT_PATCH:
-                result = self.commit_patch(project_id, str(params.get("proposal_id", "")))
+                result = self.commit_patch(
+                    project_id,
+                    str(params.get("proposal_id", "")),
+                    verify=bool(params.get("verify", False)),
+                )
             elif method == RPC_RUN_CHECKS:
                 result = self.run_checks(
                     project_id,
@@ -435,6 +449,10 @@ class AddonProjectService(WorkspaceServiceMixin):
                 )
             elif method == RPC_HISTORY:
                 result = self.history(project_id, params.get("limit", 20))
+            elif method == RPC_RUN_TESTS:
+                result = self.run_tests(project_id, entrypoint=params.get("entrypoint"))
+            elif method == RPC_SET_ENTRYPOINT:
+                result = self.set_entrypoint(project_id, str(params.get("entrypoint", "")))
             else:  # pragma: no cover - guarded by RPC_METHODS
                 raise AddonProjectError("method_not_found", "Unknown add-on project method")
             return self._scrub(result, root)

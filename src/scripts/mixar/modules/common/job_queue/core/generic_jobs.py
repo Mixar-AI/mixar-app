@@ -213,7 +213,7 @@ class SyncImageJob(Job):
                 self._server_image_name = extract_image_name(result)
             return ("DONE", [])
         if status in FAILED_BACKEND_STATUSES:
-            self.error = inner.get("error", self.fail_message)
+            self.error = (inner.get("error") or self.fail_message)
             self.user_message = (
                 inner.get("user_message", "") or self.fail_message
             )
@@ -245,6 +245,7 @@ class SyncImageJob(Job):
             base_name=self.base_name or self._server_image_name,
             scene_name=self.scene_name,
             should_apply=lambda: self.state == JobState.RUNNING_DOWNLOAD,
+            session_id=str((self.agent_ref or {}).get("session_id") or ""),
         )
         return True
 

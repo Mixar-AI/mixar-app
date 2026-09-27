@@ -135,6 +135,11 @@ class MIXIE_MT_mask_tools(Menu):
             icon="SNAP_FACE",
             depress=(active_tool == "MAGIC_SELECT"),
         )
+        if active_tool == "MAGIC_SELECT":
+            hint = col.column()
+            hint.scale_y = 0.8
+            hint.label(text="Click an object in the image", icon="INFO")
+            hint.label(text="Esc to finish", icon="EVENT_ESC")
 
         if not has_selected_image:
             layout.separator(factor=0.3)

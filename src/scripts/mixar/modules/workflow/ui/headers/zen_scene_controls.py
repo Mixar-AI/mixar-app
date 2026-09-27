@@ -68,25 +68,51 @@ def draw_playback(layout, context):
 
 def draw_sky(layout, context):
     row = layout.mixar_surface(theme="ZEN", density="COMPACT").row(align=True)
-    row.alignment = "EXPAND"
-    row.ui_units_x = 10.2
-    caption(row, "Enable Sky Light", 116, variant="GHOST")
-    if not hasattr(bpy.types, "MIXAR_OT_zen_set_sky"):
-        row.enabled = False
-        row.label(text="OFF")
-        style(row, "GHOST")
-        return
+    row.ui_units_x = 8.6
     row.enabled = context.scene.render.engine in {"CYCLES", "BLENDER_EEVEE"}
+    settings = row.row(align=True)
+    settings.ui_units_x = 5.0
+    if hasattr(bpy.types, "MIXAR_PT_zen_sky"):
+        settings.popover(panel="MIXAR_PT_zen_sky", text="Sky Light")
+    else:
+        settings.label(text="Sky Light")
+    style(settings)
+    toggle = row.row(align=True)
+    toggle.ui_units_x = 2.2
     active = sky_enabled(context.scene)
-    for enabled, label in ((False, "OFF"), (True, "ON")):
-        button = row.row(align=True)
-        button.ui_units_x = 2.2
-        button.operator("mixar.zen_set_sky", text=label, depress=active == enabled).enabled = enabled
-        style(button, "GHOST")
+    if hasattr(bpy.types, "MIXAR_OT_zen_set_sky"):
+        toggle.operator("mixar.zen_set_sky", text="ON" if active else "OFF",
+                        depress=active).enabled = not active
+    else:
+        toggle.label(text="OFF")
+    style(toggle, "GHOST")
+    add = row.row(align=True)
+    add.ui_units_x = 1.4
+    if hasattr(bpy.types, "MIXAR_OT_zen_load_hdri"):
+        add.operator("mixar.zen_load_hdri", text="", icon="ADD")
+    else:
+        add.label(text="", icon="ADD")
+    style(add)
+
+
+def draw_scenes_button(surface, context):
+    """Native rounded hamburger with a sliding Scene label on hover."""
+    wm = context.window_manager
+    drawer_open = bool(getattr(wm, "mixar_scenes_drawer_target", 0))
+    attention = bool(getattr(wm, "mixar_scene_tabs_attention", False))
+    scenes = surface.row()
+    # Reserve the expanded width; the native layout pass contracts the button
+    # and shifts the left lane at rest, sharing actual bounds with hit tests.
+    scenes.ui_units_x = 4.1
+    scenes.operator("view3d.scenes_drawer_toggle", text="Scene",
+                    depress=drawer_open or attention)
+    style(scenes)
+    surface.separator(factor=0.15)
 
 
 def draw_left(layout, context, *, compact):
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
+    draw_scenes_button(surface, context)
     add = surface.row()
     add.ui_units_x = 3.4 if compact else 5.8
     add.menu("VIEW3D_MT_add", text="Add" if compact else "Add Objects")
@@ -109,17 +135,7 @@ def draw_right(layout, context, *, compact):
     # Native row spacing is enough between groups; extra separators double it.
     draw_cinema(layout, context)
     draw_playback(layout, context)
-    if compact:
-        sky = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
-        sky.ui_units_x = 5.2
-        if hasattr(bpy.types, "MIXAR_PT_zen_sky"):
-            sky.popover(panel="MIXAR_PT_zen_sky", text="Sky Light", icon="WORLD")
-        else:
-            sky.enabled = False
-            sky.label(text="Sky Light")
-        style(sky)
-    else:
-        draw_sky(layout, context)
+    draw_sky(layout, context)
     export = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
     export.ui_units_x = 4.2
     export.menu("TOPBAR_MT_file_export", text="Export", icon="EXPORT")
@@ -131,8 +147,8 @@ def draw_cinema(layout, context):
     if state is None:
         return
     row = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
-    row.ui_units_x = 6.2
+    row.ui_units_x = 6.0
     active = bool(state.is_directing)
     row.operator("mixar.director_finish" if active else "mixar.director_enter",
-                 text="Cinema Mode", depress=active)
+                 text="Cinema Mode", icon="CINEMA_REEL", depress=active)
     style(row, "PRIMARY")

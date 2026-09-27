@@ -6,8 +6,7 @@
  * \ingroup edinterface
  *
  * Zen chrome beds. The island/pill windows frost through GHOST; the Zen
- * topbar lives in the main window, so it takes the same ISLAND pane the
- * kit already owns. The Zen scene toolbar has a black bed; its empty
+ * topbar and scene toolbar share one opaque themed bed; the empty
  * tool-header remains transparent. Both use the existing overlap geometry.
  * macOS and Windows share this GPU path.
  *
@@ -17,6 +16,7 @@
  */
 
 #include "BKE_context.hh"
+#include "UI_mixar_theme.hh"
 #include "BKE_global.hh"
 #include "BKE_main.hh"
 
@@ -30,7 +30,6 @@
 #include "DNA_workspace_types.h"
 #include "DNA_userdef_types.h"
 
-#include "ED_mixar_glass.hh"
 #include "ED_screen.hh"
 
 #include "GPU_framebuffer.hh"
@@ -93,8 +92,7 @@ bool mixar_zen_header_clear(const bContext *C, const ARegion *region)
     return false;
   }
   const ScrArea *area = CTX_wm_area(C);
-  /* Only the topbar uses the ISLAND bed. The scene toolbar owns its
-   * separate flat reference recipe below. */
+  /* The mode bar shares the Cinema toolbar background below. */
   if (area == nullptr || area->spacetype != SPACE_TOPBAR) {
     return false;
   }
@@ -102,15 +100,8 @@ bool mixar_zen_header_clear(const bContext *C, const ARegion *region)
   ED_region_pixelspace(region);
   /* The main window has no native backdrop. Its topbar is an opaque bed;
    * alpha here exposes uninitialised region buffers, not viewport frost. */
-  GPU_clear_color(0.040f, 0.055f, 0.048f, 1.0f);
-  const rcti pane{0, region->winx, 0, region->winy};
-  MixarGlassStyle style;
-  style.role = MIXAR_GLASS_ISLAND;
-  style.radius = 0.0f;
-  style.draw_shadow = false;
-  style.draw_specular = false;
-  style.draw_rim = false;
-  mixar_glass_draw(pane, style);
+  MIXAR_THEME_LOAD(background, ToolbarBackground);
+  GPU_clear_color(background[0], background[1], background[2], 1.0f);
   return true;
 }
 
@@ -130,10 +121,10 @@ bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region)
   }
   ED_region_pixelspace(region);
   if (region->regiontype == RGN_TYPE_HEADER) {
-    GPU_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
+    MIXAR_THEME_LOAD(background, ToolbarBackground);
+    GPU_clear_color(background[0], background[1], background[2], 1.0f);
     const rctf divider{0, float(region->winx), 0, float(U.pixelsize)};
-    const float c = mixar_chrome::toolbar_border[0] / 255.0f;
-    const float color[4] = {c, c, c, 1.0f};
+    MIXAR_THEME_LOAD(color, ToolbarBorder);
     draw_roundbox_corner_set(CNR_ALL);
     draw_roundbox_4fv(&divider, true, 0, color);
   }

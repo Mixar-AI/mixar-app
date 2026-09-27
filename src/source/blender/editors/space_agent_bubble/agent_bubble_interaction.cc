@@ -23,13 +23,39 @@ bool agent_bubble_should_dismiss(bContext *C, const wmEvent *event, void *bubble
   {
     return false;
   }
-  /* Pickers and popups belong to the chat interaction even outside its frame. */
-  for (wmWindow &win : CTX_wm_manager(C)->windows) {
-    const bool is_island = ELEM(win.runtime->ghostwin, bubble, pill);
-    if (!is_island && WM_window_is_temp_screen(&win)) {
-      return false;
+  /* A press inside a temporary window (picker, render view, Preferences) is
+   * interaction with that window, not an outside click. */
+  if (WM_window_is_temp_screen(target)) {
+    return false;
+  }
+  wmWindowManager *wm = CTX_wm_manager(C);
+  const wmWindow *bubble_win = nullptr;
+  for (const wmWindow &win : wm->windows) {
+    if (win.runtime->ghostwin == bubble) {
+      bubble_win = &win;
+      break;
     }
+  }
+  for (wmWindow &win : wm->windows) {
+    const bool is_island = ELEM(win.runtime->ghostwin, bubble, pill);
     const bScreen *screen = WM_window_get_active_screen(&win);
+    /* Pickers belong to the chat interaction even outside its frame: the file
+     * dialog the island opens is parented to it, so hiding the island would
+     * take the picker down. Any file picker anywhere is treated the same.
+     * Other temporary windows elsewhere (an open Preferences window, a render
+     * view) must NOT freeze the collapse. */
+    if (!is_island && WM_window_is_temp_screen(&win)) {
+      if (bubble_win && win.parent == bubble_win) {
+        return false;
+      }
+      if (screen) {
+        for (const ScrArea &area : screen->areabase) {
+          if (area.spacetype == SPACE_FILE) {
+            return false;
+          }
+        }
+      }
+    }
     if (!screen) {
       continue;
     }

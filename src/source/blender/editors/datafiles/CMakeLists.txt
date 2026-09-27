@@ -239,6 +239,7 @@ if(WITH_BLENDER)
       brushes_all
       brush_data
       camera_data
+      cinema_reel
       camera_stereo
       cancel
       cancel_large
@@ -582,7 +583,13 @@ if(WITH_BLENDER)
       meta_ellipsoid
       meta_plane
       mixar_icon
+      credits_upgrade
+      credits_slide
+      credits_refer
+      credits_creator
       paperclip
+      notification_sound
+      notification_sound_off
       eraser
       submit_arrow
       modifier

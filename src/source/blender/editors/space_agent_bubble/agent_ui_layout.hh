@@ -42,13 +42,29 @@ enum AgentTabId {
   AGENT_TAB_IMAGE,
   AGENT_TAB_VIDEO,
   AGENT_TAB_SPLAT,
+  AGENT_TAB_ADDON, /* Add-on Project Mode: the same chat, in ADDON_PROJECT mode. */
   AGENT_TAB_GENERATIONS,
   AGENT_TAB_QUEUE,
 
   AGENT_TAB_COUNT,
 };
 
-/** Content starts below session actions only on the Agent tab. */
+/**
+ * The tabs whose card is the CHAT (transcript, composer, header actions) —
+ * Agent and Add-on. Every "is this the Agent tab" gate in the island and in
+ * the shared chat editor asks this, so a second chat tab is one enum row,
+ * never a second predicate. Add-on differs from Agent only by the scene's
+ * `mixie_chat_mode` (synced by `bubble_tab_props.py`); the layout is identical.
+ */
+inline bool agent_ui_tab_shows_chat(const AgentTabId tab)
+{
+  return tab == AGENT_TAB_AGENT || tab == AGENT_TAB_ADDON;
+}
+
+/** `wm.mixar_bubble_tab` enum identifier -> tab; #AGENT_TAB_COUNT when unknown. */
+AgentTabId agent_ui_tab_from_identifier(const char *identifier);
+
+/** Content starts below session actions only on the chat tabs. */
 float agent_ui_panel_top(AgentTabId tab);
 
 /** Shared by text measurement and tab painting. */
@@ -109,6 +125,7 @@ struct AgentIslandLayout {
   rctf hdr_handwriting; /* Signature disc — explicit handwriting, separate from Sketch. */
   rctf hdr_checkpoints; /* Turn checkpoints — restore an earlier turn. */
   rctf hdr_rules; /* Rules text-document icon, beside Checkpoints. */
+  rctf hdr_scenes; /* Scene tabs — which tab this chat is, jump to another. */
   float hdr_title_cx;
   float hdr_title_y;
 

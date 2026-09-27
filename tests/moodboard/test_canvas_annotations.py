@@ -34,7 +34,8 @@ def drawing():
     tree.body = [node for node in tree.body if not isinstance(node, (ast.Import, ast.ImportFrom))]
     scope = {'Operator': object, 'math': math, 'ANNOTATION_MAX_POINTS_PER_STROKE': 4,
              'CANVAS_ANNOTATION_SAMPLE_PX': 2.0, 'is_moodboard_context': lambda c: True,
-             'redraw_moodboard_canvases': Mock()}
+             'redraw_moodboard_canvases': Mock(),
+             'begin_preview': Mock(), 'end_preview': Mock()}
     exec(compile(tree, str(source), 'exec'), scope)
     strokes = Collection(lambda: NS(points=Collection(lambda: NS(x=0, y=0))))
     context = NS(
@@ -70,6 +71,8 @@ def test_release_includes_short_endpoint_and_leaves_tool_ready_for_another_strok
     op.modal(context, event(x=151, type='MOUSEMOVE', value='NOTHING'))
     assert len(op._stroke.points) == 1  # Under two screen pixels.
     assert op.modal(context, event(x=151, value='RELEASE')) == {'FINISHED'}
+    op.modal.__globals__['end_preview'].assert_called_once_with(
+        context.scene, 'mixie_moodboard_annotations', committed=True)
     assert len(op._stroke.points) == 2
     assert context.window_manager.mixie_moodboard_annotating
     context.window.cursor_modal_restore.assert_called_once()
@@ -81,6 +84,8 @@ def test_cancel_removes_only_the_inflight_stroke(drawing, type):
     earlier = context.scene.mixie_moodboard_annotations.add()
     op.invoke(context, event())
     assert op.modal(context, event(type=type)) == {'CANCELLED'}
+    op.modal.__globals__['end_preview'].assert_called_once_with(
+        context.scene, 'mixie_moodboard_annotations')
     assert context.scene.mixie_moodboard_annotations == [earlier]
     context.window.cursor_modal_restore.assert_called_once()
 

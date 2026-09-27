@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <vector>
 
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -221,7 +222,7 @@ void agent_ui_generations_draw(const bContext *C,
              "window_manager.mixar_generations_source",
              rail[i].value,
              (i == 0) ? "Everything Mixar has generated" :
-                        "Browse and connect Blender asset libraries");
+                        "Your connected folders: images, videos and 3D assets");
   }
   agent_ui_generations_libraries(C, block, frame, data);
 
@@ -276,8 +277,8 @@ void agent_ui_generations_draw(const bContext *C,
         block, &wm, "mixar_generations_scroll", grid.scrollbar, BLI_rctf_size_y(&grid.view), grid.max_scroll);
   }
 
-  rctf selected_tile;
-  agent_ui_generations_grid(C, block, panel, frame, data, grid, &selected_tile);
+  std::vector<rctf> selected_tiles;
+  agent_ui_generations_grid(C, block, panel, frame, data, grid, &selected_tiles);
 
   /* The detail column paints AND lays its two actions, so it runs while blend
    * is still on and before the block is closed. */
@@ -288,17 +289,19 @@ void agent_ui_generations_draw(const bContext *C,
   ui::block_end(C, block);
   ui::block_draw(C, block);
 
-  /* Clip the selection ring along with partial rows. */
-  if (BLI_rctf_size_x(&selected_tile) > 0.0f) {
+  /* Clip the selection rings along with partial rows. */
+  if (!selected_tiles.empty()) {
     const GenViewportClip clip(grid.view);
     MIXAR_THEME_LOAD(accent, AgentAccent);
     const float w = std::max(GEN_SEL_BORDER * u, frame.pad * 0.2f);
-    rctf ring = selected_tile;
-    BLI_rctf_pad(&ring, -w * 0.5f, -w * 0.5f);
     GPU_blend(GPU_BLEND_ALPHA);
     ui::draw_roundbox_corner_set(ui::CNR_ALL);
-    ui::draw_roundbox_4fv_ex(
-        &ring, nullptr, nullptr, 1.0f, accent, w, (GEN_TILE_RADIUS * u) - w * 0.5f);
+    for (const rctf &tile : selected_tiles) {
+      rctf ring = tile;
+      BLI_rctf_pad(&ring, -w * 0.5f, -w * 0.5f);
+      ui::draw_roundbox_4fv_ex(
+          &ring, nullptr, nullptr, 1.0f, accent, w, (GEN_TILE_RADIUS * u) - w * 0.5f);
+    }
     GPU_blend(GPU_BLEND_NONE);
   }
 }

@@ -18,7 +18,13 @@
 #include "BKE_preview_image.hh"
 #include "BKE_scene.hh"
 
+#include <array>
+#include <cmath>
+
+#include "BLI_math_geom.h"
+#include "BLI_math_vector_types.hh"
 #include "BLI_string.h"
+#include "../interface/interface_intern.hh"
 #include "BLI_vector.hh"
 
 #include "DNA_object_types.h"
@@ -251,6 +257,48 @@ static void add_asset_preview(const bContext *C,
   }
 }
 
+/** The text pass paints after native card controls. Snapshot its rotated
+ * footprints so hidden controls cannot consume clicks meant for that text. */
+static void exclude_text_overlays(ui::Block *block, PointerRNA *scene, View2D *v2d)
+{
+  PropertyRNA *boxes = RNA_struct_find_property(scene, "mixie_moodboard_textboxes");
+  if (!boxes) {
+    return;
+  }
+  Vector<std::array<float2, 4>> footprints;
+  CollectionPropertyIterator iter{};
+  RNA_property_collection_begin(scene, boxes, &iter);
+  while (iter.valid) {
+    const float x = RNA_float_get(&iter.ptr, "position_x");
+    const float y = RNA_float_get(&iter.ptr, "position_y");
+    const float w = RNA_float_get(&iter.ptr, "width");
+    const float h = RNA_float_get(&iter.ptr, "height");
+    const float angle = RNA_float_get(&iter.ptr, "rotation") * (M_PI / 180.0f);
+    const float cosine = std::cos(angle), sine = std::sin(angle);
+    std::array<float2, 4> corners = {float2(-w/2, -h/2), float2(w/2, -h/2),
+                                     float2(w/2, h/2), float2(-w/2, h/2)};
+    for (float2 &p : corners) {
+      const float px = x + w/2 + p.x * cosine - p.y * sine;
+      const float py = y + h/2 + p.x * sine + p.y * cosine;
+      ui::view2d_view_to_region_fl(v2d, px, py, &p.x, &p.y);
+    }
+    footprints.append(corners);
+    RNA_property_collection_next(&iter);
+  }
+  RNA_property_collection_end(&iter);
+  if (!footprints.is_empty()) {
+    block->mixar_point_is_occluded = [footprints = std::move(footprints)](float x, float y) {
+      const float2 point(x, y);
+      for (const auto &quad : footprints) {
+        if (isect_point_quad_v2(point, quad[0], quad[1], quad[2], quad[3])) {
+          return true;
+        }
+      }
+      return false;
+    };
+  }
+}
+
 void mixie_draw_moodboard_graph_controls(const bContext *C,
                                          View2D *v2d,
                                          const MoodboardGraphCache *cache)
@@ -302,6 +350,7 @@ void mixie_draw_moodboard_graph_controls(const bContext *C,
    * (mixie_draw_moodboard_media_actions.cc). */
   moodboard_add_selected_media_actions(C, block, v2d, region, &scene_ptr, cache);
 
+  exclude_text_overlays(block, &scene_ptr, v2d);
   ui::block_end(C, block);
   for (const ObjectPreviewDraw &preview : object_previews) {
     PreviewImage *preview_image = BKE_previewimg_id_ensure(&preview.object->id);

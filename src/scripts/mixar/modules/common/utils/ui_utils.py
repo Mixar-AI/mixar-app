@@ -76,13 +76,14 @@ def draw_multiline_text_input(layout, data, prop, *, text="",
 _TOP_OVERLAP_REGION_TYPES = frozenset({'HEADER', 'TOOL_HEADER'})
 
 
-def visible_overlapping_headers(area, window_region):
+def visible_overlapping_headers(area, window_region,
+                                region_types=_TOP_OVERLAP_REGION_TYPES):
     """The visible header regions of *area* that sit over *window_region*."""
     wx0, wy0 = window_region.x, window_region.y
     wx1, wy1 = wx0 + window_region.width, wy0 + window_region.height
     found = []
     for region in area.regions:
-        if region.type not in _TOP_OVERLAP_REGION_TYPES:
+        if region.type not in region_types:
             continue
         if region.width <= 1 or region.height <= 1:
             continue
@@ -93,19 +94,22 @@ def visible_overlapping_headers(area, window_region):
     return found
 
 
-def top_header_overlap_px(area, window_region):
+def top_header_overlap_px(area, window_region,
+                          region_types=_TOP_OVERLAP_REGION_TYPES):
     """Pixels at the top of *window_region* covered by an overlapping header.
 
     0 when the headers sit beside the canvas (stock, non-overlap layout),
     are hidden, or are bottom-aligned. Overlays anchored to the top of the
-    region (the agent halo, the sketch hint) start below this inset so the
-    header neither hides them nor is washed over by them.
+    region (the sketch hint) start below this inset so the header neither
+    hides them nor is washed over by them. *region_types* narrows which
+    header strips count (the halo passes only the opaque Zen HEADER).
     """
     try:
         top = window_region.y + window_region.height
         mid = window_region.y + window_region.height / 2.0
         inset = 0
-        for region in visible_overlapping_headers(area, window_region):
+        for region in visible_overlapping_headers(
+                area, window_region, region_types):
             if region.y + region.height / 2.0 < mid:
                 continue  # bottom-aligned header
             inset = max(inset, top - region.y)

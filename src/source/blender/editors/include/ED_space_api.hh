@@ -24,6 +24,12 @@ void ED_agent_bubble_handle_event(bContext *C, const wmEvent *event);
 /* Exact native-window identity; the open island's small status pill is excluded. */
 bool ED_agent_bubble_is_resting_pill(const bContext *C);
 
+/* The island's active tab (wm.mixar_bubble_tab) shows the chat — Agent or
+ * Add-on. `unknown` is the answer while the property is not registered or
+ * unreadable (the card is Agent until Python registers it; each caller
+ * chooses whether that fails open or closed). */
+bool ED_agent_bubble_tab_shows_chat(const bContext *C, bool unknown);
+
 /* Resolve the live native host; reparenting need not change wmWindow::parent. */
 wmWindow *ED_agent_bubble_host_window_get(wmWindowManager *wm);
 

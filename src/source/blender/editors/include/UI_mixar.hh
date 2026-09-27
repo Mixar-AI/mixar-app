@@ -43,6 +43,9 @@ void mixar_style_card(Button *button, MixarCardElement element, float legacy_pay
 const char *mixar_component_name(MixarComponent component);
 const char *mixar_theme_name(MixarTheme theme);
 const char *mixar_variant_name(MixarVariant variant);
+/** Horizontal inset, in region pixels, that keeps a Zen action's fill inside a
+ * dropdown menu's rounded outline; 0 outside menus. */
+float mixar_menu_item_inset(const Button &button);
 /** Draws the component backdrop; true means the native text pass is still
  * required. */
 bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &rect);

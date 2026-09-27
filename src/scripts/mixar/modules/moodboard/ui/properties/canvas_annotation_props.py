@@ -18,7 +18,7 @@ class MixieMoodboardCanvasPoint(PropertyGroup):
 class MixieMoodboardCanvasStroke(PropertyGroup):
     points: CollectionProperty(type=MixieMoodboardCanvasPoint)
     color: FloatVectorProperty(
-        name="Color", subtype="COLOR", size=4,
+        name="Color", subtype="COLOR_GAMMA", size=4,
         default=ANNOTATION_COLOR_DEFAULT, min=0.0, max=1.0,
     )
     # Stored in canvas units, so both points and width follow canvas zoom.

@@ -146,7 +146,9 @@ class MExportObj(bpy.types.Operator):
         kwargs = settings_to_kwargs(os)
 
         try:
-            bpy.ops.wm.obj_export(filepath=self.filepath, **kwargs)
+            status = bpy.ops.wm.obj_export(filepath=self.filepath, **kwargs)
+            if 'FINISHED' not in status:
+                raise RuntimeError(f"exporter returned {sorted(status)}")
         except Exception as e:
             logger.error("OBJ export failed: %s", e)
             self.report({'ERROR'}, f"Export failed: {e}")
