@@ -15,7 +15,10 @@
  * opaque header, so it must stay on the stock overlap and clear path.
  */
 
+#include <algorithm>
+#include "interface_intern.hh"
 #include "BKE_context.hh"
+#include "BKE_screen.hh"
 #include "UI_mixar_theme.hh"
 #include "BKE_global.hh"
 #include "BKE_main.hh"
@@ -132,6 +135,53 @@ bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region)
     GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f);
   }
   return true;
+}
+
+/* Native View2D panning owns drag events; keep the entire control group reachable. */
+void mixar_zen_adaptive_pan_clamp(const bContext *C, ARegion *region)
+{
+  if (!mixar_workspace_is_zen(C) || region->regiontype != RGN_TYPE_TOOL_HEADER) {
+    return;
+  }
+  rctf bounds;
+  BLI_rctf_init_minmax(&bounds);
+  bool found = false;
+  for (const Block &block : region->runtime->uiblocks) {
+    if (block.name != "VIEW3D_HT_tool_header") {
+      continue;
+    }
+    for (const Button &button : block.buttons()) {
+      if (button.mixar_style.component != MixarComponent::Toolbar ||
+          (button.flag & UI_HIDDEN)) {
+        continue;
+      }
+      BLI_rctf_union(&bounds, &button.rect);
+      found = true;
+    }
+  }
+  if (!found) {
+    return;
+  }
+  /* A compact swatch stays vertically centered with the full-height controls. */
+  for (Block &block : region->runtime->uiblocks) {
+    if (block.name != "VIEW3D_HT_tool_header") {
+      continue;
+    }
+    for (Button &button : block.buttons()) {
+      if (button.type == ButtonType::Color) {
+        BLI_rctf_translate(&button.rect, 0,
+                          BLI_rctf_cent_y(&bounds) - BLI_rctf_cent_y(&button.rect));
+      }
+    }
+  }
+  const float xmin = std::min(bounds.xmax - region->winx, bounds.xmin);
+  const float xmax = std::max(bounds.xmax - region->winx, bounds.xmin);
+  const float ymin = std::min(bounds.ymax - region->winy, bounds.ymin);
+  const float ymax = std::max(bounds.ymax - region->winy, bounds.ymin);
+  View2D &v2d = region->v2d;
+  BLI_rctf_translate(&v2d.cur,
+                    std::clamp(v2d.cur.xmin, xmin, xmax) - v2d.cur.xmin,
+                    std::clamp(v2d.cur.ymin, ymin, ymax) - v2d.cur.ymin);
 }
 
 }  // namespace blender::ui

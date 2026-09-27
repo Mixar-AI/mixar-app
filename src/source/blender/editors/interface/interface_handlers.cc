@@ -5820,6 +5820,16 @@ static bool do_but_ANY_drag_toggle(
 
 static int do_but_BUT(bContext *C, Button *but, HandleButtonData *data, const wmEvent *event)
 {
+  /* Start native panning on the grip press, rather than after its release. */
+  if (data->state == BUTTON_STATE_HIGHLIGHT && event->type == LEFTMOUSE &&
+      event->val == KM_PRESS && but->optype &&
+      STREQ(but->optype->idname, "VIEW2D_OT_pan") &&
+      but->block->name == "VIEW3D_HT_tool_header" &&
+      but->mixar_style.theme == MixarTheme::Zen)
+  {
+    button_activate_state(C, but, BUTTON_STATE_EXIT);
+    return WM_UI_HANDLER_BREAK;
+  }
   /* Mixar: operator buttons with a drag payload use the native drag threshold.
    * A release without a drag still invokes the button's ordinary operator. */
   if (button_drag_is_draggable(but) &&

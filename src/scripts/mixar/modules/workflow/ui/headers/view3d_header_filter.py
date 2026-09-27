@@ -5,8 +5,8 @@
 """Zen-only viewport scene toolbar and Move/Rotate/Scale tool strip.
 
 The header uses native controls with reference-matched toolbar presentation.
-The tool header remains empty. Engine workspaces, including Texturing, keep
-Blender's original headers and tools. Workspace identity owns this filtering,
+A compact selection menu floats in the transparent tool header. Engine
+workspaces, including Texturing, keep Blender's original headers and tools. Workspace identity owns this filtering,
 so a global preference cannot remove controls from a different editor.
 """
 
@@ -18,6 +18,7 @@ from ...constants import BASIC_WORKSPACE_NAME, ZEN_TRANSFORM_TOOL_IDS
 from ...core import viewport_guides
 from ..operators import zen_tool_toggle
 from . import zen_scene_controls
+from .zen_object_controls import draw_object_controls
 
 _logger = get_logger(__name__)
 
@@ -110,15 +111,15 @@ def _draw_zen_guides(self, context):
 def _patched_tool_header_draw(self, context):
     """Replacement for VIEW3D_HT_tool_header.draw.
 
-    Zen mode: render nothing. The region overlaps and clears transparent,
-    so an empty tool-header must not paint button-section chrome.
+    Zen mode: center the selection menu over the viewport. The region
+    overlaps and clears transparent; only the native controls paint a surface.
     Engine mode: defer to the original draw.
     """
     if not _is_basic_workspace(context):
         if _original_tool_header_draw is not None:
             _original_tool_header_draw(self, context)
         return
-    # Zen mode: deliberately empty.
+    draw_object_controls(self.layout, context)
 
 
 def _tool_helper():

@@ -99,4 +99,5 @@ bool mixar_area_floats_viewport_chrome(const ScrArea *area);
 bool mixar_zen_header_clear(const bContext *C, const ARegion *region);
 /** Zen scene-toolbar bed / transparent empty tool-header clear. */
 bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region);
+void mixar_zen_adaptive_pan_clamp(const bContext *C, ARegion *region);
 }  // namespace blender::ui

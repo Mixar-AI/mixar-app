@@ -152,10 +152,10 @@ def configure_basic_workspace_chrome() -> None:
 
     Counter-intuitive but deliberate: hiding regions via show_region_*
     creates Blender's collapsed-region expand arrow, which we do not want.
-    Instead, view3d_header_filter empties the header/tool-header/T-panel
-    contents while the regions stay visible. This function ensures the
-    regions are visible to begin with, in case the workspace was saved
-    with regions hidden from a previous session.
+    Instead, view3d_header_filter draws Zen controls in those regions;
+    the tool header is transparent around its floating selection menu.
+    This function ensures the regions are visible to begin with, in case
+    the workspace was saved with regions hidden from a previous session.
 
     Walks bpy.data.workspaces directly (not the active window's screen) so
     the configuration is independent of any in-flight workspace switch.
@@ -186,11 +186,12 @@ def configure_basic_workspace_chrome() -> None:
                         space.show_region_toolbar = True
                     if not space.show_region_header:
                         space.show_region_header = True
-                    # Tool Settings header (the tool-options strip above the
-                    # main header) stays HIDDEN in Zen Mode for a cleaner
-                    # viewport. Idempotent guard, same splash-safe reason.
-                    if space.show_region_tool_header:
-                        space.show_region_tool_header = False
+                    # Native controls float over the viewport in this
+                    # transparent region; its empty area has no background.
+                    if (hasattr(space, 'mixar_zen_controls_initialized')
+                            and not space.mixar_zen_controls_initialized):
+                        space.show_region_tool_header = True
+                        space.mixar_zen_controls_initialized = True
                     # Zen Mode keeps the viewport clean: relationship lines
                     # are off by default. Same idempotent guard as above so we
                     # don't trigger redraws that would close the splash.

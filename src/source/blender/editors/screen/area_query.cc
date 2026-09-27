@@ -168,7 +168,8 @@ bool ED_region_contains_xy(const ARegion *region, const int event_xy[2])
       const int overlap_margin = UI_REGION_OVERLAP_MARGIN;
       /* Note the View2D.tot isn't reliable for headers with spacers otherwise
        * we'd check #ED_region_overlap_isect_xy_with_margin for both bases. */
-      if (region->v2d.keeptot == V2D_KEEPTOT_STRICT) {
+      if (region->v2d.keeptot == V2D_KEEPTOT_STRICT ||
+          region->regiontype == RGN_TYPE_TOOL_HEADER) {
         /* Header. */
         rcti rect;
         BLI_rcti_init_pt_radius(&rect, event_xy, overlap_margin);

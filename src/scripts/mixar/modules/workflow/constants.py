@@ -30,3 +30,11 @@ PRO_DEFAULT_WORKSPACE_NAME = "Layout"
 # bottom). Shared with the strip's toggle logic so the buttons and the
 # "is this a transform tool?" test cannot drift apart.
 ZEN_TRANSFORM_TOOL_IDS = ("builtin.move", "builtin.rotate", "builtin.scale")
+
+# Deliberately small Zen quick-edit menu; full modifier authoring stays in Engine.
+ZEN_MODIFIER_ITEMS = (
+    ("BEVEL", "Bevel", "Round the mesh's edges"),
+    ("SUBSURF", "Subdivision", "Smooth the mesh with subdivision"),
+    ("MIRROR", "Mirror", "Mirror the mesh along an axis"),
+)
+ZEN_MODIFIER_TYPES = frozenset(item[0] for item in ZEN_MODIFIER_ITEMS)
