@@ -14,6 +14,7 @@
 #include "UI_mixar_theme.hh"
 #include "WM_types.hh"
 #include "toolbar.hh"
+#include "scenes_toggle.hh"
 #include "cinema_label.hh"
 
 #include <algorithm>
@@ -90,6 +91,10 @@ bool mixar_toolbar_sample_range(Button &button)
 
 bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &bounds)
 {
+  if (mixar_scenes_toggle_is_button(button)) {
+    mixar_scenes_toggle_draw(button, bounds);
+    return false;
+  }
   const uchar *toolbar_background = mixar_theme_color_ptr(MixarThemeSlot::ToolbarBackground);
   const uchar *toolbar_border = mixar_theme_color_ptr(MixarThemeSlot::ToolbarBorder);
   const uchar *toolbar_primary = mixar_theme_color_ptr(MixarThemeSlot::ToolbarPrimary);

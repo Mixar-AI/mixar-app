@@ -105,7 +105,6 @@ void sync_cards(const bContext *C, ScenesDrawerRuntime *runtime)
     read_string(&tab_ptr, "scene_uid", card.scene_uid);
     read_string(&tab_ptr, "scene_name", card.scene_name);
     read_string(&tab_ptr, "session_id", card.session_id);
-    read_string(&tab_ptr, "last_text", card.last_text);
     const int status = read_enum(&tab_ptr, "status", 0);
     card.status = (status >= 0 && status <= 3) ? ScenesDrawerTabStatus(status) :
                                                  ScenesDrawerTabStatus::Idle;
@@ -126,6 +125,13 @@ void sync_cards(const bContext *C, ScenesDrawerRuntime *runtime)
                      return card.scene_uid == runtime->selection_anchor;
                    })) {
     runtime->selection_anchor.clear();
+  }
+  /* A card deleted elsewhere (agent, another window) takes its rename with it. */
+  if (!runtime->rename_uid.empty() &&
+      std::none_of(runtime->cards.begin(), runtime->cards.end(),
+                   [&](const ScenesDrawerCard &card) { return card.scene_uid == runtime->rename_uid; }))
+  {
+    runtime->rename_uid.clear();
   }
 }
 
@@ -197,45 +203,19 @@ void draw_pill(const rctf &rect, const float fill[4], const float radius)
   ui::draw_roundbox_4fv(&rect, true, radius, fill);
 }
 
-static void glyph_line(const float x1, const float y1, const float x2, const float y2,
-                       const float width, const float color[4])
-{
-  GPUVertFormat *format = immVertexFormat();
-  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
-  immBindBuiltinProgram(GPU_SHADER_3D_POLYLINE_UNIFORM_COLOR);
-  float viewport[4];
-  GPU_viewport_size_get_f(viewport);
-  immUniform2fv("viewportSize", &viewport[2]);
-  immUniform1f("lineWidth", width);
-  immUniformColor4fv(color);
-  immBegin(GPU_PRIM_LINES, 2);
-  immVertex2f(pos, x1, y1);
-  immVertex2f(pos, x2, y2);
-  immEnd();
-  immUnbindProgram();
-}
-
 void draw_trash(const rcti &box, const float scale, const float color[4])
 {
-  /* A bin: lid with a handle, tapered body, two inner lines. The card's
-   * close control deletes the whole scene; the glyph says so. */
-  /* Drawn at 62% of the control's box so it sits like the status badge's
-   * text rather than dominating the card. */
-  const float w = float(BLI_rcti_size_x(&box) + 1) * 0.62f;
-  const float h = float(BLI_rcti_size_y(&box) + 1) * 0.62f;
-  const float x = float(box.xmin) + (float(BLI_rcti_size_x(&box) + 1) - w) * 0.5f;
-  const float y = float(box.ymin) + (float(BLI_rcti_size_y(&box) + 1) - h) * 0.5f;
-  const float line = std::max(1.15f * scale, 1.0f);
-  const float lid_y = y + h * 0.78f;
-  glyph_line(x + w * 0.18f, lid_y, x + w * 0.82f, lid_y, line, color);          /* lid */
-  glyph_line(x + w * 0.40f, lid_y, x + w * 0.44f, y + h * 0.90f, line, color);  /* handle */
-  glyph_line(x + w * 0.56f, y + h * 0.90f, x + w * 0.60f, lid_y, line, color);
-  glyph_line(x + w * 0.44f, y + h * 0.90f, x + w * 0.56f, y + h * 0.90f, line, color);
-  glyph_line(x + w * 0.26f, lid_y, x + w * 0.31f, y + h * 0.16f, line, color);   /* body */
-  glyph_line(x + w * 0.74f, lid_y, x + w * 0.69f, y + h * 0.16f, line, color);
-  glyph_line(x + w * 0.31f, y + h * 0.16f, x + w * 0.69f, y + h * 0.16f, line, color);
-  glyph_line(x + w * 0.44f, y + h * 0.66f, x + w * 0.45f, y + h * 0.28f, line, color);  /* ribs */
-  glyph_line(x + w * 0.56f, y + h * 0.66f, x + w * 0.55f, y + h * 0.28f, line, color);
+  /* Use the same vector icon as menus/dialogs, at a readable UI-scaled size. */
+  const float size = 16.0f * scale;
+  const float x = (box.xmin + box.xmax - size) * 0.5f;
+  const float y = (box.ymin + box.ymax - size) * 0.5f;
+  uchar tint[4];
+  for (int i = 0; i < 4; i++) {
+    tint[i] = uchar(std::clamp(color[i], 0.0f, 1.0f) * 255.0f);
+  }
+  ui::icon_draw_ex(x, y, ICON_TRASH, 16.0f / size, 1.0f, 0.0f,
+                   tint, false, UI_NO_ICON_OVERLAY_TEXT);
+  GPU_blend(GPU_BLEND_ALPHA);
 }
 
 void draw_hint(const rcti &anchor, const char *text, const float scale)
@@ -324,8 +304,8 @@ void draw_selection_wash(const rctf &card, const float panel_right,
     /* Concave joins open out toward the panel edge, within the row gap. */
     const float dx = std::clamp(x - (panel_right - radius), 0.0f, radius);
     const float flare = radius - std::sqrt(std::max(0.0f, radius * radius - dx * dx));
-    const float fade = smooth(std::clamp((x - card.xmin - width * 0.5f) /
-                                            (width * 0.5f), 0.0f, 1.0f));
+    const float fade = smooth(std::clamp((x - card.xmin - width * 0.72f) /
+                                            (width * 0.28f), 0.0f, 1.0f));
     /* Keep the glass/progress visible on the body; cover its right outline
      * before joining the panel margin, then end at the region canvas color. */
     const float cover_start = card.xmin + (card.xmax - card.xmin) * 0.65f;
@@ -334,9 +314,9 @@ void draw_selection_wash(const rctf &card, const float panel_right,
                                          0.0f, 1.0f));
     float fill[4];
     for (int c = 0; c < 3; c++) {
-      fill[c] = zen.canvas[c] + (zen.primary[c] - zen.canvas[c]) * 0.32f * (1.0f - fade);
+      fill[c] = zen.canvas[c] + (zen.primary[c] - zen.canvas[c]) * 0.58f * (1.0f - fade);
     }
-    fill[3] = 0.28f + 0.72f * cover;
+    fill[3] = 0.62f + 0.38f * cover;
     immAttr4fv(color, fill);
     immVertex2f(pos, x, card.ymin + inset - flare);
     immAttr4fv(color, fill);
@@ -392,7 +372,9 @@ void draw_drag_preview(ScenesDrawerRuntime *runtime, ARegion *region, const floa
   BLF_size(font, 12.0f * scale);
   draw_elided(font, found->scene_name, x, rect.ymax - 24.0f * scale, width, zen.strong);
   BLF_size(font, 10.0f * scale);
-  draw_elided(font, runtime->drag_settling ? found->last_text : "Release to move", x, rect.ymin + 10.0f * scale, width, zen.secondary);
+  if (!runtime->drag_settling) {
+    draw_elided(font, "Release to move", x, rect.ymin + 10.0f * scale, width, zen.secondary);
+  }
   BLI_rcti_rctf_copy(&runtime->drag_rect, &rect);
   BLI_rcti_translate(&runtime->drag_rect, region->winrct.xmin, region->winrct.ymin);
 }

@@ -4,7 +4,8 @@
 """No-credit UI replay: double-click rename, range/toggle/all selection, batch delete.
 
 Run after startup_health on a clean isolated Dev QA profile. Uses the actual
-card/key events and standard dialogs; never calls edit operators directly.
+card/key events, the native inline rename field and the Yes/No dialog; never
+calls edit operators directly.
 """
 import inspect
 import os
@@ -15,6 +16,8 @@ sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario
 
 WM = 'bpy.context.window_manager'
+# The inline rename field is the only native Text button in the drawer region.
+RENAME_FIELD = "drv.find(but_type='Text', area_type='VIEW_3D', region_type='NAVIGATION_BAR')"
 
 
 def double_click(name):
@@ -44,6 +47,18 @@ def modified_click(name, modifier):
     yield .08
     drv._sim(win, type='LEFTMOUSE', value='RELEASE', x=x, y=y)
     yield .12
+    return True
+
+
+def retype(text):
+    # The field is already in edit mode after the double-click (Outliner-style
+    # activation), so keyboard input goes straight to it: select all, replace.
+    win = drv.main_window()
+    drv.press(win, 'A', ctrl=True)
+    drv.press(win, 'BACK_SPACE')
+    yield .05
+    drv.type_text(win, text)
+    yield .1
     return True
 
 
@@ -108,30 +123,44 @@ def run(qa):
         qa.click(op='VIEW3D_OT_scenes_drawer_toggle', area='VIEW_3D')
     qa.wait(f'{WM}.mixar_scenes_drawer_amount>=.98')
     qa.wait("bool(drv.find(surface='scenes_drawer_new'))")
-    helpers = '\n'.join(inspect.getsource(fn) for fn in (double_click, modified_click, hover_card, rapid_add))
+    helpers = '\n'.join(inspect.getsource(fn)
+                        for fn in (double_click, modified_click, retype, hover_card, rapid_add))
     native_eval = qa.eval
     qa.eval = lambda code: native_eval(helpers + '\n' + code)
     qa.step('rapid_add_including_double_click_is_immediate', qa.eval, 'result=rapid_add(3)')
     names = qa.eval(f'result=[t.scene_name for t in {WM}.mixar_scene_tabs]')
     uid = qa.eval(f'result=bpy.data.scenes[{names[1]!r}].session_uid')
     sid = qa.eval(f'result=bpy.data.scenes[{names[1]!r}].mixie_session_id')
+    manual_prop = 'mixar_scene_name_manual'
     qa.eval(f'result=double_click({names[1]!r})')
-    qa.wait("bool(drv.find(prop='new_name', popup=True))", timeout=10)
-    capture(qa, out / 'rename-dialog.png')
+    qa.wait(f'bool({RENAME_FIELD})', timeout=10)
+    capture(qa, out / 'rename-inline.png')
+    # An unchanged commit (Enter without typing) must not pin a manual name.
+    qa.press('RET')
+    qa.wait(f'not {RENAME_FIELD}')
+    qa.step('unchanged_rename_keeps_automatic_naming', qa.eval,
+            f'scene=bpy.data.scenes[{names[1]!r}]\n'
+            f'assert not scene.get({manual_prop!r}), scene.get({manual_prop!r})\nresult=True')
     renamed = 'Courtyard East'
-    qa.cmd('set_text', widget={'prop': 'new_name', 'popup': True}, text=renamed)
-    if qa.find(popup=True, text='OK')['total']:
-        qa.click(popup=True, text='OK')
+    qa.eval(f'result=double_click({names[1]!r})')
+    qa.wait(f'bool({RENAME_FIELD})', timeout=10)
+    qa.eval(f'result=retype({renamed!r})')
+    qa.press('RET')
     qa.wait(f'bpy.data.scenes.get({renamed!r}) is not None')
     qa.step('rename_preserves_scene_identity_and_order', qa.eval,
             f'scene=bpy.data.scenes[{renamed!r}]\n'
             f'assert scene.session_uid=={uid} and scene.mixie_session_id=={sid!r}\n'
+            f'assert scene.get({manual_prop!r}) is True\n'
             f'assert {WM}.mixar_scene_tabs[1].scene_name=={renamed!r}\nresult=True')
     names[1] = renamed
     qa.eval(f'result=double_click({renamed!r})')
-    qa.wait("bool(drv.find(prop='new_name', popup=True))")
+    qa.wait(f'bool({RENAME_FIELD})')
+    qa.eval("result=retype('Discarded draft')")
     qa.press('ESC')
-    qa.step('rename_cancel', qa.eval, f'assert bpy.data.scenes.get({renamed!r}) is not None\nresult=True')
+    qa.wait(f'not {RENAME_FIELD}')
+    qa.step('rename_cancel', qa.eval,
+            f'assert bpy.data.scenes.get({renamed!r}) is not None\n'
+            "assert bpy.data.scenes.get('Discarded draft') is None\nresult=True")
     active = qa.eval('result=drv.main_window().scene.name')
     add_rect = qa.eval("result=drv.find_one(surface='scenes_drawer_new')['rect']")
     card_rects = qa.eval("result=[c['rect'] for c in drv.find(surface='scenes_drawer_card')]")
@@ -156,14 +185,17 @@ def run(qa):
     qa.step('range_selects_contiguous_scenes', qa.eval,
             f"assert [c['text'] for c in drv.find(surface='scenes_drawer_selection')]=={names[:3]!r}\nresult=True")
     qa.click(surface='scenes_drawer_delete_selected')
-    qa.wait("bool(drv.find(popup=True, text='Delete'))")
+    qa.wait("bool(drv.find(popup=True, text='Yes'))")
+    qa.step('delete_dialog_is_a_yes_no_question', qa.eval,
+            "assert drv.find(popup=True, text='No') and not drv.find(popup=True, text='Cancel')\n"
+            "result=True")
     capture(qa, out / 'delete-confirmation.png')
-    qa.press('ESC')
-    qa.step('cancel_deletes_nothing', qa.eval,
+    qa.click(popup=True, text='No')
+    qa.step('no_deletes_nothing', qa.eval,
             f'assert len({WM}.mixar_scene_tabs)==4\nresult=True')
     qa.click(surface='scenes_drawer_delete_selected')
-    qa.wait("bool(drv.find(popup=True, text='Delete'))")
-    qa.click(popup=True, text='Delete')
+    qa.wait("bool(drv.find(popup=True, text='Yes'))")
+    qa.click(popup=True, text='Yes')
     qa.wait(f'len({WM}.mixar_scene_tabs)==1')
     qa.step('bulk_delete_preserves_unselected_scene', qa.eval,
             f'assert {WM}.mixar_scene_tabs[0].scene_name=={names[3]!r}\n'
@@ -177,9 +209,9 @@ def run(qa):
     qa.press('A', oskey=True)
     qa.wait("len(drv.find(surface='scenes_drawer_selection'))==2")
     qa.press('DEL')
-    qa.wait("bool(drv.find(popup=True, text='Delete'))")
+    qa.wait("bool(drv.find(popup=True, text='Yes'))")
     capture(qa, out / 'delete-all-confirmation.png')
-    qa.click(popup=True, text='Delete')
+    qa.click(popup=True, text='Yes')
     qa.wait(f'len({WM}.mixar_scene_tabs)==1')
     qa.step('delete_all_leaves_new_empty_scene', qa.eval,
             f'assert {WM}.mixar_scene_tabs[0].scene_uid not in {all_uids!r}\n'

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Standard Blender dialogs for the native Scenes panel's edit actions."""
+"""Validated rename commits and explicit scene deletion confirmations."""
 
 import bpy
 from bpy.props import StringProperty
@@ -46,6 +46,23 @@ class MIXIE_CHAT_OT_rename_scene_tab(Operator):
         return {'FINISHED'}
 
 
+def _delete_title(tabs):
+    if len(tabs) == len(real_scenes()):
+        return 'Delete all scenes?'
+    return 'Delete this scene?' if len(tabs) == 1 else 'Delete selected scenes?'
+
+
+def _draw_delete_confirmation(layout, scene_uids):
+    tabs, reason = batch_preflight(scene_uids)
+    if reason:
+        layout.label(text=reason, icon='ERROR')
+        return
+    all_scenes = len(tabs) == len(real_scenes())
+    layout.label(text='Agents will stop and chats will be archived.')
+    if all_scenes:
+        layout.label(text='A new empty scene will remain open.')
+
+
 class MIXIE_CHAT_OT_delete_scene_tabs(Operator):
     bl_idname = 'mixie_chat.delete_scene_tabs'
     bl_label = 'Delete Selected Scenes'
@@ -59,21 +76,11 @@ class MIXIE_CHAT_OT_delete_scene_tabs(Operator):
         if reason:
             self.report({'WARNING'}, reason)
             return {'CANCELLED'}
-        return context.window_manager.invoke_props_dialog(self, width=380, confirm_text='Delete')
+        return context.window_manager.invoke_props_dialog(
+            self, width=380, title=_delete_title(tabs), confirm_text='Yes', cancel_default=True)
 
     def draw(self, context):
-        tabs, reason = batch_preflight(self.scene_uids)
-        if reason:
-            self.layout.label(text=reason, icon='ERROR')
-            return
-        self.layout.label(text=f'Delete {len(tabs)} selected scene(s)?', icon='TRASH')
-        self.layout.label(text='Their agents will stop and chats will be archived.')
-        for scene in tabs[:5]:
-            self.layout.label(text=scene.name)
-        if len(tabs) > 5:
-            self.layout.label(text=f'…and {len(tabs) - 5} more')
-        if len(tabs) == len(real_scenes()):
-            self.layout.label(text='A new empty scene will remain open.')
+        _draw_delete_confirmation(self.layout, self.scene_uids)
 
     def execute(self, context):
         count, reason = close_scene_tabs(self.scene_uids)

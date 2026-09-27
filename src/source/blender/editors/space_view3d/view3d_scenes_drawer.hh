@@ -201,6 +201,10 @@ void draw_elided(int font_id,
 const char *status_label(ScenesDrawerTabStatus status);
 const float *status_color(ScenesDrawerTabStatus status);
 void draw_pill(const rctf &rect, const float fill[4], float radius);
+/** The native inline rename field over `card`'s title. Its commit is a
+ * no-op when the text is unchanged (see `view3d_scenes_drawer_selection.cc`). */
+void draw_inline_name(const bContext *C, ARegion *region, ScenesDrawerRuntime *runtime,
+                      const ScenesDrawerCard &card, const rctf &rect);
 /** The card's delete control (a bin) and the hover label beside a control. */
 void draw_trash(const rcti &box, float scale, const float color[4]);
 void update_card_motion(ScenesDrawerRuntime *runtime);
@@ -226,6 +230,7 @@ bool view3d_scenes_drawer_op_poll(bContext *C);
 bool view3d_scenes_drawer_edge_hit(const bContext *C, const int xy[2]);
 bool view3d_scenes_drawer_selection_click(bContext *C, ARegion *region,
                                          ScenesDrawerRuntime *runtime, const wmEvent *event);
+void view3d_scenes_drawer_delete_card(bContext *C, const std::string &uid);
 void VIEW3D_OT_scenes_drawer_selection(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_hover(wmOperatorType *ot);

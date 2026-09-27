@@ -137,7 +137,7 @@ static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator *op, const w
                OPERATOR_PASS_THROUGH;
   }
   if (close) {
-    drawer_call_python(C, "MIXIE_CHAT_OT_close_scene_tab", runtime->cards[index].scene_name.c_str());
+    view3d_scenes_drawer_delete_card(C, runtime->cards[index].scene_uid);
     WM_event_add_notifier(C, NC_SCENE, nullptr);
     ED_region_tag_redraw(region);
     return OPERATOR_FINISHED;
