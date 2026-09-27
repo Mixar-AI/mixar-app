@@ -3537,6 +3537,10 @@ void ED_region_panels_layout_ex(const bContext *C,
   const bool region_layout_based = region->flag & RGN_FLAG_DYNAMIC_SIZE;
   bool update_tot_size = true;
 
+  /* Zen's floating Move/Rotate/Scale pill stays a fixed pixel size: the
+   * panels keymap's View2D zoom would otherwise scale its buttons. */
+  ui::mixar_zen_floating_tools_fixed_scale(C, region);
+
   /* only allow scrolling in vertical direction */
   v2d->keepofs |= V2D_LOCKOFS_X | V2D_KEEPOFS_Y;
   v2d->keepofs &= ~(V2D_LOCKOFS_Y | V2D_KEEPOFS_X);
@@ -3814,6 +3818,10 @@ void ED_region_panels_layout(const bContext *C, ARegion *region)
 
 void ED_region_panels_draw(const bContext *C, ARegion *region)
 {
+  /* Re-assert before the aspect read and the View2D ortho, so a zoom that
+   * lands between layout and draw cannot resize the Zen pill either. */
+  ui::mixar_zen_floating_tools_fixed_scale(C, region);
+
   View2D *v2d = &region->v2d;
   const float aspect = BLI_rctf_size_y(&region->v2d.cur) /
                        (BLI_rcti_size_y(&region->v2d.mask) + 1);

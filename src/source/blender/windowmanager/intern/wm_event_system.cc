@@ -75,6 +75,7 @@
 
 #include "UI_interface.hh"
 #include "UI_interface_layout.hh"
+#include "UI_mixar.hh"
 #include "UI_view2d.hh"
 
 #include "WM_api.hh"
@@ -4224,6 +4225,24 @@ static eHandlerActionFlag wm_event_do_handlers_area_regions(bContext *C,
   ARegion *region_hovered = ED_area_find_region_xy_visual(area, RGN_TYPE_ANY, event->xy);
   if (!region_hovered) {
     return WM_HANDLER_CONTINUE;
+  }
+
+  /* Mixar: Zen's floating Move/Rotate/Scale pill is chrome over the viewport.
+   * A pointer navigation gesture over its buttons (wheel, trackpad pan /
+   * pinch / rotate, middle-mouse orbit and ctrl+MMB zoom) navigates the scene
+   * as it does one pixel away. The pill's panels keymap would otherwise take
+   * it and pan or zoom the pill itself. */
+  if ((ISMOUSE_WHEEL(event->type) || ISMOUSE_GESTURE(event->type) ||
+       event->type == MIDDLEMOUSE) &&
+      ui::mixar_region_is_zen_floating_tools(region_hovered))
+  {
+    ARegion *region_main = BKE_area_find_region_xy(area, RGN_TYPE_WINDOW, event->xy);
+    if (region_main == nullptr) {
+      region_main = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
+    }
+    if (region_main != nullptr) {
+      region_hovered = region_main;
+    }
   }
 
   return wm_event_do_region_handlers(C, event, region_hovered);

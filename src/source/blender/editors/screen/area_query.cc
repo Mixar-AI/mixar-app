@@ -20,6 +20,7 @@
 #include "ED_screen.hh"
 
 #include "UI_interface.hh"
+#include "UI_mixar.hh"
 #include "UI_view2d.hh"
 
 namespace blender {
@@ -58,6 +59,27 @@ bool ED_region_overlap_isect_xy(const ARegion *region, const int event_xy[2])
           ED_region_overlap_isect_y(region, event_xy[1]));
 }
 
+/**
+ * Zen's Move/Rotate/Scale pill is three buttons centred in a full-height,
+ * LEFT-aligned overlap region by a transparent spacer. Its panel's View2D
+ * extent therefore runs from the top of the viewport down to the pill, and
+ * the stock LEFT rule (clip Y only) handed that whole column to the pill:
+ * a pinch there scaled the buttons, a click there never reached the scene.
+ * Only the buttons (with the usual overlap margin, as for headers) are the
+ * pill; everything else is the viewport behind it. Used by the hover
+ * (#ED_screen_set_active_region) and event (#ED_area_find_region_xy_visual)
+ * lookups alike, through #ED_region_contains_xy.
+ */
+static bool zen_floating_tools_contains_xy(const ARegion *region, const int event_xy[2])
+{
+  if (!BLI_rcti_isect_pt_v(&region->winrct, event_xy)) {
+    return false;
+  }
+  rcti rect;
+  BLI_rcti_init_pt_radius(&rect, event_xy, UI_REGION_OVERLAP_MARGIN);
+  return ui::region_but_find_rect_over(region, &rect) != nullptr;
+}
+
 bool ED_region_overlap_isect_any_xy(const ScrArea *area, const int event_xy[2])
 {
   for (ARegion &region : area->regionbase) {
@@ -74,6 +96,12 @@ bool ED_region_overlap_isect_any_xy(const ScrArea *area, const int event_xy[2])
     }
     if (area->spacetype == SPACE_VIEW3D && region.regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE) {
       if (view3d_scenes_drawer_contains_xy(area, &region, event_xy)) {
+        return true;
+      }
+      continue;
+    }
+    if (ui::mixar_region_is_zen_floating_tools(&region)) {
+      if (zen_floating_tools_contains_xy(&region, event_xy)) {
         return true;
       }
       continue;
@@ -187,6 +215,10 @@ bool ED_region_contains_xy(const ARegion *region, const int event_xy[2])
          * Its View2D extent is exactly the cards and chevron: clip both axes. */
         if (region->regiontype == RGN_TYPE_EXECUTE) {
           return ED_region_overlap_isect_xy(region, event_xy);
+        }
+
+        if (ui::mixar_region_is_zen_floating_tools(region)) {
+          return zen_floating_tools_contains_xy(region, event_xy);
         }
 
         const int alignment = RGN_ALIGN_ENUM_FROM_MASK(region->alignment);
