@@ -238,6 +238,15 @@ class HTTPClient:
                 body = data.get("detail") if isinstance(data.get("detail"), dict) else data
                 if isinstance(body, dict) and isinstance(body.get("data"), dict):
                     cta = body["data"]
+            # Every REST 402, whichever feature made the call, opens the
+            # out-of-credits banner (thread-safe, deduped per burst).
+            try:
+                from mixar.modules.common.notifications.credits_banner import (
+                    request_credits_banner,
+                )
+                request_credits_banner("http_402", action_url=cta.get("action_url"))
+            except Exception as exc:  # noqa: BLE001 — never mask the 402 itself
+                _logger.debug("Credits banner request skipped: %s", exc)
             return InsufficientCreditsError(
                 action_url=cta.get("action_url"),
                 action_label=cta.get("action_label"),

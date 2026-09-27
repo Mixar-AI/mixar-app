@@ -33,6 +33,7 @@ from mixar.modules.common.scenes_log import slog
 
 from ...constants import SessionState, is_lane_scene
 from ...core import get_connection_manager, get_session_manager
+from ...core.scene_tab_snapshot import snapshot_shown_tab
 from ...core.scene_tab_send import send_selection_to_scene  # noqa: F401 — the send operator's worker
 
 logger = get_logger(__name__)
@@ -206,6 +207,7 @@ def new_scene_tab(name: str = "") -> object:
         session.set_connected(scene)          # IDLE: the composer accepts a message
     else:
         session.set_disconnected(scene)
+    snapshot_shown_tab()                   # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     renumber_tabs(existing + [scene])      # the new tab takes the last slot
     slog("tab.new", scene, connected=live, tabs=len(real_scenes()))
@@ -216,6 +218,8 @@ def switch_scene_tab(scene, was=None) -> bool:
     """Show a tab in every window. False for a lane or a missing scene."""
     if scene is None or is_lane_scene(scene):
         return False
+    if was is not scene:
+        snapshot_shown_tab()               # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     slog("tab.switch", scene, was=getattr(was, "name", ""))
     return True
@@ -243,13 +247,18 @@ def stop_scene_tab(scene, sid: str) -> None:
     slog("tab.close.cancel", scene)
 
 
-def close_scene_tab(scene, report=None) -> tuple[bool, str]:
-    """Stop, then close. Returns ``(closed, reason)``."""
+def close_scene_tab(scene, report=None, neighbour=None) -> tuple[bool, str]:
+    """Stop, then close. Returns ``(closed, reason)``.
+
+    ``neighbour`` is the tab a window showing ``scene`` moves to; a batch
+    close passes its survivor so windows never hop through a doomed tab."""
     if scene is None or is_lane_scene(scene):
         return False, "That scene is not a tab"
     tabs = real_scenes()
     if len(tabs) <= 1:
         return False, "Keep at least one scene open"
+    if neighbour is None or neighbour is scene or neighbour not in tabs:
+        neighbour = next((s for s in tabs if s is not scene), None)
     session = get_session_manager()
     sid = session.get_session_id(scene) or ""
     slog("tab.close.prompt", scene, running=_running(scene))
@@ -273,7 +282,6 @@ def close_scene_tab(scene, report=None) -> tuple[bool, str]:
     # Move the windows showing the scene off it first: Blender refuses to
     # remove a window's current scene. A window on another tab stays there —
     # closing a background tab never changes what the user is looking at.
-    neighbour = next((s for s in tabs if s is not scene), None)
     switch_all_windows(neighbour, showing=scene)
     slog("tab.switch", neighbour, was=scene.name, reason="close")
 
@@ -311,6 +319,8 @@ class MIXIE_CHAT_OT_new_scene_tab(Operator):
 
     def execute(self, context):
         new_scene_tab(self.name)
+        from ..properties.scene_tabs_props import refresh_scene_tabs
+        refresh_scene_tabs()
         return {'FINISHED'}
 
 
@@ -329,6 +339,8 @@ class MIXIE_CHAT_OT_switch_scene_tab(Operator):
         if not switch_scene_tab(bpy.data.scenes.get(self.scene_name), was):
             self.report({'WARNING'}, "That scene is not a tab")
             return {'CANCELLED'}
+        from ..properties.scene_tabs_props import refresh_scene_tabs
+        refresh_scene_tabs()
         return {'FINISHED'}
 
 
@@ -345,6 +357,10 @@ class MIXIE_CHAT_OT_reorder_scene_tab(Operator):
     def execute(self, context):
         if not reorder_scene_tab(bpy.data.scenes.get(self.scene_name), self.index):
             return {'CANCELLED'}
+        # The native landing animation needs the new order immediately;
+        # waiting for the periodic mirror tick would flash the previous order.
+        from ..properties.scene_tabs_props import refresh_scene_tabs
+        refresh_scene_tabs()
         return {'FINISHED'}
 
 
@@ -412,6 +428,8 @@ class MIXIE_CHAT_OT_close_scene_tab(Operator):
         if not closed:
             self.report({'WARNING'}, reason)
             return {'CANCELLED'}
+        from ..properties.scene_tabs_props import refresh_scene_tabs
+        refresh_scene_tabs()
         return {'FINISHED'}
 
 

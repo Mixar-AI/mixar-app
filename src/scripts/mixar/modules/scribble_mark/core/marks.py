@@ -98,6 +98,36 @@ def add_mark(scene, serial, view_name, view_data, reading, region_width,
     return item
 
 
+def join_newest(scene, view_name, region_size, strokes, strokes_world=None):
+    """Fold a stroke group into the newest DRAFT mark of *view_name*.
+
+    What a commit does at ``MAX_MARKS_PER_TURN`` instead of refusing: the cap
+    bounds the marks a turn carries, never the ink. A sketch drawn one line
+    per pause is one mark per line, and refusing the group past the cap made
+    every further line vanish as it settled. Only a mark of the same freeze
+    can take the group — its strokes are normalized to that frame. Returns the
+    joined serial, or None when this freeze has no draft (the cap was filled
+    by an earlier freeze) or the group has no ink.
+    """
+    for item in reversed(list(_collection(scene) or ())):
+        if item.state != STATE_DRAFT or item.view_name != view_name:
+            continue
+        data = _parsed(item)
+        if data is None:
+            return None
+        width, height = region_size
+        try:
+            joined = payload_mod.extend_mark(data, strokes, width, height,
+                                             strokes_world)
+        except ValueError as exc:
+            logger.warning("Scribble mark: could not join mark %s: %s",
+                           item.serial, exc)
+            return None
+        item.mark_json = json.dumps(joined, separators=(",", ":"))
+        return int(item.serial)
+    return None
+
+
 #: Serials flipped to SENT by the most recent send, so a stopped turn can
 #: hand them back. Session-only on purpose: a stop and its retry happen in
 #: the same session, and a reopened mark is a DRAFT like any other.
@@ -154,7 +184,11 @@ def remove_last(scene, keep_view=""):
     mark that happened to be its only reference — the freeze owns it and
     gives it back itself (``FreezeSession.release_if_unused``).
 
-    Returns True when a mark was removed.
+    A mark that took groups past the cap (``join_newest``) gives back its
+    newest group first, so one undo is still one group of ink — the same
+    group the overlay pops.
+
+    Returns True when a mark (or a joined group) was removed.
     """
     collection = _collection(scene)
     if not collection:
@@ -162,6 +196,10 @@ def remove_last(scene, keep_view=""):
     for index in range(len(collection) - 1, -1, -1):
         if collection[index].state != STATE_DRAFT:
             continue
+        retracted = payload_mod.retract_join(_parsed(collection[index]) or {})
+        if retracted is not None:
+            collection[index].mark_json = json.dumps(retracted, separators=(",", ":"))
+            return True
         _release_item(collection[index], collection, keep_view=keep_view)
         collection.remove(index)
         return True

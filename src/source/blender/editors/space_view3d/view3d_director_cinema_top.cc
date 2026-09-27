@@ -65,8 +65,8 @@ constexpr float STRIP_Y = 159.0f;
 void brand_chip(const rctf &pill)
 {
   const float u = cinema_unit();
-  MIXAR_THEME_LOAD(brand_top, CinemaBrandTop);
-  MIXAR_THEME_LOAD(brand_bottom, CinemaBrandBottom);
+  MIXAR_THEME_LOAD(brand_top, CinemaPillOnA);
+  MIXAR_THEME_LOAD(brand_bottom, CinemaPillOnB);
   cinema_panel(pill, CINEMA_ROW_RADIUS * u, brand_top, brand_bottom);
 
   const float cy = BLI_rctf_cent_y(&pill);
@@ -75,8 +75,8 @@ void brand_chip(const rctf &pill)
                      pill.xmin + (CINEMA_BRAND_PAD + CINEMA_BRAND_LOGO) * u,
                      cy - logo_d * 0.5f,
                      cy + logo_d * 0.5f};
-  MIXAR_THEME_LOAD(logo_top, CinemaPillOnA);
-  MIXAR_THEME_LOAD(logo_bottom, CinemaPillOnB);
+  MIXAR_THEME_LOAD(logo_top, GradientStart);
+  MIXAR_THEME_LOAD(logo_bottom, Selected);
   cinema_panel(logo, logo_d * 0.5f, logo_top, logo_bottom);
 
   MIXAR_THEME_LOAD(value_col, CinemaRowTextOn);

@@ -52,7 +52,8 @@ wmOperatorStatus navigate(bContext *C, wmOperator *op, const wmEvent *event)
   }
   wmWindowManager *wm = CTX_wm_manager(C);
   const int total = agent_queue::total_rows(wm);
-  const auto layout = agent_queue::layout(panel, island.scale, total);
+  const auto layout = agent_queue::layout(
+      panel, island.scale, total, agent_queue::active_failure_present(wm));
   const float maximum = float(std::max(0, total - layout.capacity));
   float offset = std::clamp(agent_queue::offset_get(wm), 0.0f, maximum);
   float delta = RNA_float_get(op->ptr, "delta");

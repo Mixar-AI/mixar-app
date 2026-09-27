@@ -145,7 +145,7 @@ void agent_bubble_references_draw(const bContext *C,
                                                  agent_bubble_reference_count(C),
                                                  agent_bubble_reference_fraction(wm));
   ui::Block *block = ui::block_begin(C, region, "agent_references", ui::EmbossType::None);
-  if (state.active_tab == AGENT_TAB_AGENT) {
+  if (agent_ui_tab_shows_chat(AgentTabId(state.active_tab))) {
     agent_bubble_send_button(C, region, block, layout, state);
   }
   /* The same neutral hairline as the Library column separators. */
@@ -167,22 +167,22 @@ void agent_bubble_references_draw(const bContext *C,
     const std::string &path = item.path;
     const std::string &name = item.name;
     const char *source = item.source.c_str();
-    const bool generation = state.active_tab != AGENT_TAB_AGENT;
+    const bool generation = !agent_ui_tab_shows_chat(AgentTabId(state.active_tab));
     const float plate[4] = {0.08f, 0.09f, 0.085f, 0.25f};
     GPU_blend(GPU_BLEND_ALPHA);
     pane_fill_round(&image, 10 * u, plate);
-    if (generation || STREQ(source, "FILE") || STREQ(source, "BLEND_DATA")) {
-      footer_thumbnails_draw_image(CTX_data_main(C),
-                                   path.c_str(),
-                                   generation || STREQ(source, "BLEND_DATA"),
-                                   image.xmin,
-                                   image.ymin,
-                                   g.image_size);
-    }
+    /* Publish before painting: an inbound ribbon owns the picture until it
+     * lands on this slot, so the reference is never shown twice. */
+    const bool board = generation || STREQ(source, "BLEND_DATA");
     rctf visible_image;
-    if ((generation || STREQ(source, "BLEND_DATA")) &&
-        BLI_rctf_isect(&image, &g.view, &visible_image)) {
-      ED_moodboard_attachment_target(C, region, path.c_str(), visible_image);
+    if (board && BLI_rctf_isect(&image, &g.view, &visible_image)) {
+      ED_moodboard_attachment_target(C, region, path.c_str(), image, g.view);
+    }
+    const bool arriving = board &&
+                          ED_moodboard_attachment_arriving(CTX_wm_window(C), path.c_str());
+    if (!arriving && (board || STREQ(source, "FILE"))) {
+      footer_thumbnails_draw_image(
+          CTX_data_main(C), path.c_str(), board, image.xmin, image.ymin, g.image_size);
     }
     MIXAR_THEME_LOAD(dim, TextSecondary);
     const auto caption = ui::mixar_fit_text(

@@ -218,11 +218,11 @@ class MExportBakedChannel(bpy.types.Operator, ExportHelper):
 
                     if _save_image_to_file(image, self.filepath, self.file_format):
                         self.report({'INFO'}, f"Exported '{self.channel_name}' to {self.filepath}")
-                        _capture_export(context, "BAKED_CHANNEL", True, channel_name=self.channel_name, file_format=self.file_format)
+                        _capture_export(context, "BAKED_CHANNEL", True, file_format=self.file_format)
                         return {'FINISHED'}
                     else:
                         self.report({'ERROR'}, f"Failed to export '{self.channel_name}'")
-                        _capture_export(context, "BAKED_CHANNEL", False, channel_name=self.channel_name, file_format=self.file_format)
+                        _capture_export(context, "BAKED_CHANNEL", False, file_format=self.file_format)
                         return {'CANCELLED'}
 
         self.report({'ERROR'}, f"Channel '{self.channel_name}' not found or not baked")

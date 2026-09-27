@@ -125,7 +125,7 @@ class MeshSegmentJob(Job):
                 self._result_data = result
             return ("DONE", [])
         if status in FAILED_BACKEND_STATUSES:
-            self.error = inner.get("error", "Mesh segmentation failed")
+            self.error = (inner.get("error") or "Mesh segmentation failed")
             self.user_message = inner.get("user_message", "") or "Mesh segmentation failed"
             return ("FAIL", [])
         return ("WAIT", [])

@@ -16,6 +16,7 @@
 #include "DNA_userdef_types.h"
 
 #include "UI_interface.hh"
+#include "UI_mixar_theme.hh"
 
 #include "mixie_chat_ui_types.hh"
 /* Mixar 5.2 port: namespace wrap. */
@@ -238,17 +239,6 @@ ChatBubbleStyle chat_ui_get_user_bubble_style(const ChatLayoutMetrics *metrics)
     style.hover_color[3] = 0.95f;
   }
 
-  /* Flat minimal palette — a clean dark pill for the user message, overriding
-   * the theme so the product look is consistent across themes. */
-  style.bg_color[0] = 0.165f;
-  style.bg_color[1] = 0.175f;
-  style.bg_color[2] = 0.200f;
-  style.bg_color[3] = 1.0f;
-  style.text_color[0] = 0.96f;
-  style.text_color[1] = 0.96f;
-  style.text_color[2] = 0.97f;
-  style.text_color[3] = 1.0f;
-
   return style;
 }
 
@@ -290,10 +280,6 @@ ChatBubbleStyle chat_ui_get_agent_bubble_style(const ChatLayoutMetrics *metrics)
   style.bg_color[1] = 0.0f;
   style.bg_color[2] = 0.0f;
   style.bg_color[3] = 0.0f;
-  style.text_color[0] = 0.90f;
-  style.text_color[1] = 0.91f;
-  style.text_color[2] = 0.93f;
-  style.text_color[3] = 1.0f;
 
   return style;
 }
@@ -349,13 +335,8 @@ void chat_ui_get_label_color(float out_color[4])
 
 void chat_ui_get_prompt_button_color(float out_color[4])
 {
-  /* Flat minimal palette — special blocks (steps / thinking / todo / plan) sit
-   * in a subtle container just a touch above the editor background, instead of
-   * a heavy filled card. Forced over the theme for a consistent product look. */
-  out_color[0] = 0.125f;
-  out_color[1] = 0.135f;
-  out_color[2] = 0.155f;
-  out_color[3] = 1.0f;
+  /* Special blocks share the editable panel palette. */
+  ui::mixar_theme_color_f(ui::MixarThemeSlot::Panel, out_color);
 }
 
 void chat_ui_get_placeholder_text_color(float out_color[4])

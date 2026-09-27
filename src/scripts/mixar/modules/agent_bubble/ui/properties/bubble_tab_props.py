@@ -17,16 +17,35 @@ be serialized into a shared ``.blend`` or participate in undo.
 import bpy
 from bpy.props import EnumProperty
 
+from ...constants import CHAT_TAB_MODES
+
 TAB_ITEMS = (
     ('AGENT', "Agent", "Chat with the agent"),
     ('THREE_D', "3D", "3D generation (coming soon)"),
     ('IMAGE', "Image", "Image generation"),
     ('VIDEO', "Video", "Video generation"),
-    ('SPLAT', "Gaussian Splat", "Gaussian splat worlds (coming soon)"),
+    ('SPLAT', "Splats", "Gaussian splat worlds (coming soon)"),
+    ('ADDON', "Add-on", "Build a Blender add-on with the agent"),
     ('GENERATIONS', "Library",
      "Your generations and connected asset libraries"),
     ('QUEUE', "Queue", "Generation job queue"),
 )
+
+
+def _on_tab_changed(self, context):
+    """Put the chat into the selected chat tab's mode, then repaint.
+
+    Agent -> ``AGENT``, Add-on -> ``ADDON_PROJECT`` (``CHAT_TAB_MODES``); a
+    pane tab leaves ``scene.mixie_chat_mode`` untouched. This is the ONE
+    writer of the mode from the island — the C++ strip is stock
+    ``wm.context_set_enum`` buttons and knows nothing about modes.
+    """
+    mode = CHAT_TAB_MODES.get(getattr(self, "mixar_bubble_tab", ""))
+    scene = getattr(context, "scene", None) if context else None
+    if mode and scene is not None and hasattr(scene, "mixie_chat_mode") \
+            and scene.mixie_chat_mode != mode:
+        scene.mixie_chat_mode = mode
+    _redraw_bubbles(self, context)
 
 
 def _redraw_bubbles(_self, context):
@@ -34,6 +53,11 @@ def _redraw_bubbles(_self, context):
     wm = context.window_manager if context else bpy.context.window_manager
     if wm is None:
         return
+    try:
+        from mixar.modules.common.analytics.journey_events import tab_changed
+        tab_changed(context, wm.mixar_bubble_tab)
+    except Exception:
+        pass
     for window in wm.windows:
         for area in window.screen.areas:
             if area.type == 'AGENT_BUBBLE':
@@ -46,9 +70,11 @@ def register():
         description="Which tab the agent island's card is showing",
         items=TAB_ITEMS,
         default='AGENT',
-        update=_redraw_bubbles,
+        update=_on_tab_changed,
         options={'SKIP_SAVE'},
     )
+    from mixar.modules.common.analytics.journey_events import tab_changed
+    tab_changed(bpy.context, 'AGENT')
 
 
 def unregister():

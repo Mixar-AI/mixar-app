@@ -38,7 +38,7 @@ def layout(qa, suffix):
         height = img.height
     area_top, scale = qa.eval(SETUP + 'result=[area.y+area.height, bpy.context.preferences.system.ui_scale]')
     logical_height = (height - area_top) / scale
-    assert abs(logical_height - 36) <= 2, logical_height
+    assert abs(logical_height - 40) <= 2, logical_height
     qa.click(area_type='TOPBAR', text='File', but_type='Pulldown')
     assert qa.find(popup=True)['widgets'], 'File menu did not open'
     qa.press('ESC')
@@ -67,7 +67,7 @@ def account(qa, suffix):
             rect = qa.find(**query)['widgets'][0]['rect']
             scale = qa.eval('result=bpy.context.preferences.system.ui_scale')
             height = (rect[3] - rect[1]) / scale
-            assert 30 <= height <= 33, (label, height)
+            assert 34 <= height <= 37, (label, height)
             region_y, region_height = qa.eval(
                 "result=next((r.y, r.height) for a in drv.main_window().global_areas "
                 "if a.type == 'TOPBAR' for r in a.regions if r.alignment == 'RIGHT')")

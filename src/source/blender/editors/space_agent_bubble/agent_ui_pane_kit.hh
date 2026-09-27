@@ -97,8 +97,6 @@ struct Block;
 #define PANE_COL_WASH_BOTTOM MIXAR_THEME_BRACE(PaneWash) /* #131413 */
 #define PANE_COL_CHIP {ui::mixar_tokens::mixar_zen().control[0], ui::mixar_tokens::mixar_zen().control[1], ui::mixar_tokens::mixar_zen().control[2], ui::mixar_tokens::mixar_zen().control[3]}        /* #313131 params chip / track */
 #define PANE_COL_PILL {ui::mixar_tokens::mixar_zen().selected[0], ui::mixar_tokens::mixar_zen().selected[1], ui::mixar_tokens::mixar_zen().selected[2], ui::mixar_tokens::mixar_zen().selected[3]}        /* #484848 value pill / thumb */
-#define PANE_COL_PILL_DIM MIXAR_THEME_BRACE(PanePillDim)    /* #3C3C3C recessed value */
-#define PANE_COL_PILL_ON MIXAR_THEME_BRACE(PanePillOn)     /* #474747 ON pill */
 #define PANE_COL_ACTION {ui::mixar_tokens::mixar_zen().action[0], ui::mixar_tokens::mixar_zen().action[1], ui::mixar_tokens::mixar_zen().action[2], ui::mixar_tokens::mixar_zen().action[3]}      /* #1D1D1D bottom chips */
 #define PANE_COL_GENERATE {ui::mixar_tokens::mixar_zen().primary[0], ui::mixar_tokens::mixar_zen().primary[1], ui::mixar_tokens::mixar_zen().primary[2], ui::mixar_tokens::mixar_zen().primary[3]}    /* #1A4026 */
 #define PANE_COL_BOX {ui::mixar_tokens::mixar_zen().input[0], ui::mixar_tokens::mixar_zen().input[1], ui::mixar_tokens::mixar_zen().input[2], ui::mixar_tokens::mixar_zen().input[3]}         /* #121212 prompt box */

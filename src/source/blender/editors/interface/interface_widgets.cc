@@ -5316,16 +5316,15 @@ static void widget_menu_itembut(uiWidgetColors *wcol,
   WidgetBase wtb;
   widget_init(&wtb);
 
-  /* Padding on the sides. */
+  /* Fill the complete selectable row; preserve the native text inset below. */
+  round_box_edges(&wtb, CNR_NONE, rect, 0.0f);
+  widgetbase_draw(&wtb, wcol);
+
+  /* Padding on the sides of the text only. */
   const float padding = zoom * 0.125f * U.widget_unit;
   rect->xmin += padding;
   rect->xmax -= padding;
 
-  const float rad = widget_radius_from_zoom(zoom, wcol);
-
-  round_box_edges(&wtb, CNR_ALL, rect, rad);
-
-  widgetbase_draw(&wtb, wcol);
 }
 
 static void widget_menu_itembut_unpadded(uiWidgetColors *wcol,
@@ -5472,7 +5471,8 @@ static void widget_optionbut(uiWidgetColors *wcol,
     color_blend_v4_v4v4(wcol->inner, wcol->inner, wcol->inner_sel, 0.75f);
   }
 
-  const float rad = widget_radius_from_rcti(&recttemp, wcol);
+  /* Keep checkboxes recognizably square, including older pill-shaped themes. */
+  const float rad = std::min(wcol->roundness, 0.15f) * BLI_rcti_size_y(&recttemp);
   round_box_edges(&wtb, CNR_ALL, &recttemp, rad);
 
   /* decoration */
@@ -5891,8 +5891,8 @@ static void mixar_gradient_sample(float t, float out[4])
    * green->cyan range. */
   f = f * f * (3.0f - 2.0f * f);
   float a[4], b[4];
-  rgba_uchar_to_float(a, MX_GRADIENT[i0]);
-  rgba_uchar_to_float(b, MX_GRADIENT[i0 + 1]);
+  mixar_theme_color_f(MixarThemeSlot(int(MixarThemeSlot::GradientStart) + i0), a);
+  mixar_theme_color_f(MixarThemeSlot(int(MixarThemeSlot::GradientStart) + i0 + 1), b);
   for (int k = 0; k < 4; k++) {
     out[k] = a[k] + (b[k] - a[k]) * f;
   }
@@ -6198,7 +6198,10 @@ static void widget_zen_tool_glass(Button *but,
   }
 
   if (paint_bed) {
-    const float glass_rad = 0.5f * std::min(BLI_rctf_size_x(&pane), BLI_rctf_size_y(&pane));
+    const float half_size = 0.5f * std::min(BLI_rctf_size_x(&pane), BLI_rctf_size_y(&pane));
+    const float glass_rad = zen_toolbar_tool(but) ?
+                                std::min(half_size, mixar_tokens::compact_density.radius * UI_SCALE_FAC) :
+                                half_size;
     /* An explicit GlassTool capsule floats over content the pane cannot
      * predict — the moodboard drawer's add-tools sit directly on reference
      * photography — so it takes the kit's readability floor instead of the
@@ -6239,7 +6242,11 @@ static void widget_zen_tool_glass(Button *but,
                            but->mixar_style.component == MixarComponent::GlassTool;
     const float inset = (transform ? 1.0f : 2.0f) * UI_SCALE_FAC;
     BLI_rctf_pad(&cell, -inset, -inset);
-    const float cell_rad = 0.5f * std::min(BLI_rctf_size_x(&cell), BLI_rctf_size_y(&cell));
+    const float half_size = 0.5f * std::min(BLI_rctf_size_x(&cell), BLI_rctf_size_y(&cell));
+    const float cell_rad = zen_toolbar_tool(but) ?
+                               std::min(half_size,
+                                        mixar_tokens::compact_density.radius * UI_SCALE_FAC - inset) :
+                               half_size;
     if (!transform) {
       const float cx = BLI_rctf_cent_x(&cell), cy = BLI_rctf_cent_y(&cell);
       cell = {cx - cell_rad, cx + cell_rad, cy - cell_rad, cy + cell_rad};
@@ -7189,6 +7196,12 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
     }
   }
   else if (mixar_component) {
+    /* Menu actions sit inside the menu's outline; the native text pass below
+     * shares the padded rect, so the icon and label keep their inset too. */
+    const int menu_inset = int(mixar_menu_item_inset(*but));
+    if (menu_inset > 0) {
+      BLI_rcti_pad(rect, -menu_inset, 0);
+    }
     native_text = mixar_component_draw(*but, wt->wcol, *rect);
   }
   else if (ELEM(but->type, ButtonType::Row, ButtonType::Popover) && zen_glass_cell(but)) {

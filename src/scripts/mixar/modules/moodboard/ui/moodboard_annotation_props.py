@@ -28,7 +28,7 @@ class MixieMoodboardAnnotationStroke(PropertyGroup):
     color: FloatVectorProperty(
         name="Color",
         description="Stroke color and opacity",
-        subtype="COLOR",
+        subtype="COLOR_GAMMA",
         size=4,
         default=ANNOTATION_COLOR_DEFAULT,
         min=0.0,

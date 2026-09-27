@@ -20,6 +20,7 @@
 #include "DNA_userdef_types.h"
 #include "DNA_windowmanager_types.h"
 #include "ED_moodboard_attachment.hh"
+#include "ED_screen.hh"
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"
 #include "GPU_texture.hh"
@@ -36,7 +37,8 @@ gpu::Texture *mixie_moodboard_srgb_texture(Image *image, ImageUser *image_user);
 namespace blender {
 namespace {
 using namespace ed::mixie;
-constexpr int STRIPS = 32;
+constexpr int GRID = ATTACHMENT_FLIGHT_GRID;
+using FlightMesh = std::array<FlightPoint, (GRID + 1) * (GRID + 1)>;
 char timer_identity;
 struct WindowIdentity {
   wmWindow *window = nullptr;
@@ -78,6 +80,8 @@ struct Flight {
   uint32_t image_uid = 0, scene_uid = 0;
   WindowIdentity source_window, target_window;
   FlightQuad source{}, target{};
+  FlightLanding landing = FlightLanding::Dissolve;
+  FlightPath path;
   double queued = 0, start = 0, delay = 0;
 };
 struct Overlay {
@@ -134,24 +138,42 @@ float progress(const Flight &f)
   return float((BLI_time_now_seconds() - f.start) / ATTACHMENT_FLIGHT_SECONDS);
 }
 
-void draw_flights(const wmWindow *win, void * /*data*/)
+/* The painted mesh in window pixels; the QA bounds read the same vertices. */
+void flight_mesh(const Flight &f, const wmWindow *win, const float t, FlightMesh &mesh)
 {
   const float scale = attachment_pixel_scale(win);
+  for (int row = 0; row <= GRID; row++) {
+    for (int col = 0; col <= GRID; col++) {
+      const FlightPoint p = attachment_flight_vertex(
+          f.path, float(col) / GRID, float(row) / GRID, t);
+      mesh[row * (GRID + 1) + col] = {(p[0] - win->posx) * scale, (p[1] - win->posy) * scale};
+    }
+  }
+}
+
+void draw_flights(const wmWindow *win, void * /*data*/)
+{
   for (const Flight &f : flights) {
     if (!f.start || (win != f.source_window.window && win != f.target_window.window) ||
         !f.source_window.stationary() || !f.target_window.stationary())
     {
       continue;
     }
+    /* A handoff holds its landed pose past 1 until the tick retires it and
+     * repaints the thumbnail, so no frame shows neither. Reduce Motion
+     * reports 2 and is never drawn. */
     const float t = progress(f);
     Image *image = live_image(f);
-    if (t < 0 || t >= 1 || !image) {
+    if (t < 0 || t >= 2.0f || !image) {
       continue;
     }
-    gpu::Texture *texture = mixie_moodboard_srgb_texture(image, nullptr);
+    const float alpha = attachment_flight_alpha(f.path, t);
+    gpu::Texture *texture = alpha > 0.0f ? mixie_moodboard_srgb_texture(image, nullptr) : nullptr;
     if (!texture) {
       continue;
     }
+    FlightMesh mesh;
+    flight_mesh(f, win, std::min(t, 1.0f), mesh);
     const GPUBlend blend = GPU_blend_get();
     GPU_blend(GPU_BLEND_ALPHA_PREMULT);
     GPU_texture_filter_mode(texture, true);
@@ -160,27 +182,43 @@ void draw_flights(const wmWindow *win, void * /*data*/)
     const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
     const uint uv = GPU_vertformat_attr_add(format, "texCoord", gpu::VertAttrType::SFLOAT_32_32);
     immBindBuiltinProgram(GPU_SHADER_3D_IMAGE_COLOR);
-    const float alpha = attachment_flight_alpha(t);
     immUniformColor4f(alpha, alpha, alpha, alpha);
-    immBegin(GPU_PRIM_TRIS, STRIPS * 6);
-    auto vertex = [&](float x, float y) {
-      const auto p = attachment_flight_vertex(f.source, f.target, x, y, t);
-      immAttr2f(uv, x, y);
-      immVertex2f(pos, (p[0] - win->posx) * scale, (p[1] - win->posy) * scale);
+    immBegin(GPU_PRIM_TRIS, GRID * GRID * 6);
+    auto vertex = [&](int col, int row) {
+      const FlightPoint &p = mesh[row * (GRID + 1) + col];
+      immAttr2f(uv, float(col) / GRID, float(row) / GRID);
+      immVertex2f(pos, p[0], p[1]);
     };
-    for (int row = 0; row < STRIPS; row++) {
-      const float a = float(row) / STRIPS, b = float(row + 1) / STRIPS;
-      vertex(0, a);
-      vertex(1, a);
-      vertex(1, b);
-      vertex(0, a);
-      vertex(1, b);
-      vertex(0, b);
+    for (int row = 0; row < GRID; row++) {
+      for (int col = 0; col < GRID; col++) {
+        vertex(col, row);
+        vertex(col + 1, row);
+        vertex(col + 1, row + 1);
+        vertex(col, row);
+        vertex(col + 1, row + 1);
+        vertex(col, row + 1);
+      }
     }
     immEnd();
     immUnbindProgram();
     GPU_texture_unbind(texture);
     GPU_blend(blend);
+  }
+}
+
+/* The composer hides an arriving thumbnail; repaint it in the same pass the
+ * ribbon is retired, whether it landed or was cancelled. */
+void redraw_destination(const Flight &f)
+{
+  wmWindow *win = f.target_window.live();
+  bScreen *screen = win ? WM_window_get_active_screen(win) : nullptr;
+  if (!screen || f.landing != FlightLanding::Handoff) {
+    return;
+  }
+  for (ScrArea &area : screen->areabase) {
+    if (area.spacetype == SPACE_AGENT_BUBBLE) {
+      ED_area_tag_redraw(&area);
+    }
   }
 }
 
@@ -220,27 +258,37 @@ double tick(uintptr_t /*id*/, void * /*data*/)
       for (wmWindowManager &wm : G_MAIN->wm) {
         for (wmWindow &win : wm.windows) {
           if (win.scene && win.scene->id.session_uid == f.scene_uid &&
-              attachment_window_visible(&win) && attachment_resting_target(&win, f.target))
+              attachment_window_visible(&win) &&
+              attachment_resting_target(&win, flight_quad_aspect(f.source), f.target))
           {
             f.target_window = WindowIdentity(&win);
+            f.landing = FlightLanding::Dissolve;
             break;
           }
         }
       }
     }
     if (!f.start && f.target_window.stationary()) {
+      f.path = attachment_flight_path(f.source, f.target, f.landing);
       f.start = now + f.delay;
       ensure_overlay(f.source_window.live());
       ensure_overlay(f.target_window.live());
     }
   }
+  /* Decided once per flight: the clock moves, and a slot hidden for a flight
+   * retired without a repaint would stay empty. */
   flights.erase(std::remove_if(flights.begin(),
                                flights.end(),
                                [&](const Flight &f) {
-                                 return !f.source_window.stationary() || !live_image(f) ||
-                                        (f.start ?
-                                             (!f.target_window.stationary() || progress(f) > 1) :
-                                             now - f.queued > 0.35);
+                                 const bool retired =
+                                     !f.source_window.stationary() || !live_image(f) ||
+                                     (f.start ? (!f.target_window.stationary() ||
+                                                 progress(f) > 1) :
+                                                now - f.queued > 0.35);
+                                 if (retired) {
+                                   redraw_destination(f);
+                                 }
+                                 return retired;
                                }),
                 flights.end());
   for (const Overlay &overlay : overlays) {
@@ -307,14 +355,10 @@ void qa_targets(const wmWindow *win,
       continue;
     }
     rctf bounds{1e20f, -1e20f, 1e20f, -1e20f};
-    const float scale = attachment_pixel_scale(win);
-    for (int row = 0; row <= STRIPS; row++) {
-      for (int x = 0; x <= 1; x++) {
-        auto p = attachment_flight_vertex(f.source, f.target, x, float(row) / STRIPS, t);
-        p[0] = (p[0] - win->posx) * scale;
-        p[1] = (p[1] - win->posy) * scale;
-        BLI_rctf_do_minmax_v(&bounds, p.data());
-      }
+    FlightMesh mesh;
+    flight_mesh(f, win, t, mesh);
+    for (FlightPoint &p : mesh) {
+      BLI_rctf_do_minmax_v(&bounds, p.data());
     }
     MixarQATarget target;
     target.surface = "moodboard_attachment_flight";
@@ -330,7 +374,8 @@ void qa_targets(const wmWindow *win,
 void ED_moodboard_attachment_target(const bContext *C,
                                     ARegion *region,
                                     const char *image_name,
-                                    const rctf &rect)
+                                    const rctf &slot,
+                                    const rctf &clip)
 {
   for (Flight &f : flights) {
     if (f.start || f.image_name != image_name || !CTX_data_scene(C) ||
@@ -342,14 +387,34 @@ void ED_moodboard_attachment_target(const bContext *C,
     if (!attachment_window_visible(win)) {
       continue;
     }
-    /* Shrink into the center of the actual painted thumbnail slot. */
-    const float half = std::min(16 * attachment_pixel_scale(win),
-                                std::min(BLI_rctf_size_x(&rect), BLI_rctf_size_y(&rect)) / 2);
-    const float x = region->winrct.xmin + BLI_rctf_cent_x(&rect);
-    const float y = region->winrct.ymin + BLI_rctf_cent_y(&rect);
-    f.target = attachment_desktop_quad(win, {x - half, x + half, y - half, y + half});
+    /* Land on the picture the thumbnail paints (aspect-fit in its slot), so
+     * the ribbon becomes the thumbnail instead of shrinking into its centre. */
+    const FlightQuad fit = flight_fit_quad(
+        flight_quad_aspect(f.source), slot.xmin, slot.xmax, slot.ymin, slot.ymax);
+    const rctf painted{fit[0][0], fit[2][0], fit[0][1], fit[2][1]};
+    rctf visible;
+    if (!BLI_rctf_isect(&painted, &clip, &visible) || BLI_rctf_size_x(&visible) < 2 ||
+        BLI_rctf_size_y(&visible) < 2)
+    {
+      continue;
+    }
+    BLI_rctf_translate(&visible, region->winrct.xmin, region->winrct.ymin);
+    f.target = attachment_desktop_quad(win, visible);
     f.target_window = WindowIdentity(win);
+    f.landing = FlightLanding::Handoff;
   }
+}
+
+bool ED_moodboard_attachment_arriving(const wmWindow *window, const char *image_name)
+{
+  for (const Flight &f : flights) {
+    if (f.target_window.window == window && f.landing == FlightLanding::Handoff &&
+        f.image_name == image_name)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 void MIXIE_OT_moodboard_attachment_flight(wmOperatorType *ot)
@@ -395,9 +460,9 @@ bool ED_moodboard_attachment_incoming(const wmWindow *target, MixieAttachmentInc
   const Flight &f = flights[size_t(best)];
   const float t = std::clamp(progress(f), 0.0f, 1.0f);
   const ed::mixie::FlightPoint pos = ed::mixie::attachment_flight_vertex(
-      f.source, f.target, 0.5f, 0.5f, t);
+      f.path, 0.5f, 0.5f, t);
   const ed::mixie::FlightPoint land = ed::mixie::attachment_flight_vertex(
-      f.source, f.target, 0.5f, 0.5f, 1.0f);
+      f.path, 0.5f, 0.5f, 1.0f);
   r_incoming.progress = progress(f);
   r_incoming.position[0] = pos[0];
   r_incoming.position[1] = pos[1];

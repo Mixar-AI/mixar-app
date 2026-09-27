@@ -89,6 +89,17 @@ def split_result_names(raw) -> list:
     return [part.strip() for part in str(raw).split(",") if part.strip()]
 
 
+def _agent_error_text(job) -> str:
+    from .job import JobState
+
+    if job.state == JobState.FAILED:
+        from .failure_info import failure_message, failure_reason
+
+        reason = failure_reason(job)
+        return failure_message(job) + (f"\nReason: {reason}" if reason else "")
+    return str(getattr(job, "user_message", "") or getattr(job, "error", "") or "")
+
+
 def build_agent_result_params(job) -> dict:
     """Assemble the ``generation.agent_result`` params for one terminal job."""
     ref = dict(job.agent_ref or {})
@@ -106,9 +117,9 @@ def build_agent_result_params(job) -> dict:
         "label": str(getattr(job, "label", "") or ""),
         "backend_job_id": str(getattr(job, "backend_job_id", "") or ""),
         "status": _STATUS_BY_STATE.get(job.state, "failed"),
-        "error": str(
-            getattr(job, "user_message", "") or getattr(job, "error", "") or ""
-        ),
+        # The agent explains a failure to the user, so it gets the queue's
+        # sentence plus the provider's own reason, not just the summary.
+        "error": _agent_error_text(job),
         "result_names": split_result_names(
             getattr(job, "imported_object_names", "")
         ),

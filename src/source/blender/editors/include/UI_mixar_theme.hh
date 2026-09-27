@@ -9,7 +9,7 @@
  *
  * Theme slots for Mixar UI painted in the last interface wave: the shared
  * Zen palette, widget grays, topbar chrome, cinema rows and the three island
- * greens. Glass wash stays a platform-split literal, not a slot.
+ * greens, toolbar, Generate gradient and glass wash.
  *
  * A stored color of all zeros (an old preference that predates the field)
  * falls back to the compiled palette. `MIXAR_THEME_LOAD` is two statements;
@@ -92,6 +92,19 @@ enum class MixarThemeSlot : int {
   WidgetBorder,
   Ink,
   Sunken,
+  GradientStart,
+  GradientMidA,
+  GradientMidB,
+  GradientEnd,
+  ToolbarBackground,
+  ToolbarBorder,
+  ToolbarPrimary,
+  ToolbarPrimaryBorder,
+  ToolbarText,
+  ToolbarMuted,
+  ToolbarSelected,
+  GlassWash,
+  SketchInk,
   AgentBorder,
   AgentTabActive,
   AgentAccent,
@@ -102,6 +115,8 @@ void mixar_theme_color_u(MixarThemeSlot slot, unsigned char out[4]);
 void mixar_theme_copy_u(MixarThemeSlot slot, const unsigned char fallback[4], unsigned char out[4]);
 void mixar_theme_color_f(MixarThemeSlot slot, float out[4]);
 const unsigned char *mixar_theme_color_ptr(MixarThemeSlot slot);
+/** The Moodboard RGB background, independent of the host region type. */
+void mixar_moodboard_canvas_color(float out[4]);
 
 inline float mixar_theme_chan(MixarThemeSlot slot, int channel)
 {

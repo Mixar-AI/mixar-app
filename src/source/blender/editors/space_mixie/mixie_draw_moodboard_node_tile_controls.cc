@@ -190,6 +190,9 @@ void moodboard_add_node_tile_controls(ui::Block *block,
     const int generate_w = std::min(int(118 * UI_SCALE_FAC),
                                     BLI_rcti_size_x(&tile) - 2 * margin -
                                         refine_count * (generate_h + int(metrics.gap)));
+    const int actions_w = generate_w + refine_count * (generate_h + int(metrics.gap));
+    const int actions_x = tile.xmin + (BLI_rcti_size_x(&tile) - actions_w) / 2;
+    const int generate_x = actions_x + actions_w - generate_w;
     /* Make the prompt a tall multi-line text area: it spans from the top margin
      * down to just above the Generate button. Height comfortably exceeds
      * UI_UNIT_Y * 1.5 at any UI scale, which is what flips the native text
@@ -230,16 +233,15 @@ void moodboard_add_node_tile_controls(ui::Block *block,
      * Square icon buttons: the tile is small and the words would crowd
      * Generate, which must stay the obvious action.
      *
-     * Laid out right to left — Generate, then Revert, then Refine — so
-     * Refine keeps the same relationship to the pair whether or not Revert
-     * is present, and Generate never moves. */
+     * Center the complete action row, including Revert when present, beneath
+     * the prompt. Native button bounds own drawing and hit testing together. */
     if (RNA_boolean_get(node, "show_prompt")) {
       const bool refined = RNA_boolean_get(node, "prompt_refined");
       const bool refining = RNA_boolean_get(node, "prompt_refining");
       const int refine_w = generate_h;
       const int refine_gap = int(metrics.gap);
       const int refine_y = tile.ymin + margin;
-      int refine_x = tile.xmax - margin - generate_w - refine_gap - refine_w;
+      int refine_x = generate_x - refine_gap - refine_w;
 
       if (refined) {
         ui::Button *revert = ui::uiDefIconButO(block,
@@ -302,7 +304,7 @@ void moodboard_add_node_tile_controls(ui::Block *block,
                                          "MIXIE_OT_moodboard_run_action_node",
                                          blender::wm::OpCallContext::ExecDefault,
                                          run_label,
-                                         tile.xmax - margin - generate_w,
+                                         generate_x,
                                          tile.ymin + margin,
                                          generate_w,
                                          generate_h,

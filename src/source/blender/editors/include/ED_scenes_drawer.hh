@@ -23,6 +23,7 @@
 #include <cmath>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "BLI_rect.h"
@@ -54,9 +55,9 @@ enum class ScenesDrawerTabStatus : int8_t {
 /** One painted scene card, cached by the draw pass for hit tests and QA. All
  * rects are WINDOW pixels. */
 struct ScenesDrawerCard {
+  std::string scene_uid;
   std::string scene_name;
   std::string session_id;
-  std::string last_text;
   ScenesDrawerTabStatus status = ScenesDrawerTabStatus::Idle;
   int workers_done = 0;
   int workers_total = 0;
@@ -67,14 +68,11 @@ struct ScenesDrawerCard {
   rcti thumb_rect = {};
 };
 
-/** A scene rendered into a small offscreen for its card (see
- * `view3d_scenes_drawer_thumbs.cc`). Owned by the region runtime. */
+/** A card's copy of its scene's snapshot (see `view3d_scenes_drawer_thumbs.cc`:
+ * the pixels come from a session store that outlives the region; the texture
+ * is the region's own). Never a render: a snapshot of the host viewport as the
+ * tab was last shown. */
 struct ScenesDrawerThumb {
-  GPUOffScreen *offscreen = nullptr;
-  /** The last render, read back the moment it finished. The render runs from
-   * a timer, outside any window frame; a GPU texture rendered there and read
-   * by the card's blit in a later frame came up black on Metal from the
-   * second render on. Pixels in memory have no such lifetime. */
   std::vector<unsigned char> pixels;
   int pixels_w = 0;
   int pixels_h = 0;
@@ -82,11 +80,8 @@ struct ScenesDrawerThumb {
   bool pixels_dirty = false;
   /** The card's texture, created and refreshed in the region's draw pass. */
   blender::gpu::Texture *texture = nullptr;
-  bool has_render = false;
-  bool render_failed = false;
-  uint64_t update_count = 0;
-  double last_render_time = 0.0;
-  int draw_type = -1;
+  /** Store generation these pixels were copied from; 0 = nothing copied yet. */
+  uint64_t generation = 0;
 };
 
 /** Last painted slide and layout, stored on the drawer region's `regiondata`. */
@@ -102,6 +97,12 @@ struct ScenesDrawerRuntime {
   bool redraw_pending = false;
   /** Layout of the last draw pass (window pixels). */
   std::vector<ScenesDrawerCard> cards;
+  std::unordered_set<std::string> selected_uids;
+  std::string selection_anchor;
+  std::string rename_uid;
+  char rename_buffer[1024] = {};
+  rcti bulk_delete_rect = {};
+  rcti clear_selection_rect = {};
   rcti new_rect = {};
   bool new_visible = false;
   /** Card list scroll, window pixels, 0 = top; `scroll_max` is measured by
@@ -112,13 +113,31 @@ struct ScenesDrawerRuntime {
   int hover = -1;
   bool hover_close = false;
   bool hover_new = false;
+  bool hover_delete = false;
   /** A card press in flight: the pressed card and, once dragged past the
    * threshold, the slot the pointer is over (an insertion line is drawn). */
   int drag_index = -1;
   int drag_target = -1;
+  /** ID session_uid of the lifted card: survives renames and index shifts. */
+  std::string drag_scene;
+  int drag_y = 0;
+  int drag_offset_y = 0;
+  bool drag_settling = false;
+  float drag_preview_top = 0.0f;
+  /** Animated rows are independent of scroll/scale and keyed by ID session_uid. */
+  std::unordered_map<std::string, float> card_rows;
+  double cards_draw_time = 0.0;
+  rcti list_rect = {};
+  rcti drag_rect = {};
+  rcti drop_rect = {};
   /** Thumbnails by scene name; entries for scenes no longer listed are freed. */
   std::unordered_map<std::string, ScenesDrawerThumb> thumbs;
 };
+
+/** Floating panel inset and list geometry, in unscaled UI units. */
+#define VIEW3D_SCENES_DRAWER_PANEL_GAP 8.0f
+#define VIEW3D_SCENES_DRAWER_CARD_H 60.0f
+#define VIEW3D_SCENES_DRAWER_CARD_GAP 8.0f
 
 /** Factory width fallback (unscaled UI units) before the first View3D layout
  * promotes to ``VIEW3D_SCENES_DRAWER_WIDTH_FRACTION``. Keep in lockstep with
@@ -157,7 +176,7 @@ inline float view3d_scenes_drawer_runtime_amount(const ARegion *region)
 }
 
 /**
- * The panel is the whole region: a normal (non-overlapping) left-aligned
+ * The panel is inset inside a normal (non-overlapping) left-aligned
  * region whose width is the open width times the slide amount, so the
  * viewport is pushed right as it opens. Shut, the region is hidden.
  */
@@ -173,7 +192,9 @@ inline bool view3d_scenes_drawer_panel_rect_for(const ScrArea *area,
     return false;
   }
   *r_rect = region->winrct;
-  return BLI_rcti_size_x(r_rect) > 2;
+  const int gap = int(std::lround(VIEW3D_SCENES_DRAWER_PANEL_GAP * UI_SCALE_FAC));
+  BLI_rcti_pad(r_rect, -gap, -gap);
+  return BLI_rcti_size_x(r_rect) > 2 && BLI_rcti_size_y(r_rect) > 2;
 }
 
 /** The resize sash: a narrow strip inside the open panel's right edge. */

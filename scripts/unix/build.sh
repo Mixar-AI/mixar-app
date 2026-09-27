@@ -12,6 +12,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/settings.sh"
 
+# GUI terminals can omit Homebrew from PATH even when CMake is installed.
+# Keep an explicitly configured CMake first; only discover a fallback if absent.
+if ! command -v cmake >/dev/null 2>&1 && [ "$(uname -s)" = Darwin ]; then
+    for mixar_cmake_bin in /opt/homebrew/bin /usr/local/bin /Applications/CMake.app/Contents/bin; do
+        if [ -x "$mixar_cmake_bin/cmake" ]; then
+            export PATH="$PATH:$mixar_cmake_bin"
+            break
+        fi
+    done
+fi
+if ! command -v cmake >/dev/null 2>&1; then
+    echo "CMake is required but was not found on PATH. Install CMake, then run make build again." >&2
+    exit 1
+fi
+
 # Use MIXAR_ENV directly from settings.sh (already exported there)
 # Blender always builds in Release mode for optimal performance
 BLENDER_BUILD_ENV="Release"

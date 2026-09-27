@@ -498,6 +498,7 @@ static void agent_bubble_island_controls_header(const bContext *C,
       {AGENT_TAB_IMAGE, "IMAGE", "Image generation"},
       {AGENT_TAB_VIDEO, "VIDEO", "Video generation"},
       {AGENT_TAB_SPLAT, "SPLAT", "Gaussian Splat world generation"},
+      {AGENT_TAB_ADDON, "ADDON", "Build a Blender add-on with the agent"},
       {AGENT_TAB_GENERATIONS, "GENERATIONS",
        "Your generations and connected asset libraries"},
       {AGENT_TAB_QUEUE, "QUEUE", "Generation queue"},
@@ -534,7 +535,7 @@ static void agent_bubble_island_controls_header(const bContext *C,
     }
   }
 
-  if (state->active_tab == AGENT_TAB_AGENT) {
+  if (agent_ui_tab_shows_chat(AgentTabId(state->active_tab))) {
     if (state->handwriting_available) {
       agent_bubble_rect_to_region(region, layout->hdr_handwriting, &bx, &by, &bw, &bh);
       uiDefButO(block, ui::ButtonType::But, "mixie_chat.ink_toggle",
@@ -625,6 +626,8 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                                  &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
                                  nullptr);
     if (input_but) {
+      /* Keep the inset composer charcoal even while native text editing selects it. */
+      ui::button_color_set(input_but, ui::theme::theme_get()->space_mixie_chat.chat_input_bg);
       /* Placeholder on the BUTTON: painting it separately put the ghost text at
        * the artboard's x while Blender drew the caret at the field's own text
        * origin — two places for one thing. */
@@ -1100,11 +1103,12 @@ static void agent_bubble_island_region_draw(const bContext *C, ARegion *region)
     return;
   }
 
-  /* Queue tab: the card shows the unified job queue instead of the chat. */
+  /* Pane tabs: the card shows the queue / a generation pane instead of the
+   * chat (Agent and Add-on both take the chat path below). */
   {
     AgentIslandState tab_probe;
     agent_ui_state_gather(C, &tab_probe);
-    if (tab_probe.active_tab != AGENT_TAB_AGENT) {
+    if (!agent_ui_tab_shows_chat(AgentTabId(tab_probe.active_tab))) {
       /* The transcript is not drawn below, so its per-message rects would
        * otherwise stay live over the pane that replaced it — the chat's hit
        * tests are a CACHE, not a re-derivation, and every one of them walks
@@ -1408,7 +1412,7 @@ static void agent_bubble_sync_chrome_sizes(const bContext *C)
   /* Non-Agent tabs draw their entire pane inside the WINDOW region — panes
    * like the 3D tab pin rows to the panel FOOT, which the Agent tab's TOOLS
    * band would clip — so TOOLS keeps only the card-foot sliver there. */
-  const bool agent_tab_active = (tab_probe.active_tab == AGENT_TAB_AGENT);
+  const bool agent_tab_active = agent_ui_tab_shows_chat(AgentTabId(tab_probe.active_tab));
   const bool wants_input_strip = has_conversation || tab_probe.ink_visible;
   if (wants_input_strip) {
     const int native_w = WM_window_native_pixel_x(win);
@@ -1470,7 +1474,7 @@ static void agent_bubble_composer_region_draw(const bContext *C, ARegion *region
   }
   agent_ui_draw_island(region, &layout, &state);
   agent_bubble_island_end();
-  if (state.active_tab == AGENT_TAB_AGENT) {
+  if (agent_ui_tab_shows_chat(AgentTabId(state.active_tab))) {
     agent_bubble_island_controls_bottom(C, region, &layout, &state);
 
     if (state.ink_visible) {
@@ -2262,10 +2266,14 @@ static void agent_bubble_pad_apply(bContext *C)
   /* Flag first: the per-frame constraint sync stands down on it. */
   g_bubble_pad_active = true;
 
-  /* The pad has no tab strip, so the card must be showing the chat. */
+  /* The pad has no tab strip, so the card must be showing the chat. A chat
+   * tab already showing it (Agent, Add-on) is kept — forcing Agent here would
+   * leave the Add-on tab's scene mode without its tab. */
   if (wmWindowManager *wm = CTX_wm_manager(C)) {
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-    if (RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab")) {
+    if (RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab") &&
+        !ED_agent_bubble_tab_shows_chat(C, true))
+    {
       RNA_enum_set_identifier(C, &wm_ptr, "mixar_bubble_tab", "AGENT");
     }
   }
@@ -2799,7 +2807,7 @@ void agent_bubble_header_region_draw(const bContext *C, ARegion *region)
       agent_bubble_island_end();
       agent_bubble_island_controls_header(C, region, &layout, &state);
 
-      if (state.active_tab == AGENT_TAB_AGENT && state.ink_visible) {
+      if (agent_ui_tab_shows_chat(AgentTabId(state.active_tab)) && state.ink_visible) {
         mixie_chat_draw_ink_strokes_for_region(C, region);
       }
     }

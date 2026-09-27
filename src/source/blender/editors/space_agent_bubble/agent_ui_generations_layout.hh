@@ -36,7 +36,7 @@ constexpr float GEN_GAP_EM = 0.50f;
  * fraction of the full pad — a label still has air on both sides. */
 constexpr float GEN_PAD_SHRINK = 0.72f;
 
-constexpr const char *GEN_RAIL_LABELS[GEN_LAYOUT_RAIL_COUNT] = {"AI generations", "Asset Library"};
+constexpr const char *GEN_RAIL_LABELS[GEN_LAYOUT_RAIL_COUNT] = {"AI generations", "My Libraries"};
 constexpr const char *GEN_FILTER_LABELS[GEN_LAYOUT_CHIP_COUNT] = {
     "All", "3D", "Image", "Video", "Splats"};
 /** Widest label each action slot can show. The column is stable across

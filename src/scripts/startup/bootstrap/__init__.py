@@ -463,12 +463,11 @@ def _initialize_theme_defaults():
     import bpy
     try:
         theme = bpy.context.preferences.themes[0]
-        theme.mixie_chat.chat_bubble_hover = (0.3, 0.85, 0.95, 0.95)
-        # Past-chats overlay row hover. Seeded every launch (like
-        # chat_bubble_hover) so prefs saved before the field existed —
-        # which load it as zero — still get a sensible value. Tune the
-        # look here or via theme.mixie_chat.chat_history_row_hover.
-        theme.mixie_chat.chat_history_row_hover = (1.0, 1.0, 1.0, 0.07)
+        # Migrate only absent legacy fields; never replace saved theme edits.
+        if not any(theme.mixie_chat.chat_bubble_hover):
+            theme.mixie_chat.chat_bubble_hover = (47/255, 89/255, 47/255, 38/255)
+        if not any(theme.mixie_chat.chat_history_row_hover):
+            theme.mixie_chat.chat_history_row_hover = (1.0, 1.0, 1.0, 18/255)
         logger.debug("Initialized mixie chat theme colors")
     except Exception as e:
         logger.debug("Could not initialize theme defaults: %s", e)

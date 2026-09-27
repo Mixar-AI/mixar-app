@@ -34,3 +34,10 @@ Specifically:
 ucupaint's license is GPL-3.0-or-later (see [LICENSES/GPL-3.0-or-later.txt](LICENSES/GPL-3.0-or-later.txt)). Mixar's adaptations of ucupaint code are also distributed under GPL-3.0-or-later, consistent with the original license. Per-file SPDX metadata and [REUSE.toml](REUSE.toml) record per-file copyright attribution.
 
 We thank ucupumar for the open-source work that made Mixar's texture-painting module possible.
+
+### Clash Grotesk
+
+The Cinema Mode button uses Clash Grotesk Regular by Indian Type Foundry,
+obtained from [Fontshare](https://www.fontshare.com/fonts/clash-grotesk) under
+the [ITF Free Font License](LICENSES/LicenseRef-ITF-FFL.txt). The font is used
+for application UI only and is excluded from public source snapshots.

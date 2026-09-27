@@ -44,7 +44,14 @@ class MIXIE_OT_queue_copy_error(Operator):
         queue = get_queue(self.feature_key)
         for job in queue.snapshot():
             if job.id == self.job_id:
-                context.window_manager.clipboard = job.error or "Unknown error"
+                from mixar.modules.common.job_queue.core.failure_info import (
+                    failure_details,
+                )
+
+                details = failure_details(job)
+                if job.error and job.error not in details:
+                    details += f"\nLocal error: {job.error}"
+                context.window_manager.clipboard = details
                 self.report({'INFO'}, "Error copied to clipboard")
                 return {'FINISHED'}
         self.report({'WARNING'}, "Job not found in queue")

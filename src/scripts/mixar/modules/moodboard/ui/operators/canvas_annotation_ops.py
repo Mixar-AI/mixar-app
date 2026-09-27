@@ -11,6 +11,7 @@ from ...constants import ANNOTATION_MAX_POINTS_PER_STROKE, CANVAS_ANNOTATION_SAM
 from ...core.annotation_erase import erase_hits, restore_strokes, snapshot_strokes
 from ...core.canvas_context import is_moodboard_context, redraw_moodboard_canvases
 from ...core.canvas_mark_mode import set_canvas_mark_mode
+from ...core.first_use import begin_preview, end_preview
 
 
 def _available(context):
@@ -111,6 +112,7 @@ class MIXIE_OT_moodboard_annotation_stroke(Operator):
         self._region = context.region
         self._scene = context.scene
         self._index = len(self._scene.mixie_moodboard_annotations)
+        begin_preview(self._scene, "mixie_moodboard_annotations")
         self._stroke = self._scene.mixie_moodboard_annotations.add()
         self._scene.mixie_moodboard_show_annotations = True
         state = self._scene.mixie_edit_tool_state
@@ -134,6 +136,7 @@ class MIXIE_OT_moodboard_annotation_stroke(Operator):
             return {"RUNNING_MODAL"}
         if event.type == "LEFTMOUSE" and event.value == "RELEASE":
             self._append(event, force=True)
+            end_preview(self._scene, "mixie_moodboard_annotations", committed=True)
             context.window.cursor_modal_restore()
             redraw_moodboard_canvases()
             return {"FINISHED"}
@@ -142,6 +145,7 @@ class MIXIE_OT_moodboard_annotation_stroke(Operator):
 
     def cancel(self, context):
         self._scene.mixie_moodboard_annotations.remove(self._index)
+        end_preview(self._scene, "mixie_moodboard_annotations")
         context.window.cursor_modal_restore()
         redraw_moodboard_canvases()
 

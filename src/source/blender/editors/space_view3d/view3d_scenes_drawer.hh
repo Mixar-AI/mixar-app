@@ -151,13 +151,29 @@ bool view3d_scenes_drawer_is_open(const ARegion *region);
 
 void view3d_scenes_drawer_region_register(SpaceType *st);
 
-/** Thumbnails (`view3d_scenes_drawer_thumbs.cc`). */
-void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &thumb, Main *bmain, const wmWindowManager *wm,
-                                       Scene *scene, const View3D *host, int w, int h,
-                                       double min_interval);
+/** Thumbnails (`view3d_scenes_drawer_thumbs.cc`): snapshots of the host
+ * viewport, kept in a session store by scene name. */
+/** False once snapshots are off for the session (env kill switch, or fail-closed
+ * after repeated GPU failures). */
+bool view3d_scenes_drawer_snapshots_enabled();
+/** True while a snapshot must not be taken: resize dispatch, a render, no GPU
+ * context, a locked interface or an island/pill window drag in progress. */
+bool view3d_scenes_drawer_snapshot_blocked(const bContext *C);
+/** Copy the host WINDOW region's last drawn frame as `scene`'s thumbnail
+ * (`thumb_w` x `thumb_h` pixels). Without `force` the shown card refreshes
+ * only when the depsgraph changed and not more than every couple of seconds.
+ * Returns true when a new picture was stored; any failure keeps the last one. */
+bool view3d_scenes_drawer_snapshot_capture(const bContext *C, ARegion *host_region,
+                                           const Scene *scene, int thumb_w, int thumb_h,
+                                           bool force);
+bool view3d_scenes_drawer_snapshot_exists(const std::string &scene_name);
+/** Drop snapshots of scenes that no longer exist in `bmain`. */
+void view3d_scenes_drawer_snapshot_evict(const Main *bmain);
 void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &thumb);
-/** Draw the last render into `rect` (region pixels, inclusive), uploading it first if new. */
-void view3d_scenes_drawer_thumb_draw(ScenesDrawerThumb &thumb, const rcti &rect);
+/** Draw `scene_name`'s snapshot into `rect` (region pixels, inclusive), copying
+ * it from the store and uploading it first if it changed. */
+void view3d_scenes_drawer_thumb_draw(ScenesDrawerThumb &thumb, const std::string &scene_name,
+                                     const rcti &rect);
 void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area);
 
 /** \} */
@@ -185,8 +201,17 @@ void draw_elided(int font_id,
 const char *status_label(ScenesDrawerTabStatus status);
 const float *status_color(ScenesDrawerTabStatus status);
 void draw_pill(const rctf &rect, const float fill[4], float radius);
+/** The native inline rename field over `card`'s title. Its commit is a
+ * no-op when the text is unchanged (see `view3d_scenes_drawer_selection.cc`). */
+void draw_inline_name(const bContext *C, ARegion *region, ScenesDrawerRuntime *runtime,
+                      const ScenesDrawerCard &card, const rctf &rect);
 /** The card's delete control (a bin) and the hover label beside a control. */
 void draw_trash(const rcti &box, float scale, const float color[4]);
+void update_card_motion(ScenesDrawerRuntime *runtime);
+void draw_header(ScenesDrawerRuntime *runtime, ARegion *region,
+                 float x0, float x1, float mid, float scale);
+void draw_selection_wash(const rctf &card, float panel_right, float region_right, float scale);
+void draw_drag_preview(ScenesDrawerRuntime *runtime, ARegion *region, float scale);
 void draw_hint(const rcti &anchor, const char *text, float scale);
 
 }  // namespace view3d_scenes_drawer
@@ -203,6 +228,10 @@ void view3d_scenes_drawer_operatortypes();
 bool view3d_scenes_drawer_op_poll(bContext *C);
 /** True on the resize sash of the context region. */
 bool view3d_scenes_drawer_edge_hit(const bContext *C, const int xy[2]);
+bool view3d_scenes_drawer_selection_click(bContext *C, ARegion *region,
+                                         ScenesDrawerRuntime *runtime, const wmEvent *event);
+void view3d_scenes_drawer_delete_card(bContext *C, const std::string &uid);
+void VIEW3D_OT_scenes_drawer_selection(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_hover(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_scroll(wmOperatorType *ot);

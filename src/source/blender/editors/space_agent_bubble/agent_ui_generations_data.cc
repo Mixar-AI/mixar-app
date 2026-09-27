@@ -83,12 +83,14 @@ bool item_push(GenPaneData *data, GenItem **r_item)
   return true;
 }
 
-/** Every registered library, in preferences order, for the rail's list. */
+/** Every connected library, in preferences order, for the rail's list.
+ * "Mixar Generations" is left out: it is the AI generations source, and
+ * listing it again among the user's folders read as a second, stray copy. */
 void gather_libraries(GenPaneData *data)
 {
   for (const bUserAssetLibrary &lib_ref : U.asset_libraries) {
     const bUserAssetLibrary *lib = &lib_ref;
-    if (!lib->name[0]) {
+    if (!lib->name[0] || STREQ(lib->name, GENERATIONS_LIBRARY_NAME)) {
       continue;
     }
     data->lib_names.emplace_back(lib->name);
@@ -111,7 +113,8 @@ const char *asset_type_label(const ID_Type id_type)
 }
 
 /** Read one library into the item list. \a only_name limits it to that
- * library; null takes every registered one.
+ * library; null takes every connected USER library (never the generations
+ * archive, which belongs to the AI generations source).
  *
  * \a reload drops the cached read first. Blender's asset list reads a library
  * ONCE and never notices a .blend appearing underneath it — which is exactly
@@ -122,7 +125,9 @@ void gather_assets(const bContext *C, GenPaneData *data, const char *only_name, 
 {
   for (const bUserAssetLibrary &lib_ref : U.asset_libraries) {
     const bUserAssetLibrary *lib = &lib_ref;
-    if (only_name && !STREQ(lib->name, only_name)) {
+    if (only_name ? !STREQ(lib->name, only_name) :
+                    STREQ(lib->name, GENERATIONS_LIBRARY_NAME))
+    {
       continue;
     }
     if (!lib->name[0] || !lib->dirpath[0]) {
@@ -392,6 +397,7 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
         &wm_ptr, "mixar_generations_selected", r_data->selected, sizeof(r_data->selected));
     gen_read_string(
         &wm_ptr, "mixar_generations_library", r_data->library, sizeof(r_data->library));
+    agent_ui_generations_read_multi(&wm_ptr, r_data);
     r_data->scroll = gen_read_float(&wm_ptr, "mixar_generations_scroll");
     r_data->library_scroll = gen_read_float(&wm_ptr, "mixar_generations_library_scroll");
     if (PropertyRNA *rev = RNA_struct_find_property(&wm_ptr, "mixar_generations_revision");
@@ -422,7 +428,12 @@ void agent_ui_generations_gather(const bContext *C, GenPaneData *r_data)
   gather_libraries(r_data);
 
   if (r_data->source == GEN_SOURCE_LIBRARY) {
-    gather_assets(C, r_data, r_data->library[0] ? r_data->library : nullptr, reload);
+    const char *only = r_data->library[0] ? r_data->library : nullptr;
+    gather_assets(C, r_data, only, reload);
+    /* Plain images and videos in the same folders: the asset list only sees
+     * datablocks marked inside .blend files, so a folder of pictures read
+     * as an empty library. */
+    agent_ui_generations_gather_files(C, r_data, only);
   }
   else {
     gather_jobs(C, r_data);

@@ -67,6 +67,14 @@ constexpr float PHONE_ROW_H = 30.0f;
 constexpr float PHONE_GAP = 9.0f;
 constexpr float PHONE_CARD_RADIUS = 16.0f;
 
+/**
+ * The pairing link is a LAN address, so it only opens on a phone that is on
+ * this computer's network. A phone on mobile data or a guest Wi-Fi fails
+ * silently: the phone never connects and the card just keeps waiting. The
+ * card says so under the title, before the user scans.
+ */
+constexpr const char *PHONE_SAME_WIFI_HINT = "Phone and computer must be on the same Wi-Fi";
+
 /** Everything the card paints, copied out of the mirror in one pass. */
 struct PhoneState {
   bool running = false;
@@ -255,7 +263,8 @@ void cinema_draw_phone_button(ui::Block *block,
                             "Hand the camera back and disconnect the phone" :
                         status.running ?
                             "Stop waiting and close the pairing code" :
-                            "Pair a phone over Wi-Fi and drive this camera with it";
+                            "Pair a phone on the same Wi-Fi as this computer and drive this "
+                            "camera with it";
 
   if (status.connected) {
     MIXAR_THEME_LOAD(on, Primary);
@@ -318,8 +327,8 @@ void cinema_draw_phone_card(ui::Block *block, const bContext *C, const ARegion *
   const bool warn_tls = !state.tls;
   const bool has_notice = state.notice[0] != '\0';
 
-  float height = PHONE_CARD_PAD * 2.0f + PHONE_TITLE_H + PHONE_GAP + PHONE_LINE_H + PHONE_GAP +
-                 PHONE_ROW_H;
+  float height = PHONE_CARD_PAD * 2.0f + PHONE_TITLE_H + PHONE_LINE_H + PHONE_GAP +
+                 PHONE_LINE_H + PHONE_GAP + PHONE_ROW_H;
   if (has_qr) {
     height += PHONE_QR_EDGE + PHONE_GAP;
   }
@@ -362,6 +371,14 @@ void cinema_draw_phone_card(ui::Block *block, const bContext *C, const ARegion *
                      y + PHONE_TITLE_H * u * 0.5f,
                      CINEMA_FONT_TITLE * u,
                      value_col);
+
+  y -= PHONE_LINE_H * u;
+  text_center_fitted(PHONE_SAME_WIFI_HINT,
+                     cx,
+                     y + PHONE_LINE_H * u * 0.5f,
+                     CINEMA_FONT_LABEL * u,
+                     card_w - PHONE_CARD_PAD * u * 2.0f,
+                     label_col);
 
   if (has_qr) {
     y -= PHONE_GAP * u + PHONE_QR_EDGE * u;

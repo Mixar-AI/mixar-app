@@ -147,6 +147,16 @@ void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, cons
     }
     return;
   }
+  if (icon == AGENT_ICON_ADDON) {
+    /* A puzzle piece: a square with one tab on top and one on the right. */
+    static const float piece[][2] = {
+        {-.34f, -.34f}, {-.34f, .22f}, {-.10f, .22f}, {-.10f, .34f},
+        {.10f, .34f},   {.10f, .22f},  {.22f, .22f},  {.22f, .10f},
+        {.34f, .10f},   {.34f, -.10f}, {.22f, -.10f}, {.22f, -.34f},
+    };
+    stroke_path(piece, 12, cx, cy, size, weight, true, color);
+    return;
+  }
   if (icon != AGENT_ICON_VIDEO) {
     return;
   }

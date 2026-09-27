@@ -52,7 +52,8 @@ DETAIL_CC = (CPP / "agent_ui_generations_detail.cc").read_text(encoding="utf-8")
 #: The pane is five translation units; a name may live in any of them.
 LIBRARIES_CC = (CPP / "agent_ui_generations_libraries.cc").read_text(encoding="utf-8")
 NAV_CC = (CPP / "agent_ui_generations_navigation.cc").read_text(encoding="utf-8")
-ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC + LIBRARIES_CC + NAV_CC
+SELECTION_CC = (CPP / "agent_ui_generations_selection.cc").read_text(encoding="utf-8")
+ALL_CC = PANE_CC + GRID_CC + DETAIL_CC + DATA_CC + LIBRARIES_CC + NAV_CC + SELECTION_CC
 INTERN_HH = (CPP / "agent_ui_generations_intern.hh").read_text(encoding="utf-8")
 ICONS_HH = (CPP / "agent_ui_icons.hh").read_text(encoding="utf-8")
 DRAW_CC = (CPP / "agent_ui_controls_paint.cc").read_text(encoding="utf-8")
@@ -106,15 +107,16 @@ def _op_self(**fields):
 
 @pytest.mark.parametrize("name", generations_props.PROP_NAMES)
 def test_every_pane_property_is_read_by_the_cpp(name):
-    assert f'"{name}"' in DATA_CC, (
+    assert f'"{name}"' in DATA_CC + SELECTION_CC, (
         f"{name} is registered but the pane never reads it — a property the "
         "C++ does not know about is state nothing can change"
     )
 
 
 #: Written by Python, not by a control in the pane — the archiver bumps the
-#: revision so the pane knows to re-read a library it has already cached.
-_WRITTEN_BY_PYTHON = {"mixar_generations_revision"}
+#: revision so the pane knows to re-read a library it has already cached, and
+#: ``mixar.generations_select`` writes the multi-selection on Ctrl/Cmd-click.
+_WRITTEN_BY_PYTHON = {"mixar_generations_revision", "mixar_generations_multi"}
 
 
 @pytest.mark.parametrize(
@@ -253,21 +255,22 @@ def _tab_table():
     ).group(1)
     labels = re.findall(r'"([^"]+)"', metrics)
     marks = re.findall(r"AGENT_ICON_\w+", icons)
-    assert len(labels) == len(marks) == 7
+    assert len(labels) == len(marks) == 8
     return dict(zip(labels, marks))
 
 
 def test_every_category_tab_carries_its_own_mark():
     """No two marked category tabs may share a glyph.
 
-    `generations.svg` draws marks for Agent and Gaussian Splat; 3D, Image and Video
+    `generations.svg` draws marks for Agent and Splats; 3D, Image and Video
     take the island's cube, picture and camera glyphs so those tabs cannot
     read as failed-to-load. Library and Queue are label-only
     (`AGENT_ICON_COUNT`); Queue still gains a count chip while nonempty.
     """
     tabs = _tab_table()
     assert tabs["Agent"] == "AGENT_ICON_AGENT"
-    assert tabs["Gaussian Splat"] == "AGENT_ICON_SPLAT"
+    assert tabs["Splats"] == "AGENT_ICON_SPLAT"
+    assert tabs["Add-on"] == "AGENT_ICON_ADDON"
     assert tabs["Library"] == "AGENT_ICON_COUNT"
     assert tabs["Queue"] == "AGENT_ICON_COUNT"
     assert tabs["3D"] == "AGENT_ICON_MESH"
@@ -540,7 +543,7 @@ def test_the_tile_operator_survives_the_preview_button():
     """A preview-tile button carries no operator of its own, so the click
     action has to be attached afterwards (the asset shelf's pattern)."""
     assert "button_operator_set(but" in GRID_CC
-    assert 'WM_operatortype_find("wm.context_set_string"' in GRID_CC
+    assert 'WM_operatortype_find("mixar.generations_select"' in GRID_CC
 
 
 def test_a_library_write_bumps_the_pane_revision():

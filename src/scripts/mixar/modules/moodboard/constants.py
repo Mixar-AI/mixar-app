@@ -9,6 +9,8 @@ Moodboard Module Constants
 Centralized configuration values for the moodboard module.
 """
 
+from mixar.modules.common.constants import SKETCH_COLOR_RGBA
+
 # ============================================================================
 # JOB QUEUE IDENTIFIERS
 # ============================================================================
@@ -274,10 +276,15 @@ LASSO_MIN_POINTS = 3
 SCENE_SEGMENT_REQUEST_TIMEOUT_SECONDS = 120.0
 SCENE_SEGMENT_POLL_INTERVAL_SECONDS = 0.5
 SCENE_SEGMENT_HTTP_TIMEOUT_SECONDS = 30.0
+# The backend proxies the upload to SAM3 with its own 120s timeout
+# (SCENE_SEGMENT_API_TIMEOUT) and answers with the upstream error when that
+# expires; a client timeout equal to it fires first and hides that answer.
+SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS = 135.0
 
 # Freehand annotation defaults. Width is measured in display pixels at the
 # image's base scale and grows with image/canvas zoom.
-ANNOTATION_COLOR_DEFAULT = (1.0, 0.12, 0.04, 1.0)
+# Display-space sRGB, matching the native canvas stroke renderer (#696F6C).
+ANNOTATION_COLOR_DEFAULT = SKETCH_COLOR_RGBA
 ANNOTATION_WIDTH_DEFAULT = 4.0
 ANNOTATION_WIDTH_MIN = 1.0
 ANNOTATION_WIDTH_MAX = 32.0
@@ -430,8 +437,8 @@ FRAME_MIN_HEIGHT = 160.0
 
 
 # Editable node templates: identity, label, icon, catalog capability.
-# The canvas strip reveals them progressively as width allows (mesh first,
-# then this list order); every entry stays in the + menu.
+# The canvas strip prioritizes 3D, video and mesh, then reveals the rest in
+# this list order as width allows; every entry stays in the + menu.
 NODE_TEMPLATES = (
     ('IMAGE_GEN', "Generate Image", 'IMAGE_DATA', 'image_gen'),
     ('MODEL_3D', "Image to 3D", 'MESH_DATA', 'model_gen'),

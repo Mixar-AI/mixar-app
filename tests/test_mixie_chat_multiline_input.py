@@ -21,6 +21,7 @@ HANDLERS = (UI / "interface_handlers.cc").read_text(encoding="utf-8")
 WIDGETS = (UI / "interface_widgets.cc").read_text(encoding="utf-8")
 LAYOUT_HH = (BUBBLE / "agent_ui_layout.hh").read_text(encoding="utf-8")
 LAYOUT_CC = (BUBBLE / "agent_ui_layout.cc").read_text(encoding="utf-8")
+METRICS_CC = (BUBBLE / "agent_ui_composer_metrics.cc").read_text(encoding="utf-8")
 THEME_HH = (BUBBLE / "agent_ui_theme.hh").read_text(encoding="utf-8")
 BUBBLE_CC = (BUBBLE / "space_agent_bubble.cc").read_text(encoding="utf-8")
 FOOTER_LAYOUT = (CHAT / "mixie_chat_footer_layout.cc").read_text(encoding="utf-8")
@@ -52,7 +53,7 @@ def test_island_strip_grows_with_visual_lines():
     assert "#define AGENT_INPUT_MAX_LINES 4" in THEME_HH
     assert "int agent_ui_composer_visual_lines(" in LAYOUT_HH
     assert "float agent_ui_composer_strip_h(" in LAYOUT_HH
-    strip = _function_body(LAYOUT_CC, "float agent_ui_composer_strip_h(")
+    strip = _function_body(METRICS_CC, "float agent_ui_composer_strip_h(")
     assert "AGENT_INPUT_H * lines" in strip
     assert "AGENT_INPUT_MAX_LINES" in strip
 
@@ -95,3 +96,11 @@ def test_multiline_chrome_is_not_hidden_by_field_height():
     assert "BLI_rcti_size_y" not in draw
     assert "if (but->col[3] < 128)" in draw
     assert "widget_textbut(wcol, rect, state, roundboxalign, zoom)" in draw
+
+
+def test_focused_composer_keeps_its_chat_background():
+    # Native text focus otherwise inherits the green wcol_text.inner_sel.
+    assert "ui::button_color_set(input_but, ui::theme::theme_get()->space_mixie_chat.chat_input_bg);" in BUBBLE_CC
+    draw = _function_body(WIDGETS, "static void widget_textbut_custom(")
+    assert "wcol->inner[0] = but->col[0];" in draw
+    assert draw.index("wcol->inner[0]") < draw.index("widget_textbut(wcol,")

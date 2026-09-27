@@ -132,7 +132,7 @@ class SceneReconJob(Job):
 
         # Map job queue statuses
         if gq_status in FAILED_BACKEND_STATUSES:
-            self.error = inner.get("error", "Scene reconstruction failed")
+            self.error = (inner.get("error") or "Scene reconstruction failed")
             self.user_message = inner.get("user_message", "") or "Scene reconstruction failed"
             return ("FAIL", [])
         if gq_status == "PENDING":

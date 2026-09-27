@@ -8,16 +8,8 @@ Two small operators the island's C++ panes bind:
 - ``mixar.pane_capture_viewport`` — screenshot the 3D viewport (the same
   ``render.opengl(view_context=True)`` capture the chat attachment flow uses,
   see ``space_mixie_chat/ui/operators/screenshot_ops.py``) and attach the
-  still as the ACTIVE pane's reference:
-
-  * Image  -> ``tab_imagegen.reference_images`` (the exact add the
-    moodboard's ``mixie.imagegen_upload_reference`` performs: packed image,
-    boarded unselected, mirrored into the tab's reference collection).
-  * Video  -> boarded as a SELECTED moodboard item — Video Gen's
-    references ARE the selected board media
-    (``get_selected_moodboard_media_inputs``).
-  * Gaussian Splat -> ``tab_world_labs.reference_image`` with
-    ``use_selected_image`` switched off so the capture is what submits.
+  still as the ACTIVE pane's reference through the routing table in
+  ``agent_bubble/core/pane_references.py`` (shared with clipboard paste).
 
 - ``mixar.pane_video_upload_reference`` — file picker that imports images and videos
   onto the moodboard AS SELECTED, feeding Video Gen's native selection-based
@@ -38,6 +30,13 @@ import time
 
 import bpy
 from bpy.types import Operator
+
+from mixar.modules.agent_bubble.core.pane_references import (
+    PANE_TABS,
+    attach_file_to_pane,
+    attach_to_board_selected,
+    redraw_bubbles,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -127,46 +126,6 @@ def _capture_viewport_to_file(context):
     return path if os.path.exists(path) else None
 
 
-def _attach_to_imagegen(scene, img, filepath):
-    """The exact reference-add mixie.imagegen_upload_reference performs."""
-    from mixar.modules.moodboard.core.moodboard_utils import (
-        place_new_moodboard_item,
-    )
-
-    tab = scene.mixie_moodboard_sidebar.tab_imagegen
-
-    mb_item = scene.mixie_moodboard_images.add()
-    mb_item.image = img
-    mb_item.scale = 1.0
-    place_new_moodboard_item(scene, mb_item)
-    mb_item.selected = False
-
-    ref_item = tab.reference_images.add()
-    ref_item.image = img
-    ref_item.moodboard_index = len(scene.mixie_moodboard_images) - 1
-    ref_item.display_name = img.name
-    if img.size[0] > 0 and img.size[1] > 0:
-        ref_item.display_resolution = f"{img.size[0]} x {img.size[1]}"
-    else:
-        ref_item.display_resolution = "Unknown"
-    ref_item.display_path = filepath
-    if hasattr(tab, "use_reference_images"):
-        # Uploaded/captured refs are used with board-selection mode OFF.
-        tab.use_reference_images = False
-
-
-def _attach_to_board_selected(scene, filepath):
-    """Board the file as a SELECTED item (Video Gen's reference source)."""
-    from mixar.modules.moodboard.core.media_import import (
-        load_media_file_to_board,
-    )
-
-    item = load_media_file_to_board(scene, filepath)
-    if item is not None:
-        item.selected = True
-    return item
-
-
 class MIXAR_OT_pane_capture_viewport(Operator):
     """Capture the 3D viewport and attach it as the pane's reference image"""
 
@@ -197,37 +156,18 @@ class MIXAR_OT_pane_capture_viewport(Operator):
             self.report({'WARNING'}, "No 3D viewport found to capture")
             return {'CANCELLED'}
 
-        sidebar = getattr(scene, "mixie_moodboard_sidebar", None)
-        if sidebar is None:
-            self.report({'WARNING'}, "Moodboard sidebar properties unavailable")
-            return {'CANCELLED'}
-
+        # Only the Image, Video and Splat panes bind this; any other caller
+        # keeps the historical Image default.
+        pane = tab if tab in PANE_TABS else 'IMAGE'
         try:
-            if tab == 'VIDEO':
-                if _attach_to_board_selected(scene, path) is None:
-                    raise RuntimeError("could not board the capture")
-            else:
-                img = bpy.data.images.load(path, check_existing=False)
-                img.name = "Viewport Capture"
-                img.pack()
-                if tab == 'SPLAT':
-                    wl = sidebar.tab_world_labs
-                    wl.reference_image = img
-                    if hasattr(wl, "use_selected_image"):
-                        wl.use_selected_image = False
-                else:
-                    # Image (and any future pane defaults here).
-                    _attach_to_imagegen(scene, img, path)
+            attach_file_to_pane(scene, pane, path, "Viewport Capture")
         except Exception as exc:  # noqa: BLE001
             logger.error("Could not attach viewport capture: %r", exc)
             self.report({'ERROR'}, f"Could not attach capture: {exc}")
             return {'CANCELLED'}
 
         self.report({'INFO'}, "Viewport captured as reference")
-        for window in wm.windows:
-            for area in window.screen.areas:
-                if area.type == 'AGENT_BUBBLE':
-                    area.tag_redraw()
+        redraw_bubbles(wm)
         return {'FINISHED'}
 
 
@@ -267,7 +207,7 @@ class MIXAR_OT_pane_video_upload_reference(Operator):
             if not os.path.isfile(filepath):
                 continue
             try:
-                if _attach_to_board_selected(scene, filepath) is not None:
+                if attach_to_board_selected(scene, filepath) is not None:
                     added += 1
             except Exception as exc:  # noqa: BLE001
                 logger.error("Video reference import failed: %r", exc)

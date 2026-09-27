@@ -10,6 +10,7 @@ Defines PropertyGroups for tracking image editing tool state.
 """
 
 from bpy.types import PropertyGroup
+from mixar.modules.common.core.theme_colors import annotation_color_get, annotation_color_set
 from bpy.props import (
     FloatProperty,
     IntProperty,
@@ -76,9 +77,11 @@ class MoodboardEditToolState(PropertyGroup):
     annotation_color: FloatVectorProperty(
         name="Color",
         description="Color and opacity for new annotation strokes",
-        subtype='COLOR',
+        subtype='COLOR_GAMMA',
         size=4,
         default=ANNOTATION_COLOR_DEFAULT,
+        get=annotation_color_get,
+        set=annotation_color_set,
         min=0.0,
         max=1.0,
     )
@@ -105,6 +108,17 @@ class MoodboardEditToolState(PropertyGroup):
     magic_select_pending: BoolProperty(
         name="Magic Select Pending",
         description="Whether a segmentation request is in progress",
+        default=False,
+        options={'SKIP_SAVE'},
+    )
+
+    # The queued / in-flight Magic Select click, image-relative (0-1). The
+    # C++ tool painter draws a marker there that pulses while `_pending`.
+    magic_select_point_x: FloatProperty(name="Magic Select Point X", default=0.0)
+    magic_select_point_y: FloatProperty(name="Magic Select Point Y", default=0.0)
+    magic_select_has_point: BoolProperty(
+        name="Magic Select Has Point",
+        description="A click is queued or being segmented; draw its marker",
         default=False,
         options={'SKIP_SAVE'},
     )

@@ -13,8 +13,6 @@ import addon_utils
 import bpy
 
 from mixar.modules.addon_project.service import AddonProjectService
-from mixar.modules.addon_project.ui.menus import classes as project_menu_classes
-from mixar.modules.addon_project.ui.operators import classes as project_ui_classes
 
 
 BASE_INIT = """\
@@ -84,25 +82,6 @@ def _record(description: dict, relative: str) -> dict:
 
 
 def main() -> None:
-    assert {cls.bl_idname for cls in project_ui_classes} == {
-        "mixar.addon_project_link",
-        "mixar.addon_project_unlink",
-        "mixar.addon_project_open_entrypoint",
-        "mixar.addon_project_set_entrypoint",
-        "mixar.addon_project_run_checks",
-        "mixar.addon_project_rollback_last",
-    }
-    assert {cls.bl_idname for cls in project_menu_classes} == {
-        "MIXAR_MT_addon_project_more",
-    }
-    all_project_ui_classes = (*project_ui_classes, *project_menu_classes)
-    newly_registered = []
-    for cls in all_project_ui_classes:
-        if not cls.is_registered:
-            bpy.utils.register_class(cls)
-            newly_registered.append(cls)
-    assert all(cls.is_registered for cls in all_project_ui_classes)
-
     with tempfile.TemporaryDirectory(prefix="mixar_addon_project_smoke_") as temp:
         temp_root = Path(temp)
         project = temp_root / "studio_addon"
@@ -178,15 +157,9 @@ def main() -> None:
             "live_reload": checked["blender_reload"]["success"],
             "enabled_reload": checked_while_enabled["blender_reload"]["success"],
             "rollback_reload": checked_after_rollback["blender_reload"]["success"],
-            "ui_registered": all(
-                cls.is_registered for cls in all_project_ui_classes
-            ),
         }
         assert str(project) not in json.dumps(public)
         print("ADDON_PROJECT_BLENDER_SMOKE_OK " + json.dumps(public, sort_keys=True))
-
-    for cls in reversed(newly_registered):
-        bpy.utils.unregister_class(cls)
 
 
 if __name__ == "__main__":

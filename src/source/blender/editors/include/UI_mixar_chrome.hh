@@ -14,24 +14,19 @@ namespace blender::ui::mixar_chrome {
 inline constexpr MixarDensity density = MixarDensity::Compact;
 
 /** Global menu bar has its own height; editor headers retain their native size. */
-inline constexpr float topbar_height = 36.0f;
+inline constexpr float topbar_height = 40.0f;
 
-/** Zen scene toolbar: 15% shorter bed, with unchanged readable control sizes. */
-inline constexpr float zen_toolbar_height = 54.0f * 0.85f;
-inline constexpr float zen_toolbar_control_height = 34.0f;
-inline constexpr unsigned char toolbar_background[4] = {0, 0, 0, 255};
-inline constexpr unsigned char toolbar_border[4] = {55, 55, 55, 255};
-inline constexpr unsigned char toolbar_primary[4] = {0, 29, 14, 255};
-inline constexpr unsigned char toolbar_primary_border[4] = {0, 51, 28, 255};
-inline constexpr unsigned char toolbar_text[4] = {184, 188, 187, 255};
-inline constexpr unsigned char toolbar_muted[4] = {69, 73, 72, 255};
-inline constexpr unsigned char toolbar_shading_selected[4] = {64, 164, 164, 255};
+/** Both header rows share one height; scene controls have six-pixel vertical insets. */
+inline constexpr float zen_toolbar_height = topbar_height;
+inline constexpr float zen_toolbar_control_height = topbar_height - 12.0f;
 
 /** Widget-font scales for topbar, viewport shading pills and Cinema popup
  * rows. Chrome uses Blender `UI_SCALE_FAC`, not the island artboard unit. */
 inline constexpr float label_scale = 0.95f;
 inline constexpr float caption_scale = 0.90f;
 
+/** Full Zen/Engine track height, centered inside the topbar, px @1x. */
+inline constexpr float slider_height = 28.0f;
 /** Thumb inset inside the Zen/Engine track, px @1x. */
 inline constexpr float slider_thumb_inset = 2.0f;
 /** Inactive Solid/Rendered pill opacity. */

@@ -260,7 +260,9 @@ bool button_contains_pt(const Button *but, float mx, float my)
 {
   return BLI_rctf_isect_pt(&but->rect, mx, my) &&
          (!but->block->mixar_clip_rect ||
-          BLI_rctf_isect_pt(&*but->block->mixar_clip_rect, mx, my));
+          BLI_rctf_isect_pt(&*but->block->mixar_clip_rect, mx, my)) &&
+         (!but->block->mixar_point_is_occluded ||
+          !but->block->mixar_point_is_occluded(mx, my));
 }
 
 bool button_contains_rect(const Button *but, const rctf *rect)
@@ -767,7 +769,8 @@ Block *block_find_mouse_over_ex(const ARegion *region, const int xy[2], bool onl
     float mx = xy[0], my = xy[1];
     window_to_block_fl(region, &block, &mx, &my);
     if (BLI_rctf_isect_pt(&block.rect, mx, my) &&
-        (!block.mixar_clip_rect || BLI_rctf_isect_pt(&*block.mixar_clip_rect, mx, my)))
+        (!block.mixar_clip_rect || BLI_rctf_isect_pt(&*block.mixar_clip_rect, mx, my)) &&
+        (!block.mixar_point_is_occluded || !block.mixar_point_is_occluded(mx, my)))
     {
       return &block;
     }

@@ -95,6 +95,7 @@ def _textbox_ops_scope():
         "get_moodboard_viewport_center": lambda: (0.0, 0.0),
         "find_moodboard_canvas_region": lambda context: None,
         "redraw_moodboard_canvases": Mock(),
+        "begin_preview": Mock(), "end_preview": Mock(), "mark_started": Mock(),
         "release_moodboard_image_entry": Mock(),
         "exit_canvas_mark_mode": lambda context: exits.append(context) or True,
     }

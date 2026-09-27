@@ -36,6 +36,7 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_interface_c.hh"
 #include "UI_resources.hh"
 
 #include "WM_api.hh"
@@ -295,6 +296,10 @@ void view3d_scenes_drawer_region_init(wmWindowManager *wm, ARegion *region)
       wm->runtime->defaultconf, "Scenes Drawer Grip", SPACE_VIEW3D, VIEW3D_SCENES_DRAWER_REGION_TYPE);
   WM_event_add_keymap_handler_priority(&region->runtime->handlers, grip_keymap, 0);
   view3d_scenes_drawer_toggle_handlers_add(wm, region);
+  /* Native editing must receive selection/clipboard keys before the card
+   * keymap (which also owns Cmd/Ctrl+A and Delete). Outside a field it passes
+   * through to the existing drawer handlers. UI handlers prepend themselves. */
+  ui::region_handlers_add(&region->runtime->handlers);
 
   ED_region_tag_redraw(region);
 }

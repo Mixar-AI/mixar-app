@@ -18,6 +18,7 @@ enum class AgentIslandControl {
   Image,
   Video,
   Splat,
+  Addon,
   Generations,
   Queue,
   History,

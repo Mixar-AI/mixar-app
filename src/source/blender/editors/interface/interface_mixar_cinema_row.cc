@@ -221,8 +221,6 @@ void draw_option(Button *but,
 {
   const MixarInteraction motion = mixar_button_motion(*but);
   const bool disabled = (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
-  const rctf row = row_rect(rect);
-  const float rad = row_radius(row);
   const bool action = kind == MixarCinemaRowKind::Action;
   /* A standalone SWITCH shows its off state: a toggle that paints nothing
    * while off ("Keyframe Images (3)" in the export popup) is a line of text
@@ -233,6 +231,13 @@ void draw_option(Button *but,
                                        ButtonType::ToggleN,
                                        ButtonType::IconToggle,
                                        ButtonType::IconToggleN);
+  rctf row = row_rect(rect);
+  float rad = row_radius(row);
+  if (!action && !switchy) {
+    /* Dropdown selections fill their native row, without a rounded chip inset. */
+    mixar_card_rect_to_rctf(rect, &row);
+    rad = 0.0f;
+  }
   if (switchy && motion.selected < 1.0f) {
     uchar track[4];
     themed(MixarThemeSlot::CinemaRowTrack, TRACK, track);

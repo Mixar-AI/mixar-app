@@ -24,8 +24,6 @@ DEV_MODE = False
 # Delay before agent connection attempts on startup (seconds)
 STARTUP_DELAY_SECONDS = 1.0
 
-
-
 # SCENE ROUTING
 
 # The backend addresses every execute_script with a `session_id` that acts as a
@@ -497,3 +495,7 @@ TEMP_PLACEHOLDER_PREFIX = "temp_placeholder_"
 
 # Let a synchronous tool or final response remain readable between draw frames.
 CAT_ACTIVITY_HOLD_SECONDS = 0.9
+MANUAL_SCENE_NAME_PROP = "mixar_scene_name_manual"
+
+SOUND_FEEDBACK_TIMING = (0.20, 1.20, 0.22)  # Expand, hold, collapse.
+SOUND_FEEDBACK_WIDTHS = (1.8, 6.0)

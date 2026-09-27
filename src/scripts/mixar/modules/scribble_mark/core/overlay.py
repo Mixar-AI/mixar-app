@@ -36,6 +36,7 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 
 from .smoothing import catmull_rom
+from mixar.modules.common.core.theme_colors import sketch_ink_color
 
 from mixar.config.logging_config import get_logger
 
@@ -43,7 +44,6 @@ from . import freeze
 from mixar.modules.common.utils.ui_utils import top_header_overlap_px
 from ..constants import (
     INTENT_SKETCH,
-    MARK_HINT_ACCENT_COLOR,
     MARK_HINT_BG_COLOR,
     MARK_HINT_FONT_PX,
     MARK_HINT_HEIGHT_PX,
@@ -55,8 +55,6 @@ from ..constants import (
     MARK_HINT_TOP_GAP_PX,
     MARK_HINT_TALK_KEY,
     MARK_HINT_VOICE,
-    MARK_INK_COLOR,
-    MARK_INK_COLOR_SETTLED,
     MARK_INK_WIDTH,
     MARK_SCRIM_COLOR,
 )
@@ -390,7 +388,7 @@ def _draw_hint(area, region, scene, scale):
     shader.uniform_float("color", MARK_HINT_BG_COLOR)
     batch.draw(shader)
 
-    colour = MARK_HINT_ACCENT_COLOR if _live_strokes else MARK_HINT_TEXT_COLOR
+    colour = sketch_ink_color() if _live_strokes else MARK_HINT_TEXT_COLOR
     blf.color(_FONT_ID, *colour)
     blf.position(_FONT_ID, x0 + pad_x, y0 + (height - text_h) / 2.0, 0)
     blf.draw(_FONT_ID, text)
@@ -425,10 +423,12 @@ def _draw_callback():
 
             scale = ui_scale()
             width = MARK_INK_WIDTH * scale
+            ink = sketch_ink_color()
+            settled_ink = (*ink[:3], ink[3] * 0.55)
             for polylines in _settled_smooth:
-                _draw_smoothed(polylines, MARK_INK_COLOR_SETTLED, width)
+                _draw_smoothed(polylines, settled_ink, width)
             if _live_strokes:
-                _draw_smoothed(_live_smoothed(), MARK_INK_COLOR, width)
+                _draw_smoothed(_live_smoothed(), ink, width)
 
             _draw_hint(area, region, scene, scale)
         finally:

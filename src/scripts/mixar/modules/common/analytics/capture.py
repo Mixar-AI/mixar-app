@@ -11,6 +11,7 @@ network I/O and never imports or touches bpy.
 from __future__ import annotations
 
 import functools
+import os
 import platform
 import queue
 import threading
@@ -44,6 +45,8 @@ _events_dropped = 0
 _cached_context_properties: dict[str, str | None] = {}
 _suppressed = False
 _shutdown = False
+# A desktop process session is independent of agent conversation/session IDs.
+_app_session_id = str(uuid.uuid4())
 
 _AUTH_CACHE_TTL_SECONDS = 30.0
 _auth_cache: tuple[float, bool] | None = None
@@ -82,6 +85,9 @@ def _common_properties(context=None) -> dict:
         "environment": get_environment(),
         "ui_mode": get_ui_mode(),
         "platform": platform.system().lower(),
+        "app_session_id": _app_session_id,
+        "telemetry_schema_version": 2,
+        "is_test": os.environ.get('MIXAR_QA') == '1',
     }
     if context is not None:
         wm = getattr(context, "window_manager", None)
@@ -165,9 +171,12 @@ def _take_batch() -> list[dict]:
 
 
 def _send(batch: list[dict]) -> None:
+    # Re-check consent at delivery: a batch can predate an opt-out.
     if not batch:
         return
     try:
+        if not is_enabled():
+            return
         _post_batch(batch)
     except Exception as exc:  # noqa: BLE001 - analytics is deliberately fail-open
         logger.debug("Telemetry delivery failed: %s", exc)
@@ -240,6 +249,17 @@ def _successful(result) -> bool:
     return isinstance(result, set) and bool(result & {"FINISHED", "RUNNING_MODAL"})
 
 
+def _capture_operator_result(op_id, result, context):
+    try:
+        from .journey_events import operator_outcome
+        operator_outcome(op_id, result, context)
+        capture(EVENT_OPERATOR, {
+            "operator": op_id, "success": _successful(result),
+        }, context=context)
+    except Exception:
+        pass
+
+
 def _operator_wrapper(original, op_id: str, *, with_event: bool):
     """Build a wrapper with the exact RNA method signature.
 
@@ -253,22 +273,24 @@ def _operator_wrapper(original, op_id: str, *, with_event: bool):
 
         @functools.wraps(original)
         def wrapped(self, context, event):
-            result = original(self, context, event)
-            capture(EVENT_OPERATOR, {
-                "operator": op_id,
-                "success": _successful(result),
-            }, context=context)
+            try:
+                result = original(self, context, event)
+            except Exception:
+                _capture_operator_result(op_id, {'ERROR'}, context)
+                raise
+            _capture_operator_result(op_id, result, context)
             return result
 
     else:
 
         @functools.wraps(original)
         def wrapped(self, context):
-            result = original(self, context)
-            capture(EVENT_OPERATOR, {
-                "operator": op_id,
-                "success": _successful(result),
-            }, context=context)
+            try:
+                result = original(self, context)
+            except Exception:
+                _capture_operator_result(op_id, {'ERROR'}, context)
+                raise
+            _capture_operator_result(op_id, result, context)
             return result
 
     return wrapped

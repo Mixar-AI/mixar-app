@@ -9,6 +9,7 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue import enqueue_generation
+from mixar.modules.hunyuan.constants import ANIMATE_IMPORT_OPTIONS
 from .media_utils import is_still_item
 from .node_graph import action_node_by_id, input_media_items
 from .node_job_bridge import ensure_graph_listener
@@ -38,13 +39,17 @@ _MESH_FEATURE_ROUTING = {
         'capability': 'animate',
         'feature_key': 'animate',
         'scene_flag': 'mixie_animate_is_generating',
-        'import_options': {"bone_heuristic": "BLENDER", "guess_original_bind_pose": False},
+        # Same import as every other Auto Rig: skinned mesh + armature only,
+        # the armature shown In Front.
+        'import_options': ANIMATE_IMPORT_OPTIONS,
+        'armature_in_front': True,
     },
 }
 
 
 def _mesh_result_hook(scene_name: str, node_id: str,
-                      texture_finalize: bool = False, base_name: str = ""):
+                      texture_finalize: bool = False, base_name: str = "",
+                      armature_in_front: bool = False):
     """Embed the imported result mesh INTO the producing node.
 
     Like Generate 3D, the feature node's generate UI is replaced by the result
@@ -55,6 +60,9 @@ def _mesh_result_hook(scene_name: str, node_id: str,
     When *texture_finalize* is set (PBR Generation), the imported mesh is renamed
     (pose kept) and its material/images cleaned up + packed map split, then the
     node binds to the FINAL name.
+
+    When *armature_in_front* is set (Auto Rig), the imported armature is shown
+    In Front, like every other Auto Rig import.
     """
     def _hook(job, object_names: str):
         scene = bpy.data.scenes.get(scene_name)
@@ -66,6 +74,11 @@ def _mesh_result_hook(scene_name: str, node_id: str,
         from .node_graph import create_asset_result
 
         result = object_names
+        if armature_in_front:
+            from mixar.modules.hunyuan.core.animate_enqueue import (
+                show_armatures_in_front,
+            )
+            show_armatures_in_front(object_names)
         if texture_finalize:
             try:
                 from mixar.modules.common.job_queue.core.model_io import (
@@ -185,6 +198,7 @@ def _run_mesh_feature(context, node, operator):
         context.scene.name, node.node_id,
         texture_finalize=(node.action_type == 'PBR_GEN'),
         base_name=meshes[0].name,
+        armature_in_front=routing.get('armature_in_front', False),
     )
     extra = {}
     if routing.get('import_options'):
