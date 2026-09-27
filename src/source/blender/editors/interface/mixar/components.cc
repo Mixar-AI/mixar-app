@@ -83,13 +83,25 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     interp_v4_v4v4(fill, background, mixar_zen().selected, motion.selected);
   }
   if (!input) {
+    /* The shared Moodboard template strip uses the theme's primary green on
+     * hover in both hosts, without changing other secondary actions. */
+    const bool template_hover = style.component == MixarComponent::Action && !disabled &&
+                                button.block->name == "MIXIE_PT_canvas_templates";
+    if (template_hover) {
+      interp_v4_v4v4(fill, fill, mixar_zen().primary, motion.hover);
+    }
     for (int i = 0; i < 3; i++) {
       fill[i] = std::clamp(
-          (fill[i] + 0.035f * motion.hover) * (1.0f - 0.10f * motion.press), 0.0f, 1.0f);
+          (fill[i] + (template_hover ? 0.0f : 0.035f * motion.hover)) *
+              (1.0f - 0.10f * motion.press), 0.0f, 1.0f);
     }
   }
   if (!label) {
-    const float corner_radius = std::min(radius * u * (input ? 2.0f : 1.0f),
+    /* Canvas prompts use restrained corners in both Moodboard hosts, while
+     * retaining the shared text inset and the island's input recipe. */
+    const float requested_radius = input && button.block->name == "moodboard_floating_node_controls" ?
+                                       8.0f * UI_SCALE_FAC : radius * u * (input ? 2.0f : 1.0f);
+    const float corner_radius = std::min(requested_radius,
                                         0.5f * std::min(BLI_rctf_size_x(&rect),
                                                         BLI_rctf_size_y(&rect)));
     mixar_fill_round(rect, corner_radius, fill);

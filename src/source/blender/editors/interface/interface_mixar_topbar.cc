@@ -14,11 +14,12 @@
  * ours. Colours and chrome label scale live in `UI_mixar_chrome.hh`
  * (UI.svg 1x: slider track 225x28 rx7 #1D1D1D with a 106x23 rx7 #393939
  * thumb inset 2px; Cinema pill 120x27 fully rounded, #3F3F3F hairline
- * border, flat label and flat green fill). Geometry stays on the layout.
+ * border, shared horizontal Cinema gradients, film-strip icon and raised V1
+ * marker). Geometry stays on the layout.
  * Compact is the chrome host; these widgets keep the UI.svg sizes rather
  * than Compact's 32-unit control height.
  *
- * Cinema, viewport shading, and account chips are panes (`MIXAR_GLASS_PILL`);
+ * Viewport shading and account chips are panes (`MIXAR_GLASS_PILL`);
  * the slider track/thumb and the account avatar disc stay flat — grooves and
  * pictures must not show the bar through them.
  */
@@ -48,9 +49,9 @@
 
 #include "interface_intern.hh"
 #include "interface_mixar_card_paint.hh"
-#include "interface_mixar_cinema_label.hh"
 #include "interface_mixar_profile_card.hh"
 #include "UI_mixar_theme.hh"
+#include "mixar/cinema_label.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender::ui {
@@ -98,6 +99,33 @@ void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *
   left->rect.ymin = right->rect.ymin = center_y - half_height;
   left->rect.ymax = right->rect.ymax = center_y + half_height;
   const float limit = left->rect.xmin - 8.0f * UI_SCALE_FAC;
+  /* Spend the added pill padding before hiding tabs at the mode switch.
+   * Keep the native 10px per side as the floor, so labels never get squeezed. */
+  int tab_count = 0;
+  float workspace_end = 0.0f;
+  for (const Button &but : block->buttons()) {
+    if (but.type == ButtonType::Tab) {
+      tab_count++;
+      workspace_end = std::max(workspace_end, but.rect.xmax);
+    }
+    else if (but.optype && STREQ(but.optype->idname, "WORKSPACE_OT_add")) {
+      workspace_end = std::max(workspace_end, but.rect.xmax);
+    }
+  }
+  if (tab_count > 0 && workspace_end > limit) {
+    const float trim = std::min(8.0f * UI_SCALE_FAC, (workspace_end - limit) / tab_count);
+    float shift = 0.0f;
+    for (Button &but : block->buttons()) {
+      if (but.type == ButtonType::Tab) {
+        BLI_rctf_translate(&but.rect, -shift, 0);
+        but.rect.xmax -= trim;
+        shift += trim;
+      }
+      else if (but.optype && STREQ(but.optype->idname, "WORKSPACE_OT_add")) {
+        BLI_rctf_translate(&but.rect, -shift, 0);
+      }
+    }
+  }
   for (Button &but : block->buttons()) {
     const bool workspace = but.type == ButtonType::Tab ||
                           (but.optype && STREQ(but.optype->idname, "WORKSPACE_OT_add"));
@@ -188,27 +216,13 @@ void draw_slider_right(Button *but, const rcti *rect)
   draw_label_centred(rect, but->drawstr.c_str(), slider_label, label_scale);
 }
 
-/**
- * "Cinema Mode": fully rounded pill — the design's dark chip at rest, the
- * whole pill filled green while directing.
- *
- * No separate switch widget: the fill is the state. A knob read as "here is
- * a control inside a button" when the button already IS the control.
- *
- * FLAT, fill and label alike. The green used to ramp top to bottom
- * (`CinemaPillOnB` -> `CinemaPillOnA`) and the resting label left to right
- * (#505050 -> white); both read as decoration on a control whose only job is
- * to say on or off. One colour per state: the fill is `CinemaPillOnB`, and
- * the label is white while directing and a step short of it at rest.
- */
+/** Cinema shares horizontal background and text ramps in Zen and Engine,
+ * with independently blended active endpoints. Native semantic selection remains separate from pressing. */
 void draw_cinema_pill(Button *but, const rcti *rect)
 {
-  uchar pill_on[4], pill_border[4], pill_border_on[4], pill_label_a[4], pill_label_b[4];
-  mixar_theme_copy_u(MixarThemeSlot::CinemaPillOnB, mixar_chrome::cinema_pill_fill_on_b, pill_on);
+  uchar pill_border[4], pill_border_on[4];
   mixar_theme_copy_u(MixarThemeSlot::CinemaPillBorder, mixar_chrome::cinema_pill_border, pill_border);
   mixar_theme_copy_u(MixarThemeSlot::CinemaPillBorderOn, mixar_chrome::cinema_pill_border_on, pill_border_on);
-  mixar_theme_copy_u(MixarThemeSlot::CinemaPillLabel, mixar_chrome::cinema_pill_label_a, pill_label_a);
-  mixar_theme_copy_u(MixarThemeSlot::CinemaPillLabelOn, mixar_chrome::cinema_pill_label_b, pill_label_b);
   rctf pill;
   mixar_card_rect_to_rctf(rect, &pill);
   /* The design's pill is shorter than the topbar's button height; inset so
@@ -218,22 +232,10 @@ void draw_cinema_pill(Button *but, const rcti *rect)
 
   const float rad = BLI_rctf_size_y(&pill) * 0.5f;
   /* Operator press is separate from the semantic selected state. The central
-   * sampler reads `lit`, so holding the mouse never turns an idle pill green. */
+   * sampler reads `lit`, so holding the mouse never activates Cinema Mode. */
   const MixarInteraction motion = mixar_button_motion(*but);
   const float emphasis = motion.hover + (1.0f - motion.hover) * motion.press;
-  const float boost = 1.0f + 0.12f * motion.hover + (0.22f - 0.12f * motion.hover) * motion.press;
-  float fill[4];
-  mixar_card_to_float(pill_on, fill);
-  for (int i = 0; i < 3; i++) {
-    fill[i] = std::min(1.0f, fill[i] * boost);
-  }
-  /* Only semantic selection reveals the green, over the glass bed. */
-  fill[3] = motion.selected;
-
-  GPU_blend(GPU_BLEND_ALPHA);
-  mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, 0.84f + 0.16f * emphasis);
-  draw_roundbox_corner_set(CNR_ALL);
-  draw_roundbox_4fv(&pill, true, rad, fill);
+  mixar_cinema_background(pill, rad, motion.selected, emphasis);
   uchar border[4];
   blend_color(pill_border,
               pill_border_on,
@@ -242,10 +244,8 @@ void draw_cinema_pill(Button *but, const rcti *rect)
   const float border_alpha = 0.85f + 0.05f * motion.selected;
   mixar_card_outline_round(&pill, rad, border, border_alpha + (1.0f - border_alpha) * emphasis);
 
-  /* One colour: white while directing, a step short of it at rest. */
-  uchar label[4];
-  blend_color(pill_label_a, pill_label_b, 0.8f + 0.2f * motion.selected, label);
-  mixar_cinema_draw_label(*rect, but->str.c_str(), but->icon, label, label_scale);
+  mixar_cinema_label(*rect, but->drawstr.c_str(), motion.selected,
+                      (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0, but->icon);
 }
 
 /** Zen viewport shading pill: "Solid" / "Rendered". */

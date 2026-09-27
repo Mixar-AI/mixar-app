@@ -1507,7 +1507,10 @@ static void template_ID_tabs(const bContext *C,
     }
 
     const int name_width = fontstyle_string_width(&style->widget, id->name + 2);
-    const int but_width = name_width + UI_UNIT_X;
+    /* Give workspace pills 14 logical pixels per side, instead of 10. */
+    const int padding = horizontal && template_id.idcode == ID_WS ? int(1.4f * UI_UNIT_X) :
+                                                                   UI_UNIT_X;
+    const int but_width = name_width + padding;
 
     ButtonTab *tab = static_cast<ButtonTab *>(uiDefButR_prop(block,
                                                              ButtonType::Tab,

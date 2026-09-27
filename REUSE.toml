@@ -42,6 +42,7 @@ SPDX-License-Identifier = "GPL-2.0-or-later"
 [[annotations]]
 path = [
   "src/scripts/mixar/modules/onboarding/assets/**",
+  "src/scripts/mixar/modules/space_mixie_chat/core/assets/*.mp3",
   "src/scripts/mixar/modules/testing/*.json",
   "src/scripts/mixar/modules/texel_density/texel/*.json",
   "src/scripts/startup/bl_app_templates_system/**/*.blend",
@@ -146,3 +147,8 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "KIRI Engine contributors"
 SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "src/release/datafiles/fonts/ClashGrotesk-Regular.otf"
+SPDX-FileCopyrightText = "Indian Type Foundry"
+SPDX-License-Identifier = "LicenseRef-ITF-FFL"

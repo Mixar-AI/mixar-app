@@ -25,8 +25,8 @@ def test_canvas_cards_and_drawer_share_the_island_palette():
     assert 'moodboard_draw_surface(frame,' in canvas
     assert 'moodboard_draw_surface(rect,' in card
     assert 'ui::mixar_tokens::mixar_zen().panel' in canvas
-    assert 'ui::mixar_tokens::mixar_zen().canvas' in drawer
-    assert 'ui::mixar_tokens::mixar_zen().canvas' in editor
+    assert 'ui::mixar_moodboard_canvas_color(canvas)' in drawer
+    assert 'ui::mixar_moodboard_canvas_color(canvas)' in editor
     assert all('MIXAR_GLASS_MOODBOARD' not in text for text in (canvas, card, drawer))
 
 

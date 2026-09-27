@@ -18,6 +18,7 @@ of asking a vision model to guess one.
 
 import sys
 
+
 # =============================================================================
 # PAYLOAD CONTRACT
 # =============================================================================
@@ -316,13 +317,6 @@ ANNOTATED_IMAGE_NAME = "mixar_mark_frame_annotated"
 # OVERLAY
 # =============================================================================
 
-#: Ink colour of a live mark (RGBA, linear). Cyan reads on both a bright clay
-#: render and a dark material preview, which red and green do not.
-MARK_INK_COLOR = (0.31, 0.85, 0.82, 1.0)
-
-#: Ink of a mark already committed this turn — same hue, quieter.
-MARK_INK_COLOR_SETTLED = (0.31, 0.85, 0.82, 0.55)
-
 #: Stroke width in unscaled pixels.
 MARK_INK_WIDTH = 3.0
 
@@ -343,7 +337,6 @@ MARK_HINT_TOP_GAP_PX = 12.0
 MARK_HINT_FONT_PX = 12
 MARK_HINT_BG_COLOR = (0.05, 0.07, 0.09, 0.86)
 MARK_HINT_TEXT_COLOR = (0.86, 0.93, 0.95, 1.0)
-MARK_HINT_ACCENT_COLOR = (0.31, 0.85, 0.82, 1.0)
 
 #: The talk key, named in every reading: hold left Option (macOS) / left Alt
 #: (Windows), exactly as in the chat composer (``core/push_to_talk.py``). While

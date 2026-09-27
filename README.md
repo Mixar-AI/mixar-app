@@ -101,6 +101,13 @@ include pytest by default.
 
 ### Build flow
 
+On macOS, `make build` finds an existing CMake in Homebrew's standard locations
+or `/Applications/CMake.app` when a GUI terminal omits it from `PATH`. An existing
+`cmake` on `PATH` takes precedence. Install CMake first if none is found.
+Build and launch from the same checkout: `make build` defaults to Prod, so use
+`make run Prod`. A Dock shortcut to `/Applications/Mixar.app` opens that installed
+copy, not the app under this checkout's `build/Prod/bin/`.
+
 Mixar uses an overlay pattern so version upgrades from upstream Blender stay clean:
 
 ```text

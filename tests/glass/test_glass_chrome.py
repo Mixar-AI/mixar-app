@@ -15,8 +15,8 @@ from .surface_contracts import (
 class TestTheTopbarPillsArePanes:
     """The Cinema pill, the viewport shading chips and the account chip.
 
-    All three are the same neutral capsule in the topbar, so all three take the
-    PILL role and keep only their own stroke and label. The slider and the
+    Viewport and account capsules take the PILL role. Cinema uses the same
+    green brand gradient in both workspace modes. The slider and the
     avatar disc are the bar's machinery and must stay flat.
     """
 
@@ -26,7 +26,7 @@ class TestTheTopbarPillsArePanes:
     def test_the_three_pills_draw_the_pane(self) -> None:
         """One call per pill. A flat bed left behind keeps a hand-mixed
         near-black the material table cannot reach."""
-        for signature in ("void draw_cinema_pill(", "void draw_viewport_pill(", "void draw_profile_pill("):
+        for signature in ("void draw_viewport_pill(", "void draw_profile_pill("):
             assert self._body(signature).count("mixar_card_glass_round(") == 1, (
                 f"{signature} no longer draws exactly one pane"
             )
@@ -42,30 +42,14 @@ class TestTheTopbarPillsArePanes:
         for token in ("PILL_FILL", "VIEW_PILL_FILL", "PROFILE_FILL"):
             assert not re.search(rf"\b{token}\b", code), f"{token} is still a pill fill"
 
-    def test_the_resting_cinema_pill_carries_the_hover_cue(self) -> None:
-        """The fixed brightness lift went with the fill it lifted.
-
-        Without the alpha form the resting pill has no hover or press
-        feedback at all — the state changes silently.
-        """
+    def test_cinema_keeps_its_brand_color_in_both_modes(self) -> None:
+        """The Engine pill retains Zen's resting ramp and semantic active cue."""
         body = self._body("void draw_cinema_pill(")
-        assert "mixar_card_glass_round(&pill, rad, MIXAR_GLASS_PILL, 0.84f + 0.16f * emphasis);" in body
-
-    def test_the_lit_cinema_pill_keeps_its_opaque_green_state(self) -> None:
-        """Selection animates the green to opaque; hover cannot select it."""
-        body = self._body("void draw_cinema_pill(")
-        assert "fill[3] = motion.selected;" in body
-        assert "draw_roundbox_4fv(&pill, true, rad, fill);" in body
-        assert "mixar_card_to_float(pill_on, fill);" in body
-
-    def test_the_cinema_pill_has_no_gradient(self) -> None:
-        """One green, one label colour per state: the ramps were decoration on
-        a control whose only job is to say on or off."""
-        body = self._body("void draw_cinema_pill(")
-        assert "draw_roundbox_4fv_ex(" not in body
-        assert "CinemaPillOnA" not in body
-        assert "draw_label_gradient" not in body
-        assert "mixar_cinema_draw_label(*rect, but->str.c_str(), but->icon, label, label_scale);" in body
+        assert "mixar_cinema_background(pill, rad, motion.selected, emphasis)" in body
+        assert "mixar_cinema_label(*rect, but->drawstr.c_str(), motion.selected," in body
+        assert "motion.hover + (1.0f - motion.hover) * motion.press" in body
+        assert "but->icon" in body, "the film-strip icon is no longer handed to the label"
+        assert "mixar_cinema_draw_label" not in body, "the flat icon label must not shadow the gradient one"
 
     def test_the_viewport_pills_alpha_dims_the_whole_pane(self) -> None:
         """Dim and lit are one alpha, so it must scale every layer.

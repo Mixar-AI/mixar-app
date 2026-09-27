@@ -329,7 +329,7 @@ namespace blender {
  * \{ */
 
 /* AppKit frost and the Windows live GPU backdrop share the same light wash. */
-#define AGENT_COL_GLASS_WASH {0.075f, 0.078f, 0.075f, 0.20f}
+#define AGENT_COL_GLASS_WASH MIXAR_THEME_BRACE(GlassWash)
 #define AGENT_COL_GLASS_FIELD_UCHAR {18, 22, 20, 48}
 #define AGENT_COL_SURFACE {0.071f, 0.071f, 0.071f, 1.0f}      /* #121212 strip, panel, pill */
 #define AGENT_COL_CHIP {0.114f, 0.114f, 0.114f, 1.0f}         /* #1D1D1D chip track */

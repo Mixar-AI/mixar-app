@@ -19,7 +19,6 @@ using mixar_tokens::MX_FG_1;
 using mixar_tokens::MX_FG_2;
 using mixar_tokens::MX_FG_3;
 using mixar_tokens::MX_FG_4;
-using mixar_tokens::MX_GRADIENT;
 using mixar_tokens::MX_R_SM;
 using mixar_tokens::MX_R_MD;
 using mixar_tokens::MX_R_PILL;

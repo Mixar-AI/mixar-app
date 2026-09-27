@@ -10,6 +10,7 @@ Defines PropertyGroups for tracking image editing tool state.
 """
 
 from bpy.types import PropertyGroup
+from mixar.modules.common.core.theme_colors import annotation_color_get, annotation_color_set
 from bpy.props import (
     FloatProperty,
     IntProperty,
@@ -76,9 +77,11 @@ class MoodboardEditToolState(PropertyGroup):
     annotation_color: FloatVectorProperty(
         name="Color",
         description="Color and opacity for new annotation strokes",
-        subtype='COLOR',
+        subtype='COLOR_GAMMA',
         size=4,
         default=ANNOTATION_COLOR_DEFAULT,
+        get=annotation_color_get,
+        set=annotation_color_set,
         min=0.0,
         max=1.0,
     )

@@ -118,7 +118,7 @@ def _rgba(color, alpha_override=None):
 
 _TEXT_FALLBACK = (226 / 255, 226 / 255, 226 / 255, 1.0)
 _STRONG_FALLBACK = (1.0, 1.0, 1.0, 1.0)
-_FOCUS_FALLBACK = (0.0, 192 / 255, 199 / 255, 1.0)
+_FOCUS_FALLBACK = (127 / 255, 155 / 255, 120 / 255, 1.0)
 _DANGER_FALLBACK = (224 / 255, 72 / 255, 72 / 255, 1.0)
 
 

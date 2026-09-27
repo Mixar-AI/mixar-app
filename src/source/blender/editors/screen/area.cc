@@ -1903,6 +1903,12 @@ static void region_rect_recursive(
     if (view3d_moodboard_drawer_is_overlay(area, region)) {
       drawer_remainder = *remainder;
       mixar_floating_headers_clip(region, &drawer_remainder);
+      /* Inset the region itself so canvas drawing, hit targets and resizing
+       * all leave the same viewport gap above and below the floating board. */
+      const int margin = min_ii(int(std::lround(10.0f * UI_SCALE_FAC)),
+                                max_ii(0, (BLI_rcti_size_y(&drawer_remainder) - 1) / 2));
+      drawer_remainder.ymin += margin;
+      drawer_remainder.ymax -= margin;
       winrct = &drawer_remainder;
     }
     const int width = BLI_rcti_size_x(winrct) + 1;

@@ -19,13 +19,6 @@ inline constexpr float topbar_height = 40.0f;
 /** Both header rows share one height; scene controls have six-pixel vertical insets. */
 inline constexpr float zen_toolbar_height = topbar_height;
 inline constexpr float zen_toolbar_control_height = topbar_height - 12.0f;
-inline constexpr unsigned char toolbar_background[4] = {0, 0, 0, 255};
-inline constexpr unsigned char toolbar_border[4] = {55, 55, 55, 255};
-inline constexpr unsigned char toolbar_primary[4] = {0, 29, 14, 255};
-inline constexpr unsigned char toolbar_primary_border[4] = {0, 51, 28, 255};
-inline constexpr unsigned char toolbar_text[4] = {184, 188, 187, 255};
-inline constexpr unsigned char toolbar_muted[4] = {69, 73, 72, 255};
-inline constexpr unsigned char toolbar_shading_selected[4] = {64, 164, 164, 255};
 
 /** Widget-font scales for topbar, viewport shading pills and Cinema popup
  * rows. Chrome uses Blender `UI_SCALE_FAC`, not the island artboard unit. */

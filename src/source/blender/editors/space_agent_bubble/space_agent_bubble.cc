@@ -625,6 +625,8 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
                                  &scene_ptr, "mixie_chat_input", -1, 0.0f, 0.0f,
                                  nullptr);
     if (input_but) {
+      /* Keep the inset composer charcoal even while native text editing selects it. */
+      ui::button_color_set(input_but, ui::theme::theme_get()->space_mixie_chat.chat_input_bg);
       /* Placeholder on the BUTTON: painting it separately put the ghost text at
        * the artboard's x while Blender drew the caret at the field's own text
        * origin — two places for one thing. */

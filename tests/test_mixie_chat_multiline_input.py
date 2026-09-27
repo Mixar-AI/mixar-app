@@ -95,3 +95,11 @@ def test_multiline_chrome_is_not_hidden_by_field_height():
     assert "BLI_rcti_size_y" not in draw
     assert "if (but->col[3] < 128)" in draw
     assert "widget_textbut(wcol, rect, state, roundboxalign, zoom)" in draw
+
+
+def test_focused_composer_keeps_its_chat_background():
+    # Native text focus otherwise inherits the green wcol_text.inner_sel.
+    assert "ui::button_color_set(input_but, ui::theme::theme_get()->space_mixie_chat.chat_input_bg);" in BUBBLE_CC
+    draw = _function_body(WIDGETS, "static void widget_textbut_custom(")
+    assert "wcol->inner[0] = but->col[0];" in draw
+    assert draw.index("wcol->inner[0]") < draw.index("widget_textbut(wcol,")

@@ -9,6 +9,8 @@ Moodboard Module Constants
 Centralized configuration values for the moodboard module.
 """
 
+from mixar.modules.common.constants import SKETCH_COLOR_RGBA
+
 # ============================================================================
 # JOB QUEUE IDENTIFIERS
 # ============================================================================
@@ -281,7 +283,8 @@ SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS = 135.0
 
 # Freehand annotation defaults. Width is measured in display pixels at the
 # image's base scale and grows with image/canvas zoom.
-ANNOTATION_COLOR_DEFAULT = (1.0, 0.12, 0.04, 1.0)
+# Display-space sRGB, matching the native canvas stroke renderer (#696F6C).
+ANNOTATION_COLOR_DEFAULT = SKETCH_COLOR_RGBA
 ANNOTATION_WIDTH_DEFAULT = 4.0
 ANNOTATION_WIDTH_MIN = 1.0
 ANNOTATION_WIDTH_MAX = 32.0

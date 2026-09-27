@@ -285,12 +285,12 @@ class TestZenChromeUsesTheFamily:
         assert "cinema_panel(row," in left
         assert "cinema_panel(track," in right
 
-    def test_zen_header_is_the_island_pane(self) -> None:
+    def test_zen_headers_share_the_toolbar_background(self) -> None:
         chrome = (IFACE / "interface_mixar_zen_chrome.cc").read_text(encoding="utf-8")
         assert 'STREQ(workspace->id.name + 2, "Zen Mode")' in chrome
-        assert "style.role = MIXAR_GLASS_ISLAND;" in chrome
-        assert "GPU_clear_color(0.040f, 0.055f, 0.048f, 1.0f)" in chrome
-        assert "mixar_glass_draw(pane, style);" in chrome
+        assert chrome.count("MIXAR_THEME_LOAD(background, ToolbarBackground)") == 2
+        assert "GPU_clear_color(background[0], background[1], background[2], 1.0f)" in chrome
+        assert "mixar_glass_draw(" not in chrome
         assert "area->spacetype != SPACE_TOPBAR" in chrome
         area = (ED / "screen" / "area.cc").read_text(encoding="utf-8")
         assert "mixar_zen_header_clear(C, region)" in area
@@ -303,7 +303,8 @@ class TestZenChromeUsesTheFamily:
         chrome = (IFACE / "interface_mixar_zen_chrome.cc").read_text(encoding="utf-8")
         assert "GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f)" in chrome
         assert "RGN_TYPE_HEADER" in chrome
-        assert "GPU_clear_color(0.0f, 0.0f, 0.0f, 1.0f)" in chrome
+        assert "MIXAR_THEME_LOAD(background, ToolbarBackground)" in chrome
+        assert "GPU_clear_color(background[0], background[1], background[2], 1.0f)" in chrome
         # Both header rows still use the same Zen-only region dispatch.
         assert (
             "ELEM(region->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER)"
