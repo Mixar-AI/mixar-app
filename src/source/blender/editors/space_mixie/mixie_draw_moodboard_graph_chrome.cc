@@ -29,7 +29,7 @@
 
 namespace blender::ed::mixie {
 
-float moodboard_card_corner_radius(View2D *v2d, PointerRNA *node)
+float moodboard_card_corner_radius(View2D * /*v2d*/, PointerRNA *node)
 {
   const auto metrics = ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC);
   float pixels = metrics.padding;
@@ -41,12 +41,12 @@ float moodboard_card_corner_radius(View2D *v2d, PointerRNA *node)
       /* Result content has square corners and a canvas-space inset. */
       return MOODBOARD_GRAPH_PREVIEW_INSET;
     }
-    /* Concentric with the settings chip: outer radius = inset + inner radius.
-     * Both stay in screen pixels when the board zooms. Asset previews remain
-     * square and therefore use the padding alone as their outer radius. */
+    /* Base the draft curve on the shared padding and chip radius at unit
+     * scale. Keep that shape in canvas units: dividing by zoom would preserve
+     * screen pixels and turn a small card into a capsule when zooming out. */
     pixels += ui::mixar_tokens::radius * UI_SCALE_FAC * 0.65f;
   }
-  return pixels / std::max(ui::view2d_scale_get_x(v2d), 0.001f);
+  return pixels / UI_SCALE_FAC;
 }
 
 void moodboard_draw_card_background(const rctf &rect, const bool selected, const float radius)

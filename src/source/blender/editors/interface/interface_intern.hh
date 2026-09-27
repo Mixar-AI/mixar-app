@@ -719,6 +719,9 @@ struct Block {
   rctf rect = {};
   /** Optional viewport in block coordinates. Clips paint and input, never layout. */
   std::optional<rctf> mixar_clip_rect;
+  /** Painted canvas overlays may occlude controls without changing their layout.
+   * Pure geometry in block coordinates; never retain scene/RNA pointers here. */
+  std::function<bool(float, float)> mixar_point_is_occluded;
   float aspect = 0.0f;
 
   BlockAlertLevel alert_level = BlockAlertLevel::None;

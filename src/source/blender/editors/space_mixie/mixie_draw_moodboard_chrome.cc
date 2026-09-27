@@ -4,6 +4,7 @@
 /** Shared, screen-space canvas chrome. Hosts only own placement and clipping. */
 
 #include "mixie_moodboard_chrome.hh"
+#include "mixie_moodboard_first_use.hh"
 #include "mixie_moodboard_node_layout.hh"
 #include "mixie_moodboard_template_drag.hh"
 
@@ -16,23 +17,6 @@
 #include "WM_api.hh"
 
 namespace blender::ed::mixie {
-
-static bool board_has_content(const bContext *C)
-{
-  PointerRNA ptr = RNA_id_pointer_create(&CTX_data_scene(C)->id);
-  /* Same collections as canvas_context.has_moodboard_content. */
-  for (const char *name : {"mixie_moodboard_images", "mixie_moodboard_textboxes",
-                           "mixie_moodboard_frames", "mixie_moodboard_groups",
-                           "mixie_moodboard_action_nodes", "mixie_moodboard_asset_nodes",
-                           "mixie_moodboard_links", "mixie_moodboard_annotations"})
-  {
-    PropertyRNA *prop = RNA_struct_find_property(&ptr, name);
-    if (prop && RNA_property_collection_length(&ptr, prop)) {
-      return true;
-    }
-  }
-  return false;
-}
 
 static void draw_panel(const bContext *C,
                        ARegion *region,
@@ -84,28 +68,6 @@ void mixie_moodboard_chrome_draw(const bContext *C, ARegion *region)
   const int available = host.xmax - int(metrics.padding) - templates_x;
 
   ED_region_pixelspace(region);
-  if (!board_has_content(C)) {
-    const rcti content = moodboard_visible_canvas_rect(C);
-    const float width = BLI_rcti_size_x(&content);
-    if (width > 40 * UI_SCALE_FAC && BLI_rcti_size_y(&content) > 100 * UI_SCALE_FAC) {
-      const auto title = ui::mixar_text_style(ui::MixarTextRole::Heading, UI_SCALE_FAC * 0.75f);
-      const auto hint = ui::mixar_text_style(ui::MixarTextRole::Body, UI_SCALE_FAC * 0.75f);
-      const bool narrow = width < 240 * UI_SCALE_FAC;
-      const std::string label = ui::mixar_fit_text(
-          narrow ? "Drop media" : "Start with a reference", width, title);
-      BLF_disable(BLF_default(), BLF_CLIPPING);
-      ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&content),
-                            BLI_rcti_cent_y(&content), title, ui::mixar_tokens::mixar_zen().text);
-      if (!narrow) {
-        const std::string sub = ui::mixar_fit_text(
-            "Drop media or choose a node template", width, hint);
-        ui::mixar_label_center(sub.c_str(), BLI_rcti_cent_x(&content),
-                              BLI_rcti_cent_y(&content) - metrics.control_height,
-                              hint, ui::mixar_tokens::mixar_zen().secondary);
-      }
-      BLF_batch_draw_flush();
-    }
-  }
   draw_panel(C, region, "MIXIE_PT_canvas_tools", x, y, rail);
   /* One progressive strip: Python draws as many template buttons as fit in
    * `available` and always keeps the + menu. Coarse wide/compact/icon panel
@@ -113,6 +75,8 @@ void mixie_moodboard_chrome_draw(const bContext *C, ARegion *region)
   if (available > 0) {
     draw_panel(C, region, "MIXIE_PT_canvas_templates", templates_x, y, available);
   }
+  /* Resolve the real shortcut geometry before drawing its first-use cue. */
+  moodboard_first_use_draw(C, region);
 }
 
 }  // namespace blender::ed::mixie

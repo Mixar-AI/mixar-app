@@ -13,6 +13,7 @@ import uuid
 import bpy
 
 from .moodboard_utils import place_new_moodboard_item
+from .first_use import mark_started
 
 
 
@@ -44,6 +45,7 @@ def add_packed_image_to_board(
     if frame_id:
         item.frame_id = frame_id
     place_new_moodboard_item(scene, item, anchor=anchor)
+    mark_started(scene)
     return item
 
 
@@ -83,6 +85,7 @@ def load_media_file_to_board(scene, filepath, anchor=None):
     item.scale = 1.0
     item.z_order = len(scene.mixie_moodboard_images) - 1
     place_new_moodboard_item(scene, item, anchor=anchor)
+    mark_started(scene)
     return item
 
 
@@ -169,6 +172,7 @@ def import_generated_video(
             if frame is not None:
                 item.frame_id = frame.frame_id
         place_new_moodboard_item(scene, item)
+        mark_started(scene)
         return image.name
     except Exception:
         if image is not None:

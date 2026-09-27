@@ -34,6 +34,13 @@ result = [{{k:w[k] for k in ('text','rect','layout_rect','type')}} for w in widg
 def check(qa, host='VIEW_3D'):
     widgets = strip(qa, host)
     require(widgets and widgets[-1]['type'] == 'Menu', 'Overflow menu is missing')
+    available = qa.eval("from mixar.modules.moodboard.core.node_templates import available_templates\n"
+                        "result=[(item[0], item[1]) for item in available_templates()]")
+    priority = ('MODEL_3D', 'VIDEO_GEN', 'MESH_REFERENCE')
+    expected = ([label for key in priority for action, label in available if action == key]
+                + [label for action, label in available if action not in priority])
+    require([w['text'] for w in widgets[:-1]] == expected[:len(widgets)-1],
+            f'Template shortcut priority changed: {widgets}')
     bounds = target(qa, 'moodboard_canvas', area_type=host)['rect']
     for index, widget in enumerate(widgets):
         rect = widget['layout_rect']

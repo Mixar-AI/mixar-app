@@ -434,8 +434,8 @@ FRAME_MIN_HEIGHT = 160.0
 
 
 # Editable node templates: identity, label, icon, catalog capability.
-# The canvas strip reveals them progressively as width allows (mesh first,
-# then this list order); every entry stays in the + menu.
+# The canvas strip prioritizes 3D, video and mesh, then reveals the rest in
+# this list order as width allows; every entry stays in the + menu.
 NODE_TEMPLATES = (
     ('IMAGE_GEN', "Generate Image", 'IMAGE_DATA', 'image_gen'),
     ('MODEL_3D', "Image to 3D", 'MESH_DATA', 'model_gen'),

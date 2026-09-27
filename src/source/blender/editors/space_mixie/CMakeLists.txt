@@ -22,6 +22,8 @@ set(SRC
   mixie_dragdrop.cc
   mixie_draw_moodboard.cc
   mixie_draw_moodboard_chrome.cc
+  mixie_moodboard_first_use.cc
+  mixie_moodboard_first_use.hh
   mixie_draw_moodboard_annotations.cc
   mixie_draw_moodboard_frames.cc
   mixie_draw_moodboard_frame_actions.cc
