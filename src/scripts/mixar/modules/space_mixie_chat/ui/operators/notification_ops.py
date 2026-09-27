@@ -9,7 +9,14 @@ import bpy
 from bpy.props import StringProperty
 from bpy.types import Operator
 
-from ...core.completion_sound import CHIME, OFF, play_sound
+from ...core.completion_sound import (
+    CHIME,
+    OFF,
+    get_completion_sound,
+    get_notifications_muted,
+    play_sound,
+    set_completion_sound,
+)
 from ...core import sound_feedback
 
 
@@ -24,10 +31,7 @@ class MIXIE_CHAT_OT_preview_completion_sound(Operator):
     sound: StringProperty(default="", options={'HIDDEN', 'SKIP_SAVE'})
 
     def execute(self, context):
-        value = self.sound or getattr(
-            context.window_manager, "mixar_completion_sound", ""
-        )
-        play_sound(value)
+        play_sound(self.sound or get_completion_sound())
         return {'FINISHED'}
 
 
@@ -40,30 +44,31 @@ class MIXIE_CHAT_OT_toggle_completion_sound(Operator):
 
     @classmethod
     def poll(cls, context):
-        wm = context.window_manager
-        return (hasattr(wm, "mixar_notifications_muted") and
-                hasattr(wm, "mixar_completion_sound"))
+        return hasattr(context.window_manager, "mixar_notifications_muted")
 
     @classmethod
     def description(cls, context, properties):
-        wm = context.window_manager
-        off = wm.mixar_notifications_muted or wm.mixar_completion_sound == OFF
-        if off:
+        if _sound_off():
             return "Task completion sounds: Off — click to enable"
         return "Task completion sounds: On — click to mute"
 
     def execute(self, context):
+        # Read the persisted config, not the enum mirror: its index lookup can
+        # miss a catalog clip when the items cache predates a catalog refresh.
         wm = context.window_manager
-        if wm.mixar_completion_sound == OFF:
-            wm.mixar_completion_sound = CHIME
+        if get_completion_sound() == OFF:
+            set_completion_sound(CHIME)
             wm.mixar_notifications_muted = False
         else:
-            wm.mixar_notifications_muted = not wm.mixar_notifications_muted
-        if wm.mixar_notifications_muted:
-            sound_feedback.cancel()
-        else:
-            sound_feedback.show()
+            wm.mixar_notifications_muted = not get_notifications_muted()
+        # The mute property's update already cancelled feedback when silencing.
+        if not get_notifications_muted():
+            sound_feedback.show(reduce_motion=context.preferences.view.use_reduce_motion)
         return {'FINISHED'}
+
+
+def _sound_off() -> bool:
+    return get_notifications_muted() or get_completion_sound() == OFF
 
 
 classes = (

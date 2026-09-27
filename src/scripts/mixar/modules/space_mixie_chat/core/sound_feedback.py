@@ -10,18 +10,23 @@ import bpy
 from ..constants import SOUND_FEEDBACK_TIMING
 
 _started = None
+# Captured by show(): the tween-free path redraws only at the hold's edges.
+_reduce_motion = False
 
 
-def expansion(now=None, *, reduce_motion=False):
+def expansion(now=None, *, reduce_motion=None):
     """Read the current expansion without starting timers or changing UI state."""
     if _started is None:
         return 0.0
+    if reduce_motion is None:
+        reduce_motion = _reduce_motion
     elapsed = (time.monotonic() if now is None else now) - _started
     grow, hold, shrink = SOUND_FEEDBACK_TIMING
     if elapsed < 0 or elapsed >= grow + hold + shrink:
         return 0.0
     if reduce_motion:
-        return 1.0
+        # No tween: the label is simply shown for the hold.
+        return 1.0 if grow <= elapsed < grow + hold else 0.0
     if elapsed < grow:
         fraction = elapsed / grow
     elif elapsed < grow + hold:
@@ -44,17 +49,24 @@ def _tick():
     global _started
     if _started is None:
         return None
-    if time.monotonic() - _started >= sum(SOUND_FEEDBACK_TIMING):
+    elapsed = time.monotonic() - _started
+    grow, hold, shrink = SOUND_FEEDBACK_TIMING
+    end = grow + hold if _reduce_motion else grow + hold + shrink
+    if elapsed >= end:
         _started = None
         redraw()
         return None
     redraw()
-    return 1.0 / 60.0
+    if not _reduce_motion:
+        return 1.0 / 60.0
+    # Tween-free: nothing changes between the hold's edges, so sleep until the next one.
+    return max(0.0, (grow if elapsed < grow else end) - elapsed)
 
 
-def show():
-    global _started
+def show(*, reduce_motion=False):
+    global _started, _reduce_motion
     _started = time.monotonic()
+    _reduce_motion = bool(reduce_motion)
     if not bpy.app.timers.is_registered(_tick):
         bpy.app.timers.register(_tick, first_interval=0.0)
     redraw()

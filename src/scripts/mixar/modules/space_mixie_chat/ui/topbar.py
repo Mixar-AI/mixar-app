@@ -32,9 +32,9 @@ from __future__ import annotations
 import bpy
 from bpy.types import Header, Panel
 
-from ..constants import SessionState  # noqa: F401  (kept for parity)
+from ..constants import SOUND_FEEDBACK_WIDTHS, SessionState  # noqa: F401  (kept for parity)
 from ..core import avatar_icon, sound_feedback
-from ..constants import SOUND_FEEDBACK_WIDTHS
+from ..core.completion_sound import OFF, get_completion_sound, get_notifications_muted
 
 
 class MIXAR_PT_profile(Panel):
@@ -102,14 +102,13 @@ class MIXAR_PT_profile(Panel):
 
 
 def _draw_sound_toggle(layout, context):
-    wm = context.window_manager
     if not (hasattr(bpy.types, 'MIXIE_CHAT_OT_toggle_completion_sound') and
-            hasattr(wm, 'mixar_notifications_muted') and
-            hasattr(wm, 'mixar_completion_sound')):
+            hasattr(context.window_manager, 'mixar_notifications_muted')):
         return
-    enabled = not wm.mixar_notifications_muted and wm.mixar_completion_sound != 'OFF'
-    fraction = sound_feedback.expansion(
-        reduce_motion=context.preferences.view.use_reduce_motion) if enabled else 0.0
+    # The persisted config is the truth; the enum mirror's index lookup can
+    # miss a catalog clip and read as Off while that clip plays.
+    enabled = not get_notifications_muted() and get_completion_sound() != OFF
+    fraction = sound_feedback.expansion() if enabled else 0.0
     closed, opened = SOUND_FEEDBACK_WIDTHS
     row = layout.mixar_surface(theme='ZEN').row(align=True)
     row.alignment = 'EXPAND'
@@ -144,10 +143,11 @@ def _draw_topbar_profile_right(self, context):
     # profile pill so the two clusters don't read as one control.
     layout.separator()
 
-    # The native right-header layout fills the menu-bar height. Reserve room
-    # for its taller account icon so the label remains fully visible.
     _draw_sound_toggle(layout, context)
     layout.separator(factor=0.4)
+
+    # The native right-header layout fills the menu-bar height. Reserve room
+    # for its taller account icon so the label remains fully visible.
     account = layout.row(align=True)
 
     if getattr(wm, 'mixie_chat_is_logged_in', False):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
-# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
 """No-credit profile speaker replay. Set QA_HARNESS/MIXAR_QA_PORT/QA_SCENARIO_OUT."""
 
 import json

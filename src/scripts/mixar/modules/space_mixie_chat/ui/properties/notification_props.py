@@ -51,24 +51,42 @@ def _sound_items(self, context):
     return _items_cache
 
 
+def _index_of(stored, items):
+    return next((index for index, item in enumerate(items) if item[0] == stored), None)
+
+
 def _sound_get(self):
     stored = get_completion_sound()
-    for index, item in enumerate(_items_cache or _sound_items(self, None)):
-        if item[0] == stored:
-            return index
-    return 0
+    index = _index_of(stored, _items_cache)
+    if index is None:
+        # The cache is only rebuilt when the enum is drawn, so a catalog refresh
+        # can leave a stored catalog id unresolved; rebuild before reporting Off.
+        index = _index_of(stored, _sound_items(self, None))
+    return index or 0
 
 
 def _sound_set(self, value):
     items = _items_cache or _sound_items(self, None)
     if 0 <= value < len(items):
         set_completion_sound(items[value][0])
-        sound_feedback.cancel()
+        _sync_feedback()
 
 
 def _on_mute_change(self, _context) -> None:
     set_notifications_muted(self.mixar_notifications_muted)
-    sound_feedback.cancel()
+    _sync_feedback()
+
+
+def _sync_feedback() -> None:
+    """Silencing ends any live confirmation; other changes only redraw both surfaces.
+
+    The toggle operator owns the confirmation it shows, so an enabling change must
+    not tear down the timer it is about to start.
+    """
+    if get_notifications_muted() or get_completion_sound() == OFF:
+        sound_feedback.cancel()
+    else:
+        sound_feedback.redraw()
 
 
 def _revalidate_catalog() -> float:

@@ -2,8 +2,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1400" viewBox="0 0 1400 1400">
-<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
-<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
 <g transform="scale(58.3333333333)">
 <path fill="#fff" d="M3 9h4l5-4c.5-.4 1-.1 1 .5v13c0 .6-.5.9-1 .5l-5-4H3c-.6 0-1-.4-1-1v-4c0-.6.4-1 1-1Z"/><path fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" d="M16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/>
 </g>
