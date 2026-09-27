@@ -107,6 +107,12 @@ def _install_addon(root: Path, entrypoint: str, allow_root_package: bool) -> dic
     import addon_utils
 
     try:
+        # A user add-ons dir created this session is not on sys.path yet, so
+        # enable() could not import the link (a first add-on on a fresh
+        # machine). Blender's own add-on install refreshes the paths the same way.
+        bpy.utils.refresh_script_paths()
+        if str(addons_dir) not in sys.path:
+            sys.path.append(str(addons_dir))
         addon_utils.modules_refresh()
         module = addon_utils.enable(entrypoint, default_set=True)
     except Exception:

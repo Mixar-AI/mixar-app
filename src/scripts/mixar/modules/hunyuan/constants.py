@@ -35,6 +35,31 @@ ANIMATE_RETARGET_MODEL = "tripo_retarget_v2_5"
 # sends it and the backend resolves/authorizes the vendor task.
 ANIMATE_RIG_JOB_PROP = "mixar_rig_job_id"
 
+# glTF import options for every rigged / animated result: the Animate tab's
+# Auto Rig and Animate, the agent's Auto Rig, and the Moodboard Auto Rig node.
+# Only the skinned mesh and its armature may land:
+#
+# * disable_bone_shape — by default Blender's glTF importer adds an
+#   "Icosphere" object in a hidden "glTF_not_exported" collection and makes
+#   it every bone's custom shape. It is sized from the armature's extent, so
+#   on a rig whose armature node carries a small scale (a centimetre rig,
+#   scale 0.01) it draws ~100x oversized and engulfs the character.
+# * bone_heuristic=TEMPERANCE — the importer's BLENDER heuristic divides
+#   every bone's length by the armature scale, so the same centimetre rig
+#   imports with 10-36 m bones. TEMPERANCE keeps the joint-to-joint lengths
+#   and aims each bone at its child. It only changes how bones are drawn:
+#   the importer compensates in the pose, so skinning and baked animation
+#   deform the mesh identically under every heuristic.
+# * guess_original_bind_pose=False — these rigs are not authored in Blender,
+#   and a guessed bind pose doesn't match what the animation was baked
+#   against (limbs collapse once it plays); the glTF's own node transforms
+#   are the bind pose the animation expects.
+ANIMATE_IMPORT_OPTIONS = {
+    "bone_heuristic": "TEMPERANCE",
+    "guess_original_bind_pose": False,
+    "disable_bone_shape": True,
+}
+
 # Segmentation (Tripo v3 mesh APIs). Two services split by INPUT, not by
 # endpoint: SEGMENT takes a mesh already in the scene (/v3/mesh/segment),
 # SMART_SEGMENT takes a 2D image and both models AND segments it in one task

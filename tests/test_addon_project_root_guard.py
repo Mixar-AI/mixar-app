@@ -49,7 +49,7 @@ class _AddonUtils:
     def modules_refresh(self, *_args, **_kwargs):
         pass
 
-    def enable(self, name, default_set=False, persistent=False):
+    def enable(self, name, default_set=False, persistent=False, **_kwargs):
         self.enable_calls.append((name, default_set))
         return sys.modules.get(name) or SimpleNamespace()
 
@@ -58,11 +58,9 @@ class _AddonUtils:
 
 
 @pytest.fixture
-def env(tmp_path, monkeypatch):
+def env(tmp_path, monkeypatch, set_addon_projects_root):
     service = AddonProjectService(tmp_path / "client_state")
-    root = tmp_path / "rg_addons_root"
-    root.mkdir()
-    service.set_workspace_root(str(root))
+    root = set_addon_projects_root(tmp_path / "rg_addons_root")
     addons_dir = tmp_path / "user_addons"
     addons_dir.mkdir()
     import bpy
@@ -322,16 +320,16 @@ def test_never_stamped_standalone_root_folder_is_never_healed(tmp_path, env):
     assert manifest.get("workspace", False) is False
 
 
-def test_abandoned_workspace_root_keeps_its_guards(tmp_path, env):
-    # The stamp, not the live workspace.json comparison, drives the guards:
-    # after the user moves to a NEW root, the old stamped root still rejects
-    # the root-package shape.
+def test_abandoned_workspace_root_keeps_its_guards(
+    tmp_path, env, set_addon_projects_root
+):
+    # The stamp, not a live comparison with the Preference, drives the
+    # guards: after the user points the Preference at a NEW root, the old
+    # stamped root still rejects the root-package shape.
     _addon_package(env.root, "rg_old_alpha")
     _addon_package(env.root, "rg_old_beta")
     old = env.service.link_workspace_root()
-    new_root = tmp_path / "rg_new_root"
-    new_root.mkdir()
-    env.service.set_workspace_root(str(new_root))
+    set_addon_projects_root(tmp_path / "rg_new_root")
     (env.root / "__init__.py").write_text(UMBRELLA_SOURCE, encoding="utf-8")
 
     with pytest.raises(AddonProjectError) as error:

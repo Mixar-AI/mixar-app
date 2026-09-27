@@ -3,16 +3,31 @@
 
 #include "../interface_intern.hh"
 #include "BLI_math_vector.h"
+#include "DNA_theme_types.h"
 #include "DNA_userdef_types.h"
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
 #include "UI_mixar.hh"
+#include "UI_resources.hh"
 #include "UI_mixar_motion.hh"
 #include "UI_mixar_tokens.hh"
 #include <algorithm>
 
 namespace blender::ui {
+float mixar_menu_item_inset(const Button &button)
+{
+  const Block *block = button.block;
+  if (button.mixar_style.theme != MixarTheme::Zen ||
+      button.mixar_style.component != MixarComponent::Action || block == nullptr ||
+      !block_is_menu(block) || block_is_pie_menu(block))
+  {
+    return 0.0f;
+  }
+  /* Blender's menu padding, so the side gutters match the top and bottom. */
+  return float(UI_MENU_PADDING) / block->aspect;
+}
+
 bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bounds)
 {
   if (button.mixar_style.component == MixarComponent::Toolbar) {
@@ -99,8 +114,18 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   if (!label) {
     /* Canvas prompts use restrained corners in both Moodboard hosts, while
      * retaining the shared text inset and the island's input recipe. */
-    const float requested_radius = input && button.block->name == "moodboard_floating_node_controls" ?
-                                       8.0f * UI_SCALE_FAC : radius * u * (input ? 2.0f : 1.0f);
+    float requested_radius = input && button.block->name == "moodboard_floating_node_controls" ?
+                                 8.0f * UI_SCALE_FAC : radius * u * (input ? 2.0f : 1.0f);
+    /* A menu action is inset from the menu outline (the caller pads `bounds`)
+     * and its corners stay concentric with the menu's themed roundness, never
+     * sharper than the small-control radius. */
+    const float menu_inset = mixar_menu_item_inset(button);
+    if (menu_inset > 0.0f) {
+      const float zoom = 1.0f / button.block->aspect;
+      const float menu_radius = theme::theme_get()->tui.wcol_menu_back.roundness *
+                                U.widget_unit * zoom;
+      requested_radius = std::max(menu_radius - menu_inset, MX_R_SM * UI_SCALE_FAC * zoom);
+    }
     const float corner_radius = std::min(requested_radius,
                                         0.5f * std::min(BLI_rctf_size_x(&rect),
                                                         BLI_rctf_size_y(&rect)));

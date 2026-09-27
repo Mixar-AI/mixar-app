@@ -462,7 +462,9 @@ class ConnectionManager:
 
             def _worker() -> None:
                 from mixar.modules.addon_project.constants import (
+                    RPC_COMMIT_PATCH,
                     RPC_RUN_CHECKS,
+                    RPC_RUN_TESTS,
                     RPC_SET_ENABLED,
                 )
                 from mixar.modules.addon_project.service import get_addon_project_service
@@ -473,9 +475,11 @@ class ConnectionManager:
                 # enable/disable (register()/unregister(), prefs writes).
                 # Static checks and every other project operation stay on
                 # this worker.
-                needs_main_thread = method == RPC_SET_ENABLED or (
+                # run_tests too: the add-on's tests drive Blender's API.
+                # A verified commit runs reload and tests inside the commit.
+                needs_main_thread = method in (RPC_SET_ENABLED, RPC_RUN_TESTS) or (
                     method == RPC_RUN_CHECKS and bool(params.get("reload_blender"))
-                )
+                ) or (method == RPC_COMMIT_PATCH and bool(params.get("verify")))
                 if needs_main_thread:
                     if method == RPC_RUN_CHECKS:
                         static_params = dict(params)

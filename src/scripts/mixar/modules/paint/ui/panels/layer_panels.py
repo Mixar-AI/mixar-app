@@ -27,6 +27,7 @@ from .preferences_panel_helpers import (
     draw_image_settings,
     draw_ui_options,
     draw_rendering_options,
+    draw_addon_project_options,
     draw_layer_node_options,
     draw_update_settings,
     draw_developer_options,
@@ -52,6 +53,7 @@ __all__ = [
     'draw_image_settings',
     'draw_ui_options',
     'draw_rendering_options',
+    'draw_addon_project_options',
     'draw_layer_node_options',
     'draw_update_settings',
     'draw_developer_options',
@@ -404,6 +406,11 @@ class LAYERS_PT_Preferences(LAYERS_PT_Main, Panel):
 
         # ========== RENDERING OPTIONS ==========
         draw_rendering_options(layout, prefs)
+
+        layout.separator()
+
+        # ========== ADD-ON PROJECTS ==========
+        draw_addon_project_options(layout, prefs)
 
         layout.separator()
 

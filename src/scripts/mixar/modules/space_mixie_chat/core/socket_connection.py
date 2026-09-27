@@ -248,6 +248,8 @@ class SocketConnection:
         reply is HANDSHAKE_TRANSIENT and just retries (jsonrpc_frames).
         """
         from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
+        from ...addon_project.constants import TESTS_CAPABILITY as ADDON_PROJECT_TESTS_CAPABILITY
+        from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -278,6 +280,8 @@ class SocketConnection:
                 # clients would silently never reply).
                 "liveness",
                 ADDON_PROJECT_CAPABILITY,
+                ADDON_PROJECT_TESTS_CAPABILITY,
+                ADDON_PROJECT_VERIFY_CAPABILITY,
                 # blender.execute_script frames may carry params["envelope"]
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.

@@ -58,7 +58,6 @@ struct ScenesDrawerCard {
   std::string scene_uid;
   std::string scene_name;
   std::string session_id;
-  std::string last_text;
   ScenesDrawerTabStatus status = ScenesDrawerTabStatus::Idle;
   int workers_done = 0;
   int workers_total = 0;
@@ -100,6 +99,8 @@ struct ScenesDrawerRuntime {
   std::vector<ScenesDrawerCard> cards;
   std::unordered_set<std::string> selected_uids;
   std::string selection_anchor;
+  std::string rename_uid;
+  char rename_buffer[1024] = {};
   rcti bulk_delete_rect = {};
   rcti clear_selection_rect = {};
   rcti new_rect = {};

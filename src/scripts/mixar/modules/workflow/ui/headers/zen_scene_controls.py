@@ -96,23 +96,17 @@ def draw_sky(layout, context):
 
 
 def draw_scenes_button(surface, context):
-    """The Scenes drawer toggle, first on the toolbar: ``>≡`` opens the tab
-    list, ``≡<`` closes it. Lit while another tab needs the user."""
-    from ...core import scenes_toggle_icons
-
+    """Native rounded hamburger with a sliding Scene label on hover."""
     wm = context.window_manager
-    drawer_open = int(getattr(wm, "mixar_scenes_drawer_target", 0) or 0) != 0
+    drawer_open = bool(getattr(wm, "mixar_scenes_drawer_target", 0))
     attention = bool(getattr(wm, "mixar_scene_tabs_attention", False))
     scenes = surface.row()
-    # Wide enough for the inset glyph, narrow enough that the compact
-    # toolbar still spells "Add" (2.8 units squeezed it to "Ad").
-    scenes.ui_units_x = 2.2
-    icon = scenes_toggle_icons.icon_id(drawer_open)
-    if icon:
-        scenes.operator("view3d.scenes_drawer_toggle", text="", icon_value=icon)
-    else:
-        scenes.operator("view3d.scenes_drawer_toggle", text="", icon="COLLAPSEMENU")
-    style(scenes, "PRIMARY" if (attention or drawer_open) else "SECONDARY")
+    # Reserve the expanded width; the native layout pass contracts the button
+    # and shifts the left lane at rest, sharing actual bounds with hit tests.
+    scenes.ui_units_x = 4.1
+    scenes.operator("view3d.scenes_drawer_toggle", text="Scene",
+                    depress=drawer_open or attention)
+    style(scenes)
     surface.separator(factor=0.15)
 
 

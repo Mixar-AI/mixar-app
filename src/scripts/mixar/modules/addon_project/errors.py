@@ -16,6 +16,16 @@ class AddonProjectError(Exception):
         self.message = message
 
 
+class VerificationFailed(AddonProjectError):
+    """A verified commit whose add-on failed its reload or its tests; the
+    transaction reverts every file it wrote. ``records`` is one proof per
+    add-on the commit touched."""
+
+    def __init__(self, message: str, records: list):
+        super().__init__("verification_failed", message)
+        self.records = records
+
+
 def public_error(exc: Exception, project_root=None) -> dict:
     """Convert an exception to a response without leaking a local root path."""
     if isinstance(exc, AddonProjectError):

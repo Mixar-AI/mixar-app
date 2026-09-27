@@ -71,7 +71,6 @@ class MixarSceneTab(PropertyGroup):
     scene_name: StringProperty(name="Scene", default="", options={'SKIP_SAVE'})
     session_id: StringProperty(name="Session", default="", options={'SKIP_SAVE'})
     status: EnumProperty(name="Status", items=STATUS_ITEMS, default='IDLE', options={'SKIP_SAVE'})
-    last_text: StringProperty(name="Last message", default="", maxlen=160, options={'SKIP_SAVE'})
     workers_done: IntProperty(name="Workers done", default=0, min=0, options={'SKIP_SAVE'})
     workers_total: IntProperty(name="Workers", default=0, min=0, options={'SKIP_SAVE'})
     is_active: BoolProperty(name="Active", default=False, options={'SKIP_SAVE'})
@@ -144,17 +143,6 @@ def _status_of(scene) -> str:
     return 'IDLE'
 
 
-def _last_agent_text(scene) -> str:
-    try:
-        for msg in reversed(scene.mixie_chat_messages):
-            if msg.sender == 'AGENT' and (msg.text or "").strip():
-                text = " ".join((msg.text or "").split())
-                return text[:157] + "…" if len(text) > 160 else text
-    except Exception:  # noqa: BLE001
-        pass
-    return ""
-
-
 def _workers(session_id: str):
     try:
         from mixar.modules.agent_panel.core.cards import _sessions
@@ -198,13 +186,13 @@ def refresh_scene_tabs() -> int:
         done, total = _workers(sid)
         records.append((str(scene.session_uid), scene.name, sid,
                         status if status != 'IDLE' or not _finished_unseen.get(sid) else 'DONE',
-                        _last_agent_text(scene), done, total, is_active, attention))
+                        done, total, is_active, attention))
     if wm.mixar_scene_tabs_attention != attention_any:
         wm.mixar_scene_tabs_attention = attention_any
     global _last_signature
     signature = tuple(records)
     if signature != _last_signature or len(tabs) != len(records):
-        fields = ('scene_uid', 'scene_name', 'session_id', 'status', 'last_text',
+        fields = ('scene_uid', 'scene_name', 'session_id', 'status',
                   'workers_done', 'workers_total', 'is_active', 'attention')
         tabs.clear()
         for values in records:

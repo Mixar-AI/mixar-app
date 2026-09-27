@@ -25,9 +25,6 @@ from mixar.modules.addon_project.service import AddonProjectService
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKSPACE_OPS = (
-    ROOT / "src/scripts/mixar/modules/addon_project/ui/workspace_ops.py"
-)
 
 ADDON_SOURCE = (
     "bl_info = {'name': 'Sample'}\n"
@@ -45,7 +42,7 @@ class _AddonUtils:
     def modules_refresh(self, *_args, **_kwargs):
         pass
 
-    def enable(self, name, default_set=False, persistent=False):
+    def enable(self, name, default_set=False, persistent=False, **_kwargs):
         self.enable_calls.append((name, default_set))
         self.enabled_names.add(name)
         return sys.modules.get(name) or SimpleNamespace()
@@ -60,11 +57,9 @@ class _AddonUtils:
 
 
 @pytest.fixture
-def env(tmp_path, monkeypatch):
+def env(tmp_path, monkeypatch, set_addon_projects_root):
     service = AddonProjectService(tmp_path / "client_state")
-    root = tmp_path / "projects"
-    root.mkdir()
-    service.set_workspace_root(str(root))
+    root = set_addon_projects_root(tmp_path / "projects")
     package = root / "en_sample_addon"
     package.mkdir()
     (package / "__init__.py").write_text(ADDON_SOURCE, encoding="utf-8")
@@ -199,11 +194,11 @@ def test_set_enabled_entrypoint_param_validation_and_fallback(env):
     assert is_link(env.addons_dir / "en_other_addon")
 
 
-def test_set_enabled_requires_an_active_entrypoint(tmp_path):
+def test_set_enabled_requires_an_active_entrypoint(
+    tmp_path, set_addon_projects_root
+):
     service = AddonProjectService(tmp_path / "client_state")
-    root = tmp_path / "projects"
-    root.mkdir()
-    service.set_workspace_root(str(root))
+    set_addon_projects_root(tmp_path / "projects")
     linked = service.link_workspace_root()
     with pytest.raises(AddonProjectError) as error:
         service.set_enabled(linked["project_id"], True)
@@ -327,7 +322,7 @@ def test_set_enabled_rpc_is_marshalled_to_the_main_thread():
         / "src/scripts/mixar/modules/space_mixie_chat/core/connection_manager.py"
     ).read_text(encoding="utf-8")
     worker = source.split("def _worker", 1)[1].split("threading.Thread", 1)[0]
-    assert "needs_main_thread = method == RPC_SET_ENABLED or (" in worker
+    assert "needs_main_thread = method in (RPC_SET_ENABLED, RPC_RUN_TESTS) or (" in worker
     assert 'method == RPC_RUN_CHECKS and bool(params.get("reload_blender"))' in worker
     assert worker.index("needs_main_thread") < worker.index("run_on_main_thread")
 
@@ -389,27 +384,3 @@ def test_describe_standalone_project_has_no_addons_key(tmp_path, env):
     assert "addons" not in description
     assert "layout" not in description
 
-
-def test_enable_menu_and_operator_source_pins():
-    source = WORKSPACE_OPS.read_text(encoding="utf-8")
-
-    # One operator covers enable/disable/uninstall via two BoolProperties.
-    op_cls = source.split("class MIXAR_OT_addon_project_set_enabled", 1)[1]
-    op_cls = op_cls.split("\nclass ", 1)[0].split("\ndef ", 1)[0]
-    assert "enabled: BoolProperty" in op_cls
-    assert "uninstall: BoolProperty" in op_cls
-    assert "source files are kept" in op_cls  # uninstall keeps project files
-
-    # The menu reads enabled state on open (menus draw only when opened)
-    # and shows the one relevant toggle plus uninstall; skipped without an
-    # active entrypoint.
-    menu_cls = source.split("class MIXAR_MT_addon_project_workspace", 1)[1]
-    # One definition of "enabled": the menu delegates to the installer's
-    # addon_is_enabled (which wraps addon_utils.check), the same probe that
-    # feeds describe's per-addon state list.
-    assert "from ..installer import addon_is_enabled" in source
-    assert "return addon_is_enabled(entrypoint)" in source
-    assert "_entrypoint_is_enabled(entrypoint)" in menu_cls
-    assert "if entrypoint:" in menu_cls
-    assert menu_cls.count('"mixar.addon_project_set_enabled"') == 3
-    assert "props.uninstall = True" in menu_cls

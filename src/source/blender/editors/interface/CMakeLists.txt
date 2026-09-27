@@ -52,6 +52,8 @@ set(SRC
   mixar/components.cc
   mixar/toolbar.cc
   mixar/toolbar.hh
+  mixar/scenes_toggle.cc
+  mixar/scenes_toggle.hh
   mixar/cinema_label.cc
   mixar/cinema_label.hh
   mixar/tour_menu.cc

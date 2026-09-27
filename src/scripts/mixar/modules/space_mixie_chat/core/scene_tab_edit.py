@@ -31,6 +31,11 @@ def rename_scene_tab(scene, name):
     name = name.strip()
     if not name:
         return False, 'Enter a scene name'
+    if name == scene.name:
+        # Nothing to change. Never mark the scene as manually named here: the
+        # inline field commits on click-away too, so this path is reached by
+        # an accidental double-click and must leave automatic naming intact.
+        return True, ''
     if _running(scene):
         return False, 'Wait for this scene’s agent to finish before renaming'
     try:

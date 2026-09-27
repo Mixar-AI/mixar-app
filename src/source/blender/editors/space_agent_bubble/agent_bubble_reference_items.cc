@@ -7,6 +7,8 @@
 #include "DNA_windowmanager_types.h"
 #include "RNA_access.hh"
 
+#include "agent_ui_layout.hh"
+
 namespace blender {
 namespace {
 PointerRNA pointer(PointerRNA owner, const char *name)
@@ -52,7 +54,7 @@ std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowM
   PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
   PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
   const std::string active = enum_id(wm_ptr, "mixar_bubble_tab");
-  if (active == "AGENT") {
+  if (agent_ui_tab_shows_chat(agent_ui_tab_from_identifier(active.c_str()))) {
     if (RNA_struct_find_property(&scene_ptr, "mixie_chat_pending_attachments")) {
       RNA_BEGIN (&scene_ptr, item, "mixie_chat_pending_attachments") {
         items.push_back({RNA_string_get(&item, "image_path"),

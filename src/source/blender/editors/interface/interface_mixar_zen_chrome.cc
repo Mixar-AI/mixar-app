@@ -41,6 +41,7 @@
 #include "UI_mixar.hh"
 #include "UI_mixar_chrome.hh"
 #include "UI_interface_c.hh"
+#include "UI_view2d.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -87,6 +88,59 @@ bool mixar_area_floats_viewport_chrome(const ScrArea *area)
            mixar_workspace_name_floats_viewport_chrome(workspace->id.name + 2);
   }
   return false;
+}
+
+bool mixar_region_is_zen_floating_tools(const ARegion *region)
+{
+  if (region == nullptr || !region->overlap || region->regiontype != RGN_TYPE_TOOLS) {
+    return false;
+  }
+  if (G_MAIN == nullptr) {
+    return false;
+  }
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
+  if (wm == nullptr) {
+    return false;
+  }
+  for (wmWindow &win : wm->windows) {
+    const bScreen *screen = WM_window_get_active_screen(&win);
+    if (screen == nullptr) {
+      continue;
+    }
+    for (const ScrArea &area : screen->areabase) {
+      if (BLI_findindex(&area.regionbase, region) != -1) {
+        return mixar_area_floats_viewport_chrome(&area);
+      }
+    }
+  }
+  return false;
+}
+
+void mixar_zen_floating_tools_fixed_scale(const bContext *C, ARegion *region)
+{
+  const ScrArea *area = C ? CTX_wm_area(C) : nullptr;
+  if (region == nullptr || !region->overlap || region->regiontype != RGN_TYPE_TOOLS ||
+      !mixar_area_floats_viewport_chrome(area))
+  {
+    return;
+  }
+  /* The Mixie chat transcript's lock. #view2d_region_reinit restores the
+   * panels' 0.5-2x zoom range on every region init, so this is re-asserted
+   * from layout and draw rather than set once. */
+  View2D *v2d = &region->v2d;
+  v2d->keepzoom = V2D_LOCKZOOM_X | V2D_LOCKZOOM_Y | V2D_KEEPZOOM;
+  v2d->minzoom = 1.0f;
+  v2d->maxzoom = 1.0f;
+
+  const float mask_w = float(BLI_rcti_size_x(&v2d->mask) + 1);
+  const float mask_h = float(BLI_rcti_size_y(&v2d->mask) + 1);
+  if (mask_w <= 1.0f || mask_h <= 1.0f) {
+    return;
+  }
+  /* One view unit per pixel, keeping the left edge and the top (scroll)
+   * origin, so a pill zoomed before this lock existed comes back. */
+  v2d->cur.xmax = v2d->cur.xmin + mask_w;
+  v2d->cur.ymin = v2d->cur.ymax - mask_h;
 }
 
 bool mixar_zen_header_clear(const bContext *C, const ARegion *region)

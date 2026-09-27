@@ -69,7 +69,7 @@ def _patched_header_draw(self, context):
     width = context.region.width / max(context.preferences.system.ui_scale, 0.01)
     compact = width < 1480
     left = layout.row(align=False)
-    left.ui_units_x = 33 if not compact else 11
+    left.ui_units_x = 36 if not compact else 17
     zen_scene_controls.draw_left(left, context, compact=compact)
     layout.separator_spacer()
 
@@ -352,12 +352,6 @@ def uninstall_view3d_header_filter():
     if tools_cls is not None and _original_tools_active_draw is not None:
         tools_cls.draw = _original_tools_active_draw
         _original_tools_active_draw = None
-
-    try:
-        from ...core import scenes_toggle_icons
-        scenes_toggle_icons.unregister()
-    except Exception:  # noqa: BLE001 — teardown never raises
-        pass
 
 
 classes = ()

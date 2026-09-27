@@ -95,6 +95,12 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
   if (runtime) {
     runtime->amount = amount;
     runtime->new_visible = false;
+    if (amount < VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT) {
+      /* Closing the drawer ends a rename: the field's block is freed with the
+       * region contents, and a kept uid would silently re-enter editing with
+       * the stale draft the next time the card is laid out. */
+      runtime->rename_uid.clear();
+    }
   }
 
   const ui::mixar_tokens::Palette &zen = ui::mixar_tokens::mixar_zen();
@@ -166,15 +172,36 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
     int scissor_prev[4];
     GPU_scissor_get(scissor_prev);
     GPU_scissor(0, int(list_bottom), winx, std::max(0, int(list_height)));
+    /* Recess the position hint behind the cards: the active row
+     * covers it where its wash joins the viewport, keeping that seam unbroken. */
+    if (runtime->scroll_max > 0.0f) {
+      const float track_h = list_height;
+      const float thumb_h = std::max(24.0f * scale, track_h * track_h / (track_h + runtime->scroll_max));
+      const float thumb_top = list_top - (runtime->scroll / runtime->scroll_max) * (track_h - thumb_h);
+      rctf thumb;
+      thumb.xmax = panel.xmax - 3.0f * scale;
+      thumb.xmin = thumb.xmax - 2.0f * scale;
+      thumb.ymax = thumb_top;
+      thumb.ymin = thumb_top - thumb_h;
+      float fill[4];
+      with_alpha(zen.secondary, 0.20f, fill);
+      draw_pill(thumb, fill, 1.0f * scale);
+    }
+
     for (int i = 0; i < count; i++) {
       ScenesDrawerCard &card = runtime->cards[i];
+      const float y_top = list_top + runtime->scroll -
+                          runtime->card_rows.at(card.scene_uid) * (CARD_H + CARD_GAP) * scale;
+      const float y_bottom = y_top - CARD_H * scale;
+      if (runtime->rename_uid == card.scene_uid &&
+          (runtime->drag_target >= 0 || y_bottom >= list_top || y_top <= list_bottom))
+      {
+        runtime->rename_uid.clear(); /* Not laid out this frame: see the title below. */
+      }
       if (runtime->drag_target >= 0 && card.scene_uid == runtime->drag_scene) {
         card.rect = card.close_rect = card.thumb_rect = {};
         continue; /* The lifted card is painted once, above its moving siblings. */
       }
-      const float y_top = list_top + runtime->scroll -
-                          runtime->card_rows.at(card.scene_uid) * (CARD_H + CARD_GAP) * scale;
-      const float y_bottom = y_top - CARD_H * scale;
       if (y_bottom >= list_top) {
         /* Scrolled out above: no rect, so hit tests and QA skip it. */
         card.rect = {};
@@ -230,7 +257,18 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
        * timer operator and read back; drawn here from the card's own texture. A
        * scene that has never been evaluated shows a dark bed. */
       rcti thumb;
-      thumb.xmin = int(rect.xmin + 8.0f * scale);
+      /* A quiet 2 x 3 dot grip makes the whole card's drag affordance visible. */
+      rctf grip = {rect.xmin + 7.0f * scale, rect.xmin + 21.0f * scale,
+                   rect.ymin + 17.0f * scale, rect.ymax - 17.0f * scale};
+      for (int col = 0; col < 2; col++) {
+        for (int row = 0; row < 3; row++) {
+          const float x = grip.xmin + (2.0f + col * 6.0f) * scale;
+          const float y = (rect.ymin + rect.ymax) * 0.5f + (row - 1) * 6.0f * scale;
+          rctf dot = {x, x + 2.5f * scale, y - 1.25f * scale, y + 1.25f * scale};
+          draw_pill(dot, zen.secondary, 1.25f * scale);
+        }
+      }
+      thumb.xmin = int(rect.xmin + 27.0f * scale);
       thumb.xmax = thumb.xmin + int(THUMB_W * scale);
       thumb.ymax = int(rect.ymax - 8.0f * scale);
       thumb.ymin = thumb.ymax - int(THUMB_H * scale);
@@ -253,14 +291,14 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       close_rect.ymax = rect.ymax - 8.0f * scale;
       close_rect.ymin = close_rect.ymax - close_w;
 
-      /* Status pill, left of the close glyph. */
+      /* Status has its own line, with breathing room below the title. */
       BLF_size(font, 10.0f * scale);
       const char *status = status_label(card.status);
       const float status_w = BLF_width(font, status, strlen(status)) + 14.0f * scale;
       rctf pill;
-      pill.xmax = close_rect.xmin - (count > 1 ? 6.0f * scale : 0.0f);
-      pill.xmin = pill.xmax - status_w;
-      pill.ymax = rect.ymax - 11.0f * scale;
+      pill.xmin = inner_x;
+      pill.xmax = std::min(pill.xmin + status_w, close_rect.xmin - 4.0f * scale);
+      pill.ymax = rect.ymax - 32.0f * scale;
       pill.ymin = pill.ymax - PILL_H * scale;
       {
         /* A solid badge with dark text: the tinted pill with tinted text was
@@ -285,13 +323,24 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         name_x += 12.0f * scale;
       }
       BLF_size(font, 12.0f * scale);
-      draw_elided(font, card.scene_name, name_x, rect.ymax - 24.0f * scale,
-                  pill.xmin - 8.0f * scale - name_x, zen.strong);
-
-      /* The agent's last line. */
-      BLF_size(font, 11.0f * scale);
-      draw_elided(font, card.last_text, inner_x, rect.ymin + 10.0f * scale,
-                  rect.xmax - 12.0f * scale - inner_x, zen.secondary);
+      rctf title = {name_x, std::max(name_x + scale, close_rect.xmin - 6.0f * scale),
+                    rect.ymax - 26.0f * scale, rect.ymax - 6.0f * scale};
+      /* Rename mode lives only on a fully laid-out title: the field is a native
+       * button whose hit rect is not scissored, so a card half under the header
+       * would take clicks meant for the header; and a card that leaves the list
+       * (scroll, lift) loses its block anyway. Either way the draft is dropped. */
+      if (runtime->rename_uid == card.scene_uid &&
+          (title.ymax > list_top || title.ymin < list_bottom))
+      {
+        runtime->rename_uid.clear();
+      }
+      if (runtime->rename_uid == card.scene_uid) {
+        draw_inline_name(C, region, runtime, card, title);
+      }
+      else {
+        draw_elided(font, card.scene_name, name_x, rect.ymax - 22.0f * scale,
+                    BLI_rctf_size_x(&title), zen.strong);
+      }
 
       /* Delete control (never on the last remaining tab): a bin, red when
        * hovered — it removes the whole scene, not just the card. */
@@ -353,20 +402,6 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       }
     }
 
-    /* Scroll indicator: a thin track on the right while cards overflow. */
-    if (runtime->scroll_max > 0.0f) {
-      const float track_h = list_height;
-      const float thumb_h = std::max(24.0f * scale, track_h * track_h / (track_h + runtime->scroll_max));
-      const float thumb_top = list_top - (runtime->scroll / runtime->scroll_max) * (track_h - thumb_h);
-      rctf thumb;
-      thumb.xmax = panel.xmax - 3.0f * scale;
-      thumb.xmin = thumb.xmax - 3.0f * scale;
-      thumb.ymax = thumb_top;
-      thumb.ymin = thumb_top - thumb_h;
-      float fill[4];
-      with_alpha(zen.secondary, 0.45f, fill);
-      draw_pill(thumb, fill, 1.5f * scale);
-    }
     GPU_scissor(scissor_prev[0], scissor_prev[1], scissor_prev[2], scissor_prev[3]);
 
   }

@@ -10,6 +10,7 @@
 #include "DNA_scene_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
+#include "ED_space_api.hh"
 #include "RNA_access.hh"
 #include "UI_interface_c.hh"
 #include "WM_api.hh"
@@ -29,11 +30,8 @@ static bool focus_composer(bContext *C, void *ghost_window)
       continue;
     }
     PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-    PropertyRNA *tab = RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab");
     PropertyRNA *ink = RNA_struct_find_property(&wm_ptr, "mixie_chat_ink_visible");
-    int agent_tab = 0;
-    if ((tab && (!RNA_property_enum_value(C, &wm_ptr, tab, "AGENT", &agent_tab) ||
-                 RNA_property_enum_get(&wm_ptr, tab) != agent_tab)) ||
+    if (!ED_agent_bubble_tab_shows_chat(C, true) ||
         (ink && RNA_property_boolean_get(&wm_ptr, ink)))
     {
       return true; /* Opening another pane must not focus a hidden chat field. */

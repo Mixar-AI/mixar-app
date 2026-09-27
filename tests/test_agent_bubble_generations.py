@@ -255,21 +255,22 @@ def _tab_table():
     ).group(1)
     labels = re.findall(r'"([^"]+)"', metrics)
     marks = re.findall(r"AGENT_ICON_\w+", icons)
-    assert len(labels) == len(marks) == 7
+    assert len(labels) == len(marks) == 8
     return dict(zip(labels, marks))
 
 
 def test_every_category_tab_carries_its_own_mark():
     """No two marked category tabs may share a glyph.
 
-    `generations.svg` draws marks for Agent and Gaussian Splat; 3D, Image and Video
+    `generations.svg` draws marks for Agent and Splats; 3D, Image and Video
     take the island's cube, picture and camera glyphs so those tabs cannot
     read as failed-to-load. Library and Queue are label-only
     (`AGENT_ICON_COUNT`); Queue still gains a count chip while nonempty.
     """
     tabs = _tab_table()
     assert tabs["Agent"] == "AGENT_ICON_AGENT"
-    assert tabs["Gaussian Splat"] == "AGENT_ICON_SPLAT"
+    assert tabs["Splats"] == "AGENT_ICON_SPLAT"
+    assert tabs["Add-on"] == "AGENT_ICON_ADDON"
     assert tabs["Library"] == "AGENT_ICON_COUNT"
     assert tabs["Queue"] == "AGENT_ICON_COUNT"
     assert tabs["3D"] == "AGENT_ICON_MESH"

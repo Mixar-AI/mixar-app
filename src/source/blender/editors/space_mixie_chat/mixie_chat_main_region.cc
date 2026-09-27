@@ -26,6 +26,7 @@
 #include "RNA_access.hh"
 
 #include "ED_screen.hh"
+#include "ED_space_api.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -327,27 +328,11 @@ static bool mixie_chat_dispatch_is_live(const bContext *C)
     return false;
   }
 
-  wmWindowManager *wm = CTX_wm_manager(C);
-  if (!wm) {
-    return true;
-  }
   /* wm.mixar_bubble_tab is the island's ONE source of what the card shows
-   * (bubble_tab_props.py). Matched on the stable enum IDENTIFIER, never an
-   * index; absent before Python registers it, and the card is Agent until
-   * then — so every unreadable branch below falls back to live. */
-  PointerRNA wm_ptr = RNA_id_pointer_create(&wm->id);
-  PropertyRNA *prop = RNA_struct_find_property(&wm_ptr, "mixar_bubble_tab");
-  if (!prop || RNA_property_type(prop) != PROP_ENUM) {
-    return true;
-  }
-  const char *ident = nullptr;
-  if (!RNA_property_enum_identifier(
-          nullptr, &wm_ptr, prop, RNA_property_enum_get(&wm_ptr, prop), &ident) ||
-      ident == nullptr)
-  {
-    return true;
-  }
-  if (!STREQ(ident, "AGENT")) {
+   * (bubble_tab_props.py); the chat is live on its chat tabs (Agent,
+   * Add-on). Absent before Python registers it, and the card is Agent until
+   * then — so an unreadable property falls back to live. */
+  if (!ED_agent_bubble_tab_shows_chat(C, true)) {
     return false;
   }
   /* A pending asset question replaces the transcript with the island's

@@ -145,7 +145,7 @@ void agent_bubble_references_draw(const bContext *C,
                                                  agent_bubble_reference_count(C),
                                                  agent_bubble_reference_fraction(wm));
   ui::Block *block = ui::block_begin(C, region, "agent_references", ui::EmbossType::None);
-  if (state.active_tab == AGENT_TAB_AGENT) {
+  if (agent_ui_tab_shows_chat(AgentTabId(state.active_tab))) {
     agent_bubble_send_button(C, region, block, layout, state);
   }
   /* The same neutral hairline as the Library column separators. */
@@ -167,7 +167,7 @@ void agent_bubble_references_draw(const bContext *C,
     const std::string &path = item.path;
     const std::string &name = item.name;
     const char *source = item.source.c_str();
-    const bool generation = state.active_tab != AGENT_TAB_AGENT;
+    const bool generation = !agent_ui_tab_shows_chat(AgentTabId(state.active_tab));
     const float plate[4] = {0.08f, 0.09f, 0.085f, 0.25f};
     GPU_blend(GPU_BLEND_ALPHA);
     pane_fill_round(&image, 10 * u, plate);

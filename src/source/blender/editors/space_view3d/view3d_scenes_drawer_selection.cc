@@ -8,6 +8,7 @@
 
 #include "BLF_api.hh"
 #include "BKE_context.hh"
+#include "BLI_string.h"
 #include "ED_screen.hh"
 #include "RNA_access.hh"
 #include "UI_interface.hh"
@@ -73,7 +74,9 @@ bool view3d_scenes_drawer_selection_click(bContext *C, ARegion *region,
       continue;
     }
     if (event->val == KM_DBL_CLICK && event->modifier == 0) {
-      invoke_edit(C, "MIXIE_CHAT_OT_rename_scene_tab", "scene_uid", card.scene_uid);
+      runtime->rename_uid = card.scene_uid;
+      STRNCPY(runtime->rename_buffer, card.scene_name.c_str());
+      ED_region_tag_redraw(region);
       return true;
     }
     const bool extend = event->modifier & (KM_CTRL | KM_OSKEY);
@@ -148,7 +151,49 @@ void VIEW3D_OT_scenes_drawer_selection(wmOperatorType *ot)
   ot->flag = OPTYPE_INTERNAL;
 }
 
+void view3d_scenes_drawer_delete_card(bContext *C, const std::string &uid)
+{
+  invoke_edit(C, "MIXIE_CHAT_OT_delete_scene_tabs", "scene_uids", "[\"" + uid + "\"]");
+}
+
 namespace view3d_scenes_drawer {
+
+void draw_inline_name(const bContext *C, ARegion *region, ScenesDrawerRuntime *runtime,
+                      const ScenesDrawerCard &card, const rctf &rect)
+{
+  ui::Block *block = ui::block_begin(C, region, "scene_card_rename", ui::EmbossType::Emboss);
+  ui::Button *but = ui::uiDefBut(block, ui::ButtonType::Text, "",
+      int(rect.xmin), int(rect.ymin), short(BLI_rctf_size_x(&rect)),
+      short(BLI_rctf_size_y(&rect)), runtime->rename_buffer, 0.0f,
+      sizeof(runtime->rename_buffer), "Scene name");
+  ui::button_flag_disable(but, ui::BUT_UNDO);
+  ui::button_func_set(but, [runtime, uid = card.scene_uid, current = card.scene_name](
+                               bContext &context) {
+    const std::string name = runtime->rename_buffer;
+    runtime->rename_uid.clear();
+    if (name == current) {
+      /* Native text editing applies on Enter AND on any click-away, so an
+       * accidental double-click must not commit: an unchanged name would
+       * still pin the scene as manually named and stop automatic naming. */
+      return;
+    }
+    wmOperatorType *ot = WM_operatortype_find("MIXIE_CHAT_OT_rename_scene_tab", true);
+    if (ot) {
+      PointerRNA props = WM_operator_properties_create_ptr(ot);
+      RNA_string_set(&props, "scene_uid", uid.c_str());
+      RNA_string_set(&props, "new_name", name.c_str());
+      WM_operator_name_call_ptr(&context, ot, wm::OpCallContext::ExecDefault, &props, nullptr);
+      WM_operator_properties_free(&props);
+    }
+  });
+  /* Same lifecycle as the Outliner: native editing supplies selection, UTF-8,
+   * clipboard, Enter and Escape; the draft never writes directly to an ID. */
+  if (!ui::button_active_only(C, region, block, but)) {
+    runtime->rename_uid.clear();
+  }
+  ui::block_end(C, block);
+  ui::block_draw(C, block);
+}
 
 void draw_header(ScenesDrawerRuntime *runtime, ARegion *region,
                  const float x0, const float x1, const float mid, const float scale)

@@ -5,6 +5,7 @@
 """Optimistic, staged, journaled add-on source transactions."""
 
 import difflib
+import importlib.util
 import os
 import stat
 import tempfile
@@ -14,7 +15,7 @@ from pathlib import Path
 
 from .checks import run_scoped_checks, run_static_checks
 from .constants import MAX_DIFF_CHARS, MAX_PATCH_BYTES, MAX_PATCH_FILES
-from .errors import AddonProjectError
+from .errors import AddonProjectError, VerificationFailed
 from .indexer import build_index, read_source, sha256_bytes
 from .paths import normalize_relative_path, resolve_project_path
 from .storage import read_json, write_json_atomic
@@ -160,6 +161,24 @@ class TransactionStore:
             os.replace(temporary, path)
 
     @staticmethod
+    def _drop_bytecode(path: Path) -> None:
+        """Remove the cached bytecode of a rewritten or deleted source.
+
+        A .pyc is trusted when its recorded mtime (whole seconds) and size
+        match the source, so an edit of the same length within the same
+        second — a quick fix, a revert — would import the OLD code: the
+        verified commit would prove the wrong version.
+        """
+        if path.suffix != ".py":
+            return
+        try:
+            cached = Path(importlib.util.cache_from_source(str(path)))
+            if cached.exists():
+                cached.unlink()
+        except (NotImplementedError, ValueError, OSError):
+            pass
+
+    @staticmethod
     def _atomic_write(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
@@ -171,6 +190,7 @@ class TransactionStore:
                 handle.flush()
                 os.fsync(handle.fileno())
             TransactionStore._replace(temporary, path)
+            TransactionStore._drop_bytecode(path)
         except Exception:
             try:
                 os.unlink(temporary)
@@ -179,7 +199,15 @@ class TransactionStore:
             raise
 
     def commit(self, project_id: str, root: Path, proposal_id: str,
-               *, check_scopes=None) -> dict:
+               *, check_scopes=None, verify=None) -> dict:
+        """Write one staged proposal atomically.
+
+        ``verify`` (a verified commit) is called after the static pass while
+        the journal is still ``pending``: it returns the proof records, or
+        raises ``VerificationFailed``, which reverts every written file like
+        any other failure — and so does an interruption mid-proof, through
+        ``recover_pending``. A failed proof also spends the proposal.
+        """
         proposal = read_json(self._proposal_path(project_id, proposal_id), None)
         if not isinstance(proposal, dict) or proposal.get("project_id") != project_id:
             raise AddonProjectError("proposal_not_found", "The staged proposal is unavailable")
@@ -236,6 +264,7 @@ class TransactionStore:
                     raise AddonProjectError("file_conflict", f"File changed after staging: {change['path']}")
                 if change["operation"] == "delete":
                     path.unlink()
+                    self._drop_bytecode(path)
                 else:
                     self._atomic_write(path, change["content"])
                 written.append(backup)
@@ -246,28 +275,38 @@ class TransactionStore:
             checks = run_scoped_checks(check_scopes or [(root, "")])
             if not checks["success"]:
                 raise AddonProjectError("checks_failed", checks["summary"])
+            verification = verify() if verify is not None else None
             _, revision = build_index(root)
             journal["revision"] = revision
             journal["status"] = "committed"
             write_json_atomic(history_path, journal)
-        except Exception:
+        except Exception as exc:
             for backup in reversed(written):
                 path = resolve_project_path(root, backup["path"])
                 if backup["content"] is None:
                     if path.exists():
                         path.unlink()
+                    self._drop_bytecode(path)
                 else:
                     self._atomic_write(path, backup["content"])
             try:
                 history_path.unlink()
             except OSError:
                 pass
+            if isinstance(exc, VerificationFailed):
+                self._spend(project_id, proposal_id)
             raise
+        self._spend(project_id, proposal_id)
+        result = {"success": True, "transaction_id": transaction_id, "revision": revision, "checks": checks}
+        if verification is not None:
+            result["verification"] = verification
+        return result
+
+    def _spend(self, project_id: str, proposal_id: str) -> None:
         try:
             self._proposal_path(project_id, proposal_id).unlink()
         except OSError:
             pass
-        return {"success": True, "transaction_id": transaction_id, "revision": revision, "checks": checks}
 
     def history(self, project_id: str, limit=20) -> list[dict]:
         history_dir = self._project_dir(project_id) / "history"
@@ -328,6 +367,7 @@ class TransactionStore:
             if file_record.get("content") is None:
                 if path.exists():
                     path.unlink()
+                self._drop_bytecode(path)
             else:
                 self._atomic_write(path, file_record["content"])
 

@@ -54,6 +54,18 @@ def draw_rendering_options(layout, prefs):
     col.prop(prefs, "default_render_device")
 
 
+def draw_addon_project_options(layout, prefs):
+    """Draw the add-on projects section (the native folder field/picker).
+
+    Args:
+        layout: Blender layout object
+        prefs: Mixar paint preferences
+    """
+    box = layout.box()
+    box.label(text="Add-on Projects", icon="FILE_SCRIPT")
+    box.column(align=True).prop(prefs, "addon_projects_dir")
+
+
 def draw_layer_node_options(layout, prefs):
     """Draw the default layer/node options section.
 

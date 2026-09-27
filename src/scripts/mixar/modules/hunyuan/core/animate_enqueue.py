@@ -28,6 +28,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue.constants import FEATURE_ANIMATE
 from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
 from ..constants import (
+    ANIMATE_IMPORT_OPTIONS,
     ANIMATE_RIG_JOB_PROP,
     ANIMATE_RIG_SERVICE,
     ANIMATE_RETARGET_SERVICE,
@@ -38,26 +39,28 @@ logger = get_logger(__name__)
 
 ANIMATE_SCENE_FLAG = "mixie_animate_is_generating"
 
-# glTF import options for Tripo rigged / animated results. Tripo rigs are
-# not authored in Blender, so Blender's default "Guess Original Bind Pose"
-# reconstructs a bind pose that doesn't match what the animation was baked
-# against — the mesh imports fine at rest but limbs collapse/cluster once
-# the animation plays. Turning it off uses the glTF's own node transforms
-# as the bind pose (what the animation expects). bone_heuristic=BLENDER is
-# the importer default; pinned so a future default change can't regress us.
-_ANIMATE_IMPORT_OPTIONS = {
-    "bone_heuristic": "BLENDER",
-    "guess_original_bind_pose": False,
-}
-
-
 # ---------------------------------------------------------------------------
 # Import hooks
 # ---------------------------------------------------------------------------
 
 
+def show_armatures_in_front(object_names: str) -> None:
+    """Draw every imported armature In Front of the mesh it deforms.
+
+    The glTF importer only sets this alongside the bone-shape Icosphere,
+    which ``ANIMATE_IMPORT_OPTIONS`` turns off.
+    """
+    import bpy
+
+    for name in (n.strip() for n in object_names.split(",")):
+        obj = bpy.data.objects.get(name) if name else None
+        if obj is not None and obj.type == 'ARMATURE':
+            obj.show_in_front = True
+
+
 def _rig_on_imported(job, object_names: str) -> None:
-    """Stamp every imported object with the rig job id.
+    """Stamp every imported object with the rig job id and show the rig
+    In Front.
 
     The rigged GLB imports as an armature with the skinned mesh parented
     under it; stamping ALL of them means the user can select any part of
@@ -76,10 +79,16 @@ def _rig_on_imported(job, object_names: str) -> None:
             stamped += 1
         except Exception as e:
             logger.warning("[Animate] Could not stamp %s: %s", name, e)
+    show_armatures_in_front(object_names)
     logger.info(
         "[Animate] Rig imported: stamped %d object(s) with job %s",
         stamped, job.backend_job_id,
     )
+
+
+def _animate_on_imported(job, object_names: str) -> None:
+    """Show the animated copy's armature In Front, like the rig."""
+    show_armatures_in_front(object_names)
 
 
 # ---------------------------------------------------------------------------
@@ -242,7 +251,7 @@ def enqueue_rig_jobs(
         label=label,
         fail_message="Auto Rig failed",
         on_imported=_rig_on_imported,
-        import_options=_ANIMATE_IMPORT_OPTIONS,
+        import_options=ANIMATE_IMPORT_OPTIONS,
         scene_flag=ANIMATE_SCENE_FLAG,
     )
     return [job] if job is not None else []
@@ -283,6 +292,7 @@ def enqueue_retarget_job(
         payload=payload,
         label=f"{label} ({short})",
         fail_message="Animate failed",
-        import_options=_ANIMATE_IMPORT_OPTIONS,
+        on_imported=_animate_on_imported,
+        import_options=ANIMATE_IMPORT_OPTIONS,
         scene_flag=ANIMATE_SCENE_FLAG,
     )
