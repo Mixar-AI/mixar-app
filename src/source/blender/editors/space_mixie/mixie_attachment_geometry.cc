@@ -60,7 +60,7 @@ bool attachment_window_visible(const wmWindow *win)
 #endif
 }
 
-bool attachment_resting_target(wmWindow *win, FlightQuad &quad)
+bool attachment_resting_target(wmWindow *win, float aspect, FlightQuad &quad)
 {
   bContext *context = CTX_create();
   CTX_wm_window_set(context, win);
@@ -71,8 +71,10 @@ bool attachment_resting_target(wmWindow *win, FlightQuad &quad)
   }
   const float x = WM_window_native_pixel_x(win) * 0.5f;
   const float y = WM_window_native_pixel_y(win) * 0.5f;
-  const float half = 9 * attachment_pixel_scale(win);
-  quad = attachment_desktop_quad(win, {x - half, x + half, y - half, y + half});
+  /* A small tile in the picture's own aspect: the dissolve never squashes it. */
+  const float half = 11 * attachment_pixel_scale(win);
+  const FlightQuad fit = flight_fit_quad(aspect, x - half, x + half, y - half, y + half);
+  quad = attachment_desktop_quad(win, {fit[0][0], fit[2][0], fit[0][1], fit[2][1]});
   return true;
 }
 

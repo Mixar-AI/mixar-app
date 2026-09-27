@@ -75,13 +75,20 @@ namespace {
 #define QROW_DOT_R 6.0f         /* Status dot radius — scaled with the type. */
 #define QROW_CANCEL_W 40.0f     /* Cancel cross hit width at the row's right edge. */
 #define QPANEL_PAD PANE_INSET_X /* Panel inset — the kit strip inset. */
-#define QHEADER_H 54.0f         /* "N jobs" + Clear finished strip above the rows. */
+#define QHEADER_H 54.0f         /* Status summary + Clear finished strip above the rows. */
+/* "Why it failed" card under the rows while the selected job is FAILED.
+ * Fixed height: the navigation operator recomputes row capacity without
+ * drawing, so it must not depend on how long a failure reason is. */
+#define QFAILURE_CARD_H 236.0f
 
 /** \} */
 
 }  // namespace
 
-agent_queue::QueueLayout agent_queue::layout(const rctf &panel, float u, int total)
+agent_queue::QueueLayout agent_queue::layout(const rctf &panel,
+                                             float u,
+                                             int total,
+                                             const bool failure_card)
 {
   QueueLayout result{};
   const float pad = QPANEL_PAD * u;
@@ -89,6 +96,16 @@ agent_queue::QueueLayout agent_queue::layout(const rctf &panel, float u, int tot
   result.row_gap = QROW_GAP * u;
   result.rows = {
       panel.xmin + pad, panel.xmax - pad, panel.ymin + pad, panel.ymax - pad - QHEADER_H * u};
+  result.failure = {0.0f, 0.0f, 0.0f, 0.0f};
+  /* The card takes the bottom of the panel, but never more than half of the
+   * list area: on a short island the rows stay usable and the card's text is
+   * budgeted to whatever height it got. */
+  if (failure_card) {
+    const float card_h = std::min(QFAILURE_CARD_H * u, BLI_rctf_size_y(&result.rows) * 0.5f);
+    result.failure = result.rows;
+    result.failure.ymax = result.failure.ymin + card_h;
+    result.rows.ymin = result.failure.ymax + QROW_GAP * u;
+  }
   result.footer = result.rows;
   result.footer.ymax = result.footer.ymin + ui::mixar_tokens::control_height * u;
   auto capacity = [&]() {
@@ -109,7 +126,8 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   wmWindowManager *wm = CTX_wm_manager(C);
 
   using namespace agent_queue;
-  const QueueLayout metrics = layout(panel, u, total_rows(wm));
+  const QueueLayout metrics = layout(
+      panel, u, total_rows(wm), active_failure_present(wm));
   const QueueData data = gather_rows(wm, metrics.capacity);
   const auto &rows = data.rows;
   const int row_count = data.total;
@@ -140,29 +158,45 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   pane_wash_paint(panel, u);
 
   if (row_count == 0) {
-    ui::mixar_label_center("No jobs in the queue",
-                          (panel.xmin + panel.xmax) * 0.5f,
-                          (panel.ymin + panel.ymax) * 0.5f,
-                          title_style,
-                          col_dim);
+    /* Say what the tab is for, not just that it is empty. */
+    const float cx = (panel.xmin + panel.xmax) * 0.5f;
+    const float cy = (panel.ymin + panel.ymax) * 0.5f;
+    ui::mixar_label_center("No generations yet", cx, cy + title_style.size * 0.8f, title_style, col_text);
+    const std::string sub = ui::mixar_fit_text(
+        "Image, 3D, video and splat jobs show up here with their progress and any errors",
+        list_right - list_left,
+        meta_style);
+    ui::mixar_label_center(sub.c_str(), cx, cy - meta_style.size * 0.9f, meta_style, col_dim);
     GPU_blend(GPU_BLEND_NONE);
     return;
   }
 
-  /* Count and actions share the header strip. */
+  /* Status summary and actions share the header strip: "2 running · 1 queued
+   * · 3 done · 1 failed" says at a glance what "N jobs · N active" did not —
+   * whether anything needs attention. Zero buckets are left out. */
   const bool any_terminal = data.any_terminal;
-  const int active_count = data.active;
   {
-    char counts[64];
-    if (active_count > 0) {
-      SNPRINTF(
-          counts, "%d job%s · %d active", row_count, (row_count == 1) ? "" : "s", active_count);
-    }
-    else {
-      SNPRINTF(counts, "%d job%s", row_count, (row_count == 1) ? "" : "s");
-    }
+    const struct {
+      int count;
+      const char *word;
+      const float *color;
+    } buckets[] = {{data.running, "running", col_accent},
+                   {data.pending, "queued", col_pending},
+                   {data.done, "done", col_dim},
+                   {data.failed, "failed", col_failed}};
     const float cy = y_top - header_h * 0.5f;
-    ui::mixar_label_left(counts, list_left, cy, meta_style, col_dim);
+    float x = list_left;
+    bool first = true;
+    for (const auto &bucket : buckets) {
+      if (bucket.count <= 0) {
+        continue;
+      }
+      char part[48];
+      SNPRINTF(part, "%s%d %s", first ? "" : " \xC2\xB7 ", bucket.count, bucket.word);
+      ui::mixar_label_left(part, x, cy, meta_style, bucket.color);
+      x += ui::mixar_text_width(part, meta_style);
+      first = false;
+    }
   }
 
   const int shown = rows.size();
@@ -229,7 +263,22 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                 "Select this job");
     ui::mixar_style_button(sel, ui::MixarComponent::Surface, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
     ui::mixar_button_lit_set(sel, rows[i].mirror_index == active_index);
-    ui::mixar_button_tooltip_owned(sel, row.title.c_str());
+    /* A failed row's tooltip is its whole explanation; others say what the
+     * job is and where it stands. */
+    std::string tip = row.title;
+    if (row.is_failed && !row.is_cancelled) {
+      tip += "\n" + row.failure.details + "\nClick for details.";
+    }
+    else {
+      if (row.type_label[0]) {
+        tip += std::string("\n") + row.type_label +
+               (row.model_label[0] ? std::string(" \xC2\xB7 ") + row.model_label : "");
+      }
+      if (row.status[0]) {
+        tip += std::string("\n") + row.status;
+      }
+    }
+    ui::mixar_button_tooltip_owned(sel, tip.c_str());
     if (sel) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(sel);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixie_queue.active_index");
@@ -264,6 +313,10 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
         }
       }
     }
+  }
+
+  if (data.has_selected_failure && BLI_rctf_size_y(&metrics.failure) > 0.0f) {
+    failure_card_draw(block, data.selected_failure, metrics.failure, u);
   }
 
   ui::block_end(C, block);
@@ -343,7 +396,14 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                           row.is_failed && !selected ? col_failed : row_dim);
 
     char meta[160] = "";
-    if (row.type_label[0] && row.model_label[0]) {
+    if (row.is_failed && !row.is_cancelled) {
+      /* A failed row says WHY right in the list: the provider's reason when
+       * there is one (it is the specific part), else the message. */
+      const std::string &why = row.failure.reason.empty() ? row.failure.message :
+                                                            row.failure.reason;
+      STRNCPY(meta, why.c_str());
+    }
+    else if (row.type_label[0] && row.model_label[0]) {
       SNPRINTF(meta, "%s \xC2\xB7 %s", row.type_label, row.model_label);
     }
     else if (row.type_label[0]) {

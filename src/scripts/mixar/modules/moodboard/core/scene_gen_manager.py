@@ -281,7 +281,7 @@ class SceneGenManager:
                 message=response.message, data=mapped,
             )
         elif gq_status in ("FAILED", "CANCELLED", "DLQ"):
-            error = inner.get("error", "Job failed")
+            error = (inner.get("error") or "Job failed")
             unwrapped = APIResponse(
                 success=True, status_code=response.status_code,
                 message=response.message,

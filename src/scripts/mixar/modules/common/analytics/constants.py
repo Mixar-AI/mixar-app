@@ -11,6 +11,10 @@ MAX_PROPERTIES = 32
 SHUTDOWN_TIMEOUT_SECONDS = 2.0
 
 EVENT_OPERATOR = "product.operator"
+EVENT_ISLAND_TAB = "ui.island_tab_changed"
+EVENT_UI_ACTION = "ui.action"
+EVENT_GENERATION_ATTEMPT = "generation.attempted"
+EVENT_GENERATION_DISPATCH = "generation.dispatch_result"
 EVENT_MOODBOARD_PANEL = "moodboard.panel_changed"
 EVENT_MOODBOARD_SIDEBAR = "moodboard.sidebar_toggled"
 EVENT_CHAT_MODE = "agent.mode_changed"

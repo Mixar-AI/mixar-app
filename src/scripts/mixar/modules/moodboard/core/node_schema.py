@@ -540,6 +540,9 @@ def sync_node_schema(_scene, node) -> None:
         )
         limits = input_contract.setdefault("limits", {})
         limits["IMAGE"] = max(int(limits.get("IMAGE", 0) or 0), 1)
+    if node.action_type == 'MODEL_3D':
+        from .model_3d_views import apply_view_sockets
+        apply_view_sockets(input_contract, model)
     if node.action_type == 'CHARACTER_PARTS':
         from .character_parts_schema import require_character_image
         require_character_image(input_contract)

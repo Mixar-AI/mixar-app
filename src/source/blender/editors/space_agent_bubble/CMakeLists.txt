@@ -52,6 +52,7 @@ set(SRC
   agent_ui_pill_draft.cc
   agent_ui_queue_navigation.cc
   agent_ui_queue_data.cc
+  agent_ui_queue_failure.cc
   agent_ui_queue.cc
   agent_ui_tabsplat.cc
   agent_ui_tabsplat_paint.cc

@@ -27,6 +27,7 @@ from mixar.config.logging_config import get_logger
 from ..constants import DOWNLOAD_PROGRESS_REFRESH_S, LOG_PREFIX
 from .downloader import DownloadCancelled, download_file
 from .error_helpers import classify_error
+from .failure_info import clean_reason
 from .job import Job, JobState, TERMINAL_STATES
 from .model_io import import_file
 
@@ -65,6 +66,7 @@ def _record_output_landed(job: Job, file_type: str, object_names, *,
         from mixar.modules.common.analytics.capture import capture
         from mixar.modules.common.analytics.constants import EVENT_OUTPUT_LANDED
         capture(EVENT_OUTPUT_LANDED, {
+            "job_id": getattr(job, "backend_job_id", "") or "",
             "feature_key": getattr(job, "feature_key", "") or "",
             "service": getattr(job, "service", "")
             or getattr(job, "job_type", "") or "",
@@ -259,6 +261,8 @@ class DownloadMixin:
             job.state = JobState.FAILED
             job.error = f"Import failed: {e}"
             job.user_message = "Failed to import the generated model"
+            job.error_class = "import"
+            job.error_reason = clean_reason(f"{type(e).__name__}: {e}")
             # Don't leave the downloaded temp file behind — repeated failed
             # imports would otherwise accumulate multi-MB files in tempdir.
             try:
@@ -300,6 +304,9 @@ class DownloadMixin:
             return None
         job.state = JobState.FAILED
         job.error = message
+        if message != "Download cancelled":
+            job.error_class = "download"
+            job.error_reason = clean_reason(message)
         if user_message:
             job.user_message = user_message
         self._notify()

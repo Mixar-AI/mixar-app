@@ -110,6 +110,8 @@ def test_the_queue_recognises_its_credit_failures_by_the_shared_message():
     # The banner check comes before the toast push, and skips it.
     assert method.index("OUT_OF_CREDITS_MESSAGE") < method.index("get_notification_store().push")
     assert "continue" in method[method.index("OUT_OF_CREDITS_MESSAGE"):method.index("try:")]
+    # The failure_info class is the primary key; the sentence is the fallback.
+    assert 'error_class", "") == "credits"' in method
 
 
 def test_mask_tool_credit_failure_opens_the_banner_not_a_toast(monkeypatch):
