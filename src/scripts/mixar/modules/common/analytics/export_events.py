@@ -2,7 +2,16 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Privacy-safe normalized export telemetry."""
+"""Privacy-safe normalized export telemetry.
+
+Two events: ``export.initiated`` when an exporter starts (File menu, the
+agent's tools, the UV layout button) and ``export.completed`` with the
+outcome. Native exporters that run behind Blender's own file browser
+report their completion through ``watch_native_completion``: a short-lived
+timer polls ``window_manager.operators`` for the exporter's registered
+call and reports its normalized settings once it lands. Nothing here ever
+carries a path, an object name or a file name.
+"""
 
 from __future__ import annotations
 
@@ -12,45 +21,61 @@ from .capture import capture
 from .constants import EVENT_EXPORT, EVENT_EXPORT_INITIATED
 
 _MAX_DEEP_COUNT_OBJECTS = 3000
+COMPLETION_POLL_SECONDS = 1.0
+COMPLETION_GIVE_UP_SECONDS = 600.0
 
 
 def _setting(settings, name):
     return getattr(settings, name, None)
 
 
+_MAPPINGS = {
+    "GLTF": {
+        "export_selected_only": "use_selection",
+        "apply_modifiers": "export_apply",
+        "include_animation": "export_animations",
+        "image_format": "export_image_format",
+        "draco_compression": "export_draco_mesh_compression_enable",
+    },
+    "OBJ": {
+        "export_selected_only": "export_selected_objects",
+        "apply_modifiers": "apply_modifiers",
+        "include_materials": "export_materials",
+        "include_animation": "export_animation",
+        "global_scale": "global_scale",
+        "forward_axis": "forward_axis",
+        "up_axis": "up_axis",
+        "path_mode": "path_mode",
+    },
+    "FBX": {
+        "export_selected_only": "use_selection",
+        "apply_modifiers": "use_mesh_modifiers",
+        "include_animation": "bake_anim",
+        "include_textures": "embed_textures",
+        "global_scale": "global_scale",
+        "forward_axis": "axis_forward",
+        "up_axis": "axis_up",
+        "path_mode": "path_mode",
+    },
+    "USD": {
+        "export_selected_only": "selected_objects_only",
+        "include_materials": "export_materials",
+        "include_animation": "export_animation",
+        "up_axis": "export_global_up_selection",
+        "convert_orientation": "convert_orientation",
+    },
+    "PLY": {"export_selected_only": "export_selected_objects",
+            "apply_modifiers": "apply_modifiers", "global_scale": "global_scale"},
+    "STL": {"export_selected_only": "export_selected_objects",
+            "apply_modifiers": "apply_modifiers", "global_scale": "global_scale"},
+    "ALEMBIC": {"export_selected_only": "selected", "global_scale": "global_scale"},
+}
+
+
 def normalized_settings(export_format: str, settings) -> dict:
     """Map Blender format-specific settings onto stable primitive keys."""
-    mappings = {
-        "GLTF": {
-            "export_selected_only": "use_selection",
-            "apply_modifiers": "export_apply",
-            "include_animation": "export_animations",
-            "image_format": "export_image_format",
-            "draco_compression": "export_draco_mesh_compression_enable",
-        },
-        "OBJ": {
-            "export_selected_only": "export_selected_objects",
-            "apply_modifiers": "apply_modifiers",
-            "include_materials": "export_materials",
-            "include_animation": "export_animation",
-            "global_scale": "global_scale",
-            "forward_axis": "forward_axis",
-            "up_axis": "up_axis",
-            "path_mode": "path_mode",
-        },
-        "FBX": {
-            "export_selected_only": "use_selection",
-            "apply_modifiers": "use_mesh_modifiers",
-            "include_animation": "bake_anim",
-            "include_textures": "embed_textures",
-            "global_scale": "global_scale",
-            "forward_axis": "axis_forward",
-            "up_axis": "axis_up",
-            "path_mode": "path_mode",
-        },
-    }
     result = {}
-    for key, source in mappings.get(export_format, {}).items():
+    for key, source in _MAPPINGS.get(export_format, {}).items():
         value = _setting(settings, source)
         if value is not None:
             result[key] = value
@@ -95,21 +120,81 @@ def scene_counts(context, *, selected_only: bool) -> dict:
     return result
 
 
-def capture_export(context, *, export_format, success, filepath=None, extra=None) -> None:
+def capture_export(context, *, export_format, success, filepath=None, extra=None,
+                   extension=None) -> None:
     """Capture an export result without retaining any path or asset name."""
     properties = {"format": str(export_format), "success": bool(success)}
-    if filepath:
-        extension = os.path.splitext(os.fspath(filepath))[1].lower().lstrip(".")
-        if extension:
-            properties["extension"] = extension
+    if extension:
+        properties["extension"] = str(extension).lower().lstrip(".")
+    elif filepath:
+        ext = os.path.splitext(os.fspath(filepath))[1].lower().lstrip(".")
+        if ext:
+            properties["extension"] = ext
     if extra:
         properties.update(extra)
     capture(EVENT_EXPORT, properties, context=context)
 
 
-def capture_export_initiated(context, export_format: str) -> None:
-    """Capture a File-menu export start without paths or export settings."""
-    capture(EVENT_EXPORT_INITIATED, {
-        "format": str(export_format),
-        "via": "file_menu",
-    }, context=context)
+def capture_export_initiated(context, export_format: str, *, via: str = "file_menu",
+                             tool: str | None = None) -> None:
+    """Capture an export start without paths or export settings."""
+    properties = {"format": str(export_format), "via": via}
+    if tool:
+        properties["tool"] = tool
+    capture(EVENT_EXPORT_INITIATED, properties, context=context)
+
+
+def registered_operator_idname(namespace: str, name: str) -> str:
+    """``wm.obj_export`` → ``WM_OT_obj_export`` (what ``wm.operators`` lists)."""
+    return f"{namespace.upper()}_OT_{name}"
+
+
+def find_completed_operator(operators, idname: str, baseline: int):
+    """The newest registered operator matching ``idname`` past ``baseline``."""
+    entries = list(operators or ())
+    if len(entries) < baseline:
+        baseline = 0
+    for entry in reversed(entries[baseline:]):
+        if getattr(entry, "bl_idname", "") == idname:
+            return entry
+    return None
+
+
+def watch_native_completion(export_format: str, idname: str, *, via: str = "file_menu",
+                            extra: dict | None = None) -> None:
+    """Report ``export.completed`` when a native exporter's call lands in
+    ``window_manager.operators`` (its file browser is modal, so the Mixar
+    wrapper returns before the export runs). Polls once a second, gives up
+    quietly after ``COMPLETION_GIVE_UP_SECONDS``."""
+    import time
+
+    import bpy
+
+    try:
+        baseline = len(bpy.context.window_manager.operators)
+    except Exception:
+        baseline = 0
+    started = time.monotonic()
+
+    def tick():
+        try:
+            wm = bpy.context.window_manager
+            entry = find_completed_operator(wm.operators, idname, baseline)
+            if entry is not None:
+                settings = normalized_settings(export_format, entry)
+                properties = {"via": via, **settings, **scene_counts(
+                    bpy.context, selected_only=bool(settings.get("export_selected_only")))}
+                properties.update(extra or {})
+                capture_export(bpy.context, export_format=export_format, success=True,
+                               extra=properties)
+                return None
+        except Exception:
+            return None
+        if time.monotonic() - started > COMPLETION_GIVE_UP_SECONDS:
+            return None
+        return COMPLETION_POLL_SECONDS
+
+    try:
+        bpy.app.timers.register(tick, first_interval=COMPLETION_POLL_SECONDS)
+    except Exception:
+        pass

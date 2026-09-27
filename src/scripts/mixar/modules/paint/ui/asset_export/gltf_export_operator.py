@@ -111,7 +111,9 @@ class MExportGltf(bpy.types.Operator):
         kwargs = settings_to_kwargs(gs, exclude=_EXCLUDE)
 
         try:
-            bpy.ops.export_scene.gltf(filepath=self.filepath, **kwargs)
+            status = bpy.ops.export_scene.gltf(filepath=self.filepath, **kwargs)
+            if 'FINISHED' not in status:
+                raise RuntimeError(f"exporter returned {sorted(status)}")
         except Exception as e:
             logger.error("glTF export failed: %s", e)
             self.report({'ERROR'}, f"Export failed: {e}")

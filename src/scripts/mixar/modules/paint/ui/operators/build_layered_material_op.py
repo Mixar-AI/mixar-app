@@ -35,7 +35,7 @@ class LAYERS_OT_BuildLayeredMaterial(bpy.types.Operator):
             self.report({'ERROR'}, f"Build failed: {e}")
             return {'CANCELLED'}
         self.report({'INFO'}, f"Built {result['layers_built']} layer(s)")
-        print("__RESULT__" + json.dumps({"success": True, **result}))
+        print("\n__RESULT__" + json.dumps({"success": True, **result}))
         return {'FINISHED'}
 
 
