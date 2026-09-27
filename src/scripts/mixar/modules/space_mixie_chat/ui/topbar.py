@@ -32,8 +32,9 @@ from __future__ import annotations
 import bpy
 from bpy.types import Header, Panel
 
-from ..constants import SessionState  # noqa: F401  (kept for parity)
-from ..core import avatar_icon
+from ..constants import SOUND_FEEDBACK_WIDTHS, SessionState  # noqa: F401  (kept for parity)
+from ..core import avatar_icon, sound_feedback
+from ..core.completion_sound import OFF, get_completion_sound, get_notifications_muted
 
 
 class MIXAR_PT_profile(Panel):
@@ -99,6 +100,30 @@ class MIXAR_PT_profile(Panel):
         layout.operator("mixie_chat.logout", text="Logout", icon='PANEL_CLOSE')
 
 
+
+def _draw_sound_toggle(layout, context):
+    if not (hasattr(bpy.types, 'MIXIE_CHAT_OT_toggle_completion_sound') and
+            hasattr(context.window_manager, 'mixar_notifications_muted')):
+        return
+    # The persisted config is the truth; the enum mirror's index lookup can
+    # miss a catalog clip and read as Off while that clip plays.
+    enabled = not get_notifications_muted() and get_completion_sound() != OFF
+    fraction = sound_feedback.expansion() if enabled else 0.0
+    closed, opened = SOUND_FEEDBACK_WIDTHS
+    row = layout.mixar_surface(theme='ZEN').row(align=True)
+    row.alignment = 'EXPAND'
+    row.ui_units_x = closed + (opened - closed) * fraction
+    # Native icon-only buttons otherwise retain their fixed one-unit width.
+    row.scale_x = row.ui_units_x if fraction < 0.999 else 1.0
+    # Keep the full label readable; expand first, then reveal it for the hold.
+    row.operator('mixie_chat.toggle_completion_sound',
+                 text='Sound on' if fraction >= 0.999 else '',
+                 icon=('NONE' if fraction >= 0.999 else
+                       'NOTIFICATION_SOUND' if enabled else 'NOTIFICATION_SOUND_OFF'),
+                 depress=enabled)
+    row.mixar_style(component='ACTION', variant='GHOST')
+
+
 def _draw_topbar_profile_right(self, context):
     """Append the profile dropdown / login button to the right side of the top bar.
 
@@ -117,6 +142,9 @@ def _draw_topbar_profile_right(self, context):
     # Small visual breather between the view-layer search and the
     # profile pill so the two clusters don't read as one control.
     layout.separator()
+
+    _draw_sound_toggle(layout, context)
+    layout.separator(factor=0.4)
 
     # The native right-header layout fills the menu-bar height. Reserve room
     # for its taller account icon so the label remains fully visible.

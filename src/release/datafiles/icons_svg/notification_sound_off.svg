@@ -1,0 +1,9 @@
+<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1400" viewBox="0 0 1400 1400">
+<g transform="scale(58.3333333333)" opacity="0.7">
+<path fill="#fff" d="m8.9 7.5 3.1-2.5c.5-.4 1-.1 1 .5v6.1ZM13 14.4v4.1c0 .6-.5.9-1 .5l-5-4H3c-.6 0-1-.4-1-1v-4c0-.6.4-1 1-1h4l.33-.27Z"/>
+<path fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" d="m3 3 18 18"/>
+</g>
+</svg>
