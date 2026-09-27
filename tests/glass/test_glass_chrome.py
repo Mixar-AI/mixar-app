@@ -65,7 +65,7 @@ class TestTheTopbarPillsArePanes:
         assert "draw_roundbox_4fv_ex(" not in body
         assert "CinemaPillOnA" not in body
         assert "draw_label_gradient" not in body
-        assert "draw_label_centred(rect, but->drawstr.c_str(), label, label_scale);" in body
+        assert "mixar_cinema_draw_label(*rect, but->str.c_str(), but->icon, label, label_scale);" in body
 
     def test_the_viewport_pills_alpha_dims_the_whole_pane(self) -> None:
         """Dim and lit are one alpha, so it must scale every layer.

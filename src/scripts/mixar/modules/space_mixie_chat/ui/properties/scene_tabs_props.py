@@ -30,6 +30,8 @@ from bpy.types import PropertyGroup
 
 from mixar.config.logging_config import get_logger
 
+from ...core.scene_tab_snapshot import zen_view3d_override
+
 logger = get_logger(__name__)
 
 _ANIMATION_INTERVAL = 1.0 / 60.0
@@ -77,25 +79,7 @@ class MixarSceneTab(PropertyGroup):
 
 # --- slide clock (mirror of the moodboard drawer) ---------------------------
 
-def _view3d_override():
-    window_manager = getattr(bpy.context, 'window_manager', None)
-    if window_manager is None:
-        return None
-    for window in window_manager.windows:
-        if window.workspace.name != 'Zen Mode':
-            continue
-        screen = window.screen
-        if screen is None:
-            continue
-        for area in screen.areas:
-            if area.type != 'VIEW_3D':
-                continue
-            region = next((r for r in area.regions if r.type == 'WINDOW'), None)
-            if region is None:
-                continue
-            return {'window': window, 'screen': screen, 'area': area, 'region': region,
-                    'space_data': area.spaces.active}
-    return None
+_view3d_override = zen_view3d_override
 
 
 _THUMBS_INTERVAL = 1.0
@@ -103,10 +87,10 @@ _last_thumbs = 0.0
 
 
 def _refresh_thumbs(amount: float) -> None:
-    """Card thumbnails are rendered here, from the timer, never in the drawer's
-    draw pass: the operator evaluates a background tab's depsgraph itself
-    (a workspace rebuild or a routed script leaves it tagged and nobody else
-    evaluates a scene no window shows) and renders only the cards that changed."""
+    """Refresh the SHOWN tab's card from the viewport's last frame (the operator
+    throttles and skips an unchanged scene). Cards are snapshots, never renders:
+    a background tab keeps its last picture until it is shown again
+    (``core/scene_tab_snapshot.py``)."""
     global _last_thumbs
     now = time.monotonic()
     if amount < 0.98 or now - _last_thumbs < _THUMBS_INTERVAL:

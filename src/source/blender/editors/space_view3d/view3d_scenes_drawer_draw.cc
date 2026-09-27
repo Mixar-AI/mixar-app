@@ -259,10 +259,7 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         rctf bed;
         BLI_rctf_rcti_copy(&bed, &thumb);
         draw_pill(bed, zen.panel, 6.0f * scale);
-        auto found = runtime->thumbs.find(card.scene_name);
-        if (found != runtime->thumbs.end()) {
-          view3d_scenes_drawer_thumb_draw(found->second, thumb);
-        }
+        view3d_scenes_drawer_thumb_draw(runtime->thumbs[card.scene_name], card.scene_name, thumb);
       }
       card.thumb_rect.xmin = thumb.xmin + region->winrct.xmin;
       card.thumb_rect.xmax = thumb.xmax + region->winrct.xmin;

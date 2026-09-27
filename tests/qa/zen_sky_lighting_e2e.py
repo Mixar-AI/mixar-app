@@ -36,7 +36,7 @@ with bpy.context.temp_override(window=win, area=area):
     bpy.ops.screen.area_split(direction='HORIZONTAL', factor=.5)
 result=True
 """)
-    qa.wait("len(drv.find(text='ON', op='MIXAR_OT_zen_set_sky', region_type='HEADER')) == 2", timeout=8)
+    qa.wait("len(drv.find(op='MIXAR_OT_zen_set_sky', region_type='HEADER')) == 2", timeout=8)
     qa.eval(SETUP + """
 scene.render.engine = 'BLENDER_EEVEE'
 for view, flags in zip(views, ((False, True), (True, False))):
@@ -52,7 +52,10 @@ def sky(qa, enabled):
     # Choose the lower viewport's native target deterministically.
     qa.eval(f"""
 def click_sky():
-    targets = sorted(drv.find(text={'ON' if enabled else 'OFF'!r}, op='MIXAR_OT_zen_set_sky',
+    from mixar.modules.workflow.core.zen_scene import sky_enabled
+    if sky_enabled(drv.main_window().scene) == {enabled!r}:
+        return True
+    targets = sorted(drv.find(op='MIXAR_OT_zen_set_sky',
                              area_type='VIEW_3D', region_type='HEADER'),
                      key=lambda w: w['rect'][1])
     yield from drv.click_steps(targets[0])
@@ -138,7 +141,7 @@ def persistence(qa):
     path = OUT / "two-viewport-sky.mixar"
     qa.eval(f"result=str(bpy.ops.wm.save_as_mainfile(filepath={str(path)!r}, check_existing=False))")
     qa.eval(f"result=str(bpy.ops.wm.open_mainfile(filepath={str(path)!r}))")
-    qa.wait("len(drv.find(text='ON', op='MIXAR_OT_zen_set_sky', region_type='HEADER')) == 2", timeout=12)
+    qa.wait("len(drv.find(op='MIXAR_OT_zen_set_sky', region_type='HEADER')) == 2", timeout=12)
     assert qa.eval(FLAGS) == [[True, True], [True, True]]
     sky(qa, False)
     assert qa.eval(FLAGS) == ORIGINAL

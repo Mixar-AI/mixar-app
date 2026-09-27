@@ -56,7 +56,9 @@ def reset():
     return True
 result=reset()
 """)
-    qa.wait("drv.main_window().workspace.name == 'Zen Mode' and bool(drv.find(text='Add Objects', area_type='VIEW_3D'))", timeout=12)
+    qa.wait("drv.main_window().workspace.name == 'Zen Mode' and "
+            "bool(drv.find(text='Add Objects', area_type='VIEW_3D') or "
+            "drv.find(text='Add', area_type='VIEW_3D'))", timeout=12)
 
 
 def snap(qa, name):
@@ -75,7 +77,7 @@ r = next(r for r in area.regions if r.type == 'HEADER')
 result = [r.x, r.y, r.width, r.height, bpy.context.preferences.system.ui_scale]
 """)
     x, y, width, height, scale = geometry
-    assert abs(height / scale - 54 * .85) <= 1, geometry
+    assert abs(height / scale - 40) <= 1, geometry
     interactive = [w for w in widgets if w["type"] not in ("Label", "Other")]
     for w in interactive:
         x0, y0, x1, y1 = w["rect"]
@@ -85,7 +87,7 @@ result = [r.x, r.y, r.width, r.height, bpy.context.preferences.system.ui_scale]
     ordered = sorted(interactive, key=lambda w: w["rect"][0])
     for a, b in zip(ordered, ordered[1:]):
         assert a["rect"][2] <= b["rect"][0] + 1, (a, b)
-    assert any(w.get("text") == "Add Objects" for w in widgets)
+    assert any(w.get("text") in {"Add Objects", "Add"} for w in widgets)
     assert any(w.get("text") == "Export" for w in widgets)
     snap(qa, "toolbar-default")
     targets = qa.cmd("snap", path=str(OUT / "toolbar-targets.png"),
@@ -240,7 +242,7 @@ view.shading.use_scene_world = False
 view.shading.use_scene_world_render = True
 result = {'name':original.name, 'nodes':len(original.node_tree.nodes)}
 """)
-    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="ON")
+    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
     qa.wait("drv.main_window().scene.world == drv.main_window().scene.mixar_zen_sky.sky_world", timeout=6)
     data = qa.eval(SETUP + """
 assert scene.mixar_zen_sky.previous_world['qa_zen_preserve'] == 'original-world'
@@ -259,17 +261,17 @@ def preview():
 result=preview()
 """)
     snap(qa, "sky-on")
-    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="OFF")
+    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
     assert qa.eval(SETUP + "result=scene.world.name") == saved["name"]
     assert qa.eval(SETUP + "result=len(scene.world.node_tree.nodes)") == saved["nodes"]
     assert qa.eval(SETUP + "result=[view.shading.use_scene_world, view.shading.use_scene_world_render]") == [False, True]
     snap(qa, "sky-off")
-    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="ON")
+    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
     assert qa.eval("result=len(bpy.data.worlds)") == data["worlds"], "Toggle leaked worlds"
-    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="OFF")
+    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
     qa.eval(SETUP + "scene.world=None; result=True")
-    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="ON")
-    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="OFF")
+    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
+    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
     assert qa.eval(SETUP + "result=scene.world is None")
     qa.eval(SETUP + f"scene.world=bpy.data.worlds[{saved['name']!r}]; view.shading.type='SOLID'; result=True")
     return {**data, "restored": saved["name"], "none_restored": True}
@@ -315,13 +317,9 @@ def compact(qa):
         assert qa.eval(SETUP + "result=scene.eevee.taa_render_samples") == 24
         snap(qa, "compact-render-settings")
         qa.press("ESC")
-        qa.click(**HEADER, text="Sky Light")
-        qa.click(popup=True, op="MIXAR_OT_zen_set_sky", text="ON")
-        qa.press("ESC")
+        qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
         assert qa.eval(SETUP + "result=scene.world == scene.mixar_zen_sky.sky_world")
-        qa.click(**HEADER, text="Sky Light")
-        qa.click(popup=True, op="MIXAR_OT_zen_set_sky", text="OFF")
-        qa.press("ESC")
+        qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
         return {"scale": saved * 1.5, "render_samples": 24, "sky": True}
     finally:
         qa.eval(f"bpy.context.preferences.view.ui_scale={saved!r}; result=True")
@@ -330,7 +328,7 @@ def compact(qa):
 def persistence(qa):
     original = qa.eval(SETUP + "result=scene.world.name")
     flags = qa.eval(SETUP + "result=[view.shading.use_scene_world, view.shading.use_scene_world_render]")
-    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="ON")
+    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
     qa.click(area_type="TOPBAR", text="Edit")
     qa.click(popup=True, op="ED_OT_undo")
     qa.wait(f"drv.main_window().scene.world.name == {original!r}", timeout=6)
@@ -345,7 +343,7 @@ def persistence(qa):
     qa.eval(f"result=str(bpy.ops.wm.open_mainfile(filepath={str(path)!r}))")
     qa.wait("bool(drv.find(text='ON', op='MIXAR_OT_zen_set_sky'))", timeout=12)
     assert qa.eval(SETUP + "result=scene.world == scene.mixar_zen_sky.sky_world")
-    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky", text="OFF")
+    qa.click(**HEADER, op="MIXAR_OT_zen_set_sky")
     assert qa.eval(SETUP + "result=scene.world.name") == original
     assert qa.eval(SETUP + "result=[view.shading.use_scene_world, view.shading.use_scene_world_render]") == flags
     snap(qa, "sky-restored-after-reopen")

@@ -151,13 +151,29 @@ bool view3d_scenes_drawer_is_open(const ARegion *region);
 
 void view3d_scenes_drawer_region_register(SpaceType *st);
 
-/** Thumbnails (`view3d_scenes_drawer_thumbs.cc`). */
-void view3d_scenes_drawer_thumb_render(ScenesDrawerThumb &thumb, Main *bmain, const wmWindowManager *wm,
-                                       Scene *scene, const View3D *host, int w, int h,
-                                       double min_interval);
+/** Thumbnails (`view3d_scenes_drawer_thumbs.cc`): snapshots of the host
+ * viewport, kept in a session store by scene name. */
+/** False once snapshots are off for the session (env kill switch, or fail-closed
+ * after repeated GPU failures). */
+bool view3d_scenes_drawer_snapshots_enabled();
+/** True while a snapshot must not be taken: resize dispatch, a render, no GPU
+ * context, a locked interface or an island/pill window drag in progress. */
+bool view3d_scenes_drawer_snapshot_blocked(const bContext *C);
+/** Copy the host WINDOW region's last drawn frame as `scene`'s thumbnail
+ * (`thumb_w` x `thumb_h` pixels). Without `force` the shown card refreshes
+ * only when the depsgraph changed and not more than every couple of seconds.
+ * Returns true when a new picture was stored; any failure keeps the last one. */
+bool view3d_scenes_drawer_snapshot_capture(const bContext *C, ARegion *host_region,
+                                           const Scene *scene, int thumb_w, int thumb_h,
+                                           bool force);
+bool view3d_scenes_drawer_snapshot_exists(const std::string &scene_name);
+/** Drop snapshots of scenes that no longer exist in `bmain`. */
+void view3d_scenes_drawer_snapshot_evict(const Main *bmain);
 void view3d_scenes_drawer_thumb_free(ScenesDrawerThumb &thumb);
-/** Draw the last render into `rect` (region pixels, inclusive), uploading it first if new. */
-void view3d_scenes_drawer_thumb_draw(ScenesDrawerThumb &thumb, const rcti &rect);
+/** Draw `scene_name`'s snapshot into `rect` (region pixels, inclusive), copying
+ * it from the store and uploading it first if it changed. */
+void view3d_scenes_drawer_thumb_draw(ScenesDrawerThumb &thumb, const std::string &scene_name,
+                                     const rcti &rect);
 void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area);
 
 /** \} */

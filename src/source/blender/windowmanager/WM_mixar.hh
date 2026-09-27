@@ -23,4 +23,15 @@ namespace blender {
  */
 bool Mixar_window_resize_dispatch_active();
 
+/**
+ * Make `win`'s GPU context the active one for GPU work done outside a draw
+ * (`wm_draw.cc`'s front-buffer reads do the same). A region's viewport
+ * textures sample as black from another window's context on Metal, and the
+ * island and pill are windows of their own, so the drawable window is often
+ * not the host. Returns true when a switch happened; then call
+ * #Mixar_window_gpu_context_pop when done.
+ */
+bool Mixar_window_gpu_context_push(const wmWindowManager *wm, wmWindow *win);
+void Mixar_window_gpu_context_pop(const wmWindowManager *wm);
+
 }  // namespace blender

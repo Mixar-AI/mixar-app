@@ -24,8 +24,8 @@ idnames are frozen agent contracts); only what the user reads changed.
 
 import bpy
 
-_PILL_UNITS = 7.5
-"""Pill width in UI units — the design's 150 px at 1x (1 unit = 20 px)."""
+_PILL_UNITS = 6.0
+"""120 logical pixels, matching the Zen toolbar entry (1 unit = 20 px)."""
 
 
 def draw_director_entry(self, context):
@@ -49,17 +49,17 @@ def draw_director_entry(self, context):
     is_directing = bool(state.is_directing)
     if is_directing:
         # Clicking the active pill leaves Cinema Mode without losing the take.
-        sub.operator("mixar.director_finish", text="Cinema Mode")
+        sub.operator("mixar.director_finish", text="Cinema Mode", icon="CINEMA_REEL")
     else:
-        sub.operator("mixar.director_enter", text="Cinema Mode")
+        sub.operator("mixar.director_enter", text="Cinema Mode", icon="CINEMA_REEL")
 
-    # Native pill chrome: dark fill, hairline border, label graded grey to
-    # white (interface_mixar_topbar.cc). Guarded so a build without the
+    # Native pill chrome: glass fill, hairline border, film strip and raised V1
+    # (interface_mixar_topbar.cc). Guarded so a build without the
     # widget still shows a working, if stock, button.
     if hasattr(sub, "mixar_topbar_element"):
         sub.mixar_topbar_element(kind='CINEMA_PILL', active=is_directing)
 
-    # The switch knob eases across in C++; that needs frames, and a redraw
+    # The selected fill eases in C++; that needs frames, and a redraw
     # tagged from a draw callback does not wake the idle loop. Same pump the
     # mode slider uses — it no-ops unless the state actually changed.
     try:

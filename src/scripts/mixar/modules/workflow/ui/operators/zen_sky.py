@@ -13,7 +13,7 @@ from ...core.zen_sky_viewports import set_sky_viewports
 class MIXAR_OT_zen_set_sky(bpy.types.Operator):
     bl_idname = "mixar.zen_set_sky"
     bl_label = "Enable Sky Light"
-    bl_description = ("Use a procedural sky for scene lighting in renders; "
+    bl_description = ("Use sky or HDRI environment lighting in renders; "
                       "Off restores the previous world and viewport lighting. "
                       "Visible in Material Preview and Rendered shading")
     bl_options = {"REGISTER", "UNDO"}

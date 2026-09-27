@@ -33,6 +33,7 @@ from mixar.modules.common.scenes_log import slog
 
 from ...constants import SessionState, is_lane_scene
 from ...core import get_connection_manager, get_session_manager
+from ...core.scene_tab_snapshot import snapshot_shown_tab
 from ...core.scene_tab_send import send_selection_to_scene  # noqa: F401 — the send operator's worker
 
 logger = get_logger(__name__)
@@ -206,6 +207,7 @@ def new_scene_tab(name: str = "") -> object:
         session.set_connected(scene)          # IDLE: the composer accepts a message
     else:
         session.set_disconnected(scene)
+    snapshot_shown_tab()                   # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     renumber_tabs(existing + [scene])      # the new tab takes the last slot
     slog("tab.new", scene, connected=live, tabs=len(real_scenes()))
@@ -216,6 +218,8 @@ def switch_scene_tab(scene, was=None) -> bool:
     """Show a tab in every window. False for a lane or a missing scene."""
     if scene is None or is_lane_scene(scene):
         return False
+    if was is not scene:
+        snapshot_shown_tab()               # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     slog("tab.switch", scene, was=getattr(was, "name", ""))
     return True

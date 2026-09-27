@@ -39,24 +39,29 @@ def set_sky_enabled(scene, enabled):
 
     world = state.sky_world
     if world is None:
-        world = bpy.data.worlds.new("Zen Sky")
-        try:
-            # Blender 5.2 worlds always have nodes; earlier builds need this.
-            if not world.use_nodes:
-                world.use_nodes = True
-            tree = world.node_tree
-            tree.nodes.clear()
-            output = tree.nodes.new("ShaderNodeOutputWorld")
-            background = tree.nodes.new("ShaderNodeBackground")
-            sky = tree.nodes.new("ShaderNodeTexSky")
-            sky.location = (-520, 0)
-            background.location = (-240, 0)
-            output.location = (0, 0)
-            tree.links.new(sky.outputs["Color"], background.inputs["Color"])
-            tree.links.new(background.outputs["Background"], output.inputs["Surface"])
-        except Exception:
-            bpy.data.worlds.remove(world)
-            raise
+        world = create_sky_world()
         state.sky_world = world
     state.previous_world = scene.world
     scene.world = world
+
+
+def create_sky_world():
+    """Build a private world without changing a scene or its saved pointers."""
+    world = bpy.data.worlds.new("Zen Sky")
+    try:
+        if not world.use_nodes:
+            world.use_nodes = True
+        tree = world.node_tree
+        tree.nodes.clear()
+        output = tree.nodes.new("ShaderNodeOutputWorld")
+        background = tree.nodes.new("ShaderNodeBackground")
+        sky = tree.nodes.new("ShaderNodeTexSky")
+        sky.location = (-520, 0)
+        background.location = (-240, 0)
+        output.location = (0, 0)
+        tree.links.new(sky.outputs["Color"], background.inputs["Color"])
+        tree.links.new(background.outputs["Background"], output.inputs["Surface"])
+    except Exception:
+        bpy.data.worlds.remove(world)
+        raise
+    return world

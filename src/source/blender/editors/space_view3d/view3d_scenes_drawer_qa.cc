@@ -66,6 +66,13 @@ void drawer_qa_targets(const wmWindow *win,
   int index = 0;
   for (const ScenesDrawerCard &card : runtime->cards) {
     push(card.rect, "scenes_drawer_card", card.scene_name, card.session_id, index, card.is_active);
+    if (BLI_rcti_size_x(&card.thumb_rect) > 0) {
+      push(card.thumb_rect,
+           "scenes_drawer_card_thumb",
+           card.scene_name,
+           view3d_scenes_drawer_snapshot_exists(card.scene_name) ? "snapshot" : "none",
+           index);
+    }
     if (BLI_rcti_size_x(&card.close_rect) > 0) {
       push(card.close_rect, "scenes_drawer_card_close", card.scene_name, card.session_id, index);
     }

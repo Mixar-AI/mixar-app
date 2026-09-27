@@ -67,14 +67,11 @@ struct ScenesDrawerCard {
   rcti thumb_rect = {};
 };
 
-/** A scene rendered into a small offscreen for its card (see
- * `view3d_scenes_drawer_thumbs.cc`). Owned by the region runtime. */
+/** A card's copy of its scene's snapshot (see `view3d_scenes_drawer_thumbs.cc`:
+ * the pixels come from a session store that outlives the region; the texture
+ * is the region's own). Never a render: a snapshot of the host viewport as the
+ * tab was last shown. */
 struct ScenesDrawerThumb {
-  GPUOffScreen *offscreen = nullptr;
-  /** The last render, read back the moment it finished. The render runs from
-   * a timer, outside any window frame; a GPU texture rendered there and read
-   * by the card's blit in a later frame came up black on Metal from the
-   * second render on. Pixels in memory have no such lifetime. */
   std::vector<unsigned char> pixels;
   int pixels_w = 0;
   int pixels_h = 0;
@@ -82,11 +79,8 @@ struct ScenesDrawerThumb {
   bool pixels_dirty = false;
   /** The card's texture, created and refreshed in the region's draw pass. */
   blender::gpu::Texture *texture = nullptr;
-  bool has_render = false;
-  bool render_failed = false;
-  uint64_t update_count = 0;
-  double last_render_time = 0.0;
-  int draw_type = -1;
+  /** Store generation these pixels were copied from; 0 = nothing copied yet. */
+  uint64_t generation = 0;
 };
 
 /** Last painted slide and layout, stored on the drawer region's `regiondata`. */
@@ -116,7 +110,7 @@ struct ScenesDrawerRuntime {
    * threshold, the slot the pointer is over (an insertion line is drawn). */
   int drag_index = -1;
   int drag_target = -1;
-  /** Thumbnails by scene name; entries for scenes no longer listed are freed. */
+  /** Card thumbnails by scene name; entries for scenes no longer listed are freed. */
   std::unordered_map<std::string, ScenesDrawerThumb> thumbs;
 };
 

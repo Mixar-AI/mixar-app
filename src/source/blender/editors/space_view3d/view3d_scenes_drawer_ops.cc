@@ -186,6 +186,16 @@ static void VIEW3D_OT_scenes_drawer_set(wmOperatorType *ot)
 
 /* --- Thumbnails -------------------------------------------------------- */
 
+static void thumb_size(int *r_w, int *r_h)
+{
+  const float scale = UI_SCALE_FAC;
+  *r_w = int(VIEW3D_SCENES_DRAWER_THUMB_W * scale) + 1;
+  *r_h = int(VIEW3D_SCENES_DRAWER_THUMB_H * scale) + 1;
+}
+
+/* The drawer tick: refresh the SHOWN tab's card from the host viewport's last
+ * frame (throttled, only after its depsgraph changed) and drop snapshots of
+ * scenes that are gone. Never renders anything: see `_thumbs.cc`. */
 static wmOperatorStatus drawer_thumbs_exec(bContext *C, wmOperator * /*op*/)
 {
   ScrArea *area = view3d_scenes_drawer_area_find(C);
@@ -193,29 +203,18 @@ static wmOperatorStatus drawer_thumbs_exec(bContext *C, wmOperator * /*op*/)
   ScenesDrawerRuntime *runtime = region ? static_cast<ScenesDrawerRuntime *>(region->regiondata) :
                                           nullptr;
   if (area == nullptr || region == nullptr || runtime == nullptr || (region->flag & RGN_FLAG_HIDDEN) ||
-      runtime->amount < VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT)
+      runtime->amount < VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT ||
+      !view3d_scenes_drawer_snapshots_enabled())
   {
     return OPERATOR_CANCELLED;
   }
-  const View3D *host = static_cast<const View3D *>(area->spacedata.first);
-  const float scale = UI_SCALE_FAC;
-  const int thumb_w = int(VIEW3D_SCENES_DRAWER_THUMB_W * scale) + 1;
-  const int thumb_h = int(VIEW3D_SCENES_DRAWER_THUMB_H * scale) + 1;
-  Main *bmain = CTX_data_main(C);
-  bool rendered = false;
-  for (const ScenesDrawerCard &card : runtime->cards) {
-    Scene *scene = reinterpret_cast<Scene *>(
-        BKE_libblock_find_name(bmain, ID_SCE, card.scene_name.c_str()));
-    if (scene == nullptr) {
-      continue;
-    }
-    ScenesDrawerThumb &t = runtime->thumbs[card.scene_name];
-    const double before = t.last_render_time;
-    view3d_scenes_drawer_thumb_render(t, bmain, CTX_wm_manager(C), scene, host, thumb_w, thumb_h,
-                                      card.is_active ? 0.5 : 1.5);
-    rendered |= (t.last_render_time != before);
-  }
-  if (rendered) {
+  view3d_scenes_drawer_snapshot_evict(CTX_data_main(C));
+  ARegion *host = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
+  int thumb_w, thumb_h;
+  thumb_size(&thumb_w, &thumb_h);
+  if (view3d_scenes_drawer_snapshot_capture(
+          C, host, CTX_data_scene(C), thumb_w, thumb_h, /*force=*/false))
+  {
     ED_region_tag_redraw(region);
   }
   return OPERATOR_FINISHED;
@@ -225,8 +224,44 @@ static void VIEW3D_OT_scenes_drawer_thumbs(wmOperatorType *ot)
 {
   ot->name = "Refresh Scenes Drawer Thumbnails";
   ot->idname = "VIEW3D_OT_scenes_drawer_thumbs";
-  ot->description = "Evaluate and render the scene tab thumbnails that changed (timer-driven)";
+  ot->description = "Refresh the shown scene tab's card from the viewport (timer-driven)";
   ot->exec = drawer_thumbs_exec;
+  ot->poll = view3d_scenes_drawer_op_poll;
+  ot->flag = OPTYPE_INTERNAL;
+}
+
+/* Called by the Python tab switch BEFORE the windows move to another scene:
+ * the leaving tab's last drawn frame becomes its card. Works with the drawer
+ * shut too, so the cards have pictures when it opens. */
+static wmOperatorStatus drawer_snapshot_exec(bContext *C, wmOperator * /*op*/)
+{
+  if (!view3d_scenes_drawer_snapshots_enabled()) {
+    return OPERATOR_CANCELLED;
+  }
+  ScrArea *area = view3d_scenes_drawer_area_find(C);
+  ARegion *host = area ? BKE_area_find_region_type(area, RGN_TYPE_WINDOW) : nullptr;
+  if (host == nullptr) {
+    return OPERATOR_CANCELLED;
+  }
+  int thumb_w, thumb_h;
+  thumb_size(&thumb_w, &thumb_h);
+  if (!view3d_scenes_drawer_snapshot_capture(
+          C, host, CTX_data_scene(C), thumb_w, thumb_h, /*force=*/true))
+  {
+    return OPERATOR_CANCELLED;
+  }
+  if (ARegion *region = view3d_scenes_drawer_region_find(area)) {
+    ED_region_tag_redraw(region);
+  }
+  return OPERATOR_FINISHED;
+}
+
+static void VIEW3D_OT_scenes_drawer_snapshot(wmOperatorType *ot)
+{
+  ot->name = "Snapshot Scene Tab";
+  ot->idname = "VIEW3D_OT_scenes_drawer_snapshot";
+  ot->description = "Keep the viewport's last frame as the shown scene tab's card picture";
+  ot->exec = drawer_snapshot_exec;
   ot->poll = view3d_scenes_drawer_op_poll;
   ot->flag = OPTYPE_INTERNAL;
 }
@@ -326,6 +361,7 @@ void view3d_scenes_drawer_operatortypes()
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_hover);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_scroll);
   WM_operatortype_append(VIEW3D_OT_scenes_drawer_thumbs);
+  WM_operatortype_append(VIEW3D_OT_scenes_drawer_snapshot);
 }
 
 void view3d_scenes_drawer_keymap(wmKeyConfig *keyconf)
