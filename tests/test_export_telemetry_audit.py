@@ -190,3 +190,55 @@ def test_every_capture_export_caller_passes_success_explicitly():
             # Names never ride along: only counts, settings and the extension.
             assert "name=" not in call and "names=" not in call, f"{path}: {call}"
     assert seen >= 5
+
+
+def test_every_gltf_export_call_site_stays_on_the_active_scene():
+    # use_selection alone still walks every Blender scene; an object selected
+    # in another scene lands in the file as a second glTF scene.
+    for rel in ("common/job_queue/core/model_io.py", "connector/core/unreal_export.py"):
+        src = (MODULES / rel).read_text(encoding="utf-8")
+        for match in re.finditer(r"bpy\.ops\.export_scene\.gltf\(", src):
+            call = _call_text(src, match.start() + len("bpy.ops.export_scene.gltf"))
+            assert "use_active_scene=True" in call, f"{rel}: {call}"
+    presets = (MODULES / "space_mixie_chat/core/export_presets.py").read_text(encoding="utf-8")
+    assert '"use_active_scene": True' in presets
+
+
+def test_export_selected_mesh_exports_only_the_selected_meshes_of_the_view_layer(tmp_path):
+    from unittest.mock import MagicMock
+    for name in ("requests", "requests.adapters", "keyring"):
+        sys.modules.setdefault(name, MagicMock(name=name))
+    if not hasattr(sys.modules["requests"], "adapters"):
+        sys.modules["requests"].adapters = sys.modules["requests.adapters"]
+    from mixar.modules.common.job_queue.core import model_io
+    calls = []
+
+    class _Obj:
+        def __init__(self, name, type_):
+            self.name, self.type, self.selected = name, type_, True
+
+        def select_set(self, value):
+            self.selected = value
+
+    mesh, empty, other_scene = _Obj("Plant", "MESH"), _Obj("Root", "EMPTY"), _Obj("Monkey", "MESH")
+    class _Layer:
+        active = empty
+
+        def __contains__(self, name):
+            return name in ("Plant", "Root")
+
+    view_layer = SimpleNamespace(objects=_Layer())
+    context = SimpleNamespace(selected_objects=[mesh, empty, other_scene], view_layer=view_layer)
+
+    def gltf(**kwargs):
+        calls.append(kwargs)
+        assert [o.name for o in context.selected_objects if o.selected] == ["Plant"]
+        open(kwargs["filepath"], "wb").write(b"glTF")
+        return {"FINISHED"}
+
+    bpy = sys.modules["bpy"]
+    with patch.object(bpy.ops.export_scene, "gltf", gltf), patch.object(model_io, "bpy", bpy):
+        data, name = model_io.export_selected_mesh(context, "GLB")
+    assert data == b"glTF" and name == "export.glb"
+    assert calls[0]["use_active_scene"] is True and calls[0]["use_selection"] is True
+    assert [o.selected for o in (mesh, empty, other_scene)] == [True, True, True]  # restored

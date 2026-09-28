@@ -218,6 +218,40 @@ void draw_trash(const rcti &box, const float scale, const float color[4])
   GPU_blend(GPU_BLEND_ALPHA);
 }
 
+void draw_selection_mark(const rctf &card, const float scale)
+{
+  /* Batch selection must read at a glance next to the active row's wash, so
+   * it is three cues, none of them subtle: a green tint over the whole card,
+   * a two-pixel outline in the light focus green (the dark primary vanished
+   * on the glass), and a filled check badge where the drag grip sits. */
+  const ui::mixar_tokens::Palette &zen = ui::mixar_tokens::mixar_zen();
+  const float radius = 10.0f * scale;
+  float tint[4];
+  with_alpha(zen.primary, 0.30f, tint);
+  ui::draw_roundbox_corner_set(ui::CNR_ALL);
+  ui::draw_roundbox_4fv(&card, true, radius, tint);
+  float line[4];
+  with_alpha(zen.focus, 1.0f, line);
+  ui::draw_roundbox_4fv(&card, false, radius, line);
+  rctf inner = card;
+  BLI_rctf_pad(&inner, -U.pixelsize, -U.pixelsize);
+  ui::draw_roundbox_4fv(&inner, false, radius - U.pixelsize, line);
+
+  const float size = 18.0f * scale;
+  const float cx = card.xmin + 15.0f * scale;
+  const float cy = (card.ymin + card.ymax) * 0.5f;
+  rctf badge = {cx - 0.5f * size, cx + 0.5f * size, cy - 0.5f * size, cy + 0.5f * size};
+  draw_pill(badge, line, 0.5f * size);
+  const float glyph = 14.0f * scale;
+  uchar dark[4];
+  for (int i = 0; i < 4; i++) {
+    dark[i] = uchar(std::clamp(zen.canvas[i], 0.0f, 1.0f) * 255.0f);
+  }
+  ui::icon_draw_ex(cx - 0.5f * glyph, cy - 0.5f * glyph, ICON_CHECKMARK, 16.0f / glyph, 1.0f, 0.0f,
+                   dark, false, UI_NO_ICON_OVERLAY_TEXT);
+  GPU_blend(GPU_BLEND_ALPHA);
+}
+
 void draw_hint(const rcti &anchor, const char *text, const float scale)
 {
   /* A small label to the LEFT of the control it explains (the trash sits at

@@ -13,7 +13,11 @@ from bpy.props import StringProperty
 from bpy.types import Operator
 from bpy_extras.io_utils import ExportHelper
 
-from ...core.export_destination import clear_destination, set_destination
+from ...core.export_destination import (
+    clear_destination,
+    remember_export_folder,
+    set_destination,
+)
 
 # Every format the agent's export_scene spec may name (agent_export.EXTENSIONS).
 _EXTENSIONS = {"fbx": ".fbx", "glb": ".glb", "gltf": ".gltf", "obj": ".obj",
@@ -37,6 +41,10 @@ class MIXIE_CHAT_OT_choose_export_location(Operator, ExportHelper):
     export_format: StringProperty(default="", options={'HIDDEN', 'SKIP_SAVE'})
     target_scope: StringProperty(default="", options={'HIDDEN', 'SKIP_SAVE'})
     suggested_filename: StringProperty(default="export", options={'HIDDEN', 'SKIP_SAVE'})
+    # The backend's request id from the file_save interrupt context; the
+    # picked folder is remembered under it (bubble id only as a fallback for
+    # an old backend that sends none).
+    request_id: StringProperty(default="", options={'HIDDEN', 'SKIP_SAVE'})
     filename_ext = ".glb"
     filter_glob: StringProperty(default="*.glb", options={'HIDDEN'})
 
@@ -71,6 +79,14 @@ class MIXIE_CHAT_OT_choose_export_location(Operator, ExportHelper):
             self.report({'ERROR'}, "The export filename has the wrong extension")
             return {'CANCELLED'}
         set_destination(self.session_id, self.filepath)
+        # The folder is remembered under the backend's request id so a
+        # retried export_scene in the same request reuses it instead of
+        # asking again (bubble id: fallback for a backend without one).
+        try:
+            remember_export_folder(self.session_id, self.request_id or self.bubble_id,
+                                   os.path.dirname(self.filepath))
+        except Exception:
+            pass
         result = bpy.ops.mixie_chat.select_slot_action(
             bubble_id=self.bubble_id,
             action_value="export_destination_selected",

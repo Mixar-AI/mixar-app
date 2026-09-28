@@ -96,7 +96,7 @@ def test_report_aggregates_each_check_per_mesh():
     bad = SimpleNamespace(name="Bad", type="MESH", rotation_euler=(0.1, 0, 0),
                           scale=(1, 1, 1), modifiers=[],
                           data=SimpleNamespace(materials=[], uv_layers=[]))
-    module.resolve_targets = lambda *_args: [good, bad]
+    module.resolve_targets = lambda *_args, **_kwargs: [good, bad]
     report = module.run_preflight({"target_scope": "scene"})
     assert report["mesh_count"] == 2
     assert report["ready"] is False
