@@ -4,12 +4,17 @@
 
 """Agent Auto Rig Operator.
 
-Agent-driven entry point for Tripo auto-rigging. Unlike the interactive
+Agent-driven entry point for auto-rigging. Unlike the interactive
 ``mixie.animate_generate`` (which reads the sidebar tab + viewport
 selection), this operator takes an explicit ``object_name`` plus rig
 params and dispatches ONE ``tripo_rig`` job through the same
 ``enqueue_rig_jobs`` helper the UI uses — so export / size-cap / queue /
 import (with ``guess_original_bind_pose=False``) are all shared.
+
+``model`` picks the rig engine by catalog slug on the ``tripo_rig``
+service (empty or unknown = the catalog default, Tripo). ``rig_type`` /
+``spec`` are Tripo's knobs; ``height_meters`` is sent only when > 0 and
+the chosen model's catalog schema declares it (e.g. Meshy Auto Rig).
 
 Contract with the agent's ``enqueue_generation`` tool: on success return
 ``{'FINISHED'}``; on any refusal set
@@ -18,7 +23,7 @@ and return ``{'CANCELLED'}`` (the agent script reads that prop).
 """
 
 import bpy
-from bpy.props import StringProperty
+from bpy.props import FloatProperty, StringProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
@@ -41,12 +46,24 @@ def _fail(context, reason: str):
     return {'CANCELLED'}
 
 
+def _model_declares(model_slug: str, param_name: str) -> bool:
+    """Whether the rig model's catalog schema declares *param_name*."""
+    try:
+        from mixar.bootstrap.generation_catalog_cache import get_model
+        from mixar.modules.hunyuan.constants import ANIMATE_RIG_SERVICE
+
+        model = get_model(ANIMATE_RIG_SERVICE, model_slug) or {}
+        return param_name in (model.get("parameters") or {})
+    except Exception:
+        return False
+
+
 class MIXIE_OT_agent_auto_rig(Operator):
-    """Auto-rig a named mesh object via Tripo (agent entry point)"""
+    """Auto-rig a named mesh object via a catalog rig engine (agent entry point)"""
 
     bl_idname = "mixie.agent_auto_rig"
     bl_label = "Agent Auto Rig"
-    bl_description = "Auto-rig the given mesh object using Tripo"
+    bl_description = "Auto-rig the given mesh object"
     bl_options = {'REGISTER'}
 
     object_name: StringProperty(
@@ -66,6 +83,19 @@ class MIXIE_OT_agent_auto_rig(Operator):
         name="Skeleton Spec",
         description="Skeleton convention: 'tripo' or 'mixamo'",
         default="tripo",
+    )
+    model: StringProperty(
+        name="Model",
+        description="Rig engine catalog slug on the tripo_rig service; "
+                    "empty = the catalog default",
+        default="",
+    )
+    height_meters: FloatProperty(
+        name="Height (m)",
+        description="Character height in meters, for engines whose catalog "
+                    "schema declares it; 0 = engine default",
+        default=0.0,
+        min=0.0,
     )
 
     def execute(self, context):
@@ -129,19 +159,22 @@ class MIXIE_OT_agent_auto_rig(Operator):
                 f"Invalid spec '{self.spec}'. Expected 'tripo' or 'mixamo'.",
             )
 
-        # Resolve the catalog model slug (falls back to the constant when the
-        # catalog isn't loaded); enqueue_rig_jobs sends it as the model slug
-        # and the backend routes by its model_ref.
+        # Resolve the requested catalog model slug (an empty/unknown one falls
+        # back to the catalog default, then to the constant when the catalog
+        # isn't loaded); enqueue_rig_jobs sends it as the model slug and the
+        # backend routes by its model_ref.
         model = ANIMATE_RIG_MODEL
         try:
             from mixar.modules.common.generation_params import resolve_model_slug
             model = resolve_model_slug(
-                ANIMATE_RIG_SERVICE, "", ANIMATE_RIG_MODEL,
+                ANIMATE_RIG_SERVICE, (self.model or "").strip(), ANIMATE_RIG_MODEL,
             )
         except Exception:
             pass
 
         params = {"rig_type": rig_type, "spec": skel}
+        if self.height_meters > 0 and _model_declares(model, "height_meters"):
+            params["height_meters"] = float(self.height_meters)
         try:
             enqueued = enqueue_rig_jobs(
                 context=context,
