@@ -128,6 +128,9 @@ static wmOperatorStatus selection_invoke(bContext *C, wmOperator *, const wmEven
       runtime->selected_uids.insert(card.scene_uid);
     }
   }
+  else if (event->type == EVT_ESCKEY && !runtime->confirm_uid.empty()) {
+    runtime->confirm_uid.clear(); /* Esc backs out of an in-card delete confirmation. */
+  }
   else if (event->type == EVT_ESCKEY && !runtime->selected_uids.empty()) {
     runtime->selected_uids.clear();
   }
@@ -154,6 +157,24 @@ void VIEW3D_OT_scenes_drawer_selection(wmOperatorType *ot)
 void view3d_scenes_drawer_delete_card(bContext *C, const std::string &uid)
 {
   invoke_edit(C, "MIXIE_CHAT_OT_delete_scene_tabs", "scene_uids", "[\"" + uid + "\"]");
+}
+
+void view3d_scenes_drawer_delete_card_confirmed(bContext *C, const std::string &uid)
+{
+  wmOperatorType *ot = WM_operatortype_find("MIXIE_CHAT_OT_delete_scene_tabs", true);
+  if (!ot) {
+    return;
+  }
+  PointerRNA props = WM_operator_properties_create_ptr(ot);
+  RNA_string_set(&props, "scene_uids", ("[\"" + uid + "\"]").c_str());
+  RNA_boolean_set(&props, "confirmed", true);
+  WM_operator_name_call_ptr(C, ot, wm::OpCallContext::InvokeDefault, &props, nullptr);
+  WM_operator_properties_free(&props);
+}
+
+void view3d_scenes_drawer_delete_card_now(bContext *C, const std::string &uid)
+{
+  invoke_edit(C, "MIXIE_CHAT_OT_delete_scene_tab_now", "scene_uid", uid);
 }
 
 namespace view3d_scenes_drawer {

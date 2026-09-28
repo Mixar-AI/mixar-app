@@ -120,6 +120,34 @@ static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator *op, const w
     ED_region_tag_redraw(region);
     return OPERATOR_FINISHED;
   }
+  if (!runtime->confirm_uid.empty()) {
+    /* A card is asking "Delete?": its two buttons take the press, any other
+     * press backs out of the question and is then handled as usual. */
+    for (const ScenesDrawerCard &card : runtime->cards) {
+      if (card.scene_uid != runtime->confirm_uid) {
+        continue;
+      }
+      if (BLI_rcti_isect_pt_v(&card.confirm_delete_rect, event->xy)) {
+        const std::string uid = card.scene_uid;
+        runtime->confirm_uid.clear();
+        runtime->hover_confirm = 0;
+        view3d_scenes_drawer_delete_card_confirmed(C, uid);
+        WM_event_add_notifier(C, NC_SCENE, nullptr);
+        ED_region_tag_redraw(region);
+        return OPERATOR_FINISHED;
+      }
+      if (BLI_rcti_isect_pt_v(&card.confirm_cancel_rect, event->xy)) {
+        runtime->confirm_uid.clear();
+        runtime->hover_confirm = 0;
+        ED_region_tag_redraw(region);
+        return OPERATOR_FINISHED;
+      }
+      break;
+    }
+    runtime->confirm_uid.clear();
+    runtime->hover_confirm = 0;
+    ED_region_tag_redraw(region);
+  }
   if (view3d_scenes_drawer_selection_click(C, region, runtime, event)) {
     return OPERATOR_FINISHED;
   }
@@ -137,8 +165,18 @@ static wmOperatorStatus drawer_click_invoke(bContext *C, wmOperator *op, const w
                OPERATOR_PASS_THROUGH;
   }
   if (close) {
-    view3d_scenes_drawer_delete_card(C, runtime->cards[index].scene_uid);
-    WM_event_add_notifier(C, NC_SCENE, nullptr);
+    const ScenesDrawerCard &card = runtime->cards[index];
+    if (card.empty) {
+      /* Nothing to lose: no question, the tab goes and a toast offers Undo. */
+      view3d_scenes_drawer_delete_card_now(C, card.scene_uid);
+      WM_event_add_notifier(C, NC_SCENE, nullptr);
+    }
+    else {
+      /* The card itself asks, in place: no dialog over the drawer. */
+      runtime->confirm_uid = card.scene_uid;
+      runtime->hover_confirm = 0;
+      runtime->selected_uids.clear();
+    }
     ED_region_tag_redraw(region);
     return OPERATOR_FINISHED;
   }
@@ -388,12 +426,24 @@ static wmOperatorStatus drawer_hover_invoke(bContext *C, wmOperator * /*op*/, co
                         BLI_rcti_isect_pt_v(&runtime->new_rect, event->xy);
   const bool over_delete = !runtime->selected_uids.empty() &&
                            BLI_rcti_isect_pt_v(&runtime->bulk_delete_rect, event->xy);
+  int over_confirm = 0;
+  if (!runtime->confirm_uid.empty()) {
+    for (const ScenesDrawerCard &card : runtime->cards) {
+      if (card.scene_uid != runtime->confirm_uid) {
+        continue;
+      }
+      over_confirm = BLI_rcti_isect_pt_v(&card.confirm_delete_rect, event->xy) ? 2 :
+                     BLI_rcti_isect_pt_v(&card.confirm_cancel_rect, event->xy) ? 1 : 0;
+      break;
+    }
+  }
   if (index != runtime->hover || close != runtime->hover_close || over_new != runtime->hover_new ||
-      over_delete != runtime->hover_delete) {
+      over_delete != runtime->hover_delete || over_confirm != runtime->hover_confirm) {
     runtime->hover = index;
     runtime->hover_close = close;
     runtime->hover_new = over_new;
     runtime->hover_delete = over_delete;
+    runtime->hover_confirm = over_confirm;
     ED_region_tag_redraw(region);
   }
   return OPERATOR_PASS_THROUGH;

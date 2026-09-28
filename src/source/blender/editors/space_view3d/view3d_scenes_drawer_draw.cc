@@ -198,6 +198,12 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
       {
         runtime->rename_uid.clear(); /* Not laid out this frame: see the title below. */
       }
+      if (runtime->confirm_uid == card.scene_uid &&
+          (runtime->drag_target >= 0 || y_bottom >= list_top || y_top <= list_bottom))
+      {
+        runtime->confirm_uid.clear(); /* A question the user cannot see is withdrawn. */
+      }
+      card.confirm_cancel_rect = card.confirm_delete_rect = {};
       if (runtime->drag_target >= 0 && card.scene_uid == runtime->drag_scene) {
         card.rect = card.close_rect = card.thumb_rect = {};
         continue; /* The lifted card is painted once, above its moving siblings. */
@@ -271,22 +277,98 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
           draw_pill(dot, zen.secondary, 1.25f * scale);
         }
       }
+      const bool confirming = runtime->confirm_uid == card.scene_uid;
       thumb.xmin = int(rect.xmin + 27.0f * scale);
       thumb.xmax = thumb.xmin + int(THUMB_W * scale);
       thumb.ymax = int(rect.ymax - 8.0f * scale);
       thumb.ymin = thumb.ymax - int(THUMB_H * scale);
-      {
+      if (confirming) {
+        /* The question names the scene; the picture's width goes to the
+         * question, what it costs and the two pills instead. */
+        card.thumb_rect = {};
+      }
+      else {
         rctf bed;
         BLI_rctf_rcti_copy(&bed, &thumb);
         draw_pill(bed, zen.panel, 6.0f * scale);
         view3d_scenes_drawer_thumb_draw(runtime->thumbs[card.scene_name], card.scene_name, thumb);
+        card.thumb_rect.xmin = thumb.xmin + region->winrct.xmin;
+        card.thumb_rect.xmax = thumb.xmax + region->winrct.xmin;
+        card.thumb_rect.ymin = thumb.ymin + region->winrct.ymin;
+        card.thumb_rect.ymax = thumb.ymax + region->winrct.ymin;
       }
-      card.thumb_rect.xmin = thumb.xmin + region->winrct.xmin;
-      card.thumb_rect.xmax = thumb.xmax + region->winrct.xmin;
-      card.thumb_rect.ymin = thumb.ymin + region->winrct.ymin;
-      card.thumb_rect.ymax = thumb.ymax + region->winrct.ymin;
 
-      const float inner_x = float(thumb.xmax) + 10.0f * scale;
+      const float inner_x = confirming ? float(thumb.xmin) : float(thumb.xmax) + 10.0f * scale;
+      if (confirming) {
+        /* The card asks in place: "Delete <name>?", what it costs, Cancel /
+         * Delete. No dialog over the drawer, no trash glyph, no hint; Esc or a
+         * press anywhere else withdraws the question (ops_cards / selection). */
+        const auto cache_rect = [&](const rctf &r, rcti &target) {
+          BLI_rcti_rctf_copy(&target, &r);
+          BLI_rcti_translate(&target, region->winrct.xmin, region->winrct.ymin);
+          if (!BLI_rcti_isect(&target, &runtime->list_rect, &target)) {
+            target = {};
+          }
+        };
+        BLF_size(font, 12.0f * scale);
+        const std::string question = "Delete \u201c" + card.scene_name + "\u201d?";
+        draw_elided(font, question, inner_x, rect.ymax - 22.0f * scale,
+                    rect.xmax - 8.0f * scale - inner_x, zen.strong);
+
+        BLF_size(font, 11.0f * scale);
+        const char *delete_label = "Delete";
+        const char *cancel_label = "Cancel";
+        const float btn_h = 20.0f * scale;
+        const float btn_top = rect.ymax - 30.0f * scale;
+        rctf del;
+        del.xmax = rect.xmax - 8.0f * scale;
+        del.xmin = del.xmax - (BLF_width(font, delete_label, strlen(delete_label)) + 20.0f * scale);
+        del.ymax = btn_top;
+        del.ymin = btn_top - btn_h;
+        rctf cancel;
+        cancel.xmax = del.xmin - 6.0f * scale;
+        cancel.xmin = cancel.xmax - (BLF_width(font, cancel_label, strlen(cancel_label)) + 20.0f * scale);
+        cancel.ymax = del.ymax;
+        cancel.ymin = del.ymin;
+        float fill[4];
+        with_alpha(zen.danger, runtime->hover_confirm == 2 ? 1.0f : 0.85f, fill);
+        draw_pill(del, fill, 0.5f * btn_h);
+        with_alpha(zen.canvas, runtime->hover_confirm == 1 ? 1.0f : 0.8f, fill);
+        draw_pill(cancel, fill, 0.5f * btn_h);
+        BLF_color4fv(font, zen.strong);
+        const float label_y = del.ymin + 0.5f * (btn_h - BLF_height_max(font)) + 1.0f * scale;
+        BLF_position(font, del.xmin + 10.0f * scale, label_y, 0.0f);
+        BLF_draw(font, delete_label, strlen(delete_label));
+        BLF_position(font, cancel.xmin + 10.0f * scale, label_y, 0.0f);
+        BLF_draw(font, cancel_label, strlen(cancel_label));
+
+        /* What the delete costs, from the tab's real state. */
+        std::string cost;
+        if (card.status == ScenesDrawerTabStatus::Working ||
+            card.status == ScenesDrawerTabStatus::Waiting) {
+          cost = "Stops the working agent";
+        }
+        if (card.has_chat) {
+          cost += cost.empty() ? "Chat kept in History" : " \u00b7 chat kept in History";
+        }
+        if (cost.empty()) {
+          cost = "Its objects go with it";
+        }
+        BLF_size(font, 10.0f * scale);
+        draw_elided(font, cost, inner_x, del.ymin + 0.5f * (btn_h - BLF_height_max(font)) + 1.0f * scale,
+                    cancel.xmin - 8.0f * scale - inner_x, zen.secondary);
+
+        cache_rect(del, card.confirm_delete_rect);
+        cache_rect(cancel, card.confirm_cancel_rect);
+        rect.ymax = std::min(rect.ymax, list_top);
+        rect.ymin = std::max(rect.ymin, list_bottom);
+        card.rect.xmin = int(rect.xmin) + region->winrct.xmin;
+        card.rect.xmax = int(rect.xmax) + region->winrct.xmin;
+        card.rect.ymin = int(rect.ymin) + region->winrct.ymin;
+        card.rect.ymax = int(rect.ymax) + region->winrct.ymin;
+        card.close_rect = {};
+        continue;
+      }
       const float close_w = (count > 1) ? CLOSE_SIZE * scale : 0.0f;
       rctf close_rect;
       close_rect.xmax = rect.xmax - 8.0f * scale;

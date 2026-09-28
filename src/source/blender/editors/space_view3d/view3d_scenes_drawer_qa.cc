@@ -101,6 +101,10 @@ void drawer_qa_targets(const wmWindow *win,
     if (BLI_rcti_size_x(&card.close_rect) > 0) {
       push(card.close_rect, "scenes_drawer_card_close", card.scene_name, card.session_id, index);
     }
+    if (BLI_rcti_size_x(&card.confirm_delete_rect) > 0) {
+      push(card.confirm_delete_rect, "scenes_drawer_card_confirm_delete", card.scene_name, "Delete", index);
+      push(card.confirm_cancel_rect, "scenes_drawer_card_confirm_cancel", card.scene_name, "Cancel", index);
+    }
     index++;
   }
 }

@@ -63,9 +63,17 @@ struct ScenesDrawerCard {
   int workers_total = 0;
   bool is_active = false;
   bool attention = false;
+  /** Nothing to lose: no chat, idle, no run, no user objects. Python decides
+   * (`scene_tab_edit.tab_is_empty`); the close glyph then deletes at once. */
+  bool empty = false;
+  bool has_chat = false;
   rcti rect = {};
   rcti close_rect = {};
   rcti thumb_rect = {};
+  /** The in-card delete confirmation's two buttons (window pixels), laid out
+   * only while `ScenesDrawerRuntime::confirm_uid` names this card. */
+  rcti confirm_cancel_rect = {};
+  rcti confirm_delete_rect = {};
 };
 
 /** A card's copy of its scene's snapshot (see `view3d_scenes_drawer_thumbs.cc`:
@@ -101,6 +109,10 @@ struct ScenesDrawerRuntime {
   std::string selection_anchor;
   std::string rename_uid;
   char rename_buffer[1024] = {};
+  /** Card flipped into its delete confirmation (ID session_uid), or empty. */
+  std::string confirm_uid;
+  /** 0 none, 1 the confirmation's Cancel, 2 its Delete. */
+  int hover_confirm = 0;
   rcti bulk_delete_rect = {};
   rcti clear_selection_rect = {};
   rcti new_rect = {};

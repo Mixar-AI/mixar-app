@@ -75,6 +75,11 @@ class MixarSceneTab(PropertyGroup):
     workers_total: IntProperty(name="Workers", default=0, min=0, options={'SKIP_SAVE'})
     is_active: BoolProperty(name="Active", default=False, options={'SKIP_SAVE'})
     attention: BoolProperty(name="Needs attention", default=False, options={'SKIP_SAVE'})
+    # The drawer's close glyph deletes an `empty` tab at once (Undo toast) and
+    # flips any other card into its in-place confirmation, whose consequence
+    # line reads `has_chat` (core/scene_tab_edit.py).
+    empty: BoolProperty(name="Nothing to lose", default=False, options={'SKIP_SAVE'})
+    has_chat: BoolProperty(name="Has chat", default=False, options={'SKIP_SAVE'})
 
 
 # --- slide clock (mirror of the moodboard drawer) ---------------------------
@@ -169,6 +174,7 @@ def refresh_scene_tabs() -> int:
     records = []
     attention_any = False
     from ..operators.scene_tab_ops import ordered_tabs
+    from ...core.scene_tab_edit import tab_has_chat, tab_is_empty
     for scene in ordered_tabs():
         sid = getattr(scene, "mixie_session_id", "") or ""
         status = _status_of(scene)
@@ -186,14 +192,16 @@ def refresh_scene_tabs() -> int:
         done, total = _workers(sid)
         records.append((str(scene.session_uid), scene.name, sid,
                         status if status != 'IDLE' or not _finished_unseen.get(sid) else 'DONE',
-                        done, total, is_active, attention))
+                        done, total, is_active, attention,
+                        tab_is_empty(scene), tab_has_chat(scene)))
     if wm.mixar_scene_tabs_attention != attention_any:
         wm.mixar_scene_tabs_attention = attention_any
     global _last_signature
     signature = tuple(records)
     if signature != _last_signature or len(tabs) != len(records):
         fields = ('scene_uid', 'scene_name', 'session_id', 'status',
-                  'workers_done', 'workers_total', 'is_active', 'attention')
+                  'workers_done', 'workers_total', 'is_active', 'attention',
+                  'empty', 'has_chat')
         tabs.clear()
         for values in records:
             tab = tabs.add()

@@ -234,6 +234,10 @@ bool view3d_scenes_drawer_edge_hit(const bContext *C, const int xy[2]);
 bool view3d_scenes_drawer_selection_click(bContext *C, ARegion *region,
                                          ScenesDrawerRuntime *runtime, const wmEvent *event);
 void view3d_scenes_drawer_delete_card(bContext *C, const std::string &uid);
+/** The card's own confirmation said Delete: close the tab without a dialog. */
+void view3d_scenes_drawer_delete_card_confirmed(bContext *C, const std::string &uid);
+/** A tab with nothing to lose: close it at once; Python shows an Undo toast. */
+void view3d_scenes_drawer_delete_card_now(bContext *C, const std::string &uid);
 void VIEW3D_OT_scenes_drawer_selection(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_click(wmOperatorType *ot);
 void VIEW3D_OT_scenes_drawer_hover(wmOperatorType *ot);

@@ -112,6 +112,8 @@ void sync_cards(const bContext *C, ScenesDrawerRuntime *runtime)
     card.workers_total = read_int(&tab_ptr, "workers_total", 0);
     card.is_active = read_bool(&tab_ptr, "is_active");
     card.attention = read_bool(&tab_ptr, "attention");
+    card.empty = read_bool(&tab_ptr, "empty");
+    card.has_chat = read_bool(&tab_ptr, "has_chat");
     runtime->cards.push_back(std::move(card));
     RNA_property_collection_next(&iter);
   }
@@ -120,6 +122,12 @@ void sync_cards(const bContext *C, ScenesDrawerRuntime *runtime)
     return std::none_of(runtime->cards.begin(), runtime->cards.end(),
                         [&](const ScenesDrawerCard &card) { return card.scene_uid == uid; });
   });
+  if (!runtime->confirm_uid.empty() &&
+      std::none_of(runtime->cards.begin(), runtime->cards.end(),
+                   [&](const ScenesDrawerCard &card) { return card.scene_uid == runtime->confirm_uid; }))
+  {
+    runtime->confirm_uid.clear(); /* The tab went away under its own confirmation. */
+  }
   if (std::none_of(runtime->cards.begin(), runtime->cards.end(),
                    [&](const ScenesDrawerCard &card) {
                      return card.scene_uid == runtime->selection_anchor;

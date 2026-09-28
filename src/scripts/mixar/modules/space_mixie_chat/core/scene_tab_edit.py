@@ -49,6 +49,35 @@ def rename_scene_tab(scene, name):
     return True, ''
 
 
+def tab_has_chat(scene) -> bool:
+    """True when the tab's transcript holds any message (its chat is worth keeping)."""
+    try:
+        return len(getattr(scene, 'mixie_chat_messages', None) or ()) > 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+_FURNITURE_TYPES = frozenset({'CAMERA', 'LIGHT'})
+
+
+def tab_is_empty(scene) -> bool:
+    """Nothing to lose: no chat, no run, idle, and nothing in the scene but the
+    camera and light a new tab is furnished with. Such a tab is deleted without
+    a question (an Undo toast brings an equal one back)."""
+    if scene is None or is_lane_scene(scene) or tab_has_chat(scene):
+        return False
+    try:
+        from ..ui.operators.scene_tab_ops import _running
+        if _running(scene):
+            return False
+    except Exception:  # noqa: BLE001
+        return False
+    try:
+        return all(o.type in _FURNITURE_TYPES for o in scene.objects)
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def batch_preflight(serialized):
     from ..ui.operators.scene_tab_ops import _running, _connection_live
     tabs, reason = resolve_tabs(serialized)
