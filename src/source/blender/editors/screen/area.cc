@@ -1883,7 +1883,22 @@ static void region_rect_recursive(
 
       if (alignment == RGN_ALIGN_TOP) {
         region->winrct.ymin = region->winrct.ymax - prefsizey + 1;
-        winrct->ymax = region->winrct.ymin - 1;
+        if (region->overlap && region->regiontype == RGN_TYPE_TOOL_HEADER &&
+            ui::mixar_area_floats_viewport_chrome(area))
+        {
+          /* Mixar: Zen's tool header spans the whole viewport so its floating
+           * object and light controls can sit anywhere, but only its top
+           * toolbar band is chrome; everything below is transparent and passes
+           * events through. Reserve just that band. Cutting the full height
+           * collapsed the overlap remainder, and TOOLS and UI (the T and N
+           * panels, the transform pill) were laid out 2 px tall and flagged
+           * too small: they toggled but never drew. */
+          winrct->ymax = region->winrct.ymax -
+                         int(UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_height);
+        }
+        else {
+          winrct->ymax = region->winrct.ymin - 1;
+        }
       }
       else {
         region->winrct.ymax = region->winrct.ymin + prefsizey - 1;
