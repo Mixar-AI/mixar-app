@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "mixar_local_auth_server.h"
+#include "mixar_sso_success_page.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,61 +41,6 @@ using namespace blender;
 // State validation defends against unsolicited callbacks; removing CORS
 // closes the cross-origin readability channel.
 static const char* CONNECTION_CLOSE = "Connection: close\r\n";
-
-static const char* SUCCESS_PAGE =
-    "<!DOCTYPE html>"
-    "<html lang=\"en\"><head><meta charset=\"UTF-8\">"
-    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
-    "<title>Login Successful — Mixar</title>"
-    "<style>"
-    "* { margin: 0; padding: 0; box-sizing: border-box; }"
-    "body {"
-    "  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;"
-    "  background: #0a0a0a; color: #fff; min-height: 100vh;"
-    "  display: flex; align-items: center; justify-content: center;"
-    "  padding: 2rem; -webkit-font-smoothing: antialiased;"
-    "}"
-    ".card {"
-    "  width: 100%; max-width: 480px;"
-    "  background: rgba(255, 255, 255, 0.02);"
-    "  border: 1px solid rgba(0, 192, 199, 0.15);"
-    "  border-radius: 24px; padding: 3rem;"
-    "  backdrop-filter: blur(20px); text-align: center;"
-    "  animation: fadeUp 0.6s ease forwards;"
-    "}"
-    ".check {"
-    "  width: 64px; height: 64px;"
-    "  background: rgba(34, 197, 94, 0.1);"
-    "  border: 1px solid rgba(34, 197, 94, 0.3);"
-    "  border-radius: 50%; display: flex;"
-    "  align-items: center; justify-content: center;"
-    "  margin: 0 auto 1.5rem;"
-    "}"
-    ".check svg { color: #22c55e; }"
-    "h1 {"
-    "  font-size: 2rem; font-weight: 600; margin-bottom: 0.75rem;"
-    "  background: linear-gradient(135deg, #00C0C7 0%, #85C449 100%);"
-    "  -webkit-background-clip: text; -webkit-text-fill-color: transparent;"
-    "  background-clip: text;"
-    "}"
-    "p { font-size: 1rem; color: rgba(255, 255, 255, 0.5); line-height: 1.6; }"
-    "@keyframes fadeUp {"
-    "  from { opacity: 0; transform: translateY(40px); }"
-    "  to   { opacity: 1; transform: translateY(0); }"
-    "}"
-    "</style></head><body>"
-    "<div class=\"card\">"
-    "  <div class=\"check\">"
-    "    <svg width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\""
-    "         stroke=\"currentColor\" stroke-width=\"2.5\">"
-    "      <polyline points=\"20 6 9 17 4 12\" />"
-    "    </svg>"
-    "  </div>"
-    "  <h1>Login Successful</h1>"
-    "  <p>You can close this tab and return to Mixar.</p>"
-    "</div>"
-    "<script>window.close();</script>"
-    "</body></html>";
 
 static const char* FAILURE_PAGE =
     "<!DOCTYPE html>"
@@ -149,6 +95,25 @@ static const char* FAILURE_PAGE =
     "</div>"
     "</body></html>";
 
+// Embedded webfonts make the response larger than a single socket write may accept.
+static bool send_all(SOCKET socket, const char *data, int length) {
+    while (length > 0) {
+        const int sent = (int)send(socket, data, length, 0);
+        if (sent == SOCKET_ERROR) {
+#ifdef _WIN32
+            if (WSAGetLastError() == WSAEINTR) continue;
+#else
+            if (errno == EINTR) continue;
+#endif
+            return false;
+        }
+        if (sent == 0) return false;
+        data += sent;
+        length -= sent;
+    }
+    return true;
+}
+
 // Send an HTTP response for GET requests.
 // result > 0: auth code received - success HTML
 // result == 0: GET arrived with query but no code, or state mismatch — failure HTML
@@ -173,13 +138,13 @@ static void send_http_response(SOCKET client_socket, int result) {
     }
 
     int hdr_len = (int)strlen(headers);
-    if (send(client_socket, headers, hdr_len, 0) < 0) {
+    if (!send_all(client_socket, headers, hdr_len)) {
         printf("Warning: send() failed for HTTP headers (result=%d).\n", result);
         return;
     }
     if (body) {
         int body_len = (int)strlen(body);
-        if (send(client_socket, body, body_len, 0) < 0) {
+        if (!send_all(client_socket, body, body_len)) {
             printf("Warning: send() failed for HTTP body (result=%d).\n", result);
         }
     }
