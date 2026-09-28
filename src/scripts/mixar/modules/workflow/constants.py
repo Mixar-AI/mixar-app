@@ -38,3 +38,11 @@ ZEN_MODIFIER_ITEMS = (
     ("MIRROR", "Mirror", "Mirror the mesh along an axis"),
 )
 ZEN_MODIFIER_TYPES = frozenset(item[0] for item in ZEN_MODIFIER_ITEMS)
+
+ZEN_TEXTURE_CHANNELS = (
+    ('Base Color', 'Base Color', 'Color texture (sRGB)'),
+    ('Roughness', 'Roughness', 'Roughness texture (Non-Color)'),
+    ('Metallic', 'Metallic', 'Metallic texture (Non-Color)'),
+    ('Normal', 'Normal', 'Tangent-space normal texture (Non-Color; requires UVs)'),
+)
+ZEN_TEXTURE_ROLE = 'mixar_zen_texture_role'

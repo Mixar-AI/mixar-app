@@ -68,7 +68,7 @@ class MIXAR_PT_zen_object_textures(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "HEADER"
     bl_label = "Textures"
-    bl_ui_units_x = 18
+    bl_ui_units_x = 22
 
     @classmethod
     def poll(cls, context):
@@ -80,6 +80,7 @@ class MIXAR_PT_zen_object_textures(bpy.types.Panel):
         if obj is None or obj.type != "MESH":
             return
         layout = _properties(self.layout)
+        layout.scale_y = 1.1
         if len(obj.material_slots) > 1:
             layout.template_list('MATERIAL_UL_matslots', 'zen', obj, 'material_slots',
                                  obj, 'active_material_index', rows=2, maxrows=3)
@@ -92,7 +93,11 @@ class MIXAR_PT_zen_object_textures(bpy.types.Panel):
         add.operator('mixar.zen_add_material', text="", icon='ADD').object_name = obj.name
         material = obj.active_material
         if material is None:
-            layout.label(text="Choose a material or add one with +.")
+            layout.label(text="Add a material to start texturing.", icon='MATERIAL')
+            create = layout.row()
+            create.enabled = obj.is_editable and obj.data.is_editable
+            create.operator('mixar.zen_add_material', text='Create Material',
+                            icon='ADD').object_name = obj.name
             return
         draw_material_properties(layout, context, material)
 

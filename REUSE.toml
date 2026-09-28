@@ -128,3 +128,13 @@ SPDX-License-Identifier = "Apache-2.0"
 path = "src/release/datafiles/fonts/ClashGrotesk-Regular.otf"
 SPDX-FileCopyrightText = "Indian Type Foundry"
 SPDX-License-Identifier = "LicenseRef-ITF-FFL"
+
+# GUI QA evidence for the floating object controls; not shipped in the app.
+[[annotations]]
+path = [
+  "docs/development/zen-object-controls/*.png",
+  "docs/development/zen-object-controls/*.json",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
