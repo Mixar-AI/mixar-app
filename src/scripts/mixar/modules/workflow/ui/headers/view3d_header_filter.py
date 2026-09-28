@@ -15,7 +15,7 @@ import bpy
 from mixar.config.logging_config import get_logger
 
 from ...constants import BASIC_WORKSPACE_NAME, ZEN_TRANSFORM_TOOL_IDS
-from ...core import viewport_guides
+from ...core import viewport_guides, zen_toolbar_layout
 from ..operators import zen_tool_toggle
 from . import zen_scene_controls
 from .zen_object_controls import draw_object_controls
@@ -66,39 +66,34 @@ def _patched_header_draw(self, context):
 
     # Side lanes reserve space around the shading cluster. Narrow windows
     # move scene settings into native popovers instead of clipping controls.
-    width = context.region.width / max(context.preferences.system.ui_scale, 0.01)
-    compact = width < 1640
-    narrow = width < 1180
+    tier = zen_scene_controls.header_tier(context)
     left = layout.row(align=False)
     # Let child controls own their widths; a smaller parent budget squeezes
     # the leading Add menu before the native header can adapt.
-    zen_scene_controls.draw_left(left, context, compact=compact, narrow=narrow)
+    zen_scene_controls.draw_left(left, context, tier=tier)
     layout.separator_spacer()
 
     # The reference's compact X-ray chip and native shading enum share the
     # centered lane. RNA still filters the available modes for each engine.
     cluster = layout.row(align=False)
-    guides = cluster.mixar_surface(theme="ZEN").row(align=True)
-    guides.operator(
-        "mixar.zen_toggle_guides", text="", icon="GRID",
-        depress=viewport_guides.guides_shown(view),
-    )
-    guides.mixar_style(component="TOOLBAR", variant="GHOST")
-    chip = cluster.mixar_surface(theme="ZEN").row(align=True)
-    chip.enabled = shading.type in {"SOLID", "WIREFRAME"}
-    xray_prop = "show_xray_wireframe" if shading.type == "WIREFRAME" else "show_xray"
-    chip.prop(shading, xray_prop, text="", icon="XRAY", toggle=True)
-    chip.mixar_style(component="TOOLBAR", variant="GHOST")
+    minimal = tier == zen_toolbar_layout.MINIMAL
+    if not minimal:
+        zen_scene_controls.draw_guides(cluster, context)
     surface = cluster.mixar_surface(theme="ZEN")
     row = surface.row(align=True)
-    row.prop(shading, "type", text="", expand=True)
-    row.popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")
+    if minimal:
+        # The shading popover keeps every mode; its trigger shows the current one.
+        icon = shading.bl_rna.properties["type"].enum_items[shading.type].icon
+        row.popover(panel="VIEW3D_PT_shading", text="", icon=icon)
+    else:
+        row.prop(shading, "type", text="", expand=True)
+        row.popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")
     row.mixar_style(component="TOOLBAR", variant="GHOST", all_items=True)
 
     layout.separator_spacer()
     right = layout.row(align=False)
     right.alignment = "RIGHT"
-    zen_scene_controls.draw_right(right, context, compact=compact, narrow=narrow)
+    zen_scene_controls.draw_right(right, context, tier=tier)
 
 
 def _draw_zen_guides(self, context):

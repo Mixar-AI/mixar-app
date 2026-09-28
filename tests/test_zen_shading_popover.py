@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 HEADER = (
     ROOT / "src/scripts/mixar/modules/workflow/ui/headers/view3d_header_filter.py"
 ).read_text(encoding="utf-8")
+CONTROLS = (
+    ROOT / "src/scripts/mixar/modules/workflow/ui/headers/zen_scene_controls.py"
+).read_text(encoding="utf-8")
 WIDGETS = (
     ROOT / "src/source/blender/editors/interface/interface_widgets.cc"
 ).read_text(encoding="utf-8")
@@ -33,7 +36,9 @@ def test_the_popover_shares_the_reference_shading_group():
     assert 'row.prop(shading, "type", text="", expand=True)' in header
     assert 'row.popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")' in header
     assert 'row.mixar_style(component="TOOLBAR", variant="GHOST", all_items=True)' in header
-    assert 'chip.prop(shading, xray_prop, text="", icon="XRAY", toggle=True)' in header
+    # The grid/X-ray chips are shared with the narrow-window overflow popover.
+    assert "zen_scene_controls.draw_guides(cluster, context)" in header
+    assert 'chip.prop(shading, xray_prop, text="", icon="XRAY", toggle=True)' in CONTROLS
 
 
 def test_the_glass_painter_paints_popover_icon_chips():

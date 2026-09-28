@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Adaptive Add Objects menu and overflow at five UI scales; no paid requests.
+"""Adaptive Add Objects menu, width tiers and overflow at five UI scales; no paid requests.
 
 Run with QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT against an isolated
 Dev app. Review every emitted header capture as well as the geometry verdict.
@@ -37,9 +37,14 @@ r = next(r for r in a.regions if r.type == 'HEADER')
 result = {'rect': [r.x, r.y, r.x+r.width, r.y+r.height],
           'scale': bpy.context.preferences.system.ui_scale}
 ''')
+    tier = qa.eval(
+        'from mixar.modules.workflow.core import zen_toolbar_layout as t\n'
+        f'result = t.tier_for_width({bounds["rect"][2] - bounds["rect"][0]} / {bounds["scale"]})')
     target = qa.find(text='Add Objects', **HEADER)['widgets']
     assert len(target) == 1, target
-    assert qa.find(op='MIXAR_OT_director_enter', **HEADER)['total'] == 1
+    # From TIGHT on, Cinema Mode lives in the Scene Controls popover.
+    cinema_inline = tier in ('FULL', 'COMPACT', 'NARROW')
+    assert qa.find(op='MIXAR_OT_director_enter', **HEADER)['total'] == int(cinema_inline), tier
     x0, y0, x1, y1 = target[0]['rect']
     rx0, ry0, rx1, ry1 = bounds['rect']
     assert rx0 <= x0 < x1 <= rx1 and ry0 <= y0 < y1 <= ry1, (target, bounds)
@@ -53,7 +58,7 @@ result = {'rect': [r.x, r.y, r.x+r.width, r.y+r.height],
     qa.cmd('snap', path=str(OUT / f'add-menu-{scale}.png'))
     qa.press('ESC')
     logical_width = (rx1-rx0)/bounds['scale']
-    if logical_width < 1180:
+    if tier not in ('FULL', 'COMPACT'):
         # The three native popovers are render, shading, then overflow.
         qa.eval("""
 def open_overflow():
@@ -66,9 +71,11 @@ result = open_overflow()
 """)
         qa.wait("bool(drv.find(text='Sky Light', popup=True))", timeout=5)
         assert qa.find(text='Export', popup=True)['total']
+        if not cinema_inline:
+            assert qa.find(op='MIXAR_OT_director_enter', popup=True)['total'] == 1
         qa.cmd('snap', path=str(OUT / f'overflow-{scale}.png'))
         qa.press('ESC')
-    return {'logical_width': logical_width, 'add_rect': target[0]['rect']}
+    return {'logical_width': logical_width, 'tier': tier, 'add_rect': target[0]['rect']}
 
 
 def run(qa):

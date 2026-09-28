@@ -5,7 +5,11 @@
 
 import bpy
 
-from ..headers.zen_scene_controls import draw_export, draw_playback, draw_render_settings, draw_sky
+from ..headers.zen_scene_controls import (
+    draw_cinema, draw_export, draw_guides, draw_playback, draw_render_settings, draw_sky,
+    header_tier,
+)
+from ...core.zen_toolbar_layout import overflow_sections
 from ...core.zen_scene import sky_enabled
 from ...core.zen_sky_lighting import sky_nodes, uses_hdri
 
@@ -27,9 +31,17 @@ class MIXAR_PT_zen_toolbar_more(bpy.types.Panel):
     bl_ui_units_x = 12
 
     def draw(self, context):
-        draw_playback(self.layout, context)
-        draw_sky(self.layout, context)
-        draw_export(self.layout)
+        layout = self.layout
+        # Whatever the current width tier moved out of the toolbar, in order.
+        draw = {
+            "CINEMA": lambda: draw_cinema(layout, context),
+            "GUIDES": lambda: draw_guides(layout.row(), context),
+            "PLAYBACK": lambda: draw_playback(layout, context),
+            "SKY": lambda: draw_sky(layout, context),
+            "EXPORT": lambda: draw_export(layout),
+        }
+        for section in overflow_sections(header_tier(context)) or ("PLAYBACK", "SKY", "EXPORT"):
+            draw[section]()
 
 
 class MIXAR_PT_zen_sky(bpy.types.Panel):
