@@ -185,6 +185,9 @@ class TestExecutorHoldsForPrefetch:
         # Skip scene routing: empty session follows the active window; None
         # window short-circuits every bpy.context branch.
         monkeypatch.setattr(ex, "bpy", SimpleNamespace(context=SimpleNamespace(window=None)))
+        # No render job: the mocked bpy.app.is_job_running is truthy.
+        gate = importlib.import_module("mixar.modules.space_mixie_chat.core.render_gate")
+        monkeypatch.setattr(gate.render_slot, "native_render_kind", lambda: None)
         monkeypatch.setattr(ex, "_execution_gate_until", 0.0)
         lanes.clear()
         return ex, sent, executed

@@ -222,3 +222,69 @@ class TestUploadPathContract:
         assert "CHAT_ATTACHMENT_JPEG_QUALITY = 85" in source
         assert "IMAGE_MAX_EDGE_PX" in source and "IMAGE_JPEG_QUALITY" in source
 
+
+
+class TestEncodeBlendImageJpeg:
+    """Moodboard inspection runs DURING renders (render_gate allowlists it), so
+    it must never create a datablock: image.copy()/images.remove() tag the
+    render thread's depsgraph, which crashed 4.1.1 mid-video."""
+
+    encode = staticmethod(_compressor.encode_blend_image_jpeg)
+
+    @staticmethod
+    def _image(packed=None, pixels_rgba=None, dirty=False, size=(0, 0)):
+        from types import SimpleNamespace
+
+        def _foreach_get(buf):
+            if pixels_rgba is None:
+                raise AssertionError("pixel buffer read on the packed fast path")
+            buf[:] = [c / 255.0 for c in pixels_rgba] * (size[0] * size[1])
+
+        return SimpleNamespace(
+            name="board.jpg", is_dirty=dirty, filepath="", size=size,
+            packed_file=SimpleNamespace(data=packed) if packed else None,
+            pixels=SimpleNamespace(foreach_get=_foreach_get))
+
+    def test_packed_photo_is_downscaled_without_reading_pixels(self):
+        out = self.encode(self._image(packed=_photo_bytes(size=(3000, 2000))), 1024)
+        img = _decode(out)
+        assert img.format == "JPEG" and img.size == (1024, 683)
+
+    def test_orientation_stays_as_the_moodboard_shows_it(self):
+        exif = Image.Exif()
+        exif[0x0112] = 6  # "rotate 90 CW to display": Blender ignores it
+        raw = _photo_bytes(size=(400, 200), exif=exif)
+        assert _decode(self.encode(self._image(packed=raw), 1024)).size == (400, 200)
+
+    def test_unsaved_pixel_edits_come_from_the_pixel_buffer(self):
+        red = Image.new("RGB", (8, 8), (255, 0, 0))
+        buf = io.BytesIO()
+        red.save(buf, format="PNG")
+        image = self._image(packed=buf.getvalue(), pixels_rgba=(0, 255, 0, 255),
+                            dirty=True, size=(8, 8))
+        r, g, b = _decode(self.encode(image, 1024)).convert("RGB").getpixel((4, 4))
+        assert g > 200 and r < 60
+
+    def test_bytes_pil_cannot_decode_fall_back_to_pixels(self):
+        image = self._image(packed=b"\x76\x2f\x31\x01 openexr", pixels_rgba=(0, 0, 255, 255),
+                            size=(4, 4))
+        assert _decode(self.encode(image, 1024)).size == (4, 4)
+
+    def test_transparency_is_flattened_onto_white(self):
+        image = self._image(pixels_rgba=(0, 0, 0, 0), size=(4, 4))
+        assert _decode(self.encode(image, 1024)).convert("RGB").getpixel((1, 1)) >= (250, 250, 250)
+
+    def test_an_implausible_pixel_count_is_refused(self, monkeypatch):
+        monkeypatch.setattr(_compressor, "MAX_DECODE_PIXELS", 100)
+        with pytest.raises(ValueError, match="too large"):
+            self.encode(self._image(packed=_photo_bytes(size=(64, 64))), 1024)
+
+    def test_no_pixels_and_no_source_is_an_error(self):
+        with pytest.raises(ValueError):
+            self.encode(self._image(pixels_rgba=(0, 0, 0, 255), size=(0, 0)), 1024)
+
+    def test_the_encoder_creates_no_datablock(self):
+        src = (CHAT / "core/attachment_compression.py").read_text()
+        body = src[src.index("def encode_blend_image_jpeg("):]
+        for forbidden in (".copy(", "images.new", "images.load", "images.remove", "save_render"):
+            assert forbidden not in body, forbidden
