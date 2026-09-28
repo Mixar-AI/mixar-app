@@ -2,38 +2,17 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""The Cycles compute device, decided by the user and applied once at startup.
+"""Discover usable Cycles GPUs once; render jobs only read the result.
 
-Blender ships with `scene.cycles.device = 'CPU'` and nothing in Mixar ever
-wrote it, so every Cycles render — the user's F12 and the agent's
-`render_viewport(quality="final")` alike — ran on the CPU on a machine with a
-perfectly good GPU (trace `ddf5774e`: three finals, `device: CPU`, 45-66 s
-each, the UI starved for all of it). The backend cannot fix that: it has no
-idea what silicon is in the machine, the handshake's `device_id` is the
-anti-abuse id and not a GPU, and `docs/render-job-contract.md` forbids the
-render job from writing a Preference.
-
-So the decision is the client's, and it is split in two:
-
-- **Here, once at startup** (`enable_gpu_device`, driven by
-  `bootstrap/render_device_module.py`): read the `default_render_device`
-  preference and, unless it says CPU, turn on the machine's Metal / OptiX /
-  CUDA / HIP / oneAPI device in the Cycles add-on Preferences. This is the
-  only Preference write, it happens before any render, and it is idempotent.
-- **In `preview_render._apply_settings`, per job**: `scene.cycles.device` is
-  set to `'GPU'` for the job and restored afterwards, but ONLY when
-  `use_gpu()` says the preference allows it and a device is actually enabled.
-  That module must not mention `preferences.addons` at all
-  (`tests/test_render_job_guard.py`), which is the other reason the read
-  lives here.
-
-Everything degrades to the CPU in silence: no device, no Cycles add-on, a
-preference of CPU, or any exception at all just means `use_gpu()` is False.
+The bootstrap pass configures Cycles preferences and fresh-scene defaults.
+Preview jobs may temporarily select GPU, but never discover devices or write
+preferences (see docs/render-job-contract.md). No supported device means CPU.
 """
 
 import bpy
 
 from ....config.logging_config import get_logger
+from mixar.modules.common.render_coordinator import core as render_slot
 
 logger = get_logger(__name__)
 
@@ -45,6 +24,8 @@ PREFERENCE = "default_render_device"
 # The startup pass is once per session: the enabled flags live in the user's
 # Preferences and survive, so a second pass would only re-write what is there.
 _startup_done = False
+# Cycles retains stale preference entries for disconnected GPUs.
+_discovered_devices = {}
 
 
 def preference() -> str:
@@ -64,10 +45,13 @@ def _cycles_preferences():
 
 
 def _enabled_devices(cycles_prefs) -> list:
-    """Every non-CPU device Cycles currently has switched on."""
+    """Enabled devices belonging to the selected backend and live inventory."""
     devices = []
+    chosen = str(getattr(cycles_prefs, "compute_device_type", "NONE"))
+    live_ids = _discovered_devices.get(chosen)
     for device in getattr(cycles_prefs, "devices", ()) or ():
-        if str(getattr(device, "type", "CPU")) != "CPU" and bool(getattr(device, "use", False)):
+        if (chosen in DEVICE_TYPES and device.type == chosen and device.use
+                and (live_ids is None or device.id in live_ids)):
             devices.append(device)
     return devices
 
@@ -109,33 +93,43 @@ def enable_gpu_device(force: bool = False) -> str:
         return ""
     try:
         # Never write Preferences under a running render: the job reads them.
-        if bpy.app.is_job_running("RENDER"):
+        if bpy.app.is_job_running("RENDER") or render_slot.busy():
             return ""
         cycles_prefs = _cycles_preferences()
         if cycles_prefs is None:
             return ""
 
-        chosen = str(getattr(cycles_prefs, "compute_device_type", "NONE") or "NONE")
-        if chosen == "NONE":
-            available = _available_types(cycles_prefs)
-            chosen = next((name for name in DEVICE_TYPES if name in available), "")
-            if not chosen:
-                _startup_done = True
-                logger.debug("No Cycles compute device available; renders stay on the CPU")
-                return ""
+        current = str(getattr(cycles_prefs, "compute_device_type", "NONE") or "NONE")
+        available = _available_types(cycles_prefs)
+        if current not in available:
+            _discovered_devices[current] = set()
+        # A configured backend wins when it has hardware. The enum describes
+        # build support, not installed GPUs: OptiX can exist on an AMD machine.
+        candidates = dict.fromkeys((current, *DEVICE_TYPES))
+        for chosen in candidates:
+            if chosen not in available or chosen not in DEVICE_TYPES:
+                continue
+            try:
+                devices = cycles_prefs.get_devices_for_type(chosen)
+                devices = [device for device in devices if device.type == chosen]
+                _discovered_devices[chosen] = {device.id for device in devices}
+            except Exception as exc:
+                _discovered_devices[chosen] = set()
+                logger.debug("Cycles %s device discovery failed: %s", chosen, exc)
+                continue
+            if not devices:
+                continue
+            # Only select a backend AFTER discovering a real device. Querying
+            # one backend avoids get_devices() probing every installed driver.
             cycles_prefs.compute_device_type = chosen
-
-        # get_devices() populates the list for the chosen backend.
-        if hasattr(cycles_prefs, "get_devices"):
-            cycles_prefs.get_devices()
-        enabled = 0
-        for device in getattr(cycles_prefs, "devices", ()) or ():
-            if str(getattr(device, "type", "CPU")) == chosen and not getattr(device, "use", False):
+            for device in devices:
                 device.use = True
-                enabled += 1
+            _startup_done = True
+            logger.info("Cycles compute device: %s (%d device(s))", chosen, len(devices))
+            return chosen
         _startup_done = True
-        logger.info("Cycles compute device: %s (%d device(s) newly enabled)", chosen, enabled)
-        return chosen
+        logger.debug("No Cycles GPU available; renders stay on the CPU")
+        return ""
     except Exception as exc:
         # A machine without a GPU, a Cycles build without the backend, a
         # read-only preferences file — all of it just means CPU.
@@ -147,6 +141,9 @@ def enable_gpu_device(force: bool = False) -> str:
 def _available_types(cycles_prefs) -> set:
     """The backends this build offers, from the RNA enum of the preference."""
     try:
+        # Cycles uses a dynamic EnumProperty; RNA enum_items can be empty.
+        if hasattr(cycles_prefs, "get_device_types"):
+            return {item[0] for item in cycles_prefs.get_device_types(bpy.context)}
         items = cycles_prefs.bl_rna.properties["compute_device_type"].enum_items
         return {str(item.identifier) for item in items}
     except Exception:
@@ -157,3 +154,4 @@ def reset_for_tests() -> None:
     """Forget the once-per-session latch (tests only)."""
     global _startup_done
     _startup_done = False
+    _discovered_devices.clear()

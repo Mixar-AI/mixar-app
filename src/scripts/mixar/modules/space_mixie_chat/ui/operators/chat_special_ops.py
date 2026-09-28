@@ -207,6 +207,7 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                     export_format=bubble.export_format,
                     target_scope=bubble.export_scope,
                     suggested_filename=bubble.export_suggested_filename,
+                    request_id=getattr(bubble, "export_request_id", "") or "",
                 )
 
         # #1251 import picker: same two-pass bridge as the export picker. The

@@ -234,13 +234,22 @@ def _queue(module, request_id):
 def test_deferred_result_skips_respond_and_the_queue_keeps_draining(
     executor, deferral, monkeypatch
 ):
+    """The preview's reply is held open while the queue keeps draining: a
+    script that arrives during the live preview is REFUSED at once (the
+    render_gate), never parked behind it, and the preview still delivers."""
+    import importlib
+
     client = _fake_client(monkeypatch)
-    results = {
-        "req-1": {"success": True, "__deferred_preview__": KEY},
-        "req-2": {"success": True, "objects": 3},
-    }
-    monkeypatch.setattr(executor.pump, "execute_request",
-                        lambda req, ex, on_success=None, **_kw: dict(results[req.request_id]))
+    gate = importlib.import_module("mixar.modules.space_mixie_chat.core.render_gate")
+    rendering = {"kind": None}
+    monkeypatch.setattr(gate.render_slot, "native_render_kind", lambda: rendering["kind"])
+    ran = []
+
+    def _execute(req, ex, on_success=None, **_kw):
+        ran.append(req.request_id)
+        return {"success": True, "__deferred_preview__": KEY}
+
+    monkeypatch.setattr(executor.pump, "execute_request", _execute)
     _queue(executor, "req-1")
     _queue(executor, "req-2")
 
@@ -249,9 +258,15 @@ def test_deferred_result_skips_respond_and_the_queue_keeps_draining(
     assert executor.get_inflight_script()["request_id"] == "req-1"
     deferral.bpy.app.timers.register.assert_called_once()
 
-    executor._process_one_request()  # req-2 executes while req-1 is pending
-    client.queue_response.assert_called_once_with("req-2", {"success": True, "objects": 3})
+    rendering["kind"] = "preview"  # the job req-1 started is now running
+    executor._process_one_request()  # req-2 answered at once, not held
+    assert ran == ["req-1"]
+    request_id, refusal = client.queue_response.call_args[0]
+    assert request_id == "req-2"
+    assert refusal["error_type"] == "render_in_progress" and refusal["render_kind"] == "preview"
+    assert not executor.lanes.pending()
 
+    rendering["kind"] = None
     deferral.polls["value"] = {"job_id": KEY, "status": "done", "image_url": "data:image/png;base64,AA=="}
     assert deferral._tick() is None
     assert client.queue_response.call_args[0][0] == "req-1"

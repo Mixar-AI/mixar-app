@@ -16,6 +16,7 @@ import math
 import os
 
 import bpy
+from mixar.modules.common.gltf_import import import_gltf
 from mathutils import Matrix, Vector
 
 from mixar.config.logging_config import get_logger
@@ -426,7 +427,7 @@ def _import_collider_glb(glb_path: str) -> None:
     if not os.path.exists(glb_path):
         return
     try:
-        bpy.ops.import_scene.gltf(filepath=glb_path)
+        import_gltf(filepath=glb_path)
     except Exception as e:  # noqa: BLE001
         logger.warning("[WorldLabs] collider GLB import failed: %s", e)
 

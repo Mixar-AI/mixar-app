@@ -20,6 +20,7 @@ for _dep in ("keyring", "websocket", "requests", "jwt", "sentry_sdk"):
     sys.modules.setdefault(_dep, MagicMock(name=_dep))
 
 from mixar.modules.space_mixie_chat.core import (  # noqa: E402
+    export_gltf_bounds,
     export_package,
     export_reimport,
     export_verify,
@@ -342,3 +343,39 @@ def test_reimport_restores_timing_and_mode_and_keeps_the_usd_frame_range(tmp_pat
     assert (render.fps, render.fps_base, scene.frame_end) == (24, 1.0, 250)
     assert [c.kwargs["mode"] for c in mode_set.call_args_list] == ["OBJECT", "EDIT"]
     assert usd_import.call_args.kwargs["set_frame_range"] is False
+
+
+def test_glb_with_a_second_scene_is_flagged(tmp_path):
+    # glTF walks every scene unless use_active_scene: a selected object in
+    # another scene rides along as a second glTF scene.
+    path = write_glb(tmp_path / "plant.glb", scenes=2)
+    result = export_verify.verify_export(path, "glb", {"mesh_count": 1, "images_expected": 1})
+    assert result["scenes"] == 2 and result["passed"] is False
+    assert any("holds 2 scenes" in issue for issue in result["issues"])
+    assert export_verify.verify_export(write_glb(tmp_path / "one.glb"), "glb", {"mesh_count": 1})["scenes"] == 1
+
+
+def test_glb_dimensions_are_world_space(tmp_path):
+    # Two 2x1x0.5 boxes, the second translated 3 m along X and 2 m up: the
+    # asset is 5 m long, not the size of one part.
+    path = write_glb(tmp_path / "parts.glb", meshes=2, node_translations=[(0, 0, 0), (3, 2, 0)])
+    result = export_verify.verify_export(path, "glb", {"mesh_count": 2})
+    assert result["dimensions_m"] == [5.0, 3.0, 0.5]
+    # Rotation via quaternion (90 deg about Z swaps X/Y extents) and a parent
+    # node without a mesh whose matrix scales the child; an instanced mesh
+    # counted where each instance sits.
+    doc = {
+        "accessors": [{"count": 8, "type": "VEC3", "componentType": 5126, "min": [0, 0, 0], "max": [2, 1, 1]}],
+        "meshes": [{"primitives": [{"attributes": {"POSITION": 0}}]}],
+        "nodes": [
+            {"children": [1, 2], "matrix": [2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 10, 0, 0, 1]},
+            {"mesh": 0, "rotation": [0, 0, 0.7071068, 0.7071068]},
+            {"mesh": 0, "translation": [0, 0, 5]},
+            {"mesh": 0, "translation": [100, 100, 100]},  # not in the scene
+        ],
+        "scenes": [{"nodes": [0]}],
+    }
+    lo, hi = export_gltf_bounds.gltf_world_bounds(doc)
+    assert [round(v, 4) for v in lo] == [8.0, 0.0, 0.0]
+    assert [round(v, 4) for v in hi] == [14.0, 4.0, 12.0]
+    assert export_gltf_bounds.gltf_world_bounds({"nodes": [{"name": "empty"}], "scenes": [{"nodes": [0]}]}) is None

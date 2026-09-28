@@ -24,8 +24,8 @@ idnames are frozen agent contracts); only what the user reads changed.
 
 import bpy
 
-_PILL_UNITS = 6.0
-"""120 logical pixels, matching the Zen toolbar entry (1 unit = 20 px)."""
+_PILL_UNITS = 9.0
+"""180 logical pixels, matching the Zen toolbar entry (1 unit = 20 px)."""
 
 
 def draw_director_entry(self, context):
@@ -53,7 +53,7 @@ def draw_director_entry(self, context):
     else:
         sub.operator("mixar.director_enter", text="Cinema Mode", icon="CINEMA_REEL")
 
-    # Native pill chrome: glass fill, hairline border, film strip and raised V1
+    # Native pill chrome: glass fill, hairline border, film strip and inline italic V2
     # (interface_mixar_topbar.cc). Guarded so a build without the
     # widget still shows a working, if stock, button.
     if hasattr(sub, "mixar_topbar_element"):

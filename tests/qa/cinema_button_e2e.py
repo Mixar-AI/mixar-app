@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Header-row heights, Cinema raised V1, film strip, width and enter/finish clicks in both hosts; no paid requests.
+"""Header-row heights, Cinema inline italic V2, film strip, width and enter/finish clicks in both hosts; no paid requests.
 
 Run with QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT against an isolated
 Dev app. Inspect the emitted PNGs as well as the state/pixel verdict.
@@ -75,22 +75,20 @@ result = [region.y, region.y + region.height]
             bottom = (control['rect'][1] - region_bounds[0]) / scale
             top = (region_bounds[1] - control['rect'][3]) / scale
             assert bottom >= 5 and top >= 5, (control, bottom, top)
-    # Enlarged UI can trigger native row fitting in the fixed-width QA window.
-    # The control must stay compact; pixel checks below still require full content.
-    user_scale = qa.eval('result=bpy.context.preferences.view.ui_scale')
-    if user_scale == 1.0:
-        assert abs(width - 120) <= 2, (width, target)
-    else:
-        assert 114 <= width <= 122, (width, target)
+    # Both hosts reserve 180 units. At fractional UI scales Blender fits
+    # the native header (176.4 logical pixels at 125%); the pixel checks
+    # below still require the entire label and aligned version suffix.
+    assert 174 <= width <= 182, (width, target)
     path = OUT / f'{name}.png'
     qa.cmd('snap', path=str(path), target=query, margin=0)
     with Image.open(path).convert('RGB') as image:
         w, h = image.size
-        # Bright neutral pixels identify the film-strip/text, excluding green chrome.
+        # Neutral glyph coverage excludes the green active outline too;
+        # its antialiased border can differ by only 25–35 RGB levels.
         points = [(x, y) for y in range(int(scale), h-int(scale))
                   for x in range(int(3*scale), w-int(3*scale))
-                  if min(image.getpixel((x, y))) > 120
-                  and max(image.getpixel((x, y))) - min(image.getpixel((x, y))) < 35]
+                  if min(image.getpixel((x, y))) > 65
+                  and max(image.getpixel((x, y))) - min(image.getpixel((x, y))) < 12]
         assert points, path
         left, right = min(x for x, _ in points), max(x for x, _ in points)
         assert left >= 5*scale and right < w-5*scale, (left, right, w)
@@ -98,20 +96,43 @@ result = [region.y, region.y + region.height]
         film = [(x, y) for x, y in points if x < left+16*scale]
         assert len(film) > 20*scale*scale, ('missing film strip', path)
         assert max(y for _, y in film)-min(y for _, y in film) > 9*scale, path
-        # The last text island is the small raised V1, separated by a 3px gap.
+        # The final text island is the full-size italic V2, after a space.
         occupied = sorted({x for x, _ in points})
         gaps = [(a, b) for a, b in zip(occupied, occupied[1:]) if b-a > 2*scale]
         assert gaps, ('missing version separation', path)
         version_start = gaps[-1][1]
         badge = [(x,y) for x,y in points if x >= version_start]
         main = [(x,y) for x,y in points if left+20*scale < x < version_start-3*scale]
-        assert badge and main, ('missing V1 or label', path)
+        assert badge and main, ('missing V2 or label', path)
         badge_height = max(y for _,y in badge)-min(y for _,y in badge)+1
         main_height = max(y for _,y in main)-min(y for _,y in main)+1
-        assert badge_height < main_height*.85, ('version not smaller', path)
-        assert sum(y for _,y in badge)/len(badge) < sum(y for _,y in main)/len(main)-2*scale, ('version not raised', path)
+        assert abs(badge_height - main_height) <= 2*scale, ('version size differs', path)
+        assert abs(max(y for _,y in badge)-max(y for _,y in main)) <= scale, ('version baseline differs', path)
     return {'logical_width': width, 'logical_height': height,
             'row_heights': row_heights, 'scale': scale, 'path': str(path)}
+
+
+def compare_capsules():
+    """Compare the green capsule silhouette, excluding neutral glyphs."""
+    outlines = []
+    for host in ('ai', 'pro'):
+        with Image.open(OUT / f'{host}-active.png').convert('RGB') as image:
+            rows = []
+            for y in range(image.height):
+                xs = [x for x in range(image.width)
+                      if (c := image.getpixel((x, y)))[1] > c[0] + 12
+                      and c[1] > c[2] + 8]
+                if xs:
+                    rows.append((min(xs), max(xs)))
+            assert rows, ('missing capsule', host)
+            outlines.append(rows)
+    zen, engine = outlines
+    # Compare each curved edge after removing the hosts' empty vertical margins.
+    assert len(zen) == len(engine), (len(zen), len(engine))
+    delta = max(abs(a-b) for z, e in zip(zen, engine) for a, b in zip(z, e))
+    assert delta <= 2, ('capsule edges differ', delta)
+    assert zen[0][0] - min(left for left, _ in zen) >= len(zen) * .25
+    return {'visible_height_px': len(zen), 'edge_difference_px': delta}
 
 
 def run(qa):
@@ -145,6 +166,7 @@ result = {'scale': bpy.context.preferences.view.ui_scale,
             qa.click(area_type=host, region_type='HEADER', op='MIXAR_OT_director_finish')
             qa.wait('not drv.main_window().scene.mixar_director.is_directing', timeout=10)
             qa.cmd('snap', path=str(OUT / f'{mode}-full.png'))
+        results['shape_parity'] = qa.step('shape_parity', compare_capsules)
         return {'measurements': results, 'backend_calls': 0}
     finally:
         redraw(qa, f"bpy.context.preferences.view.ui_scale = {saved['scale']}\n"

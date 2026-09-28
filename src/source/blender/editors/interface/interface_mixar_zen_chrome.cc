@@ -15,7 +15,10 @@
  * opaque header, so it must stay on the stock overlap and clear path.
  */
 
+#include <algorithm>
+#include "interface_intern.hh"
 #include "BKE_context.hh"
+#include "BKE_screen.hh"
 #include "UI_mixar_theme.hh"
 #include "BKE_global.hh"
 #include "BKE_main.hh"
@@ -38,6 +41,7 @@
 #include "UI_mixar.hh"
 #include "UI_mixar_chrome.hh"
 #include "UI_interface_c.hh"
+#include "UI_view2d.hh"
 
 #include "WM_api.hh"
 #include "WM_types.hh"
@@ -86,6 +90,59 @@ bool mixar_area_floats_viewport_chrome(const ScrArea *area)
   return false;
 }
 
+bool mixar_region_is_zen_floating_tools(const ARegion *region)
+{
+  if (region == nullptr || !region->overlap || region->regiontype != RGN_TYPE_TOOLS) {
+    return false;
+  }
+  if (G_MAIN == nullptr) {
+    return false;
+  }
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
+  if (wm == nullptr) {
+    return false;
+  }
+  for (wmWindow &win : wm->windows) {
+    const bScreen *screen = WM_window_get_active_screen(&win);
+    if (screen == nullptr) {
+      continue;
+    }
+    for (const ScrArea &area : screen->areabase) {
+      if (BLI_findindex(&area.regionbase, region) != -1) {
+        return mixar_area_floats_viewport_chrome(&area);
+      }
+    }
+  }
+  return false;
+}
+
+void mixar_zen_floating_tools_fixed_scale(const bContext *C, ARegion *region)
+{
+  const ScrArea *area = C ? CTX_wm_area(C) : nullptr;
+  if (region == nullptr || !region->overlap || region->regiontype != RGN_TYPE_TOOLS ||
+      !mixar_area_floats_viewport_chrome(area))
+  {
+    return;
+  }
+  /* The Mixie chat transcript's lock. #view2d_region_reinit restores the
+   * panels' 0.5-2x zoom range on every region init, so this is re-asserted
+   * from layout and draw rather than set once. */
+  View2D *v2d = &region->v2d;
+  v2d->keepzoom = V2D_LOCKZOOM_X | V2D_LOCKZOOM_Y | V2D_KEEPZOOM;
+  v2d->minzoom = 1.0f;
+  v2d->maxzoom = 1.0f;
+
+  const float mask_w = float(BLI_rcti_size_x(&v2d->mask) + 1);
+  const float mask_h = float(BLI_rcti_size_y(&v2d->mask) + 1);
+  if (mask_w <= 1.0f || mask_h <= 1.0f) {
+    return;
+  }
+  /* One view unit per pixel, keeping the left edge and the top (scroll)
+   * origin, so a pill zoomed before this lock existed comes back. */
+  v2d->cur.xmax = v2d->cur.xmin + mask_w;
+  v2d->cur.ymin = v2d->cur.ymax - mask_h;
+}
+
 bool mixar_zen_header_clear(const bContext *C, const ARegion *region)
 {
   if (region == nullptr || !mixar_workspace_is_zen(C)) {
@@ -132,6 +189,53 @@ bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region)
     GPU_clear_color(0.0f, 0.0f, 0.0f, 0.0f);
   }
   return true;
+}
+
+/* Native View2D panning owns drag events; keep the entire control group reachable. */
+void mixar_zen_adaptive_pan_clamp(const bContext *C, ARegion *region)
+{
+  if (!mixar_workspace_is_zen(C) || region->regiontype != RGN_TYPE_TOOL_HEADER) {
+    return;
+  }
+  rctf bounds;
+  BLI_rctf_init_minmax(&bounds);
+  bool found = false;
+  for (const Block &block : region->runtime->uiblocks) {
+    if (block.name != "VIEW3D_HT_tool_header") {
+      continue;
+    }
+    for (const Button &button : block.buttons()) {
+      if (button.mixar_style.component != MixarComponent::Toolbar ||
+          (button.flag & UI_HIDDEN)) {
+        continue;
+      }
+      BLI_rctf_union(&bounds, &button.rect);
+      found = true;
+    }
+  }
+  if (!found) {
+    return;
+  }
+  /* A compact swatch stays vertically centered with the full-height controls. */
+  for (Block &block : region->runtime->uiblocks) {
+    if (block.name != "VIEW3D_HT_tool_header") {
+      continue;
+    }
+    for (Button &button : block.buttons()) {
+      if (button.type == ButtonType::Color) {
+        BLI_rctf_translate(&button.rect, 0,
+                          BLI_rctf_cent_y(&bounds) - BLI_rctf_cent_y(&button.rect));
+      }
+    }
+  }
+  const float xmin = std::min(bounds.xmax - region->winx, bounds.xmin);
+  const float xmax = std::max(bounds.xmax - region->winx, bounds.xmin);
+  const float ymin = std::min(bounds.ymax - region->winy, bounds.ymin);
+  const float ymax = std::max(bounds.ymax - region->winy, bounds.ymin);
+  View2D &v2d = region->v2d;
+  BLI_rctf_translate(&v2d.cur,
+                    std::clamp(v2d.cur.xmin, xmin, xmax) - v2d.cur.xmin,
+                    std::clamp(v2d.cur.ymin, ymin, ymax) - v2d.cur.ymin);
 }
 
 }  // namespace blender::ui

@@ -16,6 +16,7 @@ from math import pi, tan, sin, atan
 from typing import List, Optional
 
 import bpy
+from mixar.modules.common.gltf_import import import_gltf
 from mathutils import Matrix, Vector, Quaternion
 
 from mixar.config.logging_config import get_logger
@@ -164,7 +165,7 @@ def add_object(
     temp_path = _write_temp_glb(glb_bytes, f"scenegen_obj{object_id}")
     logger.debug("[SceneGen] Importing GLB...")
 
-    bpy.ops.import_scene.gltf(filepath=temp_path)
+    import_gltf(filepath=temp_path)
 
     mesh_pose_matrix = pose_data.get("mesh_pose_matrix") if pose_data else None
 

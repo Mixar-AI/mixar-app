@@ -13,6 +13,7 @@ raw properties, and the Linux (no-pill) island path.
 """
 
 import sys
+from contextlib import nullcontext
 import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -237,3 +238,49 @@ def test_drawer_set_returns_false_when_operator_fails(monkeypatch):
     assert ops.calls[0][0] == "view3d.moodboard_drawer_set"
     assert ops.calls[0][1] == {"amount": 1.0, "target": 1.0}
     assert actions.drawer_set({"amount": "bad"}) is False
+
+
+# --- Scenes drawer (actions_extra) -------------------------------------------
+
+def _scenes_setup(monkeypatch, target):
+    from mixar.modules.onboarding.core.tour import actions_extra as extra
+    wm = SimpleNamespace(mixar_scenes_drawer_target=target)
+    ops = []
+
+    def call_op(path, **_kw):
+        ops.append(path)
+        wm.mixar_scenes_drawer_target = 1 if path.endswith("reveal") else 0
+        return True
+
+    monkeypatch.setattr(extra, "_wm", lambda: wm)
+    monkeypatch.setattr(extra, "_scenes_drawer_opened", False)
+    monkeypatch.setattr(actions, "_call_op", call_op)
+    monkeypatch.setattr(actions, "_zen_view3d_override", lambda: {})
+    monkeypatch.setattr(extra.bpy.context, "temp_override",
+                        lambda **_kw: nullcontext(), raising=False)
+    return extra, wm, ops
+
+
+def test_scenes_drawer_opens_then_closes_its_own_drawer(monkeypatch):
+    extra, wm, ops = _scenes_setup(monkeypatch, 0)
+    assert actions.run("scenes_drawer", {"open": True}) is True
+    assert actions.run("scenes_drawer", {"open": False}) is True
+    assert ops == ["view3d.scenes_drawer_reveal", "view3d.scenes_drawer_toggle"]
+    assert wm.mixar_scenes_drawer_target == 0
+
+
+def test_scenes_drawer_leaves_the_users_open_drawer_alone(monkeypatch):
+    extra, wm, ops = _scenes_setup(monkeypatch, 1)
+    assert actions.run("scenes_drawer", {"open": True}) is True
+    assert actions.run("scenes_drawer", {"open": False}) is True
+    extra.reset_transients()
+    assert ops == [] and wm.mixar_scenes_drawer_target == 1
+
+
+def test_reset_transients_shuts_a_drawer_the_tour_left_open(monkeypatch):
+    extra, wm, ops = _scenes_setup(monkeypatch, 0)
+    monkeypatch.setattr(extra, "help_menu_close", lambda _a: True)
+    actions.run("scenes_drawer", {"open": True})
+    extra.reset_transients()
+    assert ops[-1] == "view3d.scenes_drawer_toggle"
+    assert wm.mixar_scenes_drawer_target == 0

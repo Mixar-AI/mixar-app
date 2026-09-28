@@ -493,3 +493,7 @@ PARAMETER_HELP_BY_LABEL = {
     'steps': "The number of refinement steps used during generation. More steps can take longer.",
     'format': "The file format used to store the generated image.",
 }
+
+# Canvas navigation remains available during text placement and inline editing.
+TEXTBOX_NAVIGATION_EVENTS = frozenset({'WHEELUPMOUSE', 'WHEELDOWNMOUSE',
+    'WHEELLEFTMOUSE', 'WHEELRIGHTMOUSE', 'TRACKPADZOOM', 'TRACKPADPAN'})

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import threading
+import time
 import json
 
 import bpy
@@ -23,22 +24,107 @@ _cache_lock = threading.Lock()
 _repair_cache: dict[tuple[str, str, str], dict] = {}
 
 
-def resolve_targets(scope: str, object_names: list[str] | None = None):
-    """Resolve meshes exactly once for preflight, repair, and export."""
+_resolved_lock = threading.Lock()
+# (session_id, request_id, scope, object_names) -> (resolved mesh names, stored at)
+_resolved_targets: dict[tuple, tuple[list[str], float]] = {}
+TARGET_MEMORY_SECONDS = 900.0
+
+
+def _mesh_descendants(obj, out: list, seen: set) -> None:
+    """``obj`` and everything under it (children of children, collection
+    instances) that is a mesh, in a stable order, each once."""
+    if id(obj) in seen:
+        return
+    seen.add(id(obj))
+    if getattr(obj, "type", "") == 'MESH' and obj not in out:
+        out.append(obj)
+    for child in getattr(obj, "children", ()) or ():
+        _mesh_descendants(child, out, seen)
+    instance = getattr(obj, "instance_collection", None)
+    if instance is not None:
+        for member in getattr(instance, "all_objects", None) or getattr(instance, "objects", ()) or ():
+            _mesh_descendants(member, out, seen)
+
+
+def target_memory_key(spec: dict):
+    """The memory slot of ONE agent request: its session and request ids plus the
+    scope and names. A spec without both ids (an older backend, a direct call)
+    has no slot, so nothing is remembered and every call resolves afresh —
+    never a global ``("selected", ())`` slot shared by unrelated requests."""
+    session_id = str(spec.get("session_id") or "")
+    request_id = str(spec.get("request_id") or "")
+    if not session_id or not request_id:
+        return None
+    return (session_id, request_id, str(spec.get("target_scope") or "scene"),
+            tuple(str(n) for n in (spec.get("object_names") or ())))
+
+
+def _remember_targets(key, meshes) -> None:
+    if key is None:
+        return
+    with _resolved_lock:
+        _resolved_targets[key] = ([obj.name for obj in meshes], time.monotonic())
+
+
+def remembered_targets(key):
+    """Meshes resolved by an earlier preflight of the SAME request — the live
+    selection may have changed since (operators deselect, the picker interrupt),
+    so repair and export reuse the NAMES instead of resolving again. Expired or
+    unknown slots are empty; dropped names are skipped; nothing left means
+    "resolve afresh"."""
+    if key is None:
+        return []
+    with _resolved_lock:
+        entry = _resolved_targets.get(key)
+        if entry and time.monotonic() - entry[1] > TARGET_MEMORY_SECONDS:
+            _resolved_targets.pop(key, None)
+            entry = None
+    stored = list(entry[0]) if entry else []
+    meshes = [bpy.data.objects.get(name) for name in stored]
+    return [obj for obj in meshes if obj is not None and obj.type == 'MESH']
+
+
+def resolve_targets(scope: str, object_names: list[str] | None = None, *, remember_as=None):
+    """Resolve meshes for preflight, repair and export. A named or selected
+    object that is an Empty / root / collection instance expands to its mesh
+    descendants (recursively)."""
     names = list(object_names or [])
+    meshes: list = []
+    seen: set = set()
     if scope == "named":
         missing = [name for name in names if bpy.data.objects.get(name) is None]
         if missing:
             raise ValueError("Named object(s) not found: " + ", ".join(missing))
-        meshes = [bpy.data.objects[name] for name in names
-                  if bpy.data.objects[name].type == 'MESH']
+        for name in names:
+            _mesh_descendants(bpy.data.objects[name], meshes, seen)
     elif scope == "selected":
-        meshes = [obj for obj in bpy.context.selected_objects if obj.type == 'MESH']
+        for obj in bpy.context.selected_objects:
+            _mesh_descendants(obj, meshes, seen)
     else:
         meshes = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH']
     if not meshes:
         raise ValueError("No mesh objects match the export target")
+    _remember_targets(remember_as, meshes)
     return meshes
+
+
+def export_targets(spec: dict):
+    """The meshes for ``spec``: ``spec["mesh_names"]`` when the backend carries
+    the preflight's names, else the names remembered by that preflight, else a
+    fresh resolution."""
+    scope = str(spec.get("target_scope") or "scene")
+    names = list(spec.get("object_names") or [])
+    carried = [str(n) for n in (spec.get("mesh_names") or [])]
+    if carried:
+        meshes = [bpy.data.objects.get(n) for n in carried]
+        meshes = [obj for obj in meshes if obj is not None and obj.type == 'MESH']
+        if meshes:
+            return meshes
+    key = target_memory_key(spec)
+    meshes = remembered_targets(key)
+    if meshes:
+        return meshes
+    return resolve_targets(scope, names, remember_as=key)
 
 
 def _is_identity(values, identity) -> bool:
@@ -141,8 +227,17 @@ def inspect_mesh(obj) -> dict[str, list[str]]:
 
 
 def run_preflight(spec: dict) -> dict:
-    meshes = resolve_targets(str(spec.get("target_scope") or "scene"),
-                             list(spec.get("object_names") or []))
+    """Same target order as export (backend ``mesh_names`` → client memory →
+    fresh resolve): a ``selected`` scope resolved before the picker is not
+    re-read from a changed live selection when the tool re-runs after the
+    interrupt. ``clear_repair_cache()`` at the end of ``run_export`` drops
+    the memory."""
+    return preflight_meshes(spec, export_targets(spec))
+
+
+def preflight_meshes(spec: dict, meshes) -> dict:
+    """The readiness report for already-resolved meshes; ``mesh_names`` is
+    carried so repair and export act on exactly these objects."""
     checks = {key: {"label": CHECK_LABELS[key], "passed": 0, "failed": 0,
                     "failed_meshes": [], "failures": []}
               for key in CHECK_ORDER}
@@ -159,8 +254,8 @@ def run_preflight(spec: dict) -> dict:
             else:
                 check["passed"] += 1
     return {"success": True, "ready": all(not item["failed"] for item in checks.values()),
-            "mesh_count": len(meshes), "preserved_armature_modifiers": armatures,
-            "checks": checks}
+            "mesh_count": len(meshes), "mesh_names": [obj.name for obj in meshes],
+            "preserved_armature_modifiers": armatures, "checks": checks}
 
 
 def format_report_markdown(report: dict, detail_limit: int = 4) -> str:
@@ -200,6 +295,14 @@ def clear_repair_cache(session_id: str | None = None) -> None:
         else:
             for key in [key for key in _repair_cache if key[0] == session_id]:
                 _repair_cache.pop(key, None)
+    with _resolved_lock:
+        if session_id is None:
+            _resolved_targets.clear()
+        else:
+            # Only this session's requests: another session's in-flight export
+            # keeps its resolved targets.
+            for key in [key for key in _resolved_targets if key[0] == session_id]:
+                _resolved_targets.pop(key, None)
 
 
 def repair_export(session_id: str, request_id: str, task_id: str, spec: dict) -> dict:
@@ -209,8 +312,7 @@ def repair_export(session_id: str, request_id: str, task_id: str, spec: dict) ->
         cached = _repair_cache.get(key)
     if cached is not None:
         return cached
-    meshes = resolve_targets(str(spec.get("target_scope") or "scene"),
-                             list(spec.get("object_names") or []))
+    meshes = export_targets(spec)
     target_ids = {id(obj) for obj in meshes}
     active, selected = bpy.context.view_layer.objects.active, list(bpy.context.selected_objects)
     mode = active.mode if active else 'OBJECT'
@@ -292,7 +394,7 @@ def repair_export(session_id: str, request_id: str, task_id: str, spec: dict) ->
                 errors.append(f"{obj.name}/{material.name}: bake failed: {exc}")
             finally:
                 obj.select_set(False)
-        report = run_preflight(spec)
+        report = preflight_meshes(spec, meshes)
         report["repair_errors"] = errors
         report["cached"] = False
         with _cache_lock:

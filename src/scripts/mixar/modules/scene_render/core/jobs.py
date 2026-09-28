@@ -159,7 +159,7 @@ def start(context, key, kind='image', label='', expected_session='', **options):
     if kind == 'video' and (first if first is not None else scene.frame_start) >= (
             last if last is not None else scene.frame_end):
         return _reply(key, 'failed', error='animation_range_required')
-    reservation = slot.acquire('scene-render:' + key)
+    reservation = slot.acquire(f'scene-render:{kind}:{key}')
     if reservation is None:
         return _reply(key, 'busy', error='another_render_running')
     job = None

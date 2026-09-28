@@ -8,13 +8,14 @@ pauses, what the captions read and where the card sits. ``test_tour_beats``
 pins the table's structural invariants; this file pins the presentation
 pass so a re-timing cannot quietly undo it.
 
-Transcript facts (Naman's colour-corrected take of 2026-09-24, silences over
-~0.9 s trimmed on the source frame grid, 2:05.4): "Go give it a try." ends
-19.07 s; G, R, S at 22.37 / 23.79 / 25.11; "Here are key shortcuts that will
-come handy." 26.89–28.59; "Click to open it up." ends 36.10; "Everything you
-generate lands in the library." ends 61.43; "…or just press tilde." ends
-76.50; "flip to engine mode." ends 97.22; the closing line ends 124.77 and
-the clip ends at 125.40.
+Transcript facts (Naman's take of 2026-09-28, silences over ~0.9 s trimmed
+on the source's frame grid, the Mixar logo card kept whole, 2:17.3): "Go on,
+give it a spin." ends 17.16 s; G, R, S at 20.00 / 20.98 / 22.00; "Here are
+some shortcuts that will come handy." 23.42–25.41; "Click it to open it up."
+ends 31.18; "Everything you generate lands in the library." ends 55.73; the
+Scenes line 66.83–77.01; the Cinema Mode line 77.64–84.51; "…or just press
+tilde." ends 89.86; "flip to engine mode." ends 106.84; the closing line
+ends 130.24 and the clip (logo card included) ends at 137.30.
 """
 
 from __future__ import annotations
@@ -26,14 +27,14 @@ from mixar.modules.onboarding.core.tour.beats import MIXAR_INTRO, find_index
 
 BEATS = {b.id: b for b in MIXAR_INTRO.beats}
 GATE_TAIL_MS = 500
-CLIP_END_MS = 125400
+CLIP_END_MS = 137300
 # (gated beat, last word of its line in ms)
 LAST_WORDS = {
-    "viewport-try": 19067,
-    "find-island": 36100,
-    "library-prompt": 61427,
-    "moodboard-prompt": 76520,
-    "engine-prompt": 97220,
+    "viewport-try": 17160,
+    "find-island": 31180,
+    "library-prompt": 55730,
+    "moodboard-prompt": 89860,
+    "engine-prompt": 106840,
 }
 ACT_CAPTIONS = {
     "intro": "Welcome",
@@ -44,11 +45,13 @@ ACT_CAPTIONS = {
     "island-tabs": "Part 2 · Mixie",
     "library-prompt": "Part 2 · Mixie",
     "library": "Part 2 · Mixie",
-    "moodboard-prompt": "Part 3 · The moodboard",
-    "moodboard-canvas": "Part 3 · The moodboard",
-    "moodboard-nodes": "Part 3 · The moodboard",
-    "engine-prompt": "Part 4 · Zen and Engine",
-    "engine-mode": "Part 4 · Zen and Engine",
+    "scenes": "Part 3 · Scenes and Cinema",
+    "cinema": "Part 3 · Scenes and Cinema",
+    "moodboard-prompt": "Part 4 · The moodboard",
+    "moodboard-canvas": "Part 4 · The moodboard",
+    "moodboard-nodes": "Part 4 · The moodboard",
+    "engine-prompt": "Part 5 · Zen and Engine",
+    "engine-mode": "Part 5 · Zen and Engine",
     "creator-program": "Creator Program",
     "outro": "You're all set",
 }
@@ -133,10 +136,10 @@ def test_shortcut_panel_lights_each_key_as_it_is_named():
     panel = _overlay("shortcuts", "shortcut-keys")
     assert panel.kind == B.OVERLAY_KEYS and panel.at_pct is not None
     named = {keys: ms for keys, _label, ms in panel.rows}
-    # G, R and S light on the word; the rest fill in on "Here are key shortcuts".
-    assert (named["G"], named["R"], named["S"]) == (22373, 23793, 25113)
+    # G, R and S light on the word; the rest fill in on "Here are some shortcuts".
+    assert (named["G"], named["R"], named["S"]) == (20000, 20980, 22000)
     rest = [ms for keys, _l, ms in panel.rows if keys not in ("Click", "G", "R", "S")]
-    assert rest and all(26893 <= ms <= 28593 for ms in rest)
+    assert rest and all(23420 <= ms <= 25410 for ms in rest)
     assert [ms for _k, _l, ms in panel.rows] == sorted(ms for _k, _l, ms in panel.rows)
     # Mixar's own two: Shift+M opens Mixie; hold Option/Alt to talk.
     labels = {keys: label for keys, label, _ms in panel.rows}
@@ -149,8 +152,8 @@ def test_island_tabs_follow_the_new_tab_names():
     assert tabs == ["AGENT", "THREE_D", "IMAGE", "VIDEO", "SPLAT", "THREE_D"]
     # "3D, Image, Video and World Model" are named in one breath.
     at = {args["tab"]: t for t, name, args in _actions("island-tabs")
-          if name == "island_tab" and t < 53900}
-    assert (at["THREE_D"], at["IMAGE"], at["VIDEO"], at["SPLAT"]) == (50847, 51347, 51847, 52647)
+          if name == "island_tab" and t < 49000}
+    assert (at["THREE_D"], at["IMAGE"], at["VIDEO"], at["SPLAT"]) == (46120, 46640, 47320, 48020)
     assert _overlay("island-tabs", "model-chip-ring").anchor == B.A_MODEL_CHIP
 
 
@@ -161,11 +164,39 @@ def test_a_cursor_crossing_into_the_island_leads_its_click_by_900ms():
 
 def test_library_points_at_linking_your_own_library_then_resets():
     acts = _actions("library")
-    assert (65200, "library_source", {"source": "LIBRARY"}) in acts
+    assert (59070, "library_source", {"source": "LIBRARY"}) in acts
     assert acts[-1][1:] == ("library_source", {"source": "AI"})
     assert _overlay("library", "library-add-ring").anchor == B.A_LIBRARY_ADD
     # A fresh account has no tiles: the first glide needs somewhere to land.
     assert _overlay("library", "library-tile").at_pct is not None
+
+
+def test_scenes_opens_the_drawer_shows_new_scene_then_closes_it():
+    beat = BEATS["scenes"]
+    assert beat.gate is None
+    assert [(name, args) for _at, name, args in beat.actions] == [
+        ("scenes_drawer", {"open": True}), ("scenes_drawer", {"open": False})]
+    opened, closed = (at for at, _n, _a in beat.actions)
+    # The cursor's click on the Scene button is the drawer opening.
+    assert _overlay("scenes", "scenes-cursor").click_ms == opened
+    assert _overlay("scenes", "scenes-cursor").anchor == B.A_SCENES_BUTTON
+    new_ring = _overlay("scenes", "scenes-new-ring")
+    assert new_ring.anchor == B.A_SCENES_NEW == {"surface": "scenes_drawer_new"}
+    assert opened < new_ring.appear_ms < closed < beat.clip_end_ms
+    # Closed before the moodboard act asks the user to pull the other drawer.
+    assert closed < BEATS["cinema"].enter_ms
+
+
+def test_cinema_is_a_callout_only():
+    beat = BEATS["cinema"]
+    assert beat.gate is None and beat.actions == ()
+    for ov in beat.overlays:
+        assert ov.anchor == B.A_CINEMA_BUTTON == {"op": "mixar.director_enter"}, ov.id
+        if ov.kind == B.OVERLAY_CURSOR:
+            assert ov.click_ms is None, ov.id    # never enters Cinema Mode
+    callout = _overlay("cinema", "cinema-callout")
+    assert callout.kind == B.OVERLAY_CALLOUT and callout.title == "Cinema Mode"
+    assert callout.side == "below"
 
 
 def test_moodboard_canvas_and_nodes_keep_the_drawer_open_without_hints():
@@ -200,7 +231,7 @@ def test_creator_program_opens_the_real_help_menu_with_a_callout():
 
 def test_outro_cleans_up_in_the_pause_then_shows_the_replay_note():
     outro = BEATS["outro"]
-    assert outro.actions == ((123373, "tour_cleanup", {}),)
+    assert outro.actions == ((128650, "tour_cleanup", {}),)
     note = _overlay("outro", "replay-hint")
     assert note.kind == B.OVERLAY_CAPTION
     assert note.text == "Replay any time from Help → Start tour"

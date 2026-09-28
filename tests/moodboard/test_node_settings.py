@@ -112,7 +112,8 @@ def test_popup_has_no_submit_or_confirmation_side_effect(popup):
     cls = popup['MIXIE_OT_moodboard_node_settings']
     op = cls()
     op.node_id, op.report = 'owner', Mock()
-    context = SimpleNamespace(scene=SimpleNamespace(mixie_moodboard_action_nodes=[node()]),
+    context = SimpleNamespace(region=SimpleNamespace(type="TEMP"),
+                              scene=SimpleNamespace(mixie_moodboard_action_nodes=[node()]),
                               window_manager=SimpleNamespace(invoke_popup=Mock(
                                   return_value={'RUNNING_MODAL'})))
     assert op.invoke(context, None) == {'RUNNING_MODAL'}
@@ -228,3 +229,18 @@ def test_info_uses_owning_nodes_default_and_keeps_current_value(popup):
     assert 'Default: 1' in info.details
     assert 'Range: 1 to 4' in info.details
     assert field.value_integer == 3
+
+
+def test_overlay_anchors_below_owner_header_without_changing_prompt(popup):
+    owner = node(position_x=10, position_y=20, width=400, height=300, prompt='Draft')
+    region = SimpleNamespace(type='TOOL_PROPS', x=100, y=50,
+        view2d=SimpleNamespace(view_to_region=lambda x, y, **kw: (x*2, y*2)))
+    context = SimpleNamespace(region=region,
+        preferences=SimpleNamespace(system=SimpleNamespace(ui_scale=2)),
+        scene=SimpleNamespace(mixie_moodboard_action_nodes=[owner]),
+        window_manager=SimpleNamespace(invoke_popup=Mock(return_value={'RUNNING_MODAL'})))
+    op = popup['MIXIE_OT_moodboard_node_settings'](); op.node_id='owner'
+    assert op.invoke(context, SimpleNamespace(mouse_x=900, mouse_y=650)) == {'RUNNING_MODAL'}
+    assert op.anchored_overlay and tuple(op.overlay_offset) == (-756, -64)
+    context.window_manager.invoke_popup.assert_called_once_with(op, width=376)
+    assert owner.prompt == 'Draft'

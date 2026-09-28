@@ -154,6 +154,17 @@ def test_banner_actions_cover_every_native_choice():
     assert 'bl_idname = "mixar.credits_banner_action"' in ops_path.read_text()
 
 
+def test_a_completed_slide_opens_wherever_the_pointer_is_released():
+    """A real drag overshoots the short track or drifts off its thin height;
+    gating the release on the track swallowed the Creator Program choice."""
+    native = (EDITORS / "interface/mixar/credits_banner.cc").read_text()
+    release = native[native.index("event->val == KM_RELEASE"):]
+    branch = release[release.index("if (state->dragging) {"):release.index("else {")]
+    assert "if (state->slide >= SLIDE_COMPLETE) {" in branch
+    assert "hit" not in branch
+    assert "choose(C, *state, TARGET_CREATOR);" in release[:release.index("state->returning = true;")]
+
+
 def test_creator_program_link_matches_the_help_menu():
     from mixar.modules.common.notifications import constants as C
 

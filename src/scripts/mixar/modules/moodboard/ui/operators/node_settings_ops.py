@@ -155,11 +155,35 @@ class MIXIE_OT_moodboard_node_settings(Operator):
     def poll(cls, context):
         return is_moodboard_context(context)
 
+    overlay_offset: bpy.props.IntVectorProperty(
+        size=2, default=(0, 0), options={'HIDDEN', 'SKIP_SAVE'}
+    )
+    anchored_overlay: bpy.props.BoolProperty(
+        default=False, options={'HIDDEN', 'SKIP_SAVE'}
+    )
+
     def invoke(self, context, event):
-        if _popup_node(context, self.node_id) is None:
+        node = _popup_node(context, self.node_id)
+        if node is None:
             self.report({'WARNING'}, "This inference node is no longer available")
             return {'CANCELLED'}
-        return context.window_manager.invoke_popup(self, width=340)
+        # Pin the native overlay below this card's model row, over the prompt.
+        # No cursor warp, saved UI state or changes to the draft are needed.
+        region = context.region
+        width = 340
+        self.anchored_overlay = region.type in {'WINDOW', 'TOOL_PROPS'}
+        if self.anchored_overlay:
+            scale = context.preferences.system.ui_scale
+            left, top = region.view2d.view_to_region(
+                node.position_x, node.position_y + node.height, clip=False)
+            right, _ = region.view2d.view_to_region(
+                node.position_x + node.width, node.position_y, clip=False)
+            width = max(240, min(480, int((right - left) / scale) - 24))
+            self.overlay_offset = (
+                int(region.x + left + 12 * scale - event.mouse_x),
+                int(region.y + top - 52 * scale - event.mouse_y),
+            )
+        return context.window_manager.invoke_popup(self, width=width)
 
     def draw(self, context):
         node = _popup_node(context, self.node_id)

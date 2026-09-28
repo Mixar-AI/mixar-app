@@ -22,6 +22,12 @@ rcti moodboard_visible_canvas_rect(const bContext *C);
 
 /** One visibility/ownership gate for both tile hints and editable controls. */
 bool moodboard_node_controls_rect(const bContext *C, View2D *v2d, PointerRNA *node, rcti *r_rect);
+/** Model picker and settings overlay entry; reserves their header row. */
+void moodboard_add_node_settings(ui::Block *block,
+                                PointerRNA *node,
+                                rcti &controls,
+                                bool running,
+                                const char *node_id);
 ui::Button *moodboard_screen_prop_button(ui::Block *block,
                                          PointerRNA *ptr,
                                          const char *property,

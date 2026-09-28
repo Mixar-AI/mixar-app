@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Cycles compute device — the one startup pass.
+"""Cycles compute device startup pass and deferred new-file scene defaults.
 
 Blender's `scene.cycles.device` default is `'CPU'` and its Preferences ship
 with no compute device enabled, so a Cycles render on a machine with a GPU
@@ -26,6 +26,7 @@ from __future__ import annotations
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.render_coordinator import core as render_slot
 from mixar.modules.space_mixie_chat.core import render_device
 
 logger = get_logger(__name__)
@@ -41,23 +42,35 @@ _attempts = 0
 def _apply() -> float | None:
     """Timer body: enable the device, or come back if a render owns it."""
     global _attempts
-    _attempts += 1
     try:
-        if bpy.app.is_job_running("RENDER") and _attempts < MAX_ATTEMPTS:
+        # Setup/finalization reservations matter even without a native job.
+        # Busy retries do not exhaust the preference-readiness budget.
+        if bpy.app.is_job_running("RENDER") or render_slot.busy():
             return RETRY_S
+        _attempts += 1
+        if getattr(bpy.context.scene, "mixar_paint_preferences", None) is None:
+            return RETRY_S if _attempts < MAX_ATTEMPTS else None
         render_device.enable_gpu_device()
+        from . import render_defaults_module
+        render_defaults_module.apply_startup_defaults()
     except Exception as exc:
         logger.debug("Render device startup pass failed (%s); renders stay on the CPU", exc)
     return None
 
 
-def register() -> None:
+def schedule() -> None:
+    """One nonpersistent pass per file, after UI preferences have registered."""
     global _attempts
     _attempts = 0
     try:
-        bpy.app.timers.register(_apply, first_interval=FIRST_PASS_DELAY_S)
+        if not bpy.app.timers.is_registered(_apply):
+            bpy.app.timers.register(_apply, first_interval=FIRST_PASS_DELAY_S)
     except Exception as exc:
         logger.debug("Could not schedule the render device startup pass: %s", exc)
+
+
+def register() -> None:
+    schedule()
 
 
 def unregister() -> None:
