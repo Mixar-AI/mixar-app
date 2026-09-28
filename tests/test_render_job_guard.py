@@ -143,7 +143,10 @@ def test_a_script_proceeds_when_no_render_is_running(executor, monkeypatch):
 def test_read_only_tools_run_during_a_render(monkeypatch):
     gate = _render(monkeypatch, "scene_video")
     for tool in ("list_moodboard_images", "inspect_moodboard_image",
-                 "render_scene_image", "render_scene_video"):
+                 "render_scene_image", "render_scene_video", "_scene_digest",
+                 "_wait_generation_poll", "_detect_views_poll", "_await_generation_image",
+                 "poll_generation", "get_all_queue_status", "list_scene_meshes", "list_rules",
+                 "get_paint_layer_stack", "get_paint_channels"):
         assert gate.refusal(tool) is None, tool
     for tool in ("execute_bpy_script", "render_viewport", "crop_moodboard_image", "unknown"):
         assert gate.refusal(tool)["error_type"] == "render_in_progress", tool

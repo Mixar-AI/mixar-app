@@ -35,6 +35,18 @@ READ_ONLY_TOOLS = frozenset({
     # Replay and busy are answered before scene_render writes anything.
     "render_scene_image",
     "render_scene_video",
+    # The orchestrator's scene digest, sent at the start of every turn.
+    "_scene_digest",
+    # Generation polling reads the Python job queues or moodboard props.
+    "_wait_generation_poll",
+    "_detect_views_poll",
+    "_await_generation_image",  # the inspect_moodboard_image script
+    "poll_generation",
+    "get_all_queue_status",
+    "list_scene_meshes",
+    "list_rules",
+    "get_paint_layer_stack",
+    "get_paint_channels",
 })
 
 _RENDERS = {
