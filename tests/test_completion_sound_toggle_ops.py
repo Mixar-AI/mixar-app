@@ -171,7 +171,7 @@ def draw_toggle(sound, muted, fraction, has_operator=True):
 def test_topbar_gate_reads_the_resolved_clip_and_mute():
     row = draw_toggle(BELL, False, 0.0)
     (_idname, kw), = row.calls
-    assert kw["depress"] is True and kw["icon"] == 'NOTIFICATION_SOUND'
+    assert kw["depress"] is False and kw["icon"] == 'NOTIFICATION_SOUND'
     assert row.ui_units_x == WIDTHS[0]
     for sound, muted in ((BELL, True), (OFF, False)):
         (_idname, kw), = draw_toggle(sound, muted, 1.0).calls

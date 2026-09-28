@@ -118,11 +118,12 @@ def _draw_sound_toggle(layout, context):
     # Native icon-only buttons otherwise retain their fixed one-unit width.
     row.scale_x = row.ui_units_x if fraction < 0.999 else 1.0
     # Keep the full label readable; expand first, then reveal it for the hold.
+    # The icon and tooltip convey sound state; keep the button neutral in both states.
     row.operator('mixie_chat.toggle_completion_sound',
                  text='Sound on' if fraction >= 0.999 else '',
                  icon=('NONE' if fraction >= 0.999 else
                        'NOTIFICATION_SOUND' if enabled else 'NOTIFICATION_SOUND_OFF'),
-                 depress=enabled)
+                 depress=False)
     row.mixar_style(component='ACTION', variant='GHOST')
 
 
