@@ -30,6 +30,7 @@ import os
 import tempfile
 
 import bpy
+from mixar.modules.common.gltf_import import import_gltf
 
 from mixar.config.logging_config import get_logger
 
@@ -227,7 +228,7 @@ def import_file(filepath, file_type="GLB", import_options=None):
             gltf_kwargs = {"filepath": filepath}
             if import_options:
                 gltf_kwargs.update(import_options)
-            bpy.ops.import_scene.gltf(**gltf_kwargs)
+            import_gltf(**gltf_kwargs)
         elif ft == "OBJ":
             bpy.ops.wm.obj_import(filepath=filepath)
         elif ft == "FBX":
