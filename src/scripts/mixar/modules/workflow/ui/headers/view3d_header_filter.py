@@ -67,10 +67,12 @@ def _patched_header_draw(self, context):
     # Side lanes reserve space around the shading cluster. Narrow windows
     # move scene settings into native popovers instead of clipping controls.
     width = context.region.width / max(context.preferences.system.ui_scale, 0.01)
-    compact = width < 1480
+    compact = width < 1640
+    narrow = width < 1180
     left = layout.row(align=False)
-    left.ui_units_x = 36 if not compact else 17
-    zen_scene_controls.draw_left(left, context, compact=compact)
+    # Let child controls own their widths; a smaller parent budget squeezes
+    # the leading Add menu before the native header can adapt.
+    zen_scene_controls.draw_left(left, context, compact=compact, narrow=narrow)
     layout.separator_spacer()
 
     # The reference's compact X-ray chip and native shading enum share the
@@ -95,9 +97,8 @@ def _patched_header_draw(self, context):
 
     layout.separator_spacer()
     right = layout.row(align=False)
-    right.ui_units_x = 29 if not compact else 27
     right.alignment = "RIGHT"
-    zen_scene_controls.draw_right(right, context, compact=compact)
+    zen_scene_controls.draw_right(right, context, compact=compact, narrow=narrow)
 
 
 def _draw_zen_guides(self, context):

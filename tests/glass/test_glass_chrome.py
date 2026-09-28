@@ -45,7 +45,7 @@ class TestTheTopbarPillsArePanes:
     def test_cinema_keeps_its_brand_color_in_both_modes(self) -> None:
         """The Engine pill retains Zen's resting ramp and semantic active cue."""
         body = self._body("void draw_cinema_pill(")
-        assert "mixar_cinema_background(pill, rad, motion.selected, emphasis)" in body
+        assert "mixar_cinema_background(pill, motion.selected, emphasis)" in body
         assert "mixar_cinema_label(*rect, but->drawstr.c_str(), motion.selected," in body
         assert "motion.hover + (1.0f - motion.hover) * motion.press" in body
         assert "but->icon" in body, "the film-strip icon is no longer handed to the label"
@@ -68,9 +68,9 @@ class TestTheTopbarPillsArePanes:
         rim. Colours live in `UI_mixar_chrome.hh`.
         """
         cinema = self._body("void draw_cinema_pill(")
-        assert re.search(r"blend_color\(pill_border,\s*"
-                         r"pill_border_on,\s*motion.selected,\s*border\)", cinema)
-        assert "mixar_card_outline_round(&pill, rad, border," in cinema
+        # Cinema's complete border/fill recipe lives in the shared painter.
+        assert "mixar_cinema_background(pill, motion.selected, emphasis)" in cinema
+        assert "mixar_card_outline_round" not in cinema
         assert "mixar_card_outline_round(&pill, rad, viewport_border, alpha);" in self._body(
             "void draw_viewport_pill("
         )

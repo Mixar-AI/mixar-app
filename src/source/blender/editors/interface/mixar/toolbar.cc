@@ -142,14 +142,15 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
   if (first) {
     if (cinema) {
       const float emphasis = motion.hover + (1.0f - motion.hover) * motion.press;
-      mixar_cinema_background(group, radius, motion.selected, emphasis);
+      mixar_cinema_background(group, motion.selected, emphasis);
     }
     else {
       mixar_card_fill_round(&group, radius,
                             adaptive ? mixar_theme_color_ptr(MixarThemeSlot::Gray700) :
                             primary ? toolbar_primary : toolbar_background);
+      mixar_card_outline_round(
+          &group, radius, primary ? toolbar_primary_border : toolbar_border, 1);
     }
-    mixar_card_outline_round(&group, radius, primary ? toolbar_primary_border : toolbar_border, 1);
   }
 
   /* The adaptive bar has a solid outer container and inset section controls.
@@ -240,7 +241,8 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
   /* Standalone actions center their label inside equal horizontal padding.
    * Menus retain their left label and reserved trailing chevron. */
   if (cinema) {
-    mixar_cinema_label(text, label.c_str(), motion.selected, disabled, button.icon);
+    /* The shared painter owns its padding, exactly as in the Engine host. */
+    mixar_cinema_label(bounds, label.c_str(), motion.selected, disabled, button.icon);
     return false;
   }
   mixar_card_draw_text(font, &text, label.c_str(), text_color,

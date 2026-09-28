@@ -13,8 +13,8 @@
  * them out, sizes them and dispatches their clicks — only the pixels are
  * ours. Colours and chrome label scale live in `UI_mixar_chrome.hh`
  * (UI.svg 1x: slider track 225x28 rx7 #1D1D1D with a 106x23 rx7 #393939
- * thumb inset 2px; Cinema pill 120x27 fully rounded, #3F3F3F hairline
- * border, shared horizontal Cinema gradients, film-strip icon and raised V1
+ * thumb inset 2px; Cinema pill with shared toolbar-height rounded geometry, #3F3F3F hairline
+ * border, shared horizontal Cinema gradients, film-strip icon and inline italic V2
  * marker). Geometry stays on the layout.
  * Compact is the chrome host; these widgets keep the UI.svg sizes rather
  * than Compact's 32-unit control height.
@@ -220,29 +220,13 @@ void draw_slider_right(Button *but, const rcti *rect)
  * with independently blended active endpoints. Native semantic selection remains separate from pressing. */
 void draw_cinema_pill(Button *but, const rcti *rect)
 {
-  uchar pill_border[4], pill_border_on[4];
-  mixar_theme_copy_u(MixarThemeSlot::CinemaPillBorder, mixar_chrome::cinema_pill_border, pill_border);
-  mixar_theme_copy_u(MixarThemeSlot::CinemaPillBorderOn, mixar_chrome::cinema_pill_border_on, pill_border_on);
   rctf pill;
   mixar_card_rect_to_rctf(rect, &pill);
-  /* The design's pill is shorter than the topbar's button height; inset so
-   * it reads as a floating chip rather than a full-height slab. */
-  const float inset = 1.0f * UI_SCALE_FAC;
-  BLI_rctf_pad(&pill, -inset, -inset);
-
-  const float rad = BLI_rctf_size_y(&pill) * 0.5f;
   /* Operator press is separate from the semantic selected state. The central
    * sampler reads `lit`, so holding the mouse never activates Cinema Mode. */
   const MixarInteraction motion = mixar_button_motion(*but);
   const float emphasis = motion.hover + (1.0f - motion.hover) * motion.press;
-  mixar_cinema_background(pill, rad, motion.selected, emphasis);
-  uchar border[4];
-  blend_color(pill_border,
-              pill_border_on,
-              motion.selected,
-              border);
-  const float border_alpha = 0.85f + 0.05f * motion.selected;
-  mixar_card_outline_round(&pill, rad, border, border_alpha + (1.0f - border_alpha) * emphasis);
+  mixar_cinema_background(pill, motion.selected, emphasis);
 
   mixar_cinema_label(*rect, but->drawstr.c_str(), motion.selected,
                       (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0, but->icon);

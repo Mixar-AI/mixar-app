@@ -110,19 +110,20 @@ def draw_scenes_button(surface, context):
     surface.separator(factor=0.15)
 
 
-def draw_left(layout, context, *, compact):
+def draw_left(layout, context, *, compact, narrow=False):
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
     draw_scenes_button(surface, context)
     add = surface.row()
-    add.ui_units_x = 3.4 if compact else 5.8
-    add.menu("VIEW3D_MT_add", text="Add" if compact else "Add Objects")
+    add.ui_units_x = 5.8
+    add.menu("VIEW3D_MT_add", text="Add Objects")
     style(add, "PRIMARY")
     surface.separator(factor=0.8)
     if compact:
         render = surface.row()
-        render.ui_units_x = 8
+        render.ui_units_x = 2.0 if narrow else 8
         if hasattr(bpy.types, "MIXAR_PT_zen_render_settings"):
-            render.popover(panel="MIXAR_PT_zen_render_settings", text="Render Settings", icon="SCENE")
+            render.popover(panel="MIXAR_PT_zen_render_settings",
+                           text="" if narrow else "Render Settings", icon="SCENE")
         else:
             render.enabled = False
             render.label(text="Render Settings")
@@ -137,11 +138,21 @@ def draw_left(layout, context, *, compact):
         style(restore)
 
 
-def draw_right(layout, context, *, compact):
+def draw_right(layout, context, *, compact, narrow=False):
     # Native row spacing is enough between groups; extra separators double it.
     draw_cinema(layout, context)
-    draw_playback(layout, context)
-    draw_sky(layout, context)
+    if narrow and hasattr(bpy.types, "MIXAR_PT_zen_toolbar_more"):
+        more = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
+        more.ui_units_x = 2.0
+        more.popover(panel="MIXAR_PT_zen_toolbar_more", text="", icon="DOWNARROW_HLT")
+        style(more)
+    else:
+        draw_playback(layout, context)
+        draw_sky(layout, context)
+        draw_export(layout)
+
+
+def draw_export(layout):
     export = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
     export.ui_units_x = 4.2
     export.menu("TOPBAR_MT_file_export", text="Export", icon="EXPORT")
@@ -153,7 +164,7 @@ def draw_cinema(layout, context):
     if state is None:
         return
     row = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
-    row.ui_units_x = 6.0
+    row.ui_units_x = 9.0
     active = bool(state.is_directing)
     row.operator("mixar.director_finish" if active else "mixar.director_enter",
                  text="Cinema Mode", icon="CINEMA_REEL", depress=active)

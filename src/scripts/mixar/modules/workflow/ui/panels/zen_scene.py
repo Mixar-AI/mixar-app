@@ -5,7 +5,7 @@
 
 import bpy
 
-from ..headers.zen_scene_controls import draw_render_settings
+from ..headers.zen_scene_controls import draw_export, draw_playback, draw_render_settings, draw_sky
 from ...core.zen_scene import sky_enabled
 from ...core.zen_sky_lighting import sky_nodes, uses_hdri
 
@@ -18,6 +18,18 @@ class MIXAR_PT_zen_render_settings(bpy.types.Panel):
 
     def draw(self, context):
         draw_render_settings(self.layout, context, vertical=True)
+
+
+class MIXAR_PT_zen_toolbar_more(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "HEADER"
+    bl_label = "Scene Controls"
+    bl_ui_units_x = 12
+
+    def draw(self, context):
+        draw_playback(self.layout, context)
+        draw_sky(self.layout, context)
+        draw_export(self.layout)
 
 
 class MIXAR_PT_zen_sky(bpy.types.Panel):
@@ -67,4 +79,4 @@ class MIXAR_PT_zen_sky(bpy.types.Panel):
         layout.label(text="Visible in Material Preview and Rendered.")
 
 
-classes = (MIXAR_PT_zen_render_settings, MIXAR_PT_zen_sky)
+classes = (MIXAR_PT_zen_render_settings, MIXAR_PT_zen_toolbar_more, MIXAR_PT_zen_sky)
