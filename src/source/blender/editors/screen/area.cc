@@ -887,8 +887,13 @@ void ED_area_status_text(ScrArea *area, const char *str)
     if (region.regiontype == RGN_TYPE_HEADER && region.runtime->visible) {
       ar = &region;
     }
-    else if (region.regiontype == RGN_TYPE_TOOL_HEADER && region.runtime->visible) {
+    else if (region.regiontype == RGN_TYPE_TOOL_HEADER && region.runtime->visible &&
+             !ui::mixar_area_floats_viewport_chrome(area))
+    {
       /* Prefer tool header when we also have a header. */
+      /* Mixar's floating tool header spans the viewport. Status text replaces
+       * its draw callback and fills the region height behind the text, so use
+       * the regular header there instead of obscuring the scene. */
       ar = &region;
       break;
     }

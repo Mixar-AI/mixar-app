@@ -42,6 +42,7 @@
 #include "ED_agent_panel.hh"
 #include "ED_mixar_glass.hh"
 #include "ED_screen.hh"
+#include "ED_space_api.hh"
 
 #include "GPU_framebuffer.hh"
 #include "GPU_immediate.hh"
@@ -414,6 +415,9 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 
   GPU_blend(GPU_BLEND_NONE);
 
+  /* Python POST_PIXEL handlers registered on the drawer's region type (the
+   * onboarding tour rings the panel and "+ New scene" from one). */
+  ED_region_draw_cb_draw(C, region, REGION_DRAW_POST_PIXEL);
 }
 
 }  // namespace blender
