@@ -24,7 +24,7 @@ BOOTSTRAP = ROOT / "src/scripts/mixar/bootstrap/render_device_module.py"
 
 
 def _device(kind, use=False):
-    return SimpleNamespace(type=kind, use=use)
+    return SimpleNamespace(type=kind, use=use, id=kind)
 
 
 def _cycles_prefs(compute="NONE", available=("METAL", "NONE"), devices=None):
@@ -32,7 +32,8 @@ def _cycles_prefs(compute="NONE", available=("METAL", "NONE"), devices=None):
         compute_device_type=compute,
         devices=list(devices if devices is not None else [_device("METAL"), _device("CPU")]),
     )
-    prefs.get_devices = lambda: None
+    prefs.get_devices_for_type = lambda kind: [
+        d for d in prefs.devices if d.type in (kind, "CPU")]
     prefs.bl_rna = SimpleNamespace(properties={
         "compute_device_type": SimpleNamespace(
             enum_items=[SimpleNamespace(identifier=name) for name in available])})
@@ -48,6 +49,8 @@ def device(monkeypatch):
     fake = MagicMock(name="bpy")
     fake.app.is_job_running.return_value = False
     monkeypatch.setattr(module, "bpy", fake)
+    monkeypatch.setattr(module, "render_slot", MagicMock())
+    module.render_slot.busy.return_value = False
     module.reset_for_tests()
     return module
 
@@ -175,3 +178,67 @@ def test_the_contract_documents_the_device_rule_and_the_final_cap():
     for needle in ("default_render_device", "FINAL_MAX_EDGE_PX", "1920",
                    "render_device_module", "scene.cycles.device"):
         assert needle in doc, needle
+
+
+def test_dynamic_device_enum_discovers_metal(device):
+    prefs = _cycles_prefs(available=())
+    prefs.get_device_types = lambda context: [("NONE", "None", ""), ("METAL", "Metal", "")]
+    _install(device, prefs)
+    assert device.enable_gpu_device() == "METAL"
+    assert prefs.devices[0].use
+
+
+@pytest.mark.parametrize("backend", ["OPTIX", "CUDA", "HIP", "ONEAPI", "METAL"])
+def test_selects_real_hardware_not_just_compiled_backends(device, backend):
+    prefs = _cycles_prefs(available=(), devices=[_device(backend), _device("CPU")])
+    prefs.get_device_types = lambda context: [(name, name, "") for name in device.DEVICE_TYPES]
+    _install(device, prefs)
+    assert device.enable_gpu_device() == backend
+    assert prefs.compute_device_type == backend
+    assert device.use_gpu()
+    assert not prefs.devices[-1].use
+
+
+def test_failing_optix_driver_falls_back_to_cuda(device):
+    prefs = _cycles_prefs(available=("OPTIX", "CUDA"), devices=[_device("CUDA")])
+    def probe(kind):
+        if kind == "OPTIX":
+            raise RuntimeError("driver unavailable")
+        return prefs.devices
+    prefs.get_devices_for_type = probe
+    _install(device, prefs)
+    assert device.enable_gpu_device() == "CUDA"
+    assert device.use_gpu()
+
+
+def test_device_from_other_backend_cannot_enable_gpu(device):
+    prefs = _cycles_prefs(compute="CUDA", devices=[_device("OPTIX", True)])
+    _install(device, prefs)
+    assert not device.use_gpu()
+
+
+def test_cached_disconnected_device_cannot_enable_gpu(device):
+    prefs = _cycles_prefs(compute="METAL", devices=[_device("METAL", True)])
+    prefs.get_devices_for_type = lambda kind: [_device("CPU")]
+    _install(device, prefs)
+    assert device.enable_gpu_device() == ""
+    assert not device.use_gpu()
+
+
+def test_render_reservation_defers_device_discovery(device):
+    prefs = _cycles_prefs()
+    prefs.get_devices_for_type = MagicMock(side_effect=prefs.get_devices_for_type)
+    _install(device, prefs)
+    device.render_slot.busy.return_value = True
+    assert device.enable_gpu_device() == ""
+    prefs.get_devices_for_type.assert_not_called()
+    device.render_slot.busy.return_value = False
+    assert device.enable_gpu_device() == "METAL"
+
+
+def test_saved_backend_missing_from_this_build_cannot_enable_gpu(device):
+    prefs = _cycles_prefs(compute="OPTIX", available=("NONE",),
+                          devices=[_device("OPTIX", True)])
+    _install(device, prefs)
+    assert device.enable_gpu_device() == ""
+    assert not device.use_gpu()
