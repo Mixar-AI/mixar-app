@@ -5,8 +5,8 @@
 """Zen-only viewport scene toolbar and Move/Rotate/Scale tool strip.
 
 The header uses native controls with reference-matched toolbar presentation.
-The tool header remains empty. Engine workspaces, including Texturing, keep
-Blender's original headers and tools. Workspace identity owns this filtering,
+A compact selection menu floats in the transparent tool header. Engine
+workspaces, including Texturing, keep Blender's original headers and tools. Workspace identity owns this filtering,
 so a global preference cannot remove controls from a different editor.
 """
 
@@ -15,9 +15,10 @@ import bpy
 from mixar.config.logging_config import get_logger
 
 from ...constants import BASIC_WORKSPACE_NAME, ZEN_TRANSFORM_TOOL_IDS
-from ...core import viewport_guides
+from ...core import viewport_guides, zen_toolbar_layout
 from ..operators import zen_tool_toggle
 from . import zen_scene_controls
+from .zen_object_controls import draw_object_controls
 
 _logger = get_logger(__name__)
 
@@ -65,38 +66,34 @@ def _patched_header_draw(self, context):
 
     # Side lanes reserve space around the shading cluster. Narrow windows
     # move scene settings into native popovers instead of clipping controls.
-    width = context.region.width / max(context.preferences.system.ui_scale, 0.01)
-    compact = width < 1480
+    tier = zen_scene_controls.header_tier(context)
     left = layout.row(align=False)
-    left.ui_units_x = 36 if not compact else 17
-    zen_scene_controls.draw_left(left, context, compact=compact)
+    # Let child controls own their widths; a smaller parent budget squeezes
+    # the leading Add menu before the native header can adapt.
+    zen_scene_controls.draw_left(left, context, tier=tier)
     layout.separator_spacer()
 
     # The reference's compact X-ray chip and native shading enum share the
     # centered lane. RNA still filters the available modes for each engine.
     cluster = layout.row(align=False)
-    guides = cluster.mixar_surface(theme="ZEN").row(align=True)
-    guides.operator(
-        "mixar.zen_toggle_guides", text="", icon="GRID",
-        depress=viewport_guides.guides_shown(view),
-    )
-    guides.mixar_style(component="TOOLBAR", variant="GHOST")
-    chip = cluster.mixar_surface(theme="ZEN").row(align=True)
-    chip.enabled = shading.type in {"SOLID", "WIREFRAME"}
-    xray_prop = "show_xray_wireframe" if shading.type == "WIREFRAME" else "show_xray"
-    chip.prop(shading, xray_prop, text="", icon="XRAY", toggle=True)
-    chip.mixar_style(component="TOOLBAR", variant="GHOST")
+    minimal = tier == zen_toolbar_layout.MINIMAL
+    if not minimal:
+        zen_scene_controls.draw_guides(cluster, context)
     surface = cluster.mixar_surface(theme="ZEN")
     row = surface.row(align=True)
-    row.prop(shading, "type", text="", expand=True)
-    row.popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")
+    if minimal:
+        # The shading popover keeps every mode; its trigger shows the current one.
+        icon = shading.bl_rna.properties["type"].enum_items[shading.type].icon
+        row.popover(panel="VIEW3D_PT_shading", text="", icon=icon)
+    else:
+        row.prop(shading, "type", text="", expand=True)
+        row.popover(panel="VIEW3D_PT_shading", text="", icon="DOWNARROW_HLT")
     row.mixar_style(component="TOOLBAR", variant="GHOST", all_items=True)
 
     layout.separator_spacer()
     right = layout.row(align=False)
-    right.ui_units_x = 29 if not compact else 27
     right.alignment = "RIGHT"
-    zen_scene_controls.draw_right(right, context, compact=compact)
+    zen_scene_controls.draw_right(right, context, tier=tier)
 
 
 def _draw_zen_guides(self, context):
@@ -110,15 +107,15 @@ def _draw_zen_guides(self, context):
 def _patched_tool_header_draw(self, context):
     """Replacement for VIEW3D_HT_tool_header.draw.
 
-    Zen mode: render nothing. The region overlaps and clears transparent,
-    so an empty tool-header must not paint button-section chrome.
+    Zen mode: center the selection menu over the viewport. The region
+    overlaps and clears transparent; only the native controls paint a surface.
     Engine mode: defer to the original draw.
     """
     if not _is_basic_workspace(context):
         if _original_tool_header_draw is not None:
             _original_tool_header_draw(self, context)
         return
-    # Zen mode: deliberately empty.
+    draw_object_controls(self.layout, context)
 
 
 def _tool_helper():

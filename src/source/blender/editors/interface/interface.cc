@@ -3875,6 +3875,21 @@ void block_listen(const Block *block, const wmRegionListenerParams *listener_par
     listener.listener_func(listener_params);
   }
 
+  /* Native modifier add/apply notifies the object, but popovers otherwise only
+   * refresh on window resize. Refresh the adaptive stack without polling timers. */
+  const wmNotifier *notice = listener_params->notifier;
+  if (listener_params->region->regiontype == RGN_TYPE_TEMPORARY &&
+      notice->category == NC_OBJECT && notice->data == ND_MODIFIER)
+  {
+    for (const Button &button : block->buttons()) {
+      if (button.rnaprop &&
+          STREQ(RNA_property_identifier(button.rnaprop), "mixar_zen_modifier_index"))
+      {
+        ED_region_tag_refresh_ui(listener_params->region);
+        break;
+      }
+    }
+  }
   block_views_listen(block, listener_params);
 }
 

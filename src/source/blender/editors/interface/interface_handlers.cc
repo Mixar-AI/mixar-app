@@ -76,6 +76,7 @@
 #include "buttons/interface_textbox.hh"
 #include "interface_text_dictation.hh"
 #include "interface_intern.hh"
+#include "interface_moodboard_navigation.hh"
 #include "interface_mixar_section.hh" /* Mixar: UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_TEST. */
 
 #include "RNA_access.hh"
@@ -5820,6 +5821,16 @@ static bool do_but_ANY_drag_toggle(
 
 static int do_but_BUT(bContext *C, Button *but, HandleButtonData *data, const wmEvent *event)
 {
+  /* Start native panning on the grip press, rather than after its release. */
+  if (data->state == BUTTON_STATE_HIGHLIGHT && event->type == LEFTMOUSE &&
+      event->val == KM_PRESS && but->optype &&
+      STREQ(but->optype->idname, "VIEW2D_OT_pan") &&
+      but->block->name == "VIEW3D_HT_tool_header" &&
+      but->mixar_style.theme == MixarTheme::Zen)
+  {
+    button_activate_state(C, but, BUTTON_STATE_EXIT);
+    return WM_UI_HANDLER_BREAK;
+  }
   /* Mixar: operator buttons with a drag payload use the native drag threshold.
    * A release without a drag still invokes the button's ordinary operator. */
   if (button_drag_is_draggable(but) &&
@@ -11162,6 +11173,12 @@ static int handle_button_event(bContext *C, const wmEvent *event, Button *but)
   HandleButtonData *data = but->active;
   const HandleButtonState state_orig = data->state;
 
+  if (ELEM(data->state, BUTTON_STATE_HIGHLIGHT, BUTTON_STATE_TEXT_EDITING,
+           BUTTON_STATE_TEXT_SELECTING) && moodboard_text_navigation_event(C, but, event))
+  {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
   Block *block = but->block;
   ARegion *region = data->region;
 
@@ -13740,6 +13757,15 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
 
   Button *but = region_find_active_but(region);
 
+  /* Bypass the window-modal editor as well as the region button handler.
+   * Returning without exiting preserves the draft, caret and text selection. */
+  if (but && but->active &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING) &&
+      moodboard_text_navigation_event(C, but, event))
+  {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
   /* A file drop is an explicit composer action. Release modal text editing
    * with the draft committed so the region's dropbox can receive this event. */
   ScrArea *drop_area = CTX_wm_area(C);
@@ -13816,6 +13842,41 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
           but = target;
           break;
         }
+      }
+    }
+    /* The transcript (the island's WINDOW region) is custom-drawn: its slot
+     * action buttons ("Choose Export Location", choice / confirm gates),
+     * option chips, step headers, stars and links are hit-tested by position
+     * in the region's own UI handler (mixie_chat_ui_handler), never uiButs,
+     * so but_find_mouse_over above finds nothing there. Opening the island
+     * focuses the composer (agent_bubble_composer.cc), which makes this
+     * handler window-modal; Blender's click-outside rule then spends the
+     * press on exiting text editing (ui_do_but_textedit → EXIT + BREAK) and
+     * the user's first click on a gate button does nothing — only a second
+     * click works. Commit the draft and let this same press continue to the
+     * transcript region's handlers. The composer's own field (empty-chat
+     * WINDOW composer) and any native tile there keep stock handling. */
+    if (!region_popup && area && area->spacetype == SPACE_AGENT_BUBBLE &&
+        event->type == LEFTMOUSE && event->val == KM_PRESS && but->active &&
+        ui_but_mixie_mention_scene(but) &&
+        ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+    {
+      ARegion *transcript = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
+      if (transcript && !(transcript->flag & RGN_FLAG_HIDDEN) &&
+          BLI_rcti_isect_pt_v(&transcript->winrct, event->xy) &&
+          but_find_mouse_over(transcript, event) == nullptr)
+      {
+#ifdef WITH_INPUT_IME
+        wmWindow *win = CTX_wm_window(C);
+        const wmIMEData *ime = win->runtime->ime_data;
+        if (ime && win->runtime->ime_data_is_composing && !ime->composite.empty()) {
+          textedit_insert_buf(but, but->active->text_edit, ime->composite.c_str(),
+                              ime->composite.size());
+        }
+#endif
+        button_activate_exit(C, but, but->active, false, false);
+        apply_but_funcs_after(C);
+        return WM_UI_HANDLER_CONTINUE;
       }
     }
     /* Commit an edited Zen input and transfer the press to the native Zen

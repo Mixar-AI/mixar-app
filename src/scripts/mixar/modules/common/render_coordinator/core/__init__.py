@@ -48,6 +48,24 @@ def busy():
     return _active is not None or bpy.app.is_job_running("RENDER")
 
 
+def native_render_kind():
+    """Who owns the render running on Blender's job thread, or None.
+
+    ``preview`` (agent verification, seconds), ``scene_image`` /
+    ``scene_video`` (scene_render deliverables) or ``other`` (the user's F12,
+    any unreserved render).
+    """
+    _main_thread()
+    if not bpy.app.is_job_running("RENDER"):
+        return None
+    owner = _active.owner if _active is not None else ""
+    if owner.startswith("agent-preview:"):
+        return "preview"
+    if owner.startswith("scene-render:"):
+        return "scene_video" if owner.startswith("scene-render:video:") else "scene_image"
+    return "other"
+
+
 def acquire(owner):
     """Reserve before scene mutation; None means the caller must defer."""
     global _active

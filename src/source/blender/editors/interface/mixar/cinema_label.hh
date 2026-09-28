@@ -7,10 +7,11 @@ struct rcti;
 struct rctf;
 
 namespace blender::ui {
-/** Shared Cinema Mode button typography for the Zen toolbar and Engine topbar. */
-void mixar_cinema_background(const rctf &bounds, float radius, float selected, float emphasis);
-/** Gradient label with an optional leading icon (start colour) and a small raised
- * "V1" marker (end colour); the three are fitted together inside `bounds`. */
+/** Shared Cinema capsule: one visible height, inset, radius, fill and border
+ * in both hosts, independent of their native header hit-target heights. */
+void mixar_cinema_background(const rctf &bounds, float selected, float emphasis);
+/** Gradient label with an optional leading icon (start colour) and an inline italic
+ * "V2" suffix (end colour); the three are fitted together inside `bounds`. */
 void mixar_cinema_label(const rcti &bounds,
                         const char *label,
                         float selected,

@@ -94,6 +94,21 @@ bool mixar_workspace_is_zen(const bContext *C);
 bool mixar_workspace_floats_viewport_chrome(const bContext *C);
 bool mixar_area_floats_viewport_chrome(const ScrArea *area);
 /**
+ * Zen's floating Move/Rotate/Scale pill: the overlapping TOOLS region of a
+ * Zen View3D. It is chrome over the viewport, not a panel list, so it never
+ * zooms, and only its buttons are a hit (see #ED_region_contains_xy).
+ * Finds the region's area itself, so it also answers for callers without one.
+ */
+bool mixar_region_is_zen_floating_tools(const ARegion *region);
+/**
+ * Keep the Zen pill at a fixed on-screen size. Its TOOLS region still carries
+ * the stock "View2D Buttons List" keymap (trackpad pinch, ctrl+MMB, numpad
+ * +/-, ctrl+=/-), whose zoom would otherwise scale the buttons. Locks the
+ * View2D zoom (the zoom operators' poll then fails) and snaps a zoom already
+ * saved in the file back to 1:1. No-op for every other region.
+ */
+void mixar_zen_floating_tools_fixed_scale(const bContext *C, ARegion *region);
+/**
  * Paint the Zen topbar as the family's ISLAND pane instead of the theme
  * header slab. View3D headers use their own toolbar bed. Returns true when
  * the caller must skip
@@ -102,4 +117,5 @@ bool mixar_area_floats_viewport_chrome(const ScrArea *area);
 bool mixar_zen_header_clear(const bContext *C, const ARegion *region);
 /** Zen scene-toolbar bed / transparent empty tool-header clear. */
 bool mixar_zen_floating_header_clear(const bContext *C, const ARegion *region);
+void mixar_zen_adaptive_pan_clamp(const bContext *C, ARegion *region);
 }  // namespace blender::ui

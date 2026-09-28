@@ -68,6 +68,9 @@ def _run_operator(fmt: str, filepath: str) -> set:
             filepath=filepath,
             export_format="GLB",
             use_selection=True,
+            # glTF walks every scene without this; a selected object in
+            # another scene would otherwise ride along as a second scene.
+            use_active_scene=True,
             export_texcoords=True,
             export_normals=True,
             export_materials="EXPORT",

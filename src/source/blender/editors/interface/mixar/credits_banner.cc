@@ -13,7 +13,8 @@
  * handoffs and telemetry stay in one Python place.
  *
  * Input: Esc or a press on the dimmed backdrop dismisses; Enter picks the
- * focused action (Upgrade by default); Creator requires a completed slide.
+ * focused action (Upgrade by default); Creator requires a completed slide,
+ * released anywhere.
  * Foreign timers and window events pass through.
  */
 
@@ -292,7 +293,10 @@ static wmOperatorStatus banner_modal(bContext *C, wmOperator *op, const wmEvent 
       if (state->dragging) {
         state->slide = slider_progress(layout, mx - state->drag_offset);
         state->dragging = false;
-        if (state->slide >= SLIDE_COMPLETE && hit == TARGET_CREATOR) {
+        /* Progress alone decides: a full slide usually overshoots the short
+         * track or drifts off its thin height, and the hint already reads
+         * "Release to continue" there. Sliding back is the way to cancel. */
+        if (state->slide >= SLIDE_COMPLETE) {
           choose(C, *state, TARGET_CREATOR);
         }
         else {

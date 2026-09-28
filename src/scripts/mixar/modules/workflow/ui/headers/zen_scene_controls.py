@@ -5,7 +5,21 @@
 
 import bpy
 
+from ...core import viewport_guides, zen_toolbar_layout as tiers
 from ...core.zen_scene import render_samples_binding, sky_enabled
+
+
+def header_tier(context):
+    """Width tier of the viewport's scene toolbar (also valid in its popovers)."""
+    area = getattr(context, "area", None)
+    header = None
+    if area is not None:
+        header = next((r for r in area.regions if r.type == "HEADER"), None)
+    pixels = header.width if header is not None else getattr(context.region, "width", 0)
+    scale = max(float(context.preferences.system.ui_scale), 0.01)
+    view = getattr(context, "space_data", None)
+    restore = view is not None and not getattr(view, "show_region_tool_header", True)
+    return tiers.tier_for_width(pixels / scale, object_controls=restore)
 
 
 def style(layout, variant="SECONDARY"):
@@ -29,9 +43,9 @@ def draw_render_settings(layout, context, *, vertical=False):
     field.prop(context.scene.render, "engine", text="")
     style(field)
     if not vertical:
-        controls.separator(factor=0.8)
+        controls.separator(factor=0.5)
     samples = controls.row(align=True)
-    samples.ui_units_x = 14.0
+    samples.ui_units_x = 13.0
     target = getattr(context.window_manager, "mixar_zen_sample_target", "RENDER")
     selector = samples.row(align=True)
     selector.ui_units_x = 8.0
@@ -110,19 +124,21 @@ def draw_scenes_button(surface, context):
     surface.separator(factor=0.15)
 
 
-def draw_left(layout, context, *, compact):
+def draw_left(layout, context, *, tier):
     surface = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
     draw_scenes_button(surface, context)
     add = surface.row()
-    add.ui_units_x = 3.4 if compact else 5.8
-    add.menu("VIEW3D_MT_add", text="Add" if compact else "Add Objects")
+    add.ui_units_x = 5.8
+    add.menu("VIEW3D_MT_add", text="Add Objects")
     style(add, "PRIMARY")
-    surface.separator(factor=0.8)
-    if compact:
+    surface.separator(factor=0.5)
+    if tier != tiers.FULL:
+        icon_only = tiers.at_most(tier, tiers.NARROW)
         render = surface.row()
-        render.ui_units_x = 8
+        render.ui_units_x = 2.0 if icon_only else 8
         if hasattr(bpy.types, "MIXAR_PT_zen_render_settings"):
-            render.popover(panel="MIXAR_PT_zen_render_settings", text="Render Settings", icon="SCENE")
+            render.popover(panel="MIXAR_PT_zen_render_settings",
+                           text="" if icon_only else "Render Settings", icon="SCENE")
         else:
             render.enabled = False
             render.label(text="Render Settings")
@@ -130,12 +146,47 @@ def draw_left(layout, context, *, compact):
     else:
         draw_render_settings(surface, context)
 
+    if not context.space_data.show_region_tool_header:
+        restore = surface.row()
+        compact = tiers.at_most(tier, tiers.NARROW)
+        restore.operator('wm.context_toggle', text='' if compact else 'Object Controls',
+                         icon='PREFERENCES').data_path = 'space_data.show_region_tool_header'
+        style(restore)
 
-def draw_right(layout, context, *, compact):
+
+def draw_guides(layout, context):
+    """Grid/relationship-lines toggle and the X-ray chip."""
+    view = context.space_data
+    shading = view.shading
+    guides = layout.mixar_surface(theme="ZEN").row(align=True)
+    guides.operator(
+        "mixar.zen_toggle_guides", text="", icon="GRID",
+        depress=viewport_guides.guides_shown(view),
+    )
+    guides.mixar_style(component="TOOLBAR", variant="GHOST")
+    chip = layout.mixar_surface(theme="ZEN").row(align=True)
+    chip.enabled = shading.type in {"SOLID", "WIREFRAME"}
+    xray_prop = "show_xray_wireframe" if shading.type == "WIREFRAME" else "show_xray"
+    chip.prop(shading, xray_prop, text="", icon="XRAY", toggle=True)
+    chip.mixar_style(component="TOOLBAR", variant="GHOST")
+
+
+def draw_right(layout, context, *, tier):
     # Native row spacing is enough between groups; extra separators double it.
-    draw_cinema(layout, context)
-    draw_playback(layout, context)
-    draw_sky(layout, context)
+    if not tiers.at_most(tier, tiers.TIGHT):
+        draw_cinema(layout, context)
+    if tiers.overflow_sections(tier) and hasattr(bpy.types, "MIXAR_PT_zen_toolbar_more"):
+        more = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
+        more.ui_units_x = 2.0
+        more.popover(panel="MIXAR_PT_zen_toolbar_more", text="", icon="DOWNARROW_HLT")
+        style(more)
+    else:
+        draw_playback(layout, context)
+        draw_sky(layout, context)
+        draw_export(layout)
+
+
+def draw_export(layout):
     export = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
     export.ui_units_x = 4.2
     export.menu("TOPBAR_MT_file_export", text="Export", icon="EXPORT")
@@ -147,7 +198,7 @@ def draw_cinema(layout, context):
     if state is None:
         return
     row = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
-    row.ui_units_x = 6.0
+    row.ui_units_x = 9.0
     active = bool(state.is_directing)
     row.operator("mixar.director_finish" if active else "mixar.director_enter",
                  text="Cinema Mode", icon="CINEMA_REEL", depress=active)

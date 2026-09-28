@@ -278,3 +278,26 @@ def test_a_finished_job_puts_running_down_even_when_the_camera_is_gone():
     assert settings.render_is_running is False
     assert settings.render_progress == 0.0
     assert "removed" in settings.render_status
+
+
+def test_native_render_kind_names_the_owner_of_the_job_thread(renderer):
+    """render_gate tells the backend which render refused a script: a preview
+    is waited out, anything else is reported to the user."""
+    assert slot.native_render_kind() is None  # no native job at all
+    renderer.app.is_job_running.return_value = True
+    assert slot.native_render_kind() == 'other'  # the user's F12
+    for owner, kind in (('agent-preview:' + KEY, 'preview'),
+                        ('scene-render:video:' + KEY, 'scene_video'),
+                        ('scene-render:image:' + KEY, 'scene_image'),
+                        ('director-guides', 'other')):
+        slot._active = slot.Reservation(owner)
+        assert slot.native_render_kind() == kind, owner
+    renderer.app.is_job_running.return_value = False
+    assert slot.native_render_kind() is None  # finalizing: the job thread is gone
+
+
+def test_scene_render_owner_carries_its_kind():
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1]
+           / 'src/scripts/mixar/modules/scene_render/core/jobs.py').read_text()
+    assert "slot.acquire(f'scene-render:{kind}:{key}')" in src

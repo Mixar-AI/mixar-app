@@ -26,7 +26,19 @@ def snap(qa, name):
 def settings_query(qa):
     if qa.find(**HEADER, prop='engine')['widgets']:
         return HEADER
-    qa.click(**HEADER, text='Render Settings')
+    if qa.find(**HEADER, text='Render Settings')['widgets']:
+        qa.click(**HEADER, text='Render Settings')
+    else:
+        # Narrow tiers show the render popover as an icon; it is the header's
+        # first popover in every tier.
+        qa.eval("""
+def open_render():
+    pops = drv.find(area_type='VIEW_3D', region_type='HEADER', but_type='Popover')
+    yield from drv.click_steps(pops[0])
+    yield .3
+    return True
+result = open_render()
+""")
     return {'popup': True}
 
 

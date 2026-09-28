@@ -7,7 +7,7 @@
  * \brief Screen-space floating controls for selected moodboard nodes.
  *
  * Shared screen-space model/settings, prompt and action controls.
- * The Python node-settings popup owns the parameter schema renderer.
+ * Direct model selection and an anchored settings overlay preserve the prompt.
  * Both hosts use the same content bounds and native widgets.
  */
 
@@ -127,27 +127,7 @@ static void add_action_toolbar(const bContext *C,
     }
   }
 
-  /* One stable model/settings entry, regardless of host width. */
-  const auto metrics = ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC);
-  const int margin = int(metrics.padding);
-  const int height = int(metrics.control_height);
-  char model[MIXIE_GRAPH_LABEL_BUF];
-  mixie_rna_string_get_clamped(node, "model_label", model, sizeof(model));
-  ui::Button *settings = ui::uiDefIconTextButO(block,
-                                               ui::ButtonType::But,
-                                               "MIXIE_OT_moodboard_node_settings",
-                                               wm::OpCallContext::InvokeDefault,
-                                               ICON_PREFERENCES,
-                                               model[0] ? model : "Model & Settings",
-                                               controls.xmin + margin,
-                                               controls.ymax - margin - height,
-                                               BLI_rcti_size_x(&controls) - 2 * margin,
-                                               height,
-                                               "Choose a model and adjust generation settings");
-  ui::mixar_style_button(settings, ui::MixarComponent::Action,
-                        ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
-  RNA_string_set(ui::button_operator_ptr_ensure(settings), "node_id", node_id);
-  controls.ymax -= height + int(metrics.gap);
+  moodboard_add_node_settings(block, node, controls, generation_running, node_id);
   /* All controls remain anchored to the full card, including off-canvas edges. */
   moodboard_add_node_tile_controls(
       block, node, controls, generation_running, has_result, state, edit_mode, node_id);

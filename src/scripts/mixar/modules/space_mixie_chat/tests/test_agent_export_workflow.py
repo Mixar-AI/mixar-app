@@ -26,6 +26,7 @@ from mixar.modules.space_mixie_chat.core import (  # noqa: E402
     agent_export,
     export_clips,
     export_destination,
+    export_preflight,
     export_presets,
 )
 from _export_support import write_glb  # noqa: E402
@@ -70,6 +71,7 @@ def test_presets_cover_every_use_case_and_exporter():
                 assert kwargs["axis_forward"] == "-Z" and kwargs["axis_up"] == "Y"
             elif family == "gltf":
                 assert kwargs["use_selection"] and kwargs["export_yup"] is True
+                assert kwargs["use_active_scene"] is True  # never another scene's objects
                 assert kwargs["export_cameras"] is False and kwargs["export_lights"] is False
                 assert kwargs["export_draco_mesh_compression_enable"] is False
             elif family == "usd":
@@ -111,6 +113,7 @@ def test_preset_report_carries_the_documented_keys():
     assert report["axis_up"] == "Y" and report["leaf_bones"] is False
     glb = export_presets.preset_report("web", "glb", export_presets.preset_kwargs("web", "glb"), "none")
     assert glb["axis_up"] == "Y" and glb["draco"] is False and glb["embed_textures"] is True
+    assert glb["active_scene_only"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -301,8 +304,8 @@ def fake_scene(monkeypatch, tmp_path):
         data=SimpleNamespace(materials=MagicMock()),
     )
     monkeypatch.setattr(agent_export, "bpy", fake_bpy)
-    monkeypatch.setattr(agent_export, "resolve_targets", lambda scope, names: meshes)
-    monkeypatch.setattr(agent_export, "run_preflight", lambda spec: {"ready": False})
+    monkeypatch.setattr(agent_export, "export_targets", lambda spec: meshes)
+    monkeypatch.setattr(agent_export, "preflight_meshes", lambda spec, meshes: {"ready": False})
     monkeypatch.setattr(agent_export, "_temporary_export_materials", lambda meshes: nullcontext())
 
     def exporter(filepath, **kwargs):
@@ -455,6 +458,10 @@ def test_picker_accepts_every_contract_format():
 
 
 class _FakeImage(_Fake):
+    packed_file = None
+    filepath = ""
+    file_format = "PNG"
+
     def copy(self):
         return _FakeImage(name=self.name, size=self.size, saved=[], filepath_raw="", file_format="")
 
@@ -494,6 +501,35 @@ def test_staged_obj_textures_writes_beside_the_obj_and_restores(tmp_path, monkey
     assert len(removed) == 2 and removed[1] is loaded[0]
     with export_obj_textures.staged_obj_textures([_Fake(data=SimpleNamespace(materials=[]))], obj_path) as staged:
         assert staged == (0, "")
+
+
+def test_staged_obj_textures_never_re_encodes_existing_bytes(tmp_path, monkeypatch):
+    # Blender has no DDS writer: a packed DDS must land byte-identical, an
+    # unpacked file is copied, only a generated image is rendered to PNG.
+    from mixar.modules.space_mixie_chat.core import export_obj_textures
+    loaded = []
+    monkeypatch.setattr(export_obj_textures, "bpy", SimpleNamespace(data=SimpleNamespace(images=SimpleNamespace(
+        remove=lambda img: None, load=lambda path: loaded.append(path) or _FakeImage(name=os.path.basename(path), filepath=path)))))
+    dds_bytes = b"DDS |" + bytes(range(64))
+    # size (0, 0): Blender cannot decode the DDS, but its bytes still ship
+    packed = _FakeImage(name="Armor", size=(0, 0), filepath="//textures/Armor.dds",
+                        packed_file=SimpleNamespace(data=dds_bytes))
+    on_disk = tmp_path / "src" / "Skin.jpg"
+    on_disk.parent.mkdir()
+    on_disk.write_bytes(b"\xff\xd8jpeg")
+    unpacked = _FakeImage(name="Skin", size=(4, 4), file_format="JPEG", filepath=str(on_disk))
+    generated = _FakeImage(name="Bake", size=(4, 4), file_format="PNG")
+    nodes = [SimpleNamespace(image=img, node_tree=None) for img in (packed, unpacked, generated)]
+    material = _Fake(name="M", use_nodes=True, node_tree=SimpleNamespace(nodes=nodes))
+    mesh = _Fake(name="Hero", data=SimpleNamespace(materials=[material]))
+    with export_obj_textures.staged_obj_textures([mesh], str(tmp_path / "Hero.obj")) as (count, folder):
+        assert count == 3 and folder == "Hero_textures"
+        assert (tmp_path / folder / "Armor.dds").read_bytes() == dds_bytes
+        assert (tmp_path / folder / "Skin.jpg").read_bytes() == b"\xff\xd8jpeg"
+        assert (tmp_path / folder / "Bake.png").read_bytes() == b"\x89PNG"
+        assert len(loaded) == 3
+    for node, img in zip(nodes, (packed, unpacked, generated)):
+        assert node.image is img
 
 
 def test_obj_export_stages_textures_and_uses_relative_paths(fake_scene, monkeypatch):
@@ -539,3 +575,188 @@ def test_reimport_uses_the_active_scene_not_a_temp_scene():
         assert f'"{block}"' in src
     assert "REIMPORT_SIZE_CAP = 250 * 1024 * 1024" in src
     assert "state.restore()" in src
+
+
+# ---------------------------------------------------------------------------
+# resolve_targets: roots expand to mesh descendants; names are carried
+# ---------------------------------------------------------------------------
+
+
+def _obj(name, type_="MESH", children=(), instance=None):
+    return _Fake(name=name, type=type_, children=list(children), instance_collection=instance)
+
+
+@pytest.fixture
+def preflight_scene(monkeypatch):
+    leaf_a, leaf_b = _obj("Barrel"), _obj("Stock")
+    grip = _obj("Grip")
+    sub = _obj("Handguard", "EMPTY", children=[leaf_a])
+    root = _obj("AK47", "EMPTY", children=[sub, leaf_b, grip])
+    stray = _obj("Floor")
+    linked = _obj("Bolt")
+    instance = _obj("Bolt_instance", "EMPTY", instance=SimpleNamespace(all_objects=[linked]))
+    objects = dict((o.name, o) for o in (leaf_a, leaf_b, grip, sub, root, stray, linked, instance))
+    ctx = SimpleNamespace(selected_objects=[root], scene=SimpleNamespace(objects=list(objects.values())))
+    monkeypatch.setattr(export_preflight, "bpy", SimpleNamespace(
+        data=SimpleNamespace(objects=objects), context=ctx))
+    export_preflight.clear_repair_cache()
+    yield SimpleNamespace(ctx=ctx, objects=objects, root=root)
+    export_preflight.clear_repair_cache()
+
+
+def test_named_root_empty_expands_to_nested_mesh_descendants(preflight_scene):
+    names = [o.name for o in export_preflight.resolve_targets("named", ["AK47"])]
+    assert names == ["Barrel", "Stock", "Grip"]
+    # nested roots + a collection instance, each mesh once, order stable
+    names = [o.name for o in export_preflight.resolve_targets("named", ["AK47", "Handguard", "Bolt_instance"])]
+    assert names == ["Barrel", "Stock", "Grip", "Bolt"]
+    preflight_scene.objects["Lonely"] = _obj("Lonely", "EMPTY")
+    with pytest.raises(ValueError, match="No mesh objects match"):
+        export_preflight.resolve_targets("named", ["Lonely"])
+    with pytest.raises(ValueError, match="not found"):
+        export_preflight.resolve_targets("named", ["Ghost"])
+
+
+def test_selection_holding_only_the_root_expands(preflight_scene):
+    names = [o.name for o in export_preflight.resolve_targets("selected")]
+    assert names == ["Barrel", "Stock", "Grip"]
+
+
+def test_repair_and_export_reuse_the_preflight_targets_after_a_deselect(preflight_scene):
+    spec = {"target_scope": "selected", "session_id": "sess-a", "request_id": "req-1"}
+    # the preflight resolves and remembers under THIS request
+    assert [o.name for o in export_preflight.export_targets(spec)] == ["Barrel", "Stock", "Grip"]
+    preflight_scene.ctx.selected_objects.clear()  # an operator deselected everything
+    with pytest.raises(ValueError):
+        export_preflight.resolve_targets("selected")
+    assert [o.name for o in export_preflight.export_targets(spec)] == ["Barrel", "Stock", "Grip"]
+    # names carried by the backend win over the memory
+    assert [o.name for o in export_preflight.export_targets({**spec, "mesh_names": ["Floor"]})] == ["Floor"]
+    # a dropped object is skipped, an empty memory resolves afresh
+    del preflight_scene.objects["Grip"]
+    assert [o.name for o in export_preflight.export_targets(spec)] == ["Barrel", "Stock"]
+    export_preflight.clear_repair_cache("sess-a")
+    with pytest.raises(ValueError):
+        export_preflight.export_targets(spec)
+
+
+def test_target_memory_never_leaks_across_requests_or_sessions(preflight_scene, monkeypatch):
+    """PR #1700 review: a ("selected", ()) slot shared by every request made an
+    unrelated later export reuse an old mesh list, and clearing one session wiped
+    every other session's targets."""
+    first = {"target_scope": "selected", "session_id": "sess-a", "request_id": "req-1"}
+    assert [o.name for o in export_preflight.export_targets(first)] == ["Barrel", "Stock", "Grip"]
+    # the user now selects something else and a NEW request exports the selection
+    preflight_scene.ctx.selected_objects[:] = [preflight_scene.objects["Floor"]]
+    later = {**first, "request_id": "req-2"}
+    assert [o.name for o in export_preflight.export_targets(later)] == ["Floor"]
+    # another session with the same scope reads its own live selection too
+    other = {**first, "session_id": "sess-b", "request_id": "req-9"}
+    assert [o.name for o in export_preflight.export_targets(other)] == ["Floor"]
+    # a spec without ids (older backend) never uses or writes the memory
+    assert [o.name for o in export_preflight.export_targets({"target_scope": "selected"})] == ["Floor"]
+    # clearing session A leaves session B's in-flight targets alone
+    preflight_scene.ctx.selected_objects[:] = [preflight_scene.objects["Barrel"]]
+    export_preflight.clear_repair_cache("sess-a")
+    assert [o.name for o in export_preflight.export_targets(other)] == ["Floor"]
+    assert [o.name for o in export_preflight.export_targets(first)] == ["Barrel"]
+    # an expired slot resolves afresh
+    clock = [1000.0]
+    monkeypatch.setattr(export_preflight.time, "monotonic", lambda: clock[0])
+    fresh = {**first, "request_id": "req-3"}
+    assert [o.name for o in export_preflight.export_targets(fresh)] == ["Barrel"]
+    preflight_scene.ctx.selected_objects[:] = [preflight_scene.objects["Floor"]]
+    clock[0] += export_preflight.TARGET_MEMORY_SECONDS + 1
+    assert [o.name for o in export_preflight.export_targets(fresh)] == ["Floor"]
+
+
+# ---------------------------------------------------------------------------
+# remembered folder: one picker per agent request
+# ---------------------------------------------------------------------------
+
+
+def test_remembered_folder_is_per_request_and_expires(tmp_path, monkeypatch):
+    export_destination.clear_all_destinations()
+    export_destination.remember_export_folder("sess", "bubble-1", str(tmp_path))
+    assert export_destination.remembered_export_folder("sess", "bubble-1") == str(tmp_path)
+    assert export_destination.remembered_export_folder("sess", "bubble-2") is None
+    assert export_destination.remembered_export_folder("other", "bubble-1") is None
+    export_destination.remember_export_folder("sess", "bubble-2", str(tmp_path / "b"))  # next pick overwrites
+    assert export_destination.remembered_export_folder("sess", "bubble-1") is None
+    assert export_destination.remembered_export_folder("sess", "bubble-2") == str(tmp_path / "b")
+    now = [1000.0]
+    monkeypatch.setattr(export_destination.time, "monotonic", lambda: now[0])
+    export_destination.remember_export_folder("sess", "bubble-3", str(tmp_path))
+    now[0] += export_destination.FOLDER_MEMORY_SECONDS + 1
+    assert export_destination.remembered_export_folder("sess", "bubble-3") is None
+    export_destination.remember_export_folder("sess", "bubble-4", str(tmp_path))
+    export_destination.clear_all_destinations()
+    assert export_destination.remembered_export_folder("sess", "bubble-4") is None
+    with pytest.raises(ValueError):
+        export_destination.remember_export_folder("", "x", str(tmp_path))
+
+
+def test_run_export_to_remembered_reuses_the_picked_folder(fake_scene):
+    folder = fake_scene.tmp / "picked"
+    folder.mkdir()
+    (folder / "Hero.glb").write_bytes(b"first pick")
+    spec = {"format": "glb", "target_scope": "scene", "use_case": "web", "suggested_filename": "Hero", "destination": "ask"}
+    # different / unknown request id: no picker memory, no error text
+    assert agent_export.run_export_to_remembered("sess", "bubble-9", spec) == {"success": False, "remembered": False}
+    export_destination.remember_export_folder("sess", "bubble-1", str(folder))
+    assert agent_export.run_export_to_remembered("sess", "bubble-2", spec) == {"success": False, "remembered": False}
+    result = agent_export.run_export_to_remembered("sess", "bubble-1", spec)
+    assert result["success"] is True and result["remembered"] is True
+    assert result["folder"] == "chosen earlier" and result["filepath_basename"] == "Hero_2.glb"
+    assert (folder / "Hero.glb").read_bytes() == b"first pick" and (folder / "Hero_2.glb").exists()
+    _no_paths(result)
+    assert agent_export.run_export_to_remembered("sess", "bubble-1", {**spec, "format": "step"}) == {
+        "success": False, "remembered": True, "error": "Unsupported export format: step"}
+    # a path the picker parked for THIS call is left to run_export (the tool re-runs
+    # after its interrupt); it is not an earlier pick
+    export_destination.set_destination("sess", str(folder / "Hero_3.glb"))
+    assert agent_export.run_export_to_remembered("sess", "bubble-1", spec) == {"success": False, "remembered": False}
+    export_destination.clear_destination("sess")
+    assert agent_export.run_export_to_remembered("sess", "bubble-1", spec)["remembered"] is True
+
+
+def test_picker_remembers_the_folder_under_the_backend_request_id():
+    src = open(os.path.join(_OPS_DIR, "agent_export_ops.py"), encoding="utf-8").read()
+    assert "request_id: StringProperty(default=\"\", options={'HIDDEN', 'SKIP_SAVE'})" in src
+    assert "remember_export_folder(self.session_id, self.request_id or self.bubble_id," in src
+    assert "os.path.dirname(self.filepath)" in src
+    # the slot action hands the bubble's request id to the picker
+    dispatch = open(os.path.join(_OPS_DIR, "chat_special_ops.py"), encoding="utf-8").read()
+    assert 'request_id=getattr(bubble, "export_request_id", "") or ""' in dispatch
+    props = open(os.path.join(_OPS_DIR, "..", "properties", "chat_props.py"), encoding="utf-8").read()
+    assert "export_request_id: StringProperty(" in props
+
+
+def test_file_save_interrupt_context_puts_the_request_id_on_the_bubble():
+    from mixar.modules.space_mixie_chat.core.slot_processor import SlotEventProcessor as SlotProcessor
+    bubble = SimpleNamespace()
+    SlotProcessor._apply_interrupt_context_slot(bubble, {
+        "format": "glb", "scope": "selected", "extension": ".glb",
+        "suggested_filename": "Hero", "request_id": "req-7f3a",
+    })
+    assert bubble.export_request_id == "req-7f3a"
+    assert (bubble.export_format, bubble.export_scope, bubble.export_suggested_filename) == ("glb", "selected", "Hero")
+    # an old backend without a request id: the picker falls back to the bubble id
+    SlotProcessor._apply_interrupt_context_slot(bubble, {"format": "fbx"})
+    assert bubble.export_request_id == ""
+    assert not any("/" in str(v) for v in vars(bubble).values())
+
+
+def test_preflight_after_a_resume_uses_the_remembered_targets(preflight_scene, monkeypatch):
+    monkeypatch.setattr(export_preflight, "inspect_mesh", lambda obj: {k: [] for k in export_preflight.CHECK_ORDER})
+    for obj in preflight_scene.objects.values():
+        obj.modifiers = []
+    spec = {"target_scope": "selected", "session_id": "sess-a", "request_id": "req-1"}
+    first = export_preflight.run_preflight(spec)
+    assert first["mesh_names"] == ["Barrel", "Stock", "Grip"]
+    preflight_scene.ctx.selected_objects.clear()  # the picker interrupt; an operator deselected
+    again = export_preflight.run_preflight(spec)
+    assert again["mesh_names"] == ["Barrel", "Stock", "Grip"] and again["ready"] is True
+    export_preflight.clear_repair_cache()
+    with pytest.raises(ValueError):
+        export_preflight.run_preflight(spec)

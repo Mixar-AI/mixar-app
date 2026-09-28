@@ -64,7 +64,9 @@ class MGltfExportSettings(PropertyGroup):
     use_active_scene: BoolProperty(
         name='Active Scene',
         description='Export active scene only',
-        default=False,
+        # Scene tabs are separate documents: an export must never carry the
+        # other tabs as extra glTF scenes (re-imported, they become phantom tabs).
+        default=True,
     )
     export_extras: BoolProperty(
         name='Custom Properties',

@@ -122,6 +122,10 @@ struct DirectorWalkData {
   unsigned int held = 0;
   /** The left button is DOWN: mouse motion aims the camera. */
   bool looking = false;
+  /** Where the look-drag last aimed from, in window space. The drag delta is
+   * measured against this rather than `event->prev_xy`: see the MOUSEMOVE
+   * branch of #director_walk_modal. */
+  int look_xy[2] = {0, 0};
   double last_tick = 0.0;
   bool moved = false;
   wmTimer *timer = nullptr;
@@ -376,6 +380,8 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
         return director_walk_finish(C, op);
       }
       data->looking = true;
+      data->look_xy[0] = event->xy[0];
+      data->look_xy[1] = event->xy[1];
       return OPERATOR_RUNNING_MODAL;
     }
     /* The release ends the drag it started — and only that drag. A release
@@ -397,11 +403,19 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
     if (camera != data->camera || locked) {
       return director_walk_finish(C, op);
     }
-    walk_look(C,
-              data,
-              camera,
-              float(event->xy[0] - event->prev_xy[0]),
-              float(event->xy[1] - event->prev_xy[1]));
+    /* The drag is measured from where the walk last aimed, never from
+     * `event->prev_xy`. The window queue coalesces motion: a MOUSEMOVE queued
+     * behind another demotes that one to INBETWEEN_MOUSEMOVE and takes ITS
+     * position as `prev_xy`, so the in-between motion is simply gone. A
+     * still look-drag drains the queue between moves and hardly notices;
+     * while W/A/S/D are held every tick commits the camera and redraws, the
+     * moves pile up behind the redraw, and most of the drag was dropped —
+     * the camera would drive or turn, never both. */
+    const int dx = event->xy[0] - data->look_xy[0];
+    const int dy = event->xy[1] - data->look_xy[1];
+    data->look_xy[0] = event->xy[0];
+    data->look_xy[1] = event->xy[1];
+    walk_look(C, data, camera, float(dx), float(dy));
     return OPERATOR_RUNNING_MODAL;
   }
 
@@ -417,8 +431,14 @@ wmOperatorStatus director_walk_modal(bContext *C, wmOperator *op, const wmEvent 
      * to be — the outliner, the properties editor, the chat, a moodboard,
      * another workspace's 3D viewport — and W meant "walk" in editors that
      * have their own W. It is the same question the look handle asks, so a
-     * press over a card or a text field goes to the card or the field. */
-    if (!director_pointer_on_stage(C, event)) {
+     * press over a card or a text field goes to the card or the field.
+     *
+     * Except DURING a look-drag: the drag began on the stage and the pointer
+     * is the look handle until the button comes up, wherever it has been
+     * dragged to — over the chat bar, a card or off the region. Asking
+     * where it is then handed W to whatever the drag happened to cross, so
+     * driving while looking worked only until the pointer left the stage. */
+    if (!data->looking && !director_pointer_on_stage(C, event)) {
       return OPERATOR_PASS_THROUGH;
     }
     /* The first key of a burst, with no look-drag running either: nothing

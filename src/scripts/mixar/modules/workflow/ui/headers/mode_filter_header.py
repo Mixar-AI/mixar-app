@@ -27,6 +27,7 @@ register() a second time.
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.utils import topbar_layout
 from mixar.modules.workflow.constants import BASIC_WORKSPACE_NAME
 from mixar.modules.workflow.ui.operators import mode_slider_anim
 
@@ -36,10 +37,29 @@ _original_draw_left = None
 _original_draw_right = None
 
 
-_SLIDER_HALF_UNITS = 5.5
-"""Half the slider's width in UI units — the design's 225 px track, halved
-(1 unit = UI_UNIT_X = 20 px @1x). Both halves MUST share this: the C++
-painter derives the full track by mirroring the left half's rect."""
+_SLIDER_HALF_UNITS = topbar_layout.SLIDER_HALF_UNITS
+"""Both halves MUST share this: the C++ painter derives the full track by
+mirroring the left half's rect."""
+
+
+def _window_width(context):
+    """Logical window width for the menu bar, or None outside a real header."""
+    area = getattr(context, "area", None)
+    prefs = getattr(context, "preferences", None)
+    if area is None or prefs is None:
+        return None
+    return topbar_layout.logical_width(area.width, prefs.system.ui_scale)
+
+
+def _draw_editor_menus(layout, context, *, engine):
+    """Inline menus, or one collapsed menu when they would reach the slider."""
+    width = _window_width(context)
+    if (width is not None and hasattr(bpy.types, "MIXAR_MT_editor_menus_collapsed")
+            and topbar_layout.collapse_editor_menus(width, engine=engine)):
+        # The logo stays the bar's first element and opens every menu.
+        layout.menu("MIXAR_MT_editor_menus_collapsed", text="", icon='MIXAR_ICON')
+        return
+    bpy.types.TOPBAR_MT_editor_menus.draw_collapsible(context, layout)
 
 
 def _draw_mode_slider(layout, context) -> None:
@@ -86,7 +106,9 @@ def _patched_draw_left(self, context):
     window = context.window
     screen = context.screen
 
-    bpy.types.TOPBAR_MT_editor_menus.draw_collapsible(context, layout)
+    workspace = getattr(context, "workspace", None)
+    is_zen = workspace is not None and workspace.name == BASIC_WORKSPACE_NAME
+    _draw_editor_menus(layout, context, engine=not is_zen)
     # Space (not LINE) so Help keeps its trailing gap without a divider.
     layout.separator()
 
@@ -96,8 +118,7 @@ def _patched_draw_left(self, context):
         )
         return
 
-    workspace = getattr(context, "workspace", None)
-    if workspace is not None and workspace.name == BASIC_WORKSPACE_NAME:
+    if is_zen:
         # Zen mode: no workspace tab strip — just the centred mode slider.
         _draw_mode_slider(layout, context)
         return
@@ -124,10 +145,13 @@ def _patched_draw_right(self, context):
     if workspace is not None and workspace.name == BASIC_WORKSPACE_NAME:
         return
     # Two full datablock selectors plus Cinema/profile can consume more than
-    # half the header. On narrower or scaled displays keep both selectors in
-    # one native popover, leaving the mode switch's center lane available.
-    scale = max(float(context.preferences.system.ui_scale), 0.01)
-    if context.area.width / scale < 1640 and hasattr(bpy.types, "MIXAR_PT_scene_controls"):
+    # half the header. Unless they fit beside the account button's whole
+    # label, keep both selectors in one native popover, leaving the mode
+    # switch's center lane available.
+    width = _window_width(context)
+    full = width is not None and topbar_layout.engine_full_selectors(
+        width, topbar_layout.context_account_units(context))
+    if not full and hasattr(bpy.types, "MIXAR_PT_scene_controls"):
         self.layout.popover(panel="MIXAR_PT_scene_controls", text="", icon='SCENE_DATA')
     elif _original_draw_right is not None:
         _original_draw_right(self, context)

@@ -373,7 +373,7 @@ void agent_ui_draw_chip_row(ARegion *region,
    * jumping. The label brightens with it. */
   {
     MIXAR_THEME_LOAD(accent, AgentAccent);
-    MIXAR_THEME_LOAD(track_off, ChipActive);
+    MIXAR_THEME_LOAD(track_off, Border);
     MIXAR_THEME_LOAD(text_dim, TextSecondary);
     const AgentIslandFeedback feedback = agent_ui_motion_sample(
         region, AgentIslandControl::Auto, layout->chip_auto, state->auto_mode);

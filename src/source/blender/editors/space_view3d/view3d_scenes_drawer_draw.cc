@@ -42,6 +42,7 @@
 #include "ED_agent_panel.hh"
 #include "ED_mixar_glass.hh"
 #include "ED_screen.hh"
+#include "ED_space_api.hh"
 
 #include "GPU_framebuffer.hh"
 #include "GPU_immediate.hh"
@@ -248,19 +249,22 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
         draw_pill(stripe, zen.primary, 1.5f * scale);
       }
 
-      if (runtime->selected_uids.contains(card.scene_uid)) {
-        ui::draw_roundbox_corner_set(ui::CNR_ALL);
-        ui::draw_roundbox_4fv(&rect, false, CARD_RADIUS * scale, zen.primary);
+      const bool selected = runtime->selected_uids.contains(card.scene_uid);
+      if (selected) {
+        /* Selection is louder than the active wash on purpose: the wash says
+         * "this is the viewport's scene", the check says "this will be deleted". */
+        draw_selection_mark(rect, scale);
       }
 
       /* Thumbnail: the scene rendered natively into a small offscreen by the
        * timer operator and read back; drawn here from the card's own texture. A
        * scene that has never been evaluated shows a dark bed. */
       rcti thumb;
-      /* A quiet 2 x 3 dot grip makes the whole card's drag affordance visible. */
+      /* A quiet 2 x 3 dot grip makes the whole card's drag affordance visible;
+       * a selected card shows its check badge there instead. */
       rctf grip = {rect.xmin + 7.0f * scale, rect.xmin + 21.0f * scale,
                    rect.ymin + 17.0f * scale, rect.ymax - 17.0f * scale};
-      for (int col = 0; col < 2; col++) {
+      for (int col = 0; col < (selected ? 0 : 2); col++) {
         for (int row = 0; row < 3; row++) {
           const float x = grip.xmin + (2.0f + col * 6.0f) * scale;
           const float y = (rect.ymin + rect.ymax) * 0.5f + (row - 1) * 6.0f * scale;
@@ -411,6 +415,9 @@ void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 
   GPU_blend(GPU_BLEND_NONE);
 
+  /* Python POST_PIXEL handlers registered on the drawer's region type (the
+   * onboarding tour rings the panel and "+ New scene" from one). */
+  ED_region_draw_cb_draw(C, region, REGION_DRAW_POST_PIXEL);
 }
 
 }  // namespace blender
