@@ -45,7 +45,9 @@ def test_overflow_keeps_every_control_reachable():
 
 def test_menus_collapse_only_when_they_reach_the_slider():
     assert not bar.collapse_editor_menus(1512)
-    assert not bar.collapse_editor_menus(800)
+    # The Community menu now needs a full left lane.
+    assert not bar.collapse_editor_menus(1024)
+    assert bar.collapse_editor_menus(800)
     assert bar.collapse_editor_menus(700)
     # Engine's Workspaces icon follows the menus, so it collapses sooner.
     width = 2 * (bar.EDITOR_MENUS_PX + bar.SLIDER_HALF_UNITS * bar.UNIT_PX

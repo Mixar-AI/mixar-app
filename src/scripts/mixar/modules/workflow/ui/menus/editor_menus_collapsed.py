@@ -17,6 +17,8 @@ class MIXAR_MT_editor_menus_collapsed(bpy.types.Menu):
         for menu in ("TOPBAR_MT_file", "TOPBAR_MT_edit", "TOPBAR_MT_render",
                      "TOPBAR_MT_window", "TOPBAR_MT_help"):
             layout.menu(menu)
+        if hasattr(bpy.types, "MIXAR_MT_community"):
+            layout.menu("MIXAR_MT_community")
 
 
 classes = (MIXAR_MT_editor_menus_collapsed,)

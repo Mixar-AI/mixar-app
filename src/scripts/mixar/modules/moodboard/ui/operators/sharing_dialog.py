@@ -32,7 +32,8 @@ class SharingDialog:
             wm = bpy.context.window_manager
             state = (wm.moodboard_community_busy, wm.moodboard_community_notice,
                      wm.moodboard_community_link, wm.moodboard_community_mode,
-                     wm.moodboard_community_page, len(flow.records))
+                     wm.moodboard_community_page, wm.moodboard_community_kind,
+                     wm.moodboard_community_selected, len(flow.records))
             if state != self._last_state and self._popup:
                 self._last_state = state
                 self._popup.tag_refresh_ui()

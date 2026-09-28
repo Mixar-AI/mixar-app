@@ -41,8 +41,14 @@ def reset():
     _generation += 1
     _account = identity()
     records.clear()
+    from . import addon_publication
+    addon_publication.choices.clear()
+    addon_publication.preview.clear()
+    addon_publication.saved_publication.clear()
     wm = bpy.context.window_manager
     wm.moodboard_community_busy = False
+    wm.moodboard_community_selected = -1
+    wm.moodboard_community_total = 0
     wm.moodboard_community_notice = ""
     wm.moodboard_community_link = ""
     from .sharing_previews import clear
@@ -96,15 +102,17 @@ def request(method, path, on_success, *, message, **kwargs):
         wm.moodboard_community_busy = False
         try:
             on_success(unwrap(response))
+        except ValueError as exc:
+            notice(sanitize_message(str(exc), "Couldn't complete this action"))
         except Exception as exc:
-            notice(error_message(exc, "Couldn't open this moodboard. Try refreshing"))
+            notice(error_message(exc, "Couldn't complete this action. Please try again"))
         redraw_moodboard_canvases()
 
     def failure(error):
         if not valid():
             return
         wm.moodboard_community_busy = False
-        notice(error_message(error, "Couldn't load moodboards. Check your connection and retry"))
+        notice(error_message(error, "Couldn't load the community. Check your connection and retry"))
 
     try:
         getattr(get_moodboard_service(), method + '_async')(
@@ -125,6 +133,7 @@ def load(mode=None, page=0):
         return
     wm.moodboard_community_mode, wm.moodboard_community_page = mode, page
     records.clear()
+    wm.moodboard_community_selected = -1
 
     def complete(data):
         records.extend(data.get('items', []))
@@ -135,12 +144,14 @@ def load(mode=None, page=0):
                 if current:
                     scene.moodboard_share_revision = current['revision']
         wm.moodboard_community_more = bool(data.get('has_more'))
-        notice("" if records else "No boards yet. Publish a board or try another search")
+        wm.moodboard_community_total = data.get('total', len(records))
+        notice('')
         from .sharing_previews import load_covers
         load_covers(records)
 
-    request('get', mode, complete, message="Loading moodboards…",
-            params={'page': page, 'q': wm.moodboard_community_query})
+    request('get', mode, complete, message='Loading creations…',
+            params={'page': page, 'q': wm.moodboard_community_query,
+                    'kind': wm.moodboard_community_kind, 'sort': wm.moodboard_community_sort})
 
 
 def publish(scene):
@@ -175,6 +186,15 @@ def open_copy(path):
     source = bpy.context.scene
 
     def complete(data):
+        if data.get('kind') == 'addon':
+            records.clear()
+            records.append({k: v for k, v in data.items() if k not in {'assets', 'snapshot'}})
+            bpy.context.window_manager.moodboard_community_kind = 'addon'
+            bpy.context.window_manager.moodboard_community_selected = 0
+            from .sharing_previews import load_covers
+            load_covers(records)
+            notice('Add-on found. Review its details and choose Download ZIP')
+            return
         from .sharing_snapshot import restore
         from mixar.modules.space_mixie_chat.ui.operators.scene_tab_ops import (
             inherit_account, inherit_settings, switch_scene_tab, renumber_tabs,
@@ -250,8 +270,9 @@ def delete(record):
     def complete(_data):
         if record in records:
             records.remove(record)
+        bpy.context.window_manager.moodboard_community_selected = -1
         for scene in bpy.data.scenes:
             if scene.moodboard_share_id == record['id']:
                 scene.moodboard_share_id, scene.moodboard_share_revision = '', 0
-        notice("Cloud board deleted. Your local board is still here")
-    request('delete', record['id'], complete, message="Deleting cloud board…")
+        notice("Publication deleted. Your local work is still here")
+    request('delete', record['id'], complete, message="Deleting publication…")

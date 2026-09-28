@@ -19,7 +19,9 @@ class MIXIE_OT_moodboard_share(SharingDialog, Operator):
         flow.open_share(context.scene)
         if not context.scene.moodboard_share_title:
             context.scene.moodboard_share_title = context.scene.name
-        return self.begin(context, 560)
+        from ...core.sharing_previews import load_board_cover
+        load_board_cover(context.scene)
+        return self.begin(context, 720)
 
     def draw(self, context):
         self.track(context)
@@ -46,12 +48,14 @@ class MIXIE_OT_moodboard_publish(Operator):
 
 class MIXIE_OT_moodboard_explore(SharingDialog, Operator):
     bl_idname = 'mixie.moodboard_explore'
-    bl_label = 'Explore Moodboards'
-    bl_description = 'Discover boards by other creators or manage your own shared boards'
+    bl_label = 'Explore Mixar'
+    bl_description = 'Discover moodboards and add-ons by other creators, or manage your publications'
+    kind: EnumProperty(items=[('moodboard', 'Moodboards', ''), ('addon', 'Add-ons', '')])
 
     def invoke(self, context, event):
+        context.window_manager.moodboard_community_kind = self.kind
         flow.load('explore')
-        return self.begin(context, 820)
+        return self.begin(context, 940)
 
     def draw(self, context):
         self.track(context)
@@ -63,12 +67,15 @@ class MIXIE_OT_moodboard_explore_load(Operator):
     bl_label = 'Refresh Moodboards'
     mode: EnumProperty(items=[('current', 'Current', ''), ('explore', 'Explore', ''), ('mine', 'My Boards', '')])
     page: IntProperty(default=0, min=0)
+    kind: EnumProperty(items=[('current', 'Current', ''), ('moodboard', 'Moodboards', ''), ('addon', 'Add-ons', '')])
 
     @classmethod
     def poll(cls, context):
         return not context.window_manager.moodboard_community_busy
 
     def execute(self, context):
+        if self.kind != 'current':
+            context.window_manager.moodboard_community_kind = self.kind
         flow.load(None if self.mode == 'current' else self.mode, self.page)
         return {'FINISHED'}
 
@@ -96,7 +103,7 @@ class MIXIE_OT_moodboard_community_action(Operator):
     bl_label = 'Moodboard Action'
     index: IntProperty(default=-1)
     action: EnumProperty(items=[(a, label, '') for a, label in (
-        ('open', 'Open Copy'), ('copy', 'Copy Link'), ('private', 'Make Private'),
+        ('details', 'View Details'), ('open', 'Open Copy'), ('copy', 'Copy Link'), ('private', 'Make Private'),
         ('public', 'Publish in Explore'), ('unlisted', 'Share by Link'), ('delete', 'Delete Cloud Board'))])
 
     @classmethod
@@ -120,7 +127,9 @@ class MIXIE_OT_moodboard_community_action(Operator):
         if self.index >= len(flow.records):
             return {'CANCELLED'}
         record = flow.records[self.index]
-        if self.action == 'open':
+        if self.action == 'details':
+            context.window_manager.moodboard_community_selected = self.index
+        elif self.action == 'open':
             flow.open_copy(record['id'] if 'id' in record else 'shared/' + record['token'])
         elif self.action == 'copy':
             context.window_manager.clipboard = flow.url(record)

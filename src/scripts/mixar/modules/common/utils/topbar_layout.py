@@ -24,9 +24,9 @@ the left half's rectangle to find the full track."""
 SLIDER_CLEARANCE_PX = 8.0
 """Gap the native centring keeps between the slider and anything before it."""
 
-EDITOR_MENUS_PX = 262.0
-"""Logo + File/Edit/Render/Window/Help plus the trailing separator, as laid
-out at 1x (measured ~250 in the running app) with a little slack."""
+EDITOR_MENUS_PX = 352.0
+"""Logo + File/Edit/Render/Window/Help/Community plus the trailing separator.
+Includes 90 logical pixels for the community menu and its spacing."""
 
 WORKSPACE_MENU_PX = 28.0
 """Engine's Workspaces icon menu, which follows the editor menus."""
