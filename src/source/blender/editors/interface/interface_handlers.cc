@@ -76,6 +76,7 @@
 #include "buttons/interface_textbox.hh"
 #include "interface_text_dictation.hh"
 #include "interface_intern.hh"
+#include "interface_moodboard_navigation.hh"
 #include "interface_mixar_section.hh" /* Mixar: UI_BUT_MIXAR_DBLCLICK_EDITS_LABEL_TEST. */
 
 #include "RNA_access.hh"
@@ -11172,6 +11173,12 @@ static int handle_button_event(bContext *C, const wmEvent *event, Button *but)
   HandleButtonData *data = but->active;
   const HandleButtonState state_orig = data->state;
 
+  if (ELEM(data->state, BUTTON_STATE_HIGHLIGHT, BUTTON_STATE_TEXT_EDITING,
+           BUTTON_STATE_TEXT_SELECTING) && moodboard_text_navigation_event(C, but, event))
+  {
+    return WM_UI_HANDLER_CONTINUE;
+  }
+
   Block *block = but->block;
   ARegion *region = data->region;
 
@@ -13749,6 +13756,15 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
   int retval = WM_UI_HANDLER_CONTINUE;
 
   Button *but = region_find_active_but(region);
+
+  /* Bypass the window-modal editor as well as the region button handler.
+   * Returning without exiting preserves the draft, caret and text selection. */
+  if (but && but->active &&
+      ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING) &&
+      moodboard_text_navigation_event(C, but, event))
+  {
+    return WM_UI_HANDLER_CONTINUE;
+  }
 
   /* A file drop is an explicit composer action. Release modal text editing
    * with the draft committed so the region's dropbox can receive this event. */

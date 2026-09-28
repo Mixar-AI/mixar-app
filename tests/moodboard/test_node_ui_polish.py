@@ -142,7 +142,7 @@ def test_finished_nodes_offer_edit_and_run_again_in_settings():
 
 
 def test_settings_entry_scales_with_the_ui_factor():
-    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_ui.cc")
+    node_ui = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
     assert "ui::mixar_density_metrics(ui::MixarDensity::Compact, UI_SCALE_FAC)" in node_ui
     assert "const int height = int(metrics.control_height)" in node_ui
     assert '"MIXIE_OT_moodboard_node_settings"' in node_ui

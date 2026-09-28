@@ -1714,7 +1714,23 @@ static ui::Block *wm_operator_ui_create(bContext *C, ARegion *region, void *user
 
   block_func_set(block, nullptr, nullptr, nullptr);
 
-  block_bounds_set_popup(block, 6 * UI_SCALE_FAC, nullptr);
+  /* Moodboard settings cover the owning card's prompt. Keep the existing
+   * native popup scrolling, editing and dismissal, anchored to that card. */
+  if (STREQ(op->idname, "MIXIE_OT_moodboard_node_settings") &&
+      RNA_boolean_get(op->ptr, "anchored_overlay"))
+  {
+    ui::Layout &footer = layout.column(false);
+    ui::Button *done = uiDefBut(footer.block(), ui::ButtonType::But, IFACE_("Done"),
+                                0, 0, 0, UI_UNIT_Y, nullptr, 0, 0, "Return to the node prompt");
+    button_func_set(done, [data, block](bContext &ctx) { dialog_exec_cb(&ctx, data, block); });
+    int offset[2];
+    RNA_int_get_array(op->ptr, "overlay_offset", offset);
+    block_flag_disable(block, ui::BLOCK_MOVEMOUSE_QUIT);
+    block_bounds_set_popup(block, 6 * UI_SCALE_FAC, offset);
+  }
+  else {
+    block_bounds_set_popup(block, 6 * UI_SCALE_FAC, nullptr);
+  }
 
   return block;
 }

@@ -23,6 +23,7 @@ from ...core.first_use import begin_preview, end_preview, mark_started
 from ...core.image_lifecycle import release_moodboard_image_entry
 from ....common.utils.platform_utils import format_shortcut
 from ...constants import (
+    TEXTBOX_NAVIGATION_EVENTS,
     TEXTBOX_TEXT_DEFAULT,
     TEXTBOX_WIDTH_DEFAULT,
     TEXTBOX_HEIGHT_DEFAULT,
@@ -121,6 +122,8 @@ class MIXIE_OT_moodboard_add_textbox(Operator):
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
+        if event.type in TEXTBOX_NAVIGATION_EVENTS:
+            return {'PASS_THROUGH'}
         scene = context.scene
 
         if event.type == 'MOUSEMOVE':
@@ -237,6 +240,8 @@ class MIXIE_OT_moodboard_edit_textbox(Operator):
         if not (0 <= idx < len(boxes)):
             return {'CANCELLED'}
         tb = boxes[idx]
+        if event.type in TEXTBOX_NAVIGATION_EVENTS:
+            return {'PASS_THROUGH'}
 
         # Arm click-to-finish only after the mouse moves, so the double-click
         # that started editing can't immediately confirm it.

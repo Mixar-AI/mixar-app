@@ -41,6 +41,7 @@ set(SRC
   interface_drop.cc
   interface_dropboxes.cc
   interface_handlers.cc
+  interface_moodboard_navigation.hh
   interface_text_dictation.cc
   interface_text_dictation.hh
   interface_icons.cc
