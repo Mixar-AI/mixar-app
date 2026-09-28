@@ -13818,6 +13818,41 @@ static int handler_region_menu(bContext *C, const wmEvent *event, void * /*userd
         }
       }
     }
+    /* The transcript (the island's WINDOW region) is custom-drawn: its slot
+     * action buttons ("Choose Export Location", choice / confirm gates),
+     * option chips, step headers, stars and links are hit-tested by position
+     * in the region's own UI handler (mixie_chat_ui_handler), never uiButs,
+     * so but_find_mouse_over above finds nothing there. Opening the island
+     * focuses the composer (agent_bubble_composer.cc), which makes this
+     * handler window-modal; Blender's click-outside rule then spends the
+     * press on exiting text editing (ui_do_but_textedit → EXIT + BREAK) and
+     * the user's first click on a gate button does nothing — only a second
+     * click works. Commit the draft and let this same press continue to the
+     * transcript region's handlers. The composer's own field (empty-chat
+     * WINDOW composer) and any native tile there keep stock handling. */
+    if (!region_popup && area && area->spacetype == SPACE_AGENT_BUBBLE &&
+        event->type == LEFTMOUSE && event->val == KM_PRESS && but->active &&
+        ui_but_mixie_mention_scene(but) &&
+        ELEM(but->active->state, BUTTON_STATE_TEXT_EDITING, BUTTON_STATE_TEXT_SELECTING))
+    {
+      ARegion *transcript = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
+      if (transcript && !(transcript->flag & RGN_FLAG_HIDDEN) &&
+          BLI_rcti_isect_pt_v(&transcript->winrct, event->xy) &&
+          but_find_mouse_over(transcript, event) == nullptr)
+      {
+#ifdef WITH_INPUT_IME
+        wmWindow *win = CTX_wm_window(C);
+        const wmIMEData *ime = win->runtime->ime_data;
+        if (ime && win->runtime->ime_data_is_composing && !ime->composite.empty()) {
+          textedit_insert_buf(but, but->active->text_edit, ime->composite.c_str(),
+                              ime->composite.size());
+        }
+#endif
+        button_activate_exit(C, but, but->active, false, false);
+        apply_but_funcs_after(C);
+        return WM_UI_HANDLER_CONTINUE;
+      }
+    }
     /* Commit an edited Zen input and transfer the press to the native Zen
      * action under the pointer, whether beside or overlapping the input.
      * Otherwise the modal editor can consume the first Generate click.

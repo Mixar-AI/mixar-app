@@ -32,9 +32,10 @@ from .export_obj_textures import staged_obj_textures
 from .export_preflight import (
     active_mixar_nodes,
     clear_repair_cache,
+    export_targets,
     material_images,
+    preflight_meshes,
     repair_export,  # noqa: F401 — re-exported for the backend's repair call
-    resolve_targets,
     run_preflight,
 )
 from .export_presets import PRESETS, preset_kwargs, preset_report  # noqa: F401
@@ -189,14 +190,14 @@ def run_export(session_id: str, spec: dict) -> dict:
     try:
         if active and mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
-        meshes = resolve_targets(
-            str(spec.get("target_scope") or "scene"),
-            list(spec.get("object_names") or []),
-        )
+        # The meshes the preflight resolved (names carried in the spec or
+        # remembered client-side), never the live selection: operators run
+        # since may have changed it.
+        meshes = export_targets(spec)
         if not meshes:
             return {"success": False, "error": "No mesh objects match the export target"}
         try:
-            readiness_bypassed = not run_preflight(spec).get("ready", True)
+            readiness_bypassed = not preflight_meshes(spec, meshes).get("ready", True)
         except Exception:
             readiness_bypassed = False
         armatures = _required_armatures(meshes)
@@ -344,6 +345,32 @@ def run_export_to(session_id: str, spec: dict, folder_kind: str = "downloads") -
     result = run_export(session_id, spec)
     if result.get("success"):
         result["folder"] = kind
+    return result
+
+
+def run_export_to_remembered(session_id: str, request_id: str, spec: dict) -> dict:
+    """Export into the folder the user picked earlier for ``request_id``
+    (see ``export_destination.remember_export_folder``), never overwriting.
+    Without such a folder returns ``{"success": False, "remembered": False}``
+    with NO error text — the backend then opens the picker. Never a path."""
+    from .export_destination import has_destination, remembered_export_folder, set_destination
+    if has_destination(session_id):
+        # The picker just parked a path for THIS call (the tool re-runs after its
+        # interrupt): that pick is consumed by run_export, never mistaken for an
+        # earlier one — the answer must not say "previously chosen folder".
+        return {"success": False, "remembered": False}
+    folder = remembered_export_folder(session_id, request_id)
+    if not folder or not os.path.isdir(folder):
+        return {"success": False, "remembered": False}
+    fmt = str(spec.get("format") or "").lower().lstrip(".")
+    extension = EXTENSIONS.get(fmt)
+    if extension is None:
+        return {"success": False, "remembered": True, "error": f"Unsupported export format: {fmt}"}
+    set_destination(session_id, _unique_path(folder, safe_stem(spec.get("suggested_filename"), extension), extension))
+    result = run_export(session_id, {**spec, "destination": "ask"})
+    result["remembered"] = True
+    if result.get("success"):
+        result["folder"] = "chosen earlier"
     return result
 
 

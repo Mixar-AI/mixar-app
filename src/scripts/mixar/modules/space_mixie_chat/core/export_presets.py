@@ -23,7 +23,10 @@ COMMON = {
         "add_leaf_bones": False, "use_armature_deform_only": True,
     },
     "gltf": {
-        "use_selection": True, "export_cameras": False, "export_lights": False,
+        # use_selection alone still walks EVERY scene: an object selected in
+        # another scene lands in the file as a second glTF scene.
+        "use_selection": True, "use_active_scene": True,
+        "export_cameras": False, "export_lights": False,
         "export_texcoords": True, "export_normals": True, "export_materials": "EXPORT",
         "export_image_format": "AUTO", "export_draco_mesh_compression_enable": False,
         "export_yup": True,
@@ -106,7 +109,7 @@ def preset_report(use_case: str, fmt: str, kwargs: dict, animation_mode: str) ->
         "axis_forward": None, "axis_up": None, "scale": None,
         "leaf_bones": None, "animation_mode": animation_mode,
         "tangents": None, "apply_modifiers": None, "draco": None,
-        "image_format": None, "embed_textures": None,
+        "image_format": None, "embed_textures": None, "active_scene_only": True,
     }
     if family == "fbx":
         report.update(
@@ -125,6 +128,7 @@ def preset_report(use_case: str, fmt: str, kwargs: dict, animation_mode: str) ->
             draco=kwargs.get("export_draco_mesh_compression_enable", False),
             image_format=kwargs.get("export_image_format"),
             embed_textures=fmt == "glb",
+            active_scene_only=bool(kwargs.get("use_active_scene", False)),
         )
     elif family == "usd":
         yup = bool(kwargs.get("convert_orientation"))

@@ -19,6 +19,8 @@ import os
 import struct
 import zipfile
 
+from .export_gltf_bounds import gltf_world_bounds
+
 # Text formats are legitimately tiny (a cube OBJ is ~900 bytes); binaries
 # below half a KB have no geometry at all.
 MIN_FILE_BYTES = {"obj": 64, "gltf": 64}
@@ -125,8 +127,12 @@ def summarize_gltf(doc: dict, result: dict) -> None:
     extensions = doc.get("extensionsUsed") or []
     result["draco"] = "KHR_draco_mesh_compression" in extensions
     result["up_axis"] = "+Y"
+    scenes = doc.get("scenes") or []
+    result["scenes"] = len(scenes)
+    if len(scenes) > 1:
+        result["issues"].append(
+            f"The file holds {len(scenes)} scenes; only the active scene should be exported.")
     triangles = 0
-    lo, hi = [None] * 3, [None] * 3
     for mesh in meshes:
         for prim in mesh.get("primitives") or []:
             mode = prim.get("mode", 4)
@@ -141,16 +147,12 @@ def summarize_gltf(doc: dict, result: dict) -> None:
                 triangles += int(count) // 3
             elif count and mode in (5, 6):
                 triangles += max(0, int(count) - 2)
-            if position is not None and position < len(accessors):
-                acc = accessors[position]
-                a_min, a_max = acc.get("min"), acc.get("max")
-                if a_min and a_max and len(a_min) == 3 and len(a_max) == 3:
-                    for axis in range(3):
-                        lo[axis] = a_min[axis] if lo[axis] is None else min(lo[axis], a_min[axis])
-                        hi[axis] = a_max[axis] if hi[axis] is None else max(hi[axis], a_max[axis])
     result["triangles"] = triangles
-    if None not in lo and None not in hi:
-        result["dimensions_m"] = [round(float(hi[i] - lo[i]), 4) for i in range(3)]
+    # World-space: node transforms place the parts (a 54-part rifle is not
+    # the size of its largest part).
+    bounds = gltf_world_bounds(doc)
+    if bounds is not None:
+        result["dimensions_m"] = [round(float(bounds[1][i] - bounds[0][i]), 4) for i in range(3)]
     result["checked"] = True
 
 
