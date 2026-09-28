@@ -6,7 +6,7 @@ import uuid
 
 from mixar.modules.common.agent_rpc.client import command, call
 from .agent_events import AgentEvent
-from .chat_payloads import build_chat_payload, collect_user_preferences
+from .chat_payloads import build_chat_payload, collect_scene_context, collect_user_preferences
 from . import turn_events
 
 _handlers = {}
@@ -120,6 +120,7 @@ class TurnTransport:
             attachment_names=attachment_names, imported_object_names=imported_object_names,
             project_context=project_context, mark_context=mark_context,
             user_preferences=collect_user_preferences(), auto_mode=auto_mode,
+            scene_context=collect_scene_context(session_id),
         )
         return self._send('chat', payload, user_message, interjecting)
 

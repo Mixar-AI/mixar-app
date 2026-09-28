@@ -13,9 +13,17 @@ so a failing tab can be read from the filesystem. Lives in ``common`` so both th
 ``scripts/scenes_dossier.sh`` merges both by time.
 
 Events: ``route.pin`` / ``route.restore`` / ``route.reject``, ``tab.new``,
-``tab.switch``, ``tab.close.<step>``, ``cards.clear`` / ``cards.settle``,
-``sweep.lane``, ``commit.target``, ``gen.deliver``, ``undo.banner``,
-``poll.start`` / ``poll.stop``.
+``tab.switch``, ``tab.close.<step>``, ``tab.dedupe``, ``cards.clear`` /
+``cards.settle``, ``sweep.lane``, ``commit.target``, ``gen.deliver``,
+``undo.banner``, ``poll.start`` / ``poll.stop``, and the scene datablock audit
+``scene.added`` / ``scene.removed`` (``core/scene_identity.py``: every scene
+that appears in or leaves ``bpy.data.scenes``, whoever made it, with the last
+operator that ran).
+
+Every line also lands in the client log file (``config/logging_config.py``,
+``~/.mixar/logs/mixar-client.log``) at INFO even in Prod, where the console
+is held at ERROR; the file is what a support bundle ships
+(``ui/operators/support_bundle_ops.py``).
 
 Never raises.
 """
@@ -27,9 +35,12 @@ import os
 import time
 from typing import Any
 
+import logging
+
 from mixar.config.logging_config import get_logger
 
-logger = get_logger(__name__)
+# INFO floor: the ledger reaches the log file whatever the console level.
+logger = get_logger(__name__, file_floor=logging.INFO)
 
 TAG = "[SCENES]"
 _DOSSIER_FILE = "events.jsonl"

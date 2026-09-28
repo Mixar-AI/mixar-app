@@ -18,6 +18,7 @@ def build_chat_payload(
     mark_context: Optional[dict] = None,
     user_preferences: Optional[dict] = None,
     auto_mode: bool = False,
+    scene_context: Optional[dict] = None,
 ) -> dict:
     """The ``agent.chat`` command body — one shape for a fresh turn and for an
     interjection into an open run (``core/composer_send.py``)."""
@@ -72,7 +73,67 @@ def build_chat_payload(
     # backend keeps nothing (docs/modules/agent-chat.md § Auto mode).
     if auto_mode:
         payload["auto_mode"] = True
+
+    # Which tab this turn runs in, and the tab table as the client sees it
+    # (parallel scenes). Datablock names only, never a path. The backend
+    # logs it as a [SCENES] line and stamps it on the Langfuse trace, so a
+    # trace can be tied to a tab without guessing from its content.
+    if scene_context:
+        payload["scene_context"] = scene_context
     return payload
+
+
+#: Caps mirrored by the backend schema (modules/agent/schemas/agent_commands.py).
+SCENE_CONTEXT_MAX_TABS = 64
+SCENE_CONTEXT_NAME_MAX = 64
+
+
+def _tab_entry(scene, session_id: str) -> dict:
+    from ..constants import is_lane_scene
+    sid = str(getattr(scene, "mixie_session_id", "") or "")
+    entry = {
+        "name": str(getattr(scene, "name", "") or "")[:SCENE_CONTEXT_NAME_MAX],
+        "session": sid,
+        "objects": 0,
+        "state": str(getattr(scene, "mixie_chat_state", "") or ""),
+        "lane": bool(is_lane_scene(scene)),
+        "current": bool(sid) and sid == session_id,
+    }
+    try:
+        entry["objects"] = len(scene.objects)
+    except Exception:
+        pass
+    return entry
+
+
+def collect_scene_context(session_id: str) -> Optional[dict]:
+    """The tab a turn belongs to plus the client's tab table (main-thread
+    bpy read). ``None`` when nothing can be read; never raises."""
+    try:
+        import bpy
+
+        scenes = list(bpy.data.scenes)
+        tabs = [_tab_entry(s, session_id) for s in scenes[:SCENE_CONTEXT_MAX_TABS]]
+        current = next((t["name"] for t in tabs if t["current"]), "")
+        window_scene = ""
+        try:
+            window = bpy.context.window
+            if window is not None and window.scene is not None:
+                window_scene = str(window.scene.name)[:SCENE_CONTEXT_NAME_MAX]
+        except Exception:
+            pass
+        if not current:
+            # A first message: the session id is minted on this send and the
+            # tab is the window's scene.
+            current = window_scene
+        return {
+            "scene": current,
+            "window_scene": window_scene,
+            "tabs": tabs,
+            "truncated": len(scenes) > SCENE_CONTEXT_MAX_TABS,
+        }
+    except Exception:
+        return None
 
 
 def collect_user_preferences() -> Optional[dict]:

@@ -252,6 +252,36 @@ Two backend tools, both bound by `load_tools("export")`; the contract is the bac
 - **Verification** (`core/export_verify.py::verify_export(path, fmt, expected)`, contract §5) runs after the write while the client still knows the path and never raises (`checked: false` + reason in `issues`). GLB/glTF parse the JSON (bounds from POSITION accessor min/max); OBJ is text-scanned with `.mtl`/texture existence; FBX / USD / USDC / USDZ are header-checked then re-imported by `core/export_reimport.py` into a temporary collection of the ACTIVE scene (a `temp_override` onto a new scene makes the FBX importer fail on pose bones — `KeyError: 'Bone'`); 250 MB cap, every imported datablock and the collection removed, selection/active/mode restored — USDZ additionally lists the zip. FBX re-imports name clips `<armature>|<stack>|<clip>`; `file_clip_names` maps them back to the scene names for `clips`. OBJ: Blender writes `map_Kd` only for on-disk images, so `core/export_obj_textures.py` stages every used image as PNG into `<stem>_textures/` beside the OBJ (unique-named) and exports with `path_mode='RELATIVE'`; the emptiness floor is 64 bytes for OBJ/glTF, 512 for binaries.
 - **Telemetry**: `export.initiated` (`via: "agent"`, `tool`) and `export.completed` from both tools through `common/analytics/export_events.py` — counts, kinds, verification flags and `duration_ms` only, never a path, object name or file name.
 
+## Scene forensics (log file, scene audit, tab context, support bundle)
+
+Built after a production incident (2026-09-28) where four empty `<tab>.001` scenes appeared
+during two agent turns and nothing on either side had recorded who made them: the console is
+hidden on Windows and held at ERROR in Prod, the `[SCENES]` ledger only knew tab operations,
+and no scene name reaches the backend or Langfuse.
+
+- **Log file** — `config/logging_config.py` attaches one rotating file handler
+  (`~/.mixar/logs/mixar-client.log`, 5 MB × 3, UTC ISO timestamps) to every Mixar logger.
+  Loggers admit WARNING+ to it whatever the console level; `common/scenes_log.py` opts in at
+  INFO (`get_logger(__name__, file_floor=logging.INFO)`) so every `[SCENES]` line is on disk.
+  The console output is unchanged. `MIXAR_CLIENT_LOG_DIR` overrides the folder, `0` disables.
+- **Scene datablock audit** — `core/scene_identity.py` keeps the set of scene names; the same
+  timer that dedupes copied session ids first diffs it and logs `scene.added` (objects, world,
+  camera, custom keys, session, the window's scene, the last three operators from
+  `window_manager.operators`) and `scene.removed`. `scenes.loaded` is the file-load baseline.
+  A Copy Settings copy (shared world, no objects, `scene.new` as the operator), a Mixar tab
+  (own world, camera + light), a worker workspace (`mixar_workspace_*` keys) and an appended
+  scene each leave a distinct line.
+- **Tab context on every turn** — `core/chat_payloads.py:collect_scene_context(session_id)`
+  puts `scene_context` (the tab, the window's scene, the tab table: name, session, objects,
+  state, lane, current) on the `agent.chat` body; the backend logs `turn.scene` and stamps it on
+  the trace (backend `docs/agent/contracts/chat-intake.md` § Scene context).
+- **Support bundle** — File → Export → "Mixar: Save support bundle (.zip)"
+  (`ui/operators/support_bundle_ops.py`, `core/support_bundle.py`): the log file, the
+  dossiers, the checkpoint `index.json`s (never the `.mixar` snapshots), `scenes.json` (the live
+  scene table) and `app.json`. No scene data, no paths.
+
+Tests: `tests/test_scene_forensics.py`.
+
 ## Where to look for what
 
 | Question | First file to read |
