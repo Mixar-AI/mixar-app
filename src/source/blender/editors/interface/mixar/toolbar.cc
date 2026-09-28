@@ -27,7 +27,10 @@ using namespace mixar_chrome;
 bool same_group(const Button &a, const Button &b)
 {
   return a.alignnr != 0 && a.alignnr == b.alignnr &&
-         b.mixar_style.component == MixarComponent::Toolbar &&
+         (b.mixar_style.component == MixarComponent::Toolbar ||
+          (a.mixar_style.theme == MixarTheme::Zen &&
+           a.block->name == "VIEW3D_HT_tool_header" &&
+           ELEM(b.type, ButtonType::Color, ButtonType::Num, ButtonType::NumSlider))) &&
          !(b.flag & (UI_HIDDEN | UI_SCROLLED));
 }
 
@@ -79,6 +82,15 @@ bool mixar_toolbar_sample_range(Button &button)
            (STREQ(property, "taa_render_samples") || STREQ(property, "taa_samples"))) {
     maximum = 256.0f;
   }
+  else if (button.block->name == "VIEW3D_HT_tool_header" &&
+           button.mixar_style.theme == MixarTheme::Zen && STREQ(property, "energy") &&
+           (STREQ(owner, "PointLight") || STREQ(owner, "AreaLight") ||
+            STREQ(owner, "SpotLight") || STREQ(owner, "SunLight"))) {
+    maximum = STREQ(owner, "SunLight") ? 10.0f : 5000.0f;
+    button.softmin = 0.0f;
+    button.softmax = maximum;
+    return true;
+  }
   else {
     return false;
   }
@@ -95,6 +107,8 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
     mixar_scenes_toggle_draw(button, bounds);
     return false;
   }
+  const bool adaptive = button.mixar_style.theme == MixarTheme::Zen &&
+                        button.block->name == "VIEW3D_HT_tool_header";
   const uchar *toolbar_background = mixar_theme_color_ptr(MixarThemeSlot::ToolbarBackground);
   const uchar *toolbar_border = mixar_theme_color_ptr(MixarThemeSlot::ToolbarBorder);
   const uchar *toolbar_primary = mixar_theme_color_ptr(MixarThemeSlot::ToolbarPrimary);
@@ -109,7 +123,7 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
                       (STREQ(button.optype->idname, "MIXAR_OT_director_enter") ||
                        STREQ(button.optype->idname, "MIXAR_OT_director_finish"));
   const bool ghost = button.mixar_style.variant == MixarVariant::Ghost;
-  const bool compact = ghost && button.str.empty();
+  const bool compact = !adaptive && ghost && button.str.empty();
   const MixarInteraction motion = mixar_button_motion(button);
   const uchar *text_color = disabled ? toolbar_muted : toolbar_text;
   copy_v4_v4_uchar(colors.text, text_color);
@@ -131,9 +145,20 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
       mixar_cinema_background(group, radius, motion.selected, emphasis);
     }
     else {
-      mixar_card_fill_round(&group, radius, primary ? toolbar_primary : toolbar_background);
+      mixar_card_fill_round(&group, radius,
+                            adaptive ? mixar_theme_color_ptr(MixarThemeSlot::Gray700) :
+                            primary ? toolbar_primary : toolbar_background);
     }
     mixar_card_outline_round(&group, radius, primary ? toolbar_primary_border : toolbar_border, 1);
+  }
+
+  /* The adaptive bar has a solid outer container and inset section controls.
+   * Native button bounds still own popover placement, focus and hit testing. */
+  if (adaptive && button.type == ButtonType::Popover) {
+    rctf inset = cell;
+    BLI_rctf_pad(&inset, -6.0f * u, -6.0f * u);
+    mixar_card_fill_round(&inset, 5.0f * u,
+                         mixar_theme_color_ptr(MixarThemeSlot::Input));
   }
 
   if (button.type == ButtonType::Label) {
@@ -173,14 +198,14 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
     const float cy = BLI_rctf_cent_y(&cell);
     const float x0 = cell.xmin + 12 * u, x1 = cell.xmax - 44 * u;
     if (x1 > x0) {
-      rctf track{x0, x1, cy - 0.5f * u, cy + 0.5f * u};
-      mixar_card_fill_round(&track, 0, toolbar_border);
+      rctf track{x0, x1, cy - (adaptive ? 1.0f : 0.5f) * u, cy + (adaptive ? 1.0f : 0.5f) * u};
+      mixar_card_fill_round(&track, 0, adaptive ? toolbar_muted : toolbar_border);
       const double span = double(button.softmax) - button.softmin;
       const float factor = span > 0 ? std::clamp(
           float((button_value_get(&button) - button.softmin) / span), 0.0f, 1.0f) : 0.0f;
       const float x = x0 + (x1 - x0) * factor;
       rctf thumb{x - 2 * u, x + 2 * u, cy - 7 * u, cy + 7 * u};
-      mixar_card_fill_round(&thumb, u, toolbar_border);
+      mixar_card_fill_round(&thumb, u, adaptive ? toolbar_text : toolbar_border);
     }
     mixar_card_draw_text(font, &text, button.drawstr.c_str(), text_color, UI_STYLE_TEXT_RIGHT);
     return false;

@@ -1523,7 +1523,7 @@ static void mixar_floating_headers_clip(const ARegion *region, rcti *overlap_rem
 {
   for (const ARegion *previous = region->prev; previous; previous = previous->prev) {
     if (!previous->overlap ||
-        !ELEM(previous->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER) ||
+        previous->regiontype != RGN_TYPE_HEADER ||
         region_is_hidden(previous) ||
         (previous->flag & (RGN_FLAG_POLL_FAILED | RGN_FLAG_TOO_SMALL)))
     {
@@ -1545,7 +1545,8 @@ static void region_overlap_fix(ScrArea *area, ARegion *region)
 {
   /* Its transparent gutter and painted slice have their own visual hit test.
    * Stacking the drawer beside the N-panel detaches its closed grip from the edge. */
-  if (view3d_moodboard_drawer_is_overlay(area, region)) {
+  if (view3d_moodboard_drawer_is_overlay(area, region) ||
+      (region->regiontype == RGN_TYPE_TOOL_HEADER && ui::mixar_area_floats_viewport_chrome(area))) {
     return;
   }
   /* find overlapping previous region on same place */
@@ -1553,7 +1554,9 @@ static void region_overlap_fix(ScrArea *area, ARegion *region)
   int align1 = 0;
   const int align = RGN_ALIGN_ENUM_FROM_MASK(region->alignment);
   for (region_iter = region->prev; region_iter; region_iter = region_iter->prev) {
-    if (view3d_moodboard_drawer_is_overlay(area, region_iter)) {
+    if (view3d_moodboard_drawer_is_overlay(area, region_iter) ||
+        (region_iter->regiontype == RGN_TYPE_TOOL_HEADER &&
+         ui::mixar_area_floats_viewport_chrome(area))) {
       continue;
     }
     if (region_is_hidden(region_iter)) {
@@ -1607,7 +1610,9 @@ static void region_overlap_fix(ScrArea *area, ARegion *region)
   /* At this point, 'region' is in its final position and still open.
    * Make a final check it does not overlap any previous 'other side' region. */
   for (region_iter = region->prev; region_iter; region_iter = region_iter->prev) {
-    if (view3d_moodboard_drawer_is_overlay(area, region_iter)) {
+    if (view3d_moodboard_drawer_is_overlay(area, region_iter) ||
+        (region_iter->regiontype == RGN_TYPE_TOOL_HEADER &&
+         ui::mixar_area_floats_viewport_chrome(area))) {
       continue;
     }
     if (region_is_hidden(region_iter)) {
@@ -1783,7 +1788,9 @@ static void region_rect_recursive(
     }
   }
   else if (region->regiontype == RGN_TYPE_TOOL_HEADER) {
-    prefsizey = ED_area_headersize();
+    prefsizey = ui::mixar_area_floats_viewport_chrome(area) ?
+                    std::max(2 * ED_area_headersize(), BLI_rcti_size_y(overlap_remainder) + 1) :
+                    ED_area_headersize();
   }
   else if (region->regiontype == RGN_TYPE_FOOTER) {
     prefsizey = ED_area_footersize();
@@ -4095,21 +4102,31 @@ void ED_region_header_layout(const bContext *C, ARegion *region)
   const bool zen_toolbar = area && area->spacetype == SPACE_VIEW3D &&
                            region->regiontype == RGN_TYPE_HEADER &&
                            ui::mixar_workspace_is_zen(C);
+  const bool zen_adaptive = area && area->spacetype == SPACE_VIEW3D &&
+                            region->regiontype == RGN_TYPE_TOOL_HEADER &&
+                            ui::mixar_workspace_is_zen(C);
   const int offset = zen_toolbar ? 15.0f * UI_SCALE_FAC :
                      is_global ? 4.0f * UI_SCALE_FAC : int(UI_HEADER_OFFSET);
 
   /* Height of buttons and scaling needed to achieve it. */
   const bool topbar_account = area && area->spacetype == SPACE_TOPBAR &&
                               RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_RIGHT;
-  const int button_height = zen_toolbar ?
+  const int button_height = zen_adaptive ? 2 * UI_UNIT_Y :
+                            zen_toolbar ?
                                 UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_control_height :
                             topbar_account ? region->winy - 4.0f * UI_SCALE_FAC :
                                 UI_UNIT_Y;
   const int buttony = min_ii(button_height, region->winy - 2 * UI_SCALE_FAC);
   const float buttony_scale = buttony / float(UI_UNIT_Y);
 
-  /* Vertically center buttons. */
-  int2 co = {offset, buttony + (region->winy - buttony) / 2};
+  /* The transparent adaptive host spans the viewport; its controls start at the top. */
+  if (zen_adaptive) {
+    region->v2d.keepofs = eView2D_KeepOfs(0);
+    region->v2d.align = eView2D_Align(0);
+    region->v2d.keeptot = V2D_KEEPTOT_FREE;
+  }
+  int2 co = {offset, zen_adaptive ? int(region->winy - 2 * UI_SCALE_FAC) :
+                                  buttony + (region->winy - buttony) / 2};
   int maxco = co.x;
 
   /* set view2d view matrix for scrolling (without scrollers) */
@@ -4151,6 +4168,10 @@ void ED_region_header_layout(const bContext *C, ARegion *region)
     }
 
     co = ui::block_layout_resolve(block);
+    if (zen_adaptive) {
+      /* Center in unpanned coordinates, so header spacers do not undo a drag. */
+      block_translate(block, (region->winx - (co.x - offset)) / 2.0f - offset, 0);
+    }
 
     /* for view2d */
     maxco = std::max(co.x, maxco);
@@ -4178,6 +4199,9 @@ void ED_region_header_layout(const bContext *C, ARegion *region)
 
   /* Always as last. */
   ui::view2d_totRect_set(&region->v2d, maxco, region->winy);
+  if (zen_adaptive) {
+    ui::mixar_zen_adaptive_pan_clamp(C, region);
+  }
 
   /* Restore view matrix. */
   ui::view2d_view_restore(C);

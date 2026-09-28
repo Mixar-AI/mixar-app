@@ -66,6 +66,7 @@
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
+#include "UI_mixar.hh"
 
 #include "BLO_read_write.hh"
 
@@ -1077,7 +1078,31 @@ static void view3d_header_region_init(wmWindowManager *wm, ARegion *region)
 
   WM_event_add_keymap_handler(&region->runtime->handlers, keymap);
 
+  bool adaptive = false;
+  if (region->regiontype == RGN_TYPE_TOOL_HEADER) {
+    for (wmWindow &window : wm->windows) {
+      const bScreen *screen = WM_window_get_active_screen(&window);
+      if (!screen) {
+        continue;
+      }
+      for (const ScrArea &area : screen->areabase) {
+        if (BLI_findindex(&area.regionbase, region) != -1 &&
+            ui::mixar_area_floats_viewport_chrome(&area)) {
+          adaptive = true;
+        }
+      }
+    }
+  }
+  const float x = adaptive && (region->v2d.flag & V2D_IS_INIT) ? region->v2d.cur.xmin : 0;
+  const float y = adaptive && (region->v2d.flag & V2D_IS_INIT) ? region->v2d.cur.ymin : 0;
   ED_region_header_init(region);
+  if (adaptive) {
+    region->v2d.keepofs = eView2D_KeepOfs(0);
+    region->v2d.align = eView2D_Align(0);
+    region->v2d.keeptot = V2D_KEEPTOT_FREE;
+    BLI_rctf_translate(&region->v2d.cur, x - region->v2d.cur.xmin, y - region->v2d.cur.ymin);
+    region->flag &= ~RGN_FLAG_INDICATE_OVERFLOW;
+  }
 }
 
 static void view3d_header_region_draw(const bContext *C, ARegion *region)
@@ -1089,6 +1114,22 @@ static void view3d_header_region_listener(const wmRegionListenerParams *params)
 {
   ARegion *region = params->region;
   const wmNotifier *wmn = params->notifier;
+
+  /* Dismissal belongs to the current selection, not the workspace. Native
+   * selection notifications still reach hidden regions, so the next selection
+   * can restore the host without a polling timer or a new operator. */
+  if (region->regiontype == RGN_TYPE_TOOL_HEADER && params->area &&
+      ui::mixar_area_floats_viewport_chrome(params->area) &&
+      wmn->category == NC_SCENE && ELEM(wmn->data, ND_OB_ACTIVE, ND_OB_SELECT) &&
+      (!wmn->reference || wmn->reference == params->scene) &&
+      (region->flag & RGN_FLAG_HIDDEN_BY_USER))
+  {
+    region->flag &= ~(RGN_FLAG_HIDDEN | RGN_FLAG_HIDDEN_BY_USER);
+    /* Reinstall region handlers removed by dismissal as well as its geometry. */
+    WM_window_get_active_screen(params->window)->do_refresh = true;
+    ED_area_tag_region_size_update(params->area, region);
+    ED_region_tag_redraw(region);
+  }
 
   /* context changes */
   switch (wmn->category) {
@@ -1789,6 +1830,7 @@ void ED_spacetype_view3d()
   art->message_subscribe = ED_area_do_mgs_subscribe_for_tool_header;
   art->init = view3d_header_region_init;
   art->draw = view3d_tools_header_region_draw;
+  art->on_view2d_changed = ui::mixar_zen_adaptive_pan_clamp;
   BLI_addhead(&st->regiontypes, art);
 
   /* regions: header */

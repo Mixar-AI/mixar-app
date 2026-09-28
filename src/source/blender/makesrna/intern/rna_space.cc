@@ -790,6 +790,7 @@ static const EnumPropertyItem spreadsheet_table_id_type_items[] = {
 #  include "IMB_imbuf_types.hh"
 
 #  include "UI_interface.hh"
+#  include "UI_mixar.hh"
 #  include "UI_view2d.hh"
 
 #  include "SEQ_proxy.hh"
@@ -1011,6 +1012,15 @@ static void rna_Space_show_region_header_set(PointerRNA *ptr, bool value)
 static void rna_Space_show_region_header_update(bContext *C, PointerRNA *ptr)
 {
   rna_Space_bool_from_region_flag_update_by_type(C, ptr, RGN_TYPE_HEADER, RGN_FLAG_HIDDEN);
+  ScrArea *area = rna_area_from_space(ptr);
+  if (ui::mixar_area_floats_viewport_chrome(area)) {
+    /* Selection can restore the adaptive bar immediately. Do not leave a fade
+     * timer that would hide the restored region when dismissal completes. */
+    if (ARegion *region = BKE_area_find_region_type(area, RGN_TYPE_TOOL_HEADER)) {
+      ED_region_visibility_change_update(C, area, region);
+    }
+    return;
+  }
   rna_Space_bool_from_region_flag_update_by_type(C, ptr, RGN_TYPE_TOOL_HEADER, RGN_FLAG_HIDDEN);
 }
 
@@ -1045,6 +1055,15 @@ static void rna_Space_show_region_tool_header_set(PointerRNA *ptr, bool value)
 }
 static void rna_Space_show_region_tool_header_update(bContext *C, PointerRNA *ptr)
 {
+  ScrArea *area = rna_area_from_space(ptr);
+  if (ui::mixar_area_floats_viewport_chrome(area)) {
+    /* Selection can restore the adaptive bar immediately. Do not leave a fade
+     * timer that would hide the restored region when dismissal completes. */
+    if (ARegion *region = BKE_area_find_region_type(area, RGN_TYPE_TOOL_HEADER)) {
+      ED_region_visibility_change_update(C, area, region);
+    }
+    return;
+  }
   rna_Space_bool_from_region_flag_update_by_type(C, ptr, RGN_TYPE_TOOL_HEADER, RGN_FLAG_HIDDEN);
 }
 

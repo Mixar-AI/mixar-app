@@ -130,6 +130,12 @@ def draw_left(layout, context, *, compact):
     else:
         draw_render_settings(surface, context)
 
+    if not context.space_data.show_region_tool_header:
+        restore = surface.row()
+        restore.operator('wm.context_toggle', text='Object Controls',
+                         icon='PREFERENCES').data_path = 'space_data.show_region_tool_header'
+        style(restore)
+
 
 def draw_right(layout, context, *, compact):
     # Native row spacing is enough between groups; extra separators double it.
