@@ -54,11 +54,9 @@ _shutdown_requested = False
 # Execution gate: defer script running so the chat UI can render planning text
 _execution_gate_until: float = 0.0
 
-# Render jobs never gate scripts: the preview render runs on Blender's job
-# thread with its OWN depsgraph, and its tool call is held open by
-# preview_deferral, never by this queue. A hold here (3.4.2) stalled every
-# turn for the whole render; removed in 3.4.4 — do not bring it back for ANY
-# job type (docs/render-job-contract.md has the write-up and pinning tests).
+# A render on Blender's job thread REFUSES scripts at once (render_gate); it
+# never holds this queue. The 3.4.2 hold stalled every turn for the whole
+# render — do not bring a hold back (docs/render-job-contract.md).
 
 # In-flight script marker for the blender.liveness probe. Set on the main
 # thread around ScriptExecutor.execute() and read from the WebSocket thread:
@@ -319,6 +317,10 @@ def _process_one_request() -> Optional[float]:
     from .session import get_session_manager
     if not get_session_manager().has_active_session(_request_session_id(req)):
         _reject_stale_session(req)
+        return _stop_timer_if_idle()
+
+    from .render_gate import refuse_during_render
+    if refuse_during_render(req):
         return _stop_timer_if_idle()
 
     logger.info(f"Executing {req.tool_name} (id: {req.request_id})")

@@ -468,6 +468,9 @@ class SlotEventProcessor:
         bubble.export_suggested_filename = str(
             context.get("suggested_filename") or "export"
         )[:96]
+        # The backend's request id (export_destination.remember_export_folder
+        # keys the picked folder on it). Absent from an old backend → "".
+        bubble.export_request_id = str(context.get("request_id") or "")[:128]
         # #1251 import picker: the offered extensions (comma-separated), so
         # the native open dialog can filter. Never a path.
         bubble.import_formats = str(context.get("formats") or "")[:120]

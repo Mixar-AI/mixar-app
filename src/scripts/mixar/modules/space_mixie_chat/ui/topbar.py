@@ -35,6 +35,8 @@ from bpy.types import Header, Panel
 from ..constants import SOUND_FEEDBACK_WIDTHS, SessionState  # noqa: F401  (kept for parity)
 from ..core import avatar_icon, sound_feedback
 from ..core.completion_sound import OFF, get_completion_sound, get_notifications_muted
+from ...common.utils import topbar_layout
+from ...workflow.constants import BASIC_WORKSPACE_NAME
 
 
 class MIXAR_PT_profile(Panel):
@@ -116,12 +118,51 @@ def _draw_sound_toggle(layout, context):
     # Native icon-only buttons otherwise retain their fixed one-unit width.
     row.scale_x = row.ui_units_x if fraction < 0.999 else 1.0
     # Keep the full label readable; expand first, then reveal it for the hold.
+    # The icon and tooltip convey sound state; keep the button neutral in both states.
     row.operator('mixie_chat.toggle_completion_sound',
                  text='Sound on' if fraction >= 0.999 else '',
                  icon=('NONE' if fraction >= 0.999 else
                        'NOTIFICATION_SOUND' if enabled else 'NOTIFICATION_SOUND_OFF'),
-                 depress=enabled)
+                 depress=False)
     row.mixar_style(component='ACTION', variant='GHOST')
+
+
+def _account_lane(context):
+    """(window logical width, is Engine, Engine shows full selectors) or None
+    outside a real header."""
+    area = getattr(context, "area", None)
+    if area is None:
+        return None
+    width = topbar_layout.logical_width(area.width, context.preferences.system.ui_scale)
+    workspace = getattr(context, "workspace", None)
+    engine = workspace is None or workspace.name != BASIC_WORKSPACE_NAME
+    selectors = engine and topbar_layout.engine_full_selectors(
+        width, topbar_layout.context_account_units(context))
+    return width, engine, selectors
+
+
+def _show_sound_toggle(context, logged_in):
+    lane = _account_lane(context)
+    return lane is None or topbar_layout.show_sound_toggle(
+        lane[0], engine=lane[1], logged_in=logged_in)
+
+
+def _profile_pill_size(context, email, sound):
+    """(ui_units_x, label) for the account pill at the window's width."""
+    lane = _account_lane(context)
+    if lane is None:
+        return len(email) * 0.35 + 3.8, email
+    return topbar_layout.profile_pill(
+        email, lane[0], engine=lane[1], sound=sound, selectors=lane[2])
+
+
+def _login_button_size(context, sound):
+    """(ui_units_x, label) for the Login button at the window's width."""
+    lane = _account_lane(context)
+    if lane is None:
+        return topbar_layout.LOGIN_UNITS, "Login"
+    return topbar_layout.login_button(
+        lane[0], engine=lane[1], sound=sound, selectors=lane[2])
 
 
 def _draw_topbar_profile_right(self, context):
@@ -143,27 +184,34 @@ def _draw_topbar_profile_right(self, context):
     # profile pill so the two clusters don't read as one control.
     layout.separator()
 
-    _draw_sound_toggle(layout, context)
-    layout.separator(factor=0.4)
+    logged_in = getattr(wm, 'mixie_chat_is_logged_in', False)
+    # On the narrowest windows the account button keeps the lane; sound
+    # stays reachable from Preferences.
+    sound = _show_sound_toggle(context, logged_in)
+    if sound:
+        _draw_sound_toggle(layout, context)
+        layout.separator(factor=0.4)
 
     # The native right-header layout fills the menu-bar height. Reserve room
     # for its taller account icon so the label remains fully visible.
     account = layout.row(align=True)
 
-    if getattr(wm, 'mixie_chat_is_logged_in', False):
+    if logged_in:
         # Logged in → email pill that opens the profile popover.
         # ui_units_x mirrors the sizing previously used in the mixie
         # chat header so the pill width still grows with the email.
         email = getattr(scene, 'mixie_chat_user_id', "") if scene is not None else ""
         profile_sub = account.row(align=True)
-        profile_sub.ui_units_x = len(email) * 0.35 + 3.8
+        # Grows with the email, but never into the centred mode slider: a
+        # short right lane shortens the label, then shows the avatar alone.
+        profile_sub.ui_units_x, label = _profile_pill_size(context, email, sound)
         # Native account chip (interface_mixar_topbar.cc): dark slab, label,
         # and a full-height avatar disc at the RIGHT end per the design —
         # which is also why no `icon=` is passed here (Blender would pin it
         # to the left slot). The disc carries the stock person glyph: with no
         # profile picture set, the placeholder social platforms use reads
         # better than a generated initial.
-        profile_sub.popover(panel="MIXAR_PT_profile", text=email)
+        profile_sub.popover(panel="MIXAR_PT_profile", text=label)
         if hasattr(profile_sub, "mixar_topbar_element"):
             profile_sub.mixar_topbar_element(kind='PROFILE_PILL', active=True)
         else:
@@ -174,14 +222,15 @@ def _draw_topbar_profile_right(self, context):
                 profile_sub.popover(
                     panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
     else:
-        account.ui_units_x = 6.4
+        # Icon-only on windows whose right lane cannot fit the label.
+        account.ui_units_x, label = _login_button_size(context, sound)
         # Not logged in → login popover (preferred) with operator fallback
         # for the brief window where the login panel class hasn't
         # finished registering yet.
         if hasattr(bpy.types, 'MIXIE_CHAT_PT_login'):
-            account.popover(panel="MIXIE_CHAT_PT_login", text="Login", icon='USER')
+            account.popover(panel="MIXIE_CHAT_PT_login", text=label, icon='USER')
         else:
-            account.operator("mixie_chat.login", text="Login", icon='USER')
+            account.operator("mixie_chat.login", text=label, icon='USER')
 
 
 def register():

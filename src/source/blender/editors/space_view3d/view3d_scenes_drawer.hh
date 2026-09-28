@@ -211,6 +211,9 @@ void draw_inline_name(const bContext *C, ARegion *region, ScenesDrawerRuntime *r
                       const ScenesDrawerCard &card, const rctf &rect);
 /** The card's delete control (a bin) and the hover label beside a control. */
 void draw_trash(const rcti &box, float scale, const float color[4]);
+/** Batch-selection cues: tint, light outline and the check badge over the
+ * grip. Decoration only; hit boxes come from the card rect. */
+void draw_selection_mark(const rctf &card, float scale);
 void update_card_motion(ScenesDrawerRuntime *runtime);
 void draw_header(ScenesDrawerRuntime *runtime, ARegion *region,
                  float x0, float x1, float mid, float scale);

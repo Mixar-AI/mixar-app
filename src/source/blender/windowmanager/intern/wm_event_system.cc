@@ -3909,6 +3909,33 @@ static ARegion *region_event_inside(bContext *C, const int xy[2])
   return nullptr;
 }
 
+/**
+ * Mixar: the context region for a window-level DROP.
+ *
+ * Zen stretches the transparent TOOL_HEADER chrome over the whole viewport, and
+ * it precedes the WINDOW region in `regionbase`, so #region_event_inside hands a
+ * drop the chrome even on its empty parts. The file-drop dropbox polls Blender's
+ * C++ file handlers (FBX, OBJ, STL, PLY, USD) with that region and they refuse
+ * anything but WINDOW, so a file dropped on the bare Zen viewport did nothing
+ * (glTF's Python poll checks only the area, which is why it worked). Hit-test
+ * overlapping regions the way events are routed to them
+ * (#ED_area_find_region_xy_visual: a header counts only where it has a button,
+ * the moodboard drawer only while open). Drops only: every other event keeps
+ * the stock lookup, which the chrome's own button and card handlers rely on.
+ */
+static ARegion *region_event_inside_for_event(bContext *C, const wmEvent *event)
+{
+  if (event->type == EVT_DROP) {
+    ScrArea *area = CTX_wm_area(C);
+    if (area && ui::mixar_area_floats_viewport_chrome(area)) {
+      if (ARegion *region = ED_area_find_region_xy_visual(area, RGN_TYPE_ANY, event->xy)) {
+        return region;
+      }
+    }
+  }
+  return region_event_inside(C, event->xy);
+}
+
 static void wm_paintcursor_tag(bContext *C, wmWindowManager *wm, ARegion *region)
 {
   if (region) {
@@ -4370,7 +4397,7 @@ void wm_event_do_handlers(bContext *C)
 
       /* We let modal handlers get active area/region, also wm_paintcursor_test needs it. */
       CTX_wm_area_set(C, area_event_inside(C, event->xy));
-      CTX_wm_region_set(C, region_event_inside(C, event->xy));
+      CTX_wm_region_set(C, region_event_inside_for_event(C, event));
 
       ED_agent_bubble_handle_event(C, event);
 
@@ -4475,7 +4502,7 @@ void wm_event_do_handlers(bContext *C)
         if ((action & WM_HANDLER_BREAK) == 0) {
           /* Also some non-modal handlers need active area/region. */
           CTX_wm_area_set(C, area_event_inside(C, event->xy));
-          CTX_wm_region_set(C, region_event_inside(C, event->xy));
+          CTX_wm_region_set(C, region_event_inside_for_event(C, event));
 
           wm_region_mouse_co(C, event);
 

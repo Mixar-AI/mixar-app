@@ -8,7 +8,8 @@ import struct
 
 
 def glb_bytes(*, meshes=1, animations=(), materials=("Mat",), images=1, embedded=True,
-              draco=False, bin_size=2048, size=(2.0, 1.0, 0.5)) -> bytes:
+              draco=False, bin_size=2048, size=(2.0, 1.0, 0.5), node_translations=None,
+              scenes=1, extra_nodes=()) -> bytes:
     """A minimal glTF 2.0 binary: ``meshes`` cube-like primitives sharing one
     POSITION accessor (min/max spanning ``size``) and one index accessor."""
     accessors = [
@@ -24,8 +25,10 @@ def glb_bytes(*, meshes=1, animations=(), materials=("Mat",), images=1, embedded
         "meshes": [{"name": f"Mesh{i}", "primitives": [
             {"attributes": {"POSITION": 0}, "indices": 1, "material": 0 if materials else None}
         ]} for i in range(meshes)],
-        "nodes": [{"mesh": i, "name": f"Node{i}"} for i in range(meshes)],
-        "scenes": [{"nodes": list(range(meshes))}],
+        "nodes": [{"mesh": i, "name": f"Node{i}",
+                   **({"translation": list(node_translations[i])} if node_translations else {})}
+                  for i in range(meshes)] + list(extra_nodes),
+        "scenes": [{"nodes": list(range(meshes))}] + [{"nodes": []} for _ in range(scenes - 1)],
         "materials": [{"name": name} for name in materials],
         "images": [
             {"bufferView": 0, "mimeType": "image/png"} if embedded else {"uri": f"tex{i}.png"}

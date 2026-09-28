@@ -5,7 +5,11 @@
 
 import bpy
 
-from ..headers.zen_scene_controls import draw_render_settings
+from ..headers.zen_scene_controls import (
+    draw_cinema, draw_export, draw_guides, draw_playback, draw_render_settings, draw_sky,
+    header_tier,
+)
+from ...core.zen_toolbar_layout import overflow_sections
 from ...core.zen_scene import sky_enabled
 from ...core.zen_sky_lighting import sky_nodes, uses_hdri
 
@@ -18,6 +22,26 @@ class MIXAR_PT_zen_render_settings(bpy.types.Panel):
 
     def draw(self, context):
         draw_render_settings(self.layout, context, vertical=True)
+
+
+class MIXAR_PT_zen_toolbar_more(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "HEADER"
+    bl_label = "Scene Controls"
+    bl_ui_units_x = 12
+
+    def draw(self, context):
+        layout = self.layout
+        # Whatever the current width tier moved out of the toolbar, in order.
+        draw = {
+            "CINEMA": lambda: draw_cinema(layout, context),
+            "GUIDES": lambda: draw_guides(layout.row(), context),
+            "PLAYBACK": lambda: draw_playback(layout, context),
+            "SKY": lambda: draw_sky(layout, context),
+            "EXPORT": lambda: draw_export(layout),
+        }
+        for section in overflow_sections(header_tier(context)) or ("PLAYBACK", "SKY", "EXPORT"):
+            draw[section]()
 
 
 class MIXAR_PT_zen_sky(bpy.types.Panel):
@@ -67,4 +91,4 @@ class MIXAR_PT_zen_sky(bpy.types.Panel):
         layout.label(text="Visible in Material Preview and Rendered.")
 
 
-classes = (MIXAR_PT_zen_render_settings, MIXAR_PT_zen_sky)
+classes = (MIXAR_PT_zen_render_settings, MIXAR_PT_zen_toolbar_more, MIXAR_PT_zen_sky)

@@ -4,7 +4,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
-Interactive tour — app actions for the Library and Creator Program beats.
+Interactive tour — app actions for the Library, Scenes and Creator Program
+beats.
 
 Split out of ``actions.py`` for size; ``actions`` merges ``EXTRA_ACTIONS``
 into its registry. Every action returns True on success and never raises.
@@ -17,6 +18,9 @@ into its registry. Every action returns True on success and never raises.
   input) with the Creator Program row highlighted; ``help_menu_close``
   closes it again. The highlight is a WindowManager ID property the Help
   menu's draw reads, so it disappears with the menu.
+* ``scenes_drawer`` slides the Zen Scenes drawer open (``open: True``,
+  ``view3d.scenes_drawer_reveal``) or shut again. It only ever closes a
+  drawer the tour itself opened, so a user's open drawer is left alone.
 
 ``reset_transients`` undoes whatever these left behind; the session calls it
 on every stop, whatever the reason.
@@ -36,6 +40,7 @@ HIGHLIGHT_CREATOR = "creator_program"
 LIBRARY_SOURCES = ("AI", "LIBRARY")
 
 _library_source_changed = False
+_scenes_drawer_opened = False
 
 
 def _wm():
@@ -105,18 +110,52 @@ def help_menu_close(_args: dict) -> bool:
         return False
 
 
+def _scenes_drawer_is_open() -> bool:
+    wm = _wm()
+    return bool(getattr(wm, "mixar_scenes_drawer_target", 0)) if wm else False
+
+
+def scenes_drawer(args: dict) -> bool:
+    global _scenes_drawer_opened
+    want_open = bool(args.get("open", True))
+    if _scenes_drawer_is_open() == want_open:
+        return True
+    if not want_open and not _scenes_drawer_opened:
+        return True                     # the user's drawer, not ours
+    # ``actions`` imports this module at load time; import back lazily.
+    from .actions import _call_op, _zen_view3d_override
+    override = _zen_view3d_override()
+    if override is None:
+        _logger.info("tour actions: scenes_drawer has no Zen 3D View to target")
+        return False
+    op = "view3d.scenes_drawer_reveal" if want_open else "view3d.scenes_drawer_toggle"
+    try:
+        with bpy.context.temp_override(**override):
+            ok = _call_op(op)
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning("tour actions: scenes_drawer(%s) failed: %s", want_open, exc)
+        return False
+    if ok:
+        _scenes_drawer_opened = want_open
+    return ok
+
+
 def reset_transients() -> None:
     """Close the tour's menu, drop the highlight, put the Library back on
-    the generations grid if the tour moved it."""
+    the generations grid and shut the Scenes drawer if the tour moved them."""
     global _library_source_changed
     help_menu_close({})
     if _library_source_changed:
         library_source({"source": "AI"})
         _library_source_changed = False
+    if _scenes_drawer_opened:
+        scenes_drawer({"open": False})
+_scenes_drawer_opened = False
 
 
 EXTRA_ACTIONS = {
     "library_source": library_source,
     "help_menu_open": help_menu_open,
     "help_menu_close": help_menu_close,
+    "scenes_drawer": scenes_drawer,
 }

@@ -14,6 +14,7 @@ import tempfile
 from typing import List, Optional
 
 import bpy
+from mixar.modules.common.gltf_import import import_gltf
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
@@ -90,7 +91,7 @@ def _import_glb_bytes(glb_bytes: bytes, name: str = "sam3d_model"):
     try:
         temp_path = _write_temp_glb(glb_bytes, name)
         logger.debug("[SAM3D] Saved GLB to temp file")
-        bpy.ops.import_scene.gltf(filepath=temp_path)
+        import_gltf(filepath=temp_path)
         imported_objects = list(bpy.context.selected_objects)
         logger.debug("[SAM3D] Successfully imported GLB: %s (%s objects)", name, len(imported_objects))
         return imported_objects

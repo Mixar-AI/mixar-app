@@ -173,22 +173,28 @@ result=go()
 """)
 
 
-def hold_slider(qa):
-    return qa.eval("""
+def hold_slider(qa, overshoot=False):
+    """Press the thumb and drag it to the end. ``overshoot`` ends the drag the
+    way a hand does: past the track's right edge and off its height."""
+    return qa.eval(f"""
 def hold():
     thumb = drv.find_one(surface='credits_banner_slider')
     track = drv.find_one(surface='credits_banner', value='CREATOR')
     r, t = thumb['rect'], track['rect']
     x0, y = int((r[0] + r[2]) / 2), int((r[1] + r[3]) / 2)
     x1 = int(t[2] - (x0 - t[0]))
+    y1 = y
+    if {overshoot!r}:
+        x1 = int(t[2] + (t[3] - t[1]))
+        y1 = int(t[1] - (t[3] - t[1]))
     win = thumb['_win']
     drv.move_to(win, x0, y)
     yield .1
     win.event_simulate(type='LEFTMOUSE', value='PRESS', x=x0, y=y)
     yield .1
-    drv.move_to(win, x1, y)
+    drv.move_to(win, x1, y1)
     yield .15
-    return {'x': x1, 'y': y}
+    return {{'x': x1, 'y': y1}}
 result = hold()
 """)
 
@@ -227,8 +233,9 @@ def check_slider(qa, out):
     release_slider(qa, point)
     assert len(qa.eval(TARGETS)) == 4
 
-    # A full slide opens exactly once, and only on release.
-    point = hold_slider(qa)
+    # A full slide opens exactly once, and only on release — even released
+    # past the track's end and below it, as a real drag finishes.
+    point = hold_slider(qa, overshoot=True)
     assert len(qa.eval(TARGETS)) == 4
     assert qa.eval("result=drv.find(surface='credits_banner_slider')[0]['text']") == 'Release to continue'
     snap(qa, out, 'slider_complete', target={'surface': 'credits_banner_card'}, margin=12)

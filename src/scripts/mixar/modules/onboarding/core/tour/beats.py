@@ -94,6 +94,13 @@ A_NODE_TEMPLATES_MENU = {"tip": "Start with an editable node template", "area": 
 # The top-bar Help menu button, and the Creator Program row of the open menu.
 A_HELP_MENU = {"text": "Help", "area": "TOPBAR"}
 A_CREATOR_ROW = {"text": "Creator Program", "popup": True}
+# The Zen toolbar's Scene button (top left), the Scenes drawer it slides
+# out, and the drawer's "+ New scene" pill.
+A_SCENES_BUTTON = {"op": "view3d.scenes_drawer_toggle"}
+A_SCENES_PANEL = {"surface": "scenes_drawer_panel"}
+A_SCENES_NEW = {"surface": "scenes_drawer_new"}
+# The Zen toolbar's Cinema Mode button (top right); the tour never enters it.
+A_CINEMA_BUTTON = {"op": "mixar.director_enter"}
 # Engine-mode editors the "full toolkit" line points at (inset rings).
 A_PROPERTIES_EDITOR = {"area": "PROPERTIES", "region": "WINDOW"}
 A_OUTLINER = {"area": "OUTLINER", "region": "WINDOW"}

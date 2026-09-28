@@ -89,12 +89,45 @@ def _flatten_alpha(img):
     return canvas
 
 
-def _encode_jpeg(img) -> bytes:
+def _encode_jpeg(img, quality: int = CHAT_ATTACHMENT_JPEG_QUALITY) -> bytes:
     out = io.BytesIO()
-    img.convert("RGB").save(
-        out, format="JPEG", quality=CHAT_ATTACHMENT_JPEG_QUALITY, optimize=True
-    )
+    img.convert("RGB").save(out, format="JPEG", quality=quality, optimize=True)
     return out.getvalue()
+
+
+def _decode_downscaled(raw: bytes, max_edge: int, transpose: bool = True):
+    """Decode encoded bytes with the longest edge at most ``max_edge``.
+
+    Returns ``(image, source_format, (width, height))``, or None when the
+    header declares an implausible pixel count. Raises on undecodable bytes.
+    """
+    img = PILImage.open(io.BytesIO(raw))
+    # Only valid straight after open — the transforms below clear it.
+    source_format = (img.format or "").upper()
+
+    # Header-only at this point: reject bombs before any pixels are
+    # decoded, and let libjpeg decode straight to a reduced scale (draft
+    # is DCT-domain, so a 12 MP photo never materialises at full size).
+    width, height = img.size
+    if width <= 0 or height <= 0:
+        return None
+    if width * height > MAX_DECODE_PIXELS:
+        logger.warning(
+            "[ChatCompress] Refusing to decode %sx%s image (%.0f MP > %.0f MP cap)",
+            width, height, width * height / 1e6, MAX_DECODE_PIXELS / 1e6,
+        )
+        return None
+    img.draft("RGB", (max_edge, max_edge))
+
+    if transpose:
+        # iPhone photos are stored landscape with an orientation tag; without
+        # this the model sees them rotated. The JPEG re-encode drops EXIF, so
+        # the backend's own transpose then correctly does nothing.
+        img = PILImageOps.exif_transpose(img) or img
+
+    if max(img.size) > max_edge:
+        img.thumbnail((max_edge, max_edge), PILImage.LANCZOS)
+    return img, source_format, (width, height)
 
 
 def compress_image_bytes(
@@ -123,35 +156,10 @@ def compress_image_bytes(
     budget = len(raw) if original_size is None else original_size
 
     try:
-        img = PILImage.open(io.BytesIO(raw))
-        # Only valid straight after open — the transforms below clear it.
-        source_format = (img.format or "").upper()
-
-        # Header-only at this point: reject bombs before any pixels are
-        # decoded, and let libjpeg decode straight to a reduced scale (draft
-        # is DCT-domain, so a 12 MP photo never materialises at full size).
-        width, height = img.size
-        if width <= 0 or height <= 0:
+        decoded = _decode_downscaled(raw, CHAT_ATTACHMENT_MAX_EDGE)
+        if decoded is None:
             return None
-        if width * height > MAX_DECODE_PIXELS:
-            logger.warning(
-                "[ChatCompress] Refusing to decode %sx%s attachment (%.0f MP > %.0f MP cap)",
-                width, height, width * height / 1e6, MAX_DECODE_PIXELS / 1e6,
-            )
-            return None
-        img.draft("RGB", (CHAT_ATTACHMENT_MAX_EDGE, CHAT_ATTACHMENT_MAX_EDGE))
-
-        # iPhone photos are stored landscape with an orientation tag; without
-        # this the model sees them rotated. The JPEG re-encode drops EXIF, so
-        # the backend's own transpose then correctly does nothing.
-        img = PILImageOps.exif_transpose(img) or img
-
-        if max(img.size) > CHAT_ATTACHMENT_MAX_EDGE:
-            img.thumbnail(
-                (CHAT_ATTACHMENT_MAX_EDGE, CHAT_ATTACHMENT_MAX_EDGE),
-                PILImage.LANCZOS,
-            )
-
+        img, source_format, (width, height) = decoded
         compressed = _encode_jpeg(_flatten_alpha(img))
     except Exception:
         logger.warning("[ChatCompress] Could not compress attachment; sending original",
@@ -281,3 +289,35 @@ def compress_blend_image_for_chat(image_name: str) -> Optional[Tuple[bytes, str]
         image_name, width, height, img.size[0], img.size[1], len(compressed) / 1024,
     )
     return compressed, JPEG_MIME
+
+
+def encode_blend_image_jpeg(image, max_edge: int,
+                            quality: int = CHAT_ATTACHMENT_JPEG_QUALITY) -> bytes:
+    """JPEG bytes of a blend image, longest edge at most ``max_edge``. MAIN THREAD.
+
+    Creates, loads and removes no datablock: a temporary image would tag the
+    depsgraph of a render running on Blender's job thread
+    (docs/render-job-contract.md), and moodboard inspection runs during
+    renders. Orientation stays as stored, i.e. as the moodboard shows it.
+    Raises ValueError when the image has no readable pixels.
+    """
+    if not HAS_PIL:
+        raise ValueError("PIL is unavailable")
+    img = None
+    raw = _packed_source_bytes(image)
+    if raw:
+        try:
+            decoded = _decode_downscaled(raw, max_edge, transpose=False)
+        except Exception:
+            decoded = False  # EXR/HDR and the like: read the pixel buffer
+        if decoded is None:
+            raise ValueError(f"Image '{image.name}' is too large to decode")
+        if decoded:
+            img = decoded[0]
+    if img is None:
+        img = _pixels_to_pil(image)
+        if not all(img.size):
+            raise ValueError(f"Image '{image.name}' has no pixel data")
+        if max(img.size) > max_edge:
+            img.thumbnail((max_edge, max_edge), PILImage.LANCZOS)
+    return _encode_jpeg(_flatten_alpha(img), quality)

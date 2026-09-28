@@ -10,6 +10,7 @@ Helper functions for downloading and importing 3D models from URLs.
 """
 
 import bpy
+from mixar.modules.common.gltf_import import import_gltf
 import os
 import tempfile
 import urllib.request
@@ -71,7 +72,7 @@ def download_and_import_glb(url: str) -> list:
         existing_objects = set(bpy.data.objects.keys())
 
         # Import GLB
-        bpy.ops.import_scene.gltf(filepath=temp_path)
+        import_gltf(filepath=temp_path)
 
         # Find newly imported objects
         new_objects = [
@@ -137,7 +138,7 @@ def download_and_import_model(url: str, file_format: str = "glb") -> list:
 
         # Import based on format
         if file_format in ("glb", "gltf"):
-            bpy.ops.import_scene.gltf(filepath=temp_path)
+            import_gltf(filepath=temp_path)
         elif file_format == "fbx":
             bpy.ops.import_scene.fbx(filepath=temp_path)
         elif file_format == "obj":
@@ -150,10 +151,10 @@ def download_and_import_model(url: str, file_format: str = "glb") -> list:
                 bpy.ops.wm.usd_import(filepath=temp_path)
             except AttributeError:
                 logger.warning("[Image to 3D] USD import not available, trying as GLB")
-                bpy.ops.import_scene.gltf(filepath=temp_path)
+                import_gltf(filepath=temp_path)
         else:
             # Default to GLB
-            bpy.ops.import_scene.gltf(filepath=temp_path)
+            import_gltf(filepath=temp_path)
 
         # Find newly imported objects
         new_objects = [

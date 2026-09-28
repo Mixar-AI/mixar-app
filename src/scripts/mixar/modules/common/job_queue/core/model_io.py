@@ -30,6 +30,7 @@ import os
 import tempfile
 
 import bpy
+from mixar.modules.common.gltf_import import import_gltf
 
 from mixar.config.logging_config import get_logger
 
@@ -112,20 +113,47 @@ def export_selected_mesh(context, format="GLB"):
     fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_export_")
     os.close(fd)
 
-    selected = [o for o in context.selected_objects if o.type == 'MESH']
+    view_layer = context.view_layer
+    selected = [o for o in context.selected_objects
+                if o.type == 'MESH' and o.name in view_layer.objects]
     if not selected:
         raise ValueError("No mesh objects selected")
 
-    if format == "GLB":
-        bpy.ops.export_scene.gltf(
-            filepath=filepath, use_selection=True, export_format='GLB',
-        )
-    elif format == "OBJ":
-        bpy.ops.wm.obj_export(
-            filepath=filepath, export_selected_objects=True,
-        )
-    elif format == "FBX":
-        bpy.ops.export_scene.fbx(filepath=filepath, use_selection=True)
+    # Deterministic: exactly the selected MESH objects of the active view
+    # layer, nothing else the selection may hold (empties, lights, an
+    # object selected in another scene). The selection is restored after.
+    previous = [o for o in context.selected_objects]
+    active = view_layer.objects.active
+    try:
+        for obj in previous:
+            if obj not in selected:
+                try:
+                    obj.select_set(False)
+                except RuntimeError:
+                    pass
+        if format == "GLB":
+            # glTF walks EVERY scene unless told otherwise; use_selection
+            # alone lets an object selected in another scene into the file.
+            bpy.ops.export_scene.gltf(
+                filepath=filepath, use_selection=True, use_active_scene=True,
+                export_format='GLB',
+            )
+        elif format == "OBJ":
+            bpy.ops.wm.obj_export(
+                filepath=filepath, export_selected_objects=True,
+            )
+        elif format == "FBX":
+            bpy.ops.export_scene.fbx(filepath=filepath, use_selection=True)
+    finally:
+        for obj in previous:
+            try:
+                obj.select_set(True)
+            except RuntimeError:
+                pass
+        try:
+            view_layer.objects.active = active
+        except Exception:
+            pass
 
     with open(filepath, "rb") as f:
         data = f.read()
@@ -200,7 +228,7 @@ def import_file(filepath, file_type="GLB", import_options=None):
             gltf_kwargs = {"filepath": filepath}
             if import_options:
                 gltf_kwargs.update(import_options)
-            bpy.ops.import_scene.gltf(**gltf_kwargs)
+            import_gltf(**gltf_kwargs)
         elif ft == "OBJ":
             bpy.ops.wm.obj_import(filepath=filepath)
         elif ft == "FBX":

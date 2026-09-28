@@ -35,6 +35,9 @@ DRAW_TARGETS = (
     # The Zen moodboard drawer is an overlapping TOOL_PROPS region painted
     # after WINDOW, so overlays on its tools must be drawn there too.
     ("SpaceView3D", "TOOL_PROPS"),
+    # The Zen Scenes drawer is its own left region (RGN_TYPE_NAV_BAR); its
+    # draw runs POST_PIXEL handlers so the Scenes beat can ring its panel.
+    ("SpaceView3D", "NAVIGATION_BAR"),
     ("SpaceTopBar", "HEADER"), ("SpaceStatusBar", "HEADER"),
     ("SpaceAgentBubble", "WINDOW"), ("SpaceAgentBubble", "HEADER"),
     ("SpaceAgentBubble", "TOOLS"),

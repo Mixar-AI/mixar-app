@@ -58,6 +58,28 @@ def test_the_camera_turns_only_while_the_left_button_is_held():
     assert move.index("if (!data->looking) {") < move.index("walk_look(")
 
 
+def test_the_look_drag_is_measured_from_its_own_anchor_not_prev_xy():
+    """The window queue coalesces motion: a MOUSEMOVE queued behind another
+    demotes it to INBETWEEN_MOUSEMOVE and takes its position as `prev_xy`, so
+    `xy - prev_xy` drops the in-between motion. While W/A/S/D are held every
+    tick redraws, moves pile up behind it, and the look barely turned — the
+    camera could drive or turn, never both."""
+    modal = _block(WALK, "wmOperatorStatus director_walk_modal(")
+    move = _code(modal[modal.index("event->type == MOUSEMOVE") :])
+    assert "prev_xy" not in move
+    assert "const int dx = event->xy[0] - data->look_xy[0];" in move
+    assert "const int dy = event->xy[1] - data->look_xy[1];" in move
+    # The anchor advances with every aim ...
+    assert move.index("data->look_xy[0] = event->xy[0];") < move.index("walk_look(")
+    # ... and is seeded by the press that starts the drag.
+    press = modal[modal.index("if (event->type == LEFTMOUSE) {") :]
+    press = press[: press.index("was_looking")]
+    assert press.index("data->looking = true;") < press.index(
+        "data->look_xy[0] = event->xy[0];"
+    )
+    assert "int look_xy[2]" in _block(WALK, "struct DirectorWalkData {")
+
+
 def test_the_left_button_never_ends_the_walk():
     modal = _block(WALK, "wmOperatorStatus director_walk_modal(")
     # LEFTMOUSE is handled as a state, not a confirm.

@@ -119,8 +119,22 @@ def test_a_movement_key_pressed_off_the_stage_is_not_the_cameras():
     keys = modal[modal.index("director_move_from_key(event->type)") :]
     press = keys[keys.index("if (event->val == KM_PRESS) {") :]
     press = press[: press.index("data->held |= bit;")]
-    assert "if (!director_pointer_on_stage(C, event)) {" in press
+    assert "if (!data->looking && !director_pointer_on_stage(C, event)) {" in press
     assert "return OPERATOR_PASS_THROUGH;" in press
+
+
+def test_a_movement_key_pressed_during_a_look_drag_is_the_cameras():
+    """Driving while looking: the drag began on the stage, so the pointer is
+    the look handle until the button comes up, wherever it was dragged. The
+    stage test used to hand W to the chat bar or a card the drag crossed."""
+    modal = _modal()
+    keys = modal[modal.index("director_move_from_key(event->type)") :]
+    press = keys[keys.index("if (event->val == KM_PRESS) {") :]
+    press = press[: press.index("data->held |= bit;")]
+    guard = "if (!data->looking && !director_pointer_on_stage(C, event)) {"
+    assert guard in press
+    # `looking` is asked first, so a drag in flight never consults the stage.
+    assert guard.index("data->looking") < guard.index("director_pointer_on_stage")
 
 
 def test_a_key_the_walk_never_claimed_passes_its_release_on():

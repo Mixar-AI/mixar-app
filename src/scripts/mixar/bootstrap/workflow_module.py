@@ -79,6 +79,8 @@ def _ensure_modeling_workspace_object_mode():
         if workspace.name not in _OBJECT_MODE_WORKSPACES:
             return None
 
+        configure_basic_workspace_chrome()
+
         obj = bpy.context.object
         if obj is None:
             return 0.2 if _object_mode_retry_count < _OBJECT_MODE_RETRY_LIMIT else None
@@ -106,13 +108,10 @@ def _schedule_object_mode_reset() -> None:
 def _on_load_post(_dummy_arg) -> None:
     """Enforce Zen Mode viewport overlay defaults after every file load.
 
-    The Zen Mode workspace persists in the saved file, and entering Zen
-    Mode only re-runs configure_basic_workspace_chrome() via the explicit
-    mode-switch operator. Launching into — or opening — a file while
-    already in Zen Mode never fires that operator, so a workspace saved
-    with relationship lines / object extras on would keep showing them.
-    This handler re-applies the defaults on load. It only ever touches the
-    Zen Mode workspace's viewports, so it's a no-op in Engine mode.
+    Reapply the defaults immediately after loading, alongside the deferred
+    startup/workspace timer and explicit mode-switch setup. The configuration
+    only touches Zen viewports, including files saved with the floating
+    selection menu's host region hidden.
     """
     try:
         configure_basic_workspace_chrome()
