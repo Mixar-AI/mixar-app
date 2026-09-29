@@ -246,28 +246,28 @@ class TestCanTopUp:
     def test_free_tier_cannot(self):
         assert not state.snapshot_free_tier().can_top_up
 
-    def test_free_tier_with_signup_bonus_has_a_bar_but_cannot(self):
-        """A free account with credits answers 200 with
-        ``billing_interval == "free"``: the bar depletes from the lifetime
-        grants, but there is no plan behind it, so the server would refuse a
-        top-up and the CTA must stay "See Plans"."""
+    def test_free_tier_with_bonus_credits_reads_full_but_cannot(self):
+        """A free account with credits answers 200 with ``billing_interval ==
+        "free"`` and ``usage_pct`` 0 while any credit remains — the website's
+        "100% left" + bonus line (Slack #bugs 2026-09-28: the card read 20%
+        off lifetime grants). ``credits_per_month`` is the lifetime sum and
+        must never be used as a denominator; no plan, so "See Plans" stays."""
         snap = state.snapshot_from_payload(
             _payload(
                 plan_slug="free",
                 plan_name="Free",
                 billing_interval="free",
-                credits_per_month=200,
-                balance_cents=150,
-                usage_pct=25.0,
+                credits_per_month=28075,
+                balance_cents=5615,
+                usage_pct=0.0,
                 days_left=0,
             )
         )
-        assert snap.has_subscription
-        assert snap.is_free
-        assert not snap.can_top_up
-        assert snap.remaining_pct == 75.0
-        assert state.usage_factor(snap) == 0.75
-        assert state.format_remaining_label(snap) == "75% left"
+        assert snap.has_subscription and snap.is_free and not snap.can_top_up
+        assert snap.remaining_pct == 100.0
+        assert state.usage_factor(snap) == 1.0
+        assert state.format_remaining_label(snap) == "100% left"
+        assert state.usage_severity(snap.remaining_pct) == constants.SEVERITY_OK
 
     def test_failed_refresh_keeps_free_tier_marker(self):
         state.set_snapshot(

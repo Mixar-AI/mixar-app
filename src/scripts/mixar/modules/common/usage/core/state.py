@@ -48,7 +48,7 @@ class UsageSnapshot:
     plan_name: str = ""
     #: ``"monthly"`` / ``"yearly"`` / ``"trial"`` / ``"free"`` — the backend's
     #: reading of what the allocation is. ``"free"`` is a free-tier account
-    #: metered against its lifetime grants (sign-up bonus, referrals).
+    #: holding bonus credits; its bar is full while any credit remains.
     billing_interval: str = ""
     #: Credits consumed this cycle, as a percentage of the allocation.
     usage_pct: float = 0.0
