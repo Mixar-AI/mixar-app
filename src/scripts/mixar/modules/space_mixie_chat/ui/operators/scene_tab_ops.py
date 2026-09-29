@@ -214,7 +214,7 @@ def new_scene_tab(name: str = "") -> object:
     # The tab's birth is an undo step of its own: one Ctrl-Z after "+ New
     # scene" takes back the tab, not the previous tab's last edit, and the
     # history shows where the tab begins.
-    push_undo_step(f"New scene tab: {scene.name}")
+    push_undo_step(f"New scene tab: {scene.name}", scene=scene)   # tagged with the new tab, from any caller
     slog("tab.new", scene, connected=live, tabs=len(real_scenes()))
     return scene
 
