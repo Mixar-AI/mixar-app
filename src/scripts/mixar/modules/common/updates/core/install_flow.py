@@ -146,6 +146,10 @@ def _worker(info, eligibility, running_binary):
 
         if os.path.isfile(path) and _already_staged(path, info.download_sha256):
             logger.info("Installer for %s already staged — skipping download", version)
+            # Report it as fully downloaded so the badge reads "Verifying…"
+            # during the signature check rather than "Downloading…".
+            size = os.path.getsize(path)
+            state.set_download_progress(size, size)
         else:
             download.download_installer(
                 info.download_url,
