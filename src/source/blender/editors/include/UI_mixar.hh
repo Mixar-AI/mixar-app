@@ -101,6 +101,13 @@ bool mixar_area_floats_viewport_chrome(const ScrArea *area);
  */
 bool mixar_region_is_zen_floating_tools(const ARegion *region);
 /**
+ * Zen's adaptive object/light bar host: the overlapping TOOL_HEADER of a Zen
+ * View3D. It spans the whole viewport so the bar can be dragged anywhere, but
+ * only its top toolbar band is chrome; the rest is transparent. Finds the
+ * region's area itself, so it also answers for callers without one.
+ */
+bool mixar_region_is_zen_adaptive_tool_header(const ARegion *region);
+/**
  * Keep the Zen pill at a fixed on-screen size. Its TOOLS region still carries
  * the stock "View2D Buttons List" keymap (trackpad pinch, ctrl+MMB, numpad
  * +/-, ctrl+=/-), whose zoom would otherwise scale the buttons. Locks the
