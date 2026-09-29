@@ -8,7 +8,9 @@ framed draft graph (cards, labels, links, Assemble rows, frame membership and
 reveal), undoes it with one Ctrl+Z, repeats without Auto Rig, and confirms the
 + menu hides the entry once the image model publishes no reference limit.
 The catalog fixture replaces only the in-memory snapshot and is restored; no
-Generate is pressed and no job can be queued. Set QA_HARNESS, MIXAR_QA_PORT,
+Generate is pressed and no job can be queued. The template ships hidden
+(`WORKFLOW_TEMPLATES[...]['hidden']`), so the replay lifts that in the app for
+its own run and restores it. Set QA_HARNESS, MIXAR_QA_PORT,
 QA_SCENARIO_OUT; use a clean isolated QA app. Inspect the screenshots.
 """
 
@@ -191,7 +193,12 @@ def run(qa):
     qa.cmd('ensure_moodboard', sidebar=False)
     qa.eval(f'''
 from mixar.bootstrap import generation_catalog_cache as catalog
+from mixar.modules.moodboard.core.workflow_templates import WORKFLOW_TEMPLATES
 bpy.app.driver_namespace['_qa_sheet_catalog']=catalog._catalog
+# Shipped hidden: lift it for this replay only (restored in `finally`).
+entry=WORKFLOW_TEMPLATES['CHARACTER_SHEET_3D']
+bpy.app.driver_namespace['_qa_sheet_hidden']=entry.get('hidden')
+entry['hidden']=False
 win=drv.main_window()
 area=next(a for a in win.screen.areas if a.type=='MIXIE')
 region=next(r for r in area.regions if r.type=='WINDOW')
@@ -247,6 +254,9 @@ result=True
     finally:
         qa.eval('''
 from mixar.bootstrap import generation_catalog_cache as catalog
+from mixar.modules.moodboard.core.workflow_templates import WORKFLOW_TEMPLATES
+# Before the catalog swap, so its redraw already shows the restored state.
+WORKFLOW_TEMPLATES['CHARACTER_SHEET_3D']['hidden']=bpy.app.driver_namespace.pop('_qa_sheet_hidden')
 with catalog._lock:
     catalog._catalog=bpy.app.driver_namespace.pop('_qa_sheet_catalog')
     catalog._bump_enum_version_locked()
