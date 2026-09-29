@@ -123,13 +123,13 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         if turn is not None:
             logger.debug("Agent turn ended (%s)", session_id[:8])
             if turn[2]:
-                self._close_turn_checkpoint()
+                self._close_turn_checkpoint(session_id)
 
-    def _close_turn_checkpoint(self) -> None:
+    def _close_turn_checkpoint(self, session_id: str = "") -> None:
         if self._window_on_lane_scene():
             logger.debug("Closing undo checkpoint skipped: window pinned to a lane scene")
             return
-        if not self._push_undo_checkpoint("Mixie Chat Turn"):
+        if not self._push_undo_checkpoint("Mixie Chat Turn", session_id=session_id):
             logger.warning("Closing undo checkpoint failed - the turn's work may not be redoable")
 
     def _should_push_undo(self, grouping: bool = None) -> bool:
@@ -166,17 +166,45 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             return False
         return False
 
-    def _push_undo_checkpoint(self, message: str = "Mixie Chat Script") -> bool:
-        """Push an undo checkpoint; retry once inside an explicit window
-        context (undo_push's poll fails when the script runs without one).
-        Returns True only when a checkpoint was actually created."""
+    @staticmethod
+    def _session_scene(session_id: str):
+        """The scene tab a chat session belongs to, or None."""
+        if not session_id:
+            return None
+        try:
+            for scene in bpy.data.scenes:
+                if getattr(scene, "mixie_session_id", "") == session_id:
+                    return scene
+        except Exception:  # noqa: BLE001 — bpy.data mid-teardown
+            return None
+        return None
+
+    def _push_undo_checkpoint(self, message: str = "Mixie Chat Script", session_id: str = "") -> bool:
+        """Push an undo checkpoint on behalf of the session's tab.
+
+        Per-tab undo (M1) tags every step with a tab. The executor's pushes land
+        from timers while the window shows whatever the user looks at, and a
+        Python `scene=` override is dropped once a window is overridden, so the
+        tab is passed explicitly through `WindowManager.mixar_undo_push` (a
+        one-shot C-side override around ED_undo_push; needs no window). Builds
+        without it fall back to `ed.undo_push`, retried inside a borrowed window
+        because that operator polls for one. Returns True only when a
+        checkpoint was created."""
+        scene = self._session_scene(session_id or self._current_session)
+        wm = bpy.context.window_manager
+        pusher = getattr(wm, "mixar_undo_push", None)
+        if scene is not None and callable(pusher):
+            try:
+                return bool(pusher(message, scene=scene))   # RNA: optional pointer = keyword-only
+            except (RuntimeError, TypeError, AttributeError):
+                logger.debug("mixar_undo_push failed; falling back to ed.undo_push", exc_info=True)
         try:
             bpy.ops.ed.undo_push(message=message)
             return True
         except RuntimeError:
             pass
         try:
-            windows = bpy.context.window_manager.windows
+            windows = wm.windows
             if not windows:
                 return False
             with bpy.context.temp_override(window=windows[0]):

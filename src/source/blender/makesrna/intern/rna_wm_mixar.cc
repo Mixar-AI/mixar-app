@@ -53,6 +53,9 @@
 #include "WM_mixar.hh"
 
 #include "BKE_undo_tabs.hh"
+#include "BKE_context.hh"
+#include "DNA_scene_types.h"
+#include "ED_undo.hh"
 
 #ifdef RNA_RUNTIME
 #  include <algorithm>
@@ -152,6 +155,29 @@ static void rna_WindowManager_mixar_undo_history_get(PointerRNA * /*ptr*/, char 
 static bool rna_WindowManager_mixar_per_tab_undo_get(PointerRNA * /*ptr*/)
 {
   return blender::BKE_undo_tabs_enabled();
+}
+
+/* A checkpoint pushed on behalf of a scene tab. The agent executor's pushes
+ * land from timers while the window shows whatever the user looks at, and a
+ * Python `scene=` override is dropped once a window is overridden (and a
+ * `view_layer=` one crashes the post-operator update), so the tab is passed
+ * explicitly: a one-shot override consumed by BKE_undo_step_tab_annotate. No
+ * operator poll: ED_undo_push itself needs no window. */
+static bool rna_WindowManager_mixar_undo_push(wmWindowManager * /*wm*/,
+                                              bContext *C,
+                                              const char *message,
+                                              Scene *scene)
+{
+  if (C == nullptr || message == nullptr) {
+    return false;
+  }
+  const uint32_t tab = (scene != nullptr) ?
+                           blender::BKE_undo_tab_uid_for_scene(CTX_data_main(C), scene) :
+                           blender::UNDO_TAB_DOCUMENT;
+  blender::BKE_undo_tabs_push_override_set(tab);
+  blender::ED_undo_push(C, message);
+  blender::BKE_undo_tabs_push_override_set(blender::UNDO_TAB_DOCUMENT);
+  return true;
 }
 
 /* Defined in windowmanager/intern/wm_{event_system,window}.cc (Mixar overlay). */
@@ -505,6 +531,21 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
                              "Undo History (per-tab)",
                              "JSON of the undo stack, newest first: each step's name, type, "
                              "tab (scene session_uid) and owner-map summary (Mixar per-tab undo)");
+
+    {
+      FunctionRNA *func = RNA_def_function(
+          srna_wm, "mixar_undo_push", "rna_WindowManager_mixar_undo_push");
+      RNA_def_function_flag(func, FUNC_USE_CONTEXT);
+      RNA_def_function_ui_description(
+          func,
+          "Push an undo checkpoint on behalf of a scene tab (Mixar per-tab undo): the step is "
+          "tagged with that tab whatever the window shows. Needs no window in the context");
+      PropertyRNA *parm = RNA_def_string(func, "message", nullptr, 0, "", "Step name");
+      RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+      RNA_def_pointer(func, "scene", "Scene", "", "The tab's scene (None = document)");
+      parm = RNA_def_boolean(func, "ok", false, "", "A step was pushed");
+      RNA_def_function_return(func, parm);
+    }
 
     prop = RNA_def_property(srna_wm, "mixar_per_tab_undo", PROP_BOOLEAN, PROP_NONE);
     RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_per_tab_undo_get", nullptr);

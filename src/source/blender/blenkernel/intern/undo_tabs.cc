@@ -104,11 +104,20 @@ uint32_t BKE_undo_tab_uid_from_context(bContext *C)
   if (C == nullptr) {
     return UNDO_TAB_DOCUMENT;
   }
-  wmWindow *win = CTX_wm_window(C);
-  if (win == nullptr || win->scene == nullptr) {
+  /* The context scene first: it honours a Python `temp_override(scene=...)`,
+   * which is how the agent executor pushes a checkpoint for ITS tab while the
+   * window shows whatever the user is looking at (a closing checkpoint lands
+   * from a timer after the user has moved on). A user operator's context
+   * scene is the window's scene, so both cases read the same way. */
+  Scene *scene = CTX_data_scene(C);
+  if (scene == nullptr) {
+    wmWindow *win = CTX_wm_window(C);
+    scene = (win != nullptr) ? win->scene : nullptr;
+  }
+  if (scene == nullptr) {
     return UNDO_TAB_DOCUMENT;
   }
-  return BKE_undo_tab_uid_for_scene(CTX_data_main(C), win->scene);
+  return BKE_undo_tab_uid_for_scene(CTX_data_main(C), scene);
 }
 
 /* -------------------------------------------------------------------- */
@@ -216,12 +225,20 @@ int BKE_undo_owner_map_shared_count(const UndoOwnerMap *map)
 /** \name Step annotation
  * \{ */
 
+static uint32_t g_push_tab_override = UNDO_TAB_DOCUMENT;
+
+void BKE_undo_tabs_push_override_set(const uint32_t tab_uid)
+{
+  g_push_tab_override = tab_uid;
+}
+
 void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const UndoStep *inherit_from)
 {
   if (us == nullptr) {
     return;
   }
-  uint32_t tab = BKE_undo_tab_uid_from_context(C);
+  uint32_t tab = g_push_tab_override != UNDO_TAB_DOCUMENT ? g_push_tab_override :
+                                                             BKE_undo_tab_uid_from_context(C);
   if (tab == UNDO_TAB_DOCUMENT && inherit_from != nullptr) {
     tab = inherit_from->mixar_tab_uid;
   }

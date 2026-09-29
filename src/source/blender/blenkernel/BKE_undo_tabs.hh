@@ -65,6 +65,11 @@ uint32_t BKE_undo_owner_map_lookup(const UndoOwnerMap *map, uint32_t session_uid
 int BKE_undo_owner_map_size(const UndoOwnerMap *map);
 int BKE_undo_owner_map_shared_count(const UndoOwnerMap *map);
 
+/** An explicit tab for the next pushes, for pushes made on behalf of a tab
+ * from a context whose window shows another (the agent executor's checkpoints
+ * land from timers). Set before #ED_undo_push, cleared with 0 after it. */
+void BKE_undo_tabs_push_override_set(uint32_t tab_uid);
+
 /** Tag a freshly pushed step and, for a memfile step under the flag, attach
  * its owner map. ``C`` may lack a window (internal pushes): the tab is then
  * inherited from ``inherit_from`` when given. */

@@ -410,6 +410,16 @@ def run_m1() -> None:
     tab("A").collection.objects.unlink(tab("C").objects["C_cube"])
     edit("C", "C · unlink again", lambda: None)
     check("unlinking clears the share", history()["steps"][0]["shared"] == 0)
+    # An agent checkpoint pushed while the window shows another tab: the executor
+    # pushes through WindowManager.mixar_undo_push(message, scene), an explicit
+    # tab (a Python scene override is dropped under a window override).
+    show("C")
+    wm = bpy.data.window_managers[0]
+    ok = wm.mixar_undo_push("A · closing checkpoint from a timer", scene=tab("A"))
+    top = history()["steps"][0]
+    check("mixar_undo_push for A while the window shows C is tagged A",
+          ok and top["name"].startswith("A · closing") and top["tab_uid"] == uids["A"],
+          f"ok={ok} tab={top['tab_uid']} want={uids['A']} window={win().scene.name}")
 
 
 def main() -> int:

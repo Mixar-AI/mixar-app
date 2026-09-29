@@ -361,3 +361,43 @@ def test_closing_checkpoint_is_skipped_while_pinned_to_a_lane(executor_module, m
     bpy_mod.context.window_manager.windows = [_window("agentlane:x")]
     executor.end_agent_turn("s1")
     assert _undo_pushes(bpy_mod) == 1
+
+
+def test_checkpoints_are_pushed_on_behalf_of_the_sessions_tab(executor_module, monkeypatch):
+    # Per-tab undo (M1): the executor pushes through WindowManager.mixar_undo_push
+    # with the SESSION's scene, so the step is tagged with the agent's tab even
+    # when the window shows another (the closing checkpoint lands from a timer
+    # after the user moved on).
+    bpy_mod = _mocked_bpy(monkeypatch, executor_module, windows=[_window("other-tab")])
+    agent_scene = MagicMock(mixie_session_id="s1")
+    bpy_mod.data.scenes = [MagicMock(mixie_session_id="other-tab"), agent_scene]
+    pusher = bpy_mod.context.window_manager.mixar_undo_push
+    pusher.return_value = True
+    executor = executor_module.ScriptExecutor()
+    executor.begin_agent_turn("s1")
+    assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
+    executor.end_agent_turn("s1")
+    assert pusher.call_count == 2
+    for call in pusher.call_args_list:
+        assert call.kwargs["scene"] is agent_scene
+    assert pusher.call_args_list[-1].args[0] == "Mixie Chat Turn"
+    assert _undo_pushes(bpy_mod) == 0            # never the window-scene path
+
+
+def test_a_build_without_mixar_undo_push_falls_back_to_ed_undo_push(executor_module, monkeypatch):
+    bpy_mod = _mocked_bpy(monkeypatch, executor_module, windows=[_window("tab")])
+    agent_scene = MagicMock(mixie_session_id="s1")
+    bpy_mod.data.scenes = [agent_scene]
+    del bpy_mod.context.window_manager.mixar_undo_push
+    executor = executor_module.ScriptExecutor()
+    executor.begin_agent_turn("s1")
+    assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
+    assert _undo_pushes(bpy_mod) == 1
+
+
+def test_a_push_without_a_known_session_scene_keeps_the_old_path(executor_module, monkeypatch):
+    bpy_mod = _mocked_bpy(monkeypatch, executor_module)
+    bpy_mod.data.scenes = []
+    executor = executor_module.ScriptExecutor()
+    assert executor._push_undo_checkpoint() is True
+    assert bpy_mod.context.window_manager.mixar_undo_push.call_count == 0
