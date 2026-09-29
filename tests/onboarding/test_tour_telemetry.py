@@ -49,11 +49,11 @@ def test_event_names_are_the_tour_funnel():
 
 
 def test_started_step_finished_carry_only_ids_numbers_and_enums(events):
-    telemetry.started("mixar-intro")
+    telemetry.started("mixar-intro", "fr", "en")
     telemetry.step("mixar-intro", "find-island", 3)
     telemetry.finished("mixar-intro", "completed", "outro", 118.26)
     assert events == [
-        (EVENT_TOUR_STARTED, {"tour_id": "mixar-intro"}),
+        (EVENT_TOUR_STARTED, {"tour_id": "mixar-intro", "language": "fr", "narration": "en"}),
         (EVENT_TOUR_STEP, {"tour_id": "mixar-intro", "beat_id": "find-island", "index": 3}),
         (EVENT_TOUR_FINISHED, {"tour_id": "mixar-intro", "outcome": "completed",
                                "beat_id": "outro", "elapsed_s": 118.3}),
@@ -85,3 +85,8 @@ def test_a_capture_failure_never_reaches_the_tour(monkeypatch):
     telemetry.started("t")
     telemetry.step("t", "b", 0)
     telemetry.finished("t", "completed", "b", 2.0)
+
+
+def test_started_defaults_to_english_for_both_codes(events):
+    telemetry.started("t")
+    assert events == [(EVENT_TOUR_STARTED, {"tour_id": "t", "language": "en", "narration": "en"})]

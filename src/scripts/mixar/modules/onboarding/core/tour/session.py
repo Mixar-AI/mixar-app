@@ -61,6 +61,12 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
         self.tour = tour
         self.rate = rate
         self.silent = silent
+        self.language = "en"     # the user's tour language (set in start())
+        self.narration = "en"    # the language actually narrating
+        self.subtitles = None    # srt.Subtitles shown over the video, or None
+        self._loading = False    # waiting for a language pack's first part
+        self._loading_deadline = 0.0
+        self._loading_label = ""
         self.running = False
         self.completed = False
         self.exit_confirm = False
@@ -115,7 +121,17 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
         self._exit_requested = True
 
     def tick(self) -> None:
-        if not self.running or self.runner is None:
+        if not self.running:
+            return
+        if self._loading:
+            if not self._host_alive():
+                self.stop("host-closed")
+                return
+            self._last_wall = time.monotonic()
+            self._tick_loading()
+            self._tag_redraw_all()
+            return
+        if self.runner is None:
             return
         now = time.monotonic()
         dt = max(0.0, min(0.1, now - self._last_wall))
@@ -145,6 +161,14 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
         self._sync_beat()
 
         ms = self.runner.last_ms
+        # A language pack's parts are opened here, on the tick, never in
+        # the draw callback (``bpy.data.images.load`` is a data write).
+        prepare = getattr(self.video, "prepare", None)
+        if prepare is not None:
+            try:
+                prepare(ms)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Tour: part prepare failed: %s", exc)
         beat = self.runner.beat
         self._update_gate_state(beat, dt)
         views, cmd = self.overlay_state.compute(
@@ -404,6 +428,10 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
             logger.debug("Tour: draw failed: %s", exc)
 
     def _draw_window_layer(self, window_ptr, is_host: bool, film_ok: bool = True) -> None:
+        if self._loading:
+            if is_host:
+                self._draw_loading_card()
+            return
         beat = self.runner.beat if self.runner else None
         if beat is None or self._host_lost:
             return
@@ -445,6 +473,9 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
                 hover=self.hover, caption=beat.label,
                 controls_alpha=self.card_motion.controls_alpha,
                 gate_film=self._gate_film,
+                subtitle=self.subtitles.text_at(ms) if self.subtitles else "",
+                loading_text=config.LOADING_PART_TEXT
+                if getattr(self.clock, "waiting", False) else "",
             )
             self._draw_captions()
             if self.exit_confirm and self._exit_layout is not None:

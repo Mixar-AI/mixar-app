@@ -153,6 +153,11 @@ class TourRunner:
             return
 
         ms = self.clock.position_ms()
+        if getattr(self.clock, "waiting", False):
+            # A language pack part has not arrived yet: the clock holds
+            # before it and the session shows a loading card. Not a stall.
+            self._reset_watchdog()
+            return
         for r in self.skip_ranges:
             if r.start_ms <= ms < r.resume_ms:
                 self.clock.seek_ms(r.resume_ms)
