@@ -43,9 +43,25 @@ constexpr uint32_t UNDO_TAB_SHARED = 0xFFFFFFFFu;
  * (of those that exist) and never frees a tab's cursor step. */
 constexpr int UNDO_TAB_MIN_STEPS = 8;
 
-/** ``MIXAR_PER_TAB_UNDO=1`` in the environment (read once). Gates the
- * history filter and the owner-map build; tags are always recorded. */
+/** M5: per-tab undo is ON by default. ``MIXAR_PER_TAB_UNDO=0`` (or ``false`` /
+ * ``off``) in the environment turns it off for the session, and the chat
+ * module's config key ``per_tab_undo: false`` does the same at startup through
+ * #BKE_undo_tabs_set_enabled (``WindowManager.mixar_per_tab_undo``). Gates the
+ * tab walk, the hold, the history filter and the owner-map build; tags are
+ * always recorded. */
 bool BKE_undo_tabs_enabled();
+/** The runtime kill switch. Turning it off forgets every tab's cursor; the
+ * next document-wide walk re-reads every ID (see #BKE_undo_tabs_live_diverged). */
+void BKE_undo_tabs_set_enabled(bool enabled);
+
+/** M5: after a tab walk the live document is no longer the state of the
+ * stack's active step, until the next push encodes it again. A document-wide
+ * walk in that window must re-read every ID: the reader's identical-chunk
+ * shortcut compares adjacent steps against a live document it assumes to be
+ * the active step's. */
+void BKE_undo_tabs_note_tab_walk();
+void BKE_undo_tabs_note_push();
+bool BKE_undo_tabs_live_diverged();
 
 /** True for a worker lane scene (``mixie_session_id`` starts with ``agentlane:``). */
 bool BKE_undo_tab_scene_is_lane(const Scene *scene);
@@ -140,10 +156,11 @@ uint32_t BKE_undo_tabs_partial_tab();
  * session_uid exists in the old Main. */
 UndoPartialDecision BKE_undo_tabs_partial_decide(uint32_t session_uid, bool has_live);
 
-/** M3: true when every ID is owned by ``tab_uid`` in the live document (a
- * Scene: its own tab). A mode step (edit mesh, sculpt, paint, text) names
- * the datablocks it touches; the tab walk applies it only when they are all
- * the tab's. Names the first foreign one in ``r_reason``. */
+/** M3: true when every ID is the tab's own in the live document (a Scene: its
+ * own tab) or global (reachable from no tab: a Text, a Brush, orphan data; M5).
+ * A mode step (edit mesh, sculpt, paint, text) names the datablocks it touches;
+ * the tab walk applies it unless one belongs to another tab or is shared.
+ * Names the offending one in ``r_reason``. */
 bool BKE_undo_tabs_ids_owned(Main *bmain, uint32_t tab_uid, Span<ID *> ids, std::string *r_reason);
 
 /** JSON array of the stack's steps, newest first, for the harness:

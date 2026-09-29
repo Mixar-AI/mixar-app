@@ -33,6 +33,7 @@
 #include "BKE_undo_tabs.hh"
 
 #include "BLI_map.hh"
+#include "BLI_memory_utils.hh"
 #include "BLI_vector.hh"
 
 #include "RNA_access.hh"
@@ -737,6 +738,7 @@ eUndoPushReturn BKE_undosys_step_push_with_type(UndoStack *ustack,
       }
     }
     us->mixar_cursors = tab_cursors_snapshot(ustack);
+    BKE_undo_tabs_note_push(); /* the live document is this step's state again */
     ustack->step_active = us;
     BLI_addtail(&ustack->steps, us);
     use_memfile_step = us->use_memfile_step;
@@ -944,6 +946,22 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
              us_target->name,
              us_target->type->name,
              undo_dir);
+
+  /* Mixar per-tab undo (M5): a document-wide walk after tab walks. The live
+   * document is not the active step's state, so the reader's identical-chunk
+   * shortcut cannot be trusted for any tab: re-read every ID (in place where it
+   * still lives). Armed here for Undo Whole Document and for the classic walk
+   * after the runtime kill switch alike. */
+  const bool reread_all = BKE_undo_tabs_live_diverged() && !BKE_undo_tabs_partial_active();
+  if (reread_all) {
+    BKE_undo_tabs_whole_document_begin();
+  }
+  BLI_SCOPED_DEFER([&]() {
+    if (reread_all) {
+      BKE_undo_tabs_partial_end();
+      BKE_undo_tabs_note_push(); /* the live document is the target's state now */
+    }
+  });
 
   /* Undo/Redo steps until we reach given target step (or beyond if it has to be skipped),
    * from given reference step. */
@@ -1185,6 +1203,7 @@ static bool undosys_tab_step_apply(UndoStack *ustack,
   if (!undosys_tab_step_decode(ustack, C, tab_uid, target, dir, true, r_reason)) {
     return false;
   }
+  BKE_undo_tabs_note_tab_walk();
   TabCursors *cursors = tab_cursors_get(ustack, true);
   /* Back on its newest step, the tab is at the top again: no cursor entry. */
   if (target == undosys_tab_newest_step(ustack, tab_uid)) {

@@ -157,6 +157,13 @@ static bool rna_WindowManager_mixar_per_tab_undo_get(PointerRNA * /*ptr*/)
   return blender::BKE_undo_tabs_enabled();
 }
 
+/* M5: the runtime kill switch (the chat module's config key at startup, a
+ * developer toggle otherwise). */
+static void rna_WindowManager_mixar_per_tab_undo_set(PointerRNA * /*ptr*/, const bool value)
+{
+  blender::BKE_undo_tabs_set_enabled(value);
+}
+
 /* A checkpoint pushed on behalf of a scene tab. The agent executor's pushes
  * land from timers while the window shows whatever the user looks at, and a
  * Python `scene=` override is dropped once a window is overridden (and a
@@ -548,9 +555,13 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     }
 
     prop = RNA_def_property(srna_wm, "mixar_per_tab_undo", PROP_BOOLEAN, PROP_NONE);
-    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_per_tab_undo_get", nullptr);
-    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
-    RNA_def_property_ui_text(prop, "Per-tab Undo", "MIXAR_PER_TAB_UNDO is set for this session");
+    RNA_def_property_boolean_funcs(
+        prop, "rna_WindowManager_mixar_per_tab_undo_get", "rna_WindowManager_mixar_per_tab_undo_set");
+    RNA_def_property_ui_text(
+        prop,
+        "Per-tab Undo",
+        "Undo, redo and the history walk the shown scene tab only (on by default; "
+        "MIXAR_PER_TAB_UNDO=0 or the config key per_tab_undo: false turns it off)");
 
     /* Timers and modal handlers also run from inside the OS resize callback
      * (see wm_window.cc). A viewport render there crashes macOS. */

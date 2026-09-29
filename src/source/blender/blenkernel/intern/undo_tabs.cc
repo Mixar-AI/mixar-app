@@ -47,13 +47,52 @@ static const char *SCENE_SESSION_PROP = "mixie_session_id";
 static const char *LANE_PARENT_PROP = "mixar_workspace_main_session";
 static const char *LANE_PREFIX = "agentlane:";
 
+static bool env_disables_per_tab_undo()
+{
+  const char *env = std::getenv("MIXAR_PER_TAB_UNDO");
+  if (env == nullptr || env[0] == '\0') {
+    return false;
+  }
+  return env[0] == '0' || BLI_strcaseeq(env, "false") || BLI_strcaseeq(env, "off") ||
+         BLI_strcaseeq(env, "no");
+}
+
+static bool g_enabled = !env_disables_per_tab_undo();
+static bool g_live_diverged = false;
+
 bool BKE_undo_tabs_enabled()
 {
-  static const bool enabled = [] {
-    const char *env = std::getenv("MIXAR_PER_TAB_UNDO");
-    return env != nullptr && env[0] != '\0' && env[0] != '0';
-  }();
-  return enabled;
+  return g_enabled;
+}
+
+void BKE_undo_tabs_set_enabled(const bool enabled)
+{
+  if (g_enabled == enabled) {
+    return;
+  }
+  g_enabled = enabled;
+  CLOG_INFO(&LOG, "per-tab undo %s at runtime", enabled ? "on" : "off");
+  if (!enabled && G_MAIN != nullptr) {
+    wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
+    if (wm != nullptr && wm->runtime != nullptr && wm->runtime->undo_stack != nullptr) {
+      BKE_undosys_tab_cursors_clear(wm->runtime->undo_stack);
+    }
+  }
+}
+
+void BKE_undo_tabs_note_tab_walk()
+{
+  g_live_diverged = true;
+}
+
+void BKE_undo_tabs_note_push()
+{
+  g_live_diverged = false;
+}
+
+bool BKE_undo_tabs_live_diverged()
+{
+  return g_live_diverged;
 }
 
 static const char *scene_string_prop(const Scene *scene, const char *name)
@@ -419,12 +458,12 @@ bool BKE_undo_tabs_ids_owned(Main *bmain,
     const uint32_t owner = (GS(id->name) == ID_SCE) ?
                                BKE_undo_tab_uid_for_scene(bmain, reinterpret_cast<Scene *>(id)) :
                                BKE_undo_owner_map_lookup(live, id->session_uid);
-    if (owner != tab_uid) {
+    /* The tab's own, or global (no tab reaches it): a Text in the editor, a
+     * Brush. Another tab's, or shared, is refused. */
+    if (owner != tab_uid && owner != UNDO_TAB_DOCUMENT) {
       if (r_reason) {
         *r_reason = std::string("'") + id->name + "' " +
-                    (owner == UNDO_TAB_SHARED  ? "is shared between tabs" :
-                     owner == UNDO_TAB_DOCUMENT ? "belongs to no tab" :
-                                                  "belongs to another tab");
+                    (owner == UNDO_TAB_SHARED ? "is shared between tabs" : "belongs to another tab");
       }
       ok = false;
       break;

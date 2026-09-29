@@ -104,8 +104,10 @@ def fingerprint_tab(scene) -> dict:
 
 
 def fingerprint_all() -> dict:
+    # a tab may be gone (M5 P12 closes one): it is simply absent from the fingerprint
     return {
-        "tabs": {label: fingerprint_tab(tab(label)) for label in TABS},
+        "tabs": {label: fingerprint_tab(bpy.data.scenes[name]) for label, name in TABS.items()
+                 if name in bpy.data.scenes},
         "window_scene": win().scene.name,
         "orphans": sorted(o.name for o in bpy.data.objects if o.users == 0),
         "scene_count": len(bpy.data.scenes),
@@ -130,7 +132,13 @@ def diff_all(before: dict, after: dict) -> dict:
     out = {"tabs": {}, "window_scene": [before["window_scene"], after["window_scene"]]
            if before["window_scene"] != after["window_scene"] else None}
     for label in TABS:
-        d = diff_tab(before["tabs"][label], after["tabs"][label])
+        b, a = before["tabs"].get(label), after["tabs"].get(label)
+        if b is None and a is None:
+            continue
+        if b is None or a is None:
+            out["tabs"][label] = {"present": [b is not None, a is not None]}
+            continue
+        d = diff_tab(b, a)
         if d:
             out["tabs"][label] = d
     return out
@@ -294,7 +302,7 @@ def _observe(key: str, before: dict, after: dict, d: dict):
         return key.split(":", 1)[1] in d["tabs"]
     if key.startswith("has:"):
         label, obj = key.split(":", 1)[1].split("/")
-        return obj in after["tabs"][label]["objects"]
+        return label in after["tabs"] and obj in after["tabs"][label]["objects"]
     if key == "scene_count":
         return after["scene_count"]
     if key == "can_redo":
@@ -545,6 +553,103 @@ def run_m4_probes() -> None:
           expect_document={}, expect_isolation={"has:C/C_ico": True, "has:A/A_f11": True,
                                                 "changed:B": False, "window_stays": True,
                                                 "can_redo": False})
+    run_m5_probes()
+
+
+# -- M5: the lane poll, global datablocks, the kill switch, a closed tab ---------
+
+
+def run_m5_probes() -> None:
+    show("C")
+    # P10e: a window on a worker lane (agent workspace) may not undo at all
+    lane = bpy.data.scenes.new("Workspace_lane")
+    tab("C")["mixie_session_id"] = "session-C"
+    lane["mixie_session_id"] = "agentlane:xyz"
+    lane["mixar_workspace_main_session"] = "session-C"
+
+    def show_lane():
+        win().scene = lane
+    probe("P10e window on a worker lane: undo/redo/history refused", show_lane,
+          expect_document={}, expect_isolation={"undo_poll": False, "redo_poll": False,
+                                                "history_poll": False, "whole_doc_poll": False})
+    win().scene = tab("C")
+    bpy.data.scenes.remove(lane)
+    del tab("C")["mixie_session_id"]
+    probe("P10f back on C with the lane gone: allowed again", lambda: None,
+          expect_document={}, expect_isolation={"undo_poll": True, "whole_doc_poll": True})
+
+    # P14: a global datablock (a Text: no tab reaches it) is left alone by a tab's
+    # undo; only Undo Whole Document restores it. The documented rule.
+    text = bpy.data.texts.new("Notes")
+    text.write("draft 1")
+    edit("C", "C · note 1", lambda: None)              # a C step holding "draft 1"
+    text.write(" + draft 2")
+    edit("C", "C · note 2", lambda: None)              # a C step holding "draft 1 + draft 2"
+
+    def text_state():
+        return bpy.data.texts["Notes"].as_string()
+    before_text = text_state()
+    probe("P14a undo in C leaves the global Text alone", lambda: press("undo"),
+          expect_document={}, expect_isolation={"changed:A": False, "changed:B": False,
+                                                "window_stays": True})
+    check("M5 P14a global Text untouched by a tab undo", text_state() == before_text,
+          f"{text_state()!r}")
+    press("redo")
+    bpy.data.texts.remove(bpy.data.texts["Notes"])
+
+    # P13: the runtime kill switch after tab walks. The live document is not the
+    # active step's state (C just walked); with the flag off the classic walk must
+    # re-read every ID rather than trust the identical-chunk shortcut. No crash,
+    # then the flag comes back on.
+    wm = bpy.context.window_manager
+    press("undo")                                       # C one step back: live diverged
+
+    def kill_switch_then_classic_undo():
+        wm.mixar_per_tab_undo = False
+        try:
+            press("undo")                               # classic, document-wide
+        finally:
+            wm.mixar_per_tab_undo = True
+    probe("P13 kill switch after a tab walk: the classic undo re-reads, no crash",
+          kill_switch_then_classic_undo, expect_document={}, expect_isolation={})
+    check("M5 P13 flag back on", bool(wm.mixar_per_tab_undo), "")
+    h = history()
+    check("M5 P13 history reports the flag on", bool(h and h["enabled"]), "")
+    # bring every tab to its top again (per-tab redo walks above the active step)
+    for label in ("C", "A", "B"):
+        if label not in TABS:
+            continue
+        show(label)
+        for _ in range(8):
+            with _override_window():
+                if not bpy.ops.ed.redo.poll():
+                    break
+            press("redo")
+    show("C")
+
+    # P12: a closed tab. Its steps stay tagged with a scene that no longer exists;
+    # a tab's undo never brings it back, Undo Whole Document does.
+    if "B" in TABS:
+        b_uid = tab("B").session_uid
+        scenes_before = len(bpy.data.scenes)
+        bpy.data.scenes.remove(tab("B"))
+        push("Close tab B")
+
+        def undo_in_c():
+            press("undo")
+        probe("P12a after closing B, undo in C touches C only", undo_in_c,
+              expect_document={}, expect_isolation={"changed:A": False, "window_stays": True,
+                                                    "scene_count": scenes_before - 1})
+        press("redo")
+
+        def whole_document():
+            with _override_window():
+                bpy.ops.ed.undo_whole_document()
+        probe("P12b undo whole document brings B back", whole_document,
+              expect_document={}, expect_isolation={"scene_count": scenes_before,
+                                                    "window_stays": True})
+        check("M5 P12b B is the same scene (session_uid)",
+              any(s.session_uid == b_uid for s in bpy.data.scenes), "")
 
 
 # -- M1: tags and the owner map ------------------------------------------------

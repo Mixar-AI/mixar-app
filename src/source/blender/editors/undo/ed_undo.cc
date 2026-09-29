@@ -926,12 +926,11 @@ static wmOperatorStatus ed_undo_whole_document_exec(bContext *C, wmOperator *op)
   wmWindowManager *wm = CTX_wm_manager(C);
   WM_operator_stack_clear(wm);
   UndoStack *ustack = wm->runtime->undo_stack;
-  /* After per-tab walks the live document is not the active step's state, so
-   * every ID is re-read; the target step's cursor snapshot then says where
-   * each tab stood when that state was written. */
-  BKE_undo_tabs_whole_document_begin();
+  /* After per-tab walks the live document is not the active step's state: the
+   * document walk re-reads every ID (BKE_undosys_step_load_data_ex); the target
+   * step's cursor snapshot then says where each tab stood when that state was
+   * written. */
   wmOperatorStatus ret = ed_undo_step_direction(C, STEP_UNDO, op->reports, false);
-  BKE_undo_tabs_partial_end();
   BKE_undosys_tab_cursors_restore(ustack, ustack->step_active);
   if (ret & OPERATOR_FINISHED) {
     ed_undo_refresh_for_op(C);

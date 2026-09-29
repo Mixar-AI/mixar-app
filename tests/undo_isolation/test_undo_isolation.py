@@ -45,10 +45,10 @@ pytestmark = pytest.mark.skipif(BINARY is None, reason="no Mixar bundle (set MIX
 
 def run_lab(expect: str, tmp_path: pathlib.Path, per_tab: bool) -> dict:
     env = dict(os.environ, MIXAR_UNDO_LAB_EXPECT=expect, MIXAR_UNDO_LAB_OUT=str(tmp_path))
-    # The flag changes what a press does (M2): the document contract runs with it
-    # OFF (today's whole-document undo), the isolation contract with it ON. The
-    # flag also turns on the M1 tagging/owner-map view the lab's M1 probes read.
-    env["MIXAR_PER_TAB_UNDO"] = "1" if per_tab else ""
+    # Per-tab undo is ON by default (M5); MIXAR_PER_TAB_UNDO=0 turns it off for the
+    # session. The document contract runs with it OFF (the classic whole-document
+    # undo), the isolation contract with it ON.
+    env["MIXAR_PER_TAB_UNDO"] = "1" if per_tab else "0"
     proc = subprocess.run(
         [str(BINARY), "--background", "--factory-startup", "--python", str(LAB)],
         env=env, capture_output=True, text=True, timeout=300,
