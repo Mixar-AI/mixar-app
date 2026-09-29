@@ -16,7 +16,8 @@ line per expectation.
 Two contracts: `document` (what a document-wide undo does: the press reverts A's newest
 turn and moves the window) and `isolation` (the per-tab design: only C moves, the window
 stays). `test_undo_isolation.py` runs both through pytest when a bundle exists (`MIXAR_APP`
-or `build/Dev`), `isolation` as a non-strict xfail until the flag ships.
+or `build/Dev`): `document` with `MIXAR_PER_TAB_UNDO` off, `isolation` with it on. Both must
+pass on the per-tab branch.
 
 ## 2026-09-29: green on the current build, after one harness bug
 
@@ -33,3 +34,14 @@ crash of the same day went through the key-event path with no override and is NO
 reproduced by this lab; the GUI scenario in the QA harness plus the ASAN bundle is the
 instrument for it. Knobs for bisecting: `MIXAR_UNDO_LAB_NO_FURNISH`,
 `MIXAR_UNDO_LAB_NO_EDITMODE`, `MIXAR_UNDO_LAB_NO_B`, `MIXAR_UNDO_LAB_LEGACY`.
+
+## 2026-09-29: M2 and M3 green behind `MIXAR_PER_TAB_UNDO=1`
+
+The isolation contract is the build's behaviour with the flag on. P1–P4 (memfile steps,
+M2), P5–P6 (edit-mode steps in C over A's memfile steps, M3) and three isolation-only
+probes: P7 undo in C, a push in A, redo in C (C's redo survives another tab's push); P8 Edit
+> Undo History jumps (`ed.undo_history(item=<stack index>)`, index from
+`WindowManager.mixar_undo_history`) back to C's first edit and forward to its newest; P9
+`undo_steps = 8`, twelve pushes in A, redo in C still works and C keeps eight of its own
+steps (the per-tab reserve and the cursor pin in the step limit). 68 checks with the flag,
+25 without. The `M3 P9 stack:` line prints the whole tagged stack after the limit ran.
