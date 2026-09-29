@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 # Per-tab undo: isolation lab (design M0)
 
 `undo_isolation_lab.py` runs INSIDE a built Mixar bundle, headless:
