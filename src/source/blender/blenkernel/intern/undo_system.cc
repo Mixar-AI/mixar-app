@@ -961,6 +961,13 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
       BKE_undo_tabs_partial_end();
       BKE_undo_tabs_note_push(); /* the live document is the target's state now */
     }
+    /* Every tab now stands where it stood when the reached step was written:
+     * its cursor snapshot says so. Restored after every document-wide walk,
+     * flag on or off, so the cursors agree with the live document the moment
+     * per-tab undo is (re)enabled (the isolation scenario's kill-switch block:
+     * a classic undo with the flag off, then the flag back on, then per-tab
+     * redos that must reach every tab's top). */
+    BKE_undosys_tab_cursors_restore(ustack, ustack->step_active);
   });
 
   /* Undo/Redo steps until we reach given target step (or beyond if it has to be skipped),

@@ -630,6 +630,7 @@ def run_m5_probes() -> None:
     # re-read every ID rather than trust the identical-chunk shortcut. No crash,
     # then the flag comes back on.
     wm = bpy.context.window_manager
+    before_p13 = fingerprint_all()
     press("undo")                                       # C one step back: live diverged
 
     def kill_switch_then_classic_undo():
@@ -654,6 +655,9 @@ def run_m5_probes() -> None:
                     break
             press("redo")
     show("C")
+    after_p13 = fingerprint_all()
+    check("M5 P13 every tab back at its top after the switch (cursors from the reached step's snapshot)",
+          diff_all(before_p13, after_p13)["tabs"] == {}, f"{diff_all(before_p13, after_p13)['tabs']}")
 
     # P12: a closed tab. Its steps stay tagged with a scene that no longer exists;
     # a tab's undo never brings it back, Undo Whole Document does.
