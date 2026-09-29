@@ -326,6 +326,39 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
   return true;
 }
 
+bool BKE_undo_tabs_ids_owned(Main *bmain,
+                             const uint32_t tab_uid,
+                             const Span<ID *> ids,
+                             std::string *r_reason)
+{
+  UndoOwnerMap *live = BKE_undo_owner_map_build(bmain, nullptr);
+  bool ok = true;
+  for (ID *id : ids) {
+    if (id == nullptr) {
+      if (r_reason) {
+        *r_reason = "a datablock that step edited no longer exists";
+      }
+      ok = false;
+      break;
+    }
+    const uint32_t owner = (GS(id->name) == ID_SCE) ?
+                               BKE_undo_tab_uid_for_scene(bmain, reinterpret_cast<Scene *>(id)) :
+                               BKE_undo_owner_map_lookup(live, id->session_uid);
+    if (owner != tab_uid) {
+      if (r_reason) {
+        *r_reason = std::string("'") + id->name + "' " +
+                    (owner == UNDO_TAB_SHARED  ? "is shared between tabs" :
+                     owner == UNDO_TAB_DOCUMENT ? "belongs to no tab" :
+                                                  "belongs to another tab");
+      }
+      ok = false;
+      break;
+    }
+  }
+  BKE_undo_owner_map_free(live);
+  return ok;
+}
+
 void BKE_undo_tabs_partial_end()
 {
   if (g_partial.live_owners != nullptr) {
@@ -408,19 +441,25 @@ std::string BKE_undo_tabs_history_json(const wmWindowManager *wm)
   out += ",\"current_tab\":" + std::to_string(current);
   out += ",\"steps\":[";
   if (ustack != nullptr) {
+    const UndoStep *cursor = (current != UNDO_TAB_DOCUMENT) ?
+                                 BKE_undosys_tab_cursor(const_cast<UndoStack *>(ustack), current) :
+                                 nullptr;
+    int index = BLI_listbase_count(&ustack->steps) - 1;
     bool first = true;
     for (const UndoStep *us = static_cast<const UndoStep *>(ustack->steps.last); us; us = us->prev) {
       if (!first) {
         out += ",";
       }
       first = false;
-      out += "{\"name\":\"";
+      out += "{\"index\":" + std::to_string(index--);
+      out += ",\"name\":\"";
       json_escape_into(out, us->name);
       out += "\",\"type\":\"";
       json_escape_into(out, us->type != nullptr ? us->type->name : "");
       out += "\",\"tab_uid\":" + std::to_string(us->mixar_tab_uid);
       out += ",\"skip\":" + std::string(us->skip ? "true" : "false");
       out += ",\"active\":" + std::string(us == ustack->step_active ? "true" : "false");
+      out += ",\"cursor\":" + std::string(us == cursor ? "true" : "false");
       out += ",\"memfile\":" +
              std::string((us->type != nullptr && STREQ(us->type->name, "Global Undo")) ? "true" :
                                                                                          "false");

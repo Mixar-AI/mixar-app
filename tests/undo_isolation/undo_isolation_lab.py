@@ -290,10 +290,20 @@ def _observe(key: str, before: dict, after: dict, d: dict):
     if key.startswith("changed:"):
         return key.split(":", 1)[1] in d["tabs"]
     if key.startswith("has:"):
-        tab, obj = key.split(":", 1)[1].split("/")
-        return obj in after["tabs"][tab]["objects"]
+        label, obj = key.split(":", 1)[1].split("/")
+        return obj in after["tabs"][label]["objects"]
     if key == "scene_count":
         return after["scene_count"]
+    if key == "can_redo":
+        with _override_window():
+            return bool(bpy.ops.ed.redo.poll())
+    if key.startswith("own_steps_kept:"):
+        # M3: at least UNDO_TAB_MIN_STEPS (8) of the tab's own steps survive the limit
+        h = history()
+        if not h:
+            return None
+        uid = tab(key.split(":", 1)[1]).session_uid
+        return sum(1 for s in h["steps"] if s["tab_uid"] == uid and not s["skip"]) >= 8
     raise KeyError(key)
 
 
@@ -319,11 +329,8 @@ def run_probes() -> None:
           expect_document={"has:C/C_torus": True, "has:A/A_5": True},
           expect_isolation={"has:C/C_torus": True, "changed:A": False, "window_stays": True})
 
-    if NO_EDITMODE or (EXPECT == "isolation" and not os.environ.get("MIXAR_UNDO_LAB_MODE_STEPS")):
-        # Mode steps (edit mesh, sculpt, paint) are per object and walk per tab
-        # from M3 on; the M2 partial restore covers memfile steps. Set
-        # MIXAR_UNDO_LAB_MODE_STEPS=1 to include P5/P6 in the isolation contract.
-        log("M0 P5/P6 (mode steps) skipped in isolation mode until M3")
+    if NO_EDITMODE:
+        log("M0 P5/P6 (mode steps) skipped (MIXAR_UNDO_LAB_NO_EDITMODE)")
         return
     # P5: edit-mode steps in C sit on top of A's memfile step. Two undos: the mode steps;
     # the third lands on the memfile step beneath, which today belongs to A.
@@ -356,6 +363,90 @@ def run_probes() -> None:
     probe("P6 undo x1 more (the step beneath)", lambda: press("undo"),
           expect_document={"changed:A": True, "window_scene": "A_agent"},
           expect_isolation={"changed:A": False, "changed:B": False, "window_stays": True})
+    if EXPECT == "isolation":
+        run_m3_probes()
+
+
+# -- M3: redo across tabs, the history jump, the per-tab step reserve ---------
+
+
+def _history_index(name: str) -> int:
+    """Stack index (oldest = 0) of the newest non-skip step called `name`."""
+    h = history()
+    if not h:
+        raise RuntimeError("no WindowManager.mixar_undo_history")
+    for s in h["steps"]:
+        if s["name"] == name and not s["skip"]:
+            return s["index"]
+    raise KeyError(name)
+
+
+def jump(name: str) -> None:
+    """What a click in Edit > Undo History does: ed.undo_history(item=<stack index>)."""
+    idx = _history_index(name)
+    with _override_window():
+        bpy.ops.ed.undo_history(item=idx)
+
+
+def run_m3_probes() -> None:
+    """Isolation contract only: the document contract's redo dies on any push."""
+    # P7a: P6 left C four tagged steps behind its top (edit mode, resize, the two
+    # toggles). Forward again: the tab is at its top and has no redo.
+    probe("P7a redo x4 in C (back to its top)", lambda: press("redo", 4),
+          expect_document={},
+          expect_isolation={"has:C/C_torus": True, "changed:A": False, "changed:B": False,
+                            "window_stays": True, "can_redo": False})
+    # a fresh visible edit so the cross-tab redo has something to bring back
+    edit("C", "C · add ico", lambda: add_mesh(tab("C"), "C_ico", "cone", (-8, 0, 0)))
+
+    def cross_tab_redo():
+        press("undo")                                             # C_ico gone, C's cursor behind
+        edit("A", "A · script 6", lambda: add_mesh(tab("A"), "A_6", "cube", (12, 0, 0)))
+        show("C")
+        press("redo")                                             # C's redo survives A's push
+    probe("P7 undo in C, push in A, redo in C", cross_tab_redo,
+          expect_document={},
+          expect_isolation={"has:C/C_ico": True, "has:A/A_6": True, "changed:B": False,
+                            "window_stays": True, "can_redo": False})
+
+    # P8: Undo History jumps walk the tab one tagged step at a time, either way
+    probe("P8a history jump to 'C · move cube'", lambda: jump("C · move cube"),
+          expect_document={},
+          expect_isolation={"has:C/C_cube": True, "has:C/C_torus": False, "has:C/C_ico": False,
+                            "changed:A": False, "changed:B": False, "window_stays": True,
+                            "can_redo": True})
+    probe("P8b history jump to 'C · add ico'", lambda: jump("C · add ico"),
+          expect_document={},
+          expect_isolation={"has:C/C_torus": True, "has:C/C_ico": True, "changed:A": False,
+                            "changed:B": False, "window_stays": True, "can_redo": False})
+
+    # P9: the step limit keeps a tab's own reserve and never frees its cursor
+    def limit_then_redo():
+        press("undo")                                             # cursor behind, C_ico gone
+        bpy.context.preferences.edit.undo_steps = 8
+        try:
+            for i in range(12):
+                edit("A", f"A · filler {i}",
+                     lambda i=i: add_mesh(tab("A"), f"A_f{i}", "cube", (20 + i, 0, 0)))
+        finally:
+            bpy.context.preferences.edit.undo_steps = 32
+        show("C")
+        h = history()
+        if h:
+            per_tab = {}
+            for st in h["steps"]:
+                if not st["skip"]:
+                    per_tab[st["tab_uid"]] = per_tab.get(st["tab_uid"], 0) + 1
+            log(f"M3 P9 stack after the fillers: {len(h['steps'])} steps, per tab {per_tab}, "
+                f"oldest {[st['name'] for st in h['steps'][-6:]][::-1]}")
+            log("M3 P9 stack: " + "; ".join(f"{st['index']}:{st['name']}|t{st['tab_uid']}"
+                                            f"{'|skip' if st['skip'] else ''}{'|cursor' if st['cursor'] else ''}"
+                                            for st in h["steps"][::-1]))
+        press("redo")
+    probe("P9 undo in C, 12 pushes in A under undo_steps=8, redo in C", limit_then_redo,
+          expect_document={},
+          expect_isolation={"has:C/C_ico": True, "has:A/A_f11": True, "changed:B": False,
+                            "window_stays": True, "can_redo": False, "own_steps_kept:C": True})
 
 
 # -- M1: tags and the owner map ------------------------------------------------

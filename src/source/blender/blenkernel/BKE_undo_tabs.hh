@@ -23,7 +23,10 @@
 #include <cstdint>
 #include <string>
 
+#include "BLI_span.hh"
+
 struct bContext;
+struct ID;
 struct Main;
 struct Scene;
 struct UndoStack;
@@ -36,6 +39,9 @@ namespace blender {
 constexpr uint32_t UNDO_TAB_DOCUMENT = 0u;
 /** Owner value of an ID reachable from two or more tabs. */
 constexpr uint32_t UNDO_TAB_SHARED = 0xFFFFFFFFu;
+/** Design M3: the step limit keeps at least this many of a tab's own steps
+ * (of those that exist) and never frees a tab's cursor step. */
+constexpr int UNDO_TAB_MIN_STEPS = 8;
 
 /** ``MIXAR_PER_TAB_UNDO=1`` in the environment (read once). Gates the
  * history filter and the owner-map build; tags are always recorded. */
@@ -110,9 +116,16 @@ uint32_t BKE_undo_tabs_partial_tab();
  * session_uid exists in the old Main. */
 UndoPartialDecision BKE_undo_tabs_partial_decide(uint32_t session_uid, bool has_live);
 
+/** M3: true when every ID is owned by ``tab_uid`` in the live document (a
+ * Scene: its own tab). A mode step (edit mesh, sculpt, paint, text) names
+ * the datablocks it touches; the tab walk applies it only when they are all
+ * the tab's. Names the first foreign one in ``r_reason``. */
+bool BKE_undo_tabs_ids_owned(Main *bmain, uint32_t tab_uid, Span<ID *> ids, std::string *r_reason);
+
 /** JSON array of the stack's steps, newest first, for the harness:
- * name, type, tab_uid, current (the window scene's tab), skip, active,
- * memfile, owners, shared, shared_names, owner_map_ms. */
+ * index (stack index, oldest = 0), name, type, tab_uid, skip, active, cursor
+ * (the current tab's cursor step), memfile, owners, shared, shared_names,
+ * owner_map_ms; current_tab is the window scene's tab. */
 std::string BKE_undo_tabs_history_json(const wmWindowManager *wm);
 
 }  // namespace blender

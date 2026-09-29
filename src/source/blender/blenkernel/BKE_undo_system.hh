@@ -340,6 +340,10 @@ bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, uint32_t tab_uid,
 UndoStep *BKE_undosys_tab_cursor(UndoStack *ustack, uint32_t tab_uid);
 /** True while the tab's cursor is behind its newest step (a redo is available for it). */
 bool BKE_undosys_tab_has_redo(UndoStack *ustack, uint32_t tab_uid);
+/** M3: walk the tab to ``target`` (one of its own steps) one tagged step at a
+ * time, in either direction; the Undo History entry of a tab. */
+bool BKE_undosys_tab_step_load(
+    UndoStack *ustack, bContext *C, uint32_t tab_uid, UndoStep *target, std::string *r_reason);
 
 /**
  * Redo until `us_target` step becomes the active (currently loaded) one.

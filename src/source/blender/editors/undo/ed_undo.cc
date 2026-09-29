@@ -345,6 +345,36 @@ static int ed_undo_step_by_index(bContext *C, const int undo_index, ReportList *
   BLI_assert(undo_index >= 0);
 
   wmWindowManager *wm = CTX_wm_manager(C);
+
+  /* Mixar per-tab undo (M3): the Undo History of a tab walks that tab to the
+   * chosen step (the menu lists only its steps; the index is the stack's). */
+  if (BKE_undo_tabs_enabled()) {
+    const uint32_t tab = BKE_undo_tab_uid_from_context(C);
+    wmWindow *win = CTX_wm_window(C);
+    if (tab != UNDO_TAB_DOCUMENT && win != nullptr && win->scene != nullptr &&
+        !BKE_undo_tab_scene_is_lane(win->scene))
+    {
+      UndoStack *ustack = wm->runtime->undo_stack;
+      UndoStep *target = static_cast<UndoStep *>(BLI_findlink(&ustack->steps, undo_index));
+      UndoStep *cursor = BKE_undosys_tab_cursor(ustack, tab);
+      if (target == nullptr || target == cursor) {
+        return OPERATOR_CANCELLED;
+      }
+      const enum eUndoStepDir undo_dir = (BLI_findindex(&ustack->steps, cursor) > undo_index) ?
+                                             STEP_UNDO :
+                                             STEP_REDO;
+      ed_undo_step_pre(C, wm, undo_dir, reports);
+      std::string reason;
+      const bool ok = BKE_undosys_tab_step_load(ustack, C, tab, target, &reason);
+      ed_undo_step_post(C, wm, undo_dir, reports);
+      if (!ok) {
+        BKE_reportf(reports, RPT_INFO, "%s", reason.c_str());
+        return OPERATOR_CANCELLED;
+      }
+      return OPERATOR_FINISHED;
+    }
+  }
+
   const int active_step_index = BLI_findindex(&wm->runtime->undo_stack->steps,
                                               wm->runtime->undo_stack->step_active);
   if (undo_index == active_step_index) {
