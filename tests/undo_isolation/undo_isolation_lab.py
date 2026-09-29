@@ -604,7 +604,7 @@ def run_m5_probes() -> None:
     press("redo")
     win().scene = tab("C")
     del TABS["F"]
-    bpy.data.scenes.remove(fresh)
+    bpy.data.scenes.remove(bpy.data.scenes["Fresh_tab"])   # the Python reference dangles across a restore
 
     # P14: a global datablock (a Text: no tab reaches it) is left alone by a tab's
     # undo; only Undo Whole Document restores it. The documented rule.
