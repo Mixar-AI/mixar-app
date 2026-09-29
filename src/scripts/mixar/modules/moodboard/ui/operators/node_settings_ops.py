@@ -21,7 +21,12 @@ from mixar.modules.moodboard.ui.sidebar_ui_helpers import (
     draw_input,
     draw_section_box,
     draw_toggle,
+    draw_tooltip,
 )
+
+
+# Space between stacked fields so captions read as belonging to their control.
+FIELD_GAP = 0.6
 
 
 def _popup_node(context, node_id):
@@ -66,19 +71,19 @@ def _clamp_numeric_settings(node):
                 parameter.value_float = bounded
 
 
+MODE_HELP = "The kind of generation this node runs."
+MODEL_HELP = "The AI model this node generates with."
+
+
 def _draw_parameter(layout, parameter, spec=None):
+    """Caption over the control for every kind; hover either for help."""
     label = parameter.label or parameter.name.replace('_', ' ').title()
     kind = parameter.parameter_type
     field = layout.column(align=True)
-    caption = field.row(align=True)
+    field.label(text=label)
     if kind == 'BOOLEAN':
-        draw_toggle(caption, parameter, 'value_boolean', text=label)
-    else:
-        caption.label(text=label)
-    info = caption.operator('mixie.moodboard_parameter_info', text='', icon='INFO', emboss=False)
-    info.details = parameter_help(parameter, spec)
-    if kind == 'BOOLEAN':
-        return
+        draw_toggle(field, parameter, 'value_boolean',
+                    text="On" if parameter.value_boolean else "Off")
     elif kind == 'ENUM':
         draw_dropdown(field, parameter, 'value_enum', text="")
     elif kind in {'INTEGER', 'FLOAT'}:
@@ -87,6 +92,8 @@ def _draw_parameter(layout, parameter, spec=None):
             field.mixar_style(component='NUMBER')
     else:
         draw_input(field, parameter, 'value_string', text="")
+    # After the control exists, so the caption and the value share it.
+    draw_tooltip(field, parameter_help(parameter, spec))
 
 
 def _draw_settings(layout, node, scene=None):
@@ -108,13 +115,19 @@ def _draw_settings(layout, node, scene=None):
     settings = draw_section_box(layout)
     settings.enabled = not running
     if node.show_mode:
-        settings.label(text="Mode")
-        draw_dropdown(settings, node, 'service_key', text="")
-    settings.label(text="Model")
-    draw_dropdown(settings, node, 'model', text="")
+        mode = settings.column(align=True)
+        mode.label(text="Mode")
+        draw_dropdown(mode, node, 'service_key', text="")
+        draw_tooltip(mode, MODE_HELP)
+        settings.separator(factor=FIELD_GAP)
+    model = settings.column(align=True)
+    model.label(text="Model")
+    draw_dropdown(model, node, 'model', text="")
+    draw_tooltip(model, MODEL_HELP)
     specs = parameter_specs(node)
     for parameter in node.parameters:
         if parameter.visible:
+            settings.separator(factor=FIELD_GAP)
             _draw_parameter(settings, parameter, specs.get(parameter.name))
 
     if scene is not None and node.action_type == 'CHARACTER_PARTS':
@@ -124,6 +137,7 @@ def _draw_settings(layout, node, scene=None):
         components.enabled = not running
         draw_character_parts_node(components, scene, node)
 
+    layout.separator(factor=FIELD_GAP)
     actions = layout.column(align=True)
     actions.enabled = not running
     if (node.preview_image or node.preview_object) and node.state in {

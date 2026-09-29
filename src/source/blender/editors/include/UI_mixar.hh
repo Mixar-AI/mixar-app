@@ -83,6 +83,10 @@ inline void mixar_label_center(
   mixar_label_left(text, x - mixar_text_width(text, style) * 0.5f, cy, style, color);
 }
 void mixar_button_tooltip_owned(Button *button, const char *text);
+/** The text set by #mixar_button_tooltip_owned, else null (QA inspection). */
+const char *mixar_button_tooltip_owned_text(const Button &button);
+/** Owned hover tooltip on every button in the layout's subtree. */
+void mixar_tooltip_layout(Layout *layout, const char *text);
 void mixar_button_lit_set(Button *button, bool lit);
 /** True when the context workspace is Mixar's dedicated Zen Mode tab. */
 bool mixar_workspace_is_zen(const bContext *C);

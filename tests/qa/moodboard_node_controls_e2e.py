@@ -59,8 +59,10 @@ def complete_form(qa, host, name):
     query={'op':SETTINGS,'area_type':host}
     qa.click(**query)
     if name not in {'ASSEMBLE','CHARACTER_PARTS'}:
-        count=qa.find(popup=True,op='MIXIE_OT_moodboard_parameter_info')['total']
-        require(count==len(read(qa)['params']),f'{name}: full settings lost catalog fields')
+        # Every visible field shows its help on hover of caption and value.
+        count=sum(1 for w in qa.find(popup=True)['widgets']
+                  if w['type']=='Label' and w.get('tip'))
+        require(count>=len(read(qa)['params']),f'{name}: full settings lost catalog fields')
     snapshot(qa,host+'-'+name+'-all-settings',area=host)
     qa.press('ESC')
 

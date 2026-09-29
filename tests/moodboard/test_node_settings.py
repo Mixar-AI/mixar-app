@@ -29,7 +29,7 @@ def popup():
     tree = ast.parse(PATH.read_text())
     body = []
     for item in tree.body:
-        if isinstance(item, ast.FunctionDef):
+        if isinstance(item, (ast.FunctionDef, ast.Assign)):
             body.append(item)
         elif isinstance(item, ast.ClassDef):
             item.bases = [ast.Name(id='object', ctx=ast.Load())]
@@ -44,6 +44,7 @@ def popup():
         'draw_input': lambda layout, data, prop, **kw: layout.prop(data, prop, **kw),
         'draw_toggle': lambda layout, data, prop, **kw: layout.prop(data, prop, **kw),
         'draw_section_box': lambda layout: layout.column(),
+        'draw_tooltip': lambda layout, text: layout.mixar_tooltip(text=text),
         'redraw_moodboard_canvases': Mock(),
         'is_moodboard_context': Mock(return_value=True),
     }
@@ -67,6 +68,9 @@ class Layout:
     row = column
     mixar_surface = column
 
+    def separator(self, **kwargs):
+        pass
+
     def label(self, **kwargs):
         self.events.append(('label', kwargs['text'], self.active()))
 
@@ -81,10 +85,14 @@ class Layout:
     def mixar_style(self, **kwargs):
         pass
 
+    def mixar_tooltip(self, text):
+        self.events.append(('tooltip', text, self.active()))
+
 
 def parameter(kind, **kwargs):
     values = dict(parameter_type=kind, visible=True, name='quality', label='Quality',
-                  minimum=1.0, maximum=4.0, value_integer=1, value_float=1.0)
+                  minimum=1.0, maximum=4.0, value_integer=1, value_float=1.0,
+                  value_boolean=True)
     values.update(kwargs)
     return SimpleNamespace(**values)
 
@@ -135,13 +143,14 @@ def test_visible_fields_keep_names_and_bind_to_node_values(popup):
     popup['_draw_settings'](layout, node(parameters=params + [hidden]))
     labels = [value for kind, value, _ in layout.events if kind == 'label']
     assert {'Mode', 'Model', 'ENUM label', 'INTEGER label', 'FLOAT label',
-            'STRING label'} <= set(labels)
+            'STRING label', 'BOOLEAN label'} <= set(labels)
     fields = [value for kind, value, _ in layout.events if kind == 'prop']
     assert not any(data is hidden for data, _, _ in fields)
     assert {name for _, name, _ in fields} == {
         'service_key', 'model', 'value_enum', 'value_integer', 'value_float',
         'value_boolean', 'value_string'}
-    assert next(kw['text'] for _, name, kw in fields if name == 'value_boolean') == 'BOOLEAN label'
+    # A toggle sits under its caption like every other field and shows its state.
+    assert next(kw['text'] for _, name, kw in fields if name == 'value_boolean') == 'On'
     assert not any(kw.get('slider') for _, _, kw in fields)
 
 
@@ -153,7 +162,7 @@ def test_running_settings_and_reset_are_disabled(popup, state):
                 if kind in {'prop', 'op'}]
     assert controls and not any(enabled for _, _, enabled in controls)
     assert [value[0] for kind, value, _ in controls if kind == 'op'] == [
-        'mixie.moodboard_parameter_info', 'mixie.moodboard_reset_node_params']
+        'mixie.moodboard_reset_node_params']
 
 
 @pytest.mark.parametrize('state', ['SUCCESS', 'FAILED', 'CANCELLED'])
@@ -219,16 +228,31 @@ def test_integer_popup_clamp_survives_float32_catalog_bounds(popup):
     assert field.value_integer == UNBOUNDED_INT_MAX
 
 
-def test_info_uses_owning_nodes_default_and_keeps_current_value(popup):
+def test_hover_help_uses_owning_nodes_default_and_keeps_current_value(popup):
     field = parameter('INTEGER', value_integer=3)
     layout = Layout()
     popup['_draw_settings'](layout, node(parameters=[field],
                                         schema_json='{"parameters":{"quality":{"default":1}}}'))
-    info = next(value[1] for kind, value, _ in layout.events
-                if kind == 'op' and value[0] == 'mixie.moodboard_parameter_info')
-    assert 'Default: 1' in info.details
-    assert 'Range: 1 to 4' in info.details
+    tips = [value for kind, value, _ in layout.events if kind == 'tooltip']
+    assert tips[-1] == 'Enter a whole number for this model setting. Range: 1 to 4. Default: 1.'
     assert field.value_integer == 3
+
+
+def test_every_field_explains_itself_on_hover_without_an_info_icon(popup):
+    params = [parameter(kind, label=f'{kind} label')
+              for kind in ('ENUM', 'INTEGER', 'FLOAT', 'BOOLEAN', 'STRING')]
+    layout = Layout()
+    popup['_draw_settings'](layout, node(parameters=params))
+    events = layout.events
+    assert not any(kind == 'op' and value[0] != 'mixie.moodboard_reset_node_params'
+                   for kind, value, _ in events)
+    # Mode, Model and each parameter: the tooltip lands after its caption AND
+    # control, so the C++ side applies it to both buttons in that column.
+    tips = [i for i, (kind, _, _) in enumerate(events) if kind == 'tooltip']
+    assert len(tips) == 2 + len(params)
+    for index in tips:
+        assert events[index - 1][0] == 'prop'
+        assert events[index - 2][0] == 'label'
 
 
 def test_overlay_anchors_below_owner_header_without_changing_prompt(popup):

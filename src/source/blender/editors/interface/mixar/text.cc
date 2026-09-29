@@ -1,6 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
+#include "../interface_intern.hh"
 #include "BLF_api.hh"
 #include "MEM_guardedalloc.h"
 #include "UI_interface.hh"
@@ -176,5 +177,10 @@ void mixar_button_tooltip_owned(Button *button, const char *text)
   char *owned = static_cast<char *>(MEM_new_uninitialized(size, __func__));
   memcpy(owned, text, size);
   button_func_tooltip_set(button, tooltip_owned, owned, MEM_delete_void);
+}
+const char *mixar_button_tooltip_owned_text(const Button &button)
+{
+  /* Only this file's owned strings are read; other tip funcs may need context. */
+  return button.tip_func == tooltip_owned ? static_cast<const char *>(button.tip_arg) : nullptr;
 }
 }  // namespace blender::ui
