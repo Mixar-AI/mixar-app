@@ -129,3 +129,32 @@ def test_dispatch_operator_is_registered_with_skip_save_owner():
     tree = ast.parse(source)
     classes = [n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
     assert "MIXIE_OT_moodboard_prompt_generate" in classes
+
+
+def _enter_case() -> str:
+    source = _read(HANDLERS)
+    start = source.index("case EVT_RETKEY: {")
+    return source[start : source.index("case EVT_DELKEY:", start)]
+
+
+def test_node_prompt_enter_is_not_gated_on_the_area():
+    """The Zen drawer hosts the canvas in a View3D TOOL_PROPS region.
+
+    Detecting the node prompt only inside a SPACE_MIXIE / SPACE_AGENT_BUBBLE
+    area made Enter in the drawer confirm the text without running the node.
+    The owner struct (``prompt`` + ``node_id``) identifies it in every host.
+    """
+    case = _enter_case()
+    detect = case[case.index("is_moodboard_node_prompt = is_prompt") :]
+    detect = detect[: detect.index(";") + 1]
+    assert '"node_id"' in detect
+    assert "spacetype" not in detect and "area" not in detect, detect
+    # The sidebar/island tab routing must never claim a node prompt.
+    tab_gate = case[case.index("const bool is_moodboard_prompt = ") :]
+    tab_gate = tab_gate[: tab_gate.index(";") + 1]
+    assert "!is_moodboard_node_prompt" in tab_gate
+    # Node submit runs before the chat and generic multiline branches, and
+    # Shift+Enter still falls through to insert a newline.
+    node_branch = case.index("if (is_moodboard_node_prompt &&")
+    assert node_branch < case.index("if (ui_but_is_multiline_text(but) && (event->modifier & KM_SHIFT))")
+    assert "(KM_SHIFT | KM_CTRL | KM_ALT | KM_OSKEY)) == 0" in case[node_branch : node_branch + 200]
