@@ -23,11 +23,13 @@ from ..core.assemble_schema import (
     part_label,
     part_links,
 )
+from ..core.parameter_help import parameter_help
 from .sidebar_ui_helpers import (
     draw_dropdown,
     draw_hint,
     draw_section_box,
     draw_toggle,
+    draw_tooltip,
 )
 
 _SLOT_LABELS = dict(SLOT_CHOICES)
@@ -94,23 +96,31 @@ def _draw_part(layout, scene, link, rows: dict, outcomes: dict) -> None:
     outcome = outcomes.get(link.to_socket) or {}
     slot = _effective_slot(slot_row, outcome)
 
-    col.label(text="Slot")
-    draw_dropdown(col, slot_row, 'value_enum', text="")
+    field = col.column(align=True)
+    field.label(text="Slot")
+    draw_dropdown(field, slot_row, 'value_enum', text="")
+    draw_tooltip(field, parameter_help(slot_row))
     hold_row = rows.get(param_name("hold", index))
     if hold_row is not None and slot in HAND_SLOTS | FOREARM_SLOTS | {_UNRESOLVED}:
-        col.label(text="Hold")
-        draw_dropdown(col, hold_row, 'value_enum', text="")
+        field = col.column(align=True)
+        field.label(text="Hold")
+        draw_dropdown(field, hold_row, 'value_enum', text="")
+        draw_tooltip(field, parameter_help(hold_row))
     size_row = rows.get(param_name("size", index))
     if size_row is not None:
         basis = "head width" if slot in HEAD_SLOTS else "height"
-        col.label(text=f"Size (% of {basis}, 0 = auto)")
-        field = col.row(align=True)
-        field.prop(size_row, 'value_float', text="")
-        if hasattr(field, 'mixar_style'):
-            field.mixar_style(component='NUMBER')
+        field = col.column(align=True)
+        field.label(text=f"Size (% of {basis}, 0 = auto)")
+        value = field.row(align=True)
+        value.prop(size_row, 'value_float', text="")
+        if hasattr(value, 'mixar_style'):
+            value.mixar_style(component='NUMBER')
+        draw_tooltip(field, parameter_help(size_row))
     flip_row = rows.get(param_name("flip", index))
     if flip_row is not None and slot in HAND_SLOTS | {_UNRESOLVED}:
-        draw_toggle(col.row(), flip_row, 'value_boolean', text="Flip edge")
+        field = col.row()
+        draw_toggle(field, flip_row, 'value_boolean', text="Flip edge")
+        draw_tooltip(field, parameter_help(flip_row))
     _draw_outcome(col, outcome)
 
 

@@ -39,8 +39,17 @@ def _display(value, choices):
     return str(value) if value != '' else 'Empty'
 
 
+def _sentence(text):
+    text = text.strip()
+    return text if text.endswith(('.', '!', '?')) else text + '.'
+
+
 def parameter_help(parameter, spec=None):
-    """Explain purpose and valid input without inventing model capabilities."""
+    """One hover tooltip: what the field does, then its valid input.
+
+    The dropdown already lists an enum's options, so they are not repeated.
+    Never invents a range or default the saved schema does not carry.
+    """
     spec = spec if isinstance(spec, dict) else {}
     label = parameter.label or parameter.name.replace('_', ' ').title()
     kind = parameter.parameter_type
@@ -55,10 +64,8 @@ def parameter_help(parameter, spec=None):
             'FLOAT': 'Enter a number for this model setting; decimal values are allowed.',
             'STRING': 'Enter text for this model setting.',
         }.get(kind, 'Configure this setting for the selected model.')
-    parts = [label, description]
+    parts = [description]
     choices = _choices(parameter)
-    if kind == 'ENUM' and choices:
-        parts.append('Options: ' + ', '.join(_display(c['value'], choices) for c in choices))
     if kind in {'INTEGER', 'FLOAT'}:
         low, high = parameter.minimum, parameter.maximum
         if low <= high:
@@ -73,5 +80,5 @@ def parameter_help(parameter, spec=None):
     if 'default' in spec and spec['default'] is not None:
         parts.append('Default: ' + _display(spec['default'], choices))
     if getattr(parameter, 'required', False):
-        parts.append('Required for generation.')
-    return '\n\n'.join(parts)
+        parts.append('Required for generation')
+    return ' '.join(_sentence(part) for part in parts)

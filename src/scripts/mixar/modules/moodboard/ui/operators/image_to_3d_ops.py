@@ -14,7 +14,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.utils.image_utils import compress_for_service
-from mixar.modules.moodboard.core.media_utils import selected_reference_stills
+from mixar.modules.moodboard.core.model_gen_inputs import selected_input_images
 
 logger = get_logger(__name__)
 
@@ -109,8 +109,10 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 self.report({"ERROR"}, "Please wait for models to load or check connection")
                 return {"CANCELLED"}
 
-        # Get the input image based on context
+        # Get the input image(s) based on context. Selecting several moodboard
+        # stills queues one job per image; every other source is a single image.
         image = None
+        extra_images = []
 
         if self.from_chat:
             if hasattr(scene, 'mixie_image_to_3d_image'):
@@ -124,9 +126,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         elif sidebar_tab:
             use_selected = getattr(sidebar_tab, 'use_selected_image', False)
             if use_selected:
-                selected = selected_reference_stills(scene)
+                selected = selected_input_images(scene)
                 if selected:
-                    image = selected[0].image
+                    image, extra_images = selected[0], selected[1:]
                 else:
                     self.report({"ERROR"}, "Please select an image in the moodboard")
                     return {"CANCELLED"}
@@ -137,9 +139,9 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                     return {"CANCELLED"}
         else:
             if hasattr(scene, 'mixie_image_to_3d_use_selected') and scene.mixie_image_to_3d_use_selected:
-                selected = selected_reference_stills(scene)
+                selected = selected_input_images(scene)
                 if selected:
-                    image = selected[0].image
+                    image, extra_images = selected[0], selected[1:]
                 else:
                     self.report({"ERROR"}, "No image selected in moodboard")
                     return {"CANCELLED"}
@@ -152,6 +154,34 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 self.report({"ERROR"}, "No input image available")
                 return {"CANCELLED"}
 
+        # Get prompt (optional)
+        if sidebar_tab:
+            prompt = getattr(sidebar_tab, 'prompt', '').strip() or None
+        elif hasattr(scene, 'mixie_image_to_3d_prompt'):
+            prompt = scene.mixie_image_to_3d_prompt.strip() or None
+        else:
+            prompt = None
+
+        queued = 0
+        for img in [image, *extra_images]:
+            result = self._submit_image(scene, img, model_name, prompt)
+            if result is None:
+                continue  # already reported
+            queued += 1
+        if not queued:
+            return {"CANCELLED"}
+
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
+        from mixar.modules.common.job_queue.constants import FEATURE_MODEL_3D
+        mark_enqueued(FEATURE_MODEL_3D)
+        self.report(
+            {"INFO"},
+            "Added to queue" if queued == 1 else f"Added {queued} models to queue",
+        )
+        return {"FINISHED"}
+
+    def _submit_image(self, scene, image, model_name, prompt):
+        """Enqueue one 3D job for *image*; None (after reporting) on failure."""
         # Turnaround sheets: the detect-views endpoint already split this
         # image into per-view crops and staged them in S3, so submit ONE
         # multi-view job forwarding those keys verbatim rather than
@@ -159,7 +189,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         # below, unchanged.
         turnaround_payload = self._turnaround_payload(scene, image, model_name)
         if turnaround_payload is False:
-            return {"CANCELLED"}
+            return None
 
         # Convert image to bytes
         image_bytes = None
@@ -168,15 +198,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 image_bytes = compress_for_service(image, "image_to_3d")
             except Exception as e:
                 self.report({"ERROR"}, f"Failed to process image: {e}")
-                return {"CANCELLED"}
-
-        # Get prompt (optional)
-        if sidebar_tab:
-            prompt = getattr(sidebar_tab, 'prompt', '').strip() or None
-        elif hasattr(scene, 'mixie_image_to_3d_prompt'):
-            prompt = scene.mixie_image_to_3d_prompt.strip() or None
-        else:
-            prompt = None
+                return None
 
         # Enqueue via job queue
         try:
@@ -221,15 +243,12 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             )
             if not job:
                 self.report({"ERROR"}, "A duplicate generation is already queued")
-                return {"CANCELLED"}
+                return None
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")
-            return {"CANCELLED"}
+            return None
 
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
-        mark_enqueued(FEATURE_MODEL_3D)
-        self.report({"INFO"}, "Added to queue")
-        return {"FINISHED"}
+        return job
 
     def _turnaround_payload(self, scene, image, model_name):
         """Multi-view payload fragment for the set *image* is the main of.

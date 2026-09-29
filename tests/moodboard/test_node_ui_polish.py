@@ -262,11 +262,13 @@ def test_a_finished_node_can_export_its_own_result():
     assert "def node_exportable_media(scene, node_id" in media
 
 
-def test_node_fields_retain_catalog_help_in_the_popup():
+def test_node_fields_explain_themselves_on_hover_not_with_an_icon():
     settings = _read(MOODBOARD / "ui/operators/node_settings_ops.py")
-    help_source = _read(MOODBOARD / "ui/operators/node_parameter_info.py")
-    assert "info.details = parameter_help(parameter, spec)" in settings
-    assert "return properties.details" in help_source
+    helpers = _read(MOODBOARD / "ui/sidebar_ui_helpers.py")
+    assert "draw_tooltip(field, parameter_help(parameter, spec))" in settings
+    assert "icon='INFO'" not in settings.split("def _draw_settings")[0]
+    assert "layout.mixar_tooltip(text=text)" in helpers
+    assert not (MOODBOARD / "ui/operators/node_parameter_info.py").exists()
 
 
 def test_a_result_can_be_opened_in_its_own_preview_window():

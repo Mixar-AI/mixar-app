@@ -4,6 +4,7 @@
 /** Scene selection uses transient ID session_uids, never mutable display names.
  * Destructive actions and text editing remain standard Python-owned operators. */
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "BLF_api.hh"
@@ -195,19 +196,55 @@ void draw_inline_name(const bContext *C, ARegion *region, ScenesDrawerRuntime *r
   ui::block_draw(C, block);
 }
 
+/* Baseline that centers `text`'s ink (not the font's line box) on `mid`. */
+static float ink_baseline(const int font, const char *text, const float mid)
+{
+  rcti ink;
+  BLF_boundbox(font, text, strlen(text), &ink);
+  return std::round(mid - 0.5f * float(ink.ymin + ink.ymax));
+}
+
+/* Center the label's ink in `rect`: the advance width and the font's line box
+ * leave the leading "+" and the cap-height glyphs visibly off-center. */
+static void draw_centered_label(const int font, const char *label, const rctf &rect,
+                                const float color[4])
+{
+  const size_t len = strlen(label);
+  rcti ink;
+  BLF_boundbox(font, label, len, &ink);
+  BLF_color4fv(font, color);
+  BLF_position(font, std::round(BLI_rctf_cent_x(&rect) - 0.5f * float(ink.xmin + ink.xmax)),
+               ink_baseline(font, label, BLI_rctf_cent_y(&rect)), 0.0f);
+  BLF_draw(font, label, len);
+}
+
 void draw_header(ScenesDrawerRuntime *runtime, ARegion *region,
                  const float x0, const float x1, const float mid, const float scale)
 {
+  /* Pill label padding and the selection actions' fixed slot, unscaled. */
+  constexpr float ADD_PAD_X = 14.0f;
+  constexpr float SELECTION_SLOT_W = 96.0f;
+  constexpr float ACTION_GAP = 8.0f;
+  constexpr float DELETE_W = 24.0f;
+
   runtime->bulk_delete_rect = runtime->clear_selection_rect = runtime->new_rect = {};
   runtime->new_visible = runtime->selected_uids.empty();
   const auto &zen = ui::mixar_tokens::mixar_zen();
   const int font = BLF_default();
-  rctf action = {x1 - 96.0f * scale, x1, mid - 12.0f * scale, mid + 12.0f * scale};
+  const float half_h = 0.5f * HEADER_ACTION_H * scale;
+  const char *add_label = "+ New scene";
+  BLF_size(font, 11.0f * scale);
+  /* Add hugs its label with even padding; the selection actions keep a fixed
+   * slot. Both are right-aligned to the cards and share one vertical band. */
+  const float add_w = std::round(BLF_width(font, add_label, strlen(add_label)) +
+                                 2.0f * ADD_PAD_X * scale);
+  const float action_w = runtime->new_visible ? add_w : SELECTION_SLOT_W * scale;
+  rctf action = {x1 - action_w, x1, mid - half_h, mid + half_h};
   BLF_size(font, 14.0f * scale);
   const std::string title = runtime->new_visible ? "Scenes" :
       std::to_string(runtime->selected_uids.size()) + " selected";
-  draw_elided(font, title, x0, mid - 0.35f * BLF_height_max(font),
-              action.xmin - x0 - 6.0f * scale, zen.strong);
+  draw_elided(font, title, x0, ink_baseline(font, title.c_str(), mid),
+              action.xmin - x0 - ACTION_GAP * scale, zen.strong);
   BLF_size(font, 11.0f * scale);
   const auto cache_rect = [&](const rctf &rect, rcti &target) {
     BLI_rcti_rctf_copy(&target, &rect);
@@ -216,24 +253,19 @@ void draw_header(ScenesDrawerRuntime *runtime, ARegion *region,
   if (runtime->new_visible) {
     float fill[4];
     with_alpha(zen.primary, runtime->hover_new ? 1.0f : 0.85f, fill);
-    draw_pill(action, fill, 12.0f * scale);
-    const char *label = "+ New scene";
-    BLF_color4fv(font, zen.strong);
-    BLF_position(font, (action.xmin + action.xmax - BLF_width(font, label, strlen(label))) * 0.5f,
-                 mid - 0.35f * BLF_height_max(font), 0.0f);
-    BLF_draw(font, label, strlen(label));
+    draw_pill(action, fill, half_h);
+    draw_centered_label(font, add_label, action, zen.strong);
     cache_rect(action, runtime->new_rect);
     return;
   }
-  /* Use the same header slot as Add; selection never changes list height/scroll. */
+  /* Use the same header band as Add; selection never changes list height/scroll. */
   rctf clear = action;
-  clear.xmax = x1 - 32.0f * scale;
+  clear.xmax = x1 - (DELETE_W + ACTION_GAP) * scale;
   draw_pill(clear, zen.canvas, 6.0f * scale);
-  draw_elided(font, "Clear", clear.xmin + 12.0f * scale,
-              mid - 0.35f * BLF_height_max(font), BLI_rctf_size_x(&clear), zen.strong);
+  draw_centered_label(font, "Clear", clear, zen.strong);
   cache_rect(clear, runtime->clear_selection_rect);
   rctf remove = action;
-  remove.xmin = x1 - 24.0f * scale;
+  remove.xmin = x1 - DELETE_W * scale;
   float fill[4];
   with_alpha(zen.danger, runtime->hover_delete ? 0.35f : 0.18f, fill);
   draw_pill(remove, fill, 6.0f * scale);
