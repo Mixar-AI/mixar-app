@@ -149,8 +149,9 @@ def draw_left(layout, context, *, tier):
     if not context.space_data.show_region_tool_header:
         restore = surface.row()
         compact = tiers.at_most(tier, tiers.NARROW)
-        restore.operator('wm.context_toggle', text='' if compact else 'Object Controls',
-                         icon='PREFERENCES').data_path = 'space_data.show_region_tool_header'
+        restore.operator('mixar.zen_object_controls_show',
+                         text='' if compact else 'Object Controls',
+                         icon='PREFERENCES').show = True
         style(restore)
 
 

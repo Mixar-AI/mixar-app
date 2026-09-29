@@ -43,7 +43,7 @@ result = True
     assert qa.eval("result=len(drv.main_window().view_layer.objects.active.modifiers)") == 0
     qa.press('ESC')
     qa.press('ESC')
-    qa.click(**STRIP, op='WM_OT_context_toggle')
+    qa.click(**STRIP, op='MIXAR_OT_zen_object_controls_show')
     qa.wait("bool(drv.find(area_type='VIEW_3D', text='Object Controls'))", timeout=5)
     qa.click(area_type='VIEW_3D', text='Object Controls')
     qa.wait("bool(drv.find(op='VIEW2D_OT_pan'))", timeout=5)

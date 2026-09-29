@@ -18,6 +18,7 @@
 #include "cinema_label.hh"
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 
 namespace blender::ui {
@@ -62,6 +63,32 @@ void icon(const int id, const float x, const float y, const uchar *color, const 
 {
   icon_draw_ex(x, y, id, 1.0f, 1.0f, 0.0f, color, false, nullptr, false, size / 16.0f);
 }
+
+/** The floating Zen bar's light Brightness slider (Point/Area/Spot W, Sun W/m^2). */
+bool adaptive_light_energy(const Button &button)
+{
+  if (button.block->name != "VIEW3D_HT_tool_header" ||
+      button.mixar_style.theme != MixarTheme::Zen || !button.rnaprop || !button.rnapoin.type ||
+      !STREQ(RNA_property_identifier(button.rnaprop), "energy"))
+  {
+    return false;
+  }
+  const char *owner = RNA_struct_identifier(button.rnapoin.type);
+  return STREQ(owner, "PointLight") || STREQ(owner, "AreaLight") ||
+         STREQ(owner, "SpotLight") || STREQ(owner, "SunLight");
+}
+
+/** Brightness reads as "5000 W" / "12.5" / "3.00": large wattages need no
+ * thousandths, and the native string keeps units. Typing still edits the
+ * full-precision value, because this only runs when no edit string exists. */
+std::string adaptive_light_energy_label(Button &button)
+{
+  const double value = std::abs(button_value_get(&button));
+  const int precision = value >= 100.0 ? 0 : value >= 10.0 ? 1 : 2;
+  char str[UI_MAX_DRAW_STR];
+  button_string_get_ex(&button, str, sizeof(str), precision, false, nullptr);
+  return str;
+}
 }  // namespace
 
 bool mixar_toolbar_sample_range(Button &button)
@@ -82,10 +109,7 @@ bool mixar_toolbar_sample_range(Button &button)
            (STREQ(property, "taa_render_samples") || STREQ(property, "taa_samples"))) {
     maximum = 256.0f;
   }
-  else if (button.block->name == "VIEW3D_HT_tool_header" &&
-           button.mixar_style.theme == MixarTheme::Zen && STREQ(property, "energy") &&
-           (STREQ(owner, "PointLight") || STREQ(owner, "AreaLight") ||
-            STREQ(owner, "SpotLight") || STREQ(owner, "SunLight"))) {
+  else if (adaptive_light_energy(button)) {
     maximum = STREQ(owner, "SunLight") ? 10.0f : 5000.0f;
     button.softmin = 0.0f;
     button.softmax = maximum;
@@ -197,7 +221,20 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
 
   if (ELEM(button.type, ButtonType::Num, ButtonType::NumSlider)) {
     const float cy = BLI_rctf_cent_y(&cell);
-    const float x0 = cell.xmin + 12 * u, x1 = cell.xmax - 44 * u;
+    const std::string value = adaptive_light_energy(button) ? adaptive_light_energy_label(button) :
+                                                              button.drawstr;
+    /* The value owns a right-aligned column the track never enters. Lights reserve
+     * one fixed column ("5000" wide) so Point, Spot, Area and Sun tracks match
+     * and dragging never moves the track end; wider text (a typed 100000) still
+     * pushes the track left instead of drawing over it. The gap clears the
+     * thumb, which extends 2u past the track end at full value. */
+    const float reserve = adaptive_light_energy(button) ?
+                              float(fontstyle_string_width(&font, "00000")) :
+                              0.0f;
+    const float value_width = std::max(reserve,
+                                       float(fontstyle_string_width(&font, value.c_str())));
+    const float x0 = cell.xmin + 12 * u;
+    const float x1 = std::min(cell.xmax - 44 * u, float(text.xmax) - value_width - 8 * u);
     if (x1 > x0) {
       rctf track{x0, x1, cy - (adaptive ? 1.0f : 0.5f) * u, cy + (adaptive ? 1.0f : 0.5f) * u};
       mixar_card_fill_round(&track, 0, adaptive ? toolbar_muted : toolbar_border);
@@ -208,7 +245,7 @@ bool mixar_toolbar_draw(Button &button, uiWidgetColors &colors, const rcti &boun
       rctf thumb{x - 2 * u, x + 2 * u, cy - 7 * u, cy + 7 * u};
       mixar_card_fill_round(&thumb, u, adaptive ? toolbar_text : toolbar_border);
     }
-    mixar_card_draw_text(font, &text, button.drawstr.c_str(), text_color, UI_STYLE_TEXT_RIGHT);
+    mixar_card_draw_text(font, &text, value.c_str(), text_color, UI_STYLE_TEXT_RIGHT);
     return false;
   }
   if (button.str.empty() && button.icon) {
