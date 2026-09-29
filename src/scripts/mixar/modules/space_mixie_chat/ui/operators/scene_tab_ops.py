@@ -30,6 +30,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.scenes_log import slog
+from mixar.modules.common.utils.undo import push_undo_step
 
 from ...constants import SessionState, is_lane_scene
 from ...core import get_connection_manager, get_session_manager
@@ -210,6 +211,10 @@ def new_scene_tab(name: str = "") -> object:
     snapshot_shown_tab()                   # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     renumber_tabs(existing + [scene])      # the new tab takes the last slot
+    # The tab's birth is an undo step of its own: one Ctrl-Z after "+ New
+    # scene" takes back the tab, not the previous tab's last edit, and the
+    # history shows where the tab begins.
+    push_undo_step(f"New scene tab: {scene.name}")
     slog("tab.new", scene, connected=live, tabs=len(real_scenes()))
     return scene
 

@@ -73,15 +73,17 @@ def register():
     # Undo / redo are held while an agent works in any tab: a window modal, not
     # a keymap item (the stock Screen binding would run first). Its tick lives
     # here so it starts with the rest of the scene-tab wiring.
-    from .operators.undo_ops import ensure_shield_timer
+    from .operators.undo_ops import ensure_shield_timer, install_edit_menu_hold
     ensure_shield_timer()
+    install_edit_menu_hold()
     logger.debug("Scenes drawer keymap registered (%d items)", len(addon_keymaps))
 
 
 def unregister():
     try:
-        from .operators.undo_ops import stop_shield_timer
+        from .operators.undo_ops import stop_shield_timer, uninstall_edit_menu_hold
         stop_shield_timer()
+        uninstall_edit_menu_hold()
     except Exception:  # noqa: BLE001
         pass
     for km, kmi in addon_keymaps:

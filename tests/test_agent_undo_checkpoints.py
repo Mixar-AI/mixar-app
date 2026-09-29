@@ -81,12 +81,45 @@ def _undo_pushes(bpy_mod) -> int:
 # --------------------------------------------------------------------------- #
 
 
-def test_default_is_per_script_checkpoints_with_a_cap_under_blenders_stack(executor_module):
-    assert executor_module.AGENT_UNDO_GROUP_PER_TURN is False
+def test_default_is_one_checkpoint_per_turn_with_a_cap_under_blenders_stack(executor_module):
+    # One checkpoint per turn (2026-09-29): a mid-turn checkpoint of an
+    # orchestrated turn holds a worker lane and a pre-merge object set; undoing
+    # to it resurrected the lane and crashed the depsgraph on the replaced
+    # objects. The pre-turn state is the only step a turn leaves.
+    assert executor_module.AGENT_UNDO_GROUP_PER_TURN is True
     cap = executor_module.AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN
     # Blender keeps 32 undo steps by default; the cap must leave room for the
     # pre-turn checkpoint to survive a whole turn.
     assert 0 < cap < 32
+
+
+def _window(scene_session: str = ""):
+    return MagicMock(scene=MagicMock(mixie_session_id=scene_session))
+
+
+def test_no_checkpoint_while_the_window_is_pinned_to_a_worker_lane(executor_module, monkeypatch):
+    # The routing pin of a workspace script has the window on the lane scene;
+    # a memfile step written then records the lane as the current scene, and
+    # an undo landing on it puts the user inside the lane. Skipped, uncounted:
+    # the next MAIN-pinned script pushes the turn's checkpoint instead.
+    bpy_mod = _mocked_bpy(monkeypatch, executor_module,
+                          windows=[_window("agentlane:abc")])
+    executor = executor_module.ScriptExecutor()
+    executor.begin_agent_turn()
+    assert executor.execute("bpy.ops.mixar.probe()").success is True
+    assert _undo_pushes(bpy_mod) == 0
+    bpy_mod.context.window_manager.windows = [_window("tab-session")]
+    assert executor.execute("bpy.ops.mixar.probe()").success is True
+    assert _undo_pushes(bpy_mod) == 1
+    assert executor.execute("bpy.ops.mixar.probe()").success is True
+    assert _undo_pushes(bpy_mod) == 1
+
+
+def test_lane_probe_fails_open(executor_module, monkeypatch):
+    bpy_mod = _mocked_bpy(monkeypatch, executor_module)
+    type(bpy_mod.context.window_manager).windows = property(lambda self: (_ for _ in ()).throw(RuntimeError("no wm")))
+    executor = executor_module.ScriptExecutor()
+    assert executor._window_on_lane_scene() is False
 
 
 def test_scripts_outside_a_turn_always_push(executor_module):
@@ -97,6 +130,7 @@ def test_scripts_outside_a_turn_always_push(executor_module):
 
 def test_ungrouped_turn_pushes_per_script_until_the_cap(executor_module, monkeypatch):
     bpy_mod = _mocked_bpy(monkeypatch, executor_module)
+    monkeypatch.setattr(executor_module, "AGENT_UNDO_GROUP_PER_TURN", False)
     cap = executor_module.AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN
     executor = executor_module.ScriptExecutor()
     executor.begin_agent_turn()
@@ -122,7 +156,9 @@ def test_grouped_turn_pushes_once_per_turn(executor_module, monkeypatch):
     assert executor._should_push_undo(grouping=True) is False
     assert executor._should_push_undo(grouping=True) is False
 
-    # The next turn starts a fresh checkpoint even while still grouped.
+    # The next turn starts a fresh checkpoint even while still grouped. No
+    # script ran through execute() here, so ending the turn adds no closing
+    # checkpoint.
     executor.end_agent_turn()
     executor.begin_agent_turn()
     assert executor._should_push_undo(grouping=True) is True
@@ -203,6 +239,7 @@ def test_execute_stops_pushing_after_the_cap_but_keeps_running_scripts(
     executor_module, monkeypatch
 ):
     bpy_mod = _mocked_bpy(monkeypatch, executor_module)
+    monkeypatch.setattr(executor_module, "AGENT_UNDO_GROUP_PER_TURN", False)
     cap = executor_module.AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN
     executor = executor_module.ScriptExecutor()
     executor.begin_agent_turn()
@@ -224,10 +261,14 @@ def test_execute_grouped_turn_pushes_once(executor_module, monkeypatch):
         assert executor.execute("bpy.ops.mixar.probe()").success is True
     assert _undo_pushes(bpy_mod) == 1
 
+    # Ending a turn that ran scripts closes it with the state the agent left,
+    # so the turn is bracketed: undo reverts it, redo reapplies it.
     executor.end_agent_turn()
+    assert _undo_pushes(bpy_mod) == 2
+    assert bpy_mod.ops.ed.undo_push.call_args_list[-1].kwargs["message"] == "Mixie Chat Turn"
     executor.begin_agent_turn()
     assert executor.execute("bpy.ops.mixar.probe()").success is True
-    assert _undo_pushes(bpy_mod) == 2
+    assert _undo_pushes(bpy_mod) == 3
 
 
 def test_failed_push_never_aborts_is_retried_and_logged_once_per_turn(
@@ -299,3 +340,24 @@ def test_turn_boundaries_are_wired_in_the_stream_pipeline():
     assert "end_agent_turn(" in abort
     file_handlers = (_CORE_ROOT / "file_handlers.py").read_text(encoding="utf-8")
     assert "end_agent_turn()" in file_handlers
+
+
+def test_a_turn_without_scripts_closes_without_a_checkpoint(executor_module, monkeypatch):
+    bpy_mod = _mocked_bpy(monkeypatch, executor_module)
+    executor = executor_module.ScriptExecutor()
+    executor.begin_agent_turn("s1")
+    executor.end_agent_turn("s1")
+    executor.begin_agent_turn("s2")
+    executor.end_agent_turn()               # every session, none ran a script
+    assert _undo_pushes(bpy_mod) == 0
+
+
+def test_closing_checkpoint_is_skipped_while_pinned_to_a_lane(executor_module, monkeypatch):
+    bpy_mod = _mocked_bpy(monkeypatch, executor_module, windows=[_window("tab")])
+    executor = executor_module.ScriptExecutor()
+    executor.begin_agent_turn("s1")
+    assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
+    assert _undo_pushes(bpy_mod) == 1
+    bpy_mod.context.window_manager.windows = [_window("agentlane:x")]
+    executor.end_agent_turn("s1")
+    assert _undo_pushes(bpy_mod) == 1
