@@ -10,8 +10,14 @@ Three content-free events, one per stage, through the shared analytics
 ``capture`` (consent-gated, auth-gated, fail-open): ``started`` when the
 modal begins, ``step`` on every beat entry, ``finished`` once with how the
 tour ended. Properties are the tour id, beat ids and indices, an outcome
-enum and elapsed seconds — never text, paths or scene content. Each call
-swallows its own errors so telemetry can never break the tour.
+enum, elapsed seconds and two language codes — never text, paths or scene
+content. Each call swallows its own errors so telemetry can never break
+the tour.
+
+``started`` carries ``language`` (the code the user chose) and
+``narration`` (the code actually playing: ``en`` while a language pack is
+still missing, so the two together measure how often a pack was ready in
+time).
 """
 
 from mixar.config.logging_config import get_logger
@@ -34,12 +40,17 @@ def _capture(event: str, properties: dict) -> None:
         logger.debug("Tour telemetry %s failed: %s", event, exc)
 
 
-def started(tour_id: str) -> None:
-    """The tour modal began playing ``tour_id``."""
+def started(tour_id: str, language: str = "en", narration: str = "en") -> None:
+    """The tour modal began playing ``tour_id`` for a user who chose
+    ``language``, narrated in ``narration`` (both tour language codes)."""
     try:
         from mixar.modules.common.analytics.constants import EVENT_TOUR_STARTED
 
-        _capture(EVENT_TOUR_STARTED, {"tour_id": str(tour_id)})
+        _capture(EVENT_TOUR_STARTED, {
+            "tour_id": str(tour_id),
+            "language": str(language or "en"),
+            "narration": str(narration or "en"),
+        })
     except Exception as exc:  # noqa: BLE001
         logger.debug("Tour telemetry started failed: %s", exc)
 

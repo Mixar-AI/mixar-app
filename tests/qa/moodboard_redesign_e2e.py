@@ -10,7 +10,6 @@ the verdict. This scenario never presses Generate.
 """
 
 import json
-import textwrap
 import time
 
 from moodboard_drawer_e2e import (
@@ -46,13 +45,21 @@ def parameter_info(qa):
                     f"for n in {SCENE}.mixie_moodboard_action_nodes "
                     f"if n.node_id=={SCENE}.mixie_moodboard_active_node_id "
                     "for p in n.parameters if p.visible)")
-    expected = textwrap.wrap(label, width=45)[0]
     before = nodes(qa)
-    # Native buttons sharing one operator have no exported collection index.
-    # Resolve the first catalog field from the live semantic result's bounds.
-    item = qa.find(popup=True, op='MIXIE_OT_moodboard_parameter_info')['widgets'][0]
-    qa.cmd('click_xy', x=item['center'][0], y=item['center'][1])
-    qa.wait(f'bool(drv.find(popup=True,text={expected!r}))', timeout=4)
+    # Help lives on the field itself: hover the caption, no info icon.
+    item = qa.find(popup=True, text=label, but_type='Label')['widgets'][0]
+    require(item.get('tip'), 'Parameter caption has no hover help')
+    x, y = item['center']
+    qa.eval(f"""
+def hover():
+    win=drv.main_window()
+    drv.move_to(win, {x-4}, {y})
+    yield .2
+    drv.move_to(win, {x}, {y})
+    yield 1.5
+    return True
+result=hover()
+""")
     snapshot(qa, '09_parameter_help')
     require(nodes(qa) == before, 'Reading parameter help changed the graph')
     qa.press('ESC')

@@ -45,7 +45,11 @@ def _format_size(num_bytes) -> str:
 def _download_body(state) -> str:
     """Progress line for a download the user is waiting on."""
     transferred, total = state.download_bytes
-    percent = int(round(state.download_progress * 100))
+    if total > 0 and transferred >= total:
+        # Bytes are in; the worker is verifying the signature and the
+        # state stays DOWNLOADING until it returns.
+        return "Verifying download…"
+    percent = int(state.download_progress * 100)
     if total > 0:
         return f"{percent}% — {_format_size(transferred)} of {_format_size(total)}"
     if transferred > 0:

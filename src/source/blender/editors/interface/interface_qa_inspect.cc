@@ -393,7 +393,11 @@ void qa_dump_region(std::string &out,
              ",\"selected\":" + std::to_string(motion.selected) + "},";
       json_str(out, "text", text);
       out += ',';
-      if (!but->tip.is_empty()) {
+      if (const char *owned_tip = blender::ui::mixar_button_tooltip_owned_text(*but)) {
+        json_str(out, "tip", owned_tip);
+        out += ',';
+      }
+      else if (!but->tip.is_empty()) {
         json_str(out, "tip", std::string(but->tip.data(), size_t(but->tip.size())));
         out += ',';
       }

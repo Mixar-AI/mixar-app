@@ -90,6 +90,30 @@ bool mixar_area_floats_viewport_chrome(const ScrArea *area)
   return false;
 }
 
+/* The area holding a region, for callers that have no area of their own. */
+static const ScrArea *mixar_area_of_region(const ARegion *region)
+{
+  if (region == nullptr || G_MAIN == nullptr) {
+    return nullptr;
+  }
+  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
+  if (wm == nullptr) {
+    return nullptr;
+  }
+  for (wmWindow &win : wm->windows) {
+    const bScreen *screen = WM_window_get_active_screen(&win);
+    if (screen == nullptr) {
+      continue;
+    }
+    for (const ScrArea &area : screen->areabase) {
+      if (BLI_findindex(&area.regionbase, region) != -1) {
+        return &area;
+      }
+    }
+  }
+  return nullptr;
+}
+
 bool mixar_region_is_zen_floating_tools(const ARegion *region)
 {
   if (region == nullptr || !region->overlap || region->regiontype != RGN_TYPE_TOOLS) {
@@ -114,6 +138,14 @@ bool mixar_region_is_zen_floating_tools(const ARegion *region)
     }
   }
   return false;
+}
+
+bool mixar_region_is_zen_adaptive_tool_header(const ARegion *region)
+{
+  if (region == nullptr || !region->overlap || region->regiontype != RGN_TYPE_TOOL_HEADER) {
+    return false;
+  }
+  return mixar_area_floats_viewport_chrome(mixar_area_of_region(region));
 }
 
 void mixar_zen_floating_tools_fixed_scale(const bContext *C, ARegion *region)

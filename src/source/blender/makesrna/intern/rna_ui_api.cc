@@ -992,6 +992,11 @@ static void rna_uiLayoutMixarStyle(
   }
 }
 
+static void rna_uiLayoutMixarTooltip(Layout *layout, const char *text)
+{
+  ui::mixar_tooltip_layout(layout, text);
+}
+
 static void rna_uiLayoutMixarCinemaRow(Layout *layout, int kind)
 {
   ui::UI_layout_mixar_cinema_row(layout, ui::MixarCinemaRowKind(kind));
@@ -1804,6 +1809,12 @@ void RNA_api_ui_layout(StructRNA *srna)
       {4, "CAPTION", 0, "Caption", "Non-interactive explanation"},
       {0, nullptr, 0, nullptr, nullptr},
   };
+  func = RNA_def_function(srna, "mixar_tooltip", "rna_uiLayoutMixarTooltip");
+  RNA_def_function_ui_description(
+      func, "Replace the hover tooltip of every item already in this layout (Mixar)");
+  parm = RNA_def_string(func, "text", nullptr, 0, "Text", "Tooltip text");
+  RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+
   func = RNA_def_function(srna, "mixar_cinema_row", "rna_uiLayoutMixarCinemaRow");
   RNA_def_function_ui_description(func,
       "Style the last item with the shared Cinema popup row painter and rounded popup corners");

@@ -69,8 +69,8 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     inline = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
     assert 'model[0] ? model : "Model unavailable"' in inline
     assert "moodboard_add_node_settings(block, node, controls" in controls
-    assert "draw_dropdown(settings, node, 'service_key'" in settings
-    assert "draw_dropdown(settings, node, 'model'" in settings
+    assert "draw_dropdown(mode, node, 'service_key'" in settings
+    assert "draw_dropdown(model, node, 'model'" in settings
     assert "MOODBOARD_GRAPH_CONTROLS_MIN_PX_X" in layout
     assert "moodboard_node_controls_rect(C, v2d, node, &controls)" in controls
     # The draft hint draws exactly when the floating controls do not, so both

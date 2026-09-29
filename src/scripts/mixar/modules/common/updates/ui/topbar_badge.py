@@ -21,6 +21,44 @@ from ..constants import InstallState
 from ..core.state import get_update_state
 from ..core.update_checker import is_forced
 
+# Install states in which the badge reports progress, not a problem. A
+# forced update is still red while nothing is happening (the user must
+# act), but once staging/installing is under way red would read as an
+# error — the Slack "Downloading 100%" on red report.
+_IN_PROGRESS_STATES = (
+    InstallState.DOWNLOADING,
+    InstallState.READY,
+    InstallState.INSTALLING,
+)
+
+
+def download_complete(state) -> bool:
+    """Every byte is on disk and the worker is checksumming/verifying.
+
+    ``download_progress`` reaches 1.0 before the thread runs the
+    signature check (``verify.verify_installer``, up to 90s of
+    ``codesign``/Authenticode), and the state only leaves DOWNLOADING
+    once that returns.
+    """
+    return (
+        state.install_state is InstallState.DOWNLOADING
+        and state.download_progress >= 1.0
+    )
+
+
+def badge_alert(state, info) -> bool:
+    """Whether the badge draws in the alert (red) style.
+
+    Red only for a forced/unsupported update the user has not started on
+    yet (or whose staging failed/was ruled out). In-progress states use
+    the regular theme button — the same neutral as the Login pill beside
+    it.
+    """
+    if info is None or not is_forced(info):
+        return False
+    return state.install_state not in _IN_PROGRESS_STATES
+
+
 def badge_label(state) -> str:
     """Label for the topbar badge — the always-visible install status.
 
@@ -34,10 +72,13 @@ def badge_label(state) -> str:
         return "Restart to Update"
     if install_state is InstallState.INSTALLING:
         return "Updating…"
+    if download_complete(state):
+        return "Verifying…"
     if install_state is InstallState.DOWNLOADING:
         progress = state.download_progress
         if progress > 0:
-            return f"Downloading {int(round(progress * 100))}%"
+            # Floor, so "100%" never shows while bytes are still missing.
+            return f"Downloading {int(progress * 100)}%"
         return "Downloading…"
     return "Update Available"
 
@@ -50,8 +91,7 @@ def draw_update_badge(layout) -> None:
         return
 
     row = layout.row(align=True)
-    # Red only for forced/unsupported updates; regular button otherwise.
-    row.alert = is_forced(info)
+    row.alert = badge_alert(state, info)
     row.operator(
         "mixar.show_update_toast",
         text=badge_label(state),

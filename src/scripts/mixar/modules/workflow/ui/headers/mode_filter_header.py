@@ -129,6 +129,10 @@ def _patched_draw_left(self, context):
         new="workspace.add",
         menu="TOPBAR_MT_workspace_menu",
     )
+    # Tabs that would reach the slider collapse into this dropdown; native
+    # layout places it after the "+" and hides it while every tab fits.
+    if hasattr(bpy.types, "MIXAR_MT_workspace_overflow"):
+        layout.menu("MIXAR_MT_workspace_overflow", text="", icon='DOWNARROW_HLT')
     _draw_mode_slider(layout, context)
 
 

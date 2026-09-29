@@ -57,11 +57,83 @@ def is_undo_chord(event) -> bool:
             and not getattr(event, "alt", False))
 
 
-def refuse(redo: bool, report, busy: list) -> None:
+def hold_message(redo: bool, busy: list) -> str:
     what = "Redo" if redo else "Undo"
     shown = ", ".join(busy[:3]) + (" …" if len(busy) > 3 else "")
-    report({'WARNING'}, f"{what} is unavailable while an agent works in {shown}")
+    return f"{what} is unavailable while an agent works in {shown}"
+
+
+def refuse(redo: bool, report, busy: list) -> None:
+    report({'WARNING'}, hold_message(redo, busy))
     slog("undo.refused", None, redo=bool(redo), tabs=busy)
+
+
+# -- Edit menu: the same hold for the mouse ----------------------------------
+#
+# The modal above sees key chords only. Edit → Undo / Redo / Undo History run
+# the stock operators straight from a click, and the Undo History submenu is a
+# C-defined menu (space_topbar.cc) whose entries jump anywhere in the stack —
+# past another tab's live turn, or past the tab itself (2026-09-29: two live
+# agent tabs deleted from the history menu). While a tab works, the Edit menu
+# shows the hold instead of those three entries; the rest of the menu is the
+# stock body. Menu search (F3) can still reach the operators: closing that
+# needs a C-side poll (follow-up).
+
+_stock_edit_draw = None
+
+
+def _draw_edit_menu_rest(layout, context) -> None:
+    """The stock TOPBAR_MT_edit body after the three undo entries (Blender 5.2)."""
+    show_developer = context.preferences.view.show_developer_ui
+    layout.separator()
+    layout.operator("screen.redo_last", text="Adjust Last Operation...")
+    layout.operator("screen.repeat_last")
+    layout.operator("screen.repeat_history", text="Repeat History...")
+    layout.separator()
+    layout.operator("wm.search_menu", text="Menu Search...", icon='VIEWZOOM')
+    if show_developer:
+        layout.operator("wm.search_operator", text="Operator Search...")
+    layout.separator()
+    props = layout.operator("wm.call_panel", text="Rename Active Item...")
+    props.name = "TOPBAR_PT_name"
+    props.keep_open = False
+    layout.operator("wm.batch_rename", text="Batch Rename...")
+    layout.separator()
+    layout.prop(context.tool_settings, "lock_object_mode")
+    layout.separator()
+    layout.operator("screen.userpref_show", text="Preferences...", icon='PREFERENCES')
+
+
+def draw_edit_menu(self, context) -> None:
+    """TOPBAR_MT_edit.draw while the hold is installed."""
+    busy = working_tabs()
+    if not busy:
+        _stock_edit_draw(self, context)
+        return
+    layout = self.layout
+    held = layout.column()
+    held.enabled = False
+    held.label(text=hold_message(False, busy), icon='LOOP_BACK')
+    held.label(text=hold_message(True, busy), icon='LOOP_FORWARDS')
+    held.label(text="Undo History is unavailable while an agent works")
+    _draw_edit_menu_rest(layout, context)
+
+
+def install_edit_menu_hold() -> None:
+    global _stock_edit_draw
+    menu = getattr(bpy.types, "TOPBAR_MT_edit", None)
+    if menu is None or _stock_edit_draw is not None:
+        return
+    _stock_edit_draw = menu.draw
+    menu.draw = draw_edit_menu
+
+
+def uninstall_edit_menu_hold() -> None:
+    global _stock_edit_draw
+    menu = getattr(bpy.types, "TOPBAR_MT_edit", None)
+    if menu is not None and _stock_edit_draw is not None:
+        menu.draw = _stock_edit_draw
+    _stock_edit_draw = None
 
 
 class MIXIE_CHAT_OT_undo_shield(Operator):

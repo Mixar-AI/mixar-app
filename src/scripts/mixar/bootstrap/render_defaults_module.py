@@ -70,7 +70,13 @@ def _prepare_file():
     global _ready
     _ready = False
     _saved_scenes.clear()
-    if bpy.data.filepath:
+    try:
+        filepath = bpy.data.filepath
+    except AttributeError:
+        # Startup registration sees `_RestrictData`; no file is loaded yet and
+        # the load_post that follows snapshots whatever file Blender opens.
+        filepath = ""
+    if filepath:
         _saved_scenes.update(scene.session_uid for scene in bpy.data.scenes)
     _subscribe()
 

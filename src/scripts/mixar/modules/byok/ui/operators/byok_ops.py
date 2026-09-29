@@ -87,6 +87,12 @@ def _dialog_host_window(context):
     return max(candidates, key=lambda w: len(w.screen.areas))
 
 
+# True while the props dialog is on screen. Re-invoking would stack another
+# dialog (and reset the form state under the one already open), so invoke()
+# refuses while set; execute()/cancel() clear it when the dialog closes.
+_dialog_open = False
+
+
 class MIXAR_BYOK_OT_open_dialog(Operator):
     """Configure your own API provider and key for the Mixar agent"""
     bl_idname = "mixar_byok.open_dialog"
@@ -97,6 +103,9 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
     )
 
     def invoke(self, context, event):
+        global _dialog_open
+        if _dialog_open:
+            return {'CANCELLED'}
         wm = context.window_manager
         # Reset dialog-local state on open. Never prefill the api_key field.
         wm.byok_dialog_state = 'IDLE'
@@ -154,18 +163,27 @@ class MIXAR_BYOK_OT_open_dialog(Operator):
         # `temp_override(screen=...)` refuses it outright ("Overriding context
         # with an active temporary screen isn't supported").
         host = _dialog_host_window(context)
-        if host is not None and host != context.window:
-            with context.temp_override(window=host):
-                return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
-        return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
+        _dialog_open = True
+        try:
+            if host is not None and host != context.window:
+                with context.temp_override(window=host):
+                    return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
+            return wm.invoke_props_dialog(self, width=CARD_DIALOG_WIDTH)
+        except Exception:
+            _dialog_open = False
+            raise
 
     def execute(self, context):
+        global _dialog_open
+        _dialog_open = False
         # No-op: Save / Remove are their own operators, invoked from draw().
         _wipe_form_secrets(context.window_manager)
         return {'FINISHED'}
 
     def cancel(self, context):
         """Esc/click-away must not leave JWTs or API keys in RNA memory."""
+        global _dialog_open
+        _dialog_open = False
         _wipe_form_secrets(context.window_manager)
 
     def draw(self, context):

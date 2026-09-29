@@ -8,6 +8,16 @@ Callbacks arrive on Blender's main thread (the shared request queue delivers
 them there), so they write RNA directly. Every request carries a generation
 number: reopening the dialog while an older load is in flight must not let
 the stale answer overwrite the fresh state.
+
+The link is cached for the session on WindowManager: once loaded, a reopen
+shows it at once and revalidates in the background (``reset`` / ``load``).
+Logout drops it (``clear``) so the next account never sees this one's link.
+
+Every state change must rebuild the open dialog explicitly (``_redraw``): a
+props dialog re-runs ``draw()`` only when its pop-up region is tagged for a
+UI refresh, and neither ``area.tag_redraw()`` nor these WM property writes
+reach it. Without that tag it kept "Getting your invite link…" until an
+unrelated window event happened to refresh it.
 """
 
 from __future__ import annotations
@@ -32,12 +42,20 @@ def _wm():
 
 
 def _redraw() -> None:
+    """Redraw the areas and rebuild the open dialog's layout."""
     wm = _wm()
     if wm is None:
         return
     for window in wm.windows:
         for area in window.screen.areas:
             area.tag_redraw()
+        # Pop-up regions sit outside every area; only this reaches them.
+        refresh = getattr(window, "mixar_refresh_popups", None)
+        if refresh is not None:
+            try:
+                refresh()
+            except Exception as exc:  # noqa: BLE001 — never break a callback
+                logger.debug("[Referrals] pop-up refresh failed: %s", exc)
 
 
 def set_notice(wm, text: str, kind: str = C.NOTICE_INFO, details=()) -> None:
@@ -47,10 +65,52 @@ def set_notice(wm, text: str, kind: str = C.NOTICE_INFO, details=()) -> None:
 
 
 def reset(wm) -> None:
-    """Fresh dialog state. The typed email draft survives a reopen."""
+    """Fresh dialog state. The typed email draft survives a reopen.
+
+    A link loaded earlier this session opens straight into READY; ``load``
+    then revalidates it without a loading screen.
+    """
+    wm.mixar_referral_state = C.STATE_READY if wm.mixar_referral_url else C.STATE_LOADING
+    wm.mixar_referral_error = ""
+    set_notice(wm, "")
+
+
+def clear(wm) -> None:
+    """Forget the cached link and draft (logout). Drops in-flight answers."""
+    global _generation
+    _generation += 1
+    wm.mixar_referral_url = ""
+    wm.mixar_referral_emails = ""
+    wm.mixar_referral_invitee_award = 0
+    wm.mixar_referral_inviter_award = 0
+    wm.mixar_referral_paid_total = 0
+    wm.mixar_referral_count = 0
     wm.mixar_referral_state = C.STATE_LOADING
     wm.mixar_referral_error = ""
     set_notice(wm, "")
+
+
+def _apply(wm, url: str, data) -> bool:
+    """Write the dashboard answer; True when anything the dialog shows changed."""
+    awards = data.get("award_amounts") or {}
+    values = {
+        "mixar_referral_url": url,
+        "mixar_referral_invitee_award": int(awards.get("invitee") or 0),
+        "mixar_referral_inviter_award": int(awards.get("inviter") or 0),
+        "mixar_referral_paid_total": int(awards.get("paid_total") or 0),
+        "mixar_referral_count": int(data.get("qualified_count") or 0),
+    }
+    changed = False
+    for attr, value in values.items():
+        # Unchanged values are not rewritten: a background revalidation must
+        # not rebuild the dialog under a user typing addresses.
+        if getattr(wm, attr) != value:
+            setattr(wm, attr, value)
+            changed = True
+    if wm.mixar_referral_state in (C.STATE_LOADING, C.STATE_ERROR):
+        wm.mixar_referral_state = C.STATE_READY
+        changed = True
+    return changed
 
 
 def load() -> None:
@@ -68,24 +128,22 @@ def load() -> None:
         data = invites.unwrap(response)
         url = data.get("invite_url") or ""
         if not url:
+            wm.mixar_referral_url = ""
             wm.mixar_referral_state = C.STATE_ERROR
             wm.mixar_referral_error = "Referrals are not available right now"
             _redraw()
             return
-        awards = data.get("award_amounts") or {}
-        wm.mixar_referral_url = url
-        wm.mixar_referral_invitee_award = int(awards.get("invitee") or 0)
-        wm.mixar_referral_inviter_award = int(awards.get("inviter") or 0)
-        wm.mixar_referral_paid_total = int(awards.get("paid_total") or 0)
-        wm.mixar_referral_count = int(data.get("qualified_count") or 0)
-        wm.mixar_referral_state = C.STATE_READY
-        _redraw()
+        if _apply(wm, url, data):
+            _redraw()
 
     def _on_error(error) -> None:
         wm = _wm()
         if wm is None or token != _generation:
             return
         logger.error("[Referrals] dashboard load failed: %s", error)
+        if wm.mixar_referral_url and wm.mixar_referral_state != C.STATE_LOADING:
+            # Background revalidation of a cached link: keep showing it.
+            return
         wm.mixar_referral_state = C.STATE_ERROR
         wm.mixar_referral_error = invites.error_message(
             error, "Couldn't load your invite link")

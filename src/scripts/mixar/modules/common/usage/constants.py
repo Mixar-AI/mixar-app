@@ -60,7 +60,7 @@ TRIAL_SLUG_PREFIX = "trial"
 HANDOFF_TARGET_BUY_CREDITS = "buy-credits"
 HANDOFF_TARGET_PRICING = "pricing"
 
-#: ``billing_interval`` the backend reports for a free-tier account metered
-#: against its lifetime grants (sign-up bonus, referral rewards). Such an
-#: account has a bar but no plan, so it can never top up.
+#: ``billing_interval`` the backend reports for a free-tier account holding
+#: bonus credits (sign-up bonus, referral rewards). Such an account has a bar
+#: (full while any credit remains) but no plan, so it can never top up.
 FREE_BILLING_INTERVAL = "free"

@@ -21,9 +21,38 @@ import os
 VIDEO_ASSET = "tour/founder.mp4"
 VIDEO_PLACEHOLDER_ASSET = "tour/founder_placeholder.mp4"
 DEMO_IMAGE_ASSET = "tour/demo_concept.png"
+# Re-timed SubRip files, one per non-English tour language (``<code>.srt``),
+# shown over the English video while that language's pack is missing.
+SUBTITLES_DIR = "tour/subtitles"
+# QA: "always" shows subtitles even for English / localized playback.
+ENV_SUBTITLES = "MIXAR_TOUR_SUBTITLES"
 
 # Used only when the container's frame count / audio length can't be read.
 VIDEO_FPS_FALLBACK = 24.0
+
+# ---------------------------------------------------------------------------
+# Language packs (every language but English; see docs/plans localization).
+# ---------------------------------------------------------------------------
+# Bumped with every re-cut of the English take or change to the beat table;
+# a pack built for another version is never played.
+TOUR_PACK_VERSION = 1
+# Public manifest on the releases CDN (no auth: the first-time splash
+# starts the download before login). Override for QA/staging.
+PACKS_MANIFEST_URL = "https://cdn.mixar.app/tour-packs/manifest.json"
+ENV_PACKS_MANIFEST_URL = "MIXAR_TOUR_PACKS_URL"
+# QA: a local folder laid out like the cache (``<code>/part-<k>.mp4``,
+# ``<code>/timing.json``, ``manifest.json``) that stands in for cache + CDN.
+ENV_PACK_DIR = "MIXAR_TOUR_PACK_DIR"
+PACK_CACHE_SUBDIR = "mixar/tour"
+PACK_PART_DEADLINE_S = 300.0       # per file; a 5 MB part on a slow line
+PACK_MANIFEST_TIMEOUT_S = 15.0
+# How long the tour waits, on a loading card, for a chosen language's timing
+# table and first part before falling back to English with subtitles. The
+# other parts keep downloading while the localized tour plays; a part that
+# is still missing when its act starts holds the tour on the same card.
+PACK_WAIT_S = 10.0
+LOADING_TEXT = "Preparing the {language} tour…"
+LOADING_PART_TEXT = "Loading the next part…"
 
 # ---------------------------------------------------------------------------
 # Operators / properties.
@@ -31,6 +60,7 @@ VIDEO_FPS_FALLBACK = 24.0
 OP_TOUR = "mixar.onboarding_tour"
 WM_PROP_TOUR_STATE = "mixar_tour_state"        # JSON, read by the QA harness
 WM_PROP_TOUR_QA_TARGETS = "mixar_tour_qa_targets"  # JSON list of control rects
+WM_PROP_TOUR_LANGUAGE = "mixar_tour_language"      # enum, first-time splash dropdown
 
 # Environment override so the QA harness can run the whole tour in a few
 # seconds: playback rate multiplier applied to the clock at start.
@@ -95,6 +125,10 @@ CONTROLS_FILM_BANDS = 4                        # stacked bands faking a gradient
 CONTROL_TEXT = (0.92, 0.92, 0.94, 0.95)
 CONTROL_TEXT_DIM = (0.65, 0.66, 0.70, 0.9)
 CONTROL_FONT_PX = 13
+SUBTITLE_FONT_PX = 15            # subtitle band inside the video, above the controls
+SUBTITLE_MAX_LINES = 3
+SUBTITLE_BG = (0.0, 0.0, 0.0, 0.55)
+SUBTITLE_TEXT = (0.97, 0.97, 0.97, 1.0)
 CONTROL_GAP = 14
 GATE_CAPTION_ALPHA_FLOOR = 0.6                 # always readable while gated
 # Freeze-frame film over the paused video while a gate waits (times the

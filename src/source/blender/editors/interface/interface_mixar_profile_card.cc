@@ -315,7 +315,7 @@ void add_usage(Layout *layout, const AccountInfo &info)
     return;
   }
 
-  layout->label(IFACE_("Your Usage"), ICON_NONE);
+  layout->label(IFACE_("Usage Remaining"), ICON_NONE);
   mark_last(layout, MixarCardElement::SectionLabel);
 
   if (info.has_subscription) {

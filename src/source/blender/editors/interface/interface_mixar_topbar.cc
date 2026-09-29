@@ -57,8 +57,9 @@
 namespace blender::ui {
 
 /* Resolve against the whole window after native layout. Paint, hit tests and
- * QA all receive these final button rectangles. Workspace tabs keep their
- * natural widths; the Workspaces menu owns access to the ones that overflow. */
+ * QA all receive these final button rectangles. Workspace tabs that would
+ * reach the switch overflow into a dropdown placed, with the New Workspace
+ * "+", right after the last visible tab (`interface_mixar_topbar_tabs.cc`). */
 void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *block)
 {
   const ScrArea *area = C ? CTX_wm_area(C) : nullptr;
@@ -99,40 +100,8 @@ void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *
   left->rect.ymin = right->rect.ymin = center_y - half_height;
   left->rect.ymax = right->rect.ymax = center_y + half_height;
   const float limit = left->rect.xmin - 8.0f * UI_SCALE_FAC;
-  /* Spend the added pill padding before hiding tabs at the mode switch.
-   * Keep the native 10px per side as the floor, so labels never get squeezed. */
-  int tab_count = 0;
-  float workspace_end = 0.0f;
-  for (const Button &but : block->buttons()) {
-    if (but.type == ButtonType::Tab) {
-      tab_count++;
-      workspace_end = std::max(workspace_end, but.rect.xmax);
-    }
-    else if (but.optype && STREQ(but.optype->idname, "WORKSPACE_OT_add")) {
-      workspace_end = std::max(workspace_end, but.rect.xmax);
-    }
-  }
-  if (tab_count > 0 && workspace_end > limit) {
-    const float trim = std::min(8.0f * UI_SCALE_FAC, (workspace_end - limit) / tab_count);
-    float shift = 0.0f;
-    for (Button &but : block->buttons()) {
-      if (but.type == ButtonType::Tab) {
-        BLI_rctf_translate(&but.rect, -shift, 0);
-        but.rect.xmax -= trim;
-        shift += trim;
-      }
-      else if (but.optype && STREQ(but.optype->idname, "WORKSPACE_OT_add")) {
-        BLI_rctf_translate(&but.rect, -shift, 0);
-      }
-    }
-  }
-  for (Button &but : block->buttons()) {
-    const bool workspace = but.type == ButtonType::Tab ||
-                          (but.optype && STREQ(but.optype->idname, "WORKSPACE_OT_add"));
-    if (workspace && but.rect.xmax > limit) {
-      but.flag |= UI_HIDDEN;
-    }
-  }
+  /* Tabs past the switch overflow into the dropdown; "+" stays beside them. */
+  mixar_topbar_fit_workspace_tabs(C, block, limit);
   block_bounds_calc(block);
 }
 

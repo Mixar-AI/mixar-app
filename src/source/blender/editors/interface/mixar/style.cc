@@ -120,6 +120,24 @@ void mixar_style_last(Layout *layout, const MixarComponent component, const Mixa
   }
 }
 
+void mixar_tooltip_layout(Layout *layout, const char *text)
+{
+  if (!layout || !text || !text[0]) {
+    return;
+  }
+  /* Every button in this layout's subtree, so a caption label and the control
+   * under it explain the same field on hover — no separate info icon. */
+  for (std::unique_ptr<Button> &button : layout->block()->buttons_ptrs) {
+    Layout *owner = button->layout;
+    while (owner && owner != layout) {
+      owner = owner->parent();
+    }
+    if (owner) {
+      mixar_button_tooltip_owned(button.get(), text);
+    }
+  }
+}
+
 void mixar_button_lit_set(Button *button, const bool lit)
 {
   if (button) {

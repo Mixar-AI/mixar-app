@@ -4888,29 +4888,32 @@ static int do_but_textedit(
         if (but->rnaprop) {
           const char *prop_id = RNA_property_identifier(but->rnaprop);
           is_quick_prompt = (prop_id && STREQ(prop_id, "mixie_chat_quick_prompt_input"));
+          const bool is_prompt = prop_id && STREQ(prop_id, "prompt");
+          /* A canvas node prompt is recognised by its OWNER (the only struct
+           * carrying both `prompt` and `node_id`), never by the area: the
+           * same card is drawn by the standalone Mixie editor AND the Zen
+           * Moodboard drawer, which is a TOOL_PROPS region of a View3D. An
+           * area gate made Enter in the drawer only confirm the text. */
+          is_moodboard_node_prompt = is_prompt && RNA_struct_find_property(&but->rnapoin,
+                                                                           "node_id") != nullptr;
           /* SPACE_AGENT_BUBBLE too: the island's 3D / Media / Gaussian Splat
            * panes draw the SAME moodboard tab PropertyGroups, so their prompt
            * fields must submit through the same dispatcher. Without this they
            * fell through to the chat branch below (the island IS a chat
            * space), which stamped the chat submit marker into a generation
            * prompt and sent nothing anywhere. */
-          const bool is_moodboard_prompt = area && prop_id && STREQ(prop_id, "prompt") &&
+          const bool is_moodboard_prompt = area && is_prompt && !is_moodboard_node_prompt &&
                                            ELEM(area->spacetype, SPACE_MIXIE,
                                                 SPACE_AGENT_BUBBLE);
-          if (is_moodboard_prompt) {
-            if (RNA_struct_find_property(&but->rnapoin, "node_id")) {
-              is_moodboard_node_prompt = true;
-            }
-            else if (data->region) {
-              /* The moodboard's N-panel tab lives in the sidebar's UI region;
-               * the island's panes live in its WINDOW region. Popup dialogs
-               * (TEMP regions) keep the native Enter-confirms-dialog behavior
-               * in both, and the canvas node prompt is the branch above. */
-              is_moodboard_sidebar_prompt =
-                  (area->spacetype == SPACE_AGENT_BUBBLE) ?
-                      (data->region->regiontype != RGN_TYPE_TEMPORARY) :
-                      (data->region->regiontype == RGN_TYPE_UI);
-            }
+          if (is_moodboard_prompt && data->region) {
+            /* The moodboard's N-panel tab lives in the sidebar's UI region;
+             * the island's panes live in its WINDOW region. Popup dialogs
+             * (TEMP regions) keep the native Enter-confirms-dialog behavior
+             * in both, and the canvas node prompt is the branch below. */
+            is_moodboard_sidebar_prompt =
+                (area->spacetype == SPACE_AGENT_BUBBLE) ?
+                    (data->region->regiontype != RGN_TYPE_TEMPORARY) :
+                    (data->region->regiontype == RGN_TYPE_UI);
           }
         }
 

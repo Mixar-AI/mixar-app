@@ -346,13 +346,17 @@ def _env_rate(name: str) -> Optional[float]:
     return value
 
 
-def make_clock(path: str, duration_ms: Optional[int], silent: bool = False,
-               rate: float = 1.0) -> BaseClock:
-    """Build the tour clock, paused at 0.
+def make_clock(path, duration_ms: Optional[int], silent: bool = False,
+               rate: float = 1.0, ready=None) -> BaseClock:
+    """Build the tour clock, paused at 0. ``path`` is the English file, or a
+    language pack's ``(start_ms, end_ms, path)`` parts (``ready(k)`` says
+    which are on disk) → ``PartsClock``.
 
     ``config.ENV_SILENT`` and ``config.ENV_CLOCK_RATE`` override the
     arguments when set, so the QA harness can force a deterministic, fast
-    wall clock without touching the caller.
+    wall clock without touching the caller. A silent parts clock is a
+    ``PartsClock`` over wall clocks, so holds for missing parts still
+    happen in QA.
     """
     env_silent = _env_flag(config.ENV_SILENT)
     if env_silent is not None:
@@ -361,6 +365,11 @@ def make_clock(path: str, duration_ms: Optional[int], silent: bool = False,
     if env_rate is not None:
         rate = env_rate
 
+    if isinstance(path, (list, tuple)):
+        from .clock_parts import PartsClock, SilentPartsClock
+        if silent:
+            return SilentPartsClock(path, duration_ms, rate=rate, ready=ready)
+        return PartsClock(path, duration_ms, rate=rate, ready=ready)
     if not silent and path:
         try:
             return AudClock(path, duration_ms, rate=rate)

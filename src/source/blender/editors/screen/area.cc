@@ -1699,6 +1699,16 @@ bool ED_region_is_overlap(const int spacetype, const int regiontype)
   }
 }
 
+/* Mixar: Zen's tool header spans the whole viewport so its floating object and
+ * light controls can sit anywhere, but only its top toolbar band is chrome;
+ * everything below is transparent and passes events through. Returns the
+ * lowest row of that band. Layout reserves only the band for the overlap
+ * remainder and the visible rect subtracts only the band, so the two agree. */
+static int mixar_zen_tool_header_band_ymin(const ARegion *tool_header)
+{
+  return tool_header->winrct.ymax - int(UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_height);
+}
+
 static void region_rect_recursive(
     ScrArea *area, ARegion *region, rcti *remainder, rcti *overlap_remainder, int quad)
 {
@@ -1898,8 +1908,7 @@ static void region_rect_recursive(
            * collapsed the overlap remainder, and TOOLS and UI (the T and N
            * panels, the transform pill) were laid out 2 px tall and flagged
            * too small: they toggled but never drew. */
-          winrct->ymax = region->winrct.ymax -
-                         int(UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_height);
+          winrct->ymax = mixar_zen_tool_header_band_ymin(region);
         }
         else {
           winrct->ymax = region->winrct.ymin - 1;
@@ -4639,12 +4648,23 @@ static void region_visible_rect_calc(ARegion *region, rcti *rect)
           }
         }
         else if (ELEM(alignment, RGN_ALIGN_TOP, RGN_ALIGN_BOTTOM)) {
-          /* Same logic as above for vertical regions. */
-          if (abs(rect->ymin - region_iter->winrct.ymin) < 2) {
-            rect->ymin = region_iter->winrct.ymax;
+          /* Mixar: of Zen's viewport-wide tool header only the top toolbar band
+           * is chrome. Subtracting the whole region collapsed the viewport's
+           * visible rect to zero height: the navigation gizmo (and its zoom/pan
+           * buttons) was laid out off-screen, and annotation strokes failed
+           * their bounds check. Treat just the band as overlapping. */
+          rcti overlap = region_iter->winrct;
+          if (alignment == RGN_ALIGN_TOP &&
+              ui::mixar_region_is_zen_adaptive_tool_header(region_iter))
+          {
+            overlap.ymin = std::max(overlap.ymin, mixar_zen_tool_header_band_ymin(region_iter));
           }
-          if (abs(rect->ymax - region_iter->winrct.ymax) < 2) {
-            rect->ymax = region_iter->winrct.ymin;
+          /* Same logic as above for vertical regions. */
+          if (abs(rect->ymin - overlap.ymin) < 2) {
+            rect->ymin = overlap.ymax;
+          }
+          if (abs(rect->ymax - overlap.ymax) < 2) {
+            rect->ymax = overlap.ymin;
           }
         }
         else if (alignment == RGN_ALIGN_FLOAT) {

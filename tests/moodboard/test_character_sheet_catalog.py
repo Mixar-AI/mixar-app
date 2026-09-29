@@ -8,6 +8,7 @@ import pytest
 from mixar.bootstrap import generation_catalog_cache as catalog
 from mixar.modules.moodboard.core import node_templates
 from mixar.modules.moodboard.core.character_sheet_catalog import preflight
+from mixar.modules.moodboard.core.workflow_templates import WORKFLOW_TEMPLATES
 
 REFERENCES = {'inputs': [{'kind': 'image', 'name': 'reference_images', 'multiple': True}],
               'cost_multiplier_param': 'number_of_images'}
@@ -37,6 +38,14 @@ def rich(image_models=None, image_key='image_gen', image_spec=REFERENCES,
     if rig:
         capabilities.append(capability('animate', 'animate', [{'slug': 'rig'}]))
     return {'capabilities': capabilities}
+
+
+@pytest.fixture(autouse=True)
+def hide_lifted(monkeypatch):
+    """The template ships hidden (test_character_sheet_hidden.py); this file pins
+    the catalog gate, so lift that here or every "not offered" assertion below
+    would pass because of the flag rather than the gate."""
+    monkeypatch.setitem(WORKFLOW_TEMPLATES['CHARACTER_SHEET_3D'], 'hidden', False)
 
 
 @pytest.fixture

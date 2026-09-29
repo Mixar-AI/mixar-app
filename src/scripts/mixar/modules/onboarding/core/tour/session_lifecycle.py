@@ -54,6 +54,21 @@ FALLBACK_TICK_INTERVAL_S = 1.0 / 30.0
 DELIBERATE_ENDINGS = ("completed", "exited")
 
 
+def _subtitles_for(language: str, narration: str):
+    """Subtitles are for a user whose language is not the one narrating
+    (English playing while their pack is missing); ``MIXAR_TOUR_SUBTITLES=
+    always`` forces them so QA can screenshot the band. English has none."""
+    import os
+    from . import srt
+    forced = os.environ.get(config.ENV_SUBTITLES, "").lower() == "always"
+    if language == narration and not forced:
+        return None
+    subs = srt.load(language)
+    if subs is None:
+        logger.info("Tour: no subtitles bundled for %r", language)
+    return subs
+
+
 def _telemetry():
     try:
         from . import telemetry
@@ -68,9 +83,86 @@ class SessionLifecycleMixin:
     # -- start -----------------------------------------------------------
 
     def start(self, window, area, region) -> bool:
+        """Bind to the host and either begin playing or, for a language
+        whose pack is still downloading, show a loading card for up to
+        ``config.PACK_WAIT_S`` first (``_tick_loading`` then begins)."""
         from . import session as session_mod
-        path = config.video_path()
-        if not path:
+        from . import language as language_mod
+        from . import media as media_mod
+        self.language = language_mod.current()
+        self._host_window_ptr = anchors.normalize_ptr(window.as_pointer())
+        self._host_region_ptr = anchors.normalize_ptr(region.as_pointer())
+        self._refresh_host(window, region)
+        plan = media_mod.resolve(self.tour, self.language)
+        if plan.narration != self.language and self._pack_may_arrive(self.language):
+            self._loading = True
+            self._loading_deadline = time.monotonic() + config.PACK_WAIT_S
+            self._loading_label = config.LOADING_TEXT.format(
+                language=language_mod.get(self.language).english)
+            try:
+                self._install_draw_handlers()
+                self.running = True
+                self._start_fallback_ticker()
+                session_mod._current = self
+                self._started_wall = time.monotonic()
+                self._last_wall = self._started_wall
+                self._publish(force=True)
+                self._tag_redraw_all()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Tour: loading card failed (%s); starting now", exc)
+                self._loading = False
+                return self._begin(plan)
+            logger.info("Tour: waiting up to %.0fs for the %s pack",
+                        config.PACK_WAIT_S, self.language)
+            return True
+        return self._begin(plan)
+
+    @staticmethod
+    def _pack_may_arrive(code: str) -> bool:
+        """A download for ``code`` is running (or just started): worth a wait."""
+        try:
+            from . import pack_fetch
+            pack_fetch.prefetch(code)
+            return pack_fetch.state(code).get("status") == "downloading"
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Tour: pack fetch unavailable: %s", exc)
+            return False
+
+    def _tick_loading(self) -> None:
+        """Poll for the pack; begin localized when its first part lands,
+        or in English (with subtitles) at the deadline or on a failed fetch."""
+        from . import media as media_mod
+        plan = media_mod.resolve(self.tour, self.language)
+        if plan.narration == self.language:
+            self._loading = False
+            self._finish_loading(plan)
+            return
+        failed = False
+        try:
+            from . import pack_fetch
+            failed = pack_fetch.state(self.language).get("status") not in ("downloading", "ready")
+        except Exception:  # noqa: BLE001
+            failed = True
+        if failed or time.monotonic() >= self._loading_deadline:
+            logger.info("Tour: %s pack not ready in time; narrating in English with subtitles",
+                        self.language)
+            self._loading = False
+            self._finish_loading(plan)
+
+    def _finish_loading(self, plan) -> None:
+        # The loading phase installed handlers and the ticker; _begin
+        # installs again, so take them down first.
+        self._remove_draw_handlers()
+        if not self._begin(plan):
+            self.stop("start-failed")
+
+    def _begin(self, plan) -> bool:
+        from . import session as session_mod
+        from . import media as media_mod
+        self.tour = plan.tour
+        self.narration = plan.narration
+        self.subtitles = _subtitles_for(self.language, self.narration)
+        if not plan.video_paths or not plan.video_paths[0]:
             logger.warning("Tour: no video asset; refusing to start")
             return False
         try:
@@ -78,14 +170,7 @@ class SessionLifecycleMixin:
                 if hasattr(actions, "snapshot_state") else None
             if hasattr(actions, "reset_session_state"):
                 actions.reset_session_state()
-            from .video import MovieTexture
-            self.video = MovieTexture(path)
-            from .clock import make_clock
-            self.clock = make_clock(path, self.video.duration_ms,
-                                    silent=self.silent, rate=self.rate)
-            self._host_window_ptr = anchors.normalize_ptr(window.as_pointer())
-            self._host_region_ptr = anchors.normalize_ptr(region.as_pointer())
-            self._refresh_host(window, region)
+            self.video, self.clock = media_mod.open_media(plan, self.silent, self.rate)
             from .runner import TourRunner
             self.runner = TourRunner(self._tour_for_platform(), self.clock,
                                      on_action=self._on_action,
@@ -107,11 +192,11 @@ class SessionLifecycleMixin:
         t = _telemetry()
         if t is not None:
             try:
-                t.started(self.tour.id)
+                t.started(self.tour.id, self.language, self.narration)
             except Exception:  # noqa: BLE001
                 pass
-        logger.info("Tour %s started (rate=%.2f silent=%s)",
-                    self.tour.id, self.rate, self.silent)
+        logger.info("Tour %s started (rate=%.2f silent=%s narration=%s)",
+                    self.tour.id, self.rate, self.silent, self.narration)
         return True
 
     def _tour_for_platform(self):
@@ -260,10 +345,15 @@ class SessionLifecycleMixin:
         """Republish the QA state/targets. Throttled to ~5 Hz unless the
         status changed or ``force`` (start/stop)."""
         try:
-            state = self.runner.state() if self.runner else {"status": "idle"}
+            state = self.runner.state() if self.runner else {
+                "status": "loading" if getattr(self, "_loading", False) else "idle"}
             state["running"] = self.running
             state["exit_confirm"] = self.exit_confirm
             state["completed"] = self.completed
+            state["language"] = self.language
+            state["narration"] = self.narration
+            subs = self.subtitles
+            state["subtitle"] = subs.text_at(state.get("ms", 0) or 0) if subs else ""
             if final:
                 state["status"] = STATUS_ENDED
             key = (state.get("status"), state.get("beat"), state.get("paused"),

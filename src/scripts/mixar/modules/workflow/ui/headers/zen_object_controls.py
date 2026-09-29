@@ -57,7 +57,7 @@ def draw_object_controls(layout, context):
 
     close = row.row(align=True)
     close.ui_units_x = 1.4
-    close.operator('wm.context_toggle', text='', icon='X').data_path = 'space_data.show_region_tool_header'
+    close.operator('mixar.zen_object_controls_show', text='', icon='X').show = False
     close.mixar_style(component="TOOLBAR", variant="GHOST")
 
 

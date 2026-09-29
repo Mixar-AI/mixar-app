@@ -172,3 +172,14 @@ def test_scene_created_while_file_load_timer_waits_receives_defaults(defaults):
     defaults.apply_startup_defaults()
     assert saved.cycles.device == "CPU" and not saved.render.use_border
     assert fresh.cycles.device == "GPU" and fresh.render.use_border
+
+
+def test_registration_survives_restricted_startup_data(defaults):
+    class RestrictData:  # Blender's `_RestrictData` during startup scripts
+        pass
+
+    defaults.bpy.data = RestrictData()
+    defaults.register()
+    assert defaults.bpy.app.handlers.load_post == [defaults._on_load]
+    defaults.bpy.msgbus.subscribe_rna.assert_called_once()
+    assert not defaults._saved_scenes
