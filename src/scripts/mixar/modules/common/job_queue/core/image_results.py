@@ -260,7 +260,10 @@ def download_images_to_moodboard(
                         on_error(f"Could not finalize generated images: {e}")
                         return None
                 if undo_message:
-                    bpy.ops.ed.undo_push(message=undo_message)
+                    # The step belongs to the originating tab, not to the tab the
+                    # window shows when the images land (per-tab undo).
+                    from mixar.modules.common.utils.undo import push_undo_step
+                    push_undo_step(undo_message, scene=target_scene)
                 logger.debug(
                     "[Queue] image moodboard update completed job=%s count=%d total=%.3fs",
                     job_id,

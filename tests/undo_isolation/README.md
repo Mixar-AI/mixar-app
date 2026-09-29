@@ -57,3 +57,14 @@ dialog headless) after P9 left twelve A steps written while C stood one step bac
 step AND C's redone object go, C's redo is alive, per-tab redo in A then in C brings both
 back. 94 checks with the flag, 25 without. Fingerprints use `matrix_basis` (`matrix_world` is
 evaluated data, reset by a full re-read until that scene's depsgraph runs).
+
+## 2026-09-30: M5, on by default
+
+The flag is on unless `MIXAR_PER_TAB_UNDO=0`; the pytest wrapper sets it to `0` for the
+document contract. New isolation probes: P10e a window on a worker lane refuses everything;
+P14 a global Text is left alone by a tab's undo; P13 the kill switch after a tab walk (the
+classic undo re-reads every ID, no crash, the flag back on, every tab redone to its top);
+P12 a closed tab stays closed under a tab's undo and comes back with the same `session_uid`
+under Undo Whole Document. 112 checks with the flag, 25 without; the same 112 clean under
+ASAN. The lab tolerates a tab that no longer exists (a closed tab is absent from the
+fingerprint).

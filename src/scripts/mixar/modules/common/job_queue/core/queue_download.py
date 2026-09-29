@@ -283,8 +283,11 @@ class DownloadMixin:
             # step predates it too.
             try:
                 from mixar.modules.common.utils.undo import push_undo_step
+                # The step belongs to the job's tab, not to whatever tab the
+                # window shows when the download lands (per-tab undo).
                 push_undo_step(
-                    f"Import {job.label}" if job.label else "Import Generated Result"
+                    f"Import {job.label}" if job.label else "Import Generated Result",
+                    scene=resolve_job_scene(job.scene_name, _job_session_id(job)),
                 )
             except Exception as undo_error:  # noqa: BLE001 — never demote a success
                 logger.warning(

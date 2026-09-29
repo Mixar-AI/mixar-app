@@ -213,7 +213,8 @@ def _import_on_main(
             _import_pano_to_moodboard(pano_path)
         _attach_graph_result(scene_name, graph_node_id, names)
         try:
-            bpy.ops.ed.undo_push(message="World Labs: Import World")
+            from mixar.modules.common.utils.undo import push_undo_step
+            push_undo_step("World Labs: Import World", scene=bpy.data.scenes.get(scene_name))
         except Exception:  # noqa: BLE001
             pass
         on_done(", ".join(names))
