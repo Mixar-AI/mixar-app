@@ -84,9 +84,8 @@ static void tab_cursors_free(UndoStack *ustack)
 }
 
 /** A step is going away: any tab whose cursor sat on it moves to the top. */
-static void tab_cursors_forget_step(UndoStack *ustack, const UndoStep *us)
+static void tab_cursors_drop_step(TabCursors *cursors, const UndoStep *us)
 {
-  TabCursors *cursors = tab_cursors_get(ustack, false);
   if (cursors == nullptr) {
     return;
   }
@@ -98,6 +97,33 @@ static void tab_cursors_forget_step(UndoStack *ustack, const UndoStep *us)
   }
   for (const uint32_t tab : gone) {
     cursors->remove(tab);
+  }
+}
+
+/** A step is going away: no live cursor and no step's snapshot may point at it. */
+static void tab_cursors_forget_step(UndoStack *ustack, const UndoStep *us)
+{
+  tab_cursors_drop_step(tab_cursors_get(ustack, false), us);
+  for (UndoStep &it : ustack->steps) {
+    tab_cursors_drop_step(static_cast<TabCursors *>(it.mixar_cursors), us);
+  }
+}
+
+/** A copy of the live cursors for a step's snapshot; null when no tab is behind. */
+static TabCursors *tab_cursors_snapshot(UndoStack *ustack)
+{
+  TabCursors *cursors = tab_cursors_get(ustack, false);
+  if (cursors == nullptr || cursors->is_empty()) {
+    return nullptr;
+  }
+  return MEM_new<TabCursors>(__func__, *cursors);
+}
+
+static void tab_cursors_snapshot_free(UndoStep *us)
+{
+  if (us->mixar_cursors != nullptr) {
+    MEM_delete(static_cast<TabCursors *>(us->mixar_cursors));
+    us->mixar_cursors = nullptr;
   }
 }
 
@@ -284,6 +310,7 @@ static void undosys_step_free_and_unlink(UndoStack *ustack, UndoStep *us)
   us->type->step_free(us);
   UNDO_NESTED_CHECK_END;
   BKE_undo_step_tab_free(us);
+  tab_cursors_snapshot_free(us);
   tab_cursors_forget_step(ustack, us);
 
   BLI_remlink(&ustack->steps, us);
@@ -709,6 +736,7 @@ eUndoPushReturn BKE_undosys_step_push_with_type(UndoStack *ustack,
         cursors->remove(us->mixar_tab_uid);
       }
     }
+    us->mixar_cursors = tab_cursors_snapshot(ustack);
     ustack->step_active = us;
     BLI_addtail(&ustack->steps, us);
     use_memfile_step = us->use_memfile_step;
@@ -724,6 +752,7 @@ eUndoPushReturn BKE_undosys_step_push_with_type(UndoStack *ustack,
       UndoStep *us = static_cast<UndoStep *>(ustack->steps.last);
       BLI_assert(STREQ(us->name, name_internal));
       us->mixar_tab_uid = us_prev->mixar_tab_uid;
+      us->mixar_cursors = tab_cursors_snapshot(ustack);
       us_prev->skip = true;
 #ifdef WITH_GLOBAL_UNDO_CORRECT_ORDER
       ustack->step_active_memfile = us;
@@ -1051,10 +1080,44 @@ UndoStep *BKE_undosys_tab_cursor(UndoStack *ustack, const uint32_t tab_uid)
   return undosys_tab_newest_step(ustack, tab_uid);
 }
 
+/** The tab's next own step after ``ref``: its redo target. After a whole-document
+ * undo (M4) a tab with no cursor entry still has redo when its steps sit above
+ * the document's active step. */
+static UndoStep *undosys_tab_next_step(const UndoStep *ref, const uint32_t tab_uid)
+{
+  for (UndoStep *us = ref ? ref->next : nullptr; us != nullptr; us = us->next) {
+    if (!us->skip && us->mixar_tab_uid == tab_uid) {
+      return us;
+    }
+  }
+  return nullptr;
+}
+
 bool BKE_undosys_tab_has_redo(UndoStack *ustack, const uint32_t tab_uid)
 {
-  TabCursors *cursors = tab_cursors_get(ustack, false);
-  return cursors != nullptr && cursors->contains(tab_uid);
+  return undosys_tab_next_step(BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid) != nullptr;
+}
+
+void BKE_undosys_tab_cursors_clear(UndoStack *ustack)
+{
+  if (TabCursors *cursors = tab_cursors_get(ustack, false)) {
+    cursors->clear();
+  }
+}
+
+void BKE_undosys_tab_cursors_restore(UndoStack *ustack, const UndoStep *from)
+{
+  BKE_undosys_tab_cursors_clear(ustack);
+  const TabCursors *snapshot = from ? static_cast<const TabCursors *>(from->mixar_cursors) : nullptr;
+  if (snapshot == nullptr || snapshot->is_empty()) {
+    return;
+  }
+  TabCursors *cursors = tab_cursors_get(ustack, true);
+  for (auto item : snapshot->items()) {
+    if (BLI_findindex(&ustack->steps, item.value) != -1) {
+      cursors->add_overwrite(item.key, item.value);
+    }
+  }
 }
 
 static bool undosys_tab_step_is_global(const UndoStep *us)
@@ -1168,24 +1231,14 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
 
 bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, const uint32_t tab_uid, std::string *r_reason)
 {
-  TabCursors *cursors = tab_cursors_get(ustack, false);
-  UndoStep **cursor = cursors ? cursors->lookup_ptr(tab_uid) : nullptr;
-  if (cursor == nullptr) {
+  UndoStep *target = undosys_tab_next_step(BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid);
+  if (target == nullptr) {
     if (r_reason) {
       *r_reason = "nothing to redo in this tab";
     }
     return false;
   }
-  for (UndoStep *us = (*cursor)->next; us != nullptr; us = us->next) {
-    if (us->skip || us->mixar_tab_uid != tab_uid) {
-      continue;
-    }
-    return undosys_tab_step_apply(ustack, C, tab_uid, us, STEP_REDO, r_reason);
-  }
-  if (r_reason) {
-    *r_reason = "nothing to redo in this tab";
-  }
-  return false;
+  return undosys_tab_step_apply(ustack, C, tab_uid, target, STEP_REDO, r_reason);
 }
 
 bool BKE_undosys_tab_step_load(

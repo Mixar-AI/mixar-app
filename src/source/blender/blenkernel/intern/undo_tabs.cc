@@ -15,6 +15,7 @@
 #include "CLG_log.h"
 
 #include "BLI_listbase.h"
+#include "BLI_utildefines.h"
 #include "BLI_map.hh"
 #include "BLI_string.h"
 #include "BLI_time.h"
@@ -226,6 +227,61 @@ int BKE_undo_owner_map_shared_count(const UndoOwnerMap *map)
 /** \name Step annotation
  * \{ */
 
+static int scene_int_prop(const Scene *scene, const char *name, const int fallback)
+{
+  if (scene == nullptr || scene->id.properties == nullptr) {
+    return fallback;
+  }
+  const IDProperty *prop = IDP_GetPropertyFromGroup(scene->id.properties, name);
+  if (prop == nullptr) {
+    return fallback;
+  }
+  if (prop->type == IDP_INT) {
+    return IDP_int_get(prop);
+  }
+  if (prop->type == IDP_BOOLEAN) {
+    return IDP_bool_get(prop) ? 1 : 0;
+  }
+  return fallback;
+}
+
+bool BKE_undo_tab_scene_is_working(const Scene *scene)
+{
+  if (scene_int_prop(scene, "mixie_run_open", 0) != 0) {
+    return true;
+  }
+  const int state = scene_int_prop(scene, "mixie_chat_state", -1);
+  return ELEM(state, UNDO_TAB_STATE_BUSY, UNDO_TAB_STATE_MODIFYING, UNDO_TAB_STATE_AWAITING_INPUT);
+}
+
+bool BKE_undo_tab_any_working(Main *bmain)
+{
+  if (bmain == nullptr) {
+    return false;
+  }
+  for (const Scene &scene : bmain->scenes) {
+    if (BKE_undo_tab_scene_is_lane(&scene)) {
+      return true; /* a worker lane exists only while its tab's turn runs */
+    }
+    if (BKE_undo_tab_scene_is_working(&scene)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string BKE_undo_tab_scene_name(Main *bmain, const uint32_t tab_uid)
+{
+  if (bmain != nullptr) {
+    for (const Scene &scene : bmain->scenes) {
+      if (scene.id.session_uid == tab_uid) {
+        return std::string(scene.id.name + 2);
+      }
+    }
+  }
+  return std::string();
+}
+
 static uint32_t g_push_tab_override = UNDO_TAB_DOCUMENT;
 
 void BKE_undo_tabs_push_override_set(const uint32_t tab_uid)
@@ -275,6 +331,8 @@ void BKE_undo_step_tab_free(UndoStep *us)
 
 struct PartialState {
   bool active = false;
+  /** M4: a whole-document restore, every ID re-read. */
+  bool whole = false;
   uint32_t tab = UNDO_TAB_DOCUMENT;
   const UndoOwnerMap *step_owners = nullptr;
   UndoOwnerMap *live_owners = nullptr;
@@ -359,6 +417,15 @@ bool BKE_undo_tabs_ids_owned(Main *bmain,
   return ok;
 }
 
+void BKE_undo_tabs_whole_document_begin()
+{
+  BLI_assert(!g_partial.active);
+  g_partial = PartialState{};
+  g_partial.active = true;
+  g_partial.whole = true;
+  CLOG_DEBUG(&LOG, "whole-document restore armed: every ID re-read");
+}
+
 void BKE_undo_tabs_partial_end()
 {
   if (g_partial.live_owners != nullptr) {
@@ -379,7 +446,7 @@ uint32_t BKE_undo_tabs_partial_tab()
 
 UndoPartialDecision BKE_undo_tabs_partial_decide(const uint32_t session_uid, const bool has_live)
 {
-  if (!g_partial.active) {
+  if (!g_partial.active || g_partial.whole) {
     return UndoPartialDecision::Restore;
   }
   const uint32_t at_step = BKE_undo_owner_map_lookup(g_partial.step_owners, session_uid);

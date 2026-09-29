@@ -104,6 +104,10 @@ struct UndoStep {
    * memfile steps under the flag, the owner map of every ID at that moment. */
   uint32_t mixar_tab_uid;
   struct UndoOwnerMap *mixar_owners;
+  /* M4: the tabs' cursors when this step was pushed (which walked-back state
+   * of every tab this memfile holds); a whole-document walk to this step
+   * restores them. Owned; null when no tab was behind. */
+  void *mixar_cursors;
   /* Over alloc 'type->struct_size'. */
 };
 
@@ -340,6 +344,11 @@ bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, uint32_t tab_uid,
 UndoStep *BKE_undosys_tab_cursor(UndoStack *ustack, uint32_t tab_uid);
 /** True while the tab's cursor is behind its newest step (a redo is available for it). */
 bool BKE_undosys_tab_has_redo(UndoStack *ustack, uint32_t tab_uid);
+/** M4: forget every tab's cursor (after a whole-document walk every tab stands
+ * at the document's active step). */
+void BKE_undosys_tab_cursors_clear(UndoStack *ustack);
+/** M4: the cursors as they were when ``from`` was pushed (cleared when none). */
+void BKE_undosys_tab_cursors_restore(UndoStack *ustack, const UndoStep *from);
 /** M3: walk the tab to ``target`` (one of its own steps) one tagged step at a
  * time, in either direction; the Undo History entry of a tab. */
 bool BKE_undosys_tab_step_load(

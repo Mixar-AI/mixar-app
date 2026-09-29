@@ -87,7 +87,10 @@ def fingerprint_tab(scene) -> dict:
             "data": getattr(data, "name", None),
             "data_uid": getattr(data, "session_uid", None),
             "mesh": _mesh_hash(data) if o.type == "MESH" and data else None,
-            "matrix": [round(x, 4) for row in o.matrix_world for x in row],
+            # matrix_basis, not matrix_world: the latter is evaluated data, reset by a
+            # full re-read of the object (M4 whole-document walk) until that scene's
+            # depsgraph runs, which a non-window scene's does not.
+            "matrix": [round(x, 4) for row in o.matrix_basis for x in row],
             "materials": [s.material.name if s.material else None for s in o.material_slots],
             "parent": o.parent.name if o.parent else None,
         }
@@ -297,6 +300,12 @@ def _observe(key: str, before: dict, after: dict, d: dict):
     if key == "can_redo":
         with _override_window():
             return bool(bpy.ops.ed.redo.poll())
+    if key in ("undo_poll", "redo_poll", "history_poll", "whole_doc_poll"):
+        op = {"undo_poll": bpy.ops.ed.undo, "redo_poll": bpy.ops.ed.redo,
+              "history_poll": bpy.ops.ed.undo_history,
+              "whole_doc_poll": bpy.ops.ed.undo_whole_document}[key]
+        with _override_window():
+            return bool(op.poll())
     if key.startswith("own_steps_kept:"):
         # M3: at least UNDO_TAB_MIN_STEPS (8) of the tab's own steps survive the limit
         h = history()
@@ -447,6 +456,70 @@ def run_m3_probes() -> None:
           expect_document={},
           expect_isolation={"has:C/C_ico": True, "has:A/A_f11": True, "changed:B": False,
                             "window_stays": True, "can_redo": False, "own_steps_kept:C": True})
+    if hasattr(bpy.ops.ed, "undo_whole_document"):
+        run_m4_probes()
+
+
+# -- M4: the hold from the tab's own run flags; Undo Whole Document -------------
+
+
+def _set_run(label: str, open_: bool) -> None:
+    """What SessionManager.set_run writes (the chat props are not registered
+    headless, so the raw IDProperty the C side reads)."""
+    tab(label)["mixie_run_open"] = bool(open_)
+
+
+def _set_state(label: str, index: int) -> None:
+    """mixie_chat_state as stored: the SESSION_STATE_ITEMS index (BUSY = 3)."""
+    tab(label)["mixie_chat_state"] = int(index)
+
+
+def _clear_flags(label: str) -> None:
+    for key in ("mixie_run_open", "mixie_chat_state"):
+        if key in tab(label):
+            del tab(label)[key]
+
+
+def run_m4_probes() -> None:
+    show("C")
+    # P10: the hold narrows to the tab's OWN agent and needs no modal
+    probe("P10a C's run open: undo/redo/history refused in C", lambda: _set_run("C", True),
+          expect_document={},
+          expect_isolation={"undo_poll": False, "redo_poll": False, "history_poll": False,
+                            "whole_doc_poll": False, "changed:C": False})
+    _clear_flags("C")
+    probe("P10b C busy (state 3): undo refused in C", lambda: _set_state("C", 3),
+          expect_document={}, expect_isolation={"undo_poll": False})
+    _clear_flags("C")
+    probe("P10c only A's run open: C may undo, whole-document may not",
+          lambda: _set_run("A", True),
+          expect_document={}, expect_isolation={"undo_poll": True, "whole_doc_poll": False})
+    _clear_flags("A")
+    probe("P10d all idle: everything allowed again", lambda: None,
+          expect_document={}, expect_isolation={"undo_poll": True, "whole_doc_poll": True})
+
+    # P11: Undo Whole Document = the classic one-step walk, cursors reset, window stays
+    def whole_document():
+        with _override_window():
+            bpy.ops.ed.undo_whole_document()
+    # The document at 'A · filler 10' was written while C stood one step back
+    # (P9): a whole-document walk restores that, C_ico gone and C's redo alive.
+    probe("P11a undo whole document (newest step is A's; C as it stood then)", whole_document,
+          expect_document={},
+          expect_isolation={"has:A/A_f11": False, "has:C/C_ico": False, "changed:B": False,
+                            "window_stays": True, "can_redo": True})
+
+    def redo_in_A_then_back():
+        show("A")
+        press("redo")
+        show("C")
+    probe("P11b per-tab redo in A brings A's step back", redo_in_A_then_back,
+          expect_document={}, expect_isolation={"has:A/A_f11": True, "has:C/C_ico": False,
+                                                "changed:B": False, "window_stays": True})
+    probe("P11c per-tab redo in C brings C_ico back", lambda: press("redo"),
+          expect_document={}, expect_isolation={"has:C/C_ico": True, "has:A/A_f11": True,
+                                                "changed:B": False, "window_stays": True,
+                                                "can_redo": False})
 
 
 # -- M1: tags and the owner map ------------------------------------------------

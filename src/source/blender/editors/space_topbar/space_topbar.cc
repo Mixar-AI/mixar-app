@@ -21,6 +21,7 @@
 #include "BKE_undo_system.hh"
 #include "BKE_undo_tabs.hh"
 
+#include "ED_mixar_undo.hh"
 #include "ED_screen.hh"
 #include "ED_space_api.hh"
 
@@ -105,6 +106,8 @@ static void topbar_operatortypes()
   /* Mixar: the whole-window out-of-credits banner. The top bar is the one
    * space every main window has, so it hosts the registration. */
   ED_mixar_credits_banner_register();
+  /* Mixar per-tab undo (M4): Edit > Undo Whole Document. */
+  WM_operatortype_append(ED_OT_undo_whole_document);
 }
 
 static void topbar_keymap(wmKeyConfig * /*keyconf*/) {}

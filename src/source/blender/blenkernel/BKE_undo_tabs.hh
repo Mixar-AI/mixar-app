@@ -58,6 +58,24 @@ uint32_t BKE_undo_tab_uid_for_scene(Main *bmain, Scene *scene);
 /** The tab of the context's window scene, #UNDO_TAB_DOCUMENT without a window. */
 uint32_t BKE_undo_tab_uid_from_context(bContext *C);
 
+/* M4: the hold. A tab whose own agent is mid-turn or holds an open backend
+ * run refuses undo, redo and the history in its window: the undo operators'
+ * own poll reads the scene's run flags, so the refusal holds with no modal,
+ * no viewport lock and through menu search. The flags are the chat module's
+ * Python-registered Scene properties, read here as IDProperties:
+ * ``mixie_run_open`` (bool) and ``mixie_chat_state`` (enum, stored as the
+ * item index of ``SESSION_STATE_ITEMS``: OFFLINE 0, CONNECTING 1, IDLE 2,
+ * BUSY 3, MODIFYING 4, AWAITING_INPUT 5; pinned by
+ * ``tests/test_undo_hold_state_indices.py``). */
+constexpr int UNDO_TAB_STATE_BUSY = 3;
+constexpr int UNDO_TAB_STATE_MODIFYING = 4;
+constexpr int UNDO_TAB_STATE_AWAITING_INPUT = 5;
+bool BKE_undo_tab_scene_is_working(const Scene *scene);
+/** Any real tab working (lanes are credited to their tab). */
+bool BKE_undo_tab_any_working(Main *bmain);
+/** The scene name of a tab, empty when no scene has that ``session_uid``. */
+std::string BKE_undo_tab_scene_name(Main *bmain, uint32_t tab_uid);
+
 /** Opaque: ``session_uid -> tab_uid`` for every ID reachable from a tab, plus
  * the names of the shared ones (for messages and the harness). */
 struct UndoOwnerMap;
@@ -110,6 +128,12 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
                                  const UndoOwnerMap *step_owners,
                                  std::string *r_reason);
 void BKE_undo_tabs_partial_end();
+/** M4: arm a WHOLE-document restore (Edit > Undo Whole Document). After per-tab
+ * walks the live document is no longer the state of the stack's active step, so
+ * the reader's identical-chunk shortcut (adjacent steps only) cannot be trusted
+ * for any tab: every ID is re-read, in place where it still lives. Ended by
+ * #BKE_undo_tabs_partial_end; #BKE_undo_tabs_partial_tab is #UNDO_TAB_DOCUMENT. */
+void BKE_undo_tabs_whole_document_begin();
 bool BKE_undo_tabs_partial_active();
 uint32_t BKE_undo_tabs_partial_tab();
 /** The reader's per-ID question. ``has_live`` = a datablock with that

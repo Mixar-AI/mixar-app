@@ -1079,7 +1079,7 @@ static void setup_app_data(bContext *C,
     /* Mixar per-tab undo (M2): a partial restore never moves the window; the
      * memfile's "current scene" is the tab an agent had pinned when the step
      * was written, not where the user is. */
-    if (track_undo_scene && BKE_undo_tabs_partial_active()) {
+    if (track_undo_scene && (BKE_undo_tabs_partial_active() || BKE_undo_tabs_enabled())) {
       track_undo_scene = false;
       if (win && win->scene) {
         curscene = win->scene;

@@ -4,6 +4,16 @@
 
 """Undo and redo are held while an agent works in ANY scene tab.
 
+Per-tab undo (``MIXAR_PER_TAB_UNDO=1``, the C side: ``BKE_undo_tabs.hh``,
+design M4) retires everything in this module but the Edit-menu drawing: the
+undo operators' own poll reads the tab's run flags (``mixie_run_open``,
+``mixie_chat_state``) and refuses undo, redo and the history in a window
+whose OWN agent works, through the keymap, the menu, menu search and Python
+alike, with no modal and no viewport lock; other tabs' agents block nothing.
+The Edit menu then shows the stock entries (greyed by their poll while the
+tab's agent works) plus "Undo Whole Document...", the document-wide walk
+behind a confirmation. With the flag off the hold below is what runs.
+
 Blender's undo is document-wide: a step taken back in the visible, idle tab
 also takes back what another tab's agent just built — or the other tab
 itself, when its creation is the newest step (found by the parallel-scenes
@@ -82,6 +92,14 @@ def refuse(redo: bool, report, busy: list) -> None:
 _stock_edit_draw = None
 
 
+def per_tab_undo() -> bool:
+    """True when the build runs per-tab undo (the C flag, read once at startup)."""
+    try:
+        return bool(getattr(bpy.context.window_manager, "mixar_per_tab_undo", False))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _draw_edit_menu_rest(layout, context) -> None:
     """The stock TOPBAR_MT_edit body after the three undo entries (Blender 5.2)."""
     show_developer = context.preferences.view.show_developer_ui
@@ -106,6 +124,16 @@ def _draw_edit_menu_rest(layout, context) -> None:
 
 def draw_edit_menu(self, context) -> None:
     """TOPBAR_MT_edit.draw while the hold is installed."""
+    if per_tab_undo():
+        # M4: the stock entries hold themselves (their poll reads this tab's run
+        # flags); the whole-document walk is a separate, confirmed entry.
+        layout = self.layout
+        layout.operator("ed.undo", icon='LOOP_BACK')
+        layout.operator("ed.redo", icon='LOOP_FORWARDS')
+        layout.menu("TOPBAR_MT_undo_history")
+        layout.operator("ed.undo_whole_document", text="Undo Whole Document...")
+        _draw_edit_menu_rest(layout, context)
+        return
     busy = working_tabs()
     if not busy:
         _stock_edit_draw(self, context)
@@ -198,6 +226,8 @@ def _shield_tick():
     A modal never survives a file load; the window list is the truth."""
     global _running
     try:
+        if per_tab_undo():
+            return _TICK_S      # M4: the C poll is the hold; no modal
         if _running and not _shield_alive():
             _running = False
         if _running or not working_tabs():

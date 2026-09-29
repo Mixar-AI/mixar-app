@@ -28,6 +28,11 @@
 #include "BKE_screen.hh"
 #include "BKE_undo_system.hh"
 #include "BKE_undo_tabs.hh"
+#include "BLI_map.hh"
+#include "BLI_vector.hh"
+#include "BLT_translation.hh"
+#include "ED_mixar_undo.hh"
+#include "UI_interface_icons.hh"
 
 #include <string>
 #include "BKE_workspace.hh"
@@ -244,7 +249,8 @@ static void ed_undo_step_post(bContext *C,
  */
 static wmOperatorStatus ed_undo_step_direction(bContext *C,
                                                enum eUndoStepDir step,
-                                               ReportList *reports)
+                                               ReportList *reports,
+                                               const bool per_tab = true)
 {
   BLI_assert(ELEM(step, STEP_UNDO, STEP_REDO));
 
@@ -259,7 +265,7 @@ static wmOperatorStatus ed_undo_step_direction(bContext *C,
    * document-wide walk stays for a window on no tab (and for the explicit
    * "Undo whole document" of M4). */
   bool done = false;
-  if (BKE_undo_tabs_enabled()) {
+  if (per_tab && BKE_undo_tabs_enabled()) {
     const uint32_t tab = BKE_undo_tab_uid_from_context(C);
     wmWindow *win = CTX_wm_window(C);
     if (tab != UNDO_TAB_DOCUMENT && win != nullptr && win->scene != nullptr &&
@@ -624,9 +630,40 @@ static bool ed_undo_redo_poll(bContext *C)
           WM_operator_check_ui_enabled(C, last_op->type->name));
 }
 
+/**
+ * Mixar per-tab undo (M4): the hold. With the flag on, a window on a worker lane
+ * or on a tab whose own agent works refuses undo, redo and the history. This is
+ * the operators' own poll, so it holds through the keymap, the Edit menu, menu
+ * search and Python, with no modal and no viewport lock. Other tabs' agents
+ * block nothing.
+ */
+static bool ed_undo_tab_hold_poll(bContext *C)
+{
+  if (!BKE_undo_tabs_enabled()) {
+    return true;
+  }
+  wmWindow *win = CTX_wm_window(C);
+  const Scene *scene = (win != nullptr) ? win->scene : CTX_data_scene(C);
+  if (scene == nullptr) {
+    return true;
+  }
+  if (BKE_undo_tab_scene_is_lane(scene)) {
+    CTX_wm_operator_poll_msg_set(C, "Undo is unavailable inside an agent's workspace");
+    return false;
+  }
+  if (BKE_undo_tab_scene_is_working(scene)) {
+    CTX_wm_operator_poll_msg_set(C, "Undo is unavailable while this tab's agent works");
+    return false;
+  }
+  return true;
+}
+
 static bool ed_undo_poll(bContext *C)
 {
   if (!ed_undo_is_init_and_screenactive_poll(C)) {
+    return false;
+  }
+  if (!ed_undo_tab_hold_poll(C)) {
     return false;
   }
   UndoStack *undo_stack = CTX_wm_manager(C)->runtime->undo_stack;
@@ -670,6 +707,9 @@ void ED_OT_undo_push(wmOperatorType *ot)
 static bool ed_redo_poll(bContext *C)
 {
   if (!ed_undo_is_init_and_screenactive_poll(C)) {
+    return false;
+  }
+  if (!ed_undo_tab_hold_poll(C)) {
     return false;
   }
   UndoStack *undo_stack = CTX_wm_manager(C)->runtime->undo_stack;
@@ -810,6 +850,133 @@ void ED_undo_operator_repeat_cb_evt(bContext *C, void *arg_op, int /*arg_unused*
  * \{ */
 
 /* NOTE: also check #ed_undo_step() in top if you change notifiers. */
+static bool ed_undo_history_poll(bContext *C)
+{
+  return ed_undo_is_init_and_screenactive_poll(C) && ed_undo_tab_hold_poll(C);
+}
+
+/* -------------------------------------------------------------------- */
+/** \name Mixar: Undo Whole Document (M4)
+ *
+ * The classic document-wide walk, one step back, behind a confirmation that
+ * names the tabs it moves. Refused while any tab's agent works or a worker
+ * lane exists. Every tab's cursor is forgotten: after it, every tab stands at
+ * the document's active step, and a tab's Shift-Ctrl-Z redoes its own steps
+ * above it.
+ * \{ */
+
+static bool ed_undo_whole_document_poll(bContext *C)
+{
+  if (!BKE_undo_tabs_enabled()) {
+    CTX_wm_operator_poll_msg_set(C, "Per-tab undo is off; Undo already covers the whole document");
+    return false;
+  }
+  if (!ed_undo_is_init_and_screenactive_poll(C)) {
+    return false;
+  }
+  UndoStack *ustack = CTX_wm_manager(C)->runtime->undo_stack;
+  if (ustack->step_active == nullptr || ustack->step_active->prev == nullptr) {
+    return false;
+  }
+  if (BKE_undo_tab_any_working(CTX_data_main(C))) {
+    CTX_wm_operator_poll_msg_set(C, "Undo Whole Document is unavailable while an agent works");
+    return false;
+  }
+  return true;
+}
+
+/** The tabs a whole-document undo moves: those with a step above the target
+ * (the step being taken back) and those standing behind their newest step. */
+static std::string ed_undo_whole_document_tabs(bContext *C, const UndoStep *target)
+{
+  UndoStack *ustack = CTX_wm_manager(C)->runtime->undo_stack;
+  Main *bmain = CTX_data_main(C);
+  blender::Vector<uint32_t> tabs;
+  for (const UndoStep *us = target ? target->next : nullptr; us != nullptr; us = us->next) {
+    if (!us->skip && us->mixar_tab_uid != UNDO_TAB_DOCUMENT && !tabs.contains(us->mixar_tab_uid)) {
+      tabs.append(us->mixar_tab_uid);
+    }
+  }
+  for (const Scene &scene : bmain->scenes) {
+    const uint32_t tab = scene.id.session_uid;
+    if (tabs.contains(tab) || BKE_undo_tab_scene_is_lane(&scene)) {
+      continue;
+    }
+    /* Behind its newest step now, or behind it when the target was written. */
+    if (BKE_undosys_tab_has_redo(ustack, tab) ||
+        (target->mixar_cursors != nullptr &&
+         static_cast<const blender::Map<uint32_t, UndoStep *> *>(target->mixar_cursors)->contains(tab)))
+    {
+      tabs.append(tab);
+    }
+  }
+  std::string names;
+  for (const uint32_t tab : tabs) {
+    const std::string name = BKE_undo_tab_scene_name(bmain, tab);
+    if (name.empty()) {
+      continue;
+    }
+    names += (names.empty() ? "" : ", ") + name;
+  }
+  return names;
+}
+
+static wmOperatorStatus ed_undo_whole_document_exec(bContext *C, wmOperator *op)
+{
+  wmWindowManager *wm = CTX_wm_manager(C);
+  WM_operator_stack_clear(wm);
+  UndoStack *ustack = wm->runtime->undo_stack;
+  /* After per-tab walks the live document is not the active step's state, so
+   * every ID is re-read; the target step's cursor snapshot then says where
+   * each tab stood when that state was written. */
+  BKE_undo_tabs_whole_document_begin();
+  wmOperatorStatus ret = ed_undo_step_direction(C, STEP_UNDO, op->reports, false);
+  BKE_undo_tabs_partial_end();
+  BKE_undosys_tab_cursors_restore(ustack, ustack->step_active);
+  if (ret & OPERATOR_FINISHED) {
+    ed_undo_refresh_for_op(C);
+  }
+  return ret;
+}
+
+static wmOperatorStatus ed_undo_whole_document_invoke(bContext *C, wmOperator *op, const wmEvent * /*event*/)
+{
+  UndoStack *ustack = CTX_wm_manager(C)->runtime->undo_stack;
+  UndoStep *target = ustack->step_active ? ustack->step_active->prev : nullptr;
+  while (target != nullptr && target->skip) {
+    target = target->prev;
+  }
+  if (target == nullptr) {
+    return OPERATOR_CANCELLED;
+  }
+  const std::string tabs = ed_undo_whole_document_tabs(C, target);
+  std::string message = std::string("Every tab goes back to \"") + target->name + "\".";
+  if (!tabs.empty()) {
+    message += " Tabs that change: " + tabs + ".";
+  }
+  return WM_operator_confirm_ex(C,
+                                op,
+                                IFACE_("Undo Whole Document"),
+                                message.c_str(),
+                                IFACE_("Undo"),
+                                blender::ui::AlertIcon::Warning,
+                                false);
+}
+
+void ED_OT_undo_whole_document(wmOperatorType *ot)
+{
+  ot->name = "Undo Whole Document";
+  ot->description =
+      "Take back the newest step of every tab at once (the per-tab undo of the Undo entry walks "
+      "only this tab)";
+  ot->idname = "ED_OT_undo_whole_document";
+  ot->invoke = ed_undo_whole_document_invoke;
+  ot->exec = ed_undo_whole_document_exec;
+  ot->poll = ed_undo_whole_document_poll;
+}
+
+/** \} */
+
 static wmOperatorStatus undo_history_exec(bContext *C, wmOperator *op)
 {
   PropertyRNA *prop = RNA_struct_find_property(op->ptr, "item");
@@ -847,7 +1014,7 @@ void ED_OT_undo_history(wmOperatorType *ot)
   /* API callbacks. */
   ot->invoke = undo_history_invoke;
   ot->exec = undo_history_exec;
-  ot->poll = ed_undo_is_init_and_screenactive_poll;
+  ot->poll = ed_undo_history_poll;
 
   RNA_def_int(ot->srna, "item", 0, 0, INT_MAX, "Item", "", 0, INT_MAX);
 }
