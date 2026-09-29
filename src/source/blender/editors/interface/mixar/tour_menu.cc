@@ -212,4 +212,42 @@ bool Mixar_tour_menu_close(wmWindow *win)
   return true;
 }
 
+/* A pop-up re-runs its layout only when its region carries RGN_REFRESH_UI.
+ * The WM ID-property writes Python makes from an async callback notify a bare
+ * NC_WINDOW, which pop-ups ignore (they refresh on NC_WINDOW | NA_EDITED, a
+ * window resize), and pop-up regions live in the screen's own region list,
+ * not in any area, so `area.tag_redraw()` never reaches them either. A props
+ * dialog whose `draw()` reads async state (Refer a Friend's "Getting your
+ * invite link…") therefore stays stale until some unrelated window event.
+ *
+ * Only operator dialogs (a handle with `popup_op`) are tagged: menus and
+ * popovers are left alone, since a forced popover refresh is the path that
+ * once read a freed button (see the file comment above). */
+int Mixar_refresh_popups(wmWindow *win)
+{
+  bScreen *screen = win ? WM_window_get_active_screen(win) : nullptr;
+  if (screen == nullptr) {
+    return 0;
+  }
+  int count = 0;
+  for (ARegion &region : screen->regionbase) {
+    if (region.regiontype != RGN_TYPE_TEMPORARY || region.runtime == nullptr) {
+      continue;
+    }
+    bool is_dialog = false;
+    for (ui::Block &block : region.runtime->uiblocks) {
+      if (block.handle != nullptr && block.handle->popup_op != nullptr) {
+        is_dialog = true;
+        break;
+      }
+    }
+    if (is_dialog) {
+      ED_region_tag_refresh_ui(&region);
+      ED_region_tag_redraw(&region);
+      count++;
+    }
+  }
+  return count;
+}
+
 }  // namespace blender

@@ -200,6 +200,16 @@ def _clear_byok_state_on_logout(wm):
         logger.debug("Failed clearing local model mirrors on logout: %s", e)
 
 
+def _clear_referral_state(wm):
+    """Drop the session-cached Refer a Friend link (logout and every SSO
+    login) so another account never opens the dialog on this one's link."""
+    try:
+        from mixar.modules.referrals.core import flow as referral_flow
+        referral_flow.clear(wm)
+    except Exception as e:  # noqa: BLE001 — stripped builds lack the module
+        logger.debug("Failed clearing referral state: %s", e)
+
+
 def _schedule_apply_login(user_info: dict, refreshed: bool) -> None:
     """Schedule main-thread bpy property updates after successful auth.
 
@@ -340,6 +350,7 @@ def _auth_check_background() -> None:
                 wm.mixie_chat_login_error = ""
 
                 _capture_session_started("sso_relogin")
+                _clear_referral_state(wm)
 
                 if user_info and user_info.get("status") == "success":
                     email = user_info["data"].get("email", "")
@@ -506,6 +517,7 @@ class MIXIE_CHAT_OT_login(Operator):
                         if hasattr(live_wm, 'mixie_chat_session_expired'):
                             live_wm.mixie_chat_session_expired = False
                         _capture_session_started("interactive_login")
+                        _clear_referral_state(live_wm)
 
                         if user_info and user_info.get("status") == "success":
                             email = user_info["data"].get("email", "")
@@ -597,6 +609,7 @@ class MIXIE_CHAT_OT_logout(Operator):
         # Clear cached BYOK state so the profile menu and dialog reset
         # when the next user logs in.
         _clear_byok_state_on_logout(wm)
+        _clear_referral_state(wm)
 
         self.report({'INFO'}, "Logged out successfully")
         return {'FINISHED'}

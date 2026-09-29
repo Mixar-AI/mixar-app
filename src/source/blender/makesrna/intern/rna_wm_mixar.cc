@@ -222,6 +222,14 @@ static bool rna_Window_mixar_tour_popover_open(wmWindow *win, bContext *C, const
   return Mixar_tour_popover_open(C, win, panel);
 }
 
+/* tour_menu.cc: tag every open pop-up in the window to rebuild its layout. */
+int Mixar_refresh_popups(wmWindow *win);
+
+static int rna_Window_mixar_refresh_popups(wmWindow *win)
+{
+  return Mixar_refresh_popups(win);
+}
+
 /* Mixar: live GHOST client bounds (wm_draw.cc); wmWindow::posx/posy can be stale. */
 bool Mixar_window_live_client_rect(const wmWindow *win, int r_rect[4]);
 
@@ -424,6 +432,14 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     parm = RNA_def_string(func, "panel", nullptr, 0, "Panel", "Panel type idname");
     RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
     parm = RNA_def_boolean(func, "opened", false, "", "");
+    RNA_def_function_return(func, parm);
+  }
+  {
+    FunctionRNA *func = RNA_def_function(
+        srna, "mixar_refresh_popups", "rna_Window_mixar_refresh_popups");
+    RNA_def_function_ui_description(
+        func, "Rebuild every pop-up open in this window after async state changes");
+    PropertyRNA *parm = RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX);
     RNA_def_function_return(func, parm);
   }
   /* This window's client rect inside another window's client coordinates
