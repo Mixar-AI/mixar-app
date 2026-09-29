@@ -1116,6 +1116,17 @@ bool BKE_undosys_tab_has_redo(UndoStack *ustack, const uint32_t tab_uid)
   return undosys_tab_next_step(BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid) != nullptr;
 }
 
+bool BKE_undosys_tab_has_undo(UndoStack *ustack, const uint32_t tab_uid)
+{
+  const UndoStep *ref = BKE_undosys_tab_cursor(ustack, tab_uid);
+  for (const UndoStep *us = ref ? ref->prev : nullptr; us != nullptr; us = us->prev) {
+    if (!us->skip && us->mixar_tab_uid == tab_uid) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void BKE_undosys_tab_cursors_clear(UndoStack *ustack)
 {
   if (TabCursors *cursors = tab_cursors_get(ustack, false)) {

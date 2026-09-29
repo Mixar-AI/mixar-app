@@ -667,6 +667,17 @@ static bool ed_undo_poll(bContext *C)
     return false;
   }
   UndoStack *undo_stack = CTX_wm_manager(C)->runtime->undo_stack;
+  /* Mixar per-tab undo (M5): nothing to undo when the tab has no own step
+   * before its cursor (its reserve floor, or a tab with no edits yet). */
+  if (BKE_undo_tabs_enabled()) {
+    const uint32_t tab = BKE_undo_tab_uid_from_context(C);
+    wmWindow *win = CTX_wm_window(C);
+    if (tab != UNDO_TAB_DOCUMENT && win != nullptr && win->scene != nullptr &&
+        !BKE_undo_tab_scene_is_lane(win->scene))
+    {
+      return BKE_undosys_tab_has_undo(undo_stack, tab);
+    }
+  }
   return (undo_stack->step_active != nullptr) && (undo_stack->step_active->prev != nullptr);
 }
 

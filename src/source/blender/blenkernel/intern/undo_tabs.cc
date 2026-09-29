@@ -95,17 +95,32 @@ bool BKE_undo_tabs_live_diverged()
   return g_live_diverged;
 }
 
+/* A `bpy.props` StringProperty on the Scene (the chat module's
+ * `mixie_session_id`) lives in `id.system_properties` (Blender 4.3+); a raw
+ * custom property (`scene["…"] = …`, what the headless lab writes and what the
+ * backend's workspace script stamps) in `id.properties`. Read both: M5's
+ * seven-tab soak found the lane mapping dead in the app because only the
+ * second store was read. */
 static const char *scene_string_prop(const Scene *scene, const char *name)
 {
-  if (scene == nullptr || scene->id.properties == nullptr) {
+  if (scene == nullptr) {
     return nullptr;
   }
-  const IDProperty *prop = IDP_GetPropertyTypeFromGroup(scene->id.properties, name, IDP_STRING);
-  if (prop == nullptr) {
-    return nullptr;
+  const IDProperty *stores[2] = {scene->id.system_properties, scene->id.properties};
+  for (const IDProperty *group : stores) {
+    if (group == nullptr) {
+      continue;
+    }
+    const IDProperty *prop = IDP_GetPropertyTypeFromGroup(group, name, IDP_STRING);
+    if (prop == nullptr) {
+      continue;
+    }
+    const char *value = IDP_string_get(prop);
+    if (value != nullptr && value[0] != '\0') {
+      return value;
+    }
   }
-  const char *value = IDP_string_get(prop);
-  return (value != nullptr && value[0] != '\0') ? value : nullptr;
+  return nullptr;
 }
 
 bool BKE_undo_tab_scene_is_lane(const Scene *scene)
@@ -155,10 +170,31 @@ uint32_t BKE_undo_tab_uid_from_context(bContext *C)
     wmWindow *win = CTX_wm_window(C);
     scene = (win != nullptr) ? win->scene : nullptr;
   }
+  Main *bmain = CTX_data_main(C) ? CTX_data_main(C) : G_MAIN;
+  if (scene == nullptr && bmain != nullptr) {
+    /* A push from a context with no scene and no window (a script run from a
+     * timer, a job callback): the shown tab, which is what the executor's
+     * routing pin puts on the window for an agent's script. */
+    wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+    wmWindow *win = nullptr;
+    if (wm != nullptr) {
+      win = (wm->runtime != nullptr && wm->runtime->winactive != nullptr) ?
+                wm->runtime->winactive :
+                static_cast<wmWindow *>(wm->windows.first);
+    }
+    scene = (win != nullptr) ? win->scene : nullptr;
+    CLOG_WARN(&LOG,
+              "undo push with no context scene: tagged with the shown tab '%s'",
+              scene ? scene->id.name + 2 : "(none)");
+  }
   if (scene == nullptr) {
     return UNDO_TAB_DOCUMENT;
   }
-  return BKE_undo_tab_uid_for_scene(CTX_data_main(C), scene);
+  const uint32_t tab = BKE_undo_tab_uid_for_scene(bmain, scene);
+  if (tab == UNDO_TAB_DOCUMENT) {
+    CLOG_WARN(&LOG, "undo push on scene '%s' resolves to no tab (an unresolved lane?)", scene->id.name + 2);
+  }
+  return tab;
 }
 
 /* -------------------------------------------------------------------- */

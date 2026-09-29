@@ -344,6 +344,9 @@ bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, uint32_t tab_uid,
 UndoStep *BKE_undosys_tab_cursor(UndoStack *ustack, uint32_t tab_uid);
 /** True while the tab's cursor is behind its newest step (a redo is available for it). */
 bool BKE_undosys_tab_has_redo(UndoStack *ustack, uint32_t tab_uid);
+/** M5: the tab has an own step before its cursor to walk back to (false at
+ * the reserve floor and for a tab with no steps yet). */
+bool BKE_undosys_tab_has_undo(UndoStack *ustack, uint32_t tab_uid);
 /** M4: forget every tab's cursor (after a whole-document walk every tab stands
  * at the document's active step). */
 void BKE_undosys_tab_cursors_clear(UndoStack *ustack);

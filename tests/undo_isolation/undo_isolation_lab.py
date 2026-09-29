@@ -483,6 +483,8 @@ def _register_flags() -> None:
     if not hasattr(bpy.types.Scene, "mixie_chat_state"):
         bpy.types.Scene.mixie_chat_state = bpy.props.EnumProperty(items=_STATE_ITEMS, default="OFFLINE",
                                                                    options={'SKIP_SAVE'})
+    if not hasattr(bpy.types.Scene, "mixie_session_id"):
+        bpy.types.Scene.mixie_session_id = bpy.props.StringProperty(default="", options={'SKIP_SAVE'})
 
 
 def _set_run(label: str, open_: bool) -> None:
@@ -561,10 +563,14 @@ def run_m4_probes() -> None:
 
 def run_m5_probes() -> None:
     show("C")
-    # P10e: a window on a worker lane (agent workspace) may not undo at all
+    # P10e: a window on a worker lane (agent workspace) may not undo at all. The
+    # session ids are the registered bpy.props (id.system_properties, the app's
+    # store); the parent stamp is a raw custom property, as the backend's
+    # workspace script writes it.
+    _register_flags()
     lane = bpy.data.scenes.new("Workspace_lane")
-    tab("C")["mixie_session_id"] = "session-C"
-    lane["mixie_session_id"] = "agentlane:xyz"
+    tab("C").mixie_session_id = "session-C"
+    lane.mixie_session_id = "agentlane:xyz"
     lane["mixar_workspace_main_session"] = "session-C"
 
     def show_lane():
@@ -572,11 +578,33 @@ def run_m5_probes() -> None:
     probe("P10e window on a worker lane: undo/redo/history refused", show_lane,
           expect_document={}, expect_isolation={"undo_poll": False, "redo_poll": False,
                                                 "history_poll": False, "whole_doc_poll": False})
+    # P10e2: a step pushed while the window shows the lane belongs to the lane's PARENT tab
+    push("pushed from the lane")
+    h = history()
+    check("M5 P10e2 a push on a lane is tagged with its parent tab",
+          bool(h) and h["steps"][0]["tab_uid"] == tab("C").session_uid,
+          f"tag={h['steps'][0]['tab_uid'] if h else None} C={tab('C').session_uid}")
     win().scene = tab("C")
     bpy.data.scenes.remove(lane)
-    del tab("C")["mixie_session_id"]
+    tab("C").mixie_session_id = ""
     probe("P10f back on C with the lane gone: allowed again", lambda: None,
           expect_document={}, expect_isolation={"undo_poll": True, "whole_doc_poll": True})
+    # P10g: the poll says "nothing to undo" for a tab with no own step below its cursor
+    fresh = bpy.data.scenes.new("Fresh_tab")
+    TABS["F"] = fresh.name
+    win().scene = fresh
+    push("New scene tab: Fresh_tab")        # the birth step the app pushes; a tab's walk stops here
+    probe("P10g a fresh tab with no edits: undo poll false", lambda: None,
+          expect_document={}, expect_isolation={"undo_poll": False, "redo_poll": False})
+    edit("F", "F · first edit", lambda: add_mesh(fresh, "F_cube", "cube", (0, 0, 9)))
+    probe("P10g2 after its first edit: undo poll true", lambda: None,
+          expect_document={}, expect_isolation={"undo_poll": True})
+    probe("P10g3 undo it: the tab is at its floor again", lambda: press("undo"),
+          expect_document={}, expect_isolation={"has:F/F_cube": False, "undo_poll": False, "redo_poll": True})
+    press("redo")
+    win().scene = tab("C")
+    del TABS["F"]
+    bpy.data.scenes.remove(fresh)
 
     # P14: a global datablock (a Text: no tab reaches it) is left alone by a tab's
     # undo; only Undo Whole Document restores it. The documented rule.
