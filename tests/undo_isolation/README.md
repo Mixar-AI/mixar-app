@@ -28,5 +28,13 @@ Stock Blender 4.2.21 runs `probe_flip.py` clean in both variants. No agents, no 
 handlers, no lane scenes: a plain bpy script. This is the crash class behind the
 production Ctrl-Z crash of 2026-09-29 15:47, reduced to ten seconds. Evidence in
 `~/Downloads/per-tab-undo/lab-29-09/evidence/` (probe_flip.py, crash logs, the stock run).
-Until it is fixed the `document` contract cannot pass on the fork; the test records the
-crash as a failure on purpose.
+Determinism runs (same day): stock Blender 5.2.0 passes the full lab 2 of 3 times and
+crashes the third; the production 4.1.2 bundle crashes `probe_flip.py` 1 of 2; the Dev build
+crashes it 3 of 3. With `--debug-memory` (guarded allocator) the Dev crash disappears; with
+Blender's legacy undo (`MIXAR_UNDO_LAB_LEGACY=1`) the full lab passes on Dev but the minimal
+probe still crashes. So this is an allocation-order-dependent use-after-free in Blender's
+multi-scene memfile undo/redo, present upstream, that the Dev build hits deterministically.
+The harness is sound (all 16 document-mode checks pass whenever the build survives); the
+next instrument is an ASAN build. Knobs for bisecting on a reference build:
+`MIXAR_UNDO_LAB_NO_FURNISH`, `MIXAR_UNDO_LAB_NO_EDITMODE`, `MIXAR_UNDO_LAB_NO_B`,
+`MIXAR_UNDO_LAB_LEGACY`.

@@ -45,6 +45,10 @@ def log(msg: str) -> None:
 
 
 EXPECT = os.environ.get("MIXAR_UNDO_LAB_EXPECT", "document")
+NO_FURNISH = bool(os.environ.get("MIXAR_UNDO_LAB_NO_FURNISH"))
+NO_EDITMODE = bool(os.environ.get("MIXAR_UNDO_LAB_NO_EDITMODE"))
+NO_B = bool(os.environ.get("MIXAR_UNDO_LAB_NO_B"))
+LEGACY = bool(os.environ.get("MIXAR_UNDO_LAB_LEGACY"))   # Blender's legacy undo: no old-Main reuse
 OUT = pathlib.Path(os.environ.get("MIXAR_UNDO_LAB_OUT", "/tmp/mixar-undo-lab"))
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -184,9 +188,10 @@ def build() -> None:
     c = bpy.context.scene
     c.name = "C_manual"
     TABS["C"] = c.name
-    for label in ("A", "B"):
+    for label in (("A",) if NO_B else ("A", "B")):
         s = bpy.data.scenes.new(f"{label}_agent")
-        furnish(s)
+        if not NO_FURNISH:
+            furnish(s)
         TABS[label] = s.name
     # the original "Original" step is whatever the startup file left; start clean
     push("lab: tabs created")
@@ -208,6 +213,14 @@ def build() -> None:
     edit("C", "C · move cube", move_c)
 
     # B: an agent turn
+    if NO_B:
+        edit("C", "C · add torus", lambda: add_mesh(tab("C"), "C_torus", "torus", (-4, 0, 0)))
+        edit("A", "A · turn 2 (pre)", lambda: None)
+        edit("A", "A · script 4", lambda: add_mesh(tab("A"), "A_4", "cube", (8, 0, 0)), checkpoint=False)
+        edit("A", "A · script 5", lambda: add_mesh(tab("A"), "A_5", "sphere", (10, 0, 0)), checkpoint=False)
+        push("A · turn 2 done")
+        show("C")
+        return
     edit("B", "B · turn 1 (pre)", lambda: None)
     edit("B", "B · script 1", lambda: add_mesh(tab("B"), "B_1", "cube", (0, 3, 0)), checkpoint=False)
     edit("B", "B · script 2", lambda: add_mesh(tab("B"), "B_2", "torus", (0, 6, 0)), checkpoint=False)
@@ -259,6 +272,8 @@ def probe(name: str, action, expect_document: dict, expect_isolation: dict) -> N
 
 
 def _observe(key: str, before: dict, after: dict, d: dict):
+    if key.endswith(":B") and "B" not in TABS:
+        return False if key.startswith("changed:") else None
     if key == "window_stays":
         return before["window_scene"] == after["window_scene"]
     if key == "window_scene":
@@ -295,6 +310,8 @@ def run_probes() -> None:
           expect_document={"has:C/C_torus": True, "has:A/A_5": True},
           expect_isolation={"has:C/C_torus": True, "changed:A": False, "window_stays": True})
 
+    if NO_EDITMODE:
+        return
     # P5: edit-mode steps in C sit on top of A's memfile step. Two undos: the mode steps;
     # the third lands on the memfile step beneath, which today belongs to A.
     show("C")
@@ -330,6 +347,9 @@ def run_probes() -> None:
 
 def main() -> int:
     ok = True
+    if LEGACY:
+        bpy.context.preferences.experimental.use_undo_legacy = True
+        log(f"M0 legacy undo = {bpy.context.preferences.experimental.use_undo_legacy}")
     try:
         build()
         run_probes()
@@ -338,6 +358,8 @@ def main() -> int:
         ok = False
     report = {
         "expect": EXPECT,
+        "legacy_undo": LEGACY,
+        "knobs": {"no_furnish": NO_FURNISH, "no_editmode": NO_EDITMODE, "no_b": NO_B},
         "app": bpy.app.version_string,
         "steps": STEPS,
         "probes": PROBES,
