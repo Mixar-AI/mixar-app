@@ -973,7 +973,18 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
   /* Undo/Redo steps until we reach given target step (or beyond if it has to be skipped),
    * from given reference step. */
   bool is_processing_extra_skipped_steps = false;
-  for (UndoStep *us_iter = undosys_step_iter_first(us_reference, undo_dir); us_iter != nullptr;
+  UndoStep *us_first = undosys_step_iter_first(us_reference, undo_dir);
+  if (reread_all && undo_dir == STEP_UNDO && us_first == us_reference &&
+      us_reference->is_applied == false)
+  {
+    /* Mixar per-tab undo (M5): a type that decodes its active step on undo
+     * (sculpt, paint, text) whose active step a tab walk already un-applied.
+     * Decoding it again would apply the undo delta twice (the sculpt node
+     * swaps coordinates); the full re-read of the target replaces every ID
+     * anyway. */
+    us_first = us_reference->prev;
+  }
+  for (UndoStep *us_iter = us_first; us_iter != nullptr;
        us_iter = (undo_dir == -1) ? us_iter->prev : us_iter->next)
   {
     BLI_assert(us_iter != nullptr);
