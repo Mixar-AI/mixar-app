@@ -45,12 +45,15 @@ pytestmark = pytest.mark.skipif(BINARY is None, reason="no Mixar bundle (set MIX
 
 
 def run_lab(expect: str, tmp_path: pathlib.Path) -> dict:
-    env = dict(os.environ, MIXAR_UNDO_LAB_EXPECT=expect, MIXAR_UNDO_LAB_OUT=str(tmp_path))
+    # MIXAR_PER_TAB_UNDO=1 turns on the M1 tagging/owner-map view so the lab's M1
+    # probes run; the restore is unchanged by it until M2.
+    env = dict(os.environ, MIXAR_UNDO_LAB_EXPECT=expect, MIXAR_UNDO_LAB_OUT=str(tmp_path),
+               MIXAR_PER_TAB_UNDO="1")
     proc = subprocess.run(
         [str(BINARY), "--background", "--factory-startup", "--python", str(LAB)],
         env=env, capture_output=True, text=True, timeout=300,
     )
-    lines = [l for l in proc.stdout.splitlines() if l.startswith("M0 ")]
+    lines = [l for l in proc.stdout.splitlines() if l.startswith(("M0 ", "M1 "))]
     sys.stdout.write("\n".join(lines) + "\n")
     report_path = tmp_path / "report.json"
     assert report_path.exists(), f"no report; rc={proc.returncode}\n{proc.stdout[-2000:]}\n{proc.stderr[-2000:]}"

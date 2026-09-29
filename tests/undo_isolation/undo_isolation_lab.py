@@ -354,6 +354,64 @@ def run_probes() -> None:
           expect_isolation={"changed:A": False, "changed:B": False, "window_stays": True})
 
 
+# -- M1: tags and the owner map ------------------------------------------------
+
+
+def history():
+    """The stack as the C side sees it (WindowManager.mixar_undo_history, M1), or None."""
+    wm = bpy.data.window_managers[0]
+    if not hasattr(wm, "mixar_undo_history"):
+        return None
+    return json.loads(wm.mixar_undo_history)
+
+
+def check(name: str, ok: bool, detail="") -> None:
+    VERDICTS.append({"probe": "M1", "check": name, "want": True, "got": bool(ok), "ok": bool(ok)})
+    log(f"M1 {name}: {'PASS' if ok else 'FAIL'}  {detail}")
+
+
+def run_m1() -> None:
+    """Every step carries the tab whose scene the window showed at push; memfile
+    steps under the flag carry an owner map with no shared IDs, and a hand-linked
+    object turns up as shared on the next push."""
+    h = history()
+    if h is None:
+        log("M1 skipped: WindowManager.mixar_undo_history not present (build without M1)")
+        return
+    uids = {label: tab(label).session_uid for label in TABS}
+    by_name = {}
+    for st in h["steps"]:
+        by_name.setdefault(st["name"], st)
+    expect_tab = {"C · add cube": "C", "C · move cube": "C", "C · add torus": "C",
+                  "A · turn 1 (pre)": "A", "A · turn 1 done": "A", "A · turn 2 done": "A",
+                  "B · turn 1 (pre)": "B", "B · turn 1 done": "B"}
+    for name, label in expect_tab.items():
+        st = by_name.get(name)
+        check(f"tag {name!r} = {label}", st is not None and st["tab_uid"] == uids[label],
+              f"got={st and st['tab_uid']} want={uids[label]}")
+    check("current_tab is the window's tab", h["current_tab"] == tab("C").session_uid
+          if win().scene.name == TABS["C"] else h["current_tab"] == win().scene.session_uid)
+    if not h["enabled"]:
+        log("M1 owner map skipped: MIXAR_PER_TAB_UNDO not set")
+        return
+    memfile = [st for st in h["steps"] if st["memfile"] and st["name"] != "Original"]
+    check("memfile steps carry an owner map", bool(memfile) and all(st["owners"] > 0 for st in memfile),
+          f"{[(st['name'], st['owners']) for st in memfile[:3]]}")
+    check("no shared IDs in a clean session", all(st["shared"] == 0 for st in memfile),
+          f"{[(st['name'], st['shared_names']) for st in memfile if st['shared']]}")
+    slowest = max((st["owner_map_ms"] for st in memfile), default=0.0)
+    check("owner map under 50 ms", slowest < 50.0, f"slowest={slowest:.2f} ms")
+    # A hand-linked object: C's cube linked into A. The next push must mark it shared.
+    tab("A").collection.objects.link(tab("C").objects["C_cube"])
+    edit("C", "C · hand-link cube into A", lambda: None)
+    top = history()["steps"][0]
+    check("hand-linked object is shared on the next push", top["shared"] >= 1 and "C_cube" in " ".join(top["shared_names"]),
+          f"shared={top['shared']} names={top['shared_names']}")
+    tab("A").collection.objects.unlink(tab("C").objects["C_cube"])
+    edit("C", "C · unlink again", lambda: None)
+    check("unlinking clears the share", history()["steps"][0]["shared"] == 0)
+
+
 def main() -> int:
     ok = True
     if LEGACY:
@@ -362,6 +420,7 @@ def main() -> int:
     try:
         build()
         run_probes()
+        run_m1()      # after the probes: its two pushes would otherwise change the stack's top
     except Exception:  # noqa: BLE001
         log("M0 harness error:\n" + traceback.format_exc())
         ok = False

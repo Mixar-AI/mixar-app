@@ -19,6 +19,7 @@
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 #include "BKE_undo_system.hh"
+#include "BKE_undo_tabs.hh"
 
 #include "ED_screen.hh"
 #include "ED_space_api.hh"
@@ -237,11 +238,21 @@ static void undo_history_draw_menu(const bContext *C, Menu *menu)
     return;
   }
 
+  /* Mixar per-tab undo (M1): under the flag the menu lists the current tab's
+   * steps and the document steps (tab 0, e.g. "Original"), not the other
+   * tabs'. The jump itself is still document-wide until M2. */
+  const bool per_tab = BKE_undo_tabs_enabled();
+  const uint32_t current_tab = per_tab ? BKE_undo_tab_uid_from_context(const_cast<bContext *>(C)) :
+                                         UNDO_TAB_DOCUMENT;
+  auto step_hidden = [&](const UndoStep &us) {
+    return per_tab && us.mixar_tab_uid != UNDO_TAB_DOCUMENT && us.mixar_tab_uid != current_tab;
+  };
+
   int undo_step_count = 0;
   int undo_step_count_all = 0;
   for (UndoStep &us : wm->runtime->undo_stack->steps.items_reversed()) {
     undo_step_count_all += 1;
-    if (us.skip) {
+    if (us.skip || step_hidden(us)) {
       continue;
     }
     undo_step_count += 1;
@@ -259,7 +270,7 @@ static void undo_history_draw_menu(const bContext *C, Menu *menu)
   for (UndoStep *us = static_cast<UndoStep *>(wm->runtime->undo_stack->steps.last); us;
        us = us->prev, i--)
   {
-    if (us->skip) {
+    if (us->skip || step_hidden(*us)) {
       continue;
     }
     if (!(undo_step_count % col_size)) {

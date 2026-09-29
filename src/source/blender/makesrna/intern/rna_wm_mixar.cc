@@ -52,6 +52,8 @@
 
 #include "WM_mixar.hh"
 
+#include "BKE_undo_tabs.hh"
+
 #ifdef RNA_RUNTIME
 #  include <algorithm>
 #  include <cstring>
@@ -127,6 +129,29 @@ static void rna_WindowManager_mixar_qa_ui_dump_get(PointerRNA * /*ptr*/, char *v
   memcpy(value, g_mixar_qa_ui_dump_cache.c_str(), g_mixar_qa_ui_dump_cache.size() + 1);
   g_mixar_qa_ui_dump_cache.clear();
   g_mixar_qa_ui_dump_cache.shrink_to_fit();
+}
+
+/* Per-tab undo (BKE_undo_tabs.hh): the undo stack as JSON, newest first, with
+ * each step's tab and owner-map summary. Same length/get pairing as the QA dump. */
+static std::string g_mixar_undo_history_cache;
+
+static int rna_WindowManager_mixar_undo_history_length(PointerRNA *ptr)
+{
+  const wmWindowManager *wm = (const wmWindowManager *)ptr->data;
+  g_mixar_undo_history_cache = blender::BKE_undo_tabs_history_json(wm);
+  return int(g_mixar_undo_history_cache.size());
+}
+
+static void rna_WindowManager_mixar_undo_history_get(PointerRNA * /*ptr*/, char *value)
+{
+  memcpy(value, g_mixar_undo_history_cache.c_str(), g_mixar_undo_history_cache.size() + 1);
+  g_mixar_undo_history_cache.clear();
+  g_mixar_undo_history_cache.shrink_to_fit();
+}
+
+static bool rna_WindowManager_mixar_per_tab_undo_get(PointerRNA * /*ptr*/)
+{
+  return blender::BKE_undo_tabs_enabled();
 }
 
 /* Defined in windowmanager/intern/wm_{event_system,window}.cc (Mixar overlay). */
@@ -469,6 +494,22 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
         "QA UI Dump",
         "JSON snapshot of all live UI widgets (labels, operators, properties, "
         "window-space rects, state) for the Mixar QA harness");
+
+    prop = RNA_def_property(srna_wm, "mixar_undo_history", PROP_STRING, PROP_NONE);
+    RNA_def_property_string_funcs(prop,
+                                  "rna_WindowManager_mixar_undo_history_get",
+                                  "rna_WindowManager_mixar_undo_history_length",
+                                  nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(prop,
+                             "Undo History (per-tab)",
+                             "JSON of the undo stack, newest first: each step's name, type, "
+                             "tab (scene session_uid) and owner-map summary (Mixar per-tab undo)");
+
+    prop = RNA_def_property(srna_wm, "mixar_per_tab_undo", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_per_tab_undo_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(prop, "Per-tab Undo", "MIXAR_PER_TAB_UNDO is set for this session");
 
     /* Timers and modal handlers also run from inside the OS resize callback
      * (see wm_window.cc). A viewport render there crashes macOS. */
