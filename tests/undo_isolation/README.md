@@ -45,3 +45,15 @@ probes: P7 undo in C, a push in A, redo in C (C's redo survives another tab's pu
 `undo_steps = 8`, twelve pushes in A, redo in C still works and C keeps eight of its own
 steps (the per-tab reserve and the cursor pin in the step limit). 68 checks with the flag,
 25 without. The `M3 P9 stack:` line prints the whole tagged stack after the limit ran.
+
+## 2026-09-30: M4 green: the hold as a poll, Undo Whole Document
+
+P10 registers the two run flags with `bpy.props` the way the chat module does (they land in
+`id.system_properties`, the store the C side reads first) and checks the operators' polls in
+C: its own run open, BUSY, AWAITING_INPUT or a raw custom property refuse undo, redo, history
+and the whole-document entry; only A's run open leaves C free to undo but not to undo the
+whole document; all idle allows everything. P11 runs `ed.undo_whole_document` (exec, no
+dialog headless) after P9 left twelve A steps written while C stood one step back: A's newest
+step AND C's redone object go, C's redo is alive, per-tab redo in A then in C brings both
+back. 94 checks with the flag, 25 without. Fingerprints use `matrix_basis` (`matrix_world` is
+evaluated data, reset by a full re-read until that scene's depsgraph runs).

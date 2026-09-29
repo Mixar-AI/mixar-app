@@ -463,33 +463,58 @@ def run_m3_probes() -> None:
 # -- M4: the hold from the tab's own run flags; Undo Whole Document -------------
 
 
+# The chat module is not registered headless: register the two flags the way it
+# does (bpy.props on Scene, stored in id.system_properties, the store the C side
+# reads first) with the same item order as SESSION_STATE_ITEMS.
+_STATE_ITEMS = [(k, k, "") for k in ("OFFLINE", "CONNECTING", "IDLE", "BUSY", "MODIFYING", "AWAITING_INPUT")]
+
+
+def _register_flags() -> None:
+    if not hasattr(bpy.types.Scene, "mixie_run_open"):
+        bpy.types.Scene.mixie_run_open = bpy.props.BoolProperty(default=False, options={'SKIP_SAVE'})
+    if not hasattr(bpy.types.Scene, "mixie_chat_state"):
+        bpy.types.Scene.mixie_chat_state = bpy.props.EnumProperty(items=_STATE_ITEMS, default="OFFLINE",
+                                                                   options={'SKIP_SAVE'})
+
+
 def _set_run(label: str, open_: bool) -> None:
-    """What SessionManager.set_run writes (the chat props are not registered
-    headless, so the raw IDProperty the C side reads)."""
+    """What SessionManager.set_run writes."""
+    tab(label).mixie_run_open = bool(open_)
+
+
+def _set_state(label: str, name: str) -> None:
+    tab(label).mixie_chat_state = name
+
+
+def _set_raw_run(label: str, open_: bool) -> None:
+    """A raw custom property (id.properties), the other store the C side reads."""
     tab(label)["mixie_run_open"] = bool(open_)
 
 
-def _set_state(label: str, index: int) -> None:
-    """mixie_chat_state as stored: the SESSION_STATE_ITEMS index (BUSY = 3)."""
-    tab(label)["mixie_chat_state"] = int(index)
-
-
 def _clear_flags(label: str) -> None:
-    for key in ("mixie_run_open", "mixie_chat_state"):
-        if key in tab(label):
-            del tab(label)[key]
+    tab(label).mixie_run_open = False
+    tab(label).mixie_chat_state = "IDLE"
+    if "mixie_run_open" in tab(label):
+        del tab(label)["mixie_run_open"]
 
 
 def run_m4_probes() -> None:
     show("C")
+    _register_flags()
     # P10: the hold narrows to the tab's OWN agent and needs no modal
     probe("P10a C's run open: undo/redo/history refused in C", lambda: _set_run("C", True),
           expect_document={},
           expect_isolation={"undo_poll": False, "redo_poll": False, "history_poll": False,
                             "whole_doc_poll": False, "changed:C": False})
     _clear_flags("C")
-    probe("P10b C busy (state 3): undo refused in C", lambda: _set_state("C", 3),
+    probe("P10b C busy: undo refused in C", lambda: _set_state("C", "BUSY"),
           expect_document={}, expect_isolation={"undo_poll": False})
+    _clear_flags("C")
+    probe("P10b2 C awaiting input: undo refused in C", lambda: _set_state("C", "AWAITING_INPUT"),
+          expect_document={}, expect_isolation={"undo_poll": False})
+    _clear_flags("C")
+    probe("P10b3 C's run open as a raw custom property: undo refused in C",
+          lambda: _set_raw_run("C", True), expect_document={}, expect_isolation={"undo_poll": False})
     _clear_flags("C")
     probe("P10c only A's run open: C may undo, whole-document may not",
           lambda: _set_run("A", True),

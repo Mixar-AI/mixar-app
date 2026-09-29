@@ -227,12 +227,16 @@ int BKE_undo_owner_map_shared_count(const UndoOwnerMap *map)
 /** \name Step annotation
  * \{ */
 
-static int scene_int_prop(const Scene *scene, const char *name, const int fallback)
+/** A Python-registered Scene property (``bpy.props`` on ``bpy.types.Scene``)
+ * is stored in ``id.system_properties`` (Blender 4.3+); a raw custom property
+ * (``scene["name"] = …``) in ``id.properties``. Either store may carry a run
+ * flag; a flag set in either counts. */
+static int group_int_prop(const IDProperty *group, const char *name, const int fallback)
 {
-  if (scene == nullptr || scene->id.properties == nullptr) {
+  if (group == nullptr) {
     return fallback;
   }
-  const IDProperty *prop = IDP_GetPropertyFromGroup(scene->id.properties, name);
+  const IDProperty *prop = IDP_GetPropertyFromGroup(group, name);
   if (prop == nullptr) {
     return fallback;
   }
@@ -245,13 +249,26 @@ static int scene_int_prop(const Scene *scene, const char *name, const int fallba
   return fallback;
 }
 
+static bool scene_state_is_working(const int state)
+{
+  return ELEM(state, UNDO_TAB_STATE_BUSY, UNDO_TAB_STATE_MODIFYING, UNDO_TAB_STATE_AWAITING_INPUT);
+}
+
 bool BKE_undo_tab_scene_is_working(const Scene *scene)
 {
-  if (scene_int_prop(scene, "mixie_run_open", 0) != 0) {
-    return true;
+  if (scene == nullptr) {
+    return false;
   }
-  const int state = scene_int_prop(scene, "mixie_chat_state", -1);
-  return ELEM(state, UNDO_TAB_STATE_BUSY, UNDO_TAB_STATE_MODIFYING, UNDO_TAB_STATE_AWAITING_INPUT);
+  const IDProperty *stores[2] = {scene->id.system_properties, scene->id.properties};
+  for (const IDProperty *group : stores) {
+    if (group_int_prop(group, "mixie_run_open", 0) != 0) {
+      return true;
+    }
+    if (scene_state_is_working(group_int_prop(group, "mixie_chat_state", -1))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool BKE_undo_tab_any_working(Main *bmain)
