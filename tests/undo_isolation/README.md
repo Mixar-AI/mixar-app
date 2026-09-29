@@ -18,23 +18,18 @@ turn and moves the window) and `isolation` (the per-tab design: only C moves, th
 stays). `test_undo_isolation.py` runs both through pytest when a bundle exists (`MIXAR_APP`
 or `build/Dev`), `isolation` as a non-strict xfail until the flag ships.
 
-## 2026-09-29 finding: the fork crashes before the lab can measure anything
+## 2026-09-29: green on the current build, after one harness bug
 
-On fork `feature/mixar-blastoff` (Blender 5.2.0 base) the lab segfaults in the depsgraph
-relation builder on the third probe (`build_world` on a freed World), and the minimal
-`probe_flip.py` (two scenes, one cube each, window switched between them, undo, redo)
-segfaults at the REDO in `build_material → build_animdata → BKE_animdata_from_id`.
-Stock Blender 4.2.21 runs `probe_flip.py` clean in both variants. No agents, no Python
-handlers, no lane scenes: a plain bpy script. This is the crash class behind the
-production Ctrl-Z crash of 2026-09-29 15:47, reduced to ten seconds. Evidence in
-`~/Downloads/per-tab-undo/lab-29-09/evidence/` (probe_flip.py, crash logs, the stock run).
-Determinism runs (same day): stock Blender 5.2.0 passes the full lab 2 of 3 times and
-crashes the third; the production 4.1.2 bundle crashes `probe_flip.py` 1 of 2; the Dev build
-crashes it 3 of 3. With `--debug-memory` (guarded allocator) the Dev crash disappears; with
-Blender's legacy undo (`MIXAR_UNDO_LAB_LEGACY=1`) the full lab passes on Dev but the minimal
-probe still crashes. So this is an allocation-order-dependent use-after-free in Blender's
-multi-scene memfile undo/redo, present upstream, that the Dev build hits deterministically.
-The harness is sound (all 16 document-mode checks pass whenever the build survives); the
-next instrument is an ASAN build. Knobs for bisecting on a reference build:
-`MIXAR_UNDO_LAB_NO_FURNISH`, `MIXAR_UNDO_LAB_NO_EDITMODE`, `MIXAR_UNDO_LAB_NO_B`,
-`MIXAR_UNDO_LAB_LEGACY`.
+First runs crashed the fork, the production bundle and stock Blender 5.2.0 intermittently
+in the depsgraph after an undo or a redo. An ASAN build named the freed block: the Scene the
+lab had pinned into the context with `temp_override(scene=…, view_layer=…)` around
+`ed.undo` / `ed.redo`. A Python context override is a raw pointer; the memfile decode
+replaces the Main and frees the old Scene, then the operator wrapper's post-call view-layer
+update (`bpy_op_view_layer_update`) reads the stale override. Undo, redo and `undo_push`
+therefore run under `temp_override(window, screen)` only. With that, the Dev build passes
+the minimal probe 3/3 and the full lab 3/3 (16 of 16 document-mode checks), and
+`test_document_wide_undo_is_what_the_build_does_today` is green. The production Ctrl-Z
+crash of the same day went through the key-event path with no override and is NOT
+reproduced by this lab; the GUI scenario in the QA harness plus the ASAN bundle is the
+instrument for it. Knobs for bisecting: `MIXAR_UNDO_LAB_NO_FURNISH`,
+`MIXAR_UNDO_LAB_NO_EDITMODE`, `MIXAR_UNDO_LAB_NO_B`, `MIXAR_UNDO_LAB_LEGACY`.

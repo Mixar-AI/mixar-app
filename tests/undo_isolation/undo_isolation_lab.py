@@ -142,8 +142,17 @@ def _override(scene):
                                      view_layer=scene.view_layers[0])
 
 
+def _override_window():
+    """For undo, redo and undo_push: window + screen only. A scene / view_layer
+    override is a raw pointer the memfile decode leaves dangling once it has
+    replaced the Main (ASAN 2026-09-29: heap-use-after-free in
+    bpy_op_view_layer_update right after ed.undo under such an override)."""
+    w = win()
+    return bpy.context.temp_override(window=w, screen=w.screen)
+
+
 def push(label: str) -> None:
-    with _override(win().scene):
+    with _override_window():
         bpy.ops.ed.undo_push(message=label)
 
 
@@ -247,7 +256,7 @@ def build() -> None:
 def press(what: str, times: int = 1) -> None:
     op = bpy.ops.ed.undo if what == "undo" else bpy.ops.ed.redo
     for _ in range(times):
-        with _override(win().scene):
+        with _override_window():
             op()
 
 
