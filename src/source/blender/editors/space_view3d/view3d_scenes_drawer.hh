@@ -211,6 +211,9 @@ void draw_trash(const rcti &box, float scale, const float color[4]);
  * grip. Decoration only; hit boxes come from the card rect. */
 void draw_selection_mark(const rctf &card, float scale);
 void update_card_motion(ScenesDrawerRuntime *runtime);
+/** Height of the header's action pills (Add, Clear, delete), unscaled. The
+ * header band is this plus the side padding above and below it. */
+constexpr float HEADER_ACTION_H = 24.0f;
 void draw_header(ScenesDrawerRuntime *runtime, ARegion *region,
                  float x0, float x1, float mid, float scale);
 void draw_selection_wash(const rctf &card, float panel_right, float region_right, float scale);
