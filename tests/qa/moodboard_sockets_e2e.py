@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""No-credit socket palette, zoom and precise connection GUI regression.
+"""No-credit socket palette, zoom, label sharpness and precise connection GUI regression.
 
 Run in a clean isolated Dev QA app with a live generation catalog:
     QA_HARNESS=/path/to/mixar-qa-harness python3 tests/qa/moodboard_sockets_e2e.py
@@ -253,6 +253,50 @@ def selected_labels(qa, fixtures, references, action):
             "sockets": qa.find(surface="moodboard_socket", text=action, limit=50)}
 
 
+def close_labels(qa, fixtures, references, action):
+    """Selected labels at close zoom must stay crisp, not an upscaled smear.
+
+    A label rasterized in canvas units shrank to a few pixels at high zoom and
+    the view matrix blew it up: no glyph pixel then reaches the text color.
+    """
+    from PIL import Image
+
+    zoom(qa, "WHEELUPMOUSE", 14)
+    require(1 / canvas(qa)["units_per_pixel"][0] > 2.5,
+            "Label check must run at close zoom (> 2.5)")
+    for node_id in fixtures.values():
+        place(qa, node_id, left=-10000, bottom=100)
+    for index, reference in enumerate(references):
+        place_media(qa, reference, 150+index*230, 100, width=180)
+    place(qa, action, left=1100, bottom=300, width=700, height=560)
+    clear_selection(qa)
+    qa.click(surface="moodboard_node", text=action)
+    qa.wait(f"any(n.node_id=={action!r} and n.selected "
+            f"for n in {SCENE}.mixie_moodboard_action_nodes)", timeout=5)
+    path = OUT / "06_selected_socket_labels_close.png"
+    capture = qa.cmd("snap", path=str(path))
+    image = Image.open(path).convert("L")
+    width, height = image.size
+    scale = qa.eval("result=bpy.context.preferences.system.ui_scale")
+    labels = []
+    for widget in qa.find(surface="moodboard_socket", text=action, limit=50)["widgets"]:
+        cx, cy = (round(v) for v in widget["center"])
+        right = cx - round(14*scale)
+        box = (max(0, right - round(90*scale)), max(0, height-1-cy - round(7*scale)),
+               max(0, right), min(height, height-1-cy + round(7*scale)))
+        if box[2] <= box[0] or box[3] <= box[1]:
+            continue
+        pixels = list(image.crop(box).getdata())
+        labels.append({"socket": widget["detail"], "peak": max(pixels),
+                       "bright": sum(p > 170 for p in pixels)})
+    require(labels, "No selected input label was on screen at close zoom")
+    for label in labels:
+        require(label["bright"] >= 6,
+                f"Close-zoom socket label is blurred (no crisp glyph pixels): {label}")
+    return {"capture": capture, "labels": labels,
+            "units_per_pixel": canvas(qa)["units_per_pixel"]}
+
+
 def run(qa: QA):
     OUT.mkdir(parents=True, exist_ok=True)
     require(qa.eval("result=__import__('os').environ.get('MIXAR_QA')=='1'"),
@@ -309,6 +353,8 @@ def run(qa: QA):
                                  qa, fixtures, action, "04_close_socket_palette")
     evidence["selected_labels"] = qa.step("selected_labels_and_dock", selected_labels,
                                            qa, fixtures, references, action)
+    evidence["close_labels"] = qa.step("close_zoom_crisp_labels", close_labels,
+                                        qa, fixtures, references, action)
     require(qa.eval(f"result=all(n.state=='DRAFT' and not n.job_id "
                     f"for n in {SCENE}.mixie_moodboard_action_nodes)"),
             "A fixture unexpectedly submitted work")

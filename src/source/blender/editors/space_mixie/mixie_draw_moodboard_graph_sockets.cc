@@ -180,10 +180,13 @@ void moodboard_draw_output_handle(View2D *v2d, const float x, const float y, con
   GPU_blend(previous_blend);
 }
 
-static float socket_label_font_size(View2D *v2d)
+/** Screen pixels, never canvas units: the glyphs are rasterized at this size
+ * and drawn 1:1. Sizing in canvas units (px / zoom) made BLF rasterize a
+ * ~3 px font when zoomed in and the view matrix blew it up into a smear. */
+static float socket_label_font_px(View2D *v2d)
 {
   const float zoom = socket_zoom(v2d);
-  return std::clamp(13.0f * zoom, 10.0f * UI_SCALE_FAC, 12.0f * UI_SCALE_FAC) / zoom;
+  return std::clamp(13.0f * zoom, 10.0f * UI_SCALE_FAC, 12.0f * UI_SCALE_FAC);
 }
 
 /** Right-aligned socket name beside a selected node's input, so what each
@@ -191,8 +194,8 @@ static float socket_label_font_size(View2D *v2d)
 float moodboard_socket_label_width(View2D *v2d, const char *label)
 {
   const int font_id = BLF_default();
-  BLF_size(font_id, socket_label_font_size(v2d));
-  return BLF_width(font_id, label, strlen(label));
+  BLF_size(font_id, socket_label_font_px(v2d));
+  return BLF_width(font_id, label, strlen(label)) / socket_zoom(v2d);
 }
 
 void moodboard_draw_socket_label(View2D *v2d,
@@ -207,23 +210,38 @@ void moodboard_draw_socket_label(View2D *v2d,
     return;
   }
   const int font_id = BLF_default();
-  const float width = moodboard_socket_label_width(v2d, label);
-  const float zoom = socket_zoom(v2d), unit = UI_SCALE_FAC / zoom;
-  const float font_size = socket_label_font_size(v2d);
-  const float gap = (radius_px + 6.0f * UI_SCALE_FAC) / zoom;
+  const float font_px = socket_label_font_px(v2d);
+  BLF_size(font_id, font_px);
+  const float width = BLF_width(font_id, label, strlen(label));
+  const float unit = UI_SCALE_FAC;
+  const float gap = radius_px + 6.0f * UI_SCALE_FAC;
+  /* Everything below is in screen pixels around the socket: the canvas zoom
+   * is undone locally, and the anchor snapped to the pixel grid, so the text
+   * stays as crisp at 400% as at 100%. */
+  const float scale_x = socket_zoom(v2d);
+  const float scale_y = std::max(std::abs(ui::view2d_scale_get_y(v2d)), 0.001f);
+  float region_x, region_y;
+  ui::view2d_view_to_region_fl(v2d, socket_x, socket_y, &region_x, &region_y);
+  const float snap_x = roundf(region_x) - region_x;
+  const float snap_y = roundf(region_y) - region_y;
+  GPU_matrix_push();
+  GPU_matrix_translate_2f(socket_x, socket_y);
+  GPU_matrix_scale_2f(1.0f / scale_x, 1.0f / scale_y);
+  GPU_matrix_translate_2f(snap_x, snap_y);
   /* Incoming links share the label's baseline. An opaque, quiet bed keeps
    * them from striking through the text while preserving the terminal stub. */
-  const rctf backing = {socket_x - gap - width - 3.0f * unit,
-                        socket_x - gap + 3.0f * unit,
-                        socket_y - font_size * 0.5f - unit,
-                        socket_y + font_size * 0.5f + unit};
+  const float text_x = roundf(-gap - width);
+  const rctf backing = {text_x - 3.0f * unit,
+                        roundf(-gap) + 3.0f * unit,
+                        -font_px * 0.5f - unit,
+                        font_px * 0.5f + unit};
   const float background[4] = {0.025f, 0.030f, 0.035f, 1.0f};
   ui::draw_roundbox_corner_set(ui::CNR_ALL);
   ui::draw_roundbox_4fv(&backing, true, 2.0f * unit, background);
   BLF_color4f(font_id, 0.78f, 0.82f, 0.86f, 0.95f);
-  BLF_position(
-      font_id, socket_x - gap - width, socket_y - font_size * 0.35f, 0.0f);
+  BLF_position(font_id, text_x, roundf(-font_px * 0.35f), 0.0f);
   BLF_draw(font_id, label, strlen(label));
+  GPU_matrix_pop();
 }
 
 }  // namespace blender::ed::mixie
