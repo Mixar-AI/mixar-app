@@ -7,7 +7,9 @@
  * \ingroup spmixiechat
  *
  * Drag-and-drop support for Mixie Chat.
- * Allows dropping image files into the chat to add them as attachments.
+ * Allows dropping image files anywhere on the agent island (any tab) or its
+ * resting capsule to add them as attachments; the attach also places each
+ * image on the scene's moodboard (core/attachment_board_sync.py).
  *
  * Architecture note: The drop operator must be a C++ operator because
  * WM_dropbox_add() validates the operator name at registration time
@@ -29,6 +31,7 @@
 #include "BKE_context.hh"
 #include "BKE_report.hh"
 
+#include "ED_moodboard_attachment.hh"
 #include "ED_space_api.hh"
 
 #include "RNA_access.hh"
@@ -46,6 +49,31 @@ namespace blender {
 /** \name Drop Image Operator
  * \{ */
 
+/** The island's tab property and its Agent value. False until Python
+ * registers `wm.mixar_bubble_tab`, so callers fail closed during startup. */
+static bool mixie_chat_drop_agent_tab(bContext *C,
+                                      PointerRNA *r_wm,
+                                      PropertyRNA **r_tab,
+                                      int *r_agent)
+{
+  *r_wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
+  *r_tab = RNA_struct_find_property(r_wm, "mixar_bubble_tab");
+  return *r_tab && RNA_property_enum_value(C, r_wm, *r_tab, "AGENT", r_agent);
+}
+
+/** Select the Agent tab through RNA so its update (chat mode, repaint) runs
+ * like the tab strip's own button. */
+static void mixie_chat_drop_show_agent_tab(bContext *C)
+{
+  PointerRNA wm;
+  PropertyRNA *tab;
+  int agent;
+  if (mixie_chat_drop_agent_tab(C, &wm, &tab, &agent)) {
+    RNA_property_enum_set(&wm, tab, agent);
+    RNA_property_update(C, &wm, tab);
+  }
+}
+
 static wmOperatorStatus mixie_chat_drop_image_exec(bContext *C, wmOperator *op)
 {
   const char *attachment_operator = RNA_struct_property_is_set(op->ptr, "image_name") ?
@@ -61,15 +89,17 @@ static wmOperatorStatus mixie_chat_drop_image_exec(bContext *C, wmOperator *op)
     /* A drop on the resting chat capsule explicitly targets the composer,
      * regardless of the tab that was active when the island was minimised.
      * Restore only on release, before validation so feedback has a full UI. */
-    PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
-    PropertyRNA *tab = RNA_struct_find_property(&wm, "mixar_bubble_tab");
-    int agent;
-    if (tab && RNA_property_enum_value(C, &wm, tab, "AGENT", &agent)) {
-      RNA_property_enum_set(&wm, tab, agent);
-      RNA_property_update(C, &wm, tab);
-    }
+    mixie_chat_drop_show_agent_tab(C);
     WM_operator_name_call(
         C, "MIXAR_OT_bubble_restore", wm::OpCallContext::ExecDefault, nullptr, nullptr);
+  }
+  else if (CTX_wm_area(C) && CTX_wm_area(C)->spacetype == SPACE_AGENT_BUBBLE &&
+           !ED_agent_bubble_tab_shows_chat(C, false))
+  {
+    /* A file dropped on a pane tab (3D, Image, Library, Queue, ...) is a
+     * chat reference too: show the Agent composer it lands in, exactly as a
+     * tab click would, so the pill is never added to a hidden composer. */
+    mixie_chat_drop_show_agent_tab(C);
   }
   if (RNA_struct_property_is_set(op->ptr, "image_name")) {
     char name[MAX_ID_NAME - 2];
@@ -159,16 +189,22 @@ static bool mixie_chat_image_drop_poll(bContext *C,
   if (!area || !(area->spacetype == SPACE_AGENT_BUBBLE)) {
     return false;
   }
-  if (area->spacetype == SPACE_AGENT_BUBBLE && !ED_agent_bubble_is_resting_pill(C)) {
-    /* The HEADER map belongs only to the resting capsule. The status pill
-     * above an open island and the island's tab strip are not composers. */
-    const ARegion *region = CTX_wm_region(C);
-    if (region && region->regiontype == RGN_TYPE_HEADER) {
-      return false;
-    }
-    /* Only a chat tab (Agent, Add-on) has a composer to attach to; a pane
-     * tab rejects the drop rather than feeding a hidden composer. */
-    if (!ED_agent_bubble_tab_shows_chat(C, false)) {
+  /* The whole attachment destination takes a reference: the open island
+   * (tab strip, transcript, reference column, composer) or, while
+   * minimised, the resting capsule. The small status pill above an open
+   * island and a window mid-minimise handoff are not destinations. */
+  if (!ED_agent_bubble_is_attachment_destination(CTX_wm_window(C))) {
+    return false;
+  }
+  if (!ED_agent_bubble_is_resting_pill(C) && !ED_agent_bubble_tab_shows_chat(C, false)) {
+    /* A pane tab takes only OS file drops (Explorer / Finder) and switches
+     * to Agent on release (exec). In-app Image-ID drags stay with the pane,
+     * whose references come from the moodboard selection. Until Python
+     * registers the tab property there is no composer to show: refuse. */
+    PointerRNA wm;
+    PropertyRNA *tab;
+    int agent;
+    if (drag->type != WM_DRAG_PATH || !mixie_chat_drop_agent_tab(C, &wm, &tab, &agent)) {
       return false;
     }
   }

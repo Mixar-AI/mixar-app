@@ -227,6 +227,47 @@ def _draw_caption(video_rect: tuple, caption: str, px: float, s: float, alpha: f
                        _with_alpha(config.HINT_TEXT, alpha))
 
 
+def _draw_subtitle(layout: CardLayout, text: str, px: float, s: float, alpha: float,
+                   controls_alpha: float) -> None:
+    """Subtitle band inside the bottom of the video: centred lines on a
+    translucent film, wrapped to the video width. It sits above the
+    controls strip while that is revealed, otherwise on the video's
+    bottom edge, so the two never overlap."""
+    if not text:
+        return
+    from .. import srt
+    vx0, vy0, vx1, _vy1 = layout.video
+    pad_x, pad_y, gap = 12 * s, 5 * s, 6 * s
+    max_w = (vx1 - vx0) - 2 * pad_x - 2 * gap
+    lines = srt.wrap(text, max_w, lambda t: _text_width(t, px))[: config.SUBTITLE_MAX_LINES]
+    line_h = px * 1.3
+    w = max(_text_width(ln, px) for ln in lines) + 2 * pad_x
+    h = line_h * len(lines) + 2 * pad_y
+    strip_h = (layout.controls[3] - layout.controls[1]) if controls_alpha > 0.02 else 0.0
+    ymin = vy0 + strip_h + gap
+    xmin = (vx0 + vx1) * 0.5 - w * 0.5
+    draw_rounded_rect(xmin, ymin, w, h, 4 * s, _with_alpha(config.SUBTITLE_BG, alpha))
+    for i, ln in enumerate(lines):
+        top = ymin + h - pad_y - i * line_h
+        draw_text_centered((xmin, top - line_h, xmin + w, top), ln, px,
+                           _with_alpha(config.SUBTITLE_TEXT, alpha))
+
+
+def _draw_loading(video_rect: tuple, text: str, px: float, s: float, alpha: float) -> None:
+    """A film over the video with the loading line centred: shown while a
+    language pack's first part is fetched, or a later part has not arrived
+    when its act starts."""
+    vx0, vy0, vx1, vy1 = video_rect
+    draw_rect(vx0, vy0, vx1 - vx0, vy1 - vy0, _with_alpha(GATE_FILM, alpha * 0.55))
+    pad_x, pad_y = 14 * s, 7 * s
+    w, h = _text_width(text, px) + 2 * pad_x, px + 2 * pad_y
+    cx, cy = (vx0 + vx1) * 0.5, (vy0 + vy1) * 0.5
+    draw_rounded_rect(cx - w * 0.5, cy - h * 0.5, w, h, h * 0.5,
+                      _with_alpha(config.HINT_BG, alpha * 0.9))
+    draw_text_centered((cx - w * 0.5, cy - h * 0.5, cx + w * 0.5, cy + h * 0.5), text, px,
+                       _with_alpha(config.HINT_TEXT, alpha))
+
+
 def _draw_controls_film(controls: tuple, alpha: float) -> None:
     """Bottom-up film under the labels: stacked bands fake a gradient."""
     xmin, ymin, xmax, ymax = controls
@@ -300,10 +341,11 @@ def draw_card(layout: CardLayout, texture, progress: float, paused: bool, rate: 
               alpha: float = 1.0, ui_scale: float = 1.0,
               gate_seconds_left: Optional[float] = None,
               hover: Optional[str] = None, caption: str = "",
-              controls_alpha: float = 0.0, gate_film: float = 0.0) -> None:
+              controls_alpha: float = 0.0, gate_film: float = 0.0,
+              subtitle: str = "", loading_text: str = "") -> None:
     """Paint the card: background, video, gate film, caption, controls strip
-    (scaled by ``controls_alpha``), progress hairline, gate caption, pause
-    glyph. ``gate_film`` (0..1, eased by the session) darkens the held frame
+    (scaled by ``controls_alpha``), subtitle band, progress hairline, gate
+    caption, pause glyph. ``gate_film`` (0..1, eased by the session) darkens the held frame
     by ``GATE_FILM_ALPHA`` while a gate waits, so the pause reads as a
     deliberate freeze-frame rather than a stall."""
     if alpha <= 0.0:
@@ -324,6 +366,9 @@ def draw_card(layout: CardLayout, texture, progress: float, paused: bool, rate: 
         px = config.CONTROL_FONT_PX * s
         _draw_caption(layout.video, caption, px, s, alpha)
         _draw_controls(layout, paused, rate, px, hover, alpha * ca)
+        _draw_subtitle(layout, subtitle, config.SUBTITLE_FONT_PX * s, s, alpha, ca)
+        if loading_text:
+            _draw_loading(layout.video, loading_text, config.SUBTITLE_FONT_PX * s, s, alpha)
 
         vxmin, vymin, vxmax, _vymax = layout.video
         bar_h = config.CARD_PROGRESS_H * s

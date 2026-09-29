@@ -25,6 +25,7 @@ from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
 from ...auth.core.auth import get_access_token, refresh_access_token
 
+from .client_version import client_version_headers
 from .constants import (
     CONTENT_TYPE_JSON,
     DEFAULT_RETRY_COUNT,
@@ -184,6 +185,10 @@ class HTTPClient:
         token = get_access_token()
         if token:
             headers["Authorization"] = f"Bearer {token}"
+
+        # This instance's version, which the force-update gate prefers over
+        # the account-wide users.client_version (omitted when unknown).
+        headers.update(client_version_headers())
 
         # The backend emits server-side telemetry (generation lifecycle,
         # agent turns, ws connects) and honors this header, extending the

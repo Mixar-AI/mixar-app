@@ -22,8 +22,9 @@ def test_sparse_aspect_ratio_explains_shape_and_uses_catalog_labels():
         {'value': 'square', 'label': '1:1'}, {'value': 'wide', 'label': '16:9'}]))
     help_text = parameter_help(field, {'default': 'wide'})
     assert 'width:height' in help_text
-    assert 'Options: 1:1, 16:9' in help_text
-    assert 'Default: 16:9' in help_text
+    # The dropdown lists the options; the tooltip stays short.
+    assert 'Options:' not in help_text
+    assert 'Default: 16:9.' in help_text
     assert 'square' not in help_text
 
 
@@ -71,8 +72,14 @@ def test_false_and_zero_are_valid_catalog_defaults(value, expected):
 @pytest.mark.parametrize('choices', ['not json', '{}', 'null', '[null, 0, {}]'])
 def test_malformed_saved_choices_do_not_break_settings(choices):
     help_text = parameter_help(parameter(choices_json=choices, required=True))
-    assert 'Options:' not in help_text
     assert 'Required for generation.' in help_text
+
+
+def test_tooltip_is_one_paragraph_of_sentences():
+    help_text = parameter_help(parameter(label='Duration', description='Clip length',
+                                         parameter_type='INTEGER', minimum=4, maximum=12),
+                               {'default': 5})
+    assert help_text == 'Clip length. Range: 4 to 12. Default: 5.'
 
 
 def test_help_reads_saved_schema_and_does_not_mutate_values():

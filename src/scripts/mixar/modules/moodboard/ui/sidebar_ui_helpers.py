@@ -78,6 +78,16 @@ def draw_input(layout, data, prop, text=""):
         layout.prop(data, prop, text=text)
 
 
+def draw_tooltip(layout, text):
+    """Hover help on every item already in *layout* (caption and control).
+
+    Moodboard fields explain themselves on hover over the key or the value;
+    they never add a separate info icon.
+    """
+    if text and hasattr(layout, 'mixar_tooltip'):
+        layout.mixar_tooltip(text=text)
+
+
 def draw_hint(col, text, icon='NONE'):
     """Subtle, smaller-scale info label drawn inside a parent column."""
     row = col.row()

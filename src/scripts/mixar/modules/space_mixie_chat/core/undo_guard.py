@@ -19,6 +19,9 @@ logger = get_logger(__name__)
 
 # Temporary snapshot held between pre/post handler pairs.
 _saved_messages = None
+# The tabs' view and live runs, taken with the messages (core/undo_tab_guard.py).
+_saved_view = None
+_saved_runs = None
 
 
 def _snapshot_single_scene(scene):
@@ -237,13 +240,43 @@ def _restore_all_scenes(snapshots):
             _restore_single_scene(scene, snapshot)
 
 
+# -- Tabs: the view does not move, no run outlives its tab -------------------
+
+
+def _snapshot_tabs():
+    """The windows' scenes and the live runs, for `undo_tab_guard`."""
+    try:
+        from .session import get_session_manager
+        from .undo_tab_guard import snapshot_runs, snapshot_view
+        windows = list(bpy.context.window_manager.windows)
+        return snapshot_view(windows), snapshot_runs(list(bpy.data.scenes), get_session_manager())
+    except Exception:  # noqa: BLE001 — a snapshot never breaks undo
+        logger.debug("Tab snapshot before undo failed", exc_info=True)
+        return None, None
+
+
+def _repair_tabs():
+    """Put every window back where it was and cancel runs whose tab is gone."""
+    global _saved_view, _saved_runs
+    view, runs = _saved_view, _saved_runs
+    _saved_view = _saved_runs = None
+    if view is None and runs is None:
+        return
+    try:
+        from .undo_tab_guard import repair_after_undo
+        repair_after_undo(view or {}, runs or {})
+    except Exception:  # noqa: BLE001 — a repair never breaks undo
+        logger.warning("Tab repair after undo failed", exc_info=True)
+
+
 # -- Handlers ----------------------------------------------------------------
 
 @persistent
 def _on_undo_pre(scene):
     """Snapshot messages from ALL scenes before undo."""
-    global _saved_messages
+    global _saved_messages, _saved_view, _saved_runs
     _saved_messages = _snapshot_all_scenes()
+    _saved_view, _saved_runs = _snapshot_tabs()
 
 
 def _notice_if_agents_running() -> None:
@@ -270,14 +303,16 @@ def _on_undo_post(scene):
     if _saved_messages is not None:
         _restore_all_scenes(_saved_messages)
         _saved_messages = None
+    _repair_tabs()
     _notice_if_agents_running()
 
 
 @persistent
 def _on_redo_pre(scene):
     """Snapshot messages from ALL scenes before redo."""
-    global _saved_messages
+    global _saved_messages, _saved_view, _saved_runs
     _saved_messages = _snapshot_all_scenes()
+    _saved_view, _saved_runs = _snapshot_tabs()
 
 
 @persistent
@@ -287,6 +322,7 @@ def _on_redo_post(scene):
     if _saved_messages is not None:
         _restore_all_scenes(_saved_messages)
         _saved_messages = None
+    _repair_tabs()
     _notice_if_agents_running()
 
 

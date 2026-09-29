@@ -14,7 +14,7 @@ def op(code):
 def close():
     time.sleep(0.3)  # Let selection notifications and layout reach the next frame.
     q.wait("next(r for a in drv.main_window().screen.areas if a.type=='VIEW_3D' for r in a.regions if r.type=='TOOL_HEADER').height > 1", timeout=5)
-    q.click(area_type='VIEW_3D',region_type='TOOL_HEADER',op='WM_OT_context_toggle')
+    q.click(area_type='VIEW_3D',region_type='TOOL_HEADER',op='MIXAR_OT_zen_object_controls_show')
     q.wait("not next(a for a in drv.main_window().screen.areas if a.type=='VIEW_3D').spaces.active.show_region_tool_header",timeout=5)
 op('bpy.ops.mesh.primitive_cube_add()\nbpy.context.object.name="QA Reopen Mesh"')
 q.wait("bool(drv.find(area_type='VIEW_3D',region_type='TOOL_HEADER',text='Modifier'))",timeout=5)

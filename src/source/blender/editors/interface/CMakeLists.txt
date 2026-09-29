@@ -80,6 +80,7 @@ set(SRC
   interface_mixar_tab_rects.cc
   interface_mixar_theme.cc
   interface_mixar_topbar.cc
+  interface_mixar_topbar_tabs.cc
   interface_mixar_zen_chrome.cc
   interface_qa_inspect.cc
   interface_ops.cc

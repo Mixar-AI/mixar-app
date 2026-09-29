@@ -461,16 +461,19 @@ PREVIEW_DEFERRED_MAX_S = 240.0
 # granularity/cost is governed here.
 #
 # AGENT_UNDO_GROUP_PER_TURN
-#   False (default): every script gets its own checkpoint (bounded by the cap
-#   below), so Ctrl-Z steps back through a turn one tool at a time — e.g.
-#   revert just the applied texturing and keep the build.
-#   True: one shared checkpoint per agent turn — the pre-turn state is one
-#   Ctrl-Z away and undo memory stays flat in very heavy scenes, at the price
-#   of all-or-nothing undo.
+#   True (default since 2026-09-29): one checkpoint per agent turn — the
+#   pre-turn state, pushed before the turn's first script — so one Ctrl-Z
+#   reverts what the agent did this turn and NO checkpoint captures a
+#   half-done turn. A mid-turn checkpoint of an orchestrated turn holds a
+#   worker lane scene and a pre-merge object set; undoing to it resurrected
+#   the lane, moved the window into it and crashed the depsgraph on the
+#   replaced objects (prod 4.1.2, 2026-09-29; lab notes in mixar-backend
+#   docs/agent/parallel-scene-tabs). Per-tab undo will bring finer steps back.
+#   False: every script gets its own checkpoint (bounded by the cap below).
 # Turn boundaries come from queue_processor: begin_agent_turn on the first
 # streamed event, end_agent_turn on stream complete/error (and on abort /
 # file load), so a checkpoint-less turn cannot leak into the next one.
-AGENT_UNDO_GROUP_PER_TURN = False
+AGENT_UNDO_GROUP_PER_TURN = True
 
 # Per-script checkpoints are capped per turn. Blender keeps U.undosteps
 # (32 by default) memfile steps, so an uncapped long turn would evict the

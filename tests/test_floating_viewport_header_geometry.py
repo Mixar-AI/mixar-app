@@ -59,33 +59,30 @@ int main()
   assert(remaining.ymax == 773); // Tool settings must sit below shading.
   remaining = {}; // Hidden non-overlap region resets the overlay remainder.
   mixar_floating_headers_clip(&drawer, &remaining);
-  assert(remaining.ymin == 0 && remaining.ymax == 747);
+  // Only the scene toolbar is reserved here. Zen's viewport-wide tool header
+  // reserves just its top band, in region_rect_recursive (#1706, #1715).
+  assert(remaining.ymin == 0 && remaining.ymax == 773);
   assert(remaining.xmin == 0 && remaining.xmax == 999);
 
   for (int flag : {RGN_FLAG_HIDDEN, RGN_FLAG_POLL_FAILED, RGN_FLAG_TOO_SMALL}) {
-    tools.flag = flag;
+    header.flag = flag;
     remaining = {};
     mixar_floating_headers_clip(&drawer, &remaining);
-    assert(remaining.ymax == 773); // Unavailable tool headers reserve nothing.
+    assert(remaining.ymax == 799); // Unavailable headers reserve nothing.
   }
-  tools.flag = 0;
+  header.flag = 0;
   header.alignment = RGN_ALIGN_BOTTOM;
   header.winrct.ymin = 0;
   header.winrct.ymax = 25;
   remaining = {};
   mixar_floating_headers_clip(&drawer, &remaining);
-  assert(remaining.ymin == 26 && remaining.ymax == 747);
+  assert(remaining.ymin == 26 && remaining.ymax == 799);
   // Existing tighter bounds must survive both repeated clipping and headers.
   remaining.ymin = 100;
   remaining.ymax = 700;
   mixar_floating_headers_clip(&drawer, &remaining);
   assert(remaining.ymin == 100 && remaining.ymax == 700);
 
-  tools.alignment |= RGN_ALIGN_HIDE_WITH_PREV;
-  header.flag = RGN_FLAG_HIDDEN;
-  remaining = {};
-  mixar_floating_headers_clip(&drawer, &remaining);
-  assert(remaining.ymin == 0 && remaining.ymax == 799);
 }
 ''')
     binary = tmp_path / "header_geometry"

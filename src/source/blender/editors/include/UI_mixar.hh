@@ -83,6 +83,10 @@ inline void mixar_label_center(
   mixar_label_left(text, x - mixar_text_width(text, style) * 0.5f, cy, style, color);
 }
 void mixar_button_tooltip_owned(Button *button, const char *text);
+/** The text set by #mixar_button_tooltip_owned, else null (QA inspection). */
+const char *mixar_button_tooltip_owned_text(const Button &button);
+/** Owned hover tooltip on every button in the layout's subtree. */
+void mixar_tooltip_layout(Layout *layout, const char *text);
 void mixar_button_lit_set(Button *button, bool lit);
 /** True when the context workspace is Mixar's dedicated Zen Mode tab. */
 bool mixar_workspace_is_zen(const bContext *C);
@@ -100,6 +104,13 @@ bool mixar_area_floats_viewport_chrome(const ScrArea *area);
  * Finds the region's area itself, so it also answers for callers without one.
  */
 bool mixar_region_is_zen_floating_tools(const ARegion *region);
+/**
+ * Zen's adaptive object/light bar host: the overlapping TOOL_HEADER of a Zen
+ * View3D. It spans the whole viewport so the bar can be dragged anywhere, but
+ * only its top toolbar band is chrome; the rest is transparent. Finds the
+ * region's area itself, so it also answers for callers without one.
+ */
+bool mixar_region_is_zen_adaptive_tool_header(const ARegion *region);
 /**
  * Keep the Zen pill at a fixed on-screen size. Its TOOLS region still carries
  * the stock "View2D Buttons List" keymap (trackpad pinch, ctrl+MMB, numpad

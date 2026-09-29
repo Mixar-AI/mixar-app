@@ -25,6 +25,7 @@ import bpy
 from ..constants import (
     AGENT_UNDO_GROUP_PER_TURN,
     AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN,
+    is_lane_scene,
     SCRIPT_TIMEOUT_THRESHOLD,
 )
 
@@ -97,18 +98,39 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         reset exactly once per turn.
         """
         if session_id not in self._turns:
-            self._turns[session_id] = [0, False]
+            # [checkpoints pushed, push failure logged, scripts ran]
+            self._turns[session_id] = [0, False, False]
             logger.debug("Agent turn started (%s)", session_id[:8])
 
     def end_agent_turn(self, session_id: Optional[str] = None) -> None:
-        """Signal the end of an agent turn. ``None`` ends every session's."""
+        """Signal the end of an agent turn. ``None`` ends every session's.
+
+        A turn that ran scripts closes with one more checkpoint: the state the
+        agent left. The pre-turn checkpoint alone makes the turn one-way — an
+        undo returns to it, but nothing captured the finished work, so a redo
+        has nothing to bring back (2026-09-29 lab). Every turn is now bracketed:
+        undo reverts it, redo reapplies it.
+        """
         if session_id is None:
             if self._turns:
+                ran = any(turn[2] for turn in self._turns.values())
                 self._turns.clear()
                 logger.debug("Agent turns ended (all)")
+                if ran:
+                    self._close_turn_checkpoint()
             return
-        if self._turns.pop(session_id, None) is not None:
+        turn = self._turns.pop(session_id, None)
+        if turn is not None:
             logger.debug("Agent turn ended (%s)", session_id[:8])
+            if turn[2]:
+                self._close_turn_checkpoint()
+
+    def _close_turn_checkpoint(self) -> None:
+        if self._window_on_lane_scene():
+            logger.debug("Closing undo checkpoint skipped: window pinned to a lane scene")
+            return
+        if not self._push_undo_checkpoint("Mixie Chat Turn"):
+            logger.warning("Closing undo checkpoint failed - the turn's work may not be redoable")
 
     def _should_push_undo(self, grouping: bool = None) -> bool:
         """Whether THIS script should push an undo checkpoint.
@@ -132,12 +154,24 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         limit = 1 if group_per_turn else AGENT_UNDO_MAX_CHECKPOINTS_PER_TURN
         return turn[0] < limit
 
-    def _push_undo_checkpoint(self) -> bool:
+    @staticmethod
+    def _window_on_lane_scene() -> bool:
+        """True while any window shows a worker lane scene (the routing pin
+        of a workspace script). Fail-open: no windows, no lane."""
+        try:
+            for window in bpy.context.window_manager.windows:
+                if is_lane_scene(getattr(window, "scene", None)):
+                    return True
+        except Exception:  # noqa: BLE001 — never block a script over a probe
+            return False
+        return False
+
+    def _push_undo_checkpoint(self, message: str = "Mixie Chat Script") -> bool:
         """Push an undo checkpoint; retry once inside an explicit window
         context (undo_push's poll fails when the script runs without one).
         Returns True only when a checkpoint was actually created."""
         try:
-            bpy.ops.ed.undo_push(message="Mixie Chat Script")
+            bpy.ops.ed.undo_push(message=message)
             return True
         except RuntimeError:
             pass
@@ -146,7 +180,7 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             if not windows:
                 return False
             with bpy.context.temp_override(window=windows[0]):
-                bpy.ops.ed.undo_push(message="Mixie Chat Script")
+                bpy.ops.ed.undo_push(message=message)
             return True
         except (RuntimeError, AttributeError):
             return False
@@ -203,8 +237,18 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         # _should_push_undo; a failed push never aborts the script — it is
         # logged once per turn and retried by the next script, where it used
         # to be silently swallowed (turns got NO checkpoint at all).
+        turn_record = self._turn()
+        if turn_record is not None:
+            turn_record[2] = True
         if push_undo and self._should_push_undo():
-            self._push_undo_for_script()
+            if self._window_on_lane_scene():
+                # The routing pin has the window on a worker lane: a memfile
+                # step written now records the lane as the CURRENT scene, so an
+                # undo landing on it would put the user inside the lane. Skip,
+                # uncounted: the next MAIN-pinned script pushes the checkpoint.
+                logger.debug("Undo checkpoint skipped: window pinned to a lane scene")
+            else:
+                self._push_undo_for_script()
 
         # Snapshot handlers before execution to detect additions
         handler_snapshot = self._snapshot_handlers()

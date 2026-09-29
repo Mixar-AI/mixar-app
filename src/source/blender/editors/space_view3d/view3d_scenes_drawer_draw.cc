@@ -69,8 +69,10 @@ namespace blender {
 namespace {
 
 /* Layout, unscaled UI units. */
-constexpr float HEADER_H = 40.0f;
 constexpr float SIDE_PAD = 12.0f;
+/* The header's pills keep the same inset from the panel's top edge as from its
+ * sides, so "+ New scene" sits square in the corner. */
+constexpr float HEADER_H = view3d_scenes_drawer::HEADER_ACTION_H + 2.0f * SIDE_PAD;
 constexpr float CARD_H = VIEW3D_SCENES_DRAWER_CARD_H;
 constexpr float CARD_GAP = VIEW3D_SCENES_DRAWER_CARD_GAP;
 constexpr float CARD_RADIUS = 10.0f;

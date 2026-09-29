@@ -71,10 +71,12 @@ class MIXAR_OT_refer_friend(Operator):
     def invoke(self, context, event):
         wm = context.window_manager
         low_credit.dismiss_toast()
+        # A link cached this session opens READY at once; load() revalidates.
         flow.reset(wm)
         flow.load()
-        # invoke_props_dialog (not invoke_popup) so the dialog keeps
-        # redrawing while the async load/send flips the state.
+        # invoke_props_dialog (not invoke_popup) so the dialog can be rebuilt:
+        # flow._redraw() tags its pop-up region when the async load/send
+        # flips the state. It does not redraw on its own.
         host = _dialog_host_window(context)
         if host is not None and host != context.window:
             with context.temp_override(window=host):

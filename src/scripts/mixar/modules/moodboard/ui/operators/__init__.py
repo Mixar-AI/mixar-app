@@ -12,6 +12,8 @@ Collection of operators for moodboard UI interactions.
 from . import (
     agent_auto_rig_ops,
     agent_segment_ops,
+    agent_video_gen_ops,
+    agent_video_upscale_ops,
     cancel_ops,
     detect_views_ops,
     imagegen_ops,
@@ -40,6 +42,8 @@ from . import (
 modules = (
     agent_auto_rig_ops,
     agent_segment_ops,
+    agent_video_gen_ops,
+    agent_video_upscale_ops,
     cancel_ops,
     detect_views_ops,
     imagegen_ops,

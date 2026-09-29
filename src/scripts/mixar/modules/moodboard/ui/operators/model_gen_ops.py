@@ -20,7 +20,7 @@ import base64 as _b64
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
-from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
+from mixar.modules.moodboard.core.model_gen_inputs import tab_input_images
 
 logger = get_logger(__name__)
 
@@ -84,13 +84,6 @@ class MIXIE_OT_model_gen_generate(Operator):
     bl_description = "Generate a 3D model using the selected mode and model"
     bl_options = {"REGISTER"}
 
-    def _get_input_image(self, context, tab):
-        """Input image from the shared image-source UI (or None)."""
-        scene = context.scene
-        if getattr(tab, 'use_selected_image', False):
-            return first_selected_reference_still(scene)
-        return getattr(tab, 'reference_image', None)
-
     def _turnaround_payload(self, context, image, service_key, model):
         """Multi-view payload fragment for the set *image* is the main of.
 
@@ -139,13 +132,7 @@ class MIXIE_OT_model_gen_generate(Operator):
         return fragment
 
     def execute(self, context):
-        from mixar.modules.common.generation_params import (
-            assemble_payload, collect_params, model_supports_multi_view,
-            resolve_service_key,
-        )
-        from mixar.modules.common.utils.image_utils import (
-            compress_for_service, compress_image_for_upload,
-        )
+        from mixar.modules.common.generation_params import resolve_service_key
 
         scene = context.scene
         sidebar = getattr(scene, 'mixie_moodboard_sidebar', None)
@@ -173,10 +160,39 @@ class MIXIE_OT_model_gen_generate(Operator):
             self.report({"ERROR"}, "Please wait for models to load")
             return {"CANCELLED"}
 
-        # --- Inputs (image shared by all modes; multi-view for models that
-        # advertise supports_multi_view, keyed per-model not per-service) ---
-        image = self._get_input_image(context, tab)
+        # --- Inputs: one job per input image (several selected board stills
+        # queue several models); no image is a prompt-only submit ---
+        images = tab_input_images(scene, tab) or [None]
         prompt = (getattr(tab, 'prompt', '') or '').strip() or None
+
+        queued = []
+        for image in images:
+            feature_key = self._submit(context, service_key, model, image, prompt)
+            if feature_key:
+                queued.append(feature_key)
+        if not queued:
+            return {"CANCELLED"}
+
+        from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
+            mark_enqueued,
+        )
+        mark_enqueued(queued[0])
+        self.report(
+            {"INFO"},
+            "Added to queue" if len(queued) == 1
+            else f"Added {len(queued)} models to queue",
+        )
+        return {"FINISHED"}
+
+    def _submit(self, context, service_key, model, image, prompt):
+        """Enqueue one job for *image*; its feature key, or None (reported)."""
+        from mixar.modules.common.generation_params import (
+            assemble_payload, collect_params, model_supports_multi_view,
+        )
+        from mixar.modules.common.utils.image_utils import (
+            compress_for_service, compress_image_for_upload,
+        )
+
         supports_mv = model_supports_multi_view(service_key, model)
 
         # --- Multiple Views: submit the whole set as ONE multi-view job ---
@@ -187,7 +203,7 @@ class MIXIE_OT_model_gen_generate(Operator):
         turnaround_payload = self._turnaround_payload(
             context, image, service_key, model)
         if turnaround_payload is False:
-            return {"CANCELLED"}
+            return None
 
         # Per-mode input validation (mirrors each legacy operator).
         if turnaround_payload:
@@ -198,15 +214,15 @@ class MIXIE_OT_model_gen_generate(Operator):
                     {"ERROR"},
                     "Provide at least one of: prompt, image, or multiple views",
                 )
-                return {"CANCELLED"}
+                return None
         elif service_key == "hunyuan_rapid":
             if not (image or prompt):
                 self.report({"ERROR"}, "Provide either a prompt or an image")
-                return {"CANCELLED"}
+                return None
         else:
             if not image:
                 self.report({"ERROR"}, "Please add an input image")
-                return {"CANCELLED"}
+                return None
 
         # --- Base payload (image / multi-view) ---
         payload = {}
@@ -220,7 +236,7 @@ class MIXIE_OT_model_gen_generate(Operator):
                     image_bytes = compress_image_for_upload(image)
             except Exception as e:
                 self.report({"ERROR"}, f"Failed to process image: {e}")
-                return {"CANCELLED"}
+                return None
             if image_bytes:
                 payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
                 payload["image_filename"] = "image.png"
@@ -278,17 +294,12 @@ class MIXIE_OT_model_gen_generate(Operator):
             )
             if not job:
                 self.report({"ERROR"}, "A duplicate generation is already queued")
-                return {"CANCELLED"}
+                return None
         except Exception as e:
             self.report({"ERROR"}, f"Failed to start generation: {e}")
-            return {"CANCELLED"}
+            return None
 
-        from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
-            mark_enqueued,
-        )
-        mark_enqueued(feature_key)
-        self.report({"INFO"}, "Added to queue")
-        return {"FINISHED"}
+        return feature_key
 
 
 classes = (
