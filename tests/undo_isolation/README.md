@@ -1,0 +1,32 @@
+# Per-tab undo: isolation lab (design M0)
+
+`undo_isolation_lab.py` runs INSIDE a built Mixar bundle, headless:
+
+```bash
+MIXAR_UNDO_LAB_EXPECT=document build/Dev/bin/Mixar.app/Contents/MacOS/Mixar \
+  --background --factory-startup --python tests/undo_isolation/undo_isolation_lab.py
+```
+
+It builds three scene tabs with disjoint datablocks (C manual, A and B agent-like with
+bracketed turns), interleaves their steps on the one undo stack, then undoes / redoes with
+the window on C and fingerprints every tab before and after each press. `report.json` lands
+in `MIXAR_UNDO_LAB_OUT` (default `/tmp/mixar-undo-lab`); one `M0 <probe> / <check>: PASS|FAIL`
+line per expectation.
+
+Two contracts: `document` (what a document-wide undo does: the press reverts A's newest
+turn and moves the window) and `isolation` (the per-tab design: only C moves, the window
+stays). `test_undo_isolation.py` runs both through pytest when a bundle exists (`MIXAR_APP`
+or `build/Dev`), `isolation` as a non-strict xfail until the flag ships.
+
+## 2026-09-29 finding: the fork crashes before the lab can measure anything
+
+On fork `feature/mixar-blastoff` (Blender 5.2.0 base) the lab segfaults in the depsgraph
+relation builder on the third probe (`build_world` on a freed World), and the minimal
+`probe_flip.py` (two scenes, one cube each, window switched between them, undo, redo)
+segfaults at the REDO in `build_material → build_animdata → BKE_animdata_from_id`.
+Stock Blender 4.2.21 runs `probe_flip.py` clean in both variants. No agents, no Python
+handlers, no lane scenes: a plain bpy script. This is the crash class behind the
+production Ctrl-Z crash of 2026-09-29 15:47, reduced to ten seconds. Evidence in
+`~/Downloads/per-tab-undo/lab-29-09/evidence/` (probe_flip.py, crash logs, the stock run).
+Until it is fixed the `document` contract cannot pass on the fork; the test records the
+crash as a failure on purpose.
