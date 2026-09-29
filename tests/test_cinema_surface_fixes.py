@@ -376,7 +376,9 @@ def test_mode_slider_uses_final_window_geometry():
     assert "view2d_scale_get_x" in body
     assert "BLI_rctf_translate(&left->rect" in body
     assert "BLI_rctf_translate(&right->rect" in body
-    assert "UI_HIDDEN" in body  # overflow tabs cannot cover the centered switch
+    # Overflow tabs cannot cover the centered switch: they collapse into the
+    # workspace dropdown (pinned by tests/test_workspace_tab_overflow.py).
+    assert "mixar_topbar_fit_workspace_tabs(C, block, limit)" in body
     source = (WORKFLOW / "ui/headers/mode_filter_header.py").read_text()
     assert "_centring_pad_px" not in source
     assert "MIXAR_MT_engine_workspaces" in source

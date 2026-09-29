@@ -171,4 +171,10 @@ void UI_mixar_profile_card_draw_element(
 namespace blender::ui {
 struct Block;
 void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *block);
+/**
+ * Fit Engine's workspace tabs, the New Workspace "+" and the overflow
+ * dropdown into the lane ending at \a limit (block space). Tabs that do not
+ * fit are hidden and handed to the dropdown's context; the active one stays.
+ */
+void mixar_topbar_fit_workspace_tabs(const bContext *C, Block *block, float limit);
 }
