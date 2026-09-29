@@ -2908,6 +2908,14 @@ static void read_undo_partial_keep_foreign_leftovers(FileData *fd)
     if (id_type->flags & IDTYPE_FLAGS_NO_MEMFILE_UNDO) {
       continue; /* moved already, before the read */
     }
+    if (id_type->id_code == ID_LI) {
+      /* A library that appeared after the step (the first sculpt-mode entry
+       * links the essentials brush library) is the library machinery's: its
+       * split Main is moved by #read_undo_libraries_preserve_never_undo_libraries
+       * when never-undo IDs use it. Moving the Library ID here as well linked it
+       * twice and left `blo_join_main` spinning on a cyclic list (M5). */
+      continue;
+    }
     ListBaseT<ID> *new_lb = which_libbase(new_bmain, id_type->id_code);
     ID *id_next = nullptr;
     for (ID *id = id_first; id != nullptr; id = id_next) {
