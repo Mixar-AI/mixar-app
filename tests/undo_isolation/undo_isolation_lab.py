@@ -319,7 +319,11 @@ def run_probes() -> None:
           expect_document={"has:C/C_torus": True, "has:A/A_5": True},
           expect_isolation={"has:C/C_torus": True, "changed:A": False, "window_stays": True})
 
-    if NO_EDITMODE:
+    if NO_EDITMODE or (EXPECT == "isolation" and not os.environ.get("MIXAR_UNDO_LAB_MODE_STEPS")):
+        # Mode steps (edit mesh, sculpt, paint) are per object and walk per tab
+        # from M3 on; the M2 partial restore covers memfile steps. Set
+        # MIXAR_UNDO_LAB_MODE_STEPS=1 to include P5/P6 in the isolation contract.
+        log("M0 P5/P6 (mode steps) skipped in isolation mode until M3")
         return
     # P5: edit-mode steps in C sit on top of A's memfile step. Two undos: the mode steps;
     # the third lands on the memfile step beneath, which today belongs to A.

@@ -77,6 +77,39 @@ void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const Un
 /** Free what #BKE_undo_step_tab_annotate attached. */
 void BKE_undo_step_tab_free(UndoStep *us);
 
+/* -------------------------------------------------------------------- */
+/* Partial restore (design M2).
+ *
+ * A per-tab undo restores ONE tab from a memfile step: IDs that tab owns are
+ * read as today, everything else keeps its live datablock, whatever the
+ * memfile says. The reader consults this process-wide state (undo is main
+ * thread only) instead of new fields on the upstream read parameters. */
+
+enum class UndoPartialDecision : int8_t {
+  /** Not partial, or the tab's own ID: the reader's normal undo paths. */
+  Restore = 0,
+  /** Another tab's, global or shared: keep the live datablock as-is. */
+  Keep = 1,
+  /** In the memfile, not live, not the tab's: do not read it at all. */
+  Skip = 2,
+};
+
+/** Arm a partial restore of ``tab_uid`` from a step whose owner map is
+ * ``step_owners`` (may be null: everything then keys off the live map). The
+ * live map is built here from ``bmain``. Returns false, with the names of
+ * the shared datablocks in ``r_reason``, when either map holds a shared ID:
+ * ownership fails closed. */
+bool BKE_undo_tabs_partial_begin(Main *bmain,
+                                 uint32_t tab_uid,
+                                 const UndoOwnerMap *step_owners,
+                                 std::string *r_reason);
+void BKE_undo_tabs_partial_end();
+bool BKE_undo_tabs_partial_active();
+uint32_t BKE_undo_tabs_partial_tab();
+/** The reader's per-ID question. ``has_live`` = a datablock with that
+ * session_uid exists in the old Main. */
+UndoPartialDecision BKE_undo_tabs_partial_decide(uint32_t session_uid, bool has_live);
+
 /** JSON array of the stack's steps, newest first, for the harness:
  * name, type, tab_uid, current (the window scene's tab), skip, active,
  * memfile, owners, shared, shared_names, owner_map_ms. */

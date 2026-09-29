@@ -85,6 +85,7 @@
 #include "BKE_library.hh"
 #include "BKE_main.hh" /* for Main */
 #include "BKE_main_idmap.hh"
+#include "BKE_undo_tabs.hh"
 #include "BKE_main_invariants.hh"
 #include "BKE_main_namemap.hh"
 #include "BKE_material.hh"
@@ -2882,6 +2883,53 @@ static void read_undo_tag_all_noundo_ids(FileData *fd)
  * practice they need to be handled separately, to ensure that their order in the new bmain list
  * matches the one from the read blend-file. Reading linked 'placeholder' entries in a memfile
  * relies on current library being the last item in the new main list. */
+/**
+ * Mixar per-tab undo (M2): after the memfile's IDs were read, the old Main
+ * still holds every live ID the memfile did not mention. For a whole-document
+ * undo they die with the old Main. For a partial restore of one tab, only that
+ * tab's may die (it created them after the step); everything else is moved
+ * into the new Main untouched, the way the no-undo types are.
+ */
+static void read_undo_partial_keep_foreign_leftovers(FileData *fd)
+{
+  Main *new_bmain = fd->bmain;
+  Main *old_bmain = fd->old_bmain;
+  BLI_assert(old_bmain->curlib == nullptr);
+  int kept = 0;
+  MainListsArray lbarray = BKE_main_lists_get(*old_bmain);
+  int i = lbarray.size();
+  while (i--) {
+    ListBaseT<ID> *old_lb = lbarray[i];
+    if (BLI_listbase_is_empty(old_lb)) {
+      continue;
+    }
+    ID *id_first = static_cast<ID *>(old_lb->first);
+    const IDTypeInfo *id_type = BKE_idtype_get_info_from_id(id_first);
+    if (id_type->flags & IDTYPE_FLAGS_NO_MEMFILE_UNDO) {
+      continue; /* moved already, before the read */
+    }
+    ListBaseT<ID> *new_lb = which_libbase(new_bmain, id_type->id_code);
+    ID *id_next = nullptr;
+    for (ID *id = id_first; id != nullptr; id = id_next) {
+      id_next = static_cast<ID *>(id->next);
+      if (BKE_undo_tabs_partial_decide(id->session_uid, true) == UndoPartialDecision::Restore) {
+        continue; /* the tab's own: created after the step, dies with the old Main */
+      }
+      BLI_remlink(old_lb, id);
+      BLI_addtail(new_lb, id);
+      id->tag |= ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED;
+      id->newid = nullptr;
+      id->orig_id = nullptr;
+      BKE_main_idmap_insert_id(fd->new_idmap_uid, id);
+      if (new_bmain->id_map != nullptr) {
+        BKE_main_idmap_insert_id(new_bmain->id_map, id);
+      }
+      kept++;
+    }
+  }
+  CLOG_DEBUG(&LOG_UNDO, "UNDO(tab): %d foreign datablocks kept across the restore", kept);
+}
+
 static void read_undo_reuse_noundo_local_ids(FileData *fd)
 {
   Main *new_bmain = fd->bmain;
@@ -3346,6 +3394,40 @@ static bool read_libblock_undo_restore(
     return true;
   }
 
+  /* Mixar per-tab undo (M2): a partial restore of one tab. IDs that tab does
+   * not own keep their live datablock whatever the memfile says (the same
+   * path as an unchanged ID); one with no live counterpart is not read at
+   * all — it is not this tab's to bring back. */
+  /* The "identical chunk" shortcut below is only valid between ADJACENT memfile
+   * steps: the flags are computed at write time against the neighbouring step,
+   * and a document-wide history jump decodes every step in between. A per-tab
+   * walk jumps straight to its target, so for the tab's own IDs the live
+   * datablock may differ from the target however the flags read; they are
+   * always re-read (in place when live). */
+  bool force_reread = false;
+  if (do_partial_undo && BKE_undo_tabs_partial_active()) {
+    const UndoPartialDecision decision = BKE_undo_tabs_partial_decide(id->session_uid,
+                                                                       id_old != nullptr);
+    force_reread = (decision == UndoPartialDecision::Restore);
+    if (decision == UndoPartialDecision::Keep) {
+      CLOG_DEBUG(&LOG_UNDO,
+                 "UNDO(tab): keep %s (uid %u) -> another tab's / global, kept as-is",
+                 id->name,
+                 id->session_uid);
+      read_libblock_undo_restore_identical(fd, main, id, id_old, bhead, id_tag);
+      *r_id_old = id_old;
+      return true;
+    }
+    if (decision == UndoPartialDecision::Skip) {
+      CLOG_DEBUG(&LOG_UNDO,
+                 "UNDO(tab): skip %s (uid %u) -> not live, not this tab's",
+                 id->name,
+                 id->session_uid);
+      *r_id_old = nullptr;
+      return true;
+    }
+  }
+
   if (!do_partial_undo) {
     CLOG_DEBUG(&LOG_UNDO,
                "UNDO: read %s (uid %u) -> no partial undo, always read at new address",
@@ -3355,7 +3437,7 @@ static bool read_libblock_undo_restore(
   }
 
   /* Restore local datablocks. */
-  if (id_old != nullptr && read_libblock_is_identical(fd, bhead)) {
+  if (id_old != nullptr && !force_reread && read_libblock_is_identical(fd, bhead)) {
     /* Local datablock was unchanged, restore from the old main. */
     CLOG_DEBUG(&LOG_UNDO,
                "UNDO: read %s (uid %u) -> keep identical data-block",
@@ -4297,6 +4379,9 @@ BlendFileData *blo_read_file_internal(FileData *fd, const char *filepath)
     }
   }
 
+  if (is_undo && BKE_undo_tabs_partial_active()) {
+    read_undo_partial_keep_foreign_leftovers(fd);
+  }
   if (is_undo) {
     /* Move remaining libraries containing 'no undo' IDs from old to new Main. */
     read_undo_libraries_preserve_never_undo_libraries(fd);

@@ -65,6 +65,7 @@
 #include "BKE_screen.hh"
 #include "BKE_studiolight.h"
 #include "BKE_undo_system.hh"
+#include "BKE_undo_tabs.hh"
 #include "BKE_workspace.hh"
 
 #include "BLO_read_write.hh"
@@ -1075,6 +1076,15 @@ static void setup_app_data(bContext *C,
     curscreen = CTX_wm_screen(C);
 
     track_undo_scene = (mode == LOAD_UNDO && curscreen && curscene && bfd->main->wm.first);
+    /* Mixar per-tab undo (M2): a partial restore never moves the window; the
+     * memfile's "current scene" is the tab an agent had pinned when the step
+     * was written, not where the user is. */
+    if (track_undo_scene && BKE_undo_tabs_partial_active()) {
+      track_undo_scene = false;
+      if (win && win->scene) {
+        curscene = win->scene;
+      }
+    }
 
     if (track_undo_scene) {
       /* Keep the old (to-be-freed) scene, remapping below will ensure it's remapped to the

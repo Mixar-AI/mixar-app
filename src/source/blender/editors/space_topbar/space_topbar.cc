@@ -276,7 +276,11 @@ static void undo_history_draw_menu(const bContext *C, Menu *menu)
     if (!(undo_step_count % col_size)) {
       column = &split.column(false);
     }
-    const bool is_active = (us == wm->runtime->undo_stack->step_active);
+    /* Mixar per-tab undo: the marker is the tab's cursor, the step this tab
+     * currently reflects, not the document's active step. */
+    const UndoStep *active_step = per_tab ? BKE_undosys_tab_cursor(wm->runtime->undo_stack, current_tab) :
+                                            wm->runtime->undo_stack->step_active;
+    const bool is_active = (us == active_step);
     ui::Layout &row = column->row(false);
     row.enabled_set(!is_active);
     PointerRNA op_ptr = row.op("ED_OT_undo_history",

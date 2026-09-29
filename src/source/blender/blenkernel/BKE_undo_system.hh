@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 /** \file
  * \ingroup bke
@@ -73,6 +74,12 @@ struct UndoStack {
    * within which all but the last undo-step is marked for skipping.
    */
   int group_level;
+
+  /* Mixar per-tab undo (M2): per tab, the step whose state that tab currently
+   * reflects; a tab with no entry is at the top. `blender::Map<uint32_t,
+   * UndoStep *> *`, allocated lazily, owned by the stack. `step_active` stays
+   * at the top while tabs walk their own history. */
+  void *mixar_tab_cursors;
 };
 
 struct UndoStep {
@@ -320,6 +327,19 @@ bool BKE_undosys_step_undo_with_data(UndoStack *ustack, bContext *C, UndoStep *u
  * Undo one step from current active (currently loaded) one.
  */
 bool BKE_undosys_step_undo(UndoStack *ustack, bContext *C);
+
+/* Mixar per-tab undo (M2). Walk ONE tab's history: undo restores the tab from
+ * the newest step tagged with it before the tab's cursor, redo from the next
+ * one after; other tabs' datablocks, the window and the screens are never
+ * touched (BKE_undo_tabs.hh, the partial restore). `r_reason` receives why a
+ * walk did nothing ("nothing to undo in this tab", shared datablocks, an
+ * unsupported step type). */
+bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, uint32_t tab_uid, std::string *r_reason);
+bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, uint32_t tab_uid, std::string *r_reason);
+/** The step a tab currently reflects (its cursor), or `step_active` when it is at the top. */
+UndoStep *BKE_undosys_tab_cursor(UndoStack *ustack, uint32_t tab_uid);
+/** True while the tab's cursor is behind its newest step (a redo is available for it). */
+bool BKE_undosys_tab_has_redo(UndoStack *ustack, uint32_t tab_uid);
 
 /**
  * Redo until `us_target` step becomes the active (currently loaded) one.

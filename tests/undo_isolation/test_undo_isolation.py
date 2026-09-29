@@ -6,10 +6,9 @@
 
 Skipped unless a bundle is found: ``MIXAR_APP`` (path to ``Mixar.app`` or
 its ``MacOS/Mixar`` binary) or the repo's own ``build/Dev/bin/Mixar.app``.
-The ``document`` contract is what the current build does and must keep
-doing until the per-tab undo flag ships; the ``isolation`` contract is the
-target and is expected to fail until then (``xfail``, not strict, so the day
-it passes shows up as XPASS rather than breaking the run).
+The ``document`` contract is what the build does with ``MIXAR_PER_TAB_UNDO``
+off (whole-document undo); the ``isolation`` contract is what it does with
+the flag on (M2: a press in a tab restores that tab only). Both must pass.
 """
 
 from __future__ import annotations
@@ -44,11 +43,12 @@ BINARY = _binary()
 pytestmark = pytest.mark.skipif(BINARY is None, reason="no Mixar bundle (set MIXAR_APP or build build/Dev)")
 
 
-def run_lab(expect: str, tmp_path: pathlib.Path) -> dict:
-    # MIXAR_PER_TAB_UNDO=1 turns on the M1 tagging/owner-map view so the lab's M1
-    # probes run; the restore is unchanged by it until M2.
-    env = dict(os.environ, MIXAR_UNDO_LAB_EXPECT=expect, MIXAR_UNDO_LAB_OUT=str(tmp_path),
-               MIXAR_PER_TAB_UNDO="1")
+def run_lab(expect: str, tmp_path: pathlib.Path, per_tab: bool) -> dict:
+    env = dict(os.environ, MIXAR_UNDO_LAB_EXPECT=expect, MIXAR_UNDO_LAB_OUT=str(tmp_path))
+    # The flag changes what a press does (M2): the document contract runs with it
+    # OFF (today's whole-document undo), the isolation contract with it ON. The
+    # flag also turns on the M1 tagging/owner-map view the lab's M1 probes read.
+    env["MIXAR_PER_TAB_UNDO"] = "1" if per_tab else ""
     proc = subprocess.run(
         [str(BINARY), "--background", "--factory-startup", "--python", str(LAB)],
         env=env, capture_output=True, text=True, timeout=300,
@@ -62,16 +62,15 @@ def run_lab(expect: str, tmp_path: pathlib.Path) -> dict:
     return report
 
 
-def test_document_wide_undo_is_what_the_build_does_today(tmp_path):
-    report = run_lab("document", tmp_path)
+def test_document_wide_undo_is_what_the_build_does_without_the_flag(tmp_path):
+    report = run_lab("document", tmp_path, per_tab=False)
     failed = [v for v in report["verdicts"] if not v["ok"]]
     assert not failed, failed
     assert report["returncode"] == 0
 
 
-@pytest.mark.xfail(reason="per-tab undo not built yet (design M2+)", strict=False)
-def test_per_tab_isolation(tmp_path):
-    report = run_lab("isolation", tmp_path)
+def test_per_tab_isolation_with_the_flag(tmp_path):
+    report = run_lab("isolation", tmp_path, per_tab=True)
     failed = [v for v in report["verdicts"] if not v["ok"]]
     assert not failed, failed
     assert report["returncode"] == 0
