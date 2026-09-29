@@ -155,10 +155,31 @@ uint32_t BKE_undo_tab_uid_for_scene(Main *bmain, Scene *scene)
   return parent != nullptr ? parent->id.session_uid : UNDO_TAB_DOCUMENT;
 }
 
+/** The scene the active window shows: what a push with no context at all can
+ * still be attributed to (a sculpt stroke ends its step with a null context
+ * and the stack's active step may be another tab's; an internal memfile push
+ * before a mode step belongs with that step). */
+static Scene *shown_scene(Main *bmain)
+{
+  wmWindowManager *wm = (bmain != nullptr) ? static_cast<wmWindowManager *>(bmain->wm.first) :
+                                             nullptr;
+  if (wm == nullptr) {
+    return nullptr;
+  }
+  wmWindow *win = (wm->runtime != nullptr && wm->runtime->winactive != nullptr) ?
+                      wm->runtime->winactive :
+                      static_cast<wmWindow *>(wm->windows.first);
+  return (win != nullptr) ? win->scene : nullptr;
+}
+
 uint32_t BKE_undo_tab_uid_from_context(bContext *C)
 {
   if (C == nullptr) {
-    return UNDO_TAB_DOCUMENT;
+    /* M5: a push with no context (sculpt's push_end, the kernel's internal
+     * memfile pushes) belongs to the shown tab, never to whichever tab pushed
+     * last: the seven-tab soak tagged a user's brush stroke with an agent's
+     * tab that way, and the tab's undo then took the wrong step back. */
+    return BKE_undo_tab_uid_for_scene(G_MAIN, shown_scene(G_MAIN));
   }
   /* The context scene first: it honours a Python `temp_override(scene=...)`,
    * which is how the agent executor pushes a checkpoint for ITS tab while the
@@ -175,14 +196,7 @@ uint32_t BKE_undo_tab_uid_from_context(bContext *C)
     /* A push from a context with no scene and no window (a script run from a
      * timer, a job callback): the shown tab, which is what the executor's
      * routing pin puts on the window for an agent's script. */
-    wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
-    wmWindow *win = nullptr;
-    if (wm != nullptr) {
-      win = (wm->runtime != nullptr && wm->runtime->winactive != nullptr) ?
-                wm->runtime->winactive :
-                static_cast<wmWindow *>(wm->windows.first);
-    }
-    scene = (win != nullptr) ? win->scene : nullptr;
+    scene = shown_scene(bmain);
     CLOG_WARN(&LOG,
               "undo push with no context scene: tagged with the shown tab '%s'",
               scene ? scene->id.name + 2 : "(none)");
