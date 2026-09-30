@@ -63,7 +63,11 @@ namespace blender::ui {
 void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *block)
 {
   const ScrArea *area = C ? CTX_wm_area(C) : nullptr;
+  /* Only the topbar's own header: a popup opened from it (the splash from the
+   * Mixar icon) keeps the topbar as context area, and centring its Zen/Engine
+   * buttons would move them out of the popup. */
   if (!area || area->spacetype != SPACE_TOPBAR || !region ||
+      region->regiontype != RGN_TYPE_HEADER ||
       RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_RIGHT)
   {
     return;

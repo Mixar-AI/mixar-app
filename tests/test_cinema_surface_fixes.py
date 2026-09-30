@@ -385,6 +385,16 @@ def test_mode_slider_uses_final_window_geometry():
     assert "MIXAR_PT_scene_controls" in source
 
 
+def test_mode_slider_centring_skips_popups_opened_from_the_topbar():
+    # The splash opened from the Mixar icon keeps the topbar as its context
+    # area; centring its Zen/Engine buttons moved them out of the popup and
+    # left "Choose Your Mode" empty. Only the topbar's own header centres.
+    body = TOPBAR[TOPBAR.index("void mixar_topbar_center_mode_slider("):]
+    guard = body[: body.index("Button *left")]
+    assert "region->regiontype != RGN_TYPE_HEADER" in guard
+    assert "return;" in guard
+
+
 # -------------------------------------------------------------------------
 # 10. Topbar state comes from the payload, never from the press flag.
 
