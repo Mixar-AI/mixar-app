@@ -28,6 +28,11 @@
 #include "ED_mixar_undo.hh"
 #include "ED_undo.hh"
 
+#ifndef RNA_RUNTIME
+#  include "rna_internal_types.hh" /* brna->structs_map */
+#endif
+
+/* Every include stays above the wrap (see rna_wm_mixar.cc). */
 namespace blender {
 
 #ifdef RNA_RUNTIME
