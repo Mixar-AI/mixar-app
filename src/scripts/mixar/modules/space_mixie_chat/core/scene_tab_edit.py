@@ -46,6 +46,13 @@ def rename_scene_tab(scene, name):
         renumber_tabs(tabs)
     except (RuntimeError, TypeError, AttributeError):
         return False, 'This scene cannot be renamed'
+    # The name is document content: without a step of its own, the tab's next
+    # undo re-reads the Scene from an older step and the rename is gone, and
+    # redo cannot bring it back (bonkers campaign seed 2, 2026-09-30). One
+    # memfile step, in the RENAMED tab's history (the drawer's window may show
+    # another tab), as the outliner's rename gives a stock scene.
+    from mixar.modules.common.utils.undo import push_undo_step
+    push_undo_step(f"Rename tab: {scene.name}", scene=scene)
     return True, ''
 
 

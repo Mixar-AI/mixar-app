@@ -305,6 +305,19 @@ def test_manual_rename_keeps_identity_chat_and_order(rig):
     assert b.get('mixar_scene_name_manual') is True
 
 
+def test_rename_pushes_one_undo_step_for_the_renamed_tab(rig, monkeypatch):
+    """Seed 2 of the bonkers campaign: a rename without a step vanished on the
+    tab's next undo and redo could not bring it back."""
+    from mixar.modules.common.utils import undo as undo_mod
+    pushes = []
+    monkeypatch.setattr(undo_mod, "push_undo_step", lambda message, scene=None: pushes.append((message, scene)) or True)
+    b = ops.new_scene_tab("B")
+    assert edit.rename_scene_tab(b, "Lamp") == (True, '')
+    assert pushes == [("Rename tab: Lamp", b)]
+    assert edit.rename_scene_tab(b, "Lamp") == (True, '')        # no change, no step
+    assert len(pushes) == 1
+
+
 def test_rename_refuses_empty_and_running_scene(rig):
     assert edit.rename_scene_tab(rig.a, ' ')[0] is False
     SessionManager.set_state(rig.a, SessionState.BUSY)
