@@ -45,6 +45,13 @@ class SessionInputMixin:
         if not self.running or self._end_requested:
             return "PASS_THROUGH"
         et, val = event.type, event.value
+        if self._loading:
+            # No runner yet: Escape gives up the wait and leaves the tour
+            # unseen (offered again); everything else passes through.
+            if val == "PRESS" and et == "ESC":
+                self.stop("cancelled")
+                return "RUNNING_MODAL"
+            return "PASS_THROUGH"
         mx, my = event.mouse_x, event.mouse_y
 
         if self.exit_confirm:

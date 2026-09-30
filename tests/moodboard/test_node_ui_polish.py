@@ -72,6 +72,29 @@ def test_sockets_draw_type_color_occupancy_and_labels():
     assert "moodboard_draw_socket_label" in draw
 
 
+def test_socket_label_rasterizes_at_screen_size_so_zoom_never_blurs_it():
+    """The label font is sized in screen pixels and drawn 1:1.
+
+    Sizing it in canvas units (px / zoom) made BLF rasterize a ~3 px font at
+    high zoom and the view matrix scaled that bitmap up into a smear.
+    """
+    painters = _read(SPACE_MIXIE / "mixie_draw_moodboard_graph_sockets.cc")
+    body = painters[painters.index("void moodboard_draw_socket_label("):]
+    body = body[: body.index("\n}\n") + 3]
+    font = re.search(
+        r"static float socket_label_font_px\(View2D \*v2d\)\s*\{(.*?)\n\}",
+        painters,
+        re.S,
+    )
+    assert font, "the socket label font-size helper is missing"
+    assert "/ zoom" not in font.group(1), "the label font must not shrink with zoom"
+    # The canvas zoom is undone locally around the socket, pixel-snapped.
+    assert "GPU_matrix_push();" in body and "GPU_matrix_pop();" in body
+    assert "GPU_matrix_scale_2f(1.0f / scale_x, 1.0f / scale_y);" in body
+    assert "roundf(region_x)" in body and "roundf(region_y)" in body
+    assert body.index("GPU_matrix_scale_2f") < body.index("BLF_draw(")
+
+
 def test_socket_occupancy_comes_from_the_shared_cache():
     geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_geometry.cc")
     header = _read(SPACE_MIXIE / "mixie_intern.hh")

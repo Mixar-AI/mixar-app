@@ -134,10 +134,18 @@ def run(qa):
     qa.eval('result=str(bpy.ops.mixar.bubble_restore())')
     qa.wait("bool(drv.find(area_type='AGENT_BUBBLE',text='Generation queue'))",timeout=10)
     qa.click(area_type='AGENT_BUBBLE',text='Generation queue')
-    before = attachments(qa)
-    qa.step('queue_drop_does_not_attach_to_hidden_chat', batch_drop, qa, [portrait], queue=True)
-    assert attachments(qa) == before
-    qa.click(area_type='AGENT_BUBBLE',text='Agent chat')
+    # An Explorer/Finder drop on a pane tab is a chat reference too: release
+    # shows the Agent composer, attaches the file and boards it.
+    before, board_before = attachments(qa), board(qa)
+    fresh = png(out/'pane-drop.png',(210,180,60),width=320,height=200)
+    qa.step('pane_tab_drop_attaches_and_boards', batch_drop, qa, [fresh], queue=True)
+    qa.wait("bpy.context.window_manager.mixar_bubble_tab=='AGENT'",timeout=6)
+    after = attachments(qa)
+    assert len(after) == len(before) + 1 and Path(after[-1]['path']).name == fresh.name, after
+    assert len(board(qa)) == len(board_before) + 1
+    assert fresh.name in {Path(i['path']).name for i in board(qa)}
+    snap_chat(qa,out,'pane-drop')
+    qa.press('ESC')
 
     extra = [png(out/f'extra-{i}.png',(100+i*20,100,160)) for i in range(10)]
     qa.step('batch_respects_attachment_limit', batch_drop, qa, extra, chat=True)
@@ -146,7 +154,7 @@ def run(qa):
     snap_chat(qa,out,'attachment-limit')
     result = {'mixed_batch_nonoverlap':True,'full_paths_preserved':True,
               'invalid_files_rejected':True,'webp':True,'board_chat_dedupe':True,
-              'queue_drop_isolated':True,'attachment_cap':10,'batch_bounds':bounds,'paid_requests':0}
+              'pane_drop_attaches_and_boards':True,'attachment_cap':10,'batch_bounds':bounds,'paid_requests':0}
     (out/'reference-drop-verdict.json').write_text(json.dumps(result,indent=2)+'\n')
     return result
 
