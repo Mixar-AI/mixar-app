@@ -54,6 +54,7 @@ namespace blender {
  * Defined in rna_wm_mixar.cc — not declared in rna_internal.hh
  * because that header is upstream and Mixar avoids overlaying it. */
 void RNA_def_wm_mixar(BlenderRNA *brna);
+void RNA_def_wm_mixar_undo(BlenderRNA *brna);
 
 static CLG_LogRef LOG = {"makesrna"};
 
@@ -4145,6 +4146,7 @@ static RNAProcessItem PROCESS_ITEMS[] = {
     /* Mixar: ``Window.global_areas`` extension. Must come AFTER
      * ``rna_wm.cc`` so ``RNA_struct_find(brna, "Window")`` resolves. */
     {"rna_wm_mixar.cc", nullptr, RNA_def_wm_mixar},
+    {"rna_wm_mixar_undo.cc", nullptr, RNA_def_wm_mixar_undo},
     {"rna_wm_gizmo.cc", "rna_wm_gizmo_api.cc", RNA_def_wm_gizmo},
     {"rna_workspace.cc", "rna_workspace_api.cc", RNA_def_workspace},
     {"rna_world.cc", nullptr, RNA_def_world},
@@ -4202,10 +4204,11 @@ static void rna_generate(BlenderRNA *brna, FILE *f, const char *filename, const 
 
   /* Mixar's WM extension owns no structs: its runtime helpers belong only
    * in rna_wm_gen.cc, alongside the Window/WindowManager property wrappers. */
-  if (filename && !STREQ(filename, "rna_wm_mixar.cc")) {
+  if (filename && !STREQ(filename, "rna_wm_mixar.cc") && !STREQ(filename, "rna_wm_mixar_undo.cc")) {
     fprintf(f, "#include \"%s\"\n", filename);
     if (STREQ(filename, "rna_wm.cc")) {
       fprintf(f, "#include \"rna_wm_mixar.cc\"\n");
+      fprintf(f, "#include \"rna_wm_mixar_undo.cc\"\n");
     }
   }
   if (api_filename) {

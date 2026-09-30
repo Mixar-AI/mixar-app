@@ -99,6 +99,7 @@ set(DEFSRC
   # Mixar: extends Window with global_areas collection so Python can
   # access the topbar / statusbar areas (see rna_wm_mixar.cc).
   rna_wm_mixar.cc
+  rna_wm_mixar_undo.cc
   rna_wm_gizmo.cc
   rna_workspace.cc
   rna_world.cc
