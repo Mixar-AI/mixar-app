@@ -102,7 +102,9 @@ void ED_undo_group_end(bContext *C)
   BKE_undosys_stack_group_end(wm->runtime->undo_stack);
 }
 
-void ED_undo_push(bContext *C, const char *str)
+/* Mixar: `type` forces the step type (a tab checkpoint is a memfile step
+ * whatever the context is in), nullptr keeps the context's choice. */
+static eUndoPushReturn ed_undo_push_ex(bContext *C, const char *str, const UndoType *type)
 {
   CLOG_INFO(&LOG, "Push '%s'", str);
   WM_file_tag_modified();
@@ -113,7 +115,7 @@ void ED_undo_push(bContext *C, const char *str)
      * otherwise allow it to be nullptr, see: #60934.
      * Otherwise it must never be nullptr, even when undo is disabled. */
     if (wm->runtime->undo_stack == nullptr) {
-      return;
+      return UNDO_PUSH_RET_FAILURE;
     }
   }
 
@@ -131,7 +133,7 @@ void ED_undo_push(bContext *C, const char *str)
     steps = 1;
   }
   if (steps <= 0) {
-    return;
+    return UNDO_PUSH_RET_FAILURE;
   }
 
   eUndoPushReturn push_retval;
@@ -143,7 +145,10 @@ void ED_undo_push(bContext *C, const char *str)
     BKE_undosys_stack_limit_steps_and_memory(wm->runtime->undo_stack, steps - 1, 0);
   }
 
-  push_retval = BKE_undosys_step_push(wm->runtime->undo_stack, C, str);
+  /* A step a mode initialised (sculpt, paint) keeps its own type. */
+  push_retval = (type != nullptr && wm->runtime->undo_stack->step_init == nullptr) ?
+                    BKE_undosys_step_push_with_type(wm->runtime->undo_stack, C, str, type) :
+                    BKE_undosys_step_push(wm->runtime->undo_stack, C, str);
 
   if (U.undomemory != 0) {
     const size_t memory_limit = size_t(U.undomemory) * 1024 * 1024;
@@ -157,6 +162,17 @@ void ED_undo_push(bContext *C, const char *str)
   if (push_retval & UNDO_PUSH_RET_OVERRIDE_CHANGED) {
     WM_main_add_notifier(NC_WM | ND_LIB_OVERRIDE_CHANGED, nullptr);
   }
+  return push_retval;
+}
+
+void ED_undo_push(bContext *C, const char *str)
+{
+  ed_undo_push_ex(C, str, nullptr);
+}
+
+bool ED_undo_push_memfile(bContext *C, const char *str)
+{
+  return (ed_undo_push_ex(C, str, BKE_UNDOSYS_TYPE_MEMFILE) & UNDO_PUSH_RET_SUCCESS) != 0;
 }
 
 /**
@@ -278,6 +294,11 @@ static wmOperatorStatus ed_undo_step_direction(bContext *C,
       if (!ok) {
         ed_undo_step_post(C, wm, step, reports);
         BKE_reportf(reports, RPT_INFO, "%s", reason.c_str());
+        CLOG_WARN(&LOG,
+                  "per-tab %s refused in '%s': %s",
+                  (step == STEP_UNDO) ? "undo" : "redo",
+                  win->scene->id.name + 2,
+                  reason.c_str());
         return OPERATOR_CANCELLED;
       }
       done = true;

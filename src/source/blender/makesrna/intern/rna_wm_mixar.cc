@@ -55,6 +55,7 @@
 #include "BKE_undo_tabs.hh"
 #include "BKE_context.hh"
 #include "DNA_scene_types.h"
+#include "ED_mixar_undo.hh"
 #include "ED_undo.hh"
 
 #ifdef RNA_RUNTIME
@@ -187,9 +188,12 @@ static bool rna_WindowManager_mixar_undo_push(wmWindowManager * /*wm*/,
                            blender::BKE_undo_tab_uid_for_scene(CTX_data_main(C), scene) :
                            blender::UNDO_TAB_DOCUMENT;
   blender::BKE_undo_tabs_push_override_set(tab);
-  blender::ED_undo_push(C, message);
+  /* The tab's checkpoint is a memfile step whatever the window shows; the
+   * return value says whether a step was really added (undo steps at zero,
+   * no stack in background mode). */
+  const bool pushed = blender::ED_undo_push_memfile(C, message);
   blender::BKE_undo_tabs_push_override_set(blender::UNDO_TAB_DOCUMENT);
-  return true;
+  return pushed;
 }
 
 /* Defined in windowmanager/intern/wm_{event_system,window}.cc (Mixar overlay). */
