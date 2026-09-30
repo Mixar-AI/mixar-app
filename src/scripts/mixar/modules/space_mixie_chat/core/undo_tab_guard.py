@@ -145,13 +145,18 @@ def cancel_orphaned_runs(saved_runs: dict[str, str], live_session_ids: Iterable[
 
 # -- Live state (undo_pre / undo_post) -----------------------------------------
 
-LIVE_PROPS = ("mixie_chat_state", "mixie_run_open", "mixie_run_id", "mixie_session_id")
+LIVE_PROPS = ("mixie_chat_state", "mixie_run_open", "mixie_run_id", "mixie_session_id",
+              "mixie_checkpoint_session_id",
+              # the signed-in identity a new tab inherits (scene_tab_ops.ACCOUNT_PROPS)
+              "mixie_chat_user_id", "mixie_chat_credits", "mixie_chat_model")
 """A tab's connection truth, not document content. A memfile step is written
 while the tab's agent is BUSY, so restoring the Scene datablock from it reads
 that state back into a tab whose run is long over: the tab then reads BUSY with
 no run, the per-tab hold refuses its undo and redo, and nothing flips it back
-(bonkers campaign seed 2, 2026-09-30). The values a scene had the instant
-before the walk are the truth; they are written back afterwards."""
+(bonkers campaign seed 2, 2026-09-30). The signed-in identity rides on the scene
+too: a walk to a step older than the login emptied the header's email pill for
+that tab (seed 6, seen live). The values a scene had the instant before the
+walk are the truth; they are written back afterwards."""
 
 
 def snapshot_live_state(scenes: Iterable) -> dict[int, dict]:

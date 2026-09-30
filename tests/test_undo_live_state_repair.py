@@ -20,9 +20,10 @@ if _SRC_SCRIPTS not in sys.path:
 from mixar.modules.space_mixie_chat.core import undo_tab_guard as guard  # noqa: E402
 
 
-def _scene(uid, name, state="IDLE", run=False, sid="sess", run_id=""):
+def _scene(uid, name, state="IDLE", run=False, sid="sess", run_id="", email="me@mixar.app"):
     return SimpleNamespace(session_uid=uid, name=name, mixie_chat_state=state, mixie_run_open=run,
-                           mixie_run_id=run_id, mixie_session_id=sid)
+                           mixie_run_id=run_id, mixie_session_id=sid, mixie_chat_user_id=email,
+                           mixie_chat_credits=42, mixie_chat_model="default")
 
 
 def test_a_finished_tab_read_busy_by_the_walk_is_idle_again():
@@ -65,3 +66,14 @@ def test_lane_scenes_are_left_alone():
                            mixie_run_id="", mixie_session_id="agentlane:x")
     assert guard.snapshot_live_state([lane]) == {}
     assert guard.restore_live_state([lane], {}, {}) == []
+
+
+def test_the_signed_in_identity_survives_a_walk_older_than_the_login():
+    """Seen live (seed 6): the manual tab undone to Original lost its email and
+    the header showed the avatar alone; every other tab still had it."""
+    saved = guard.snapshot_live_state([_scene(26, "Scene", email="satyam@mixar.app")])
+    after = _scene(26, "Scene", email="")
+    after.mixie_chat_credits = 0
+    guard.restore_live_state([after], saved, saved_runs={})
+    assert after.mixie_chat_user_id == "satyam@mixar.app"
+    assert after.mixie_chat_credits == 42
