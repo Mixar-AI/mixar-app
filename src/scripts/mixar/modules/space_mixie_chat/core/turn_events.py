@@ -300,9 +300,11 @@ def _apply(scene, turn, payload):
     processor = get_event_processor()
     if payload.get('type') == 'turn_end':
         status = payload.get('status')
+        # `cancelled` passes through so a stopped run closes without the
+        # completion sound; every other end reads as the run completing.
         processor._handle_typed_payload({'type': 'run_status',
             'run_id': payload.get('run_id', turn.run_id),
-            'status': 'in_progress' if status == 'in_progress' else 'completed'}, scene)
+            'status': status if status in ('in_progress', 'cancelled') else 'completed'}, scene)
         processor._handle_agent_complete_internal(scene)
         processor._clear_loader_bubbles(scene)
         turn.complete = True

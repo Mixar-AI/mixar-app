@@ -382,3 +382,56 @@ def test_popup_status_reads_working_in_background_for_idle_open_run():
     assert agent_bubble_menu._get_status(scene)[0] == "Working"
     scene.mixie_chat_state = "BUSY"
     assert agent_bubble_menu._get_status(scene)[0] == "Running"
+
+
+# ---------------------------------------------------------------------------
+# G. The completion sound marks a run FINISHING, never the user's Stop
+# ---------------------------------------------------------------------------
+
+
+def _chimes(monkeypatch):
+    from mixar.modules.space_mixie_chat.core import completion_sound
+
+    calls = []
+    monkeypatch.setattr(completion_sound, "play_completion_sound", lambda: calls.append(True))
+    return calls
+
+
+def test_completed_run_plays_the_completion_sound(monkeypatch):
+    _card_settle(monkeypatch)
+    chimes = _chimes(monkeypatch)
+    processor = queue_processor.EventProcessor()
+    scene = _scene(state="BUSY")
+
+    processor._handle_typed_payload({"type": "run_status", "run_id": "run-1", "status": "in_progress"}, scene)
+    assert chimes == []
+    processor._handle_typed_payload({"type": "run_status", "run_id": "run-1", "status": "completed"}, scene)
+    assert chimes == [True]
+
+
+def test_stopped_run_closes_silently(monkeypatch):
+    """Stop closes the run on the client first (session_ops abort), then the
+    backend's ``cancelled`` / ``turn_end: cancelled`` arrive: no sound."""
+    _card_settle(monkeypatch)
+    chimes = _chimes(monkeypatch)
+    processor = queue_processor.EventProcessor()
+    scene = _scene(state="BUSY")
+
+    SessionManager.set_run(scene, "run-1", True)
+    SessionManager.set_run(scene, "", False)  # the abort operator's close
+    assert scene.mixie_run_open is False and chimes == []
+
+    SessionManager.set_run(scene, "run-1", True)  # a late in_progress re-opened it
+    processor._handle_typed_payload({"type": "cancelled"}, scene)
+    assert scene.mixie_run_open is False and chimes == []
+
+    SessionManager.set_run(scene, "run-1", True)
+    processor._handle_typed_payload({"type": "run_status", "run_id": "run-1", "status": "cancelled"}, scene)
+    assert scene.mixie_run_open is False and chimes == []
+
+
+def test_turn_end_passes_cancelled_through_to_run_status():
+    events = _source("core/turn_events.py")
+    assert "status if status in ('in_progress', 'cancelled') else 'completed'" in events
+    abort = _source("ui/operators/session_ops.py")
+    assert 'session.set_run(scene, "", False)' in abort, "Stop never asks for the sound"

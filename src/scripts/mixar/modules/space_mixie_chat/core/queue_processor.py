@@ -77,8 +77,12 @@ class EventProcessor:
         kind = data.get("type")
         if kind == "run_status":
             self._run_status_seen.add(scene.name)
+            status = data.get("status")
+            # A cancelled run (the user's Stop) closes silently; any other
+            # close is the run finishing and plays the completion sound.
             self._session.set_run(
-                scene, str(data.get("run_id") or ""), data.get("status") == "in_progress"
+                scene, str(data.get("run_id") or ""), status == "in_progress",
+                notify=status != "cancelled",
             )
             return True
         if kind == "cancelled":
@@ -97,7 +101,7 @@ class EventProcessor:
         if scene.name in self._run_status_seen:
             self._run_status_seen.discard(scene.name)
             return
-        self._session.set_run(scene, "", False)
+        self._session.set_run(scene, "", False, notify=True)
 
     # ========================================================================
     # agent Event Dispatch (called from timer on main thread)
