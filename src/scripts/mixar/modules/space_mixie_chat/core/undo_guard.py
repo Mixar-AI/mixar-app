@@ -22,6 +22,7 @@ _saved_messages = None
 # The tabs' view and live runs, taken with the messages (core/undo_tab_guard.py).
 _saved_view = None
 _saved_runs = None
+_saved_live = None
 
 
 def _snapshot_single_scene(scene):
@@ -244,27 +245,29 @@ def _restore_all_scenes(snapshots):
 
 
 def _snapshot_tabs():
-    """The windows' scenes and the live runs, for `undo_tab_guard`."""
+    """The windows' scenes, the live runs and every tab's live state, for
+    `undo_tab_guard`."""
     try:
         from .session import get_session_manager
-        from .undo_tab_guard import snapshot_runs, snapshot_view
+        from .undo_tab_guard import snapshot_live_state, snapshot_runs, snapshot_view
         windows = list(bpy.context.window_manager.windows)
-        return snapshot_view(windows), snapshot_runs(list(bpy.data.scenes), get_session_manager())
+        scenes = list(bpy.data.scenes)
+        return (snapshot_view(windows), snapshot_runs(scenes, get_session_manager()),
+                snapshot_live_state(scenes))
     except Exception:  # noqa: BLE001 — a snapshot never breaks undo
         logger.debug("Tab snapshot before undo failed", exc_info=True)
-        return None, None
-
+        return None, None, None
 
 def _repair_tabs():
     """Put every window back where it was and cancel runs whose tab is gone."""
-    global _saved_view, _saved_runs
-    view, runs = _saved_view, _saved_runs
-    _saved_view = _saved_runs = None
-    if view is None and runs is None:
+    global _saved_view, _saved_runs, _saved_live
+    view, runs, live = _saved_view, _saved_runs, _saved_live
+    _saved_view = _saved_runs = _saved_live = None
+    if view is None and runs is None and live is None:
         return
     try:
         from .undo_tab_guard import repair_after_undo
-        repair_after_undo(view or {}, runs or {})
+        repair_after_undo(view or {}, runs or {}, live)
     except Exception:  # noqa: BLE001 — a repair never breaks undo
         logger.warning("Tab repair after undo failed", exc_info=True)
 
@@ -274,9 +277,9 @@ def _repair_tabs():
 @persistent
 def _on_undo_pre(scene):
     """Snapshot messages from ALL scenes before undo."""
-    global _saved_messages, _saved_view, _saved_runs
+    global _saved_messages, _saved_view, _saved_runs, _saved_live
     _saved_messages = _snapshot_all_scenes()
-    _saved_view, _saved_runs = _snapshot_tabs()
+    _saved_view, _saved_runs, _saved_live = _snapshot_tabs()
 
 
 def _last_walk_was_per_tab() -> bool:
@@ -324,9 +327,9 @@ def _on_undo_post(scene):
 @persistent
 def _on_redo_pre(scene):
     """Snapshot messages from ALL scenes before redo."""
-    global _saved_messages, _saved_view, _saved_runs
+    global _saved_messages, _saved_view, _saved_runs, _saved_live
     _saved_messages = _snapshot_all_scenes()
-    _saved_view, _saved_runs = _snapshot_tabs()
+    _saved_view, _saved_runs, _saved_live = _snapshot_tabs()
 
 
 @persistent

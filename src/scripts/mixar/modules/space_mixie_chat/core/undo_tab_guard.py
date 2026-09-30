@@ -19,6 +19,10 @@ Two invariants, enforced around every undo and redo by ``undo_guard``:
 2. **No run outlives its tab silently.** A session whose scene vanished in the
    undo while its turn or run was open is cancelled on the backend and its
    executor turn ended, so it stops building (and billing) into nothing.
+3. **A tab's live state is not document content.** The run flags and the
+   session id a scene had before the walk are written back after it: a step
+   written while the agent was BUSY must not turn a finished tab BUSY again
+   (its own hold would then refuse its undo and redo for good).
 
 Everything here takes plain arguments so it is testable without Blender;
 ``undo_guard`` passes the live ``bpy`` objects.
@@ -139,6 +143,75 @@ def cancel_orphaned_runs(saved_runs: dict[str, str], live_session_ids: Iterable[
     return orphaned
 
 
+# -- Live state (undo_pre / undo_post) -----------------------------------------
+
+LIVE_PROPS = ("mixie_chat_state", "mixie_run_open", "mixie_run_id", "mixie_session_id")
+"""A tab's connection truth, not document content. A memfile step is written
+while the tab's agent is BUSY, so restoring the Scene datablock from it reads
+that state back into a tab whose run is long over: the tab then reads BUSY with
+no run, the per-tab hold refuses its undo and redo, and nothing flips it back
+(bonkers campaign seed 2, 2026-09-30). The values a scene had the instant
+before the walk are the truth; they are written back afterwards."""
+
+
+def snapshot_live_state(scenes: Iterable) -> dict[int, dict]:
+    """The live props of every real scene, keyed by ``session_uid`` (stable
+    across a memfile restore and a rename)."""
+    saved: dict[int, dict] = {}
+    for scene in scenes:
+        if is_lane_scene(scene):
+            continue
+        uid = getattr(scene, "session_uid", None)
+        if not uid:
+            continue
+        entry = {"name": getattr(scene, "name", "")}
+        for prop in LIVE_PROPS:
+            if hasattr(scene, prop):
+                entry[prop] = getattr(scene, prop)
+        saved[uid] = entry
+    return saved
+
+
+def restore_live_state(scenes: Iterable, saved: dict[int, dict], saved_runs: dict[str, str],
+                       idle_value: str = "IDLE") -> list[tuple[str, str, object, object]]:
+    """Write every scene's live props back to what they were before the walk.
+
+    A scene the walk brought back (no snapshot: it was deleted before) has no
+    live run by definition; when its restored state says an agent works, it is
+    set idle unless a run of that session was live before the walk. Returns the
+    changes made as ``(scene name, prop, from, to)``."""
+    changes: list[tuple[str, str, object, object]] = []
+    active = {"BUSY", "MODIFYING", "AWAITING_INPUT"}
+    for scene in scenes:
+        if is_lane_scene(scene):
+            continue
+        uid = getattr(scene, "session_uid", None)
+        entry = saved.get(uid) if uid else None
+        if entry is not None:
+            wanted = {prop: entry[prop] for prop in LIVE_PROPS if prop in entry}
+        else:
+            state = getattr(scene, "mixie_chat_state", None)
+            sid = getattr(scene, "mixie_session_id", "") or ""
+            if state not in active or sid in saved_runs:
+                continue
+            wanted = {"mixie_chat_state": idle_value, "mixie_run_open": False}
+        for prop, value in wanted.items():
+            if not hasattr(scene, prop):
+                continue
+            current = getattr(scene, prop)
+            if current == value:
+                continue
+            try:
+                setattr(scene, prop, value)
+            except Exception:  # noqa: BLE001 — a scene mid-teardown
+                logger.debug("Could not restore %s on %s", prop, getattr(scene, "name", "?"), exc_info=True)
+                continue
+            changes.append((getattr(scene, "name", ""), prop, current, value))
+    for name, prop, was, now in changes:
+        _slog("undo.live_state_restored", scene=name, prop=prop, was=str(was), to=str(now))
+    return changes
+
+
 # -- Wiring helpers for undo_guard --------------------------------------------
 
 
@@ -146,13 +219,16 @@ def live_session_ids(scenes: Iterable) -> list[str]:
     return [getattr(s, "mixie_session_id", "") or "" for s in scenes if not is_lane_scene(s)]
 
 
-def repair_after_undo(saved_view: dict[int, str], saved_runs: dict[str, str]) -> None:
+def repair_after_undo(saved_view: dict[int, str], saved_runs: dict[str, str],
+                      saved_live: dict[int, dict] | None = None) -> None:
     """Apply both invariants against the live document. Main thread only."""
     import bpy
 
     windows = list(bpy.context.window_manager.windows)
     scenes = list(bpy.data.scenes)
     restore_view(windows, saved_view, bpy.data.scenes.get, scenes)
+    if saved_live is not None:
+        restore_live_state(scenes, saved_live, saved_runs or {})
     if not saved_runs:
         return
     from .executor import get_executor
