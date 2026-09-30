@@ -149,6 +149,12 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
                                  uint32_t tab_uid,
                                  const UndoOwnerMap *step_owners,
                                  std::string *r_reason);
+/** The validation #BKE_undo_tabs_partial_begin performs, without arming: false
+ * (and the reason) when the restore would be refused. */
+bool BKE_undo_tabs_partial_check(Main *bmain,
+                                 uint32_t tab_uid,
+                                 const UndoOwnerMap *step_owners,
+                                 std::string *r_reason);
 void BKE_undo_tabs_partial_end();
 /** M4: arm a WHOLE-document restore (Edit > Undo Whole Document). After per-tab
  * walks the live document is no longer the state of the stack's active step, so

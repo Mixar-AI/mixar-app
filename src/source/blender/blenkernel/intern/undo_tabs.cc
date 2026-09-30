@@ -473,19 +473,17 @@ static std::string shared_names_joined(const UndoOwnerMap *map)
   return out;
 }
 
-bool BKE_undo_tabs_partial_begin(Main *bmain,
-                                 const uint32_t tab_uid,
-                                 const UndoOwnerMap *step_owners,
-                                 std::string *r_reason)
+static bool partial_validate(Main *bmain,
+                             const uint32_t tab_uid,
+                             const UndoOwnerMap *step_owners,
+                             const UndoOwnerMap *live,
+                             std::string *r_reason)
 {
-  BLI_assert(!g_partial.active);
-  UndoOwnerMap *live = BKE_undo_owner_map_build(bmain, nullptr);
   if (BKE_undo_owner_map_shared_count(live) > 0) {
     if (r_reason) {
       *r_reason = "shared between tabs now: " + shared_names_joined(live) +
                   " (Edit > Undo Whole Document walks every tab)";
     }
-    BKE_undo_owner_map_free(live);
     return false;
   }
   if (step_owners != nullptr && BKE_undo_owner_map_shared_count(step_owners) > 0) {
@@ -493,7 +491,6 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
       *r_reason = "shared between tabs at that step: " + shared_names_joined(step_owners) +
                   " (Edit > Undo Whole Document walks every tab)";
     }
-    BKE_undo_owner_map_free(live);
     return false;
   }
   /* A datablock the tab owned at the step but another tab owns now, or the
@@ -522,9 +519,33 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
         *r_reason = "moved between tabs since that step: " + moved +
                     " (Edit > Undo Whole Document walks every tab)";
       }
-      BKE_undo_owner_map_free(live);
       return false;
     }
+  }
+  return true;
+}
+
+bool BKE_undo_tabs_partial_check(Main *bmain,
+                                 const uint32_t tab_uid,
+                                 const UndoOwnerMap *step_owners,
+                                 std::string *r_reason)
+{
+  UndoOwnerMap *live = BKE_undo_owner_map_build(bmain, nullptr);
+  const bool ok = partial_validate(bmain, tab_uid, step_owners, live, r_reason);
+  BKE_undo_owner_map_free(live);
+  return ok;
+}
+
+bool BKE_undo_tabs_partial_begin(Main *bmain,
+                                 const uint32_t tab_uid,
+                                 const UndoOwnerMap *step_owners,
+                                 std::string *r_reason)
+{
+  BLI_assert(!g_partial.active);
+  UndoOwnerMap *live = BKE_undo_owner_map_build(bmain, nullptr);
+  if (!partial_validate(bmain, tab_uid, step_owners, live, r_reason)) {
+    BKE_undo_owner_map_free(live);
+    return false;
   }
   g_partial.active = true;
   g_partial.tab = tab_uid;

@@ -753,8 +753,10 @@ eUndoPushReturn BKE_undosys_step_push_with_type(UndoStack *ustack,
     if (ok) {
       UndoStep *us = static_cast<UndoStep *>(ustack->steps.last);
       BLI_assert(STREQ(us->name, name_internal));
+      /* The inner push tagged and snapshotted the memfile step already; only
+       * the tab is corrected to the mode step's (review of #1746: a second
+       * snapshot here leaked the first). */
       us->mixar_tab_uid = us_prev->mixar_tab_uid;
-      us->mixar_cursors = tab_cursors_snapshot(ustack);
       us_prev->skip = true;
 #ifdef WITH_GLOBAL_UNDO_CORRECT_ORDER
       ustack->step_active_memfile = us;
@@ -1225,6 +1227,34 @@ static bool undosys_tab_step_decode(UndoStack *ustack,
   return true;
 }
 
+/**
+ * Would #undosys_tab_step_decode accept ``target``? The same checks, none of
+ * the work: a mode step's datablocks must be the tab's or global, a memfile
+ * step's owner maps must hold nothing shared or moved. Asked before an active
+ * step (sculpt, paint, text) is decoded on the way to ``target``, so a refusal
+ * never leaves that step half-undone (review of #1746).
+ */
+static bool undosys_tab_step_check(bContext * /*C*/,
+                                   const uint32_t tab_uid,
+                                   UndoStep *target,
+                                   std::string *r_reason)
+{
+  if (!undosys_tab_step_is_global(target)) {
+    Vector<ID *> refs;
+    if (target->type->step_foreach_ID_ref) {
+      target->type->step_foreach_ID_ref(target, undosys_id_ref_resolve, G_MAIN);
+      target->type->step_foreach_ID_ref(
+          target,
+          [](void *user_data, UndoRefID *id_ref) {
+            static_cast<Vector<ID *> *>(user_data)->append(id_ref->ptr);
+          },
+          &refs);
+    }
+    return BKE_undo_tabs_ids_owned(G_MAIN, tab_uid, refs, r_reason);
+  }
+  return BKE_undo_tabs_partial_check(G_MAIN, tab_uid, target->mixar_owners, r_reason);
+}
+
 static bool undosys_tab_step_apply(UndoStack *ustack,
                                    bContext *C,
                                    const uint32_t tab_uid,
@@ -1267,10 +1297,16 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
     /* Some mode steps (sculpt, paint, text) undo by decoding THEMSELVES in
      * the undo direction before the step beneath is read, as
      * #undosys_step_iter_first does for the document walk. */
-    if ((ref->type->flags & UNDOTYPE_FLAG_DECODE_ACTIVE_STEP) &&
-        !undosys_tab_step_decode(ustack, C, tab_uid, ref, STEP_UNDO, false, r_reason))
-    {
-      return false;
+    if (ref->type->flags & UNDOTYPE_FLAG_DECODE_ACTIVE_STEP) {
+      /* The step beneath must be acceptable BEFORE the active step is
+       * un-applied: a refusal after that would leave the active step
+       * half-undone and the next press would apply its delta twice. */
+      if (!undosys_tab_step_check(C, tab_uid, us, r_reason)) {
+        return false;
+      }
+      if (!undosys_tab_step_decode(ustack, C, tab_uid, ref, STEP_UNDO, false, r_reason)) {
+        return false;
+      }
     }
     return undosys_tab_step_apply(ustack, C, tab_uid, us, STEP_UNDO, r_reason);
   }
