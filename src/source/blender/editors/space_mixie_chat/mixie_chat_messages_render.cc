@@ -161,13 +161,14 @@ void mixie_chat_render_messages(const bContext *C,
         text_buffer[0] = '\0';
       }
 
-      float label_y = layout.y_pos - metrics.label_height;
-      const char *label = mixie_chat_sender_label(layout, &msg_ptr);
-      float label_x = layout.is_user ? (layout.bubble_x + layout.bubble_width)
-                                     : layout.bubble_x;
-      chat_ui_draw_sender_label(label, label_x,
-                                label_y + 8.0f * metrics.scale_factor, &metrics,
-                                layout.is_user);
+      if (const char *label = mixie_chat_sender_label(layout, &msg_ptr)) {
+        float label_y = layout.y_pos - metrics.label_height;
+        float label_x = layout.is_user ? (layout.bubble_x + layout.bubble_width)
+                                       : layout.bubble_x;
+        chat_ui_draw_sender_label(label, label_x,
+                                  label_y + 8.0f * metrics.scale_factor, &metrics,
+                                  layout.is_user);
+      }
 
       mixie_chat_render_message_content(layout, &msg_ptr, text_len, text_buffer);
 

@@ -282,8 +282,8 @@ class MixieChatMessage(PropertyGroup):
     # #1251 import picker: comma-separated extensions offered by the native
     # open dialog. Picker configuration only — never a path.
     import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
-    # USER bubbles only: a short delivery note the renderer appends to the
-    # sender label ("You (queued)"). Set when a message is sent as an
+    # USER bubbles only: a short delivery note the renderer draws above the
+    # bubble ("queued"). Set when a message is sent as an
     # interjection into a streaming turn, cleared by the backend's `joined`
     # ack, replaced by "could not be delivered" when the ack never comes.
     delivery_hint: StringProperty(default="", maxlen=32, options={'SKIP_SAVE'})

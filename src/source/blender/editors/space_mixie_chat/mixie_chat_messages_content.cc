@@ -252,22 +252,20 @@ const char *mixie_chat_sender_label(const MessageLayoutData &layout, PointerRNA 
   if (layout.is_error) {
     return "Error";
   }
-  if (!layout.is_user) {
-    return "Mixie";
+  /* Plain "You" / "Mixie" labels are not drawn: the bubble side already says
+   * who spoke. A user message sent into a running turn (an interjection)
+   * still shows its delivery state until the backend's `joined` ack clears
+   * the hint. */
+  if (!layout.is_user || !g_msg_props.delivery_hint) {
+    return nullptr;
   }
-  /* A user message sent into a running turn (an interjection) carries its
-   * delivery state until the backend's `joined` ack clears the hint. */
-  static char label_buf[64];
-  if (g_msg_props.delivery_hint) {
-    char hint[40] = "";
-    const int hint_len = RNA_property_string_length(msg_ptr, g_msg_props.delivery_hint);
-    if (hint_len > 0 && hint_len < int(sizeof(hint))) {
-      RNA_property_string_get(msg_ptr, g_msg_props.delivery_hint, hint);
-      SNPRINTF(label_buf, "You (%s)", hint);
-      return label_buf;
-    }
+  static char label_buf[40];
+  const int hint_len = RNA_property_string_length(msg_ptr, g_msg_props.delivery_hint);
+  if (hint_len <= 0 || hint_len >= int(sizeof(label_buf))) {
+    return nullptr;
   }
-  return "You";
+  RNA_property_string_get(msg_ptr, g_msg_props.delivery_hint, label_buf);
+  return label_buf;
 }
 
 /** \} */
