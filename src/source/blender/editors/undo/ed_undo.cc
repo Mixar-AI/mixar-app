@@ -998,8 +998,8 @@ void ED_OT_undo_whole_document(wmOperatorType *ot)
 {
   ot->name = "Undo Whole Document";
   ot->description =
-      "Take back the newest step of every tab at once (the per-tab undo of the Undo entry walks "
-      "only this tab)";
+      "Step the whole document back one step, every tab at once, as the classic undo did (the "
+      "Undo entry walks only this tab)";
   ot->idname = "ED_OT_undo_whole_document";
   ot->invoke = ed_undo_whole_document_invoke;
   ot->exec = ed_undo_whole_document_exec;

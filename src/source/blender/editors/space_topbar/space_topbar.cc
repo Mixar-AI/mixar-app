@@ -241,14 +241,16 @@ static void undo_history_draw_menu(const bContext *C, Menu *menu)
     return;
   }
 
-  /* Mixar per-tab undo (M1): under the flag the menu lists the current tab's
-   * steps and the document steps (tab 0, e.g. "Original"), not the other
-   * tabs'. The jump itself is still document-wide until M2. */
+  /* Mixar per-tab undo: under the flag the menu of a tab's window lists that
+   * tab's steps only. A document step ("Original", a file load) is not a
+   * per-tab jump target (BKE_undosys_tab_step_load refuses it), so listing it
+   * was a row that always failed (review 2026-09-30, finding 5). A window on
+   * no tab lists everything. */
   const bool per_tab = BKE_undo_tabs_enabled();
   const uint32_t current_tab = per_tab ? BKE_undo_tab_uid_from_context(const_cast<bContext *>(C)) :
                                          UNDO_TAB_DOCUMENT;
   auto step_hidden = [&](const UndoStep &us) {
-    return per_tab && us.mixar_tab_uid != UNDO_TAB_DOCUMENT && us.mixar_tab_uid != current_tab;
+    return per_tab && current_tab != UNDO_TAB_DOCUMENT && us.mixar_tab_uid != current_tab;
   };
 
   int undo_step_count = 0;

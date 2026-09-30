@@ -30,6 +30,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.scenes_log import slog
+from mixar.modules.common.agent_execution.document import ensure_scene_id
 from mixar.modules.common.utils.undo import push_undo_step
 
 from ...constants import SessionState, is_lane_scene
@@ -199,6 +200,7 @@ def new_scene_tab(name: str = "") -> object:
     # A fresh tab: no session yet (minted on the first message), no chat, but
     # the same signed-in account and settings as the tab it was opened from.
     scene.mixie_session_id = ""
+    ensure_scene_id(scene)  # the per-scene undo epoch key, stable across renames
     inherit_account(source, scene)
     inherit_settings(source, scene)
     furnish_scene(scene)

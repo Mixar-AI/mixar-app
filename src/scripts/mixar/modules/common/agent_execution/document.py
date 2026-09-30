@@ -40,8 +40,12 @@ _registered = False
 
 
 def _scene_key(scene):
+    """The scene's stable id, assigned on first use so a rename never changes
+    the key (a renamed tab would otherwise read epoch 0 and let a commit
+    prepared before an undo pass the fence); the name only when the id cannot
+    be written."""
     try:
-        return str(scene.get(SCENE_ID_PROP) or scene.name)
+        return str(ensure_scene_id(scene) or scene.name)
     except Exception:  # noqa: BLE001
         return str(getattr(scene, "name", scene))
 
