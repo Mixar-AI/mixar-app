@@ -731,7 +731,13 @@ eUndoPushReturn BKE_undosys_step_push_with_type(UndoStack *ustack,
       if (UndoStep **cursor = cursors->lookup_ptr(us->mixar_tab_uid)) {
         for (UndoStep *it = (*cursor)->next; it != nullptr; it = it->next) {
           if (it->mixar_tab_uid == us->mixar_tab_uid) {
+            /* The tab's dead redo branch: no tab walks it, and the
+             * document-wide walk must not either (the campaign of 09-30: Undo
+             * Whole Document stepped into a state the tab had discarded), so
+             * it is a skip step from here on. Its memfile stays in the chain
+             * for the steps above it. */
             it->mixar_tab_uid = UNDO_TAB_DOCUMENT;
+            it->skip = true;
           }
         }
         cursors->remove(us->mixar_tab_uid);

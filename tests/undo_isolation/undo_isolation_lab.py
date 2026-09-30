@@ -690,6 +690,33 @@ def run_m5_probes() -> None:
         check("M5 P12b B is the same scene (session_uid)",
               any(s.session_uid == b_uid for s in bpy.data.scenes), "")
 
+    # P16: a push after undos in the tab kills its redo branch: those steps carry no
+    # tab AND are skip steps, so a whole-document walk jumps over them instead of
+    # stepping into a state the tab discarded.
+    show("C")
+    edit("C", "C · dead 1", lambda: add_mesh(tab("C"), "C_dead1", "cube", (0, 0, 20)))
+    edit("C", "C · dead 2", lambda: add_mesh(tab("C"), "C_dead2", "cube", (0, 0, 22)))
+    press("undo"); press("undo")                       # C two steps back
+    edit("C", "C · alive", lambda: add_mesh(tab("C"), "C_alive", "cube", (0, 0, 24)))
+    h = history()
+    dead = [st for st in h["steps"] if st["name"] in ("C · dead 1", "C · dead 2")]
+    check("M5 P16 the dead branch carries no tab and is skipped",
+          len(dead) == 2 and all(st["tab_uid"] == 0 and st["skip"] for st in dead), f"{dead}")
+    def whole_document_once():
+        with _override_window():
+            bpy.ops.ed.undo_whole_document()
+    probe("P16b undo whole document from the top jumps over the dead branch", whole_document_once,
+          expect_document={}, expect_isolation={"has:C/C_alive": False, "has:C/C_dead1": False,
+                                                "has:C/C_dead2": False, "window_stays": True})
+    redos = 0
+    while redos < 3:                                    # C back to its top (one press: the dead branch is skipped)
+        with _override_window():
+            if not bpy.ops.ed.redo.poll():
+                break
+        press("redo"); redos += 1
+    check("M5 P16c one redo brought C to its alive top over the dead branch",
+          "C_alive" in tab("C").objects and redos == 1, f"redos={redos}")
+
     # P15: a datablock that moved between tabs since the step is shared for that
     # restore: the tab's undo refuses and names it (Undo Whole Document is the way).
     show("C")
