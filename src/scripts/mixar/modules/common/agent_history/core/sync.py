@@ -5,6 +5,7 @@
 """Background archive transport. Never perform filesystem I/O on the WS/UI thread."""
 import errno
 import logging
+import re
 import threading
 import time
 
@@ -13,6 +14,13 @@ from . import blobs, store
 
 # Retried automatically; a toast would only restate the connection indicator.
 TRANSIENT = ('archive_sync_timeout', 'archive_sync_unavailable')
+_CODE = re.compile(r'[a-z_]{1,64}')
+
+
+def _reason(exc):
+    """The store's fixed failure code; never exception text that could carry data."""
+    text = str(exc)
+    return text if _CODE.fullmatch(text) else type(exc).__name__
 
 
 class ArchiveSync:
@@ -32,11 +40,14 @@ class ArchiveSync:
     def stop(self):
         self.stop_event.set()
 
-    def _notice(self, code, level=logging.WARNING):
+    def _notice(self, code, level=logging.WARNING, reason=None):
         if code == self.last_error:
             return
         self.last_error = code
-        logging.getLogger(__name__).log(level, 'Agent archive: %s', code)
+        if reason:
+            logging.getLogger(__name__).log(level, 'Agent archive: %s (%s)', code, reason)
+        else:
+            logging.getLogger(__name__).log(level, 'Agent archive: %s', code)
         if code in TRANSIENT:
             return
         bodies = {
@@ -194,9 +205,9 @@ class ArchiveSync:
                                 'archive_permission_denied' if exc.errno in (errno.EACCES, errno.EPERM) else
                                 'archive_write_failed')
                         self._notice(code)
-                    except ValueError:
+                    except ValueError as exc:
                         healthy = False
-                        self._notice('archive_validation_failed')
+                        self._notice('archive_validation_failed', reason=_reason(exc))
                     except Exception:
                         # No path, payload or exception text in logs or RPC replies.
                         healthy = False
