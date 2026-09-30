@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Oi, sou o Naman, da Mixar.
+Em alguns minutos, vou apresentar o aplicativo.
+Esta é a sua janela de visualização.
+Um espaço 3D pelo qual você pode navegar.
+Arraste com o botão do meio para orbitar, role para dar zoom.
+Use Shift e o botão do meio para deslocar a vista.
+Pode experimentar.
+Clique para selecionar, G para mover,
+R para girar, S para redimensionar.
+Aqui estão alguns atalhos úteis.
+Vê a pequena ilha abaixo? É a Mixie, sua agente.
+Clique para abrir.
+A Mixie tem abas.
+Em Agent, diga o que quer com palavras simples. A agente trabalha na sua cena.
+A agente usa modelos como Tripo, Meshy e Nano Banana.
+Para ter mais controle, abra as outras abas:
+3D, Image, Video ou World Model.
+Escolha um modelo e ajuste as configurações.
+Tudo o que você gera vai para a biblioteca.
+Suas criações estão aqui.
+Conecte sua própria biblioteca para a agente usar seus recursos,
+e economize créditos.
+No canto superior esquerdo fica a gaveta de cenas.
+Cada cena tem sua própria aba e agente Mixie.
+Execute tarefas em paralelo e alterne quando quiser.
+Quando a cena estiver pronta, entre no Cinema Mode
+para dirigir a câmera e criar fluxos de vídeo.
+As ideias começam em 2D.
+Puxe o moodboard pela direita ou pressione til.
+É uma tela para referências e conceitos.
+Solte imagens, vídeos ou esboços aqui.
+Monte grafos de nós para modelos generativos, como no ComfyUI.
+Você está no Zen Mode, a visualização mais simples.
+Se conhece o Blender, mude para Engine Mode.
+Todo o espaço de trabalho do Blender está lá, com cada painel e atalho.
+A Mixie funciona nos dois. Escolha o mais confortável.
+Vamos voltar ao Zen Mode.
+Nosso programa de parceiros criativos oferece créditos
+e uma comunidade que constrói o futuro da IA e do 3D.
+É isso. Agora você sabe onde está tudo.
+Vamos criar em 3D juntos.

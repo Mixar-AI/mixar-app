@@ -80,38 +80,38 @@ msgid "Join Discord"
 msgstr "Tham Gia Discord"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "Sắp Đặt Nhanh Tróng"
 
 msgid "Import Preferences From Previous Version"
-msgstr ""
+msgstr "Nhập Khẩu Cài Đặt Sở Thích Từ Phiên Bản Trước"
 
 msgctxt "Operator"
 msgid "Import Blender {:d}.{:d} Preferences"
 msgstr ""
 
 msgid "Create New Preferences"
-msgstr ""
+msgstr "Tạo Cài Đặt Sở Thích Mới"
 
 msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "Kiểu Mẫu"
 
 msgid "Keymap"
-msgstr ""
+msgstr "Bố Trí Phím"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "Chuột Lựa Chọn"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "Hành Động của phím Dấu Cách"
 
 msgid "Save New Preferences"
-msgstr ""
+msgstr "Lưu Cài Đặt Sở Thích"
 
 msgid "Continue"
-msgstr ""
+msgstr "Tiếp/Liên Tục"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -10423,6 +10423,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10436,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"

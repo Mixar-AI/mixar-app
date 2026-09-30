@@ -3,30 +3,11 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""
-First-time splash (Quick Setup) replacement.
+"""First-time Quick Setup: one language choice for UI and tour.
 
-Blender draws ``WM_MT_splash_quick_setup`` instead of the normal splash
-while no preferences file exists yet (``wm_splash_screen.cc``), so it is
-the very first screen a new install shows. Registering a Menu with the
-same ``bl_idname`` replaces upstream's, the way ``splash_menu.py`` replaces
-``WM_MT_splash``.
-
-Mixar's version keeps upstream's rows (import previous preferences, theme,
-keymap, mouse select, spacebar action, save) and:
-
-* puts the **tour language** dropdown at the top
-  (``WindowManager.mixar_tour_language`` — ``onboarding/core/tour/language``
-  owns the list, the persisted choice and the change notification that
-  starts the language pack download);
-* drops Blender's own ``view.language`` row. Two language fields on one
-  screen would confuse, and Mixar's interface strings are not translated
-  yet, so that row would switch only half the UI.
-
-The drawn value is the persisted choice, so a reinstall that kept the user
-config shows the language the user picked before. The tour's language is
-deliberately not saved into ``userpref.blend``: it lives with the other
-Mixar config keys in the per-user ``mixar.json`` overlay.
+The language property is registered with this menu, synchronously, so the
+first draw has the same rows as every later draw. Continue saves Blender
+preferences; the selection also persists through Mixar's per-user config.
 """
 
 import bpy
@@ -72,10 +53,7 @@ class WM_MT_splash_quick_setup(Menu):
         col.use_property_split = True
         col.use_property_decorate = False
 
-        # Tour language: the first choice on the first screen. English is the
-        # default; any other pick starts that language's download at once.
-        if hasattr(wm, WM_PROP_TOUR_LANGUAGE):
-            col.prop(wm, WM_PROP_TOUR_LANGUAGE, text="Language")
+        col.prop(wm, WM_PROP_TOUR_LANGUAGE, text="Language")
 
         # Theme.
         sub = col.column(heading="Theme")
@@ -116,8 +94,14 @@ class WM_MT_splash_quick_setup(Menu):
 
 def register():
     """Replace native WM_MT_splash_quick_setup with Mixar's."""
+    from mixar.modules.onboarding.ui.properties import language_props
+    from mixar.modules.onboarding.core.tour.language_preferences import restore_unsaved_choice
+    language_props.register()
+    restore_unsaved_choice()
     bpy.utils.register_class(WM_MT_splash_quick_setup)
 
 
 def unregister():
     bpy.utils.unregister_class(WM_MT_splash_quick_setup)
+    from mixar.modules.onboarding.ui.properties import language_props
+    language_props.unregister()

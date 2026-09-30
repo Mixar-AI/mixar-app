@@ -80,38 +80,38 @@ msgid "Join Discord"
 msgstr "Discord-இல் சேருங்கள்"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "விரைவான அமைப்பு"
 
 msgid "Import Preferences From Previous Version"
-msgstr ""
+msgstr "முந்தைய பதிப்பிலிருந்து விருப்பங்களை இறக்குமதி செய்யுங்கள்"
 
 msgctxt "Operator"
 msgid "Import Blender {:d}.{:d} Preferences"
 msgstr ""
 
 msgid "Create New Preferences"
-msgstr ""
+msgstr "புதிய விருப்பங்களை உருவாக்கவும்"
 
 msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "கருப்பொருள்"
 
 msgid "Keymap"
-msgstr ""
+msgstr "கீமாப்"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "சுட்டி தேர்ந்தெடுக்கவும்"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "ச்பேச்பார் நடவடிக்கை"
 
 msgid "Save New Preferences"
-msgstr ""
+msgstr "புதிய விருப்பங்களைச் சேமிக்கவும்"
 
 msgid "Continue"
-msgstr ""
+msgstr "தொடரவும்"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -10423,6 +10423,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10436,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"

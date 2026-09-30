@@ -45,9 +45,9 @@ def resolve(tour: Tour, language: str, root: Optional[str] = None,
     """``allow_partial``: a pack whose timing table and first part are
     verified plays while the rest downloads (the session holds at a part
     that has not arrived); False demands the complete pack."""
-    code = language_mod.normalize(language)
+    code = language_mod.narration_code(language)
     english = MediaPlan(tour, language_mod.DEFAULT_CODE, (config.video_path(),), None, None)
-    if language_mod.is_bundled(code):
+    if code is None or code == language_mod.DEFAULT_CODE:
         return english
     script = timing.script_hash(tour)
     pack = packs.installed(code, root=root, expected_script_hash=script)

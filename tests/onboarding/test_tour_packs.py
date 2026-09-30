@@ -142,3 +142,12 @@ def test_partial_pack_plays_when_timing_and_first_part_are_verified(tmp_path, mo
     assert media.resolve(MIXAR_INTRO, "fr", root=root, allow_partial=False).narration == "en"
     packs.mark_verified(packs.part_path(root, "fr", 1), entry["parts"][1]["sha256"])
     assert plan.ready(1)                      # readiness is read live
+
+
+def test_regional_choice_uses_existing_voice_pack_and_suppresses_english_timed_subtitles(tmp_path):
+    from mixar.modules.onboarding.core.tour.session_lifecycle import _subtitles_for
+    for choice, voice in (("pt_BR", "pt"), ("zh_HANT", "zh")):
+        make_pack(tmp_path, code=voice)
+        plan = media.resolve(MIXAR_INTRO, choice, root=str(tmp_path))
+        assert plan.narration == voice and plan.parts
+        assert _subtitles_for(choice, plan.narration) is None

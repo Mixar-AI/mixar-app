@@ -80,10 +80,10 @@ msgid "Join Discord"
 msgstr "加入 Discord"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "快速設定"
 
 msgid "Import Preferences From Previous Version"
-msgstr ""
+msgstr "從先前版本匯入偏好設定"
 
 msgctxt "Operator"
 msgid "Import Blender {:d}.{:d} Preferences"
@@ -96,22 +96,22 @@ msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "主題"
 
 msgid "Keymap"
-msgstr ""
+msgstr "按鍵對應"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "滑鼠選取"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "空白鍵動作"
 
 msgid "Save New Preferences"
-msgstr ""
+msgstr "儲存新的偏好設定"
 
 msgid "Continue"
-msgstr ""
+msgstr "繼續"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -10423,6 +10423,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10436,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"

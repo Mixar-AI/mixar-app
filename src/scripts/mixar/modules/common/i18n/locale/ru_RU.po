@@ -80,38 +80,38 @@ msgid "Join Discord"
 msgstr "Присоединиться к Discord"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "Быстрая настройка"
 
 msgid "Import Preferences From Previous Version"
-msgstr ""
+msgstr "Импорт настроек из предыдущей версии"
 
 msgctxt "Operator"
 msgid "Import Blender {:d}.{:d} Preferences"
 msgstr ""
 
 msgid "Create New Preferences"
-msgstr ""
+msgstr "Создать новые настройки"
 
 msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "Тема"
 
 msgid "Keymap"
-msgstr ""
+msgstr "Раскладка"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "Выделение мышкой"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "Действие пробела"
 
 msgid "Save New Preferences"
-msgstr ""
+msgstr "Сохранить новые настройки"
 
 msgid "Continue"
-msgstr ""
+msgstr "Продолжение"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -10423,6 +10423,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10436,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"

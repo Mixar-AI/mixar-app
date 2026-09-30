@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Hei, olen Naman Mixarilta.
+Esittelen sovelluksen muutamassa minuutissa.
+Tämä on 3D-näkymäsi.
+Kolmiulotteinen tila, jossa voit liikkua.
+Kierrä vetämällä keskipainikkeella, zoomaa rullalla.
+Panoroi pitämällä Shift pohjassa ja vetämällä keskipainikkeella.
+Kokeile itse.
+Valitse napsauttamalla, siirrä G:llä,
+kierrä R:llä, skaalaa S:llä.
+Tässä muutamia käteviä pikanäppäimiä.
+Näetkö pienen saarekkeen alhaalla? Se on agenttisi Mixie.
+Avaa se napsauttamalla.
+Mixiellä on välilehtiä.
+Kerro Agentissa omin sanoin, mitä haluat. Agentti muokkaa kohtaustasi.
+Agentti käyttää malleja kuten Tripo, Meshy ja Nano Banana.
+Saat enemmän hallintaa muilta välilehdiltä:
+3D, Image, Video tai World Model.
+Valitse malli ja säädä sen asetuksia.
+Kaikki luomasi päätyy kirjastoon.
+Luomuksesi ovat täällä.
+Yhdistä oma kirjastosi, jotta agentti voi käyttää aineistoasi,
+ja säästät krediittejä.
+Vasemmassa yläkulmassa on kohtauspaneeli.
+Jokaisella kohtauksella on oma välilehti ja Mixie-agentti.
+Suorita tehtäviä rinnakkain ja vaihda niiden välillä milloin vain.
+Kun kohtaus on valmis, siirry Cinema Modeen
+ohjataksesi kameraa ja luodaksesi videotyönkulkuja.
+Ideat alkavat 2D:stä.
+Vedä moodboard esiin oikealta tai paina tildeä.
+Se on pohja viitteille ja ideoille.
+Pudota tähän kuvia, videoita tai luonnoksia.
+Rakenna generatiivisten mallien solmukaavioita kuten ComfyUI:ssa.
+Olet Zen Modessa, yksinkertaisimmassa näkymässä.
+Tunnetko Blenderin? Vaihda Engine Modeen.
+Koko Blender-työtila on käytössä paneeleineen ja pikanäppäimineen.
+Mixie toimii molemmissa. Valitse sinulle sopiva.
+Palataan Zen Modeen.
+Luovien kumppanien ohjelmamme tarjoaa krediittejä
+ja yhteisön, joka muovaa tekoälyn ja 3D:n tulevaisuutta.
+Siinä kaikki. Nyt tiedät, mistä kaikki löytyy.
+Luodaan 3D:tä yhdessä.

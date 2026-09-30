@@ -80,38 +80,38 @@ msgid "Join Discord"
 msgstr "Discord-ში გაწევრიანება"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "სწრაფი დაყენება"
 
 msgid "Import Preferences From Previous Version"
-msgstr ""
+msgstr "დააიმპორტირე სასურველი პარამეტრები წინა ვერსიიდან"
 
 msgctxt "Operator"
 msgid "Import Blender {:d}.{:d} Preferences"
 msgstr ""
 
 msgid "Create New Preferences"
-msgstr ""
+msgstr "შექმენი ახალი სასურველი პარამეტრები"
 
 msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "თემა"
 
 msgid "Keymap"
-msgstr ""
+msgstr "კლავიშრუკა"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "თაგვით მონიშვნა"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "გამოტოვების კლავიშის ქმედება"
 
 msgid "Save New Preferences"
-msgstr ""
+msgstr "ახალი სასურველი პარამეტრების შენახვა"
 
 msgid "Continue"
-msgstr ""
+msgstr "გაგრძელება"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -10423,6 +10423,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10436,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"

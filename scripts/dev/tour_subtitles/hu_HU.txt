@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Szia, Naman vagyok a Mixartól.
+Néhány perc alatt körbevezetlek az alkalmazásban.
+Ez a nézetablakod.
+Egy 3D-tér, amelyben mozoghatsz.
+Középső gombbal húzva forgatsz, görgetéssel nagyítasz.
+Shift és a középső gomb eltolja a nézetet.
+Próbáld ki.
+Kattintással kijelölsz, G-vel mozgatsz,
+R-rel forgatsz, S-sel méretezel.
+Íme néhány hasznos gyorsbillentyű.
+Látod lent a kis szigetet? Ő Mixie, az ügynököd.
+Kattints a megnyitásához.
+A Mixie több fület tartalmaz.
+Az Agentben mondd el egyszerűen, mit szeretnél. Az ügynök dolgozik a jeleneteden.
+Az ügynök például Tripo, Meshy és Nano Banana modelleket használ.
+Több vezérléshez nyisd meg a többi fület:
+3D, Image, Video vagy World Model.
+Válassz modellt és állítsd be a paramétereit.
+Minden generált tartalom a könyvtárba kerül.
+Itt találod az alkotásaidat.
+Csatold saját könyvtáradat, hogy az ügynök a te elemeidet használja,
+és krediteket takaríts meg.
+Balra fent van a jelenetfiók.
+Minden jelenetnek saját füle és Mixie ügynöke van.
+Futtass feladatokat párhuzamosan, és válts köztük bármikor.
+Ha a jelenet elkészült, válts Cinema Mode-ra,
+hogy irányítsd a kamerát és videós munkafolyamatokat készíts.
+Az ötletek 2D-ben kezdődnek.
+Húzd elő jobbról a moodboardot, vagy nyomd meg a tildét.
+Ez egy vászon referenciákhoz és koncepciókhoz.
+Húzz ide képeket, videókat vagy vázlatokat.
+Építs csomópontgráfokat generatív modellekhez, mint a ComfyUI-ban.
+Zen Mode-ban vagy, a legegyszerűbb nézetben.
+Ismered a Blendert? Válts Engine Mode-ra.
+A teljes Blender-munkaterület elérhető minden panellel és gyorsbillentyűvel.
+A Mixie mindkettőben működik. Válaszd a kényelmesebbet.
+Térjünk vissza Zen Mode-ba.
+Kreatív partnerprogramunk krediteket ad,
+és egy közösséget, amely az AI és a 3D jövőjét alakítja.
+Ennyi. Most már tudod, mi hol van.
+Alkossunk együtt 3D-ben.

@@ -104,6 +104,10 @@ path = [
   "docs/development/i18n-translation/review_notes.json",
   "docs/development/i18n-translation/terms/*.json",
   "docs/development/i18n-translation/logical/*.json",
+  "scripts/dev/tour_subtitles/*.json",
+  "scripts/dev/tour_subtitles/*.txt",
+  "scripts/dev/tour_subtitles/*.srt",
+  "src/scripts/mixar/modules/common/i18n/locale/*.po",
   "docs/development/posthog-blastoff/*.json",
 ]
 precedence = "override"

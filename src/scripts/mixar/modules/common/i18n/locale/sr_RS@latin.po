@@ -100,8 +100,9 @@ msgstr "O programu"
 msgid "Join Discord"
 msgstr "Pridruži se Discord-u"
 
+# derived
 msgid "Quick Setup"
-msgstr ""
+msgstr "Brzo podešavanje"
 
 msgid "Import Preferences From Previous Version"
 msgstr ""
@@ -116,23 +117,27 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
+# derived
 msgid "Theme"
-msgstr ""
+msgstr "Tema"
 
+# derived
 msgid "Keymap"
-msgstr ""
+msgstr "Raspored tastera"
 
+# derived
 msgid "Mouse Select"
-msgstr ""
+msgstr "Izbor mišem"
 
+# derived
 msgid "Spacebar Action"
-msgstr ""
+msgstr "Radnja razmaknice"
 
 msgid "Save New Preferences"
 msgstr ""
 
 msgid "Continue"
-msgstr ""
+msgstr "Nastavi"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -13520,6 +13525,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -13530,9 +13538,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 # derived

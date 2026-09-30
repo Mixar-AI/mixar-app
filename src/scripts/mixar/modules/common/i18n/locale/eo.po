@@ -80,7 +80,7 @@ msgid "Join Discord"
 msgstr "Aliĝi al Discord"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "Rapida agordo"
 
 msgid "Import Preferences From Previous Version"
 msgstr ""
@@ -96,22 +96,22 @@ msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "Etoso"
 
 msgid "Keymap"
-msgstr ""
+msgstr "Klavmapo"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "Musa elekto"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "Ago de spacoklavo"
 
 msgid "Save New Preferences"
 msgstr ""
 
 msgid "Continue"
-msgstr ""
+msgstr "Daŭrigi"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -10423,6 +10423,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10436,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"

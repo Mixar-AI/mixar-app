@@ -57,11 +57,11 @@ DELIBERATE_ENDINGS = ("completed", "exited")
 def _subtitles_for(language: str, narration: str):
     """Subtitles are for a user whose language is not the one narrating
     (English playing while their pack is missing); ``MIXAR_TOUR_SUBTITLES=
-    always`` forces them so QA can screenshot the band. English has none."""
+    always`` forces them so QA can screenshot the band, including English."""
     import os
-    from . import srt
+    from . import srt, language as language_mod
     forced = os.environ.get(config.ENV_SUBTITLES, "").lower() == "always"
-    if language == narration and not forced:
+    if language_mod.narration_code(language) == narration and not forced:
         return None
     subs = srt.load(language)
     if subs is None:
@@ -94,7 +94,8 @@ class SessionLifecycleMixin:
         self._host_region_ptr = anchors.normalize_ptr(region.as_pointer())
         self._refresh_host(window, region)
         plan = media_mod.resolve(self.tour, self.language)
-        if plan.narration != self.language and self._pack_may_arrive(self.language):
+        if (plan.narration != language_mod.narration_code(self.language)
+                and self._pack_may_arrive(self.language)):
             self._loading = True
             self._loading_deadline = time.monotonic() + config.PACK_WAIT_S
             self._loading_label = config.LOADING_TEXT.format(
@@ -120,6 +121,9 @@ class SessionLifecycleMixin:
     @staticmethod
     def _pack_may_arrive(code: str) -> bool:
         """A download for ``code`` is running (or just started): worth a wait."""
+        from . import language as language_mod
+        if language_mod.narration_code(code) in (None, "en"):
+            return False
         try:
             from . import pack_fetch
             pack_fetch.prefetch(code)
@@ -133,7 +137,8 @@ class SessionLifecycleMixin:
         or in English (with subtitles) at the deadline or on a failed fetch."""
         from . import media as media_mod
         plan = media_mod.resolve(self.tour, self.language)
-        if plan.narration == self.language:
+        from . import language as language_mod
+        if plan.narration == language_mod.narration_code(self.language):
             self._loading = False
             self._finish_loading(plan)
             return
