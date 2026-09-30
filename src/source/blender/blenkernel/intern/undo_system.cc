@@ -32,6 +32,10 @@
 #include "BKE_undo_system.hh"
 #include "BKE_undo_tabs.hh"
 
+#include "DNA_scene_types.h"
+
+#include "BLI_set.hh"
+
 #include "BLI_map.hh"
 #include "BLI_memory_utils.hh"
 #include "BLI_vector.hh"
@@ -501,16 +505,32 @@ UndoStep *BKE_undosys_stack_init_or_active_with_type(UndoStack *ustack, const Un
  */
 static UndoStep *undosys_tab_limit_extend(UndoStack *ustack, UndoStep *us)
 {
+  /* The reserve and the cursor pin are for tabs that still exist: a closed
+   * tab's steps age out like any other's, and its cursor entry goes, or every
+   * tab closed in a session would hold its last eight steps and pin one for
+   * good (review 2026-09-30, finding 2). */
+  Set<uint32_t> live;
+  if (G_MAIN != nullptr) {
+    for (Scene &scene : G_MAIN->scenes) {
+      const uint32_t tab = BKE_undo_tab_uid_for_scene(G_MAIN, &scene);
+      if (tab != UNDO_TAB_DOCUMENT) {
+        live.add(tab);
+      }
+    }
+  }
+  TabCursors *cursors = tab_cursors_get(ustack, false);
+  if (cursors != nullptr) {
+    cursors->remove_if([&](auto item) { return !live.contains(item.key); });
+  }
   Map<uint32_t, int> kept;
   for (UndoStep *it = static_cast<UndoStep *>(ustack->steps.last); it != nullptr; it = it->prev) {
-    if (!it->skip && it->mixar_tab_uid != UNDO_TAB_DOCUMENT) {
+    if (!it->skip && it->mixar_tab_uid != UNDO_TAB_DOCUMENT && live.contains(it->mixar_tab_uid)) {
       kept.lookup_or_add(it->mixar_tab_uid, 0) += 1;
     }
     if (it == us) {
       break;
     }
   }
-  TabCursors *cursors = tab_cursors_get(ustack, false);
   for (UndoStep *it = us->prev; it != nullptr; it = it->prev) {
     bool keep = false;
     if (cursors != nullptr) {
@@ -520,7 +540,7 @@ static UndoStep *undosys_tab_limit_extend(UndoStack *ustack, UndoStep *us)
         }
       }
     }
-    if (!it->skip && it->mixar_tab_uid != UNDO_TAB_DOCUMENT) {
+    if (!it->skip && it->mixar_tab_uid != UNDO_TAB_DOCUMENT && live.contains(it->mixar_tab_uid)) {
       int &n = kept.lookup_or_add(it->mixar_tab_uid, 0);
       if (n < UNDO_TAB_MIN_STEPS) {
         n += 1;

@@ -828,6 +828,43 @@ def run_m5_probes() -> None:
         check("M5 P18c the plain mixar_undo_push return value is honest",
               wm.mixar_undo_push("C · p18 plain") is True, "")
 
+    # P19 (finding 2): a closed tab's steps age out like any other's under the
+    # step limit; only live tabs get the eight-step reserve and a cursor pin.
+    show("C")
+    dead = bpy.data.scenes.new("D_tab")
+    win().scene = dead
+    for i in range(10):
+        with _override(dead):
+            add_mesh(dead, f"D_{i}", "cube", (i, 0, 40))
+        push(f"D · step {i}")
+    dead_uid = dead.session_uid
+    press("undo")                                      # D has a cursor entry behind its top
+    win().scene = tab("C")
+    bpy.data.scenes.remove(bpy.data.scenes["D_tab"])   # (the Python ref is stale after the walk)
+    # (steps are freed from the oldest up to a boundary: the dead tab's age out
+    # once every live tab's eight-step reserve lies above them)
+    bpy.context.preferences.edit.undo_steps = 8
+    try:
+        for i in range(9):
+            for label in ("A", "B", "C"):
+                if label in TABS:
+                    edit(label, f"{label} · p19 {i}",
+                         lambda label=label, i=i: add_mesh(tab(label), f"{label}_p19_{i}", "cube", (i, 0, 44)))
+    finally:
+        bpy.context.preferences.edit.undo_steps = LAB_UNDO_STEPS
+    h = history()
+    left = [st["name"] for st in h["steps"] if st["tab_uid"] == dead_uid] if h else None
+    check("M5 P19 a closed tab's steps are freed by the limit (no reserve for a dead tab)",
+          h is not None and not left, f"left={left}")
+    check("M5 P19b the live tabs keep their reserve",
+          h is not None and all(sum(1 for st in h["steps"] if st["tab_uid"] == tab(l).session_uid and not st["skip"]) >= 8
+                                for l in ("A", "B", "C") if l in TABS), "")
+    show("C")
+    probe("P19a undo in C still walks C after the limit", lambda: press("undo"),
+          expect_document={}, expect_isolation={"undo_result": "FINISHED", "has:C/C_p19_8": False,
+                                                "changed:A": False})
+    press("redo")
+
 
 # -- M1: tags and the owner map ------------------------------------------------
 
@@ -845,13 +882,11 @@ def check(name: str, ok: bool, detail="") -> None:
     log(f"M1 {name}: {'PASS' if ok else 'FAIL'}  {detail}")
 
 
-def run_m1() -> None:
-    """Every step carries the tab whose scene the window showed at push; memfile
-    steps under the flag carry an owner map with no shared IDs, and a hand-linked
-    object turns up as shared on the next push."""
+def run_m1_tags() -> None:
+    """Every step carries the tab whose scene the window showed at push. Runs
+    right after build(): the limit probes (P9, P19) free the first steps."""
     h = history()
     if h is None:
-        log("M1 skipped: WindowManager.mixar_undo_history not present (build without M1)")
         return
     uids = {label: tab(label).session_uid for label in TABS}
     by_name = {}
@@ -866,6 +901,16 @@ def run_m1() -> None:
               f"got={st and st['tab_uid']} want={uids[label]}")
     check("current_tab is the window's tab", h["current_tab"] == tab("C").session_uid
           if win().scene.name == TABS["C"] else h["current_tab"] == win().scene.session_uid)
+
+
+def run_m1() -> None:
+    """Memfile steps under the flag carry an owner map with no shared IDs, and a
+    hand-linked object turns up as shared on the next push."""
+    h = history()
+    if h is None:
+        log("M1 skipped: WindowManager.mixar_undo_history not present (build without M1)")
+        return
+    uids = {label: tab(label).session_uid for label in TABS}
     if not h["enabled"]:
         log("M1 owner map skipped: MIXAR_PER_TAB_UNDO not set")
         return
@@ -905,6 +950,7 @@ def main() -> int:
         log(f"M0 legacy undo = {bpy.context.preferences.experimental.use_undo_legacy}")
     try:
         build()
+        run_m1_tags()
         run_probes()
         run_m1()      # after the probes: its two pushes would otherwise change the stack's top
     except Exception:  # noqa: BLE001
