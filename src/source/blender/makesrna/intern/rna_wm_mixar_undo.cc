@@ -28,6 +28,8 @@
 #include "ED_mixar_undo.hh"
 #include "ED_undo.hh"
 
+namespace blender {
+
 #ifdef RNA_RUNTIME
 
 /* Per-tab undo (BKE_undo_tabs.hh): the undo stack as JSON, newest first, with
@@ -147,3 +149,5 @@ void RNA_def_wm_mixar_undo(BlenderRNA *brna)
 }
 
 #endif /* RNA_RUNTIME */
+
+}  // namespace blender
