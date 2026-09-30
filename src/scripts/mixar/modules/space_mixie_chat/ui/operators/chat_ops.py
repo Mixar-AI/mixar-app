@@ -294,6 +294,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
 
         # OPTIMISTIC UPDATE: Add user message immediately for instant feedback
         user_msg = scene.mixie_chat_messages.add()
+        user_index = len(scene.mixie_chat_messages) - 1
         user_msg.sender = 'USER'
         user_msg.text = message_text
         if interjecting:
@@ -318,6 +319,11 @@ class MIXIE_CHAT_OT_send_message(Operator):
         # interjection answers inside the turn already streaming.
         if fresh_turn:
             add_turn_placeholder(scene)
+            # A collection add() reallocates the IDProperty array: every item
+            # reference taken before it points into freed memory (ASAN,
+            # 2026-09-30: heap-use-after-free writing request_id through the
+            # stale bubble). Resolve the user bubble again by index.
+            user_msg = scene.mixie_chat_messages[user_index]
 
         # Trigger immediate redraw to show user message + loader together
         metrics.start_timer('optimistic_ui_redraw')
