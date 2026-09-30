@@ -10,6 +10,7 @@ Inline drawer functions for tabs that were previously popup-only or
 lived in a separate space. Called from sidebar panel drawers.
 """
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.hunyuan.constants import LIMITS
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_prompt_section,
@@ -48,7 +49,7 @@ def _draw_segment_to_3d(layout, context):
         sam_box = layout.box()
         sam_box.label(text="Box Selection:", icon='SELECT_SET')
         if state.box_select_pending:
-            draw_status_badge(sam_box, "Processing...", 'GENERATING')
+            draw_status_badge(sam_box, n_("Processing..."), 'GENERATING')
         else:
             row = sam_box.row()
             row.scale_y = GENERATE_BUTTON_SCALE_Y
@@ -59,7 +60,7 @@ def _draw_segment_to_3d(layout, context):
         sam_box = layout.box()
         sam_box.label(text="Multi-Lasso Selection:", icon='OUTLINER_DATA_GP_LAYER')
         if state.lasso_select_pending:
-            draw_status_badge(sam_box, "Refining...", 'GENERATING')
+            draw_status_badge(sam_box, n_("Refining..."), 'GENERATING')
         else:
             sam_box.label(text="Draw another loop or press Enter to finish", icon='INFO')
             row = sam_box.row()
@@ -134,7 +135,7 @@ def _draw_mesh_segment(layout, context):
             "mesh_segmentation", getattr(tab, "mode", "")
         ) or "mesh_segment"
 
-        col = draw_section_box(layout, "Settings", icon='SETTINGS')
+        col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
         col.use_property_split = True
         col.use_property_decorate = False
         draw_capability_selector(col, tab, "mesh_segmentation")
@@ -148,27 +149,27 @@ def _draw_mesh_segment(layout, context):
             FEATURE_TRIPO_SEGMENT,
         )
 
-        col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+        col = draw_section_box(layout, n_("Mesh Info"), icon='MESH_DATA')
         draw_mesh_info(col, context, max_mb=150)
-        draw_hint(layout, "Select the objects you want to split into parts",
+        draw_hint(layout, n_("Select the objects you want to split into parts"),
                   icon='INFO')
         draw_section_separator(layout)
 
-        col = draw_section_box(layout, "Reference Mask", icon='IMAGE_DATA')
+        col = draw_section_box(layout, n_("Reference Mask"), icon='IMAGE_DATA')
         col.template_ID(tab, "ref_image", open="image.open")
         if tab.ref_image is not None:
             # Say this explicitly: Tripo silently ignores both params when a
             # mask is supplied, and a user who tuned them would otherwise
             # think they took effect.
-            draw_hint(col, "Mask supplied — Granularity and Split by "
-                           "Connectivity are ignored", icon='INFO')
+            draw_hint(col, n_("Mask supplied — Granularity and Split by "
+                              "Connectivity are ignored"), icon='INFO')
         draw_section_separator(layout)
 
-        info = draw_section_box(layout, "About Tripo Segmentation", icon='INFO')
-        draw_hint(info, "Parts import into a '<object>_parts' collection",
+        info = draw_section_box(layout, n_("About Tripo Segmentation"), icon='INFO')
+        draw_hint(info, n_("Parts import into a '<object>_parts' collection"),
                   icon='DOT')
-        draw_hint(info, "The original mesh is hidden, not deleted", icon='DOT')
-        draw_hint(info, "Max mesh: 150 MB", icon='DOT')
+        draw_hint(info, n_("The original mesh is hidden, not deleted"), icon='DOT')
+        draw_hint(info, n_("Max mesh: 150 MB"), icon='DOT')
 
         draw_generate_footer(
             layout, context, "mixie.tripo_segment_generate", "tripo_segment",
@@ -184,11 +185,11 @@ def _draw_mesh_segment(layout, context):
             return
         part = scene.hunyuan.part
 
-        col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+        col = draw_section_box(layout, n_("Mesh Info"), icon='MESH_DATA')
         draw_mesh_info(col, context, max_faces=30000, max_mb=100)
         draw_section_separator(layout)
 
-        col = draw_section_box(layout, "Export", icon='EXPORT')
+        col = draw_section_box(layout, n_("Export"), icon='EXPORT')
         draw_dropdown(col, part, "export_format", text="Format")
 
         draw_hunyuan_generate_footer(
@@ -198,11 +199,11 @@ def _draw_mesh_segment(layout, context):
         return
 
     # Mesh Segmentation (default) — existing inputs + submit flow.
-    draw_prompt_section(layout, tab, label="Description")
+    draw_prompt_section(layout, tab, label=n_("Description"))
     draw_section_separator(layout)
 
     col = draw_section_box(
-        layout, "Inputs" if catalog_ready else "Settings", icon='SETTINGS')
+        layout, n_("Inputs") if catalog_ready else n_("Settings"), icon='SETTINGS')
     col.prop(tab, "expected_parts", text="Expected Parts")
 
     draw_generate_footer(
@@ -226,7 +227,7 @@ def _draw_hunyuan_pro(layout, pro, context=None):
     # --- Input image ---
     col = draw_section_box(
         layout,
-        "Input Image",
+        n_("Input Image"),
         icon='IMAGE_DATA',
         action_op="mixie.hunyuan_load_image",
     )
@@ -252,7 +253,7 @@ def _draw_hunyuan_pro(layout, pro, context=None):
     # the catalog-driven Model Gen tab would render here as a control that
     # silently does nothing. Both are removable once _submit_pro resolves
     # turnaround groups.
-    col = draw_section_box(layout, "Multi-View Images", icon='RENDERLAYERS')
+    col = draw_section_box(layout, n_("Multi-View Images"), icon='RENDERLAYERS')
     for i, mv in enumerate(pro.multi_views):
         row = col.row(align=True)
         draw_dropdown(row, mv, "view_type", text="")
@@ -263,19 +264,19 @@ def _draw_hunyuan_pro(layout, pro, context=None):
         op_rm = row.operator("mixie.hunyuan_remove_multi_view", text="", icon='X')
         op_rm.index = i
     col.operator("mixie.hunyuan_add_multi_view", text="Add View", icon='ADD')
-    draw_hint(col, "Max 8MB each")
+    draw_hint(col, n_("Max 8MB each"))
 
     draw_section_separator(layout)
 
     # --- Settings ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
     draw_dropdown(col, pro, "model_version", text="Model")
     draw_dropdown(col, pro, "generate_type", text="Type")
     draw_toggle(col, pro, "enable_pbr", text="Enable PBR")
     col.prop(pro, "face_count", text="Face Count", slider=True)
-    draw_hint(col, "Range: 40,000 - 1,500,000")
+    draw_hint(col, n_("Range: 40,000 - 1,500,000"))
     if pro.generate_type == 'LowPoly':
         draw_dropdown(col, pro, "polygon_type", text="Polygon Type")
 
@@ -315,11 +316,11 @@ def _draw_uv_unwrap(layout, context):
     uv = props.uv
     job = uv.job
 
-    col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+    col = draw_section_box(layout, n_("Mesh Info"), icon='MESH_DATA')
     draw_mesh_info(col, context, max_faces=30000, max_mb=100)
     draw_section_separator(layout)
 
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     draw_dropdown(col, uv, "export_format", text="Format")
 
     # Catalog Model dropdown + schema params (no-op when not loaded).
@@ -369,12 +370,12 @@ def _draw_retopology(layout, context):
     topo = props.topology
     is_tripo = topo.model == 'tripo'
 
-    col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+    col = draw_section_box(layout, n_("Mesh Info"), icon='MESH_DATA')
     draw_mesh_info(col, context, max_mb=150 if is_tripo else 200)
-    draw_hint(layout, "Select the objects you want to retopologize", icon='INFO')
+    draw_hint(layout, n_("Select the objects you want to retopologize"), icon='INFO')
     draw_section_separator(layout)
 
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
     draw_dropdown(col, topo, "model", text="Model")
@@ -383,13 +384,13 @@ def _draw_retopology(layout, context):
         col.prop(topo, "tripo_face_limit", text="Face Limit", slider=True)
         col.prop(topo, "tripo_quad", text="Quad Mesh")
         col.prop(topo, "tripo_bake", text="Bake Textures")
-        face_range = "500-10,000 (quad)" if topo.tripo_quad else "500-20,000 (tri)"
-        info = draw_section_box(layout, "About Tripo Retopology", icon='INFO')
-        draw_hint(info, "v2.0 smart highpoly to lowpoly", icon='DOT')
-        draw_hint(info, "Max mesh: 150 MB", icon='DOT')
-        draw_hint(info, "Formats: GLB / GLTF / FBX / OBJ / STL", icon='DOT')
-        draw_hint(info, f"Face Limit range: {face_range}", icon='DOT')
-        draw_hint(info, "Bake transfers textures to the low-poly", icon='DOT')
+        face_range = iface_("500-10,000 (quad)") if topo.tripo_quad else iface_("500-20,000 (tri)")
+        info = draw_section_box(layout, n_("About Tripo Retopology"), icon='INFO')
+        draw_hint(info, n_("v2.0 smart highpoly to lowpoly"), icon='DOT')
+        draw_hint(info, n_("Max mesh: 150 MB"), icon='DOT')
+        draw_hint(info, n_("Formats: GLB / GLTF / FBX / OBJ / STL"), icon='DOT')
+        draw_hint(info, iface_("Face Limit range: {range}").format(range=face_range), icon='DOT')
+        draw_hint(info, n_("Bake transfers textures to the low-poly"), icon='DOT')
     else:
         draw_dropdown(col, topo, "polygon_type", text="Polygon Type")
         draw_dropdown(col, topo, "face_level", text="Face Level")

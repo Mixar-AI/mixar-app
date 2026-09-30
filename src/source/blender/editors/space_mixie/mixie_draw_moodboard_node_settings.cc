@@ -13,6 +13,8 @@
 #include "DNA_theme_types.h"   /* UI_SCALE_FAC */
 #include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
 
+#include "BLT_translation.hh"
+
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_mixar.hh"
@@ -96,7 +98,7 @@ void moodboard_add_node_settings(ui::Block *block,
   mixie_rna_string_get_clamped(node, "model_label", model, sizeof(model));
   const int settings_width = height;
   ui::Button *model_button = moodboard_screen_prop_button(block, node, "model",
-      model[0] ? model : "Model unavailable", ui::ButtonType::Menu,
+      model[0] ? model : IFACE_("Model unavailable"), ui::ButtonType::Menu,
       left, top - height, width - settings_width - gap, height);
   moodboard_set_node_tooltip(model_button, "Model\n\nChoose this node's model directly. Changing models restores that model's parameter defaults.");
   if (running || !model[0]) {

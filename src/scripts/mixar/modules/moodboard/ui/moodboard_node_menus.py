@@ -12,6 +12,7 @@ menu's branching.
 
 from bpy.types import Menu
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 from ..core.node_templates import available_templates
 from .canvas_template_helpers import draw_template
@@ -51,12 +52,12 @@ class MIXIE_MT_moodboard_add(Menu):
 
 
 _ALIGN_ITEMS = (
-    ('LEFT', "Align Left", 'ANCHOR_LEFT'),
-    ('CENTER_X', "Align Centre", 'ANCHOR_CENTER'),
-    ('RIGHT', "Align Right", 'ANCHOR_RIGHT'),
-    ('TOP', "Align Top", 'ANCHOR_TOP'),
-    ('CENTER_Y', "Align Middle", 'ANCHOR_CENTER'),
-    ('BOTTOM', "Align Bottom", 'ANCHOR_BOTTOM'),
+    ('LEFT', n_("Align Left"), 'ANCHOR_LEFT'),
+    ('CENTER_X', n_("Align Centre"), 'ANCHOR_CENTER'),
+    ('RIGHT', n_("Align Right"), 'ANCHOR_RIGHT'),
+    ('TOP', n_("Align Top"), 'ANCHOR_TOP'),
+    ('CENTER_Y', n_("Align Middle"), 'ANCHOR_CENTER'),
+    ('BOTTOM', n_("Align Bottom"), 'ANCHOR_BOTTOM'),
 )
 
 

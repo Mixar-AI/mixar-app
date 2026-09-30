@@ -27,6 +27,8 @@
 
 #include "BLI_vector.hh"
 
+#include "BLT_translation.hh"
+
 #include "mixie_chat_history_intern.hh"
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -64,9 +66,10 @@ inline constexpr float RULES_TOGGLE_H = 14.0f;
 inline constexpr float RULES_EDIT_SIZE = 20.0f;
 inline constexpr float RULES_EDIT_GAP = 6.0f; /* toggle -> pencil spacing */
 
-/** Explicit scope choices under "Applies to", at the top-right of each card. */
-inline constexpr const char *RULES_SCOPE_PROJECT = "This project";
-inline constexpr const char *RULES_SCOPE_GLOBAL = "All projects";
+/** Explicit scope choices under "Applies to", at the top-right of each card.
+ * Untranslated msgids: wrap in IFACE_() where drawn or measured. */
+inline constexpr const char *RULES_SCOPE_PROJECT = N_("This project");
+inline constexpr const char *RULES_SCOPE_GLOBAL = N_("All projects");
 inline constexpr float RULES_SCOPE_CHIP_H = 24.0f;
 inline constexpr float RULES_GROUP_HEADER_H = 22.0f;
 

@@ -23,6 +23,7 @@ import time
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_
 
 from ..constants import DOWNLOAD_PROGRESS_REFRESH_S, LOG_PREFIX
 from .downloader import DownloadCancelled, download_file
@@ -121,7 +122,7 @@ class DownloadMixin:
         if not chosen or not chosen.get("url"):
             job.state = JobState.FAILED
             job.error = "No downloadable result file"
-            job.user_message = "No result available — please retry"
+            job.user_message = n_("No result available — please retry")
             self._notify()
             self._pump()
             return
@@ -182,7 +183,7 @@ class DownloadMixin:
                 friendly = (
                     getattr(e, "user_message", "")
                     or classify_error(e)
-                    or "Download failed — please retry"
+                    or n_("Download failed — please retry")
                 )
 
                 def _fail_cb():
@@ -260,7 +261,7 @@ class DownloadMixin:
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Import failed: {e}"
-            job.user_message = "Failed to import the generated model"
+            job.user_message = n_("Failed to import the generated model")
             job.error_class = "import"
             job.error_reason = clean_reason(f"{type(e).__name__}: {e}")
             # Don't leave the downloaded temp file behind — repeated failed
@@ -284,7 +285,8 @@ class DownloadMixin:
             try:
                 from mixar.modules.common.utils.undo import push_undo_step
                 push_undo_step(
-                    f"Import {job.label}" if job.label else "Import Generated Result"
+                    iface_("Import {name}").format(name=job.label) if job.label
+                    else n_("Import Generated Result")
                 )
             except Exception as undo_error:  # noqa: BLE001 — never demote a success
                 logger.warning(

@@ -480,7 +480,7 @@ def test_capture_is_bound_to_i_in_a_keymap_dispatched_before_object_mode():
 def test_the_keycap_hint_matches_the_live_binding():
     """A painted hint is a promise; never paint a key the keymap does not bind."""
     top = _read_cc("view3d_director_cinema_top.cc")
-    assert '{0.0f, {"I"}, 1, "Insert keyframe", false}' in top
+    assert '{0.0f, {"I"}, 1, N_("Insert keyframe"), false}' in top
     assert '{"F"}' not in top
 
 

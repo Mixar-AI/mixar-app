@@ -9,6 +9,8 @@ import re
 import threading
 import time
 
+from mixar.modules.common.i18n import n_
+
 from ..constants import BACKOFF_MAX_SECONDS, POLL_SECONDS, REPLY_WAIT_SECONDS, REQUEST_TIMEOUT
 from . import blobs, store
 
@@ -51,17 +53,17 @@ class ArchiveSync:
         if code in TRANSIENT:
             return
         bodies = {
-            'archive_sync_rejected': 'The server rejected the history sync request. Update the app and backend, then reconnect.',
-            'archive_owner_changed': 'History sync stopped because the signed-in account changed. Reconnect to resume.',
-            'archive_gap': 'Some history is no longer available from the server. The missing range is marked in the archive.',
-            'archive_blocked': 'The server history buffer is full. Saved records are being acknowledged so sync can continue.',
-            'archive_disk_full': 'History could not be saved because the disk is full. Free disk space; saving will retry automatically.',
-            'archive_permission_denied': 'History could not be saved because folder access was denied. Check the app’s filesystem permissions.',
-            'archive_write_failed': 'History could not be saved locally. Existing records are preserved; saving will retry automatically.',
-            'archive_validation_failed': 'History failed an archive integrity or identity check. Existing records are preserved; the failed batch was not acknowledged.',
+            'archive_sync_rejected': n_('The server rejected the history sync request. Update the app and backend, then reconnect.'),
+            'archive_owner_changed': n_('History sync stopped because the signed-in account changed. Reconnect to resume.'),
+            'archive_gap': n_('Some history is no longer available from the server. The missing range is marked in the archive.'),
+            'archive_blocked': n_('The server history buffer is full. Saved records are being acknowledged so sync can continue.'),
+            'archive_disk_full': n_('History could not be saved because the disk is full. Free disk space; saving will retry automatically.'),
+            'archive_permission_denied': n_('History could not be saved because folder access was denied. Check the app’s filesystem permissions.'),
+            'archive_write_failed': n_('History could not be saved locally. Existing records are preserved; saving will retry automatically.'),
+            'archive_validation_failed': n_('History failed an archive integrity or identity check. Existing records are preserved; the failed batch was not acknowledged.'),
         }
         from mixar.modules.common.notifications import get_notification_store
-        get_notification_store().push('warning', 'Agent history needs attention',
+        get_notification_store().push('warning', n_('Agent history needs attention'),
             body=bodies.get(code, bodies['archive_write_failed']))
 
     def _capture_scene_ids(self):

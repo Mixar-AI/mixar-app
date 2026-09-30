@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 from bpy.props import BoolProperty
 
+from mixar.modules.common.i18n import rpt_
 from ...constants import (
     MOODBOARD_IMAGE_BASE_SIZE,
     MOODBOARD_IMAGE_SPACING,
@@ -333,12 +334,13 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
                         context.area.tag_redraw()
                         self.report(
                             {'INFO'},
-                            f"Lasso loop {len(state.lasso_loops)} added. "
-                            "Draw another loop or press Enter to finish.",
+                            rpt_("Lasso loop {count} added. Draw another loop or press Enter to finish.").format(
+                                count=len(state.lasso_loops)),
                         )
                         return {'RUNNING_MODAL'}
                     else:
-                        self.report({'WARNING'}, f"Need at least {LASSO_MIN_POINTS} points to create lasso mask")
+                        self.report({'WARNING'}, rpt_("Need at least {count} points to create lasso mask").format(
+                            count=LASSO_MIN_POINTS))
                         state.lasso_points.clear()
                         state.active_tool = 'NONE'
                         state.target_image_index = -1
@@ -372,7 +374,8 @@ class MIXIE_OT_moodboard_lasso_tool(Operator):
                 state.is_drawing = False
                 _commit_lasso_loop(state)
             if len(state.lasso_loops) == 0:
-                self.report({'WARNING'}, f"Need at least {LASSO_MIN_POINTS} points to create lasso mask")
+                self.report({'WARNING'}, rpt_("Need at least {count} points to create lasso mask").format(
+                    count=LASSO_MIN_POINTS))
                 return {'RUNNING_MODAL'}
             bpy.app.timers.register(_auto_trigger_lasso_sam, first_interval=0.0)
             return {'FINISHED'}

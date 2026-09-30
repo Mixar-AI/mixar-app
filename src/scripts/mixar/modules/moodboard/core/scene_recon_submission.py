@@ -15,6 +15,7 @@ import datetime
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -66,7 +67,8 @@ def submit_recon_job(scene, sidebar_tab, image_bytes,
         from mixar.modules.moodboard.core.scene_recon_queue import enqueue_scene_recon_job
         from mixar.modules.moodboard.core import scene_importer
     except ImportError as e:
-        on_prompt_error(scene, sidebar_tab, f"Scene recon queue not available: {e}")
+        on_prompt_error(scene, sidebar_tab, rpt_("Scene recon queue not available: {error}").format(
+            error=e))
         return False
 
     job_suffix = datetime.datetime.now().strftime("%H%M%S")
@@ -159,7 +161,7 @@ def submit_recon_job(scene, sidebar_tab, image_bytes,
     )
 
     if not job:
-        on_prompt_error(scene, sidebar_tab, "Failed to submit reconstruction job")
+        on_prompt_error(scene, sidebar_tab, n_("Failed to submit reconstruction job"))
         return False
 
     return True

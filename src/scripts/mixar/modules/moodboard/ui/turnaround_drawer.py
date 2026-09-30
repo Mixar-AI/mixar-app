@@ -28,6 +28,7 @@ Shared by the catalog-driven Model Gen UI (``model_gen_drawer``) and the
 legacy Basic fallback in ``sidebar_panel_drawers`` so both behave the same.
 """
 
+from mixar.modules.common.i18n import iface_, n_
 from ..constants import TURNAROUND_MAX_COMPANIONS
 from .sidebar_ui_helpers import (
     draw_dropdown, draw_hint, draw_image_thumbnail, draw_section_box,
@@ -57,7 +58,8 @@ def draw_detect_views_section(layout, context, service_key, model_slug):
     group_id = get_active_group(scene)
     summary = group_summary(scene, group_id)
 
-    title = "Multiple Views" if not summary else f"Multiple Views  ({summary})"
+    title = (n_("Multiple Views") if not summary
+             else iface_("Multiple Views  ({summary})").format(summary=summary))
     col = draw_section_box(layout, title, icon='RENDERLAYERS')
 
     _draw_header(col, scene, context, group_id)
@@ -148,7 +150,9 @@ def _draw_add_row(col, scene, context, group_id):
     count = min(len(eligible), capacity)
     add.operator(
         "mixie.moodboard_add_selected_views",
-        text=f"Add Selected ({count})" if count else "Add Selected",
+        text=(iface_("Add Selected ({count})").format(count=count)
+              if count else iface_("Add Selected")),
+        translate=False,
         icon='ADD',
     )
     pick = row.row(align=True)
@@ -174,13 +178,13 @@ def _draw_hints(col, scene, context, group_id, model_slug):
         draw_hint(col, status, icon='INFO')
 
     if _resolve_input_image(context) is None:
-        draw_hint(col, "Select an image to use as the input image", icon='ERROR')
+        draw_hint(col, n_("Select an image to use as the input image"), icon='ERROR')
         return
 
     if not group_id:
         draw_hint(
             col,
-            "Split a turnaround sheet, or select images and Add Selected",
+            n_("Split a turnaround sheet, or select images and Add Selected"),
             icon='INFO',
         )
         return
@@ -194,8 +198,8 @@ def _draw_hints(col, scene, context, group_id, model_slug):
         # Not an error — the job still runs, just without these views.
         draw_hint(
             col,
-            f"'{model_slug}' takes {', '.join(allowed)} only — "
-            f"{len(unsupported)} view(s) will not be sent",
+            iface_("'{model}' takes {views} only — {count} view(s) will not be sent").format(
+                model=model_slug, views=', '.join(allowed), count=len(unsupported)),
             icon='ERROR',
         )
         return
@@ -203,7 +207,7 @@ def _draw_hints(col, scene, context, group_id, model_slug):
     if remaining_capacity(scene, group_id) <= 0:
         draw_hint(
             col,
-            f"{TURNAROUND_MAX_COMPANIONS} views is the maximum",
+            iface_("{count} views is the maximum").format(count=TURNAROUND_MAX_COMPANIONS),
             icon='INFO',
         )
         return
@@ -211,7 +215,7 @@ def _draw_hints(col, scene, context, group_id, model_slug):
     if not eligible_selected_images(
             scene, group_id, _resolve_input_image(context)):
         draw_hint(
-            col, "Select moodboard images to add them as views", icon='INFO')
+            col, n_("Select moodboard images to add them as views"), icon='INFO')
         return
 
-    draw_hint(col, "Generates as one multi-view job", icon='CHECKMARK')
+    draw_hint(col, n_("Generates as one multi-view job"), icon='CHECKMARK')

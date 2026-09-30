@@ -22,6 +22,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 
@@ -71,7 +73,7 @@ void unit_switch(ui::Block *block,
   const struct {
     const char *label;
     const char *value;
-  } cells[2] = {{"Frames", "FRAMES"}, {"Duration", "DURATION"}};
+  } cells[2] = {{N_("Frames"), "FRAMES"}, {N_("Duration"), "DURATION"}};
 
   const float pad = SEGMENT_PAD * u;
   const float cell_w = (BLI_rctf_size_x(&track) - pad * 2.0f) * 0.5f;
@@ -85,14 +87,14 @@ void unit_switch(ui::Block *block,
     if (active) {
       cinema_fill(cell, std::min(radius, BLI_rctf_size_y(&cell) * 0.5f), on_bg);
     }
-    cinema_text_center(cells[index].label,
+    cinema_text_center(IFACE_(cells[index].label),
                        BLI_rctf_cent_x(&cell),
                        BLI_rctf_cent_y(&cell),
                        CINEMA_FONT_LABEL * u,
                        active ? on : off);
     cinema_qa_record(region, cell, "director_ruler_unit", cells[index].value, -1);
     ui::Button *but = cinema_op_button(
-        block, "WM_OT_context_set_enum", cell, "Label the ruler in frames or elapsed time");
+        block, "WM_OT_context_set_enum", cell, TIP_("Label the ruler in frames or elapsed time"));
     if (but != nullptr) {
       PointerRNA *ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(ptr, "data_path", "scene.mixar_director.ruler_unit");
@@ -119,8 +121,9 @@ float cinema_draw_ruler_group(ui::Block *block,
   /* Titled "Ruler", not "Duration": Duration is now one of the two cells it
    * introduces, and a group labelled with the name of one of its own options
    * reads as a statement rather than a choice. */
-  cinema_text_left("Ruler", x, cy, CINEMA_FONT_TITLE * u, title);
-  x += cinema_text_width("Ruler", CINEMA_FONT_TITLE * u) + 16.0f * u;
+  const char *ruler_title = IFACE_("Ruler");
+  cinema_text_left(ruler_title, x, cy, CINEMA_FONT_TITLE * u, title);
+  x += cinema_text_width(ruler_title, CINEMA_FONT_TITLE * u) + 16.0f * u;
 
   char unit_id[16] = "DURATION";
   PointerRNA state_ptr;

@@ -11,6 +11,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -170,12 +171,12 @@ class MIXIE_OT_scene_gen_exp_place_in_scene(Operator):
             )
 
         if placed == 0:
-            self.report({"WARNING"}, f"No meshes placed ({skipped} skipped)")
+            self.report({"WARNING"}, rpt_("No meshes placed ({skipped} skipped)").format(
+                skipped=skipped))
             return {"CANCELLED"}
 
-        msg = f"Placed {placed} mesh(es)"
-        if skipped:
-            msg += f" ({skipped} skipped)"
+        msg = (rpt_("Placed {placed} mesh(es) ({skipped} skipped)") if skipped
+               else rpt_("Placed {placed} mesh(es)")).format(placed=placed, skipped=skipped)
         self.report({"INFO"}, msg)
         return {"FINISHED"}
 

@@ -18,6 +18,7 @@ from ....utils.blender_commons import simple_remove_node
 from ....utils.constants import FLOW_VCOL
 
 from ..utils.bake_common import TEMP_VCOL, recover_bake_settings
+from mixar.modules.common.i18n import n_
 
 logger = get_logger(__name__)
 
@@ -126,7 +127,7 @@ def _create_source_node(mat, bprops, nodes, objs, bbox_min, bbox_max):
 
         if not nodes.src.node_tree:
             logger.error("Failed to load CAVITY node library!")
-            return "Failed to load CAVITY node library!"
+            return n_("Failed to load CAVITY node library!")
 
         vcol_node = nodes.src.node_tree.nodes.get("vcol")
         if vcol_node:
@@ -141,7 +142,7 @@ def _create_source_node(mat, bprops, nodes, objs, bbox_min, bbox_max):
 
         if not nodes.src.node_tree:
             logger.error("Failed to load DUST node library!")
-            return "Failed to load DUST node library!"
+            return n_("Failed to load DUST node library!")
 
         mat.node_tree.links.new(nodes.src.outputs[0], nodes.bsdf.inputs[0])
         mat.node_tree.links.new(nodes.bsdf.outputs[0], nodes.output.inputs[0])
@@ -152,7 +153,7 @@ def _create_source_node(mat, bprops, nodes, objs, bbox_min, bbox_max):
 
         if not nodes.src.node_tree:
             logger.error("Failed to load PAINT_BASE node library!")
-            return "Failed to load PAINT_BASE node library!"
+            return n_("Failed to load PAINT_BASE node library!")
 
         mat.node_tree.links.new(nodes.src.outputs[0], nodes.bsdf.inputs[0])
         mat.node_tree.links.new(nodes.bsdf.outputs[0], nodes.output.inputs[0])

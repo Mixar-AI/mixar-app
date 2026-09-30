@@ -33,6 +33,7 @@ from .merge_layer_invoke import (
     validate_merge_layer,
 )
 from .merge_layer_ui import draw_merge_layer_dialog
+from mixar.modules.common.i18n import rpt_
 
 # Re-export all functions for backward compatibility
 __all__ = [
@@ -225,9 +226,7 @@ class MMergeLayer(bpy.types.Operator, BaseBakeOperator):
 
         self.report(
             {"INFO"},
-            "Merging layers is done in "
-            + "{:0.2f}".format(time.time() - T)
-            + " seconds!",
+            rpt_("Merging layers is done in {seconds:0.2f} seconds!").format(seconds=time.time() - T),
         )
 
         return {"FINISHED"}

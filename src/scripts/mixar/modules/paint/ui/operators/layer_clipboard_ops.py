@@ -12,6 +12,7 @@ from bpy.props import BoolProperty, IntProperty
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -83,7 +84,7 @@ class LAYERS_OT_CopyLayer(Operator):
         wmp.clipboard_tree = node.node_tree.name
         wmp.clipboard_layer = layer.name if not self.all_layers else ""
 
-        self.report({"INFO"}, f"Layer '{layer.name}' copied to clipboard")
+        self.report({"INFO"}, rpt_("Layer '{name}' copied to clipboard").format(name=layer.name))
 
         return {"FINISHED"}
 
@@ -434,9 +435,7 @@ class LAYERS_OT_PasteLayer(Operator):
 
             self.report(
                 {"INFO"},
-                "Rebaking pasted layers is done in "
-                + "{:0.2f}".format(time.time() - T)
-                + " seconds!",
+                rpt_("Rebaking pasted layers is done in {seconds:0.2f} seconds!").format(seconds=time.time() - T),
             )
 
         # Refresh active layer

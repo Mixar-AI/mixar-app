@@ -19,6 +19,8 @@ too generous costs the user the whole upload and then fails.
 
 import os
 
+from mixar.modules.common.i18n import rpt_
+
 
 def get_video_generation_limits(service_key, model_slug=""):
     """Return normalized reference limits, or ``None`` for invalid config.
@@ -155,24 +157,24 @@ def video_reference_count_error(
     image_mode = str(image_mode or "")
     if image_mode in _FRAME_IMAGE_MODES:
         wanted = 1 if image_mode == "first_frame" else 2
-        frames = "one image" if wanted == 1 else "exactly two images"
         if image_count != wanted:
             return (
-                f"Image mode {image_mode!r} uses {frames} "
-                f"(got {image_count})"
-            )
+                rpt_("Image mode {mode!r} uses one image (got {count})") if wanted == 1
+                else rpt_("Image mode {mode!r} uses exactly two images (got {count})")
+            ).format(mode=image_mode, count=image_count)
         if video_count:
-            return (
+            return rpt_(
                 "Video references are not supported in first/last-frame "
                 "image modes"
             )
         return None
     if image_count > limits["max_images"]:
-        return f"Select at most {limits['max_images']} images"
+        return rpt_("Select at most {count} images").format(count=limits['max_images'])
     if video_count > limits["max_videos"]:
-        return f"Select at most {limits['max_videos']} videos"
+        return rpt_("Select at most {count} videos").format(count=limits['max_videos'])
     if image_count + video_count > limits["max_materials"]:
-        return f"Select at most {limits['max_materials']} reference materials"
+        return rpt_("Select at most {count} reference materials").format(
+            count=limits['max_materials'])
     return None
 
 
@@ -188,10 +190,11 @@ def build_video_reference_inputs(videos, limits) -> list[dict]:
     inputs = []
     for video in videos:
         if video["file_size_bytes"] > limits["max_video_bytes"]:
-            raise ValueError(f"Video is too large: {video['filename']}")
+            raise ValueError(rpt_("Video is too large: {name}").format(name=video['filename']))
         extension = os.path.splitext(video["filename"])[1].lower()
         if extension not in limits["video_extensions"]:
-            raise ValueError(f"Unsupported video reference: {video['filename']}")
+            raise ValueError(rpt_("Unsupported video reference: {name}").format(
+                name=video['filename']))
         inputs.append({
             "filename": video["filename"],
             "mime_type": video["mime_type"],
@@ -211,10 +214,8 @@ def build_image_reference_inputs(images, limits, compress) -> list[dict]:
     for index, item in enumerate(images):
         payload = compress(item["image"], "video_gen")
         if len(payload) > limits["max_image_bytes"]:
-            raise ValueError(
-                "Image is too large after compression: "
-                f"{item.get('filename') or item.get('image_name') or 'reference'}"
-            )
+            raise ValueError(rpt_("Image is too large after compression: {name}").format(
+                name=item.get('filename') or item.get('image_name') or rpt_('reference')))
         inputs.append({
             "filename": f"reference_{index + 1}.jpg",
             "mime_type": "image/jpeg",

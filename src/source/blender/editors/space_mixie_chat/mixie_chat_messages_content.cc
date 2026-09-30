@@ -18,8 +18,11 @@
 
 #include "BLI_rect.h"
 #include "BLI_string.h"
+#include "BLI_string_utf8.h"
 
 #include "BKE_main.hh"
+
+#include "BLT_translation.hh"
 
 #include "RNA_access.hh"
 
@@ -156,7 +159,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         loader_text = layout.loader.texts[current_index];
       }
       else {
-        loader_text = "Loading...";
+        loader_text = RPT_("Loading...");
       }
       /* Wall-clock spinner phase (see chat_ui_spinner_frame). */
       const int spin_idx = chat_ui_spinner_frame();
@@ -250,7 +253,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
 const char *mixie_chat_sender_label(const MessageLayoutData &layout, PointerRNA *msg_ptr)
 {
   if (layout.is_error) {
-    return "Error";
+    return IFACE_("Error");
   }
   /* Plain "You" / "Mixie" labels are not drawn: the bubble side already says
    * who spoke. A user message sent into a running turn (an interjection)
@@ -259,12 +262,18 @@ const char *mixie_chat_sender_label(const MessageLayoutData &layout, PointerRNA 
   if (!layout.is_user || !g_msg_props.delivery_hint) {
     return nullptr;
   }
-  static char label_buf[40];
+  char hint[40] = "";
   const int hint_len = RNA_property_string_length(msg_ptr, g_msg_props.delivery_hint);
-  if (hint_len <= 0 || hint_len >= int(sizeof(label_buf))) {
+  if (hint_len <= 0 || hint_len >= int(sizeof(hint))) {
     return nullptr;
   }
-  RNA_property_string_get(msg_ptr, g_msg_props.delivery_hint, label_buf);
+  RNA_property_string_get(msg_ptr, g_msg_props.delivery_hint, hint);
+  /* The hint is an English Python state token ("queued", "delivery
+   * uncertain", ...), marked for extraction there; translate it here. The
+   * lookup can hand back `hint` itself, so copy into storage that outlives
+   * this call. */
+  static char label_buf[128];
+  STRNCPY_UTF8(label_buf, IFACE_(hint));
   return label_buf;
 }
 

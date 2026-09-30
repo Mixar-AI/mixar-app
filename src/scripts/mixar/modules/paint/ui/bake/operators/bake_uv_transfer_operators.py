@@ -30,6 +30,7 @@ from ..utils.bake_operators_helper import (
     set_entities_which_using_the_same_image_or_segment,
     transfer_uv,
 )
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -261,13 +262,9 @@ class MTransferSomeLayerUV(bpy.types.Operator, BaseBakeOperator):
 
         self.report(
             {"INFO"},
-            "All layers and masks using "
-            + self.from_uv_map
-            + " are transferred to "
-            + self.uv_map
-            + " in "
-            + "{:0.2f}".format(time.time() - T)
-            + " seconds!",
+            rpt_("All layers and masks using {from_uv} are transferred to {to_uv} in {seconds:0.2f} seconds!").format(
+                from_uv=self.from_uv_map, to_uv=self.uv_map, seconds=time.time() - T
+            ),
         )
 
         return {"FINISHED"}
@@ -388,7 +385,7 @@ class MTransferLayerUV(bpy.types.Operator, BaseBakeOperator):
             return {"CANCELLED"}
 
         if self.uv_map == self.entity.uv_name:
-            self.report({"ERROR"}, "This layer/mask already use " + self.uv_map + "!")
+            self.report({"ERROR"}, rpt_("This layer/mask already use {uv}!").format(uv=self.uv_map))
             return {"CANCELLED"}
 
         mat = get_active_material()
@@ -429,14 +426,9 @@ class MTransferLayerUV(bpy.types.Operator, BaseBakeOperator):
 
         self.report(
             {"INFO"},
-            self.entity.name
-            + " UV is transferred from "
-            + ori_uv_name
-            + " to "
-            + self.uv_map
-            + " in "
-            + "{:0.2f}".format(time.time() - T)
-            + " seconds!",
+            rpt_("{name} UV is transferred from {from_uv} to {to_uv} in {seconds:0.2f} seconds!").format(
+                name=self.entity.name, from_uv=ori_uv_name, to_uv=self.uv_map, seconds=time.time() - T
+            ),
         )
 
         return {"FINISHED"}

@@ -16,6 +16,7 @@
 #include "agent_ui_text.hh"
 
 #include "BLI_rect.h"
+#include "BLT_translation.hh"
 
 namespace blender {
 
@@ -45,18 +46,19 @@ GenResolveInput agent_ui_generations_input(const rctf &panel, const float u)
   in.font_action = GEN_ACTION_FONT * agent_ui_text_unit();
   in.font_lib = GEN_LIB_FONT * agent_ui_text_unit();
   for (int i = 0; i < GEN_LAYOUT_RAIL_COUNT; i++) {
-    in.rail_label[i] = pane_text_width(GEN_RAIL_LABELS[i], in.font_chip);
+    in.rail_label[i] = pane_text_width(IFACE_(GEN_RAIL_LABELS[i]), in.font_chip);
   }
   for (int i = 0; i < GEN_LAYOUT_CHIP_COUNT; i++) {
-    in.chip_label[i] = pane_text_width(GEN_FILTER_LABELS[i], in.font_chip);
+    in.chip_label[i] = pane_text_width(IFACE_(GEN_FILTER_LABELS[i]), in.font_chip);
   }
   for (int i = 0; i < GEN_ACTION_PRIMARY_COUNT; i++) {
     in.action_primary = std::max(in.action_primary,
-                                 pane_text_width(GEN_ACTION_PRIMARY[i], in.font_action));
+                                 pane_text_width(IFACE_(GEN_ACTION_PRIMARY[i]), in.font_action));
   }
   for (int i = 0; i < GEN_ACTION_SECONDARY_COUNT; i++) {
     in.action_secondary = std::max(in.action_secondary,
-                                   pane_text_width(GEN_ACTION_SECONDARY[i], in.font_action));
+                                   pane_text_width(IFACE_(GEN_ACTION_SECONDARY[i]),
+                                                   in.font_action));
   }
   in.rail_w_design = GEN_RAIL_W * u;
   in.rail_h_design = GEN_RAIL_H * u;

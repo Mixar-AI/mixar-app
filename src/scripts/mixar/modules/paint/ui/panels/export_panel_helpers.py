@@ -12,6 +12,7 @@ and batch export actions in the TEXTURE_EXPORT tab.
 import bpy
 
 from ...utils.common_ui import split_layout
+from mixar.modules.common.i18n import iface_
 
 
 # Channel display configuration
@@ -110,18 +111,18 @@ def _draw_bake_target_details(layout, mp, node):
     if has_image:
         bt_label = bt_node.image.name
         if bt_node.image.is_float:
-            bt_label += " (Float)"
+            bt_label = iface_("{name} (Float)").format(name=bt_label)
         header.prop(
             btui, "expand_content", text=bt_label,
-            emboss=False, icon='IMAGE_DATA'
+            emboss=False, icon='IMAGE_DATA', translate=False
         )
     else:
         bt_label = bt.name
         if bt.use_float:
-            bt_label += " (Float)"
+            bt_label = iface_("{name} (Float)").format(name=bt_label)
         header.prop(
             btui, "expand_content", text=bt_label,
-            emboss=False, icon='RENDER_STILL'
+            emboss=False, icon='RENDER_STILL', translate=False
         )
 
     # Only draw content if expanded
@@ -144,7 +145,7 @@ def _draw_bake_target_details(layout, mp, node):
     if has_image:
         img = bt_node.image
         info_row.label(
-            text=f"Image: {img.name}", icon='IMAGE_DATA'
+            text=iface_("Image: {name}").format(name=img.name), icon='IMAGE_DATA', translate=False
         )
     else:
         info_row.label(

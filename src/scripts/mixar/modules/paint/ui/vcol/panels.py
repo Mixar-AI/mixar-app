@@ -13,6 +13,7 @@ import bpy
 from ...core.element.get_elements import get_active_vertex_color
 from ...core.node.node_utils import get_vertex_colors
 from ...utils.blender_commons import get_user_preferences
+from mixar.modules.common.i18n import iface_
 
 
 def vcol_editor_draw(self, context):
@@ -42,7 +43,7 @@ def vcol_editor_draw(self, context):
     if not ve.show_vcol_list:
         row.prop(ve, 'show_vcol_list', text='', emboss=False, icon='TRIA_RIGHT')
         if vcol:
-            row.label(text='Active: ' + vcol.name)
+            row.label(text=iface_('Active: {name}').format(name=vcol.name), translate=False)
         else:
             row.label(text='Active: -')
     else:

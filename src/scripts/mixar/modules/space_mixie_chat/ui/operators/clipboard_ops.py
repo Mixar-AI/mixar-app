@@ -40,6 +40,7 @@ from ...constants import (
     CHAT_INPUT_MAXLEN,
     MAX_ATTACHMENTS_PER_MESSAGE,
 )
+from mixar.modules.common.i18n import rpt_
 from ...core import validate_image_file
 from ...core.attachment_board_sync import mirror_attachment_to_moodboard
 from ...core.clipboard_image import read_clipboard_image
@@ -99,7 +100,7 @@ def append_clipboard_text_to_input(context, report=None):
     if len(new_input) > CHAT_INPUT_MAXLEN:
         if report is not None:
             report({'WARNING'},
-                   f"Pasted text too long (max {CHAT_INPUT_MAXLEN} chars)")
+                   rpt_("Pasted text too long (max {count} chars)").format(count=CHAT_INPUT_MAXLEN))
         new_input = new_input[:CHAT_INPUT_MAXLEN]
 
     scene.mixie_chat_input = new_input
@@ -205,7 +206,7 @@ class MIXIE_CHAT_OT_paste_image(Operator):
             is_valid, error = validate_image_file(img_path)
 
             if not is_valid:
-                self.report({'ERROR'}, f"Invalid image: {error}")
+                self.report({'ERROR'}, rpt_("Invalid image: {error}").format(error=error))
                 self._safe_remove(img_path)
                 return {'CANCELLED'}
 
@@ -221,7 +222,7 @@ class MIXIE_CHAT_OT_paste_image(Operator):
             attachments = scene.mixie_chat_pending_attachments
             if len(attachments) >= MAX_ATTACHMENTS_PER_MESSAGE:
                 self.report({'WARNING'},
-                           f"Max {MAX_ATTACHMENTS_PER_MESSAGE} attachments")
+                            rpt_("Max {count} attachments").format(count=MAX_ATTACHMENTS_PER_MESSAGE))
                 self._safe_remove(img_path)
                 return {'CANCELLED'}
 
@@ -250,7 +251,7 @@ class MIXIE_CHAT_OT_paste_image(Operator):
 
         except Exception as e:
             logger.error(f"Failed to paste image: {e}")
-            self.report({'ERROR'}, f"Paste failed: {str(e)}")
+            self.report({'ERROR'}, rpt_("Paste failed: {error}").format(error=e))
             return {'CANCELLED'}
 
     def _attach_to_pane(self, context, pane, img_path):

@@ -20,6 +20,7 @@ textured GLB imports as a new object through the standard AsyncGLBJob path.
 import base64 as _b64
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue.constants import FEATURE_PBR_GEN
 from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
 
@@ -86,28 +87,30 @@ def enqueue_pbr_texture_job(
     from mixar.modules.common.generation_params import assemble_payload
     from mixar.modules.common.utils.image_utils import compress_image_for_upload
 
-    def _fail(msg):
+    def _fail(msg, **fields):
+        # The agent reads the English reason; the user's report is translated.
+        text = msg.format(**fields)
         if operator is not None:
-            operator.report({'ERROR'}, msg)
+            operator.report({'ERROR'}, rpt_(msg).format(**fields))
         else:
-            logger.warning(msg)
+            logger.warning(text)
         try:
-            context.window_manager['mixar_agent_gen_reason'] = msg
+            context.window_manager['mixar_agent_gen_reason'] = text
         except Exception:
             pass
         return None
 
     meshes = [o for o in objects if getattr(o, "type", None) == 'MESH']
     if not meshes:
-        return _fail("No mesh to texture")
+        return _fail(n_("No mesh to texture"))
 
     try:
         file_bytes, filename = _export_objects_glb(context, meshes)
     except Exception as e:
-        return _fail(f"Failed to export mesh: {e}")
+        return _fail(n_("Failed to export mesh: {error}"), error=e)
     if len(file_bytes) > MAX_PBR_MESH_FILE_SIZE:
         size_mb = len(file_bytes) / (1024 * 1024)
-        return _fail(f"Exported mesh is {size_mb:.1f}MB (max 150MB)")
+        return _fail(n_("Exported mesh is {size:.1f}MB (max 150MB)"), size=size_mb)
 
     payload = {
         "file_bytes_b64": _b64.b64encode(file_bytes).decode(),
@@ -118,9 +121,9 @@ def enqueue_pbr_texture_job(
     try:
         if view_images:
             if len(view_images) != 4 or not all(view_images):
-                return _fail(
+                return _fail(n_(
                     "Multiple Views needs all four images "
-                    "(front, left, back, right)")
+                    "(front, left, back, right)"))
             payload["reference_images_b64"] = [
                 _b64.b64encode(compress_image_for_upload(img)).decode()
                 for img in view_images
@@ -133,7 +136,7 @@ def enqueue_pbr_texture_job(
             else:
                 payload["reference_image_bytes_b64"] = encoded
     except Exception as e:
-        return _fail(f"Failed to process reference image: {e}")
+        return _fail(n_("Failed to process reference image: {error}"), error=e)
 
     merged = dict(params or {})
     if prompt:
@@ -152,12 +155,12 @@ def enqueue_pbr_texture_job(
             model=model,
             payload=payload,
             label=label,
-            fail_message="PBR generation failed",
+            fail_message=n_("PBR generation failed"),
             on_imported=make_texture_reimport_on_imported(),
             scene_flag=PBR_GEN_SCENE_FLAG,
         )
     except Exception as e:
-        return _fail(f"Failed to start generation: {e}")
+        return _fail(n_("Failed to start generation: {error}"), error=e)
     if job is None:
-        return _fail(f"A duplicate PBR generation for '{label}' is already queued")
+        return _fail(n_("A duplicate PBR generation for '{label}' is already queued"), label=label)
     return job

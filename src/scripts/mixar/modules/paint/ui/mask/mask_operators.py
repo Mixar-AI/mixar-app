@@ -20,6 +20,7 @@ from bpy.props import (
 from bpy_extras.io_utils import ImportHelper
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 logger = get_logger(__name__)
 
 from ...core.element.check_elements import (
@@ -496,23 +497,23 @@ class MASKS_MT_MaskSourceMenu(bpy.types.Menu):
         # ===== IMAGE SECTION =====
         cache_image = tree.nodes.get(mask.cache_image) if tree else None
         if mask.type != 'IMAGE' and cache_image and cache_image.image:
-            op = col.operator('wm.m_replace_mask_type', text='Image: ' + cache_image.image.name, icon='RADIOBUT_OFF')
+            op = col.operator('wm.m_replace_mask_type', text=iface_('Image: {name}').format(name=cache_image.image.name), icon='RADIOBUT_OFF', translate=False)
             op.type = 'IMAGE'
             op.load_item = False
             op.item_name = ''
         else:
             source = get_mask_source(mask)
-            suffix = ''
+            text = iface_('Image')
             if mask.type == 'IMAGE' and source and source.image:
-                suffix += ': ' + source.image.name
+                text = iface_('Image: {name}').format(name=source.image.name)
             icon = 'RADIOBUT_ON' if mask.type == 'IMAGE' else 'RADIOBUT_OFF'
-            col.label(text='Image' + suffix, icon=icon)
+            col.label(text=text, icon=icon, translate=False)
 
-        label = 'Open Image' if mask.type != 'IMAGE' else 'Replace Image'
-        col.operator('wm.m_open_image_to_replace_mask', text=folder_emoji + label)
+        label = iface_('Open Image' if mask.type != 'IMAGE' else 'Replace Image')
+        col.operator('wm.m_open_image_to_replace_mask', text=folder_emoji + label, translate=False)
 
-        label = 'Open Available Image' if mask.type != 'IMAGE' else 'Replace with Available Image'
-        op = col.operator('wm.m_replace_mask_type', text=folder_emoji + label)
+        label = iface_('Open Available Image' if mask.type != 'IMAGE' else 'Replace with Available Image')
+        op = col.operator('wm.m_replace_mask_type', text=folder_emoji + label, translate=False)
         op.type = 'IMAGE'
         op.load_item = True
 
@@ -521,20 +522,20 @@ class MASKS_MT_MaskSourceMenu(bpy.types.Menu):
         # ===== VERTEX COLOR SECTION =====
         cache_vcol = tree.nodes.get(mask.cache_vcol) if tree else None
         if mask.type != 'VCOL' and cache_vcol and cache_vcol.attribute_name != '':
-            op = col.operator('wm.m_replace_mask_type', text='Vertex Color: ' + cache_vcol.attribute_name, icon='RADIOBUT_OFF')
+            op = col.operator('wm.m_replace_mask_type', text=iface_('Vertex Color: {name}').format(name=cache_vcol.attribute_name), icon='RADIOBUT_OFF', translate=False)
             op.type = 'VCOL'
             op.load_item = False
             op.item_name = ''
         else:
             source = get_mask_source(mask)
-            suffix = ''
+            text = iface_('Vertex Color')
             if mask.type == 'VCOL' and source and hasattr(source, 'attribute_name') and source.attribute_name != '':
-                suffix += ': ' + source.attribute_name
+                text = iface_('Vertex Color: {name}').format(name=source.attribute_name)
             icon = 'RADIOBUT_ON' if mask.type == 'VCOL' else 'RADIOBUT_OFF'
-            col.label(text='Vertex Color' + suffix, icon=icon)
+            col.label(text=text, icon=icon, translate=False)
 
-        label = 'Open Available Vertex Color' if mask.type != 'VCOL' else 'Replace Vertex Color'
-        op = col.operator('wm.m_replace_mask_type', text=folder_emoji + label)
+        label = iface_('Open Available Vertex Color' if mask.type != 'VCOL' else 'Replace Vertex Color')
+        op = col.operator('wm.m_replace_mask_type', text=folder_emoji + label, translate=False)
         op.type = 'VCOL'
         op.load_item = True
 

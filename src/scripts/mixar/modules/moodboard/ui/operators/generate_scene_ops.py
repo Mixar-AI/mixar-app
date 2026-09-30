@@ -18,6 +18,7 @@ from mixar.modules.common.gltf_import import import_gltf
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.core.media_utils import selected_reference_stills
 
 logger = get_logger(__name__)
@@ -229,11 +230,12 @@ class MIXIE_OT_generate_scene(Operator):
             image_bytes = compress_image_for_upload(source_image)
             logger.debug("[SceneGen] Using image: %sx%s (%s)", source_image.size[0], source_image.size[1], 'compressed' if img_item.compressed_image else 'original')
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to convert image: {e}")
+            self.report({'ERROR'}, rpt_("Failed to convert image: {error}").format(error=e))
             return {'CANCELLED'}
 
         num_masks = len(mask_bytes_list)
-        self.report({'INFO'}, f"Generating 3D scene from {num_masks} segment(s)...")
+        self.report({'INFO'}, rpt_("Generating 3D scene from {num_masks} segment(s)...").format(
+            num_masks=num_masks))
 
         # Submit job via manager
         manager.submit_job(

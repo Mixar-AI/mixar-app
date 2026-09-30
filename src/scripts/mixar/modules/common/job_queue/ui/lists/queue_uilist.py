@@ -12,6 +12,7 @@ from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
 from mixar.modules.common.job_queue.core.job import JobState
 from mixar.modules.common.job_queue.core.labels import feature_label, format_elapsed
 from mixar.modules.common.job_queue.core.queue_manager import get_queue
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 # Tracks when the last enqueue happened per feature_key (epoch seconds).
 # Used to show "Added to queue" flash and disable Generate for a few seconds.
@@ -74,7 +75,7 @@ def _generation_model_label(service: str, model: str) -> str:
 
 def _display_title(display_label: str, label: str) -> str:
     """Return the structured queue title without parsing human-authored text."""
-    title = (display_label or label or "(unnamed)").strip() or "(unnamed)"
+    title = (display_label or label or n_("(unnamed)")).strip() or n_("(unnamed)")
     return title[:1].upper() + title[1:]
 
 
@@ -85,17 +86,17 @@ def _status_word(state: str, substate: str, headline: str = "") -> str:
     "Out of credits") — ``headline`` from core/failure_info.py.
     """
     if state == JobState.SUCCESS.value:
-        return "Done"
+        return n_("Done")
     if state == JobState.FAILED.value:
-        return headline or "Failed"
+        return headline or n_("Failed")
     if state == JobState.CANCELLED.value:
-        return "Cancelled"
+        return n_("Cancelled")
     if state == JobState.PAUSED_AUTH.value:
-        return "Waiting for sign-in"
+        return n_("Waiting for sign-in")
     if state in _RUNNING_STATE_VALUES:
-        return substate or "Processing"
+        return substate or n_("Processing")
     if state == JobState.PENDING.value:
-        return substate or "Queued"
+        return substate or n_("Queued")
     return substate or ""
 
 
@@ -199,20 +200,23 @@ class MIXIE_UL_unified_queue(UIList):
             col.separator(factor=_QUEUE_ROW_GAP)
             err_row = col.row(align=True)
             msg_col = err_row.column(align=True)
-            msg = (
+            # Job messages stay English (the agent reads them too); translate
+            # the fixed ones here, server/formatted text passes through.
+            msg = rpt_(
                 item.error_message or item.user_message
                 or sanitize_message(item.error)
             )
-            msg_col.label(text=msg, icon='ERROR')
+            msg_col.label(text=msg, icon='ERROR', translate=False)
             # The provider's own words, then what the user can do about it.
             for extra in (
-                f"Reason: {item.error_reason}" if item.error_reason else "",
-                item.error_hint,
+                iface_("Reason: {reason}").format(reason=item.error_reason)
+                if item.error_reason else "",
+                rpt_(item.error_hint) if item.error_hint else "",
             ):
                 if extra:
                     line = msg_col.row(align=True)
                     line.active = False
-                    line.label(text=extra, icon='BLANK1')
+                    line.label(text=extra, icon='BLANK1', translate=False)
             actions = err_row.row(align=True)
             actions.alignment = 'RIGHT'
             op = actions.operator(
@@ -337,10 +341,11 @@ def draw_queue_generate_footer(
         status_row = layout.row(align=True)
         active_count = queue.running_count() + queue.pending_count()
         if active_count:
-            status_row.label(
-                text=f"{active_count} job{'s' if active_count != 1 else ''} in queue",
-                icon='TIME',
-            )
+            if active_count == 1:
+                jobs_text = iface_("{count} job in queue").format(count=active_count)
+            else:
+                jobs_text = iface_("{count} jobs in queue").format(count=active_count)
+            status_row.label(text=jobs_text, icon='TIME', translate=False)
         view = status_row.row(align=True)
         view.alignment = 'RIGHT'
         view.operator("mixie.queue_view", text="View Queue", icon='FORWARD')
@@ -370,10 +375,14 @@ def draw_unified_queue_panel(layout, context):
 
     chip_row = layout.row(align=True)
     chip_row.scale_y = _QUEUE_FILTER_SCALE_Y
-    chip_row.prop_enum(pg, "filter_mode", 'ALL', text=f"All ({n_all})")
-    chip_row.prop_enum(pg, "filter_mode", 'ACTIVE', text=f"Active ({n_active})")
-    chip_row.prop_enum(pg, "filter_mode", 'DONE', text=f"Done ({n_done})")
-    chip_row.prop_enum(pg, "filter_mode", 'FAILED', text=f"Failed ({n_failed})")
+    chip_row.prop_enum(pg, "filter_mode", 'ALL', translate=False,
+                       text=iface_("All ({count})").format(count=n_all))
+    chip_row.prop_enum(pg, "filter_mode", 'ACTIVE', translate=False,
+                       text=iface_("Active ({count})").format(count=n_active))
+    chip_row.prop_enum(pg, "filter_mode", 'DONE', translate=False,
+                       text=iface_("Done ({count})").format(count=n_done))
+    chip_row.prop_enum(pg, "filter_mode", 'FAILED', translate=False,
+                       text=iface_("Failed ({count})").format(count=n_failed))
     layout.separator(factor=_QUEUE_FILTER_GAP)
 
     if len(pg.items) == 0:

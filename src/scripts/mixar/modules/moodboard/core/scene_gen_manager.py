@@ -17,6 +17,7 @@ import bpy
 import requests as requests_lib
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from ...common.api.services.job_queue_service import get_job_queue_service
 from ...common.api.services.scene_gen_service import get_scene_gen_service
 from ...common.api.response import APIResponse
@@ -281,7 +282,7 @@ class SceneGenManager:
                 message=response.message, data=mapped,
             )
         elif gq_status in ("FAILED", "CANCELLED", "DLQ"):
-            error = (inner.get("error") or "Job failed")
+            error = (inner.get("error") or n_("Job failed"))
             unwrapped = APIResponse(
                 success=True, status_code=response.status_code,
                 message=response.message,
@@ -314,12 +315,13 @@ class SceneGenManager:
 
         # Log error details if job failed
         if job_status == "failed":
-            error_message = inner_data.get("error") or inner_data.get("message") or data.get("message") or "Unknown error"
+            error_message = inner_data.get("error") or inner_data.get("message") or data.get("message") or rpt_("Unknown error")
             logger.error("[SceneGen] Job FAILED: %s", error_message)
             # Store error for callback
             if job_id not in self._failed_objects:
                 self._failed_objects[job_id] = []
-            self._failed_objects[job_id].append((-1, f"Job failed: {error_message}"))
+            self._failed_objects[job_id].append((-1, rpt_("Job failed: {error}").format(
+                error=error_message)))
 
         # Queue completed objects (don't download yet)
         downloaded = self._downloaded_objects.get(job_id, set())
@@ -559,7 +561,8 @@ class SceneGenManager:
                 self._retry_download(job_id, obj_data, delay)
             else:
                 # Permanent failure after max retries
-                error_msg = f"Failed after {MAX_DOWNLOAD_RETRIES} attempts: {response.message}"
+                error_msg = rpt_("Failed after {attempts} attempts: {message}").format(
+                    attempts=MAX_DOWNLOAD_RETRIES, message=response.message)
                 logger.error("[SceneGen] Permanent failure for object %s: %s", object_id, error_msg)
                 self._handle_permanent_failure(job_id, object_id, error_msg)
             return

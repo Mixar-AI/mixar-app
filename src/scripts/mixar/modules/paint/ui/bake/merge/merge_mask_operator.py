@@ -41,6 +41,7 @@ from ..utils.bake_common import (
     recover_bake_settings,
     remember_before_bake,
 )
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -310,9 +311,7 @@ class MMergeMask(bpy.types.Operator, BaseBakeOperator):
 
         self.report(
             {"INFO"},
-            "Merging masks is done in "
-            + "{:0.2f}".format(time.time() - T)
-            + " seconds!",
+            rpt_("Merging masks is done in {seconds:0.2f} seconds!").format(seconds=time.time() - T),
         )
 
         return {"FINISHED"}

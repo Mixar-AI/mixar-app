@@ -25,6 +25,7 @@
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 #include "BLF_api.hh"
+#include "BLT_translation.hh"
 
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
@@ -108,7 +109,7 @@ void draw_grip(const float x_right, const float y_centre)
 
   const int font = BLF_default();
   BLF_size(font, 12.0f * scale);
-  const char *label = "Moodboard";
+  const char *label = IFACE_("Moodboard");
   const size_t label_len = strlen(label);
   const float text_w = BLF_width(font, label, label_len);
   const float text_h = BLF_height_max(font);

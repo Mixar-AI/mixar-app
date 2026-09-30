@@ -12,6 +12,7 @@ Routes to the correct format-specific file-browser operator
 import bpy
 
 from .export_utils import export_poll
+from mixar.modules.common.i18n import rpt_
 
 
 class MExportAsset(bpy.types.Operator):
@@ -40,7 +41,7 @@ class MExportAsset(bpy.types.Operator):
         if tab == 'FBX':
             return bpy.ops.wm.m_export_fbx('INVOKE_DEFAULT')
 
-        self.report({'ERROR'}, f"Unknown export format: {tab}")
+        self.report({'ERROR'}, rpt_("Unknown export format: {format}").format(format=tab))
         return {'CANCELLED'}
 
 

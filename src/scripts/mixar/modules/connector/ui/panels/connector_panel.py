@@ -6,6 +6,7 @@ import bpy
 from bpy.types import Panel
 
 from mixar.modules.connector.core.sidecar import sidecar_port
+from mixar.modules.common.i18n import iface_
 
 
 class MIXAR_PT_connector_panel(Panel):
@@ -27,7 +28,7 @@ class MIXAR_PT_connector_panel(Panel):
         layout.prop(settings, "export_format")
         layout.operator("mixar.connector_start_sidecar", icon="PLAY")
         layout.operator("mixar.connector_export_unreal", icon="EXPORT")
-        layout.label(text=f"Sidecar :{sidecar_port()}")
+        layout.label(text=iface_("Sidecar :{port}").format(port=sidecar_port()), translate=False)
         layout.label(text="Hub :7734 · Unreal MCP :8000/mcp · UnrealMCP TCP :55557")
         if settings.last_export_path:
             layout.label(text=settings.last_export_path)

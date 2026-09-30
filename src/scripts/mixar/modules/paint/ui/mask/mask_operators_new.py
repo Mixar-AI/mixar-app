@@ -24,6 +24,7 @@ from bpy.props import (
 )
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -352,7 +353,7 @@ class MNewLayerMask(bpy.types.Operator):
             try:
                 bpy.ops.image.save_all_modified()
             except RuntimeError as e:
-                self.report({"WARNING"}, f"Could not save modified images before creating mask: {e}")
+                self.report({"WARNING"}, rpt_("Could not save modified images before creating mask: {error}").format(error=e))
 
         obj = get_active_object()
         mat = obj.active_material
@@ -378,13 +379,13 @@ class MNewLayerMask(bpy.types.Operator):
         if has_duplicate:
             if duplicate_type == "IMAGE":
                 self.report(
-                    {"ERROR"}, "Image named '" + self.name + "' is already available!"
+                    {"ERROR"}, rpt_("Image named '{name}' is already available!").format(name=self.name)
                 )
                 return {"CANCELLED"}
             elif duplicate_type == "VCOL":
                 self.report(
                     {"ERROR"},
-                    "Vertex Color named '" + self.name + "' is already available!",
+                    rpt_("Vertex Color named '{name}' is already available!").format(name=self.name),
                 )
                 return {"CANCELLED"}
             elif self.options.is_repeat:
@@ -393,7 +394,7 @@ class MNewLayerMask(bpy.types.Operator):
                 remove_mask(layer, same_name_mask, obj)
             else:
                 self.report(
-                    {"ERROR"}, "Mask named '" + self.name + "' is already available!"
+                    {"ERROR"}, rpt_("Mask named '{name}' is already available!").format(name=self.name)
                 )
                 return {"CANCELLED"}
 

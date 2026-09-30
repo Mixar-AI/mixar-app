@@ -27,7 +27,7 @@ def test_sender_label_never_returns_you_or_mixie():
     body = _sender_label_body()
     assert not re.search(r'"You\b', body)
     assert '"Mixie"' not in body
-    assert 'return "Error";' in body
+    assert re.search(r'return (IFACE_\()?"Error"\)?;', body)  # translated in the UI language
     assert "return nullptr;" in body
     assert "delivery_hint" in body
 

@@ -21,6 +21,12 @@
 #include <algorithm>
 #include <cmath>
 
+/* Translation marker, identical to BLT_translation.hh's (this header stays
+ * Blender-free). The label tables hold msgids: measure and draw `IFACE_()`. */
+#ifndef N_
+#  define N_(msgid) msgid
+#endif
+
 namespace blender {
 
 constexpr int GEN_LAYOUT_CHIP_COUNT = 5;
@@ -36,14 +42,16 @@ constexpr float GEN_GAP_EM = 0.50f;
  * fraction of the full pad — a label still has air on both sides. */
 constexpr float GEN_PAD_SHRINK = 0.72f;
 
-constexpr const char *GEN_RAIL_LABELS[GEN_LAYOUT_RAIL_COUNT] = {"AI generations", "My Libraries"};
+constexpr const char *GEN_RAIL_LABELS[GEN_LAYOUT_RAIL_COUNT] = {N_("AI generations"),
+                                                                 N_("My Libraries")};
 constexpr const char *GEN_FILTER_LABELS[GEN_LAYOUT_CHIP_COUNT] = {
-    "All", "3D", "Image", "Video", "Splats"};
+    N_("All"), N_("3D"), N_("Image"), N_("Video"), N_("Splats")};
 /** Widest label each action slot can show. The column is stable across
  * selection; `build_actions` must not grow a label past these. */
 constexpr const char *GEN_ACTION_PRIMARY[] = {
-    "Add to Scene", "Select on Board", "Select in Scene", "Generating…"};
-constexpr const char *GEN_ACTION_SECONDARY[] = {"Open Folder", "Already in file", "Open Queue"};
+    N_("Add to Scene"), N_("Select on Board"), N_("Select in Scene"), N_("Generating…")};
+constexpr const char *GEN_ACTION_SECONDARY[] = {
+    N_("Open Folder"), N_("Already in file"), N_("Open Queue")};
 constexpr int GEN_ACTION_PRIMARY_COUNT = 4;
 constexpr int GEN_ACTION_SECONDARY_COUNT = 3;
 

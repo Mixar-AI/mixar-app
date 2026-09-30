@@ -16,6 +16,8 @@ import os
 
 import bpy
 
+from mixar.modules.common.i18n import iface_
+
 from .import_source import pop_source
 
 # A generous-but-bounded cap on the names reported back: an imported pack can
@@ -52,7 +54,7 @@ def formats_hint(formats: str) -> str:
         f.strip().lstrip("*.").upper()
         for f in (formats or "").split(",") if f.strip()
     ]
-    return f"Agent expects: {', '.join(fmts)}" if fmts else ""
+    return iface_("Agent expects: {formats}").format(formats=", ".join(fmts)) if fmts else ""
 
 
 def _importer_op(extension: str):

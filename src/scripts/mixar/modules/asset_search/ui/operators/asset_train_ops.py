@@ -33,6 +33,7 @@ from mixar.modules.asset_search.core.train_support import (
     W_SCAN_END,
     fmt_duration,
 )
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -91,7 +92,7 @@ class MIXIE_OT_train_asset_model(Operator):
         state = context.scene.mixie_asset_training
         state.is_training = True
         state.progress = 0.0
-        state.phase_text = "Starting…"
+        state.phase_text = n_("Starting…")
         state.current_item = ""
         state.assets_done = 0
         state.assets_total = 0
@@ -138,7 +139,7 @@ class MIXIE_OT_train_asset_model(Operator):
             return {"PASS_THROUGH"}
 
         if self._phase == 'INIT':
-            state.phase_text = "Scanning libraries…"
+            state.phase_text = n_("Scanning libraries…")
             self._phase = 'SCANNING'
             self._redraw(context)
             return {"RUNNING_MODAL"}
@@ -158,11 +159,11 @@ class MIXIE_OT_train_asset_model(Operator):
                 enrolled_names,
             )
             if context.preferences.filepaths.asset_libraries and not enrolled_names():
-                msg = ("No libraries selected — tick the libraries to train "
-                       "in the list below, then train")
+                msg = n_("No libraries selected — tick the libraries to train "
+                         "in the list below, then train")
             else:
-                msg = ("No asset library found — add one from "
-                       "Edit > Preferences > File Paths")
+                msg = n_("No asset library found — add one from "
+                         "Edit > Preferences > File Paths")
             self._finish(context, success=False, message=msg)
             return {"CANCELLED"}
         # An AUTO train with an empty scan (e.g. the last enrolled library was
@@ -171,9 +172,8 @@ class MIXIE_OT_train_asset_model(Operator):
         # embeddings, so search stops returning them.
 
         state.progress = W_SCAN_END
-        state.phase_text = (
-            f"Checking what's new ({len(self._scan_metadata)} assets scanned)…"
-        )
+        state.phase_text = iface_("Checking what's new ({count} assets scanned)…").format(
+            count=len(self._scan_metadata))
         self._bg_result = None
         self._bg_thread = threading.Thread(
             target=prepare_api, args=(self._scan_metadata, self), daemon=True,
@@ -199,7 +199,7 @@ class MIXIE_OT_train_asset_model(Operator):
             # the run can be cancelled, so this path keeps the old barrier:
             # render everything, then upload.
             self._stream_uploads = False
-            state.prepare_note = f"{scanned} assets — full training"
+            state.prepare_note = iface_("{count} assets — full training").format(count=scanned)
             return self._start_rendering(context, state, filter_assets=None)
 
         action = res.get("action", "full_train")
@@ -221,17 +221,18 @@ class MIXIE_OT_train_asset_model(Operator):
             self._removed_assets = res.get("removed_assets", [])
             self._train_mode = "incremental"
             unchanged = res.get("unchanged_count", scanned - len(new_assets))
-            state.prepare_note = (
-                f"{scanned} scanned · {unchanged} already embedded · "
-                f"{len(new_assets)} new · {len(self._removed_assets)} removed"
-            )
+            state.prepare_note = iface_(
+                "{scanned} scanned · {unchanged} already embedded · "
+                "{new} new · {removed} removed"
+            ).format(scanned=scanned, unchanged=unchanged, new=len(new_assets),
+                     removed=len(self._removed_assets))
             if not new_assets and not self._removed_assets:
                 self._finish(context, success=True,
                              message="Embeddings are up to date — nothing to do")
                 return {"FINISHED"}
             if not new_assets:
                 state.progress = W_RENDER_END
-                state.phase_text = "Removing deleted assets…"
+                state.phase_text = n_("Removing deleted assets…")
                 self._phase = 'UPLOADING'
                 self._redraw(context)
                 return {"RUNNING_MODAL"}
@@ -239,7 +240,7 @@ class MIXIE_OT_train_asset_model(Operator):
 
         self._train_mode = "full"
         self._removed_assets = []
-        state.prepare_note = f"{scanned} assets — full training"
+        state.prepare_note = iface_("{count} assets — full training").format(count=scanned)
         return self._start_rendering(context, state, filter_assets=None)
 
     # ------------------------------------------------------------------ #
@@ -347,8 +348,12 @@ class MIXIE_OT_train_asset_model(Operator):
         # reports its summary even under auto.
         if not silent:
             elapsed = fmt_duration(time.time() - self._started_at)
-            skipped = f", {state.failed_count} skipped" if state.failed_count else ""
-            state.last_summary = f"{message}{skipped} — {elapsed}"
+            if state.failed_count:
+                state.last_summary = rpt_("{message}, {count} skipped — {elapsed}").format(
+                    message=rpt_(message), count=state.failed_count, elapsed=elapsed)
+            else:
+                state.last_summary = rpt_("{message} — {elapsed}").format(
+                    message=rpt_(message), elapsed=elapsed)
             state.last_summary_success = success
             if success:
                 state.last_trained_at = time.strftime("%d %b %H:%M")

@@ -12,6 +12,7 @@ the same, so ``purpose`` decides only what the picked object becomes.
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...constants import BEAT_INTERPOLATION_ITEMS
 from ...constants import BEAT_INTERPOLATION_DEFAULT
 from ...core.dof import clear_focus_object, set_focus_object
@@ -77,7 +78,7 @@ class MIXAR_OT_director_set_interpolation(Operator):
         # Each write above re-applied on its own; one more is cheap and makes
         # the whole pass land even if a single beat's update failed closed.
         apply_interpolation(shot)
-        self.report({'INFO'}, f"Interpolation set on {len(selected)} keyframe(s)")
+        self.report({'INFO'}, rpt_("Interpolation set on {count} keyframe(s)").format(count=len(selected)))
         return {'FINISHED'}
 
 
@@ -235,7 +236,7 @@ class MIXAR_OT_director_pick_track_target(Operator):
         except Exception as exc:  # noqa: BLE001 — surfaced, never swallowed
             context.window.cursor_modal_restore()
             self._end()
-            self.report({'ERROR'}, f"Could not pick: {exc}")
+            self.report({'ERROR'}, rpt_("Could not pick: {error}").format(error=exc))
             return {'CANCELLED'}
         if target is None or target == shot.camera:
             # Keep the eyedropper alive: a miss is not a decision.
@@ -250,13 +251,13 @@ class MIXAR_OT_director_pick_track_target(Operator):
             if not set_focus_object(shot.camera, target):
                 self.report({'ERROR'}, "This camera cannot hold a focus object")
                 return {'CANCELLED'}
-            self.report({'INFO'}, f"Focused on {target.name}")
+            self.report({'INFO'}, rpt_("Focused on {name}").format(name=target.name))
             return {'FINISHED'}
         # Tracking only AIMS: the constraint turns the camera to the target.
         # Where the camera stands and how much of the frame the subject fills
         # stay the director's — the pick never moves the camera or its lens.
         shot.track_target = target
-        self.report({'INFO'}, f"Camera tracks {target.name}")
+        self.report({'INFO'}, rpt_("Camera tracks {name}").format(name=target.name))
         return {'FINISHED'}
 
 

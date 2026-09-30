@@ -5,6 +5,7 @@
 
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
+#include "BLT_translation.hh"
 #include "DNA_windowmanager_types.h"
 #include "MEM_guardedalloc.h"
 #include "RNA_access.hh"
@@ -18,29 +19,30 @@ bool state_is(const char *state, const char *name)
 }
 
 /** C++ mirror of the UIList's `_status_word` — one vocabulary, two surfaces.
- * A failed job says why in two words (\a headline, from failure_info.py). */
+ * A failed job says why in two words (\a headline, from failure_info.py).
+ * Translated here, per gather (Python's substate text is drawn as written). */
 void status_word(const char *state, const char *substate, const char *headline, char r_out[64])
 {
   const char *word = "";
   if (state_is(state, "SUCCESS")) {
-    word = "Done";
+    word = IFACE_("Done");
   }
   else if (state_is(state, "FAILED")) {
-    word = (headline && headline[0]) ? headline : "Failed";
+    word = (headline && headline[0]) ? IFACE_(headline) : IFACE_("Failed");
   }
   else if (state_is(state, "CANCELLED")) {
-    word = "Cancelled";
+    word = IFACE_("Cancelled");
   }
   else if (state_is(state, "PAUSED_AUTH")) {
-    word = "Waiting for sign-in";
+    word = IFACE_("Waiting for sign-in");
   }
   else if (state_is(state, "RUNNING_SUBMIT") || state_is(state, "RUNNING_POLL") ||
            state_is(state, "RUNNING_DOWNLOAD"))
   {
-    word = (substate && substate[0]) ? substate : "Processing";
+    word = (substate && substate[0]) ? substate : IFACE_("Processing");
   }
   else if (state_is(state, "PENDING")) {
-    word = (substate && substate[0]) ? substate : "Queued";
+    word = (substate && substate[0]) ? substate : IFACE_("Queued");
   }
   else {
     word = (substate && substate[0]) ? substate : "";
@@ -236,7 +238,7 @@ QueueData gather_rows(wmWindowManager *wm, const int capacity)
       row.title = read_item_std_string(&item, "label");
     }
     if (row.title.empty()) {
-      row.title = "(unnamed)";
+      row.title = IFACE_("(unnamed)");
     }
     /* Match the UIList's capitalized first letter. ASCII-only on purpose —
      * a multi-byte first char is left alone. */

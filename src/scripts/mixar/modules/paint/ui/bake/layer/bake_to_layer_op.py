@@ -17,6 +17,7 @@ from .bake_to_layer_invoke import invoke_bake_to_layer
 from .bake_to_layer_operators_helper import get_bake_properties_from_self
 from .bake_to_layer_properties import BakeToLayerProperties
 from .bake_to_layer_ui import draw_bake_to_layer_ui
+from mixar.modules.common.i18n import iface_, rpt_
 
 
 class MBakeToLayer(bpy.types.Operator, BaseBakeOperator, BakeToLayerProperties):
@@ -124,11 +125,9 @@ class MBakeToLayer(bpy.types.Operator, BaseBakeOperator, BakeToLayerProperties):
         if image:
             self.report(
                 {"INFO"},
-                "Baking "
-                + bake_type_labels[self.type]
-                + " is done in "
-                + "{:0.2f}".format(rdict["time_elapsed"])
-                + " seconds!",
+                rpt_("Baking {type} is done in {seconds:0.2f} seconds!").format(
+                    type=iface_(bake_type_labels[self.type]), seconds=rdict["time_elapsed"]
+                ),
             )
 
         return {"FINISHED"}

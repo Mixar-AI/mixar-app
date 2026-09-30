@@ -8,7 +8,8 @@ import bpy
 from bpy.props import EnumProperty, IntProperty
 from bpy.types import Operator
 
-from ...constants import ASPECT_PRESETS
+from mixar.modules.common.i18n import rpt_
+from ...constants import ASPECT_PRESET_TIPS, ASPECT_PRESETS
 from ...core.aspect import apply_ratio, remember_camera_ratio
 from ...core.shot_api import active_shot, refresh_manifest
 from ...core.viewport import (
@@ -293,9 +294,9 @@ class MIXAR_OT_director_navigate(_WalkSupervisor, Operator):
                 context, shot, state.beat_seconds, replace_existing=True
             )
         except Exception as exc:
-            self.report({'WARNING'}, f"Auto Key could not capture: {exc}")
+            self.report({'WARNING'}, rpt_("Auto Key could not capture: {error}").format(error=exc))
             return
-        self.report({'INFO'}, f"Auto keyframe at frame {beat.frame}")
+        self.report({'INFO'}, rpt_("Auto keyframe at frame {frame}").format(frame=beat.frame))
 
 
 class MIXAR_OT_director_explore(_WalkSupervisor, Operator):
@@ -470,7 +471,7 @@ class MIXAR_OT_director_set_aspect(Operator):
     preset: EnumProperty(
         name="Aspect",
         items=tuple(
-            (key, values[0], f"Set {values[0]} output", index)
+            (key, values[0], ASPECT_PRESET_TIPS[key], index)
             for index, (key, values) in enumerate(ASPECT_PRESETS.items())
         ),
         default="WIDE",

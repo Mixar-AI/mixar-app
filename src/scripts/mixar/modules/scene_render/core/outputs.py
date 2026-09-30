@@ -7,6 +7,7 @@ import os
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.common.notifications import get_notification_store
 
 logger = get_logger(__name__)
@@ -15,10 +16,12 @@ logger = get_logger(__name__)
 def notify(key, kind, status, body=""):
     try:
         store = get_notification_store()
+        video = kind == 'video'
+        title = {"started": rpt_("Rendering video") if video else rpt_("Rendering image"),
+                 "done": rpt_("Video added to Moodboard") if video else rpt_("Image added to Moodboard"),
+                 "cancelled": rpt_("Render cancelled"), "failed": rpt_("Render failed")}[status]
         store.push('success' if status == 'done' else 'error' if status == 'failed' else 'info',
-                   {"started": f"Rendering {kind}", "done": f"{kind.title()} added to Moodboard",
-                    "cancelled": "Render cancelled", "failed": "Render failed"}[status],
-                   body=body, id='scene-render-' + key, ttl_ms=0 if status == 'started' else 8000)
+                   title, body=body, id='scene-render-' + key, ttl_ms=0 if status == 'started' else 8000)
     except Exception:
         logger.exception("Scene render notification failed")
 

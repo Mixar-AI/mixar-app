@@ -27,6 +27,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "GPU_state.hh"
 
 #include "UI_interface.hh"
@@ -205,8 +207,8 @@ void mixie_chat_history_draw_rows(const HistoryDrawFrame &f)
     const float del_zone_left = checkpoints ? row_xmax - 10.0f * scale :
                                               hit.delete_bounds.xmin - 8.0f * scale;
     const char *when_text = is_armed ?
-                                (checkpoints ? (entry.action[0] ? entry.action : "Revert?") :
-                                               "Delete?") :
+                                (checkpoints ? (entry.action[0] ? entry.action : IFACE_("Revert?")) :
+                                               IFACE_("Delete?")) :
                                 entry.when;
     float when_w = 0.0f;
     if (when_text[0] != '\0') {
@@ -235,7 +237,9 @@ void mixie_chat_history_draw_rows(const HistoryDrawFrame &f)
                                                       HIST_TITLE_INDENT) * scale;
       const float title_max_w = (del_zone_left - when_w - 10.0f * scale) - title_x;
       char clipped[224];
-      hist_text_ellipsis(entry.title[0] ? entry.title : (checkpoints ? "Checkpoint" : "Untitled chat"),
+      hist_text_ellipsis(entry.title[0] ? entry.title :
+                                          (checkpoints ? IFACE_("Checkpoint") :
+                                                         IFACE_("Untitled chat")),
                          font_id, title_px, std::max(title_max_w, 20.0f * scale),
                          clipped, sizeof(clipped));
       const float *base_col = (is_current || (checkpoints && is_armed)) ? HIST_COL_TITLE_CURRENT :

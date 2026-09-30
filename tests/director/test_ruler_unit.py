@@ -60,7 +60,7 @@ def test_the_native_index_matches_the_enum_order():
 
 def test_the_chips_paint_and_set_the_same_identifiers():
     for label, value in (("Frames", "FRAMES"), ("Duration", "DURATION")):
-        assert f'{{"{label}", "{value}"}}' in RULER_GROUP.replace("\n     ", "")
+        assert f'{{N_("{label}"), "{value}"}}' in RULER_GROUP.replace("\n     ", "")
     assert '"Min", "MIN"' not in DOCK
     assert '"Sec", "SEC"' not in DOCK
 
@@ -166,7 +166,8 @@ def test_duration_picks_its_own_format_from_the_span():
 def test_the_group_is_titled_ruler_not_after_one_of_its_options():
     """"Duration" is one of the two chips now; a group labelled with the name
     of one of its own options reads as a statement, not a choice."""
-    assert 'cinema_text_left("Ruler", x, cy, CINEMA_FONT_TITLE * u, title);' in RULER_GROUP
+    assert 'const char *ruler_title = IFACE_("Ruler");' in RULER_GROUP
+    assert 'cinema_text_left(ruler_title, x, cy, CINEMA_FONT_TITLE * u, title);' in RULER_GROUP
     assert 'cinema_text_left("Duration",' not in DOCK
 
 

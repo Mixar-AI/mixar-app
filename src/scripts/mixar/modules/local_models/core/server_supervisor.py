@@ -43,6 +43,7 @@ import urllib.request
 from typing import Callable, Optional
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from ..constants import (
     DEFAULT_CTX_SIZE,
@@ -169,7 +170,8 @@ def _watch(proc, gen: int, port: int, variant: str, on_state: OnState) -> None:
                 return  # superseded by a stop/restart
         if proc.poll() is not None:
             _report_startup_death(gen, variant, on_state,
-                                  f"server exited with code {proc.returncode}")
+                                  rpt_("server exited with code {code}").format(
+                                      code=proc.returncode))
             return
         if _health_ok(port):
             with _lock:
@@ -191,7 +193,7 @@ def _watch(proc, gen: int, port: int, variant: str, on_state: OnState) -> None:
         threading.Thread(target=_reap, args=(proc,), daemon=True).start()
         _report_startup_death(
             gen, variant, on_state,
-            f"no healthy response within {HEALTH_TIMEOUT_S}s",
+            rpt_("no healthy response within {seconds}s").format(seconds=HEALTH_TIMEOUT_S),
         )
         return
 
@@ -325,7 +327,7 @@ def start_server(model_id: str, on_state: OnState, *,
             if logf:
                 logf.close()
             _current["state"] = "failed"
-            on_state("failed", f"could not launch server: {exc}")
+            on_state("failed", rpt_("could not launch server: {error}").format(error=exc))
             return False
         _proc = proc
         _logf = logf

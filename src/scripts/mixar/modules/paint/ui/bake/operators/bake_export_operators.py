@@ -17,6 +17,7 @@ from bpy_extras.io_utils import ExportHelper
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.export_events import capture_export
+from mixar.modules.common.i18n import iface_, rpt_
 
 logger = get_logger(__name__)
 
@@ -217,15 +218,15 @@ class MExportBakedChannel(bpy.types.Operator, ExportHelper):
                     image = baked_node.image
 
                     if _save_image_to_file(image, self.filepath, self.file_format):
-                        self.report({'INFO'}, f"Exported '{self.channel_name}' to {self.filepath}")
+                        self.report({'INFO'}, rpt_("Exported '{name}' to {path}").format(name=self.channel_name, path=self.filepath))
                         _capture_export(context, "BAKED_CHANNEL", True, file_format=self.file_format)
                         return {'FINISHED'}
                     else:
-                        self.report({'ERROR'}, f"Failed to export '{self.channel_name}'")
+                        self.report({'ERROR'}, rpt_("Failed to export '{name}'").format(name=self.channel_name))
                         _capture_export(context, "BAKED_CHANNEL", False, file_format=self.file_format)
                         return {'CANCELLED'}
 
-        self.report({'ERROR'}, f"Channel '{self.channel_name}' not found or not baked")
+        self.report({'ERROR'}, rpt_("Channel '{name}' not found or not baked").format(name=self.channel_name))
         return {'CANCELLED'}
 
 
@@ -292,7 +293,7 @@ class MExportAllBakedChannels(bpy.types.Operator, ExportHelper):
 
             if baked:
                 box = layout.box()
-                box.label(text=f"Will export {len(baked)} channel(s):", icon='INFO')
+                box.label(text=iface_("Will export {count} channel(s):").format(count=len(baked)), icon='INFO', translate=False)
                 col = box.column(align=True)
                 col.scale_y = 0.8
                 for ch, img in baked:
@@ -317,7 +318,7 @@ class MExportAllBakedChannels(bpy.types.Operator, ExportHelper):
             try:
                 os.makedirs(directory)
             except OSError as e:
-                self.report({'ERROR'}, f"Cannot create directory: {e}")
+                self.report({'ERROR'}, rpt_("Cannot create directory: {error}").format(error=e))
                 _capture_export(context, "BAKED_CHANNELS_ALL", False, file_format=self.file_format, image_count=0)
                 return {'CANCELLED'}
 
@@ -333,7 +334,7 @@ class MExportAllBakedChannels(bpy.types.Operator, ExportHelper):
                 exported_count += 1
 
         if exported_count > 0:
-            self.report({'INFO'}, f"Exported {exported_count} channel(s) to {directory}")
+            self.report({'INFO'}, rpt_("Exported {count} channel(s) to {path}").format(count=exported_count, path=directory))
             _capture_export(context, "BAKED_CHANNELS_ALL", True, file_format=self.file_format, image_count=exported_count)
             return {'FINISHED'}
         else:
@@ -419,15 +420,15 @@ class MExportBakedTexture(bpy.types.Operator, ExportHelper):
     def execute(self, context):
         image = bpy.data.images.get(self.image_name)
         if not image:
-            self.report({'ERROR'}, f"Image '{self.image_name}' not found")
+            self.report({'ERROR'}, rpt_("Image '{name}' not found").format(name=self.image_name))
             return {'CANCELLED'}
 
         if _save_image_to_file(image, self.filepath, self.file_format):
-            self.report({'INFO'}, f"Exported '{self.image_name}' to {self.filepath}")
+            self.report({'INFO'}, rpt_("Exported '{name}' to {path}").format(name=self.image_name, path=self.filepath))
             _capture_export(context, "BAKED_TEXTURE", True, file_format=self.file_format)
             return {'FINISHED'}
         else:
-            self.report({'ERROR'}, f"Failed to export '{self.image_name}'")
+            self.report({'ERROR'}, rpt_("Failed to export '{name}'").format(name=self.image_name))
             _capture_export(context, "BAKED_TEXTURE", False, file_format=self.file_format)
             return {'CANCELLED'}
 
@@ -481,7 +482,7 @@ class MExportAllBakedTextures(bpy.types.Operator, ExportHelper):
         baked_images = _get_baked_mesh_map_images()
         if baked_images:
             box = layout.box()
-            box.label(text=f"Will export {len(baked_images)} texture(s):", icon='INFO')
+            box.label(text=iface_("Will export {count} texture(s):").format(count=len(baked_images)), icon='INFO', translate=False)
             col = box.column(align=True)
             col.scale_y = 0.8
             for img in baked_images:
@@ -498,7 +499,7 @@ class MExportAllBakedTextures(bpy.types.Operator, ExportHelper):
             try:
                 os.makedirs(directory)
             except OSError as e:
-                self.report({'ERROR'}, f"Cannot create directory: {e}")
+                self.report({'ERROR'}, rpt_("Cannot create directory: {error}").format(error=e))
                 _capture_export(context, "BAKED_TEXTURES_ALL", False, file_format=self.file_format, image_count=0)
                 return {'CANCELLED'}
 
@@ -514,7 +515,7 @@ class MExportAllBakedTextures(bpy.types.Operator, ExportHelper):
                 exported_count += 1
 
         if exported_count > 0:
-            self.report({'INFO'}, f"Exported {exported_count} texture(s) to {directory}")
+            self.report({'INFO'}, rpt_("Exported {count} texture(s) to {path}").format(count=exported_count, path=directory))
             _capture_export(context, "BAKED_TEXTURES_ALL", True, file_format=self.file_format, image_count=exported_count)
             return {'FINISHED'}
         else:

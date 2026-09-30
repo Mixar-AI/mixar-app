@@ -15,6 +15,7 @@ from bpy.props import (
 )
 from bpy.types import Image, Object, PropertyGroup
 
+from mixar.modules.common.i18n import iface_
 from mixar.modules.moodboard.constants import (
     GRAPH_ACCEPTED_TYPES_MAXLEN,
     GRAPH_DESCRIPTION_MAXLEN,
@@ -169,7 +170,7 @@ def refresh_node_dropdown_labels(node) -> None:
     node.service_label = _service_label_for_slug(node.action_type, node.service_key_id)
     node.model_label = _model_label_for_slug(node.service_key_id, node.model_slug)
     if node.action_type == 'ASSEMBLE':  # local: the settings button opens its part rows
-        node.service_label, node.model_label = "", "Attachment settings"
+        node.service_label, node.model_label = "", iface_("Attachment settings")
 
 
 _SUPPRESS_ENUM_MIRROR = False

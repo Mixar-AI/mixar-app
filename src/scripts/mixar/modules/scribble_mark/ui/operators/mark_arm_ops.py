@@ -9,6 +9,7 @@ from __future__ import annotations
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.scribble_mark.core import marks as mark_store
 from mixar.modules.scribble_mark.core import overlay, scribble_mode
 
@@ -89,7 +90,7 @@ class MIXAR_OT_scribble_mark_clear(Operator):
         if getattr(wm, "mixar_mark_intent", "AUTO") != "AUTO":
             wm.mixar_mark_intent = "AUTO"
         overlay.tag_redraw()
-        self.report({"INFO"}, f"Cleared {removed} mark(s)")
+        self.report({"INFO"}, rpt_("Cleared {count} mark(s)").format(count=removed))
         return {"FINISHED"}
 
 

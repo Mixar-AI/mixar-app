@@ -12,6 +12,8 @@ Centralized configuration values for the Mixie Chat module.
 import sys
 from enum import Enum
 
+from mixar.modules.common.i18n import n_
+
 
 # DEVELOPMENT MODE
 
@@ -92,12 +94,12 @@ SESSION_STATE_ITEMS = [
 
 # State labels for UI display
 STATE_LABELS = {
-    SessionState.OFFLINE: "Not Connected",
-    SessionState.CONNECTING: "Connecting...",
-    SessionState.IDLE: "Connected",
-    SessionState.BUSY: "Working...",
-    SessionState.MODIFYING: "Modifying...",
-    SessionState.AWAITING_INPUT: "Awaiting Input...",
+    SessionState.OFFLINE: n_("Not Connected"),
+    SessionState.CONNECTING: n_("Connecting..."),
+    SessionState.IDLE: n_("Connected"),
+    SessionState.BUSY: n_("Working..."),
+    SessionState.MODIFYING: n_("Modifying..."),
+    SessionState.AWAITING_INPUT: n_("Awaiting Input..."),
 }
 
 
@@ -413,9 +415,7 @@ VIDEO_FILE_FORMATS = {
     '.mts', '.mv', '.mxf', '.ogg', '.ogv', '.r3d', '.ts', '.vob', '.webm',
     '.wmv', '.xvid',
 }
-VIDEO_ATTACHMENT_REJECTED = (
-    "Videos require Video mode. Remove the video to send to Agent."
-)
+VIDEO_ATTACHMENT_REJECTED = n_("Videos require Video mode. Remove the video to send to Agent.")
 THUMBNAIL_SIZE = (128, 128)
 MAX_ATTACHMENTS_PER_MESSAGE = 10
 

@@ -17,6 +17,7 @@ from typing import Callable, List, Optional, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue.constants import (
     FEATURE_IMAGE_TO_3D_PRO,
     FEATURE_SCENE_GEN_HP,
@@ -333,7 +334,7 @@ def enqueue_pro_job(
         model=model_key,
         payload=payload,
         label=label,
-        fail_message="Image to 3D failed",
+        fail_message=n_("Image to 3D failed"),
         on_imported=make_model_rename_on_imported(
             resolved_name, model_front_zrot(model_key), placement=placement),
         scene_flag="mixie_image_to_3d_is_generating",
@@ -358,7 +359,7 @@ def enqueue_scene_gen_hp_jobs(
         try:
             image_bytes = compress_image_for_upload(image)
         except Exception as e:
-            msg = f"Failed to compress '{image.name}': {e}"
+            msg = rpt_("Failed to compress '{name}': {error}").format(name=image.name, error=e)
             logger.warning(msg)
             if operator is not None:
                 operator.report({'WARNING'}, msg)
@@ -398,7 +399,7 @@ def enqueue_scene_gen_hp_jobs(
             payload=payload,
             label=image.name,
             origin_capability_key=CHARACTER_PARTS_CAPABILITY_KEY,
-            fail_message="Scene generation failed",
+            fail_message=n_("Scene generation failed"),
             on_imported=_make_hp_on_imported(chain_id),
             scene_flag="mixie_scene_gen_hp_is_generating",
         )
@@ -439,7 +440,7 @@ def enqueue_scene_gen_lp_jobs(
         try:
             file_bytes, filename = _export_single_object(context, obj)
         except Exception as e:
-            msg = f"Failed to export '{obj.name}': {e}"
+            msg = rpt_("Failed to export '{name}': {error}").format(name=obj.name, error=e)
             logger.warning(msg)
             if operator is not None:
                 operator.report({'WARNING'}, msg)
@@ -447,10 +448,8 @@ def enqueue_scene_gen_lp_jobs(
 
         if len(file_bytes) > MAX_FILE_SIZE_TOPOLOGY:
             size_mb = len(file_bytes) / (1024 * 1024)
-            msg = (
-                f"Skipping '{obj.name}': exported file is {size_mb:.1f}MB "
-                f"(max {MAX_FILE_SIZE_TOPOLOGY // (1024 * 1024)}MB)"
-            )
+            msg = rpt_("Skipping '{name}': exported file is {size:.1f}MB (max {limit}MB)").format(
+                name=obj.name, size=size_mb, limit=MAX_FILE_SIZE_TOPOLOGY // (1024 * 1024))
             logger.warning(msg)
             if operator is not None:
                 operator.report({'WARNING'}, msg)
@@ -477,7 +476,7 @@ def enqueue_scene_gen_lp_jobs(
             payload=payload,
             label=obj.name,
             origin_capability_key=CHARACTER_PARTS_CAPABILITY_KEY,
-            fail_message="Scene generation failed",
+            fail_message=n_("Scene generation failed"),
             on_imported=_make_lp_on_imported(chain_id),
             scene_flag="mixie_scene_gen_lp_is_generating",
         )

@@ -16,6 +16,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.common.render_coordinator import core as slot
 from ..constants import RESULTS_NS, MAX_RESULTS, TICK_SECONDS, LOST_AFTER_SECONDS
 from .settings import Settings, render_info
@@ -72,7 +73,7 @@ def _before_load(_unused, _extra=None):
     if _job is not None:
         # The timer retains only its old job and cleans files after native teardown.
         _job['invalidated'] = True
-        notify(_job['key'], _job['kind'], 'cancelled', 'The project was closed.')
+        notify(_job['key'], _job['kind'], 'cancelled', rpt_('The project was closed.'))
         slot.release(_job['reservation'])
     _job = None
     _records.clear()
@@ -116,8 +117,8 @@ def _tick(job):
     value['elapsed_seconds'] = round(time.monotonic() - job['started'], 2)
     _publish(job['key'], value)
     notify(job['key'], job['kind'], value['status'],
-           'Open Moodboard to view it.' if value['status'] == 'done' else
-           'Check the scene camera and render settings, then try again.' if value['status'] == 'failed' else '')
+           rpt_('Open Moodboard to view it.') if value['status'] == 'done' else
+           rpt_('Check the scene camera and render settings, then try again.') if value['status'] == 'failed' else '')
     return None
 
 
@@ -195,8 +196,8 @@ def start(context, key, kind='image', label='', expected_session='', **options):
         value = _publish(key, _reply(key, 'started', kind=kind, scene_session=session,
                                      render=job['render']))
         notify(key, kind, 'started',
-               ('Using EEVEE because this scene exceeds the Cycles memory budget. ' if settings.downgraded else '') +
-               'It will appear in Moodboard when finished. Use the render progress control to cancel.')
+               (rpt_('Using EEVEE because this scene exceeds the Cycles memory budget.') + ' ' if settings.downgraded else '') +
+               rpt_('It will appear in Moodboard when finished. Use the render progress control to cancel.'))
         return value
     except Exception:
         logger.exception('Could not start scene render')
@@ -212,5 +213,5 @@ def start(context, key, kind='image', label='', expected_session='', **options):
         slot.release(reservation)
         if folder:
             shutil.rmtree(folder, ignore_errors=True)
-        notify(key, kind, 'failed', 'Check the scene camera and render settings, then try again.')
+        notify(key, kind, 'failed', rpt_('Check the scene camera and render settings, then try again.'))
         return _publish(key, _reply(key, 'failed', error='async_render_unavailable'))

@@ -14,6 +14,8 @@ hint-scale sublabels, 1.4-scale primary action buttons, and status badges.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import iface_, n_
+
 # Visual constants — kept in lockstep with moodboard/constants.py
 # (GENERATE_BUTTON_SCALE_Y / SEP_* / HINT_SCALE_Y).
 _BTN_SCALE = 1.4
@@ -61,7 +63,7 @@ def _input(layout, data, prop, **kw):
 def _draw_status(layout, state):
     """Library Index section: state badge, last-run summary, train actions."""
     col = _section(
-        layout, "Library Index", icon='ASSET_MANAGER',
+        layout, n_("Library Index"), icon='ASSET_MANAGER',
         action_op="mixie.refresh_asset_status",
         action_icon='SORTTIME' if state.is_refreshing else 'FILE_REFRESH',
         action_enabled=not state.is_refreshing,
@@ -69,7 +71,7 @@ def _draw_status(layout, state):
 
     if not state.has_model and not state.last_trained_at:
         col.label(text="Not indexed yet", icon='INFO')
-        _hint(col, "Train to enable search and agent reuse")
+        _hint(col, n_("Train to enable search and agent reuse"))
     elif state.needs_retraining:
         alert = col.row()
         alert.alert = True
@@ -80,7 +82,7 @@ def _draw_status(layout, state):
     else:
         col.label(text="Up to date", icon='CHECKMARK')
     if state.last_trained_at:
-        _hint(col, f"Last trained: {state.last_trained_at}")
+        _hint(col, iface_("Last trained: {time}").format(time=state.last_trained_at))
 
     if state.last_summary:
         col.separator(factor=_SEP_INTRA)
@@ -111,13 +113,13 @@ def _draw_library_enrollment(layout, context):
     ensure_library_list_synced(context)
 
     col = _section(
-        layout, "Libraries to Train", icon='ASSET_MANAGER',
+        layout, n_("Libraries to Train"), icon='ASSET_MANAGER',
         action_op="mixie.refresh_libraries", action_icon='FILE_REFRESH',
     )
     wm = context.window_manager
     coll = getattr(wm, "mixie_asset_libraries", None)
     if not coll:
-        _hint(col, "Add asset libraries in Preferences › File Paths")
+        _hint(col, n_("Add asset libraries in Preferences › File Paths"))
         return
 
     col.template_list(
@@ -129,28 +131,31 @@ def _draw_library_enrollment(layout, context):
     enabled_n = sum(1 for it in coll if it.enabled)
     footer = col.row(align=True)
     footer.scale_y = _HINT_SCALE
-    footer.label(text=f"{enabled_n} of {len(coll)} selected")
+    footer.label(text=iface_("{count} of {total} selected").format(count=enabled_n, total=len(coll)),
+                 translate=False)
     ops = footer.row(align=True)
     ops.alignment = 'RIGHT'
     ops.operator("mixie.set_all_libraries", text="All").enable = True
     ops.operator("mixie.set_all_libraries", text="None").enable = False
-    _hint(col, "Counts show after Refresh; only ticked libraries are trained",
+    _hint(col, n_("Counts show after Refresh; only ticked libraries are trained"),
           icon='INFO')
 
 
 def _draw_training_progress(layout, state):
     """Live training section: bar, counter, phase, current item, ETA, cancel."""
-    col = _section(layout, "Training", icon='ASSET_MANAGER')
+    col = _section(layout, n_("Training"), icon='ASSET_MANAGER')
 
     col.prop(state, "progress", text=state.phase_text or "Training…", slider=True)
 
     if state.assets_total:
         col.label(
-            text=f"Embedding {state.assets_done} / {state.assets_total} assets",
+            text=iface_("Embedding {done} / {total} assets").format(
+                done=state.assets_done, total=state.assets_total),
             icon='RENDER_RESULT',
+            translate=False,
         )
     if state.current_item:
-        _hint(col, f"Now: {state.current_item}")
+        _hint(col, iface_("Now: {item}").format(item=state.current_item))
     if state.eta_text:
         _hint(col, state.eta_text, icon='TIME')
     if state.prepare_note:
@@ -162,7 +167,8 @@ def _draw_training_progress(layout, state):
         fail_row.alert = True
         fail_row.prop(
             state, "show_failures",
-            text=f"{state.failed_count} skipped",
+            text=iface_("{count} skipped").format(count=state.failed_count),
+            translate=False,
             icon='TRIA_DOWN' if state.show_failures else 'TRIA_RIGHT',
             emboss=False,
         )
@@ -185,16 +191,16 @@ def _draw_training_progress(layout, state):
 
 def _draw_search(layout, state, is_training):
     """Search section: prompt + reference image + button + actionable results."""
-    col = _section(layout, "Search Library", icon='VIEWZOOM')
+    col = _section(layout, n_("Search Library"), icon='VIEWZOOM')
 
     if is_training:
-        _hint(col, "Unavailable while training", icon='LOCKED')
+        _hint(col, n_("Unavailable while training"), icon='LOCKED')
         return
 
     _input(col, state, "search_prompt", text="",
-           icon='VIEWZOOM', placeholder="Describe an asset…")
+           icon='VIEWZOOM', placeholder=n_("Describe an asset…"))
     col.separator(factor=_SEP_INTRA)
-    _hint(col, "Reference Image (optional)", icon='IMAGE_DATA')
+    _hint(col, n_("Reference Image (optional)"), icon='IMAGE_DATA')
     col.template_ID(state, "search_image", open="image.open")
 
     col.separator(factor=_SEP_INTRA)
@@ -209,8 +215,8 @@ def _draw_search(layout, state, is_training):
     if state.search_results:
         col.separator(factor=_SEP_SECTION)
         header = col.row(align=True)
-        header.label(text=f"{len(state.search_results)} result(s)",
-                     icon='CHECKMARK')
+        header.label(text=iface_("{count} result(s)").format(count=len(state.search_results)),
+                     icon='CHECKMARK', translate=False)
         header.operator("mixie.clear_search_results", text="", icon='X',
                         emboss=False)
         for hit in state.search_results:
@@ -218,7 +224,7 @@ def _draw_search(layout, state, is_training):
             row = card.row(align=True)
             main = row.column(align=True)
             main.label(text=hit.name, icon='OBJECT_DATA')
-            src = hit.library or "unknown library"
+            src = hit.library or iface_("unknown library")
             if hit.asset_type:
                 src += f" · {hit.asset_type}"
             _hint(main, "    " + src)
@@ -228,13 +234,13 @@ def _draw_search(layout, state, is_training):
                 score_row.progress(factor=hit.score,
                                    text=f"{hit.score:.0%}", type='BAR')
             except Exception:
-                _hint(score_row, f"score {hit.score:.2f}")
+                _hint(score_row, iface_("score {score:.2f}").format(score=hit.score))
             btn_col = row.column()
             op = btn_col.operator("mixie.locate_search_result", text="",
                                   icon='ZOOM_SELECTED')
             op.asset_name = hit.name
             op.library = hit.library
-        _hint(col, "Click the magnifier to show a result in the browser",
+        _hint(col, n_("Click the magnifier to show a result in the browser"),
               icon='INFO')
     elif state.search_message:
         col.separator(factor=_SEP_INTRA)
@@ -244,14 +250,14 @@ def _draw_search(layout, state, is_training):
         row.operator("mixie.clear_search_results", text="", icon='X',
                      emboss=False)
         if "No matching" in state.search_message:
-            _hint(col, "Try other words, or retrain if assets are new")
+            _hint(col, n_("Try other words, or retrain if assets are new"))
 
 
 def _draw_agent_reuse(layout, state):
-    col = _section(layout, "Agent Asset Reuse",
+    col = _section(layout, n_("Agent Asset Reuse"),
                    icon='OUTLINER_OB_GROUP_INSTANCE')
     col.prop(state, "match_threshold", text="Match Threshold", slider=True)
-    _hint(col, "Ask the agent to \"use my library\"", icon='INFO')
+    _hint(col, n_("Ask the agent to \"use my library\""), icon='INFO')
 
 
 # ---------------------------------------------------------------------------

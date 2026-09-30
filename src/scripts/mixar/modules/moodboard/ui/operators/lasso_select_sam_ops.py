@@ -17,6 +17,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -429,7 +430,7 @@ def _perform_mask_segmentations(
             _perform_mask_segmentations(scene, target_idx, masks, outlines, index + 1)
             return
 
-        error_msg = message or "Unknown error"
+        error_msg = message or rpt_("Unknown error")
         if "timed out" in error_msg.lower():
             logger.error("[LassoSelectSAM] %s", error_msg)
             toast_failure(error_msg)

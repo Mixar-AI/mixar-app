@@ -15,6 +15,7 @@ from bpy.types import Operator
 from bpy.props import IntProperty
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -128,7 +129,8 @@ class MIXIE_OT_moodboard_upload_to_sam(Operator):
                         if manager.queue_upload(img_item.image, img_item=img_item):
                             count += 1
                 if count > 0:
-                    self.report({'INFO'}, f"Queued {count} images for upload")
+                    self.report({'INFO'}, rpt_("Queued {count} images for upload").format(
+                        count=count))
                 else:
                     self.report({'INFO'}, "All images already uploaded")
         else:
@@ -143,7 +145,8 @@ class MIXIE_OT_moodboard_upload_to_sam(Operator):
                 return {'CANCELLED'}
 
             if manager.queue_upload(img_item.image, img_item=img_item):
-                self.report({'INFO'}, f"Uploading '{img_item.image.name}'...")
+                self.report({'INFO'}, rpt_("Uploading '{name}'...").format(
+                    name=img_item.image.name))
             else:
                 if manager.is_ready(img_item.image):
                     self.report({'INFO'}, "Image already uploaded")

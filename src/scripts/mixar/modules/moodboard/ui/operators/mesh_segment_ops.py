@@ -15,6 +15,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -114,7 +115,7 @@ class MIXIE_OT_mesh_segment_submit(Operator):
             logger.debug("Exported mesh to: %s", obj_path)
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to export mesh: {e}")
+            self.report({'ERROR'}, rpt_("Failed to export mesh: {error}").format(error=e))
             return {'CANCELLED'}
 
         # Model slug from the tab's catalog selection (catalog default →
@@ -156,7 +157,7 @@ class MIXIE_OT_mesh_segment_submit(Operator):
                 return {'CANCELLED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to submit job: {e}")
+            self.report({'ERROR'}, rpt_("Failed to submit job: {error}").format(error=e))
             return {'CANCELLED'}
 
 
@@ -183,7 +184,7 @@ class MIXIE_OT_mesh_segment_cancel(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to cancel job: {e}")
+            self.report({'ERROR'}, rpt_("Failed to cancel job: {error}").format(error=e))
             return {'CANCELLED'}
 
 

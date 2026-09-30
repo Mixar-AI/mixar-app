@@ -19,6 +19,7 @@ FEATURE_LOOKDEV queue); inputs live on ``tab_lookdev`` (prompt,
 fast_mode) because the submit operator reads them from there.
 """
 
+from mixar.modules.common.i18n import n_
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_prompt_section,
     draw_generate_footer, draw_dropdown, draw_toggle,
@@ -43,7 +44,7 @@ def draw_blockout_mode(layout, context, model_owner):
     draw_section_separator(layout)
 
     # --- Settings ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     draw_toggle(col, lookdev_tab, "fast_mode", text="Fast Mode (~4x faster)")
 
     # Catalog Model dropdown + schema params. The owner's model enum is

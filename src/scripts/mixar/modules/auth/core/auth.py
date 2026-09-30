@@ -17,6 +17,8 @@ import webbrowser
 
 import requests
 
+from mixar.modules.common.i18n import rpt_
+
 from ....config.config import get_server_url
 from ...common.network import classify_network_error, log_network_failure
 from ....config.logging_config import get_logger
@@ -349,7 +351,7 @@ def login(username, password):
                     logger.info("Login successful")
                     return {
                         "success": True,
-                        "message": "Login successful",
+                        "message": rpt_("Login successful"),
                         "token": access_token,
                     }
                 else:
@@ -360,11 +362,12 @@ def login(username, password):
             else:
                 return {
                     "success": False,
-                    "message": "Incomplete token pair in login response",
+                    "message": rpt_("Incomplete token pair in login response"),
                 }
         else:
             # Parse error message from response
-            error_message = f"Authentication failed: {response.status_code}"
+            error_message = rpt_("Authentication failed: {status}").format(
+                status=response.status_code)
             try:
                 error_data = response.json()
                 detail = error_data.get("detail")
@@ -391,7 +394,7 @@ def login(username, password):
     except Exception as e:
         return {
             "success": False,
-            "message": f"Login error: {str(e)}",
+            "message": rpt_("Login error: {error}").format(error=e),
         }
 
 
@@ -556,10 +559,10 @@ def _replace_token_pair_locked(new_access_token, new_refresh_token):
     old_access_token, old_refresh_token = _credentials_snapshot()
     if not store_refresh_token(new_refresh_token):
         _restore_token_pair(old_access_token, old_refresh_token)
-        return False, "Failed to store refresh token"
+        return False, rpt_("Failed to store refresh token")
     if not store_access_token(new_access_token):
         _restore_token_pair(old_access_token, old_refresh_token)
-        return False, "Failed to store access token"
+        return False, rpt_("Failed to store access token")
     return True, None
 
 
@@ -792,7 +795,7 @@ def create_dashboard_handoff_url(source="texture_painting", target=None):
     """
     token = get_access_token()
     if not token:
-        return {"success": False, "message": "Not logged in. Please login first."}
+        return {"success": False, "message": rpt_("Not logged in. Please login first.")}
 
     try:
         url = f"{get_server_url()}/api/v1/auth/handoff/create"
@@ -809,7 +812,8 @@ def create_dashboard_handoff_url(source="texture_painting", target=None):
         if response.status_code not in (200, 201):
             return {
                 "success": False,
-                "message": f"Failed to create handoff ticket: {response.status_code}",
+                "message": rpt_("Failed to create handoff ticket: {status}").format(
+                    status=response.status_code),
             }
 
         data = response.json()
@@ -817,13 +821,13 @@ def create_dashboard_handoff_url(source="texture_painting", target=None):
         if not redirect_url:
             ticket = data.get("ticket")
             if not ticket:
-                return {"success": False, "message": "No redirect URL returned by backend."}
+                return {"success": False, "message": rpt_("No redirect URL returned by backend.")}
             redirect_url = f"{get_server_url().rstrip('/')}/auth/handoff?ticket={urllib.parse.quote(ticket)}"
 
         return {"success": True, "url": redirect_url}
     except Exception as e:
         logger.error(f"Failed creating dashboard handoff URL: {e}")
-        return {"success": False, "message": f"Handoff setup failed: {str(e)}"}
+        return {"success": False, "message": rpt_("Handoff setup failed: {error}").format(error=e)}
 
 
 def open_dashboard_with_handoff():
@@ -836,8 +840,10 @@ def open_dashboard_with_handoff():
     try:
         opened = webbrowser.open(target_url)
         if not opened:
-            return {"success": False, "message": "Could not open browser automatically.", "url": target_url}
-        return {"success": True, "message": "Dashboard opened.", "url": target_url}
+            return {"success": False, "message": rpt_("Could not open browser automatically."),
+                    "url": target_url}
+        return {"success": True, "message": rpt_("Dashboard opened."), "url": target_url}
     except Exception as e:
         logger.error(f"Failed opening dashboard URL in browser: {e}")
-        return {"success": False, "message": f"Browser launch failed: {str(e)}", "url": target_url}
+        return {"success": False, "message": rpt_("Browser launch failed: {error}").format(error=e),
+                "url": target_url}

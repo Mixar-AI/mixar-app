@@ -8,6 +8,8 @@ Layer-related constants for the paint module.
 Contains constants for layer types, items, labels, and source types.
 """
 
+from mixar.modules.common.i18n import n_
+
 # Layer type items
 layer_type_items = (
     ("IMAGE", "Image", ""),
@@ -63,23 +65,23 @@ projection_axis_items = (
 
 # Layer type labels
 layer_type_labels = {
-    "IMAGE": "Image",
-    "BRICK": "Brick",
-    "CHECKER": "Checker",
-    "GRADIENT": "Gradient",
-    "MAGIC": "Magic",
-    "MUSGRAVE": "Musgrave",
-    "NOISE": "Noise",
-    "VORONOI": "Voronoi",
-    "WAVE": "Wave",
-    "VCOL": "Vertex Color",
-    "BACKGROUND": "Background",
-    "COLOR": "Fill Layer",
-    "GROUP": "Group",
-    "HEMI": "Fake Lighting",
-    "GABOR": "Gabor",
-    "EDGE_DETECT": "Edge Detect",
-    "AO": "Ambient Occlusion",
+    "IMAGE": n_("Image"),
+    "BRICK": n_("Brick"),
+    "CHECKER": n_("Checker"),
+    "GRADIENT": n_("Gradient"),
+    "MAGIC": n_("Magic"),
+    "MUSGRAVE": n_("Musgrave"),
+    "NOISE": n_("Noise"),
+    "VORONOI": n_("Voronoi"),
+    "WAVE": n_("Wave"),
+    "VCOL": n_("Vertex Color"),
+    "BACKGROUND": n_("Background"),
+    "COLOR": n_("Fill Layer"),
+    "GROUP": n_("Group"),
+    "HEMI": n_("Fake Lighting"),
+    "GABOR": n_("Gabor"),
+    "EDGE_DETECT": n_("Edge Detect"),
+    "AO": n_("Ambient Occlusion"),
 }
 
 # Hemi space items

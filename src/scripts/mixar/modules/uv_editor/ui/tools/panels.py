@@ -12,6 +12,8 @@ UV Sculpt Tools panel for the Mixar UV Properties space.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import iface_, n_
+
 
 # Width of the left label column inside Properties rows. Matches the
 # value used in the Texel Density / Selection panels so labels line up
@@ -200,24 +202,25 @@ class MIXAR_UV_PT_tools(Panel):
         uv_sculpt = tool_settings.uv_sculpt
 
         tool_name = {
-            'sculpt.uv_sculpt_grab': 'Grab',
-            'sculpt.uv_sculpt_relax': 'Relax',
-            'sculpt.uv_sculpt_pinch': 'Pinch',
-        }.get(tool.idname, 'Tool')
+            'sculpt.uv_sculpt_grab': n_('Grab'),
+            'sculpt.uv_sculpt_relax': n_('Relax'),
+            'sculpt.uv_sculpt_pinch': n_('Pinch'),
+        }.get(tool.idname, n_('Tool'))
 
         # Header with tool name — no icon, the toolbar buttons above
         # already carry the brush glyphs.
         box = layout.box()
         row = box.row()
-        row.label(text=f"{tool_name} Properties")
+        row.label(text=iface_("{tool} Properties").format(tool=iface_(tool_name)),
+                  translate=False)
 
         col = box.column(align=True)
         col.separator(factor=0.5)
 
         # Size and Strength — left-aligned label column to match the
         # Texel Density panel layout.
-        _labelled_prop(col, uv_sculpt, "size", "Size")
-        _labelled_prop(col, uv_sculpt, "strength", "Strength")
+        _labelled_prop(col, uv_sculpt, "size", n_("Size"))
+        _labelled_prop(col, uv_sculpt, "strength", n_("Strength"))
 
         # Options merged into the same Properties box (no separate
         # Options collapsible). Lock Borders and Sculpt All Islands
@@ -229,13 +232,13 @@ class MIXAR_UV_PT_tools(Panel):
         toggles.prop(tool_settings, "uv_sculpt_all_islands", text="Sculpt All Islands")
         if tool.idname == 'sculpt.uv_sculpt_relax':
             props = tool.operator_properties("sculpt.uv_sculpt_relax")
-            _labelled_prop(col, props, "relax_method", "Method")
+            _labelled_prop(col, props, "relax_method", n_("Method"))
 
         layout.separator(factor=0.5)
 
         # Falloff (collapsible)
         falloff_box = layout.box()
-        if draw_collapsible_header(falloff_box, uv_ui, "expand_tool_falloff", "Falloff"):
+        if draw_collapsible_header(falloff_box, uv_ui, "expand_tool_falloff", n_("Falloff")):
             falloff_col = falloff_box.column()
             falloff_col.prop(uv_sculpt, "curve_distance_falloff_preset", expand=True)
             if uv_sculpt.curve_distance_falloff_preset == 'CUSTOM':

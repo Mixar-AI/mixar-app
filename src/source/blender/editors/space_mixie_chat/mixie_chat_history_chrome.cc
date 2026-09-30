@@ -25,6 +25,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "GPU_state.hh"
 
 #include "UI_interface.hh"
@@ -105,7 +107,7 @@ void mixie_chat_history_draw_chrome(const HistoryDrawFrame &f)
 
     float title_col[4] = {HIST_COL_HEADER_TEXT[0], HIST_COL_HEADER_TEXT[1],
                           HIST_COL_HEADER_TEXT[2], HIST_COL_HEADER_TEXT[3] * ease};
-    const char *card_title = checkpoints ? "Checkpoints" : "Chats";
+    const char *card_title = checkpoints ? IFACE_("Checkpoints") : IFACE_("Chats");
     hist_draw_label(card_title, font_id, header_px, panel.xmin + pad, baseline, title_col);
 
     if (!store_empty) {
@@ -215,12 +217,13 @@ void mixie_chat_history_draw_empty(const HistoryDrawFrame &f)
     float hint_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2],
                          HIST_COL_MUTED[3] * ease};
 
-    const char *empty_text = checkpoints ? "No turns yet" :
-                             store_empty ? "No past chats yet" :
-                                           "No chats match your search";
-    const char *hint_text = checkpoints ? "A checkpoint is taken before each turn" :
-                            store_empty ? "New Chat saves the current conversation here" :
-                                          "Backspace to edit, Esc to clear";
+    const char *empty_text = checkpoints ? IFACE_("No turns yet") :
+                             store_empty ? IFACE_("No past chats yet") :
+                                           IFACE_("No chats match your search");
+    const char *hint_text = checkpoints ? IFACE_("A checkpoint is taken before each turn") :
+                            store_empty ?
+                                          IFACE_("New Chat saves the current conversation here") :
+                                          IFACE_("Backspace to edit, Esc to clear");
     const float cx = (panel.xmin + panel.xmax) * 0.5f;
     const float cy = (list_top + list_bottom) * 0.5f - slide;
 

@@ -44,6 +44,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -151,8 +153,8 @@ static void history_draw_search(
     float hint_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2],
                          HIST_COL_MUTED[3] * 0.85f * ease};
     /* Placeholder sits right of the caret so the two don't overlap. */
-    hist_draw_label(
-        "Search chats\xe2\x80\xa6", font_id, text_px, text_x + 5.0f * scale, baseline, hint_col);
+    hist_draw_label(IFACE_("Search chats\xe2\x80\xa6"), font_id, text_px,
+                    text_x + 5.0f * scale, baseline, hint_col);
   }
   else {
     /* Tail-clip: drop leading characters until the remainder fits, so the
@@ -308,9 +310,9 @@ void mixie_chat_draw_history_overlay(const bContext *C, ARegion *region)
       footer_lines[footer_count++] = notice;
     }
     else if (!store_empty) {
-      footer_lines[footer_count++] = "Click a turn to revert it and everything after it.";
-      footer_lines[footer_count++] = "Reverted turns move below; click one to reapply it.";
-      footer_lines[footer_count++] = "Nothing is written to your file.";
+      footer_lines[footer_count++] = IFACE_("Click a turn to revert it and everything after it.");
+      footer_lines[footer_count++] = IFACE_("Reverted turns move below; click one to reapply it.");
+      footer_lines[footer_count++] = IFACE_("Nothing is written to your file.");
     }
   }
   const float footer_line_h = HIST_FOOTER_LINE_HEIGHT * scale;

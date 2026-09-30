@@ -39,6 +39,7 @@ import time
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.scribble_mark.constants import (
     INTENT_SKETCH,
     MARK_COMMIT_IDLE_S,
@@ -129,8 +130,7 @@ class MIXAR_OT_scribble_mark_draw(Operator):
             # in the still, and every raycast would land somewhere the user
             # did not point. Refusing is the honest option; silently marking
             # the wrong place is not.
-            self.report({"WARNING"},
-                        "Leave camera view (Numpad 0) before marking")
+            self.report({"WARNING"}, "Leave camera view (Numpad 0) before marking")
             return {"CANCELLED"}
 
         self._session = FreezeSession()
@@ -390,8 +390,8 @@ class MIXAR_OT_scribble_mark_draw(Operator):
                                       world) is not None:
                 overlay.push_settled(strokes)
             else:
-                self.report({"WARNING"},
-                            f"Only {MAX_MARKS_PER_TURN} marks per message")
+                self.report({"WARNING"}, rpt_("Only {count} marks per message").format(
+                    count=MAX_MARKS_PER_TURN))
             mark_store.refresh_reading(context.scene, context.window_manager)
             overlay.tag_redraw()
             return

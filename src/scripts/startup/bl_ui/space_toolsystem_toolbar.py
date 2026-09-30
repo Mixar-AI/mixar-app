@@ -23,6 +23,7 @@ from bpy.types import (
 )
 from bpy.app.translations import (
     pgettext_iface as iface_,
+    pgettext_n as n_,
     pgettext_tip as tip_,
     contexts as i18n_contexts,
 )
@@ -3068,7 +3069,8 @@ class _defs_mixar_uv:
         """Tool mode - hosts Snapping / Round to Pixels / Align / Align Rotation."""
         return dict(
             idname="builtin.uv_tool",
-            label="Tool",
+            # Tool labels are looked up in the operator context.
+            label=n_("Tool", "Operator"),
             # Wrench/screwdriver glyph — Mixar-authored toolbar `.dat`
             # generated from `upstream/release/datafiles/icons_svg/tool_settings.svg`
             # via `src/release/datafiles/add_uv_tool_icons.py`. Matches
@@ -3085,7 +3087,8 @@ class _defs_mixar_uv:
         """Functions mode - switches to Functions panel in Mixar UV Properties."""
         return dict(
             idname="builtin.uv_functions",
-            label="Functions",
+            # Tool labels are looked up in the operator context.
+            label=n_("Functions", "Operator"),
             # Mark-seam glyph — Mixar-authored toolbar `.dat` generated
             # from `upstream/release/datafiles/icons_svg/edge_seam.svg`
             # via `src/release/datafiles/add_uv_tool_icons.py`. Same
@@ -3107,7 +3110,8 @@ class _defs_mixar_uv:
         choices."""
         return dict(
             idname="builtin.uv_panel_mode",
-            label="Properties",
+            # Tool labels are looked up in the operator context.
+            label=n_("Properties", "Operator"),
             icon="ops.generic.cursor",
             widget=None,
             keymap=None,

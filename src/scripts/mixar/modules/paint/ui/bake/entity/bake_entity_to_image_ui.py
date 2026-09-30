@@ -5,6 +5,8 @@
 
 """UI drawing methods for MBakeEntityToImage operator."""
 
+from mixar.modules.common.i18n import n_
+
 
 def _draw_row(col, label, scale_y=1.4, split_factor=0.25):
     """Create a standard row with label column and return split for content.
@@ -80,7 +82,7 @@ def _draw_name_section(operator, col):
         operator: The MBakeEntityToImage operator instance
         col: Column layout
     """
-    _, split = _draw_row(col, "Name:")
+    _, split = _draw_row(col, n_("Name:"))
     split.prop(operator, "name", text="")
     col.separator(factor=0.4)
 
@@ -93,26 +95,26 @@ def _draw_image_settings(operator, col):
         col: Column layout
     """
     # HDR
-    _, split = _draw_row(col, "32-bit Float:", scale_y=1.2)
+    _, split = _draw_row(col, n_("32-bit Float:"), scale_y=1.2)
     split.prop(operator, "hdr", text="")
     col.separator(factor=0.4)
 
     # Custom Resolution
-    _, split = _draw_row(col, "Custom Res:", scale_y=1.2)
+    _, split = _draw_row(col, n_("Custom Res:"), scale_y=1.2)
     split.prop(operator, "use_custom_resolution", text="")
     col.separator(factor=0.4)
 
     if not operator.use_custom_resolution:
-        _, split = _draw_row(col, "Resolution:")
+        _, split = _draw_row(col, n_("Resolution:"))
         crow = split.row(align=True)
         crow.prop(operator, "image_resolution", expand=True)
         col.separator(factor=0.4)
     else:
-        _, split = _draw_row(col, "Width:")
+        _, split = _draw_row(col, n_("Width:"))
         split.prop(operator, "width", text="")
         col.separator(factor=0.4)
 
-        _, split = _draw_row(col, "Height:")
+        _, split = _draw_row(col, n_("Height:"))
         split.prop(operator, "height", text="")
         col.separator(factor=0.4)
 
@@ -125,24 +127,24 @@ def _draw_sampling_uv_settings(operator, col):
         col: Column layout
     """
     # Samples
-    _, split = _draw_row(col, "Samples:")
+    _, split = _draw_row(col, n_("Samples:"))
     split.prop(operator, "samples", text="")
     col.separator(factor=0.4)
 
     # UV Map
-    _, split = _draw_row(col, "UV Map:")
+    _, split = _draw_row(col, n_("UV Map:"))
     split.prop_search(operator, "uv_map", operator, "uv_map_coll", text="", icon="GROUP_UVS")
     col.separator(factor=0.4)
 
     # Margin
-    _, split = _draw_row(col, "Margin:")
+    _, split = _draw_row(col, n_("Margin:"))
     margin_split = split.split(factor=0.4, align=True)
     margin_split.prop(operator, "margin", text="")
     margin_split.prop(operator, "margin_type", text="")
     col.separator(factor=0.4)
 
     # Bake Device
-    _, split = _draw_row(col, "Device:")
+    _, split = _draw_row(col, n_("Device:"))
     split.prop(operator, "bake_device", text="")
     col.separator(factor=0.4)
 
@@ -155,7 +157,7 @@ def _draw_processing_options(operator, col):
         col: Column layout
     """
     # Blur
-    _, split = _draw_row(col, "Use Blur:", scale_y=1.2)
+    _, split = _draw_row(col, n_("Use Blur:"), scale_y=1.2)
     rrow = split.row(align=True)
     rrow.prop(operator, "blur", text="")
     if operator.blur:
@@ -163,7 +165,7 @@ def _draw_processing_options(operator, col):
     col.separator(factor=0.4)
 
     if operator.blur:
-        _, split = _draw_row(col, "Blur Factor:" if operator.blur_type == "NOISE" else "Blur Size:")
+        _, split = _draw_row(col, n_("Blur Factor:") if operator.blur_type == "NOISE" else n_("Blur Size:"))
         if operator.blur_type == "NOISE":
             split.prop(operator, "blur_factor", text="")
         else:
@@ -171,12 +173,12 @@ def _draw_processing_options(operator, col):
         col.separator(factor=0.4)
 
     # FXAA
-    _, split = _draw_row(col, "Use FXAA:", scale_y=1.2)
+    _, split = _draw_row(col, n_("Use FXAA:"), scale_y=1.2)
     split.prop(operator, "fxaa", text="")
     col.separator(factor=0.4)
 
     # Denoise
-    _, split = _draw_row(col, "Use Denoise:", scale_y=1.2)
+    _, split = _draw_row(col, n_("Use Denoise:"), scale_y=1.2)
     split.prop(operator, "denoise", text="")
     col.separator(factor=0.4)
 
@@ -190,16 +192,16 @@ def _draw_entity_options(operator, col):
     """
     # Duplicate Entity - only for masks
     if operator.mask:
-        _, split = _draw_row(col, "Duplicate:", scale_y=1.2)
+        _, split = _draw_row(col, n_("Duplicate:"), scale_y=1.2)
         split.prop(operator, "duplicate_entity", text="Duplicate Mask")
         col.separator(factor=0.4)
 
         if operator.duplicate_entity:
-            _, split = _draw_row(col, "Disable Current:", scale_y=1.2)
+            _, split = _draw_row(col, n_("Disable Current:"), scale_y=1.2)
             split.prop(operator, "disable_current", text="Disable Current Mask")
             col.separator(factor=0.4)
     elif operator.duplicate_entity:
-        _, split = _draw_row(col, "Disable Current:", scale_y=1.2)
+        _, split = _draw_row(col, n_("Disable Current:"), scale_y=1.2)
         split.prop(operator, "disable_current", text="Disable Current Layer")
         col.separator(factor=0.4)
 
@@ -211,6 +213,6 @@ def _draw_image_atlas_option(operator, col):
         operator: The MBakeEntityToImage operator instance
         col: Column layout
     """
-    _, split = _draw_row(col, "Image Atlas:", scale_y=1.2)
+    _, split = _draw_row(col, n_("Image Atlas:"), scale_y=1.2)
     split.prop(operator, "use_image_atlas", text="")
     col.separator(factor=0.4)

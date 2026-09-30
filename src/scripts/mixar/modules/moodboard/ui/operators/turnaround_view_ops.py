@@ -28,6 +28,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from ....common.utils.file_select_utils import (
     file_select_guard, mark_file_select_executed,
@@ -145,7 +146,7 @@ class MIXIE_OT_moodboard_add_selected_views(Operator):
         if capacity <= 0:
             self.report(
                 {"WARNING"},
-                f"The set already holds {TURNAROUND_MAX_COMPANIONS} views",
+                rpt_("The set already holds {count} views").format(count=TURNAROUND_MAX_COMPANIONS),
             )
             return {"CANCELLED"}
 
@@ -167,13 +168,14 @@ class MIXIE_OT_moodboard_add_selected_views(Operator):
             # the user believes they supplied.
             self.report(
                 {"WARNING"},
-                f"{skipped} image(s) not added — the set is limited to "
-                f"{TURNAROUND_MAX_COMPANIONS} views",
+                rpt_("{skipped} image(s) not added — the set is limited to {limit} views").format(
+                    skipped=skipped, limit=TURNAROUND_MAX_COMPANIONS),
             )
         _redraw_all()
         self.report(
             {"INFO"},
-            f"Added {len(attached)} view(s): {', '.join(attached)}",
+            rpt_("Added {count} view(s): {items}").format(
+                count=len(attached), items=', '.join(attached)),
         )
         return {"FINISHED"}
 
@@ -216,7 +218,7 @@ class MIXIE_OT_moodboard_add_turnaround_view(Operator):
         if remaining_capacity(scene, group_id) <= 0:
             self.report(
                 {"WARNING"},
-                f"The set already holds {TURNAROUND_MAX_COMPANIONS} views",
+                rpt_("The set already holds {count} views").format(count=TURNAROUND_MAX_COMPANIONS),
             )
             return {"CANCELLED"}
 
@@ -237,7 +239,8 @@ class MIXIE_OT_moodboard_add_turnaround_view(Operator):
         _bind_main(self, context, group_id)
         mark_file_select_executed(self)
         _redraw_all()
-        self.report({"INFO"}, f"Added '{image.name}' as the {view_type} view")
+        self.report({"INFO"}, rpt_("Added '{name}' as the {view_type} view").format(
+            name=image.name, view_type=view_type))
         return {"FINISHED"}
 
     def _load(self, context):
@@ -250,10 +253,10 @@ class MIXIE_OT_moodboard_add_turnaround_view(Operator):
         try:
             path = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({"ERROR"}, f"Invalid file path: {e}")
+            self.report({"ERROR"}, rpt_("Invalid file path: {error}").format(error=e))
             return None
         if not os.path.isfile(path):
-            self.report({"ERROR"}, f"File not found: {path}")
+            self.report({"ERROR"}, rpt_("File not found: {path}").format(path=path))
             return None
         try:
             image = bpy.data.images.load(path, check_existing=True)
@@ -261,7 +264,7 @@ class MIXIE_OT_moodboard_add_turnaround_view(Operator):
             # carries its pixels inline at submit time, unlike detected crops.
             image.pack()
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to load image: {e}")
+            self.report({"ERROR"}, rpt_("Failed to load image: {error}").format(error=e))
             return None
         return image
 
@@ -289,7 +292,8 @@ class MIXIE_OT_moodboard_remove_turnaround_view(Operator):
             self.report({"WARNING"}, "View is not part of this set")
             return {"CANCELLED"}
         _redraw_all()
-        self.report({"INFO"}, f"Removed '{image.name}' from the multi-view set")
+        self.report({"INFO"}, rpt_("Removed '{name}' from the multi-view set").format(
+            name=image.name))
         return {"FINISHED"}
 
 
@@ -343,11 +347,11 @@ class MIXIE_OT_moodboard_promote_turnaround_view(Operator):
         if demoted:
             self.report(
                 {"INFO"},
-                f"'{image.name}' is now the input image; "
-                f"'{previous_item.image.name}' joined the set as {demoted}",
+                rpt_("'{name}' is now the input image; '{name2}' joined the set as {demoted}").format(
+                    name=image.name, name2=previous_item.image.name, demoted=demoted),
             )
         else:
-            self.report({"INFO"}, f"'{image.name}' is now the input image")
+            self.report({"INFO"}, rpt_("'{name}' is now the input image").format(name=image.name))
         return {"FINISHED"}
 
     def _demote_previous_main(self, scene, group_id: str, previous_item):
@@ -398,7 +402,7 @@ class MIXIE_OT_moodboard_clear_turnaround(Operator):
             self.report({'WARNING'}, "Multi-view set not found")
             return {'CANCELLED'}
         _redraw_all()
-        self.report({'INFO'}, f"Cleared {cleared} view(s)")
+        self.report({'INFO'}, rpt_("Cleared {cleared} view(s)").format(cleared=cleared))
         return {'FINISHED'}
 
 

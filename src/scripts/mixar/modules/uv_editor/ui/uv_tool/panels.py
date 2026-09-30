@@ -16,6 +16,7 @@ controls below — no collapse arrows.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.uv_editor.ui.base.panels import snap_base_applies
 
 
@@ -219,7 +220,7 @@ class MIXAR_UV_PT_uv_tool(Panel):
             col.label(text="Space data unavailable", icon='ERROR')
             return
 
-        _row(col, "Round to Pixels").prop(sima.uv_editor,
+        _row(col, n_("Round to Pixels")).prop(sima.uv_editor,
                                           "pixel_round_mode", text="")
 
     # ---------- Align ----------
@@ -259,7 +260,7 @@ class MIXAR_UV_PT_uv_tool(Panel):
                       icon='ERROR')
             return
 
-        _row(col, "Method").prop(p, "method", text="")
+        _row(col, n_("Method")).prop(p, "method", text="")
 
         # Axis only applies to the Geometry method — dim it for Auto.
         axis_split = col.split(factor=_LABEL_FACTOR, align=True)

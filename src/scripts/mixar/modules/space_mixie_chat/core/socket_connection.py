@@ -127,6 +127,13 @@ class SocketConnection:
                 )
             except Exception:
                 pass
+            # The interface language, read once per connection: the agent
+            # falls back to it when the user's own language is unclear.
+            try:
+                from mixar.modules.common.i18n import ui_locale
+                headers.append(f"X-Mixar-Locale: {ui_locale()}")
+            except Exception:
+                pass
 
             if not token:
                 logger.warning("No auth token available - connection may fail")

@@ -43,6 +43,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 #include "BKE_idtype.hh"
 #include "BKE_main.hh"
@@ -97,7 +99,8 @@ void gather_libraries(GenPaneData *data)
   }
 }
 
-/** What the caption calls an asset.
+/** What the caption calls an asset, translated (the gather runs per draw;
+ * `id_dir` keeps Blender's untranslated name for `wm.append`).
  *
  * Blender's own name for #ID_OB is "Object", but every Object in the
  * generations library is a generated mesh and the design's caption reads
@@ -106,10 +109,10 @@ void gather_libraries(GenPaneData *data)
 const char *asset_type_label(const ID_Type id_type)
 {
   if (id_type == ID_OB) {
-    return "Mesh";
+    return IFACE_("Mesh");
   }
   const char *name = BKE_idtype_idcode_to_name(short(id_type));
-  return name ? name : "Asset";
+  return name ? IFACE_(name) : IFACE_("Asset");
 }
 
 /** Read one library into the item list. \a only_name limits it to that
@@ -218,7 +221,7 @@ void gather_media(const bContext *C, GenPaneData *data)
     BLI_strncpy(item->name, image->id.name + 2, sizeof(item->name));
     BLI_snprintf(item->key, sizeof(item->key), "media:%s", image->id.name + 2);
     BLI_strncpy(item->type_label,
-                (item->kind == GEN_ITEM_VIDEO) ? "Video" : "Image",
+                (item->kind == GEN_ITEM_VIDEO) ? IFACE_("Video") : IFACE_("Image"),
                 sizeof(item->type_label));
     BLI_strncpy(item->detail, prompt, sizeof(item->detail));
     BLI_strncpy(item->path, image->filepath, sizeof(item->path));
@@ -258,8 +261,8 @@ void gather_splats(const bContext *C, GenPaneData *data)
     item->kind = GEN_ITEM_SPLAT;
     BLI_strncpy(item->name, collection->id.name + 2, sizeof(item->name));
     BLI_snprintf(item->key, sizeof(item->key), "splat:%s", collection->id.name + 2);
-    BLI_strncpy(item->type_label, "Splat world", sizeof(item->type_label));
-    BLI_strncpy(item->detail, "In this file", sizeof(item->detail));
+    BLI_strncpy(item->type_label, IFACE_("Splat world"), sizeof(item->type_label));
+    BLI_strncpy(item->detail, IFACE_("In this file"), sizeof(item->detail));
   }
 }
 
@@ -307,7 +310,9 @@ void gather_jobs(const bContext *C, GenPaneData *data)
     gen_read_string(&row, "display_label", display, sizeof(display));
     gen_read_string(&row, "label", label, sizeof(label));
     BLI_strncpy(
-        item->name, display[0] ? display : (label[0] ? label : "Generating"), sizeof(item->name));
+        item->name,
+        display[0] ? display : (label[0] ? label : IFACE_("Generating")),
+        sizeof(item->name));
     BLI_snprintf(item->key, sizeof(item->key), "job:%s", job_id);
     gen_read_string(&row, "type_label", item->type_label, sizeof(item->type_label));
     gen_read_string(&row, "model_label", item->model_label, sizeof(item->model_label));

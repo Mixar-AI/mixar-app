@@ -26,6 +26,7 @@ import re
 import uuid
 from typing import Iterable, Mapping, Optional
 
+from mixar.modules.common.i18n import rpt_
 from ..constants import (
     CHARACTER_COMPONENT_ASPECT_TOLERANCE,
     CHARACTER_COMPONENT_BACKGROUND_RGB,
@@ -178,7 +179,7 @@ def _encode_jpeg(image) -> bytes:
 def decode_component_source(source_bytes: bytes):
     """Decode one source image for reuse across every mask in a batch."""
     if not source_bytes:
-        raise ValueError("The component source image is empty")
+        raise ValueError(rpt_("The component source image is empty"))
     from PIL import Image
 
     with Image.open(BytesIO(source_bytes)) as opened_source:
@@ -203,7 +204,7 @@ def prepare_component_references(
     component.
     """
     if not mask_bytes:
-        raise ValueError("The component mask is empty")
+        raise ValueError(rpt_("The component mask is empty"))
 
     from PIL import Image
 
@@ -218,8 +219,8 @@ def prepare_component_references(
 
     if _aspect_ratio_delta(source.size, mask.size) > CHARACTER_COMPONENT_ASPECT_TOLERANCE:
         raise ValueError(
-            "The SAM3 mask no longer aligns with its source image; "
-            "create the component selection again"
+            rpt_("The SAM3 mask no longer aligns with its source image; "
+                 "create the component selection again")
         )
 
     binary = mask.point(
@@ -228,7 +229,7 @@ def prepare_component_references(
     )
     selection_box = binary.getbbox()
     if selection_box is None:
-        raise ValueError("The SAM3 component mask contains no selected pixels")
+        raise ValueError(rpt_("The SAM3 component mask contains no selected pixels"))
 
     left, top, right, bottom = selection_box
     selected_width = right - left
@@ -304,7 +305,7 @@ def build_component_payload(
     """Build the existing ``image_gen`` wire payload for one component."""
     ordered = references.ordered()
     if len(ordered) < CHARACTER_COMPONENT_REQUIRED_REFERENCES:
-        raise ValueError("Component detail generation requires source and mask references")
+        raise ValueError(rpt_("Component detail generation requires source and mask references"))
 
     resolved_params = dict(params or {})
     try:

@@ -4,6 +4,7 @@
 
 """Catalog-driven Video Gen drawer (Seedance and the MiniMax H3 tiers)."""
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.common.job_queue.constants import FEATURE_VIDEO_GEN
 
 from .sidebar_ui_helpers import (
@@ -20,7 +21,7 @@ def _draw_video_gen(layout, context):
     sidebar = getattr(scene, "mixie_moodboard_sidebar", None)
     tab = getattr(sidebar, "tab_video_gen", None) if sidebar else None
     if tab is None:
-        draw_hint(layout, "Video Gen tab not available", icon='ERROR')
+        draw_hint(layout, n_("Video Gen tab not available"), icon='ERROR')
         return
 
     from mixar.modules.common.generation_params import draw_capability_selector
@@ -33,51 +34,55 @@ def _draw_video_gen(layout, context):
     )
 
     refs = get_selected_moodboard_media_inputs(context)
-    selected = draw_section_box(layout, "Selected References", icon='IMAGE_DATA')
-    selected.label(text=f"Images: {len(refs['images'])}", icon='IMAGE_DATA')
-    selected.label(text=f"Videos: {len(refs['videos'])}", icon='FILE_MOVIE')
+    selected = draw_section_box(layout, n_("Selected References"), icon='IMAGE_DATA')
+    selected.label(text=iface_("Images: {count}").format(count=len(refs['images'])),
+                   icon='IMAGE_DATA', translate=False)
+    selected.label(text=iface_("Videos: {count}").format(count=len(refs['videos'])),
+                   icon='FILE_MOVIE', translate=False)
     if refs["videos"] and not refs["all_video_sources_available"]:
-        draw_hint(selected, "A selected video source file is missing", icon='ERROR')
+        draw_hint(selected, n_("A selected video source file is missing"), icon='ERROR')
     elif not refs["count"]:
-        draw_hint(selected, "No references selected — text-to-video", icon='INFO')
+        draw_hint(selected, n_("No references selected — text-to-video"), icon='INFO')
     else:
         draw_hint(
             selected,
-            "Mention image/video order in the prompt when assigning roles",
+            n_("Mention image/video order in the prompt when assigning roles"),
             icon='INFO',
         )
 
     draw_section_separator(layout)
     draw_prompt_section(
-        layout, tab, label="Prompt", icon='TEXT', min_lines=3, max_lines=7,
+        layout, tab, label=n_("Prompt"), icon='TEXT', min_lines=3, max_lines=7,
     )
     draw_section_separator(layout)
 
-    settings = draw_section_box(layout, "Settings", icon='SETTINGS')
+    settings = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     settings.use_property_split = True
     settings.use_property_decorate = False
     draw_capability_selector(settings, tab, "video_gen")
 
-    limit_box = draw_section_box(layout, "Reference Limits", icon='INFO')
+    limit_box = draw_section_box(layout, n_("Reference Limits"), icon='INFO')
     limits = get_video_generation_limits(
         "video_gen", selected_video_model_slug(scene)
     )
     if limits is None:
-        draw_hint(limit_box, "Catalog input config is incomplete", icon='ERROR')
+        draw_hint(limit_box, n_("Catalog input config is incomplete"), icon='ERROR')
     else:
         draw_hint(
             limit_box,
-            f"Up to {limits['max_images']} images and {limits['max_videos']} videos",
+            iface_("Up to {images} images and {videos} videos").format(
+                images=limits['max_images'], videos=limits['max_videos']),
             icon='DOT',
         )
         draw_hint(
             limit_box,
-            f"Selected videos: {limits['max_video_seconds']:g} seconds combined",
+            iface_("Selected videos: {seconds:g} seconds combined").format(
+                seconds=limits['max_video_seconds']),
             icon='DOT',
         )
         draw_hint(
             limit_box,
-            f"{limits['max_materials']} reference materials total",
+            iface_("{count} reference materials total").format(count=limits['max_materials']),
             icon='DOT',
         )
 

@@ -16,6 +16,7 @@ from bpy.types import Operator
 from bpy.props import StringProperty
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from ...core.generate_progress import reset_progress
 
 logger = get_logger(__name__)
@@ -108,7 +109,7 @@ class MIXIE_OT_cancel_segment_to_3d(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to cancel: {e}")
+            self.report({'ERROR'}, rpt_("Failed to cancel: {error}").format(error=e))
             return {'CANCELLED'}
 
 

@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 from bpy.props import BoolProperty, EnumProperty, IntVectorProperty
 
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.uv_editor.common.uv_utils import (
     get_mixar_uv_image_editor,
     poll_mixar_uv_edit_mode,
@@ -361,7 +362,8 @@ class MIXAR_OT_visualize(Operator):
                         break
                 break
 
-        self.report({'INFO'}, f"Material '{mat_name}' created and applied")
+        self.report({'INFO'}, rpt_("Material '{name}' created and applied").format(
+            name=mat_name))
         return {'FINISHED'}
 
 

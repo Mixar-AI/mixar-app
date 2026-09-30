@@ -10,6 +10,7 @@ import bpy
 from bpy.props import StringProperty
 
 from ...layered_build.builder import build_layered_material
+from mixar.modules.common.i18n import rpt_
 
 
 class LAYERS_OT_BuildLayeredMaterial(bpy.types.Operator):
@@ -27,14 +28,14 @@ class LAYERS_OT_BuildLayeredMaterial(bpy.types.Operator):
         try:
             manifest = json.loads(self.manifest_json)
         except json.JSONDecodeError as e:
-            self.report({'ERROR'}, f"Invalid manifest JSON: {e}")
+            self.report({'ERROR'}, rpt_("Invalid manifest JSON: {error}").format(error=e))
             return {'CANCELLED'}
         try:
             result = build_layered_material(manifest, context.view_layer.objects.active)
         except Exception as e:
-            self.report({'ERROR'}, f"Build failed: {e}")
+            self.report({'ERROR'}, rpt_("Build failed: {error}").format(error=e))
             return {'CANCELLED'}
-        self.report({'INFO'}, f"Built {result['layers_built']} layer(s)")
+        self.report({'INFO'}, rpt_("Built {count} layer(s)").format(count=result['layers_built']))
         print("\n__RESULT__" + json.dumps({"success": True, **result}))
         return {'FINISHED'}
 

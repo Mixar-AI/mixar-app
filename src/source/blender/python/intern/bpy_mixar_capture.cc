@@ -3,6 +3,9 @@
 
 /** Private PCM capture for cloud dictation. No scene/RNA or network access. */
 #include <Python.h>
+
+#include "BLT_translation.hh"
+
 #ifdef WITH_OPENAL
 #  include <al.h>
 #  include <alc.h>
@@ -43,20 +46,20 @@ static PyObject *capture_open(PyObject *, PyObject *)
 {
 #  ifdef __APPLE__
   if (Mixar_MicrophonePermission(true) != 1) {
-    PyErr_SetString(PyExc_RuntimeError, "Microphone permission is required");
+    PyErr_SetString(PyExc_RuntimeError, RPT_("Microphone permission is required"));
     return nullptr;
   }
 #  endif
   /* The driver converts the device's native format to mono PCM16 at 16 kHz. */
   ALCdevice *device = alcCaptureOpenDevice(nullptr, 16000, AL_FORMAT_MONO16, 32000);
   if (!device) {
-    PyErr_SetString(PyExc_RuntimeError, "Microphone unavailable. Check input device and privacy settings.");
+    PyErr_SetString(PyExc_RuntimeError, RPT_("Microphone unavailable. Check input device and privacy settings."));
     return nullptr;
   }
   alcCaptureStart(device);
   if (alcGetError(device) != ALC_NO_ERROR) {
     alcCaptureCloseDevice(device);
-    PyErr_SetString(PyExc_RuntimeError, "Microphone could not start");
+    PyErr_SetString(PyExc_RuntimeError, RPT_("Microphone could not start"));
     return nullptr;
   }
   Capture *capture = new Capture{device};
@@ -92,7 +95,7 @@ static PyObject *capture_read_impl(PyObject *capsule, const bool stop)
     alcCaptureStop(capture->device);
     alcCaptureCloseDevice(capture->device);
     capture->device = nullptr;
-    PyErr_SetString(PyExc_RuntimeError, "Microphone stalled or capture buffer overflowed");
+    PyErr_SetString(PyExc_RuntimeError, RPT_("Microphone stalled or capture buffer overflowed"));
     return nullptr;
   }
   PyObject *result = PyBytes_FromStringAndSize(nullptr, Py_ssize_t(samples) * 2);
@@ -110,7 +113,7 @@ static PyObject *capture_read_impl(PyObject *capsule, const bool stop)
   }
   if (failed) {
     Py_DECREF(result);
-    PyErr_SetString(PyExc_RuntimeError, "Microphone disconnected");
+    PyErr_SetString(PyExc_RuntimeError, RPT_("Microphone disconnected"));
     return nullptr;
   }
   return result;

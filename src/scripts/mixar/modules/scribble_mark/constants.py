@@ -18,6 +18,7 @@ of asking a vision model to guess one.
 
 import sys
 
+from mixar.modules.common.i18n import n_
 
 # =============================================================================
 # PAYLOAD CONTRACT
@@ -362,4 +363,11 @@ MARK_HINT_MARKED = (
 MARK_HINT_SKETCH = (
     "Draw to build  ·  " + MARK_HINT_VOICE + "  ·  Type instructions  ·  Enter: send"
     "  ·  Tab: Point to edit  ·  Ctrl/Cmd+Z: undo  ·  Done / Esc: preview"
+)
+#: Every item of the three pills above, for extraction: the overlay translates
+#: a pill item by item at draw time; the talk item is its own template there.
+MARK_HINT_ITEMS = (
+    n_("Draw a shape or circle what to change"), n_("Type instructions"), n_("Enter: send"),
+    n_("Done / Esc: preview"), n_("Point to edit"), n_("Tab: Draw to build"),
+    n_("Ctrl/Cmd+Z: undo"), n_("Draw to build"), n_("Tab: Point to edit"),
 )

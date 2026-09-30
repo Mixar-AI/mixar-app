@@ -17,22 +17,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from mixar.modules.common.i18n import iface_, n_, rpt_
 from .render_spec import ordered_render_kinds, render_duration_seconds
 
 
 # The reason strings below are user-facing copy. They name the blocker and,
 # where there is one, the next action — never a bare "unavailable".
-REASON_NO_CAMERA = "No camera in this scene"
-REASON_NO_KEYS = "'{name}' has no camera keyframes yet"
-REASON_ONE_KEY = "'{name}' has only one keyframe — animate at least two"
-REASON_EMPTY_RANGE = "The {label} is empty — set a start and end frame"
-REASON_NO_KINDS = "Select at least one video: Beauty, Clay or Depth"
-REASON_BUSY = "A render is already running"
+REASON_NO_CAMERA = n_("No camera in this scene")
+REASON_NO_KEYS = n_("'{name}' has no camera keyframes yet")
+REASON_ONE_KEY = n_("'{name}' has only one keyframe — animate at least two")
+REASON_EMPTY_RANGE = n_("The {label} is empty — set a start and end frame")
+REASON_NO_KINDS = n_("Select at least one video: Beauty, Clay or Depth")
+REASON_BUSY = n_("A render is already running")
 
 _RANGE_LABELS = {
-    "CAMERA_KEYS": "camera key range",
-    "SCENE": "scene frame range",
-    "PREVIEW": "preview range",
+    "CAMERA_KEYS": n_("camera key range"),
+    "SCENE": n_("scene frame range"),
+    "PREVIEW": n_("preview range"),
 }
 
 
@@ -125,12 +126,12 @@ def build_export_plan(
     # this export is for.
     if key_count == 0:
         return CameraExportPlan(
-            False, REASON_NO_KEYS.format(name=name), kinds=ordered_kinds
+            False, rpt_(REASON_NO_KEYS).format(name=name), kinds=ordered_kinds
         )
     if key_count == 1:
         return CameraExportPlan(
             False,
-            REASON_ONE_KEY.format(name=name),
+            rpt_(REASON_ONE_KEY).format(name=name),
             frame_start=frames[0],
             frame_end=frames[0],
             key_count=1,
@@ -139,10 +140,10 @@ def build_export_plan(
 
     frame_start, frame_end = resolve_frame_range(scene, frames, range_source)
     if frame_end <= frame_start:
-        label = _RANGE_LABELS.get(range_source, "frame range")
+        label = rpt_(_RANGE_LABELS.get(range_source, n_("frame range")))
         return CameraExportPlan(
             False,
-            REASON_EMPTY_RANGE.format(label=label),
+            rpt_(REASON_EMPTY_RANGE).format(label=label),
             frame_start=frame_start,
             frame_end=frame_end,
             key_count=key_count,
@@ -169,4 +170,5 @@ def describe_range(plan: CameraExportPlan, fps: float, fps_base: float = 1.0) ->
     seconds = render_duration_seconds(
         plan.frame_start, plan.frame_end, fps, fps_base
     )
-    return f"{plan.frame_start} – {plan.frame_end} · {seconds:.1f}s"
+    return iface_("{start} – {end} · {seconds:.1f}s").format(
+        start=plan.frame_start, end=plan.frame_end, seconds=seconds)

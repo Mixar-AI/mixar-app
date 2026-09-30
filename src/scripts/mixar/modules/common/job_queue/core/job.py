@@ -9,6 +9,8 @@ from enum import Enum
 import time
 import uuid
 
+from mixar.modules.common.i18n import iface_, n_
+
 
 class JobState(str, Enum):
     PENDING = "PENDING"
@@ -47,9 +49,9 @@ def download_substate_text(transferred: int, total: int, attempt: int = 0) -> st
     ``Content-Length``.
     """
     prefix = (
-        "Downloading…"
+        iface_("Downloading…")
         if attempt <= 1
-        else f"Retrying download… (attempt {attempt})"
+        else iface_("Retrying download… (attempt {attempt})").format(attempt=attempt)
     )
     if transferred <= 0:
         return prefix
@@ -290,7 +292,7 @@ class Job:
             raise ValueError("Enqueue response missing job_id")
 
     def _parse_standard_poll(
-        self, response, *, fail_message="Generation failed",
+        self, response, *, fail_message=n_("Generation failed"),
     ) -> tuple:
         """Standard poll parsing for async (file-based) jobs.
 
@@ -328,9 +330,9 @@ class Job:
             if error:
                 self.error = str(error)
             elif status == "CANCELLED":
-                self.error = "Cancelled"
+                self.error = n_("Cancelled")
             elif status == "DLQ":
-                self.error = "Job failed permanently after retries"
+                self.error = n_("Job failed permanently after retries")
             apply_backend_failure(self, inner)
             if status == "CANCELLED":
                 self.error_class = "cancelled"
@@ -346,18 +348,18 @@ class Job:
         """Human-readable secondary text for the queue UIList."""
         st = self.state
         if st == JobState.PENDING:
-            return "Pending"
+            return iface_("Pending")
         if st == JobState.RUNNING_SUBMIT:
-            return "Submitting…"
+            return iface_("Submitting…")
         if st == JobState.RUNNING_POLL:
             bs = self.backend_status
             if bs == "PENDING":
                 if self.queue_position > 0:
-                    return f"Queued (#{self.queue_position})"
-                return "Queued"
+                    return iface_("Queued (#{position})").format(position=self.queue_position)
+                return iface_("Queued")
             # No elapsed time here — row 1 of the queue UIList already
             # shows the job's running clock; a second one is confusing.
-            return "Processing"
+            return iface_("Processing")
         if st == JobState.RUNNING_DOWNLOAD:
             return download_substate_text(
                 self.download_bytes,
@@ -365,11 +367,13 @@ class Job:
                 self.download_attempt,
             )
         if st == JobState.SUCCESS:
-            return f"Done: {self.imported_object_names}" if self.imported_object_names else "Done"
+            if self.imported_object_names:
+                return iface_("Done: {names}").format(names=self.imported_object_names)
+            return iface_("Done")
         if st == JobState.FAILED:
-            return "Failed"
+            return iface_("Failed")
         if st == JobState.CANCELLED:
-            return "Cancelled"
+            return iface_("Cancelled")
         if st == JobState.PAUSED_AUTH:
-            return "Waiting for sign-in"
+            return iface_("Waiting for sign-in")
         return ""

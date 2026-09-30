@@ -287,7 +287,7 @@ def test_frame_fields_yield_to_the_transport():
 
 
 def test_the_aerial_hint_is_bound():
-    assert '{0.0f, {"O"}, 1, "Aerial view", false}' in TOP
+    assert '{0.0f, {"O"}, 1, N_("Aerial view"), false}' in TOP
     assert '"mixar.director_aerial",' in KEYMAP
     assert "type='O'," in KEYMAP
     assert "director_aerial" in KEYMAP.split("_OPERATOR_NAMES")[1]

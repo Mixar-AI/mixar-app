@@ -5,6 +5,8 @@
 
 """Material section UI drawing helpers."""
 
+from mixar.modules.common.i18n import iface_
+
 
 def draw_materials_section(context, layout):
     """Draw materials UI list section with material slots management (Mixar Paint pattern).
@@ -48,13 +50,9 @@ def draw_materials_section(context, layout):
     rrow.scale_x = 0.95
 
     # Build material display text
-    text_material = 'Material: '
-    if mat:
-        text_material += mat.name
-    else:
-        text_material += '-'
+    text_material = iface_('Material: {name}').format(name=mat.name if mat else '-')
 
-    rrow.prop(mpui, 'show_materials', emboss=False, text=text_material, icon=icon)
+    rrow.prop(mpui, 'show_materials', emboss=False, text=text_material, icon=icon, translate=False)
 
     # ========== MATERIALS LIST (EXPANDED STATE) ==========
     if mpui.show_materials:

@@ -15,6 +15,7 @@ Smart UV Project is selected. Reads the values shown in the panel from
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.uv_editor.common.uv_utils import (
     poll_mixar_uv_edit_mode,
     with_uv_context,
@@ -61,7 +62,8 @@ class MIXAR_OT_unwrap(Operator):
             return {'FINISHED'}
 
         if method not in _UNWRAP_METHODS:
-            self.report({'ERROR'}, f"Unknown unwrap method: {method}")
+            self.report({'ERROR'}, rpt_("Unknown unwrap method: {method}").format(
+                method=method))
             return {'CANCELLED'}
 
         p = get_operator_properties(context, "uv.unwrap")

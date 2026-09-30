@@ -21,6 +21,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from ...core.turnaround_detect import detect_views
 from ...core.turnaround_views import find_group_for_image
@@ -95,7 +96,8 @@ class MIXIE_OT_moodboard_detect_views(Operator):
             image = bpy.data.images.get(name)
             if image is None:
                 self.report(
-                    {'ERROR'}, f"Image '{name}' not found in bpy.data.images")
+                    {'ERROR'},
+                    rpt_("Image '{name}' not found in bpy.data.images").format(name=name))
                 return {'CANCELLED'}
         else:
             image = _resolve_selected_image(context)
@@ -120,8 +122,9 @@ class MIXIE_OT_moodboard_detect_views(Operator):
             logger.debug("[DetectViews] %s companion views in group %r",
                          count, group_id)
             _set_status(
-                f"Detected {count} extra views" if count
-                else "Only one view detected"
+                (rpt_("Detected {count} extra view") if count == 1
+                 else rpt_("Detected {count} extra views")).format(count=count) if count
+                else n_("Only one view detected")
             )
             _redraw_all()
 
@@ -133,7 +136,7 @@ class MIXIE_OT_moodboard_detect_views(Operator):
             )
             failed_early.append(message)
             show_generation_error(
-                scene, "Detect Views", message,
+                scene, n_("Detect Views"), message,
                 "mixie_detect_views_running", "mixie_detect_views_status",
             )
 
@@ -141,11 +144,11 @@ class MIXIE_OT_moodboard_detect_views(Operator):
             # Not an error: the image is an ordinary single image and the
             # existing single-image path applies unchanged.
             _set_running(False)
-            _set_status("No multiple views detected")
+            _set_status(n_("No multiple views detected"))
             _redraw_all()
 
         _set_running(True)
-        _set_status("Detecting views...")
+        _set_status(n_("Detecting views..."))
         _redraw_all()
         try:
             detect_views(
@@ -156,7 +159,7 @@ class MIXIE_OT_moodboard_detect_views(Operator):
             _set_running(False)
             _set_status("")
             logger.error("[DetectViews] Failed to start: %s", e, exc_info=True)
-            self.report({'ERROR'}, f"Failed to start view detection: {e}")
+            self.report({'ERROR'}, rpt_("Failed to start view detection: {error}").format(error=e))
             return {'CANCELLED'}
 
         if failed_early:

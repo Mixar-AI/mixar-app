@@ -15,6 +15,7 @@ import os
 import sys
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -80,14 +81,14 @@ def _macos_location() -> InstallLocation:
     if _TRANSLOCATION_MARKER in binary:
         return InstallLocation(
             "", False,
-            "Move Mixar to your Applications folder to update in place",
+            n_("Move Mixar to your Applications folder to update in place"),
         )
 
     bundle = _macos_bundle(binary)
     if not bundle:
         return InstallLocation(
             "", False,
-            "Mixar is not running from an application bundle",
+            n_("Mixar is not running from an application bundle"),
         )
 
     parent = os.path.dirname(bundle)
@@ -97,7 +98,7 @@ def _macos_location() -> InstallLocation:
     if not os.access(parent, os.W_OK | os.X_OK):
         return InstallLocation(
             bundle, False,
-            f"No permission to update {parent}",
+            rpt_("No permission to update {path}").format(path=parent),
         )
 
     return InstallLocation(bundle, True, "", relaunch_candidates=[bundle])
@@ -130,7 +131,7 @@ def _windows_relaunch_candidates(install_dir: str) -> list:
 def _windows_location() -> InstallLocation:
     install_dir = os.path.dirname(os.path.abspath(_binary_path()))
     if not install_dir:
-        return InstallLocation("", False, "Install directory could not be resolved")
+        return InstallLocation("", False, n_("Install directory could not be resolved"))
 
     # Deliberately no write check: a per-machine MSI is *expected* to live
     # in a directory the user cannot write, and msiexec supplies the
@@ -155,8 +156,8 @@ def get_install_location() -> InstallLocation:
             return _windows_location()
     except Exception as e:  # noqa: BLE001 - never break the update check
         logger.error("Could not resolve install location: %s", e, exc_info=True)
-        return InstallLocation("", False, "Install location could not be resolved")
+        return InstallLocation("", False, n_("Install location could not be resolved"))
 
     return InstallLocation(
-        "", False, "In-app updates are not supported on this platform",
+        "", False, n_("In-app updates are not supported on this platform"),
     )

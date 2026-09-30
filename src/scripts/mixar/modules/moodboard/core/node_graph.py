@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import uuid
 
+from mixar.modules.common.i18n import rpt_
 from ..constants import GRAPH_NODE_ID_MAXLEN
 from .media_utils import is_still_item
 from .moodboard_utils import get_moodboard_image_display_size
@@ -245,25 +246,26 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
     target = action_node_by_id(scene, to_node_id)
     socket = _input_socket(target, to_socket) if target else None
     if not source_type:
-        raise ValueError("The source node is no longer available")
+        raise ValueError(rpt_("The source node is no longer available"))
     if target is None or socket is None:
-        raise ValueError("The target input is no longer available")
+        raise ValueError(rpt_("The target input is no longer available"))
     if from_node_id == to_node_id or _path_exists(scene, to_node_id, from_node_id):
-        raise ValueError("Connections cannot create a cycle")
+        raise ValueError(rpt_("Connections cannot create a cycle"))
     source_action = getattr(action_node_by_id(scene, from_node_id), 'action_type', '')
     if target.action_type == source_action == 'ASSEMBLE':
-        raise ValueError("An Assemble card cannot feed another Assemble card")
+        raise ValueError(rpt_("An Assemble card cannot feed another Assemble card"))
     accepted = {item for item in socket.accepted_types.split(",") if item}
     if source_type not in accepted:
-        raise ValueError(f"This input does not accept {source_type.lower()} nodes")
+        raise ValueError(rpt_("This input does not accept {kind} nodes").format(
+            kind=source_type.lower()))
     incoming = [
         link for link in scene.mixie_moodboard_links
         if link.to_node_id == to_node_id
     ]
     if any(link.to_socket == to_socket for link in incoming):
-        raise ValueError("That input socket is already connected")
+        raise ValueError(rpt_("That input socket is already connected"))
     if any(link.from_node_id == from_node_id for link in incoming):
-        raise ValueError("That node is already connected to this input")
+        raise ValueError(rpt_("That node is already connected to this input"))
     counts = {}
     for link in incoming:
         kind = node_output_type(scene, link.from_node_id)
@@ -271,10 +273,11 @@ def connect_nodes(scene, from_node_id: str, to_node_id: str, to_socket: str):
     counts[source_type] = counts.get(source_type, 0) + 1
     limits = _contract_limits(target)
     if int(limits.get(source_type, 0) or 0) < counts[source_type]:
-        raise ValueError(f"This model accepts fewer {source_type.lower()} inputs")
+        raise ValueError(rpt_("This model accepts fewer {kind} inputs").format(
+            kind=source_type.lower()))
     total_limit = int(limits.get("TOTAL", 0) or 0)
     if total_limit and sum(counts.values()) > total_limit:
-        raise ValueError("This model's total input limit has been reached")
+        raise ValueError(rpt_("This model's total input limit has been reached"))
     socket_index = next(
         index for index, item in enumerate(target.input_sockets)
         if item.socket_id == to_socket
@@ -296,7 +299,7 @@ def connect_to_next_input(scene, from_node_id: str, to_node_id: str):
     target = action_node_by_id(scene, to_node_id)
     source_type = node_output_type(scene, from_node_id)
     if not source_type:
-        raise ValueError("The source node is no longer available")
+        raise ValueError(rpt_("The source node is no longer available"))
     occupied = {
         link.to_socket for link in scene.mixie_moodboard_links
         if link.to_node_id == to_node_id
@@ -305,7 +308,8 @@ def connect_to_next_input(scene, from_node_id: str, to_node_id: str):
         accepted = socket.accepted_types.split(",")
         if socket.socket_id not in occupied and source_type in accepted:
             return connect_nodes(scene, from_node_id, to_node_id, socket.socket_id)
-    raise ValueError(f"No available input accepts this {source_type.lower()} node")
+    raise ValueError(rpt_("No available input accepts this {kind} node").format(
+        kind=source_type.lower()))
 
 
 def reconcile_node_links(scene, node) -> None:
@@ -449,25 +453,25 @@ def create_connected_action(
         source = _graph_node_by_id(scene, source_node_id)
         source_type = node_output_type(scene, source_node_id)
         if not source_type:
-            raise ValueError("The source node is no longer available")
+            raise ValueError(rpt_("The source node is no longer available"))
         if source is not None and source_type in accepted:
             sources = [source]
     if not sources and not mesh_feature:
         sources = _selected_media(scene, action_type)
     if not sources and not allow_empty:
         if mesh_feature:
-            raise ValueError("Connect this from a 3D mesh node")
+            raise ValueError(rpt_("Connect this from a 3D mesh node"))
         if action_type == 'VIDEO_UPSCALE':
-            raise ValueError("Upscale Video needs one selected video")
+            raise ValueError(rpt_("Upscale Video needs one selected video"))
         if action_type == 'CHARACTER_PARTS':
-            raise ValueError("Character Parts needs one selected image with component masks")
+            raise ValueError(rpt_("Character Parts needs one selected image with component masks"))
         if action_type == 'WORLD_LABS':
-            raise ValueError("Generate Splat needs one selected image")
+            raise ValueError(rpt_("Generate Splat needs one selected image"))
         if action_type != 'IMAGE_GEN':
             raise ValueError(
-                "Generate to 3D needs one selected image"
+                rpt_("Generate to 3D needs one selected image")
                 if action_type == 'MODEL_3D'
-                else "Create Video needs at least one selected image or video"
+                else rpt_("Create Video needs at least one selected image or video")
             )
 
     source_ids = [item.node_id for item in sources]  # the add may reallocate their collection

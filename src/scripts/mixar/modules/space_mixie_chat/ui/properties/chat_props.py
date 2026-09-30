@@ -21,6 +21,7 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from ...core.ui_utils import bump_layout_epoch, redraw_chat_areas
 from .chat_slot_types import (
     MixieChatTodoItem,
@@ -485,7 +486,7 @@ def _report_send_refused(reason: str) -> None:
         from mixar.modules.common.notifications import get_notification_store
         # One stable id: repeated Enters replace the toast, never stack it.
         get_notification_store().push(
-            "warning", "Message not sent", body=reason,
+            "warning", n_("Message not sent"), body=reason,
             ttl_ms=6000, id="mixie_chat_send_refused",
         )
     except Exception:  # noqa: BLE001 — the log line above still records it
@@ -589,34 +590,34 @@ def _has_mesh_selection(scene, context):
 
 _GENERATE_TYPE_HINTS = {
     'depth_to_image': (
-        "Enter a render prompt. Mixie will use the current scene's depth "
-        "as the guide.",
+        n_("Enter a render prompt. Mixie will use the current scene's depth "
+           "as the guide."),
         _has_prompt,
     ),
     'pbr_gen': (
-        "Please enter your prompt and select the mesh objects in the "
-        "3D viewport before hitting send.",
+        n_("Please enter your prompt and select the mesh objects in the "
+           "3D viewport before hitting send."),
         lambda scene, context: (
             _has_prompt(scene, context) and _has_mesh_selection(scene, context)
         ),
     ),
     'model_3d': (
-        "Attach a reference image or select one in the moodboard, then "
-        "hit send. A prompt is optional.",
+        n_("Attach a reference image or select one in the moodboard, then "
+           "hit send. A prompt is optional."),
         _has_input_image,
     ),
     'image_to_3d': (
-        "Attach a reference image or select one in the moodboard, then "
-        "hit send. A prompt is optional.",
+        n_("Attach a reference image or select one in the moodboard, then "
+           "hit send. A prompt is optional."),
         _has_input_image,
     ),
     'hunyuan_rapid': (
-        "Attach a reference image or enter a prompt, then hit send.",
+        n_("Attach a reference image or enter a prompt, then hit send."),
         _has_prompt_or_image,
     ),
     'scene_reconstruction': (
-        "Attach an image to reconstruct it into a 3D scene, or enter a "
-        "prompt to generate one from a description. You can also combine both.",
+        n_("Attach an image to reconstruct it into a 3D scene, or enter a "
+           "prompt to generate one from a description. You can also combine both."),
         _has_prompt_or_image,
     ),
 }
@@ -668,10 +669,10 @@ def _ask_model_choice(scene, service_key):
     msg = scene.mixie_chat_messages.add()
     msg.sender = 'AGENT'
     msg.bubble_id = MODEL_ASK_BUBBLE_PREFIX + str(uuid.uuid4())
-    msg.text = (
-        f"Which model should I use for {get_display_label(service_key)}? "
-        f"Tap one below — or just hit send to use {default_label}."
-    )
+    msg.text = rpt_(
+        "Which model should I use for {service}? "
+        "Tap one below — or just hit send to use {model}."
+    ).format(service=get_display_label(service_key), model=default_label)
     for model in models:
         slug = model.get("slug")
         if not slug:
@@ -711,7 +712,7 @@ def on_generate_type_changed(self, context):
         if show:
             msg = scene.mixie_chat_messages.add()
             msg.sender = 'AGENT'
-            msg.text = hint
+            msg.text = rpt_(hint)
             posted = True
 
     try:

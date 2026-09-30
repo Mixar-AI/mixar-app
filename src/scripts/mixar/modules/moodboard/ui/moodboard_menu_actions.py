@@ -11,6 +11,7 @@ selected, where was the noodle dropped — so the answers live here rather than
 being imported from one menu module into the other.
 """
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.moodboard.core import node_layout  # noqa: F401  (re-export)
 
 
@@ -19,14 +20,14 @@ from mixar.modules.moodboard.core.node_templates import template_available
 
 
 MESH_CONTINUATIONS = (
-    ('PBR_GEN', "PBR Generation", 'TEXTURE', "pbr_generation"),
-    ('RETOPOLOGY', "Retopology", 'MOD_REMESH', "retopology"),
-    ('MESH_SEGMENT', "Mesh Segmentation", 'MOD_EXPLODE', "mesh_segmentation"),
-    ('AUTO_RIG', "Auto Rig", 'ARMATURE_DATA', "animate"),
+    ('PBR_GEN', n_("PBR Generation"), 'TEXTURE', "pbr_generation"),
+    ('RETOPOLOGY', n_("Retopology"), 'MOD_REMESH', "retopology"),
+    ('MESH_SEGMENT', n_("Mesh Segmentation"), 'MOD_EXPLODE', "mesh_segmentation"),
+    ('AUTO_RIG', n_("Auto Rig"), 'ARMATURE_DATA', "animate"),
 )
 # Local, so it has no capability. Offered only from a body it can rig parts
 # to; never from ASSEMBLE itself, whose output would re-export body + parts.
-ASSEMBLE_CONTINUATION = ('ASSEMBLE', "Assemble onto this body", 'BONE_DATA', None)
+ASSEMBLE_CONTINUATION = ('ASSEMBLE', n_("Assemble onto this body"), 'BONE_DATA', None)
 
 
 def _is_rigged_asset(asset) -> bool:

@@ -18,6 +18,7 @@ TOPOLOGY path.
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -109,7 +110,7 @@ class MIXIE_OT_retopology_generate(Operator):
                 operator=self,
             )
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to start retopology: {e}")
+            self.report({"ERROR"}, rpt_("Failed to start retopology: {error}").format(error=e))
             return {"CANCELLED"}
         if not enqueued:
             self.report(

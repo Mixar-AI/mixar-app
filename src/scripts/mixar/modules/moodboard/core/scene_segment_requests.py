@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, List, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from ...common.api.response import APIResponse
 from ...common.api.services.scene_segment_service import get_scene_segment_service
 from ..constants import (
@@ -76,7 +77,7 @@ class SceneSegmentRequestMixin:
     ) -> bool:
         if image is None:
             if on_complete:
-                on_complete(False, None, "No image provided")
+                on_complete(False, None, rpt_("No image provided"))
             return False
 
         image_name = image.name
@@ -90,7 +91,7 @@ class SceneSegmentRequestMixin:
                 job_id = state.job_id
         if unavailable:
             if on_complete:
-                on_complete(False, None, "Image not uploaded")
+                on_complete(False, None, rpt_("Image not uploaded"))
             return False
 
         def on_success(response: APIResponse):
@@ -99,7 +100,7 @@ class SceneSegmentRequestMixin:
             request_id = inner_data.get("request_id")
             if not request_id:
                 if on_complete:
-                    on_complete(False, None, "No request_id in response")
+                    on_complete(False, None, rpt_("No request_id in response"))
                 return
 
             with self._jobs_lock:
@@ -155,7 +156,7 @@ class SceneSegmentRequestMixin:
             for callback in callbacks:
                 self._call_segment_callback(
                     callback, False, None,
-                    "Segmentation timed out; please try again",
+                    rpt_("Segmentation timed out; please try again"),
                 )
 
             pending_jobs = []
@@ -264,7 +265,7 @@ class SceneSegmentRequestMixin:
                     request.status = RequestStatus.COMPLETED
                     downloads.append(request)
                 elif status == "failed":
-                    failures.append((request, data.get("error", "Unknown error")))
+                    failures.append((request, data.get("error", rpt_("Unknown error"))))
                 elif status == "generating":
                     request.status = RequestStatus.GENERATING
 
@@ -291,7 +292,7 @@ class SceneSegmentRequestMixin:
                 )
             else:
                 self._finish_request(
-                    state, request, False, None, "Empty mask response",
+                    state, request, False, None, rpt_("Empty mask response"),
                 )
 
         def on_error(error: Exception):

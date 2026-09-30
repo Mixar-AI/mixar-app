@@ -47,6 +47,7 @@ import urllib.request
 from typing import Callable, Iterable, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ..constants import (
     LOG_PREFIX,
@@ -142,9 +143,9 @@ def validate_base_url(base_url: str) -> Optional[str]:
     """
     base = _parse_base(base_url or "")
     if base is None:
-        return "Enter a valid http(s) URL, e.g. http://127.0.0.1:11434"
+        return n_("Enter a valid http(s) URL, e.g. http://127.0.0.1:11434")
     if not _host_allowed(base["host"], base["port"]):
-        return "Only servers on this computer or your local network are allowed"
+        return n_("Only servers on this computer or your local network are allowed")
     return None
 
 

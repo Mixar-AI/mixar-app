@@ -40,6 +40,8 @@ bookkeeping twice a second. A completion toast is pushed exactly once, when
 its feature's last job leaves the active states.
 """
 
+from mixar.modules.common.i18n import n_, rpt_
+
 from ..constants import (
     QUEUE_ACTIVE_TOAST_TTL_MS,
     QUEUE_DONE_TOAST_ID_PREFIX,
@@ -88,7 +90,7 @@ def _store():
 def _view_queue_action():
     from mixar.modules.common.notifications.store import NotificationAction
     return NotificationAction(
-        label="View Queue",
+        label=n_("View Queue"),
         operator="mixie.queue_view",
         style="primary",
     )
@@ -188,9 +190,9 @@ def _push_active(count: int) -> None:
     global _last_key, _showing_active
 
     title = (
-        "Generation in progress"
+        n_("Generation in progress")
         if count == 1
-        else f"{count} generations in progress"
+        else rpt_("{count} generations in progress").format(count=count)
     )
     key = f"active\x1f{title}\x1f{_latest_label}"
     if key == _last_key and _showing_active:
@@ -233,11 +235,11 @@ def _request_usage_refresh() -> None:
 
 
 def _outcome_text(succeeded: int, failed: int, cancelled: int) -> str:
-    parts = [f"{succeeded} succeeded"]
+    parts = [rpt_("{count} succeeded").format(count=succeeded)]
     if failed:
-        parts.append(f"{failed} failed")
+        parts.append(rpt_("{count} failed").format(count=failed))
     if cancelled:
-        parts.append(f"{cancelled} cancelled")
+        parts.append(rpt_("{count} cancelled").format(count=cancelled))
     return ", ".join(parts)
 
 
@@ -263,12 +265,11 @@ def _push_feature_summary(label: str, batch: list) -> None:
         return
 
     if label:
-        title = f"{label} complete"
+        title = rpt_("{label} complete").format(label=label)
+    elif succeeded == 1:
+        title = n_("Generation ready")
     else:
-        title = (
-            "Generation ready" if succeeded == 1
-            else f"{succeeded} generations ready"
-        )
+        title = rpt_("{count} generations ready").format(count=succeeded)
     _store().push(
         "success",
         title,

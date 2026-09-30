@@ -27,6 +27,7 @@ from pathlib import Path
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -251,8 +252,8 @@ def build_library_grid(
     if not assets:
         _set_content(
             msg,
-            "**Your library is empty.** Enroll an asset library in the Assets "
-            "workspace — it trains automatically, then its assets show up here.",
+            rpt_("**Your library is empty.** Enroll an asset library in the Assets "
+                 "workspace — it trains automatically, then its assets show up here."),
         )
         _redraw()
         return
@@ -261,19 +262,19 @@ def build_library_grid(
     shown = filtered[:_MAX_GRID]
 
     if query:
-        header = f"**{len(filtered)}** asset(s) matching “{query}”"
+        header = rpt_("**{count}** asset(s) matching “{query}”").format(count=len(filtered), query=query)
     else:
-        header = f"**Your library** — {len(assets)} asset(s)"
+        header = rpt_("**Your library** — {count} asset(s)").format(count=len(assets))
     if header_note:
         header += f"\n\n_{header_note}_"
     if len(filtered) > len(shown):
-        header += f" · showing the first {len(shown)}, refine your search"
+        header += " · " + rpt_("showing the first {count}, refine your search").format(count=len(shown))
     if not shown:
-        _set_content(msg, header + "\n\nNo matches — try a different search.")
+        _set_content(msg, header + "\n\n" + rpt_("No matches — try a different search."))
         _redraw()
         return
 
-    _set_content(msg, header + "\n\nClick an asset to add it to the scene at the 3D cursor.")
+    _set_content(msg, header + "\n\n" + rpt_("Click an asset to add it to the scene at the 3D cursor."))
     for i, asset in enumerate(shown):
         action = msg.action_items.add()
         action.label = asset["name"]
@@ -381,11 +382,11 @@ def _start_semantic_search(context, query: str, image_pack=None) -> None:
     _cleanup_bubble(msg)
     msg.action_items.clear()
     if query and image_pack:
-        status = f"Searching your library for “{query}” + attached image…"
+        status = rpt_("Searching your library for “{query}” + attached image…").format(query=query)
     elif image_pack:
-        status = "Searching your library by attached image…"
+        status = rpt_("Searching your library by attached image…")
     else:
-        status = f"Searching your library for “{query}”…"
+        status = rpt_("Searching your library for “{query}”…").format(query=query)
     _set_content(msg, status)
     _redraw()
 
@@ -419,9 +420,10 @@ def _semantic_search_worker(query: str, token: int, image_pack=None) -> None:
             raise_for_status=False,
         )
         if not resp.success:
-            result = {
+            result = {  # worded on the main thread (no bpy in this worker)
                 "success": False,
-                "message": resp.message or f"Server returned {resp.status_code}",
+                "message": resp.message,
+                "status_code": resp.status_code,
             }
         else:
             inner = (resp.data or {}).get("data", resp.data or {})
@@ -470,7 +472,9 @@ def _poll_semantic_search():
         # to the local name filter so the tab still works, and say so. An
         # image-only query has no text to name-match, so just report the
         # failure instead of dumping the whole library as fake "matches".
-        note = result.get("message") or "search unavailable"
+        note = result.get("message") or (
+            rpt_("Server returned {code}").format(code=result["status_code"])
+            if "status_code" in result else rpt_("search unavailable"))
         logger.warning("[LibraryMode] semantic search failed: %s", note)
         if had_image and not query:
             msg = _grid_bubble(scene)
@@ -478,14 +482,14 @@ def _poll_semantic_search():
             msg.action_items.clear()
             _set_content(
                 msg,
-                f"**Image search unavailable** ({note}).\n\n"
-                "Try again in a moment, or type a text search instead.",
+                rpt_("**Image search unavailable** ({reason}).\n\n"
+                     "Try again in a moment, or type a text search instead.").format(reason=note),
             )
             _redraw()
             return None
         build_library_grid(
             context, query, force=False,
-            header_note=f"Showing name matches only ({note}).",
+            header_note=rpt_("Showing name matches only ({reason}).").format(reason=note),
         )
         return None
 
@@ -506,9 +510,9 @@ def _apply_semantic_results(
     msg.action_items.clear()
 
     if query and had_image:
-        what = f"“{query}” + your image"
+        what = rpt_("“{query}” + your image").format(query=query)
     elif had_image:
-        what = "your image"
+        what = rpt_("your image")
     else:
         what = f"“{query}”"
 
@@ -516,16 +520,16 @@ def _apply_semantic_results(
     if not usable:
         _set_content(
             msg,
-            f"**0** asset(s) matching {what}\n\n"
-            "No matches — try a different search.",
+            rpt_("**{count}** asset(s) matching {what}").format(count=0, what=what)
+            + "\n\n" + rpt_("No matches — try a different search."),
         )
         _redraw()
         return
 
     _set_content(
         msg,
-        f"**{len(usable)}** asset(s) matching {what}\n\n"
-        "Click an asset to add it to the scene at the 3D cursor.",
+        rpt_("**{count}** asset(s) matching {what}").format(count=len(usable), what=what)
+        + "\n\n" + rpt_("Click an asset to add it to the scene at the 3D cursor."),
     )
     for i, row in enumerate(usable):
         action = msg.action_items.add()
@@ -615,7 +619,7 @@ def add_asset_to_scene(context, library, blend_file, asset_name, asset_type,
     blend_path = _resolve_blend_path({"library": library, "blend_file": blend_file})
     if not blend_path or not Path(blend_path).exists():
         invalidate()
-        return False, "That asset's file could not be found."
+        return False, n_("That asset's file could not be found.")
 
     prefer_collection = (asset_type or "").lower().startswith("collection")
     try:
@@ -628,12 +632,12 @@ def add_asset_to_scene(context, library, blend_file, asset_name, asset_type,
             elif in_objects:
                 data_to.objects = [asset_name]
             else:
-                return False, f"'{asset_name}' is not in the asset file anymore."
+                return False, rpt_("'{name}' is not in the asset file anymore.").format(name=asset_name)
 
         if is_collection:
             coll = data_to.collections[0]
             if coll is None:
-                return False, "The asset appended empty."
+                return False, n_("The asset appended empty.")
             context.scene.collection.children.link(coll)
             members = list(coll.all_objects)
         else:
@@ -646,7 +650,7 @@ def add_asset_to_scene(context, library, blend_file, asset_name, asset_type,
                     except RuntimeError:
                         pass
         if not members:
-            return False, "The asset appended empty."
+            return False, n_("The asset appended empty.")
 
         context.view_layer.update()
 
@@ -712,4 +716,4 @@ def add_asset_to_scene(context, library, blend_file, asset_name, asset_type,
         return True, asset_name
     except Exception:
         logger.exception("[LibraryMode] add-to-scene failed for %s", asset_name)
-        return False, "Could not add the asset to the scene."
+        return False, n_("Could not add the asset to the scene.")

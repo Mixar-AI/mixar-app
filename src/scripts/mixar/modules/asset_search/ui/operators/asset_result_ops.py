@@ -14,6 +14,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -48,7 +49,8 @@ class MIXIE_OT_locate_search_result(Operator):
                     except Exception:
                         self.report(
                             {"WARNING"},
-                            f"Library '{self.library}' is not available",
+                            rpt_("Library '{library}' is not available").format(
+                                library=self.library),
                         )
                         return {"CANCELLED"}
                     break
@@ -59,7 +61,8 @@ class MIXIE_OT_locate_search_result(Operator):
         for area in context.screen.areas:
             if area.type == 'FILE_BROWSER':
                 area.tag_redraw()
-        self.report({"INFO"}, f"Showing '{self.asset_name}' in {self.library}")
+        self.report({"INFO"}, rpt_("Showing '{name}' in {library}").format(
+            name=self.asset_name, library=self.library))
         return {"FINISHED"}
 
 

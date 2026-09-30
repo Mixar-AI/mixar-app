@@ -38,6 +38,7 @@ from .media_utils import first_selected_reference_still, selected_reference_stil
 from typing import List, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 
 from ..constants import (
     MOODBOARD_IMAGE_BASE_SIZE,
@@ -459,4 +460,4 @@ def group_summary(scene, group_id: str) -> Optional[str]:
     items = group_items(scene, group_id)
     if not items:
         return None
-    return f"{len(items)} of {TURNAROUND_MAX_COMPANIONS}"
+    return iface_("{count} of {total}").format(count=len(items), total=TURNAROUND_MAX_COMPANIONS)

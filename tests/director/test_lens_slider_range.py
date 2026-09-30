@@ -84,7 +84,7 @@ def test_the_ortho_scale_slider_is_tuned_in_its_own_group():
     re-lay itself, so a scale slider that existed only while the camera was
     already orthographic could never be reached by the segment that makes it
     orthographic."""
-    body = POPUP[POPUP.index('director_popup_section_label(block, "Orthographic"') :]
+    body = POPUP[POPUP.index('director_popup_section_label(block, IFACE_("Orthographic")') :]
     body = body[: body.index("director_popup_state(value")]
     assert '"ortho_scale",' in body
     assert "ORTHO_SCALE_SLIDER_MIN," in body

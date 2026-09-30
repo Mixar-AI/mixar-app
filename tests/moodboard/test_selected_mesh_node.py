@@ -304,6 +304,6 @@ def test_a_short_mesh_list_uses_a_sized_menu():
         ROOT / "src/scripts/mixar/modules/moodboard/ui/operators/mesh_reference_ops.py"
     ).read_text(encoding="utf-8")
     assert "_COMPACT_MESH_MENU_LIMIT = 8" in source
-    assert "popup_menu(draw, title=\"Select Mesh\")" in source
+    assert "popup_menu(draw, title=iface_(\"Select Mesh\"))" in source
     assert "return {'INTERFACE'}" in source
     assert "invoke_search_popup(self)" in source

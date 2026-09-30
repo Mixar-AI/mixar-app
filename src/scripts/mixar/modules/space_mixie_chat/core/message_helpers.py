@@ -11,6 +11,7 @@ shared helpers for slot loaders and authentication.
 
 import json
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 
 import bpy
 
@@ -123,7 +124,7 @@ def add_turn_placeholder(scene) -> None:
     placeholder.sender = 'AGENT'
     placeholder.bubble_id = f"{TEMP_PLACEHOLDER_PREFIX}{uuid.uuid4().hex[:12]}"
     placeholder.loader_visible = True
-    placeholder.loader_texts = json.dumps(["Thinking..."])
+    placeholder.loader_texts = json.dumps([iface_("Thinking...")])
     start_loader_animation()
 
 

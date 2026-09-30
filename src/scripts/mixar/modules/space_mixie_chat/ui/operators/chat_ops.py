@@ -19,6 +19,7 @@ from bpy.types import Operator
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.capture import capture
 from mixar.modules.common.analytics.constants import EVENT_MESSAGE_SENT
+from mixar.modules.common.i18n import iface_, rpt_
 
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState
 from ...core.performance_metrics import get_metrics
@@ -225,7 +226,8 @@ class MIXIE_CHAT_OT_send_message(Operator):
         if len(message_text) > MAX_MESSAGE_LENGTH:
             self.report(
                 {'WARNING'},
-                f"Message too long: {len(message_text)} chars (max {MAX_MESSAGE_LENGTH})"
+                rpt_("Message too long: {count} chars (max {max})").format(
+                    count=len(message_text), max=MAX_MESSAGE_LENGTH)
             )
             return {'CANCELLED'}
 
@@ -263,7 +265,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 mark_context, mark_notes = chat_bridge.prepare_for_send(scene)
                 outgoing_attachments = chat_bridge.preview.outgoing_attachments(scene)
                 for note in mark_notes:
-                    self.report({'INFO'}, f"Marks: {note}")
+                    self.report({'INFO'}, rpt_("Marks: {note}").format(note=rpt_(note)))
             except Exception as e:  # noqa: BLE001
                 # The words are a complete request on their own; never lose a
                 # message because the marks could not be assembled.
@@ -304,7 +306,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 msg_att = user_msg.attachments.add()
                 msg_att.image_path = att.image_path
                 msg_att.image_source = att.image_source
-                msg_att.display_name = "Sketch" if att.scribble_view else att.display_name
+                msg_att.display_name = iface_("Sketch") if att.scribble_view else att.display_name
 
         # Clear input field immediately for better UX
         if not self.message_override:
@@ -362,12 +364,12 @@ class MIXIE_CHAT_OT_send_message(Operator):
                         encoded = future.result(timeout=timeout_per_image)
                 except FuturesTimeoutError:
                     logger.error(f"Image encoding timeout for {att_path}")
-                    self.report({'WARNING'},
-                                f"Skipped slow image: {os.path.basename(att_path)}")
+                    self.report({'WARNING'}, rpt_("Skipped slow image: {name}").format(
+                        name=os.path.basename(att_path)))
                     continue
                 except Exception as e:
                     logger.error(f"Image encoding error for {att_path}: {e}")
-                    self.report({'WARNING'}, f"Image encoding failed: {str(e)}")
+                    self.report({'WARNING'}, rpt_("Image encoding failed: {error}").format(error=e))
                     continue
 
                 if encoded:
@@ -489,7 +491,7 @@ class MIXIE_CHAT_OT_send_message(Operator):
                 msg_att = user_msg.attachments.add()
                 msg_att.image_path = att.image_path
                 msg_att.image_source = att.image_source
-                msg_att.display_name = "Sketch" if att.scribble_view else att.display_name
+                msg_att.display_name = iface_("Sketch") if att.scribble_view else att.display_name
             start_demo_stream(scene, user_text="")
         else:
             start_demo_stream(scene, user_text=message_text)

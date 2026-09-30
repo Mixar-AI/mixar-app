@@ -33,6 +33,8 @@
 
 #include <optional>
 
+#include "BLT_translation.hh"
+
 #include "ED_screen.hh"
 
 #include "UI_interface.hh"
@@ -97,8 +99,8 @@ static void add_frame_card_actions(ui::Block *block,
       more, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   RNA_string_set(ui::button_operator_ptr_ensure(more), "name", "MIXIE_MT_moodboard_frame");
   moodboard_set_node_tooltip(more,
-                             "Frame options\n\nSelect contents, add the selection, "
-                             "fit to contents, colour, lock, collapse, ungroup or delete.");
+                             TIP_("Frame options\n\nSelect contents, add the selection, "
+                                  "fit to contents, colour, lock, collapse, ungroup or delete."));
   x -= width + gap;
 
   /* The pencil sits where a card's Edit sits. A frame has no settings, so what
@@ -120,8 +122,8 @@ static void add_frame_card_actions(ui::Block *block,
    * with several selected. */
   RNA_string_set(ui::button_operator_ptr_ensure(rename), "frame_id", frame_id);
   moodboard_set_node_tooltip(rename,
-                             "Rename\n\nEdit this frame's name in place, right here "
-                             "above it. Enter applies, Escape keeps the old name.");
+                             TIP_("Rename\n\nEdit this frame's name in place, right here "
+                                  "above it. Enter applies, Escape keeps the old name."));
 }
 
 /* The in-place rename field, on the row's line and spanning the frame's
@@ -160,7 +162,7 @@ static bool add_frame_rename_field(const bContext *C,
   if (!field) {
     return false;
   }
-  moodboard_set_node_tooltip(field, "Rename\n\nEnter applies, Escape keeps the old name.");
+  moodboard_set_node_tooltip(field, TIP_("Rename\n\nEnter applies, Escape keeps the old name."));
   return ui::button_active_only(C, region, block, field);
 }
 

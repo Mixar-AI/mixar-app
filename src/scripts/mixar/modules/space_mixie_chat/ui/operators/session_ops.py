@@ -12,6 +12,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, rpt_
 
 from ...core import get_connection_manager, get_session_manager
 from ...core import populate_dev_session, DevDataProvider
@@ -53,7 +54,7 @@ def _send_cancel_request(session_id: str) -> None:
             from ...core.message_helpers import add_agent_message
             for scene in bpy.data.scenes:
                 if getattr(scene, 'mixie_session_id', '') == session_id:
-                    add_agent_message(scene, 'Stop could not be confirmed. Reconnect and try Stop again.')
+                    add_agent_message(scene, rpt_('Stop could not be confirmed. Reconnect and try Stop again.'))
         run_on_main_thread(show_failure)
 
 
@@ -355,7 +356,7 @@ class MIXIE_CHAT_OT_abort_session(Operator):
         italic *Stopped* marker appended so the user sees the response was
         cut short rather than a backend error.
         """
-        stopped_marker = "*Stopped*"
+        stopped_marker = iface_("*Stopped*")
         try:
             messages = context.scene.mixie_chat_messages
             to_remove = []
@@ -448,7 +449,7 @@ class MIXIE_CHAT_OT_resume_previous_task(Operator):
         placeholder.sender = 'AGENT'
         placeholder.bubble_id = f"{TEMP_PLACEHOLDER_PREFIX}{_uuid.uuid4().hex[:12]}"
         placeholder.loader_visible = True
-        placeholder.loader_texts = _json.dumps(["Resuming previous task..."])
+        placeholder.loader_texts = _json.dumps([iface_("Resuming previous task...")])
         try:
             from ...core.animation_manager import start_loader_animation
             start_loader_animation()

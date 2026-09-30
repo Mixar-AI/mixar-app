@@ -211,7 +211,7 @@ def _draw_topbar_profile_right(self, context):
         # to the left slot). The disc carries the stock person glyph: with no
         # profile picture set, the placeholder social platforms use reads
         # better than a generated initial.
-        profile_sub.popover(panel="MIXAR_PT_profile", text=label)
+        profile_sub.popover(panel="MIXAR_PT_profile", text=label, translate=False)
         if hasattr(profile_sub, "mixar_topbar_element"):
             profile_sub.mixar_topbar_element(kind='PROFILE_PILL', active=True)
         else:
@@ -220,7 +220,8 @@ def _draw_topbar_profile_right(self, context):
             avatar_id = avatar_icon.get_avatar_icon_id(email)
             if avatar_id:
                 profile_sub.popover(
-                    panel="MIXAR_PT_profile", text=email, icon_value=avatar_id)
+                    panel="MIXAR_PT_profile", text=email, icon_value=avatar_id,
+                    translate=False)
     else:
         # Icon-only on windows whose right lane cannot fit the label.
         account.ui_units_x, label = _login_button_size(context, sound)

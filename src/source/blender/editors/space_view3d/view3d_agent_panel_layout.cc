@@ -4,6 +4,7 @@
 /** Shared card layout, pointer bounds and notification anchor. */
 #include "../interface/interface_intern.hh"
 #include "BKE_screen.hh"
+#include "BLT_translation.hh"
 #include "BLI_listbase.h"
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -92,10 +93,13 @@ void view3d_agent_panel_layout_cards(const ARegion *region, AgentPanelRuntime *r
   const int seen = (scroll_px + visible_h + gap) / stride;
   const int remaining = std::max(n - seen, 1);
   if (view3d_agent_panel_at_end(runtime)) {
-    STRNCPY(runtime->chevron_label, "Back to first");
+    STRNCPY(runtime->chevron_label, IFACE_("Back to first"));
+  }
+  else if (remaining == 1) {
+    SNPRINTF(runtime->chevron_label, IFACE_("%d more agent"), remaining);
   }
   else {
-    SNPRINTF(runtime->chevron_label, "%d more agent%s", remaining, remaining == 1 ? "" : "s");
+    SNPRINTF(runtime->chevron_label, IFACE_("%d more agents"), remaining);
   }
 
   /* The clipped window the column scrolls behind. A left-docked region is as

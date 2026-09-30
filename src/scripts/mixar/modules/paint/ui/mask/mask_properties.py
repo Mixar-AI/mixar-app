@@ -14,7 +14,6 @@ from bpy.props import (
 )
 
 from ...core.modifier.mask_modifier import mask_modifier_type_items
-from ...utils.common import get_addon_title
 from ...utils.constants import (
     hemi_space_items,
     mask_texcoord_type_items,
@@ -102,9 +101,7 @@ class MLayerMask(bpy.types.PropertyGroup):
 
     active_edit: BoolProperty(
         name="Active Mask",
-        description="Active mask for Blender's paint mode and edit mode, or "
-        + get_addon_title()
-        + "'s Mask preview mode",
+        description="Active mask for Blender's paint mode and edit mode, or Mixar Paint's Mask preview mode",
         default=False,
         update=update_mask_active_edit,
     )

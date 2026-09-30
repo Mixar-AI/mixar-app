@@ -12,6 +12,7 @@ context menu and the More button floating above a selected frame.
 import bpy
 from bpy.types import Menu
 
+from mixar.modules.common.i18n import iface_
 from mixar.modules.moodboard.constants import FRAME_PALETTE
 from mixar.modules.moodboard.core import frames as frame_core
 
@@ -74,7 +75,9 @@ class MIXIE_MT_moodboard_frame(Menu):
         row.enabled = member_count > 0
         op = row.operator(
             "mixie.moodboard_select_frame_contents",
-            text=f"Select Contents ({member_count})" if member_count else "Select Contents",
+            text=(iface_("Select Contents ({count})").format(count=member_count)
+                  if member_count else iface_("Select Contents")),
+            translate=False,
             icon='RESTRICT_SELECT_OFF',
         )
         op.frame_id = frame_id
@@ -139,8 +142,8 @@ class MIXIE_MT_moodboard_frame(Menu):
         row.enabled = member_count > 0
         op = row.operator(
             "mixie.moodboard_delete_frame",
-            text=f"Delete Frame and {member_count} Item(s)",
-            icon='TRASH',
+            text=iface_("Delete Frame and {count} Item(s)").format(count=member_count),
+            icon='TRASH', translate=False,
         )
         op.frame_id = frame_id
         op.with_contents = True

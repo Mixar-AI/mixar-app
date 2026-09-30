@@ -7,6 +7,7 @@
 
 import bpy
 from ...core.node.get_nodes import get_layer_source
+from mixar.modules.common.i18n import iface_
 
 
 def is_baked_to_layer_type(layer, mp):
@@ -114,8 +115,8 @@ def draw_baked_layer_item(col, layer, mp):
     row.scale_y = 1.3
 
     preview_icon = 'HIDE_OFF' if is_previewing else 'HIDE_ON'
-    preview_text = "Preview: " + bake_type_name
-    op = row.operator("wm.m_toggle_baked_layer_preview", text=preview_text, icon=preview_icon, depress=is_previewing)
+    preview_text = iface_("Preview: {name}").format(name=bake_type_name)
+    op = row.operator("wm.m_toggle_baked_layer_preview", text=preview_text, icon=preview_icon, depress=is_previewing, translate=False)
     op.layer_name = layer.name
 
     col.separator(factor=0.3)

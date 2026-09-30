@@ -5,6 +5,8 @@
 
 """UI drawing logic for merge layer operator"""
 
+from mixar.modules.common.i18n import n_
+
 
 def draw_merge_layer_dialog(operator, context):
     """
@@ -54,23 +56,23 @@ def _draw_settings_box(operator, main_col, blend_type):
     col.separator(factor=1.2)
 
     # Main Channel
-    _draw_property_row(col, "Main Channel:", operator, "channel_idx", scale_y=1.4)
+    _draw_property_row(col, n_("Main Channel:"), operator, "channel_idx", scale_y=1.4)
     col.separator(factor=0.4)
 
     # Apply Modifiers
-    _draw_property_row(col, "Apply Mods:", operator, "apply_modifiers", scale_y=1.2)
+    _draw_property_row(col, n_("Apply Mods:"), operator, "apply_modifiers", scale_y=1.2)
     col.separator(factor=0.4)
 
     # Apply Neighbor Modifiers
     _draw_property_row(
-        col, "Neighbor Mods:", operator, "apply_neighbor_modifiers", scale_y=1.2
+        col, n_("Neighbor Mods:"), operator, "apply_neighbor_modifiers", scale_y=1.2
     )
     col.separator(factor=0.4)
 
     if blend_type != "MIX":
         # Force Mix Blending
         _draw_property_row(
-            col, "Force Mix:", operator, "force_mix_blending", scale_y=1.2
+            col, n_("Force Mix:"), operator, "force_mix_blending", scale_y=1.2
         )
         col.separator(factor=0.4)
 

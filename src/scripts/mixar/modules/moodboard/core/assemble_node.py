@@ -20,6 +20,7 @@ import logging
 
 import numpy as np
 
+from mixar.modules.common.i18n import n_, rpt_
 from .assemble_bones import BoneInfo, nearest_bone
 from .assemble_constants import param_name
 from .assemble_landmarks import crossings, outer_surface, ray_start, surface_query
@@ -32,7 +33,7 @@ from .assemble_math import (
     transform_points,
 )
 from .assemble_rules import region_note
-from .assemble_schema import body_link, part_label, part_links
+from .assemble_schema import body_link, part_label, part_links, summary_text
 
 STAMP_OWNER = "mixar_assembled_by"
 STAMP_REST = "mixar_assemble_rest"
@@ -135,15 +136,16 @@ def _resolve_body(scene, node):
 
     link = body_link(scene, node)
     if link is None:
-        raise ValueError("Connect a body to Assemble")
+        raise ValueError(rpt_("Connect a body to Assemble"))
     source = action_node_by_id(scene, link.from_node_id)
     if source is not None and source.action_type == 'ASSEMBLE':
-        raise ValueError("Connect the rigged body itself, not another Assemble card")
+        raise ValueError(rpt_("Connect the rigged body itself, not another Assemble card"))
     objects = _scene_objects(scene, mesh_source_object_names(scene, link.from_node_id))
     meshes = [obj for obj in objects if obj.type == 'MESH' and STAMP_OWNER not in obj]
     if not meshes:
-        label = part_label(scene, link.from_node_id) or "the body card"
-        raise ValueError(f"Generate '{label}' first — Assemble uses its result")
+        label = part_label(scene, link.from_node_id) or rpt_("the body card")
+        raise ValueError(rpt_("Generate '{label}' first — Assemble uses its result").format(
+            label=label))
     arm = next((obj for obj in objects if obj.type == 'ARMATURE'), None)
     if arm is None:
         arm = next((found for found in (m.find_armature() for m in meshes) if found), None)
@@ -165,7 +167,7 @@ def _resolve_parts(scene, node, body_set) -> list:
         parts.append(entry)
         source = action_node_by_id(scene, link.from_node_id)
         if source is not None and source.action_type == 'ASSEMBLE':
-            entry["skip"] = "connect the part's own card, not an Assemble card"
+            entry["skip"] = n_("connect the part's own card, not an Assemble card")
             continue
         for obj in _scene_objects(scene, mesh_source_object_names(scene, link.from_node_id)):
             root = _root(obj)
@@ -185,9 +187,9 @@ def _resolve_parts(scene, node, body_set) -> list:
                       and _live_assemble(scene, root.get(STAMP_OWNER))), None)
         if owner is not None:
             entry["roots"] = []
-            entry["skip"] = "attached by another Assemble card; disconnect it there first"
+            entry["skip"] = n_("attached by another Assemble card; disconnect it there first")
         elif not entry["roots"]:
-            entry["skip"] = "not generated yet"
+            entry["skip"] = n_("not generated yet")
         claimed.update(root.as_pointer() for root in entry["roots"])
     return parts
 
@@ -196,9 +198,9 @@ def _validate(context, objects) -> None:
     scene, view_layer = context.scene, context.view_layer
     for obj in objects:
         if scene.objects.get(obj.name) != obj or view_layer.objects.get(obj.name) != obj:
-            raise ValueError(f"'{obj.name}' is not in this view layer")
+            raise ValueError(rpt_("'{name}' is not in this view layer").format(name=obj.name))
         if obj.mode != 'OBJECT':
-            raise ValueError("Leave Pose/Edit mode first")
+            raise ValueError(rpt_("Leave Pose/Edit mode first"))
 
 
 def _restore_rest(scene, view_layer, node, roots, snapshot) -> None:
@@ -316,7 +318,8 @@ def _attach(root, delta, parent, bone, view_layer, height) -> list:
     view_layer.update()
     drift = np.abs(np.array(root.matrix_world, dtype=float) - np.array(placed, dtype=float))
     if float(drift.max()) >= DRIFT_TOLERANCE * max(1.0, height):
-        raise ValueError(f"Could not keep '{root.name}' in place while parenting")
+        raise ValueError(rpt_("Could not keep '{name}' in place while parenting").format(
+            name=root.name))
     return [float(value) for value in rest.reshape(16)]
 
 
@@ -338,14 +341,6 @@ def _hide_source_body(scene, view_layer, node, link, keep, snapshot) -> None:
             member[STAMP_HIDDEN] = node.node_id
 
 
-def _summary(attached: int, skipped: int, rigged: bool) -> str:
-    noun = "part" if attached == 1 else "parts"
-    text = (f"No parts connected — the {'rigged ' if rigged else ''}body is the character"
-            if attached == skipped == 0 else f"{attached} {noun} on bones" if rigged
-            else f"{attached} {noun} placed — not rigged")
-    return f"{text}, {skipped} skipped" if skipped else text
-
-
 def _result_names(names) -> str:
     from ..constants import GRAPH_OBJECT_NAMES_MAXLEN
 
@@ -365,7 +360,7 @@ def _place(part, rows, body, env) -> dict:
     region = _row(rows, "slot", index, "value_enum", "AUTO") == "AUTO" and region_note(part["label"])
     if part["skip"] or region or not members:
         return {**record, "status": "skipped",
-                "notes": [part["skip"] or region or "no mesh in this part"]}
+                "notes": [part["skip"] or region or n_("no mesh in this part")]}
     verts = _evaluated_verts(members, env["depsgraph"])
     settings = resolve_settings(
         part["label"], sorted_extents(verts),
@@ -379,7 +374,7 @@ def _place(part, rows, body, env) -> dict:
     bone, how = body["resolved"].get(key, ("", "estimated"))
     if arm is not None and not bone:
         bone = nearest_bone(body["resolved"], body["bones"], body["sockets"][key])
-        notes.append("does not follow the arm")
+        notes.append(n_("does not follow the arm"))
     for root in roots:
         env["snapshot"].remember(root)
         rest = _attach(root, plan.delta, arm if arm is not None else env["meshes"][0],
@@ -424,7 +419,7 @@ def _assemble(context, node, snapshot) -> None:
     node.params_json = json.dumps({
         "version": 1, "rigged": arm is not None, "armature": arm.name if arm is not None else "",
         "body": body_names, "height_m": round(body["height"], 4), "yaw_deg": round(body["yaw"], 2),
-        "summary": _summary(attached, len(records) - attached, arm is not None),
+        "summary": summary_text(attached, len(records) - attached, arm is not None),
         "parts": records,
     }, separators=(",", ":"))
     node.state = 'SUCCESS'

@@ -19,6 +19,7 @@ import os
 import threading
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from ..constants import LOCAL_MODEL_TOAST_ID, LOG_PREFIX
 from . import catalog, runtime
@@ -96,9 +97,9 @@ def start_download(model_id: str):
     global _toast_suppressed
     entry = catalog.get_model(model_id)
     if entry is None:
-        return False, "Unknown local model"
+        return False, n_("Unknown local model")
     if _dl.active:
-        return False, "Another download is already in progress"
+        return False, n_("Another download is already in progress")
 
     _dl.reset()
     _dl.active = True
@@ -188,7 +189,7 @@ def _download_worker(model_id: str, label: str) -> None:
         _dl.cancelled = True
         logger.info("%s download cancelled: %s", LOG_PREFIX, model_id)
     except Exception as exc:  # noqa: BLE001 - worker must never raise
-        _dl.error = getattr(exc, "user_message", "") or "Local model setup failed"
+        _dl.error = getattr(exc, "user_message", "") or n_("Local model setup failed")
         logger.error("%s download failed: %s", LOG_PREFIX, exc, exc_info=True)
     finally:
         _dl.active = False
@@ -256,11 +257,12 @@ def _refresh_toast() -> None:
         store = toast_store()
         if _dl.active:
             if _dl.file_label == "extract":
-                title = "Unpacking local AI runtime…"
+                title = n_("Unpacking local AI runtime…")
             elif _dl.file_label == "local AI runtime":
-                title = f"Downloading local AI runtime — {_dl.pct}%"
+                title = rpt_("Downloading local AI runtime — {percent}%").format(percent=_dl.pct)
             else:
-                title = f"Downloading {_dl.label} — {_dl.pct}%"
+                title = rpt_("Downloading {name} — {percent}%").format(
+                    name=_dl.label, percent=_dl.pct)
             key = f"active\x1f{title}"
             if key == _last_toast_key:
                 return
@@ -283,13 +285,13 @@ def _refresh_toast() -> None:
         _toast_suppressed = False
         if _dl.done:
             store.push(
-                "success", "Local model ready",
-                body=f"{_dl.label} is downloaded on this computer",
+                "success", n_("Local model ready"),
+                body=rpt_("{name} is downloaded on this computer").format(name=_dl.label),
                 id=LOCAL_MODEL_TOAST_ID,
             )
         elif _dl.error:
             store.push(
-                "error", "Local model download failed",
+                "error", n_("Local model download failed"),
                 body=_dl.error, id=LOCAL_MODEL_TOAST_ID,
             )
         else:  # cancelled

@@ -34,6 +34,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"
@@ -456,21 +458,25 @@ void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region)
     const float pad_x = INK_HINT_PAD_X * scale;
     const float gap = INK_HINT_GAP * scale;
     const float btn_h = INK_BTN_H * scale;
-    const float clear_w = INK_CLEAR_W * scale;
+    /* The Clear pill grows past its fixed width when a translation needs it. */
+    const char *clear_label = IFACE_("Clear");
+    BLF_size(font_id, float(hint_px));
+    const float clear_label_w = BLF_width(font_id, clear_label, strlen(clear_label));
+    const float clear_w = std::max(INK_CLEAR_W * scale, clear_label_w + 20.0f * scale);
     const float close_size = HIST_CLOSE_SIZE * 0.8f * scale;
 
     const char *hint_text;
     if (busy) {
-      hint_text = "Converting handwriting…";
+      hint_text = IFACE_("Converting handwriting…");
     }
     else if (rt->ink_store_full) {
-      hint_text = "Canvas full — pause to convert";
+      hint_text = IFACE_("Canvas full — pause to convert");
     }
     else if (rt->ink_point_count == 0) {
-      hint_text = "Handwriting — write your prompt";
+      hint_text = IFACE_("Handwriting — write your prompt");
     }
     else {
-      hint_text = "Pause to convert · Enter converts now · Esc closes";
+      hint_text = IFACE_("Pause to convert · Enter converts now · Esc closes");
     }
 
     BLF_size(font_id, float(hint_px));
@@ -525,9 +531,8 @@ void mixie_chat_draw_ink_overlay(const bContext *C, ARegion *region)
                                   HIST_COL_MUTED[1],
                                   HIST_COL_MUTED[2],
                                   (rt->ink_point_count > 0 ? 1.0f : 0.45f) * ease};
-      BLF_size(font_id, float(hint_px));
-      const float cw = BLF_width(font_id, "Clear", 5);
-      hist_draw_label("Clear",
+      const float cw = clear_label_w;
+      hist_draw_label(clear_label,
                       font_id,
                       hint_px,
                       cx_min + (clear_w - cw) * 0.5f,

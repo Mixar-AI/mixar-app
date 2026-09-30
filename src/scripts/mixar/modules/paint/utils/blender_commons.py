@@ -11,6 +11,7 @@ import bpy_extras.image_utils
 from mathutils import Color
 
 from ....config.logging_config import get_logger
+from mixar.modules.common.i18n import tip_
 
 logger = get_logger(__name__)
 
@@ -189,7 +190,7 @@ def get_operator_description(operator):
     else:
         return ""
     return (
-        description + ". Hold Shift for options"
+        tip_("{description}. Hold Shift for options").format(description=tip_(description))
         if get_user_preferences().skip_property_popups
         else ""
     )

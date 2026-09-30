@@ -21,6 +21,7 @@ from bpy.props import (
 from bpy_extras.io_utils import ImportHelper
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -276,9 +277,7 @@ class MOpenImageAsMask(bpy.types.Operator, ImportHelper, OpenImage):
             if not os.path.isfile(self.file_browser_filepath):
                 self.report(
                     {"ERROR"},
-                    "There's no image with address '"
-                    + self.file_browser_filepath
-                    + "'!",
+                    rpt_("There's no image with address '{path}'!").format(path=self.file_browser_filepath),
                 )
                 return {"CANCELLED"}
             import_list = [os.path.basename(self.file_browser_filepath)]
@@ -314,7 +313,7 @@ class MOpenImageAsMask(bpy.types.Operator, ImportHelper, OpenImage):
         if skipped_paths:
             self.report(
                 {"WARNING"},
-                f"Skipped {len(skipped_paths)} file(s) with invalid paths"
+                rpt_("Skipped {count} file(s) with invalid paths").format(count=len(skipped_paths))
             )
 
         for image in images:

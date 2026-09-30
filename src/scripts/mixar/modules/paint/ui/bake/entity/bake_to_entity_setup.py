@@ -40,6 +40,7 @@ from ..utils.bake_common import (
     get_merged_mesh_objects,
     is_join_objects_problematic,
 )
+from mixar.modules.common.i18n import n_
 
 logger = get_logger(__name__)
 
@@ -87,9 +88,9 @@ def get_other_objects(bprops, mat, objs, overwrite_img, segment):
 
     if not other_objs:
         if overwrite_img:
-            return [], "No source objects found! They're probably deleted!"
+            return [], n_("No source objects found! They're probably deleted!")
         else:
-            return [], "Source objects must be selected and it should have different material!"
+            return [], n_("Source objects must be selected and it should have different material!")
 
     return other_objs, ""
 

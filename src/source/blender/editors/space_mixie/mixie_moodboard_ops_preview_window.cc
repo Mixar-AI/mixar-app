@@ -23,6 +23,8 @@
 
 #include "BLI_rect.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_image.hh"
 
 #include "MOV_read.hh"
@@ -117,8 +119,9 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
   if (!image) {
     BKE_report(op->reports,
                RPT_WARNING,
-               media_id[0] ? "This board item has no image or video to preview" :
-                             "This node has no image or video to preview");
+               /* N_: BKE_report translates the message it is given. */
+               media_id[0] ? N_("This board item has no image or video to preview") :
+                             N_("This node has no image or video to preview"));
     return OPERATOR_CANCELLED;
   }
 
@@ -151,7 +154,7 @@ static wmOperatorStatus moodboard_preview_media_exec(bContext *C, wmOperator *op
    * window rather than becoming part of the saved workspace layout -- a preview
    * is something the user opens and closes, not a screen they arrange. */
   if (WM_window_open(C,
-                     "Image Preview",
+                     IFACE_("Image Preview"),
                      &window_rect,
                      SPACE_IMAGE,
                      false,

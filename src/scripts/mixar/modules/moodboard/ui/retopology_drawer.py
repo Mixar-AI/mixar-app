@@ -18,6 +18,7 @@ Called from ``sidebar_tab_drawers._draw_retopology`` which falls back to
 the legacy ``scene.hunyuan.topology`` UI when the catalog isn't loaded.
 """
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.common.job_queue.constants import FEATURE_RETOPOLOGY
 
 from .sidebar_ui_helpers import (
@@ -57,14 +58,14 @@ def _draw_retopology_catalog(layout, context):
     is_tripo = model_slug == _TRIPO_MODEL or service_key == _TRIPO_SERVICE
 
     # --- Mesh info ---
-    col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+    col = draw_section_box(layout, n_("Mesh Info"), icon='MESH_DATA')
     draw_mesh_info(col, context, max_mb=150 if is_tripo else 200)
-    draw_hint(layout, "Select the objects you want to retopologize",
+    draw_hint(layout, n_("Select the objects you want to retopologize"),
               icon='INFO')
     draw_section_separator(layout)
 
     # --- Settings (Mode / Model / schema params from the catalog) ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
     draw_capability_selector(col, tab, "retopology")
@@ -75,12 +76,12 @@ def _draw_retopology_catalog(layout, context):
         if hasattr(scene, 'hunyuan'):
             draw_toggle(col, scene.hunyuan.topology, "tripo_bake",
                         text="Bake Textures")
-        info = draw_section_box(layout, "About Tripo Retopology", icon='INFO')
-        draw_hint(info, "v2.0 smart highpoly to lowpoly", icon='DOT')
-        draw_hint(info, "Max mesh: 150 MB", icon='DOT')
-        draw_hint(info, "Face Limit caps: 20,000 (tri) / 10,000 (quad)",
+        info = draw_section_box(layout, n_("About Tripo Retopology"), icon='INFO')
+        draw_hint(info, n_("v2.0 smart highpoly to lowpoly"), icon='DOT')
+        draw_hint(info, n_("Max mesh: 150 MB"), icon='DOT')
+        draw_hint(info, n_("Face Limit caps: 20,000 (tri) / 10,000 (quad)"),
                   icon='DOT')
-        draw_hint(info, "Bake transfers textures to the low-poly", icon='DOT')
+        draw_hint(info, n_("Bake transfers textures to the low-poly"), icon='DOT')
 
     # --- Generate ---
     draw_generate_footer(

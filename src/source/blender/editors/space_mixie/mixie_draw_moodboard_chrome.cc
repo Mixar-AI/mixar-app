@@ -10,6 +10,7 @@
 
 #include "BKE_screen.hh"
 #include "BLF_api.hh"
+#include "BLT_translation.hh"
 #include "ED_screen.hh"
 #include "UI_interface_layout.hh"
 #include "UI_mixar.hh"

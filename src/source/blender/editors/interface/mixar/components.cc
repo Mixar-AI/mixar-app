@@ -3,6 +3,7 @@
 
 #include "../interface_intern.hh"
 #include "BLI_math_vector.h"
+#include "BLT_translation.hh"
 #include "DNA_theme_types.h"
 #include "DNA_userdef_types.h"
 #include "UI_interface.hh"
@@ -182,8 +183,10 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
   const float cy = BLI_rctf_cent_y(&rect);
   float right = rect.xmax - padding * u;
   if (style.component == MixarComponent::Toggle) {
-    const float on_w = mixar_text_width("ON", text_style) + 20.0f * u;
-    const float off_w = mixar_text_width("OFF", text_style) + 20.0f * u;
+    const char *on_label = IFACE_("ON");
+    const char *off_label = IFACE_("OFF");
+    const float on_w = mixar_text_width(on_label, text_style) + 20.0f * u;
+    const float off_w = mixar_text_width(off_label, text_style) + 20.0f * u;
     const float start = right + padding * u * 0.5f - on_w - off_w;
     rctf on = {start, start + on_w, rect.ymin + 4 * u, rect.ymax - 4 * u};
     rctf off = {on.xmax, on.xmax + off_w, on.ymin, on.ymax};
@@ -192,9 +195,12 @@ bool mixar_component_draw(Button &button, uiWidgetColors &colors, const rcti &bo
     thumb.xmax = off.xmax + (on.xmax - off.xmax) * motion.selected;
     mixar_fill_round(thumb, radius * u, mixar_zen().selected);
     mixar_label_left(
-        "ON", on.xmin + 10 * u, cy, text_style, selected ? foreground : mixar_zen().secondary);
-    mixar_label_left(
-        "OFF", off.xmin + 10 * u, cy, text_style, selected ? mixar_zen().secondary : foreground);
+        on_label, on.xmin + 10 * u, cy, text_style, selected ? foreground : mixar_zen().secondary);
+    mixar_label_left(off_label,
+                     off.xmin + 10 * u,
+                     cy,
+                     text_style,
+                     selected ? mixar_zen().secondary : foreground);
     right = start - gap * u;
   }
   if (style.component == MixarComponent::Dropdown) {

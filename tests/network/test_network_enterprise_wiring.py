@@ -94,7 +94,7 @@ def test_login_operator_has_scoped_watchdog_and_keeps_failure_reason():
     )
     assert "_release_stuck_login(attempt_id, sso_thread)" in source
     assert "SSO_LOGIN_TIMEOUT_S + _LOGIN_WATCHDOG_GRACE_S" in source
-    assert 'f"Session expired. {reason}"' in source
+    assert 'rpt_("Session expired. {reason}").format(reason=reason)' in source
     assert '"Session expired. Please log in again."' not in source
 
 

@@ -14,6 +14,7 @@ from collections import deque
 from dataclasses import dataclass, field
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from ..constants import SessionState
 from .agent_events import AgentEvent
 from . import turn_cursor
@@ -352,7 +353,8 @@ def _replay_unavailable(scene, turn):
     get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
     get_session_manager().set_run(scene, '', False)
     get_session_manager().set_state(scene, SessionState.IDLE)
-    add_agent_message(scene, 'The connection lost part of this response. The task was not restarted. Check the scene before continuing.')
+    add_agent_message(scene, rpt_('The connection lost part of this response. The task was not restarted. '
+                                  'Check the scene before continuing.'))
     turn.complete = True
 
 

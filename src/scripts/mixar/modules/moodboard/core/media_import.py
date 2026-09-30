@@ -12,6 +12,7 @@ import uuid
 
 import bpy
 
+from mixar.modules.common.i18n import rpt_
 from .moodboard_utils import place_new_moodboard_item
 from .first_use import mark_started
 
@@ -69,12 +70,12 @@ def load_media_file_to_board(scene, filepath, anchor=None):
     try:
         img = bpy.data.images.load(filepath, check_existing=True)
         if img.size[0] <= 0 or img.size[1] <= 0:
-            raise ValueError("Cannot decode media preview")
+            raise ValueError(rpt_("Cannot decode media preview"))
         img.colorspace_settings.name = 'sRGB'
         if img.source != 'MOVIE':
             img.pack()
         elif img.frame_duration < 1:
-            raise ValueError("Movie contains no playable frames")
+            raise ValueError(rpt_("Movie contains no playable frames"))
     except Exception:
         if img is not None and img not in images_before:
             bpy.data.images.remove(img)
@@ -101,7 +102,7 @@ def pack_still_image(source_path: str, *, display_name: str = ""):
     image = bpy.data.images.load(source_path, check_existing=False)
     try:
         if image.source == 'MOVIE' or image.size[0] <= 0 or image.size[1] <= 0:
-            raise ValueError("Captured result is not a valid still image")
+            raise ValueError(rpt_("Captured result is not a valid still image"))
         image.colorspace_settings.name = 'sRGB'
         image.pack()
         if display_name:
@@ -154,7 +155,7 @@ def import_generated_video(
         moved = True
         image = bpy.data.images.load(destination, check_existing=False)
         if image.source != 'MOVIE' or image.frame_duration < 1:
-            raise ValueError("Generated result is not a playable video")
+            raise ValueError(rpt_("Generated result is not a playable video"))
         image.name = display_name or f"Seedance {uuid.uuid4().hex[:6]}"
 
         scene = bpy.data.scenes.get(scene_name) if scene_name else None

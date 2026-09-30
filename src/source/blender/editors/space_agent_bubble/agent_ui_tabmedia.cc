@@ -25,6 +25,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 
 #include "DNA_scene_types.h"
@@ -139,8 +141,8 @@ void agent_ui_tabmedia_draw(const bContext *C,
     model_chip.kind = MediaChipKind::Enum;
     model_chip.on_wm_group = false;
     BLI_strncpy(model_chip.prop_id, "model", sizeof(model_chip.prop_id));
-    model_chip.label = "Model";
-    model_chip.value = model_label[0] ? model_label : "Loading...";
+    model_chip.label = IFACE_("Model");
+    model_chip.value = model_label[0] ? model_label : IFACE_("Loading...");
 
     if (group_ok) {
       chip_count += media_gather_param_chips(
@@ -202,7 +204,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
 
   /* Video catalog-only unavailable state. */
   if (video_unavailable) {
-    pane_label_centre("Video generation needs the live catalog",
+    pane_label_centre(IFACE_("Video generation needs the live catalog"),
                    (band.xmin + band.xmax) * 0.5f,
                    row_y - chip_h_px * 0.5f,
                    font,
@@ -227,8 +229,10 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * AFTER the embossed field block below — its chrome covers earlier
    * pixels). */
   rctf upload = {}, capture = {}, generate = {};
-  const float upload_w = pane_action_chip_w("Upload Reference", true, u);
-  const float capture_w = pane_action_chip_w("Capture Viewport", false, u);
+  const char *upload_label = IFACE_("Upload Reference");
+  const char *capture_label = IFACE_("Capture Viewport");
+  const float upload_w = pane_action_chip_w(upload_label, true, u);
+  const float capture_w = pane_action_chip_w(capture_label, false, u);
   float bx = prompt_box.xmin + PANE_BOTTOM_IN_L * u;
   /* Both halves upload: the image half into tab_imagegen's reference
    * collection, the video half onto the moodboard AS SELECTED (Video Gen's
@@ -258,7 +262,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
    * count), never a lock. Only a missing prompt field or an unusable
    * catalog can disarm it. */
   const bool can_generate = tab_ok && !video_unavailable && prompt_ok;
-  char gen_label[32];
+  char gen_label[64];
   pane_queue_label(gen_label, sizeof(gen_label), active_jobs, running_jobs > 0);
   generate = pane_generate_rect(prompt_box, u, gen_label);
 
@@ -300,7 +304,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
                              &tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
     ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (input) {
-      ui::button_placeholder_set(input, "Describe your scene here...");
+      ui::button_placeholder_set(input, IFACE_("Describe your scene here..."));
       ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
       ui::button_flag_enable(input, ui::BUT_TEXTEDIT_UPDATE);
     }
@@ -348,12 +352,13 @@ void agent_ui_tabmedia_draw(const bContext *C,
       video ? "mixar.pane_video_upload_reference" : "mixie.imagegen_upload_reference",
       blender::wm::OpCallContext::InvokeDefault,
       ICON_IMAGE_DATA,
-      "Upload Reference",
+      upload_label,
       int(upload.xmin),
       int(upload.ymin),
       short(BLI_rctf_size_x(&upload)),
       short(BLI_rctf_size_y(&upload)),
-      video ? "Add reference images and videos from disk" : "Add reference images from disk");
+      video ? TIP_("Add reference images and videos from disk") :
+              TIP_("Add reference images from disk"));
 
   ui::mixar_style_button(
       upload_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
@@ -363,12 +368,12 @@ void agent_ui_tabmedia_draw(const bContext *C,
                                          ui::ButtonType::But,
                                          "mixar.pane_capture_viewport",
                                          blender::wm::OpCallContext::InvokeDefault,
-                                         "Capture Viewport",
+                                         capture_label,
                                          int(capture.xmin),
                                          int(capture.ymin),
                                          short(BLI_rctf_size_x(&capture)),
                                          short(BLI_rctf_size_y(&capture)),
-                                         "Screenshot the 3D viewport as a reference image");
+                                         TIP_("Screenshot the 3D viewport as a reference image"));
 
   ui::mixar_style_button(
       capture_button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
@@ -390,7 +395,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
                                 int(generate.ymin),
                                 short(BLI_rctf_size_x(&generate)),
                                 short(BLI_rctf_size_y(&generate)),
-                                video ? "Generate a video" : "Generate images");
+                                video ? TIP_("Generate a video") : TIP_("Generate images"));
     ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (but && !can_generate) {
       ui::button_flag_enable(but, ui::BUT_DISABLED);

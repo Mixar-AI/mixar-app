@@ -67,7 +67,8 @@ AgentTabId agent_ui_tab_from_identifier(const char *identifier);
 /** Content starts below session actions only on the chat tabs. */
 float agent_ui_panel_top(AgentTabId tab);
 
-/** Shared by text measurement and tab painting. */
+/** Shared by text measurement and tab painting. Returns the untranslated
+ * msgid: both sites measure and draw `IFACE_(label)`. */
 const char *agent_ui_tab_label(AgentTabId tab);
 
 struct AgentTabLayout {

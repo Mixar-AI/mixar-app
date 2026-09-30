@@ -12,6 +12,7 @@ import json
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 from mixar.modules.common.job_queue import enqueue_generation
 from mixar.modules.common.utils.image_utils import compress_for_service
 from .media_utils import describe_moodboard_media, is_still_item
@@ -89,20 +90,20 @@ def _run_image(context, node, operator):
 
     prompt = node.prompt.strip()
     if not prompt:
-        raise ValueError("Enter a prompt in the image node")
+        raise ValueError(rpt_("Enter a prompt in the image node"))
     service_key = resolve_service_key("image_gen", node_service_key(node))
     if service_key != "image_gen":
-        raise ValueError("The selected image service needs a newer app version")
+        raise ValueError(rpt_("The selected image service needs a newer app version"))
     model = resolve_model_slug(service_key, node_model_slug(node))
     if not model:
-        raise ValueError("No enabled image model is available")
+        raise ValueError(rpt_("No enabled image model is available"))
 
     references = [
         item for item in input_media_items(context.scene, node)
         if is_still_item(item)
     ]
     if getattr(node, "requires_reference", False) and not references:
-        raise ValueError("Connect your character sheet to this card first")
+        raise ValueError(rpt_("Connect your character sheet to this card first"))
     model_spec = get_model(service_key, model) or {}
     # Fail closed: a catalog that publishes no reference limit takes no
     # references. Guessing a client-side default here would burn a queue slot
@@ -110,9 +111,9 @@ def _run_image(context, node, operator):
     max_refs = int(model_spec.get("max_reference_images") or 0)
     if len(references) > max_refs:
         raise ValueError(
-            f"This model accepts at most {max_refs} reference images"
+            rpt_("This model accepts at most {count} reference images").format(count=max_refs)
             if max_refs
-            else "This model does not accept reference images"
+            else rpt_("This model does not accept reference images")
         )
     reference_b64 = [
         base64.b64encode(compress_for_service(item.image, "imagegen")).decode()
@@ -139,7 +140,7 @@ def _run_image(context, node, operator):
         display_label=prompt[:40],
         origin_capability_key="image_gen",
         graph_node_id=node.node_id,
-        fail_message="Image generation failed",
+        fail_message=n_("Image generation failed"),
         name_prefix="imagegen",
         prompt_text=prompt,
         undo_message="Generate Image Node",
@@ -165,12 +166,12 @@ def _run_model_3d(context, node, operator):
 
     service_key = resolve_service_key("model_gen", node_service_key(node))
     if not service_key:
-        raise ValueError("Model Gen is unavailable in the generation catalog")
+        raise ValueError(rpt_("Model Gen is unavailable in the generation catalog"))
     if service_key not in {'model_3d', 'image_to_3d', 'hunyuan_rapid'}:
-        raise ValueError("This Model Gen mode is not supported by inference nodes yet")
+        raise ValueError(rpt_("This Model Gen mode is not supported by inference nodes yet"))
     model = resolve_model_slug(service_key, node_model_slug(node))
     if not model:
-        raise ValueError("No enabled 3D generation model is available")
+        raise ValueError(rpt_("No enabled 3D generation model is available"))
 
     # A multi-view set that cannot be honoured raises a TERMINAL ValueError and
     # is deliberately allowed to propagate: degrading to a single image would
@@ -192,7 +193,7 @@ def _run_model_3d(context, node, operator):
     prompt = node.prompt.strip() or None
     supports_mv = model_supports_multi_view(service_key, model)
     if not turnaround and service_key != "model_3d" and not (image or prompt or supports_mv):
-        raise ValueError("Provide an image or prompt")
+        raise ValueError(rpt_("Provide an image or prompt"))
 
     payload = dict(turnaround or {})
     if not turnaround:
@@ -253,13 +254,13 @@ def _run_video(context, node, operator):
 
     prompt = node.prompt.strip()
     if not prompt:
-        raise ValueError("Enter a video prompt in the Node panel")
+        raise ValueError(rpt_("Enter a video prompt in the Node panel"))
     service_key = resolve_service_key("video_gen", node_service_key(node))
     if service_key != "video_gen":
-        raise ValueError("The selected video service needs a newer app version")
+        raise ValueError(rpt_("The selected video service needs a newer app version"))
     model = resolve_model_slug(service_key, node_model_slug(node))
     if not model:
-        raise ValueError("No enabled video model is available")
+        raise ValueError(rpt_("No enabled video model is available"))
 
     descriptions = [
         describe_moodboard_media(item)
@@ -269,7 +270,7 @@ def _run_video(context, node, operator):
     videos = [item for item in descriptions if item["media_type"] == "VIDEO"]
     limits = get_video_generation_limits(service_key, model)
     if limits is None:
-        raise ValueError("Video generation catalog config is incomplete")
+        raise ValueError(rpt_("Video generation catalog config is incomplete"))
     params = collect_node_params(node)
     from .video_generation_catalog import video_reference_count_error
 
@@ -282,7 +283,7 @@ def _run_video(context, node, operator):
     if count_error:
         raise ValueError(count_error)
     if any(not item["source_available"] for item in videos):
-        raise ValueError("A connected video was moved or deleted")
+        raise ValueError(rpt_("A connected video was moved or deleted"))
 
     from .video_generation_catalog import (
         build_image_reference_inputs,
@@ -303,7 +304,7 @@ def _run_video(context, node, operator):
         display_label=prompt[:40],
         origin_capability_key="video_gen",
         graph_node_id=node.node_id,
-        fail_message="Video generation failed",
+        fail_message=n_("Video generation failed"),
         prompt_text=prompt,
         image_inputs=image_inputs,
         video_inputs=video_inputs,
@@ -356,21 +357,21 @@ def _run_mask_detail(context, node, operator):
     scene = context.scene
     service_key = resolve_service_key("image_gen", node_service_key(node))
     if service_key != "image_gen":
-        raise ValueError("Mask detail generation runs on the image service")
+        raise ValueError(rpt_("Mask detail generation runs on the image service"))
     model_slug = resolve_model_slug(service_key, node_model_slug(node))
     if not model_slug:
-        raise ValueError("No enabled image model is available")
+        raise ValueError(rpt_("No enabled image model is available"))
     if not is_loaded():
-        raise ValueError("Load the generation catalog before generating details")
+        raise ValueError(rpt_("Load the generation catalog before generating details"))
     model = get_model(service_key, model_slug)
     if not model_supports_component_details(model):
         raise ValueError(
-            "Choose an Image Gen model with mask guidance and two references"
+            rpt_("Choose an Image Gen model with mask guidance and two references")
         )
 
     sources = [item for item in input_media_items(scene, node) if is_still_item(item)]
     if not sources:
-        raise ValueError("Connect the source image to this mask node")
+        raise ValueError(rpt_("Connect the source image to this mask node"))
     source_item = sources[0]
     segment = next(
         (
@@ -381,7 +382,7 @@ def _run_mask_detail(context, node, operator):
         None,
     )
     if segment is None:
-        raise ValueError("The lasso mask for this node no longer exists")
+        raise ValueError(rpt_("The lasso mask for this node no longer exists"))
 
     # This node's own catalog params (edited in its panel); views/full-context
     # are per-node props. number_of_images is driven by Views per Component.
@@ -420,10 +421,10 @@ def _run_mask_detail(context, node, operator):
         model=model_slug,
         payload=payload,
         label=f"MaskNode:{node.node_id[:8]}:{component_name[:24]}",
-        display_label=f"{component_name} detail",
+        display_label=iface_("{component} detail").format(component=component_name),
         origin_capability_key="image_gen",
         graph_node_id=node.node_id,
-        fail_message="Component detail generation failed",
+        fail_message=n_("Component detail generation failed"),
         name_prefix="component_detail",
         prompt_text=payload["prompt"],
         undo_message="Generate Mask Detail",
@@ -451,7 +452,7 @@ def mark_run_failed(node, message: str) -> bool:
 
 def run_action_node(context, node, operator):
     if node.state in {'QUEUED', 'RUNNING'}:
-        raise ValueError("This node is already running")
+        raise ValueError(rpt_("This node is already running"))
     node.error = ""
     require_upstream_results(context.scene, node)
     if node.action_type == 'IMAGE_GEN':
@@ -482,7 +483,7 @@ def run_action_node(context, node, operator):
     else:
         job, params = _run_model_3d(context, node, operator)
     if job is None:
-        raise ValueError("A duplicate generation is already queued")
+        raise ValueError(rpt_("A duplicate generation is already queued"))
     node.params_json = json.dumps(params, separators=(",", ":"), sort_keys=True)
     node.job_id = job.id
     node.state = 'QUEUED'

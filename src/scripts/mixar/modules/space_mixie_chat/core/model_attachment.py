@@ -21,6 +21,8 @@ import os
 
 import bpy
 
+from mixar.modules.common.i18n import rpt_
+
 # Importer dispatch + name diffing mirror core/agent_import.py (the
 # agent-driven import, #1251) — keep the two in sync. Duplicated deliberately:
 # the two features land on independent branches and this keeps the attach
@@ -71,11 +73,11 @@ def import_model_attachment(filepath: str) -> dict:
     if op is None:
         return {
             "success": False,
-            "error": "unsupported model format "
-                     f"({extension or 'unknown'}; supported: OBJ)",
+            "error": rpt_("unsupported model format ({format}; supported: OBJ)").format(
+                format=extension or rpt_("unknown")),
         }
     if not os.path.isfile(filepath):
-        return {"success": False, "error": "the file does not exist"}
+        return {"success": False, "error": rpt_("the file does not exist")}
 
     active = bpy.context.view_layer.objects.active
     selected = list(bpy.context.selected_objects)
@@ -88,7 +90,7 @@ def import_model_attachment(filepath: str) -> dict:
         if not names:
             return {
                 "success": False,
-                "error": "the importer reported no new objects",
+                "error": rpt_("the importer reported no new objects"),
             }
         return {
             "success": True,

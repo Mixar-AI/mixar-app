@@ -4,6 +4,7 @@
 #include "BLF_api.hh"
 #include "BLI_rect.h"
 #include "BLI_string.h"
+#include "BLT_translation.hh"
 #include "DNA_screen_types.h"
 #include "ED_mixar_glass.hh"
 #include "GPU_state.hh"
@@ -50,7 +51,7 @@ void rules_draw_rows(const RulesDrawFrame &f)
   if (entries.is_empty()) {
     float hint_col[4] = {
         HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2], HIST_COL_MUTED[3] * ease};
-    const char *empty_text = "Add a rule above to guide Mixie.";
+    const char *empty_text = IFACE_("Add a rule above to guide Mixie.");
     const float w = hist_text_width(empty_text, font_id, meta_px);
     const float cx = (panel.xmin + panel.xmax) * 0.5f;
     hist_draw_label(empty_text,
@@ -82,7 +83,7 @@ void rules_draw_rows(const RulesDrawFrame &f)
                             HIST_COL_MUTED[2],
                             HIST_COL_MUTED[3] * 0.9f * ease};
       hist_draw_label(
-          item.label, font_id, hint_px, panel_x + pad + 8.0f * scale, baseline, group_col);
+          IFACE_(item.label), font_id, hint_px, panel_x + pad + 8.0f * scale, baseline, group_col);
     }
 
     const bool in_list = BLI_rctf_isect_pt(&rt->rules_list_bounds, mouse_x, mouse_y);
@@ -198,7 +199,7 @@ void rules_draw_rows(const RulesDrawFrame &f)
         control.ymin -= slide;
         control.ymax -= slide;
         float caption_col[4] = {HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2], ease};
-        hist_draw_label("Applies to",
+        hist_draw_label(IFACE_("Applies to"),
                         font_id,
                         meta_px,
                         control.xmin,
@@ -223,7 +224,7 @@ void rules_draw_rows(const RulesDrawFrame &f)
                              (selected ? 0.95f : 0.08f) * ease};
             chat_ui_draw_rounded_rect(&choice, radius - 2.0f * scale, fill);
           }
-          const char *label = global ? RULES_SCOPE_GLOBAL : RULES_SCOPE_PROJECT;
+          const char *label = IFACE_(global ? RULES_SCOPE_GLOBAL : RULES_SCOPE_PROJECT);
           const float *base_col = selected ? HIST_COL_TITLE : HIST_COL_MUTED;
           float label_col[4] = {base_col[0], base_col[1], base_col[2], ease};
           const float width = hist_text_width(label, font_id, meta_px);

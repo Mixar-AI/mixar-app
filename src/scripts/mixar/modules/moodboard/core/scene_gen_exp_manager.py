@@ -22,6 +22,7 @@ from typing import Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from .media_utils import selected_reference_stills
 
 logger = get_logger(__name__)
@@ -116,14 +117,14 @@ class SceneGenExpManager:
         """
         tab = self._get_tab()
         if tab is None:
-            return False, "Sidebar properties not found"
+            return False, n_("Sidebar properties not found")
 
         if tab.gen_in_progress:
-            return False, "Image generation already in progress"
+            return False, n_("Image generation already in progress")
 
         targets = [i for i, obj in enumerate(tab.objects) if obj.selected]
         if not targets:
-            return False, "No objects selected"
+            return False, n_("No objects selected")
 
         from mixar.modules.common.job_queue import enqueue_generation
         from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
@@ -175,7 +176,7 @@ class SceneGenExpManager:
                 payload=payload,
                 label=f"ImageGen: {prompt[:40]}",
                 display_label=prompt[:40],
-                fail_message="Image generation failed",
+                fail_message=n_("Image generation failed"),
                 name_prefix="imagegen",
                 prompt_text=prompt,
                 undo_message="Generate Image",
@@ -187,14 +188,14 @@ class SceneGenExpManager:
                 self._attach_imagegen_listener(job.id, i, label)
             else:
                 obj.gen_status = "failed"
-                obj.gen_error = "Failed to enqueue"
+                obj.gen_error = n_("Failed to enqueue")
                 tab.gen_failed_count += 1
 
         # If all enqueue attempts failed immediately
         if tab.gen_failed_count >= tab.gen_total_count:
             tab.gen_in_progress = False
             self._grid_positions.clear()
-            return False, "All image generation jobs failed to enqueue"
+            return False, n_("All image generation jobs failed to enqueue")
 
         logger.info(
             "[SceneGenExp] Enqueued %d image generation jobs "
@@ -338,14 +339,14 @@ class SceneGenExpManager:
                 )
             except Exception as e:
                 obj.gen_status = "failed"
-                obj.gen_error = f"Post-processing failed: {e}"
+                obj.gen_error = rpt_("Post-processing failed: {error}").format(error=e)
                 tab.gen_failed_count += 1
                 logger.error(
                     "[SceneGenExp] Post-process failed for '%s': %s", label, e,
                 )
         else:
             obj.gen_status = "failed"
-            obj.gen_error = job.error or "Image generation failed"
+            obj.gen_error = job.error or n_("Image generation failed")
             tab.gen_failed_count += 1
 
         # Check if batch is done

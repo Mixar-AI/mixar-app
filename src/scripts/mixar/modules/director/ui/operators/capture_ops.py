@@ -8,6 +8,7 @@ import bpy
 from bpy.props import IntProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core.board_export import send_keyframes_to_board
 from ...core.capture import capture_beat, remove_beat
 from ...core.handoff import prepare_video_generation
@@ -42,9 +43,10 @@ class MIXAR_OT_director_capture_beat(Operator):
         try:
             beat = capture_beat(context, shot, state.beat_seconds)
         except Exception as exc:
-            self.report({'ERROR'}, f"Could not capture keyframe: {exc}")
+            self.report({'ERROR'}, rpt_("Could not capture keyframe: {error}").format(error=exc))
             return {'CANCELLED'}
-        self.report({'INFO'}, f"Captured keyframe {len(shot.beats)} at frame {beat.frame}")
+        self.report({'INFO'}, rpt_("Captured keyframe {number} at frame {frame}").format(
+            number=len(shot.beats), frame=beat.frame))
         return {'FINISHED'}
 
 
@@ -214,11 +216,11 @@ class MIXAR_OT_director_send_video(Operator):
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
         if focused:
-            self.report({'INFO'}, f"Selected {count} keyframes for Video Gen")
+            self.report({'INFO'}, rpt_("Selected {count} keyframes for Video Gen").format(count=count))
         else:
             self.report(
                 {'INFO'},
-                f"Selected {count} keyframes; open Agent island > Video",
+                rpt_("Selected {count} keyframes; open Agent island > Video").format(count=count),
             )
         return {'FINISHED'}
 
@@ -242,7 +244,8 @@ class MIXAR_OT_director_send_keyframes(Operator):
             self.report({'ERROR'}, str(exc))
             return {'CANCELLED'}
         self.report(
-            {'INFO'}, f"Sent {len(shot.beats)} keyframes to '{shot.name}'"
+            {'INFO'}, rpt_("Sent {count} keyframes to '{name}'").format(
+                count=len(shot.beats), name=shot.name)
         )
         return {'FINISHED'}
 

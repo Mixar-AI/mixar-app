@@ -466,7 +466,7 @@ void BAKING_OT_gaussian_blur(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", N_("Image"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 3, 1, 100, "Radius", "", 1, 100);
@@ -484,7 +484,7 @@ void BAKING_OT_box_blur(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", N_("Image"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 3, 1, 100, "Radius", "", 1, 100);
@@ -501,7 +501,7 @@ void BAKING_OT_bilateral_filter(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", N_("Image"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_int(ot->srna, "radius", 3, 1, 20, "Radius", "", 1, 20);
@@ -520,7 +520,7 @@ void BAKING_OT_fxaa(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", N_("Image"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 }

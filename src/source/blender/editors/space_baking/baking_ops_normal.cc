@@ -265,7 +265,7 @@ void BAKING_OT_height_to_normal(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", N_("Image"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "strength", 1.0f, 0.01f, 10.0f, "Strength", "", 0.01f, 10.0f);
@@ -283,9 +283,9 @@ void BAKING_OT_blend_normal_maps(wmOperatorType *ot)
   ot->flag = 0;
 
   blender::ed::baking::define_image_name_property(
-      ot->srna, "base_image", "Base Image", "Base normal map (modified in place)");
+      ot->srna, "base_image", N_("Base Image"), N_("Base normal map (modified in place)"));
   blender::ed::baking::define_image_name_property(
-      ot->srna, "detail_image", "Detail Image", "Detail normal map to blend");
+      ot->srna, "detail_image", N_("Detail Image"), N_("Detail normal map to blend"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "detail_strength", 1.0f, 0.0f, 2.0f, "Detail Strength", "", 0.0f, 2.0f);

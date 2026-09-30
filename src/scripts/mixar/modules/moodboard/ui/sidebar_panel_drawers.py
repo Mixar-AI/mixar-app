@@ -10,6 +10,7 @@ Each function draws the UI content for one panel in the moodboard sidebar.
 Called from the Panel.draw() methods in moodboard_sidebar_panels.py.
 """
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.common.utils.mixie_space_utils import count_selected_moodboard_images
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_prompt_section,
@@ -59,14 +60,15 @@ def _draw_imagegen(layout, context):
     selected_count = count_selected_moodboard_images(scene)
     col = draw_section_box(
         layout,
-        "Reference Images",
+        n_("Reference Images"),
         icon='IMAGE_DATA',
         action_op="mixie.imagegen_upload_reference",
     )
 
     ref_label = (
-        f"Use Selected Moodboard Image ({selected_count})" if selected_count > 0
-        else "Use Selected Moodboard Image"
+        iface_("Use Selected Moodboard Image ({count})").format(count=selected_count)
+        if selected_count > 0
+        else n_("Use Selected Moodboard Image")
     )
     draw_toggle(col, tab, "use_reference_images", text=ref_label)
 
@@ -90,7 +92,7 @@ def _draw_imagegen(layout, context):
     draw_section_separator(layout)
 
     # --- Settings ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
 
@@ -146,7 +148,7 @@ def _draw_lookdev360(layout, context):
     # --- Reference image ---
     col = draw_section_box(
         layout,
-        "Reference Image",
+        n_("Reference Image"),
         icon='IMAGE_DATA',
         action_op="mixie.lookdev360_upload_reference",
     )
@@ -164,7 +166,7 @@ def _draw_lookdev360(layout, context):
     draw_section_separator(layout)
 
     # --- Settings ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
     draw_dropdown(col, tab, "resolution", text="Resolution")
@@ -223,13 +225,13 @@ def _draw_image_to_3d_basic(layout, context):
     tab = scene.mixie_moodboard_sidebar.tab_image_to_3d
 
     # --- Prompt ---
-    draw_prompt_section(layout, tab, label="Prompt (optional)")
+    draw_prompt_section(layout, tab, label=n_("Prompt (optional)"))
     draw_section_separator(layout)
 
     # --- Input image ---
     col = draw_section_box(
         layout,
-        "Input Image",
+        n_("Input Image"),
         icon='IMAGE_DATA',
         action_op="mixie.image_to_3d_pick_image",
     )
@@ -255,7 +257,7 @@ def _draw_image_to_3d_basic(layout, context):
     draw_section_separator(layout)
 
     # --- Settings ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
     row = col.row(align=True)
@@ -277,13 +279,13 @@ def _draw_scene_recon(layout, context):
     tab = scene.mixie_moodboard_sidebar.tab_scene_recon
 
     # --- Description ---
-    draw_prompt_section(layout, tab, label="Scene Description", icon='SCENE_DATA')
+    draw_prompt_section(layout, tab, label=n_("Scene Description"), icon='SCENE_DATA')
     draw_section_separator(layout)
 
     # --- Input image ---
     col = draw_section_box(
         layout,
-        "Input Image",
+        n_("Input Image"),
         icon='IMAGE_DATA',
         action_op="mixie.scene_recon_pick_image",
     )
@@ -305,7 +307,7 @@ def _draw_scene_recon(layout, context):
     # Pipeline flags are schema-driven from the catalog's
     # scene_reconstruction service (model sam3d) when loaded; the legacy
     # hardcoded tab props otherwise so the tab never goes blank offline.
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     drew_catalog_params = False
     try:
         from mixar.modules.common.generation_params import (
@@ -331,7 +333,7 @@ def _draw_scene_recon(layout, context):
     # Progress (if running)
     if scene.mixie_scene_recon_is_generating:
         layout.separator(factor=SEP_INTRA)
-        draw_status_badge(layout, tab.stage_name or "Generating...", 'GENERATING')
+        draw_status_badge(layout, tab.stage_name or n_("Generating..."), 'GENERATING')
         if tab.stage_detail:
             row = layout.row()
             row.scale_y = 0.85
@@ -357,7 +359,7 @@ def _draw_scene_gen_exp(layout, context):
     from .scene_gen_exp_drawers import draw_step3_hp, draw_step4_lp, draw_step5_place
 
     # Step 1 — Extract Labels
-    col = draw_section_box(layout, "Step 1: Extract Labels", icon='VIEWZOOM')
+    col = draw_section_box(layout, n_("Step 1: Extract Labels"), icon='VIEWZOOM')
 
     row = col.row(align=True)
     row.label(text="Input Image")
@@ -399,7 +401,7 @@ def _draw_scene_gen_exp(layout, context):
     if tab.has_result and not is_processing:
         n = len(tab.objects)
         row = col.row(align=True)
-        draw_status_badge(row, f"{n} objects extracted", 'DONE')
+        draw_status_badge(row, iface_("{count} objects extracted").format(count=n), 'DONE')
         row.operator("mixie.scene_gen_exp_clear", text="", icon='X')
 
     draw_section_separator(layout)
@@ -409,7 +411,11 @@ def _draw_scene_gen_exp(layout, context):
         list_box = layout.box()
         header = list_box.row(align=True)
         selected_count = sum(1 for obj in tab.objects if obj.selected)
-        header.label(text=f"Objects ({selected_count}/{len(tab.objects)} selected)")
+        header.label(
+            text=iface_("Objects ({selected}/{total} selected)").format(
+                selected=selected_count, total=len(tab.objects)),
+            translate=False,
+        )
         header.operator("mixie.scene_gen_exp_toggle_all", text="", icon='CHECKBOX_HLT')
         list_box.template_list(
             "MIXIE_UL_scene_gen_labels", "",
@@ -420,7 +426,7 @@ def _draw_scene_gen_exp(layout, context):
         draw_section_separator(layout)
 
     # Step 2 — Generate Images
-    step2 = draw_section_box(layout, "Step 2: Generate Images", icon='IMAGE_DATA')
+    step2 = draw_section_box(layout, n_("Step 2: Generate Images"), icon='IMAGE_DATA')
     step2_enabled = tab.has_result and len(tab.objects) > 0 and not is_processing
     step2.enabled = step2_enabled
 
@@ -443,25 +449,34 @@ def _draw_scene_gen_exp(layout, context):
         total = tab.gen_total_count or 1
         btn_row.operator(
             "mixie.scene_gen_exp_generate_images",
-            text=f"Generating images {done}/{total}...", icon='SORTTIME',
+            text=iface_("Generating images {done}/{total}...").format(done=done, total=total),
+            icon='SORTTIME', translate=False,
         )
     else:
         btn_row.operator(
             "mixie.scene_gen_exp_generate_images",
-            text=f"Generate Images ({selected_count})" if selected_count else "Generate Images",
-            icon='IMAGE_DATA',
+            text=(iface_("Generate Images ({count})").format(count=selected_count)
+                  if selected_count else iface_("Generate Images")),
+            icon='IMAGE_DATA', translate=False,
         )
 
     if gen_in_progress:
         done = tab.gen_completed_count + tab.gen_failed_count
-        draw_status_badge(step2, f"Generating images {done}/{tab.gen_total_count}...", 'GENERATING')
+        draw_status_badge(
+            step2,
+            iface_("Generating images {done}/{total}...").format(
+                done=done, total=tab.gen_total_count),
+            'GENERATING',
+        )
     elif tab.gen_total_count > 0:
         if tab.gen_failed_count == 0:
-            draw_status_badge(step2, f"{tab.gen_completed_count} generated", 'DONE')
+            draw_status_badge(
+                step2, iface_("{count} generated").format(count=tab.gen_completed_count), 'DONE')
         else:
             draw_status_badge(
                 step2,
-                f"{tab.gen_completed_count} generated, {tab.gen_failed_count} failed",
+                iface_("{done} generated, {failed} failed").format(
+                    done=tab.gen_completed_count, failed=tab.gen_failed_count),
                 'ERROR',
             )
 

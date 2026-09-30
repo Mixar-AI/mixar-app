@@ -12,6 +12,7 @@ Operators for AI image generation using the dynamic v2 API.
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.utils.image_utils import compress_for_service
 from mixar.modules.moodboard.core.imagegen_queue import get_imagegen_listener
 from mixar.config.logging_config import get_logger
@@ -319,7 +320,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                 payload=payload,
                 label=f"ImageGen: {stored_prompt[:40]}",
                 display_label=stored_prompt[:40],
-                fail_message="Image generation failed",
+                fail_message=n_("Image generation failed"),
                 name_prefix="imagegen",
                 prompt_text=stored_prompt,
                 undo_message="Generate Image",
@@ -329,7 +330,7 @@ class MIXIE_OT_imagegen_generate(Operator):
                 self.report({"ERROR"}, "A duplicate image generation is already queued")
                 return {"CANCELLED"}
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to start generation: {e}")
+            self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return {"CANCELLED"}
 
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import mark_enqueued
@@ -406,7 +407,7 @@ class MIXIE_OT_imagegen_generate(Operator):
             payload=payload,
             label=f"ImageGen: {_label_base} [{_uuid.uuid4().hex[:4]}]",
             display_label=_label_base,
-            fail_message="Image generation failed",
+            fail_message=n_("Image generation failed"),
             name_prefix="imagegen",
             prompt_text=prompt,
             undo_message="Generate Image",

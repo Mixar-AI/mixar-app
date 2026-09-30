@@ -18,6 +18,10 @@
 
 #include "BKE_screen.hh"
 
+#include "BLF_api.hh"
+
+#include "BLT_translation.hh"
+
 #include "DNA_screen_types.h"
 
 #include "UI_interface.hh"
@@ -82,14 +86,14 @@ struct TabMetric {
 };
 
 const TabMetric g_tab_metrics[AGENT_TAB_COUNT] = {
-    {AGENT_TAB_X_AGENT, AGENT_TAB_W_AGENT, "Agent"},
-    {AGENT_TAB_X_3D, AGENT_TAB_W_3D, "3D"},
-    {AGENT_TAB_X_IMAGE, AGENT_TAB_W_IMAGE, "Image"},
-    {AGENT_TAB_X_VIDEO, AGENT_TAB_W_VIDEO, "Video"},
-    {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, "Splats"},
-    {AGENT_TAB_X_ADDON, AGENT_TAB_W_ADDON, "Add-on"},
-    {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, "Library"},
-    {AGENT_TAB_X_QUEUE, AGENT_TAB_W_QUEUE, "Queue"},
+    {AGENT_TAB_X_AGENT, AGENT_TAB_W_AGENT, N_("Agent")},
+    {AGENT_TAB_X_3D, AGENT_TAB_W_3D, N_("3D")},
+    {AGENT_TAB_X_IMAGE, AGENT_TAB_W_IMAGE, N_("Image")},
+    {AGENT_TAB_X_VIDEO, AGENT_TAB_W_VIDEO, N_("Video")},
+    {AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, N_("Splats")},
+    {AGENT_TAB_X_ADDON, AGENT_TAB_W_ADDON, N_("Add-on")},
+    {AGENT_TAB_X_GENERATIONS, AGENT_TAB_W_GENERATIONS, N_("Library")},
+    {AGENT_TAB_X_QUEUE, AGENT_TAB_W_QUEUE, N_("Queue")},
 };
 
 }  // namespace
@@ -205,7 +209,7 @@ void agent_ui_layout_build(const int window_w,
   const float text_size = agent_ui_body_font_size();
   const float badge_size = AGENT_NEW_BADGE_FONT * agent_ui_text_unit();
   const float badge_w = std::max(float(AGENT_NEW_BADGE_W),
-                                ui::mixar_text_width("NEW", badge_size) / u +
+                                ui::mixar_text_width(IFACE_("NEW"), badge_size) / u +
                                     2.0f * AGENT_TAB_ICON_GAP);
   TabMetric tabs[AGENT_TAB_COUNT];
   float extra = 0.0f;
@@ -213,7 +217,7 @@ void agent_ui_layout_build(const int window_w,
     tabs[i] = g_tab_metrics[i];
     const float leading = i == AGENT_TAB_QUEUE ? AGENT_QUEUE_COUNT_W : AGENT_TAB_ICON;
     const float trailing = i == AGENT_TAB_ADDON ? badge_w + AGENT_TAB_ICON_GAP : 0.0f;
-    const float wanted = ui::mixar_text_width(tabs[i].label, text_size) / u + leading +
+    const float wanted = ui::mixar_text_width(IFACE_(tabs[i].label), text_size) / u + leading +
                          trailing + 3.0f * AGENT_TAB_ICON_GAP + 2.0f / u;
     tabs[i].w = std::max(tabs[i].w, wanted);
     extra += tabs[i].w - g_tab_metrics[i].w;
@@ -383,6 +387,7 @@ void agent_ui_layout_fit_controls(AgentIslandLayout &layout, const AgentIslandSt
   in.voice_status = state.voice_status;
   in.model_available = state.model_available;
   in.model_label = state.model_label;
+  in.translate = [](const char *msgid) -> const char * { return IFACE_(msgid); };
   const AgentChipMetrics metrics{AGENT_CHIP_ICON * u,
                                  AGENT_CHIP_ICON_GAP * u,
                                  AGENT_CHIP_PAD_X * u,

@@ -20,6 +20,8 @@ unchanged ``addon_project_v1`` contract.
 import re
 from pathlib import Path
 
+from mixar.modules.common.i18n import n_
+
 from .constants import (
     DEFAULT_WORKSPACE_DIR,
     IGNORED_PARTS,
@@ -119,8 +121,8 @@ def ensure_workspace_root(storage_dir: Path) -> Path:
     except OSError:
         raise AddonProjectError(
             "workspace_root_unavailable",
-            "Your add-on projects folder is unavailable; reconnect the "
-            "drive, or change the folder under Mixar Preferences",
+            n_("Your add-on projects folder is unavailable; reconnect the "
+               "drive, or change the folder under Mixar Preferences"),
         )
     return root
 

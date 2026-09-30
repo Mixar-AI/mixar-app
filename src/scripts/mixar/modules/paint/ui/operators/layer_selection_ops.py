@@ -11,6 +11,7 @@ from bpy.props import IntProperty
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, rpt_
 logger = get_logger(__name__)
 
 from ...core.node.get_nodes import get_layer_source
@@ -50,7 +51,7 @@ class LAYERS_OT_LayerContextMenu(Operator):
         # Invoke the menu
         context.window_manager.popup_menu(
             self.draw_menu,
-            title="Layer Operations",
+            title=iface_("Layer Operations"),
             icon='LAYER_USED'
         )
         return {'FINISHED'}
@@ -115,7 +116,7 @@ class LAYERS_OT_SelectLayer(Operator):
             try:
                 bpy.ops.image.save_all_modified()
             except RuntimeError as e:
-                self.report({"WARNING"}, f"Could not save modified images before switching layers: {e}")
+                self.report({"WARNING"}, rpt_("Could not save modified images before switching layers: {error}").format(error=e))
 
         # Single click - select the layer
         # Get backend mp
