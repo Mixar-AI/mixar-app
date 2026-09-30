@@ -29,6 +29,7 @@
 #include "BKE_context.hh"
 #include "BKE_global.hh"
 #include "BKE_idprop.hh"
+#include "BKE_idtype.hh"
 #include "BKE_lib_query.hh"
 #include "BKE_main.hh"
 #include "BKE_undo_system.hh"
@@ -229,6 +230,11 @@ uint32_t BKE_undo_tab_uid_from_context(bContext *C)
 
 struct UndoOwnerMap {
   Map<uint32_t, uint32_t> owner;
+  /** The tabs that reach each shared datablock (review 2026-09-30, finding 1:
+   * sharing is judged per pressing tab, not across the document). */
+  Map<uint32_t, Vector<uint32_t>> shared_by;
+  /** Name of each LOCAL shared datablock, the ones a restore could change. */
+  Map<uint32_t, std::string> shared_name;
   Vector<std::string> shared_names;
   int shared = 0;
   double build_ms = 0.0;
@@ -244,18 +250,66 @@ static void owner_map_record(UndoOwnerMap *map, const ID *id, const uint32_t tab
   if (id == nullptr || id->session_uid == 0) {
     return;
   }
+  /* A type memfile undo never writes (a Brush, a WorkSpace, a Screen) is never
+   * restored, so it can neither be owned nor shared: every scene's tool
+   * settings point at the active brush, and counting it would refuse undo in
+   * every tab once two tabs paint with the same brush. */
+  const IDTypeInfo *info = BKE_idtype_get_info_from_id(id);
+  if (info != nullptr && (info->flags & IDTYPE_FLAGS_NO_MEMFILE_UNDO)) {
+    return;
+  }
   uint32_t *slot = map->owner.lookup_ptr(id->session_uid);
   if (slot == nullptr) {
     map->owner.add_new(id->session_uid, tab);
     return;
   }
-  if (*slot != tab && *slot != UNDO_TAB_SHARED) {
-    *slot = UNDO_TAB_SHARED;
-    map->shared += 1;
-    if (map->shared_names.size() < 32) {
-      map->shared_names.append(std::string(id->name));
-    }
+  if (*slot == tab) {
+    return;
   }
+  if (*slot == UNDO_TAB_SHARED) {
+    Vector<uint32_t> &tabs = map->shared_by.lookup(id->session_uid);
+    if (!tabs.contains(tab)) {
+      tabs.append(tab);
+    }
+    return;
+  }
+  Vector<uint32_t> tabs;
+  tabs.append(*slot);
+  tabs.append(tab);
+  map->shared_by.add_new(id->session_uid, std::move(tabs));
+  *slot = UNDO_TAB_SHARED;
+  /* A datablock linked from a library is never edited locally: a partial
+   * restore keeps it as it is (the SHARED owner) and no tab is refused for it. */
+  if (ID_IS_LINKED(id)) {
+    return;
+  }
+  map->shared += 1;
+  map->shared_name.add_new(id->session_uid, std::string(id->name));
+  if (map->shared_names.size() < 32) {
+    map->shared_names.append(std::string(id->name));
+  }
+}
+
+/** The local shared datablocks the tab itself reaches: the ones a restore of
+ * this tab would change under another tab. A datablock two OTHER tabs share
+ * is none of this tab's business. Returns the count; names up to eight. */
+static int owner_map_shared_for_tab(const UndoOwnerMap *map, const uint32_t tab, std::string *r_names)
+{
+  int count = 0;
+  if (map == nullptr) {
+    return 0;
+  }
+  for (const auto item : map->shared_name.items()) {
+    const Vector<uint32_t> *tabs = map->shared_by.lookup_ptr(item.key);
+    if (tabs == nullptr || !tabs->contains(tab)) {
+      continue;
+    }
+    if (r_names != nullptr && count < 8) {
+      *r_names += (r_names->empty() ? "" : ", ") + item.value;
+    }
+    count++;
+  }
+  return count;
 }
 
 UndoOwnerMap *BKE_undo_owner_map_build(Main *bmain, double *r_ms)
@@ -458,37 +512,26 @@ struct PartialState {
 
 static PartialState g_partial;
 
-static std::string shared_names_joined(const UndoOwnerMap *map)
-{
-  std::string out;
-  if (map == nullptr) {
-    return out;
-  }
-  for (const std::string &name : map->shared_names) {
-    if (!out.empty()) {
-      out += ", ";
-    }
-    out += name;
-  }
-  return out;
-}
-
 static bool partial_validate(Main *bmain,
                              const uint32_t tab_uid,
                              const UndoOwnerMap *step_owners,
                              const UndoOwnerMap *live,
                              std::string *r_reason)
 {
-  if (BKE_undo_owner_map_shared_count(live) > 0) {
+  /* Sharing is judged from the pressing tab: a datablock this tab reaches
+   * that another tab reaches too, now or at the step. What two other tabs
+   * share does not stop this one (review 2026-09-30, finding 1). */
+  std::string names;
+  if (owner_map_shared_for_tab(live, tab_uid, &names) > 0) {
     if (r_reason) {
-      *r_reason = "shared between tabs now: " + shared_names_joined(live) +
+      *r_reason = "shared with another tab now: " + names +
                   " (Edit > Undo Whole Document walks every tab)";
     }
     return false;
   }
-  if (step_owners != nullptr && BKE_undo_owner_map_shared_count(step_owners) > 0) {
+  if (step_owners != nullptr && owner_map_shared_for_tab(step_owners, tab_uid, &names) > 0) {
     if (r_reason) {
-      *r_reason = "shared between tabs at that step: " + shared_names_joined(step_owners) +
+      *r_reason = "shared with another tab at that step: " + names +
                   " (Edit > Undo Whole Document walks every tab)";
     }
     return false;

@@ -142,9 +142,12 @@ enum class UndoPartialDecision : int8_t {
 
 /** Arm a partial restore of ``tab_uid`` from a step whose owner map is
  * ``step_owners`` (may be null: everything then keys off the live map). The
- * live map is built here from ``bmain``. Returns false, with the names of
- * the shared datablocks in ``r_reason``, when either map holds a shared ID:
- * ownership fails closed. */
+ * live map is built here from ``bmain``. Returns false, with their names in
+ * ``r_reason``, when a LOCAL datablock this tab reaches is shared with another
+ * tab in either map (a restore would change the other tab's), or when one
+ * moved between tabs since the step: ownership fails closed. What two other
+ * tabs share, a library-linked datablock, or a type memfile undo never
+ * writes (a Brush) refuses nothing. */
 bool BKE_undo_tabs_partial_begin(Main *bmain,
                                  uint32_t tab_uid,
                                  const UndoOwnerMap *step_owners,

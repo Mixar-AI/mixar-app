@@ -204,7 +204,11 @@ def furnish(scene) -> None:
     scene.collection.objects.link(light_ob)
 
 
+LAB_UNDO_STEPS = 200  # the lab pushes ~90 steps; the M1 checks look for the first ones
+
+
 def build() -> None:
+    bpy.context.preferences.edit.undo_steps = LAB_UNDO_STEPS
     c = bpy.context.scene
     c.name = "C_manual"
     TABS["C"] = c.name
@@ -453,7 +457,7 @@ def run_m3_probes() -> None:
                 edit("A", f"A · filler {i}",
                      lambda i=i: add_mesh(tab("A"), f"A_f{i}", "cube", (20 + i, 0, 0)))
         finally:
-            bpy.context.preferences.edit.undo_steps = 32
+            bpy.context.preferences.edit.undo_steps = LAB_UNDO_STEPS
         show("C")
         h = history()
         if h:
@@ -733,6 +737,97 @@ def run_m5_probes() -> None:
         tab("C").collection.objects.unlink(a1)
         push("C · gives A_1 back")
 
+    # P17 (review 2026-09-30, finding 1): sharing is judged from the pressing tab.
+    # A datablock A and B share stops A's undo (and B's) and names it; C, which
+    # does not reach it, undoes as before. A brush shared through the tool
+    # settings of two tabs counts for nothing: memfile undo never writes one.
+    show("C")
+    edit("C", "C · p17 a", lambda: add_mesh(tab("C"), "C_p17a", "cube", (0, 0, 30)))
+    edit("C", "C · p17 b", lambda: add_mesh(tab("C"), "C_p17b", "cube", (0, 0, 32)))
+    edit("A", "A · p17 cube", lambda: add_mesh(tab("A"), "A_p17", "cube", (0, 0, 30)))
+    if "B" in TABS:
+        tab("B").collection.objects.link(tab("A").objects["A_p17"])
+        push("A · shares A_p17 with B")
+        h = history()
+        check("M5 P17 the shared object is in the step's map as shared",
+              bool(h) and h["steps"][0]["shared"] >= 1 and "OBA_p17" in h["steps"][0]["shared_names"],
+              f"{h['steps'][0]['shared_names'] if h else None}")
+        show("C")
+        probe("P17a undo in C while A and B share an object: C undoes, A and B untouched",
+              lambda: press("undo"),
+              expect_document={}, expect_isolation={"undo_result": "FINISHED", "has:C/C_p17b": False,
+                                                    "has:C/C_p17a": True, "changed:A": False,
+                                                    "changed:B": False})
+        press("redo")
+        show("A")
+        probe("P17b undo in A, which shares the object: refused, nothing changes",
+              lambda: press("undo"),
+              expect_document={}, expect_isolation={"undo_result": "CANCELLED", "has:A/A_p17": True,
+                                                    "changed:B": False, "changed:C": False})
+        show("B")
+        probe("P17c undo in B, which shares it too: refused, nothing changes",
+              lambda: press("undo"),
+              expect_document={}, expect_isolation={"undo_result": "CANCELLED", "has:A/A_p17": True,
+                                                    "changed:A": False, "changed:C": False})
+        tab("B").collection.objects.unlink(tab("A").objects["A_p17"])
+        show("A")
+        push("A · unshares A_p17")
+    # a brush on two tabs' tool settings: sculpt mode in both tabs puts the one
+    # default "Draw" brush on both (the paint brush pointer is not writable from
+    # Python; the mode toggle is what a user does)
+    brushes = []
+    for label, name in (("A", "A_p17"), ("C", "C_p17a")):
+        show(label)
+        with _override(tab(label)):
+            bpy.context.view_layer.objects.active = tab(label).objects[name]
+            bpy.ops.object.mode_set(mode="SCULPT")
+            brushes.append(tab(label).tool_settings.sculpt.brush)
+            bpy.ops.object.mode_set(mode="OBJECT")
+        push(f"{label} · sculpt toggle p17")
+    h = history()
+    check("M5 P17d one brush on two tabs' tool settings is not shared (memfile undo never writes one)",
+          bool(h) and brushes[0] is not None and brushes[0] == brushes[1] and h["steps"][0]["shared"] == 0,
+          f"brushes={[b.name if b else None for b in brushes]} shared={h['steps'][0]['shared_names'] if h else None}")
+    show("A")
+    probe("P17e undo in A with the brush on two tabs: allowed", lambda: press("undo"),
+          expect_document={}, expect_isolation={"undo_result": "FINISHED", "changed:C": False})
+    press("redo")
+
+    # P18 (finding 6): a tab's checkpoint pushed through the override while the
+    # window's tab has an object in edit mode is a memfile step of the named tab,
+    # never an edit-mesh step of the shown tab's mesh tagged with the other.
+    wm = bpy.data.window_managers[0]
+    if hasattr(wm, "mixar_undo_push"):
+        show("C")
+        ob = tab("C").objects["C_p17a"]
+        with _override(tab("C")):
+            bpy.context.view_layer.objects.active = ob
+            bpy.ops.object.mode_set(mode="EDIT")
+        push("C · p18 edit")
+        pushed = wm.mixar_undo_push("A · checkpoint p18", scene=tab("A"))
+        h = history()
+        top = h["steps"][0] if h else {}
+        check("M5 P18 the override checkpoint is a memfile step tagged with A",
+              pushed is True and top.get("tab_uid") == tab("A").session_uid and top.get("memfile") is True
+              and top.get("type") != "Edit Mesh", f"pushed={pushed} top={top.get('name')}/{top.get('type')}/{top.get('tab_uid')}")
+        show("A")
+        probe("P18a undo in A over its checkpoint: A walks, C's edit mode untouched",
+              lambda: press("undo"),
+              expect_document={}, expect_isolation={"undo_result": "FINISHED", "changed:C": False,
+                                                    "window_stays": True})
+        # (a memfile restore exits every edit mode, stock: C's object is back in
+        # object mode after A's walk, its mesh untouched -- the two-window case)
+        log(f"M0 P18 note: C's object mode after A's walk = {tab('C').objects['C_p17a'].mode}")
+        press("redo")
+        show("C")
+        if tab("C").objects["C_p17a"].mode == "EDIT":
+            with _override(tab("C")):
+                bpy.context.view_layer.objects.active = tab("C").objects["C_p17a"]
+                bpy.ops.object.mode_set(mode="OBJECT")
+        push("C · p18 leave edit")
+        check("M5 P18c the plain mixar_undo_push return value is honest",
+              wm.mixar_undo_push("C · p18 plain") is True, "")
+
 
 # -- M1: tags and the owner map ------------------------------------------------
 
@@ -777,7 +872,8 @@ def run_m1() -> None:
     memfile = [st for st in h["steps"] if st["memfile"] and st["name"] != "Original"]
     check("memfile steps carry an owner map", bool(memfile) and all(st["owners"] > 0 for st in memfile),
           f"{[(st['name'], st['owners']) for st in memfile[:3]]}")
-    check("no shared IDs in a clean session", all(st["shared"] == 0 for st in memfile),
+    check("no shared IDs in a clean session",
+          all(st["shared"] == 0 for st in memfile if not st["name"].startswith("A · shares")),
           f"{[(st['name'], st['shared_names']) for st in memfile if st['shared']]}")
     slowest = max((st["owner_map_ms"] for st in memfile), default=0.0)
     check("owner map under 50 ms", slowest < 50.0, f"slowest={slowest:.2f} ms")
