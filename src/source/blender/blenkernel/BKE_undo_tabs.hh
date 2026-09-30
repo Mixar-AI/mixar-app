@@ -62,6 +62,12 @@ void BKE_undo_tabs_set_enabled(bool enabled);
 void BKE_undo_tabs_note_tab_walk();
 void BKE_undo_tabs_note_push();
 bool BKE_undo_tabs_live_diverged();
+/** M5: the walk that ran last was document-wide (Undo Whole Document, or the
+ * classic undo with the flag off) rather than one tab's. The chat module's
+ * document epoch reads it (``WindowManager.mixar_last_undo_document``) to bump
+ * one scene's epoch or every scene's. */
+void BKE_undo_tabs_note_document_walk();
+bool BKE_undo_tabs_last_walk_was_document();
 
 /** True for a worker lane scene (``mixie_session_id`` starts with ``agentlane:``). */
 bool BKE_undo_tab_scene_is_lane(const Scene *scene);

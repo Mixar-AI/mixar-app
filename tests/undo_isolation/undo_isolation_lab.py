@@ -264,11 +264,16 @@ def build() -> None:
 # -- probes -------------------------------------------------------------------
 
 
+LAST_OP_RESULT = None
+
+
 def press(what: str, times: int = 1) -> None:
+    global LAST_OP_RESULT
     op = bpy.ops.ed.undo if what == "undo" else bpy.ops.ed.redo
     for _ in range(times):
         with _override_window():
-            op()
+            result = op()
+        LAST_OP_RESULT = "CANCELLED" if "CANCELLED" in result else "FINISHED"
 
 
 def probe(name: str, action, expect_document: dict, expect_isolation: dict) -> None:
@@ -308,6 +313,8 @@ def _observe(key: str, before: dict, after: dict, d: dict):
     if key == "can_redo":
         with _override_window():
             return bool(bpy.ops.ed.redo.poll())
+    if key == "undo_result":
+        return LAST_OP_RESULT
     if key in ("undo_poll", "redo_poll", "history_poll", "whole_doc_poll"):
         op = {"undo_poll": bpy.ops.ed.undo, "redo_poll": bpy.ops.ed.redo,
               "history_poll": bpy.ops.ed.undo_history,
@@ -682,6 +689,22 @@ def run_m5_probes() -> None:
                                                     "window_stays": True})
         check("M5 P12b B is the same scene (session_uid)",
               any(s.session_uid == b_uid for s in bpy.data.scenes), "")
+
+    # P15: a datablock that moved between tabs since the step is shared for that
+    # restore: the tab's undo refuses and names it (Undo Whole Document is the way).
+    show("C")
+    a1 = tab("A").objects.get("A_1")
+    if a1 is not None:
+        tab("C").collection.objects.link(a1)
+        tab("A").collection.objects.unlink(a1)
+        push("C · adopts A_1")                     # A_1 owned by C now; by A at every older step
+        probe("P15a undo in C with a datablock that moved from A: refused, nothing changes",
+              lambda: press("undo"),
+              expect_document={}, expect_isolation={"undo_result": "CANCELLED", "has:C/A_1": True,
+                                                    "changed:A": False, "changed:B": False})
+        tab("A").collection.objects.link(a1)
+        tab("C").collection.objects.unlink(a1)
+        push("C · gives A_1 back")
 
 
 # -- M1: tags and the owner map ------------------------------------------------

@@ -279,10 +279,24 @@ def _on_undo_pre(scene):
     _saved_view, _saved_runs = _snapshot_tabs()
 
 
-def _notice_if_agents_running() -> None:
-    """Undo is one stack for the whole document: while another tab's agent is
-    running, say so once (a fixed toast id collapses repeated presses)."""
+def _last_walk_was_per_tab() -> bool:
+    """Per-tab undo on and the walk that just ran was one tab's: the document
+    did not move, so there is nothing to warn about."""
     try:
+        wm = bpy.context.window_manager
+        return getattr(wm, "mixar_per_tab_undo", None) is True and \
+            getattr(wm, "mixar_last_undo_document", None) is False
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _notice_if_agents_running() -> None:
+    """A document-wide undo moves every tab: while another tab's agent is
+    running, say so once (a fixed toast id collapses repeated presses). A
+    per-tab walk (the default) touches the shown tab only and says nothing."""
+    try:
+        if _last_walk_was_per_tab():
+            return
         from .session import get_session_manager
         if not get_session_manager().has_active_session():
             return

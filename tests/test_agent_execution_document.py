@@ -81,3 +81,27 @@ def test_unregister_removes_only_our_callbacks_and_can_register_again(runtime):
     assert runtime.app.handlers.load_post == [other, document._on_load_post]
     load_file(runtime)
     assert document.document_epoch() == 1
+
+
+class _Scene:
+    def __init__(self, name):
+        self.name = name
+        self._props = {}
+
+    def get(self, key, default=None):
+        return self._props.get(key, default)
+
+
+def test_per_tab_undo_bumps_only_that_scenes_epoch(monkeypatch):
+    monkeypatch.setattr(document, "_document_epoch", 0)
+    monkeypatch.setattr(document, "_scene_epochs", {})
+    a, b = _Scene("A"), _Scene("B")
+    assert document.document_epoch(a) == document.document_epoch(b) == 0
+    monkeypatch.setattr(document, "_last_walk_was_per_tab", lambda bpy=None: True)
+    document._on_undo_post(a)
+    assert document.document_epoch(a) == 1
+    assert document.document_epoch(b) == 0          # B's run is not revoked by A's undo
+    assert document.document_epoch() == 0           # the shared base did not move
+    monkeypatch.setattr(document, "_last_walk_was_per_tab", lambda bpy=None: False)
+    document._on_undo_post(a)                       # a document-wide walk
+    assert document.document_epoch(a) == 2 and document.document_epoch(b) == 1

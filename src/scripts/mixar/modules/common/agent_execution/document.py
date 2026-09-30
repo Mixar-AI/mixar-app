@@ -8,9 +8,14 @@
   datablock (``scene['mixar_document_id']``) — survives save/load, but is
   NOT undo-safe on its own, which is why the epoch exists.
 - ``scene_id``: a per-scene UUID custom property.
-- ``document_epoch``: a module-global monotonic counter bumped on file load,
-  undo and redo. It lives OUTSIDE undo-restored data, so a commit prepared
-  against epoch N can never be published after the user undid past it.
+- ``document_epoch``: a monotonic counter bumped on file load, undo and redo.
+  It lives OUTSIDE undo-restored data, so a commit prepared against epoch N
+  can never be published after the user undid past it. Per-tab undo (the
+  C flag ``WindowManager.mixar_per_tab_undo``) makes it per tab: a tab's own
+  undo or redo bumps THAT scene's epoch only, so a Ctrl-Z in the user's tab
+  never revokes the run building in another tab; a file load or a
+  document-wide walk (Undo Whole Document, or undo with the flag off) bumps
+  the shared base every scene's epoch includes.
 - ``mixie_v3_run_active`` (WindowManager BoolProperty): while a v3 run is
   active the viewport lock stands down and manual edits keep being captured.
 """
@@ -29,19 +34,47 @@ SCENE_ID_PROP = "mixar_scene_id"
 WM_RUN_ACTIVE_PROP = "mixie_v3_run_active"
 
 _document_epoch: int = 0
+_scene_epochs: dict = {}
 _commit_in_progress: bool = False
 _registered = False
 
 
-def document_epoch() -> int:
-    return _document_epoch
+def _scene_key(scene):
+    try:
+        return str(scene.get(SCENE_ID_PROP) or scene.name)
+    except Exception:  # noqa: BLE001
+        return str(getattr(scene, "name", scene))
 
 
-def bump_document_epoch(reason: str = "") -> int:
+def document_epoch(scene=None) -> int:
+    """The document's epoch, or a scene's: the shared base plus that tab's own
+    undo/redo bumps. A commit fence compares the scene's."""
+    if scene is None:
+        return _document_epoch
+    return _document_epoch + _scene_epochs.get(_scene_key(scene), 0)
+
+
+def bump_document_epoch(reason: str = "", scene=None) -> int:
     global _document_epoch
-    _document_epoch += 1
-    logger.debug("document epoch -> %s (%s)", _document_epoch, reason)
-    return _document_epoch
+    if scene is None:
+        _document_epoch += 1
+        logger.debug("document epoch -> %s (%s)", _document_epoch, reason)
+        return _document_epoch
+    key = _scene_key(scene)
+    _scene_epochs[key] = _scene_epochs.get(key, 0) + 1
+    logger.debug("scene epoch %s -> %s (%s)", key, document_epoch(scene), reason)
+    return document_epoch(scene)
+
+
+def _last_walk_was_per_tab(bpy=None) -> bool:
+    """True when the undo/redo that just ran walked one tab (per-tab undo on,
+    and the C side did not do a document-wide walk)."""
+    try:
+        wm = (bpy or _bpy()).context.window_manager
+        return getattr(wm, "mixar_per_tab_undo", None) is True and \
+            getattr(wm, "mixar_last_undo_document", None) is False
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _bpy():
@@ -122,7 +155,7 @@ def document_identity(scene=None, bpy=None, session_id: str = "") -> dict:
             scene = None
     return {
         "document_id": ensure_document_id(bpy),
-        "document_epoch": document_epoch(),
+        "document_epoch": document_epoch(scene),
         "scene_id": ensure_scene_id(scene),
         "scene_name": getattr(scene, "name", "") if scene is not None else "",
     }
@@ -212,12 +245,20 @@ def _on_load_post(*_):
     bump_document_epoch("load_post")
 
 
-def _on_undo_post(*_):
-    bump_document_epoch("undo_post")
+def _on_undo_post(*args):
+    scene = args[0] if args else None
+    if scene is not None and _last_walk_was_per_tab():
+        bump_document_epoch("undo_post", scene=scene)   # this tab only
+    else:
+        bump_document_epoch("undo_post")
 
 
-def _on_redo_post(*_):
-    bump_document_epoch("redo_post")
+def _on_redo_post(*args):
+    scene = args[0] if args else None
+    if scene is not None and _last_walk_was_per_tab():
+        bump_document_epoch("redo_post", scene=scene)
+    else:
+        bump_document_epoch("redo_post")
 
 
 def register() -> None:

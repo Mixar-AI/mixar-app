@@ -164,6 +164,11 @@ static void rna_WindowManager_mixar_per_tab_undo_set(PointerRNA * /*ptr*/, const
   blender::BKE_undo_tabs_set_enabled(value);
 }
 
+static bool rna_WindowManager_mixar_last_undo_document_get(PointerRNA * /*ptr*/)
+{
+  return blender::BKE_undo_tabs_last_walk_was_document();
+}
+
 /* A checkpoint pushed on behalf of a scene tab. The agent executor's pushes
  * land from timers while the window shows whatever the user looks at, and a
  * Python `scene=` override is dropped once a window is overridden (and a
@@ -553,6 +558,12 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
       parm = RNA_def_boolean(func, "ok", false, "", "A step was pushed");
       RNA_def_function_return(func, parm);
     }
+
+    prop = RNA_def_property(srna_wm, "mixar_last_undo_document", PROP_BOOLEAN, PROP_NONE);
+    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_last_undo_document_get", nullptr);
+    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
+    RNA_def_property_ui_text(
+        prop, "Last Undo Was Document-Wide", "The undo or redo that ran last walked every tab, not one");
 
     prop = RNA_def_property(srna_wm, "mixar_per_tab_undo", PROP_BOOLEAN, PROP_NONE);
     RNA_def_property_boolean_funcs(

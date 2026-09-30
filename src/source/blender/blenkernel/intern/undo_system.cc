@@ -953,6 +953,9 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
    * still lives). Armed here for Undo Whole Document and for the classic walk
    * after the runtime kill switch alike. */
   const bool reread_all = BKE_undo_tabs_live_diverged() && !BKE_undo_tabs_partial_active();
+  if (!BKE_undo_tabs_partial_active()) {
+    BKE_undo_tabs_note_document_walk(); /* a document-wide walk, flag on or off */
+  }
   if (reread_all) {
     BKE_undo_tabs_whole_document_begin();
   }

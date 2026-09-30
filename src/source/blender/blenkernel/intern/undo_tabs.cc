@@ -59,6 +59,7 @@ static bool env_disables_per_tab_undo()
 
 static bool g_enabled = !env_disables_per_tab_undo();
 static bool g_live_diverged = false;
+static bool g_last_walk_document = false;
 
 bool BKE_undo_tabs_enabled()
 {
@@ -83,6 +84,17 @@ void BKE_undo_tabs_set_enabled(const bool enabled)
 void BKE_undo_tabs_note_tab_walk()
 {
   g_live_diverged = true;
+  g_last_walk_document = false;
+}
+
+void BKE_undo_tabs_note_document_walk()
+{
+  g_last_walk_document = true;
+}
+
+bool BKE_undo_tabs_last_walk_was_document()
+{
+  return g_last_walk_document;
 }
 
 void BKE_undo_tabs_note_push()
@@ -470,17 +482,49 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
   UndoOwnerMap *live = BKE_undo_owner_map_build(bmain, nullptr);
   if (BKE_undo_owner_map_shared_count(live) > 0) {
     if (r_reason) {
-      *r_reason = "shared between tabs now: " + shared_names_joined(live);
+      *r_reason = "shared between tabs now: " + shared_names_joined(live) +
+                  " (Edit > Undo Whole Document walks every tab)";
     }
     BKE_undo_owner_map_free(live);
     return false;
   }
   if (step_owners != nullptr && BKE_undo_owner_map_shared_count(step_owners) > 0) {
     if (r_reason) {
-      *r_reason = "shared between tabs at that step: " + shared_names_joined(step_owners);
+      *r_reason = "shared between tabs at that step: " + shared_names_joined(step_owners) +
+                  " (Edit > Undo Whole Document walks every tab)";
     }
     BKE_undo_owner_map_free(live);
     return false;
+  }
+  /* A datablock the tab owned at the step but another tab owns now, or the
+   * reverse (moved between tabs since): shared for this restore. Restoring it
+   * as the tab's would change the tab that has it now. Fails closed. */
+  if (step_owners != nullptr && bmain != nullptr) {
+    std::string moved;
+    int moved_count = 0;
+    ID *id = nullptr;
+    FOREACH_MAIN_ID_BEGIN (bmain, id) {
+      const uint32_t at_step = BKE_undo_owner_map_lookup(step_owners, id->session_uid);
+      const uint32_t now = BKE_undo_owner_map_lookup(live, id->session_uid);
+      const bool tab_then = (at_step == tab_uid), tab_now = (now == tab_uid);
+      const bool other_then = (at_step != tab_uid && at_step != UNDO_TAB_DOCUMENT);
+      const bool other_now = (now != tab_uid && now != UNDO_TAB_DOCUMENT);
+      if ((tab_then && other_now) || (tab_now && other_then)) {
+        if (moved_count < 8) {
+          moved += (moved.empty() ? "" : ", ") + std::string(id->name + 2);
+        }
+        moved_count++;
+      }
+    }
+    FOREACH_MAIN_ID_END;
+    if (moved_count > 0) {
+      if (r_reason) {
+        *r_reason = "moved between tabs since that step: " + moved +
+                    " (Edit > Undo Whole Document walks every tab)";
+      }
+      BKE_undo_owner_map_free(live);
+      return false;
+    }
   }
   g_partial.active = true;
   g_partial.tab = tab_uid;
