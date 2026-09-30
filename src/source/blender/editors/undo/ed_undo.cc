@@ -29,6 +29,7 @@
 #include "BKE_undo_system.hh"
 #include "BKE_undo_tabs.hh"
 #include "BLI_map.hh"
+#include "BLI_set.hh"
 #include "BLI_vector.hh"
 #include "BLT_translation.hh"
 #include "ED_mixar_undo.hh"
@@ -210,6 +211,39 @@ static void ed_undo_step_pre(bContext *C,
   }
 }
 
+/* Mixar: after a memfile restore, the depsgraph of a scene no window shows
+ * keeps its object nodes, and their `id_orig` pointers, as they were: an
+ * original the walk freed (created after the target step) dangles until that
+ * depsgraph is rebuilt, which only happens once the scene is shown again. The
+ * viewport's periodic batch sweep (#DRW_cache_free_old_batches) walks EVERY
+ * scene's depsgraph and read `GS(id_orig->name)` of such an object (ASAN,
+ * bonkers campaign 2026-09-30; parallel tabs give every agent scene a live
+ * depsgraph). The windows' scenes are rebuilt before the next draw; the others
+ * are freed here and come back when the scene is next shown or evaluated. */
+static void ed_undo_free_unshown_depsgraphs(Main *bmain, wmWindowManager *wm)
+{
+  if (bmain == nullptr || wm == nullptr) {
+    return;
+  }
+  blender::Set<const Scene *> shown;
+  for (wmWindow &win : wm->windows) {
+    if (const Scene *scene = WM_window_get_active_scene(&win)) {
+      shown.add(scene);
+    }
+  }
+  int freed = 0;
+  for (Scene &scene : bmain->scenes) {
+    if (scene.depsgraph_hash == nullptr || shown.contains(&scene)) {
+      continue;
+    }
+    BKE_scene_free_depsgraph_hash(&scene);
+    freed++;
+  }
+  if (freed > 0) {
+    CLOG_DEBUG(&LOG, "undo: freed the depsgraphs of %d scene(s) no window shows", freed);
+  }
+}
+
 /**
  * Common post management of undo/redo (calling post handlers, adding notifiers etc.).
  *
@@ -226,6 +260,7 @@ static void ed_undo_step_post(bContext *C,
   Main *bmain = CTX_data_main(C);
   Scene *scene = CTX_data_scene(C);
 
+  ed_undo_free_unshown_depsgraphs(bmain, wm);
   /* App-Handlers (post). */
   {
     wm->op_undo_depth++;
