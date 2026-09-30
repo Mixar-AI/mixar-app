@@ -15,6 +15,7 @@ import os
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from ...core.image_lifecycle import remove_image_safely
 
@@ -51,11 +52,11 @@ class MIXIE_OT_image_to_3d_upload_image(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({"ERROR"}, f"Invalid file path: {e}")
+            self.report({"ERROR"}, rpt_("Invalid file path: {error}").format(error=e))
             return {"CANCELLED"}
 
         if not os.path.isfile(filepath):
-            self.report({"ERROR"}, f"File not found: {filepath}")
+            self.report({"ERROR"}, rpt_("File not found: {filepath}").format(filepath=filepath))
             return {"CANCELLED"}
 
         # Validate it's an image file
@@ -63,14 +64,15 @@ class MIXIE_OT_image_to_3d_upload_image(Operator):
         file_ext = os.path.splitext(filepath)[1].lower()
 
         if file_ext not in valid_extensions:
-            self.report({"ERROR"}, f"Invalid image format: {file_ext}")
+            self.report({"ERROR"}, rpt_("Invalid image format: {file_ext}").format(
+                file_ext=file_ext))
             return {"CANCELLED"}
 
         # Load the image and set as reference_image
         try:
             image = bpy.data.images.load(filepath, check_existing=True)
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to load image: {e}")
+            self.report({"ERROR"}, rpt_("Failed to load image: {error}").format(error=e))
             return {"CANCELLED"}
 
         # Set the image in sidebar tab properties
@@ -81,7 +83,7 @@ class MIXIE_OT_image_to_3d_upload_image(Operator):
                 sidebar.tab_image_to_3d.reference_image = image
                 # Switch to uploaded-image mode so the info card is visible
                 sidebar.tab_image_to_3d.use_selected_image = False
-                self.report({"INFO"}, f"Set '{image.name}' as input image")
+                self.report({"INFO"}, rpt_("Set '{name}' as input image").format(name=image.name))
                 mark_file_select_executed(self)
                 return {"FINISHED"}
 
@@ -145,18 +147,18 @@ class MIXIE_OT_image_to_3d_pick_image(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({"ERROR"}, f"Invalid file path: {e}")
+            self.report({"ERROR"}, rpt_("Invalid file path: {error}").format(error=e))
             return {"CANCELLED"}
 
         if not os.path.isfile(filepath):
-            self.report({"ERROR"}, f"File not found: {filepath}")
+            self.report({"ERROR"}, rpt_("File not found: {filepath}").format(filepath=filepath))
             return {"CANCELLED"}
 
         try:
             img = bpy.data.images.load(filepath, check_existing=True)
             img.pack()
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to load image: {e}")
+            self.report({"ERROR"}, rpt_("Failed to load image: {error}").format(error=e))
             return {"CANCELLED"}
 
         scene = context.scene
@@ -169,7 +171,7 @@ class MIXIE_OT_image_to_3d_pick_image(Operator):
                 sidebar.tab_image_to_3d.use_selected_image = False
         # Also set the global scene property for legacy/popup contexts
         scene.mixie_image_to_3d_image = img
-        self.report({"INFO"}, f"Selected '{img.name}' as input image")
+        self.report({"INFO"}, rpt_("Selected '{name}' as input image").format(name=img.name))
         mark_file_select_executed(self)
         return {"FINISHED"}
 

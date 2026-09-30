@@ -15,6 +15,7 @@ chat as agent bubbles on the main thread. See
 import threading
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -47,6 +48,9 @@ def _send_backend(session_id: str, calls: list) -> None:
         pass
     with _LOCK:
         _rewind_inflight = True
+    # Translated here, on the main thread: the worker below must not touch bpy.
+    rewind_failed = rpt_("Scene restored, but the conversation could not be rewound: "
+                         "{error}. The agent may still remember the undone turns.")
 
     def _run():
         global _rewind_inflight
@@ -76,8 +80,7 @@ def _send_backend(session_id: str, calls: list) -> None:
             with _LOCK:
                 _rewind_inflight = False
         if failure:
-            _notify(scene_name, "Scene restored, but the conversation could not be rewound: "
-                                f"{failure}. The agent may still remember the undone turns.")
+            _notify(scene_name, rewind_failed.format(error=failure))
 
     threading.Thread(target=_run, name="mixie-turn-checkpoint", daemon=True).start()
 
@@ -96,14 +99,15 @@ def _clear_session_on_main(scene_name: str) -> None:
                 get_session_manager().clear_session_id(scene)
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Could not clear the session id after a bookmark-less rewind: {e}")
+        # Posted from this main-thread timer so the notice can be translated.
+        _notify(scene_name, rpt_("Scene restored. That checkpoint predates the conversation, "
+                                 "so the next message starts a new chat."))
         return None
     try:
         import bpy as _bpy
         _bpy.app.timers.register(_clear, first_interval=0.0)
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Session clear timer skipped: {e}")
-    _notify(scene_name, "Scene restored. That checkpoint predates the conversation, "
-                        "so the next message starts a new chat.")
 
 
 def _notify(scene_name: str, text: str) -> None:

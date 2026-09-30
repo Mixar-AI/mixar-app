@@ -27,6 +27,7 @@ import base64 as _b64
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.job_queue.constants import FEATURE_ANIMATE
 from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
+from mixar.modules.common.i18n import n_, rpt_
 from ..constants import (
     ANIMATE_IMPORT_OPTIONS,
     ANIMATE_RIG_JOB_PROP,
@@ -214,21 +215,22 @@ def enqueue_rig_jobs(
     try:
         file_bytes, filename = _export_objects_together(context, meshes)
     except Exception as e:
-        msg = f"Failed to export selected mesh(es): {e}"
-        logger.warning(msg)
+        logger.warning("Failed to export selected mesh(es): %s", e)
         if operator is not None:
-            operator.report({'WARNING'}, msg)
+            operator.report({'WARNING'}, rpt_(
+                "Failed to export selected mesh(es): {error}").format(error=e))
         return []
 
     if len(file_bytes) > MAX_FILE_SIZE_ANIMATE_RIG:
         size_mb = len(file_bytes) / (1024 * 1024)
-        msg = (
-            f"Skipping Auto Rig: combined export is {size_mb:.1f}MB "
-            f"(max {MAX_FILE_SIZE_ANIMATE_RIG // (1024 * 1024)}MB)"
+        max_mb = MAX_FILE_SIZE_ANIMATE_RIG // (1024 * 1024)
+        msg = n_(
+            "Skipping Auto Rig: combined export is {size_mb:.1f}MB "
+            "(max {max_mb}MB)"
         )
-        logger.warning(msg)
+        logger.warning(msg.format(size_mb=size_mb, max_mb=max_mb))
         if operator is not None:
-            operator.report({'WARNING'}, msg)
+            operator.report({'WARNING'}, rpt_(msg).format(size_mb=size_mb, max_mb=max_mb))
         return []
 
     label = _rig_label(context, meshes)
@@ -249,7 +251,7 @@ def enqueue_rig_jobs(
         model=model,
         payload=payload,
         label=label,
-        fail_message="Auto Rig failed",
+        fail_message=n_("Auto Rig failed"),
         on_imported=_rig_on_imported,
         import_options=ANIMATE_IMPORT_OPTIONS,
         scene_flag=ANIMATE_SCENE_FLAG,
@@ -291,7 +293,7 @@ def enqueue_retarget_job(
         model=model,
         payload=payload,
         label=f"{label} ({short})",
-        fail_message="Animate failed",
+        fail_message=n_("Animate failed"),
         on_imported=_animate_on_imported,
         import_options=ANIMATE_IMPORT_OPTIONS,
         scene_flag=ANIMATE_SCENE_FLAG,

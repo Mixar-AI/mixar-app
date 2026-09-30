@@ -3,6 +3,7 @@
 
 """Editable node starters; the catalog continues to own models and settings."""
 
+from mixar.modules.common.i18n import rpt_
 from ..constants import NODE_TEMPLATES
 from .capabilities import capability_available
 from .media_utils import is_still_item
@@ -82,7 +83,7 @@ def create_template(scene, template_id, center, *, exact_position=False, source_
     its frame (which carries a position and size like a card).
     """
     if not template_available(template_id):
-        raise ValueError("This template needs an available generation model. Check your connection.")
+        raise ValueError(rpt_("This template needs an available generation model. Check your connection."))
     if is_workflow(template_id):
         from .character_sheet_workflow import build_character_sheet_workflow, resolve_sheet_sources
 

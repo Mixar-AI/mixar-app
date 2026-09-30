@@ -11,6 +11,7 @@
 #include "BKE_report.hh"
 #include "BKE_screen.hh"
 #include "BLI_listbase.h"
+#include "BLT_translation.hh"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -34,6 +35,7 @@
 #include "agent_ui_text.hh"
 #include "agent_ui_theme.hh"
 #include <algorithm>
+#include <fmt/format.h>
 
 namespace blender {
 void footer_thumbnails_draw_image(Main *, const char *, int, float, float, float);
@@ -121,7 +123,7 @@ void agent_bubble_send_button(const bContext * /*C*/,
             int(r.ymin) - region->winrct.ymin,
             short(BLI_rctf_size_x(&r)),
             short(BLI_rctf_size_y(&r)),
-            state.stop_visible ? "Stop the running turn" : "Send");
+            state.stop_visible ? TIP_("Stop the running turn") : TIP_("Send"));
 }
 
 namespace {
@@ -202,7 +204,7 @@ void agent_bubble_references_draw(const bContext *C,
                                       int(visible_image.ymin),
                                       int(BLI_rctf_size_x(&visible_image)),
                                       int(BLI_rctf_size_y(&visible_image)),
-                                      "View sketch larger. Add instructions in chat, then Send");
+                                      TIP_("View sketch larger. Add instructions in chat, then Send"));
       RNA_string_set(ui::button_operator_ptr_ensure(preview), "image_name", path.c_str());
     }
     rctf close = {
@@ -220,12 +222,14 @@ void agent_bubble_references_draw(const bContext *C,
                                          int(close.ymin),
                                          int(BLI_rctf_size_x(&close)),
                                          int(BLI_rctf_size_y(&close)),
-                                         "Remove reference");
+                                         TIP_("Remove reference"));
       PointerRNA *props = ui::button_operator_ptr_ensure(button);
       RNA_string_set(props, "attachment_path", path.c_str());
       RNA_string_set(props, "attachment_source", source ? source : "");
       ui::mixar_button_tooltip_owned(
-          button, item.sketch ? "Discard this sketch and its queued drawing" : ("Remove " + name).c_str());
+          button,
+          item.sketch ? TIP_("Discard this sketch and its queued drawing") :
+                        fmt::format(fmt::runtime(TIP_("Remove {}")), name).c_str());
     }
   }
   GPU_scissor(UNPACK4(old_scissor));
@@ -246,7 +250,7 @@ void agent_bubble_references_draw(const bContext *C,
                                    0,
                                    0,
                                    1,
-                                   "Scroll references");
+                                   TIP_("Scroll references"));
     ui::button_scrollbar_visual_height_set(scroll, BLI_rctf_size_y(&g.view) / g.max_scroll);
   }
   ui::block_end(C, block);
@@ -317,7 +321,7 @@ static wmOperatorStatus preview_sketch_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
   const rcti rect = {0, 1000, 0, 720};
-  if (!WM_window_open(C, "Sketch Preview", &rect, SPACE_IMAGE, false, false, true,
+  if (!WM_window_open(C, IFACE_("Sketch Preview"), &rect, SPACE_IMAGE, false, false, true,
                       WIN_ALIGN_PARENT_CENTER, nullptr, nullptr)) {
     BKE_report(op->reports, RPT_ERROR, "Could not open the sketch preview");
     return OPERATOR_CANCELLED;

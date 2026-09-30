@@ -26,6 +26,7 @@ from mixar.modules.common.utils.mixie_space_utils import (
     get_first_selected_moodboard_image,
 )
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -328,7 +329,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
             self.report({'INFO'}, "Added to queue")
             return {'FINISHED'}
 
-        self.report({'WARNING'}, f"Unknown mode: {mode}")
+        self.report({'WARNING'}, rpt_("Unknown mode: {mode}").format(mode=mode))
         return {'CANCELLED'}
 
     # ------------------------------------------------------------------ #
@@ -604,7 +605,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
 
             selected = selected_reference_stills(context.scene)
             if not selected:
-                raise ValueError("No image selected in moodboard")
+                raise ValueError(rpt_("No image selected in moodboard"))
             for item in selected:
                 enqueue_pro_job(
                     image=item.image,
@@ -640,9 +641,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
         # Single image / multi-view / prompt-only submission.
         single_img = uploaded[0].image if uploaded else None
         if not (has_prompt or single_img or has_mv):
-            raise ValueError(
+            raise ValueError(rpt_(
                 "Provide at least one of: prompt, image, or multi-view images",
-            )
+            ))
 
         label = single_img.name if single_img else (shared.get("prompt") or "prompt")
         enqueue_pro_job(
@@ -666,14 +667,14 @@ class MIXIE_OT_hunyuan_generate(Operator):
         if use_moodboard:
             mb_img = get_first_selected_moodboard_image(context.scene)
             if not mb_img:
-                raise ValueError("No image selected in moodboard")
+                raise ValueError(rpt_("No image selected in moodboard"))
             has_image = True
             has_prompt = False
 
         if not has_prompt and not has_image:
-            raise ValueError("Provide either a prompt or an image")
+            raise ValueError(rpt_("Provide either a prompt or an image"))
         if has_prompt and has_image:
-            raise ValueError("Prompt and image are mutually exclusive")
+            raise ValueError(rpt_("Prompt and image are mutually exclusive"))
 
         image_bytes = b""
         if has_image:
@@ -728,7 +729,7 @@ class MIXIE_OT_hunyuan_generate(Operator):
             o for o in context.selected_objects if o.type == 'MESH'
         ]
         if not selected_meshes:
-            raise ValueError("No mesh selected")
+            raise ValueError(rpt_("No mesh selected"))
 
         shared = snapshot_shared_params(topo)
         enqueued = enqueue_retopology_jobs(
@@ -738,9 +739,9 @@ class MIXIE_OT_hunyuan_generate(Operator):
             operator=self,
         )
         if not enqueued:
-            raise ValueError(
+            raise ValueError(rpt_(
                 "No objects could be enqueued (all skipped or failed export)",
-            )
+            ))
 
 
 # ============================================================================

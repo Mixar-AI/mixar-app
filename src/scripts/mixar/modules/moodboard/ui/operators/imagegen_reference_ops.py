@@ -16,6 +16,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from mixar.modules.moodboard.core.moodboard_utils import place_new_moodboard_item
 from mixar.modules.moodboard.core.image_lifecycle import remove_image_safely
@@ -86,7 +87,8 @@ class MIXIE_OT_imagegen_add_style_image(Operator):
             self.report({"WARNING"}, "No valid images found")
             return {"CANCELLED"}
 
-        self.report({"INFO"}, f"Added {added_count} reference image(s)")
+        self.report({"INFO"}, rpt_("Added {added_count} reference image(s)").format(
+            added_count=added_count))
         mark_file_select_executed(self)
         return {"FINISHED"}
 
@@ -235,7 +237,7 @@ class MIXIE_OT_imagegen_upload_reference(Operator):
                 if img.size[0] > 0 and img.size[1] > 0:
                     ref_item.display_resolution = f"{img.size[0]} x {img.size[1]}"
                 else:
-                    ref_item.display_resolution = "Unknown"
+                    ref_item.display_resolution = n_("Unknown")
 
                 ref_item.display_path = filepath
 
@@ -251,7 +253,8 @@ class MIXIE_OT_imagegen_upload_reference(Operator):
         # Switch off moodboard-selection mode so uploaded refs are primary
         tab.use_reference_images = False
 
-        self.report({"INFO"}, f"Added {added_count} reference image(s)")
+        self.report({"INFO"}, rpt_("Added {added_count} reference image(s)").format(
+            added_count=added_count))
 
         # Redraw the UI
         for area in context.screen.areas:

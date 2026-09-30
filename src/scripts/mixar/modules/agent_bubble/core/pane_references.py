@@ -24,6 +24,8 @@ own chat-attachment path for it.
 
 import os
 
+from mixar.modules.common.i18n import n_
+
 PANE_TABS = frozenset({'THREE_D', 'IMAGE', 'VIDEO', 'SPLAT'})
 
 
@@ -48,7 +50,7 @@ def attach_to_imagegen(scene, img, filepath):
     if img.size[0] > 0 and img.size[1] > 0:
         ref_item.display_resolution = f"{img.size[0]} x {img.size[1]}"
     else:
-        ref_item.display_resolution = "Unknown"
+        ref_item.display_resolution = n_("Unknown")
     ref_item.display_path = filepath
     if hasattr(tab, "use_reference_images"):
         # Uploaded/captured refs are used with board-selection mode OFF.

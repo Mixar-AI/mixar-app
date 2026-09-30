@@ -17,6 +17,7 @@ only draws and validates.
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...core import local_provider
 from . import byok_dialog_ui
@@ -70,25 +71,25 @@ def managed_status(wm):
     """(text, icon, is_error) for the managed status line."""
     if getattr(wm, 'mixar_local_dl_active', False):
         if getattr(wm, 'mixar_local_dl_file', '') == 'extract':
-            return ("Unpacking the local AI runtime…", 'SORTTIME', False)
+            return (n_("Unpacking the local AI runtime…"), 'SORTTIME', False)
         pct = getattr(wm, 'mixar_local_dl_pct', 0)
-        return (f"Downloading — {pct}%", 'IMPORT', False)
+        return (iface_("Downloading — {percent}%").format(percent=pct), 'IMPORT', False)
     model_id = _selected_model_id(wm)
     if not model_id:
-        return ("Choose a model", 'INFO', False)
+        return (n_("Choose a model"), 'INFO', False)
     if getattr(wm, 'mixar_local_server_model', '') == model_id:
         state = getattr(wm, 'mixar_local_server_state', '')
         if state == 'ready':
-            return ("Running", 'CHECKMARK', False)
+            return (n_("Running"), 'CHECKMARK', False)
         if state in ('spawning', 'waiting_health'):
-            return ("Starting… (a big model can take a few minutes)",
+            return (n_("Starting… (a big model can take a few minutes)"),
                     'SORTTIME', False)
         if state in ('crashed', 'failed'):
             error = getattr(wm, 'mixar_local_last_error', '')
-            return (error or "The local server stopped", 'ERROR', True)
+            return (rpt_(error) if error else n_("The local server stopped"), 'ERROR', True)
     if _model_downloaded(model_id):
-        return ("Downloaded — not running", 'INFO', False)
-    return ("Not downloaded", 'INFO', False)
+        return (n_("Downloaded — not running"), 'INFO', False)
+    return (n_("Not downloaded"), 'INFO', False)
 
 
 def _server_busy_with(wm, model_id: str) -> bool:
@@ -118,14 +119,14 @@ def draw_local_fields(body, wm) -> None:
     body.separator(factor=0.5)
     byok_dialog_ui.card_label(
         body,
-        "Runs entirely on this computer — your prompts never leave it "
-        "except through Mixar's agent orchestration.",
+        n_("Runs entirely on this computer — your prompts never leave it "
+           "except through Mixar's agent orchestration."),
         'MUTED',
     )
 
 
 def _draw_managed(body, wm) -> None:
-    byok_dialog_ui.field_label(body, "Model")
+    byok_dialog_ui.field_label(body, n_("Model"))
     byok_dialog_ui.field_dropdown(body, wm, 'byok_form_local_model')
 
     text, _icon, is_error = managed_status(wm)
@@ -137,46 +138,46 @@ def _draw_managed(body, wm) -> None:
     buttons.scale_y = 1.4
     if getattr(wm, 'mixar_local_dl_active', False):
         byok_dialog_ui.op_button(
-            buttons, "mixar_local.cancel_download", "Cancel Download", 'CARD')
+            buttons, "mixar_local.cancel_download", n_("Cancel Download"), 'CARD')
     elif not model_id:
         buttons.enabled = False
         buttons.label(text="")
     elif not _model_downloaded(model_id):
         props = byok_dialog_ui.op_button(
-            buttons, "mixar_local.download_model", "Download", 'CARD')
+            buttons, "mixar_local.download_model", n_("Download"), 'CARD')
         props.model_id = model_id
     elif _server_busy_with(wm, model_id):
-        byok_dialog_ui.op_button(buttons, "mixar_local.stop_server", "Stop", 'CARD')
+        byok_dialog_ui.op_button(buttons, "mixar_local.stop_server", n_("Stop"), 'CARD')
     else:
         props = byok_dialog_ui.op_button(
-            buttons, "mixar_local.start_server", "Start", 'CARD')
+            buttons, "mixar_local.start_server", n_("Start"), 'CARD')
         props.model_id = model_id
         props = byok_dialog_ui.op_button(
-            buttons, "mixar_local.remove_model", "Delete Download", 'DANGER')
+            buttons, "mixar_local.remove_model", n_("Delete Download"), 'DANGER')
         props.model_id = model_id
 
 
 def _draw_custom(body, wm) -> None:
-    byok_dialog_ui.field_label(body, "Detected local apps")
+    byok_dialog_ui.field_label(body, n_("Detected local apps"))
     detect_row = byok_dialog_ui.field_dropdown(body, wm, 'byok_form_local_detected')
     detect_row.operator(MIXAR_BYOK_OT_local_rescan.bl_idname,
                         text="", icon='FILE_REFRESH')
     body.separator(factor=0.45)
 
-    byok_dialog_ui.field_label(body, "Base URL")
+    byok_dialog_ui.field_label(body, n_("Base URL"))
     byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_base')
     body.separator(factor=0.45)
-    byok_dialog_ui.field_label(body, "Model")
+    byok_dialog_ui.field_label(body, n_("Model"))
     byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_model')
     body.separator(factor=0.45)
-    byok_dialog_ui.field_label(body, "API Key (optional)")
+    byok_dialog_ui.field_label(body, n_("API Key (optional)"))
     byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_key')
     body.separator(factor=0.5)
 
     byok_dialog_ui.card_label(
         body,
-        "Any OpenAI-compatible server on this computer — Ollama, "
-        "LM Studio, llama.cpp…",
+        n_("Any OpenAI-compatible server on this computer — Ollama, "
+           "LM Studio, llama.cpp…"),
         'MUTED',
     )
 
@@ -197,7 +198,7 @@ def execute_local(op, wm, on_done):
         started, err = local_provider.save_managed(wm, on_done)
     if not started:
         wm.byok_dialog_state = 'ERROR'
-        wm.byok_last_error = err or "Could not save the local provider."
+        wm.byok_last_error = err or n_("Could not save the local provider.")
         return {'CANCELLED'}
     wm.byok_dialog_state = 'SAVING'
     wm.byok_last_error = ''

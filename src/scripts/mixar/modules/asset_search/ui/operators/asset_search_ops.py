@@ -21,6 +21,7 @@ from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
 from mixar.modules.asset_search.core.api_client import metered_client
 from mixar.modules.common.api.client import HTTPClient
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 from mixar.modules.asset_search.constants import (
@@ -115,7 +116,7 @@ class MIXIE_OT_search_assets(Operator):
                 return {"RUNNING_MODAL"}
 
             res = self._result or {}
-            state.search_message = res.get("message", "Search failed")
+            state.search_message = res.get("message", n_("Search failed"))
             # Structured rows for the actionable results list (panel).
             state.search_results.clear()
             for hit in res.get("results", []):
@@ -222,11 +223,11 @@ class MIXIE_OT_refresh_asset_status(Operator):
             else:
                 state.needs_retraining = True
                 state.retraining_message = res.get(
-                    "message", "Could not check status")
+                    "message", n_("Could not check status"))
 
             self._cleanup(context)
             report_type = "INFO" if not state.needs_retraining else "WARNING"
-            msg = state.retraining_message or "Embeddings are up to date"
+            msg = state.retraining_message or n_("Embeddings are up to date")
             self.report({report_type}, msg)
             return {"FINISHED"}
 
@@ -310,12 +311,12 @@ def _search_api(prompt, image_bytes, operator):
         if resp.status_code == 404:
             operator._result = {
                 "success": False,
-                "message": "No trained model found. Please train first.",
+                "message": n_("No trained model found. Please train first."),
             }
             return
 
         if not resp.success:
-            msg = resp.message or f"Server returned {resp.status_code}"
+            msg = resp.message or rpt_("Server returned {status}").format(status=resp.status_code)
             operator._result = {"success": False, "message": msg}
             return
 
@@ -326,7 +327,7 @@ def _search_api(prompt, image_bytes, operator):
         if not results:
             operator._result = {
                 "success": True,
-                "message": "No matching assets found",
+                "message": n_("No matching assets found"),
                 "results": [],
             }
             return
@@ -345,13 +346,13 @@ def _search_api(prompt, image_bytes, operator):
             })
         operator._result = {
             "success": True,
-            "message": f"Found {len(rows)} matching asset(s)",
+            "message": rpt_("Found {count} matching asset(s)").format(count=len(rows)),
             "results": rows,
         }
     except Exception as exc:
         operator._result = {
             "success": False,
-            "message": f"Search failed: {exc}",
+            "message": rpt_("Search failed: {error}").format(error=exc),
         }
 
 
@@ -370,12 +371,12 @@ def _status_api(metadata, operator):
             operator._result = {
                 "success": True,
                 "needs_retraining": True,
-                "message": "No trained model found. Please train first.",
+                "message": n_("No trained model found. Please train first."),
             }
             return
 
         if not resp.success:
-            msg = resp.message or f"Server returned {resp.status_code}"
+            msg = resp.message or rpt_("Server returned {status}").format(status=resp.status_code)
             operator._result = {"success": False, "message": msg}
             return
 
@@ -389,7 +390,7 @@ def _status_api(metadata, operator):
     except Exception as exc:
         operator._result = {
             "success": False,
-            "message": f"Status check failed: {exc}",
+            "message": rpt_("Status check failed: {error}").format(error=exc),
         }
 
 
@@ -483,7 +484,7 @@ def _auto_check_poll():
         state.has_model = _auto_check_result["has_embeddings"]
         if not state.has_model:
             state.needs_retraining = True
-            state.retraining_message = (
+            state.retraining_message = n_(
                 "No trained model found. Please train first."
             )
     state.auto_check_done = True

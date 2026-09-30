@@ -4,6 +4,7 @@
 
 """Sidebar UI for named SAM3 character components."""
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.common.utils.ui_utils import draw_multiline_text_input
 from mixar.modules.moodboard.constants import (
     GENERATE_BUTTON_SCALE_Y,
@@ -39,12 +40,12 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
     model_ready = _component_model_ready(model_slug)
     col = draw_section_box(
         layout,
-        f"Character Components ({len(segments)})",
+        iface_("Character Components ({count})").format(count=len(segments)),
         icon='MOD_MASK',
     )
     draw_hint(
         col,
-        "Eye: 3D/overlay   Check: detail batch",
+        n_("Eye: 3D/overlay   Check: detail batch"),
         icon='INFO',
     )
     for segment_index, segment in enumerate(segments):
@@ -84,14 +85,14 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
         col.separator(factor=SEP_INTRA)
         draw_status_badge(
             col,
-            f"{active_count} components for 3D · "
-            f"{included_count} components for detail",
+            iface_("{active} components for 3D · {included} components for detail").format(
+                active=active_count, included=included_count),
             'DONE',
         )
 
     detail = draw_section_box(
         layout,
-        "Component Detail Images",
+        n_("Component Detail Images"),
         icon='IMAGE_DATA',
     )
     draw_dropdown(detail, settings, "model", text="Model")
@@ -110,7 +111,7 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
     else:
         draw_hint(
             detail,
-            "Choose a catalog model supporting 2+ reference images",
+            n_("Choose a catalog model supporting 2+ reference images"),
             icon='ERROR',
         )
 
@@ -124,8 +125,8 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
     )
     draw_hint(
         detail,
-        "Each component job generates the selected number of distinct views "
-        "from its cutout and lossless SAM3 mask",
+        n_("Each component job generates the selected number of distinct views "
+           "from its cutout and lossless SAM3 mask"),
         icon='INFO',
     )
 
@@ -134,11 +135,9 @@ def draw_character_components(layout, selected_idx, selected_item, settings):
     action.enabled = model_ready and included_count > 0
     generate = action.operator(
         "mixie.generate_character_components",
-        text=(
-            f"Generate {included_count} Component(s) × "
-            f"{settings.views_per_component} View(s)"
-        ),
-        icon='RENDER_STILL',
+        text=iface_("Generate {components} Component(s) × {views} View(s)").format(
+            components=included_count, views=settings.views_per_component),
+        icon='RENDER_STILL', translate=False,
     )
     generate.image_index = selected_idx
     generate.segment_index = -1

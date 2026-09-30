@@ -24,6 +24,7 @@ from bpy.props import IntProperty, StringProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ...constants import CHAT_RULES_MAXLEN
 from ...core import rules_api
@@ -93,7 +94,7 @@ class _RuleOpMixin:
 
     def _finish(self, context, result: dict):
         if not result.get("success"):
-            self.report({'WARNING'}, result.get("error", "Rule operation failed"))
+            self.report({'WARNING'}, result.get("error", n_("Rule operation failed")))
             return {'CANCELLED'}
         rules_api.refresh_rules_ui()
         return {'FINISHED'}

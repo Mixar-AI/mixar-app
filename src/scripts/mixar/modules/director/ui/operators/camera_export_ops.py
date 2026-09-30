@@ -16,6 +16,7 @@ already shows, so a press can never fail silently.
 
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core.camera_export import current_plan, export_settings, render_busy
 from ...core.render_outputs import start_camera_render
 
@@ -48,11 +49,12 @@ class MIXAR_OT_render_camera_to_moodboard(Operator):
         try:
             count = start_camera_render(context, scene, settings, camera, plan)
         except Exception as exc:
-            self.report({'ERROR'}, f"Could not render camera videos: {exc}")
+            self.report({'ERROR'}, rpt_("Could not render camera videos: {error}").format(error=exc))
             return {'CANCELLED'}
         self.report(
             {'INFO'},
-            f"Rendering {count} video{'s' if count != 1 else ''} to Moodboard",
+            rpt_("Rendering {count} video to Moodboard").format(count=count) if count == 1
+            else rpt_("Rendering {count} videos to Moodboard").format(count=count),
         )
         return {'FINISHED'}
 

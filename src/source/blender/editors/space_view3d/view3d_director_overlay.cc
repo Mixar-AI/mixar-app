@@ -15,6 +15,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
@@ -66,18 +68,18 @@ void draw_tool_rail(ui::Block *block,
   const Object *active = CTX_data_active_object(C);
   const bool character = active && active->type != OB_CAMERA;
   const Tool tools[] = {
-      {view3d_director_shots_popup_create, ICON_CAMERA_DATA, "Shots and takes", false},
+      {view3d_director_shots_popup_create, ICON_CAMERA_DATA, N_("Shots and takes"), false},
       {view3d_director_moves_popup_create,
        ICON_CON_CAMERASOLVER,
-       "One-click camera moves, timing, and handheld",
+       N_("One-click camera moves, timing, and handheld"),
        true},
       {view3d_director_camera_popup_create,
        ICON_VIEW_CAMERA,
-       "Direction, adherence, timing, and guides",
+       N_("Direction, adherence, timing, and guides"),
        false},
       {view3d_director_animation_popup_create,
        ICON_ARMATURE_DATA,
-       "Animation presets for the selected character",
+       N_("Animation presets for the selected character"),
        true},
   };
   const int button_count = character ? 4 : 3;
@@ -109,7 +111,7 @@ void draw_tool_rail(ui::Block *block,
                                       y,
                                       short(unit * 2),
                                       short(unit * 2),
-                                      tools[index].tooltip);
+                                      TIP_(tools[index].tooltip));
     /* Moves needs an editable camera; Shots/Camera/Animation always open. */
     director_overlay_disable_button(button,
                                     index == 1 && (!state.has_camera || state.locked));
@@ -131,14 +133,14 @@ void draw_empty_state(ui::Block *block, const ARegion *region, const int unit, c
    * at 12 px and used to run out of a panel this narrow. */
   const float white[4] = {0.96f, 0.96f, 0.98f, 1.0f};
   const float text_w = float(panel_w) - float(gap) * 4.0f;
-  cinema_text_center_fitted("Direct your first camera shot",
+  cinema_text_center_fitted(IFACE_("Direct your first camera shot"),
                             float(x + panel_w / 2),
                             float(y + panel_h - unit * 2),
                             18.0f * UI_SCALE_FAC,
                             text_w,
                             white);
-  cinema_text_center_fitted("Explore the scene, frame a moment, then capture only the "
-                            "keyframes that matter.",
+  cinema_text_center_fitted(IFACE_("Explore the scene, frame a moment, then capture only the "
+                                   "keyframes that matter."),
                             float(x + panel_w / 2),
                             float(y + panel_h - unit * 4),
                             12.0f * UI_SCALE_FAC,
@@ -147,12 +149,12 @@ void draw_empty_state(ui::Block *block, const ARegion *region, const int unit, c
   director_overlay_operator_button(block,
                                    "MIXAR_OT_director_start",
                                    ICON_VIEW_CAMERA,
-                                   "Create Camera & Direct",
+                                   IFACE_("Create Camera & Direct"),
                                    x + (panel_w - unit * 10) / 2,
                                    y + gap * 2,
                                    unit * 10,
                                    unit * 2,
-                                   "Create a camera aligned to this view and start directing");
+                                   TIP_("Create a camera aligned to this view and start directing"));
 }
 
 void draw_context_actions(ui::Block *block,
@@ -172,12 +174,12 @@ void draw_context_actions(ui::Block *block,
     director_overlay_operator_button(block,
                                      "MIXAR_OT_director_new_shot",
                                      ICON_ADD,
-                                     "Add Camera Here",
+                                     IFACE_("Add Camera Here"),
                                      action_x,
                                      action_y,
                                      action_w,
                                      unit * 2,
-                                     "Create a new shot camera exactly at this view");
+                                     TIP_("Create a new shot camera exactly at this view"));
     director_overlay_operator_button(block,
                                      "MIXAR_OT_director_return_to_shot",
                                      ICON_LOOP_BACK,
@@ -186,7 +188,7 @@ void draw_context_actions(ui::Block *block,
                                      action_y,
                                      unit * 2,
                                      unit * 2,
-                                     "Back to the active shot camera without adding");
+                                     TIP_("Back to the active shot camera without adding"));
   }
   else if (state.has_shot) {
     const int action_w = unit * 8;
@@ -196,7 +198,7 @@ void draw_context_actions(ui::Block *block,
     const char *operator_id = state.locked ? "MIXAR_OT_director_new_take" :
                                              "MIXAR_OT_director_capture_beat";
     const int icon = state.locked ? ICON_DUPLICATE : ICON_KEYFRAME_HLT;
-    const char *label = state.locked ? "Start New Take" : "Capture Keyframe";
+    const char *label = state.locked ? IFACE_("Start New Take") : IFACE_("Capture Keyframe");
     director_overlay_operator_button(
         block,
         operator_id,
@@ -206,8 +208,8 @@ void draw_context_actions(ui::Block *block,
         action_y,
         action_w,
         unit * 2,
-        state.locked ? "Create an editable child of this locked take" :
-                       "Key this camera pose and capture its reference frame (I)");
+        state.locked ? TIP_("Create an editable child of this locked take") :
+                       TIP_("Key this camera pose and capture its reference frame (I)"));
     Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
     if (!state.locked && scene != nullptr) {
       /* Blender's own Auto Keying toggle, as on the dock: an RNA toggle on
@@ -227,9 +229,9 @@ void draw_context_actions(ui::Block *block,
                     0,
                     0.0f,
                     0.0f,
-                    state.auto_key ? "Auto Keying is on (the Timeline's record button)" :
-                                     "Auto Keying (the Timeline's record button): key the "
-                                     "camera automatically after every move");
+                    state.auto_key ? TIP_("Auto Keying is on (the Timeline's record button)") :
+                                     TIP_("Auto Keying (the Timeline's record button): key the "
+                                          "camera automatically after every move"));
     }
   }
 
@@ -246,12 +248,12 @@ void draw_context_actions(ui::Block *block,
     director_overlay_operator_button(block,
                                      "MIXAR_OT_director_toggle_timeline",
                                      ICON_TIME,
-                                     "Timeline",
+                                     IFACE_("Timeline"),
                                      gap * 2,
                                      gap * 2,
                                      timeline_w,
                                      unit * 2,
-                                     "Expand the shot timeline");
+                                     TIP_("Expand the shot timeline"));
   }
 
   if (!state.beats.is_empty() && (bottom_row_fits || state.timeline_expanded)) {
@@ -262,12 +264,12 @@ void draw_context_actions(ui::Block *block,
     ui::uiDefBlockBut(block,
                   view3d_director_render_popup_create,
                   nullptr,
-                  "Export to Moodboard",
+                  IFACE_("Export to Moodboard"),
                   region->winx - export_w - gap * 2,
                   gap * 2,
                   short(export_w),
                   short(unit * 2),
-                  "Export keyframes and rendered guides to the Moodboard");
+                  TIP_("Export keyframes and rendered guides to the Moodboard"));
   }
 }
 

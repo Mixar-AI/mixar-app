@@ -67,11 +67,11 @@ def test_add_on_tab_follows_gaussian_splat_in_every_table():
                             "Generations", "Queue"]
 
     space_cc = _read(BUBBLE / "space_agent_bubble.cc")
-    assert '{AGENT_TAB_ADDON, "ADDON", "Build a Blender add-on with the agent"}' in space_cc
+    assert '{AGENT_TAB_ADDON, "ADDON", N_("Build a Blender add-on with the agent")}' in space_cc
     state_cc = _read(BUBBLE / "agent_ui_state.cc")
     assert '{"ADDON", AGENT_TAB_ADDON}' in state_cc
     layout_cc = _read(BUBBLE / "agent_ui_layout.cc")
-    assert '{AGENT_TAB_X_ADDON, AGENT_TAB_W_ADDON, "Add-on"}' in layout_cc
+    assert '{AGENT_TAB_X_ADDON, AGENT_TAB_W_ADDON, N_("Add-on")}' in layout_cc
 
 
 def test_add_on_pill_closes_the_left_group_and_keeps_its_pitch():
@@ -102,7 +102,7 @@ def test_splats_pill_is_sized_for_its_short_label():
     assert token("AGENT_TAB_W_SPLAT") == token("AGENT_TAB_W_VIDEO")
     assert token("AGENT_TAB_X_SPLAT") == token("AGENT_TAB_X_VIDEO") + token("AGENT_TAB_W_VIDEO") + 6
     layout_cc = _read(BUBBLE / "agent_ui_layout.cc")
-    assert '{AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, "Splats"}' in layout_cc
+    assert '{AGENT_TAB_X_SPLAT, AGENT_TAB_W_SPLAT, N_("Splats")}' in layout_cc
     labels = [item[1] for item in bubble_tab_props.TAB_ITEMS]
     assert "Splats" in labels and "Gaussian Splat" not in labels
 

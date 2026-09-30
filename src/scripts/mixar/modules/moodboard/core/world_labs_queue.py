@@ -23,6 +23,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.constants import FEATURE_WORLD_LABS
 from mixar.modules.common.job_queue.core.queue_manager import FeatureQueue
@@ -92,7 +93,7 @@ class WorldLabsJob(Job):
 
     def parse_poll_response(self, response):
         status, result_files = self._parse_standard_poll(
-            response, fail_message="World generation failed",
+            response, fail_message=n_("World generation failed"),
         )
         if status == "DONE":
             for f in result_files or []:
@@ -125,13 +126,13 @@ class WorldLabsJob(Job):
                     self._pano_url = f.get("url", "")
 
         if not self._spz_url:
-            on_error("World generation result missing splat (SPZ) URL")
+            on_error(n_("World generation result missing splat (SPZ) URL"))
             return True
         if not self._glb_url:
             # Placement, seating, and scene layout all require the collider.
             # Importing a splat-only world looks like success and then fails
             # later with "collider not found".
-            on_error("World generation result missing collider (GLB) URL")
+            on_error(n_("World generation result missing collider (GLB) URL"))
             return True
 
         spz_url, glb_url, pano_url, label = (
@@ -159,7 +160,7 @@ class WorldLabsJob(Job):
                     except Exception as e:  # noqa: BLE001
                         logger.warning("[WorldLabs] pano download failed: %s", e)
             except Exception as e:  # noqa: BLE001
-                err = f"Failed to download/convert world: {e}"
+                err = rpt_("Failed to download/convert world: {error}").format(error=e)
                 logger.error("[WorldLabs] %s", err)
                 _cleanup_temp_paths(ply_path, glb_path, pano_path)
                 bpy.app.timers.register(
@@ -204,7 +205,7 @@ def _import_on_main(
             ply_path, glb_path, name=label or "World", semantics=semantics,
         )
         if not names:
-            on_error("World imported but produced no objects")
+            on_error(n_("World imported but produced no objects"))
             return
         # The pano is a 360 interior of the room Marble rendered from the input
         # viewpoint. Drop it on the moodboard as a room-appearance reference the
@@ -220,7 +221,7 @@ def _import_on_main(
         on_done(", ".join(names))
     except Exception as e:  # noqa: BLE001
         logger.error("[WorldLabs] import failed: %s", e)
-        on_error(f"Failed to import world: {e}")
+        on_error(rpt_("Failed to import world: {error}").format(error=e))
     finally:
         _cleanup_temp_paths(ply_path, glb_path, pano_path)
 

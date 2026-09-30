@@ -13,6 +13,7 @@ Mirrors the material slot UI from Properties > Material panel.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.uv_editor.ui.base.panels import poll_header_panel
 
 
@@ -135,10 +136,10 @@ class MIXAR_UV_PT_material_slot(Panel):
             col.label(text="Material Properties", icon='PROPERTIES')
             col.separator(factor=0.5)
 
-            _row(col, "Viewport Color").prop(mat, "diffuse_color", text="")
-            _row(col, "Metallic").prop(mat, "metallic", text="")
-            _row(col, "Roughness").prop(mat, "roughness", text="")
-            _row(col, "Pass Index").prop(mat, "pass_index", text="")
+            _row(col, n_("Viewport Color")).prop(mat, "diffuse_color", text="")
+            _row(col, n_("Metallic")).prop(mat, "metallic", text="")
+            _row(col, n_("Roughness")).prop(mat, "roughness", text="")
+            _row(col, n_("Pass Index")).prop(mat, "pass_index", text="")
 
 
 classes = (

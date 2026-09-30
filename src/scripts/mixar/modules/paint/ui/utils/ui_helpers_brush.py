@@ -11,6 +11,7 @@ Active Tool and Workspace Settings panel layout.
 
 import bpy
 from bl_ui.properties_paint_common import BrushAssetShelf
+from mixar.modules.common.i18n import n_
 
 
 def _get_ui_state(context):
@@ -72,9 +73,9 @@ def draw_full_brush_properties(context, layout, layer):
     # ========== BRUSH ASSET ==========
     box = layout.box()
     header = box.row()
-    label = "Brush Asset"
+    label = n_("Brush Asset")
     if brush.has_unsaved_changes:
-        label = "Brush Asset (Unsaved)"
+        label = n_("Brush Asset (Unsaved)")
     header.label(text=label)
     header.menu("VIEW3D_MT_brush_context_menu", icon='DOWNARROW_HLT', text="")
 
@@ -153,7 +154,7 @@ def draw_full_brush_properties(context, layout, layer):
 
             # Randomize Color (collapsible)
             col.separator()
-            if _draw_collapsible_header(col, ui_state, 'expand_color_picker', "Randomize Color"):
+            if _draw_collapsible_header(col, ui_state, 'expand_color_picker', n_("Randomize Color")):
                 sub = col.column(align=True)
                 sub.active = brush.use_color_as_displacement if hasattr(brush, 'use_color_as_displacement') else True
                 if hasattr(brush, 'color_jitter_h'):
@@ -168,7 +169,7 @@ def draw_full_brush_properties(context, layout, layer):
 
         # Color Palette (collapsible)
         col.separator()
-        if _draw_collapsible_header(col, ui_state, 'expand_color_palette', "Color Palette"):
+        if _draw_collapsible_header(col, ui_state, 'expand_color_palette', n_("Color Palette")):
             sub = col.column()
             sub.template_ID(settings, "palette", new="palette.new")
             if settings.palette:
@@ -177,7 +178,7 @@ def draw_full_brush_properties(context, layout, layer):
         layout.separator()
 
     # ========== ADVANCED (collapsible) ==========
-    if _draw_collapsible_header(layout, ui_state, 'expand_brush_advanced', "Advanced"):
+    if _draw_collapsible_header(layout, ui_state, 'expand_brush_advanced', n_("Advanced")):
         box = layout.box()
         col = box.column()
         col.use_property_split = True
@@ -189,7 +190,7 @@ def draw_full_brush_properties(context, layout, layer):
     layout.separator()
 
     # ========== TEXTURE (collapsible) ==========
-    if _draw_collapsible_header(layout, ui_state, 'expand_brush_texture', "Texture"):
+    if _draw_collapsible_header(layout, ui_state, 'expand_brush_texture', n_("Texture")):
         box = layout.box()
         col = box.column()
         tex_slot = brush.texture_slot
@@ -201,7 +202,7 @@ def draw_full_brush_properties(context, layout, layer):
     layout.separator()
 
     # ========== TEXTURE MASK (collapsible) ==========
-    if _draw_collapsible_header(layout, ui_state, 'expand_brush_texture_mask', "Texture Mask"):
+    if _draw_collapsible_header(layout, ui_state, 'expand_brush_texture_mask', n_("Texture Mask")):
         box = layout.box()
         col = box.column()
         mask_tex_slot = brush.mask_texture_slot
@@ -213,7 +214,7 @@ def draw_full_brush_properties(context, layout, layer):
     layout.separator()
 
     # ========== STROKE (collapsible) ==========
-    if _draw_collapsible_header(layout, ui_state, 'expand_brush_stroke', "Stroke"):
+    if _draw_collapsible_header(layout, ui_state, 'expand_brush_stroke', n_("Stroke")):
         box = layout.box()
         col = box.column()
         col.use_property_split = True
@@ -225,7 +226,7 @@ def draw_full_brush_properties(context, layout, layer):
     layout.separator()
 
     # ========== FALLOFF (collapsible) ==========
-    if _draw_collapsible_header(layout, ui_state, 'expand_brush_falloff', "Falloff"):
+    if _draw_collapsible_header(layout, ui_state, 'expand_brush_falloff', n_("Falloff")):
         box = layout.box()
         col = box.column()
         row = col.row(align=True)

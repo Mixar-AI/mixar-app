@@ -32,6 +32,7 @@ import time
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 
 logger = get_logger(__name__)
 
@@ -279,7 +280,7 @@ def missing_result_failures(handle):
         unrendered = [label for label in labels if label not in rendered]
         if unrendered:
             failures.extend(
-                (label, "preview worker exited before rendering this asset")
+                (label, iface_("preview worker exited before rendering this asset"))
                 for label in unrendered[:missing]
             )
         else:
@@ -287,7 +288,8 @@ def missing_result_failures(handle):
             # so the checksum is never stamped over unrendered assets.
             failures.append((
                 "worker shard",
-                f"{missing} assets were not rendered (worker exited early)",
+                iface_("{count} assets were not rendered (worker exited early)").format(
+                    count=missing),
             ))
     return failures
 

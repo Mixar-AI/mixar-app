@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from mixar.modules.common.i18n import rpt_
 from .frame_math import effective_fps
 
 
@@ -22,7 +23,7 @@ def render_frame_bounds(frames) -> tuple[int, int]:
     """Return the first/last distinct frame, requiring an animatable span."""
     ordered = sorted({int(frame) for frame in frames})
     if len(ordered) < 2:
-        raise ValueError("Capture at least two keyframes to render a video")
+        raise ValueError(rpt_("Capture at least two keyframes to render a video"))
     return ordered[0], ordered[-1]
 
 

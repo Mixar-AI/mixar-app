@@ -187,12 +187,14 @@ class SessionManager:
         return scene is not None and getattr(scene, 'mixie_run_open', False) is True
 
     @staticmethod
-    def set_run(scene, run_id: str, open: bool) -> None:
+    def set_run(scene, run_id: str, open: bool, *, notify: bool = False) -> None:
         """Single writer of the run state. Must be called from the main thread.
 
         ``open=True`` records ``run_id`` and keeps the scene active for worker
         scripts even when its turn is IDLE; ``open=False`` closes it (the id
         is dropped — a closed run is never addressed again).
+        ``notify=True`` (the run finished) plays the completion sound; Stop,
+        cancel, New Chat and every other close stay silent.
         """
         if not scene or not hasattr(scene, 'mixie_run_open'):
             return
@@ -218,8 +220,9 @@ class SessionManager:
                 settle_running(scene=scene)
             except Exception:  # noqa: BLE001 — the panel never blocks the run
                 pass
-            from .completion_sound import play_completion_sound
-            play_completion_sound()
+            if notify:
+                from .completion_sound import play_completion_sound
+                play_completion_sound()
         if changed and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
                 f"RUN [{scene.name}]: {'open' if open else 'closed'} {run_id[:8]}"

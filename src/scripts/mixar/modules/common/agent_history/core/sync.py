@@ -5,14 +5,24 @@
 """Background archive transport. Never perform filesystem I/O on the WS/UI thread."""
 import errno
 import logging
+import re
 import threading
 import time
+
+from mixar.modules.common.i18n import n_
 
 from ..constants import BACKOFF_MAX_SECONDS, POLL_SECONDS, REPLY_WAIT_SECONDS, REQUEST_TIMEOUT
 from . import blobs, store
 
 # Retried automatically; a toast would only restate the connection indicator.
 TRANSIENT = ('archive_sync_timeout', 'archive_sync_unavailable')
+_CODE = re.compile(r'[a-z_]{1,64}')
+
+
+def _reason(exc):
+    """The store's fixed failure code; never exception text that could carry data."""
+    text = str(exc)
+    return text if _CODE.fullmatch(text) else type(exc).__name__
 
 
 class ArchiveSync:
@@ -32,25 +42,28 @@ class ArchiveSync:
     def stop(self):
         self.stop_event.set()
 
-    def _notice(self, code, level=logging.WARNING):
+    def _notice(self, code, level=logging.WARNING, reason=None):
         if code == self.last_error:
             return
         self.last_error = code
-        logging.getLogger(__name__).log(level, 'Agent archive: %s', code)
+        if reason:
+            logging.getLogger(__name__).log(level, 'Agent archive: %s (%s)', code, reason)
+        else:
+            logging.getLogger(__name__).log(level, 'Agent archive: %s', code)
         if code in TRANSIENT:
             return
         bodies = {
-            'archive_sync_rejected': 'The server rejected the history sync request. Update the app and backend, then reconnect.',
-            'archive_owner_changed': 'History sync stopped because the signed-in account changed. Reconnect to resume.',
-            'archive_gap': 'Some history is no longer available from the server. The missing range is marked in the archive.',
-            'archive_blocked': 'The server history buffer is full. Saved records are being acknowledged so sync can continue.',
-            'archive_disk_full': 'History could not be saved because the disk is full. Free disk space; saving will retry automatically.',
-            'archive_permission_denied': 'History could not be saved because folder access was denied. Check the app’s filesystem permissions.',
-            'archive_write_failed': 'History could not be saved locally. Existing records are preserved; saving will retry automatically.',
-            'archive_validation_failed': 'History failed an archive integrity or identity check. Existing records are preserved; the failed batch was not acknowledged.',
+            'archive_sync_rejected': n_('The server rejected the history sync request. Update the app and backend, then reconnect.'),
+            'archive_owner_changed': n_('History sync stopped because the signed-in account changed. Reconnect to resume.'),
+            'archive_gap': n_('Some history is no longer available from the server. The missing range is marked in the archive.'),
+            'archive_blocked': n_('The server history buffer is full. Saved records are being acknowledged so sync can continue.'),
+            'archive_disk_full': n_('History could not be saved because the disk is full. Free disk space; saving will retry automatically.'),
+            'archive_permission_denied': n_('History could not be saved because folder access was denied. Check the app’s filesystem permissions.'),
+            'archive_write_failed': n_('History could not be saved locally. Existing records are preserved; saving will retry automatically.'),
+            'archive_validation_failed': n_('History failed an archive integrity or identity check. Existing records are preserved; the failed batch was not acknowledged.'),
         }
         from mixar.modules.common.notifications import get_notification_store
-        get_notification_store().push('warning', 'Agent history needs attention',
+        get_notification_store().push('warning', n_('Agent history needs attention'),
             body=bodies.get(code, bodies['archive_write_failed']))
 
     def _capture_scene_ids(self):
@@ -194,9 +207,9 @@ class ArchiveSync:
                                 'archive_permission_denied' if exc.errno in (errno.EACCES, errno.EPERM) else
                                 'archive_write_failed')
                         self._notice(code)
-                    except ValueError:
+                    except ValueError as exc:
                         healthy = False
-                        self._notice('archive_validation_failed')
+                        self._notice('archive_validation_failed', reason=_reason(exc))
                     except Exception:
                         # No path, payload or exception text in logs or RPC replies.
                         healthy = False

@@ -10,6 +10,7 @@ Validates face count and file size, then calls ``enqueue_generation(kind="glb")`
 import base64 as _b64
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.common.job_queue import enqueue_generation
 from mixar.modules.common.job_queue.constants import FEATURE_HUNYUAN_PART
 from ..constants import LIMITS, MAX_FILE_SIZE_PART
@@ -47,15 +48,14 @@ def enqueue_part_job(*, context, operator=None):
     max_faces = LIMITS['PART']['max_faces']
     face_count = get_total_face_count(context)
     if face_count > max_faces:
-        raise ValueError(
-            f"Selected mesh has {face_count:,} faces (max {max_faces:,})",
-        )
+        raise ValueError(rpt_("Selected mesh has {count:,} faces (max {max_faces:,})").format(
+            count=face_count, max_faces=max_faces))
 
     part = context.scene.hunyuan.part
     file_bytes, filename = export_selected_mesh(context, part.export_format)
     if len(file_bytes) > MAX_FILE_SIZE_PART:
         size_mb = len(file_bytes) / (1024 * 1024)
-        raise ValueError(f"Exported file is {size_mb:.1f}MB (max 100MB)")
+        raise ValueError(rpt_("Exported file is {size_mb:.1f}MB (max 100MB)").format(size_mb=size_mb))
 
     obj_name = next(
         (o.name for o in context.selected_objects if o.type == 'MESH'),

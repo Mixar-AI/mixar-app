@@ -146,7 +146,7 @@ def test_agent_action_reads_send_not_generate():
     run); Stop only while busy with an empty composer — `stop_visible` is
     derived once in agent_ui_state.cc and read by both the paint and the
     button row."""
-    assert 'label_centre(state->stop_visible ? "Stop" : "Send"' in CONTROLS_PAINT_CC
+    assert 'label_centre(state->stop_visible ? IFACE_("Stop") : IFACE_("Send")' in CONTROLS_PAINT_CC
     state_cc = (BUBBLE / "agent_ui_state.cc").read_text(encoding="utf-8")
     assert "r_state->stop_visible = r_state->status_busy && r_state->prompt_empty;" in state_cc
     tools = _function_body(BUBBLE_CC, "static void agent_bubble_island_controls_bottom(")
@@ -155,7 +155,7 @@ def test_agent_action_reads_send_not_generate():
     assert '"mixie_chat.send_message"' in references
     send = _function_body(references, "void agent_bubble_send_button(")
     assert 'state.stop_visible ? "mixie_chat.abort_session" : "mixie_chat.send_message"' in send
-    assert 'state.stop_visible ? "Stop the running turn" : "Send"' in send
+    assert 'state.stop_visible ? TIP_("Stop the running turn") : TIP_("Send")' in send
     column = _function_body(references, "void agent_bubble_references_draw(")
     assert "agent_bubble_send_button(C, region, block, layout, state)" in column
     assert '"Generate"' not in send

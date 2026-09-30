@@ -11,6 +11,7 @@
 #include <algorithm>
 
 #include "BLF_api.hh"
+#include "BLT_translation.hh"
 
 #include "BKE_context.hh"
 #include "BKE_image.hh"
@@ -407,9 +408,9 @@ void mixie_draw_sam3d_mode(const bContext *C, ARegion *region)
         BLF_size(font_id, 14.0f);
         BLF_color4f(font_id, 0.5f, 0.5f, 0.5f, 1.0f);
         BLF_position(font_id, PREVIEW_PADDING, PREVIEW_HEIGHT / 2.0f, 0);
-        BLF_draw(font_id,
-                 "No segmented images yet. Draw a box and segment to see results here.",
-                 75);
+        const char *empty_text = IFACE_(
+            "No segmented images yet. Draw a box and segment to see results here.");
+        BLF_draw(font_id, empty_text, strlen(empty_text));
       }
     }
   }

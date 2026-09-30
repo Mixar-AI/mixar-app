@@ -24,6 +24,8 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from mixar.modules.common.i18n import n_, rpt_
+
 from ..constants import (
     PROXY_ENV_VARS,
     FAILURE_DNS,
@@ -45,14 +47,16 @@ class NetworkFailure:
 
     kind: str
     support_code: str
-    message: str  # short, user-facing; safe to show in a narrow panel
+    message: str  # short, user-facing (translated); safe to show in a narrow panel
     hint: str  # what IT / support should check
     detail: str  # root exception summary for logs (never shown in UI)
     host: str = ""
 
     @property
     def user_text(self) -> str:
-        return f"{self.message} ({self.support_code})"
+        # The support code stays verbatim in every language: it is what a
+        # user quotes to support.
+        return rpt_("{message} ({code})").format(message=self.message, code=self.support_code)
 
 
 # Signatures are matched against the lowercase concatenation of every
@@ -158,7 +162,7 @@ _SIGNATURES = (
 
 _MESSAGES = {
     FAILURE_TLS_VERIFY: (
-        "Certificate verification failed. Your network may be inspecting HTTPS traffic.",
+        n_("Certificate verification failed. Your network may be inspecting HTTPS traffic."),
         "A TLS-inspecting proxy or firewall is presenting a certificate Mixar does not "
         "trust. Copy the organization's root CA file (.crt, .cer or .pem) into "
         "{certs_dir} and restart Mixar, or install it in the OS certificate store. "
@@ -168,44 +172,44 @@ _MESSAGES = {
         "from TLS inspection.",
     ),
     FAILURE_TLS_HANDSHAKE: (
-        "Secure connection could not be established.",
+        n_("Secure connection could not be established."),
         "The TLS handshake with {host} failed before certificate verification. "
         "'WRONG_VERSION_NUMBER' usually means a plain-HTTP proxy is answering an HTTPS "
         "request: check the proxy URL scheme and port. Otherwise a middlebox is "
         "terminating the connection.",
     ),
     FAILURE_PROXY: (
-        "Proxy connection failed.",
+        n_("Proxy connection failed."),
         "The configured proxy rejected or could not tunnel the connection to {host}. "
         "Check HTTPS_PROXY / MIXAR_PROXY_URL (credentials belong in the URL). PAC files "
         "are not supported; set the proxy URL explicitly.",
     ),
     FAILURE_DNS: (
-        "Could not resolve the server address.",
+        n_("Could not resolve the server address."),
         "DNS lookup for {host} failed. Check DNS, split-tunnel VPN rules, or whether "
         "the domain needs to be allowlisted on an internal resolver.",
     ),
     FAILURE_TIMEOUT: (
-        "Connection timed out.",
+        n_("Connection timed out."),
         "No response from {host}. A firewall may be silently dropping traffic on "
         "port 443, or a proxy is required but not configured.",
     ),
     FAILURE_REFUSED: (
-        "Connection refused.",
+        n_("Connection refused."),
         "Something on the path to {host} actively rejected the connection: usually a "
         "proxy or firewall rule, or a wrong proxy port.",
     ),
     FAILURE_RESET: (
-        "Connection was closed by the network.",
+        n_("Connection was closed by the network."),
         "The connection to {host} was reset mid-flight, which is typical of a firewall "
         "or TLS-inspecting proxy that blocks this destination.",
     ),
     FAILURE_UNREACHABLE: (
-        "Network unreachable.",
+        n_("Network unreachable."),
         "No route to {host}. Check connectivity and VPN state.",
     ),
     FAILURE_UNKNOWN: (
-        "Network error: {short}",
+        n_("Network error: {short}"),
         "Unrecognized failure reaching {host}. See the log detail.",
     ),
 }
@@ -307,7 +311,7 @@ def classify_network_error(
         kind = FAILURE_PROXY
 
     message, hint = _MESSAGES[kind]
-    message = message.format(short=_short(exc))
+    message = rpt_(message).format(short=_short(exc))
     hint = hint.format(host=host, certs_dir=_certs_dir_label())
     if proxy and kind not in (FAILURE_PROXY, FAILURE_UNKNOWN):
         from .proxy import redact_proxy_url

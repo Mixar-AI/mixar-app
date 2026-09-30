@@ -26,6 +26,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "RNA_access.hh"
 
 #include "agent_ui_generations_intern.hh"
@@ -138,19 +140,19 @@ void gen_format_age(const double epoch, char r_out[32])
   }
   const double delta = double(time(nullptr)) - epoch;
   if (delta < 60.0) {
-    BLI_strncpy(r_out, "just now", 32);
+    BLI_strncpy(r_out, IFACE_("just now"), 32);
   }
   else if (delta < 3600.0) {
-    BLI_snprintf(r_out, 32, "%dm ago", int(delta / 60.0));
+    BLI_snprintf(r_out, 32, IFACE_("%dm ago"), int(delta / 60.0));
   }
   else if (delta < 86400.0) {
-    BLI_snprintf(r_out, 32, "%dh ago", int(delta / 3600.0));
+    BLI_snprintf(r_out, 32, IFACE_("%dh ago"), int(delta / 3600.0));
   }
   else if (delta < 86400.0 * 7.0) {
-    BLI_snprintf(r_out, 32, "%dd ago", int(delta / 86400.0));
+    BLI_snprintf(r_out, 32, IFACE_("%dd ago"), int(delta / 86400.0));
   }
   else {
-    BLI_snprintf(r_out, 32, "%dw ago", int(delta / (86400.0 * 7.0)));
+    BLI_snprintf(r_out, 32, IFACE_("%dw ago"), int(delta / (86400.0 * 7.0)));
   }
 }
 

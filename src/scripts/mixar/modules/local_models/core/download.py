@@ -39,6 +39,7 @@ import urllib.parse
 import urllib.request
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ..constants import (
     DOWNLOAD_CHUNK_BYTES,
@@ -65,7 +66,7 @@ class DownloadError(Exception):
 
     def __init__(self, message, user_message="", retryable=False):
         super().__init__(message)
-        self.user_message = user_message or "Download failed — please retry"
+        self.user_message = user_message or n_("Download failed — please retry")
         self.retryable = retryable
 
 
@@ -73,7 +74,7 @@ class DownloadCancelled(DownloadError):
     """``should_cancel`` returned True."""
 
     def __init__(self, message="Download cancelled"):
-        super().__init__(message, user_message="Cancelled")
+        super().__init__(message, user_message=n_("Cancelled"))
 
 
 def default_deadline_s(expected_size):
@@ -95,7 +96,7 @@ def _deadline_error(transferred, total):
     )
     return DownloadError(
         f"Download exceeded its total time limit ({detail} transferred)",
-        "Download timed out — please retry",
+        n_("Download timed out — please retry"),
     )
 
 
@@ -107,7 +108,7 @@ def _classify_http_error(exc):
         )
     return DownloadError(
         f"Download host returned HTTP {code}",
-        "Download failed — the file is not available",
+        n_("Download failed — the file is not available"),
     )
 
 
@@ -157,13 +158,13 @@ def _open(url, offset, deadline):
     except urllib.error.URLError as e:
         raise DownloadError(
             f"Could not reach the download host: {e.reason}",
-            "Could not download — check your internet connection",
+            n_("Could not download — check your internet connection"),
             retryable=True,
         ) from e
     except (TimeoutError, socket.timeout, http.client.HTTPException, OSError) as e:
         raise DownloadError(
             f"Connection to the download host failed: {e}",
-            "Could not download — check your internet connection",
+            n_("Could not download — check your internet connection"),
             retryable=True,
         ) from e
 
@@ -223,7 +224,7 @@ def _attempt(url, part_path, state, deadline, attempt, expected_size,
                     state["offset"] += written
                     raise DownloadError(
                         f"Host stopped responding after {written} bytes: {e}",
-                        "Download stalled — please retry",
+                        n_("Download stalled — please retry"),
                         retryable=True,
                     ) from e
                 except (http.client.HTTPException, OSError) as e:
@@ -254,7 +255,7 @@ def _attempt(url, part_path, state, deadline, attempt, expected_size,
         state["offset"] += written  # keep what we got; retry resumes here
         raise DownloadError(
             f"Incomplete body: {written} of {content_length} bytes",
-            "Download was incomplete — please retry",
+            n_("Download was incomplete — please retry"),
             retryable=True,
         )
     state["offset"] += written
@@ -291,7 +292,7 @@ def download_file(url, dest_path, *, expected_sha256=None, expected_size=None,
     if scheme != "https":
         raise DownloadError(
             f"Refusing non-https download URL (scheme={scheme!r})",
-            "Download failed — invalid download source",
+            n_("Download failed — invalid download source"),
         )
 
     dest_dir = os.path.dirname(dest_path)
@@ -354,7 +355,7 @@ def download_file(url, dest_path, *, expected_sha256=None, expected_size=None,
         _remove(part_path)
         raise DownloadError(
             f"Size mismatch: got {final_size}, expected {expected_size}",
-            "Downloaded file failed verification — please retry",
+            n_("Downloaded file failed verification — please retry"),
         )
     if expected_sha256:
         digest = state["hasher"].hexdigest()
@@ -362,7 +363,7 @@ def download_file(url, dest_path, *, expected_sha256=None, expected_size=None,
             _remove(part_path)
             raise DownloadError(
                 f"SHA-256 mismatch: got {digest}, expected {expected_sha256}",
-                "Downloaded file failed verification — please retry",
+                n_("Downloaded file failed verification — please retry"),
             )
     os.replace(part_path, dest_path)
     return dest_path

@@ -287,7 +287,7 @@ def test_frame_fields_yield_to_the_transport():
 
 
 def test_the_aerial_hint_is_bound():
-    assert '{0.0f, {"O"}, 1, "Aerial view", false}' in TOP
+    assert '{0.0f, {"O"}, 1, N_("Aerial view"), false}' in TOP
     assert '"mixar.director_aerial",' in KEYMAP
     assert "type='O'," in KEYMAP
     assert "director_aerial" in KEYMAP.split("_OPERATOR_NAMES")[1]
@@ -383,6 +383,16 @@ def test_mode_slider_uses_final_window_geometry():
     assert "_centring_pad_px" not in source
     assert "MIXAR_MT_engine_workspaces" in source
     assert "MIXAR_PT_scene_controls" in source
+
+
+def test_mode_slider_centring_skips_popups_opened_from_the_topbar():
+    # The splash opened from the Mixar icon keeps the topbar as its context
+    # area; centring its Zen/Engine buttons moved them out of the popup and
+    # left "Choose Your Mode" empty. Only the topbar's own header centres.
+    body = TOPBAR[TOPBAR.index("void mixar_topbar_center_mode_slider("):]
+    guard = body[: body.index("Button *left")]
+    assert "region->regiontype != RGN_TYPE_HEADER" in guard
+    assert "return;" in guard
 
 
 # -------------------------------------------------------------------------

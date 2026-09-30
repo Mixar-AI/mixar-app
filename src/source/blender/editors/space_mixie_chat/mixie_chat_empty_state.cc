@@ -21,6 +21,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "ED_screen.hh"
 
 #include "DNA_screen_types.h"
@@ -43,13 +45,14 @@ namespace blender {
  * \{ */
 
 /**
- * Prompt texts shown when chat is empty.
+ * Prompt texts shown when chat is empty. Untranslated msgids: translated
+ * where drawn/measured, and where a click inserts them into the composer.
  */
 static const char *g_empty_prompt_texts[CHAT_EMPTY_PROMPT_COUNT] = {
-    "Tell me about the features in Mixar",
-    "Generate a futuristic sci-fi character concept",
-    "Place and pack islands across 2 UDIMs",
-    "Generate a 3D model of the image selected in moodboard",
+    N_("Tell me about the features in Mixar"),
+    N_("Generate a futuristic sci-fi character concept"),
+    N_("Place and pack islands across 2 UDIMs"),
+    N_("Generate a 3D model of the image selected in moodboard"),
 };
 
 /**
@@ -131,7 +134,7 @@ void mixie_chat_draw_empty_state(const bContext *C,
   for (int i = 0; i < CHAT_EMPTY_PROMPT_COUNT; i++) {
     float text_width, text_height;
     float content_width = max_bubble_width - bubble_padding_h * 2.0f;
-    chat_ui_calc_text_bounds(g_empty_prompt_texts[i], content_width, metrics.font_size, 0,
+    chat_ui_calc_text_bounds(IFACE_(g_empty_prompt_texts[i]), content_width, metrics.font_size, 0,
                              &text_width, &text_height);
     bubble_heights[i] = text_height + bubble_padding_v * 2.0f;
     bubble_widths[i] = text_width + bubble_padding_h * 2.0f + 4.0f;
@@ -153,7 +156,7 @@ void mixie_chat_draw_empty_state(const bContext *C,
   float uniform_bubble_width = max_bubble_width_found;
 
   /* Heading text */
-  const char *heading_text = "Hey friend! How can I help today?";
+  const char *heading_text = IFACE_("Hey friend! How can I help today?");
   const float heading_spacing = 24.0f * metrics.scale_factor;
   int heading_font_size = int(float(metrics.font_size) * 1.2f);
 
@@ -266,7 +269,7 @@ void mixie_chat_draw_empty_state(const bContext *C,
     text_rect.xmax = bubble_x + uniform_bubble_width - bubble_padding_h;
     text_rect.ymin = bubble_y + bubble_padding_v - b_yoff;
     text_rect.ymax = start_y - bubble_padding_v - b_yoff;
-    chat_ui_draw_text_wrapped(g_empty_prompt_texts[i], &text_rect, metrics.font_size, 0,
+    chat_ui_draw_text_wrapped(IFACE_(g_empty_prompt_texts[i]), &text_rect, metrics.font_size, 0,
                               anim_text_col);
 
     start_y = bubble_y - bubble_spacing;

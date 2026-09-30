@@ -5,6 +5,7 @@
 """Small main-thread helpers shared by the training operators."""
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 
 logger = get_logger(__name__)
 
@@ -32,7 +33,7 @@ def set_failures(state, failures):
     state.failed_count = len(failures)
     lines = [f"{label} — {reason}" for label, reason in failures[:10]]
     if len(failures) > 10:
-        lines.append(f"…and {len(failures) - 10} more (see console)")
+        lines.append(iface_("…and {count} more (see console)").format(count=len(failures) - 10))
     state.failed_list = "\n".join(lines)
 
 

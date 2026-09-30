@@ -33,6 +33,8 @@ import re
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import iface_, n_
+
 
 # ---------------------------------------------------------------------------
 # Markdown stripping (small, on-purpose — we just clean the obvious symbols).
@@ -116,13 +118,13 @@ def _draw_feedback_votes(parent_layout, msg) -> None:
         editor.enabled = not sending
         editor.prop(msg, "feedback_comment", text="")
         actions = editor.row(align=True)
-        for operator, label in (("submit_feedback_comment", "Save"),
-                                ("cancel_feedback_comment", "Cancel")):
+        for operator, label in (("submit_feedback_comment", n_("Save")),
+                                ("cancel_feedback_comment", n_("Cancel"))):
             op = actions.operator("mixie_chat." + operator, text=label)
             op.bubble_id = bubble_id
     elif getattr(msg, 'feedback_submitted_comment', ''):
         for line in _wrap_lines(msg.feedback_submitted_comment, _WRAP_WIDTH):
-            parent_layout.label(text=line)
+            parent_layout.label(text=line, translate=False)
 
 
 def _draw_message(parent_layout, sender: str, wrapped: list[str]) -> None:
@@ -145,7 +147,7 @@ def _draw_message(parent_layout, sender: str, wrapped: list[str]) -> None:
     for line in wrapped:
         row = body.row()
         row.alignment = 'RIGHT' if is_user else 'LEFT'
-        row.label(text=line)
+        row.label(text=line, translate=False)
 
 
 # ---------------------------------------------------------------------------
@@ -236,16 +238,17 @@ class AGENT_BUBBLE_PT_history(Panel):
                 rendered += 1
             except Exception as e:  # noqa: BLE001 — never blank the whole panel
                 history.label(
-                    text=f"(failed to render message: {e})",
-                    icon='ERROR',
+                    text=iface_("(failed to render message: {error})").format(error=e),
+                    icon='ERROR', translate=False,
                 )
 
         if rendered == 0:
             # Iteration produced nothing visible — surface the count so
             # we can diagnose rather than show a silent empty body.
             layout.label(
-                text=f"({len(messages)} messages but none rendered)",
-                icon='SORTTIME',
+                text=iface_("({count} messages but none rendered)").format(
+                    count=len(messages)),
+                icon='SORTTIME', translate=False,
             )
 
 

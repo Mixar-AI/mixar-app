@@ -8,6 +8,9 @@ Sheet to 3D template builder all key on these names, so they live in one
 bpy-free place.
 """
 
+from mixar.modules.common.i18n import n_
+
+
 BODY_SOCKET = "body"
 PART_SOCKET_COUNT = 8
 PART_GROUP = "parts"
@@ -25,25 +28,25 @@ def param_name(kind: str, index: int) -> str:
 
 
 SLOT_CHOICES = (
-    ("AUTO", "Auto (from name)"),
-    ("HAND_R", "Right hand"),
-    ("HAND_L", "Left hand"),
-    ("FOREARM_R", "Right forearm"),
-    ("FOREARM_L", "Left forearm"),
-    ("BACK", "Back"),
-    ("HIP_R", "Right hip"),
-    ("HIP_L", "Left hip"),
-    ("HEAD_FRONT", "Head front"),
-    ("HEAD_TOP", "Head top"),
-    ("FLOAT_R", "Float by right hand"),
-    ("FLOAT_L", "Float by left hand"),
+    ("AUTO", n_("Auto (from name)")),
+    ("HAND_R", n_("Right hand")),
+    ("HAND_L", n_("Left hand")),
+    ("FOREARM_R", n_("Right forearm")),
+    ("FOREARM_L", n_("Left forearm")),
+    ("BACK", n_("Back")),
+    ("HIP_R", n_("Right hip")),
+    ("HIP_L", n_("Left hip")),
+    ("HEAD_FRONT", n_("Head front")),
+    ("HEAD_TOP", n_("Head top")),
+    ("FLOAT_R", n_("Float by right hand")),
+    ("FLOAT_L", n_("Float by left hand")),
 )
 HOLD_CHOICES = (
-    ("AUTO", "Auto"),
-    ("POINT", "Point forward"),
-    ("UPRIGHT", "Upright"),
-    ("FACE_OUT", "Face outward"),
-    ("AS_IS", "As generated"),
+    ("AUTO", n_("Auto")),
+    ("POINT", n_("Point forward")),
+    ("UPRIGHT", n_("Upright")),
+    ("FACE_OUT", n_("Face outward")),
+    ("AS_IS", n_("As generated")),
 )
 HAND_SLOTS = frozenset({"HAND_R", "HAND_L"})
 FOREARM_SLOTS = frozenset({"FOREARM_R", "FOREARM_L"})

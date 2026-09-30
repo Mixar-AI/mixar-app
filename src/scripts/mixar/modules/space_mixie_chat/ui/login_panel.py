@@ -51,12 +51,12 @@ class MIXIE_CHAT_PT_login(Panel):
             line = ""
             for word in words:
                 if len(line) + len(word) + 1 > 30:
-                    error_col.label(text=line)
+                    error_col.label(text=line, translate=False)
                     line = word
                 else:
                     line = f"{line} {word}".strip()
             if line:
-                error_col.label(text=line)
+                error_col.label(text=line, translate=False)
             col.separator()
 
         col.label(text="Sign in with your Mixar account", icon='USER')

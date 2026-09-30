@@ -22,6 +22,7 @@ from mixar.modules.common.analytics.export_events import (
     normalized_settings,
     scene_counts,
 )
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -109,13 +110,13 @@ class MExportFbx(bpy.types.Operator):
                 raise RuntimeError(f"exporter returned {sorted(status)}")
         except Exception as e:
             logger.error("FBX export failed: %s", e)
-            self.report({'ERROR'}, f"Export failed: {e}")
+            self.report({'ERROR'}, rpt_("Export failed: {error}").format(error=e))
             self._revert(context)
             _capture_fbx_export(context, fs, False, self.filepath)
             return {'CANCELLED'}
 
         self._revert(context)
-        self.report({'INFO'}, f"Exported FBX to {self.filepath}")
+        self.report({'INFO'}, rpt_("Exported FBX to {path}").format(path=self.filepath))
         _capture_fbx_export(context, fs, True, self.filepath)
         return {'FINISHED'}
 

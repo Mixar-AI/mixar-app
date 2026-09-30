@@ -15,6 +15,7 @@ from bpy.types import Operator
 
 from ...core.lookdev_utils import prepare_depth_render
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -126,8 +127,8 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
 
         # Render depth map from scene
         fast_mode = props.fast_mode if props else False
-        mode_str = " (fast mode)" if fast_mode else ""
-        self.report({'INFO'}, f"Rendering depth map from scene{mode_str}...")
+        self.report({'INFO'}, rpt_("Rendering depth map from scene (fast mode)...") if fast_mode
+                    else rpt_("Rendering depth map from scene..."))
         depth_filepath, success = prepare_depth_render(fast_mode=fast_mode)
 
         if not success or not depth_filepath:
@@ -140,7 +141,7 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
             from mixar.modules.common.utils.image_utils import compress_file_for_service
             depth_bytes = compress_file_for_service(depth_filepath, "lookdev")
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to read depth map: {e}")
+            self.report({'ERROR'}, rpt_("Failed to read depth map: {error}").format(error=e))
             return {'CANCELLED'}
 
         # Clear previous error
@@ -195,7 +196,7 @@ class MIXIE_OT_lookdev_generate_from_scene(Operator):
             payload=payload,
             label=f"Lookdev: {stripped_prompt[:40]}",
             display_label=stripped_prompt[:40],
-            fail_message="Lookdev generation failed",
+            fail_message=n_("Lookdev generation failed"),
             name_prefix="lookdev",
             prompt_text=stripped_prompt,
             undo_message="Blockout to Render",

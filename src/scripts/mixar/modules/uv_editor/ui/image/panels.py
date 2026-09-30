@@ -19,6 +19,7 @@ import sys
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.uv_editor.ui.base.panels import poll_header_panel
 
 
@@ -169,7 +170,7 @@ class MIXAR_UV_PT_image(Panel):
     # ---------- Transform (flip + rotate + resize) ----------
 
     def _draw_transform_section(self, layout, context):
-        col = _section(layout, "Transform", icon='ORIENTATION_GLOBAL')
+        col = _section(layout, n_("Transform"), icon='ORIENTATION_GLOBAL')
 
         # Flip Horizontal + Flip Vertical on one row.
         row = col.row(align=True)
@@ -212,7 +213,7 @@ class MIXAR_UV_PT_image(Panel):
     # ---------- Color (invert + palette) ----------
 
     def _draw_color_section(self, layout):
-        col = _section(layout, "Color", icon='IMAGE_RGB')
+        col = _section(layout, n_("Color"), icon='IMAGE_RGB')
 
         row = col.row(align=True)
         row.scale_y = 1.3

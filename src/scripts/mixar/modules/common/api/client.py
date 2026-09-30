@@ -200,6 +200,14 @@ class HTTPClient:
         except Exception:
             pass
 
+        # The interface language: the backend localizes the text it serves
+        # (generation catalog labels) and the agent's fallback reply language.
+        try:
+            from mixar.modules.common.i18n import ui_locale
+            headers["X-Mixar-Locale"] = ui_locale()
+        except Exception:
+            pass
+
         return headers
 
     def _build_url(self, endpoint: str) -> str:

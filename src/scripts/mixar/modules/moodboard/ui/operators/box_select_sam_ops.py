@@ -16,6 +16,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -193,7 +194,7 @@ def _perform_box_segmentation(target_idx, x1, y1, x2, y2, _retry=False):
         if success and mask_bytes:
             _create_segment_from_mask(target_idx, mask_bytes, "Box Segment")
         else:
-            error_msg = message or "Unknown error"
+            error_msg = message or rpt_("Unknown error")
             if error_msg == "expired" and not _retry:
                 logger.error("[BoxSelectSAM] Job expired, re-uploading and retrying...")
                 _upload_and_retry_box(target_idx, x1, y1, x2, y2)

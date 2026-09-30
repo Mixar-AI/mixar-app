@@ -245,7 +245,7 @@ def test_painters_honour_the_fitted_forms():
 
 def test_capturing_is_the_recorders_listening_state():
     """C++ compares the status string; the producer must keep that literal."""
-    assert "s.state = 'Listening'" in VOICE_PY
+    assert "s.state = n_('Listening')" in VOICE_PY
     assert 'STREQ(r_state->voice_status, "Listening")' in STATE_CC
     assert "bool voice_capturing;" in DRAW_HH
     assert '"mixie_chat_voice_level"' in STATE_CC
@@ -253,7 +253,7 @@ def test_capturing_is_the_recorders_listening_state():
 
 def test_voice_chip_reads_stop_with_a_stop_square_and_the_live_trace():
     body = _function_body(VOICE_PAINT_CC, "void agent_ui_draw_voice_chip(")
-    assert 'capturing ? "Stop"' in body
+    assert 'capturing ? IFACE_("Stop")' in body
     assert "agent_ui_draw_stop_glyph(icon, color)" in body
     assert "agent_ui_icon_draw(AGENT_ICON_MIC" in body
     assert "agent_ui_draw_voice_wave(wave, now, level, color)" in body

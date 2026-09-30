@@ -34,6 +34,7 @@ from mixar.modules.asset_search.core.train_api import (
     _read_batch_files,
     train_client,
 )
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -225,11 +226,12 @@ def post_stream(stream, mode, removed_assets, operator):
                 stream.abort()
                 operator._bg_result = {
                     "success": False,
-                    "message": (
-                        f"Batch {sent + 1} failed ({resp.status_code}): {msg} — "
-                        f"{total_embedded} assets were embedded before the "
+                    "message": rpt_(
+                        "Batch {batch} failed ({status}): {error} — "
+                        "{count} assets were embedded before the "
                         "failure and are saved; run Train again to continue"
-                    ),
+                    ).format(batch=sent + 1, status=resp.status_code, error=msg,
+                             count=total_embedded),
                     "embedded": total_embedded,
                 }
                 return
@@ -260,24 +262,25 @@ def post_stream(stream, mode, removed_assets, operator):
                 if not resp.success:
                     operator._bg_result = {
                         "success": False,
-                        "message": resp.message or f"Server returned {resp.status_code}",
+                        "message": resp.message or rpt_("Server returned {status}").format(
+                            status=resp.status_code),
                     }
                     return
                 operator._upload_done = 1
                 operator._bg_result = {
                     "success": True,
-                    "message": f"{len(removed_assets)} removed",
+                    "message": rpt_("{count} removed").format(count=len(removed_assets)),
                     "embedded": 0,
                 }
                 return
             operator._bg_result = {
-                "success": True, "message": "Nothing to upload", "embedded": 0,
+                "success": True, "message": n_("Nothing to upload"), "embedded": 0,
             }
             return
 
         operator._bg_result = {
             "success": True,
-            "message": f"{total_embedded} assets embedded",
+            "message": rpt_("{count} assets embedded").format(count=total_embedded),
             "embedded": total_embedded,
         }
     except Exception as exc:  # noqa: BLE001 — the modal must always finish
@@ -285,6 +288,6 @@ def post_stream(stream, mode, removed_assets, operator):
         stream.abort()
         operator._bg_result = {
             "success": False,
-            "message": f"Upload failed: {exc}",
+            "message": rpt_("Upload failed: {error}").format(error=exc),
             "embedded": total_embedded,
         }

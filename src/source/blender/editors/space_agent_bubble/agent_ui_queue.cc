@@ -32,6 +32,7 @@
 #include "BLI_string.h"
 #include "BLI_time.h"
 #include "BLI_utildefines.h"
+#include "BLT_translation.hh"
 
 #include "BKE_context.hh"
 
@@ -161,9 +162,10 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
     /* Say what the tab is for, not just that it is empty. */
     const float cx = (panel.xmin + panel.xmax) * 0.5f;
     const float cy = (panel.ymin + panel.ymax) * 0.5f;
-    ui::mixar_label_center("No generations yet", cx, cy + title_style.size * 0.8f, title_style, col_text);
+    ui::mixar_label_center(
+        IFACE_("No generations yet"), cx, cy + title_style.size * 0.8f, title_style, col_text);
     const std::string sub = ui::mixar_fit_text(
-        "Image, 3D, video and splat jobs show up here with their progress and any errors",
+        IFACE_("Image, 3D, video and splat jobs show up here with their progress and any errors"),
         list_right - list_left,
         meta_style);
     ui::mixar_label_center(sub.c_str(), cx, cy - meta_style.size * 0.9f, meta_style, col_dim);
@@ -176,14 +178,15 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
    * whether anything needs attention. Zero buckets are left out. */
   const bool any_terminal = data.any_terminal;
   {
+    /* Count templates, translated per draw (never keep the pointer). */
     const struct {
       int count;
       const char *word;
       const float *color;
-    } buckets[] = {{data.running, "running", col_accent},
-                   {data.pending, "queued", col_pending},
-                   {data.done, "done", col_dim},
-                   {data.failed, "failed", col_failed}};
+    } buckets[] = {{data.running, N_("%d running"), col_accent},
+                   {data.pending, N_("%d queued"), col_pending},
+                   {data.done, N_("%d done"), col_dim},
+                   {data.failed, N_("%d failed"), col_failed}};
     const float cy = y_top - header_h * 0.5f;
     float x = list_left;
     bool first = true;
@@ -191,8 +194,10 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
       if (bucket.count <= 0) {
         continue;
       }
-      char part[48];
-      SNPRINTF(part, "%s%d %s", first ? "" : " \xC2\xB7 ", bucket.count, bucket.word);
+      char count_text[40];
+      SNPRINTF(count_text, IFACE_(bucket.word), bucket.count);
+      char part[64];
+      SNPRINTF(part, "%s%s", first ? "" : " \xC2\xB7 ", count_text);
       ui::mixar_label_left(part, x, cy, meta_style, bucket.color);
       x += ui::mixar_text_width(part, meta_style);
       first = false;
@@ -207,17 +212,18 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   /* Clear finished. */
   if (any_terminal) {
     const float cy = panel.ymax - pad - header_h * 0.5f;
-    const float w = pane_action_chip_w("Clear finished", false, u);
+    const char *clear_label = IFACE_("Clear finished");
+    const float w = pane_action_chip_w(clear_label, false, u);
     ui::Button *clear = uiDefButO(block,
                                   ui::ButtonType::But,
                                   "mixie.queue_clear_all_completed",
                                   blender::wm::OpCallContext::InvokeDefault,
-                                  "Clear finished",
+                                  clear_label,
                                   int(list_right - w),
                                   int(cy - ui::mixar_tokens::control_height * u * 0.5f),
                                   short(w),
                                   short(ui::mixar_tokens::control_height * u),
-                                  "Remove all finished jobs from the queue");
+                                  TIP_("Remove all finished jobs from the queue"));
     ui::mixar_style_button(clear, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
   }
 
@@ -239,7 +245,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                   int(row_bottom),
                                   short(cancel_w),
                                   short(row_h),
-                                  "Cancel this job");
+                                  TIP_("Cancel this job"));
       ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Ghost, u, agent_ui_text_unit());
       if (but) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
@@ -260,7 +266,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                 int(row_bottom),
                                 short(list_right - cancel_w - list_left),
                                 short(row_h),
-                                "Select this job");
+                                TIP_("Select this job"));
     ui::mixar_style_button(sel, ui::MixarComponent::Surface, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
     ui::mixar_button_lit_set(sel, rows[i].mirror_index == active_index);
     /* A failed row's tooltip is its whole explanation; others say what the
@@ -287,7 +293,7 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   }
 
   if (data.total > shown && shown > 0) {
-    const char *labels[] = {"First", "Previous", "Next", "Last"};
+    const char *labels[] = {N_("First"), N_("Previous"), N_("Next"), N_("Last")};
     const Navigation actions[] = {FIRST, PAGE, PAGE, LAST};
     const float button_w = 100.0f * u;
     const float gap = 8.0f * u;
@@ -297,12 +303,12 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                      ui::ButtonType::But,
                                      "mixar.queue_navigate",
                                      wm::OpCallContext::InvokeDefault,
-                                     labels[i],
+                                     IFACE_(labels[i]),
                                      int(x),
                                      int(metrics.footer.ymin),
                                      short(button_w),
                                      short(ui::mixar_tokens::control_height * u),
-                                     "Browse queue jobs");
+                                     TIP_("Browse queue jobs"));
       ui::mixar_style_button(button, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
       if (button) {
         PointerRNA *ptr = ui::button_operator_ptr_ensure(button);
@@ -421,12 +427,16 @@ void agent_ui_queue_draw(const bContext *C, ARegion *region, const rctf &panel, 
   }
 
   if (shown < row_count) {
-    char range[64];
+    char range[128];
     if (shown) {
-      SNPRINTF(range, "%d–%d of %d", data.visible.first + 1, data.visible.end(), data.total);
+      SNPRINTF(range,
+               IFACE_("%d–%d of %d"),
+               data.visible.first + 1,
+               data.visible.end(),
+               data.total);
     }
     else {
-      BLI_strncpy(range, "Increase window height to view jobs", sizeof(range));
+      BLI_strncpy(range, IFACE_("Increase window height to view jobs"), sizeof(range));
     }
     ui::mixar_label_left(
         range, metrics.footer.xmin, BLI_rctf_cent_y(&metrics.footer), meta_style, col_dim);

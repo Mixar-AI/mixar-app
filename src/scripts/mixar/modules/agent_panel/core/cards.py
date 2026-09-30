@@ -31,6 +31,7 @@ from typing import Any, Iterable, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 
 from ..constants import (
     AGENT_NAME_MAXLEN,
@@ -106,7 +107,7 @@ def derive_agent_name(task_label: str) -> str:
     """
     label = humanize_label(task_label)
     if not label:
-        return "Agent"
+        return iface_("Agent")
     label = label.rstrip(" .!?:;,")
     if len(label) <= AGENT_NAME_TARGET_CHARS:
         return label[:AGENT_NAME_MAXLEN]

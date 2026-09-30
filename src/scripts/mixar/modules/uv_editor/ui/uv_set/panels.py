@@ -14,6 +14,7 @@ content using a consistent label/control split for alignment.
 import bpy
 from bpy.types import Panel, UIList
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.uv_editor.ui.base.panels import poll_header_panel
 
 
@@ -98,7 +99,7 @@ class MIXAR_UV_PT_uv_set(Panel):
 
         # ---- UV Maps ----
         if obj and obj.type == 'MESH' and obj.data:
-            col = _section(layout, "UV Maps", icon='UV')
+            col = _section(layout, n_("UV Maps"), icon='UV')
             me = obj.data
             list_row = col.row()
             list_row.template_list(
@@ -120,7 +121,7 @@ class MIXAR_UV_PT_uv_set(Panel):
 
         # ---- Active Image ----
         if sima:
-            col = _section(layout, "Active Image", icon='IMAGE_DATA')
+            col = _section(layout, n_("Active Image"), icon='IMAGE_DATA')
             col.template_ID(sima, "image", new="mixar.image_new",
                             open="image.open")
             layout.separator(factor=0.5)
@@ -128,7 +129,7 @@ class MIXAR_UV_PT_uv_set(Panel):
         # ---- Image Settings ----
         if sima and sima.image:
             ima = sima.image
-            col = _section(layout, "Image Settings", icon='SETTINGS')
+            col = _section(layout, n_("Image Settings"), icon='SETTINGS')
             iuser = sima.image_user
 
             # Source: only Single Image / UDIM Tiles are meaningful in
@@ -148,12 +149,12 @@ class MIXAR_UV_PT_uv_set(Panel):
                 # UDIM: each tile is its own file — no top-level file
                 # picker. Show the data-side settings template_image
                 # would have rendered for TILED.
-                _row(col, "Color Space").prop(
+                _row(col, n_("Color Space")).prop(
                     ima.colorspace_settings, "name", text="")
-                _row(col, "Alpha").prop(ima, "alpha_mode", text="")
+                _row(col, n_("Alpha")).prop(ima, "alpha_mode", text="")
                 _row(col, "").prop(ima, "use_view_as_render",
                                    text="View as Render")
-                _row(col, "Seam Margin").prop(ima, "seam_margin", text="")
+                _row(col, n_("Seam Margin")).prop(ima, "seam_margin", text="")
             else:
                 # Single Image. We can't use `template_image` here — it
                 # re-renders its own Source dropdown (the 6-item enum)
@@ -161,16 +162,16 @@ class MIXAR_UV_PT_uv_set(Panel):
                 # the user asked us to remove. Render the equivalent
                 # data-side settings inline instead. The file picker
                 # already lives in the "Active Image" section above.
-                _row(col, "Color Space").prop(
+                _row(col, n_("Color Space")).prop(
                     ima.colorspace_settings, "name", text="")
-                _row(col, "Alpha").prop(ima, "alpha_mode", text="")
+                _row(col, n_("Alpha")).prop(ima, "alpha_mode", text="")
                 _row(col, "").prop(ima, "use_view_as_render",
                                    text="View as Render")
             layout.separator(factor=0.5)
 
         # ---- UDIM Tiles ----
         if sima and sima.image and sima.image.source == 'TILED':
-            col = _section(layout, "UDIM Tiles", icon='RENDERLAYERS')
+            col = _section(layout, n_("UDIM Tiles"), icon='RENDERLAYERS')
             ima = sima.image
 
             # Column header — describes the three values that
@@ -202,7 +203,7 @@ class MIXAR_UV_PT_uv_set(Panel):
 
         # ---- Grid ----
         if sima and sima.show_uvedit:
-            col = _section(layout, "Grid", icon='MESH_GRID')
+            col = _section(layout, n_("Grid"), icon='MESH_GRID')
             overlay = sima.overlay
             uvedit = sima.uv_editor
             col.active = overlay.show_overlays
@@ -218,22 +219,22 @@ class MIXAR_UV_PT_uv_set(Panel):
             if overlay.show_grid_background:
                 col.separator(factor=0.3)
 
-                _row(col, "Shape Source").prop(
+                _row(col, n_("Shape Source")).prop(
                     uvedit, "grid_shape_source", text="", expand=False)
 
                 # Subdivisions only applies to the Fixed shape source.
                 if uvedit.grid_shape_source == "FIXED":
-                    _row(col, "Subdivisions").prop(
+                    _row(col, n_("Subdivisions")).prop(
                         uvedit, "custom_grid_subdivisions", text="")
 
                 # Tiles X/Y on one line.
-                _row(col, "Tiles").row(align=True).prop(
+                _row(col, n_("Tiles")).row(align=True).prop(
                     uvedit, "tile_grid_shape", text="")
             layout.separator(factor=0.5)
 
         # ---- UV Stretch ----
         if sima and sima.show_uvedit:
-            col = _section(layout, "UV Stretch", icon='UV_VERTEXSEL')
+            col = _section(layout, n_("UV Stretch"), icon='UV_VERTEXSEL')
             uvedit = sima.uv_editor
             overlay = sima.overlay
             col.active = overlay.show_overlays
@@ -249,7 +250,7 @@ class MIXAR_UV_PT_uv_set(Panel):
 
         # ---- UV Display ----
         if sima and sima.show_uvedit:
-            col = _section(layout, "UV Display", icon='UV')
+            col = _section(layout, n_("UV Display"), icon='UV')
             uvedit = sima.uv_editor
             overlay = sima.overlay
             col.active = overlay.show_overlays

@@ -24,6 +24,7 @@ import uuid
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from .ui_utils import redraw_chat_areas
 
@@ -35,12 +36,12 @@ logger = get_logger(__name__)
 CREDITS_BUBBLE_PREFIX = "credit-upgrade-"
 
 _CONTENT_MAXLEN = 4096
-_DEFAULT_TITLE = "You're out of credits"
-_DEFAULT_BODY = (
+_DEFAULT_TITLE = n_("You're out of credits")
+_DEFAULT_BODY = n_(
     "You've used your monthly credit allowance. "
     "Upgrade your plan to keep creating with Mixie."
 )
-_CTA_LABEL = "Upgrade"
+_CTA_LABEL = n_("Upgrade")
 
 
 def is_credits_exhausted_error(status_code, message: str = "") -> bool:
@@ -129,8 +130,8 @@ def add_credit_upgrade_chat_message(
 
 
 def _build_content(title: str, body: str) -> str:
-    title = (title or _DEFAULT_TITLE).strip()
-    body = (body or _DEFAULT_BODY).strip()
+    title = (title or rpt_(_DEFAULT_TITLE)).strip()
+    body = (body or rpt_(_DEFAULT_BODY)).strip()
     return f"**{title}**\n\n{body}"[:_CONTENT_MAXLEN]
 
 
@@ -161,6 +162,6 @@ def _fill_bubble(msg, content: str) -> None:
 
     msg.action_items.clear()
     action = msg.action_items.add()
-    action.label = _CTA_LABEL
+    action.label = iface_(_CTA_LABEL)
     action.value = CREDIT_UPGRADE_CHAT_ACTION
     action.style = "PRIMARY"

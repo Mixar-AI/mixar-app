@@ -12,6 +12,8 @@ import re
 
 from mathutils import Vector
 
+from mixar.modules.common.i18n import data_
+
 from .....config.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -91,7 +93,7 @@ def create_info_nodes(tree):
     infos = []
 
     info = nodes.new('NodeFrame')
-    info.label = 'WARNING: Do NOT edit this group manually!'
+    info.label = data_('WARNING: Do NOT edit this group manually!')
     info.use_custom_color = True
     info.color = (1.0, 0.5, 0.5)
     info.width = 450.0

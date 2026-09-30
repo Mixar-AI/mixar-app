@@ -11,6 +11,7 @@ Cross-mode operators for applying images to scene.
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.core.media_utils import is_still_item
 
 
@@ -76,9 +77,11 @@ class MIXIE_OT_moodboard_apply_overlay(Operator):
             if space_data:
                 space_data.region_3d.view_perspective = 'CAMERA'
                 area_3d.tag_redraw()
-                self.report({'INFO'}, f"Overlay applied to camera '{camera.name}'")
+                self.report({'INFO'}, rpt_("Overlay applied to camera '{name}'").format(
+                    name=camera.name))
         else:
-            self.report({'INFO'}, f"Overlay applied to camera '{camera.name}'. Switch to 3D View to see it.")
+            self.report({'INFO'}, rpt_("Overlay applied to camera '{name}'. Switch to 3D View to see it.").format(
+                name=camera.name))
 
         return {'FINISHED'}
 

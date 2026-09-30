@@ -28,6 +28,8 @@
 #include "BLI_rect.h"
 #include "BLI_string.h"
 
+#include "BLT_translation.hh"
+
 #include "DNA_image_types.h"
 #include "DNA_scene_types.h"
 
@@ -198,7 +200,7 @@ rctf pane_generate_rect(const rctf &box, const float u, const char *label)
   const auto layout = composer_layout(box, u);
   rctf rect;
   rect.xmax = box.xmax - PANE_BOTTOM_IN_R * u;
-  const char *text = (label && label[0]) ? label : "Generate";
+  const char *text = (label && label[0]) ? label : IFACE_("Generate");
   const float width = std::max(PANE_GENERATE_W * u,
                                pane_action_chip_w(text, false, u) + 2.0f);
   rect.xmin = rect.xmax - width;
@@ -250,7 +252,8 @@ float pane_onoff_chip_w(const char *label, const float u)
 {
   const float font = PANE_FONT * agent_ui_text_unit();
   return PANE_CHIP_PAD_X * u + pane_text_width(label, font) + 12.0f * u +
-         pane_text_width("ON", font) + 20.0f * u + pane_text_width("OFF", font) + 20.0f * u +
+         pane_text_width(IFACE_("ON"), font) + 20.0f * u +
+         pane_text_width(IFACE_("OFF"), font) + 20.0f * u +
          PANE_CHIP_PAD_X * u * 0.75f;
 }
 

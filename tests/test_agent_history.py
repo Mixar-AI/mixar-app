@@ -84,8 +84,13 @@ def test_gap_and_unknown_version_are_explicit(client_store):
     client_store.write_batch('owner', p)
     manifest = json.loads((client_store.root() / 'session/manifest.json').read_text())
     assert manifest['gaps'][0]['reason'] == 'expired'
-    with pytest.raises(ValueError, match='sequence_gap'):
-        client_store.write_batch('owner', packet(3))
+    # The missing range can never be re-delivered: record it and move on, or
+    # the same batch is refused on every poll and the session never syncs again.
+    assert client_store.write_batch('owner', packet(3))['seq'] == 3
+    manifest = json.loads((client_store.root() / 'session/manifest.json').read_text())
+    assert {'epoch': 'a' * 32, 'reason': 'archive_sequence_gap', 'expected': 1, 'received': 3} in manifest['gaps']
+    assert client_store.write_batch('owner', packet(3))['seq'] == 3  # replay stays verified
+    assert client_store.write_batch('owner', packet(4, 'Fourth'))['seq'] == 4
 
 
 def test_separate_image_blob_is_verified(client_store):
@@ -182,3 +187,25 @@ def test_handshake_server_capabilities_list_negotiates_archive(result, history, 
     assert connection.agent_history_supported is history
     assert connection.agent_history_blobs_by_reference is reference
     assert connection.agent_ws_supported is ws
+
+
+def test_scene_id_change_is_recorded_not_refused(client_store):
+    """A session's scene op-history id is not stable (chat restore into another
+    scene, undo, checkpoints, file copies); it is metadata, never a gate."""
+    client_store.write_batch('owner', packet(), 'scene-a')
+    assert client_store.write_batch('owner', packet(2, 'Second'), 'scene-b')['seq'] == 2
+    assert client_store.write_batch('owner', packet(3, 'Third'), 'scene-a')['seq'] == 3
+    assert client_store.write_batch('owner', packet(4, 'Fourth'), 'scene-b')['seq'] == 4
+    manifest = json.loads((client_store.root() / 'session/manifest.json').read_text())
+    assert manifest['scene_history_id'] == 'scene-a'
+    assert manifest['scene_history_aliases'] == ['scene-b']
+
+
+def test_scene_fallback_or_invalid_id_never_binds(client_store):
+    client_store.write_batch('owner', packet(), '_nosession')
+    client_store.write_batch('owner', packet(2, 'Second'), '../not an id')
+    manifest = json.loads((client_store.root() / 'session/manifest.json').read_text())
+    assert manifest['scene_history_id'] is None
+    client_store.write_batch('owner', packet(3, 'Third'), 'scene-a')
+    manifest = json.loads((client_store.root() / 'session/manifest.json').read_text())
+    assert manifest['scene_history_id'] == 'scene-a' and 'scene_history_aliases' not in manifest

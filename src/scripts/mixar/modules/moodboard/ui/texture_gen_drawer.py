@@ -25,6 +25,7 @@ Per-mode generate routing:
                             land in the procedural material library.
 """
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.moodboard.constants import SEP_INTRA
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_prompt_section,
@@ -40,9 +41,9 @@ _TEXTURE_GEN_FOOTER = {
 }
 
 _PROMPT_LABELS = {
-    "pbr_gen": "Prompt",
-    "hunyuan_texture_edit": "Prompt (ignored when a reference image is set)",
-    "mat_gen": "Material Description",
+    "pbr_gen": n_("Prompt"),
+    "hunyuan_texture_edit": n_("Prompt (ignored when a reference image is set)"),
+    "mat_gen": n_("Material Description"),
 }
 
 
@@ -61,7 +62,7 @@ def _draw_matgen_status(layout, context):
     """Surface the paint-side MatGen status (done/error) in this tab."""
     status = getattr(context.window_manager, "mixar_matgen_status", "") or ""
     if status.startswith("done:"):
-        draw_status_badge(layout, f"Generated: {status[5:]}", 'DONE')
+        draw_status_badge(layout, iface_("Generated: {name}").format(name=status[5:]), 'DONE')
     elif status.startswith("error:"):
         draw_status_badge(layout, status[6:], 'ERROR')
 
@@ -70,7 +71,7 @@ def _draw_reference_image_section(layout, tab, context, *, show_style_only):
     """Shared reference-image picker (moodboard toggle + upload)."""
     col = draw_section_box(
         layout,
-        "Reference Image",
+        n_("Reference Image"),
         icon='IMAGE_DATA',
         action_op="mixie.lookdev360_upload_reference",
     )
@@ -100,7 +101,7 @@ def _draw_texture_gen(layout, context):
 
     # --- Prompt ---
     draw_prompt_section(
-        layout, tab, label=_PROMPT_LABELS.get(service_key, "Prompt"))
+        layout, tab, label=_PROMPT_LABELS.get(service_key, n_("Prompt")))
     draw_section_separator(layout)
 
     # --- Per-mode inputs ---
@@ -109,16 +110,16 @@ def _draw_texture_gen(layout, context):
             layout, tab, context, show_style_only=True)
         draw_section_separator(layout)
     elif service_key == "hunyuan_texture_edit":
-        col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+        col = draw_section_box(layout, n_("Mesh Info"), icon='MESH_DATA')
         draw_mesh_info(col, context, max_mb=100)
-        draw_hint(col, "Exported as FBX for texture editing", icon='INFO')
+        draw_hint(col, n_("Exported as FBX for texture editing"), icon='INFO')
         draw_section_separator(layout)
         _draw_reference_image_section(
             layout, tab, context, show_style_only=False)
         draw_section_separator(layout)
 
     # --- Settings (Mode / Model / schema params from the catalog) ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
     draw_capability_selector(col, tab, "texture_gen")
@@ -134,7 +135,7 @@ def _draw_texture_gen(layout, context):
     if service_key == "mat_gen":
         draw_hint(
             layout,
-            "Materials are added to the Procedural Material library",
+            n_("Materials are added to the Procedural Material library"),
             icon='INFO',
         )
         _draw_matgen_status(layout, context)

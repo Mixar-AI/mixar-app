@@ -17,6 +17,8 @@ Deliberately ``bpy``-free so the standalone suite exercises it directly.
 
 import os
 
+from mixar.modules.common.i18n import iface_, n_, rpt_
+
 CAPABILITY_KEY = "video_upscale"
 SERVICE_KEY = "video_upscale"
 #: Query-param value the backend uploader expects for an upscale SOURCE clip
@@ -81,9 +83,9 @@ def _optional_positive_int(value):
 def video_upscale_source_error(*, video_count):
     """Human-readable reason the selection is not ONE usable source, or None."""
     if video_count == 0:
-        return "Select one video on the moodboard to upscale"
+        return n_("Select one video on the moodboard to upscale")
     if video_count > 1:
-        return "Video Upscale takes one video at a time — select just one"
+        return n_("Video Upscale takes one video at a time — select just one")
     return None
 
 
@@ -101,15 +103,15 @@ def build_video_upscale_input(video, limits) -> dict:
     staged key — that measurement, not this one, is what prices the job.
     """
     if not video.get("source_available", True):
-        raise ValueError(f"Video source was moved or deleted: {video['filename']}")
+        raise ValueError(rpt_("Video source was moved or deleted: {name}").format(
+            name=video['filename']))
     if video["file_size_bytes"] > limits["max_bytes"]:
-        raise ValueError(
-            f"Video is too large to upscale ({limits['max_bytes'] // (1024 * 1024)} MB max): "
-            f"{video['filename']}"
-        )
+        raise ValueError(rpt_("Video is too large to upscale ({size} MB max): {name}").format(
+            size=limits['max_bytes'] // (1024 * 1024), name=video['filename']))
     extension = os.path.splitext(video["filename"])[1].lower()
     if extension not in limits["video_extensions"]:
-        raise ValueError(f"Unsupported video for upscaling: {video['filename']}")
+        raise ValueError(rpt_("Unsupported video for upscaling: {name}").format(
+            name=video['filename']))
     _check_frame_size(video, limits)
     return {
         "filename": video["filename"],
@@ -132,27 +134,27 @@ def _check_frame_size(video, limits) -> None:
         return
     max_side = limits.get("max_side_pixels")
     if max_side and max(width, height) > max_side:
-        raise ValueError(
-            f"Video frame is too large to upscale ({width}x{height}; "
-            f"{max_side} px on the longest side max): {video['filename']}"
-        )
+        raise ValueError(rpt_(
+            "Video frame is too large to upscale ({width}x{height}; "
+            "{limit} px on the longest side max): {name}"
+        ).format(width=width, height=height, limit=max_side, name=video['filename']))
     max_pixels = limits.get("max_pixels")
     if max_pixels and width * height > max_pixels:
-        raise ValueError(
-            f"Video frame is too large to upscale ({width}x{height}; "
-            f"{max_pixels} pixels max): {video['filename']}"
-        )
+        raise ValueError(rpt_(
+            "Video frame is too large to upscale ({width}x{height}; "
+            "{limit} pixels max): {name}"
+        ).format(width=width, height=height, limit=max_pixels, name=video['filename']))
 
 
 def describe_source_limits(limits) -> list[str]:
     """Short hint lines for the sidebar's "Source Limits" box."""
     lines = [
-        f"Up to {limits['max_seconds']:g} seconds, "
-        f"{limits['max_bytes'] // (1024 * 1024)} MB",
+        iface_("Up to {seconds:g} seconds, {size} MB").format(
+            seconds=limits['max_seconds'], size=limits['max_bytes'] // (1024 * 1024)),
     ]
     if limits.get("max_side_pixels"):
-        lines.append(f"Up to {limits['max_side_pixels']} px on the longest side")
-    lines.append(
-        "Formats: " + ", ".join(ext.lstrip(".").upper() for ext in limits["video_extensions"])
-    )
+        lines.append(iface_("Up to {pixels} px on the longest side").format(
+            pixels=limits['max_side_pixels']))
+    lines.append(iface_("Formats: {formats}").format(
+        formats=", ".join(ext.lstrip(".").upper() for ext in limits["video_extensions"])))
     return lines

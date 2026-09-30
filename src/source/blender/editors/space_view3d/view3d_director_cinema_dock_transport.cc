@@ -19,6 +19,8 @@
 
 #include "BLI_rect.h"
 
+#include "BLT_translation.hh"
+
 #include "DNA_screen_types.h"
 
 #include "UI_interface.hh"
@@ -128,9 +130,9 @@ void draw_transport(ui::Block *block,
     bool step;
     const char *tip;
   } transport[3] = {
-      {"MIXAR_OT_director_previous_beat", false, true, "Previous keyframe"},
-      {"MIXAR_OT_director_preview", true, false, "Preview this shot"},
-      {"MIXAR_OT_director_next_beat", true, true, "Next keyframe"},
+      {"MIXAR_OT_director_previous_beat", false, true, N_("Previous keyframe")},
+      {"MIXAR_OT_director_preview", true, false, N_("Preview this shot")},
+      {"MIXAR_OT_director_next_beat", true, true, N_("Next keyframe")},
   };
   const bool no_beats = state.beats.is_empty();
   for (int index = 0; index < 3; index++) {
@@ -141,7 +143,8 @@ void draw_transport(ui::Block *block,
     const rctf box = {slot_cx - size * 0.5f, slot_cx + size * 0.5f, cy - size * 0.5f, cy + size * 0.5f};
     transport_glyph(box, transport[index].forward, transport[index].step, index == 1 && playing);
     cinema_qa_record(region, box, "director_transport", transport[index].tip, index);
-    ui::Button *but = cinema_op_button(block, transport[index].op, box, transport[index].tip);
+    ui::Button *but = cinema_op_button(
+        block, transport[index].op, box, TIP_(transport[index].tip));
     const bool can_record = state.auto_key && state.has_camera && !state.locked;
     const bool enabled = index == 1 ? (playing ||
                                       ((can_record || state.beats.size() >= 2) &&

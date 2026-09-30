@@ -39,6 +39,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_scene_types.h"
 
 #include "RNA_access.hh"
@@ -130,7 +132,8 @@ int draw_kind_toggles(bContext *C,
     }
     ui::Button *toggle = ui::uiDefButR_prop(block,
                                            ui::ButtonType::Row,
-                                           items[index].name,
+                                           CTX_IFACE_(RNA_property_translation_context(kinds_prop),
+                                                      items[index].name),
                                            cell_x(drawn),
                                            y,
                                            short(cell_x(drawn + 1) - cell_x(drawn)),
@@ -141,7 +144,11 @@ int draw_kind_toggles(bContext *C,
                                            0,
                                            float(items[index].value),
                                            std::nullopt);
-    director_but_tooltip_owned(toggle, items[index].description);
+    director_but_tooltip_owned(
+        toggle,
+        items[index].description ?
+            CTX_TIP_(RNA_property_translation_context(kinds_prop), items[index].description) :
+            nullptr);
     ui::UI_mixar_cinema_row_tag(toggle, ui::MixarCinemaRowKind::Segment);
     if (running) {
       ui::button_flag_enable(toggle, ui::BUT_DISABLED);
@@ -162,9 +169,9 @@ struct VideoSize {
   const char *tip;
 };
 constexpr VideoSize VIDEO_SIZES[] = {
-    {25, "Draft", "A quarter of the output size: fastest"},
-    {50, "Half", "Half the output size"},
-    {100, "Full", "The full output size: slowest"},
+    {25, N_("Draft"), N_("A quarter of the output size: fastest")},
+    {50, N_("Half"), N_("Half the output size")},
+    {100, N_("Full"), N_("The full output size: slowest")},
 };
 
 /** What the Send action will send — `core/board_export.export_plan`. */
@@ -201,26 +208,37 @@ SendPlan send_plan(const DirectorPopupData &data,
   return plan;
 }
 
-/** "Send 3 Images + 2 Videos" — `core/board_export.plan_label`. */
+/** "Send 3 Images + 2 Videos" — `core/board_export.plan_label`. Plurals are
+ * whole translated templates, never a suffix. */
 void send_label(const SendPlan &plan, char *r_label, const size_t size)
 {
   if (plan.images > 0 && plan.videos > 0) {
-    BLI_snprintf(r_label,
-                 size,
-                 "Send %d Image%s + %d Video%s",
-                 plan.images,
-                 plan.images == 1 ? "" : "s",
-                 plan.videos,
-                 plan.videos == 1 ? "" : "s");
+    char images[48];
+    char videos[48];
+    BLI_snprintf(images,
+                 sizeof(images),
+                 plan.images == 1 ? IFACE_("%d Image") : IFACE_("%d Images"),
+                 plan.images);
+    BLI_snprintf(videos,
+                 sizeof(videos),
+                 plan.videos == 1 ? IFACE_("%d Video") : IFACE_("%d Videos"),
+                 plan.videos);
+    BLI_snprintf(r_label, size, IFACE_("Send %s + %s"), images, videos);
   }
   else if (plan.images > 0) {
-    BLI_snprintf(r_label, size, "Send %d Image%s", plan.images, plan.images == 1 ? "" : "s");
+    BLI_snprintf(r_label,
+                 size,
+                 plan.images == 1 ? IFACE_("Send %d Image") : IFACE_("Send %d Images"),
+                 plan.images);
   }
   else if (plan.videos > 0) {
-    BLI_snprintf(r_label, size, "Send %d Video%s", plan.videos, plan.videos == 1 ? "" : "s");
+    BLI_snprintf(r_label,
+                 size,
+                 plan.videos == 1 ? IFACE_("Send %d Video") : IFACE_("Send %d Videos"),
+                 plan.videos);
   }
   else {
-    BLI_strncpy(r_label, "Nothing to Send", size);
+    BLI_strncpy(r_label, IFACE_("Nothing to Send"), size);
   }
 }
 
@@ -232,7 +250,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
   ui::block_flag_enable(block, ui::BLOCK_KEEP_OPEN);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || data.shot_ptr.data == nullptr) {
-    director_popup_section_label(block, "No shot to export yet", 0, UI_UNIT_X * 10);
+    director_popup_section_label(block, IFACE_("No shot to export yet"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -253,7 +271,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
   char heading[160];
   BLI_snprintf(heading,
                sizeof(heading),
-               "%s  \xc2\xb7  Take %d",
+               IFACE_("%s  \xc2\xb7  Take %d"),
                shot_name,
                RNA_int_get(&data.shot_ptr, "version"));
   y -= label_h;
@@ -270,10 +288,10 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
   y -= gap + row_h;
   char images_label[64];
   if (stills > 0) {
-    BLI_snprintf(images_label, sizeof(images_label), "Keyframe Images (%d)", stills);
+    BLI_snprintf(images_label, sizeof(images_label), IFACE_("Keyframe Images (%d)"), stills);
   }
   else {
-    BLI_strncpy(images_label, "Keyframe Images (none yet)", sizeof(images_label));
+    BLI_strncpy(images_label, IFACE_("Keyframe Images (none yet)"), sizeof(images_label));
   }
   ui::Button *images = ui::uiDefIconTextButR(block,
                                              ui::ButtonType::Toggle,
@@ -287,15 +305,15 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
                                              "export_images",
                                              0,
                                              stills > 0 ?
-                                                 "Add each keyframe's captured image to the "
-                                                 "Moodboard" :
-                                                 "Keyframes added with Add Keyframe carry an "
-                                                 "image; this shot has none yet");
+                                                 TIP_("Add each keyframe's captured image to the "
+                                                      "Moodboard") :
+                                                 TIP_("Keyframes added with Add Keyframe carry an "
+                                                      "image; this shot has none yet"));
   director_popup_state(images, false, stills > 0);
 
   /* ---- Videos: which, and how big. ---- */
   y -= gap + label_h;
-  director_popup_section_label(block, "Videos", y, width);
+  director_popup_section_label(block, IFACE_("Videos"), y, width);
   y -= row_h;
   const int chosen_videos = draw_kind_toggles(C, block, data, running, y, width);
 
@@ -309,7 +327,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
     const VideoSize &size = VIDEO_SIZES[index];
     ui::Button *cell = ui::uiDefButR(block,
                                      ui::ButtonType::Row,
-                                     size.name,
+                                     IFACE_(size.name),
                                      cell_x(index),
                                      y,
                                      short(cell_x(index + 1) - cell_x(index)),
@@ -319,7 +337,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
                                      0,
                                      0,
                                      float(size.percent),
-                                     size.tip);
+                                     TIP_(size.tip));
     director_popup_state(cell, percent == size.percent, !running);
     /* One segmented group, lit by BUT_ACTIVE_DEFAULT like the lens cells. */
     ui::UI_mixar_cinema_row_tag(cell, ui::MixarCinemaRowKind::Segment);
@@ -331,10 +349,10 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
   if (running) {
     char status[256] = "";
     RNA_string_get(&data.shot_ptr, "render_status", status);
-    director_popup_section_label(block, status[0] ? status : "Rendering videos", y, width);
+    director_popup_section_label(block, status[0] ? status : IFACE_("Rendering videos"), y, width);
   }
   else if (chosen_videos > 0 && plan.videos == 0) {
-    director_popup_section_label(block, "Videos need two or more keyframes", y, width);
+    director_popup_section_label(block, IFACE_("Videos need two or more keyframes"), y, width);
   }
   else {
     const float fps = std::max(data.state.fps, 0.001f);
@@ -365,7 +383,7 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
       y,
       width,
       row_h,
-      "Add the chosen images to the Moodboard; videos render into it in the background");
+      TIP_("Add the chosen images to the Moodboard; videos render into it in the background"));
   director_overlay_disable_button(send, plan.images == 0 && plan.videos == 0);
   ui::UI_mixar_cinema_row_tag(send, ui::MixarCinemaRowKind::Action);
   ui::button_func_set(send, render_popup_close, block, nullptr);
@@ -380,9 +398,9 @@ ui::Block *render_popup_create(bContext *C, ARegion *region, void *arg)
     char sent[64];
     BLI_snprintf(sent,
                  sizeof(sent),
-                 "%d video%s already on the Moodboard",
-                 output_count,
-                 output_count == 1 ? "" : "s");
+                 output_count == 1 ? IFACE_("%d video already on the Moodboard") :
+                                     IFACE_("%d videos already on the Moodboard"),
+                 output_count);
     ui::Button *entry = ui::uiDefIconTextBut(block,
                                              ui::ButtonType::Label,
                                              ICON_FILE_MOVIE,

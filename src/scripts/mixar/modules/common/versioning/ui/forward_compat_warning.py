@@ -8,6 +8,8 @@
 import bpy
 from bpy.props import StringProperty
 
+from mixar.modules.common.i18n import iface_
+
 
 class MIXAR_OT_forward_compat_warning(bpy.types.Operator):
     """Warn user that the file was saved by a newer Mixar version"""
@@ -27,8 +29,10 @@ class MIXAR_OT_forward_compat_warning(bpy.types.Operator):
     def draw(self, context):
         layout = self.layout
         layout.label(
-            text=f"This file was saved by Mixar version {self.file_version}.",
+            text=iface_("This file was saved by Mixar version {version}.").format(
+                version=self.file_version),
             icon='ERROR',
+            translate=False,
         )
         layout.label(text="Some data may be missing or incorrect.")
         layout.label(text="Save will overwrite with the current version.")

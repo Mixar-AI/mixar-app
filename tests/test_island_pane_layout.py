@@ -127,7 +127,7 @@ def test_bottom_row_and_generate_use_shared_composer_geometry():
     # Busy labels ("Generating (N)") must grow the chip — sizing against the
     # idle "Generate" string alone clips the live wording.
     assert "pane_action_chip_w(text, false, u)" in generate or "pane_action_chip_w(label" in generate
-    assert 'const char *text = (label && label[0]) ? label : "Generate"' in generate
+    assert 'const char *text = (label && label[0]) ? label : IFACE_("Generate")' in generate
 
 
 def test_generation_panes_size_generate_from_the_live_queue_label():

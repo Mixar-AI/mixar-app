@@ -4,6 +4,7 @@
 #include "BLF_api.hh"
 #include "BLI_rect.h"
 #include "BLI_string.h"
+#include "BLT_translation.hh"
 #include "DNA_screen_types.h"
 #include "ED_mixar_glass.hh"
 #include "GPU_state.hh"
@@ -65,10 +66,11 @@ void rules_draw_chrome(const RulesDrawFrame &f)
                           HIST_COL_HEADER_TEXT[1],
                           HIST_COL_HEADER_TEXT[2],
                           HIST_COL_HEADER_TEXT[3] * ease};
+    const char *title = IFACE_("Project Rules");
     BLF_enable(font_id, BLF_BOLD);
-    hist_draw_label("Project Rules", font_id, header_px, panel.xmin + pad, baseline, title_col);
+    hist_draw_label(title, font_id, header_px, panel.xmin + pad, baseline, title_col);
 
-    const float title_w = hist_text_width("Project Rules", font_id, header_px);
+    const float title_w = hist_text_width(title, font_id, header_px);
     BLF_disable(font_id, BLF_BOLD);
 
     if (!entries.is_empty()) {
@@ -114,7 +116,7 @@ void rules_draw_chrome(const RulesDrawFrame &f)
 
   /* Footer hint. */
   {
-    const char *hint = "Enabled rules apply on your next message.";
+    const char *hint = IFACE_("Enabled rules apply on your next message.");
     float hint_col[4] = {
         HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2], HIST_COL_MUTED[3] * 0.9f * ease};
     const float w = hist_text_width(hint, font_id, hint_px);

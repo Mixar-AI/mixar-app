@@ -7,6 +7,7 @@
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -61,7 +62,7 @@ class MIXIE_OT_video_upscale_generate(Operator):
             )
         except Exception as exc:
             logger.exception("Could not start video upscale")
-            self.report({'ERROR'}, f"Failed to start video upscale: {exc}")
+            self.report({'ERROR'}, rpt_("Failed to start video upscale: {error}").format(error=exc))
             return {'CANCELLED'}
         if job is None:
             self.report({'ERROR'}, "A duplicate video upscale is already queued")

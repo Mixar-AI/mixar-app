@@ -11,6 +11,8 @@ draft ink. Sent images and marks are never removed by draft cleanup.
 
 from types import SimpleNamespace
 
+from mixar.modules.common.i18n import iface_, n_
+
 from . import annotate, freeze, marks as mark_store
 
 
@@ -56,17 +58,17 @@ def sync(scene):
             existing.scribble_view = view
             continue
         if existing is None and len(pending) >= MAX_ATTACHMENTS_PER_MESSAGE:
-            notes.append("Remove a reference to make room for the sketch preview.")
+            notes.append(n_("Remove a reference to make room for the sketch preview."))
             continue
         if freeze.get_image(name) is None:
             frame = freeze.get_image(frame_for_view(view))
             if frame is None or not annotate.render_annotated(frame, marks, name):
-                notes.append("Could not create the sketch preview. Draw again to retry.")
+                notes.append(n_("Could not create the sketch preview. Draw again to retry."))
                 continue
         att = existing if existing is not None else pending.add()
         att.image_source = "BLEND_DATA"
         att.image_path = name
-        att.display_name = "View sketch"
+        att.display_name = iface_("View sketch")
         att.scribble_view = view
     redraw_chat_areas()
     return notes

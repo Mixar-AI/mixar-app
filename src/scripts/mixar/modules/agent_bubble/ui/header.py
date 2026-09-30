@@ -36,6 +36,7 @@ from mixar.modules.agent_bubble.core.pill_icons import (
     get_pill_icon_id_named,
     get_running_text_suffix,
 )
+from mixar.modules.common.i18n import iface_
 
 
 # Session-state values that mean the agent is actively working — these
@@ -129,7 +130,7 @@ def _queue_clock(started_at: float) -> str:
 
 def _queue_count_text(count: int) -> str:
     capped = f"{_QUEUE_COUNT_CAP}+" if count > _QUEUE_COUNT_CAP else str(count)
-    return f"{capped} jobs"
+    return iface_("{count} jobs").format(count=capped)
 
 
 def _queue_label(activity) -> str:
@@ -148,7 +149,7 @@ def _queue_label(activity) -> str:
     if activity.count == 1:
         # Empty label = the catalog could not answer. Generic wording beats
         # leaking a raw service key like "mesh_segment" into the pill.
-        subject = activity.label or "Generating"
+        subject = activity.label or iface_("Generating")
     else:
         subject = _queue_count_text(activity.count)
 
@@ -157,35 +158,35 @@ def _queue_label(activity) -> str:
         return text
     # Long capability names ("Mesh Segmentation") don't fit beside a clock.
     # Keep the clock — it carries more information than the name here.
-    return f"Generating {clock}".strip()
+    return iface_("Generating {clock}").format(clock=clock).strip()
 
 
 def _get_status(scene) -> PillStatus:
     """Return what the status pill should render."""
     state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
     if state == "OFFLINE":
-        return PillStatus("Disconnected", "red", 'CANCEL')
+        return PillStatus(iface_("Disconnected"), "red", 'CANCEL')
     if state == "CONNECTING":
-        return PillStatus("Connecting", "blue", 'SORTTIME')
+        return PillStatus(iface_("Connecting"), "blue", 'SORTTIME')
     if _transport_down():
         # Any non-offline state with the transport gone means the client is
         # auto-reconnecting (and, mid-turn, will re-attach to the stream).
-        return PillStatus("Reconnecting", "red", 'CANCEL')
+        return PillStatus(iface_("Reconnecting"), "red", 'CANCEL')
     if state in _RUNNING_STATES:
-        return PillStatus("Running", "green", 'RECORD_ON', animate=True)
+        return PillStatus(iface_("Running"), "green", 'RECORD_ON', animate=True)
     if state == "AWAITING_INPUT":
         # Blue instead of yellow — yellow is already the macOS close
         # traffic-light button. CONNECTING and AWAITING_INPUT can't be
         # active simultaneously, so reusing the same blue is safe and
         # avoids the visual collision.
-        return PillStatus("Awaiting Input", "blue", 'QUESTION')
+        return PillStatus(iface_("Awaiting Input"), "blue", 'QUESTION')
 
     # The orchestrator ended its turn but the run is open: workers are still
     # building and the backend will start the next turn itself. Not "Running"
     # (nothing to stop, the composer is free) and not "Idle" (work is going
     # on). The viewport lock stays down — it keys on BUSY/MODIFYING.
     if getattr(scene, "mixie_run_open", False) is True:
-        return PillStatus("Working", "green", 'RECORD_ON')
+        return PillStatus(iface_("Working"), "green", 'RECORD_ON')
 
     # Queue activity is ORTHOGONAL to the agent turn: the agent routinely
     # enqueues a multi-minute generation, answers in chat and drops to IDLE
@@ -199,7 +200,7 @@ def _get_status(scene) -> PillStatus:
     if activity is not None:
         return PillStatus(_queue_label(activity), "green", 'RECORD_ON')
 
-    return PillStatus("Idle", "grey", 'RECORD_OFF')
+    return PillStatus(iface_("Idle"), "grey", 'RECORD_OFF')
 
 
 def _is_pill_window(context) -> bool:
@@ -228,9 +229,9 @@ def _draw_status(layout, scene) -> None:
     status = _get_status(scene)
     icon_id = get_pill_icon_id_named(status.colour)
     if icon_id:
-        layout.label(text=_pill_text(status), icon_value=icon_id)
+        layout.label(text=_pill_text(status), icon_value=icon_id, translate=False)
     else:
-        layout.label(text=_pill_text(status), icon=status.fallback_icon)
+        layout.label(text=_pill_text(status), icon=status.fallback_icon, translate=False)
 
 
 class AGENT_BUBBLE_HT_header(Header):
@@ -309,7 +310,7 @@ class AGENT_BUBBLE_HT_header(Header):
                         text=label,
                         icon_value=icon_id,
                         emboss=False,
-                        no_tooltip=True,
+                        no_tooltip=True, translate=False,
                     )
                 else:
                     row.operator(
@@ -317,12 +318,12 @@ class AGENT_BUBBLE_HT_header(Header):
                         text=label,
                         icon=status.fallback_icon,
                         emboss=False,
-                        no_tooltip=True,
+                        no_tooltip=True, translate=False,
                     )
             elif icon_id:
-                row.label(text=label, icon_value=icon_id)
+                row.label(text=label, icon_value=icon_id, translate=False)
             else:
-                row.label(text=label, icon=status.fallback_icon)
+                row.label(text=label, icon=status.fallback_icon, translate=False)
             return
 
         # Main bubble window header (left → right):

@@ -18,6 +18,7 @@ from bpy.props import (
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 logger = get_logger(__name__)
 
 from ...utils.statics import blend_type_items
@@ -287,11 +288,11 @@ class LAYERS_OT_AddPaintLayer(Operator):
 
         # Validate unique name
         if self.name in [img.name for img in bpy.data.images]:
-            self.report({'ERROR'}, f"Image '{self.name}' already exists!")
+            self.report({'ERROR'}, rpt_("Image '{name}' already exists!").format(name=self.name))
             return {'CANCELLED'}
 
         if self.name in [layer.name for layer in mp.layers]:
-            self.report({'ERROR'}, f"Layer '{self.name}' already exists!")
+            self.report({'ERROR'}, rpt_("Layer '{name}' already exists!").format(name=self.name))
             return {'CANCELLED'}
 
         # Get channel index

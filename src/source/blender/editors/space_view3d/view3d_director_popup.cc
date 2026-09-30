@@ -16,6 +16,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_camera_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
@@ -183,7 +185,7 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || !data.camera) {
-    director_popup_section_label(block, "No active shot camera", 0, UI_UNIT_X * 10);
+    director_popup_section_label(block, IFACE_("No active shot camera"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -219,7 +221,7 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
                                  y,
                                  width,
                                  row_h,
-                                 "Set this output aspect ratio");
+                                 TIP_("Set this output aspect ratio"));
     RNA_enum_set_identifier(
         C, ui::button_operator_ptr_ensure(but), "preset", preset.identifier);
     const bool active = int64_t(scene->r.xsch) * preset.ratio_height ==
@@ -240,7 +242,8 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
   const int gap = int(UI_UNIT_Y * 0.25f);
   const int label_h = int(UI_UNIT_Y * 0.85f);
   y -= gap + label_h;
-  director_popup_section_label(block, matched ? "Custom" : "Custom (in use)", y, width);
+  director_popup_section_label(
+      block, matched ? IFACE_("Custom") : IFACE_("Custom (in use)"), y, width);
 
   y -= row_h;
   const int half_w = (width - gap) / 2;
@@ -256,7 +259,7 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
                                       0,
                                       0,
                                       0,
-                                      "Width side of the ratio");
+                                      TIP_("Width side of the ratio"));
   director_popup_state(ratio_x, false, data.editable);
   ui::Button *ratio_y = ui::uiDefButR(block,
                                       ui::ButtonType::Num,
@@ -270,19 +273,19 @@ ui::Block *aspect_popup_create(bContext *C, ARegion *region, void *arg)
                                       0,
                                       0,
                                       0,
-                                      "Height side of the ratio");
+                                      TIP_("Height side of the ratio"));
   director_popup_state(ratio_y, false, data.editable);
 
   y -= gap + row_h;
   ui::Button *custom = popup_op_button(block,
                                        "MIXAR_OT_director_set_custom_aspect",
                                        ICON_NONE,
-                                       "Frame at this ratio",
+                                       IFACE_("Frame at this ratio"),
                                        0,
                                        y,
                                        width,
                                        row_h,
-                                       "Frame this camera at the ratio above");
+                                       TIP_("Frame this camera at the ratio above"));
   director_popup_state(custom, !matched, data.editable);
 
   director_popup_block_end(block);
@@ -297,7 +300,7 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void *arg)
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || !data.camera) {
-    director_popup_section_label(block, "No active shot camera", 0, UI_UNIT_X * 10);
+    director_popup_section_label(block, IFACE_("No active shot camera"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -312,10 +315,16 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void *arg)
     const char *right_label;
   };
   const MovePair pairs[] = {
-      {"Orbit", "ORBIT_LEFT", ICON_LOOP_BACK, "Left", "ORBIT_RIGHT", ICON_LOOP_FORWARDS, "Right"},
-      {"Dolly", "DOLLY_IN", ICON_ZOOM_IN, "In", "DOLLY_OUT", ICON_ZOOM_OUT, "Out"},
-      {"Crane", "CRANE_UP", ICON_TRIA_UP, "Up", "CRANE_DOWN", ICON_TRIA_DOWN, "Down"},
-      {"Pan", "PAN_LEFT", ICON_BACK, "Left", "PAN_RIGHT", ICON_FORWARD, "Right"},
+      {N_("Orbit"),
+       "ORBIT_LEFT",
+       ICON_LOOP_BACK,
+       N_("Left"),
+       "ORBIT_RIGHT",
+       ICON_LOOP_FORWARDS,
+       N_("Right")},
+      {N_("Dolly"), "DOLLY_IN", ICON_ZOOM_IN, N_("In"), "DOLLY_OUT", ICON_ZOOM_OUT, N_("Out")},
+      {N_("Crane"), "CRANE_UP", ICON_TRIA_UP, N_("Up"), "CRANE_DOWN", ICON_TRIA_DOWN, N_("Down")},
+      {N_("Pan"), "PAN_LEFT", ICON_BACK, N_("Left"), "PAN_RIGHT", ICON_FORWARD, N_("Right")},
   };
   const int width = director_popup_width(arg, UI_UNIT_X * 12);
   const int row_h = int(UI_UNIT_Y * 1.15f);
@@ -326,29 +335,29 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void *arg)
 
   for (const MovePair &pair : pairs) {
     y -= label_h;
-    director_popup_section_label(block, pair.section, y, width);
+    director_popup_section_label(block, IFACE_(pair.section), y, width);
     y -= row_h;
     ui::Button *left = popup_op_button(block,
                                   "MIXAR_OT_director_camera_move",
                                   pair.left_icon,
-                                  pair.left_label,
+                                  IFACE_(pair.left_label),
                                   0,
                                   y,
                                   half_w,
                                   row_h,
-                                  "Capture this move as sparse keyframes");
+                                  TIP_("Capture this move as sparse keyframes"));
     RNA_enum_set_identifier(
         C, ui::button_operator_ptr_ensure(left), "move", pair.left_identifier);
     director_popup_state(left, false, data.editable);
     ui::Button *right = popup_op_button(block,
                                    "MIXAR_OT_director_camera_move",
                                    pair.right_icon,
-                                   pair.right_label,
+                                   IFACE_(pair.right_label),
                                    half_w + gap,
                                    y,
                                    half_w,
                                    row_h,
-                                   "Capture this move as sparse keyframes");
+                                   TIP_("Capture this move as sparse keyframes"));
     RNA_enum_set_identifier(
         C, ui::button_operator_ptr_ensure(right), "move", pair.right_identifier);
     director_popup_state(right, false, data.editable);
@@ -358,7 +367,7 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void *arg)
   y -= gap + row_h;
   ui::Button *spacing = ui::uiDefButR(block,
                              ui::ButtonType::NumSlider,
-                             "Keyframe Spacing",
+                             IFACE_("Keyframe Spacing"),
                              0,
                              y,
                              short(width),
@@ -375,7 +384,7 @@ ui::Block *moves_popup_create(bContext *C, ARegion *region, void *arg)
   ui::Button *handheld = ui::uiDefIconTextButR(block,
                                       ui::ButtonType::Toggle,
                                       ICON_FORCE_TURBULENCE,
-                                      "Handheld",
+                                      IFACE_("Handheld"),
                                       0,
                                       y,
                                       short(half_w),

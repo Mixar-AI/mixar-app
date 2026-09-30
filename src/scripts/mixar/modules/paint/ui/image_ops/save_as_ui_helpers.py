@@ -9,6 +9,8 @@ This module provides helper functions for drawing the UI elements
 of the MSaveAsImage operator panel.
 """
 
+from mixar.modules.common.i18n import n_
+
 
 def draw_labeled_row(col, label_text, scale_y=1.4, split_factor=0.25):
     """Create a labeled row with standard layout.
@@ -55,13 +57,13 @@ def draw_file_format_section(layout, operator):
     col.separator(factor=1.2)
 
     # File Format
-    _, _, split = draw_labeled_row(col, "Format:")
+    _, _, split = draw_labeled_row(col, n_("Format:"))
     split.prop(operator, "file_format", text="")
 
     col.separator(factor=0.4)
 
     # Color Mode
-    _, _, split = draw_labeled_row(col, "Color Mode:")
+    _, _, split = draw_labeled_row(col, n_("Color Mode:"))
     row_inner = split.row(align=True)
     row_inner.prop(operator, "color_mode", expand=True)
 
@@ -75,7 +77,7 @@ def draw_file_format_section(layout, operator):
         "TIFF",
     }:
         col.separator(factor=0.4)
-        _, _, split = draw_labeled_row(col, "Color Depth:")
+        _, _, split = draw_labeled_row(col, n_("Color Depth:"))
         row_inner = split.row(align=True)
         row_inner.prop(operator, "color_depth", expand=True)
 
@@ -101,31 +103,31 @@ def _draw_format_specific_options(col, operator):
     # PNG Compression
     if file_format == "PNG":
         col.separator(factor=0.4)
-        _, _, split = draw_labeled_row(col, "Compression:")
+        _, _, split = draw_labeled_row(col, n_("Compression:"))
         split.prop(operator, "compression", text="")
 
     # Quality (JPEG, JPEG2000, WEBP)
     if file_format in {"JPEG", "JPEG2000", "WEBP"}:
         col.separator(factor=0.4)
-        _, _, split = draw_labeled_row(col, "Quality:")
+        _, _, split = draw_labeled_row(col, n_("Quality:"))
         split.prop(operator, "quality", text="")
 
     # TIFF Codec
     if file_format == "TIFF":
         col.separator(factor=0.4)
-        _, _, split = draw_labeled_row(col, "Compression:")
+        _, _, split = draw_labeled_row(col, n_("Compression:"))
         split.prop(operator, "tiff_codec", text="")
 
     # EXR Codec
     if file_format in {"OPEN_EXR", "OPEN_EXR_MULTILAYER"}:
         col.separator(factor=0.4)
-        _, _, split = draw_labeled_row(col, "Codec:")
+        _, _, split = draw_labeled_row(col, n_("Codec:"))
         split.prop(operator, "exr_codec", text="")
 
     # EXR Z Buffer
     if file_format == "OPEN_EXR":
         col.separator(factor=0.4)
-        _, _, split = draw_labeled_row(col, "Z Buffer:", scale_y=1.2)
+        _, _, split = draw_labeled_row(col, n_("Z Buffer:"), scale_y=1.2)
         split.prop(operator, "use_zbuffer", text="")
 
     # Cineon
@@ -141,7 +143,7 @@ def _draw_format_specific_options(col, operator):
     # DPX Log
     if file_format == "DPX":
         col.separator(factor=0.4)
-        _, _, split = draw_labeled_row(col, "Log:", scale_y=1.2)
+        _, _, split = draw_labeled_row(col, n_("Log:"), scale_y=1.2)
         split.prop(operator, "use_cineon_log", text="")
 
 
@@ -156,19 +158,19 @@ def _draw_jpeg2000_options(col, operator):
         None
     """
     col.separator(factor=0.4)
-    _, _, split = draw_labeled_row(col, "Codec:")
+    _, _, split = draw_labeled_row(col, n_("Codec:"))
     split.prop(operator, "jpeg2k_codec", text="")
 
     col.separator(factor=0.4)
-    _, _, split = draw_labeled_row(col, "Cinema 48:", scale_y=1.2)
+    _, _, split = draw_labeled_row(col, n_("Cinema 48:"), scale_y=1.2)
     split.prop(operator, "use_jpeg2k_cinema_48", text="")
 
     col.separator(factor=0.4)
-    _, _, split = draw_labeled_row(col, "Cinema:", scale_y=1.2)
+    _, _, split = draw_labeled_row(col, n_("Cinema:"), scale_y=1.2)
     split.prop(operator, "use_jpeg2k_cinema_preset", text="")
 
     col.separator(factor=0.4)
-    _, _, split = draw_labeled_row(col, "YCC:", scale_y=1.2)
+    _, _, split = draw_labeled_row(col, n_("YCC:"), scale_y=1.2)
     split.prop(operator, "use_jpeg2k_ycc", text="")
 
 
@@ -196,14 +198,14 @@ def draw_save_options_section(layout, operator):
     col.separator(factor=1.2)
 
     # Copy
-    _, _, split = draw_labeled_row(col, "Copy:", scale_y=1.2)
+    _, _, split = draw_labeled_row(col, n_("Copy:"), scale_y=1.2)
     split.prop(operator, "copy", text="")
 
     if not operator.copy:
         col.separator(factor=0.4)
 
         # Relative Path
-        _, _, split = draw_labeled_row(col, "Relative Path:", scale_y=1.2)
+        _, _, split = draw_labeled_row(col, n_("Relative Path:"), scale_y=1.2)
         split.prop(operator, "relative", text="")
 
     col.separator(factor=0.8)

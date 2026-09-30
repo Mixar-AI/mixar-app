@@ -93,11 +93,12 @@ inline constexpr float HIST_COL_SEARCH_OUTLINE[4] = {1.0f, 1.0f, 1.0f, 0.08f};
 /** Local snapshot of one history entry read from RNA. */
 struct HistoryDrawEntry {
   char title[200];
-  char when[24];
-  char group[32];
+  /* Label buffers are sized for translated (multi-byte) text. */
+  char when[64];
+  char group[64];
   char session_id[128];
   /** Checkpoints: the armed-row prompt ("Revert turns 3–5?"), from Python. */
-  char action[48];
+  char action[128];
 };
 
 /** One row or section header of the display list the overlay builds. */

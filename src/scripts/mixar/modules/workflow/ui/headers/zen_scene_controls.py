@@ -5,6 +5,8 @@
 
 import bpy
 
+from mixar.modules.common.i18n import n_
+
 from ...core import viewport_guides, zen_toolbar_layout as tiers
 from ...core.zen_scene import render_samples_binding, sky_enabled
 
@@ -38,7 +40,7 @@ def draw_render_settings(layout, context, *, vertical=False):
     controls = surface.column() if vertical else surface.row()
     engine = controls.row(align=True)
     engine.ui_units_x = 10.1
-    caption(engine, "Render Engine", 112)
+    caption(engine, n_("Render Engine"), 112)
     field = engine.row(align=True)
     field.prop(context.scene.render, "engine", text="")
     style(field)

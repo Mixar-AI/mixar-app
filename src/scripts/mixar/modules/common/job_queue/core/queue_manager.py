@@ -29,6 +29,7 @@ from mixar.modules.common.api.exceptions import (
     ConnectionError as APIConnectionError,
     TimeoutError as APITimeoutError,
 )
+from mixar.modules.common.i18n import n_
 from .model_io import (
     get_poll_interval,
     redraw_3d_views,
@@ -428,11 +429,11 @@ class FeatureQueue(DownloadMixin):
             self._cancel_on_backend(job.backend_job_id)
         # Set descriptive error for in-flight jobs (backend can't cancel them)
         if job.state in RUNNING_STATES:
-            job.error = "Cancelled (generation may still complete on server)"
+            job.error = n_("Cancelled (generation may still complete on server)")
         job._submit_retry_scheduled = False
         job.state = JobState.CANCELLED
         if not job.error:
-            job.error = "Cancelled"
+            job.error = n_("Cancelled")
         self._notify()
         self._pump()
 
@@ -444,7 +445,7 @@ class FeatureQueue(DownloadMixin):
                 job._submit_retry_scheduled = False
                 job.state = JobState.CANCELLED
                 if not job.error:
-                    job.error = "Cancelled"
+                    job.error = n_("Cancelled")
         self._notify()
         self._pump()
 
@@ -472,7 +473,7 @@ class FeatureQueue(DownloadMixin):
                 job._submit_retry_scheduled = False
                 job.state = JobState.CANCELLED
                 if not job.error:
-                    job.error = "Cancelled"
+                    job.error = n_("Cancelled")
             # Same release pass _notify() runs for terminal jobs — these are
             # being dropped, so no later notify will see them.
             try:
@@ -689,7 +690,7 @@ class FeatureQueue(DownloadMixin):
                     title = (
                         getattr(job, "display_label", "")
                         or job.label
-                        or "Generation failed"
+                        or n_("Generation failed")
                     )
                     get_notification_store().push(
                         "error", title, body=message, priority="high",
@@ -753,7 +754,7 @@ class FeatureQueue(DownloadMixin):
         except Exception as e:
             job.state = JobState.FAILED
             job.error = f"Failed to parse submit response: {e}"
-            job.user_message = "Failed to process server response"
+            job.user_message = n_("Failed to process server response")
             self._notify()
             self._pump()
             return
@@ -817,7 +818,7 @@ class FeatureQueue(DownloadMixin):
             return True
 
         job.state = JobState.RUNNING_SUBMIT
-        job.user_message = "Submission still pending - retrying"
+        job.user_message = n_("Submission still pending - retrying")
         self._notify()
 
         if job._submit_retry_scheduled:
@@ -829,7 +830,7 @@ class FeatureQueue(DownloadMixin):
             if job.state != JobState.RUNNING_SUBMIT or job.backend_job_id:
                 return None
             job.error = ""
-            job.user_message = "Retrying submission..."
+            job.user_message = n_("Retrying submission...")
             self._notify()
             self._submit_job_attempt(job)
             return None
@@ -859,7 +860,7 @@ class FeatureQueue(DownloadMixin):
             job.error = (
                 f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
             )
-            job.user_message = "Generation timed out — please try again"
+            job.user_message = n_("Generation timed out — please try again")
             job.error_class = "timeout"
             job.error_reason = job.error
             self._notify()
@@ -896,7 +897,7 @@ class FeatureQueue(DownloadMixin):
             job.state = JobState.FAILED
             apply_client_failure(
                 job, e, stage="client",
-                message="Could not read the server's response for this job",
+                message=n_("Could not read the server's response for this job"),
             )
             self._notify()
             self._pump()
@@ -934,7 +935,7 @@ class FeatureQueue(DownloadMixin):
             job.error = (
                 f"Job timed out after {int(MAX_POLL_DURATION // 60)} minutes"
             )
-            job.user_message = "Generation timed out — please try again"
+            job.user_message = n_("Generation timed out — please try again")
             job.error_class = "timeout"
             job.error_reason = job.error
         elif job.state == JobState.RUNNING_DOWNLOAD:
@@ -946,7 +947,7 @@ class FeatureQueue(DownloadMixin):
                 "Download did not finish within "
                 f"{int(DOWNLOAD_WATCHDOG_DEADLINE_S // 60)} minutes"
             )
-            job.user_message = "Download timed out — please retry"
+            job.user_message = n_("Download timed out — please retry")
             job.error_class = "download"
             job.error_reason = job.error
         else:
@@ -967,7 +968,7 @@ class FeatureQueue(DownloadMixin):
             job.state = JobState.FAILED
             apply_client_failure(
                 job, error, stage="client",
-                message="Job result expired — please retry",
+                message=n_("Job result expired — please retry"),
             )
             self._notify()
             self._pump()
@@ -1000,7 +1001,7 @@ class FeatureQueue(DownloadMixin):
 
     def _enter_auth_pause(self, job: Job, error) -> None:
         job.state = JobState.PAUSED_AUTH
-        job.error = "Waiting for sign-in"
+        job.error = n_("Waiting for sign-in")
         self._auth_paused = True
         self._notify()
         # Lazy import to avoid circulars

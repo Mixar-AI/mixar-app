@@ -11,6 +11,8 @@
 #include "mixie_moodboard_ops_common.hh"
 #include "mixie_moodboard_node_layout.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_windowmanager_types.h"
 #include "DNA_workspace_types.h"
 
@@ -216,7 +218,8 @@ static wmOperatorStatus moodboard_frame_exec(bContext *C, wmOperator *op)
   if (!moodboard_content_bounds(&scene_ptr, selected_only, &bounds)) {
     BKE_report(op->reports,
                RPT_INFO,
-               selected_only ? "Nothing selected to frame" : "The board is empty");
+               /* N_: BKE_report translates the message it is given. */
+               selected_only ? N_("Nothing selected to frame") : N_("The board is empty"));
     return OPERATOR_CANCELLED;
   }
 

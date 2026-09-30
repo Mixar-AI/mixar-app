@@ -318,7 +318,7 @@ def test_state_mirrors_aerial_and_the_poll_opens_to_the_stage():
 
 
 def test_the_hint_is_aerial_view_and_lights_with_the_mode():
-    assert '{0.0f, {"O"}, 1, "Aerial view", false}' in TOP
+    assert '{0.0f, {"O"}, 1, N_("Aerial view"), false}' in TOP
     # Only in the resting set: there is no Aerial hint while walking, so the
     # lit flag has to say which set it is reading.
     assert "const bool lit = !state.walking && index == 0 && state.aerial_mode;" in TOP

@@ -24,6 +24,7 @@ from mixar.modules.common.analytics.draft_events import note_generation_submitte
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import Job, JobState, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_RECON
@@ -132,8 +133,8 @@ class SceneReconJob(Job):
 
         # Map job queue statuses
         if gq_status in FAILED_BACKEND_STATUSES:
-            self.error = (inner.get("error") or "Scene reconstruction failed")
-            self.user_message = inner.get("user_message", "") or "Scene reconstruction failed"
+            self.error = (inner.get("error") or n_("Scene reconstruction failed"))
+            self.user_message = inner.get("user_message", "") or n_("Scene reconstruction failed")
             return ("FAIL", [])
         if gq_status == "PENDING":
             self.backend_status = gq_status
@@ -166,13 +167,13 @@ class SceneReconJob(Job):
 
         # If every object failed, treat the whole job as failed
         if succeeded == 0 and total > 0:
-            on_error(f"All {total} objects failed to generate")
+            on_error(rpt_("All {total} objects failed to generate").format(total=total))
             return True
 
         if self._imported_names:
             on_done(", ".join(self._imported_names))
         else:
-            on_done(f"{succeeded}/{total} objects")
+            on_done(rpt_("{succeeded}/{total} objects").format(succeeded=succeeded, total=total))
         return True
 
     def get_poll_interval(self):
@@ -193,13 +194,13 @@ class SceneReconJob(Job):
         _update_tab_status(stage_name, stage_detail)
 
         if job_status == "failed":
-            self.error = data.get("error", "Job failed")
-            self.user_message = data.get("user_message", "") or "Scene reconstruction failed"
+            self.error = data.get("error", n_("Job failed"))
+            self.user_message = data.get("user_message", "") or n_("Scene reconstruction failed")
             _update_tab_status(error=self.error)
             return ("FAIL", [])
         if job_status in TERMINAL_JOB_STATUSES and job_status != "completed":
-            self.error = f"Job ended: {job_status}"
-            self.user_message = data.get("user_message", "") or "Scene reconstruction failed"
+            self.error = rpt_("Job ended: {status}").format(status=job_status)
+            self.user_message = data.get("user_message", "") or n_("Scene reconstruction failed")
             _update_tab_status(error=self.error)
             return ("FAIL", [])
 
@@ -235,10 +236,11 @@ class SceneReconJob(Job):
         # Update tab UI
         if phase == "model_generation":
             _update_tab_status(
-                f"Generating 3D Models ({completed}/{total})", "",
+                rpt_("Generating 3D Models ({completed}/{total})").format(
+                    completed=completed, total=total), "",
             )
         elif phase == "completed":
-            _update_tab_status(f"Scene Complete ({total} objects)", "")
+            _update_tab_status(rpt_("Scene Complete ({total} objects)").format(total=total), "")
 
         # Scan for newly completed objects to download
         for obj in objects:
@@ -275,8 +277,8 @@ class SceneReconJob(Job):
                 return ("DONE", [])
 
             if job_status == "failed" and no_downloads:
-                self.error = error or "All model generations failed"
-                self.user_message = data.get("user_message", "") or "Scene reconstruction failed"
+                self.error = error or n_("All model generations failed")
+                self.user_message = data.get("user_message", "") or n_("Scene reconstruction failed")
                 return ("FAIL", [])
 
         # Check if all done
@@ -353,7 +355,7 @@ def enqueue_scene_recon_job(
     """Build a ``SceneReconJob`` and submit it to the queue."""
     job = SceneReconJob(
         feature_key=FEATURE_SCENE_RECON,
-        label="Scene Reconstruction",
+        label=n_("Scene Reconstruction"),
         service=_SERVICE_KEY,
         image_bytes_b64=_b64.b64encode(image_bytes).decode(),
         generate_mesh=generate_mesh,
@@ -417,7 +419,7 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
                 cb = j._on_error_callback
                 if cb:
                     try:
-                        cb(j.error or "Scene reconstruction failed")
+                        cb(j.error or n_("Scene reconstruction failed"))
                     except Exception:
                         pass
 

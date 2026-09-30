@@ -9,6 +9,7 @@ from bpy.props import IntProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 from mixar.modules.moodboard.constants import CHARACTER_PARTS_CAPABILITY_KEY
 
 logger = get_logger(__name__)
@@ -138,7 +139,8 @@ class MIXIE_OT_generate_character_components(Operator):
             packed_source = _packed_image_bytes(source_image)
             source_bytes = packed_source or image_to_png_bytes(source_image)
         except Exception as exc:
-            self.report({'ERROR'}, f"Could not read the component source: {exc}")
+            self.report({'ERROR'}, rpt_("Could not read the component source: {error}").format(
+                error=exc))
             return {'CANCELLED'}
 
         source_item_id = ensure_moodboard_item_id(source_item)
@@ -157,11 +159,13 @@ class MIXIE_OT_generate_character_components(Operator):
                 except Exception as fallback_exc:
                     self.report(
                         {'ERROR'},
-                        f"Could not decode the component source: {fallback_exc}",
+                        rpt_("Could not decode the component source: {error}").format(
+                            error=fallback_exc),
                     )
                     return {'CANCELLED'}
             else:
-                self.report({'ERROR'}, f"Could not decode the component source: {exc}")
+                self.report({'ERROR'}, rpt_("Could not decode the component source: {error}").format(
+                    error=exc))
                 return {'CANCELLED'}
         encoded_full_source = None
         for _index, segment in targets:
@@ -197,12 +201,14 @@ class MIXIE_OT_generate_character_components(Operator):
                     model=model_slug,
                     payload=payload,
                     label=f"CharacterComponent:{source_item_id}:{component_id}",
-                    display_label=f"{component_name} detail",
+                    display_label=iface_("{component} detail").format(
+                        component=component_name),
                     # This composite workflow is surfaced by the Character
                     # Parts N-panel but submits to the Image Gen backend
                     # service.
                     origin_capability_key=CHARACTER_PARTS_CAPABILITY_KEY,
-                    fail_message=f"Could not generate {component_name} detail",
+                    fail_message=rpt_("Could not generate {component} detail").format(
+                        component=component_name),
                     name_prefix="component_detail",
                     prompt_text=payload["prompt"],
                     undo_message="Generate Character Component",
@@ -215,7 +221,8 @@ class MIXIE_OT_generate_character_components(Operator):
                     listener=get_imagegen_listener(),
                 )
                 if job is None:
-                    failures.append(f"{component_name} is already queued")
+                    failures.append(rpt_("{component} is already queued").format(
+                        component=component_name))
                     continue
                 enqueued += 1
             except Exception as exc:
@@ -232,13 +239,15 @@ class MIXIE_OT_generate_character_components(Operator):
             if failures:
                 self.report(
                     {'WARNING'},
-                    f"Queued {enqueued} component(s); {len(failures)} skipped",
+                    rpt_("Queued {enqueued} component(s); {count} skipped").format(
+                        enqueued=enqueued, count=len(failures)),
                 )
             else:
-                self.report({'INFO'}, f"Queued {enqueued} component detail image(s)")
+                self.report({'INFO'}, rpt_("Queued {enqueued} component detail image(s)").format(
+                    enqueued=enqueued))
             return {'FINISHED'}
 
-        detail = failures[0] if failures else "No component jobs were accepted"
+        detail = failures[0] if failures else n_("No component jobs were accepted")
         self.report({'ERROR'}, detail[:240])
         return {'CANCELLED'}
 

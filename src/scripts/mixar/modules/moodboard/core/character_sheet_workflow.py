@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 
+from mixar.modules.common.i18n import rpt_
 from ..constants import FRAME_SELECTION_PADDING, MOODBOARD_MULTI_IMAGE_GAP
 from .assemble_constants import BODY_SOCKET, param_name, part_socket
 from .asset_nodes import find_free_asset_position
@@ -229,7 +230,7 @@ def _free_socket(scene, node, kind: str) -> str:
     for socket in node.input_sockets:
         if socket.socket_id not in occupied and kind in socket.accepted_types.split(","):
             return socket.socket_id
-    raise ValueError(f"This model has no free {kind.lower()} input")
+    raise ValueError(rpt_("This model has no free {kind} input").format(kind=kind.lower()))
 
 
 def _new_card(scene, created: list, action_type: str, **kwargs):
@@ -299,7 +300,7 @@ def _build_assemble(scene, created, body_id, part_ids, origin, offset) -> str:
         for kind, value in row.items():
             parameter = _parameter(node, param_name(kind, index))
             if parameter is None:
-                raise ValueError("Assemble's settings are unavailable")
+                raise ValueError(rpt_("Assemble's settings are unavailable"))
             parameter.value_enum = value
     return node_id
 
@@ -335,14 +336,14 @@ def build_character_sheet_workflow(scene, *, sources: list, center):
     pf = preflight()
     if pf is None:
         raise ValueError(
-            "This template needs an image model that accepts references and a 3D model "
-            "that takes an image"
+            rpt_("This template needs an image model that accepts references and a 3D model "
+                 "that takes an image")
         )
     sources = list(sources or ())
     if len(sources) > pf.image_socket_count:
         raise ValueError(
-            f"This image model takes at most {pf.image_socket_count} reference images; "
-            "select fewer"
+            rpt_("This image model takes at most {count} reference images; select fewer")
+            .format(count=pf.image_socket_count)
         )
     has_rig = template_available('AUTO_RIG')
     # Plain data only from here on: a card source goes stale at the first add.
@@ -386,12 +387,12 @@ def build_character_sheet_workflow(scene, *, sources: list, center):
         # Never the sheet: it stays where the user put it, outside the frame.
         frame = create_frame(scene, from_items=members, name=_frame_name(scene, sheet))
         if frame is None:
-            raise ValueError("Frames are unavailable on this board")
+            raise ValueError(rpt_("Frames are unavailable on this board"))
         frame_id = frame.frame_id
 
         deselect_graph_nodes(scene)
         select_frame(scene, frame_id)
-        post_graph_notice(scene, NOTICE, ref_ids[0])
+        post_graph_notice(scene, rpt_(NOTICE), ref_ids[0])
         return frame
     except Exception as exc:
         _rollback(scene, created, notes, frame_id)

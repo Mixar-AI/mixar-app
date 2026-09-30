@@ -13,6 +13,7 @@ segmented character is rigged as one skeleton, not one rig per part.
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -60,8 +61,9 @@ class MIXIE_OT_animate_generate(Operator):
             # loudly here instead.
             self.report(
                 {"ERROR"},
-                f"Auto Rig can't submit to service '{service_key}' — only "
-                f"'{ANIMATE_RIG_SERVICE}' is supported by this operator.",
+                rpt_("Auto Rig can't submit to service '{service}' — only '{supported}' is "
+                     "supported by this operator.").format(
+                    service=service_key, supported=ANIMATE_RIG_SERVICE),
             )
             return {"CANCELLED"}
         model = resolve_model_slug(
@@ -85,7 +87,7 @@ class MIXIE_OT_animate_generate(Operator):
                 operator=self,
             )
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to start Auto Rig: {e}")
+            self.report({"ERROR"}, rpt_("Failed to start Auto Rig: {error}").format(error=e))
             return {"CANCELLED"}
         if not enqueued:
             self.report(

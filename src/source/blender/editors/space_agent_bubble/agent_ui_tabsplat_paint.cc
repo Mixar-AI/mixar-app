@@ -28,6 +28,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "DNA_image_types.h"
 #include "DNA_scene_types.h"
 
@@ -157,14 +159,16 @@ void splat_pane_rects_build(const rctf &panel,
     return out;
   };
 
-  r->chip_upload = place(pane_action_chip_w("Upload Reference", true, u), PANE_CHIP_GAP * u);
-  r->chip_capture = place(pane_action_chip_w("Capture Viewport", false, u), 18.0f * u);
+  r->chip_upload = place(pane_action_chip_w(IFACE_("Upload Reference"), true, u),
+                         PANE_CHIP_GAP * u);
+  r->chip_capture = place(pane_action_chip_w(IFACE_("Capture Viewport"), false, u), 18.0f * u);
 
   /* One shared Toggle contains its label and ON/OFF state. Reserve its
    * measured native recipe before placing previews; never overlap Generate. */
-  const float toggle_w = pane_text_width("Use Moodboard", PANE_FONT * agent_ui_text_unit()) +
-                         pane_text_width("ON", PANE_FONT * agent_ui_text_unit()) +
-                         pane_text_width("OFF", PANE_FONT * agent_ui_text_unit()) +
+  const float toggle_w = pane_text_width(IFACE_("Use Moodboard"),
+                                         PANE_FONT * agent_ui_text_unit()) +
+                         pane_text_width(IFACE_("ON"), PANE_FONT * agent_ui_text_unit()) +
+                         pane_text_width(IFACE_("OFF"), PANE_FONT * agent_ui_text_unit()) +
                          (2 * ui::mixar_tokens::padding + 52.0f) * u;
   r->moodboard_switch = place(toggle_w, 12.0f * u);
 
@@ -216,7 +220,8 @@ void splat_pane_paint(const bContext *C,
       if (count == 0) {
         /* Use the same fixed text unit for fitting and drawing the hint. */
         const float hint_font = PANE_FONT_SUB * agent_ui_text_unit();
-        const char *hint = state.use_selected ? "none selected" : "no image added";
+        const char *hint = state.use_selected ? IFACE_("none selected") :
+                                                IFACE_("no image added");
         if (end_x + pane_text_width(hint, hint_font) <= max_x) {
           pane_label_left(hint, end_x, row_cy, hint_font, dim);
         }

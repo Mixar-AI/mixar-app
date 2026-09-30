@@ -10,6 +10,7 @@ from bpy.props import EnumProperty
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -247,7 +248,7 @@ class CHANNELS_OT_AddChannel(Operator):
                     if target_socket and self.set_strength_to_one:
                         setup_bsdf_companion_socket(mat, target_socket)
 
-            self.report({'INFO'}, f"Added channel '{channel.name}'")
+            self.report({'INFO'}, rpt_("Added channel '{name}'").format(name=channel.name))
 
             # Request UI refresh
             request_ui_refresh()
@@ -256,7 +257,7 @@ class CHANNELS_OT_AddChannel(Operator):
 
         except Exception as e:
             mp.halt_reconnect = False
-            self.report({'ERROR'}, f"Failed to add channel: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to add channel: {error}").format(error=e))
             logger.error("Failed to add channel: %s", e, exc_info=True)
             return {'CANCELLED'}
 
@@ -304,7 +305,7 @@ class CHANNELS_OT_AddChannelQuick(Operator):
         # Check if channel already exists
         for ch in mp.channels:
             if ch.name == self.channel_name:
-                self.report({'WARNING'}, f"Channel '{self.channel_name}' already exists")
+                self.report({'WARNING'}, rpt_("Channel '{name}' already exists").format(name=self.channel_name))
                 return {'CANCELLED'}
 
         # Create new channel
@@ -347,7 +348,7 @@ class CHANNELS_OT_AddChannelQuick(Operator):
                     if target_socket and self.set_strength_to_one:
                         setup_bsdf_companion_socket(mat, target_socket)
 
-            self.report({'INFO'}, f"Added channel '{channel.name}'")
+            self.report({'INFO'}, rpt_("Added channel '{name}'").format(name=channel.name))
 
             # Request UI refresh
             request_ui_refresh()
@@ -356,7 +357,7 @@ class CHANNELS_OT_AddChannelQuick(Operator):
 
         except Exception as e:
             mp.halt_reconnect = False
-            self.report({'ERROR'}, f"Failed to add channel: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to add channel: {error}").format(error=e))
             logger.error("Failed to add channel: %s", e, exc_info=True)
             return {'CANCELLED'}
 

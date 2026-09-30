@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 
+from mixar.modules.common.i18n import iface_, n_, rpt_
 from .assemble_constants import (
     BODY_SOCKET,
     HOLD_CHOICES,
@@ -32,24 +33,27 @@ from .assemble_constants import (
 )
 
 SCHEMA_VERSION = "assemble/v1"
-DEFAULT_SUMMARY = "Assembled character"
+DEFAULT_SUMMARY = n_("Assembled character")
 
 # (label, parameter_type, description) per settings row kind.
 _ROWS = {
-    "slot": ("Slot", 'ENUM', "Where this part attaches; Auto reads the part's name"),
-    "hold": ("Hold", 'ENUM', "How a hand or forearm item is held; Auto reads the part's name"),
-    "size": ("Size %", 'FLOAT', "Longest dimension as a percentage of the body height; 0 = auto"),
-    "flip": ("Flip edge", 'BOOLEAN', "Turn the part half a turn about its long axis"),
+    "slot": (n_("Slot"), 'ENUM', n_("Where this part attaches; Auto reads the part's name")),
+    "hold": (n_("Hold"), 'ENUM',
+             n_("How a hand or forearm item is held; Auto reads the part's name")),
+    "size": (n_("Size %"), 'FLOAT',
+             n_("Longest dimension as a percentage of the body height; 0 = auto")),
+    "flip": (n_("Flip edge"), 'BOOLEAN', n_("Turn the part half a turn about its long axis")),
 }
 _CHOICES = {"slot": SLOT_CHOICES, "hold": HOLD_CHOICES}
 
 
 def assemble_contract() -> dict:
     """One required body mesh plus up to eight optional, progressive parts."""
-    sockets = [{"id": BODY_SOCKET, "label": "Body", "accepted_types": ["MESH"],
+    sockets = [{"id": BODY_SOCKET, "label": iface_("Body"), "accepted_types": ["MESH"],
                 "required": True, "group_id": BODY_SOCKET, "repeatable": False}]
     sockets += [
-        {"id": part_socket(index), "label": f"Part {index + 1}", "accepted_types": ["MESH"],
+        {"id": part_socket(index), "label": iface_("Part {number}").format(number=index + 1),
+         "accepted_types": ["MESH"],
          "required": False, "group_id": PART_GROUP, "repeatable": True}
         for index in range(PART_SOCKET_COUNT)
     ]
@@ -241,6 +245,18 @@ def last_outcome(node) -> dict:
         for part in parts
         if isinstance(part, dict) and part.get("socket")
     }
+
+
+def summary_text(attached: int, skipped: int, rigged: bool) -> str:
+    """The run report's one-line summary (moved here from ``assemble_node``)."""
+    one, none = attached == 1, attached == skipped == 0
+    text = (rpt_("No parts connected — the rigged body is the character") if none and rigged
+            else rpt_("No parts connected — the body is the character") if none
+            else (rpt_("{count} part on bones") if one else rpt_("{count} parts on bones"))
+            if rigged else rpt_("{count} part placed — not rigged") if one
+            else rpt_("{count} parts placed — not rigged")).format(count=attached)
+    return rpt_("{summary}, {count} skipped").format(
+        summary=text, count=skipped) if skipped else text
 
 
 def assemble_summary(node) -> str:

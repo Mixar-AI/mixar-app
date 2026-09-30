@@ -51,6 +51,8 @@ import bpy
 from bpy.props import BoolProperty, StringProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
+
 logger = logging.getLogger(__name__)
 
 #: Must match ``asset_search/constants.py:GENERATION_LIBRARY_NAME``.
@@ -172,21 +174,22 @@ class MIXAR_OT_generations_add_library(Operator):
             # Idempotent: re-picking a connected folder selects it rather than
             # registering a second entry pointing at the same place.
             context.window_manager.mixar_generations_library = already
-            self.report({'INFO'}, f"Already connected as '{already}'")
+            self.report({'INFO'}, rpt_("Already connected as '{name}'").format(name=already))
             return {'FINISHED'}
 
         try:
             bpy.ops.preferences.asset_library_add(directory=path)
         except Exception as exc:  # noqa: BLE001 — surface, never swallow
             logger.exception("[Generations] Could not add asset library")
-            self.report({'ERROR'}, f"Could not add the library: {exc}")
+            self.report({'ERROR'}, rpt_("Could not add the library: {error}").format(error=exc))
             return {'CANCELLED'}
 
         name = _registered_library_paths().get(os.path.normcase(path), "")
         if name:
             context.window_manager.mixar_generations_library = name
         _refresh_media(context)
-        self.report({'INFO'}, f"Connected '{name or os.path.basename(path)}'")
+        self.report({'INFO'}, rpt_("Connected '{name}'").format(
+            name=name or os.path.basename(path)))
         return {'FINISHED'}
 
 
@@ -247,7 +250,7 @@ class MIXAR_OT_generations_select_media(Operator):
         for item in items:
             image = getattr(item, "image", None)
             item.selected = image is not None and image.name == target
-        self.report({'INFO'}, f"Selected '{target}' on the moodboard")
+        self.report({'INFO'}, rpt_("Selected '{name}' on the moodboard").format(name=target))
         return {'FINISHED'}
 
 
@@ -283,7 +286,7 @@ class MIXAR_OT_generations_select_splat(Operator):
             pass
         proxy.select_set(True)
         context.view_layer.objects.active = proxy
-        self.report({'INFO'}, f"Selected '{proxy.name}'")
+        self.report({'INFO'}, rpt_("Selected '{name}'").format(name=proxy.name))
         return {'FINISHED'}
 
 
@@ -309,7 +312,7 @@ class MIXAR_OT_generations_open_folder(Operator):
         try:
             bpy.ops.wm.path_open(filepath=folder)
         except Exception as exc:  # noqa: BLE001
-            self.report({'ERROR'}, f"Could not open the folder: {exc}")
+            self.report({'ERROR'}, rpt_("Could not open the folder: {error}").format(error=exc))
             return {'CANCELLED'}
         return {'FINISHED'}
 

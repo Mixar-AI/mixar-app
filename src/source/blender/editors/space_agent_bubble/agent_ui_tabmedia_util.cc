@@ -21,6 +21,7 @@
 #include "BLI_rect.h"
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
+#include "BLT_translation.hh"
 
 #include "DNA_scene_types.h"
 
@@ -187,7 +188,8 @@ float media_chip_width(const MediaParamChip &chip, const float u, const float fo
     case MediaChipKind::Bool:
       /* label [ON OFF] */
       return pad * 2.0f + pane_text_width(chip.label.c_str(), font) + 12.0f * u +
-             pane_text_width("ON", font) + pane_text_width("OFF", font) + 44.0f * u;
+             pane_text_width(IFACE_("ON"), font) + pane_text_width(IFACE_("OFF"), font) +
+             44.0f * u;
     case MediaChipKind::Int:
       /* Caption + native numeric field, with room for drag arrows and typing.
        */

@@ -4,6 +4,8 @@
 
 import bpy
 
+from mixar.modules.common.i18n import n_
+
 from . import utils
 from . import core_td_operators, add_td_operators, viz_operators
 from .constants import *
@@ -109,7 +111,7 @@ def _draw_mixar_uv(layout, context, td):
 	layout.separator(factor=0.5)
 
 	# ---- Calculate ----
-	col = _mixar_section(layout, "Calculate", icon='DRIVER_DISTANCE')
+	col = _mixar_section(layout, n_("Calculate"), icon='DRIVER_DISTANCE')
 	row = col.row(align=True)
 	row.label(text="UV Space:")
 	row.label(text=f"{td.uv_space} %")
@@ -124,12 +126,12 @@ def _draw_mixar_uv(layout, context, td):
 	layout.separator(factor=0.5)
 
 	# ---- Set Texel Density ----
-	col = _mixar_section(layout, "Set Texel Density", icon='IMPORT')
+	col = _mixar_section(layout, n_("Set Texel Density"), icon='IMPORT')
 	# Consistent label-column width so all three rows align. Unit (e.g.
 	# "px/cm") is rendered as a trailing label on the right of the input.
-	_labelled_prop(col, td, "density_set", "Texel Density:", suffix=cur_units)
-	_labelled_prop(col, td, 'set_method', "Method:")
-	_labelled_prop(col, td, 'rescale_anchor', "Scale Anchor:")
+	_labelled_prop(col, td, "density_set", n_("Texel Density:"), suffix=cur_units)
+	_labelled_prop(col, td, 'set_method', n_("Method:"))
+	_labelled_prop(col, td, 'rescale_anchor', n_("Scale Anchor:"))
 	col.separator(factor=0.5)
 	row = col.row(align=True)
 	row.scale_y = 1.3
@@ -138,17 +140,17 @@ def _draw_mixar_uv(layout, context, td):
 	# ---- Selection by TD (EDIT only) ----
 	if is_edit:
 		layout.separator(factor=0.5)
-		col = _mixar_section(layout, "Selection by Texel Density", icon='RESTRICT_SELECT_OFF')
-		_labelled_prop(col, td, "select_mode", "Select:")
-		_labelled_prop(col, td, "select_type", "Select Type:")
+		col = _mixar_section(layout, n_("Selection by Texel Density"), icon='RESTRICT_SELECT_OFF')
+		_labelled_prop(col, td, "select_mode", n_("Select:"))
+		_labelled_prop(col, td, "select_type", n_("Select Type:"))
 		if td.select_mode in ("FACES_BY_TD", "ISLANDS_BY_TD"):
-			_labelled_prop(col, td, "select_value", "Texel Density:", suffix=cur_units)
+			_labelled_prop(col, td, "select_value", n_("Texel Density:"), suffix=cur_units)
 		elif td.select_mode == "ISLANDS_BY_SPACE":
-			_labelled_prop(col, td, "select_value", "UV Space:", suffix="%")
+			_labelled_prop(col, td, "select_value", n_("UV Space:"), suffix="%")
 		else:
-			_labelled_prop(col, td, "select_value", "Value:")
+			_labelled_prop(col, td, "select_value", n_("Value:"))
 		if td.select_type == "EQUAL":
-			_labelled_prop(col, td, "select_threshold", "Select Threshold:")
+			_labelled_prop(col, td, "select_threshold", n_("Select Threshold:"))
 		col.separator(factor=0.5)
 		row = col.row(align=True)
 		row.scale_y = 1.3

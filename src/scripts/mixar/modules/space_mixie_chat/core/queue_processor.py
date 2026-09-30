@@ -14,6 +14,7 @@ functions to safely transfer events to the main thread via timers.
 """
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 import json
 from typing import Optional
 import threading
@@ -77,8 +78,12 @@ class EventProcessor:
         kind = data.get("type")
         if kind == "run_status":
             self._run_status_seen.add(scene.name)
+            status = data.get("status")
+            # A cancelled run (the user's Stop) closes silently; any other
+            # close is the run finishing and plays the completion sound.
             self._session.set_run(
-                scene, str(data.get("run_id") or ""), data.get("status") == "in_progress"
+                scene, str(data.get("run_id") or ""), status == "in_progress",
+                notify=status != "cancelled",
             )
             return True
         if kind == "cancelled":
@@ -97,7 +102,7 @@ class EventProcessor:
         if scene.name in self._run_status_seen:
             self._run_status_seen.discard(scene.name)
             return
-        self._session.set_run(scene, "", False)
+        self._session.set_run(scene, "", False, notify=True)
 
     # ========================================================================
     # agent Event Dispatch (called from timer on main thread)
@@ -138,7 +143,7 @@ class EventProcessor:
             if isinstance(data, dict):
                 message = data.get("message") or ""
             self._handle_inband_error(
-                message or "The request could not be completed.", scene
+                message or rpt_("The request could not be completed."), scene
             )
             return
 
@@ -172,7 +177,7 @@ class EventProcessor:
     def handle_command_error(self, result, scene):
         """Display a confirmed command rejection, preserving typed credit actions."""
         from .credits_notice import is_credits_exhausted_error, add_credit_upgrade_chat_message
-        message = result.get('message') or 'Message could not be delivered'
+        message = result.get('message') or rpt_('Message could not be delivered')
         data = result.get('data') or {}
         status = result.get('status_code') or data.get('status_code')
         if is_credits_exhausted_error(status, message):
@@ -243,13 +248,13 @@ class EventProcessor:
             elif is_pre_stream_error:
                 add_agent_message(
                     scene,
-                    "Couldn't reach the server. Please check your connection and try again.",
+                    rpt_("Couldn't reach the server. Please check your connection and try again."),
                 )
             elif was_busy:
                 add_agent_message(
                     scene,
-                    "Connection to the server was lost. "
-                    "The agent may still be working — press Abort to cancel.",
+                    rpt_("Connection to the server was lost. "
+                         "The agent may still be working — press Abort to cancel."),
                 )
             else:
                 add_agent_message(scene, error_message)

@@ -11,6 +11,7 @@ import uuid
 
 import bpy
 
+from mixar.modules.common.i18n import data_, rpt_
 from ..constants import DIRECTOR_SHOT_BASENAME, DIRECTOR_TEXT_SUFFIX
 from .manifest import (
     build_camera_direction_manifest,
@@ -169,7 +170,7 @@ def create_shot(scene, camera, *, parent=None):
     shot.camera = camera
     if parent is None:
         root_number = sum(1 for item in state.shots if not item.parent_shot_id)
-        shot.name = f"{DIRECTOR_SHOT_BASENAME} {root_number:02d}"
+        shot.name = f"{data_(DIRECTOR_SHOT_BASENAME)} {root_number:02d}"
     else:
         shot.name = parent.name
         shot.version = parent.version + 1
@@ -196,14 +197,14 @@ def split_shot(scene, shot, frame: int):
     two hand-built shots sharing a camera would.
     """
     if shot.state != 'DRAFT':
-        raise ValueError("Create a new take before splitting a locked shot")
+        raise ValueError(rpt_("Create a new take before splitting a locked shot"))
     moving = [
         index for index, beat in enumerate(shot.beats) if beat.frame > frame
     ]
     if not moving or len(moving) == len(shot.beats):
-        raise ValueError(
+        raise ValueError(rpt_(
             "Place the playhead between two keyframes to split the shot"
-        )
+        ))
     state = scene.mixar_director
     original_index = shot_index(state, shot)
     # Everything read from *shot* must be copied out first: adding the new
@@ -314,7 +315,7 @@ def _sample_camera(scene, camera, frame: int) -> dict:
 def build_shot_manifest(scene, shot) -> dict:
     """Sample native camera animation at each beat and build its manifest."""
     if shot.camera is None or shot.camera.type != 'CAMERA':
-        raise ValueError("The shot has no camera")
+        raise ValueError(rpt_("The shot has no camera"))
 
     current_frame = scene.frame_current
     beats = []
@@ -388,7 +389,7 @@ def lock_shot(scene, shot) -> str:
     if shot.state == 'LOCKED':
         return shot.snapshot_json
     if not shot.beats:
-        raise ValueError("Capture at least one camera beat before locking")
+        raise ValueError(rpt_("Capture at least one camera beat before locking"))
     from .rotation_curves import repair_rotation_continuity
 
     repair_rotation_continuity(shot.camera)

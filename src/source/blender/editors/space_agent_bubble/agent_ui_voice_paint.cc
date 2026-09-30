@@ -13,6 +13,7 @@
 
 #include "BLI_rect.h"
 #include "BLI_time.h"
+#include "BLT_translation.hh"
 
 #include "DNA_screen_types.h"
 
@@ -95,7 +96,11 @@ void agent_ui_draw_voice_chip(ARegion *region,
   const float cy = BLI_rctf_cent_y(&chip);
   const bool show_label = capturing ? form <= 1 : form == 0;
   const bool show_wave = capturing && form == 0;
-  const char *word = capturing ? "Stop" : (label && label[0] ? label : "Voice");
+  /* \a label is the raw status the Python half writes (compared elsewhere);
+   * it is translated here, where it is drawn and measured. */
+  const char *word = capturing ? IFACE_("Stop") :
+                     (label && label[0]) ? IFACE_(label) :
+                                           IFACE_("Voice");
 
   float wave_room = show_wave ? wave_w + icon_gap : 0.0f;
   std::string text;

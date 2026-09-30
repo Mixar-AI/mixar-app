@@ -22,6 +22,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from ...core import magic_select_flow as flow_mod
 from ...core.canvas_context import redraw_moodboard_canvases
@@ -200,7 +201,7 @@ class MIXIE_OT_moodboard_magic_select_tool(Operator):
             state = self._state()
             created = bool(success and mask_bytes) and self._create_segment(state, mask_bytes)
             if not created:
-                error_msg = message or "Unknown error"
+                error_msg = message or rpt_("Unknown error")
                 if error_msg == "expired":
                     # One re-upload per request; a second expiry falls through
                     # to a failure toast instead of looping upload → expired.

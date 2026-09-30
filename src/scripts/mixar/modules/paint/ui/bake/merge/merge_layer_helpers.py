@@ -11,6 +11,7 @@ import numpy
 from ....core.element.get_elements import get_layer_vcol
 from ....utils.blender_commons import get_active_object, set_active_object
 from ....utils.math_utils import blend_color_mix_byte
+from mixar.modules.common.i18n import n_
 
 
 def merge_vertex_color_layers(
@@ -50,13 +51,13 @@ def merge_vertex_color_layers(
     if modifier_found:
         return (
             False,
-            "Vertex color merge does not works with modifers and masks yet!",
+            n_("Vertex color merge does not works with modifers and masks yet!"),
         )
 
     if ch.blend_type != "MIX" or neighbor_ch.blend_type != "MIX":
         return (
             False,
-            "Vertex color merge only works with Mix blend type for now!",
+            n_("Vertex color merge only works with Mix blend type for now!"),
         )
 
     # Determine upper and lower layers

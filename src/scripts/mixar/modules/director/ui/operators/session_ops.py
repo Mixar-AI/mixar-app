@@ -7,6 +7,7 @@
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core.shot_api import (
     active_shot,
     adopt_camera,
@@ -50,7 +51,7 @@ def _start_walking(operator, context) -> None:
     try:
         bpy.ops.mixar.director_navigate('INVOKE_DEFAULT')
     except Exception as exc:  # noqa: BLE001 — entering must never fail on this
-        operator.report({'INFO'}, f"Walk navigation not started: {exc}")
+        operator.report({'INFO'}, rpt_("Walk navigation not started: {error}").format(error=exc))
 
 
 def _camera_for_start(context, shot):
@@ -165,7 +166,8 @@ class MIXAR_OT_director_start(Operator):
         state.timeline_expanded = True
         state.navigation_mode = 'NAVIGATE'
         state.walk_active = False
-        self.report({'INFO'}, f"Directing {shot.name}, take {shot.version}")
+        self.report({'INFO'}, rpt_("Directing {name}, take {take}").format(
+            name=shot.name, take=shot.version))
         return {'FINISHED'}
 
 
@@ -194,7 +196,7 @@ class MIXAR_OT_director_new_shot(Operator):
         select_camera_object(context, camera)
         context.scene.mixar_director.is_directing = True
         context.scene.mixar_director.timeline_expanded = True
-        self.report({'INFO'}, f"Created {shot.name}")
+        self.report({'INFO'}, rpt_("Created {name}").format(name=shot.name))
         return {'FINISHED'}
 
 
@@ -244,7 +246,8 @@ class MIXAR_OT_director_lock(Operator):
         _leave_immersive(context, state)
         state.is_directing = False
         restore_view(context, context.scene)
-        self.report({'INFO'}, f"Locked {shot.name}, take {shot.version}")
+        self.report({'INFO'}, rpt_("Locked {name}, take {take}").format(
+            name=shot.name, take=shot.version))
         return {'FINISHED'}
 
 
@@ -269,7 +272,7 @@ class MIXAR_OT_director_new_take(Operator):
             return {'CANCELLED'}
         select_camera_object(context, new_take.camera)
         context.scene.mixar_director.is_directing = True
-        self.report({'INFO'}, f"Started take {new_take.version}")
+        self.report({'INFO'}, rpt_("Started take {take}").format(take=new_take.version))
         return {'FINISHED'}
 
 

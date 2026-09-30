@@ -21,6 +21,7 @@ from ....core.subtree.get_subtree import (
 from mixar.config.logging_config import get_logger
 
 from .layer_transform_utils import finalize_layer_move
+from mixar.modules.common.i18n import iface_
 
 logger = get_logger(__name__)
 
@@ -86,7 +87,7 @@ class MMoveLayer(bpy.types.Operator):
         direction = getattr(wm, 'mixar_move_direction', 'UP')
 
         col = layout.column(align=True)
-        col.label(text=f"Group '{group_name}' is adjacent", icon='FILE_FOLDER')
+        col.label(text=iface_("Group '{name}' is adjacent").format(name=group_name), icon='FILE_FOLDER', translate=False)
         col.separator()
 
         # Move into group option

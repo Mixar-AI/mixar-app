@@ -4,8 +4,10 @@
 
 """Constants for the sparse camera-directing workflow."""
 
-DIRECTOR_CAMERA_BASENAME = "Mixar Shot Camera"
-DIRECTOR_SHOT_BASENAME = "Shot"
+from mixar.modules.common.i18n import n_
+
+DIRECTOR_CAMERA_BASENAME = n_("Mixar Shot Camera")
+DIRECTOR_SHOT_BASENAME = n_("Shot")
 DIRECTOR_TEXT_SUFFIX = ".camera.json"
 
 # Native dense motion samples stay out of the sparse beat strip.
@@ -78,6 +80,16 @@ ASPECT_PRESETS = {
     "VERTICAL": ("9:16", 9, 16),
     "SQUARE": ("1:1", 1, 1),
 }
+# Tooltip of each Set Aspect item, one literal per preset so it is translatable.
+ASPECT_PRESET_TIPS = {
+    "PHOTO": n_("Set 3:2 output"),
+    "SMARTPHONE": n_("Set 4:3 output"),
+    "WIDE": n_("Set 16:9 output"),
+    "CINEMA_185": n_("Set 1.85:1 output"),
+    "CINEMA_239": n_("Set 2.39:1 output"),
+    "VERTICAL": n_("Set 9:16 output"),
+    "SQUARE": n_("Set 1:1 output"),
+}
 
 # Camera "template styles" — the design's named list of how a shot moves.
 #
@@ -113,9 +125,16 @@ RESOLUTION_PRESETS = {
     "K2": ("2K", 1440),
     "K4": ("4K", 2160),
 }
+# Tooltip of each resolution tier, one literal per tier so it is translatable.
+RESOLUTION_PRESET_TIPS = {
+    "HD720": n_("Render at 720p"),
+    "HD1080": n_("Render at 1080p"),
+    "K2": n_("Render at 2K"),
+    "K4": n_("Render at 4K"),
+}
 
 RESOLUTION_PRESET_ITEMS = tuple(
-    (key, label, f"Render at {label}", index)
+    (key, label, RESOLUTION_PRESET_TIPS[key], index)
     for index, (key, (label, _short)) in enumerate(RESOLUTION_PRESETS.items())
 )
 
@@ -245,5 +264,5 @@ CAMERA_EXPORT_RANGE_ITEMS = (
 
 # One label, one panel id: the Render menu row, the animation-editor row and
 # the popup they both open must name the same thing.
-CAMERA_EXPORT_LABEL = "Export to Moodboard"
+CAMERA_EXPORT_LABEL = n_("Export to Moodboard")
 CAMERA_EXPORT_PANEL_ID = "MIXAR_PT_camera_export"

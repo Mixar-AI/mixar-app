@@ -42,6 +42,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 
@@ -101,18 +103,20 @@ void auto_key_chip(ui::Block *block,
   /* Blender's own timeline flips RECORD_OFF to RECORD_ON when auto-keying is
    * armed (`rna_scene.cc` ui_icon); REC says a take is actually going down,
    * which `state.recording` publishes from the recorder. Tooltips are
-   * literals: `ui::Button::tip` is non-owning. */
+   * translated literals, rebuilt with the block on every redraw:
+   * `ui::Button::tip` is non-owning. */
   ui::Button *but = cinema_prop_toggle(
       block,
       &tool_settings_ptr,
       "use_keyframe_insert_auto",
       state.recording ? ICON_REC : (armed ? ICON_RECORD_ON : ICON_RECORD_OFF),
       chip,
-      state.recording ? "Recording a take: every frame the timeline plays is keyed" :
-      armed ? "Auto Keying is on (the Timeline's record button): a keyframe after every "
-              "camera move, and a recorded take while the timeline plays" :
-              "Auto Keying (the Timeline's record button): key the camera automatically "
-              "after every move, and record a take while the timeline plays");
+      state.recording ?
+          TIP_("Recording a take: every frame the timeline plays is keyed") :
+      armed ? TIP_("Auto Keying is on (the Timeline's record button): a keyframe after every "
+                   "camera move, and a recorded take while the timeline plays") :
+              TIP_("Auto Keying (the Timeline's record button): key the camera automatically "
+                   "after every move, and record a take while the timeline plays"));
   director_overlay_disable_button(but, !state.has_camera);
 }
 
@@ -126,10 +130,10 @@ void cinema_draw_dock_actions(ui::Block *block,
 {
   const float u = cinema_unit();
   const bool locked = state.locked;
-  const char *label = locked ? "New Take" : "Add Keyframe";
+  const char *label = locked ? IFACE_("New Take") : IFACE_("Add Keyframe");
   const char *key = locked ? nullptr : "I";
-  const char *tip = locked ? "Start an editable child take" :
-                             "Key the live camera pose as a keyframe (I)";
+  const char *tip = locked ? TIP_("Start an editable child take") :
+                             TIP_("Key the live camera pose as a keyframe (I)");
 
   /* The pill is sized to its own text: "New Take" and "Add Keyframe" are
    * different widths and a fixed box would clip one of them. */

@@ -3,8 +3,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""
-Moodboard Modal Transform Operators
+"""Moodboard Modal Transform Operators
 
 Interactive modal operators for grab, rotate and scale of moodboard items.
 """
@@ -14,6 +13,7 @@ import math
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from .transform_ops import (
     get_all_items_to_transform,
     calculate_selection_pivot,
@@ -166,7 +166,7 @@ class MIXIE_OT_moodboard_grab(Operator):
             # not adopt whatever it passed over (see `resolve_membership`).
             self._resolve_membership(context)
             count = len(self._initial_positions)
-            self.report({'INFO'}, f"Moved {count} item(s)")
+            self.report({'INFO'}, rpt_("Moved {count} item(s)").format(count=count))
             return {'FINISHED'}
 
         elif event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS':
@@ -302,7 +302,7 @@ class MIXIE_OT_moodboard_rotate(Operator):
         elif event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             # Confirm the rotation
             count = len(self._initial_states)
-            self.report({'INFO'}, f"Rotated {count} item(s)")
+            self.report({'INFO'}, rpt_("Rotated {count} item(s)").format(count=count))
             return {'FINISHED'}
 
         elif event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS':
@@ -427,7 +427,7 @@ class MIXIE_OT_moodboard_scale(Operator):
         elif event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             # Confirm the scale
             count = len(self._initial_states)
-            self.report({'INFO'}, f"Scaled {count} item(s)")
+            self.report({'INFO'}, rpt_("Scaled {count} item(s)").format(count=count))
             return {'FINISHED'}
 
         elif event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS':

@@ -20,6 +20,7 @@ import tempfile
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.core.splat_lifecycle import (
     finalize_splat_handles,
     note_splats_imported,
@@ -66,9 +67,10 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
     """
     ext = os.path.splitext(filepath)[1].lower()
     if ext not in SPLAT_EXTENSIONS:
-        raise ValueError(f"Unsupported splat file type '{ext}' (expected .spz or .ply)")
+        raise ValueError(rpt_("Unsupported splat file type '{ext}' (expected .spz or .ply)").format(
+            ext=ext))
     if not os.path.isfile(filepath):
-        raise ValueError(f"File not found: {filepath}")
+        raise ValueError(rpt_("File not found: {path}").format(path=filepath))
 
     stem = name or os.path.splitext(os.path.basename(filepath))[0] or "Splat"
 
@@ -93,7 +95,8 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
 
         splat_objs = _import_tracked(lambda: _import_splat_ply(ply_path))
         if not splat_objs:
-            raise ValueError(f"No objects imported from {os.path.basename(filepath)}")
+            raise ValueError(rpt_("No objects imported from {name}").format(
+                name=os.path.basename(filepath)))
         # Converted .spz (our decoder negates Y/Z → effectively y-up) takes the
         # World Labs +90 X; a raw 3DGS .ply keeps the vendor y-DOWN frame and
         # needs the opposite rotation (KIRI's "Rotate for Blender Axes").

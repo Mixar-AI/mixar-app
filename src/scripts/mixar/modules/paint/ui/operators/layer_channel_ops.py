@@ -13,6 +13,7 @@ from bpy.props import IntProperty, BoolProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, rpt_
 
 logger = get_logger(__name__)
 
@@ -95,9 +96,9 @@ class LAYERS_OT_ToggleLayerChannel(Operator):
             reconnect_layer_nodes(layer)
             rearrange_layer_nodes(layer)
 
-            action = "Enabled" if self.enable else "Disabled"
-            channel_name = root_channel.name if root_channel else f"Channel {ch_idx}"
-            self.report({'INFO'}, f"{action} {channel_name} for layer '{layer.name}'")
+            template = rpt_("Enabled {channel} for layer '{layer}'") if self.enable else rpt_("Disabled {channel} for layer '{layer}'")
+            channel_name = root_channel.name if root_channel else iface_("Channel {index}").format(index=ch_idx)
+            self.report({'INFO'}, template.format(channel=channel_name, layer=layer.name))
 
             # Request UI refresh
             request_ui_refresh()
@@ -105,7 +106,7 @@ class LAYERS_OT_ToggleLayerChannel(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to toggle channel: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to toggle channel: {error}").format(error=e))
             return {'CANCELLED'}
 
 
@@ -255,11 +256,11 @@ class CHANNEL_OT_ToggleCustomOverride(Operator):
             if is_custom:
                 # Turn off custom - back to default (brush/layer mode)
                 channel.override_type = 'LAYER'
-                action = "Disabled"
+                template = rpt_("Disabled custom override for {channel}")
             else:
                 # Turn on custom override
                 channel.override_type = 'OVERRIDE'
-                action = "Enabled"
+                template = rpt_("Enabled custom override for {channel}")
 
                 # For VALUE channels, set override_value to current brush luminance
                 if root_channel and root_channel.type == 'VALUE':
@@ -267,8 +268,8 @@ class CHANNEL_OT_ToggleCustomOverride(Operator):
                     if hasattr(channel, 'override_value'):
                         channel.override_value = luminance
 
-            channel_name = root_channel.name if root_channel else f"Channel {ch_idx}"
-            self.report({'INFO'}, f"{action} custom override for {channel_name}")
+            channel_name = root_channel.name if root_channel else iface_("Channel {index}").format(index=ch_idx)
+            self.report({'INFO'}, template.format(channel=channel_name))
 
             # Request UI refresh
             request_ui_refresh()
@@ -276,7 +277,7 @@ class CHANNEL_OT_ToggleCustomOverride(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to toggle custom override: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to toggle custom override: {error}").format(error=e))
             return {'CANCELLED'}
 
     def _get_brush_luminance(self, context):
@@ -367,7 +368,7 @@ class CHANNEL_OT_ToggleImageOverride(Operator):
                 if root_channel and root_channel.type == 'NORMAL':
                     if hasattr(channel, 'override'):
                         channel.override = True  # Keep enabled for bump color
-                action = "Disabled"
+                template = rpt_("Disabled image override for {channel}")
             else:
                 # Turn on image override
                 channel.override_type = 'IMAGE'
@@ -375,10 +376,10 @@ class CHANNEL_OT_ToggleImageOverride(Operator):
                 if root_channel and root_channel.type == 'NORMAL':
                     if hasattr(channel, 'override'):
                         channel.override = True
-                action = "Enabled"
+                template = rpt_("Enabled image override for {channel}")
 
-            channel_name = root_channel.name if root_channel else f"Channel {ch_idx}"
-            self.report({'INFO'}, f"{action} image override for {channel_name}")
+            channel_name = root_channel.name if root_channel else iface_("Channel {index}").format(index=ch_idx)
+            self.report({'INFO'}, template.format(channel=channel_name))
 
             # Request UI refresh
             request_ui_refresh()
@@ -390,7 +391,7 @@ class CHANNEL_OT_ToggleImageOverride(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to toggle image override: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to toggle image override: {error}").format(error=e))
             return {'CANCELLED'}
 
 
@@ -456,8 +457,8 @@ class CHANNEL_OT_ActivateOverrideFromLuminance(Operator):
             if hasattr(channel, 'override_value'):
                 channel.override_value = luminance
 
-            channel_name = root_channel.name if root_channel else f"Channel {ch_idx}"
-            self.report({'INFO'}, f"Activated override for {channel_name} with value {luminance:.2f}")
+            channel_name = root_channel.name if root_channel else iface_("Channel {index}").format(index=ch_idx)
+            self.report({'INFO'}, rpt_("Activated override for {channel} with value {value:.2f}").format(channel=channel_name, value=luminance))
 
             # Request UI refresh
             request_ui_refresh()
@@ -465,7 +466,7 @@ class CHANNEL_OT_ActivateOverrideFromLuminance(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to activate override: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to activate override: {error}").format(error=e))
             return {'CANCELLED'}
 
     def _get_brush_luminance(self, context):
@@ -562,15 +563,15 @@ class CHANNEL_OT_ToggleNormalImageOverride(Operator):
                 channel.override_1_type = 'DEFAULT'
                 if hasattr(channel, 'override_1'):
                     channel.override_1 = False
-                action = "Disabled"
+                message = rpt_("Disabled normal map image override")
             else:
                 # Turn on image override
                 channel.override_1_type = 'IMAGE'
                 if hasattr(channel, 'override_1'):
                     channel.override_1 = True
-                action = "Enabled"
+                message = rpt_("Enabled normal map image override")
 
-            self.report({'INFO'}, f"{action} normal map image override")
+            self.report({'INFO'}, message)
 
             # Request UI refresh
             request_ui_refresh()
@@ -582,7 +583,7 @@ class CHANNEL_OT_ToggleNormalImageOverride(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to toggle normal map image override: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to toggle normal map image override: {error}").format(error=e))
             return {'CANCELLED'}
 
 

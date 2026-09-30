@@ -81,10 +81,11 @@ def test_the_label_names_both_and_nothing_is_disabled():
 def test_the_native_label_mirrors_the_python_one():
     label = POPUP[POPUP.index("void send_label(") :]
     label = label[: label.index("\n}\n")]
-    assert '"Send %d Image%s + %d Video%s"' in label
-    assert '"Send %d Image%s"' in label
-    assert '"Send %d Video%s"' in label
-    assert '"Nothing to Send"' in label
+    # Plurals are whole translated templates (docs/modules/i18n.md).
+    assert 'IFACE_("Send %s + %s")' in label
+    assert 'IFACE_("Send %d Image")' in label and 'IFACE_("Send %d Images")' in label
+    assert 'IFACE_("Send %d Video")' in label and 'IFACE_("Send %d Videos")' in label
+    assert 'IFACE_("Nothing to Send")' in label
 
 
 def test_the_native_plan_mirrors_the_python_one():
@@ -96,7 +97,7 @@ def test_the_native_plan_mirrors_the_python_one():
 
 
 def test_the_size_cells_match_the_presets():
-    native = re.findall(r'\{(\d+), "(\w+)", "([^"]+)"\}', POPUP)
+    native = re.findall(r'\{(\d+), N_\("(\w+)"\), N_\("([^"]+)"\)\}', POPUP)
     assert [(int(p), n, t) for p, n, t in native] == list(constants.VIDEO_SIZE_PRESETS)
 
 
@@ -132,7 +133,7 @@ def test_the_videos_are_named_for_what_they_look_like():
     names = [item[1] for item in constants.SHOT_RENDER_OUTPUT_ITEMS]
     assert names == ["Color", "Clay", "Depth"]
     labels = (DIRECTOR / "core/render_outputs.py").read_text(encoding="utf-8")
-    assert '"BEAUTY": "Color",' in labels
+    assert '"BEAUTY": n_("Color"),' in labels
 
 
 # -------------------------------------------------------------------------

@@ -22,6 +22,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 from mixar.modules.common.render_coordinator import core as render_slot
 
 from .render_passes import (
@@ -44,9 +45,9 @@ from .render_spec import ordered_render_kinds, render_frame_bounds
 logger = get_logger(__name__)
 
 _KIND_LABELS = {
-    "BEAUTY": "Color",
-    "CLAY": "Clay",
-    "DEPTH": "Depth",
+    "BEAUTY": n_("Color"),
+    "CLAY": n_("Clay"),
+    "DEPTH": n_("Depth"),
 }
 _NEXT_PASS_POLL_SECONDS = 0.15
 _NEXT_PASS_TIMEOUT_SECONDS = 10.0
@@ -92,7 +93,7 @@ def _resolved_movie_path(path: str) -> str:
     for candidate in (path, f"{path}.mp4", f"{os.path.splitext(path)[0]}.mp4"):
         if os.path.isfile(candidate) and os.path.getsize(candidate) > 0:
             return candidate
-    raise RuntimeError("The animation render did not produce an MP4")
+    raise RuntimeError(rpt_("The animation render did not produce an MP4"))
 
 
 def _remove_handlers() -> None:
@@ -197,7 +198,7 @@ def _start_current_pass() -> None:
     job = _job
     scene, target = _job_target(job)
     if scene is None or target is None:
-        raise RuntimeError("The render camera was removed while rendering")
+        raise RuntimeError(rpt_("The render camera was removed while rendering"))
     view_layer = scene.view_layers.get(job["view_layer_name"])
     view_layer = view_layer or scene.view_layers[0]
     kind = job["kinds"][job["index"]]
@@ -210,10 +211,8 @@ def _start_current_pass() -> None:
     job["finalize_scheduled"] = False
     label = _KIND_LABELS[kind]
     target.set_status(
-        status=(
-            f"Rendering {label} {job['index'] + 1}/{len(job['kinds'])}"
-            " · Esc to cancel"
-        )
+        status=rpt_("Rendering {label} {index}/{total} · Esc to cancel").format(
+            label=iface_(label), index=job['index'] + 1, total=len(job['kinds']))
     )
     _redraw()
 
@@ -271,7 +270,7 @@ def _complete_current_pass():
     job["pass_running"] = False
     scene, target = _job_target(job)
     if scene is None or target is None:
-        _finish_job(False, "Render failed: the render camera is unavailable")
+        _finish_job(False, rpt_("Render failed: the render camera is unavailable"))
         return None
     kind = job["kinds"][job["index"]]
     try:
@@ -285,11 +284,13 @@ def _complete_current_pass():
             return None
     except Exception as exc:
         logger.exception("Director guide render failed")
-        _finish_job(False, f"Render failed: {exc}")
+        _finish_job(False, rpt_("Render failed: {error}").format(error=exc))
         return None
+    completed = job['completed']
     _finish_job(
         True,
-        f"Added {job['completed']} video{'s' if job['completed'] != 1 else ''} to Moodboard",
+        rpt_("Added {count} video to Moodboard").format(count=completed) if completed == 1
+        else rpt_("Added {count} videos to Moodboard").format(count=completed),
     )
     return None
 
@@ -310,7 +311,8 @@ def _queue_next_pass(target) -> None:
     label = _KIND_LABELS[kind]
     job["next_pass_deadline"] = time.monotonic() + _NEXT_PASS_TIMEOUT_SECONDS
     target.set_status(
-        status=f"Preparing {label} {job['index'] + 1}/{len(job['kinds'])}"
+        status=rpt_("Preparing {label} {index}/{total}").format(
+            label=iface_(label), index=job['index'] + 1, total=len(job['kinds']))
     )
     _redraw()
     _schedule_for_job(_start_next_pass_when_idle, _NEXT_PASS_POLL_SECONDS)
@@ -328,17 +330,17 @@ def _start_next_pass_when_idle():
     if render_slot_busy:
         if before_deadline:
             return _NEXT_PASS_POLL_SECONDS
-        _finish_job(False, "Render failed: Blender did not release the render slot")
+        _finish_job(False, rpt_("Render failed: Blender did not release the render slot"))
         return None
     try:
         _start_current_pass()
     except _RenderStartDeferred:
         if before_deadline:
             return _NEXT_PASS_POLL_SECONDS
-        _finish_job(False, "Render failed: Blender refused the next video pass")
+        _finish_job(False, rpt_("Render failed: Blender refused the next video pass"))
     except Exception as exc:
         logger.exception("Could not start the next Director render pass")
-        _finish_job(False, f"Render failed: {exc}")
+        _finish_job(False, rpt_("Render failed: {error}").format(error=exc))
     return None
 
 
@@ -366,7 +368,7 @@ def _on_render_cancel(scene, _depsgraph=None) -> None:
         return
     _job["pass_running"] = False
     _job["finalize_scheduled"] = True
-    _schedule_for_job(lambda: _finish_job(False, "Shot render canceled"), 0.1)
+    _schedule_for_job(lambda: _finish_job(False, rpt_("Shot render canceled")), 0.1)
 
 
 def _on_render_write(scene, _depsgraph=None) -> None:
@@ -414,14 +416,14 @@ def _start_render(context, scene, target, preparing: str) -> int:
     reservation = render_slot.acquire("director-guides")
     if reservation is None:
         _job = None
-        raise RuntimeError("Another render is already in progress")
+        raise RuntimeError(rpt_("Another render is already in progress"))
     _job["reservation"] = reservation
     try:
         target.set_status(running=True, progress=0.0, status=preparing)
         _add_handlers()
         _start_current_pass()
     except Exception:
-        _finish_job(False, "Could not start the guide render")
+        _finish_job(False, rpt_("Could not start the guide render"))
         raise
     return len(target.kinds)
 
@@ -429,12 +431,12 @@ def _start_render(context, scene, target, preparing: str) -> int:
 def start_shot_render(context, shot) -> int:
     """Start an interactive multi-pass render and return the pass count."""
     if _job is not None or render_slot.busy():
-        raise RuntimeError("Another render is already in progress")
+        raise RuntimeError(rpt_("Another render is already in progress"))
     if shot.camera is None or shot.camera.type != 'CAMERA':
-        raise ValueError("Choose a shot camera first")
+        raise ValueError(rpt_("Choose a shot camera first"))
     kinds = ordered_render_kinds(shot.render_output_types)
     if not kinds:
-        raise ValueError("Select at least one shot render")
+        raise ValueError(rpt_("Select at least one shot render"))
     frame_start, frame_end = shot_frame_range(shot)
     # Director owns this camera's keys, so the continuity repair every other
     # Director key-writing path runs is right here too.
@@ -442,7 +444,7 @@ def start_shot_render(context, shot) -> int:
 
     scene = shot_scene(shot, context.scene)
     target = shot_target(shot, frame_start, frame_end, kinds)
-    return _start_render(context, scene, target, "Preparing shot render")
+    return _start_render(context, scene, target, rpt_("Preparing shot render"))
 
 
 def start_camera_render(context, scene, settings, camera, plan) -> int:
@@ -453,8 +455,8 @@ def start_camera_render(context, scene, settings, camera, plan) -> int:
     live in ONE place, `core/render_request.py`.
     """
     if _job is not None or render_slot.busy():
-        raise RuntimeError("Another render is already in progress")
+        raise RuntimeError(rpt_("Another render is already in progress"))
     if not plan.ok:
         raise ValueError(plan.reason)
     target = camera_target(settings, camera, plan)
-    return _start_render(context, scene, target, "Preparing camera render")
+    return _start_render(context, scene, target, rpt_("Preparing camera render"))

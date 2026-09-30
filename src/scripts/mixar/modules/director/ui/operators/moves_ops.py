@@ -7,6 +7,7 @@
 from bpy.props import EnumProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core.animation_presets import ANIMATION_PRESETS, apply_animation_preset
 from ...core.camera_moves import CAMERA_MOVES, apply_camera_move
 from ...core.shot_api import active_shot
@@ -46,13 +47,14 @@ class MIXAR_OT_director_camera_move(Operator):
         try:
             frames = apply_camera_move(context, shot, state, self.move)
         except Exception as exc:
-            self.report({'ERROR'}, f"Could not apply the move: {exc}")
+            self.report({'ERROR'}, rpt_("Could not apply the move: {error}").format(error=exc))
             return {'CANCELLED'}
         if not frames:
             return {'CANCELLED'}
         self.report(
             {'INFO'},
-            f"Added {len(frames)} keyframes through frame {frames[-1]}",
+            rpt_("Added {count} keyframes through frame {frame}").format(
+                count=len(frames), frame=frames[-1]),
         )
         return {'FINISHED'}
 
@@ -92,9 +94,11 @@ class MIXAR_OT_director_apply_animation(Operator):
                 context.scene, obj, self.preset, state.animation_seconds
             )
         except Exception as exc:
-            self.report({'ERROR'}, f"Could not animate {obj.name}: {exc}")
+            self.report({'ERROR'}, rpt_("Could not animate {name}: {error}").format(
+                name=obj.name, error=exc))
             return {'CANCELLED'}
-        self.report({'INFO'}, f"Keyed {obj.name} through frame {end}")
+        self.report({'INFO'}, rpt_("Keyed {name} through frame {frame}").format(
+            name=obj.name, frame=end))
         return {'FINISHED'}
 
 

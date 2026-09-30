@@ -27,7 +27,8 @@ honestly; it changes no behaviour by itself.
 from bpy.props import EnumProperty, IntProperty
 from bpy.types import Operator
 
-from ...constants import CAMERA_TEMPLATE_ITEMS, RESOLUTION_PRESETS
+from mixar.modules.common.i18n import n_, rpt_
+from ...constants import CAMERA_TEMPLATE_ITEMS, RESOLUTION_PRESET_TIPS, RESOLUTION_PRESETS
 from ...core.camera_moves import apply_camera_move
 from ...core.capture import capture_beat
 from ...core.rotation_curves import repair_rotation_continuity, rotation_data_path
@@ -45,11 +46,11 @@ def _apply_handheld(context, shot, state) -> str:
     """Make handheld drift live now; returns the message to report."""
     if shot.beats:
         # The property update already re-attached the noise to the curves.
-        return "Handheld drift on this shot's keyframes"
+        return n_("Handheld drift on this shot's keyframes")
     # No curves yet for the noise to ride on: anchor the shot here, which
     # creates them (capture re-runs the handheld refresh itself).
     beat = capture_beat(context, shot, state.beat_seconds)
-    return f"Captured keyframe 1 at frame {beat.frame} with handheld drift"
+    return rpt_("Captured keyframe 1 at frame {frame} with handheld drift").format(frame=beat.frame)
 
 
 def _apply_level_horizon(context, shot) -> str:
@@ -59,8 +60,8 @@ def _apply_level_horizon(context, shot) -> str:
     frames = sorted({int(beat.frame) for beat in shot.beats})
     if not frames:
         if level_camera_horizon(camera):
-            return "Horizon leveled; Navigate keeps it level"
-        return "Camera is already level"
+            return n_("Horizon leveled; Navigate keeps it level")
+        return n_("Camera is already level")
     original = int(scene.frame_current)
     leveled = 0
     try:
@@ -79,8 +80,8 @@ def _apply_level_horizon(context, shot) -> str:
         scene.frame_set(original)
         context.view_layer.update()
     if not leveled:
-        return "Every keyframe is already level"
-    return f"Leveled the horizon on {leveled} keyframe(s)"
+        return n_("Every keyframe is already level")
+    return rpt_("Leveled the horizon on {count} keyframe(s)").format(count=leveled)
 
 
 class MIXAR_OT_director_set_template(Operator):
@@ -129,11 +130,12 @@ class MIXAR_OT_director_set_template(Operator):
                 return {'FINISHED'}
             frames = apply_camera_move(context, shot, state, _TEMPLATE_MOVES[self.template])
         except Exception as exc:  # noqa: BLE001 — surfaced, never swallowed
-            self.report({'ERROR'}, f"Could not apply the template: {exc}")
+            self.report({'ERROR'}, rpt_("Could not apply the template: {error}").format(error=exc))
             return {'CANCELLED'}
         if not frames:
             return {'CANCELLED'}
-        self.report({'INFO'}, f"Added {len(frames)} keyframes through frame {frames[-1]}")
+        self.report({'INFO'}, rpt_("Added {count} keyframes through frame {frame}").format(
+            count=len(frames), frame=frames[-1]))
         return {'FINISHED'}
 
 
@@ -147,7 +149,7 @@ class MIXAR_OT_director_set_resolution(Operator):
     preset: EnumProperty(
         name="Preset",
         items=tuple(
-            (key, label, f"Render at {label}", index)
+            (key, label, RESOLUTION_PRESET_TIPS[key], index)
             for index, (key, (label, _short)) in enumerate(RESOLUTION_PRESETS.items())
         ),
         default="HD1080",

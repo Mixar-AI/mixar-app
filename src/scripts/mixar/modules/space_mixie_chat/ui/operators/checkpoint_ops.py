@@ -14,20 +14,23 @@ to rewind the conversation to the same point.
 from bpy.props import StringProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import iface_, n_
 from ...core import turn_checkpoints
 from ...core.chat_history import format_relative_time
 from ...core.ui_utils import redraw_chat_areas
 
-GROUP_TURNS = "Turns"
-GROUP_REVERTED = "Reverted turns"
-GROUP_SAFETY = "Safety copies"
+# Section headers, drawn verbatim by C++: translated per entry at sync.
+GROUP_TURNS = n_("Turns")
+GROUP_REVERTED = n_("Reverted turns")
+GROUP_SAFETY = n_("Safety copies")
 
 
 def checkpoint_row_title(item: dict) -> str:
     """One card row: "Turn 3 · add a chandelier" (the time is its own
     column), or "Safety copy · your edits after turn 2"."""
     kind = item.get("kind", "turn")
-    head = f"Turn {item.get('turn_index', '?')}" if kind == "turn" else "Safety copy"
+    head = (iface_("Turn {number}").format(number=item.get('turn_index', '?')) if kind == "turn"
+            else iface_("Safety copy"))
     label = (item.get("label") or "").strip()
     if label:
         return f"{head} · {label if len(label) <= 48 else label[:47] + '…'}"
@@ -38,9 +41,14 @@ def checkpoint_row_action(line: dict, item: dict) -> str:
     """The armed-row prompt: what the second click does, turns named."""
     verb, first, last = turn_checkpoints.describe_jump(line, item)
     if verb == "bring back":
-        return "Bring back?"
-    head = "Revert" if verb == "revert" else "Reapply"
-    return f"{head} this turn?" if first == last else f"{head} turns {first}–{last}?"
+        return iface_("Bring back?")
+    if verb == "revert":
+        if first == last:
+            return iface_("Revert this turn?")
+        return iface_("Revert turns {first}–{last}?").format(first=first, last=last)
+    if first == last:
+        return iface_("Reapply this turn?")
+    return iface_("Reapply turns {first}–{last}?").format(first=first, last=last)
 
 
 def sync_checkpoint_entries(context) -> None:
@@ -64,7 +72,7 @@ def sync_checkpoint_entries(context) -> None:
             entry.session_id = item["id"]
             entry.archived_at = item.get("created_at", "") or ""
             entry.when = format_relative_time(entry.archived_at, short=True)
-            entry.group = group
+            entry.group = iface_(group)
             entry.action = checkpoint_row_action(line, item)
     allowed, reason = turn_checkpoints.can_restore(scene)
     wm.mixie_chat_history_locked = not allowed

@@ -15,6 +15,7 @@ panel header. Replaces the previous separate Projection panel.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.uv_editor.ui.base.panels import poll_header_panel
 
 
@@ -87,7 +88,7 @@ class MIXAR_UV_PT_unwrap(Panel):
         col.label(text="Unwrap", icon='UV_SYNC_SELECT')
         col.separator(factor=0.5)
 
-        _row(col, "Method").prop(uv_ui, "unwrap_method", text="")
+        _row(col, n_("Method")).prop(uv_ui, "unwrap_method", text="")
 
         method = uv_ui.unwrap_method
         if method == 'SMART_PROJECT':
@@ -116,10 +117,10 @@ class MIXAR_UV_PT_unwrap(Panel):
         # widow toggle when there's an odd count) so the panel stays
         # compact instead of stacking every checkbox on its own line.
         if method == 'MINIMUM_STRETCH':
-            _row(col, "Iterations").prop(op_props, "iterations", text="")
+            _row(col, n_("Iterations")).prop(op_props, "iterations", text="")
             if op_props.use_weights:
-                _row(col, "Weight Group").prop(op_props, "weight_group", text="")
-                _row(col, "Weight Factor").prop(op_props, "weight_factor", text="")
+                _row(col, n_("Weight Group")).prop(op_props, "weight_group", text="")
+                _row(col, n_("Weight Factor")).prop(op_props, "weight_factor", text="")
 
             row = col.row(align=True)
             row.prop(op_props, "no_flip")
@@ -135,8 +136,8 @@ class MIXAR_UV_PT_unwrap(Panel):
             col.prop(op_props, "use_subsurf_data",
                      text="Use Subdivision Surface")
 
-        _row(col, "Margin Method").prop(op_props, "margin_method", text="")
-        _row(col, "Margin").prop(op_props, "margin", text="")
+        _row(col, n_("Margin Method")).prop(op_props, "margin_method", text="")
+        _row(col, n_("Margin")).prop(op_props, "margin", text="")
 
     @staticmethod
     def _draw_smart_project_props(col, wm):
@@ -145,11 +146,11 @@ class MIXAR_UV_PT_unwrap(Panel):
             col.label(text="uv.smart_project properties unavailable", icon='ERROR')
             return
 
-        _row(col, "Angle Limit").prop(op_props, "angle_limit", text="")
-        _row(col, "Margin Method").prop(op_props, "margin_method", text="")
-        _row(col, "Rotate Method").prop(op_props, "rotate_method", text="")
-        _row(col, "Island Margin").prop(op_props, "island_margin", text="")
-        _row(col, "Area Weight").prop(op_props, "area_weight", text="")
+        _row(col, n_("Angle Limit")).prop(op_props, "angle_limit", text="")
+        _row(col, n_("Margin Method")).prop(op_props, "margin_method", text="")
+        _row(col, n_("Rotate Method")).prop(op_props, "rotate_method", text="")
+        _row(col, n_("Island Margin")).prop(op_props, "island_margin", text="")
+        _row(col, n_("Area Weight")).prop(op_props, "area_weight", text="")
         # Two bool toggles share a single row so the section stays tight.
         row = col.row(align=True)
         row.prop(op_props, "correct_aspect")
@@ -163,7 +164,7 @@ class MIXAR_UV_PT_unwrap(Panel):
         col.label(text="Project", icon='MOD_UVPROJECT')
         col.separator(factor=0.5)
 
-        _row(col, "Type").prop(uv_ui, "projection_type", text="")
+        _row(col, n_("Type")).prop(uv_ui, "projection_type", text="")
 
         ptype = uv_ui.projection_type
         drawer = _PROJECTION_DRAWERS.get(ptype)
@@ -183,7 +184,7 @@ def _draw_cube(col, wm):
     if p is None:
         col.label(text="uv.cube_project properties unavailable", icon='ERROR')
         return
-    _row(col, "Cube Size").prop(p, "cube_size", text="")
+    _row(col, n_("Cube Size")).prop(p, "cube_size", text="")
     _bool_row(col, p, ("correct_aspect", "clip_to_bounds", "scale_to_bounds"))
 
 
@@ -192,14 +193,14 @@ def _draw_cylinder(col, wm):
     if p is None:
         col.label(text="uv.cylinder_project properties unavailable", icon='ERROR')
         return
-    _row(col, "Direction").prop(p, "direction", text="")
-    _row(col, "Align").prop(p, "align", text="")
-    _row(col, "Pole").prop(p, "pole", text="")
+    _row(col, n_("Direction")).prop(p, "direction", text="")
+    _row(col, n_("Align")).prop(p, "align", text="")
+    _row(col, n_("Pole")).prop(p, "pole", text="")
     # Radius sits with the rest of the labelled inputs, above the
     # boolean row. Seam folds in as `Preserve Seam` alongside the other
     # toggles so all four bools share a 2x2 grid instead of an awkward
     # labelled checkbox + 3-toggle row.
-    _row(col, "Radius").prop(p, "radius", text="")
+    _row(col, n_("Radius")).prop(p, "radius", text="")
     row1 = col.row(align=True)
     row1.prop(p, "seam", text="Preserve Seam")
     row1.prop(p, "correct_aspect")
@@ -213,9 +214,9 @@ def _draw_sphere(col, wm):
     if p is None:
         col.label(text="uv.sphere_project properties unavailable", icon='ERROR')
         return
-    _row(col, "Direction").prop(p, "direction", text="")
-    _row(col, "Align").prop(p, "align", text="")
-    _row(col, "Pole").prop(p, "pole", text="")
+    _row(col, n_("Direction")).prop(p, "direction", text="")
+    _row(col, n_("Align")).prop(p, "align", text="")
+    _row(col, n_("Pole")).prop(p, "pole", text="")
     # Same 2x2 toggle grid as the cylinder projection: Preserve Seam
     # joins the other three booleans instead of getting its own row.
     row1 = col.row(align=True)
@@ -231,7 +232,7 @@ def _draw_camera(col, wm):
     if p is None:
         col.label(text="mixar.camera_project properties unavailable", icon='ERROR')
         return
-    _row(col, "Scale").prop(p, "scale", text="")
+    _row(col, n_("Scale")).prop(p, "scale", text="")
     _bool_row(col, p, ("correct_aspect",))
 
 
@@ -240,7 +241,7 @@ def _draw_normal(col, wm):
     if p is None:
         col.label(text="mixar.normal_project properties unavailable", icon='ERROR')
         return
-    _row(col, "Scale").prop(p, "scale", text="")
+    _row(col, n_("Scale")).prop(p, "scale", text="")
     _bool_row(col, p, ("correct_aspect",))
 
 
@@ -249,8 +250,8 @@ def _draw_planar(col, wm):
     if p is None:
         col.label(text="mixar.planar_project properties unavailable", icon='ERROR')
         return
-    _row(col, "Axis").prop(p, "axis", text="")
-    _row(col, "Scale").prop(p, "scale", text="")
+    _row(col, n_("Axis")).prop(p, "axis", text="")
+    _row(col, n_("Scale")).prop(p, "scale", text="")
     _bool_row(col, p, ("correct_aspect", "center_uvs"))
 
 

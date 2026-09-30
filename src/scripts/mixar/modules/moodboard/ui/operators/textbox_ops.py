@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 from bpy.props import IntProperty, StringProperty
 
+from mixar.modules.common.i18n import rpt_, tip_
 from ...core.moodboard_utils import get_moodboard_viewport_center
 from ...core.canvas_context import (
     find_moodboard_canvas_region,
@@ -47,12 +48,15 @@ def _tag_moodboard_redraw():
 
 
 class MIXIE_OT_moodboard_add_textbox(Operator):
-    """Add a text box to the moodboard"""
-
     bl_idname = "mixie.moodboard_add_textbox"
     bl_label = "Add Text"
     bl_description = f"Add a text box to the moodboard ({format_shortcut('T')})"
     bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def description(cls, context, properties):
+        return tip_("Add a text box to the moodboard ({shortcut})").format(
+            shortcut=format_shortcut('T'))
 
     text: StringProperty(
         name="",
@@ -409,16 +413,16 @@ class MIXIE_OT_moodboard_delete(Operator):
         # Build report message
         parts = []
         if deleted_images > 0:
-            parts.append(f"{deleted_images} image(s)")
+            parts.append(rpt_("{count} image(s)").format(count=deleted_images))
         if deleted_textboxes > 0:
-            parts.append(f"{deleted_textboxes} text box(es)")
+            parts.append(rpt_("{count} text box(es)").format(count=deleted_textboxes))
         if deleted_frames > 0:
-            parts.append(f"{deleted_frames} frame(s)")
+            parts.append(rpt_("{count} frame(s)").format(count=deleted_frames))
         if deleted_links > 0:
-            parts.append(f"{deleted_links} connection(s)")
+            parts.append(rpt_("{count} connection(s)").format(count=deleted_links))
         if deleted_nodes > 0:
-            parts.append(f"{deleted_nodes} node(s)")
-        self.report({'INFO'}, f"Deleted {', '.join(parts)}")
+            parts.append(rpt_("{count} node(s)").format(count=deleted_nodes))
+        self.report({'INFO'}, rpt_("Deleted {items}").format(items=', '.join(parts)))
         return {'FINISHED'}
 
 

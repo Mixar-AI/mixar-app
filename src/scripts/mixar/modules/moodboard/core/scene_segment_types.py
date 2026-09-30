@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Dict, Iterable, List, Optional
 
+from mixar.modules.common.i18n import rpt_
+
 
 SegmentCallback = Callable[[bool, Optional[bytes], str], None]
 UploadCallback = Callable[[bool, str], None]
@@ -72,7 +74,7 @@ def expire_stalled_requests(
             if now - request.created_at < timeout:
                 continue
             request.status = RequestStatus.FAILED
-            request.error = "Segmentation timed out"
+            request.error = rpt_("Segmentation timed out")
             if request.callback:
                 callbacks.append(request.callback)
             request.callback = None

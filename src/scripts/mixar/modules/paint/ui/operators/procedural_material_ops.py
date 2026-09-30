@@ -22,6 +22,7 @@ from ...core.node.node_utils import get_active_mpaint_node
 from ...core.layer.ensure_procedural_channels import ensure_channels_for_procedural
 from ...procedural_materials import material_registry
 from ..utils.ui_refresh import request_ui_refresh
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -62,7 +63,7 @@ class LAYERS_OT_AddCustomProceduralLayer(Operator):
         # Get the material from registry to verify it exists
         material = material_registry.get_material(self.material_id)
         if not material:
-            self.report({'ERROR'}, f"Material '{self.material_id}' not found in registry")
+            self.report({'ERROR'}, rpt_("Material '{name}' not found in registry").format(name=self.material_id))
             return {'CANCELLED'}
 
         # Get active mpaint node to verify setup
@@ -85,7 +86,7 @@ class LAYERS_OT_AddCustomProceduralLayer(Operator):
             # Apply to existing layer
             result = bpy.ops.layers.apply_material_to_layer(material_id=self.material_id)
             if result == {'FINISHED'}:
-                self.report({'INFO'}, f"Applied material '{material.name}' to existing layer")
+                self.report({'INFO'}, rpt_("Applied material '{name}' to existing layer").format(name=material.name))
                 return {'FINISHED'}
             # If it failed or was cancelled, fall through to create new layer
 
@@ -97,7 +98,7 @@ class LAYERS_OT_AddCustomProceduralLayer(Operator):
             if not node_group:
                 self.report(
                     {'ERROR'},
-                    f"Could not load script for '{material.name}' — check your connection"
+                    rpt_("Could not load script for '{name}' — check your connection").format(name=material.name)
                 )
                 return {'CANCELLED'}
 
@@ -122,10 +123,10 @@ class LAYERS_OT_AddCustomProceduralLayer(Operator):
                 name=layer_name
             )
 
-            self.report({'INFO'}, f"Added procedural material layer: {material.name}")
+            self.report({'INFO'}, rpt_("Added procedural material layer: {name}").format(name=material.name))
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to create procedural material layer: {e}")
+            self.report({'ERROR'}, rpt_("Failed to create procedural material layer: {error}").format(error=e))
             logger.error("Failed to create procedural material layer: %s", e, exc_info=True)
             return {'CANCELLED'}
 
@@ -182,13 +183,13 @@ class LAYERS_OT_ApplyMaterialToLayer(Operator):
         # Get material from registry
         material = material_registry.get_material(self.material_id)
         if not material:
-            self.report({'ERROR'}, f"Material '{self.material_id}' not found in registry")
+            self.report({'ERROR'}, rpt_("Material '{name}' not found in registry").format(name=self.material_id))
             return {'CANCELLED'}
 
         # Get node group for material
         node_group = material_registry.get_node_group(self.material_id)
         if not node_group:
-            self.report({'ERROR'}, f"Could not load node group for material '{self.material_id}'")
+            self.report({'ERROR'}, rpt_("Could not load node group for material '{name}'").format(name=self.material_id))
             return {'CANCELLED'}
 
         # Get active mpaint node
@@ -254,7 +255,7 @@ class LAYERS_OT_ApplyMaterialToLayer(Operator):
             logger.info(f"Applied material '{material.name}' to layer '{layer.name}'")
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to apply material: {e}")
+            self.report({'ERROR'}, rpt_("Failed to apply material: {error}").format(error=e))
             logger.error("Failed to apply material: %s", e, exc_info=True)
             return {'CANCELLED'}
 
@@ -341,7 +342,7 @@ class LAYERS_OT_ClearLayerMaterial(Operator):
             self.report({'INFO'}, "Material cleared, reverted to solid color")
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to clear material: {e}")
+            self.report({'ERROR'}, rpt_("Failed to clear material: {error}").format(error=e))
             logger.error("Failed to clear material: %s", e, exc_info=True)
             return {'CANCELLED'}
 

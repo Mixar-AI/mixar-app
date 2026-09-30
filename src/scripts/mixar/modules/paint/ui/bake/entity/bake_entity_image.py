@@ -9,6 +9,7 @@ from mixar.config.logging_config import get_logger
 
 import re
 import bpy
+from mixar.modules.common.i18n import n_
 
 logger = get_logger(__name__)
 
@@ -82,7 +83,7 @@ def bake_entity_as_image(entity, bprops, set_image_to_entity=False):
         objs, _ = get_bakeable_objects_and_meshes(mat)
 
     if not objs:
-        rdict["message"] = "No valid objects found to bake!"
+        rdict["message"] = n_("No valid objects found to bake!")
         return rdict
 
     # Get tile numbers
@@ -100,7 +101,7 @@ def bake_entity_as_image(entity, bprops, set_image_to_entity=False):
     if m1:
         layer_idx = int(m1.group(1))
         if layer_idx >= len(mp.layers):
-            rdict["message"] = "Layer index out of bounds!"
+            rdict["message"] = n_("Layer index out of bounds!")
             return rdict
         layer = mp.layers[layer_idx]
         mask = None
@@ -109,17 +110,17 @@ def bake_entity_as_image(entity, bprops, set_image_to_entity=False):
         layer_idx = int(m2.group(1))
         mask_idx = int(m2.group(2))
         if layer_idx >= len(mp.layers):
-            rdict["message"] = "Layer index out of bounds!"
+            rdict["message"] = n_("Layer index out of bounds!")
             return rdict
         layer = mp.layers[layer_idx]
         if mask_idx >= len(layer.masks):
-            rdict["message"] = "Mask index out of bounds!"
+            rdict["message"] = n_("Mask index out of bounds!")
             return rdict
         mask = layer.masks[mask_idx]
         source_tree = get_mask_tree(mask)
 
     else:
-        rdict["message"] = "Wrong entity!"
+        rdict["message"] = n_("Wrong entity!")
         return rdict
 
     # Disable use baked first

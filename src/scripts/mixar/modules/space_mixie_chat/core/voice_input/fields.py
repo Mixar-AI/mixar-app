@@ -42,7 +42,8 @@ def show_status(text):
     if not text:
         store.dismiss(key)
         return
-    hint = 'Release Option/Alt to finish; Esc cancels.'
+    from mixar.modules.common.i18n import rpt_
+    hint = rpt_('Release Option/Alt to finish; Esc cancels.')
     if text == 'Finishing':
-        hint = 'Keep this field open; Esc cancels.'
-    store.push('info', text, hint, id=key, ttl_ms=0)
+        hint = rpt_('Keep this field open; Esc cancels.')
+    store.push('info', rpt_(text), hint, id=key, ttl_ms=0)

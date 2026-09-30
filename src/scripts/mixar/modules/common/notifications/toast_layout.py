@@ -6,6 +6,8 @@
 import bpy
 import blf
 
+from mixar.modules.common.i18n import iface_, rpt_
+
 from .constants import (
     BADGE_RADIUS, BUTTON_GAP, BUTTON_HEIGHT, BUTTON_PADDING_X,
     CLOSE_BUTTON_SIZE, CLOSE_BUTTON_INSET, TOAST_CORNER_OFFSET_X, TOAST_CORNER_OFFSET_Y,
@@ -88,7 +90,12 @@ def layout_toast(item, width, scale, font_size=None, measure=None, emphasis_meas
     line_height = font_size * 1.35
     blocks, buttons = [], []
     cursor = 0.0
-    for kind, text in (('title', item.title), ('body', item.body), ('url', item.action_url)):
+    # Local toasts carry msgids (or already-translated templates); server
+    # notifications are the backend's text and stay verbatim.
+    local = getattr(item, 'server_id', None) is None
+    title = rpt_(item.title) if local else item.title
+    body = rpt_(item.body) if local else item.body
+    for kind, text in (('title', title), ('body', body), ('url', item.action_url)):
         font_id = bold_font if kind == 'title' else _FONT_ID
         measure_block = emphasis_measure if kind == 'title' else measure
         lines = _wrap_text(text, font_size, content_width, measure_block)
@@ -106,7 +113,8 @@ def layout_toast(item, width, scale, font_size=None, measure=None, emphasis_meas
     button_pad = min(BUTTON_PADDING_X * scale, content_width * .15)
     for action in item.actions:
         label_width = max(1.0, content_width - 2 * button_pad)
-        lines = _wrap_text(action.label, font_size, label_width, emphasis_measure) or ['']
+        label = iface_(action.label) if getattr(action, 'translate', True) else action.label
+        lines = _wrap_text(label, font_size, label_width, emphasis_measure) or ['']
         button_width = min(content_width, max(emphasis_measure(line) for line in lines) + 2 * button_pad)
         button_height = max(BUTTON_HEIGHT * scale, len(lines) * line_height + 16 * scale)
         if row and row_width + gap + button_width > content_width:

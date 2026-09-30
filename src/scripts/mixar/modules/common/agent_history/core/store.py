@@ -24,6 +24,9 @@ from ..constants import MAX_BLOB_BYTES, MAX_READ_CHARS, MAX_READ_RECORDS, MAX_RE
 _LOCK = threading.RLock()
 _ID = re.compile(r'^[A-Za-z0-9_-]{1,128}$')
 _HASH = re.compile(r'^[a-f0-9]{64}$')
+# operation_history's fallback when a scene cannot hold an id; never a binding.
+NO_SCENE = '_nosession'
+MAX_SCENE_ALIASES = 16
 
 
 def valid_id(value):
@@ -145,6 +148,24 @@ def _verify_replay(directory, epoch, seq, event_id):
     raise ValueError('archive_cursor_without_record')
 
 
+def _bind_scene(manifest, scene_id):
+    """Record which scene holds this conversation. Metadata only, never a gate.
+
+    A scene's operation-history id is not stable for a session: restoring a past
+    chat into another scene, undo/revert past its lazy assignment, a checkpoint
+    or a file copy opened elsewhere all pair the session with a new id. Refusing
+    the batch then failed every later sync of the session for good. The first
+    binding stays; later ones are kept, bounded, most recent last.
+    """
+    if manifest.get('scene_history_id') is None:
+        manifest['scene_history_id'] = scene_id
+        return
+    if manifest['scene_history_id'] == scene_id:
+        return
+    aliases = [a for a in manifest.get('scene_history_aliases') or [] if a != scene_id]
+    manifest['scene_history_aliases'] = (aliases + [scene_id])[-MAX_SCENE_ALIASES:]
+
+
 def write_batch(owner, packet, scene_history_id=None):
     session = valid_id(packet['session_id'])
     epoch = packet.get('epoch')
@@ -154,12 +175,8 @@ def write_batch(owner, packet, scene_history_id=None):
         raise ValueError('missing_archive_epoch')
     with _locked(session) as directory:
         manifest = _manifest(directory, valid_id(owner))
-        if scene_history_id:
-            scene_id = valid_id(scene_history_id)
-            if manifest['scene_history_id'] not in (None, scene_id):
-                # A scene copy may keep the session ID. Preserve original binding.
-                raise ValueError('archive_scene_mismatch')
-            manifest['scene_history_id'] = scene_id
+        if isinstance(scene_history_id, str) and scene_history_id != NO_SCENE and _ID.fullmatch(scene_history_id):
+            _bind_scene(manifest, scene_history_id)
         # Persist ownership before the first journal write, including crashes.
         if not (directory / 'manifest.json').exists():
             _atomic(directory / 'manifest.json', canonical(manifest))
@@ -185,11 +202,14 @@ def write_batch(owner, packet, scene_history_id=None):
                 _verify_replay(directory, epoch, seq, event['event_id'])
                 continue  # replay after durable write, before acknowledgement
             if seq != cursor + 1:
+                # The server delivers the lowest row it still holds, so the
+                # missing range is gone for good (acknowledged by another copy
+                # of this archive, or expired). Refusing it re-delivered the
+                # same batch on every poll and wedged the session: nothing was
+                # acknowledged again and the server buffer filled up behind it.
                 gap = {'epoch': epoch, 'reason': 'archive_sequence_gap', 'expected': cursor + 1, 'received': seq}
                 if gap not in manifest['gaps']:
                     manifest['gaps'].append(gap)
-                _atomic(directory / 'manifest.json', canonical(manifest))
-                raise ValueError('archive_sequence_gap')
             record = event['record']
             if record.get('version') != 1:
                 raise ValueError('unsupported_archive_version')

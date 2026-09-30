@@ -32,6 +32,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "MEM_guardedalloc.h"
 
 #include "DNA_scene_types.h"
@@ -378,12 +380,12 @@ static const char *mention_kind_label(int kind)
 {
   switch (kind) {
     case 1:
-      return "Material";
+      return IFACE_("Material");
     case 2:
-      return "Asset";
+      return IFACE_("Asset");
     case 0:
     default:
-      return "Object";
+      return IFACE_("Object");
   }
 }
 

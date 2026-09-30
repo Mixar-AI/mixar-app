@@ -16,6 +16,8 @@
 
 #include "BLI_string.h"
 
+#include "BLT_translation.hh"
+
 #include "DNA_theme_types.h"   /* UI_SCALE_FAC */
 #include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
 
@@ -114,7 +116,8 @@ static void draw_text(const char *text, const float x, const float y, const floa
 
 static const char *state_label(const int state)
 {
-  static const char *labels[] = {"Draft", "Queued", "Running", "Complete", "Failed", "Cancelled"};
+  static const char *labels[] = {
+      N_("Draft"), N_("Queued"), N_("Running"), N_("Complete"), N_("Failed"), N_("Cancelled")};
   return labels[std::clamp(state, 0, 5)];
 }
 
@@ -191,45 +194,45 @@ static void draw_draft_hint(PointerRNA *node, const rctf &rect)
   /* ASSEMBLE is append-only action index 11; local, with per-part Settings. */
   if (action_type == 11) {
     draw_text_centered_clipped(
-        "Attach parts to the body", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+        IFACE_("Attach parts to the body"), center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
     draw_text_centered_clipped(
-        "Slots and sizes in Settings", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+        IFACE_("Slots and sizes in Settings"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
     return;
   }
   /* CHARACTER_PARTS is append-only action index 10; it has no prompt field. */
   if (action_type == 10) {
     draw_text_centered_clipped(
-        "Mask the source image", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+        IFACE_("Mask the source image"), center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
     draw_text_centered_clipped(
-        "Choose components in Settings", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+        IFACE_("Choose components in Settings"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
     return;
   }
   /* Promptless mesh cards draw no prompt field for the default hint to name. */
   if (!RNA_boolean_get(node, "show_prompt")) {
     draw_text_centered_clipped(
-        "Uses the connected input", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+        IFACE_("Uses the connected input"), center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
     draw_text_centered_clipped(
-        "Select it to run", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+        IFACE_("Select it to run"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
     return;
   }
   /* MODEL_3D (index 2) builds from its connected image; a prompt is extra. */
   if (action_type == 2 && !prompt[0]) {
     draw_text_centered_clipped(
-        "Turns one connected image into 3D", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+        IFACE_("Turns one connected image into 3D"), center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
     draw_text_centered_clipped(
-        "Prompt optional", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+        IFACE_("Prompt optional"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
     return;
   }
   if (prompt[0]) {
     draw_text_centered_clipped(prompt, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
     draw_text_centered_clipped(
-        "Click to edit and generate", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+        IFACE_("Click to edit and generate"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
   }
   else {
     draw_text_centered_clipped(
-        "Describe what you want to create", center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
+        IFACE_("Describe what you want to create"), center_x, center_y + 8.0f, max_width, 17.0f, 0.75f);
     draw_text_centered_clipped(
-        "Click this block to type a prompt", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+        IFACE_("Click this block to type a prompt"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
   }
 }
 
@@ -244,12 +247,12 @@ static void draw_state_hint(PointerRNA *node, const rctf &rect, const int state)
   const float center_y = BLI_rctf_cent_y(&rect);
   const float max_width = std::max(60.0f, BLI_rctf_size_x(&rect) - 56.0f);
   const char *title = ELEM(state, 1, 2) ?
-                          (state == 1 ? "Queued..." : "Generating...") :
-                          (state == 4 ? "Generation failed" : "Cancelled");
+                          (state == 1 ? IFACE_("Queued...") : IFACE_("Generating...")) :
+                          (state == 4 ? IFACE_("Generation failed") : IFACE_("Cancelled"));
   draw_text_centered_clipped(title, center_x, center_y + 8.0f, max_width, 17.0f, 0.85f);
   if (ELEM(state, 4, 5)) {
     draw_text_centered_clipped(
-        "Click to edit the prompt and try again", center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
+        IFACE_("Click to edit the prompt and try again"), center_x, center_y - 24.0f, max_width, 13.0f, 0.5f);
     if (state == 4) {
       draw_error_line(node, center_x, center_y - 52.0f, max_width);
     }
@@ -384,14 +387,14 @@ void mixie_draw_moodboard_graph_nodes(const bContext *C,
           if (has_visual) {
             /* Keep the unobtrusive corner label over an existing preview
              * (Edit & Run Again keeps the previous result visible). */
-            draw_text(state_label(state), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
+            draw_text(IFACE_(state_label(state)), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
           }
           else if (ELEM(state, 4, 5) && controls_visible) {
             /* The floating prompt + Generate are on screen for the retry, so
              * the centered hint would draw straight underneath them. Keep the
              * compact corner label, and float the failure reason above the
              * card where nothing overlaps it. */
-            draw_text(state_label(state), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
+            draw_text(IFACE_(state_label(state)), rect.xmin + 18.0f, rect.ymin + 18.0f, 14.0f, 0.72f);
             if (state == 4) {
               draw_error_line(&node,
                               BLI_rctf_cent_x(&rect),

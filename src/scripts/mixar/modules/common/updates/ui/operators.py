@@ -18,6 +18,7 @@ suite's ``bpy`` mock an operator body never runs.
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 from mixar.modules.common.utils.tour import tour_running
 
 logger = get_logger(__name__)
@@ -125,7 +126,8 @@ class MIXAR_OT_restart_to_update(bpy.types.Operator):
         version = info.latest_version if info else ""
 
         layout = self.layout
-        layout.label(text=f"Mixar will close and update to {version}.", icon="FILE_REFRESH")
+        layout.label(text=iface_("Mixar will close and update to {version}.").format(version=version),
+                     icon="FILE_REFRESH", translate=False)
         layout.label(text="It reopens automatically when the update is done.")
 
         if self._can_save():

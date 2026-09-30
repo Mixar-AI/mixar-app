@@ -98,9 +98,9 @@ def test_menus_offer_splat_from_an_image_or_image_gen():
     output_menu = _read(MOODBOARD / "ui/moodboard_output_menu.py")
 
     assert "if source_type == 'IMAGE' and capability_available(\"world_labs\")" in output_menu
-    assert "'WORLD_LABS', \"Generate Splat\"" in output_menu
+    assert "'WORLD_LABS', n_(\"Generate Splat\")" in output_menu
     assert "action_node.action_type == 'IMAGE_GEN'" in context_menu
-    assert "'WORLD_LABS', \"Generate Splat\"" in context_menu
+    assert "'WORLD_LABS', n_(\"Generate Splat\")" in context_menu
     assert "selected_stills > 0 and _capability_available(\"world_labs\")" in context_menu
     assert "for item in available_templates():" in node_menus
     assert "draw_template(layout, item, drop=drop)" in node_menus

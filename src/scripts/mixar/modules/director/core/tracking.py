@@ -14,13 +14,14 @@ target returns the take to its keyed framing.
 
 import bpy
 
+from mixar.modules.common.i18n import data_, n_
 from ..constants import TRACK_CONSTRAINT_NAME
 from .shot_api import shot_scene
 
 #: Custom property marking an empty Director created to aim at.
 FOCUS_MARKER = "mixar_director_focus"
 #: Base name for those empties; Blender uniquifies it.
-FOCUS_BASENAME = "Mixar Focus"
+FOCUS_BASENAME = n_("Mixar Focus")
 #: Below this the origin IS the centre and no helper is worth creating.
 FOCUS_EPSILON = 1.0e-4
 
@@ -103,7 +104,7 @@ def ensure_focus_empty(scene, target):
             break
     empty = existing
     if empty is None:
-        empty = bpy.data.objects.new(f"{FOCUS_BASENAME} {target.name}", None)
+        empty = bpy.data.objects.new(f"{data_(FOCUS_BASENAME)} {target.name}", None)
         empty[FOCUS_MARKER] = True
         scene.collection.objects.link(empty)
         empty.parent = target

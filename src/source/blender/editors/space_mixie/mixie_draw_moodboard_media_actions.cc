@@ -32,6 +32,8 @@
 
 #include <optional>
 
+#include "BLT_translation.hh"
+
 #include "ED_screen.hh"
 
 #include "UI_interface.hh"
@@ -95,7 +97,7 @@ void moodboard_add_media_card_actions(ui::Block *block,
   RNA_string_set(ui::button_operator_ptr_ensure(save), "media_id", media_id);
   ui::mixar_style_button(
       save, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
-  moodboard_set_node_tooltip(save, "Export\n\nSave this image or video to disk.");
+  moodboard_set_node_tooltip(save, TIP_("Export\n\nSave this image or video to disk."));
   x -= width + gap;
 
   ui::Button *preview = ui::uiDefIconButO(block,
@@ -113,8 +115,8 @@ void moodboard_add_media_card_actions(ui::Block *block,
       preview, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   moodboard_set_node_tooltip(
       preview,
-      "Preview\n\nOpen this image or video in its own window. Several previews "
-      "can be open at once.");
+      TIP_("Preview\n\nOpen this image or video in its own window. Several previews "
+           "can be open at once."));
   x -= width + gap;
 
   /* The pencil sits where a card's Edit sits. A reference has no settings, so
@@ -134,8 +136,9 @@ void moodboard_add_media_card_actions(ui::Block *block,
   ui::mixar_style_button(
       rename, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
   moodboard_set_node_tooltip(rename,
-                             "Rename\n\nEdit the name of this image or video in place, right "
-                             "here above it. Enter applies, Escape keeps the old name.");
+                             TIP_("Rename\n\nEdit the name of this image or video in place, "
+                                  "right here above it. Enter applies, Escape keeps the old "
+                                  "name."));
 }
 
 /* The in-place rename field, on the row's line and spanning the tile's
@@ -178,7 +181,7 @@ static bool moodboard_add_media_rename_field(const bContext *C,
   }
   ui::mixar_style_button(
       field, ui::MixarComponent::Input, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
-  moodboard_set_node_tooltip(field, "Rename\n\nEnter applies, Escape keeps the old name.");
+  moodboard_set_node_tooltip(field, TIP_("Rename\n\nEnter applies, Escape keeps the old name."));
   /* The outliner's temporary-rename mechanism: the first call activates the
    * field (text editing, cursor in it, text selected); every later redraw must
    * re-create the button and call this again to keep the edit alive; and once

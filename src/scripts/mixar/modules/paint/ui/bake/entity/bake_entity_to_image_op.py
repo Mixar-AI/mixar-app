@@ -70,6 +70,7 @@ from ..utils.bake_common import BaseBakeOperator, bake_entity_as_image
 # Import helper modules
 from .bake_entity_to_image_invoke import invoke_bake_entity_to_image
 from .bake_entity_to_image_ui import draw_bake_entity_to_image_ui
+from mixar.modules.common.i18n import iface_, rpt_
 
 
 class MBakeEntityToImage(bpy.types.Operator, BaseBakeOperator):
@@ -256,11 +257,9 @@ class MBakeEntityToImage(bpy.types.Operator, BaseBakeOperator):
         if image:
             self.report(
                 {"INFO"},
-                "Baking "
-                + entity_label
-                + " is done in "
-                + "{:0.2f}".format(time.time() - T)
-                + " seconds!",
+                rpt_("Baking {type} is done in {seconds:0.2f} seconds!").format(
+                    type=iface_(entity_label), seconds=time.time() - T
+                ),
             )
 
         return {"FINISHED"}

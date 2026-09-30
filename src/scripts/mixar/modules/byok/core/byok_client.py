@@ -24,6 +24,7 @@ from typing import Any, Callable, Optional
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ...common.api import APIResponse, get_agent_service
 from ...common.network import classify_network_error, log_network_failure
@@ -35,8 +36,8 @@ logger = get_logger(__name__)
 # APIResponse → tri-tuple translation
 # ---------------------------------------------------------------------------
 
-_VALIDATION_ERROR_MSG = "Invalid form data — please reach out to support."
-_GENERIC_SERVER_ERROR_MSG = "Something went wrong on our end. Please try again."
+_VALIDATION_ERROR_MSG = n_("Invalid form data — please reach out to support.")
+_GENERIC_SERVER_ERROR_MSG = n_("Something went wrong on our end. Please try again.")
 
 
 def _translate(response: APIResponse) -> tuple[bool, Optional[Any], Optional[str]]:

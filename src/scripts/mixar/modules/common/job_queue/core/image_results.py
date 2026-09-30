@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -135,7 +136,7 @@ def download_images_to_moodboard(
 
             def _apply():
                 if not downloaded_files:
-                    on_error("Failed to download generated images")
+                    on_error(n_("Failed to download generated images"))
                     return None
                 from mixar.modules.common.utils.image_utils import (
                     add_image_to_moodboard,
@@ -170,7 +171,7 @@ def download_images_to_moodboard(
                         cleanup_temp_image(temp_path)
 
                 if not loaded_images:
-                    on_error("Failed to load generated images")
+                    on_error(n_("Failed to load generated images"))
                     return None
 
                 target_scene = None
@@ -186,7 +187,7 @@ def download_images_to_moodboard(
                                 bpy.data.images.remove(img)
                             except Exception:
                                 pass
-                        on_error(f"Originating scene '{scene_name}' no longer exists")
+                        on_error(rpt_("Originating scene '{name}' no longer exists").format(name=scene_name))
                         return None
                 else:
                     target_scene = getattr(bpy.context, "scene", None)
@@ -196,7 +197,7 @@ def download_images_to_moodboard(
                             bpy.data.images.remove(img)
                         except Exception:
                             pass
-                    on_error("No Blender scene is available for generated images")
+                    on_error(n_("No Blender scene is available for generated images"))
                     return None
 
                 added_images = []
@@ -219,7 +220,7 @@ def download_images_to_moodboard(
                             pass
 
                 if not added_images:
-                    on_error("Failed to add generated images to the moodboard")
+                    on_error(n_("Failed to add generated images to the moodboard"))
                     return None
 
                 names = ", ".join(img.name for img in added_images)

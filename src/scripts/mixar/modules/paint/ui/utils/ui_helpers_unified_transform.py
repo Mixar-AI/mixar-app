@@ -125,7 +125,7 @@ def draw_unified_transform_panel(context, layout, layer, mp):
         header_row.prop(mixar_ui, "expand_transform", text="", icon=icon, emboss=False)
 
     # Show what is being transformed
-    header_row.label(text=f"Transform", icon='ORIENTATION_LOCAL')
+    header_row.label(text="Transform", icon='ORIENTATION_LOCAL')
 
     if not expand:
         return

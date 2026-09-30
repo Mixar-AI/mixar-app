@@ -18,6 +18,8 @@ Everything the runtime layer trusts is pinned here at curation time:
 Nothing in this file imports bpy and nothing performs I/O.
 """
 
+from mixar.modules.common.i18n import n_
+
 LOG_PREFIX = "[LocalModels]"
 
 # ---------------------------------------------------------------------------
@@ -117,7 +119,7 @@ MODEL_CATALOG = (
     {
         "id": "qwen3.5-2b",
         "label": "Qwen3.5 2B",
-        "description": "Smallest vision-capable model — fast on any machine, good tool use.",
+        "description": n_("Smallest vision-capable model — fast on any machine, good tool use."),
         "repo": "unsloth/Qwen3.5-2B-GGUF",
         "file": {
             "name": "Qwen3.5-2B-Q4_K_M.gguf",
@@ -137,7 +139,7 @@ MODEL_CATALOG = (
     {
         "id": "qwen3.5-4b",
         "label": "Qwen3.5 4B",
-        "description": "Recommended default — balanced speed/quality, vision + very good tool use.",
+        "description": n_("Recommended default — balanced speed/quality, vision + very good tool use."),
         "repo": "unsloth/Qwen3.5-4B-GGUF",
         "file": {
             "name": "Qwen3.5-4B-Q4_K_M.gguf",
@@ -157,7 +159,7 @@ MODEL_CATALOG = (
     {
         "id": "qwen3.5-9b",
         "label": "Qwen3.5 9B",
-        "description": "High-quality vision model for 16 GB machines — excellent tool use.",
+        "description": n_("High-quality vision model for 16 GB machines — excellent tool use."),
         "repo": "unsloth/Qwen3.5-9B-GGUF",
         "file": {
             "name": "Qwen3.5-9B-Q4_K_M.gguf",
@@ -177,7 +179,7 @@ MODEL_CATALOG = (
     {
         "id": "gpt-oss-20b",
         "label": "GPT-OSS 20B",
-        "description": "Text-only reasoning/agentic model (no image understanding).",
+        "description": n_("Text-only reasoning/agentic model (no image understanding)."),
         "repo": "ggml-org/gpt-oss-20b-GGUF",
         "file": {
             "name": "gpt-oss-20b-MXFP4.gguf",
@@ -193,7 +195,7 @@ MODEL_CATALOG = (
     {
         "id": "qwen3.6-27b",
         "label": "Qwen3.6 27B",
-        "description": "Agentic-coding flagship for 32 GB machines — vision + best tool use.",
+        "description": n_("Agentic-coding flagship for 32 GB machines — vision + best tool use."),
         "repo": "unsloth/Qwen3.6-27B-GGUF",
         "file": {
             "name": "Qwen3.6-27B-Q4_K_M.gguf",

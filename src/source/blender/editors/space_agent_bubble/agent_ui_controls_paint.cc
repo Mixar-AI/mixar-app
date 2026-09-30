@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "BLI_string.h"
+#include "BLT_translation.hh"
 #include "UI_interface_c.hh"
 #include "UI_mixar.hh"
 
@@ -142,7 +143,7 @@ void agent_ui_draw_tab_strip(ARegion *region,
                           has_icon ? AGENT_TAB_ICON * u + gap : 0.0f;
     const float trailing = has_badge ? BLI_rctf_size_x(&layout->new_badge) + gap : 0.0f;
     const std::string label = ui::mixar_fit_text(
-        agent_ui_tab_label(AgentTabId(i)),
+        IFACE_(agent_ui_tab_label(AgentTabId(i))),
         std::max(0.0f, BLI_rctf_size_x(&tab.pill) - leading - trailing - gap * 2.0f),
         label_size);
     const float start = group_left(tab.pill, label.c_str(), label_size, leading, trailing);
@@ -192,7 +193,7 @@ void agent_ui_draw_tab_strip(ARegion *region,
 
     if (has_badge) {
       fill_round(&badge, AGENT_NEW_BADGE_RADIUS * u, accent);
-      label_centre("NEW",
+      label_centre(IFACE_("NEW"),
                    BLI_rctf_cent_x(&badge),
                    BLI_rctf_cent_y(&badge),
                    AGENT_NEW_BADGE_FONT * agent_ui_text_unit(),
@@ -269,7 +270,7 @@ void agent_ui_draw_chip_row(ARegion *region,
       upload_fill);
   fill_round(&layout->chip_upload, radius, upload_fill);
   chip_content(layout->chip_upload, AGENT_ICON_IMAGE,
-               layout->compact_reference ? "Reference" : "Upload Reference",
+               layout->compact_reference ? IFACE_("Reference") : IFACE_("Upload Reference"),
                size, icon_edge, icon_gap, text, upload_fill);
 
   /* Sketch becomes Done while drawing. The reading control explains what the
@@ -286,7 +287,7 @@ void agent_ui_draw_chip_row(ARegion *region,
             region, AgentIslandControl::Scribble, layout->chip_scribble, state->scribble_armed),
         scribble_fill);
     fill_round(&layout->chip_scribble, radius, scribble_fill);
-    const char *label = state->scribble_armed ? "Done" : "Sketch";
+    const char *label = state->scribble_armed ? IFACE_("Done") : IFACE_("Sketch");
     if (layout->chip_form[AGENT_CHIP_SLOT_SCRIBBLE] > 0) {
       chip_icon(layout->chip_scribble, AGENT_ICON_PEN, icon_edge, text, scribble_fill);
     }
@@ -307,7 +308,7 @@ void agent_ui_draw_chip_row(ARegion *region,
       /* Elided to the room left of the chevron: a narrow row fits this chip
        * down to a couple of glyphs rather than running it into the next one. */
       const std::string reading = ui::mixar_fit_text(
-          state->mark_intent[0] ? state->mark_intent : "Auto detect",
+          state->mark_intent[0] ? state->mark_intent : IFACE_("Auto detect"),
           std::max(0.0f, BLI_rctf_size_x(&layout->chip_reading) - pad * 2.0f -
                              icon_edge * 0.7f - icon_gap),
           size);
@@ -403,7 +404,7 @@ void agent_ui_draw_chip_row(ARegion *region,
       float label_col[4];
       agent_ui_motion_color(text_dim, text, {0.0f, 0.0f, feedback.selected}, label_col);
       const std::string label = ui::mixar_fit_text(
-          "Auto",
+          IFACE_("Auto"),
           std::max(0.0f, track.xmin - icon_gap - (layout->chip_auto.xmin + pad)),
           size);
       label_left(label.c_str(), layout->chip_auto.xmin + pad, cy, size, label_col);
@@ -468,7 +469,7 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Generate, layout->btn_generate),
       generate_fill);
   fill_round(&layout->btn_generate, radius, generate_fill);
-  label_centre(state->stop_visible ? "Stop" : "Send",
+  label_centre(state->stop_visible ? IFACE_("Stop") : IFACE_("Send"),
                BLI_rctf_cent_x(&layout->btn_generate),
                BLI_rctf_cent_y(&layout->btn_generate),
                size,

@@ -10,6 +10,7 @@ file sizes under 500 lines.
 
 import bpy
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.moodboard.constants import SEP_INTRA
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_dropdown,
@@ -66,7 +67,7 @@ def draw_step3_hp(layout, context, tab):
     """Draw Step 3: Generate HP Meshes section."""
     scene = context.scene
 
-    step3 = draw_section_box(layout, "Step 3: Generate HP Meshes", icon='MESH_DATA')
+    step3 = draw_section_box(layout, n_("Step 3: Generate HP Meshes"), icon='MESH_DATA')
     step3_enabled = tab.has_result and len(tab.objects) > 0
     step3.enabled = step3_enabled
 
@@ -97,7 +98,9 @@ def draw_step3_hp(layout, context, tab):
     btn_row.enabled = step3_enabled and eligible_count > 0
     btn_row.operator(
         "mixie.scene_gen_exp_generate_hp",
-        text=f"Generate HP ({eligible_count})" if eligible_count else "Generate HP",
+        text=(iface_("Generate HP ({count})").format(count=eligible_count)
+              if eligible_count else iface_("Generate HP")),
+        translate=False,
         icon='MESH_DATA',
     )
 
@@ -121,7 +124,7 @@ def draw_step4_lp(layout, context, tab):
     """Draw Step 4: Generate LP Meshes section."""
     scene = context.scene
 
-    step4 = draw_section_box(layout, "Step 4: Generate LP Meshes", icon='MOD_REMESH')
+    step4 = draw_section_box(layout, n_("Step 4: Generate LP Meshes"), icon='MOD_REMESH')
     step4_enabled = tab.has_result and len(tab.objects) > 0
     step4.enabled = step4_enabled
 
@@ -151,7 +154,9 @@ def draw_step4_lp(layout, context, tab):
     btn_row.enabled = step4_enabled and eligible_count > 0
     btn_row.operator(
         "mixie.scene_gen_exp_generate_lp",
-        text=f"Generate LP ({eligible_count})" if eligible_count else "Generate LP",
+        text=(iface_("Generate LP ({count})").format(count=eligible_count)
+              if eligible_count else iface_("Generate LP")),
+        translate=False,
         icon='MOD_REMESH',
     )
 
@@ -175,7 +180,7 @@ def draw_step5_place(layout, context, tab):
     """Draw Step 5: Place in Scene section."""
     from .operators.scene_gen_exp_place_ops import count_placeable
 
-    step5 = draw_section_box(layout, "Step 5: Place in Scene", icon='PIVOT_MEDIAN')
+    step5 = draw_section_box(layout, n_("Step 5: Place in Scene"), icon='PIVOT_MEDIAN')
     step5_enabled = tab.has_result and len(tab.objects) > 0
     step5.enabled = step5_enabled
 
@@ -189,6 +194,8 @@ def draw_step5_place(layout, context, tab):
     btn_row.enabled = step5_enabled and eligible > 0
     btn_row.operator(
         "mixie.scene_gen_exp_place_in_scene",
-        text=f"Place in Scene ({eligible})" if eligible else "Place in Scene",
+        text=(iface_("Place in Scene ({count})").format(count=eligible)
+              if eligible else iface_("Place in Scene")),
+        translate=False,
         icon='PIVOT_MEDIAN',
     )

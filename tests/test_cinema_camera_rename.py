@@ -37,12 +37,12 @@ UI_C_HH = (ROOT / "src/source/blender/editors/include/UI_interface_c.hh").read_t
 QA_RECORD = 'cinema_qa_record(region, select, "director_camera", name, index);'
 OP_BUTTON = (
     'cinema_op_button(\n'
-    '        block, "MIXAR_OT_director_pick_camera", select, "Direct this camera");'
+    '        block, "MIXAR_OT_director_pick_camera", select, TIP_("Direct this camera"));'
 )
 TEXT_FIELD_CALL = (
     'cinema_text_field(\n'
     '        block, &camera_ptr, "name", select, '
-    '"Rename this camera: double-click or Ctrl+click");'
+    'TIP_("Rename this camera: double-click or Ctrl+click"));'
 )
 TAG_CALL = "ui::UI_mixar_button_double_click_edits_label(but);"
 
@@ -117,7 +117,7 @@ def test_helper_tags_the_button_as_a_cinema_field():
 def test_tooltip_is_a_string_literal_promising_only_live_gestures():
     # Tooltips are non-owning StringRefs: a temporary would dangle.
     match = re.search(
-        r'cinema_text_field\(\s*block, &camera_ptr, "name", select, ("[^"]+")\);', CAMERAS
+        r'cinema_text_field\(\s*block, &camera_ptr, "name", select, TIP_\(("[^"]+")\)\);', CAMERAS
     )
     assert match is not None
     # Both gestures are backed by the do_but_BUT hook below.

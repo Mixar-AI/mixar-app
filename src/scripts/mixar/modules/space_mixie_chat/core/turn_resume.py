@@ -13,6 +13,7 @@ import uuid
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -30,14 +31,14 @@ STATUS_ENDED = "ended"
 # them and needs no notice.
 _HIT_STATUSES = (STATUS_RUNNING, STATUS_ABANDONED)
 
-_RUNNING_TITLE = "A previous task is still running"
-_RUNNING_BODY = (
+_RUNNING_TITLE = n_("A previous task is still running")
+_RUNNING_BODY = n_(
     "The connection dropped while the agent was working, and the task kept "
     "running on the server. Resume it to see what it produced — or dismiss "
     "this and start fresh."
 )
-_ABANDONED_TITLE = "A previous task was interrupted"
-_ABANDONED_BODY = (
+_ABANDONED_TITLE = n_("A previous task was interrupted")
+_ABANDONED_BODY = n_(
     "The connection dropped while the agent was working, and the task was "
     "stopped before anyone saw it finish. Resume it to see how far it got — "
     "or dismiss this and start fresh."
@@ -169,11 +170,12 @@ def offer_resume_prompt(scene, session_id: str, info: dict) -> None:
             # notice-about-a-finished-turn bug on its own.
             return
         active = status == STATUS_RUNNING
-        title = _RUNNING_TITLE if active else _ABANDONED_TITLE
-        body = _RUNNING_BODY if active else _ABANDONED_BODY
+        title = rpt_(_RUNNING_TITLE if active else _ABANDONED_TITLE)
+        body = rpt_(_RUNNING_BODY if active else _ABANDONED_BODY)
         content = f"**{title}**\n\n{body}"
         if active:
-            content += "\n\nThe task is *still running* — resuming will replay what you missed and follow it live."
+            content += "\n\n" + rpt_(
+                "The task is *still running* — resuming will replay what you missed and follow it live.")
 
         # Refresh an existing notice in place instead of stacking duplicates.
         for msg in scene.mixie_chat_messages:
@@ -242,11 +244,11 @@ def _fill_bubble(msg, content: str, session_id: str) -> None:
 
     msg.action_items.clear()
     resume = msg.action_items.add()
-    resume.label = "Resume task"
+    resume.label = iface_("Resume task")
     resume.value = f"{RESUME_ACTION_PREFIX}{session_id}"
     resume.style = "PRIMARY"
     dismiss = msg.action_items.add()
-    dismiss.label = "Start fresh"
+    dismiss.label = iface_("Start fresh")
     dismiss.value = DISMISS_ACTION
     dismiss.style = "DEFAULT"
 

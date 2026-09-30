@@ -11,6 +11,7 @@ boxed sections with labeled headers, uniform separators, hint labels,
 and standardized generate-button footers.
 """
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.moodboard.constants import (
     GENERATE_BUTTON_SCALE_Y,
     SEP_SECTION,
@@ -129,7 +130,7 @@ def focus_segments_panel(context):
 # Prompt section
 # ---------------------------------------------------------------------------
 
-def draw_prompt_section(layout, prop_owner, label="Prompt",
+def draw_prompt_section(layout, prop_owner, label=n_("Prompt"),
                         icon='TEXT', action_op=None, action_icon='FILE_FOLDER',
                         min_lines=2, max_lines=5, refine=True):
     """Boxed prompt input with label and optional action button. Returns col.
@@ -199,10 +200,14 @@ def draw_moodboard_image_toggle(col, prop_owner, context, *, multi=False):
     )
     if multi:
         count = count_selected_moodboard_images(context.scene)
-        label = f"Use Selected Moodboard Image ({count})" if count > 0 else "Use Selected Moodboard Image"
+        label = (
+            iface_("Use Selected Moodboard Image ({count})").format(count=count)
+            if count > 0 else n_("Use Selected Moodboard Image")
+        )
     else:
         first_img = get_first_selected_moodboard_image(context.scene)
-        label = "Use Selected Moodboard Image (1)" if first_img else "Use Selected Moodboard Image"
+        label = (n_("Use Selected Moodboard Image (1)") if first_img
+                 else n_("Use Selected Moodboard Image"))
     draw_toggle(col, prop_owner, "use_selected_image", text=label)
     if prop_owner.use_selected_image:
         if multi:
@@ -232,22 +237,26 @@ def draw_mesh_info(col, context, max_faces=None, max_mb=None):
     if selected_meshes:
         total_faces = sum(len(o.data.polygons) for o in selected_meshes)
         if len(selected_meshes) == 1:
-            col.label(text=f"Mesh: {selected_meshes[0].name} ({total_faces:,} faces)")
+            col.label(text=iface_("Mesh: {name} ({faces:,} faces)").format(
+                name=selected_meshes[0].name, faces=total_faces), translate=False)
         else:
-            col.label(text=f"{len(selected_meshes)} meshes ({total_faces:,} faces)")
+            col.label(text=iface_("{count} meshes ({faces:,} faces)").format(
+                count=len(selected_meshes), faces=total_faces), translate=False)
 
         limits_parts = []
         if max_faces:
-            limits_parts.append(f"{max_faces:,} faces")
+            limits_parts.append(iface_("{faces:,} faces").format(faces=max_faces))
         if max_mb:
             limits_parts.append(f"{max_mb}MB")
         if limits_parts:
-            draw_hint(col, f"Limits: {' / '.join(limits_parts)}", icon='INFO')
+            draw_hint(col, iface_("Limits: {limits}").format(limits=" / ".join(limits_parts)),
+                      icon='INFO')
 
         if max_faces and total_faces > max_faces:
             col.label(
-                text=f"Warning: {total_faces:,} faces exceeds {max_faces:,} limit",
-                icon='ERROR',
+                text=iface_("Warning: {faces:,} faces exceeds {limit:,} limit").format(
+                    faces=total_faces, limit=max_faces),
+                icon='ERROR', translate=False,
             )
     else:
         col.label(text="No mesh selected", icon='ERROR')
@@ -280,7 +289,7 @@ def draw_status_badge(layout, text, status='INFO'):
     row.label(text=text, icon=icon)
 
 
-def draw_styled_progress(layout, data, prop, text="Generating..."):
+def draw_styled_progress(layout, data, prop, text=n_("Generating...")):
     """Wrap a progress slider in a styled box."""
     if hasattr(layout, 'mixar_section'):
         box = layout.mixar_section()
@@ -367,8 +376,9 @@ def draw_generate_footer(layout, context, operator_id, tab_prefix,
         active_count = queue.running_count() + queue.pending_count()
         if active_count:
             status_row.label(
-                text=f"{active_count} job{'s' if active_count != 1 else ''} in queue",
-                icon='TIME',
+                text=(iface_("{count} job in queue") if active_count == 1
+                      else iface_("{count} jobs in queue")).format(count=active_count),
+                icon='TIME', translate=False,
             )
         view = status_row.row(align=True)
         view.alignment = 'RIGHT'
@@ -378,7 +388,8 @@ def draw_generate_footer(layout, context, operator_id, tab_prefix,
     error_msg = getattr(scene, error_attr, '')
     if error_msg:
         from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
-        draw_status_badge(layout, f"Error: {sanitize_message(error_msg)}", 'ERROR')
+        draw_status_badge(
+            layout, iface_("Error: {error}").format(error=sanitize_message(error_msg)), 'ERROR')
 
 
 def draw_hunyuan_generate_footer(layout, context, job, mode, can_generate_fn):
@@ -406,11 +417,14 @@ def draw_hunyuan_generate_footer(layout, context, job, mode, can_generate_fn):
         draw_styled_progress(layout, job, "progress", text=job.progress_label or "Generating...")
 
     if job.status == 'DONE':
-        draw_status_badge(layout, f"Imported: {job.imported_object_name}", 'DONE')
+        draw_status_badge(
+            layout, iface_("Imported: {name}").format(name=job.imported_object_name), 'DONE')
 
     if job.status == 'FAILED':
         from mixar.modules.common.job_queue.core.error_helpers import sanitize_message
-        draw_status_badge(layout, f"Error: {sanitize_message(job.error_message)}", 'ERROR')
+        draw_status_badge(
+            layout, iface_("Error: {error}").format(error=sanitize_message(job.error_message)),
+            'ERROR')
         row = layout.row()
         op = row.operator("mixie.hunyuan_dismiss_error", text="Dismiss", icon='X')
         op.mode_override = mode

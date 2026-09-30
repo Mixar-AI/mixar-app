@@ -16,6 +16,7 @@ from bpy.props import CollectionProperty, EnumProperty, IntProperty, StringPrope
 from bpy.types import Operator, OperatorFileListElement
 from bpy_extras.io_utils import ImportHelper
 
+from mixar.modules.common.i18n import rpt_, tip_
 from ...constants import MAX_ATTACHMENTS_PER_MESSAGE, SUPPORTED_IMAGE_FORMATS, VIDEO_ATTACHMENT_REJECTED
 from ...core import (
     cleanup_loaded_file_image,
@@ -73,8 +74,8 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
         rejected = 0
         for filepath in filepaths:
             if len(attachments) >= MAX_ATTACHMENTS_PER_MESSAGE:
-                self.report({'WARNING'},
-                            f"Attachment limit ({MAX_ATTACHMENTS_PER_MESSAGE}) reached")
+                self.report({'WARNING'}, rpt_("Attachment limit ({count}) reached").format(
+                    count=MAX_ATTACHMENTS_PER_MESSAGE))
                 break
 
             # #1268: a 3D model file is imported into the scene AT ATTACH
@@ -93,7 +94,8 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
                     rejected += 1
                     self.report(
                         {'WARNING'},
-                        f"Skipped {os.path.basename(filepath)}: {result.get('error')}",
+                        rpt_("Skipped {name}: {error}").format(
+                            name=os.path.basename(filepath), error=result.get('error')),
                     )
                     continue
                 attachment = attachments.add()
@@ -109,7 +111,8 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
             is_valid, error = validate_image_file(filepath)
             if not is_valid:
                 rejected += 1
-                self.report({'WARNING'}, f"Cannot add {os.path.basename(filepath)}: {error}")
+                self.report({'WARNING'}, rpt_("Cannot add {name}: {error}").format(
+                    name=os.path.basename(filepath), error=error))
                 continue
 
             # Skip duplicates — a FILE pill for the same path, or a board
@@ -139,7 +142,7 @@ class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
                     if region.type == 'TOOLS':
                         region.tag_redraw()
 
-        self.report({'INFO'}, f"Added {added} image(s)")
+        self.report({'INFO'}, rpt_("Added {count} image(s)").format(count=added))
         return {'FINISHED'}
 
 
@@ -162,7 +165,8 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
         for img in images:
             name = img['name']
             dims = f"{img['width']}x{img['height']}"
-            desc = f"{dims} - {'Has data' if img['has_data'] else 'No data'}"
+            desc = (tip_("{size} - Has data") if img['has_data']
+                    else tip_("{size} - No data")).format(size=dims)
             items.append((name, name, desc))
 
         return items
@@ -242,7 +246,7 @@ class MIXIE_CHAT_OT_add_image_from_blend(Operator):
         redraw_chat_areas()
         sync_bubble_attachment_size_deferred(force_attachment_height=True)
 
-        self.report({'INFO'}, f"Added: {attachment.display_name}")
+        self.report({'INFO'}, rpt_("Added: {name}").format(name=attachment.display_name))
         return {'FINISHED'}
 
 
@@ -326,7 +330,7 @@ class MIXIE_CHAT_OT_remove_attachment(Operator):
         # Notify UI to refresh
         redraw_chat_areas()
 
-        self.report({'INFO'}, f"Removed: {name}")
+        self.report({'INFO'}, rpt_("Removed: {name}").format(name=name))
         return {'FINISHED'}
 
 

@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 from .job import FAILED_BACKEND_STATUSES, Job, JobState
 from .image_results import download_images_to_moodboard
 from .helpers import extract_image_name, extract_image_urls
@@ -48,7 +49,7 @@ class AsyncGLBJob(Job):
     job_type: str = ""
     model: str = ""
     payload: dict = field(default_factory=dict)
-    fail_message: str = "Generation failed"
+    fail_message: str = n_("Generation failed")
     _on_imported_hook: Optional[Callable] = field(default=None, repr=False)
     # Extra glTF import operator kwargs (GLB only). Animate uses this to
     # keep Tripo rigged/animated imports from collapsing — see model_io.
@@ -143,7 +144,7 @@ class SyncImageJob(Job):
     job_type: str = ""
     model: str = ""
     payload: dict = field(default_factory=dict)
-    fail_message: str = "Generation failed"
+    fail_message: str = n_("Generation failed")
     name_prefix: str = "image"
     prompt_text: str = ""
     undo_message: str = ""

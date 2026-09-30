@@ -13,21 +13,19 @@ import time
 import bpy
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
 from ...core.layer.check_layers import is_overlay_normal_empty
 from ...core.node.node_utils import get_active_mpaint_node
-from ...utils.common import get_addon_title
 from .image_ops_operators_helper import pack_image
 
 
 class MCopyImagePathToClipboard(bpy.types.Operator):
     bl_idname = "wm.copy_image_path_to_clipboard"
     bl_label = "Copy Image Path To Clipboard"
-    bl_description = (
-        get_addon_title() + " Copy the image file path to the system clipboard"
-    )
+    bl_description = "Mixar Paint Copy the image file path to the system clipboard"
 
     clipboard_text: bpy.props.StringProperty()
 
@@ -41,17 +39,14 @@ class MCopyImagePathToClipboard(bpy.types.Operator):
             Set containing 'FINISHED' status.
         """
         context.window_manager.clipboard = self.clipboard_text
-        self.report({"INFO"}, "Copied: " + self.clipboard_text)
+        self.report({"INFO"}, rpt_("Copied: {text}").format(text=self.clipboard_text))
         return {"FINISHED"}
 
 
 class MOpenContainingImageFolder(bpy.types.Operator):
     bl_idname = "wm.open_containing_image_folder"
     bl_label = "Open Containing Image Folder"
-    bl_description = (
-        get_addon_title()
-        + " Open the folder containing the image file and highlight it"
-    )
+    bl_description = "Mixar Paint Open the folder containing the image file and highlight it"
 
     file_path: bpy.props.StringProperty()
 

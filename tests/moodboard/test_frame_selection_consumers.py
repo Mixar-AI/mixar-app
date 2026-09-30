@@ -28,6 +28,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from mixar.modules.common.i18n import rpt_
+
 ROOT = Path(__file__).resolve().parents[2]
 TRANSFORM_OPS = ROOT / "src/scripts/mixar/modules/moodboard/ui/operators/transform_ops.py"
 HEADER = ROOT / "src/scripts/mixar/modules/space_mixie/ui/header.py"
@@ -52,6 +54,7 @@ def _load_transform_ops():
         "redraw_moodboard_canvases": Mock(),
         "release_all_moodboard_images": Mock(),
         "stamp_moodboard_item_added": Mock(),
+        "rpt_": rpt_,
     }
     exec(compile(tree, str(TRANSFORM_OPS), "exec"), scope)
     return scope

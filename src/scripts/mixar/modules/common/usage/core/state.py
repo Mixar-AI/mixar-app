@@ -22,6 +22,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+from mixar.modules.common.i18n import iface_
+
 from ..constants import (
     FREE_BILLING_INTERVAL,
     SEVERITY_CRITICAL,
@@ -288,8 +290,8 @@ def format_remaining_label(snapshot: UsageSnapshot) -> str:
     reads "0% left" rather than rounding up to a reassuring "1%".
     """
     if not snapshot.has_subscription:
-        return "Upgrade"
-    return "%d%% left" % int(snapshot.remaining_pct)
+        return iface_("Upgrade")
+    return iface_("{percent}% left").format(percent=int(snapshot.remaining_pct))
 
 
 def format_credits(value: int) -> str:
@@ -299,13 +301,17 @@ def format_credits(value: int) -> str:
 
 def format_cycle_label(snapshot: UsageSnapshot) -> str:
     """Plan + cycle line for the popover header."""
-    name = snapshot.plan_name or snapshot.plan_slug or "Subscription"
-    if snapshot.days_left <= 0:
+    name = snapshot.plan_name or snapshot.plan_slug or iface_("Subscription")
+    days = snapshot.days_left
+    if days <= 0:
         return name
-    unit = "day" if snapshot.days_left == 1 else "days"
     if snapshot.is_cancelling:
-        return "%s · Expires in %d %s" % (name, snapshot.days_left, unit)
-    return "%s · %d %s left in cycle" % (name, snapshot.days_left, unit)
+        if days == 1:
+            return iface_("{plan} · Expires in {count} day").format(plan=name, count=days)
+        return iface_("{plan} · Expires in {count} days").format(plan=name, count=days)
+    if days == 1:
+        return iface_("{plan} · {count} day left in cycle").format(plan=name, count=days)
+    return iface_("{plan} · {count} days left in cycle").format(plan=name, count=days)
 
 
 def usage_factor(snapshot: UsageSnapshot) -> float:

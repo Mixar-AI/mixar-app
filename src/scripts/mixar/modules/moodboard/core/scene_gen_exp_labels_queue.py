@@ -23,6 +23,7 @@ from mixar.modules.common.analytics.draft_events import note_generation_submitte
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import Job, JobState, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN_EXP_LABELS
@@ -111,8 +112,8 @@ class SceneGenExpLabelsJob(Job):
         result = inner.get("result") or {}
 
         if gq_status in FAILED_BACKEND_STATUSES:
-            self.error = (inner.get("error") or "Label extraction failed")
-            self.user_message = inner.get("user_message", "") or "Label extraction failed"
+            self.error = (inner.get("error") or n_("Label extraction failed"))
+            self.user_message = inner.get("user_message", "") or n_("Label extraction failed")
             return ("FAIL", [])
         if gq_status == "PENDING":
             self.backend_status = gq_status
@@ -134,7 +135,7 @@ class SceneGenExpLabelsJob(Job):
                 self._on_labels_ready()
             except Exception as e:
                 logger.error("[SceneGenExp] labels_ready callback error: %s", e)
-        on_done("Labels extracted")
+        on_done(n_("Labels extracted"))
         return True
 
     def get_poll_interval(self):
@@ -154,16 +155,16 @@ class SceneGenExpLabelsJob(Job):
             stage_name
             + (" — " if stage_name and stage_detail else "")
             + stage_detail
-        ) or "Processing..."
+        ) or n_("Processing...")
         _update_tab_status(stage_detail=detail_text)
 
         if job_status == "failed":
-            self.error = data.get("error", "Job failed")
-            self.user_message = data.get("user_message", "") or "Label extraction failed"
+            self.error = data.get("error", n_("Job failed"))
+            self.user_message = data.get("user_message", "") or n_("Label extraction failed")
             _update_tab_status(error=self.error)
             return ("FAIL", [])
         if job_status in TERMINAL_JOB_STATUSES and job_status != "completed":
-            self.error = f"Job ended: {job_status}"
+            self.error = rpt_("Job ended: {status}").format(status=job_status)
             _update_tab_status(error=self.error)
             return ("FAIL", [])
 
@@ -186,12 +187,13 @@ class SceneGenExpLabelsJob(Job):
         self._current_poll_interval = POLL_INTERVAL_PHASE2
 
         if phase == "downloading_npz":
-            _update_tab_status(stage_detail="Downloading scene data...")
+            _update_tab_status(stage_detail=n_("Downloading scene data..."))
         elif phase == "parsing":
-            _update_tab_status(stage_detail="Parsing scene...")
+            _update_tab_status(stage_detail=n_("Parsing scene..."))
         elif phase == "model_generation":
             _update_tab_status(
-                stage_detail=f"Detecting objects ({completed}/{total})...",
+                stage_detail=rpt_("Detecting objects ({completed}/{total})...").format(
+                    completed=completed, total=total),
             )
         elif phase == "completed":
             self._store_labels(objects)
@@ -205,20 +207,20 @@ class SceneGenExpLabelsJob(Job):
                 )
                 self._store_labels(objects)
                 return ("DONE", [])
-            self.error = error or "Scene analysis failed"
+            self.error = error or n_("Scene analysis failed")
             _update_tab_status(error=self.error)
             return ("FAIL", [])
 
         # Job-level terminal status
         if job_status in TERMINAL_JOB_STATUSES and phase not in ("completed", "failed"):
             if job_status == "failed":
-                self.error = error or "Job failed"
+                self.error = error or n_("Job failed")
                 _update_tab_status(error=self.error)
                 return ("FAIL", [])
             if objects:
                 self._store_labels(objects)
                 return ("DONE", [])
-            self.error = "No objects detected"
+            self.error = n_("No objects detected")
             _update_tab_status(error=self.error)
             return ("FAIL", [])
 
@@ -309,7 +311,7 @@ def enqueue_scene_gen_exp_labels_job(
     """Build a ``SceneGenExpLabelsJob`` and submit it to the queue."""
     job = SceneGenExpLabelsJob(
         feature_key=FEATURE_SCENE_GEN_EXP_LABELS,
-        label="Scene Gen Exp Labels",
+        label=n_("Scene Gen Exp Labels"),
         service=_SERVICE_KEY,
         image_bytes_b64=_b64.b64encode(image_bytes).decode(),
         min_mask_pixels=min_mask_pixels,
@@ -367,7 +369,7 @@ def _on_queue_changed(queue: FeatureQueue) -> None:
                 cb = j._on_error_callback
                 if cb:
                     try:
-                        cb(j.error or "Label extraction failed")
+                        cb(j.error or n_("Label extraction failed"))
                     except Exception:
                         pass
 

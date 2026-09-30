@@ -31,6 +31,8 @@ the wire (the annotated frame shows them).
 import copy
 import json
 
+from mixar.modules.common.i18n import n_, rpt_
+
 from . import sketch as sketch_mod
 from .geometry import decimate, normalized_bbox, to_normalized
 from .simplify import simplify_shape
@@ -274,15 +276,15 @@ def serialize(payload, max_bytes=MARK_JSON_MAX_BYTES):
             mark["region"]["polygon"] = decimate(polygon, 8)
     text = _dump(working)
     if len(text.encode("utf-8")) <= max_bytes:
-        notes.append("mark outlines thinned to fit the context budget")
+        notes.append(n_("mark outlines thinned to fit the context budget"))
         return text, notes
 
     for mark in working["marks"]:
         mark.get("region", {})["polygon"] = []
     text = _dump(working)
     if len(text.encode("utf-8")) <= max_bytes:
-        notes.append("mark outlines dropped to fit the context budget; "
-                     "bounding boxes and resolved objects kept")
+        notes.append(n_("mark outlines dropped to fit the context budget; "
+                        "bounding boxes and resolved objects kept"))
         return text, notes
 
     dropped = 0
@@ -292,14 +294,14 @@ def serialize(payload, max_bytes=MARK_JSON_MAX_BYTES):
         working["views"] = _used_views(working)
         text = _dump(working)
         if len(text.encode("utf-8")) <= max_bytes:
-            notes.append(f"{dropped} oldest mark(s) dropped to fit the "
-                         f"context budget")
+            notes.append(rpt_("{count} oldest mark(s) dropped to fit the "
+                              "context budget").format(count=dropped))
             return text, notes
 
     if dropped:
-        notes.append(f"{dropped} oldest mark(s) dropped to fit the context "
-                     f"budget")
-    notes.append("payload still over budget after shedding; sent as-is")
+        notes.append(rpt_("{count} oldest mark(s) dropped to fit the "
+                          "context budget").format(count=dropped))
+    notes.append(n_("payload still over budget after shedding; sent as-is"))
     return _dump(working), notes
 
 
@@ -315,14 +317,14 @@ def _shed_sketch(working, max_bytes):
         mark.get("region", {})["polygon"] = []
     text = _dump(working)
     if len(text.encode("utf-8")) <= max_bytes:
-        return text, "mark outlines dropped; the sketch block and the marked frame carry the ink"
+        return text, n_("mark outlines dropped; the sketch block and the marked frame carry the ink")
 
     sketch = working["sketch"]
     for stroke in sketch.get("strokes") or []:
         stroke["world"] = simplify_shape(stroke.get("world") or [], 4)
     text = _dump(working)
     if len(text.encode("utf-8")) <= max_bytes:
-        return text, "sketch stroke paths thinned to fit the context budget"
+        return text, n_("sketch stroke paths thinned to fit the context budget")
 
     strokes = sketch.get("strokes") or []
     if len(strokes) > 16:
@@ -335,8 +337,8 @@ def _shed_sketch(working, max_bytes):
         sketch["strokes"] = [strokes[i] for i in keep]
         text = _dump(working)
         if len(text.encode("utf-8")) <= max_bytes:
-            return text, "shortest sketch strokes dropped to fit the context budget"
-    return None, "sketch detail shed; still over budget"
+            return text, n_("shortest sketch strokes dropped to fit the context budget")
+    return None, n_("sketch detail shed; still over budget")
 
 
 def _dump(payload):

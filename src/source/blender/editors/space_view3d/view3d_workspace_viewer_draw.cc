@@ -5,6 +5,7 @@
 #include <cmath>
 #include "BLF_api.hh"
 #include "BKE_context.hh"
+#include "BLT_translation.hh"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "GPU_framebuffer.hh"
@@ -163,9 +164,10 @@ void view3d_workspace_viewer_draw(const bContext *C, ARegion *region, void *data
     corner_masks(image, 18*u, dim, dim);
   }
   else {
-    const char *message = !scene ? "This workspace is no longer available" :
-                          v.render_failed ? "Preview unavailable. Close and reopen to retry." :
-                                            "Waiting for the workspace preview…";
+    const char *message = !scene ? RPT_("This workspace is no longer available") :
+                          v.render_failed ?
+                                   RPT_("Preview unavailable. Close and reopen to retry.") :
+                                   RPT_("Waiting for the workspace preview…");
     label(message, v.image.xmin+24*u, BLI_rcti_cent_y(&v.image),
           BLI_rcti_size_x(&v.image)-48*u, muted);
   }

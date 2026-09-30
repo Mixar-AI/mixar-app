@@ -14,6 +14,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -141,14 +142,14 @@ def _sync_brush_gen_ui(queue):
             return
         latest = max(jobs, key=lambda job: job.created_at)
         if latest.state == JobState.SUCCESS:
-            mixar_ui.brush_gen_status = "Brush texture ready"
+            mixar_ui.brush_gen_status = n_("Brush texture ready")
         elif latest.state == JobState.FAILED:
             mixar_ui.brush_gen_status = (
                 latest.user_message or sanitize_message(latest.error)
-                or "Brush generation failed"
+                or n_("Brush generation failed")
             )
         elif latest.state == JobState.CANCELLED:
-            mixar_ui.brush_gen_status = "Cancelled"
+            mixar_ui.brush_gen_status = n_("Cancelled")
     except Exception as exc:  # never let status reporting break the listener
         logger.debug("[BrushGen] status sync failed: %s", exc)
 
@@ -274,7 +275,7 @@ class MGenerateBrushTexture(Operator):
             payload=payload,
             label=f"Brush: {prompt[:40]}",
             display_label=prompt[:40],
-            fail_message="Brush generation failed",
+            fail_message=n_("Brush generation failed"),
             name_prefix="brush_gen",
             prompt_text=prompt,
             listener=_get_brush_gen_listener(),
@@ -287,7 +288,7 @@ class MGenerateBrushTexture(Operator):
 
         mixar_ui.brush_gen_in_progress = True
         mixar_ui.brush_gen_progress = 0.1
-        mixar_ui.brush_gen_status = "Requesting texture from AI..."
+        mixar_ui.brush_gen_status = n_("Requesting texture from AI...")
         _redraw_ui(context)
 
         self.report({'INFO'}, "Brush texture generation started...")
@@ -360,7 +361,7 @@ class MApplyBrushSelectedImage(Operator):
         image = images[0]
         if _apply_image_as_mask(image):
             _redraw_ui(context)
-            self.report({'INFO'}, f"Applied '{image.name}' as brush mask texture")
+            self.report({'INFO'}, rpt_("Applied '{name}' as brush mask texture").format(name=image.name))
             return {'FINISHED'}
 
         self.report({'ERROR'}, "Failed to apply image as brush mask")

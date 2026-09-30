@@ -17,6 +17,7 @@ from mathutils import Color
 from bpy.props import StringProperty, FloatVectorProperty, EnumProperty
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -51,7 +52,7 @@ class MSetActiveVcol(bpy.types.Operator):
             set_active_vertex_color(obj, vcol)
             return {'FINISHED'}
 
-        self.report({'ERROR'}, "There's no vertex color named " + self.vcol_name + '!')
+        self.report({'ERROR'}, rpt_("There's no vertex color named {name}!").format(name=self.vcol_name))
         return {'CANCELLED'}
 
 

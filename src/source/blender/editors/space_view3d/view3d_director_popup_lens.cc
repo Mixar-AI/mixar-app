@@ -25,6 +25,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_camera_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
@@ -185,7 +187,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || !data.camera) {
-    director_popup_section_label(block, "No active shot camera", 0, UI_UNIT_X * 10);
+    director_popup_section_label(block, IFACE_("No active shot camera"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -201,9 +203,9 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
     short camera_type;
   };
   const LensType types[] = {
-      {"PERSP", "Perspective", CAM_PERSP},
-      {"ORTHO", "Orthographic", CAM_ORTHO},
-      {"PANO", "Panoramic", CAM_PANO},
+      {"PERSP", N_("Perspective"), CAM_PERSP},
+      {"ORTHO", N_("Orthographic"), CAM_ORTHO},
+      {"PANO", N_("Panoramic"), CAM_PANO},
   };
   /* Each cell spans from its own edge to the NEXT one's, so integer
    * division cannot leave the last cell short of the row's right edge. */
@@ -213,12 +215,12 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
     ui::Button *but = director_overlay_operator_button(block,
                                  "MIXAR_OT_director_set_lens_type",
                                  ICON_NONE,
-                                 types[index].label,
+                                 IFACE_(types[index].label),
                                  segment_x(index),
                                  y,
                                  segment_x(index + 1) - segment_x(index),
                                  row_h,
-                                 "Switch the lens projection");
+                                 TIP_("Switch the lens projection"));
     RNA_enum_set_identifier(
         C, ui::button_operator_ptr_ensure(but), "lens_type", types[index].identifier);
     const bool live = data.camera->type == types[index].camera_type;
@@ -237,7 +239,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
   const int label_h = int(UI_UNIT_Y * 0.85f);
   if (data.camera->type == CAM_PERSP) {
     y -= gap + label_h;
-    director_popup_section_label(block, "Perspective", y, width);
+    director_popup_section_label(block, IFACE_("Perspective"), y, width);
     /* A focal length is named by its focal length: a descriptive word in
      * front of it is the same number plus the arguable half, since 35mm reads
      * as normal to one director and wide to another. Mirrors LENS_PRESETS_MM
@@ -255,7 +257,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
                                    y,
                                    width,
                                    row_h,
-                                   "Apply this focal length");
+                                   TIP_("Apply this focal length"));
       RNA_int_set(ui::button_operator_ptr_ensure(but), "lens_mm", mm);
       director_popup_state(but, std::abs(data.camera->lens - float(mm)) < 0.5f, data.editable);
     }
@@ -270,7 +272,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
      * LENS_SLIDER_MAX_MM in `director/constants.py`. */
     ui::Button *slider = ui::uiDefButR(block,
                               ui::ButtonType::NumSlider,
-                              "Focal Length",
+                              IFACE_("Focal Length"),
                               0,
                               y,
                               short(width),
@@ -290,14 +292,14 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
 
   if (data.camera->type == CAM_ORTHO) {
     y -= gap + label_h;
-    director_popup_section_label(block, "Orthographic", y, width);
+    director_popup_section_label(block, IFACE_("Orthographic"), y, width);
     y -= row_h;
     /* Same problem as the focal length: `ortho_scale`'s stock soft range runs
      * to 1000, so one pixel of drag was a different shot. Mirrors
      * ORTHO_SCALE_SLIDER_MIN / _MAX in `director/constants.py`. */
     ui::Button *value = ui::uiDefButR(block,
                              ui::ButtonType::NumSlider,
-                             "Scale",
+                             IFACE_("Scale"),
                              0,
                              y,
                              short(width),
@@ -319,7 +321,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
      * (`BLOCK_MIXAR_POPUPS_REFRESH`), so picking a panorama type shows that
      * type's parameters at once; it used to need the popup reopened. */
     y -= gap + label_h;
-    director_popup_section_label(block, "Panoramic", y, width);
+    director_popup_section_label(block, IFACE_("Panoramic"), y, width);
     y -= gap + row_h;
     ui::Button *type_menu = ui::uiDefButR(block,
                                           ui::ButtonType::Menu,
@@ -351,7 +353,7 @@ ui::Block *lens_popup_create(bContext *C, ARegion *region, void *arg)
     const Scene *scene = CTX_data_scene(C);
     if (scene != nullptr && !STREQ(scene->r.engine, "CYCLES")) {
       y -= gap + int(UI_UNIT_Y * 0.85f);
-      director_popup_section_label(block, "Renders in Cycles only", y, width);
+      director_popup_section_label(block, IFACE_("Renders in Cycles only"), y, width);
     }
   }
 

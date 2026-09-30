@@ -28,6 +28,8 @@
 #include "BLI_string_utf8.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 #include "BKE_global.hh"
 #include "BKE_main.hh"
@@ -493,15 +495,15 @@ static void agent_bubble_island_controls_header(const bContext *C,
     const char *value;
     const char *tip;
   } tab_buttons[] = {
-      {AGENT_TAB_AGENT, "AGENT", "Agent chat"},
-      {AGENT_TAB_3D, "THREE_D", "3D generation"},
-      {AGENT_TAB_IMAGE, "IMAGE", "Image generation"},
-      {AGENT_TAB_VIDEO, "VIDEO", "Video generation"},
-      {AGENT_TAB_SPLAT, "SPLAT", "Gaussian Splat world generation"},
-      {AGENT_TAB_ADDON, "ADDON", "Build a Blender add-on with the agent"},
+      {AGENT_TAB_AGENT, "AGENT", N_("Agent chat")},
+      {AGENT_TAB_3D, "THREE_D", N_("3D generation")},
+      {AGENT_TAB_IMAGE, "IMAGE", N_("Image generation")},
+      {AGENT_TAB_VIDEO, "VIDEO", N_("Video generation")},
+      {AGENT_TAB_SPLAT, "SPLAT", N_("Gaussian Splat world generation")},
+      {AGENT_TAB_ADDON, "ADDON", N_("Build a Blender add-on with the agent")},
       {AGENT_TAB_GENERATIONS, "GENERATIONS",
-       "Your generations and connected asset libraries"},
-      {AGENT_TAB_QUEUE, "QUEUE", "Generation queue"},
+       N_("Your generations and connected asset libraries")},
+      {AGENT_TAB_QUEUE, "QUEUE", N_("Generation queue")},
   };
   for (const auto &tb : tab_buttons) {
     if (layout->pad) {
@@ -516,10 +518,10 @@ static void agent_bubble_island_controls_header(const bContext *C,
      * falls through to the window drag. Keep a real button that refuses. */
     if ((state->scribble_armed || state->voice_listening) && state->active_tab != tb.tab) {
       const char *locked_tip = (state->scribble_armed && state->voice_listening) ?
-                                   "Finish sketching or dictating before switching tabs" :
+                                   TIP_("Finish sketching or dictating before switching tabs") :
                                state->scribble_armed ?
-                                   "Finish sketching before switching tabs" :
-                                   "Finish dictating before switching tabs";
+                                   TIP_("Finish sketching before switching tabs") :
+                                   TIP_("Finish dictating before switching tabs");
       uiDefButO(block, ui::ButtonType::But, "mixar.bubble_tab_locked",
                 blender::wm::OpCallContext::InvokeDefault, "",
                 bx, by, bw, bh, locked_tip);
@@ -527,7 +529,7 @@ static void agent_bubble_island_controls_header(const bContext *C,
     }
     ui::Button *but = uiDefButO(block, ui::ButtonType::But, "wm.context_set_enum",
                            blender::wm::OpCallContext::InvokeDefault, "",
-                           bx, by, bw, bh, tb.tip);
+                           bx, by, bw, bh, TIP_(tb.tip));
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_tab");
@@ -541,31 +543,32 @@ static void agent_bubble_island_controls_header(const bContext *C,
       uiDefButO(block, ui::ButtonType::But, "mixie_chat.ink_toggle",
                 blender::wm::OpCallContext::InvokeDefault,
                 "", bx, by, bw, bh,
-                state->ink_visible ? "Return to typing; keep viewport annotations" :
-                                     "Open handwriting to turn written words into prompt text");
+                state->ink_visible ?
+                    TIP_("Return to typing; keep viewport annotations") :
+                    TIP_("Open handwriting to turn written words into prompt text"));
     }
     agent_bubble_rect_to_region(region, layout->hdr_history, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_history",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-              "Chat history");
+              TIP_("Chat history"));
     agent_bubble_rect_to_region(region, layout->hdr_new_chat, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.new_session",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-              "New chat");
+              TIP_("New chat"));
     /* Turn checkpoints: the Python menu lists the snapshots taken before
      * each turn of this chat; a row restores scene and chat to that point. */
     agent_bubble_rect_to_region(region, layout->hdr_checkpoints, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_checkpoints",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-              "Checkpoints — go back to an earlier turn of this chat");
+              TIP_("Checkpoints — go back to an earlier turn of this chat"));
     agent_bubble_rect_to_region(region, layout->hdr_rules, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_rules",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-                  "Rules — edit project and global rules for the agent");
+                  TIP_("Rules — edit project and global rules for the agent"));
     agent_bubble_rect_to_region(region, layout->hdr_scenes, &bx, &by, &bw, &bh);
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.show_scene_tabs",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-              "Scene tabs — this chat's scene; jump to another tab or open a new one");
+              TIP_("Scene tabs — this chat's scene; jump to another tab or open a new one"));
   }
   ui::block_end(C, block);
   ui::block_draw(C, block);
@@ -642,7 +645,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
    * `mixie_chat.add_image` opens nothing on its own. */
   uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_image_from_file",
             blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-            "Attach a reference image");
+            TIP_("Attach a reference image"));
 
   /* --- Scribble chips, right of Upload ---
    * The same operators the chat header binds (space_mixie_chat/ui/header.py):
@@ -654,16 +657,16 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     uiDefButO(block, ui::ButtonType::But, "mixar.scribble_toggle",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               state->scribble_armed ?
-                  "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send" :
-                  "Draw what to build or circle what to change. Click Done to preview, then Send");
+                  TIP_("Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send") :
+                  TIP_("Draw what to build or circle what to change. Click Done to preview, then Send"));
 
     if (state->scribble_armed || state->mark_count > 0) {
       agent_bubble_rect_to_region(region, layout->chip_reading, &bx, &by, &bw, &bh);
       ui::Button *reading_but = uiDefButO(
           block, ui::ButtonType::But, "wm.context_menu_enum",
           blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-          "Draw to build creates the shape you sketch. Point to edit shows where "
-          "to apply your chat instructions. Tab switches while drawing");
+          TIP_("Draw to build creates the shape you sketch. Point to edit shows where "
+               "to apply your chat instructions. Tab switches while drawing"));
       if (reading_but) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(reading_but);
         RNA_string_set(op_ptr, "data_path", "window_manager.mixar_mark_intent");
@@ -673,7 +676,7 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
         agent_bubble_rect_to_region(region, layout->chip_clear, &bx, &by, &bw, &bh);
         uiDefButO(block, ui::ButtonType::But, "mixar.scribble_mark_clear",
                   blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-                  "Discard the unsent drawing and its preview");
+                  TIP_("Discard the unsent drawing and its preview"));
       }
     }
   }
@@ -686,10 +689,10 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
     uiDefButO(block, ui::ButtonType::But, "mixie_chat.voice_toggle",
               blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
               state->voice_capturing ?
-                  "Stop dictating and insert the words (or release Option/Alt). Shift-click cancels" :
+                  TIP_("Stop dictating and insert the words (or release Option/Alt). Shift-click cancels") :
               state->voice_listening ?
-                  "Click to cancel voice input" :
-                  "Hold left Option (Mac) or left Alt (Windows) in a text field to dictate, release to finish. Click to start or stop; Shift-click cancels");
+                  TIP_("Click to cancel voice input") :
+                  TIP_("Hold left Option (Mac) or left Alt (Windows) in a text field to dictate, release to finish. Click to start or stop; Shift-click cancels"));
   }
 
   /* --- Auto, right of Voice ---
@@ -700,10 +703,10 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   uiDefButO(block, ui::ButtonType::But, "mixie_chat.toggle_auto_mode",
             blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
             state->auto_mode ?
-                "Auto mode is on: the agent decides open choices itself and never asks. "
-                "Click to let it ask again" :
-                "Auto mode: the agent decides open choices itself instead of asking you, "
-                "and lists its decisions in the summary");
+                TIP_("Auto mode is on: the agent decides open choices itself and never asks. "
+                     "Click to let it ask again") :
+                TIP_("Auto mode: the agent decides open choices itself instead of asking you, "
+                     "and lists its decisions in the summary"));
 
   /* --- Model, right of Auto ---
    * Pops the Python menu that owns the whole picker (catalog projection,
@@ -729,9 +732,9 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
         bw,
         bh,
         state->model_byok_active ?
-            "Your own API key is in use, and it decides the model. Open this menu "
-            "and pick \"Change or remove my API key\" to choose a hosted model again" :
-            "Choose which model the agent runs on");
+            TIP_("Your own API key is in use, and it decides the model. Open this menu "
+                 "and pick \"Change or remove my API key\" to choose a hosted model again") :
+            TIP_("Choose which model the agent runs on"));
   }
 
   if (!agent_bubble_references_visible(C)) {
@@ -3026,7 +3029,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
   rect.ymax = agent_bubble_collapsed_height_for_current_attachments(C);
 
   wmWindow *win = WM_window_open(C,
-                                 "Agent Bubble",
+                                 IFACE_("Agent Bubble"),
                                  &rect,
                                  SPACE_AGENT_BUBBLE,
                                  /*toplevel=*/false,
@@ -3184,7 +3187,7 @@ static wmOperatorStatus agent_bubble_show_window_exec(bContext *C, wmOperator *o
       pill_rect.ymax = AGENT_BUBBLE_PILL_HEIGHT;
 
       wmWindow *pill_win = WM_window_open(C,
-                                          "Agent Bubble Status",
+                                          IFACE_("Agent Bubble Status"),
                                           &pill_rect,
                                           SPACE_AGENT_BUBBLE,
                                           /*toplevel=*/false,

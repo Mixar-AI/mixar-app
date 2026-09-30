@@ -37,6 +37,7 @@ from ....utils.statics import blend_type_items
 from mixar.config.logging_config import get_logger
 
 from ...image_atlas.image_atlas_utils import check_need_of_erasing_segments
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -421,7 +422,7 @@ class MNewLayer(bpy.types.Operator):
             try:
                 bpy.ops.image.save_all_modified()
             except RuntimeError as e:
-                self.report({"WARNING"}, f"Could not save modified images before creating layer: {e}")
+                self.report({"WARNING"}, rpt_("Could not save modified images before creating layer: {error}").format(error=e))
 
         from .layer_operators_crud_helpers import execute_new_layer
         return execute_new_layer(self, context)

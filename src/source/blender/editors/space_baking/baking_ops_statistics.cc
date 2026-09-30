@@ -195,7 +195,7 @@ void BAKING_OT_get_image_minmax(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", N_("Image"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
 
@@ -218,7 +218,7 @@ void BAKING_OT_normalize_image(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", N_("Image"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "target_min", 0.0f, -FLT_MAX, FLT_MAX, "Target Min", "", 0.0f, 1.0f);

@@ -70,6 +70,10 @@ struct AgentChipRowInputs {
   const char *voice_status = "";
   bool model_available = false;
   const char *model_label = "";
+  /** Fixed chip words and the voice status are measured as drawn: the island
+   *  passes its UI translation; null (the harness) measures the English.
+   *  The model label and the reading's intent arrive already as drawn. */
+  const char *(*translate)(const char *msgid) = nullptr;
 };
 
 /** Chip metrics in device pixels (theme artboard units times the island unit). */
@@ -95,8 +99,11 @@ inline void agent_chip_forms(const AgentChipRowInputs &in,
                              AgentChipForms (&r_chips)[AGENT_CHIP_SLOT_COUNT])
 {
   const float padding = 3.0f * m.icon_gap;
-  auto width = [&](const char *label, const float icon) {
+  auto as_drawn = [&](const char *label, const float icon) {
     return text_width(label) + icon + padding + 2.0f;
+  };
+  auto width = [&](const char *label, const float icon) {
+    return as_drawn(in.translate ? in.translate(label) : label, icon);
   };
   /* Every chip's floor, and Upload Reference's hard one: its mark alone. */
   const float icon_only = m.icon + padding;
@@ -130,11 +137,12 @@ inline void agent_chip_forms(const AgentChipRowInputs &in,
     const char *label = in.model_label[0] ? in.model_label : "Mixie";
     const float chevron = m.icon * 0.7f + m.icon_gap;
     r_chips[AGENT_CHIP_SLOT_MODEL] = {
-        {width(label, m.icon) + chevron, width(label, m.icon), icon_only}, 3};
+        {as_drawn(label, m.icon) + chevron, as_drawn(label, m.icon), icon_only}, 3};
   }
   if (in.scribble_armed || in.mark_count) {
     /* The reading label elides down to about two glyphs beside its chevron. */
-    const float reading = width(in.mark_intent[0] ? in.mark_intent : "Auto detect", m.icon);
+    const float reading = in.mark_intent[0] ? as_drawn(in.mark_intent, m.icon) :
+                                              width("Auto detect", m.icon);
     const float floor = m.icon * 0.7f + m.icon_gap + 2.0f * m.pad_x + m.text_size * 1.5f;
     r_chips[AGENT_CHIP_SLOT_READING] = {{reading, std::min(reading, floor)}, 2};
   }

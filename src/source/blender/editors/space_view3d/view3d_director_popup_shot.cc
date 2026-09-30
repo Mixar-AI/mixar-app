@@ -17,6 +17,8 @@
 
 #include "BLI_string.h"
 
+#include "BLT_translation.hh"
+
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
@@ -53,7 +55,8 @@ ui::Block *shots_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data)) {
-    director_popup_section_label(block, "Director is not available", 0, UI_UNIT_X * 10);
+    director_popup_section_label(
+        block, IFACE_("Director is not available"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -71,7 +74,7 @@ ui::Block *shots_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 
   y -= row_h;
   char heading[64];
-  BLI_snprintf(heading, sizeof(heading), "Shots  ·  %d", shot_count);
+  BLI_snprintf(heading, sizeof(heading), "%s  ·  %d", IFACE_("Shots"), shot_count);
   director_popup_section_label(block, heading, y, width - row_h - gap);
   ui::Button *add = director_overlay_operator_button(block,
                                                 "MIXAR_OT_director_new_shot",
@@ -81,7 +84,7 @@ ui::Block *shots_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                                 y,
                                                 row_h,
                                                 row_h,
-                                                "Create a new shot camera from this view");
+                                                TIP_("Create a new shot camera from this view"));
   director_popup_state(add, false, true);
 
   if (data.shot_ptr.data != nullptr) {
@@ -98,7 +101,7 @@ ui::Block *shots_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                             0,
                             0,
                             0,
-                            "Rename this shot");
+                            TIP_("Rename this shot"));
     director_popup_state(name, false, !data.state.locked);
   }
 
@@ -123,7 +126,7 @@ ui::Block *shots_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                                   y,
                                                   width,
                                                   row_h,
-                                                  "Direct this shot");
+                                                  TIP_("Direct this shot"));
     RNA_int_set(ui::button_operator_ptr_ensure(row), "index", index);
     director_popup_state(row, index == active_index, true);
   }
@@ -133,35 +136,35 @@ ui::Block *shots_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     ui::Button *take = director_overlay_operator_button(block,
                                                    "MIXAR_OT_director_new_take",
                                                    ICON_DUPLICATE,
-                                                   "Start New Take",
+                                                   IFACE_("Start New Take"),
                                                    0,
                                                    y,
                                                    width,
                                                    row_h,
-                                                   "Create an editable child of this locked take");
+                                                   TIP_("Create an editable child of this locked take"));
     director_popup_state(take, false, true);
     y -= row_h;
   }
   ui::Button *remove = director_overlay_operator_button(block,
                                                    "MIXAR_OT_director_remove_shot",
                                                    ICON_CANCEL,
-                                                   "Remove Shot",
+                                                   IFACE_("Remove Shot"),
                                                    0,
                                                    y,
                                                    width,
                                                    row_h,
-                                                   "Remove this shot; the camera and images stay");
+                                                   TIP_("Remove this shot; the camera and images stay"));
   director_popup_state(remove, false, shot_count > 0);
   y -= row_h;
   ui::Button *finish = director_overlay_operator_button(block,
                                                    "MIXAR_OT_director_finish",
                                                    ICON_CHECKMARK,
-                                                   "Finish Directing",
+                                                   IFACE_("Finish Directing"),
                                                    0,
                                                    y,
                                                    width,
                                                    row_h,
-                                                   "Leave camera view without losing this take");
+                                                   TIP_("Leave camera view without losing this take"));
   director_popup_state(finish, false, true);
 
   director_popup_block_end(block);
@@ -176,7 +179,7 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || data.shot_ptr.data == nullptr) {
-    director_popup_section_label(block, "No active shot", 0, UI_UNIT_X * 10);
+    director_popup_section_label(block, IFACE_("No active shot"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -193,7 +196,7 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   int y = 0;
 
   y -= label_h;
-  director_popup_section_label(block, "What happens in the shot?", y, width);
+  director_popup_section_label(block, IFACE_("What happens in the shot?"), y, width);
   y -= row_h;
   ui::Button *prompt = ui::uiDefButR(block,
                             ui::ButtonType::Text,
@@ -207,7 +210,7 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                             0,
                             0,
                             0,
-                            "Describe the action and motion between keyframes");
+                            TIP_("Describe the action and motion between keyframes"));
   director_popup_state(prompt, false, data.editable);
   y -= row_h;
   ui::Button *adherence = ui::uiDefButR(block,
@@ -222,15 +225,15 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                                0,
                                0,
                                0,
-                               "How closely the video should follow the keyframes");
+                               TIP_("How closely the video should follow the keyframes"));
   director_popup_state(adherence, false, data.editable);
 
   y -= gap + label_h;
-  director_popup_section_label(block, "Timing", y, width);
+  director_popup_section_label(block, IFACE_("Timing"), y, width);
   y -= row_h;
   ui::Button *fps = ui::uiDefButR(block,
                          ui::ButtonType::Num,
-                         "Frame Rate",
+                         IFACE_("Frame Rate"),
                          0,
                          y,
                          short(half_w),
@@ -244,7 +247,7 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   director_popup_state(fps, false, data.editable);
   ui::Button *spacing = ui::uiDefButR(block,
                              ui::ButtonType::NumSlider,
-                             "Spacing",
+                             IFACE_("Spacing"),
                              half_w + gap,
                              y,
                              short(half_w),
@@ -254,12 +257,12 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
                              0,
                              0,
                              0,
-                             "Seconds automatically placed between captured keyframes");
+                             TIP_("Seconds automatically placed between captured keyframes"));
   director_popup_state(spacing, false, data.editable);
 
   if (data.camera != nullptr) {
     y -= gap + label_h;
-    director_popup_section_label(block, "Guides", y, width);
+    director_popup_section_label(block, IFACE_("Guides"), y, width);
     y -= row_h;
     /* Two guides, both Blender's own camera overlays. The third cell was a
      * "Path" toggle for a Director-drawn trajectory curve over the scene;
@@ -267,7 +270,7 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     const int half_guide_w = (width - gap) / 2;
     ui::Button *thirds = ui::uiDefButR(block,
                               ui::ButtonType::Toggle,
-                              "Thirds",
+                              IFACE_("Thirds"),
                               0,
                               y,
                               short(half_guide_w),
@@ -281,7 +284,7 @@ ui::Block *camera_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     director_popup_state(thirds, false, true);
     ui::Button *safe = ui::uiDefButR(block,
                             ui::ButtonType::Toggle,
-                            "Safe Areas",
+                            IFACE_("Safe Areas"),
                             half_guide_w + gap,
                             y,
                             short(width - half_guide_w - gap),
@@ -316,7 +319,8 @@ ui::Block *animation_popup_create(bContext *C, ARegion *region, void * /*arg*/)
   int y = 0;
 
   if (!character) {
-    director_popup_section_label(block, "Select a character to animate", 0, UI_UNIT_X * 11);
+    director_popup_section_label(
+        block, IFACE_("Select a character to animate"), 0, UI_UNIT_X * 11);
     director_popup_block_end(block);
     return block;
   }
@@ -326,7 +330,8 @@ ui::Block *animation_popup_create(bContext *C, ARegion *region, void * /*arg*/)
 
   y -= label_h;
   char heading[160];
-  BLI_snprintf(heading, sizeof(heading), "Animate  ·  %s", active->id.name + 2);
+  BLI_snprintf(
+      heading, sizeof(heading), "%s  ·  %s", IFACE_("Animate"), active->id.name + 2);
   director_popup_section_label(block, heading, y, width);
 
   struct PresetPair {
@@ -336,9 +341,9 @@ ui::Block *animation_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     const char *right_label;
   };
   const PresetPair pairs[] = {
-      {"WALK", "Walk Forward", "RUN", "Run Forward"},
-      {"TURN_LEFT", "Turn Left", "TURN_RIGHT", "Turn Right"},
-      {"TURN_AROUND", "Turn Around", "IDLE", "Idle"},
+      {"WALK", N_("Walk Forward"), "RUN", N_("Run Forward")},
+      {"TURN_LEFT", N_("Turn Left"), "TURN_RIGHT", N_("Turn Right")},
+      {"TURN_AROUND", N_("Turn Around"), "IDLE", N_("Idle")},
   };
   for (const PresetPair &pair : pairs) {
     y -= row_h;
@@ -346,24 +351,24 @@ ui::Block *animation_popup_create(bContext *C, ARegion *region, void * /*arg*/)
         block,
         "MIXAR_OT_director_apply_animation",
         ICON_NONE,
-        pair.left_label,
+        IFACE_(pair.left_label),
         0,
         y,
         half_w,
         row_h,
-        "Key this blocking-level motion from the playhead");
+        TIP_("Key this blocking-level motion from the playhead"));
     RNA_enum_set_identifier(C, ui::button_operator_ptr_ensure(left), "preset", pair.left_identifier);
     director_popup_state(left, false, true);
     ui::Button *right = director_overlay_operator_button(
         block,
         "MIXAR_OT_director_apply_animation",
         ICON_NONE,
-        pair.right_label,
+        IFACE_(pair.right_label),
         half_w + gap,
         y,
         half_w,
         row_h,
-        "Key this blocking-level motion from the playhead");
+        TIP_("Key this blocking-level motion from the playhead"));
     RNA_enum_set_identifier(C, ui::button_operator_ptr_ensure(right), "preset", pair.right_identifier);
     director_popup_state(right, false, true);
     y -= gap;
@@ -373,7 +378,7 @@ ui::Block *animation_popup_create(bContext *C, ARegion *region, void * /*arg*/)
     y -= row_h;
     ui::Button *seconds = ui::uiDefButR(block,
                                ui::ButtonType::NumSlider,
-                               "Motion Length",
+                               IFACE_("Motion Length"),
                                0,
                                y,
                                short(width),

@@ -32,6 +32,8 @@ from mixar.modules.common.ui.constants import (
     CARD_ROW_HEADING,
 )
 
+from mixar.modules.common.i18n import iface_, n_, rpt_
+
 from ...core import catalog_labels, model_suggestions
 
 # Row heights (uiLayout.scale_y). Match chrome ``card_row_*``.
@@ -139,7 +141,7 @@ def op_button(layout, operator_id, text, kind='CARD', default=False):
     return props
 
 
-def dismiss_button(layout, text="Cancel", kind='GHOST', default=False):
+def dismiss_button(layout, text=n_("Cancel"), kind='GHOST', default=False):
     """One button that just closes the dialog.
 
     Built on ``template_popup_confirm`` with no confirm operator: the
@@ -205,7 +207,7 @@ def draw_dialog(layout, wm):
 
     if state == 'REMOVING':
         _draw_current_config(col, wm, with_remove=False)
-        _footer_busy(layout, "Removing your key…")
+        _footer_busy(layout, n_("Removing your key…"))
         return
 
     if state == 'SAVED':
@@ -227,7 +229,7 @@ def draw_dialog(layout, wm):
         _draw_error(col, wm)
 
     if state == 'SAVING':
-        _footer_busy(layout, "Validating with provider…")
+        _footer_busy(layout, n_("Validating with provider…"))
     else:
         _footer_save(layout, state)
 
@@ -236,17 +238,17 @@ def _draw_header(col, wm, state):
     row = col.row()
     heading = row.row()
     heading.scale_y = HEADER_SCALE_Y
-    card_label(heading, "AI Provider Settings", 'HEADING')
+    card_label(heading, n_("AI Provider Settings"), 'HEADING')
 
     pill = row.row()
     pill.scale_y = HEADER_SCALE_Y
     active = wm.byok_is_active and state != 'REMOVED'
-    card_label(pill, "Active" if active else "Not configured", 'PILL')
+    card_label(pill, n_("Active") if active else n_("Not configured"), 'PILL')
 
     card_label(
         col,
-        "Run the Mixar agent on your own provider — Mixar credits are "
-        "not charged while active.",
+        n_("Run the Mixar agent on your own provider — Mixar credits are "
+           "not charged while active."),
         'MUTED',
     )
     card_divider(col)
@@ -255,23 +257,23 @@ def _draw_header(col, wm, state):
 def _draw_current_config(col, wm, with_remove):
     box = section(col)
     bcol = box.column()
-    section_title(bcol, "Current Configuration")
+    section_title(bcol, n_("Current Configuration"))
     bcol.separator(factor=0.4)
 
     provider_label = lookup_provider_label(wm.byok_current_provider)
     model_label = lookup_model_label(wm.byok_current_provider, wm.byok_current_model)
-    _value_row(bcol, "Provider", provider_label)
-    _value_row(bcol, "Model", model_label)
+    _value_row(bcol, n_("Provider"), provider_label)
+    _value_row(bcol, n_("Model"), model_label)
     if model_suggestions.is_codex(wm.byok_current_provider):
-        _value_row(bcol, "Account", wm.byok_key_preview or "ChatGPT subscription")
+        _value_row(bcol, n_("Account"), wm.byok_key_preview or n_("ChatGPT subscription"))
     else:
-        _value_row(bcol, "API Key", wm.byok_key_preview or "Stored securely")
+        _value_row(bcol, n_("API Key"), wm.byok_key_preview or n_("Stored securely"))
 
     if not wm.byok_current_supports_vision:
         bcol.separator(factor=0.3)
         card_label(
             bcol,
-            "Text-only model — chat works; 3D tasks run without visual feedback.",
+            n_("Text-only model — chat works; 3D tasks run without visual feedback."),
             'MUTED',
         )
 
@@ -281,7 +283,7 @@ def _draw_current_config(col, wm, with_remove):
         bcol.separator(factor=0.55)
         rrow = bcol.row()
         rrow.scale_y = 1.4
-        op_button(rrow, OP_REQUEST_REMOVE, "Remove API Key…", 'DANGER')
+        op_button(rrow, OP_REQUEST_REMOVE, n_("Remove API Key…"), 'DANGER')
 
 
 def _value_row(col, label, value):
@@ -294,13 +296,13 @@ def _value_row(col, label, value):
 def _draw_form(col, wm, disabled):
     box = section(col)
     bcol = box.column()
-    section_title(bcol, "Provider Setup")
+    section_title(bcol, n_("Provider Setup"))
 
     body = bcol.column()
     body.enabled = not disabled
     body.separator(factor=0.45)
 
-    field_label(body, "Provider")
+    field_label(body, n_("Provider"))
     field_dropdown(body, wm, 'byok_form_provider')
     body.separator(factor=0.45)
 
@@ -316,64 +318,65 @@ def _draw_form(col, wm, disabled):
 
 
 def _draw_cloud_fields(body, wm):
-    field_label(body, "Model")
+    field_label(body, n_("Model"))
     field_dropdown(body, wm, 'byok_form_model')
     body.separator(factor=0.45)
-    field_label(body, "API Key")
+    field_label(body, n_("API Key"))
     field_input(body, wm, 'byok_form_api_key')
     body.separator(factor=0.5)
     card_label(
         body,
-        "Stored encrypted, used only for Mixar agent requests — only a "
-        "masked preview is shown after saving.",
+        n_("Stored encrypted, used only for Mixar agent requests — only a "
+           "masked preview is shown after saving."),
         'MUTED',
     )
 
 
 def _draw_openrouter_fields(body, wm):
-    field_label(body, "Model")
+    field_label(body, n_("Model"))
     field_input(body, wm, 'byok_form_openrouter_model')
     body.separator(factor=0.45)
-    field_label(body, "API Key")
+    field_label(body, n_("API Key"))
     field_input(body, wm, 'byok_form_api_key')
     body.separator(factor=0.5)
     card_label(
         body,
-        "Pick a model that supports tool / function calling — the agent needs it.",
+        n_("Pick a model that supports tool / function calling — the agent needs it."),
         'DANGER',
     )
     card_label(
         body,
-        "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8.",
+        n_("Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."),
         'MUTED',
     )
 
 
 def _draw_codex_fields(body, wm):
-    field_label(body, "Model")
+    field_label(body, n_("Model"))
     field_dropdown(body, wm, 'byok_form_model')
     body.separator(factor=0.45)
 
     load_row = body.row()
     load_row.scale_y = 1.4
-    op_button(load_row, OP_CODEX_LOAD_FILE, "Load from ~/.codex/auth.json", 'CARD')
+    op_button(load_row, OP_CODEX_LOAD_FILE, n_("Load from ~/.codex/auth.json"), 'CARD')
     body.separator(factor=0.35)
 
-    field_label(body, "…or paste it manually")
+    field_label(body, n_("…or paste it manually"))
     paste_row = field_input(body, wm, 'byok_form_codex_bundle')
     paste_row.operator(OP_CODEX_PASTE, text="", icon='PASTEDOWN')
 
     n = len(wm.byok_form_codex_bundle or "")
     card_label(
         body,
-        f"{n} characters pasted" if n else "Empty — paste your auth.json",
+        iface_("{count} characters pasted").format(count=n) if n
+        else n_("Empty — paste your auth.json"),
         'MUTED',
     )
     body.separator(factor=0.5)
     for line in (
-        "Run  codex login  in your terminal, then load or paste the full",
-        "contents of ~/.codex/auth.json (the paste button reads your clipboard).",
-        "Uses your ChatGPT subscription — Mixar credits are not charged.",
+        n_("Run  codex login  in your terminal, then load or paste the full"),
+        n_("contents of ~/.codex/auth.json (the paste button reads your clipboard)."),
+        n_("Uses your ChatGPT subscription — Mixar credits are not charged."),
     ):
         card_label(body, line, 'MUTED')
 
@@ -382,30 +385,31 @@ def _draw_error(col, wm):
     col.separator(factor=0.55)
     box = section(col)
     bcol = box.column()
-    card_label(bcol, "Couldn't apply your changes", 'DANGER')
+    card_label(bcol, n_("Couldn't apply your changes"), 'DANGER')
     bcol.separator(factor=0.25)
-    for line in _wrap(wm.byok_last_error, ERROR_WRAP_CHARS):
+    # Static messages are stored as msgids; formatted ones arrive translated.
+    for line in _wrap(rpt_(wm.byok_last_error), ERROR_WRAP_CHARS):
         card_label(bcol, line, 'MUTED')
 
 
 def _draw_remove_warning(col):
     box = section(col)
     bcol = box.column()
-    card_label(bcol, "Remove your API key?", 'DANGER')
+    card_label(bcol, n_("Remove your API key?"), 'DANGER')
     bcol.separator(factor=0.25)
-    card_label(bcol, "The agent will use Mixar's default provider again.", 'MUTED')
-    card_label(bcol, "Mixar credits will be charged for future agent requests.", 'MUTED')
+    card_label(bcol, n_("The agent will use Mixar's default provider again."), 'MUTED')
+    card_label(bcol, n_("Mixar credits will be charged for future agent requests."), 'MUTED')
 
 
 def _draw_saved_body(col, wm):
     box = section(col)
     bcol = box.column()
-    section_title(bcol, "Saved")
+    section_title(bcol, n_("Saved"))
     bcol.separator(factor=0.25)
     card_label(
         bcol,
-        "The Mixar agent now runs on your provider — Mixar credits are "
-        "not charged.",
+        n_("The Mixar agent now runs on your provider — Mixar credits are "
+           "not charged."),
         'MUTED',
     )
     col.separator(factor=0.6)
@@ -415,10 +419,10 @@ def _draw_saved_body(col, wm):
 def _draw_removed_body(col):
     box = section(col)
     bcol = box.column()
-    section_title(bcol, "API key removed")
+    section_title(bcol, n_("API key removed"))
     bcol.separator(factor=0.25)
-    card_label(bcol, "The agent is back on Mixar's default provider.", 'MUTED')
-    card_label(bcol, "Mixar credits are charged for agent requests again.", 'MUTED')
+    card_label(bcol, n_("The agent is back on Mixar's default provider."), 'MUTED')
+    card_label(bcol, n_("Mixar credits are charged for agent requests again."), 'MUTED')
 
 
 # ---------------------------------------------------------------------------
@@ -429,8 +433,8 @@ def _footer_save(layout, state):
     layout.separator(factor=0.9)
     row = layout.row(align=True)
     row.scale_y = ACTION_SCALE_Y
-    dismiss_button(row, "Cancel", 'GHOST')
-    label = "Try Again" if state == 'ERROR' else "Save & Activate"
+    dismiss_button(row, n_("Cancel"), 'GHOST')
+    label = n_("Try Again") if state == 'ERROR' else n_("Save & Activate")
     op_button(row, OP_SAVE, label, 'ACCENT', default=True)
 
 
@@ -451,15 +455,15 @@ def _footer_confirm_remove(layout):
     row = layout.row(align=True)
     row.scale_y = ACTION_SCALE_Y
     # Keeping the key is the safe default — Return backs out.
-    op_button(row, OP_CANCEL_REMOVE, "Keep My Key", 'CARD', default=True)
-    op_button(row, OP_CONFIRM_REMOVE, "Remove API Key", 'DANGER')
+    op_button(row, OP_CANCEL_REMOVE, n_("Keep My Key"), 'CARD', default=True)
+    op_button(row, OP_CONFIRM_REMOVE, n_("Remove API Key"), 'DANGER')
 
 
 def _footer_done(layout):
     layout.separator(factor=0.9)
     row = layout.row()
     row.scale_y = ACTION_SCALE_Y
-    dismiss_button(row, "Done", 'ACCENT', default=True)
+    dismiss_button(row, n_("Done"), 'ACCENT', default=True)
 
 
 # Auto-discovery imports every file under ui/ — nothing to register here.
