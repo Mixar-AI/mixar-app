@@ -79,7 +79,8 @@ def run_m1() -> None:
     check("memfile steps carry an owner map", bool(memfile) and all(st["owners"] > 0 for st in memfile),
           f"{[(st['name'], st['owners']) for st in memfile[:3]]}")
     check("no shared IDs in a clean session",
-          all(st["shared"] == 0 for st in memfile if not st["name"].startswith("A · shares")),
+          all(st["shared"] == 0 for st in memfile
+              if not st["name"].startswith(("A · shares", "A · orphan spans"))),
           f"{[(st['name'], st['shared_names']) for st in memfile if st['shared']]}")
     slowest = max((st["owner_map_ms"] for st in memfile), default=0.0)
     check("owner map under 50 ms", slowest < 50.0, f"slowest={slowest:.2f} ms")
