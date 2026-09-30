@@ -52,11 +52,11 @@ def push_undo_step(message: str, scene=None) -> bool:
     if pusher is not None:
         try:
             target = scene if scene is not None else getattr(bpy.context, "scene", None)
+            # False when no step was added (undo steps at zero, no stack in
+            # background mode): the docstring's promise, kept.
             if target is not None:
-                pusher(message, scene=target)
-            else:
-                pusher(message)
-            return True
+                return bool(pusher(message, scene=target))
+            return bool(pusher(message))
         except (RuntimeError, AttributeError, TypeError):
             logger.debug("mixar_undo_push failed; falling back to ed.undo_push", exc_info=True)
     try:

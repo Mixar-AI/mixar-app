@@ -1150,9 +1150,23 @@ UndoStep *BKE_undosys_tab_cursor(UndoStack *ustack, const uint32_t tab_uid)
 /** The tab's next own step after ``ref``: its redo target. After a whole-document
  * undo (M4) a tab with no cursor entry still has redo when its steps sit above
  * the document's active step. */
-static UndoStep *undosys_tab_next_step(const UndoStep *ref, const uint32_t tab_uid)
+static UndoStep *undosys_tab_next_step(const UndoStack *ustack, const UndoStep *ref, const uint32_t tab_uid)
 {
-  for (UndoStep *us = ref ? ref->next : nullptr; us != nullptr; us = us->next) {
+  /* No cursor and no own step at or below the document's active step (a
+   * whole-document walk went past the tab's first step): every step of the
+   * tab sits above the active step, and the first of them is the redo target
+   * (review of #1746). */
+  UndoStep *start = nullptr;
+  if (ref != nullptr) {
+    start = ref->next;
+  }
+  else if (ustack->step_active != nullptr) {
+    start = ustack->step_active->next;
+  }
+  else {
+    start = static_cast<UndoStep *>(ustack->steps.first);
+  }
+  for (UndoStep *us = start; us != nullptr; us = us->next) {
     if (!us->skip && us->mixar_tab_uid == tab_uid) {
       return us;
     }
@@ -1162,7 +1176,7 @@ static UndoStep *undosys_tab_next_step(const UndoStep *ref, const uint32_t tab_u
 
 bool BKE_undosys_tab_has_redo(UndoStack *ustack, const uint32_t tab_uid)
 {
-  return undosys_tab_next_step(BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid) != nullptr;
+  return undosys_tab_next_step(ustack, BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid) != nullptr;
 }
 
 bool BKE_undosys_tab_has_undo(UndoStack *ustack, const uint32_t tab_uid)
@@ -1344,7 +1358,7 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
 
 bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, const uint32_t tab_uid, std::string *r_reason)
 {
-  UndoStep *target = undosys_tab_next_step(BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid);
+  UndoStep *target = undosys_tab_next_step(ustack, BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid);
   if (target == nullptr) {
     if (r_reason) {
       *r_reason = "nothing to redo in this tab";

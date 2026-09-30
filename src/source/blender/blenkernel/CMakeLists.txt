@@ -299,6 +299,8 @@ set(SRC
   intern/type_conversions.cc
   intern/undo_system.cc
   intern/undo_tabs.cc
+  intern/undo_tabs_owner_map.cc
+  intern/undo_tabs_partial.cc
   intern/unit.cc
   intern/uvproject.cc
   intern/vfont.cc
