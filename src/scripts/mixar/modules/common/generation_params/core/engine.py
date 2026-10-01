@@ -52,16 +52,8 @@ import bpy
 
 from mixar.config.logging_config import get_logger
 from .bounds import integer_bounds, numeric_bounds
-from .engine_values import fill_choice_rows, restore_values, snapshot_values
-from .multi_select import (
-    engine_row_class,
-    is_multi_select,
-    selected_values,
-    unregister_engine_row_class,
-)
 from ..constants import (
     FLOAT_TYPES,
-    MULTI_SELECT_ACTIVE_SUFFIX,
     PARAM_ATTR_PREFIX,
     TYPE_BOOLEAN,
     TYPE_INTEGER,
@@ -112,13 +104,10 @@ def _make_prop(param_name: str, spec: dict):
     """Build a bpy property for one schema param.
 
     Returns (property, value_map) — value_map is only set for enum-backed
-    params and maps identifier strings to original choice values. A
-    multi-select (``type: array`` with published choices) is a collection of
-    choice rows; its values are read with ``read_param_value``, never raw.
+    params and maps identifier strings to original choice values.
     """
     from bpy.props import (
         BoolProperty,
-        CollectionProperty,
         EnumProperty,
         FloatProperty,
         IntProperty,
@@ -129,13 +118,6 @@ def _make_prop(param_name: str, spec: dict):
     label = spec.get("label") or param_name.replace("_", " ").title()
     description = spec.get("description") or ""
     default = spec.get("default")
-
-    if is_multi_select(spec):
-        return (
-            CollectionProperty(type=engine_row_class(), name=label, description=description),
-            None,
-        )
-
     choices = _normalized_choices(spec)
 
     if choices:
@@ -222,16 +204,7 @@ def _build_group(service_key: str, model_slug: str, parameters: dict):
         if prop is None:
             continue
         annotations[attr] = prop
-        entry = {"spec": spec, "attr": attr, "value_map": value_map}
-        if is_multi_select(spec):
-            # template_list needs an active-row int beside the collection.
-            from bpy.props import IntProperty
-
-            annotations[attr + MULTI_SELECT_ACTIVE_SUFFIX] = IntProperty(
-                name="", default=0, options={"HIDDEN", "SKIP_SAVE"},
-            )
-            entry["multi"] = True
-        schema[param_name] = entry
+        schema[param_name] = {"spec": spec, "attr": attr, "value_map": value_map}
 
     from bpy.props import StringProperty
 
@@ -256,6 +229,52 @@ def _build_group(service_key: str, model_slug: str, parameters: dict):
 # ============================================================================
 # REBUILD / TEARDOWN (main thread only)
 # ============================================================================
+
+
+def _snapshot_values() -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """Capture current raw attr values before a rebuild."""
+    snapshot: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    wm = getattr(bpy.context, "window_manager", None)
+    if wm is None:
+        return snapshot
+    for key, attr in _registered.items():
+        group = getattr(wm, attr, None)
+        schema = _schemas.get(key) or {}
+        if group is None:
+            continue
+        values = {}
+        for param_name, entry in schema.items():
+            try:
+                values[param_name] = getattr(group, entry["attr"])
+            except Exception:
+                pass
+        if values:
+            snapshot[key] = values
+    return snapshot
+
+
+def _restore_values(snapshot: Dict[Tuple[str, str], Dict[str, Any]]) -> None:
+    """Re-apply snapshotted values where the param still exists and the old
+    value is still acceptable (stale values are silently ignored)."""
+    wm = getattr(bpy.context, "window_manager", None)
+    if wm is None:
+        return
+    for key, values in snapshot.items():
+        schema = _schemas.get(key)
+        attr = _registered.get(key)
+        if not schema or not attr:
+            continue
+        group = getattr(wm, attr, None)
+        if group is None:
+            continue
+        for param_name, value in values.items():
+            entry = schema.get(param_name)
+            if not entry:
+                continue  # Param no longer exists — not an error.
+            try:
+                setattr(group, entry["attr"], value)
+            except Exception:
+                pass  # Old value no longer valid (e.g. enum id removed).
 
 
 def _teardown() -> None:
@@ -295,7 +314,7 @@ def rebuild_from_catalog() -> None:
     if not capabilities:
         return
 
-    snapshot = snapshot_values(_registered, _schemas)
+    snapshot = _snapshot_values()
     _teardown()
 
     count = 0
@@ -328,15 +347,13 @@ def rebuild_from_catalog() -> None:
                         service_key, slug, exc,
                     )
 
-    fill_choice_rows(_registered, _schemas)
-    restore_values(snapshot, _registered, _schemas)
+    _restore_values(snapshot)
     logger.info("Generation param engine rebuilt (%d model groups)", count)
 
 
 def unregister_all_param_groups() -> None:
     """Shutdown hook — tear down all dynamic classes and WM attributes."""
     _teardown()
-    unregister_engine_row_class()
 
 
 # ============================================================================
@@ -367,11 +384,8 @@ def get_param_group(service_key: str, model_slug: str):
 
 def read_param_value(group, entry: Dict[str, Any]):
     """Read one param's current value with proper python type (enum
-    identifiers are mapped back to original choice values, e.g. int; a
-    multi-select is the list of ticked values in catalog order)."""
+    identifiers are mapped back to original choice values, e.g. int)."""
     raw = getattr(group, entry["attr"])
-    if entry.get("multi"):
-        return selected_values(raw)
     value_map = entry.get("value_map")
     if value_map is not None:
         return value_map.get(raw, raw)

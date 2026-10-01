@@ -380,14 +380,11 @@ class FeatureQueue(DownloadMixin):
     def submit(self, job: Job) -> bool:
         """Submit a job. Returns False if a duplicate is already queued."""
         # Consume even a rejected enqueue's ref; only accepted jobs own it.
-        from mixar.modules.common.utils.agent_feedback import take_agent_ref, take_job_origin
-        from .agent_batches import current_agent_batch, current_batch_origin
+        from mixar.modules.common.utils.agent_feedback import take_agent_ref
+        from .agent_batches import current_agent_batch
 
         batch = current_agent_batch()
         ref = dict(batch.ref) if batch is not None else take_agent_ref(bpy.context)
-        scoped = current_batch_origin()
-        taken = scoped if scoped is not None else take_job_origin(bpy.context)
-        origin = taken or ("mixar_agent" if ref else "user")
         # Dedup: reject if same label is already active
         if job.label and any(
             j.label == job.label and j.state not in TERMINAL_STATES
@@ -396,7 +393,6 @@ class FeatureQueue(DownloadMixin):
             logger.warning("%s duplicate job rejected: %s", LOG_PREFIX, job.label)
             return False
         job.feature_key = self.feature_key
-        job.origin = origin
         if ref:
             job.agent_ref = ref
         # Stamp the originating scene (submit runs on the main thread) so the
@@ -684,19 +680,11 @@ class FeatureQueue(DownloadMixin):
                     self._request_credits_banner()
                     continue
                 try:
-                    from mixar.modules.common.notifications.store import (
-                        NotificationAction,
+                    from mixar.modules.common.notifications import (
                         get_notification_store,
                     )
-                    # "Sign-in required" (a guest's job) offers the sign-in.
-                    actions = [NotificationAction(
-                        label=n_("Sign in"), operator="mixie_chat.login",
-                        style="primary",
-                    )] if getattr(job, "error_class", "") == "auth" else None
-                    # Sentence, the provider's own reason, what to do — the
-                    # last left out when a button already is what to do.
-                    message = failure_details(job, include_ids=False,
-                                              include_hint=not actions)
+                    # Sentence, the provider's own reason, what to do.
+                    message = failure_details(job, include_ids=False)
                     # display_label strips the agent-batch prefix + dedup hash
                     # ("ImageGen: a hero [3f2a]") that the raw label carries.
                     title = (
@@ -706,7 +694,6 @@ class FeatureQueue(DownloadMixin):
                     )
                     get_notification_store().push(
                         "error", title, body=message, priority="high",
-                        actions=actions,
                     )
                 except Exception as e:
                     logger.debug(
@@ -749,10 +736,8 @@ class FeatureQueue(DownloadMixin):
         def on_submit_error(error):
             self._on_submit_error(job, error)
 
-        from mixar.modules.common.api.services.job_queue_service import submitting_as
         try:
-            with submitting_as(getattr(job, "origin", "")):
-                job.submit(on_submit_success, on_submit_error)
+            job.submit(on_submit_success, on_submit_error)
         except Exception as e:
             self._on_submit_error(job, e)
 
@@ -877,7 +862,6 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Generation timed out — please try again")
             job.error_class = "timeout"
-            job.error_class_source = "client"
             job.error_reason = job.error
             self._notify()
             self._pump()
@@ -953,7 +937,6 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Generation timed out — please try again")
             job.error_class = "timeout"
-            job.error_class_source = "client"
             job.error_reason = job.error
         elif job.state == JobState.RUNNING_DOWNLOAD:
             # The worker thread should have failed itself long before this;
@@ -966,7 +949,6 @@ class FeatureQueue(DownloadMixin):
             )
             job.user_message = n_("Download timed out — please retry")
             job.error_class = "download"
-            job.error_class_source = "client"
             job.error_reason = job.error
         else:
             return

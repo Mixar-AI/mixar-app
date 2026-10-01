@@ -13,10 +13,6 @@ results) while the threads live outside the sandbox namespace.
 import importlib.util
 from pathlib import Path
 import tempfile
-import io
-
-import pytest
-from mixar.modules.common.agent_execution import asset_cache, asset_cache_directory
 
 _SANDBOX_MODULES = (
     Path(__file__).parents[1]
@@ -32,13 +28,12 @@ def _load_sandbox_modules():
     return module
 
 
-@pytest.fixture(autouse=True)
-def isolated_cache(monkeypatch, tmp_path):
-    monkeypatch.setattr(asset_cache_directory.tempfile, "gettempdir", lambda: str(tmp_path))
-    monkeypatch.setattr(asset_cache, "_DIRECTORY", None)
+class _FakeResponse:
+    def __init__(self, data):
+        self._data = data
 
-
-_FakeResponse = io.BytesIO
+    def read(self):
+        return self._data
 
 
 def _urllib_with_fake_transport(payloads):

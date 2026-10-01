@@ -2,11 +2,13 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Constants for the account card's credit balance.
+"""Constants for the account card's usage meter.
 
-The card prints the credit balance as a number, exactly as the web
-dashboard (``mixie-frontend`` ``DashboardPage.tsx``) does — no percentage
-and no bar, so the two surfaces cannot disagree about a denominator.
+Thresholds intentionally mirror the web dashboard's usage bar
+(``mixie-frontend`` ``DashboardPage.tsx``) so a user reading "18% left"
+in Mixar and "82% used" on the website is looking at the same number
+computed the same way — the backend's ``usage_pct`` is the one source of
+truth for both and is never recomputed client-side.
 """
 
 from __future__ import annotations
@@ -32,11 +34,26 @@ USAGE_INITIAL_DELAY_SECONDS = 4.0
 USAGE_REQUEST_TIMEOUT_SECONDS = 10.0
 
 # ---------------------------------------------------------------------------
+# Display thresholds — evaluated on credits REMAINING, not used
+# ---------------------------------------------------------------------------
+
+#: Below this % remaining the meter turns red and nudges to top up.
+USAGE_CRITICAL_PCT = 20.0
+
+#: Below this % remaining the meter turns amber.
+USAGE_WARNING_PCT = 50.0
+
+#: Severity keys returned by :func:`core.state.usage_severity`.
+SEVERITY_OK = 'OK'
+SEVERITY_WARNING = 'WARNING'
+SEVERITY_CRITICAL = 'CRITICAL'
+
+# ---------------------------------------------------------------------------
 # Plan classification
 # ---------------------------------------------------------------------------
 
 #: ``plan_slug`` values starting with this mark a trial (mirrors the web
-#: dashboard's ``isTrialUser``).
+#: dashboard's ``isTrialUser``). Trial users cannot buy credit top-ups.
 TRIAL_SLUG_PREFIX = "trial"
 
 #: Dashboard handoff targets for the popover CTAs.
@@ -44,6 +61,6 @@ HANDOFF_TARGET_BUY_CREDITS = "buy-credits"
 HANDOFF_TARGET_PRICING = "pricing"
 
 #: ``billing_interval`` the backend reports for a free-tier account holding
-#: bonus credits (sign-up bonus, referral rewards, top-ups) and no monthly
-#: allowance.
+#: bonus credits (sign-up bonus, referral rewards). Such an account has a bar
+#: (full while any credit remains) but no plan, so it can never top up.
 FREE_BILLING_INTERVAL = "free"

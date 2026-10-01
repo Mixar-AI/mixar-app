@@ -39,7 +39,6 @@
 #include "ED_mixar_glass.hh"
 
 #include "agent_bubble_intern.hh"
-#include "agent_bubble_glass.hh"
 #include "agent_ui_draw.hh"
 #include "agent_ui_draw_primitives.hh"
 #include "agent_ui_icons.hh"
@@ -96,10 +95,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
     pill.ymax = h;
     /* Native frost owns the bed; both paths share the rounded light and rim. */
     if (agent_bubble_pill_bed_is_transparent()) {
-      float wash[4] = AGENT_COL_GLASS_WASH;
-#if defined(WIN32) || defined(__linux__)
-      agent_bubble_composited_island_wash(wash);
-#endif
+      const float wash[4] = AGENT_COL_GLASS_WASH;
       agent_bubble_replace_frost_wash(&pill, wash);
       glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
     }
@@ -291,10 +287,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
    * otherwise carry leftover pixels that flash the bare backdrop. Frost
    * replaces a premultiplied wash; the shared shader adds its finishing layers. */
   if (agent_bubble_pill_bed_is_transparent()) {
-    float wash[4] = AGENT_COL_GLASS_WASH;
-#if defined(WIN32) || defined(__linux__)
-    agent_bubble_composited_island_wash(wash);
-#endif
+    const float wash[4] = AGENT_COL_GLASS_WASH;
     agent_bubble_replace_frost_wash(&pill, wash);
     glass_fill_round(&pill, ui::MIXAR_GLASS_PILL, h * 0.5f, false, false, false);
   }
@@ -351,18 +344,17 @@ void agent_ui_draw_island(ARegion *region,
 
   /* --- Card --- */
   {
-    /* The pill's quiet white rim, drawn whole. It used to meter the credit
-     * percentage; credits are now a number on the account card (the same
-     * figure the web dashboard prints), so the ring no longer depletes.
-     * "Unknown" (-1) is the primitive's whole-ring path. */
+    /* Preserve the credit indication in the pill's quiet white rim. Lower the
+     * spent alpha rather than putting an opaque dark ring over native frost. */
+    const float border_spent[4] = {border[0], border[1], border[2], border[3] * 0.25f};
     draw_card_border_meter(&layout->card,
                            AGENT_CARD_RADIUS * u,
                            glass.rim_width,
                            border,
-                           border,
-                           -1.0f);
+                           border_spent,
+                           state->credits_remaining);
   }
-  /* Expanding changes the shape, not the material. The rim above already
+  /* Expanding changes the shape, not the material. The credit meter already
    * draws PILL's rim, so keep only its sheen here to avoid a doubled edge. */
   glass_fill_round(&layout->card_fill,
                    ui::MIXAR_GLASS_PILL,

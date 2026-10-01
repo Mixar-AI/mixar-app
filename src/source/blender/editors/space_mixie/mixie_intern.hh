@@ -13,7 +13,6 @@
 
 #include "BLI_map.hh"
 #include "BLI_set.hh"
-#include "BLI_vector.hh"
 
 /* rctf is stored by value in MoodboardGraphCache, so the full type is needed. */
 #include "DNA_vec_types.h"
@@ -305,6 +304,15 @@ int moodboard_find_embedded_media_index(PointerRNA *scene_ptr, const char *node_
  */
 bool moodboard_media_rename_is_active(const Scene *scene, const char *media_id);
 void moodboard_media_rename_end();
+/**
+ * Index into `mixie_moodboard_images` of the movie rendered inside the action
+ * node under the cursor, or -1. Deliberately the media index, not the node
+ * index: playback state and the hover monitor are both keyed on it.
+ */
+int moodboard_find_node_preview_video_under_mouse(PointerRNA *scene_ptr,
+                                                  float mouse_x,
+                                                  float mouse_y,
+                                                  rctf *r_node_rect);
 int moodboard_find_asset_node_under_mouse(PointerRNA *scene_ptr,
                                           float mouse_x,
                                           float mouse_y,
@@ -355,10 +363,6 @@ struct MoodboardGraphCache {
   blender::Map<std::string, PointerRNA> action_nodes;
   /** "to_node_id|to_socket" of every link, so sockets can draw occupancy. */
   blender::Set<std::string> occupied_inputs;
-  /** Every body in PAINT order, bottom to top (see #MoodboardGraphBody). */
-  blender::Vector<MoodboardGraphBody> bodies;
-  /** node_id -> position in `bodies`, for #moodboard_graph_point_covered_above. */
-  blender::Map<std::string, int> body_index;
 };
 
 void moodboard_graph_cache_build(PointerRNA *scene_ptr, MoodboardGraphCache *cache);
@@ -407,16 +411,13 @@ bool moodboard_graph_link_drag_preview(
 /** Whether the moodboard item at \a index references a movie datablock. */
 bool moodboard_item_is_video(PointerRNA *scene_ptr, int index);
 
-/**
- * Toggle runtime-only playback of a movie directly on its moodboard block. A
- * started movie plays through once and comes to rest on its first frame.
- */
+/** Toggle runtime-only playback of a movie directly on its moodboard block. */
 bool moodboard_toggle_video_playback(bContext *C,
                                      PointerRNA *scene_ptr,
                                      int index,
                                      ReportList *reports);
 
-/** Current inline playback frame and state for a movie image (advances it). */
+/** Current inline playback frame and state for a movie image. */
 int moodboard_video_playback_frame(Image *image, bool *r_is_playing);
 
 /**
@@ -430,8 +431,8 @@ int moodboard_video_playback_frame(Image *image, bool *r_is_playing);
  */
 float moodboard_video_play_radius(View2D *v2d, const rctf &media_rect);
 
-/** Stop inline movie playback and its redraw tick. */
-void mixie_moodboard_video_playback_shutdown();
+/** Stop inline movie playback and its redraw timer. */
+void mixie_moodboard_video_playback_shutdown(wmWindowManager *wm);
 
 /** Deselect all moodboard content, graph nodes, and links. */
 void moodboard_deselect_all(PointerRNA *scene_ptr);
@@ -479,6 +480,7 @@ void MIXIE_OT_moodboard_graph_select(wmOperatorType *ot);
 void MIXIE_OT_moodboard_frame_select(wmOperatorType *ot);
 void MIXIE_OT_moodboard_rename_frame(wmOperatorType *ot);
 void MIXIE_OT_moodboard_context_menu(wmOperatorType *ot);
+void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot);
 void MIXIE_OT_moodboard_zoom(wmOperatorType *ot);
 void MIXIE_OT_moodboard_ensure_visible(wmOperatorType *ot);
 void MIXIE_OT_moodboard_frame(wmOperatorType *ot);

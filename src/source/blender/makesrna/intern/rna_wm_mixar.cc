@@ -73,9 +73,6 @@
 #  include "rna_internal_types.hh"
 #endif
 
-#include "rna_wm_ui_control.cc"
-#include "rna_wm_mixar_popup.cc"
-
 /* Mixar 5.2 port: namespace wrap. Every include stays ABOVE this line: the
  * generated ``rna_*_gen.cc`` files include this .cc at global scope, and a
  * header pulled in after the wrap opens would land in ``blender::blender``. */
@@ -148,21 +145,6 @@ bool Mixar_splash_is_open();
 static bool rna_WindowManager_mixar_splash_open_get(PointerRNA * /*ptr*/)
 {
   return Mixar_splash_is_open();
-}
-
-/* Some Mixar window holds OS focus. ``win->active`` follows GHOST's
- * WindowActivate / WindowDeactivate on every platform, and switching to
- * another application deactivates the key window, so "no active window"
- * means another app is in front. The sign-in autoshow gate reads it. */
-static bool rna_WindowManager_mixar_app_active_get(PointerRNA *ptr)
-{
-  const wmWindowManager *wm = (const wmWindowManager *)ptr->data;
-  for (const wmWindow &win : wm->windows) {
-    if (win.active) {
-      return true;
-    }
-  }
-  return false;
 }
 
 static void rna_Window_mixar_qa_drag_file(
@@ -242,11 +224,6 @@ static bool rna_Window_mixar_tour_popover_open(wmWindow *win, bContext *C, const
 
 /* tour_menu.cc: tag every open pop-up in the window to rebuild its layout. */
 int Mixar_refresh_popups(wmWindow *win);
-int Mixar_refresh_popover(wmWindow *win, const char *panel_id);
-static int rna_Window_mixar_refresh_popover(wmWindow *win, const char *panel_id)
-{
-  return Mixar_refresh_popover(win, panel_id);
-}
 
 static int rna_Window_mixar_refresh_popups(wmWindow *win)
 {
@@ -272,6 +249,49 @@ static void rna_Window_mixar_live_client_rect(wmWindow *win, int r_rect[4])
   }
 }
 
+/** Observe cached UI frames. SCREEN_OT_screenshot deliberately calls
+ * WM_redraw_windows to clear menus, which destroys the hover being measured. */
+static bool rna_Window_mixar_qa_capture_frame(wmWindow *win,
+                                              bContext *C,
+                                              ReportList *reports,
+                                              const char *filepath,
+                                              int x,
+                                              int y,
+                                              int width,
+                                              int height)
+{
+  if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
+    BKE_report(reports, RPT_ERROR, "QA frame capture requires --enable-event-simulate");
+    return false;
+  }
+  int size[2];
+  /* Front-buffer reads can rotate through stale swap-chain images. Recompose
+   * cached region buffers without WM_redraw_windows or layout/event updates. */
+  uint8_t *pixels = WM_window_pixels_read_from_offscreen(C, win, size);
+  if (!pixels) {
+    BKE_report(reports, RPT_ERROR, "Unable to read QA window frame");
+    return false;
+  }
+  ImBuf *buffer = IMB_allocImBuf(size[0], size[1], ImBufFlags::Zero);
+  buffer->color_mode = ImColorMode::RGB;
+  buffer->assign_byte_data(pixels);
+  if (width > 0 && height > 0) {
+    x = std::clamp(x, 0, size[0] - 1);
+    y = std::clamp(y, 0, size[1] - 1);
+    IMB_crop(
+        buffer, int2(x, y), int2(std::min(width, size[0] - x), std::min(height, size[1] - y)));
+  }
+  ImageFormatData format;
+  BKE_image_format_init(&format);
+  format.imtype = R_IMF_IMTYPE_PNG;
+  const bool saved = BKE_imbuf_write(buffer, filepath, &format);
+  IMB_freeImBuf(buffer);
+  if (!saved) {
+    BKE_report(reports, RPT_ERROR, "Unable to save QA window frame");
+  }
+  return saved;
+}
+
 #else /* RNA_RUNTIME */
 
 void RNA_def_wm_mixar(BlenderRNA *brna)
@@ -290,9 +310,6 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     /* Window struct must already be registered; runs after RNA_def_wm. */
     return;
   }
-
-  RNA_def_mixar_ui_control(brna, srna);
-  RNA_def_mixar_popup_query(brna, srna);
 
   PropertyRNA *prop = RNA_def_property(srna, "global_areas", PROP_COLLECTION, PROP_NONE);
   RNA_def_property_collection_funcs(prop,
@@ -425,14 +442,6 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     PropertyRNA *parm = RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX);
     RNA_def_function_return(func, parm);
   }
-  {
-    FunctionRNA *func = RNA_def_function(
-        srna, "mixar_refresh_popover", "rna_Window_mixar_refresh_popover");
-    RNA_def_function_ui_description(func, "Refresh only the named live popover after async updates");
-    PropertyRNA *parm = RNA_def_string(func, "panel_id", nullptr, 0, "Panel", "Panel type idname");
-    RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
-    RNA_def_function_return(func, RNA_def_int(func, "count", 0, 0, INT_MAX, "", "", 0, INT_MAX));
-  }
   /* This window's client rect inside another window's client coordinates
    * (points, bottom-left origin) — exact across window styles. */
   {
@@ -482,16 +491,6 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
                              "Splash Open",
                              "The startup splash popup is on screen; it closes on a button, "
                              "a click outside it or Escape");
-
-    /* Opening a bubble window activates the app, so the autoshow holds
-     * while the user is in the browser after a sign-in handoff. */
-    prop = RNA_def_property(srna_wm, "mixar_app_active", PROP_BOOLEAN, PROP_NONE);
-    RNA_def_property_boolean_funcs(prop, "rna_WindowManager_mixar_app_active_get", nullptr);
-    RNA_def_property_clear_flag(prop, PROP_EDITABLE);
-    RNA_def_property_ui_text(prop,
-                             "App Active",
-                             "A Mixar window has OS focus; False while another application "
-                             "is in front");
   }
 }
 

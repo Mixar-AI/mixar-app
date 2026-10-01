@@ -13,31 +13,13 @@ from bpy.props import (
     StringProperty,
 )
 
-from .....config.config import (
-    DEFAULT_ADDON_PROJECTS_DIR,
-    get_addon_projects_dir,
-    set_addon_projects_dir,
-)
+from mixar.modules.addon_project.constants import DEFAULT_WORKSPACE_DIR
 
 
-def _save_on_update(name):
-    """Update callback that merges ONE changed preference into preferences.json.
-
-    Each property knows its own name, so an edit made in a scene that still
-    holds defaults (a new scene tab) never overwrites the other saved keys.
-    """
-    def _update(self, context):
-        from ...utils.preferences_config import save_preferences
-        save_preferences(prefs=self, key=name)
-    return _update
-
-
-def _get_addon_projects_dir(self):
-    return get_addon_projects_dir() or DEFAULT_ADDON_PROJECTS_DIR
-
-
-def _set_addon_projects_dir(self, value):
-    set_addon_projects_dir(value)
+def _save_on_update(self, context):
+    """Update callback that persists preferences whenever a value changes."""
+    from ...utils.preferences_config import save_preferences
+    save_preferences()
 
 
 class MixarPaintPreferences(bpy.types.PropertyGroup):
@@ -52,7 +34,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         min=64,
         max=16384,
         subtype='PIXEL',
-        update=_save_on_update("default_new_image_size"),
+        update=_save_on_update,
     )
 
     image_atlas_size: IntProperty(
@@ -62,7 +44,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         min=2048,
         max=16384,
         subtype='PIXEL',
-        update=_save_on_update("image_atlas_size"),
+        update=_save_on_update,
     )
 
     hdr_image_atlas_size: IntProperty(
@@ -72,14 +54,14 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         min=1024,
         max=8192,
         subtype='PIXEL',
-        update=_save_on_update("hdr_image_atlas_size"),
+        update=_save_on_update,
     )
 
     unique_image_atlas_per_mp: BoolProperty(
         name="Unique Atlas Per Tree",
         description="Use a unique image atlas for each node tree",
         default=True,
-        update=_save_on_update("unique_image_atlas_per_mp"),
+        update=_save_on_update,
     )
 
     # ========== DEVELOPER OPTIONS ==========
@@ -88,14 +70,14 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         name="Developer Mode",
         description="Show developer-only menus and options",
         default=False,
-        update=_save_on_update("developer_mode"),
+        update=_save_on_update,
     )
 
     show_experimental: BoolProperty(
         name="Show Experimental Features",
         description="Display experimental features (may be unstable)",
         default=False,
-        update=_save_on_update("show_experimental"),
+        update=_save_on_update,
     )
 
     # ========== UI OPTIONS ==========
@@ -104,14 +86,14 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         name="Image Previews",
         description="Enable image thumbnails in layers list (may affect performance)",
         default=False,
-        update=_save_on_update("use_image_preview"),
+        update=_save_on_update,
     )
 
     skip_property_popups: BoolProperty(
         name="Skip Property Popups",
         description="Suppress informational popups unless Shift is held",
         default=False,
-        update=_save_on_update("skip_property_popups"),
+        update=_save_on_update,
     )
 
     icons: EnumProperty(
@@ -122,7 +104,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
             ('LEGACY', "Legacy", "Use legacy icon set"),
         ],
         default='DEFAULT',
-        update=_save_on_update("icons"),
+        update=_save_on_update,
     )
 
     layer_list_mode: EnumProperty(
@@ -134,7 +116,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
             ('BOTH', "Both", "Show both dynamic and classic layouts"),
         ],
         default='DYNAMIC',
-        update=_save_on_update("layer_list_mode"),
+        update=_save_on_update,
     )
 
     # ========== RENDERING OPTIONS ==========
@@ -143,14 +125,14 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         name="sRGB Preview Mode",
         description="Use sRGB color space in preview mode",
         default=True,
-        update=_save_on_update("make_preview_mode_srgb"),
+        update=_save_on_update,
     )
 
     parallax_without_baked: BoolProperty(
         name="Parallax Without Baking",
         description="Allow parallax mapping without requiring baked textures",
         default=False,
-        update=_save_on_update("parallax_without_baked"),
+        update=_save_on_update,
     )
 
     default_bake_device: EnumProperty(
@@ -162,7 +144,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
             ('GPU', "GPU", "Force GPU baking"),
         ],
         default='DEFAULT',
-        update=_save_on_update("default_bake_device"),
+        update=_save_on_update,
     )
 
     default_render_device: EnumProperty(
@@ -178,7 +160,23 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
             ('CPU', "CPU", "Always render on the CPU"),
         ],
         default='AUTO',
-        update=_save_on_update("default_render_device"),
+        update=_save_on_update,
+    )
+
+    # ========== ADD-ON PROJECTS ==========
+
+    # The ONE source of the Add-on tab's projects root
+    # (addon_project/workspace.py reads it; the name is
+    # constants.WORKSPACE_ROOT_PREFERENCE). Expanded at use time.
+    addon_projects_dir: StringProperty(
+        name="Add-on Projects Folder",
+        description=(
+            "Where the Add-on tab creates new add-ons, one subfolder each; "
+            "created on first use. Already-linked projects keep their folder"
+        ),
+        default=DEFAULT_WORKSPACE_DIR,
+        subtype='DIR_PATH',
+        update=_save_on_update,
     )
 
     # ========== DEFAULT LAYER/NODE OPTIONS ==========
@@ -187,21 +185,21 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         name="Enable Baked Outside by Default",
         description="New nodes will have 'baked outside' enabled by default",
         default=False,
-        update=_save_on_update("enable_baked_outside_by_default"),
+        update=_save_on_update,
     )
 
     enable_uniform_uv_scale_by_default: BoolProperty(
         name="Uniform UV Scale by Default",
         description="Enable uniform UV scaling by default for new layers and masks",
         default=False,
-        update=_save_on_update("enable_uniform_uv_scale_by_default"),
+        update=_save_on_update,
     )
 
     enable_auto_udim_detection: BoolProperty(
         name="Auto UDIM Detection",
         description="Automatically detect UDIM tiles for textures",
         default=True,
-        update=_save_on_update("enable_auto_udim_detection"),
+        update=_save_on_update,
     )
 
     default_image_resolution: EnumProperty(
@@ -212,7 +210,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
             ('CUSTOM', "Custom", "Use custom resolution from settings"),
         ],
         default='DEFAULT',
-        update=_save_on_update("default_image_resolution"),
+        update=_save_on_update,
     )
 
     # ========== UPDATE SETTINGS ==========
@@ -221,7 +219,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         name="Auto-Check for Updates",
         description="Automatically check for addon updates",
         default=True,
-        update=_save_on_update("auto_check_update"),
+        update=_save_on_update,
     )
 
     updater_interval_months: IntProperty(
@@ -229,7 +227,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         description="Number of months between update checks",
         default=0,
         min=0,
-        update=_save_on_update("updater_interval_months"),
+        update=_save_on_update,
     )
 
     updater_interval_days: IntProperty(
@@ -237,7 +235,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         description="Number of days between update checks",
         default=1,
         min=0,
-        update=_save_on_update("updater_interval_days"),
+        update=_save_on_update,
     )
 
     updater_interval_hours: IntProperty(
@@ -245,7 +243,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         description="Number of hours between update checks",
         default=0,
         min=0,
-        update=_save_on_update("updater_interval_hours"),
+        update=_save_on_update,
     )
 
     updater_interval_minutes: IntProperty(
@@ -253,7 +251,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         description="Number of minutes between update checks",
         default=1,
         min=0,
-        update=_save_on_update("updater_interval_minutes"),
+        update=_save_on_update,
     )
 
     # ========== MATERIAL LIBRARY UI ==========
@@ -264,7 +262,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         default=4,
         min=1,
         max=10,
-        update=_save_on_update("material_ui_columns"),
+        update=_save_on_update,
     )
 
     material_image_scale: IntProperty(
@@ -273,7 +271,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         default=3,
         min=1,
         max=10,
-        update=_save_on_update("material_image_scale"),
+        update=_save_on_update,
     )
 
     # ========== MISC OPTIONS ==========
@@ -282,7 +280,7 @@ class MixarPaintPreferences(bpy.types.PropertyGroup):
         name="Always Evaluate Frame",
         description="Evaluate node tree on every frame change",
         default=False,
-        update=_save_on_update("always_evaluate_frame"),
+        update=_save_on_update,
     )
 
 
@@ -308,26 +306,9 @@ def register():
     if not hasattr(bpy.types.Scene, 'mixar_paint_preferences'):
         bpy.types.Scene.mixar_paint_preferences = bpy.props.PointerProperty(type=MixarPaintPreferences)
 
-    # The Add-on tab's projects root is per-user, not per-Scene: the field
-    # reads and writes the config overlay (addon_project/workspace.py reads
-    # the same key), so no scene carries its own copy.
-    bpy.types.WindowManager.mixar_addon_projects_dir = StringProperty(
-        name="Add-on Projects Folder",
-        description=(
-            "Where the Add-on tab creates new add-ons, one subfolder each; "
-            "created on first use. Already-linked projects keep their folder"
-        ),
-        subtype='DIR_PATH',
-        get=_get_addon_projects_dir,
-        set=_set_addon_projects_dir,
-    )
-
 
 def unregister():
     """Unregister preferences properties"""
-    if hasattr(bpy.types.WindowManager, 'mixar_addon_projects_dir'):
-        del bpy.types.WindowManager.mixar_addon_projects_dir
-
     # Unregister scene property
     if hasattr(bpy.types.Scene, 'mixar_paint_preferences'):
         del bpy.types.Scene.mixar_paint_preferences

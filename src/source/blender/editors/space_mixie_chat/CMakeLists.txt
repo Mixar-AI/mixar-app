@@ -15,7 +15,6 @@ set(INC_SYS
 )
 
 set(SRC
-  mixie_chat_anim_pump.cc
   mixie_chat_ops.cc
   mixie_chat_action_buttons.cc
   mixie_chat_agent_bubble.cc
@@ -32,7 +31,6 @@ set(SRC
   mixie_chat_history_events.cc
   mixie_chat_history_overlay.cc
   mixie_chat_lightbox.cc
-  mixie_chat_line_break.cc
   mixie_chat_history_rows.cc
   mixie_chat_history_util.cc
   mixie_chat_hit_testing.cc
@@ -46,7 +44,6 @@ set(SRC
   mixie_chat_markdown_cache.cc
   mixie_chat_markdown_parse.cc
   mixie_chat_mention.cc
-  mixie_chat_prompt_history.cc
   mixie_chat_table.cc
   mixie_chat_empty_state.cc
   mixie_chat_feedback.cc
@@ -55,7 +52,6 @@ set(SRC
   mixie_chat_messages_layout.cc
   mixie_chat_messages_render.cc
   mixie_chat_props.cc
-  mixie_chat_prose_wrap.cc
   mixie_chat_rules_events.cc
   mixie_chat_rules_overlay.cc
   mixie_chat_rules_chrome.cc
@@ -67,25 +63,19 @@ set(SRC
   mixie_chat_slots.cc
   mixie_chat_steps.cc
   mixie_chat_thinking.cc
-  mixie_chat_ui_image.cc
-  mixie_chat_ui_rich_text.cc
-  mixie_chat_ui_rounded_rect.cc
   mixie_chat_ui_primitives.cc
   mixie_chat_ui_theme.cc
   mixie_chat_voice.cc
   mixie_chat_ui_widgets.cc
   mixie_chat_ui_attachments.cc
 
-  mixie_chat_anim_pump.hh
   mixie_chat_footer_constants.hh
   mixie_chat_footer_intern.hh
   mixie_chat_history_intern.hh
   mixie_chat_ink_intern.hh
   mixie_chat_intern.hh
   mixie_chat_layout_data.hh
-  mixie_chat_line_break.hh
   mixie_chat_markdown_intern.hh
-  mixie_chat_prompt_history.hh
   mixie_chat_rules_intern.hh
   mixie_chat_ui_types.hh
 )

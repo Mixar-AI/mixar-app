@@ -5,12 +5,9 @@
 """Requests behind the Refer a Friend dialog, mirrored onto WindowManager.
 
 Callbacks arrive on Blender's main thread (the shared request queue delivers
-them there), so they write RNA directly. Every load carries a generation
+them there), so they write RNA directly. Every request carries a generation
 number: reopening the dialog while an older load is in flight must not let
-the stale answer overwrite the fresh state. A send has its own token and is
-dropped only by logout (``clear``), never by a reopen: its answer must still
-clear the sent drafts and show the notice, and ``reset`` keeps the dialog in
-SENDING while it is in flight so Send cannot be pressed twice.
+the stale answer overwrite the fresh state.
 
 The link is cached for the session on WindowManager: once loaded, a reopen
 shows it at once and revalidates in the background (``reset`` / ``load``).
@@ -34,10 +31,7 @@ from . import invites
 
 logger = get_logger(__name__)
 
-_generation = 0          # bumped by every load() and by clear()
-_account_generation = 0  # bumped only by clear() (logout)
-_send_token = 0          # bumped by every send()
-_send_in_flight = False
+_generation = 0
 
 
 def _wm():
@@ -74,23 +68,17 @@ def reset(wm) -> None:
     """Fresh dialog state. The typed email draft survives a reopen.
 
     A link loaded earlier this session opens straight into READY; ``load``
-    then revalidates it without a loading screen. A send still in flight keeps
-    SENDING (never re-arm Send) and its answer lands in the reopened dialog.
+    then revalidates it without a loading screen.
     """
-    wm.mixar_referral_error = ""
-    if _send_in_flight:
-        wm.mixar_referral_state = C.STATE_SENDING
-        return
     wm.mixar_referral_state = C.STATE_READY if wm.mixar_referral_url else C.STATE_LOADING
+    wm.mixar_referral_error = ""
     set_notice(wm, "")
 
 
 def clear(wm) -> None:
     """Forget the cached link and draft (logout). Drops in-flight answers."""
-    global _generation, _account_generation, _send_in_flight
+    global _generation
     _generation += 1
-    _account_generation += 1
-    _send_in_flight = False
     wm.mixar_referral_url = ""
     wm.mixar_referral_emails = ""
     wm.mixar_referral_invitee_award = 0
@@ -166,33 +154,21 @@ def load() -> None:
 
 def send(wm, emails) -> None:
     """Ask the backend to email the invite link to *emails*."""
-    global _send_token, _send_in_flight
     from mixar.modules.common.api.services import get_referral_service
 
-    _send_token += 1
-    token = _send_token
-    account = _account_generation
-    _send_in_flight = True
+    token = _generation
     wm.mixar_referral_state = C.STATE_SENDING
     set_notice(wm, "")
 
-    def _current() -> bool:
-        return token == _send_token and account == _account_generation
-
     def _finish() -> None:
-        global _send_in_flight
-        _send_in_flight = False
         live = _wm()
-        if live is not None:
+        if live is not None and token == _generation:
             live.mixar_referral_state = C.STATE_READY
         _redraw()
 
     def _on_success(response) -> None:
-        if not _current():
-            return
         live = _wm()
-        if live is None:
-            _finish()
+        if live is None or token != _generation:
             return
         headline, lines, all_sent = invites.summarize(invites.unwrap(response))
         if all_sent:
@@ -201,11 +177,8 @@ def send(wm, emails) -> None:
         _finish()
 
     def _on_error(error) -> None:
-        if not _current():
-            return
         live = _wm()
-        if live is None:
-            _finish()
+        if live is None or token != _generation:
             return
         logger.error("[Referrals] invite emails failed: %s", error)
         set_notice(live, invites.error_message(error, "Couldn't send invites"),

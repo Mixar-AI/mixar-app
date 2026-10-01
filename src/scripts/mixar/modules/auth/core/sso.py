@@ -130,14 +130,10 @@ def start_callback_server(state):
         return _CallbackServer(('127.0.0.1', 0), handler)
 
 
-def wait_for_code(server, state, timeout, cancel=None):
-    """Serve until a code is accepted, ``timeout`` seconds elapse or
-    ``cancel`` (a ``threading.Event``) is set — checked at least once a second."""
+def wait_for_code(server, state, timeout):
+    """Serve until a code is accepted or ``timeout`` seconds elapse."""
     deadline = time.monotonic() + timeout
     while not state.received.is_set():
-        if cancel is not None and cancel.is_set():
-            logger.info("SSO callback wait cancelled (a newer sign-in replaced it)")
-            break
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             logger.warning("SSO callback timed out after %ss", timeout)
@@ -219,7 +215,7 @@ def _exchange_code(code, verifier):
     return None, {'success': False, 'message': error_msg}
 
 
-def sso_login(timeout=None, cancel=None):
+def sso_login(timeout=None):
     """Run SSO login flow via browser with PKCE.
 
     Opens browser to the desktop-login page, starts a loopback HTTP server
@@ -231,9 +227,6 @@ def sso_login(timeout=None, cancel=None):
     Args:
         timeout: Seconds to wait for the browser callback
             (default SSO_LOGIN_TIMEOUT_S).
-        cancel: Optional ``threading.Event``; setting it ends the callback
-            wait within a second (a newer sign-in replaced this one) and
-            the result carries ``cancelled: True``.
 
     Returns:
         dict with success, message, and optionally token / failure_kind.
@@ -276,13 +269,12 @@ def sso_login(timeout=None, cancel=None):
                 'message': rpt_('Failed to open browser: {error}').format(error=e)}
 
     try:
-        code = wait_for_code(server, state, timeout, cancel=cancel)
+        code = wait_for_code(server, state, timeout)
     finally:
         server.server_close()
 
     if not code:
-        return {'success': False, 'message': rpt_('Login was cancelled or timed out'),
-                'cancelled': cancel is not None and cancel.is_set()}
+        return {'success': False, 'message': rpt_('Login was cancelled or timed out')}
 
     logger.info("Auth code received, exchanging for tokens...")
     try:

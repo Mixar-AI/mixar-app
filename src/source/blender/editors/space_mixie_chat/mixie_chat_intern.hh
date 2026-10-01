@@ -13,9 +13,7 @@
 
 #include "BLI_rect.h"
 
-#include "mixie_chat_anim_pump.hh"
 #include "mixie_chat_layout_data.hh"
-#include "mixie_chat_line_break.hh"
 #include "mixie_chat_ui_types.hh"
 namespace blender::gpu {
 class Texture;
@@ -52,6 +50,13 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region);
 void mixie_chat_main_region_exit(wmWindowManager *wm, ARegion *region);
 void mixie_chat_main_region_listener(const wmRegionListenerParams *params);
 void mixie_chat_main_region_layout(const bContext *C, ARegion *region);
+
+/* Animation frame pump (mixie_chat_main_region.cc): a TIMERNOTIFIER wmTimer
+ * that keeps chat redraws coming at animation rate while any draw-side
+ * animation (slide-in, spinner/loader, scroll bounce) is live. Request from
+ * the messages draw every frame; shutdown removes the timer outright. */
+void mixie_chat_anim_pump_request(const bContext *C, bool anim_active);
+void mixie_chat_anim_pump_shutdown(wmWindowManager *wm);
 
 /* Main region custom drawing */
 void mixie_chat_draw_messages(const bContext *C, ARegion *region);
@@ -162,7 +167,7 @@ void chat_ui_draw_rounded_rect_bordered(const rctf *rect,
  * Called from the View2D matrix (the message area draws through
  * ui::view2d_view_ortho), so the painter's specular is switched off here; see
  * the definition. `alpha` fades the whole pane. */
-void chat_ui_draw_glass_pane(const rctf *rect, float radius, const float color[4]);
+void chat_ui_draw_glass_pane(const rctf *rect, float radius, float alpha);
 
 /* Thin colored vertical accent bar at the left edge of a block (Plan / steps /
  * thinking), so the three section types are differentiated while staying flat.
@@ -199,7 +204,7 @@ void chat_ui_calc_text_bounds_font(const char *text,
                                    int font_id,
                                    float *out_width,
                                    float *out_height,
-                                   BLFWrapMode wrap_mode = CHAT_PROSE_WRAP);
+                                   BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
 
 float chat_ui_draw_text_wrapped_font(const char *text,
                                      const rctf *rect,
@@ -207,7 +212,7 @@ float chat_ui_draw_text_wrapped_font(const char *text,
                                      int flags,
                                      int font_id,
                                      const float color[4],
-                                     BLFWrapMode wrap_mode = CHAT_PROSE_WRAP);
+                                     BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
 
 /* Lazily-loaded monospace font id for code rendering. */
 int chat_ui_mono_font();
@@ -246,9 +251,6 @@ void chat_ui_calc_image_bounds(int tex_width,
 
 /* Layout metrics */
 ChatLayoutMetrics chat_ui_get_layout_metrics();
-/* Fingerprint of everything the layout cache reads from the theme (the chat
- * theme block and the UI scale). Changes when Preferences > Themes is edited. */
-uint64_t chat_ui_theme_signature();
 ChatBubbleStyle chat_ui_get_user_bubble_style(const ChatLayoutMetrics *metrics);
 ChatBubbleStyle chat_ui_get_agent_bubble_style(const ChatLayoutMetrics *metrics);
 ChatImageStyle chat_ui_get_image_style(const ChatLayoutMetrics *metrics);
@@ -292,7 +294,7 @@ void chat_ui_get_toggle_label_color(float out_color[4]);
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name UI Widgets (mixie_chat_ui_widgets.cc, mixie_chat_ui_attachments.cc)
+/** \name UI Widgets (mixie_chat_ui_widgets.cc)
  * \{ */
 
 /* Chat bubble. `glass` draws the bed as a MIXAR_GLASS_CHAT pane instead of the
@@ -474,16 +476,11 @@ bool mixie_chat_handle_code_copy_click(bContext *C,
                                        float mouse_x,
                                        float mouse_y);
 
-/* Image attachment (mixie_chat_ui_attachments.cc). `x` is the left edge of
- * the thumbnail — pass the same inset as the bubble text
- * (`bubble_x + h_padding`). `y` is the top of the attachment slot.
- * `available_width` / `max_width` is the text column so layout and draw
- * share one aspect-fit box. */
+/* Image attachment */
 float chat_ui_calc_image_attachment_height(Main *bmain,
                                            const char *image_path,
                                            int image_source,
-                                           const ChatImageStyle *style,
-                                           float available_width);
+                                           const ChatImageStyle *style);
 float chat_ui_draw_image_attachment(Main *bmain,
                                     const char *image_path,
                                     int image_source,
@@ -578,7 +575,7 @@ void chat_ui_draw_text_selection(const rctf *text_rect,
                                  int font_size,
                                  int font_id,
                                  float line_height,
-                                 BLFWrapMode wrap_mode = CHAT_PROSE_WRAP);
+                                 BLFWrapMode wrap_mode = BLFWrapMode::Minimal);
 
 /* Scroll-to-bottom indicator (mixie_chat_scroll_indicator.cc) */
 void mixie_chat_update_scroll_indicator(struct SpaceMixieChat *smixie,

@@ -26,7 +26,7 @@ def _scene():
     return SimpleNamespace(
         camera=object(),
         mixie_session_id="sess-1",
-        cycles=SimpleNamespace(samples=64, device="GPU", use_denoising=False),
+        cycles=SimpleNamespace(samples=64, device="GPU"),
         eevee=SimpleNamespace(taa_render_samples=64),
         render=SimpleNamespace(
             engine="CYCLES", resolution_x=1200, resolution_y=900,
@@ -34,28 +34,6 @@ def _scene():
             image_settings=SimpleNamespace(file_format="JPEG", compression=15),
         ),
     )
-
-
-class PassThroughScenes:
-    """Stand-in for ``render_scene`` that renders the given scene itself, so these
-    tests keep pinning the job lifecycle on one scene object. The private copy is
-    covered by ``test_preview_private_scene.py``."""
-
-    @staticmethod
-    def isolate_final(_source):
-        return False
-
-    @staticmethod
-    def create(source, *, inspection):
-        return source
-
-    @staticmethod
-    def remove(_scene):
-        return None
-
-    @staticmethod
-    def sweep(keep=None):
-        return 0
 
 
 @pytest.fixture
@@ -80,7 +58,6 @@ def preview(monkeypatch):
     fake.context.preferences.view.render_display_type = "WINDOW"
     fake.ops.render.render.return_value = {"RUNNING_MODAL"}
     monkeypatch.setattr(module, "bpy", fake)
-    monkeypatch.setattr(module, "render_scene", PassThroughScenes)
     monkeypatch.setattr(module.render_slot, "bpy", fake)
     monkeypatch.setattr(module.render_slot, "_active", None)
     return module
@@ -345,7 +322,9 @@ def _device(preview, monkeypatch, *, allowed):
 
 
 def test_the_call_chooses_the_engine_and_eevee_is_not_the_scenes_cycles(preview, monkeypatch):
-    """An explicit engine request takes precedence over the scene's engine."""
+    """Nothing used to choose: the scene's engine was whatever a worker script
+    had left on it, which is how three verification frames ran 45-66 s each on
+    Cycles CPU. EEVEE is now what the backend asks for by default."""
     _device(preview, monkeypatch, allowed=True)
     scene = preview.bpy.context.scene
     result = preview.start(preview.bpy.context, KEY, width=1280, height=720, engine="eevee")
@@ -480,25 +459,3 @@ def test_no_budget_never_downgrades(preview):
     result = preview.start(preview.bpy.context, KEY)
     assert "engine_downgraded" not in result["render"]
     assert preview.bpy.context.scene.render.engine == "CYCLES"
-
-
-@pytest.mark.parametrize("save_fails", [False, True])
-def test_png_save_uses_fast_lossless_compression_and_restores_settings(preview, save_fails):
-    scene = preview.bpy.context.scene
-    settings = scene.render.image_settings
-    settings.compression = 77
-
-    def save(path, scene):
-        assert scene.render.image_settings.file_format == "PNG"
-        assert scene.render.image_settings.compression == 15
-        if save_fails:
-            raise RuntimeError("save failed")
-        Path(path).write_bytes(b"png")
-
-    preview.bpy.data.images.get.return_value = SimpleNamespace(has_data=True, save_render=save)
-    if save_fails:
-        with pytest.raises(RuntimeError, match="save failed"):
-            preview._read_png(scene)
-    else:
-        assert preview._read_png(scene) == b"png"
-    assert (settings.file_format, settings.compression) == ("JPEG", 77)

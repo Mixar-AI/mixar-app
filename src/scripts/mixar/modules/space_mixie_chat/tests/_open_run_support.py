@@ -67,10 +67,10 @@ def _scene(name="Scene", session_id="sid-1", state="IDLE"):
 @pytest.fixture(autouse=True)
 def clean_state():
     SessionManager.reset()
-    turn_events.shutdown(app_exit=True)
+    turn_events.reset()
     yield
     SessionManager.reset()
-    turn_events.shutdown(app_exit=True)
+    turn_events.reset()
 
 
 @pytest.fixture

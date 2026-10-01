@@ -15,8 +15,6 @@ Editing that set (add / remove / promote / clear) lives in
 
 The request runs on the shared async API queue, so the UI thread is never
 blocked; progress is surfaced through ``scene.mixie_detect_views_running``.
-Status and results belong to the tab that started the detection, never to
-whichever tab is shown when the response arrives.
 """
 
 import bpy
@@ -39,18 +37,18 @@ def _redraw_all():
                 area.tag_redraw()
 
 
-def _set_running(scene, value: bool):
-    """Flip *scene*'s in-flight flag used to disable the button while detecting."""
+def _set_running(value: bool):
+    """Flip the in-flight flag used to disable the button while detecting."""
     try:
-        scene.mixie_detect_views_running = value
+        bpy.context.scene.mixie_detect_views_running = value
     except Exception:
         pass
 
 
-def _set_status(scene, message: str):
-    """Store a short status line for *scene*'s Model Gen tab to display."""
+def _set_status(message: str):
+    """Store a short status line for the Model Gen tab to display."""
     try:
-        scene.mixie_detect_views_status = message
+        bpy.context.scene.mixie_detect_views_status = message
     except Exception:
         pass
 
@@ -117,21 +115,20 @@ class MIXIE_OT_moodboard_detect_views(Operator):
         # any request goes out; track that so this operator still reports.
         failed_early = []
 
-        def on_done(target, group_id, count):
+        def on_done(group_id, count):
             # The ingest already pointed the tab at the main panel and stored
             # the group on it — nothing left to wire up here.
-            _set_running(target, False)
+            _set_running(False)
             logger.debug("[DetectViews] %s companion views in group %r",
                          count, group_id)
             _set_status(
-                target,
                 (rpt_("Detected {count} extra view") if count == 1
                  else rpt_("Detected {count} extra views")).format(count=count) if count
                 else n_("Only one view detected")
             )
             _redraw_all()
 
-        def on_error(target, message):
+        def on_error(message):
             # Reuses the shared async-error helper: clears the in-flight flag,
             # stores the message for the panel, and pops a dialog.
             from mixar.modules.common.utils.mixie_space_utils import (
@@ -139,28 +136,28 @@ class MIXIE_OT_moodboard_detect_views(Operator):
             )
             failed_early.append(message)
             show_generation_error(
-                target, n_("Detect Views"), message,
+                scene, n_("Detect Views"), message,
                 "mixie_detect_views_running", "mixie_detect_views_status",
             )
 
-        def on_not_turnaround(target):
+        def on_not_turnaround():
             # Not an error: the image is an ordinary single image and the
             # existing single-image path applies unchanged.
-            _set_running(target, False)
-            _set_status(target, n_("No multiple views detected"))
+            _set_running(False)
+            _set_status(n_("No multiple views detected"))
             _redraw_all()
 
-        _set_running(scene, True)
-        _set_status(scene, n_("Detecting views..."))
+        _set_running(True)
+        _set_status(n_("Detecting views..."))
         _redraw_all()
         try:
             detect_views(
                 image, on_done, on_error, on_not_turnaround,
-                hint=_subject_hint(scene), scene=scene,
+                hint=_subject_hint(scene),
             )
         except Exception as e:
-            _set_running(scene, False)
-            _set_status(scene, "")
+            _set_running(False)
+            _set_status("")
             logger.error("[DetectViews] Failed to start: %s", e, exc_info=True)
             self.report({'ERROR'}, rpt_("Failed to start view detection: {error}").format(error=e))
             return {'CANCELLED'}

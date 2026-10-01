@@ -82,10 +82,6 @@ class Job:
     # Failure explanation beyond the one-line user_message — see
     # core/failure_info.py (backend class, provider's own words, vendor code).
     error_class: str = ""
-    # Who stamped ``error_class``: "backend" (apply_backend_failure) or
-    # "client" (a local submit/poll/timeout/download/import failure). Only a
-    # backend-stamped class may claim a refund (failure_info.failure_hint).
-    error_class_source: str = ""
     error_reason: str = ""
     vendor_code: str = ""
     # Session-relative clocks (time.monotonic, not epoch) so they survive
@@ -156,9 +152,6 @@ class Job:
     # for every user-initiated job — and an empty ref means no callback is
     # ever sent. See core/agent_results.py.
     agent_ref: dict = field(default_factory=dict)
-    # Who asked for this job, sent as X-Mixar-Job-Origin on submit: "user",
-    # "mixar_agent" (the in-app agent's ref) or "mcp" (an external AI app).
-    origin: str = "user"
     # Set only after the backend acknowledges the terminal outcome. The
     # independent callback outbox retries uncertain delivery after disconnect.
     _agent_reported: bool = field(default=False, repr=False)

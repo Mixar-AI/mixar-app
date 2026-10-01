@@ -55,6 +55,11 @@ struct AgentIslandState {
   int active_tab;           /* AgentTabId. */
   bool agent_mode;          /* False puts the segmented thumb on Generate Mode. */
   int queue_count;          /* Shown in the Queue pill; 0 hides the count chip. */
+  /* Credits left, 0..1. The card's border is a meter for it: a full ring at
+   * 100%, shortening anticlockwise as credits are spent. -1 means "unknown"
+   * (not fetched, or a free account with no allowance) and draws the ring
+   * whole, because a border that reads empty would look like a bug. */
+  float credits_remaining;
   bool addon_is_new;        /* Draws the NEW badge on the Add-on tab. */
 
   /* Sketch reflects the viewport freeze and DRAFT marks. Handwriting is
@@ -84,27 +89,14 @@ struct AgentIslandState {
    * switch thumb sits on the ON side. */
   bool auto_mode;
 
-  /* The model chip, mirrored onto the WindowManager by the Python half
-   * (byok/core/picker_mirror.py). `model_available` is false until those
-   * properties are registered — the chip is then not laid out or drawn at
-   * all, rather than opening a card with nothing in it. */
+  /* Hosted agent model pick, mirrored onto the WindowManager by the Python
+   * half (byok). `model_available` is false until those properties are
+   * registered — the chip is then not laid out or drawn at all, rather than
+   * offering a menu that does not exist yet. `model_byok_active` means the
+   * user's own API key overrides the hosted pick, so the chip is inert. */
   bool model_available;
-
-  /* Refine / Revert of the composer draft (scene.mixie_chat_prompt_refined /
-   * _refining, moodboard/core/prompt_refine_chat.py). Refined adds Revert
-   * beside Refine; refining greys Refine out until the answer lands. */
-  bool prompt_refined;
-  bool prompt_refining;
-
-  /* The model chip (wm.mixar_agent_*; core/picker.py decides, the C++ only
-   * draws): who answers — "MIXIE" | "KEY" | "LOCAL" — its badge word and the
-   * model name as drawn, and the chip's state: "OK" | "KEY_NEEDED" | "BUSY"
-   * (busy: a switch, pause or resume is being saved; the name dims). Read by
-   * `agent_ui_provider_gather`; the chip opens the model card (agent_ui_model_card.hh). */
-  char model_source[8];
-  char model_source_label[32];
-  char model_chip_name[96];
-  char model_chip_state[16];
+  bool model_byok_active;
+  char model_label[96];
 };
 
 /** Fill \a r_state from the chat's existing properties. Read-only. */
@@ -130,10 +122,6 @@ void agent_ui_draw_tab_strip(ARegion *region, const AgentIslandLayout *layout, c
 void agent_ui_draw_handwriting_control(ARegion *region, const AgentIslandLayout *layout,
                                        const AgentIslandState *state);
 void agent_ui_draw_chip_row(ARegion *region, const AgentIslandLayout *layout, const AgentIslandState *state);
-/** Refine / Revert left of Send (agent_ui_refine_paint.cc); no-op off the chat tabs. */
-void agent_ui_draw_refine_controls(ARegion *region,
-                                   const AgentIslandLayout *layout,
-                                   const AgentIslandState *state);
 
 /** Translucent moodboard dot grid overlay covering the normal text input field during scribble. */
 

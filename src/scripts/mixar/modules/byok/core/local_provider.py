@@ -233,9 +233,7 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     from mixar.modules.local_models.core import relay
 
     base_url = (wm.byok_form_local_custom_base or "").strip().rstrip("/")
-    from mixar.modules.local_models.core.model_name import safe_model_name
-    # A typed or detected .gguf path is sent (and remembered) as its basename.
-    model = safe_model_name(wm.byok_form_local_custom_model or "")
+    model = (wm.byok_form_local_custom_model or "").strip()
     # Many local servers need no key. The backend's local provider accepts a
     # keyless credential (api_key null) — omit the field entirely when blank.
     api_key = (wm.byok_form_local_custom_key or "").strip() or None
@@ -245,22 +243,11 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     if invalid:
         return False, invalid
 
-    from . import byok_client, credential_state
-
-    # Counted from now, not from the PUT: the dialog may be closed and
-    # reopened during the ping, and must not offer Remove / the toggle a key
-    # this save is about to (re)create.
-    release = byok_client.hold()
-    epoch = credential_state.current_epoch()
+    def _thread():
+        err = _ping_models_endpoint(base_url)
+        _schedule_on_main(_after_ping, err)
 
     def _after_ping(err):
-        release()
-        if credential_state.current_epoch() != epoch:
-            # Signed out (or into another account) during the ping: never send
-            # this save with the next account's token. The save callback sees
-            # the stale epoch and leaves the dialog idle.
-            on_done(False, None, n_("Signed out before the save finished."))
-            return
         if err:
             on_done(False, None, err)
             return
@@ -277,6 +264,7 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
                     logger.warning("Local registration snapshot failed: %s", exc)
             on_done(success, data, save_err)
 
+        from . import byok_client
         byok_client.save_credentials(
             provider=LOCAL_PROVIDER_ID,
             model=model,
@@ -286,13 +274,9 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
             on_done=_wrapped,
         )
 
-    # Guaranteed delivery: a ping that dies still answers, so the count
-    # above is always released (and at shutdown, with no timer to answer
-    # through, the hold is still released).
-    _after_ping.release = release
-    byok_client._run_worker(
-        "MixarLocalCustomPing", lambda: (_ping_models_endpoint(base_url),), _after_ping,
-        (n_("Could not reach the local server."),))
+    threading.Thread(
+        target=_thread, daemon=True, name="MixarLocalCustomPing"
+    ).start()
     return True, None
 
 

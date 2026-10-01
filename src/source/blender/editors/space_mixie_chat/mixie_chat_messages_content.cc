@@ -79,7 +79,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
         bubble_rect.ymax = layout.y_pos + layout.bubble_height;
         if (glass_bed) {
           chat_ui_draw_glass_pane(&bubble_rect, layout.style.corner_radius,
-                                  layout.style.bg_color);
+                                  layout.style.bg_color[3]);
         }
         else {
           chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius,
@@ -93,11 +93,9 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
                                 layout.bubble_height, plan_accent, UI_SCALE_FAC);
 
         /* Draw markdown content (code blocks register their copy chips
-         * against this message index). Start below any attachments so the
-         * thumbnail and prose share a column without overlapping. */
+         * against this message index). */
         float content_x = layout.bubble_x + layout.style.h_padding;
-        float content_y = layout.y_pos + layout.bubble_height - layout.style.v_padding -
-                          layout.attachments_height;
+        float content_y = layout.y_pos + layout.bubble_height - layout.style.v_padding;
         mixie_chat_code_hits_set_message(layout.message_index);
         chat_ui_draw_markdown(slot_meta_d, content_x, content_y,
                               layout.content_width, &layout.style, 1.0f);
@@ -209,7 +207,7 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       bubble_rect.ymax = layout.y_pos + layout.bubble_height;
       if (glass_bed) {
         chat_ui_draw_glass_pane(&bubble_rect, layout.style.corner_radius,
-                                layout.style.bg_color);
+                                layout.style.bg_color[3]);
       }
       else {
         chat_ui_draw_rounded_rect(&bubble_rect, layout.style.corner_radius, layout.style.bg_color);
@@ -225,11 +223,9 @@ void mixie_chat_render_message_content(const MessageLayoutData &layout,
       }
 
       /* Draw markdown content (code blocks register their copy chips
-       * against this message index). Start below any attachments so the
-       * thumbnail and prose share a column without overlapping. */
+       * against this message index). */
       float content_x = layout.bubble_x + layout.style.h_padding;
-      float content_y = layout.y_pos + layout.bubble_height - layout.style.v_padding -
-                        layout.attachments_height;
+      float content_y = layout.y_pos + layout.bubble_height - layout.style.v_padding;
       mixie_chat_code_hits_set_message(layout.message_index);
       chat_ui_draw_markdown(meta_buf, content_x, content_y,
                             layout.content_width, &layout.style, 1.0f);

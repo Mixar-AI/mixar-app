@@ -1,10 +1,8 @@
 /* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
-/** Native Scenes drawer queries for Python: hit testing for window-level modal
- * handlers (the agent viewport lock lets presses on the drawer through
- * mid-turn), and which 3D View hosts the drawer (its header draws the toggle;
- * the tab switch snapshots its viewport). */
+/** Native Scenes drawer hit testing for window-level Python modal handlers
+ * (the agent viewport lock lets presses on the drawer through mid-turn). */
 #pragma once
 
 #ifdef RNA_RUNTIME
@@ -29,11 +27,6 @@ static bool rna_Area_mixar_scenes_drawer_contains(ScrArea *area, const int x, co
   }
   return false;
 }
-
-static bool rna_Area_mixar_scenes_drawer_hosts(ScrArea *area)
-{
-  return view3d_scenes_drawer_area_hosts(area);
-}
 #else
 static void rna_def_area_mixar_scenes_drawer(StructRNA *srna)
 {
@@ -47,12 +40,6 @@ static void rna_def_area_mixar_scenes_drawer(StructRNA *srna)
     RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   }
   PropertyRNA *parm = RNA_def_boolean(func, "contains", false, "Contains", "Point is on the Scenes drawer");
-  RNA_def_function_return(func, parm);
-
-  func = RNA_def_function(srna, "mixar_scenes_drawer_hosts", "rna_Area_mixar_scenes_drawer_hosts");
-  RNA_def_function_ui_description(
-      func, "This 3D View is the window's main one, which shows the Scenes drawer");
-  parm = RNA_def_boolean(func, "hosts", false, "Hosts", "The Scenes drawer lives in this area");
   RNA_def_function_return(func, parm);
 }
 #endif

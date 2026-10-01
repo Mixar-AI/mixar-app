@@ -20,8 +20,6 @@ EVENT_MOODBOARD_SIDEBAR = "moodboard.sidebar_toggled"
 EVENT_CHAT_MODE = "agent.mode_changed"
 EVENT_CHAT_HISTORY = "agent.history_toggled"
 EVENT_MESSAGE_SENT = "agent.message_sent"
-# The composer buffer (CHAT_INPUT_MAXLEN) was hit: a draft could not grow.
-EVENT_COMPOSER_CAP_HIT = "agent.composer_cap_hit"
 EVENT_BUBBLE_STATE = "agent_bubble.state_changed"
 EVENT_BUBBLE_EXPAND = "agent_bubble.expand_toggled"
 EVENT_EXPORT = "export.completed"
@@ -30,7 +28,6 @@ EVENT_IMPORT_INITIATED = "import.initiated"
 EVENT_SESSION_STARTED = "app.session_started"
 EVENT_SESSION_ENDED = "app.session_ended"
 EVENT_TELEMETRY_ENABLED = "telemetry.enabled"
-EVENT_MCP_TOOL = "mcp.tool_called"
 EVENT_UI_MODE = "workspace.mode_changed"
 EVENT_WORKSPACE = "workspace.switched"
 EVENT_DRAFT_ABANDONED = "moodboard.draft_abandoned"
@@ -79,8 +76,6 @@ WORKSPACE_NAME_ALLOWLIST = frozenset({
 # bubble_header_drag is a modal driver whose meaningful outcome (pill toggle)
 # is already reported as agent_bubble.state_changed.
 IGNORED_OPERATORS = frozenset({
-    # Native drawer -> Python capture bridge; it already emits one ui.action.
-    "mixie_chat.track_scene_drawer_open",
     "notification.toast_hover",
     # Fires success=false on every actionless toast click — chrome, not usage.
     "notification.toast_click",

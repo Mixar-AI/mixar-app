@@ -10,13 +10,7 @@ import json
 import logging
 
 from mixar.modules.common.generation_params.core.bounds import catalog_int, rna_int
-from mixar.modules.common.generation_params.core.multi_select import (
-    default_values,
-    selected_values,
-    spec_choices,
-    sync_choice_rows,
-)
-from mixar.modules.common.i18n import iface_, n_
+from mixar.modules.common.i18n import iface_
 
 from ..constants import (
     GRAPH_LABEL_MAXLEN,
@@ -24,7 +18,6 @@ from ..constants import (
     GRAPH_WIDGET_MAXLEN,
 )
 from .assemble_schema import reset_assemble_parameters, sync_assemble_schema
-from .node_client_params import injected_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +48,6 @@ _OUTPUT_TYPES = {
     'WORLD_LABS': 'SPLAT',
     'CHARACTER_PARTS': 'MESH',
     'ASSEMBLE': 'MESH',
-    # Rigged character in, the SAME character (now animated) out, so a second
-    # Animate card or an export can chain off it.
-    'ANIMATE': 'MESH',
 }
 
 _MESH_FEATURE_CAPABILITY = {
@@ -65,11 +55,7 @@ _MESH_FEATURE_CAPABILITY = {
     'RETOPOLOGY': 'retopology',
     'MESH_SEGMENT': 'mesh_segmentation',
     'AUTO_RIG': 'animate',
-    'ANIMATE': 'animation',
 }
-# The injected single MESH input's id/label; "mesh" unless named here.
-_MESH_SOCKET_DEFAULT = ("mesh", n_("Mesh"))
-_MESH_SOCKET_NAMES = {'ANIMATE': ("rig", n_("Rigged Character"))}
 
 _CONNECTABLE_TYPES = {
     "image": "IMAGE",
@@ -83,18 +69,12 @@ _CONNECTABLE_TYPES = {
 # one next empty per group). It only has to be roomy enough for the real
 # catalog contracts: Generate Video alone declares 30 images + 10 videos.
 _MAX_INPUT_SOCKETS = 64
-# The Model Gen modes the Generate to 3D card can RUN: its execution is
-# image-driven (one frontal still, per-mode compression and prompt placement
-# in ``node_execution._run_model_3d``), so a catalog mode outside this set
-# (e.g. a text-only one) keeps the template hidden rather than offering a
-# node that would refuse at run time. One definition, shared with the run
-# path; pinned by ``tests/moodboard/test_template_catalog_sync.py``.
-MODEL_3D_SERVICE_KEYS = frozenset({'model_3d', 'image_to_3d', 'hunyuan_rapid'})
+_MODEL_3D_SERVICE_KEYS = {'model_3d', 'image_to_3d', 'hunyuan_rapid'}
 # Mesh-only operations take no text guidance (Retopology, Mesh Segmentation and
 # Auto Rig act purely on geometry), so their nodes hide the prompt field. PBR
 # keeps it — Tripo texturing accepts a texture prompt.
 _PROMPTLESS_ACTION_TYPES = frozenset(
-    {'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS', 'ASSEMBLE', 'ANIMATE'})
+    {'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS', 'ASSEMBLE'})
 # PBR texturing accepts a single style/reference image OR exactly four
 # turnaround views, so the node offers up to four optional image sockets.
 _PBR_MAX_IMAGE_REFS = 4
@@ -118,7 +98,7 @@ def services_for_action(action_type: str, services) -> list:
         return [] if action_type == 'ASSEMBLE' else list(services)  # ASSEMBLE is local
     return [
         service for service in services
-        if service.get("key") in MODEL_3D_SERVICE_KEYS
+        if service.get("key") in _MODEL_3D_SERVICE_KEYS
     ]
 
 
@@ -294,15 +274,9 @@ def build_input_contract(service: dict, model: dict) -> dict:
 
 
 def _choices(spec: dict) -> list[dict]:
-    """Published choices: ``choices``, else ``enum`` / an array's ``items.enum``.
-
-    Values keep their catalog type (an integer enum stays an int on the wire);
-    the multi-select rows are strings (``spec_choices``), matched by ``str``.
-    """
     raw = spec.get("choices")
     if raw is None:
-        items = spec.get("items") if isinstance(spec.get("items"), dict) else {}
-        raw = items.get("enum") or spec.get("enum") or []
+        raw = spec.get("enum") or []
     normalized = []
     for choice in raw if isinstance(raw, list) else []:
         if isinstance(choice, dict):
@@ -318,8 +292,6 @@ def _choices(spec: dict) -> list[dict]:
 
 def _parameter_value(parameter):
     kind = parameter.parameter_type
-    if kind == 'ARRAY':
-        return selected_values(parameter.choices)
     if kind == 'ENUM':
         selected = parameter.value_enum
         try:
@@ -394,12 +366,7 @@ def _assign_default(parameter, spec: dict, choices: list[dict], old_value):
     value = old_value if old_value is not None else spec.get("default")
     kind = parameter.parameter_type
     try:
-        if kind == 'ARRAY':
-            sync_choice_rows(
-                parameter.choices, spec_choices(spec),
-                old_value if old_value is not None else default_values(spec),
-            )
-        elif kind == 'ENUM':
+        if kind == 'ENUM':
             valid = [str(choice["value"]) for choice in choices]
             selected = str(value) if value is not None else (valid[0] if valid else "NONE")
             parameter.value_enum = selected if selected in valid else (valid[0] if valid else "NONE")
@@ -519,15 +486,14 @@ def sync_node_schema(_scene, node) -> None:
         "MESH" in socket.get("accepted_types", ())
         for socket in input_contract["sockets"]
     ):
-        socket_id, socket_label = _MESH_SOCKET_NAMES.get(node.action_type, _MESH_SOCKET_DEFAULT)
         input_contract["sockets"].insert(
             0,
             {
-                "id": socket_id,
-                "label": iface_(socket_label),
+                "id": "mesh",
+                "label": iface_("Mesh"),
                 "accepted_types": ["MESH"],
                 "required": True,
-                "group_id": socket_id,
+                "group_id": "mesh",
                 "repeatable": False,
             },
         )
@@ -584,8 +550,6 @@ def sync_node_schema(_scene, node) -> None:
     parameters = model.get("parameters") or {}
     if not isinstance(parameters, dict):
         parameters = {}
-    # The catalog's own spec wins over an injected one of the same name.
-    parameters = {**injected_parameters(node.action_type), **parameters}
     schema_json = json.dumps(
         {
             "service": service_key,
@@ -667,9 +631,7 @@ def sync_node_schema(_scene, node) -> None:
         choices = _choices(spec)
         parameter.choices_json = json.dumps(choices, separators=(",", ":"))
         ptype = str(spec.get("type") or "string").lower()
-        if choices and ptype == "array":
-            parameter.parameter_type = 'ARRAY'
-        elif choices:
+        if choices:
             parameter.parameter_type = 'ENUM'
         elif ptype == "boolean":
             parameter.parameter_type = 'BOOLEAN'
@@ -715,7 +677,6 @@ def reset_node_parameters(node) -> None:
     parameters = model.get("parameters")
     if not isinstance(parameters, dict):
         parameters = {}
-    parameters = {**injected_parameters(node.action_type), **parameters}
     for parameter in node.parameters:
         raw_spec = parameters.get(parameter.name)
         spec = dict(raw_spec) if isinstance(raw_spec, dict) else {}

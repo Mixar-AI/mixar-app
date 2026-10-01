@@ -46,10 +46,10 @@ _request_queue.put((id, script, tool, session))
                                  wait for execution gate (50ms post tool_start)
                                      │
                                      ▼
-                                 take the next ready request from script_lanes
+                                 _is_render_in_progress()? defer-and-retick
                                      │
                                      ▼
-                                 render_gate: refuse mutations while rendering
+                                 dequeue (id, script, tool, session)
                                      │
                                      ▼
                                  [B3 inner guard around the rest]
@@ -67,7 +67,7 @@ _request_queue.put((id, script, tool, session))
                                  jsonrpc_client.queue_response(id, result)
                                      │
                                      ▼
-                                 log unavailable/rejected if writer cannot accept
+                                 OR _buffer_pending_response(...) if disconnected
 ```
 
 ### Defensive layers
@@ -77,11 +77,9 @@ _request_queue.put((id, script, tool, session))
 | **B3 outer guard** (`_process_one_request`) | Blender's `bpy.app.timers` silently eats exceptions; without this, one error kills the timer forever. We catch + log; in-flight request still gets an error response. |
 | **B3 inner guard** (`_execute_dequeued_request`) | Once we've dequeued a request, any exception before `queue_response` would leave the server's `tool_use` without a `tool_result`. Inner try sends an error response on failure. |
 | **B8 queue-full** | `_request_queue.put_nowait` raising `Full` triggers an explicit error response to the server, not a silent drop. |
-| **Connection-scoped response writer** | `pump.respond` attempts one response per request; its bounded writer reports acceptance or refusal. Disconnected results are recorded as unavailable and are never sent across a new connection's fence. Acceptance is not a delivery acknowledgement. |
-| **Deferred completion** | `preview_deferral` parks the request while the native render runs. The original scene's step stays RUNNING and its history closes on the terminal result. Only `done` succeeds; timeout/cancellation never releases a still-live native reservation. |
-| **Render guard** | `render_gate` checks native render coordination before routing. Mutations immediately fail with `render_in_progress`; reviewed read-only tools, including `_workspace_status`, can run. It never holds a lane until the render ends. |
-| **Inspection previews** | `inspection_preview_v1` extends the same native job to solid/material view/focus captures. `inspection_preview` owns temporary camera/world/lights and render visibility until pixels and labels are collected; cleanup runs on complete, cancel, lost job and failed preparation. Camera copies preserve the user's camera transforms and data. Results keep the inspection `image_base64`/focus/labels contract. No worker process is launched. |
-
+| **B6 pending-response buffer** | If `client.is_connected` is False at response time, stash in `_pending_responses: dict[id, (queued_at, session_id, result)]` with TTL 900s, max 256 (LRU evict). Flushed on next handshake. |
+| **K1 session-tagged buffer** | B6 entries carry the originating `session_id`. On flush, drop entries whose session is no longer present in any open scene (the user reloaded a different .blend while disconnected). |
+| **Render guard** | `_is_render_in_progress()` checks both `bpy.app.is_job_running('RENDER')` and a handler-driven `_rendering_now` flag (set by `render_init`, cleared by `render_complete`/`render_cancel`). Peek-and-defer pattern: leave the script on the queue, re-tick later. Closes the depsgraph-mutation-mid-render segfault path. |
 | **Scene routing per session** | The backend addresses every script with a `session_id`. The constant `agent:<connection>` (or empty) session is **non-pinned**: it matches no scene and runs against the user's active window scene (normal / sandbox mode). Any *other* non-empty session is a **per-scene** target — the user's main scene's `mixie_session_id` (a UUID) or an `agentlane:<parent>:<n>` lane scene (scene-build mode). Per-scene: switch `window.scene` to the matching scene, execute, restore — all in one timer tick (no redraw, no flicker). Prefix helpers live in `constants.py` (`is_non_scene_routing_session`, `is_lane_scene`). |
 | **Per-scene hard-fail** | If a per-scene session resolves to **no** scene, the script is **rejected** (error response `no scene for session <id>`) instead of silently running in the active scene — that fallback could clobber the user's work in the wrong scene. Non-pinned `agent:`/empty sessions keep the active-scene-follow behavior. |
 | **Foreground-scene restore** | After a per-scene/lane script flips away, `window.scene` is restored to the user's tracked *foreground* scene (`_user_foreground_scene_name`, captured whenever a non-pinned script runs), **not** "whatever was active when the script started" (which could be a throwaway lane scene). If the tracked scene was deleted, falls back to any non-lane scene — never a lane. |
@@ -89,33 +87,9 @@ _request_queue.put((id, script, tool, session))
 | **Session-not-active guard** | Narrow race where `load_pre` flushed the session between queue and execute — drop the script and ack the server with an error. |
 | **Asset prefetch hold** (`core/script_prefetch.py`) | Heavy texture-apply scripts (`create_layered_material`) embed their asset URLs in the script text. `queue_script_request` starts downloading them immediately on the WS thread (daemon threads, global 8-slot semaphore); `_process_one_request` holds the dequeued script in `_held` — one cheap `ready()` check per tick, UI fully responsive — until the cache is warm or the 90s wait cap passes. Execution then pays only image decode + node build, never the network. FIFO is preserved (later scripts wait behind the held one, their own prefetches already running); a prefetch that fails or passes the cap refuses the script with an explicit error rather than falling back to a main-thread download, and only scripts we start no prefetch for (unknown tool, or no extractable asset URL) keep the old in-build path. |
 
-Material inspections use eight-sample Cycles with denoising on the user's
-configured render device. Native asynchronous EEVEE can still block UI drawing
-during first-use graphics-context/shader initialization. Automatic final previews
-use the scene camera/lighting with denoised Cycles capped at 32 samples; explicit
-EEVEE/Cycles requests retain their engine and sample caps. Older backends keep
-their prior engine selection. Cycles is a dynamically registered renderer;
-the static RNA engine enum must never be used to decide whether it is available.
-Its add-on's `scene.cycles` settings signal availability, so it is selected
-even when the scene starts in EEVEE; with the add-on disabled the scene keeps
-its own engine instead of failing the preview. Solid inspections use
-Workbench. Over-budget material inspections fall back to Workbench with an
-explicit warning that materials were not evaluated. Over-budget Cycles finals
-retain the disclosed EEVEE fallback. Fast and final jobs share the same reservation and cleanup lifecycle.
-Collection-instance focus uses one evaluated depsgraph pass and bounded corner
-unions, including nested collection offsets/transforms. Source meshes stay
-instanced; framing, contact bounds and labels include their visible geometry.
-
 ## ScriptExecutor — the second sandbox
 
-Request phases are durably timestamped in the scene dossier by
-`common/agent_execution/diagnostics.py`, with monotonic queue, execution and
-render durations. Logs omit script/output content. Executor setup/body/cleanup
-share one outer lock scope; stdout/stderr restoration has its own finally.
-Off-thread reset paths marshal UI/history work to main, and application-exit
-cleanup skips Blender data access. See `docs/modules/agent-execution.md`.
-
-**File:** `core/executor.py`. The backend's `validate_bpy_script` is the first line; the plugin's `ScriptExecutor` is the second. Either can reject. Mesh conversion also has a [native-topology preflight](../../../../../docs/modules/agent-mesh-validation.md) before `BMesh.from_mesh`.
+**File:** `core/executor.py`. The backend's `validate_bpy_script` is the first line; the plugin's `ScriptExecutor` is the second. Either can reject.
 
 `ScriptExecutor.execute(script)`:
 
@@ -124,7 +98,7 @@ cleanup skips Blender data access. See `docs/modules/agent-execution.md`.
 3. **Safe builtins** — `get_safe_builtins()` returns a curated `__builtins__` dict; no `__import__`, no `eval/exec/compile`, no `vars`/`globals`/`super`/`__build_class__` (so `class` statements are impossible). `type` and the common exception classes ARE exposed — without them a script cannot write `try/except` at all, and the failure only surfaced after a full model round trip.
 4. **Handler snapshot** — captures `bpy.app.handlers` lists (`depsgraph_update_post`, `frame_change_post`, `load_pre`/`load_post`, `object_bake_*`, ...). After execution, restores them so scripts can't leak persistent handlers across sessions.
 5. **stdout/stderr capture** — `StringIO` redirection. Parses `__RESULT__` prefix lines into `return_value` (the cross-process result protocol — backend's tools rely on this).
-6. **Scene-change diffing** — tracks `created_objects`, `modified_objects`, `deleted_objects` by pre/post object set diff. Returned in the response envelope. Both snapshots include every scene, custom properties and authored animation. Binary custom properties use a type/length-qualified SHA-256 of the raw bytes, never their escaped text representation. F-curve coordinates, handles, interpolation/easing enums and amplitude/back/period use bulk RNA reads. Shared action/slot digests are reused only within one snapshot; no cross-call cache may hide an edit. Large payload hashes use `common/utils/digests.py` (bundled cryptography).
+6. **Scene-change diffing** — tracks `created_objects`, `modified_objects`, `deleted_objects` by pre/post object set diff. Returned in the response envelope.
 7. **`sanitize_value` on return** — recursively coerces non-JSON-safe types (bpy datablocks, IDs, mathutils Vectors) into JSON-serialisable forms.
 
 Result envelope sent over JSON-RPC:
@@ -309,27 +283,20 @@ public names), `core/checkpoint_store.py` (paths, index, per-kind prune),
 `ui/operators/checkpoint_ops.py` (card sync, the revert operator).
 
 Before every fresh turn `chat_ops.send_message` captures the whole document with
-`save_as_mainfile(copy=True, thumbnail=False)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
+`save_as_mainfile(copy=True)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
 as the `turn` record "before turn N" (sha256-deduplicated files, newest 20 per
-session). File hashes use streaming accelerated SHA-256 from
-`common/utils/digests.py`, retaining identical stored digests and deduplication
-semantics; native save and checkpoint publication still complete before Send.
-Capture binds the record to the turn's command id once the send is
+session) and binds the record to the turn's command id once the send is
 accepted. A document with Automatically Pack Resources on reports an error per
 image missing on disk while packing; Blender still writes the copy, so the
 capture keeps a snapshot that exists after such a `RuntimeError` and only
-gives up when nothing was written. The snapshot skips the file thumbnail
-(the Mixar `thumbnail` property of `WM_OT_save_as_mainfile`): with the AUTO
-preview and a scene camera, Blender renders the camera through EEVEE for the
-thumbnail, which held every Send for seconds on a production scene (7 s of a
-7.5 s save on a 1.2M-polygon file; 0.3 s without). The save runs inside the
-Agent Bubble's `keep_windows_for_snapshot`, so its `save_pre` purge does not
-close the island and pill for the snapshot (a restore's read closes them
-itself). A user save still purges the windows, and such a save can start from
-a bubble click, which is why native click dispatchers call operators only
-through `mixie_chat_call_operator_and_redraw`: it re-checks that the region
-still exists in a live screen before redrawing it (the purge restores a live
-context window, so only a screen walk can tell).
+gives up when nothing was written. The Agent Bubble's `save_pre` purge closes the island for this save
+like any other (bubble screens must never reach a file, and a later restore's
+read must never find a live bubble window to free); the island is re-shown
+after the save. A send started from a bubble click therefore closes the window
+whose region is on the click handler's stack, which is why native click
+dispatchers call operators only through `mixie_chat_call_operator_and_redraw`:
+it re-checks that the region still exists in a live screen before redrawing it
+(the purge restores a live context window, so only a screen walk can tell).
 
 **One timeline, position = chat length.** The snapshot before turn N holds N-1
 user messages, so `timeline(session_id, scene)` splits the turns by the scene's
@@ -368,8 +335,8 @@ the turns can be reapplied; a new message from there mints a new session and
 forgets it. A jump whose keep-capture fails is refused ("nothing was
 changed"); a jump whose read fails drops the record it had just captured.
 Every read is preceded by the Agent Bubble purge
-(`close_restored_agent_bubble_windows`): snapshot saves keep the island open,
-so the restore is the one place that closes it before a file read.
+(`close_restored_agent_bubble_windows`), because a jump with nothing to keep
+saves nothing and `save_pre` would not have closed the island.
 
 **Card.** The header (and the island's history-button row) shows a
 Checkpoints button once the session has one. It opens the native past-chats

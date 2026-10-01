@@ -33,10 +33,8 @@ enum class AgentIslandControl {
   Clear,
   Voice,
   Auto,
-  Model, /* The model chip (opens the model popup). */
+  Model,
   Generate,
-  Refine,
-  Revert,
   Count,
 };
 

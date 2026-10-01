@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import io
-import os
 from typing import Any
 
 import bpy
@@ -29,17 +28,13 @@ def scene_snapshot() -> dict[str, Any]:
                 "mesh_verts": len(obj.data.vertices) if obj.type == "MESH" else 0,
             }
         )
-    # The file's basename only: an absolute path carries the user's home
-    # folder (and on Windows their account name) off to another process.
-    filepath = bpy.data.filepath or ""
     return {
         "scene_name": scene.name,
         "object_count": len(objects),
         "objects": objects[:200],
         "render_engine": scene.render.engine,
         "frame": int(scene.frame_current),
-        "file_name": os.path.basename(filepath),
-        "saved": bool(filepath),
+        "filepath": bpy.data.filepath or "",
     }
 
 
@@ -71,14 +66,9 @@ def moodboard_snapshot() -> dict[str, Any]:
 def capture_viewport_png() -> bytes:
     """OpenGL viewport still as PNG bytes."""
     scene = bpy.context.scene
-    settings = scene.render.image_settings
-    previous = settings.file_format
-    previous_media_type = getattr(settings, "media_type", None)
+    previous = scene.render.image_settings.file_format
     try:
-        # media_type BEFORE file_format: a video-output scene rejects PNG on Blender 5.
-        if previous_media_type is not None:
-            settings.media_type = "IMAGE"
-        settings.file_format = "PNG"
+        scene.render.image_settings.file_format = "PNG"
         bpy.ops.render.opengl()
         image = bpy.data.images.get("Render Result")
         if image is None:
@@ -99,9 +89,7 @@ def capture_viewport_png() -> bytes:
                 pass
             buffer.close()
     finally:
-        if previous_media_type is not None:
-            settings.media_type = previous_media_type
-        settings.file_format = previous
+        scene.render.image_settings.file_format = previous
 
 
 def capture_moodboard_preview(index: int) -> bytes:

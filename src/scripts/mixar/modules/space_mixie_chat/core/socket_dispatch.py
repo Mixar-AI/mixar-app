@@ -12,8 +12,6 @@ Handles bidirectional RPC:
 - Tool lifecycle notifications (agent.tool_start, agent.tool_end)
 """
 
-import time
-
 from mixar.config.logging_config import get_logger
 from typing import Optional
 
@@ -35,22 +33,12 @@ class SocketDispatch:
         if "result" in msg or "error" in msg:
             msg_id = msg.get("id")
             if msg_id:
-                # The server read something we sent: the only proof the
-                # upstream works (its own pings and events prove downstream).
-                self._last_reply_time = time.time()
                 with self._pending_lock:
                     cb = self._pending_callbacks.pop(msg_id, None)
                     self._pending_deadlines.pop(msg_id, None)
                 if cb is not None:
                     try:
-                        # An error response also carries ``"result": null``
-                        # (the server serialises every field), so test the
-                        # error first: JSON-RPC never sets both, and a
-                        # refused turn command (the guest door: rate limit,
-                        # kill switch) delivered as ``None`` here was never
-                        # settled — the chat sat BUSY until a relaunch.
-                        error = msg.get("error")
-                        payload = error if isinstance(error, dict) else msg.get("result")
+                        payload = msg.get("result") if "result" in msg else msg.get("error")
                         cb(payload)
                     except Exception as e:
                         logger.error(f"Error in response callback for {msg_id}: {e}")
@@ -73,15 +61,6 @@ class SocketDispatch:
         elif method == JSONRPCMethod.BLENDER_LIVENESS:
             self._handle_liveness(request_id)
 
-        elif method in ("mcp.begin_operation", "mcp.end_operation"):
-            from mixar.modules.mcp_bridge.core.rpc import handle_request
-            if getattr(self, "_role", None):
-                if request_id:
-                    self.queue_response(request_id, {"success": False,
-                        "error_type": "capability_unavailable", "error": "MCP requires a desktop instance"})
-            else:
-                handle_request(self, method, params, request_id)
-
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
 
@@ -96,9 +75,6 @@ class SocketDispatch:
 
         elif isinstance(method, str) and method.startswith(CONTEXT_FOLDER_RPC_PREFIX):
             self._handle_context_folder_request(method, params, request_id)
-
-        elif method == JSONRPCMethod.MOODBOARD_VIEW_VIDEO:
-            self._handle_moodboard_video_request(params, request_id)
 
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
@@ -247,13 +223,6 @@ class SocketDispatch:
         # ONLY when present so older five-positional callbacks keep working.
         envelope = params.get("envelope")
 
-        from mixar.modules.mcp_bridge.core.lease import authorize_script
-        refusal = authorize_script(session_id, agent_ctx)
-        if refusal is not None:
-            if request_id:
-                self.queue_response(request_id, refusal)
-            return
-
         if self._on_script_execute:
             try:
                 if isinstance(envelope, dict):
@@ -325,27 +294,6 @@ class SocketDispatch:
             }
         if request_id and result is not None:
             self.queue_response(request_id, result)
-
-    def _handle_moodboard_video_request(self, params: dict, request_id: Optional[str]) -> None:
-        """Sample a Moodboard video as frames: the name resolves on the main
-        thread (bpy), the decode runs on a worker; the reply is deferred."""
-        if not request_id:
-            return
-        try:
-            from mixar.modules.moodboard.core.video_rpc import handle_request
-            from .main_thread_executor import run_on_main_thread
-
-            handle_request(
-                JSONRPCMethod.MOODBOARD_VIEW_VIDEO, params,
-                lambda result: self.queue_response(request_id, result),
-                run_on_main_thread=run_on_main_thread,
-            )
-        except Exception as exc:  # noqa: BLE001 - must always answer
-            logger.error("moodboard video request failed: %s", exc)
-            self.queue_response(request_id, {"success": False, "error": {
-                "code": "capability_unavailable",
-                "message": "Moodboard video is unavailable in this client",
-            }})
 
     def _handle_sandbox_control(self, params: dict, request_id: Optional[str]) -> None:
         """Handle a server-initiated agent.sandbox_control request (parent side).

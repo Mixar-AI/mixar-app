@@ -38,8 +38,6 @@ def _ui_update_timer():
     """Timer function that runs UI updates outside of draw context"""
     global _needs_update
 
-    _hydrate_new_scenes()
-
     if not _needs_update:
         return 0.1  # Check again in 0.1 seconds
 
@@ -67,32 +65,6 @@ def _ui_update_timer():
         logger.error("Mixar UI update error: %s", e)
 
     return 0.1  # Check again in 0.1 seconds
-
-
-def _hydrate_new_scenes():
-    """Give scenes created since the last load (scene tabs) the saved prefs."""
-    try:
-        from ...utils.preferences_config import hydrate_new_scenes
-        hydrate_new_scenes()
-    except Exception as exc:
-        logger.debug("Mixar Paint preference hydration skipped: %s", exc)
-
-
-def _restore_preferences(reason):
-    """Load the saved prefs into every scene and migrate the projects root."""
-    try:
-        from ...utils.preferences_config import (
-            hydrate_new_scenes,
-            load_preferences,
-            migrate_addon_projects_dir,
-            reset_hydration,
-        )
-        reset_hydration()
-        load_preferences()
-        hydrate_new_scenes()
-        migrate_addon_projects_dir()
-    except Exception as exc:
-        logger.warning("Failed to load Mixar Paint preferences %s: %s", reason, exc)
 
 
 @persistent
@@ -162,9 +134,13 @@ def on_load_post(dummy):
     _prev_material_slots_count = 0
     mark_ui_needs_update()
 
-    # Restore persisted preferences into every scene of the loaded file so
-    # that user settings are not lost when switching .blend files.
-    _restore_preferences("on file load")
+    # Restore persisted preferences into the newly loaded scene so that
+    # user settings are not lost when switching .blend files.
+    try:
+        from ...utils.preferences_config import load_preferences
+        load_preferences()
+    except Exception as exc:
+        logger.warning("Failed to load Mixar Paint preferences on file load: %s", exc)
 
 
 @persistent
@@ -206,9 +182,13 @@ def register():
         bpy.app.timers.register(_ui_update_timer, persistent=True)
         _update_timer_registered = True
 
-    # Load persisted preferences into every scene at startup so that
+    # Load persisted preferences into the current scene at startup so that
     # settings are immediately available without requiring a file reload.
-    _restore_preferences("at startup")
+    try:
+        from ...utils.preferences_config import load_preferences
+        load_preferences()
+    except Exception as exc:
+        logger.warning("Failed to load Mixar Paint preferences at startup: %s", exc)
 
 
 def unregister():

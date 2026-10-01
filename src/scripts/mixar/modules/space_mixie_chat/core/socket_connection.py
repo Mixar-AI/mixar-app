@@ -19,14 +19,7 @@ from queue import Empty
 from typing import Optional
 
 from ..constants import DISCONNECT_REASON_AUTH_FAILED, JSONRPCMethod
-from .jsonrpc_frames import (
-    HANDSHAKE_AUTH_FAILED,
-    HANDSHAKE_OK,
-    HANDSHAKE_TRANSIENT,
-    reconnect_sleep,
-    server_retry_after,
-    wait_for_handshake,
-)
+from .jsonrpc_frames import HANDSHAKE_AUTH_FAILED, HANDSHAKE_OK, HANDSHAKE_TRANSIENT, wait_for_handshake
 
 try:
     import websocket
@@ -40,26 +33,12 @@ class SocketConnection:
     def _run_loop(self) -> None:
         """Main loop running in background thread."""
         while self._running.is_set():
-            self._diag.begin()
             try:
                 if self._do_connect():
                     self._receive_loop()
             except Exception as e:
                 logger.error(f"JSON-RPC run loop error: {e}")
-                self._diag.end('run_loop_error', e)
-            # The receive loop left because someone else dropped the socket
-            # (writer, backpressure, consent) — they recorded why; else say so.
-            self._diag.end('receive_loop_exit')
 
-            # A receive error leaves the socket open; close it so the server
-            # ends this connection now, not at its own liveness timeout.
-            if self._ws is not None:
-                try:
-                    self._ws.shutdown()
-                except Exception:
-                    pass
-            from mixar.modules.mcp_bridge.core.lease import invalidate_transport
-            invalidate_transport(self)
             if self._reauth_stop:
                 self._reauth_stop.set()
                 self._reauth_stop = None
@@ -76,11 +55,9 @@ class SocketConnection:
                 callbacks = list(self._pending_callbacks.values())
                 self._pending_callbacks.clear()
                 self._pending_deadlines.clear()
-                self._awaiting_ack.clear()
             for callback in callbacks:
                 try:
-                    callback({"code": -32020, "message": "Connection lost; delivery is uncertain",
-                              "data": {"uncertain": True, "disconnected": True}})
+                    callback({"code": -32020, "message": "Connection lost; delivery is uncertain", "data": {"uncertain": True}})
                 except Exception:
                     logger.debug("Disconnected request callback failed", exc_info=True)
 
@@ -102,23 +79,11 @@ class SocketConnection:
                     logger.error(f"Error in on_disconnected callback: {e}")
 
             if self._running.is_set():
-                # A 1013 close ("capacity; retry in Ns") sets the floor; every
-                # wait is jittered so clients never reconnect in lockstep.
-                # Jitter touches the sleep only, never the backoff itself.
-                retry_after = getattr(self, "_server_retry_after", None)
-                self._server_retry_after = None
-                delay = reconnect_sleep(self._current_delay, retry_after)
-                logger.info(f"Reconnecting in {delay:.1f}s...")
-                time.sleep(delay)
+                logger.info(f"Reconnecting in {self._current_delay:.1f}s...")
+                time.sleep(self._current_delay)
                 self._current_delay = min(
                     self._current_delay * 2, self._max_reconnect_delay
                 )
-
-    def _note_server_close(self, close_code, reason="") -> None:
-        """Record a server close; a 1013 sets the next reconnect's floor."""
-        retry_after = server_retry_after(close_code, reason)
-        if retry_after is not None:
-            self._server_retry_after = retry_after
 
     def _do_connect(self) -> bool:
         """Establish connection and perform handshake.
@@ -145,7 +110,6 @@ class SocketConnection:
                 if refreshed:
                     token = refreshed
                 if self._auth.should_stop(refresh_retryable):
-                    self._diag.end('auth_stopped', failures=self._auth.failure_count)
                     if self._on_disconnected:
                         self._on_disconnected(DISCONNECT_REASON_AUTH_FAILED)
                     self._running.clear()
@@ -178,7 +142,6 @@ class SocketConnection:
                 self.ws_url, timeout=10, header=headers
             )
             self._connected = True
-            self._diag.phase('handshake')
 
             # Perform handshake. The backoff delay and auth-failure counter
             # are only reset AFTER the handshake succeeds: resetting them on
@@ -187,7 +150,6 @@ class SocketConnection:
             # (failure count wiped each cycle, so max_failures never tripped).
             outcome = self._perform_handshake()
             if outcome != HANDSHAKE_OK:
-                self._diag.end('handshake_failed', outcome=outcome)
                 try:
                     self._ws.close()
                 except Exception:
@@ -222,14 +184,9 @@ class SocketConnection:
             self._auth.reset()
             self._last_ping_time = time.time()
             self._last_recv_time = time.time()
-            self._last_reply_time = time.time()
             self._liveness_probe_started = None
-            self._send_backlog = None
-            self._last_send_progress = 0.0
-            self._upload_clear_at = 0.0
 
             self._ws.settimeout(10.0)
-            self._diag.phase('connected')
             from .socket_writer import start_writer
             self._writer = start_writer(self)
             from .socket_reauth import start_reauth
@@ -248,7 +205,6 @@ class SocketConnection:
             # 401/403 mean the credentials were rejected; a 502/503 from the
             # load balancer while the backend is down is a plain retry.
             status_code = getattr(e, 'status_code', None)
-            self._diag.end('connect_failed', e, http_status=status_code)
             if status_code in (401, 403):
                 self._auth.record_failure(token)
                 self._current_delay = self._auth.retry_delay(self._current_delay)
@@ -263,7 +219,6 @@ class SocketConnection:
             return False
         except Exception as e:
             logger.warning(f"Connection failed: {e}")
-            self._diag.end('connect_failed', e)
             self._connected = False
             return False
 
@@ -302,11 +257,7 @@ class SocketConnection:
         from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
         from ...addon_project.constants import TESTS_CAPABILITY as ADDON_PROJECT_TESTS_CAPABILITY
         from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
-        from ...mcp_bridge.constants import CAPABILITY as MCP_CAPABILITY
         from ...context_folder.constants import CAPABILITY as CONTEXT_FOLDER_CAPABILITY
-        from ...context_folder.constants import VIDEO_CAPABILITY as CONTEXT_FOLDER_VIDEO_CAPABILITY
-        from ...moodboard.constants import VIDEO_CAPABILITY as MOODBOARD_VIDEO_CAPABILITY
-        from ...scene_render.constants import CALLBACKS_CAPABILITY as SCENE_RENDER_CALLBACKS_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -330,31 +281,17 @@ class SocketConnection:
                 # Image bytes by HTTP reference; sync frames stay small.
                 "agent_history_v2",
                 "script_execution",
-                # Prepared terrain imports plus mesh_bounds/linked_scatter.
-                # The backend gates these APIs on the connected instance.
-                "forest_runtime_v1",
-                "terrain_raycast_v1",
-                "inspection_preview_v1",
                 "notifications",
                 "local_llm",
                 # Client answers blender.liveness on the WS thread; the
                 # backend only probes instances that advertise it (older
                 # clients would silently never reply).
                 "liveness",
-                *([MCP_CAPABILITY] if not self._role else []),
-                *(["mixar_ui_v1"] if not self._role else []),
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
                 # context_folder.* reads of the folders a chat attached.
                 CONTEXT_FOLDER_CAPABILITY,
-                # context_folder.view_video: this build decodes folder videos.
-                CONTEXT_FOLDER_VIDEO_CAPABILITY,
-                # moodboard.view_video: the agent reviews board videos as frames.
-                MOODBOARD_VIDEO_CAPABILITY,
-                # mixar.scene_render_start accepts agent_ref_json and reports
-                # the render's terminal outcome as generation.agent_result.
-                SCENE_RENDER_CALLBACKS_CAPABILITY,
                 # blender.execute_script frames may carry params["envelope"]
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.
@@ -374,13 +311,6 @@ class SocketConnection:
             # assumed to be a 16 GB machine.
             "machine": machine_block(),
         }
-        # How the earlier sockets ended (socket_diagnostics.py); this one's
-        # number lets the server join its own disconnect line to the report.
-        reports = self._diag.pending_reports()
-        if self._diag.current is not None:
-            params["socket_seq"] = self._diag.current.seq
-        if reports:
-            params["connection_reports"] = reports
         # Anti-abuse device signal (one trial per machine); best-effort
         if self._device_id:
             params["device_id"] = self._device_id
@@ -399,21 +329,18 @@ class SocketConnection:
         self.agent_ws_supported = False
         self.agent_history_supported = False
         self.agent_history_blobs_by_reference = False
-        self.agent_attachments_by_reference = False
         self._ws.send(json.dumps(handshake))
 
         try:
             outcome, detail = wait_for_handshake(
                 self._ws, timeout=10.0,
                 result_sink=self._set_server_capabilities,
-                close_sink=self._note_server_close,
             )
         except Exception as e:
             logger.warning(f"Handshake error: {e} - transient, will retry")
             return HANDSHAKE_TRANSIENT
         if outcome == HANDSHAKE_OK:
             logger.info("Handshake successful")
-            self._diag.acknowledge(reports)
         elif outcome == HANDSHAKE_AUTH_FAILED:
             logger.error(f"Handshake rejected: {detail}")
         else:
@@ -425,5 +352,3 @@ class SocketConnection:
         capabilities = result.get('server_capabilities', [])
         self.agent_history_supported = 'agent_history_v1' in capabilities
         self.agent_history_blobs_by_reference = 'agent_history_v2' in capabilities
-        # Chat images upload over HTTP; commands carry references (attachment_upload).
-        self.agent_attachments_by_reference = 'agent_attachments_v1' in capabilities

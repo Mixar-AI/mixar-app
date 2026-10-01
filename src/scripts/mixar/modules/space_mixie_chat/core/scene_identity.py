@@ -10,10 +10,6 @@ resume cursor. Two scenes then claim one backend session: scripts route to
 whichever matches first and turn events cannot bind. ``dedupe_session_ids``
 keeps the original and turns every copy into a fresh, empty chat.
 
-A scene created any other way than the drawer's "+ New scene" (a script,
-an add-on, Blender's New Scene) is adopted by ``adopt_scene``: while
-connected it starts IDLE with the signed-in account, like a drawer tab.
-
 Runs after a file loads and whenever the scene count changes
 (``depsgraph_update_post``; a length compare, so it costs nothing on the
 ordinary update storm). The handler itself only notices the growth: the
@@ -23,24 +19,19 @@ inside the depsgraph handler (the handler-pattern rule).
 
 from __future__ import annotations
 
-import uuid
-
 import bpy
 from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.scenes_log import slog
 
-from ..constants import SessionState, is_internal_scene, is_lane_scene
+from ..constants import SessionState
 
 logger = get_logger(__name__)
 
 _last_scene_count: int = -1
 # Custom props that identify THIS scene's conversation and document identity.
 _COPIED_PROPS = ("mixie_ws_resume", "mixar_scene_id")
-#: Login identity the auth flow stamps on the scene it signed in from; a new
-#: scene inherits it, or the profile chip and credits read blank there.
-ACCOUNT_PROPS = ("mixie_chat_user_id", "mixie_chat_credits", "mixie_chat_model")
 
 
 def _original(scenes):
@@ -88,60 +79,8 @@ def detach_copy(scene, was: str) -> None:
                 del scene[key]
         except Exception:  # noqa: BLE001
             pass
-    _renew_context_files_id(scene)
     slog("tab.dedupe", scene, was=was)
     logger.info("Scene %r was a copy of the chat session %s: detached as a new chat", scene.name, was[:8])
-
-
-def dedupe_scene_ids(scenes=None) -> list[str]:
-    """Drop ``mixar_scene_id`` from every copy of a scene that carries one.
-
-    A tab that never chatted has no session id for ``dedupe_session_ids`` to
-    notice, yet it already has its document scene id; Scene > Copy duplicates it
-    and two scenes then answer as one in the run's identity (review 2026-10-02,
-    Codex P2). The copy gets a fresh id on its next use."""
-    by_id: dict[str, list] = {}
-    for scene in (scenes if scenes is not None else bpy.data.scenes):
-        try:
-            value = scene.get("mixar_scene_id")
-        except Exception:  # noqa: BLE001
-            value = None
-        if value:
-            by_id.setdefault(str(value), []).append(scene)
-    cleared = []
-    for value, group in by_id.items():
-        if len(group) < 2:
-            continue
-        # The original is the scene that existed first: the lowest session_uid.
-        # Never the shortest name: a copy renamed to something shorter would
-        # take the id, and a run bound to the original would fail its fence.
-        keep = min(group, key=lambda sc: (getattr(sc, "session_uid", 0) or 1 << 62, sc.name))
-        for scene in group:
-            if scene is keep:
-                continue
-            try:
-                del scene["mixar_scene_id"]
-            except Exception:  # noqa: BLE001
-                continue
-            cleared.append(scene.name)
-            slog("tab.scene_id_dedupe", scene, was=value)
-    return cleared
-
-
-def _renew_context_files_id(scene) -> None:
-    """The copy also carried its source's context-file rows AND their set id
-    (``mixie_context_files_id``); left alone, two chats would publish competing
-    memberships under one id. Mint the copy its own id and publish its set —
-    just blanking it would hide the copied chips from the agent."""
-    if not hasattr(scene, "mixie_context_files_id"):
-        return
-    try:
-        from mixar.modules.context_folder.core.files import publish_set
-
-        scene.mixie_context_files_id = str(uuid.uuid4()) if len(scene.mixie_context_files) else ""
-        publish_set(scene)
-    except Exception:  # noqa: BLE001 — a stripped build without context files
-        logger.debug("context-file set renewal failed for %r", scene.name, exc_info=True)
 
 
 def dedupe_session_ids(scenes=None) -> list[str]:
@@ -162,69 +101,6 @@ def dedupe_session_ids(scenes=None) -> list[str]:
                 detach_copy(scene, sid)
                 detached.append(scene.name)
     return detached
-
-
-def inherit_account(source, scene) -> None:
-    """Copy the signed-in identity from ``source`` onto a new scene."""
-    if source is None or source is scene:
-        return
-    for prop in ACCOUNT_PROPS:
-        try:
-            setattr(scene, prop, getattr(source, prop))
-        except Exception:  # noqa: BLE001 — a missing property on either side is fine
-            pass
-
-
-def _connection_live() -> bool:
-    try:
-        from .connection_manager import get_connection_manager
-        connected = get_connection_manager().is_connected
-        return bool(connected() if callable(connected) else connected)
-    except Exception:  # noqa: BLE001
-        return False
-
-
-def _account_source(scene):
-    window = getattr(getattr(bpy.context, "window", None), "scene", None)
-    for candidate in [window, *bpy.data.scenes]:
-        if (candidate is not None and candidate is not scene and not is_lane_scene(candidate)
-                and not is_internal_scene(candidate)
-                and getattr(candidate, "mixie_chat_user_id", "")):
-            return candidate
-    return None
-
-
-def adopt_scene(scene) -> bool:
-    """Make a scene that appeared while Mixar is connected ready for work.
-
-    ``mixie_chat_state`` defaults to OFFLINE and only the WebSocket connect
-    promotes scenes to IDLE, so a scene made by ``bpy.data.scenes.new`` (an
-    agent or MCP script, an add-on, Blender's own New Scene) stayed OFFLINE
-    until the next reconnect, and chat, MCP scene tools and UI control all
-    refused it. While connected, OFFLINE on a real scene with no open run means
-    exactly that; the transport-drop paths set OFFLINE only once disconnected.
-    Agent lane scenes are workers' private copies and are never adopted.
-    """
-    from .session import get_session_manager
-
-    if scene is None or is_lane_scene(scene) or is_internal_scene(scene):
-        return False
-    session = get_session_manager()
-    if session.get_state(scene) != SessionState.OFFLINE or session.run_open(scene):
-        return False
-    if not _connection_live():
-        return False
-    if not getattr(scene, "mixie_chat_user_id", ""):
-        inherit_account(_account_source(scene), scene)
-    session.set_connected(scene)
-    slog("tab.adopt", scene)
-    logger.info("Scene %r appeared while connected: ready for chat and MCP", scene.name)
-    return True
-
-
-def adopt_new_scenes() -> list[str]:
-    """Adopt every OFFLINE real scene while connected. Returns their names."""
-    return [scene.name for scene in list(bpy.data.scenes) if adopt_scene(scene)]
 
 
 @persistent
@@ -262,13 +138,8 @@ def _dedupe_later():
     """Timer body: one scan, then the timer unregisters (returns None)."""
     try:
         dedupe_session_ids()
-        dedupe_scene_ids()
     except Exception:  # noqa: BLE001 — a failed scan must not kill the timer host
         logger.debug("session dedupe failed", exc_info=True)
-    try:
-        adopt_new_scenes()
-    except Exception:  # noqa: BLE001
-        logger.debug("new scene adoption failed", exc_info=True)
     return None
 
 
@@ -278,7 +149,6 @@ def _schedule_dedupe() -> None:
             bpy.app.timers.register(_dedupe_later, first_interval=0.0)
     except Exception:  # noqa: BLE001 — no timer host (tests, shutdown): scan inline
         dedupe_session_ids()
-        dedupe_scene_ids()
 
 
 @persistent
@@ -289,7 +159,6 @@ def _on_load_post(*_args) -> None:
     except Exception:  # noqa: BLE001
         _last_scene_count = -1
     dedupe_session_ids()
-    dedupe_scene_ids()
     _prune_active_sessions()
 
 

@@ -11,10 +11,8 @@ these properties.
 
 **WindowManager, never Scene**: this is session state that must not be
 serialized into a ``.blend`` (a shared file would carry one user's plan
-and credit balance to whoever opens it). A WindowManager is still saved
-and adopted on open, so every property here reads through process-local
-accessors (``session_value``) like ``mixie_chat_user_id``; ``SKIP_SAVE``
-alone protects neither.
+and credit balance to whoever opens it). ``mixie_chat_user_id`` uses
+process-local RNA accessors; ``SKIP_SAVE`` alone does not protect Scene data.
 
 ``core/state.py`` stays the source of truth; these are a projection of
 it, written on the main thread by ``core/poller._apply_snapshot``.
@@ -23,17 +21,16 @@ it, written on the main thread by ``core/poller._apply_snapshot``.
 from __future__ import annotations
 
 import bpy
-from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.props import BoolProperty, FloatProperty, IntProperty, StringProperty
 
 #: Every property this module attaches, for a clean unregister.
 _PROP_NAMES = (
     "mixar_usage_ready",
     "mixar_usage_has_subscription",
     "mixar_usage_plan_name",
+    "mixar_usage_remaining_pct",
     "mixar_usage_credits_remaining",
-    "mixar_usage_monthly_remaining",
-    "mixar_usage_bonus_remaining",
-    "mixar_usage_has_allowance",
+    "mixar_usage_credits_total",
     "mixar_usage_can_top_up",
     "mixar_usage_stale",
     "mixar_account_name",
@@ -41,67 +38,52 @@ _PROP_NAMES = (
 
 
 def register() -> None:
-    from mixar.modules.space_mixie_chat.core.account_identity import session_value
-
     wm = bpy.types.WindowManager
 
     wm.mixar_usage_ready = BoolProperty(
         name="Usage Ready",
         description="Whether a billing snapshot has been fetched at least once",
         default=False,
-        **session_value("mixar_usage_ready", False),
     )
     wm.mixar_usage_has_subscription = BoolProperty(
         name="Has Subscription",
         description="Whether the account has an active subscription to meter",
         default=False,
-        **session_value("mixar_usage_has_subscription", False),
     )
     wm.mixar_usage_plan_name = StringProperty(
         name="Plan Name",
         description="Display name of the current plan",
         default="",
         maxlen=64,
-        **session_value("mixar_usage_plan_name", ""),
+    )
+    wm.mixar_usage_remaining_pct = FloatProperty(
+        name="Remaining",
+        description="Percentage of the cycle credit allocation still available",
+        default=0.0,
+        min=0.0,
+        max=100.0,
     )
     wm.mixar_usage_credits_remaining = IntProperty(
         name="Credits Remaining",
-        description="Total credits available (monthly allowance plus bonus credits)",
+        description="Credits left in the current cycle",
         default=0,
         min=0,
-        **session_value("mixar_usage_credits_remaining", 0),
     )
-    wm.mixar_usage_monthly_remaining = IntProperty(
-        name="Monthly Credits Remaining",
-        description="Credits left in the plan's monthly allowance",
+    wm.mixar_usage_credits_total = IntProperty(
+        name="Credits Total",
+        description="Credit allocation for the current cycle",
         default=0,
         min=0,
-        **session_value("mixar_usage_monthly_remaining", 0),
-    )
-    wm.mixar_usage_bonus_remaining = IntProperty(
-        name="Bonus Credits Remaining",
-        description="Top-up and referral credits left",
-        default=0,
-        min=0,
-        **session_value("mixar_usage_bonus_remaining", 0),
-    )
-    wm.mixar_usage_has_allowance = BoolProperty(
-        name="Has Allowance",
-        description="Whether a monthly plan allowance backs part of the balance",
-        default=False,
-        **session_value("mixar_usage_has_allowance", False),
     )
     wm.mixar_usage_can_top_up = BoolProperty(
         name="Can Top Up",
         description="Whether this account is eligible to buy extra credits",
         default=False,
-        **session_value("mixar_usage_can_top_up", False),
     )
     wm.mixar_usage_stale = BoolProperty(
         name="Usage Stale",
         description="Whether the last refresh failed and the figures shown are old",
         default=False,
-        **session_value("mixar_usage_stale", False),
     )
     wm.mixar_account_name = StringProperty(
         name="Account Name",
@@ -109,7 +91,6 @@ def register() -> None:
         default="",
         maxlen=128,
         options={'SKIP_SAVE'},
-        **session_value("mixar_account_name", ""),
     )
 
 

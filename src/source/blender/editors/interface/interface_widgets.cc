@@ -47,7 +47,6 @@
 #include "interface_mixar_palette.hh"
 #include "interface_mixar_profile_card.hh"
 #include "interface_mixar_section.hh"
-#include "interface_mixar_sheet.hh"
 #include "UI_mixar.hh"
 #include "UI_mixar_theme.hh"
 #include "UI_mixar_tokens.hh"
@@ -141,10 +140,6 @@ enum class WidgetStyle {
   MixarAction,
   MixarToggle,
   MixarInput,
-  /* AI Provider sheet fields: native Text / Menu buttons on the sheet's own
-   * backdrop (`interface_mixar_sheet_controls.cc`); stock text pass kept. */
-  MixarSheetInput,
-  MixarSheetDropdown,
   /* Account-card elements — every kind paints its own glyphs. */
   MixarCard,
 };
@@ -5745,31 +5740,6 @@ static void widget_box(Button *but,
   GPU_blend(GPU_BLEND_NONE);
 }
 
-/* -- Mixar AI Provider sheet fields ------------------------------------------ */
-
-static void widget_mixar_sheet_input(Button *but,
-                                     uiWidgetColors * /*wcol*/,
-                                     rcti *rect,
-                                     const WidgetStateInfo * /*state*/,
-                                     int /*roundboxalign*/,
-                                     const float /*zoom*/)
-{
-  UI_mixar_sheet_input_draw(but, rect);
-}
-
-static void widget_mixar_sheet_dropdown(Button *but,
-                                        uiWidgetColors * /*wcol*/,
-                                        rcti *rect,
-                                        const WidgetStateInfo * /*state*/,
-                                        int /*roundboxalign*/,
-                                        const float /*zoom*/)
-{
-  UI_mixar_sheet_dropdown_draw(but, rect);
-  /* Text stops short of the chevron, as #widget_menubut keeps it off its
-   * arrows: the stock text pass clips (and ellipsises) to this rect. */
-  rect->xmax -= UI_mixar_sheet_dropdown_text_inset();
-}
-
 /* -- Mixar Section Widget ------------------------------------------------ */
 
 static void widget_mixar_section(Button * /*but*/,
@@ -6659,16 +6629,6 @@ static WidgetType *widget_type(WidgetStyle type)
       wt.draw = widget_mixar_input;
       break;
 
-    case WidgetStyle::MixarSheetInput:
-      wt.wcol_theme = &btheme->tui.wcol_text;
-      wt.custom = widget_mixar_sheet_input;
-      break;
-
-    case WidgetStyle::MixarSheetDropdown:
-      wt.wcol_theme = &btheme->tui.wcol_menu;
-      wt.custom = widget_mixar_sheet_dropdown;
-      break;
-
     case WidgetStyle::MixarCard:
       wt.wcol_theme = &btheme->tui.wcol_menu_back;
       /* Card elements own their glyphs entirely — the heading needs a
@@ -6969,9 +6929,7 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
       case ButtonType::Text:
         if (but->mixar_style.theme != MixarTheme::Native &&
             but->mixar_style.component == MixarComponent::Input) {
-          wt = widget_type(but->mixar_style.card == MixarCardElement::SheetInput ?
-                               WidgetStyle::MixarSheetInput :
-                               WidgetStyle::MixarInput);
+          wt = widget_type(WidgetStyle::MixarInput);
         }
         else {
           wt = widget_type(WidgetStyle::Name);
@@ -7028,9 +6986,7 @@ void draw_button(const bContext *C, ARegion *region, uiStyle *style, Button *but
       case ButtonType::Popover:
         if (but->mixar_style.theme != MixarTheme::Native &&
             but->mixar_style.component == MixarComponent::Dropdown) {
-          wt = widget_type(but->mixar_style.card == MixarCardElement::SheetDropdown ?
-                               WidgetStyle::MixarSheetDropdown :
-                               WidgetStyle::MixarDropdown);
+          wt = widget_type(WidgetStyle::MixarDropdown);
         }
         else if (but->flag & BUT_NODE_LINK) {
           /* new node-link button, not active yet XXX */
@@ -7351,12 +7307,6 @@ void draw_menu_back(uiStyle * /*style*/, Block *block, const rcti *rect)
   WidgetType *wt = widget_type(WidgetStyle::MenuBack);
 
   wt->state(wt, &STATE_INFO_NULL, EmbossType::Undefined);
-  if (block && (block->flag & BLOCK_MIXAR_SHEET)) {
-    /* The AI Provider sheet's framed card, dividers included. */
-    UI_mixar_sheet_draw_back(block, rect);
-    draw_clip_tri(block, rect, wt);
-    return;
-  }
   if (block) {
     const float zoom = 1.0f / block->aspect;
     wt->draw_block(&wt->wcol,

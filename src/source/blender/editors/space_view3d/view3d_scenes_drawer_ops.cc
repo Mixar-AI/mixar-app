@@ -5,7 +5,7 @@
 /** \file
  * \ingroup spview3d
  *
- * Operators and keymap for the sliding Scenes drawer: the slide
+ * Operators and keymap for the Zen Mode sliding Scenes drawer: the slide
  * (update / reveal / toggle / set) and the resize sash on the panel's right
  * edge. The card operators (`click`, `hover`) are in
  * `view3d_scenes_drawer_ops_cards.cc`; registration and the keymap for all
@@ -49,9 +49,10 @@ namespace blender {
 
 static void drawer_tag_redraw(bContext *C)
 {
-  /* The host, not the context area: Ctrl+` over a secondary viewport slides
-   * the main one's drawer. */
-  ScrArea *area = view3d_scenes_drawer_area_find(C);
+  ScrArea *area = CTX_wm_area(C);
+  if (area == nullptr || area->spacetype != SPACE_VIEW3D) {
+    area = view3d_scenes_drawer_area_find(C);
+  }
   if (area == nullptr) {
     return;
   }
@@ -145,17 +146,6 @@ static wmOperatorStatus drawer_toggle_exec(bContext *C, wmOperator * /*op*/)
   view3d_scenes_drawer_slide_begin(C);
   view3d_scenes_drawer_target_set(C, view3d_scenes_drawer_target(C) != 0 ? 0 : 1);
   drawer_tag_redraw(C);
-  /* Only this deliberate toggle reports discovery. Programmatic reveal,
-   * animation, closing and repeated opens do not add analytics traffic. */
-  if (view3d_scenes_drawer_target(C) != 0 &&
-      WM_operatortype_find("MIXIE_CHAT_OT_track_scene_drawer_open", true))
-  {
-    WM_operator_name_call(C,
-                         "MIXIE_CHAT_OT_track_scene_drawer_open",
-                         wm::OpCallContext::ExecDefault,
-                         nullptr,
-                         nullptr);
-  }
   return OPERATOR_FINISHED;
 }
 

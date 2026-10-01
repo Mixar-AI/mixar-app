@@ -40,7 +40,7 @@ _CLASS_TEXT = {
     "platform_config": ("Service misconfigured", "This is on our side and the team has been notified."),
     "unknown": ("Failed", "Try again. If it keeps failing, copy the details and send them to support."),
     "credits": ("Out of credits", "Add credits or upgrade your plan, then try again."),
-    "auth": ("Sign-in required", "Sign in, then retry."),
+    "auth": ("Sign-in required", "Sign in again, then retry."),
     "permission": ("Not allowed", "Your plan or account cannot use this generation."),
     "network": ("Connection problem", "Check your internet connection and try again."),
     "timeout": ("Timed out", "The generation took too long. Try again."),
@@ -49,27 +49,6 @@ _CLASS_TEXT = {
     "client": ("Failed", "Check the inputs and try again."),
     "cancelled": ("Cancelled", ""),
 }
-
-#: ``credits`` for an account with no plan (a new signup gets no trial): the
-#: feature costs credits, so the ask is a subscription, not an upgrade.
-_SUBSCRIBE_TEXT = ("Subscription needed", "Get a subscription or buy credits, then try again.")
-SUBSCRIBE_MESSAGE = "This generation uses credits — get a subscription to continue"
-
-
-def _needs_subscription() -> bool:
-    try:
-        from mixar.modules.common.usage.core.state import needs_subscription
-
-        return needs_subscription()
-    except Exception:  # noqa: BLE001 — copy only
-        return False
-
-
-def _class_text(cls: str):
-    if cls == "credits" and _needs_subscription():
-        return _SUBSCRIBE_TEXT
-    return _CLASS_TEXT.get(cls or "unknown", _CLASS_TEXT["unknown"])
-
 
 #: Classes only the backend assigns: its terminal FAIL always refunds
 #: (job_queue failure routing). Client-side classes are excluded on purpose —
@@ -119,7 +98,6 @@ def apply_backend_failure(job, data: dict) -> None:
         return
     if data.get("error_class"):
         job.error_class = str(data["error_class"])
-        job.error_class_source = "backend"
     reason = clean_reason(data.get("error_reason"))
     if reason:
         job.error_reason = reason
@@ -146,7 +124,6 @@ def _exception_class(error) -> str:
         AuthorizationError,
         ConnectionError as APIConnectionError,
         InsufficientCreditsError,
-        LoginRequiredError,
         RateLimitError,
         ServerError,
         TimeoutError as APITimeoutError,
@@ -155,9 +132,7 @@ def _exception_class(error) -> str:
 
     if isinstance(error, InsufficientCreditsError):
         return "credits"
-    # A guest's job fails terminally as "Sign-in required" — the token is
-    # valid, so the queue must never pause it on the auth watcher.
-    if isinstance(error, (AuthenticationError, LoginRequiredError)):
+    if isinstance(error, AuthenticationError):
         return "auth"
     if isinstance(error, AuthorizationError):
         detail = str(getattr(error, "message", "") or "").lower()
@@ -188,14 +163,11 @@ def apply_client_failure(job, error, *, stage: str = "submit", message: str = ""
         job.error_class = stage
     else:
         job.error_class = _exception_class(error)
-    job.error_class_source = "client"
     detail = clean_reason(getattr(error, "message", None) or str(error))
     job.error_reason = detail
     generic = classify_error(error)
     if message:
         job.user_message = message
-    elif job.error_class == "credits" and _needs_subscription():
-        job.user_message = SUBSCRIBE_MESSAGE
     elif job.error_class in ("credits", "auth"):
         job.user_message = generic
     elif detail:
@@ -208,22 +180,16 @@ def failure_headline(job) -> str:
     """Short status word for a failed row ("Blocked by content policy")."""
     cls = getattr(job, "error_class", "") or ""
     if cls in _CLASS_TEXT:
-        return _class_text(cls)[0]
+        return _CLASS_TEXT[cls][0]
     return "Failed"
 
 
 def failure_hint(job) -> str:
     """What the user can do next (and whether the credits came back)."""
     cls = getattr(job, "error_class", "") or ""
-    hint = _class_text(cls)[1]
-    # Only a class the backend stamped proves the backend failed (and so
-    # refunded) it. A client poll/submit failure maps onto the same names
-    # (ServerError -> vendor_transient) while the backend job may still charge.
-    if (
-        cls in _REFUNDED_CLASSES
-        and getattr(job, "error_class_source", "") == "backend"
-        and hint
-    ):
+    hint = _CLASS_TEXT.get(cls or "unknown", _CLASS_TEXT["unknown"])[1]
+    # Only a class the backend stamped proves the backend failed it.
+    if cls in _REFUNDED_CLASSES and hint:
         hint += " Credits for this generation were refunded."
     return hint
 
@@ -244,27 +210,18 @@ def failure_reason(job) -> str:
     if not reason:
         return ""
     message = failure_message(job)
-    # "Sign in to Mixar to use this." repeats "Sign in to Mixar to use this":
-    # compare without case and the trailing full stop the two sources differ in.
-    said, extra = _comparable(message), _comparable(reason)
-    if extra == said or extra in said:
+    if reason == message or reason in message:
         return ""
     return reason
 
 
-def _comparable(text: str) -> str:
-    return " ".join((text or "").casefold().split()).rstrip(" .!")
-
-
-def failure_details(job, *, include_ids: bool = True, include_hint: bool = True) -> str:
-    """Multi-line explanation for tooltips, toasts and the copy action.
-    ``include_hint=False`` for a surface whose button already is the hint
-    (the toast's "Sign in" next to "Sign in, then retry." said it twice)."""
+def failure_details(job, *, include_ids: bool = True) -> str:
+    """Multi-line explanation for tooltips, toasts and the copy action."""
     lines = [failure_message(job)]
     reason = failure_reason(job)
     if reason:
         lines.append(f"Reason: {reason}")
-    hint = failure_hint(job) if include_hint else ""
+    hint = failure_hint(job)
     if hint:
         lines.append(hint)
     if include_ids:

@@ -23,10 +23,8 @@
 #include "BLI_string.h"
 #include "BLI_time.h"
 
-#include "BKE_callbacks.hh"
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
-#include "BKE_wm_runtime.hh"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -75,26 +73,14 @@ static ScenesDrawerRuntime *drawer_runtime(const bContext *C)
                                              view3d_scenes_drawer_region_from_context(C));
 }
 
-/* The slide's redraw timer belongs to the window that OWNS the drawer region:
- * Ctrl+` also fires from the island, whose window freed the timer while the
- * drawer kept the pointer. A cached timer is trusted only while wm lists it. */
-static void drawer_tick_timer_ensure(wmWindowManager *wm,
-                                     ARegion *region,
-                                     ScenesDrawerRuntime *runtime)
+static void drawer_tick_timer_ensure(const bContext *C, ScenesDrawerRuntime *runtime)
 {
-  if (wm == nullptr || runtime == nullptr) {
-    return;
-  }
-  wmTimer *timer = runtime->tick_timer;
-  if (timer != nullptr && (BLI_findindex(&wm->runtime->timers, timer) == -1 ||
-                           (timer->flags & WM_TIMER_TAGGED_FOR_REMOVAL) != 0))
-  {
-    runtime->tick_timer = nullptr;
-  }
   if (runtime->tick_timer != nullptr) {
     return;
   }
-  if (wmWindow *win = view3d_scenes_drawer_region_window(wm, region)) {
+  wmWindowManager *wm = CTX_wm_manager(C);
+  wmWindow *win = CTX_wm_window(C);
+  if (wm != nullptr && win != nullptr) {
     runtime->tick_timer = WM_event_timer_add(wm, win, TIMERNOTIFIER, 1.0 / 60.0);
   }
 }
@@ -105,9 +91,7 @@ static void drawer_tick_timer_remove(wmWindowManager *wm, ScenesDrawerRuntime *r
     return;
   }
   if (wm != nullptr) {
-    /* Never read the cached timer: it may already be freed. The remove call
-     * ignores the window and checks the pointer against the live list. */
-    WM_event_timer_remove(wm, nullptr, runtime->tick_timer);
+    WM_event_timer_remove(wm, runtime->tick_timer->win, runtime->tick_timer);
   }
   runtime->tick_timer = nullptr;
 }
@@ -137,15 +121,13 @@ float view3d_scenes_drawer_display_amount(const bContext *C)
 
 void view3d_scenes_drawer_slide_begin(bContext *C)
 {
-  wmWindowManager *wm = CTX_wm_manager(C);
-  ARegion *region = view3d_scenes_drawer_region_from_context(C);
-  ScenesDrawerRuntime *runtime = view3d_scenes_drawer_runtime_ensure(wm, region);
+  ScenesDrawerRuntime *runtime = drawer_runtime(C);
   if (runtime == nullptr) {
     return;
   }
   runtime->slide_start_amount = view3d_scenes_drawer_display_amount(C);
   runtime->slide_started_at = BLI_time_now_seconds();
-  drawer_tick_timer_ensure(wm, region, runtime);
+  drawer_tick_timer_ensure(C, runtime);
 }
 
 void view3d_scenes_drawer_slide_stop(bContext *C)
@@ -157,43 +139,14 @@ void view3d_scenes_drawer_slide_stop(bContext *C)
   }
 }
 
-bool view3d_scenes_drawer_host_active(const bContext *C)
+bool view3d_scenes_drawer_zen_active(const bContext *C)
 {
-  const ScrArea *area = CTX_wm_area(C);
-  const bScreen *screen = CTX_wm_screen(C);
-  return view3d_scenes_drawer_area_hosts(area) && screen != nullptr &&
-         BLI_findindex(&screen->areabase, area) != -1;
+  return view3d_scenes_drawer_workspace_is_zen(CTX_wm_workspace(C));
 }
 
-/* The drawer's host in `screen`: its largest 3D View, the first of equals.
- * Zen has one; an Engine workspace may split several (Animation's camera
- * view, Scripting's small one) and only the main one gets the panel. Sizes
- * come from the area vertices, which are current before any area's `totrct`
- * is (polls run inside `ED_area_init`, area by area). */
-static bool drawer_area_is_main_view3d(const bScreen *screen, const ScrArea *area)
-{
-  if (screen == nullptr || area == nullptr || area->spacetype != SPACE_VIEW3D) {
-    return false;
-  }
-  const ScrArea *main = nullptr;
-  int main_size = -1;
-  for (const ScrArea &other : screen->areabase) {
-    if (other.spacetype != SPACE_VIEW3D || other.v1 == nullptr || other.v3 == nullptr) {
-      continue;
-    }
-    const int size = (int(other.v3->vec.x) - int(other.v1->vec.x)) *
-                     (int(other.v3->vec.y) - int(other.v1->vec.y));
-    if (size > main_size) {
-      main = &other;
-      main_size = size;
-    }
-  }
-  return main == area;
-}
-
-/* The region poll's answer without a context: SpaceType.init gets only
- * (wm, area), so find the window whose active screen holds `area`. */
-static bool drawer_area_hosts_in_wm(wmWindowManager *wm, const ScrArea *area)
+/* The region poll's answer without a context: the workspace of the window
+ * whose active screen holds `area`. SpaceType.init gets only (wm, area). */
+static bool drawer_area_in_zen_workspace(wmWindowManager *wm, const ScrArea *area)
 {
   if (wm == nullptr || area == nullptr) {
     return false;
@@ -203,7 +156,7 @@ static bool drawer_area_hosts_in_wm(wmWindowManager *wm, const ScrArea *area)
     if (screen == nullptr || BLI_findindex(&screen->areabase, area) == -1) {
       continue;
     }
-    return drawer_area_is_main_view3d(screen, area);
+    return view3d_scenes_drawer_workspace_is_zen(WM_window_get_active_workspace(&win));
   }
   return false;
 }
@@ -301,10 +254,8 @@ static void drawer_region_listener(const wmRegionListenerParams *params)
 static bool drawer_region_poll(const RegionPollParams *params)
 {
   /* The region exists for as long as the drawer *could* be shown; shut, it is
-   * hidden (zero width). Polls run on every screen refresh check, so resizing
-   * a split layout moves the drawer to the viewport that became the main one.
-   * One pass over the screen's areas, nothing else. */
-  return drawer_area_is_main_view3d(params->screen, params->area);
+   * hidden (zero width). One workspace compare, nothing else. */
+  return view3d_scenes_drawer_zen_active(params->context);
 }
 
 void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *region)
@@ -314,41 +265,23 @@ void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *regi
   WM_event_add_keymap_handler_priority(&region->runtime->handlers, keymap, 0);
 }
 
-wmWindow *view3d_scenes_drawer_region_window(const wmWindowManager *wm,
-                                             const ARegion *region,
-                                             ScrArea **r_area)
+/* The area a drawer region belongs to: `ARegionType.init` gets no area, and
+ * the width clamp needs one (a stored width from a wide window must not eat a
+ * narrower area's whole viewport). */
+static ScrArea *drawer_region_area(const wmWindowManager *wm, const ARegion *region)
 {
-  if (r_area != nullptr) {
-    *r_area = nullptr;
-  }
-  if (wm == nullptr || region == nullptr) {
-    return nullptr;
-  }
-  for (wmWindow &win : wm->windows) {
+  for (const wmWindow &win : wm->windows) {
     const bScreen *screen = WM_window_get_active_screen(&win);
     if (screen == nullptr) {
       continue;
     }
     for (ScrArea &area : screen->areabase) {
       if (BLI_findindex(&area.regionbase, region) != -1) {
-        if (r_area != nullptr) {
-          *r_area = &area;
-        }
-        return &win;
+        return &area;
       }
     }
   }
   return nullptr;
-}
-
-/* The area a drawer region belongs to: `ARegionType.init` gets no area, and
- * the width clamp needs one (a stored width from a wide window must not eat a
- * narrower area's whole viewport). */
-static ScrArea *drawer_region_area(const wmWindowManager *wm, const ARegion *region)
-{
-  ScrArea *area = nullptr;
-  view3d_scenes_drawer_region_window(wm, region, &area);
-  return area;
 }
 
 void view3d_scenes_drawer_region_init(wmWindowManager *wm, ARegion *region)
@@ -393,30 +326,8 @@ void view3d_scenes_drawer_region_exit(wmWindowManager *wm, ARegion *region)
   drawer_region_free(region);
 }
 
-/* A file load (Open, Revert, File > New) replaces every scene, often at the same
- * path and Main address, so the store's Main check cannot tell. CPU only. */
-static void drawer_snapshots_load_post(Main * /*bmain*/,
-                                       PointerRNA ** /*pointers*/,
-                                       int /*pointers_num*/,
-                                       void * /*arg*/)
-{
-  view3d_scenes_drawer_snapshot_store_reset();
-}
-
-static void drawer_snapshots_load_post_register()
-{
-  static bCallbackFuncStore store = {};
-  if (store.func != nullptr) {
-    return;
-  }
-  store.func = drawer_snapshots_load_post;
-  store.alloc = false;
-  BKE_callback_add(&store, BKE_CB_EVT_LOAD_POST);
-}
-
 void view3d_scenes_drawer_region_register(SpaceType *st)
 {
-  drawer_snapshots_load_post_register();
   ARegionType *art = MEM_new_zeroed<ARegionType>("spacetype view3d scenes drawer region");
   art->regionid = VIEW3D_SCENES_DRAWER_REGION_TYPE;
   art->prefsizex = VIEW3D_SCENES_DRAWER_WIDTH;
@@ -433,8 +344,7 @@ void view3d_scenes_drawer_region_register(SpaceType *st)
 }
 
 /** The first non-header region of the area: the drawer goes right before it,
- * after every header (overlapping headers — Zen's floating toolbar, Engine's
- * Tool Settings strip — clip the drawer's top in `region_rect_recursive`). */
+ * after every header (the floating Zen toolbar clips the drawer's top). */
 static ARegion *drawer_region_anchor(ScrArea *area)
 {
   for (ARegion &region : area->regionbase) {
@@ -486,8 +396,8 @@ void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area)
   region->runtime->type = BKE_regiontype_from_id(area->type, region->regiontype);
 
   /* Same first-layout answer as the moodboard drawer: poll and size the
-   * region here so the very first refresh lays it out. */
-  if (drawer_area_hosts_in_wm(wm, area)) {
+   * region here so the very first Zen refresh lays it out. */
+  if (drawer_area_in_zen_workspace(wm, area)) {
     region->flag &= ~RGN_FLAG_POLL_FAILED;
   }
   view3d_scenes_drawer_size_sync(wm, area, region);

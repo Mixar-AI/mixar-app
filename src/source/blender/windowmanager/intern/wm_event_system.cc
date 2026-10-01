@@ -72,7 +72,6 @@
 #include "PRF_profile.hh"
 
 #include "RNA_access.hh"
-#include "RNA_enum_types.hh"
 
 #include "UI_interface.hh"
 #include "UI_interface_layout.hh"
@@ -80,10 +79,8 @@
 #include "UI_view2d.hh"
 
 #include "WM_api.hh"
-#include "WM_mixar.hh"
 #include "WM_keymap.hh"
 #include "WM_message.hh"
-#include "WM_stall_monitor.hh"
 #include "WM_toolsystem.hh"
 #include "WM_types.hh"
 
@@ -203,22 +200,12 @@ wmEvent *WM_event_add(wmWindow *win, const wmEvent *event_to_add)
   return wm_event_add_intern(win, event_to_add);
 }
 
-int Mixar_ui_control_modal_count(wmWindow *win)
-{
-  return BLI_listbase_count(&win->runtime->modalhandlers);
-}
-
 wmEvent *WM_event_add_simulate(wmWindow *win, const wmEvent *event_to_add)
 {
   if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
     BLI_assert_unreachable();
     return nullptr;
   }
-  return Mixar_event_add_synthetic(win, event_to_add);
-}
-
-wmEvent *Mixar_event_add_synthetic(wmWindow *win, const wmEvent *event_to_add)
-{
   wmEvent *event = WM_event_add(win, event_to_add);
 
   /* Logic for setting previous value is documented on the #wmEvent struct,
@@ -268,7 +255,6 @@ static void wm_event_custom_clear(wmEvent *event)
 
 void wm_event_free(wmEvent *event)
 {
-  Mixar_ui_control_event_forget(event);
 #ifndef NDEBUG
   /* Don't use assert here because it's fairly harmless in most cases,
    * more an issue of correctness, something we should avoid in general. */
@@ -290,8 +276,6 @@ void wm_event_free(wmEvent *event)
 /** A version of #wm_event_free that holds the last handled event. */
 static void wm_event_free_last_handled(wmWindow *win, wmEvent *event)
 {
-  /* This event has left the queue even though Blender retains its allocation. */
-  Mixar_ui_control_event_forget(event);
   /* Don't rely on this pointer being valid,
    * callers should behave as if the memory has been freed.
    * As this function should be interchangeable with #wm_event_free. */
@@ -538,7 +522,6 @@ void wm_event_do_depsgraph(bContext *C, bool is_after_open_file)
         DEG_tag_on_visible_update(bmain, depsgraph);
       }
       DEG_make_active(depsgraph);
-      Mixar_StallScope stall_scope("depsgraph", sequencer_scene->id.name + 2);
       BKE_scene_graph_update_tagged(depsgraph, bmain);
     }
 
@@ -556,10 +539,7 @@ void wm_event_do_depsgraph(bContext *C, bool is_after_open_file)
       DEG_graph_tag_on_visible_update(depsgraph, true);
     }
     DEG_make_active(depsgraph);
-    {
-      Mixar_StallScope stall_scope("depsgraph", scene->id.name + 2);
-      BKE_scene_graph_update_tagged(depsgraph, bmain);
-    }
+    BKE_scene_graph_update_tagged(depsgraph, bmain);
   }
 
   wm_surfaces_do_depsgraph(C);
@@ -576,8 +556,6 @@ void wm_event_do_refresh_wm_and_depsgraph(bContext *C)
     for (ScrArea &area : screen->areabase) {
       if (area.do_refresh) {
         CTX_wm_area_set(C, &area);
-        const SpaceType *stall_st = BKE_spacetype_from_id(area.spacetype);
-        Mixar_StallScope stall_scope("area_refresh", stall_st ? stall_st->name : "?");
         ED_area_do_refresh(C, &area);
       }
     }
@@ -852,7 +830,6 @@ void wm_event_do_notifiers(bContext *C)
   {
     for (wmWindow &win : wm->windows) {
       CTX_wm_window_set(C, &win);
-      Mixar_StallScope stall_scope("msgbus", "WM_msgbus_handle");
       WM_msgbus_handle(wm->runtime->message_bus, C);
     }
     CTX_wm_window_set(C, nullptr);
@@ -963,16 +940,7 @@ static eHandlerActionFlag wm_handler_ui_call(bContext *C,
     CTX_wm_region_popup_set(C, handler->context.region_popup);
   }
 
-  int retval;
-  {
-    const ARegion *stall_region = CTX_wm_region(C);
-    const char *stall_name = "?";
-    if (stall_region) {
-      RNA_enum_identifier(rna_enum_region_type_items, stall_region->regiontype, &stall_name);
-    }
-    Mixar_StallScope stall_scope("ui", stall_name);
-    retval = handler->handle_fn(C, event, handler->user_data);
-  }
+  int retval = handler->handle_fn(C, event, handler->user_data);
 
   /* Putting back screen context. */
   if ((retval != WM_UI_HANDLER_BREAK) || always_pass) {
@@ -1340,14 +1308,12 @@ static void wm_operator_finished(bContext *C,
    * this will happen for python operators that call C operators. */
   if (wm->op_undo_depth == 0) {
     if (op->type->flag & OPTYPE_UNDO) {
-      Mixar_StallScope stall_scope("undo_push", op->type->idname);
       ED_undo_push_op(C, op);
       if (repeat == 0) {
         hud_status = CLEAR;
       }
     }
     else if (op->type->flag & OPTYPE_UNDO_GROUPED) {
-      Mixar_StallScope stall_scope("undo_push", op->type->idname);
       ED_undo_grouped_push_op(C, op);
       if (repeat == 0) {
         hud_status = CLEAR;
@@ -1434,10 +1400,7 @@ static wmOperatorStatus wm_operator_exec(bContext *C,
       wm->op_undo_depth++;
     }
 
-    {
-      Mixar_StallScope stall_scope("op", op->type->idname);
-      retval = op->type->exec(C, op);
-    }
+    retval = op->type->exec(C, op);
     OPERATOR_RETVAL_CHECK(retval);
 
     if (op->type->flag & OPTYPE_UNDO && CTX_wm_manager(C) == wm) {
@@ -1480,10 +1443,7 @@ static wmOperatorStatus wm_operator_exec_notest(bContext *C, wmOperator *op)
     return retval;
   }
 
-  {
-    Mixar_StallScope stall_scope("op", op->type->idname);
-    retval = op->type->exec(C, op);
-  }
+  retval = op->type->exec(C, op);
   OPERATOR_RETVAL_CHECK(retval);
 
   return retval;
@@ -1743,10 +1703,7 @@ static wmOperatorStatus wm_operator_invoke(bContext *C,
         wm->op_undo_depth++;
       }
 
-      {
-        Mixar_StallScope stall_scope("op", op->type->idname);
-        retval = op->type->invoke(C, op, &event_temp);
-      }
+      retval = op->type->invoke(C, op, &event_temp);
       OPERATOR_RETVAL_CHECK(retval);
 
       if (op->type->flag & OPTYPE_UNDO && CTX_wm_manager(C) == wm) {
@@ -1758,10 +1715,7 @@ static wmOperatorStatus wm_operator_invoke(bContext *C,
         wm->op_undo_depth++;
       }
 
-      {
-        Mixar_StallScope stall_scope("op", op->type->idname);
-        retval = op->type->exec(C, op);
-      }
+      retval = op->type->exec(C, op);
       OPERATOR_RETVAL_CHECK(retval);
 
       if (op->type->flag & OPTYPE_UNDO && CTX_wm_manager(C) == wm) {
@@ -2736,10 +2690,7 @@ static eHandlerActionFlag wm_handler_operator_call(bContext *C,
       }
 
       /* Warning, after this call all context data and 'event' may be freed. see check below. */
-      {
-        Mixar_StallScope stall_scope("modal", ot->idname);
-        retval = ot->modal(C, op, event);
-      }
+      retval = ot->modal(C, op, event);
       OPERATOR_RETVAL_CHECK(retval);
 
       if (ot->flag & OPTYPE_UNDO && CTX_wm_manager(C) == wm) {
@@ -3040,9 +2991,7 @@ static eHandlerActionFlag wm_handler_fileselect_do(bContext *C,
           wm->op_undo_depth++;
         }
 
-        const int stall_index = Mixar_stall_scope_push("op", handler->op->type->idname);
         const wmOperatorStatus retval = handler->op->type->exec(C, handler->op);
-        Mixar_stall_scope_pop(stall_index);
         OPERATOR_RETVAL_CHECK(retval);
 
         /* XXX check this carefully, `CTX_wm_manager(C) == wm` is a bit hackish. */
@@ -3053,7 +3002,6 @@ static eHandlerActionFlag wm_handler_fileselect_do(bContext *C,
         /* XXX check this carefully, `CTX_wm_manager(C) == wm` is a bit hackish. */
         if (retval & OPERATOR_FINISHED) {
           if (CTX_wm_manager(C) == wm && wm->op_undo_depth == 0) {
-            Mixar_StallScope stall_scope("undo_push", handler->op->type->idname);
             if (handler->op->type->flag & OPTYPE_UNDO) {
               ED_undo_push_op(C, handler->op);
             }
@@ -4368,12 +4316,6 @@ void wm_event_do_handlers(bContext *C)
         break;
       }
 
-      if (!Mixar_ui_control_event_valid(&win, event)) {
-        BLI_remlink(&win.runtime->event_queue, event);
-        wm_event_free(event);
-        continue;
-      }
-
       eHandlerActionFlag action = WM_HANDLER_CONTINUE;
 
       /* Force handling drag if a key is pressed even if the drag threshold has not been met.
@@ -4457,13 +4399,7 @@ void wm_event_do_handlers(bContext *C)
       CTX_wm_area_set(C, area_event_inside(C, event->xy));
       CTX_wm_region_set(C, region_event_inside_for_event(C, event));
 
-      if (event->type != MOUSEMOVE && ED_agent_bubble_handle_event(C, event)) {
-        win.event_queue_check_click = false;
-        win.event_queue_check_drag = false;
-        BLI_remlink(&win.runtime->event_queue, event);
-        wm_event_free_last_handled(&win, event);
-        continue;
-      }
+      ED_agent_bubble_handle_event(C, event);
 
       /* MVC demands to not draw in event handlers...
        * but we need to leave it for GPU selecting etc. */
@@ -4601,12 +4537,6 @@ void wm_event_do_handlers(bContext *C)
 
       /* Update previous mouse position for following events to use. */
       copy_v2_v2_int(win.runtime->eventstate->prev_xy, event->xy);
-
-      /* Paint the native border cursor after normal hover/selection handlers.
-       * Text selection and content drags must keep receiving border motion. */
-      if (event->type == MOUSEMOVE) {
-        ED_agent_bubble_handle_event(C, event);
-      }
 
       /* Un-link and free here, Blender-quit then frees all. */
       BLI_remlink(&win.runtime->event_queue, event);
@@ -6189,10 +6119,6 @@ void wm_event_add_ghostevent(wmWindowManager *wm,
 {
   if (UNLIKELY(G.f & G_FLAG_EVENT_SIMULATE)) {
     return;
-  }
-
-  if (ELEM(type, GHOST_kEventButtonDown, GHOST_kEventKeyDown, GHOST_kEventWheel)) {
-    Mixar_ui_control_human_input(wm);
   }
 
   /**

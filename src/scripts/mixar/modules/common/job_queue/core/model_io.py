@@ -106,8 +106,19 @@ def get_total_face_count(context):
     return total
 
 
-def _export_selected(context, view_layer, selected, filepath, format):
-    """Write exactly ``selected`` to ``filepath``; the selection is restored."""
+def export_selected_mesh(context, format="GLB"):
+    """Export selected mesh objects to temp file. Returns (bytes, filename)."""
+    ext_map = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
+    ext = ext_map[format]
+    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_export_")
+    os.close(fd)
+
+    view_layer = context.view_layer
+    selected = [o for o in context.selected_objects
+                if o.type == 'MESH' and o.name in view_layer.objects]
+    if not selected:
+        raise ValueError("No mesh objects selected")
+
     # Deterministic: exactly the selected MESH objects of the active view
     # layer, nothing else the selection may hold (empties, lights, an
     # object selected in another scene). The selection is restored after.
@@ -144,31 +155,12 @@ def _export_selected(context, view_layer, selected, filepath, format):
         except Exception:
             pass
 
-
-def export_selected_mesh(context, format="GLB"):
-    """Export selected mesh objects to temp file. Returns (bytes, filename)."""
-    ext_map = {"GLB": ".glb", "OBJ": ".obj", "FBX": ".fbx"}
-    ext = ext_map[format]
-    view_layer = context.view_layer
-    selected = [o for o in context.selected_objects
-                if o.type == 'MESH' and o.name in view_layer.objects]
-    if not selected:
-        raise ValueError("No mesh objects selected")
-
-    # Created only once there is something to export, and removed on every
-    # path out (exporter or read failure included) — the bytes are returned,
-    # never the path.
-    fd, filepath = tempfile.mkstemp(suffix=ext, prefix="mixar_export_")
-    os.close(fd)
+    with open(filepath, "rb") as f:
+        data = f.read()
     try:
-        _export_selected(context, view_layer, selected, filepath, format)
-        with open(filepath, "rb") as f:
-            data = f.read()
-    finally:
-        try:
-            os.remove(filepath)
-        except OSError:
-            pass
+        os.remove(filepath)
+    except OSError:
+        pass
 
     return data, f"export{ext}"
 
@@ -268,10 +260,9 @@ def import_file(filepath, file_type="GLB", import_options=None):
 # POST-IMPORT RENAME & SETUP
 # ============================================================================
 
-def post_import_rename_and_setup(object_names_str, target_name, smart_uv=False,
-                                 target_location=None):
+def post_import_rename_and_setup(object_names_str, target_name, smart_uv=False):
     """Post-import cleanup: remove Empty parents, rename mesh, set origin to
-    bottom of bounding box, and move to world origin (or *target_location*).
+    bottom of bounding box, and move to world origin.
 
     1. Find imported objects by name from the comma-separated string.
     2. If any is an Empty parent, reparent mesh children preserving world
@@ -279,9 +270,7 @@ def post_import_rename_and_setup(object_names_str, target_name, smart_uv=False,
     3. Rename the mesh to *target_name*.
     4. Apply all transforms (location/rotation/scale).
     5. Set origin to bottom-center of bounding box (lowest Z).
-    6. Move object to world origin (0, 0, 0), or to *target_location* when
-       given (retopology passes its source's :func:`world_bottom_center` so
-       the result overlays the source).
+    6. Move object to world origin (0, 0, 0).
     7. (Optional) If *smart_uv* is True, run Smart UV Project on the mesh.
 
     Returns the final mesh object name (Blender may append ``.001`` on a name
@@ -318,9 +307,8 @@ def post_import_rename_and_setup(object_names_str, target_name, smart_uv=False,
     if mesh_obj.data:
         mesh_obj.data.name = mesh_obj.name
 
-    # Apply transforms, set origin to bbox bottom-center, move to world origin
-    # (or to the caller's target).
-    _set_origin_bottom_and_center(mesh_obj, target_location)
+    # Apply transforms, set origin to bbox bottom-center, move to world origin.
+    _set_origin_bottom_and_center(mesh_obj)
 
     # Smart UV Project (for retopo meshes that lack UVs)
     if smart_uv:
@@ -349,28 +337,11 @@ def post_import_rename_and_setup(object_names_str, target_name, smart_uv=False,
     return mesh_obj.name
 
 
-def world_bottom_center(obj):
-    """World-space bottom-center of *obj*'s bounding box: (x, y) center, lowest Z.
-
-    The same point :func:`_set_origin_bottom_and_center` makes the origin, so
-    passing it back as ``target_location`` lands a re-imported mesh on *obj*.
-    """
-    from mathutils import Vector
-
-    corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
-    return (
-        sum(c.x for c in corners) / 8,
-        sum(c.y for c in corners) / 8,
-        min(c.z for c in corners),
-    )
-
-
-def _set_origin_bottom_and_center(mesh_obj, target_location=None):
+def _set_origin_bottom_and_center(mesh_obj):
     """Normalize a standalone mesh's placement.
 
     Applies all transforms, sets the object origin to the bottom-center of
-    its bounding box (lowest Z), and moves the object to the world origin, or
-    to *target_location* when given.
+    its bounding box (lowest Z), and moves the object to the world origin.
     Shared by ``post_import_rename_and_setup`` and ``rename_generated_model``.
     """
     from mathutils import Vector, Matrix
@@ -403,8 +374,8 @@ def _set_origin_bottom_and_center(mesh_obj, target_location=None):
     mesh_obj.data.transform(Matrix.Translation(-bottom_center))
     mesh_obj.matrix_world.translation += bottom_center
 
-    # Move to world origin (0, 0, 0), or to the caller's target
-    mesh_obj.location = target_location if target_location is not None else (0, 0, 0)
+    # Move to world origin (0, 0, 0)
+    mesh_obj.location = (0, 0, 0)
 
 
 def _normalize_generated_uv_names(mesh_obj):

@@ -12,7 +12,6 @@ from mixar.modules.common.api.exceptions import (
     ConnectionError,
     HTTPClientError,
     InsufficientCreditsError,
-    LoginRequiredError,
     NotFoundError,
     RateLimitError,
     ServerError,
@@ -59,8 +58,6 @@ def classify_error(error) -> str:
     # Check InsufficientCreditsError before its HTTPClientError base.
     if isinstance(error, InsufficientCreditsError):
         return OUT_OF_CREDITS_MESSAGE
-    if isinstance(error, LoginRequiredError):
-        return n_("Sign in to Mixar to use this")
     if isinstance(error, AuthenticationError):
         return n_("Authentication required — please sign in")
     if isinstance(error, AuthorizationError):

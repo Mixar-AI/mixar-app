@@ -117,7 +117,6 @@ coverage.xml
 # Local QA evidence is not versioned; keep replay scripts and contracts.
 /docs/development/evidence/
 /docs/development/**/*.png
-/docs/development/mixar-mcp/
 /docs/development/**/*.json
 
 # Translations
@@ -227,9 +226,8 @@ scripts/audit_out/
 .sync-state
 .sync-state-*
 
-# Blender autosave backups (Mixar saves .mixar, so its backups are .mixar1)
+# Blender autosave backups
 *.blend1
-*.mixar[0-9]*
 
 # Local Azure signing metadata (values come from env vars / secrets in CI)
 scripts/windows/codesign-tools/metadata.json

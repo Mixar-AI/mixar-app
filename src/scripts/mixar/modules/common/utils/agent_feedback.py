@@ -38,46 +38,20 @@ def clear_agent_gen_reason(context) -> None:
 
 
 _REF_KEY = "mixar_agent_ref"
-_ORIGIN_KEY = "mixar_job_origin"
 
 
 def clear_agent_ref(context=None) -> None:
-    """Discard an unclaimed ref (and its MCP origin) when its synchronous agent
-    script ends, so a later manual generation never inherits either."""
+    """Discard an unclaimed ref when its synchronous agent script ends."""
     try:
         if context is None:
             import bpy
 
             context = bpy.context
         wm = context.window_manager
-        for key in (_REF_KEY, _ORIGIN_KEY):
-            if key in wm.keys():
-                del wm[key]
-    except Exception:
-        pass
-
-
-def _read_agent_ref(context, clear: bool) -> dict:
-    raw = ""
-    try:
-        wm = context.window_manager
-        raw = wm.get(_REF_KEY, "") or ""
-        if clear and _REF_KEY in wm.keys():
+        if _REF_KEY in wm.keys():
             del wm[_REF_KEY]
     except Exception:
-        return {}
-
-    if not raw:
-        return {}
-    try:
-        import json
-
-        ref = json.loads(raw) if isinstance(raw, str) else raw
-    except Exception:
-        return {}
-    if not isinstance(ref, dict) or not ref.get("generation_id"):
-        return {}
-    return {str(k): v for k, v in ref.items()}
+        pass
 
 
 def take_agent_ref(context) -> dict:
@@ -95,30 +69,23 @@ def take_agent_ref(context) -> dict:
     unreadable/unparseable/not-an-object yields ``{}`` (reporting is
     best-effort — it can never block an enqueue).
     """
-    return _read_agent_ref(context, clear=True)
-
-
-def peek_agent_ref(context) -> dict:
-    """The ref ``take_agent_ref`` will claim, left in place for the enqueue.
-
-    For an operator that must judge its input against the job's session (its
-    scene) before it enqueues."""
-    return _read_agent_ref(context, clear=False)
-
-
-def take_job_origin(context) -> str:
-    """Read and CLEAR the backend's MCP marker for this enqueue: ``"mcp"`` or "".
-
-    The backend's enqueue script sets ``mixar_job_origin`` beside the agent ref
-    when an external AI app (MCP) asked for the generation, so the job submit
-    can say so (``X-Mixar-Job-Origin``). Cleared like the ref so a later manual
-    generation never inherits it.
-    """
+    raw = ""
     try:
         wm = context.window_manager
-        value = str(wm.get(_ORIGIN_KEY, "") or "")
-        if _ORIGIN_KEY in wm.keys():
-            del wm[_ORIGIN_KEY]
+        raw = wm.get(_REF_KEY, "") or ""
+        if _REF_KEY in wm.keys():
+            del wm[_REF_KEY]
     except Exception:
-        return ""
-    return "mcp" if value == "mcp" else ""
+        return {}
+
+    if not raw:
+        return {}
+    try:
+        import json
+
+        ref = json.loads(raw) if isinstance(raw, str) else raw
+    except Exception:
+        return {}
+    if not isinstance(ref, dict) or not ref.get("generation_id"):
+        return {}
+    return {str(k): v for k, v in ref.items()}

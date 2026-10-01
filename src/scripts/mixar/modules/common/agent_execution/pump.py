@@ -19,7 +19,6 @@ from typing import Any, Callable, Optional
 from mixar.config.logging_config import get_logger
 
 from .request import ExecutionRequest
-from .diagnostics import record_phase
 
 logger = get_logger(__name__)
 
@@ -178,14 +177,10 @@ def execute_request(
         req.agent_ctx, req.session_id, req.request_id
     )
     started = time.monotonic()
-    req.timing["queue_wait_ms"] = round(max(0.0, started - req.queued_at) * 1000, 1)
-    record_phase(req, "started")
     try:
         clear_agent_ref()
         set_agent_execution_context(context_session_id, context_turn_id)
-        result = executor.execute(
-            req.script, session_id=context_session_id, tool_name=req.tool_name
-        )
+        result = executor.execute(req.script, session_id=context_session_id)
         result_dict = result.to_dict()
         _attach_scene_cost(result_dict)
         if result_dict.get("success") and on_success is not None:
@@ -203,7 +198,6 @@ def execute_request(
     # backend consumers compare result payloads exactly.
     req.timing["exec_ms"] = round((time.monotonic() - started) * 1000, 1)
     req.timing["queue_wait_ms"] = round((started - req.queued_at) * 1000, 1)
-    record_phase(req, "script_finished", result_dict)
     logger.debug(
         "executed %s (id %s) success=%s queue_wait=%sms exec=%sms",
         req.tool_name, req.request_id, result_dict.get("success"),
@@ -213,25 +207,11 @@ def execute_request(
 
 
 def respond(client: Any, req: ExecutionRequest, result: dict) -> bool:
-    """Queue a reply on the SAME request id; acceptance is not delivery.
-
-    Replies stay connection-scoped. A disconnected or full writer reports
-    uncertainty locally, never replays a scene-changing script on reconnect.
-    """
-    if req.is_notification or req.response_attempted:
+    """Reply on the SAME request id. False when nothing was sent."""
+    if req.is_notification:
         return False
-    req.response_attempted = True
     if client is None or not getattr(client, "is_connected", False):
         logger.warning(f"No active client, dropping response (id: {req.request_id})")
-        record_phase(req, "response_unavailable", result)
         return False
-    try:
-        accepted = client.queue_response(req.request_id, result)
-    except Exception:
-        logger.exception("Could not queue response (id: %s)", req.request_id)
-        accepted = False
-    if accepted is False:
-        record_phase(req, "response_rejected", result)
-        return False
-    record_phase(req, "response_queued", result)
+    client.queue_response(req.request_id, result)
     return True

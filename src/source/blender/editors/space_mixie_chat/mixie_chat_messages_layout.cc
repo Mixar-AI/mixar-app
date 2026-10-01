@@ -80,8 +80,7 @@ size_t mixie_chat_build_todo_text(const TodoItemSlotData *items,
  */
 static float calculate_attachments_height(
     Main *bmain, PointerRNA *msg_ptr, const ChatImageStyle *image_style,
-    blender::Vector<AttachmentLayout> *out_attachments,
-    float available_width) {
+    blender::Vector<AttachmentLayout> *out_attachments) {
   if (!g_msg_props.attachments) {
     return 0.0f;
   }
@@ -116,7 +115,7 @@ static float calculate_attachments_height(
 
       if (path_buffer[0] != '\0') {
         float img_height = chat_ui_calc_image_attachment_height(
-            bmain, path_buffer, source, image_style, available_width);
+            bmain, path_buffer, source, image_style);
         total_height += img_height;
 
         /* Cache attachment data for later drawing */
@@ -344,7 +343,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
 
       /* Calculate attachment height and cache attachment data */
       float attachments_height = calculate_attachments_height(
-          bmain, &msg_ptr, &image_style, &layout.attachments, content_width);
+          bmain, &msg_ptr, &image_style, &layout.attachments);
 
       /* Calculate bubble dimensions */
       float bubble_width = text_width + style.h_padding * 2.0f + 4.0f * UI_SCALE_FAC;
@@ -365,8 +364,8 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
       /* Minimum bubble width */
       float min_width = 100.0f * metrics.scale_factor;
       if (attachments_height > 0) {
-        min_width = image_style.max_width + style.h_padding * 2.0f +
-                    4.0f * UI_SCALE_FAC;
+        min_width = image_style.max_width + image_style.margin * 2.0f +
+                    style.h_padding * 2.0f;
       }
       if (bubble_width < min_width) {
         bubble_width = min_width;
@@ -618,7 +617,6 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
     rt->prev_layout_epoch =
         epoch_prop ? RNA_property_int_get(scene_ptr, epoch_prop) : 0;
   }
-  rt->prev_theme_signature = chat_ui_theme_signature();
   rt->cached_total_height = total_height;
 
   return total_height;
