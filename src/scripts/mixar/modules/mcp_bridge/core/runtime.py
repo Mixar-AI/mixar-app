@@ -17,6 +17,7 @@ _snapshot = {}
 _lock = threading.Lock()
 _server = None
 _registered = False
+_provisioned = None
 
 
 def snapshot():
@@ -46,7 +47,7 @@ def _qa_status():
 
 
 def _tick():
-    global _snapshot, _server
+    global _snapshot, _server, _provisioned
     try:
         from mixar.modules.space_mixie_chat.core.connection_manager import get_connection_manager
         from mixar.modules.space_mixie_chat.core.session import get_session_manager
@@ -67,6 +68,22 @@ def _tick():
             "headers": {**client_version_headers(), "X-Mixar-Locale": ui_locale(),
                         "x-telemetry-consent": "1" if is_enabled() else "0"},
         }
+        from . import eligibility
+        from mixar.modules.common.ui_control.core import service
+        if enabled():
+            service.register()
+            eligibility.refresh(current)
+        else:
+            eligibility.invalidate()
+            service.invalidate()
+        if _provisioned != enabled():
+            from . import setup
+            setup.connection_config("CODEX", bpy.utils.resource_path('LOCAL'), bpy.app.binary_path,
+                                    enabled=enabled())
+            _provisioned = enabled()
+        if hasattr(bpy.context.window_manager, "mixar_ui_enable"):
+            bpy.context.window_manager.mixar_ui_enable(enabled=enabled())
+            current.update(ui_contract="mixar_ui_v1", ui_eligible=eligibility.valid())
         with _lock:
             _snapshot = current
         if enabled() and current["instance_id"] and _server is None:
@@ -100,6 +117,10 @@ def register():
 def unregister(shutdown=False):
     global _registered, _server
     _registered = False
+    from . import eligibility
+    from mixar.modules.common.ui_control.core import service
+    eligibility.invalidate()
+    service.unregister(shutdown=shutdown)
     try:
         _stop_server()
     finally:

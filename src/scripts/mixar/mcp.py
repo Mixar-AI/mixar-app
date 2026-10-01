@@ -159,6 +159,7 @@ def main():
     parser.add_argument("--instance", help="Pin one running Mixar instance")
     parser.add_argument("--session", help="Pin a scene session UUID")
     parser.add_argument("--qa-port", type=int, help="Opt in to semantic QA tools on this QA instance's port")
+    parser.add_argument("--legacy-proxy", action="store_true", help=argparse.SUPPRESS)
     options = parser.parse_args()
     if options.config:
         print(configuration(options.config))
@@ -167,6 +168,26 @@ def main():
         uuid.UUID(options.session)
     if options.qa_port is not None and not 1 <= options.qa_port <= 65535:
         parser.error("--qa-port must be between 1 and 65535")
+    if not options.legacy_proxy and options.qa_port is None:
+        import asyncio
+        from types import ModuleType
+        # Blender normally synthesizes these namespaces during bootstrap.
+        # The standalone launcher must not import addon registration (__init__).
+        root = Path(__file__).resolve().parent
+        # This entrypoint is named mcp.py; do not shadow the bundled MCP SDK.
+        sys.path[:] = [p for p in sys.path if Path(p).resolve() != root]
+        for name, suffix in (("mixar", ""), ("mixar.modules", "modules"),
+                ("mixar.modules.common", "modules/common"),
+                ("mixar.modules.common.ui_control", "modules/common/ui_control"),
+                ("mixar.modules.common.ui_control.core", "modules/common/ui_control/core"),
+                ("mixar.modules.mcp_bridge", "modules/mcp_bridge"),
+                ("mixar.modules.mcp_bridge.core", "modules/mcp_bridge/core")):
+            package = ModuleType(name)
+            package.__path__ = [str(root / suffix)]
+            sys.modules[name] = package
+        from mixar.modules.mcp_bridge.core.stdio_server import run
+        asyncio.run(run(options.instance, options.session))
+        return
     bridge = StdioBridge(options.instance, options.session, options.qa_port)
     pending = threading.BoundedSemaphore(MAX_PENDING_REQUESTS)
     with ThreadPoolExecutor(max_workers=8, thread_name_prefix="mixar-mcp") as pool:

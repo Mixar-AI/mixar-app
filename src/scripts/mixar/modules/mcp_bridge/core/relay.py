@@ -95,17 +95,22 @@ class RelayHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.authorized():
             return
+        if self.path == "/ui/tools":
+            from mixar.modules.common.ui_control.core.schema import tools
+            self.reply(200, {"tools": tools()})
+            return
         if self.path != "/health":
             self.reply(404, {"error": "Unknown connector endpoint"})
             return
         context = self.server.snapshot()
         self.reply(200, {key: context.get(key) for key in
-                         ("instance_id", "session_id", "scene_name", "connected", "qa_enabled", "qa_port")})
+                         ("instance_id", "session_id", "scene_name", "connected", "qa_enabled", "qa_port",
+                          "ui_contract", "ui_eligible")})
 
     def do_POST(self):
         if not self.authorized():
             return
-        if self.path != "/mcp":
+        if self.path not in {"/mcp", "/ui", "/ui/cancel"}:
             self.reply(404, {"error": "Unknown connector endpoint"})
             return
         try:
@@ -123,6 +128,19 @@ class RelayHandler(BaseHTTPRequestHandler):
                 self.reply(503, {"error": "MCP connector is disabled"})
                 return
             context = dict(self.server.snapshot())
+            if self.path == "/ui/cancel":
+                from mixar.modules.common.ui_control.core.service import cancel
+                owner = str(uuid.UUID(self.headers.get("X-Mixar-Controller-Id", "")))
+                call_id = (request.get("params") or {}).get("call_id")
+                cancel(owner, str(uuid.UUID(call_id)) if call_id else None)
+                self.reply(200, {"cancelled": True})
+                return
+            if self.path == "/ui":
+                from .local_ui import dispatch
+                response = dispatch(request, self.headers.get("X-Mixar-Controller-Id", ""),
+                                    self.headers.get("X-Mixar-Session-Id", ""))
+                self.reply(200, response)
+                return
             if not context.get("connected"):
                 self.reply(503, {"error": "Sign in to Mixar and wait for the agent connection"})
                 return

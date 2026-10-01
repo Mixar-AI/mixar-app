@@ -129,7 +129,7 @@ def test_stdio_has_only_json_protocol_and_preserves_replay_key(relay):
         {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
          "params": {"name": "scene_overview", "_meta": {"mixar/request-id": call_id}}},
     ]
-    result = subprocess.run([sys.executable, str(SCRIPT)],
+    result = subprocess.run([sys.executable, str(SCRIPT), "--legacy-proxy"],
         input="\n".join(json.dumps(item) for item in messages) + "\n", text=True,
         capture_output=True, timeout=20, check=True)
     replies = [json.loads(line) for line in result.stdout.splitlines()]

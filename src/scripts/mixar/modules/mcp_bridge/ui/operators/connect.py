@@ -26,9 +26,9 @@ class MIXAR_OT_mcp_setup(Operator):
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text="Let your AI assistant work in Mixar.")
-        layout.label(text="Tool calls use your Mixar credits.")
-        layout.label(text="Keep Mixar open and signed in while connected.")
+        layout.label(text="Let your AI assistant use Mixar scenes and controls.")
+        layout.label(text="UI control is free; scene tools and generation use credits.")
+        layout.label(text="Sign in once. Your AI app can start Mixar when needed.")
         row = layout.row()
         if runtime.enabled():
             row.label(text="MCP enabled", icon='CHECKMARK')
@@ -36,7 +36,7 @@ class MIXAR_OT_mcp_setup(Operator):
         else:
             row.operator("mixar.set_mcp_enabled", text="Enable MCP").enabled = True
         layout.separator()
-        layout.label(text="Copy setup, then add it to your AI app:")
+        layout.label(text="Copy setup to enable MCP, then add it to your AI app:")
         for client, label in SETUP_CHOICES:
             layout.operator("mixar.copy_mcp_setup", text=iface_(label)).client = client
 
@@ -71,7 +71,11 @@ class MIXAR_OT_copy_mcp_setup(Operator):
         ('CODEX', "Codex", "MCP server configuration")), default='CODEX')
 
     def execute(self, context):
-        context.window_manager.clipboard = connection_config(self.client, bpy.utils.resource_path('LOCAL'))
+        if not add_config("mcp_enabled", True):
+            self.report({'WARNING'}, "MCP is enabled for this session; saving the preference failed")
+        runtime.refresh()
+        context.window_manager.clipboard = connection_config(
+            self.client, bpy.utils.resource_path('LOCAL'), bpy.app.binary_path)
         self.report({'INFO'}, "MCP setup copied")
         return {'FINISHED'}
 

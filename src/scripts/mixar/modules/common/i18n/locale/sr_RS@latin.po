@@ -6373,13 +6373,13 @@ msgstr ""
 msgid "Connect external AI assistants to your Mixar scenes with MCP"
 msgstr ""
 
-msgid "Let your AI assistant work in Mixar."
+msgid "Let your AI assistant use Mixar scenes and controls."
 msgstr ""
 
-msgid "Tool calls use your Mixar credits."
+msgid "UI control is free; scene tools and generation use credits."
 msgstr ""
 
-msgid "Keep Mixar open and signed in while connected."
+msgid "Sign in once. Your AI app can start Mixar when needed."
 msgstr ""
 
 msgid "MCP enabled"
@@ -6391,7 +6391,7 @@ msgstr ""
 msgid "Enable MCP"
 msgstr ""
 
-msgid "Copy setup, then add it to your AI app:"
+msgid "Copy setup to enable MCP, then add it to your AI app:"
 msgstr ""
 
 msgid "Allow local AI clients to use your Mixar account and scenes"
@@ -6425,6 +6425,9 @@ msgid "MCP server configuration"
 msgstr ""
 
 msgid "Codex"
+msgstr ""
+
+msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
 msgid "MCP setup copied"
@@ -35839,18 +35842,6 @@ msgstr "Putanje otpuštanja moraju biti neprazni nizovi"
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Putanje otpuštanja moraju biti neprazan JSON niz"
 
-# derived
-msgid "QA frame capture requires --enable-event-simulate"
-msgstr "Snimanje QA kadra zahteva --enable-event-simulate"
-
-# derived
-msgid "Unable to read QA window frame"
-msgstr "Nije moguće pročitati kadar QA prozora"
-
-# derived
-msgid "Unable to save QA window frame"
-msgstr "Nije moguće sačuvati kadar QA prozora"
-
 msgid "rna_iterator_listbase_end"
 msgstr ""
 
@@ -35885,6 +35876,25 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "Invalid UI event value"
+msgstr ""
+
+msgid "UI text events require one UTF-8 character"
+msgstr ""
+
+msgid "Wait for the window resize to finish"
+msgstr ""
+
+msgid "Unable to read window frame"
+msgstr ""
+
+# derived
+msgid "QA frame capture requires --enable-event-simulate"
+msgstr "Snimanje QA kadra zahteva --enable-event-simulate"
+
+msgid "Mixar UI control is disabled"
 msgstr ""
 
 # derived

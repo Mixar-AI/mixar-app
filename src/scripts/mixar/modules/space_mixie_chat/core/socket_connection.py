@@ -290,6 +290,7 @@ class SocketConnection:
                 # clients would silently never reply).
                 "liveness",
                 *([MCP_CAPABILITY] if not self._role else []),
+                *(["mixar_ui_v1"] if not self._role else []),
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
