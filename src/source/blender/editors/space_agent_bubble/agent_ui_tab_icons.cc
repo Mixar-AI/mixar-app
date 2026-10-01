@@ -147,6 +147,26 @@ void agent_ui_tab_icon_draw(AgentIcon icon, float cx, float cy, float size, cons
     }
     return;
   }
+  if (icon == AGENT_ICON_ATTACH) {
+    static const float clip[][2] = {
+        {.18f, .04f}, {-.12f, -.26f}, {-.23f, -.28f}, {-.32f, -.22f},
+        {-.35f, -.12f}, {-.30f, -.02f}, {.10f, .38f}, {.23f, .41f},
+        {.35f, .35f}, {.40f, .23f}, {.37f, .10f}, {-.03f, -.30f},
+        {-.18f, -.40f}, {-.34f, -.37f}, {-.44f, -.24f}, {-.45f, -.08f},
+        {-.37f, .06f}, {-.02f, .41f}};
+    stroke_path(clip, 18, cx, cy, size, weight * 0.8f, false, color);
+    return;
+  }
+  if (icon == AGENT_ICON_FOLDER) {
+    /* A folder: the body with its tab raised on the upper left. */
+    static const float folder[][2] = {
+        {-.38f, -.28f}, {-.38f, .28f}, {-.08f, .28f}, {.02f, .18f}, {.38f, .18f}, {.38f, -.28f},
+    };
+    static const float lip[][2] = {{-.38f, .06f}, {.38f, .06f}};
+    stroke_path(folder, 6, cx, cy, size, weight, true, color);
+    stroke_path(lip, 2, cx, cy, size, weight, false, color);
+    return;
+  }
   if (icon == AGENT_ICON_ADDON) {
     /* A puzzle piece: a square with one tab on top and one on the right. */
     static const float piece[][2] = {

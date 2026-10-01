@@ -23,32 +23,24 @@ import bpy
 
 from mixar.modules.common.i18n import rpt_
 
-# Importer dispatch + name diffing mirror core/agent_import.py (the
-# agent-driven import, #1251) — keep the two in sync. Duplicated deliberately:
-# the two features land on independent branches and this keeps the attach
-# path self-contained.
-_MAX_NAMES = 20
+from .agent_import import IMPORTABLE_EXTENSIONS, _IMPORTERS
 
-_MODEL_EXTENSIONS = {".obj"}
+_MAX_NAMES = 20
+MODEL_EXTENSIONS = frozenset(IMPORTABLE_EXTENSIONS)
 
 
 def is_model_file(filepath: str) -> bool:
-    """True for a 3D model file the chat can attach-and-import (OBJ per
-    #1268; FBX/GLB/USD ride the same path when enabled)."""
-    return os.path.splitext(filepath or "")[1].lower() in _MODEL_EXTENSIONS
+    """Whether the chat can attach and import this model's format."""
+    return os.path.splitext(filepath or "")[1].lower() in MODEL_EXTENSIONS
 
 
 def _importer_op(extension: str):
-    """The native importer operator for an extension, or None."""
-    if extension == ".obj":
-        return getattr(getattr(bpy.ops, "wm", None), "obj_import", None)
-    if extension == ".fbx":
-        return getattr(getattr(bpy.ops, "import_scene", None), "fbx", None)
-    if extension in (".glb", ".gltf"):
-        return getattr(getattr(bpy.ops, "import_scene", None), "gltf", None)
-    if extension in (".usd", ".usdz", ".usda", ".usdc"):
-        return getattr(getattr(bpy.ops, "wm", None), "usd_import", None)
-    return None
+    """Resolve the shared importer map against the current Blender runtime."""
+    entry = _IMPORTERS.get(extension)
+    if entry is None:
+        return None
+    submodule, name = entry
+    return getattr(getattr(bpy.ops, submodule, None), name, None)
 
 
 def _new_top_level(before: set[str]) -> list[str]:
@@ -73,8 +65,9 @@ def import_model_attachment(filepath: str) -> dict:
     if op is None:
         return {
             "success": False,
-            "error": rpt_("unsupported model format ({format}; supported: OBJ)").format(
-                format=extension or rpt_("unknown")),
+            "error": rpt_("unsupported model format ({format}; supported: {supported})").format(
+                format=extension or rpt_("unknown"),
+                supported=", ".join(ext[1:].upper() for ext in IMPORTABLE_EXTENSIONS)),
         }
     if not os.path.isfile(filepath):
         return {"success": False, "error": rpt_("the file does not exist")}

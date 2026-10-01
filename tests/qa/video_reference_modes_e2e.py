@@ -19,7 +19,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(os.environ['QA_HARNESS']) / 'scenarios'))
 from lib import run_scenario
-from generation_reference_column_e2e import TABS, capture
+from generation_reference_column_e2e import TABS, capture, open_picker
 from reference_drop_ux_e2e import SCENE, batch_drop, pause
 
 VIDEO_UPLOAD = 'MIXAR_OT_pane_video_upload_reference'
@@ -40,7 +40,7 @@ def tab(qa, key):
 
 
 def picker(qa, out, op, path, *, video=False, confirm=True):
-    qa.click(area_type='AGENT_BUBBLE', op=op)
+    open_picker(qa, op)
     qa.wait("bool(drv.find(area_type='FILE_BROWSER',prop='directory'))", timeout=8)
     selected = qa.eval("h=drv.find(area_type='FILE_BROWSER',prop='directory')[0]\n"
                        "p=h['_area'].spaces.active.params\n"

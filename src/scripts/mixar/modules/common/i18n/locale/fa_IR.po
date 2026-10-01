@@ -3053,6 +3053,72 @@ msgstr "glTF ﯽﯾﻭﺩﻭﺩ ﻦﯾﺰﮕﯾﺎﺟ"
 msgid "Last Export"
 msgstr "ﻥﺩﺮﮐ ﺭﺩﺎﺻ ﻦﯾﺮﺧﺁ"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar ﯼﺎﻤﻧ ﻦﯿﺑﺭﻭﺩ"
 
@@ -19464,8 +19530,8 @@ msgstr ".ﺪﺸﻧ ﻦﮑﻤﻣ ﻪﻨﺤﺻ ﻪﺑ ﯽﯾﺍﺭﺍﺩ ﻥﺩﻭ
 msgid "Thinking..."
 msgstr "...ﺮﮑﻓ ﻝﺎﺣ ﺭﺩ"
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "(OBJ :ﻩﺪﺷ‌ﯽﻧﺎﺒﯿﺘﺸﭘ ؛{format}) ﺩﻮﺷ‌ﯽﻤﻧ ﯽﻧﺎﺒﯿﺘﺸﭘ ﻝﺪﻣ ﺖﻣﺮﻓ"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "ﻪﺘﺧﺎﻨﺷﺎﻧ"
@@ -20458,8 +20524,11 @@ msgstr "ﻑﺬﺣ ﯼﺍﺮﺑ ﻩﺪﺷ‌ﯽﻧﺎﮕﯾﺎﺑ ﺖﺴﺸﻧ"
 msgid "Chat removed from history"
 msgstr "ﺪﺷ ﻑﺬﺣ ﻪﭽﺨﯾﺭﺎﺗ ﺯﺍ ﻮﮕﺘﻔﮔ"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "ﻡﺎﯿﭘ ﺮﻫ ﻒﻘﺳ ﺎﺗ ﯽﯾﺎﺗﺪﻨﭼ ﺏﺎﺨﺘﻧﺍ — ﺪﻨﮐ‌ﯽﻣ ﻪﻓﺎﺿﺍ ﻞﯾﺎﻓ ﺯﺍ ﺮﯾﻮﺼﺗ ﺖﺳﻮﯿﭘ"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "ﺪﯿﺳﺭ ({count}) ﺖﺳﻮﯿﭘ ﻒﻘﺳ ﻪﺑ"
@@ -24145,6 +24214,9 @@ msgstr "ﺪﻨﮐ‌ﯽﻣ ﻒﻗﻮﺘﻣ ﺎﯾ ﻉﻭﺮﺷ ﺍﺭ ﭻﮑﺳ�
 msgid "Stop the running turn"
 msgstr "ﺪﻨﮐ‌ﯽﻣ ﻒﻗﻮﺘﻣ ﺍﺭ ﺍﺮﺟﺍ ﻝﺎﺣ ﺭﺩ ﺖﺑﻮﻧ"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "ﺪﯿﻨﮐ ﻝﺎﺳﺭﺍ ﺲﭙﺳ ،ﺪﯿﻨﮐ ﻪﻓﺎﺿﺍ ﺭﻮﺘﺳﺩ ﻮﮕﺘﻔﮔ ﺭﺩ .ﺪﯿﻨﯿﺒﺑ ﺮﺗ‌ﮒﺭﺰﺑ ﺍﺭ ﭻﮑﺳﺍ"
 
@@ -24153,6 +24225,9 @@ msgstr "ﻊﺟﺮﻣ ﻑﺬﺣ"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "ﺩﺭﺍﺬﮔ‌ﯽﻣ ﺭﺎﻨﮐ ﺍﺭ ﺵﺍ‌ﻩﺪﺷ‌ﻒﺻ ﻢﯿﺳﺮﺗ ﻭ ﭻﮑﺳﺍ ﻦﯾﺍ"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{} ﻑﺬﺣ"
@@ -24195,9 +24270,6 @@ msgstr "ﻦﺘﻓﺮﮔ ﻝﺎﺣ ﺭﺩ"
 
 msgid "NEW"
 msgstr "ﺪﯾﺪﺟ"
-
-msgid "Upload Reference"
-msgstr "ﻊﺟﺮﻣ ﯼﺭﺍﺬﮔﺭﺎﺑ"
 
 msgid "Ask Mixie anything..."
 msgstr "...ﺪﯿﺳﺮﭙﺑ Mixie ﺯﺍ ﺪﯿﻫﺍﻮﺧ‌ﯽﻣ ﻪﭼ ﺮﻫ"
@@ -24430,6 +24502,9 @@ msgstr ".ﺪﯿﻨﮐ ﻝﺎﺳﺭﺍ ﺲﭙﺳ ،ﺪﯿﻨﮐ ﻪﻓﺎﺿﺍ �
 msgid "AI model"
 msgstr "ﯽﻋﻮﻨﺼﻣ ﺵﻮﻫ ﻝﺪﻣ"
 
+msgid "Upload Reference"
+msgstr "ﻊﺟﺮﻣ ﯼﺭﺍﺬﮔﺭﺎﺑ"
+
 msgid "Pick an input image for 3D generation"
 msgstr "ﺪﯿﻨﯾﺰﮔﺮﺑ ﯼﺪﻌﺑ‌ﻪﺳ ﺪﯿﻟﻮﺗ ﯼﺍﺮﺑ ﯼﺩﻭﺭﻭ ﺮﯾﻮﺼﺗ ﮏﯾ"
 
@@ -24520,8 +24595,8 @@ msgstr "ﺪﯿﻨﮐ ﺶﯾﺍﺮﯾﻭ ﺍﺭ ﻞﻣﺎﻋ ﯼﺮﺳﺍﺮﺳ �
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "ﺪﯿﻨﮐ ﺖﺳﻮﯿﭘ ﻊﺟﺮﻣ ﺮﯾﻮﺼﺗ ﮏﯾ"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "ﺪﯿﻨﮐ ﻝﺎﺳﺭﺍ ﺲﭙﺳ ،ﺪﯿﻨﮐ ﻪﻓﺎﺿﺍ ﺭﻮﺘﺳﺩ .(Esc) ﺪﻫﺩ‌ﯽﻣ ﻥﺎﺸﻧ ﻮﮕﺘﻔﮔ ﺭﺩ ﺍﺭ ﭻﮑﺳﺍ ﺶﯾﺎﻤﻧ‌ﺶﯿﭘ ﻭ ﺪﻨﮐ‌ﯽﻣ ﻡﺎﻤﺗ ﺍﺭ ﻥﺪﯿﺸﮐ"
@@ -26643,6 +26718,9 @@ msgstr "ﻮﺷﺯﺎﺑ ﺶﻨﮐ"
 
 msgid "Non-interactive explanation"
 msgstr "ﯽﻠﻣﺎﻌﺗﺮﯿﻏ ﺢﯿﺿﻮﺗ"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "ﻞﻣﺎﮐ ﺖﺳﺍﺮﺘﻨﮐ ﺎﺑ ﮒﺭﺰﺑ ﻥﺍﻮﻨﻋ"

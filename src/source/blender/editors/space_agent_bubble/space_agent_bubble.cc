@@ -641,11 +641,12 @@ static void agent_bubble_island_controls_bottom(const bContext *C,
   }
 
   agent_bubble_rect_to_region(region, layout->chip_upload, &bx, &by, &bw, &bh);
-  /* Same operator the old chat footer's attach button used —
-   * `mixie_chat.add_image` opens nothing on its own. */
-  uiDefButO(block, ui::ButtonType::But, "mixie_chat.add_image_from_file",
+  /* A small menu (context_folder/ui/menus/attach_menu.py): an image or 3D
+   * file through `mixie_chat.add_image_from_file`, or a folder the agent
+   * uses as context. Dropping a file on the island still attaches it. */
+  uiDefButO(block, ui::ButtonType::But, "mixie_chat.attach",
             blender::wm::OpCallContext::InvokeDefault, "", bx, by, bw, bh,
-            TIP_("Attach a reference image"));
+            TIP_("Attach a reference image or 3D file, or a folder the agent can use as context"));
 
   /* --- Scribble chips, right of Upload ---
    * The same operators the chat header binds (space_mixie_chat/ui/header.py):
@@ -1783,7 +1784,10 @@ static int agent_bubble_pending_attachment_count(const bContext *C)
   if (attachments_prop == nullptr) {
     return 0;
   }
-  return RNA_property_collection_length(&scene_ptr, attachments_prop);
+  /* Attached context folders show as chips in the same reference column. */
+  PropertyRNA *folders_prop = RNA_struct_find_property(&scene_ptr, "mixie_context_folders");
+  return RNA_property_collection_length(&scene_ptr, attachments_prop) +
+         (folders_prop ? RNA_property_collection_length(&scene_ptr, folders_prop) : 0);
 }
 
 static int agent_bubble_collapsed_height_for_current_attachments(const bContext *C)

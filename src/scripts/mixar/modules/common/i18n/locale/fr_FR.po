@@ -3053,6 +3053,72 @@ msgstr "Solution de repli glTF binaire"
 msgid "Last Export"
 msgstr "Dernier export"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Caméra de plan Mixar"
 
@@ -19464,8 +19530,8 @@ msgstr "Impossible d’ajouter l’asset à la scène."
 msgid "Thinking..."
 msgstr "Réflexion..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "format de modèle non pris en charge ({format} ; pris en charge : OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "inconnu"
@@ -20458,8 +20524,11 @@ msgstr "Session archivée à supprimer"
 msgid "Chat removed from history"
 msgstr "Discussion supprimée de l’historique"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Ajouter des images en pièces jointes depuis un fichier — sélection multiple possible jusqu’à la limite par message"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Limite de pièces jointes ({count}) atteinte"
@@ -24145,6 +24214,9 @@ msgstr "Démarrer ou arrêter la dictée dans le brouillon du croquis"
 msgid "Stop the running turn"
 msgstr "Arrêter le tour en cours"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Agrandir le croquis. Ajoutez des instructions dans la discussion, puis cliquez sur Envoyer"
 
@@ -24153,6 +24225,9 @@ msgstr "Retirer la référence"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Abandonner ce croquis et son dessin en attente"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "Retirer {}"
@@ -24195,9 +24270,6 @@ msgstr "Chasse"
 
 msgid "NEW"
 msgstr "NOUVEAU"
-
-msgid "Upload Reference"
-msgstr "Importer une référence"
 
 msgid "Ask Mixie anything..."
 msgstr "Demandez n’importe quoi à Mixie..."
@@ -24430,6 +24502,9 @@ msgstr "Croquis prêt. Ajoutez des instructions, puis cliquez sur Envoyer."
 msgid "AI model"
 msgstr "Modèle d’IA"
 
+msgid "Upload Reference"
+msgstr "Importer une référence"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Choisir une image d’entrée pour la génération 3D"
 
@@ -24520,8 +24595,8 @@ msgstr "Règles — modifier les règles du projet et les règles globales de l�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Joindre une image de référence"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Terminer le dessin et afficher l’aperçu du croquis dans la discussion (Esc). Ajoutez des instructions, puis cliquez sur Envoyer"
@@ -26643,6 +26718,9 @@ msgstr "Action de fenêtre contextuelle"
 
 msgid "Non-interactive explanation"
 msgstr "Explication non interactive"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Titre surdimensionné à contraste maximal"

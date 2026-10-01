@@ -3053,6 +3053,72 @@ msgstr "Bináris glTF tartalék"
 msgid "Last Export"
 msgstr "Utolsó exportálás"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar snittkamera"
 
@@ -19464,8 +19530,8 @@ msgstr "Az asset nem adható a jelenethez."
 msgid "Thinking..."
 msgstr "Gondolkodik..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "nem támogatott modellformátum ({format}; támogatott: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "ismeretlen"
@@ -20458,8 +20524,11 @@ msgstr "Törlendő archivált munkamenet"
 msgid "Chat removed from history"
 msgstr "A csevegés eltávolítva az előzményekből"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Képmellékletek hozzáadása fájlból — többszörös kijelölés az üzenetenkénti felső határig"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Elérte a mellékletkorlátot ({count})"
@@ -24145,6 +24214,9 @@ msgstr "Diktálás indítása vagy leállítása a vázlatpiszkozatba"
 msgid "Stop the running turn"
 msgstr "A futó forduló leállítása"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Nagyobb vázlat megtekintése. Adjon hozzá utasításokat a csevegésben, majd nyomja meg a Küldés gombot"
 
@@ -24153,6 +24225,9 @@ msgstr "Referencia eltávolítása"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Ennek a vázlatnak és a sorban álló rajzának az elvetése"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{} eltávolítása"
@@ -24195,9 +24270,6 @@ msgstr "Elkapás"
 
 msgid "NEW"
 msgstr "ÚJ"
-
-msgid "Upload Reference"
-msgstr "Referencia feltöltése"
 
 msgid "Ask Mixie anything..."
 msgstr "Kérdezzen bármit a Mixie-től..."
@@ -24430,6 +24502,9 @@ msgstr "A vázlat kész. Adjon hozzá utasításokat, majd nyomja meg a Küldés
 msgid "AI model"
 msgstr "MI-modell"
 
+msgid "Upload Reference"
+msgstr "Referencia feltöltése"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Válasszon bemeneti képet a 3D-generáláshoz"
 
@@ -24520,8 +24595,8 @@ msgstr "Szabályok — a projekt- és a globális szabályok szerkesztése az ü
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Referenciakép csatolása"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Fejezze be a rajzolást, és mutassa a vázlat előnézetét a csevegésben (Esc). Adjon hozzá utasításokat, majd nyomja meg a Küldés gombot"
@@ -26643,6 +26718,9 @@ msgstr "Felugró művelet"
 
 msgid "Non-interactive explanation"
 msgstr "Nem interaktív magyarázat"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Túlméretezett, teljes kontrasztú cím"

@@ -87,7 +87,7 @@ def geometry(qa, transcript):
     vertical = [card_top - buttons[0][3], buttons[0][1] - panel_top]
     assert all(abs(m - 20 * unit) <= 2 for m in vertical), vertical
     field = rect(qa, FIELD)
-    upload = rect(qa, target('add_image_from_file'))
+    upload = rect(qa, target('attach'))
     send = rect(qa, target('send_message'))
     assert abs(field[0] - buttons[0][0]) <= 2, (field, buttons)
     assert abs(field[2] - buttons[-1][2]) <= 2, (field, buttons)

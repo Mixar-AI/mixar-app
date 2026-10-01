@@ -3053,6 +3053,72 @@ msgstr "glTF 二進位備援格式"
 msgid "Last Export"
 msgstr "上次匯出"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar 鏡頭相機"
 
@@ -19464,8 +19530,8 @@ msgstr "無法將素材加入場景。"
 msgid "Thinking..."
 msgstr "思考中..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "不支援的模型格式（{format}；支援：OBJ）"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "未知"
@@ -20458,8 +20524,11 @@ msgstr "要刪除的已封存工作階段"
 msgid "Chat removed from history"
 msgstr "已從歷史中移除聊天"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "從檔案加入影像附件，支援多選，最多可達每則訊息的附件上限"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "已達附件上限（{count}）"
@@ -24145,6 +24214,9 @@ msgstr "開始或停止聽寫至草圖草稿"
 msgid "Stop the running turn"
 msgstr "停止執行中的回合"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "放大檢視草圖。在聊天中加入指示，然後傳送"
 
@@ -24153,6 +24225,9 @@ msgstr "移除參考"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "捨棄此草圖及其佇列中的繪圖"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "移除 {}"
@@ -24195,9 +24270,6 @@ msgstr "捕捉中"
 
 msgid "NEW"
 msgstr "新"
-
-msgid "Upload Reference"
-msgstr "上傳參考"
 
 msgid "Ask Mixie anything..."
 msgstr "向 Mixie 提出任何問題..."
@@ -24430,6 +24502,9 @@ msgstr "草圖已就緒。加入指示後即可傳送。"
 msgid "AI model"
 msgstr "AI 模型"
 
+msgid "Upload Reference"
+msgstr "上傳參考"
+
 msgid "Pick an input image for 3D generation"
 msgstr "挑選用於 3D 生成的輸入影像"
 
@@ -24520,8 +24595,8 @@ msgstr "規則 — 編輯智慧代理的專案與全域規則"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "附加參考影像"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "完成繪製並在聊天中顯示草圖預覽（Esc）。加入指示後再傳送"
@@ -26643,6 +26718,9 @@ msgstr "彈出動作"
 
 msgid "Non-interactive explanation"
 msgstr "非互動式說明"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "超大全對比標題"

@@ -3053,6 +3053,72 @@ msgstr "glTF לש יראניב יוביג"
 msgid "Last Export"
 msgstr "ןורחא אוציי"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar לש טוש תמלצמ"
 
@@ -19464,8 +19530,8 @@ msgstr ".הנצסל סכנה תא ףיסוהל ןתינ אל"
 msgid "Thinking..."
 msgstr "...בשוח"
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "(OBJ :ךמתנ ;{format}) ךמתנ אל לדומ טמרופ"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "עודי אל"
@@ -20458,8 +20524,11 @@ msgstr "הקיחמל ןויכראב הלעפה"
 msgid "Chat removed from history"
 msgstr "הירוטסיההמ רסוה טא'צה"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "העדוהל הסכמל דע הבורמ הריחבב ךמות — ץבוקמ תופרוצמ תונומת תפסוה"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "הגשוה ({count}) םיפרוצמה םיצבקה תלבגמ"
@@ -24145,6 +24214,9 @@ msgstr "הציקסה תטויטל הבתכה רצוע וא ליחתמ"
 msgid "Stop the running turn"
 msgstr "ליעפה בבסה תא רצוע"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "חולשל זאו ,טא'צב תויחנה ףיסוהל שי .לודגב הציקסה תא גיצמ"
 
@@ -24153,6 +24225,9 @@ msgstr "סנרפר תרסה"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "רותבש רויצה תאו וזה הציקסה תא ךילשמ"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{} תרסה"
@@ -24195,9 +24270,6 @@ msgstr "טלוק"
 
 msgid "NEW"
 msgstr "שדח"
-
-msgid "Upload Reference"
-msgstr "סנרפר תאלעה"
 
 msgid "Ask Mixie anything..."
 msgstr "...רבד לכ Mixie תא ולאש"
@@ -24430,6 +24502,9 @@ msgstr ".החילש זאו ,תויחנה ופיסוה .הנכומ הציקסה"
 msgid "AI model"
 msgstr "AI לדומ"
 
+msgid "Upload Reference"
+msgstr "סנרפר תאלעה"
+
 msgid "Pick an input image for 3D generation"
 msgstr "תידממ-תלת הריציל טלק תנומת תריחב"
 
@@ -24520,8 +24595,8 @@ msgstr "ןכוסה לש םיילבולגה םיללכהו טקיורפה ילל�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "סנרפר תנומת ףוריצ"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "החילש זאו ,תויחנה ופיסוה .(Esc) טא'צב הציקסה לש המידקמ הגוצת גיצמו רויצה תא םייסמ"
@@ -26643,6 +26718,9 @@ msgstr "תצפוק הלועפ"
 
 msgid "Non-interactive explanation"
 msgstr "יביטקארטניא אל רבסה"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "האלמ תוידוגינב הלודג תרתוכ"
