@@ -11,8 +11,8 @@ these properties.
 
 **WindowManager, never Scene**: this is session state that must not be
 serialized into a ``.blend`` (a shared file would carry one user's plan
-and credit balance to whoever opens it). ``mixie_chat_user_id`` sets the
-same precedent with ``SKIP_SAVE``.
+and credit balance to whoever opens it). ``mixie_chat_user_id`` uses
+process-local RNA accessors; ``SKIP_SAVE`` alone does not protect Scene data.
 
 ``core/state.py`` stays the source of truth; these are a projection of
 it, written on the main thread by ``core/poller._apply_snapshot``.
