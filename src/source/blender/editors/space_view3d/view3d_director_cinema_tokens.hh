@@ -76,7 +76,7 @@
 #define CINEMA_BRAND_LOGO 22.0f        /* Round logo chip diameter. */
 #define CINEMA_BRAND_MARK 14.0f        /* Mixar mark edge inside the logo chip. */
 #define CINEMA_BRAND_GAP 8.0f          /* Logo -> wordmark -> mode name. */
-#define CINEMA_BRAND_VERSION_PAD 12.0f /* Pill's right edge -> "V1". */
+#define CINEMA_BRAND_TAG_PAD 12.0f     /* Pill's right edge, at the least, -> "BETA" label. */
 
 /* Right panel. Cards stack from CINEMA_COLUMN_TOP at CINEMA_CARD_GAP so the
  * column's foot lands on the same design y as the left column's. */

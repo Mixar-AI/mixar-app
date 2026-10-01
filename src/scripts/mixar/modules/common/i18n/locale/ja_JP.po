@@ -80,38 +80,38 @@ msgid "Join Discord"
 msgstr "Discordに参加"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "クイックセットアップ"
 
 msgid "Import Preferences From Previous Version"
-msgstr ""
+msgstr "以前のバージョンからプリファレンスをインポート"
 
 msgctxt "Operator"
 msgid "Import Blender {:d}.{:d} Preferences"
 msgstr ""
 
 msgid "Create New Preferences"
-msgstr ""
+msgstr "新規プリファレンスを作成"
 
 msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "テーマ"
 
 msgid "Keymap"
-msgstr ""
+msgstr "キーマップ"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "マウス選択"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "スペースバーアクション"
 
 msgid "Save New Preferences"
-msgstr ""
+msgstr "新規プリファレンスを保存"
 
 msgid "Continue"
-msgstr ""
+msgstr "継続"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -3052,6 +3052,72 @@ msgstr "glTFバイナリのフォールバック"
 
 msgid "Last Export"
 msgstr "前回のエクスポート"
+
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
 
 msgid "Mixar Shot Camera"
 msgstr "Mixarショットカメラ"
@@ -10423,6 +10489,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10502,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"
@@ -19468,8 +19534,8 @@ msgstr "アセットをシーンに追加できませんでした。"
 msgid "Thinking..."
 msgstr "思考中..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "非対応のモデル形式です（{format}。対応形式: OBJ）"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "不明"
@@ -20462,8 +20528,11 @@ msgstr "削除するアーカイブ済みセッション"
 msgid "Chat removed from history"
 msgstr "チャットを履歴から削除しました"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "ファイルから画像を添付します — メッセージあたりの上限まで複数選択できます"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "添付ファイルの上限（{count}）に達しました"
@@ -24149,6 +24218,9 @@ msgstr "スケッチの下書きへの音声入力を開始/停止します"
 msgid "Stop the running turn"
 msgstr "実行中のターンを停止します"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "スケッチを拡大表示します。チャットで指示を追加してから送信してください"
 
@@ -24157,6 +24229,9 @@ msgstr "参照を削除します"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "このスケッチとキュー内の描画を破棄します"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{} を削除します"
@@ -24199,9 +24274,6 @@ msgstr "キャッチ中"
 
 msgid "NEW"
 msgstr "新着"
-
-msgid "Upload Reference"
-msgstr "参照をアップロード"
 
 msgid "Ask Mixie anything..."
 msgstr "Mixieに何でも聞いてください..."
@@ -24434,6 +24506,9 @@ msgstr "スケッチの準備ができました。指示を追加してから送
 msgid "AI model"
 msgstr "AIモデル"
 
+msgid "Upload Reference"
+msgstr "参照をアップロード"
+
 msgid "Pick an input image for 3D generation"
 msgstr "3D生成用の入力画像を選択します"
 
@@ -24524,8 +24599,8 @@ msgstr "ルール — エージェントのプロジェクトルールとグロ�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "参照画像を添付します"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "描画を終了し、チャットにスケッチのプレビューを表示します（Esc）。指示を追加してから送信してください"
@@ -26647,6 +26722,9 @@ msgstr "ポップアップアクション"
 
 msgid "Non-interactive explanation"
 msgstr "操作できない説明文"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "大きなフルコントラストの見出し"

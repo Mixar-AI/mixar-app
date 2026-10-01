@@ -80,38 +80,38 @@ msgid "Join Discord"
 msgstr "Discord-ში გაწევრიანება"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "სწრაფი დაყენება"
 
 msgid "Import Preferences From Previous Version"
-msgstr ""
+msgstr "დააიმპორტირე სასურველი პარამეტრები წინა ვერსიიდან"
 
 msgctxt "Operator"
 msgid "Import Blender {:d}.{:d} Preferences"
 msgstr ""
 
 msgid "Create New Preferences"
-msgstr ""
+msgstr "შექმენი ახალი სასურველი პარამეტრები"
 
 msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "თემა"
 
 msgid "Keymap"
-msgstr ""
+msgstr "კლავიშრუკა"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "თაგვით მონიშვნა"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "გამოტოვების კლავიშის ქმედება"
 
 msgid "Save New Preferences"
-msgstr ""
+msgstr "ახალი სასურველი პარამეტრების შენახვა"
 
 msgid "Continue"
-msgstr ""
+msgstr "გაგრძელება"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -3052,6 +3052,72 @@ msgstr "glTF-ის ორობითი სარეზერვო"
 
 msgid "Last Export"
 msgstr "ბოლო ექსპორტი"
+
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
 
 msgid "Mixar Shot Camera"
 msgstr "Mixar-ის შოტის კამერა"
@@ -10423,6 +10489,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10502,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"
@@ -19464,8 +19530,8 @@ msgstr "აქტივის სცენაზე დამატება ვ
 msgid "Thinking..."
 msgstr "ფიქრობს..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "მხარდაუჭერელი მოდელის ფორმატი ({format}; მხარდაჭერილია: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "უცნობი"
@@ -20458,8 +20524,11 @@ msgstr "წასაშლელი დაარქივებული სე�
 msgid "Chat removed from history"
 msgstr "ჩატი ისტორიიდან მოიცილა"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "გამოსახულების დანართების დამატება ფაილიდან — მხარს უჭერს მრავალ მონიშვნას შეტყობინების ლიმიტამდე"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "დანართის ლიმიტი ({count}) მიღწეულია"
@@ -24145,6 +24214,9 @@ msgstr "კარნახის დაწყება ან გაჩერე
 msgid "Stop the running turn"
 msgstr "მიმდინარე სვლის გაჩერება"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "ესკიზის უფრო დიდად ნახვა. დაამატეთ მითითებები ჩატში, შემდეგ გაგზავნეთ"
 
@@ -24153,6 +24225,9 @@ msgstr "რეფერენსის მოცილება"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "ამ ესკიზისა და მისი რიგში მყოფი ნახატის გაუქმება"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{}-ის მოცილება"
@@ -24195,9 +24270,6 @@ msgstr "ეწევა"
 
 msgid "NEW"
 msgstr "ახალი"
-
-msgid "Upload Reference"
-msgstr "რეფერენსის ატვირთვა"
 
 msgid "Ask Mixie anything..."
 msgstr "ჰკითხეთ Mixie-ს რაც გნებავთ..."
@@ -24430,6 +24502,9 @@ msgstr "ესკიზი მზადაა. დაამატეთ მი�
 msgid "AI model"
 msgstr "AI მოდელი"
 
+msgid "Upload Reference"
+msgstr "რეფერენსის ატვირთვა"
+
 msgid "Pick an input image for 3D generation"
 msgstr "აირჩიეთ შენატანის გამოსახულება 3D წარმოქმნისთვის"
 
@@ -24520,8 +24595,8 @@ msgstr "წესები — აგენტის პროექტისა
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "რეფერენს გამოსახულების მიმაგრება"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "დაასრულეთ ხატვა და აჩვენეთ ესკიზის გადახედვა ჩატში (Esc). დაამატეთ მითითებები, შემდეგ გაგზავნეთ"
@@ -26643,6 +26718,9 @@ msgstr "ამომხტარი ქმედება"
 
 msgid "Non-interactive explanation"
 msgstr "არაინტერაქტიული ახსნა"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "გადიდებული სრული კონტრასტის სათაური"

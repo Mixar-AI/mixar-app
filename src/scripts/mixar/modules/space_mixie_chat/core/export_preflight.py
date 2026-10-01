@@ -19,6 +19,14 @@ CHECK_LABELS = {
     "packed_images": "Material images packed",
     "mixar_bakes": "Mixar Paint materials baked",
 }
+# Formats that carry no materials or textures: the material checks cannot
+# block them and repair never packs or bakes for them.
+GEOMETRY_ONLY_FORMATS = ("stl",)
+MATERIAL_CHECKS = ("packed_images", "mixar_bakes")
+
+
+def geometry_only(spec: dict) -> bool:
+    return str(spec.get("format") or "").lower().lstrip(".") in GEOMETRY_ONLY_FORMATS
 
 _cache_lock = threading.Lock()
 _repair_cache: dict[tuple[str, str, str], dict] = {}
@@ -208,7 +216,7 @@ def _mixar_reasons(obj, material) -> list[str]:
     return reasons
 
 
-def inspect_mesh(obj) -> dict[str, list[str]]:
+def inspect_mesh(obj, materials: bool = True) -> dict[str, list[str]]:
     failures = {key: [] for key in CHECK_ORDER}
     if not (_is_identity(obj.rotation_euler, (0.0, 0.0, 0.0)) and
             _is_identity(obj.scale, (1.0, 1.0, 1.0))):
@@ -216,7 +224,7 @@ def inspect_mesh(obj) -> dict[str, list[str]]:
     ordinary = [mod.name for mod in obj.modifiers if mod.type != 'ARMATURE']
     if ordinary:
         failures["modifiers"].append("unapplied modifiers: " + ", ".join(ordinary))
-    for material in obj.data.materials:
+    for material in obj.data.materials if materials else ():
         unpacked = [image.name for image in material_images(material)
                     if getattr(image, "packed_file", None) is None]
         if unpacked:
@@ -242,9 +250,16 @@ def preflight_meshes(spec: dict, meshes) -> dict:
                     "failed_meshes": [], "failures": []}
               for key in CHECK_ORDER}
     armatures = 0
+    skip = geometry_only(spec)
+    if skip:
+        # Kept (not dropped) so every reader's table still has the row.
+        fmt = str(spec.get("format")).lower().lstrip(".").upper()
+        for key in MATERIAL_CHECKS:
+            checks[key]["label"] += f" (not used by {fmt})"
+            checks[key]["skipped"] = True
     for obj in meshes:
         armatures += sum(mod.type == 'ARMATURE' for mod in obj.modifiers)
-        failures = inspect_mesh(obj)
+        failures = inspect_mesh(obj, materials=False) if skip else inspect_mesh(obj)
         for key, reasons in failures.items():
             check = checks[key]
             if reasons:
@@ -320,6 +335,7 @@ def repair_export(session_id: str, request_id: str, task_id: str, spec: dict) ->
     errors = []
     bake_jobs = []
     isolated_materials = {}
+    materials = not geometry_only(spec)
     try:
         if active and mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
@@ -334,7 +350,7 @@ def repair_export(session_id: str, request_id: str, task_id: str, spec: dict) ->
                 obj.data = obj.data.copy()
             # A material is copied only when a non-target object uses it. This
             # keeps packing/baking from changing assets outside export scope.
-            for slot_index, material in enumerate(list(obj.data.materials)):
+            for slot_index, material in enumerate(list(obj.data.materials) if materials else ()):
                 if material is None:
                     continue
                 used_outside = any(
@@ -362,7 +378,7 @@ def repair_export(session_id: str, request_id: str, task_id: str, spec: dict) ->
                     bpy.ops.object.modifier_apply(modifier=modifier.name)
                 except Exception as exc:
                     errors.append(f"{obj.name}/{modifier.name}: {exc}")
-            for material in obj.data.materials:
+            for material in obj.data.materials if materials else ():
                 for image in material_images(material):
                     if getattr(image, "packed_file", None) is None:
                         try:

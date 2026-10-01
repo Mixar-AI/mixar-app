@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Habari, mimi ni Naman kutoka Mixar.
+Kwa dakika chache nitakuonyesha programu hii.
+Hili ni eneo lako la mwonekano.
+Nafasi ya 3D unayoweza kuzunguka ndani yake.
+Buruta kwa kitufe cha kati kuzungusha, sogeza gurudumu kukuza.
+Shift na kitufe cha kati husogeza mwonekano.
+Jaribu mwenyewe.
+Bofya kuchagua, G kusogeza,
+R kuzungusha, S kubadili ukubwa.
+Hizi ni baadhi ya njia za mkato muhimu.
+Unaona kisiwa kidogo chini? Huyo ni Mixie, wakala wako.
+Bofya kukifungua.
+Mixie ina vichupo.
+Katika Agent, sema unachotaka kwa maneno rahisi. Wakala atafanyia kazi mandhari yako.
+Wakala hutumia modeli kama Tripo, Meshy na Nano Banana.
+Kwa udhibiti zaidi, fungua vichupo vingine:
+3D, Image, Video au World Model.
+Chagua modeli na urekebishe mipangilio yake.
+Kila unachozalisha huingia kwenye maktaba.
+Ubunifu wako uko hapa.
+Unganisha maktaba yako ili wakala atumie rasilimali zako,
+na uokoe mikopo.
+Juu kushoto kuna droo ya mandhari.
+Kila mandhari ina kichupo chake na wakala Mixie.
+Endesha kazi sambamba na ubadilishe kati yake wakati wowote.
+Mandhari ikikamilika, badili kwenda Cinema Mode
+kuongoza kamera na kuunda mtiririko wa kazi za video.
+Mawazo huanza katika 2D.
+Vuta moodboard kutoka kulia au bonyeza tilde.
+Ni turubai ya marejeleo na dhana.
+Weka picha, video au michoro hapa.
+Jenga grafu za nodi za modeli zalishi kama katika ComfyUI.
+Uko katika Zen Mode, mwonekano rahisi zaidi.
+Unaijua Blender? Badili kwenda Engine Mode.
+Eneo lote la kazi la Blender lipo, pamoja na kila paneli na njia ya mkato.
+Mixie hufanya kazi katika zote mbili. Chagua inayokufaa.
+Turudi katika Zen Mode.
+Programu yetu ya washirika wabunifu inakupa mikopo
+na jumuiya inayounda mustakabali wa AI na 3D.
+Ni hayo tu. Sasa unajua kila kitu kilipo.
+Tuunde 3D pamoja.

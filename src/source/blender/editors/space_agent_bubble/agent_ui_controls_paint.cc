@@ -261,7 +261,7 @@ void agent_ui_draw_chip_row(ARegion *region,
     return;
   }
 
-  /* Center the full Upload Reference label together with its picture mark. */
+  /* Center Attach together with its paperclip. */
   float upload_fill[4];
   agent_ui_motion_color(
       chip,
@@ -269,8 +269,8 @@ void agent_ui_draw_chip_row(ARegion *region,
       agent_ui_motion_sample(region, AgentIslandControl::Upload, layout->chip_upload),
       upload_fill);
   fill_round(&layout->chip_upload, radius, upload_fill);
-  chip_content(layout->chip_upload, AGENT_ICON_IMAGE,
-               layout->compact_reference ? IFACE_("Reference") : IFACE_("Upload Reference"),
+  chip_content(layout->chip_upload, AGENT_ICON_ATTACH,
+               IFACE_("Attach"),
                size, icon_edge, icon_gap, text, upload_fill);
 
   /* Sketch becomes Done while drawing. The reading control explains what the

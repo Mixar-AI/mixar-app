@@ -21,7 +21,7 @@ from ...core.export_destination import (
 
 # Every format the agent's export_scene spec may name (agent_export.EXTENSIONS).
 _EXTENSIONS = {"fbx": ".fbx", "glb": ".glb", "gltf": ".gltf", "obj": ".obj",
-               "usd": ".usd", "usdc": ".usdc", "usdz": ".usdz"}
+               "usd": ".usd", "usdc": ".usdc", "usdz": ".usdz", "stl": ".stl"}
 
 
 def _safe_name(value: str) -> str:

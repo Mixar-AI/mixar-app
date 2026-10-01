@@ -122,6 +122,8 @@ def test_failed_write_is_not_acknowledged_and_recovery_clears_error(module, monk
     assert [params['acknowledgements'] for params in sent] == [[], [], [ack]]
     assert notices == [expected] and sync.last_error is None
     assert 'sensitive' not in str(notifications.push.call_args)
+    assert notifications.push.call_args.kwargs['id'] == module.SYNC_NOTICE_ID
+    notifications.dismiss.assert_called_with(module.SYNC_NOTICE_ID)
 
 
 def test_transient_failures_log_without_toasting(module, monkeypatch):
@@ -372,3 +374,23 @@ def test_scene_rebinding_does_not_wedge_the_session(module, monkeypatch):
     manifest = json.loads((module.store.root() / 'conversation/manifest.json').read_text())
     assert manifest['scene_history_id'] == 'scene-before'
     assert manifest['scene_history_aliases'] == ['scene-after']
+
+
+def test_recovery_clears_only_archive_warning_across_workers(module, monkeypatch):
+    items = {'unrelated': 'keep me'}
+    notifications = Mock()
+    notifications.push.side_effect = lambda *args, **kw: items.update({kw['id']: kw['body']})
+    notifications.dismiss.side_effect = lambda key: items.pop(key, None)
+    monkeypatch.setitem(sys.modules, 'mixar.modules.common.notifications',
+        types.SimpleNamespace(get_notification_store=lambda: notifications))
+    old = module.ArchiveSync(types.SimpleNamespace())
+    old._notice('archive_validation_failed')
+    old._notice('archive_disk_full')
+    assert len(items) == 2
+    assert 'disk is full' in items[module.SYNC_NOTICE_ID]
+    old._notice('archive_sync_timeout')
+    assert module.SYNC_NOTICE_ID in items  # disconnected does not mean recovered
+    replacement = module.ArchiveSync(types.SimpleNamespace())
+    replacement._recovered()
+    assert items == {'unrelated': 'keep me'}
+    notifications.dismiss.assert_called_once_with(module.SYNC_NOTICE_ID)

@@ -80,38 +80,38 @@ msgid "Join Discord"
 msgstr "Unirse a Discord"
 
 msgid "Quick Setup"
-msgstr ""
+msgstr "Configuración rápida"
 
 msgid "Import Preferences From Previous Version"
-msgstr ""
+msgstr "Importar preferencias de la versión anterior"
 
 msgctxt "Operator"
 msgid "Import Blender {:d}.{:d} Preferences"
 msgstr ""
 
 msgid "Create New Preferences"
-msgstr ""
+msgstr "Crear nuevas preferencias"
 
 msgid "Language"
 msgstr ""
 
 msgid "Theme"
-msgstr ""
+msgstr "Tema"
 
 msgid "Keymap"
-msgstr ""
+msgstr "Mapa de teclado"
 
 msgid "Mouse Select"
-msgstr ""
+msgstr "Botón seleccionar"
 
 msgid "Spacebar Action"
-msgstr ""
+msgstr "Tecla Espacio"
 
 msgid "Save New Preferences"
-msgstr ""
+msgstr "Guardar nuevas preferencias"
 
 msgid "Continue"
-msgstr ""
+msgstr "Continua"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -3052,6 +3052,72 @@ msgstr "glTF binario alternativo"
 
 msgid "Last Export"
 msgstr "Última exportación"
+
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
 
 msgid "Mixar Shot Camera"
 msgstr "Cámara de plano de Mixar"
@@ -10423,6 +10489,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -10433,9 +10502,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 msgid "Mixar Operation History ID"
@@ -19464,8 +19530,8 @@ msgstr "No se pudo agregar el recurso a la escena."
 msgid "Thinking..."
 msgstr "Pensando..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "formato de modelo no admitido ({format}; admitido: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "desconocido"
@@ -20458,8 +20524,11 @@ msgstr "Sesión archivada que se borrará"
 msgid "Chat removed from history"
 msgstr "Chat eliminado del historial"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Agrega imágenes adjuntas desde archivo; admite selección múltiple hasta el límite por mensaje"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Se alcanzó el límite de adjuntos ({count})"
@@ -24145,6 +24214,9 @@ msgstr "Inicia o detiene el dictado en el borrador del boceto"
 msgid "Stop the running turn"
 msgstr "Detiene el turno en curso"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Muestra el boceto más grande. Agregue instrucciones en el chat y luego pulse Enviar"
 
@@ -24153,6 +24225,9 @@ msgstr "Elimina la referencia"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Descarta este boceto y su dibujo en cola"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "Eliminar {}"
@@ -24195,9 +24270,6 @@ msgstr "Atrapando"
 
 msgid "NEW"
 msgstr "NUEVO"
-
-msgid "Upload Reference"
-msgstr "Subir referencia"
 
 msgid "Ask Mixie anything..."
 msgstr "Pregúntele lo que quiera a Mixie..."
@@ -24430,6 +24502,9 @@ msgstr "Boceto listo. Agregue instrucciones y luego pulse Enviar."
 msgid "AI model"
 msgstr "Modelo de IA"
 
+msgid "Upload Reference"
+msgstr "Subir referencia"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Elige una imagen de entrada para la generación 3D"
 
@@ -24520,8 +24595,8 @@ msgstr "Reglas: edita las reglas globales y del proyecto para el agente"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Adjunta una imagen de referencia"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Termina de dibujar y muestra la previsualización del boceto en el chat (Esc). Agregue instrucciones y luego pulse Enviar"
@@ -26643,6 +26718,9 @@ msgstr "Acción emergente"
 
 msgid "Non-interactive explanation"
 msgstr "Explicación no interactiva"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Encabezado grande de contraste máximo"

@@ -209,3 +209,54 @@ def test_scene_fallback_or_invalid_id_never_binds(client_store):
     client_store.write_batch('owner', packet(3, 'Third'), 'scene-a')
     manifest = json.loads((client_store.root() / 'session/manifest.json').read_text())
     assert manifest['scene_history_id'] == 'scene-a' and 'scene_history_aliases' not in manifest
+
+
+@pytest.mark.parametrize('rotate', [False, True])
+def test_gap_survives_final_manifest_failure(client_store, monkeypatch, rotate):
+    client_store.write_batch('owner', packet())
+    if rotate:
+        monkeypatch.setattr(client_store, 'SEGMENT_BYTES', 1)
+    original = client_store._atomic
+    def fail_final(path, raw):
+        if path.name == 'manifest.json' and json.loads(raw)['cursors'].get('a' * 32) == 4:
+            raise OSError('final manifest failed')
+        return original(path, raw)
+    monkeypatch.setattr(client_store, '_atomic', fail_final)
+    with pytest.raises(OSError):
+        client_store.write_batch('owner', packet(4, 'Fourth'))
+    monkeypatch.setattr(client_store, '_atomic', original)
+    assert client_store.write_batch('owner', packet(4, 'Fourth'))['seq'] == 4
+    expected = {'epoch': 'a' * 32, 'reason': 'archive_sequence_gap', 'expected': 2, 'received': 4}
+    result = client_store.read('owner', 'session')
+    assert result['gaps'] == [expected]
+    rows = [line for path in (client_store.root() / 'session/events').glob('*.jsonl')
+            for line in path.read_text().splitlines()]
+    assert [json.loads(line)['seq'] for line in sorted(rows, key=lambda x: json.loads(x)['seq'])] == [1, 4]
+
+
+def test_gap_metadata_failure_prevents_journal_append(client_store, monkeypatch):
+    client_store.write_batch('owner', packet())
+    original = client_store._atomic
+    def fail_metadata(path, raw):
+        if path.name == 'manifest.json':
+            raise OSError('gap metadata failed')
+        return original(path, raw)
+    monkeypatch.setattr(client_store, '_atomic', fail_metadata)
+    with pytest.raises(OSError):
+        client_store.write_batch('owner', packet(4, 'Fourth'))
+    rows = (client_store.root() / 'session/events/000001.jsonl').read_text().splitlines()
+    assert [json.loads(line)['seq'] for line in rows] == [1]
+
+
+def test_partial_batch_failure_keeps_each_gap(client_store):
+    client_store.write_batch('owner', packet())
+    batch = packet(4, 'Fourth')
+    batch['records'] += packet(7, 'Seventh')['records']
+    broken = packet(8)['records'][0]
+    broken['event_id'] = '0' * 64
+    batch['records'].append(broken)
+    with pytest.raises(ValueError, match='hash_mismatch'):
+        client_store.write_batch('owner', batch)
+    batch['records'][-1] = packet(8)['records'][0]
+    assert client_store.write_batch('owner', batch)['seq'] == 8
+    assert [(g['expected'], g['received']) for g in client_store.read('owner', 'session')['gaps']] == [(2, 4), (5, 7)]

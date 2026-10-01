@@ -53,7 +53,7 @@ def draw_director_entry(self, context):
     else:
         sub.operator("mixar.director_enter", text="Cinema Mode", icon="CINEMA_REEL")
 
-    # Native pill chrome: glass fill, hairline border, film strip and inline italic V2
+    # Native pill chrome: glass fill, hairline border, film strip and small BETA tag label
     # (interface_mixar_topbar.cc). Guarded so a build without the
     # widget still shows a working, if stock, button.
     if hasattr(sub, "mixar_topbar_element"):

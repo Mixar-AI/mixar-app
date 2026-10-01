@@ -13,8 +13,8 @@
  * shipped function across widths and states.
  *
  * Sacrifice order, cheapest first:
- *  1. Upload Reference shortens to "Reference", then the model chip walks its
- *     own ladder (chevron, label, icon) to keep "Reference" readable; its icon
+ *  1. The model chip walks its own ladder (chevron, label, icon) to keep
+ *     the short "Attach" label readable; its icon
  *     alone may then push Upload toward its icon floor, and finally it drops.
  *  2. Only when the core chips alone would push Upload below its icon floor
  *     do they shed labels, in #AGENT_CHIP_SHED_ORDER: the live Voice trace
@@ -43,8 +43,8 @@ enum AgentChipSlot {
 inline constexpr int AGENT_CHIP_FORM_MAX = 3;
 
 /** One chip's widths, widest form first. `count == 0` means not shown.
- *  Upload's three forms are "Upload Reference", "Reference" and its icon
- *  floor; its placed width is continuous between them. */
+ *  Attach uses the same width in both named slots, then its icon floor;
+ *  its placed width is continuous between the label and icon. */
 struct AgentChipForms {
   float width[AGENT_CHIP_FORM_MAX] = {};
   int count = 0;
@@ -111,7 +111,7 @@ inline void agent_chip_forms(const AgentChipRowInputs &in,
     chip = {};
   }
   r_chips[AGENT_CHIP_SLOT_UPLOAD] = {
-      {width("Upload Reference", m.icon), width("Reference", m.icon), icon_only}, 3};
+      {width("Attach", m.icon), width("Attach", m.icon), icon_only}, 3};
   if (in.scribble_available) {
     const char *annotation = in.scribble_armed ? "Done" : "Sketch";
     r_chips[AGENT_CHIP_SLOT_SCRIBBLE] = {{width(annotation, m.icon), icon_only}, 2};

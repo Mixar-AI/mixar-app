@@ -29,19 +29,19 @@ from ...core.attachment_board_sync import (
     find_attachment_for_file,
     mirror_attachment_to_moodboard,
 )
-from ...core.model_attachment import import_model_attachment, is_model_file
+from ...core.model_attachment import MODEL_EXTENSIONS, import_model_attachment, is_model_file
 from ...core.ui_utils import redraw_chat_areas, sync_bubble_attachment_size_deferred
 
 
 class MIXIE_CHAT_OT_add_image_from_file(Operator, ImportHelper):
-    """Add image attachment(s) from file — supports multi-select up to the per-message cap"""
+    """Add images or 3D models from files, up to the per-message limit"""
     bl_idname = "mixie_chat.add_image_from_file"
-    bl_label = "Add Image"
+    bl_label = "Add Images or 3D Models"
     bl_options = {'REGISTER'}
 
     # ImportHelper settings
     filter_glob: StringProperty(
-        default=";".join(f"*{ext}" for ext in sorted(SUPPORTED_IMAGE_FORMATS | {'.obj'})),
+        default=";".join(f"*{ext}" for ext in sorted(SUPPORTED_IMAGE_FORMATS | MODEL_EXTENSIONS)),
         options={'HIDDEN'}
     )
 

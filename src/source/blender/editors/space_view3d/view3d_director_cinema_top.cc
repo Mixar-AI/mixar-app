@@ -34,6 +34,7 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
+#include "UI_mixar_chrome.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
@@ -61,8 +62,8 @@ constexpr float STRIP_Y = 159.0f;
 
 /**
  * Mixar banner chip: the brand gradient pill with the round logo chip, the
- * "mixar" wordmark, the mode name and the version. INERT — no button, no QA
- * record, no tooltip; it only names what the surface is.
+ * "mixar" wordmark, the mode name and the small "BETA" stage-tag label. INERT —
+ * no button, no QA record, no tooltip; it only names what the surface is.
  */
 void brand_chip(const rctf &pill)
 {
@@ -87,17 +88,31 @@ void brand_chip(const rctf &pill)
   cinema_text_left("mixar", wordmark_x, cy, CINEMA_FONT_VALUE * u, value_col);
   const float mode_x = wordmark_x + cinema_text_width("mixar", CINEMA_FONT_VALUE * u) +
                        CINEMA_BRAND_GAP * u;
-  /* The version is right-aligned, so the mode name is measured against where
-   * it starts: at the smallest fit the two used to meet in the middle. */
-  const float version_w = cinema_text_width("V1", CINEMA_FONT_LABEL * u);
-  const float version_x = pill.xmax - CINEMA_BRAND_VERSION_PAD * u - version_w;
-  cinema_text_left_fitted(IFACE_("Cinema Mode"),
-                          mode_x,
-                          cy,
-                          CINEMA_FONT_VALUE * u,
-                          version_x - CINEMA_BRAND_GAP * u - mode_x,
-                          label_col);
-  cinema_text_left("V1", version_x, cy, CINEMA_FONT_LABEL * u, label_col);
+  /* The stage tag follows the mode name as a small rounded label, the same
+   * recipe the topbar button draws (`mixar_chrome::cinema_tag_*`). The name is
+   * fitted against the room the tag leaves, so at the smallest fit the two
+   * never meet. */
+  namespace chrome = ui::mixar_chrome;
+  const char *stage_tag = chrome::cinema_stage_tag;
+  const float tag_font = CINEMA_FONT_VALUE * chrome::cinema_tag_text_scale * u;
+  const float tag_w = cinema_text_width(stage_tag, tag_font) + 2.0f * chrome::cinema_tag_pad_x * u;
+  const float tag_gap = chrome::cinema_tag_gap * u;
+  const float name_room = pill.xmax - CINEMA_BRAND_TAG_PAD * u - tag_w - tag_gap - mode_x;
+  const char *mode_name = IFACE_("Cinema Mode");
+  const float name_w = std::min(cinema_text_width(mode_name, CINEMA_FONT_VALUE * u), name_room);
+  cinema_text_left_fitted(mode_name, mode_x, cy, CINEMA_FONT_VALUE * u, name_room, label_col);
+
+  const float tag_h = chrome::cinema_tag_height * u;
+  const float tag_x = std::round(mode_x + name_w + tag_gap);
+  const rctf tag = {tag_x, tag_x + std::round(tag_w), cy - tag_h * 0.5f, cy + tag_h * 0.5f};
+  const float tag_radius = chrome::cinema_tag_radius * u;
+  const float tag_fill[4] = {
+      value_col[0], value_col[1], value_col[2], value_col[3] * chrome::cinema_tag_fill_alpha};
+  const float tag_border[4] = {
+      value_col[0], value_col[1], value_col[2], value_col[3] * chrome::cinema_tag_border_alpha};
+  cinema_fill(tag, tag_radius, tag_fill);
+  cinema_outline(tag, tag_radius, tag_border, u);
+  cinema_text_center(stage_tag, BLI_rctf_cent_x(&tag), cy, tag_font, value_col);
 
   /* The mark last: the icon pass leaves its own blend state behind, which
    * the primitives above would otherwise inherit. Same call as the Agent

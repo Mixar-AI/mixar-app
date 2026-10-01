@@ -92,7 +92,7 @@ def assert_chip_geometry(qa):
     ops = {'MIXAR_OT_scribble_toggle', 'MIXIE_CHAT_OT_voice_toggle',
            'MIXIE_CHAT_OT_toggle_auto_mode', 'MIXIE_CHAT_OT_send_message',
            'MIXAR_OT_scribble_mark_clear', 'WM_OT_context_menu_enum',
-           'MIXIE_CHAT_OT_add_image_from_file'}
+           'MIXIE_CHAT_OT_attach'}
     rects = [w['rect'] for w in controls if w.get('op') in ops]
     for i, a in enumerate(rects):
         for b in rects[i+1:]:

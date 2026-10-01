@@ -27,10 +27,11 @@ if str(_SRC_ROOT) not in sys.path:
 
 
 class FakeSession:
-    def __init__(self, state="idle", run_open=False, connected=True):
+    def __init__(self, state="idle", run_open=False, connected=True, active_session=False):
         self.state = SimpleNamespace(value=state)
         self._run_open = run_open
         self._connected = connected
+        self._active_session = active_session
         self.calls = []
 
     def get_state(self, scene):
@@ -38,6 +39,9 @@ class FakeSession:
 
     def run_open(self, scene):
         return self._run_open
+
+    def has_active_session(self):
+        return self._active_session
 
     def is_connected(self, scene):
         return self._connected

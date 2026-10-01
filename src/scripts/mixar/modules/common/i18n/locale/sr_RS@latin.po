@@ -100,8 +100,9 @@ msgstr "O programu"
 msgid "Join Discord"
 msgstr "Pridruži se Discord-u"
 
+# derived
 msgid "Quick Setup"
-msgstr ""
+msgstr "Brzo podešavanje"
 
 msgid "Import Preferences From Previous Version"
 msgstr ""
@@ -116,23 +117,27 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
+# derived
 msgid "Theme"
-msgstr ""
+msgstr "Tema"
 
+# derived
 msgid "Keymap"
-msgstr ""
+msgstr "Raspored tastera"
 
+# derived
 msgid "Mouse Select"
-msgstr ""
+msgstr "Izbor mišem"
 
+# derived
 msgid "Spacebar Action"
-msgstr ""
+msgstr "Radnja razmaknice"
 
 msgid "Save New Preferences"
 msgstr ""
 
 msgid "Continue"
-msgstr ""
+msgstr "Nastavi"
 
 msgid "ThemeSpaceMixie"
 msgstr ""
@@ -3912,6 +3917,72 @@ msgstr "Rezervni glTF binarni format"
 # derived
 msgid "Last Export"
 msgstr "Poslednji izvoz"
+
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
 
 # derived
 msgid "Mixar Shot Camera"
@@ -13520,6 +13591,9 @@ msgstr ""
 msgid "The tour could not start (see log)"
 msgstr ""
 
+msgid "Language for the interface and guided tour"
+msgstr ""
+
 msgid "Mixar Tour State"
 msgstr ""
 
@@ -13530,9 +13604,6 @@ msgid "Mixar Tour QA Targets"
 msgstr ""
 
 msgid "JSON list of the tour's clickable control rects"
-msgstr ""
-
-msgid "Language the guided tour is narrated in"
 msgstr ""
 
 # derived
@@ -25238,9 +25309,8 @@ msgstr "Nije bilo moguće dodati resurs u scenu."
 msgid "Thinking..."
 msgstr "Razmišljanje..."
 
-# derived
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "nepodržan format modela ({format}; podržano: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 # derived
 msgid "unknown"
@@ -26521,9 +26591,11 @@ msgstr "Arhivirana sesija za brisanje"
 msgid "Chat removed from history"
 msgstr "Ćaskanje je uklonjeno iz istorijata"
 
-# derived
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Dodaj priloge slike iz datoteke — podržava višestruki izbor do granice po poruci"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 # derived
 msgid "Attachment limit ({count}) reached"
@@ -31165,6 +31237,9 @@ msgstr "Pokreće ili zaustavlja diktiranje u nacrt skice"
 msgid "Stop the running turn"
 msgstr "Zaustavi tekući potez"
 
+msgid "Folder context"
+msgstr ""
+
 # derived
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Prikažite skicu većom. Dodajte uputstva u ćaskanje, zatim Pošalji"
@@ -31176,6 +31251,9 @@ msgstr "Ukloni referencu"
 # derived
 msgid "Discard this sketch and its queued drawing"
 msgstr "Odbacuje ovu skicu i njen crtež u redu"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 # derived
 msgid "Remove {}"
@@ -31232,10 +31310,6 @@ msgstr "Stizanje"
 # derived
 msgid "NEW"
 msgstr "NOVO"
-
-# derived
-msgid "Upload Reference"
-msgstr "Otpremi referencu"
 
 # derived
 msgid "Ask Mixie anything..."
@@ -31524,6 +31598,10 @@ msgid "AI model"
 msgstr ""
 
 # derived
+msgid "Upload Reference"
+msgstr "Otpremi referencu"
+
+# derived
 msgid "Pick an input image for 3D generation"
 msgstr "Izaberite ulaznu sliku za 3D generisanje"
 
@@ -31641,9 +31719,8 @@ msgstr "Pravila — uredite pravila projekta i globalna pravila za agenta"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-# derived
-msgid "Attach a reference image"
-msgstr "Priloži referencnu sliku"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 # derived
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
@@ -34346,6 +34423,9 @@ msgstr "Iskačuća radnja"
 # derived
 msgid "Non-interactive explanation"
 msgstr "Neinteraktivno objašnjenje"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 # derived
 msgid "Oversized full-contrast heading"

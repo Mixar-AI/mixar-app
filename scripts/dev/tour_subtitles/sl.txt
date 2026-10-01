@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Živjo, sem Naman iz Mixarja.
+V nekaj minutah vam bom pokazal aplikacijo.
+To je vaš 3D-pogled.
+Prostor 3D, po katerem se lahko premikate.
+Vlecite s srednjim gumbom za vrtenje, s koleščkom povečujte.
+Shift in srednji gumb premikata pogled.
+Poskusite sami.
+Kliknite za izbor, G za premik,
+R za vrtenje, S za spreminjanje merila.
+Tu je nekaj uporabnih bližnjic.
+Vidite otoček spodaj? To je Mixie, vaš agent.
+Kliknite, da ga odprete.
+Mixie ima zavihke.
+V Agent z običajnimi besedami povejte, kaj želite. Agent bo delal na prizoru.
+Agent uporablja modele, kot so Tripo, Meshy in Nano Banana.
+Za več nadzora odprite druge zavihke:
+3D, Image, Video ali World Model.
+Izberite model in prilagodite nastavitve.
+Vse, kar ustvarite, pristane v knjižnici.
+Vaše stvaritve so tukaj.
+Povežite svojo knjižnico, da agent uporablja vaše vire,
+in prihranite kredite.
+Zgoraj levo je predal s prizori.
+Vsak prizor ima svoj zavihek in agenta Mixie.
+Izvajajte naloge vzporedno in kadar koli preklapljajte med njimi.
+Ko je prizor pripravljen, preklopite v Cinema Mode,
+da upravljate kamero in ustvarjate video poteke.
+Ideje se začnejo v 2D.
+Povlecite moodboard z desne ali pritisnite tildo.
+To je platno za reference in koncepte.
+Sem spustite slike, videe ali skice.
+Gradite grafe vozlišč za generativne modele, kot v ComfyUI.
+Ste v Zen Mode, najpreprostejšem pogledu.
+Poznate Blender? Preklopite v Engine Mode.
+Na voljo je celoten delovni prostor Blenderja z vsemi ploščami in bližnjicami.
+Mixie deluje v obeh. Izberite, kar vam ustreza.
+Vrnimo se v Zen Mode.
+Naš program ustvarjalnih partnerjev vam ponuja kredite
+in skupnost, ki oblikuje prihodnost umetne inteligence in 3D.
+To je vse. Zdaj veste, kje je kaj.
+Ustvarjajmo 3D skupaj.

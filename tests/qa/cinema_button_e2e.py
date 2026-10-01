@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Header-row heights, Cinema inline italic V2, film strip, width and enter/finish clicks in both hosts; no paid requests.
+"""Header-row heights, Cinema BETA tag label, film strip, width and enter/finish clicks in both hosts; no paid requests.
 
 Run with QA_HARNESS, MIXAR_QA_PORT and QA_SCENARIO_OUT against an isolated
 Dev app. Inspect the emitted PNGs as well as the state/pixel verdict.
@@ -96,18 +96,20 @@ result = [region.y, region.y + region.height]
         film = [(x, y) for x, y in points if x < left+16*scale]
         assert len(film) > 20*scale*scale, ('missing film strip', path)
         assert max(y for _, y in film)-min(y for _, y in film) > 9*scale, path
-        # The final text island is the full-size italic V2, after a space.
+        # The final island is the small BETA label (capsule + caps), after a gap.
         occupied = sorted({x for x, _ in points})
         gaps = [(a, b) for a, b in zip(occupied, occupied[1:]) if b-a > 2*scale]
-        assert gaps, ('missing version separation', path)
-        version_start = gaps[-1][1]
-        badge = [(x,y) for x,y in points if x >= version_start]
-        main = [(x,y) for x,y in points if left+20*scale < x < version_start-3*scale]
-        assert badge and main, ('missing V2 or label', path)
-        badge_height = max(y for _,y in badge)-min(y for _,y in badge)+1
-        main_height = max(y for _,y in main)-min(y for _,y in main)+1
-        assert abs(badge_height - main_height) <= 2*scale, ('version size differs', path)
-        assert abs(max(y for _,y in badge)-max(y for _,y in main)) <= scale, ('version baseline differs', path)
+        assert gaps, ('missing stage tag separation', path)
+        tag_start = gaps[-1][1]
+        badge = [(x,y) for x,y in points if x >= tag_start]
+        main = [(x,y) for x,y in points if left+20*scale < x < tag_start-3*scale]
+        assert badge and main, ('missing BETA tag or label', path)
+        badge_width = max(x for x,_ in badge)-min(x for x,_ in badge)+1
+        main_width = max(x for x,_ in main)-min(x for x,_ in main)+1
+        assert badge_width < main_width*.5, ('stage tag is not a small label', path)
+        badge_mid = (max(y for _,y in badge)+min(y for _,y in badge))/2
+        main_mid = (max(y for _,y in main)+min(y for _,y in main))/2
+        assert abs(badge_mid-main_mid) <= 1.5*scale, ('stage tag off the label band', path)
     return {'logical_width': width, 'logical_height': height,
             'row_heights': row_heights, 'scale': scale, 'path': str(path)}
 

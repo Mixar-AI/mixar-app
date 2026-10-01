@@ -122,6 +122,9 @@ def test_listing_skips_records_whose_file_is_gone(tc):
 def test_can_restore_requires_an_idle_session_with_no_open_run(tc):
     scene = _scene()
     assert tc.m.can_restore(scene) == (True, "")
+    tc.session._active_session = True
+    assert tc.m.can_restore(scene) == (False, "Another tab's agent is still running")
+    tc.session._active_session = False
     tc.session._run_open = True
     assert tc.m.can_restore(scene)[0] is False
     tc.session._run_open = False

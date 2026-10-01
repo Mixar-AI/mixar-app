@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Ahoj, jsem Naman z Mixaru.
+Za pár minut vám ukážu aplikaci.
+Toto je váš 3D pohled.
+Prostor 3D, ve kterém se můžete pohybovat.
+Tažením prostředním tlačítkem otáčejte, kolečkem přibližujte.
+Shift a prostřední tlačítko posouvají pohled.
+Zkuste si to.
+Kliknutím vyberte, G pro přesun,
+R pro otočení, S pro změnu měřítka.
+Tady je pár užitečných zkratek.
+Vidíte ostrůvek dole? To je Mixie, váš agent.
+Kliknutím jej otevřete.
+Mixie má záložky.
+V Agent popište běžnými slovy, co chcete. Agent upraví vaši scénu.
+Agent používá modely jako Tripo, Meshy a Nano Banana.
+Pro větší kontrolu otevřete další záložky:
+3D, Image, Video nebo World Model.
+Vyberte model a upravte jeho nastavení.
+Vše, co vygenerujete, se uloží do knihovny.
+Tady jsou vaše výtvory.
+Připojte vlastní knihovnu, aby agent používal vaše podklady,
+a šetřil kredity.
+Vlevo nahoře je panel scén.
+Každá scéna má vlastní záložku a agenta Mixie.
+Spouštějte úlohy souběžně a kdykoli mezi nimi přepínejte.
+Až bude scéna hotová, přepněte do Cinema Mode,
+kde můžete řídit kameru a tvořit postupy pro video.
+Nápady začínají ve 2D.
+Vytáhněte moodboard zprava nebo stiskněte vlnovku.
+Je to plátno pro reference a koncepty.
+Přetáhněte sem obrázky, videa nebo náčrty.
+Tvořte uzlové grafy generativních modelů jako v ComfyUI.
+Jste v Zen Mode, nejjednodušším zobrazení.
+Znáte Blender? Přepněte do Engine Mode.
+Je tu celé prostředí Blenderu, všechny panely i zkratky.
+Mixie funguje v obou. Vyberte si, co vám vyhovuje.
+Vraťme se do Zen Mode.
+Náš program pro tvůrčí partnery nabízí kredity
+a komunitu, která utváří budoucnost AI a 3D.
+To je vše. Už víte, kde co najít.
+Pojďme společně tvořit ve 3D.

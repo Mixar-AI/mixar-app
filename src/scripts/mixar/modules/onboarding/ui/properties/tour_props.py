@@ -13,11 +13,8 @@ Two JSON strings the running tour publishes for the QA harness:
 * ``mixar_tour_qa_targets`` — the video card's control rects (pause, skip,
   exit, the gate anchor) so ``qa_client`` can click them by name.
 
-Plus the tour language dropdown the first-time splash shows
-(``mixar_tour_language``): an EnumProperty whose getter/setter go straight
-to ``core/tour/language`` so the value is the persisted per-user choice,
-never a copy that could drift from it. Setting it persists the choice and
-notifies the language listeners (the pack fetch starts from there).
+The splash language enum is registered synchronously by language_props;
+this deferred module owns the tour state and background pack prefetch.
 
 WindowManager, ``SKIP_SAVE``: per-session UI state, never serialized into
 a ``.blend``. The hand-written ``register()`` is required for WM props
@@ -32,7 +29,6 @@ from bpy.app.handlers import persistent
 from mixar.config.logging_config import get_logger
 from mixar.modules.onboarding.core.tour import language
 from mixar.modules.onboarding.core.tour.config import (
-    WM_PROP_TOUR_LANGUAGE,
     WM_PROP_TOUR_QA_TARGETS,
     WM_PROP_TOUR_STATE,
 )
@@ -55,21 +51,6 @@ def _on_load_pre(*_args):
         _logger.debug("tour: load_pre stop failed: %s", exc)
 
 
-def _language_get(_self) -> int:
-    try:
-        return language.CODES.index(language.stored())
-    except ValueError:
-        return 0
-
-
-def _language_set(_self, index: int) -> None:
-    try:
-        code = language.CODES[int(index)]
-    except (IndexError, ValueError, TypeError):
-        code = language.DEFAULT_CODE
-    language.set_stored(code)
-
-
 def _prefetch(code: str) -> None:
     """Start the language pack download; runs on the main thread (the
     property setter / a startup timer) and returns at once."""
@@ -84,7 +65,7 @@ def _prefetch_stored_later():
     """Startup: fetch (or resume) the stored language's pack a few seconds
     in, so a download interrupted last session completes without the user
     touching the dropdown again."""
-    _prefetch(language.stored())
+    _prefetch(language.current())
     return None
 
 
@@ -116,18 +97,6 @@ def register():
             options={"SKIP_SAVE"},
         ),
     )
-    setattr(
-        bpy.types.WindowManager,
-        WM_PROP_TOUR_LANGUAGE,
-        bpy.props.EnumProperty(
-            name="Language",
-            description="Language the guided tour is narrated in",
-            items=language.enum_items(),
-            get=_language_get,
-            set=_language_set,
-            options={"SKIP_SAVE"},
-        ),
-    )
 
 
 def unregister():
@@ -146,7 +115,7 @@ def unregister():
         pass
     if _on_load_pre in bpy.app.handlers.load_pre:
         bpy.app.handlers.load_pre.remove(_on_load_pre)
-    for attr in (WM_PROP_TOUR_STATE, WM_PROP_TOUR_QA_TARGETS, WM_PROP_TOUR_LANGUAGE):
+    for attr in (WM_PROP_TOUR_STATE, WM_PROP_TOUR_QA_TARGETS):
         if hasattr(bpy.types.WindowManager, attr):
             delattr(bpy.types.WindowManager, attr)
 

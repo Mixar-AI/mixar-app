@@ -28,7 +28,7 @@ from typing import Dict, Optional
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.remote_assets.core import download as dl
 
-from . import config, packs
+from . import config, language, packs
 
 logger = get_logger(__name__)
 
@@ -42,6 +42,7 @@ def manifest_url() -> str:
 
 
 def state(code: str) -> dict:
+    code = language.narration_code(code)
     with _lock:
         return dict(_states.get(code) or {"status": "absent"})
 
@@ -131,8 +132,9 @@ class _Worker(threading.Thread):
 
 def prefetch(code: str) -> bool:
     """Start fetching ``code``'s pack; cancels workers for other languages.
-    Returns False when nothing was started (English, already installed, a
-    worker already running, or no cache dir)."""
+    Returns False when nothing was started (English or subtitles-only,
+    already installed, a worker already running, or no cache dir)."""
+    code = language.narration_code(code)
     if not code or code == "en":
         _cancel_others(None)
         return False

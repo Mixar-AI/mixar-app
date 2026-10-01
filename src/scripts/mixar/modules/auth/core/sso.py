@@ -30,7 +30,7 @@ import threading
 import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import requests
 
@@ -43,6 +43,7 @@ from ..utils.constants import (
     SSO_CALLBACK_PORT,
     SSO_CALLBACK_READ_TIMEOUT_S,
     SSO_LOGIN_TIMEOUT_S,
+    SSO_SOURCE_DESKTOP,
 )
 from .auth import store_login_token_pair
 from .device import get_device_id
@@ -150,6 +151,23 @@ def _pkce_pair():
     return verifier, challenge
 
 
+def desktop_login_url(port, challenge, state):
+    """The website's desktop-login URL for this login attempt.
+
+    The frontend echoes ``state`` back unchanged in the loopback redirect and
+    carries the whole URL through its signup flow when ``source`` marks it as
+    app-initiated, so a new user lands back here instead of on /downloads.
+    """
+    query = urlencode({
+        'port': port,
+        'code_challenge': challenge,
+        'code_challenge_method': 'S256',
+        'state': state,
+        'source': SSO_SOURCE_DESKTOP,
+    })
+    return f"{get_frontend_url()}/app/desktop-login?{query}"
+
+
 def _exchange_code(code, verifier):
     """POST the code to the backend. Returns (token_data, error_result)."""
     url = f"{get_server_url()}/api/v1/auth/desktop/token"
@@ -240,12 +258,7 @@ def sso_login(timeout=None):
     actual_port = server.server_address[1]
     logger.info("SSO callback server listening on 127.0.0.1:%s", actual_port)
 
-    # The frontend echoes `state` back unchanged in the loopback redirect.
-    sso_url = (
-        f"{get_frontend_url()}/app/desktop-login"
-        f"?port={actual_port}&code_challenge={challenge}"
-        f"&code_challenge_method=S256&state={expected_state}"
-    )
+    sso_url = desktop_login_url(actual_port, challenge, expected_state)
     try:
         webbrowser.open(sso_url)
         logger.info("Opened browser for SSO: %s", sso_url)

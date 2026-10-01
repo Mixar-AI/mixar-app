@@ -163,7 +163,7 @@ def animation_kwargs(fmt: str, requested) -> tuple[dict, str, str]:
     family = "gltf" if fmt in ("glb", "gltf") else fmt
     if family in ("usd", "usdc", "usda", "usdz"):
         family = "usd"
-    if family == "obj":
+    if family in ("obj", "stl"):  # static geometry: no animation to select
         return {}, "none", ""
     if requested is None:
         mode = "all"

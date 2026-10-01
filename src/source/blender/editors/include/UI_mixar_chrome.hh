@@ -37,6 +37,22 @@ inline constexpr unsigned char slider_thumb[4] = {0x39, 0x39, 0x39, 255};
 inline constexpr unsigned char slider_thumb_hover[4] = {0x46, 0x46, 0x46, 255};
 inline constexpr unsigned char slider_label[4] = {255, 255, 255, 255};
 
+/** Release-stage tag every Cinema Mode surface shows beside its name: the
+ * Zen/Engine button and the Cinema surface's banner chip. One string and one
+ * label recipe so the two can never disagree again. */
+inline constexpr const char *cinema_stage_tag = "BETA";
+/** The tag is drawn as a small rounded label: upright caps at this fraction of
+ * the mode name's size, a faint fill and a hairline in the text colour.
+ * Geometry in px @1x (multiplied by the host's unit). */
+inline constexpr float cinema_tag_text_scale = 0.68f;
+inline constexpr float cinema_tag_height = 15.0f;
+inline constexpr float cinema_tag_pad_x = 5.0f;
+inline constexpr float cinema_tag_radius = 4.0f;
+/** Mode name -> tag. */
+inline constexpr float cinema_tag_gap = 6.0f;
+inline constexpr float cinema_tag_fill_alpha = 0.14f;
+inline constexpr float cinema_tag_border_alpha = 0.55f;
+
 inline constexpr unsigned char cinema_pill_fill[4] = {0x0E, 0x0E, 0x0E, 255};
 inline constexpr unsigned char cinema_pill_border[4] = {0x3F, 0x3F, 0x3F, 255};
 inline constexpr unsigned char cinema_pill_fill_on_a[4] = {0x20, 0x58, 0x36, 255};

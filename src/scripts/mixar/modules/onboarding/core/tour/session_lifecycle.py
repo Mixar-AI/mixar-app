@@ -12,7 +12,9 @@ clock or texture outlives a failed start. ``stop`` is idempotent and
 never raises; it distinguishes deliberate endings (``completed``,
 ``exited`` → mark seen, run the completion cleanup that leaves the
 moodboard open) from interruptions (``cancelled``, ``host-closed``,
-``error``, ``file-loaded`` → restore the pre-tour state).
+``error``, ``file-loaded`` → restore the pre-tour state). The seen flag is
+also written as soon as the first beat is over, so a user who quits midway
+is not shown the tour again on the next launch.
 """
 
 import time
@@ -57,11 +59,11 @@ DELIBERATE_ENDINGS = ("completed", "exited")
 def _subtitles_for(language: str, narration: str):
     """Subtitles are for a user whose language is not the one narrating
     (English playing while their pack is missing); ``MIXAR_TOUR_SUBTITLES=
-    always`` forces them so QA can screenshot the band. English has none."""
+    always`` forces them so QA can screenshot the band, including English."""
     import os
-    from . import srt
+    from . import srt, language as language_mod
     forced = os.environ.get(config.ENV_SUBTITLES, "").lower() == "always"
-    if language == narration and not forced:
+    if language_mod.narration_code(language) == narration and not forced:
         return None
     subs = srt.load(language)
     if subs is None:
@@ -94,7 +96,8 @@ class SessionLifecycleMixin:
         self._host_region_ptr = anchors.normalize_ptr(region.as_pointer())
         self._refresh_host(window, region)
         plan = media_mod.resolve(self.tour, self.language)
-        if plan.narration != self.language and self._pack_may_arrive(self.language):
+        if (plan.narration != language_mod.narration_code(self.language)
+                and self._pack_may_arrive(self.language)):
             self._loading = True
             self._loading_deadline = time.monotonic() + config.PACK_WAIT_S
             self._loading_label = config.LOADING_TEXT.format(
@@ -120,6 +123,9 @@ class SessionLifecycleMixin:
     @staticmethod
     def _pack_may_arrive(code: str) -> bool:
         """A download for ``code`` is running (or just started): worth a wait."""
+        from . import language as language_mod
+        if language_mod.narration_code(code) in (None, "en"):
+            return False
         try:
             from . import pack_fetch
             pack_fetch.prefetch(code)
@@ -133,7 +139,8 @@ class SessionLifecycleMixin:
         or in English (with subtitles) at the deadline or on a failed fetch."""
         from . import media as media_mod
         plan = media_mod.resolve(self.tour, self.language)
-        if plan.narration == self.language:
+        from . import language as language_mod
+        if plan.narration == language_mod.narration_code(self.language):
             self._loading = False
             self._finish_loading(plan)
             return
@@ -272,6 +279,18 @@ class SessionLifecycleMixin:
             actions.run(name, args)
         except Exception as exc:  # noqa: BLE001
             logger.debug("Tour: action %s failed: %s", name, exc)
+
+    def _mark_seen_past_first_beat(self) -> None:
+        """Write the seen flag once the runner has left the first beat:
+        finishing the first step counts as seeing the tour, so quitting
+        midway (or closing the app) never brings it back next launch."""
+        if getattr(self, "_seen_written", False):
+            return
+        runner = getattr(self, "runner", None)
+        if runner is None or runner.index < 1:
+            return
+        self._seen_written = True
+        self._mark_seen()
 
     def _mark_seen(self) -> None:
         try:

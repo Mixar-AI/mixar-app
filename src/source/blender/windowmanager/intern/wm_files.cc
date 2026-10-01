@@ -47,6 +47,7 @@ extern "C" void Mixar_FloatingDocksRestoreAfterModal();
 #include "BLI_math_base.h"
 #include "BLI_math_time.h"
 #include "BLI_memory_cache.hh"
+#include "BLI_set.hh"
 #include "BLI_string.h"
 #include "BLI_string_utf8.h"
 #include "BLI_system.h"
@@ -282,17 +283,24 @@ bool wm_file_or_session_data_has_unsaved_changes(const Main *bmain, const wmWind
  * Best case is all screens match, in that case they get assigned to proper window.
  */
 
+struct wmFileReadWMSetupData : BlendFileReadWMSetupData {
+  /* Window allocations survive the Main replacement, but their old workspaces and screens do
+   * not. Capture the classification before teardown; never inspect old screens during matching.
+   * Keep this in the per-read setup data so it also survives the WM ID contents being swapped. */
+  Set<const wmWindow *> old_agent_bubble_windows;
+};
+
 /**
  * Clear several WM/UI runtime data that would make later complex WM handling impossible.
  *
  * Return data should be cleared by #wm_file_read_setup_wm_finalize. */
-static BlendFileReadWMSetupData *wm_file_read_setup_wm_init(bContext *C,
-                                                            Main *bmain,
-                                                            const bool is_read_homefile)
+static wmFileReadWMSetupData *wm_file_read_setup_wm_init(bContext *C,
+                                                       Main *bmain,
+                                                       const bool is_read_homefile)
 {
   BLI_assert(BLI_listbase_count_at_most(&bmain->wm, 2) <= 1);
   wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
-  BlendFileReadWMSetupData *wm_setup_data = MEM_new_zeroed<BlendFileReadWMSetupData>(__func__);
+  wmFileReadWMSetupData *wm_setup_data = MEM_new<wmFileReadWMSetupData>(__func__);
   wm_setup_data->is_read_homefile = is_read_homefile;
   /* This info is not always known yet when this function is called. */
   wm_setup_data->is_factory_startup = false;
@@ -305,6 +313,12 @@ static BlendFileReadWMSetupData *wm_file_read_setup_wm_init(bContext *C,
    *
    * Code copied from `wm_init_exit.cc`. */
   WM_jobs_kill_all(wm);
+
+  for (const wmWindow &win : wm->windows) {
+    if (wm_window_contains_agent_bubble_space(&win)) {
+      wm_setup_data->old_agent_bubble_windows.add(&win);
+    }
+  }
 
   wmWindow *active_win = CTX_wm_window(C);
   for (wmWindow &win : wm->windows) {
@@ -447,9 +461,9 @@ static void wm_file_read_setup_wm_keep_old(const bContext *C,
 }
 
 static void wm_file_read_setup_wm_use_new(bContext *C,
-                                          Main * /*bmain*/,
-                                          BlendFileReadWMSetupData *wm_setup_data,
-                                          wmWindowManager *wm)
+                                        Main * /*bmain*/,
+                                        wmFileReadWMSetupData *wm_setup_data,
+                                        wmWindowManager *wm)
 {
   wmWindowManager *old_wm = wm_setup_data->old_wm;
 
@@ -492,7 +506,7 @@ static void wm_file_read_setup_wm_use_new(bContext *C,
        * Unmatched old windows are freed together with their GHOST windows
        * by wm_close_and_free() below, which also resets the bubble's
        * cached native pointers via #ED_agent_bubble_window_freed. */
-      if (wm_window_contains_agent_bubble_space(&old_win)) {
+      if (wm_setup_data->old_agent_bubble_windows.contains(&old_win)) {
         continue;
       }
       if (old_win.winid == win.winid) {
@@ -517,7 +531,7 @@ static void wm_file_read_setup_wm_use_new(bContext *C,
     wmWindow *win_old = static_cast<wmWindow *>(old_wm->windows.first);
     for (wmWindow &win_iter : old_wm->windows) {
       wmWindow *win = &win_iter;
-      if (!wm_window_contains_agent_bubble_space(win)) {
+      if (!wm_setup_data->old_agent_bubble_windows.contains(win)) {
         win_old = win;
         break;
       }
@@ -617,8 +631,8 @@ static void wm_file_read_strip_agent_bubble_windows(bContext *C, wmWindowManager
  * Counterpart of #wm_file_read_setup_wm_init.
  */
 static void wm_file_read_setup_wm_finalize(bContext *C,
-                                           Main *bmain,
-                                           BlendFileReadWMSetupData *wm_setup_data)
+                                         Main *bmain,
+                                         wmFileReadWMSetupData *wm_setup_data)
 {
   BLI_assert(BLI_listbase_count_at_most(&bmain->wm, 2) <= 1);
   BLI_assert(wm_setup_data != nullptr);
@@ -1254,7 +1268,7 @@ bool WM_file_read(bContext *C,
 
       /* Put WM into a stable state for post-readfile processes (kill jobs, removes event handlers,
        * message bus, and so on). */
-      BlendFileReadWMSetupData *wm_setup_data = wm_file_read_setup_wm_init(C, bmain, false);
+      wmFileReadWMSetupData *wm_setup_data = wm_file_read_setup_wm_init(C, bmain, false);
 
       /* This flag is initialized by the operator but overwritten on read.
        * need to re-enable it here else drivers and registered scripts won't work. */
@@ -1492,7 +1506,7 @@ void wm_homefile_read_ex(bContext *C,
    * so we know this will work if all else fails. */
   wm_file_read_pre(use_data, use_userdef);
 
-  BlendFileReadWMSetupData *wm_setup_data = nullptr;
+  wmFileReadWMSetupData *wm_setup_data = nullptr;
   if (use_data) {
     /* Put WM into a stable state for post-readfile processes (kill jobs, removes event handlers,
      * message bus, and so on). */

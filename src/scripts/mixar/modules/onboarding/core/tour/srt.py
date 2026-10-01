@@ -18,12 +18,13 @@ No ``bpy``: pure parsing plus ``cue_at``, so the fake-clock tests cover it.
 
 import os
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import List, Optional
 
 from mixar.config.logging_config import get_logger
 
-from . import config
+from . import config, language
 
 logger = get_logger(__name__)
 
@@ -90,7 +91,7 @@ def subtitles_dir() -> str:
 
 
 def path_for(code: str) -> str:
-    return os.path.join(subtitles_dir(), f"{code}.srt")
+    return os.path.join(subtitles_dir(), f"{language.subtitle_code(code)}.srt")
 
 
 def load(code: str) -> Optional[Subtitles]:
@@ -116,6 +117,21 @@ def wrap(text: str, max_width: float, measure) -> List[str]:
     per character when a single "word" overflows."""
     out: List[str] = []
     for para in text.split("\n"):
+        # RTL assets, like Blender's PO catalogs, are shaped and reordered
+        # to visual order at build time. Wrap from the right edge so a long
+        # cue's final words do not appear on its first line.
+        if any(unicodedata.bidirectional(ch) in {"R", "AL"} for ch in para):
+            line = ""
+            for word in reversed(para.split(" ")):
+                candidate = f"{word} {line}" if line else word
+                if line and measure(candidate) > max_width:
+                    out.append(line)
+                    line = word
+                else:
+                    line = candidate
+            if line:
+                out.append(line)
+            continue
         words = para.split(" ")
         line = ""
         for word in words:

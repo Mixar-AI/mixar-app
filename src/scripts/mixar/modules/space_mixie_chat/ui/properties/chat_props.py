@@ -953,14 +953,8 @@ def register():
         default='SONNET',
     )
 
-    # Login/Account properties
-    bpy.types.Scene.mixie_chat_user_id = StringProperty(
-        name="User ID",
-        description="User ID for Mixie Chat login",
-        default="",
-        maxlen=256,
-        options={'SKIP_SAVE'},  # Prevent leaking email in .blend files
-    )
+    from ...core.account_identity import register as register_account_identity
+    register_account_identity()
 
     # Security: password and login state on WindowManager (session-only, never saved to .blend)
     bpy.types.WindowManager.mixie_chat_password = StringProperty(
@@ -1059,6 +1053,8 @@ def register():
 
 
 def unregister():
+    from ...core.account_identity import unregister as unregister_account_identity
+    unregister_account_identity()
     # Remove file load handler
     from ...core.file_handlers import unregister as unregister_file_handlers
     unregister_file_handlers()

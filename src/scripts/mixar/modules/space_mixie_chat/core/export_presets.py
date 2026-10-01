@@ -40,6 +40,13 @@ COMMON = {
         "export_normals": True, "export_armatures": True,
         "export_cameras": False, "export_lights": False, "relative_paths": True,
     },
+    # Geometry only. Z-up / Y-forward is what slicers expect; the scene unit
+    # is ignored so ``global_scale`` (``stl_kwargs``) is the only multiplier.
+    "stl": {
+        "export_selected_objects": True, "apply_modifiers": True, "use_batch": False,
+        "use_scene_unit": False, "forward_axis": "Y", "up_axis": "Z",
+        "global_scale": 1.0, "ascii_format": False,
+    },
 }
 
 _USD_YUP = {
@@ -79,7 +86,8 @@ PRESETS = {
 }
 
 _FAMILY = {"fbx": "fbx", "glb": "gltf", "gltf": "gltf", "obj": "obj",
-           "usd": "usd", "usdc": "usd", "usda": "usd", "usdz": "usd"}
+           "usd": "usd", "usdc": "usd", "usda": "usd", "usdz": "usd", "stl": "stl"}
+STL_SCALE_RANGE = (1.0e-6, 1.0e6)  # wm.stl_export ``global_scale`` hard range
 
 
 def exporter_family(fmt: str) -> str:
@@ -97,6 +105,21 @@ def preset_kwargs(use_case: str, fmt: str) -> dict:
     if fmt == "usdz":
         kwargs.setdefault("export_textures_mode", "NEW")
     return kwargs
+
+
+def stl_kwargs(spec: dict) -> dict:
+    """``spec["stl"] = {"scale": float, "ascii": bool}`` → ``wm.stl_export``
+    kwargs; absent keys default to scale 1.0, binary. A scale outside the
+    operator's range raises ValueError (never silently clamped)."""
+    options = spec.get("stl") or {}
+    if not isinstance(options, dict):
+        raise ValueError("stl options must be an object")
+    scale = options.get("scale")
+    scale = 1.0 if scale is None else float(scale)
+    low, high = STL_SCALE_RANGE
+    if not low <= scale <= high:  # also rejects NaN
+        raise ValueError(f"STL scale must be between {low:g} and {high:g}")
+    return {"global_scale": scale, "ascii_format": bool(options.get("ascii", False))}
 
 
 def preset_report(use_case: str, fmt: str, kwargs: dict, animation_mode: str) -> dict:
@@ -136,6 +159,12 @@ def preset_report(use_case: str, fmt: str, kwargs: dict, animation_mode: str) ->
             axis_forward="-Z" if yup else "Y", axis_up="Y" if yup else "Z",
             scale="meters", embed_textures=fmt == "usdz",
             apply_modifiers=True,
+        )
+    elif family == "stl":
+        report.update(
+            axis_forward=kwargs.get("forward_axis"), axis_up=kwargs.get("up_axis"),
+            scale=kwargs.get("global_scale"), apply_modifiers=kwargs.get("apply_modifiers"),
+            embed_textures=False, ascii=bool(kwargs.get("ascii_format")),
         )
     else:
         report.update(axis_forward="-Z", axis_up="Y", scale="meters",
