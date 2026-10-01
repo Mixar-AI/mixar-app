@@ -15,6 +15,8 @@ Takes a plain ``layout``, so it works in any space.
 
 from __future__ import annotations
 
+from mixar.modules.common.i18n import iface_
+
 from ..constants import KIND_EXTENSION
 
 
@@ -46,8 +48,9 @@ def draw_plugin_import(layout, context) -> None:
     if not len(state.plugins):
         box = layout.box()
         box.label(
-            text=f"No user plugins found in Blender {state.source_version}.",
-            icon="INFO",
+            text=iface_("No user plugins found in Blender {version}.").format(
+                version=state.source_version),
+            icon="INFO", translate=False,
         )
         if state.source_path:
             box.label(text=state.source_path)
@@ -57,14 +60,16 @@ def draw_plugin_import(layout, context) -> None:
     box = layout.box()
     header = box.row(align=True)
     header.label(
-        text=f"From Blender {state.source_version}  ({len(state.plugins)} found)",
-        icon="BLENDER",
+        text=iface_("From Blender {version}  ({count} found)").format(
+            version=state.source_version, count=len(state.plugins)),
+        icon="BLENDER", translate=False,
     )
 
     counts = _kind_counts(state)
     sub = header.row(align=True)
     sub.alignment = "RIGHT"
-    sub.label(text=f"{counts['extension']} ext · {counts['addon']} add-on")
+    sub.label(text=iface_("{extensions} ext · {addons} add-on").format(
+        extensions=counts['extension'], addons=counts['addon']), translate=False)
 
     row = box.row(align=True)
     row.label(text="Enable after import:")
@@ -108,4 +113,4 @@ def _draw_summary(layout, state) -> None:
     layout.separator()
     col = layout.column(align=True)
     for i, line in enumerate(state.last_summary.split("\n")):
-        col.label(text=line, icon="INFO" if i == 0 else "BLANK1")
+        col.label(text=line, icon="INFO" if i == 0 else "BLANK1", translate=False)

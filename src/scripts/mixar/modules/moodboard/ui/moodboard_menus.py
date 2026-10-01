@@ -14,6 +14,7 @@ from bpy.types import Menu
 
 from ..core.node_templates import template_available
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.common.utils.mixie_space_utils import (
     MIXIE_SPACE_AVAILABLE,
     get_selected_moodboard_items,
@@ -158,25 +159,25 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     _connected_action(
                         layout,
                         'IMAGE_GEN',
-                        "Generate Image",
+                        n_("Generate Image"),
                         'IMAGE_DATA',
                         action_node.node_id,
                     )
                     _connected_action(
                         layout,
                         'MODEL_3D',
-                        "Generate to 3D",
+                        n_("Generate to 3D"),
                         'MESH_DATA',
                         action_node.node_id,
                     )
                     if template_available('CHARACTER_PARTS'):
-                        _connected_action(layout, 'CHARACTER_PARTS', "Character Parts",
+                        _connected_action(layout, 'CHARACTER_PARTS', n_("Character Parts"),
                                           'OUTLINER_OB_ARMATURE', action_node.node_id)
                     if _capability_available("world_labs"):
                         _connected_action(
                             layout,
                             'WORLD_LABS',
-                            "Generate Splat",
+                            n_("Generate Splat"),
                             'WORLD',
                             action_node.node_id,
                         )
@@ -186,7 +187,7 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     _connected_action(
                         layout,
                         'VIDEO_GEN',
-                        "Generate Video",
+                        n_("Generate Video"),
                         'FILE_MOVIE',
                         action_node.node_id,
                     )
@@ -195,7 +196,7 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                     _capability_available("video_upscale")
                 ):
                     _connected_action(
-                        layout, 'VIDEO_UPSCALE', "Upscale Video",
+                        layout, 'VIDEO_UPSCALE', n_("Upscale Video"),
                         'FULLSCREEN_ENTER', action_node.node_id,
                     )
                 layout.separator()
@@ -217,27 +218,27 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         if selected_images > 0:
             layout.label(text="Create Connected Node")
             _connected_action(
-                layout, 'IMAGE_GEN', "Generate Image", 'IMAGE_DATA'
+                layout, 'IMAGE_GEN', n_("Generate Image"), 'IMAGE_DATA'
             )
             row = layout.row()
             row.enabled = selected_stills > 0
-            _connected_action(row, 'MODEL_3D', "Generate to 3D", 'MESH_DATA')
+            _connected_action(row, 'MODEL_3D', n_("Generate to 3D"), 'MESH_DATA')
             if selected_stills > 0 and template_available('CHARACTER_PARTS'):
-                _connected_action(layout, 'CHARACTER_PARTS', "Character Parts", 'OUTLINER_OB_ARMATURE')
+                _connected_action(layout, 'CHARACTER_PARTS', n_("Character Parts"), 'OUTLINER_OB_ARMATURE')
             # Click path: the selected stills are the sheet(s) the workflow reads.
             if selected_stills > 0 and template_available('CHARACTER_SHEET_3D'):
                 _draw_character_sheet_entry(layout)
             if selected_stills > 0 and _capability_available("world_labs"):
                 _connected_action(
-                    layout, 'WORLD_LABS', "Generate Splat", 'WORLD'
+                    layout, 'WORLD_LABS', n_("Generate Splat"), 'WORLD'
                 )
             if _capability_available("video_gen"):
                 _connected_action(
-                    layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE'
+                    layout, 'VIDEO_GEN', n_("Generate Video"), 'FILE_MOVIE'
                 )
             if selected_images > selected_stills and _capability_available("video_upscale"):
                 _connected_action(
-                    layout, 'VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER'
+                    layout, 'VIDEO_UPSCALE', n_("Upscale Video"), 'FULLSCREEN_ENTER'
                 )
             # Multi Lasso Mask launches the lasso tool on the one selected
             # still; each SAM3-refined loop spawns a connected mask-detail node.
@@ -259,11 +260,11 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         elif action_node is None:
             layout.label(text="Create Node")
             _connected_action(
-                layout, 'IMAGE_GEN', "Generate Image", 'IMAGE_DATA'
+                layout, 'IMAGE_GEN', n_("Generate Image"), 'IMAGE_DATA'
             )
             if _capability_available("video_gen"):
                 _connected_action(
-                    layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE'
+                    layout, 'VIDEO_GEN', n_("Generate Video"), 'FILE_MOVIE'
                 )
             layout.separator()
 

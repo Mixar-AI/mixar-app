@@ -23,6 +23,7 @@ import math
 
 import numpy as np
 
+from mixar.modules.common.i18n import rpt_
 from .assemble_bones import bone_sockets, facing_yaw, resolve_bones
 from .assemble_constants import FLOAT_SLOTS, FOREARM_SLOTS, HAND_SLOTS, HEAD_SLOTS
 from .assemble_landmarks import body_extent, estimate_landmarks, head_width, surface_query
@@ -184,7 +185,7 @@ def resolve_settings(label, extents_sorted_desc, slot='AUTO', hold='AUTO',
     warnings = []
     word = body_word(label)
     if word:
-        warnings.append(f"'{word}' usually stays on the body mesh")
+        warnings.append(rpt_("'{word}' usually stays on the body mesh").format(word=word))
     explicit_size = max(float(size_pct or 0.0), 0.0)
 
     slot_guessed = slot in ('', 'AUTO')

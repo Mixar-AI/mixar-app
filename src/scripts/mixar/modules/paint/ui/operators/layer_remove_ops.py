@@ -10,6 +10,7 @@ from bpy.props import BoolProperty, IntProperty
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 logger = get_logger(__name__)
 
 from ...core.io.arrangements.layer_arrangements import rearrange_mp_nodes
@@ -120,7 +121,7 @@ class LAYERS_OT_RemoveActiveLayer(Operator):
                     # Question text
                     question_row = main_col.row(align=True)
                     question_row.scale_y = 1.2
-                    question_row.label(text=f"Remove layer '{layer.name}'?", icon='QUESTION')
+                    question_row.label(text=iface_("Remove layer '{name}'?").format(name=layer.name), icon='QUESTION', translate=False)
 
                     main_col.separator(factor=0.8)
 
@@ -132,7 +133,7 @@ class LAYERS_OT_RemoveActiveLayer(Operator):
 
                         box = main_col.box()
                         box_col = box.column(align=True)
-                        box_col.label(text=f"* {len(layer.masks)} mask(s)")
+                        box_col.label(text=iface_("* {count} mask(s)").format(count=len(layer.masks)), translate=False)
 
                         main_col.separator(factor=0.4)
 

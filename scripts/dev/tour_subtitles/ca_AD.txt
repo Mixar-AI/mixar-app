@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Hola, soc en Naman de Mixar.
+En uns minuts et mostraré l'aplicació.
+Aquesta és la teva vista 3D.
+Un espai 3D pel qual et pots moure.
+Arrossega amb el botó central per orbitar, desplaça la roda per fer zoom.
+Maj i el botó central desplacen la vista.
+Prova-ho.
+Clica per seleccionar, G per moure,
+R per girar, S per escalar.
+Aquí tens algunes dreceres útils.
+Veus l'illa petita de baix? És la Mixie, el teu agent.
+Clica per obrir-la.
+La Mixie té pestanyes.
+A Agent, explica amb paraules senzilles què vols. L'agent treballa en la teva escena.
+L'agent utilitza models com Tripo, Meshy i Nano Banana.
+Per tenir més control, obre les altres pestanyes:
+3D, Image, Video o World Model.
+Tria un model i ajusta'n la configuració.
+Tot el que generes va a la biblioteca.
+Les teves creacions són aquí.
+Connecta la teva biblioteca perquè l'agent utilitzi els teus recursos,
+i estalviïs crèdits.
+A dalt a l'esquerra hi ha el calaix d'escenes.
+Cada escena té la seva pestanya i el seu agent Mixie.
+Executa tasques en paral·lel i canvia entre elles quan vulguis.
+Quan l'escena estigui llesta, passa a Cinema Mode
+per dirigir la càmera i crear fluxos de vídeo.
+Les idees comencen en 2D.
+Treu el moodboard des de la dreta o prem la titlla.
+És un llenç per a referències i conceptes.
+Deixa-hi imatges, vídeos o esbossos.
+Crea grafs de nodes per a models generatius, com a ComfyUI.
+Ets a Zen Mode, la vista més senzilla.
+Coneixes Blender? Passa a Engine Mode.
+Hi ha tot l'espai de treball de Blender, amb cada panell i drecera.
+La Mixie funciona en tots dos. Tria el que et vagi millor.
+Tornem a Zen Mode.
+El nostre programa de socis creatius ofereix crèdits
+i una comunitat que construeix el futur de la IA i el 3D.
+Ja està. Ara saps on és tot.
+Creem 3D plegats.

@@ -11,6 +11,8 @@ Single column layout like the Texturing Layers space.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import iface_
+
 
 def _draw_texture_sets_tab(context, layout, obj):
     """Draw the Texture Sets tab content (material slots management).
@@ -130,13 +132,14 @@ def _draw_channel_settings_tab(context, layout):
         icon_name = channel_custom_icon_dict.get(channel.type, 'rgb_channel')
         icon_value = get_icon(icon_name)
 
+        title = iface_("{channel} Settings").format(channel=channel.name)
         if icon_value:
-            header_row.label(text=f"{channel.name} Settings", icon_value=icon_value)
+            header_row.label(text=title, icon_value=icon_value, translate=False)
         else:
             # Fallback to standard icons
             fallback_icons = {'VALUE': 'SHADING_TEXTURE', 'RGB': 'COLOR', 'NORMAL': 'NORMALS_FACE'}
             type_icon = fallback_icons.get(channel.type, 'DOT')
-            header_row.label(text=f"{channel.name} Settings", icon=type_icon)
+            header_row.label(text=title, icon=type_icon, translate=False)
 
         # Draw channel settings content
         _draw_channel_settings_content(settings_box, channel, node, mp)

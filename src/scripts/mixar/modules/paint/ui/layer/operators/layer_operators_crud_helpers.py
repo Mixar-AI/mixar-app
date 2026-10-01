@@ -58,6 +58,7 @@ from ...udim.udim_utils import (
 from mixar.config.logging_config import get_logger
 
 from ....core.element.update_uv import refresh_temp_uv
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -219,16 +220,16 @@ def execute_new_layer(operator, context):
     if same_name:
         if operator.type == "IMAGE":
             operator.report(
-                {"ERROR"}, "Image named '" + operator.name + "' is already available!"
+                {"ERROR"}, rpt_("Image named '{name}' is already available!").format(name=operator.name)
             )
         elif operator.type == "VCOL":
             operator.report(
                 {"ERROR"},
-                "Vertex Color named '" + operator.name + "' is already available!",
+                rpt_("Vertex Color named '{name}' is already available!").format(name=operator.name),
             )
         else:
             operator.report(
-                {"ERROR"}, "Layer named '" + operator.name + "' is already available!"
+                {"ERROR"}, rpt_("Layer named '{name}' is already available!").format(name=operator.name)
             )
         return {"CANCELLED"}
 

@@ -7,6 +7,7 @@
 from bpy.props import FloatProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core import beat_sync
 from ...core.key_drag import KeyDrag
 from ...core.shot_api import active_shot
@@ -94,7 +95,7 @@ class MIXAR_OT_director_drag_strip(Operator):
             try:
                 applied = self._drag.apply(requested)
             except Exception as exc:
-                self.report({'ERROR'}, f"Could not move camera strip: {exc}")
+                self.report({'ERROR'}, rpt_("Could not move camera strip: {error}").format(error=exc))
                 return self._abort(context)
             if self._carry_playhead:
                 context.scene.frame_set(self._original_current_frame + applied)
@@ -109,7 +110,7 @@ class MIXAR_OT_director_drag_strip(Operator):
                 self._drag.finish()
                 context.view_layer.update()
             except Exception as exc:
-                self.report({'ERROR'}, f"Could not move camera strip: {exc}")
+                self.report({'ERROR'}, rpt_("Could not move camera strip: {error}").format(error=exc))
                 return self._abort(context)
             beat_sync.hold(False)
             self._redraw(context)

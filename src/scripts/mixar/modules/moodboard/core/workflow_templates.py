@@ -14,6 +14,8 @@ graph it built are untouched: that graph is ordinary frames and cards.
 Pure data plus two predicates: safe to call from a menu draw.
 """
 
+from mixar.modules.common.i18n import n_
+
 WORKFLOW_TEMPLATES = {
     'CHARACTER_SHEET_3D': {
         # Every member must be offered as a node template on its own…
@@ -23,7 +25,7 @@ WORKFLOW_TEMPLATES = {
         # Withdrawn from every Add surface. Set False to offer it again; the
         # catalog gate in ``workflow_available`` still applies.
         'hidden': True,
-        'description': (
+        'description': n_(
             "Build an editable workflow from a character sheet: clean body and part "
             "references, 3D, rig and assembly. Nothing is generated until you press Generate."
         ),

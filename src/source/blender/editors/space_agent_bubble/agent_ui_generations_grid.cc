@@ -44,6 +44,7 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
 #include "BKE_icons.hh"
 
 #include "DNA_ID.h"
@@ -245,11 +246,13 @@ void agent_ui_generations_grid(const bContext *C,
   const GenViewportClip clip(grid.view);
 
   if (data.count == 0) {
-    const char *empty = data.loading ? "Loading assets…" :
-                        data.source != GEN_SOURCE_LIBRARY ? "Your generations will appear here" :
-                        data.lib_names.empty() ? "Add a folder to see its images, videos and 3D assets" :
-                        data.filter != GEN_FILTER_ALL ? "Nothing of this kind here" :
-                                                        "No images, videos or 3D assets here yet";
+    const char *empty = data.loading ? IFACE_("Loading assets…") :
+                        data.source != GEN_SOURCE_LIBRARY ?
+                                       IFACE_("Your generations will appear here") :
+                        data.lib_names.empty() ?
+                                       IFACE_("Add a folder to see its images, videos and 3D assets") :
+                        data.filter != GEN_FILTER_ALL ? IFACE_("Nothing of this kind here") :
+                                                        IFACE_("No images, videos or 3D assets here yet");
     pane_label_centre(empty,
                       (frame.grid_x + frame.grid_right) * 0.5f,
                       (panel.ymin + panel.ymax) * 0.5f,
@@ -283,7 +286,7 @@ void agent_ui_generations_grid(const bContext *C,
     const float cap1 = tile.ymin - frame.cap_gap - font_cap * 0.5f;
     const float cap2 = cap1 - font_cap * 1.35f;
     if (item.kind == GEN_ITEM_JOB) {
-      pane_label_centre("GENERATING", BLI_rctf_cent_x(&tile), cap1, font_cap, live);
+      pane_label_centre(IFACE_("GENERATING"), BLI_rctf_cent_x(&tile), cap1, font_cap, live);
       char name[96];
       BLI_strncpy(name, item.name, sizeof(name));
       pane_fit_text(name, text_w, font_cap);
@@ -317,9 +320,8 @@ void agent_ui_generations_grid(const bContext *C,
     tile.ymin = tile.ymax - grid.tile;
 
     const char *tip = (item.kind == GEN_ITEM_ASSET) ?
-                          "Click to inspect, Ctrl/Cmd-click to select several, or drag "
-                          "into the viewport" :
-                          "Click to inspect, Ctrl/Cmd-click to select several";
+                          TIP_("Click to inspect, Ctrl/Cmd-click to select several, or drag into the viewport") :
+                          TIP_("Click to inspect, Ctrl/Cmd-click to select several");
     /* Keep Blender's PreviewTile event path for asset drag, but paint the
      * preview above: a clipped native button must not squeeze its image. */
     rctf hit;

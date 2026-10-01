@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from mixar.modules.common.i18n import rpt_
 from ..constants import DEFAULT_DIRECTION_PROMPT
 from .shot_api import compile_manifest
 
@@ -41,10 +42,10 @@ def _validate_reference_limit(shot) -> None:
     except Exception:
         limits = None
     if limits is not None and len(shot.beats) > limits["max_images"]:
-        raise ValueError(
-            f"This video model accepts {limits['max_images']} image references; "
-            f"the shot has {len(shot.beats)} keyframes"
-        )
+        raise ValueError(rpt_(
+            "This video model accepts {limit} image references; "
+            "the shot has {count} keyframes"
+        ).format(limit=limits['max_images'], count=len(shot.beats)))
 
 
 def select_shot_beats(scene, shot) -> int:
@@ -77,12 +78,12 @@ def focus_video_generation(context) -> bool:
 def prepare_video_generation(context, shot) -> tuple[int, bool]:
     """Compile the manifest, select beats, copy direction, and focus Video Gen."""
     if not shot.beats:
-        raise ValueError("Capture at least one keyframe first")
+        raise ValueError(rpt_("Capture at least one keyframe first"))
     _validate_reference_limit(shot)
     if shot.state == 'DRAFT':
         compile_manifest(context.scene, shot)
     elif not shot.snapshot_json:
-        raise ValueError("The locked take has no guidance snapshot")
+        raise ValueError(rpt_("The locked take has no guidance snapshot"))
     # Captures no longer auto-board, so ensure this shot's stills are on the
     # board (grouped) before selecting them as the Video Gen references.
     from .board_export import send_keyframes_to_board
@@ -90,7 +91,7 @@ def prepare_video_generation(context, shot) -> tuple[int, bool]:
     send_keyframes_to_board(context.scene, shot)
     count = select_shot_beats(context.scene, shot)
     if count != len(shot.beats):
-        raise ValueError("One or more keyframe images are missing")
+        raise ValueError(rpt_("One or more keyframe images are missing"))
 
     sidebar = getattr(context.scene, "mixie_moodboard_sidebar", None)
     tab = getattr(sidebar, "tab_video_gen", None) if sidebar else None

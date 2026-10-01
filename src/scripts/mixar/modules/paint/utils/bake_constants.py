@@ -8,6 +8,8 @@ Bake-related constants for the paint module.
 Contains constants for bake types, items, labels, suffixes, and export formats.
 """
 
+from mixar.modules.common.i18n import n_
+
 # =============================================================================
 # EXPORT FORMAT CONSTANTS
 # =============================================================================
@@ -57,22 +59,22 @@ bake_type_items = (
 
 # Bake type labels
 bake_type_labels = {
-    "AO": "Ambient Occlusion",
-    "POINTINESS": "Pointiness",
-    "CAVITY": "Cavity",
-    "DUST": "Dust",
-    "PAINT_BASE": "Paint Base",
-    "BEVEL_NORMAL": "Bevel Normal",
-    "BEVEL_MASK": "Bevel Grayscale",
-    "MULTIRES_NORMAL": "Multires Normal",
-    "MULTIRES_DISPLACEMENT": "Multires Displacement",
-    "OTHER_OBJECT_NORMAL": "Other Objects Normal",
-    "OTHER_OBJECT_EMISSION": "Other Objects Color",
-    "OTHER_OBJECT_CHANNELS": "Other Objects Channels",
-    "SELECTED_VERTICES": "Selected Vertices",
-    "FLOW": "Flow",
-    "OBJECT_SPACE_NORMAL": "Object Space Normal",
-    "POSITION": "Position Map",
+    "AO": n_("Ambient Occlusion"),
+    "POINTINESS": n_("Pointiness"),
+    "CAVITY": n_("Cavity"),
+    "DUST": n_("Dust"),
+    "PAINT_BASE": n_("Paint Base"),
+    "BEVEL_NORMAL": n_("Bevel Normal"),
+    "BEVEL_MASK": n_("Bevel Grayscale"),
+    "MULTIRES_NORMAL": n_("Multires Normal"),
+    "MULTIRES_DISPLACEMENT": n_("Multires Displacement"),
+    "OTHER_OBJECT_NORMAL": n_("Other Objects Normal"),
+    "OTHER_OBJECT_EMISSION": n_("Other Objects Color"),
+    "OTHER_OBJECT_CHANNELS": n_("Other Objects Channels"),
+    "SELECTED_VERTICES": n_("Selected Vertices"),
+    "FLOW": n_("Flow"),
+    "OBJECT_SPACE_NORMAL": n_("Object Space Normal"),
+    "POSITION": n_("Position Map"),
 }
 
 # Bake type suffixes

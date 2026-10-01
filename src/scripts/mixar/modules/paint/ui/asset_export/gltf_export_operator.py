@@ -22,6 +22,7 @@ from mixar.modules.common.analytics.export_events import (
     normalized_settings,
     scene_counts,
 )
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -116,13 +117,13 @@ class MExportGltf(bpy.types.Operator):
                 raise RuntimeError(f"exporter returned {sorted(status)}")
         except Exception as e:
             logger.error("glTF export failed: %s", e)
-            self.report({'ERROR'}, f"Export failed: {e}")
+            self.report({'ERROR'}, rpt_("Export failed: {error}").format(error=e))
             self._revert(context)
             _capture_gltf_export(context, gs, False, self.filepath)
             return {'CANCELLED'}
 
         self._revert(context)
-        self.report({'INFO'}, f"Exported glTF to {self.filepath}")
+        self.report({'INFO'}, rpt_("Exported glTF to {path}").format(path=self.filepath))
         _capture_gltf_export(context, gs, True, self.filepath)
         return {'FINISHED'}
 

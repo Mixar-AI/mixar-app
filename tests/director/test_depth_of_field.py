@@ -175,7 +175,7 @@ def test_the_popup_presets_are_the_python_ones():
 
 def test_the_row_took_the_output_rows_slot():
     """Third row of the output card, at the same pitch as the other two."""
-    assert '"Depth of Field",' in LEFT
+    assert 'N_("Depth of Field"),' in LEFT
     assert "242.0f + CINEMA_ROW_PITCH * 2.0f," in LEFT
     assert "view3d_director_dof_popup_create," in LEFT
     # And the card grew back to hold three rows: y 208 + 3 * 68 + caption.
@@ -218,7 +218,7 @@ def test_the_focus_caption_cannot_name_a_stale_object():
     moment Pick or Release changed it; the left column's row carries the
     live name and redraws every frame."""
     assert '"Focusing on %s"' not in POPUP
-    assert 'director_popup_section_label(block, "Focus", y, width);' in POPUP
+    assert 'director_popup_section_label(block, IFACE_("Focus"), y, width);' in POPUP
 
 
 def test_the_tracked_subject_row_may_still_branch():

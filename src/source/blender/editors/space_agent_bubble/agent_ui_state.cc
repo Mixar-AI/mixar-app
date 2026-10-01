@@ -41,6 +41,8 @@
 #include "BLI_string.h"
 #include "BLI_string_utf8.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 
 #include "DNA_scene_types.h"
@@ -252,7 +254,8 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
 
   r_state->active_tab = AGENT_TAB_AGENT;  /* overwritten from wm below */
   r_state->addon_is_new = true;
-  r_state->placeholder = "Describe your scene here...";
+  /* Placeholders are translated per gather (the language can change). */
+  r_state->placeholder = IFACE_("Describe your scene here...");
   r_state->agent_mode = true;
 
   Scene *scene = CTX_data_scene(C);
@@ -298,7 +301,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
                              read_bool_prop(&scene_ptr, "mixie_run_open");
     if (r_state->status_active) {
       BLI_strncpy(
-          r_state->status_text, "Working", sizeof(r_state->status_text));
+          r_state->status_text, IFACE_("Working"), sizeof(r_state->status_text));
     }
     r_state->agent_mode = enum_is(&scene_ptr, "mixie_chat_mode", "AGENT");
     /* A scene saved before the chat registered the property reads false —
@@ -494,7 +497,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
   }
 
   if (r_state->scribble_armed) {
-    r_state->placeholder = "Draw or type instructions. Enter to send.";
+    r_state->placeholder = IFACE_("Draw or type instructions. Enter to send.");
     if (scene) {
       PointerRNA scene_ptr = RNA_id_pointer_create(&scene->id);
       read_string_prop(&scene_ptr, "mixie_chat_input", r_state->sketch_prompt,
@@ -502,7 +505,7 @@ void agent_ui_state_gather(const bContext *C, AgentIslandState *r_state)
     }
   }
   else if (r_state->mark_count > 0) {
-    r_state->placeholder = "Sketch ready. Add instructions, then Send.";
+    r_state->placeholder = IFACE_("Sketch ready. Add instructions, then Send.");
   }
 
   /* Same property the account card meters — one source of truth for credits.

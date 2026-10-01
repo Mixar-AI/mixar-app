@@ -18,6 +18,7 @@ from bpy.types import Operator
 from bpy_extras.io_utils import ImportHelper
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -399,7 +400,7 @@ class LAYERS_OT_OpenImagesToLayer(Operator, ImportHelper, OpenImage):
         # Report success
         matched_channels = [mp.channels[m[0]].name for m in channel_matches]
         logger.info(f"Layer '{layer_name}' created with channels: {', '.join(matched_channels)} in {(time.time() - T) * 1000:.2f} ms!")
-        self.report({'INFO'}, f"Created layer with {len(channel_matches)} channel(s): {', '.join(matched_channels)}")
+        self.report({'INFO'}, rpt_("Created layer with {count} channel(s): {channels}").format(count=len(channel_matches), channels=', '.join(matched_channels)))
 
         return {'FINISHED'}
 

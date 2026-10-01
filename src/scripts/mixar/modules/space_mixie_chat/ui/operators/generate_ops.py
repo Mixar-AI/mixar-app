@@ -26,6 +26,7 @@ Routing:
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...core.message_helpers import add_agent_message, add_slot_loader
 from ...core.generation_poller import register_generation_poll
@@ -132,8 +133,8 @@ def execute_generate_mode(operator, context):
                 # IMAGES — a model file is not one. Warn once and skip.
                 operator.report(
                     {'WARNING'},
-                    f"Skipped {att.display_name}: model files are not "
-                    "reference images — attach it in Agent mode instead",
+                    rpt_("Skipped {name}: model files are not reference images — "
+                         "attach it in Agent mode instead").format(name=att.display_name),
                 )
                 continue
             msg_att = user_msg.attachments.add()
@@ -156,7 +157,7 @@ def execute_generate_mode(operator, context):
     elif gen_type == 'scene_reconstruction':
         return _handle_scene_recon(operator, context, prompt, pending_attachments)
 
-    operator.report({'WARNING'}, f"Unknown generate type: {gen_type}")
+    operator.report({'WARNING'}, rpt_("Unknown generate type: {type}").format(type=gen_type))
     return {'CANCELLED'}
 
 
@@ -165,11 +166,11 @@ def _handle_lookdev(operator, context, prompt):
     scene = context.scene
 
     if not prompt:
-        add_agent_message(scene, "Please enter a prompt describing the scene you want to generate.")
+        add_agent_message(scene, rpt_("Please enter a prompt describing the scene you want to generate."))
         return {'CANCELLED'}
 
     scene.mixie_lookdev_prompt = prompt
-    bubble_id = add_slot_loader(scene, "Generating lookdev image from scene")
+    bubble_id = add_slot_loader(scene, iface_("Generating lookdev image from scene"))
 
     bpy.ops.mixie.lookdev_generate_from_scene(from_chat=True)
 
@@ -177,7 +178,7 @@ def _handle_lookdev(operator, context, prompt):
         scene, bubble_id,
         is_generating_attr="mixie_lookdev_is_generating",
         error_attr="mixie_lookdev_error",
-        success_message="Check moodboard for the output.",
+        success_message=n_("Check moodboard for the output."),
     )
 
     scene.mixie_chat_input = ""
@@ -191,15 +192,15 @@ def _handle_lookdev_360(operator, context, prompt):
 
     mesh_objects = [obj for obj in context.selected_objects if obj.type == 'MESH']
     if not mesh_objects:
-        add_agent_message(scene, "Please select mesh objects in the 3D viewport before generating.")
+        add_agent_message(scene, rpt_("Please select mesh objects in the 3D viewport before generating."))
         return {'CANCELLED'}
 
     if not prompt:
-        add_agent_message(scene, "Please enter a prompt describing the texture style.")
+        add_agent_message(scene, rpt_("Please enter a prompt describing the texture style."))
         return {'CANCELLED'}
 
     scene.mixie_lookdev360_prompt = prompt
-    bubble_id = add_slot_loader(scene, "Generating 360 textures for selected meshes")
+    bubble_id = add_slot_loader(scene, iface_("Generating 360 textures for selected meshes"))
 
     bpy.ops.mixie.lookdev360_generate(from_chat=True)
 
@@ -207,7 +208,7 @@ def _handle_lookdev_360(operator, context, prompt):
         scene, bubble_id,
         is_generating_attr="mixie_lookdev360_is_generating",
         error_attr="mixie_lookdev360_error",
-        success_message="Textures generated and applied to selected meshes.",
+        success_message=n_("Textures generated and applied to selected meshes."),
     )
 
     scene.mixie_chat_input = ""
@@ -224,7 +225,7 @@ def _handle_image_to_3d(operator, context, prompt, pending_attachments):
     if not img:
         add_agent_message(
             scene,
-            "Please attach a reference image or select one in the moodboard."
+            rpt_("Please attach a reference image or select one in the moodboard.")
         )
         return {'CANCELLED'}
 
@@ -232,7 +233,7 @@ def _handle_image_to_3d(operator, context, prompt, pending_attachments):
     scene.mixie_image_to_3d_prompt = prompt or ""
     scene.mixie_image_to_3d_use_selected = False
 
-    bubble_id = add_slot_loader(scene, "Generating 3D model from image")
+    bubble_id = add_slot_loader(scene, iface_("Generating 3D model from image"))
 
     # model="" lets the operator fall back to the catalog default.
     bpy.ops.mixie.image_to_3d_generate(
@@ -242,7 +243,7 @@ def _handle_image_to_3d(operator, context, prompt, pending_attachments):
         scene, bubble_id,
         is_generating_attr="mixie_image_to_3d_is_generating",
         error_attr="mixie_image_to_3d_error",
-        success_message="3D model generated and imported into the viewport.",
+        success_message=n_("3D model generated and imported into the viewport."),
     )
 
     scene.mixie_chat_input = ""
@@ -298,7 +299,7 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
     if not img and not prompt:
         add_agent_message(
             scene,
-            "Attach a reference image or enter a prompt describing the model."
+            rpt_("Attach a reference image or enter a prompt describing the model.")
         )
         return {'CANCELLED'}
 
@@ -323,7 +324,7 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
             pass
     if not model:
         add_agent_message(
-            scene, "Generation catalog not loaded yet — please retry shortly."
+            scene, rpt_("Generation catalog not loaded yet — please retry shortly.")
         )
         return {'CANCELLED'}
 
@@ -336,7 +337,7 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
             )
             image_bytes = compress_image_for_upload(img)
         except Exception as e:
-            add_agent_message(scene, f"Failed to process the image: {e}")
+            add_agent_message(scene, rpt_("Failed to process the image: {error}").format(error=e))
             return {'CANCELLED'}
         if image_bytes:
             payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
@@ -369,12 +370,12 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
         feature_key = FEATURE_IMAGE_TO_3D_PRO
         scene_flag = "mixie_image_to_3d_is_generating"
         error_attr = "mixie_image_to_3d_error"
-        loader_text = "Generating 3D model (Pro)"
+        loader_text = iface_("Generating 3D model (Pro)")
     else:
         feature_key = FEATURE_HUNYUAN_RAPID
         scene_flag = "mixie_hunyuan_rapid_is_generating"
         error_attr = "mixie_hunyuan_rapid_error"
-        loader_text = "Generating 3D model (Rapid)"
+        loader_text = iface_("Generating 3D model (Rapid)")
 
     # Name the imported mesh from the input image (or a prompt slug for
     # text-to-3D) and normalize its placement — same as model_gen_ops.
@@ -407,23 +408,23 @@ def _handle_model_gen_queue(operator, context, service_key, prompt,
             payload=payload,
             label=label,
             display_label=display_label,
-            fail_message="3D model generation failed",
+            fail_message=rpt_("3D model generation failed"),
             scene_flag=scene_flag,
             **route_extra,
         )
         if not job:
-            add_agent_message(scene, "A duplicate generation is already queued.")
+            add_agent_message(scene, rpt_("A duplicate generation is already queued."))
             return {'CANCELLED'}
     except Exception as e:
         logger.error("Chat %s enqueue failed: %s", service_key, e, exc_info=True)
-        add_agent_message(scene, f"Failed to start generation: {e}")
+        add_agent_message(scene, rpt_("Failed to start generation: {error}").format(error=e))
         return {'CANCELLED'}
 
     register_generation_poll(
         scene, bubble_id,
         is_generating_attr=scene_flag,
         error_attr=error_attr,
-        success_message="3D model generated and imported into the viewport.",
+        success_message=n_("3D model generated and imported into the viewport."),
     )
 
     scene.mixie_chat_input = ""
@@ -439,7 +440,7 @@ def _handle_image_gen(operator, context, prompt, pending_attachments):
     scene = context.scene
 
     if not prompt:
-        add_agent_message(scene, "Please enter a prompt describing the image you want to generate.")
+        add_agent_message(scene, rpt_("Please enter a prompt describing the image you want to generate."))
         return {'CANCELLED'}
 
     # Load attached images into the ref images collection for the operator to pick up
@@ -458,7 +459,7 @@ def _handle_image_gen(operator, context, prompt, pending_attachments):
         used_attachment = True
 
     scene.mixie_imagegen_prompt = prompt
-    bubble_id = add_slot_loader(scene, "Generating image")
+    bubble_id = add_slot_loader(scene, iface_("Generating image"))
 
     # model="" lets the operator fall back to the catalog default.
     bpy.ops.mixie.imagegen_generate(
@@ -468,7 +469,7 @@ def _handle_image_gen(operator, context, prompt, pending_attachments):
         scene, bubble_id,
         is_generating_attr="mixie_imagegen_is_generating",
         error_attr="mixie_imagegen_error",
-        success_message="Check moodboard for the generated image.",
+        success_message=n_("Check moodboard for the generated image."),
     )
 
     scene.mixie_chat_input = ""
@@ -487,7 +488,7 @@ def _handle_scene_recon(operator, context, prompt, pending_attachments):
     if not prompt and not has_image:
         add_agent_message(
             scene,
-            "Please enter a prompt describing the scene, or attach an image to reconstruct."
+            rpt_("Please enter a prompt describing the scene, or attach an image to reconstruct.")
         )
         return {'CANCELLED'}
 
@@ -502,15 +503,15 @@ def _handle_scene_recon(operator, context, prompt, pending_attachments):
             img = bpy.data.images.get(att.image_path)
 
         if not img:
-            add_agent_message(scene, "Failed to load the attached image.")
+            add_agent_message(scene, rpt_("Failed to load the attached image."))
             return {'CANCELLED'}
 
         chat_image_name = img.name
 
     if has_image:
-        bubble_id = add_slot_loader(scene, "Generating 3D scene from image")
+        bubble_id = add_slot_loader(scene, iface_("Generating 3D scene from image"))
     else:
-        bubble_id = add_slot_loader(scene, "Generating 3D scene from description")
+        bubble_id = add_slot_loader(scene, iface_("Generating 3D scene from description"))
 
     bpy.ops.mixie.scene_recon_generate(
         from_chat=True,
@@ -522,7 +523,7 @@ def _handle_scene_recon(operator, context, prompt, pending_attachments):
         scene, bubble_id,
         is_generating_attr="mixie_scene_recon_is_generating",
         error_attr="mixie_scene_recon_error",
-        success_message="3D scene generated and imported into the viewport.",
+        success_message=n_("3D scene generated and imported into the viewport."),
     )
 
     scene.mixie_chat_input = ""

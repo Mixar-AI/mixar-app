@@ -9,11 +9,13 @@
 #include <algorithm>
 #include <limits>
 #include <string>
+#include <fmt/format.h>
 
 #include "BLI_listbase.h"
 #include "BLI_rect.h"
 #include "BLI_time.h"
 #include "BLI_utildefines.h"
+#include "BLT_translation.hh"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "UI_mixar_motion.hh"
@@ -133,7 +135,7 @@ void agent_ui_draw_pill_draft(const AgentIslandState &state,
     caret_epoch = now;
   }
   const bool empty = preview_draft.empty();
-  std::string text = empty ? "Type instructions..." : preview_draft;
+  std::string text = empty ? IFACE_("Type instructions...") : preview_draft;
   for (char &c : text) {
     if (c == '\n' || c == '\r' || c == '\t') {
       c = ' ';
@@ -157,8 +159,9 @@ void agent_ui_draw_pill_draft(const AgentIslandState &state,
   const float text_color[4] = AGENT_COL_TEXT;
   const float placeholder_color[4] = AGENT_COL_TEXT_DIM;
   const std::string title = state.voice_status[0] ?
-                                std::string(state.voice_status) + " · Enter to send" :
-                                "Sketch · Enter to send";
+                                fmt::format(fmt::runtime(IFACE_("{} · Enter to send")),
+                                            IFACE_(state.voice_status)) :
+                                IFACE_("Sketch · Enter to send");
   const float title_size = font_size * 0.75f;
   const float title_y = height * 0.72f;
   float title_x = left;

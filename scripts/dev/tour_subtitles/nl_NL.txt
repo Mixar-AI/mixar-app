@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Hoi, ik ben Naman van Mixar.
+In een paar minuten laat ik je de app zien.
+Dit is je viewport.
+Een 3D-ruimte waarin je kunt bewegen.
+Sleep met de middelste knop om te draaien, scroll om te zoomen.
+Shift en de middelste knop verschuiven het beeld.
+Probeer het maar.
+Klik om te selecteren, G om te verplaatsen,
+R om te draaien, S om te schalen.
+Hier zijn wat handige sneltoetsen.
+Zie je het eilandje onderaan? Dat is Mixie, je agent.
+Klik om het te openen.
+Mixie heeft tabbladen.
+Vertel in Agent wat je wilt. De agent werkt aan je scène.
+De agent gebruikt modellen zoals Tripo, Meshy en Nano Banana.
+Open voor meer controle de andere tabbladen:
+3D, Image, Video of World Model.
+Kies een model en pas de instellingen aan.
+Alles wat je genereert komt in de bibliotheek.
+Hier staan je creaties.
+Koppel je eigen bibliotheek zodat de agent je materiaal gebruikt,
+en je credits bespaart.
+Linksboven vind je de scènelade.
+Elke scène heeft een eigen tabblad en Mixie-agent.
+Voer taken naast elkaar uit en wissel op elk moment.
+Als je scène klaar is, ga je naar Cinema Mode
+om de camera te regisseren en videoworkflows te maken.
+Ideeën beginnen in 2D.
+Trek het moodboard van rechts open of druk op tilde.
+Het is een canvas voor referenties en concepten.
+Sleep hier afbeeldingen, video's of schetsen naartoe.
+Bouw knooppuntgrafen voor generatieve modellen, zoals in ComfyUI.
+Je bent in Zen Mode, de eenvoudigste weergave.
+Ken je Blender? Schakel dan naar Engine Mode.
+De volledige Blender-werkruimte is er, met elk paneel en elke sneltoets.
+Mixie werkt in beide. Kies wat prettig voelt.
+Laten we teruggaan naar Zen Mode.
+Ons programma voor creatieve partners geeft je credits
+en een gemeenschap die de toekomst van AI en 3D vormgeeft.
+Dat was het. Nu weet je waar alles zit.
+Laten we samen 3D maken.

@@ -13,6 +13,7 @@ the image's ``preview.icon_id`` (an integer custom icon). ``layout.prop`` and
 """
 
 import bpy
+from mixar.modules.common.i18n import n_, tip_
 
 # Blender requires a persistent reference to the list returned by an
 # EnumProperty ``items`` callback; otherwise the item strings are garbage
@@ -37,7 +38,7 @@ def get_image_icon_id(img):
         return 0
 
 
-def build_image_enum_items(names, cache_key, none_label="No Images"):
+def build_image_enum_items(names, cache_key, none_label=n_("No Images")):
     """Build EnumProperty items (with preview icons) from image names.
 
     Args:
@@ -52,8 +53,8 @@ def build_image_enum_items(names, cache_key, none_label="No Images"):
     for i, name in enumerate(names):
         img = bpy.data.images.get(name)
         icon_id = get_image_icon_id(img)
-        items.append((name, name, f"Use {name}", icon_id, i))
+        items.append((name, name, tip_("Use {name}").format(name=name), icon_id, i))
     if not items:
-        items.append(("NONE", none_label, "No images available", 0, 0))
+        items.append(("NONE", none_label, n_("No images available"), 0, 0))
     _enum_cache[cache_key] = items
     return items

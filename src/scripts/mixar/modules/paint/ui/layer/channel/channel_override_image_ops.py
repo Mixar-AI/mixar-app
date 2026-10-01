@@ -24,6 +24,7 @@ from ....utils.blender_commons import get_noncolor_name
 from ...other.base_operator import OpenImage
 from ...utils.ui_refresh import request_ui_refresh
 from .channel_image_utils import get_existing_images, is_normal_map_filename
+from mixar.modules.common.i18n import rpt_
 
 
 class MOpenImageToOverrideChannel(bpy.types.Operator, ImportHelper, OpenImage):
@@ -125,7 +126,7 @@ class MOpenImageToOverrideChannel(bpy.types.Operator, ImportHelper, OpenImage):
                 override_type = getattr(ch, 'override_type', 'LAYER')
                 if override_type != 'IMAGE':
                     self._set_brush_texture(context, image)
-                    self.report({'INFO'}, f"Loaded image '{image.name}' as brush texture")
+                    self.report({'INFO'}, rpt_("Loaded image '{name}' as brush texture").format(name=image.name))
                     return {'FINISHED'}
             # Fill layers and Paint layers with IMAGE mode fall through to standard handling
 
@@ -185,7 +186,7 @@ class MOpenImageToOverrideChannel(bpy.types.Operator, ImportHelper, OpenImage):
         if hasattr(ch, 'expand_blend_settings'):
             ch.expand_blend_settings = saved_expand_blend
 
-        self.report({'INFO'}, f"Loaded image '{image.name}' to {root_ch.name} channel")
+        self.report({'INFO'}, rpt_("Loaded image '{name}' to {channel} channel").format(name=image.name, channel=root_ch.name))
 
         return {'FINISHED'}
 
@@ -251,10 +252,10 @@ class MOpenImageToOverrideChannel(bpy.types.Operator, ImportHelper, OpenImage):
 
         # Activate the local brush
         if activate_local_brush(local_brush_name):
-            self.report({'INFO'}, f"Activated '{local_brush_name}' brush with texture")
+            self.report({'INFO'}, rpt_("Activated '{brush}' brush with texture").format(brush=local_brush_name))
         else:
             # Fallback: inform user to manually select the brush
-            self.report({'INFO'}, f"Texture ready on '{local_brush_name}' brush. Select it from brush list.")
+            self.report({'INFO'}, rpt_("Texture ready on '{brush}' brush. Select it from brush list.").format(brush=local_brush_name))
 
 
 class MOpenImageToOverride1Channel(bpy.types.Operator, ImportHelper, OpenImage):
@@ -355,7 +356,7 @@ class MOpenImageToOverride1Channel(bpy.types.Operator, ImportHelper, OpenImage):
         if hasattr(ch, 'expand_blend_settings'):
             ch.expand_blend_settings = saved_expand_blend
 
-        self.report({'INFO'}, f"Loaded normal map '{image.name}'")
+        self.report({'INFO'}, rpt_("Loaded normal map '{name}'").format(name=image.name))
 
         return {'FINISHED'}
 
@@ -414,7 +415,7 @@ class MSelectExistingImage(bpy.types.Operator):
         image = bpy.data.images.get(self.image_name)
 
         if not image:
-            self.report({'ERROR'}, f"Image '{self.image_name}' not found")
+            self.report({'ERROR'}, rpt_("Image '{name}' not found").format(name=self.image_name))
             return {'CANCELLED'}
 
         # Get layer and root channel from stored path
@@ -476,7 +477,7 @@ class MSelectExistingImage(bpy.types.Operator):
         if hasattr(ch, 'expand_blend_settings'):
             ch.expand_blend_settings = saved_expand_blend
 
-        self.report({'INFO'}, f"Selected image '{image.name}' for {root_ch.name} channel")
+        self.report({'INFO'}, rpt_("Selected image '{name}' for {channel} channel").format(name=image.name, channel=root_ch.name))
 
         return {'FINISHED'}
 
@@ -565,7 +566,7 @@ class MClearChannelImage(bpy.types.Operator):
         if hasattr(ch, 'expand_blend_settings'):
             ch.expand_blend_settings = saved_expand_blend
 
-        self.report({'INFO'}, f"Cleared image from {root_ch.name} channel")
+        self.report({'INFO'}, rpt_("Cleared image from {channel} channel").format(channel=root_ch.name))
 
         return {'FINISHED'}
 
@@ -627,7 +628,7 @@ class MSelectExistingImageNormal(bpy.types.Operator):
         image = bpy.data.images.get(self.image_name)
 
         if not image:
-            self.report({'ERROR'}, f"Image '{self.image_name}' not found")
+            self.report({'ERROR'}, rpt_("Image '{name}' not found").format(name=self.image_name))
             return {'CANCELLED'}
 
         # Get layer and root channel from stored path
@@ -688,7 +689,7 @@ class MSelectExistingImageNormal(bpy.types.Operator):
         if hasattr(ch, 'expand_blend_settings'):
             ch.expand_blend_settings = saved_expand_blend
 
-        self.report({'INFO'}, f"Selected normal map '{image.name}'")
+        self.report({'INFO'}, rpt_("Selected normal map '{name}'").format(name=image.name))
 
         return {'FINISHED'}
 

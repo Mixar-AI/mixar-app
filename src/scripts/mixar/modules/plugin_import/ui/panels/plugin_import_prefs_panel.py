@@ -28,6 +28,7 @@ from __future__ import annotations
 from bl_ui.space_userpref import USERPREF_PT_addons
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 
 from ..plugin_import_drawer import draw_plugin_import
 
@@ -60,7 +61,7 @@ def _draw_addons_prefs_section(panel, context) -> None:
     if state.scanned and len(state.plugins):
         sub = header.row(align=True)
         sub.alignment = "RIGHT"
-        sub.label(text=f"{len(state.plugins)} found")
+        sub.label(text=iface_("{count} found").format(count=len(state.plugins)), translate=False)
 
     if state.show_panel:
         draw_plugin_import(box, context)

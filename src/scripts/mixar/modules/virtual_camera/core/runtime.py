@@ -21,6 +21,7 @@ import time
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from ..constants import (
     APPLY_TIMER_INTERVAL,
@@ -151,7 +152,7 @@ class Runtime:
             return self._tick_inner()
         except Exception:
             logger.exception("virtual_camera: control tick failed")
-            self.last_error = "Internal error in control tick — see console"
+            self.last_error = rpt_("Internal error in control tick — see console")
             return APPLY_TIMER_INTERVAL
 
     def _tick_inner(self):
@@ -308,7 +309,7 @@ class Runtime:
         if self._capture_failures < _CAPTURE_FAILURE_LIMIT:
             return
         self.capture_disabled = True
-        self.last_error = "Viewport streaming unavailable — camera control still active"
+        self.last_error = rpt_("Viewport streaming unavailable — camera control still active")
         logger.exception(
             "virtual_camera: capture failed %d times, streaming disabled",
             self._capture_failures,

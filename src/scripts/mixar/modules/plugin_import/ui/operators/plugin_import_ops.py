@@ -20,6 +20,7 @@ from bpy.props import BoolProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...core.enumerate import list_user_plugins
 from ...core.importer import import_all
@@ -81,7 +82,8 @@ class MIXIE_OT_scan_blender_plugins(Operator):
 
         self.report(
             {"INFO"},
-            f"Found {len(plugins)} plugin(s) in Blender {version}",
+            rpt_("Found {count} plugin(s) in Blender {version}").format(
+                count=len(plugins), version=version),
         )
         return {"FINISHED"}
 
@@ -137,14 +139,20 @@ class MIXIE_OT_import_blender_plugins(Operator):
         for item in state.plugins:
             item.status = status_by_name.get(item.name, "")
 
-        msg = (
-            f"Imported {summary.imported}, "
-            f"already present {summary.already_present}, "
-            f"failed {summary.failed} · "
-            f"enabled {summary.enabled}"
+        template = n_(
+            "Imported {imported}, already present {already_present}, "
+            "failed {failed} · enabled {enabled}"
         )
         if summary.enable_failed:
-            msg += f", {summary.enable_failed} couldn't enable"
+            template = n_(
+                "Imported {imported}, already present {already_present}, "
+                "failed {failed} · enabled {enabled}, {enable_failed} couldn't enable"
+            )
+        msg = rpt_(template).format(
+            imported=summary.imported, already_present=summary.already_present,
+            failed=summary.failed, enabled=summary.enabled,
+            enable_failed=summary.enable_failed,
+        )
         state.last_summary = msg
 
         # Surface the first real failure reason (missing dep, bad module id,
@@ -170,14 +178,14 @@ def _notify_summary(summary, first_failure: str = "") -> None:
     Same bottom-left toast lane as every other alert. A clean import fades on
     its own; any failure stays until dismissed and names the first reason.
     """
-    lines = [f"Imported: {summary.imported}"]
+    lines = [iface_("Imported: {count}").format(count=summary.imported)]
     if summary.already_present:
-        lines.append(f"Already in Mixar: {summary.already_present}")
-    lines.append(f"Enabled: {summary.enabled}")
+        lines.append(iface_("Already in Mixar: {count}").format(count=summary.already_present))
+    lines.append(iface_("Enabled: {count}").format(count=summary.enabled))
     if summary.failed:
-        lines.append(f"Failed to copy: {summary.failed}")
+        lines.append(iface_("Failed to copy: {count}").format(count=summary.failed))
     if summary.enable_failed:
-        lines.append(f"Couldn't enable: {summary.enable_failed}")
+        lines.append(iface_("Couldn't enable: {count}").format(count=summary.enable_failed))
 
     had_failure = bool(summary.failed or summary.enable_failed)
     if had_failure and first_failure:

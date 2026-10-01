@@ -31,6 +31,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 
 #include "DNA_scene_types.h"
@@ -268,10 +270,10 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
 
   x += dropdown_chip(C, block, region, st.mode_label,
                      "scene.mixie_moodboard_sidebar.tab_image_to_3d.mode",
-                     "3D generation mode", x, row_top, u);
+                     TIP_("3D generation mode"), x, row_top, u);
   x += dropdown_chip(C, block, region, st.model_label,
                      "scene.mixie_moodboard_sidebar.tab_image_to_3d.model",
-                     "AI model", x, row_top, u);
+                     TIP_("AI model"), x, row_top, u);
 
   /* The prompt box is RESERVED FIRST (kit contract): the params get the room
    * above `pane_params_floor` and elide inside it, so the box can never be
@@ -311,7 +313,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
                                &st.tab_ptr, "prompt", -1, 0.0f, 0.0f, nullptr);
       ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
       if (input) {
-        ui::button_placeholder_set(input, "Describe your scene here...");
+        ui::button_placeholder_set(input, IFACE_("Describe your scene here..."));
         ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
         ui::button_flag_enable(input, ui::BUT_TEXTEDIT_UPDATE);
       }
@@ -333,7 +335,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
   /* Queue label first — Generate's width (and the thumbs' right edge) grow
    * with "Generating (N)" / "Queued (N)", so sizing thumbs against the idle
    * "Generate" chip would let them overlap the live button. */
-  char gen_label[32];
+  char gen_label[64];
   pane_queue_label(gen_label, sizeof(gen_label), st.active_jobs, st.generating);
   const rctf generate = pane_generate_rect(box, u, gen_label);
   {
@@ -341,7 +343,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
      * generate path reads it when use_selected_image is off). The chip keeps
      * its constant label; what is attached is shown as a thumbnail beside it,
      * the way the Agent tab previews its attachments. */
-    const char *label = "Upload Reference";
+    const char *label = IFACE_("Upload Reference");
     rctf rect;
     rect.xmin = box.xmin + PANE_BOTTOM_IN_L * u;
     rect.xmax = rect.xmin + pane_action_chip_w(label, true, u);
@@ -353,7 +355,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
               blender::wm::OpCallContext::InvokeDefault, ICON_IMAGE_DATA, label,
               int(rect.xmin), int(rect.ymin),
               short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
-              "Pick an input image for 3D generation");
+              TIP_("Pick an input image for 3D generation"));
     ui::mixar_style_button(upload, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
 
     /* Reference preview — whatever this tab will actually SUBMIT: the board
@@ -396,7 +398,7 @@ void agent_ui_tab3d_draw(const bContext *C, ARegion *region, const rctf &panel, 
                              blender::wm::OpCallContext::InvokeDefault, gen_label,
                              int(rect.xmin), int(rect.ymin),
                              short(BLI_rctf_size_x(&rect)), short(BLI_rctf_size_y(&rect)),
-                             "Generate a 3D model with the selected mode and model");
+                             TIP_("Generate a 3D model with the selected mode and model"));
       ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u, agent_ui_text_unit());
       if (but && !armed) { ui::button_flag_enable(but, ui::BUT_DISABLED); }
       if (but) {

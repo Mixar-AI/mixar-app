@@ -34,6 +34,8 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import requests
 
+from mixar.modules.common.i18n import rpt_
+
 from ....config.config import get_frontend_url, get_server_url
 from ....config.logging_config import get_logger
 from ...common.network import classify_network_error, log_network_failure
@@ -200,7 +202,7 @@ def _exchange_code(code, verifier):
         # Tokens may be at top level or nested under "data"
         return resp_data.get('data', resp_data), None
 
-    error_msg = f'Token exchange failed: {response.status_code}'
+    error_msg = rpt_('Token exchange failed: {status}').format(status=response.status_code)
     try:
         detail = response.json().get('detail')
         if isinstance(detail, str):
@@ -250,7 +252,8 @@ def sso_login(timeout=None):
         server = start_callback_server(state)
     except OSError as e:
         logger.error("Failed to start auth server: %s", e)
-        return {'success': False, 'message': f'Failed to start auth server: {e}'}
+        return {'success': False,
+                'message': rpt_('Failed to start auth server: {error}').format(error=e)}
 
     actual_port = server.server_address[1]
     logger.info("SSO callback server listening on 127.0.0.1:%s", actual_port)
@@ -262,7 +265,8 @@ def sso_login(timeout=None):
     except Exception as e:
         server.server_close()
         logger.error("Failed to open browser: %s", e)
-        return {'success': False, 'message': f'Failed to open browser: {e}'}
+        return {'success': False,
+                'message': rpt_('Failed to open browser: {error}').format(error=e)}
 
     try:
         code = wait_for_code(server, state, timeout)
@@ -270,14 +274,14 @@ def sso_login(timeout=None):
         server.server_close()
 
     if not code:
-        return {'success': False, 'message': 'Login was cancelled or timed out'}
+        return {'success': False, 'message': rpt_('Login was cancelled or timed out')}
 
     logger.info("Auth code received, exchanging for tokens...")
     try:
         token_data, error = _exchange_code(code, verifier)
     except Exception as e:
         logger.error("Token exchange error: %s", e)
-        return {'success': False, 'message': f'Login error: {str(e)}'}
+        return {'success': False, 'message': rpt_('Login error: {error}').format(error=e)}
     if error:
         return error
 
@@ -285,11 +289,11 @@ def sso_login(timeout=None):
     refresh_token_val = (token_data or {}).get('refresh_token')
     if not (access_token and access_token.strip() and refresh_token_val and refresh_token_val.strip()):
         logger.warning("Token exchange 200 but token pair was incomplete")
-        return {'success': False, 'message': 'Incomplete token pair in response'}
+        return {'success': False, 'message': rpt_('Incomplete token pair in response')}
 
     stored, storage_error = store_login_token_pair(access_token, refresh_token_val)
     if not stored:
         logger.error("Failed to store SSO token pair in safe storage")
         return {'success': False, 'message': storage_error}
     logger.info("SSO login successful — tokens stored")
-    return {'success': True, 'message': 'Login successful', 'token': access_token}
+    return {'success': True, 'message': rpt_('Login successful'), 'token': access_token}

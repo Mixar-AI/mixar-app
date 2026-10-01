@@ -19,6 +19,7 @@ from mixar.modules.asset_search.core.train_support import (
     launch_thumbnail_backfill,
     set_failures,
 )
+from mixar.modules.common.i18n import iface_
 
 logger = get_logger(__name__)
 
@@ -53,8 +54,9 @@ def handle_render_worker(op, context, state):
             state, len(worker.results), worker.total, last.get("label", ""))
         set_failures(state, op._worker_failures + worker.failures)
         state.phase_text = (
-            f"Rendering previews in background "
-            f"{len(worker.results)}/{worker.total}" + op._upload_note()
+            iface_("Rendering previews in background {done}/{total}").format(
+                done=len(worker.results), total=worker.total)
+            + op._upload_note()
         )
         op._redraw(context)
 

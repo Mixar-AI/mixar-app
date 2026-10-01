@@ -30,6 +30,7 @@ from bpy.types import Operator
 from bpy.props import BoolProperty, FloatProperty, IntProperty, StringProperty
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.constants import FRAME_PALETTE
 from mixar.modules.moodboard.core import frames as frame_core
 
@@ -168,7 +169,7 @@ class MIXIE_OT_moodboard_ungroup(Operator):
             self.report({'WARNING'}, "No frames to ungroup")
             return {'CANCELLED'}
         _redraw(context)
-        self.report({'INFO'}, f"Dissolved {dissolved} frame(s)")
+        self.report({'INFO'}, rpt_("Dissolved {dissolved} frame(s)").format(dissolved=dissolved))
         return {'FINISHED'}
 
 
@@ -218,7 +219,8 @@ class MIXIE_OT_moodboard_delete_frame(Operator):
             try:
                 bpy.ops.mixie.moodboard_delete()
             except RuntimeError as exc:
-                self.report({'ERROR'}, f"Could not delete the frame's contents: {exc}")
+                self.report({'ERROR'}, rpt_("Could not delete the frame's contents: {error}").format(
+                    error=exc))
                 return {'CANCELLED'}
             _redraw(context)
             return {'FINISHED'}
@@ -274,7 +276,7 @@ class MIXIE_OT_moodboard_add_selection_to_frame(Operator):
             self.report({'WARNING'}, "Nothing selected to add")
             return {'CANCELLED'}
         _redraw(context)
-        self.report({'INFO'}, f"Added {added} item(s) to the frame")
+        self.report({'INFO'}, rpt_("Added {added} item(s) to the frame").format(added=added))
         return {'FINISHED'}
 
 

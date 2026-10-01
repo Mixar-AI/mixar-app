@@ -11,6 +11,7 @@ in C++).  All property data lives on WindowManager PropertyGroups.
 """
 
 import bpy
+from mixar.modules.common.i18n import n_
 
 
 def draw_asset_export_section(layout, mp, node, context):
@@ -146,7 +147,7 @@ def _draw_action_buttons(layout, mp):
     # Bake / Rebake
     bake_row = col.row(align=True)
     bake_row.scale_y = 1.5
-    bake_text = "Rebake Channels" if mp.use_baked else "Bake Channels"
+    bake_text = n_("Rebake Channels" if mp.use_baked else "Bake Channels")
     bake_icon = 'FILE_REFRESH' if mp.use_baked else 'RENDER_STILL'
     bake_op = bake_row.operator(
         "wm.m_bake_channels",

@@ -36,6 +36,7 @@ unresolved, never allowed to fail the send.
 from __future__ import annotations
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from . import coverage as cov
 from . import vertex_groups as vgroups
@@ -355,11 +356,11 @@ def commit_message(resolved):
     landed on must be read off the same record the agent is sent.
     """
     if not resolved or not resolved.get("hit"):
-        return "Mark added — nothing under it"
+        return n_("Mark added — nothing under it")
     objects = resolved.get("objects") or []
     if not objects:
-        return "Mark added"
+        return n_("Mark added")
     name = objects[0].get("name")
     if objects[0].get("vertex_group"):
-        return f"Mark added on {name} (part of it)"
-    return f"Mark added on {name}"
+        return rpt_("Mark added on {name} (part of it)").format(name=name)
+    return rpt_("Mark added on {name}").format(name=name)

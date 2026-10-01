@@ -32,6 +32,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "GPU_state.hh"
 
 #include "UI_interface.hh"
@@ -130,14 +132,17 @@ static const char *step_kind_glyph(int kind)
   }
 }
 
-/* Row text: label + optional target. Shared by calc + draw. */
+/* Row text: label + optional target. Shared by calc + draw. The label is an
+ * English token (client-marked, or the backend's step label) translated here;
+ * the target is scene data. */
 static void steps_row_text(const StepItemSlotData &step, char *buf, size_t buf_len)
 {
+  const char *label = IFACE_(step.label);
   if (step.target[0] != '\0') {
-    BLI_snprintf(buf, buf_len, "%s  %s", step.label, step.target);
+    BLI_snprintf(buf, buf_len, "%s  %s", label, step.target);
   }
   else {
-    BLI_strncpy(buf, step.label, buf_len);
+    BLI_strncpy(buf, label, buf_len);
   }
 }
 
@@ -349,7 +354,7 @@ float chat_ui_calc_steps_block_height(const ChatBubbleStyle *style,
   const float line_height = float(BLF_height_max(font_id));
 
   /* Header: chevron + summary (wrapped, min one line) + vertical padding. */
-  const char *summary = layout->steps_summary[0] ? layout->steps_summary : "Steps";
+  const char *summary = layout->steps_summary[0] ? layout->steps_summary : IFACE_("Steps");
   float hw, hh;
   chat_ui_calc_text_bounds(summary,
                            content_width - chat_ui_chevron_indent(),
@@ -445,7 +450,7 @@ void chat_ui_draw_steps_block(Main *bmain,
   /* --- Header: chevron icon + summary, muted (secondary UI, not content) --- */
   const float header_col[4] = {card.text_color[0], card.text_color[1],
                                card.text_color[2], card.text_color[3] * 0.65f};
-  const char *summary = layout->steps_summary[0] ? layout->steps_summary : "Steps";
+  const char *summary = layout->steps_summary[0] ? layout->steps_summary : IFACE_("Steps");
   float hw, hh;
   chat_ui_calc_text_bounds(summary, content_width - chevron_indent,
                            card.font_size, 0, &hw, &hh);

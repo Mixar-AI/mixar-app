@@ -6,6 +6,7 @@
 
 import bpy
 
+from mixar.modules.common.i18n import iface_, rpt_
 from mixar.modules.common.job_queue.core.job import JobState, RUNNING_STATES
 from .node_graph import action_node_by_id
 from .canvas_context import redraw_moodboard_canvases
@@ -83,7 +84,7 @@ def _refresh_progress_text() -> bool:
             except Exception:
                 substate = ""
             if not substate:
-                substate = "Queued" if node.state == 'QUEUED' else "Processing"
+                substate = iface_("Queued") if node.state == 'QUEUED' else iface_("Processing")
             parts = [substate]
             created = getattr(job, "created_at", 0.0)
             if created:
@@ -160,7 +161,10 @@ def sync_graph_jobs(queue) -> None:
         if node.job_id != job_id:
             node.job_id = job_id
             changed = True
-        error = str(getattr(job, "user_message", "") or getattr(job, "error", "") or "")
+        # The card draws this verbatim: a fixed user_message is a msgid (n_), so
+        # translate it here; a raw error from the backend is shown as sent.
+        user_message = str(getattr(job, "user_message", "") or "")
+        error = rpt_(user_message) if user_message else str(getattr(job, "error", "") or "")
         if state == 'FAILED':
             # The node draws one line: the sentence plus the provider's reason.
             from mixar.modules.common.job_queue.core.failure_info import (
@@ -169,7 +173,7 @@ def sync_graph_jobs(queue) -> None:
             )
 
             reason = failure_reason(job)
-            error = failure_message(job) + (f" — {reason}" if reason else "")
+            error = rpt_(failure_message(job)) + (f" — {reason}" if reason else "")
         if node.error != error:
             node.error = error
             changed = True

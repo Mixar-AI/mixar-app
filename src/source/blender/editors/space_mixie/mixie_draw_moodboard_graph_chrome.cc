@@ -199,7 +199,8 @@ void moodboard_draw_node_header(PointerRNA *node,
   }
 
   /* The user's name if they gave one, otherwise the node type's own label --
-   * resolved from the enum so there is no second copy of those names to drift.
+   * resolved from the enum so there is no second copy of those names to drift,
+   * and translated like any enum label (the user's own name never is).
    */
   char label[MIXIE_GRAPH_LABEL_BUF];
   mixie_rna_string_get_clamped(node, is_action ? "label" : "title", label, sizeof(label));
@@ -207,7 +208,7 @@ void moodboard_draw_node_header(PointerRNA *node,
   if (label[0] == '\0') {
     PropertyRNA *prop = RNA_struct_find_property(node, "action_type");
     const char *name = nullptr;
-    if (prop && RNA_property_enum_name(
+    if (prop && RNA_property_enum_name_gettexted(
                     nullptr, node, prop, RNA_property_enum_get(node, prop), &name))
     {
       title = name;

@@ -14,6 +14,7 @@ from collections import deque
 from dataclasses import dataclass, field
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from ..constants import SessionState
 from .agent_events import AgentEvent
 from . import turn_cursor
@@ -300,9 +301,11 @@ def _apply(scene, turn, payload):
     processor = get_event_processor()
     if payload.get('type') == 'turn_end':
         status = payload.get('status')
+        # `cancelled` passes through so a stopped run closes without the
+        # completion sound; every other end reads as the run completing.
         processor._handle_typed_payload({'type': 'run_status',
             'run_id': payload.get('run_id', turn.run_id),
-            'status': 'in_progress' if status == 'in_progress' else 'completed'}, scene)
+            'status': status if status in ('in_progress', 'cancelled') else 'completed'}, scene)
         processor._handle_agent_complete_internal(scene)
         processor._clear_loader_bubbles(scene)
         turn.complete = True
@@ -350,7 +353,8 @@ def _replay_unavailable(scene, turn):
     get_executor().end_agent_turn(getattr(scene, "mixie_session_id", "") or "")
     get_session_manager().set_run(scene, '', False)
     get_session_manager().set_state(scene, SessionState.IDLE)
-    add_agent_message(scene, 'The connection lost part of this response. The task was not restarted. Check the scene before continuing.')
+    add_agent_message(scene, rpt_('The connection lost part of this response. The task was not restarted. '
+                                  'Check the scene before continuing.'))
     turn.complete = True
 
 

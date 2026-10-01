@@ -405,7 +405,7 @@ def test_menus_offer_upscale_only_where_a_video_can_feed_it():
 
     output_menu = _read(MOODBOARD / "ui/moodboard_output_menu.py")
     assert "if source_type == 'VIDEO' and capability_available(\"video_upscale\")" in output_menu
-    assert "'VIDEO_UPSCALE', \"Upscale Video\"" in output_menu
+    assert "'VIDEO_UPSCALE', n_(\"Upscale Video\")" in output_menu
 
     assert "'IMAGE_GEN', 'VIDEO_GEN', 'VIDEO_UPSCALE'" in context_menu
     assert "{'VIDEO_GEN', 'VIDEO_UPSCALE'}" in context_menu

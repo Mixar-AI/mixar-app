@@ -1144,7 +1144,8 @@ static void rna_uiItemR_mixar_input(Layout *layout,
 /* Item values must match the `mixar_card_label` enum in
  * #RNA_api_ui_layout — mapped by value here because #MixarCardElement is
  * an editor-side type the makesrna pass cannot see. */
-static void rna_uiLayoutMixarCardLabel(Layout *layout, const char *text, int kind)
+static void rna_uiLayoutMixarCardLabel(
+    Layout *layout, const char *text, int kind, const char *text_ctxt, bool translate)
 {
   ui::MixarCardElement element = ui::MixarCardElement::None;
   switch (kind) {
@@ -1172,7 +1173,10 @@ static void rna_uiLayoutMixarCardLabel(Layout *layout, const char *text, int kin
     default:
       break;
   }
-  layout->label(text ? text : "", ICON_NONE);
+  /* Translated like #rna_uiItemL: callers pass UI literals (`text="..."`). */
+  std::optional<StringRefNull> label = rna_translate_ui_text(
+      text, text_ctxt, nullptr, nullptr, translate);
+  layout->label(label.value_or(""), ICON_NONE);
   if (element != ui::MixarCardElement::None) {
     ui::UI_layout_mixar_card_tag_last(layout, element, 0.0f);
   }
@@ -1807,6 +1811,7 @@ void RNA_api_ui_layout(StructRNA *srna)
       {1, "ACTIVE", 0, "Active", "Current choice with a graded background"},
       {2, "ACTION", 0, "Action", "Popup action"},
       {4, "CAPTION", 0, "Caption", "Non-interactive explanation"},
+      {7, "DESCRIPTION", 0, "Description", "Action card with a title and supporting line"},
       {0, nullptr, 0, nullptr, nullptr},
   };
   func = RNA_def_function(srna, "mixar_tooltip", "rna_uiLayoutMixarTooltip");
@@ -1900,6 +1905,7 @@ void RNA_api_ui_layout(StructRNA *srna)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   parm = RNA_def_enum(func, "kind", mixar_card_label_kind_items, 2, "Kind", "Element kind");
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
+  api_ui_item_common_translation(func);
 
   /* Mixar profile-card action-button styling for the previous button.
    * Values must match the switch in `rna_uiLayoutMixarCardButton`. */

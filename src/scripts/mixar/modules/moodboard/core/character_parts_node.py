@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Character Parts nodes submit existing component masks through SceneGen."""
 
+from mixar.modules.common.i18n import rpt_
 from ..constants import CHARACTER_PARTS_CAPABILITY_KEY, SCENE_GEN_JOB_TYPE
 from .media_utils import is_still_item
 from .node_schema import collect_node_params, node_model_slug, node_service_key
@@ -13,14 +14,14 @@ def source_item(scene, node):
 
     inputs = input_media_items(scene, node)
     if len(inputs) != 1 or not is_still_item(inputs[0]):
-        raise ValueError("Connect one image with component masks to Character Parts")
+        raise ValueError(rpt_("Connect one image with component masks to Character Parts"))
     return inputs[0]
 
 
 def active_masks(item):
     masks = [segment for segment in item.segments if segment.active and segment.mask_image]
     if not masks:
-        raise ValueError("Create masks with Box Mask, Multi-Lasso Mask or Magic Select, then enable a component")
+        raise ValueError(rpt_("Create masks with Box Mask, Multi-Lasso Mask or Magic Select, then enable a component"))
     return masks
 
 
@@ -36,10 +37,10 @@ def resolve_target(node):
     services = get_services(CHARACTER_PARTS_CAPABILITY_KEY, surface='moodboard') if capability else []
     if (not capability or not _enabled(capability) or key != SCENE_GEN_JOB_TYPE
             or not any(service.get('key') == key and _enabled(service) for service in services)):
-        raise ValueError("Character Parts is unavailable in the generation catalog")
+        raise ValueError(rpt_("Character Parts is unavailable in the generation catalog"))
     model_record = get_model(key, model) if model else None
     if not model_record or not _enabled(model_record):
-        raise ValueError("Choose an enabled Character Parts model")
+        raise ValueError(rpt_("Choose an enabled Character Parts model"))
     return key, model
 
 
@@ -69,7 +70,7 @@ def _import_callbacks(scene_name, scene_uid, node_id, job_ref):
         from . import scene_importer
         scene, node = live_owner()
         if scene is None:
-            raise ValueError("The originating Character Parts run is no longer active")
+            raise ValueError(rpt_("The originating Character Parts run is no longer active"))
         collection = bpy.data.collections.get(state['collection_name'])
         if collection is None:
             collection = bpy.data.collections.new(f'CharacterParts_{node_id[:8]}')
@@ -91,7 +92,8 @@ def _import_callbacks(scene_name, scene_uid, node_id, job_ref):
                     glb_bytes, pose_data, object_id, auto_adjust_camera=False,
                 )
             if obj is None:
-                raise ValueError(f'Character part {object_id} could not be imported')
+                raise ValueError(rpt_('Character part {id} could not be imported').format(
+                    id=object_id))
             state['z_offset'] = owned['z_offset']
             state['z_offset_locked'] = owned['z_offset_locked']
             return [obj]

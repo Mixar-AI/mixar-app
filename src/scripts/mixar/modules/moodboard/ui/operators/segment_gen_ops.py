@@ -18,6 +18,7 @@ and the import hook (parts collection, part naming, source hidden) are shared.
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
 
 logger = get_logger(__name__)
@@ -108,7 +109,7 @@ class MIXIE_OT_tripo_segment_generate(Operator):
             )
         except Exception as e:  # noqa: BLE001
             logger.warning("[Segment] enqueue failed: %s", e)
-            self.report({"ERROR"}, f"Segmentation failed: {e}")
+            self.report({"ERROR"}, rpt_("Segmentation failed: {error}").format(error=e))
             return {"CANCELLED"}
 
         if not enqueued:
@@ -117,7 +118,7 @@ class MIXIE_OT_tripo_segment_generate(Operator):
 
         from mixar.modules.common.job_queue.constants import FEATURE_TRIPO_SEGMENT
         _flash_queue(FEATURE_TRIPO_SEGMENT)
-        self.report({"INFO"}, f"Segmenting {len(enqueued)} mesh(es)...")
+        self.report({"INFO"}, rpt_("Segmenting {count} mesh(es)...").format(count=len(enqueued)))
         return {"FINISHED"}
 
 
@@ -179,7 +180,7 @@ class MIXIE_OT_smart_segment_generate(Operator):
             )
         except Exception as e:  # noqa: BLE001
             logger.warning("[SmartSegment] enqueue failed: %s", e)
-            self.report({"ERROR"}, f"Smart segmentation failed: {e}")
+            self.report({"ERROR"}, rpt_("Smart segmentation failed: {error}").format(error=e))
             return {"CANCELLED"}
 
         if job is None:

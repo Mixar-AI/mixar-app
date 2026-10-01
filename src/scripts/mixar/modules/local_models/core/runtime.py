@@ -19,6 +19,7 @@ import os
 from typing import Callable, Dict, List, Optional
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ..constants import (
     LLAMA_CPP_TAG,
@@ -41,7 +42,7 @@ class LocalRuntimeError(Exception):
 
     def __init__(self, message, user_message=""):
         super().__init__(message)
-        self.user_message = user_message or "Local model setup failed"
+        self.user_message = user_message or n_("Local model setup failed")
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +133,7 @@ def ensure_runtime(progress_cb: ProgressCb = None, cancel_cb: CancelCb = None,
     if not candidates:
         raise LocalRuntimeError(
             f"No llama.cpp build for platform {platform_info.platform_key()!r}",
-            "Local models are not supported on this platform",
+            n_("Local models are not supported on this platform"),
         )
     for spec in candidates:
         binary = server_binary_path(spec["variant"])
@@ -154,7 +155,7 @@ def ensure_runtime(progress_cb: ProgressCb = None, cancel_cb: CancelCb = None,
             )
     raise LocalRuntimeError(
         f"All runtime candidates failed: {last_error}",
-        getattr(last_error, "user_message", "") or "Could not install the local AI runtime",
+        getattr(last_error, "user_message", "") or n_("Could not install the local AI runtime"),
     )
 
 

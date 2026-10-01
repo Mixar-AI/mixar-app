@@ -27,6 +27,7 @@ from ....utils.blender_commons import (
 from ..utils.bake_operators_helper import rebake_baked_images
 from ...udim.udim_operators_helper import remove_udim_atlas_segment_by_name
 from ..utils.bake_common import BaseBakeOperator
+from mixar.modules.common.i18n import rpt_
 
 
 class MTryToSelectBakedVertexSelect(bpy.types.Operator):
@@ -274,9 +275,7 @@ class MRebakeBakedImages(bpy.types.Operator, BaseBakeOperator):
 
         self.report(
             {"INFO"},
-            "Rebaking all baked layers & masks is done in "
-            + "{:0.2f}".format(time.time() - T)
-            + " seconds!",
+            rpt_("Rebaking all baked layers & masks is done in {seconds:0.2f} seconds!").format(seconds=time.time() - T),
         )
         return {"FINISHED"}
 

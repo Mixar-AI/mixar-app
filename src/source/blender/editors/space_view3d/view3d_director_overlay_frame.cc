@@ -19,6 +19,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_camera_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
@@ -67,15 +69,15 @@ void camera_lens_label(const View3D *v3d, char *label, const int label_size)
                              id_cast<const Camera *>(object->data) :
                              nullptr;
   if (!camera) {
-    BLI_strncpy(label, "Camera Lens", label_size);
+    BLI_strncpy(label, IFACE_("Camera Lens"), label_size);
     return;
   }
   if (camera->type == CAM_ORTHO) {
-    BLI_strncpy(label, "Orthographic  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  ▾", IFACE_("Orthographic"));
     return;
   }
   if (camera->type == CAM_PANO) {
-    BLI_strncpy(label, "Panoramic  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  ▾", IFACE_("Panoramic"));
     return;
   }
   BLI_snprintf(label, label_size, "%dmm  ▾", int(std::round(camera->lens)));
@@ -94,29 +96,34 @@ void camera_aspect_label(const Scene *scene, char *label, const int label_size)
   const int width = std::max(scene->r.xsch, 1);
   const int height = std::max(scene->r.ysch, 1);
   if (aspect_matches(width, height, 3, 2)) {
-    BLI_strncpy(label, "Photography  3:2  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  3:2  ▾", IFACE_("Photography"));
   }
   else if (aspect_matches(width, height, 4, 3)) {
-    BLI_strncpy(label, "Smartphone  4:3  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  4:3  ▾", IFACE_("Smartphone"));
   }
   else if (aspect_matches(width, height, 16, 9)) {
-    BLI_strncpy(label, "Video / TV  16:9  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  16:9  ▾", IFACE_("Video / TV"));
   }
   else if (aspect_matches(width, height, 185, 100)) {
-    BLI_strncpy(label, "Cinema  1.85:1  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  1.85:1  ▾", IFACE_("Cinema"));
   }
   else if (aspect_matches(width, height, 239, 100)) {
-    BLI_strncpy(label, "Cinema  2.39:1  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  2.39:1  ▾", IFACE_("Cinema"));
   }
   else if (aspect_matches(width, height, 9, 16)) {
-    BLI_strncpy(label, "Social  9:16  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  9:16  ▾", IFACE_("Social"));
   }
   else if (width == height) {
-    BLI_strncpy(label, "Square  1:1  ▾", label_size);
+    BLI_snprintf(label, label_size, "%s  1:1  ▾", IFACE_("Square"));
   }
   else {
     const int divisor = std::gcd(width, height);
-    BLI_snprintf(label, label_size, "Aspect  %d:%d  ▾", width / divisor, height / divisor);
+    BLI_snprintf(label,
+                 label_size,
+                 "%s  %d:%d  ▾",
+                 IFACE_("Aspect"),
+                 width / divisor,
+                 height / divisor);
   }
 }
 
@@ -162,7 +169,7 @@ void view3d_director_frame_controls_draw(ui::Block *block,
                               top,
                               short(lens_w),
                               short(button_h),
-                              "Choose the lens type and focal length");
+                              TIP_("Choose the lens type and focal length"));
   ui::mixar_style_button(lens, ui::MixarComponent::Dropdown);
   director_overlay_disable_button(lens, state.locked);
 
@@ -172,12 +179,12 @@ void view3d_director_frame_controls_draw(ui::Block *block,
                               ui::ButtonType::But,
                               "MIXAR_OT_director_navigate",
                               blender::wm::OpCallContext::InvokeRegionWin,
-                              "Navigate",
+                              IFACE_("Navigate"),
                               left,
                               bottom,
                               short(navigate_w),
                               short(button_h),
-                              "Navigate with WASD and mouse");
+                              TIP_("Navigate with WASD and mouse"));
   ui::mixar_style_button(navigate, ui::MixarComponent::Action, ui::MixarVariant::Secondary);
   ui::mixar_button_lit_set(navigate, state.navigate_mode);
   if (state.navigate_mode) {
@@ -193,7 +200,7 @@ void view3d_director_frame_controls_draw(ui::Block *block,
                                 bottom,
                                 short(aspect_w),
                                 short(button_h),
-                                "Choose the shot output aspect ratio");
+                                TIP_("Choose the shot output aspect ratio"));
   ui::mixar_style_button(aspect, ui::MixarComponent::Dropdown);
   director_overlay_disable_button(aspect, state.locked);
 
@@ -209,8 +216,8 @@ void view3d_director_frame_controls_draw(ui::Block *block,
                                      top,
                                      button_h,
                                      button_h,
-                                     "Fill the viewport with the camera frame; click again to "
-                                     "shrink it back");
+                                     TIP_("Fill the viewport with the camera frame; click again "
+                                          "to shrink it back"));
     director_overlay_operator_button(
         block,
         "MIXAR_OT_director_drag_frame",
@@ -220,7 +227,7 @@ void view3d_director_frame_controls_draw(ui::Block *block,
         top,
         button_h,
         button_h,
-        "Move the camera frame; scroll resizes, click places, Esc reverts");
+        TIP_("Move the camera frame; scroll resizes, click places, Esc reverts"));
   }
   const rctf active_dot = {border.xmax - inset - dot_size,
                            border.xmax - inset,

@@ -10,6 +10,7 @@ from bpy.props import IntProperty, StringProperty
 from bpy.types import Operator
 
 from ...core.node.node_utils import get_active_mpaint_node
+from mixar.modules.common.i18n import rpt_
 
 
 class LAYERS_OT_EditLayerMenu(Operator):
@@ -197,7 +198,7 @@ class LAYERS_OT_RenameLayerPopup(Operator):
             if self.layer_index < len(wm.mixar_ui.ui_layers):
                 wm.mixar_ui.ui_layers[self.layer_index].name = self.new_name
 
-        self.report({'INFO'}, f"Renamed '{old_name}' to '{self.new_name}'")
+        self.report({'INFO'}, rpt_("Renamed '{old}' to '{new}'").format(old=old_name, new=self.new_name))
         return {'FINISHED'}
 
 

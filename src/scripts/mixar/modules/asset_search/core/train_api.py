@@ -29,6 +29,7 @@ from mixar.modules.asset_search.constants import (
     ASSET_TRAIN_ENDPOINT,
     ASSET_TRAIN_PREPARE_ENDPOINT,
 )
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -59,7 +60,7 @@ def prepare_api(metadata, operator):
             raise_for_status=False,
         )
         if not resp.success:
-            msg = resp.message or f"Server returned {resp.status_code}"
+            msg = resp.message or rpt_("Server returned {status}").format(status=resp.status_code)
             operator._bg_result = {"success": False, "message": msg}
             return
         data = resp.data or {}
@@ -75,7 +76,8 @@ def prepare_api(metadata, operator):
         }
     except Exception as exc:
         logger.error("[Asset Training] Prepare error: %s", exc)
-        operator._bg_result = {"success": False, "message": f"Prepare failed: {exc}"}
+        operator._bg_result = {"success": False,
+                               "message": rpt_("Prepare failed: {error}").format(error=exc)}
 
 
 def build_upload_batches(assets):
@@ -168,14 +170,15 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
                 raise_for_status=False,
             )
             if not resp.success:
-                msg = resp.message or f"Server returned {resp.status_code}"
+                msg = resp.message or rpt_("Server returned {status}").format(status=resp.status_code)
                 operator._bg_result = {"success": False, "message": msg}
                 return
             inner = (resp.data or {}).get("data", resp.data or {})
             operator._upload_done = 1
             operator._bg_result = {
                 "success": True,
-                "message": f"{inner.get('removed', len(removed_assets))} removed",
+                "message": rpt_("{count} removed").format(
+                    count=inner.get('removed', len(removed_assets))),
                 "embedded": 0,
             }
             return
@@ -210,14 +213,15 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
             )
             del files_list
             if not resp.success:
-                msg = resp.message or f"Server returned {resp.status_code}"
+                msg = resp.message or rpt_("Server returned {status}").format(status=resp.status_code)
                 operator._bg_result = {
                     "success": False,
-                    "message": (
-                        f"Batch {i + 1}/{len(batches)} failed: {msg} — "
-                        f"{total_embedded} assets were embedded before the "
+                    "message": rpt_(
+                        "Batch {batch}/{total} failed: {error} — "
+                        "{count} assets were embedded before the "
                         "failure and are saved; run Train again to continue"
-                    ),
+                    ).format(batch=i + 1, total=len(batches), error=msg,
+                             count=total_embedded),
                     "embedded": total_embedded,
                 }
                 return
@@ -229,13 +233,13 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
 
         operator._bg_result = {
             "success": True,
-            "message": f"{total_embedded} assets embedded",
+            "message": rpt_("{count} assets embedded").format(count=total_embedded),
             "embedded": total_embedded,
         }
     except Exception as exc:
         logger.error("[Asset Training] Upload error: %s", exc)
         operator._bg_result = {
             "success": False,
-            "message": f"Upload failed: {exc}",
+            "message": rpt_("Upload failed: {error}").format(error=exc),
             "embedded": getattr(operator, "_upload_embedded", 0),
         }

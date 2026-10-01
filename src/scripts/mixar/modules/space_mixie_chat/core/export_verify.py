@@ -9,7 +9,9 @@ contains (meshes, materials, images, clips, bounds) plus ``issues`` — human
 sentences describing every mismatch against ``expected``. It never raises:
 a method that cannot run reports ``checked: False`` with the reason in
 ``issues``. GLB / glTF are parsed directly; FBX / USD / USDZ are re-imported
-into a throwaway scene (``export_reimport``); OBJ is text-scanned.
+into a throwaway collection (``export_reimport``); OBJ is text-scanned.
+STL is re-imported too and additionally reports ``bounds`` in the FILE's
+units (after the export scale) plus a non-manifold edge count.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ from .export_gltf_bounds import gltf_world_bounds
 
 # Text formats are legitimately tiny (a cube OBJ is ~900 bytes); binaries
 # below half a KB have no geometry at all.
-MIN_FILE_BYTES = {"obj": 64, "gltf": 64}
+MIN_FILE_BYTES = {"obj": 64, "gltf": 64, "stl": 134}  # STL: header + one triangle
 MIN_FILE_BYTES_DEFAULT = 512
 _IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".tga", ".tif", ".tiff", ".exr", ".bmp")
 
@@ -68,11 +70,11 @@ def verify_export(path: str, fmt: str, expected: dict | None = None) -> dict:
             _verify_gltf(path, result)
         elif fmt == "obj":
             _verify_obj(path, result)
-        elif fmt in ("fbx", "usd", "usdc", "usda", "usdz"):
+        elif fmt in ("fbx", "usd", "usdc", "usda", "usdz", "stl"):
             from .export_reimport import verify_by_reimport
             if fmt == "usdz":
                 _usdz_listing(path, result)
-            verify_by_reimport(path, fmt, result)
+            verify_by_reimport(path, fmt, result, expected.get("stl_scale"))
         else:
             result["issues"].append(f"No verification method for {fmt or 'this'} files.")
             return result

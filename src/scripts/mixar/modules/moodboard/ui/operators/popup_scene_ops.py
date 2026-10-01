@@ -12,6 +12,7 @@ Popup dialogs for Segment to 3D and Scene Reconstruction features.
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import iface_
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
@@ -115,7 +116,8 @@ class MIXIE_OT_segment_to_3d_popup(Operator):
         layout.separator()
 
         # List segments
-        layout.label(text=f"Segments ({num_segments}):")
+        layout.label(text=iface_("Segments ({count}):").format(count=num_segments),
+                     translate=False)
 
         for i, segment in enumerate(selected_item.segments):
             row = layout.row(align=True)
@@ -138,7 +140,8 @@ class MIXIE_OT_segment_to_3d_popup(Operator):
         active_count = sum(1 for s in selected_item.segments if s.active)
         if active_count > 0:
             layout.separator()
-            layout.label(text=f"{active_count} segment(s) active", icon='CHECKMARK')
+            layout.label(text=iface_("{count} segment(s) active").format(count=active_count),
+                         icon='CHECKMARK', translate=False)
 
         # Generate Scene button
         layout.separator()
@@ -224,7 +227,8 @@ class MIXIE_OT_scene_recon_popup(Operator):
             img = first_selected_reference_still(scene)
             if img:
                 row = box_col.row()
-                row.label(text=f"Selected: {img.name}", icon='CHECKMARK')
+                row.label(text=iface_("Selected: {name}").format(name=img.name), icon='CHECKMARK',
+                          translate=False)
             else:
                 row = box_col.row()
                 row.label(text="No image selected in moodboard", icon='ERROR')

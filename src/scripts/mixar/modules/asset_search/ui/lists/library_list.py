@@ -6,6 +6,8 @@
 
 from bpy.types import UIList
 
+from mixar.modules.common.i18n import n_
+
 
 class MIXIE_UL_asset_libraries(UIList):
     """One row per registered asset library: train toggle · name · asset count."""
@@ -14,7 +16,7 @@ class MIXIE_UL_asset_libraries(UIList):
                   active_prop, index):
         row = layout.row(align=True)
         row.prop(item, "enabled", text="")
-        row.label(text=item.name or "(unnamed)", icon='ASSET_MANAGER')
+        row.label(text=item.name or n_("(unnamed)"), icon='ASSET_MANAGER')
         count = row.row()
         count.alignment = 'RIGHT'
         count.active = item.asset_count >= 0

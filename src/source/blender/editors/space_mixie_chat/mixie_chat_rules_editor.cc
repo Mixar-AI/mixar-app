@@ -4,6 +4,7 @@
 #include "BLF_api.hh"
 #include "BLI_rect.h"
 #include "BLI_string.h"
+#include "BLT_translation.hh"
 #include "DNA_screen_types.h"
 #include "ED_mixar_glass.hh"
 #include "GPU_state.hh"
@@ -103,7 +104,7 @@ void rules_draw_editor(const RulesDrawFrame &f)
   if (rt->rules_text[0] == '\0') {
     float hint_col[4] = {
         HIST_COL_MUTED[0], HIST_COL_MUTED[1], HIST_COL_MUTED[2], HIST_COL_MUTED[3] * 0.85f * ease};
-    hist_draw_label("e.g. Use meters for all dimensions",
+    hist_draw_label(IFACE_("e.g. Use meters for all dimensions"),
                     font_id,
                     text_px,
                     text_x + 3.0f * scale,
@@ -184,7 +185,7 @@ void rules_draw_editor(const RulesDrawFrame &f)
     const float boost = submit_hovered ? 1.2f : 1.0f;
     float btn_col[4] = {0.094f * boost, 0.243f * boost, 0.145f * boost, btn_alpha};
     chat_ui_draw_rounded_rect(&btn, 10.0f * scale, btn_col);
-    const char *label = editing_existing ? "Save" : "Add Rule";
+    const char *label = editing_existing ? IFACE_("Save") : IFACE_("Add Rule");
     float label_col[4] = {0.94f, 0.96f, 0.95f, btn_alpha};
     BLF_enable(font_id, BLF_BOLD);
     const float label_w = hist_text_width(label, font_id, meta_px);

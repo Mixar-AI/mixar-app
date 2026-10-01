@@ -14,6 +14,8 @@
 #include "mixie_draw_moodboard_intern.hh"
 #include "mixie_moodboard_node_layout.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_theme_types.h"   /* UI_SCALE_FAC */
 #include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
 
@@ -88,7 +90,8 @@ void moodboard_add_node_card_actions(ui::Block *block,
     /* Scoped to THIS node, so the button on this card saves this card's result
      * even when several nodes are selected. */
     RNA_string_set(ui::button_operator_ptr_ensure(save), "node_id", node_id);
-    moodboard_set_node_tooltip(save, "Export\n\nSave this node's generated result to disk.");
+    moodboard_set_node_tooltip(save,
+                               TIP_("Export\n\nSave this node's generated result to disk."));
     x -= width + gap;
 
     /* Between Edit and Export, which is the order the actions are reached in:
@@ -109,8 +112,8 @@ void moodboard_add_node_card_actions(ui::Block *block,
     RNA_string_set(ui::button_operator_ptr_ensure(preview), "node_id", node_id);
     moodboard_set_node_tooltip(
         preview,
-        "Preview\n\nOpen this result in its own window. Several previews can "
-        "be open at once.");
+        TIP_("Preview\n\nOpen this result in its own window. Several previews can "
+             "be open at once."));
     x -= width + gap;
   }
 
@@ -139,10 +142,10 @@ void moodboard_add_node_card_actions(ui::Block *block,
   RNA_string_set(ui::button_operator_ptr_ensure(toggle), "node_id", node_id);
   moodboard_set_node_tooltip(
       toggle,
-      edit_mode ? "Cancel edit\n\nStop editing without generating, and show this "
-                  "node's result again. Any settings changed stay on the node." :
-                  "Edit\n\nShow this node's settings and prompt so it can be "
-                  "adjusted and run again.");
+      edit_mode ? TIP_("Cancel edit\n\nStop editing without generating, and show this "
+                       "node's result again. Any settings changed stay on the node.") :
+                  TIP_("Edit\n\nShow this node's settings and prompt so it can be "
+                       "adjusted and run again."));
 }
 
 void moodboard_add_node_tile_controls(ui::Block *block,
@@ -166,7 +169,7 @@ void moodboard_add_node_tile_controls(ui::Block *block,
                                        ui::ButtonType::But,
                                        "MIXIE_OT_moodboard_cancel_action_node",
                                        blender::wm::OpCallContext::ExecDefault,
-                                       "Cancel",
+                                       IFACE_("Cancel"),
                                        tile.xmax - margin - cancel_w,
                                        tile.ymin + margin,
                                        cancel_w,
@@ -217,10 +220,11 @@ void moodboard_add_node_tile_controls(ui::Block *block,
                                                         BLI_rcti_size_x(&tile) - margin * 2,
                                                         prompt_height);
       if (prompt) {
-        ui::button_placeholder_set(prompt, "Describe your idea…");
+        ui::button_placeholder_set(prompt, IFACE_("Describe your idea…"));
         ui::button_flag_enable(prompt, ui::BUT_TEXTEDIT_UPDATE);
         moodboard_set_node_tooltip(
-            prompt, "Prompt\n\nDescribe what to generate. Press Enter to submit this node.");
+            prompt,
+            TIP_("Prompt\n\nDescribe what to generate. Press Enter to submit this node."));
       }
     }
 
@@ -258,7 +262,7 @@ void moodboard_add_node_tile_controls(ui::Block *block,
             revert, ui::MixarComponent::Action, ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
         RNA_string_set(ui::button_operator_ptr_ensure(revert), "node_id", node_id);
         moodboard_set_node_tooltip(
-            revert, "Revert\n\nRestore the prompt you wrote before it was refined.");
+            revert, TIP_("Revert\n\nRestore the prompt you wrote before it was refined."));
         refine_x -= refine_gap + refine_w;
       }
 
@@ -280,25 +284,29 @@ void moodboard_add_node_tile_controls(ui::Block *block,
        * Revert always returns the user's OWN words however many passes ran. */
       moodboard_set_node_tooltip(refine,
                                  refined ?
-                                     "Refine Again\n\nRewrite this prompt once more for the "
-                                     "model it will be sent to. Revert still restores your "
-                                     "own wording, not the previous refinement." :
-                                     "Refine\n\nRewrite this prompt for the model it will be "
-                                     "sent to, adding the detail that model responds to.");
+                                     TIP_("Refine Again\n\nRewrite this prompt once more "
+                                          "for the model it will be sent to. Revert still "
+                                          "restores your own wording, not the previous "
+                                          "refinement.") :
+                                     TIP_("Refine\n\nRewrite this prompt for the model it "
+                                          "will be sent to, adding the detail that model "
+                                          "responds to."));
       /* After the tooltip, so the disabled hint is what the reader gets
        * first when the button cannot be pressed. The button stays in place
        * rather than disappearing, so Generate does not shift sideways under
        * the pointer as the prompt is typed. */
       const bool has_prompt = RNA_string_length(node, "prompt") > 0;
       if (!has_prompt || refining) {
-        ui::button_disable(refine, refining ? "Refining this prompt..." : "Write a prompt first");
+        /* N_: the tooltip translates a disabled hint when it shows it. */
+        ui::button_disable(refine,
+                           refining ? N_("Refining this prompt...") : N_("Write a prompt first"));
       }
     }
 
     /* ASSEMBLE (append-only action index 11) runs locally: it queues nothing,
      * so it must not inherit the run operator's "add to the queue" tooltip. */
     const bool assemble = RNA_enum_get(node, "action_type") == 11;
-    const char *run_label = assemble ? "Assemble" : "Generate";
+    const char *run_label = assemble ? IFACE_("Assemble") : IFACE_("Generate");
     ui::Button *generate = ui::uiDefButO(block,
                                          ui::ButtonType::But,
                                          "MIXIE_OT_moodboard_run_action_node",
@@ -314,8 +322,8 @@ void moodboard_add_node_tile_controls(ui::Block *block,
     RNA_string_set(ui::button_operator_ptr_ensure(generate), "node_id", node_id);
     if (assemble) {
       moodboard_set_node_tooltip(generate,
-                                 "Assemble\n\nAttach the connected parts to the body, "
-                                 "locally. Uses no credits.");
+                                 TIP_("Assemble\n\nAttach the connected parts to the body, "
+                                      "locally. Uses no credits."));
     }
   }
 }

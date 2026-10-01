@@ -13,6 +13,7 @@ toolbar / ``P`` keymap force-refresh if anything ever desynchronises.
 
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_, tip_
 from ....common.utils.platform_utils import format_shortcut
 from ...core.media_utils import is_video_item
 
@@ -65,6 +66,11 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
     bl_options = {'REGISTER'}
 
     @classmethod
+    def description(cls, context, properties):
+        return tip_("Refresh moodboard→chat attachment sync ({shortcut})").format(
+            shortcut=format_shortcut('P'))
+
+    @classmethod
     def poll(cls, context):
         scene = context.scene
         if scene is None:
@@ -87,7 +93,7 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
             force_resync(scene)
             _reconcile_attachments(scene, selected, animate=True)
         except Exception as e:  # noqa: BLE001 — keep the keymap functional
-            self.report({'WARNING'}, f"Sync failed: {e}")
+            self.report({'WARNING'}, rpt_("Sync failed: {error}").format(error=e))
             return {'CANCELLED'}
 
         selected_count = sum(
@@ -100,17 +106,19 @@ class MIXIE_OT_moodboard_send_to_chat(Operator):
             # video content part); tell the user instead of doing nothing.
             self.report(
                 {'WARNING'},
-                f"Skipped {skipped_videos} video"
-                f"{'s' if skipped_videos != 1 else ''}: the agent accepts "
-                "still images only. Use Video Gen on the moodboard for clips",
+                (rpt_("Skipped {count} video: the agent accepts still images only. "
+                      "Use Video Gen on the moodboard for clips") if skipped_videos == 1
+                 else rpt_("Skipped {count} videos: the agent accepts still images only. "
+                           "Use Video Gen on the moodboard for clips")
+                 ).format(count=skipped_videos),
             )
         if selected_count == 0 and not skipped_videos:
             self.report({'INFO'}, "No moodboard images selected")
         elif selected_count:
             self.report(
                 {'INFO'},
-                f"Synced {selected_count} moodboard image"
-                f"{'s' if selected_count != 1 else ''}",
+                (rpt_("Synced {count} moodboard image") if selected_count == 1
+                 else rpt_("Synced {count} moodboard images")).format(count=selected_count),
             )
         return {'FINISHED'}
 
@@ -125,6 +133,11 @@ class MIXIE_CHAT_OT_attach_moodboard_image(Operator):
         f"Refresh moodboard→chat attachment sync ({format_shortcut('P')})"
     )
     bl_options = {'REGISTER'}
+
+    @classmethod
+    def description(cls, context, properties):
+        return tip_("Refresh moodboard→chat attachment sync ({shortcut})").format(
+            shortcut=format_shortcut('P'))
 
     @classmethod
     def poll(cls, context):

@@ -7,6 +7,7 @@
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -98,7 +99,8 @@ class MIXIE_OT_video_gen_generate(Operator):
             return {'CANCELLED'}
         except Exception as exc:
             logger.exception("Could not prepare video image references")
-            self.report({'ERROR'}, f"Could not prepare image references: {exc}")
+            self.report({'ERROR'}, rpt_("Could not prepare image references: {error}").format(
+                error=exc))
             return {'CANCELLED'}
 
         try:
@@ -114,7 +116,7 @@ class MIXIE_OT_video_gen_generate(Operator):
                 label=f"VideoGen: {prompt[:40]}",
                 display_label=prompt[:40],
                 origin_capability_key="video_gen",
-                fail_message="Video generation failed",
+                fail_message=n_("Video generation failed"),
                 prompt_text=prompt,
                 image_inputs=image_inputs,
                 video_inputs=video_inputs,
@@ -122,7 +124,8 @@ class MIXIE_OT_video_gen_generate(Operator):
                 scene_flag="mixie_video_gen_is_generating",
             )
         except Exception as exc:
-            self.report({'ERROR'}, f"Failed to start video generation: {exc}")
+            self.report({'ERROR'}, rpt_("Failed to start video generation: {error}").format(
+                error=exc))
             return {'CANCELLED'}
         if job is None:
             self.report({'ERROR'}, "A duplicate video generation is already queued")

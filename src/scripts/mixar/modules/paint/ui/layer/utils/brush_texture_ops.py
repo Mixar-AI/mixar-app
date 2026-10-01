@@ -14,6 +14,7 @@ import bpy
 from bpy_extras.io_utils import ImportHelper
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -170,7 +171,7 @@ class MOpenImageToBrushTexture(bpy.types.Operator, ImportHelper, OpenImage):
         if needs_activate:
             activate_local_brush(brush.name)
 
-        self.report({'INFO'}, f"Set brush texture to '{image.name}'")
+        self.report({'INFO'}, rpt_("Set brush texture to '{name}'").format(name=image.name))
         return {'FINISHED'}
 
 
@@ -269,7 +270,7 @@ class MOpenImageToMaskTexture(bpy.types.Operator, ImportHelper, OpenImage):
         if needs_activate:
             activate_local_brush(brush.name)
 
-        self.report({'INFO'}, f"Set mask texture to '{image.name}'")
+        self.report({'INFO'}, rpt_("Set mask texture to '{name}'").format(name=image.name))
         return {'FINISHED'}
 
 

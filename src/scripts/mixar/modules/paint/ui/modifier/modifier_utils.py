@@ -4,6 +4,7 @@
 
 from ...core.modifier.modifier import check_modifiers_trees
 from ...utils.common import split_layout
+from mixar.modules.common.i18n import n_
 
 
 def draw_modifier_properties(
@@ -77,7 +78,7 @@ def draw_modifier_properties(
             split.label(text="Affect:")
             row = split.row(align=True)
 
-            label = "Color" if channel_type != "VALUE" else "Value"
+            label = n_("Color" if channel_type != "VALUE" else "Value")
             row.prop(modifier, "affect_color", text=label, toggle=True)
             row.prop(modifier, "affect_alpha", text="Alpha", toggle=True)
 

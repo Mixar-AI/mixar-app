@@ -21,8 +21,8 @@ import os
 VIDEO_ASSET = "tour/founder.mp4"
 VIDEO_PLACEHOLDER_ASSET = "tour/founder_placeholder.mp4"
 DEMO_IMAGE_ASSET = "tour/demo_concept.png"
-# Re-timed SubRip files, one per non-English tour language (``<code>.srt``),
-# shown over the English video while that language's pack is missing.
+# English-timed SubRip tracks covering every UI locale (``<code>.srt``).
+# Shown over English when the selected voice is unavailable; UK shares en.
 SUBTITLES_DIR = "tour/subtitles"
 # QA: "always" shows subtitles even for English / localized playback.
 ENV_SUBTITLES = "MIXAR_TOUR_SUBTITLES"
@@ -31,7 +31,7 @@ ENV_SUBTITLES = "MIXAR_TOUR_SUBTITLES"
 VIDEO_FPS_FALLBACK = 24.0
 
 # ---------------------------------------------------------------------------
-# Language packs (every language but English; see docs/plans localization).
+# Language packs (nine dubbed voices; other UI locales use subtitles).
 # ---------------------------------------------------------------------------
 # Bumped with every re-cut of the English take or change to the beat table;
 # a pack built for another version is never played.

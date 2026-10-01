@@ -36,6 +36,7 @@ import threading
 from typing import Any, Dict, Optional
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from . import model_menu, preference_client
 
@@ -69,7 +70,7 @@ _epoch: int = 0
 _request_serial: int = 0
 _mutating: bool = False
 _RETRY_DELAY_S = 15.0
-PENDING_MESSAGE = "Saving agent model… Please wait before sending or changing models."
+PENDING_MESSAGE = n_("Saving agent model… Please wait before sending or changing models.")
 
 
 def mutation_pending() -> bool:

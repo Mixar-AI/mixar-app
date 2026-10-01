@@ -83,7 +83,7 @@ static ui::Block *mixie_chat_block_agent_bubble_create(bContext *C,
      * Python menu hasn't loaded yet. Without this, an empty ui::Block
      * collapses to zero size and the popup is effectively invisible —
      * which makes the bubble look broken. */
-    layout.label("Mixar agent bubble loading…", ICON_INFO);
+    layout.label(IFACE_("Mixar agent bubble loading…"), ICON_INFO);
   }
 
   ui::block_bounds_set_centered(block, 6 * UI_SCALE_FAC);

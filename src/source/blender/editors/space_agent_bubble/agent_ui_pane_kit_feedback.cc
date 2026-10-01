@@ -51,6 +51,8 @@
 #include "BLI_time.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 
 #include "DNA_windowmanager_types.h"
@@ -326,7 +328,7 @@ void pane_queue_label(char *out,
                       const bool generating)
 {
   if (active_jobs <= 0) {
-    BLI_strncpy(out, "Generate", size_t(out_maxncpy));
+    BLI_strncpy(out, IFACE_("Generate"), size_t(out_maxncpy));
     return;
   }
   /* The count is the feedback: it appears the moment the job is queued and
@@ -334,10 +336,10 @@ void pane_queue_label(char *out,
    * matched job has left PENDING, the wording switches to Generating so an
    * in-flight mesh does not keep looking stuck in the queue. */
   if (generating) {
-    BLI_snprintf(out, size_t(out_maxncpy), "Generating (%d)", active_jobs);
+    BLI_snprintf(out, size_t(out_maxncpy), IFACE_("Generating (%d)"), active_jobs);
     return;
   }
-  BLI_snprintf(out, size_t(out_maxncpy), "Queued (%d)", active_jobs);
+  BLI_snprintf(out, size_t(out_maxncpy), IFACE_("Queued (%d)"), active_jobs);
 }
 
 }  // namespace blender

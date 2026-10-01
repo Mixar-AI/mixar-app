@@ -21,6 +21,7 @@ from mixar.modules.asset_search.core.train_support import (
     fmt_duration,
     set_failures,
 )
+from mixar.modules.common.i18n import iface_, n_
 
 from .asset_inspect_ops import (
     clear_render_filter,
@@ -59,10 +60,9 @@ def start_rendering(op, context, state, filter_assets):
     if len(items) >= preview_worker.WORKER_MIN_ITEMS:
         op._worker = preview_worker.start_worker(items)
         if op._worker is not None:
-            state.phase_text = (
-                f"Rendering previews in background 0/{len(items)} "
-                "(app stays responsive)"
-            )
+            state.phase_text = iface_(
+                "Rendering previews in background {done}/{total} (app stays responsive)"
+            ).format(done=0, total=len(items))
             op._phase = 'RENDER_WORKER'
             op._redraw(context)
             return {"RUNNING_MODAL"}
@@ -81,7 +81,8 @@ def start_inprocess_session(op, context, state, items):
     op._session.failures.extend(op._worker_failures)
     op._worker_failures = []
     op._session.start()
-    state.phase_text = f"Rendering previews 0/{len(items)}"
+    state.phase_text = iface_("Rendering previews {done}/{total}").format(
+        done=0, total=len(items))
     op._phase = 'RENDERING'
     op._redraw(context)
     return {"RUNNING_MODAL"}
@@ -95,7 +96,8 @@ def update_progress(op, state, done, total, current):
     state.progress = W_PREPARE_END + (W_RENDER_END - W_PREPARE_END) * frac
     elapsed = time.time() - op._render_started_at
     if 3 <= done < total:
-        state.eta_text = f"~{fmt_duration((elapsed / done) * (total - done))} remaining"
+        state.eta_text = iface_("~{duration} remaining").format(
+            duration=fmt_duration((elapsed / done) * (total - done)))
 
 
 def handle_rendering(op, context, state):
@@ -112,7 +114,8 @@ def handle_rendering(op, context, state):
                         session.current_label)
         set_failures(state, session.failures)
         state.phase_text = (
-            f"Rendering previews {session.index}/{session.total}"
+            iface_("Rendering previews {done}/{total}").format(
+                done=session.index, total=session.total)
             + op._upload_note()
         )
         op._redraw(context)
@@ -149,7 +152,7 @@ def complete(op, context, state, collected, failures, reused=0):
     if reused:
         state.prepare_note = (
             (state.prepare_note + " · " if state.prepare_note else "")
-            + f"{reused} thumbnails reused (not re-rendered)"
+            + iface_("{count} thumbnails reused (not re-rendered)").format(count=reused)
         )
 
     if not collected and op._train_mode == "full":
@@ -161,7 +164,7 @@ def complete(op, context, state, collected, failures, reused=0):
         # Batches have been going out all along; closing the stream sends the
         # held-back final one (with the checksum) and ends the thread.
         op._stop_upload_stream()
-        state.phase_text = "Finishing upload & embedding…"
+        state.phase_text = n_("Finishing upload & embedding…")
         op._phase = 'WAITING'
     else:
         op._phase = 'UPLOADING'
@@ -188,9 +191,8 @@ def cancel(op, context, state, collected, teardown=None):
     keep = collected and (op._train_mode == "incremental" or op._stream_uploads)
     if keep:
         set_collected_asset_data(collected)
-        state.phase_text = (
-            f"Cancelled — saving the {len(collected)} finished assets…"
-        )
+        state.phase_text = iface_("Cancelled — saving the {count} finished assets…").format(
+            count=len(collected))
         state.progress = W_RENDER_END
         if op._stream_uploads:
             op._stop_upload_stream()

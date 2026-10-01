@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Saluton, mi estas Naman de Mixar.
+Dum kelkaj minutoj mi montros al vi la aplikaĵon.
+Jen via 3D-vidujo.
+Tridimensia spaco, en kiu vi povas moviĝi.
+Trenu per la meza butono por orbiti, rulumu por zomi.
+Majuskliga klavo kaj meza butono ŝovas la vidon.
+Provu ĝin.
+Klaku por elekti, G por movi,
+R por turni, S por skali.
+Jen kelkaj utilaj klavkombinoj.
+Ĉu vi vidas la insuleton sube? Tio estas Mixie, via agento.
+Klaku por malfermi ĝin.
+Mixie havas langetojn.
+En Agent diru per ordinaraj vortoj, kion vi volas. La agento laboras pri via sceno.
+La agento uzas modelojn kiel Tripo, Meshy kaj Nano Banana.
+Por pli da regado, malfermu la aliajn langetojn:
+3D, Image, Video aŭ World Model.
+Elektu modelon kaj ĝustigu ĝiajn agordojn.
+Ĉio, kion vi generas, iras en la bibliotekon.
+Viaj kreaĵoj estas ĉi tie.
+Ligu vian propran bibliotekon, por ke la agento uzu viajn rimedojn,
+ŝparante kreditojn.
+Supre maldekstre estas la scenotirkesto.
+Ĉiu sceno havas propran langeton kaj agenton Mixie.
+Rulu taskojn paralele kaj ŝanĝu inter ili iam ajn.
+Kiam la sceno pretas, iru al Cinema Mode
+por direkti la kameraon kaj krei videolaborfluojn.
+Ideoj komenciĝas en 2D.
+Eltiru la etosotabulon de dekstre aŭ premu tildon.
+Ĝi estas kanvaso por referencoj kaj konceptoj.
+Faligu ĉi tien bildojn, filmetojn aŭ skizojn.
+Konstruu nodgrafojn por generaj modeloj, kiel en ComfyUI.
+Vi estas en Zen Mode, la plej simpla vido.
+Ĉu vi konas Blender? Ŝanĝu al Engine Mode.
+La tuta laborspaco de Blender ĉeestas, kun ĉiuj paneloj kaj klavkombinoj.
+Mixie funkcias en ambaŭ. Elektu tion, kio plaĉas al vi.
+Ni revenu al Zen Mode.
+Nia programo por kreivaj partneroj donas kreditojn
+kaj komunumon, kiu formas la estontecon de AI kaj 3D.
+Jen ĉio. Vi nun scias, kie ĉio estas.
+Ni kreu 3D kune.

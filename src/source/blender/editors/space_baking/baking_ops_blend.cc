@@ -258,9 +258,9 @@ void BAKING_OT_blend_images(wmOperatorType *ot)
   ot->flag = 0;
 
   blender::ed::baking::define_image_name_property(
-      ot->srna, "base_image", "Base Image", "Base image (modified in place)");
+      ot->srna, "base_image", N_("Base Image"), N_("Base image (modified in place)"));
   blender::ed::baking::define_image_name_property(
-      ot->srna, "blend_image", "Blend Image", "Image to blend on top");
+      ot->srna, "blend_image", N_("Blend Image"), N_("Image to blend on top"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna, "opacity", 1.0f, 0.0f, 1.0f, "Opacity", "", 0.0f, 1.0f);
@@ -278,7 +278,7 @@ void BAKING_OT_dither_image(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  blender::ed::baking::define_image_name_property(ot->srna, "image", "Image");
+  blender::ed::baking::define_image_name_property(ot->srna, "image", N_("Image"));
   RNA_def_int(ot->srna, "width", 1024, 1, 32768, "Width", "", 1, 32768);
   RNA_def_int(ot->srna, "height", 1024, 1, 32768, "Height", "", 1, 32768);
   RNA_def_float(ot->srna,

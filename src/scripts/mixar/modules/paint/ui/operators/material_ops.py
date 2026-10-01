@@ -14,6 +14,7 @@ import bpy
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 logger = get_logger(__name__)
 
 from ...core.node.node_utils import get_active_mpaint_node
@@ -35,8 +36,8 @@ class LAYERS_OT_RemoveMPaintNode(Operator):
     """Remove Mixar Paint node from material"""
 
     bl_idname = "wm.m_remove_mp_node"
-    bl_label = "Remove " + get_addon_title() + " Node"
-    bl_description = "Remove " + get_addon_title() + " node, but keep all baked channel image(s)"
+    bl_label = "Remove Mixar Paint Node"
+    bl_description = "Remove Mixar Paint node, but keep all baked channel image(s)"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -61,7 +62,7 @@ class LAYERS_OT_RemoveMPaintNode(Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
-        self.layout.label(text="This " + get_addon_title() + " node setup isn't baked yet!")
+        self.layout.label(text=iface_("This {addon} node setup isn't baked yet!").format(addon=get_addon_title()), translate=False)
         self.layout.label(text="Are you sure want to delete?")
 
     def execute(self, context):

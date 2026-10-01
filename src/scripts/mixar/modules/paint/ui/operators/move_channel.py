@@ -10,6 +10,7 @@ from bpy.types import Operator
 
 from ...core.node.node_utils import get_active_mpaint_node
 from ..utils.ui_refresh import request_ui_refresh
+from mixar.modules.common.i18n import rpt_
 
 
 class CHANNELS_OT_MoveChannel(Operator):
@@ -83,7 +84,7 @@ class CHANNELS_OT_MoveChannel(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to move channel: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to move channel: {error}").format(error=e))
             return {'CANCELLED'}
 
 

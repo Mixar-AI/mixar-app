@@ -262,7 +262,7 @@ def test_native_card_sections_prompts_and_cursor_lock():
     targets = (chat / "mixie_chat_qa_targets.cc").read_text(encoding="utf-8")
     assert "t.detail = row.group" in targets and "restored" not in targets
     ops = (_CHAT_ROOT / "ui" / "operators" / "checkpoint_ops.py").read_text(encoding="utf-8")
-    assert 'GROUP_REVERTED = "Reverted turns"' in ops and "entry.action = checkpoint_row_action(line, item)" in ops
+    assert 'GROUP_REVERTED = n_("Reverted turns")' in ops and "entry.action = checkpoint_row_action(line, item)" in ops
     assert "mixie_chat_history_current" not in ops
 
 
@@ -271,7 +271,8 @@ def test_row_prompts_name_the_turns_a_click_moves(tc, monkeypatch):
     source = ops_path.read_text(encoding="utf-8")
     # Lift the pure helpers out of the operator module (bpy.types.Operator is a mock there).
     helpers = source[source.index("GROUP_TURNS ="):source.index("def sync_checkpoint_entries")]
-    namespace = {"turn_checkpoints": tc.m, "format_relative_time": lambda *a, **k: ""}
+    namespace = {"turn_checkpoints": tc.m, "format_relative_time": lambda *a, **k: "",
+                 "iface_": lambda text: text, "n_": lambda text: text}
     exec(helpers, namespace)
     scene = _scene(users=0)
     records = _turns(tc, scene, 5)

@@ -521,8 +521,9 @@ int chat_ui_handle_action_click(float mouse_x,
                                 int button_count);
 float chat_ui_get_action_buttons_height(float scale_factor);
 
-/* Sender label. mixie_chat_sender_label returns "You" / "Mixie" / "Error",
- * or "You (<delivery_hint>)" for a user message sent into a running turn
+/* Sender label. mixie_chat_sender_label returns "Error" for an error bubble,
+ * the delivery hint ("queued") for a user message sent into a running turn,
+ * and nullptr otherwise — plain "You" / "Mixie" labels are not drawn
  * (mixie_chat_messages_content.cc; the buffer is valid until the next call). */
 const char *mixie_chat_sender_label(const MessageLayoutData &layout, PointerRNA *msg_ptr);
 void chat_ui_draw_sender_label(const char *label,

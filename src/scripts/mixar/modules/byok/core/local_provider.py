@@ -27,6 +27,7 @@ import urllib.request
 from typing import Callable, List, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_, tip_
 
 from ..constants import LOCAL_PROVIDER_ID
 
@@ -62,13 +63,14 @@ def build_model_items(rows) -> List[Tuple[str, str, str]]:
     for row in rows:
         label = row["label"]
         if row.get("recommended"):
-            label += " (recommended)"
+            label = iface_("{model} (recommended)").format(model=label)
         if row.get("fit") == "too_big":
-            label += " — too large for this machine"
+            label = iface_("{model} — too large for this machine").format(model=label)
         elif not row.get("downloaded"):
-            label += " — not downloaded"
+            label = iface_("{model} — not downloaded").format(model=label)
         gigabytes = row.get("total_bytes", 0) / (1024 ** 3)
-        description = f"{row.get('description', '')} (~{gigabytes:.1f} GB)"
+        description = tip_("{description} (~{size:.1f} GB)").format(
+            description=tip_(row.get('description', '')), size=gigabytes)
         items.append((row["id"], label, description))
     return items
 
@@ -194,11 +196,11 @@ def save_managed(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     model_id = wm.byok_form_local_model
     row = model_row(model_id)
     if row is None:
-        return False, "Choose a local model first."
+        return False, n_("Choose a local model first.")
     current = server_supervisor.current()
     if (not server_supervisor.is_healthy() or not current
             or current.get("model_id") != model_id):
-        return False, "Start the local model first (it must be running to save)."
+        return False, n_("Start the local model first (it must be running to save).")
     base_url = current["base_url"]
     supports_vision = bool(row.get("vision"))
 
@@ -236,7 +238,7 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     # keyless credential (api_key null) — omit the field entirely when blank.
     api_key = (wm.byok_form_local_custom_key or "").strip() or None
     if not base_url or not model:
-        return False, "Base URL and model name are required."
+        return False, n_("Base URL and model name are required.")
     invalid = relay.validate_base_url(base_url)
     if invalid:
         return False, invalid
@@ -290,9 +292,9 @@ def _ping_models_endpoint(base_url: str) -> Optional[str]:
             # 401/403 still proves a server is listening — the key may be
             # required per-request; the backend relay will surface that.
             return None
-        return f"The local server answered HTTP {status}."
+        return rpt_("The local server answered HTTP {status}.").format(status=status)
     except Exception:
-        return (
+        return n_(
             "Could not reach the local server. Check that it is running "
             "and the base URL is correct."
         )

@@ -26,6 +26,8 @@ bootstrap module) to respect the 500-line file budget there.
 
 from typing import List, Optional, Tuple
 
+from mixar.modules.common.i18n import n_
+
 from .draw import draw_service_params
 
 # Enum identifiers that are placeholder states, never real catalog keys.
@@ -71,7 +73,7 @@ def get_service_enum_items(
             return _LOADING_ITEMS
         error = get_cache_error()
         if error:
-            return _memoize("service_err", error, lambda: [("ERROR", "Error", error)])
+            return _memoize("service_err", error, lambda: [("ERROR", n_("Error"), error)])
         return _LOADING_ITEMS
 
     def _build():
@@ -262,14 +264,14 @@ def draw_capability_selector(
         return False
 
     if len(services) > 1:
-        _dropdown(layout, data, mode_prop, "Mode")
+        _dropdown(layout, data, mode_prop, n_("Mode"))
 
     if model_refresh_op:
         row = layout.row(align=True)
-        _dropdown(row, data, model_prop, "Model")
+        _dropdown(row, data, model_prop, n_("Model"))
         row.operator(model_refresh_op, text="", icon='FILE_REFRESH')
     else:
-        _dropdown(layout, data, model_prop, "Model")
+        _dropdown(layout, data, model_prop, n_("Model"))
 
     service_key = resolve_service_key(
         capability_key, getattr(data, mode_prop, ""), surface=surface

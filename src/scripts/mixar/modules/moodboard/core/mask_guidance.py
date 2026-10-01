@@ -6,6 +6,8 @@
 
 from io import BytesIO
 
+from mixar.modules.common.i18n import rpt_
+
 
 def constrain_refined_mask(refined_bytes: bytes, guide_bytes: bytes) -> bytes:
     """Intersect a SAM3 result with its user-drawn guide mask.
@@ -15,7 +17,7 @@ def constrain_refined_mask(refined_bytes: bytes, guide_bytes: bytes) -> bytes:
     generation, so pixels outside it must never reach Gemini.
     """
     if not refined_bytes or not guide_bytes:
-        raise ValueError("Both refined and guide masks are required")
+        raise ValueError(rpt_("Both refined and guide masks are required"))
 
     from PIL import Image, ImageChops
 
@@ -30,7 +32,7 @@ def constrain_refined_mask(refined_bytes: bytes, guide_bytes: bytes) -> bytes:
     guide = guide.point(lambda value: 255 if value >= 128 else 0, mode="L")
     constrained = ImageChops.multiply(refined, guide)
     if constrained.getbbox() is None:
-        raise ValueError("SAM3 result does not overlap the original lasso")
+        raise ValueError(rpt_("SAM3 result does not overlap the original lasso"))
 
     output = BytesIO()
     constrained.save(output, format="PNG", optimize=True)

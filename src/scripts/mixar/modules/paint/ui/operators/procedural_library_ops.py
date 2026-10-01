@@ -21,6 +21,7 @@ from bpy.types import Operator
 from .....config.logging_config import get_logger
 from ...procedural_materials import material_registry
 from ..utils import material_preview_manager
+from mixar.modules.common.i18n import iface_, n_, tip_
 
 logger = get_logger(__name__)
 
@@ -52,7 +53,7 @@ def _draw_ai_generate_section(layout, wm):
     prompt_row = ai_box.row(align=True)
     prompt_row.scale_y = 1.3
     prompt_row.prop(wm, "mixar_matgen_query", text="",
-                    placeholder="e.g. worn copper with green patina")
+                    placeholder=n_("e.g. worn copper with green patina"))
     prompt_row.operator("matgen.generate_material", text="Generate", icon='PLAY')
 
     ai_box.row().prop(wm, "mixar_matgen_pipeline", text="Pipeline")
@@ -63,9 +64,9 @@ def _draw_ai_generate_section(layout, wm):
         if status == "generating":
             row.label(text="Generating…", icon='TIME')
         elif status.startswith("done:"):
-            row.label(text=f"\u2713 {status[5:]} added to library", icon='CHECKMARK')
+            row.label(text="\u2713 " + iface_("{name} added to library").format(name=status[5:]), icon='CHECKMARK', translate=False)
         elif status.startswith("error:"):
-            row.label(text=f"\u2717 {status[6:]}", icon='ERROR')
+            row.label(text="\u2717 " + status[6:], icon='ERROR', translate=False)
 
     recent = wm.mixar_matgen_recent
     if not recent:
@@ -187,7 +188,7 @@ class LAYERS_OT_ProceduralMaterialLibraryPopup(Operator):
             for cat in categories:
                 display = cat.replace('_', ' ').title()
                 count = len(material_registry.get_materials_by_category(cat))
-                items.append((cat, f"{display} ({count})", f"Show {display} materials"))
+                items.append((cat, f"{display} ({count})", tip_("Show {category} materials").format(category=display)))
             return items
         except Exception:
             return [("ALL", "All Categories", "")]
@@ -208,7 +209,7 @@ class LAYERS_OT_ProceduralMaterialLibraryPopup(Operator):
                 _draw_ai_generate_section(layout, wm)
                 layout.separator()
         except Exception as e:
-            layout.label(text=f"AI section error: {e}", icon='ERROR')
+            layout.label(text=iface_("AI section error: {error}").format(error=e), icon='ERROR', translate=False)
 
         # Search + category filter
         layout.prop(self, "search", text="", icon='VIEWZOOM')
@@ -237,7 +238,7 @@ class LAYERS_OT_ProceduralMaterialLibraryPopup(Operator):
                 _draw_category_section(layout, self.category, mats)
 
         except Exception as e:
-            layout.label(text=f"Error: {e}", icon='ERROR')
+            layout.label(text=iface_("Error: {error}").format(error=e), icon='ERROR', translate=False)
 
     def _draw_grouped(self, layout, materials):
         """Draw all categories, AI Generated pinned first."""

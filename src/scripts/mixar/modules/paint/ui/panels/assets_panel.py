@@ -11,6 +11,7 @@ Shows procedural materials and other assets from the paint backend.
 """
 
 from bpy.types import Header, Panel
+from mixar.modules.common.i18n import iface_
 
 
 class MIXAR_ASSETS_HT_header(Header):
@@ -55,7 +56,7 @@ class MIXAR_ASSETS_PT_main(Panel):
         try:
             categories = material_registry.get_categories()
             if categories:
-                col.label(text=f"{len(categories)} categories available")
+                col.label(text=iface_("{count} categories available").format(count=len(categories)), translate=False)
                 col.separator()
 
                 # Show procedural material library popup

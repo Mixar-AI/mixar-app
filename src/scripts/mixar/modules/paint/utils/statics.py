@@ -5,6 +5,7 @@
 import re
 
 from .constants import layer_type_labels
+from mixar.modules.common.i18n import iface_
 
 
 # Static blend type items tuple (for use with default= parameter)
@@ -137,26 +138,26 @@ def entity_input_items(self, context):
         items.append(("RGB", "RGB", ""))
         items.append(("ALPHA", "Alpha", ""))
     else:
-        label = layer_type_labels[entity.type]
+        label = iface_(layer_type_labels[entity.type])
 
         if entity.type == "VORONOI":
-            items.append(("RGB", label + " Color", ""))
-            items.append(("ALPHA", label + " Distance", ""))
+            items.append(("RGB", iface_("{type} Color").format(type=label), ""))
+            items.append(("ALPHA", iface_("{type} Distance").format(type=label), ""))
         elif entity.type == "GABOR":
-            items.append(("RGB", label + " Value", ""))
-            items.append(("ALPHA", label + " Phase", ""))
+            items.append(("RGB", iface_("{type} Value").format(type=label), ""))
+            items.append(("ALPHA", iface_("{type} Phase").format(type=label), ""))
         elif entity.type == "VCOL":
             items.append(("RGB", label, ""))
-            items.append(("ALPHA", label + " Alpha", ""))
-            items.append(("R", label + " Red", ""))
-            items.append(("G", label + " Green", ""))
-            items.append(("B", label + " Blue", ""))
+            items.append(("ALPHA", iface_("{type} Alpha").format(type=label), ""))
+            items.append(("R", iface_("{type} Red").format(type=label), ""))
+            items.append(("G", iface_("{type} Green").format(type=label), ""))
+            items.append(("B", iface_("{type} Blue").format(type=label), ""))
         elif entity.type == "IMAGE":
-            items.append(("RGB", label + " Color", ""))
-            items.append(("ALPHA", label + " Alpha", ""))
+            items.append(("RGB", iface_("{type} Color").format(type=label), ""))
+            items.append(("ALPHA", iface_("{type} Alpha").format(type=label), ""))
         else:
-            items.append(("RGB", label + " Color", ""))
-            items.append(("ALPHA", label + " Factor", ""))
+            items.append(("RGB", iface_("{type} Color").format(type=label), ""))
+            items.append(("ALPHA", iface_("{type} Factor").format(type=label), ""))
 
     return items
 

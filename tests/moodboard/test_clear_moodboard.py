@@ -10,6 +10,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from mixar.modules.common.i18n import rpt_
+
 
 COLLECTIONS = ('images', 'textboxes', 'groups', 'action_nodes', 'asset_nodes',
                'links', 'annotations')
@@ -25,7 +27,7 @@ def clear_board():
     release = Mock()
     redraw = Mock()
     scope = {'Operator': object, 'release_all_moodboard_images': release,
-             'redraw_moodboard_canvases': redraw}
+             'redraw_moodboard_canvases': redraw, 'rpt_': rpt_}
     exec(compile(tree, str(source), 'exec'), scope)
     op = scope['MIXIE_OT_clear_moodboard']()
     op.report = Mock()

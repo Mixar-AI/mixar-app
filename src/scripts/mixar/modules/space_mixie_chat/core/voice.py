@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from .voice_input.composer import Draft
 from ..constants import (VOICE_EVENT_POLL_S, VOICE_TOAST_ID, VOICE_TOAST_TTL_MS,
                          VOICE_STARTUP_TIMEOUT_S, VOICE_SESSION_GRACE_S, VOICE_BUFFER_SECONDS)
@@ -18,6 +19,8 @@ _last_timings = {}
 # not stop it.
 _ptt_owned = False
 logger = get_logger(__name__)
+# The client's own wording among dictation error events; server text is shown as sent.
+_CLIENT_ERRORS = (n_('Voice input unavailable.'), n_('Voice input failed.'))
 
 
 def available():
@@ -55,7 +58,7 @@ def toggle(context):
             except Exception as exc:
                 logger.warning('Dictation capture finalization failed: %s', exc)
                 _finish()
-                _toast('warning', 'Voice could not finish. Your draft was preserved.')
+                _toast('warning', rpt_('Voice could not finish. Your draft was preserved.'))
         return 'stopped'
     return start(context)
 
@@ -93,7 +96,7 @@ def push_to_talk_end(discard=False):
     except Exception as exc:
         logger.warning('Dictation capture finalization failed: %s', exc)
         _finish()
-        _toast('warning', 'Voice could not finish. Your draft was preserved.')
+        _toast('warning', rpt_('Voice could not finish. Your draft was preserved.'))
     return 'stopped'
 
 
@@ -111,11 +114,11 @@ def start(context, field_token="", chat_target=False):
     if not scene:
         return 'no_scene'
     if scribble.is_busy() or scribble.is_canvas_open(context.window_manager):
-        _toast('warning', 'Finish handwriting before starting voice input.')
+        _toast('warning', rpt_('Finish handwriting before starting voice input.'))
         return 'unavailable'
     token = get_access_token()
     if not token:
-        _toast('warning', 'Sign in to use voice input.')
+        _toast('warning', rpt_('Sign in to use voice input.'))
         return 'unavailable'
     if not field_token:
         scribble.release_composer()
@@ -154,11 +157,11 @@ def _begin_capture(s):
         s.transport.timings['local_setup_ms'] = round((s.permission_at - s.began) * 1000, 1)
     permission = aud._mixar_capture_permission()
     if permission == -2:
-        raise RuntimeError('Launch Mixar from Finder to allow microphone access.')
+        raise RuntimeError(rpt_('Launch Mixar from Finder to allow microphone access.'))
     if permission < 0:
-        raise RuntimeError('Allow microphone access for Mixar in system privacy settings.')
+        raise RuntimeError(rpt_('Allow microphone access for Mixar in system privacy settings.'))
     if permission != 1:
-        _status('Allow microphone')
+        _status(n_('Allow microphone'))
         return
     opening = time.monotonic()
     s.transport.timings['permission_wait_ms'] = round((opening - s.permission_at) * 1000, 1)
@@ -167,7 +170,7 @@ def _begin_capture(s):
     s.transport.timings['capture_open_ms'] = round((s.recording_at - opening) * 1000, 1)
     s.transport.timings['click_to_capture_ms'] = round((s.recording_at - s.began) * 1000, 1)
     logger.info('Dictation capture timings %s', s.transport.timings)
-    s.state = 'Listening'
+    s.state = n_('Listening')
     _status(s.state)
     s.transport.start()
     s.started = True
@@ -184,7 +187,7 @@ def stop():
     s.transport.feed(aud._mixar_capture_stop(s.capture))
     s.capture = None
     s.transport.stop()
-    s.state = 'Finishing'
+    s.state = n_('Finishing')
     _status(s.state)
 
 
@@ -208,7 +211,7 @@ def defer_send(context):
     except Exception as exc:
         logger.warning('Dictation capture finalization failed: %s', exc)
         _finish()
-        _toast('warning', 'Voice could not finish. Your draft was preserved.')
+        _toast('warning', rpt_('Voice could not finish. Your draft was preserved.'))
     return True
 
 
@@ -282,9 +285,9 @@ def _tick():
             cancel()
             return None
         if time.monotonic() > s.deadline:
-            raise TimeoutError('Voice input timed out. Please try again.')
+            raise TimeoutError(rpt_('Voice input timed out. Please try again.'))
         if s.recording_at is not None and not s.ready and time.monotonic() - s.recording_at > VOICE_BUFFER_SECONDS:
-            raise TimeoutError('Voice could not connect. Your draft was preserved. Please try again.')
+            raise TimeoutError(rpt_('Voice could not connect. Your draft was preserved. Please try again.'))
         if not field_token and (s.scene.mixie_chat_input != s.draft.base
                                 or _attachments(s.scene) != s.attachments):
             s.draft.pending_send = False
@@ -311,17 +314,21 @@ def _tick():
                 if s.capture is not None:
                     aud._mixar_capture_stop(s.capture)
                     s.capture = None
-                s.state = 'Finishing'
+                s.state = n_('Finishing')
                 _status(s.state)
             elif kind == 'error':
-                raise RuntimeError(event.get('message', 'Voice input failed.'))
+                code = event.get('support_code')
+                message = event.get('message', 'Voice input failed.')
+                raise RuntimeError(
+                    rpt_('Voice connection failed ({code}). Please try again.').format(code=code) if code
+                    else rpt_(message) if message in _CLIENT_ERRORS else message)
             elif kind == 'final':
                 if field_token:
                     from .voice_input import fields
                     _finish()
                     fields.publish(bpy.context.window_manager, field_token, event.get('text', ''))
                     if not bpy.context.window_manager.mixie_chat_voice_field_text:
-                        _toast('info', "Didn't catch that. Please try speaking again.")
+                        _toast('info', rpt_("Didn't catch that. Please try speaking again."))
                     return None
                 text, send = s.draft.final(event.get('text', ''), s.scene.mixie_chat_input, _identity(s.scene))
                 if _attachments(s.scene) != s.attachments:
@@ -329,7 +336,7 @@ def _tick():
                 scene = s.scene
                 _finish()
                 if text is None:
-                    _toast('info', "Didn't catch that. Please try speaking again.")
+                    _toast('info', rpt_("Didn't catch that. Please try speaking again."))
                 else:
                     from . import scribble
                     scribble.release_composer()
@@ -342,7 +349,8 @@ def _tick():
                 return None
     except Exception as exc:
         _finish()
-        _toast('warning', 'Voice audio could not keep up. Please try again.' if isinstance(exc, queue.Full) else str(exc))
+        _toast('warning', rpt_('Voice audio could not keep up. Please try again.')
+               if isinstance(exc, queue.Full) else str(exc))
         return None
     return VOICE_EVENT_POLL_S
 

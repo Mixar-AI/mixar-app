@@ -13,6 +13,7 @@ successive renderings of the same toast instead of a pile-up.
 """
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from .update_checker import is_forced
 
@@ -51,10 +52,11 @@ def _download_body(state) -> str:
         return "Verifying download…"
     percent = int(state.download_progress * 100)
     if total > 0:
-        return f"{percent}% — {_format_size(transferred)} of {_format_size(total)}"
+        return rpt_("{percent}% — {transferred} of {total}").format(
+            percent=percent, transferred=_format_size(transferred), total=_format_size(total))
     if transferred > 0:
-        return f"{_format_size(transferred)} downloaded"
-    return "Starting download…"
+        return rpt_("{size} downloaded").format(size=_format_size(transferred))
+    return rpt_("Starting download…")
 
 
 def push_downloading_toast(info) -> None:
@@ -70,15 +72,15 @@ def push_downloading_toast(info) -> None:
 
     forced = is_forced(info)
     actions = [] if forced else [NotificationAction(
-        label="Cancel", operator="mixar.cancel_update_download", style="secondary",
+        label=n_("Cancel"), operator="mixar.cancel_update_download", style="secondary",
     )]
 
     get_notification_store().push(
         type_str="update",
-        title=f"Downloading Mixar {info.latest_version}",
+        title=rpt_("Downloading Mixar {version}").format(version=info.latest_version),
         body=(
             f"{_download_body(get_update_state())}\n"
-            "Mixar will restart to finish updating."
+            + rpt_("Mixar will restart to finish updating.")
         ),
         priority="critical" if forced else "normal",
         actions=actions,
@@ -126,38 +128,39 @@ def push_update_available_toast(info) -> None:
     )
 
     if install_state is InstallState.READY:
-        title = "Mixar Update Ready"
-        body = f"Version {info.latest_version} is ready to install."
+        title = n_("Mixar Update Ready")
+        body = rpt_("Version {version} is ready to install.").format(version=info.latest_version)
     else:
         # No percentage here, deliberately. Staging runs in the background
         # and the user has not asked to wait on it; the topbar badge shows
         # "Downloading 45%" for anyone who wants the detail. Progress
         # belongs in the toast only once the user has pressed Restart &
         # Update and is actually waiting — see push_downloading_toast.
-        title = "Mixar Update Required" if forced else "Mixar Update Available"
-        body = f"Version {info.latest_version} is available."
+        title = n_("Mixar Update Required") if forced else n_("Mixar Update Available")
+        body = rpt_("Version {version} is available.").format(version=info.latest_version)
 
     if forced:
-        body += " This update is required to continue using Mixar."
+        body += " " + rpt_("This update is required to continue using Mixar.")
     if can_self_install:
-        body += " Mixar will restart to apply it."
+        body += " " + rpt_("Mixar will restart to apply it.")
     if info.changelog_summary:
         body += f"\n{info.changelog_summary}"
     # The reason the primary button fell back to the browser. Without it a
     # failed background download is indistinguishable from a release that
     # never supported self-install — invisible unless a console is open.
     if install_state is InstallState.FAILED and state.install_error:
-        body += f"\n{state.install_error} — use Download to update via your browser."
+        body += "\n" + rpt_("{error} — use Download to update via your browser.").format(
+            error=rpt_(state.install_error))
 
     actions = []
     if can_self_install:
         actions.append(NotificationAction(
-            label="Restart & Update", operator="mixar.restart_to_update",
+            label=n_("Restart & Update"), operator="mixar.restart_to_update",
             style="primary",
         ))
     else:
         actions.append(NotificationAction(
-            label="Download", operator="mixar.open_downloads_page", style="primary",
+            label=n_("Download"), operator="mixar.open_downloads_page", style="primary",
         ))
 
     get_notification_store().push(
@@ -190,18 +193,19 @@ def push_install_aborted_toast() -> None:
     from .state import get_update_state
 
     info = get_update_state().update_info
-    version = f" {info.latest_version}" if info else ""
+    if info:
+        retry = rpt_("Click Restart & Update to install {version} again.").format(
+            version=info.latest_version)
+    else:
+        retry = rpt_("Click Restart & Update to install again.")
 
     get_notification_store().push(
         type_str="warning",
-        title="Update paused",
-        body=(
-            "Mixar didn't close, so the update was not installed.\n"
-            f"Click Restart & Update to install{version} again."
-        ),
+        title=n_("Update paused"),
+        body=rpt_("Mixar didn't close, so the update was not installed.") + "\n" + retry,
         priority="normal",
         actions=[NotificationAction(
-            label="Restart & Update", operator="mixar.restart_to_update",
+            label=n_("Restart & Update"), operator="mixar.restart_to_update",
             style="primary",
         )],
         ttl_ms=0,
@@ -241,8 +245,9 @@ def push_up_to_date_toast() -> None:
 
     get_notification_store().push(
         type_str="success",
-        title="Mixar is up to date",
-        body=f"You're running the latest version ({get_current_version()}).",
+        title=n_("Mixar is up to date"),
+        body=rpt_("You're running the latest version ({version}).").format(
+            version=get_current_version()),
         priority="normal",
         ttl_ms=6000,
         id=UPDATE_NOTIFICATION_ID,
@@ -256,8 +261,8 @@ def push_check_failed_toast() -> None:
 
     get_notification_store().push(
         type_str="error",
-        title="Could not check for updates",
-        body="Check your internet connection and try again.",
+        title=n_("Could not check for updates"),
+        body=n_("Check your internet connection and try again."),
         priority="normal",
         ttl_ms=6000,
         id=UPDATE_NOTIFICATION_ID,
@@ -295,25 +300,26 @@ def report_previous_update_result() -> None:
             # on Windows this is what a relaunch of a stale path looks like.
             _push_update_outcome_toast(
                 "error",
-                "Update didn't take effect",
-                f"Mixar {target} was installed but version {running} started. "
-                "Reinstall from the downloads page.",
+                n_("Update didn't take effect"),
+                rpt_("Mixar {target} was installed but version {running} started. "
+                     "Reinstall from the downloads page.").format(target=target, running=running),
             )
             return
         _push_update_outcome_toast(
             "success",
-            f"Updated to Mixar {target or running}",
-            "The update was installed successfully.",
+            rpt_("Updated to Mixar {version}").format(version=target or running),
+            n_("The update was installed successfully."),
             ttl_ms=8000,
         )
         return
 
-    _push_update_outcome_toast(
-        "error",
-        "Update was not installed",
-        f"{_failure_reason(result)} You can download {target or 'the update'} "
-        "from the downloads page.",
-    )
+    if target:
+        body = rpt_("{reason} You can download {version} from the downloads page.").format(
+            reason=_failure_reason(result), version=target)
+    else:
+        body = rpt_("{reason} You can download the update from the downloads page.").format(
+            reason=_failure_reason(result))
+    _push_update_outcome_toast("error", n_("Update was not installed"), body)
 
 
 def _capture_result(result, target, running) -> None:
@@ -340,18 +346,18 @@ def _failure_reason(result) -> str:
     stage = result.get("stage", "")
     code = result.get("exit", "")
     if stage == "wait":
-        return "Mixar was still running when the installer tried to start."
+        return rpt_("Mixar was still running when the installer tried to start.")
     if stage == "verify":
-        return "The downloaded installer failed its signature check."
+        return rpt_("The downloaded installer failed its signature check.")
     if stage in ("mount", "unpack"):
-        return "The downloaded installer could not be opened."
+        return rpt_("The downloaded installer could not be opened.")
     if stage in ("copy", "swap"):
-        return "Mixar could not be replaced on disk."
+        return rpt_("Mixar could not be replaced on disk.")
     if code == "1602":
-        return "The installation was cancelled."
+        return rpt_("The installation was cancelled.")
     if code == "1603":
-        return "Windows Installer reported a fatal error."
-    return "The installer did not finish."
+        return rpt_("Windows Installer reported a fatal error.")
+    return rpt_("The installer did not finish.")
 
 
 def _push_update_outcome_toast(type_str, title, body, ttl_ms=0) -> None:
@@ -361,7 +367,7 @@ def _push_update_outcome_toast(type_str, title, body, ttl_ms=0) -> None:
     actions = None
     if type_str == "error":
         actions = [NotificationAction(
-            label="Download", operator="mixar.open_downloads_page", style="primary",
+            label=n_("Download"), operator="mixar.open_downloads_page", style="primary",
         )]
 
     get_notification_store().push(

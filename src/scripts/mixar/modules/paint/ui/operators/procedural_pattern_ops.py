@@ -15,6 +15,7 @@ from bpy.types import Operator
 
 from .....config.logging_config import get_logger
 from ..utils.ui_refresh import request_ui_refresh
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -58,7 +59,7 @@ class LAYERS_OT_AddProceduralLayer(Operator):
             logger.debug(f"y_new_layer returned: {result}")
         except Exception as e:
             logger.error(f"Exception calling y_new_layer: {e}")
-            self.report({'ERROR'}, f"Failed to create {self.layer_type} layer: {e}")
+            self.report({'ERROR'}, rpt_("Failed to create {type} layer: {error}").format(type=self.layer_type, error=e))
             return {'CANCELLED'}
 
         request_ui_refresh()

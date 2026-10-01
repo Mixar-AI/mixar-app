@@ -17,6 +17,7 @@ from bpy.props import StringProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -84,7 +85,7 @@ class MIXIE_OT_agent_hunyuan_retopology(Operator):
             topo.polygon_type = poly
             topo.face_level = face
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to set topology properties: {e}")
+            self.report({'ERROR'}, rpt_("Failed to set topology properties: {error}").format(error=e))
             return {'CANCELLED'}
 
         # Reuse the existing generate operator (mode_override='TOPOLOGY') so the

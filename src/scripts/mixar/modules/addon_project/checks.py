@@ -11,6 +11,7 @@ import os
 import pkgutil
 import sys
 import traceback
+from mixar.modules.common.i18n import n_
 from pathlib import Path
 
 from .indexer import read_source
@@ -277,7 +278,7 @@ def run_blender_reload(
         result = {
             "success": True,
             "check": "blender_reload",
-            "message": "Add-on imported, every module loaded, registration cycled twice without leaks",
+            "message": n_("Add-on imported, every module loaded, registration cycled twice without leaks"),
             "left_enabled": was_enabled,
             "submodules": len(submodules),
         }
@@ -307,7 +308,7 @@ def run_blender_reload(
             result["installed"] = bool(install.get("success"))
             if install.get("success"):
                 result["left_enabled"] = True
-                result["message"] = "Add-on installed and enabled"
+                result["message"] = n_("Add-on installed and enabled")
         _with_console(result, console)
         return result
     except Exception as exc:

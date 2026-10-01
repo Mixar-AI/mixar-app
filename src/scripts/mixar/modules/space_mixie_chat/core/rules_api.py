@@ -27,6 +27,7 @@ is pure logic, unit-testable outside Blender.
 import uuid
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from .rules import get_raw_rules, parse_rules, serialize_rules, rules_snapshot, rules_fit_store
 from .rules_global import load_global_rules, save_global_rules
@@ -103,7 +104,9 @@ def save_store(scene, is_global: bool, rules: list) -> bool:
 # Mutations — each returns {"success", "error", "rules": <fresh list>}
 # =============================================================================
 
-_ERR_FULL = "Rules could not be saved — store may be full or unavailable"
+# Static errors are English for the agent tools; the UI operators' reports
+# translate them (Operator.report looks every message up).
+_ERR_FULL = n_("Rules could not be saved — store may be full or unavailable")
 
 
 def _result(scene, success: bool, error: str = "") -> dict:
@@ -117,7 +120,7 @@ def _result(scene, success: bool, error: str = "") -> dict:
 def add_rule(scene, text: str, scope: str = SCOPE_PROJECT) -> dict:
     text = (text or "").strip()
     if not text:
-        return _result(scene, False, "Rule text is empty")
+        return _result(scene, False, n_("Rule text is empty"))
     if scope not in (SCOPE_PROJECT, SCOPE_GLOBAL):
         return _result(scene, False,
                        f"Unknown scope {scope!r} — use 'project' or 'global'")
@@ -143,7 +146,7 @@ def update_rule(scene, index: int = -1, text=None, enabled=None, scope=None,
     if text is not None:
         text = str(text).strip()
         if not text:
-            return _result(scene, False, "Rule text is empty")
+            return _result(scene, False, n_("Rule text is empty"))
         rules[local]["text"] = text
     if enabled is not None:
         rules[local]["enabled"] = bool(enabled)
@@ -165,12 +168,12 @@ def update_rule(scene, index: int = -1, text=None, enabled=None, scope=None,
         dest = load_global_rules()
         dest.append(rule)
         if not save_global_rules(dest):
-            return _result(scene, False, "Global rules could not be saved — store may be full or unavailable")
+            return _result(scene, False, n_("Global rules could not be saved — store may be full or unavailable"))
     else:
         dest = parse_rules(get_raw_rules(scene))
         dest.append(rule)
         if not write_project_rules(scene, dest):
-            return _result(scene, False, "File rules could not be saved — store may be full or unavailable")
+            return _result(scene, False, n_("File rules could not be saved — store may be full or unavailable"))
     # The two stores are disjoint, so the destination write above cannot
     # have invalidated the in-memory source list — pop and persist it.
     rules.pop(local)
@@ -193,7 +196,7 @@ def remove_rule(scene, index: int = -1, rule_id=None) -> dict:
     is_global, rules, local = resolved
     rules.pop(local)
     if not save_store(scene, is_global, rules):
-        return _result(scene, False, "Rule could not be removed — store is unavailable")
+        return _result(scene, False, n_("Rule could not be removed — store is unavailable"))
     return _result(scene, True)
 
 

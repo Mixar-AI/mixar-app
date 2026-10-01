@@ -21,6 +21,7 @@ import threading
 
 from mixar.modules.asset_search.core.train_api import build_upload_batches, post_batches
 from mixar.modules.asset_search.core.train_support import W_RENDER_END
+from mixar.modules.common.i18n import iface_
 
 from .asset_inspect_ops import get_collected_asset_data
 
@@ -55,7 +56,9 @@ def feed(op, infos):
 
 def note(op):
     """' · uploaded N' for the render phase text, or '' before the first post."""
-    return f" · uploaded {op._upload_done}" if op._upload_done else ""
+    if not op._upload_done:
+        return ""
+    return " · " + iface_("uploaded {count}").format(count=op._upload_done)
 
 
 def stop_stream(op, drop=False):
@@ -86,7 +89,8 @@ def handle_uploading(op, context, state):
 
     state.upload_total = max(len(batches), 1)
     state.upload_done = 0
-    state.phase_text = f"Uploading & embedding — batch 0/{max(len(batches), 1)}"
+    state.phase_text = iface_("Uploading & embedding — batch {done}/{total}").format(
+        done=0, total=max(len(batches), 1))
 
     op._bg_result = None
     op._bg_thread = threading.Thread(
@@ -107,7 +111,8 @@ def handle_waiting(op, context, state):
     if done != state.upload_done or state.upload_total != total:
         state.upload_done = done
         state.upload_total = total
-        state.phase_text = f"Uploading & embedding — batch {done}/{total}"
+        state.phase_text = iface_("Uploading & embedding — batch {done}/{total}").format(
+            done=done, total=total)
         state.progress = W_RENDER_END + (1.0 - W_RENDER_END) * (done / total)
         op._redraw(context)
 

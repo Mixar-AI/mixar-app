@@ -10,6 +10,7 @@ import json
 import logging
 
 from mixar.modules.common.generation_params.core.bounds import catalog_int, rna_int
+from mixar.modules.common.i18n import iface_
 
 from ..constants import (
     GRAPH_LABEL_MAXLEN,
@@ -489,7 +490,7 @@ def sync_node_schema(_scene, node) -> None:
             0,
             {
                 "id": "mesh",
-                "label": "Mesh",
+                "label": iface_("Mesh"),
                 "accepted_types": ["MESH"],
                 "required": True,
                 "group_id": "mesh",
@@ -512,7 +513,7 @@ def sync_node_schema(_scene, node) -> None:
         for index in range(_PBR_MAX_IMAGE_REFS):
             input_contract["sockets"].append({
                 "id": f"reference:{index}",
-                "label": f"Reference {index + 1}",
+                "label": iface_("Reference {number}").format(number=index + 1),
                 "accepted_types": ["IMAGE"],
                 "required": False,
                 "group_id": "reference",
@@ -531,7 +532,7 @@ def sync_node_schema(_scene, node) -> None:
             0,
             {
                 "id": "image",
-                "label": "Image",
+                "label": iface_("Image"),
                 "accepted_types": ["IMAGE"],
                 "required": False,
                 "group_id": "image",

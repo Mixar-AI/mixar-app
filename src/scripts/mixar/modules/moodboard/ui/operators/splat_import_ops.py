@@ -17,6 +17,7 @@ from bpy.types import Operator, OperatorFileListElement
 from bpy_extras.io_utils import ImportHelper
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -75,8 +76,9 @@ class MIXIE_OT_import_splat(Operator, ImportHelper):
             return {'CANCELLED'}
         self.report(
             {'INFO'},
-            f"Imported {len(paths) - len(errors)} splat(s): "
-            f"{', '.join(imported[:4])}{'…' if len(imported) > 4 else ''}",
+            rpt_("Imported {count} splat(s): {names}").format(
+                count=len(paths) - len(errors),
+                names=', '.join(imported[:4]) + ('…' if len(imported) > 4 else '')),
         )
         return {'FINISHED'}
 

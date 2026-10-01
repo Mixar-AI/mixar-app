@@ -9,6 +9,8 @@ import time
 import uuid
 from pathlib import Path
 
+from mixar.modules.common.i18n import n_
+
 from .addon_tests import run_addon_tests
 from .checks import run_blender_reload, run_static_checks
 from .constants import (
@@ -68,7 +70,7 @@ class AddonProjectService(WorkspaceServiceMixin):
         with self._lock:
             root = Path(root_value).expanduser()
             if not root.is_dir():
-                raise AddonProjectError("invalid_root", "Choose an existing add-on project folder")
+                raise AddonProjectError("invalid_root", n_("Choose an existing add-on project folder"))
             root = root.resolve(strict=True)
             # Standalone semantics: shape (a) stays legitimate here. A
             # workspace root is linked via link_workspace_root, whose
@@ -300,13 +302,13 @@ class AddonProjectService(WorkspaceServiceMixin):
         if "." in requested or not _MODULE_RE.match(requested):
             raise AddonProjectError(
                 "invalid_entrypoint",
-                "The entrypoint must be one top-level module name",
+                n_("The entrypoint must be one top-level module name"),
             )
         if not allow_root_package and is_root_package_entrypoint(root, requested):
             raise AddonProjectError(
                 "invalid_entrypoint",
-                "Each add-on lives in its own subfolder of the projects "
-                "folder; the projects folder itself cannot be the add-on",
+                n_("Each add-on lives in its own subfolder of the projects "
+                   "folder; the projects folder itself cannot be the add-on"),
             )
         entrypoint_source_path(root, requested)
         return requested
@@ -331,13 +333,13 @@ class AddonProjectService(WorkspaceServiceMixin):
             if not chosen:
                 raise AddonProjectError(
                     "entrypoint_missing",
-                    "Set an active add-on before changing its enabled state",
+                    n_("Set an active add-on before changing its enabled state"),
                 )
             if not allow_root and is_root_package_entrypoint(root, chosen):
                 raise AddonProjectError(
                     "invalid_entrypoint",
-                    "Each add-on lives in its own subfolder of the projects "
-                    "folder; the projects folder itself cannot be the add-on",
+                    n_("Each add-on lives in its own subfolder of the projects "
+                       "folder; the projects folder itself cannot be the add-on"),
                 )
             if enabled:
                 outcome = set_addon_enabled(

@@ -57,7 +57,7 @@ def test_walking_advertises_the_walks_own_keys():
     assert '{"Q", "E"}' in block
     assert '{"LMB"}' in block and "Hold to look" in block
     # The sprint and the creep share one group, the way Q and E do.
-    assert '{"Shift", WALK_SLOW_KEY}, 2, "Faster / slower"' in block
+    assert '{"Shift", WALK_SLOW_KEY}, 2, N_("Faster / slower")' in block
     assert "WALKING_HINTS = 4" in TOP
 
 

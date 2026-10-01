@@ -21,6 +21,7 @@ import os
 import sys
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from ..constants import INSTALLER_EXTENSIONS, SELF_INSTALL_TYPES
 from . import app_paths, staging, verify
@@ -63,25 +64,26 @@ def check_eligibility(update_info) -> Eligibility:
     platform = _platform_key()
     allowed = SELF_INSTALL_TYPES.get(platform)
     if not allowed:
-        return Eligibility(False, "In-app updates aren't supported on this platform")
+        return Eligibility(False, n_("In-app updates aren't supported on this platform"))
 
     if not update_info or not update_info.download_url:
-        return Eligibility(False, "This release has no in-app installer")
+        return Eligibility(False, n_("This release has no in-app installer"))
     if not update_info.download_sha256:
         # Without a checksum we would be running an unverified elevated
         # installer. The browser download at least shows the user what
         # they are launching.
-        return Eligibility(False, "This release was published without a checksum")
+        return Eligibility(False, n_("This release was published without a checksum"))
 
     installer_type = (update_info.installer_type or "").lower()
     if installer_type not in allowed:
         return Eligibility(
-            False, f"Unsupported installer type for {platform}: {installer_type or 'none'}",
+            False, rpt_("Unsupported installer type for {platform}: {installer_type}").format(
+                platform=platform, installer_type=installer_type or "none"),
         )
 
     location = app_paths.get_install_location()
     if not location.writable:
-        return Eligibility(False, location.reason or "This install can't be updated in place")
+        return Eligibility(False, location.reason or n_("This install can't be updated in place"))
 
     return Eligibility(
         True, "", location=location, extension=INSTALLER_EXTENSIONS[installer_type],

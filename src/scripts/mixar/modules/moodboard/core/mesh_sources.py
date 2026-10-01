@@ -3,6 +3,8 @@
 
 """Scene membership, not a retained datablock, makes a mesh reference usable."""
 
+from mixar.modules.common.i18n import rpt_
+
 
 def is_scene_mesh(scene, obj) -> bool:
     try:
@@ -28,29 +30,29 @@ def mesh_input_objects(context, node):
             continue
         name = obj.name if obj is not None else source.object_names
         if name:
-            raise ValueError(
-                f'Mesh "{name}" was removed from this scene. '
+            raise ValueError(rpt_(
+                'Mesh "{name}" was removed from this scene. '
                 'Select another mesh on its Moodboard node.'
-            )
-        raise ValueError('No mesh selected. Use Select Mesh on the connected Moodboard node.')
+            ).format(name=name))
+        raise ValueError(rpt_('No mesh selected. Use Select Mesh on the connected Moodboard node.'))
 
     names = input_source_object_names(scene, node)
     if not names:
-        raise ValueError('Connect a mesh node and select a scene mesh before generating.')
+        raise ValueError(rpt_('Connect a mesh node and select a scene mesh before generating.'))
     objects = []
     for name in names:
         obj = scene.objects.get(name)
         if obj is None:
-            raise ValueError(
-                f'Mesh "{name}" is no longer in this scene. '
+            raise ValueError(rpt_(
+                'Mesh "{name}" is no longer in this scene. '
                 'Restore it or connect another mesh node.'
-            )
+            ).format(name=name))
         if context.view_layer.objects.get(name) != obj:
-            raise ValueError(
-                f'Mesh "{name}" is unavailable in the current view layer. '
+            raise ValueError(rpt_(
+                'Mesh "{name}" is unavailable in the current view layer. '
                 'Enable its collection in the Outliner or choose another mesh.'
-            )
+            ).format(name=name))
         objects.append(obj)
     if not any(obj.type == 'MESH' for obj in objects):
-        raise ValueError('Connect a mesh node and select a scene mesh before generating.')
+        raise ValueError(rpt_('Connect a mesh node and select a scene mesh before generating.'))
     return objects

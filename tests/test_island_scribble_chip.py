@@ -115,7 +115,7 @@ def test_chip_row_paints_scribble_in_the_island_unit():
     assert "AGENT_ICON_PEN" in body
     assert "AgentIslandControl::Scribble" in body
     assert "layout->chip_scribble, state->scribble_armed" in body
-    assert 'state->scribble_armed ? "Done" : "Sketch"' in body
+    assert 'state->scribble_armed ? IFACE_("Done") : IFACE_("Sketch")' in body
     assert "AGENT_ICON_CROSS" in body
     assert "AGENT_ICON_CHEVRON_DOWN" in body
 

@@ -38,11 +38,16 @@ from .export_preflight import (
     repair_export,  # noqa: F401 — re-exported for the backend's repair call
     run_preflight,
 )
-from .export_presets import PRESETS, preset_kwargs, preset_report  # noqa: F401
+from .export_presets import PRESETS, preset_kwargs, preset_report, stl_kwargs  # noqa: F401
 from .export_verify import file_clip_names, verify_export
 
 EXTENSIONS = {"fbx": ".fbx", "glb": ".glb", "gltf": ".gltf", "obj": ".obj",
-              "usd": ".usd", "usdc": ".usdc", "usdz": ".usdz"}
+              "usd": ".usd", "usdc": ".usdc", "usdz": ".usdz", "stl": ".stl"}
+# Static formats: no rig or animation reaches the file.
+STATIC_WARNINGS = {
+    "obj": "OBJ is static-only; rigs and animation were omitted.",
+    "stl": "STL is geometry-only; materials, textures, rigs and animation were omitted.",
+}
 FOLDER_KINDS = ("downloads", "library", "temp")
 MESH_NAME_LIMIT = 24
 
@@ -67,6 +72,8 @@ def _exporter(fmt: str):
         return bpy.ops.wm.obj_export
     if fmt in ("usd", "usdc", "usdz"):
         return bpy.ops.wm.usd_export
+    if fmt == "stl":
+        return bpy.ops.wm.stl_export
     raise ValueError(f"Unsupported export format: {fmt}")
 
 
@@ -210,22 +217,28 @@ def run_export(session_id: str, spec: dict) -> dict:
             obj.select_set(True)
         context.view_layer.objects.active = meshes[0]
         staged, textures_folder = 0, ""
-        with clip_selection(armatures, animations, scene) as (clips, clips_missing):
-            with _temporary_export_materials(meshes):
+        # STL is geometry only: no clip muting, material swap or texture
+        # staging — the mesh is written as posed at the current frame.
+        stl = fmt == "stl"
+        clip_ctx = (nullcontext(([], [])) if stl
+                    else clip_selection(armatures, animations, scene))
+        with clip_ctx as (clips, clips_missing):
+            with nullcontext() if stl else _temporary_export_materials(meshes):
                 # OBJ: packed / generated images never reach the .mtl, so they
                 # are staged beside the OBJ and referenced relatively.
                 texture_ctx = (staged_obj_textures(meshes, filepath) if fmt == "obj"
                                else nullcontext((0, "")))
                 with texture_ctx as (staged, textures_folder):
-                    overrides = {"path_mode": "RELATIVE"} if staged else None
+                    overrides = ({"path_mode": "RELATIVE"} if staged
+                                 else stl_kwargs(spec) if stl else None)
                     status, kwargs, anim_mode, warning = _run_operator(
                         fmt, filepath, str(spec.get("use_case") or "other"), animations,
                         overrides,
                     )
         if 'FINISHED' not in status:
             raise RuntimeError(f"Blender exporter returned {sorted(status)}")
-        if fmt == "obj":
-            warning = "OBJ is static-only; rigs and animation were omitted."
+        if fmt in STATIC_WARNINGS:
+            warning = STATIC_WARNINGS[fmt]
             clips = []
         size = 0
         try:
@@ -234,9 +247,13 @@ def run_export(session_id: str, spec: dict) -> dict:
             pass
         verification = verify_export(filepath, fmt, {
             "mesh_count": len(meshes), "armature_count": len(armatures),
-            "clips": clips if animations is not None else None, "joined": False,
-            "images_expected": staged if fmt == "obj" else _images_expected(meshes),
+            "clips": clips if animations is not None and not stl else None,
+            # STL has no objects: every mesh lands in the file as one solid.
+            "joined": stl,
+            "images_expected": (staged if fmt == "obj" else 0 if stl
+                                else _images_expected(meshes)),
             "compression": "none",
+            "stl_scale": kwargs.get("global_scale") if stl else None,
         })
         if verification.get("checked") and verification.get("animations"):
             # Names as the FILE holds them, mapped back to the scene clip names

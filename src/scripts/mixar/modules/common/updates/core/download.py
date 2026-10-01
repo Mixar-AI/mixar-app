@@ -21,6 +21,7 @@ import urllib.error
 import urllib.request  # noqa: F401 - tests patch ``download.urllib.request.urlopen``
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 from mixar.modules.common.remote_assets.core import download as _shared
 
 from ..constants import (
@@ -40,12 +41,15 @@ logger = get_logger(__name__)
 class UpdateDownloadError(_shared.DownloadError):
     """A download or verification failure. ``user_message`` is UI-safe."""
 
+    def __init__(self, message, user_message="", retryable=False):
+        super().__init__(message, user_message or n_("Download failed"), retryable)
+
 
 class UpdateDownloadCancelled(UpdateDownloadError):
     """``should_cancel`` returned True."""
 
     def __init__(self):
-        super().__init__("Download cancelled", user_message="Cancelled")
+        super().__init__("Download cancelled", user_message=n_("Cancelled"))
 
 
 def _classify(exc):
@@ -91,7 +95,7 @@ def download_installer(
     if not expected_sha256:
         raise UpdateDownloadError(
             "Release published without a sha256 — refusing to stage installer",
-            user_message="Update could not be verified",
+            user_message=n_("Update could not be verified"),
         )
     return _shared.download_file(
         url, final_path, expected_sha256,

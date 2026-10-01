@@ -32,6 +32,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 
@@ -188,7 +190,7 @@ void interpolation_chip(ui::Block *block,
   const float chevron[4] = {0.851f, 0.851f, 0.851f, 1.0f};
   cinema_panel(rect, std::min(CINEMA_ROW_RADIUS * u, BLI_rctf_size_y(&rect) * 0.5f), top, bottom);
 
-  const char *name = "Bezier";
+  const char *name = N_("Bezier");
   const char *identifier = "BEZIER";
   PointerRNA shot_ptr = {};
   view3d_director_active_shot_pointer(CTX_data_scene(const_cast<bContext *>(C)), &shot_ptr);
@@ -210,7 +212,7 @@ void interpolation_chip(ui::Block *block,
       if (!RNA_property_collection_lookup_int(&shot_ptr, beats, index, &beat_ptr)) {
         continue;
       }
-      const char *beat_name = "Shot Default";
+      const char *beat_name = N_("Shot Default");
       const char *beat_id = "SHOT";
       interpolation_labels(C, &beat_ptr, &beat_name, &beat_id);
       if (first) {
@@ -219,7 +221,7 @@ void interpolation_chip(ui::Block *block,
         first = false;
       }
       else if (!STREQ(identifier, beat_id)) {
-        name = "Mixed";
+        name = N_("Mixed");
         identifier = "MIXED";
         break;
       }
@@ -228,8 +230,11 @@ void interpolation_chip(ui::Block *block,
   else {
     interpolation_labels(C, &shot_ptr, &name, &identifier);
   }
-  cinema_text_left(
-      name, rect.xmin + 12.0f * u, BLI_rctf_cent_y(&rect), CINEMA_FONT_VALUE * u, value_col);
+  cinema_text_left(IFACE_(name),
+                   rect.xmin + 12.0f * u,
+                   BLI_rctf_cent_y(&rect),
+                   CINEMA_FONT_VALUE * u,
+                   value_col);
   cinema_chevron(rect.xmax - 16.0f * u, BLI_rctf_cent_y(&rect), 9.0f * u, chevron);
 
   cinema_qa_record(region, rect, "director_interpolation", identifier, -1);
@@ -237,8 +242,8 @@ void interpolation_chip(ui::Block *block,
       block,
       view3d_director_interpolation_popup_create,
       rect,
-      has_selection ? "Interpolation: how the camera eases out of the selected keyframes" :
-                      "Interpolation: how the camera eases between this shot's keyframes",
+      has_selection ? TIP_("Interpolation: how the camera eases out of the selected keyframes") :
+                      TIP_("Interpolation: how the camera eases between this shot's keyframes"),
       CinemaPopupSlot::Strip);
   director_overlay_disable_button(but, !enabled);
 }
@@ -298,20 +303,20 @@ float draw_frame_range(ui::Block *block,
   const rctf start_rect = {x, x + field_w, row_ymin, row_ymax};
   frame_field(block,
               ptr,
-              "Start",
+              IFACE_("Start"),
               seconds ? "range_start_seconds" : "frame_start",
               start_rect,
-              seconds ? "First frame of the scene range, in seconds" :
-                        "First frame of the scene range");
+              seconds ? TIP_("First frame of the scene range, in seconds") :
+                        TIP_("First frame of the scene range"));
   x += field_w + FIELD_GAP * u;
   const rctf end_rect = {x, x + field_w, row_ymin, row_ymax};
   frame_field(block,
               ptr,
-              "End",
+              IFACE_("End"),
               seconds ? "range_end_seconds" : "frame_end",
               end_rect,
-              seconds ? "Last frame of the scene range, in seconds" :
-                        "Last frame of the scene range");
+              seconds ? TIP_("Last frame of the scene range, in seconds") :
+                        TIP_("Last frame of the scene range"));
   return x + field_w + FIELD_GAP * u;
 }
 

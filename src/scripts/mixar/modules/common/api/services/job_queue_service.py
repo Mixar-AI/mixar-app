@@ -19,6 +19,7 @@ from typing import Callable, Optional
 from urllib.parse import quote
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ....auth.core.auth import get_access_token
 from ..constants import APIModule
@@ -72,14 +73,14 @@ class JobQueueService(BaseService):
             error = error.get("message") or error.get("detail") or str(error)
         user_message = ""
         if status == "CANCELLED":
-            user_message = "Generation was cancelled"
-            error = error or "Cancelled"
+            user_message = n_("Generation was cancelled")
+            error = error or n_("Cancelled")
         elif status == "FAILED":
             # The job queue's ``error`` is already a client-safe, per-class
             # sentence ("The generation was rejected by the provider's content
             # policy."); a fixed "Generation failed" here hid it from every
             # surface, since they all prefer user_message.
-            user_message = str(error or "") or "Generation failed — please try again"
+            user_message = str(error or "") or n_("Generation failed — please try again")
 
         normalized = {
             "job_id": data.get("job_id") or data.get("id"),

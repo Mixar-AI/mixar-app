@@ -19,6 +19,7 @@ and nodes used to have separate clipboards behind the same key, resolved by
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_, tip_
 from ....common.utils.platform_utils import format_shortcut
 from ...core.moodboard_clipboard import copy_selected
 from ...core.media_utils import selected_exportable_media
@@ -51,6 +52,14 @@ class MIXIE_OT_moodboard_copy_image(Operator):
     bl_options = {'REGISTER'}
 
     @classmethod
+    def description(cls, context, properties):
+        return tip_(
+            "Copy the selected images, videos, text boxes and inference nodes "
+            "(with their connections and results); paste with "
+            "{shortcut} in this or another Mixar instance"
+        ).format(shortcut=format_shortcut('V'))
+
+    @classmethod
     def poll(cls, context):
         return _has_moodboard_selection(context.scene)
 
@@ -63,8 +72,8 @@ class MIXIE_OT_moodboard_copy_image(Operator):
             self.report({'WARNING'}, "Nothing selected to copy")
             return {'CANCELLED'}
 
-        noun = "item" if count == 1 else "items"
-        self.report({'INFO'}, f"Copied {count} {noun}")
+        self.report({'INFO'}, (rpt_("Copied {count} item") if count == 1
+                               else rpt_("Copied {count} items")).format(count=count))
         return {'FINISHED'}
 
 

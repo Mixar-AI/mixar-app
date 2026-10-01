@@ -17,6 +17,7 @@ from typing import Callable, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import get_queue
 from mixar.modules.common.job_queue.constants import FEATURE_IMAGEGEN
 from mixar.modules.common.job_queue.core.job import JobState, TERMINAL_STATES
@@ -41,7 +42,7 @@ class _SceneReconImageGenJob(SyncImageJob):
     def handle_result(self, result_files, on_done, on_error):
         """Download image, add to moodboard, then submit scene recon."""
         if not self._image_urls:
-            on_error("No image URLs in server response")
+            on_error(n_("No image URLs in server response"))
             return True
 
         urls = list(self._image_urls)
@@ -74,7 +75,7 @@ class _SceneReconImageGenJob(SyncImageJob):
                             sidebar = scene.mixie_moodboard_sidebar
                             if hasattr(sidebar, "tab_scene_recon"):
                                 sidebar_tab = sidebar.tab_scene_recon
-                                sidebar_tab.stage_name = "Starting reconstruction..."
+                                sidebar_tab.stage_name = n_("Starting reconstruction...")
                                 sidebar_tab.stage_detail = ""
 
                         from mixar.modules.moodboard.core.scene_recon_submission import (
@@ -87,12 +88,12 @@ class _SceneReconImageGenJob(SyncImageJob):
                         on_done(img.name)
                     except Exception as e:
                         logger.error("Error chaining scene recon: %s", e)
-                        on_error(f"Error: {e}")
+                        on_error(rpt_("Error: {error}").format(error=e))
                     return None
 
                 bpy.app.timers.register(_chain, first_interval=0.0)
             except Exception as e:
-                err = f"Failed to download generated image: {e}"
+                err = rpt_("Failed to download generated image: {error}").format(error=e)
                 logger.error("[SceneRecon] %s", err)
 
                 def _fail():
@@ -148,7 +149,7 @@ def enqueue_imagegen_for_recon(
         job_type="image_gen",
         model="pro",
         payload=payload,
-        fail_message="Image generation failed",
+        fail_message=n_("Image generation failed"),
         name_prefix="imagegen",
         prompt_text=effective_prompt,
         _stored_prompt=effective_prompt,
@@ -188,7 +189,7 @@ def _watch_for_failure(
                 continue
             if j.state == JobState.FAILED:
                 q.remove_listener(_listener)
-                on_error(j.error or "Image generation failed")
+                on_error(j.error or n_("Image generation failed"))
             elif j.state in TERMINAL_STATES:
                 q.remove_listener(_listener)
             return

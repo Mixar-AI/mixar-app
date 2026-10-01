@@ -22,6 +22,7 @@ import base64 as _b64
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
 
 logger = get_logger(__name__)
@@ -97,13 +98,13 @@ class MIXIE_OT_texture_edit_generate(Operator):
         try:
             file_bytes, filename = export_selected_mesh(context, "FBX")
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to export mesh: {e}")
+            self.report({"ERROR"}, rpt_("Failed to export mesh: {error}").format(error=e))
             return {"CANCELLED"}
         if len(file_bytes) > _MAX_TEXTURE_EDIT_FILE_SIZE:
             size_mb = len(file_bytes) / (1024 * 1024)
             self.report(
                 {"ERROR"},
-                f"Exported mesh is {size_mb:.1f}MB (max 100MB)",
+                rpt_("Exported mesh is {size:.1f}MB (max 100MB)").format(size=size_mb),
             )
             return {"CANCELLED"}
 
@@ -115,7 +116,7 @@ class MIXIE_OT_texture_edit_generate(Operator):
             try:
                 image_bytes = compress_image_for_upload(image)
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
             payload["reference_image_bytes_b64"] = (
                 _b64.b64encode(image_bytes).decode()
@@ -147,7 +148,7 @@ class MIXIE_OT_texture_edit_generate(Operator):
                 model=model,
                 payload=payload,
                 label=meshes[0].name,
-                fail_message="Texture edit failed",
+                fail_message=n_("Texture edit failed"),
                 on_imported=make_texture_reimport_on_imported(),
                 scene_flag="mixie_lookdev360_is_generating",
             )
@@ -156,7 +157,7 @@ class MIXIE_OT_texture_edit_generate(Operator):
                     {"ERROR"}, "A duplicate texture edit is already queued")
                 return {"CANCELLED"}
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to start generation: {e}")
+            self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return {"CANCELLED"}
 
         from mixar.modules.common.job_queue.ui.lists.queue_uilist import (
@@ -206,7 +207,7 @@ class MIXIE_OT_texture_gen_matgen(Operator):
                 )
                 return {"CANCELLED"}
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to start generation: {e}")
+            self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return {"CANCELLED"}
 
         self.report({"INFO"}, "Added to queue")

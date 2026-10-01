@@ -26,6 +26,7 @@ import re
 import bpy
 from bpy.types import Menu, UIList
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.common.utils.ui_utils import draw_multiline_text_input
 
 # Wrap width chosen for the popup's narrow width (42 widget points). At
@@ -55,17 +56,17 @@ _RUNNING_STATES = {"BUSY", "MODIFYING"}
 def _get_status(scene) -> tuple[str, str]:
     state = getattr(scene, "mixie_chat_state", "OFFLINE") or "OFFLINE"
     if state == "OFFLINE":
-        return "Disconnected", 'CANCEL'
+        return n_("Disconnected"), 'CANCEL'
     if state == "CONNECTING":
-        return "Connecting", 'SORTTIME'
+        return n_("Connecting"), 'SORTTIME'
     if state in _RUNNING_STATES:
-        return "Running", 'RECORD_ON'
+        return n_("Running"), 'RECORD_ON'
     if state == "AWAITING_INPUT":
-        return "Awaiting Input", 'QUESTION'
+        return n_("Awaiting Input"), 'QUESTION'
     if getattr(scene, "mixie_run_open", False) is True:
         # Turn over, run open: workers still build between turns.
-        return "Working", 'RECORD_ON'
-    return "Idle", 'RECORD_OFF'
+        return n_("Working"), 'RECORD_ON'
+    return n_("Idle"), 'RECORD_OFF'
 
 
 def _strip_markdown(text: str) -> str:
@@ -212,7 +213,7 @@ class MIXIE_CHAT_UL_history(UIList):
         for line in wrapped:
             row = body.row()
             row.alignment = 'RIGHT' if is_user else 'LEFT'
-            row.label(text=line)
+            row.label(text=line, translate=False)
 
 
 def _draw_message_bubble(parent_layout, sender: str, wrapped: list[str]) -> None:
@@ -240,7 +241,7 @@ def _draw_message_bubble(parent_layout, sender: str, wrapped: list[str]) -> None
     for line in wrapped:
         row = body.row()
         row.alignment = 'RIGHT' if is_user else 'LEFT'
-        row.label(text=line)
+        row.label(text=line, translate=False)
 
 
 def _draw_history(layout, scene, list_rows: int) -> None:

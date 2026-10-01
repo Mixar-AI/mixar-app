@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Kaixo, Mixarreko Naman naiz.
+Minutu gutxitan aplikazioa erakutsiko dizut.
+Hau zure 3D ikuspegia da.
+Mugitzeko aukera ematen dizun 3D espazioa.
+Arrastatu erdiko botoiarekin biratzeko; erabili gurpila zooma egiteko.
+Shift eta erdiko botoia ikuspegia lekuz aldatzeko.
+Probatu ezazu.
+Egin klik hautatzeko, G mugitzeko,
+R biratzeko, S eskalatzeko.
+Hona hemen lasterbide erabilgarri batzuk.
+Beheko uhartetxoa ikusten? Mixie da, zure agentea.
+Egin klik irekitzeko.
+Mixiek fitxak ditu.
+Agent fitxan, azaldu hitz arruntez zer nahi duzun. Agenteak zure eszenan lan egingo du.
+Agenteak Tripo, Meshy eta Nano Banana bezalako modeloak erabiltzen ditu.
+Kontrol handiagoa izateko, ireki beste fitxak:
+3D, Image, Video edo World Model.
+Aukeratu modeloa eta doitu ezarpenak.
+Sortzen duzun guztia liburutegira doa.
+Zure sorkuntzak hemen daude.
+Lotu zure liburutegia agenteak zure baliabideak erabil ditzan,
+eta kredituak aurrezteko.
+Goian ezkerrean eszenen tiradera dago.
+Eszena bakoitzak bere fitxa eta Mixie agentea ditu.
+Exekutatu zereginak batera eta aldatu haien artean nahi duzunean.
+Eszena prest dagoenean, joan Cinema Mode-ra
+kamera zuzentzeko eta bideo lan-fluxuak sortzeko.
+Ideiak 2Dn hasten dira.
+Atera moodboarda eskuinetik edo sakatu tildea.
+Erreferentzia eta kontzeptuetarako mihisea da.
+Utzi hemen irudiak, bideoak edo zirriborroak.
+Eraiki nodo-grafoak eredu sortzaileetarako, ComfyUI-n bezala.
+Zen Mode-n zaude, ikuspegi sinpleenean.
+Blender ezagutzen baduzu, joan Engine Mode-ra.
+Blenderren lan-eremu osoa dago, panel eta lasterbide guztiekin.
+Mixiek bietan funtzionatzen du. Aukeratu erosoena.
+Itzul gaitezen Zen Mode-ra.
+Gure sortzaile bazkideen programak kredituak eskaintzen dizkizu,
+eta AIren eta 3Dren etorkizuna eratzen duen komunitatea.
+Hori da guztia. Badakizu non dagoen dena.
+Sor dezagun 3D elkarrekin.

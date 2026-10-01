@@ -201,7 +201,7 @@ def test_the_marker_is_painted_outside_the_render_pass():
     # The camera is excluded from the render by type; the marker is the only camera on the map.
     assert "(1 << OB_CAMERA)" in (VIEW3D / "view3d_director_minimap.hh").read_text(encoding="utf-8")
     assert "MINIMAP_HIDDEN_TYPES" in _block(MINIMAP, "void minimap_render(")
-    assert 'caption_chip("Aerial view"' in painter
+    assert 'caption_chip(IFACE_("Aerial view")' in painter
     assert "Add a camera to place it" in painter
     assert "locked ? 0.45f : 1.0f" in painter
 

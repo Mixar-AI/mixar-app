@@ -13,6 +13,7 @@ import os
 
 import bpy
 from bpy.types import Operator
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.core.media_utils import selected_reference_stills
 
 from mixar.config.logging_config import get_logger
@@ -65,24 +66,25 @@ class MIXIE_OT_scene_gen_exp_pick_image(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({"ERROR"}, f"Invalid file path: {e}")
+            self.report({"ERROR"}, rpt_("Invalid file path: {error}").format(error=e))
             return {"CANCELLED"}
 
         if not os.path.isfile(filepath):
-            self.report({"ERROR"}, f"File not found: {filepath}")
+            self.report({"ERROR"}, rpt_("File not found: {filepath}").format(filepath=filepath))
             return {"CANCELLED"}
 
         valid_extensions = {'.png', '.jpg', '.jpeg', '.webp'}
         file_ext = os.path.splitext(filepath)[1].lower()
         if file_ext not in valid_extensions:
-            self.report({"ERROR"}, f"Invalid image format: {file_ext}")
+            self.report({"ERROR"}, rpt_("Invalid image format: {file_ext}").format(
+                file_ext=file_ext))
             return {"CANCELLED"}
 
         try:
             img = bpy.data.images.load(filepath, check_existing=True)
             img.pack()
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to load image: {e}")
+            self.report({"ERROR"}, rpt_("Failed to load image: {error}").format(error=e))
             return {"CANCELLED"}
 
         tab = _get_tab(context)
@@ -91,7 +93,7 @@ class MIXIE_OT_scene_gen_exp_pick_image(Operator):
             return {"CANCELLED"}
 
         tab.reference_image = img
-        self.report({"INFO"}, f"Selected '{img.name}'")
+        self.report({"INFO"}, rpt_("Selected '{name}'").format(name=img.name))
         mark_file_select_executed(self)
         return {"FINISHED"}
 
@@ -198,7 +200,7 @@ class MIXIE_OT_scene_gen_exp_generate_images(Operator):
             try:
                 image_bytes = compress_image_for_upload(selected_mb[0].image)
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
         else:
             if not tab.reference_image:
@@ -207,7 +209,7 @@ class MIXIE_OT_scene_gen_exp_generate_images(Operator):
             try:
                 image_bytes = compress_image_for_upload(tab.reference_image)
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
 
         try:
@@ -215,7 +217,8 @@ class MIXIE_OT_scene_gen_exp_generate_images(Operator):
                 get_scene_gen_exp_manager,
             )
         except ImportError as e:
-            self.report({"ERROR"}, f"Scene gen exp manager not available: {e}")
+            self.report({"ERROR"}, rpt_("Scene gen exp manager not available: {error}").format(
+                error=e))
             return {"CANCELLED"}
 
         manager = get_scene_gen_exp_manager()
@@ -233,7 +236,8 @@ class MIXIE_OT_scene_gen_exp_generate_images(Operator):
         # Lock label renaming once Step 2 starts
         tab.rename_allowed = False
 
-        self.report({"INFO"}, f"Generating {selected_count} image(s)...")
+        self.report({"INFO"}, rpt_("Generating {selected_count} image(s)...").format(
+            selected_count=selected_count))
         return {"FINISHED"}
 
 
@@ -314,7 +318,7 @@ class MIXIE_OT_scene_gen_exp_extract_labels(Operator):
             try:
                 image_bytes = compress_image_for_upload(selected[0].image)
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
         else:
             if not tab.reference_image:
@@ -323,7 +327,7 @@ class MIXIE_OT_scene_gen_exp_extract_labels(Operator):
             try:
                 image_bytes = compress_image_for_upload(tab.reference_image)
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
 
         try:
@@ -331,7 +335,8 @@ class MIXIE_OT_scene_gen_exp_extract_labels(Operator):
                 get_scene_gen_exp_manager,
             )
         except ImportError as e:
-            self.report({"ERROR"}, f"Scene gen exp manager not available: {e}")
+            self.report({"ERROR"}, rpt_("Scene gen exp manager not available: {error}").format(
+                error=e))
             return {"CANCELLED"}
 
         manager = get_scene_gen_exp_manager()
@@ -414,7 +419,8 @@ class MIXIE_OT_scene_gen_exp_generate_hp(Operator):
             operator=self,
         )
 
-        self.report({"INFO"}, f"Queued {len(enqueued)} HP generation job(s)")
+        self.report({"INFO"}, rpt_("Queued {count} HP generation job(s)").format(
+            count=len(enqueued)))
         return {"FINISHED"}
 
     @staticmethod
@@ -495,7 +501,8 @@ class MIXIE_OT_scene_gen_exp_generate_lp(Operator):
             operator=self,
         )
 
-        self.report({"INFO"}, f"Queued {len(enqueued)} LP retopology job(s)")
+        self.report({"INFO"}, rpt_("Queued {count} LP retopology job(s)").format(
+            count=len(enqueued)))
         return {"FINISHED"}
 
     @staticmethod

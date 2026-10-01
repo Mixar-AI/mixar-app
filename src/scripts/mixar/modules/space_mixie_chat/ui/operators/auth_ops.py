@@ -16,6 +16,7 @@ from bpy.app.handlers import persistent
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from ....auth.core.auth import (
     clear_credentials,
@@ -369,8 +370,8 @@ def _auth_check_background() -> None:
                 if hasattr(wm, 'mixie_chat_login_error'):
                     # Keep the real reason: a classified network failure
                     # (support code included) is what the customer quotes.
-                    reason = result.get('message') or "Please log in again."
-                    wm.mixie_chat_login_error = f"Session expired. {reason}"
+                    reason = result.get('message') or rpt_("Please log in again.")
+                    wm.mixie_chat_login_error = rpt_("Session expired. {reason}").format(reason=reason)
                 logger.warning("Auto SSO re-login failed: %s", result.get('message'))
         except Exception as e:
             logger.warning("SSO result apply failed: %s", e)
@@ -460,7 +461,7 @@ def _release_stuck_login(attempt_id, thread):
         wm = bpy.context.window_manager
         if wm.mixie_chat_is_logging_in:
             wm.mixie_chat_is_logging_in = False
-            wm.mixie_chat_login_error = (
+            wm.mixie_chat_login_error = rpt_(
                 "Browser login did not complete. Please try again."
             )
             for window in wm.windows:
@@ -533,7 +534,7 @@ class MIXIE_CHAT_OT_login(Operator):
                             refresh_agent_settings()
                             logger.info("SSO login completed — user is logged in")
                     else:
-                        msg = result.get("message", "Login failed")
+                        msg = result.get("message", rpt_("Login failed"))
                         live_wm.mixie_chat_login_error = msg
                         logger.warning("SSO login failed: %s", msg)
 
@@ -624,14 +625,15 @@ class MIXIE_CHAT_OT_open_dashboard(Operator):
     def execute(self, context):
         result = open_dashboard_with_handoff()
         if result.get("success"):
-            self.report({'INFO'}, result.get("message", "Dashboard opened"))
+            self.report({'INFO'}, result.get("message", n_("Dashboard opened")))
             return {'FINISHED'}
 
         fallback_url = result.get("url")
         if fallback_url:
-            self.report({'WARNING'}, f"{result.get('message', 'Failed')}. URL: {fallback_url}")
+            self.report({'WARNING'}, rpt_("{message}. URL: {url}").format(
+                message=result.get('message', rpt_('Failed')), url=fallback_url))
         else:
-            self.report({'ERROR'}, result.get("message", "Failed to open dashboard"))
+            self.report({'ERROR'}, result.get("message", n_("Failed to open dashboard")))
         return {'CANCELLED'}
 
 

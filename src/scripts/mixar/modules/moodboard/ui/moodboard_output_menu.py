@@ -13,6 +13,7 @@ from bpy.types import Menu
 
 from ..core.node_templates import template_available
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 
 from .moodboard_menu_actions import (
@@ -47,16 +48,16 @@ class MIXIE_MT_moodboard_output_menu(Menu):
         added = False
         if source_type == 'IMAGE' and capability_available("image_gen"):
             connected_action(
-                layout, 'IMAGE_GEN', "Generate Image", 'IMAGE_DATA', source_id, drop
+                layout, 'IMAGE_GEN', n_("Generate Image"), 'IMAGE_DATA', source_id, drop
             )
             added = True
         if source_type == 'IMAGE' and capability_available("model_gen"):
             connected_action(
-                layout, 'MODEL_3D', "Generate 3D", 'MESH_DATA', source_id, drop
+                layout, 'MODEL_3D', n_("Generate 3D"), 'MESH_DATA', source_id, drop
             )
             added = True
         if source_type == 'IMAGE' and template_available('CHARACTER_PARTS'):
-            connected_action(layout, 'CHARACTER_PARTS', "Character Parts",
+            connected_action(layout, 'CHARACTER_PARTS', n_("Character Parts"),
                              'OUTLINER_OB_ARMATURE', source_id, drop)
             added = True
         if source_type == 'IMAGE' and template_available('CHARACTER_SHEET_3D'):
@@ -64,17 +65,17 @@ class MIXIE_MT_moodboard_output_menu(Menu):
             added = True
         if source_type == 'IMAGE' and capability_available("world_labs"):
             connected_action(
-                layout, 'WORLD_LABS', "Generate Splat", 'WORLD', source_id, drop
+                layout, 'WORLD_LABS', n_("Generate Splat"), 'WORLD', source_id, drop
             )
             added = True
         if source_type in {'IMAGE', 'VIDEO'} and capability_available("video_gen"):
             connected_action(
-                layout, 'VIDEO_GEN', "Generate Video", 'FILE_MOVIE', source_id, drop
+                layout, 'VIDEO_GEN', n_("Generate Video"), 'FILE_MOVIE', source_id, drop
             )
             added = True
         if source_type == 'VIDEO' and capability_available("video_upscale"):
             connected_action(
-                layout, 'VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER',
+                layout, 'VIDEO_UPSCALE', n_("Upscale Video"), 'FULLSCREEN_ENTER',
                 source_id, drop,
             )
             added = True

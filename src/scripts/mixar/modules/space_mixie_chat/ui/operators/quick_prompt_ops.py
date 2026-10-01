@@ -16,6 +16,7 @@ from bpy.props import StringProperty
 
 from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_, rpt_
 
 from ...constants import DEV_MODE, MAX_MESSAGE_LENGTH, SessionState
 from ...core import (
@@ -88,7 +89,7 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         elif not DEV_MODE and not can_send(scene)[0]:
             row = layout.row()
             row.alert = True
-            row.label(text=can_send(scene)[1] or "Mixie Chat is busy", icon='ERROR')
+            row.label(text=can_send(scene)[1] or n_("Mixie Chat is busy"), icon='ERROR')
 
         # Mode selector row
         row = layout.row(align=True)
@@ -106,7 +107,8 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
 
         if pending_count > 0:
             box = layout.box()
-            box.label(text=f"{pending_count} attachment(s) pending", icon='PAPERCLIP')
+            box.label(text=iface_("{count} attachment(s) pending").format(count=pending_count),
+                      icon='PAPERCLIP', translate=False)
 
         row = layout.row(align=True)
         row.label(text="Attachments:")
@@ -135,7 +137,8 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         if len(message_text) > MAX_MESSAGE_LENGTH:
             self.report(
                 {'WARNING'},
-                f"Message too long: {len(message_text)} chars (max {MAX_MESSAGE_LENGTH})"
+                rpt_("Message too long: {count} chars (max {max})").format(
+                    count=len(message_text), max=MAX_MESSAGE_LENGTH)
             )
             return {'CANCELLED'}
 
@@ -154,7 +157,7 @@ class MIXIE_CHAT_OT_quick_prompt(Operator):
         # input, or busy while the run is open (the prompt joins the run).
         allowed, reason = can_send(scene)
         if not allowed:
-            self.report({'ERROR'}, reason or "Mixie Chat is not ready to receive messages")
+            self.report({'ERROR'}, reason or n_("Mixie Chat is not ready to receive messages"))
             return {'CANCELLED'}
 
         # Mark the user as engaged so the "Hi I'm Mixie" greeting

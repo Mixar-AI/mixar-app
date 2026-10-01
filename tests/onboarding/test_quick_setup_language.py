@@ -15,7 +15,7 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[2] / "src" / "scripts" / "mixar"
 SPLASH = ROOT / "bootstrap" / "splash_quick_setup.py"
-PROPS = ROOT / "modules" / "onboarding" / "ui" / "properties" / "tour_props.py"
+PROPS = ROOT / "modules" / "onboarding" / "ui" / "properties" / "language_props.py"
 
 
 def _source(path):
@@ -53,9 +53,18 @@ def test_property_is_backed_by_the_language_module():
     assert "items=language.enum_items()" in src
     assert "get=_language_get" in src and "set=_language_set" in src
     assert "language.set_stored(" in src
-    assert "language.stored()" in src
+    assert "language.selection()" in src
 
 
 def test_property_name_matches_config():
     from mixar.modules.onboarding.core.tour.config import WM_PROP_TOUR_LANGUAGE
     assert WM_PROP_TOUR_LANGUAGE == "mixar_tour_language"
+
+
+def test_splash_registers_property_before_menu_and_draws_it_unconditionally():
+    src = _source(SPLASH)
+    register = next(n for n in ast.parse(src).body
+                    if isinstance(n, ast.FunctionDef) and n.name == "register")
+    body = ast.get_source_segment(src, register)
+    assert body.index("language_props.register()") < body.index("register_class(")
+    assert "hasattr(wm, WM_PROP_TOUR_LANGUAGE)" not in src

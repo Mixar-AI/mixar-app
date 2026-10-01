@@ -151,7 +151,7 @@ def test_the_chip_reads_the_floor_flag_and_records_the_action_it_performs():
     assert '#include "DNA_view3d_types.h"' in TOP
     assert '"MIXAR_OT_director_toggle_grid"' in chip
     assert "ICON_GRID," in chip
-    assert 'shown ? "Hide grid lines" : "Show grid lines"' in chip
+    assert 'shown ? TIP_("Hide grid lines") : TIP_("Show grid lines")' in chip
     assert 'cinema_qa_record(region, chip, "director_grid", shown ? "hide" : "show", -1);' in chip
     # Shown paints the row ramp; hidden paints the flat "off" fill; both
     # round at the row radius like every other strip chip.

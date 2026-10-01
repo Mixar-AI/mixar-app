@@ -15,6 +15,7 @@ from bpy.props import StringProperty
 
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from mixar.modules.common.analytics.export_events import capture_export
+from mixar.modules.common.i18n import rpt_
 from ...core.media_utils import (
     describe_moodboard_media,
     is_video_item,
@@ -143,13 +144,14 @@ class MIXIE_OT_moodboard_export_images(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({'ERROR'}, f"Invalid path: {e}")
+            self.report({'ERROR'}, rpt_("Invalid path: {error}").format(error=e))
             _capture_moodboard_export(context, False, len(selected_media))
             return {'CANCELLED'}
 
         output_dir = os.path.dirname(filepath)
         if not os.path.isdir(output_dir):
-            self.report({'ERROR'}, f"Invalid directory: {output_dir}")
+            self.report({'ERROR'}, rpt_("Invalid directory: {output_dir}").format(
+                output_dir=output_dir))
             _capture_moodboard_export(context, False, len(selected_media))
             return {'CANCELLED'}
 
@@ -158,10 +160,10 @@ class MIXIE_OT_moodboard_export_images(Operator):
             try:
                 _export_media_item(selected_media[0], filepath, scene)
             except Exception as e:
-                self.report({'ERROR'}, f"Failed to export: {e}")
+                self.report({'ERROR'}, rpt_("Failed to export: {error}").format(error=e))
                 _capture_moodboard_export(context, False, 1, filepath)
                 return {'CANCELLED'}
-            self.report({'INFO'}, f"Exported media to {filepath}")
+            self.report({'INFO'}, rpt_("Exported media to {filepath}").format(filepath=filepath))
             _capture_moodboard_export(context, True, 1, filepath)
             return {'FINISHED'}
 
@@ -175,19 +177,22 @@ class MIXIE_OT_moodboard_export_images(Operator):
             try:
                 dest = os.path.abspath(os.path.realpath(dest))
                 if os.path.commonpath((output_dir, dest)) != output_dir:
-                    self.report({'ERROR'}, f"Invalid file path: {name}")
+                    self.report({'ERROR'}, rpt_("Invalid file path: {name}").format(name=name))
                     continue
             except (OSError, ValueError) as e:
-                self.report({'ERROR'}, f"Invalid file path for {name}: {e}")
+                self.report({'ERROR'}, rpt_("Invalid file path for {name}: {error}").format(
+                    name=name, error=e))
                 continue
 
             try:
                 _export_media_item(item, dest, scene)
                 count += 1
             except Exception as e:
-                self.report({'ERROR'}, f"Failed to save {name}: {e}")
+                self.report({'ERROR'}, rpt_("Failed to save {name}: {error}").format(
+                    name=name, error=e))
 
-        self.report({'INFO'}, f"Exported {count} media items to {output_dir}")
+        self.report({'INFO'}, rpt_("Exported {count} media items to {output_dir}").format(
+            count=count, output_dir=output_dir))
         _capture_moodboard_export(context, count > 0, count)
         return {'FINISHED'}
 
@@ -228,11 +233,11 @@ class MIXIE_OT_add_style_context_image(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({'ERROR'}, f"Invalid file path: {e}")
+            self.report({'ERROR'}, rpt_("Invalid file path: {error}").format(error=e))
             return {'CANCELLED'}
 
         if not os.path.isfile(filepath):
-            self.report({'ERROR'}, f"File not found: {filepath}")
+            self.report({'ERROR'}, rpt_("File not found: {filepath}").format(filepath=filepath))
             return {'CANCELLED'}
 
         try:
@@ -240,11 +245,11 @@ class MIXIE_OT_add_style_context_image(Operator):
             img.pack()
             img.preview_ensure()
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to load image: {e}")
+            self.report({'ERROR'}, rpt_("Failed to load image: {error}").format(error=e))
             return {'CANCELLED'}
 
         context.scene.mixie_style_context_image = img
-        self.report({'INFO'}, f"Set '{img.name}' as style context")
+        self.report({'INFO'}, rpt_("Set '{name}' as style context").format(name=img.name))
         mark_file_select_executed(self)
         return {'FINISHED'}
 

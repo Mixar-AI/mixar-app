@@ -35,6 +35,7 @@ from bpy.props import StringProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, rpt_
 
 from ...core import get_session_manager
 from ...core import chat_history
@@ -52,20 +53,20 @@ def _group_label(iso_ts: str) -> str:
     try:
         then = datetime.fromisoformat(iso_ts)
     except (TypeError, ValueError):
-        return "Older"
+        return iface_("Older")
     if then.tzinfo is None:
         then = then.replace(tzinfo=timezone.utc)
     days = (datetime.now(timezone.utc).astimezone().date()
             - then.astimezone().date()).days
     if days <= 0:
-        return "Today"
+        return iface_("Today")
     if days == 1:
-        return "Yesterday"
+        return iface_("Yesterday")
     if days <= 7:
-        return "Previous 7 Days"
+        return iface_("Previous 7 Days")
     if days <= 30:
-        return "Previous 30 Days"
-    return "Older"
+        return iface_("Previous 30 Days")
+    return iface_("Older")
 
 
 def sync_history_entries(context) -> None:
@@ -90,7 +91,7 @@ def sync_history_entries(context) -> None:
         if not session_id:
             continue
         entry = entries.add()
-        entry.name = meta.get("title") or "Untitled chat"
+        entry.name = meta.get("title") or iface_("Untitled chat")
         entry.session_id = session_id
         entry.archived_at = meta.get("archived_at") or ""
         entry.when = chat_history.format_relative_time(
@@ -227,7 +228,7 @@ class MIXIE_CHAT_OT_open_history_session(Operator):
         logger.info(
             f"Reopened archived chat {self.session_id[:8]} ({count} message(s))"
         )
-        self.report({'INFO'}, f"Reopened: {title}")
+        self.report({'INFO'}, rpt_("Reopened: {title}").format(title=title))
         return {'FINISHED'}
 
 

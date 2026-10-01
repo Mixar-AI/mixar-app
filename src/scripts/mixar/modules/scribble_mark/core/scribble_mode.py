@@ -13,6 +13,7 @@ from __future__ import annotations
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -103,25 +104,26 @@ def marking_unavailable_reason(context) -> str | None:
     except Exception:  # noqa: BLE001
         return None
     if area is None or region is None:
-        return "no 3D viewport is open"
+        return n_("no 3D viewport is open")
     rv3d = getattr(getattr(area.spaces, "active", None), "region_3d", None)
     if getattr(rv3d, "view_perspective", "") == "CAMERA":
-        return "the viewport is in camera view"
+        return n_("the viewport is in camera view")
     return None
 
 
 def _warn_marking_unavailable(context, report=None) -> None:
     """Report refusals visibly even when invoked from the floating island."""
-    reason = marking_unavailable_reason(context) or "the viewport could not be frozen"
+    reason = marking_unavailable_reason(context) or n_("the viewport could not be frozen")
+    message = rpt_("Cannot sketch: {reason}").format(reason=rpt_(reason))
     if report is not None:
-        report({"WARNING"}, f"Cannot sketch: {reason}")
+        report({"WARNING"}, message)
     try:
         from mixar.modules.common.notifications import get_notification_store
 
         get_notification_store().push(
             "warning",
-            f"Cannot sketch: {reason}",
-            "Open a 3D viewport outside camera view (Numpad 0 leaves it), then try again.",
+            message,
+            rpt_("Open a 3D viewport outside camera view (Numpad 0 leaves it), then try again."),
             id="scribble_annotation_unavailable",
         )
     except Exception as exc:  # noqa: BLE001

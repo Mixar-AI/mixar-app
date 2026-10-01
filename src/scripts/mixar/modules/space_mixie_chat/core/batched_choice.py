@@ -24,6 +24,8 @@ by construction.
 import json
 from typing import Any, Optional
 
+from mixar.modules.common.i18n import iface_
+
 # Value of the Cancel button shown under every card. It is answered by the
 # backend, never locally, so it always falls through to the normal dispatch.
 CANCEL_ACTION = "abort"
@@ -58,7 +60,7 @@ def question_actions(question: dict) -> list:
         {"label": option, "value": option, "style": "default"}
         for option in question.get("options", [])
     ]
-    actions.append({"label": "Cancel", "value": CANCEL_ACTION, "style": "danger"})
+    actions.append({"label": iface_("Cancel"), "value": CANCEL_ACTION, "style": "danger"})
     return actions
 
 

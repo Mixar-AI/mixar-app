@@ -41,6 +41,7 @@ from mixar.modules.common.core.theme_colors import sketch_ink_color
 from mixar.config.logging_config import get_logger
 
 from . import freeze
+from mixar.modules.common.i18n import iface_
 from mixar.modules.common.utils.ui_utils import top_header_overlap_px
 from ..constants import (
     INTENT_SKETCH,
@@ -332,12 +333,15 @@ def _hint_text(scene):
     except Exception:  # noqa: BLE001
         count = 0
     if not count:
-        return MARK_HINT_IDLE
-    if _reading is not None and _reading[0] == INTENT_SKETCH:
+        text = MARK_HINT_IDLE
+    elif _reading is not None and _reading[0] == INTENT_SKETCH:
         strokes = _reading[1]
-        return MARK_HINT_SKETCH.format(count=strokes,
+        text = MARK_HINT_SKETCH.format(count=strokes,
                                        plural="" if strokes == 1 else "s")
-    return MARK_HINT_MARKED.format(count=count, plural="" if count == 1 else "s")
+    else:
+        text = MARK_HINT_MARKED.format(count=count, plural="" if count == 1 else "s")
+    # Translated item by item (MARK_HINT_ITEMS); the talk item is ``_hint_voice``'s.
+    return "  ·  ".join(s if s == MARK_HINT_VOICE else iface_(s) for s in text.split("  ·  "))
 
 
 def _hint_voice(text):
@@ -348,10 +352,12 @@ def _hint_voice(text):
     voice_status = getattr(bpy.context.window_manager, "mixie_chat_voice_status", "")
     if isinstance(voice_status, str) and voice_status:
         from mixar.modules.space_mixie_chat.core import voice
+        voice_status = iface_(voice_status)
         if voice.push_to_talk_owned():
-            voice_status += f" · release {MARK_HINT_TALK_KEY}: finish · Esc: cancel"
+            voice_status = iface_("{status} · release {key}: finish · Esc: cancel").format(
+                status=voice_status, key=MARK_HINT_TALK_KEY)
         return text.replace(MARK_HINT_VOICE, voice_status)
-    return text
+    return text.replace(MARK_HINT_VOICE, iface_("Hold {key}: talk").format(key=MARK_HINT_TALK_KEY))
 
 
 def _draw_hint(area, region, scene, scale):

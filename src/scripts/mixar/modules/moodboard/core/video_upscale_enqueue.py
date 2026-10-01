@@ -16,6 +16,7 @@ the way the Video Gen validators once did.
 
 from __future__ import annotations
 
+from mixar.modules.common.i18n import iface_, n_, rpt_
 from mixar.modules.common.job_queue.constants import FEATURE_VIDEO_UPSCALE
 
 from .video_upscale_catalog import (
@@ -39,12 +40,12 @@ def resolve_video_upscale_target(mode: str, model_choice: str) -> tuple[str, str
 
     service_key = resolve_service_key(CAPABILITY_KEY, mode)
     if not service_key:
-        raise ValueError("Video Upscale is not available right now")
+        raise ValueError(rpt_("Video Upscale is not available right now"))
     if service_key != SERVICE_KEY:
-        raise ValueError("The selected upscale service needs a newer app version")
+        raise ValueError(rpt_("The selected upscale service needs a newer app version"))
     model = resolve_model_slug(service_key, model_choice)
     if not model:
-        raise ValueError("No enabled video upscale model is available")
+        raise ValueError(rpt_("No enabled video upscale model is available"))
     return service_key, model
 
 
@@ -52,7 +53,7 @@ def prepare_video_upscale_source(videos, limits=None) -> tuple[dict, dict]:
     """Return ``(video_input, limits)`` for exactly one described movie, or raise."""
     limits = limits or get_video_upscale_limits(SERVICE_KEY)
     if limits is None:
-        raise ValueError("Video upscale catalog config is incomplete")
+        raise ValueError(rpt_("Video upscale catalog config is incomplete"))
     error = video_upscale_source_error(video_count=len(videos))
     if error:
         raise ValueError(error)
@@ -87,10 +88,10 @@ def enqueue_video_upscale(
         model=model,
         payload=payload,
         label=f"VideoUpscale{tag}: {source_name[:40]}",
-        display_label=f"Upscale {source_name[:32]}",
+        display_label=iface_("Upscale {name}").format(name=source_name[:32]),
         origin_capability_key=CAPABILITY_KEY,
         graph_node_id=graph_node_id,
-        fail_message="Video upscale failed",
+        fail_message=n_("Video upscale failed"),
         prompt_text=prompt,
         video_inputs=[video_input],
         max_video_duration_seconds=limits["max_seconds"],
@@ -121,7 +122,7 @@ def run_video_upscale_node(context, node):
         if item["media_type"] == "VIDEO"
     ]
     if not videos:
-        raise ValueError("Connect one video to the Upscale Video node")
+        raise ValueError(rpt_("Connect one video to the Upscale Video node"))
     video_input, limits = prepare_video_upscale_source(videos)
     params = collect_node_params(node)
     ensure_graph_listener(FEATURE_VIDEO_UPSCALE)

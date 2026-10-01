@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Cześć, jestem Naman z Mixar.
+W kilka minut pokażę ci naszą aplikację.
+To twój widok 3D.
+Przestrzeń 3D, w której możesz się poruszać.
+Obracaj środkowym przyciskiem, przybliżaj kółkiem.
+Shift i środkowy przycisk przesuwają widok.
+Wypróbuj to.
+Kliknij, aby zaznaczyć, G — przesuń,
+R — obróć, S — skaluj.
+Oto kilka przydatnych skrótów.
+Widzisz wysepkę na dole? To Mixie, twój agent.
+Kliknij, aby otworzyć.
+Mixie ma zakładki.
+W Agent opisz zadanie zwykłymi słowami. Agent zmieni twoją scenę.
+Agent korzysta z modeli Tripo, Meshy i Nano Banana.
+Aby mieć więcej kontroli, otwórz inne zakładki:
+3D, Image, Video lub World Model.
+Wybierz model i dostosuj ustawienia.
+Wszystko, co wygenerujesz, trafia do biblioteki.
+Tutaj znajdziesz swoje wyniki.
+Podłącz własną bibliotekę, aby agent używał twoich zasobów,
+oszczędzając kredyty.
+W lewym górnym rogu jest panel scen.
+Każda scena ma własną zakładkę i agenta Mixie.
+Uruchamiaj zadania równolegle i przełączaj się między nimi.
+Gdy scena jest gotowa, przejdź do Cinema Mode,
+aby sterować kamerą i tworzyć procesy wideo.
+Pomysły zaczynają się w 2D.
+Wysuń moodboard z prawej lub naciśnij tyldę.
+To płótno na inspiracje i koncepcje.
+Dodawaj tu obrazy, filmy i szkice.
+Buduj grafy węzłów modeli generatywnych, jak w ComfyUI.
+Jesteś w Zen Mode, najprostszym widoku.
+Znasz Blender? Przełącz na Engine Mode.
+Jest tu cały obszar roboczy Blendera, każdy panel i skrót.
+Mixie działa w obu trybach. Wybierz wygodniejszy.
+Wróćmy do Zen Mode.
+Nasz program partnerski dla twórców zapewnia kredyty
+i społeczność kształtującą przyszłość AI i 3D.
+To wszystko. Wiesz już, gdzie co jest.
+Twórzmy razem w 3D.

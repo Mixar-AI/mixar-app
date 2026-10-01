@@ -24,6 +24,7 @@ from bpy.types import Operator
 from bpy_extras.io_utils import ExportHelper
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from ...core.chat_serializer import (
     restore_propgroup as _restore_propgroup,
@@ -113,8 +114,8 @@ class MIXIE_CHAT_OT_export_without_chat(Operator, ExportHelper):
             )
             self.report(
                 {'INFO'},
-                f"Exported chat-stripped copy ({dropped} message(s) "
-                f"omitted from {len(scenes)} scene(s)).",
+                rpt_("Exported chat-stripped copy ({count} message(s) "
+                     "omitted from {scenes} scene(s)).").format(count=dropped, scenes=len(scenes)),
             )
             logger.info(
                 f"[EXPORT_WITHOUT_CHAT] wrote {self.filepath} — dropped "
@@ -122,7 +123,7 @@ class MIXIE_CHAT_OT_export_without_chat(Operator, ExportHelper):
             )
         except Exception as e:
             logger.error(f"[EXPORT_WITHOUT_CHAT] save_as_mainfile failed: {e}")
-            self.report({'ERROR'}, f"Export failed: {e}")
+            self.report({'ERROR'}, rpt_("Export failed: {error}").format(error=e))
             try:
                 from mixar.modules.common.analytics.export_events import capture_export
                 capture_export(context, export_format="BLEND_NO_CHAT", success=False,

@@ -4,6 +4,7 @@
 
 """Catalog-authoritative World Labs sidebar drawing."""
 
+from mixar.modules.common.i18n import n_
 from .sidebar_ui_helpers import (
     draw_generate_footer,
     draw_image_info_card,
@@ -25,7 +26,7 @@ def draw_world_labs(layout, context):
         resolve_model_slug,
     )
 
-    settings_box = draw_section_box(layout, "Settings", icon='SETTINGS')
+    settings_box = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     settings_box.use_property_split = True
     settings_box.use_property_decorate = False
     drew_catalog = draw_capability_selector(settings_box, tab, "world_labs")
@@ -41,10 +42,10 @@ def draw_world_labs(layout, context):
     draw_section_separator(layout)
 
     if mode == 'TEXT':
-        draw_prompt_section(layout, tab, label="World Prompt", icon='WORLD')
+        draw_prompt_section(layout, tab, label=n_("World Prompt"), icon='WORLD')
     else:
         col = draw_section_box(
-            layout, "Input Image", icon='IMAGE_DATA',
+            layout, n_("Input Image"), icon='IMAGE_DATA',
             action_op="mixie.world_labs_pick_image",
         )
         draw_moodboard_image_toggle(col, tab, context)
@@ -54,7 +55,7 @@ def draw_world_labs(layout, context):
                 remove_op="mixie.world_labs_remove_image",
             )
         draw_section_separator(layout)
-        draw_prompt_section(layout, tab, label="Prompt (optional)", icon='TEXT')
+        draw_prompt_section(layout, tab, label=n_("Prompt (optional)"), icon='TEXT')
 
     draw_section_separator(layout)
     draw_generate_footer(

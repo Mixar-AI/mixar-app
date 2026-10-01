@@ -9,6 +9,8 @@ place. Each prompt opens with its subject, because the card label ("Body",
 "Right-hand item", …) is also the name the result image and its mesh get.
 """
 
+from mixar.modules.common.i18n import n_
+
 # The part prompts share one tail: what makes a clean single-object reference.
 # "no hand, no figure" and never the literal "no people" (the backend's
 # generation routing pins that wording for isolated props).
@@ -97,7 +99,7 @@ NO_RIG_LINE = (
 )
 NOTE_MAX_BYTES = 1023
 
-NOTICE = "Generate the three reference cards first, then compare them with the sheet"
+NOTICE = n_("Generate the three reference cards first, then compare them with the sheet")
 
 
 def note_text(*, has_sheet: bool, has_rig: bool) -> str:

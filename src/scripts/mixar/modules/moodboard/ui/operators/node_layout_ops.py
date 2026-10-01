@@ -11,6 +11,7 @@ position math over plain objects and is unit-tested directly.
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.core import node_layout
 
 
@@ -87,7 +88,7 @@ class MIXIE_OT_moodboard_align_nodes(Operator):
             return {'CANCELLED'}
         _refit_frames(context)
         _tag_redraw(context)
-        self.report({'INFO'}, f"Aligned {moved} item(s)")
+        self.report({'INFO'}, rpt_("Aligned {moved} item(s)").format(moved=moved))
         return {'FINISHED'}
 
 
@@ -127,7 +128,7 @@ class MIXIE_OT_moodboard_distribute_nodes(Operator):
             return {'CANCELLED'}
         _refit_frames(context)
         _tag_redraw(context)
-        self.report({'INFO'}, f"Distributed {moved} item(s)")
+        self.report({'INFO'}, rpt_("Distributed {moved} item(s)").format(moved=moved))
         return {'FINISHED'}
 
 
@@ -155,7 +156,7 @@ class MIXIE_OT_moodboard_tidy_nodes(Operator):
             return {'CANCELLED'}
         _refit_frames(context)
         _tag_redraw(context)
-        self.report({'INFO'}, f"Tidied {moved} item(s)")
+        self.report({'INFO'}, rpt_("Tidied {moved} item(s)").format(moved=moved))
         return {'FINISHED'}
 
 

@@ -13,6 +13,7 @@ from ....core.material.get_materials import get_all_objects_with_same_materials
 from ....core.node.node_utils import get_active_mpaint_node
 from ....utils.blender_commons import get_active_material, get_user_preferences
 from ...udim.udim_utils import get_udim_segment_tilenums, is_uvmap_udim
+from mixar.modules.common.i18n import n_
 
 
 def get_resize_image_entity_and_image(self, context):
@@ -88,8 +89,8 @@ def bake_vcol_channel_items(self, context):
 
     items = []
     # Default option to do nothing
-    items.append(("Do Nothing", "Do Nothing", "", "", 0))
-    items.append(("Sort By Channel Order", "Sort By Channel Order", "", "", 1))
+    items.append(("Do Nothing", n_("Do Nothing"), "", "", 0))
+    items.append(("Sort By Channel Order", n_("Sort By Channel Order"), "", "", 1))
 
     for i, ch in enumerate(mp.channels):
         if not ch.enable_bake_to_vcol:

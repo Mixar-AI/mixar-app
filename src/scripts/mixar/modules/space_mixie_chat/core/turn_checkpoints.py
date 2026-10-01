@@ -62,6 +62,7 @@ import time
 import uuid
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, rpt_
 
 from ..constants import DEV_MODE, SessionState
 from . import checkpoint_backend, checkpoint_budget, checkpoint_store  # noqa: F401 — tests patch through them
@@ -265,15 +266,15 @@ def can_restore(scene):
     from .session import get_session_manager
     session = get_session_manager()
     if rewind_in_flight():
-        return False, "Restoring a checkpoint…"
+        return False, rpt_("Restoring a checkpoint…")
     if session.get_state(scene) != SessionState.IDLE:
-        return False, "Wait for the agent to finish"
+        return False, rpt_("Wait for the agent to finish")
     if session.run_open(scene):
-        return False, "The agent is still building"
+        return False, rpt_("The agent is still building")
     if session.has_active_session():
         # The snapshot replaces EVERY scene; another tab's live run would be
         # overwritten mid-build.
-        return False, "Another tab's agent is still running"
+        return False, rpt_("Another tab's agent is still running")
     return True, ""
 
 
@@ -291,12 +292,12 @@ def _keep_leaving_state(scene, session_id: str, line: dict, target_id: str = "")
         # done since the scene was put back on it.
         if line["tip"] is not None and not changed:
             return "", None, ""
-        record = capture(scene, f"after turn {line['max_turn']}", kind="tip",
+        record = capture(scene, iface_("after turn {turn}").format(turn=line['max_turn']), kind="tip",
                          session_id=session_id, protect_id=target_id)
     else:
         if not changed:
             return "", None, ""
-        record = capture(scene, f"your edits after turn {position}", kind="safety",
+        record = capture(scene, iface_("your edits after turn {turn}").format(turn=position), kind="safety",
                          session_id=session_id, protect_id=target_id)
     if record is None:
         return "failed", None, ""
@@ -336,7 +337,7 @@ def restore(scene, checkpoint_id: str):
     session_id = checkpoint_session_id(scene)
     record = get_checkpoint(session_id, checkpoint_id)
     if record is None:
-        return False, "Checkpoint not found"
+        return False, rpt_("Checkpoint not found")
     allowed, reason = can_restore(scene)
     if not allowed:
         return False, reason
@@ -346,18 +347,18 @@ def restore(scene, checkpoint_id: str):
     target = _state_after(line, last) if verb == "reapply" else record
     if target is None or not os.path.isfile(_file_path(target)):
         if verb == "reapply":
-            return False, f"The scene after turn {last} is no longer stored"
-        return False, "Checkpoint file is missing"
+            return False, rpt_("The scene after turn {turn} is no longer stored").format(turn=last)
+        return False, rpt_("Checkpoint file is missing")
 
     kept, kept_record, mark_request_id = _keep_leaving_state(scene, session_id, line, target["id"])
     if kept == "failed":
-        return False, "Could not keep the current state, so nothing was changed"
+        return False, rpt_("Could not keep the current state, so nothing was changed")
     if not os.path.isfile(_file_path(target)):
         # Never expected (the keep-capture protects the target from its own
         # prune), but a read of a missing file must not be attempted.
         if kept_record is not None:
             _drop_record(session_id, kept_record)
-        return False, "Checkpoint file is missing"
+        return False, rpt_("Checkpoint file is missing")
 
     original_path = bpy.data.filepath or target.get("original_path") or ""
     window = _main_window()
@@ -377,7 +378,7 @@ def restore(scene, checkpoint_id: str):
         # holds nothing the timeline needs (and its bookmark was never sent).
         if kept_record is not None:
             _drop_record(session_id, kept_record)
-        return False, "Could not read the checkpoint"
+        return False, rpt_("Could not read the checkpoint")
 
     # The read left the document untitled. Give a titled project its own path
     # back IN MEMORY and mark it modified; nothing is written. Saving the
@@ -395,7 +396,7 @@ def restore(scene, checkpoint_id: str):
     _after_load(restored_scene, target, mark_request_id)
     message = _jump_message(verb, first, last)
     if kept == "safety":
-        message += ". Your edits since are kept as a safety copy"
+        message = rpt_("{message}. Your edits since are kept as a safety copy").format(message=message)
     return True, message
 
 
@@ -412,10 +413,10 @@ def restore_deferred(scene_name: str, checkpoint_id: str) -> None:
             scene = bpy.data.scenes.get(scene_name) or _session_scene("")
             ok, message = restore(scene, checkpoint_id)
             if not ok:
-                _notify(scene_name, f"Checkpoint not restored: {message}")
+                _notify(scene_name, rpt_("Checkpoint not restored: {reason}").format(reason=message))
         except Exception as e:  # noqa: BLE001
             logger.error(f"Deferred checkpoint restore failed: {e}", exc_info=True)
-            _notify(scene_name, "Checkpoint not restored: unexpected error")
+            _notify(scene_name, rpt_("Checkpoint not restored: unexpected error"))
         return None
 
     bpy.app.timers.register(_run, first_interval=0.05)
@@ -467,5 +468,6 @@ def _after_load(scene, record: dict, mark_request_id: str) -> None:
     if record.get("request_id"):
         calls.append(("checkpoint.rewind", {"session_id": session_id, "request_id": record["request_id"]}))
     else:
-        _notify(scene.name, "Scene restored. This checkpoint has no conversation bookmark, so the chat memory was not rewound.")
+        _notify(scene.name, rpt_("Scene restored. This checkpoint has no conversation bookmark, "
+                                 "so the chat memory was not rewound."))
     _send_backend(session_id, calls)

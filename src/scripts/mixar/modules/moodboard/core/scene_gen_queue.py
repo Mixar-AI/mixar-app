@@ -14,6 +14,7 @@ import requests
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.draft_events import note_generation_submitted
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue.constants import FEATURE_SCENE_GEN
 from ..constants import CHARACTER_PARTS_CAPABILITY_KEY, SCENE_GEN_JOB_TYPE
 from mixar.modules.common.job_queue.core.helpers import (
@@ -37,7 +38,7 @@ class SceneGenQueueJob(Job):
     """SceneGen job with a custom multi-object GLB download/import phase."""
 
     payload: dict = field(default_factory=dict)
-    fail_message: str = "Scene generation failed"
+    fail_message: str = n_("Scene generation failed")
     _on_object_ready: Optional[Callable] = field(default=None, repr=False)
     _on_download_failed: Optional[Callable] = field(default=None, repr=False)
     _objects: list = field(default_factory=list, repr=False)
@@ -101,7 +102,7 @@ class SceneGenQueueJob(Job):
         ]
         objects.sort(key=lambda obj: int(obj.get("object_id") or 0))
         if not objects:
-            on_error("No completed SceneGen objects were returned")
+            on_error(n_("No completed SceneGen objects were returned"))
             return True
 
         def _bg_download_and_import():
@@ -125,7 +126,8 @@ class SceneGenQueueJob(Job):
                         time.time() - started,
                     )
                 except Exception as exc:
-                    msg = f"Object {object_id} download failed: {exc}"
+                    msg = rpt_("Object {id} download failed: {error}").format(
+                        id=object_id, error=exc)
                     failures.append(msg)
                     self._notify_download_failed(object_id, msg)
                     continue
@@ -148,7 +150,8 @@ class SceneGenQueueJob(Job):
                         else:
                             imported_names.append(f"SceneGen_Object_{object_id}")
                     except Exception as exc:
-                        msg = f"Object {object_id} import failed: {exc}"
+                        msg = rpt_("Object {id} import failed: {error}").format(
+                            id=object_id, error=exc)
                         failures.append(msg)
                         logger.error("[SceneGen] %s", msg)
                     finally:
@@ -157,7 +160,7 @@ class SceneGenQueueJob(Job):
 
                 bpy.app.timers.register(_import_cb, first_interval=0.0)
                 if not done.wait(timeout=300):
-                    failures.append(f"Object {object_id} import timed out")
+                    failures.append(rpt_("Object {id} import timed out").format(id=object_id))
 
             def _finish_cb():
                 # A watchdog failure or queue clear can retire the run after
@@ -171,11 +174,11 @@ class SceneGenQueueJob(Job):
                         self.on_imported(names)
                     except Exception as exc:
                         logger.error("[SceneGen] result attachment failed: %s", exc)
-                        on_error("Could not attach Character Parts results to their node")
+                        on_error(n_("Could not attach Character Parts results to their node"))
                         return None
                     on_done(names)
                 else:
-                    on_error("; ".join(failures) or "SceneGen import failed")
+                    on_error("; ".join(failures) or n_("SceneGen import failed"))
                 return None
 
             bpy.app.timers.register(_finish_cb, first_interval=0.0)

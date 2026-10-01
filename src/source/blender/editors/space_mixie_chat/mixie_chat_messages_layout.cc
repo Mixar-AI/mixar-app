@@ -24,6 +24,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_space_types.h"
 
 #include "RNA_access.hh"
@@ -280,13 +282,13 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
            * Status text MUST match what chat_ui_draw_ephemeral_bubble shows. */
           float fixed_bubble_height = chat_ui_calc_ephemeral_bubble_height(
               &style,
-              chat_ui_loader_status_text(&layout.loader, layout.has_loader, "Processing..."),
+              chat_ui_loader_status_text(&layout.loader, layout.has_loader, RPT_("Processing...")),
               content_width);
           text_height = fixed_bubble_height - style.v_padding * 2.0f;
           text_width = content_width;
         } else if (layout.has_loader) {
           /* Loader-only - spinner + loader text for sizing */
-          const char *loader_text = "Loading...";
+          const char *loader_text = RPT_("Loading...");
           if (layout.loader.text_count > 0 && layout.loader.current_text_index < layout.loader.text_count) {
             loader_text = layout.loader.texts[layout.loader.current_text_index];
           }
@@ -449,7 +451,7 @@ float mixie_chat_build_layout_cache(SpaceMixieChat *smixie,
          * draws the same loader status with the same fallback. */
         layout.thinking_height = chat_ui_calc_live_thinking_height(
             &style,
-            chat_ui_loader_status_text(&layout.loader, layout.has_loader, "Working\xE2\x80\xA6"),
+            chat_ui_loader_status_text(&layout.loader, layout.has_loader, RPT_("Working\xE2\x80\xA6")),
             content_width);
       }
       else if (is_slot_msg && !is_user && layout.has_thinking) {

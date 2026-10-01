@@ -10,6 +10,7 @@ Centralized configuration values for the moodboard module.
 """
 
 from mixar.modules.common.constants import SKETCH_COLOR_RGBA
+from mixar.modules.common.i18n import n_
 
 # ============================================================================
 # JOB QUEUE IDENTIFIERS
@@ -412,14 +413,14 @@ FRAME_NAME_MAXLEN = 96             # <-> char name[128] (MIXIE_FRAME_NAME_BUF)
 # painter's own copy -- `tests/moodboard/test_frame_ui.py` pins the two
 # together. The swatch menu here is the only Python reader.
 FRAME_PALETTE = (
-    ("Rose", (0.96, 0.64, 0.64)),
-    ("Apricot", (0.97, 0.79, 0.61)),
-    ("Butter", (0.95, 0.91, 0.63)),
-    ("Mint", (0.72, 0.89, 0.66)),
-    ("Aqua", (0.64, 0.86, 0.85)),
-    ("Sky", (0.65, 0.77, 0.94)),
-    ("Lilac", (0.76, 0.69, 0.93)),
-    ("Orchid", (0.94, 0.69, 0.84)),
+    (n_("Rose"), (0.96, 0.64, 0.64)),
+    (n_("Apricot"), (0.97, 0.79, 0.61)),
+    (n_("Butter"), (0.95, 0.91, 0.63)),
+    (n_("Mint"), (0.72, 0.89, 0.66)),
+    (n_("Aqua"), (0.64, 0.86, 0.85)),
+    (n_("Sky"), (0.65, 0.77, 0.94)),
+    (n_("Lilac"), (0.76, 0.69, 0.93)),
+    (n_("Orchid"), (0.94, 0.69, 0.84)),
 )
 FRAME_PALETTE_SIZE = len(FRAME_PALETTE)
 
@@ -440,58 +441,58 @@ FRAME_MIN_HEIGHT = 160.0
 # The canvas strip prioritizes 3D, video and mesh, then reveals the rest in
 # this list order as width allows; every entry stays in the + menu.
 NODE_TEMPLATES = (
-    ('IMAGE_GEN', "Generate Image", 'IMAGE_DATA', 'image_gen'),
-    ('MODEL_3D', "Image to 3D", 'MESH_DATA', 'model_gen'),
-    ('VIDEO_GEN', "Video Generation", 'FILE_MOVIE', 'video_gen'),
-    ('VIDEO_UPSCALE', "Upscale Video", 'FULLSCREEN_ENTER', 'video_upscale'),
-    ('WORLD_LABS', "Generate Splat", 'WORLD', 'world_labs'),
-    ('PBR_GEN', "PBR Generation", 'TEXTURE', 'pbr_generation'),
-    ('RETOPOLOGY', "Retopology", 'MOD_REMESH', 'retopology'),
-    ('MESH_SEGMENT', "Mesh Segmentation", 'MOD_EXPLODE', 'mesh_segmentation'),
-    ('AUTO_RIG', "Auto Rig", 'ARMATURE_DATA', 'animate'),
-    ('MESH_REFERENCE', "Add Mesh", 'OUTLINER_OB_MESH', None),
-    ('CHARACTER_PARTS', "Character Parts", 'OUTLINER_OB_ARMATURE', 'character_parts'),
-    ('CHARACTER_SHEET_3D', "Character Sheet to 3D", 'COMMUNITY', 'model_gen'),
+    ('IMAGE_GEN', n_("Generate Image"), 'IMAGE_DATA', 'image_gen'),
+    ('MODEL_3D', n_("Image to 3D"), 'MESH_DATA', 'model_gen'),
+    ('VIDEO_GEN', n_("Video Generation"), 'FILE_MOVIE', 'video_gen'),
+    ('VIDEO_UPSCALE', n_("Upscale Video"), 'FULLSCREEN_ENTER', 'video_upscale'),
+    ('WORLD_LABS', n_("Generate Splat"), 'WORLD', 'world_labs'),
+    ('PBR_GEN', n_("PBR Generation"), 'TEXTURE', 'pbr_generation'),
+    ('RETOPOLOGY', n_("Retopology"), 'MOD_REMESH', 'retopology'),
+    ('MESH_SEGMENT', n_("Mesh Segmentation"), 'MOD_EXPLODE', 'mesh_segmentation'),
+    ('AUTO_RIG', n_("Auto Rig"), 'ARMATURE_DATA', 'animate'),
+    ('MESH_REFERENCE', n_("Add Mesh"), 'OUTLINER_OB_MESH', None),
+    ('CHARACTER_PARTS', n_("Character Parts"), 'OUTLINER_OB_ARMATURE', 'character_parts'),
+    ('CHARACTER_SHEET_3D', n_("Character Sheet to 3D"), 'COMMUNITY', 'model_gen'),
 )
 
 # Display-only explanations when a catalog omits help. Match captions, never
 # payload keys; options, defaults, limits and model-specific rules stay in the catalog.
 PARAMETER_HELP_BY_LABEL = {
-    'aspect ratio': "The shape of the result, expressed as width:height. Wider ratios suit landscapes; taller ratios suit portraits.",
-    'resolution': "The detail level of the result. Higher settings can preserve finer detail and produce larger files.",
-    'image size': "The dimensions and orientation of the generated image.",
-    'images': "How many images to create in one generation.",
-    'number of images': "How many images to create in one generation.",
-    'style': "The visual treatment applied to the generated image.",
-    'texture': "Generate surface color and appearance for the mesh.",
-    'pbr': "Generate material maps for physically based shading, so the surface responds to scene lighting.",
-    'pbr textures': "Generate material maps for physically based shading, so the surface responds to scene lighting.",
-    'pbr materials': "Generate material maps for physically based shading, so the surface responds to scene lighting.",
-    'face limit': "The maximum polygon budget for the mesh. A lower limit keeps geometry lighter; a higher limit allows more detail.",
-    'face count': "The requested polygon count. Lower values keep the mesh lighter; higher values allow more geometric detail.",
-    'face target': "The target polygon count after simplification. Lower values reduce geometry and may remove small details.",
-    'texture quality': "The level of detail used when generating surface textures.",
-    'texture size': "The pixel dimensions of the texture maps. Larger maps can hold finer detail and use more memory.",
-    'remesh': "Rebuild the mesh's topology as part of generation.",
-    'quad topology': "Request topology built from four-sided faces for easier mesh editing.",
-    'granularity': "How finely the model separates the input into parts. Finer settings can separate smaller details.",
-    'split by connectivity': "Separate disconnected pieces of geometry into individual parts.",
-    'generate audio': "Include generated sound with the video.",
-    'generate mesh': "Create mesh geometry from the input.",
-    'simplify mesh': "Reduce mesh complexity after reconstruction.",
-    'min mask pixels': "The minimum mask area, in pixels. Increasing it filters out smaller regions.",
-    'vertex color': "Store color on the mesh vertices; the available color detail depends on the geometry.",
-    'bake textures': "Bake surface appearance into texture maps for the mesh.",
-    'texture baking': "Bake surface appearance into texture maps for the mesh.",
-    'compression': "How the generated asset is compressed for storage and transfer.",
-    'alignment': "How generated textures are aligned to the source image or mesh geometry.",
-    'seed': "Controls the random starting point. Reusing a seed with the same settings helps compare variations.",
-    'texture seed': "Controls the random starting point for texture generation. Reuse it with the same settings to compare variations.",
-    'rig type': "The type of rig to create for posing and animating the mesh.",
-    'skeleton': "The skeleton structure used to rig the mesh.",
-    'guidance': "How strongly the generation follows its guidance. Higher values emphasize that guidance.",
-    'steps': "The number of refinement steps used during generation. More steps can take longer.",
-    'format': "The file format used to store the generated image.",
+    'aspect ratio': n_("The shape of the result, expressed as width:height. Wider ratios suit landscapes; taller ratios suit portraits."),
+    'resolution': n_("The detail level of the result. Higher settings can preserve finer detail and produce larger files."),
+    'image size': n_("The dimensions and orientation of the generated image."),
+    'images': n_("How many images to create in one generation."),
+    'number of images': n_("How many images to create in one generation."),
+    'style': n_("The visual treatment applied to the generated image."),
+    'texture': n_("Generate surface color and appearance for the mesh."),
+    'pbr': n_("Generate material maps for physically based shading, so the surface responds to scene lighting."),
+    'pbr textures': n_("Generate material maps for physically based shading, so the surface responds to scene lighting."),
+    'pbr materials': n_("Generate material maps for physically based shading, so the surface responds to scene lighting."),
+    'face limit': n_("The maximum polygon budget for the mesh. A lower limit keeps geometry lighter; a higher limit allows more detail."),
+    'face count': n_("The requested polygon count. Lower values keep the mesh lighter; higher values allow more geometric detail."),
+    'face target': n_("The target polygon count after simplification. Lower values reduce geometry and may remove small details."),
+    'texture quality': n_("The level of detail used when generating surface textures."),
+    'texture size': n_("The pixel dimensions of the texture maps. Larger maps can hold finer detail and use more memory."),
+    'remesh': n_("Rebuild the mesh's topology as part of generation."),
+    'quad topology': n_("Request topology built from four-sided faces for easier mesh editing."),
+    'granularity': n_("How finely the model separates the input into parts. Finer settings can separate smaller details."),
+    'split by connectivity': n_("Separate disconnected pieces of geometry into individual parts."),
+    'generate audio': n_("Include generated sound with the video."),
+    'generate mesh': n_("Create mesh geometry from the input."),
+    'simplify mesh': n_("Reduce mesh complexity after reconstruction."),
+    'min mask pixels': n_("The minimum mask area, in pixels. Increasing it filters out smaller regions."),
+    'vertex color': n_("Store color on the mesh vertices; the available color detail depends on the geometry."),
+    'bake textures': n_("Bake surface appearance into texture maps for the mesh."),
+    'texture baking': n_("Bake surface appearance into texture maps for the mesh."),
+    'compression': n_("How the generated asset is compressed for storage and transfer."),
+    'alignment': n_("How generated textures are aligned to the source image or mesh geometry."),
+    'seed': n_("Controls the random starting point. Reusing a seed with the same settings helps compare variations."),
+    'texture seed': n_("Controls the random starting point for texture generation. Reuse it with the same settings to compare variations."),
+    'rig type': n_("The type of rig to create for posing and animating the mesh."),
+    'skeleton': n_("The skeleton structure used to rig the mesh."),
+    'guidance': n_("How strongly the generation follows its guidance. Higher values emphasize that guidance."),
+    'steps': n_("The number of refinement steps used during generation. More steps can take longer."),
+    'format': n_("The file format used to store the generated image."),
 }
 
 # Canvas navigation remains available during text placement and inline editing.

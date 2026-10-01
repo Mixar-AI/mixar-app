@@ -14,6 +14,7 @@ This module provides functions to draw the channels management UI including:
 from ...core.node.node_utils import get_active_mpaint_node
 from ...core.lib.lib import channel_custom_icon_dict
 from ...core.lib.lib_operations import get_icon
+from mixar.modules.common.i18n import iface_
 
 
 def draw_channels_section(context, layout):
@@ -49,7 +50,7 @@ def draw_channels_section(context, layout):
 
     channel_count = len(mp.channels)
     rrow.prop(mpui, 'show_channels', emboss=False,
-              text=f'Channels ({channel_count})', icon=icon)
+              text=iface_('Channels ({count})').format(count=channel_count), icon=icon, translate=False)
 
     # ========== CHANNELS LIST (EXPANDED STATE) ==========
     if not mpui.show_channels:
@@ -126,14 +127,14 @@ def _draw_channel_settings_panel(layout, mp, mpui, node):
     rrow.prop(channel, expand_prop, text='', emboss=False, icon=icon)
 
     if icon_value:
-        rrow.prop(channel, expand_prop, text=f'{channel.name} Channel',
-                  emboss=False, icon_value=icon_value)
+        rrow.prop(channel, expand_prop, text=iface_('{name} Channel').format(name=channel.name),
+                  emboss=False, icon_value=icon_value, translate=False)
     else:
         # Fallback to standard icons
         fallback_icons = {'VALUE': 'SHADING_TEXTURE', 'RGB': 'COLOR', 'NORMAL': 'NORMALS_FACE'}
         type_icon = fallback_icons.get(channel.type, 'DOT')
-        rrow.prop(channel, expand_prop, text=f'{channel.name} Channel',
-                  emboss=False, icon=type_icon)
+        rrow.prop(channel, expand_prop, text=iface_('{name} Channel').format(name=channel.name),
+                  emboss=False, icon=type_icon, translate=False)
 
     # Settings menu button on the right (if menu exists)
     # rrow = row.row(align=True)

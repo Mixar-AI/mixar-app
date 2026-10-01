@@ -28,6 +28,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.ui.constants import CARD_DIALOG_WIDTH
+from mixar.modules.common.i18n import n_
 
 from ...core import byok_client, credential_state, model_suggestions, models_cache
 from ...core import preference_state
@@ -234,7 +235,7 @@ class MIXAR_BYOK_OT_save(Operator):
             or not api_key
         ):
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = "Choose a model for this provider and enter an API key."
+            wm.byok_last_error = n_("Choose a model for this provider and enter an API key.")
             return {'CANCELLED'}
 
         wm.byok_dialog_state = 'SAVING'
@@ -256,7 +257,7 @@ class MIXAR_BYOK_OT_save(Operator):
         api_key = wm.byok_form_api_key.strip()
         if not model or not api_key:
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = "Model slug and API key are required."
+            wm.byok_last_error = n_("Model slug and API key are required.")
             return {'CANCELLED'}
 
         wm.byok_dialog_state = 'SAVING'
@@ -289,7 +290,7 @@ class MIXAR_BYOK_OT_save(Operator):
         bundle = wm.byok_form_codex_bundle.strip()
         if not model_suggestions.is_valid_model('codex', model) or not bundle:
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = "Choose a Codex model and load your auth.json bundle."
+            wm.byok_last_error = n_("Choose a Codex model and load your auth.json bundle.")
             return {'CANCELLED'}
 
         wm.byok_dialog_state = 'SAVING'
@@ -358,7 +359,7 @@ def _on_save_done(success: bool, data, err, epoch=None):
             _deregister_local_if_switched_away(wm.byok_current_provider)
         else:
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = err or "Save failed."
+            wm.byok_last_error = err or n_("Save failed.")
             logger.warning("BYOK save failed: %s", err)
         _redraw_mixie_chat_areas()
     except Exception as e:
@@ -492,7 +493,7 @@ def _on_delete_done(success: bool, removed_count: int, err):
             _deregister_local_if_switched_away(None)
         else:
             wm.byok_dialog_state = 'ERROR'
-            wm.byok_last_error = err or "Remove failed."
+            wm.byok_last_error = err or n_("Remove failed.")
             logger.warning("BYOK remove failed: %s", err)
         _redraw_mixie_chat_areas()
     except Exception as e:

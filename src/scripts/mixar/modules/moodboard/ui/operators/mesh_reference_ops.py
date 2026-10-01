@@ -6,6 +6,7 @@
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import iface_, n_
 from ...core.asset_nodes import assign_mesh_reference
 from ...core.canvas_context import is_moodboard_context, redraw_moodboard_canvases
 from ...core.node_graph import asset_node_by_id
@@ -46,7 +47,7 @@ def _popup_compact_mesh_menu(context, node_id, objects):
             props.node_id = node_id
             props.object_name = obj.name
 
-    context.window_manager.popup_menu(draw, title="Select Mesh")
+    context.window_manager.popup_menu(draw, title=iface_("Select Mesh"))
 
 
 class MIXIE_OT_moodboard_select_mesh(Operator):
@@ -66,7 +67,7 @@ class MIXIE_OT_moodboard_select_mesh(Operator):
     def invoke(self, context, event):
         objects = sorted((obj for obj in context.scene.objects if obj.type == 'MESH'),
                          key=lambda obj: obj.name.casefold())
-        items = [(obj.name, obj.name, "Use this scene mesh", 'OUTLINER_OB_MESH', i)
+        items = [(obj.name, obj.name, n_("Use this scene mesh"), 'OUTLINER_OB_MESH', i)
                  for i, obj in enumerate(objects)]
         key = _search_key(self, context)
         _searches.pop(key, None)

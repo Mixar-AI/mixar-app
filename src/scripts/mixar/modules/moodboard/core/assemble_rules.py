@@ -15,6 +15,8 @@ the length from the grip end; None holds the part at its bounding-box centre.
 from collections import namedtuple
 import re
 
+from mixar.modules.common.i18n import rpt_
+
 Rule = namedtuple("Rule", "keywords cls slot hold size_pct grip keep_axis")
 
 
@@ -180,5 +182,5 @@ def region_note(label: str) -> str:
     region = region_word(label)
     if not region:
         return ""
-    return (f"'{region}' is part of the body: join it into the body mesh before Auto Rig "
-            "(Assemble attaches rigid props only; pick a Slot to force it)")
+    return rpt_("'{region}' is part of the body: join it into the body mesh before Auto Rig "
+                "(Assemble attaches rigid props only; pick a Slot to force it)").format(region=region)

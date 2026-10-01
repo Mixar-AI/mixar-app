@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from mixar.modules.common.i18n import rpt_
 from ..constants import MOODBOARD_MAX_PLACEMENT_RING, MOODBOARD_MULTI_IMAGE_GAP
 from .node_layout import board_items
 
@@ -67,7 +68,7 @@ def find_free_asset_position(
 def assign_mesh_reference(node, obj):
     """Bind an existing card without replacing its identity, placement or links."""
     if obj is None or getattr(obj, "type", None) != 'MESH':
-        raise ValueError("Select a mesh object from the scene")
+        raise ValueError(rpt_("Select a mesh object from the scene"))
     if node.title in ('', 'Add Mesh', node.object_names):
         node.title = obj.name
     node.object_names = obj.name
@@ -100,7 +101,7 @@ def create_empty_mesh_node(scene, *, center=(0.0, 0.0)):
 def create_asset_node(scene, obj, *, center=(0.0, 0.0)):
     """Add or reveal one scene mesh reference, preserving its identity and links."""
     if obj is None or getattr(obj, "type", None) != 'MESH':
-        raise ValueError("Select a mesh object in Object Mode")
+        raise ValueError(rpt_("Select a mesh object in Object Mode"))
 
     from .node_graph import deselect_graph_nodes
 
@@ -137,11 +138,11 @@ def add_mesh_references(scene, objects, *, center=(0.0, 0.0), active=None):
     meshes = []
     for obj in objects:
         if obj is None or getattr(obj, 'type', None) != 'MESH':
-            raise ValueError('Select mesh objects in Object Mode')
+            raise ValueError(rpt_('Select mesh objects in Object Mode'))
         if obj not in meshes:
             meshes.append(obj)
     if not meshes:
-        raise ValueError('Select mesh objects in Object Mode')
+        raise ValueError(rpt_('Select mesh objects in Object Mode'))
     # Adding a collection entry can relocate its earlier RNA elements. Hold
     # identities during mutation and resolve live entries before selecting them.
     node_ids = [create_asset_node(scene, obj, center=center).node_id for obj in meshes]

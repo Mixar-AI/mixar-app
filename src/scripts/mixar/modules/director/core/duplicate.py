@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import uuid
 
+from mixar.modules.common.i18n import rpt_
 from .anim_curves import assigned_fcurves
 from .frame_math import frames_per_beat
 from .retime import note_beat_timing
@@ -146,10 +147,10 @@ def duplicate_beats(scene, shot, indices, beat_seconds: float) -> list:
     is what the operator reports.
     """
     if getattr(shot, "state", "DRAFT") != 'DRAFT':
-        raise ValueError("Create a new take before editing a locked shot")
+        raise ValueError(rpt_("Create a new take before editing a locked shot"))
     camera = getattr(shot, "camera", None)
     if camera is None or getattr(camera, "type", None) != 'CAMERA':
-        raise ValueError("This take has no camera to duplicate keyframes on")
+        raise ValueError(rpt_("This take has no camera to duplicate keyframes on"))
     beats = list(shot.beats)
     sources = [beats[index] for index in sorted(set(indices)) if 0 <= index < len(beats)]
     if not sources:

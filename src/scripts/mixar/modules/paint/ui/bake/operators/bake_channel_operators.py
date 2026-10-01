@@ -53,6 +53,7 @@ from .bake_channel_operators_helpers import (
     setup_multi_material,
 )
 from .bake_channel_operators_ui import draw_bake_channels_ui
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -440,7 +441,7 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
                 ori_mat_ids, ori_loop_locs, disabled_layers, temp_objs,
                 ori_edit_mode,
             )
-            self.report({"ERROR"}, f"Bake failed: {exc}")
+            self.report({"ERROR"}, rpt_("Bake failed: {error}").format(error=exc))
             return {"CANCELLED"}
 
     def _recover_after_bake_failure(
@@ -479,13 +480,13 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
     def _validate_bake_inputs(self, obj):
         """Validate bake inputs and return error message if invalid."""
         if len(self.channels) == 0:
-            return "This node has no channel!"
+            return n_("This node has no channel!")
         if self.only_active_channel and self.no_layer_using:
-            return "No layer is using '" + self.channels[0].name + "' channel!"
+            return rpt_("No layer is using '{channel}' channel!").format(channel=self.channels[0].name)
         if self.no_layer_using:
-            return "No layer is using any channel!"
+            return n_("No layer is using any channel!")
         if obj.hide_viewport or obj.hide_render:
-            return "Please unhide render and viewport of the active object!"
+            return n_("Please unhide render and viewport of the active object!")
         return None
 
     def _enable_disabled_layers(self, mp):
@@ -523,11 +524,11 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
 
     def _report_bake_result(self, start_time, mp, tree):
         """Report bake result."""
-        elapsed = "{:0.2f}".format(time.time() - start_time)
+        elapsed = time.time() - start_time
         if self.only_active_channel:
-            self.report({"INFO"}, mp.channels[mp.active_channel_index].name + " channel is baked in " + elapsed + " seconds!")
+            self.report({"INFO"}, rpt_("{channel} channel is baked in {seconds:0.2f} seconds!").format(channel=mp.channels[mp.active_channel_index].name, seconds=elapsed))
         else:
-            self.report({"INFO"}, tree.name + " channels are baked in " + elapsed + " seconds!")
+            self.report({"INFO"}, rpt_("{name} channels are baked in {seconds:0.2f} seconds!").format(name=tree.name, seconds=elapsed))
 
 
 classes = (

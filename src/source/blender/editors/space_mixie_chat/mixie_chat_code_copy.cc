@@ -35,6 +35,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_scene_types.h"
 #include "DNA_space_types.h"
 
@@ -183,7 +185,7 @@ void mixie_chat_code_chip_draw(float right_x, float top_y, float scale_factor, i
    * SIZE, not scale_factor: the markdown draw path always passes
    * scale_factor 1.0, so px constants scaled by it ignore the UI scale and
    * the label came out illegibly small on scaled displays. */
-  const char *label = copied ? "Copied \xE2\x9C\x94" : "Copy";
+  const char *label = copied ? IFACE_("Copied \xE2\x9C\x94") : IFACE_("Copy");
   int label_size = int(float(font_size) * 0.95f);
   if (label_size < 12) {
     label_size = 12;

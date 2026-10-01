@@ -35,7 +35,7 @@ class MIXIE_CHAT_OT_choose_import_file(Operator, ImportHelper):
     def draw(self, context):
         hint = formats_hint(self.formats)
         if hint:
-            self.layout.label(text=hint)
+            self.layout.label(text=hint, translate=False)
 
     def execute(self, context):
         if not self.filepath:

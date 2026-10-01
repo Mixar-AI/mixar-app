@@ -3,6 +3,7 @@
 
 #include "BKE_context.hh"
 #include "BLI_string.h"
+#include "BLT_translation.hh"
 #include "DNA_windowmanager_types.h"
 #include "RNA_access.hh"
 #include "UI_interface.hh"
@@ -112,7 +113,7 @@ void agent_ui_generations_scrollbar(ui::Block *block,
                                  0,
                                  0,
                                  100,
-                                 "Scroll library");
+                                 TIP_("Scroll library"));
   ui::button_scrollbar_visual_height_set(scroll, 100.0f * visible_height / maximum);
   ui::block_emboss_set(block, ui::EmbossType::None);
 }
@@ -205,7 +206,7 @@ void agent_ui_generations_libraries(
   const rctf &r = m.add;
   pane_fill_round(&r, std::min(GEN_META_RADIUS * u, BLI_rctf_size_y(&r) * 0.35f), bg);
   char add_label[64];
-  BLI_strncpy(add_label, "+  Add Library…", sizeof(add_label));
+  SNPRINTF(add_label, "+  %s", IFACE_("Add Library…"));
   pane_fit_text(add_label, std::max(1.0f, BLI_rctf_size_x(&r) - 2.0f * inner), frame.font_lib);
   pane_label_left(add_label, r.xmin + inner, BLI_rctf_cent_y(&r), frame.font_lib, text);
   uiDefButO(block,
@@ -217,7 +218,7 @@ void agent_ui_generations_libraries(
             int(r.ymin),
             short(BLI_rctf_size_x(&r)),
             short(BLI_rctf_size_y(&r)),
-            "Connect a folder: its images, videos and 3D assets appear here");
+            TIP_("Connect a folder: its images, videos and 3D assets appear here"));
   PointerRNA wm = RNA_id_pointer_create(&CTX_wm_manager(C)->id);
   agent_ui_generations_scrollbar(
       block, &wm, "mixar_generations_library_scroll", m.scrollbar, BLI_rctf_size_y(&m.view), m.max_scroll);

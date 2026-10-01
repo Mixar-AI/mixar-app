@@ -12,6 +12,7 @@ from ....core.node.node_utils import get_active_mpaint_node
 from ....core.node.get_nodes import get_active_mat_output_node
 from ....utils.blender_commons import get_active_material, simple_remove_node
 from ...operators.operators_helper_preview import get_preview, remove_preview, set_srgb_view_transform
+from mixar.modules.common.i18n import rpt_
 
 # Constant for temporary image texture node name
 TEMP_IMAGE_PREVIEW_NODE = "_temp_image_preview"
@@ -60,7 +61,7 @@ class MToggleBakedLayerPreview(bpy.types.Operator):
                 break
 
         if layer_index < 0:
-            self.report({"WARNING"}, f"Layer '{self.layer_name}' not found")
+            self.report({"WARNING"}, rpt_("Layer '{name}' not found").format(name=self.layer_name))
             return {"CANCELLED"}
 
         # Check if we're already previewing this layer
@@ -178,7 +179,7 @@ class MToggleBakedChannelPreview(bpy.types.Operator):
                 break
 
         if channel_index < 0:
-            self.report({"WARNING"}, f"Channel '{self.channel_name}' not found")
+            self.report({"WARNING"}, rpt_("Channel '{name}' not found").format(name=self.channel_name))
             return {"CANCELLED"}
 
         # Check if we're already previewing this channel
@@ -245,7 +246,7 @@ class MToggleBakedImagePreview(bpy.types.Operator):
         # Get the image from bpy.data.images
         image = bpy.data.images.get(self.image_name)
         if not image:
-            self.report({"WARNING"}, f"Image '{self.image_name}' not found")
+            self.report({"WARNING"}, rpt_("Image '{name}' not found").format(name=self.image_name))
             return {"CANCELLED"}
 
         # Check if we're already previewing this image

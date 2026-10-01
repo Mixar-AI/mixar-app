@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 
 import bpy
 
+from mixar.modules.common.i18n import n_
+
 from .constants import UNREAL_FBX_AXIS_FORWARD, UNREAL_FBX_AXIS_UP
 
 _EXTENSIONS = {"usd": ".usd", "fbx": ".fbx", "glb": ".glb"}
@@ -36,7 +38,7 @@ def _select_export_objects(object_names: list[str] | None) -> list:
         ]
     meshes = [obj for obj in objects if obj.type == "MESH"]
     if not meshes:
-        raise RuntimeError("No mesh objects are available to export")
+        raise RuntimeError(n_("No mesh objects are available to export"))
     for obj in objects:
         try:
             obj.select_set(True)

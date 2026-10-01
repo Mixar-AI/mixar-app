@@ -13,6 +13,8 @@ Panels are controlled via scene.mixie_active_panel property.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import iface_
+
 from ..constants import get_imagegen_max_refs
 from mixar.modules.moodboard.core.media_utils import first_selected_reference_still
 
@@ -43,10 +45,10 @@ class MIXIE_PT_mesh_segment(Panel):
 
         obj = context.active_object
         if obj and obj.type == 'MESH':
-            box.label(text=f"Object: {obj.name}", icon='CHECKMARK')
+            box.label(text=iface_("Object: {name}").format(name=obj.name), icon='CHECKMARK', translate=False)
             # Check for UV map
             if obj.data.uv_layers:
-                box.label(text=f"UV Maps: {len(obj.data.uv_layers)}", icon='UV')
+                box.label(text=iface_("UV Maps: {count}").format(count=len(obj.data.uv_layers)), icon='UV', translate=False)
             else:
                 row = box.row()
                 row.alert = True
@@ -87,10 +89,10 @@ class MIXIE_PT_mesh_segment(Panel):
             # Progress bar with percentage
             progress_pct = int(scene.mixie_mesh_segment_progress * 100)
             row = box.row()
-            row.progress(factor=scene.mixie_mesh_segment_progress, text=f"Progress: {progress_pct}%")
+            row.progress(factor=scene.mixie_mesh_segment_progress, text=iface_("Progress: {percent}%").format(percent=progress_pct), translate=False)
 
             if scene.mixie_mesh_segment_current_step:
-                box.label(text=f"Step: {scene.mixie_mesh_segment_current_step}")
+                box.label(text=iface_("Step: {step}").format(step=iface_(scene.mixie_mesh_segment_current_step)), translate=False)
 
             # Cancel button
             row = box.row()
@@ -127,7 +129,7 @@ class MIXIE_PT_mesh_segment(Panel):
             box = layout.box()
             box.label(text="Result", icon='CHECKMARK')
             box.label(text="Labels applied as vertex groups")
-            box.label(text=f"Status: {scene.mixie_mesh_segment_status}")
+            box.label(text=iface_("Status: {status}").format(status=scene.mixie_mesh_segment_status), translate=False)
 
 
 class MIXIE_PT_lookdev(Panel):
@@ -167,7 +169,7 @@ class MIXIE_PT_lookdev(Panel):
         else:
             img = first_selected_reference_still(scene)
             if img:
-                box.label(text=f"Selected: {img.name}", icon='CHECKMARK')
+                box.label(text=iface_("Selected: {name}").format(name=img.name), icon='CHECKMARK', translate=False)
             else:
                 box.label(text="No image selected in moodboard", icon='ERROR')
 
@@ -248,7 +250,7 @@ class MIXIE_PT_lookdev360(Panel):
         if mesh_count == 0:
             box.label(text="No mesh objects selected", icon='ERROR')
         else:
-            box.label(text=f"{mesh_count} mesh object(s) selected", icon='CHECKMARK')
+            box.label(text=iface_("{count} mesh object(s) selected").format(count=mesh_count), icon='CHECKMARK', translate=False)
 
             # Check for objects without UV maps
             objects_without_uv = 0
@@ -259,7 +261,7 @@ class MIXIE_PT_lookdev360(Panel):
             if objects_without_uv > 0:
                 row = box.row()
                 row.alert = True
-                row.label(text=f"{objects_without_uv} object(s) missing UV map", icon='INFO')
+                row.label(text=iface_("{count} object(s) missing UV map").format(count=objects_without_uv), icon='INFO', translate=False)
                 row = box.row()
                 row.label(text="(Will be auto-unwrapped)", icon='BLANK1')
 
@@ -274,7 +276,7 @@ class MIXIE_PT_lookdev360(Panel):
             # Show currently selected moodboard image info
             img = first_selected_reference_still(scene)
             if img:
-                box.label(text=f"Selected: {img.name}", icon='CHECKMARK')
+                box.label(text=iface_("Selected: {name}").format(name=img.name), icon='CHECKMARK', translate=False)
             else:
                 box.label(text="No image selected in moodboard", icon='INFO')
         else:
@@ -386,13 +388,13 @@ class MIXIE_PT_imagegen(Panel):
             row = box.row()
             if total_ref > max_refs:
                 row.alert = True
-                row.label(text=f"{total_ref} total (max {max_refs} for {scene.mixie_imagegen_model.capitalize()})", icon='ERROR')
+                row.label(text=iface_("{total} total (max {max} for {model})").format(total=total_ref, max=max_refs, model=scene.mixie_imagegen_model.capitalize()), icon='ERROR', translate=False)
             else:
                 if ref_count > max_moodboard:
                     row.alert = True
-                    row.label(text=f"{ref_count} selected (only {max_moodboard} will be used)", icon='INFO')
+                    row.label(text=iface_("{count} selected (only {max} will be used)").format(count=ref_count, max=max_moodboard), icon='INFO', translate=False)
                 else:
-                    row.label(text=f"{total_ref} reference image(s)", icon='CHECKMARK')
+                    row.label(text=iface_("{count} reference image(s)").format(count=total_ref), icon='CHECKMARK', translate=False)
 
         # Generation Settings Section
         layout.separator()
@@ -466,7 +468,7 @@ class MIXIE_PT_image_to_3d(Panel):
             # Show currently selected moodboard image info
             img = first_selected_reference_still(scene)
             if img:
-                box.label(text=f"Selected: {img.name}", icon='CHECKMARK')
+                box.label(text=iface_("Selected: {name}").format(name=img.name), icon='CHECKMARK', translate=False)
             else:
                 box.label(text="No image selected in moodboard", icon='ERROR')
         else:

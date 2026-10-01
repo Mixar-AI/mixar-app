@@ -27,6 +27,8 @@
 #include "../interface/interface_intern.hh"
 #include "BLI_vector.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_object_types.h"
 #include "DNA_theme_types.h"   /* UI_SCALE_FAC */
 #include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
@@ -180,10 +182,10 @@ static void add_asset_preview(const bContext *C,
       ui::Button *picker = ui::uiDefIconTextButO(
           block, ui::ButtonType::But, "MIXIE_OT_moodboard_select_mesh",
           wm::OpCallContext::InvokeDefault, ICON_OUTLINER_OB_MESH,
-          object_ptr.data ? "Change Mesh" : "Select Mesh",
+          object_ptr.data ? IFACE_("Change Mesh") : IFACE_("Select Mesh"),
           BLI_rcti_cent_x(&card) - width / 2,
           object_ptr.data ? card.ymin : BLI_rcti_cent_y(&card) - height / 2,
-          width, height, "Choose a mesh from this scene for the Moodboard node");
+          width, height, TIP_("Choose a mesh from this scene for the Moodboard node"));
       ui::mixar_style_button(picker, ui::MixarComponent::Action,
                             ui::MixarVariant::Secondary, UI_SCALE_FAC * 0.65f);
       RNA_string_set(ui::button_operator_ptr_ensure(picker), "node_id", node_id);
@@ -195,7 +197,8 @@ static void add_asset_preview(const bContext *C,
         mixie_rna_string_get_clamped(node, "object_names", names, sizeof(names));
         const auto style = ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC);
         const std::string label = ui::mixar_fit_text(
-            names[0] ? "Mesh removed from scene" : "Choose a scene mesh", width, style);
+            names[0] ? IFACE_("Mesh removed from scene") : IFACE_("Choose a scene mesh"),
+            width, style);
         ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card),
                               BLI_rcti_cent_y(&card) + height + metrics.gap,
                               style, ui::mixar_tokens::mixar_zen().secondary);
@@ -206,7 +209,7 @@ static void add_asset_preview(const bContext *C,
       mixie_rna_string_get_clamped(node, "object_names", names, sizeof(names));
       const auto style = ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC);
       const std::string label = ui::mixar_fit_text(
-          names[0] ? "Mesh removed from scene" : "Choose a scene mesh",
+          names[0] ? IFACE_("Mesh removed from scene") : IFACE_("Choose a scene mesh"),
           BLI_rcti_size_x(&card), style);
       ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card), BLI_rcti_cent_y(&card),
                             style, ui::mixar_tokens::mixar_zen().secondary);
@@ -230,7 +233,7 @@ static void add_asset_preview(const bContext *C,
   else {
     const auto style = ui::mixar_text_style(ui::MixarTextRole::Caption, UI_SCALE_FAC);
     const char *message = RNA_boolean_get(node, "scene_mesh_reference") ?
-                              "Mesh unavailable" : "3D asset";
+                              IFACE_("Mesh unavailable") : IFACE_("3D asset");
     const std::string label = ui::mixar_fit_text(message, BLI_rcti_size_x(&card), style);
     ui::mixar_label_center(label.c_str(), BLI_rcti_cent_x(&card), BLI_rcti_cent_y(&card),
                            style, ui::mixar_tokens::mixar_zen().secondary);

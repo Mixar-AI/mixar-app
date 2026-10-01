@@ -25,6 +25,7 @@ from collections import deque
 from urllib.parse import parse_qs, urlparse
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.common.network import server_ssl_context
 
 from ..constants import DEFAULT_PORT, PORT_SCAN_RANGE, WS_PATH
@@ -199,7 +200,7 @@ class VirtualCameraServer:
         self.state.last_error = ""
         hosts = pairing.lan_addresses()
         if not hosts:
-            self.state.last_error = "No network interface found — join a Wi-Fi network."
+            self.state.last_error = rpt_("No network interface found — join a Wi-Fi network.")
             return False
 
         cert = tls_utils.ensure_certificate(hosts)
@@ -212,7 +213,7 @@ class VirtualCameraServer:
             except OSError:
                 continue
         if httpd is None:
-            self.state.last_error = "No free port available."
+            self.state.last_error = rpt_("No free port available.")
             return False
         httpd.daemon_threads = True
 

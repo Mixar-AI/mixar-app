@@ -65,6 +65,14 @@ std::vector<AgentReference> agent_bubble_reference_items(Scene *scene, wmWindowM
       }
       RNA_END;
     }
+    /* Context folders stay attached across turns; `path` is the opaque
+     * folder id the remove button hands back (agent_bubble_references.cc). */
+    if (RNA_struct_find_property(&scene_ptr, "mixie_context_folders")) {
+      RNA_BEGIN (&scene_ptr, item, "mixie_context_folders") {
+        items.push_back({RNA_string_get(&item, "folder_id"), RNA_string_get(&item, "name"), "FOLDER"});
+      }
+      RNA_END;
+    }
     return items;
   }
 
