@@ -14,8 +14,8 @@
  * ours. Colours and chrome label scale live in `UI_mixar_chrome.hh`
  * (UI.svg 1x: slider track 225x28 rx7 #1D1D1D with a 106x23 rx7 #393939
  * thumb inset 2px; Cinema pill with shared toolbar-height rounded geometry, #3F3F3F hairline
- * border, shared horizontal Cinema gradients, film-strip icon and inline italic V2
- * marker). Geometry stays on the layout.
+ * border, shared horizontal Cinema gradients, film-strip icon and small rounded
+ * "BETA" stage-tag label). Geometry stays on the layout.
  * Compact is the chrome host; these widgets keep the UI.svg sizes rather
  * than Compact's 32-unit control height.
  *

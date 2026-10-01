@@ -29,7 +29,7 @@ namespace blender {
 #define BLENDER_VERSION_CYCLE release
 
 #define MIXAR_VERSION 401
-#define MIXAR_VERSION_PATCH 3
+#define MIXAR_VERSION_PATCH 4
 #define MIXAR_VERSION_CYCLE release
 
 /* Mixar file format version, stored in FileGlobal.
