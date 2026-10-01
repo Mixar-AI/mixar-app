@@ -391,9 +391,15 @@ void qa_dump_region(std::string &out,
       out += "\"mixar_motion\":{\"hover\":" + std::to_string(motion.hover) +
              ",\"press\":" + std::to_string(motion.press) +
              ",\"selected\":" + std::to_string(motion.selected) + "},";
-      json_str(out, "text", text);
+      const bool secret = but->rnaprop && RNA_property_subtype(but->rnaprop) == PROP_PASSWORD;
+      out += secret ? "\"secret\":true," : "";
+      json_str(out, "text", secret ? std::string() : text);
       out += ',';
-      if (const char *owned_tip = blender::ui::mixar_button_tooltip_owned_text(*but)) {
+      if (secret) {
+        json_str(out, "tip", "");
+        out += ',';
+      }
+      else if (const char *owned_tip = blender::ui::mixar_button_tooltip_owned_text(*but)) {
         json_str(out, "tip", owned_tip);
         out += ',';
       }

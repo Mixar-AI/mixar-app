@@ -93,6 +93,9 @@ def begin_operation(params):
     except (ValueError, TypeError, AttributeError) as exc:
         return _failure("invalid_params", str(exc))
     tick()
+    from mixar.modules.common.ui_control.core.ownership import active as ui_active
+    if ui_active():
+        return _failure("ui_busy", "Release UI control before starting a scene operation")
     bpy, session = _runtime()
     from mixar.modules.space_mixie_chat.constants import SessionState, is_lane_scene
     scenes = list(bpy.data.scenes)

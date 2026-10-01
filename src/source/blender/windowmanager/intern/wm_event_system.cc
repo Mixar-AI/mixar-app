@@ -79,6 +79,7 @@
 #include "UI_view2d.hh"
 
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_keymap.hh"
 #include "WM_message.hh"
 #include "WM_toolsystem.hh"
@@ -200,12 +201,22 @@ wmEvent *WM_event_add(wmWindow *win, const wmEvent *event_to_add)
   return wm_event_add_intern(win, event_to_add);
 }
 
+int Mixar_ui_control_modal_count(wmWindow *win)
+{
+  return BLI_listbase_count(&win->runtime->modalhandlers);
+}
+
 wmEvent *WM_event_add_simulate(wmWindow *win, const wmEvent *event_to_add)
 {
   if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
     BLI_assert_unreachable();
     return nullptr;
   }
+  return Mixar_event_add_synthetic(win, event_to_add);
+}
+
+wmEvent *Mixar_event_add_synthetic(wmWindow *win, const wmEvent *event_to_add)
+{
   wmEvent *event = WM_event_add(win, event_to_add);
 
   /* Logic for setting previous value is documented on the #wmEvent struct,
@@ -255,6 +266,7 @@ static void wm_event_custom_clear(wmEvent *event)
 
 void wm_event_free(wmEvent *event)
 {
+  Mixar_ui_control_event_forget(event);
 #ifndef NDEBUG
   /* Don't use assert here because it's fairly harmless in most cases,
    * more an issue of correctness, something we should avoid in general. */
@@ -4310,6 +4322,11 @@ void wm_event_do_handlers(bContext *C)
 
     wmEvent *event;
     while ((event = static_cast<wmEvent *>(win.runtime->event_queue.first))) {
+      if (!Mixar_ui_control_event_valid(&win, event)) {
+        BLI_remlink(&win.runtime->event_queue, event);
+        wm_event_free(event);
+        continue;
+      }
       /* Do the check at the start of the next iteration, to avoid by-passing it in case the
        * previous iteration has been early-terminated (using `continue;` e.g.). */
       if (wm->runtime->break_events_handling) {
@@ -6119,6 +6136,10 @@ void wm_event_add_ghostevent(wmWindowManager *wm,
 {
   if (UNLIKELY(G.f & G_FLAG_EVENT_SIMULATE)) {
     return;
+  }
+
+  if (ELEM(type, GHOST_kEventButtonDown, GHOST_kEventKeyDown, GHOST_kEventWheel)) {
+    Mixar_ui_control_human_input(wm);
   }
 
   /**

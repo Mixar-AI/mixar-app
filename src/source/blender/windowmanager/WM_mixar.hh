@@ -11,7 +11,28 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace blender {
+
+struct wmWindow;
+struct wmWindowManager;
+struct wmEvent;
+
+/* Main-thread-only production input. Never enables global QA simulation. */
+void Mixar_ui_control_enable(wmWindowManager *wm, bool enabled);
+bool Mixar_ui_control_enabled();
+bool Mixar_ui_control_begin(wmWindowManager *wm, const char *owner);
+void Mixar_ui_control_end(wmWindowManager *wm, const char *owner);
+int Mixar_ui_control_generation(wmWindowManager *wm);
+int Mixar_ui_control_pending();
+int Mixar_ui_control_modal_count(wmWindow *win);
+bool Mixar_ui_control_input(wmWindowManager *wm, wmWindow *win,
+                            const char *owner, const wmEvent *event);
+bool Mixar_ui_control_event_valid(wmWindow *win, const wmEvent *event);
+void Mixar_ui_control_event_forget(const wmEvent *event);
+void Mixar_ui_control_human_input(wmWindowManager *wm);
+wmEvent *Mixar_event_add_synthetic(wmWindow *win, const wmEvent *event);
 
 /**
  * True while the OS window-resize callback is dispatching handlers, timers
