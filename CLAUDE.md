@@ -41,7 +41,7 @@ python -m pytest -q  # standalone suite, runs OUTSIDE Blender (root conftest.py 
 python -m pytest -q src/scripts/mixar/modules/testing  # legacy/embedded suite (needs runtime deps)
 ```
 
-- Python packages are installed from `scripts/python_requirements.txt` into the embedded Blender Python (`make install`).
+- `make build` installs `scripts/python_requirements.txt` into embedded Blender Python, replacing stale package files on incremental builds. `scripts/check_python_runtime.py` verifies the bundled trust and MCP imports before success.
 - `pytest.ini` testpaths: `tests/`, plus in-tree suites under `space_mixie_chat/tests` and `paint/{layered_build,procedural_materials}/tests`. `pythonpath = src/scripts`.
 - `bpy` is a MagicMock in tests, so `bpy.types.Operator` subclasses are mocks — operator logic is pinned via source-level/`ast` tests (see `tests/moodboard/`, `tests/test_job_queue_download.py`).
 - The root `conftest.py` imports the REAL `numpy`/`PIL` before collection: `modules/testing/mock_bpy` stubs third-party modules only when ABSENT from `sys.modules`, so without the preload the first importer decided whether PIL was real for the whole session.
