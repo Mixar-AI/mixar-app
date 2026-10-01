@@ -80,7 +80,8 @@ def launch(options):
                MIXAR_OPERATION_HISTORY_DIR=str(directory / "ophistory"))
     with (directory / "app.log").open("w") as log:
         process = subprocess.Popen([
-            str(app), "-p", "60", "60", "1680", "1050", "--enable-event-simulate",
+            str(app), "-p", "60", "60", "1680", "1050",
+            *([] if options.normal_input else ["--enable-event-simulate"]),
             "--python", str(harness / "driver/qa_server.py"),
         ], env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     marker = {"pid": process.pid, "fingerprint": fingerprint(process.pid), "qa_port": options.qa_port}
@@ -95,6 +96,7 @@ def main():
     parser.add_argument("--app", type=Path)
     parser.add_argument("--qa-harness", type=Path)
     parser.add_argument("--qa-port", type=int, default=4797)
+    parser.add_argument("--normal-input", action="store_true", help="Test production native input without QA event simulation")
     parser.add_argument("--stop", action="store_true")
     options = parser.parse_args()
     if options.stop:
