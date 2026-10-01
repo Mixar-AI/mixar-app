@@ -41,6 +41,7 @@ import uuid
 from datetime import datetime, timezone
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, n_
 
 from ..constants import (
     CHAT_HISTORY_MEDIA_MAX_BYTES,
@@ -54,7 +55,7 @@ logger = get_logger(__name__)
 
 _INDEX_FILENAME = "index.json"
 _RECORD_VERSION = 1
-_STOPPED_MARKER = "*Stopped*"
+_STOPPED_MARKER = n_("*Stopped*")
 
 # Metadata keys mirrored into index.json for the popover list.
 _META_KEYS = (
@@ -330,16 +331,16 @@ def format_relative_time(iso_ts: str, short: bool = False) -> str:
         then = then.replace(tzinfo=timezone.utc)
     seconds = (datetime.now(timezone.utc) - then).total_seconds()
     if seconds < 60:
-        return "now" if short else "just now"
+        return iface_("now") if short else iface_("just now")
     if seconds < 3600:
         minutes = int(seconds // 60)
-        return f"{minutes}m" if short else f"{minutes}m ago"
+        return (iface_("{count}m") if short else iface_("{count}m ago")).format(count=minutes)
     if seconds < 86400:
         hours = int(seconds // 3600)
-        return f"{hours}h" if short else f"{hours}h ago"
+        return (iface_("{count}h") if short else iface_("{count}h ago")).format(count=hours)
     if seconds < 86400 * 30:
         days = int(seconds // 86400)
-        return f"{days}d" if short else f"{days}d ago"
+        return (iface_("{count}d") if short else iface_("{count}d ago")).format(count=days)
     return then.strftime("%b %d")
 
 
@@ -373,8 +374,9 @@ def _sanitize_snapshot(snapshot: list) -> list:
             if not content.strip():
                 continue  # loader-only placeholder — nothing to keep
             msg["loader_visible"] = False
-            if _STOPPED_MARKER not in content:
-                msg["content"] = content.rstrip() + "\n\n" + _STOPPED_MARKER
+            marker = iface_(_STOPPED_MARKER)
+            if marker not in content:
+                msg["content"] = content.rstrip() + "\n\n" + marker
         if msg.get("action_items"):
             msg["action_items"] = []
         if msg.get("input_type"):
@@ -403,7 +405,7 @@ def _derive_title(snapshot: list) -> str:
         if len(line) > CHAT_HISTORY_TITLE_MAXLEN:
             return line[: CHAT_HISTORY_TITLE_MAXLEN - 1].rstrip() + "…"
         return line
-    return "Untitled chat"
+    return iface_("Untitled chat")
 
 
 def _copy_media(snapshot: list, session_id: str) -> None:

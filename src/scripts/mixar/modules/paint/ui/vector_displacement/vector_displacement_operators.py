@@ -39,6 +39,7 @@ from .vector_displacement_utils import (
     get_combined_vdm_image,
     get_tangent_bitangent_images,
 )
+from mixar.modules.common.i18n import rpt_
 
 
 class MSculptImage(bpy.types.Operator):
@@ -247,9 +248,7 @@ class MSculptImage(bpy.types.Operator):
 
         self.report(
             {"INFO"},
-            "Sculpt mode is entered in "
-            + "{:0.2f}".format(time.time() - T)
-            + " seconds!",
+            rpt_("Sculpt mode is entered in {seconds:0.2f} seconds!").format(seconds=time.time() - T),
         )
 
         return {"FINISHED"}
@@ -338,9 +337,7 @@ class MApplySculptToImage(bpy.types.Operator):
 
         self.report(
             {"INFO"},
-            "Applying sculpt to VDM is done in "
-            + "{:0.2f}".format(time.time() - T)
-            + " seconds!",
+            rpt_("Applying sculpt to VDM is done in {seconds:0.2f} seconds!").format(seconds=time.time() - T),
         )
 
         return {"FINISHED"}

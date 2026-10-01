@@ -4,11 +4,13 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from mixar.modules.common.i18n import n_
+
 from ..constants import SessionState, STATE_LABELS, VIDEO_ATTACHMENT_REJECTED
 from .attachment_validation import pending_video_attachments
 from .session import get_session_manager
 
-HINT_QUEUED = 'queued'
+HINT_QUEUED = n_('queued')  # display: C++ translates the token
 
 
 @dataclass
@@ -35,14 +37,14 @@ def can_send(scene):
         return False, PENDING_MESSAGE
     from .turn_checkpoints import rewind_in_flight
     if rewind_in_flight():
-        return False, 'Restoring a checkpoint…'
+        return False, n_('Restoring a checkpoint…')
     session = get_session_manager()
     state = session.get_state(scene)
     if state in (SessionState.IDLE, SessionState.MODIFYING, SessionState.AWAITING_INPUT):
         return True, ''
     if state == SessionState.BUSY and session.run_open(scene):
         return True, ''
-    return False, STATE_LABELS.get(state, 'Agent is not connected')
+    return False, STATE_LABELS.get(state, n_('Agent is not connected'))
 
 
 def is_interjection(scene):
@@ -85,7 +87,7 @@ def send_user_message(scene, msg):
         if ok:
             session.set_state(scene, SessionState.BUSY)
             session.clear_streaming()
-        return ok, '' if ok else 'Failed to send input'
+        return ok, '' if ok else n_('Failed to send input')
     wire_message = compose_wire_message(scene, msg.text)
     sid = session.get_session_id(scene) if state == SessionState.BUSY else session.start_session(scene, msg.text)
     ok = handler.start_stream(
@@ -103,4 +105,4 @@ def send_user_message(scene, msg):
     )
     if ok:
         mark_rules_sent(scene)
-    return ok, '' if ok else 'Failed to send message'
+    return ok, '' if ok else n_('Failed to send message')

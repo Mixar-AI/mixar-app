@@ -362,7 +362,7 @@ class _FakeLayout:
     def separator(self, **_kwargs):
         self.sink.append(("separator",))
 
-    def label(self, text="", icon=""):
+    def label(self, text="", icon="", translate=True):
         self.sink.append(("label", text, icon))
 
     def prop(self, _data, name, **_kwargs):

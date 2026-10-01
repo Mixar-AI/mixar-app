@@ -21,6 +21,7 @@ Guidance mirrors Tripo's mutually-exclusive ``texture_prompt``:
   all required, submitted together as Tripo ``images``.
 """
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.moodboard.constants import SEP_INTRA
 from mixar.modules.common.job_queue.constants import FEATURE_PBR_GEN
 
@@ -33,17 +34,17 @@ from .sidebar_ui_helpers import (
 # Four positional views, in the ORDER the backend/Tripo expects
 # (front, left, back, right — see TripoAdapter._build_texture_prompt).
 _VIEW_SLOTS = (
-    ("front_image", "Front"),
-    ("left_image", "Left"),
-    ("back_image", "Back"),
-    ("right_image", "Right"),
+    ("front_image", n_("Front")),
+    ("left_image", n_("Left")),
+    ("back_image", n_("Back")),
+    ("right_image", n_("Right")),
 )
 
 
 def _draw_multi_view(box, tab):
     """Four positional view slots (each: pick existing OR upload)."""
-    draw_hint(box, "All four views are used together", icon='INFO')
-    missing = [label for prop, label in _VIEW_SLOTS
+    draw_hint(box, n_("All four views are used together"), icon='INFO')
+    missing = [iface_(label) for prop, label in _VIEW_SLOTS
                if getattr(tab, prop, None) is None]
     grid = box.grid_flow(
         row_major=True, columns=2, even_columns=True, even_rows=False)
@@ -54,7 +55,7 @@ def _draw_multi_view(box, tab):
         col.template_ID(tab, prop, open="image.open")
     if missing:
         box.separator(factor=SEP_INTRA)
-        draw_hint(box, f"Missing: {', '.join(missing)}", icon='ERROR')
+        draw_hint(box, iface_("Missing: {views}").format(views=', '.join(missing)), icon='ERROR')
 
 
 def _draw_single_view(box, tab, context):
@@ -73,23 +74,23 @@ def _draw_pbr_gen(layout, context):
     sidebar = getattr(scene, "mixie_moodboard_sidebar", None)
     tab = getattr(sidebar, "tab_pbr_gen", None) if sidebar else None
     if tab is None:
-        draw_hint(layout, "PBR Generation tab not available", icon='ERROR')
+        draw_hint(layout, n_("PBR Generation tab not available"), icon='ERROR')
         return
 
     from mixar.modules.common.generation_params import draw_capability_selector
 
     # --- Mesh info ---
-    col = draw_section_box(layout, "Mesh Info", icon='MESH_DATA')
+    col = draw_section_box(layout, n_("Mesh Info"), icon='MESH_DATA')
     draw_mesh_info(col, context, max_mb=150)
-    draw_hint(col, "Select the untextured mesh to texture", icon='INFO')
+    draw_hint(col, n_("Select the untextured mesh to texture"), icon='INFO')
     draw_section_separator(layout)
 
     # --- Prompt (optional text guidance) ---
-    draw_prompt_section(layout, tab, label="Prompt (optional)")
+    draw_prompt_section(layout, tab, label=n_("Prompt (optional)"))
     draw_section_separator(layout)
 
     # --- Reference images: single ⇄ multi-view ---
-    box = draw_section_box(layout, "Reference Images", icon='IMAGE_DATA')
+    box = draw_section_box(layout, n_("Reference Images"), icon='IMAGE_DATA')
     draw_toggle(box, tab, "multi_view",
                 text="Multiple Views (Front / Left / Back / Right)")
     box.separator(factor=SEP_INTRA)
@@ -100,7 +101,7 @@ def _draw_pbr_gen(layout, context):
     draw_section_separator(layout)
 
     # --- Settings (Model / schema params from the catalog) ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
     draw_capability_selector(col, tab, "pbr_generation")

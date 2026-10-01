@@ -8,6 +8,19 @@ and reusable by both the slot processor and the dev-data mock.
 """
 from collections.abc import Iterable
 
+try:
+    from mixar.modules.common.i18n import iface_, n_
+except ImportError:  # loaded by path, outside the package (unit tests)
+    def iface_(msgid):
+        return msgid
+
+    def n_(msgid):
+        return msgid
+
+# Row labels stay English where this module compares them later ("Tool call",
+# "Inspected scene", the script-inferred actions): the chat renderer translates
+# a row label when it draws it. Labels built from counts are translated here.
+
 # Step kinds, in the enum order of chat_slot_types.MixieChatStepItem (the C++
 # side reads that enum as an int index to pick the row glyph).
 _VALID_KINDS = {"READ", "WRITE", "COMMAND", "SEARCH", "TOOL"}
@@ -35,7 +48,7 @@ def format_steps_summary(kinds: Iterable[str], image_count: int = 0) -> str:
     n = sum(1 for kind in kinds if kind in _VALID_KINDS)
     if n <= 0:
         return ""
-    return f"{n} tool{'s' if n != 1 else ''} called"
+    return (iface_("{n} tool called") if n == 1 else iface_("{n} tools called")).format(n=n)
 
 
 def normalize_step_item(item_data: dict) -> dict:
@@ -99,20 +112,20 @@ def infer_step_kind(tool_name: str) -> str:
 # to the script classifier and then to the generic "Tool call" the result
 # counts refine on finish. Keep this table small and human — it is UI copy.
 _TOOL_LABELS = {
-    "render_viewport": "Captured viewport",
-    "render_viewport_final": "Rendered final image",
-    "render_final": "Rendered final image",
-    "render_multiview": "Captured views",
-    "inspect_mesh_seams": "Inspected seams",
-    "inspect_uv_map": "Inspected UV layout",
-    "inspect_geometry": "Measured geometry",
-    "inspect_spatial_constraints": "Checked placement",
-    "correct_spatial_placement": "Corrected placement",
-    "import_terrain_asset": "Imported asset",
-    "list_terrain_assets": "Browsed asset library",
-    "place_camera": "Placed camera",
-    "scene_overview": "Inspected scene",
-    "critique_scene": "Reviewed the scene",
+    "render_viewport": n_("Captured viewport"),
+    "render_viewport_final": n_("Rendered final image"),
+    "render_final": n_("Rendered final image"),
+    "render_multiview": n_("Captured views"),
+    "inspect_mesh_seams": n_("Inspected seams"),
+    "inspect_uv_map": n_("Inspected UV layout"),
+    "inspect_geometry": n_("Measured geometry"),
+    "inspect_spatial_constraints": n_("Checked placement"),
+    "correct_spatial_placement": n_("Corrected placement"),
+    "import_terrain_asset": n_("Imported asset"),
+    "list_terrain_assets": n_("Browsed asset library"),
+    "place_camera": n_("Placed camera"),
+    "scene_overview": n_("Inspected scene"),
+    "critique_scene": n_("Reviewed the scene"),
 }
 
 # Tools whose row is a capture: the tile(s) under the row ARE the result, so
@@ -133,7 +146,7 @@ def humanize_tool_name(tool_name: str) -> str:
     it actually did.
     """
     key = (tool_name or "").strip().lower()
-    return _TOOL_LABELS.get(key, "Tool call")
+    return _TOOL_LABELS.get(key, n_("Tool call"))
 
 
 def is_internal_step(tool_name: str, request_id: str = "") -> bool:
@@ -165,18 +178,18 @@ def classify_script_action(script: str) -> str:
         return ""
     # Rendering is unmistakable and never modeling.
     if "ops.render.render" in s or "render.render(" in s or "render_still" in s:
-        return "Rendered scene"
+        return n_("Rendered scene")
     # UV work is unmistakable too, and it edits with bmesh / ops.mesh (which
     # the geometry guard below would otherwise catch): the rows are how the
     # user follows a UV pass — "Marked seams" -> "Unwrapped mesh" -> "Packed
     # UV islands". Checked in pipeline order so a script doing all three is
     # labelled by its last stage.
     if "pack_islands" in s or "uv.pack" in s:
-        return "Packed UV islands"
+        return n_("Packed UV islands")
     if "uv.unwrap" in s or "uv.smart_project" in s or "unwrap(" in s:
-        return "Unwrapped mesh"
+        return n_("Unwrapped mesh")
     if "mark_seam" in s or "seam = true" in s or ".seam=true" in s:
-        return "Marked seams"
+        return n_("Marked seams")
     # If the script builds geometry, it's modeling — let the counts label it.
     creates_geometry = any(k in s for k in (
         "primitive_", "ops.mesh.", "meshes.new", "bmesh", "curves.new",
@@ -195,22 +208,22 @@ def classify_script_action(script: str) -> str:
         reads = any(k in s for k in (
             "bpy.data", "context.scene", "context.view_layer", "context.object"))
         if reads and not mutates:
-            return "Inspected scene"
+            return n_("Inspected scene")
         if any(k in s for k in (
                 "data.materials", "material_slots", "node_tree", "principled",
                 "data.images", "image_texture", ".uv_layers", "bsdf")):
-            return "Applied materials"
+            return n_("Applied materials")
         if any(k in s for k in (
                 "data.cameras", "cameras.new", "camera_add", "scene.camera",
                 ".lens", "track_to")):
-            return "Set up camera"
+            return n_("Set up camera")
         if any(k in s for k in (
                 "data.lights", "lights.new", "light_add", "world.node_tree",
                 "environment_texture", "type='sun'", "type='area'",
                 "type='point'", "type='spot'")):
-            return "Set up lighting"
+            return n_("Set up lighting")
         if "modifier_add" in s or "modifiers.new" in s:
-            return "Added modifier"
+            return n_("Added modifier")
     return ""
 
 
@@ -224,11 +237,11 @@ def _summarize_object_counts(created: int, modified: int, deleted: int) -> str:
     """
     parts = []
     if created:
-        parts.append(f"{created} created")
+        parts.append(iface_("{count} created").format(count=created))
     if modified:
-        parts.append(f"{modified} modified")
+        parts.append(iface_("{count} modified").format(count=modified))
     if deleted:
-        parts.append(f"{deleted} deleted")
+        parts.append(iface_("{count} deleted").format(count=deleted))
     return " · ".join(parts)
 
 
@@ -240,18 +253,18 @@ def _object_names_detail(created: list, modified: list, deleted: list) -> str:
     """
     cap = 40
 
-    def fmt(names: list, verb: str) -> str:
+    def fmt(names: list, template: str) -> str:
         if not names:
             return ""
         shown = names[:cap]
-        line = f"{verb}: " + ", ".join(shown)
+        line = iface_(template).format(names=", ".join(shown))
         if len(names) > cap:
-            line += f" … (+{len(names) - cap} more)"
+            line += " " + iface_("… (+{count} more)").format(count=len(names) - cap)
         return line
 
-    parts = [p for p in (fmt(created, "Created"),
-                         fmt(modified, "Modified"),
-                         fmt(deleted, "Deleted")) if p]
+    parts = [p for p in (fmt(created, n_("Created: {names}")),
+                         fmt(modified, n_("Modified: {names}")),
+                         fmt(deleted, n_("Deleted: {names}"))) if p]
     return "\n".join(parts)
 
 
@@ -265,15 +278,16 @@ def _result_label(created: int, modified: int, deleted: int):
       - mixed          -> "Updated scene", target="8 created · 1 modified · …"
       - nothing        -> "Ran a tool", target=""
     """
-    active = [(n, v) for n, v in ((created, "Created"),
-                                  (modified, "Modified"),
-                                  (deleted, "Deleted")) if n]
+    active = [(n, one, many) for n, one, many in (
+        (created, n_("Created {count} object"), n_("Created {count} objects")),
+        (modified, n_("Modified {count} object"), n_("Modified {count} objects")),
+        (deleted, n_("Deleted {count} object"), n_("Deleted {count} objects"))) if n]
     if not active:
-        return "Ran a tool", ""
+        return iface_("Ran a tool"), ""
     if len(active) == 1:
-        n, verb = active[0]
-        return f"{verb} {n} object{'s' if n != 1 else ''}", ""
-    return "Updated scene", _summarize_object_counts(created, modified, deleted)
+        n, one, many = active[0]
+        return iface_(one if n == 1 else many).format(count=n), ""
+    return iface_("Updated scene"), _summarize_object_counts(created, modified, deleted)
 
 
 _CAPTURE_LABELS = frozenset(_TOOL_LABELS[name] for name in CAPTURE_TOOLS)
@@ -538,7 +552,7 @@ def finish_step_on_bubble(bubble, request_id: str, result: dict) -> bool:
             # stdout — that is the "Blender create Mesh node Cube.099" log wall.
             row.detail = _object_names_detail(created, modified, deleted)
         else:
-            row.label = "Failed"
+            row.label = iface_("Failed")
             row.target = ""
             row.detail = (result.get("error") or "")[:500]
         return True

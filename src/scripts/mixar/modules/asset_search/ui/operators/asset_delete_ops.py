@@ -19,6 +19,7 @@ from mixar.config.config import get_server_url
 from mixar.config.logging_config import get_logger
 from mixar.modules.asset_search.constants import ASSET_EMBEDDINGS_DELETE_ENDPOINT
 from mixar.modules.common.api.client import HTTPClient
+from mixar.modules.common.i18n import n_, rpt_
 
 logger = get_logger(__name__)
 
@@ -33,7 +34,7 @@ def _delete_api(operator):
             raise_for_status=False,
         )
         if not resp.success:
-            msg = resp.message or f"Server returned {resp.status_code}"
+            msg = resp.message or rpt_("Server returned {status}").format(status=resp.status_code)
             operator._result = {"success": False, "message": msg}
             return
         data = resp.data or {}
@@ -43,13 +44,14 @@ def _delete_api(operator):
             "success": True,
             "deleted": deleted,
             "message": (
-                "All asset embeddings deleted — train again to re-enable search"
-                if deleted else "No embeddings to delete"
+                n_("All asset embeddings deleted — train again to re-enable search")
+                if deleted else n_("No embeddings to delete")
             ),
         }
     except Exception as exc:
         logger.error("[Asset Delete] Request failed: %s", exc)
-        operator._result = {"success": False, "message": f"Delete failed: {exc}"}
+        operator._result = {"success": False,
+                            "message": rpt_("Delete failed: {error}").format(error=exc)}
 
 
 class MIXIE_OT_delete_asset_embeddings(Operator):

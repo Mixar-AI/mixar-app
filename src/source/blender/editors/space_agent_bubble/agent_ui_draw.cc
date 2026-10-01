@@ -27,6 +27,8 @@
 #include "BLI_string.h"
 #include "BLI_time.h"
 
+#include "BLT_translation.hh"
+
 #include "DNA_screen_types.h"
 
 #include "GPU_immediate.hh"
@@ -142,7 +144,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
      * of the chip. */
     char preview[160];
     BLI_strncpy(preview,
-                state->last_prompt[0] ? state->last_prompt : "Ask Mixie anything...",
+                state->last_prompt[0] ? state->last_prompt : IFACE_("Ask Mixie anything..."),
                 sizeof(preview));
     /* One line only — newlines read as garbage glyphs in BLF. */
     for (char *c = preview; *c; c++) {
@@ -207,7 +209,7 @@ void agent_ui_draw_status_pill(ARegion *region, const float width,
       }
       *d = '\0';
 
-      const char *base_status = mixie_cat_activity_name(state->cat_activity);
+      const char *base_status = IFACE_(mixie_cat_activity_name(state->cat_activity));
       char label[160];
       if (state->last_prompt[0] != '\0') {
         SNPRINTF(label, "%s%s · %s", base_status, dots, preview);
@@ -419,7 +421,7 @@ void agent_ui_draw_island(ARegion *region,
 
       char disp[512];
       BLI_strncpy(disp,
-                  state->input_text[0] ? state->input_text : "Write your prompt here...",
+                  state->input_text[0] ? state->input_text : IFACE_("Write your prompt here..."),
                   sizeof(disp));
       for (char *c = disp; *c; c++) {
         if (*c == '\n' || *c == '\r') {

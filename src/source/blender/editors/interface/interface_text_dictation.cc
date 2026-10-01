@@ -9,8 +9,11 @@
 
 #include <algorithm>
 
+#include <fmt/format.h>
+
 #include "BKE_context.hh"
 #include "BKE_report.hh"
+#include "BLT_translation.hh"
 #include "DNA_windowmanager_types.h"
 #include "ED_screen.hh"
 #include "RNA_access.hh"
@@ -96,8 +99,11 @@ static void finish_hold(bContext *C, TextDictation &state)
 static void show_status(bContext *C, TextDictation &state)
 {
   PointerRNA wm = manager_pointer(C);
-  std::string status = RNA_string_get(&wm, "mixie_chat_voice_status");
-  status += state.released ? ": Esc to cancel" : ": release Option/Alt to finish, Esc to cancel";
+  /* Python stores the untranslated status; translate it and the hint here. */
+  const std::string voice_status = RNA_string_get(&wm, "mixie_chat_voice_status");
+  const char *hint = state.released ? RPT_("{}: Esc to cancel") :
+                                      RPT_("{}: release Option/Alt to finish, Esc to cancel");
+  const std::string status = fmt::format(fmt::runtime(hint), IFACE_(voice_status.c_str()));
   if (status != state.displayed_status) {
     state.displayed_status = status;
     ED_workspace_status_text(C, status.c_str());

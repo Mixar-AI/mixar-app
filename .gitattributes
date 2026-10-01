@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Machine-maintained translation data: GitHub collapses these in pull request
+# diffs and leaves them out of language statistics, so a catalog refresh does
+# not bury the code under review. `git diff` is unaffected.
+src/scripts/mixar/modules/common/i18n/locale/*.po linguist-generated=true
+docs/development/i18n-translation/glossary/*.json linguist-generated=true
+docs/development/i18n-translation/logical/*.json linguist-generated=true
+docs/development/i18n-translation/terms/*.json linguist-generated=true
+docs/development/i18n-translation/review_notes.json linguist-generated=true

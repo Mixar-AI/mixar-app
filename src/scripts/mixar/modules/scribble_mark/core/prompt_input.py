@@ -3,6 +3,7 @@
 
 """Type into the Agent draft without leaving the frozen drawing surface."""
 
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.space_mixie_chat.constants import CHAT_INPUT_MAXLEN
 
 
@@ -52,7 +53,8 @@ def handle(context, event, report):
     current = context.scene.mixie_chat_input
     value = current[:-1] if erase else current + text
     if len(value) > CHAT_INPUT_MAXLEN:
-        report({"WARNING"}, f"Agent draft is full (max {CHAT_INPUT_MAXLEN} characters)")
+        report({"WARNING"}, rpt_("Agent draft is full (max {count} characters)").format(
+            count=CHAT_INPUT_MAXLEN))
         value = value[:CHAT_INPUT_MAXLEN]
     context.scene.mixie_chat_input = value
     redraw_chat_areas()

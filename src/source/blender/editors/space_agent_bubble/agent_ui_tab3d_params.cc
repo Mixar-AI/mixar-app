@@ -40,6 +40,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 
 #include "DNA_screen_types.h"
@@ -208,8 +210,9 @@ void draw_boolean_chip(ui::Block *block,
 
   const float pad = PANE_CHIP_PAD_X * u;
   const float name_w = pane_text_width(name, font);
-  const float on_w = pane_text_width("ON", font) + 20.0f * u;
-  const float off_w = pane_text_width("OFF", font) + 20.0f * u;
+  /* The Toggle component draws the translated ON/OFF; measure the same. */
+  const float on_w = pane_text_width(IFACE_("ON"), font) + 20.0f * u;
+  const float off_w = pane_text_width(IFACE_("OFF"), font) + 20.0f * u;
   const float w = pad + name_w + 12.0f * u + on_w + off_w + pad * 0.5f;
 
   rctf rect;

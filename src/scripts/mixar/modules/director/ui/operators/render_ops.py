@@ -13,6 +13,7 @@ point scripts and the agent already call.
 
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core.board_export import export_plan, send_keyframes_to_board
 from ...core.render_outputs import render_job_active, start_shot_render
 from ...core.shot_api import active_shot
@@ -108,11 +109,12 @@ class MIXAR_OT_director_render_videos(Operator):
         try:
             count = start_shot_render(context, shot)
         except Exception as exc:
-            self.report({'ERROR'}, f"Could not render shot videos: {exc}")
+            self.report({'ERROR'}, rpt_("Could not render shot videos: {error}").format(error=exc))
             return {'CANCELLED'}
         self.report(
             {'INFO'},
-            f"Rendering {count} shot video{'s' if count != 1 else ''} to Moodboard",
+            rpt_("Rendering {count} shot video to Moodboard").format(count=count) if count == 1
+            else rpt_("Rendering {count} shot videos to Moodboard").format(count=count),
         )
         return {'FINISHED'}
 

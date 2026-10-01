@@ -107,9 +107,9 @@ def test_failed_write_is_not_acknowledged_and_recovery_clears_error(module, monk
     notifications = Mock()
     monkeypatch.setitem(sys.modules, 'mixar.modules.common.notifications',
         types.SimpleNamespace(get_notification_store=lambda: notifications))
-    def notice(code):
+    def notice(code, **kwargs):
         notices.append(code)
-        original(code)
+        original(code, **kwargs)
     monkeypatch.setattr(sync, '_notice', notice)
     def send(method, params, callback, timeout):
         sent.append(params)
@@ -122,6 +122,8 @@ def test_failed_write_is_not_acknowledged_and_recovery_clears_error(module, monk
     assert [params['acknowledgements'] for params in sent] == [[], [], [ack]]
     assert notices == [expected] and sync.last_error is None
     assert 'sensitive' not in str(notifications.push.call_args)
+    assert notifications.push.call_args.kwargs['id'] == module.SYNC_NOTICE_ID
+    notifications.dismiss.assert_called_with(module.SYNC_NOTICE_ID)
 
 
 def test_transient_failures_log_without_toasting(module, monkeypatch):
@@ -325,3 +327,70 @@ def test_stop_during_materialize_skips_the_write(module, monkeypatch):
     monkeypatch.setattr(sync, '_capture_scene_ids', lambda: True)
     sync._run()
     writer.assert_not_called()
+
+
+def test_validation_warning_names_the_failed_check_but_no_payload(module, monkeypatch, caplog):
+    monkeypatch.setitem(sys.modules, 'mixar.modules.common.notifications',
+        types.SimpleNamespace(get_notification_store=Mock))
+    sync = module.ArchiveSync(types.SimpleNamespace())
+    with caplog.at_level('WARNING'):
+        sync._notice('archive_validation_failed', reason=module._reason(ValueError('archive_record_hash_mismatch')))
+    assert 'archive_record_hash_mismatch' in caplog.text
+    assert module._reason(ValueError('/Users/me/secret payload')) == 'ValueError'
+
+
+def test_scene_rebinding_does_not_wedge_the_session(module, monkeypatch):
+    """Regression: a session re-paired with another scene id (chat restored into
+    another scene, undo past the id's lazy assignment, a checkpoint) failed every
+    later batch with archive_validation_failed and was never acknowledged again."""
+    import hashlib, json
+    def packet(seq):
+        record = {'version': 1, 'run_id': 'run', 'task_id': 'orchestrator', 'kind': 'message',
+                  'payload': {'id': 'm%d' % seq, 'role': 'ai', 'text': 'reply %d' % seq}}
+        raw = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
+        return {'session_id': 'conversation', 'epoch': 'a' * 32, 'status': 'available',
+                'records': [{'seq': seq, 'event_id': hashlib.sha256(raw).hexdigest(), 'record': record}]}
+    sent, notices = [], []
+    client = types.SimpleNamespace(is_connected=True)
+    sync = module.ArchiveSync(client)
+    scenes = iter(['scene-before', 'scene-after', 'scene-after'])
+    def capture():
+        sync.scene_ids = {'conversation': next(scenes)}
+        return True
+    monkeypatch.setattr(sync, '_capture_scene_ids', capture)
+    monkeypatch.setattr(module, 'POLL_SECONDS', 0)
+    monkeypatch.setattr(sync, '_notice', lambda code, **kwargs: notices.append(code))
+    def send(method, params, callback, timeout):
+        sent.append(params)
+        callback({'version': 1, 'owner_id': 'owner',
+                  'sessions': [packet(len(sent))] if len(sent) < 3 else []})
+        if len(sent) == 3:
+            client.is_connected = False
+        return 'request'
+    client.send_request = send
+    sync._run()
+    assert notices == []
+    assert [a['seq'] for a in sent[2]['acknowledgements']] == [2]
+    manifest = json.loads((module.store.root() / 'conversation/manifest.json').read_text())
+    assert manifest['scene_history_id'] == 'scene-before'
+    assert manifest['scene_history_aliases'] == ['scene-after']
+
+
+def test_recovery_clears_only_archive_warning_across_workers(module, monkeypatch):
+    items = {'unrelated': 'keep me'}
+    notifications = Mock()
+    notifications.push.side_effect = lambda *args, **kw: items.update({kw['id']: kw['body']})
+    notifications.dismiss.side_effect = lambda key: items.pop(key, None)
+    monkeypatch.setitem(sys.modules, 'mixar.modules.common.notifications',
+        types.SimpleNamespace(get_notification_store=lambda: notifications))
+    old = module.ArchiveSync(types.SimpleNamespace())
+    old._notice('archive_validation_failed')
+    old._notice('archive_disk_full')
+    assert len(items) == 2
+    assert 'disk is full' in items[module.SYNC_NOTICE_ID]
+    old._notice('archive_sync_timeout')
+    assert module.SYNC_NOTICE_ID in items  # disconnected does not mean recovered
+    replacement = module.ArchiveSync(types.SimpleNamespace())
+    replacement._recovered()
+    assert items == {'unrelated': 'keep me'}
+    notifications.dismiss.assert_called_once_with(module.SYNC_NOTICE_ID)

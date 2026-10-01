@@ -10,6 +10,7 @@ from bpy.props import IntProperty
 from bpy.types import Operator, Menu
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, rpt_
 
 logger = get_logger(__name__)
 
@@ -68,7 +69,7 @@ class MASKS_OT_RemoveMask(Operator):
                     # Question
                     question_row = main_col.row(align=True)
                     question_row.scale_y = 1.3
-                    question_row.label(text=f"Remove mask '{mask.name}'?", icon='QUESTION')
+                    question_row.label(text=iface_("Remove mask '{name}'?").format(name=mask.name), icon='QUESTION', translate=False)
 
     def execute(self, context):
         """Remove the specified mask from the active layer.
@@ -105,7 +106,7 @@ class MASKS_OT_RemoveMask(Operator):
             # Remove mask
             remove_mask(layer, mask, obj, refresh_list=True)
 
-            self.report({'INFO'}, f"Removed mask '{mask_name}' from layer '{layer.name}'")
+            self.report({'INFO'}, rpt_("Removed mask '{mask}' from layer '{layer}'").format(mask=mask_name, layer=layer.name))
 
             # Request UI refresh
             request_ui_refresh()
@@ -113,7 +114,7 @@ class MASKS_OT_RemoveMask(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to remove mask: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to remove mask: {error}").format(error=e))
             logger.error("Failed to remove mask: %s", e, exc_info=True)
             return {'CANCELLED'}
 
@@ -354,7 +355,7 @@ class LAYERS_OT_SelectMask(Operator):
             try:
                 bpy.ops.image.save_all_modified()
             except RuntimeError as e:
-                self.report({"WARNING"}, f"Could not save modified images before switching to mask: {e}")
+                self.report({"WARNING"}, rpt_("Could not save modified images before switching to mask: {error}").format(error=e))
 
         wm = context.window_manager
 

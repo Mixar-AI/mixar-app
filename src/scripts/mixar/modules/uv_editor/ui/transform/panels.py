@@ -12,6 +12,7 @@ Snapping panel for the Mixar UV Properties space.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.uv_editor.ui.base.panels import snap_base_applies
 
 
@@ -58,7 +59,7 @@ class MIXAR_UV_PT_snapping(Panel):
 
         # ========== SNAPPING OPTIONS SECTION ==========
         box = layout.box()
-        if draw_collapsible_header(box, uv_ui, "expand_snapping_options", "Snapping Options", icon='SNAP_ON'):
+        if draw_collapsible_header(box, uv_ui, "expand_snapping_options", n_("Snapping Options"), icon='SNAP_ON'):
             col = box.column(align=True)
             col.separator(factor=0.5)
 
@@ -88,7 +89,7 @@ class MIXAR_UV_PT_snapping(Panel):
 
         # ========== SNAP OPERATIONS SECTION ==========
         box = layout.box()
-        if draw_collapsible_header(box, uv_ui, "expand_snap_operations", "Snap Operations", icon='SNAP_GRID'):
+        if draw_collapsible_header(box, uv_ui, "expand_snap_operations", n_("Snap Operations"), icon='SNAP_GRID'):
             col = box.column(align=True)
             col.separator(factor=0.5)
             col.label(text="Selection")

@@ -31,6 +31,8 @@
 
 #include "BLI_math_vector.h"
 
+#include "BLT_translation.hh"
+
 #include "CLG_log.h"
 
 #include "RNA_access.hh"

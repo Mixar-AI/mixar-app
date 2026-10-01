@@ -77,14 +77,13 @@ class AGENT_BUBBLE_PT_footer(Panel):
             mode_sub.scale_x = 0.4
             mode_sub.prop(scene, "mixie_chat_mode", text="")
 
-        # Paperclip — attach an image / file to the next message.
+        # Paperclip — attach an image / 3D file to the next message, or a
+        # folder as context (the island's chip opens the same menu).
         # Placed immediately after the mode control (no spacer)
         # so they read as a single composer-controls cluster on the left,
-        # matching the Figma layout. Reuses the chat editor's
-        # add_image_from_file operator so attachments end up in the same
-        # collection.
+        # matching the Figma layout.
         action_row.operator(
-            "mixie_chat.add_image_from_file",
+            "mixie_chat.attach",
             text="",
             icon='LINKED',
         )

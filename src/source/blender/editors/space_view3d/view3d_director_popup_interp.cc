@@ -22,6 +22,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "RNA_access.hh"
 
 #include "UI_interface.hh"
@@ -42,7 +44,7 @@ ui::Block *interpolation_popup_create(bContext *C, ARegion *region, void *arg)
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || data.shot_ptr.data == nullptr) {
-    director_popup_section_label(block, "No active shot", 0, UI_UNIT_X * 10);
+    director_popup_section_label(block, IFACE_("No active shot"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -79,7 +81,8 @@ ui::Block *interpolation_popup_create(bContext *C, ARegion *region, void *arg)
 
   PropertyRNA *prop = RNA_struct_find_property(&list_ptr, "interpolation");
   if (prop == nullptr) {
-    director_popup_section_label(block, "Interpolation unavailable", 0, UI_UNIT_X * 10);
+    director_popup_section_label(
+        block, IFACE_("Interpolation unavailable"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -98,7 +101,12 @@ ui::Block *interpolation_popup_create(bContext *C, ARegion *region, void *arg)
   if (!indices.empty()) {
     char caption[64];
     const int count = int(std::count(indices.begin(), indices.end(), ',')) + 1;
-    BLI_snprintf(caption, sizeof(caption), "%d keyframe%s", count, count == 1 ? "" : "s");
+    if (count == 1) {
+      BLI_snprintf(caption, sizeof(caption), IFACE_("%d keyframe"), count);
+    }
+    else {
+      BLI_snprintf(caption, sizeof(caption), IFACE_("%d keyframes"), count);
+    }
     y -= label_h;
     director_popup_section_label(block, caption, y, width);
   }
@@ -111,13 +119,13 @@ ui::Block *interpolation_popup_create(bContext *C, ARegion *region, void *arg)
         block,
         "MIXAR_OT_director_set_interpolation",
         ICON_NONE,
-        items[index].name,
+        CTX_IFACE_(RNA_property_translation_context(prop), items[index].name),
         0,
         y,
         width,
         row_h,
-        indices.empty() ? "Ease the camera this way between this shot's keyframes" :
-                          "Ease the camera this way out of the selected keyframes");
+        indices.empty() ? TIP_("Ease the camera this way between this shot's keyframes") :
+                          TIP_("Ease the camera this way out of the selected keyframes"));
     PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
     RNA_enum_set_identifier(C, op_ptr, "interpolation", items[index].identifier);
     RNA_string_set(op_ptr, "indices", indices.c_str());

@@ -16,6 +16,7 @@ from bpy.props import (
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 logger = get_logger(__name__)
 
 from ...utils.statics import blend_type_items
@@ -347,7 +348,7 @@ class LAYERS_OT_AddFillLayer(Operator):
 
         # Validate unique name
         if self.name in [layer.name for layer in mp.layers]:
-            self.report({'ERROR'}, f"Layer '{self.name}' already exists!")
+            self.report({'ERROR'}, rpt_("Layer '{name}' already exists!").format(name=self.name))
             return {'CANCELLED'}
 
         # Get channel index
@@ -477,7 +478,7 @@ class LAYERS_OT_AddAdvancedLayer(Operator):
         try:
             bpy.ops.wm.m_new_layer('INVOKE_DEFAULT', type=self.layer_type)
         except:
-            self.report({'ERROR'}, f"Failed to create {self.layer_type} layer")
+            self.report({'ERROR'}, rpt_("Failed to create {type} layer").format(type=self.layer_type))
             return {'CANCELLED'}
 
         request_ui_refresh()

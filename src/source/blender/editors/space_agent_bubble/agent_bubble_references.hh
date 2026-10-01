@@ -31,6 +31,7 @@ struct AgentReferenceGeometry {
   rctf view;
   rctf scrollbar;
   float image_size, row_pitch, max_scroll, offset;
+  std::vector<rctf> rows;
 };
 bool agent_bubble_references_visible(const bContext *C);
 void agent_bubble_references_sync(const bContext *C);
@@ -46,7 +47,7 @@ void agent_bubble_send_button(const bContext *C,
                               const AgentIslandState &state);
 AgentReferenceGeometry agent_bubble_reference_geometry(const wmWindow *win,
                                                        const ARegion *region,
-                                                       int count,
+                                                       const std::vector<AgentReference> &items,
                                                        float fraction);
 int agent_bubble_reference_count(const bContext *C);
 float agent_bubble_reference_fraction(wmWindowManager *wm);

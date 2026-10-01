@@ -35,6 +35,7 @@ from typing import Callable, Optional, Tuple
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from ..constants import (
     DETECT_PANEL_HERO,
@@ -84,17 +85,17 @@ def detect_views(
     try:
         image_bytes = compress_for_service(image, "turnaround_detect")
     except Exception as e:
-        on_error(f"Failed to read image: {e}")
+        on_error(rpt_("Failed to read image: {error}").format(error=e))
         return
     if not image_bytes:
-        on_error("Image has no pixel data")
+        on_error(n_("Image has no pixel data"))
         return
     if len(image_bytes) > DETECT_MAX_UPLOAD_BYTES:
         # The backend rejects oversized uploads with a generic 422; say what
         # actually went wrong instead.
         on_error(
-            f"Image is too large to analyse "
-            f"({len(image_bytes) / (1024 * 1024):.1f} MB, limit 20 MB)"
+            rpt_("Image is too large to analyse ({size:.1f} MB, limit 20 MB)").format(
+                size=len(image_bytes) / (1024 * 1024))
         )
         return
 
@@ -143,9 +144,9 @@ def _error_message(error) -> str:
     )
 
     if getattr(error, "status_code", None) == 502:
-        return "View detection failed — no credits were used, please try again"
+        return n_("View detection failed — no credits were used, please try again")
     return classify_error(error) or sanitize_message(
-        str(error), "View detection failed"
+        str(error), n_("View detection failed")
     )
 
 
@@ -229,14 +230,14 @@ def _ingest_panels(
 
         def _apply():
             if not downloaded:
-                on_error("Failed to download the detected views")
+                on_error(n_("Failed to download the detected views"))
                 return None
             try:
                 group_id, count = _add_panels_to_moodboard(
                     source_name, base, downloaded)
             except Exception as e:
                 logger.error("[Turnaround] Failed to add crops: %s", e, exc_info=True)
-                on_error(f"Failed to add detected views: {e}")
+                on_error(rpt_("Failed to add detected views: {error}").format(error=e))
                 return None
             on_done(group_id, count)
             return None
@@ -299,7 +300,7 @@ def _add_panels_to_moodboard(source_name, base, downloaded) -> Tuple[str, int]:
             companions += 1
 
     if not loaded:
-        raise RuntimeError("No crops could be loaded")
+        raise RuntimeError(rpt_("No crops could be loaded"))
 
     # The user's next Generate then naturally takes the multi-view path
     # without them having to hunt for the right crop on the canvas. Only when

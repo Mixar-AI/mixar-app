@@ -30,6 +30,7 @@ import threading
 from typing import Optional
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ..constants import LOCAL_MODEL_TOAST_ID, LOG_PREFIX
 from . import catalog, manifest, relay, runtime, server_supervisor
@@ -161,7 +162,7 @@ def _apply_server_state(state: str, detail: str) -> None:
         failed_variant = current.get("variant") or ""
         if _fallback_tried:
             _set_server_wm("failed", model_id,
-                           "The local AI runtime could not start")
+                           n_("The local AI runtime could not start"))
         else:
             _fallback_tried = True
             _set_server_wm("waiting_health", model_id)
@@ -180,9 +181,9 @@ def _apply_server_state(state: str, detail: str) -> None:
             server_supervisor.start_server(model_id, _on_server_state)
         else:
             _set_server_wm("crashed", model_id,
-                           "The local model server stopped unexpectedly")
+                           n_("The local model server stopped unexpectedly"))
     elif state == "failed":
-        _set_server_wm("failed", model_id, detail or "Local server failed")
+        _set_server_wm("failed", model_id, detail or n_("Local server failed"))
     _redraw()
 
 

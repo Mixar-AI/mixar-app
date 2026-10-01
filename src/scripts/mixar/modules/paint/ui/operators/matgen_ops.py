@@ -21,6 +21,7 @@ from bpy.props import CollectionProperty, EnumProperty, IntProperty, StringPrope
 from bpy.types import Operator, PropertyGroup
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -95,7 +96,7 @@ class MATGEN_OT_GenerateMaterial(Operator):
             )
             if job is None:
                 set_agent_gen_reason(context, "Material generation already queued (duplicate)")
-                wm.mixar_matgen_status = "error:Duplicate job already in queue"
+                wm.mixar_matgen_status = "error:" + rpt_("Duplicate job already in queue")
                 return {'CANCELLED'}
         except Exception as e:
             set_agent_gen_reason(context, str(e))

@@ -24,6 +24,7 @@ from ...core.lookdev360_utils import (
     get_selected_mesh_objects,
 )
 from ...core.lookdev360_paint_integration import check_or_create_mpaint_setup
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.common.utils.image_utils import compress_for_service
 
 logger = get_logger(__name__)
@@ -137,14 +138,16 @@ class MIXIE_OT_lookdev360_generate(Operator):
         # Step 2: Ensure UV unwrap on all objects
         for obj in mesh_objects:
             if not ensure_uv_unwrap(obj):
-                self.report({'ERROR'}, f"Failed to create UV map for '{obj.name}'")
+                self.report({'ERROR'}, rpt_("Failed to create UV map for '{name}'").format(
+                    name=obj.name))
                 return {'CANCELLED'}
 
         # Step 2b: Ensure MPaint (ucupaint) setup exists on each object
         for obj in mesh_objects:
             node = check_or_create_mpaint_setup(obj)
             if not node:
-                self.report({'ERROR'}, f"Failed to create paint setup for '{obj.name}'")
+                self.report({'ERROR'}, rpt_("Failed to create paint setup for '{name}'").format(
+                    name=obj.name))
                 return {'CANCELLED'}
 
         # Step 3: Export to OBJ
@@ -159,7 +162,8 @@ class MIXIE_OT_lookdev360_generate(Operator):
             max_size = 50 * 1024 * 1024  # 50MB
             if file_size > max_size:
                 size_mb = file_size / (1024 * 1024)
-                self.report({'ERROR'}, f"Exported mesh is too large ({size_mb:.1f} MB). Maximum size is 50 MB")
+                self.report({'ERROR'}, rpt_("Exported mesh is too large ({size:.1f} MB). Maximum size is 50 MB").format(
+                    size=size_mb))
                 try:
                     os.unlink(obj_path)
                 except OSError:
@@ -223,7 +227,7 @@ class MIXIE_OT_lookdev360_generate(Operator):
                 self.report({'ERROR'}, "A duplicate Lookdev360 generation is already queued")
                 return {'CANCELLED'}
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to start generation: {e}")
+            self.report({'ERROR'}, rpt_("Failed to start generation: {error}").format(error=e))
             try:
                 os.unlink(obj_path)
             except OSError:

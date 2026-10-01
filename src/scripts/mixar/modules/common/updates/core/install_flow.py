@@ -22,6 +22,7 @@ import threading
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ..constants import InstallState
 from . import download, installer, staging, verify
@@ -168,7 +169,7 @@ def _worker(info, eligibility, running_binary):
             _discard(path)
             raise download.UpdateDownloadError(
                 f"Installer rejected: {detail}",
-                user_message="Update failed verification",
+                user_message=n_("Update failed verification"),
             )
         if verdict == verify.UNVERIFIED:
             logger.warning("Installer signature not verified: %s", detail)
@@ -180,7 +181,7 @@ def _worker(info, eligibility, running_binary):
         logger.info("Update download cancelled by user")
         state.set_install_idle()
     except Exception as e:  # noqa: BLE001 - the thread must never escape
-        message = getattr(e, "user_message", "") or "Download failed"
+        message = getattr(e, "user_message", "") or n_("Download failed")
         logger.error("Update download failed: %s", e, exc_info=True)
         state.set_install_failed(message)
 
@@ -361,10 +362,10 @@ def apply_and_restart():
     path = state.installer_path
 
     if state.install_state is not InstallState.READY or not path:
-        return False, "The update isn't ready yet"
+        return False, n_("The update isn't ready yet")
     if not os.path.isfile(path):
-        state.set_install_failed("The downloaded installer is missing")
-        return False, "The downloaded installer is missing"
+        state.set_install_failed(n_("The downloaded installer is missing"))
+        return False, n_("The downloaded installer is missing")
 
     eligibility = installer.check_eligibility(info)
     if not eligibility:
@@ -382,8 +383,8 @@ def apply_and_restart():
         )
     except Exception as e:  # noqa: BLE001 - nothing has changed yet
         logger.error("Could not start the update helper: %s", e, exc_info=True)
-        state.set_install_failed("Could not start the updater")
-        return False, "Could not start the updater"
+        state.set_install_failed(n_("Could not start the updater"))
+        return False, n_("Could not start the updater")
 
     state.set_installing()
     try:
@@ -444,7 +445,7 @@ def _abort_pending_install():
     if state.installer_path:
         state.set_ready(state.installer_path, state.signature_verified)
     else:
-        state.set_install_failed("Mixar didn't close")
+        state.set_install_failed(n_("Mixar didn't close"))
 
     from .toasts import push_install_aborted_toast
 

@@ -10,12 +10,15 @@ Persistent "Update Available" indicator drawn just right of the topbar
 draw hook).  Visible whenever update info is cached in the update state
 singleton — including after the toast has been dismissed or the version
 has already been announced, so the badge persists until they are actually
-on the latest release.  Clicking re-shows the sticky update toast, which
-is what makes suppressing repeat announcements safe: the update is
+on the latest release. Once ready, clicking opens the same restart
+confirmation as the toast button. Otherwise it re-shows the sticky update
+toast, which makes suppressing repeat announcements safe: the update is
 demoted to ambient status, never withheld.
 """
 
 import bpy
+
+from mixar.modules.common.i18n import iface_
 
 from ..constants import InstallState
 from ..core.state import get_update_state
@@ -69,18 +72,18 @@ def badge_label(state) -> str:
     """
     install_state = state.install_state
     if install_state is InstallState.READY:
-        return "Restart to Update"
+        return iface_("Restart to Update")
     if install_state is InstallState.INSTALLING:
-        return "Updating…"
+        return iface_("Updating…")
     if download_complete(state):
-        return "Verifying…"
+        return iface_("Verifying…")
     if install_state is InstallState.DOWNLOADING:
         progress = state.download_progress
         if progress > 0:
             # Floor, so "100%" never shows while bytes are still missing.
-            return f"Downloading {int(progress * 100)}%"
-        return "Downloading…"
-    return "Update Available"
+            return iface_("Downloading {percent}%").format(percent=int(progress * 100))
+        return iface_("Downloading…")
+    return iface_("Update Available")
 
 
 def draw_update_badge(layout) -> None:
@@ -92,9 +95,12 @@ def draw_update_badge(layout) -> None:
 
     row = layout.row(align=True)
     row.alert = badge_alert(state, info)
+    row.operator_context = 'INVOKE_DEFAULT'
     row.operator(
-        "mixar.show_update_toast",
+        "mixar.restart_to_update" if state.install_state is InstallState.READY
+        else "mixar.show_update_toast",
         text=badge_label(state),
+        translate=False,
         icon='FILE_REFRESH',
     )
 

@@ -8,15 +8,17 @@ from __future__ import annotations
 
 from bpy.types import UIList
 
+from mixar.modules.common.i18n import n_
+
 from ...constants import KIND_EXTENSION
 
 # Post-import status code → (icon, short text) shown at the row's right.
 _STATUS_DISPLAY = {
-    "imported": ("CHECKMARK", "Imported"),
-    "exists": ("FILE_TICK", "Already in Mixar"),
-    "failed": ("ERROR", "Copy failed"),
-    "enabled": ("CHECKMARK", "Enabled"),
-    "enable_failed": ("ERROR", "Enable failed"),
+    "imported": ("CHECKMARK", n_("Imported")),
+    "exists": ("FILE_TICK", n_("Already in Mixar")),
+    "failed": ("ERROR", n_("Copy failed")),
+    "enabled": ("CHECKMARK", n_("Enabled")),
+    "enable_failed": ("ERROR", n_("Enable failed")),
     "skipped": ("BLANK1", ""),
 }
 

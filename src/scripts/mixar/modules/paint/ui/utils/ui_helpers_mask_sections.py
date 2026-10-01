@@ -19,6 +19,7 @@ from ...core.subtree.get_subtree import get_mask_tree
 from ..operators.decal_operators import get_decal_object
 from .ui_helpers_base import draw_input_prop
 from .ui_helpers_mask_utils import get_node_drawing_functions
+from mixar.modules.common.i18n import iface_, n_
 
 # Consistent UI constants
 LABEL_FACTOR = 0.35
@@ -43,23 +44,23 @@ def _get_mask_source_label(mask):
         if mask.type == 'IMAGE':
             if source and source.image:
                 return source.image.name
-            return 'Image'
+            return n_('Image')
         elif mask.type == 'VCOL':
             if source and hasattr(source, 'attribute_name') and source.attribute_name != '':
                 return source.attribute_name
-            return 'Vertex Color'
+            return n_('Vertex Color')
         elif mask.type == 'MODIFIER':
             if mask.modifier_type == 'INVERT':
-                return 'Invert'
+                return n_('Invert')
             elif mask.modifier_type == 'RAMP':
-                return 'Ramp'
+                return n_('Ramp')
             elif mask.modifier_type == 'CURVE':
-                return 'Curve'
-            return 'Modifier'
+                return n_('Curve')
+            return n_('Modifier')
         else:
             return mask_type_labels.get(mask.type, mask.type)
     except Exception:
-        return mask.type if mask else 'Unknown'
+        return mask.type if mask else n_('Unknown')
 
 
 # =============================================================================
@@ -124,7 +125,7 @@ def draw_mask_channel_toggles_inline(layout, mask, layer):
             root_ch = mp.channels[idx] if idx < len(mp.channels) else None
 
             if root_ch:
-                ch_name = root_ch.name if hasattr(root_ch, 'name') else f"Ch{idx}"
+                ch_name = root_ch.name if hasattr(root_ch, 'name') else iface_("Ch{index}").format(index=idx)
                 row.prop(mask_ch, "enable", text=ch_name, toggle=True)
 
 
@@ -367,7 +368,7 @@ def draw_mask_channel_toggles_content(layout, mask, layer):
                 root_ch = mp.channels[idx] if idx < len(mp.channels) else None
 
                 if root_ch:
-                    ch_name = root_ch.name if hasattr(root_ch, 'name') else f"Ch{idx}"
+                    ch_name = root_ch.name if hasattr(root_ch, 'name') else iface_("Ch{index}").format(index=idx)
                     row.prop(mask_ch, "enable", text=ch_name, toggle=True)
 
 

@@ -14,8 +14,8 @@
  * ours. Colours and chrome label scale live in `UI_mixar_chrome.hh`
  * (UI.svg 1x: slider track 225x28 rx7 #1D1D1D with a 106x23 rx7 #393939
  * thumb inset 2px; Cinema pill with shared toolbar-height rounded geometry, #3F3F3F hairline
- * border, shared horizontal Cinema gradients, film-strip icon and inline italic V2
- * marker). Geometry stays on the layout.
+ * border, shared horizontal Cinema gradients, film-strip icon and small rounded
+ * "BETA" stage-tag label). Geometry stays on the layout.
  * Compact is the chrome host; these widgets keep the UI.svg sizes rather
  * than Compact's 32-unit control height.
  *
@@ -63,7 +63,11 @@ namespace blender::ui {
 void mixar_topbar_center_mode_slider(const bContext *C, ARegion *region, Block *block)
 {
   const ScrArea *area = C ? CTX_wm_area(C) : nullptr;
+  /* Only the topbar's own header: a popup opened from it (the splash from the
+   * Mixar icon) keeps the topbar as context area, and centring its Zen/Engine
+   * buttons would move them out of the popup. */
   if (!area || area->spacetype != SPACE_TOPBAR || !region ||
+      region->regiontype != RGN_TYPE_HEADER ||
       RGN_ALIGN_ENUM_FROM_MASK(region->alignment) == RGN_ALIGN_RIGHT)
   {
     return;

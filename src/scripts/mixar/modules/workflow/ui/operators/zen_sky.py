@@ -6,6 +6,7 @@
 import bpy
 from bpy.props import BoolProperty
 
+from mixar.modules.common.i18n import rpt_
 from ...core.zen_scene import set_sky_enabled, sky_enabled
 from ...core.zen_sky_viewports import set_sky_viewports
 
@@ -30,7 +31,7 @@ class MIXAR_OT_zen_set_sky(bpy.types.Operator):
             set_sky_enabled(context.scene, self.enabled)
             set_sky_viewports(context.scene, self.enabled, context.screen, restart=restart)
         except (RuntimeError, TypeError, AttributeError) as exc:
-            self.report({"ERROR"}, f"Could not change sky lighting: {exc}")
+            self.report({"ERROR"}, rpt_("Could not change sky lighting: {error}").format(error=exc))
             return {"CANCELLED"}
         areas = context.screen.areas if context.screen else ()
         for area in areas:

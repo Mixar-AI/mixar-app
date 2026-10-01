@@ -19,6 +19,7 @@ from bpy.props import (
     BoolProperty,
 )
 
+from mixar.modules.common.i18n import n_, rpt_, tip_
 from ...core.media_import import load_media_file_to_board
 from ...core.moodboard_utils import place_new_moodboard_item
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
@@ -47,6 +48,11 @@ class MIXIE_OT_moodboard_add_image(Operator):
         f"({format_shortcut('I')})"
     )
     bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def description(cls, context, properties):
+        return tip_("Import image or video files and add them to the moodboard "
+                    "({shortcut})").format(shortcut=format_shortcut('I'))
 
     filepath: StringProperty(
         name="File Path",
@@ -106,16 +112,18 @@ class MIXIE_OT_moodboard_add_image(Operator):
             try:
                 filepath = os.path.abspath(os.path.realpath(raw_filepath))
             except (OSError, ValueError) as e:
-                self.report({'WARNING'}, f"Invalid file path: {e}")
+                self.report({'WARNING'}, rpt_("Invalid file path: {error}").format(error=e))
                 continue
 
             if not os.path.isfile(filepath):
-                self.report({'WARNING'}, f"File not found: {filepath}")
+                self.report({'WARNING'}, rpt_("File not found: {filepath}").format(
+                    filepath=filepath))
                 continue
 
             item = _load_media_from_filepath(scene, filepath)
             if item is None:
-                self.report({'WARNING'}, f"Failed to load media: {filepath}")
+                self.report({'WARNING'}, rpt_("Failed to load media: {filepath}").format(
+                    filepath=filepath))
                 continue
 
             added_count += 1
@@ -126,7 +134,8 @@ class MIXIE_OT_moodboard_add_image(Operator):
         elif added_count == 1:
             self.report({'INFO'}, "Added 1 media item to moodboard")
         else:
-            self.report({'INFO'}, f"Added {added_count} media items to moodboard")
+            self.report({'INFO'}, rpt_("Added {added_count} media items to moodboard").format(
+                added_count=added_count))
 
         mark_file_select_executed(self)
         return {'FINISHED'}
@@ -188,7 +197,8 @@ class MIXIE_OT_moodboard_add_existing_image(Operator):
 
         img = bpy.data.images.get(self.image_name)
         if not img:
-            self.report({'WARNING'}, f"Image '{self.image_name}' not found")
+            self.report({'WARNING'}, rpt_("Image '{image_name}' not found").format(
+                image_name=self.image_name))
             return {'CANCELLED'}
 
         scene = context.scene
@@ -200,7 +210,7 @@ class MIXIE_OT_moodboard_add_existing_image(Operator):
         item.z_order = len(scene.mixie_moodboard_images) - 1
         place_new_moodboard_item(scene, item)
 
-        self.report({'INFO'}, f"Added '{img.name}' to moodboard")
+        self.report({'INFO'}, rpt_("Added '{name}' to moodboard").format(name=img.name))
         return {'FINISHED'}
 
 
@@ -213,11 +223,11 @@ def _grab_external_clipboard():
     try:
         from PIL import ImageGrab
     except ImportError:
-        return None, "Pillow is required for clipboard paste. Install it with: pip install Pillow"
+        return None, n_("Pillow is required for clipboard paste. Install it with: pip install Pillow")
     try:
         return ImageGrab.grabclipboard(), None
     except Exception as e:
-        return None, f"Failed to read clipboard: {e}"
+        return None, rpt_("Failed to read clipboard: {error}").format(error=e)
 
 
 def _is_our_export(content, exported_size) -> bool:
@@ -247,6 +257,12 @@ class MIXIE_OT_moodboard_paste_image(Operator):
         f"instance -- or an image from the system clipboard ({format_shortcut('V')})"
     )
     bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def description(cls, context, properties):
+        return tip_("Paste what was copied on a moodboard -- in this or another Mixar "
+                    "instance -- or an image from the system clipboard ({shortcut})").format(
+            shortcut=format_shortcut('V'))
 
     # Cursor position (canvas coords) captured at invoke so the paste lands
     # under the mouse instead of at the viewport centre.
@@ -302,7 +318,8 @@ class MIXIE_OT_moodboard_paste_image(Operator):
                     for area in context.screen.areas:
                         if area.type == 'MIXIE':
                             area.tag_redraw()
-                    self.report({'INFO'}, f"Pasted {pasted} item{'s' if pasted != 1 else ''}")
+                    self.report({'INFO'}, (rpt_("Pasted {count} item") if pasted == 1
+                                           else rpt_("Pasted {count} items")).format(count=pasted))
                     return {'FINISHED'}
                 clip_img = None
                 clipboard_read = False
@@ -354,7 +371,7 @@ class MIXIE_OT_moodboard_paste_image(Operator):
 
             clip_img.save(tmp_path, format='PNG')
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to save clipboard image: {e}")
+            self.report({'ERROR'}, rpt_("Failed to save clipboard image: {error}").format(error=e))
             return {'CANCELLED'}
 
         try:

@@ -39,7 +39,7 @@ def execute(paths, *, attachments=None, valid=None, model=False):
     mirror = Mock()
     importer = Mock(return_value={'success': True, 'display_name': 'model.obj',
                                   'imported_object_names': ['Object']})
-    namespace = dict(os=os, MAX_ATTACHMENTS_PER_MESSAGE=MAX_ATTACHMENTS_PER_MESSAGE,
+    namespace = dict(os=os, MAX_ATTACHMENTS_PER_MESSAGE=MAX_ATTACHMENTS_PER_MESSAGE, rpt_=lambda s: s,
                      is_model_file=lambda p: model, import_model_attachment=importer,
                      validate_image_file=valid or (lambda p: (False, 'Cannot decode image')),
                      find_attachment_for_file=lambda a, p: None,
@@ -80,7 +80,7 @@ def test_repeated_model_reference_does_not_import_duplicate_scene_objects():
 
 @pytest.fixture
 def validate():
-    namespace = dict(os=os, HAS_PIL=True, PILImage=Image, MAX_IMAGE_DIMENSION=16384,
+    namespace = dict(os=os, rpt_=lambda s: s, HAS_PIL=True, PILImage=Image, MAX_IMAGE_DIMENSION=16384,
                      MAX_IMAGE_SIZE_BYTES=25*1024*1024,
                      SUPPORTED_IMAGE_FORMATS={'.png', '.jpg', '.webp'},
                      VIDEO_FILE_FORMATS={'.mp4', '.mov', '.webm'},
@@ -187,7 +187,7 @@ def test_preview_remove_resolves_identity_after_collection_changes(target, remai
             del self[index]
     items = IndexedAttachments(SimpleNamespace(image_path=p, image_source='MODEL_FILE', display_name=p)
                                for p in ('/tmp/a.obj', '/tmp/b.obj'))
-    namespace = dict(redraw_chat_areas=Mock(), cleanup_loaded_file_image=Mock())
+    namespace = dict(redraw_chat_areas=Mock(), cleanup_loaded_file_image=Mock(), rpt_=lambda s: s)
     fn = function(CHAT/'ui/operators/image_ops.py', 'execute', namespace,
                   'MIXIE_CHAT_OT_remove_attachment')
     op = SimpleNamespace(index=0, attachment_path=target, attachment_source='MODEL_FILE', report=Mock())

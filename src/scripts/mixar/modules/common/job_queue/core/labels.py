@@ -118,5 +118,10 @@ def stackable_job_identity(display: str) -> tuple[str, str]:
     """
     import uuid
 
-    clean = (display or "").strip() or "3D model"
-    return f"{clean} [{uuid.uuid4().hex[:4]}]", clean
+    from mixar.modules.common.i18n import iface_
+
+    clean = (display or "").strip()
+    # The dedup label (sent to the agent) stays English; only the fallback
+    # title the surfaces draw verbatim is translated.
+    label = clean or "3D model"
+    return f"{label} [{uuid.uuid4().hex[:4]}]", clean or iface_("3D model")

@@ -32,6 +32,7 @@ import addon_utils
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from ..constants import (
     DEFAULT_USER_REPO,
@@ -82,7 +83,7 @@ class PluginImportUnavailable(RuntimeError):
     """Mixar's own user tree could not be resolved — nothing can be imported."""
 
 
-def _require_dir(raw: str, what: str) -> Path:
+def _require_dir(raw: str, failure: str) -> Path:
     """Turn a ``user_resource`` result into a Path, refusing the empty string.
 
     ``bpy.utils.user_resource`` PRINTS and swallows a creation failure and
@@ -93,17 +94,16 @@ def _require_dir(raw: str, what: str) -> Path:
     profiles, locked-down machines), so fail the batch loudly instead.
     """
     if not raw:
-        raise PluginImportUnavailable(
-            "Could not create Mixar's {} directory — check permissions on your "
-            "user profile folder.".format(what)
-        )
+        raise PluginImportUnavailable(rpt_(failure))
     return Path(raw)
 
 
 def mixar_addons_dir() -> Path:
     """Mixar's user add-ons dir (``.../Mixar/5.0/scripts/addons``)."""
     return _require_dir(
-        bpy.utils.user_resource("SCRIPTS", path="addons", create=True), "add-ons"
+        bpy.utils.user_resource("SCRIPTS", path="addons", create=True),
+        n_("Could not create Mixar's add-ons directory — check permissions on your "
+           "user profile folder."),
     )
 
 
@@ -139,7 +139,8 @@ def target_extension_repo() -> tuple[str, Path]:
         # No usable repo registered — synthesise the default path.
         path = _require_dir(
             bpy.utils.user_resource("EXTENSIONS", path=DEFAULT_USER_REPO, create=True),
-            "extensions",
+            n_("Could not create Mixar's extensions directory — check permissions on "
+               "your user profile folder."),
         )
         return DEFAULT_USER_REPO, path
 
@@ -253,7 +254,7 @@ def import_all(plugins: list[PluginInfo], selection: dict[str, bool]) -> ImportS
         else:
             outcome.enable_status = ENABLE_FAILED
             summary.enable_failed += 1
-            outcome.message = err or "enable failed (may be incompatible with Blender 5.0)"
+            outcome.message = err or rpt_("enable failed (may be incompatible with Blender 5.0)")
 
     # 4. Persist enabled state.
     if summary.enabled:

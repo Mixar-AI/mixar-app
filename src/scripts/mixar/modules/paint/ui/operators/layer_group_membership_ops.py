@@ -15,6 +15,7 @@ from bpy.props import EnumProperty, IntProperty, StringProperty
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, rpt_, tip_
 
 logger = get_logger(__name__)
 
@@ -58,7 +59,7 @@ def get_available_groups(self, context):
     # Add all GROUP type layers as options (except selected ones and their children)
     for i, layer in enumerate(mp.layers):
         if layer.type == 'GROUP' and i not in selected_indices:
-            items.append((str(i), layer.name, f'Add layers to "{layer.name}" group'))
+            items.append((str(i), layer.name, tip_('Add layers to "{name}" group').format(name=layer.name)))
 
     return items
 
@@ -118,7 +119,7 @@ class LAYERS_OT_MoveSelectedToGroup(Operator):
 
         # Info text
         info_row = group_col.row(align=True)
-        info_row.label(text=f"Moving {selected_count} layer(s) to group", icon='INFO')
+        info_row.label(text=iface_("Moving {count} layer(s) to group").format(count=selected_count), icon='INFO', translate=False)
 
         group_col.separator(factor=0.4)
 
@@ -229,7 +230,7 @@ class LAYERS_OT_MoveSelectedToGroup(Operator):
 
         request_ui_refresh()
 
-        self.report({'INFO'}, f"Created group '{group_name}' with {moved_count} layer(s)")
+        self.report({'INFO'}, rpt_("Created group '{name}' with {count} layer(s)").format(name=group_name, count=moved_count))
 
         return {"FINISHED"}
 
@@ -300,20 +301,20 @@ class LAYERS_OT_AddLayersToGroup(Operator):
         if self.layer_index >= 0 and self.layer_index < len(mp.layers):
             layer = mp.layers[self.layer_index]
             info_row = group_col.row(align=True)
-            info_row.label(text=f'Adding layer: "{layer.name}"', icon='INFO')
+            info_row.label(text=iface_('Adding layer: "{name}"').format(name=layer.name), icon='INFO', translate=False)
         else:
             selected_count = 0
             if hasattr(wm, 'mixar_ui'):
                 selected_count = sum(1 for layer in wm.mixar_ui.ui_layers if layer.selected)
             info_row = group_col.row(align=True)
             if selected_count > 0:
-                info_row.label(text=f"Adding {selected_count} selected layer(s)", icon='INFO')
+                info_row.label(text=iface_("Adding {count} selected layer(s)").format(count=selected_count), icon='INFO', translate=False)
             else:
                 # Fallback to active layer
                 active_idx = mp.active_layer_index
                 if active_idx >= 0 and active_idx < len(mp.layers):
                     active_layer = mp.layers[active_idx]
-                    info_row.label(text=f'Adding active layer: "{active_layer.name}"', icon='INFO')
+                    info_row.label(text=iface_('Adding active layer: "{name}"').format(name=active_layer.name), icon='INFO', translate=False)
                 else:
                     info_row.label(text="No layers selected", icon='ERROR')
 
@@ -377,10 +378,10 @@ class LAYERS_OT_AddLayersToGroup(Operator):
         request_ui_refresh()
 
         if target_idx == -1:
-            self.report({'INFO'}, f"Moved {moved_count} layer(s) to root level")
+            self.report({'INFO'}, rpt_("Moved {count} layer(s) to root level").format(count=moved_count))
         else:
             target_name = mp.layers[target_idx].name
-            self.report({'INFO'}, f"Added {moved_count} layer(s) to group '{target_name}'")
+            self.report({'INFO'}, rpt_("Added {count} layer(s) to group '{name}'").format(count=moved_count, name=target_name))
 
         return {"FINISHED"}
 
@@ -414,8 +415,8 @@ class LAYERS_OT_AddLayersToGroup(Operator):
             if layer.type == 'GROUP':
                 self.report(
                     {'ERROR'},
-                    f'Cannot add group "{layer.name}" into another group. '
-                    f'Groups must remain at root level.'
+                    rpt_('Cannot add group "{name}" into another group. '
+                         'Groups must remain at root level.').format(name=layer.name)
                 )
                 return False
         return True
@@ -476,7 +477,7 @@ class LAYERS_OT_RemoveFromGroup(Operator):
         layer = mp.layers[layer_idx]
 
         if layer.parent_idx == -1:
-            self.report({'INFO'}, f"Layer '{layer.name}' is already at root level")
+            self.report({'INFO'}, rpt_("Layer '{name}' is already at root level").format(name=layer.name))
             return {'FINISHED'}
 
         old_parent_name = mp.layers[layer.parent_idx].name
@@ -489,7 +490,7 @@ class LAYERS_OT_RemoveFromGroup(Operator):
 
         request_ui_refresh()
 
-        self.report({'INFO'}, f"Removed '{layer.name}' from group '{old_parent_name}'")
+        self.report({'INFO'}, rpt_("Removed '{name}' from group '{group}'").format(name=layer.name, group=old_parent_name))
 
         return {"FINISHED"}
 

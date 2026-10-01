@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import bpy
 
+from mixar.modules.common.i18n import data_, rpt_
 from ..constants import DIRECTOR_CAMERA_BASENAME
 from .frame_math import write_preview_range
 
@@ -73,10 +74,10 @@ def create_camera_from_view(context):
     """Create a native camera aligned to the current viewport."""
     target = find_view3d_context(context)
     if target is None:
-        raise RuntimeError("No 3D viewport is available")
+        raise RuntimeError(rpt_("No 3D viewport is available"))
     _window, _area, _region, space = target
-    camera_data = bpy.data.cameras.new(DIRECTOR_CAMERA_BASENAME)
-    camera = bpy.data.objects.new(DIRECTOR_CAMERA_BASENAME, camera_data)
+    camera_data = bpy.data.cameras.new(data_(DIRECTOR_CAMERA_BASENAME))
+    camera = bpy.data.objects.new(data_(DIRECTOR_CAMERA_BASENAME), camera_data)
     context.scene.collection.objects.link(camera)
     camera.matrix_world = space.region_3d.view_matrix.inverted()
     camera.data.show_passepartout = True
@@ -134,7 +135,7 @@ def enter_director_surface(context):
     """Enter the calm viewport shell used by the native Director UI."""
     target = find_view3d_context(context)
     if target is None:
-        raise RuntimeError("No 3D viewport is available")
+        raise RuntimeError(rpt_("No 3D viewport is available"))
     _window, area, _region, space = target
     remember_view(context, context.scene)
     # Only toggle a region that is actually open: setting show_region_* to a
@@ -181,7 +182,7 @@ def enter_camera_view(context, camera, *, remember: bool = True):
     """Make *camera* the scene camera and enter lock-to-camera view."""
     target = find_view3d_context(context)
     if target is None:
-        raise RuntimeError("No 3D viewport is available")
+        raise RuntimeError(rpt_("No 3D viewport is available"))
     _window, area, _region, space = target
     if remember:
         remember_view(context, context.scene)
@@ -221,7 +222,7 @@ def enter_free_view(context):
     """Leave camera lock so navigation moves the viewpoint, not the camera."""
     target = find_view3d_context(context)
     if target is None:
-        raise RuntimeError("No 3D viewport is available")
+        raise RuntimeError(rpt_("No 3D viewport is available"))
     _window, area, _region, space = target
     space.lock_camera = False
     # Any projection that is not perspective, not just the camera's. Guarding
@@ -248,7 +249,7 @@ def enter_aerial_view(context, scene):
 
     target = find_view3d_context(context)
     if target is None:
-        raise RuntimeError("No 3D viewport is available")
+        raise RuntimeError(rpt_("No 3D viewport is available"))
     _window, area, region, space = target
     remember_view(context, scene)
 

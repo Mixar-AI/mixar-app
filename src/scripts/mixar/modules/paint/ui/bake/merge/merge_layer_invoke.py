@@ -10,6 +10,7 @@ from ....core.layer.layer_utils import get_root_height_channel
 from ....core.node.get_nodes import get_layer_source
 from ....core.subtree.get_subtree import get_lower_neighbor, get_upper_neighbor
 from ....utils.common import get_channel_index
+from mixar.modules.common.i18n import n_
 
 
 def validate_merge_layer(operator, mp, layer, direction):
@@ -30,7 +31,7 @@ def validate_merge_layer(operator, mp, layer, direction):
     # Check for enabled channels
     enabled_chs = [ch for ch in layer.channels if ch.enable]
     if not any(enabled_chs):
-        return "Need at least one layer channel enabled!"
+        return n_("Need at least one layer channel enabled!")
 
     # Get neighbor based on direction
     if direction == "UP":
@@ -43,16 +44,16 @@ def validate_merge_layer(operator, mp, layer, direction):
     operator.neighbor_layer = neighbor_layer
 
     if not neighbor_layer:
-        return "No neighbor found!"
+        return n_("No neighbor found!")
 
     if not neighbor_layer.enable or not layer.enable:
-        return "Both layer should be enabled!"
+        return n_("Both layer should be enabled!")
 
     if neighbor_layer.parent_idx != layer.parent_idx:
-        return "Cannot merge with layer with different parent!"
+        return n_("Cannot merge with layer with different parent!")
 
     if neighbor_layer.type == "GROUP" or layer.type == "GROUP":
-        return "Merge doesn't works with layer group!"
+        return n_("Merge doesn't works with layer group!")
 
     return error_message
 
@@ -86,7 +87,7 @@ def validate_height_channels(operator, mp, layer, neighbor_layer):
             and neighbor_layer.channels[height_ch_idx].enable
         ):
             if height_ch.normal_map_type != neighbor_height_ch.normal_map_type:
-                return "These two layers has different normal map type!"
+                return n_("These two layers has different normal map type!")
     else:
         operator.height_ch = None
         operator.neighbor_height_ch = None
@@ -108,7 +109,7 @@ def validate_layer_source(layer):
 
     if layer.type == "IMAGE":
         if not source.image:
-            return source, "This layer has no image!"
+            return source, n_("This layer has no image!")
 
     return source, ""
 

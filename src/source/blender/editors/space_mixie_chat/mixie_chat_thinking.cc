@@ -19,6 +19,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "MEM_guardedalloc.h"
 
 #include "UI_interface.hh"
@@ -253,7 +255,7 @@ void chat_ui_draw_ephemeral_bubble(const ChatBubbleStyle *style,
   }
   const char *spinner_char = g_thinking_spinners[spinner_idx];
 
-  const char *status_message = chat_ui_loader_status_text(loader, has_loader, "Processing...");
+  const char *status_message = chat_ui_loader_status_text(loader, has_loader, RPT_("Processing..."));
 
   char status_line[512];
   snprintf(status_line, sizeof(status_line), "%s %s", spinner_char, status_message);
@@ -407,7 +409,7 @@ void chat_ui_draw_thinking_dropdown(const ChatBubbleStyle *style,
     secs = 1;
   }
   char header[128];
-  BLI_snprintf(header, sizeof(header), "Thought for %ds", secs);
+  BLI_snprintf(header, sizeof(header), IFACE_("Thought for %ds"), secs);
 
   const float chevron_indent = chat_ui_chevron_indent();
   float header_top = rect.ymax - style->v_padding;

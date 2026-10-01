@@ -18,6 +18,7 @@ These popups close automatically when generation starts.
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import iface_
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
@@ -233,7 +234,8 @@ class MIXIE_OT_lookdev360_popup(Operator):
             img = first_selected_reference_still(scene)
             if img:
                 row = box_col.row()
-                row.label(text=f"Selected: {img.name}", icon='CHECKMARK')
+                row.label(text=iface_("Selected: {name}").format(name=img.name), icon='CHECKMARK',
+                          translate=False)
             else:
                 row = box_col.row()
                 row.label(text="No image selected in moodboard", icon='ERROR')
@@ -334,7 +336,8 @@ class MIXIE_OT_image_to_3d_popup(Operator):
             img = first_selected_reference_still(scene)
             if img:
                 row = box_col.row()
-                row.label(text=f"Selected: {img.name}", icon='CHECKMARK')
+                row.label(text=iface_("Selected: {name}").format(name=img.name), icon='CHECKMARK',
+                          translate=False)
             else:
                 row = box_col.row()
                 row.label(text="No image selected in moodboard", icon='ERROR')

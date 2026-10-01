@@ -21,7 +21,6 @@ from ...core.io.connections.layer_connections import reconnect_layer_nodes
 from ...core.modifier.modifier_commons import delete_modifier_nodes
 from ...core.node.node_utils import get_active_mpaint_node
 from ...core.subtree.get_subtree import get_tree
-from ...utils.common import get_addon_title
 from .normal_map_modifier_operators_helper import add_new_normalmap_modifier
 from .normal_map_modifier_utils import normalmap_modifier_type_items
 
@@ -94,8 +93,8 @@ class MNewNormalmapModifier(bpy.types.Operator):
 
 class MMoveNormalMapModifier(bpy.types.Operator):
     bl_idname = "wm.m_move_normalmap_modifier"
-    bl_label = "Move " + get_addon_title() + " Modifier"
-    bl_description = "Move " + get_addon_title() + " Modifier"
+    bl_label = "Move Mixar Paint Modifier"
+    bl_description = "Move Mixar Paint Modifier"
     bl_options = {"REGISTER", "UNDO"}
 
     direction: EnumProperty(
@@ -184,8 +183,8 @@ class MMoveNormalMapModifier(bpy.types.Operator):
 
 class MRemoveNormalMapModifier(bpy.types.Operator):
     bl_idname = "wm.m_remove_normalmap_modifier"
-    bl_label = "Remove " + get_addon_title() + " Modifier"
-    bl_description = "Remove " + get_addon_title() + " Modifier"
+    bl_label = "Remove Mixar Paint Modifier"
+    bl_description = "Remove Mixar Paint Modifier"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod

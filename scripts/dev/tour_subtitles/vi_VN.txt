@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Xin chào, tôi là Naman từ Mixar.
+Trong vài phút tới, tôi sẽ giới thiệu ứng dụng.
+Đây là khung nhìn của bạn.
+Một không gian 3D để bạn di chuyển.
+Kéo chuột giữa để xoay, cuộn để thu phóng.
+Giữ Shift và kéo chuột giữa để dịch khung nhìn.
+Hãy thử xem.
+Nhấp để chọn, G để di chuyển,
+R để xoay, S để đổi tỷ lệ.
+Đây là một số phím tắt hữu ích.
+Thấy hòn đảo nhỏ phía dưới không? Đó là Mixie, trợ lý của bạn.
+Nhấp để mở.
+Mixie có các thẻ.
+Trong Agent, nói điều bạn muốn bằng lời thường. Trợ lý sẽ làm việc trên cảnh.
+Trợ lý dùng các mô hình như Tripo, Meshy và Nano Banana.
+Để kiểm soát nhiều hơn, mở các thẻ khác:
+3D, Image, Video hoặc World Model.
+Chọn mô hình và điều chỉnh cài đặt.
+Mọi thứ bạn tạo đều vào thư viện.
+Các sản phẩm của bạn ở đây.
+Kết nối thư viện riêng để trợ lý dùng tài nguyên của bạn,
+giúp tiết kiệm tín dụng.
+Góc trên bên trái là ngăn cảnh.
+Mỗi cảnh có thẻ và trợ lý Mixie riêng.
+Chạy các tác vụ song song và chuyển đổi bất cứ lúc nào.
+Khi cảnh đã sẵn sàng, chuyển sang Cinema Mode
+để điều khiển máy quay và tạo quy trình video.
+Ý tưởng bắt đầu từ 2D.
+Kéo moodboard từ bên phải hoặc nhấn phím dấu ngã.
+Đó là khung vẽ cho tài liệu tham khảo và ý tưởng.
+Thả hình ảnh, video hoặc bản phác thảo vào đây.
+Tạo đồ thị nút cho mô hình tạo sinh như trong ComfyUI.
+Bạn đang ở Zen Mode, giao diện đơn giản nhất.
+Nếu biết Blender, hãy chuyển sang Engine Mode.
+Toàn bộ không gian Blender có ở đây, với mọi bảng và phím tắt.
+Mixie hoạt động ở cả hai. Hãy chọn chế độ phù hợp.
+Hãy quay lại Zen Mode.
+Chương trình đối tác sáng tạo mang đến tín dụng
+và cộng đồng cùng định hình tương lai AI và 3D.
+Vậy là xong. Bạn đã biết mọi thứ ở đâu.
+Hãy cùng sáng tạo 3D.

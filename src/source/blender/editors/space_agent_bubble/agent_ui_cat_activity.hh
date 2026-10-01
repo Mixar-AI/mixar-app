@@ -6,6 +6,12 @@
 #include "agent_ui_cat_catch.hh"
 #include "agent_ui_pill_cat_pose.hh"
 
+/* Translation marker, identical to BLT_translation.hh's (this header stays
+ * Blender-free for tests/test_cat_activity.py). */
+#ifndef N_
+#  define N_(msgid) msgid
+#endif
+
 namespace blender {
 
 enum class MixieCatActivity {
@@ -70,31 +76,32 @@ inline MixieCatActivity mixie_cat_activity(const MixieCatSignals &s)
   return s.generating ? MixieCatActivity::Generating : MixieCatActivity::Idle;
 }
 
+/** Untranslated: the QA value reads it raw; the pill draws `IFACE_()` of it. */
 inline const char *mixie_cat_activity_name(const MixieCatActivity activity)
 {
   switch (activity) {
     case MixieCatActivity::Thinking:
-      return "Thinking";
+      return N_("Thinking");
     case MixieCatActivity::Reading:
-      return "Reading";
+      return N_("Reading");
     case MixieCatActivity::Working:
-      return "Working";
+      return N_("Working");
     case MixieCatActivity::Generating:
-      return "Generating";
+      return N_("Generating");
     case MixieCatActivity::Responding:
-      return "Responding";
+      return N_("Responding");
     case MixieCatActivity::Listening:
-      return "Listening";
+      return N_("Listening");
     case MixieCatActivity::Waiting:
-      return "Waiting for you";
+      return N_("Waiting for you");
     case MixieCatActivity::Offline:
-      return "Offline";
+      return N_("Offline");
     case MixieCatActivity::Connecting:
-      return "Connecting";
+      return N_("Connecting");
     case MixieCatActivity::Catching:
-      return "Catching";
+      return N_("Catching");
     default:
-      return "Idle";
+      return N_("Idle");
   }
 }
 

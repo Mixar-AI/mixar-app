@@ -22,6 +22,7 @@ member, so it can never leak into ``multi_view_images``.
 from typing import List, Tuple
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from .turnaround_views import (
     allowed_view_types, group_items, moodboard_item_for,
@@ -43,7 +44,7 @@ def _encode_image(image) -> str:
 
     data = compress_for_service(image, "image_to_3d")
     if not data:
-        raise ValueError(f"'{image.name}' has no pixel data")
+        raise ValueError(rpt_("'{name}' has no pixel data").format(name=image.name))
     return base64.b64encode(data).decode()
 
 
@@ -98,11 +99,11 @@ def build_multi_view_payload(
     surface the message and fall back to nothing, never to a malformed job.
     """
     if main_image is None:
-        raise ValueError("Add an input image before generating")
+        raise ValueError(rpt_("Add an input image before generating"))
 
     items = group_items(scene, group_id)
     if not items:
-        raise ValueError("Multi-view set has no images")
+        raise ValueError(rpt_("Multi-view set has no images"))
 
     warnings: List[str] = []
     payload = main_fragment(scene, main_image)
@@ -115,15 +116,14 @@ def build_multi_view_payload(
             # Belt and braces: the input image should never be a member.
             continue
         if item.view_type not in allowed:
-            warnings.append(
-                f"'{item.image.name}' is a {item.view_type} view, which "
-                f"'{model_slug}' does not accept — it was not sent"
-            )
+            warnings.append(rpt_(
+                "'{image}' is a {view} view, which '{model}' does not accept — it was not sent"
+            ).format(image=item.image.name, view=item.view_type, model=model_slug))
             continue
         if item.view_type in seen:
-            warnings.append(
-                f"More than one '{item.view_type}' view — kept only the first"
-            )
+            warnings.append(rpt_(
+                "More than one '{view}' view — kept only the first"
+            ).format(view=item.view_type))
             continue
         seen.add(item.view_type)
         multi_views.append(_view_entry(item))

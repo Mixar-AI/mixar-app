@@ -14,6 +14,8 @@ import bpy
 from bpy.types import Operator
 from bpy.props import EnumProperty, StringProperty, IntProperty
 
+from mixar.modules.common.i18n import rpt_
+
 from ...core import cleanup_loaded_file_images, collect_message_file_image_paths
 from ...core.ui_utils import redraw_chat_areas
 
@@ -127,7 +129,7 @@ class MIXIE_CHAT_OT_edit_message(Operator):
 
         # Validate index
         if self.index < 0 or self.index >= len(messages):
-            self.report({'ERROR'}, f"Invalid message index: {self.index}")
+            self.report({'ERROR'}, rpt_("Invalid message index: {index}").format(index=self.index))
             return {'CANCELLED'}
 
         msg = messages[self.index]
@@ -163,7 +165,7 @@ class MIXIE_CHAT_OT_remove_message(Operator):
 
         # Validate index
         if self.index < 0 or self.index >= len(messages):
-            self.report({'ERROR'}, f"Invalid message index: {self.index}")
+            self.report({'ERROR'}, rpt_("Invalid message index: {index}").format(index=self.index))
             return {'CANCELLED'}
 
         paths = collect_message_file_image_paths(messages[self.index])
@@ -219,7 +221,7 @@ class MIXIE_CHAT_OT_add_image(Operator):
         else:
             # Use specific index
             if self.message_index < 0 or self.message_index >= len(messages):
-                self.report({'ERROR'}, f"Invalid message index: {self.message_index}")
+                self.report({'ERROR'}, rpt_("Invalid message index: {index}").format(index=self.message_index))
                 return {'CANCELLED'}
             msg = messages[self.message_index]
 

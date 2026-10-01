@@ -30,6 +30,8 @@
 #include "BKE_camera.h"
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_ID.h"
 #include "DNA_camera_types.h"
 #include "DNA_object_types.h"
@@ -269,9 +271,9 @@ void cinema_draw_minimap(ui::Block *block,
   }
 
   const float margin = MINIMAP_CHIP_MARGIN * u;
-  caption_chip("Aerial view", inner.xmin + margin, inner.ymax - margin, u);
+  caption_chip(IFACE_("Aerial view"), inner.xmin + margin, inner.ymax - margin, u);
   if (!camera) {
-    const char *hint = "Add a camera to place it";
+    const char *hint = IFACE_("Add a camera to place it");
     const float width = cinema_text_width(hint, CINEMA_FONT_LABEL * u) +
                         MINIMAP_CHIP_PAD * u * 2.0f;
     caption_chip(hint,

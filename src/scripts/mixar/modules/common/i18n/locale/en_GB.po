@@ -1,0 +1,1437 @@
+# Mixar interface translations.
+# This file is distributed under the same license as the Mixar package.
+#
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+# SPDX-License-Identifier: GPL-3.0-or-later
+msgid ""
+msgstr ""
+"Project-Id-Version: Mixar\n"
+"Language-Team: Mixar (machine-translated, native review welcome)\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Mixar-Language-Name: English (UK)\n"
+
+# derived
+msgid "Fetching generation catalog"
+msgstr "Fetching generation catalogue"
+
+# derived
+msgid ""
+"Scrollable list of chat messages for the floating bubble.\n"
+"\n"
+"Using a UIList instead of manual layout rendering gives us scroll\n"
+"behavior for free — mouse wheel, trackpad, up/down arrow keys,\n"
+"and the scrollbar all just work. The list is bound to\n"
+"scene.mixie_chat_messages so every message is reachable; the\n"
+"user scrolls within the visible window.\n"
+"\n"
+"Each row renders one message as a boxed bubble. Agent messages\n"
+"fill the row; user messages are pushed to the right with a left\n"
+"margin so they read as opposite-aligned chat bubbles.\n"
+msgstr ""
+"Scrollable list of chat messages for the floating bubble.\n"
+"\n"
+"Using a UIList instead of manual layout rendering gives us scroll\n"
+"behaviour for free — mouse wheel, trackpad, up/down arrow keys,\n"
+"and the scrollbar all just work. The list is bound to\n"
+"scene.mixie_chat_messages so every message is reachable; the\n"
+"user scrolls within the visible window.\n"
+"\n"
+"Each row renders one message as a boxed bubble. Agent messages\n"
+"fill the row; user messages are pushed to the right with a left\n"
+"margin so they read as opposite-aligned chat bubbles.\n"
+
+# derived
+msgid "Generation settings are unavailable; reload the catalog"
+msgstr "Generation settings are unavailable; reload the catalogue"
+
+# derived
+msgid "Reading the local model catalog"
+msgstr "Reading the local model catalogue"
+
+# derived
+msgid "Refresh Models Catalog"
+msgstr "Refresh Models Catalogue"
+
+# derived
+msgid "Revalidate the provider+model catalog from the backend"
+msgstr "Revalidate the provider+model catalogue from the backend"
+
+# derived
+msgid "Catalog visible_if keyed by RNA attribute"
+msgstr "Catalogue visible_if keyed by RNA attribute"
+
+# derived
+msgid "Whether the account has an active subscription to meter"
+msgstr "Whether the account has an active subscription to metre"
+
+msgid "Color"
+msgstr "Colour"
+
+# derived
+msgid "Plain gray surfaces, so shape and motion read on their own"
+msgstr "Plain grey surfaces, so shape and motion read on their own"
+
+# derived
+msgid "Shot render canceled"
+msgstr "Shot render cancelled"
+
+# derived
+msgid "Horizon leveled; Navigate keeps it level"
+msgstr "Horizon levelled; Navigate keeps it level"
+
+# derived
+msgid "Leveled the horizon on {count} keyframe(s)"
+msgstr "Levelled the horizon on {count} keyframe(s)"
+
+# derived
+msgid "Whether Director currently owns a maximized viewport area"
+msgstr "Whether Director currently owns a maximised viewport area"
+
+msgid "Center"
+msgstr "Centre"
+
+msgid "Center text"
+msgstr "Centre text"
+
+# derived
+msgid "Generate surface color and appearance for the mesh."
+msgstr "Generate surface colour and appearance for the mesh."
+
+# derived
+msgid "Store color on the mesh vertices; the available color detail depends on the geometry."
+msgstr "Store colour on the mesh vertices; the available colour detail depends on the geometry."
+
+# derived
+msgid "How strongly the generation follows its guidance. Higher values emphasize that guidance."
+msgstr "How strongly the generation follows its guidance. Higher values emphasise that guidance."
+
+# derived
+msgid "Character Parts is unavailable in the generation catalog"
+msgstr "Character Parts is unavailable in the generation catalogue"
+
+# derived
+msgid "Model Gen is unavailable in the generation catalog"
+msgstr "Model Gen is unavailable in the generation catalogue"
+
+# derived
+msgid "Video generation catalog config is incomplete"
+msgstr "Video generation catalogue config is incomplete"
+
+# derived
+msgid "Load the generation catalog before generating details"
+msgstr "Load the generation catalogue before generating details"
+
+# derived
+msgid "This 3D feature is unavailable in the generation catalog"
+msgstr "This 3D feature is unavailable in the generation catalogue"
+
+# derived
+msgid "Video upscale catalog config is incomplete"
+msgstr "Video upscale catalogue config is incomplete"
+
+# derived
+msgid "World Labs catalog parameter '{name}' is unavailable"
+msgstr "World Labs catalogue parameter '{name}' is unavailable"
+
+# derived
+msgid "Blockout to Render not initialized"
+msgstr "Blockout to Render not initialised"
+
+# derived
+msgid "Choose a catalog model supporting 2+ reference images"
+msgstr "Choose a catalogue model supporting 2+ reference images"
+
+# derived
+msgid "Stroke color and opacity"
+msgstr "Stroke colour and opacity"
+
+# derived
+msgid "World Labs model published by the generation catalog"
+msgstr "World Labs model published by the generation catalogue"
+
+# derived
+msgid "Color and opacity for new annotation strokes"
+msgstr "Colour and opacity for new annotation strokes"
+
+# derived
+msgid "Catalog unavailable"
+msgstr "Catalogue unavailable"
+
+# derived
+msgid "Load the generation catalog before creating component details"
+msgstr "Load the generation catalogue before creating component details"
+
+# derived
+msgid "Segment a UV-unwrapped mesh into labeled parts"
+msgstr "Segment a UV-unwrapped mesh into labelled parts"
+
+# derived
+msgid "Catalog choice"
+msgstr "Catalogue choice"
+
+# derived
+msgid "Generation service supplied by the backend catalog"
+msgstr "Generation service supplied by the backend catalogue"
+
+# derived
+msgid "Saved catalog service slug backing the Mode dropdown"
+msgstr "Saved catalogue service slug backing the Mode dropdown"
+
+# derived
+msgid "Generation model supplied by the backend catalog"
+msgstr "Generation model supplied by the backend catalogue"
+
+# derived
+msgid "Saved catalog model slug backing the Model dropdown"
+msgstr "Saved catalogue model slug backing the Model dropdown"
+
+# derived
+msgid "Catalog schema used to build this node's controls"
+msgstr "Catalogue schema used to build this node's controls"
+
+# derived
+msgid "Group color"
+msgstr "Group colour"
+
+# derived
+msgid "Show the colored mask overlay on the source image"
+msgstr "Show the coloured mask overlay on the source image"
+
+# derived
+msgid "Original lasso polygon stored as normalized JSON coordinates"
+msgstr "Original lasso polygon stored as normalised JSON coordinates"
+
+msgid "Text Color"
+msgstr "Text Colour"
+
+# derived
+msgid "Color of the text"
+msgstr "Colour of the text"
+
+msgid "Background Color"
+msgstr "Background Colour"
+
+# derived
+msgid "Background color of the text box"
+msgstr "Background colour of the text box"
+
+msgid "Vertex Colors"
+msgstr "Vertex Colours"
+
+# derived
+msgid "Use vertex colors instead of baked textures"
+msgstr "Use vertex colours instead of baked textures"
+
+# derived
+msgid "Hunyuan not initialized"
+msgstr "Hunyuan not initialised"
+
+# derived
+msgid "Catalog input config is incomplete"
+msgstr "Catalogue input config is incomplete"
+
+# derived
+msgid "World Labs catalog settings are unavailable"
+msgstr "World Labs catalogue settings are unavailable"
+
+# derived
+msgid "Rig engine catalog slug on the tripo_rig service; empty = the catalog default"
+msgstr "Rig engine catalogue slug on the tripo_rig service; empty = the catalogue default"
+
+# derived
+msgid "Character height in meters, for engines whose catalog schema declares it; 0 = engine default"
+msgstr "Character height in metres, for engines whose catalogue schema declares it; 0 = engine default"
+
+# derived
+msgid "Model slug from the catalog (empty = catalog default)"
+msgstr "Model slug from the catalogue (empty = catalogue default)"
+
+# derived
+msgid "Catalog model slug; empty uses the catalog default"
+msgstr "Catalogue model slug; empty uses the catalogue default"
+
+# derived
+msgid "The model's catalog parameters as a JSON object"
+msgstr "The model's catalogue parameters as a JSON object"
+
+# derived
+msgid "Generation catalog not loaded yet — retry shortly"
+msgstr "Generation catalogue not loaded yet — retry shortly"
+
+# derived
+msgid "Generation catalog module not available"
+msgstr "Generation catalogue module not available"
+
+# derived
+msgid "Please wait for the catalog to load"
+msgstr "Please wait for the catalogue to load"
+
+msgid "Color Space"
+msgstr "Colour Space"
+
+# derived
+msgid "Input RGB will be used as alpha output, Output RGB will be replaced using custom color."
+msgstr "Input RGB will be used as alpha output, Output RGB will be replaced using custom colour."
+
+# derived
+msgid "Override Color"
+msgstr "Override Colour"
+
+msgid "Color Ramp"
+msgstr "Colour Ramp"
+
+msgid "Math"
+msgstr "Maths"
+
+# derived
+msgid "Color:"
+msgstr "Colour:"
+
+msgid "Base Color"
+msgstr "Base Colour"
+
+# derived
+msgid "Layer Color Tag"
+msgstr "Layer Colour Tag"
+
+# derived
+msgid "Color tag for layer organization"
+msgstr "Colour tag for layer organisation"
+
+# derived
+msgid "Brush grayscale value for VALUE channels (synced with brush color)"
+msgstr "Brush greyscale value for VALUE channels (synced with brush colour)"
+
+# derived
+msgid "Luminance value calculated from brush color"
+msgstr "Luminance value calculated from brush colour"
+
+# derived
+msgid "JSON-serialized per-channel brush values"
+msgstr "JSON-serialised per-channel brush values"
+
+# derived
+msgid "Expand Color Picker"
+msgstr "Expand Colour Picker"
+
+# derived
+msgid "Expand Color Palette"
+msgstr "Expand Colour Palette"
+
+msgid "Do not export color attributes"
+msgstr "Do not export colour attributes"
+
+msgid "Export colors in linear color space"
+msgstr "Export colours in linear colour space"
+
+msgid "Prioritize Active Color"
+msgstr "Prioritise Active Colour"
+
+msgid "Use Vertex Color"
+msgstr "Use Vertex Colour"
+
+msgid "Export vertex color when used by material"
+msgstr "Export vertex colour when used by material"
+
+msgid "Export active vertex color"
+msgstr "Export active vertex colour"
+
+msgid "Export vertex color with this name"
+msgstr "Export vertex colour with this name"
+
+msgid "Do not export vertex color"
+msgstr "Do not export vertex colour"
+
+msgid "Export All Vertex Colors"
+msgstr "Export All Vertex Colours"
+
+msgid "Export Active Vertex Color When No Material"
+msgstr "Export Active Vertex Colour When No Material"
+
+msgid "Color Quantization Bits"
+msgstr "Colour Quantization Bits"
+
+msgid "Optimize Animation Size"
+msgstr "Optimise Animation Size"
+
+msgid "Vertex Color Quantization"
+msgstr "Vertex Colour Quantization"
+
+msgid "Normalized"
+msgstr "Normalised"
+
+msgid "Use normalized attributes for positions"
+msgstr "Use normalised attributes for positions"
+
+msgid "Vertex Color"
+msgstr "Vertex Colour"
+
+# derived
+msgid "Normalize Bake Result"
+msgstr "Normalise Bake Result"
+
+# derived
+msgid "Normalize the bake result"
+msgstr "Normalise the bake result"
+
+# derived
+msgid "Normalize Position"
+msgstr "Normalise Position"
+
+# derived
+msgid "Normalize position values using bounding box (0-1 range)"
+msgstr "Normalise position values using bounding box (0-1 range)"
+
+# derived
+msgid "Normalize:"
+msgstr "Normalise:"
+
+# derived
+msgid "Normalize Pointiness"
+msgstr "Normalise Pointiness"
+
+# derived
+msgid "Vertex color merge does not works with modifers and masks yet!"
+msgstr "Vertex colour merge does not works with modifers and masks yet!"
+
+# derived
+msgid "Vertex color merge only works with Mix blend type for now!"
+msgstr "Vertex colour merge only works with Mix blend type for now!"
+
+# derived
+msgid "No neighbor found!"
+msgstr "No neighbour found!"
+
+# derived
+msgid "Apply Neighbor Modifiers"
+msgstr "Apply Neighbour Modifiers"
+
+# derived
+msgid "Apply neighbor modifiers"
+msgstr "Apply neighbour modifiers"
+
+# derived
+msgid "Neighbor Mods:"
+msgstr "Neighbour Mods:"
+
+# derived
+msgid "No valid neighbor mask!"
+msgstr "No valid neighbour mask!"
+
+# derived
+msgid "Also delete the vertex color"
+msgstr "Also delete the vertex colour"
+
+# derived
+msgid "Also remove baked vertex colors"
+msgstr "Also remove baked vertex colours"
+
+# derived
+msgid "Has any channel enabled Bake As Vertex Color"
+msgstr "Has any channel enabled Bake As Vertex Colour"
+
+# derived
+msgid "Force First Vertex Color Channel"
+msgstr "Force First Vertex Colour Channel"
+
+# derived
+msgid "Force the first channel after baking the Vertex Color"
+msgstr "Force the first channel after baking the Vertex Colour"
+
+# derived
+msgid "Use dithering for less banding color"
+msgstr "Use dithering for less banding colour"
+
+# derived
+msgid "Bake channel to vertex color"
+msgstr "Bake channel to vertex colour"
+
+# derived
+msgid "Bake Channel to Vertex Color"
+msgstr "Bake Channel to Vertex Colour"
+
+# derived
+msgid "Target Vertex Color Name"
+msgstr "Target Vertex Colour Name"
+
+# derived
+msgid "Target vertex color name, it will create one if it doesn't exist"
+msgstr "Target vertex colour name, it will create one if it doesn't exist"
+
+# derived
+msgid "Force target vertex color to be first on the vertex colors list (useful for exporting)"
+msgstr "Force target vertex colour to be first on the vertex colours list (useful for exporting)"
+
+# derived
+msgid "Bake to Vertex Color"
+msgstr "Bake to Vertex Colour"
+
+# derived
+msgid "Altas Base Color"
+msgstr "Altas Base Colour"
+
+# derived
+msgid "Base Color:"
+msgstr "Base Colour:"
+
+# derived
+msgid "Atlas Base Color"
+msgstr "Atlas Base Colour"
+
+msgid "Color Mode"
+msgstr "Colour Mode"
+
+msgid "Color Depth"
+msgstr "Colour Depth"
+
+# derived
+msgid "Color Mode:"
+msgstr "Colour Mode:"
+
+# derived
+msgid "Color Depth:"
+msgstr "Colour Depth:"
+
+# derived
+msgid "Remove the image and revert to default channel behavior"
+msgstr "Remove the image and revert to default channel behaviour"
+
+# derived
+msgid "Remove the normal map image and revert to default color"
+msgstr "Remove the normal map image and revert to default colour"
+
+# derived
+msgid "Use a solid color or value"
+msgstr "Use a solid colour or value"
+
+# derived
+msgid "Nearest neighbor (pixelated)"
+msgstr "Nearest neighbour (pixelated)"
+
+# derived
+msgid "Solid color for this channel"
+msgstr "Solid colour for this channel"
+
+msgid "Fill Color"
+msgstr "Fill Colour"
+
+# derived
+msgid "Color ID"
+msgstr "Colour ID"
+
+msgid "Mask Color"
+msgstr "Mask Colour"
+
+# derived
+msgid "Fill Selected Geometry with Vertex Color / Color ID Mask"
+msgstr "Fill Selected Geometry with Vertex Colour / Colour ID Mask"
+
+# derived
+msgid "Fill selected geometry with vertex color or color ID mask"
+msgstr "Fill selected geometry with vertex colour or colour ID mask"
+
+# derived
+msgid "Vertex Color Data Type"
+msgstr "Vertex Colour Data Type"
+
+# derived
+msgid "Vertex color data type"
+msgstr "Vertex colour data type"
+
+# derived
+msgid "Vertex Color Domain"
+msgstr "Vertex Colour Domain"
+
+# derived
+msgid "Vertex color domain"
+msgstr "Vertex colour domain"
+
+# derived
+msgid "Mask Vertex Color Data Type"
+msgstr "Mask Vertex Colour Data Type"
+
+# derived
+msgid "Mask Vertex color data type"
+msgstr "Mask Vertex colour data type"
+
+# derived
+msgid "Mask Vertex Color Domain"
+msgstr "Mask Vertex Colour Domain"
+
+# derived
+msgid "Mask Vertex color domain"
+msgstr "Mask Vertex colour domain"
+
+# derived
+msgid "Divide RGB by its alpha value (very recommended for vertex color layer)"
+msgstr "Divide RGB by its alpha value (very recommended for vertex colour layer)"
+
+# derived
+msgid "Add a new Fill Layer with uniform color that affects all channels"
+msgstr "Add a new Fill Layer with uniform colour that affects all channels"
+
+# derived
+msgid "Vertex color only works with mesh object!"
+msgstr "Vertex colour only works with mesh object!"
+
+# derived
+msgid "Vertex Color named '{name}' is already available!"
+msgstr "Vertex Colour named '{name}' is already available!"
+
+# derived
+msgid "Color ID:"
+msgstr "Colour ID:"
+
+# derived
+msgid "Override color value"
+msgstr "Override colour value"
+
+msgid "Vertex Color Name"
+msgstr "Vertex Colour Name"
+
+# derived
+msgid "Channel override vertex color name"
+msgstr "Channel override vertex colour name"
+
+# derived
+msgid "Override color for normal map"
+msgstr "Override colour for normal map"
+
+# derived
+msgid "Color Shortcut on the list"
+msgstr "Colour Shortcut on the list"
+
+# derived
+msgid "Display color shortcut on the list"
+msgstr "Display colour shortcut on the list"
+
+# derived
+msgid "Transition AO Color"
+msgstr "Transition AO Colour"
+
+# derived
+msgid "Remove the brush texture, returning to solid color mode"
+msgstr "Remove the brush texture, returning to solid colour mode"
+
+# derived
+msgid "Select Vertex Color"
+msgstr "Select Vertex Colour"
+
+# derived
+msgid "Vertex Color:"
+msgstr "Vertex Colour:"
+
+# derived
+msgid "Vertex Color: {name}"
+msgstr "Vertex Colour: {name}"
+
+# derived
+msgid "Open Available Vertex Color"
+msgstr "Open Available Vertex Colour"
+
+# derived
+msgid "Replace Vertex Color"
+msgstr "Replace Vertex Colour"
+
+# derived
+msgid "Color Option"
+msgstr "Colour Option"
+
+# derived
+msgid "Fill Selected Geometry with Vertex Color / Color ID"
+msgstr "Fill Selected Geometry with Vertex Colour / Colour ID"
+
+# derived
+msgid "Fill selected geometry with vertex color / color ID"
+msgstr "Fill selected geometry with vertex colour / colour ID"
+
+# derived
+msgid "Vertex color mask only works with mesh object!"
+msgstr "Vertex colour mask only works with mesh object!"
+
+# derived
+msgid "Vertex Color Data:"
+msgstr "Vertex Colour Data:"
+
+# derived
+msgid "No vertex color selected!"
+msgstr "No vertex colour selected!"
+
+# derived
+msgid "RGB to Intensity Color"
+msgstr "RGB to Intensity Colour"
+
+# derived
+msgid "Affect Color"
+msgstr "Affect Colour"
+
+# derived
+msgid "Ramp will affect the color value"
+msgstr "Ramp will affect the colour value"
+
+# derived
+msgid "Color channel"
+msgstr "Colour channel"
+
+# derived
+msgid "Non-Color Data"
+msgstr "Non-Colour Data"
+
+# derived
+msgid "Treat as non-color data (linear colorspace)"
+msgstr "Treat as non-colour data (linear colourspace)"
+
+# derived
+msgid "Color Channels:"
+msgstr "Colour Channels:"
+
+# derived
+msgid "Initialize layer based material system for this object"
+msgstr "Initialise layer based material system for this object"
+
+# derived
+msgid "Use Linear Color Blending"
+msgstr "Use Linear Colour Blending"
+
+# derived
+msgid "Use more accurate linear color blending"
+msgstr "Use more accurate linear colour blending"
+
+# derived
+msgid "Add a new fill layer with color and optional mask"
+msgstr "Add a new fill layer with colour and optional mask"
+
+# derived
+msgid "Mask Color:"
+msgstr "Mask Colour:"
+
+# derived
+msgid "Add a new layer group to organize layers"
+msgstr "Add a new layer group to organise layers"
+
+# derived
+msgid "Vertex color layer"
+msgstr "Vertex colour layer"
+
+# derived
+msgid "Toggle between default color and image override for normal map source"
+msgstr "Toggle between default colour and image override for normal map source"
+
+# derived
+msgid "Load multiple images (color, metallic, roughness, normal) and create a layer with auto-channel assignment"
+msgstr "Load multiple images (colour, metallic, roughness, normal) and create a layer with auto-channel assignment"
+
+# derived
+msgid "UI not initialized"
+msgstr "UI not initialised"
+
+# derived
+msgid "New Vertex Color"
+msgstr "New Vertex Colour"
+
+# derived
+msgid "Color Tag:"
+msgstr "Colour Tag:"
+
+# derived
+msgid "Pick color tag for this layer"
+msgstr "Pick colour tag for this layer"
+
+# derived
+msgid "Vertex Color Masks"
+msgstr "Vertex Colour Masks"
+
+# derived
+msgid "Vertex color-based masks submenu"
+msgstr "Vertex colour-based masks submenu"
+
+# derived
+msgid "New Vertex Color Mask"
+msgstr "New Vertex Colour Mask"
+
+# derived
+msgid "Bevel Grayscale"
+msgstr "Bevel Greyscale"
+
+# derived
+msgid "Remove procedural material from fill layer and revert to solid color"
+msgstr "Remove procedural material from fill layer and revert to solid colour"
+
+# derived
+msgid "Material cleared, reverted to solid color"
+msgstr "Material cleared, reverted to solid colour"
+
+# derived
+msgid "Paint backend not initialized"
+msgstr "Paint backend not initialised"
+
+# derived
+msgid "Paint UI not initialized"
+msgstr "Paint UI not initialised"
+
+# derived
+msgid "Enable Bake to Vertex Color"
+msgstr "Enable Bake to Vertex Colour"
+
+# derived
+msgid "Enable vertex color as bake target"
+msgstr "Enable vertex colour as bake target"
+
+# derived
+msgid "Use Baked Vertex Color"
+msgstr "Use Baked Vertex Colour"
+
+# derived
+msgid "Use baked vertex color"
+msgstr "Use baked vertex colour"
+
+# derived
+msgid "Bake To Vertex Color Alpha"
+msgstr "Bake To Vertex Colour Alpha"
+
+# derived
+msgid "When enabled, the channel are baked only to Alpha with vertex color"
+msgstr "When enabled, the channel are baked only to Alpha with vertex colour"
+
+# derived
+msgid "Non-color won't be converted to linear first before blending"
+msgstr "Non-colour won't be converted to linear first before blending"
+
+# derived
+msgid "Color value for fill layer"
+msgstr "Colour value for fill layer"
+
+# derived
+msgid "Use vertex color override"
+msgstr "Use vertex colour override"
+
+# derived
+msgid "Use fill color override"
+msgstr "Use fill colour override"
+
+# derived
+msgid "Override color value for this channel"
+msgstr "Override colour value for this channel"
+
+# derived
+msgid "Enable color ramp at edges"
+msgstr "Enable colour ramp at edges"
+
+# derived
+msgid "Bake this channel to vertex colors"
+msgstr "Bake this channel to vertex colours"
+
+# derived
+msgid "Target vertex color name for baking"
+msgstr "Target vertex colour name for baking"
+
+# derived
+msgid "Vertex color mask"
+msgstr "Vertex colour mask"
+
+# derived
+msgid "Color ID mask"
+msgstr "Colour ID mask"
+
+# derived
+msgid "Color ID for color ID mask"
+msgstr "Colour ID for colour ID mask"
+
+# derived
+msgid "Layer channels (Color, Roughness, Metallic, Normal, etc.)"
+msgstr "Layer channels (Colour, Roughness, Metallic, Normal, etc.)"
+
+# derived
+msgid "Use more accurate linear color blending (it will behave differently than Photoshop)"
+msgstr "Use more accurate linear colour blending (it will behave differently than Photoshop)"
+
+# derived
+msgid "Use sRGB color space in preview mode"
+msgstr "Use sRGB colour space in preview mode"
+
+# derived
+msgid "Expand bake to vertex color settings"
+msgstr "Expand bake to vertex colour settings"
+
+# derived
+msgid "Transition ramp only works on color or value channel!"
+msgstr "Transition ramp only works on colour or value channel!"
+
+# derived
+msgid "Transition AO only works on color or value channel!"
+msgstr "Transition AO only works on colour or value channel!"
+
+msgid "Stabilize Stroke"
+msgstr "Stabilise Stroke"
+
+msgid "Color Picker"
+msgstr "Colour Picker"
+
+msgid "Randomize Color"
+msgstr "Randomize Colour"
+
+msgid "Color Palette"
+msgstr "Colour Palette"
+
+# derived
+msgid "Solid color source"
+msgstr "Solid colour source"
+
+# derived
+msgid "Colorspace:"
+msgstr "Colourspace:"
+
+# derived
+msgid "Set Active Vertex Color"
+msgstr "Set Active Vertex Colour"
+
+# derived
+msgid "Set active vertex color"
+msgstr "Set active vertex colour"
+
+# derived
+msgid "There's no vertex color named {name}!"
+msgstr "There's no vertex colour named {name}!"
+
+# derived
+msgid "Select Faces based on Vertex Color"
+msgstr "Select Faces based on Vertex Colour"
+
+# derived
+msgid "Select faces based on vertex color"
+msgstr "Select faces based on vertex colour"
+
+# derived
+msgid "Vertex Color Fill Face with Custom Color"
+msgstr "Vertex Colour Fill Face with Custom Colour"
+
+# derived
+msgid "Fill selected polygon with vertex color with custom color"
+msgstr "Fill selected polygon with vertex colour with custom colour"
+
+# derived
+msgid "Vertex Color Fill"
+msgstr "Vertex Colour Fill"
+
+# derived
+msgid "Fill selected polygon with vertex color"
+msgstr "Fill selected polygon with vertex colour"
+
+# derived
+msgid "Fill with Color"
+msgstr "Fill with Colour"
+
+# derived
+msgid "Vertex Color Editor"
+msgstr "Vertex Colour Editor"
+
+# derived
+msgid "Vertex color editor panel in the UI region."
+msgstr "Vertex colour editor panel in the UI region."
+
+# derived
+msgid "Vertex color editor panel in the Tools region."
+msgstr "Vertex colour editor panel in the Tools region."
+
+# derived
+msgid "Show Vertex Color List"
+msgstr "Show Vertex Colour List"
+
+# derived
+msgid "Show vertex color list"
+msgstr "Show vertex colour list"
+
+# derived
+msgid "Other Objects Color"
+msgstr "Other Objects Colour"
+
+# derived
+msgid "Other object's color"
+msgstr "Other object's colour"
+
+# derived
+msgid "Color Data"
+msgstr "Colour Data"
+
+# derived
+msgid "Use layer's source texture/color"
+msgstr "Use layer's source texture/colour"
+
+# derived
+msgid "Use slider/color value"
+msgstr "Use slider/colour value"
+
+# derived
+msgid "Layer Color"
+msgstr "Layer Colour"
+
+# derived
+msgid "Use layer's source color"
+msgstr "Use layer's source colour"
+
+# derived
+msgid "Use default normal color"
+msgstr "Use default normal colour"
+
+msgid "Byte Color"
+msgstr "Byte Colour"
+
+# derived
+msgid "Albedo/Diffuse color"
+msgstr "Albedo/Diffuse colour"
+
+# derived
+msgid "Emission color"
+msgstr "Emission colour"
+
+# derived
+msgid "Solid Color"
+msgstr "Solid Colour"
+
+# derived
+msgid "Use a solid fill color"
+msgstr "Use a solid fill colour"
+
+# derived
+msgid "Extend edge colors"
+msgstr "Extend edge colours"
+
+# derived
+msgid "Compute and return the distance to the closest feature point as well as its position and color"
+msgstr "Compute and return the distance to the closest feature point as well as its position and colour"
+
+# derived
+msgid "Compute and return the distance to the second closest feature point as well as its position and color."
+msgstr "Compute and return the distance to the second closest feature point as well as its position and colour."
+
+# derived
+msgid "{type} Color"
+msgstr "{type} Colour"
+
+# derived
+msgid "The serialized mark — region, gesture and resolved objects"
+msgstr "The serialised mark — region, gesture and resolved objects"
+
+# derived
+msgid "The serialized frozen frame this mark was drawn on"
+msgstr "The serialised frozen frame this mark was drawn on"
+
+# derived
+msgid ""
+"Profile / account dropdown — opened from the global top bar.\n"
+"\n"
+"The contents are drawn natively by `layout.mixar_profile_card()`\n"
+"(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
+"credit usage meter and the account actions, laid out as one card\n"
+"rather than a menu. Python still owns registration and every\n"
+"operator the card invokes — C++ owns only pixels.\n"
+msgstr ""
+"Profile / account dropdown — opened from the global top bar.\n"
+"\n"
+"The contents are drawn natively by `layout.mixar_profile_card()`\n"
+"(`interface_mixar_profile_card.cc`): a greeting, the plan chip, the\n"
+"credit usage metre and the account actions, laid out as one card\n"
+"rather than a menu. Python still owns registration and every\n"
+"operator the card invokes — C++ owns only pixels.\n"
+
+# derived
+msgid "The generate sub-type — a generation-catalog service key (e.g. image_gen, model_3d)"
+msgstr "The generate sub-type — a generation-catalogue service key (e.g. image_gen, model_3d)"
+
+# derived
+msgid "Collapse / expand the finalized thinking dropdown"
+msgstr "Collapse / expand the finalised thinking dropdown"
+
+# derived
+msgid "Generation is currently unavailable. Refresh the catalog and try again."
+msgstr "Generation is currently unavailable. Refresh the catalogue and try again."
+
+# derived
+msgid "Generation catalog not loaded yet — please retry shortly."
+msgstr "Generation catalogue not loaded yet — please retry shortly."
+
+# derived
+msgid "Whether the finalized thinking dropdown is collapsed"
+msgstr "Whether the finalised thinking dropdown is collapsed"
+
+# derived
+msgid "UI state not initialized"
+msgstr "UI state not initialised"
+
+msgid "UV Center"
+msgstr "UV Centre"
+
+msgid "Color Grid"
+msgstr "Colour Grid"
+
+# derived
+msgid "Bake TD to Vertex Color"
+msgstr "Bake TD to Vertex Colour"
+
+# derived
+msgid "Visualize TD/Islands/UV with vertex color"
+msgstr "Visualise TD/Islands/UV with vertex colour"
+
+# derived
+msgid "Clear TD Vertex Colors"
+msgstr "Clear TD Vertex Colours"
+
+# derived
+msgid "Clear baked values from vertex colors"
+msgstr "Clear baked values from vertex colours"
+
+# derived
+msgid "UV UI not initialized"
+msgstr "UV UI not initialised"
+
+# derived
+msgid "Merge at Center"
+msgstr "Merge at Centre"
+
+# derived
+msgid "Weld selected UVs at center"
+msgstr "Weld selected UVs at centre"
+
+msgid "At Center"
+msgstr "At Centre"
+
+# derived
+msgid "Visualize"
+msgstr "Visualise"
+
+# derived
+msgid "Invert All Colors"
+msgstr "Invert All Colours"
+
+# derived
+msgid "Viewport Color"
+msgstr "Viewport Colour"
+
+msgid "Minimize Stretch"
+msgstr "Minimise Stretch"
+
+# derived
+msgid "Minimize UV stretch by relaxing islands"
+msgstr "Minimise UV stretch by relaxing islands"
+
+# derived
+msgid "Center UVs"
+msgstr "Centre UVs"
+
+# derived
+msgid "Center the projected UVs in UV space"
+msgstr "Centre the projected UVs in UV space"
+
+# derived
+msgid "Mixar UV UI state not initialized"
+msgstr "Mixar UV UI state not initialised"
+
+msgid "Center View to Cursor"
+msgstr "Centre View to Cursor"
+
+# derived
+msgid "Center view to cursor"
+msgstr "Centre view to cursor"
+
+# derived
+msgid "Roughness texture (Non-Color)"
+msgstr "Roughness texture (Non-Colour)"
+
+# derived
+msgid "Metallic texture (Non-Color)"
+msgstr "Metallic texture (Non-Colour)"
+
+# derived
+msgid "Tangent-space normal texture (Non-Color; requires UVs)"
+msgstr "Tangent-space normal texture (Non-Colour; requires UVs)"
+
+# derived
+msgid "Modeling workspace not found"
+msgstr "Modelling workspace not found"
+
+# derived
+msgid "Load an image into this material channel; data maps use Non-Color"
+msgstr "Load an image into this material channel; data maps use Non-Colour"
+
+# derived
+msgid "Video generation needs the live catalog"
+msgstr "Video generation needs the live catalogue"
+
+# derived
+msgid "Convert image region from linear to sRGB color space"
+msgstr "Convert image region from linear to sRGB colour space"
+
+# derived
+msgid "Convert image region from sRGB to linear color space"
+msgstr "Convert image region from sRGB to linear colour space"
+
+# derived
+msgid "Sigma Color"
+msgstr "Sigma Colour"
+
+# derived
+msgid "Fill image region with a solid color (C++ accelerated)"
+msgstr "Fill image region with a solid colour (C++ accelerated)"
+
+# derived
+msgid "Fill color (RGBA)"
+msgstr "Fill colour (RGBA)"
+
+# derived
+msgid "Normalize Image"
+msgstr "Normalise Image"
+
+# derived
+msgid "Normalize image values to target range"
+msgstr "Normalise image values to target range"
+
+# derived
+msgid "Crop start X (normalized 0-1)"
+msgstr "Crop start X (normalised 0-1)"
+
+# derived
+msgid "Crop start Y (normalized 0-1)"
+msgstr "Crop start Y (normalised 0-1)"
+
+# derived
+msgid "Crop end X (normalized 0-1)"
+msgstr "Crop end X (normalised 0-1)"
+
+# derived
+msgid "Crop end Y (normalized 0-1)"
+msgstr "Crop end Y (normalised 0-1)"
+
+# derived
+msgid "Center viewport references in the drawer"
+msgstr "Centre viewport references in the drawer"
+
+# derived
+msgid "Box start X (normalized 0-1)"
+msgstr "Box start X (normalised 0-1)"
+
+# derived
+msgid "Box start Y (normalized 0-1)"
+msgstr "Box start Y (normalised 0-1)"
+
+# derived
+msgid "Box end X (normalized 0-1)"
+msgstr "Box end X (normalised 0-1)"
+
+# derived
+msgid "Box end Y (normalized 0-1)"
+msgstr "Box end Y (normalised 0-1)"
+
+# derived
+msgid "Recognize Handwriting Locally"
+msgstr "Recognise Handwriting Locally"
+
+# derived
+msgid "Start on-device recognition of one rasterized ink batch"
+msgstr "Start on-device recognition of one rasterised ink batch"
+
+# derived
+msgid "Exit any active chat composer text edit so recognized handwriting can append safely"
+msgstr "Exit any active chat composer text edit so recognised handwriting can append safely"
+
+# derived
+msgid "e.g. Use meters for all dimensions"
+msgstr "e.g. Use metres for all dimensions"
+
+# derived
+msgid "Island Glass Wash color"
+msgstr "Island Glass Wash colour"
+
+# derived
+msgid "Toolbar Selected color"
+msgstr "Toolbar Selected colour"
+
+# derived
+msgid "Toolbar Disabled Text color"
+msgstr "Toolbar Disabled Text colour"
+
+# derived
+msgid "Toolbar Text color"
+msgstr "Toolbar Text colour"
+
+# derived
+msgid "Toolbar Action Border color"
+msgstr "Toolbar Action Border colour"
+
+# derived
+msgid "Toolbar Action color"
+msgstr "Toolbar Action colour"
+
+# derived
+msgid "Toolbar Border color"
+msgstr "Toolbar Border colour"
+
+# derived
+msgid "Toolbar Background color"
+msgstr "Toolbar Background colour"
+
+# derived
+msgid "Gray 800"
+msgstr "Grey 800"
+
+# derived
+msgid "Gray 700"
+msgstr "Grey 700"
+
+# derived
+msgid "Background color for user message bubbles"
+msgstr "Background colour for user message bubbles"
+
+# derived
+msgid "Background color for agent message bubbles"
+msgstr "Background colour for agent message bubbles"
+
+# derived
+msgid "Background color when hovering over interactive bubbles"
+msgstr "Background colour when hovering over interactive bubbles"
+
+# derived
+msgid "Text color for user messages"
+msgstr "Text colour for user messages"
+
+# derived
+msgid "Text color for agent messages"
+msgstr "Text colour for agent messages"
+
+# derived
+msgid "Background color for the chat input field"
+msgstr "Background colour for the chat input field"
+
+# derived
+msgid "Background color for mode selection buttons"
+msgstr "Background colour for mode selection buttons"
+
+# derived
+msgid "Background color for the active mode button"
+msgstr "Background colour for the active mode button"
+
+# derived
+msgid "Background color for chat buttons"
+msgstr "Background colour for chat buttons"
+
+# derived
+msgid "Text color for chat buttons"
+msgstr "Text colour for chat buttons"
+
+# derived
+msgid "Color for footer buttons on hover"
+msgstr "Colour for footer buttons on hover"
+
+# derived
+msgid "Label Color"
+msgstr "Label Colour"
+
+# derived
+msgid "Color for chat labels and secondary text"
+msgstr "Colour for chat labels and secondary text"
+
+# derived
+msgid "Background color for prompt suggestion buttons"
+msgstr "Background colour for prompt suggestion buttons"
+
+# derived
+msgid "Track color for the plan mode toggle when enabled"
+msgstr "Track colour for the plan mode toggle when enabled"
+
+# derived
+msgid "Color for placeholder text in input fields"
+msgstr "Colour for placeholder text in input fields"
+
+# derived
+msgid "Border color for image thumbnails"
+msgstr "Border colour for image thumbnails"
+
+# derived
+msgid "Start color for the send button icon gradient (top-left)"
+msgstr "Start colour for the send button icon gradient (top-left)"
+
+# derived
+msgid "End color for the send button icon gradient (bottom-right)"
+msgstr "End colour for the send button icon gradient (bottom-right)"
+
+# derived
+msgid "Send Arrow Color"
+msgstr "Send Arrow Colour"
+
+# derived
+msgid "Color of the arrow shape in the send button icon"
+msgstr "Colour of the arrow shape in the send button icon"
+
+# derived
+msgid "Background color for the input / send-button region"
+msgstr "Background colour for the input / send-button region"
+
+# derived
+msgid "Background color for text input fields"
+msgstr "Background colour for text input fields"
+
+# derived
+msgid "Text color for input fields"
+msgstr "Text colour for input fields"
+
+# derived
+msgid "Border color for text input fields"
+msgstr "Border colour for text input fields"
+
+# derived
+msgid "Background color for buttons"
+msgstr "Background colour for buttons"
+
+# derived
+msgid "Text color for buttons"
+msgstr "Text colour for buttons"
+
+# derived
+msgid "Button hover overlay color"
+msgstr "Button hover overlay colour"
+
+# derived
+msgid "Background color for panels"
+msgstr "Background colour for panels"
+
+# derived
+msgid "Text color for labels"
+msgstr "Text colour for labels"
+
+# derived
+msgid "Active tab fill color"
+msgstr "Active tab fill colour"
+
+# derived
+msgid "Background color for the tab strip"
+msgstr "Background colour for the tab strip"
+
+# derived
+msgid "Inactive tab fill color"
+msgstr "Inactive tab fill colour"
+
+# derived
+msgid "Text color for the active tab"
+msgstr "Text colour for the active tab"
+
+# derived
+msgid "Text color for inactive tabs"
+msgstr "Text colour for inactive tabs"
+
+# derived
+msgid "Outer glow color for the active tab"
+msgstr "Outer glow colour for the active tab"
+
+# derived
+msgid "Edge indicator bar color on the active tab"
+msgstr "Edge indicator bar colour on the active tab"
+
+# derived
+msgid "Background color for Generate / action buttons"
+msgstr "Background colour for Generate / action buttons"
+
+# derived
+msgid "Track color for toggles when checked"
+msgstr "Track colour for toggles when checked"

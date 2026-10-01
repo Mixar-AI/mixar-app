@@ -16,6 +16,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import List, Optional, Union
 
+from mixar.modules.common.i18n import n_
+
 from .constants import (
     DEFAULT_TTL_MS,
     FADE_DURATION_MS,
@@ -33,11 +35,16 @@ class NotificationAction:
     URL in the browser (and reports the notification read). ``url`` avoids a
     module-global stash per notification type: several toasts with different
     links can be on screen at once, each button carrying its own URL.
+
+    ``label`` is the untranslated msgid (mark literals with ``n_()``); the
+    renderer translates it at draw time. ``translate=False`` keeps a label
+    that is not Mixar's own text (a server-supplied label) verbatim.
     """
     label: str
     operator: str = ""  # e.g. "mixar.open_downloads_page"
     style: str = "secondary"  # "primary", "secondary", or "danger"
     url: Optional[str] = None  # when set, clicking opens this URL instead
+    translate: bool = True
 
 
 @dataclass
@@ -126,6 +133,12 @@ class NotificationStore:
     ) -> str:
         """Add a notification and ensure the toast timer is running.
 
+        ``title``/``body`` of a local notification are translated when the
+        toast is drawn (``rpt_``): pass static text as the msgid (``n_()``)
+        and runtime-built text as a translated template,
+        ``rpt_("{count} ready").format(count=n)``. Server notifications
+        (``server_id`` set) are drawn verbatim.
+
         Args:
             type_str: One of "info", "warning", "update", "error", "success".
             title: Short notification title.
@@ -205,11 +218,13 @@ class NotificationStore:
         action_url = data.get("action_url")
         actions = None
         if action_url:
+            label = data.get("action_label")
             actions = [
                 NotificationAction(
-                    label=data.get("action_label") or "Open",
+                    label=label or n_("Open"),
                     style="primary",
                     url=action_url,
+                    translate=not label,
                 ),
             ]
         return self.push(

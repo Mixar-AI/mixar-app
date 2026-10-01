@@ -17,6 +17,8 @@ used by the rest of the Mixar UV panels.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import n_
+
 from .constants import ANNOTATION_LAYER_NAME_MAX, LABEL_FACTOR
 
 _ANNOTATE_TOOLS = (
@@ -127,12 +129,12 @@ class MIXAR_UV_PT_annotate(Panel):
         _icon_handle = ToolSelectPanelHelper._icon_value_from_icon_handle
 
         annotate_tools = (
-            ('builtin.annotate', "Annotate", "ops.gpencil.draw"),
-            ('builtin.annotate_line', "Annotate Line",
+            ('builtin.annotate', n_("Annotate"), "ops.gpencil.draw"),
+            ('builtin.annotate_line', n_("Annotate Line"),
              "ops.gpencil.draw.line"),
-            ('builtin.annotate_polygon', "Annotate Polygon",
+            ('builtin.annotate_polygon', n_("Annotate Polygon"),
              "ops.gpencil.draw.poly"),
-            ('builtin.annotate_eraser', "Annotate Eraser",
+            ('builtin.annotate_eraser', n_("Annotate Eraser"),
              "ops.gpencil.draw.eraser"),
         )
 
@@ -151,7 +153,7 @@ class MIXAR_UV_PT_annotate(Panel):
         layout.separator(factor=0.5)
 
         tool_settings = context.tool_settings
-        col = _section(layout, "Annotate", icon='OUTLINER_OB_GREASEPENCIL')
+        col = _section(layout, n_("Annotate"), icon='OUTLINER_OB_GREASEPENCIL')
 
         # ----- Annotation: color swatch + layer popover -----
         self._draw_annotation_row(col, context)
@@ -159,7 +161,7 @@ class MIXAR_UV_PT_annotate(Panel):
         # ----- Placement (not shown for the eraser — it doesn't draw
         # strokes, so the placement plane is meaningless). -----
         if idname != 'builtin.annotate_eraser':
-            _row(col, "Placement").prop(
+            _row(col, n_("Placement")).prop(
                 tool_settings, "annotation_stroke_placement_view2d", text="")
 
         # ----- Tool-specific controls -----
@@ -181,7 +183,7 @@ class MIXAR_UV_PT_annotate(Panel):
         if gpd is None or gpl is None:
             # No annotation data yet — drawing into the viewport will
             # create it. Surface a hint rather than an empty row.
-            _row(col, "Annotation").label(text="(none — draw to create)")
+            _row(col, n_("Annotation")).label(text="(none — draw to create)")
             return
 
         text = ""
@@ -198,7 +200,7 @@ class MIXAR_UV_PT_annotate(Panel):
         # rounded border instead of leaving a gap between them — the
         # gap was making the popover open into space that overlapped
         # the Placement row below it.
-        ann_split = _row(col, "Annotation").split(factor=0.3, align=True)
+        ann_split = _row(col, n_("Annotation")).split(factor=0.3, align=True)
         ann_split.prop(gpl, "color", text="")
         ann_split.popover(panel="TOPBAR_PT_annotation_layers", text=text)
 
@@ -213,9 +215,9 @@ class MIXAR_UV_PT_annotate(Panel):
         sub = col.column(align=True)
         sub.active = props.use_stabilizer
 
-        _row(sub, "Radius").prop(
+        _row(sub, n_("Radius")).prop(
             props, "stabilizer_radius", text="", slider=True)
-        _row(sub, "Factor").prop(
+        _row(sub, n_("Factor")).prop(
             props, "stabilizer_factor", text="", slider=True)
 
     # ---------- Line (Annotate Line) controls ----------
@@ -223,15 +225,15 @@ class MIXAR_UV_PT_annotate(Panel):
     @staticmethod
     def _draw_line(col, tool):
         props = tool.operator_properties("gpencil.annotate")
-        _row(col, "Style Start").prop(props, "arrowstyle_start", text="")
-        _row(col, "End").prop(props, "arrowstyle_end", text="")
+        _row(col, n_("Style Start")).prop(props, "arrowstyle_start", text="")
+        _row(col, n_("End")).prop(props, "arrowstyle_end", text="")
 
     # ---------- Eraser controls ----------
 
     @staticmethod
     def _draw_eraser(col, context):
         prefs = context.preferences
-        _row(col, "Radius").prop(
+        _row(col, n_("Radius")).prop(
             prefs.edit, "grease_pencil_eraser_radius", text="")
 
 

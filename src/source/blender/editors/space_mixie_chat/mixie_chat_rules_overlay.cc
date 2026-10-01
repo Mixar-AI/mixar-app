@@ -44,6 +44,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_screen_types.h"
 #include "DNA_userdef_types.h"
 #include "DNA_space_types.h"
@@ -214,8 +216,10 @@ void mixie_chat_draw_rules_overlay(const bContext *C, ARegion *region)
   const float card_w = panel_w - 2.0f * pad;
   const float indent = RULES_TEXT_INDENT * scale;
   const float delete_zone = (HIST_DELETE_SIZE + 12.0f) * scale;
-  const float scope_w = 2.0f * (std::max(hist_text_width(RULES_SCOPE_PROJECT, font_id, meta_px),
-                                       hist_text_width(RULES_SCOPE_GLOBAL, font_id, meta_px)) +
+  const float scope_w = 2.0f * (std::max(hist_text_width(IFACE_(RULES_SCOPE_PROJECT), font_id,
+                                                       meta_px),
+                                       hist_text_width(IFACE_(RULES_SCOPE_GLOBAL), font_id,
+                                                       meta_px)) +
                                16.0f * scale);
   const float chip_zone = scope_w + 6.0f * scale;
   const float card_wrap_w = card_w - card_pad - indent - chip_zone - delete_zone - card_pad;
@@ -304,7 +308,10 @@ void mixie_chat_draw_rules_overlay(const bContext *C, ARegion *region)
                 editor_top - editor_box_h,
                 editor_top);
   {
-    const float submit_w = hist_text_width("Add Rule", font_id, text_px) + 32.0f * scale;
+    /* One stable width for both labels ("Add Rule" / "Save"), translated. */
+    const float submit_w = std::max(hist_text_width(IFACE_("Add Rule"), font_id, text_px),
+                                    hist_text_width(IFACE_("Save"), font_id, text_px)) +
+                           32.0f * scale;
     const float submit_top = editor_top - editor_box_h - submit_gap;
     BLI_rctf_init(&rt->rules_submit_bounds,
                   panel_x + panel_w - pad - submit_w,

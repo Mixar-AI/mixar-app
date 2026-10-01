@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 from bpy.props import BoolProperty
 
+from mixar.modules.common.i18n import iface_
 from mixar.modules.common.utils.mixie_space_utils import MIXIE_SPACE_AVAILABLE
 from mixar.modules.moodboard.core.canvas_context import is_moodboard_context
 from mixar.modules.moodboard.constants import GENERATE_BUTTON_SCALE_Y
@@ -101,7 +102,8 @@ class MIXIE_OT_imagegen_popup(Operator):
         row = box_col.row()
         row.prop(self, "use_selected_images", text="")
         if selected_count > 0:
-            row.label(text=f"Use {selected_count} selected image(s) as context")
+            row.label(text=iface_("Use {count} selected image(s) as context").format(
+                count=selected_count), translate=False)
         else:
             row.label(text="Use selected images as context")
             row.enabled = False

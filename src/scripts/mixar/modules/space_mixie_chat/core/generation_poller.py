@@ -13,6 +13,7 @@ that checks a scene boolean, hides the loader, and posts a result.
 
 import bpy
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from .message_helpers import add_agent_message
 from .ui_utils import redraw_chat_areas
@@ -79,7 +80,7 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
             _hide_loader(scene, bubble_id)
             add_agent_message(
                 scene,
-                "Generation may still be running — check the Queue panel for status.",
+                rpt_("Generation may still be running — check the Queue panel for status."),
             )
             redraw_chat_areas()
             return None
@@ -90,9 +91,9 @@ def register_generation_poll(scene, bubble_id, is_generating_attr,
 
             error = getattr(scene, error_attr, "")
             if error:
-                add_agent_message(scene, f"Generation failed: {error}")
+                add_agent_message(scene, rpt_("Generation failed: {error}").format(error=error))
             else:
-                add_agent_message(scene, success_message)
+                add_agent_message(scene, rpt_(success_message))
 
             redraw_chat_areas()
             return None

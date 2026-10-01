@@ -25,6 +25,7 @@
 #include "BLI_rect.h"
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
+#include "BLT_translation.hh"
 
 #include "BKE_context.hh"
 
@@ -121,7 +122,7 @@ void agent_ui_generations_draw(const bContext *C,
       pane_fill_round(&dot, dot_r, strong);
     }
     char label[64];
-    BLI_strncpy(label, rail[i].label, sizeof(label));
+    BLI_strncpy(label, IFACE_(rail[i].label), sizeof(label));
     pane_fit_text(label, std::max(1.0f, r.xmax - frame.pad - frame.rail_label_x), font_chip);
     pane_label_left(label, frame.rail_label_x, cy, font_chip, active ? strong : dim);
   }
@@ -145,7 +146,7 @@ void agent_ui_generations_draw(const bContext *C,
     rctf &r = chip_rect[i];
     r = gen_rct(frame.chip[i]);
     pane_fill_round(&r, std::min(frame.chip_r, BLI_rctf_size_y(&r) * 0.5f), active ? pill_on : chip_off);
-    pane_label_centre(chips[i].label,
+    pane_label_centre(IFACE_(chips[i].label),
                       BLI_rctf_cent_x(&r),
                       BLI_rctf_cent_y(&r),
                       font_chip,
@@ -221,8 +222,8 @@ void agent_ui_generations_draw(const bContext *C,
     set_enum(rail_rect[i],
              "window_manager.mixar_generations_source",
              rail[i].value,
-             (i == 0) ? "Everything Mixar has generated" :
-                        "Your connected folders: images, videos and 3D assets");
+             (i == 0) ? TIP_("Everything Mixar has generated") :
+                        TIP_("Your connected folders: images, videos and 3D assets"));
   }
   agent_ui_generations_libraries(C, block, frame, data);
 
@@ -230,7 +231,7 @@ void agent_ui_generations_draw(const bContext *C,
     set_enum(chip_rect[i],
              "window_manager.mixar_generations_filter",
              chips[i].value,
-             "Filter the grid");
+             TIP_("Filter the grid"));
   }
   {
     ui::Button *but = uiDefButO(block,
@@ -242,7 +243,7 @@ void agent_ui_generations_draw(const bContext *C,
                                 int(sort_rect.ymin),
                                 short(BLI_rctf_size_x(&sort_rect)),
                                 short(BLI_rctf_size_y(&sort_rect)),
-                                "Newest first / oldest first");
+                                TIP_("Newest first / oldest first"));
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
       RNA_string_set(op_ptr, "data_path", "window_manager.mixar_generations_sort");
@@ -266,7 +267,7 @@ void agent_ui_generations_draw(const bContext *C,
                                     int(r.ymin),
                                     short(BLI_rctf_size_x(&r)),
                                     short(BLI_rctf_size_y(&r)),
-                                    i ? "Next rows" : "Previous rows");
+                                    i ? TIP_("Next rows") : TIP_("Previous rows"));
         PointerRNA *op = ui::button_operator_ptr_ensure(but);
         RNA_enum_set(op, "action", 1);
         RNA_float_set(op, "delta", i ? 1 : -1);

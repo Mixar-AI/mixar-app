@@ -101,10 +101,26 @@ SPDX-License-Identifier = "LicenseRef-Mixar-Brand"
 path = [
   "docs/open-source/asset-provenance-review.csv",
   "docs/open-source/audit/**",
+  "docs/development/i18n-translation/review_notes.json",
+  "docs/development/i18n-translation/terms/*.json",
+  "docs/development/i18n-translation/logical/*.json",
+  "scripts/dev/tour_subtitles/*.json",
+  "scripts/dev/tour_subtitles/*.txt",
+  "scripts/dev/tour_subtitles/*.srt",
+  "src/scripts/mixar/modules/common/i18n/locale/*.po",
+  "docs/development/posthog-blastoff/*.json",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Excerpts of Blender's own interface translations (term glossaries for
+# translators), extracted from upstream locale/po.
+[[annotations]]
+path = "docs/development/i18n-translation/glossary/*.json"
+precedence = "override"
+SPDX-FileCopyrightText = "2012-2026 Blender Authors"
+SPDX-License-Identifier = "GPL-2.0-or-later"
 
 # Unmodified KIRI 3DGS Render distribution files that cannot safely carry
 # inline SPDX comments (binary assets and shader payloads). The vendored

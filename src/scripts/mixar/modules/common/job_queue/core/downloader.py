@@ -32,6 +32,7 @@ import urllib.error
 import urllib.request
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ..constants import (
     DOWNLOAD_CHUNK_BYTES,
@@ -77,7 +78,7 @@ class DownloadCancelled(DownloadError):
     """``should_cancel`` returned True — the caller cancelled the job."""
 
     def __init__(self, message="Download cancelled"):
-        super().__init__(message, user_message="Cancelled")
+        super().__init__(message, user_message=n_("Cancelled"))
 
 
 def _remove(filepath):
@@ -93,7 +94,7 @@ def _classify_http_error(exc):
     if code in (408, 429) or code >= 500:
         return DownloadError(
             f"Result host returned HTTP {code}",
-            "Download failed — please retry",
+            n_("Download failed — please retry"),
             retryable=True,
         )
     if code == 403:
@@ -101,16 +102,16 @@ def _classify_http_error(exc):
         # client-side, and retrying a 403 just spins, so stop and say so.
         return DownloadError(
             f"Result link is no longer valid (HTTP {code}, presigned URL expired)",
-            "Download link expired — please run the generation again",
+            n_("Download link expired — please run the generation again"),
         )
     if code == 404:
         return DownloadError(
             f"Result file is no longer available (HTTP {code})",
-            "Result is no longer available — please run the generation again",
+            n_("Result is no longer available — please run the generation again"),
         )
     return DownloadError(
         f"Result host returned HTTP {code}",
-        "Download failed — please retry",
+        n_("Download failed — please retry"),
     )
 
 
@@ -121,7 +122,7 @@ def _deadline_error(written, total):
         detail = f"{written} bytes transferred"
     return DownloadError(
         f"Download exceeded its total time limit ({detail})",
-        "Download timed out — please retry",
+        n_("Download timed out — please retry"),
     )
 
 
@@ -180,13 +181,13 @@ def _open(url, deadline):
     except urllib.error.URLError as e:
         raise DownloadError(
             f"Could not reach the result host: {e.reason}",
-            "Could not download the result — check your internet connection",
+            n_("Could not download the result — check your internet connection"),
             retryable=True,
         ) from e
     except (TimeoutError, socket.timeout, http.client.HTTPException, OSError) as e:
         raise DownloadError(
             f"Connection to the result host failed: {e}",
-            "Could not download the result — check your internet connection",
+            n_("Could not download the result — check your internet connection"),
             retryable=True,
         ) from e
 
@@ -217,13 +218,13 @@ def _attempt(url, filepath, deadline, attempt, on_progress, should_cancel):
                 except (TimeoutError, socket.timeout) as e:
                     raise DownloadError(
                         f"Result host stopped responding after {written} bytes: {e}",
-                        "Download stalled — please retry",
+                        n_("Download stalled — please retry"),
                         retryable=True,
                     ) from e
                 except (http.client.HTTPException, OSError) as e:
                     raise DownloadError(
                         f"Connection dropped after {written} bytes: {e}",
-                        "Download failed — please retry",
+                        n_("Download failed — please retry"),
                         retryable=True,
                     ) from e
                 if not chunk:
@@ -248,7 +249,7 @@ def _attempt(url, filepath, deadline, attempt, on_progress, should_cancel):
         # as a confusing glTF parse error (or worse, a partial "success").
         raise DownloadError(
             f"Download incomplete: received {written} of {total} bytes",
-            "Download was incomplete — please retry",
+            n_("Download was incomplete — please retry"),
             retryable=True,
         )
 
@@ -325,5 +326,5 @@ def download_file(
 
     _remove(filepath)
     raise last_error or DownloadError(
-        "Download failed", "Download failed — please retry",
+        "Download failed", n_("Download failed — please retry"),
     )

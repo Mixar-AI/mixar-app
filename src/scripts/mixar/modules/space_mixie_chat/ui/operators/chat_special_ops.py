@@ -17,6 +17,7 @@ from bpy.types import Operator
 from bpy.props import IntProperty, StringProperty
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 
 from ...constants import (
     FEEDBACK_STATUS_RECEIVED,
@@ -94,7 +95,7 @@ def _find_feedback_message(scene, bubble_id: str):
 def _queue_feedback_comment(scene, msg) -> tuple[bool, str]:
     """Validate and queue a comment submission for one feedback message."""
     if not msg.feedback_visible:
-        return False, "Feedback is available only on the latest response"
+        return False, n_("Feedback is available only on the latest response")
     comment = msg.feedback_comment.strip()
     validation_error = validate_feedback_comment(
         msg.feedback_rating,
@@ -334,7 +335,7 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
                 # Add hint instead of "Modify" user message
                 hint_msg = scene.mixie_chat_messages.add()
                 hint_msg.sender = 'AGENT'
-                hint_msg.text = "Type your feedback below and press Enter to modify the plan."
+                hint_msg.text = rpt_("Type your feedback below and press Enter to modify the plan.")
 
                 logger.info("Switched to MODIFYING state via slot action")
                 self.report({'INFO'}, "Enter your feedback in the chat input")
@@ -382,7 +383,7 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
 
         except Exception as e:
             logger.error(f"Error dispatching slot action: {e}")
-            self.report({'ERROR'}, f"Error: {e}")
+            self.report({'ERROR'}, rpt_("Error: {error}").format(error=e))
 
         redraw_chat_areas()
         return {'FINISHED'}
@@ -409,7 +410,7 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
             action.asset_name, action.asset_type,
         )
         if ok:
-            self.report({'INFO'}, f"Added '{message}' to the scene")
+            self.report({'INFO'}, rpt_("Added '{name}' to the scene").format(name=message))
             return {'FINISHED'}
         self.report({'WARNING'}, message)
         return {'CANCELLED'}
@@ -537,7 +538,8 @@ class MIXIE_CHAT_OT_select_slot_action(Operator):
 
         confirm = scene.mixie_chat_messages.add()
         confirm.sender = 'AGENT'
-        confirm.text = f"Got it — I'll use {label} for {service_label}."
+        confirm.text = rpt_("Got it — I'll use {model} for {service}.").format(
+            model=label, service=service_label)
         redraw_chat_areas()
         return {'FINISHED'}
 
@@ -804,7 +806,7 @@ class MIXIE_CHAT_OT_cancel_generation(Operator):
             if getattr(scene, gen_attr, False):
                 setattr(scene, gen_attr, False)
                 if hasattr(scene, err_attr):
-                    setattr(scene, err_attr, "Cancelled by user")
+                    setattr(scene, err_attr, n_("Cancelled by user"))
 
         # Also reset progress
         try:

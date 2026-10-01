@@ -27,6 +27,7 @@ missing one must cost a debug line, not a failed module import.
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_
 
 from ...constants import CAMERA_EXPORT_LABEL, CAMERA_EXPORT_PANEL_ID
 from ...core.camera_export import export_settings, scene_has_camera
@@ -43,12 +44,12 @@ def _draw_row(layout, context) -> None:
     settings = export_settings(context.scene)
     if settings is not None and settings.render_is_running:
         percent = int(round(float(settings.render_progress) * 100))
-        label = f"Exporting to Moodboard… {percent}%"
+        label = iface_("Exporting to Moodboard… {percent}%").format(percent=percent)
     else:
-        label = f"{CAMERA_EXPORT_LABEL}…"
+        label = iface_(CAMERA_EXPORT_LABEL) + "…"
     layout.separator()
     props = layout.operator(
-        "wm.call_panel", text=label, icon='RENDER_ANIMATION'
+        "wm.call_panel", text=label, icon='RENDER_ANIMATION', translate=False
     )
     props.name = CAMERA_EXPORT_PANEL_ID
     # Kind selection is a multi-select and the popup doubles as the live

@@ -67,7 +67,7 @@ def test_native_graph_renderer_and_operators_are_compiled_and_registered():
     # Mode/Model draw the Python-cached human labels (dynamic enums can't
     # self-display); the static word is only the empty-label fallback.
     inline = _read(SPACE_MIXIE / "mixie_draw_moodboard_node_settings.cc")
-    assert 'model[0] ? model : "Model unavailable"' in inline
+    assert 'model[0] ? model : IFACE_("Model unavailable")' in inline
     assert "moodboard_add_node_settings(block, node, controls" in controls
     assert "draw_dropdown(mode, node, 'service_key'" in settings
     assert "draw_dropdown(model, node, 'model'" in settings
@@ -121,8 +121,8 @@ def test_context_actions_create_connected_nodes_and_execute_through_queue():
         ROOT / "src/scripts/mixar/modules/common/job_queue/core/enqueue.py"
     )
 
-    assert "'IMAGE_GEN', \"Generate Image\"" in menu
-    assert "'MODEL_3D', \"Generate to 3D\"" in menu
+    assert "'IMAGE_GEN', n_(\"Generate Image\")" in menu
+    assert "'MODEL_3D', n_(\"Generate to 3D\")" in menu
     assert '_capability_available("video_gen")' in menu
     assert "add_link(" in graph
     assert "connect_to_next_input(" in graph

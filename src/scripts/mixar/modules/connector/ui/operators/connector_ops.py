@@ -7,6 +7,7 @@ from bpy.types import Operator
 
 from mixar.modules.connector.core.sidecar import sidecar_port, start_sidecar
 from mixar.modules.connector.core.unreal_export import export_scene_for_unreal
+from mixar.modules.common.i18n import rpt_
 
 
 class MIXAR_OT_connector_start_sidecar(Operator):
@@ -17,7 +18,7 @@ class MIXAR_OT_connector_start_sidecar(Operator):
     def execute(self, context):
         settings = context.window_manager.mixar_connector
         port = start_sidecar(settings.sidecar_port)
-        self.report({"INFO"}, f"Connector sidecar on 127.0.0.1:{port}")
+        self.report({"INFO"}, rpt_("Connector sidecar on 127.0.0.1:{port}").format(port=port))
         return {"FINISHED"}
 
 
@@ -34,7 +35,8 @@ class MIXAR_OT_connector_export_unreal(Operator):
             self.report({"ERROR"}, str(exc))
             return {"CANCELLED"}
         settings.last_export_path = result["filepath"]
-        self.report({"INFO"}, f"Exported {result['filename']} ({result['mesh_count']} meshes)")
+        self.report({"INFO"}, rpt_("Exported {filename} ({count} meshes)").format(
+            filename=result["filename"], count=result["mesh_count"]))
         return {"FINISHED"}
 
 

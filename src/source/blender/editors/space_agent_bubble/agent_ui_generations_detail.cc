@@ -32,6 +32,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 
 #include "DNA_screen_types.h"
@@ -160,6 +162,7 @@ int build_meta(const GenItem &item, const char *(&r_chips)[3])
   return n;
 }
 
+/** Labels and tips come back translated; this runs on every draw. */
 void build_actions(const GenItem &item, ActionSpec r_actions[2])
 {
   r_actions[0] = ActionSpec{};
@@ -167,16 +170,16 @@ void build_actions(const GenItem &item, ActionSpec r_actions[2])
 
   switch (item.kind) {
     case GEN_ITEM_ASSET:
-      r_actions[0] = {"Add to Scene",
+      r_actions[0] = {IFACE_("Add to Scene"),
                       "mixar.generations_add_asset",
                       {"blend_path", "id_dir", "asset_name"},
                       {item.path, item.id_dir, item.name},
-                      "Append this asset into the current scene"};
-      r_actions[1] = {"Open Folder",
+                      TIP_("Append this asset into the current scene")};
+      r_actions[1] = {IFACE_("Open Folder"),
                       item.path[0] ? "mixar.generations_open_folder" : "",
                       {"path", nullptr, nullptr},
                       {item.path, nullptr, nullptr},
-                      "Show the asset's .blend in the file browser"};
+                      TIP_("Show the asset's .blend in the file browser")};
       break;
     case GEN_ITEM_IMAGE:
     case GEN_ITEM_VIDEO:
@@ -198,30 +201,30 @@ void build_actions(const GenItem &item, ActionSpec r_actions[2])
       /* The image is already on the board — that is where this pane found
        * it — so the useful verb is "select", which is how the board's
        * selection becomes a reference everywhere else. */
-      r_actions[0] = {"Select on Board",
+      r_actions[0] = {IFACE_("Select on Board"),
                       "mixar.generations_select_media",
                       {"image_name", nullptr, nullptr},
                       {item.name, nullptr, nullptr},
-                      "Select this on the moodboard so it can be used as a reference"};
-      r_actions[1] = {"Open Folder",
+                      TIP_("Select this on the moodboard so it can be used as a reference")};
+      r_actions[1] = {IFACE_("Open Folder"),
                       item.path[0] ? "mixar.generations_open_folder" : "",
                       {"path", nullptr, nullptr},
                       {item.path, nullptr, nullptr},
-                      "Show this file in the file browser"};
+                      TIP_("Show this file in the file browser")};
       break;
     case GEN_ITEM_SPLAT:
-      r_actions[0] = {"Select in Scene",
+      r_actions[0] = {IFACE_("Select in Scene"),
                       "mixar.generations_select_splat",
                       {"collection_name", nullptr, nullptr},
                       {item.name, nullptr, nullptr},
-                      "Select this splat world's handle in the viewport"};
-      r_actions[1] = {"Already in file", "", {nullptr, nullptr, nullptr},
+                      TIP_("Select this splat world's handle in the viewport")};
+      r_actions[1] = {IFACE_("Already in file"), "", {nullptr, nullptr, nullptr},
                       {nullptr, nullptr, nullptr}, ""};
       break;
     case GEN_ITEM_JOB:
-      r_actions[0] = {"Generating…", "", {nullptr, nullptr, nullptr},
+      r_actions[0] = {IFACE_("Generating…"), "", {nullptr, nullptr, nullptr},
                       {nullptr, nullptr, nullptr}, ""};
-      r_actions[1] = {"Open Queue", "", {nullptr, nullptr, nullptr},
+      r_actions[1] = {IFACE_("Open Queue"), "", {nullptr, nullptr, nullptr},
                       {nullptr, nullptr, nullptr}, ""};
       break;
   }
@@ -256,7 +259,7 @@ void agent_ui_generations_detail(const bContext *C,
   const int index = agent_ui_generations_selected_index(data);
   if (index < 0) {
     const float cy = (panel.ymin + panel.ymax) * 0.5f;
-    pane_label_centre(data.count > 0 ? "Select an item" : "Nothing selected",
+    pane_label_centre(data.count > 0 ? IFACE_("Select an item") : IFACE_("Nothing selected"),
                       x0 + col_w * 0.5f,
                       cy + (data.count > 0 ? frame.font_meta * 0.75f : 0.0f),
                       frame.font_meta,
@@ -455,8 +458,8 @@ void agent_ui_generations_detail(const bContext *C,
                              blender::wm::OpCallContext::InvokeDefault, "",
                              int(r.xmin), int(r.ymin), short(BLI_rctf_size_x(&r)),
                              short(BLI_rctf_size_y(&r)),
-                             locked ? "Finish sketching or dictating before switching tabs" :
-                                      "Show the generation queue");
+                             locked ? TIP_("Finish sketching or dictating before switching tabs") :
+                                      TIP_("Show the generation queue"));
       if (but && !locked) {
         PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
         RNA_string_set(op_ptr, "data_path", "window_manager.mixar_bubble_tab");

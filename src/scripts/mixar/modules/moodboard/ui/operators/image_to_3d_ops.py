@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.utils.image_utils import compress_for_service
 from mixar.modules.moodboard.core.model_gen_inputs import selected_input_images
 
@@ -197,7 +198,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             try:
                 image_bytes = compress_for_service(image, "image_to_3d")
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return None
 
         # Enqueue via job queue
@@ -236,7 +237,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 payload=payload,
                 label=job_label,
                 display_label=display_label,
-                fail_message="3D model generation failed",
+                fail_message=n_("3D model generation failed"),
                 on_imported=make_model_rename_on_imported(
                     mesh_name, model_front_zrot(model_name)),
                 scene_flag="mixie_image_to_3d_is_generating",
@@ -245,7 +246,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 self.report({"ERROR"}, "A duplicate generation is already queued")
                 return None
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to start generation: {e}")
+            self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return None
 
         return job
@@ -294,11 +295,13 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         img = bpy.data.images.get(self.image_name.strip())
         if not img:
             set_agent_gen_reason(context, f"Image '{self.image_name}' not found in bpy.data.images")
-            self.report({"ERROR"}, f"Image '{self.image_name}' not found in bpy.data.images")
+            self.report({"ERROR"}, rpt_("Image '{image_name}' not found in bpy.data.images").format(
+                image_name=self.image_name))
             return {"CANCELLED"}
         if not img.has_data:
             set_agent_gen_reason(context, f"Image '{self.image_name}' has no pixel data")
-            self.report({"ERROR"}, f"Image '{self.image_name}' has no pixel data")
+            self.report({"ERROR"}, rpt_("Image '{image_name}' has no pixel data").format(
+                image_name=self.image_name))
             return {"CANCELLED"}
 
         # Agent invocations are always authenticated, so the catalog is the
@@ -323,7 +326,8 @@ class MIXIE_OT_image_to_3d_generate(Operator):
         if not model_name or model_name not in valid_models:
             choices = ", ".join(f"'{m}'" for m in valid_models)
             set_agent_gen_reason(context, f"Invalid model '{model_name}'; must be one of: {choices}")
-            self.report({"ERROR"}, f"Invalid model '{model_name}'. Must be one of: {choices}")
+            self.report({"ERROR"}, rpt_("Invalid model '{model_name}'. Must be one of: {choices}").format(
+                model_name=model_name, choices=choices))
             return {"CANCELLED"}
 
         # The agent operator is the path used by backend
@@ -345,7 +349,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
                 image_bytes = compress_image_for_upload(img)
             except Exception as e:
                 set_agent_gen_reason(context, f"Failed to convert image: {e}")
-                self.report({"ERROR"}, f"Failed to convert image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to convert image: {error}").format(error=e))
                 return {"CANCELLED"}
 
         # Pass through only the operator properties the agent explicitly
@@ -399,7 +403,7 @@ class MIXIE_OT_image_to_3d_generate(Operator):
             model=model_name,
             payload=payload,
             label=job_label,
-            fail_message="3D model generation failed",
+            fail_message=n_("3D model generation failed"),
             on_imported=make_model_rename_on_imported(
                 mesh_name, model_front_zrot(model_name), placement=placement),
             scene_flag="mixie_image_to_3d_is_generating",

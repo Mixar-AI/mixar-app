@@ -8,6 +8,8 @@ import bpy
 from bpy.props import IntProperty, StringProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import iface_
+
 from ...core.shot_api import active_shot, adopt_camera
 from ...core.viewport import enter_camera_view
 
@@ -169,7 +171,7 @@ class MIXAR_OT_director_pick_camera(Operator):
                     "mixar.director_pick_camera", text=obj.name, icon='CAMERA_DATA'
                 ).camera_name = obj.name
 
-        context.window_manager.popup_menu(draw, title="Camera", icon='CAMERA_DATA')
+        context.window_manager.popup_menu(draw, title=iface_("Camera"), icon='CAMERA_DATA')
         return {'FINISHED'}
 
 

@@ -95,4 +95,4 @@ def test_the_dock_keeps_redrawing_itself_while_playing():
 
 
 def test_the_transport_middle_slot_is_preview():
-    assert '{"MIXAR_OT_director_preview", true, false, "Preview this shot"}' in TRANSPORT
+    assert '{"MIXAR_OT_director_preview", true, false, N_("Preview this shot")}' in TRANSPORT

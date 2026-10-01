@@ -20,6 +20,7 @@ import base64 as _b64
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.moodboard.core.model_gen_inputs import tab_input_images
 
 logger = get_logger(__name__)
@@ -44,7 +45,7 @@ def _routing(service_key):
     if service_key == "model_3d":
         return dict(
             feature_key=FEATURE_MODEL_3D,
-            fail_message="3D model generation failed",
+            fail_message=n_("3D model generation failed"),
             scene_flag="mixie_image_to_3d_is_generating",
         )
     if service_key == "image_to_3d":
@@ -52,7 +53,7 @@ def _routing(service_key):
         # so it is intentionally omitted here.
         return dict(
             feature_key=FEATURE_IMAGE_TO_3D_PRO,
-            fail_message="Image to 3D failed",
+            fail_message=n_("Image to 3D failed"),
             scene_flag="mixie_image_to_3d_is_generating",
         )
     if service_key == "hunyuan_rapid":
@@ -235,7 +236,7 @@ class MIXIE_OT_model_gen_generate(Operator):
                 else:
                     image_bytes = compress_image_for_upload(image)
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return None
             if image_bytes:
                 payload["image_bytes_b64"] = _b64.b64encode(image_bytes).decode()
@@ -296,7 +297,7 @@ class MIXIE_OT_model_gen_generate(Operator):
                 self.report({"ERROR"}, "A duplicate generation is already queued")
                 return None
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to start generation: {e}")
+            self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return None
 
         return feature_key

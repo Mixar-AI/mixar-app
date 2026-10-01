@@ -31,6 +31,7 @@ import time
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import data_, rpt_
 from mixar.modules.agent_bubble.core.pane_references import (
     PANE_TABS,
     attach_file_to_pane,
@@ -150,7 +151,7 @@ class MIXAR_OT_pane_capture_viewport(Operator):
             path = _capture_viewport_to_file(context)
         except Exception as exc:  # noqa: BLE001
             logger.error("Viewport capture failed: %r", exc)
-            self.report({'ERROR'}, f"Viewport capture failed: {exc}")
+            self.report({'ERROR'}, rpt_("Viewport capture failed: {error}").format(error=exc))
             return {'CANCELLED'}
         if path is None:
             self.report({'WARNING'}, "No 3D viewport found to capture")
@@ -160,10 +161,10 @@ class MIXAR_OT_pane_capture_viewport(Operator):
         # keeps the historical Image default.
         pane = tab if tab in PANE_TABS else 'IMAGE'
         try:
-            attach_file_to_pane(scene, pane, path, "Viewport Capture")
+            attach_file_to_pane(scene, pane, path, data_("Viewport Capture"))
         except Exception as exc:  # noqa: BLE001
             logger.error("Could not attach viewport capture: %r", exc)
-            self.report({'ERROR'}, f"Could not attach capture: {exc}")
+            self.report({'ERROR'}, rpt_("Could not attach capture: {error}").format(error=exc))
             return {'CANCELLED'}
 
         self.report({'INFO'}, "Viewport captured as reference")
@@ -214,10 +215,9 @@ class MIXAR_OT_pane_video_upload_reference(Operator):
         if added == 0:
             self.report({'WARNING'}, "No valid image or video references added")
             return {'CANCELLED'}
-        self.report(
-            {'INFO'},
-            f"Added {added} selected reference{'s' if added != 1 else ''}",
-        )
+        self.report({'INFO'}, (
+            rpt_("Added {count} selected reference") if added == 1
+            else rpt_("Added {count} selected references")).format(count=added))
         return {'FINISHED'}
 
 

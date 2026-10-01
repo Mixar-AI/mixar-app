@@ -24,6 +24,8 @@
 
 #include "BLF_api.hh"
 
+#include "BLT_translation.hh"
+
 #include "ED_screen.hh"
 
 #include "DNA_scene_types.h"
@@ -161,13 +163,14 @@ void mixie_chat_render_messages(const bContext *C,
         text_buffer[0] = '\0';
       }
 
-      float label_y = layout.y_pos - metrics.label_height;
-      const char *label = mixie_chat_sender_label(layout, &msg_ptr);
-      float label_x = layout.is_user ? (layout.bubble_x + layout.bubble_width)
-                                     : layout.bubble_x;
-      chat_ui_draw_sender_label(label, label_x,
-                                label_y + 8.0f * metrics.scale_factor, &metrics,
-                                layout.is_user);
+      if (const char *label = mixie_chat_sender_label(layout, &msg_ptr)) {
+        float label_y = layout.y_pos - metrics.label_height;
+        float label_x = layout.is_user ? (layout.bubble_x + layout.bubble_width)
+                                       : layout.bubble_x;
+        chat_ui_draw_sender_label(label, label_x,
+                                  label_y + 8.0f * metrics.scale_factor, &metrics,
+                                  layout.is_user);
+      }
 
       mixie_chat_render_message_content(layout, &msg_ptr, text_len, text_buffer);
 
@@ -339,7 +342,7 @@ void mixie_chat_render_messages(const bContext *C,
           if (ml.has_content && ml.has_loader) {
             /* Use the same loader text and fallback measured by layout. */
             const char *status = chat_ui_loader_status_text(
-                &ml.loader, ml.has_loader, "Working\xE2\x80\xA6");
+                &ml.loader, ml.has_loader, RPT_("Working\xE2\x80\xA6"));
             chat_ui_draw_live_thinking(&think_style, status, spin,
                                        ml.bubble_x,
                                        stack_y - ml.thinking_height,

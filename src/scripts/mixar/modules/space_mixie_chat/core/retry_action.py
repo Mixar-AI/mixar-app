@@ -7,11 +7,13 @@ from uuid import uuid4
 
 import bpy
 
+from mixar.modules.common.i18n import n_, rpt_
+
 from . import parked_resume
 from .ui_utils import redraw_chat_areas
 
 _pending = set()
-FAILURE_MESSAGE = (
+FAILURE_MESSAGE = n_(
     "Couldn't send the retry. Check your connection and wait for any current "
     "turn to finish, then click Retry failed tasks again."
 )
@@ -22,7 +24,7 @@ def _notify_failure(scene):
     notice.bubble_id = str(uuid4())
     notice.sender = 'AGENT'
     notice.message_type = 'AGENT'
-    notice.content = FAILURE_MESSAGE
+    notice.content = rpt_(FAILURE_MESSAGE)
 
 
 def schedule_retry(scene, bubble_id):

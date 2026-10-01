@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from ...common.api.response import APIResponse
 from ...common.api.services.scene_segment_service import get_scene_segment_service
 from ..constants import SCENE_SEGMENT_UPLOAD_TIMEOUT_SECONDS
@@ -35,7 +36,7 @@ class SceneSegmentUploadMixin:
         """Upload *image*, or join the callback list of its active upload."""
         if image is None:
             if on_complete:
-                on_complete(False, "No image provided")
+                on_complete(False, rpt_("No image provided"))
             return False
 
         image_name = image.name
@@ -73,7 +74,7 @@ class SceneSegmentUploadMixin:
             image_bytes = compress_image_for_scene_segment(image, img_item)
         except Exception as exc:
             self._finish_upload(
-                image_name, state, False, f"Compression failed: {exc}",
+                image_name, state, False, rpt_("Compression failed: {error}").format(error=exc),
             )
             return False
 
@@ -82,7 +83,7 @@ class SceneSegmentUploadMixin:
             inner_data = data.get("data", data)
             job_id = inner_data.get("job_id")
             if not job_id:
-                self._finish_upload(image_name, state, False, "No job_id in response")
+                self._finish_upload(image_name, state, False, rpt_("No job_id in response"))
                 return
 
             with self._jobs_lock:

@@ -19,6 +19,7 @@ from mixar.modules.common.analytics.draft_events import note_generation_submitte
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_MESH_SEGMENT
@@ -103,7 +104,7 @@ class MeshSegmentJob(Job):
             try:
                 scene = bpy.context.scene
                 scene.mixie_mesh_segment_status = "pending"
-                scene.mixie_mesh_segment_current_step = "Queued"
+                scene.mixie_mesh_segment_current_step = n_("Queued")
             except Exception:
                 pass
             return ("WAIT", [])
@@ -115,7 +116,7 @@ class MeshSegmentJob(Job):
             try:
                 scene = bpy.context.scene
                 scene.mixie_mesh_segment_status = "processing"
-                scene.mixie_mesh_segment_current_step = "Processing..."
+                scene.mixie_mesh_segment_current_step = n_("Processing...")
             except Exception:
                 pass
             return ("RUN", [])
@@ -185,11 +186,15 @@ class MeshSegmentJob(Job):
 # ---------------------------------------------------------------------------
 
 
-def _reject(message: str) -> None:
-    """Log + surface an enqueue rejection on the scene's error property."""
-    logger.error("[MeshSegment] %s", message)
+def _reject(message: str, **fields) -> None:
+    """Log + surface an enqueue rejection on the scene's error property.
+
+    ``message`` is an English template: the log keeps English, the error
+    shown in the UI is translated.
+    """
+    logger.error("[MeshSegment] %s", message.format(**fields))
     try:
-        bpy.context.scene.mixie_mesh_segment_error = message
+        bpy.context.scene.mixie_mesh_segment_error = rpt_(message).format(**fields)
     except Exception:  # noqa: BLE001 — no scene (headless) — logging is enough
         pass
 
@@ -208,10 +213,10 @@ def enqueue_mesh_segment_job(
     # would spend a job and then apply nothing (see MeshSegmentJob.handle_result).
     mesh_obj = bpy.data.objects.get(mesh_object_name)
     if mesh_obj is None or mesh_obj.type != 'MESH' or mesh_obj.data is None:
-        _reject(f"Mesh object '{mesh_object_name}' not found")
+        _reject(n_("Mesh object '{name}' not found"), name=mesh_object_name)
         return None
     if not mesh_obj.data.uv_layers:
-        _reject("Mesh has no UV map — segmentation results need UVs to apply")
+        _reject(n_("Mesh has no UV map — segmentation results need UVs to apply"))
         return None
 
     try:

@@ -16,6 +16,7 @@ from bpy.props import IntProperty
 from bpy.types import Operator
 
 from .....config.logging_config import get_logger
+from mixar.modules.common.i18n import iface_, rpt_
 
 logger = get_logger(__name__)
 
@@ -186,7 +187,7 @@ class CHANNELS_OT_RemoveChannel(Operator):
                 # Question
                 question_row = main_col.row(align=True)
                 question_row.scale_y = 1.3
-                question_row.label(text=f"Remove channel '{channel.name}'?", icon='ERROR')
+                question_row.label(text=iface_("Remove channel '{name}'?").format(name=channel.name), icon='ERROR', translate=False)
 
                 main_col.separator(factor=0.8)
 
@@ -197,7 +198,7 @@ class CHANNELS_OT_RemoveChannel(Operator):
 
                 warn_col.label(text="This action will:", icon='INFO')
                 warn_col.separator(factor=0.3)
-                warn_col.label(text=f"• Remove '{channel.name}' from all {num_layers} layer(s)")
+                warn_col.label(text=iface_("• Remove '{name}' from all {count} layer(s)").format(name=channel.name, count=num_layers), translate=False)
                 warn_col.label(text="• Delete all painted/override data for this channel")
                 warn_col.label(text="• Remove all modifiers on this channel")
 
@@ -269,7 +270,7 @@ class CHANNELS_OT_RemoveChannel(Operator):
             # 6. Reconnect remaining channels to BSDF
             reconnect_mp_nodes(tree)
 
-            self.report({'INFO'}, f"Removed channel '{channel_name}'")
+            self.report({'INFO'}, rpt_("Removed channel '{name}'").format(name=channel_name))
 
             # Request UI refresh
             request_ui_refresh()
@@ -277,7 +278,7 @@ class CHANNELS_OT_RemoveChannel(Operator):
             return {'FINISHED'}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to remove channel: {str(e)}")
+            self.report({'ERROR'}, rpt_("Failed to remove channel: {error}").format(error=e))
             logger.error("Failed to remove channel: %s", e, exc_info=True)
             return {'CANCELLED'}
 

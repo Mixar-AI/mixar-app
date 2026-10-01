@@ -12,6 +12,7 @@ from typing import Callable, Optional
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.draft_events import note_generation_submitted
+from mixar.modules.common.i18n import n_
 from .generic_jobs import AsyncGLBJob, StreamingVideoJob, SyncImageJob
 from .helpers import create_scene_flag_listener, get_queue_with_listener
 from .job import Job
@@ -30,7 +31,7 @@ def enqueue_generation(
     display_label: str = "",
     origin_capability_key: str = "",
     graph_node_id: str = "",
-    fail_message: str = "Generation failed",
+    fail_message: str = n_("Generation failed"),
     # GLB-only
     on_imported: Optional[Callable] = None,
     import_options: Optional[dict] = None,

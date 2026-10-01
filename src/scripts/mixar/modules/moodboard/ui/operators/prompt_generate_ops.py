@@ -25,6 +25,8 @@ import bpy
 from bpy.types import Operator
 from mixar.modules.common.analytics.journey_events import generation_attempt, generation_dispatch
 
+from mixar.modules.common.i18n import rpt_
+
 
 def _pane_message(text, level_name):
     """Mirror `text` onto the agent island's pane-message line.
@@ -65,10 +67,8 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
         )
         if not operator_id:
             generation_dispatch(context, attempt, 'unknown_owner')
-            message = (
-                "No Generate action is registered for this prompt "
-                f"({self.owner_type or 'unknown tab'})"
-            )
+            message = rpt_("No Generate action is registered for this prompt ({owner})").format(
+                owner=self.owner_type or rpt_('unknown tab'))
             self.report({'WARNING'}, message)
             _pane_message(message, "LEVEL_WARNING")
             return {'CANCELLED'}
@@ -77,14 +77,15 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             op_callable = getattr(getattr(bpy.ops, module_name), function_name)
         except AttributeError:
             generation_dispatch(context, attempt, 'unavailable')
-            message = f"Operator {operator_id} is not available"
+            message = rpt_("Operator {operator} is not available").format(operator=operator_id)
             self.report({'WARNING'}, message)
             _pane_message(message, "LEVEL_WARNING")
             return {'CANCELLED'}
         try:
             if not op_callable.poll():
                 generation_dispatch(context, attempt, 'poll_failed')
-                message = f"{operator_id} cannot run in the current context"
+                message = rpt_("{operator} cannot run in the current context").format(
+                    operator=operator_id)
                 self.report({'WARNING'}, message)
                 _pane_message(message, "LEVEL_WARNING")
                 return {'CANCELLED'}
@@ -110,13 +111,13 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             # INFO/WARNING into the OWN ReportList bpy_operator.cc gave the
             # nested call — nothing of it escaped to us or to the user. Say
             # the one thing we do know rather than bailing out silently.
-            message = "Generation was cancelled"
+            message = rpt_("Generation was cancelled")
             self.report({'WARNING'}, message)
             _pane_message(message, "LEVEL_WARNING")
             return {'CANCELLED'}
         generation_dispatch(context, attempt,
                             'modal_started' if 'RUNNING_MODAL' in result else 'dispatched')
-        _pane_message("Generation submitted", "LEVEL_INFO")
+        _pane_message(rpt_("Generation submitted"), "LEVEL_INFO")
         return {'FINISHED'}
 
 

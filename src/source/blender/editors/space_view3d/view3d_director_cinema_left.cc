@@ -22,6 +22,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_camera_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
@@ -59,15 +61,15 @@ void lens_label(const bContext *C, char *label, const int size)
 {
   const Camera *camera = active_camera_data(C);
   if (camera == nullptr) {
-    BLI_strncpy(label, "No camera", size);
+    BLI_strncpy(label, IFACE_("No camera"), size);
     return;
   }
   if (camera->type == CAM_ORTHO) {
-    BLI_strncpy(label, "Orthographic", size);
+    BLI_strncpy(label, IFACE_("Orthographic"), size);
     return;
   }
   if (camera->type == CAM_PANO) {
-    BLI_strncpy(label, "Panoramic", size);
+    BLI_strncpy(label, IFACE_("Panoramic"), size);
     return;
   }
   /* Millimetres, never FOV degrees — the Director contract. The row is
@@ -97,13 +99,13 @@ void dof_label(const bContext *C, char *label, const int size)
 {
   PointerRNA dof = {};
   if (!active_camera_dof(C, &dof)) {
-    BLI_strncpy(label, "No camera", size);
+    BLI_strncpy(label, IFACE_("No camera"), size);
     return;
   }
   PropertyRNA *use_prop = RNA_struct_find_property(&dof, "use_dof");
   if (use_prop == nullptr || !RNA_property_boolean_get(&dof, use_prop)) {
     /* The one word that matters: everything is sharp. */
-    BLI_strncpy(label, "Off", size);
+    BLI_strncpy(label, IFACE_("Off"), size);
     return;
   }
   char stop[16] = "";
@@ -198,7 +200,7 @@ void dropdown_row(ui::Block *block,
   const rctf row = cinema_design_rect(
       region, cinema_margin(region) + CINEMA_CARD_PAD, design_y, CINEMA_ROW_W, CINEMA_ROW_H);
   /* Caption sits 12 design px above the row. */
-  cinema_text_left(caption,
+  cinema_text_left(IFACE_(caption),
                    row.xmin,
                    row.ymax + 12.0f * u,
                    CINEMA_FONT_LABEL * u,
@@ -246,7 +248,7 @@ void template_row(ui::Block *block,
   }
   MIXAR_THEME_LOAD(on, CinemaRowTextOn);
   MIXAR_THEME_LOAD(off, CinemaRowTextDisabled);
-  cinema_text_left_fitted(label,
+  cinema_text_left_fitted(IFACE_(label),
                           row.xmin + 12.0f * u,
                           BLI_rctf_cent_y(&row),
                           CINEMA_FONT_VALUE * u,
@@ -255,7 +257,7 @@ void template_row(ui::Block *block,
 
   cinema_qa_record(region, row, "director_template", identifier, -1);
   ui::Button *but = cinema_op_button(
-      block, "MIXAR_OT_director_set_template", row, "Apply this camera template");
+      block, "MIXAR_OT_director_set_template", row, TIP_("Apply this camera template"));
   if (but != nullptr) {
     RNA_enum_set_identifier(
         const_cast<bContext *>(C), ui::button_operator_ptr_ensure(but), "template", identifier);
@@ -296,37 +298,37 @@ void cinema_draw_left_panel(ui::Block *block,
   aspect_label(C, label, sizeof(label));
   dropdown_row(block,
                region,
-               "Aspect Ratio",
+               N_("Aspect Ratio"),
                label,
                242.0f,
                view3d_director_aspect_popup_create,
-               "Choose the output aspect ratio",
+               TIP_("Choose the output aspect ratio"),
                editable);
 
   lens_label(C, label, sizeof(label));
   dropdown_row(block,
                region,
-               "Camera lens",
+               N_("Camera lens"),
                label,
                242.0f + CINEMA_ROW_PITCH,
                view3d_director_lens_popup_create,
-               "Choose the lens type and focal length",
+               TIP_("Choose the lens type and focal length"),
                editable);
 
   dof_label(C, label, sizeof(label));
   dropdown_row(block,
                region,
-               "Depth of Field",
+               N_("Depth of Field"),
                label,
                242.0f + CINEMA_ROW_PITCH * 2.0f,
                view3d_director_dof_popup_create,
-               "Choose what stays sharp and how much of the shot is blurred",
+               TIP_("Choose what stays sharp and how much of the shot is blurred"),
                editable);
 
   /* Card 2 — template styles. */
   const rctf card2 = cinema_design_rect(region, cinema_margin(region), 439.0f, CINEMA_PANEL_W, 220.0f);
   cinema_glass_panel(card2, CINEMA_PANEL_RADIUS * u);
-  cinema_text_left("Template Style",
+  cinema_text_left(IFACE_("Template Style"),
                    card2.xmin + CINEMA_CARD_PAD * u,
                    card2.ymax - 22.0f * u,
                    CINEMA_FONT_LABEL * u,
@@ -358,11 +360,11 @@ void cinema_draw_left_panel(ui::Block *block,
   };
   constexpr float first_template_y = 485.0f;
   const TemplateRow rows[] = {
-      {"None", "NONE", first_template_y},
-      {"Handheld camera", "HANDHELD", first_template_y + CINEMA_LIST_PITCH},
-      {"Z-Fixed", "Z_FIXED", first_template_y + CINEMA_LIST_PITCH * 2.0f},
-      {"Dolly Zoom", "DOLLY_ZOOM", first_template_y + CINEMA_LIST_PITCH * 3.0f},
-      {"Crane", "CRANE", first_template_y + CINEMA_LIST_PITCH * 4.0f},
+      {N_("None"), "NONE", first_template_y},
+      {N_("Handheld camera"), "HANDHELD", first_template_y + CINEMA_LIST_PITCH},
+      {N_("Z-Fixed"), "Z_FIXED", first_template_y + CINEMA_LIST_PITCH * 2.0f},
+      {N_("Dolly Zoom"), "DOLLY_ZOOM", first_template_y + CINEMA_LIST_PITCH * 3.0f},
+      {N_("Crane"), "CRANE", first_template_y + CINEMA_LIST_PITCH * 4.0f},
   };
   for (const TemplateRow &row : rows) {
     template_row(block,
@@ -379,7 +381,7 @@ void cinema_draw_left_panel(ui::Block *block,
   const rctf card3 = cinema_design_rect(
       region, cinema_margin(region), CINEMA_SPEED_CARD_Y, CINEMA_PANEL_W, CINEMA_SPEED_CARD_H);
   cinema_glass_panel(card3, CINEMA_PANEL_RADIUS * u);
-  cinema_text_left("Speed",
+  cinema_text_left(IFACE_("Speed"),
                    card3.xmin + CINEMA_CARD_PAD * u,
                    card3.ymax - 20.0f * u,
                    CINEMA_FONT_LABEL * u,
@@ -429,7 +431,8 @@ void cinema_draw_left_panel(ui::Block *block,
                               0,
                               0,
                               0,
-                              "Speed of the shot: right plays it faster, left slower; the middle is as captured");
+                              TIP_("Speed of the shot: right plays it faster, left slower; the "
+                                   "middle is as captured"));
     ui::block_emboss_set(block, blender::ui::EmbossType::Emboss);
     director_overlay_disable_button(slider, !editable);
     cinema_qa_record(region, meter, "director_speed", "speed", -1);

@@ -27,6 +27,8 @@
 #include "BLI_string.h"
 #include "BLI_utildefines.h"
 
+#include "BLT_translation.hh"
+
 #include "BKE_context.hh"
 
 #include "DNA_scene_types.h"
@@ -76,7 +78,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
     /* Fail closed, like the moodboard drawer: message only, no controls —
      * a bundled client must never resurrect a disabled Marble model. */
     const float *dim = ui::mixar_tokens::mixar_zen().secondary;
-    pane_label_centre("World Labs catalog settings are unavailable",
+    pane_label_centre(IFACE_("World Labs catalog settings are unavailable"),
                        BLI_rctf_cent_x(&panel),
                        BLI_rctf_cent_y(&panel),
                        PANE_FONT * agent_ui_text_unit(),
@@ -106,7 +108,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
   splat_pane_rects_build(
       panel, u, state.model_label.c_str(), mode_items, mode_count, lod_items, lod_count, &rects);
   /* Live queue label sizes Generate (and the thumbs' right edge) before paint. */
-  char gen_label[32];
+  char gen_label[64];
   pane_queue_label(gen_label, sizeof(gen_label), state.active_jobs, state.generating);
   rects.btn_generate = pane_generate_rect(rects.prompt_box, u, gen_label);
 
@@ -152,10 +154,10 @@ void agent_ui_tabsplat_draw(const bContext *C,
     }
   };
   if (rects.mode_dropdown) {
-    dropdown(rects.mode_track, state.mode_prop, "Mode");
+    dropdown(rects.mode_track, state.mode_prop, IFACE_("Mode"));
   }
   if (rects.lod_dropdown) {
-    dropdown(rects.lod_track, state.lod_prop, "LOD");
+    dropdown(rects.lod_track, state.lod_prop, IFACE_("LOD"));
   }
 
   /* Mode segments (Text / Image) + LOD segments — stock wm.context_set_enum
@@ -241,12 +243,12 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                           "mixie.world_labs_pick_image",
                                           blender::wm::OpCallContext::InvokeDefault,
                                           ICON_IMAGE_DATA,
-                                          "Upload Reference",
+                                          IFACE_("Upload Reference"),
                                           bx,
                                           by,
                                           bw,
                                           bh,
-                                          "Upload an input image for world generation");
+                                          TIP_("Upload an input image for world generation"));
       ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
     }
 
@@ -257,12 +259,12 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                   ui::ButtonType::But,
                                   "mixar.pane_capture_viewport",
                                   blender::wm::OpCallContext::InvokeDefault,
-                                  "Capture Viewport",
+                                  IFACE_("Capture Viewport"),
                                   bx,
                                   by,
                                   bw,
                                   bh,
-                                  "Screenshot the 3D viewport as the input image");
+                                  TIP_("Screenshot the 3D viewport as the input image"));
       ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Secondary, u, agent_ui_text_unit());
     }
 
@@ -273,12 +275,12 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                   ui::ButtonType::But,
                                   "wm.context_toggle",
                                   blender::wm::OpCallContext::InvokeDefault,
-                                  "Use Moodboard",
+                                  IFACE_("Use Moodboard"),
                                   bx,
                                   by,
                                   bw,
                                   bh,
-                                  "Use the image selected on the moodboard");
+                                  TIP_("Use the image selected on the moodboard"));
       ui::mixar_style_button(but, ui::MixarComponent::Toggle, ui::MixarVariant::Primary, u, agent_ui_text_unit());
       ui::mixar_button_lit_set(but, state.use_selected);
       if (but) {
@@ -304,7 +306,7 @@ void agent_ui_tabsplat_draw(const bContext *C,
                                 by,
                                 bw,
                                 bh,
-                                "Generate a 3D world from the prompt or input image");
+                                TIP_("Generate a 3D world from the prompt or input image"));
     ui::mixar_style_button(but, ui::MixarComponent::Action, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (but) {
       PointerRNA *op_ptr = ui::button_operator_ptr_ensure(but);
@@ -321,8 +323,9 @@ void agent_ui_tabsplat_draw(const bContext *C,
     ui::mixar_style_button(input_but, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (input_but) {
       ui::button_placeholder_set(input_but,
-                             state.image_mode ? "Describe your scene here... (optional)" :
-                                                "Describe your scene here...");
+                             state.image_mode ?
+                                 IFACE_("Describe your scene here... (optional)") :
+                                 IFACE_("Describe your scene here..."));
       ui::button_flag2_enable(input_but, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
       /* TEXTEDIT_UPDATE is not just Enter-to-submit parity — it is one of the
        * multiline text gates (ui_but_is_multiline_text): without it a tall

@@ -7,6 +7,7 @@
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.moodboard.core.graph_notice import post_graph_notice
 from mixar.modules.moodboard.ui.moodboard_graph_properties import ACTION_TYPES
 
@@ -51,7 +52,8 @@ class MIXIE_OT_moodboard_create_connected_action(Operator):
             ensure_moodboard_region_visible(
                 node.position_x, node.position_y, node.width, node.height,
             )
-        self.report({'INFO'}, f"Created {node.action_type.replace('_', ' ').title()} node")
+        self.report({'INFO'}, rpt_("Created {kind} node").format(
+            kind=node.action_type.replace('_', ' ').title()))
         if context.area:
             context.area.tag_redraw()
         return {'FINISHED'}
@@ -150,7 +152,7 @@ class MIXIE_OT_moodboard_run_action_node(Operator):
                 context.area.tag_redraw()
             return {'CANCELLED'}
         # ASSEMBLE runs locally and queues nothing (run_action_node -> None).
-        message = assemble_summary(node) if job is None else "Node added to the generation queue"
+        message = assemble_summary(node) if job is None else n_("Node added to the generation queue")
         self.report({'INFO'}, message)
         if context.area:
             context.area.tag_redraw()
@@ -465,7 +467,8 @@ class MIXIE_OT_moodboard_select_asset_objects(Operator):
             for obj in view_layer.objects:
                 obj.select_set(False)
         except (AttributeError, RuntimeError) as exc:
-            self.report({'WARNING'}, f"Could not update the selection: {exc}")
+            self.report({'WARNING'}, rpt_("Could not update the selection: {error}").format(
+                error=exc))
             return {'CANCELLED'}
         selected = []
         for name in mesh_source_object_names(context.scene, node.node_id):
@@ -475,7 +478,7 @@ class MIXIE_OT_moodboard_select_asset_objects(Operator):
                 selected.append(obj)
         if selected:
             view_layer.objects.active = selected[0]
-        self.report({'INFO'}, f"Selected {len(selected)} object(s)")
+        self.report({'INFO'}, rpt_("Selected {count} object(s)").format(count=len(selected)))
         return {'FINISHED'}
 
 

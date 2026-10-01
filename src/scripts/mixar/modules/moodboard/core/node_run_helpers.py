@@ -9,6 +9,7 @@ the graph helpers are imported lazily, as ``node_execution`` imports them too.
 
 from __future__ import annotations
 
+from mixar.modules.common.i18n import n_, rpt_
 from .generation_names import sanitize_label
 from .node_action_types import ACTION_TYPES
 
@@ -41,7 +42,7 @@ def producer_ready(scene, node_id: str) -> bool:
 
 def _card_name(node) -> str:
     label = str(getattr(node, "label", "") or "").strip()
-    return label or _ACTION_NAMES.get(node.action_type, "the connected card")
+    return label or rpt_(_ACTION_NAMES.get(node.action_type, n_("the connected card")))
 
 
 def require_upstream_results(scene, node) -> None:
@@ -62,8 +63,10 @@ def require_upstream_results(scene, node) -> None:
         producer = action_node_by_id(scene, link.from_node_id)
         name = _card_name(producer)
         if producer.state in {'QUEUED', 'RUNNING'}:
-            raise ValueError(f"Wait for '{name}' to finish — this card uses its result")
-        raise ValueError(f"Generate '{name}' first — this card uses its result")
+            raise ValueError(rpt_("Wait for '{name}' to finish — this card uses its result").format(
+                name=name))
+        raise ValueError(rpt_("Generate '{name}' first — this card uses its result").format(
+            name=name))
 
 
 def label_image_name(node) -> str:

@@ -5,6 +5,7 @@
 import uuid
 
 from mixar.modules.common.agent_rpc.client import command, call
+from mixar.modules.common.i18n import n_
 from .agent_events import AgentEvent
 from .chat_payloads import build_chat_payload, collect_user_preferences
 from . import turn_events
@@ -54,6 +55,15 @@ class TurnTransport:
         if method in ('chat', 'input'):
             from .rules import rules_snapshot
             payload['rules'] = rules_snapshot(scene)
+        if method in ('chat', 'input'):
+            # Answers can replace folders while a question is pending. Send
+            # the complete snapshot (empty clears) on both entry points so
+            # the resumed agent sees the folders that this session grants.
+            try:
+                from mixar.modules.context_folder.core import attach as folders
+                payload['folder_context'] = folders.folder_context_for_send(scene, payload['session_id'])
+            except Exception:  # noqa: BLE001 — a folder failure never blocks a send
+                pass
         self._session_id = payload['session_id']
         command_id = str(uuid.uuid4())
         self.last_command_id = command_id
@@ -71,8 +81,9 @@ class TurnTransport:
             from .queue_processor import get_event_processor
             for item in target.mixie_chat_messages:
                 if item.sender == 'USER' and item.bubble_id == command_id:
-                    item.delivery_hint = ('delivery uncertain' if result.get('uncertain') else
-                                          '' if result.get('ok', True) else 'could not be delivered')
+                    # English state tokens: the chat renderer translates them when drawn.
+                    item.delivery_hint = (n_('delivery uncertain') if result.get('uncertain') else
+                                          '' if result.get('ok', True) else n_('could not be delivered'))
                     break
             if result.get('ok') is False and not result.get('cancelled') and not result.get('uncertain') and not joining:
                 processor = get_event_processor()

@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Salut, sunt Naman de la Mixar.
+În câteva minute îți voi prezenta aplicația.
+Aceasta este fereastra ta 3D.
+Un spațiu 3D în care te poți deplasa.
+Trage cu butonul din mijloc pentru orbitare, derulează pentru zoom.
+Shift și butonul din mijloc deplasează vederea.
+Încearcă și tu.
+Clic pentru selectare, G pentru mutare,
+R pentru rotire, S pentru scalare.
+Iată câteva scurtături utile.
+Vezi insulița de jos? Este Mixie, agentul tău.
+Fă clic pentru a o deschide.
+Mixie are file.
+În Agent spune simplu ce dorești. Agentul lucrează la scena ta.
+Agentul folosește modele precum Tripo, Meshy și Nano Banana.
+Pentru mai mult control, deschide celelalte file:
+3D, Image, Video sau World Model.
+Alege un model și ajustează setările.
+Tot ce generezi ajunge în bibliotecă.
+Creațiile tale sunt aici.
+Conectează propria bibliotecă pentru ca agentul să folosească resursele tale,
+economisind credite.
+În stânga sus este sertarul scenelor.
+Fiecare scenă are propria filă și propriul agent Mixie.
+Rulează sarcini în paralel și schimbă-le oricând.
+Când scena este gata, treci în Cinema Mode
+pentru a dirija camera și a crea fluxuri video.
+Ideile încep în 2D.
+Trage moodboardul din dreapta sau apasă tilda.
+Este o pânză pentru referințe și concepte.
+Adaugă aici imagini, videoclipuri sau schițe.
+Construiește grafuri de noduri pentru modele generative, ca în ComfyUI.
+Ești în Zen Mode, cea mai simplă vizualizare.
+Cunoști Blender? Treci în Engine Mode.
+Ai întregul spațiu Blender, cu toate panourile și scurtăturile.
+Mixie funcționează în ambele. Alege ce ți se potrivește.
+Să revenim în Zen Mode.
+Programul nostru pentru parteneri creativi oferă credite
+și o comunitate care modelează viitorul AI și 3D.
+Asta e tot. Acum știi unde este fiecare lucru.
+Hai să creăm 3D împreună.

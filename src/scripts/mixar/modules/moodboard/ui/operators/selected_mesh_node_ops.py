@@ -7,6 +7,7 @@
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core.canvas_context import redraw_moodboard_canvases
 from ...core.asset_nodes import add_mesh_references, selected_mesh_objects
 from ...core.moodboard_utils import (
@@ -77,7 +78,8 @@ class MIXIE_OT_add_selected_mesh_to_moodboard(Operator):
         if context.area:
             context.area.tag_redraw()
         added = len(context.scene.mixie_moodboard_asset_nodes) - before
-        self.report({'INFO'}, f"Added {added} mesh reference(s); selected {len(nodes)} on the Moodboard")
+        self.report({'INFO'}, rpt_("Added {added} mesh reference(s); selected {count} on the Moodboard").format(
+            added=added, count=len(nodes)))
         return {'FINISHED'}
 
 

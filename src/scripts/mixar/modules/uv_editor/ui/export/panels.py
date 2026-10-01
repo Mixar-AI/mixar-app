@@ -11,6 +11,7 @@ UV Export panel for the Mixar UV Properties space.
 
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import n_
 from mixar.modules.uv_editor.ui.base.panels import poll_header_panel
 
 
@@ -71,8 +72,8 @@ class MIXAR_UV_PT_export(Panel):
                       icon='ERROR')
             return
 
-        _row(col, "Format").prop(op_props, "mode", text="")
-        _row(col, "Export Tiles").prop(op_props, "export_tiles", text="")
+        _row(col, n_("Format")).prop(op_props, "mode", text="")
+        _row(col, n_("Export Tiles")).prop(op_props, "export_tiles", text="")
 
         # Size is a 2-component vector — render the two components on
         # one row so X and Y sit side by side.
@@ -82,7 +83,7 @@ class MIXAR_UV_PT_export(Panel):
         size_row.prop(op_props, "size", index=0, text="")
         size_row.prop(op_props, "size", index=1, text="")
 
-        _row(col, "Fill Opacity").prop(op_props, "opacity", text="")
+        _row(col, n_("Fill Opacity")).prop(op_props, "opacity", text="")
 
         # All UVs + Modified share a single row in the right gutter.
         flags_split = col.split(factor=_LABEL_FACTOR, align=True)

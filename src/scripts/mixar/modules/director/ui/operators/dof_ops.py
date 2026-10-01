@@ -13,6 +13,7 @@ already tracking, and the whole-stop presets a director asks for by name.
 from bpy.props import EnumProperty, FloatProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core.dof import camera_dof, clear_focus_object, set_focus_object
 from ...core.shot_api import active_shot
 
@@ -65,7 +66,7 @@ class MIXAR_OT_director_set_focus(Operator):
         if not set_focus_object(shot.camera, target):
             self.report({'ERROR'}, "This camera cannot hold a focus object")
             return {'CANCELLED'}
-        self.report({'INFO'}, f"Focused on {target.name}")
+        self.report({'INFO'}, rpt_("Focused on {name}").format(name=target.name))
         return {'FINISHED'}
 
 

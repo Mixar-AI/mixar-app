@@ -19,6 +19,7 @@ from .ui_helpers_mask import draw_mask_settings
 from .ui_helpers_layer_fill import draw_fill_section
 from .ui_helpers_layer_material import draw_material_section
 from .ui_helpers_layer_source import draw_node_group_inputs
+from mixar.modules.common.i18n import n_
 
 
 def _get_draw_channel_settings():
@@ -374,9 +375,9 @@ def _draw_paint_layer_settings(context, layout, layer, mp):
         ch_toggle_box = ch_toggle_container.box()
 
         channel_abbrev = {
-            "Color": "Color", "Metallic": "Metallic", "Roughness": "Roughness",
-            "Normal": "Normal", "Height": "Height", "Transmission": "Transmission",
-            "Emission": "Emission", "Alpha": "Alpha", "Displacement": "Displacement",
+            "Color": n_("Color"), "Metallic": n_("Metallic"), "Roughness": n_("Roughness"),
+            "Normal": n_("Normal"), "Height": n_("Height"), "Transmission": n_("Transmission"),
+            "Emission": n_("Emission"), "Alpha": n_("Alpha"), "Displacement": n_("Displacement"),
         }
 
         buttons_per_row = 5

@@ -23,6 +23,8 @@ import os
 import sys
 from pathlib import Path
 
+from mixar.modules.common.i18n import n_
+
 from .errors import AddonProjectError
 from .links import create_link, is_link, resolves_to
 from .manifest import entrypoint_source_path
@@ -53,7 +55,7 @@ def install_addon(root: Path, entrypoint: str, *, allow_root_package=True) -> di
     except Exception:
         return _failure(
             "install_error",
-            "The add-on compiled but could not be installed automatically",
+            n_("The add-on compiled but could not be installed automatically"),
         )
 
 
@@ -63,9 +65,9 @@ def _install_addon(root: Path, entrypoint: str, allow_root_package: bool) -> dic
         # a nested package stays on the dry-run register/unregister path.
         return _failure(
             "dotted_entrypoint",
-            "Only a top-level module can be auto-installed; move the add-on "
-            "package to the project root or enable it manually from an "
-            "add-ons directory",
+            n_("Only a top-level module can be auto-installed; move the add-on "
+               "package to the project root or enable it manually from an "
+               "add-ons directory"),
         )
     source, link_name, is_package = _resolve_install_source(root, entrypoint)
     if not allow_root_package and source.resolve() == Path(root).resolve():
@@ -74,8 +76,8 @@ def _install_addon(root: Path, entrypoint: str, allow_root_package: bool) -> dic
         # entrypoint got here (legacy manifest, umbrella __init__.py, ...).
         return _failure(
             "workspace_root_install",
-            "The projects folder itself cannot be installed as an add-on; "
-            "each add-on lives in its own subfolder",
+            n_("The projects folder itself cannot be installed as an add-on; "
+               "each add-on lives in its own subfolder"),
         )
 
     import bpy
@@ -99,9 +101,9 @@ def _install_addon(root: Path, entrypoint: str, allow_root_package: bool) -> dic
         except OSError:
             return _failure(
                 "install_link_failed",
-                "The add-on compiled but could not be linked into Blender's "
-                "add-ons directory (creating links may need extra "
-                "privileges on this system)",
+                n_("The add-on compiled but could not be linked into Blender's "
+                   "add-ons directory (creating links may need extra "
+                   "privileges on this system)"),
             )
 
     import addon_utils
@@ -126,13 +128,13 @@ def _install_addon(root: Path, entrypoint: str, allow_root_package: bool) -> dic
                 pass
         return _failure(
             "install_enable_failed",
-            "The add-on was linked but Blender could not enable it",
+            n_("The add-on was linked but Blender could not enable it"),
         )
     return {
         "success": True,
         "installed": True,
         "created_link": created_link,
-        "message": "Add-on installed and enabled",
+        "message": n_("Add-on installed and enabled"),
     }
 
 
@@ -209,7 +211,7 @@ def set_addon_enabled(
     except Exception:
         return _failure(
             "disable_error",
-            "The add-on could not be disabled automatically",
+            n_("The add-on could not be disabled automatically"),
         )
 
 
@@ -244,13 +246,13 @@ def _disable_addon(root: Path, entrypoint: str) -> dict:
     if "." in entrypoint:
         return _failure(
             "dotted_entrypoint",
-            "Only a top-level module can be managed automatically",
+            n_("Only a top-level module can be managed automatically"),
         )
     if not _owned_by_project(root, entrypoint):
         return _failure(
             "not_installed_by_mixar",
-            "The add-on was not installed from this project; manage it from "
-            "Blender's Preferences instead",
+            n_("The add-on was not installed from this project; manage it from "
+               "Blender's Preferences instead"),
         )
 
     import addon_utils
@@ -262,7 +264,7 @@ def _disable_addon(root: Path, entrypoint: str) -> dict:
         "success": True,
         "enabled": False,
         "link_removed": False,
-        "message": "Add-on disabled",
+        "message": n_("Add-on disabled"),
     }
 
 
@@ -281,7 +283,7 @@ def uninstall_addon(root: Path, entrypoint: str) -> dict:
     except Exception:
         return _failure(
             "uninstall_error",
-            "The add-on could not be uninstalled automatically",
+            n_("The add-on could not be uninstalled automatically"),
         )
 
 
@@ -289,7 +291,7 @@ def _uninstall_addon(root: Path, entrypoint: str) -> dict:
     if "." in entrypoint:
         return _failure(
             "dotted_entrypoint",
-            "Only a top-level module can be managed automatically",
+            n_("Only a top-level module can be managed automatically"),
         )
     source, link_name, _is_package = _resolve_install_source(root, entrypoint)
 
@@ -309,8 +311,8 @@ def _uninstall_addon(root: Path, entrypoint: str) -> dict:
         # enabled add-on of this name belongs to someone else.
         return _failure(
             "not_installed_by_mixar",
-            "The add-on was not installed from this project; manage it from "
-            "Blender's Preferences instead",
+            n_("The add-on was not installed from this project; manage it from "
+               "Blender's Preferences instead"),
         )
 
     import addon_utils
@@ -324,8 +326,8 @@ def _uninstall_addon(root: Path, entrypoint: str) -> dict:
         except OSError:
             return _failure(
                 "uninstall_link_failed",
-                "The add-on was disabled but its install link could not be "
-                "removed",
+                n_("The add-on was disabled but its install link could not be "
+                   "removed"),
             )
         try:
             addon_utils.modules_refresh()
@@ -336,8 +338,8 @@ def _uninstall_addon(root: Path, entrypoint: str) -> dict:
         "enabled": False,
         "link_removed": link_removed,
         "message": (
-            "Add-on disabled and uninstalled; project files kept"
+            n_("Add-on disabled and uninstalled; project files kept")
             if link_removed
-            else "Add-on disabled; no install link to remove"
+            else n_("Add-on disabled; no install link to remove")
         ),
     }

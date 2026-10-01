@@ -32,6 +32,8 @@
 #include "BKE_context.hh"
 #include "BKE_wm_runtime.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
@@ -232,7 +234,7 @@ void cinema_draw_camera_list(ui::Block *block,
   Scene *scene = CTX_data_scene(const_cast<bContext *>(C));
 
   cinema_glass_panel(card, CINEMA_PANEL_RADIUS * u);
-  cinema_text_left("My Cameras",
+  cinema_text_left(IFACE_("My Cameras"),
                    card.xmin + CINEMA_CARD_PAD * u,
                    card.ymax - 22.0f * u,
                    CINEMA_FONT_LABEL * u,
@@ -247,7 +249,7 @@ void cinema_draw_camera_list(ui::Block *block,
   MIXAR_THEME_LOAD(add_top, CinemaRowTop);
   const float add_bottom[4] = {0.192f, 0.192f, 0.192f, 1.0f}; /* #313131 */
   cinema_panel(add, BLI_rctf_size_y(&add) * 0.5f, add_top, add_bottom);
-  cinema_text_center("+ Add Camera",
+  cinema_text_center(IFACE_("+ Add Camera"),
                      BLI_rctf_cent_x(&add),
                      BLI_rctf_cent_y(&add),
                      11.0f * u,
@@ -259,14 +261,14 @@ void cinema_draw_camera_list(ui::Block *block,
   cinema_op_button(block,
                    state.has_shot ? "MIXAR_OT_director_new_shot" : "MIXAR_OT_director_start",
                    add,
-                   state.has_shot ? "Create a new shot camera from this view" :
-                                    "Direct the active scene camera from the viewport");
+                   state.has_shot ? TIP_("Create a new shot camera from this view") :
+                                    TIP_("Direct the active scene camera from the viewport"));
 
   blender::Vector<Object *> cameras;
   collect_scene_cameras(scene, &cameras);
   if (cameras.is_empty()) {
     cinema_camera_list_release(region);
-    cinema_text_center("No cameras yet",
+    cinema_text_center(IFACE_("No cameras yet"),
                        BLI_rctf_cent_x(&card),
                        BLI_rctf_cent_y(&card) - 10.0f * u,
                        CINEMA_FONT_VALUE * u,
@@ -353,7 +355,7 @@ void cinema_draw_camera_list(ui::Block *block,
 
     cinema_qa_record(region, select, "director_camera", name, index);
     ui::Button *but = cinema_op_button(
-        block, "MIXAR_OT_director_pick_camera", select, "Direct this camera");
+        block, "MIXAR_OT_director_pick_camera", select, TIP_("Direct this camera"));
     if (but != nullptr) {
       RNA_string_set(ui::button_operator_ptr_ensure(but), "camera_name", name);
       ui::UI_mixar_button_double_click_edits_label(but);
@@ -365,7 +367,7 @@ void cinema_draw_camera_list(ui::Block *block,
      * tag. Renaming an ID through RNA keeps names unique on its own. */
     PointerRNA camera_ptr = RNA_id_pointer_create(&camera->id);
     cinema_text_field(
-        block, &camera_ptr, "name", select, "Rename this camera: double-click or Ctrl+click");
+        block, &camera_ptr, "name", select, TIP_("Rename this camera: double-click or Ctrl+click"));
 
     /* Created LAST and on its own rect, so it is asked before the row and
      * answers only its own pixels. The operator confirms before deleting. */
@@ -374,7 +376,7 @@ void cinema_draw_camera_list(ui::Block *block,
                                                 "MIXAR_OT_director_delete_camera",
                                                 ICON_X,
                                                 remove,
-                                                "Delete this camera and its shots");
+                                                TIP_("Delete this camera and its shots"));
     if (remove_but != nullptr) {
       RNA_string_set(ui::button_operator_ptr_ensure(remove_but), "camera_name", name);
     }

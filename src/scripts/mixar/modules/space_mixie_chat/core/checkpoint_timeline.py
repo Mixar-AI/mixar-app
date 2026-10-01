@@ -16,6 +16,7 @@ re-tag, bubble purge) live here too; the store and the jump itself are in
 """
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -175,6 +176,11 @@ def describe_jump(line: dict, record: dict) -> tuple:
 
 def _jump_message(verb: str, first: int, last: int) -> str:
     if verb == "bring back":
-        return "Brought back your edits"
-    head = "Reverted" if verb == "revert" else "Reapplied"
-    return f"{head} turn {first}" if first == last else f"{head} turns {first}–{last}"
+        return rpt_("Brought back your edits")
+    if verb == "revert":
+        if first == last:
+            return rpt_("Reverted turn {turn}").format(turn=first)
+        return rpt_("Reverted turns {first}–{last}").format(first=first, last=last)
+    if first == last:
+        return rpt_("Reapplied turn {turn}").format(turn=first)
+    return rpt_("Reapplied turns {first}–{last}").format(first=first, last=last)

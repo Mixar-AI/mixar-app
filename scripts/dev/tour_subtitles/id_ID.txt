@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Hai, saya Naman dari Mixar.
+Dalam beberapa menit, saya akan memperkenalkan aplikasi ini.
+Ini viewport Anda.
+Ruang 3D yang dapat Anda jelajahi.
+Seret tombol tengah untuk mengorbit, gulir untuk memperbesar.
+Shift dan seret tombol tengah untuk menggeser tampilan.
+Silakan coba.
+Klik untuk memilih, G untuk memindahkan,
+R untuk memutar, S untuk mengubah skala.
+Berikut beberapa pintasan yang berguna.
+Lihat pulau kecil di bawah? Itulah Mixie, agen Anda.
+Klik untuk membukanya.
+Mixie memiliki beberapa tab.
+Di Agent, jelaskan keinginan Anda dengan kata-kata biasa. Agen akan mengerjakan adegan Anda.
+Agen memakai model seperti Tripo, Meshy, dan Nano Banana.
+Untuk kontrol lebih lanjut, buka tab lainnya:
+3D, Image, Video, atau World Model.
+Pilih model dan sesuaikan pengaturannya.
+Semua hasil generasi masuk ke pustaka.
+Hasil Anda ada di sini.
+Hubungkan pustaka sendiri agar agen memakai aset Anda,
+sehingga menghemat kredit.
+Di kiri atas ada laci adegan.
+Setiap adegan memiliki tab dan agen Mixie sendiri.
+Jalankan tugas berdampingan dan beralih kapan saja.
+Setelah adegan siap, beralihlah ke Cinema Mode
+untuk mengarahkan kamera dan membuat alur kerja video.
+Ide dimulai dari 2D.
+Tarik moodboard dari kanan atau tekan tilde.
+Ini kanvas untuk referensi dan konsep.
+Letakkan gambar, video, atau sketsa di sini.
+Buat graf simpul untuk model generatif, seperti di ComfyUI.
+Anda berada di Zen Mode, tampilan paling sederhana.
+Jika mengenal Blender, beralihlah ke Engine Mode.
+Seluruh ruang kerja Blender tersedia, lengkap dengan panel dan pintasannya.
+Mixie bekerja di keduanya. Pilih yang paling nyaman.
+Mari kembali ke Zen Mode.
+Program mitra kreatif kami memberi Anda kredit
+dan komunitas yang membentuk masa depan AI dan 3D.
+Selesai. Kini Anda tahu letak semuanya.
+Mari membuat 3D bersama.

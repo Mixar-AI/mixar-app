@@ -35,6 +35,7 @@ from typing import Optional
 import gpu
 from gpu_extras.batch import batch_for_shader
 
+from mixar.modules.common.i18n import iface_
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.notifications.toast_renderer_shapes import (
     draw_circle,
@@ -136,10 +137,10 @@ def layout_from_card_rect(card_rect: tuple, ui_scale: float) -> CardLayout:
     gap = config.CONTROL_GAP * s
     bpad = BUTTON_PAD_X * s
     widths = {
-        "pause": _widest((config.CONTROL_PAUSE, config.CONTROL_RESUME), px),
+        "pause": _widest((iface_(config.CONTROL_PAUSE), iface_(config.CONTROL_RESUME)), px),
         "speed": _widest([format_rate(r) for r in config.SPEED_OPTIONS], px),
-        "skip": _text_width(config.CONTROL_SKIP, px),
-        "exit": _text_width(config.CONTROL_EXIT, px),
+        "skip": _text_width(iface_(config.CONTROL_SKIP), px),
+        "exit": _text_width(iface_(config.CONTROL_EXIT), px),
     }
     buttons = {}
     cursor_x = controls[0] + gap * 0.5
@@ -239,7 +240,12 @@ def _draw_subtitle(layout: CardLayout, text: str, px: float, s: float, alpha: fl
     vx0, vy0, vx1, _vy1 = layout.video
     pad_x, pad_y, gap = 12 * s, 5 * s, 6 * s
     max_w = (vx1 - vx0) - 2 * pad_x - 2 * gap
-    lines = srt.wrap(text, max_w, lambda t: _text_width(t, px))[: config.SUBTITLE_MAX_LINES]
+    lines = srt.wrap(text, max_w, lambda t: _text_width(t, px))
+    # Translations can expand. Fit them without silently discarding the
+    # end of the spoken sentence; keep the full cue at the minimum size.
+    while len(lines) > config.SUBTITLE_MAX_LINES and px > 10 * s:
+        px -= s
+        lines = srt.wrap(text, max_w, lambda t: _text_width(t, px))
     line_h = px * 1.3
     w = max(_text_width(ln, px) for ln in lines) + 2 * pad_x
     h = line_h * len(lines) + 2 * pad_y
@@ -297,7 +303,7 @@ def _draw_controls(layout: CardLayout, paused: bool, rate: float, px: float,
         if rect is None:
             continue
         color = CONTROL_TEXT_HOVER if hover == name else config.CONTROL_TEXT
-        draw_text_centered(rect, labels[name], px, _with_alpha(color, alpha))
+        draw_text_centered(rect, iface_(labels[name]), px, _with_alpha(color, alpha))
 
 
 def _draw_gate_caption(layout: CardLayout, px: float, s: float,

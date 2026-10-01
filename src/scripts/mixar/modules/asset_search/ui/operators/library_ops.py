@@ -17,6 +17,7 @@ from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.asset_search.core import library_enrollment as enroll
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -101,7 +102,10 @@ class MIXIE_OT_refresh_libraries(Operator):
         enroll.invalidate_cache()
         rebuild_library_list(context, count=True)
         n = len(context.window_manager.mixie_asset_libraries)
-        self.report({"INFO"}, f"Scanned {n} asset librar" + ("y" if n == 1 else "ies"))
+        if n == 1:
+            self.report({"INFO"}, rpt_("Scanned {count} asset library").format(count=n))
+        else:
+            self.report({"INFO"}, rpt_("Scanned {count} asset libraries").format(count=n))
         return {"FINISHED"}
 
 

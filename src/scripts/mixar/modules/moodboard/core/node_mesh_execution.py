@@ -8,6 +8,7 @@ import base64
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import enqueue_generation
 from mixar.modules.hunyuan.constants import ANIMATE_IMPORT_OPTIONS
 from .media_utils import is_still_item
@@ -159,10 +160,10 @@ def _run_mesh_feature(context, node, operator):
     capability = routing['capability']
     service_key = resolve_service_key(capability, node_service_key(node))
     if not service_key:
-        raise ValueError("This 3D feature is unavailable in the generation catalog")
+        raise ValueError(rpt_("This 3D feature is unavailable in the generation catalog"))
     model = resolve_model_slug(service_key, node_model_slug(node))
     if not model:
-        raise ValueError("No enabled model is available for this feature")
+        raise ValueError(rpt_("No enabled model is available for this feature"))
 
     # Export the exact source objects, not whatever the user last clicked.
     view_layer = context.view_layer
@@ -176,8 +177,8 @@ def _run_mesh_feature(context, node, operator):
     except (AttributeError, RuntimeError) as exc:
         logger.warning("[NodeGraph] source mesh selection failed: %s", exc)
         raise ValueError(
-            'The source mesh cannot be selected. Make it selectable in the '
-            'Outliner or choose another mesh on its Moodboard node.'
+            rpt_('The source mesh cannot be selected. Make it selectable in the '
+                 'Outliner or choose another mesh on its Moodboard node.')
         ) from exc
 
     file_bytes, filename = export_selected_mesh(context, "GLB")
@@ -213,7 +214,7 @@ def _run_mesh_feature(context, node, operator):
         display_label=node.action_type.replace('_', ' ').title(),
         origin_capability_key=capability,
         graph_node_id=node.node_id,
-        fail_message="3D generation failed",
+        fail_message=n_("3D generation failed"),
         scene_flag=routing['scene_flag'],
         on_imported=hook,
         **extra,

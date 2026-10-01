@@ -26,14 +26,13 @@ from ...core.modifier.modifier import (
 from ...core.modifier.modifier_commons import delete_modifier_nodes
 from ...core.node.node_utils import get_active_mpaint_node
 from ...core.subtree.get_subtree import get_mod_tree
-from ...utils.common import get_addon_title
 from .modifier_popup import CHANNEL_OT_ModifiersPopup
 
 
 class MNewMPaintModifier(bpy.types.Operator):
     bl_idname = "wm.m_new_mpaint_modifier"
-    bl_label = "New " + get_addon_title() + " Modifier"
-    bl_description = "New " + get_addon_title() + " Modifier"
+    bl_label = "New Mixar Paint Modifier"
+    bl_description = "New Mixar Paint Modifier"
     bl_options = {"REGISTER", "UNDO"}
 
     type: EnumProperty(
@@ -121,8 +120,8 @@ class MNewMPaintModifier(bpy.types.Operator):
 
 class MMoveMPaintModifier(bpy.types.Operator):
     bl_idname = "wm.m_move_mpaint_modifier"
-    bl_label = "Move " + get_addon_title() + " Modifier"
-    bl_description = "Move " + get_addon_title() + " Modifier"
+    bl_label = "Move Mixar Paint Modifier"
+    bl_description = "Move Mixar Paint Modifier"
     bl_options = {"REGISTER", "UNDO"}
 
     direction: EnumProperty(
@@ -205,8 +204,8 @@ class MMoveMPaintModifier(bpy.types.Operator):
 
 class MRemoveMPaintModifier(bpy.types.Operator):
     bl_idname = "wm.m_remove_mpaint_modifier"
-    bl_label = "Remove " + get_addon_title() + " Modifier"
-    bl_description = "Remove " + get_addon_title() + " Modifier"
+    bl_label = "Remove Mixar Paint Modifier"
+    bl_description = "Remove Mixar Paint Modifier"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod

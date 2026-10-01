@@ -11,6 +11,8 @@ Separated from property definitions to keep moodboard_properties.py focused
 on PropertyGroup class definitions.
 """
 
+from mixar.modules.common.i18n import n_
+
 _CHARACTER_COMPONENT_CATALOG_UNAVAILABLE = [(
     "NONE",
     "Catalog unavailable",
@@ -127,9 +129,9 @@ def _get_imagegen_aspect_ratio_items(self, context):
     except Exception:
         pass
     return [
-        ("1:1", "1:1", "Square"),
-        ("16:9", "16:9", "Widescreen"),
-        ("9:16", "9:16", "Portrait"),
+        ("1:1", "1:1", n_("Square")),
+        ("16:9", "16:9", n_("Widescreen")),
+        ("9:16", "9:16", n_("Portrait")),
     ]
 
 

@@ -6,6 +6,7 @@
 import json
 import math
 
+from mixar.modules.common.i18n import n_, tip_
 from ..constants import PARAMETER_HELP_BY_LABEL
 
 
@@ -33,10 +34,10 @@ def _display(value, choices):
         if str(choice['value']) == str(value):
             return str(choice.get('label') or choice['value'])
     if isinstance(value, bool):
-        return 'On' if value else 'Off'
+        return tip_('On') if value else tip_('Off')
     if isinstance(value, float):
         return f'{value:g}'
-    return str(value) if value != '' else 'Empty'
+    return str(value) if value != '' else tip_('Empty')
 
 
 def _sentence(text):
@@ -55,15 +56,15 @@ def parameter_help(parameter, spec=None):
     kind = parameter.parameter_type
     description = str(getattr(parameter, 'description', '') or '').strip()
     if not description:
-        description = PARAMETER_HELP_BY_LABEL.get(' '.join(label.lower().split()), '')
+        description = tip_(PARAMETER_HELP_BY_LABEL.get(' '.join(label.lower().split()), ''))
     if not description:
-        description = {
-            'ENUM': 'Choose one of the options supported by this model.',
-            'BOOLEAN': 'Turn this model setting on or off.',
-            'INTEGER': 'Enter a whole number for this model setting.',
-            'FLOAT': 'Enter a number for this model setting; decimal values are allowed.',
-            'STRING': 'Enter text for this model setting.',
-        }.get(kind, 'Configure this setting for the selected model.')
+        description = tip_({
+            'ENUM': n_('Choose one of the options supported by this model.'),
+            'BOOLEAN': n_('Turn this model setting on or off.'),
+            'INTEGER': n_('Enter a whole number for this model setting.'),
+            'FLOAT': n_('Enter a number for this model setting; decimal values are allowed.'),
+            'STRING': n_('Enter text for this model setting.'),
+        }.get(kind, n_('Configure this setting for the selected model.')))
     parts = [description]
     choices = _choices(parameter)
     if kind in {'INTEGER', 'FLOAT'}:
@@ -72,13 +73,13 @@ def parameter_help(parameter, spec=None):
             has_low = math.isfinite(low) and low > -1e17
             has_high = math.isfinite(high) and high < 1e17
             if has_low and has_high:
-                parts.append(f'Range: {low:g} to {high:g}')
+                parts.append(tip_('Range: {low:g} to {high:g}').format(low=low, high=high))
             elif has_low:
-                parts.append(f'Minimum: {low:g}')
+                parts.append(tip_('Minimum: {low:g}').format(low=low))
             elif has_high:
-                parts.append(f'Maximum: {high:g}')
+                parts.append(tip_('Maximum: {high:g}').format(high=high))
     if 'default' in spec and spec['default'] is not None:
-        parts.append('Default: ' + _display(spec['default'], choices))
+        parts.append(tip_('Default: {value}').format(value=_display(spec['default'], choices)))
     if getattr(parameter, 'required', False):
-        parts.append('Required for generation')
+        parts.append(tip_('Required for generation'))
     return ' '.join(_sentence(part) for part in parts)

@@ -24,6 +24,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
@@ -194,7 +196,7 @@ void cinema_draw_right_panel(ui::Block *block,
               fps_active,
               "MIXAR_OT_director_set_fps",
               /*enabled=*/true,
-              "Set the scene frame rate",
+              TIP_("Set the scene frame rate"),
               "director_fps",
               [&](ui::Button *but, const int index) {
                 RNA_int_set(ui::button_operator_ptr_ensure(but), "fps", fps_rates[index]);
@@ -226,7 +228,7 @@ void cinema_draw_right_panel(ui::Block *block,
               res_active,
               "MIXAR_OT_director_set_resolution",
               /*enabled=*/true,
-              "Set the output resolution",
+              TIP_("Set the output resolution"),
               "director_resolution",
               [&](ui::Button *but, const int index) {
                 RNA_enum_set_identifier(const_cast<bContext *>(C),
@@ -241,7 +243,7 @@ void cinema_draw_right_panel(ui::Block *block,
   cinema_fill(export_rect, CINEMA_ROW_RADIUS * u, export_col);
   const bool can_export = !state.beats.is_empty();
   const float export_text[4] = {1.0f, 1.0f, 1.0f, can_export ? 1.0f : 0.45f};
-  cinema_text_center_fitted("Export to Moodboard",
+  cinema_text_center_fitted(IFACE_("Export to Moodboard"),
                             BLI_rctf_cent_x(&export_rect),
                             BLI_rctf_cent_y(&export_rect),
                             CINEMA_FONT_ACTION * u,
@@ -250,7 +252,7 @@ void cinema_draw_right_panel(ui::Block *block,
   ui::Button *export_but = cinema_popup_button(block,
                                           view3d_director_render_popup_create,
                                           export_rect,
-                                          "Export keyframes and rendered guides to the Moodboard",
+                                          TIP_("Export keyframes and rendered guides to the Moodboard"),
                                           CinemaPopupSlot::Export);
   director_overlay_disable_button(export_but, !can_export);
   cinema_qa_record(region, export_rect, "director_export", "export", -1);

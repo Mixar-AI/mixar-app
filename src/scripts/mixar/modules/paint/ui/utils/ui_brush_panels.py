@@ -17,6 +17,7 @@ which is displayed in the main properties panel below the CHANNELS/BRUSH tabs.
 import bpy
 
 from . import get_mixar_ui
+from mixar.modules.common.i18n import iface_
 
 
 def _draw_brush_texture_generation(context, layout):
@@ -81,7 +82,7 @@ def _draw_brush_texture_generation(context, layout):
         counter_row = col.row(align=True)
         counter_row.alignment = 'RIGHT'
         counter_row.scale_y = 0.7
-        counter_row.label(text=f"{current_length}/1024 characters")
+        counter_row.label(text=iface_("{count}/1024 characters").format(count=current_length), translate=False)
 
         col.separator(factor=0.5)
 

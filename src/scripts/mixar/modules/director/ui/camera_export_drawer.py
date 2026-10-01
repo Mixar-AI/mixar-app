@@ -11,6 +11,7 @@ and offers the fix, because a surface that disappears is precisely why power
 users never found the Director's own export.
 """
 
+from mixar.modules.common.i18n import iface_
 from ..constants import CAMERA_EXPORT_LABEL
 from ..core.camera_export import current_plan, export_settings
 from ..core.render_request import describe_range
@@ -56,7 +57,7 @@ def draw_camera_export(layout, context) -> None:
     row.label(text="Camera", icon='CAMERA_DATA')
     row.prop(settings, "camera_override", text="")
     if camera is not None and settings.camera_override is None:
-        layout.label(text=f"Using {camera.name}")
+        layout.label(text=iface_("Using {name}").format(name=camera.name), translate=False)
 
     if settings.render_is_running:
         _draw_running(layout, settings)
@@ -73,7 +74,7 @@ def draw_camera_export(layout, context) -> None:
     layout.prop(settings, "range_source", text="Range")
     summary = describe_range(plan, scene.render.fps, scene.render.fps_base)
     if summary:
-        layout.label(text=summary, icon='TIME')
+        layout.label(text=summary, icon='TIME', translate=False)
 
     layout.separator()
     layout.label(text="Videos")

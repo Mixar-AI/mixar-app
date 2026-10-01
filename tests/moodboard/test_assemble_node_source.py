@@ -68,7 +68,7 @@ def test_bone_parent_keeps_world_matrix_and_uses_blender_52_api():
                  "root.parent_type = 'BONE' if bone else 'OBJECT'",
                  "root.matrix_world = placed", "view_layer.update()"):
         assert call in SOURCE, call
-    assert "Could not keep '{root.name}' in place while parenting" in SOURCE
+    assert "Could not keep '{name}' in place while parenting" in SOURCE
 
 
 def test_pure_modules_stay_bpy_free():

@@ -38,6 +38,7 @@ import json
 from typing import Dict, List, Optional, Tuple
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from ..constants import (
     CHAT_INPUT_MAXLEN,
@@ -273,9 +274,9 @@ def _report_handwriting_dropped() -> None:
 
         get_notification_store().push(
             "warning",
-            "Sent without the last handwriting",
-            "Transcription was still running. Anything that lands now stays in "
-            "the message box for your next message.",
+            rpt_("Sent without the last handwriting"),
+            rpt_("Transcription was still running. Anything that lands now stays in "
+                 "the message box for your next message."),
             id="scribble_handwriting_dropped",
         )
     except Exception as exc:  # noqa: BLE001
@@ -655,14 +656,14 @@ def _error_message(error) -> str:
         or "too many 502" in str(error)
     )
     if engine_failed:
-        return "Couldn't read that handwriting — please try writing it again"
+        return rpt_("Couldn't read that handwriting — please try writing it again")
     # A 404 here is the ROUTE missing — a backend without the handwriting
     # half (seen on uat7 during the first in-app pass) — not a missing
     # resource of the user's. The shared classifier's "Resource not found"
     # reads as if something they wrote was lost.
     if getattr(error, "status_code", None) == 404 or "Not Found" in str(error):
-        return ("Handwriting recognition isn't available on this server yet — "
-                "type the message instead")
+        return rpt_("Handwriting recognition isn't available on this server yet — "
+                    "type the message instead")
     return classify_error(error) or sanitize_message(
-        str(error), "Handwriting conversion failed"
+        str(error), rpt_("Handwriting conversion failed")
     )

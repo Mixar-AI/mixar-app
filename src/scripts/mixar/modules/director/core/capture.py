@@ -12,6 +12,7 @@ import uuid
 
 import bpy
 
+from mixar.modules.common.i18n import data_, rpt_
 from .frame_math import frames_per_beat, next_beat_frame
 from .keying import key_camera_pose
 from .retime import note_beat_timing
@@ -115,7 +116,7 @@ def _render_splat_still(scene, camera):
 def _render_viewport_still(context, scene, camera, display_name: str):
     target = find_view3d_context(context)
     if target is None:
-        raise RuntimeError("No 3D viewport is available")
+        raise RuntimeError(rpt_("No 3D viewport is available"))
     window, area, region, space = target
     render = scene.render
     image_settings = render.image_settings
@@ -157,7 +158,7 @@ def _render_viewport_still(context, scene, camera, display_name: str):
                     view_context=True,
                 )
         if 'FINISHED' not in result or not os.path.isfile(path):
-            raise RuntimeError("Viewport capture did not produce an image")
+            raise RuntimeError(rpt_("Viewport capture did not produce an image"))
 
         # Pack the still into the blend WITHOUT boarding it. Captures used to
         # land on the moodboard immediately, which cluttered the board; stills
@@ -216,11 +217,11 @@ def capture_beat(context, shot, beat_seconds: float, *, replace_existing: bool =
     Manual capture keeps the append, which is the repeat-capture quick flow.
     """
     if shot.state != 'DRAFT':
-        raise ValueError("Create a new take before editing a locked shot")
+        raise ValueError(rpt_("Create a new take before editing a locked shot"))
     camera = shot.camera
     scene = shot_scene(shot, context.scene)
     if camera is None or camera.type != 'CAMERA':
-        raise ValueError("Choose a camera before capturing a keyframe")
+        raise ValueError(rpt_("Choose a camera before capturing a keyframe"))
 
     enter_camera_view(context, camera, remember=False)
     world_matrix = camera.matrix_world.copy()
@@ -271,7 +272,7 @@ def capture_beat(context, shot, beat_seconds: float, *, replace_existing: bool =
             context,
             scene,
             camera,
-            f"{shot.name} · Keyframe {number:02d}",
+            data_("{name} · Keyframe {number:02d}").format(name=shot.name, number=number),
         )
         _key_camera(camera, target_frame)
         from .interpolation import apply_interpolation

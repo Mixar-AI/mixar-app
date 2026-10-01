@@ -14,6 +14,7 @@ import os
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from ...core.image_lifecycle import remove_image_safely
 from ...core.world_labs_enqueue import resolve_world_labs_catalog as _catalog_settings
@@ -54,17 +55,17 @@ class MIXIE_OT_world_labs_pick_image(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({"ERROR"}, f"Invalid file path: {e}")
+            self.report({"ERROR"}, rpt_("Invalid file path: {error}").format(error=e))
             return {"CANCELLED"}
         if not os.path.isfile(filepath):
-            self.report({"ERROR"}, f"File not found: {filepath}")
+            self.report({"ERROR"}, rpt_("File not found: {filepath}").format(filepath=filepath))
             return {"CANCELLED"}
 
         try:
             img = bpy.data.images.load(filepath, check_existing=True)
             img.pack()
         except Exception as e:  # noqa: BLE001
-            self.report({"ERROR"}, f"Failed to load image: {e}")
+            self.report({"ERROR"}, rpt_("Failed to load image: {error}").format(error=e))
             return {"CANCELLED"}
 
         tab = _get_world_labs_tab(context)
@@ -73,7 +74,7 @@ class MIXIE_OT_world_labs_pick_image(Operator):
             return {"CANCELLED"}
         tab.reference_image = img
         tab.use_selected_image = False  # show the uploaded-image card
-        self.report({"INFO"}, f"Selected '{img.name}' as input image")
+        self.report({"INFO"}, rpt_("Selected '{name}' as input image").format(name=img.name))
         mark_file_select_executed(self)
         return {"FINISHED"}
 
@@ -167,7 +168,7 @@ class MIXIE_OT_world_labs_generate(Operator):
             try:
                 image_bytes = compress_for_service(image, "world_labs")
             except Exception as e:  # noqa: BLE001
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
             image_b64 = _b64.b64encode(image_bytes).decode()
             label = image.name
@@ -185,7 +186,7 @@ class MIXIE_OT_world_labs_generate(Operator):
                 label=label,
             )
         except Exception as e:  # noqa: BLE001
-            self.report({"ERROR"}, f"Failed to start generation: {e}")
+            self.report({"ERROR"}, rpt_("Failed to start generation: {error}").format(error=e))
             return {"CANCELLED"}
 
         if not job:
@@ -243,7 +244,7 @@ class MIXIE_OT_world_labs_generate(Operator):
                 image_bytes = compress_for_service(img, "world_labs")
             except Exception as e:  # noqa: BLE001
                 set_agent_gen_reason(context, f"Failed to process image: {e}")
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
             image_b64 = _b64.b64encode(image_bytes).decode()
             label = img.name

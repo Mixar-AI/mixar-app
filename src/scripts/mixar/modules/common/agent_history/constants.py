@@ -7,6 +7,8 @@ CAPABILITY = 'agent_history_v1'
 # v2: image bytes leave the socket; agent.history_sync sends {"blobs": "reference"}
 # and the archive thread fetches GET /agent/history/blob over HTTP.
 CAPABILITY_V2 = 'agent_history_v2'
+# Stable across reconnects; recovery removes only the archive sync warning.
+SYNC_NOTICE_ID = 'mixar-agent-history-sync'
 POLL_SECONDS = 2.0
 REQUEST_TIMEOUT = 20.0  # main-thread scene capture only
 # A sync reply is bound to its connection: wait for it (or the disconnect) instead

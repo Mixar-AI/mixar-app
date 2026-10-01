@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Sveiki, aš Naman iš Mixar.
+Per kelias minutes parodysiu jums programą.
+Tai jūsų 3D rodinys.
+Trimatė erdvė, kurioje galite judėti.
+Sukite tempdami viduriniu mygtuku, keiskite mastelį ratuku.
+Shift ir vidurinis mygtukas pastumia vaizdą.
+Išbandykite patys.
+Spustelėkite pasirinkti, G — perkelti,
+R — pasukti, S — keisti mastelį.
+Štai keli naudingi spartieji klavišai.
+Matote salelę apačioje? Tai Mixie, jūsų agentas.
+Spustelėkite atidaryti.
+Mixie turi korteles.
+Agent kortelėje paprastai pasakykite, ko norite. Agentas dirbs su scena.
+Agentas naudoja tokius modelius kaip Tripo, Meshy ir Nano Banana.
+Norėdami daugiau valdymo, atidarykite kitas korteles:
+3D, Image, Video arba World Model.
+Pasirinkite modelį ir pakeiskite nuostatas.
+Viskas, ką sugeneruojate, patenka į biblioteką.
+Jūsų kūriniai yra čia.
+Prijunkite savo biblioteką, kad agentas naudotų jūsų išteklius,
+ir taupytų kreditus.
+Viršuje kairėje yra scenų stalčius.
+Kiekviena scena turi savo kortelę ir Mixie agentą.
+Vykdykite užduotis lygiagrečiai ir bet kada jas perjunkite.
+Kai scena paruošta, pereikite į Cinema Mode,
+kad valdytumėte kamerą ir kurtumėte vaizdo darbo eigas.
+Idėjos prasideda nuo 2D.
+Ištraukite moodboard iš dešinės arba paspauskite tildę.
+Tai drobė pavyzdžiams ir idėjoms.
+Vilkite čia vaizdus, vaizdo įrašus ar eskizus.
+Kurkite generatyvinių modelių mazgų grafus kaip ComfyUI.
+Esate Zen Mode — paprasčiausiame rodinyje.
+Mokate Blender? Pereikite į Engine Mode.
+Čia visa Blender darbo erdvė su visais skydeliais ir sparčiaisiais klavišais.
+Mixie veikia abiejuose. Rinkitės patogesnį.
+Grįžkime į Zen Mode.
+Mūsų kūrybinių partnerių programa suteikia kreditų
+ir bendruomenę, kuriančią AI ir 3D ateitį.
+Štai ir viskas. Dabar žinote, kur ką rasti.
+Kurkime 3D kartu.

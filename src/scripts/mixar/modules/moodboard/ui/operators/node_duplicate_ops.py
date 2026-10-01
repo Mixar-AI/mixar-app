@@ -15,6 +15,7 @@ one binding is a worse deal than one obvious one.
 import bpy
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.moodboard.core import node_duplicate
 
 
@@ -48,7 +49,8 @@ class MIXIE_OT_moodboard_duplicate_nodes(Operator):
             self.report({'WARNING'}, "No inference nodes selected")
             return {'CANCELLED'}
         _tag_redraw(context)
-        self.report({'INFO'}, f"Duplicated {len(created)} node(s) - move to position")
+        self.report({'INFO'}, rpt_("Duplicated {count} node(s) - move to position").format(
+            count=len(created)))
         # The copies land on top of the originals; grab mode places them, the
         # same hand-off Shift+D and image duplication use.
         bpy.ops.mixie.moodboard_grab('INVOKE_DEFAULT')

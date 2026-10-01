@@ -22,6 +22,7 @@ from mixar.modules.common.analytics.draft_events import note_generation_submitte
 from mixar.modules.common.api.services.job_queue_service import (
     get_job_queue_service,
 )
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.job_queue import Job, get_queue
 from mixar.modules.common.job_queue.core.job import FAILED_BACKEND_STATUSES
 from mixar.modules.common.job_queue.constants import FEATURE_LOOKDEV360
@@ -136,15 +137,15 @@ class Lookdev360Job(Job):
                 self._extract_texture_urls(result)
             return ("DONE", [])
         if status in FAILED_BACKEND_STATUSES:
-            self.error = (inner.get("error") or "PBR generation failed")
-            self.user_message = inner.get("user_message", "") or "PBR generation failed"
+            self.error = (inner.get("error") or n_("PBR generation failed"))
+            self.user_message = inner.get("user_message", "") or n_("PBR generation failed")
             return ("FAIL", [])
         return ("WAIT", [])
 
     def handle_result(self, result_files, on_done, on_error):
         """Download textures in bg thread, apply as fill layers on main thread."""
         if not self._texture_urls.get("basecolor"):
-            on_error("Missing BaseColor texture URL in server response")
+            on_error(n_("Missing BaseColor texture URL in server response"))
             return True
 
         urls = dict(self._texture_urls)
@@ -164,7 +165,7 @@ class Lookdev360Job(Job):
                 try:
                     albedo_path = download_texture_to_tempfile(urls["basecolor"])
                 except Exception as e:
-                    err = f"Failed to download BaseColor texture: {e}"
+                    err = rpt_("Failed to download BaseColor texture: {error}").format(error=e)
 
                     def _fail():
                         on_error(err)
@@ -196,7 +197,7 @@ class Lookdev360Job(Job):
                             albedo_path, f"pbr_basecolor_{timestamp}"
                         )
                     except Exception as e:
-                        on_error(f"Failed to load BaseColor texture: {e}")
+                        on_error(rpt_("Failed to load BaseColor texture: {error}").format(error=e))
                         return None
 
                     optional_imgs = {}
@@ -219,7 +220,7 @@ class Lookdev360Job(Job):
 
                 bpy.app.timers.register(_apply, first_interval=0.0)
             except Exception as e:
-                err = f"Unexpected error during texture download: {e}"
+                err = rpt_("Unexpected error during texture download: {error}").format(error=e)
                 logger.error("[Lookdev360] %s", err)
 
                 def _fail_outer():
@@ -312,7 +313,7 @@ def _apply_textures(
                 os.unlink(stored_obj_path)
         except OSError:
             pass
-        on_error("Failed to apply textures to any object")
+        on_error(n_("Failed to apply textures to any object"))
         return
 
     # Set scene flags so the "Restore Materials" button appears in the sidebar

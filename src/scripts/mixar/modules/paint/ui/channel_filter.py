@@ -9,6 +9,7 @@ used in the Substance 3D Painter-style layer panel.
 """
 
 from ..core.node.node_utils import get_active_mpaint_node
+from mixar.modules.common.i18n import tip_
 
 
 def get_channel_filter_items(self, context):
@@ -35,7 +36,7 @@ def get_channel_filter_items(self, context):
             # Use channel index as identifier for easy lookup
             identifier = str(i)
             name = channel.name
-            description = f"Show {channel.name} blend mode and opacity"
+            description = tip_("Show {channel} blend mode and opacity").format(channel=channel.name)
 
             # Icon based on channel type/name
             icon_map = {

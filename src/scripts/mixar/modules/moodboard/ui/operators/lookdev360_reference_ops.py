@@ -15,6 +15,7 @@ from bpy.types import Operator
 import os
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 from ....common.utils.file_select_utils import file_select_guard, mark_file_select_executed
 from ...core.lookdev360_utils import restore_material_checkpoint
 from ...core.image_lifecycle import remove_image_safely
@@ -65,11 +66,11 @@ class MIXIE_OT_lookdev360_upload_reference(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({'ERROR'}, f"Invalid file path: {e}")
+            self.report({'ERROR'}, rpt_("Invalid file path: {error}").format(error=e))
             return {'CANCELLED'}
 
         if not os.path.isfile(filepath):
-            self.report({'ERROR'}, f"File not found: {filepath}")
+            self.report({'ERROR'}, rpt_("File not found: {filepath}").format(filepath=filepath))
             return {'CANCELLED'}
 
         # Load the image
@@ -77,7 +78,7 @@ class MIXIE_OT_lookdev360_upload_reference(Operator):
             img = bpy.data.images.load(filepath, check_existing=True)
             img.pack()
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to load image: {e}")
+            self.report({'ERROR'}, rpt_("Failed to load image: {error}").format(error=e))
             return {'CANCELLED'}
 
         # Set as reference image in sidebar properties
@@ -92,7 +93,7 @@ class MIXIE_OT_lookdev360_upload_reference(Operator):
             if area.type == 'MIXIE':
                 area.tag_redraw()
 
-        self.report({'INFO'}, f"Added '{img.name}' as reference image")
+        self.report({'INFO'}, rpt_("Added '{name}' as reference image").format(name=img.name))
         mark_file_select_executed(self)
         return {'FINISHED'}
 
@@ -155,11 +156,11 @@ class MIXIE_OT_lookdev360_pick_style_image(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({'ERROR'}, f"Invalid file path: {e}")
+            self.report({'ERROR'}, rpt_("Invalid file path: {error}").format(error=e))
             return {'CANCELLED'}
 
         if not os.path.isfile(filepath):
-            self.report({'ERROR'}, f"File not found: {filepath}")
+            self.report({'ERROR'}, rpt_("File not found: {filepath}").format(filepath=filepath))
             return {'CANCELLED'}
 
         # Load the image
@@ -167,13 +168,13 @@ class MIXIE_OT_lookdev360_pick_style_image(Operator):
             img = bpy.data.images.load(filepath, check_existing=True)
             img.pack()
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to load image: {e}")
+            self.report({'ERROR'}, rpt_("Failed to load image: {error}").format(error=e))
             return {'CANCELLED'}
 
         # Set as style image
         context.scene.mixie_lookdev360_style_image = img
 
-        self.report({'INFO'}, f"Selected '{img.name}' as style image")
+        self.report({'INFO'}, rpt_("Selected '{name}' as style image").format(name=img.name))
         mark_file_select_executed(self)
         return {'FINISHED'}
 

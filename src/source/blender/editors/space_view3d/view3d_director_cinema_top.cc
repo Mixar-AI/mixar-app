@@ -22,6 +22,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_screen_types.h"
 #include "DNA_view3d_types.h"
 
@@ -32,6 +34,7 @@
 #include "UI_interface.hh"
 #include "UI_interface_c.hh"
 #include "UI_interface_icons.hh"
+#include "UI_mixar_chrome.hh"
 #include "UI_resources.hh"
 
 #include "view3d_director.hh"
@@ -59,8 +62,8 @@ constexpr float STRIP_Y = 159.0f;
 
 /**
  * Mixar banner chip: the brand gradient pill with the round logo chip, the
- * "mixar" wordmark, the mode name and the version. INERT — no button, no QA
- * record, no tooltip; it only names what the surface is.
+ * "mixar" wordmark, the mode name and the small "BETA" stage-tag label. INERT —
+ * no button, no QA record, no tooltip; it only names what the surface is.
  */
 void brand_chip(const rctf &pill)
 {
@@ -85,17 +88,31 @@ void brand_chip(const rctf &pill)
   cinema_text_left("mixar", wordmark_x, cy, CINEMA_FONT_VALUE * u, value_col);
   const float mode_x = wordmark_x + cinema_text_width("mixar", CINEMA_FONT_VALUE * u) +
                        CINEMA_BRAND_GAP * u;
-  /* The version is right-aligned, so the mode name is measured against where
-   * it starts: at the smallest fit the two used to meet in the middle. */
-  const float version_w = cinema_text_width("V1", CINEMA_FONT_LABEL * u);
-  const float version_x = pill.xmax - CINEMA_BRAND_VERSION_PAD * u - version_w;
-  cinema_text_left_fitted("Cinema Mode",
-                          mode_x,
-                          cy,
-                          CINEMA_FONT_VALUE * u,
-                          version_x - CINEMA_BRAND_GAP * u - mode_x,
-                          label_col);
-  cinema_text_left("V1", version_x, cy, CINEMA_FONT_LABEL * u, label_col);
+  /* The stage tag follows the mode name as a small rounded label, the same
+   * recipe the topbar button draws (`mixar_chrome::cinema_tag_*`). The name is
+   * fitted against the room the tag leaves, so at the smallest fit the two
+   * never meet. */
+  namespace chrome = ui::mixar_chrome;
+  const char *stage_tag = chrome::cinema_stage_tag;
+  const float tag_font = CINEMA_FONT_VALUE * chrome::cinema_tag_text_scale * u;
+  const float tag_w = cinema_text_width(stage_tag, tag_font) + 2.0f * chrome::cinema_tag_pad_x * u;
+  const float tag_gap = chrome::cinema_tag_gap * u;
+  const float name_room = pill.xmax - CINEMA_BRAND_TAG_PAD * u - tag_w - tag_gap - mode_x;
+  const char *mode_name = IFACE_("Cinema Mode");
+  const float name_w = std::min(cinema_text_width(mode_name, CINEMA_FONT_VALUE * u), name_room);
+  cinema_text_left_fitted(mode_name, mode_x, cy, CINEMA_FONT_VALUE * u, name_room, label_col);
+
+  const float tag_h = chrome::cinema_tag_height * u;
+  const float tag_x = std::round(mode_x + name_w + tag_gap);
+  const rctf tag = {tag_x, tag_x + std::round(tag_w), cy - tag_h * 0.5f, cy + tag_h * 0.5f};
+  const float tag_radius = chrome::cinema_tag_radius * u;
+  const float tag_fill[4] = {
+      value_col[0], value_col[1], value_col[2], value_col[3] * chrome::cinema_tag_fill_alpha};
+  const float tag_border[4] = {
+      value_col[0], value_col[1], value_col[2], value_col[3] * chrome::cinema_tag_border_alpha};
+  cinema_fill(tag, tag_radius, tag_fill);
+  cinema_outline(tag, tag_radius, tag_border, u);
+  cinema_text_center(stage_tag, BLI_rctf_cent_x(&tag), cy, tag_font, value_col);
 
   /* The mark last: the icon pass leaves its own blend state behind, which
    * the primitives above would otherwise inherit. Same call as the Agent
@@ -142,8 +159,8 @@ void track_eyedropper(ui::Block *block,
       "MIXAR_OT_director_pick_track_target",
       ICON_EYEDROPPER,
       chip,
-      tracking ? "Stop tracking the picked object" :
-                 "Eyedropper: pick an object for the camera to keep pointing at");
+      tracking ? TIP_("Stop tracking the picked object") :
+                 TIP_("Eyedropper: pick an object for the camera to keep pointing at"));
   if (but != nullptr) {
     RNA_boolean_set(ui::button_operator_ptr_ensure(but), "clear", tracking);
     director_overlay_disable_button(but, !enabled);
@@ -176,7 +193,7 @@ void grid_chip(ui::Block *block, const bContext *C, const ARegion *region, const
                      "MIXAR_OT_director_toggle_grid",
                      ICON_GRID,
                      chip,
-                     shown ? "Hide grid lines" : "Show grid lines");
+                     shown ? TIP_("Hide grid lines") : TIP_("Show grid lines"));
   cinema_qa_record(region, chip, "director_grid", shown ? "hide" : "show", -1);
 }
 
@@ -223,9 +240,9 @@ void walk_chip(ui::Block *block,
                      "MIXAR_OT_director_navigate",
                      ICON_VIEW_CAMERA,
                      chip,
-                     walking ? "Stop walking" :
-                               "Walk the camera: W A S D, Q E, Shift to sprint, " WALK_SLOW_KEY
-                               " to creep, hold the left button to look. Click again to stop");
+                     walking ? TIP_("Stop walking") :
+                               TIP_("Walk the camera: W A S D, Q E, Shift to sprint, " WALK_SLOW_KEY
+                                    " to creep, hold the left button to look. Click again to stop"));
   cinema_qa_record(region, chip, "director_walk", walking ? "stop" : "start", -1);
 }
 
@@ -267,16 +284,16 @@ void cinema_draw_top_strip(ui::Block *block,
   constexpr int RESTING_HINTS = 2;
   constexpr int WALKING_HINTS = 4;
   const Hint resting_hints[RESTING_HINTS] = {
-      {0.0f, {"O"}, 1, "Aerial view", false},
-      {0.0f, {"I"}, 1, "Insert keyframe", false},
+      {0.0f, {"O"}, 1, N_("Aerial view"), false},
+      {0.0f, {"I"}, 1, N_("Insert keyframe"), false},
   };
   /* Most useful first: a row too narrow for all of them drops from the END,
    * so the speed modifiers — refinements — are what give way first. */
   const Hint walking_hints[WALKING_HINTS] = {
-      {0.0f, {"W", "A", "S", "D"}, 4, "Move around", true},
-      {0.0f, {"Q", "E"}, 2, "Up / down", false},
-      {0.0f, {"LMB"}, 1, "Hold to look", false},
-      {0.0f, {"Shift", WALK_SLOW_KEY}, 2, "Faster / slower", false},
+      {0.0f, {"W", "A", "S", "D"}, 4, N_("Move around"), true},
+      {0.0f, {"Q", "E"}, 2, N_("Up / down"), false},
+      {0.0f, {"LMB"}, 1, N_("Hold to look"), false},
+      {0.0f, {"Shift", WALK_SLOW_KEY}, 2, N_("Faster / slower"), false},
   };
   /* Groups pack at CINEMA_HINT_GAP from the row's left edge. `x` is resolved
    * here from the measured label widths, once the row's span is known. */
@@ -311,7 +328,7 @@ void cinema_draw_top_strip(ui::Block *block,
   float row_need = 12.0f + CINEMA_PHONE_H * 3.0f + CINEMA_STRIP_GAP * 2.0f;
   for (int index = 0; index < hint_count; index++) {
     hint_w[index] = caps_design_w(hints[index]) + 8.0f +
-                    cinema_text_width(hints[index].label, CINEMA_FONT_LABEL * u) / u;
+                    cinema_text_width(IFACE_(hints[index].label), CINEMA_FONT_LABEL * u) / u;
     row_need += hint_w[index] + (index > 0 ? CINEMA_HINT_GAP : 0.0f);
   }
   /* The row's span, in design px. Hints start on its left edge and the chips
@@ -412,7 +429,7 @@ void cinema_draw_top_strip(ui::Block *block,
     for (int key = hint.stacked ? 1 : 0; key < hint.key_count; key++) {
       x += cinema_keycap(x, row_y, hint.keys[key]) + 2.0f * u;
     }
-    cinema_text_left(hint.label,
+    cinema_text_left(IFACE_(hint.label),
                      x + 8.0f * u,
                      row_y + CINEMA_KEYCAP_H * u * 0.5f,
                      CINEMA_FONT_LABEL * u,

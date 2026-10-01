@@ -13,6 +13,7 @@ import bpy
 from bpy.types import Operator
 from bpy.props import FloatProperty
 
+from mixar.modules.common.i18n import rpt_
 from ...core.canvas_context import redraw_moodboard_canvases
 from ...core.image_lifecycle import release_all_moodboard_images
 from ...core.moodboard_utils import stamp_moodboard_item_added
@@ -126,7 +127,7 @@ class MIXIE_OT_flip_horizontal(Operator):
         tag_mixie_redraw(context)
 
         count = len(selected_images)
-        self.report({'INFO'}, f"Flipped {count} image(s) horizontally")
+        self.report({'INFO'}, rpt_("Flipped {count} image(s) horizontally").format(count=count))
         return {'FINISHED'}
 
 
@@ -152,7 +153,7 @@ class MIXIE_OT_flip_vertical(Operator):
         tag_mixie_redraw(context)
 
         count = len(selected_images)
-        self.report({'INFO'}, f"Flipped {count} image(s) vertically")
+        self.report({'INFO'}, rpt_("Flipped {count} image(s) vertically").format(count=count))
         return {'FINISHED'}
 
 
@@ -186,7 +187,8 @@ class MIXIE_OT_rotate_images(Operator):
         tag_mixie_redraw(context)
 
         count = len(selected_images)
-        self.report({'INFO'}, f"Rotated {count} image(s) by {self.angle} degrees")
+        self.report({'INFO'}, rpt_("Rotated {count} image(s) by {angle} degrees").format(
+            count=count, angle=self.angle))
         return {'FINISHED'}
 
 
@@ -233,18 +235,18 @@ class MIXIE_OT_clear_moodboard(Operator):
 
         parts = []
         if image_count > 0:
-            parts.append(f"{image_count} image(s)")
+            parts.append(rpt_("{count} image(s)").format(count=image_count))
         if textbox_count > 0:
-            parts.append(f"{textbox_count} text box(es)")
+            parts.append(rpt_("{count} text box(es)").format(count=textbox_count))
         if frame_count > 0:
-            parts.append(f"{frame_count} frame(s)")
+            parts.append(rpt_("{count} frame(s)").format(count=frame_count))
         if node_count > 0:
-            parts.append(f"{node_count} node(s)")
+            parts.append(rpt_("{count} node(s)").format(count=node_count))
         if link_count > 0:
-            parts.append(f"{link_count} connection(s)")
+            parts.append(rpt_("{count} connection(s)").format(count=link_count))
         if annotation_count > 0:
-            parts.append(f"{annotation_count} annotation stroke(s)")
-        self.report({'INFO'}, f"Cleared {', '.join(parts)}")
+            parts.append(rpt_("{count} annotation stroke(s)").format(count=annotation_count))
+        self.report({'INFO'}, rpt_("Cleared {items}").format(items=', '.join(parts)))
         return {'FINISHED'}
 
 
@@ -279,7 +281,8 @@ class MIXIE_OT_moodboard_duplicate(Operator):
             if node_count:
                 tag_mixie_redraw(context)
                 self.report(
-                    {'INFO'}, f"Duplicated {node_count} node(s) - move to position"
+                    {'INFO'}, rpt_("Duplicated {node_count} node(s) - move to position").format(
+                        node_count=node_count)
                 )
                 # Same hand-off as the image path below: the copies land on the
                 # originals and grab mode places them.
@@ -365,7 +368,8 @@ class MIXIE_OT_moodboard_duplicate(Operator):
         tag_mixie_redraw(context)
 
         duplicated_count += node_count
-        self.report({'INFO'}, f"Duplicated {duplicated_count} item(s) - move to position")
+        self.report({'INFO'}, rpt_("Duplicated {duplicated_count} item(s) - move to position").format(
+            duplicated_count=duplicated_count))
 
         # Invoke grab mode for the duplicated items
         bpy.ops.mixie.moodboard_grab('INVOKE_DEFAULT')
@@ -412,7 +416,7 @@ class MIXIE_OT_moodboard_select_all(Operator):
         # no card claims the inspector.
         scene.mixie_moodboard_active_node_id = ""
         tag_mixie_redraw(context)
-        self.report({'INFO'}, f"Selected {count} item(s)")
+        self.report({'INFO'}, rpt_("Selected {count} item(s)").format(count=count))
         return {'FINISHED'}
 
 

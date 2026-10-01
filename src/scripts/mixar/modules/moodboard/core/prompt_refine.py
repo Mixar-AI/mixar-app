@@ -41,6 +41,7 @@ from typing import Callable, Optional
 import bpy
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 logger = get_logger(__name__)
 
@@ -348,7 +349,7 @@ def refine(slot: _Slot, on_done: Callable[[bool, str], None]) -> bool:
     """
     prompt = slot.read().strip()
     if not prompt:
-        on_done(False, "Write a prompt first")
+        on_done(False, n_("Write a prompt first"))
         return False
     if slot.is_running():
         return False
@@ -373,7 +374,7 @@ def refine(slot: _Slot, on_done: Callable[[bool, str], None]) -> bool:
         original = data.get("original_prompt") or prompt
 
         if not refined:
-            _finish(False, "Refinement returned nothing — prompt unchanged")
+            _finish(False, n_("Refinement returned nothing — prompt unchanged"))
             return
         if not slot.alive():
             _finish(False, "")
@@ -382,7 +383,7 @@ def refine(slot: _Slot, on_done: Callable[[bool, str], None]) -> bool:
             # Nothing gained, and offering a Revert would promise an undo of
             # a change that never happened. An EARLIER refinement's stash is
             # left standing — that undo is still real.
-            _finish(True, "Prompt is already specific — left unchanged")
+            _finish(True, n_("Prompt is already specific — left unchanged"))
             return
 
         # Refine stays available after a refinement, so this can be the
@@ -391,7 +392,7 @@ def refine(slot: _Slot, on_done: Callable[[bool, str], None]) -> bool:
         if not slot.has_stash():
             slot.stash(original)
         slot.write(refined)
-        _finish(True, "Prompt refined")
+        _finish(True, n_("Prompt refined"))
 
     def _on_error(error):
         logger.error("[PromptRefine] refine failed: %s", error)
@@ -439,9 +440,9 @@ def _error_message(error) -> str:
     """
     status = getattr(error, "status_code", None)
     if status == 409:
-        return "Prompt refinement is unavailable for this model"
+        return n_("Prompt refinement is unavailable for this model")
     if status == 502:
-        return "Refinement failed — no credits were used, please try again"
+        return n_("Refinement failed — no credits were used, please try again")
 
     try:
         from mixar.modules.common.job_queue.core.error_helpers import (
@@ -451,8 +452,8 @@ def _error_message(error) -> str:
     except Exception:
         # The classifier is a nicety; losing it must not cost the user the
         # only signal that their click did nothing.
-        return "Prompt refinement failed"
+        return n_("Prompt refinement failed")
 
     return classify_error(error) or sanitize_message(
-        str(error), "Prompt refinement failed"
+        str(error), n_("Prompt refinement failed")
     )

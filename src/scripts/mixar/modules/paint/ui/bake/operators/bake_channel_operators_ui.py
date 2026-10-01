@@ -7,6 +7,7 @@
 
 from ....core.layer.layer_utils import get_root_height_channel
 from ....utils.blender_commons import get_active_object, is_bl_equal
+from mixar.modules.common.i18n import n_
 
 
 def draw_bake_channels_ui(operator, context, layout):
@@ -58,10 +59,10 @@ def draw_bake_channels_ui(operator, context, layout):
     _draw_custom_resolution(operator, col)
 
     # Samples
-    _draw_property_row(col, "Samples:", operator, "samples")
+    _draw_property_row(col, n_("Samples:"), operator, "samples")
 
     # AA Level
-    _draw_property_row(col, "AA Level:", operator, "aa_level")
+    _draw_property_row(col, n_("AA Level:"), operator, "aa_level")
 
     # Margin
     _draw_margin_row(operator, col)
@@ -74,7 +75,7 @@ def draw_bake_channels_ui(operator, context, layout):
     _draw_bake_device(operator, col)
 
     # Interpolation
-    _draw_property_row(col, "Interpolation:", operator, "interpolation")
+    _draw_property_row(col, n_("Interpolation:"), operator, "interpolation")
 
     # UV Map
     _draw_uv_map(operator, col)
@@ -83,26 +84,26 @@ def draw_bake_channels_ui(operator, context, layout):
     _draw_vcol_force_first(operator, col, active_channel)
 
     # UDIM
-    _draw_checkbox_row(col, "Use UDIM:", operator, "use_udim")
+    _draw_checkbox_row(col, n_("Use UDIM:"), operator, "use_udim")
 
     # FXAA
-    _draw_checkbox_row(col, "Use FXAA:", operator, "fxaa")
+    _draw_checkbox_row(col, n_("Use FXAA:"), operator, "fxaa")
 
     # Denoise
-    _draw_checkbox_row(col, "Use Denoise:", operator, "denoise")
+    _draw_checkbox_row(col, n_("Use Denoise:"), operator, "denoise")
 
     # Dithering
     if any_color_channel:
         _draw_dithering(operator, col)
 
     # Use OSL
-    _draw_checkbox_row(col, "Use OSL:", operator, "use_osl")
+    _draw_checkbox_row(col, n_("Use OSL:"), operator, "use_osl")
 
     # Force Bake All Polygons
-    _draw_checkbox_row(col, "Force All Poly:", operator, "force_bake_all_polygons")
+    _draw_checkbox_row(col, n_("Force All Poly:"), operator, "force_bake_all_polygons")
 
     # Bake Disabled Layers
-    _draw_checkbox_row(col, "Bake Disabled:", operator, "bake_disabled_layers")
+    _draw_checkbox_row(col, n_("Bake Disabled:"), operator, "bake_disabled_layers")
 
     col.separator(factor=0.8)
     main_col.separator(factor=0.8)

@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Attach .obj files (#1268) — attach-time local import, names-only wire.
+"""Attach model files — attach-time local import, names-only wire.
 
-Picking/dropping a .obj in the chat imports it into the scene IMMEDIATELY
+Picking/dropping a model in the chat imports it into the scene IMMEDIATELY
 (client-side), the attachment records the created object names, and only
 those names reach the backend (parallel to attachment_names — deliberately
 NOT in the vision gate). The local path never leaves the addon process.
@@ -38,7 +38,7 @@ def fake_bpy(monkeypatch):
     holder = MagicMock()
     state = {"objects": []}
 
-    def install(objects, op_result=("FINISHED",)):
+    def install(objects, op_result=("FINISHED",), extension=".obj"):
         state["objects"] = []
         holder.data = MagicMock()
         holder.data.objects = state["objects"]
@@ -50,7 +50,8 @@ def fake_bpy(monkeypatch):
 
         op.side_effect = _op
         holder.ops = MagicMock()
-        holder.ops.wm.obj_import = op
+        submodule, name = model_attachment._IMPORTERS[extension]
+        setattr(getattr(holder.ops, submodule), name, op)
         holder.context.view_layer.objects.active = None
         holder.ops.object.select_all.poll.return_value = False
         monkeypatch.setattr(model_attachment, "bpy", holder)
@@ -114,3 +115,21 @@ def test_send_flow_collects_model_names_keeps_index_alignment(monkeypatch):
         attachment_names.append("ResolvedImage")
     assert imported == ["Chair", "Chair_Leg"]
     assert attachment_names == ["", "ResolvedImage"]
+
+
+@pytest.mark.parametrize("extension", model_attachment.IMPORTABLE_EXTENSIONS)
+def test_all_supported_formats_dispatch_and_report_names(extension, fake_bpy):
+    op = fake_bpy([_FakeObj("Root"), _FakeObj("Child", parent="Root")], extension=extension)
+    path = "/tmp/asset" + extension.upper()
+    assert model_attachment.is_model_file(path)
+    with patch.object(model_attachment.os.path, "isfile", return_value=True):
+        result = model_attachment.import_model_attachment(path)
+    op.assert_called_once_with(filepath=path)
+    assert result == {"success": True, "imported_object_names": ["Root"],
+                      "object_count": 1, "display_name": "asset" + extension.upper()}
+
+
+@pytest.mark.parametrize("extension", [".blend", ".exe", ".mp4", ".stl"])
+def test_unsupported_formats_are_not_models(extension):
+    assert not model_attachment.is_model_file("asset" + extension)
+    assert not model_attachment.import_model_attachment("asset" + extension)["success"]

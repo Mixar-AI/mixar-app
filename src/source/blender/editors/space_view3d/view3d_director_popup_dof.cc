@@ -26,6 +26,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_camera_types.h"
 #include "DNA_object_types.h"
 
@@ -78,12 +80,12 @@ void focus_pick_row(ui::Block *block,
       block,
       "MIXAR_OT_director_pick_track_target",
       ICON_EYEDROPPER,
-      "Pick",
+      IFACE_("Pick"),
       0,
       y,
       half_w,
       row_h,
-      "Eyedropper: click an object to keep it in focus");
+      TIP_("Eyedropper: click an object to keep it in focus"));
   if (pick != nullptr) {
     PointerRNA *ptr = ui::button_operator_ptr_ensure(pick);
     RNA_enum_set_identifier(C, ptr, "purpose", "FOCUS");
@@ -93,12 +95,12 @@ void focus_pick_row(ui::Block *block,
       block,
       "MIXAR_OT_director_set_focus",
       ICON_NONE,
-      "Release",
+      IFACE_("Release"),
       half_w + gap,
       y,
       half_w,
       row_h,
-      "Stop following the object and hold the distance it was focused at");
+      TIP_("Stop following the object and hold the distance it was focused at"));
   if (release != nullptr) {
     RNA_enum_set_identifier(C, ui::button_operator_ptr_ensure(release), "mode", "CLEAR");
     /* Nothing to release is not an error to discover by pressing it. */
@@ -117,7 +119,7 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
   ui::Block *block = director_popup_block_begin(C, region, __func__);
   DirectorPopupData data;
   if (!director_popup_data_get(C, &data) || !data.camera) {
-    director_popup_section_label(block, "No active shot camera", 0, UI_UNIT_X * 10);
+    director_popup_section_label(block, IFACE_("No active shot camera"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -127,7 +129,8 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
     dof_ptr = RNA_property_pointer_get(&data.camera_data_ptr, dof_prop);
   }
   if (dof_ptr.data == nullptr) {
-    director_popup_section_label(block, "Depth of field unavailable", 0, UI_UNIT_X * 10);
+    director_popup_section_label(
+        block, IFACE_("Depth of field unavailable"), 0, UI_UNIT_X * 10);
     director_popup_block_end(block);
     return block;
   }
@@ -141,7 +144,7 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
   y -= row_h;
   ui::Button *enable = ui::uiDefButR(block,
                                      ui::ButtonType::Toggle,
-                                     "Depth of Field",
+                                     IFACE_("Depth of Field"),
                                      0,
                                      y,
                                      short(width),
@@ -151,7 +154,7 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
                                      0,
                                      0,
                                      0,
-                                     "Blur what is not at the focus distance");
+                                     TIP_("Blur what is not at the focus distance"));
   director_popup_state(enable, false, data.editable);
 
   /* Every row, always. The popup stays open (BLOCK_KEEP_OPEN) and a
@@ -167,7 +170,7 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
    * naming the old one the moment Pick or Release changed it. The left
    * column's own Depth of Field row carries that name and redraws live. */
   y -= gap + label_h;
-  director_popup_section_label(block, "Focus", y, width);
+  director_popup_section_label(block, IFACE_("Focus"), y, width);
 
   y -= row_h;
   focus_pick_row(block, C, data, focus != nullptr, y, width, row_h, gap);
@@ -192,12 +195,12 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
         block,
         "MIXAR_OT_director_set_focus",
         ICON_NONE,
-        "Focus on Tracked Subject",
+        IFACE_("Focus on Tracked Subject"),
         0,
         y,
         width,
         row_h,
-        "Focus on the object this camera is already pointing at");
+        TIP_("Focus on the object this camera is already pointing at"));
     if (subject != nullptr) {
       RNA_enum_set_identifier(C, ui::button_operator_ptr_ensure(subject), "mode", "SUBJECT");
       director_popup_state(subject, false, data.editable);
@@ -211,7 +214,7 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
   y -= gap + row_h;
   ui::Button *distance = ui::uiDefButR(block,
                                        ui::ButtonType::Num,
-                                       "Focus Distance",
+                                       IFACE_("Focus Distance"),
                                        0,
                                        y,
                                        short(width),
@@ -225,7 +228,7 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
   director_popup_state(distance, false, data.editable);
 
   y -= gap + label_h;
-  director_popup_section_label(block, "Aperture", y, width);
+  director_popup_section_label(block, IFACE_("Aperture"), y, width);
 
   /* Whole stops, the way a lens barrel is marked. Mirrors FSTOP_PRESETS in
    * `director/constants.py`. */
@@ -258,7 +261,7 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
                                                        y,
                                                        preset_w,
                                                        row_h,
-                                                       "Open or close the aperture to this stop");
+                                                       TIP_("Open or close the aperture to this stop"));
     if (but != nullptr) {
       RNA_float_set(ui::button_operator_ptr_ensure(but), "fstop", presets[index]);
       director_popup_state(
@@ -275,7 +278,7 @@ ui::Block *dof_popup_create(bContext *C, ARegion *region, void *arg)
      * `director/constants.py`. */
     ui::Button *slider = ui::uiDefButR(block,
                                        ui::ButtonType::NumSlider,
-                                       "f-stop",
+                                       IFACE_("f-stop"),
                                        0,
                                        y,
                                        short(width),

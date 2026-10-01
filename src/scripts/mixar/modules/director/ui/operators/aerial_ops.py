@@ -14,11 +14,12 @@ jump, new take) ends the mode through ``enter_camera_view``.
 
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import n_
 from ...core.shot_api import active_shot
 from ...core.viewport import enter_aerial_view, enter_camera_view, enter_free_view
 
-AERIAL_ENTER_MESSAGE = "Aerial view — click to place the camera, O to return"
-AERIAL_EXIT_MESSAGE = "Back to the camera"
+AERIAL_ENTER_MESSAGE = n_("Aerial view — click to place the camera, O to return")
+AERIAL_EXIT_MESSAGE = n_("Back to the camera")
 
 
 def _leave_aerial(context):

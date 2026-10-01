@@ -19,6 +19,7 @@ the same right-hand column.
 import bpy
 from bpy.types import Panel
 
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.uv_editor.ui.base.panels import poll_header_panel
 
 
@@ -85,7 +86,8 @@ def _row(col, label_text):
 
 def _prop_row_if_exists(col, owner, label_text, prop_name):
     if not hasattr(owner, prop_name):
-        col.label(text=f"{label_text} unavailable", icon='ERROR')
+        col.label(text=iface_("{label} unavailable").format(label=iface_(label_text)),
+                  icon='ERROR', translate=False)
         return
     _row(col, label_text).prop(owner, prop_name, text="")
 
@@ -151,7 +153,7 @@ class MIXAR_UV_PT_pack_islands(Panel):
             return
 
         # Shape Method
-        _row(col, "Shape Method").prop(p, "shape_method", text="")
+        _row(col, n_("Shape Method")).prop(p, "shape_method", text="")
 
         # Scale + Rotate inline checkboxes (in the right column).
         right = _row(col, "")
@@ -167,7 +169,7 @@ class MIXAR_UV_PT_pack_islands(Panel):
         rot_right.prop(p, "rotate_method", text="")
 
         # Margin: dropdown + numeric on one row in the right column.
-        margin_right = _row(col, "Margin")
+        margin_right = _row(col, n_("Margin"))
         m_row = margin_right.row(align=True)
         m_row.prop(p, "margin_method", text="")
         m_row.prop(p, "margin", text="")
@@ -186,7 +188,7 @@ class MIXAR_UV_PT_pack_islands(Panel):
         _row(col, "").prop(p, "merge_overlap", text="Merge Overlapping")
 
         # Pack To dropdown.
-        _row(col, "Pack To").prop(p, "udim_source", text="")
+        _row(col, n_("Pack To")).prop(p, "udim_source", text="")
 
         # Set Custom Region button — only when Pack To = Custom Region.
         # `use_uv_custom_region` is enabled automatically by the timer
@@ -268,11 +270,11 @@ class MIXAR_UV_PT_pack_islands(Panel):
                       icon='ERROR')
             return
 
-        _prop_row_if_exists(col, p, "Initial Position", "initial_position")
-        _prop_row_if_exists(col, p, "Axis", "axis")
-        _prop_row_if_exists(col, p, "Align", "align")
-        _prop_row_if_exists(col, p, "Order", "order")
-        _prop_row_if_exists(col, p, "Margin", "margin")
+        _prop_row_if_exists(col, p, n_("Initial Position"), "initial_position")
+        _prop_row_if_exists(col, p, n_("Axis"), "axis")
+        _prop_row_if_exists(col, p, n_("Align"), "align")
+        _prop_row_if_exists(col, p, n_("Order"), "order")
+        _prop_row_if_exists(col, p, n_("Margin"), "margin")
 
         col.separator(factor=0.5)
         run_row = col.row(align=True)

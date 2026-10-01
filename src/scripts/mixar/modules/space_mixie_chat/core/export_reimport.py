@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Re-import verification for FBX and USD exports (export contract §5).
+"""Re-import verification for FBX, USD and STL exports (export contract §5).
 
 The file is header-checked, then imported into the ACTIVE scene inside a
 dedicated temporary collection (the FBX importer evaluates pose bones, which
@@ -48,6 +48,60 @@ def check_usd_header(path: str) -> str | None:
     if head.startswith(b"PK\x03\x04"):
         return "usdz"
     return None
+
+
+def check_stl_header(path: str, size: int) -> tuple[str | None, int | None]:
+    """('binary', triangles) when the size matches the binary layout (84-byte
+    header + 50 bytes per triangle; binary headers may also start with
+    "solid"), ('ascii', None) for a ``solid`` text file, else (None, None)."""
+    with open(path, "rb") as handle:
+        head = handle.read(84)
+    if len(head) == 84:
+        count = struct.unpack("<I", head[80:84])[0]
+        if size == 84 + 50 * count:
+            return "binary", count
+    if head.lstrip().lower().startswith(b"solid"):
+        return "ascii", None
+    return None, None
+
+
+def _open_edges(meshes) -> int | None:
+    """Edges not shared by exactly two faces (the STL importer merges
+    coincident vertices, so a watertight solid has none). Numpy, no loop."""
+    try:
+        import numpy as np
+    except ImportError:
+        return None
+    total = 0
+    for obj in meshes:
+        mesh = obj.data
+        if not len(mesh.edges):
+            continue
+        loop_edges = np.empty(len(mesh.loops), dtype=np.int32)
+        mesh.loops.foreach_get("edge_index", loop_edges)
+        faces_per_edge = np.bincount(loop_edges, minlength=len(mesh.edges))
+        total += int(np.count_nonzero(faces_per_edge != 2))
+    return total
+
+
+def _stl_report(meshes, result: dict, scale) -> None:
+    """File-unit bounds (imported at scale 1 with no axis change, so they are
+    the numbers a slicer shows), metres back through the export scale, and a
+    non-manifold issue."""
+    bounds = _bounds(meshes)
+    result["bounds"] = bounds
+    result["up_axis"] = "+Z"
+    try:
+        scale = float(scale) if scale else 1.0
+    except (TypeError, ValueError):
+        scale = 1.0
+    result["dimensions_m"] = [round(v / scale, 6) for v in bounds] if bounds else None
+    open_edges = _open_edges(meshes)
+    result["non_manifold_edges"] = open_edges
+    if open_edges:
+        result["issues"].append(
+            f"The STL is not watertight: {open_edges} edge(s) are open or shared by "
+            "more than two faces.")
 
 
 def _snapshot() -> dict:
@@ -139,6 +193,10 @@ def _import(path: str, fmt: str, collection) -> set:
         view_layer.active_layer_collection = layer
     if fmt == "fbx":
         return bpy.ops.import_scene.fbx(filepath=path)
+    if fmt == "stl":
+        # Identity transform: the mesh holds the file's own coordinates.
+        return bpy.ops.wm.stl_import(filepath=path, global_scale=1.0, use_scene_unit=False,
+                                     forward_axis="Y", up_axis="Z")
     return bpy.ops.wm.usd_import(filepath=path, set_frame_range=False)
 
 
@@ -152,10 +210,18 @@ def _remove_new(before: dict) -> None:
                 pass
 
 
-def verify_by_reimport(path: str, fmt: str, result: dict) -> None:
+def verify_by_reimport(path: str, fmt: str, result: dict, stl_scale=None) -> None:
     """Header check, then a guarded re-import into a temporary collection."""
     fmt = fmt.lower()
-    if fmt == "fbx":
+    file_triangles = None
+    if fmt == "stl":
+        kind, file_triangles = check_stl_header(path, result["file_size_bytes"])
+        if kind is None:
+            result["issues"].append("The STL file is neither a binary nor an ASCII STL.")
+            return
+        result["stl_encoding"] = kind
+        result["triangles"] = file_triangles
+    elif fmt == "fbx":
         is_binary, version = check_fbx_header(path)
         if not is_binary:
             result["issues"].append("The FBX file does not carry a Kaydara binary header.")
@@ -202,8 +268,11 @@ def verify_by_reimport(path: str, fmt: str, result: dict) -> None:
         result["triangles"] = sum(
             sum(max(0, len(poly.vertices) - 2) for poly in obj.data.polygons)
             for obj in meshes
-        )
-        result["dimensions_m"] = _bounds(meshes)
+        ) if file_triangles is None else file_triangles  # a binary STL states its own count
+        if fmt == "stl":
+            _stl_report(meshes, result, stl_scale)
+        else:
+            result["dimensions_m"] = _bounds(meshes)
         result["checked"] = True
     except Exception as exc:  # noqa: BLE001 — never break the export
         result["checked"] = False

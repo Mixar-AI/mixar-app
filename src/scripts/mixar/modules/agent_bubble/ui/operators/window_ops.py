@@ -29,6 +29,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 _logger = get_logger(__name__)
 
@@ -108,7 +109,7 @@ class MIXAR_OT_agent_bubble_open_window(Operator):
         try:
             result = cpp_op()
         except Exception as e:  # noqa: BLE001 — surface clearly
-            self.report({'ERROR'}, f"Failed to open Agent Bubble window: {e}")
+            self.report({'ERROR'}, rpt_("Failed to open Agent Bubble window: {error}").format(error=e))
             print(f"[agent_bubble] open_window: cpp op raised: {e!r}")
             return {'CANCELLED'}
 

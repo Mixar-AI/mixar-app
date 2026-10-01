@@ -21,6 +21,7 @@ from __future__ import annotations
 import threading
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -133,14 +134,14 @@ def _fire_resume(scene_name: str, open_count: int) -> None:
     notice = scene.mixie_chat_messages.add()
     notice.sender = 'AGENT'
     notice.text = (
-        "Welcome back — resuming your unfinished build "
-        f"({open_count} step{'s' if open_count != 1 else ''} left) from the "
-        "last completed step."
-    )
+        rpt_("Welcome back — resuming your unfinished build ({count} step left) from the "
+             "last completed step.") if open_count == 1 else
+        rpt_("Welcome back — resuming your unfinished build ({count} steps left) from the "
+             "last completed step.")).format(count=open_count)
     if not send_continue(scene):
         fallback = scene.mixie_chat_messages.add()
         fallback.sender = 'AGENT'
-        fallback.text = (
+        fallback.text = rpt_(
             "Couldn't resume automatically — press Enter on \"continue\" "
             "in the chat to pick the build back up."
         )

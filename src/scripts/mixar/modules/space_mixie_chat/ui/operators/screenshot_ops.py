@@ -12,6 +12,7 @@ import time
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from ...constants import MAX_ATTACHMENTS_PER_MESSAGE
 from ...core import cleanup_loaded_file_image, get_image_display_name, validate_image_file
@@ -36,7 +37,7 @@ class MIXIE_CHAT_OT_capture_screenshot(Operator):
         # Check attachment limit
         pending = scene.mixie_chat_pending_attachments
         if len(pending) >= MAX_ATTACHMENTS_PER_MESSAGE:
-            self.report({'WARNING'}, f"Max {MAX_ATTACHMENTS_PER_MESSAGE} attachments")
+            self.report({'WARNING'}, rpt_("Max {count} attachments").format(count=MAX_ATTACHMENTS_PER_MESSAGE))
             return {'CANCELLED'}
 
         # Find 3D viewport
@@ -135,7 +136,7 @@ class MIXIE_CHAT_OT_capture_screenshot(Operator):
 
         except Exception as e:
             logger.error(f"Failed to capture screenshot: {e}")
-            self.report({'ERROR'}, f"Screenshot capture failed: {str(e)}")
+            self.report({'ERROR'}, rpt_("Screenshot capture failed: {error}").format(error=e))
             return {'CANCELLED'}
 
 
@@ -176,7 +177,7 @@ class MIXIE_CHAT_OT_snip_image(Operator):
         # Check attachment limit
         pending = scene.mixie_chat_pending_attachments
         if len(pending) >= MAX_ATTACHMENTS_PER_MESSAGE:
-            self.report({'WARNING'}, f"Max {MAX_ATTACHMENTS_PER_MESSAGE} attachments")
+            self.report({'WARNING'}, rpt_("Max {count} attachments").format(count=MAX_ATTACHMENTS_PER_MESSAGE))
             return {'CANCELLED'}
 
         system = platform.system()
@@ -221,7 +222,7 @@ class MIXIE_CHAT_OT_snip_image(Operator):
                         return {'CANCELLED'}
         except Exception as e:
             logger.error(f"Failed to launch snipping tool: {e}")
-            self.report({'ERROR'}, f"Capture failed: {str(e)}")
+            self.report({'ERROR'}, rpt_("Capture failed: {error}").format(error=e))
             return {'CANCELLED'}
 
         # Start modal timer to poll subprocess completion

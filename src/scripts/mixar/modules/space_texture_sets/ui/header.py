@@ -8,6 +8,8 @@
 import bpy
 from bpy.types import Header
 
+from mixar.modules.common.i18n import iface_
+
 
 class TEXTURE_SETS_HT_header(Header):
     """Title bar for the Texture Sets space.
@@ -30,7 +32,8 @@ class TEXTURE_SETS_HT_header(Header):
         if obj:
             layout.label(text=obj.name, icon='OBJECT_DATA')
             mat_count = len(obj.material_slots)
-            layout.label(text=f"Materials: {mat_count}")
+            layout.label(text=iface_("Materials: {count}").format(count=mat_count),
+                         translate=False)
 
 
 classes = (

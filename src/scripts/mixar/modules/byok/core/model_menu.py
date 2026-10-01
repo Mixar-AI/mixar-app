@@ -30,23 +30,25 @@ share: `chip_label()` (what the WM `mixar_agent_model_label` mirror holds) and
 from dataclasses import dataclass
 from typing import Any, Dict, List, Sequence
 
+from mixar.modules.common.i18n import iface_, n_
+
 #: Shown when the catalog is empty — offline, pre-auth, or a backend that has
 #: published nothing. Never replaced by a hardcoded model list: a
 #: backend-authoritative list fails CLOSED.
-EMPTY_SENTINEL_TEXT = "No models available — contact support"
+EMPTY_SENTINEL_TEXT = n_("No models available — contact support")
 
 #: Shown at the top of the menu while a user key is configured. The server
 #: resolves BYOK ahead of any stored platform pick, so the pick is inert until
 #: the key is removed — saying so beats a menu of silently dead rows. This is
 #: the fallback wording; once the credential state names the provider and
 #: model, `byok_note_text()` says which one ("Your key: <Provider> · <Model>").
-BYOK_NOTE_TEXT = "Your API key controls the model"
+BYOK_NOTE_TEXT = n_("Your API key controls the model")
 BYOK_NOTE_PREFIX = "Your key: "
 
 #: What the island chip reads while a user key overrides the hosted pick
 #: (product decision: "Custom"; the no-pick chip stays "Mixie"). One constant
 #: so the wording can be swapped in one place — e.g. "My Key", "Own Key".
-BYOK_CHIP_TEXT = "Custom"
+BYOK_CHIP_TEXT = n_("Custom")
 
 #: Separator between the model label and its thinking level on the chip.
 CHIP_SEPARATOR = " · "
@@ -56,8 +58,8 @@ RESET_TEXT = "Mixie"
 #: The chat's route to the dialog also offered in the profile menu. Keep it
 #: enabled while BYOK is active so users can clear the key overriding their
 #: hosted pick, including when the model catalog is empty.
-BYOK_SETUP_TEXT = "Use my own API key…"
-BYOK_MANAGE_TEXT = "Change or remove my API key…"
+BYOK_SETUP_TEXT = n_("Use my own API key…")
+BYOK_MANAGE_TEXT = n_("Change or remove my API key…")
 
 @dataclass(frozen=True)
 class MenuRow:
@@ -93,8 +95,8 @@ def format_thinking_label(level: str) -> str:
     """Sub-row wording for one thinking level."""
     text = format_thinking_level(level)
     if not text:
-        return "Thinking"
-    return "Thinking: " + text
+        return n_("Thinking")
+    return iface_("Thinking: {level}").format(level=iface_(text))
 
 
 def chip_label(model_label: str, thinking_level: str = "", byok_active: bool = False) -> str:
@@ -106,9 +108,11 @@ def chip_label(model_label: str, thinking_level: str = "", byok_active: bool = F
     the model's own default, which the chip does not spell out).
     """
     if byok_active:
-        return BYOK_CHIP_TEXT
+        return iface_(BYOK_CHIP_TEXT)
     label = (model_label or "").strip()
-    level = format_thinking_level(thinking_level)
+    # The level words ("Low", "High", ...) are fixed vocabulary; the model
+    # label is catalog data and stays as written.
+    level = iface_(format_thinking_level(thinking_level))
     if label and level:
         return label + CHIP_SEPARATOR + level
     return label
@@ -123,7 +127,7 @@ def byok_note_text(provider_label: str = "", model_label: str = "") -> str:
     parts = [part.strip() for part in (provider_label, model_label) if (part or "").strip()]
     if not parts:
         return BYOK_NOTE_TEXT
-    return BYOK_NOTE_PREFIX + CHIP_SEPARATOR.join(parts)
+    return iface_("Your key: {name}").format(name=CHIP_SEPARATOR.join(parts))
 
 
 def build_rows(

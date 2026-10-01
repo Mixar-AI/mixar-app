@@ -15,6 +15,7 @@ Handles bidirectional RPC:
 from mixar.config.logging_config import get_logger
 from typing import Optional
 
+from ...context_folder.constants import RPC_PREFIX as CONTEXT_FOLDER_RPC_PREFIX
 from ..constants import JSONRPCMethod
 
 try:
@@ -71,6 +72,9 @@ class SocketDispatch:
 
         elif isinstance(method, str) and method.startswith(JSONRPCMethod.AGENT_EXECUTION_PREFIX):
             self._handle_execution_request(method, params, request_id)
+
+        elif isinstance(method, str) and method.startswith(CONTEXT_FOLDER_RPC_PREFIX):
+            self._handle_context_folder_request(method, params, request_id)
 
         elif method == JSONRPCMethod.AGENT_TOOL_START:
             if self._on_tool_start:
@@ -151,6 +155,24 @@ class SocketDispatch:
             }
         if request_id:
             self.queue_response(request_id, result)
+
+    def _handle_context_folder_request(
+        self, method: str, params: dict, request_id: Optional[str]
+    ) -> None:
+        """Answer a context-folder read on a worker thread (no bpy). Access is
+        decided by the session's grants, never by the request alone."""
+        if not request_id:
+            return
+        try:
+            from mixar.modules.context_folder.core.rpc import handle_request
+
+            handle_request(method, params, lambda result: self.queue_response(request_id, result))
+        except Exception as exc:  # noqa: BLE001 - must always answer
+            logger.error("context folder request failed: %s", exc)
+            self.queue_response(request_id, {"success": False, "error": {
+                "code": "capability_unavailable",
+                "message": "Context folders are unavailable in this client",
+            }})
 
     def _handle_addon_project_request(
         self, method: str, params: dict, request_id: Optional[str]

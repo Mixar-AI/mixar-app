@@ -9,6 +9,8 @@ import re
 import uuid
 from pathlib import Path
 
+from mixar.modules.common.i18n import n_
+
 from .constants import MANIFEST_DIR, MANIFEST_FILE, MANIFEST_VERSION
 from .errors import AddonProjectError
 from .storage import read_json, write_json_atomic
@@ -53,7 +55,7 @@ def is_root_package_entrypoint(root: Path, entrypoint: str) -> bool:
 def entrypoint_source_path(root: Path, entrypoint: str) -> Path:
     """Resolve a validated import name to its package or single-file source."""
     if not entrypoint or not _MODULE_RE.match(entrypoint):
-        raise AddonProjectError("invalid_entrypoint", "The add-on module name is invalid")
+        raise AddonProjectError("invalid_entrypoint", n_("The add-on module name is invalid"))
     parts = entrypoint.split(".")
     if parts[0] == root.name and (root / "__init__.py").is_file():
         package = root.joinpath(*parts[1:])
@@ -67,7 +69,7 @@ def entrypoint_source_path(root: Path, entrypoint: str) -> Path:
         return module_file
     raise AddonProjectError(
         "entrypoint_missing",
-        "The configured add-on entrypoint was not found in the linked project",
+        n_("The configured add-on entrypoint was not found in the linked project"),
     )
 
 
@@ -113,17 +115,17 @@ def infer_entrypoint(root: Path, *, allow_root_package=True) -> str:
 def load_manifest(root: Path) -> dict:
     payload = read_json(manifest_path(root), None)
     if not isinstance(payload, dict):
-        raise AddonProjectError("manifest_missing", "The linked folder has no valid Mixar project metadata")
+        raise AddonProjectError("manifest_missing", n_("The linked folder has no valid Mixar project metadata"))
     if payload.get("schema_version") != MANIFEST_VERSION:
-        raise AddonProjectError("manifest_version", "The project metadata version is not supported")
+        raise AddonProjectError("manifest_version", n_("The project metadata version is not supported"))
     project_id = payload.get("project_id")
     try:
         uuid.UUID(str(project_id))
     except (ValueError, TypeError, AttributeError):
-        raise AddonProjectError("manifest_invalid", "The project metadata has an invalid project ID")
+        raise AddonProjectError("manifest_invalid", n_("The project metadata has an invalid project ID"))
     entrypoint = payload.get("entrypoint", "")
     if entrypoint and not _MODULE_RE.match(entrypoint):
-        raise AddonProjectError("manifest_invalid", "The project entrypoint is invalid")
+        raise AddonProjectError("manifest_invalid", n_("The project entrypoint is invalid"))
     return {
         "schema_version": MANIFEST_VERSION,
         "project_id": str(project_id),
@@ -167,7 +169,7 @@ def validate_project_root(root: Path, *, entrypoint=None) -> None:
         if not _MODULE_RE.match(chosen_entrypoint):
             raise AddonProjectError(
                 "invalid_entrypoint",
-                "The add-on module name is invalid",
+                n_("The add-on module name is invalid"),
             )
         return
     if infer_entrypoint(root):
@@ -196,7 +198,7 @@ def ensure_manifest(root: Path, name=None, entrypoint=None, *, allow_root_packag
         else entrypoint
     )
     if chosen_entrypoint and not _MODULE_RE.match(chosen_entrypoint):
-        raise AddonProjectError("invalid_entrypoint", "The add-on module name is invalid")
+        raise AddonProjectError("invalid_entrypoint", n_("The add-on module name is invalid"))
     payload = {
         "schema_version": MANIFEST_VERSION,
         "project_id": str(uuid.uuid4()),
@@ -221,8 +223,8 @@ def set_entrypoint(root: Path, entrypoint: str, *, allow_root_package=True) -> d
     if not allow_root_package and is_root_package_entrypoint(root, entrypoint):
         raise AddonProjectError(
             "invalid_entrypoint",
-            "Each add-on lives in its own subfolder of the projects folder; "
-            "the projects folder itself cannot be the add-on",
+            n_("Each add-on lives in its own subfolder of the projects folder; "
+               "the projects folder itself cannot be the add-on"),
         )
     manifest = load_manifest(root)
     entrypoint_source_path(root, entrypoint)

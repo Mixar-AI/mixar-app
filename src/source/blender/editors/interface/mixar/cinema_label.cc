@@ -178,26 +178,32 @@ void mixar_cinema_label(const rcti &bounds,
   const float u = UI_SCALE_FAC;
   const size_t length = strlen(label);
   /* Shared label geometry in both hosts: 16px icon, 4px icon gap,
-   * 7px side padding, then a space and same-size italic version suffix. */
+   * 7px side padding, then the small stage-tag label (`mixar_chrome::cinema_tag_*`). */
   const float icon_size = 16.0f * u;
   const bool has_icon = !ELEM(icon_id, ICON_NONE, ICON_BLANK1);
   const float leading = has_icon ? icon_size + 4.0f * u : 0.0f;
-  const char *version = "V2";
+  const char *tag = mixar_chrome::cinema_stage_tag;
+  const size_t tag_length = strlen(tag);
+  const float tag_gap = mixar_chrome::cinema_tag_gap * u;
+  const float tag_pad = mixar_chrome::cinema_tag_pad_x * u;
   float size = style.points * u;
-  float text_width, version_width, gap;
+  float text_width, tag_ink_width;
+  rcti tag_ink;
   const float available = std::max(1.0f, BLI_rcti_size_x(&bounds) - 14.0f * u - leading);
   for (int pass = 0; pass < 2; pass++) {
     BLF_size(font, size);
     text_width = BLF_width(font, label, length);
-    gap = BLF_width(font, " ", 1);
-    BLF_enable(font, BLF_ITALIC);
-    version_width = BLF_width(font, version, strlen(version));
-    BLF_disable(font, BLF_ITALIC);
-    if (pass == 0 && text_width + gap + version_width > available) {
-      size *= available / (text_width + gap + version_width);
+    BLF_size(font, size * mixar_chrome::cinema_tag_text_scale);
+    BLF_boundbox(font, tag, tag_length, &tag_ink);
+    tag_ink_width = float(BLI_rcti_size_x(&tag_ink));
+    /* Only the glyphs shrink to fit; the tag's padding and gap stay fixed. */
+    const float glyphs = available - tag_gap - 2.0f * tag_pad;
+    if (pass == 0 && text_width + tag_ink_width > glyphs) {
+      size *= std::max(1.0f, glyphs) / (text_width + tag_ink_width);
     }
   }
-  const float left = (bounds.xmin + bounds.xmax - leading - text_width - gap - version_width) *
+  const float tag_width = tag_ink_width + 2.0f * tag_pad;
+  const float left = (bounds.xmin + bounds.xmax - leading - text_width - tag_gap - tag_width) *
                      0.5f;
   const float cy = BLI_rcti_cent_y_fl(&bounds);
   const float alpha = disabled ? 0.5f : 1.0f;
@@ -235,9 +241,39 @@ void mixar_cinema_label(const rcti &bounds,
   BLF_boundbox(font, label, length, &label_ink);
   const float baseline = cy - (label_ink.ymin + label_ink.ymax) * 0.5f;
   draw_tinted_text(font, label, left + leading, baseline, start, end, alpha);
-  BLF_enable(font, BLF_ITALIC);
-  draw_tinted_text(font, version, left + leading + text_width + gap, baseline, end, end, alpha);
-  BLF_disable(font, BLF_ITALIC);
+
+  /* The stage tag: a small rounded label in the ramp's end colour — a faint
+   * fill, a hairline and smaller upright caps, centred on the label's cap band. */
+  const float tag_size = size * mixar_chrome::cinema_tag_text_scale;
+  /* The capsule shrinks with the glyphs when a narrow host fits the label down. */
+  const float fit = size / (style.points * u);
+  const float tag_h = std::round(mixar_chrome::cinema_tag_height * u * fit);
+  const float tag_x = std::round(left + leading + text_width + tag_gap);
+  const float tag_cy = std::round(cy);
+  const rctf tag_rect = {tag_x,
+                         tag_x + std::round(tag_width),
+                         tag_cy - std::floor(tag_h * 0.5f),
+                         tag_cy + std::ceil(tag_h * 0.5f)};
+  const float tag_radius = std::min(mixar_chrome::cinema_tag_radius * u, tag_h * 0.5f);
+  const float tag_fill[4] = {end[0], end[1], end[2],
+                             end[3] * mixar_chrome::cinema_tag_fill_alpha * alpha};
+  const float tag_border[4] = {end[0], end[1], end[2],
+                               end[3] * mixar_chrome::cinema_tag_border_alpha * alpha};
+  draw_roundbox_corner_set(CNR_ALL);
+  draw_roundbox_4fv(&tag_rect, true, tag_radius, tag_fill);
+  draw_roundbox_4fv(&tag_rect, false, tag_radius, tag_border);
+  /* The roundbox pass leaves blending off; the glyph blit needs it back. */
+  GPU_blend(GPU_BLEND_ALPHA);
+  BLF_size(font, tag_size);
+  BLF_boundbox(font, tag, tag_length, &tag_ink);
+  const float tag_baseline = tag_cy - (tag_ink.ymin + tag_ink.ymax) * 0.5f;
+  draw_tinted_text(font,
+                   tag,
+                   tag_x + (BLI_rctf_size_x(&tag_rect) - BLI_rcti_size_x(&tag_ink)) * 0.5f,
+                   tag_baseline,
+                   end,
+                   end,
+                   alpha);
 
   GPU_blend(old_blend);
   GPU_scissor(old_scissor[0], old_scissor[1], old_scissor[2], old_scissor[3]);

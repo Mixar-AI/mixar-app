@@ -12,6 +12,7 @@ and the shared input-image UI. Called from
 Basic/Pro subtab UI when the catalog isn't loaded.
 """
 
+from mixar.modules.common.i18n import n_
 from .sidebar_ui_helpers import (
     draw_section_box, draw_section_separator, draw_prompt_section,
     draw_moodboard_image_toggle, draw_generate_footer,
@@ -62,13 +63,13 @@ def _draw_model_gen(layout, context):
     ) or "model_3d"
 
     # --- Prompt ---
-    draw_prompt_section(layout, tab, label="Prompt (optional)")
+    draw_prompt_section(layout, tab, label=n_("Prompt (optional)"))
     draw_section_separator(layout)
 
     # --- Input image (shared by all modes) ---
     col = draw_section_box(
         layout,
-        "Input Image",
+        n_("Input Image"),
         icon='IMAGE_DATA',
         action_op="mixie.image_to_3d_pick_image",
     )
@@ -90,7 +91,7 @@ def _draw_model_gen(layout, context):
     draw_section_separator(layout)
 
     # --- Settings (Mode / Model / schema params from the catalog) ---
-    col = draw_section_box(layout, "Settings", icon='SETTINGS')
+    col = draw_section_box(layout, n_("Settings"), icon='SETTINGS')
     col.use_property_split = True
     col.use_property_decorate = False
     draw_capability_selector(

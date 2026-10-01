@@ -15,6 +15,7 @@ import mathutils
 from bpy.types import Operator
 from bpy.props import EnumProperty, FloatProperty, BoolProperty
 
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.uv_editor.common.uv_utils import (
     get_mixar_uv_image_editor,
     poll_mixar_uv_edit_mode,
@@ -454,7 +455,8 @@ class MIXAR_OT_project(Operator):
 
         op_idname = _PROJECTION_OPERATOR.get(ui.projection_type)
         if op_idname is None:
-            self.report({'ERROR'}, f"Unknown projection type: {ui.projection_type}")
+            self.report({'ERROR'}, rpt_("Unknown projection type: {type}").format(
+                type=ui.projection_type))
             return {'CANCELLED'}
 
         # Resolve "module.op_name" -> bpy.ops.module.op_name and invoke with

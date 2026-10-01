@@ -19,6 +19,7 @@ from bpy.props import StringProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 logger = get_logger(__name__)
 
@@ -58,7 +59,7 @@ class MIXIE_CHAT_OT_ink_commit(Operator):
             return {'CANCELLED'}
         except Exception as e:
             logger.error("[Scribble] ink commit failed: %s", e, exc_info=True)
-            self.report({'WARNING'}, f"Handwriting conversion failed: {e}")
+            self.report({'WARNING'}, rpt_("Handwriting conversion failed: {error}").format(error=e))
             return {'CANCELLED'}
         return {'FINISHED'}
 

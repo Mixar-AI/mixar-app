@@ -127,6 +127,13 @@ class SocketConnection:
                 )
             except Exception:
                 pass
+            # The interface language, read once per connection: the agent
+            # falls back to it when the user's own language is unclear.
+            try:
+                from mixar.modules.common.i18n import ui_locale
+                headers.append(f"X-Mixar-Locale: {ui_locale()}")
+            except Exception:
+                pass
 
             if not token:
                 logger.warning("No auth token available - connection may fail")
@@ -250,6 +257,7 @@ class SocketConnection:
         from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
         from ...addon_project.constants import TESTS_CAPABILITY as ADDON_PROJECT_TESTS_CAPABILITY
         from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
+        from ...context_folder.constants import CAPABILITY as CONTEXT_FOLDER_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -282,6 +290,8 @@ class SocketConnection:
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
+                # context_folder.* reads of the folders a chat attached.
+                CONTEXT_FOLDER_CAPABILITY,
                 # blender.execute_script frames may carry params["envelope"]
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.

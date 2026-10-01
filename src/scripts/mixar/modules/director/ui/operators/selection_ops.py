@@ -13,6 +13,7 @@ fixed-size and a selection is not; ``core/selection.py`` parses it.
 from bpy.props import StringProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import rpt_
 from ...core.duplicate import duplicate_beats
 from ...core.native_keys import select_columns
 from ...core.selection import parse_indices
@@ -70,7 +71,7 @@ class MIXAR_OT_director_duplicate_beats(Operator):
         # The copies become the selection, so a drag started next (Shift+D
         # hands them straight to one) moves them and nothing else.
         select_columns(shot.camera, [int(beat.frame) for beat in created], 'SET')
-        self.report({'INFO'}, f"Duplicated {len(created)} keyframe(s)")
+        self.report({'INFO'}, rpt_("Duplicated {count} keyframe(s)").format(count=len(created)))
         return {'FINISHED'}
 
 

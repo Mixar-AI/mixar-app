@@ -22,6 +22,7 @@ from ..utils.bake_common import (
     get_bakeable_objects_and_meshes,
     is_object_bakeable,
 )
+from mixar.modules.common.i18n import n_
 
 logger = get_logger(__name__)
 
@@ -38,18 +39,18 @@ def validate_bake_inputs(bprops, mp, obj):
         str: Error message if validation fails, empty string if valid
     """
     if bprops.type == "SELECTED_VERTICES" and obj.mode != "EDIT":
-        return "Should be in edit mode!"
+        return n_("Should be in edit mode!")
 
     if bprops.target_type == "MASK" and len(mp.layers) == 0:
-        return "Mask need active layer!"
+        return n_("Mask need active layer!")
 
     if (hasattr(obj, "hide_viewport") and obj.hide_viewport) or obj.hide_render:
-        return "Please unhide render and viewport of active object!"
+        return n_("Please unhide render and viewport of active object!")
 
     if bprops.type == "FLOW" and (
         bprops.uv_map == "" or bprops.uv_map_1 == "" or bprops.uv_map == bprops.uv_map_1
     ):
-        return "UVMap and Straight UVMap cannot be the same or empty!"
+        return n_("UVMap and Straight UVMap cannot be the same or empty!")
 
     return ""
 
@@ -75,11 +76,11 @@ def validate_cage_object(bprops, obj):
             if any(
                 [mod for mod in cage_object.modifiers if mod.type not in {"ARMATURE"}]
             ) or any([mod for mod in obj.modifiers if mod.type not in {"ARMATURE"}]):
-                return None, "Mesh modifiers is not working with cage object for now!"
+                return None, n_("Mesh modifiers is not working with cage object for now!")
 
             if len(cage_object.data.polygons) != len(obj.data.polygons):
                 return None, (
-                    "Invalid cage object, the cage mesh must have the same number of faces as the active object!"
+                    n_("Invalid cage object, the cage mesh must have the same number of faces as the active object!")
                 )
 
     return cage_object, ""
@@ -109,7 +110,7 @@ def get_bakeable_objs(mat, obj, cage_object, bprops):
                 multires_count += 1
 
     if not objs or (bprops.type.startswith("MULTIRES_") and multires_count == 0):
-        return [], "No valid objects found to bake!"
+        return [], n_("No valid objects found to bake!")
 
     return objs, ""
 

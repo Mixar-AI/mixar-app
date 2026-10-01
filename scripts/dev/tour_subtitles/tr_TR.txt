@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Merhaba, ben Mixar'dan Naman.
+Birkaç dakika içinde uygulamayı tanıtacağım.
+Burası görünüm alanınız.
+İçinde dolaşabileceğiniz bir 3D alan.
+Ortadan sürükleyerek döndürün, tekerlekle yakınlaştırın.
+Kaydırmak için Shift ile orta tuşu sürükleyin.
+Haydi, deneyin.
+Seçmek için tıklayın, taşımak için G,
+döndürmek için R, ölçeklemek için S.
+İşte birkaç yararlı kısayol.
+Alttaki küçük adayı görüyor musunuz? O, ajanınız Mixie.
+Açmak için tıklayın.
+Mixie'nin sekmeleri var.
+Agent'ta isteğinizi sade sözlerle anlatın. Sahnenizde çalışır.
+Ajan Tripo, Meshy ve Nano Banana gibi modelleri kullanır.
+Daha fazla kontrol için diğer sekmeleri açın:
+3D, Image, Video veya World Model.
+Bir model seçip ayarlarını değiştirin.
+Ürettiğiniz her şey kütüphaneye gelir.
+Ürettikleriniz burada.
+Ajanın varlıklarınızı kullanması için kendi kütüphanenizi bağlayın,
+krediden tasarruf edin.
+Sol üstte sahneler çekmecesi var.
+Her sahnenin kendi sekmesi ve Mixie ajanı var.
+Görevleri yan yana yürütün, aralarında istediğiniz an geçin.
+Sahneniz hazır olunca Cinema Mode'a geçin,
+kamerayı yönetin ve video iş akışları oluşturun.
+Fikirler 2D'de başlar.
+Moodboard'u sağdan çekin veya tilde tuşuna basın.
+Referanslar ve fikirler için bir tuvaldir.
+Buraya resim, video veya eskiz bırakın.
+ComfyUI gibi üretken modeller için düğüm grafikleri kurun.
+En sade görünüm olan Zen Mode'dasınız.
+Blender biliyorsanız Engine Mode'a geçin.
+Tüm panelleri ve kısayollarıyla Blender çalışma alanı burada.
+Mixie ikisinde de çalışır. Size uygun olanı seçin.
+Zen Mode'a dönelim.
+Yaratıcı ortak programımız size kredi sağlar
+ve AI ile 3D'nin geleceğini şekillendiren bir topluluğa katılmanızı sağlar.
+İşte bu kadar. Artık her şeyin yerini biliyorsunuz.
+Birlikte 3D üretelim.

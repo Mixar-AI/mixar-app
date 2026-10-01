@@ -19,6 +19,7 @@ import bpy
 from .attachment_validation import is_video_attachment
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import rpt_
 
 from ..constants import (
     MAX_IMAGE_DIMENSION,
@@ -84,19 +85,19 @@ def _is_path_safe(filepath: str) -> tuple[bool, str]:
         Tuple of (is_safe, error_message)
     """
     if not filepath:
-        return False, "Empty filepath"
+        return False, rpt_("Empty filepath")
 
     # Resolve to absolute path to detect traversal attempts
     try:
         abs_path = os.path.realpath(filepath)
     except (OSError, ValueError) as e:
-        return False, f"Invalid path: {e}"
+        return False, rpt_("Invalid path: {error}").format(error=e)
 
     # Check for path traversal (original path different from resolved)
     # This catches attempts like "../../../etc/passwd"
     normalized_input = os.path.normpath(filepath)
     if '..' in filepath and abs_path != os.path.realpath(normalized_input):
-        return False, "Path traversal detected"
+        return False, rpt_("Path traversal detected")
 
     # Allow temp directories (on macOS /var/folders resolves to /private/var/folders)
     import tempfile
@@ -117,7 +118,7 @@ def _is_path_safe(filepath: str) -> tuple[bool, str]:
     lower_path = abs_path.lower().replace('\\', '/')
     for blocked in BLOCKED_PATH_PATTERNS:
         if blocked.lower().replace('\\', '/') in lower_path:
-            return False, f"Access to sensitive path blocked: {blocked}"
+            return False, rpt_("Access to sensitive path blocked: {path}").format(path=blocked)
 
     return True, ""
 
@@ -235,7 +236,7 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
         Tuple of (is_valid, error_message)
     """
     if not filepath:
-        return False, "No file path provided"
+        return False, rpt_("No file path provided")
 
     # Security: Validate path before any file operations
     is_safe, error = _is_path_safe(filepath)
@@ -243,24 +244,25 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
         return False, error
 
     if not os.path.isfile(filepath):
-        return False, "File does not exist or is not a regular file"
+        return False, rpt_("File does not exist or is not a regular file")
 
     # Check file extension
     ext = os.path.splitext(filepath)[1].lower()
     if ext in VIDEO_FILE_FORMATS:
-        return False, VIDEO_ATTACHMENT_REJECTED
+        return False, rpt_(VIDEO_ATTACHMENT_REJECTED)
     if ext not in SUPPORTED_IMAGE_FORMATS:
-        return False, f"Unsupported format: {ext}. Supported: {', '.join(SUPPORTED_IMAGE_FORMATS)}"
+        return False, rpt_("Unsupported format: {format}. Supported: {formats}").format(
+            format=ext, formats=', '.join(SUPPORTED_IMAGE_FORMATS))
 
     # Check file size
     try:
         file_size = os.path.getsize(filepath)
     except OSError:
-        return False, "File is no longer accessible"
+        return False, rpt_("File is no longer accessible")
     if file_size > MAX_IMAGE_SIZE_BYTES:
         size_mb = file_size / (1024 * 1024)
         max_mb = MAX_IMAGE_SIZE_BYTES / (1024 * 1024)
-        return False, f"File too large: {size_mb:.1f}MB (max {max_mb:.0f}MB)"
+        return False, rpt_("File too large: {size:.1f}MB (max {max:.0f}MB)").format(size=size_mb, max=max_mb)
 
     # Security: Validate image dimensions to prevent memory exhaustion
     if HAS_PIL:
@@ -268,13 +270,12 @@ def validate_image_file(filepath: str) -> tuple[bool, str]:
             with PILImage.open(filepath) as img:
                 width, height = img.size
                 if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
-                    return False, (
-                        f"Image dimensions too large: {width}x{height} "
-                        f"(max {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION})"
-                    )
+                    return False, rpt_(
+                        "Image dimensions too large: {width}x{height} (max {max}x{max})"
+                    ).format(width=width, height=height, max=MAX_IMAGE_DIMENSION)
                 img.verify()
         except (OSError, ValueError, SyntaxError, PILImage.DecompressionBombError) as e:
-            return False, f"Could not read image: {e}"
+            return False, rpt_("Could not read image: {error}").format(error=e)
 
     return True, ""
 

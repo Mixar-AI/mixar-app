@@ -17,6 +17,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_, rpt_
 from mixar.modules.common.utils.image_utils import (
     add_image_to_moodboard,
     compress_image_for_upload,
@@ -109,18 +110,19 @@ class MIXIE_OT_scene_recon_pick_image(Operator):
         try:
             filepath = os.path.abspath(os.path.realpath(self.filepath))
         except (OSError, ValueError) as e:
-            self.report({"ERROR"}, f"Invalid file path: {e}")
+            self.report({"ERROR"}, rpt_("Invalid file path: {error}").format(error=e))
             return {"CANCELLED"}
 
         if not os.path.isfile(filepath):
-            self.report({"ERROR"}, f"File not found: {filepath}")
+            self.report({"ERROR"}, rpt_("File not found: {filepath}").format(filepath=filepath))
             return {"CANCELLED"}
 
         valid_extensions = {'.png', '.jpg', '.jpeg', '.webp'}
         file_ext = os.path.splitext(filepath)[1].lower()
 
         if file_ext not in valid_extensions:
-            self.report({"ERROR"}, f"Invalid image format: {file_ext}")
+            self.report({"ERROR"}, rpt_("Invalid image format: {file_ext}").format(
+                file_ext=file_ext))
             return {"CANCELLED"}
 
         # Store path and display name in tab properties
@@ -130,7 +132,8 @@ class MIXIE_OT_scene_recon_pick_image(Operator):
             if hasattr(sidebar, 'tab_scene_recon'):
                 sidebar.tab_scene_recon.image_path = filepath
                 sidebar.tab_scene_recon.image_name = os.path.basename(filepath)
-                self.report({"INFO"}, f"Selected '{os.path.basename(filepath)}'")
+                self.report({"INFO"}, rpt_("Selected '{name}'").format(
+                    name=os.path.basename(filepath)))
                 mark_file_select_executed(self)
                 return {"FINISHED"}
 
@@ -238,7 +241,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
                 image_bytes = compress_image_for_upload(selected[0].image)
                 logger.debug("Using moodboard image: %s", selected[0].image.name)
             except Exception as e:
-                self.report({"ERROR"}, f"Failed to process image: {e}")
+                self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
                 return {"CANCELLED"}
         else:
             # Use file picker image or text prompt
@@ -248,7 +251,7 @@ class MIXIE_OT_scene_recon_generate(Operator):
                     image_bytes = compress_file_for_upload(image_path)
                     logger.debug("Using file: %s", image_path)
                 except Exception as e:
-                    self.report({"ERROR"}, f"Failed to read image: {e}")
+                    self.report({"ERROR"}, rpt_("Failed to read image: {error}").format(error=e))
                     return {"CANCELLED"}
             else:
                 # No file picked - check for text prompt
@@ -285,8 +288,8 @@ class MIXIE_OT_scene_recon_generate(Operator):
         """Generate an image from prompt, add to moodboard, then start recon."""
         scene.mixie_scene_recon_is_generating = True
         start_progress('scene_recon')
-        sidebar_tab.stage_name = "Generating scene image..."
-        sidebar_tab.stage_detail = "Creating image from description"
+        sidebar_tab.stage_name = n_("Generating scene image...")
+        sidebar_tab.stage_detail = n_("Creating image from description")
         sidebar_tab.error_text = ""
         sidebar_tab.phase = ""
 
@@ -332,13 +335,14 @@ class MIXIE_OT_scene_recon_generate(Operator):
         """Reconstruct scene from an attached image (no image generation step)."""
         img = bpy.data.images.get(image_name)
         if not img:
-            self.report({"ERROR"}, f"Image '{image_name}' not found")
+            self.report({"ERROR"}, rpt_("Image '{image_name}' not found").format(
+                image_name=image_name))
             return {"CANCELLED"}
 
         try:
             image_bytes = compress_image_for_upload(img)
         except Exception as e:
-            self.report({"ERROR"}, f"Failed to process image: {e}")
+            self.report({"ERROR"}, rpt_("Failed to process image: {error}").format(error=e))
             return {"CANCELLED"}
 
         scene.mixie_scene_recon_is_generating = True
@@ -447,7 +451,7 @@ class MIXIE_OT_scene_recon_cancel(Operator):
                 self.report({"INFO"}, "Scene reconstruction cancelled")
                 return {"FINISHED"}
         except ImportError as e:
-            self.report({"ERROR"}, f"Queue system not available: {e}")
+            self.report({"ERROR"}, rpt_("Queue system not available: {error}").format(error=e))
             return {"CANCELLED"}
 
         self.report({"WARNING"}, "No active job to cancel")
@@ -476,7 +480,7 @@ class MIXIE_OT_scene_recon_open_folder(Operator):
 
         folder = os.path.dirname(result_path)
         if not os.path.isdir(folder):
-            self.report({"ERROR"}, f"Folder not found: {folder}")
+            self.report({"ERROR"}, rpt_("Folder not found: {folder}").format(folder=folder))
             return {"CANCELLED"}
 
         # Open folder in file explorer (cross-platform).

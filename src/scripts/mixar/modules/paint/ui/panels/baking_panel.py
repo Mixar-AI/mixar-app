@@ -14,6 +14,7 @@ import bpy
 from bpy.types import Header, Panel
 
 from ...core.node.get_nodes import get_layer_source
+from mixar.modules.common.i18n import iface_, n_
 
 
 class BAKING_HT_header(Header):
@@ -351,7 +352,7 @@ def _get_material_category_items():
     """
     from ...procedural_materials import material_registry
 
-    items = [('ALL', 'All Categories')]
+    items = [('ALL', n_('All Categories'))]
     try:
         categories = material_registry.get_categories()
         for cat in categories:
@@ -409,7 +410,7 @@ def _draw_inline_material_library(layout, context):
 
         # === MATERIAL COUNT ===
         count_row = header_col.row()
-        count_row.label(text=f"{len(materials)} materials")
+        count_row.label(text=iface_("{count} materials").format(count=len(materials)), translate=False)
 
         layout.separator()
 
@@ -468,7 +469,7 @@ def _draw_inline_material_library(layout, context):
             op.material_id = material.material_id
 
     except Exception as e:
-        layout.label(text=f"Error: {str(e)}", icon='ERROR')
+        layout.label(text=iface_("Error: {error}").format(error=e), icon='ERROR', translate=False)
 
 
 def _get_category_display_name(category_id):
@@ -481,7 +482,7 @@ def _get_category_display_name(category_id):
         str: Human-readable category name.
     """
     if category_id == 'ALL':
-        return "All Categories"
+        return n_("All Categories")
     return category_id.replace('_', ' ').title()
 
 

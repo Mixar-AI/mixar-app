@@ -10,6 +10,7 @@ from urllib.parse import urlsplit, urlunsplit
 import websocket
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 from mixar.modules.common.network.core.errors import classify_network_error, log_network_failure
 from ...constants import VOICE_FINAL_TIMEOUT_S, VOICE_SESSION_GRACE_S, VOICE_BUFFER_SECONDS
 from .audio_buffer import AudioBuffer
@@ -113,7 +114,7 @@ class Transport:
                                 'buffered_audio_seconds': self.audio.bytes_pending / 32000}))
             ready = json.loads(ws.recv())
             if ready.get('type') != 'ready':
-                self.emit({'type': 'error', 'message': ready.get('message', 'Voice input unavailable.')})
+                self.emit({'type': 'error', 'message': ready.get('message', n_('Voice input unavailable.'))})
                 return
             max_seconds = ready.get('max_duration_seconds')
             if type(max_seconds) is not int or not 1 <= max_seconds <= 600:
@@ -186,7 +187,10 @@ class Transport:
                 failure = classify_network_error(exc, self.url)
                 log_network_failure(logger, failure, 'dictation')
                 try:
-                    self.emit({'type': 'error', 'message': f'Voice connection failed ({failure.support_code}). Please try again.'})
+                    # The coordinator translates this on the main thread (no bpy here).
+                    self.emit({'type': 'error', 'support_code': failure.support_code,
+                               'message': n_('Voice connection failed ({code}). Please try again.').format(
+                                   code=failure.support_code)})
                 except queue.Full:
                     pass
         finally:

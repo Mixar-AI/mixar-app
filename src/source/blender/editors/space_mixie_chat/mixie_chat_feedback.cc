@@ -19,6 +19,8 @@
 #include "BLI_rect.h"
 #include "BLI_string.h"
 
+#include "BLT_translation.hh"
+
 #include "DNA_userdef_types.h"
 
 #include "BKE_context.hh"
@@ -166,7 +168,7 @@ void mixie_chat_render_feedback(const bContext *C,
   }
   mutable_layout.feedback_comment_bounds = {};
   if (layout.feedback_rating > 0) {
-    const char *label = layout.feedback_comment_expanded ? "Close" : "Comment";
+    const char *label = layout.feedback_comment_expanded ? IFACE_("Close") : IFACE_("Comment");
     float width, text_h;
     chat_ui_calc_text_bounds(label, 200, layout.style.font_size - 1, 0, &width, &text_h);
     rctf &bounds = mutable_layout.feedback_comment_bounds;
@@ -184,7 +186,8 @@ void mixie_chat_render_feedback(const bContext *C,
   float top = copy.ymin - metrics.bubble_spacing;
   if (layout.feedback_row_height > 0) {
     const bool failed = layout.feedback_status == FEEDBACK_STATUS_FAILED;
-    const char *status = failed ? "Couldn't send. Please try again." : "Sending feedback...";
+    const char *status = failed ? RPT_("Couldn't send. Please try again.") :
+                                 RPT_("Sending feedback...");
     float color[4] = {failed ? 0.9f : 0.6f, 0.55f, 0.5f, 1.0f};
     chat_ui_draw_label(status, layout.bubble_x, top - layout.style.font_size,
                        layout.style.font_size - 1, 0, color, false);
@@ -215,15 +218,15 @@ void mixie_chat_render_feedback(const bContext *C,
   ui::Block *block = ui::block_begin(C, region, name, ui::EmbossType::Emboss);
   ui::Button *input = ui::uiDefButR(block, ui::ButtonType::Text, "", rx1, ry1,
       short(rx2 - rx1), short(ry2 - ry1), msg_ptr, "feedback_comment", -1, 0, 0, nullptr);
-  ui::button_placeholder_set(input, "Add a comment (optional)");
+  ui::button_placeholder_set(input, IFACE_("Add a comment (optional)"));
   ui::button_flag_enable(input, ui::BUT_TEXTEDIT_UPDATE);
   if (sending) ui::button_flag_enable(input, ui::BUT_DISABLED);
   const int button_h = int(20 * UI_SCALE_FAC);
   const char *ops[] = {"MIXIE_CHAT_OT_submit_feedback_comment", "MIXIE_CHAT_OT_cancel_feedback_comment"};
-  const char *labels[] = {"Save", "Cancel"};
+  const char *labels[] = {N_("Save"), N_("Cancel")};
   for (int i = 0; i < 2; i++) {
     ui::Button *button = ui::uiDefButO(block, ui::ButtonType::But, ops[i],
-        wm::OpCallContext::ExecDefault, labels[i], rx1 + i * int(66 * UI_SCALE_FAC),
+        wm::OpCallContext::ExecDefault, IFACE_(labels[i]), rx1 + i * int(66 * UI_SCALE_FAC),
         ry1 - button_h - int(4 * UI_SCALE_FAC), int(60 * UI_SCALE_FAC), button_h, std::nullopt);
     RNA_string_set(ui::button_operator_ptr_ensure(button), "bubble_id", layout.bubble_id);
     if (sending) ui::button_flag_enable(button, ui::BUT_DISABLED);

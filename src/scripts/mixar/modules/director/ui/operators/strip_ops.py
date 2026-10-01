@@ -7,6 +7,7 @@
 from bpy.props import IntProperty
 from bpy.types import Operator
 
+from mixar.modules.common.i18n import iface_, rpt_
 from ...core.capture import remove_beat
 from ...core.native_keys import has_selected_keys
 from ...core.shot_api import active_shot, split_shot
@@ -47,7 +48,7 @@ class MIXAR_OT_director_split_strip(Operator):
             return {'CANCELLED'}
         self.report(
             {'INFO'},
-            f"Split into {original_name} and {new_shot.name}",
+            rpt_("Split into {first} and {second}").format(first=original_name, second=new_shot.name),
         )
         return {'FINISHED'}
 
@@ -75,7 +76,8 @@ class MIXAR_OT_director_clear_strip(Operator):
         for index in reversed(range(len(shot.beats))):
             if remove_beat(context.scene, shot, index):
                 removed += 1
-        self.report({'INFO'}, f"Removed {removed} keyframes from {shot.name}")
+        self.report({'INFO'}, rpt_("Removed {count} keyframes from {name}").format(
+            count=removed, name=shot.name))
         return {'FINISHED'}
 
 
@@ -118,14 +120,14 @@ class MIXAR_OT_director_strip_menu(Operator):
                     # cursor lands on.
                     copy = layout.operator(
                         "mixar.director_duplicate_beats",
-                        text=f"Duplicate Keyframe {beat_index + 1}",
-                        icon='DUPLICATE',
+                        text=iface_("Duplicate Keyframe {number}").format(number=beat_index + 1),
+                        icon='DUPLICATE', translate=False,
                     )
                     copy.indices = str(beat_index)
                     delete = layout.operator(
                         "mixar.director_remove_beat",
-                        text=f"Delete Keyframe {beat_index + 1}",
-                        icon='X',
+                        text=iface_("Delete Keyframe {number}").format(number=beat_index + 1),
+                        icon='X', translate=False,
                     )
                     delete.index = beat_index
                 if keys_selected:

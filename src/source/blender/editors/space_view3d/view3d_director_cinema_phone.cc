@@ -34,6 +34,8 @@
 
 #include "BKE_context.hh"
 
+#include "BLT_translation.hh"
+
 #include "DNA_screen_types.h"
 #include "DNA_windowmanager_types.h"
 
@@ -256,15 +258,15 @@ void cinema_draw_phone_button(ui::Block *block,
   /* Three states, three things the click means. A button that reads "Drive
    * camera from your phone" while a phone is already driving would hand
    * control back without saying so. */
-  const char *label = status.connected ? "Phone connected" :
-                      status.running   ? "Waiting for your phone" :
-                                         "Drive camera from your phone";
+  const char *label = status.connected ? IFACE_("Phone connected") :
+                      status.running   ? IFACE_("Waiting for your phone") :
+                                         IFACE_("Drive camera from your phone");
   const char *tooltip = status.connected ?
-                            "Hand the camera back and disconnect the phone" :
+                            TIP_("Hand the camera back and disconnect the phone") :
                         status.running ?
-                            "Stop waiting and close the pairing code" :
-                            "Pair a phone on the same Wi-Fi as this computer and drive this "
-                            "camera with it";
+                            TIP_("Stop waiting and close the pairing code") :
+                            TIP_("Pair a phone on the same Wi-Fi as this computer and drive this "
+                                 "camera with it");
 
   if (status.connected) {
     MIXAR_THEME_LOAD(on, Primary);
@@ -358,7 +360,7 @@ void cinema_draw_phone_card(ui::Block *block, const bContext *C, const ARegion *
    * here: in Aerial mode it used to fall through to
    * `MIXAR_OT_director_place_camera`, whose poll is the stage, and move the
    * shot camera to a point hidden behind the card. */
-  cinema_blocker(block, card, "Pair a phone, or Cancel to close this");
+  cinema_blocker(block, card, TIP_("Pair a phone, or Cancel to close this"));
 
   MIXAR_THEME_LOAD(value_col, CinemaRowTextOn);
   MIXAR_THEME_LOAD(label_col, CinemaLabel);
@@ -366,7 +368,8 @@ void cinema_draw_phone_card(ui::Block *block, const bContext *C, const ARegion *
 
   float y = card.ymax - PHONE_CARD_PAD * u;
   y -= PHONE_TITLE_H * u;
-  cinema_text_center(has_qr ? "Scan with your phone camera" : "Open this link on your phone",
+  cinema_text_center(has_qr ? IFACE_("Scan with your phone camera") :
+                              IFACE_("Open this link on your phone"),
                      cx,
                      y + PHONE_TITLE_H * u * 0.5f,
                      CINEMA_FONT_TITLE * u,
@@ -392,12 +395,13 @@ void cinema_draw_phone_card(ui::Block *block, const bContext *C, const ARegion *
     cinema_op_button(block,
                      "MIXAR_OT_virtual_camera_copy_url",
                      qr_area,
-                     "Copy the pairing link (open it in the phone's browser instead)");
+                     TIP_("Copy the pairing link (open it in the phone's browser instead)"));
     cinema_qa_record(region, qr_area, "director_phone_card", "qr", -1);
   }
 
   y -= PHONE_GAP * u + PHONE_LINE_H * u;
-  text_center_fitted(state.url[0] != '\0' ? state.url : "Finding this computer on the network…",
+  text_center_fitted(state.url[0] != '\0' ? state.url :
+                                             IFACE_("Finding this computer on the network…"),
                      cx,
                      y + PHONE_LINE_H * u * 0.5f,
                      CINEMA_FONT_LABEL * u,
@@ -406,7 +410,7 @@ void cinema_draw_phone_card(ui::Block *block, const bContext *C, const ARegion *
 
   if (warn_tls) {
     y -= PHONE_LINE_H * u;
-    cinema_text_center("No secure link: joysticks only, no phone motion",
+    cinema_text_center(IFACE_("No secure link: joysticks only, no phone motion"),
                        cx,
                        y + PHONE_LINE_H * u * 0.5f,
                        CINEMA_FONT_LABEL * u,
@@ -437,22 +441,22 @@ void cinema_draw_phone_card(ui::Block *block, const bContext *C, const ARegion *
               region,
               copy_chip,
               "MIXAR_OT_virtual_camera_copy_url",
-              "Copy Link",
-              "Copy the pairing link to the clipboard",
+              IFACE_("Copy Link"),
+              TIP_("Copy the pairing link to the clipboard"),
               "copy");
   action_chip(block,
               region,
               repair_chip,
               "MIXAR_OT_virtual_camera_new_pairing",
-              "New Code",
-              "Issue a fresh pairing code and invalidate this one",
+              IFACE_("New Code"),
+              TIP_("Issue a fresh pairing code and invalidate this one"),
               "repair");
   action_chip(block,
               region,
               stop_chip,
               "MIXAR_OT_virtual_camera_stop",
-              "Cancel",
-              "Stop waiting and close the pairing server",
+              IFACE_("Cancel"),
+              TIP_("Stop waiting and close the pairing server"),
               "stop");
 }
 

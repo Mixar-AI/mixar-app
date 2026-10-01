@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+Hej, jeg er Naman fra Mixar.
+På få minutter viser jeg dig rundt i appen.
+Dette er dit 3D-visningsområde.
+Et 3D-rum, du kan bevæge dig rundt i.
+Træk med midterknappen for at rotere, rul for at zoome.
+Shift og midterknappen panorerer visningen.
+Prøv det selv.
+Klik for at vælge, G for at flytte,
+R for at rotere, S for at skalere.
+Her er nogle nyttige genveje.
+Ser du den lille ø nederst? Det er Mixie, din agent.
+Klik for at åbne den.
+Mixie har faner.
+Fortæl i Agent med almindelige ord, hvad du ønsker. Agenten arbejder på scenen.
+Agenten bruger modeller som Tripo, Meshy og Nano Banana.
+Åbn de andre faner for mere kontrol:
+3D, Image, Video eller World Model.
+Vælg en model, og tilpas indstillingerne.
+Alt, du genererer, lander i biblioteket.
+Dine resultater ligger her.
+Tilknyt dit eget bibliotek, så agenten bruger dine ressourcer,
+og du sparer kreditter.
+Øverst til venstre er sceneskuffen.
+Hver scene har sin egen fane og Mixie-agent.
+Kør opgaver side om side, og skift når som helst.
+Når scenen er klar, skift til Cinema Mode
+for at styre kameraet og opbygge videoforløb.
+Idéer starter i 2D.
+Træk moodboardet frem fra højre, eller tryk på tilde.
+Det er et lærred til referencer og koncepter.
+Slip billeder, videoer eller skitser her.
+Byg nodegrafer til generative modeller, som i ComfyUI.
+Du er i Zen Mode, den enkleste visning.
+Kender du Blender? Skift til Engine Mode.
+Hele Blenders arbejdsområde er her med alle paneler og genveje.
+Mixie fungerer i begge. Vælg det, der passer dig.
+Lad os gå tilbage til Zen Mode.
+Vores kreative partnerprogram giver dig kreditter
+og et fællesskab, der former fremtiden for AI og 3D.
+Det var det. Nu ved du, hvor alt er.
+Lad os skabe 3D sammen.

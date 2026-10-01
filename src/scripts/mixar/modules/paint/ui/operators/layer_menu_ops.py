@@ -14,6 +14,7 @@ from bpy.props import IntProperty
 from bpy.types import Operator
 
 from ...core.node.node_utils import get_active_mpaint_node
+from mixar.modules.common.i18n import iface_
 
 
 class LAYERS_OT_SelectedLayersMenu(Operator):
@@ -64,7 +65,7 @@ class LAYERS_OT_SelectedLayersMenu(Operator):
         header_row = main_col.row(align=True)
         header_row.scale_y = 1.2
         if selected_count > 0:
-            header_row.label(text=f"Operations on {selected_count} Layer(s)", icon='THREE_DOTS')
+            header_row.label(text=iface_("Operations on {count} Layer(s)").format(count=selected_count), icon='THREE_DOTS', translate=False)
         else:
             header_row.label(text="Layer Operations", icon='THREE_DOTS')
 

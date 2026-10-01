@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 
+from mixar.modules.common.i18n import rpt_
 from mixar.modules.common.job_queue.constants import FEATURE_WORLD_LABS
 from mixar.modules.moodboard.core.world_labs_mode import resolve_world_labs_mode
 
@@ -33,14 +34,14 @@ def resolve_world_labs_catalog(
     placeholders = {"", "LOADING", "NONE", "ERROR"}
     requested = selected_model or ""
     if requested not in placeholders and get_model("world_labs", requested) is None:
-        raise ValueError(f"World Labs model '{requested}' is not enabled")
+        raise ValueError(rpt_("World Labs model '{model}' is not enabled").format(model=requested))
     model = (
         requested if requested not in placeholders
         else (get_default_model_slug("world_labs") or "")
     )
     model_row = get_model("world_labs", model) if model else None
     if not model_row:
-        raise ValueError("No enabled World Labs model is available")
+        raise ValueError(rpt_("No enabled World Labs model is available"))
 
     values = collect_params("world_labs", model)
     schema = model_row.get("parameters") or {}
@@ -50,7 +51,8 @@ def resolve_world_labs_catalog(
         value = explicit or values.get(name) or spec.get("default")
         allowed = spec.get("enum")
         if value is None or (allowed is not None and value not in allowed):
-            raise ValueError(f"World Labs catalog parameter '{name}' is unavailable")
+            raise ValueError(rpt_("World Labs catalog parameter '{name}' is unavailable").format(
+                name=name))
         return str(value)
 
     return model, _value("mode", selected_mode), _value("lod", selected_lod)
@@ -73,7 +75,7 @@ def run_world_labs_node(context, node):
         if is_still_item(item)
     ]
     if len(stills) > 1:
-        raise ValueError("Generate Splat takes one image")
+        raise ValueError(rpt_("Generate Splat takes one image"))
     image = stills[0].image if stills else None
     prompt = (getattr(node, "prompt", "") or "").strip()
     params = collect_node_params(node)
@@ -86,9 +88,9 @@ def run_world_labs_node(context, node):
         catalog_mode, has_image=image is not None, has_prompt=bool(prompt),
     )
     if mode == "image" and image is None:
-        raise ValueError("Connect an image or enter a prompt")
+        raise ValueError(rpt_("Connect an image or enter a prompt"))
     if mode == "text" and not prompt:
-        raise ValueError("Enter a prompt in the splat node")
+        raise ValueError(rpt_("Enter a prompt in the splat node"))
 
     image_b64 = ""
     label = prompt[:40] if prompt else "World"

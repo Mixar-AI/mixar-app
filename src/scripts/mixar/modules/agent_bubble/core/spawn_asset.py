@@ -20,6 +20,8 @@ import logging
 
 import bpy
 
+from mixar.modules.common.i18n import n_, rpt_
+
 logger = logging.getLogger(__name__)
 
 _SLOTS = {"object": "objects", "collection": "collections"}
@@ -36,22 +38,22 @@ def spawn_library_asset(context, blend_path, id_dir, asset_name):
     name = (asset_name or "").strip()
     kind = (id_dir or "Object").strip() or "Object"
     if not blend or not name:
-        return False, "That asset has no file on disk"
+        return False, n_("That asset has no file on disk")
     if not _is_file(blend):
-        return False, "The asset's .blend is missing"
+        return False, n_("The asset's .blend is missing")
     slot = _SLOTS.get(kind.lower())
     if slot is None:
-        return False, "Only objects and collections can be added to the scene"
+        return False, n_("Only objects and collections can be added to the scene")
 
     try:
         with bpy.data.libraries.load(blend, link=False) as (data_from, data_to):
             available = list(getattr(data_from, slot, []) or [])
             if name not in available:
-                return False, f"'{name}' is not in that file anymore"
+                return False, rpt_("'{name}' is not in that file anymore").format(name=name)
             setattr(data_to, slot, [name])
     except Exception:
         logger.exception("[Generations] Could not read '%s' from %s", name, blend)
-        return False, f"Could not add '{name}' to the scene"
+        return False, rpt_("Could not add '{name}' to the scene").format(name=name)
 
     loaded = [
         item
@@ -59,11 +61,11 @@ def spawn_library_asset(context, blend_path, id_dir, asset_name):
         if item is not None and not isinstance(item, str)
     ]
     if not loaded:
-        return False, "The asset appended empty."
+        return False, n_("The asset appended empty.")
 
     target = _viewport_target(context)
     if target is None or target.scene is None:
-        return False, "No scene is open to add this to"
+        return False, n_("No scene is open to add this to")
     scene = target.scene
     view_layer = target.view_layer
 
@@ -76,7 +78,7 @@ def spawn_library_asset(context, blend_path, id_dir, asset_name):
             if _link_object(collection, obj):
                 members.append(obj)
     if not members:
-        return False, "The asset appended empty."
+        return False, n_("The asset appended empty.")
 
     _touch_view_layer(view_layer)
     members = _realize_instancers(context, target, view_layer, members)
@@ -86,7 +88,7 @@ def spawn_library_asset(context, blend_path, id_dir, asset_name):
     _reveal(view_layer, members)
     _frame(context, target)
     _redraw(target)
-    return True, f"Added '{name}' to the scene"
+    return True, rpt_("Added '{name}' to the scene").format(name=name)
 
 
 def _is_file(path):

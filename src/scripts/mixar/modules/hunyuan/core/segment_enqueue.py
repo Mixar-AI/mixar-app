@@ -29,6 +29,7 @@ from mixar.modules.common.job_queue.constants import (
     FEATURE_TRIPO_SEGMENT,
 )
 from mixar.modules.common.job_queue.core.enqueue import enqueue_generation
+from mixar.modules.common.i18n import n_, rpt_
 from ..constants import (
     MAX_FILE_SIZE_SEGMENT,
     SEGMENT_JOB_PROP,
@@ -215,21 +216,20 @@ def enqueue_segment_jobs(
         try:
             file_bytes, filename = _export_single_object(context, obj)
         except Exception as e:  # noqa: BLE001
-            msg = f"Failed to export '{obj.name}': {e}"
-            logger.warning(msg)
+            msg = n_("Failed to export '{name}': {error}")
+            logger.warning(msg.format(name=obj.name, error=e))
             if operator is not None:
-                operator.report({'WARNING'}, msg)
+                operator.report({'WARNING'}, rpt_(msg).format(name=obj.name, error=e))
             continue
 
         if len(file_bytes) > MAX_FILE_SIZE_SEGMENT:
             size_mb = len(file_bytes) / (1024 * 1024)
-            msg = (
-                f"Skipping '{obj.name}': exported file is {size_mb:.1f}MB "
-                f"(max {MAX_FILE_SIZE_SEGMENT // (1024 * 1024)}MB)"
-            )
-            logger.warning(msg)
+            fields = dict(name=obj.name, size_mb=size_mb,
+                          max_mb=MAX_FILE_SIZE_SEGMENT // (1024 * 1024))
+            msg = n_("Skipping '{name}': exported file is {size_mb:.1f}MB (max {max_mb}MB)")
+            logger.warning(msg.format(**fields))
             if operator is not None:
-                operator.report({'WARNING'}, msg)
+                operator.report({'WARNING'}, rpt_(msg).format(**fields))
             continue
 
         payload = assemble_payload(
@@ -250,7 +250,7 @@ def enqueue_segment_jobs(
             model=model,
             payload=payload,
             label=obj.name,
-            fail_message="Mesh segmentation failed",
+            fail_message=n_("Mesh segmentation failed"),
             on_imported=segment_on_imported,
             scene_flag=SEGMENT_SCENE_FLAG,
         )
@@ -284,10 +284,10 @@ def enqueue_smart_segment_job(
     try:
         image_bytes = compress_for_service(image, "image_to_3d")
     except Exception as e:  # noqa: BLE001
-        msg = f"Failed to read image '{image.name}': {e}"
-        logger.warning(msg)
+        msg = n_("Failed to read image '{name}': {error}")
+        logger.warning(msg.format(name=image.name, error=e))
         if operator is not None:
-            operator.report({'WARNING'}, msg)
+            operator.report({'WARNING'}, rpt_(msg).format(name=image.name, error=e))
         return None
 
     payload = assemble_payload(
@@ -307,7 +307,7 @@ def enqueue_smart_segment_job(
         model=model,
         payload=payload,
         label=image.name,
-        fail_message="Smart segmentation failed",
+        fail_message=n_("Smart segmentation failed"),
         on_imported=segment_on_imported,
         scene_flag=SMART_SEGMENT_SCENE_FLAG,
     )

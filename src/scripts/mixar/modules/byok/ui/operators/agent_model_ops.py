@@ -21,12 +21,13 @@ from bpy.props import StringProperty
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.common.i18n import n_
 
 from ...core import preference_client, preference_state
 
 logger = get_logger(__name__)
 
-_BYOK_BLOCKED_MSG = (
+_BYOK_BLOCKED_MSG = n_(
     "Your own API key is in use — pick \"Change or remove my API key\" in this "
     "menu to choose a hosted model"
 )
@@ -200,7 +201,7 @@ def _on_save_done(epoch, previous, success, data, err) -> None:
         # The server's message is user-safe per the contract ("Model not
         # available: ..."), and a transport failure already arrives carrying a
         # NET-* support code from `classify_network_error`. Surface it verbatim.
-        _notify_failure("Could not change model", err or "")
+        _notify_failure(n_("Could not change model"), err or "")
     preference_state.end_mutation(epoch)
     _redraw()
 
@@ -214,7 +215,7 @@ def _on_reset_done(epoch, previous, success, err) -> None:
     else:
         logger.debug("Agent model reset rejected, reverting: %s", err)
         preference_state.apply_local(previous, epoch=epoch)
-        _notify_failure("Could not reset model", err or "")
+        _notify_failure(n_("Could not reset model"), err or "")
     preference_state.end_mutation(epoch)
     _redraw()
 

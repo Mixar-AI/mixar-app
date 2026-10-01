@@ -177,11 +177,12 @@ rctf pane_prompt_field_rect(const rctf &box, float u);
  * overlapping clicks, so a floating row makes the params unreachable). */
 float pane_bottom_row_ymin(const rctf &box, float u);
 /**
- * Generate chip rect, sized for \a label (defaults to "Generate"). Busy labels
- * like "Generating (3)" outgrow the idle chip, so every pane that paints a
- * live queue label must pass it here — thumbs stop at this rect's left edge.
+ * Generate chip rect, sized for \a label (null: the translated "Generate").
+ * Busy labels like "Generating (3)" outgrow the idle chip, so every pane that
+ * paints a live queue label must pass it here — thumbs stop at this rect's
+ * left edge. \a label is measured as given: pass it already translated.
  */
-rctf pane_generate_rect(const rctf &box, float u, const char *label = "Generate");
+rctf pane_generate_rect(const rctf &box, float u, const char *label = nullptr);
 
 /** True when \a prop_id has no catalog `visible_if`, or the live sibling
  * values match. Missing `mixar_visible_if` metadata fails open. */
@@ -198,7 +199,7 @@ float pane_dropdown_chip_w(const char *label, float u);
 rctf pane_segmented_layout(
     float x, float y_top, const char *const *labels, int count, float u, rctf *r_segs);
 
-/** Measured ON/OFF toggle width. */
+/** Measured ON/OFF toggle width (\a label as drawn; ON/OFF translated). */
 float pane_onoff_chip_w(const char *label, float u);
 
 /** \} */
@@ -303,7 +304,8 @@ float pane_ref_thumbs_paint(Image *const *images,
 void pane_but_tooltip_owned(ui::Button *but, const char *text);
 
 /**
- * The Generate button's label for \a active_jobs already in the queue.
+ * The Generate button's label for \a active_jobs already in the queue,
+ * translated (it is both measured and drawn).
  *
  * "Generate" when nothing is active; "Generating (N)" when any matched job is
  * already RUNNING_*; "Queued (N)" when every matched job is still PENDING /

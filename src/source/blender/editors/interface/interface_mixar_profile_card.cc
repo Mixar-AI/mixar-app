@@ -424,7 +424,7 @@ void add_actions(Layout *layout)
 
   Layout &top = grid.row(true);
   top.scale_y_set(ROW_ACTION);
-  add_action(&top, "MIXIE_CHAT_OT_open_dashboard", "Dashboard", MixarCardIcon::Grid,
+  add_action(&top, "MIXIE_CHAT_OT_open_dashboard", N_("Dashboard"), MixarCardIcon::Grid,
              MixarCardElement::CardButton);
   /* In-app referrals, so an out-of-credit user never has to leave for the web. */
   add_action(&top, "MIXAR_OT_refer_friend", "Refer a Friend", MixarCardIcon::Gift,
@@ -435,7 +435,7 @@ void add_actions(Layout *layout)
   Layout &settings = grid.row(true);
   settings.scale_y_set(ROW_ACTION);
   settings.operator_context_set(wm::OpCallContext::InvokeDefault);
-  add_action(&settings, "MIXAR_BYOK_OT_open_dialog", "AI Provider Settings",
+  add_action(&settings, "MIXAR_BYOK_OT_open_dialog", N_("AI Provider Settings"),
              MixarCardIcon::Sliders, MixarCardElement::CardButton);
 
   Layout &bottom = grid.row(true);
@@ -461,7 +461,7 @@ void add_logout(Layout *layout)
    * padding to eat the text ("Logout" -> "Log"). A full-width strip with
    * the contents centred by the painter is both the correct hit area and
    * the intended look. */
-  add_action(&row, "MIXIE_CHAT_OT_logout", "Logout", MixarCardIcon::Cross,
+  add_action(&row, "MIXIE_CHAT_OT_logout", N_("Logout"), MixarCardIcon::Cross,
              MixarCardElement::GhostButton);
 }
 
