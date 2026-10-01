@@ -22,6 +22,8 @@ class OutgoingMessage:
     project_context: Optional[dict] = None
     mark_context: Optional[dict] = None
     user_message: object = None
+    command_id: Optional[str] = None
+    answers: Optional[dict] = None
 
 
 def model_change_pending(scene):
@@ -79,6 +81,7 @@ def send_user_message(scene, msg):
             action='modify' if state == SessionState.MODIFYING else 'respond',
             text=msg.text, question_ref=pending_question_ref(scene),
             user_message=msg.user_message,
+            command_id=msg.command_id, answers=msg.answers,
             interrupt_id=pending_interrupt_id(scene), attachments=[
                 {"type": "image_url", "image_url": {"url":
                  f"data:{img.get('mime_type', 'image/png')};base64,{img.get('base64', '')}"}}
@@ -98,6 +101,7 @@ def send_user_message(scene, msg):
         imported_object_names=msg.imported_object_names,
         project_context=msg.project_context, mark_context=msg.mark_context,
         user_message=msg.user_message, interjecting=interjecting,
+        command_id=msg.command_id,
         # The composer's Auto switch. Read here, on the ONE path a fresh turn
         # and an interjection share, so both carry it; an input answer
         # (start_input_stream above) is not a turn and never does.

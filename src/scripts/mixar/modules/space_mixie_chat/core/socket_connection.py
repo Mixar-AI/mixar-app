@@ -260,6 +260,7 @@ class SocketConnection:
         from ...addon_project.constants import TESTS_CAPABILITY as ADDON_PROJECT_TESTS_CAPABILITY
         from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
         from ...mcp_bridge.constants import CAPABILITY as MCP_CAPABILITY
+        from ...mcp_bridge.constants import AGENT_CAPABILITY as MCP_AGENT_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -289,7 +290,7 @@ class SocketConnection:
                 # backend only probes instances that advertise it (older
                 # clients would silently never reply).
                 "liveness",
-                *([MCP_CAPABILITY] if not self._role else []),
+                *([MCP_CAPABILITY, MCP_AGENT_CAPABILITY] if not self._role else []),
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,

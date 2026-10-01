@@ -13,6 +13,9 @@ def dispatch(method, params):
         return lease.begin_operation(params)
     if method == END_OPERATION:
         return lease.end_operation(params)
+    if method == 'mcp.agent_command':
+        from .agent_control import dispatch as agent_dispatch
+        return agent_dispatch(params)
     return {"success": False, "error_type": "unknown_method", "error": "Unknown MCP operation method"}
 
 

@@ -60,7 +60,7 @@ class SocketDispatch:
         elif method == JSONRPCMethod.BLENDER_LIVENESS:
             self._handle_liveness(request_id)
 
-        elif method in ("mcp.begin_operation", "mcp.end_operation"):
+        elif method in ("mcp.begin_operation", "mcp.end_operation", "mcp.agent_command"):
             from mixar.modules.mcp_bridge.core.rpc import handle_request
             if getattr(self, "_role", None):
                 if request_id:

@@ -5,6 +5,7 @@
 from mixar.modules.common.i18n import n_
 
 CAPABILITY = "mcp_operations_v1"
+AGENT_CAPABILITY = "mcp_agent_v1"
 BEGIN_OPERATION = "mcp.begin_operation"
 END_OPERATION = "mcp.end_operation"
 OPERATION_CONTEXT_KEY = "mcp_operation_id"

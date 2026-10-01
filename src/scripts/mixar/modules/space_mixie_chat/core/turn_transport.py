@@ -44,7 +44,7 @@ class TurnTransport:
         return any(not turn.complete and turn.session_id == self._session_id
                    for turn in turn_events._turns.values())
 
-    def _send(self, method, payload, user_message=None, interjecting=False):
+    def _send(self, method, payload, user_message=None, interjecting=False, command_id=None):
         from .session import get_session_manager
         scene = self._scene()
         if scene is None:
@@ -56,7 +56,7 @@ class TurnTransport:
             from .rules import rules_snapshot
             payload['rules'] = rules_snapshot(scene)
         self._session_id = payload['session_id']
-        command_id = str(uuid.uuid4())
+        command_id = command_id or str(uuid.uuid4())
         self.last_command_id = command_id
         previous_state = get_session_manager().get_state(scene)
         joining = interjecting
@@ -114,7 +114,7 @@ class TurnTransport:
                      execution_required=True, approval_required=True, auth_token=None,
                      image_attachments=None, attachment_names=None, imported_object_names=None,
                      project_context=None, mark_context=None, user_message=None,
-                     interjecting=False, auto_mode=False):
+                     interjecting=False, auto_mode=False, command_id=None):
         payload = build_chat_payload(
             message=message, instance_id=instance_id, session_id=session_id,
             plan_required=plan_required, execution_required=execution_required,
@@ -123,11 +123,11 @@ class TurnTransport:
             project_context=project_context, mark_context=mark_context,
             user_preferences=collect_user_preferences(), auto_mode=auto_mode,
         )
-        return self._send('chat', payload, user_message, interjecting)
+        return self._send('chat', payload, user_message, interjecting, command_id)
 
     def start_input_stream(self, session_id, action, text='', answers=None,
                            interrupt_id=None, auth_token=None, question_ref=None, attachments=None,
-                           user_message=None):
+                           user_message=None, command_id=None):
         payload = {'session_id': session_id, 'action': action, 'text': text}
         if answers:
             payload['answers'] = answers
@@ -137,7 +137,7 @@ class TurnTransport:
             payload['attachments'] = attachments
         if question_ref:
             payload['question_ref'] = question_ref
-        return self._send('input', payload, user_message)
+        return self._send('input', payload, user_message, command_id=command_id)
 
     def stop_stream(self):
         turn_events.drop_scene(self.scene_name)

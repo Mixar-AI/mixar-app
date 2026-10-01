@@ -8,8 +8,12 @@
 3. Copy the setup for Claude Code, Claude Desktop or Codex and add it to that client.
 4. Restart the client's MCP connection, keeping Mixar open.
 
-Ask the assistant to inspect the scene, make a change, and verify it with a
-viewport image. Tools cover scene and geometry inspection, Blender scripting,
+For complete creative tasks, ask the assistant to use `mixar_agent_start`. It
+runs the full backend chat agent with its live prompts, skills, workers and
+verification. Follow `mixar_agent_status`, answer questions with
+`mixar_agent_respond`, and use `mixar_agent_cancel` to stop it. These controls
+have no MCP surcharge; normal Mixar agent and generation billing applies.
+Direct tools can also inspect the scene, make a change and verify a viewport image. Tools cover scene and geometry inspection, Blender scripting,
 materials and layers, UVs, generation, assets, animation through scripting,
 rendering and export. Tool discovery includes schemas and pricing policy.
 
