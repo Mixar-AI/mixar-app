@@ -64,7 +64,7 @@ def status(scene, session, command_id):
 def dispatch(params):
     from mixar.modules.space_mixie_chat.constants import SessionState
     if not lease._enabled():
-        return lease._failure('mcp_disabled', 'Enable Connect Claude / Codex in Mixar first')
+        return lease._failure('mcp_disabled', 'Enable Connect MCP in Mixar first')
     try:
         session_id = lease._uuid(params.get('session_id'))
         command_id = lease._uuid(params.get('command_id'))

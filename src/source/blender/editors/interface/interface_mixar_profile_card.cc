@@ -418,7 +418,8 @@ void add_action(Layout *layout,
 
 void add_actions(Layout *layout)
 {
-  Layout &grid = layout->column(false);
+  /* Button insets supply the same gap horizontally and vertically. */
+  Layout &grid = layout->column(true);
 
   Layout &top = grid.row(true);
   top.scale_y_set(ROW_ACTION);
@@ -439,8 +440,8 @@ void add_actions(Layout *layout)
   Layout &connect = grid.row(true);
   connect.scale_y_set(ROW_ACTION);
   connect.operator_context_set(wm::OpCallContext::InvokeDefault);
-  add_action(&connect, "MIXAR_OT_connect_ai", N_("Connect Claude / Codex"),
-             MixarCardIcon::None, MixarCardElement::CardButton);
+  add_action(&connect, "MIXAR_OT_connect_ai", N_("Connect MCP"),
+             MixarCardIcon::Plug, MixarCardElement::CardButton);
 
   Layout &bottom = grid.row(true);
   bottom.scale_y_set(ROW_ACTION);

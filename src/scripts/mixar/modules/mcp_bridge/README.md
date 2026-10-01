@@ -4,7 +4,7 @@
 # Connect Claude or Codex to Mixar
 
 1. Open Mixar and sign in.
-2. Open your **Profile → Connect Claude / Codex → Enable MCP**.
+2. Open your **Profile → Connect MCP → Enable MCP**.
 3. Copy the setup for Claude Code, Claude Desktop or Codex and add it to that client.
 4. Restart the client's MCP connection, keeping Mixar open.
 

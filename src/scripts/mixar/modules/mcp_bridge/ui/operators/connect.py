@@ -15,7 +15,7 @@ from ...core.setup import connection_config
 
 class MIXAR_OT_mcp_setup(Operator):
     bl_idname = "mixar.connect_ai"
-    bl_label = "Connect Claude / Codex"
+    bl_label = "Connect MCP"
     bl_description = "Connect external AI assistants to your Mixar scenes with MCP"
 
     def execute(self, context):

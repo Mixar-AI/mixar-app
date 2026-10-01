@@ -6367,7 +6367,7 @@ msgstr ""
 msgid "Copy Codex Configuration"
 msgstr ""
 
-msgid "Connect Claude / Codex"
+msgid "Connect MCP"
 msgstr ""
 
 msgid "Connect external AI assistants to your Mixar scenes with MCP"

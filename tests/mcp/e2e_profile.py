@@ -15,6 +15,7 @@ from e2e_scene import enable_in_ui, load_qa
 
 
 CONNECT = {"op": "MIXAR_OT_connect_ai", "popup": True}
+PROFILE = {"but_type": "Popover", "area_type": "TOPBAR"}
 
 
 def snap(qa, path, target):
@@ -33,6 +34,36 @@ def close_popups(qa):
         for window in {w["window"] for w in widgets}:
             qa.press("ESC", window=window)
     assert not qa.find(popup=True)["total"]
+
+
+def profile_layout(qa, output):
+    saved = qa.eval("result=bpy.context.preferences.view.ui_scale")
+    layouts = {}
+    try:
+        for factor in (1.0, 1.5):
+            qa.eval(f"bpy.context.preferences.view.ui_scale={saved * factor}\nresult=True")
+            qa.click(**PROFILE)
+            names = ("Dashboard", "Refer a Friend", "AI Provider Settings", "Connect MCP", "Docs")
+            rows = {name: qa.find(text=name, popup=True)["widgets"][0]["rect"] for name in names}
+            top, right, settings, connect, bottom = (rows[name] for name in names)
+            # The same painter inset surrounds each button; equal layout gaps
+            # therefore produce equal visible gaps across rows and columns.
+            gaps = [right[0] - top[2], top[1] - settings[3],
+                    settings[1] - connect[3], connect[1] - bottom[3]]
+            assert min(gaps) >= -1, (factor, gaps)
+            assert max(gaps) - min(gaps) <= 1, (factor, gaps)
+            assert max(r[0] for r in (top, settings, connect, bottom)) - min(
+                r[0] for r in (top, settings, connect, bottom)) <= 1, rows
+            assert abs(settings[2] - connect[2]) <= 1, rows
+            heights = [r[3] - r[1] for r in rows.values()]
+            assert max(heights) - min(heights) <= 1, heights
+            snap(qa, output / ("profile.png" if factor == 1 else "profile-150.png"), CONNECT)
+            layouts[str(factor)] = {"rects": rows, "gaps": gaps}
+            close_popups(qa)
+    finally:
+        close_popups(qa)
+        qa.eval(f"bpy.context.preferences.view.ui_scale={saved}\nresult=True")
+    return layouts
 
 
 def run(qa, output):
@@ -61,9 +92,10 @@ def run(qa, output):
     qa.click(text=email, area_type="TOPBAR")
     entry = qa.find(**CONNECT)["widgets"]
     assert len(entry) == 1 and entry[0]["enabled"], entry
+    assert entry[0]["text"] == "Connect MCP", entry
     assert qa.find(op="MIXAR_BYOK_OT_open_dialog", popup=True)["total"] == 1
-    snap(qa, output / "profile.png", CONNECT)
     close_popups(qa)
+    layouts = profile_layout(qa, output)
     enable_in_ui(qa, output)
     qa.click(text=email, area_type="TOPBAR")
     qa.click(**CONNECT)
@@ -88,6 +120,7 @@ def run(qa, output):
         qa.eval("p=bpy.types.MIXAR_PT_profile\np.draw=p._qa_native_draw\n"
                 "del p._qa_native_draw\nresult=True")
     return {"help_entry_absent": True, "profile_entry_enabled": True,
+            "profile_label": "Connect MCP", "layout_at_ui_scales": layouts,
             "setup_opens": True, "enable_connect_disable": True,
             "client_setup_choices": 3, "fallback_setup_opens": True,
             "credits_spent": 0, "requires_visual_review": True}
