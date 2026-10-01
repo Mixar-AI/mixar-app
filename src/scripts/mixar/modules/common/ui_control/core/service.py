@@ -97,7 +97,9 @@ def _eligible():
     from mixar.modules.mcp_bridge.core import runtime, eligibility
     if not runtime.enabled():
         raise UIError("mcp_disabled", "Mixar MCP is disabled")
-    if not eligibility.valid():
+    wm = bpy.context.window_manager
+    if (not getattr(wm, "mixie_chat_is_logged_in", False)
+            or getattr(wm, "mixie_chat_session_expired", False) or not eligibility.valid()):
         raise UIError("account_not_ready", "Wait for Mixar sign-in and UI eligibility renewal")
 
 
@@ -113,6 +115,14 @@ def _run(req):
                 "scene_name": win.scene.name, "eligible": eligibility.valid(),
                 "input_busy": ownership.active(), "event_simulate": bpy.app.use_event_simulate}, []
     if req.name == "mixar_ui_observe":
+        if req.args.get("image"):
+            # Let cached window buffers catch up before returning pixels. Merely
+            # tagging one redraw can still expose the previous frame on Metal.
+            for _ in range(3):
+                for window in bpy.context.window_manager.windows:
+                    for area in window.screen.areas:
+                        area.tag_redraw()
+                yield 0.05
         return observe.observe(req.owner, req.args)
     if req.name == "mixar_ui_act":
         _eligible()
@@ -144,7 +154,8 @@ def _finish(req, result, *, failed=False, status="succeeded", blocks=()):
             if req.claimed:
                 _receipts.finish(req.call_id, status)
         except Exception:
-            result = {**result, "receipt_status": "outcome_unknown"}
+            failed = True
+            result = {**result, "error_type": "outcome_unknown", "receipt_status": "outcome_unknown"}
     req.result = envelope(result, req.call_id, failed=failed, blocks=blocks)
     req.done.set()
     with _request_lock:

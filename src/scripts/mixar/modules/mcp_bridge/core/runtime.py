@@ -64,6 +64,8 @@ def _tick():
             "session_id": getattr(scene, "mixie_session_id", ""),
             "scene_name": getattr(scene, "name", ""),
             "connected": manager.is_connected,
+            "signed_in": bool(getattr(bpy.context.window_manager, "mixie_chat_is_logged_in", False))
+                         and not bool(getattr(bpy.context.window_manager, "mixie_chat_session_expired", False)),
             "backend_url": get_server_url(),
             "headers": {**client_version_headers(), "X-Mixar-Locale": ui_locale(),
                         "x-telemetry-consent": "1" if is_enabled() else "0"},

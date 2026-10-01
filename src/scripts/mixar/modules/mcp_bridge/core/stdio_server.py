@@ -20,6 +20,8 @@ zero invocation credits; UI-triggered generation keeps normal product pricing.
 Keep each call UUID: after an uncertain UI action use mixar_ui_call_status; for
 backend scene tools use mixar_call_status. Never blindly repeat a mutation.
 Mixar must be signed in; its bundled controller starts automatically with MCP.
+The connector pins a desktop and scene. After a deliberate scene switch, inspect
+mixar_ui_context, then explicitly bind its session before further actions.
 """
 
 
@@ -66,6 +68,14 @@ def create_server(connector):
             args = params.arguments or {}
             if params.name in schema.SCHEMAS:
                 schema.validate(params.name, args)
+            if params.name == "mixar_tool_quote" and args.get("tool") in schema.SCHEMAS:
+                if set(args) != {"tool"}:
+                    raise ValueError("Specify only the tool to quote")
+                payload = {"result": {"tool": args["tool"], "invocation_credits": 0,
+                    "generation_credits": None, "generation_billing": "existing_job_queue",
+                    "surface": "local_ui"}, "usage": {"request_id": call_id, "credits_charged": 0}}
+                return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(payload))],
+                                            structured_content=payload, meta={"mixar/request-id": call_id})
             if params.name == "mixar_ui_context":
                 if args.get("instance"):
                     available = await asyncio.to_thread(instances)
@@ -75,6 +85,7 @@ def create_server(connector):
                     with connector.lock:
                         connector.instance, connector.record = args["instance"], None
                         connector.upstream_version = None
+                        connector.bound_session = connector.session
                     args = {k: v for k, v in args.items() if k != "instance"}
                 elif connector.record is None:
                     available = await asyncio.to_thread(instances)
@@ -84,7 +95,19 @@ def create_server(connector):
                                   "scene_name": h.get("scene_name")} for r, h in available]}
                         return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(result))],
                                                     structured_content=result)
+                if args.get("session"):
+                    _, health = await asyncio.to_thread(connector.attach)
+                    if args["session"] != health.get("session_id"):
+                        raise ValueError("Select the current Mixar scene session returned by context")
+                    connector.bound_session = args["session"]
+                    args = {k: v for k, v in args.items() if k != "session"}
             result = await asyncio.to_thread(connector.call, params.name, args, call_id)
+            if params.name == "mixar_tool_catalog" and not result.get("isError"):
+                payload = result["structuredContent"]["result"]
+                query = args.get("query", "").casefold()
+                payload["tools"].extend(t for t in schema.tools() if query in t["name"].casefold()
+                                       or query in t["description"].casefold())
+                result["content"][0] = {"type": "text", "text": json.dumps(payload)}
             return types.CallToolResult.model_validate(result)
         except asyncio.CancelledError:
             await asyncio.shield(asyncio.to_thread(connector.cancel, call_id))

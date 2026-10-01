@@ -23,6 +23,8 @@ def test_sdk_initializes_and_exposes_ui_without_blender_or_backend(tmp_path):
                 assert prompts.prompts[0].name == "build-and-verify"
                 prompt = await session.get_prompt("build-and-verify", {"goal": "make a cube"})
                 assert "make a cube" in prompt.messages[0].content.text
+                quote = await session.call_tool("mixar_tool_quote", {"tool": "mixar_ui_act"})
+                assert quote.structured_content["result"]["invocation_credits"] == 0
                 catalog = await session.list_tools()
                 names = {tool.name for tool in catalog.tools}
                 assert {"mixar_ui_context", "mixar_ui_observe", "mixar_ui_act", "mixar_ui_call_status"} <= names

@@ -27,7 +27,7 @@ def action(name, props=None, required=()):
 
 
 SCHEMAS = {
-    "mixar_ui_context": obj({"release": BOOL, "instance": TOKEN}),
+    "mixar_ui_context": obj({"release": BOOL, "instance": TOKEN, "session": TOKEN}),
     "mixar_ui_observe": obj({"query": QUERY, "image": BOOL, "window": TOKEN,
                              "limit": {"type": "integer", "minimum": 1, "maximum": 200}}),
     "mixar_ui_act": {"type": "object", "oneOf": [
@@ -48,7 +48,7 @@ SCHEMAS = {
     "mixar_ui_call_status": obj({"call_id": TOKEN}, ("call_id",)),
 }
 DESCRIPTIONS = {
-    "mixar_ui_context": "Read local Mixar UI readiness and current scene, or release your input ownership.",
+    "mixar_ui_context": "Read UI readiness and current/bound scene. Explicitly select an instance or bind its current session after changing documents. Can release your input ownership.",
     "mixar_ui_observe": "Inspect visible Mixar controls and regions. Returns fresh opaque context/target handles; optionally a screenshot. Inspect before each action.",
     "mixar_ui_act": "Drive one observed Mixar control or region through native events. User input cancels control. Gesture points are normalized bottom-left region coordinates. Never blindly retry an uncertain action.",
     "mixar_ui_wait": "Wait for matching visible controls to appear/disappear, with a bounded deadline. No Python expressions.",
