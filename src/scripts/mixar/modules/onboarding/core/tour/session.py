@@ -287,7 +287,6 @@ class TourSession(SessionLifecycleMixin, SessionInputMixin, SessionDrawMixin):
         if beat_id == self._last_beat_id:
             return
         self._last_beat_id = beat_id
-        self._mark_seen_past_first_beat()
         self.overlay_state.reset(beat)
         self._gate_done_for = None
         if beat is not None and beat.hide_cursor:

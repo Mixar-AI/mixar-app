@@ -6,13 +6,13 @@
 """
 Onboarding persistence
 
-Tracks which users (by email) have already seen the onboarding tour —
-got past its first step, or finished or exited it. Stored as a JSON file in Mixar's user-data dir so
+Tracks which users (by email) have already completed or skipped the
+onboarding tour. Stored as a JSON file in Mixar's user-data dir so
 the flag survives Blender restarts and is per-machine, per-account.
 
-The seen-list is the gate for whether the tour opens — a user
-appears in this file once the tour has moved past its first step
-(or they exited it), and from then on they never see the tour again
+The seen-list is the gate for whether the welcome card opens — a
+user appears in this file once they've finished or explicitly
+skipped the tour, and from then on they never see the tour again
 on this machine. Different users on the same machine each see the
 tour exactly once.
 """
