@@ -244,19 +244,10 @@ class SessionManager:
 
     @property
     def instance_id(self) -> str:
-        """Get the Blender instance ID (generated lazily on first access)."""
+        """Get the process identity, restoring its RNA mirror after file loads."""
         import bpy
-        wm = bpy.context.window_manager
-        if not wm:
-            logger.debug("No WindowManager context available")
-            return ""
-        if not hasattr(wm, 'mixie_instance_id'):
-            logger.warning("mixie_instance_id property not registered yet")
-            return ""
-        if not wm.mixie_instance_id:
-            wm.mixie_instance_id = str(uuid.uuid4())
-            logger.debug(f"Generated instance_id: {wm.mixie_instance_id[:8]}...")
-        return wm.mixie_instance_id
+        from mixar.modules.common.utils.process_identity import instance_id
+        return instance_id(bpy.context.window_manager)
 
     # ========================================================================
     # Session Lifecycle (scene-explicit)
