@@ -96,6 +96,8 @@ def begin_operation(params):
     from mixar.modules.common.ui_control.core.ownership import active as ui_active
     if ui_active():
         return _failure("ui_busy", "Release UI control before starting a scene operation")
+    from mixar.modules.common.ui_control.core.observe import invalidate as invalidate_ui
+    invalidate_ui()
     bpy, session = _runtime()
     from mixar.modules.space_mixie_chat.constants import SessionState, is_lane_scene
     scenes = list(bpy.data.scenes)

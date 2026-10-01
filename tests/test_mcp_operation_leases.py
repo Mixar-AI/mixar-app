@@ -288,3 +288,10 @@ def test_admission_uses_real_session_state_contract(monkeypatch):
     scene.mixie_run_open = True
     with pytest.raises(UIError, match="active scene operation"):
         ownership.available()
+
+
+def test_scene_admission_invalidates_prior_ui_observations(env, monkeypatch):
+    from mixar.modules.common.ui_control.core import observe
+    monkeypatch.setattr(observe, "_contexts", {"prior-observation": {}})
+    assert lease.begin_operation(params(env.first))["success"]
+    assert not observe._contexts

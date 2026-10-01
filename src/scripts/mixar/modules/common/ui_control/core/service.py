@@ -148,6 +148,10 @@ def _run(req):
 
 def _finish(req, result, *, failed=False, status="succeeded", blocks=()):
     if req.name == "mixar_ui_act":
+        if req.claimed:
+            # Even geometry edits that leave the view matrix unchanged consume
+            # their observation. Receipt replay is resolved before target lookup.
+            observe.invalidate()
         if failed:
             ownership.release(req.owner)
         try:

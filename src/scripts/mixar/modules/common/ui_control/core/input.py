@@ -119,6 +119,7 @@ def run(owner, args):
         deadline = time.monotonic()+2
         while True:
             hits = [w for w in observe.widgets() if w.get("popup") and
+                    w["w"] == item["_win"].as_pointer() and
                     w.get("enabled", True) and w.get("text", "").casefold() == args["item"].casefold()]
             if len(hits) == 1:
                 yield from click(owner, hits[0], point(hits[0]))

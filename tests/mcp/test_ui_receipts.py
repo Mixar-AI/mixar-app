@@ -50,3 +50,14 @@ def test_two_identical_claims_cannot_dispatch_twice(tmp_path):
 def test_ui_arguments_cannot_smuggle_execution_or_unbounded_gestures(args):
     with pytest.raises(UIError):
         validate("mixar_ui_act", args)
+
+
+@pytest.mark.parametrize("timeout", [float("nan"), float("inf"), -float("inf")])
+def test_nonfinite_wait_cannot_disable_the_request_deadline(timeout):
+    with pytest.raises(UIError):
+        validate("mixar_ui_wait", {"query": {}, "timeout": timeout})
+
+
+def test_text_rejects_embedded_control_bytes_before_any_input():
+    with pytest.raises(UIError):
+        validate("mixar_ui_act", {"context": "c", "target": "t", "action": "set_text", "text": "abc\x00def"})

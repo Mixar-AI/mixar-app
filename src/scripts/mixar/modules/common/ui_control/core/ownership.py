@@ -49,6 +49,8 @@ def begin(owner):
     if _owner is not None and _owner != owner:
         raise UIError("ui_busy", "Another connection owns Mixar input")
     wm = bpy.context.window_manager
+    if _owner is None and not _unsettled and any(getattr(w, "modal_operators", ()) for w in wm.windows):
+        raise UIError("ui_busy", "Finish the current modal operation before starting UI control")
     if not wm.mixar_ui_begin(owner=owner):
         raise UIError("ui_busy", "Mixar input is unavailable")
     if _owner is None and not _unsettled:

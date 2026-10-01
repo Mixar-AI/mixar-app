@@ -64,3 +64,10 @@ def test_disconnect_keeps_modal_fence_until_explicit_ui_recovery(native):
     native.modals = 1
     ownership.release("controller-b", require_settled=True)
     assert not ownership.active()
+
+
+def test_initial_control_does_not_enter_a_preexisting_human_modal(native):
+    ownership.bpy.context.window_manager.windows[0].modal_operators = ["human transform"]
+    with pytest.raises(UIError, match="current modal operation"):
+        ownership.begin("controller-a")
+    assert not ownership.active()

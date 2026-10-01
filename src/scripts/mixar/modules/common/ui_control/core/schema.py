@@ -11,7 +11,7 @@ def obj(properties=None, required=()):
 
 
 TOKEN = {"type": "string", "minLength": 1, "maxLength": 128}
-TEXT = {"type": "string", "maxLength": 4096}
+TEXT = {"type": "string", "maxLength": 4096, "pattern": r"^[^\x00-\x09\x0b-\x1f\x7f\ud800-\udfff]*$"}
 BOOL = {"type": "boolean"}
 QUERY = obj({key: TEXT for key in (
     "text", "op", "prop", "surface", "area_type", "region_type", "panel", "value")})
@@ -57,9 +57,14 @@ DESCRIPTIONS = {
 
 
 def validate(name, args):
+    import json
     from jsonschema import Draft202012Validator
     if name not in SCHEMAS:
         raise UIError("unknown_tool", "Unknown UI tool")
+    try:
+        json.dumps(args, allow_nan=False)
+    except (ValueError, TypeError):
+        raise UIError("invalid_arguments", "UI arguments must be finite JSON values") from None
     if next(Draft202012Validator(SCHEMAS[name]).iter_errors(args), None):
         raise UIError("invalid_arguments", "Arguments do not match the UI tool schema")
 
