@@ -197,6 +197,81 @@ msgstr "പ്രവർത്തനക്ഷമമായ നില മാറ്�
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
+msgid "Invalid response status"
+msgstr ""
+
+msgid "Invalid upgrade header"
+msgstr ""
+
+msgid "Invalid connection header"
+msgstr ""
+
+msgid "Invalid challenge response"
+msgstr ""
+
+msgid "ClientResponse"
+msgstr ""
+
+msgid "RequestInfo"
+msgstr ""
+
+msgid "ChainMapProxy"
+msgstr ""
+
+msgid "ETag"
+msgstr ""
+
+msgid "HttpVersion"
+msgstr ""
+
+msgid "HttpVersion10"
+msgstr ""
+
+msgid "8bit"
+msgstr ""
+
+msgid "7bit"
+msgstr ""
+
+msgid "AsyncResolver"
+msgstr ""
+
+msgid "DefaultResolver"
+msgstr ""
+
+msgid "EofStream"
+msgstr ""
+
+msgid "StreamReader"
+msgstr ""
+
+msgid "Stopped\n"
+msgstr ""
+
+msgid "RequestPayloadError"
+msgstr ""
+
+msgid "PayloadAccessError"
+msgstr ""
+
+msgid "FileField"
+msgstr ""
+
+msgid "Request"
+msgstr ""
+
+msgid "StreamResponse"
+msgstr ""
+
+msgid "Response"
+msgstr ""
+
+msgid "WebSocketReady"
+msgstr ""
+
+msgid "WSMsgType"
+msgstr ""
+
 msgid "Unknown"
 msgstr "അജ്ഞാതം"
 
@@ -4897,6 +4972,78 @@ msgstr "ലോക്കൽ സെർവർ മോഡൽ"
 
 msgid "Local model last error"
 msgstr "ലോക്കൽ മോഡൽ അവസാന പിശക്"
+
+msgid "Copy Claude Code Command"
+msgstr ""
+
+msgid "Copy Claude Desktop Configuration"
+msgstr ""
+
+msgid "Copy Codex Configuration"
+msgstr ""
+
+msgid "Connect Claude / Codex"
+msgstr ""
+
+msgid "Connect external AI assistants to your Mixar scenes with MCP"
+msgstr ""
+
+msgid "Let your AI assistant work in Mixar."
+msgstr ""
+
+msgid "Tool calls use your Mixar credits."
+msgstr ""
+
+msgid "Keep Mixar open and signed in while connected."
+msgstr ""
+
+msgid "MCP enabled"
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "Enable MCP"
+msgstr ""
+
+msgid "Copy setup, then add it to your AI app:"
+msgstr ""
+
+msgid "Allow local AI clients to use your Mixar account and scenes"
+msgstr ""
+
+msgid "MCP preference applies until Mixar closes; saving failed"
+msgstr ""
+
+msgid "MCP is waiting for the desktop connection"
+msgstr ""
+
+msgid "MCP disabled"
+msgstr ""
+
+msgid "Copy MCP Setup"
+msgstr ""
+
+msgid "Copy the connection setup without exposing account credentials"
+msgstr ""
+
+msgid "Claude Code"
+msgstr ""
+
+msgid "Terminal setup command"
+msgstr ""
+
+msgid "Claude Desktop"
+msgstr ""
+
+msgid "MCP server configuration"
+msgstr ""
+
+msgid "Codex"
+msgstr ""
+
+msgid "MCP setup copied"
+msgstr ""
 
 msgid "Processing..."
 msgstr "പ്രോസസ് ചെയ്യുന്നു..."

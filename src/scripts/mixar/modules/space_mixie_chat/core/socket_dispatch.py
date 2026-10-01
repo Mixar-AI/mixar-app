@@ -60,6 +60,15 @@ class SocketDispatch:
         elif method == JSONRPCMethod.BLENDER_LIVENESS:
             self._handle_liveness(request_id)
 
+        elif method in ("mcp.begin_operation", "mcp.end_operation"):
+            from mixar.modules.mcp_bridge.core.rpc import handle_request
+            if getattr(self, "_role", None):
+                if request_id:
+                    self.queue_response(request_id, {"success": False,
+                        "error_type": "capability_unavailable", "error": "MCP requires a desktop instance"})
+            else:
+                handle_request(self, method, params, request_id)
+
         elif method == JSONRPCMethod.AGENT_SANDBOX_CONTROL:
             self._handle_sandbox_control(params, request_id)
 
@@ -200,6 +209,13 @@ class SocketDispatch:
         # Optional v3 task envelope (harness v3 PR 1). Passed as a keyword
         # ONLY when present so older five-positional callbacks keep working.
         envelope = params.get("envelope")
+
+        from mixar.modules.mcp_bridge.core.lease import authorize_script
+        refusal = authorize_script(session_id, agent_ctx)
+        if refusal is not None:
+            if request_id:
+                self.queue_response(request_id, refusal)
+            return
 
         if self._on_script_execute:
             try:

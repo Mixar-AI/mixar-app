@@ -87,16 +87,7 @@ class SessionManager:
 
     @staticmethod
     def set_state(scene, state: SessionState) -> None:
-        """Set session state on a scene. Must be called from the main thread.
-
-        Also syncs:
-        - scene.mixie_chat_is_busy (for C++ UI)
-        - _active_scenes set (for thread-safe background checks)
-
-        Args:
-            scene: bpy.types.Scene instance
-            state: New SessionState
-        """
+        """Set state and sync native UI/active-session flags on the main thread."""
         if not scene or not hasattr(scene, 'mixie_chat_state'):
             logger.warning("Cannot set state: scene missing mixie_chat_state property")
             return
@@ -111,6 +102,8 @@ class SessionManager:
         if old_str == new_str:
             return
 
+        from mixar.modules.mcp_bridge.core.lease import state_changed
+        state_changed(scene, state)
         scene.mixie_chat_state = new_str
 
         # Sync derived is_busy flag for C++ rendering code
