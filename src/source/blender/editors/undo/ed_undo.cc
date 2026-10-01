@@ -327,7 +327,11 @@ static wmOperatorStatus ed_undo_step_direction(bContext *C,
                           BKE_undosys_tab_step_undo(wm->runtime->undo_stack, C, tab, &reason) :
                           BKE_undosys_tab_step_redo(wm->runtime->undo_stack, C, tab, &reason);
       if (!ok) {
-        ed_undo_step_post(C, wm, step, reports);
+        /* Nothing was restored (every refusal is decided before a decode), so
+         * the post handlers do not run: the chat module's undo_post bumps the
+         * DOCUMENT epoch when the last walk was document-wide, which a
+         * refusal after an Undo Whole Document would have reported, revoking
+         * the in-flight commits of every other tab (review of #1746). */
         BKE_reportf(reports, RPT_INFO, "%s", reason.c_str());
         CLOG_WARN(&LOG,
                   "per-tab %s refused in '%s': %s",
@@ -428,11 +432,12 @@ static int ed_undo_step_by_index(bContext *C, const int undo_index, ReportList *
       ed_undo_step_pre(C, wm, undo_dir, reports);
       std::string reason;
       const bool ok = BKE_undosys_tab_step_load(ustack, C, tab, target, &reason);
-      ed_undo_step_post(C, wm, undo_dir, reports);
       if (!ok) {
+        /* Refused before any decode: no post handlers (see ed_undo_step_direction). */
         BKE_reportf(reports, RPT_INFO, "%s", reason.c_str());
         return OPERATOR_CANCELLED;
       }
+      ed_undo_step_post(C, wm, undo_dir, reports);
       return OPERATOR_FINISHED;
     }
   }

@@ -379,3 +379,42 @@ def run_m5_probes() -> None:
         while bpy.ops.ed.redo.poll():
             bpy.ops.ed.redo()
     win().scene = tab("C")
+
+    # P22 (review of #1746): a refused per-tab walk fires no undo_post / redo_post
+    # handler. The chat module's undo_post bumps the DOCUMENT epoch when the
+    # last walk was document-wide; a refusal after an Undo Whole Document would
+    # have reported that and revoked every other tab's in-flight commit.
+    counts = {"undo": 0, "redo": 0}
+
+    def _p22_undo_post(_scene):
+        counts["undo"] += 1
+
+    def _p22_redo_post(_scene):
+        counts["redo"] += 1
+    bpy.app.handlers.undo_post.append(_p22_undo_post)
+    bpy.app.handlers.redo_post.append(_p22_redo_post)
+    try:
+        with _override_window():
+            bpy.ops.ed.undo_whole_document()          # the last walk is document-wide
+            bpy.ops.ed.redo()
+        counts["undo"] = counts["redo"] = 0
+        if "B" in TABS:
+            tab("B").collection.objects.link(tab("A").objects["A_p17"])
+            show("A")
+            push("A · shares A_p17 again (p22)")
+            probe("P22a a refused per-tab undo (shared) runs no undo_post handler", lambda: press("undo"),
+                  expect_document={}, expect_isolation={"undo_result": "CANCELLED"})
+            check("M5 P22a no undo_post fired on the refusal", counts["undo"] == 0, f"{counts}")
+            tab("B").collection.objects.unlink(tab("A").objects["A_p17"])
+            push("A · p22 unshared")
+        show("C")
+        h = history()
+        other = next((st for st in h["steps"] if st["tab_uid"] == tab("A").session_uid and not st["skip"]), None) if h else None
+        if other is not None:
+            with _override_window():
+                r = bpy.ops.ed.undo_history(item=other["index"])
+            check("M5 P22b a refused history jump (another tab's step) runs no handler",
+                  "CANCELLED" in r and counts["undo"] == 0 and counts["redo"] == 0, f"{r} {counts}")
+    finally:
+        bpy.app.handlers.undo_post.remove(_p22_undo_post)
+        bpy.app.handlers.redo_post.remove(_p22_redo_post)
