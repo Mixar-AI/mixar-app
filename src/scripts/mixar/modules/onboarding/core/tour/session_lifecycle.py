@@ -12,7 +12,9 @@ clock or texture outlives a failed start. ``stop`` is idempotent and
 never raises; it distinguishes deliberate endings (``completed``,
 ``exited`` → mark seen, run the completion cleanup that leaves the
 moodboard open) from interruptions (``cancelled``, ``host-closed``,
-``error``, ``file-loaded`` → restore the pre-tour state).
+``error``, ``file-loaded`` → restore the pre-tour state). The seen flag is
+also written as soon as the first beat is over, so a user who quits midway
+is not shown the tour again on the next launch.
 """
 
 import time
@@ -277,6 +279,18 @@ class SessionLifecycleMixin:
             actions.run(name, args)
         except Exception as exc:  # noqa: BLE001
             logger.debug("Tour: action %s failed: %s", name, exc)
+
+    def _mark_seen_past_first_beat(self) -> None:
+        """Write the seen flag once the runner has left the first beat:
+        finishing the first step counts as seeing the tour, so quitting
+        midway (or closing the app) never brings it back next launch."""
+        if getattr(self, "_seen_written", False):
+            return
+        runner = getattr(self, "runner", None)
+        if runner is None or runner.index < 1:
+            return
+        self._seen_written = True
+        self._mark_seen()
 
     def _mark_seen(self) -> None:
         try:
