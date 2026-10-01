@@ -71,3 +71,11 @@ def test_initial_control_does_not_enter_a_preexisting_human_modal(native):
     with pytest.raises(UIError, match="current modal operation"):
         ownership.begin("controller-a")
     assert not ownership.active()
+
+
+def test_only_the_finished_scene_lock_is_a_settling_transition(native):
+    win = ownership.bpy.context.window_manager.windows[0]
+    win.modal_operators = [SimpleNamespace(bl_idname="MIXAR_OT_agent_viewport_block")]
+    assert ownership.settling()
+    win.modal_operators = [SimpleNamespace(bl_idname="TRANSFORM_OT_translate")]
+    assert not ownership.settling()

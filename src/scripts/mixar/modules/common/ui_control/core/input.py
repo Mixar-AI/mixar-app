@@ -95,7 +95,8 @@ def run(owner, args):
         if args["key"] not in allowed or not keyboard_key(args["key"]):
             raise UIError("invalid_key", "Use a supported Blender keyboard event")
         item["_win"].cursor_warp(*xy)
-        yield from keypress(owner, item, args["key"], xy, mods)
+        yield from keypress(owner, item, args["key"], xy, mods,
+                            keyboard_text(args["key"], mods))
     elif action == "set_text":
         if item.get("type") not in {"Text", "SearchMenu", "Num", "NumSlider"}:
             raise UIError("invalid_target", "Text replacement requires an observed editable field")
@@ -155,6 +156,26 @@ def run(owner, args):
         yield 0.025
     return {"input_delivered": True, "postcondition_verified": False,
             "note": "Inspect the current state and screenshot to verify the intended result."}
+
+
+def keyboard_text(key, mods):
+    """Match the text accompanying ordinary OS keys (numeric input needs it)."""
+    if any(mods.get(modifier) for modifier in ("ctrl", "alt", "oskey")):
+        return ""
+    shift = mods.get("shift", False)
+    if len(key) == 1 and "A" <= key <= "Z":
+        return key if shift else key.lower()
+    pairs = dict(zip(
+        ("ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"),
+        zip("0123456789", ")!@#$%^&*(")))
+    pairs.update({"MINUS": ("-", "_"), "EQUAL": ("=", "+"), "PERIOD": (".", ">"),
+                  "COMMA": (",", "<"), "SLASH": ("/", "?"), "SPACE": (" ", " "),
+                  "SEMI_COLON": (";", ":"), "QUOTE": ("'", '"'),
+                  "LEFT_BRACKET": ("[", "{"), "RIGHT_BRACKET": ("]", "}"),
+                  "BACK_SLASH": ("\\", "|"), "ACCENT_GRAVE": ("`", "~")})
+    if key.startswith("NUMPAD_") and key[-1:].isdigit():
+        return key[-1]
+    return pairs.get(key, ("", ""))[bool(shift)]
 
 
 def keyboard_key(key):

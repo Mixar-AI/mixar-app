@@ -13,6 +13,16 @@ import pytest
 from mixar.modules.common.ui_control.core import input as native_input, observe
 
 
+@pytest.mark.parametrize("key,mods,text", [
+    ("TWO", {}, "2"), ("MINUS", {}, "-"), ("PERIOD", {}, "."),
+    ("NUMPAD_2", {}, "2"), ("G", {}, "g"), ("A", {"shift": True}, "A"),
+    ("TWO", {"shift": True}, "@"), ("A", {"oskey": True}, ""),
+    ("A", {"ctrl": True}, ""), ("RET", {}, ""),
+])
+def test_keyboard_events_include_numeric_text(key, mods, text):
+    assert native_input.keyboard_text(key, mods) == text
+
+
 def test_transparent_zen_header_only_occludes_drawn_controls(monkeypatch):
     header = SimpleNamespace(type="TOOL_HEADER", width=100, height=80,
                              as_pointer=lambda: 7)

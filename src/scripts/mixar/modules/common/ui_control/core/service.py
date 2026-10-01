@@ -122,6 +122,11 @@ def _run(req):
                 "account_status": eligibility.status(),
                 "input_busy": ownership.active(), "event_simulate": bpy.app.use_event_simulate}, []
     if req.name == "mixar_ui_observe":
+        settle_deadline = min(req.deadline, time.monotonic()+2)
+        while ownership.settling():
+            if time.monotonic() >= settle_deadline:
+                raise UIError("ui_busy", "The scene finished but its viewport is still unlocking")
+            yield 0.025
         if req.args.get("image"):
             # Let cached window buffers catch up before returning pixels. Merely
             # tagging one redraw can still expose the previous frame on Metal.
@@ -138,7 +143,7 @@ def _run(req):
         if prior:
             return prior, []
         observe.resolve(req.owner, req.args["context"], req.args["target"])
-        ownership.available()
+        ownership.prepare(req.owner)
         _receipts.claim(req.call_id, digest)
         req.claimed = True
         return (yield from native_input.run(req.owner, req.args)), []

@@ -42,8 +42,7 @@ def available():
         raise UIError("scene_busy", "Wait for the active scene operation to finish")
 
 
-def begin(owner):
-    global _owner, _generation, _scene, _modal_baseline, _unsettled
+def prepare(owner):
     available()
     active()  # Clear Python ownership after native takeover/expiry.
     if _owner is not None and _owner != owner:
@@ -51,6 +50,23 @@ def begin(owner):
     wm = bpy.context.window_manager
     if _owner is None and not _unsettled and any(getattr(w, "modal_operators", ()) for w in wm.windows):
         raise UIError("ui_busy", "Finish the current modal operation before starting UI control")
+
+
+def settling():
+    """Scene completion precedes removal of its viewport-lock modal by a tick."""
+    try:
+        available()
+    except UIError:
+        return False
+    return any(getattr(op, "bl_idname", "") in {
+        "mixar.agent_viewport_block", "MIXAR_OT_agent_viewport_block"}
+        for w in bpy.context.window_manager.windows for op in getattr(w, "modal_operators", ()))
+
+
+def begin(owner):
+    global _owner, _generation, _scene, _modal_baseline, _unsettled
+    prepare(owner)
+    wm = bpy.context.window_manager
     if not wm.mixar_ui_begin(owner=owner):
         raise UIError("ui_busy", "Mixar input is unavailable")
     if _owner is None and not _unsettled:
