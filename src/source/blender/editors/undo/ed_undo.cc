@@ -211,6 +211,81 @@ static void ed_undo_step_pre(bContext *C,
   }
 }
 
+/**
+ * Mixar per-tab undo: the tab an undo operator in this context walks, or
+ * #UNDO_TAB_DOCUMENT for the classic walk. Read from the WINDOW's scene, the
+ * scene the hold poll reads: a Python ``temp_override(scene=B)`` around
+ * ``ed.undo`` from a window on an idle tab used to pass the hold and walk B
+ * while B's own run was open (review 2026-10-01, R7).
+ */
+static uint32_t ed_undo_window_tab(const bContext *C)
+{
+  if (!BKE_undo_tabs_enabled()) {
+    return UNDO_TAB_DOCUMENT;
+  }
+  wmWindow *win = CTX_wm_window(C);
+  if (win == nullptr || win->scene == nullptr || BKE_undo_tab_scene_is_lane(win->scene)) {
+    return UNDO_TAB_DOCUMENT;
+  }
+  return BKE_undo_tab_uid_for_scene(CTX_data_main(C), win->scene);
+}
+
+/**
+ * Mixar per-tab undo (review 2026-10-01, R3): why a tab's walk must not start,
+ * decided BEFORE #ed_undo_step_pre, whose job kill and pre handlers are side
+ * effects a refusal must not have.
+ *
+ * - Another tab runs a job with progress (a render, an agent's preview render,
+ *   a bake): every memfile restore replaces Main, so a job still holding the
+ *   old one cannot survive it and the pre step cancels it. Cancelling another
+ *   tab's work is not this tab's undo to make; the press waits instead.
+ * - The walk itself would refuse (nothing to undo, shared or moved datablocks,
+ *   a step written with per-tab undo off).
+ */
+static bool ed_undo_tab_walk_refused(bContext *C,
+                                     wmWindowManager *wm,
+                                     const uint32_t tab,
+                                     const eUndoStepDir dir,
+                                     std::string *r_reason,
+                                     eReportType *r_type)
+{
+  Main *bmain = CTX_data_main(C);
+  for (Scene &scene : bmain->scenes) {
+    const uint32_t owner = BKE_undo_tab_uid_for_scene(bmain, &scene);
+    if (owner == tab || !WM_jobs_test(wm, &scene, WM_JOB_TYPE_ANY)) {
+      continue;
+    }
+    std::string name = BKE_undo_tab_scene_name(bmain, owner);
+    if (name.empty()) {
+      name = scene.id.name + 2;
+    }
+    *r_reason = "Undo waits for the render or bake running in '" + name +
+                "' (undoing now would cancel it)";
+    *r_type = RPT_WARNING;
+    return true;
+  }
+  if (!BKE_undosys_tab_step_check(wm->runtime->undo_stack, C, tab, dir, r_reason)) {
+    *r_type = RPT_INFO;
+    return true;
+  }
+  return false;
+}
+
+static void ed_undo_tab_report_refusal(bContext *C,
+                                       ReportList *reports,
+                                       const eUndoStepDir dir,
+                                       const std::string &reason,
+                                       const eReportType type)
+{
+  wmWindow *win = CTX_wm_window(C);
+  BKE_reportf(reports, type, "%s", reason.c_str());
+  CLOG_WARN(&LOG,
+            "per-tab %s refused in '%s': %s",
+            (dir == STEP_UNDO) ? "undo" : "redo",
+            (win && win->scene) ? win->scene->id.name + 2 : "?",
+            reason.c_str());
+}
+
 /* Mixar: after a memfile restore, the depsgraph of a scene no window shows
  * keeps its object nodes, and their `id_orig` pointers, as they were: an
  * original the walk freed (created after the target step) dangles until that
@@ -309,41 +384,35 @@ static wmOperatorStatus ed_undo_step_direction(bContext *C,
 
   wmWindowManager *wm = CTX_wm_manager(C);
 
-  ed_undo_step_pre(C, wm, step, reports);
-
   /* Mixar per-tab undo (M2): with the flag on and the window on a scene tab,
    * walk that tab's own history and restore only its datablocks. The classic
    * document-wide walk stays for a window on no tab (and for the explicit
    * "Undo whole document" of M4). */
-  bool done = false;
-  if (per_tab && BKE_undo_tabs_enabled()) {
-    const uint32_t tab = BKE_undo_tab_uid_from_context(C);
-    wmWindow *win = CTX_wm_window(C);
-    if (tab != UNDO_TAB_DOCUMENT && win != nullptr && win->scene != nullptr &&
-        !BKE_undo_tab_scene_is_lane(win->scene))
-    {
-      std::string reason;
-      const bool ok = (step == STEP_UNDO) ?
-                          BKE_undosys_tab_step_undo(wm->runtime->undo_stack, C, tab, &reason) :
-                          BKE_undosys_tab_step_redo(wm->runtime->undo_stack, C, tab, &reason);
-      if (!ok) {
-        /* Nothing was restored (every refusal is decided before a decode), so
-         * the post handlers do not run: the chat module's undo_post bumps the
-         * DOCUMENT epoch when the last walk was document-wide, which a
-         * refusal after an Undo Whole Document would have reported, revoking
-         * the in-flight commits of every other tab (review of #1746). */
-        BKE_reportf(reports, RPT_INFO, "%s", reason.c_str());
-        CLOG_WARN(&LOG,
-                  "per-tab %s refused in '%s': %s",
-                  (step == STEP_UNDO) ? "undo" : "redo",
-                  win->scene->id.name + 2,
-                  reason.c_str());
-        return OPERATOR_CANCELLED;
-      }
-      done = true;
+  const uint32_t tab = per_tab ? ed_undo_window_tab(C) : UNDO_TAB_DOCUMENT;
+  if (tab != UNDO_TAB_DOCUMENT) {
+    /* Every refusal is decided before the pre step (review 2026-10-01, R3): a
+     * refused press kills no job and runs no handler. Nothing is restored, so
+     * the post handlers do not run either: the chat module's undo_post bumps
+     * the DOCUMENT epoch when the last walk was document-wide, which a refusal
+     * after an Undo Whole Document would have reported, revoking the in-flight
+     * commits of every other tab (review of #1746). */
+    std::string reason;
+    eReportType type = RPT_INFO;
+    if (ed_undo_tab_walk_refused(C, wm, tab, step, &reason, &type)) {
+      ed_undo_tab_report_refusal(C, reports, step, reason, type);
+      return OPERATOR_CANCELLED;
+    }
+    ed_undo_step_pre(C, wm, step, reports);
+    const bool ok = (step == STEP_UNDO) ?
+                        BKE_undosys_tab_step_undo(wm->runtime->undo_stack, C, tab, &reason) :
+                        BKE_undosys_tab_step_redo(wm->runtime->undo_stack, C, tab, &reason);
+    if (!ok) {
+      ed_undo_tab_report_refusal(C, reports, step, reason, RPT_INFO);
+      return OPERATOR_CANCELLED;
     }
   }
-  if (!done) {
+  else {
+    ed_undo_step_pre(C, wm, step, reports);
     if (step == STEP_UNDO) {
       BKE_undosys_step_undo(wm->runtime->undo_stack, C);
     }
@@ -367,6 +436,44 @@ static int ed_undo_step_by_name(bContext *C, const char *undo_name, ReportList *
   BLI_assert(undo_name != nullptr);
 
   wmWindowManager *wm = CTX_wm_manager(C);
+
+  /* Mixar per-tab undo (review 2026-10-01, R1): Adjust Last Operation (the
+   * redo panel, F9, a gizmo's redo) takes the operator's step back before
+   * running it again. Found by name across the whole stack and loaded with the
+   * document walk, that reverted every tab's newer work and the repeat's push
+   * then truncated their history. On a tab it is the tab's walk, and only when
+   * the operator's step is the tab's current one. */
+  const uint32_t tab = ed_undo_window_tab(C);
+  if (tab != UNDO_TAB_DOCUMENT) {
+    UndoStack *ustack = wm->runtime->undo_stack;
+    UndoStep *cursor = BKE_undosys_tab_cursor(ustack, tab);
+    if (cursor == nullptr || !STREQ(cursor->name, undo_name)) {
+      CLOG_WARN(&LOG,
+                "Step name='%s' is not this tab's current step ('%s'): not repeated",
+                undo_name,
+                cursor ? cursor->name : "");
+      return OPERATOR_CANCELLED;
+    }
+    wmWindow *win = CTX_wm_window(C);
+    if (BKE_undo_tab_scene_is_working(win->scene)) {
+      BKE_report(reports, RPT_INFO, "Unavailable while this tab's agent works");
+      return OPERATOR_CANCELLED;
+    }
+    std::string reason;
+    eReportType type = RPT_INFO;
+    if (ed_undo_tab_walk_refused(C, wm, tab, STEP_UNDO, &reason, &type)) {
+      ed_undo_tab_report_refusal(C, reports, STEP_UNDO, reason, type);
+      return OPERATOR_CANCELLED;
+    }
+    ed_undo_step_pre(C, wm, STEP_UNDO, reports);
+    if (!BKE_undosys_tab_step_undo(ustack, C, tab, &reason)) {
+      ed_undo_tab_report_refusal(C, reports, STEP_UNDO, reason, RPT_INFO);
+      return OPERATOR_CANCELLED;
+    }
+    ed_undo_step_post(C, wm, STEP_UNDO, reports);
+    return OPERATOR_FINISHED;
+  }
+
   UndoStep *undo_step_from_name = BKE_undosys_step_find_by_name(wm->runtime->undo_stack,
                                                                 undo_name);
   if (undo_step_from_name == nullptr) {
@@ -414,12 +521,9 @@ static int ed_undo_step_by_index(bContext *C, const int undo_index, ReportList *
 
   /* Mixar per-tab undo (M3): the Undo History of a tab walks that tab to the
    * chosen step (the menu lists only its steps; the index is the stack's). */
-  if (BKE_undo_tabs_enabled()) {
-    const uint32_t tab = BKE_undo_tab_uid_from_context(C);
-    wmWindow *win = CTX_wm_window(C);
-    if (tab != UNDO_TAB_DOCUMENT && win != nullptr && win->scene != nullptr &&
-        !BKE_undo_tab_scene_is_lane(win->scene))
-    {
+  {
+    const uint32_t tab = ed_undo_window_tab(C);
+    if (tab != UNDO_TAB_DOCUMENT) {
       UndoStack *ustack = wm->runtime->undo_stack;
       UndoStep *target = static_cast<UndoStep *>(BLI_findlink(&ustack->steps, undo_index));
       UndoStep *cursor = BKE_undosys_tab_cursor(ustack, tab);
@@ -429,13 +533,23 @@ static int ed_undo_step_by_index(bContext *C, const int undo_index, ReportList *
       const enum eUndoStepDir undo_dir = (BLI_findindex(&ustack->steps, cursor) > undo_index) ?
                                              STEP_UNDO :
                                              STEP_REDO;
-      ed_undo_step_pre(C, wm, undo_dir, reports);
       std::string reason;
+      eReportType type = RPT_INFO;
+      if (ed_undo_tab_walk_refused(C, wm, tab, undo_dir, &reason, &type)) {
+        ed_undo_tab_report_refusal(C, reports, undo_dir, reason, type);
+        return OPERATOR_CANCELLED;
+      }
+      ed_undo_step_pre(C, wm, undo_dir, reports);
       const bool ok = BKE_undosys_tab_step_load(ustack, C, tab, target, &reason);
       if (!ok) {
-        /* Refused before any decode: no post handlers (see ed_undo_step_direction). */
         BKE_reportf(reports, RPT_INFO, "%s", reason.c_str());
-        return OPERATOR_CANCELLED;
+        /* The jump walks one tagged step at a time: a refusal part way leaves the
+         * tab moved, and the post handlers (chat guard, epoch, live-state repair)
+         * must see that walk (review 2026-10-01). Refused at the first step:
+         * nothing changed, no post handlers (see ed_undo_step_direction). */
+        if (BKE_undosys_tab_cursor(ustack, tab) == cursor) {
+          return OPERATOR_CANCELLED;
+        }
       }
       ed_undo_step_post(C, wm, undo_dir, reports);
       return OPERATOR_FINISHED;
@@ -518,6 +632,13 @@ bool ED_undo_is_valid(const bContext *C, const char *undoname)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
   UndoStack *ustack = wm->runtime->undo_stack;
+  /* Mixar per-tab undo (review 2026-10-01, R1): on a tab, an operator can be
+   * adjusted only while its step is the tab's current one. */
+  const uint32_t tab = ed_undo_window_tab(C);
+  if (ustack && undoname && tab != UNDO_TAB_DOCUMENT) {
+    const UndoStep *cursor = BKE_undosys_tab_cursor(ustack, tab);
+    return cursor && STREQ(cursor->name, undoname) && BKE_undosys_tab_has_undo(ustack, tab);
+  }
   return ustack && BKE_undosys_stack_has_undo(ustack, undoname);
 }
 
@@ -730,14 +851,8 @@ static bool ed_undo_poll(bContext *C)
   UndoStack *undo_stack = CTX_wm_manager(C)->runtime->undo_stack;
   /* Mixar per-tab undo (M5): nothing to undo when the tab has no own step
    * before its cursor (its reserve floor, or a tab with no edits yet). */
-  if (BKE_undo_tabs_enabled()) {
-    const uint32_t tab = BKE_undo_tab_uid_from_context(C);
-    wmWindow *win = CTX_wm_window(C);
-    if (tab != UNDO_TAB_DOCUMENT && win != nullptr && win->scene != nullptr &&
-        !BKE_undo_tab_scene_is_lane(win->scene))
-    {
-      return BKE_undosys_tab_has_undo(undo_stack, tab);
-    }
+  if (const uint32_t tab = ed_undo_window_tab(C); tab != UNDO_TAB_DOCUMENT) {
+    return BKE_undosys_tab_has_undo(undo_stack, tab);
   }
   return (undo_stack->step_active != nullptr) && (undo_stack->step_active->prev != nullptr);
 }
@@ -787,11 +902,8 @@ static bool ed_redo_poll(bContext *C)
   UndoStack *undo_stack = CTX_wm_manager(C)->runtime->undo_stack;
   /* Mixar per-tab undo (M2): the document's active step stays at the top while
    * tabs walk their own history; redo is available when THIS tab is behind. */
-  if (BKE_undo_tabs_enabled()) {
-    const uint32_t tab = BKE_undo_tab_uid_from_context(C);
-    if (tab != UNDO_TAB_DOCUMENT) {
-      return BKE_undosys_tab_has_redo(undo_stack, tab);
-    }
+  if (const uint32_t tab = ed_undo_window_tab(C); tab != UNDO_TAB_DOCUMENT) {
+    return BKE_undosys_tab_has_redo(undo_stack, tab);
   }
   return (undo_stack->step_active != nullptr) && (undo_stack->step_active->next != nullptr);
 }
@@ -864,7 +976,13 @@ bool ED_undo_operator_repeat(bContext *C, wmOperator *op)
 
       WM_operator_free_all_after(wm, op);
 
-      ED_undo_pop_op(C, op);
+      if ((ed_undo_step_by_name(C, op->type->name, op->reports) & OPERATOR_FINISHED) == 0) {
+        /* Mixar per-tab undo (review 2026-10-01, R1): nothing was taken back (not
+         * this tab's current step, its agent works, the walk was refused).
+         * Running the operator again now would apply it a second time. */
+        CTX_wm_region_set(C, region_orig);
+        return false;
+      }
 
       if (op->type->check) {
         if (op->type->check(C, op)) {
@@ -997,13 +1115,11 @@ static wmOperatorStatus ed_undo_whole_document_exec(bContext *C, wmOperator *op)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
   WM_operator_stack_clear(wm);
-  UndoStack *ustack = wm->runtime->undo_stack;
   /* After per-tab walks the live document is not the active step's state: the
-   * document walk re-reads every ID (BKE_undosys_step_load_data_ex); the target
-   * step's cursor snapshot then says where each tab stood when that state was
-   * written. */
+   * document walk re-reads every ID, and it restores the reached step's cursor
+   * snapshot itself (BKE_undosys_step_load_data_ex), which says where each tab
+   * stood when that state was written. */
   wmOperatorStatus ret = ed_undo_step_direction(C, STEP_UNDO, op->reports, false);
-  BKE_undosys_tab_cursors_restore(ustack, ustack->step_active);
   if (ret & OPERATOR_FINISHED) {
     ed_undo_refresh_for_op(C);
   }

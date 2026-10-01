@@ -503,7 +503,9 @@ UndoStep *BKE_undosys_stack_init_or_active_with_type(UndoStack *ustack, const Un
  * and no tab's cursor step is freed: a tab that walked back while other tabs
  * pushed must still find its way forward.
  */
-static UndoStep *undosys_tab_limit_extend(UndoStack *ustack, UndoStep *us)
+static UndoStep *undosys_tab_limit_extend(UndoStack *ustack,
+                                          UndoStep *us,
+                                          Set<const UndoStep *> &r_pinned)
 {
   /* The reserve and the cursor pin are for tabs that still exist: a closed
    * tab's steps age out like any other's, and its cursor entry goes, or every
@@ -548,10 +550,46 @@ static UndoStep *undosys_tab_limit_extend(UndoStack *ustack, UndoStep *us)
       }
     }
     if (keep) {
+      r_pinned.add(it);
       us = it;
     }
   }
   return us;
+}
+
+/**
+ * Mixar per-tab undo (review 2026-10-01, R2): the reserve keeps a tab's own
+ * steps and its cursor, not everything pushed after them. Upstream frees only
+ * the oldest steps, so a reserve step deep in the stack used to keep every
+ * later step alive: one idle tab and an agent building elsewhere grew the stack
+ * without bound (undo_steps 8: 61 of 60 pushes kept). Between the reserve's
+ * cutoff and the document-wide one, every memfile step the reserve does not
+ * pin is freed. Only a memfile step followed by another memfile step: a mode
+ * step resolves its references against the memfile before it, and freeing a
+ * memfile merges its chunks into the next one (#BLO_memfile_merge), whose
+ * neighbour's "identical in the future" flags the memfile type recomputes.
+ */
+static void undosys_tab_limit_free_between(UndoStack *ustack,
+                                           UndoStep *us_from,
+                                           const UndoStep *us_doc,
+                                           const Set<const UndoStep *> &pinned)
+{
+  int freed = 0;
+  UndoStep *it = us_from;
+  while (it != nullptr && it != us_doc) {
+    UndoStep *next = it->next;
+    if (!pinned.contains(it) && it->type == BKE_UNDOSYS_TYPE_MEMFILE && next != nullptr &&
+        next->type == BKE_UNDOSYS_TYPE_MEMFILE && it != ustack->step_active &&
+        it != ustack->step_active_memfile && it != us_from)
+    {
+      undosys_step_free_and_unlink(ustack, it);
+      freed++;
+    }
+    it = next;
+  }
+  if (freed > 0) {
+    CLOG_DEBUG(&LOG, "per-tab limit: freed %d step(s) between the tabs' reserves", freed);
+  }
 }
 
 void BKE_undosys_stack_limit_steps_and_memory(UndoStack *ustack, int steps, size_t memory_limit)
@@ -591,8 +629,10 @@ void BKE_undosys_stack_limit_steps_and_memory(UndoStack *ustack, int steps, size
 
   CLOG_DEBUG(&LOG, "Total steps %zu: data_size_all=%zu", us_count, data_size_all);
 
+  UndoStep *us_doc = us;
+  Set<const UndoStep *> pinned;
   if (us && BKE_undo_tabs_enabled()) {
-    us = undosys_tab_limit_extend(ustack, us);
+    us = undosys_tab_limit_extend(ustack, us, pinned);
   }
 
   if (us) {
@@ -614,6 +654,9 @@ void BKE_undosys_stack_limit_steps_and_memory(UndoStack *ustack, int steps, size
     /* Free from first to last, free functions may update de-duplication info
      * (see #MemFileUndoStep). */
     undosys_stack_clear_all_first(ustack, us->prev, us_exclude);
+    if (us != us_doc) {
+      undosys_tab_limit_free_between(ustack, us, us_doc, pinned);
+    }
   }
 }
 
@@ -1366,6 +1409,40 @@ bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, const uint32_t ta
     return false;
   }
   return undosys_tab_step_apply(ustack, C, tab_uid, target, STEP_REDO, r_reason);
+}
+
+bool BKE_undosys_tab_step_check(UndoStack *ustack,
+                                bContext *C,
+                                const uint32_t tab_uid,
+                                const eUndoStepDir dir,
+                                std::string *r_reason)
+{
+  UndoStep *ref = BKE_undosys_tab_cursor(ustack, tab_uid);
+  if (dir == STEP_REDO) {
+    UndoStep *target = undosys_tab_next_step(ustack, ref, tab_uid);
+    if (target == nullptr) {
+      if (r_reason) {
+        *r_reason = "nothing to redo in this tab";
+      }
+      return false;
+    }
+    return undosys_tab_step_check(C, tab_uid, target, r_reason);
+  }
+  for (UndoStep *us = ref ? ref->prev : nullptr; us != nullptr; us = us->prev) {
+    if (us->skip || us->mixar_tab_uid != tab_uid) {
+      continue;
+    }
+    if ((ref->type->flags & UNDOTYPE_FLAG_DECODE_ACTIVE_STEP) &&
+        !undosys_tab_step_check(C, tab_uid, ref, r_reason))
+    {
+      return false;
+    }
+    return undosys_tab_step_check(C, tab_uid, us, r_reason);
+  }
+  if (r_reason) {
+    *r_reason = "nothing to undo in this tab";
+  }
+  return false;
 }
 
 bool BKE_undosys_tab_step_load(

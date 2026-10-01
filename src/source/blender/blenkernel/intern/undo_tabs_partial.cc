@@ -65,6 +65,18 @@ static bool partial_validate(Main *bmain,
                              const UndoOwnerMap *live,
                              std::string *r_reason)
 {
+  /* A memfile step written while per-tab undo was off carries no owner map.
+   * Without it the reader cannot tell what the tab owned THEN: a datablock the
+   * tab had at the step and deleted since would be skipped as "not this tab's"
+   * and silently never come back (review 2026-10-01, R5). Fails closed. */
+  if (step_owners == nullptr) {
+    if (r_reason) {
+      *r_reason =
+          "that step was recorded while per-tab undo was off (Edit > Undo Whole Document walks "
+          "every tab)";
+    }
+    return false;
+  }
   /* Sharing is judged from the pressing tab: a datablock this tab reaches
    * that another tab reaches too, now or at the step. What two other tabs
    * share does not stop this one (review 2026-09-30, finding 1). */
@@ -94,8 +106,10 @@ static bool partial_validate(Main *bmain,
       const uint32_t at_step = BKE_undo_owner_map_lookup(step_owners, id->session_uid);
       const uint32_t now = BKE_undo_owner_map_lookup(live, id->session_uid);
       const bool tab_then = (at_step == tab_uid), tab_now = (now == tab_uid);
-      const bool other_then = (at_step != tab_uid && at_step != UNDO_TAB_DOCUMENT);
-      const bool other_now = (now != tab_uid && now != UNDO_TAB_DOCUMENT);
+      /* A worker lane is not another tab: what the tab's lane built and merged
+       * into the tab moved within the tab. */
+      const bool other_then = !ELEM(at_step, tab_uid, UNDO_TAB_DOCUMENT, UNDO_TAB_LANE);
+      const bool other_now = !ELEM(now, tab_uid, UNDO_TAB_DOCUMENT, UNDO_TAB_LANE);
       if ((tab_then && other_now) || (tab_now && other_then)) {
         if (moved_count < 8) {
           moved += (moved.empty() ? "" : ", ") + std::string(id->name + 2);
@@ -217,7 +231,7 @@ UndoPartialDecision BKE_undo_tabs_partial_decide(const uint32_t session_uid, con
     return UndoPartialDecision::Restore;
   }
   /* Everything else stays exactly as it is now; what is not live anymore is
-   * not brought back on this tab's behalf. */
+   * not brought back on this tab's behalf (a worker lane among them). */
   return has_live ? UndoPartialDecision::Keep : UndoPartialDecision::Skip;
 }
 

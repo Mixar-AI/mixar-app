@@ -247,8 +247,12 @@ static void undo_history_draw_menu(const bContext *C, Menu *menu)
    * was a row that always failed (review 2026-09-30, finding 5). A window on
    * no tab lists everything. */
   const bool per_tab = BKE_undo_tabs_enabled();
-  const uint32_t current_tab = per_tab ? BKE_undo_tab_uid_from_context(const_cast<bContext *>(C)) :
-                                         UNDO_TAB_DOCUMENT;
+  /* The window's tab, as the undo operators read it (review 2026-10-01). */
+  wmWindow *menu_win = CTX_wm_window(C);
+  const uint32_t current_tab = (per_tab && menu_win && menu_win->scene &&
+                                !BKE_undo_tab_scene_is_lane(menu_win->scene)) ?
+                                   BKE_undo_tab_uid_for_scene(CTX_data_main(C), menu_win->scene) :
+                                   UNDO_TAB_DOCUMENT;
   auto step_hidden = [&](const UndoStep &us) {
     return per_tab && current_tab != UNDO_TAB_DOCUMENT && us.mixar_tab_uid != current_tab;
   };
@@ -283,8 +287,9 @@ static void undo_history_draw_menu(const bContext *C, Menu *menu)
     }
     /* Mixar per-tab undo: the marker is the tab's cursor, the step this tab
      * currently reflects, not the document's active step. */
-    const UndoStep *active_step = per_tab ? BKE_undosys_tab_cursor(wm->runtime->undo_stack, current_tab) :
-                                            wm->runtime->undo_stack->step_active;
+    const UndoStep *active_step = (current_tab != UNDO_TAB_DOCUMENT) ?
+                                      BKE_undosys_tab_cursor(wm->runtime->undo_stack, current_tab) :
+                                      wm->runtime->undo_stack->step_active;
     const bool is_active = (us == active_step);
     ui::Layout &row = column->row(false);
     row.enabled_set(!is_active);

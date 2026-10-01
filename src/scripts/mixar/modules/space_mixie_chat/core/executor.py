@@ -125,8 +125,32 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             if turn[2]:
                 self._close_turn_checkpoint(session_id)
 
+    def _lane_pin_blocks_push(self, session_id: str = "") -> bool:
+        """Whether a window on a worker lane must stop a checkpoint.
+
+        The skip exists for the classic undo: a memfile step written while a
+        window shows a lane records the lane as the current scene, and an undo
+        landing on it put the user inside the lane. Per-tab undo never moves the
+        window and tags the step through ``mixar_undo_push(scene=)``, so there
+        the skip only lost checkpoints: a user watching a worker through its
+        card's eye when a turn ended left that turn without its closing step,
+        and an undo then went past the turn's work with no redo to bring it back
+        (review 2026-10-01, R6). A lane alive in the step is never restored by a
+        tab's walk (the C side's lane owner class)."""
+        if not self._window_on_lane_scene():
+            return False
+        try:
+            wm = bpy.context.window_manager
+            per_tab = bool(getattr(wm, "mixar_per_tab_undo", False)) and \
+                callable(getattr(wm, "mixar_undo_push", None))
+        except Exception:  # noqa: BLE001
+            per_tab = False
+        if per_tab and self._session_scene(session_id or self._current_session) is not None:
+            return False
+        return True
+
     def _close_turn_checkpoint(self, session_id: str = "") -> None:
-        if self._window_on_lane_scene():
+        if self._lane_pin_blocks_push(session_id):
             logger.debug("Closing undo checkpoint skipped: window pinned to a lane scene")
             return
         if not self._push_undo_checkpoint("Mixie Chat Turn", session_id=session_id):
@@ -269,7 +293,7 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         if turn_record is not None:
             turn_record[2] = True
         if push_undo and self._should_push_undo():
-            if self._window_on_lane_scene():
+            if self._lane_pin_blocks_push():
                 # The routing pin has the window on a worker lane: a memfile
                 # step written now records the lane as the CURRENT scene, so an
                 # undo landing on it would put the user inside the lane. Skip,

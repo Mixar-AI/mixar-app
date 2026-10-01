@@ -401,3 +401,48 @@ def test_a_push_without_a_known_session_scene_keeps_the_old_path(executor_module
     executor = executor_module.ScriptExecutor()
     assert executor._push_undo_checkpoint() is True
     assert bpy_mod.context.window_manager.mixar_undo_push.call_count == 0
+
+
+def _per_tab_bpy(monkeypatch, executor_module, windows):
+    bpy_mod = _mocked_bpy(monkeypatch, executor_module, windows=windows)
+    bpy_mod.context.window_manager.mixar_per_tab_undo = True
+    agent_scene = MagicMock(mixie_session_id="s1")
+    bpy_mod.data.scenes = [MagicMock(mixie_session_id="other-tab"), agent_scene]
+    pusher = bpy_mod.context.window_manager.mixar_undo_push
+    pusher.return_value = True
+    return bpy_mod, pusher, agent_scene
+
+
+def test_per_tab_closing_checkpoint_lands_while_the_user_watches_a_lane(executor_module, monkeypatch):
+    # Review 2026-10-01, R6: the user opened a worker's lane through its card's
+    # eye; the turn ends. Per-tab undo tags the step through mixar_undo_push and
+    # never moves the window, so the skip only lost the closing checkpoint and
+    # an undo then went past the turn's work with nothing to redo.
+    bpy_mod, pusher, agent_scene = _per_tab_bpy(monkeypatch, executor_module, [_window("tab")])
+    executor = executor_module.ScriptExecutor()
+    executor.begin_agent_turn("s1")
+    assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
+    bpy_mod.context.window_manager.windows = [_window("agentlane:x")]
+    executor.end_agent_turn("s1")
+    assert pusher.call_count == 2
+    assert all(call.kwargs.get("scene") is agent_scene for call in pusher.call_args_list)
+
+
+def test_per_tab_script_checkpoint_lands_while_pinned_to_a_lane(executor_module, monkeypatch):
+    bpy_mod, pusher, _ = _per_tab_bpy(monkeypatch, executor_module, [_window("agentlane:abc")])
+    executor = executor_module.ScriptExecutor()
+    executor.begin_agent_turn("s1")
+    assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
+    assert pusher.call_count == 1
+    assert _undo_pushes(bpy_mod) == 0
+
+
+def test_lane_skip_stays_with_per_tab_undo_off(executor_module, monkeypatch):
+    # The kill switch: the classic undo still flips the window to a step's
+    # current scene, so a step written on a lane stays skipped.
+    bpy_mod, pusher, _ = _per_tab_bpy(monkeypatch, executor_module, [_window("agentlane:abc")])
+    bpy_mod.context.window_manager.mixar_per_tab_undo = False
+    executor = executor_module.ScriptExecutor()
+    executor.begin_agent_turn("s1")
+    assert executor.execute("bpy.ops.mixar.probe()", session_id="s1").success is True
+    assert pusher.call_count == 0 and _undo_pushes(bpy_mod) == 0

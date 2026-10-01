@@ -2925,6 +2925,9 @@ static void read_undo_partial_keep_foreign_leftovers(FileData *fd)
       }
       BLI_remlink(old_lb, id);
       BLI_addtail(new_lb, id);
+      /* Keep the list in name order, as every other path that adds an ID does
+       * (review 2026-10-01, R10: a kept foreign datablock was listed last). */
+      id_sort_by_name(new_lb, id, nullptr);
       id->tag |= ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED;
       id->newid = nullptr;
       id->orig_id = nullptr;

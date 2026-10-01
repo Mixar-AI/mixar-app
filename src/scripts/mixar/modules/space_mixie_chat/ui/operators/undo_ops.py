@@ -185,11 +185,13 @@ class MIXIE_CHAT_OT_undo_shield(Operator):
 
     def modal(self, context, event):
         if event.type == 'TIMER':
-            if not working_tabs():
+            # Per-tab undo turned on while the shield runs: the C poll is the
+            # hold from here on, so the modal stands down (review 2026-10-01).
+            if not working_tabs() or per_tab_undo():
                 self._finish(context)
                 return {'FINISHED'}
             return {'PASS_THROUGH'}
-        if is_undo_chord(event):
+        if is_undo_chord(event) and not per_tab_undo():
             busy = working_tabs()
             if busy:
                 refuse(bool(event.shift), self.report, busy)

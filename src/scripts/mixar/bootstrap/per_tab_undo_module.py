@@ -28,6 +28,23 @@ logger = get_logger(__name__)
 CONFIG_KEY = "per_tab_undo"
 
 
+def _as_bool(value):
+    """The config value as a flag: a hand-edited ``"false"`` / ``"off"`` / ``"0"``
+    string is off, not a truthy non-empty string (review 2026-10-01). ``None``
+    (and anything unreadable) keeps the build default."""
+    if value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in ("0", "false", "off", "no"):
+            return False
+        if text in ("1", "true", "on", "yes"):
+            return True
+    return None
+
+
 def apply_config() -> bool:
     """Apply the config key once; returns the resulting flag state."""
     wm = bpy.context.window_manager
@@ -38,8 +55,9 @@ def apply_config() -> bool:
         value = get_config().get(CONFIG_KEY)
     except Exception:  # noqa: BLE001 — config unreadable: keep the build default
         value = None
-    if value is not None and bool(value) != bool(wm.mixar_per_tab_undo):
-        wm.mixar_per_tab_undo = bool(value)
+    value = _as_bool(value)
+    if value is not None and value != bool(wm.mixar_per_tab_undo):
+        wm.mixar_per_tab_undo = value
     state = bool(wm.mixar_per_tab_undo)
     logger.info("per-tab undo %s (%s)", "on" if state else "off",
                 "config" if value is not None else "default")

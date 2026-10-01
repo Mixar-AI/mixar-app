@@ -340,6 +340,12 @@ bool BKE_undosys_step_undo(UndoStack *ustack, bContext *C);
  * unsupported step type). */
 bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, uint32_t tab_uid, std::string *r_reason);
 bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, uint32_t tab_uid, std::string *r_reason);
+/** Review 2026-10-01: would the tab's next undo/redo be accepted? The checks
+ * the walk makes, none of the work: the caller asks before anything with a side
+ * effect (killing jobs, the pre handlers) so a refusal leaves everything as it
+ * was. */
+bool BKE_undosys_tab_step_check(
+    UndoStack *ustack, bContext *C, uint32_t tab_uid, eUndoStepDir dir, std::string *r_reason);
 /** The step a tab currently reflects (its cursor), or `step_active` when it is at the top. */
 UndoStep *BKE_undosys_tab_cursor(UndoStack *ustack, uint32_t tab_uid);
 /** True while the tab's cursor is behind its newest step (a redo is available for it). */

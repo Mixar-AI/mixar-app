@@ -39,6 +39,12 @@ namespace blender {
 constexpr uint32_t UNDO_TAB_DOCUMENT = 0u;
 /** Owner value of an ID reachable from two or more tabs. */
 constexpr uint32_t UNDO_TAB_SHARED = 0xFFFFFFFFu;
+/** Owner value of an ID only a worker lane reaches (the lane scene itself and
+ * what no tab reaches through it). A tab's walk never restores one: it keeps a
+ * live lane as it is and never brings back a lane that is gone (a lane alive
+ * when a step was written would otherwise come back on an undo onto that step,
+ * with no run to own it; review 2026-10-01, R11). */
+constexpr uint32_t UNDO_TAB_LANE = 0xFFFFFFFEu;
 /** Design M3: the step limit keeps at least this many of a tab's own steps
  * (of those that exist) and never frees a tab's cursor step. */
 constexpr int UNDO_TAB_MIN_STEPS = 8;
@@ -141,7 +147,7 @@ enum class UndoPartialDecision : int8_t {
 };
 
 /** Arm a partial restore of ``tab_uid`` from a step whose owner map is
- * ``step_owners`` (may be null: everything then keys off the live map). The
+ * ``step_owners`` (null, a step written with per-tab undo off, refuses). The
  * live map is built here from ``bmain``. Returns false, with their names in
  * ``r_reason``, when a LOCAL datablock this tab reaches is shared with another
  * tab in either map (a restore would change the other tab's), or when one

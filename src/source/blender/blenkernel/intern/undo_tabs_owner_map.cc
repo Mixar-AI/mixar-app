@@ -54,17 +54,33 @@ struct OwnerWalk {
   uint32_t tab;
 };
 
+/** A type memfile undo never writes (a Brush, a WorkSpace, a Screen) is never
+ * restored, so it can neither be owned nor shared: every scene's tool settings
+ * point at the active brush, and counting it would refuse undo in every tab
+ * once two tabs paint with the same brush. */
+static bool owner_map_type_is_never_undone(const ID *id)
+{
+  const IDTypeInfo *info = BKE_idtype_get_info_from_id(id);
+  return info != nullptr && (info->flags & IDTYPE_FLAGS_NO_MEMFILE_UNDO);
+}
+
+/** The walk callbacks' return: never descend through a type memfile undo never
+ * writes. A local brush's texture and image are reached from every scene whose
+ * tool settings use that brush; walked through, they became "shared" and
+ * refused undo in every tab painting with it (review 2026-10-01, R4). What
+ * they point at is owned by whoever reaches it directly, else global. */
+static int owner_map_walk_return(const ID *id)
+{
+  return (id != nullptr && owner_map_type_is_never_undone(id)) ? IDWALK_RET_STOP_RECURSION :
+                                                                 IDWALK_RET_NOP;
+}
+
 static void owner_map_record(UndoOwnerMap *map, const ID *id, const uint32_t tab)
 {
   if (id == nullptr || id->session_uid == 0) {
     return;
   }
-  /* A type memfile undo never writes (a Brush, a WorkSpace, a Screen) is never
-   * restored, so it can neither be owned nor shared: every scene's tool
-   * settings point at the active brush, and counting it would refuse undo in
-   * every tab once two tabs paint with the same brush. */
-  const IDTypeInfo *info = BKE_idtype_get_info_from_id(id);
-  if (info != nullptr && (info->flags & IDTYPE_FLAGS_NO_MEMFILE_UNDO)) {
+  if (owner_map_type_is_never_undone(id)) {
     return;
   }
   uint32_t *slot = map->owner.lookup_ptr(id->session_uid);
@@ -121,6 +137,16 @@ int undo_tabs_owner_map_shared_for_tab(const UndoOwnerMap *map, const uint32_t t
   return count;
 }
 
+/** A lane reaches it: the lane's own when no tab does, the tab's otherwise.
+ * Never makes anything shared (a lane works on its tab's behalf). */
+static void owner_map_record_lane(UndoOwnerMap *map, const ID *id)
+{
+  if (id == nullptr || id->session_uid == 0 || owner_map_type_is_never_undone(id)) {
+    return;
+  }
+  map->owner.add(id->session_uid, UNDO_TAB_LANE);
+}
+
 struct RootWalk {
   UndoOwnerMap *map;
   Vector<const ID *> unowned;
@@ -138,6 +164,10 @@ static void root_walk_note(RootWalk *w, const ID *id)
         }
       }
     }
+  }
+  else if (owner == UNDO_TAB_LANE) {
+    /* A lane's datablock claims nothing for the root: the root stays global
+     * (kept as it is by every tab's walk, as the lane's datablocks are). */
   }
   else if (owner != UNDO_TAB_DOCUMENT) {
     if (!w->tabs.contains(owner)) {
@@ -181,7 +211,7 @@ static void owner_map_claim_roots(Main *bmain, UndoOwnerMap *map)
           if (ref != nullptr && ref->session_uid != 0) {
             root_walk_note(w, ref);
           }
-          return IDWALK_RET_NOP;
+          return owner_map_walk_return(ref);
         },
         &walk,
         IDWALK_READONLY | IDWALK_RECURSE);
@@ -204,10 +234,15 @@ UndoOwnerMap *BKE_undo_owner_map_build(Main *bmain, double *r_ms)
   const double t0 = BLI_time_now_seconds();
   UndoOwnerMap *map = MEM_new<UndoOwnerMap>(__func__);
   if (bmain != nullptr) {
+    /* The tabs first, then the lanes: a datablock a tab reaches is the tab's
+     * whatever a lane does with it; what only a lane reaches is the lane's. */
     for (Scene &scene : bmain->scenes) {
+      if (BKE_undo_tab_scene_is_lane(&scene)) {
+        continue;
+      }
       const uint32_t tab = BKE_undo_tab_uid_for_scene(bmain, &scene);
       if (tab == UNDO_TAB_DOCUMENT) {
-        continue; /* an unresolved lane: no tab can claim it */
+        continue;
       }
       owner_map_record(map, &scene.id, tab);
       OwnerWalk walk{map, tab};
@@ -220,9 +255,27 @@ UndoOwnerMap *BKE_undo_owner_map_build(Main *bmain, double *r_ms)
             if (id != nullptr) {
               owner_map_record(w->map, id, w->tab);
             }
-            return IDWALK_RET_NOP;
+            return owner_map_walk_return(id);
           },
           &walk,
+          IDWALK_READONLY | IDWALK_RECURSE);
+    }
+    for (Scene &scene : bmain->scenes) {
+      if (!BKE_undo_tab_scene_is_lane(&scene)) {
+        continue;
+      }
+      owner_map_record_lane(map, &scene.id);
+      BKE_library_foreach_ID_link(
+          bmain,
+          &scene.id,
+          [](LibraryIDLinkCallbackData *cb_data) -> int {
+            const ID *id = *cb_data->id_pointer;
+            if (id != nullptr) {
+              owner_map_record_lane(static_cast<UndoOwnerMap *>(cb_data->user_data), id);
+            }
+            return owner_map_walk_return(id);
+          },
+          map,
           IDWALK_READONLY | IDWALK_RECURSE);
     }
     owner_map_claim_roots(bmain, map);
