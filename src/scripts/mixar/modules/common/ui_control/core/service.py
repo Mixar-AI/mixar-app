@@ -99,8 +99,14 @@ def _eligible():
         raise UIError("mcp_disabled", "Mixar MCP is disabled")
     wm = bpy.context.window_manager
     if (not getattr(wm, "mixie_chat_is_logged_in", False)
-            or getattr(wm, "mixie_chat_session_expired", False) or not eligibility.valid()):
-        raise UIError("account_not_ready", "Wait for Mixar sign-in and UI eligibility renewal")
+            or getattr(wm, "mixie_chat_session_expired", False)):
+        raise UIError("signin_required", "Sign in to Mixar before controlling its UI")
+    state = eligibility.status()
+    if not state["eligible"]:
+        messages = {"backend_update_required": "This backend needs the Mixar UI-control update",
+                    "client_update_required": "Update Mixar to use UI control",
+                    "account_unavailable": "This Mixar account cannot use UI control"}
+        raise UIError(state["reason"], messages.get(state["reason"], "Wait for Mixar sign-in and UI eligibility renewal"))
 
 
 def _run(req):
@@ -113,6 +119,7 @@ def _run(req):
             ownership.release(req.owner, require_settled=True)
         return {"contract": "mixar_ui_v1", "session_id": win.scene.mixie_session_id,
                 "scene_name": win.scene.name, "eligible": eligibility.valid(),
+                "account_status": eligibility.status(),
                 "input_busy": ownership.active(), "event_simulate": bpy.app.use_event_simulate}, []
     if req.name == "mixar_ui_observe":
         if req.args.get("image"):

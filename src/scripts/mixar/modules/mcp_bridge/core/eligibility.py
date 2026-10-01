@@ -11,6 +11,7 @@ _generation = 0
 _refreshing = False
 _identity = None
 _next_attempt = 0.0
+_reason = "starting"
 
 
 def valid():
@@ -18,21 +19,30 @@ def valid():
         return time.monotonic() < _deadline
 
 
+def status():
+    with _lock:
+        allowed = time.monotonic() < _deadline
+        return {"eligible": allowed, "reason": None if allowed else
+                ("eligibility_expired" if _reason == "ready" else _reason)}
+
+
 def invalidate():
-    global _deadline, _generation
+    global _deadline, _generation, _reason
     with _lock:
         _deadline = 0.0
         _generation += 1
+        _reason = "disabled"
 
 
 def refresh(context):
-    global _refreshing, _identity, _generation, _deadline, _next_attempt
+    global _refreshing, _identity, _generation, _deadline, _next_attempt, _reason
     identity = (context.get("instance_id"), context.get("backend_url"), context.get("connected"),
                 context.get("signed_in"))
     with _lock:
         if identity != _identity:
             _identity, _deadline = identity, 0.0
             _generation += 1
+            _reason = "starting" if context.get("signed_in") else "signin_required"
         if (not context.get("connected") or not context.get("signed_in")
                 or _refreshing or time.monotonic() < _next_attempt):
             return
@@ -46,13 +56,14 @@ def refresh(context):
 
 
 def _fetch(context, generation):
-    global _refreshing, _deadline
+    global _refreshing, _deadline, _reason
     import requests
     from mixar.modules.auth.core.auth import get_access_token, refresh_access_token
     from mixar.modules.common.network import classify_network_error, log_network_failure
     from mixar.config.logging_config import get_logger
     started = time.monotonic()
     deadline = 0.0
+    reason = "backend_unavailable"
     try:
         token = get_access_token()
         if token:
@@ -65,6 +76,9 @@ def _fetch(context, generation):
                     if token:
                         continue
                 break
+            reason = {401: "signin_required", 403: "account_unavailable",
+                      404: "backend_update_required", 409: "client_update_required",
+                      426: "client_update_required"}.get(response.status_code, reason)
             if response.status_code == 200:
                 data = response.json()
                 if (data.get("eligible") is True and data.get("instance_id") == context["instance_id"]
@@ -72,6 +86,9 @@ def _fetch(context, generation):
                     ttl = data.get("valid_for_seconds")
                     if type(ttl) is int and 0 < ttl <= 60:
                         deadline = started+ttl
+                        reason = "ready"
+        else:
+            reason = "signin_required"
     except requests.exceptions.RequestException as exc:
         log_network_failure(get_logger(__name__), classify_network_error(exc), context="mcp_ui_eligibility")
     except (ValueError, TypeError, KeyError):
@@ -80,4 +97,5 @@ def _fetch(context, generation):
         with _lock:
             if generation == _generation:
                 _deadline = deadline
+                _reason = reason
             _refreshing = False
