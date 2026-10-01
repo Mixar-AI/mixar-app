@@ -183,3 +183,27 @@ def test_already_staged_installer_reports_full_progress_before_verifying():
             lines.setdefault(node.func.attr, node.lineno)
     assert "set_download_progress" in lines
     assert lines["set_download_progress"] < lines["verify_installer"]
+
+
+@pytest.mark.parametrize("install_state", list(InstallState))
+def test_badge_invokes_restart_only_when_installer_is_ready(install_state):
+    state = get_update_state()
+    state.set_available(_info())
+    _enter(state, install_state)
+    layout = MagicMock()
+    # Headers can inherit EXEC_REGION_WIN, skipping the restart dialog.
+    layout.row.return_value.operator_context = 'EXEC_REGION_WIN'
+    draw_update_badge(layout)
+    row = layout.row.return_value
+    assert row.operator_context == 'INVOKE_DEFAULT'
+    expected = (
+        "mixar.restart_to_update" if install_state is InstallState.READY
+        else "mixar.show_update_toast"
+    )
+    assert row.operator.call_args.args == (expected,)
+
+
+def test_badge_does_not_draw_without_update_info():
+    layout = MagicMock()
+    draw_update_badge(layout)
+    layout.row.assert_not_called()

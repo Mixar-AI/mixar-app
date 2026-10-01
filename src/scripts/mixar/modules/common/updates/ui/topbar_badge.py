@@ -10,8 +10,9 @@ Persistent "Update Available" indicator drawn just right of the topbar
 draw hook).  Visible whenever update info is cached in the update state
 singleton — including after the toast has been dismissed or the version
 has already been announced, so the badge persists until they are actually
-on the latest release.  Clicking re-shows the sticky update toast, which
-is what makes suppressing repeat announcements safe: the update is
+on the latest release. Once ready, clicking opens the same restart
+confirmation as the toast button. Otherwise it re-shows the sticky update
+toast, which makes suppressing repeat announcements safe: the update is
 demoted to ambient status, never withheld.
 """
 
@@ -94,8 +95,10 @@ def draw_update_badge(layout) -> None:
 
     row = layout.row(align=True)
     row.alert = badge_alert(state, info)
+    row.operator_context = 'INVOKE_DEFAULT'
     row.operator(
-        "mixar.show_update_toast",
+        "mixar.restart_to_update" if state.install_state is InstallState.READY
+        else "mixar.show_update_toast",
         text=badge_label(state),
         translate=False,
         icon='FILE_REFRESH',
