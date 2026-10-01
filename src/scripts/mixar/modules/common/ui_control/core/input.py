@@ -11,10 +11,7 @@ from ..constants import UIError
 from . import observe, ownership
 
 
-def point(item):
-    x0, y0, x1, y1 = item["rect"]
-    if x1 <= x0 or y1 <= y0:
-        raise UIError("target_hidden", "The target has no visible geometry")
+def occlusion_rects(item):
     # Popup regions intercept events before ordinary area regions.
     if not item.get("popup"):
         for other in observe.widgets():
@@ -22,10 +19,29 @@ def point(item):
                 raise UIError("popup_active", "Close or act on the current popup first")
     occluders = []
     if item.get("region_type") == "WINDOW" and item.get("_area"):
-        occluders = [r for r in item["_area"].regions if r.type != "WINDOW" and r.width > 1 and r.height > 1]
+        area = item["_area"]
+        for region in area.regions:
+            if region.type == "WINDOW" or region.width < 2 or region.height < 2:
+                continue
+            # Zen's transparent TOOL_HEADER spans the viewport. Its native
+            # handlers intercept drawn controls, not that whole rectangle.
+            if (area.type == "VIEW_3D" and region.type == "TOOL_HEADER"
+                    and region.height > area.height / 2):
+                occluders.extend(w["rect"] for w in observe.widgets()
+                                 if w.get("r") == region.as_pointer())
+            else:
+                occluders.append((region.x, region.y, region.x+region.width, region.y+region.height))
+    return occluders
+
+
+def point(item):
+    x0, y0, x1, y1 = item["rect"]
+    if x1 <= x0 or y1 <= y0:
+        raise UIError("target_hidden", "The target has no visible geometry")
+    occluders = occlusion_rects(item)
     for fx, fy in [(0.5, 0.5), (0.2, 0.5), (0.8, 0.5), (0.5, 0.2), (0.5, 0.8)]:
         x, y = int(x0 + (x1-x0)*fx), int(y0 + (y1-y0)*fy)
-        if not any(r.x <= x < r.x+r.width and r.y <= y < r.y+r.height for r in occluders):
+        if not any(left <= x < right and bottom <= y < top for left, bottom, right, top in occluders):
             return x, y
     raise UIError("target_occluded", "Reveal this control before acting")
 
@@ -118,6 +134,9 @@ def run(owner, args):
     elif action == "gesture":
         x0, y0, x1, y1 = item["rect"]
         points = [(int(x0+p[0]*(x1-x0-1)), int(y0+p[1]*(y1-y0-1))) for p in args["points"]]
+        obstacles = occlusion_rects(item)
+        if any(segment_intersects(a, b, rect) for a, b in zip(points, points[1:]) for rect in obstacles):
+            raise UIError("target_occluded", "The gesture crosses an overlapping control or panel")
         button = args.get("button", "LEFTMOUSE")
         item["_win"].cursor_warp(*points[0])
         event(owner, item, "MOUSEMOVE", "NOTHING", points[0], mods)
@@ -149,3 +168,18 @@ def keyboard_key(key):
         "NUMPAD_ENTER", *{"NUMPAD_%d" % i for i in range(10)},
         *{"F%d" % i for i in range(1, 25)},
     }
+
+
+def segment_intersects(start, end, rect):
+    lower, upper = 0.0, 1.0
+    for a, b, minimum, maximum in zip(start, end, rect[:2], rect[2:]):
+        delta = b-a
+        if delta == 0:
+            if not minimum <= a <= maximum:
+                return False
+        else:
+            entry, leave = sorted(((minimum-a)/delta, (maximum-a)/delta))
+            lower, upper = max(lower, entry), min(upper, leave)
+            if lower > upper:
+                return False
+    return True

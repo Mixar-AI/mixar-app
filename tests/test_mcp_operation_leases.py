@@ -273,3 +273,18 @@ def test_queued_request_is_fenced_before_execution_even_if_a_new_chat_is_active(
     executor._process_one_request()
     assert replies == [("stale", "MCP operation is missing, expired or belongs to another scene",
                         "mcp_operation_expired")]
+
+
+def test_admission_uses_real_session_state_contract(monkeypatch):
+    from mixar.modules.common.ui_control.core import ownership
+    from mixar.modules.common.ui_control.constants import UIError
+    from mixar.modules.common.render_coordinator import core as renders
+    monkeypatch.setattr(renders, "busy", lambda: False)
+    scene = SimpleNamespace(mixie_chat_state="idle", mixie_run_open=False)
+    monkeypatch.setattr(ownership, "bpy", SimpleNamespace(context=SimpleNamespace(
+        window_manager=SimpleNamespace(mixar_window_resizing=False))))
+    monkeypatch.setattr(ownership.observe, "main_window", lambda: SimpleNamespace(scene=scene))
+    ownership.available()
+    scene.mixie_run_open = True
+    with pytest.raises(UIError, match="active scene operation"):
+        ownership.available()

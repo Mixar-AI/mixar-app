@@ -288,6 +288,8 @@ void wm_event_free(wmEvent *event)
 /** A version of #wm_event_free that holds the last handled event. */
 static void wm_event_free_last_handled(wmWindow *win, wmEvent *event)
 {
+  /* This event has left the queue even though Blender retains its allocation. */
+  Mixar_ui_control_event_forget(event);
   /* Don't rely on this pointer being valid,
    * callers should behave as if the memory has been freed.
    * As this function should be interchangeable with #wm_event_free. */
@@ -4322,15 +4324,16 @@ void wm_event_do_handlers(bContext *C)
 
     wmEvent *event;
     while ((event = static_cast<wmEvent *>(win.runtime->event_queue.first))) {
-      if (!Mixar_ui_control_event_valid(&win, event)) {
-        BLI_remlink(&win.runtime->event_queue, event);
-        wm_event_free(event);
-        continue;
-      }
       /* Do the check at the start of the next iteration, to avoid by-passing it in case the
        * previous iteration has been early-terminated (using `continue;` e.g.). */
       if (wm->runtime->break_events_handling) {
         break;
+      }
+
+      if (!Mixar_ui_control_event_valid(&win, event)) {
+        BLI_remlink(&win.runtime->event_queue, event);
+        wm_event_free(event);
+        continue;
       }
 
       eHandlerActionFlag action = WM_HANDLER_CONTINUE;

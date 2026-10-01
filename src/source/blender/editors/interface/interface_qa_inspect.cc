@@ -38,6 +38,7 @@
 #include "interface_mixar_multiline_qa.hh"
 #include "interface_mixar_section.hh"
 #include "interface_qa_inspect.hh"
+#include "interface_qa_button_type.hh"
 
 /* Mixar 5.2 port: namespace wrap. */
 namespace blender {
@@ -103,69 +104,6 @@ void json_str(std::string &out, const char *key, const std::string &value)
   out += "\":\"";
   json_escape_append(out, value.data(), value.size());
   out += '"';
-}
-
-const char *but_type_name(const blender::ui::ButtonType type)
-{
-  using blender::ui::ButtonType;
-  switch (type) {
-    case ButtonType::But:
-      return "But";
-    case ButtonType::Row:
-      return "Row";
-    case ButtonType::Text:
-      return "Text";
-    case ButtonType::Menu:
-      return "Menu";
-    case ButtonType::ButMenu:
-      return "ButMenu";
-    case ButtonType::Num:
-      return "Num";
-    case ButtonType::NumSlider:
-      return "NumSlider";
-    case ButtonType::Toggle:
-      return "Toggle";
-    case ButtonType::ToggleN:
-      return "ToggleN";
-    case ButtonType::IconToggle:
-      return "IconToggle";
-    case ButtonType::IconToggleN:
-      return "IconToggleN";
-    case ButtonType::ButToggle:
-      return "ButToggle";
-    case ButtonType::Checkbox:
-      return "Checkbox";
-    case ButtonType::CheckboxN:
-      return "CheckboxN";
-    case ButtonType::Color:
-      return "Color";
-    case ButtonType::Tab:
-      return "Tab";
-    case ButtonType::Popover:
-      return "Popover";
-    case ButtonType::Scroll:
-      return "Scroll";
-    case ButtonType::Block:
-      return "Block";
-    case ButtonType::Label:
-      return "Label";
-    case ButtonType::Pulldown:
-      return "Pulldown";
-    case ButtonType::ListBox:
-      return "ListBox";
-    case ButtonType::ListRow:
-      return "ListRow";
-    case ButtonType::SearchMenu:
-      return "SearchMenu";
-    case ButtonType::HotkeyEvent:
-      return "HotkeyEvent";
-    case ButtonType::Image:
-      return "Image";
-    case ButtonType::Progress:
-      return "Progress";
-    default:
-      return "Other";
-  }
 }
 
 /* A widget scrolled out of its region still has valid geometry, but in window
@@ -377,7 +315,7 @@ void qa_dump_region(std::string &out,
       }
 
       out += "\"type\":\"";
-      out += but_type_name(but->type);
+      out += mixar_qa::but_type_name(but->type);
       out += "\",";
 
       const std::string &text = but->drawstr.empty() ? but->str : but->drawstr;

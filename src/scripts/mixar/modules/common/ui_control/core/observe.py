@@ -81,6 +81,12 @@ def public(item):
         "rect", "enabled", "sel", "popup", "type", "area_type", "region_type"}}
 
 
+def window_extent(win):
+    areas = [*win.screen.areas, *win.global_areas]
+    return {"width": max((a.x+a.width for a in areas), default=0),
+            "height": max((a.y+a.height for a in areas), default=0)}
+
+
 def image(win, items):
     from mixar.modules.common.render_coordinator.core import busy
     if (bpy.context.window_manager.mixar_window_resizing or bpy.app.is_job_running('RENDER')
@@ -94,13 +100,15 @@ def image(win, items):
                 raise UIError("capture_unavailable", "Window frame is not ready")
         with Image.open(path) as source:
             frame = source.convert("RGB")
-        sx, sy = frame.width / win.width, frame.height / win.height
+        # Widget rectangles and the captured buffer both use native pixels.
+        # Window.width/height are logical on Retina and must not scale masks.
+        native_width, native_height = frame.size
         draw = ImageDraw.Draw(frame)
         for item in items:
             if item.get("secret") and item["w"] == win.as_pointer():
                 x0, y0, x1, y1 = item["rect"]
-                draw.rectangle((int(x0*sx), int(frame.height-y1*sy),
-                                int(x1*sx), int(frame.height-y0*sy)), fill="black")
+                draw.rectangle((int(x0), int(frame.height-y1),
+                                int(x1), int(frame.height-y0)), fill="black")
         frame.thumbnail((2048, 2048))
         out = io.BytesIO()
         frame.save(out, format="PNG")
@@ -108,8 +116,8 @@ def image(win, items):
     if len(raw) > MAX_IMAGE_BYTES:
         raise UIError("capture_too_large", "Window image exceeds the local image budget")
     return {"type": "image", "mimeType": "image/png", "data": base64.b64encode(raw).decode()}, {
-        "width": frame.width, "height": frame.height, "window_width": win.width,
-        "window_height": win.height, "origin": "bottom_left"}
+        "width": frame.width, "height": frame.height, "window_width": native_width,
+        "window_height": native_height, "origin": "bottom_left"}
 
 
 def observe(owner, args):
@@ -151,7 +159,7 @@ def observe(owner, args):
     result = {"context": token, "session_id": main_window().scene.mixie_session_id,
               "scene_name": main_window().scene.name, "targets": targets,
               "total_targets": len(found), "regions": regions,
-              "windows": [{"window": window_ids[w.as_pointer()], "width": w.width, "height": w.height,
+              "windows": [{"window": window_ids[w.as_pointer()], **window_extent(w),
                            "scene_name": w.scene.name} for w in all_windows]}
     blocks = []
     if args.get("image"):

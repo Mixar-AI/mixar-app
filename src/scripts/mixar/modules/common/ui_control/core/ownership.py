@@ -31,7 +31,7 @@ def active():
 
 def available():
     from mixar.modules.common.render_coordinator.core import busy
-    from mixar.modules.space_mixie_chat.core import session
+    from mixar.modules.space_mixie_chat.core.session import SessionManager as session
     from mixar.modules.space_mixie_chat.constants import SessionState
     if busy():
         raise UIError("render_in_progress", "Wait for the render to finish")
