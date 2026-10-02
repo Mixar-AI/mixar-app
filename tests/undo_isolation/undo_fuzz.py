@@ -619,6 +619,13 @@ def press(uid: int, what: str) -> None:
                     break
             if ok:
                 del changed[k]
+        # An object the tab shared at the step that another tab deleted since: the
+        # tab's undo does not take back another tab's delete.
+        if "objects" in d:
+            gone_before = {k for k in d["objects"]["removed"]
+                           if not any(k in fp.get("objects", {}) for fp in before.values())}
+            d["objects"]["removed"] = [k for k in d["objects"]["removed"]
+                                       if not (k in gone_before and mine.get(k, {}).get("name") in s_objs)]
         if "objects" in d and not (d["objects"]["added"] or d["objects"]["removed"] or changed):
             del d["objects"]
         if d:

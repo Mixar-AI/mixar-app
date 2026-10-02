@@ -36,6 +36,8 @@
 
 #include "BLI_set.hh"
 
+#include <string>
+
 #include "BLI_map.hh"
 #include "BLI_memory_utils.hh"
 #include "BLI_vector.hh"
@@ -1022,21 +1024,18 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
   BLI_assert(undo_dir != STEP_INVALID);
 
   /* Mixar per-tab undo (the invariant test, 2026-10-02): a document-wide walk
-   * never stops on a mode step (edit mesh, sculpt, paint) of a tab the window
-   * does not show. Its decode resolves the objects through the window's view
-   * layer, where that tab's objects are not, so the walk landed with the tab's
-   * mesh one edit short of the step. Such a step is passed over like a skip
-   * step, for this walk only, and the walk lands on the step beyond it. */
+   * lands on memfile steps only. A mode step (edit mesh, sculpt, paint) holds one
+   * tab's edit-mode state, and the tabs' edit-mode work that no memfile has yet
+   * lives only there: landing on one restored the shown tab's and lost a hidden
+   * tab's edit made just before it (its own decode, through the window's view
+   * layer, could not restore it either). Every tab's state is complete in a
+   * memfile step (edit-mode data is flushed into it). Mode steps are passed over
+   * like skip steps, for this walk only. */
   Vector<UndoStep *> mixar_passed_over;
   if (use_skip && BKE_undo_tabs_enabled() && !BKE_undo_tabs_partial_active()) {
-    wmWindow *win = C ? CTX_wm_window(C) : nullptr;
-    const uint32_t shown = (win && win->scene) ? BKE_undo_tab_uid_for_scene(G_MAIN, win->scene) :
-                                                 UNDO_TAB_DOCUMENT;
     for (UndoStep *it = us_target; it != nullptr; it = (undo_dir == -1) ? it->prev : it->next) {
-      const bool hidden_mode_step = it->type->step_foreach_ID_ref != nullptr &&
-                                    it->mixar_tab_uid != UNDO_TAB_DOCUMENT &&
-                                    it->mixar_tab_uid != shown;
-      if (!it->skip && !hidden_mode_step) {
+      const bool mode_step = it->type->step_foreach_ID_ref != nullptr;
+      if (!it->skip && !mode_step) {
         break;
       }
       if (!it->skip) {
@@ -1080,7 +1079,13 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
    * shortcut cannot be trusted for any tab: re-read every ID (in place where it
    * still lives). Armed here for Undo Whole Document and for the classic walk
    * after the runtime kill switch alike. */
-  const bool reread_all = BKE_undo_tabs_live_diverged() && !BKE_undo_tabs_partial_active();
+  /* With per-tab undo on, every document-wide walk re-reads every ID: the stack
+   * interleaves tabs, passes over mode steps and frees steps from the middle, so
+   * the reader's "identical to the neighbouring step" shortcut kept a mesh from
+   * an internal pre-step memfile that already held a hidden tab's later edit (the
+   * invariant test, 2026-10-02). Undo Whole Document is rare; the cost is fine. */
+  const bool reread_all = (BKE_undo_tabs_live_diverged() || BKE_undo_tabs_enabled()) &&
+                          !BKE_undo_tabs_partial_active();
   if (!BKE_undo_tabs_partial_active()) {
     BKE_undo_tabs_note_document_walk(); /* a document-wide walk, flag on or off */
   }
@@ -1408,17 +1413,46 @@ static bool undosys_tab_step_is_global(const UndoStep *us)
  * was in edit mode) stayed although the tab's cursor went back past them. The
  * document walk loads the memfile before a mode step for this
  * (#WITH_GLOBAL_UNDO_CORRECT_ORDER); the tab walk loads it for the tab only: the
- * nearest memfile at or below the mode step. Only needed coming from a memfile
- * step: between two of the tab's mode steps its object-level state is the same.
+ * nearest memfile at or below the mode step. Needed coming from a memfile step,
+ * or from a mode step that edits datablocks the target step does not restore.
  */
+static Set<std::string> undosys_step_ref_names(const UndoStep *us)
+{
+  Set<std::string> names;
+  if (us->type->step_foreach_ID_ref != nullptr) {
+    us->type->step_foreach_ID_ref(
+        const_cast<UndoStep *>(us),
+        [](void *user_data, UndoRefID *id_ref) {
+          static_cast<Set<std::string> *>(user_data)->add(id_ref->name);
+        },
+        &names);
+  }
+  return names;
+}
+
 static UndoStep *undosys_tab_preload_step(const UndoStep *from,
                                           UndoStep *target,
                                           const eUndoStepDir dir)
 {
   if (dir != STEP_UNDO || from == nullptr || target == nullptr ||
-      !undosys_tab_step_is_global(from) || undosys_tab_step_is_global(target))
+      undosys_tab_step_is_global(target))
   {
     return nullptr;
+  }
+  if (!undosys_tab_step_is_global(from)) {
+    /* Between two mode steps the object-level state is the same only when the
+     * step left edits nothing the target does not restore: an edit-mesh step on
+     * one object, undone onto the tab's earlier edit-mesh step on another, kept
+     * the first object's edit (the invariant test, 2026-10-02). */
+    const Set<std::string> from_refs = undosys_step_ref_names(from);
+    const Set<std::string> target_refs = undosys_step_ref_names(target);
+    bool covered = true;
+    for (const std::string &name : from_refs) {
+      covered &= target_refs.contains(name);
+    }
+    if (covered) {
+      return nullptr;
+    }
   }
   for (UndoStep *us = target->prev; us != nullptr; us = us->prev) {
     if (undosys_tab_step_is_global(us)) {
