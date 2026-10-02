@@ -378,7 +378,11 @@ class MIXIE_CHAT_OT_send_to_scene_tab(Operator):
     bl_idname = "mixie_chat.send_to_scene_tab"
     bl_label = "Send Selection to Scene"
     bl_description = "Copy the selected objects (with their mesh and materials) into another tab"
-    bl_options = {'REGISTER', 'UNDO'}
+    # No UNDO flag: the operator's own step would be filed under the SOURCE tab,
+    # whose undo cannot take back copies that live in the target tab (a dead
+    # Ctrl-Z there, and nothing to undo in the target). The step is pushed for
+    # the target tab instead (review 2026-10-02).
+    bl_options = {'REGISTER'}
 
     scene_name: StringProperty(name="Scene", default="", options={'SKIP_SAVE'})
 
@@ -395,6 +399,7 @@ class MIXIE_CHAT_OT_send_to_scene_tab(Operator):
         if not made:
             self.report({'WARNING'}, "Nothing was copied")
             return {'CANCELLED'}
+        push_undo_step(f"Copied from {context.scene.name}", scene=target)
         self.report({'INFO'}, f"Copied {len(made)} object(s) to {target.name}")
         return {'FINISHED'}
 

@@ -77,3 +77,33 @@ def test_the_signed_in_identity_survives_a_walk_older_than_the_login():
     guard.restore_live_state([after], saved, saved_runs={})
     assert after.mixie_chat_user_id == "satyam@mixar.app"
     assert after.mixie_chat_credits == 42
+
+
+class _SceneWithProps(SimpleNamespace):
+    """A scene with raw custom properties (``scene["key"]``), like a bpy ID."""
+
+    def __init__(self, props, **kw):
+        super().__init__(**kw)
+        self._props = dict(props)
+
+    def get(self, key, default=None):
+        return self._props.get(key, default)
+
+    def __getitem__(self, key):
+        return self._props[key]
+
+    def __setitem__(self, key, value):
+        self._props[key] = value
+
+
+def test_the_drawer_order_survives_a_tabs_own_walk():
+    """Review 2026-10-02: the tab order is a raw property with no step of its
+    own; a tab's undo re-read its Scene and the tab jumped back to where it was
+    before the user dragged it."""
+    kw = dict(session_uid=53, name="B", mixie_chat_state="IDLE", mixie_run_open=False, mixie_run_id="",
+              mixie_session_id="sess-b", mixie_chat_user_id="", mixie_chat_credits=0, mixie_chat_model="")
+    saved = guard.snapshot_live_state([_SceneWithProps({"mixar_tab_order": 0}, **kw)])
+    after = _SceneWithProps({"mixar_tab_order": 2}, **kw)                  # the step's order
+    changes = guard.restore_live_state([after], saved, saved_runs={})
+    assert after["mixar_tab_order"] == 0
+    assert ("B", "raw:mixar_tab_order", 2, 0) in changes

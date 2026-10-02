@@ -71,3 +71,14 @@ def test_no_module_pushes_an_untagged_undo_step():
         if "ed.undo_push(" in path.read_text(encoding="utf-8", errors="replace"):
             offenders.append(rel)
     assert offenders == []
+
+
+def test_send_selection_files_its_step_under_the_target_tab():
+    """Review 2026-10-02: an UNDO flag filed "Send Selection to Scene" under the
+    SOURCE tab, whose undo cannot touch the copies in the target: a dead Ctrl-Z
+    in the source and nothing to undo in the target."""
+    src = (REPO / "src/scripts/mixar/modules/space_mixie_chat/ui/operators/scene_tab_ops.py").read_text()
+    body = src[src.index("class MIXIE_CHAT_OT_send_to_scene_tab"):src.index("class MIXIE_CHAT_OT_show_scene_tabs")]
+    options = body[body.index("bl_options"):].splitlines()[0]
+    assert "'UNDO'" not in options
+    assert "push_undo_step(" in body and "scene=target" in body

@@ -159,6 +159,13 @@ that tab (seed 6, seen live). The values a scene had the instant before the
 walk are the truth; they are written back afterwards."""
 
 
+RAW_LIVE_PROPS = ("mixar_tab_order",)
+"""The drawer's tab order, a raw custom property on every tab's Scene and no
+undo step of its own: a tab's undo re-read its Scene from an older step and the
+tab jumped back to where it was before the user dragged it (review 2026-10-02).
+Layout, not document content; written back like the live props."""
+
+
 def snapshot_live_state(scenes: Iterable) -> dict[int, dict]:
     """The live props of every real scene, keyed by ``session_uid`` (stable
     across a memfile restore and a rename)."""
@@ -173,6 +180,13 @@ def snapshot_live_state(scenes: Iterable) -> dict[int, dict]:
         for prop in LIVE_PROPS:
             if hasattr(scene, prop):
                 entry[prop] = getattr(scene, prop)
+        for key in RAW_LIVE_PROPS:
+            try:
+                value = scene.get(key)
+            except Exception:  # noqa: BLE001
+                value = None
+            if value is not None:
+                entry["raw:" + key] = value
         saved[uid] = entry
     return saved
 
@@ -194,6 +208,9 @@ def restore_live_state(scenes: Iterable, saved: dict[int, dict], saved_runs: dic
         entry = saved.get(uid) if uid else None
         if entry is not None:
             wanted = {prop: entry[prop] for prop in LIVE_PROPS if prop in entry}
+            for key in RAW_LIVE_PROPS:
+                if "raw:" + key in entry:
+                    wanted["raw:" + key] = entry["raw:" + key]
         else:
             state = getattr(scene, "mixie_chat_state", None)
             sid = getattr(scene, "mixie_session_id", "") or ""
@@ -201,13 +218,20 @@ def restore_live_state(scenes: Iterable, saved: dict[int, dict], saved_runs: dic
                 continue
             wanted = {"mixie_chat_state": idle_value, "mixie_run_open": False}
         for prop, value in wanted.items():
-            if not hasattr(scene, prop):
+            raw = prop.startswith("raw:")
+            if raw:
+                current = scene.get(prop[4:])
+            elif not hasattr(scene, prop):
                 continue
-            current = getattr(scene, prop)
+            else:
+                current = getattr(scene, prop)
             if current == value:
                 continue
             try:
-                setattr(scene, prop, value)
+                if raw:
+                    scene[prop[4:]] = value
+                else:
+                    setattr(scene, prop, value)
             except Exception:  # noqa: BLE001 — a scene mid-teardown
                 logger.debug("Could not restore %s on %s", prop, getattr(scene, "name", "?"), exc_info=True)
                 continue
