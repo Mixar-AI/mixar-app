@@ -4964,6 +4964,177 @@ msgstr "உள்ளகச் சேவையக மாதிரி"
 msgid "Local model last error"
 msgstr "உள்ளக மாதிரியின் கடைசிப் பிழை"
 
+msgid "Mixar added to {app}"
+msgstr ""
+
+msgid "Restart {app}'s MCP connection to start using Mixar."
+msgstr ""
+
+msgid "{app} already has Mixar"
+msgstr ""
+
+msgid "Nothing changed. Restart {app}'s MCP connection if Mixar's tools are missing."
+msgstr ""
+
+msgid "Could not add Mixar to {app}"
+msgstr ""
+
+msgid "Run once in a terminal, or click Add to Claude Code."
+msgstr ""
+
+msgid "Add to ~/.codex/config.toml, or click Add to Codex."
+msgstr ""
+
+msgid "Merge into claude_desktop_config.json (Settings > Developer > Edit Config)."
+msgstr ""
+
+msgid "Merge into ~/.cursor/mcp.json (or a project's .cursor/mcp.json)."
+msgstr ""
+
+msgid "Merge into the user mcp.json (command: MCP: Open User Configuration)."
+msgstr ""
+
+msgid "Merge into ~/.config/opencode/opencode.json."
+msgstr ""
+
+msgid "Merge into the app's mcpServers configuration (Windsurf, Cline, Gemini CLI...)."
+msgstr ""
+
+msgid "Give this command to any app that can run a local (stdio) MCP server."
+msgstr ""
+
+msgid "Claude Code's claude command was not found. Copy the command and run it in a terminal."
+msgstr ""
+
+msgid "Codex's settings folder was not found; open Codex once, then try again."
+msgstr ""
+
+msgid "Codex's config.toml could not be read; copy the setup and add it by hand."
+msgstr ""
+
+msgid "Codex defines mixar in a form Mixar cannot update; edit config.toml by hand."
+msgstr ""
+
+msgid "Codex's config.toml was left unchanged; copy the setup and add it by hand."
+msgstr ""
+
+msgid "The app's command did not finish; copy the setup and add it by hand."
+msgstr ""
+
+msgid "This app is set up by pasting its configuration."
+msgstr ""
+
+msgid "MCP is enabled for this session; saving the preference failed"
+msgstr ""
+
+msgid "Connect AI Apps (MCP)"
+msgstr ""
+
+msgid "Connect Claude, Codex, Cursor or another MCP app to your Mixar scenes"
+msgstr ""
+
+msgid "App"
+msgstr ""
+
+msgid "Let your AI assistant use Mixar scenes and controls."
+msgstr ""
+
+msgid "UI control is free; scene tools and generation use credits."
+msgstr ""
+
+msgid "Sign in once. Your AI app can start Mixar when needed."
+msgstr ""
+
+msgid "MCP enabled"
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "Enable MCP"
+msgstr ""
+
+msgid "Let AI apps control Mixar's interface"
+msgstr ""
+
+msgid "Add to {app}"
+msgstr ""
+
+msgid "Copy"
+msgstr "நகலெடு"
+
+msgid "Open Config File"
+msgstr ""
+
+msgid "Then restart the app's MCP connection."
+msgstr ""
+
+msgid "Copy MCP Config"
+msgstr ""
+
+msgid "Setup Guide"
+msgstr ""
+
+msgid "Allow local AI clients to use your Mixar account and scenes"
+msgstr ""
+
+msgid "MCP preference applies until Mixar closes; saving failed"
+msgstr ""
+
+msgid "MCP is waiting for the desktop connection"
+msgstr ""
+
+msgid "MCP disabled"
+msgstr ""
+
+msgid "Let AI Apps Control Mixar's Interface"
+msgstr ""
+
+msgid "Let connected AI apps see Mixar's interface and click, type and drag in it. Your own mouse or keyboard always takes control back. Scene tools work either way"
+msgstr ""
+
+msgid "This applies until Mixar closes; saving the preference failed"
+msgstr ""
+
+msgid "AI apps can now control Mixar's interface"
+msgstr ""
+
+msgid "AI apps can no longer control Mixar's interface"
+msgstr ""
+
+msgid "Copy MCP Setup"
+msgstr ""
+
+msgid "Enable MCP and copy this app's setup. It contains the launcher path, never account credentials"
+msgstr ""
+
+msgid "MCP setup copied. Paste it into your AI app; Setup Guide shows where"
+msgstr ""
+
+msgid "Add Mixar to App"
+msgstr ""
+
+msgid "Enable MCP and add Mixar to this app's MCP servers: Claude Code through its claude mcp command, Codex in its config.toml (the previous file is kept as a backup)"
+msgstr ""
+
+msgid "Already adding Mixar to this app"
+msgstr ""
+
+msgid "Adding Mixar to {app}…"
+msgstr ""
+
+msgid "Open MCP Config File"
+msgstr ""
+
+msgid "Open this app's MCP configuration file (or its folder when the file does not exist yet)"
+msgstr ""
+
+msgid "This app's settings folder was not found. Is the app installed?"
+msgstr ""
+
+msgid "Could not open the file; copy the setup instead"
+msgstr ""
+
 msgid "Processing..."
 msgstr "செயலாக்குகிறது..."
 
@@ -6949,9 +7120,6 @@ msgstr "முனையை அழி"
 
 msgid "Duplicate Nodes (Shift D)"
 msgstr "முனைகளை நகலெடு (Shift D)"
-
-msgid "Copy"
-msgstr "நகலெடு"
 
 msgid "Continue With"
 msgstr "இதனுடன் தொடர்"
@@ -19344,6 +19512,12 @@ msgstr "உள்ளீட்டிற்காகக் காத்திர�
 msgid "Videos require Video mode. Remove the video to send to Agent."
 msgstr "காணொளிகளுக்குக் காணொளி பயன்முறை தேவை. முகவருக்கு அனுப்பக் காணொளியை அகற்றவும்."
 
+msgid "User ID"
+msgstr "பயனர் அடையாளம்"
+
+msgid "User ID for Mixie Chat login"
+msgstr "Mixie அரட்டை உள்நுழைவுக்கான பயனர் அடையாளம்"
+
 msgid "Agent expects: {formats}"
 msgstr "முகவர் எதிர்பார்ப்பது: {formats}"
 
@@ -21444,12 +21618,6 @@ msgstr "Haiku"
 
 msgid "Claude Haiku 4.0 - Fast and efficient"
 msgstr "Claude Haiku 4.0 - வேகமானதும் திறமையானதும்"
-
-msgid "User ID"
-msgstr "பயனர் அடையாளம்"
-
-msgid "User ID for Mixie Chat login"
-msgstr "Mixie அரட்டை உள்நுழைவுக்கான பயனர் அடையாளம்"
 
 msgid "Password"
 msgstr "கடவுச்சொல்"
@@ -27748,15 +27916,6 @@ msgstr "இழுத்து விடும் பாதைகள் கால
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "இழுத்து விடும் பாதைகள் காலியற்ற JSON வரிசையாக இருக்க வேண்டும்"
 
-msgid "QA frame capture requires --enable-event-simulate"
-msgstr "QA பிரேம் பிடிப்புக்கு --enable-event-simulate தேவை"
-
-msgid "Unable to read QA window frame"
-msgstr "QA சாளரப் பிரேமைப் படிக்க முடியவில்லை"
-
-msgid "Unable to save QA window frame"
-msgstr "QA சாளரப் பிரேமைச் சேமிக்க முடியவில்லை"
-
 msgid "rna_iterator_listbase_end"
 msgstr ""
 
@@ -27785,6 +27944,24 @@ msgid "Splash Open"
 msgstr ""
 
 msgid "The startup splash popup is on screen; it closes on a button, a click outside it or Escape"
+msgstr ""
+
+msgid "Invalid UI event value"
+msgstr ""
+
+msgid "UI text events require one UTF-8 character"
+msgstr ""
+
+msgid "Wait for the window resize to finish"
+msgstr ""
+
+msgid "Unable to read window frame"
+msgstr ""
+
+msgid "QA frame capture requires --enable-event-simulate"
+msgstr "QA பிரேம் பிடிப்புக்கு --enable-event-simulate தேவை"
+
+msgid "Mixar UI control is disabled"
 msgstr ""
 
 msgid "Microphone permission is required"

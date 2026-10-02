@@ -214,6 +214,9 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         Returns:
             ExecutionResult with success status, output, and detected changes
         """
+        from mixar.modules.common.ui_control.core.ownership import active as ui_active
+        if ui_active():
+            return ExecutionResult(success=False, error="ui_busy: release native UI control before running scripts")
         # Guard against overlapping executions (thread-safe)
         if not self._execution_lock.acquire(blocking=False):
             logger.warning("Script execution already in progress, skipping")
