@@ -73,3 +73,50 @@ def test_depsgraph_hook_only_scans_when_the_scene_count_grows(scenes, monkeypatc
     assert calls == [] and len(timers) == 1
     assert timers[0]() is None                     # the timer scans once and stops
     assert calls == [1]
+
+
+@pytest.fixture
+def adoption(live_bpy, monkeypatch):
+    """A signed-in tab and a scene a script just made (state left at OFFLINE)."""
+    monkeypatch.setenv("MIXAR_SCENES_DOSSIER_DIR", "0")
+    monkeypatch.setattr(live_bpy.context, "window", None, raising=False)
+    tab = _scene("Pool", session_id="sess-p")
+    tab.mixie_chat_user_id, tab.mixie_chat_credits, tab.mixie_chat_model = "user-1", 120, "auto"
+    made = _scene("Classroom", session_id="", state="OFFLINE")
+    made.mixie_chat_user_id = ""
+    live_bpy.data.scenes.extend([tab, made])
+    live = [True]
+    monkeypatch.setattr(scene_identity, "_connection_live", lambda: live[0])
+    return tab, made, live
+
+
+def test_a_script_made_scene_is_adopted_while_connected(adoption):
+    tab, made, _ = adoption
+    assert scene_identity.adopt_new_scenes() == ["Classroom"]
+    assert made.mixie_chat_state == "IDLE"
+    assert (made.mixie_chat_user_id, made.mixie_chat_credits) == ("user-1", 120)
+    assert tab.mixie_chat_state == "IDLE"  # an already-ready tab is untouched
+
+
+def test_adoption_waits_for_the_connection(adoption):
+    _, made, live = adoption
+    live[0] = False
+    assert scene_identity.adopt_new_scenes() == []
+    assert made.mixie_chat_state == "OFFLINE"
+
+
+def test_lanes_and_open_runs_are_never_adopted(adoption):
+    from mixar.modules.space_mixie_chat.constants import AGENT_LANE_SESSION_PREFIX
+    _, made, _ = adoption
+    made.mixie_session_id = AGENT_LANE_SESSION_PREFIX + "worker"
+    assert scene_identity.adopt_scene(made) is False
+    made.mixie_session_id, made.mixie_run_open = "", True
+    assert scene_identity.adopt_scene(made) is False
+    assert made.mixie_chat_state == "OFFLINE"
+
+
+def test_the_growth_timer_also_adopts(adoption, monkeypatch):
+    _, made, _ = adoption
+    monkeypatch.setattr(scene_identity, "dedupe_session_ids", lambda: [])
+    assert scene_identity._dedupe_later() is None
+    assert made.mixie_chat_state == "IDLE"

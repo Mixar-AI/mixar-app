@@ -459,3 +459,25 @@ def test_no_budget_never_downgrades(preview):
     result = preview.start(preview.bpy.context, KEY)
     assert "engine_downgraded" not in result["render"]
     assert preview.bpy.context.scene.render.engine == "CYCLES"
+
+
+@pytest.mark.parametrize("save_fails", [False, True])
+def test_png_save_uses_fast_lossless_compression_and_restores_settings(preview, save_fails):
+    scene = preview.bpy.context.scene
+    settings = scene.render.image_settings
+    settings.compression = 77
+
+    def save(path, scene):
+        assert scene.render.image_settings.file_format == "PNG"
+        assert scene.render.image_settings.compression == 15
+        if save_fails:
+            raise RuntimeError("save failed")
+        Path(path).write_bytes(b"png")
+
+    preview.bpy.data.images.get.return_value = SimpleNamespace(has_data=True, save_render=save)
+    if save_fails:
+        with pytest.raises(RuntimeError, match="save failed"):
+            preview._read_png(scene)
+    else:
+        assert preview._read_png(scene) == b"png"
+    assert (settings.file_format, settings.compression) == ("JPEG", 77)

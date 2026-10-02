@@ -192,6 +192,8 @@ def test_deleting_one_world_rebuilds_textures_and_keeps_the_other(lifecycle):
 
     bpy.data.objects.remove(doomed.proxy)  # user deletes the proxy in the outliner
     mod.on_depsgraph_update()
+    assert lifecycle.timers.is_registered(mod._check_splats)
+    mod._check_splats()
     assert lifecycle.timers.is_registered(mod.reconcile_splats)
     mod.reconcile_splats()
 
@@ -306,6 +308,8 @@ def test_hiding_a_world_also_hides_it_from_renders(lifecycle):
 
     world.proxy._visible = False  # outliner eye on the proxy
     mod.on_depsgraph_update()
+    assert lifecycle.timers.is_registered(mod._check_splats)
+    mod._check_splats()
     assert lifecycle.timers.is_registered(mod.reconcile_splats)
     mod.reconcile_splats()
     assert world.mesh.hide_render is True
@@ -353,3 +357,50 @@ def test_kiri_rebuilds_metadata_when_visibility_changes():
 def test_kiri_shader_still_culls_on_visibility():
     glsl = _VERT_GLSL.read_text(encoding="utf-8")
     assert "obj_metadata.visibility < 0.5" in glsl
+
+
+@pytest.mark.parametrize("with_splats", [False, True])
+def test_operator_burst_scans_only_after_returning_to_main_loop(lifecycle, with_splats):
+    mod = lifecycle.mod
+    if with_splats:
+        _world(lifecycle.bpy.data, "Room")
+    mod.note_splats_imported()
+    scan = MagicMock(wraps=mod.src._saved_splat_proxies)
+    mod.src._saved_splat_proxies = scan
+    for _ in range(1000):
+        mod.on_depsgraph_update()
+    scan.assert_not_called()
+    assert list(lifecycle.timers.registered) == [mod._check_splats]
+    mod._check_splats()
+    assert scan.call_count == (2 if with_splats else 1)
+    assert not mod._check_pending
+    assert not mod._reconcile_pending
+    assert lifecycle.calls == []
+
+
+@pytest.mark.parametrize("reset", ["cancel_pending", "on_load_post"])
+def test_reset_cancels_detection_and_reconciliation(lifecycle, reset):
+    mod = lifecycle.mod
+    mod.on_depsgraph_update()
+    mod.request_reconcile()
+    getattr(mod, reset)()
+    assert not lifecycle.timers.registered
+    assert not mod._check_pending and not mod._reconcile_pending
+
+
+def test_initial_detection_adopts_loaded_splats_without_rebuilding(lifecycle):
+    _world(lifecycle.bpy.data, "Loaded")
+    lifecycle.mod.on_depsgraph_update()
+    lifecycle.mod._check_splats()
+    assert lifecycle.mod._known_proxies == frozenset({"LoadedSplat_Proxy"})
+    assert lifecycle.calls == []
+
+
+def test_detection_retries_after_timer_registration_fails(lifecycle):
+    mod = lifecycle.mod
+    lifecycle.timers.register = MagicMock(side_effect=[RuntimeError("restricted"), None])
+    mod.on_depsgraph_update()
+    assert not mod._check_pending
+    mod.on_depsgraph_update()
+    assert mod._check_pending
+    assert lifecycle.timers.register.call_count == 2

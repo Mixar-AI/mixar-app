@@ -8,6 +8,10 @@ The header uses native controls with reference-matched toolbar presentation.
 A compact selection menu floats in the transparent tool header. Engine
 workspaces, including Texturing, keep Blender's original headers and tools. Workspace identity owns this filtering,
 so a global preference cannot remove controls from a different editor.
+
+The one addition to an Engine header is the Scenes drawer toggle, prepended
+on the window's main 3D View only (the viewport that hosts the drawer), so
+parallel scene tabs open from the same place in both modes.
 """
 
 import bpy
@@ -51,9 +55,38 @@ def _is_basic_workspace(context) -> bool:
     return ws is not None and ws.name == BASIC_WORKSPACE_NAME
 
 
+def _hosts_scenes_drawer(context) -> bool:
+    """True when this header's 3D View shows the window's Scenes drawer.
+
+    The native region poll owns the answer (the window's largest 3D View), so
+    the toggle sits above the panel it opens and a split layout shows one.
+    """
+    area = getattr(context, "area", None)
+    hosts = getattr(area, "mixar_scenes_drawer_hosts", None)
+    if hosts is None:
+        return False
+    try:
+        return bool(hosts())
+    except Exception:  # noqa: BLE001 — never raise from a draw callback
+        return False
+
+
+def _draw_engine_scenes_button(layout, context) -> None:
+    """Zen's Scenes hamburger at the head of an Engine viewport's stock header.
+
+    The same native toggle (`view3d.scenes_drawer_toggle`, Ctrl+`): it expands
+    to "Scene" on hover and marks an open drawer or a tab that needs the user.
+    """
+    if not _hosts_scenes_drawer(context):
+        return
+    surface = layout.mixar_surface(theme="ZEN", density="COMPACT").row()
+    zen_scene_controls.draw_scenes_button(surface, context)
+
+
 def _patched_header_draw(self, context):
     """Draw the Zen scene toolbar; retain the full stock header elsewhere."""
     if not _is_basic_workspace(context):
+        _draw_engine_scenes_button(self.layout, context)
         if _original_header_draw is not None:
             _original_header_draw(self, context)
         return

@@ -28,6 +28,7 @@ set(SRC
   intern/wm_draw_mixar_glass.cc
   intern/wm_event_query.cc
   intern/wm_event_system.cc
+  intern/wm_ui_control.cc
   intern/wm_files.cc
   intern/wm_files_colorspace.cc
   intern/wm_files_link.cc

@@ -430,6 +430,11 @@ if !ERRORLEVEL! neq 0 (
     echo Error: truststore installed but not importable — enterprise TLS trust would silently fall back to certifi
     exit /b 1
 )
+"!PYTHON_BIN!" "%ROOT_DIR%\scripts\check_python_runtime.py"
+if !ERRORLEVEL! neq 0 (
+    echo Error: Bundled MCP runtime dependencies failed to import
+    exit /b 1
+)
 echo Successfully installed and verified Python packages
 
 echo.

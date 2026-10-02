@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""Stable local entrypoint refreshed by the installed app, with no system Python."""
+
+import json
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import sys
+import time
+import uuid
+
+from .discovery import discovery_directory
+
+
+def directory():
+    return discovery_directory().parent / "connector"
+
+
+def _atomic(path, data, mode=0o600):
+    temporary = path.with_name("."+uuid.uuid4().hex)
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
+            stream.write(data)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def provision(python, script, executable, enabled=True):
+    root = directory()
+    root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if root.is_symlink():
+        raise OSError("Connector directory must not be a symlink")
+    if os.name != "nt":
+        if root.stat().st_uid != os.getuid():
+            raise OSError("Connector directory belongs to another user")
+        root.chmod(0o700)
+    manifest = {"version": 1, "python": str(python), "script": str(script),
+                "executable": str(executable), "enabled": bool(enabled)}
+    _atomic(root / "installation.json", json.dumps(manifest))
+    if os.name == "nt":
+        path = root / "mixar-mcp.cmd"
+        command = subprocess.list2cmdline([str(python), str(script)]).replace('%', '%%')
+        _atomic(path, "@echo off\n"+command+" %*\n")
+    else:
+        path = root / "mixar-mcp"
+        _atomic(path, "#!/bin/sh\nexec "+shlex.join([str(python), str(script)])+' "$@"\n', 0o700)
+    return path
+
+
+def start_app():
+    """At most one cold start across simultaneous MCP hosts; no repeated resurrection."""
+    root = directory()
+    try:
+        info = json.loads((root / "installation.json").read_text())
+    except (OSError, ValueError):
+        return False
+    if info.get("version") != 1 or info.get("enabled") is not True:
+        return False
+    executable = Path(info["executable"])
+    if not executable.is_absolute() or not executable.is_file():
+        return False
+    marker = root / "starting"
+    try:
+        if marker.exists() and time.time()-marker.stat().st_mtime > 60:
+            marker.unlink()
+        fd = os.open(marker, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        return False
+    os.close(fd)
+    command = [str(executable)]
+    if sys.platform == "darwin":
+        bundle = next((p for p in executable.parents if p.suffix == ".app"), None)
+        if bundle:
+            command = ["/usr/bin/open", "-a", str(bundle)]
+    subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)
+    return True

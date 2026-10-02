@@ -68,8 +68,10 @@ class TestToastTimerAppExitGuard:
 
 
 class TestShutdownHooksPassReason:
-    @pytest.mark.parametrize('cleanup', ['cleanup_toast_timer', 'cleanup_all_turn_handlers'])
-    def test_atexit_reason_reaches_cleanup(self, cleanup):
+    @pytest.mark.parametrize('cleanup,keyword', [
+        ('cleanup_toast_timer', 'app_exit'), ('cleanup_all_turn_handlers', 'app_exit'),
+        ('stop_mcp_relay', 'shutdown'), ('stop_mcp_leases', 'shutdown')])
+    def test_atexit_reason_reaches_cleanup(self, cleanup, keyword):
         """_run_all_cleanups must forward app_exit=(reason == "atexit") to
         UI-sensitive cleanups via _safe."""
         tree = ast.parse(SHUTDOWN_HOOKS.read_text(encoding="utf-8"))
@@ -85,8 +87,8 @@ class TestShutdownHooksPassReason:
                 and node.args[0].value == cleanup
             ):
                 kw = {k.arg: k for k in node.keywords}
-                assert "app_exit" in kw, f"{cleanup} must get app_exit"
-                expr = ast.unparse(kw["app_exit"].value)
+                assert keyword in kw, f"{cleanup} must get {keyword}"
+                expr = ast.unparse(kw[keyword].value)
                 assert "atexit" in expr and "reason" in expr
                 return
         raise AssertionError(f"_safe({cleanup!r}, ...) call not found")

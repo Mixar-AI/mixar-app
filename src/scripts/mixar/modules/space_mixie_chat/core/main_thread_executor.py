@@ -269,15 +269,7 @@ def _note_output_landed() -> None:
 
 
 def _process_one_request() -> Optional[float]:
-    """
-    Timer callback - execute ONE queued script per tick.
-
-    This runs on Blender's main thread. Executes one script per call
-    to avoid blocking the UI, then re-schedules if more scripts pending.
-
-    Returns:
-        Interval for next call if more requests, None to stop timer
-    """
+    """Execute one main-thread script per tick; reschedule only pending work."""
     if not lanes.pending():
         stop = _stop_timer_if_idle()
         if stop is None:
@@ -310,6 +302,12 @@ def _process_one_request() -> Optional[float]:
         refusal = pump.prefetch_refusal(req, status)
         logger.warning("Refusing %s (id: %s): %s", req.tool_name, req.request_id, refusal["error"])
         _send_error_response(req.request_id, refusal["error"], refusal.get("error_type", ""))
+        return _stop_timer_if_idle()
+
+    from mixar.modules.mcp_bridge.core.lease import authorize_script
+    refusal = authorize_script(req.session_id, req.agent_ctx)
+    if refusal is not None:
+        _send_error_response(req.request_id, refusal["error"], refusal["error_type"])
         return _stop_timer_if_idle()
 
     # Safety net: reject scripts that were queued just before load_pre

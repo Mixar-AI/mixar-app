@@ -5,12 +5,12 @@
 /** \file
  * \ingroup edscr
  *
- * Hit geometry for the Zen Mode Scenes drawer, docked to the LEFT edge of the
- * 3D View. Unlike the moodboard drawer (`ED_moodboard_drawer.hh`, an overlay)
- * it is a normal region that pushes the viewport right as it opens; a toolbar
- * button toggles it. Lives in `editors/include` so screen event routing and
- * the View3D drawer share one expression without a screen → space_view3d
- * link.
+ * Hit geometry for the Scenes drawer, docked to the LEFT edge of the window's
+ * main 3D View in Zen and Engine workspaces alike. Unlike the moodboard drawer
+ * (`ED_moodboard_drawer.hh`, an overlay) it is a normal region that pushes the
+ * viewport right as it opens; a header button toggles it. Lives in
+ * `editors/include` so screen event routing and the View3D drawer share one
+ * expression without a screen → space_view3d link.
  *
  * The drawer lists the scene tabs of the parallel-scenes feature (one Blender
  * Scene + one agent chat each). Python owns the list
@@ -26,6 +26,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "BLI_listbase_iterator.hh"
 #include "BLI_rect.h"
 
 #include "DNA_screen_types.h"
@@ -165,6 +166,26 @@ struct ScenesDrawerRuntime {
 /** Open/close ease duration (wall clock, not per tick). */
 #define VIEW3D_SCENES_DRAWER_SLIDE_SECONDS 0.28f
 
+/**
+ * True when `area` is the 3D View that shows the window's Scenes drawer: the
+ * drawer region's poll (`drawer_region_poll`, the window's largest View3D, in
+ * any workspace) passed on the last refresh. Every other View3D keeps a
+ * hidden drawer region, so one WindowManager slide state never opens two
+ * panels and a toggle never targets a viewport that cannot show it.
+ */
+inline bool view3d_scenes_drawer_area_hosts(const ScrArea *area)
+{
+  if (area == nullptr || area->spacetype != SPACE_VIEW3D) {
+    return false;
+  }
+  for (const ARegion &region : area->regionbase) {
+    if (region.regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE) {
+      return (region.flag & RGN_FLAG_POLL_FAILED) == 0;
+    }
+  }
+  return false;
+}
+
 inline float view3d_scenes_drawer_runtime_amount(const ARegion *region)
 {
   if (region == nullptr) {
@@ -178,7 +199,9 @@ inline float view3d_scenes_drawer_runtime_amount(const ARegion *region)
 /**
  * The panel is inset inside a normal (non-overlapping) left-aligned
  * region whose width is the open width times the slide amount, so the
- * viewport is pushed right as it opens. Shut, the region is hidden.
+ * viewport is pushed right as it opens. Shut, the region is hidden. A View3D
+ * that does not host the drawer (poll failed) keeps its last runtime and rect,
+ * so it never answers here.
  */
 inline bool view3d_scenes_drawer_panel_rect_for(const ScrArea *area,
                                                 const ARegion *region,
@@ -187,7 +210,7 @@ inline bool view3d_scenes_drawer_panel_rect_for(const ScrArea *area,
 {
   if (area == nullptr || region == nullptr || area->spacetype != SPACE_VIEW3D ||
       region->regiontype != VIEW3D_SCENES_DRAWER_REGION_TYPE ||
-      (region->flag & RGN_FLAG_HIDDEN) || amount <= 0.001f)
+      (region->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED)) || amount <= 0.001f)
   {
     return false;
   }

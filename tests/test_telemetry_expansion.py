@@ -412,6 +412,7 @@ def test_session_started_mints_the_instance_id_when_unset() -> None:
           patch.object(session_events, "_seconds_to_ready", return_value=None)):
         session_events.capture_session_started("startup_token", context=context)
     assert wm.mixie_instance_id
+    process_id = wm.mixie_instance_id
 
     session_events.reset_session_started()
     wm = SimpleNamespace(mixie_instance_id="existing-id")
@@ -419,7 +420,8 @@ def test_session_started_mints_the_instance_id_when_unset() -> None:
           patch.object(session_events, "_seconds_to_ready", return_value=None)):
         session_events.capture_session_started(
             "startup_token", context=SimpleNamespace(window_manager=wm))
-    assert wm.mixie_instance_id == "existing-id"
+    # Loaded WindowManager data cannot replace the current process join key.
+    assert wm.mixie_instance_id == process_id
 
 
 def test_toast_click_is_denylisted_operator_chrome() -> None:
