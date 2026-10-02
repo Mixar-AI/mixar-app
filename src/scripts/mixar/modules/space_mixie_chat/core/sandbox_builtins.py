@@ -88,7 +88,11 @@ def get_safe_builtins() -> dict:
             raise AttributeError(
                 f"Access to '{name}' is blocked (sandbox restriction)"
             )
-        return _original_getattr(obj, name, *default)
+        value = _original_getattr(obj, name, *default)
+        if name == "from_mesh":
+            from .sandbox_mesh import guard_from_mesh
+            return guard_from_mesh(value)
+        return value
 
     def _safe_hasattr(obj, name):
         if isinstance(name, str) and name in _BLOCKED_DUNDER_ATTRS:

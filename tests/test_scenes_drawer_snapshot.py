@@ -111,5 +111,5 @@ def test_tab_switch_snapshots_the_leaving_tab_first():
 def test_snapshot_helper_never_raises_and_props_share_the_override():
     assert "except Exception" in SNAPSHOT
     assert "bpy.ops.view3d.scenes_drawer_snapshot()" in SNAPSHOT
-    assert "from ...core.scene_tab_snapshot import zen_view3d_override" in PROPS
+    assert "from ...core.scene_tab_snapshot import drawer_view3d_override" in PROPS
     assert "def _view3d_override" not in PROPS
