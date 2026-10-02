@@ -254,7 +254,8 @@ if [[ -n "$PYTHON_BIN" ]]; then
         # Force pip to install to the embedded Python's site-packages
         # Use --no-user to prevent installation to user site-packages
         # Use --target to specify the exact location
-        if "$PYTHON_BIN" -m pip install --no-user --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
+        # --target alone leaves old package files beside newly resolved metadata.
+        if "$PYTHON_BIN" -m pip install --upgrade --no-user --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
             echo "Successfully installed Python packages to embedded Python site-packages"
             # truststore is what lets the app trust corporate root CAs; a
             # silent fallback to certifi would only surface at a customer.
@@ -264,7 +265,7 @@ if [[ -n "$PYTHON_BIN" ]]; then
             fi
         elif command -v pip3 >/dev/null 2>&1; then
             echo "Embedded pip failed, trying system pip with --target..."
-            if pip3 install --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
+            if pip3 install --upgrade --target "$SITE_PACKAGES" -r "$REQUIREMENTS_FILE"; then
                 echo "Successfully installed Python packages using system pip"
             else
                 echo "Warning: Failed to install Python packages from requirements file"
@@ -276,6 +277,7 @@ if [[ -n "$PYTHON_BIN" ]]; then
         echo "Warning: Requirements file not found at: $REQUIREMENTS_FILE"
         exit 1
     fi
+    "$PYTHON_BIN" "$ROOT_DIR/scripts/check_python_runtime.py"
 else
     echo "Warning: Python binary not found under: $PY_BASE/$BLENDER_VERSION/python/bin"
 fi

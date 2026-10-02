@@ -87,7 +87,7 @@ using namespace view3d_scenes_drawer;
 
 void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 {
-  if (!view3d_scenes_drawer_zen_active(C)) {
+  if (!view3d_scenes_drawer_host_active(C)) {
     return;
   }
 

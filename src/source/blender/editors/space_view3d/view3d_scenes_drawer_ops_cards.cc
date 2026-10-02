@@ -5,7 +5,7 @@
 /** \file
  * \ingroup spview3d
  *
- * Card operators of the Zen Mode sliding Scenes drawer: `click` turns a press
+ * Card operators of the sliding Scenes drawer: `click` turns a press
  * on a scene card (or "+ New scene", or a close glyph) into the Python
  * scene-tab operators (`mixie_chat.new_scene_tab` / `switch_scene_tab` /
  * `close_scene_tab` / `reorder_scene_tab`), a vertical drag reorders, and
@@ -220,7 +220,7 @@ static wmOperatorStatus drawer_click_modal(bContext *C, wmOperator *op, const wm
   char scene_prop[MAX_ID_NAME];
   RNA_string_get(op->ptr, "scene_uid", scene_prop);
   const int index = runtime ? drawer_card_index_of(runtime, scene_prop) : -1;
-  if (runtime == nullptr || index < 0 || !view3d_scenes_drawer_zen_active(C) ||
+  if (runtime == nullptr || index < 0 || !view3d_scenes_drawer_host_active(C) ||
       view3d_scenes_drawer_amount(C) < VIEW3D_SCENES_DRAWER_ACTIVE_AMOUNT) {
     drawer_drag_end(C, op, runtime, region);
     return OPERATOR_CANCELLED;

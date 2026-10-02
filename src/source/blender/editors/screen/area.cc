@@ -1709,6 +1709,44 @@ static int mixar_zen_tool_header_band_ymin(const ARegion *tool_header)
   return tool_header->winrct.ymax - int(UI_SCALE_FAC * ui::mixar_chrome::zen_toolbar_height);
 }
 
+/* The Scenes drawer is a normal region (it pushes the viewport), but
+ * overlapping headers took no space from the remainder it is laid out in:
+ * start its own rect below them. Zen: the floating scene toolbar only (the
+ * centred selection menu floats over the canvas, clear of the panel).
+ * Elsewhere: the Tool Settings strip, and the header when the theme makes it
+ * transparent, which overlap the viewport top with Region Overlap on and would
+ * cover the panel's heading and "+ New scene". A rect too short to clip is
+ * kept as it is. */
+static void mixar_scenes_drawer_headers_clip(const ScrArea *area,
+                                             const ARegion *region,
+                                             rcti *rect)
+{
+  if (ui::mixar_area_floats_viewport_chrome(area)) {
+    mixar_floating_headers_clip(region, rect);
+    return;
+  }
+  rcti clipped = *rect;
+  for (const ARegion *previous = region->prev; previous; previous = previous->prev) {
+    if (!previous->overlap ||
+        !ELEM(previous->regiontype, RGN_TYPE_HEADER, RGN_TYPE_TOOL_HEADER) ||
+        region_is_hidden(previous) ||
+        (previous->flag & (RGN_FLAG_POLL_FAILED | RGN_FLAG_TOO_SMALL)))
+    {
+      continue;
+    }
+    const int alignment = RGN_ALIGN_ENUM_FROM_MASK(previous->alignment);
+    if (alignment == RGN_ALIGN_TOP) {
+      clipped.ymax = std::min(clipped.ymax, previous->winrct.ymin - 1);
+    }
+    else if (alignment == RGN_ALIGN_BOTTOM) {
+      clipped.ymin = std::max(clipped.ymin, previous->winrct.ymax + 1);
+    }
+  }
+  if (BLI_rcti_size_y(&clipped) > 0) {
+    *rect = clipped;
+  }
+}
+
 static void region_rect_recursive(
     ScrArea *area, ARegion *region, rcti *remainder, rcti *overlap_remainder, int quad)
 {
@@ -2012,13 +2050,12 @@ static void region_rect_recursive(
         winrct->xmin = region->winrct.xmax + 1;
       }
       BLI_rcti_sanitize(winrct);
-      /* Mixar: the Scenes drawer is a normal region (it pushes the viewport),
-       * but Zen's scene toolbar is a floating header that took no space from
-       * the remainder: start the drawer's own rect below it. */
+      /* Mixar: the Scenes drawer starts below the headers that overlap it
+       * (Zen's floating toolbar, Engine's Tool Settings strip). */
       if (area->spacetype == SPACE_VIEW3D && region->regiontype == VIEW3D_SCENES_DRAWER_REGION_TYPE &&
-          !region->overlap && ui::mixar_area_floats_viewport_chrome(area))
+          !region->overlap)
       {
-        mixar_floating_headers_clip(region, &region->winrct);
+        mixar_scenes_drawer_headers_clip(area, region, &region->winrct);
       }
     }
   }
