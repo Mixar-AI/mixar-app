@@ -5,14 +5,16 @@
 /** \file
  * \ingroup spview3d
  *
- * Sliding Scenes drawer for Zen Mode: the list of scene tabs (one Blender
- * Scene + one agent chat each), hosted in a normal left-aligned region of the
- * 3D View that PUSHES the viewport right as it opens (the moodboard drawer on
- * the right edge is an overlay; this one is not). WindowManager-owned
- * amount / target / width; a wall-clock ease that the Python tick
- * (`scene_tabs_props._drawer_tick` → `view3d.scenes_drawer_update`) writes
- * into the region's size every frame; a toolbar button (`view3d.scenes_drawer_toggle`)
- * opens and closes it; a sash on the panel's right edge resizes it.
+ * Sliding Scenes drawer: the list of scene tabs (one Blender Scene + one agent
+ * chat each), hosted in a normal left-aligned region of the window's main 3D
+ * View — its largest, in Zen and Engine workspaces alike — that PUSHES the
+ * viewport right as it opens (the moodboard drawer on the right edge is an
+ * overlay; this one is not). WindowManager-owned amount / target / width; a
+ * wall-clock ease that the Python tick (`scene_tabs_props._drawer_tick` →
+ * `view3d.scenes_drawer_update`) writes into the region's size every frame; a
+ * header button (`view3d.scenes_drawer_toggle`: Zen's scene toolbar, the stock
+ * header of Engine's main viewport) and Ctrl+` open and close it; a sash on
+ * the panel's right edge resizes it.
  *
  * What it paints comes from Python (`wm.mixar_scene_tabs`, refreshed by
  * `space_mixie_chat/ui/properties/scene_tabs_props.py`); what a click does is a
@@ -70,7 +72,9 @@ void view3d_scenes_drawer_slide_begin(bContext *C);
 void view3d_scenes_drawer_slide_stop(bContext *C);
 int view3d_scenes_drawer_target(const bContext *C);
 void view3d_scenes_drawer_target_set(bContext *C, int target);
-bool view3d_scenes_drawer_zen_active(const bContext *C);
+/** True when the context area hosts the drawer and belongs to the context
+ * window's current screen (a workspace switch mid-drag ends the drag). */
+bool view3d_scenes_drawer_host_active(const bContext *C);
 float view3d_scenes_drawer_width(wmWindowManager *wm);
 /** The width the panel opens to, unscaled UI units, bounded by the area. */
 float view3d_scenes_drawer_open_width(wmWindowManager *wm, const ScrArea *area);
@@ -93,36 +97,41 @@ ScenesDrawerRuntime *view3d_scenes_drawer_runtime_ensure(wmWindowManager *wm, AR
 
 ARegion *view3d_scenes_drawer_region_find(const ScrArea *area);
 
-inline bool view3d_scenes_drawer_workspace_is_zen(const WorkSpace *workspace)
+/** The area of `screen` that hosts the drawer (`view3d_scenes_drawer_area_hosts`). */
+inline ScrArea *view3d_scenes_drawer_screen_host(const bScreen *screen)
 {
-  return workspace != nullptr && STREQ(workspace->id.name + 2, "Zen Mode");
+  if (screen == nullptr) {
+    return nullptr;
+  }
+  for (ScrArea &area : screen->areabase) {
+    if (view3d_scenes_drawer_area_hosts(&area)) {
+      return &area;
+    }
+  }
+  return nullptr;
 }
 
+/** The viewport the drawer operators act on: the context area when it hosts
+ * the drawer, else its window's host, else any window's. Ctrl+` over a
+ * secondary viewport, the chat composer or the topbar reaches the main one;
+ * a View3D that cannot show the drawer is never the answer. */
 inline ScrArea *view3d_scenes_drawer_area_find(const bContext *C)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
   if (wm == nullptr) {
     return nullptr;
   }
-  if (view3d_scenes_drawer_workspace_is_zen(CTX_wm_workspace(C))) {
-    if (ScrArea *area = CTX_wm_area(C)) {
-      if (view3d_scenes_drawer_region_find(area) != nullptr) {
-        return area;
-      }
+  if (ScrArea *area = CTX_wm_area(C); view3d_scenes_drawer_area_hosts(area)) {
+    return area;
+  }
+  if (const wmWindow *win = CTX_wm_window(C)) {
+    if (ScrArea *area = view3d_scenes_drawer_screen_host(WM_window_get_active_screen(win))) {
+      return area;
     }
   }
   for (wmWindow &win : wm->windows) {
-    if (!view3d_scenes_drawer_workspace_is_zen(WM_window_get_active_workspace(&win))) {
-      continue;
-    }
-    const bScreen *screen = WM_window_get_active_screen(&win);
-    if (screen == nullptr) {
-      continue;
-    }
-    for (ScrArea &area : screen->areabase) {
-      if (view3d_scenes_drawer_region_find(&area) != nullptr) {
-        return &area;
-      }
+    if (ScrArea *area = view3d_scenes_drawer_screen_host(WM_window_get_active_screen(&win))) {
+      return area;
     }
   }
   return nullptr;
@@ -130,9 +139,6 @@ inline ScrArea *view3d_scenes_drawer_area_find(const bContext *C)
 
 inline ARegion *view3d_scenes_drawer_region_from_context(const bContext *C)
 {
-  if (ARegion *region = view3d_scenes_drawer_region_find(CTX_wm_area(C))) {
-    return region;
-  }
   return view3d_scenes_drawer_region_find(view3d_scenes_drawer_area_find(C));
 }
 
