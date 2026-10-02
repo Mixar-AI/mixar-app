@@ -30,6 +30,7 @@
 #include "BKE_scene.hh"
 #include "BKE_scene_runtime.hh"
 #include "BKE_undo_system.hh"
+#include "BKE_undo_tabs.hh"
 
 #include "../depsgraph/DEG_depsgraph.hh"
 
@@ -189,17 +190,26 @@ static void memfile_undosys_step_decode(
   MemFileUndoStep *us = reinterpret_cast<MemFileUndoStep *>(us_p);
   BKE_memfile_undo_decode(us->data, undo_direction, use_old_bmain_data, C);
 
+  /* Mixar per-tab undo (review 2026-10-02, Codex P1): a tab's partial restore
+   * changed that tab's datablocks only, so only that tab's steps change their
+   * applied state. Every other tab's sculpt / paint / text steps keep theirs: a
+   * stroke another tab had undone stayed undone in its geometry, and marking it
+   * applied made that tab's redo skip it (sculpt redo trusts the flag). A
+   * whole-document restore (no tab) keeps the stock bookkeeping. */
+  const uint32_t partial_tab = BKE_undo_tabs_partial_tab();
+  auto bookkept = [&](const UndoStep *us_iter) {
+    return !BKE_UNDOSYS_TYPE_IS_MEMFILE_SKIP(us_iter->type) &&
+           (partial_tab == UNDO_TAB_DOCUMENT || us_iter->mixar_tab_uid == partial_tab);
+  };
   for (UndoStep *us_iter = us_p->next; us_iter; us_iter = us_iter->next) {
-    if (BKE_UNDOSYS_TYPE_IS_MEMFILE_SKIP(us_iter->type)) {
-      continue;
+    if (bookkept(us_iter)) {
+      us_iter->is_applied = false;
     }
-    us_iter->is_applied = false;
   }
   for (UndoStep *us_iter = us_p; us_iter; us_iter = us_iter->prev) {
-    if (BKE_UNDOSYS_TYPE_IS_MEMFILE_SKIP(us_iter->type)) {
-      continue;
+    if (bookkept(us_iter)) {
+      us_iter->is_applied = true;
     }
-    us_iter->is_applied = true;
   }
 
   /* bmain has been freed. */

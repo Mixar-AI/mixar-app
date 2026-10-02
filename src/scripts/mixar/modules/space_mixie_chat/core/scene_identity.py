@@ -83,6 +83,41 @@ def detach_copy(scene, was: str) -> None:
     logger.info("Scene %r was a copy of the chat session %s: detached as a new chat", scene.name, was[:8])
 
 
+def dedupe_scene_ids(scenes=None) -> list[str]:
+    """Drop ``mixar_scene_id`` from every copy of a scene that carries one.
+
+    A tab that never chatted has no session id for ``dedupe_session_ids`` to
+    notice, yet it already has its document scene id; Scene > Copy duplicates it
+    and two scenes then answer as one in the run's identity (review 2026-10-02,
+    Codex P2). The copy gets a fresh id on its next use."""
+    by_id: dict[str, list] = {}
+    for scene in (scenes if scenes is not None else bpy.data.scenes):
+        try:
+            value = scene.get("mixar_scene_id")
+        except Exception:  # noqa: BLE001
+            value = None
+        if value:
+            by_id.setdefault(str(value), []).append(scene)
+    cleared = []
+    for value, group in by_id.items():
+        if len(group) < 2:
+            continue
+        # The original is the scene that existed first: the lowest session_uid.
+        # Never the shortest name: a copy renamed to something shorter would
+        # take the id, and a run bound to the original would fail its fence.
+        keep = min(group, key=lambda sc: (getattr(sc, "session_uid", 0) or 1 << 62, sc.name))
+        for scene in group:
+            if scene is keep:
+                continue
+            try:
+                del scene["mixar_scene_id"]
+            except Exception:  # noqa: BLE001
+                continue
+            cleared.append(scene.name)
+            slog("tab.scene_id_dedupe", scene, was=value)
+    return cleared
+
+
 def dedupe_session_ids(scenes=None) -> list[str]:
     """Detach every scene that shares a session id with another. Returns the
     detached scene names."""
@@ -138,6 +173,7 @@ def _dedupe_later():
     """Timer body: one scan, then the timer unregisters (returns None)."""
     try:
         dedupe_session_ids()
+        dedupe_scene_ids()
     except Exception:  # noqa: BLE001 — a failed scan must not kill the timer host
         logger.debug("session dedupe failed", exc_info=True)
     return None
@@ -149,6 +185,7 @@ def _schedule_dedupe() -> None:
             bpy.app.timers.register(_dedupe_later, first_interval=0.0)
     except Exception:  # noqa: BLE001 — no timer host (tests, shutdown): scan inline
         dedupe_session_ids()
+        dedupe_scene_ids()
 
 
 @persistent
@@ -159,6 +196,7 @@ def _on_load_post(*_args) -> None:
     except Exception:  # noqa: BLE001
         _last_scene_count = -1
     dedupe_session_ids()
+    dedupe_scene_ids()
     _prune_active_sessions()
 
 

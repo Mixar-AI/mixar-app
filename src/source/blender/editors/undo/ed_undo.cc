@@ -590,7 +590,20 @@ void ED_undo_grouped_push(bContext *C, const char *str)
   }
   const UndoStep *us = ustack->step_active;
   if (us && STREQ(str, us->name)) {
-    BKE_undosys_stack_clear_active(ustack);
+    /* Mixar per-tab undo (review 2026-10-02, Codex P2): the document's active
+     * step may be another tab's. Grouping by name alone replaced tab A's "Frame
+     * Change" with tab B's, and A lost the step (its Undo greyed out). Group
+     * only into this tab's own current step, the one its next undo would take
+     * back; anything else is an ordinary push. */
+    bool group = true;
+    if (BKE_undo_tabs_enabled()) {
+      const uint32_t tab = BKE_undo_tab_uid_from_context(C);
+      group = (tab != UNDO_TAB_DOCUMENT && us->mixar_tab_uid == tab &&
+               BKE_undosys_tab_cursor(ustack, tab) == us);
+    }
+    if (group) {
+      BKE_undosys_stack_clear_active(ustack);
+    }
   }
 
   /* push as usual */

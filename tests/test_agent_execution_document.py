@@ -83,10 +83,17 @@ def test_unregister_removes_only_our_callbacks_and_can_register_again(runtime):
     assert document.document_epoch() == 1
 
 
+_NEXT_UID = [100]
+
+
 class _Scene:
-    def __init__(self, name):
+    def __init__(self, name, session_uid=None):
         self.name = name
         self._props = {}
+        if session_uid is None:
+            _NEXT_UID[0] += 1
+            session_uid = _NEXT_UID[0]
+        self.session_uid = session_uid
 
     def get(self, key, default=None):
         return self._props.get(key, default)
@@ -113,30 +120,39 @@ def test_per_tab_undo_bumps_only_that_scenes_epoch(monkeypatch):
 def test_scene_epoch_key_survives_a_rename(monkeypatch):
     """Review 2026-09-30, finding 5: the key was the scene id OR the name, and
     the id was only assigned at commit-fence time, so a tab renamed before its
-    first commit read epoch 0 again after an undo. The key is assigned on first
-    use and a rename keeps it."""
+    first commit read epoch 0 again after an undo. The key is the Scene's
+    session_uid (review 2026-10-02): a rename keeps it."""
     monkeypatch.setattr(document, "_document_epoch", 0)
     monkeypatch.setattr(document, "_scene_epochs", {})
     monkeypatch.setattr(document, "_last_walk_was_per_tab", lambda bpy=None: True)
     a = _Scene("A")
     document._on_undo_post(a)
     assert document.document_epoch(a) == 1
-    assert a.get(document.SCENE_ID_PROP)              # assigned by the bump
     a.name = "A renamed"
     assert document.document_epoch(a) == 1            # the rename changed nothing
     document._on_undo_post(a)
     assert document.document_epoch(a) == 2
 
 
-def test_scene_epoch_falls_back_to_the_name_when_the_id_cannot_be_written(monkeypatch):
+def test_a_scene_copy_does_not_share_the_originals_epoch(monkeypatch):
+    """Review 2026-10-02 (Codex P2): Scene > Copy duplicates ``mixar_scene_id``;
+    keyed on it, undoing the copy bumped the original's epoch and its run's
+    commit fence answered stale_epoch. The copy has its own session_uid."""
+    monkeypatch.setattr(document, "_document_epoch", 0)
+    monkeypatch.setattr(document, "_scene_epochs", {})
+    monkeypatch.setattr(document, "_last_walk_was_per_tab", lambda bpy=None: True)
+    original, copy = _Scene("Source"), _Scene("Source.001")
+    original[document.SCENE_ID_PROP] = copy[document.SCENE_ID_PROP] = "same-uuid"
+    document._on_undo_post(copy)
+    assert document.document_epoch(copy) == 1
+    assert document.document_epoch(original) == 0
+
+
+def test_scene_epoch_falls_back_to_the_name_without_a_session_uid(monkeypatch):
     monkeypatch.setattr(document, "_document_epoch", 0)
     monkeypatch.setattr(document, "_scene_epochs", {})
     monkeypatch.setattr(document, "_last_walk_was_per_tab", lambda bpy=None: True)
 
-    class _ReadOnlyScene(_Scene):
-        def __setitem__(self, key, value):
-            raise AttributeError("read-only")
-
-    a = _ReadOnlyScene("A")
+    a = _Scene("A", session_uid=0)
     document._on_undo_post(a)
     assert document.document_epoch(a) == 1

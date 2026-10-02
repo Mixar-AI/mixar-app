@@ -3095,6 +3095,76 @@ static void read_undo_libraries_preserve_never_undo_libraries(FileData *fd)
   }
 }
 
+/**
+ * Mixar per-tab undo (review 2026-10-02, Codex P1): linked data another tab
+ * still uses must survive one tab's restore. The memfile only knows the
+ * libraries and linked IDs of the step it holds:
+ *
+ * - a library linked after that step is not in it, so its whole split Main
+ *   stayed in the old Main and was freed with it;
+ * - a linked ID of a library the memfile does know, but linked after the step,
+ *   was listed as unused and discarded by #read_undo_libraries_cleanup_unused_ids.
+ *
+ * Either way a kept foreign datablock (another tab's collection holding a
+ * linked object) pointed at freed memory: the library vanished and showing the
+ * other tab crashed in its depsgraph. Under a partial restore, every library
+ * with a linked ID the walked tab does not own is moved into the new Main as a
+ * whole (#read_undo_move_libmain_data, the never-undo path: a Library ID is
+ * never moved on its own), and those IDs are taken off the unused list. The
+ * walked tab's own linked IDs (linked after the step) are still discarded.
+ */
+static void read_undo_partial_keep_foreign_linked(FileData *fd)
+{
+  Main *old_bmain = fd->old_bmain;
+  Main *new_bmain = fd->bmain;
+  BLI_assert(old_bmain->split_mains && new_bmain->split_mains);
+  auto is_foreign = [](const ID *id) {
+    return BKE_undo_tabs_partial_decide(id->session_uid, true) != UndoPartialDecision::Restore;
+  };
+  int libs_moved = 0, ids_kept = 0;
+  /* Libraries the memfile did not mention (cannot iterate the split Mains while moving them). */
+  Vector<Main *> old_libmains = {old_bmain->split_mains->as_span().drop_front(1)};
+  for (Main *lib_bmain : old_libmains) {
+    Library *lib = lib_bmain->curlib;
+    if (lib == nullptr || (lib->flag & LIBRARY_FLAG_IS_ARCHIVE)) {
+      continue;
+    }
+    bool any_foreign = false;
+    ID *id_iter;
+    FOREACH_MAIN_ID_BEGIN (lib_bmain, id_iter) {
+      if (!any_foreign && is_foreign(id_iter)) {
+        any_foreign = true;
+      }
+    }
+    FOREACH_MAIN_ID_END;
+    if (any_foreign) {
+      read_undo_move_libmain_data(fd, lib_bmain, nullptr);
+      libs_moved++;
+    }
+  }
+  /* Every library in the new Main: keep the foreign IDs the cleanup would discard. */
+  for (Main *lib_bmain : new_bmain->split_mains->as_span().drop_front(1)) {
+    Library *lib = lib_bmain->curlib;
+    if (lib == nullptr || (lib->flag & LIBRARY_FLAG_IS_ARCHIVE)) {
+      continue;
+    }
+    Vector<ID *> keep;
+    for (ID *id : lib->runtime->unused_ids_on_undo) {
+      if (is_foreign(id)) {
+        keep.append(id);
+      }
+    }
+    for (ID *id : keep) {
+      lib->runtime->unused_ids_on_undo.remove(id);
+    }
+    ids_kept += int(keep.size());
+  }
+  CLOG_DEBUG(&LOG_UNDO,
+             "UNDO(tab): %d foreign library(ies) moved, %d foreign linked datablock(s) kept",
+             libs_moved,
+             ids_kept);
+}
+
 /* Once all ID BHeads have been read, remove the regular linked IDs that have been moved from the
  * old to the new Main, but are actually not used in the new one. */
 static void read_undo_libraries_cleanup_unused_ids(FileData *fd)
@@ -4396,6 +4466,9 @@ BlendFileData *blo_read_file_internal(FileData *fd, const char *filepath)
   if (is_undo) {
     /* Move remaining libraries containing 'no undo' IDs from old to new Main. */
     read_undo_libraries_preserve_never_undo_libraries(fd);
+    if (BKE_undo_tabs_partial_active() && BKE_undo_tabs_partial_tab() != UNDO_TAB_DOCUMENT) {
+      read_undo_partial_keep_foreign_linked(fd);
+    }
     /* Remove from the new Main regular linked IDs that are unused. */
     read_undo_libraries_cleanup_unused_ids(fd);
   }

@@ -40,14 +40,18 @@ _registered = False
 
 
 def _scene_key(scene):
-    """The scene's stable id, assigned on first use so a rename never changes
-    the key (a renamed tab would otherwise read epoch 0 and let a commit
-    prepared before an undo pass the fence); the name only when the id cannot
-    be written."""
-    try:
-        return str(ensure_scene_id(scene) or scene.name)
-    except Exception:  # noqa: BLE001
-        return str(getattr(scene, "name", scene))
+    """The scene's in-memory identity: its ``session_uid``. A rename never
+    changes it (a renamed tab would otherwise read epoch 0 and let a commit
+    prepared before an undo pass the fence), an undo re-reads the Scene with the
+    same one, and no copy shares it. ``mixar_scene_id`` is a custom property, so
+    Scene > Copy (``scene.new(type='FULL_COPY')``) duplicated it: undoing the copy
+    bumped the original's epoch and revoked its run (review 2026-10-02, Codex P2).
+    The epochs live in this process only, like the uid. The name only when there
+    is no uid."""
+    uid = getattr(scene, "session_uid", None)
+    if uid:
+        return f"uid:{uid}"
+    return str(getattr(scene, "name", scene))
 
 
 def document_epoch(scene=None) -> int:

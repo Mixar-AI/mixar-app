@@ -500,8 +500,9 @@ UndoStep *BKE_undosys_stack_init_or_active_with_type(UndoStack *ustack, const Un
  * Mixar per-tab undo (M3): the step limit is per tab too. `us` is the oldest
  * step the document-wide count keeps; move it older until every tab keeps at
  * least #UNDO_TAB_MIN_STEPS of its own non-skip steps (of those that exist)
- * and no tab's cursor step is freed: a tab that walked back while other tabs
- * pushed must still find its way forward.
+ * and no tab's cursor step, nor any step of its redo branch, is freed: a tab
+ * that walked back while other tabs pushed must still find its way forward,
+ * one step at a time.
  */
 static UndoStep *undosys_tab_limit_extend(UndoStack *ustack,
                                           UndoStep *us,
@@ -524,6 +525,22 @@ static UndoStep *undosys_tab_limit_extend(UndoStack *ustack,
   if (cursors != nullptr) {
     cursors->remove_if([&](auto item) { return !live.contains(item.key); });
   }
+  /* A tab that walked back keeps its whole redo branch: every step of its own
+   * between its cursor and its newest step. Pinning only the cursor and the
+   * newest reserve let the limit free the steps in between, and the tab's next
+   * redo jumped from its fifth cube to its eighteenth (review 2026-10-02, Codex
+   * P2; the steps are freed from the middle since 2026-10-01, so the cursor no
+   * longer keeps everything after it alive). */
+  Set<const UndoStep *> redo_branch;
+  if (cursors != nullptr) {
+    for (auto item : cursors->items()) {
+      for (const UndoStep *it = item.value ? item.value->next : nullptr; it != nullptr; it = it->next) {
+        if (!it->skip && it->mixar_tab_uid == item.key) {
+          redo_branch.add(it);
+        }
+      }
+    }
+  }
   Map<uint32_t, int> kept;
   for (UndoStep *it = static_cast<UndoStep *>(ustack->steps.last); it != nullptr; it = it->prev) {
     if (!it->skip && it->mixar_tab_uid != UNDO_TAB_DOCUMENT && live.contains(it->mixar_tab_uid)) {
@@ -534,7 +551,7 @@ static UndoStep *undosys_tab_limit_extend(UndoStack *ustack,
     }
   }
   for (UndoStep *it = us->prev; it != nullptr; it = it->prev) {
-    bool keep = false;
+    bool keep = redo_branch.contains(it);
     if (cursors != nullptr) {
       for (auto item : cursors->items()) {
         if (item.value == it) {
