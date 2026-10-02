@@ -3128,6 +3128,72 @@ msgstr "Phương án dự phòng glTF nhị phân"
 msgid "Last Export"
 msgstr "Lần Xuất Khẩu Cuối"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Máy Quay Phim Cảnh Quay Mixar"
 
@@ -19614,8 +19680,8 @@ msgstr "Không thể thêm tài sản vào cảnh."
 msgid "Thinking..."
 msgstr "Đang suy nghĩ..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "định dạng mô hình không được hỗ trợ ({format}; được hỗ trợ: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "không xác định"
@@ -20608,8 +20674,11 @@ msgstr "Phiên đã lưu trữ cần xóa"
 msgid "Chat removed from history"
 msgstr "Đã xóa cuộc trò chuyện khỏi lịch sử"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Thêm tệp đính kèm hình ảnh từ tập tin — hỗ trợ chọn nhiều tập tin đến giới hạn của mỗi tin nhắn"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Đã đạt giới hạn tệp đính kèm ({count})"
@@ -24295,6 +24364,9 @@ msgstr "Bắt đầu hoặc dừng đọc chính tả vào bản nháp phác th�
 msgid "Stop the running turn"
 msgstr "Dừng lượt đang chạy"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Xem phác thảo lớn hơn. Thêm hướng dẫn trong cuộc trò chuyện, rồi Gửi"
 
@@ -24303,6 +24375,9 @@ msgstr "Xóa tham chiếu"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Hủy bỏ phác thảo này và nét vẽ đang chờ của nó"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "Xóa {}"
@@ -24345,9 +24420,6 @@ msgstr "Đang Vồ Bắt"
 
 msgid "NEW"
 msgstr "MỚI"
-
-msgid "Upload Reference"
-msgstr "Tải Lên Tham Chiếu"
 
 msgid "Ask Mixie anything..."
 msgstr "Hỏi Mixie bất cứ điều gì..."
@@ -24580,6 +24652,9 @@ msgstr "Phác thảo đã sẵn sàng. Thêm hướng dẫn, rồi Gửi."
 msgid "AI model"
 msgstr "Mô hình AI"
 
+msgid "Upload Reference"
+msgstr "Tải Lên Tham Chiếu"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Chọn một hình ảnh đầu vào để sinh tạo 3D"
 
@@ -24670,8 +24745,8 @@ msgstr "Quy tắc — biên soạn quy tắc dự án và quy tắc toàn cục 
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Đính kèm một hình ảnh tham chiếu"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Hoàn tất vẽ và hiển thị bản xem trước phác thảo trong cuộc trò chuyện (Esc). Thêm hướng dẫn, rồi Gửi"
@@ -26793,6 +26868,9 @@ msgstr "Hành động bật lên"
 
 msgid "Non-interactive explanation"
 msgstr "Phần giải thích không tương tác"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Tiêu đề cỡ lớn, độ tương phản đầy đủ"

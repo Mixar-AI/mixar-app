@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <string>
 
 #include "BLI_rect.h"
 #include "BLI_string.h"
@@ -308,6 +309,40 @@ void draw_option(Button *but,
              (submenu || action) ? 0.0f : pad_slack());
 }
 
+void draw_description(Button *but, const rcti *rect)
+{
+  const rctf row = row_rect(rect);
+  const MixarInteraction motion = mixar_button_motion(*but);
+  const bool disabled = (but->flag & (BUT_DISABLED | BUT_INACTIVE)) != 0;
+  uchar fill[4], title_col[4], detail_col[4];
+  themed(MixarThemeSlot::CinemaRowTrack, TRACK, fill);
+  themed(MixarThemeSlot::CinemaRowTextOn, TEXT_ON, title_col);
+  themed(MixarThemeSlot::CinemaRowCaption, CAPTION, detail_col);
+  mixar_card_fill_round(&row, row_radius(row), fill, disabled ? 0.25f : 0.5f);
+  draw_hover(row, row_radius(row), disabled ? 0.0f : std::min(1.0f, motion.hover + motion.press));
+  const std::string label = row_label(but);
+  const size_t split = label.find('\n');
+  const std::string title = label.substr(0, split);
+  const std::string detail = split == std::string::npos ? "" : label.substr(split + 1);
+  rcti text = *rect;
+  text.xmin += int(14 * UI_SCALE_FAC);
+  text.xmax -= int(14 * UI_SCALE_FAC);
+  draw_leading_icon(but, rect, text, 0, disabled ? 0.4f : 0.9f);
+  text.xmin += int(6 * UI_SCALE_FAC);
+  const int middle = (rect->ymin + rect->ymax) / 2;
+  rcti title_rect = text;
+  title_rect.ymin = middle;
+  title_rect.ymax = middle + int(21 * UI_SCALE_FAC);
+  const uiFontStyle fs = row_font();
+  draw_label(fs, &title_rect, title.c_str(), title_col, UI_STYLE_TEXT_LEFT, 0.0f, 0.0f);
+  rcti detail_rect = text;
+  detail_rect.ymin = middle - int(19 * UI_SCALE_FAC);
+  detail_rect.ymax = middle;
+  uiFontStyle small = fs;
+  small.points *= 0.85f;
+  draw_label(small, &detail_rect, detail.c_str(), detail_col, UI_STYLE_TEXT_LEFT, 0.0f, 0.0f);
+}
+
 }  // namespace mixar_cinema_row
 
 using namespace mixar_cinema_row;
@@ -403,6 +438,9 @@ void UI_mixar_cinema_row_draw(Button *but,
   }
 
   switch (kind) {
+    case MixarCinemaRowKind::Description:
+      draw_description(but, rect);
+      return;
     case MixarCinemaRowKind::Segment:
       draw_segment(but, rect);
       return;

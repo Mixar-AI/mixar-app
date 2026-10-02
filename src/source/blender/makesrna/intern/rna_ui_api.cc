@@ -1811,6 +1811,7 @@ void RNA_api_ui_layout(StructRNA *srna)
       {1, "ACTIVE", 0, "Active", "Current choice with a graded background"},
       {2, "ACTION", 0, "Action", "Popup action"},
       {4, "CAPTION", 0, "Caption", "Non-interactive explanation"},
+      {7, "DESCRIPTION", 0, "Description", "Action card with a title and supporting line"},
       {0, nullptr, 0, nullptr, nullptr},
   };
   func = RNA_def_function(srna, "mixar_tooltip", "rna_uiLayoutMixarTooltip");

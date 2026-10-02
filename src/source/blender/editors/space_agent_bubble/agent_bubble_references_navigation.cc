@@ -44,7 +44,7 @@ wmOperatorStatus navigate(bContext *C, wmOperator *op, const wmEvent *event)
   ARegion *region = CTX_wm_region(C);
   const auto g = agent_bubble_reference_geometry(CTX_wm_window(C),
                                                  region,
-                                                 agent_bubble_reference_count(C),
+                                                 agent_bubble_reference_items(CTX_data_scene(C), wm),
                                                  agent_bubble_reference_fraction(wm));
   if (event && !BLI_rctf_isect_pt(&g.view, event->mval[0], event->mval[1])) {
     return OPERATOR_PASS_THROUGH;

@@ -3128,6 +3128,72 @@ msgstr "Резервний двійковий glTF"
 msgid "Last Export"
 msgstr "Останній експорт"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Камера шоту Mixar"
 
@@ -19614,8 +19680,8 @@ msgstr "Не вдалося додати актив до сцени."
 msgid "Thinking..."
 msgstr "Міркування..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "непідтримуваний формат моделі ({format}; підтримується: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "невідомо"
@@ -20608,8 +20674,11 @@ msgstr "Архівований сеанс для видалення"
 msgid "Chat removed from history"
 msgstr "Чат видалено з історії"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Додає вкладені зображення з файлу — підтримує вибір кількох файлів у межах ліміту на повідомлення"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Досягнуто ліміту вкладень ({count})"
@@ -24295,6 +24364,9 @@ msgstr "Починає або зупиняє диктування в черне�
 msgid "Stop the running turn"
 msgstr "Зупиняє поточний хід агента"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Переглянути ескіз збільшеним. Додайте інструкції в чаті, потім натисніть «Надіслати»"
 
@@ -24303,6 +24375,9 @@ msgstr "Видаляє референс"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Відкидає цей ескіз і його малюнок у черзі"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "Видаляє {}"
@@ -24345,9 +24420,6 @@ msgstr "Ловить"
 
 msgid "NEW"
 msgstr "НОВЕ"
-
-msgid "Upload Reference"
-msgstr "Завантажити референс"
 
 msgid "Ask Mixie anything..."
 msgstr "Запитайте Mixie про будь-що..."
@@ -24580,6 +24652,9 @@ msgstr "Ескіз готовий. Додайте інструкції, поті
 msgid "AI model"
 msgstr "Модель ШІ"
 
+msgid "Upload Reference"
+msgstr "Завантажити референс"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Вибирає вхідне зображення для 3D-генерації"
 
@@ -24670,8 +24745,8 @@ msgstr "Правила — редагування правил проєкту т
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Вкладає референсне зображення"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Завершує малювання й показує передогляд ескізу в чаті (Esc). Додайте інструкції, потім натисніть «Надіслати»"
@@ -26793,6 +26868,9 @@ msgstr "Дія спливного вікна"
 
 msgid "Non-interactive explanation"
 msgstr "Неінтерактивне пояснення"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Великий заголовок повної контрастності"

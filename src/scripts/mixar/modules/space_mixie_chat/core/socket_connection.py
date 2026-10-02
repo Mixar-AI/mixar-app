@@ -260,6 +260,7 @@ class SocketConnection:
         from ...addon_project.constants import TESTS_CAPABILITY as ADDON_PROJECT_TESTS_CAPABILITY
         from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
         from ...mcp_bridge.constants import CAPABILITY as MCP_CAPABILITY
+        from ...context_folder.constants import CAPABILITY as CONTEXT_FOLDER_CAPABILITY
         from .machine_info import machine_block
 
         request_id = f"handshake_{self._next_request_id()}"
@@ -294,6 +295,8 @@ class SocketConnection:
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
+                # context_folder.* reads of the folders a chat attached.
+                CONTEXT_FOLDER_CAPABILITY,
                 # blender.execute_script frames may carry params["envelope"]
                 # (harness v3 task envelope); this client parses and carries
                 # it. Task ADMISSION on it is negotiated by later capabilities.

@@ -31,6 +31,7 @@ enum AgentIcon {
   /* Card header. */
   AGENT_ICON_CLOCK,
   AGENT_ICON_PLUS,
+  AGENT_ICON_ATTACH,
   AGENT_ICON_RESTORE, /* Counter-clockwise arrow arc — turn checkpoints. */
   AGENT_ICON_RULES,   /* Document outline — project/global rules. */
   AGENT_ICON_SIGNATURE, /* Handwritten stroke — the Handwriting control. */
@@ -44,6 +45,7 @@ enum AgentIcon {
   AGENT_ICON_PEN,  /* Stylus at 45° — the Scribble chip. */
   AGENT_ICON_CROSS, /* X — clear the queued marks. */
   AGENT_ICON_MIC,   /* Microphone — the Voice chip. */
+  AGENT_ICON_FOLDER, /* Folder — an attached context folder's reference chip. */
 
   AGENT_ICON_COUNT,
 };

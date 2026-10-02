@@ -3128,6 +3128,72 @@ msgstr "glTF ബൈനറി ഫാൾബാക്ക്"
 msgid "Last Export"
 msgstr "അവസാന എക്സ്പോർട്ട്"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar ഷോട്ട് ക്യാമറ"
 
@@ -19614,8 +19680,8 @@ msgstr "അസറ്റ് സീനിലേക്ക് ചേർക്കാ�
 msgid "Thinking..."
 msgstr "ചിന്തിക്കുന്നു..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "പിന്തുണയില്ലാത്ത മോഡൽ ഫോർമാറ്റ് ({format}; പിന്തുണയുള്ളത്: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "അജ്ഞാതം"
@@ -20608,8 +20674,11 @@ msgstr "ഇല്ലാതാക്കേണ്ട ആർക്കൈവ് ച�
 msgid "Chat removed from history"
 msgstr "ചാറ്റ് ചരിത്രത്തിൽ നിന്ന് നീക്കം ചെയ്തു"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "ഫയലിൽ നിന്ന് ചിത്ര അറ്റാച്ച്മെന്റുകൾ ചേർക്കുക — സന്ദേശ പരിധി വരെ ഒന്നിലധികം തിരഞ്ഞെടുപ്പ്"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "അറ്റാച്ച്മെന്റ് പരിധി ({count}) എത്തി"
@@ -24295,6 +24364,9 @@ msgstr "സ്കെച്ച് ഡ്രാഫ്റ്റിലേക്ക�
 msgid "Stop the running turn"
 msgstr "നടക്കുന്ന ടേൺ നിർത്തുക"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "സ്കെച്ച് വലുതായി കാണുക. ചാറ്റിൽ നിർദ്ദേശങ്ങൾ ചേർത്ത് അയയ്ക്കുക"
 
@@ -24303,6 +24375,9 @@ msgstr "റഫറൻസ് നീക്കം ചെയ്യുക"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "ഈ സ്കെച്ചും ക്യൂവിലുള്ള വരയും ഉപേക്ഷിക്കുക"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{} നീക്കം ചെയ്യുക"
@@ -24345,9 +24420,6 @@ msgstr "പിടിച്ചുവരുന്നു"
 
 msgid "NEW"
 msgstr "പുതിയത്"
-
-msgid "Upload Reference"
-msgstr "റഫറൻസ് അപ്‌ലോഡ് ചെയ്യുക"
 
 msgid "Ask Mixie anything..."
 msgstr "Mixie-യോട് എന്തും ചോദിക്കുക..."
@@ -24580,6 +24652,9 @@ msgstr "സ്കെച്ച് തയ്യാർ. നിർദ്ദേശങ
 msgid "AI model"
 msgstr "AI മോഡൽ"
 
+msgid "Upload Reference"
+msgstr "റഫറൻസ് അപ്‌ലോഡ് ചെയ്യുക"
+
 msgid "Pick an input image for 3D generation"
 msgstr "3D ജനറേഷന് ഒരു ഇൻപുട്ട് ചിത്രം തിരഞ്ഞെടുക്കുക"
 
@@ -24670,8 +24745,8 @@ msgstr "നിയമങ്ങൾ — ഏജന്റിനുള്ള പ്ര
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "ഒരു റഫറൻസ് ചിത്രം അറ്റാച്ച് ചെയ്യുക"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "വരച്ച് ചാറ്റിൽ സ്കെച്ച് പ്രിവ്യൂ കാണിക്കുക (Esc). നിർദ്ദേശങ്ങൾ ചേർത്ത് അയയ്ക്കുക"
@@ -26793,6 +26868,9 @@ msgstr "പോപ്പപ്പ് പ്രവർത്തനം"
 
 msgid "Non-interactive explanation"
 msgstr "ഇന്ററാക്റ്റീവ് അല്ലാത്ത വിശദീകരണം"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "വലുതാക്കിയ പൂർണ കോൺട്രാസ്റ്റ് തലക്കെട്ട്"

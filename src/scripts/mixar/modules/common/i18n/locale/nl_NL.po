@@ -3128,6 +3128,72 @@ msgstr "Binaire glTF als terugvaloptie"
 msgid "Last Export"
 msgstr "Laatste export"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar-shotcamera"
 
@@ -19614,8 +19680,8 @@ msgstr "Kon het asset niet aan de scène toevoegen."
 msgid "Thinking..."
 msgstr "Denken..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "niet-ondersteund modelformaat ({format}; ondersteund: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "onbekend"
@@ -20608,8 +20674,11 @@ msgstr "Te verwijderen gearchiveerde sessie"
 msgid "Chat removed from history"
 msgstr "Chat verwijderd uit geschiedenis"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Voegt afbeeldingsbijlage(n) uit een bestand toe — meerdere selecteren is mogelijk tot het maximum per bericht"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Bijlagelimiet ({count}) bereikt"
@@ -24295,6 +24364,9 @@ msgstr "Start of stopt het dicteren in het schetsconcept"
 msgid "Stop the running turn"
 msgstr "Stopt de lopende beurt"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Bekijk de schets groter. Voeg instructies toe in de chat en klik dan op Verzenden"
 
@@ -24303,6 +24375,9 @@ msgstr "Verwijdert de referentie"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Verwerpt deze schets en de bijbehorende tekening in de wachtrij"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{} verwijderen"
@@ -24345,9 +24420,6 @@ msgstr "Vangt"
 
 msgid "NEW"
 msgstr "NIEUW"
-
-msgid "Upload Reference"
-msgstr "Referentie uploaden"
 
 msgid "Ask Mixie anything..."
 msgstr "Vraag Mixie wat u maar wilt..."
@@ -24580,6 +24652,9 @@ msgstr "Schets gereed. Voeg instructies toe en klik dan op Verzenden."
 msgid "AI model"
 msgstr "AI-model"
 
+msgid "Upload Reference"
+msgstr "Referentie uploaden"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Kiest een invoerafbeelding voor 3D-generatie"
 
@@ -24670,8 +24745,8 @@ msgstr "Regels — bewerk project- en globale regels voor de agent"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Voegt een referentieafbeelding toe"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Rondt het tekenen af en toont het schetsvoorbeeld in de chat (Esc). Voeg instructies toe en klik dan op Verzenden"
@@ -26793,6 +26868,9 @@ msgstr "Pop-upactie"
 
 msgid "Non-interactive explanation"
 msgstr "Niet-interactieve uitleg"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Extra grote kop met volledig contrast"

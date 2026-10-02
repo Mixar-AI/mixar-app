@@ -3128,6 +3128,72 @@ msgstr "glTF ﻝﺩﺎﺒﺘﻣ ﯼﺮﻨﺋﺎﺑ"
 msgid "Last Export"
 msgstr "ﺪﻣﺁﺮﺑ ﯼﺮﺧﺁ"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar ﮦﺮﻤﯿﮐ ﭦﺎﺷ"
 
@@ -19614,8 +19680,8 @@ msgstr "۔ﺎﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﻞﻣﺎﺷ ﮟﯿﻣ ﺮﻈﻨﻣ ﮧ�
 msgid "Thinking..."
 msgstr "...ﮯﮨ ﺎﮨﺭ ﭺﻮﺳ"
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "(OBJ :ﻥﻭﺎﻌﻣ ؛{format}) ﭧﯿﻣﺭﺎﻓ ﻝﮈﺎﻣ ﻥﻭﺎﻌﻣ ﺮﯿﻏ"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "ﻡﻮﻠﻌﻣﺎﻧ"
@@ -20608,8 +20674,11 @@ msgstr "ﻦﺸﯿﺳ ﻅﻮﻔﺤﻣ ﻻ﻿ﺍﻭ ﮯﻧﺮﮐ ﻑﺬﺣ"
 msgid "Chat removed from history"
 msgstr "ﯽﺌﮔ ﭧﮨ ﮯﺳ ﺦﯾﺭﺎﺗ ﭧﯿﭼ"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "ﺏﺎﺨﺘﻧﺍ ﺩﺪﻌﺘﻣ ﮏﺗ ﺪﺣ ﯽﮐ ﻡﺎﻐﯿﭘ — ﮟﯾﺮﮐ ﻞﻣﺎﺷ ﮧﮑﻠﺴﻨﻣ ﯼﺮﯾﻮﺼﺗ ﮯﺳ ﻞﺋﺎﻓ"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "ﯽﺌﮔ ﻮﮨ ﯼﺭﻮﭘ ({count}) ﺪﺣ ﮧﮑﻠﺴﻨﻣ"
@@ -24295,6 +24364,9 @@ msgstr "ﮟﯿﮐﻭﺭ ﺎﯾ ﻉﻭﺮﺷ ﻼ﻿ﻣﺍ ﮟﯿﻣ ﮮﺩﻮﺴ�
 msgid "Stop the running turn"
 msgstr "ﮟﯿﮐﻭﺭ ﯼﺭﺎﺑ ﯽﺘﻠﭼ"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "ﮟﯿﺠﯿﮭﺑ ﺮﮭﭘ ،ﮟﯾﺮﮐ ﻞﻣﺎﺷ ﺕﺎﯾﺍﺪﮨ ﮟﯿﻣ ﭧﯿﭼ ۔ﮟﯿﮭﮑﯾﺩ ﺍﮍﺑ ﮧﮐﺎﺧ"
 
@@ -24303,6 +24375,9 @@ msgstr "ﮟﯿﺋﺎﭩﮨ ﮧﻟﺍﻮﺣ"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "ﮟﯾﺮﮐ ﺩﺭ ﮓﻨﺋﺍﺭﮈ ﮟﯿﻣ ﺭﺎﻄﻗ ﯽﮐ ﺱﺍ ﺭﻭﺍ ﮧﮐﺎﺧ ﮧﯾ"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "ﮟﯿﺋﺎﭩﮨ {}"
@@ -24345,9 +24420,6 @@ msgstr "ﮯﮨ ﺎﮨﺭ ﻮﮨ ﮓﻨﮨﺁ ﻢﮨ"
 
 msgid "NEW"
 msgstr "ﺎﯿﻧ"
-
-msgid "Upload Reference"
-msgstr "ﮟﯾﺮﮐ ﮈﻮﻟ ﭖﺍ ﮧﻟﺍﻮﺣ"
 
 msgid "Ask Mixie anything..."
 msgstr "Mixie ﮟﯿﮭﭼﻮﭘ ﯽﮭﺑ ﮫﭽﮐ ﮯﺳ..."
@@ -24580,6 +24652,9 @@ msgstr "۔ﮟﯿﺠﯿﮭﺑ ﺮﮭﭘ ،ﮟﯾﺮﮐ ﻞﻣﺎﺷ ﺕﺎﯾﺍ�
 msgid "AI model"
 msgstr "AI ﻝﮈﺎﻣ"
 
+msgid "Upload Reference"
+msgstr "ﮟﯾﺮﮐ ﮈﻮﻟ ﭖﺍ ﮧﻟﺍﻮﺣ"
+
 msgid "Pick an input image for 3D generation"
 msgstr "3D ﮟﯿﻨﭼ ﺮﯾﻮﺼﺗ ﭧﭘ ﻥﺍ ﮯﯿﻟ ﮯﮐ ﻖﯿﻠﺨﺗ"
 
@@ -24670,8 +24745,8 @@ msgstr "ﮟﯾﺮﮐ ﻢﯿﻣﺮﺗ ﺪﻋﺍﻮﻗ ﯽﻤﻟﺎﻋ ﺭﻭﺍ �
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "ﮟﯾﺮﮐ ﮏﻠﺴﻨﻣ ﺮﯾﻮﺼﺗ ﮧﻟﺍﻮﺣ"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "ﮟﯿﺠﯿﮭﺑ ﺮﮭﭘ ،ﮟﯾﺮﮐ ﻞﻣﺎﺷ ﺕﺎﯾﺍﺪﮨ ۔(Esc) ﮟﯿﺋﺎﮭﮐﺩ ﻮﯾﻮﯾﺮﭘ ﮧﮐﺎﺧ ﮟﯿﻣ ﭧﯿﭼ ﺭﻭﺍ ﮟﯾﺮﮐ ﻢﺘﺧ ﮓﻨﺋﺍﺭﮈ"
@@ -26793,6 +26868,9 @@ msgstr "ﻞﻤﻋ ﭖﺍ ﭖﺎﭘ"
 
 msgid "Non-interactive explanation"
 msgstr "ﺖﺣﺎﺿﻭ ﯽﻠﻣﺎﻌﺗ ﺮﯿﻏ"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "ﻥﺍﻮﻨﻋ ﺩﺎﻀﺗ ﻞﻤﮑﻣ ﺍﮍﺑ"
