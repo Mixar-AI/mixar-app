@@ -139,14 +139,43 @@ void view3d_scenes_drawer_slide_stop(bContext *C)
   }
 }
 
-bool view3d_scenes_drawer_zen_active(const bContext *C)
+bool view3d_scenes_drawer_host_active(const bContext *C)
 {
-  return view3d_scenes_drawer_workspace_is_zen(CTX_wm_workspace(C));
+  const ScrArea *area = CTX_wm_area(C);
+  const bScreen *screen = CTX_wm_screen(C);
+  return view3d_scenes_drawer_area_hosts(area) && screen != nullptr &&
+         BLI_findindex(&screen->areabase, area) != -1;
 }
 
-/* The region poll's answer without a context: the workspace of the window
- * whose active screen holds `area`. SpaceType.init gets only (wm, area). */
-static bool drawer_area_in_zen_workspace(wmWindowManager *wm, const ScrArea *area)
+/* The drawer's host in `screen`: its largest 3D View, the first of equals.
+ * Zen has one; an Engine workspace may split several (Animation's camera
+ * view, Scripting's small one) and only the main one gets the panel. Sizes
+ * come from the area vertices, which are current before any area's `totrct`
+ * is (polls run inside `ED_area_init`, area by area). */
+static bool drawer_area_is_main_view3d(const bScreen *screen, const ScrArea *area)
+{
+  if (screen == nullptr || area == nullptr || area->spacetype != SPACE_VIEW3D) {
+    return false;
+  }
+  const ScrArea *main = nullptr;
+  int main_size = -1;
+  for (const ScrArea &other : screen->areabase) {
+    if (other.spacetype != SPACE_VIEW3D || other.v1 == nullptr || other.v3 == nullptr) {
+      continue;
+    }
+    const int size = (int(other.v3->vec.x) - int(other.v1->vec.x)) *
+                     (int(other.v3->vec.y) - int(other.v1->vec.y));
+    if (size > main_size) {
+      main = &other;
+      main_size = size;
+    }
+  }
+  return main == area;
+}
+
+/* The region poll's answer without a context: SpaceType.init gets only
+ * (wm, area), so find the window whose active screen holds `area`. */
+static bool drawer_area_hosts_in_wm(wmWindowManager *wm, const ScrArea *area)
 {
   if (wm == nullptr || area == nullptr) {
     return false;
@@ -156,7 +185,7 @@ static bool drawer_area_in_zen_workspace(wmWindowManager *wm, const ScrArea *are
     if (screen == nullptr || BLI_findindex(&screen->areabase, area) == -1) {
       continue;
     }
-    return view3d_scenes_drawer_workspace_is_zen(WM_window_get_active_workspace(&win));
+    return drawer_area_is_main_view3d(screen, area);
   }
   return false;
 }
@@ -254,8 +283,10 @@ static void drawer_region_listener(const wmRegionListenerParams *params)
 static bool drawer_region_poll(const RegionPollParams *params)
 {
   /* The region exists for as long as the drawer *could* be shown; shut, it is
-   * hidden (zero width). One workspace compare, nothing else. */
-  return view3d_scenes_drawer_zen_active(params->context);
+   * hidden (zero width). Polls run on every screen refresh check, so resizing
+   * a split layout moves the drawer to the viewport that became the main one.
+   * One pass over the screen's areas, nothing else. */
+  return drawer_area_is_main_view3d(params->screen, params->area);
 }
 
 void view3d_scenes_drawer_toggle_handlers_add(wmWindowManager *wm, ARegion *region)
@@ -344,7 +375,8 @@ void view3d_scenes_drawer_region_register(SpaceType *st)
 }
 
 /** The first non-header region of the area: the drawer goes right before it,
- * after every header (the floating Zen toolbar clips the drawer's top). */
+ * after every header (overlapping headers — Zen's floating toolbar, Engine's
+ * Tool Settings strip — clip the drawer's top in `region_rect_recursive`). */
 static ARegion *drawer_region_anchor(ScrArea *area)
 {
   for (ARegion &region : area->regionbase) {
@@ -396,8 +428,8 @@ void view3d_scenes_drawer_region_ensure(wmWindowManager *wm, ScrArea *area)
   region->runtime->type = BKE_regiontype_from_id(area->type, region->regiontype);
 
   /* Same first-layout answer as the moodboard drawer: poll and size the
-   * region here so the very first Zen refresh lays it out. */
-  if (drawer_area_in_zen_workspace(wm, area)) {
+   * region here so the very first refresh lays it out. */
+  if (drawer_area_hosts_in_wm(wm, area)) {
     region->flag &= ~RGN_FLAG_POLL_FAILED;
   }
   view3d_scenes_drawer_size_sync(wm, area, region);
