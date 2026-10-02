@@ -124,6 +124,8 @@ static TabCursors *tab_cursors_snapshot(UndoStack *ustack)
   return MEM_new<TabCursors>(__func__, *cursors);
 }
 
+static void undosys_tab_cursors_pin_after_document_walk(UndoStack *ustack);
+
 static void tab_cursors_snapshot_free(UndoStep *us)
 {
   if (us->mixar_cursors != nullptr) {
@@ -377,6 +379,7 @@ void BKE_undosys_stack_clear(UndoStack *ustack)
   ustack->steps.clear_no_delete();
   ustack->step_active = nullptr;
   tab_cursors_free(ustack);
+  BKE_undo_tabs_live_owners_forget();
 }
 
 void BKE_undosys_stack_clear_active(UndoStack *ustack)
@@ -804,22 +807,28 @@ eUndoPushReturn BKE_undosys_step_push_with_type(UndoStack *ustack,
     /* Mixar: tag the step with its tab; an internal push (no window in the
      * context) inherits the tab of the step it follows. */
     BKE_undo_step_tab_annotate(us, C, G_MAIN, ustack->step_active);
-    /* A push in a tab whose cursor is behind: that tab's redo branch dies
-     * (its newer steps lose the tag, they still carry the other tabs'
-     * history) and the tab is at the top again. */
-    if (TabCursors *cursors = tab_cursors_get(ustack, false)) {
-      if (UndoStep **cursor = cursors->lookup_ptr(us->mixar_tab_uid)) {
-        for (UndoStep *it = (*cursor)->next; it != nullptr; it = it->next) {
-          if (it->mixar_tab_uid == us->mixar_tab_uid) {
-            /* The tab's dead redo branch: no tab walks it, and the
-             * document-wide walk must not either (the campaign of 09-30: Undo
-             * Whole Document stepped into a state the tab had discarded), so
-             * it is a skip step from here on. Its memfile stays in the chain
-             * for the steps above it. */
-            it->mixar_tab_uid = UNDO_TAB_DOCUMENT;
-            it->skip = true;
-          }
+    /* A push in a tab that stands behind its newest step: that tab's redo branch
+     * dies (its newer steps lose the tag, they still carry the other tabs'
+     * history) and the tab is at the top again. Where it stands is its cursor
+     * entry, or with none its newest step at or below the document's active step:
+     * after Undo Whole Document the tab's undone steps sit ABOVE the active step
+     * with no entry, and were left alive by a push, so a later undo in the tab
+     * landed on a state Undo Whole Document had taken back (the invariant test,
+     * 2026-10-02). */
+    if (us->mixar_tab_uid != UNDO_TAB_DOCUMENT) {
+      const UndoStep *stands = BKE_undosys_tab_cursor(ustack, us->mixar_tab_uid);
+      UndoStep *first = stands ? stands->next : static_cast<UndoStep *>(ustack->steps.first);
+      for (UndoStep *it = first; it != nullptr; it = it->next) {
+        if (it->mixar_tab_uid == us->mixar_tab_uid && !it->skip) {
+          /* The tab's dead redo branch: no tab walks it, and the document-wide
+           * walk must not either (the campaign of 09-30: Undo Whole Document
+           * stepped into a state the tab had discarded), so it is a skip step
+           * from here on. Its memfile stays in the chain for the steps above it. */
+          it->mixar_tab_uid = UNDO_TAB_DOCUMENT;
+          it->skip = true;
         }
+      }
+      if (TabCursors *cursors = tab_cursors_get(ustack, false)) {
         cursors->remove(us->mixar_tab_uid);
       }
     }
@@ -1060,6 +1069,8 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
      * a classic undo with the flag off, then the flag back on, then per-tab
      * redos that must reach every tab's top). */
     BKE_undosys_tab_cursors_restore(ustack, ustack->step_active);
+    undosys_tab_cursors_pin_after_document_walk(ustack);
+    BKE_undo_tabs_live_owners_note(G_MAIN);
   });
 
   /* Undo/Redo steps until we reach given target step (or beyond if it has to be skipped),
@@ -1247,9 +1258,12 @@ bool BKE_undosys_tab_is_walked_back(UndoStack *ustack, const uint32_t tab_uid)
   if (cursor == nullptr || ustack->step_active == nullptr) {
     return false;
   }
-  /* Behind the document: one of its own steps sits between its cursor and the
-   * document's active step. A cursor above the active step (a tab redone after
-   * Undo Whole Document) is ahead of it, not behind. */
+  /* Behind the document: one of its own steps sits after its cursor, at or
+   * before the document's active step. A cursor at or above the active step (a
+   * tab redone after Undo Whole Document) is not behind it. */
+  if (BLI_findindex(&ustack->steps, cursor) >= BLI_findindex(&ustack->steps, ustack->step_active)) {
+    return false;
+  }
   for (const UndoStep *us = cursor->next; us != nullptr; us = us->next) {
     if (!us->skip && us->mixar_tab_uid == tab_uid) {
       return true;
@@ -1294,24 +1308,53 @@ void BKE_undosys_tab_cursors_restore(UndoStack *ustack, const UndoStep *from)
   }
 }
 
+/**
+ * After a document-wide walk, a tab with steps above the document's active step
+ * stands on its newest step at or below it: say so with an entry. Without one,
+ * where the tab stands was recomputed from the active step, which moves to the
+ * top with the next push of ANY tab, and the tab then stood on a step the
+ * document walk had taken back (the invariant test, 2026-10-02: its next undo
+ * landed on that discarded state and its own push did not end that branch).
+ */
+static void undosys_tab_cursors_pin_after_document_walk(UndoStack *ustack)
+{
+  if (ustack->step_active == nullptr) {
+    return;
+  }
+  Set<uint32_t> above;
+  for (const UndoStep *us = ustack->step_active->next; us != nullptr; us = us->next) {
+    if (!us->skip && us->mixar_tab_uid != UNDO_TAB_DOCUMENT) {
+      above.add(us->mixar_tab_uid);
+    }
+  }
+  if (above.is_empty()) {
+    return;
+  }
+  TabCursors *cursors = tab_cursors_get(ustack, true);
+  for (const uint32_t tab : above) {
+    if (cursors->contains(tab)) {
+      continue;
+    }
+    if (UndoStep *stands = undosys_tab_newest_step(ustack, tab)) {
+      cursors->add(tab, stands);
+    }
+  }
+}
+
 /** The datablocks a mode step names that may be shared with another tab and
  * still be stepped back by this one: those no other tab touched since this
  * tab's cursor (review 2026-10-02: a material copy sent to another tab keeps
  * its image, and every paint stroke on it was refused in both tabs). */
-static Set<uint32_t> undosys_tab_shared_ok(UndoStack *ustack, const uint32_t tab_uid, Span<ID *> refs)
+static Set<uint32_t> undosys_tab_shared_ok(UndoStack *ustack,
+                                           const uint32_t tab_uid,
+                                           const UndoStep *target,
+                                           Span<ID *> refs)
 {
-  Set<uint32_t> ok;
-  const UndoStep *cursor = BKE_undosys_tab_cursor(ustack, tab_uid);
-  if (cursor == nullptr) {
-    return ok;
-  }
-  const Set<uint32_t> touched = BKE_undo_tabs_ids_touched_by_others(ustack, tab_uid, cursor, refs);
-  for (const ID *id : refs) {
-    if (id != nullptr && !touched.contains(id->session_uid)) {
-      ok.add(id->session_uid);
-    }
-  }
-  return ok;
+  /* The author rule of the memfile walk (BKE_undo_tabs.hh): a mode step may name a
+   * datablock shared with another tab when only this tab changed it since (review
+   * 2026-10-02: a material copy sent to another tab keeps its image, and every
+   * paint stroke on it was refused in both tabs). */
+  return BKE_undo_tabs_shared_ok(ustack, tab_uid, target, refs);
 }
 
 static bool undosys_tab_step_is_global(const UndoStep *us)
@@ -1327,13 +1370,42 @@ static bool undosys_tab_step_is_global(const UndoStep *us)
  * the previous memfile would restore every tab; the references resolve by
  * name against the live document, which is the tab's current state).
  */
+/**
+ * The memfile a tab's walk loads before a mode step (review 2026-10-02, found by
+ * the invariant test): undoing FROM a memfile step onto a mode step (edit mesh,
+ * sculpt, paint) applied the mode step alone, so object-level changes pushed
+ * after it (an object an agent checkpoint or a job result added while the user
+ * was in edit mode) stayed although the tab's cursor went back past them. The
+ * document walk loads the memfile before a mode step for this
+ * (#WITH_GLOBAL_UNDO_CORRECT_ORDER); the tab walk loads it for the tab only: the
+ * nearest memfile at or below the mode step. Only needed coming from a memfile
+ * step: between two of the tab's mode steps its object-level state is the same.
+ */
+static UndoStep *undosys_tab_preload_step(const UndoStep *from,
+                                          UndoStep *target,
+                                          const eUndoStepDir dir)
+{
+  if (dir != STEP_UNDO || from == nullptr || target == nullptr ||
+      !undosys_tab_step_is_global(from) || undosys_tab_step_is_global(target))
+  {
+    return nullptr;
+  }
+  for (UndoStep *us = target->prev; us != nullptr; us = us->prev) {
+    if (undosys_tab_step_is_global(us)) {
+      return us;
+    }
+  }
+  return nullptr;
+}
+
 static bool undosys_tab_step_decode(UndoStack *ustack,
                                     bContext *C,
                                     const uint32_t tab_uid,
                                     UndoStep *target,
                                     const eUndoStepDir dir,
                                     const bool is_final,
-                                    std::string *r_reason)
+                                    std::string *r_reason,
+                                    UndoStep *preload = nullptr)
 {
   CLOG_DEBUG(&LOG,
              "tab %u %s to addr=%p name='%s' type='%s'",
@@ -1353,9 +1425,19 @@ static bool undosys_tab_step_decode(UndoStack *ustack,
           },
           &refs);
     }
-    const Set<uint32_t> shared_ok = undosys_tab_shared_ok(ustack, tab_uid, refs);
+    const Set<uint32_t> shared_ok = undosys_tab_shared_ok(ustack, tab_uid, target, refs);
     if (!BKE_undo_tabs_ids_owned(G_MAIN, tab_uid, refs, r_reason, &shared_ok)) {
       return false;
+    }
+    if (preload != nullptr) {
+      /* The tab's object-level state first, from the memfile the mode step was
+       * pushed on (see #undosys_tab_preload_step), restricted to this tab. */
+      if (!BKE_undo_tabs_partial_begin(G_MAIN, ustack, tab_uid, preload, r_reason)) {
+        return false;
+      }
+      undosys_step_decode(C, G_MAIN, ustack, preload, dir, false);
+      BKE_undo_tabs_partial_end();
+      target->type->step_foreach_ID_ref(target, undosys_id_ref_resolve, G_MAIN);
     }
     UNDO_NESTED_CHECK_BEGIN;
     target->type->step_decode(C, G_MAIN, target, dir, is_final);
@@ -1381,8 +1463,12 @@ static bool undosys_tab_step_check(UndoStack *ustack,
                                    bContext * /*C*/,
                                    const uint32_t tab_uid,
                                    UndoStep *target,
-                                   std::string *r_reason)
+                                   std::string *r_reason,
+                                   UndoStep *preload = nullptr)
 {
+  if (preload != nullptr && !BKE_undo_tabs_partial_check(G_MAIN, ustack, tab_uid, preload, r_reason)) {
+    return false;
+  }
   if (!undosys_tab_step_is_global(target)) {
     Vector<ID *> refs;
     if (target->type->step_foreach_ID_ref) {
@@ -1394,7 +1480,7 @@ static bool undosys_tab_step_check(UndoStack *ustack,
           },
           &refs);
     }
-    const Set<uint32_t> shared_ok = undosys_tab_shared_ok(ustack, tab_uid, refs);
+    const Set<uint32_t> shared_ok = undosys_tab_shared_ok(ustack, tab_uid, target, refs);
     return BKE_undo_tabs_ids_owned(G_MAIN, tab_uid, refs, r_reason, &shared_ok);
   }
   return BKE_undo_tabs_partial_check(G_MAIN, ustack, tab_uid, target, r_reason);
@@ -1405,12 +1491,22 @@ static bool undosys_tab_step_apply(UndoStack *ustack,
                                    const uint32_t tab_uid,
                                    UndoStep *target,
                                    const eUndoStepDir dir,
-                                   std::string *r_reason)
+                                   std::string *r_reason,
+                                   const UndoStep *from = nullptr)
 {
-  if (!undosys_tab_step_decode(ustack, C, tab_uid, target, dir, true, r_reason)) {
+  if (!undosys_tab_step_decode(ustack,
+                               C,
+                               tab_uid,
+                               target,
+                               dir,
+                               true,
+                               r_reason,
+                               undosys_tab_preload_step(from, target, dir)))
+  {
     return false;
   }
   BKE_undo_tabs_note_tab_walk();
+  BKE_undo_tabs_live_owners_note(G_MAIN);
   TabCursors *cursors = tab_cursors_get(ustack, true);
   /* Back on its newest step, the tab is at the top again: no cursor entry. */
   if (target == undosys_tab_newest_step(ustack, tab_uid)) {
@@ -1453,7 +1549,7 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
         return false;
       }
     }
-    return undosys_tab_step_apply(ustack, C, tab_uid, us, STEP_UNDO, r_reason);
+    return undosys_tab_step_apply(ustack, C, tab_uid, us, STEP_UNDO, r_reason, ref);
   }
   if (r_reason) {
     *r_reason = "nothing to undo in this tab";
@@ -1499,7 +1595,8 @@ bool BKE_undosys_tab_step_check(UndoStack *ustack,
     {
       return false;
     }
-    return undosys_tab_step_check(ustack, C, tab_uid, us, r_reason);
+    return undosys_tab_step_check(
+        ustack, C, tab_uid, us, r_reason, undosys_tab_preload_step(ref, us, STEP_UNDO));
   }
   if (r_reason) {
     *r_reason = "nothing to undo in this tab";

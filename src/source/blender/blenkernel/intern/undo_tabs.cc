@@ -17,6 +17,7 @@
 #include "BLI_listbase.h"
 #include "BLI_utildefines.h"
 #include "BLI_map.hh"
+#include "BLI_set.hh"
 #include "BLI_string.h"
 #include "BLI_time.h"
 #include "BLI_assert.h"
@@ -308,6 +309,91 @@ void BKE_undo_tabs_push_override_set(const uint32_t tab_uid)
   g_push_tab_override = tab_uid;
 }
 
+/* -------------------------------------------------------------------- */
+/** \name Attribution by reach (the invariant test, 2026-10-02)
+ *
+ * A step belongs to the tab whose data it changed. A step that changes which
+ * tabs reach a datablock (an object linked into another tab: Engine Mode's Link
+ * to Scene, an outliner drag, Linked Copy; an object unlinked from one of two
+ * tabs) changed the collections of the tab that gained or lost it, whatever
+ * window it was pushed from. With the step filed under the window's tab, the
+ * receiving tab's walk restored its collection from a memfile that predates the
+ * link while its mode steps kept it, and the pushing tab's undo had nothing of
+ * its own to take back. The reach is compared with the owner map of the live
+ * document right before the push (refreshed after every push and every walk,
+ * never the previous step's map: after a tab walked back that map is not the
+ * live document).
+ * \{ */
+
+static UndoOwnerMap *g_live_owners = nullptr;
+
+void BKE_undo_tabs_live_owners_note(Main *bmain)
+{
+  BKE_undo_owner_map_free(g_live_owners);
+  g_live_owners = (bmain != nullptr && BKE_undo_tabs_enabled()) ? BKE_undo_owner_map_build(bmain, nullptr) :
+                                                                  nullptr;
+}
+
+void BKE_undo_tabs_live_owners_forget()
+{
+  BKE_undo_owner_map_free(g_live_owners);
+  g_live_owners = nullptr;
+}
+
+static Vector<uint32_t> owner_tabs(const UndoOwnerMap *map, const uint32_t uid)
+{
+  const uint32_t owner = BKE_undo_owner_map_lookup(map, uid);
+  if (owner == UNDO_TAB_SHARED) {
+    if (const Vector<uint32_t> *tabs = map->shared_by.lookup_ptr(uid)) {
+      return *tabs;
+    }
+    return {};
+  }
+  if (ELEM(owner, UNDO_TAB_DOCUMENT, UNDO_TAB_LANE)) {
+    return {};
+  }
+  return {owner};
+}
+
+/** The one tab whose reach changed between ``before`` and ``after`` for a datablock
+ * two tabs reach (on either side); #UNDO_TAB_DOCUMENT for none, #UNDO_TAB_SHARED
+ * when several tabs did. A datablock new or gone in ``after`` is an ordinary edit. */
+static uint32_t reach_changed_tab(const UndoOwnerMap *before, const UndoOwnerMap *after)
+{
+  Set<uint32_t> changed;
+  for (const auto item : after->owner.items()) {
+    const Vector<uint32_t> a = owner_tabs(before, item.key);
+    if (a.is_empty()) {
+      continue;
+    }
+    const Vector<uint32_t> b = owner_tabs(after, item.key);
+    if (b.is_empty()) {
+      continue;
+    }
+    Set<uint32_t> all;
+    for (const uint32_t t : a) {
+      all.add(t);
+    }
+    for (const uint32_t t : b) {
+      all.add(t);
+    }
+    if (all.size() < 2) {
+      continue;
+    }
+    for (const uint32_t t : all) {
+      if (a.contains(t) != b.contains(t)) {
+        changed.add(t);
+      }
+    }
+  }
+  if (changed.is_empty()) {
+    return UNDO_TAB_DOCUMENT;
+  }
+  return changed.size() == 1 ? *changed.begin() : UNDO_TAB_SHARED;
+}
+
+/** \} */
+
 void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const UndoStep *inherit_from)
 {
   if (us == nullptr) {
@@ -331,6 +417,19 @@ void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const Un
      * its own is the global (memfile) type. */
     if (STREQ(us->type->name, "Global Undo")) {
       us->mixar_owners = BKE_undo_owner_map_build(bmain, nullptr);
+      if (g_live_owners != nullptr) {
+        const uint32_t reach = reach_changed_tab(g_live_owners, us->mixar_owners);
+        if (!ELEM(reach, UNDO_TAB_DOCUMENT, UNDO_TAB_SHARED) && reach != us->mixar_tab_uid) {
+          CLOG_INFO(&LOG,
+                    "step '%s' changed what tab '%s' reaches: filed under it",
+                    us->name,
+                    BKE_undo_tab_scene_name(bmain, reach).c_str());
+          us->mixar_tab_uid = reach;
+          us->mixar_author_uid = reach;
+        }
+      }
+      BKE_undo_owner_map_free(g_live_owners);
+      g_live_owners = MEM_new<UndoOwnerMap>(__func__, *us->mixar_owners);
     }
   }
 }

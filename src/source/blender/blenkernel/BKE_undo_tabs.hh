@@ -129,6 +129,11 @@ void BKE_undo_tabs_push_override_set(uint32_t tab_uid);
  * its owner map. ``C`` may lack a window (internal pushes): the tab is then
  * inherited from ``inherit_from`` when given. */
 void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const UndoStep *inherit_from);
+/** The owner map of the live document a step's reach is compared with (a step that
+ * changes which tabs reach a datablock belongs to the tab that gained or lost it).
+ * Refreshed after every walk; forgotten when the stack is cleared. */
+void BKE_undo_tabs_live_owners_note(Main *bmain);
+void BKE_undo_tabs_live_owners_forget();
 /** Free what #BKE_undo_step_tab_annotate attached. */
 void BKE_undo_step_tab_free(UndoStep *us);
 
@@ -205,14 +210,14 @@ bool BKE_undo_tabs_ids_owned(Main *bmain,
                              std::string *r_reason,
                              const Set<uint32_t> *shared_ok = nullptr);
 
-/** The ``session_uid``s of ``ids`` another tab touched after ``from``: a mode step
- * of another author that names it, or a memfile step of another author (or of
- * none) whose chunks for it differ from the memfile before. A shared datablock
- * nobody else touched since the tab's cursor is the tab's to step back. */
-Set<uint32_t> BKE_undo_tabs_ids_touched_by_others(const UndoStack *ustack,
-                                                  uint32_t tab_uid,
-                                                  const UndoStep *from,
-                                                  Span<ID *> ids);
+/** The ``session_uid``s of ``ids`` a mode step walking tab ``tab_uid`` to ``target``
+ * may name although they are shared with another tab: the author rule of the
+ * memfile walk (only this tab changed them since the older of ``target`` and the
+ * tab's cursor, and no other tab has an undone change to them). */
+Set<uint32_t> BKE_undo_tabs_shared_ok(const UndoStack *ustack,
+                                      uint32_t tab_uid,
+                                      const UndoStep *target,
+                                      Span<ID *> ids);
 
 /** JSON array of the stack's steps, newest first, for the harness:
  * index (stack index, oldest = 0), name, type, tab_uid, skip, active, cursor

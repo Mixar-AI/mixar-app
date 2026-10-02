@@ -2939,6 +2939,61 @@ static void read_undo_partial_keep_foreign_leftovers(FileData *fd)
     }
   }
   CLOG_DEBUG(&LOG_UNDO, "UNDO(tab): %d foreign datablocks kept across the restore", kept);
+
+  /* Names are unique per type in a Main. A datablock the walked tab gets back may
+   * carry a name another tab's datablock took since the step (the tab deleted
+   * "ob.001", another tab's copy became "ob.001", the undo brings the first one
+   * back). The name fix after reading renamed whichever came second, which could
+   * be the other tab's: one tab's undo renamed another tab's object (the invariant
+   * test, 2026-10-02). The kept datablock keeps its name; the restored one gets
+   * the next free suffix. */
+  MainListsArray new_lbarray = BKE_main_lists_get(*new_bmain);
+  for (ListBaseT<ID> *lb : new_lbarray) {
+    Set<std::string> kept_names;
+    for (ID *id = static_cast<ID *>(lb->first); id; id = static_cast<ID *>(id->next)) {
+      if (id->lib == nullptr && (id->tag & ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED) &&
+          BKE_undo_tabs_partial_decide(id->session_uid, true) != UndoPartialDecision::Restore)
+      {
+        kept_names.add(id->name + 2);
+      }
+    }
+    if (kept_names.is_empty()) {
+      continue;
+    }
+    Vector<ID *> renamed;
+    for (ID *id = static_cast<ID *>(lb->first); id; id = static_cast<ID *>(id->next)) {
+      if (id->lib != nullptr || !kept_names.contains(id->name + 2) ||
+          BKE_undo_tabs_partial_decide(id->session_uid, true) != UndoPartialDecision::Restore)
+      {
+        continue;
+      }
+      Set<std::string> taken;
+      for (ID *other = static_cast<ID *>(lb->first); other; other = static_cast<ID *>(other->next)) {
+        if (other->lib == nullptr) {
+          taken.add(other->name + 2);
+        }
+      }
+      char base[MAX_ID_NAME];
+      int number = 0;
+      BLI_string_split_name_number(id->name + 2, '.', base, &number);
+      char name[MAX_ID_NAME - 2];
+      for (int n = std::max(number, 0) + 1; n < 1000000; n++) {
+        SNPRINTF(name, "%s.%03d", base, n);
+        if (!taken.contains(name)) {
+          break;
+        }
+      }
+      CLOG_INFO(&LOG_UNDO,
+                "UNDO(tab): '%s' brought back as '%s': another tab's datablock has that name now",
+                id->name + 2,
+                name);
+      BLI_strncpy(id->name + 2, name, sizeof(id->name) - 2);
+      renamed.append(id);
+    }
+    for (ID *id : renamed) {
+      id_sort_by_name(lb, id, nullptr);
+    }
+  }
 }
 
 static void read_undo_reuse_noundo_local_ids(FileData *fd)

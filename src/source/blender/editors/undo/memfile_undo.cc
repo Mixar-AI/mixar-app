@@ -154,11 +154,11 @@ static int memfile_undosys_step_id_reused_cb(LibraryIDLinkCallbackData *cb_data)
  */
 static CLG_LogRef LOG_TABS = {"undo.tabs"};
 
-static void memfile_undosys_editors_exit(Main *bmain)
+static int memfile_undosys_editors_exit(Main *bmain)
 {
   if (!BKE_undo_tabs_partial_active() || BKE_undo_tabs_partial_tab() == UNDO_TAB_DOCUMENT) {
     ED_editors_exit(bmain, false);
-    return;
+    return 0;
   }
   auto restored = [](const ID *id) {
     return id != nullptr &&
@@ -171,8 +171,8 @@ static void memfile_undosys_editors_exit(Main *bmain)
         DEG_id_tag_update(&ob.id, ID_RECALC_TRANSFORM | ID_RECALC_GEOMETRY);
       }
     }
-    else if (ob.mode & OB_MODE_EDIT) {
-      kept++;
+    else if (ob.mode & (OB_MODE_EDIT | OB_MODE_SCULPT)) {
+      kept++; /* kept with unflushed mode data (edit mesh, sculpt session) */
     }
   }
   ED_mesh_mirror_spatial_table_end(nullptr);
@@ -180,6 +180,7 @@ static void memfile_undosys_editors_exit(Main *bmain)
   if (kept > 0) {
     CLOG_DEBUG(&LOG_TABS, "%d object(s) of other tabs kept in edit mode", kept);
   }
+  return kept;
 }
 
 static void memfile_undosys_step_decode(
@@ -224,7 +225,7 @@ static void memfile_undosys_step_decode(
     depsgraphs = BKE_scene_undo_depsgraphs_extract(bmain);
   }
 
-  memfile_undosys_editors_exit(bmain);
+  const int kept_in_edit_mode = memfile_undosys_editors_exit(bmain);
   /* Ensure there's no preview job running. Unfinished previews will be scheduled for regeneration
    * via #PRV_TAG_RESTART_RENDERING in BKE_previewimg_blend_read. */
   ED_preview_kill_jobs(CTX_wm_manager(C), bmain);
@@ -256,6 +257,13 @@ static void memfile_undosys_step_decode(
 
   /* bmain has been freed. */
   bmain = CTX_data_main(C);
+  if (kept_in_edit_mode > 0) {
+    /* Mixar per-tab undo (the invariant test, 2026-10-02): another tab's object kept
+     * its edit-mode data across this tab's restore, but the new Main starts with
+     * no "flush needed": the next memfile step skipped the flush and was written
+     * without that tab's edit-mode work, which an undo onto it then lost. */
+    bmain->is_memfile_undo_flush_needed = true;
+  }
   ED_editors_init_for_undo(bmain);
 
   if (use_old_bmain_data) {

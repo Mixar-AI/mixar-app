@@ -204,19 +204,16 @@ def run_m5_probes() -> None:
                                                     "has:C/C_p17a": True, "changed:A": False,
                                                     "changed:B": False})
         press("redo")
-        # Review 2026-10-02: a shared datablock this tab did not change since the
-        # step is kept as it is, not refused (a new tab's world copy shares the
-        # HDRI image; one shared image used to stop undo in both tabs for good).
-        # Linking does not change the object's own data (memfile undo never
-        # writes the user count), so A's step back keeps A_p17 shared as it is.
+        # Review 2026-10-02: the link changed B's collection, so the step is B's
+        # (attribution by reach), whichever window pushed it. A's step back would
+        # remove A_p17, which A made after that step and B uses now: refused.
         show("A")
-        probe("P17b undo in A, which shares an object it did not change: allowed, B keeps it",
+        probe("P17b undo in A past making an object B now uses: refused, nothing changes",
               lambda: press("undo"),
-              expect_document={}, expect_isolation={"undo_result": "FINISHED", "has:A/A_p17": True,
+              expect_document={}, expect_isolation={"undo_result": "CANCELLED", "has:A/A_p17": True,
                                                     "changed:B": False, "changed:C": False})
-        press("redo")
         show("B")
-        probe("P17c undo in B, which shares it too: allowed, A untouched",
+        probe("P17c undo in B: the link was B's step, B takes it back, A untouched",
               lambda: press("undo"),
               expect_document={}, expect_isolation={"undo_result": "FINISHED", "has:A/A_p17": True,
                                                     "changed:A": False, "changed:C": False})
@@ -361,6 +358,17 @@ def run_m5_probes() -> None:
     # first own step above, not "nothing to redo".
     # the tab exists at C's marker step (no own step of its own yet), its two
     # steps sit above; two document walks reach the marker
+    # Every tab back at its top first: Undo Whole Document is refused while a tab
+    # stands behind the document (review 2026-10-02, P24).
+    for label in TABS:
+        if TABS[label] not in bpy.data.scenes:
+            continue
+        show(label)
+        for _ in range(50):
+            with _override_window():
+                if not bpy.ops.ed.redo.poll():
+                    break
+            press("redo")
     fresh2 = bpy.data.scenes.new("P21_tab")
     edit("C", "C · p21 marker", lambda: add_mesh(tab("C"), "C_p21", "cube", (0, 0, 58)))
     win().scene = bpy.data.scenes["P21_tab"]
@@ -412,7 +420,11 @@ def run_m5_probes() -> None:
             push("A · shares A_p17 again (p22)")
             tab("A").objects["A_p17"].location.x += 1.0     # A changes the shared object
             push("A · moves shared A_p17 (p22)")
-            probe("P22a a refused per-tab undo (shared, changed by A) runs no undo_post handler",
+            show("B")
+            tab("B").objects["A_p17"].location.y += 1.0     # and B changes it after A
+            push("B · moves shared A_p17 (p22)")
+            show("A")
+            probe("P22a a refused per-tab undo (shared, changed by A then by B) runs no undo_post handler",
                   lambda: press("undo"),
                   expect_document={}, expect_isolation={"undo_result": "CANCELLED"})
             check("M5 P22a no undo_post fired on the refusal", counts["undo"] == 0, f"{counts}")

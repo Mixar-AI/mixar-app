@@ -80,6 +80,14 @@ static void owner_map_record(UndoOwnerMap *map, const ID *id, const uint32_t tab
   if (id == nullptr || id->session_uid == 0) {
     return;
   }
+  /* An embedded datablock (a material's or world's node tree, a scene's master
+   * collection) is written and read with its owner and is in no Main list: the
+   * owner's entry decides it. Recorded on its own it read as "gone" to every
+   * restore that shared its owner (the invariant test, 2026-10-02: Linked Copy
+   * shares the world, and every undo was refused for its "Shader Nodetree"). */
+  if (id->flag & ID_FLAG_EMBEDDED_DATA) {
+    return;
+  }
   if (owner_map_type_is_never_undone(id)) {
     return;
   }
@@ -141,7 +149,9 @@ int undo_tabs_owner_map_shared_for_tab(const UndoOwnerMap *map, const uint32_t t
  * Never makes anything shared (a lane works on its tab's behalf). */
 static void owner_map_record_lane(UndoOwnerMap *map, const ID *id)
 {
-  if (id == nullptr || id->session_uid == 0 || owner_map_type_is_never_undone(id)) {
+  if (id == nullptr || id->session_uid == 0 || owner_map_type_is_never_undone(id) ||
+      (id->flag & ID_FLAG_EMBEDDED_DATA))
+  {
     return;
   }
   map->owner.add(id->session_uid, UNDO_TAB_LANE);

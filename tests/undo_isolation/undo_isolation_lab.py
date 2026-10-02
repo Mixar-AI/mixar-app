@@ -81,7 +81,7 @@ def run_m1() -> None:
     check("no shared IDs in a clean session",
           all(st["shared"] == 0 or set(st["shared_names"]) <= {"IMP23_hdri"}  # P23 shares it on purpose
               for st in memfile
-              if not st["name"].startswith(("A · shares", "A · moves shared", "A · orphan spans"))),
+              if not st["name"].startswith(("A · shares", "A · moves shared", "B · moves shared", "A · orphan spans"))),
           f"{[(st['name'], st['shared_names']) for st in memfile if st['shared']]}")
     slowest = max((st["owner_map_ms"] for st in memfile), default=0.0)
     check("owner map under 50 ms", slowest < 50.0, f"slowest={slowest:.2f} ms")

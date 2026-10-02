@@ -9,6 +9,7 @@
  * validate, decide per datablock, end), the mode-step ownership check, and
  * the harness view of the stack as JSON (``BKE_undo_tabs.hh``).
  */
+#include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -28,6 +29,7 @@
 #include "BLO_undofile.hh"
 
 #include "DNA_ID.h"
+#include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_windowmanager_types.h"
 
@@ -59,8 +61,11 @@ struct PartialState {
   uint32_t tab = UNDO_TAB_DOCUMENT;
   const UndoOwnerMap *step_owners = nullptr;
   UndoOwnerMap *live_owners = nullptr;
-  /** Conflicts this tab did not change since the step: kept as they are live. */
+  /** Shared datablocks nobody changed since the step: kept as they are live. */
   Set<uint32_t> keep;
+  /** Shared datablocks only this tab changed since the step: restored (the author
+   * takes back its own change, which the other tab sees, as sharing means). */
+  Set<uint32_t> restore;
 };
 
 static PartialState g_partial;
@@ -174,81 +179,157 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
   return true;
 }
 
-/** The memfile step whose state the live document holds: the newest memfile at
- * or below the stack's active step (tab walks never change a conflict, they keep
- * it, so for conflicts the live state is still that step's). */
-static const UndoStep *live_memfile_step(const UndoStack *ustack)
+static int step_index(const UndoStack *ustack, const UndoStep *us)
 {
-  for (const UndoStep *us = ustack->step_active; us != nullptr; us = us->prev) {
-    if (step_is_memfile(us) && g_memfile_get(us) != nullptr) {
-      return us;
-    }
-  }
-  return nullptr;
+  return us != nullptr ? BLI_findindex(&ustack->steps, us) : -1;
 }
 
-/** Which shared datablocks THIS tab changed between ``target`` and the live
- * state. Every pair of neighbouring memfile steps in between is compared; a
- * datablock that differs is credited to the authors of the steps in that
- * interval (#UndoStep::mixar_author_uid, which a dead redo branch keeps). A
- * change with no author fails closed. Returns false, the names in ``r_names``,
- * when this tab changed one. */
-static bool conflicts_untouched_by_tab(const UndoStack *ustack,
-                                       const uint32_t tab_uid,
-                                       const UndoStep *target,
-                                       const Map<uint32_t, std::string> &conflicts,
-                                       const Map<uint32_t, ID *> &live_ids,
-                                       std::string *r_names)
+/** One change to a shared datablock: the stack index of the step that shows it
+ * (a memfile step whose chunks for it differ from the memfile before, or a mode
+ * step that names it) and an author of that change. */
+struct IdChange {
+  int index;
+  uint32_t author;
+};
+using IdChanges = Map<uint32_t, Vector<IdChange>>;
+
+/** The change history of ``watched`` across the whole stack. A memfile change is
+ * credited to every author of the steps since the memfile before it (a step's
+ * #UndoStep::mixar_author_uid, which a dead redo branch keeps). */
+static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t, ID *> &watched)
 {
-  const UndoStep *live = live_memfile_step(ustack);
-  if (live == nullptr || g_memfile_get(target) == nullptr) {
-    *r_names = "(no memfile to compare)";
-    return false;
-  }
-  /* Oldest to newest, whichever way the walk goes (undo: target is older). */
-  const int i_target = BLI_findindex(&ustack->steps, target);
-  const int i_live = BLI_findindex(&ustack->steps, live);
-  if (i_target == i_live) {
-    return true;
-  }
-  const UndoStep *from = (i_target < i_live) ? target : live;
-  const UndoStep *to = (i_target < i_live) ? live : target;
+  IdChanges out;
   Set<uint32_t> uids;
-  for (const auto item : conflicts.items()) {
+  for (const auto item : watched.items()) {
     uids.add(item.key);
   }
-  Set<uint32_t> touched;
-  IdChunks prev = memfile_id_chunks(g_memfile_get(from), uids);
-  bool by_tab = false;
-  for (const UndoStep *us = from->next; us != nullptr; us = us->next) {
-    by_tab |= ELEM(us->mixar_author_uid, tab_uid, UNDO_TAB_DOCUMENT);
-    const MemFile *memfile = step_is_memfile(us) ? g_memfile_get(us) : nullptr;
-    if (memfile != nullptr) {
-      IdChunks cur = memfile_id_chunks(memfile, uids);
-      if (by_tab) {
-        for (const uint32_t uid : uids) {
-          if (!id_chunks_equal(prev.lookup_ptr(uid), cur.lookup_ptr(uid), live_ids.lookup_default(uid, nullptr))) {
-            touched.add(uid);
+  IdChunks prev;
+  bool have_prev = false;
+  Vector<uint32_t> authors;
+  /* A mode step names the OBJECT it edits (edit mesh, sculpt), but the change is
+   * to its data, and it reaches no memfile until the next push of any tab flushes
+   * the edit: an object's name stands for its watched data too. */
+  Map<std::string, Vector<uint32_t>> by_name;
+  for (const auto item : watched.items()) {
+    by_name.lookup_or_add_default(item.value->name).append(item.key);
+  }
+  if (G_MAIN != nullptr) {
+    for (const Object &ob : G_MAIN->objects) {
+      const ID *data = static_cast<const ID *>(ob.data);
+      if (data != nullptr && watched.contains(data->session_uid)) {
+        by_name.lookup_or_add_default(ob.id.name).append_non_duplicates(data->session_uid);
+      }
+    }
+  }
+  struct RefMatch {
+    const Map<std::string, Vector<uint32_t>> *by_name;
+    Vector<uint32_t> found;
+  };
+  int index = -1;
+  for (const UndoStep *us = static_cast<const UndoStep *>(ustack->steps.first); us; us = us->next) {
+    index++;
+    authors.append_non_duplicates(us->mixar_author_uid);
+    const MemFile *memfile = (step_is_memfile(us) && g_memfile_get != nullptr) ? g_memfile_get(us) :
+                                                                                  nullptr;
+    if (memfile == nullptr) {
+      if (us->type != nullptr && us->type->step_foreach_ID_ref != nullptr) {
+        /* A mode step (a stroke, an edit-mesh step) names what it changes; matched
+         * by name, as the walk resolves its references. */
+        RefMatch match{&by_name, {}};
+        us->type->step_foreach_ID_ref(
+            const_cast<UndoStep *>(us),
+            [](void *user_data, UndoRefID *id_ref) {
+              RefMatch *m = static_cast<RefMatch *>(user_data);
+              if (const Vector<uint32_t> *uids = m->by_name->lookup_ptr(id_ref->name)) {
+                for (const uint32_t uid : *uids) {
+                  m->found.append_non_duplicates(uid);
+                }
+              }
+            },
+            &match);
+        for (const uint32_t uid : match.found) {
+          out.lookup_or_add_default(uid).append({index, us->mixar_author_uid});
+        }
+      }
+      continue;
+    }
+    IdChunks cur = memfile_id_chunks(memfile, uids);
+    if (have_prev) {
+      for (const uint32_t uid : uids) {
+        if (!id_chunks_equal(prev.lookup_ptr(uid), cur.lookup_ptr(uid), watched.lookup(uid))) {
+          for (const uint32_t author : authors) {
+            out.lookup_or_add_default(uid).append({index, author});
           }
         }
       }
-      prev = std::move(cur);
-      by_tab = false;
     }
-    if (us == to) {
-      break;
+    prev = std::move(cur);
+    have_prev = true;
+    authors.clear();
+  }
+  return out;
+}
+
+enum class SharedFate { Keep, Restore, Refuse };
+
+/**
+ * What a tab's walk does with a datablock it shares with another tab (review
+ * 2026-10-02, the author rule: an undo takes back only the pressing tab's own
+ * actions, wherever they landed). ``lo`` is the older of the walk's target and
+ * the tab's cursor:
+ *
+ * - this tab did not change it after ``lo``: KEEP it exactly as it is, whatever
+ *   the other tabs did to it (keeping never touches their work);
+ * - this tab changed it, and another tab changed it after ``lo`` too or has an
+ *   older change to it undone since (its cursor is behind that change): REFUSE,
+ *   the two cannot be told apart in one memfile;
+ * - only this tab changed it: RESTORE it with the tab (the other tab sees the
+ *   shared datablock go back), unless it did not exist at the target while
+ *   another tab uses it now (a restore would free it under that tab).
+ */
+static SharedFate shared_fate(const UndoStack *ustack,
+                              const uint32_t tab_uid,
+                              const int lo,
+                              const Vector<IdChange> *changes,
+                              const bool absent_at_target,
+                              const char **r_why)
+{
+  if (changes == nullptr) {
+    return SharedFate::Keep;
+  }
+  const int active = step_index(ustack, ustack->step_active);
+  bool by_tab = false;
+  const char *foreign = nullptr;
+  for (const IdChange &c : *changes) {
+    if (c.author == tab_uid) {
+      by_tab |= c.index > lo;
+      continue;
+    }
+    if (c.index > lo) {
+      foreign = "another tab changed it since that step";
+      continue;
+    }
+    const UndoStep *cursor = (c.author != UNDO_TAB_DOCUMENT) ?
+                                 BKE_undosys_tab_cursor(const_cast<UndoStack *>(ustack), c.author) :
+                                 nullptr;
+    if (c.index > active || (cursor != nullptr && c.index > step_index(ustack, cursor))) {
+      foreign = "another tab has taken back its own change to it";
     }
   }
-  if (touched.is_empty()) {
-    return true;
+  /* Keeping it exactly as it is never touches another tab's work, whatever the
+   * other tabs did to it: only a restore (this tab changed it) can conflict. */
+  if (!by_tab) {
+    return SharedFate::Keep;
   }
-  int count = 0;
-  for (const uint32_t uid : touched) {
-    if (count++ < 8) {
-      *r_names += (r_names->empty() ? "" : ", ") + conflicts.lookup(uid);
-    }
+  if (foreign != nullptr) {
+    *r_why = foreign;
+    return SharedFate::Refuse;
   }
-  return false;
+  if (absent_at_target) {
+    *r_why = "this tab made it after that step and another tab uses it now";
+    return SharedFate::Refuse;
+  }
+  return SharedFate::Restore;
 }
 
 static void note_conflict(Map<uint32_t, std::string> &conflicts, const uint32_t uid, const std::string &name)
@@ -262,6 +343,7 @@ static bool partial_validate(Main *bmain,
                              const UndoStep *target,
                              const UndoOwnerMap *live,
                              Set<uint32_t> *r_keep,
+                             Set<uint32_t> *r_restore,
                              std::string *r_reason)
 {
   const UndoOwnerMap *step_owners = target ? target->mixar_owners : nullptr;
@@ -341,25 +423,57 @@ static bool partial_validate(Main *bmain,
     }
     return false;
   }
-  /* Kept as they are, unless this tab changed one since the step (a restore
-   * would have to revert it under the other tab). Another tab's changes to it
-   * are that tab's business: keeping them is the point of a per-tab walk. */
-  std::string touched;
-  if (g_memfile_get == nullptr ||
-      !conflicts_untouched_by_tab(ustack, tab_uid, target, conflicts, live_ids, &touched))
-  {
+  if (g_memfile_get == nullptr) {
     if (r_reason) {
-      *r_reason = "shared with another tab and changed in this tab since that step: " + touched +
-                  " (Edit > Undo Whole Document walks every tab)";
+      *r_reason = "shared with another tab (Edit > Undo Whole Document walks every tab)";
     }
     return false;
   }
-  if (r_keep != nullptr) {
-    for (const auto item : conflicts.items()) {
-      r_keep->add(item.key);
+  /* The author rule (shared_fate): keep what nobody changed, restore what only
+   * this tab changed, refuse what another tab changed too. */
+  Map<uint32_t, ID *> watched;
+  Set<uint32_t> uids;
+  for (const auto item : conflicts.items()) {
+    watched.add(item.key, live_ids.lookup(item.key));
+    uids.add(item.key);
+  }
+  const IdChanges changes = collect_id_changes(ustack, watched);
+  const IdChunks at_target = memfile_id_chunks(g_memfile_get(target), uids);
+  const int lo = std::min(step_index(ustack, target),
+                          step_index(ustack, BKE_undosys_tab_cursor(const_cast<UndoStack *>(ustack), tab_uid)));
+  std::string refused;
+  int restored = 0;
+  for (const auto item : conflicts.items()) {
+    const char *why = "";
+    const Vector<IdChange> *ch = changes.lookup_ptr(item.key);
+    switch (shared_fate(ustack, tab_uid, lo, ch, !at_target.contains(item.key), &why)) {
+      case SharedFate::Keep:
+        if (r_keep != nullptr) {
+          r_keep->add(item.key);
+        }
+        break;
+      case SharedFate::Restore:
+        restored++;
+        if (r_restore != nullptr) {
+          r_restore->add(item.key);
+        }
+        break;
+      case SharedFate::Refuse:
+        refused += (refused.empty() ? "" : "; ") + item.value + " (" + why + ")";
+        break;
     }
   }
-  CLOG_DEBUG(&LOG, "tab %u: %d shared datablock(s) kept as they are", tab_uid, int(conflicts.size()));
+  if (!refused.empty()) {
+    if (r_reason) {
+      *r_reason = "shared with another tab: " + refused + " (Edit > Undo Whole Document walks every tab)";
+    }
+    return false;
+  }
+  CLOG_DEBUG(&LOG,
+             "tab %u: %d shared datablock(s), %d restored with the tab, the rest kept",
+             tab_uid,
+             int(conflicts.size()),
+             restored);
   return true;
 }
 
@@ -370,7 +484,7 @@ bool BKE_undo_tabs_partial_check(Main *bmain,
                                  std::string *r_reason)
 {
   UndoOwnerMap *live = BKE_undo_owner_map_build(bmain, nullptr);
-  const bool ok = partial_validate(bmain, ustack, tab_uid, target, live, nullptr, r_reason);
+  const bool ok = partial_validate(bmain, ustack, tab_uid, target, live, nullptr, nullptr, r_reason);
   BKE_undo_owner_map_free(live);
   return ok;
 }
@@ -383,8 +497,8 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
 {
   BLI_assert(!g_partial.active);
   UndoOwnerMap *live = BKE_undo_owner_map_build(bmain, nullptr);
-  Set<uint32_t> keep;
-  if (!partial_validate(bmain, ustack, tab_uid, target, live, &keep, r_reason)) {
+  Set<uint32_t> keep, restore;
+  if (!partial_validate(bmain, ustack, tab_uid, target, live, &keep, &restore, r_reason)) {
     BKE_undo_owner_map_free(live);
     return false;
   }
@@ -393,6 +507,7 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
   g_partial.step_owners = target->mixar_owners;
   g_partial.live_owners = live;
   g_partial.keep = std::move(keep);
+  g_partial.restore = std::move(restore);
   CLOG_DEBUG(&LOG, "partial restore armed for tab %u", tab_uid);
   return true;
 }
@@ -434,71 +549,31 @@ bool BKE_undo_tabs_ids_owned(Main *bmain,
   return ok;
 }
 
-Set<uint32_t> BKE_undo_tabs_ids_touched_by_others(const UndoStack *ustack,
-                                                  const uint32_t tab_uid,
-                                                  const UndoStep *from,
-                                                  const Span<ID *> ids)
+Set<uint32_t> BKE_undo_tabs_shared_ok(const UndoStack *ustack,
+                                      const uint32_t tab_uid,
+                                      const UndoStep *target,
+                                      const Span<ID *> ids)
 {
-  Set<uint32_t> touched;
-  if (ustack == nullptr || from == nullptr || ids.is_empty()) {
-    return touched;
+  Set<uint32_t> ok;
+  if (ustack == nullptr || target == nullptr || ids.is_empty()) {
+    return ok;
   }
-  Set<uint32_t> uids;
-  Map<uint32_t, ID *> by_uid;
+  Map<uint32_t, ID *> watched;
   for (ID *id : ids) {
     if (id != nullptr) {
-      uids.add(id->session_uid);
-      by_uid.add(id->session_uid, id);
+      watched.add(id->session_uid, id);
     }
   }
-  /* The memfile the comparison starts from: the newest at or before ``from``. */
-  const MemFile *prev_memfile = nullptr;
-  for (const UndoStep *us = from; us != nullptr && g_memfile_get != nullptr; us = us->prev) {
-    if (step_is_memfile(us) && (prev_memfile = g_memfile_get(us)) != nullptr) {
-      break;
+  const IdChanges changes = collect_id_changes(ustack, watched);
+  const int lo = std::min(step_index(ustack, target),
+                          step_index(ustack, BKE_undosys_tab_cursor(const_cast<UndoStack *>(ustack), tab_uid)));
+  for (const auto item : watched.items()) {
+    const char *why = "";
+    if (shared_fate(ustack, tab_uid, lo, changes.lookup_ptr(item.key), false, &why) != SharedFate::Refuse) {
+      ok.add(item.key);
     }
   }
-  IdChunks prev = memfile_id_chunks(prev_memfile, uids);
-  bool by_other = false;
-  struct RefMatch {
-    const Map<uint32_t, ID *> *ids;
-    Set<uint32_t> *touched;
-  };
-  for (const UndoStep *us = from->next; us != nullptr; us = us->next) {
-    const bool other = us->mixar_author_uid != tab_uid;
-    by_other |= other;
-    const MemFile *memfile = (step_is_memfile(us) && g_memfile_get != nullptr) ? g_memfile_get(us) :
-                                                                                  nullptr;
-    if (memfile != nullptr) {
-      IdChunks cur = memfile_id_chunks(memfile, uids);
-      if (by_other) {
-        for (const uint32_t uid : uids) {
-          if (!id_chunks_equal(prev.lookup_ptr(uid), cur.lookup_ptr(uid), by_uid.lookup(uid))) {
-            touched.add(uid);
-          }
-        }
-      }
-      prev = std::move(cur);
-      by_other = false;
-    }
-    else if (other && us->type != nullptr && us->type->step_foreach_ID_ref != nullptr) {
-      /* Another tab's mode step that names one of them (a stroke on the same
-       * image, an edit of the same mesh): matched by name, as the walk resolves. */
-      RefMatch match{&by_uid, &touched};
-      us->type->step_foreach_ID_ref(
-          const_cast<UndoStep *>(us),
-          [](void *user_data, UndoRefID *id_ref) {
-            RefMatch *m = static_cast<RefMatch *>(user_data);
-            for (const auto item : m->ids->items()) {
-              if (STREQ(id_ref->name, item.value->name)) {
-                m->touched->add(item.key);
-              }
-            }
-          },
-          &match);
-    }
-  }
-  return touched;
+  return ok;
 }
 
 void BKE_undo_tabs_whole_document_begin()
@@ -533,7 +608,11 @@ UndoPartialDecision BKE_undo_tabs_partial_decide(const uint32_t session_uid, con
   if (!g_partial.active || g_partial.whole) {
     return UndoPartialDecision::Restore;
   }
-  /* A conflict this tab did not change: exactly as it is live. */
+  /* A shared datablock only this tab changed since the step: the tab's to restore. */
+  if (g_partial.restore.contains(session_uid)) {
+    return UndoPartialDecision::Restore;
+  }
+  /* A shared datablock nobody changed since the step: exactly as it is live. */
   if (g_partial.keep.contains(session_uid)) {
     return has_live ? UndoPartialDecision::Keep : UndoPartialDecision::Skip;
   }
