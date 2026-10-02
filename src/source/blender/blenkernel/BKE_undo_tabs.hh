@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <string>
 
+#include "BLI_set.hh"
 #include "BLI_span.hh"
 
 struct bContext;
@@ -195,9 +196,23 @@ UndoPartialDecision BKE_undo_tabs_partial_decide(uint32_t session_uid, bool has_
 /** M3: true when every ID is the tab's own in the live document (a Scene: its
  * own tab) or global (reachable from no tab: a Text, a Brush, orphan data; M5).
  * A mode step (edit mesh, sculpt, paint, text) names the datablocks it touches;
- * the tab walk applies it unless one belongs to another tab or is shared.
- * Names the offending one in ``r_reason``. */
-bool BKE_undo_tabs_ids_owned(Main *bmain, uint32_t tab_uid, Span<ID *> ids, std::string *r_reason);
+ * the tab walk applies it unless one belongs to another tab, or is shared and
+ * not in ``shared_ok`` (review 2026-10-02: an image a material copy shares
+ * between tabs, painted in one of them). Names the offending one in ``r_reason``. */
+bool BKE_undo_tabs_ids_owned(Main *bmain,
+                             uint32_t tab_uid,
+                             Span<ID *> ids,
+                             std::string *r_reason,
+                             const Set<uint32_t> *shared_ok = nullptr);
+
+/** The ``session_uid``s of ``ids`` another tab touched after ``from``: a mode step
+ * of another author that names it, or a memfile step of another author (or of
+ * none) whose chunks for it differ from the memfile before. A shared datablock
+ * nobody else touched since the tab's cursor is the tab's to step back. */
+Set<uint32_t> BKE_undo_tabs_ids_touched_by_others(const UndoStack *ustack,
+                                                  uint32_t tab_uid,
+                                                  const UndoStep *from,
+                                                  Span<ID *> ids);
 
 /** JSON array of the stack's steps, newest first, for the harness:
  * index (stack index, oldest = 0), name, type, tab_uid, skip, active, cursor

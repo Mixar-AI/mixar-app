@@ -383,7 +383,8 @@ bool BKE_undo_tabs_partial_begin(Main *bmain,
 bool BKE_undo_tabs_ids_owned(Main *bmain,
                              const uint32_t tab_uid,
                              const Span<ID *> ids,
-                             std::string *r_reason)
+                             std::string *r_reason,
+                             const Set<uint32_t> *shared_ok)
 {
   UndoOwnerMap *live = BKE_undo_owner_map_build(bmain, nullptr);
   bool ok = true;
@@ -400,9 +401,12 @@ bool BKE_undo_tabs_ids_owned(Main *bmain,
                                BKE_undo_owner_map_lookup(live, id->session_uid);
     /* The tab's own, or global (no tab reaches it): a Text in the editor, a
      * Brush. Another tab's, or shared, is refused. */
+    if (owner == UNDO_TAB_SHARED && shared_ok != nullptr && shared_ok->contains(id->session_uid)) {
+      continue; /* shared, and no other tab touched it since this tab's cursor */
+    }
     if (owner != tab_uid && owner != UNDO_TAB_DOCUMENT) {
       if (r_reason) {
-        *r_reason = std::string("'") + id->name + "' " +
+        *r_reason = std::string("'") + (id->name + 2) + "' " +
                     (owner == UNDO_TAB_SHARED ? "is shared between tabs" : "belongs to another tab");
       }
       ok = false;
@@ -411,6 +415,73 @@ bool BKE_undo_tabs_ids_owned(Main *bmain,
   }
   BKE_undo_owner_map_free(live);
   return ok;
+}
+
+Set<uint32_t> BKE_undo_tabs_ids_touched_by_others(const UndoStack *ustack,
+                                                  const uint32_t tab_uid,
+                                                  const UndoStep *from,
+                                                  const Span<ID *> ids)
+{
+  Set<uint32_t> touched;
+  if (ustack == nullptr || from == nullptr || ids.is_empty()) {
+    return touched;
+  }
+  Set<uint32_t> uids;
+  Map<uint32_t, ID *> by_uid;
+  for (ID *id : ids) {
+    if (id != nullptr) {
+      uids.add(id->session_uid);
+      by_uid.add(id->session_uid, id);
+    }
+  }
+  /* The memfile the comparison starts from: the newest at or before ``from``. */
+  const MemFile *prev_memfile = nullptr;
+  for (const UndoStep *us = from; us != nullptr && g_memfile_get != nullptr; us = us->prev) {
+    if (step_is_memfile(us) && (prev_memfile = g_memfile_get(us)) != nullptr) {
+      break;
+    }
+  }
+  IdChunks prev = memfile_id_chunks(prev_memfile, uids);
+  bool by_other = false;
+  struct RefMatch {
+    const Map<uint32_t, ID *> *ids;
+    Set<uint32_t> *touched;
+  };
+  for (const UndoStep *us = from->next; us != nullptr; us = us->next) {
+    const bool other = us->mixar_author_uid != tab_uid;
+    by_other |= other;
+    const MemFile *memfile = (step_is_memfile(us) && g_memfile_get != nullptr) ? g_memfile_get(us) :
+                                                                                  nullptr;
+    if (memfile != nullptr) {
+      IdChunks cur = memfile_id_chunks(memfile, uids);
+      if (by_other) {
+        for (const uint32_t uid : uids) {
+          if (!id_chunks_equal(prev.lookup_ptr(uid), cur.lookup_ptr(uid), by_uid.lookup(uid))) {
+            touched.add(uid);
+          }
+        }
+      }
+      prev = std::move(cur);
+      by_other = false;
+    }
+    else if (other && us->type != nullptr && us->type->step_foreach_ID_ref != nullptr) {
+      /* Another tab's mode step that names one of them (a stroke on the same
+       * image, an edit of the same mesh): matched by name, as the walk resolves. */
+      RefMatch match{&by_uid, &touched};
+      us->type->step_foreach_ID_ref(
+          const_cast<UndoStep *>(us),
+          [](void *user_data, UndoRefID *id_ref) {
+            RefMatch *m = static_cast<RefMatch *>(user_data);
+            for (const auto item : m->ids->items()) {
+              if (STREQ(id_ref->name, item.value->name)) {
+                m->touched->add(item.key);
+              }
+            }
+          },
+          &match);
+    }
+  }
+  return touched;
 }
 
 void BKE_undo_tabs_whole_document_begin()

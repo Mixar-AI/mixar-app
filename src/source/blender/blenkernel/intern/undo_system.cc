@@ -1294,6 +1294,26 @@ void BKE_undosys_tab_cursors_restore(UndoStack *ustack, const UndoStep *from)
   }
 }
 
+/** The datablocks a mode step names that may be shared with another tab and
+ * still be stepped back by this one: those no other tab touched since this
+ * tab's cursor (review 2026-10-02: a material copy sent to another tab keeps
+ * its image, and every paint stroke on it was refused in both tabs). */
+static Set<uint32_t> undosys_tab_shared_ok(UndoStack *ustack, const uint32_t tab_uid, Span<ID *> refs)
+{
+  Set<uint32_t> ok;
+  const UndoStep *cursor = BKE_undosys_tab_cursor(ustack, tab_uid);
+  if (cursor == nullptr) {
+    return ok;
+  }
+  const Set<uint32_t> touched = BKE_undo_tabs_ids_touched_by_others(ustack, tab_uid, cursor, refs);
+  for (const ID *id : refs) {
+    if (id != nullptr && !touched.contains(id->session_uid)) {
+      ok.add(id->session_uid);
+    }
+  }
+  return ok;
+}
+
 static bool undosys_tab_step_is_global(const UndoStep *us)
 {
   return us->type != nullptr && STREQ(us->type->name, "Global Undo");
@@ -1333,7 +1353,8 @@ static bool undosys_tab_step_decode(UndoStack *ustack,
           },
           &refs);
     }
-    if (!BKE_undo_tabs_ids_owned(G_MAIN, tab_uid, refs, r_reason)) {
+    const Set<uint32_t> shared_ok = undosys_tab_shared_ok(ustack, tab_uid, refs);
+    if (!BKE_undo_tabs_ids_owned(G_MAIN, tab_uid, refs, r_reason, &shared_ok)) {
       return false;
     }
     UNDO_NESTED_CHECK_BEGIN;
@@ -1373,7 +1394,8 @@ static bool undosys_tab_step_check(UndoStack *ustack,
           },
           &refs);
     }
-    return BKE_undo_tabs_ids_owned(G_MAIN, tab_uid, refs, r_reason);
+    const Set<uint32_t> shared_ok = undosys_tab_shared_ok(ustack, tab_uid, refs);
+    return BKE_undo_tabs_ids_owned(G_MAIN, tab_uid, refs, r_reason, &shared_ok);
   }
   return BKE_undo_tabs_partial_check(G_MAIN, ustack, tab_uid, target, r_reason);
 }
