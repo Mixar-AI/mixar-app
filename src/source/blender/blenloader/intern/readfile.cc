@@ -3321,8 +3321,18 @@ static void read_libblock_undo_restore_identical(
   if (GS(id_old->name) == ID_OB) {
     Object *ob = id_cast<Object *>(id_old);
     /* For undo we stay in object mode during undo presses, so keep editmode disabled for re-used
-     * data-blocks too. */
-    ob->mode &= ~OB_MODE_EDIT;
+     * data-blocks too.
+     *
+     * Mixar per-tab undo (review 2026-10-02): not for another tab's object a partial restore
+     * keeps as it is. Its edit-mode data is kept with it (memfile_undo.cc), and clearing the
+     * flag dropped the user out of edit mode in a tab they never undid. */
+    const bool foreign_kept = BKE_undo_tabs_partial_active() &&
+                              BKE_undo_tabs_partial_tab() != UNDO_TAB_DOCUMENT &&
+                              BKE_undo_tabs_partial_decide(id_old->session_uid, true) !=
+                                  UndoPartialDecision::Restore;
+    if (!foreign_kept) {
+      ob->mode &= ~OB_MODE_EDIT;
+    }
   }
   if (GS(id_old->name) == ID_LI) {
     Library *lib = reinterpret_cast<Library *>(id_old);

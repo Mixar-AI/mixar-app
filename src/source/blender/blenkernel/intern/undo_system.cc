@@ -843,6 +843,7 @@ eUndoPushReturn BKE_undosys_step_push_with_type(UndoStack *ustack,
        * the tab is corrected to the mode step's (review of #1746: a second
        * snapshot here leaked the first). */
       us->mixar_tab_uid = us_prev->mixar_tab_uid;
+      us->mixar_author_uid = us_prev->mixar_author_uid;
       us_prev->skip = true;
 #ifdef WITH_GLOBAL_UNDO_CORRECT_ORDER
       ustack->step_active_memfile = us;
@@ -1239,6 +1240,27 @@ bool BKE_undosys_tab_has_redo(UndoStack *ustack, const uint32_t tab_uid)
   return undosys_tab_next_step(ustack, BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid) != nullptr;
 }
 
+bool BKE_undosys_tab_is_walked_back(UndoStack *ustack, const uint32_t tab_uid)
+{
+  const TabCursors *cursors = tab_cursors_get(ustack, false);
+  const UndoStep *cursor = cursors ? cursors->lookup_default(tab_uid, nullptr) : nullptr;
+  if (cursor == nullptr || ustack->step_active == nullptr) {
+    return false;
+  }
+  /* Behind the document: one of its own steps sits between its cursor and the
+   * document's active step. A cursor above the active step (a tab redone after
+   * Undo Whole Document) is ahead of it, not behind. */
+  for (const UndoStep *us = cursor->next; us != nullptr; us = us->next) {
+    if (!us->skip && us->mixar_tab_uid == tab_uid) {
+      return true;
+    }
+    if (us == ustack->step_active) {
+      break;
+    }
+  }
+  return false;
+}
+
 bool BKE_undosys_tab_has_undo(UndoStack *ustack, const uint32_t tab_uid)
 {
   const UndoStep *ref = BKE_undosys_tab_cursor(ustack, tab_uid);
@@ -1319,7 +1341,7 @@ static bool undosys_tab_step_decode(UndoStack *ustack,
     UNDO_NESTED_CHECK_END;
     return true;
   }
-  if (!BKE_undo_tabs_partial_begin(G_MAIN, tab_uid, target->mixar_owners, r_reason)) {
+  if (!BKE_undo_tabs_partial_begin(G_MAIN, ustack, tab_uid, target, r_reason)) {
     return false;
   }
   undosys_step_decode(C, G_MAIN, ustack, target, dir, is_final);
@@ -1334,7 +1356,8 @@ static bool undosys_tab_step_decode(UndoStack *ustack,
  * step (sculpt, paint, text) is decoded on the way to ``target``, so a refusal
  * never leaves that step half-undone (review of #1746).
  */
-static bool undosys_tab_step_check(bContext * /*C*/,
+static bool undosys_tab_step_check(UndoStack *ustack,
+                                   bContext * /*C*/,
                                    const uint32_t tab_uid,
                                    UndoStep *target,
                                    std::string *r_reason)
@@ -1352,7 +1375,7 @@ static bool undosys_tab_step_check(bContext * /*C*/,
     }
     return BKE_undo_tabs_ids_owned(G_MAIN, tab_uid, refs, r_reason);
   }
-  return BKE_undo_tabs_partial_check(G_MAIN, tab_uid, target->mixar_owners, r_reason);
+  return BKE_undo_tabs_partial_check(G_MAIN, ustack, tab_uid, target, r_reason);
 }
 
 static bool undosys_tab_step_apply(UndoStack *ustack,
@@ -1401,7 +1424,7 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
       /* The step beneath must be acceptable BEFORE the active step is
        * un-applied: a refusal after that would leave the active step
        * half-undone and the next press would apply its delta twice. */
-      if (!undosys_tab_step_check(C, tab_uid, us, r_reason)) {
+      if (!undosys_tab_step_check(ustack, C, tab_uid, us, r_reason)) {
         return false;
       }
       if (!undosys_tab_step_decode(ustack, C, tab_uid, ref, STEP_UNDO, false, r_reason)) {
@@ -1443,18 +1466,18 @@ bool BKE_undosys_tab_step_check(UndoStack *ustack,
       }
       return false;
     }
-    return undosys_tab_step_check(C, tab_uid, target, r_reason);
+    return undosys_tab_step_check(ustack, C, tab_uid, target, r_reason);
   }
   for (UndoStep *us = ref ? ref->prev : nullptr; us != nullptr; us = us->prev) {
     if (us->skip || us->mixar_tab_uid != tab_uid) {
       continue;
     }
     if ((ref->type->flags & UNDOTYPE_FLAG_DECODE_ACTIVE_STEP) &&
-        !undosys_tab_step_check(C, tab_uid, ref, r_reason))
+        !undosys_tab_step_check(ustack, C, tab_uid, ref, r_reason))
     {
       return false;
     }
-    return undosys_tab_step_check(C, tab_uid, us, r_reason);
+    return undosys_tab_step_check(ustack, C, tab_uid, us, r_reason);
   }
   if (r_reason) {
     *r_reason = "nothing to undo in this tab";

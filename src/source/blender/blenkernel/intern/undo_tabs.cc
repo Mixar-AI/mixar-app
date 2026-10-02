@@ -319,6 +319,7 @@ void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const Un
     tab = inherit_from->mixar_tab_uid;
   }
   us->mixar_tab_uid = tab;
+  us->mixar_author_uid = tab;
   if (us->mixar_owners != nullptr) {
     BKE_undo_owner_map_free(us->mixar_owners);
     us->mixar_owners = nullptr;

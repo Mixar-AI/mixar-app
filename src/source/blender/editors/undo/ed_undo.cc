@@ -1085,6 +1085,20 @@ static bool ed_undo_whole_document_poll(bContext *C)
     CTX_wm_operator_poll_msg_set(C, "Undo Whole Document is unavailable while an agent works");
     return false;
   }
+  /* A tab that walked back in its own history shows a state no step of the
+   * document holds: one document step back from the top would bring its undone
+   * work back (review 2026-10-02). Redo it, or edit in that tab, first. */
+  for (Scene &scene : CTX_data_main(C)->scenes) {
+    if (!BKE_undo_tab_scene_is_lane(&scene) &&
+        BKE_undosys_tab_is_walked_back(ustack, scene.id.session_uid))
+    {
+      static std::string msg;
+      msg = std::string("'") + (scene.id.name + 2) +
+            "' has undone steps of its own: redo them, or edit in that tab, first";
+      CTX_wm_operator_poll_msg_set(C, msg.c_str());
+      return false;
+    }
+  }
   return true;
 }
 
@@ -1150,7 +1164,8 @@ static wmOperatorStatus ed_undo_whole_document_invoke(bContext *C, wmOperator *o
     return OPERATOR_CANCELLED;
   }
   const std::string tabs = ed_undo_whole_document_tabs(C, target);
-  std::string message = std::string("Every tab goes back to \"") + target->name + "\".";
+  std::string message = std::string("Every tab goes back to how the document was at \"") +
+                        target->name + "\".";
   if (!tabs.empty()) {
     message += " Tabs that change: " + tabs + ".";
   }

@@ -8,6 +8,8 @@
  * Wrapper between `ED_undo.hh` and `BKE_undo_system.hh` API's.
  */
 
+#include "CLG_log.h"
+
 #include "BLI_sys_types.h"
 
 #include "BLI_ghash.h"
@@ -37,6 +39,8 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 
+#include "ED_mesh.hh"
+#include "ED_object.hh"
 #include "ED_render.hh"
 #include "ED_undo.hh"
 #include "ED_util.hh"
@@ -140,6 +144,44 @@ static int memfile_undosys_step_id_reused_cb(LibraryIDLinkCallbackData *cb_data)
   return IDWALK_RET_NOP;
 }
 
+/**
+ * Mixar per-tab undo (review 2026-10-02): a tab's partial restore frees the
+ * edit-mode data of that tab's objects only. #ED_editors_exit frees every
+ * object's, unsaved: an object another tab left in edit mode (the user modelled
+ * in tab A, switched to tab B without leaving edit mode, pressed Ctrl-Z there)
+ * lost every edit since the last memfile step and dropped out of edit mode. The
+ * walk keeps that tab's datablocks as they are, its edit-mode data with them.
+ */
+static CLG_LogRef LOG_TABS = {"undo.tabs"};
+
+static void memfile_undosys_editors_exit(Main *bmain)
+{
+  if (!BKE_undo_tabs_partial_active() || BKE_undo_tabs_partial_tab() == UNDO_TAB_DOCUMENT) {
+    ED_editors_exit(bmain, false);
+    return;
+  }
+  auto restored = [](const ID *id) {
+    return id != nullptr &&
+           BKE_undo_tabs_partial_decide(id->session_uid, true) == UndoPartialDecision::Restore;
+  };
+  int kept = 0;
+  for (Object &ob : bmain->objects) {
+    if (restored(&ob.id) || restored(static_cast<const ID *>(ob.data))) {
+      if (ed::object::editmode_free_ex(bmain, &ob)) {
+        DEG_id_tag_update(&ob.id, ID_RECALC_TRANSFORM | ID_RECALC_GEOMETRY);
+      }
+    }
+    else if (ob.mode & OB_MODE_EDIT) {
+      kept++;
+    }
+  }
+  ED_mesh_mirror_spatial_table_end(nullptr);
+  ED_mesh_mirror_topo_table_end(nullptr);
+  if (kept > 0) {
+    CLOG_DEBUG(&LOG_TABS, "%d object(s) of other tabs kept in edit mode", kept);
+  }
+}
+
 static void memfile_undosys_step_decode(
     bContext *C, Main *bmain, UndoStep *us_p, const eUndoStepDir undo_direction, bool /*is_final*/)
 {
@@ -182,7 +224,7 @@ static void memfile_undosys_step_decode(
     depsgraphs = BKE_scene_undo_depsgraphs_extract(bmain);
   }
 
-  ED_editors_exit(bmain, false);
+  memfile_undosys_editors_exit(bmain);
   /* Ensure there's no preview job running. Unfinished previews will be scheduled for regeneration
    * via #PRV_TAG_RESTART_RENDERING in BKE_previewimg_blend_read. */
   ED_preview_kill_jobs(CTX_wm_manager(C), bmain);
@@ -378,8 +420,16 @@ static void memfile_undosys_step_free(UndoStep *us_p)
   BKE_memfile_undo_free(us->data);
 }
 
+/* Mixar per-tab undo: the conflict check reads a step's chunks (BKE_undo_tabs.hh). */
+static const MemFile *memfile_undosys_step_memfile(const UndoStep *us_p)
+{
+  const MemFileUndoStep *us = reinterpret_cast<const MemFileUndoStep *>(us_p);
+  return (us->data != nullptr) ? &us->data->memfile : nullptr;
+}
+
 void ED_memfile_undosys_type(UndoType *ut)
 {
+  BKE_undo_tabs_memfile_getter_set(memfile_undosys_step_memfile);
   ut->name = "Global Undo";
   ut->poll = memfile_undosys_poll;
   ut->step_encode = memfile_undosys_step_encode;

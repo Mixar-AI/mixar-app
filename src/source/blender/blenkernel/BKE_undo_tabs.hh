@@ -35,6 +35,8 @@ struct wmWindowManager;
 
 namespace blender {
 
+struct MemFile;
+
 /** Tab id of a step pushed with no window (file load, internal pushes). */
 constexpr uint32_t UNDO_TAB_DOCUMENT = 0u;
 /** Owner value of an ID reachable from two or more tabs. */
@@ -146,24 +148,37 @@ enum class UndoPartialDecision : int8_t {
   Skip = 2,
 };
 
-/** Arm a partial restore of ``tab_uid`` from a step whose owner map is
- * ``step_owners`` (null, a step written with per-tab undo off, refuses). The
- * live map is built here from ``bmain``. Returns false, with their names in
- * ``r_reason``, when a LOCAL datablock this tab reaches is shared with another
- * tab in either map (a restore would change the other tab's), or when one
- * moved between tabs since the step: ownership fails closed. What two other
- * tabs share, a library-linked datablock, or a type memfile undo never
- * writes (a Brush) refuses nothing. */
+/** Arm a partial restore of ``tab_uid`` onto ``target`` (a memfile step of
+ * ``ustack``) whose owner map was written with it (null, a step written with
+ * per-tab undo off, refuses). The live map is built here from ``bmain``.
+ *
+ * A LOCAL datablock this tab reaches that another tab reaches too (now or at the
+ * step), or that moved between tabs since the step, is a CONFLICT: restoring it
+ * would change the other tab. A conflict is kept exactly as it is live when this
+ * tab did not change it between the step and the live document (its memfile
+ * chunks compared step by step, each change credited to the tab that pushed it:
+ * a world HDRI copied into a new tab, a paint library node group, a material
+ * another tab edits). It refuses, named in ``r_reason``, when this tab changed
+ * it (a restore would have to revert it under the other tab), when the change
+ * cannot be credited to a tab, or when it no longer exists. What two other tabs
+ * share, a library-linked datablock, or a type memfile undo never writes (a
+ * Brush) refuses nothing. Returns false without arming on a refusal. */
 bool BKE_undo_tabs_partial_begin(Main *bmain,
+                                 const UndoStack *ustack,
                                  uint32_t tab_uid,
-                                 const UndoOwnerMap *step_owners,
+                                 const UndoStep *target,
                                  std::string *r_reason);
 /** The validation #BKE_undo_tabs_partial_begin performs, without arming: false
  * (and the reason) when the restore would be refused. */
 bool BKE_undo_tabs_partial_check(Main *bmain,
+                                 const UndoStack *ustack,
                                  uint32_t tab_uid,
-                                 const UndoOwnerMap *step_owners,
+                                 const UndoStep *target,
                                  std::string *r_reason);
+/** The memfile of a memfile step (the step type is private to the editors):
+ * registered by the memfile undo type, read by the conflict check above. */
+using UndoTabsMemfileGetFn = const MemFile *(*)(const UndoStep *us);
+void BKE_undo_tabs_memfile_getter_set(UndoTabsMemfileGetFn fn);
 void BKE_undo_tabs_partial_end();
 /** M4: arm a WHOLE-document restore (Edit > Undo Whole Document). After per-tab
  * walks the live document is no longer the state of the stack's active step, so

@@ -5,7 +5,7 @@
 
 `undo_isolation_lab.py` (the entry point; the machinery is `undo_lab_core.py`, the probe
 sets `undo_lab_probes.py` for M0/M2/M3/M4 and `undo_lab_m5.py` for M5 with the review probes
-P17–P21) runs INSIDE a built Mixar bundle, headless:
+P17–P24) runs INSIDE a built Mixar bundle, headless:
 
 ```bash
 MIXAR_UNDO_LAB_EXPECT=document build/Dev/bin/Mixar.app/Contents/MacOS/Mixar \

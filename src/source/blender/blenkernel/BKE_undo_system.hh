@@ -103,6 +103,9 @@ struct UndoStep {
    * scene the window showed when this step was pushed, 0 = document; and, on
    * memfile steps under the flag, the owner map of every ID at that moment. */
   uint32_t mixar_tab_uid;
+  /** Mixar: the tab that pushed the step, never cleared (a dead redo branch
+   * loses its #mixar_tab_uid, not its author). Credits changes between steps. */
+  uint32_t mixar_author_uid;
   struct UndoOwnerMap *mixar_owners;
   /* M4: the tabs' cursors when this step was pushed (which walked-back state
    * of every tab this memfile holds); a whole-document walk to this step
@@ -350,6 +353,10 @@ bool BKE_undosys_tab_step_check(
 UndoStep *BKE_undosys_tab_cursor(UndoStack *ustack, uint32_t tab_uid);
 /** True while the tab's cursor is behind its newest step (a redo is available for it). */
 bool BKE_undosys_tab_has_redo(UndoStack *ustack, uint32_t tab_uid);
+/** Mixar: the tab walked back in its own history behind the document's active
+ * step (an own step sits between its cursor and the active step): one document
+ * step back from the active step would bring its undone work back. */
+bool BKE_undosys_tab_is_walked_back(UndoStack *ustack, uint32_t tab_uid);
 /** M5: the tab has an own step before its cursor to walk back to (false at
  * the reserve floor and for a tab with no steps yet). */
 bool BKE_undosys_tab_has_undo(UndoStack *ustack, uint32_t tab_uid);

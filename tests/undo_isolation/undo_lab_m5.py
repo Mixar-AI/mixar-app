@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """The per-tab undo lab, probe set M5: the lane poll, global datablocks, the
-kill switch, a closed tab, and the review probes P17–P21."""
+kill switch, a closed tab, and the review probes P17–P24."""
 
 from __future__ import annotations
 
@@ -204,17 +204,25 @@ def run_m5_probes() -> None:
                                                     "has:C/C_p17a": True, "changed:A": False,
                                                     "changed:B": False})
         press("redo")
+        # Review 2026-10-02: a shared datablock this tab did not change since the
+        # step is kept as it is, not refused (a new tab's world copy shares the
+        # HDRI image; one shared image used to stop undo in both tabs for good).
+        # Linking does not change the object's own data (memfile undo never
+        # writes the user count), so A's step back keeps A_p17 shared as it is.
         show("A")
-        probe("P17b undo in A, which shares the object: refused, nothing changes",
+        probe("P17b undo in A, which shares an object it did not change: allowed, B keeps it",
               lambda: press("undo"),
-              expect_document={}, expect_isolation={"undo_result": "CANCELLED", "has:A/A_p17": True,
+              expect_document={}, expect_isolation={"undo_result": "FINISHED", "has:A/A_p17": True,
                                                     "changed:B": False, "changed:C": False})
+        press("redo")
         show("B")
-        probe("P17c undo in B, which shares it too: refused, nothing changes",
+        probe("P17c undo in B, which shares it too: allowed, A untouched",
               lambda: press("undo"),
-              expect_document={}, expect_isolation={"undo_result": "CANCELLED", "has:A/A_p17": True,
+              expect_document={}, expect_isolation={"undo_result": "FINISHED", "has:A/A_p17": True,
                                                     "changed:A": False, "changed:C": False})
-        tab("B").collection.objects.unlink(tab("A").objects["A_p17"])
+        press("redo")
+        if tab("A").objects["A_p17"].name in tab("B").objects:
+            tab("B").collection.objects.unlink(tab("A").objects["A_p17"])
         show("A")
         push("A · unshares A_p17")
     # a brush on two tabs' tool settings: sculpt mode in both tabs puts the one
@@ -402,7 +410,10 @@ def run_m5_probes() -> None:
             tab("B").collection.objects.link(tab("A").objects["A_p17"])
             show("A")
             push("A · shares A_p17 again (p22)")
-            probe("P22a a refused per-tab undo (shared) runs no undo_post handler", lambda: press("undo"),
+            tab("A").objects["A_p17"].location.x += 1.0     # A changes the shared object
+            push("A · moves shared A_p17 (p22)")
+            probe("P22a a refused per-tab undo (shared, changed by A) runs no undo_post handler",
+                  lambda: press("undo"),
                   expect_document={}, expect_isolation={"undo_result": "CANCELLED"})
             check("M5 P22a no undo_post fired on the refusal", counts["undo"] == 0, f"{counts}")
             tab("B").collection.objects.unlink(tab("A").objects["A_p17"])
@@ -418,3 +429,62 @@ def run_m5_probes() -> None:
     finally:
         bpy.app.handlers.undo_post.remove(_p22_undo_post)
         bpy.app.handlers.redo_post.remove(_p22_redo_post)
+
+    # P23 (review 2026-10-02): a datablock two tabs share is kept as it is when
+    # the pressing tab did not change it since the step (the HDRI image a new
+    # tab's world copy shares with its source tab used to refuse undo in both
+    # tabs for good). Another tab's change to it is kept; this tab's own change
+    # to it still refuses (a restore would have to revert it under the other).
+    if "B" in TABS:
+        img = bpy.data.images.new("P23_hdri", 8, 8, float_buffer=True)
+
+        def _use_img(scene):
+            world = bpy.data.worlds.new(f"{scene.name}_p23_world")
+            world.use_nodes = True
+            world.node_tree.nodes.new("ShaderNodeTexEnvironment").image = img
+            scene.world = world
+        edit("A", "A · p23 world image", lambda: _use_img(tab("A")))
+        edit("B", "B · p23 world image", lambda: _use_img(tab("B")))
+        edit("A", "A · p23 cube", lambda: add_mesh(tab("A"), "A_p23", "cube", (0, 0, 70)))
+        h = history()
+        check("M5 P23 the image is shared, by name",
+              bool(h) and "IMP23_hdri" in h["steps"][0]["shared_names"], f"{h['steps'][0]['shared_names'] if h else None}")
+        show("A")
+        probe("P23a undo in A with an image A and B share, unchanged: allowed, image kept",
+              lambda: press("undo"),
+              expect_document={}, expect_isolation={"undo_result": "FINISHED", "has:A/A_p23": False,
+                                                    "changed:B": False, "changed:C": False})
+        check("M5 P23a B's world still uses the image", any(
+            getattr(n, "image", None) == img for n in tab("B").world.node_tree.nodes), "")
+        press("redo")
+        edit("B", "B · p23 image change", lambda: setattr(img, "alpha_mode", "CHANNEL_PACKED"))
+        show("A")
+        probe("P23b undo in A after B changed the shared image: allowed, B's change kept",
+              lambda: press("undo"),
+              expect_document={}, expect_isolation={"undo_result": "FINISHED", "has:A/A_p23": False,
+                                                    "changed:B": False})
+        check("M5 P23b the image keeps B's change", img.alpha_mode == "CHANNEL_PACKED", img.alpha_mode)
+        press("redo")
+        edit("A", "A · p23 image change", lambda: setattr(img, "alpha_mode", "STRAIGHT"))
+        show("A")
+        probe("P23c undo in A after A changed the shared image: refused, nothing changes",
+              lambda: press("undo"),
+              expect_document={}, expect_isolation={"undo_result": "CANCELLED", "has:A/A_p23": True,
+                                                    "changed:B": False})
+        check("M5 P23c the image keeps A's change", img.alpha_mode == "STRAIGHT", img.alpha_mode)
+        tab("B").world = None
+        push("B · p23 world dropped")
+
+    # P24 (review 2026-10-02): Undo Whole Document steps back from the top of the
+    # stack, so a tab that walked back would get its undone work back. Refused
+    # while any tab is walked back; allowed again once it is back at its top.
+    show("C")
+    edit("C", "C · p24 cube", lambda: add_mesh(tab("C"), "C_p24", "cube", (0, 0, 74)))
+    press("undo")
+    with _override_window():
+        walked_back = bpy.ops.ed.undo_whole_document.poll()
+    press("redo")
+    with _override_window():
+        at_top = bpy.ops.ed.undo_whole_document.poll()
+    check("M5 P24 Undo Whole Document refused while C is walked back, allowed at its top",
+          walked_back is False and at_top is True, f"walked_back={walked_back} at_top={at_top}")
