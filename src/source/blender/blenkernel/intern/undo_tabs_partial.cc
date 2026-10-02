@@ -110,9 +110,9 @@ static int64_t chunk_id_offset(const MemFileChunk *chunk, const ID *id)
   return -1;
 }
 
-/** Same bytes, but for the ID header's ``recalc_up_to_undo_push``: an undo write
- * stamps the depsgraph tags the datablock collected since the previous push
- * (linking an object tags it), which is no change to its data. Identical
+/** Same bytes, but for the ID header's depsgraph tags: an undo write stamps the
+ * tags the datablock collected since the previous push (linking an object tags
+ * it, drawing an image leaves a pending recalc), which is no change to its data. Identical
  * chunks share their buffer (#BLO_memfile_merge hands a freed step's buffers
  * to the next one), the common case. */
 static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
@@ -123,6 +123,9 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
     return a == b;
   }
   if (a->size() != b->size()) {
+    if (id != nullptr) {
+      CLOG_DEBUG(&LOG, "%s changed: %d chunks vs %d", id->name, int(a->size()), int(b->size()));
+    }
     return false;
   }
   for (const int64_t i : a->index_range()) {
@@ -131,6 +134,9 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
       continue;
     }
     if (ca->size != cb->size) {
+      if (id != nullptr) {
+        CLOG_DEBUG(&LOG, "%s changed: chunk %d is %zu bytes vs %zu", id->name, int(i), ca->size, cb->size);
+      }
       return false;
     }
     int64_t skip_from = -1;
@@ -139,9 +145,14 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
       if (header < 0 || header != chunk_id_offset(cb, id)) {
         return false;
       }
-      skip_from = header + int64_t(offsetof(ID, recalc_up_to_undo_push));
+      skip_from = header + int64_t(offsetof(ID, recalc));
     }
-    const int64_t skip_to = skip_from + int64_t(sizeof(ID::recalc_up_to_undo_push));
+    /* ``recalc``, ``recalc_up_to_undo_push`` and ``recalc_after_undo_push``: depsgraph
+     * tags, written as they stand at the push (an image drawn in the viewport carries
+     * a pending ``recalc``), never a change of the data. */
+    const int64_t skip_to = skip_from + int64_t(offsetof(ID, recalc_after_undo_push) +
+                                                sizeof(ID::recalc_after_undo_push) -
+                                                offsetof(ID, recalc));
     if (skip_from < 0) {
       if (memcmp(ca->buf, cb->buf, ca->size) != 0) {
         return false;
@@ -151,6 +162,12 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
     if (memcmp(ca->buf, cb->buf, size_t(skip_from)) != 0 ||
         memcmp(ca->buf + skip_to, cb->buf + skip_to, ca->size - size_t(skip_to)) != 0)
     {
+      for (size_t at = 0; at < ca->size; at++) {
+        if (ca->buf[at] != cb->buf[at] && !(int64_t(at) >= skip_from && int64_t(at) < skip_to)) {
+          CLOG_DEBUG(&LOG, "%s changed: chunk %d differs at byte %zu of %zu", id ? id->name : "?", int(i), at, ca->size);
+          break;
+        }
+      }
       return false;
     }
   }
