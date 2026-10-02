@@ -54,7 +54,7 @@ def discover(instance_id=None):
         except (OSError, ValueError, http.client.HTTPException):
             continue
     if not candidates:
-        raise RuntimeError("Open Mixar, sign in, then use Help > Connect Claude / Codex to enable MCP.")
+        raise RuntimeError("Open Mixar, sign in, then use Help > Connect AI Apps (MCP) to enable MCP.")
     if len(candidates) != 1:
         ids = ", ".join(item["instance_id"] for item in candidates)
         raise RuntimeError("Several Mixar windows are available; use --instance with one of: " + ids)
@@ -62,26 +62,12 @@ def discover(instance_id=None):
 
 
 class StdioBridge:
-    def __init__(self, instance_id=None, session_id=None, qa_port=None):
+    def __init__(self, instance_id=None, session_id=None):
         self.instance_id = instance_id
         self.session_id = session_id
         self.record = None
         self.protocol_version = None
         self.lock = threading.Lock()
-        self.qa = None
-        if qa_port is not None:
-            spec = importlib.util.spec_from_file_location("mixar_mcp_qa_adapter",
-                Path(__file__).parent / "modules/mcp_bridge/core/qa_adapter.py")
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            self.qa = module.QAAdapter(qa_port, self.health)
-
-    def health(self):
-        status, body = local_request(self.record, "GET", "/health", timeout=2)
-        result = json.loads(body)
-        if status != 200 or result.get("instance_id") != self.record.get("instance_id"):
-            raise RuntimeError("The selected Mixar instance is no longer available")
-        return result
 
     def respond(self, payload):
         with self.lock:
@@ -99,13 +85,6 @@ class StdioBridge:
             if request.get("method") == "tools/call":
                 meta = params.get("_meta", {})
                 call_id = str(uuid.UUID(meta["mixar/request-id"])) if meta.get("mixar/request-id") else str(uuid.uuid4())
-            if (self.qa is not None and request.get("method") == "tools/call"
-                    and self.qa.handles(params.get("name"))):
-                if "id" not in request:
-                    return
-                result = self.qa.call(params["name"], params.get("arguments") or {}, call_id)
-                self.respond({"jsonrpc": "2.0", "id": request["id"], "result": result})
-                return
             headers = {}
             if self.protocol_version:
                 headers["MCP-Protocol-Version"] = self.protocol_version
@@ -125,9 +104,6 @@ class StdioBridge:
                     pass
                 raise RuntimeError(message)
             response = json.loads(body)
-            if (self.qa is not None and request.get("method") == "tools/list"
-                    and "result" in response and not response["result"].get("nextCursor")):
-                response["result"].setdefault("tools", []).extend(self.qa.tools())
             if request.get("method") == "initialize" and "result" in response:
                 self.protocol_version = response["result"].get("protocolVersion")
             self.respond(response)
@@ -158,7 +134,6 @@ def main():
     parser.add_argument("--config", choices=("claude", "codex"))
     parser.add_argument("--instance", help="Pin one running Mixar instance")
     parser.add_argument("--session", help="Pin a scene session UUID")
-    parser.add_argument("--qa-port", type=int, help="Opt in to semantic QA tools on this QA instance's port")
     parser.add_argument("--legacy-proxy", action="store_true", help=argparse.SUPPRESS)
     options = parser.parse_args()
     if options.config:
@@ -166,9 +141,7 @@ def main():
         return
     if options.session:
         uuid.UUID(options.session)
-    if options.qa_port is not None and not 1 <= options.qa_port <= 65535:
-        parser.error("--qa-port must be between 1 and 65535")
-    if not options.legacy_proxy and options.qa_port is None:
+    if not options.legacy_proxy:
         import asyncio
         from types import ModuleType
         # Blender normally synthesizes these namespaces during bootstrap.
@@ -188,7 +161,7 @@ def main():
         from mixar.modules.mcp_bridge.core.stdio_server import run
         asyncio.run(run(options.instance, options.session))
         return
-    bridge = StdioBridge(options.instance, options.session, options.qa_port)
+    bridge = StdioBridge(options.instance, options.session)
     pending = threading.BoundedSemaphore(MAX_PENDING_REQUESTS)
     with ThreadPoolExecutor(max_workers=8, thread_name_prefix="mixar-mcp") as pool:
         while True:

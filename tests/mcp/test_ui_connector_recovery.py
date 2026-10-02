@@ -16,7 +16,7 @@ def test_closed_instance_does_not_rebind_to_another_project(monkeypatch):
     assert client.attach() == first
     monkeypatch.setattr(connector, "instances", lambda: [second])
     monkeypatch.setattr(connector, "request", lambda *a, **k: (_ for _ in ()).throw(OSError("closed")))
-    with pytest.raises(RuntimeError, match="unavailable"):
+    with pytest.raises(RuntimeError, match="was closed"):
         client.attach()
     assert client.instance == "first"
 

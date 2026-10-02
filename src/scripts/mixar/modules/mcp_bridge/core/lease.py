@@ -36,6 +36,13 @@ _state_generations = {}
 _transport_generation = 0
 
 
+#: A connection's scene vanishes when another document is opened (File > New or
+#: Open, a reopened project); nothing picks the new one silently.
+DOCUMENT_CHANGED = ("Another Mixar document was opened, so this connection's scene is gone. Bind the scene "
+                    "now shown with mixar_ui_context(session=<its session_id>), or list tabs with mixar_scenes "
+                    "and pick one with mixar_scene_switch, then inspect before editing")
+
+
 def _runtime():
     import bpy
     from mixar.modules.space_mixie_chat.core.session import get_session_manager
@@ -83,7 +90,7 @@ def _receipt(operation):
 def begin_operation(params):
     """Acquire an idle scene. Repeating an active operation never extends it."""
     if not _enabled():
-        return _failure("mcp_disabled", "Enable Connect Claude / Codex in Mixar first")
+        return _failure("mcp_disabled", "Enable MCP in Mixar first (Help > Connect AI Apps (MCP))")
     try:
         operation_id = _uuid(params.get("operation_id"))
         session_id = _uuid(params["session_id"]) if params.get("session_id") else ""
@@ -106,12 +113,16 @@ def begin_operation(params):
     else:
         current = getattr(bpy.context, "scene", None)
         matches = [current] if current is not None and current in scenes else []
+    if session_id and not matches:
+        return _failure("document_changed", DOCUMENT_CHANGED)
     if len(matches) != 1 or is_lane_scene(matches[0]):
         return _failure("scene_unavailable", "Choose one existing, unambiguous scene")
     scene = matches[0]
     existing_session = session.get_session_id(scene)
     if existing_session and sum(session.get_session_id(s) == existing_session for s in scenes) != 1:
         return _failure("scene_unavailable", "Scene session identity is duplicated")
+    from mixar.modules.space_mixie_chat.core.scene_identity import adopt_scene
+    adopt_scene(scene)  # Made by a script moments ago: ready, not OFFLINE.
     scene_pointer = _pointer(scene)
     with _lock:
         if operation_id in _retired:
@@ -121,6 +132,8 @@ def begin_operation(params):
             if existing.scene_pointer != scene_pointer:
                 return _failure("operation_conflict", "Operation belongs to another scene")
             return _receipt(existing)
+        if session.get_state(scene) == SessionState.OFFLINE:
+            return _failure("scene_offline", "Mixar is not connected to its server; wait for it to reconnect")
         if session.get_state(scene) != SessionState.IDLE or session.run_open(scene):
             return _failure("scene_busy", "Wait for the current Mixar task to finish")
         if session.get_session_id(scene) in _operations:
@@ -178,6 +191,12 @@ def authorize_script(session_id, agent_ctx):
                 or context_session != operation.session_id):
             return _failure("mcp_operation_expired", "MCP operation is missing, expired or belongs to another scene")
     return None
+
+
+def any_active_operation():
+    """True while any MCP scene operation still holds its lease."""
+    with _lock:
+        return any(operation.deadline > time.monotonic() for operation in _operations.values())
 
 
 def has_active_operation(session_id):

@@ -1,13 +1,17 @@
 <!-- SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-# Connect Claude or Codex to Mixar
+# Connect an AI app to Mixar
 
 1. Open Mixar and sign in.
-2. Choose **Help → Connect Claude / Codex** and copy the setup for your client.
-   Copying setup enables MCP.
-3. Add that setup to Claude Code, Claude Desktop or Codex.
-4. Restart the client's MCP connection. It can start your installed Mixar when needed.
+2. Choose **Help → Connect AI Apps (MCP)** and pick your app. Claude Code and
+   Codex have **Add to …**, which sets everything up; for other apps, **Copy**
+   the shown setup and paste it where the dialog says (**Open Config File**
+   opens that file). **Copy MCP Config** copies the standard `mcpServers` JSON.
+3. **Setup Guide** opens the full per-app instructions.
+   Tick **Let AI apps control Mixar's interface** only if the assistant should
+   also see and click Mixar's interface; scene tools work without it.
+4. Restart the app's MCP connection. It can start your installed Mixar when needed.
 
 Ask the assistant to inspect the scene, make a change, and verify it with a
 viewport image. Tools cover scene and geometry inspection, Blender scripting,
@@ -26,18 +30,17 @@ The setup uses a stable per-user launcher backed by Mixar's bundled Python.
 It requires no separate Python packages or copied account token. **Disable** in
 the same dialog revokes access. If multiple opted-in Mixar processes are running,
 the assistant selects one using `mixar_ui_context`. The connection pins its scene;
-after deliberately changing scenes, inspect context and bind the new session.
+`mixar_scene_new` creates a tab and `mixar_scene_switch` moves to one, and every
+later tool follows. Ask the assistant to create scenes with these, not a script.
+`mixar_projects` and `mixar_project_open` reopen a recent project; the assistant
+must ask you before saving or discarding unsaved changes.
 Physical keyboard/button/wheel input interrupts queued assistant input.
 
-This client requires an MCP-enabled Mixar backend. A 404 means that backend
-deployment is still needed. Local desktop/CLI clients are supported; hosted web
-connectors requiring OAuth are a separate integration.
+Local desktop/CLI clients are supported; hosted web connectors requiring OAuth
+are a separate integration.
 
 If a call times out, inspect the scene before issuing another edit. Reuse the
 reported call UUID to retrieve its recorded outcome instead of repeating an
 operation with a fresh ID. Expired or ambiguous calls never automatically rerun.
 Use `mixar_ui_call_status` for native UI actions and `mixar_call_status` for
 backend tools. Delivery of input is separate from verifying the intended result.
-
-The native UI integration is under development. Full platform, sculpt/paint,
-physical takeover and installation-update acceptance are still required before release.

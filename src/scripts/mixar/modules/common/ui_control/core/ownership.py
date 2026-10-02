@@ -15,7 +15,13 @@ _unsettled = False
 
 
 def _has_modal():
-    return any(w.mixar_ui_modal_count() > _modal_baseline.get(w.as_pointer(), 0)
+    """A modal handler beyond those present when input began (ours, by implication).
+
+    A window first seen after that (a document load replaces windows) takes its
+    current count as its baseline: Mixar's own persistent modals restart there,
+    and counting them from zero left control "unsettled" forever.
+    """
+    return any(w.mixar_ui_modal_count() > _modal_baseline.setdefault(w.as_pointer(), w.mixar_ui_modal_count())
                for w in bpy.context.window_manager.windows)
 
 
@@ -38,6 +44,10 @@ def available():
     if bpy.context.window_manager.mixar_window_resizing:
         raise UIError("ui_busy", "Wait for window resize to finish")
     scene = observe.main_window().scene
+    from mixar.modules.space_mixie_chat.core.scene_identity import adopt_scene
+    adopt_scene(scene)  # A scene a script just made starts OFFLINE until adopted.
+    if session.get_state(scene) == SessionState.OFFLINE:
+        raise UIError("scene_offline", "Mixar is not connected to its server; wait for it to reconnect")
     if session.run_open(scene) or session.get_state(scene) != SessionState.IDLE:
         raise UIError("scene_busy", "Wait for the active scene operation to finish")
 
@@ -95,6 +105,13 @@ def release(owner=None, *, require_settled=False):
         _unsettled = _has_modal()
         bpy.context.window_manager.mixar_ui_end(owner=_owner)
         _owner, _generation = None, None
+
+
+def reset_after_load():
+    """A document load ends every modal of the old document; nothing is ours now."""
+    global _owner, _generation, _unsettled, _modal_baseline
+    _owner, _generation, _unsettled = None, None, False
+    _modal_baseline = {w.as_pointer(): w.mixar_ui_modal_count() for w in bpy.context.window_manager.windows}
 
 
 def forget():

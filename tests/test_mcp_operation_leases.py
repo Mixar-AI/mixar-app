@@ -85,11 +85,33 @@ def test_overlapping_calls_refused_only_on_the_owned_scene(env):
 
 
 @pytest.mark.parametrize("state,open_run", [("BUSY", False), ("AWAITING_INPUT", False),
-    ("MODIFYING", False), ("OFFLINE", False), ("CONNECTING", False), ("IDLE", True)])
+    ("MODIFYING", False), ("CONNECTING", False), ("IDLE", True)])
 def test_chat_and_worker_runs_cannot_be_taken_over(env, state, open_run):
     env.first.mixie_chat_state, env.first.mixie_run_open = state, open_run
     assert lease.begin_operation(params(env.first))["error_type"] == "scene_busy"
     assert env.first.mixie_chat_state == state
+
+
+def _connected(monkeypatch, live):
+    from mixar.modules.space_mixie_chat.core import scene_identity
+    monkeypatch.setattr(scene_identity, "_connection_live", lambda: live)
+    monkeypatch.setattr(scene_identity, "slog", lambda *a, **k: None)
+
+
+def test_offline_scene_while_disconnected_is_reported_offline(env, monkeypatch):
+    _connected(monkeypatch, False)
+    env.first.mixie_chat_state = "OFFLINE"
+    assert lease.begin_operation(params(env.first))["error_type"] == "scene_offline"
+    assert env.first.mixie_chat_state == "OFFLINE"
+
+
+def test_scene_a_script_just_created_is_adopted_while_connected(env, monkeypatch):
+    """bpy.data.scenes.new leaves mixie_chat_state at its OFFLINE default; while
+    connected, the next MCP call adopts it instead of refusing it."""
+    _connected(monkeypatch, True)
+    env.first.mixie_chat_state = "OFFLINE"
+    assert lease.begin_operation(params(env.first))["success"]
+    assert env.first.mixie_chat_state == "BUSY"
 
 
 def test_opt_in_and_unambiguous_scene_required(env, monkeypatch):

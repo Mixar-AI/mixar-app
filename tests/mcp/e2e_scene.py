@@ -117,7 +117,7 @@ print('Created ' + obj.name)
 async def run(options, qa, verdict):
     await asyncio.to_thread(enable_in_ui, qa, options.out)
     server = StdioServerParameters(
-        command=options.python, args=[str(options.launcher), "--qa-port", str(options.qa_port)],
+        command=options.python, args=[str(options.launcher)],
         env={"MIXAR_MCP_DISCOVERY_DIR": str(options.discovery_dir)},
     )
     async with Client(server, mode="legacy", read_timeout_seconds=240) as client:
@@ -128,9 +128,8 @@ async def run(options, qa, verdict):
             cursor = page.next_cursor
             if not cursor:
                 break
-        required = {"execute_bpy_script", "render_viewport", "mixar_credit_balance",
-                    "mixar_qa_status", "mixar_qa_find", "mixar_qa_snap",
-                    "mixar_qa_click", "mixar_qa_press"}
+        required = {"execute_bpy_script", "render_viewport", "mixar_credit_balance"}
+        assert not any(name.startswith("mixar_qa_") for name in tools), "QA tools are never served over MCP"
         assert required <= set(tools), tools
         verdict["tool_count"] = len(tools)
 
@@ -197,34 +196,6 @@ async def run(options, qa, verdict):
             suffix = ".png" if block.mime_type == "image/png" else ".jpg"
             (options.out / (f"mcp-viewport-{i}" + suffix)).write_bytes(base64.b64decode(block.data, validate=True))
         await asyncio.to_thread(qa.cmd, "snap", path=str(options.out / "desktop-result.png"))
-        qa_status = await call("mixar_qa_status")
-        verdict["qa_status"] = qa_status.structured_content["result"]
-        found = await call("mixar_qa_find", {"query": {"text": "Help", "but_type": "Pulldown"}, "limit": 10})
-        assert found.structured_content["result"]["total"] >= 1
-        click_id = str(uuid4())
-        click_args = {"target": {"text": "Help", "but_type": "Pulldown"}}
-        await call("mixar_qa_click", click_args, click_id)
-        menu_query = {"query": {"op": "MIXAR_OT_connect_ai", "popup": True}, "limit": 10}
-        menu = await call("mixar_qa_find", menu_query)
-        assert menu.structured_content["result"]["total"] == 1
-        duplicate_click = await call("mixar_qa_click", click_args, click_id)
-        assert duplicate_click.structured_content["usage"]["replayed"] is True
-        menu_after_replay = await call("mixar_qa_find", menu_query)
-        assert menu_after_replay.structured_content["result"]["total"] == 1
-        menu_snap = await call("mixar_qa_snap")
-        menu_images = [block for block in menu_snap.content if block.type == "image"]
-        assert len(menu_images) == 1 and menu_images[0].mime_type == "image/png"
-        (options.out / "mcp-qa-help-menu.png").write_bytes(base64.b64decode(menu_images[0].data, validate=True))
-        await call("mixar_qa_press", {"key": "ESC"})
-        closed_menu = await call("mixar_qa_find", menu_query)
-        assert closed_menu.structured_content["result"]["total"] == 0
-        snap = await call("mixar_qa_snap")
-        qa_images = [block for block in snap.content if block.type == "image"]
-        assert len(qa_images) == 1 and qa_images[0].mime_type == "image/png"
-        (options.out / "mcp-qa-desktop.png").write_bytes(base64.b64decode(qa_images[0].data, validate=True))
-        verdict["qa_tools_verified"] = ["mixar_qa_status", "mixar_qa_find", "mixar_qa_snap",
-                                        "mixar_qa_click", "mixar_qa_press"]
-        verdict["qa_action_replay_verified"] = True
         verdict["image_count"] = len(images)
         verdict["credits_used"] = 2
 

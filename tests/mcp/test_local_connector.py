@@ -164,9 +164,24 @@ def test_stdio_unknown_outcome_does_not_retry(relay, monkeypatch):
 def test_setup_json_and_toml_escape_install_paths(monkeypatch):
     from mixar.modules.mcp_bridge.core.setup import connection_config
     monkeypatch.setattr(sys, "platform", "win32")
-    config = json.loads(connection_config("CLAUDE_DESKTOP", 'C:\\Program Files\\Mixar'))
+    config = json.loads(connection_config("JSON", 'C:\\Program Files\\Mixar'))
     assert "Mixar" in config["mcpServers"]["mixar"]["command"]
     assert "token" not in json.dumps(config).lower()
     import tomllib
     parsed = tomllib.loads(connection_config("CODEX", 'C:\\Program Files\\Mixar'))
     assert parsed["mcp_servers"]["mixar"]["tool_timeout_sec"] == 610
+
+
+def test_the_dialog_copies_one_standard_config_and_links_the_guide(monkeypatch):
+    """One mcpServers JSON for every app; per-app formats live in the website guide."""
+    from mixar.modules.mcp_bridge.constants import SETUP_GUIDE_URL
+    from mixar.modules.mcp_bridge.core.setup import connection_config
+    monkeypatch.setattr(sys, "platform", "darwin")
+    root = "/Applications/Mixar App.app/Contents/Resources/5.2"
+    server = json.loads(connection_config("JSON", root))["mcpServers"]["mixar"]
+    assert server["command"].startswith(root) and set(server) == {"command", "args"}
+    assert SETUP_GUIDE_URL == "https://www.mixar.app/docs#connect-ai-apps"
+    from pathlib import Path
+    dialog = (Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators/connect.py").read_text()
+    assert 'text="Copy MCP Config"' in dialog and 'text="Setup Guide"' in dialog
+    assert "default='JSON'" in dialog

@@ -74,20 +74,41 @@ def launch(options):
         "mcp_enabled": False, "ui_mode": "ai",
     }))
     config.chmod(0o600)
-    env = dict(os.environ, MIXAR_QA="1", MIXAR_USER_RESOURCES=str(profile),
-               MIXAR_QA_OUT=str(directory), MIXAR_QA_PORT=str(options.qa_port),
+    marker = {"app": str(app), "harness": str(harness), "qa_port": options.qa_port,
+              "normal_input": bool(options.normal_input)}
+    pid = start(directory, marker, mode="w")
+    print(json.dumps({"pid": pid, "profile": str(profile),
+                      "qa_port": options.qa_port, "backend_url": fixture["backend_url"]}))
+
+
+def start(directory, marker, blend=None, mode="a"):
+    """Start the app on the fixture's profile; the environment (for example a
+    temporary CLAUDE_CONFIG_DIR or CODEX_HOME) is inherited."""
+    env = dict(os.environ, MIXAR_QA="1", MIXAR_USER_RESOURCES=str(directory / "profile"),
+               MIXAR_QA_OUT=str(directory), MIXAR_QA_PORT=str(marker["qa_port"]),
                MIXAR_MCP_DISCOVERY_DIR=str(directory / "discovery"),
                MIXAR_OPERATION_HISTORY_DIR=str(directory / "ophistory"))
-    with (directory / "app.log").open("w") as log:
+    with (directory / "app.log").open(mode) as log:
         process = subprocess.Popen([
-            str(app), "-p", "60", "60", "1680", "1050",
-            *([] if options.normal_input else ["--enable-event-simulate"]),
-            "--python", str(harness / "driver/qa_server.py"),
+            marker["app"], "-p", "60", "60", "1680", "1050", *([str(blend)] if blend else []),
+            *([] if marker["normal_input"] else ["--enable-event-simulate"]),
+            "--python", str(Path(marker["harness"]) / "driver/qa_server.py"),
         ], env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
-    marker = {"pid": process.pid, "fingerprint": fingerprint(process.pid), "qa_port": options.qa_port}
-    (directory / "app-process.json").write_text(json.dumps(marker))
-    print(json.dumps({"pid": process.pid, "profile": str(profile),
-                      "qa_port": options.qa_port, "backend_url": fixture["backend_url"]}))
+    (directory / "app-process.json").write_text(json.dumps(
+        {**marker, "pid": process.pid, "fingerprint": fingerprint(process.pid)}))
+    return process.pid
+
+
+def relaunch(directory, blend=None):
+    """Quit this fixture's app and start it again on the SAME profile, as a user
+    reopening Mixar (optionally on a saved file). A new process is a new instance."""
+    marker = json.loads((directory / "app-process.json").read_text())
+    stop(directory)
+    with socket.socket() as probe:
+        if probe.connect_ex(("127.0.0.1", marker["qa_port"])) == 0:
+            raise RuntimeError("QA port still belongs to a running process")
+    pid = start(directory, {key: marker[key] for key in ("app", "harness", "qa_port", "normal_input")}, blend)
+    print(json.dumps({"pid": pid, "file": str(blend) if blend else None}))
 
 
 def main():
@@ -98,9 +119,13 @@ def main():
     parser.add_argument("--qa-port", type=int, default=4797)
     parser.add_argument("--normal-input", action="store_true", help="Test production native input without QA event simulation")
     parser.add_argument("--stop", action="store_true")
+    parser.add_argument("--relaunch", nargs="?", const="", metavar="FILE",
+                        help="Restart this fixture's app on its profile, optionally opening FILE")
     options = parser.parse_args()
     if options.stop:
         stop(options.fixture)
+    elif options.relaunch is not None:
+        relaunch(options.fixture.resolve(), Path(options.relaunch).resolve() if options.relaunch else None)
     elif not options.app or not options.qa_harness:
         parser.error("--app and --qa-harness are required for launch")
     elif not 1 <= options.qa_port <= 65535:

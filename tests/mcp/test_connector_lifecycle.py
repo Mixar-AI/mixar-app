@@ -7,7 +7,6 @@ import importlib.util
 import json
 from pathlib import Path
 import socket
-import sys
 import threading
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -118,67 +117,11 @@ def test_stdio_queue_release_when_executor_is_closed():
     assert pending.acquire(blocking=False)
 
 
-def test_optional_qa_health_requires_a_real_qa_launch(monkeypatch):
-    monkeypatch.setattr(runtime, "bpy", SimpleNamespace(app=SimpleNamespace(use_event_simulate=True)))
-    thread = SimpleNamespace(name="MixarQAServer", is_alive=lambda: True)
-    monkeypatch.setattr(runtime.threading, "enumerate", lambda: [thread])
-    monkeypatch.setitem(sys.modules, "qa_driver", SimpleNamespace())
-    monkeypatch.delenv("MIXAR_QA", raising=False)
-    assert runtime._qa_status() == {"qa_enabled": False, "qa_port": None}
-    monkeypatch.setenv("MIXAR_QA", "1")
-    monkeypatch.setenv("MIXAR_QA_PORT", "4888")
-    assert runtime._qa_status() == {"qa_enabled": True, "qa_port": 4888}
-    monkeypatch.setenv("MIXAR_QA_PORT", "65536")
-    assert runtime._qa_status()["qa_enabled"] is False
-    monkeypatch.setenv("MIXAR_QA_PORT", "4888")
-    monkeypatch.setattr(thread, "is_alive", lambda: False)
-    assert runtime._qa_status()["qa_enabled"] is False
-    monkeypatch.setattr(thread, "is_alive", lambda: True)
-    monkeypatch.delitem(sys.modules, "qa_driver")
-    assert runtime._qa_status()["qa_enabled"] is False
-
-
-def test_optional_qa_tools_only_append_to_last_backend_page(monkeypatch):
-    bridge = launcher.StdioBridge()
-    bridge.record = {"port": 1, "token": "local", "instance_id": "desktop"}
-    bridge.qa = SimpleNamespace(tools=lambda: [{"name": "mixar_qa_status"}])
-    replies = []
-    monkeypatch.setattr(bridge, "respond", replies.append)
-    pages = [dict(tools=[{"name": "mesh"}], nextCursor="next"), dict(tools=[{"name": "render"}])]
-    def request(*args):
-        return 200, json.dumps({"jsonrpc": "2.0", "id": 1, "result": pages.pop(0)}).encode()
-    monkeypatch.setattr(launcher, "local_request", request)
-    bridge.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
-    bridge.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
-    assert replies[0]["result"]["tools"] == [{"name": "mesh"}]
-    assert replies[1]["result"]["tools"] == [{"name": "render"}, {"name": "mixar_qa_status"}]
-
-
-def test_optional_qa_call_routes_to_explicit_adapter_without_backend_dispatch(monkeypatch):
-    bridge = launcher.StdioBridge()
-    bridge.record = {"port": 1, "token": "local", "instance_id": "desktop"}
-    invoked, replies = [], []
-    bridge.qa = SimpleNamespace(handles=lambda name: name == "mixar_qa_status",
-        call=lambda *args: invoked.append(args) or {"content": [], "isError": False})
-    monkeypatch.setattr(bridge, "respond", replies.append)
-    backend = MagicMock(side_effect=AssertionError("QA must not execute backend tools"))
-    monkeypatch.setattr(launcher, "local_request", backend)
-    call_id = str(uuid.uuid4())
-    request = {"jsonrpc": "2.0", "id": 7, "method": "tools/call",
-               "params": {"name": "mixar_qa_status", "arguments": {},
-                          "_meta": {"mixar/request-id": call_id}}}
-    bridge.handle(request)
-    assert invoked == [("mixar_qa_status", {}, call_id)]
-    assert replies[0]["result"] == {"content": [], "isError": False}
-    request.pop("id")
-    bridge.handle(request)
-    assert len(invoked) == 1
-
-
-def test_optional_qa_health_rejects_a_different_instance(monkeypatch):
-    bridge = launcher.StdioBridge()
-    bridge.record = {"port": 1, "token": "local", "instance_id": "desktop"}
-    monkeypatch.setattr(launcher, "local_request", lambda *a, **kw: (200,
-        b'{"instance_id":"other","qa_enabled":true,"qa_port":4777}'))
-    with pytest.raises(RuntimeError, match="no longer available"):
-        bridge.health()
+def test_the_launcher_never_serves_qa_harness_tools():
+    """The developer QA adapter (--qa-port, mixar_qa_*) was removed; the harness
+    drives its own app directly and AI apps get only product tools."""
+    root = Path(__file__).parents[2] / "src/scripts/mixar"
+    assert not (root / "modules/mcp_bridge/core/qa_adapter.py").exists()
+    source = (root / "mcp.py").read_text()
+    assert "--qa-port" not in source and "QAAdapter" not in source
+    assert "qa_port" not in (root / "modules/mcp_bridge/core/relay.py").read_text()

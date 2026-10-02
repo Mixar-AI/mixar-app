@@ -79,3 +79,30 @@ def test_only_the_finished_scene_lock_is_a_settling_transition(native):
     assert ownership.settling()
     win.modal_operators = [SimpleNamespace(bl_idname="TRANSFORM_OT_translate")]
     assert not ownership.settling()
+
+
+def test_a_document_load_never_leaves_control_stuck(native):
+    """File > New clicked through the UI: the menu was still open when the load
+    released control, and the new document's windows restart Mixar's own modals.
+    Counting those from zero kept scene tools refused ("modal_active") forever."""
+    ownership.begin("controller-a")
+    native.modals = 2  # The File menu the agent opened.
+    ownership.release()  # load_pre
+    assert ownership.active()
+    fresh = SimpleNamespace(as_pointer=lambda: 99, mixar_ui_modal_count=lambda: 3)
+    ownership.bpy.context.window_manager.windows = [fresh]  # The loaded document's window.
+    assert not ownership.active()
+    ownership.release("controller-a", require_settled=True)
+
+
+def test_load_post_resets_ownership_to_the_new_document(native):
+    ownership.begin("controller-a")
+    native.modals = 2
+    ownership.reset_after_load()
+    assert not ownership.active()
+    ownership.release("controller-a", require_settled=True)
+    native.modals = 3  # A modal started after the load counts again.
+    ownership.begin("controller-a")
+    native.modals = 4
+    with pytest.raises(UIError, match="current UI operation"):
+        ownership.release("controller-a", require_settled=True)

@@ -3,8 +3,6 @@
 """Main-thread snapshots for the opt-in local MCP connector."""
 
 import threading
-import os
-import sys
 import uuid
 
 import bpy
@@ -29,21 +27,9 @@ def enabled():
     return get_config().get("mcp_enabled") is True
 
 
-def _qa_status():
-    """Expose the optional harness only in an actual, explicitly launched QA app."""
-    if (os.environ.get("MIXAR_QA") != "1" or "qa_driver" not in sys.modules
-            or not (getattr(bpy.app, "use_event_simulate", False) is True
-                    or os.environ.get("MIXAR_QA_MIXED") == "1")
-            or not any(thread.name == "MixarQAServer" and thread.is_alive()
-                       for thread in threading.enumerate())):
-        return {"qa_enabled": False, "qa_port": None}
-    try:
-        port = int(os.environ.get("MIXAR_QA_PORT", "4777"))
-        if not 1 <= port <= 65535:
-            raise ValueError("Invalid QA port")
-    except ValueError:
-        return {"qa_enabled": False, "qa_port": None}
-    return {"qa_enabled": True, "qa_port": port}
+def ui_control_enabled():
+    """Opt-in: AI apps may observe and drive Mixar's interface (mixar_ui_observe/act/wait)."""
+    return enabled() and get_config().get("mcp_ui_control") is True
 
 
 def _tick():
@@ -59,11 +45,11 @@ def _tick():
         if enabled() and scene and not getattr(scene, "mixie_session_id", ""):
             scene.mixie_session_id = str(uuid.uuid4())
         current = {
-            **_qa_status(),
             "instance_id": get_session_manager().instance_id,
             "session_id": getattr(scene, "mixie_session_id", ""),
             "scene_name": getattr(scene, "name", ""),
             "connected": manager.is_connected,
+            "ui_control": ui_control_enabled(),
             "signed_in": bool(getattr(bpy.context.window_manager, "mixie_chat_is_logged_in", False))
                          and not bool(getattr(bpy.context.window_manager, "mixie_chat_session_expired", False)),
             "backend_url": get_server_url(),

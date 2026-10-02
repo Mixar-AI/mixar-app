@@ -104,8 +104,8 @@ class RelayHandler(BaseHTTPRequestHandler):
             return
         context = self.server.snapshot()
         self.reply(200, {key: context.get(key) for key in
-                         ("instance_id", "session_id", "scene_name", "connected", "qa_enabled", "qa_port",
-                          "ui_contract", "ui_eligible")})
+                         ("instance_id", "session_id", "scene_name", "connected",
+                          "ui_contract", "ui_eligible", "ui_control")})
 
     def do_POST(self):
         if not self.authorized():
