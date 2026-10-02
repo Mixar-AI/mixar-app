@@ -303,6 +303,8 @@ def op_edit(uid):
             scene.view_layers[0].objects.active = ob
             ob.select_set(True)
             bpy.ops.object.mode_set(mode="EDIT")
+    if not ob.data.is_editmode:
+        return None                       # flagged EDIT without edit data (a whole-document walk)
     bm = bmesh.from_edit_mesh(ob.data)
     dz = rng.uniform(-1, 1)
     for v in bm.verts:
@@ -562,10 +564,33 @@ def press(uid: int, what: str) -> None:
         s_objs = set().union(*[shared[u][0] for u in shared]) if shared else set()
         s_data = set().union(*[shared[u][1] for u in shared]) if shared else set()
         s_mats = set().union(*[shared[u][2] for u in shared]) if shared else set()
+        # ...what it shares after the press (a datablock it gave away and took back
+        # is kept as the other tabs have it), and what it shared at the step.
+        mine_after = after.get(uid, {}).get("objects", {})
+        for other, fp in after.items():
+            if other == uid:
+                continue
+            theirs = fp.get("objects", {})
+            s_objs |= {r["name"] for r in mine_after.values()} & {r["name"] for r in theirs.values()}
+            s_data |= {r["data"] for r in mine_after.values()} & {r["data"] for r in theirs.values()}
+            s_mats |= {m[0] for r in mine_after.values() for m in r["materials"] if m} & \
+                {m[0] for r in theirs.values() for m in r["materials"] if m}
+        at_step = SNAP.get(step, {})
+        mine = at_step.get(uid, {}).get("objects", {})
+        for other, fp in at_step.items():
+            if other == uid:
+                continue
+            theirs = fp.get("objects", {})
+            s_objs |= {r["name"] for r in mine.values()} & {r["name"] for r in theirs.values()}
+            s_data |= {r["data"] for r in mine.values()} & {r["data"] for r in theirs.values()}
+            s_mats |= {m[0] for r in mine.values() for m in r["materials"] if m} & \
+                {m[0] for r in theirs.values() for m in r["materials"] if m}
         changed = d.get("objects", {}).get("changed", {})
         for k in list(changed):
             want_o, got = changed[k]
             was = before.get(uid, {}).get("objects", {}).get(k)
+            if was is None:   # not in this tab before the press (given away, taken back)
+                was = next((fp["objects"][k] for fp in before.values() if k in fp.get("objects", {})), None)
             if was is None:
                 continue
             obj_shared = got.get("name") in s_objs or was.get("name") in s_objs

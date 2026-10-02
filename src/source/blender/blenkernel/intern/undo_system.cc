@@ -1021,6 +1021,36 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
   const eUndoStepDir undo_dir = BKE_undosys_step_calc_direction(ustack, us_target, us_reference);
   BLI_assert(undo_dir != STEP_INVALID);
 
+  /* Mixar per-tab undo (the invariant test, 2026-10-02): a document-wide walk
+   * never stops on a mode step (edit mesh, sculpt, paint) of a tab the window
+   * does not show. Its decode resolves the objects through the window's view
+   * layer, where that tab's objects are not, so the walk landed with the tab's
+   * mesh one edit short of the step. Such a step is passed over like a skip
+   * step, for this walk only, and the walk lands on the step beyond it. */
+  Vector<UndoStep *> mixar_passed_over;
+  if (use_skip && BKE_undo_tabs_enabled() && !BKE_undo_tabs_partial_active()) {
+    wmWindow *win = C ? CTX_wm_window(C) : nullptr;
+    const uint32_t shown = (win && win->scene) ? BKE_undo_tab_uid_for_scene(G_MAIN, win->scene) :
+                                                 UNDO_TAB_DOCUMENT;
+    for (UndoStep *it = us_target; it != nullptr; it = (undo_dir == -1) ? it->prev : it->next) {
+      const bool hidden_mode_step = it->type->step_foreach_ID_ref != nullptr &&
+                                    it->mixar_tab_uid != UNDO_TAB_DOCUMENT &&
+                                    it->mixar_tab_uid != shown;
+      if (!it->skip && !hidden_mode_step) {
+        break;
+      }
+      if (!it->skip) {
+        it->skip = true;
+        mixar_passed_over.append(it);
+      }
+    }
+  }
+  BLI_SCOPED_DEFER([&]() {
+    for (UndoStep *it : mixar_passed_over) {
+      it->skip = false;
+    }
+  });
+
   /* This will be the active step once the undo process is complete.
    *
    * In case we do skip 'skipped' steps, the final active step may be several steps backward from
