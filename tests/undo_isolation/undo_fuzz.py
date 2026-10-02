@@ -486,6 +486,7 @@ def press(uid: int, what: str) -> None:
     """One press in tab ``uid``, checked against the two guarantees."""
     show(uid)
     before = fingerprint_all()
+    mat_colour_before = {m.name: tuple(round(c, 4) for c in m.diffuse_color) for m in bpy.data.materials}
     shared = {u: shared_with(uid, u) for u in before if u != uid}
     stack_before = active_step()
     entry = {"press": what, "tab": scene_of(uid).name}
@@ -585,36 +586,47 @@ def press(uid: int, what: str) -> None:
             s_data |= {r["data"] for r in mine.values()} & {r["data"] for r in theirs.values()}
             s_mats |= {m[0] for r in mine.values() for m in r["materials"] if m} & \
                 {m[0] for r in theirs.values() for m in r["materials"] if m}
+        # Each material's colour just before the press, whoever uses it (objects in
+        # no scene included).
+        colour_before = mat_colour_before
         changed = d.get("objects", {}).get("changed", {})
         for k in list(changed):
             want_o, got = changed[k]
             was = before.get(uid, {}).get("objects", {}).get(k)
             if was is None:   # not in this tab before the press (given away, taken back)
                 was = next((fp["objects"][k] for fp in before.values() if k in fp.get("objects", {})), None)
-            if was is None:
-                continue
-            obj_shared = got.get("name") in s_objs or was.get("name") in s_objs
+            obj_shared = got.get("name") in s_objs or (was is not None and was.get("name") in s_objs)
             ok = True
             for f in want_o:
                 if want_o.get(f) == got.get(f):
                     continue
-                if f in ("matrix", "type"):
-                    held = obj_shared
+                if f == "materials":
+                    # The slots are the tab's (restored); a shared material's colour is
+                    # either the step's or as it stood before the press (kept).
+                    ws, gs = want_o["materials"], got["materials"]
+                    ok = len(ws) == len(gs) and all(
+                        (w is None and g is None) or (w and g and w[0] == g[0] and (
+                            w[1] == g[1] or (g[0] in s_mats and colour_before.get(g[0]) == g[1])))
+                        for w, g in zip(ws, gs))
+                elif f in ("matrix", "type"):
+                    ok = obj_shared and was is not None and got.get(f) == was.get(f)
                 elif f in ("mesh", "data_uid"):
-                    held = obj_shared or was.get("data") in s_data
-                elif f == "materials":
-                    held = obj_shared or any(m and m[0] in s_mats for m in (was.get("materials") or []))
+                    ok = (obj_shared or (was is not None and was.get("data") in s_data)) and \
+                        was is not None and got.get(f) == was.get(f)
                 else:
-                    held = False
-                if not (held and got.get(f) == was.get(f)):
                     ok = False
+                if not ok:
                     break
             if ok:
                 del changed[k]
         if "objects" in d and not (d["objects"]["added"] or d["objects"]["removed"] or changed):
             del d["objects"]
         if d:
-            raise Violation(f"{what} in {entry['tab']} landed on {step!r} but the tab differs from its push: {d}")
+            was = {k: next((fp["objects"][k] for fp in before.values() if k in fp.get("objects", {})), None)
+                   for k in d.get("objects", {}).get("changed", {})}
+            raise Violation(f"{what} in {entry['tab']} landed on {step!r} but the tab differs from its push: {d}"
+                            f" || before the press: {was} || shared: "
+                            f"{ {u: [sorted(x) for x in shared[u]] for u in shared} }")
 
 
 if os.environ.get("MIXAR_UNDO_FUZZ_NO_CROSS"):

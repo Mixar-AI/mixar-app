@@ -373,10 +373,10 @@ static bool partial_validate(Main *bmain,
   }
   /* Datablocks that changed hands since the step:
    * - one another tab reaches now that this tab reached at the step but no longer
-   *   does (this tab gave it away): KEPT exactly as it is. Taking back the
-   *   unlink re-links it into this tab's collection; restoring the datablock
-   *   itself would revert the other tabs' changes to it (the invariant test,
-   *   2026-10-02: it was restored when two other tabs shared it now);
+   *   does (this tab gave it away): decided like a shared one (the author rule):
+   *   taking back the unlink re-links it into this tab's collection, and the
+   *   datablock itself is kept unless only this tab changed it since (the
+   *   invariant test, 2026-10-02: it was restored over two other tabs' changes);
    * - one this tab reaches now that only other tabs reached at the step (it came
    *   from another tab): refused. Restoring this tab would drop it from the only
    *   tab that has it, the other having given it away. */
@@ -402,9 +402,11 @@ static bool partial_validate(Main *bmain,
       const Vector<uint32_t> now = tabs_of(live, id->session_uid);
       const bool tab_then = then.contains(tab_uid), tab_now = now.contains(tab_uid);
       if (tab_then && !tab_now && !now.is_empty()) {
-        if (r_keep != nullptr) {
-          r_keep->add(id->session_uid);
-        }
+        /* Given away: the author rule below decides (kept when this tab did not
+         * change it since, restored when only this tab did: a tab that recoloured
+         * a material and deleted its object, whose orphan mesh another tab's image
+         * now claims, took the recolour back on its undo). */
+        note_conflict(conflicts, id->session_uid, std::string(id->name + 2));
       }
       else if (tab_now && !tab_then && !then.is_empty()) {
         if (moved_count++ < 8) {
