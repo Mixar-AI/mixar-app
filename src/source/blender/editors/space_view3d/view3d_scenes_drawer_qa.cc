@@ -20,7 +20,11 @@ void drawer_qa_targets(const wmWindow *win,
                        const ARegion *region,
                        std::vector<MixarQATarget> &r_targets)
 {
-  if (area->spacetype != SPACE_VIEW3D || region->regiontype != VIEW3D_SCENES_DRAWER_REGION_TYPE) {
+  /* A View3D that is not the window's main one keeps the runtime of the last
+   * time it hosted the drawer; its stale cards are not on screen. */
+  if (area->spacetype != SPACE_VIEW3D || region->regiontype != VIEW3D_SCENES_DRAWER_REGION_TYPE ||
+      (region->flag & RGN_FLAG_POLL_FAILED))
+  {
     return;
   }
   const ScenesDrawerRuntime *runtime = static_cast<const ScenesDrawerRuntime *>(region->regiondata);

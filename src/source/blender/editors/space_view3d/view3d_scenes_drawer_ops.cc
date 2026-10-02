@@ -5,7 +5,7 @@
 /** \file
  * \ingroup spview3d
  *
- * Operators and keymap for the Zen Mode sliding Scenes drawer: the slide
+ * Operators and keymap for the sliding Scenes drawer: the slide
  * (update / reveal / toggle / set) and the resize sash on the panel's right
  * edge. The card operators (`click`, `hover`) are in
  * `view3d_scenes_drawer_ops_cards.cc`; registration and the keymap for all
@@ -49,10 +49,9 @@ namespace blender {
 
 static void drawer_tag_redraw(bContext *C)
 {
-  ScrArea *area = CTX_wm_area(C);
-  if (area == nullptr || area->spacetype != SPACE_VIEW3D) {
-    area = view3d_scenes_drawer_area_find(C);
-  }
+  /* The host, not the context area: Ctrl+` over a secondary viewport slides
+   * the main one's drawer. */
+  ScrArea *area = view3d_scenes_drawer_area_find(C);
   if (area == nullptr) {
     return;
   }

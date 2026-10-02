@@ -50,14 +50,13 @@ RESULTS_NS = "mixie_agent_preview"
 # asked for, up to FINAL_MAX_EDGE_PX.
 MAX_EDGE_PX = 768
 FINAL_MAX_EDGE_PX = 1920
-# Big enough for a FINAL_MAX_EDGE_PX frame: a noisy 1920x1080 Cycles render is
-# 4.5-5 MB of PNG even at PNG_COMPRESSION, so the old 768-px-era 4 MB bound
-# failed every full-size final AFTER paying for the whole render. Still far
-# under the agent WebSocket's 16 MiB frame limit once base64 adds ~37%.
+# Bound encoded results independently of dimensions: noisy frames can be much
+# larger than typical previews. Base64 still fits under the 16 MiB WS limit.
 MAX_PNG_BYTES = 8_000_000
-# Blender's default (15) barely compresses; a render saved at 100 is the same
-# pixels ~35% smaller, and the save is off the critical path either way.
-PNG_COMPRESSION = 100
+# save_render runs on the UI thread after the native render job finishes.
+# Use Blender's fast default: maximum compression can stall a large preview
+# for seconds. Compression changes file size, never the decoded pixels.
+PNG_COMPRESSION = 15
 MAX_RESULTS = 4
 LOST_AFTER_S = 2.0
 CYCLES_SAMPLE_CAP = 32
