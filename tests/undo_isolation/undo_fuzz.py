@@ -136,6 +136,7 @@ def fingerprint(scene) -> dict:
             "name": o.name,
             "type": o.type,
             "data": getattr(o.data, "name", None),
+            "data_uid": getattr(o.data, "session_uid", None),
             "mesh": _mesh_hash(o) if o.type == "MESH" and o.data else None,
             "matrix": [round(x, 4) for row in o.matrix_basis for x in row],
             "materials": [(s.material.name, tuple(round(c, 4) for c in s.material.diffuse_color))
@@ -158,7 +159,7 @@ def _unnamed(fp: dict | None) -> dict | None:
     come back under a new suffix when another tab took its name since."""
     if fp is None:
         return None
-    return {**fp, "objects": {k: {kk: vv for kk, vv in v.items() if kk != "name"}
+    return {**fp, "objects": {k: {kk: vv for kk, vv in v.items() if kk not in ("name", "data")}
                               for k, v in fp["objects"].items()}}
 
 
@@ -554,17 +555,36 @@ def press(uid: int, what: str) -> None:
     want = SNAP.get(step, {}).get(uid) if step else None
     if want is not None:
         d = diff(_unnamed(want), _unnamed(after.get(uid)))
-        # The author rule: an object the tab shares with another tab is restored
-        # (only this tab changed it) or kept exactly as it was (another tab did);
-        # either is right, anything else is not.
-        shared_names = set().union(*[shared[u][0] for u in shared]) if shared else set()
+        # The author rule, field by field: what comes from a datablock the tab
+        # shares with another tab (the object, its mesh, its materials) is either
+        # restored (only this tab changed it) or kept exactly as it was before the
+        # press (another tab did); either is right, anything else is not.
+        s_objs = set().union(*[shared[u][0] for u in shared]) if shared else set()
+        s_data = set().union(*[shared[u][1] for u in shared]) if shared else set()
+        s_mats = set().union(*[shared[u][2] for u in shared]) if shared else set()
         changed = d.get("objects", {}).get("changed", {})
         for k in list(changed):
-            got = after[uid]["objects"].get(k)
+            want_o, got = changed[k]
             was = before.get(uid, {}).get("objects", {}).get(k)
-            if got and got["name"] in shared_names and was is not None and \
-                    {kk: vv for kk, vv in got.items() if kk != "name"} == \
-                    {kk: vv for kk, vv in was.items() if kk != "name"}:
+            if was is None:
+                continue
+            obj_shared = got.get("name") in s_objs or was.get("name") in s_objs
+            ok = True
+            for f in want_o:
+                if want_o.get(f) == got.get(f):
+                    continue
+                if f in ("matrix", "type"):
+                    held = obj_shared
+                elif f in ("mesh", "data_uid"):
+                    held = obj_shared or was.get("data") in s_data
+                elif f == "materials":
+                    held = obj_shared or any(m and m[0] in s_mats for m in (was.get("materials") or []))
+                else:
+                    held = False
+                if not (held and got.get(f) == was.get(f)):
+                    ok = False
+                    break
+            if ok:
                 del changed[k]
         if "objects" in d and not (d["objects"]["added"] or d["objects"]["removed"] or changed):
             del d["objects"]

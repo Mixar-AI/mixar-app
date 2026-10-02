@@ -371,26 +371,42 @@ static bool partial_validate(Main *bmain,
       }
     }
   }
-  /* A datablock this tab owned at the step and another single tab owns now, or
-   * the reverse, moved between them: restoring this tab would leave it in
-   * neither tab (or pull it back from the other). Refused, as before. */
+  /* Datablocks that changed hands since the step:
+   * - one another tab reaches now that this tab reached at the step but no longer
+   *   does (this tab gave it away): KEPT exactly as it is. Taking back the
+   *   unlink re-links it into this tab's collection; restoring the datablock
+   *   itself would revert the other tabs' changes to it (the invariant test,
+   *   2026-10-02: it was restored when two other tabs shared it now);
+   * - one this tab reaches now that only other tabs reached at the step (it came
+   *   from another tab): refused. Restoring this tab would drop it from the only
+   *   tab that has it, the other having given it away. */
   Map<uint32_t, ID *> live_ids;
   std::string moved;
   int moved_count = 0;
   {
-    auto is_other = [&](const uint32_t owner) {
-      return !ELEM(owner, tab_uid, UNDO_TAB_DOCUMENT, UNDO_TAB_LANE);
+    auto tabs_of = [&](const UndoOwnerMap *map, const uint32_t uid) -> Vector<uint32_t> {
+      const uint32_t owner = BKE_undo_owner_map_lookup(map, uid);
+      if (owner == UNDO_TAB_SHARED) {
+        const Vector<uint32_t> *tabs = map->shared_by.lookup_ptr(uid);
+        return tabs ? *tabs : Vector<uint32_t>();
+      }
+      if (ELEM(owner, UNDO_TAB_DOCUMENT, UNDO_TAB_LANE)) {
+        return {};
+      }
+      return {owner};
     };
     ID *id = nullptr;
     FOREACH_MAIN_ID_BEGIN (bmain, id) {
       live_ids.add(id->session_uid, id);
-      const uint32_t at_step = BKE_undo_owner_map_lookup(step_owners, id->session_uid);
-      const uint32_t now = BKE_undo_owner_map_lookup(live, id->session_uid);
-      /* A worker lane is not another tab: what the tab's lane built and merged
-       * into the tab moved within the tab. */
-      const bool single_then = is_other(at_step) && at_step != UNDO_TAB_SHARED;
-      const bool single_now = is_other(now) && now != UNDO_TAB_SHARED;
-      if ((at_step == tab_uid && single_now) || (now == tab_uid && single_then)) {
+      const Vector<uint32_t> then = tabs_of(step_owners, id->session_uid);
+      const Vector<uint32_t> now = tabs_of(live, id->session_uid);
+      const bool tab_then = then.contains(tab_uid), tab_now = now.contains(tab_uid);
+      if (tab_then && !tab_now && !now.is_empty()) {
+        if (r_keep != nullptr) {
+          r_keep->add(id->session_uid);
+        }
+      }
+      else if (tab_now && !tab_then && !then.is_empty()) {
         if (moved_count++ < 8) {
           moved += (moved.empty() ? "" : ", ") + std::string(id->name + 2);
         }
