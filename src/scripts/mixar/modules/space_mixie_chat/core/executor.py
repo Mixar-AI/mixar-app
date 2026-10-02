@@ -2,12 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""
-Safe script executor for running generated bpy scripts.
-
-This module provides functionality to safely execute Python/Blender
-scripts, capture output, detect changes, and handle errors.
-"""
+"""Execute generated bpy scripts, capture output and detect scene changes."""
 
 from mixar.config.logging_config import get_logger
 import ast
@@ -51,6 +46,7 @@ from .executor_handlers import HandlerCleanupMixin
 from .executor_result import ExecutionResult  # noqa: F401 — re-exported
 from .sandbox_validator import validate_script_ast
 from .sandbox_transform import snapshot_collection_iterations
+from .sandbox_mesh import guard_from_mesh, guard_mesh_conversions
 from .executor_scene_state import SceneStateMixin
 
 
@@ -424,6 +420,8 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             # trip). See sandbox_transform.py for the full rationale.
             tree = ast.parse(script, filename="<agent_script>", mode="exec")
             tree = snapshot_collection_iterations(tree)
+            tree = guard_mesh_conversions(tree)
+            exec_namespace["_mixar_guard_from_mesh"] = guard_from_mesh
 
             # Execute the script in the sandboxed namespace
             compiled = compile(tree, "<agent_script>", "exec")  # noqa: S102
