@@ -30,7 +30,12 @@ recolour, edit-mode vertex edits (left in edit mode while another tab is shown, 
 "Send selection to" (copies sharing their images), new tab (world copy sharing the
 HDRI image), rename, and Engine Mode's stock paths: Scene > New Linked / Full Copy
 and Object > Link to Scene. Knobs: MIXAR_UNDO_FUZZ_TABS (3), MIXAR_UNDO_FUZZ_UNDO_STEPS
-(200; 24 exercises the per-tab step limit), MIXAR_UNDO_FUZZ_OUT.
+(200; 24 exercises the per-tab step limit), MIXAR_UNDO_FUZZ_OUT, MIXAR_UNDO_FUZZ_LIVENESS=1 (a
+tab that received a link must be able to take it back at once: refusals there are
+usability gaps, not corruption, so the check is opt-in), MIXAR_UNDO_FUZZ_NO_CROSS /
+MIXAR_UNDO_FUZZ_NO_WHOLE (triage), MIXAR_UNDO_FUZZ_PAUSE_AT + MIXAR_UNDO_FUZZ_DEBUG_PY
+(run a probe script against the live state before action N). progress.txt names
+the action a crash died in.
 """
 
 from __future__ import annotations
@@ -354,7 +359,23 @@ def op_share(uid):
     if ob.name in scene_of(other).objects:
         return None
     scene_of(other).collection.objects.link(ob)
-    return push(uid, "share")
+    step = push(uid, "share")
+    if os.environ.get("MIXAR_UNDO_FUZZ_LIVENESS") and rng.random() < 0.3 and \
+            not _in_edit_mode(scene_of(other)):
+        # Liveness: the link is the receiving tab's step (attribution by reach), and
+        # that tab can always take its own link back (the Engine Mode GUI pass found
+        # it refused as "moved"). Then redo it, so the sequence goes on unchanged.
+        name_ = ob.name
+        show(other)
+        with _override_window():
+            r = bpy.ops.ed.undo() if bpy.ops.ed.undo.poll() else {"POLL"}
+        if "FINISHED" not in r or name_ in scene_of(other).objects:
+            raise Violation(f"the receiving tab could not take its own link of {name_} back: {r}")
+        with _override_window():
+            bpy.ops.ed.redo()
+        if name_ not in scene_of(other).objects:
+            raise Violation(f"the receiving tab's redo did not bring the link of {name_} back")
+    return step
 
 
 def op_unshare(uid):
@@ -547,9 +568,19 @@ def press(uid: int, what: str) -> None:
         if bad:
             raise Violation(f"whole-document undo to {step!r} does not match its push: {bad}")
         return
-    # 1. isolation: every other tab untouched
+    # 1. isolation: every other tab untouched, except datablocks the pressing tab
+    #    shares with it now or had at a step of its own (a datablock it gave away is
+    #    restored by its own undo when only it changed it: the author rule).
+    ever = {"objs": set(), "data": set(), "mats": set()}
+    for snap in SNAP.values():
+        for r in snap.get(uid, {}).get("objects", {}).values():
+            ever["objs"].add(r["name"])
+            ever["data"].add(r["data"])
+            ever["mats"].update(m[0] for m in r["materials"] if m)
+    widened = {u: (shared[u][0] | ever["objs"], shared[u][1] | ever["data"], shared[u][2] | ever["mats"])
+               for u in shared}
     bad = {u: d for u in before if u != uid
-           for d in [isolation_diff(before[u], after.get(u), shared[u])] if d}
+           for d in [isolation_diff(before[u], after.get(u), widened[u])] if d}
     if bad:
         raise Violation(f"{what} in {entry['tab']} changed other tabs: {bad}")
     # 2. restore: the tab is as it was at its cursor step
@@ -601,9 +632,15 @@ def press(uid: int, what: str) -> None:
                 if want_o.get(f) == got.get(f):
                     continue
                 if f == "materials":
-                    # The slots are the tab's (restored); a shared material's colour is
-                    # either the step's or as it stood before the press (kept).
+                    # The slots are the mesh's: kept as they were when the mesh (or the
+                    # object) is shared and another tab changed them; otherwise
+                    # restored, with a shared material's colour either the step's or
+                    # as it stood before the press (kept).
                     ws, gs = want_o["materials"], got["materials"]
+                    data_shared = obj_shared or (was is not None and was.get("data") in s_data) or \
+                        got.get("data") in s_data
+                    if data_shared and was is not None and gs == was.get("materials"):
+                        continue
                     ok = len(ws) == len(gs) and all(
                         (w is None and g is None) or (w and g and w[0] == g[0] and (
                             w[1] == g[1] or (g[0] in s_mats and colour_before.get(g[0]) == g[1])))
@@ -689,14 +726,23 @@ def main() -> int:
                      globals())
                 return 3
             uid = rng.choice(live_tabs())
+            if TRACE:
+                # Live progress: a crash leaves no trace.json, this names the action.
+                with open(OUT / "progress.txt", "a") as fh:
+                    fh.write(json.dumps(TRACE[-1], default=str) + "\n")
             if rng.random() < 0.55:
                 fn = pick(OPS)
+                with open(OUT / "progress.txt", "a") as fh:
+                    fh.write(f"next op {fn.__name__} in {scene_of(uid).name}\n")
                 TRACE.append({"op": fn.__name__, "tab": scene_of(uid).name})
                 show(uid)
                 fn(uid)
                 STATS["ops"] += 1
             else:
-                press(uid, pick(PRESSES))
+                what = pick(PRESSES)
+                with open(OUT / "progress.txt", "a") as fh:
+                    fh.write(f"next press {what} in {scene_of(uid).name}\n")
+                press(uid, what)
         log(f"CLEAN {json.dumps(STATS)}")
         code = 0
     except Violation as v:

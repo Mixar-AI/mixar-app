@@ -2996,6 +2996,92 @@ static void read_undo_partial_keep_foreign_leftovers(FileData *fd)
   }
 }
 
+/**
+ * Mixar per-tab undo (the invariant test, 2026-10-02, ASAN): a datablock a partial
+ * restore keeps holds its live pointers. One of them could still reach a datablock
+ * left in the old Main, which is freed with it: a kept mesh of another tab pointing
+ * at a material the walked tab's restore did not read back (heap-use-after-free in
+ * the user-count recount). Every kept datablock's pointers are checked: one aimed
+ * at a datablock re-read at a new address is pointed at that copy, one aimed at a
+ * datablock nothing read back is rescued into the new Main as it is. A kept
+ * datablock never points at freed memory, whatever the ownership rules decided.
+ */
+static void read_undo_partial_rescue_kept_references(FileData *fd)
+{
+  Main *new_bmain = fd->bmain;
+  Main *old_bmain = fd->old_bmain;
+  Set<ID *> in_new;
+  Vector<ID *> queue;
+  {
+    ID *id;
+    FOREACH_MAIN_ID_BEGIN (new_bmain, id) {
+      in_new.add(id);
+      if (id->tag & ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED) {
+        queue.append(id);
+      }
+    }
+    FOREACH_MAIN_ID_END;
+  }
+  struct Rescue {
+    FileData *fd;
+    Main *new_bmain;
+    Main *old_bmain;
+    Set<ID *> *in_new;
+    Vector<ID *> *queue;
+    int remapped = 0;
+    int rescued = 0;
+  } data{fd, new_bmain, old_bmain, &in_new, &queue};
+  for (int64_t i = 0; i < queue.size(); i++) {
+    BKE_library_foreach_ID_link(
+        new_bmain,
+        queue[i],
+        [](LibraryIDLinkCallbackData *cb_data) -> int {
+          Rescue *r = static_cast<Rescue *>(cb_data->user_data);
+          ID *p = *cb_data->id_pointer;
+          if (p == nullptr || ID_IS_LINKED(p) ||
+              (cb_data->cb_flag & (IDWALK_CB_EMBEDDED | IDWALK_CB_EMBEDDED_NOT_OWNING)) ||
+              r->in_new->contains(p))
+          {
+            return IDWALK_RET_NOP;
+          }
+          ID *copy = static_cast<ID *>(BKE_main_idmap_lookup_uid(r->fd->new_idmap_uid, p->session_uid));
+          if (copy != nullptr && copy != p) {
+            *cb_data->id_pointer = copy;
+            r->remapped++;
+            return IDWALK_RET_NOP;
+          }
+          ListBaseT<ID> *old_lb = which_libbase(r->old_bmain, GS(p->name));
+          if (old_lb == nullptr || BLI_findindex(old_lb, p) == -1) {
+            return IDWALK_RET_NOP;
+          }
+          ListBaseT<ID> *new_lb = which_libbase(r->new_bmain, GS(p->name));
+          BLI_remlink(old_lb, p);
+          BLI_addtail(new_lb, p);
+          id_sort_by_name(new_lb, p, nullptr);
+          p->tag |= ID_TAG_UNDO_OLD_ID_REUSED_UNCHANGED;
+          p->newid = nullptr;
+          p->orig_id = nullptr;
+          BKE_main_idmap_insert_id(r->fd->new_idmap_uid, p);
+          if (r->new_bmain->id_map != nullptr) {
+            BKE_main_idmap_insert_id(r->new_bmain->id_map, p);
+          }
+          r->in_new->add(p);
+          r->queue->append(p);
+          r->rescued++;
+          return IDWALK_RET_NOP;
+        },
+        &data,
+        IDWALK_NOP);
+  }
+  if (data.remapped || data.rescued) {
+    CLOG_INFO(&LOG_UNDO,
+              "UNDO(tab): kept datablocks' pointers: %d pointed at the re-read copy, %d datablock(s) "
+              "rescued from the old Main",
+              data.remapped,
+              data.rescued);
+  }
+}
+
 static void read_undo_reuse_noundo_local_ids(FileData *fd)
 {
   Main *new_bmain = fd->bmain;
@@ -3385,7 +3471,10 @@ static void read_libblock_undo_restore_identical(
                               BKE_undo_tabs_partial_tab() != UNDO_TAB_DOCUMENT &&
                               BKE_undo_tabs_partial_decide(id_old->session_uid, true) !=
                                   UndoPartialDecision::Restore;
-    if (!foreign_kept) {
+    /* ...and only while it still has its edit-mode data: its data may be the walked
+     * tab's (restored, the edit data freed), and an object flagged EDIT with no edit
+     * data crashed the next edit-mode undo push (the invariant test, 2026-10-02). */
+    if (!foreign_kept || !BKE_object_is_in_editmode(ob)) {
       ob->mode &= ~OB_MODE_EDIT;
     }
   }
@@ -4527,6 +4616,7 @@ BlendFileData *blo_read_file_internal(FileData *fd, const char *filepath)
 
   if (is_undo && BKE_undo_tabs_partial_active()) {
     read_undo_partial_keep_foreign_leftovers(fd);
+    read_undo_partial_rescue_kept_references(fd);
   }
   if (is_undo) {
     /* Move remaining libraries containing 'no undo' IDs from old to new Main. */

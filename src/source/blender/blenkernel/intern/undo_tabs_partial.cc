@@ -29,6 +29,7 @@
 #include "BLO_undofile.hh"
 
 #include "DNA_ID.h"
+#include "DNA_mesh_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_windowmanager_types.h"
@@ -144,32 +145,86 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
       }
       return false;
     }
-    int64_t skip_from = -1;
-    if (i == 0 && id != nullptr) {
-      const int64_t header = chunk_id_offset(ca, id);
-      if (header < 0 || header != chunk_id_offset(cb, id)) {
-        return false;
-      }
-      skip_from = header + int64_t(offsetof(ID, recalc));
-    }
-    /* ``recalc``, ``recalc_up_to_undo_push`` and ``recalc_after_undo_push``: depsgraph
-     * tags, written as they stand at the push (an image drawn in the viewport carries
-     * a pending ``recalc``), never a change of the data. */
-    const int64_t skip_to = skip_from + int64_t(offsetof(ID, recalc_after_undo_push) +
-                                                sizeof(ID::recalc_after_undo_push) -
-                                                offsetof(ID, recalc));
-    if (skip_from < 0) {
+    if (i > 0 || id == nullptr) {
       if (memcmp(ca->buf, cb->buf, ca->size) != 0) {
         return false;
       }
       continue;
     }
-    if (memcmp(ca->buf, cb->buf, size_t(skip_from)) != 0 ||
-        memcmp(ca->buf + skip_to, cb->buf + skip_to, ca->size - size_t(skip_to)) != 0)
-    {
+    const int64_t header = chunk_id_offset(ca, id);
+    if (header < 0 || header != chunk_id_offset(cb, id)) {
+      return false;
+    }
+    /* What an undo write stamps that is no change of the data: the ID's depsgraph
+     * tags (an image drawn in the viewport carries a pending recalc, linking an
+     * object tags it), and an Object's selection and visibility synced from the
+     * view layers (base_flag, base_local_view_bits, the SELECT bit of flag:
+     * selecting the object a tab links into another tab is not editing it), and a
+     * Mesh's automatic texture space (written back by the first evaluation). */
+    struct Mask {
+      int64_t at;
+      int64_t size;
+      uint8_t bits; /* 0xFF: the whole byte */
+    };
+    Vector<Mask> masks;
+    masks.append({header + int64_t(offsetof(ID, recalc)),
+                  int64_t(offsetof(ID, recalc_after_undo_push) + sizeof(ID::recalc_after_undo_push) -
+                          offsetof(ID, recalc)),
+                  0xFF});
+    if (GS(id->name) == ID_OB) {
+      masks.append({header + int64_t(offsetof(Object, base_flag)), int64_t(sizeof(Object::base_flag)), 0xFF});
+      masks.append({header + int64_t(offsetof(Object, base_local_view_bits)),
+                    int64_t(sizeof(Object::base_local_view_bits)),
+                    0xFF});
+      /* SELECT is bit 0 of the little-endian short Object::flag. */
+      masks.append({header + int64_t(offsetof(Object, flag)), 1, uint8_t(SELECT)});
+    }
+    if (GS(id->name) == ID_ME) {
+      /* The automatic texture space: computed by the first evaluation and written
+       * back into the original mesh (derived data, no edit). */
+      masks.append({header + int64_t(offsetof(Mesh, texspace_location)),
+                    int64_t(offsetof(Mesh, texspace_flag) + sizeof(Mesh::texspace_flag) -
+                            offsetof(Mesh, texspace_location)),
+                    0xFF});
+    }
+    Vector<uint8_t> va(int64_t(ca->size)), vb(int64_t(cb->size));
+    memcpy(va.data(), ca->buf, ca->size);
+    memcpy(vb.data(), cb->buf, cb->size);
+    for (const Mask &m : masks) {
+      for (int64_t k = m.at; k < m.at + m.size && k < int64_t(ca->size); k++) {
+        va[k] &= uint8_t(~m.bits);
+        vb[k] &= uint8_t(~m.bits);
+      }
+    }
+    if (memcmp(va.data(), vb.data(), ca->size) != 0) {
+      /* Bytes differ. A change made by an operator, RNA or an edit-mode flush tags the
+       * ID, and the newer step records those tags (recalc_up_to_undo_push); data
+       * the depsgraph writes back into the original on evaluation (a mesh's
+       * automatic texture space, caches after the struct) tags nothing. No tag in
+       * the newer step: derived, not a change of the data (the Engine Mode GUI
+       * pass, 2026-10-02: a link step read as editing the linked object's mesh). */
+      /* Only for the types evaluation writes back into (objects, geometry with an
+       * automatic texture space): an RNA edit of an image does not tag it, and
+       * would read as no change at all. */
+      const bool written_back_by_eval = ELEM(GS(id->name), ID_OB, ID_ME, ID_CU_LEGACY, ID_MB);
+      uint32_t tagged = 0;
+      const int64_t tag_at = header + int64_t(offsetof(ID, recalc_up_to_undo_push));
+      if (tag_at + int64_t(sizeof(tagged)) <= int64_t(cb->size)) {
+        memcpy(&tagged, cb->buf + tag_at, sizeof(tagged));
+      }
+      /* Tags that are no change of the data: selection, base flags (linking an
+       * object into another tab sets these), editor redraws, copy-to-evaluated
+       * syncs, frame and audio updates. */
+      const uint32_t noise = ID_RECALC_SELECT | ID_RECALC_BASE_FLAGS | ID_RECALC_EDITORS |
+                             ID_RECALC_SYNC_TO_EVAL | ID_RECALC_FRAME_CHANGE | ID_RECALC_AUDIO_FPS |
+                             ID_RECALC_AUDIO_VOLUME | ID_RECALC_AUDIO_MUTE |
+                             ID_RECALC_AUDIO_LISTENER | ID_RECALC_AUDIO;
+      if (written_back_by_eval && (tagged & ~noise) == 0) {
+        continue;
+      }
       for (size_t at = 0; at < ca->size; at++) {
-        if (ca->buf[at] != cb->buf[at] && !(int64_t(at) >= skip_from && int64_t(at) < skip_to)) {
-          CLOG_DEBUG(&LOG, "%s changed: chunk %d differs at byte %zu of %zu", id ? id->name : "?", int(i), at, ca->size);
+        if (va[int64_t(at)] != vb[int64_t(at)]) {
+          CLOG_DEBUG(&LOG, "%s changed: chunk 0 differs at byte %zu of %zu", id->name, at, ca->size);
           break;
         }
       }
@@ -409,7 +464,18 @@ static bool partial_validate(Main *bmain,
         note_conflict(conflicts, id->session_uid, std::string(id->name + 2));
       }
       else if (tab_now && !tab_then && !then.is_empty()) {
-        if (moved_count++ < 8) {
+        bool still_there = false;
+        for (const uint32_t t : then) {
+          still_there |= now.contains(t);
+        }
+        if (still_there) {
+          /* Linked in from a tab that still has it (Engine Mode's Link Objects to
+           * Scene, an outliner drag): shared, not moved. The author rule decides
+           * (the Engine Mode GUI pass, 2026-10-02: the receiving tab could not
+           * take its own link back). */
+          note_conflict(conflicts, id->session_uid, std::string(id->name + 2));
+        }
+        else if (moved_count++ < 8) {
           moved += (moved.empty() ? "" : ", ") + std::string(id->name + 2);
         }
       }
