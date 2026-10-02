@@ -44,6 +44,7 @@ set(SRC
   mixie_chat_markdown_cache.cc
   mixie_chat_markdown_parse.cc
   mixie_chat_mention.cc
+  mixie_chat_prompt_history.cc
   mixie_chat_table.cc
   mixie_chat_empty_state.cc
   mixie_chat_feedback.cc
@@ -76,6 +77,7 @@ set(SRC
   mixie_chat_intern.hh
   mixie_chat_layout_data.hh
   mixie_chat_markdown_intern.hh
+  mixie_chat_prompt_history.hh
   mixie_chat_rules_intern.hh
   mixie_chat_ui_types.hh
 )

@@ -109,6 +109,12 @@ void mixie_chat_mention_active_set(Scene *scene, int index);
 int mixie_chat_mention_active_get(Scene *scene);
 int mixie_chat_mention_insert_text_get(Scene *scene, char *r_buf, int buf_maxncpy);
 int mixie_chat_mention_row_hit(Scene *scene, const ARegion *region, const int xy[2]);
+/* Up/Down prompt recall: editors/space_mixie_chat/mixie_chat_prompt_history.cc. */
+bool mixie_chat_prompt_history_step(Scene *scene,
+                                    const char *current,
+                                    int direction,
+                                    std::string &r_text);
+void mixie_chat_prompt_history_landed(const char *text);
 }  // namespace blender
 
 namespace blender::ui {
@@ -3357,8 +3363,9 @@ static int ui_multiline_get_lines(Button *but,
  * Move cursor up or down by one visual line in a multi-line text button.
  * \param direction: -1 for up, +1 for down
  * \param select: If true, extend selection
+ * \return false when the cursor is already on the first/last line.
  */
-static void textedit_move_vertical_mixar(Button *but,
+static bool textedit_move_vertical_mixar(Button *but,
                                       TextEdit &text_edit,
                                       int direction,
                                       bool select)
@@ -3369,7 +3376,7 @@ static void textedit_move_vertical_mixar(Button *but,
 
   const int num_lines = int(lines.size());
   if (num_lines <= 1) {
-    return;
+    return false;
   }
 
   /* Find which line the cursor is on (use next line's offset to handle \n gaps) */
@@ -3387,7 +3394,7 @@ static void textedit_move_vertical_mixar(Button *but,
   /* Calculate target line */
   const int target_line = std::clamp(cursor_line + direction, 0, num_lines - 1);
   if (target_line == cursor_line) {
-    return;
+    return false;
   }
 
   /* Get cursor X position within current line (clamp to line size for \n positions) */
@@ -3422,6 +3429,7 @@ static void textedit_move_vertical_mixar(Button *but,
     but->pos = short(new_pos);
     but->selsta = but->selend = but->pos;
   }
+  return true;
 }
 
 /** \} */
@@ -4098,6 +4106,30 @@ static bool ui_textedit_mention_accept(bContext *C,
   return textedit_insert_buf(but, text_edit, insert_buf, insert_len);
 }
 
+/**
+ * Up on the chat composer's top line / Down on its bottom line: show the
+ * previous / next prompt the user sent in this chat; Down past the newest
+ * restores the draft. The cursor lands at the end, ready to edit or re-send,
+ * and one Ctrl+Z puts the replaced text back.
+ *
+ * \return true when the text changed.
+ */
+static bool ui_textedit_prompt_history_step(Button *but,
+                                            TextEdit &text_edit,
+                                            Scene *scene,
+                                            const int direction)
+{
+  std::string text;
+  if (!mixie_chat_prompt_history_step(scene, text_edit.edit_string, direction, text)) {
+    return false;
+  }
+  textedit_string_set(but, text_edit, text.c_str());
+  but->pos = int(strlen(text_edit.edit_string));
+  but->selsta = but->selend = but->pos;
+  mixie_chat_prompt_history_landed(text_edit.edit_string);
+  return true;
+}
+
 /** \} */
 
 static void textedit_begin(bContext *C, Button *but, HandleButtonData *data)
@@ -4439,6 +4471,8 @@ static int do_but_textedit(
   TextEdit &text_edit = data->text_edit;
   int retval = WM_UI_HANDLER_CONTINUE;
   bool changed = false, inbox = false, update = false, skip_undo_push = false;
+  /* Mixar: a recalled prompt opens no '@' dropdown (Up/Down would then drive it). */
+  bool recalled_prompt = false;
 
 #ifdef WITH_INPUT_IME
   wmWindow *win = CTX_wm_window(C);
@@ -4807,7 +4841,15 @@ static int do_but_textedit(
           break;
         }
         if (ui_but_is_multiline_text(but)) {
-          textedit_move_vertical_mixar(but, text_edit, +1, event->modifier & KM_SHIFT);
+          if (!textedit_move_vertical_mixar(but, text_edit, +1, event->modifier & KM_SHIFT) &&
+              (event->modifier & (KM_SHIFT | KM_CTRL | KM_ALT | KM_OSKEY)) == 0)
+          {
+            /* Mixar: Down on the composer's last line walks forward through recalled prompts. */
+            if (Scene *history_scene = ui_but_mixie_mention_scene(but)) {
+              changed = recalled_prompt = ui_textedit_prompt_history_step(
+                  but, text_edit, history_scene, +1);
+            }
+          }
           retval = WM_UI_HANDLER_BREAK;
           break;
         }
@@ -4857,7 +4899,15 @@ static int do_but_textedit(
           break;
         }
         if (ui_but_is_multiline_text(but)) {
-          textedit_move_vertical_mixar(but, text_edit, -1, event->modifier & KM_SHIFT);
+          if (!textedit_move_vertical_mixar(but, text_edit, -1, event->modifier & KM_SHIFT) &&
+              (event->modifier & (KM_SHIFT | KM_CTRL | KM_ALT | KM_OSKEY)) == 0)
+          {
+            /* Mixar: Up on the composer's first line recalls the previous sent prompt. */
+            if (Scene *history_scene = ui_but_mixie_mention_scene(but)) {
+              changed = recalled_prompt = ui_textedit_prompt_history_step(
+                  but, text_edit, history_scene, -1);
+            }
+          }
           retval = WM_UI_HANDLER_BREAK;
           break;
         }
@@ -5220,7 +5270,7 @@ static int do_but_textedit(
     /* Mixar: every text change re-detects the "@token" at the cursor and
      * publishes it — the Python update callback fills the suggestion list
      * synchronously, and the footer redraw below shows/hides the dropdown. */
-    if (!is_ime_composing) {
+    if (!is_ime_composing && !recalled_prompt) {
       if (Scene *mention_scene = ui_but_mixie_mention_scene(but)) {
         char mention_query[MIXIE_MENTION_QUERY_SIZE];
         int tok_start, tok_end;
