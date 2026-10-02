@@ -54,3 +54,20 @@ def test_falls_back_without_the_rna_function():
     mod = _load(bpy)
     assert mod.push_undo_step("Legacy") is True
     bpy.ops.ed.undo_push.assert_called_once_with(message="Legacy")
+
+
+def test_no_module_pushes_an_untagged_undo_step():
+    """Job and timer results land while the window shows any tab: a bare
+    ``bpy.ops.ed.undo_push`` files the step under THAT tab, and the result's own
+    tab loses it on its next undo/redo (review 2026-10-02: matgen, lookdev 360).
+    Only the helper and the executor's no-RNA fallback may call it."""
+    allowed = {"modules/common/utils/undo.py", "modules/space_mixie_chat/core/executor.py"}
+    root = REPO / "src/scripts/mixar"
+    offenders = []
+    for path in root.rglob("*.py"):
+        rel = path.relative_to(root).as_posix()
+        if "/tests/" in rel or rel in allowed:
+            continue
+        if "ed.undo_push(" in path.read_text(encoding="utf-8", errors="replace"):
+            offenders.append(rel)
+    assert offenders == []
