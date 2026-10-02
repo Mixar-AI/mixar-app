@@ -181,8 +181,8 @@ def test_narrowing_only_ever_takes_away():
 
 
 def test_core_chips_shed_words_only_after_the_model_chip_is_gone():
-    """Upload is the remainder, so it may win "Reference" back once a long
-    status word sheds — but never its full label, and never beside a model."""
+    """Core labels only shed after the model is gone; the short Attach label
+    may still fit in the remaining space after a longer status word sheds."""
     shed_rows = 0
     for row in _fit_rows():
         shed = any(row["counts"][s] and row["forms"][s] > 0 for s in CORE)
@@ -190,7 +190,6 @@ def test_core_chips_shed_words_only_after_the_model_chip_is_gone():
             continue
         shed_rows += 1
         assert row["widths"][MODEL] == 0.0, row
-        assert row["forms"][UPLOAD] >= 1, row
     assert shed_rows, "the sweep must reach the shedding regime"
 
 

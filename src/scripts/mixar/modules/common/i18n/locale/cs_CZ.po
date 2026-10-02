@@ -3128,6 +3128,72 @@ msgstr "Záložní binární glTF"
 msgid "Last Export"
 msgstr "Poslední export"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Kamera záběru Mixar"
 
@@ -19611,8 +19677,8 @@ msgstr "Asset se nepodařilo přidat do scény."
 msgid "Thinking..."
 msgstr "Přemýšlím..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "nepodporovaný formát modelu ({format}; podporováno: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "neznámý"
@@ -20605,8 +20671,11 @@ msgstr "Archivovaná relace ke smazání"
 msgid "Chat removed from history"
 msgstr "Chat byl odstraněn z historie"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Přidá obrázkové přílohy ze souboru — podporuje vícenásobný výběr až do limitu na zprávu"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Dosažen limit příloh ({count})"
@@ -24292,6 +24361,9 @@ msgstr "Spustí nebo zastaví diktování do konceptu skici"
 msgid "Stop the running turn"
 msgstr "Zastaví probíhající tah"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Zobrazí skicu ve větší velikosti. Přidejte pokyny v chatu a pak zvolte Odeslat"
 
@@ -24300,6 +24372,9 @@ msgstr "Odstraní referenci"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Zahodí tuto skicu a její kresbu ve frontě"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "Odstranit {}"
@@ -24342,9 +24417,6 @@ msgstr "Chytá"
 
 msgid "NEW"
 msgstr "NOVÉ"
-
-msgid "Upload Reference"
-msgstr "Nahrát referenci"
 
 msgid "Ask Mixie anything..."
 msgstr "Zeptejte se Mixie na cokoli..."
@@ -24577,6 +24649,9 @@ msgstr "Skica je připravena. Přidejte pokyny a pak zvolte Odeslat."
 msgid "AI model"
 msgstr "AI model"
 
+msgid "Upload Reference"
+msgstr "Nahrát referenci"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Vybere vstupní obrázek pro 3D generování"
 
@@ -24667,8 +24742,8 @@ msgstr "Pravidla — úprava pravidel projektu a globálních pravidel pro agent
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Přiloží referenční obrázek"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Dokončí kreslení a zobrazí náhled skici v chatu (Esc). Přidejte pokyny a pak zvolte Odeslat"
@@ -26790,6 +26865,9 @@ msgstr "Akce vyskakovací nabídky"
 
 msgid "Non-interactive explanation"
 msgstr "Neinteraktivní vysvětlení"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Nadměrný nadpis s plným kontrastem"

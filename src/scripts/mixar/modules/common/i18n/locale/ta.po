@@ -3128,6 +3128,72 @@ msgstr "glTF இருமப் பின்வாங்கல்"
 msgid "Last Export"
 msgstr "கடைசி ஏற்றுமதி"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar ஷாட் கேமரா"
 
@@ -19611,8 +19677,8 @@ msgstr "சொத்தைக் காட்சியில் சேர்க�
 msgid "Thinking..."
 msgstr "சிந்திக்கிறது..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "ஆதரிக்கப்படாத மாதிரி வடிவம் ({format}; ஆதரவு: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "தெரியாதது"
@@ -20605,8 +20671,11 @@ msgstr "அழிக்க வேண்டிய காப்பக அமர்
 msgid "Chat removed from history"
 msgstr "அரட்டை வரலாற்றிலிருந்து அகற்றப்பட்டது"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "கோப்பிலிருந்து பட இணைப்புக் கோப்பு(களை)ச் சேர் — செய்தி வரம்பு வரை பல தேர்வை ஆதரிக்கும்"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "இணைப்புக் கோப்பு வரம்பு ({count}) எட்டியது"
@@ -24292,6 +24361,9 @@ msgstr "வரைவு வரைவில் குரல் தட்டச்
 msgid "Stop the running turn"
 msgstr "இயங்கும் திருப்பத்தை நிறுத்து"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "வரைவைப் பெரிதாகப் பார். அரட்டையில் வழிமுறைகளைச் சேர்த்து, பிறகு அனுப்பு"
 
@@ -24300,6 +24372,9 @@ msgstr "குறிப்பை அகற்று"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "இந்த வரைவையும் அதன் வரிசை வரைவையும் நிராகரி"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{}-ஐ அகற்று"
@@ -24342,9 +24417,6 @@ msgstr "பிடிக்கிறது"
 
 msgid "NEW"
 msgstr "புதியது"
-
-msgid "Upload Reference"
-msgstr "குறிப்பைப் பதிவேற்று"
 
 msgid "Ask Mixie anything..."
 msgstr "Mixie-இடம் எதையும் கேளுங்கள்..."
@@ -24577,6 +24649,9 @@ msgstr "வரைவு தயார். வழிமுறைகளைச் �
 msgid "AI model"
 msgstr "AI மாதிரி"
 
+msgid "Upload Reference"
+msgstr "குறிப்பைப் பதிவேற்று"
+
 msgid "Pick an input image for 3D generation"
 msgstr "3D உருவாக்கத்திற்கு ஒரு உள்ளீட்டுப் படத்தைத் தேர்ந்தெடு"
 
@@ -24667,8 +24742,8 @@ msgstr "விதிகள் — முகவருக்கான திட்
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "குறிப்புப் படத்தை இணை"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "வரைவை முடித்து அரட்டையில் வரைவு முன்னோட்டத்தைக் காட்டு (Esc). வழிமுறைகளைச் சேர்த்து, பிறகு அனுப்பு"
@@ -26790,6 +26865,9 @@ msgstr "மேல்தோன்றல் செயல்"
 
 msgid "Non-interactive explanation"
 msgstr "ஊடாடாத விளக்கம்"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "பெரிதான முழு-வேறுபாட்டுத் தலைப்பு"

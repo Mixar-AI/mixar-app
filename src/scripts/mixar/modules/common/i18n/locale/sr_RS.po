@@ -3128,6 +3128,72 @@ msgstr "Резервни glTF бинарни формат"
 msgid "Last Export"
 msgstr "Последњи извоз"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar камера снимка"
 
@@ -19611,8 +19677,8 @@ msgstr "Није било могуће додати ресурс у сцену."
 msgid "Thinking..."
 msgstr "Размишљање..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "неподржан формат модела ({format}; подржано: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "непознато"
@@ -20605,8 +20671,11 @@ msgstr "Архивирана сесија за брисање"
 msgid "Chat removed from history"
 msgstr "Ћаскање је уклоњено из историјата"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Додај прилоге слике из датотеке — подржава вишеструки избор до границе по поруци"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Достигнута је граница прилога ({count})"
@@ -24292,6 +24361,9 @@ msgstr "Покреће или зауставља диктирање у нацр�
 msgid "Stop the running turn"
 msgstr "Заустави текући потез"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Прикажите скицу већом. Додајте упутства у ћаскање, затим Пошаљи"
 
@@ -24300,6 +24372,9 @@ msgstr "Уклони референцу"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Одбацује ову скицу и њен цртеж у реду"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "Уклони {}"
@@ -24342,9 +24417,6 @@ msgstr "Стизање"
 
 msgid "NEW"
 msgstr "НОВО"
-
-msgid "Upload Reference"
-msgstr "Отпреми референцу"
 
 msgid "Ask Mixie anything..."
 msgstr "Питајте Mixie било шта..."
@@ -24577,6 +24649,9 @@ msgstr "Скица је спремна. Додајте упутства, зат�
 msgid "AI model"
 msgstr "AI модел"
 
+msgid "Upload Reference"
+msgstr "Отпреми референцу"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Изаберите улазну слику за 3D генерисање"
 
@@ -24667,8 +24742,8 @@ msgstr "Правила — уредите правила пројекта и г�
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Приложи референцну слику"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Завршите цртање и прикажите преглед скице у ћаскању (Esc). Додајте упутства, затим Пошаљи"
@@ -26790,6 +26865,9 @@ msgstr "Искачућа радња"
 
 msgid "Non-interactive explanation"
 msgstr "Неинтерактивно објашњење"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Предимензионисан наслов пуног контраста"

@@ -30,6 +30,7 @@
 #include "WM_api.hh"
 #include "WM_types.hh"
 #include "agent_ui_draw.hh"
+#include "agent_ui_icons.hh"
 #include "agent_ui_layout.hh"
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_text.hh"
@@ -66,7 +67,7 @@ float agent_bubble_reference_fraction(wmWindowManager *wm)
 
 AgentReferenceGeometry agent_bubble_reference_geometry(const wmWindow *win,
                                                        const ARegion *region,
-                                                       const int count,
+                                                       const std::vector<AgentReference> &items,
                                                        const float fraction)
 {
   const float u = float(WM_window_native_pixel_x(win)) / AGENT_ISLAND_W;
@@ -79,8 +80,20 @@ AgentReferenceGeometry agent_bubble_reference_geometry(const wmWindow *win,
                           0.88f * std::min(BLI_rctf_size_x(&g.view),
                                             BLI_rctf_size_y(&g.view) - 30 * u));
   g.row_pitch = g.image_size + 40 * u;
-  g.max_scroll = std::max(0.0f, count * g.row_pitch - 12 * u - BLI_rctf_size_y(&g.view));
+  float content_height = 0;
+  for (const AgentReference &item : items) {
+    const bool folder = item.source == "FOLDER";
+    const float height = folder ? 72 * u : g.image_size;
+    const float x = folder ? g.view.xmin : BLI_rctf_cent_x(&g.view) - g.image_size / 2;
+    const float top = g.view.ymax - content_height;
+    g.rows.push_back({x, folder ? g.view.xmax : x + g.image_size, top - height, top});
+    content_height += folder ? 84 * u : g.row_pitch;
+  }
+  g.max_scroll = std::max(0.0f, content_height - 12 * u - BLI_rctf_size_y(&g.view));
   g.offset = std::clamp(fraction, 0.0f, 1.0f) * g.max_scroll;
+  for (rctf &row : g.rows) {
+    BLI_rctf_translate(&row, 0, g.offset);
+  }
   g.scrollbar = {width - 16 * u, width - 9 * u, g.view.ymin, g.view.ymax};
   return g;
 }
@@ -129,9 +142,7 @@ void agent_bubble_send_button(const bContext * /*C*/,
 namespace {
 rctf image_rect(const AgentReferenceGeometry &g, int index)
 {
-  const float top = g.view.ymax + g.offset - index * g.row_pitch;
-  const float x = BLI_rctf_cent_x(&g.view) - g.image_size / 2;
-  return {x, x + g.image_size, top - g.image_size, top};
+  return g.rows[index];
 }
 }  // namespace
 
@@ -144,7 +155,7 @@ void agent_bubble_references_draw(const bContext *C,
   wmWindowManager *wm = CTX_wm_manager(C);
   const auto g = agent_bubble_reference_geometry(CTX_wm_window(C),
                                                  region,
-                                                 agent_bubble_reference_count(C),
+                                                 agent_bubble_reference_items(CTX_data_scene(C), wm),
                                                  agent_bubble_reference_fraction(wm));
   ui::Block *block = ui::block_begin(C, region, "agent_references", ui::EmbossType::None);
   if (agent_ui_tab_shows_chat(AgentTabId(state.active_tab))) {
@@ -187,13 +198,30 @@ void agent_bubble_references_draw(const bContext *C,
           CTX_data_main(C), path.c_str(), board, image.xmin, image.ymin, g.image_size);
     }
     MIXAR_THEME_LOAD(dim, TextSecondary);
-    const auto caption = ui::mixar_fit_text(
-        name.c_str(),
-        g.image_size,
-        ui::mixar_text_style(ui::MixarTextRole::Caption, agent_ui_text_unit()));
-    GPU_blend(GPU_BLEND_ALPHA);
-    pane_label_left(
-        caption.c_str(), image.xmin, image.ymin - 16 * u, 15 * agent_ui_text_unit(), dim);
+    const bool folder = STREQ(source, "FOLDER");
+    if (folder) {
+      MIXAR_THEME_LOAD(text, Text);
+      const float cy = BLI_rctf_cent_y(&image);
+      const rctf glyph = {image.xmin + 10 * u, image.xmin + 38 * u, cy - 14 * u, cy + 14 * u};
+      agent_ui_icon_draw(AGENT_ICON_FOLDER, &glyph, dim, plate);
+      const float text_x = image.xmin + 48 * u;
+      const float text_width = BLI_rctf_size_x(&image) - 84 * u;
+      const auto caption = ui::mixar_fit_text(
+          name.c_str(), text_width,
+          ui::mixar_text_style(ui::MixarTextRole::Caption, agent_ui_text_unit()));
+      pane_label_left(caption.c_str(), text_x, cy + 10 * u, 15 * agent_ui_text_unit(), text);
+      const auto detail = ui::mixar_fit_text(
+          IFACE_("Folder context"), text_width, 12 * agent_ui_text_unit());
+      pane_label_left(detail.c_str(), text_x, cy - 12 * u, 12 * agent_ui_text_unit(), dim);
+    }
+    else {
+      const auto caption = ui::mixar_fit_text(
+          name.c_str(), g.image_size,
+          ui::mixar_text_style(ui::MixarTextRole::Caption, agent_ui_text_unit()));
+      GPU_blend(GPU_BLEND_ALPHA);
+      pane_label_left(
+          caption.c_str(), image.xmin, image.ymin - 16 * u, 15 * agent_ui_text_unit(), dim);
+    }
     if (item.sketch && BLI_rctf_isect(&image, &g.view, &visible_image)) {
       ui::Button *preview = uiDefButO(block,
                                       ui::ButtonType::But,
@@ -209,12 +237,17 @@ void agent_bubble_references_draw(const bContext *C,
     }
     rctf close = {
         image.xmax - 30 * u, image.xmax - 2 * u, image.ymax - 30 * u, image.ymax - 2 * u};
+    if (folder) {
+      const float cy = BLI_rctf_cent_y(&image);
+      close = {image.xmax - 32 * u, image.xmax - 4 * u, cy - 14 * u, cy + 14 * u};
+    }
     if (close.ymin >= g.view.ymin && close.ymax <= g.view.ymax) {
       const float back[4] = {0.055f, 0.065f, 0.06f, 0.90f};
       pane_fill_round(&close, 14 * u, back);
       ui::Button *button = uiDefIconButO(block,
                                          ui::ButtonType::But,
                                          generation ? "mixar.pane_remove_reference" :
+                                         folder     ? "mixie_chat.remove_context_folder" :
                                                       "mixie_chat.remove_attachment",
                                          wm::OpCallContext::ExecDefault,
                                          ICON_X,
@@ -224,12 +257,19 @@ void agent_bubble_references_draw(const bContext *C,
                                          int(BLI_rctf_size_y(&close)),
                                          TIP_("Remove reference"));
       PointerRNA *props = ui::button_operator_ptr_ensure(button);
-      RNA_string_set(props, "attachment_path", path.c_str());
-      RNA_string_set(props, "attachment_source", source ? source : "");
+      if (folder) {
+        RNA_string_set(props, "folder_id", path.c_str());
+      }
+      else {
+        RNA_string_set(props, "attachment_path", path.c_str());
+        RNA_string_set(props, "attachment_source", source ? source : "");
+      }
       ui::mixar_button_tooltip_owned(
           button,
           item.sketch ? TIP_("Discard this sketch and its queued drawing") :
-                        fmt::format(fmt::runtime(TIP_("Remove {}")), name).c_str());
+          folder ? fmt::format(fmt::runtime(TIP_("Detach folder {}; the agent can no longer read it")),
+                               name).c_str() :
+                   fmt::format(fmt::runtime(TIP_("Remove {}")), name).c_str());
     }
   }
   GPU_scissor(UNPACK4(old_scissor));
@@ -274,7 +314,7 @@ void qa_targets(const wmWindow *win,
   wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
   const auto items = agent_bubble_reference_items(win->scene, wm);
   const auto g = agent_bubble_reference_geometry(
-      win, region, int(items.size()), agent_bubble_reference_fraction(wm));
+      win, region, items, agent_bubble_reference_fraction(wm));
   auto append = [&](const char *surface,
                     const std::string &text,
                     const std::string &path,
@@ -295,7 +335,7 @@ void qa_targets(const wmWindow *win,
     const rctf image = image_rect(g, index);
     rctf visible;
     if (BLI_rctf_isect(&image, &g.view, &visible)) {
-      append("reference_preview",
+      append(item.source == "FOLDER" ? "reference_folder" : "reference_preview",
              item.name,
              item.path,
              index,

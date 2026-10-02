@@ -182,6 +182,7 @@ def write_batch(owner, packet, scene_history_id=None):
             _atomic(directory / 'manifest.json', canonical(manifest))
             _fsync_dir(directory.parent)
         path = _tail(directory, manifest)
+        durable_gap_count = len(manifest['gaps'])
         if packet.get('status') in ('gap', 'unavailable'):
             gap = {'epoch': epoch, 'reason': str(packet.get('reason') or 'unavailable')[:80]}
             if gap not in manifest['gaps']:
@@ -226,6 +227,13 @@ def write_batch(owner, packet, scene_history_id=None):
                 record = {**record, 'payload': {k: v for k, v in payload.items() if k != 'base64'}}
                 record['payload']['blob'] = image_blob
             body = _blob(directory, canonical(record))
+            if len(manifest['gaps']) != durable_gap_count:
+                # Write gap metadata before its journal row. A crash after the
+                # row is fsynced makes _tail advance the cursor on retry, so the
+                # replay path cannot rediscover the missing range. Keep the old
+                # cursor here: only the final manifest acknowledges this row.
+                _atomic(directory / 'manifest.json', canonical(manifest))
+                durable_gap_count = len(manifest['gaps'])
             row = {'epoch': epoch, 'seq': seq, 'event_id': event['event_id'],
                    'run_id': record['run_id'], 'task_id': record['task_id'],
                    'kind': record['kind'], 'message_id': payload.get('id'), 'body': body}

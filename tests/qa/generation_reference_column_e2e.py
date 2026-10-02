@@ -47,8 +47,19 @@ def capture(qa, out, name):
             f"    result=w.mixar_qa_capture_frame(filepath={str(out/(name+'.png'))!r})")
 
 
+def open_picker(qa, op):
+    """Click a pane's upload control. The Agent tab's paperclip opens the
+    Attach menu (file or folder) first; its file entry is the picker."""
+    if op == 'MIXIE_CHAT_OT_add_image_from_file':
+        qa.click(area_type='AGENT_BUBBLE', op='MIXIE_CHAT_OT_attach')
+        qa.wait(f"bool(drv.find(op={op!r}, popup=True))", timeout=5)
+        qa.click(op=op, popup=True)
+    else:
+        qa.click(area_type='AGENT_BUBBLE', op=op)
+
+
 def upload(qa, op, path):
-    qa.click(area_type='AGENT_BUBBLE', op=op)
+    open_picker(qa, op)
     qa.wait("bool(drv.find(area_type='FILE_BROWSER',prop='directory'))", timeout=8)
     # Seed the file selector's location/name, then confirm its native action.
     # Typing a slash path drives Blender's live autocomplete and can select a

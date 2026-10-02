@@ -11,7 +11,7 @@ import time
 
 from mixar.modules.common.i18n import n_
 
-from ..constants import BACKOFF_MAX_SECONDS, POLL_SECONDS, REPLY_WAIT_SECONDS, REQUEST_TIMEOUT
+from ..constants import BACKOFF_MAX_SECONDS, POLL_SECONDS, REPLY_WAIT_SECONDS, REQUEST_TIMEOUT, SYNC_NOTICE_ID
 from . import blobs, store
 
 # Retried automatically; a toast would only restate the connection indicator.
@@ -64,7 +64,13 @@ class ArchiveSync:
         }
         from mixar.modules.common.notifications import get_notification_store
         get_notification_store().push('warning', n_('Agent history needs attention'),
-            body=bodies.get(code, bodies['archive_write_failed']))
+            body=bodies.get(code, bodies['archive_write_failed']), id=SYNC_NOTICE_ID)
+
+    def _recovered(self):
+        self.last_error = None
+        # A replacement sync worker must also clear its predecessor's warning.
+        from mixar.modules.common.notifications import get_notification_store
+        get_notification_store().dismiss(SYNC_NOTICE_ID)
 
     def _capture_scene_ids(self):
         from mixar.modules.space_mixie_chat.core.main_thread_executor import run_on_main_thread
@@ -215,7 +221,7 @@ class ArchiveSync:
                         healthy = False
                         self._notice('archive_write_failed')
                 if healthy:
-                    self.last_error = None
+                    self._recovered()
             failures = 0 if self.last_error is None else failures + 1
             self._pause(failures)
 

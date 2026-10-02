@@ -3128,6 +3128,72 @@ msgstr "Binär glTF som reserv"
 msgid "Last Export"
 msgstr "Senaste export"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar shot-kamera"
 
@@ -19611,8 +19677,8 @@ msgstr "Det gick inte att lägga till tillgången i scenen."
 msgid "Thinking..."
 msgstr "Tänker..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "modellformat som inte stöds ({format}; stöds: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "okänt"
@@ -20605,8 +20671,11 @@ msgstr "Arkiverad session att ta bort"
 msgid "Chat removed from history"
 msgstr "Chatten togs bort från historiken"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Lägger till bildbilaga/-bilagor från fil – stöder flerval upp till gränsen per meddelande"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Gränsen för bilagor ({count}) har nåtts"
@@ -24292,6 +24361,9 @@ msgstr "Startar eller stoppar diktering till skissutkastet"
 msgid "Stop the running turn"
 msgstr "Stoppar den pågående omgången"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Visar skissen i större format. Lägg till instruktioner i chatten och tryck sedan på Skicka"
 
@@ -24300,6 +24372,9 @@ msgstr "Tar bort referensen"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Kastar den här skissen och dess köade ritning"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "Ta bort {}"
@@ -24342,9 +24417,6 @@ msgstr "Fångar"
 
 msgid "NEW"
 msgstr "NY"
-
-msgid "Upload Reference"
-msgstr "Ladda upp referens"
 
 msgid "Ask Mixie anything..."
 msgstr "Fråga Mixie vad som helst..."
@@ -24577,6 +24649,9 @@ msgstr "Skissen är klar. Lägg till instruktioner och tryck sedan på Skicka."
 msgid "AI model"
 msgstr "AI-modell"
 
+msgid "Upload Reference"
+msgstr "Ladda upp referens"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Väljer en indatabild för 3D-generering"
 
@@ -24667,8 +24742,8 @@ msgstr "Regler – redigera projektregler och globala regler för agenten"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Bifogar en referensbild"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Avslutar ritandet och visar förhandsvisningen av skissen i chatten (Esc). Lägg till instruktioner och tryck sedan på Skicka"
@@ -26790,6 +26865,9 @@ msgstr "Popup-åtgärd"
 
 msgid "Non-interactive explanation"
 msgstr "Icke-interaktiv förklaring"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Överdimensionerad rubrik med full kontrast"

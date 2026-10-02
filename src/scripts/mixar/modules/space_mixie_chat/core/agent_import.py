@@ -57,9 +57,9 @@ def formats_hint(formats: str) -> str:
     return iface_("Agent expects: {formats}").format(formats=", ".join(fmts)) if fmts else ""
 
 
-def _importer_op(extension: str):
+def _importer_op(extension: str, importers: dict | None = None):
     """The native importer operator for an extension, or None."""
-    entry = _IMPORTERS.get(extension)
+    entry = (importers or _IMPORTERS).get(extension)
     if entry is None:
         return None
     submodule, name = entry
@@ -86,8 +86,16 @@ def run_import(session_id: str, spec: dict) -> dict:
     filepath = pop_source(session_id)
     if not filepath:
         return {"success": False, "error": "No file was selected to import"}
+    return import_model_path(filepath)
+
+
+def import_model_path(filepath: str, importers: dict | None = None) -> dict:
+    """Run the native importer for ``filepath`` and report the new top-level
+    object names. Shared by the picker lane above and context folders
+    (``context_folder/core/importer.py``, which passes a wider ``importers``
+    map). Never returns the path — only its basename."""
     extension = os.path.splitext(filepath)[1].lower()
-    op = _importer_op(extension)
+    op = _importer_op(extension, importers)
     if op is None:
         return {
             "success": False,

@@ -3128,6 +3128,72 @@ msgstr "Cadangan biner glTF"
 msgid "Last Export"
 msgstr "Ekspor Terakhir"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Kamera Bidikan Mixar"
 
@@ -19611,8 +19677,8 @@ msgstr "Tidak dapat menambahkan aset ke adegan."
 msgid "Thinking..."
 msgstr "Berpikir..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "format model tidak didukung ({format}; didukung: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "tidak diketahui"
@@ -20605,8 +20671,11 @@ msgstr "Sesi terarsip yang akan dihapus"
 msgid "Chat removed from history"
 msgstr "Obrolan dihapus dari riwayat"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Menambahkan lampiran gambar dari berkas — mendukung pemilihan banyak berkas hingga batas per pesan"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Batas lampiran ({count}) tercapai"
@@ -24292,6 +24361,9 @@ msgstr "Memulai atau menghentikan dikte ke draf sketsa"
 msgid "Stop the running turn"
 msgstr "Menghentikan giliran yang sedang berjalan"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Melihat sketsa lebih besar. Tambahkan instruksi di obrolan, lalu Kirim"
 
@@ -24300,6 +24372,9 @@ msgstr "Menghapus referensi"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Membuang sketsa ini beserta gambarnya yang sedang mengantre"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "Menghapus {}"
@@ -24342,9 +24417,6 @@ msgstr "Menangkap"
 
 msgid "NEW"
 msgstr "BARU"
-
-msgid "Upload Reference"
-msgstr "Unggah Referensi"
 
 msgid "Ask Mixie anything..."
 msgstr "Tanyakan apa saja kepada Mixie..."
@@ -24577,6 +24649,9 @@ msgstr "Sketsa siap. Tambahkan instruksi, lalu Kirim."
 msgid "AI model"
 msgstr "Model AI"
 
+msgid "Upload Reference"
+msgstr "Unggah Referensi"
+
 msgid "Pick an input image for 3D generation"
 msgstr "Memilih gambar masukan untuk generasi 3D"
 
@@ -24667,8 +24742,8 @@ msgstr "Aturan — mengedit aturan proyek dan global untuk agen"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Melampirkan gambar referensi"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Menyelesaikan gambar dan menampilkan pratinjau sketsa di obrolan (Esc). Tambahkan instruksi, lalu Kirim"
@@ -26790,6 +26865,9 @@ msgstr "Aksi popup"
 
 msgid "Non-interactive explanation"
 msgstr "Penjelasan non-interaktif"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Judul besar berkontras penuh"

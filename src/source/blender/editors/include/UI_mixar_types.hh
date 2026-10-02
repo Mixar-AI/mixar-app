@@ -118,6 +118,8 @@ enum class MixarCinemaRowKind : uint8_t {
    * rename): paints NOTHING while idle; while being edited the chip is
    * painted and the stock text-edit drawing runs on top. */
   Field = 6,
+  /** A two-line action card: title and supporting text separated by a newline. */
+  Description = 7,
 };
 
 enum class MixarCardIcon : uint8_t {

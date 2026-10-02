@@ -3128,6 +3128,72 @@ msgstr "glTF ikili yedek seçenek"
 msgid "Last Export"
 msgstr "Son Dışa Aktarım"
 
+msgid "Choose a folder to attach"
+msgstr ""
+
+msgid "Attach a project folder, not a whole drive"
+msgstr ""
+
+msgid "That folder cannot be read"
+msgstr ""
+
+msgid "At most {count} folders can be attached to a chat"
+msgstr ""
+
+msgid "Could not save the folder attachment. Check access to your Mixar settings and try again."
+msgstr ""
+
+msgid "Attach context"
+msgstr ""
+
+msgid "Images & 3D files"
+msgstr ""
+
+msgid "Add visual references or models"
+msgstr ""
+
+msgid "Project folder"
+msgstr ""
+
+msgid "Let Mixie read files in a folder"
+msgstr ""
+
+msgid "Attach"
+msgstr ""
+
+msgid "Attach a reference image, a 3D file, or a folder the agent can use as context"
+msgstr ""
+
+msgid "Attach Folder"
+msgstr ""
+
+msgid "Attach a folder: the agent lists, reads, views and imports its files to work on your request"
+msgstr ""
+
+msgid "{name} is already attached"
+msgstr ""
+
+msgid "Attached folder: {name}"
+msgstr ""
+
+msgid "Remove Folder"
+msgstr ""
+
+msgid "Detach this folder; the agent can no longer read it"
+msgstr ""
+
+msgid "Folder ID"
+msgstr ""
+
+msgid "Opaque id resolved to a folder on this computer only"
+msgstr ""
+
+msgid "Context Folders"
+msgstr ""
+
+msgid "Folders the agent can read, view and import from while it works on this chat"
+msgstr ""
+
 msgid "Mixar Shot Camera"
 msgstr "Mixar Çekim Kamerası"
 
@@ -19611,8 +19677,8 @@ msgstr "Varlık sahneye eklenemedi."
 msgid "Thinking..."
 msgstr "Düşünüyor..."
 
-msgid "unsupported model format ({format}; supported: OBJ)"
-msgstr "desteklenmeyen model biçimi ({format}; desteklenen: OBJ)"
+msgid "unsupported model format ({format}; supported: {supported})"
+msgstr ""
 
 msgid "unknown"
 msgstr "bilinmiyor"
@@ -20605,8 +20671,11 @@ msgstr "Silinecek arşivlenmiş oturum"
 msgid "Chat removed from history"
 msgstr "Sohbet geçmişten kaldırıldı"
 
-msgid "Add image attachment(s) from file — supports multi-select up to the per-message cap"
-msgstr "Dosyadan görsel ek(ler)i ekler — mesaj başına sınıra kadar çoklu seçimi destekler"
+msgid "Add Images or 3D Models"
+msgstr ""
+
+msgid "Add images or 3D models from files, up to the per-message limit"
+msgstr ""
 
 msgid "Attachment limit ({count}) reached"
 msgstr "Ek sınırına ({count}) ulaşıldı"
@@ -24292,6 +24361,9 @@ msgstr "Eskiz taslağına dikte etmeyi başlatır veya durdurur"
 msgid "Stop the running turn"
 msgstr "Çalışan turu durdurur"
 
+msgid "Folder context"
+msgstr ""
+
 msgid "View sketch larger. Add instructions in chat, then Send"
 msgstr "Eskizi daha büyük görüntüler. Sohbete talimat ekleyin, ardından Gönder'e basın"
 
@@ -24300,6 +24372,9 @@ msgstr "Referansı kaldırır"
 
 msgid "Discard this sketch and its queued drawing"
 msgstr "Bu eskizi ve sıradaki çizimini atar"
+
+msgid "Detach folder {}; the agent can no longer read it"
+msgstr ""
 
 msgid "Remove {}"
 msgstr "{} öğesini kaldırır"
@@ -24342,9 +24417,6 @@ msgstr "Yakalıyor"
 
 msgid "NEW"
 msgstr "YENİ"
-
-msgid "Upload Reference"
-msgstr "Referans Yükle"
 
 msgid "Ask Mixie anything..."
 msgstr "Mixie'ye her şeyi sorun..."
@@ -24577,6 +24649,9 @@ msgstr "Eskiz hazır. Talimat ekleyin, ardından Gönder'e basın."
 msgid "AI model"
 msgstr "YZ modeli"
 
+msgid "Upload Reference"
+msgstr "Referans Yükle"
+
 msgid "Pick an input image for 3D generation"
 msgstr "3B oluşturma için bir giriş görseli seçer"
 
@@ -24667,8 +24742,8 @@ msgstr "Kurallar — ajan için proje ve genel kuralları düzenler"
 msgid "Scene tabs — this chat's scene; jump to another tab or open a new one"
 msgstr ""
 
-msgid "Attach a reference image"
-msgstr "Bir referans görsel ekler"
+msgid "Attach a reference image or 3D file, or a folder the agent can use as context"
+msgstr ""
 
 msgid "Finish drawing and show the sketch preview in chat (Esc). Add instructions, then Send"
 msgstr "Çizimi bitirir ve eskiz önizlemesini sohbette gösterir (Esc). Talimat ekleyin, ardından Gönder'e basın"
@@ -26790,6 +26865,9 @@ msgstr "Açılır pencere eylemi"
 
 msgid "Non-interactive explanation"
 msgstr "Etkileşimsiz açıklama"
+
+msgid "Action card with a title and supporting line"
+msgstr ""
 
 msgid "Oversized full-contrast heading"
 msgstr "Büyük boy, tam kontrastlı başlık"
