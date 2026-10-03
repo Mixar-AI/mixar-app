@@ -29,10 +29,33 @@ def request(record, method, path, payload=None, headers=None, timeout=10):
         if len(raw) > MAX_BODY:
             raise ValueError("MCP response exceeds the local transport limit")
         if not 200 <= response.status < 300:
-            raise RuntimeError("Mixar connector unavailable (HTTP %d)" % response.status)
+            try:  # The relay says why (signed out, connecting, disabled).
+                reason = str(json.loads(raw)["error"])[:200]
+            except (ValueError, KeyError, TypeError):
+                reason = ""
+            raise RuntimeError(reason or "Mixar connector unavailable (HTTP %d)" % response.status)
         return json.loads(raw) if raw else None
     finally:
         conn.close()
+
+
+def signed_in(health):
+    """An app's health record says it is signed in (older apps report only "connected")."""
+    return bool(health.get("signed_in", health.get("connected")))
+
+
+def usable(live):
+    """Of several open apps, the one an unbound connection should use, or None.
+
+    A second Mixar (an old window still open, a production app beside a dev
+    build) must not stop discovery when exactly one of them can work: prefer
+    the one signed in and connected to its server, then the one signed in.
+    """
+    for wanted in (lambda h: signed_in(h) and h.get("connected"), signed_in):
+        chosen = [(record, health) for record, health in live if wanted(health)]
+        if len(chosen) == 1:
+            return chosen[0]
+    return None
 
 
 def instances():
@@ -81,11 +104,14 @@ class Connector:
                 candidates = [found for found in [self._holding_scene(live)] if found]
                 if not candidates:
                     raise RuntimeError(self._closed_message(live))
+            if len(candidates) > 1 and not self.instance:
+                candidates = [found for found in [usable(candidates)] if found] or candidates
             if len(candidates) != 1:
                 if not candidates and not self.started:
                     self.started = True
-                    from .installation import start_app
-                    start_app()
+                    from .installation import start_app, start_in_progress
+                    if not start_app() and not start_in_progress():
+                        raise RuntimeError("Mixar is not open, and no installed Mixar could be started")
                 raise RuntimeError("Mixar is starting or unavailable" if not candidates else
                                    "Several Mixar applications are open; select an instance through mixar_ui_context")
             self.record, health = candidates[0]
@@ -97,6 +123,28 @@ class Connector:
             self.started = True
             self.health = health
             return dict(self.record), health
+
+    def readiness(self):
+        """Whether the backend's tools can be listed now: ready, signed_out,
+        starting (an app launching, restoring its sign-in or not answering yet), absent (none open and
+        none could be started), choose (several usable apps) or closed (the
+        bound app closed and its scene is open nowhere)."""
+        try:
+            _, health = self.attach()
+        except RuntimeError as exc:
+            text = str(exc)
+            if text.startswith("Several"):
+                return "choose", text
+            if "was closed" in text:
+                return "closed", text
+            if text.startswith("Mixar is not open"):
+                return "absent", text
+            return "starting", text
+        if not signed_in(health):
+            if health.get("signing_in"):
+                return "starting", "Mixar is restoring its sign-in"
+            return "signed_out", "Mixar is open but not signed in"
+        return "ready", ""
 
     def _sessions(self, record):
         """Session ids of the scene tabs an app has open (empty if it cannot say)."""

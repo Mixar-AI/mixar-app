@@ -34,6 +34,8 @@ def test_cold_start_is_coalesced_and_respects_disable(tmp_path, monkeypatch):
     installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=False)
     assert not installation.start_app()
     installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=True)
+    assert not installation.start_in_progress()
     assert installation.start_app()
     assert not installation.start_app()
+    assert installation.start_in_progress()  # A second host waits for that start.
     assert len(calls) == 1

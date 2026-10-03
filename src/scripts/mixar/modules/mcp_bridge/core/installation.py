@@ -51,6 +51,14 @@ def provision(python, script, executable, enabled=True):
     return path
 
 
+def start_in_progress():
+    """Another MCP host started Mixar within the last minute."""
+    try:
+        return time.time()-(directory() / "starting").stat().st_mtime <= 60
+    except OSError:
+        return False
+
+
 def start_app():
     """At most one cold start across simultaneous MCP hosts; no repeated resurrection."""
     root = directory()
