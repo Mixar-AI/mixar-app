@@ -34,6 +34,14 @@ def ui_control_enabled():
     return enabled() and get_config().get("mcp_ui_control") is True
 
 
+def _restoring_sign_in():
+    try:
+        from mixar.modules.space_mixie_chat.ui.operators import auth_ops
+        return bool(getattr(auth_ops, "_auth_check_started", False))
+    except Exception:  # noqa: BLE001 - status only
+        return False
+
+
 def _tick():
     global _snapshot, _server, _provisioned, _last_error, _failures
     try:
@@ -59,6 +67,8 @@ def _tick():
             "ui_control": ui_control_enabled(),
             "signed_in": bool(getattr(bpy.context.window_manager, "mixie_chat_is_logged_in", False))
                          and not bool(getattr(bpy.context.window_manager, "mixie_chat_session_expired", False)),
+            # The saved sign-in is being restored (startup or a file load).
+            "signing_in": _restoring_sign_in(),
             "backend_url": get_server_url(),
             "headers": {**client_version_headers(), "X-Mixar-Locale": ui_locale(),
                         "x-telemetry-consent": "1" if is_enabled() else "0"},

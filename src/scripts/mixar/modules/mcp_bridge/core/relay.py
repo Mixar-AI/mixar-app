@@ -11,6 +11,9 @@ import uuid
 
 from .discovery import publish
 
+#: MCP requests the backend answers from the account alone (no desktop connection).
+DISCOVERY_METHODS = frozenset({"initialize", "notifications/initialized", "ping", "tools/list",
+                               "resources/list", "resources/read", "prompts/list", "prompts/get"})
 MAX_BODY = 8 * 1024 * 1024
 
 
@@ -104,8 +107,8 @@ class RelayHandler(BaseHTTPRequestHandler):
             return
         context = self.server.snapshot()
         self.reply(200, {key: context.get(key) for key in
-                         ("instance_id", "session_id", "scene_name", "connected",
-                          "ui_contract", "ui_eligible", "ui_control")})
+                         ("instance_id", "session_id", "scene_name", "connected", "signed_in",
+                          "signing_in", "ui_contract", "ui_eligible", "ui_control")})
 
     def do_POST(self):
         if not self.authorized():
@@ -141,8 +144,13 @@ class RelayHandler(BaseHTTPRequestHandler):
                                     self.headers.get("X-Mixar-Session-Id", ""))
                 self.reply(200, response)
                 return
-            if not context.get("connected"):
-                self.reply(503, {"error": "Sign in to Mixar and wait for the agent connection"})
+            if not context.get("signed_in"):
+                self.reply(503, {"error": "Sign in to Mixar before using its tools"})
+                return
+            if not context.get("connected") and request.get("method") not in DISCOVERY_METHODS:
+                # Listing tools needs only the account; anything that reaches the
+                # scene needs the desktop's live agent connection.
+                self.reply(503, {"error": "Mixar is connecting to its server; try again in a moment"})
                 return
             if self.headers.get("X-Mixar-Session-Id"):
                 context["session_id"] = str(uuid.UUID(self.headers["X-Mixar-Session-Id"]))
