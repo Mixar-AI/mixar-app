@@ -797,7 +797,9 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
    * the edit: an object's name stands for its watched data too. */
   Map<std::string, Vector<uint32_t>> by_name;
   for (const auto item : watched.items()) {
-    by_name.lookup_or_add_default(item.value->name).append(item.key);
+    if (item.value != nullptr) {
+      by_name.lookup_or_add_default(item.value->name).append(item.key);
+    }
   }
   if (G_MAIN != nullptr) {
     for (const Object &ob : G_MAIN->objects) {
@@ -1063,6 +1065,58 @@ static bool partial_validate(Main *bmain,
                   " (Edit > Undo Whole Document walks every tab)";
     }
     return false;
+  }
+  /* This tab's own datablock at the step, gone now, that another tab reached in
+   * between (this tab shared it, a step filed under the receiving tab): when
+   * another tab changed it since (deleted it there), restoring this tab would
+   * take back that tab's delete (the invariant test, seed 10013: a tab's undo past
+   * its share brought back the object the receiving tab had deleted). */
+  if (g_memfile_get != nullptr) {
+    Map<uint32_t, ID *> lost;
+    Map<uint32_t, std::string> lost_names;
+    const int target_index = step_index(ustack, target);
+    for (const auto item : step_owners->owner.items()) {
+      if (item.value != tab_uid || live_ids.contains(item.key)) {
+        continue;
+      }
+      int index = -1;
+      for (const UndoStep *us = static_cast<const UndoStep *>(ustack->steps.first); us; us = us->next) {
+        index++;
+        if (index <= target_index || us->mixar_owners == nullptr) {
+          continue;
+        }
+        const Vector<uint32_t> *tabs = us->mixar_owners->shared_by.lookup_ptr(item.key);
+        if (tabs != nullptr && tabs->size() > 1) {
+          lost.add(item.key, nullptr);
+          const std::string *name = us->mixar_owners->shared_name.lookup_ptr(item.key);
+          lost_names.add(item.key, name ? *name : std::to_string(item.key));
+          break;
+        }
+      }
+    }
+    if (!lost.is_empty()) {
+      const IdChanges changes = collect_id_changes(ustack, lost);
+      const int lo = std::min(target_index,
+                              step_index(ustack, BKE_undosys_tab_cursor(const_cast<UndoStack *>(ustack), tab_uid)));
+      std::string deleted;
+      for (const auto item : lost.items()) {
+        const Vector<IdChange> *ch = changes.lookup_ptr(item.key);
+        bool foreign = false;
+        for (const IdChange &c : (ch ? *ch : Vector<IdChange>())) {
+          foreign |= c.index > lo && c.author != tab_uid;
+        }
+        if (foreign) {
+          deleted += (deleted.empty() ? "" : ", ") + lost_names.lookup(item.key);
+        }
+      }
+      if (!deleted.empty()) {
+        if (r_reason) {
+          *r_reason = "shared with another tab since that step and deleted there: " + deleted +
+                      " (Edit > Undo Whole Document walks every tab)";
+        }
+        return false;
+      }
+    }
   }
   if (conflicts.is_empty()) {
     return true;
