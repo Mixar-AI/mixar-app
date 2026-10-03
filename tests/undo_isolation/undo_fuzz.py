@@ -370,6 +370,9 @@ def op_share(uid):
         # it refused as "moved"). Then redo it, so the sequence goes on unchanged.
         name_ = ob.name
         show(other)
+        own = [st for st in history()["steps"] if st["tab_uid"] == other and not st["skip"]]
+        if len(own) < 2:
+            return step          # its first step of its own (setup files the tabs under Tab0)
         with _override_window():
             r = bpy.ops.ed.undo() if bpy.ops.ed.undo.poll() else {"POLL"}
         if "FINISHED" not in r or name_ in scene_of(other).objects:
