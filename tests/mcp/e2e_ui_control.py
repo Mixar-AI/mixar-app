@@ -39,7 +39,6 @@ async def run(options):
     await asyncio.to_thread(qa.cmd, "wait_login", timeout=90)
     sys.path.insert(0, str(options.harness / "scenarios"))
     from startup_health import run as startup_health
-    from lib import ensure_scenes_drawer
     health = await asyncio.to_thread(startup_health, qa)
     facts = qa.eval("from mixar.config.config import get_server_url\n"
                     "result={'simulation':bpy.app.use_event_simulate,'backend':get_server_url(),"
@@ -96,7 +95,15 @@ async def run(options):
                 return args, result
 
             await press("ESC")  # Dismiss startup splash through production native input.
-            await asyncio.to_thread(ensure_scenes_drawer, qa)
+            # Keep this replay independent of optional harness layout helpers;
+            # open the drawer through the same production MCP input being tested.
+            drawer = (await call("mixar_ui_observe", {"query": {
+                "op": "VIEW3D_OT_scenes_drawer_toggle"}})).structured_content["result"]
+            assert len(drawer["targets"]) == 1, drawer
+            await call("mixar_ui_act", {"action": "click", "context": drawer["context"],
+                "target": drawer["targets"][0]["target"]})
+            await asyncio.to_thread(qa.wait,
+                "bpy.context.window_manager.mixar_scenes_drawer_amount >= 0.98", timeout=10)
             await observe("ui-before.png")
             protected = qa.eval("result={o.name:[v for row in o.matrix_world for v in row] for o in bpy.context.scene.objects}")
             name = "MCP_NATIVE_UI_"+uuid4().hex[:8]
