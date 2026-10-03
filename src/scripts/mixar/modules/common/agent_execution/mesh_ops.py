@@ -67,7 +67,8 @@ def _combined_cutter(cutters):
     import bpy
     import numpy as np
 
-    positions, faces, bounds = [], [], []
+    from .boolean_prepare import bounds_overlap
+    positions, faces, axes = [], [], []
     offset = 0
     for obj in cutters:
         mesh = obj.data
@@ -77,7 +78,7 @@ def _combined_cutter(cutters):
         if not np.isfinite(xyz).all():
             raise ValueError("Boolean cutters must have finite world coordinates")
         positions.append(xyz)
-        bounds.append((xyz.min(axis=0), xyz.max(axis=0)))
+        axes.append(matrix[:3, :3].T)
         indices = np.empty(len(mesh.loops), dtype=np.int32)
         starts = np.empty(len(mesh.polygons), dtype=np.int32)
         counts = np.empty(len(mesh.polygons), dtype=np.int32)
@@ -90,8 +91,7 @@ def _combined_cutter(cutters):
             face = indices[start:start + count].tolist()
             faces.append(face[::-1] if reverse else face)
         offset += len(xyz)
-    overlap = any(np.all(a[0] <= b[1]) and np.all(b[0] <= a[1])
-                  for i, a in enumerate(bounds) for b in bounds[:i])
+    overlap = bounds_overlap(positions, axes)
     mesh = bpy.data.meshes.new("_MixarBooleanOperand")
     obj = None
     try:
@@ -136,7 +136,10 @@ def boolean_difference(target, cutters, *, solver="AUTO"):
     order and settings are preserved. Other stacks, shared target meshes and
     shape keys require an explicit preparation step by the caller.
     AUTO uses native MANIFOLD for closed, consistently oriented solids with
-    disjoint cutter bounds, otherwise EXACT. EXACT can be requested explicitly.
+    provably disjoint cutters, otherwise EXACT. A single closed target shell
+    with inconsistent winding is oriented on a private copy first. Multiple
+    shells (potential cavities), open meshes and ambiguous cutters keep EXACT.
+    EXACT can be requested explicitly and never reorients the target.
     The Boolean runs synchronously: split targets into separate script steps.
     """
     import bpy
@@ -166,6 +169,9 @@ def boolean_difference(target, cutters, *, solver="AUTO"):
     # solve without joining or changing any source cutter.
     operand = None
     modifier_name = None
+    original_mesh = target.data
+    repaired_mesh = None
+    committed = False
     finishing = [(m, m.show_viewport) for m in target.modifiers]
     try:
         for item, _visible in finishing:
@@ -178,6 +184,12 @@ def boolean_difference(target, cutters, *, solver="AUTO"):
         operand_closed = _closed_solid(operand.data)
         chosen = "EXACT"
         available = bpy.types.BooleanModifier.bl_rna.properties["solver"].enum_items
+        if solver == "AUTO" and "MANIFOLD" in available and not overlap and operand_closed and not target_closed:
+            from .boolean_prepare import oriented_copy
+            repaired_mesh = oriented_copy(target.data)
+            if repaired_mesh is not None:
+                target.data = repaired_mesh
+                target_closed = True
         if (solver == "AUTO" and "MANIFOLD" in available and not overlap
                 and target_closed and operand_closed):
             chosen = "MANIFOLD"
@@ -195,6 +207,7 @@ def boolean_difference(target, cutters, *, solver="AUTO"):
         if "FINISHED" not in status:
             raise RuntimeError("Batched Boolean application was cancelled")
         modifier_name = None
+        committed = True
     finally:
         remaining = target.modifiers.get(modifier_name) if modifier_name else None
         if remaining is not None:
@@ -205,4 +218,13 @@ def boolean_difference(target, cutters, *, solver="AUTO"):
             mesh = operand.data
             bpy.data.objects.remove(operand, do_unlink=True)
             bpy.data.meshes.remove(mesh)
-    return {"cutters": len(cutters), "faces": len(target.data.polygons), "solver": chosen}
+        if repaired_mesh is not None:
+            if not committed:
+                failed_mesh = target.data
+                target.data = original_mesh
+                if failed_mesh.users == 0:
+                    bpy.data.meshes.remove(failed_mesh)
+            elif original_mesh.users == 0:
+                bpy.data.meshes.remove(original_mesh)
+    return {"cutters": len(cutters), "faces": len(target.data.polygons), "solver": chosen,
+            "winding_repaired": repaired_mesh is not None}

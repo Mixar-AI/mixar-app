@@ -80,12 +80,27 @@ _request_queue.put((id, script, tool, session))
 | **Connection-scoped response writer** | `pump.respond` attempts one response per request; its bounded writer reports acceptance or refusal. Disconnected results are recorded as unavailable and are never sent across a new connection's fence. Acceptance is not a delivery acknowledgement. |
 | **Deferred completion** | `preview_deferral` parks the request while the native render runs. The original scene's step stays RUNNING and its history closes on the terminal result. Only `done` succeeds; timeout/cancellation never releases a still-live native reservation. |
 | **Render guard** | `render_gate` checks native render coordination before routing. Mutations immediately fail with `render_in_progress`; reviewed read-only tools, including `_workspace_status`, can run. It never holds a lane until the render ends. |
+| **Inspection previews** | `inspection_preview_v1` extends the same native job to solid/material view/focus captures. `inspection_preview` owns temporary camera/world/lights and render visibility until pixels and labels are collected; cleanup runs on complete, cancel, lost job and failed preparation. Camera copies preserve the user's camera transforms and data. Results keep the inspection `image_base64`/focus/labels contract. No worker process is launched. |
+
 | **Scene routing per session** | The backend addresses every script with a `session_id`. The constant `agent:<connection>` (or empty) session is **non-pinned**: it matches no scene and runs against the user's active window scene (normal / sandbox mode). Any *other* non-empty session is a **per-scene** target — the user's main scene's `mixie_session_id` (a UUID) or an `agentlane:<parent>:<n>` lane scene (scene-build mode). Per-scene: switch `window.scene` to the matching scene, execute, restore — all in one timer tick (no redraw, no flicker). Prefix helpers live in `constants.py` (`is_non_scene_routing_session`, `is_lane_scene`). |
 | **Per-scene hard-fail** | If a per-scene session resolves to **no** scene, the script is **rejected** (error response `no scene for session <id>`) instead of silently running in the active scene — that fallback could clobber the user's work in the wrong scene. Non-pinned `agent:`/empty sessions keep the active-scene-follow behavior. |
 | **Foreground-scene restore** | After a per-scene/lane script flips away, `window.scene` is restored to the user's tracked *foreground* scene (`_user_foreground_scene_name`, captured whenever a non-pinned script runs), **not** "whatever was active when the script started" (which could be a throwaway lane scene). If the tracked scene was deleted, falls back to any non-lane scene — never a lane. |
 | **Execution gate (50ms)** | `_execution_gate_until` defers script running by 50ms after `tool_start` so the chat UI has time to render the planning bubble *before* the executor blocks the main thread. Set via `gate_execution(0.05)`. |
 | **Session-not-active guard** | Narrow race where `load_pre` flushed the session between queue and execute — drop the script and ack the server with an error. |
 | **Asset prefetch hold** (`core/script_prefetch.py`) | Heavy texture-apply scripts (`create_layered_material`) embed their asset URLs in the script text. `queue_script_request` starts downloading them immediately on the WS thread (daemon threads, global 8-slot semaphore); `_process_one_request` holds the dequeued script in `_held` — one cheap `ready()` check per tick, UI fully responsive — until the cache is warm or the 90s wait cap passes. Execution then pays only image decode + node build, never the network. FIFO is preserved (later scripts wait behind the held one, their own prefetches already running); a prefetch that fails or passes the cap refuses the script with an explicit error rather than falling back to a main-thread download, and only scripts we start no prefetch for (unknown tool, or no extractable asset URL) keep the old in-build path. |
+
+Material inspections use eight-sample Cycles with denoising on the user's
+configured render device. Native asynchronous EEVEE can still block UI drawing
+during first-use graphics-context/shader initialization. Automatic final previews
+use the scene camera/lighting with denoised Cycles capped at 32 samples; explicit
+EEVEE/Cycles requests retain their engine and sample caps. Older backends keep
+their prior engine selection. Solid inspections use
+Workbench. Over-budget material inspections fall back to Workbench with an
+explicit warning that materials were not evaluated. Over-budget Cycles finals
+retain the disclosed EEVEE fallback. Fast and final jobs share the same reservation and cleanup lifecycle.
+Collection-instance focus uses one evaluated depsgraph pass and bounded corner
+unions, including nested collection offsets/transforms. Source meshes stay
+instanced; framing, contact bounds and labels include their visible geometry.
 
 ## ScriptExecutor — the second sandbox
 

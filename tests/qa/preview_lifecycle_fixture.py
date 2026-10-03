@@ -156,7 +156,7 @@ def _row():
     return next(row for row in _bubble().step_items if row.item_id == _state['run']['request'])
 
 
-def start(label='complete', width=1536, height=1024, switch_tab=True, dispatch=False):
+def start(label='complete', width=1536, height=1024, switch_tab=True, dispatch=False, inspection=None, engine='cycles'):
     from mixar.modules.common.agent_execution.request import ExecutionRequest
     from mixar.modules.common.render_coordinator import core as slot
     from mixar.modules.space_mixie_chat.core import preview_render, preview_deferral
@@ -179,9 +179,17 @@ def start(label='complete', width=1536, height=1024, switch_tab=True, dispatch=F
         SessionManager.start_session(scene, 'QA native preview')
         script = ("import bpy\nfrom mixar.modules.space_mixie_chat.core import preview_render\n"
                   f"receipt = preview_render.start(bpy.context, {key!r}, width={width}, "
-                  f"height={height}, engine='cycles')\n"
+                  f"height={height}, engine={engine!r})\n"
                   "assert receipt['status'] == 'running', receipt\n"
                   f"__RESULT__ = {{'__deferred_preview__': {key!r}}}\n")
+        if inspection is not None:
+            import json
+            spec = dict(inspection, width=width, height=height)
+            script = ("import bpy\n"
+                      f"bpy.ops.mixie_chat.agent_preview_render(job_key={key!r}, inspection_json={json.dumps(spec)!r})\n"
+                      "receipt=bpy.app.driver_namespace['mixie_agent_preview_response']\n"
+                      "assert receipt['status']=='running', receipt\n"
+                      f"__RESULT__ = {{'__deferred_preview__': {key!r}}}\n")
         main_thread_executor.queue_script_request(script, request, 'render_viewport',
                                                   scene.mixie_session_id)
         run = _state['run']
@@ -191,7 +199,8 @@ def start(label='complete', width=1536, height=1024, switch_tab=True, dispatch=F
         return {'request': request, 'queued': True}
     record_step_start(scene, request, 'render_viewport', call_id=request)
     with bpy.context.temp_override(window=window, scene=scene):
-        receipt = preview_render.start(bpy.context, key, width=width, height=height, engine='cycles')
+        receipt = preview_render.start(bpy.context, key, width=width, height=height,
+                                       engine=engine, inspection=inspection)
     assert receipt['status'] == 'running', receipt
     _state['run']['token'] = preview_render._job['reservation']
     preview_deferral.defer_response(req, key, scene=scene,
