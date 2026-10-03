@@ -12,6 +12,9 @@
    Tick **Let AI apps control Mixar's interface** only if the assistant should
    also see and click Mixar's interface; scene tools work without it.
 4. Restart the app's MCP connection. It can start your installed Mixar when needed.
+   If the assistant only sees `mixar_*` tools, Mixar was not signed in yet:
+   sign in, and Claude Code adds the scene tools by itself; in Codex, start a
+   new session.
 
 Ask the assistant to inspect the scene, make a change, and verify it with a
 viewport image. Tools cover scene and geometry inspection, Blender scripting,
@@ -29,7 +32,8 @@ Claude/Codex. Use `mixar_credit_balance` to inspect your available balance.
 The setup uses a stable per-user launcher backed by Mixar's bundled Python.
 It requires no separate Python packages or copied account token. **Disable** in
 the same dialog revokes access. If multiple opted-in Mixar processes are running,
-the assistant selects one using `mixar_ui_context`. The connection pins its scene;
+the connection uses the one that is signed in; when several are, the assistant
+selects one using `mixar_ui_context`. The connection pins its scene;
 `mixar_scene_new` creates a tab and `mixar_scene_switch` moves to one, and every
 later tool follows. Ask the assistant to create scenes with these, not a script.
 `mixar_projects` and `mixar_project_open` reopen a recent project; the assistant
