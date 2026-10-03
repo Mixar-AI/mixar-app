@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "ﻮﻳﺪﻴﻓ ﺲﻴﻟ ﺩﺪﺤﻤﻟﺍ ﻡﺎﻬﻟﻹ﻿ﺍ ﺔ�
 
 msgid "Cannot decode video: %s"
 msgstr "%s :ﻮﻳﺪﻴﻔﻟﺍ ﺰﻴﻣﺮﺗ ﻚﻓ ﺭﺬّﻌﺗ"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻲﻓ ﻮﻳﺪﻴﻔﻟﺍ ﺮﻳﺮﻤﺗ ﺐﻗﺍﺮﻣ"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "ﻪﻌﺑﺮﻣ ﺮﺷﺆﻤﻟﺍ ﺭﺩﺎﻐﻳ ﺎﻣﺪﻨﻋ ﻦﻤّﻀﻤﻟﺍ ﻡﺎﻬﻟﻹ﻿ﺍ ﺔﺣﻮﻟ ﻮﻳﺪﻴﻓ ﻞﻴﻐﺸﺗ ﻒﻗﻮﻳ"
 
 msgid "This board item has no image or video to preview"
 msgstr "ﺔﻨﻳﺎﻌﻤﻠﻟ ﻮﻳﺪﻴﻓ ﻭﺃ ﺓﺭﻮﺻ ﻰﻠﻋ ﺍﺬﻫ ﺔﺣﻮﻠﻟﺍ ﺮﺼﻨﻋ ﻱﻮﺘﺤﻳ ﻻ﻿"

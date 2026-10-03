@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "चयनित मूडबोर्ड आइटम वीडियो
 
 msgid "Cannot decode video: %s"
 msgstr "वीडियो डिकोड नहीं किया जा सकता: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "मूडबोर्ड वीडियो होवर मॉनिटर"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "पॉइंटर के टाइल से हटने पर इनलाइन मूडबोर्ड वीडियो प्लेबैक रोकता है"
 
 msgid "This board item has no image or video to preview"
 msgstr "इस बोर्ड आइटम में पूर्वावलोकन के लिए कोई छवि या वीडियो नहीं है"

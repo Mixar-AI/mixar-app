@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "O item selecionado do Moodboard não é um vídeo"
 
 msgid "Cannot decode video: %s"
 msgstr "Não é possível decodificar o vídeo: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Monitor de passagem do mouse em vídeos do Moodboard"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Para a reprodução do vídeo embutido no Moodboard quando o ponteiro sai do seu bloco"
 
 msgid "This board item has no image or video to preview"
 msgstr "Este item do quadro não tem imagem nem vídeo para visualizar"

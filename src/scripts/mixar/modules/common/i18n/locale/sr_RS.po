@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "Изабрана ставка мудборда није видео"
 
 msgid "Cannot decode video: %s"
 msgstr "Није могуће декодирати видео: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Надгледање лебдења видеа мудборда"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Зауставља уграђену репродукцију видеа мудборда када показивач напусти његову плочицу"
 
 msgid "This board item has no image or video to preview"
 msgstr "Ова ставка табле нема слику или видео за преглед"

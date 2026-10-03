@@ -73,7 +73,7 @@ class UsageSnapshot:
     @property
     def is_free(self) -> bool:
         """A free-tier account with credits to show — there is a bar, but
-        no plan behind it, so the CTA stays "See Plans"."""
+        no plan behind it."""
         return self.has_subscription and self.billing_interval == FREE_BILLING_INTERVAL
 
     @property
@@ -85,13 +85,11 @@ class UsageSnapshot:
     def can_top_up(self) -> bool:
         """Whether "Buy credits" applies — mirrors the web dashboard's
         ``canTopUpCredits`` and the server rule behind ``/subscriptions
-        /credit-topup``: subscribed, not on trial, not cancelling."""
-        return (
-            self.has_subscription
-            and not self.is_free
-            and not self.is_trial
-            and not self.is_cancelling
-        )
+        /credit-topup``: every signed-in account, no subscription needed —
+        free, trial and cancelling included. The server also refuses an
+        enterprise team member, which no usage reading reveals; the buy page
+        tells them why."""
+        return self.fetched_at > 0.0
 
 
 #: The empty snapshot — also what a logged-out client reads.

@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "Вибраний елемент мудборду не є відео"
 
 msgid "Cannot decode video: %s"
 msgstr "Неможливо декодувати відео: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Монітор наведення на відео мудборду"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Зупиняє вбудоване відтворення відео мудборду, коли вказівник залишає його плитку"
 
 msgid "This board item has no image or video to preview"
 msgstr "Цей елемент дошки не має зображення або відео для передогляду"

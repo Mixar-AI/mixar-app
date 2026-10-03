@@ -19780,7 +19780,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25636,12 +25636,6 @@ msgstr "選択したムードボードアイテムは動画ではありません
 
 msgid "Cannot decode video: %s"
 msgstr "動画をデコードできません：%s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "ムードボード動画のホバー監視"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "ポインターがタイルから離れたら、ムードボード動画のインライン再生を停止します"
 
 msgid "This board item has no image or video to preview"
 msgstr "このボードアイテムにはプレビューできる画像または動画がありません"

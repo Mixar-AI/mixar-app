@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "所選的情緒板項目不是視訊"
 
 msgid "Cannot decode video: %s"
 msgstr "無法解碼視訊：%s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "情緒板視訊懸停監視器"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "指標離開圖塊時停止情緒板內嵌視訊播放"
 
 msgid "This board item has no image or video to preview"
 msgstr "此畫板項目沒有可預覽的影像或視訊"

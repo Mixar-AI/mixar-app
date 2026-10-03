@@ -98,15 +98,17 @@ result = True
 TEARDOWN = '''
 from mixar.modules.space_mixie_chat.core import turn_events, turn_transport, file_handlers
 from mixar.modules.space_mixie_chat.core.queue_processor import cleanup_event_queue
-assert bpy.app.timers.is_registered(turn_events._drain)
+assert not turn_events._pump.pending(), 'Completed delivery left an idle timer'
 cleanup_event_queue()
 cleanup_event_queue()
-assert not bpy.app.timers.is_registered(turn_events._drain)
+assert not turn_events._pump.pending()
 file_handlers._on_load_post()
-assert bpy.app.timers.is_registered(turn_events._drain)
+assert not turn_events._pump.pending(), 'File load must not start an empty poll'
+turn_events.handle_turn_notification('agent.command.result', {'session_id': 'qa-no-session'})
+assert turn_events._pump.pending(), 'File load must re-enable ingress wakeups'
 turn_transport.create_turn_handler(drv._turn_lifecycle.scene.name)
 turn_transport.cleanup_all_turn_handlers()
-assert not bpy.app.timers.is_registered(turn_events._drain)
+assert not turn_events._pump.pending()
 assert not turn_transport._handlers
 turn_events.arm()
 turn_transport.create_turn_handler(drv._turn_lifecycle.scene.name)

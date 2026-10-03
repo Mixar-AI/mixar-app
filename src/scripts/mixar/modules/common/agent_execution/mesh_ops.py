@@ -17,6 +17,22 @@ def read_positions(mesh):
     return positions
 
 
+def mesh_bounds(mesh):
+    """Fresh local-space bounds of the base mesh, using one bulk RNA read.
+
+    Call once per source mesh before a placement/verification loop, then reuse
+    the returned arrays. There is deliberately no cache across mesh edits.
+    """
+    import numpy as np
+
+    if mesh.is_editmode:
+        raise ValueError("Base mesh bounds require Object mode")
+    xyz = read_positions(mesh)
+    if not len(xyz) or not np.isfinite(xyz).all():
+        raise ValueError("Mesh bounds require nonempty, finite coordinates")
+    return xyz.min(axis=0), xyz.max(axis=0)
+
+
 def write_positions(mesh, positions):
     """Write all base coordinates once; refuse shape-key or Edit-mode meshes.
 

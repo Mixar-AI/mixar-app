@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "Vybraná položka moodboardu nie je video"
 
 msgid "Cannot decode video: %s"
 msgstr "Video nemožno dekódovať: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Sledovanie ukazovateľa nad videom moodboardu"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Zastaví prehrávanie videa na moodboarde, keď ukazovateľ opustí jeho dlaždicu"
 
 msgid "This board item has no image or video to preview"
 msgstr "Táto položka tabule nemá obrázok ani video na náhľad"

@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "ﮟﯿﮩﻧ ﻮﯾﮉﯾﻭ ﻢﭩﺋﺁ ﮈﺭﻮﺑ ﮈﻮﻣ ﺐﺨ�
 
 msgid "Cannot decode video: %s"
 msgstr "%s :ﯽﮑﺳ ﻮﮨ ﮟﯿﮩﻧ ﮈﻮﮐ ﯼﮈ ﻮﯾﮉﯾﻭ"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "ﯽﻧﺍﺮﮕﻧ ﺭﻭﻮﮨ ﻮﯾﮉﯾﻭ ﮈﺭﻮﺑ ﮈﻮﻣ"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "۔ﮯﮨ ﺎﺘﯾﺩ ﮎﻭﺭ ﻮﯾﮉﯾﻭ ﯽﻧﻭﺭﺪﻧﺍ ﯽﮐ ﮈﺭﻮﺑ ﮈﻮﻣ ﯽﮨ ﮯﺗﮌﻮﮭﭼ ﻞﺋﺎﭨ ﺮﭩﻨﺋﺍﻮﭘ"
 
 msgid "This board item has no image or video to preview"
 msgstr "ﮟﯿﮩﻧ ﻮﯾﮉﯾﻭ ﺎﯾ ﺮﯾﻮﺼﺗ ﮯﯿﻟ ﮯﮐ ﻮﯾﻮﯾﺮﭘ ﮟﯿﻣ ﻢﭩﺋﺁ ﮈﺭﻮﺑ ﺱﺍ"

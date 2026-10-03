@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "Izbrani element Moodboarda ni video"
 
 msgid "Cannot decode video: %s"
 msgstr "Videa ni mogoče dekodirati: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Nadzor lebdenja videa Moodboarda"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Ustavi vrstično predvajanje videa Moodboarda, ko kazalec zapusti njegovo ploščico"
 
 msgid "This board item has no image or video to preview"
 msgstr "Ta element table nima slike ali videa za predogled"

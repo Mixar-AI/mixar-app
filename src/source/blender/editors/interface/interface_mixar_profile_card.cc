@@ -352,8 +352,8 @@ void add_usage(Layout *layout, const AccountInfo &info)
     RNA_string_set(&props, "target", MIXAR_TARGET_BUY_CREDITS);
   }
   else {
-    /* Trial, cancelling and free accounts cannot top up — the server
-     * refuses it, so offer plans rather than a button that would fail. */
+    /* Every signed-in account can top up — no subscription needed — so
+     * this is only a fallback: plans are the one page that never refuses. */
     PointerRNA props = cta.op("MIXAR_OT_open_billing", cta_label, ICON_NONE);
     RNA_string_set(&props, "target", MIXAR_TARGET_PRICING);
   }

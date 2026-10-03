@@ -25578,7 +25578,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -33002,14 +33002,6 @@ msgstr "Izabrana stavka mudborda nije video"
 # derived
 msgid "Cannot decode video: %s"
 msgstr "Nije moguće dekodirati video: %s"
-
-# derived
-msgid "Moodboard Video Hover Monitor"
-msgstr "Nadgledanje lebdenja videa mudborda"
-
-# derived
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Zaustavlja ugrađenu reprodukciju videa mudborda kada pokazivač napusti njegovu pločicu"
 
 # derived
 msgid "This board item has no image or video to preview"

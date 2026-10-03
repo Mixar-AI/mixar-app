@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "La elektita ero de la inspirtabulo ne estas video"
 
 msgid "Cannot decode video: %s"
 msgstr "Ne eblas malkodi videon: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Ŝvebmonitoro de video de la inspirtabulo"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Haltigas enlinian ludadon de video de la inspirtabulo, kiam la montrilo forlasas ĝian kahelon"
 
 msgid "This board item has no image or video to preview"
 msgstr "Ĉi tiu tabula ero ne havas bildon aŭ videon antaŭvideblan"

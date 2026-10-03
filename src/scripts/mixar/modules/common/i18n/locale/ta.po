@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "தேர்ந்தெடுத்த மூட்போர்டு �
 
 msgid "Cannot decode video: %s"
 msgstr "காணொளியைக் குறிநீக்க முடியாது: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "மூட்போர்டு காணொளி மேல்வட்டக் கண்காணிப்பு"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "சுட்டி அதன் ஓட்டை விட்டால் வரிசை மூட்போர்டு காணொளி இயக்கத்தை நிறுத்துகிறது"
 
 msgid "This board item has no image or video to preview"
 msgstr "இந்தப் பலகை உருப்படியில் முன்னோட்டமிட படமோ காணொளியோ இல்லை"

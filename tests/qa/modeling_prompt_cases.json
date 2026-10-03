@@ -1,0 +1,34 @@
+[
+  {
+    "name": "vanity",
+    "set_id": "modeling-primtive-f2fb",
+    "set_name": "modeling_primtive",
+    "set_rev": 1,
+    "prompt_id": "f4188a40",
+    "prompt": "Build a bathroom vanity with a sink basin cut into the counter."
+  },
+  {
+    "name": "bicycle",
+    "set_id": "modeling-primtive-f2fb",
+    "set_name": "modeling_primtive",
+    "set_rev": 1,
+    "prompt_id": "12b99202",
+    "prompt": "Model a city bicycle: diamond frame, two spoked wheels, handlebars, saddle, and pedals."
+  },
+  {
+    "name": "spiral-staircase",
+    "set_id": "modeling-primtive-f2fb",
+    "set_name": "modeling_primtive",
+    "set_rev": 1,
+    "prompt_id": "9f8654e5",
+    "prompt": "Build a spiral staircase: one central column, winding treads, and a matching handrail, about 3 meters tall."
+  },
+  {
+    "name": "forest-terrain",
+    "set_id": "terrain-testcases-9fa0",
+    "set_name": "Terrain Testcases",
+    "set_rev": 1,
+    "prompt_id": "fd77670f",
+    "prompt": "create a terrain like a forest"
+  }
+]

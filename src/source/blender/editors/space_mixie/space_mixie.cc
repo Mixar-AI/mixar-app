@@ -241,9 +241,9 @@ static void mixie_main_region_draw(const bContext *C, ARegion *region)
   mixie_draw_moodboard_mode(C, region);
 }
 
-static void mixie_main_region_exit(wmWindowManager *wm, ARegion * /*region*/)
+static void mixie_main_region_exit(wmWindowManager * /*wm*/, ARegion * /*region*/)
 {
-  mixie_moodboard_video_playback_shutdown(wm);
+  mixie_moodboard_video_playback_shutdown();
   /* The link-drag preview lives in a file-static. Closing the region (area
    * close, workspace switch, file load) can end a drag without the modal ever
    * seeing a release, so clear it here rather than leaving a stale curve to be
@@ -316,7 +316,6 @@ static void mixie_operatortypes()
   WM_operatortype_append(MIXIE_OT_moodboard_frame_select);
   WM_operatortype_append(MIXIE_OT_moodboard_rename_frame);
   WM_operatortype_append(MIXIE_OT_moodboard_context_menu);
-  WM_operatortype_append(MIXIE_OT_moodboard_video_hover);
   WM_operatortype_append(MIXIE_OT_moodboard_zoom);
   WM_operatortype_append(MIXIE_OT_moodboard_ensure_visible);
   WM_operatortype_append(MIXIE_OT_moodboard_frame);
@@ -332,21 +331,6 @@ static void mixie_operatortypes()
 static void mixie_operatortypes_keymap(wmKeyConfig *keyconf)
 {
   wmKeyMap *keymap = WM_keymap_ensure(keyconf, "Mixie", SPACE_MIXIE, RGN_TYPE_WINDOW);
-
-  /* Stateless hover checks leave normal click/drag keymap dispatch untouched. */
-  KeyMapItem_Params hover_params{};
-  hover_params.type = MOUSEMOVE;
-  hover_params.value = KM_ANY;
-  hover_params.modifier = 0;
-  WM_keymap_add_item(keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
-
-  /* Entering the sidebar or header also leaves the originating video tile. */
-  wmKeyMap *sidebar_keymap = WM_keymap_ensure(
-      keyconf, "Mixie Sidebar", SPACE_MIXIE, RGN_TYPE_UI);
-  WM_keymap_add_item(sidebar_keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
-  wmKeyMap *header_keymap = WM_keymap_ensure(
-      keyconf, "Mixie Header", SPACE_MIXIE, RGN_TYPE_HEADER);
-  WM_keymap_add_item(header_keymap, "MIXIE_OT_moodboard_video_hover", &hover_params);
 
   /* Select and move images in moodboard */
   KeyMapItem_Params params{};

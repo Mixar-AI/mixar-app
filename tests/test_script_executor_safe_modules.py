@@ -76,6 +76,20 @@ def test_new_safe_modules_do_not_open_arbitrary_imports(executor):
     assert "Module 'os' is not available" in (result.error or "")
 
 
+@pytest.mark.parametrize("stage", ["_capture_scene_state", "_snapshot_handlers", "_detect_changes",
+                                   "_cleanup_handlers", "note_turn_mode"])
+def test_executor_failure_releases_lock_and_restores_output(executor, monkeypatch, stage):
+    original = getattr(executor, stage)
+    original_stdout, original_stderr = sys.stdout, sys.stderr
+    monkeypatch.setattr(executor, stage, MagicMock(side_effect=RuntimeError("injected")))
+    with pytest.raises(RuntimeError, match="injected"):
+        executor.execute("__RESULT__ = 7", push_undo=False)
+    assert not executor._execution_lock.locked()
+    assert sys.stdout is original_stdout and sys.stderr is original_stderr
+    monkeypatch.setattr(executor, stage, original)
+    assert executor.execute("__RESULT__ = 8", push_undo=False).return_value == 8
+
+
 def test_globals_returns_filtered_snapshot_for_transaction_guard(executor):
     result = executor.execute(
         "\n".join(

@@ -394,6 +394,7 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
 
   const auto motion_stats = blender::ui::mixar_motion_stats();
   const auto cat_stats = ED_agent_bubble_motion_stats();
+  const auto chat_stats = ED_agent_chat_animation_stats();
   out += "{\"motion\":{\"pending_regions\":" + std::to_string(motion_stats.pending_regions) +
          ",\"ticks\":" + std::to_string(motion_stats.ticks) +
          ",\"redraws\":" + std::to_string(motion_stats.redraws) + "},\"mascot\":{\"ticks\":" +
@@ -402,7 +403,9 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
          ",\"quiet_frames\":" + std::to_string(cat_stats.quiet_frames) +
          ",\"scheduled\":" + (cat_stats.scheduled ? "true" : "false") +
          ",\"awaiting_draw\":" + (cat_stats.awaiting_draw ? "true" : "false") +
-         ",\"next_frame_seconds\":" + std::to_string(cat_stats.next_frame_seconds) + "},\"windows\":[";
+         ",\"next_frame_seconds\":" + std::to_string(cat_stats.next_frame_seconds) +
+         "},\"chat_animation\":{\"ticks\":" + std::to_string(chat_stats.ticks) +
+         ",\"scheduled\":" + (chat_stats.scheduled ? "true" : "false") + "},\"windows\":[";
   bool first_win = true;
   for (const wmWindow &win_ref : wm->windows) {
     const wmWindow *win = &win_ref;

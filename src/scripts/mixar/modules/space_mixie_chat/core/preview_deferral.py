@@ -26,6 +26,7 @@ from bpy.app.handlers import persistent
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.agent_execution import pump
+from mixar.modules.common.agent_execution.diagnostics import record_phase
 
 from . import preview_render
 from ..constants import PREVIEW_DEFERRED_MAX_S
@@ -73,20 +74,34 @@ def _respond(req, result: dict) -> None:
     pump.respond(get_jsonrpc_client(), req, result)
 
 
-def _take() -> Optional[dict]:
+def _take(expected=None, session_id=None) -> Optional[dict]:
     global _pending
     with _lock:
+        if expected is not None and _pending is not expected:
+            return None
+        if session_id is not None and _pending is not None:
+            req = _pending["req"]
+            owner = str((req.agent_ctx or {}).get("chat_session_id") or _pending["scene_session"]
+                        or req.session_id or "")
+            if owner != session_id and req.session_id != session_id:
+                return None
         pending, _pending = _pending, None
+        if pending is not None:
+            pending["req"].response_deferred = False
     return pending
 
 
-def _tick() -> Optional[float]:
+def _tick(expected=None) -> Optional[float]:
     with _lock:
         pending = _pending
-    if pending is None:
+    if pending is None or (expected is not None and pending is not expected):
         return None
     key = pending["key"]
-    value = preview_render.poll(key)
+    try:
+        value = preview_render.poll(key)
+    except Exception:
+        logger.exception("Preview poll failed for %s", key)
+        value = {"job_id": key, "status": "failed", "error": "preview_poll_failed"}
     elapsed = time.monotonic() - pending["started"]
     if value.get("status") == "running":
         if elapsed < PREVIEW_DEFERRED_MAX_S:
@@ -94,32 +109,75 @@ def _tick() -> Optional[float]:
         # Leave the job to finish on its own (its settings restore then).
         result = dict(value, success=False, error="preview_timeout")
     else:
-        result = dict(value, success=True)
-    if _take() is not pending:
+        result = dict(value, success=value.get("status") == "done")
+        if not result["success"]:
+            result.setdefault("error", "preview_" + str(value.get("status") or "unavailable"))
+    if _take(pending) is not pending:
         return None  # already failed/superseded by another path
     logger.info("%s %s: %s after %.1fs", pending["req"].tool_name, key,
                 result.get("status"), elapsed)
-    _respond(pending["req"], result)
-    _record_late_capture(pending["req"], result)
+    _complete(pending, result)
     return None
 
 
-def _record_late_capture(req, result: dict) -> None:
-    """The finished final render becomes a capture tile under its step row
-    (steps_recorder) — the row itself closed when the request was parked."""
-    if not result.get("success"):
+def _origin_scene(pending):
+    """Resolve the original scene after tab switches/renames, never the active tab."""
+    scene = bpy.data.scenes.get(pending["scene_name"])
+    sid = pending["scene_session"]
+    if scene is not None and getattr(scene, "mixie_session_id", "") == sid:
+        return scene
+    if sid:
+        matches = [scene for scene in bpy.data.scenes
+                   if getattr(scene, "mixie_session_id", "") == sid]
+        if len(matches) == 1:
+            return matches[0]
+    return None
+
+
+def _complete(pending, result: dict, *, update_scene=True) -> None:
+    """Finish the original row and operation exactly once, on every exit path."""
+    req = pending["req"]
+    merged = dict(pending["initial_result"])
+    merged.pop(DEFERRED_KEY, None)
+    # A printed deferral marker must not override the actual terminal result
+    # when the backend parses stdout's __RESULT__ convention.
+    merged.pop("output", None)
+    merged.update(result)
+    req.timing["render_wait_ms"] = round((time.monotonic() - pending["started"]) * 1000, 1)
+    record_phase(req, "render_finished", merged)
+    if not update_scene:
+        pass  # bpy data can already be freed during app_exit unregister.
+    elif threading.current_thread() is threading.main_thread():
+        _record_completion(pending, merged)
+    else:
+        # Disconnect/abort can arrive on the socket thread. Resolve scene RNA
+        # only when this runs on main; shutdown deliberately drops UI work.
+        from .main_thread_executor import run_on_main_thread
+        run_on_main_thread(lambda: _record_completion(pending, merged))
+    _respond(req, merged)
+
+
+def _record_completion(pending, merged):
+    req = pending["req"]
+    try:
+        scene = _origin_scene(pending)
+    except Exception:
+        scene = None
+    if scene is None:
         return
     try:
-        scene = getattr(bpy.context, "scene", None)
-        if scene is None:
-            return
-        from .steps_recorder import record_step_captures
-        record_step_captures(scene, req.request_id, result, req.session_id)
+        from .steps_recorder import record_step_end
+        record_step_end(scene, req.request_id, merged, pending["scene_session"])
     except Exception:
-        logger.debug("late capture tile skipped", exc_info=True)
+        logger.debug("Preview step recording skipped", exc_info=True)
+    try:
+        from .main_thread_routing import archive_history
+        archive_history(req.tool_name, req.script, merged, scene, req.request_id)
+    except Exception:
+        logger.debug("Preview terminal history recording skipped", exc_info=True)
 
 
-def defer_response(req, key: str) -> bool:
+def defer_response(req, key: str, *, scene=None, initial_result=None) -> bool:
     """Park ``req`` until preview ``key`` reaches a terminal state.
 
     Returns True when the caller must NOT respond itself. A second deferral
@@ -129,36 +187,47 @@ def defer_response(req, key: str) -> bool:
     global _pending
     previous = _take()
     if previous is not None:
-        _respond(previous["req"], {"success": False, "error": "preview_superseded",
-                                   "job_id": previous["key"]})
-    entry = {"req": req, "key": key, "started": time.monotonic(), "timer": _tick}
+        _complete(previous, {"success": False, "error": "preview_superseded",
+                             "job_id": previous["key"]})
+    if scene is None:
+        scene = getattr(bpy.context, "scene", None)
+    entry = {"req": req, "key": key, "started": time.monotonic(),
+             "scene_name": str(getattr(scene, "name", "") or ""),
+             "scene_session": str(getattr(scene, "mixie_session_id", "") or ""),
+             "initial_result": dict(initial_result or {})}
+    # A fresh callback prevents a superseded timer's return None from
+    # unregistering the replacement deferral during a reconnect/retry.
+    entry["timer"] = lambda: _tick(entry)
     with _lock:
         _pending = entry
-    _install_load_pre()
+        req.response_deferred = True
+    record_phase(req, "render_wait")
     try:
-        # One poller only: a superseding deferral must not double-register it.
-        if bpy.app.timers.is_registered(_tick):
-            bpy.app.timers.unregister(_tick)
-        bpy.app.timers.register(_tick, first_interval=POLL_INTERVAL_S)
+        _install_load_pre()
+        if previous is not None and bpy.app.timers.is_registered(previous["timer"]):
+            bpy.app.timers.unregister(previous["timer"])
+        bpy.app.timers.register(entry["timer"], first_interval=POLL_INTERVAL_S)
     except Exception:
         logger.exception("%s %s: poller registration failed", req.tool_name, key)
-        if _take() is entry:
-            _respond(req, {"success": False, "error": "async_render_unavailable", "job_id": key})
+        if _take(entry) is entry:
+            _complete(entry, {"success": False, "error": "async_render_unavailable", "job_id": key})
         return True
     return True
 
 
-def fail_pending(error: str) -> bool:
+def fail_pending(error: str, session_id: str | None = None, *, update_scene=True) -> bool:
     """Reply to a pending deferral with a fixed error code. True if one existed."""
-    pending = _take()
+    pending = _take(session_id=session_id)
     if pending is None:
         return False
     try:
-        if bpy.app.timers.is_registered(_tick):
-            bpy.app.timers.unregister(_tick)
+        if (threading.current_thread() is threading.main_thread()
+                and bpy.app.timers.is_registered(pending["timer"])):
+            bpy.app.timers.unregister(pending["timer"])
     except Exception:
         pass
-    _respond(pending["req"], {"success": False, "error": error, "job_id": pending["key"]})
+    _complete(pending, {"success": False, "error": error, "job_id": pending["key"]},
+              update_scene=update_scene)
     return True
 
 

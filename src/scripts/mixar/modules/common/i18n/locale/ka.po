@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "მონიშნული მუდბორდის საგან�
 
 msgid "Cannot decode video: %s"
 msgstr "ვიდეოს დეკოდირება შეუძლებელია: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "მუდბორდის ვიდეოს კურსორის მეთვალყურე"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "მუდბორდის ჩაშენებული ვიდეოს დაკვრის გაჩერება, როცა კურსორი მის ფილას ტოვებს"
 
 msgid "This board item has no image or video to preview"
 msgstr "ამ დაფის საგანს გადასახედი გამოსახულება ან ვიდეო არ აქვს"

@@ -11,7 +11,7 @@ import time
 
 from mixar.modules.common.i18n import n_
 
-from ..constants import BACKOFF_MAX_SECONDS, POLL_SECONDS, REPLY_WAIT_SECONDS, REQUEST_TIMEOUT, SYNC_NOTICE_ID
+from ..constants import BACKOFF_MAX_SECONDS, DISCOVERY_SECONDS, POLL_SECONDS, REPLY_WAIT_SECONDS, REQUEST_TIMEOUT, SYNC_NOTICE_ID
 from . import blobs, store
 
 # Retried automatically; a toast would only restate the connection indicator.
@@ -34,6 +34,18 @@ class ArchiveSync:
         self.last_error = None
         self.thread = None
         self.discovery_offset = 0
+        self._discovery_owner = None
+        self._discovery_at = 0.0
+        self._discovered = []
+
+    def _known_sessions(self):
+        """Keep active tabs immediate; discover older archives at a bounded rate."""
+        now = time.monotonic()
+        if self.owner and (self.owner != self._discovery_owner or now >= self._discovery_at):
+            self._discovered = store.known_sessions(self.owner)
+            self._discovery_owner = self.owner
+            self._discovery_at = now + DISCOVERY_SECONDS
+        return sorted(set(self.scene_ids) | set(self._discovered if self.owner else []))
 
     def start(self):
         self.thread = threading.Thread(target=self._run, daemon=True, name='MixarAgentArchive')
@@ -146,7 +158,7 @@ class ArchiveSync:
             reply = []
             def received(value):
                 reply.append(value); ready.set()
-            known = sorted(set(self.scene_ids) | set(store.known_sessions(self.owner) if self.owner else []))
+            known = self._known_sessions()
             start = self.discovery_offset % max(1, len(known))
             known = known[start:] + known[:start]
             self.discovery_offset += 32

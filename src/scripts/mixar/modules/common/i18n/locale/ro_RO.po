@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "Elementul Moodboard selectat nu este un video"
 
 msgid "Cannot decode video: %s"
 msgstr "Nu se poate decoda videoul: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Monitor planare video Moodboard"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Oprește redarea video în linie de pe Moodboard când indicatorul părăsește dala"
 
 msgid "This board item has no image or video to preview"
 msgstr "Acest element de panou nu are imagine sau video de previzualizat"

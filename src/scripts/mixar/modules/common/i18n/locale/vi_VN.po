@@ -19776,7 +19776,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25632,6 @@ msgstr "Mục đã chọn trên bảng cảm hứng không phải là video"
 
 msgid "Cannot decode video: %s"
 msgstr "Không thể giải mã video: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "Theo Dõi Di Chuột trên Video Bảng Cảm Hứng"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Dừng phát video tại chỗ trên bảng cảm hứng khi con trỏ rời khỏi ô của video"
 
 msgid "This board item has no image or video to preview"
 msgstr "Mục trên bảng này không có hình ảnh hoặc video để xem trước"
