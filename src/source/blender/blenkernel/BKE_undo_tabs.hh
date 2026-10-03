@@ -192,6 +192,16 @@ void BKE_undo_tabs_partial_end();
  * for any tab: every ID is re-read, in place where it still lives. Ended by
  * #BKE_undo_tabs_partial_end; #BKE_undo_tabs_partial_tab is #UNDO_TAB_DOCUMENT. */
 void BKE_undo_tabs_whole_document_begin();
+/** After a walk's memfile decode (before #BKE_undo_tabs_partial_end): every
+ * datablock the reader re-read now holds ``source``'s state. Collected until the
+ * next memfile push takes them (#BKE_undo_tabs_walk_restored_take). */
+void BKE_undo_tabs_walk_restored_note(const UndoStep *source);
+/** At a memfile push: hand the walks' re-reads since the previous push to ``us``,
+ * with the data of the objects in Edit Mode now. */
+void BKE_undo_tabs_walk_restored_take(UndoStep *us, Main *bmain);
+void BKE_undo_tabs_walk_restored_free(UndoStep *us);
+/** The stack was cleared: the collected re-reads point at freed steps. */
+void BKE_undo_tabs_walk_restored_forget();
 bool BKE_undo_tabs_partial_active();
 uint32_t BKE_undo_tabs_partial_tab();
 /** The reader's per-ID question. ``has_live`` = a datablock with that

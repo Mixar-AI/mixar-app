@@ -2281,6 +2281,7 @@ void BLO_write_shared(BlendWriter *writer,
       }
       if (memfile.shared_storage->sharing_info_by_address_id.add(address_id, {sharing_info, data}))
       {
+        memfile.shared_storage->size_by_address_id.add(address_id, approximate_size_in_bytes);
         /* The undo-step takes (shared) ownership of the data, which also makes it immutable. */
         sharing_info->add_user();
         /* This size is an estimate, but good enough to count data with many users less. */

@@ -416,6 +416,7 @@ void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const Un
     /* Only memfile steps carry the map: the type with no ID references of
      * its own is the global (memfile) type. */
     if (STREQ(us->type->name, "Global Undo")) {
+      BKE_undo_tabs_walk_restored_take(us, bmain);
       us->mixar_owners = BKE_undo_owner_map_build(bmain, nullptr);
       if (g_live_owners != nullptr) {
         const uint32_t reach = reach_changed_tab(g_live_owners, us->mixar_owners);
@@ -436,6 +437,7 @@ void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const Un
 
 void BKE_undo_step_tab_free(UndoStep *us)
 {
+  BKE_undo_tabs_walk_restored_free(us);
   if (us != nullptr && us->mixar_owners != nullptr) {
     BKE_undo_owner_map_free(us->mixar_owners);
     us->mixar_owners = nullptr;

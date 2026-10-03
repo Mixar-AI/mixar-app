@@ -111,6 +111,10 @@ struct UndoStep {
    * of every tab this memfile holds); a whole-document walk to this step
    * restores them. Owned; null when no tab was behind. */
   void *mixar_cursors;
+  /* Mixar: on a memfile step, the datablocks tab walks re-read since the previous
+   * push and the step each was read from (BKE_undo_tabs_walk_restored_take). Their
+   * difference from the previous memfile is the walk's, not this step's. Owned. */
+  void *mixar_walk_restored;
   /* Over alloc 'type->struct_size'. */
 };
 

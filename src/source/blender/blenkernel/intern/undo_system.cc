@@ -382,6 +382,7 @@ void BKE_undosys_stack_clear(UndoStack *ustack)
   ustack->step_active = nullptr;
   tab_cursors_free(ustack);
   BKE_undo_tabs_live_owners_forget();
+  BKE_undo_tabs_walk_restored_forget();
 }
 
 void BKE_undosys_stack_clear_active(UndoStack *ustack)
@@ -1094,6 +1095,7 @@ bool BKE_undosys_step_load_data_ex(UndoStack *ustack,
   }
   BLI_SCOPED_DEFER([&]() {
     if (reread_all) {
+      BKE_undo_tabs_walk_restored_note(ustack->step_active);
       BKE_undo_tabs_partial_end();
       BKE_undo_tabs_note_push(); /* the live document is the target's state now */
     }
@@ -1500,6 +1502,7 @@ static bool undosys_tab_step_decode(UndoStack *ustack,
         return false;
       }
       undosys_step_decode(C, G_MAIN, ustack, preload, dir, false);
+      BKE_undo_tabs_walk_restored_note(preload);
       BKE_undo_tabs_partial_end();
       target->type->step_foreach_ID_ref(target, undosys_id_ref_resolve, G_MAIN);
     }
@@ -1512,6 +1515,7 @@ static bool undosys_tab_step_decode(UndoStack *ustack,
     return false;
   }
   undosys_step_decode(C, G_MAIN, ustack, target, dir, is_final);
+  BKE_undo_tabs_walk_restored_note(target);
   BKE_undo_tabs_partial_end();
   return true;
 }
