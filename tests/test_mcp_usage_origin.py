@@ -106,3 +106,56 @@ def test_only_the_ai_apps_local_calls_are_reported(monkeypatch):
     local_ui.dispatch(call, owner, "s")
     local_ui.dispatch(release, owner, "s")
     assert reported == ["mixar_scenes"]
+
+
+def test_an_unclaimed_mcp_origin_never_reaches_the_next_manual_generation(monkeypatch):
+    """An MCP script whose operator fails before submit: the script end clears
+    the origin with the ref, so the user's next generation is the user's."""
+    from mixar.modules.common.utils.agent_feedback import clear_agent_ref
+    queue, wm = _queue_with(monkeypatch, mixar_job_origin="mcp",
+                            mixar_agent_ref=json.dumps({"generation_id": "g1", "session_id": "s"}))
+    clear_agent_ref(SimpleNamespace(window_manager=wm))
+    job = _RecordingJob(label="Manual after MCP")
+    assert queue.submit(job) is True and job.origin == "user"
+
+
+def test_every_job_of_an_mcp_batch_is_mcp(monkeypatch):
+    from mixar.modules.common.job_queue.core.agent_batches import agent_generation_batch
+    from mixar.modules.common.job_queue.core import agent_results
+    monkeypatch.setattr(agent_results, "report_agent_batch", lambda batch: None)
+    queue, wm = _queue_with(monkeypatch, mixar_job_origin="mcp",
+                            mixar_agent_ref=json.dumps({"generation_id": "g1", "session_id": "s"}))
+    jobs = [_RecordingJob(label=f"Sibling {i}") for i in range(3)]
+    with agent_generation_batch(SimpleNamespace(window_manager=wm)):
+        for job in jobs:
+            assert queue.submit(job) is True
+    assert [job.origin for job in jobs] == ["mcp"] * 3
+
+
+def test_a_job_that_stages_media_first_still_sends_its_origin(monkeypatch):
+    """Staged media submits from a later timer, outside the queue's submitting_as."""
+    from mixar.modules.common.job_queue.core import generic_jobs
+    sent = []
+    staged = []
+
+    class _Service:
+        def stage_media(self, **kw):
+            staged.append(kw)
+
+        def enqueue(self, *a, **kw):
+            sent.append(JQS._submit_origin.get())
+            return "r"
+
+    monkeypatch.setattr(JQS, "get_job_queue_service", lambda: _Service())
+    job = generic_jobs.StreamingVideoJob(label="Video", job_type="video_gen", model="m", payload={},
+                                         image_inputs=[{"bytes": b"x", "mime_type": "image/png", "filename": "a.png"}])
+    job.origin = "mcp"
+    QM.FeatureQueue("feat_origin_staged")._submit_job_attempt(job)
+    assert staged and not sent
+    staged[0]["on_success"](SimpleNamespace(data={"s3_key": "k"}))  # The timer, after the block ended.
+    assert sent == ["mcp"]
+
+
+def test_the_launcher_points_to_the_profile_menu():
+    source = (SCRIPTS / "mixar" / "mcp.py").read_text()
+    assert "Help >" not in source and "profile menu > Connect AI Apps (MCP)" in source

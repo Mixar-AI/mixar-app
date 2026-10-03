@@ -17,8 +17,9 @@ _active_batch = ContextVar('agent_generation_batch', default=None)
 
 
 class AgentBatch:
-    def __init__(self, ref):
+    def __init__(self, ref, origin=""):
         self.ref = ref
+        self.origin = origin
         self.members = {}
         self.outcomes = {}
         self.sealed = False
@@ -65,10 +66,11 @@ def agent_generation_batch(context):
     Only this synchronous scope shares the identity. On exit, even after an
     exception, stop accepting members before attempting terminal delivery.
     """
-    from mixar.modules.common.utils.agent_feedback import take_agent_ref
+    from mixar.modules.common.utils.agent_feedback import take_agent_ref, take_job_origin
 
     ref = take_agent_ref(context)
-    batch = AgentBatch(ref) if ref else None
+    # The origin belongs to the invocation like the ref: every sibling keeps it.
+    batch = AgentBatch(ref, take_job_origin(context)) if ref else None
     token = _active_batch.set(batch)
     try:
         yield

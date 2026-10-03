@@ -385,7 +385,8 @@ class FeatureQueue(DownloadMixin):
 
         batch = current_agent_batch()
         ref = dict(batch.ref) if batch is not None else take_agent_ref(bpy.context)
-        origin = take_job_origin(bpy.context) or ("mixar_agent" if ref else "user")
+        taken = batch.origin if batch is not None else take_job_origin(bpy.context)
+        origin = taken or ("mixar_agent" if ref else "user")
         # Dedup: reject if same label is already active
         if job.label and any(
             j.label == job.label and j.state not in TERMINAL_STATES

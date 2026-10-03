@@ -42,15 +42,17 @@ _ORIGIN_KEY = "mixar_job_origin"
 
 
 def clear_agent_ref(context=None) -> None:
-    """Discard an unclaimed ref when its synchronous agent script ends."""
+    """Discard an unclaimed ref (and its MCP origin) when its synchronous agent
+    script ends, so a later manual generation never inherits either."""
     try:
         if context is None:
             import bpy
 
             context = bpy.context
         wm = context.window_manager
-        if _REF_KEY in wm.keys():
-            del wm[_REF_KEY]
+        for key in (_REF_KEY, _ORIGIN_KEY):
+            if key in wm.keys():
+                del wm[key]
     except Exception:
         pass
 
