@@ -503,6 +503,39 @@ def isolation_diff(before: dict, after: dict | None, shared: tuple[set, set, set
     return d
 
 
+def _step_number(step: str) -> int:
+    return int(step.split(":")[1])
+
+
+def _held_since(obj_key: str, field: str, value, step: str) -> bool:
+    """The object held ``value`` in some tab at a step at or after ``step``. A shared
+    object's undo takes back only this tab's changes: when another tab changed it
+    after ``step`` and took that back itself, the right value is neither the step's
+    snapshot nor the value before the press but the one before this tab's change."""
+    n0 = _step_number(step)
+    return any(_step_number(name_) >= n0 and r is not None and r.get(field) == value
+               for name_, snap in SNAP.items() for fp in snap.values()
+               for r in [fp.get("objects", {}).get(obj_key)])
+
+
+def _shared_since(obj_key: str, uid: int, step: str) -> bool:
+    """Another tab had the object at a step at or after ``step`` (it may be gone now:
+    a tab's undo of its own delete brings it back with the other tabs' changes)."""
+    n0 = _step_number(step)
+    return any(_step_number(name_) >= n0 and obj_key in fp.get("objects", {})
+               for name_, snap in SNAP.items() for u, fp in snap.items() if u != uid)
+
+
+def _renamed_ok(want: str, got: str) -> bool:
+    """Same name, or a restored datablock renamed because another tab's live one
+    took its name meanwhile (the reader renames the restored one: names are unique)."""
+    if want == got:
+        return True
+    base = lambda n: n.rsplit(".", 1)[0] if n.rsplit(".", 1)[-1].isdigit() else n  # noqa: E731
+    return base(want) == base(got) and want in bpy.data.materials and \
+        bpy.data.materials[want].name_full != got
+
+
 def press(uid: int, what: str) -> None:
     """One press in tab ``uid``, checked against the two guarantees."""
     show(uid)
@@ -626,7 +659,8 @@ def press(uid: int, what: str) -> None:
             was = before.get(uid, {}).get("objects", {}).get(k)
             if was is None:   # not in this tab before the press (given away, taken back)
                 was = next((fp["objects"][k] for fp in before.values() if k in fp.get("objects", {})), None)
-            obj_shared = got.get("name") in s_objs or (was is not None and was.get("name") in s_objs)
+            obj_shared = got.get("name") in s_objs or (was is not None and was.get("name") in s_objs) or \
+                _shared_since(k, uid, step)
             ok = True
             for f in want_o:
                 if want_o.get(f) == got.get(f):
@@ -642,14 +676,16 @@ def press(uid: int, what: str) -> None:
                     if data_shared and was is not None and gs == was.get("materials"):
                         continue
                     ok = len(ws) == len(gs) and all(
-                        (w is None and g is None) or (w and g and w[0] == g[0] and (
+                        (w is None and g is None) or (w and g and _renamed_ok(w[0], g[0]) and (
                             w[1] == g[1] or (g[0] in s_mats and colour_before.get(g[0]) == g[1])))
                         for w, g in zip(ws, gs))
                 elif f in ("matrix", "type"):
-                    ok = obj_shared and was is not None and got.get(f) == was.get(f)
+                    ok = obj_shared and ((was is not None and got.get(f) == was.get(f)) or
+                                         _held_since(k, f, got.get(f), step))
                 elif f in ("mesh", "data_uid"):
-                    ok = (obj_shared or (was is not None and was.get("data") in s_data)) and \
-                        was is not None and got.get(f) == was.get(f)
+                    data_shared = obj_shared or (was is not None and was.get("data") in s_data)
+                    ok = data_shared and ((was is not None and got.get(f) == was.get(f)) or
+                                          _held_since(k, f, got.get(f), step))
                 else:
                     ok = False
                 if not ok:
@@ -658,11 +694,15 @@ def press(uid: int, what: str) -> None:
                 del changed[k]
         # An object the tab shared at the step that another tab deleted since: the
         # tab's undo does not take back another tab's delete.
+        # It may have been shared after the step (a share is the receiving tab's step).
         if "objects" in d:
             gone_before = {k for k in d["objects"]["removed"]
                            if not any(k in fp.get("objects", {}) for fp in before.values())}
+            ever_shared = {k for k in gone_before for snap in SNAP.values()
+                           if any(k in fp.get("objects", {}) for u, fp in snap.items() if u != uid)}
             d["objects"]["removed"] = [k for k in d["objects"]["removed"]
-                                       if not (k in gone_before and mine.get(k, {}).get("name") in s_objs)]
+                                       if not (k in gone_before and (mine.get(k, {}).get("name") in s_objs
+                                                                     or k in ever_shared))]
         if "objects" in d and not (d["objects"]["added"] or d["objects"]["removed"] or changed):
             del d["objects"]
         if d:
