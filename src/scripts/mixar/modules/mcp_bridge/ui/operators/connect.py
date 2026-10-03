@@ -76,6 +76,11 @@ class MIXAR_OT_mcp_setup(Operator):
         if not _signed_in(context):
             layout.label(text="Sign in to Mixar to connect AI apps.", icon='INFO')
             layout.operator("mixie_chat.login", text="Sign In")
+            if runtime.enabled():
+                # Turning MCP off never needs an account (the session may have expired).
+                row = layout.row()
+                row.label(text="MCP enabled", icon='CHECKMARK')
+                row.operator("mixar.set_mcp_enabled", text="Disable").enabled = False
             return
         layout.label(text="Scene and UI tools are free; only AI generation uses credits.")
         layout.label(text="Your AI app can start Mixar when needed.")

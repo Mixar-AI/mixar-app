@@ -135,3 +135,53 @@ def test_mcp_setup_lives_in_the_profile_menu_not_help():
     assert '"mixar.connect_ai"' in (root / "scripts/mixar/modules/space_mixie_chat/ui/topbar.py").read_text()
     card = (root / "source/blender/editors/interface/interface_mixar_profile_card.cc").read_text()
     assert '"MIXAR_OT_connect_ai"' in card and "MixarCardIcon::Plug" in card
+
+
+class _Layout:
+    """Records what a dialog draws."""
+
+    def __init__(self, log):
+        self.log, self.enabled, self.alignment = log, True, ""
+
+    def label(self, text="", **kw):
+        self.log.append(("label", text))
+
+    def operator(self, idname, text="", **kw):
+        self.log.append(("operator", idname, text))
+        return SimpleNamespace()
+
+    def row(self, **kw):
+        return self
+
+    column = box = row
+
+    def separator(self):
+        pass
+
+    def prop(self, *a, **kw):
+        pass
+
+
+def _dialog_draw(connect):
+    """The real draw method (operator classes are mocks under the stub bpy)."""
+    import ast
+    tree = ast.parse(Path(connect.__file__).read_text())
+    dialog = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "MIXAR_OT_mcp_setup")
+    draw = next(item for item in dialog.body if isinstance(item, ast.FunctionDef) and item.name == "draw")
+    namespace = dict(vars(connect))
+    exec(compile(ast.fix_missing_locations(ast.Module([draw], [])), connect.__file__, "exec"), namespace)
+    return namespace["draw"]
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_a_signed_out_user_can_still_turn_mcp_off(monkeypatch, enabled):
+    from mixar.modules.mcp_bridge.ui.operators import connect
+    monkeypatch.setattr(connect.runtime, "enabled", lambda: enabled)
+    log = []
+    dialog = SimpleNamespace(layout=_Layout(log))
+    expired = SimpleNamespace(window_manager=SimpleNamespace(mixie_chat_is_logged_in=True,
+                                                             mixie_chat_session_expired=True))
+    _dialog_draw(connect)(dialog, expired)
+    assert ("operator", "mixie_chat.login", "Sign In") in log
+    assert (("operator", "mixar.set_mcp_enabled", "Disable") in log) is enabled
+    assert not any(entry[0] == "operator" and entry[2] == "Enable MCP" for entry in log)

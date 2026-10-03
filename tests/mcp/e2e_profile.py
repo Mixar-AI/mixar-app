@@ -74,8 +74,11 @@ def profile_layout(qa, output):
 
 
 def signed_out_setup(qa, output, fixture):
-    """Signed out: the dialog offers only Sign In; enabling paths refuse."""
+    """Signed out: the dialog offers Sign In, plus Disable while MCP is still on
+    (the session expired); enabling paths refuse."""
     saved = fixture / "connector" / "tools.json"
+    mcp_on = "__import__('mixar.modules.mcp_bridge.core.runtime',fromlist=['x']).enabled()"
+    assert qa.eval("result = list(bpy.ops.mixar.set_mcp_enabled(enabled=True))") == ["FINISHED"]
     qa.eval("result = list(bpy.ops.mixie_chat.logout())")
     qa.wait(f"not {WM}.mixie_chat_is_logged_in", timeout=30)
     saved.unlink(missing_ok=True)
@@ -83,9 +86,13 @@ def signed_out_setup(qa, output, fixture):
     time.sleep(0.8)
     assert qa.find(text="Sign in to Mixar to connect AI apps.", popup=True)["total"] == 1
     assert qa.find(op="MIXIE_CHAT_OT_login", popup=True)["total"] == 1
-    assert qa.find(op="MIXAR_OT_set_mcp_enabled", popup=True)["total"] == 0
+    toggles = qa.find(op="MIXAR_OT_set_mcp_enabled", popup=True)["widgets"]
+    assert [w["text"] for w in toggles] == ["Disable"], toggles  # Turning off needs no account.
     assert qa.find(op="MIXAR_OT_copy_mcp_setup", popup=True)["total"] == 0
     snap(qa, output / "setup-signed-out.png", {"text": "Sign in to Mixar to connect AI apps.", "popup": True})
+    qa.click(op="MIXAR_OT_set_mcp_enabled", popup=True)
+    qa.wait(f"not {mcp_on}", timeout=10)
+    signed_out_disable = True
     close_popups(qa)
     # An operator's ERROR report reaches a script as RuntimeError.
     refused = {name: qa.eval(f"try:\n result = list(bpy.ops.mixar.{name}())\n"
@@ -99,7 +106,7 @@ def signed_out_setup(qa, output, fixture):
     while not saved.exists() and time.monotonic() < deadline:
         time.sleep(0.5)
     assert saved.exists(), "Copy did not save the tool list"
-    return {"refused_signed_out": refused, "saved_on_copy": True}
+    return {"refused_signed_out": refused, "saved_on_copy": True, "signed_out_can_disable": signed_out_disable}
 
 
 def run(qa, output, fixture, fallback_only):
