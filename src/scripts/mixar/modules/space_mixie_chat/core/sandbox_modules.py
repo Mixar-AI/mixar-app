@@ -340,8 +340,7 @@ class RestrictedUrllib:
         only ever receives file paths in the temp directory.
         """
         import concurrent.futures as _futures
-        import hashlib as _hashlib
-        import tempfile as _tf
+        from mixar.modules.common.agent_execution import asset_cache
 
         out = {}
         allowed = []
@@ -357,18 +356,9 @@ class RestrictedUrllib:
             except Exception:
                 out[u] = None
 
-        tmp = _tf.gettempdir().rstrip("/\\")
-
         def _fetch(u):
             try:
-                data = self._urlopen(u, timeout=timeout).read()
-                if not data:
-                    return u, None
-                name = "mixar_prefetch_" + _hashlib.sha1(u.encode()).hexdigest()[:16] + ".bin"
-                path = tmp + "/" + name
-                with open(path, "wb") as fh:
-                    fh.write(data)
-                return u, path
+                return u, asset_cache.download(u, opener=self._urlopen, timeout=timeout)
             except Exception:
                 return u, None
 
@@ -379,10 +369,17 @@ class RestrictedUrllib:
                     out[u] = path
         return out
 
+    def cached_file(self, url):
+        """Nonblocking cache lookup for a prepared first-party asset script."""
+        from mixar.modules.common.agent_execution import asset_cache
+
+        self._check_url(url)
+        return asset_cache.cached_path(str(url))
+
     def __getattr__(self, name):
         raise AttributeError(
             "urllib." + name + " is not available in the sandbox. "
-            "Allowed: urlopen(url) GET and prefetch(urls) to asset hosts only"
+            "Allowed: urlopen(url) GET, prefetch(urls), cached_file(url) to asset hosts only"
         )
 
 
