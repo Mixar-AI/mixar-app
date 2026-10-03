@@ -25633,12 +25633,6 @@ msgstr "Выбранный элемент мудборда не является
 msgid "Cannot decode video: %s"
 msgstr "Не удалось декодировать видео: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Отслеживание наведения на видео мудборда"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Останавливает встроенное воспроизведение видео мудборда, когда указатель покидает его плитку"
-
 msgid "This board item has no image or video to preview"
 msgstr "У этого элемента доски нет изображения или видео для предпросмотра"
 

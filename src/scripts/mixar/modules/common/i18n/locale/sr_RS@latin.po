@@ -33004,14 +33004,6 @@ msgid "Cannot decode video: %s"
 msgstr "Nije moguće dekodirati video: %s"
 
 # derived
-msgid "Moodboard Video Hover Monitor"
-msgstr "Nadgledanje lebdenja videa mudborda"
-
-# derived
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Zaustavlja ugrađenu reprodukciju videa mudborda kada pokazivač napusti njegovu pločicu"
-
-# derived
 msgid "This board item has no image or video to preview"
 msgstr "Ova stavka table nema sliku ili video za pregled"
 

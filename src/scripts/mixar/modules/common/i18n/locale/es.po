@@ -25633,12 +25633,6 @@ msgstr "El elemento seleccionado del moodboard no es un video"
 msgid "Cannot decode video: %s"
 msgstr "No se puede decodificar el video: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Monitor de video del moodboard al pasar el puntero"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Detiene la reproducción integrada del video del moodboard cuando el puntero sale de su celda"
-
 msgid "This board item has no image or video to preview"
 msgstr "Este elemento del tablero no tiene ninguna imagen ni video para previsualizar"
 

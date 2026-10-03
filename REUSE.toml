@@ -5,7 +5,7 @@
 version = 1
 
 [[annotations]]
-path = "tests/qa/evidence/agent-session-robustness/*"
+path = ["docs/development/moodboard-video-playback/*", "tests/qa/evidence/agent-session-robustness/*"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-2.0-or-later"

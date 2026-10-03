@@ -25633,12 +25633,6 @@ msgstr "Тандалган мудборд элементи видео эмес."
 msgid "Cannot decode video: %s"
 msgstr "Видео чечилбейт: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Мудборд видеосунун үстүнө келүү көзөмөлү"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Көрсөткүч плиткадан чыкканда мудборддогу видео ойнотууну токтотот."
-
 msgid "This board item has no image or video to preview"
 msgstr "Бул такта элементинде алдын ала көрө турган сүрөт же видео жок."
 

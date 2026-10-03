@@ -25633,12 +25633,6 @@ msgstr "A kijelölt moodboard-elem nem videó"
 msgid "Cannot decode video: %s"
 msgstr "A videó nem dekódolható: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Moodboard-videó lebegtetés-figyelő"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "A moodboardon belüli videólejátszás leállítása, amikor a mutató elhagyja a lapját"
-
 msgid "This board item has no image or video to preview"
 msgstr "Ennek a táblaelemnek nincs előnézhető képe vagy videója"
 

@@ -25633,12 +25633,6 @@ msgstr "ואידיו וניא רחבנש הארשהה חול טירפ"
 msgid "Cannot decode video: %s"
 msgstr "%s :ואידיו חנעפל ןתינ אל"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "הארשה חולב ואידיו לש ףוחיר גצ"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "חיראהמ אצוי עיבצמהשכ הארשהה חולב עמטומ ואידיו ןוגינ רצוע"
-
 msgid "This board item has no image or video to preview"
 msgstr "המידקמ הגוצתל ואידיו וא הנומת ןיא הז חול טירפל"
 

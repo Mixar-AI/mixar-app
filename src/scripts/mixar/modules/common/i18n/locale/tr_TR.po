@@ -25633,12 +25633,6 @@ msgstr "Seçili moodboard öğesi bir video değil"
 msgid "Cannot decode video: %s"
 msgstr "Video çözülemiyor: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Moodboard Video Üzerine Gelme İzleyicisi"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "İşaretçi kutucuğundan ayrıldığında satır içi moodboard video oynatmasını durdurur"
-
 msgid "This board item has no image or video to preview"
 msgstr "Bu pano öğesinin önizlenecek görseli veya videosu yok"
 

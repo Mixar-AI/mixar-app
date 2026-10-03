@@ -25633,12 +25633,6 @@ msgstr "Det valgte moodboard-element er ikke en video"
 msgid "Cannot decode video: %s"
 msgstr "Kan ikke afkode video: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Overvågning af videopegning på moodboard"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Stopper indlejret videoafspilning på moodboardet når markøren forlader flisen"
-
 msgid "This board item has no image or video to preview"
 msgstr "Dette tavleelement har intet billede eller nogen video at forhåndsvise"
 

@@ -25633,12 +25633,6 @@ msgstr "L’élément sélectionné du moodboard n’est pas une vidéo"
 msgid "Cannot decode video: %s"
 msgstr "Impossible de décoder la vidéo : %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Surveillance du survol des vidéos du moodboard"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Arrêter la lecture intégrée d’une vidéo du moodboard quand le pointeur quitte sa vignette"
-
 msgid "This board item has no image or video to preview"
 msgstr "Cet élément de la planche n’a pas d’image ni de vidéo à prévisualiser"
 

@@ -25633,12 +25633,6 @@ msgstr "Hautatutako moodboard elementua ez da bideoa"
 msgid "Cannot decode video: %s"
 msgstr "Ezin da bideoa deskodetu: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Moodboard bideoaren gain-monitorea"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Gelditu moodboard-eko bideoaren lerroko erreprodukzioa erakusleak lauza uzten duenean"
-
 msgid "This board item has no image or video to preview"
 msgstr "Taula-elementu honek ez du aurrebistarako irudirik edo bideorik"
 

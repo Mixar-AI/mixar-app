@@ -25633,12 +25633,6 @@ msgstr "รายการมู้ดบอร์ดที่เลือกไ
 msgid "Cannot decode video: %s"
 msgstr "ถอดรหัสวิดีโอไม่ได้: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "ตัวเฝ้าการชี้วิดีโอมู้ดบอร์ด"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "หยุดเล่นวิดีโอมู้ดบอร์ดในแผ่นเมื่อตัวชี้ออกจากไทล์"
-
 msgid "This board item has no image or video to preview"
 msgstr "รายการบอร์ดนี้ไม่มีภาพหรือวิดีโอให้ดูตัวอย่าง"
 

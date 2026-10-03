@@ -25633,12 +25633,6 @@ msgstr "Det markerade moodboard-objektet är inte en video"
 msgid "Cannot decode video: %s"
 msgstr "Kan inte avkoda videon: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Hovringsövervakare för moodboard-video"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Stoppar uppspelningen av moodboard-video på plats när pekaren lämnar dess ruta"
-
 msgid "This board item has no image or video to preview"
 msgstr "Det här objektet på tavlan har ingen bild eller video att förhandsgranska"
 

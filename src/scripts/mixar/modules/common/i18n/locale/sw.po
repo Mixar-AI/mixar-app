@@ -25633,12 +25633,6 @@ msgstr "Kipengee kilichochaguliwa cha ubao wa hisia si video"
 msgid "Cannot decode video: %s"
 msgstr "Haiwezi kusimbua video: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "Kifuatiliaji cha kuelea juu ya video ya ubao wa hisia"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "Sitisha uchezaji wa video ndani ya ubao wa hisia kielekezi kinapoondoka kwenye kigae chake"
-
 msgid "This board item has no image or video to preview"
 msgstr "Kipengee hiki cha ubao hakina taswira wala video ya kuhakiki"
 

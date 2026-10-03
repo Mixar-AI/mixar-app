@@ -25633,12 +25633,6 @@ msgstr "선택한 무드보드 항목이 비디오가 아닙니다"
 msgid "Cannot decode video: %s"
 msgstr "비디오를 디코딩할 수 없습니다: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "무드보드 비디오 호버 모니터"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "포인터가 타일을 벗어나면 무드보드 인라인 비디오 재생을 중지합니다"
-
 msgid "This board item has no image or video to preview"
 msgstr "이 보드 항목에는 미리 볼 이미지나 비디오가 없습니다"
 

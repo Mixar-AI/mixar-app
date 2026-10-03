@@ -25633,12 +25633,6 @@ msgstr "തിരഞ്ഞെടുത്ത മൂഡ്ബോർഡ് ഇന�
 msgid "Cannot decode video: %s"
 msgstr "വീഡിയോ ഡീകോഡ് ചെയ്യാനാകില്ല: %s"
 
-msgid "Moodboard Video Hover Monitor"
-msgstr "മൂഡ്ബോർഡ് വീഡിയോ ഹോവർ മോണിറ്റർ"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "പോയിന്റർ ടൈൽ വിട്ടുപോകുമ്പോൾ മൂഡ്ബോർഡിലെ ഇൻലൈൻ വീഡിയോ പ്ലേബാക്ക് നിർത്തുക"
-
 msgid "This board item has no image or video to preview"
 msgstr "ഈ ബോർഡ് ഇനത്തിന് പ്രിവ്യൂ ചെയ്യാൻ ചിത്രമോ വീഡിയോയോ ഇല്ല"
 
