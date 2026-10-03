@@ -730,6 +730,29 @@ def press(uid: int, what: str) -> None:
             d["objects"]["removed"] = [k for k in d["objects"]["removed"]
                                        if not (k in gone_before and (mine.get(k, {}).get("name") in s_objs
                                                                      or k in ever_shared))]
+        # An object this tab shows through a child collection it shares with another
+        # tab (a Linked Copy): the collection is kept as the other tab left it.
+        if "objects" in d:
+            colls_shared = set()
+            for snap_ in (before, after, at_step):
+                mine_c = set(snap_.get(uid, {}).get("collections", ()))
+                for other, fp in snap_.items():
+                    if other != uid:
+                        colls_shared |= mine_c & set(fp.get("collections", ()))
+            def via_shared_coll(rec):
+                return rec is not None and set(rec.get("colls", ())) & colls_shared
+            # A shared object another tab took out of this tab (a global delete it
+            # then took back for itself only): this tab's membership is kept as it
+            # was before the press. An own global delete leaves no tab holding it.
+            def kept_out(k):
+                rec = want.get("objects", {}).get(k)
+                return rec is not None and rec["name"] in s_objs and \
+                    k not in before.get(uid, {}).get("objects", {}) and \
+                    any(k in fp.get("objects", {}) for u_, fp in before.items() if u_ != uid)
+            d["objects"]["removed"] = [k for k in d["objects"]["removed"]
+                                       if not via_shared_coll(want.get("objects", {}).get(k)) and not kept_out(k)]
+            d["objects"]["added"] = [k for k in d["objects"]["added"]
+                                     if not via_shared_coll(after.get(uid, {}).get("objects", {}).get(k))]
         if "objects" in d and not (d["objects"]["added"] or d["objects"]["removed"] or changed):
             del d["objects"]
         if d:
