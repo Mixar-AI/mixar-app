@@ -135,9 +135,9 @@ def begin_operation(params):
         if session.get_state(scene) == SessionState.OFFLINE:
             return _failure("scene_offline", "Mixar is not connected to its server; wait for it to reconnect")
         if session.get_state(scene) != SessionState.IDLE or session.run_open(scene):
-            return _failure("scene_busy", "Wait for the current Mixar task to finish")
+            return _failure("scene_busy", "An agent is working in this scene tab")
         if session.get_session_id(scene) in _operations:
-            return _failure("scene_busy", "Another MCP operation owns this scene")
+            return _failure("scene_busy", "Another AI app connection is working in this scene tab")
         if len(_operations) >= MAX_ACTIVE_OPERATIONS:
             return _failure("operation_limit", "Too many active MCP operations")
         if not session.get_session_id(scene):
