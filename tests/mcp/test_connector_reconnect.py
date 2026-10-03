@@ -128,3 +128,26 @@ def test_the_ai_app_travels_with_each_call_for_usage_attribution(monkeypatch):
     assert "mixar/client" not in sent[0]
     assert sent[1] == {"mixar/request-id": "22222222-2222-2222-2222-222222222222",
                        "mixar/client": {"name": "codex-mcp-client", "version": "0.160.0"}}
+
+
+@pytest.mark.parametrize("error_type,blocks", [("modal_active", True), ("not_ready", False)])
+def test_only_an_unfinished_ui_operation_blocks_scene_tools(monkeypatch, error_type, blocks):
+    sent = []
+
+    def request(record, method, path, payload=None, headers=None, timeout=10):
+        sent.append(path)
+        if path == "/ui":
+            return {"result": {"isError": True, "structuredContent": {"result": {
+                "error_type": error_type, "error": "Finish or cancel the current UI operation before running a scene tool"}}}}
+        return {"result": {"isError": False, "content": [], "structuredContent": {"result": {}}}}
+
+    monkeypatch.setattr(connector, "request", request)
+    client = connector.Connector()
+    monkeypatch.setattr(client, "attach", lambda: ({"instance_id": "a"}, {"ui_contract": "mixar_ui_v1"}))
+    if blocks:
+        with pytest.raises(RuntimeError, match="Finish or cancel the current UI operation"):
+            client.call("scene_overview", {}, "11111111-1111-1111-1111-111111111111")
+        assert sent == ["/ui"]
+    else:  # The controller is still starting after launch: nothing to release.
+        client.call("scene_overview", {}, "11111111-1111-1111-1111-111111111111")
+        assert sent == ["/ui", "/mcp"]

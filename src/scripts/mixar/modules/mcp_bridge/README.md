@@ -12,9 +12,8 @@
    Tick **Let AI apps control Mixar's interface** only if the assistant should
    also see and click Mixar's interface; scene tools work without it.
 4. Restart the app's MCP connection. It can start your installed Mixar when needed.
-   If the assistant only sees `mixar_*` tools, Mixar was not signed in yet:
-   sign in, and Claude Code adds the scene tools by itself; in Codex, start a
-   new session.
+   The assistant sees every tool even while Mixar is closed or signed out; it
+   asks you to open Mixar or sign in when a tool needs it, then carries on.
 
 Ask the assistant to inspect the scene, make a change, and verify it with a
 viewport image. Tools cover scene and geometry inspection, Blender scripting,

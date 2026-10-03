@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Replay when an AI app gets Mixar's scene tools, against a real isolated app.
+"""Replay that an AI app always gets every Mixar tool, against a real isolated app.
 
-An AI app lists tools once while it starts. This replays the timings users hit:
-the AI app connecting while Mixar is still starting, while it is signed out, with
-a second signed-out Mixar open, and while Mixar's server connection is down.
-Spends no credits (only free inspection tools are called). Normal-input QA app
-from e2e_launch.py --normal-input; the harness only prepares state and asserts.
+An AI app lists tools once, when it connects. The app saves the backend's tool
+list while signed in, and the launcher lists it at once whatever state Mixar is
+in; a call made too early says why, and the same session works once Mixar is
+ready. Replays: the saved list appearing, connecting while Mixar is reopened,
+the server connection dropping, and a second signed-out Mixar left open. Spends
+no credits. Normal-input QA app from e2e_launch.py --normal-input.
 """
 
 import argparse
@@ -90,21 +91,15 @@ class Replay:
 
 class _Session:
     def __init__(self, replay, client):
-        self.replay, self.client, self.changed = replay, client, None
+        self.replay, self.client = replay, client
 
     async def __aenter__(self):
         self.replay.no_cold_start()
-        self.changed = asyncio.Event()
-
-        async def on_message(message):
-            if getattr(message, "method", "") == "notifications/tools/list_changed":
-                self.changed.set()
-
         self._stack = AsyncExitStack()
         params = StdioServerParameters(command=self.replay.launcher, args=[], env=self.replay.env)
         streams = await self._stack.enter_async_context(stdio_client(params))
         self.mcp = await self._stack.enter_async_context(ClientSession(
-            *streams, client_info=Implementation(name=self.client, version="1"), message_handler=on_message))
+            *streams, client_info=Implementation(name=self.client, version="1")))
         await self.mcp.initialize()
         return self
 
@@ -122,64 +117,51 @@ class _Session:
         text = " ".join(block.text for block in result.content if block.type == "text")
         return result, payload, text
 
-    async def wait_changed(self, timeout):
-        try:
-            await asyncio.wait_for(self.changed.wait(), timeout)
-            return True
-        except TimeoutError:
-            return False
+    async def until_works(self, name="scene_overview", timeout=120):
+        """Retry as an agent would; returns the messages seen before it worked."""
+        deadline, seen = time.monotonic() + timeout, []
+        while True:
+            result, _, text = await self.call(name)
+            if not result.is_error:
+                return seen
+            seen.append(text[:160])
+            if time.monotonic() > deadline:
+                raise AssertionError(f"{name} never worked: {seen[-3:]}")
+            await asyncio.sleep(2)
+
+
+def saved_tools(replay):
+    try:
+        return {t["name"] for t in json.loads((replay.fixture / "connector" / "tools.json").read_text())["tools"]}
+    except (OSError, ValueError, KeyError):
+        return set()
+
+
+async def saved_list(replay):
+    """Enabling MCP while signed in saves every backend tool for later sessions."""
+    deadline = time.monotonic() + 60
+    while SCENE_TOOL not in saved_tools(replay) and time.monotonic() < deadline:
+        await asyncio.sleep(1)
+    replay.check("signed_in_app_saves_the_tool_list", SCENE_TOOL in saved_tools(replay), len(saved_tools(replay)))
 
 
 async def startup(replay):
-    """The AI app connects right as Mixar is reopened, before its relay exists:
-    a start in progress is waited for (bounded), then the session catches up."""
+    """The AI app connects right as Mixar is reopened: every tool at once, early
+    calls say why, and the same session works once Mixar is ready."""
     replay.no_cold_start()  # Stands for "another AI app just started Mixar".
     command = [sys.executable, str(Path(__file__).with_name("e2e_launch.py")), str(replay.fixture), "--relaunch"]
     subprocess.run(command, check=True, capture_output=True, text=True)
     async with replay.session() as s:
         names, seconds = await s.tools()
-        replay.evidence["startup"] = {"list_seconds": seconds, "scene_tools_in_first_list": SCENE_TOOL in names,
-                                      "health_after_list": [h for _, h in replay.records()]}
-        replay.check("startup_list_answered_within_bounded_wait", seconds <= 15, seconds)
-        if SCENE_TOOL not in names:  # Mixar took longer than the wait: the session catches up.
-            replay.check("startup_late_tools_announced", await s.wait_changed(120))
-            names, _ = await s.tools()
-        replay.check("startup_session_gets_scene_tools", SCENE_TOOL in names,
+        replay.check("startup_lists_every_tool_at_once", SCENE_TOOL in names and seconds < 5,
                      {"seconds": seconds, "count": len(names)})
+        seen = await s.until_works()
+        replay.evidence["startup_messages_before_ready"] = seen
+        replay.check("startup_same_session_works_once_ready", True, seen[:3])
         _, context, _ = await s.call("mixar_ui_context")
-        replay.check("startup_context_reports_available",
-                     context.get("scene_tools") == "available" and context.get("signed_in") is True, context)
+        replay.check("startup_context_reports_available", context.get("scene_tools") == "available", context)
     replay.ready()
     replay.qa.wait(NOTIFY_ELIGIBLE, timeout=90)
-
-
-async def signed_out(replay):
-    """Signed out: answered at once with local tools, then the tools arrive."""
-    replay.qa.eval(f"{WM}.mixie_chat_is_logged_in = False\nresult = True")
-    await asyncio.sleep(1.5)  # The relay snapshot ticks.
-    try:
-        async with replay.session() as s:
-            names, seconds = await s.tools()
-            replay.check("signed_out_answers_at_once_without_scene_tools",
-                         SCENE_TOOL not in names and "mixar_ui_context" in names and seconds < 5,
-                         {"seconds": seconds, "count": len(names)})
-            result, _, text = await s.call("scene_overview")
-            replay.check("signed_out_scene_call_says_sign_in", result.is_error and "Sign in" in text, text[:200])
-            replay.qa.eval(f"{WM}.mixie_chat_is_logged_in = True\nresult = True")
-            await asyncio.sleep(1.5)
-            started = time.monotonic()
-            _, context, _ = await s.call("mixar_ui_context")
-            replay.check("signed_in_context_reports_loading", context.get("scene_tools") in {"loading", "available"},
-                         context)
-            replay.check("signed_in_tools_announced", await s.wait_changed(15),
-                         round(time.monotonic() - started, 1))
-            names, _ = await s.tools()
-            replay.check("signed_in_session_gets_scene_tools", SCENE_TOOL in names, len(names))
-            _, context, _ = await s.call("mixar_ui_context")
-            replay.check("context_reports_available_after_reload", context.get("scene_tools") == "available",
-                         context)
-    finally:
-        replay.qa.eval(f"{WM}.mixie_chat_is_logged_in = True\nresult = True")
 
 
 async def second_app(replay):
@@ -229,23 +211,28 @@ def launch_second(replay):
 
 
 async def server_drop(replay):
-    """Mixar's server connection is down: discovery works, calls say why."""
+    """Mixar's server connection drops: every tool still listed, calls say
+    "connecting", and the same session works once it is back."""
     replay.qa.eval("from mixar.modules.space_mixie_chat.core.connection_manager import get_connection_manager\n"
                    "get_connection_manager().disconnect()\nresult = True")
     try:
         await asyncio.sleep(1.5)
         async with replay.session() as s:
             names, seconds = await s.tools()
-            replay.check("disconnected_still_lists_scene_tools", SCENE_TOOL in names, {"seconds": seconds})
+            replay.check("disconnected_still_lists_every_tool", SCENE_TOOL in names, {"seconds": seconds})
             result, _, text = await s.call("scene_overview")
             replay.check("disconnected_call_says_connecting", result.is_error and "connecting" in text, text[:200])
             _, context, _ = await s.call("mixar_ui_context")
             replay.check("disconnected_context_reports_connecting",
                          context.get("server_connected") is False and context.get("scene_tools") == "connecting",
                          context)
+            replay.qa.eval("from mixar.modules.space_mixie_chat.core.connection_manager import get_connection_manager\n"
+                           "result = get_connection_manager().reconnect()")
+            await s.until_works()
+            replay.check("reconnected_same_session_works", True)
     finally:
         replay.qa.eval("from mixar.modules.space_mixie_chat.core.connection_manager import get_connection_manager\n"
-                       "result = get_connection_manager().reconnect()")
+                       "cm = get_connection_manager()\nresult = cm.is_connected or cm.reconnect()")
     replay.qa.wait("__import__('mixar.modules.space_mixie_chat.core.connection_manager',fromlist=['x'])"
                    ".get_connection_manager().is_connected", timeout=60)
 
@@ -260,7 +247,7 @@ async def run(options):
     replay.qa.eval("result=list(bpy.ops.mixar.copy_mcp_setup(client='JSON'))")
     replay.qa.wait(NOTIFY_ELIGIBLE, timeout=60)
     try:
-        for step in (startup, signed_out, server_drop, second_app):
+        for step in (saved_list, startup, server_drop, second_app):
             await step(replay)
     finally:
         if replay.second:

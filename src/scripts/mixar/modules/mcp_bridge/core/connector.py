@@ -109,10 +109,12 @@ class Connector:
             if len(candidates) > 1 and not self.instance:
                 candidates = [found for found in [usable(candidates)] if found] or candidates
             if len(candidates) != 1:
-                if not candidates and not self.started:
-                    self.started = True
+                if not candidates and not self.instance:
+                    # Say the same thing on every attempt: Mixar is either being
+                    # started (by this connection or another AI app) or it is not open.
                     from .installation import start_app, start_in_progress
-                    if not start_app() and not start_in_progress():
+                    first, self.started = not self.started, True
+                    if not ((first and start_app()) or start_in_progress()):
                         raise RuntimeError("Mixar is not open, and no installed Mixar could be started")
                 raise RuntimeError("Mixar is starting or unavailable" if not candidates else
                                    "Several Mixar applications are open; select an instance through mixar_ui_context")
@@ -193,8 +195,12 @@ class Connector:
             released = request(record, "POST", "/ui", {"jsonrpc": "2.0", "id": "release",
                 "method": "tools/call", "params": {"name": "mixar_ui_context", "arguments": {"release": True}}},
                 {**headers, "X-Mixar-Session-Id": ""}, timeout=12)
-            if released.get("result", {}).get("isError"):
-                raise RuntimeError("Finish or cancel the UI modal before using scene tools")
+            refusal = ((released.get("result") or {}).get("structuredContent") or {}).get("result") or {}
+            # Only an unfinished UI operation blocks scene work. Anything else
+            # (the interface controller still starting after launch, sign-in) means
+            # this connection holds no input to release.
+            if (released.get("result") or {}).get("isError") and refusal.get("error_type") == "modal_active":
+                raise RuntimeError(refusal.get("error") or "Finish or cancel the UI operation before using scene tools")
         meta = {"mixar/request-id": call_id, **({"mixar/client": self.client} if self.client else {})}
         message = {"jsonrpc": "2.0", "id": call_id, "method": "tools/call", "params": {
             "name": name, "arguments": arguments, "_meta": meta}}

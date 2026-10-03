@@ -63,13 +63,6 @@ precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-2.0-or-later"
 
-# MCP replay artifacts contain only the disposable local QA scene and receipts.
-[[annotations]]
-path = "docs/development/mixar-mcp/*"
-precedence = "closest"
-SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
-SPDX-License-Identifier = "GPL-2.0-or-later"
-
 [[annotations]]
 path = "src/release/**"
 precedence = "closest"

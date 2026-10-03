@@ -92,6 +92,12 @@ def _tick():
             current.update(ui_contract="mixar_ui_v1", ui_eligible=eligibility.valid())
         with _lock:
             _snapshot = current
+        from . import tool_snapshot
+        if enabled() and current["signed_in"]:
+            from .forward import forward
+            tool_snapshot.refresh_if_due(current, forward)  # Every tool, for the next AI app.
+        else:
+            tool_snapshot.forget()
         if enabled() and current["instance_id"] and _server is None:
             from .relay import RelayServer
             from .forward import forward
