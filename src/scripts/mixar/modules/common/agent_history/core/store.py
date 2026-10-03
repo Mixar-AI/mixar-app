@@ -20,6 +20,7 @@ import threading
 import uuid
 
 from ..constants import MAX_BLOB_BYTES, MAX_READ_CHARS, MAX_READ_RECORDS, MAX_RECORD_BYTES, SEGMENT_BYTES
+from . import idle_cache
 
 _LOCK = threading.RLock()
 _ID = re.compile(r'^[A-Za-z0-9_-]{1,128}$')
@@ -36,6 +37,9 @@ def valid_id(value):
 
 
 def root():
+    override = os.environ.get('MIXAR_AGENT_HISTORY_DIR')
+    if override:
+        return Path(override).expanduser()
     return Path.home() / '.mixar' / 'agent_history'
 
 
@@ -174,7 +178,13 @@ def write_batch(owner, packet, scene_history_id=None):
     if packet.get('records') and not epoch:
         raise ValueError('missing_archive_epoch')
     with _locked(session) as directory:
-        manifest = _manifest(directory, valid_id(owner))
+        valid_id(owner)
+        hit, ack = idle_cache.lookup(directory, owner, packet, scene_history_id)
+        if hit:
+            return ack
+        # Never retain a verified cursor across an attempted write or repair.
+        idle_cache.discard(directory)
+        manifest = _manifest(directory, owner)
         if isinstance(scene_history_id, str) and scene_history_id != NO_SCENE and _ID.fullmatch(scene_history_id):
             _bind_scene(manifest, scene_history_id)
         # Persist ownership before the first journal write, including crashes.
@@ -245,8 +255,10 @@ def write_batch(owner, packet, scene_history_id=None):
             _fsync_dir(path.parent)
             manifest['cursors'][epoch] = seq
         _atomic(directory / 'manifest.json', canonical(manifest))
-        return {'session_id': session, 'epoch': epoch,
-                'seq': manifest['cursors'].get(epoch, 0)} if epoch else None
+        ack = {'session_id': session, 'epoch': epoch,
+               'seq': manifest['cursors'].get(epoch, 0)} if epoch else None
+        idle_cache.remember(directory, owner, packet, scene_history_id, path, ack)
+        return ack
 
 
 def read(owner, session, message_id=None, task_id=None, image_id=None, limit=10):

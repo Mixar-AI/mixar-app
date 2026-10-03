@@ -388,7 +388,7 @@ def _process_one_request() -> Optional[float]:
     return _stop_timer_if_idle()  # Stop timer when queue empty
 
 
-def run_on_main_thread(fn: Callable[[], None]) -> None:
+def run_on_main_thread(fn: Callable[[], None]) -> bool:
     """Schedule a callable to run once on Blender's main thread.
 
     Thread-safe: can be called from any thread (including the SSE handler).
@@ -397,10 +397,12 @@ def run_on_main_thread(fn: Callable[[], None]) -> None:
 
     Args:
         fn: Zero-argument callable to execute on the main thread.
+
+    Returns True when queued, False during shutdown or registration failure.
     """
     if _shutdown_requested:
         logger.debug("Dropping main-thread callback during shutdown")
-        return
+        return False
 
     def _wrapper():
         try:
@@ -410,8 +412,10 @@ def run_on_main_thread(fn: Callable[[], None]) -> None:
         return None  # Return None to prevent rescheduling
     try:
         bpy.app.timers.register(_wrapper, first_interval=0.0)
+        return True
     except Exception as e:
         logger.warning(f"run_on_main_thread: failed to register timer: {e}")
+        return False
 
 
 def resume() -> None:

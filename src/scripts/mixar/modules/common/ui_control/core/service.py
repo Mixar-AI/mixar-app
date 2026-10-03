@@ -13,7 +13,7 @@ import bpy
 
 from ..constants import ACTION_TIMEOUT, MAX_PENDING, UIError
 from . import input as native_input, observe, ownership, schema
-from .receipts import Receipts
+from .receipt_startup import ReceiptInitializer
 
 
 @dataclass
@@ -39,6 +39,7 @@ _queue = queue.Queue(MAX_PENDING)
 _active = None
 _registered = False
 _receipts = None
+_receipt_initializer = ReceiptInitializer()
 _requests = {}
 _request_lock = threading.Lock()
 _disconnected = set()
@@ -303,14 +304,17 @@ def invalidate(*_args):
 
 
 def register():
+    """Finish registration when durable receipts are ready; never wait on disk."""
     global _registered, _receipts
     if _registered:
-        return
+        return True
     if not hasattr(bpy.context.window_manager, "mixar_ui_enable"):
-        return
-    path = Path(bpy.utils.user_resource('CONFIG')) / "mixar" / "ui-control" / "receipts.sqlite"
-    _receipts = Receipts(path)
-    _registered = True
+        return False
+    if _receipts is None:
+        path = Path(bpy.utils.user_resource('CONFIG')) / "mixar" / "ui-control" / "receipts.sqlite"
+        _receipts = _receipt_initializer.poll(path)
+    if _receipts is None:
+        return False
     for name in ("undo_pre", "redo_pre"):
         handlers = getattr(bpy.app.handlers, name)
         if invalidate not in handlers:
@@ -320,11 +324,18 @@ def register():
     if after_load not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(after_load)
     bpy.app.timers.register(_pump, first_interval=0.1, persistent=True)
+    _registered = True
+    return True
+
+
+def receipt_startup_status():
+    return _receipt_initializer.status()
 
 
 def unregister(shutdown=False):
     global _registered, _receipts
     _registered = False
+    _receipt_initializer.cancel()
     if not shutdown and _receipts is not None:
         invalidate()
         bpy.context.window_manager.mixar_ui_enable(enabled=False)

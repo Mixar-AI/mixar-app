@@ -13,6 +13,14 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+REM The only subtree we mirror is owned entirely by Mixar, not upstream Blender.
+REM Refuse a missing source before any copy/purge; a broken checkout must not
+REM turn an incremental build into an empty installed Python package.
+if not exist "%SRC_DIR%\scripts\mixar\" (
+    echo Error: Mixar script source directory is missing
+    exit /b 1
+)
+
 REM Incremental overlay: copy files when timestamps or sizes differ, including older upstream
 REM files restored after a branch removes an override. Matching files keep their timestamps.
 REM build_clean.bat handles full wipes when needed.
@@ -54,6 +62,19 @@ robocopy "%SRC_DIR%" "%SOURCE_DIR%" /E /MT:%ROBOCOPY_THREADS% /R:3 /W:1 /NFL /ND
 REM robocopy returns 0-7 for success
 if %errorlevel% geq 8 (
     echo Error overlaying Mixar sources
+    exit /b 1
+)
+
+REM /E above retains removed Mixar-only modules in the assembled tree. CMake
+REM clears the installed package, but would then recopy those obsolete files.
+REM Mirror ONLY this owned package; never purge the mixed upstream/source tree.
+REM Matching files retain timestamps, and the same local-junk exclusions apply.
+echo Mirroring Mixar Python package...
+robocopy "%SRC_DIR%\scripts\mixar" "%SOURCE_DIR%\scripts\mixar" /MIR /MT:%ROBOCOPY_THREADS% /R:3 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np ^
+    /XD ".venv" "venv" "__pycache__" ".pytest_cache" ^
+    /XF ".DS_Store"
+if %errorlevel% geq 8 (
+    echo Error mirroring Mixar Python package
     exit /b 1
 )
 

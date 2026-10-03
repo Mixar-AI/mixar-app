@@ -16,6 +16,8 @@ _lock = threading.Lock()
 _server = None
 _registered = False
 _provisioned = None
+_last_error = None
+_failures = 0
 
 
 def snapshot():
@@ -33,8 +35,13 @@ def ui_control_enabled():
 
 
 def _tick():
-    global _snapshot, _server, _provisioned
+    global _snapshot, _server, _provisioned, _last_error, _failures
     try:
+        # Properties are installed in deferred batches. This is ordinary
+        # startup, not a failed connector that needs a traceback or backoff.
+        wm = bpy.context.window_manager
+        if wm is None or not hasattr(wm, "mixie_instance_id"):
+            return 1.0 if _registered else None
         from mixar.modules.space_mixie_chat.core.connection_manager import get_connection_manager
         from mixar.modules.space_mixie_chat.core.session import get_session_manager
         from mixar.modules.common.api.client_version import client_version_headers
@@ -59,11 +66,12 @@ def _tick():
         from . import eligibility
         from mixar.modules.common.ui_control.core import service
         if enabled():
-            service.register()
+            current["ui_controller_ready"] = bool(service.register())
             eligibility.refresh(current)
         else:
             eligibility.invalidate()
-            service.invalidate()
+            service.unregister()
+            current["ui_controller_ready"] = False
         if _provisioned != enabled():
             from . import setup
             setup.connection_config("CODEX", bpy.utils.resource_path('LOCAL'), bpy.app.binary_path,
@@ -90,7 +98,13 @@ def _tick():
             tick()
             _stop_server()
     except Exception as exc:
-        _logger.debug("MCP connector waiting for desktop readiness: %s", type(exc).__name__)
+        signature = (type(exc), str(exc))
+        if signature != _last_error:
+            _logger.warning("MCP connector startup failed; retrying: %s", exc, exc_info=True)
+            _last_error = signature
+        _failures += 1
+        return min(30.0, 2.0 ** min(_failures, 5)) if _registered else None
+    _last_error, _failures = None, 0
     return 1.0 if _registered else None
 
 

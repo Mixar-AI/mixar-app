@@ -14,6 +14,7 @@ from mixar.modules.space_mixie_chat.core import turn_transport as transport
 
 @pytest.fixture
 def timers(monkeypatch, live_bpy):
+    from mixar.modules.space_mixie_chat.core import main_thread_executor
     registered = set()
     timer = SimpleNamespace(
         is_registered=lambda fn: fn in registered,
@@ -21,6 +22,7 @@ def timers(monkeypatch, live_bpy):
         unregister=lambda fn: registered.remove(fn),
     )
     monkeypatch.setattr(live_bpy.app, 'timers', timer)
+    monkeypatch.setattr(main_thread_executor, 'run_on_main_thread', lambda fn: fn() or True)
     yield registered
     transport._handlers.clear()
 
@@ -45,13 +47,16 @@ def test_cleanup_unregisters_timer_and_can_rearm(timers, cleanup_name):
     cleanup = transport.cleanup_all_turn_handlers if cleanup_name == 'handlers' else cleanup_event_queue
     events.arm()
     events.arm()
-    assert timers == {events._drain}
+    assert not timers  # Merely connecting must not start an idle poll.
     events.handle_turn_notification('agent.turn.started', {'session_id': 'sid'})
+    assert len(timers) == 1 and events._pump.pending()
     cleanup()
     cleanup()  # Properties and global shutdown can both call teardown.
     assert not timers and not events._inbox
     events.arm()
-    assert timers == {events._drain}
+    assert not timers
+    events.handle_turn_notification('agent.turn.started', {'session_id': 'sid'})
+    assert len(timers) == 1 and events._pump.pending()
 
 
 def test_history_reopen_allows_prompt_and_replay_without_sending(monkeypatch, live_bpy, timers):

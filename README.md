@@ -129,6 +129,12 @@ On Windows, both overlay passes replace files when their timestamps or sizes
 differ, even when upstream is older than a previous branch's override. Every
 build reruns CMake after the overlay so restored CMake files remove stale
 targets; existing object files are retained for incremental compilation.
+The Mixar-owned `src/scripts/mixar/` package is mirrored separately into the
+generated tree, removing retired Python modules before CMake installs it.
+The mirror excludes local virtual environments and Python caches and refuses a
+missing source package. Other upstream and overlay directories keep their
+incremental copy behavior; unchanged files retain timestamps. This prevents
+removed UI operators and headers from returning in a later build.
 
 ---
 

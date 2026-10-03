@@ -28,6 +28,7 @@ def client_store(tmp_path, monkeypatch):
     module = importlib.util.module_from_spec(spec)
     monkeypatch.setitem(sys.modules, spec.name, module)
     spec.loader.exec_module(module)
+    module._configured_root = module.root
     monkeypatch.setattr(module, 'root', lambda: tmp_path)
     return module
 
@@ -260,3 +261,105 @@ def test_partial_batch_failure_keeps_each_gap(client_store):
     batch['records'][-1] = packet(8)['records'][0]
     assert client_store.write_batch('owner', batch)['seq'] == 8
     assert [(g['expected'], g['received']) for g in client_store.read('owner', 'session')['gaps']] == [(2, 4), (5, 7)]
+
+
+def test_empty_poll_does_not_reparse_or_rewrite_durable_archive(client_store, monkeypatch):
+    ack = client_store.write_batch('owner', packet(), 'scene')
+    empty = {**packet(), 'records': []}
+    def unexpected(*args):
+        raise AssertionError('idle poll must only stat the verified archive')
+    monkeypatch.setattr(client_store, '_tail', unexpected)
+    monkeypatch.setattr(client_store, '_atomic', unexpected)
+    monkeypatch.setattr(client_store, '_manifest', unexpected)
+    for _ in range(3):
+        result = client_store.write_batch('owner', empty, 'scene')
+        assert result == ack
+        result['seq'] = 99  # Callers cannot modify the verified cursor.
+
+
+@pytest.mark.parametrize('change', ['append', 'torn', 'rotate', 'manifest', 'cold'])
+def test_empty_poll_revalidates_changed_or_cold_archive(client_store, change):
+    client_store.write_batch('owner', packet())
+    directory = client_store.root() / 'session'
+    path = directory / 'events/000001.jsonl'
+    if change in {'append', 'rotate'}:
+        row = json.loads(path.read_text())
+        row['seq'] = 2
+        target = path if change == 'append' else directory / 'events/000002.jsonl'
+        with target.open('ab') as handle:
+            handle.write(client_store.canonical(row) + b'\n')
+    elif change == 'torn':
+        with path.open('ab') as handle:
+            handle.write(b'{"seq":2')
+    elif change == 'manifest':
+        manifest_path = directory / 'manifest.json'
+        manifest = json.loads(manifest_path.read_text())
+        manifest['cursors'] = {}
+        manifest_path.write_text(json.dumps(manifest))
+    else:
+        client_store.idle_cache.discard(directory)
+    ack = client_store.write_batch('owner', {**packet(), 'records': []})
+    assert ack['seq'] == (2 if change in {'append', 'rotate'} else 1)
+    assert path.read_bytes().endswith(b'\n')
+    manifest = json.loads((directory / 'manifest.json').read_text())
+    assert manifest['cursors']['a' * 32] == ack['seq']
+
+
+def test_empty_poll_preserves_owner_binding_gap_and_epoch_checks(client_store):
+    empty = {**packet(), 'records': []}
+    client_store.write_batch('owner', packet(), 'scene-a')
+    with pytest.raises(ValueError, match='owner'):
+        client_store.write_batch('someone-else', empty, 'scene-a')
+    client_store.write_batch('owner', empty, 'scene-b')
+    client_store.write_batch('owner', {**empty, 'status': 'gap', 'reason': 'expired'}, 'scene-b')
+    client_store.write_batch('owner', {**empty, 'epoch': 'b' * 32}, 'scene-b')
+    manifest = json.loads((client_store.root() / 'session/manifest.json').read_text())
+    assert manifest['scene_history_aliases'] == ['scene-b']
+    assert [gap['reason'] for gap in manifest['gaps']] == ['expired', 'delivery_epoch_changed']
+
+
+@pytest.mark.parametrize('change', ['corrupt-tail', 'missing-manifest'])
+def test_empty_poll_fails_closed_when_durable_files_are_damaged(client_store, change):
+    client_store.write_batch('owner', packet())
+    directory = client_store.root() / 'session'
+    if change == 'missing-manifest':
+        (directory / 'manifest.json').unlink()
+    else:
+        import os
+        path = directory / 'events/000001.jsonl'
+        stat = path.stat()
+        raw = path.read_bytes()
+        path.write_bytes(b'x' + raw[1:])  # Same size, restored mtime; ctime still invalidates.
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+    with pytest.raises(ValueError):
+        client_store.write_batch('owner', {**packet(), 'records': []})
+
+
+def test_empty_poll_recovers_failed_commit_without_advancing_failed_ack(client_store, monkeypatch):
+    client_store.write_batch('owner', packet())
+    atomic = client_store._atomic
+    def fail_manifest(path, raw):
+        if path.name == 'manifest.json':
+            raise OSError('full')
+        return atomic(path, raw)
+    monkeypatch.setattr(client_store, '_atomic', fail_manifest)
+    with pytest.raises(OSError):
+        client_store.write_batch('owner', packet(2, 'Second'))
+    with pytest.raises(OSError):
+        client_store.write_batch('owner', {**packet(), 'records': []})
+    monkeypatch.setattr(client_store, '_atomic', atomic)
+    assert client_store.write_batch('owner', {**packet(), 'records': []})['seq'] == 2
+
+
+def test_idle_cache_is_bounded(client_store, monkeypatch):
+    monkeypatch.setattr(client_store.idle_cache, 'IDLE_CACHE_SESSIONS', 2)
+    for session in ('one', 'two', 'three'):
+        client_store.write_batch('owner', {**packet(), 'session_id': session})
+    assert len(client_store.idle_cache._verified) == 2
+    assert client_store.root() / 'one' not in client_store.idle_cache._verified
+
+
+def test_archive_root_supports_explicit_qa_isolation(client_store, monkeypatch, tmp_path):
+    isolated = tmp_path / 'isolated-history'
+    monkeypatch.setenv('MIXAR_AGENT_HISTORY_DIR', str(isolated))
+    assert client_store._configured_root() == isolated
