@@ -5,7 +5,7 @@
 Normal-input QA app (e2e_launch.py --normal-input) on a disposable backend whose
 fixture forwards telemetry to the configured PostHog project (events carry the
 fixture's own user id and deployment_environment=development). Scene tools are
-free (mcp_tool_call = 0, as migration a3d9e71c5b20 sets it), so no credits move.
+free (mcp_tool_call = 0, as migration f82c4e6d9a10 seeds it), so no credits move.
 
 With ``--generation`` (fixture served with MIXAR_QA_JOB_QUEUE=1: jobs are
 accepted, never dispatched, so no provider is called; two credits) it also
