@@ -125,3 +125,20 @@ def test_thread_start_failure_never_falls_through_to_script(monkeypatch):
     monkeypatch.setattr(threading.Thread, "start", fail)
     handle = script_prefetch.maybe_start_prefetch(f'url = "{URL}"', "import_terrain_asset")
     assert handle.state() == script_prefetch.FAILED
+
+
+@pytest.mark.parametrize('role', ['', 'sandbox'])
+def test_real_handshake_advertises_the_forest_runtime(monkeypatch, role):
+    import json
+    from types import SimpleNamespace
+    from mixar.modules.space_mixie_chat.core import socket_connection, machine_info
+
+    monkeypatch.setattr(machine_info, 'machine_block', lambda: {})
+    monkeypatch.setattr(socket_connection, 'wait_for_handshake',
+                        lambda *a, **kw: (socket_connection.HANDSHAKE_OK, None))
+    client = SimpleNamespace(_next_request_id=lambda: 'review', _blender_version=None,
+        _addon_version=None, _role=role, _device_id='', _parent_instance_id='parent',
+        _ws=MagicMock(), _set_server_capabilities=lambda result: None)
+    assert socket_connection.SocketConnection._perform_handshake(client) == socket_connection.HANDSHAKE_OK
+    frame = json.loads(client._ws.send.call_args.args[0])
+    assert 'forest_runtime_v1' in frame['params']['capabilities']
