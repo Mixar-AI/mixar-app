@@ -210,6 +210,7 @@ def new_scene_tab(name: str = "") -> object:
         session.set_connected(scene)          # IDLE: the composer accepts a message
     else:
         session.set_disconnected(scene)
+    leave_modes_for_switch(source if source is not scene else None)
     snapshot_shown_tab()                   # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     renumber_tabs(existing + [scene])      # the new tab takes the last slot
@@ -221,11 +222,50 @@ def new_scene_tab(name: str = "") -> object:
     return scene
 
 
+_MODE_LABEL = {"EDIT": "Edit", "SCULPT": "Sculpt", "TEXTURE_PAINT": "Texture Paint",
+               "VERTEX_PAINT": "Vertex Paint", "WEIGHT_PAINT": "Weight Paint"}
+
+
+def leave_modes_for_switch(scene) -> bool:
+    """Bring the tab the user leaves back to object mode, as one undo step of that
+    tab ("Leave Edit Mode"). A tab's edit, sculpt or paint state lives in data no
+    other tab's undo may touch; with no tab but the shown one in such a mode, the
+    whole class of cross-tab mode-state undo bugs cannot arise (the 2026-10-02
+    review lost a hidden tab's edit-mode work twice before it was fixed in C).
+    Only for a user's switch (never the executor's routing pin), only with per-tab
+    undo on, never while the tab's own agent works. Returns True when a mode was
+    left. Never raises: a switch must never fail on it."""
+    try:
+        wm = bpy.context.window_manager
+        if scene is None or is_lane_scene(scene) or not getattr(wm, "mixar_per_tab_undo", False):
+            return False
+        if _running(scene):
+            return False
+        view_layer = scene.view_layers[0] if scene.view_layers else None
+        active = view_layer.objects.active if view_layer is not None else None
+        in_mode = [o for o in scene.objects if o.mode != 'OBJECT']
+        if not in_mode:
+            return False
+        ob = active if active is not None and active.mode != 'OBJECT' else in_mode[0]
+        mode = ob.mode
+        window = next((w for w in wm.windows if w.scene is scene), None) or bpy.context.window
+        with bpy.context.temp_override(window=window, scene=scene, view_layer=view_layer,
+                                       active_object=ob, object=ob):
+            bpy.ops.object.mode_set(mode='OBJECT')
+        push_undo_step(f"Leave {_MODE_LABEL.get(mode, mode.title())} Mode", scene=scene)
+        slog("tab.leave_mode", scene, mode=mode, object=ob.name)
+        return True
+    except Exception:  # noqa: BLE001
+        logger.debug("leaving the mode before a tab switch failed", exc_info=True)
+        return False
+
+
 def switch_scene_tab(scene, was=None) -> bool:
     """Show a tab in every window. False for a lane or a missing scene."""
     if scene is None or is_lane_scene(scene):
         return False
     if was is not scene:
+        leave_modes_for_switch(was)
         snapshot_shown_tab()               # the leaving tab's card keeps its last frame
     switch_all_windows(scene)
     slog("tab.switch", scene, was=getattr(was, "name", ""))
