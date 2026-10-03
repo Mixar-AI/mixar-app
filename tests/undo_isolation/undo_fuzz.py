@@ -675,6 +675,14 @@ def press(uid: int, what: str) -> None:
                         got.get("data") in s_data
                     if data_shared and was is not None and gs == was.get("materials"):
                         continue
+                    # Per datablock: the mesh's slots kept (another tab changed them)
+                    # while a material only this tab recoloured is restored.
+                    step_colour = {w[0]: w[1] for w in ws if w}
+                    if data_shared and was is not None and len(gs) == len(was["materials"]) and all(
+                            (g is None and v is None) or (g and v and g[0] == v[0] and
+                                                          g[1] in (v[1], step_colour.get(g[0])))
+                            for g, v in zip(gs, was["materials"])):
+                        continue
                     ok = len(ws) == len(gs) and all(
                         (w is None and g is None) or (w and g and _renamed_ok(w[0], g[0]) and (
                             w[1] == g[1] or (g[0] in s_mats and colour_before.get(g[0]) == g[1])))
