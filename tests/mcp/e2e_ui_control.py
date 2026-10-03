@@ -4,7 +4,7 @@
 
 Use e2e_backend.py --prepare/--serve and e2e_launch.py --normal-input first.
 The QA harness prepares setup and asserts Blender state; all tested UI edits
-travel through MCP and native events. Uses two disposable fixture credits.
+travel through MCP and native events. Scene edits are free; the two fixture credits never move.
 Read the emitted PNGs before claiming visual acceptance.
 """
 

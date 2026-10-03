@@ -4,8 +4,8 @@
 
 Requires an isolated QA app using a loopback backend and exactly two test
 credits. Exercises the actual Enable MCP control, official SDK stdio client,
-scene mutation, duplicate recovery, failure refund and insufficient credits.
-It spends only the two disposable local fixture credits; no hosted model call.
+scene mutation, duplicate recovery and a failed edit. Scene tools are free, so
+the two fixture credits never move; no hosted model call.
 The verdict and PNGs need a human/agent visual review before claiming success.
 """
 
@@ -154,7 +154,7 @@ async def run(options, qa, verdict):
         create_id = str(uuid4())
         arguments = {"code": cube_script(name)}
         created = await call("execute_bpy_script", arguments, create_id)
-        assert created.structured_content["usage"]["credits_charged"] == 1
+        assert created.structured_content["usage"]["credits_charged"] == 0  # Scene tools are free.
         state = await asyncio.to_thread(assert_scene, qa, name)
         assert state["names"] == [name] and state["type"] == "MESH" and state["vertices"] == 8, state
         assert not state["busy"], state
@@ -168,17 +168,11 @@ async def run(options, qa, verdict):
 
         failed = await call("execute_bpy_script", {"code": "print(undefined_mcp_qa_variable)"}, expect_error=True)
         usage = failed.structured_content["usage"]
-        assert usage["credits_refunded"] == 1 and usage["credits_charged"] == 0, usage
-        assert usage["remaining_credits"] == 1, usage
+        assert usage["credits_refunded"] == 0 and usage["credits_charged"] == 0, usage
 
         await call("execute_bpy_script", {"code": f"import bpy\nbpy.data.objects[{name!r}].rotation_euler.z = 0.35"})
-        exhausted = await call("mixar_credit_balance")
-        assert exhausted.structured_content["result"]["available_credits"] == 0
-        rejected = await call("execute_bpy_script", {
-            "code": f"import bpy\nbpy.data.objects[{name!r}].scale = (3, 3, 3)"
-        }, expect_error=True)
-        assert rejected.structured_content["usage"]["credits_charged"] == 0
-        assert rejected.structured_content["result"].get("status_code") == 402
+        unchanged = await call("mixar_credit_balance")
+        assert unchanged.structured_content["result"]["available_credits"] == start  # Nothing spent.
 
         invalid = await call("execute_bpy_script", {"code": 123}, expect_error=True)
         assert invalid.structured_content["usage"]["credits_charged"] == 0
@@ -200,7 +194,7 @@ async def run(options, qa, verdict):
             (options.out / (f"mcp-viewport-{i}" + suffix)).write_bytes(base64.b64decode(block.data, validate=True))
         await asyncio.to_thread(qa.cmd, "snap", path=str(options.out / "desktop-result.png"))
         verdict["image_count"] = len(images)
-        verdict["credits_used"] = 2
+        verdict["credits_used"] = 0
 
 
 def main():
