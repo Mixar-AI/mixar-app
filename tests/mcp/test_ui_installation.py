@@ -39,3 +39,21 @@ def test_cold_start_is_coalesced_and_respects_disable(tmp_path, monkeypatch):
     assert not installation.start_app()
     assert installation.start_in_progress()  # A second host waits for that start.
     assert len(calls) == 1
+
+
+def test_a_slow_first_launch_still_counts_as_starting(tmp_path, monkeypatch):
+    """Gatekeeper, shader cache and sign-in restore can exceed a minute; the
+    agent must not be told Mixar is not installed while it is launching."""
+    import os
+    import time
+    monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
+    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: None)
+    installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=True)
+    assert installation.start_app()
+    marker = installation.directory() / "starting"
+    two_minutes_ago = time.time() - 120
+    os.utime(marker, (two_minutes_ago, two_minutes_ago))
+    assert installation.start_in_progress() and not installation.start_app()
+    long_ago = time.time() - installation.STARTING_SECONDS - 1
+    os.utime(marker, (long_ago, long_ago))
+    assert not installation.start_in_progress() and installation.start_app()

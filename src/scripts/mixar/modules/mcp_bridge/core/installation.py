@@ -51,10 +51,15 @@ def provision(python, script, executable, enabled=True):
     return path
 
 
+# A first launch (Gatekeeper, shader cache, sign-in restore) can take well over
+# a minute before the relay appears; until then Mixar counts as starting.
+STARTING_SECONDS = 180
+
+
 def start_in_progress():
-    """Another MCP host started Mixar within the last minute."""
+    """An MCP host started Mixar within the last STARTING_SECONDS."""
     try:
-        return time.time()-(directory() / "starting").stat().st_mtime <= 60
+        return time.time()-(directory() / "starting").stat().st_mtime <= STARTING_SECONDS
     except OSError:
         return False
 
@@ -73,7 +78,7 @@ def start_app():
         return False
     marker = root / "starting"
     try:
-        if marker.exists() and time.time()-marker.stat().st_mtime > 60:
+        if marker.exists() and time.time()-marker.stat().st_mtime > STARTING_SECONDS:
             marker.unlink()
         fd = os.open(marker, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError:
