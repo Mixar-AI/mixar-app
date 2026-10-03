@@ -70,8 +70,22 @@ def test_readiness_names_what_the_user_must_do(desktop, monkeypatch):
     assert absent.readiness()[0] == "absent"  # Not "starting" on the next attempt.
     monkeypatch.setattr(installation, "start_in_progress", lambda: True)  # Started by another AI app.
     assert connector.Connector().readiness()[0] == "starting"
-    monkeypatch.setattr(installation, "start_app", lambda: True)
-    assert connector.Connector().readiness()[0] == "starting"
+
+
+def test_only_a_tool_call_opens_a_closed_mixar(desktop, monkeypatch):
+    """AI apps list tools whenever a session starts; that must never launch
+    Mixar. Asking for something in Mixar may."""
+    import mixar.modules.mcp_bridge.core.installation as installation
+    started = []
+    monkeypatch.setattr(installation, "start_app", lambda: started.append(1) or True)
+    monkeypatch.setattr(installation, "start_in_progress", lambda: bool(started))
+    tool_snapshot.save([dict(BACKEND_TOOL)])
+    client = connector.Connector()
+    out = run_session(client)
+    assert "execute_bpy_script" in out["tools"] and client.readiness()[0] == "absent" and not started
+    with pytest.raises(RuntimeError, match="starting"):
+        client.call("scene_overview", {}, "call-1")
+    assert started == [1] and client.readiness()[0] == "starting"
 
 
 # ------------------------------------------- every tool listed at once

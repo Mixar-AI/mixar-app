@@ -115,7 +115,7 @@ def test_a_refused_create_leaves_no_uncertain_receipt(tabs, tmp_path, monkeypatc
 def test_connector_pins_the_created_or_switched_tab(monkeypatch):
     client = connector.Connector()
     client.bound_session = "sess-pool"
-    monkeypatch.setattr(client, "attach", lambda: ({}, {"session_id": "sess-pool"}))
+    monkeypatch.setattr(client, "attach", lambda **_: ({}, {"session_id": "sess-pool"}))
     sent = []
 
     def respond(record, method, path, payload=None, headers=None, timeout=10):
