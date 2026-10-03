@@ -18,6 +18,7 @@
 #include "BLI_listbase.h"
 #include "BLI_utildefines.h"
 #include "BLI_map.hh"
+#include "BLI_set.hh"
 #include "BLI_string.h"
 #include "BLI_time.h"
 #include "BLI_assert.h"
@@ -49,11 +50,6 @@ static CLG_LogRef LOG = {"undo.tabs"};
  * \{ */
 
 
-struct OwnerWalk {
-  UndoOwnerMap *map;
-  uint32_t tab;
-};
-
 /** A type memfile undo never writes (a Brush, a WorkSpace, a Screen) is never
  * restored, so it can neither be owned nor shared: every scene's tool settings
  * point at the active brush, and counting it would refuse undo in every tab
@@ -64,15 +60,49 @@ static bool owner_map_type_is_never_undone(const ID *id)
   return info != nullptr && (info->flags & IDTYPE_FLAGS_NO_MEMFILE_UNDO);
 }
 
-/** The walk callbacks' return: never descend through a type memfile undo never
- * writes. A local brush's texture and image are reached from every scene whose
- * tool settings use that brush; walked through, they became "shared" and
- * refused undo in every tab painting with it (review 2026-10-01, R4). What
- * they point at is owned by whoever reaches it directly, else global. */
-static int owner_map_walk_return(const ID *id)
+/** Calls ``visit`` for every datablock ``root`` reaches through FORWARD pointers.
+ * IDWALK_RECURSE also follows back-pointers (a collection's runtime parents, an
+ * embedded datablock's owner): a tab sharing a child collection with another tab
+ * (Scene > New > Linked Copy) climbed through that collection's parents into the
+ * other tab's master collection and its scene, and "reached" all of that tab.
+ * Every step that changed what either reached then saw two tabs gain or lose it
+ * and was filed under neither (the invariant test, seed 8097), and the two tabs'
+ * datablocks read as shared. Embedded datablocks are walked in place by their
+ * owner. A type memfile undo never writes is visited, never walked through: a
+ * local brush's texture and image are reached from every scene whose tool
+ * settings use that brush, and walked through they became "shared" and refused
+ * undo in every tab painting with it (review 2026-10-01, R4); what they point at
+ * is owned by whoever reaches it directly, else global. */
+static void owner_map_walk(Main *bmain, ID *root, FunctionRef<void(const ID *)> visit)
 {
-  return (id != nullptr && owner_map_type_is_never_undone(id)) ? IDWALK_RET_STOP_RECURSION :
-                                                                 IDWALK_RET_NOP;
+  Set<const ID *> seen;
+  Vector<ID *> todo;
+  seen.add(root);
+  todo.append(root);
+  while (!todo.is_empty()) {
+    ID *id = todo.pop_last();
+    BKE_library_foreach_ID_link(
+        bmain,
+        id,
+        [&](LibraryIDLinkCallbackData *cb_data) -> int {
+          if (cb_data->cb_flag & IDWALK_CB_LOOPBACK) {
+            return IDWALK_RET_NOP;
+          }
+          ID *ref = *cb_data->id_pointer;
+          if (ref == nullptr) {
+            return IDWALK_RET_NOP;
+          }
+          visit(ref);
+          if ((ref->flag & ID_FLAG_EMBEDDED_DATA) == 0 && !owner_map_type_is_never_undone(ref) &&
+              seen.add(ref))
+          {
+            todo.append(ref);
+          }
+          return IDWALK_RET_NOP;
+        },
+        nullptr,
+        IDWALK_READONLY);
+  }
 }
 
 static void owner_map_record(UndoOwnerMap *map, const ID *id, const uint32_t tab)
@@ -212,19 +242,11 @@ static void owner_map_claim_roots(Main *bmain, UndoOwnerMap *map)
     }
     RootWalk walk{map};
     walk.unowned.append(id);
-    BKE_library_foreach_ID_link(
-        bmain,
-        id,
-        [](LibraryIDLinkCallbackData *cb_data) -> int {
-          RootWalk *w = static_cast<RootWalk *>(cb_data->user_data);
-          const ID *ref = *cb_data->id_pointer;
-          if (ref != nullptr && ref->session_uid != 0) {
-            root_walk_note(w, ref);
-          }
-          return owner_map_walk_return(ref);
-        },
-        &walk,
-        IDWALK_READONLY | IDWALK_RECURSE);
+    owner_map_walk(bmain, id, [&](const ID *ref) {
+      if (ref->session_uid != 0) {
+        root_walk_note(&walk, ref);
+      }
+    });
     if (walk.tabs.is_empty()) {
       continue; /* global: reaches no tab */
     }
@@ -255,38 +277,14 @@ UndoOwnerMap *BKE_undo_owner_map_build(Main *bmain, double *r_ms)
         continue;
       }
       owner_map_record(map, &scene.id, tab);
-      OwnerWalk walk{map, tab};
-      BKE_library_foreach_ID_link(
-          bmain,
-          &scene.id,
-          [](LibraryIDLinkCallbackData *cb_data) -> int {
-            OwnerWalk *w = static_cast<OwnerWalk *>(cb_data->user_data);
-            const ID *id = *cb_data->id_pointer;
-            if (id != nullptr) {
-              owner_map_record(w->map, id, w->tab);
-            }
-            return owner_map_walk_return(id);
-          },
-          &walk,
-          IDWALK_READONLY | IDWALK_RECURSE);
+      owner_map_walk(bmain, &scene.id, [&](const ID *id) { owner_map_record(map, id, tab); });
     }
     for (Scene &scene : bmain->scenes) {
       if (!BKE_undo_tab_scene_is_lane(&scene)) {
         continue;
       }
       owner_map_record_lane(map, &scene.id);
-      BKE_library_foreach_ID_link(
-          bmain,
-          &scene.id,
-          [](LibraryIDLinkCallbackData *cb_data) -> int {
-            const ID *id = *cb_data->id_pointer;
-            if (id != nullptr) {
-              owner_map_record_lane(static_cast<UndoOwnerMap *>(cb_data->user_data), id);
-            }
-            return owner_map_walk_return(id);
-          },
-          map,
-          IDWALK_READONLY | IDWALK_RECURSE);
+      owner_map_walk(bmain, &scene.id, [&](const ID *id) { owner_map_record_lane(map, id); });
     }
     owner_map_claim_roots(bmain, map);
   }
