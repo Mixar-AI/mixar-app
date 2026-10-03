@@ -56,6 +56,7 @@ def provision(python, script, executable, enabled=True):
 # marker is removed as soon as an app publishes its relay or the launch fails,
 # so a quit or crashed app is not "starting" for the rest of the window.
 STARTING_SECONDS = 180
+OPEN_WAIT_SECONDS = 5
 
 
 def started():
@@ -100,9 +101,18 @@ def start_app():
         if bundle:
             command = ["/usr/bin/open", "-a", str(bundle)]
     try:
-        subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL, start_new_session=True)
+        process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, start_new_session=True)
     except OSError:
         started()
         return False
+    if command[0] == "/usr/bin/open":
+        # open hands the launch to LaunchServices and exits at once; a non-zero
+        # status means Mixar could not be opened, so nothing is starting.
+        try:
+            if process.wait(timeout=OPEN_WAIT_SECONDS) != 0:
+                started()
+                return False
+        except subprocess.TimeoutExpired:
+            pass
     return True

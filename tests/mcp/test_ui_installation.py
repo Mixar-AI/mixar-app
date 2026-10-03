@@ -28,10 +28,20 @@ def test_stable_launcher_tracks_new_install_and_quotes_paths(tmp_path, monkeypat
     assert launcher.stat().st_mode & 0o077 == 0
 
 
+class _Launched:
+    """A launch whose opener (/usr/bin/open on macOS) exited normally."""
+
+    def wait(self, timeout=None):
+        return 0
+
+
+_LAUNCHED = _Launched()
+
+
 def test_cold_start_is_coalesced_and_respects_disable(tmp_path, monkeypatch):
     monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
     calls = []
-    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: calls.append(a))
+    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: calls.append(a) or _LAUNCHED)
     installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=False)
     assert not installation.start_app()
     installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=True)
@@ -48,7 +58,7 @@ def test_a_slow_first_launch_still_counts_as_starting(tmp_path, monkeypatch):
     import os
     import time
     monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
-    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: None)
+    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: _LAUNCHED)
     installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=True)
     assert installation.start_app()
     marker = installation.directory() / "starting"
@@ -63,7 +73,7 @@ def test_a_slow_first_launch_still_counts_as_starting(tmp_path, monkeypatch):
 def test_starting_ends_when_the_app_is_up_or_the_launch_fails(tmp_path, monkeypatch):
     """A quit or crashed launch must not read as "starting" for three minutes."""
     monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
-    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: None)
+    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: _LAUNCHED)
     installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=True)
     assert installation.start_app() and installation.start_in_progress()
     installation.started()  # The relay published its record.
@@ -79,3 +89,20 @@ def test_publishing_the_relay_ends_starting():
     source = (Path(installation.__file__).with_name("relay.py")).read_text()
     start = source[source.index("    def start(self):"):source.index("    def stop(self):")]
     assert "started()" in start
+
+
+@pytest.mark.parametrize("status,starting", [(1, False), (0, True)])
+def test_a_mac_app_that_cannot_be_opened_is_not_starting(tmp_path, monkeypatch, status, starting):
+    """/usr/bin/open itself always starts; its exit status says whether Mixar could be opened."""
+    from types import SimpleNamespace
+    monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
+    app = tmp_path / "Mixar.app" / "Contents" / "MacOS" / "Mixar"
+    app.parent.mkdir(parents=True)
+    app.write_text("")
+    monkeypatch.setattr(installation.sys, "platform", "darwin")
+    commands = []
+    monkeypatch.setattr(installation.subprocess, "Popen",
+                        lambda command, **kw: commands.append(command) or SimpleNamespace(wait=lambda timeout: status))
+    installation.provision(sys.executable, tmp_path / "mcp.py", app, enabled=True)
+    assert installation.start_app() is starting
+    assert commands[0][0] == "/usr/bin/open" and installation.start_in_progress() is starting
