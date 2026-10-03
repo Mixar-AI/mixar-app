@@ -52,8 +52,18 @@ def provision(python, script, executable, enabled=True):
 
 
 # A first launch (Gatekeeper, shader cache, sign-in restore) can take well over
-# a minute before the relay appears; until then Mixar counts as starting.
+# a minute before the relay appears; until then Mixar counts as starting. The
+# marker is removed as soon as an app publishes its relay or the launch fails,
+# so a quit or crashed app is not "starting" for the rest of the window.
 STARTING_SECONDS = 180
+
+
+def started():
+    """A launched Mixar is up (its relay is published), or the launch failed."""
+    try:
+        (directory() / "starting").unlink()
+    except OSError:
+        pass
 
 
 def start_in_progress():
@@ -89,6 +99,10 @@ def start_app():
         bundle = next((p for p in executable.parents if p.suffix == ".app"), None)
         if bundle:
             command = ["/usr/bin/open", "-a", str(bundle)]
-    subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                     stderr=subprocess.DEVNULL, start_new_session=True)
+    try:
+        subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        started()
+        return False
     return True

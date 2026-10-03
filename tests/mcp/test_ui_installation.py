@@ -4,6 +4,7 @@
 
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 
@@ -57,3 +58,24 @@ def test_a_slow_first_launch_still_counts_as_starting(tmp_path, monkeypatch):
     long_ago = time.time() - installation.STARTING_SECONDS - 1
     os.utime(marker, (long_ago, long_ago))
     assert not installation.start_in_progress() and installation.start_app()
+
+
+def test_starting_ends_when_the_app_is_up_or_the_launch_fails(tmp_path, monkeypatch):
+    """A quit or crashed launch must not read as "starting" for three minutes."""
+    monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
+    monkeypatch.setattr(installation.subprocess, "Popen", lambda *a, **kw: None)
+    installation.provision(sys.executable, tmp_path / "mcp.py", sys.executable, enabled=True)
+    assert installation.start_app() and installation.start_in_progress()
+    installation.started()  # The relay published its record.
+    assert not installation.start_in_progress()
+
+    def fail(*a, **kw):
+        raise OSError("cannot launch")
+    monkeypatch.setattr(installation.subprocess, "Popen", fail)
+    assert not installation.start_app() and not installation.start_in_progress()
+
+
+def test_publishing_the_relay_ends_starting():
+    source = (Path(installation.__file__).with_name("relay.py")).read_text()
+    start = source[source.index("    def start(self):"):source.index("    def stop(self):")]
+    assert "started()" in start
