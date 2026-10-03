@@ -24,9 +24,9 @@ The local UI tools inspect visible controls, return window images, and operate
 observed controls through native clicks, keyboard input and bounded gestures.
 Use a fresh observation before acting and check state and pixels afterwards.
 
-Inspection, connection discovery and local UI input are free. Successful scene-changing tools
-use Mixar's configured per-call credit rate. AI generation retains its existing
-price. Every call reports usage; the external assistant's model is provided by
+Inspection, connection discovery, local UI input and scene changes are free.
+Only AI generation costs credits, at its usual price (including materials made
+with `create_layered_material`). Every call reports usage; the external assistant's model is provided by
 Claude/Codex. Use `mixar_credit_balance` to inspect your available balance.
 
 The setup uses a stable per-user launcher backed by Mixar's bundled Python.

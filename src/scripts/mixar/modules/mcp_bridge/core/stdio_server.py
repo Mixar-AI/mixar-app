@@ -49,8 +49,8 @@ Ask the user when an open choice matters (method, style, scale, detail, a
 large credit spend); settle small details yourself.
 Native UI tools (mixar_ui_*, if the user allows them) cover what no other
 tool does; never use OS-level computer use on Mixar.
-Inspection and UI input are free; scene edits cost Mixar credits (default 1)
-and generation its job price. After an uncertain outcome, inspect and use
+Only generation costs Mixar credits (its job price, as does
+create_layered_material); everything else is free. After an uncertain outcome, inspect and use
 mixar_call_status or mixar_ui_call_status with the same call UUID; never
 blindly repeat an edit.
 """
@@ -188,6 +188,7 @@ def create_server(connector):
                            "usage": {"request_id": call_id, "credits_charged": 0}}
                 return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(payload))],
                                             structured_content=payload, meta={"mixar/request-id": call_id})
+            connector.client = presentation.client_info(ctx)
             result = await asyncio.to_thread(connector.call, params.name, args, call_id)
             if params.name == "mixar_ui_context" and not result.get("isError"):
                 # Say whether scene work is possible in THIS session, and why not.

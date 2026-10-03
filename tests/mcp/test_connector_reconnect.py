@@ -110,3 +110,21 @@ def test_scene_and_project_tools_release_the_connections_own_input_first(monkeyp
     sent.clear()
     client.call("mixar_ui_act", {}, "22222222-2222-2222-2222-222222222222")
     assert sent == [("/ui", "mixar_ui_act")]  # Interface input keeps its own lease.
+
+
+def test_the_ai_app_travels_with_each_call_for_usage_attribution(monkeypatch):
+    sent = []
+
+    def request(record, method, path, payload=None, headers=None, timeout=10):
+        sent.append(payload["params"]["_meta"])
+        return {"result": {"isError": False, "content": [], "structuredContent": {"result": {}}}}
+
+    monkeypatch.setattr(connector, "request", request)
+    client = connector.Connector()
+    monkeypatch.setattr(client, "attach", lambda: ({"instance_id": "a"}, {}))
+    client.call("scene_overview", {}, "11111111-1111-1111-1111-111111111111")
+    client.client = {"name": "codex-mcp-client", "version": "0.160.0"}
+    client.call("scene_overview", {}, "22222222-2222-2222-2222-222222222222")
+    assert "mixar/client" not in sent[0]
+    assert sent[1] == {"mixar/request-id": "22222222-2222-2222-2222-222222222222",
+                       "mixar/client": {"name": "codex-mcp-client", "version": "0.160.0"}}

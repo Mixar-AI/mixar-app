@@ -82,6 +82,8 @@ class Connector:
         self.started = False
         self.tasks = set()
         self.health = {}
+        # The AI app's clientInfo; travels as _meta so Mixar can attribute usage.
+        self.client = {}
 
     def attach(self):
         with self.lock:
@@ -193,8 +195,9 @@ class Connector:
                 {**headers, "X-Mixar-Session-Id": ""}, timeout=12)
             if released.get("result", {}).get("isError"):
                 raise RuntimeError("Finish or cancel the UI modal before using scene tools")
+        meta = {"mixar/request-id": call_id, **({"mixar/client": self.client} if self.client else {})}
         message = {"jsonrpc": "2.0", "id": call_id, "method": "tools/call", "params": {
-            "name": name, "arguments": arguments, "_meta": {"mixar/request-id": call_id}}}
+            "name": name, "arguments": arguments, "_meta": meta}}
         # Only transport discovery retries. This request is deliberately attempted ONCE.
         response = request(record, "POST", "/ui" if local else "/mcp", message, headers, timeout=600 if not local else 35)
         if "result" not in response:

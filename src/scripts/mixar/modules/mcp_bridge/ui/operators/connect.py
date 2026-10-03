@@ -52,7 +52,7 @@ class MIXAR_OT_mcp_setup(Operator):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Let your AI assistant use Mixar scenes and controls.")
-        layout.label(text="UI control is free; scene tools and generation use credits.")
+        layout.label(text="Scene and UI tools are free; only AI generation uses credits.")
         layout.label(text="Sign in once. Your AI app can start Mixar when needed.")
         row = layout.row()
         if runtime.enabled():

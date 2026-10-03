@@ -134,6 +134,7 @@ def test_a_late_mixar_reaches_the_session_and_the_client_is_told_to_reload(monke
             return first, context, second
 
     first, context, second = asyncio.run(main())
+    assert fake.client == {"name": "claude-code", "version": "1"}  # For usage attribution.
     assert "execute_bpy_script" not in first and "mixar_ui_context" in first
     assert context["scene_tools"] in {"signed_out", "loading"} and context["next_step"]
     assert "execute_bpy_script" in second
