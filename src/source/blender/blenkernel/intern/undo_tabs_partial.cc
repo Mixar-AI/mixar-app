@@ -914,12 +914,16 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
            * between is credited through what it names, never with every
            * datablock that changed by the next push (a tab's edit-mesh step read
            * as moving another tab's shared object, and refused its undo). */
+          const bool flushed = info != nullptr && info->in_edit.contains(uid);
           if (by_mode != nullptr) {
             for (const uint32_t author : *by_mode) {
               out.lookup_or_add_default(uid).append({index, author});
             }
           }
-          else {
+          /* The pushing tab's own change too, unless it is the flush of an edit mesh
+           * (a mode step naming an object does not make the object's delete by the
+           * next push another tab's). */
+          if (by_mode == nullptr || !flushed) {
             out.lookup_or_add_default(uid).append({index, editor ? *editor : us->mixar_author_uid});
           }
         }
@@ -1207,7 +1211,22 @@ static bool partial_validate(Main *bmain,
   for (const auto item : conflicts.items()) {
     const char *why = "";
     const Vector<IdChange> *ch = changes.lookup_ptr(item.key);
-    switch (shared_fate(ustack, tab_uid, lo, ch, !at_target.contains(item.key), &why)) {
+    const SharedFate fate = shared_fate(ustack, tab_uid, lo, ch, !at_target.contains(item.key), &why);
+    if (CLOG_CHECK(&LOG, CLG_LEVEL_DEBUG)) {
+      std::string list;
+      for (const IdChange &c : (ch ? *ch : Vector<IdChange>())) {
+        list += " " + std::to_string(c.index) + ":" + std::to_string(c.author);
+      }
+      CLOG_DEBUG(&LOG,
+                 "tab %u: %s %s (lo %d, live %d): changes%s",
+                 tab_uid,
+                 fate == SharedFate::Keep ? "keep" : fate == SharedFate::Restore ? "restore" : "refuse",
+                 item.value.c_str(),
+                 lo,
+                 int(live_ids.contains(item.key)),
+                 list.c_str());
+    }
+    switch (fate) {
       case SharedFate::Keep:
         if (r_keep != nullptr) {
           r_keep->add(item.key);

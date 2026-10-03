@@ -1436,9 +1436,12 @@ static UndoStep *undosys_tab_preload_step(const UndoStep *from,
                                           UndoStep *target,
                                           const eUndoStepDir dir)
 {
-  if (dir != STEP_UNDO || from == nullptr || target == nullptr ||
-      undosys_tab_step_is_global(target))
-  {
+  /* Redo too: a redo from a memfile step onto a mode step applied the mode step
+   * alone, so the tab kept object-level state from its cursor that differs from
+   * the state the mode step was pushed on (the invariant test, seed 10217: an
+   * object another tab had removed from it in between came back). */
+  (void)dir;
+  if (from == nullptr || target == nullptr || undosys_tab_step_is_global(target)) {
     return nullptr;
   }
   if (!undosys_tab_step_is_global(from)) {
@@ -1627,14 +1630,15 @@ bool BKE_undosys_tab_step_undo(UndoStack *ustack, bContext *C, const uint32_t ta
 
 bool BKE_undosys_tab_step_redo(UndoStack *ustack, bContext *C, const uint32_t tab_uid, std::string *r_reason)
 {
-  UndoStep *target = undosys_tab_next_step(ustack, BKE_undosys_tab_cursor(ustack, tab_uid), tab_uid);
+  UndoStep *cursor = BKE_undosys_tab_cursor(ustack, tab_uid);
+  UndoStep *target = undosys_tab_next_step(ustack, cursor, tab_uid);
   if (target == nullptr) {
     if (r_reason) {
       *r_reason = "nothing to redo in this tab";
     }
     return false;
   }
-  return undosys_tab_step_apply(ustack, C, tab_uid, target, STEP_REDO, r_reason);
+  return undosys_tab_step_apply(ustack, C, tab_uid, target, STEP_REDO, r_reason, cursor);
 }
 
 bool BKE_undosys_tab_step_check(UndoStack *ustack,
@@ -1652,7 +1656,8 @@ bool BKE_undosys_tab_step_check(UndoStack *ustack,
       }
       return false;
     }
-    return undosys_tab_step_check(ustack, C, tab_uid, target, r_reason);
+    return undosys_tab_step_check(
+        ustack, C, tab_uid, target, r_reason, undosys_tab_preload_step(ref, target, STEP_REDO));
   }
   for (UndoStep *us = ref ? ref->prev : nullptr; us != nullptr; us = us->prev) {
     if (us->skip || us->mixar_tab_uid != tab_uid) {
