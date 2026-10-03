@@ -6409,6 +6409,9 @@ msgstr ""
 msgid "This app is set up by pasting its configuration."
 msgstr ""
 
+msgid "Sign in to Mixar before connecting AI apps"
+msgstr ""
+
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
@@ -6424,10 +6427,16 @@ msgstr ""
 msgid "Let your AI assistant use Mixar scenes and controls."
 msgstr ""
 
+msgid "Sign in to Mixar to connect AI apps."
+msgstr ""
+
+msgid "Sign In"
+msgstr ""
+
 msgid "Scene and UI tools are free; only AI generation uses credits."
 msgstr ""
 
-msgid "Sign in once. Your AI app can start Mixar when needed."
+msgid "Your AI app can start Mixar when needed."
 msgstr ""
 
 msgid "MCP enabled"

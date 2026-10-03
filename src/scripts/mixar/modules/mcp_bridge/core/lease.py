@@ -90,7 +90,7 @@ def _receipt(operation):
 def begin_operation(params):
     """Acquire an idle scene. Repeating an active operation never extends it."""
     if not _enabled():
-        return _failure("mcp_disabled", "Enable MCP in Mixar first (Help > Connect AI Apps (MCP))")
+        return _failure("mcp_disabled", "Enable MCP in Mixar first (profile menu > Connect AI Apps (MCP))")
     try:
         operation_id = _uuid(params.get("operation_id"))
         session_id = _uuid(params["session_id"]) if params.get("session_id") else ""

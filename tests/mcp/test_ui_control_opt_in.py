@@ -98,3 +98,40 @@ def test_an_action_that_loads_a_document_reports_it_instead_of_unknown(monkeypat
     monkeypatch.setattr(service, "_active", (request, (step for step in ())))
     service._pump()
     assert finished[0][0]["document_loaded"] is True and "failed" not in finished[0][1]
+
+
+def test_connecting_ai_apps_needs_a_signed_in_mixar():
+    """MCP acts for the signed-in account, and the tool list it lists up front is
+    saved while signed in, so every enabling path refuses a signed-out Mixar."""
+    import ast
+    from mixar.modules.mcp_bridge.ui.operators import connect
+    signed_in = SimpleNamespace(window_manager=SimpleNamespace(mixie_chat_is_logged_in=True,
+                                                               mixie_chat_session_expired=False))
+    expired = SimpleNamespace(window_manager=SimpleNamespace(mixie_chat_is_logged_in=True,
+                                                             mixie_chat_session_expired=True))
+    reports = []
+    op = SimpleNamespace(report=lambda kind, text: reports.append(text))
+    assert connect._refuse_signed_out(op, signed_in) is False and not reports
+    assert connect._refuse_signed_out(op, expired) is True and "Sign in" in reports[0]
+    source = (Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators/connect.py").read_text()
+    tree = ast.parse(source)
+    guarded = {node.name for node in tree.body if isinstance(node, ast.ClassDef)
+               for item in node.body if isinstance(item, ast.FunctionDef) and item.name == "execute"
+               and "_refuse_signed_out" in ast.unparse(item)}
+    assert {"MIXAR_OT_set_mcp_enabled", "MIXAR_OT_copy_mcp_setup", "MIXAR_OT_mcp_add_to_app"} <= guarded
+    dialog = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "MIXAR_OT_mcp_setup")
+    draw = ast.unparse(next(item for item in dialog.body if isinstance(item, ast.FunctionDef) and item.name == "draw"))
+    assert "mixie_chat.login" in draw and draw.index("_signed_in") < draw.index("set_mcp_enabled")
+
+
+def test_setup_saves_the_tool_list_at_once():
+    source = (Path(__file__).parents[2] / "src/scripts/mixar/modules/mcp_bridge/ui/operators/connect.py").read_text()
+    assert "tool_snapshot.forget()" in source and source.count("_save_tools_now()") >= 2
+
+
+def test_mcp_setup_lives_in_the_profile_menu_not_help():
+    root = Path(__file__).parents[2] / "src"
+    assert not (root / "scripts/mixar/modules/mcp_bridge/ui/menus/help.py").exists()
+    assert '"mixar.connect_ai"' in (root / "scripts/mixar/modules/space_mixie_chat/ui/topbar.py").read_text()
+    card = (root / "source/blender/editors/interface/interface_mixar_profile_card.cc").read_text()
+    assert '"MIXAR_OT_connect_ai"' in card and "MixarCardIcon::Plug" in card

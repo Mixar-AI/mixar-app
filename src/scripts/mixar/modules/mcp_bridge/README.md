@@ -4,7 +4,7 @@
 # Connect an AI app to Mixar
 
 1. Open Mixar and sign in.
-2. Choose **Help → Connect AI Apps (MCP)** and pick your app. Claude Code and
+2. Open your profile menu (top right) → **Connect AI Apps (MCP)** and pick your app. Claude Code and
    Codex have **Add to …**, which sets everything up; for other apps, **Copy**
    the shown setup and paste it where the dialog says (**Open Config File**
    opens that file). **Copy MCP Config** copies the standard `mcpServers` JSON.

@@ -167,7 +167,7 @@ def _scene_tool(req):
 
 
 UI_CONTROL_OFF = ("Interface control is off, so Mixar's interface cannot be inspected or clicked. To use it, ask "
-                  "the user to turn on 'Let AI apps control Mixar's interface' in Help > Connect AI Apps (MCP). "
+                  "the user to turn on 'Let AI apps control Mixar's interface' in the profile menu > Connect AI Apps (MCP). "
                   "Scene work uses the scene tools; mixar_ui_context reports whether they are available")
 
 
