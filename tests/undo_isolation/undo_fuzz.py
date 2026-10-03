@@ -146,6 +146,9 @@ def fingerprint(scene) -> dict:
             "matrix": [round(x, 4) for row in o.matrix_basis for x in row],
             "materials": [(s.material.name, tuple(round(c, 4) for c in s.material.diffuse_color))
                           if s.material else None for s in o.material_slots],
+            # The child collections holding it (a Linked Copy shares them).
+            "colls": sorted(c.name for c in o.users_collection if c is not scene.collection and
+                            c in scene.collection.children_recursive),
         }
     return {
         "name": scene.name,
@@ -488,9 +491,11 @@ def shared_with(uid: int, other: int) -> tuple[set, set, set]:
     return pa[0] & pb[0], pa[1] & pb[1], pa[2] & pb[2]
 
 
-def isolation_diff(before: dict, after: dict | None, shared: tuple[set, set, set]) -> dict:
+def isolation_diff(before: dict, after: dict | None, shared: tuple[set, set, set],
+                   shared_colls: set = frozenset()) -> dict:
     """``diff`` minus the changes of objects that show a datablock shared with the
-    pressing tab (objects, data, materials)."""
+    pressing tab (objects, data, materials), and the objects the pressing tab's own
+    restore adds to or removes from a collection both tabs show (a Linked Copy)."""
     d = diff(before, after)
     objs, data, mats = shared
     changed = d.get("objects", {}).get("changed", {})
@@ -498,6 +503,13 @@ def isolation_diff(before: dict, after: dict | None, shared: tuple[set, set, set
         b = changed[n][0]
         if b["name"] in objs or b["data"] in data or any(m and m[0] in mats for m in b["materials"]):
             del changed[n]
+    if "objects" in d and shared_colls:
+        def via_shared(rec):
+            return rec is not None and rec["name"] in objs and set(rec.get("colls", ())) & shared_colls
+        d["objects"]["added"] = [k for k in d["objects"]["added"]
+                                 if not via_shared((after or {}).get("objects", {}).get(k))]
+        d["objects"]["removed"] = [k for k in d["objects"]["removed"]
+                                   if not via_shared(before.get("objects", {}).get(k))]
     if "objects" in d and not (d["objects"]["added"] or d["objects"]["removed"] or changed):
         del d["objects"]
     return d
@@ -612,8 +624,12 @@ def press(uid: int, what: str) -> None:
             ever["mats"].update(m[0] for m in r["materials"] if m)
     widened = {u: (shared[u][0] | ever["objs"], shared[u][1] | ever["data"], shared[u][2] | ever["mats"])
                for u in shared}
+    def colls_shared(u):
+        mine = set(before.get(uid, {}).get("collections", ())) | set(after.get(uid, {}).get("collections", ()))
+        theirs = set(before[u].get("collections", ())) | set((after.get(u) or {}).get("collections", ()))
+        return mine & theirs
     bad = {u: d for u in before if u != uid
-           for d in [isolation_diff(before[u], after.get(u), widened[u])] if d}
+           for d in [isolation_diff(before[u], after.get(u), widened[u], colls_shared(u))] if d}
     if bad:
         raise Violation(f"{what} in {entry['tab']} changed other tabs: {bad}")
     # 2. restore: the tab is as it was at its cursor step
