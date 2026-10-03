@@ -83,10 +83,16 @@ static PartialState g_partial;
  * of the pushing tab (the invariant test's liveness seeds: a tab's undo of its
  * own move of a shared object read as the next pushing tab moving it, and that
  * tab's undo of a later link was refused). */
+struct WalkSource {
+  const UndoStep *step = nullptr;
+  /** The tab whose walk it was (#UNDO_TAB_DOCUMENT for a whole-document walk). */
+  uint32_t tab = UNDO_TAB_DOCUMENT;
+};
+
 struct WalkRestored {
   /** A whole-document walk re-read everything from this step. */
-  const UndoStep *all = nullptr;
-  Map<uint32_t, const UndoStep *> ids;
+  WalkSource all;
+  Map<uint32_t, WalkSource> ids;
   /** Taken at the push: the data of objects in Edit Mode then. Every push flushes
    * every edit mesh, so their difference is the editing tab's, whoever pushed. */
   Set<uint32_t> in_edit;
@@ -99,12 +105,12 @@ void BKE_undo_tabs_walk_restored_note(const UndoStep *source)
     return;
   }
   if (g_partial.whole) {
-    g_walk_restored.all = source;
+    g_walk_restored.all = {source, UNDO_TAB_DOCUMENT};
     g_walk_restored.ids.clear();
     return;
   }
   for (const uint32_t uid : g_partial.reread) {
-    g_walk_restored.ids.add_overwrite(uid, source);
+    g_walk_restored.ids.add_overwrite(uid, {source, g_partial.tab});
   }
 }
 
@@ -126,7 +132,7 @@ void BKE_undo_tabs_walk_restored_take(UndoStep *us, Main *bmain)
       }
     }
   }
-  if (g_walk_restored.all != nullptr || !g_walk_restored.ids.is_empty() ||
+  if (g_walk_restored.all.step != nullptr || !g_walk_restored.ids.is_empty() ||
       !g_walk_restored.in_edit.is_empty())
   {
     us->mixar_walk_restored = MEM_new<WalkRestored>(__func__, std::move(g_walk_restored));
@@ -791,6 +797,9 @@ static int step_index(const UndoStack *ustack, const UndoStep *us)
 struct IdChange {
   int index;
   uint32_t author;
+  /** A walk's restore (credited at the next push): the undoing itself, never a
+   * change that walk has taken back. */
+  bool by_walk = false;
 };
 using IdChanges = Map<uint32_t, Vector<IdChange>>;
 
@@ -812,15 +821,17 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
     IdAddresses ids;
   };
   Map<const UndoStep *, SourceView> sources;
-  auto walk_source = [&](const UndoStep *step, const uint32_t uid) -> const UndoStep * {
+  auto walk_source = [&](const UndoStep *step, const uint32_t uid) -> WalkSource {
     const WalkRestored *wr = static_cast<const WalkRestored *>(step->mixar_walk_restored);
     if (wr == nullptr || g_memfile_get == nullptr) {
-      return nullptr;
+      return {};
     }
-    const UndoStep *const *found = wr->ids.lookup_ptr(uid);
-    const UndoStep *source = found ? *found : wr->all;
-    if (source == nullptr || BLI_findindex(&ustack->steps, source) < 0 || !step_is_memfile(source)) {
-      return nullptr; /* freed since */
+    const WalkSource *found = wr->ids.lookup_ptr(uid);
+    const WalkSource source = found ? *found : wr->all;
+    if (source.step == nullptr || BLI_findindex(&ustack->steps, source.step) < 0 ||
+        !step_is_memfile(source.step))
+    {
+      return {}; /* freed since */
     }
     return source;
   };
@@ -884,15 +895,24 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
       for (const uint32_t uid : uids) {
         /* Re-read by a walk since the previous push: what the push changed is its
          * difference from the step the walk read it from. */
-        const UndoStep *source = walk_source(us, uid);
+        const WalkSource walked = walk_source(us, uid);
         bool changed;
-        if (source != nullptr) {
+        if (walked.step != nullptr) {
+          const UndoStep *source = walked.step;
           const SourceView &sv = sources.lookup_or_add_cb(source, [&]() {
             const MemFile *mf = g_memfile_get(source);
             return SourceView{memfile_id_chunks(mf, uids), memfile_id_addresses(mf)};
           });
           changed = !id_chunks_equal(
               sv.chunks.lookup_ptr(uid), cur.lookup_ptr(uid), watched.lookup(uid), sv.ids, cur_ids);
+          /* The walk's own change (it re-read another version than the previous
+           * memfile held) is the walking tab's: a tab's undo that took back its
+           * own recolour of a shared material is a change to that material. */
+          if (!id_chunks_equal(
+                  prev.lookup_ptr(uid), sv.chunks.lookup_ptr(uid), watched.lookup(uid), prev_ids, sv.ids))
+          {
+            out.lookup_or_add_default(uid).append({index, walked.tab, true});
+          }
         }
         else {
           changed = !id_chunks_equal(
@@ -979,7 +999,7 @@ static SharedFate shared_fate(const UndoStack *ustack,
     const UndoStep *cursor = (c.author != UNDO_TAB_DOCUMENT) ?
                                  BKE_undosys_tab_cursor(const_cast<UndoStack *>(ustack), c.author) :
                                  nullptr;
-    if (c.index > active || (cursor != nullptr && c.index > step_index(ustack, cursor))) {
+    if (!c.by_walk && (c.index > active || (cursor != nullptr && c.index > step_index(ustack, cursor)))) {
       foreign = "another tab has taken back its own change to it";
     }
   }

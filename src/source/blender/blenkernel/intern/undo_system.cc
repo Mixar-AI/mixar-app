@@ -1440,8 +1440,13 @@ static UndoStep *undosys_tab_preload_step(const UndoStep *from,
    * alone, so the tab kept object-level state from its cursor that differs from
    * the state the mode step was pushed on (the invariant test, seed 10217: an
    * object another tab had removed from it in between came back). */
-  (void)dir;
   if (from == nullptr || target == nullptr || undosys_tab_step_is_global(target)) {
+    return nullptr;
+  }
+  /* A step that decodes as a delta on the state before it (sculpt, paint): a redo
+   * onto it must start from the tab's previous step, never from a memfile below
+   * (the sculpt probe crashed applying a stroke over the preloaded mesh). */
+  if (dir == STEP_REDO && (target->type->flags & UNDOTYPE_FLAG_DECODE_ACTIVE_STEP)) {
     return nullptr;
   }
   if (!undosys_tab_step_is_global(from)) {
