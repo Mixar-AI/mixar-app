@@ -7,7 +7,7 @@ import json
 import uuid
 
 from mcp import types
-from mcp.server import Server, NotificationOptions
+from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
 from mixar.modules.common.ui_control.core import schema
@@ -49,8 +49,8 @@ Ask the user when an open choice matters (method, style, scale, detail, a
 large credit spend); settle small details yourself.
 Native UI tools (mixar_ui_*, if the user allows them) cover what no other
 tool does; never use OS-level computer use on Mixar.
-Inspection and UI input are free; scene edits cost Mixar credits (default 1)
-and generation its job price. After an uncertain outcome, inspect and use
+Only generation costs Mixar credits (its job price, as does
+create_layered_material); everything else is free. After an uncertain outcome, inspect and use
 mixar_call_status or mixar_ui_call_status with the same call UUID; never
 blindly repeat an edit.
 """
@@ -89,7 +89,7 @@ def failure(exc, call_id):
 
 
 def create_server(connector):
-    status = {"listed": False, "readiness": "starting", "watcher": None, "poke": None}
+    status = {"listed": False, "readiness": "starting"}
 
     def visible(tools):
         if getattr(connector, "health", {}).get("ui_control") is False:
@@ -97,41 +97,11 @@ def create_server(connector):
             return [tool for tool in tools if tool["name"] not in schema.UI_INPUT]
         return tools
 
-    async def recheck(session):
-        """Until the scene tools reach this session, keep checking and tell the
-        client to reload its list (Claude Code does; Codex needs a reconnect)."""
-        delay = availability.RECHECK_FIRST_SECONDS
-        while not status["listed"]:
-            try:  # A poke (the agent asked for status) checks at once.
-                await asyncio.wait_for(status["poke"].wait(), delay)
-                delay = availability.RECHECK_FIRST_SECONDS
-            except TimeoutError:
-                delay = min(availability.RECHECK_MAX_SECONDS, delay*2)
-            status["poke"].clear()
-            tools, status["readiness"] = await availability.fetch_tools(connector)
-            if tools is not None:
-                await session.send_tool_list_changed()
-                return
-
-    def ensure_recheck(session):
-        if status["listed"]:
-            return
-        if status["watcher"] is None or status["watcher"].done():
-            status["poke"] = asyncio.Event()
-            status["watcher"] = asyncio.create_task(recheck(session))
-            connector.tasks.add(status["watcher"])
-            status["watcher"].add_done_callback(connector.tasks.discard)
-        else:
-            status["poke"].set()
-
     async def list_tools(ctx, params):
-        # Wait briefly for a starting Mixar, never for one that needs the user.
-        wait = 0 if status["watcher"] is not None else availability.STARTUP_WAIT_SECONDS
-        backend, status["readiness"] = await availability.fetch_tools(connector, wait)
+        # Every tool at once (live, or the copy saved while signed in); never wait.
+        backend, status["readiness"] = await availability.fetch_tools(connector)
         tools = schema.tools() + (with_ui_domain(backend) if backend is not None else [])
         status["listed"] = backend is not None
-        if not status["listed"]:
-            ensure_recheck(ctx.session)
         tools = presentation.tools_for_client(visible(tools), presentation.client_name(ctx))
         return types.ListToolsResult(tools=[types.Tool.model_validate(t) for t in tools])
 
@@ -188,14 +158,15 @@ def create_server(connector):
                            "usage": {"request_id": call_id, "credits_charged": 0}}
                 return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(payload))],
                                             structured_content=payload, meta={"mixar/request-id": call_id})
+            connector.client = presentation.client_info(ctx)
             result = await asyncio.to_thread(connector.call, params.name, args, call_id)
-            if params.name == "mixar_ui_context" and not result.get("isError"):
-                # Say whether scene work is possible in THIS session, and why not.
+            payload = result.get("structuredContent") or {}
+            if params.name == "mixar_ui_context" and isinstance(payload.get("result"), dict):
+                # Say whether scene work is possible in THIS session, and why not;
+                # also when the interface controller itself is still starting.
                 readiness, _ = await asyncio.to_thread(connector.readiness)
-                payload = result["structuredContent"]
                 payload["result"].update(availability.scene_tools(status["listed"], readiness, connector.health))
                 result["content"][0] = {"type": "text", "text": json.dumps(payload)}
-                ensure_recheck(ctx.session)
             if params.name == "mixar_tool_catalog" and not result.get("isError"):
                 payload = result["structuredContent"]["result"]
                 if "domains" in payload:
@@ -252,8 +223,7 @@ async def run(instance=None, session=None):
     server = create_server(connector)
     try:
         async with stdio_server() as (read, write):
-            await server.run(read, write, server.create_initialization_options(
-                notification_options=NotificationOptions(tools_changed=True)))
+            await server.run(read, write, server.create_initialization_options())
     finally:
         for task in list(connector.tasks):
             task.cancel()

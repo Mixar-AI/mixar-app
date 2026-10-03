@@ -54,7 +54,7 @@ def discover(instance_id=None):
         except (OSError, ValueError, http.client.HTTPException):
             continue
     if not candidates:
-        raise RuntimeError("Open Mixar, sign in, then use Help > Connect AI Apps (MCP) to enable MCP.")
+        raise RuntimeError("Open Mixar, sign in, then use the profile menu > Connect AI Apps (MCP) to enable MCP.")
     if len(candidates) != 1:
         ids = ", ".join(item["instance_id"] for item in candidates)
         raise RuntimeError("Several Mixar windows are available; use --instance with one of: " + ids)

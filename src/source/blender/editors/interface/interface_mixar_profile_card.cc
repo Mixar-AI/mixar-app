@@ -12,9 +12,7 @@
  * routes it to the card's own drawing (see
  * `interface_mixar_profile_card_draw.cc`).
  *
- * Everything the card shows is read from RNA that Python owns; nothing
- * is cached here, so a stale card is impossible and there is no second
- * source of truth for account state.
+ * Account state is read live from Python-owned RNA.
  */
 
 #include <algorithm>
@@ -420,7 +418,8 @@ void add_action(Layout *layout,
 
 void add_actions(Layout *layout)
 {
-  Layout &grid = layout->column(false);
+  /* Button insets supply the same gap horizontally and vertically. */
+  Layout &grid = layout->column(true);
 
   Layout &top = grid.row(true);
   top.scale_y_set(ROW_ACTION);
@@ -437,6 +436,12 @@ void add_actions(Layout *layout)
   settings.operator_context_set(wm::OpCallContext::InvokeDefault);
   add_action(&settings, "MIXAR_BYOK_OT_open_dialog", N_("AI Provider Settings"),
              MixarCardIcon::Sliders, MixarCardElement::CardButton);
+
+  Layout &connect = grid.row(true);
+  connect.scale_y_set(ROW_ACTION);
+  connect.operator_context_set(wm::OpCallContext::InvokeDefault);
+  add_action(&connect, "MIXAR_OT_connect_ai", N_("Connect AI Apps (MCP)"),
+             MixarCardIcon::Plug, MixarCardElement::CardButton);
 
   Layout &bottom = grid.row(true);
   bottom.scale_y_set(ROW_ACTION);
@@ -466,9 +471,6 @@ void add_logout(Layout *layout)
 }
 
 }  // namespace
-
-/* -------------------------------------------------------------------- */
-/* Public API                                                            */
 
 MixarCardElement UI_mixar_card_element_get(const Button *but)
 {

@@ -136,6 +136,9 @@ enum class MixarCardIcon : uint8_t {
   Cross,
   /** Wrapped box with a ribbon — refer a friend. */
   Gift,
+  /** Two-pin plug — external MCP connections. */
+  Plug,
+  Count,
 };
 
 struct MixarScope {

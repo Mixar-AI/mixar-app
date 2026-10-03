@@ -1,12 +1,12 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""The scene tools reach an MCP session whenever Mixar can serve them, and the agent
-is told the real reason when it cannot.
+"""Every Mixar tool is listed the moment an AI app connects, and a call made before
+Mixar is ready says why.
 
-An AI app lists tools once while it starts: a Mixar still starting, a second app
-left open, or a server connection that comes up late must not leave the session
-with only the local tools, and a status must never send the agent after a wrong
-cause ("backend too old") or into workarounds.
+An AI app lists tools once, when it connects: a Mixar that is closed, starting,
+signed out or offline must not leave the session with only the local tools (the
+launcher serves the list the app saved while signed in), and a status must
+never send the agent after a wrong cause ("backend too old") or into workarounds.
 """
 
 import asyncio
@@ -17,7 +17,7 @@ from mcp import Client
 from mcp.types import Implementation
 
 from mixar.modules.common.ui_control.core import service
-from mixar.modules.mcp_bridge.core import availability, connector, eligibility, stdio_server
+from mixar.modules.mcp_bridge.core import availability, connector, eligibility, stdio_server, tool_snapshot
 
 BACKEND_TOOL = {"name": "execute_bpy_script", "description": "Run bpy.", "inputSchema": {"type": "object"},
                 "_meta": {"mixar/domain": "build"}}
@@ -65,14 +65,30 @@ def test_readiness_names_what_the_user_must_do(desktop, monkeypatch):
     import mixar.modules.mcp_bridge.core.installation as installation
     monkeypatch.setattr(installation, "start_app", lambda: False)
     monkeypatch.setattr(installation, "start_in_progress", lambda: False)
-    assert connector.Connector().readiness()[0] == "absent"
+    absent = connector.Connector()
+    assert absent.readiness()[0] == "absent"
+    assert absent.readiness()[0] == "absent"  # Not "starting" on the next attempt.
     monkeypatch.setattr(installation, "start_in_progress", lambda: True)  # Started by another AI app.
     assert connector.Connector().readiness()[0] == "starting"
-    monkeypatch.setattr(installation, "start_app", lambda: True)
-    assert connector.Connector().readiness()[0] == "starting"
 
 
-# ------------------------------------------------- waiting and rechecking
+def test_only_a_tool_call_opens_a_closed_mixar(desktop, monkeypatch):
+    """AI apps list tools whenever a session starts; that must never launch
+    Mixar. Asking for something in Mixar may."""
+    import mixar.modules.mcp_bridge.core.installation as installation
+    started = []
+    monkeypatch.setattr(installation, "start_app", lambda: started.append(1) or True)
+    monkeypatch.setattr(installation, "start_in_progress", lambda: bool(started))
+    tool_snapshot.save([dict(BACKEND_TOOL)])
+    client = connector.Connector()
+    out = run_session(client)
+    assert "execute_bpy_script" in out["tools"] and client.readiness()[0] == "absent" and not started
+    with pytest.raises(RuntimeError, match="starting"):
+        client.call("scene_overview", {}, "call-1")
+    assert started == [1] and client.readiness()[0] == "starting"
+
+
+# ------------------------------------------- every tool listed at once
 
 class Fake:
     """A Mixar whose readiness steps through ``states``; the last one sticks."""
@@ -100,47 +116,101 @@ class Fake:
         pass
 
 
-def test_a_starting_mixar_is_waited_for_and_a_signed_out_one_is_not(monkeypatch):
-    real_sleep = asyncio.sleep
-    monkeypatch.setattr(availability.asyncio, "sleep", lambda delay: real_sleep(0))
-    tools, state = asyncio.run(availability.fetch_tools(Fake(["starting", "starting", "ready"]), 30))
-    assert state == "ready" and tools and tools[0]["name"] == "execute_bpy_script"
-    fake = Fake(["signed_out", "ready"])
-    tools, state = asyncio.run(availability.fetch_tools(fake, 30))
-    assert tools is None and state == "signed_out" and fake.catalog_calls == 0
+def run_session(fake, client_name="claude-code", steps=None):
+    async def main():
+        info = Implementation(name=client_name, version="1")
+        async with Client(stdio_server.create_server(fake), client_info=info) as client:
+            out = {"tools": {t.name for t in (await client.list_tools()).tools}}
+            for name in steps or ():
+                out[name] = (await client.call_tool(name, {})).structured_content
+            return out
+    return asyncio.run(main())
 
 
-@pytest.mark.parametrize("first_delay", [0.01, 30], ids=["timed_recheck", "context_wakes_recheck"])
-def test_a_late_mixar_reaches_the_session_and_the_client_is_told_to_reload(monkeypatch, first_delay):
-    monkeypatch.setattr(availability, "STARTUP_WAIT_SECONDS", 0)
-    monkeypatch.setattr(availability, "RECHECK_FIRST_SECONDS", first_delay)
-    fake = Fake(["signed_out", "signed_out", "ready"])
+def test_a_ready_mixar_lists_live_tools_and_saves_them_for_later(monkeypatch):
+    fake = Fake(["ready"])
+    first = run_session(fake)
+    assert "execute_bpy_script" in first["tools"] and fake.catalog_calls == 1
+    assert tool_snapshot.load() == [BACKEND_TOOL]
+
+
+@pytest.mark.parametrize("state", ["signed_out", "starting", "absent", "choose", "closed"])
+def test_every_tool_is_listed_at_once_while_mixar_is_not_ready(state):
+    tool_snapshot.save([dict(BACKEND_TOOL)])
+    fake = Fake([state])
+    out = run_session(fake, steps=["mixar_ui_context"])
+    assert "execute_bpy_script" in out["tools"] and fake.catalog_calls == 0  # No waiting.
+    status = out["mixar_ui_context"]["result"]
+    assert status["scene_tools"] == state and status["next_step"]
+
+
+def test_server_connection_down_lists_the_saved_tools_and_says_connecting():
+    tool_snapshot.save([dict(BACKEND_TOOL)])
+    fake = Fake(["ready"])
+    fake.catalog = lambda: (_ for _ in ()).throw(OSError("backend unreachable"))
+    fake.health = {"connected": False}
+    out = run_session(fake, steps=["mixar_ui_context"])
+    assert "execute_bpy_script" in out["tools"]
+    assert out["mixar_ui_context"]["result"]["scene_tools"] == "connecting"
+
+
+def test_without_a_saved_list_the_session_says_to_reconnect_once_mixar_is_ready():
+    fake = Fake(["signed_out", "signed_out", "ready"])  # Never saved: first use, signed out.
+    out = run_session(fake, steps=["mixar_ui_context", "mixar_ui_context"])
+    assert "execute_bpy_script" not in out["tools"] and "mixar_ui_context" in out["tools"]
+    status = out["mixar_ui_context"]["result"]
+    assert status["scene_tools"] == "reconnect" and "/mcp" in status["next_step"]
+
+
+def test_a_corrupt_saved_list_is_ignored():
+    tool_snapshot.path().parent.mkdir(parents=True, exist_ok=True)
+    tool_snapshot.path().write_text("{not json")
+    assert tool_snapshot.load() is None
+    tool_snapshot.path().write_text('{"version": 1, "tools": [{"description": "nameless"}]}')
+    assert tool_snapshot.load() is None
+
+
+def test_the_app_saves_the_list_once_signed_in_and_hourly(monkeypatch):
+    tool_snapshot.forget()
+    calls = []
+
+    def forward(request, context, headers):
+        calls.append(request["method"])
+        if request["method"] == "initialize":
+            return 200, {"result": {"protocolVersion": "2025-11-25"}}
+        return 200, {"result": {"tools": [dict(BACKEND_TOOL)]}}
+
+    ready = {"signed_in": True, "connected": True, "backend_url": "http://127.0.0.1:1",
+             "headers": {}, "instance_id": "i", "session_id": "s"}
+    assert not tool_snapshot.refresh_if_due({**ready, "signed_in": False}, forward, now=0)
+    assert tool_snapshot.refresh_if_due(ready, forward, now=0)
+    tool_snapshot._state["thread"].join(5)
+    assert calls == ["initialize", "tools/list"] and tool_snapshot.load() == [BACKEND_TOOL]
+    assert not tool_snapshot.refresh_if_due(ready, forward, now=60)  # Fresh enough.
+    assert tool_snapshot.refresh_if_due(ready, forward, now=tool_snapshot.REFRESH_SECONDS + 1)
+    tool_snapshot._state["thread"].join(5)
+    tool_snapshot.forget()  # Signed out: the next sign-in saves again at once.
+    assert tool_snapshot.refresh_if_due(ready, forward, now=tool_snapshot.REFRESH_SECONDS + 2)
+    tool_snapshot._state["thread"].join(5)
+
+
+def test_status_is_reported_while_the_interface_controller_starts(monkeypatch):
+    fake = Fake(["ready"])
+
+    def starting(name, arguments, call_id):
+        payload = {"result": {"error_type": "not_ready", "error": "Mixar UI controller is starting"}, "usage": {}}
+        return {"content": [{"type": "text", "text": ""}], "structuredContent": payload, "isError": True}
+    fake.call = starting
 
     async def main():
-        changed = asyncio.Event()
-
-        async def on_message(message):
-            if getattr(message, "method", "") == "notifications/tools/list_changed":
-                changed.set()
-
-        # The initialize handshake, as Claude Code and Codex connect today.
-        info = Implementation(name="claude-code", version="1")
-        async with Client(stdio_server.create_server(fake), client_info=info, message_handler=on_message,
-                          mode="legacy") as client:
-            first = {tool.name for tool in (await client.list_tools()).tools}
-            context = (await client.call_tool("mixar_ui_context", {})).structured_content["result"]
-            await asyncio.wait_for(changed.wait(), 5)
-            second = {tool.name for tool in (await client.list_tools()).tools}
-            return first, context, second
-
-    first, context, second = asyncio.run(main())
-    assert "execute_bpy_script" not in first and "mixar_ui_context" in first
-    assert context["scene_tools"] in {"signed_out", "loading"} and context["next_step"]
-    assert "execute_bpy_script" in second
+        async with Client(stdio_server.create_server(fake)) as client:
+            await client.list_tools()
+            return (await client.call_tool("mixar_ui_context", {})).structured_content["result"]
+    result = asyncio.run(main())
+    assert result["error_type"] == "not_ready" and result["scene_tools"] == "available"
 
 
 def test_interface_tools_stay_hidden_while_off_even_without_the_backend(monkeypatch):
-    monkeypatch.setattr(availability, "STARTUP_WAIT_SECONDS", 0)
     fake = Fake(["signed_out"])
     fake.health = {"ui_control": False}
 
@@ -156,7 +226,8 @@ def test_interface_tools_stay_hidden_while_off_even_without_the_backend(monkeypa
 
 @pytest.mark.parametrize("state,listed,connected,expected", [
     ("ready", True, True, "available"), ("ready", True, False, "connecting"),
-    ("ready", False, True, "loading"), ("signed_out", False, False, "signed_out"),
+    ("ready", False, True, "reconnect"), ("ready", False, False, "connecting"),
+    ("signed_out", False, False, "signed_out"),
     ("choose", False, True, "choose"), ("absent", False, False, "absent"),
 ])
 def test_scene_tool_status(state, listed, connected, expected):
@@ -183,3 +254,33 @@ def test_context_reports_sign_in_without_raising(monkeypatch, logged_in, expired
     wm = SimpleNamespace(mixie_chat_is_logged_in=logged_in, mixie_chat_session_expired=expired)
     monkeypatch.setattr(service, "bpy", SimpleNamespace(context=SimpleNamespace(window_manager=wm)))
     assert service._is_signed_in() is expected
+
+
+def test_a_failing_refresh_backs_off_up_to_hourly():
+    """A backend without /api/v1/mcp must not be polled every 15 s forever."""
+    import time
+    tool_snapshot.forget()
+    ok = {"value": False}
+
+    def forward(request, context, headers):
+        if not ok["value"]:
+            return 404, {"detail": "Not Found"}
+        if request["method"] == "initialize":
+            return 200, {"result": {"protocolVersion": "2025-11-25"}}
+        return 200, {"result": {"tools": [dict(BACKEND_TOOL)]}}
+
+    ready = {"signed_in": True, "connected": True, "backend_url": "http://127.0.0.1:1"}
+    waits = []
+    for _ in range(9):
+        now = time.monotonic()
+        while not tool_snapshot.refresh_if_due(ready, forward, now=now):
+            now += 1
+        tool_snapshot._state["thread"].join(5)
+        waits.append(tool_snapshot._state["saved_at"] + tool_snapshot.REFRESH_SECONDS - time.monotonic())
+    assert [round(w / 15) * 15 for w in waits[:4]] == [15, 30, 60, 120]
+    assert max(waits) <= tool_snapshot.REFRESH_SECONDS
+    ok["value"] = True
+    tool_snapshot.refresh_if_due(ready, forward, now=time.monotonic() + tool_snapshot.REFRESH_SECONDS)
+    tool_snapshot._state["thread"].join(5)
+    assert tool_snapshot._state["delay"] == tool_snapshot.RETRY_SECONDS  # Success resets it.
+    tool_snapshot.forget()

@@ -48,6 +48,8 @@ class RelayServer(ThreadingHTTPServer):
 
     def start(self):
         self.record = publish(self.server_port, self.token, self.snapshot()["instance_id"])
+        from .installation import started
+        started()  # This app is up: an AI app's cold start (if any) has finished.
         threading.Thread(target=self.serve_forever, kwargs={"poll_interval": 0.1},
                          name="mixar-mcp-relay", daemon=True).start()
 

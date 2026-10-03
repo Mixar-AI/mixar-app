@@ -47,6 +47,8 @@ def _tick():
     try:
         # Properties are installed in deferred batches. This is ordinary
         # startup, not a failed connector that needs a traceback or backoff.
+        from . import usage
+        usage.flush()  # The relay thread queues mcp.tool_called; only this thread captures.
         wm = bpy.context.window_manager
         if wm is None or not hasattr(wm, "mixie_instance_id"):
             return 1.0 if _registered else None
@@ -92,6 +94,12 @@ def _tick():
             current.update(ui_contract="mixar_ui_v1", ui_eligible=eligibility.valid())
         with _lock:
             _snapshot = current
+        from . import tool_snapshot
+        if enabled() and current["signed_in"]:
+            from .forward import forward
+            tool_snapshot.refresh_if_due(current, forward)  # Every tool, for the next AI app.
+        else:
+            tool_snapshot.forget()
         if enabled() and current["instance_id"] and _server is None:
             from .relay import RelayServer
             from .forward import forward

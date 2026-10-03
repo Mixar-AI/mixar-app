@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Replay Help > Connect AI Apps (MCP) the way a user clicks it.
+"""Replay the Connect AI Apps (MCP) dialog the way a user clicks it.
 
 Event-simulate QA app (e2e_launch.py without --normal-input), launched with
 CLAUDE_CONFIG_DIR and CODEX_HOME pointing INSIDE the fixture: Add to Claude
@@ -72,9 +72,9 @@ def main():
     codex_config.write_text(EXISTING_CODEX)
 
     qa.dismiss_splash()
-    qa.click(text="Help", but_type="Pulldown")
-    time.sleep(0.6)
-    qa.click(op="MIXAR_OT_connect_ai", popup=True)
+    # The profile-menu entry itself is covered by e2e_profile.py (native card and
+    # Python fallback); this replay is about the dialog.
+    qa.eval("result = list(bpy.ops.mixar.connect_ai('INVOKE_DEFAULT'))")
     time.sleep(1.0)
     qa.snap(str(out / "dialog-mcp-off.png"))
     checkbox = widgets(op="MIXAR_OT_set_mcp_ui_control")

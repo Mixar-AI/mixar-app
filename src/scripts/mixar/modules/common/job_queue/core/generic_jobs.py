@@ -366,7 +366,11 @@ class StreamingVideoJob(AsyncGLBJob):
                     return
                 self._staged_video_keys.append(key)
             self._upload_index += 1
-            self.submit(on_success, on_error)
+            # A main-thread timer runs this after QueueManager's submitting_as
+            # block has ended: the deferred enqueue re-states the job's origin.
+            from mixar.modules.common.api.services.job_queue_service import submitting_as
+            with submitting_as(getattr(self, "origin", "")):
+                self.submit(on_success, on_error)
 
         get_job_queue_service().stage_media(
             media_kind=media_kind,

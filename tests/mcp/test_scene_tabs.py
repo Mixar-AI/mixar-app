@@ -115,7 +115,7 @@ def test_a_refused_create_leaves_no_uncertain_receipt(tabs, tmp_path, monkeypatc
 def test_connector_pins_the_created_or_switched_tab(monkeypatch):
     client = connector.Connector()
     client.bound_session = "sess-pool"
-    monkeypatch.setattr(client, "attach", lambda: ({}, {"session_id": "sess-pool"}))
+    monkeypatch.setattr(client, "attach", lambda **_: ({}, {"session_id": "sess-pool"}))
     sent = []
 
     def respond(record, method, path, payload=None, headers=None, timeout=10):
@@ -134,3 +134,31 @@ def test_connector_pins_the_created_or_switched_tab(monkeypatch):
     assert created["structuredContent"]["result"]["bound_session"] == "sess-new"
     listed = client.call("mixar_scenes", {}, str(uuid4()))["structuredContent"]["result"]["scenes"]
     assert [scene["bound"] for scene in listed] == [False, True]
+
+
+@pytest.fixture
+def gate(monkeypatch):
+    import importlib
+    window = SimpleNamespace(modal_operators=[])
+    wm = SimpleNamespace(windows=[window], mixar_window_resizing=False)
+    monkeypatch.setattr(scene_tabs.bpy, "context", SimpleNamespace(window_manager=wm), raising=False)
+    busy = importlib.import_module("mixar.modules.common.render_coordinator.core")
+    ownership = importlib.import_module("mixar.modules.common.ui_control.core.ownership")
+    monkeypatch.setattr(busy, "busy", lambda: False)
+    monkeypatch.setattr(ownership, "active", lambda: False)
+    return window
+
+
+def test_another_tabs_agent_does_not_block_a_new_tab(gate):
+    """Mixie working in one tab holds the viewport lock and undo shield; a new
+    tab is still allowed, as with the drawer's "+ New scene"."""
+    gate.modal_operators = [SimpleNamespace(bl_idname="MIXAR_OT_agent_viewport_block"),
+                            SimpleNamespace(bl_idname="MIXIE_CHAT_OT_undo_shield")]
+    scene_tabs._gate()
+
+
+def test_an_operation_the_user_has_open_blocks_a_tab_change(gate):
+    gate.modal_operators = [SimpleNamespace(bl_idname="MIXAR_OT_agent_viewport_block"),
+                            SimpleNamespace(bl_idname="TRANSFORM_OT_translate")]
+    with pytest.raises(UIError, match="finish or cancel"):
+        scene_tabs._gate()
