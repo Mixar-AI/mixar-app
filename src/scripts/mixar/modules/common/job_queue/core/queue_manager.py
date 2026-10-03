@@ -381,11 +381,12 @@ class FeatureQueue(DownloadMixin):
         """Submit a job. Returns False if a duplicate is already queued."""
         # Consume even a rejected enqueue's ref; only accepted jobs own it.
         from mixar.modules.common.utils.agent_feedback import take_agent_ref, take_job_origin
-        from .agent_batches import current_agent_batch
+        from .agent_batches import current_agent_batch, current_batch_origin
 
         batch = current_agent_batch()
         ref = dict(batch.ref) if batch is not None else take_agent_ref(bpy.context)
-        taken = batch.origin if batch is not None else take_job_origin(bpy.context)
+        scoped = current_batch_origin()
+        taken = scoped if scoped is not None else take_job_origin(bpy.context)
         origin = taken or ("mixar_agent" if ref else "user")
         # Dedup: reject if same label is already active
         if job.label and any(

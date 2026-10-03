@@ -10,6 +10,7 @@ The client-name table mirrors the backend's ``modules/mcp/usage_signals.py``;
 keep them in step.
 """
 
+import queue
 import re
 import time
 
@@ -44,12 +45,17 @@ def _status(result):
     return str(payload.get("error_type") or "error")[:32]
 
 
+#: Filled on the relay's HTTP thread, emptied on Blender's main thread by the
+#: runtime tick (flush); the HTTP thread never touches bpy, not even its timers.
+_pending = queue.SimpleQueue()
+_MAX_PENDING = 512
+
+
 def report(tool, meta, session, result, started):
-    """Called on the relay thread: capture on Blender's main thread, fail open."""
+    """Called on the relay thread: queue the event, fail open."""
     try:
-        import bpy
-        from mixar.modules.common.analytics.capture import capture
-        from mixar.modules.common.analytics.constants import EVENT_MCP_TOOL
+        if _pending.qsize() >= _MAX_PENDING:
+            return
         client, version = client_of(meta)
         properties = {
             "agent_source": "mcp", "surface": "desktop", "mcp_client": client,
@@ -57,10 +63,21 @@ def report(tool, meta, session, result, started):
             "status": _status(result), "duration_ms": int((time.monotonic() - started) * 1000),
             "scene_session_id": str(session)[:64] or None,
         }
-
-        def emit():
-            capture(EVENT_MCP_TOOL, properties)
-
-        bpy.app.timers.register(emit, first_interval=0.0)
+        _pending.put(properties)
     except Exception:  # noqa: BLE001 - analytics must never affect a tool call
         pass
+
+
+def flush():
+    """Main thread only: send the queued events through consent-gated capture."""
+    from mixar.modules.common.analytics.capture import capture
+    from mixar.modules.common.analytics.constants import EVENT_MCP_TOOL
+    while True:
+        try:
+            properties = _pending.get_nowait()
+        except queue.Empty:
+            return
+        try:
+            capture(EVENT_MCP_TOOL, properties)
+        except Exception:  # noqa: BLE001 - analytics must never affect the tick
+            pass

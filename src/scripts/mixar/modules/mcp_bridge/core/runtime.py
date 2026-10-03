@@ -47,6 +47,8 @@ def _tick():
     try:
         # Properties are installed in deferred batches. This is ordinary
         # startup, not a failed connector that needs a traceback or backoff.
+        from . import usage
+        usage.flush()  # The relay thread queues mcp.tool_called; only this thread captures.
         wm = bpy.context.window_manager
         if wm is None or not hasattr(wm, "mixie_instance_id"):
             return 1.0 if _registered else None

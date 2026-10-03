@@ -119,17 +119,26 @@ def test_an_unclaimed_mcp_origin_never_reaches_the_next_manual_generation(monkey
     assert queue.submit(job) is True and job.origin == "user"
 
 
-def test_every_job_of_an_mcp_batch_is_mcp(monkeypatch):
+@pytest.mark.parametrize("with_ref", [False, True])
+def test_every_job_of_an_mcp_batch_is_mcp(monkeypatch, with_ref):
+    """MCP enqueues carry no callback ref (the MCP runtime has no run), so the
+    origin must hold for every sibling with or without one."""
     from mixar.modules.common.job_queue.core.agent_batches import agent_generation_batch
     from mixar.modules.common.job_queue.core import agent_results
-    monkeypatch.setattr(agent_results, "report_agent_batch", lambda batch: None)
-    queue, wm = _queue_with(monkeypatch, mixar_job_origin="mcp",
-                            mixar_agent_ref=json.dumps({"generation_id": "g1", "session_id": "s"}))
+    reported = []
+    monkeypatch.setattr(agent_results, "report_agent_batch", reported.append)
+    props = {"mixar_job_origin": "mcp"}
+    if with_ref:
+        props["mixar_agent_ref"] = json.dumps({"generation_id": "g1", "session_id": "s"})
+    queue, wm = _queue_with(monkeypatch, **props)
     jobs = [_RecordingJob(label=f"Sibling {i}") for i in range(3)]
     with agent_generation_batch(SimpleNamespace(window_manager=wm)):
         for job in jobs:
             assert queue.submit(job) is True
     assert [job.origin for job in jobs] == ["mcp"] * 3
+    assert len(reported) == int(with_ref)  # No callback delivery without a ref.
+    after = _RecordingJob(label="Manual after the batch")
+    assert queue.submit(after) is True and after.origin == "user"
 
 
 def test_a_job_that_stages_media_first_still_sends_its_origin(monkeypatch):
@@ -159,3 +168,21 @@ def test_a_job_that_stages_media_first_still_sends_its_origin(monkeypatch):
 def test_the_launcher_points_to_the_profile_menu():
     source = (SCRIPTS / "mixar" / "mcp.py").read_text()
     assert "Help >" not in source and "profile menu > Connect AI Apps (MCP)" in source
+
+
+def test_the_relay_thread_never_touches_blender(monkeypatch):
+    """report() runs on the relay's HTTP thread: it only queues; the main-thread
+    runtime tick sends the event."""
+    import threading
+    import bpy
+    import importlib
+    capture_module = importlib.import_module("mixar.modules.common.analytics.capture")
+    touched, sent = [], []
+    monkeypatch.setattr(bpy.app.timers, "register", lambda *a, **k: touched.append(a), raising=False)
+    monkeypatch.setattr(capture_module, "capture", lambda event, props: sent.append((event, props["tool"])))
+    worker = threading.Thread(target=usage.report, args=("mixar_scenes", {"mixar/client": {"name": "codex"}},
+                                                         "s", {"isError": False}, 0.0))
+    worker.start(); worker.join()
+    assert not touched and not sent
+    usage.flush()
+    assert sent == [("mcp.tool_called", "mixar_scenes")]
