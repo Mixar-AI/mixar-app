@@ -254,3 +254,33 @@ def test_context_reports_sign_in_without_raising(monkeypatch, logged_in, expired
     wm = SimpleNamespace(mixie_chat_is_logged_in=logged_in, mixie_chat_session_expired=expired)
     monkeypatch.setattr(service, "bpy", SimpleNamespace(context=SimpleNamespace(window_manager=wm)))
     assert service._is_signed_in() is expected
+
+
+def test_a_failing_refresh_backs_off_up_to_hourly():
+    """A backend without /api/v1/mcp must not be polled every 15 s forever."""
+    import time
+    tool_snapshot.forget()
+    ok = {"value": False}
+
+    def forward(request, context, headers):
+        if not ok["value"]:
+            return 404, {"detail": "Not Found"}
+        if request["method"] == "initialize":
+            return 200, {"result": {"protocolVersion": "2025-11-25"}}
+        return 200, {"result": {"tools": [dict(BACKEND_TOOL)]}}
+
+    ready = {"signed_in": True, "connected": True, "backend_url": "http://127.0.0.1:1"}
+    waits = []
+    for _ in range(9):
+        now = time.monotonic()
+        while not tool_snapshot.refresh_if_due(ready, forward, now=now):
+            now += 1
+        tool_snapshot._state["thread"].join(5)
+        waits.append(tool_snapshot._state["saved_at"] + tool_snapshot.REFRESH_SECONDS - time.monotonic())
+    assert [round(w / 15) * 15 for w in waits[:4]] == [15, 30, 60, 120]
+    assert max(waits) <= tool_snapshot.REFRESH_SECONDS
+    ok["value"] = True
+    tool_snapshot.refresh_if_due(ready, forward, now=time.monotonic() + tool_snapshot.REFRESH_SECONDS)
+    tool_snapshot._state["thread"].join(5)
+    assert tool_snapshot._state["delay"] == tool_snapshot.RETRY_SECONDS  # Success resets it.
+    tool_snapshot.forget()

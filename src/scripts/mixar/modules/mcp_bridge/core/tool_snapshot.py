@@ -21,7 +21,7 @@ FILENAME = "tools.json"
 REFRESH_SECONDS = 3600
 RETRY_SECONDS = 15
 
-_state = {"thread": None, "saved_at": 0.0, "account": None, "error": None}
+_state = {"thread": None, "saved_at": 0.0, "account": None, "error": None, "delay": RETRY_SECONDS}
 
 
 def path():
@@ -92,11 +92,15 @@ def refresh_if_due(context, forward, *, now=None):
         try:
             tools = fetch(dict(context), forward)
             if tools and save(tools):
-                _state["error"] = None
+                _state["error"], _state["delay"] = None, RETRY_SECONDS
                 return
         except Exception as exc:  # noqa: BLE001 - a background refresh must never surface
             _state["error"] = repr(exc)[:200]
-        _state["saved_at"] = time.monotonic() - REFRESH_SECONDS + RETRY_SECONDS
+        # A backend without /api/v1/mcp or a persistent error must not be polled
+        # every 15 s: back off exponentially, up to the hourly refresh.
+        delay = _state["delay"]
+        _state["saved_at"] = time.monotonic() - REFRESH_SECONDS + delay
+        _state["delay"] = min(delay * 2, REFRESH_SECONDS)
 
     _state["thread"] = threading.Thread(target=work, name="MixarToolSnapshot", daemon=True)
     _state["thread"].start()
@@ -105,4 +109,4 @@ def refresh_if_due(context, forward, *, now=None):
 
 def forget():
     """A sign-out or disabled MCP: the next sign-in saves a fresh list."""
-    _state["account"], _state["saved_at"] = None, 0.0
+    _state["account"], _state["saved_at"], _state["delay"] = None, 0.0, RETRY_SECONDS
