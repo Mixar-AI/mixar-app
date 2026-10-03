@@ -37,6 +37,8 @@ READ_ONLY_TOOLS = frozenset({
     "render_scene_video",
     # The orchestrator's scene digest, sent at the start of every turn.
     "_scene_digest",
+    # Reconciles an uncertain workspace publication without cleanup or edits.
+    "_workspace_status",
     # Generation polling reads the Python job queues or moodboard props.
     "_wait_generation_poll",
     "_detect_views_poll",

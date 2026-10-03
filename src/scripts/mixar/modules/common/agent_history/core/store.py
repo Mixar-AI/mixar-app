@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import re
 import threading
+import time
 import uuid
 
 from ..constants import MAX_BLOB_BYTES, MAX_READ_CHARS, MAX_READ_RECORDS, MAX_RECORD_BYTES, SEGMENT_BYTES
@@ -246,7 +247,8 @@ def write_batch(owner, packet, scene_history_id=None):
                 durable_gap_count = len(manifest['gaps'])
             row = {'epoch': epoch, 'seq': seq, 'event_id': event['event_id'],
                    'run_id': record['run_id'], 'task_id': record['task_id'],
-                   'kind': record['kind'], 'message_id': payload.get('id'), 'body': body}
+                   'kind': record['kind'], 'message_id': payload.get('id'), 'body': body,
+                   'received_at': time.time()}
             if path.exists() and path.stat().st_size >= SEGMENT_BYTES:
                 manifest['segment'] += 1
                 path = directory / 'events' / ('%06d.jsonl' % manifest['segment'])
@@ -300,6 +302,7 @@ def read(owner, session, message_id=None, task_id=None, image_id=None, limit=10)
                 if remaining <= 0:
                     return {'status': 'available', 'records': rows, 'gaps': manifest['gaps']}
                 rows.append({'event_id': event['event_id'], 'text': text[:remaining],
+                             'received_at': event.get('received_at'),
                              'truncated': len(text) > remaining})
                 used += min(len(text), remaining)
                 if len(rows) >= limit or message_id:

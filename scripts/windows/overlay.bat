@@ -65,6 +65,14 @@ if %errorlevel% geq 8 (
     exit /b 1
 )
 
+REM Old headers can shadow relocated upstream headers after a branch switch.
+REM Reconcile only after BOTH copies succeed; preserve build-generated headers.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%prune_overlay.ps1" -RootDir "%ROOT_DIR%" -SourceDir "%SOURCE_DIR%" -UpstreamDir "%UPSTREAM_DIR%" -SrcDir "%SRC_DIR%"
+if %errorlevel% neq 0 (
+    echo Error reconciling stale overlay files
+    exit /b 1
+)
+
 REM /E above retains removed Mixar-only modules in the assembled tree. CMake
 REM clears the installed package, but would then recopy those obsolete files.
 REM Mirror ONLY this owned package; never purge the mixed upstream/source tree.
@@ -72,7 +80,7 @@ REM Matching files retain timestamps, and the same local-junk exclusions apply.
 echo Mirroring Mixar Python package...
 robocopy "%SRC_DIR%\scripts\mixar" "%SOURCE_DIR%\scripts\mixar" /MIR /MT:%ROBOCOPY_THREADS% /R:3 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np ^
     /XD ".venv" "venv" "__pycache__" ".pytest_cache" ^
-    /XF ".DS_Store"
+    /XF ".DS_Store" "_build_env.py"
 if %errorlevel% geq 8 (
     echo Error mirroring Mixar Python package
     exit /b 1

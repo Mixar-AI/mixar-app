@@ -6,7 +6,8 @@
 Async script execution queue for main thread execution.
 
 The WebSocket thread queues ExecutionRequests (never executes scripts); a
-main-thread timer executes ONE script per tick, so the UI never freezes; the
+main-thread timer executes ONE script per tick; long scripts must bound their
+own work because synchronous bpy still blocks the UI. The
 response goes straight to the WebSocket client's outbound queue
 (``client.queue_response``) — cross-thread queue polling segfaulted
 Blender's embedded Python.
@@ -27,6 +28,7 @@ from typing import Optional
 import bpy
 
 from mixar.modules.common.agent_execution import pump
+from mixar.modules.common.agent_execution.diagnostics import record_phase
 from mixar.modules.common.agent_execution.request import ExecutionEnvelope, ExecutionRequest
 
 from .executor import get_executor
@@ -102,14 +104,14 @@ def get_inflight_script() -> Optional[dict]:
     return info
 
 
-def _send_error_response(request_id: str, error: str, error_type: str = "") -> None:
+def _send_error_response(request_id: str, error: str, error_type: str = "", req=None) -> None:
     """Reply to a script request with a failure result (mirrors the stale-session
     path). No-op for notifications or when no client is connected."""
     from .jsonrpc_client import get_jsonrpc_client
     result = {"success": False, "error": error}
     if error_type:
         result["error_type"] = error_type
-    pump.respond(get_jsonrpc_client(), ExecutionRequest(request_id, ""), result)
+    pump.respond(get_jsonrpc_client(), req or ExecutionRequest(request_id, ""), result)
 
 
 def queue_script_request(
@@ -120,20 +122,10 @@ def queue_script_request(
     agent_ctx: Optional[dict] = None,
     envelope: Optional[dict] = None,
 ) -> None:
-    """
-    Queue a script for execution on main thread (non-blocking).
+    """Receive on the socket thread; execute on main with the same RPC id.
 
-    Called from WebSocket thread. The script will be executed on the
-    main thread by the timer callback, and the response will be sent
-    directly via the WebSocket client's outbound queue.
-
-    Args:
-        script: Python script to execute
-        request_id: JSON-RPC request ID for response matching
-        tool_name: Name of the tool being executed
-        session_id: Target session ID for scene routing
-        agent_ctx: Explicit backend chat session and turn identifiers, if sent
-        envelope: Optional v3 task envelope (carried through; not admitted here)
+    agent_ctx carries chat/turn provenance; the optional v3 envelope is
+    parsed and carried through, not admitted here.
     """
     global _execution_gate_until
     if _shutdown_requested:
@@ -143,6 +135,7 @@ def queue_script_request(
             "Dropping script request during shutdown (%s, id: %s)",
             tool_name, request_id,
         )
+        _send_error_response(request_id, "Executor is shutting down", "executor_shutdown")
         return
 
     # Gate: give SSE events (planning text) time to arrive before execution
@@ -158,12 +151,22 @@ def queue_script_request(
         tool_name=tool_name,
         session_id=session_id,
         agent_ctx=agent_ctx,
-        prefetch=maybe_start_prefetch(script, tool_name),
         envelope=ExecutionEnvelope.parse(envelope),
     )
+    record_phase(req, "received")
+    try:
+        req.prefetch = maybe_start_prefetch(script, tool_name)
+    except Exception:
+        logger.exception("Asset prefetch setup failed (id: %s)", request_id)
+        _send_error_response(request_id, "Asset prefetch setup failed; nothing was executed",
+                             "prefetch_failed", req)
+        return
     if not lanes.enqueue(req):
         logger.warning(f"Request queue full, dropping {tool_name} (id: {request_id})")
+        _send_error_response(request_id, "Script queue is full; nothing was executed", "queue_full", req)
+        record_phase(req, "queue_rejected")
         return
+    record_phase(req, "queued")
     _ensure_timer_running()
 
 
@@ -202,7 +205,13 @@ def _ensure_timer_running() -> None:
             return
 
         def _tick():
-            return _process_one_request()
+            try:
+                return _process_one_request()
+            except Exception:
+                # Blender unregisters a timer whose callback raises. Keep the
+                # flag and callback alive together so later requests can run.
+                logger.exception("Executor timer tick failed")
+                return _stop_timer_if_idle()
 
         try:
             bpy.app.timers.register(_tick, first_interval=0.01)
@@ -212,18 +221,15 @@ def _ensure_timer_running() -> None:
         except Exception as e:
             _timer_active = False
             logger.error(f"Failed to start timer: {e}")
+            for req in lanes.drain(lambda _req: True):
+                _send_error_response(req.request_id, "Executor timer unavailable; nothing was executed",
+                                     "executor_unavailable", req)
 
 
 def _stop_timer_if_idle() -> Optional[float]:
-    """Atomically stop the timer when the queue is empty.
-
-    The emptiness check and the flag clear must happen under _timer_lock so
-    a producer enqueueing at the same instant either sees the flag already
-    cleared (and re-arms the timer) or is seen by this check.
-
-    Returns:
-        None to stop the timer, or the next interval if work arrived.
-    """
+    """Stop atomically when idle; a concurrent producer must see the cleared
+    flag and re-arm, or this check must see its work. Return the next interval
+    while pending, otherwise None."""
     global _timer_active
     with _timer_lock:
         if lanes.pending():
@@ -251,7 +257,7 @@ def _reject_stale_session(req: ExecutionRequest) -> None:
         "Dropping stale script %s (id: %s) — no active agent session",
         req.tool_name, req.request_id,
     )
-    _send_error_response(req.request_id, "Agent session not active")
+    _send_error_response(req.request_id, "Agent session not active", req=req)
     # The dropped script may have been the backend's remove_scene cleanup
     # for an agentlane:* workspace — sweep leaked lane scenes ourselves.
     try:
@@ -269,7 +275,7 @@ def _note_output_landed() -> None:
 
 
 def _process_one_request() -> Optional[float]:
-    """Execute one main-thread script per tick; reschedule only pending work."""
+    """Run one queued script on main; yield to the UI between requests."""
     if not lanes.pending():
         stop = _stop_timer_if_idle()
         if stop is None:
@@ -278,7 +284,10 @@ def _process_one_request() -> Optional[float]:
     # Drain pending SSE events so planning text is finalized before
     # script execution blocks the main thread.
     from .queue_processor import drain_pending_events
-    drain_pending_events()
+    try:
+        drain_pending_events()
+    except Exception:
+        logger.exception("Agent event drain failed; continuing the script queue")
 
     # Timestamp gate: wait for Blender to draw the finalized planning
     # bubble. Set by handle_tool_start -> gate_execution(50ms).
@@ -293,6 +302,21 @@ def _process_one_request() -> Optional[float]:
         # — this tick cost one flag check, so the UI stays fully responsive
         # — and check again shortly. FIFO within each tab is preserved.
         return TIMER_INTERVAL
+    try:
+        return _execute_dequeued_request(req, status, lane)
+    except Exception:
+        logger.exception("Failed to dispatch request %s", req.request_id)
+        if req.response_deferred or req.response_attempted:
+            return _stop_timer_if_idle()
+        from .jsonrpc_client import get_jsonrpc_client
+        pump.respond(get_jsonrpc_client(), req, {"success": False,
+                     "error": "Executor dispatch failed; inspect state before retrying",
+                     "error_type": "executor_dispatch_failed", "effects_uncertain": True})
+        return _stop_timer_if_idle()
+
+
+def _execute_dequeued_request(req, status, lane) -> Optional[float]:
+    """Dispatch a taken request; execution failures never strand the next one."""
     previous = lanes.switch_to(lane)
     if previous is not None:
         from mixar.modules.common.scenes_log import slog
@@ -301,7 +325,7 @@ def _process_one_request() -> Optional[float]:
     if status in (pump.PREFETCH_FAILED, pump.PREFETCH_EXPIRED):
         refusal = pump.prefetch_refusal(req, status)
         logger.warning("Refusing %s (id: %s): %s", req.tool_name, req.request_id, refusal["error"])
-        _send_error_response(req.request_id, refusal["error"], refusal.get("error_type", ""))
+        _send_error_response(req.request_id, refusal["error"], refusal.get("error_type", ""), req)
         return _stop_timer_if_idle()
 
     from mixar.modules.mcp_bridge.core.lease import authorize_script
@@ -326,48 +350,37 @@ def _process_one_request() -> Optional[float]:
     # tick's bpy work holds the main thread (busy != frozen).
     _set_inflight(req.tool_name, req.request_id, req.session_id)
 
-    target_scene, did_switch, route_error = route_request(
-        req.session_id, req.tool_name, req.request_id
-    )
-    if route_error is not None:
-        _clear_inflight()
-        _send_error_response(req.request_id, route_error)
-        # Stop via the shared, lock-guarded helper. Assigning `_timer_active`
-        # directly here binds a function-local (this function never declares
-        # `global _timer_active`), leaving the module flag stuck True while
-        # Blender unregisters the timer — so it is never re-armed and every
-        # subsequent agent script silently stalls for the rest of the session.
-        return _stop_timer_if_idle()
-
-    # Record a RUNNING step row on the active agent bubble (steps block UI).
-    from .steps_recorder import record_step_start, record_step_end
-    chat_scene = target_scene if target_scene else getattr(bpy.context, "scene", None)
-    if chat_scene:
-        record_step_start(chat_scene, req.request_id, req.tool_name, req.script,
-                          call_id=str((req.agent_ctx or {}).get("call_id") or ""))
-
-    executor = get_executor()
-    # Skip if previous script is still executing (should not normally happen
-    # since the timer runs one-at-a-time, but guards against edge cases)
-    if executor._execution_lock.locked():
-        logger.warning(
-            "Previous script still executing, skipping request (id: %s)", req.request_id
+    target_scene = chat_scene = None
+    did_switch = execution_started = False
+    result_dict = None
+    try:
+        from .steps_recorder import record_step_start, record_step_end
+        target_scene, did_switch, route_error = route_request(
+            req.session_id, req.tool_name, req.request_id
         )
-        result_dict = {"success": False, "error": "Previous script still executing"}
-    else:
-        result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
-        logger.debug(f"Script execution completed: success={result_dict.get('success')}")
-
-    archive_history(req.tool_name, req.script, result_dict, target_scene, req.request_id)
-    restore_after(did_switch)
-
-    # Complete the step row with status / touched objects / output.
-    if chat_scene:
-        record_step_end(chat_scene, req.request_id, result_dict, req.session_id)
-
-    # Main-thread work for this script is done — the liveness probe reports
-    # idle from here on.
-    _clear_inflight()
+        if route_error is not None:
+            result_dict = {"success": False, "error": route_error, "error_type": "route_failed"}
+        else:
+            chat_scene = target_scene if target_scene else getattr(bpy.context, "scene", None)
+            if chat_scene:
+                record_step_start(chat_scene, req.request_id, req.tool_name, req.script,
+                                  call_id=str((req.agent_ctx or {}).get("call_id") or ""))
+            executor = get_executor()
+            if executor._execution_lock.locked():
+                result_dict = {"success": False, "error": "Previous script still executing"}
+            else:
+                execution_started = True
+                result_dict = pump.execute_request(req, executor, on_success=_note_output_landed)
+    except Exception:
+        logger.exception("Executor request failed (id: %s)", req.request_id)
+        result_dict = {"success": False, "error": "Executor request failed",
+                       "error_type": "executor_failed", "effects_uncertain": execution_started}
+    finally:
+        try:
+            restore_after(did_switch)
+        except Exception:
+            logger.exception("Executor scene restore failed (id: %s)", req.request_id)
+        _clear_inflight()
 
     # Send response directly via WebSocket client (thread-safe). This avoids
     # cross-thread queue polling which caused segfaults. A preview render
@@ -375,7 +388,14 @@ def _process_one_request() -> Optional[float]:
     # deferral's timer when the native job ends, and this queue keeps draining.
     from .preview_deferral import defer_response, deferred_preview_key
     deferred_key = deferred_preview_key(result_dict)
-    if deferred_key is None or not defer_response(req, deferred_key):
+    if deferred_key is None or not defer_response(req, deferred_key, scene=chat_scene,
+                                                  initial_result=result_dict):
+        try:
+            archive_history(req.tool_name, req.script, result_dict, chat_scene, req.request_id)
+            if chat_scene:
+                record_step_end(chat_scene, req.request_id, result_dict, req.session_id)
+        except Exception:
+            logger.exception("Executor history failed (id: %s)", req.request_id)
         from .jsonrpc_client import get_jsonrpc_client
         pump.respond(get_jsonrpc_client(), req, result_dict)
 
@@ -389,17 +409,7 @@ def _process_one_request() -> Optional[float]:
 
 
 def run_on_main_thread(fn: Callable[[], None]) -> bool:
-    """Schedule a callable to run once on Blender's main thread.
-
-    Thread-safe: can be called from any thread (including the SSE handler).
-    bpy.app.timers.register is one of the few Blender APIs safe to invoke
-    from a background thread — the callback fires on the main thread.
-
-    Args:
-        fn: Zero-argument callable to execute on the main thread.
-
-    Returns True when queued, False during shutdown or registration failure.
-    """
+    """Schedule once on main; return False on shutdown or registration failure."""
     if _shutdown_requested:
         logger.debug("Dropping main-thread callback during shutdown")
         return False
@@ -419,16 +429,7 @@ def run_on_main_thread(fn: Callable[[], None]) -> bool:
 
 
 def resume() -> None:
-    """Re-arm the executor after a ``cleanup(shutdown=True)``.
-
-    ``cleanup(shutdown=True)`` runs when the agent connection is torn down
-    via bootstrap unregister (Blender exit, but also "Reload Scripts").
-    Module state survives the subsequent re-register, so without clearing
-    the flag every later script request is silently dropped — no tool
-    response is ever sent and the backend times out on EVERY command until
-    Blender is fully restarted. ConnectionManager.connect() calls this so a
-    new connection always starts with a live executor.
-    """
+    """Re-arm after unregister/reload; module state survives re-registration."""
     global _shutdown_requested
     _shutdown_requested = False
 
@@ -443,9 +444,11 @@ def flush_session(session_id: str) -> int:
         return lanes.lane_key(req) == session_id or _request_session_id(req) == session_id
 
     dropped = lanes.drain(_mine)
+    from .preview_deferral import fail_pending
+    fail_pending("executor_reset", session_id=session_id)
     for req in dropped:
         try:
-            _send_error_response(req.request_id, "Agent session not active")
+            _send_error_response(req.request_id, "Agent session not active", req=req)
         except Exception:  # noqa: BLE001
             pass
     if dropped:
@@ -454,14 +457,10 @@ def flush_session(session_id: str) -> int:
 
 
 def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
-    """
-    Clean up executor state.
+    """Fail pending requests on reset, or flush only the named session.
 
-    Call on addon unregister or disconnect to clean up pending requests.
-    With ``session_id`` (not None): only that session's queued scripts are
-    dropped and the executor keeps running for the other tabs. An EMPTY id
-    is a tab that has not sent its first message — it owns no scripts, so
-    nothing is flushed; the global reset is only ever ``session_id=None``.
+    An empty id owns no work. Only None resets all tabs. Shutdown must not
+    inspect scene RNA: Blender may already have freed its data.
     """
     global _timer_active, _timer_fn, _execution_gate_until, _shutdown_requested
 
@@ -488,11 +487,14 @@ def cleanup(shutdown: bool = False, session_id: Optional[str] = None) -> None:
     # A held-open preview tool call belongs to the flushed session/connection.
     try:
         from .preview_deferral import fail_pending
-        fail_pending("executor_reset")
+        fail_pending("executor_reset", update_scene=not shutdown)
     except Exception:
         logger.debug("preview deferral flush skipped", exc_info=True)
 
-    # Clear every tab's lane, prefetch-held requests included.
+    # Fail every queued request; clearing silently leaves the backend waiting
+    # for its full timeout even though nothing is executing anymore.
+    for req in lanes.drain(lambda _req: True):
+        _send_error_response(req.request_id, "Executor reset; nothing was executed", "executor_reset", req)
     lanes.clear()
 
     logger.debug("Main thread executor cleaned up")

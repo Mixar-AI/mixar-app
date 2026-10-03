@@ -57,6 +57,22 @@ def test_fsync_replay_and_bounded_read(client_store):
         client_store.read('owner', '../escape')
 
 
+def test_receipt_time_survives_replay_and_old_archives(client_store, monkeypatch):
+    monkeypatch.setattr(client_store.time, 'time', lambda: 1234.5)
+    client_store.write_batch('owner', packet())
+    monkeypatch.setattr(client_store.time, 'time', lambda: 9999.0)
+    client_store.write_batch('owner', packet())
+    row = client_store.read('owner', 'session')['records'][0]
+    assert row['received_at'] == 1234.5
+    path = client_store.root() / 'session/events/000001.jsonl'
+    old = json.loads(path.read_text())
+    old.pop('received_at')
+    path.write_text(json.dumps(old) + '\n')
+    assert client_store.read('owner', 'session')['records'][0]['received_at'] is None
+    # Receipt metadata never changes the canonical message/hash contract.
+    assert client_store.write_batch('owner', packet())['seq'] == 1
+
+
 def test_torn_tail_and_manifest_lag_recover(client_store):
     p = packet()
     client_store.write_batch('owner', p)
