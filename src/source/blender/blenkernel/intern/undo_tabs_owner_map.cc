@@ -148,6 +148,7 @@ static void owner_map_record(UndoOwnerMap *map, const ID *id, const uint32_t tab
   }
   map->shared += 1;
   map->shared_name.add_new(id->session_uid, std::string(id->name + 2));
+  map->shared_type.add_new(id->session_uid, GS(id->name));
   if (map->shared_names.size() < 32) {
     map->shared_names.append(std::string(id->name));
   }

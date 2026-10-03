@@ -171,12 +171,12 @@ static IdChunks memfile_id_chunks(const MemFile *memfile, const Set<uint32_t> &u
  * #LargeBHead8 (32 bytes) or the legacy #SmallBHead8 (24) depending on a
  * preference. Told apart by finding the datablock's name where the ID struct
  * keeps it; -1 when neither matches (a rename: a real change anyway). */
-static int64_t chunk_id_offset(const MemFileChunk *chunk, const ID *id)
+static int64_t chunk_id_offset(const MemFileChunk *chunk, const char *id_name)
 {
   for (const int64_t header : {int64_t(32), int64_t(24)}) {
     const int64_t at = header + int64_t(offsetof(ID, name));
-    if (at + int64_t(sizeof(id->name)) <= int64_t(chunk->size) &&
-        STREQLEN(chunk->buf + at, id->name, sizeof(id->name)))
+    if (at + int64_t(sizeof(ID::name)) <= int64_t(chunk->size) &&
+        STREQLEN(chunk->buf + at, id_name, sizeof(ID::name)))
     {
       return header;
     }
@@ -521,7 +521,7 @@ static void mask_id_tags(Vector<uint8_t> &bytes)
  * synced from the view layers (base_flag, base_local_view_bits, the SELECT bit of
  * flag: selecting the object a tab links into another tab is not editing it); a
  * Mesh's automatic texture space (written back by the first evaluation). */
-static void mask_id_struct(Vector<uint8_t> &bytes, const ID *id)
+static void mask_id_struct(Vector<uint8_t> &bytes, const short id_code)
 {
   auto clear = [&](const int64_t at, const int64_t size, const uint8_t bits) {
     for (int64_t k = at; k < at + size && k < bytes.size(); k++) {
@@ -532,13 +532,13 @@ static void mask_id_struct(Vector<uint8_t> &bytes, const ID *id)
         int64_t(offsetof(ID, recalc_after_undo_push) + sizeof(ID::recalc_after_undo_push) -
                 offsetof(ID, recalc)),
         0xFF);
-  if (GS(id->name) == ID_OB) {
+  if (id_code == ID_OB) {
     clear(int64_t(offsetof(Object, base_flag)), int64_t(sizeof(Object::base_flag)), 0xFF);
     clear(int64_t(offsetof(Object, base_local_view_bits)), int64_t(sizeof(Object::base_local_view_bits)), 0xFF);
     /* SELECT is bit 0 of the little-endian short Object::flag. */
     clear(int64_t(offsetof(Object, flag)), 1, uint8_t(SELECT));
   }
-  if (GS(id->name) == ID_ME) {
+  if (id_code == ID_ME) {
     clear(int64_t(offsetof(Mesh, texspace_location)),
           int64_t(offsetof(Mesh, texspace_flag) + sizeof(Mesh::texspace_flag) -
                   offsetof(Mesh, texspace_location)),
@@ -578,12 +578,31 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
       return true;
     }
   }
-  if (id == nullptr || a->is_empty() || b->is_empty()) {
+  if (a->is_empty() || b->is_empty()) {
     return false;
   }
+  /* A datablock gone from the live document has no ID: its name is read from the
+   * write (both block header layouts tried, an ID code checked). */
+  char name_buf[sizeof(ID::name)] = "";
+  const char *id_name = id != nullptr ? id->name : nullptr;
+  for (const int64_t h : {int64_t(32), int64_t(24)}) {
+    const int64_t at = h + int64_t(offsetof(ID, name));
+    if (id_name != nullptr || at + int64_t(sizeof(ID::name)) > int64_t((*b)[0]->size)) {
+      continue;
+    }
+    const char *p = (*b)[0]->buf + at;
+    if (p[0] >= 'A' && p[0] <= 'Z' && p[1] >= 'A' && p[1] <= 'Z' && memchr(p, 0, sizeof(ID::name))) {
+      STRNCPY(name_buf, p);
+      id_name = name_buf;
+    }
+  }
+  if (id_name == nullptr) {
+    return false;
+  }
+  const short id_code = GS(id_name);
   const IdStream sa(*a), sb(*b);
-  const int64_t header = chunk_id_offset((*a)[0], id);
-  if (header < 0 || header != chunk_id_offset((*b)[0], id)) {
+  const int64_t header = chunk_id_offset((*a)[0], id_name);
+  if (header < 0 || header != chunk_id_offset((*b)[0], id_name)) {
     return false;
   }
   Vector<WrittenBlock> ba, bb;
@@ -594,6 +613,21 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
    * second in the write: not this datablock's content (its pointer says which). */
   ba.remove_if([&](const WrittenBlock &blk) { return ids_a.is_shared(blk.old); });
   bb.remove_if([&](const WrittenBlock &blk) { return ids_b.is_shared(blk.old); });
+  /* An object's material arrays (mat, matbits) follow its data's slot count when
+   * another tab adds a material to the shared mesh: untyped blocks appearing or
+   * going with nothing else of the object changed in its own blocks. Judged by
+   * the depsgraph write-back gate below like other derived object data. */
+  bool untyped_count_only = false;
+  if (ba.size() != bb.size() && id_code == ID_OB) {
+    Vector<WrittenBlock> ta = ba, tb = bb;
+    ta.remove_if([](const WrittenBlock &blk) { return blk.sdna == 0; });
+    tb.remove_if([](const WrittenBlock &blk) { return blk.sdna == 0; });
+    if (ta.size() == tb.size()) {
+      untyped_count_only = true;
+      ba = std::move(ta);
+      bb = std::move(tb);
+    }
+  }
   if (ba.size() != bb.size()) {
     if (CLOG_CHECK(&LOG, CLG_LEVEL_DEBUG)) {
       const SDNA *sdna = DNA_sdna_current_get();
@@ -608,7 +642,7 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
           };
           CLOG_DEBUG(&LOG,
                      "%s changed: block %d: %s vs %s (%d vs %d blocks)",
-                     id->name,
+                     id_name,
                      int(i),
                      desc(ba).c_str(),
                      desc(bb).c_str(),
@@ -621,7 +655,7 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
     return false;
   }
   const OwnBlocks own_a = own_blocks(ba), own_b = own_blocks(bb);
-  const bool written_back_by_eval = ELEM(GS(id->name), ID_OB, ID_ME, ID_CU_LEGACY, ID_MB);
+  const bool written_back_by_eval = ELEM(id_code, ID_OB, ID_ME, ID_CU_LEGACY, ID_MB);
   const int64_t first_chunk = int64_t((*b)[0]->size);
   /* The furthest stream offset of a difference: the depsgraph write-back gate
    * below only covers the first chunk, as it always has. */
@@ -630,7 +664,7 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
   for (const int64_t i : ba.index_range()) {
     const WrittenBlock &x = ba[i], &y = bb[i];
     if (x.code != y.code || x.sdna != y.sdna || x.len != y.len || x.nr != y.nr) {
-      CLOG_DEBUG(&LOG, "%s changed: block %d header", id->name, int(i));
+      CLOG_DEBUG(&LOG, "%s changed: block %d header", id_name, int(i));
       return false;
     }
     da.resize(x.len);
@@ -653,7 +687,7 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
           {
             CLOG_DEBUG(&LOG,
                        "%s changed: block %d (%s.%s) pointer: kind %d vs %d",
-                       id->name,
+                       id_name,
                        int(i),
                        DNA_struct_identifier(const_cast<SDNA *>(DNA_sdna_current_get()), x.sdna),
                        dna_member_at(x.sdna, at % layout->size),
@@ -674,15 +708,15 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
         memcpy(&va, da.data() + at, 8);
         memcpy(&vb, db.data() + at, 8);
         if (!(ptr_target(va, own_a, ids_a) == ptr_target(vb, own_b, ids_b))) {
-          CLOG_DEBUG(&LOG, "%s changed: pointer array block %d", id->name, int(i));
+          CLOG_DEBUG(&LOG, "%s changed: pointer array block %d", id_name, int(i));
           return false;
         }
       }
       continue;
     }
     if (i == 0) {
-      mask_id_struct(da, id);
-      mask_id_struct(db, id);
+      mask_id_struct(da, id_code);
+      mask_id_struct(db, id_code);
     }
     else if (x.sdna > 0 && struct_is_id(x.sdna)) {
       mask_id_tags(da);
@@ -698,7 +732,7 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
           last_diff = x.data_at + k;
           CLOG_DEBUG(&LOG,
                      "%s changed: block %d (%s.%s) differs at byte %lld",
-                     id->name,
+                     id_name,
                      int(i),
                      x.sdna > 0 ? DNA_struct_identifier(const_cast<SDNA *>(DNA_sdna_current_get()), x.sdna) : "raw",
                      (layout != nullptr && layout->valid && layout->size > 0) ?
@@ -712,6 +746,9 @@ static bool id_chunks_equal(const Vector<const MemFileChunk *> *a,
         }
       }
     }
+  }
+  if (untyped_count_only && last_diff < 0) {
+    last_diff = 0; /* the arrays differed: let the gate judge */
   }
   if (last_diff < 0) {
     return true;
@@ -787,7 +824,6 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
     }
     return source;
   };
-  Vector<uint32_t> authors;
   /* Datablocks a mode step named since the previous memfile, and its authors. */
   Map<uint32_t, Vector<uint32_t>> mode_authors;
   /* The author of the latest mode step that named each datablock. */
@@ -816,7 +852,6 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
   int index = -1;
   for (const UndoStep *us = static_cast<const UndoStep *>(ustack->steps.first); us; us = us->next) {
     index++;
-    authors.append_non_duplicates(us->mixar_author_uid);
     const MemFile *memfile = (step_is_memfile(us) && g_memfile_get != nullptr) ? g_memfile_get(us) :
                                                                                   nullptr;
     if (memfile == nullptr) {
@@ -875,13 +910,17 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
           const uint32_t *editor = (info != nullptr && info->in_edit.contains(uid)) ?
                                        last_mode_author.lookup_ptr(uid) :
                                        nullptr;
-          if (by_mode == nullptr && editor != nullptr) {
-            out.lookup_or_add_default(uid).append({index, *editor});
-          }
-          else {
-            for (const uint32_t author : (by_mode != nullptr ? *by_mode : authors)) {
+          /* Anything else is this memfile step's own change: a mode step in
+           * between is credited through what it names, never with every
+           * datablock that changed by the next push (a tab's edit-mesh step read
+           * as moving another tab's shared object, and refused its undo). */
+          if (by_mode != nullptr) {
+            for (const uint32_t author : *by_mode) {
               out.lookup_or_add_default(uid).append({index, author});
             }
+          }
+          else {
+            out.lookup_or_add_default(uid).append({index, editor ? *editor : us->mixar_author_uid});
           }
         }
       }
@@ -889,7 +928,6 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
     prev = std::move(cur);
     prev_ids = std::move(cur_ids);
     have_prev = true;
-    authors.clear();
     mode_authors.clear();
   }
   return out;
@@ -1045,6 +1083,9 @@ static bool partial_validate(Main *bmain,
         for (const uint32_t t : then) {
           still_there |= now.contains(t);
         }
+        /* Another tab reaches it now too (it passed through a third tab, which still
+         * has it): restoring this tab cannot take it from the only tab that has it. */
+        still_there |= now.size() > 1;
         if (still_there) {
           /* Linked in from a tab that still has it (Engine Mode's Link Objects to
            * Scene, an outliner drag): shared, not moved. The author rule decides
@@ -1122,10 +1163,17 @@ static bool partial_validate(Main *bmain,
     return true;
   }
   /* A shared datablock that no longer exists cannot be kept (the restored
-   * datablocks of this tab may point at it). */
+   * datablocks of this tab may point at it), except an object: the collections
+   * that held it drop the missing entry, so it stays gone when another tab
+   * deleted it (the author rule below: the receiving tab of a link could not undo
+   * it because another tab had since deleted an unrelated object it shared). */
   std::string gone;
   for (const auto item : conflicts.items()) {
-    if (!live_ids.contains(item.key)) {
+    if (live_ids.contains(item.key)) {
+      continue;
+    }
+    const short *type = step_owners->shared_type.lookup_ptr(item.key);
+    if (type == nullptr || *type != ID_OB) {
       gone += (gone.empty() ? "" : ", ") + item.value;
     }
   }
@@ -1147,7 +1195,7 @@ static bool partial_validate(Main *bmain,
   Map<uint32_t, ID *> watched;
   Set<uint32_t> uids;
   for (const auto item : conflicts.items()) {
-    watched.add(item.key, live_ids.lookup(item.key));
+    watched.add(item.key, live_ids.lookup_default(item.key, nullptr));
     uids.add(item.key);
   }
   const IdChanges changes = collect_id_changes(ustack, watched);

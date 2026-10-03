@@ -26,6 +26,9 @@ struct UndoOwnerMap {
   Map<uint32_t, Vector<uint32_t>> shared_by;
   /** Name of each LOCAL shared datablock, the ones a restore could change. */
   Map<uint32_t, std::string> shared_name;
+  /** Its ID code (ID_OB, ID_MA, ...): a datablock gone from the live document has
+   * no ID left to ask. */
+  Map<uint32_t, short> shared_type;
   Vector<std::string> shared_names;
   int shared = 0;
   double build_ms = 0.0;
