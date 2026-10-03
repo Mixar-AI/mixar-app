@@ -89,7 +89,7 @@ _request_queue.put((id, script, tool, session))
 
 ## ScriptExecutor — the second sandbox
 
-**File:** `core/executor.py`. The backend's `validate_bpy_script` is the first line; the plugin's `ScriptExecutor` is the second. Either can reject.
+**File:** `core/executor.py`. The backend's `validate_bpy_script` is the first line; the plugin's `ScriptExecutor` is the second. Either can reject. Mesh conversion also has a [native-topology preflight](../../../../../docs/modules/agent-mesh-validation.md) before `BMesh.from_mesh`.
 
 `ScriptExecutor.execute(script)`:
 
@@ -98,7 +98,7 @@ _request_queue.put((id, script, tool, session))
 3. **Safe builtins** — `get_safe_builtins()` returns a curated `__builtins__` dict; no `__import__`, no `eval/exec/compile`, no `vars`/`globals`/`super`/`__build_class__` (so `class` statements are impossible). `type` and the common exception classes ARE exposed — without them a script cannot write `try/except` at all, and the failure only surfaced after a full model round trip.
 4. **Handler snapshot** — captures `bpy.app.handlers` lists (`depsgraph_update_post`, `frame_change_post`, `load_pre`/`load_post`, `object_bake_*`, ...). After execution, restores them so scripts can't leak persistent handlers across sessions.
 5. **stdout/stderr capture** — `StringIO` redirection. Parses `__RESULT__` prefix lines into `return_value` (the cross-process result protocol — backend's tools rely on this).
-6. **Scene-change diffing** — tracks `created_objects`, `modified_objects`, `deleted_objects` by pre/post object set diff. Returned in the response envelope.
+6. **Scene-change diffing** — tracks `created_objects`, `modified_objects`, `deleted_objects` by pre/post object set diff. Returned in the response envelope. Both snapshots include every scene, custom properties and authored animation. Binary custom properties use a type/length-qualified SHA-256 of the raw bytes, never their escaped text representation. F-curve coordinates, handles, interpolation/easing enums and amplitude/back/period use bulk RNA reads. Shared action/slot digests are reused only within one snapshot; no cross-call cache may hide an edit. Large payload hashes use `common/utils/digests.py` (bundled cryptography).
 7. **`sanitize_value` on return** — recursively coerces non-JSON-safe types (bpy datablocks, IDs, mathutils Vectors) into JSON-serialisable forms.
 
 Result envelope sent over JSON-RPC:
@@ -285,7 +285,10 @@ public names), `core/checkpoint_store.py` (paths, index, per-kind prune),
 Before every fresh turn `chat_ops.send_message` captures the whole document with
 `save_as_mainfile(copy=True)` to `~/.mixar/checkpoints/<session>/<id>.mixar`
 as the `turn` record "before turn N" (sha256-deduplicated files, newest 20 per
-session) and binds the record to the turn's command id once the send is
+session). File hashes use streaming accelerated SHA-256 from
+`common/utils/digests.py`, retaining identical stored digests and deduplication
+semantics; native save and checkpoint publication still complete before Send.
+Capture binds the record to the turn's command id once the send is
 accepted. A document with Automatically Pack Resources on reports an error per
 image missing on disk while packing; Blender still writes the copy, so the
 capture keeps a snapshot that exists after such a `RuntimeError` and only

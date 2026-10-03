@@ -10,6 +10,10 @@ resume cursor. Two scenes then claim one backend session: scripts route to
 whichever matches first and turn events cannot bind. ``dedupe_session_ids``
 keeps the original and turns every copy into a fresh, empty chat.
 
+A scene created any other way than the drawer's "+ New scene" (a script,
+an add-on, Blender's New Scene) is adopted by ``adopt_scene``: while
+connected it starts IDLE with the signed-in account, like a drawer tab.
+
 Runs after a file loads and whenever the scene count changes
 (``depsgraph_update_post``; a length compare, so it costs nothing on the
 ordinary update storm). The handler itself only notices the growth: the
@@ -25,13 +29,16 @@ from bpy.app.handlers import persistent
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.scenes_log import slog
 
-from ..constants import SessionState
+from ..constants import SessionState, is_lane_scene
 
 logger = get_logger(__name__)
 
 _last_scene_count: int = -1
 # Custom props that identify THIS scene's conversation and document identity.
 _COPIED_PROPS = ("mixie_ws_resume", "mixar_scene_id")
+#: Login identity the auth flow stamps on the scene it signed in from; a new
+#: scene inherits it, or the profile chip and credits read blank there.
+ACCOUNT_PROPS = ("mixie_chat_user_id", "mixie_chat_credits", "mixie_chat_model")
 
 
 def _original(scenes):
@@ -138,6 +145,68 @@ def dedupe_session_ids(scenes=None) -> list[str]:
     return detached
 
 
+def inherit_account(source, scene) -> None:
+    """Copy the signed-in identity from ``source`` onto a new scene."""
+    if source is None or source is scene:
+        return
+    for prop in ACCOUNT_PROPS:
+        try:
+            setattr(scene, prop, getattr(source, prop))
+        except Exception:  # noqa: BLE001 — a missing property on either side is fine
+            pass
+
+
+def _connection_live() -> bool:
+    try:
+        from .connection_manager import get_connection_manager
+        connected = get_connection_manager().is_connected
+        return bool(connected() if callable(connected) else connected)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _account_source(scene):
+    window = getattr(getattr(bpy.context, "window", None), "scene", None)
+    for candidate in [window, *bpy.data.scenes]:
+        if (candidate is not None and candidate is not scene and not is_lane_scene(candidate)
+                and getattr(candidate, "mixie_chat_user_id", "")):
+            return candidate
+    return None
+
+
+def adopt_scene(scene) -> bool:
+    """Make a scene that appeared while Mixar is connected ready for work.
+
+    ``mixie_chat_state`` defaults to OFFLINE and only the WebSocket connect
+    promotes scenes to IDLE, so a scene made by ``bpy.data.scenes.new`` (an
+    agent or MCP script, an add-on, Blender's own New Scene) stayed OFFLINE
+    until the next reconnect, and chat, MCP scene tools and UI control all
+    refused it. While connected, OFFLINE on a real scene with no open run means
+    exactly that; the transport-drop paths set OFFLINE only once disconnected.
+    Agent lane scenes are workers' private copies and are never adopted.
+    """
+    from .session import get_session_manager
+
+    if scene is None or is_lane_scene(scene):
+        return False
+    session = get_session_manager()
+    if session.get_state(scene) != SessionState.OFFLINE or session.run_open(scene):
+        return False
+    if not _connection_live():
+        return False
+    if not getattr(scene, "mixie_chat_user_id", ""):
+        inherit_account(_account_source(scene), scene)
+    session.set_connected(scene)
+    slog("tab.adopt", scene)
+    logger.info("Scene %r appeared while connected: ready for chat and MCP", scene.name)
+    return True
+
+
+def adopt_new_scenes() -> list[str]:
+    """Adopt every OFFLINE real scene while connected. Returns their names."""
+    return [scene.name for scene in list(bpy.data.scenes) if adopt_scene(scene)]
+
+
 @persistent
 def _on_depsgraph_update(*_args) -> None:
     global _last_scene_count
@@ -176,6 +245,10 @@ def _dedupe_later():
         dedupe_scene_ids()
     except Exception:  # noqa: BLE001 — a failed scan must not kill the timer host
         logger.debug("session dedupe failed", exc_info=True)
+    try:
+        adopt_new_scenes()
+    except Exception:  # noqa: BLE001
+        logger.debug("new scene adoption failed", exc_info=True)
     return None
 
 

@@ -74,6 +74,8 @@
 #  include "rna_internal_types.hh"
 #endif
 
+#include "rna_wm_ui_control.cc"
+
 /* Mixar 5.2 port: namespace wrap. Every include stays ABOVE this line: the
  * generated ``rna_*_gen.cc`` files include this .cc at global scope, and a
  * header pulled in after the wrap opens would land in ``blender::blender``. */
@@ -250,48 +252,6 @@ static void rna_Window_mixar_live_client_rect(wmWindow *win, int r_rect[4])
   }
 }
 
-/** Observe cached UI frames. SCREEN_OT_screenshot deliberately calls
- * WM_redraw_windows to clear menus, which destroys the hover being measured. */
-static bool rna_Window_mixar_qa_capture_frame(wmWindow *win,
-                                              bContext *C,
-                                              ReportList *reports,
-                                              const char *filepath,
-                                              int x,
-                                              int y,
-                                              int width,
-                                              int height)
-{
-  if ((G.f & G_FLAG_EVENT_SIMULATE) == 0) {
-    BKE_report(reports, RPT_ERROR, "QA frame capture requires --enable-event-simulate");
-    return false;
-  }
-  int size[2];
-  /* Front-buffer reads can rotate through stale swap-chain images. Recompose
-   * cached region buffers without WM_redraw_windows or layout/event updates. */
-  uint8_t *pixels = WM_window_pixels_read_from_offscreen(C, win, size);
-  if (!pixels) {
-    BKE_report(reports, RPT_ERROR, "Unable to read QA window frame");
-    return false;
-  }
-  ImBuf *buffer = IMB_allocImBuf(size[0], size[1], ImBufFlags::Zero);
-  buffer->color_mode = ImColorMode::RGB;
-  buffer->assign_byte_data(pixels);
-  if (width > 0 && height > 0) {
-    x = std::clamp(x, 0, size[0] - 1);
-    y = std::clamp(y, 0, size[1] - 1);
-    IMB_crop(
-        buffer, int2(x, y), int2(std::min(width, size[0] - x), std::min(height, size[1] - y)));
-  }
-  ImageFormatData format;
-  BKE_image_format_init(&format);
-  format.imtype = R_IMF_IMTYPE_PNG;
-  const bool saved = BKE_imbuf_write(buffer, filepath, &format);
-  IMB_freeImBuf(buffer);
-  if (!saved) {
-    BKE_report(reports, RPT_ERROR, "Unable to save QA window frame");
-  }
-  return saved;
-}
 
 #else /* RNA_RUNTIME */
 
@@ -311,6 +271,8 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
     /* Window struct must already be registered; runs after RNA_def_wm. */
     return;
   }
+
+  RNA_def_mixar_ui_control(brna, srna);
 
   PropertyRNA *prop = RNA_def_property(srna, "global_areas", PROP_COLLECTION, PROP_NONE);
   RNA_def_property_collection_funcs(prop,

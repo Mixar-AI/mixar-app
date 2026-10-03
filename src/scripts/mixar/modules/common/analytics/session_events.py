@@ -14,7 +14,6 @@ that clock through the public getter.
 from __future__ import annotations
 
 import time
-import uuid
 
 from .capture import capture
 from .constants import EVENT_SESSION_STARTED
@@ -37,18 +36,9 @@ def session_started_emitted() -> bool:
 
 
 def _ensure_instance_id(context) -> None:
-    """Mint the per-process instance id if nothing has yet.
-
-    ``wm.mixie_instance_id`` is normally minted lazily by the chat session
-    manager on first access — which hasn't happened at login+0s, so
-    ``app.session_started`` would miss the join key its ``session_ended``
-    carries. Whoever mints first wins; the session manager reuses it.
-    """
-    wm = getattr(context, "window_manager", None)
-    if wm is None or not hasattr(wm, "mixie_instance_id"):
-        return
-    if not wm.mixie_instance_id:
-        wm.mixie_instance_id = str(uuid.uuid4())
+    """Use the same process identity as chat, including after a file load."""
+    from mixar.modules.common.utils.process_identity import instance_id
+    instance_id(getattr(context, "window_manager", None))
 
 
 def _seconds_to_ready() -> int | None:

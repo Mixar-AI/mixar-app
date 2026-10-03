@@ -35,6 +35,7 @@ from mixar.modules.common.utils.undo import push_undo_step
 
 from ...constants import SessionState, is_lane_scene
 from ...core import get_connection_manager, get_session_manager
+from ...core.scene_identity import ACCOUNT_PROPS, inherit_account  # noqa: F401 — re-exported for callers
 from ...core.scene_tab_snapshot import snapshot_shown_tab
 from ...core.scene_tab_send import send_selection_to_scene  # noqa: F401 — the send operator's worker
 
@@ -119,22 +120,6 @@ def _unique_name(base: str) -> str:
         name = f"{base} {n}"
         n += 1
     return name
-
-
-#: Login identity the auth flow stamps on the scene it signed in from; a new
-#: tab inherits it, or the profile chip and credits read blank there.
-ACCOUNT_PROPS = ("mixie_chat_user_id", "mixie_chat_credits", "mixie_chat_model")
-
-
-def inherit_account(source, scene) -> None:
-    """Copy the signed-in identity from ``source`` onto a new tab's scene."""
-    if source is None or source is scene:
-        return
-    for prop in ACCOUNT_PROPS:
-        try:
-            setattr(scene, prop, getattr(source, prop))
-        except Exception:  # noqa: BLE001 — a missing property on either side is fine
-            pass
 
 
 #: Blender's startup file placement for the camera and the key light, so a

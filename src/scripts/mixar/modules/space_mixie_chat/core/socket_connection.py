@@ -39,6 +39,8 @@ class SocketConnection:
             except Exception as e:
                 logger.error(f"JSON-RPC run loop error: {e}")
 
+            from mixar.modules.mcp_bridge.core.lease import invalidate_transport
+            invalidate_transport(self)
             if self._reauth_stop:
                 self._reauth_stop.set()
                 self._reauth_stop = None
@@ -257,6 +259,7 @@ class SocketConnection:
         from ...addon_project.constants import CAPABILITY as ADDON_PROJECT_CAPABILITY
         from ...addon_project.constants import TESTS_CAPABILITY as ADDON_PROJECT_TESTS_CAPABILITY
         from ...addon_project.constants import VERIFY_CAPABILITY as ADDON_PROJECT_VERIFY_CAPABILITY
+        from ...mcp_bridge.constants import CAPABILITY as MCP_CAPABILITY
         from ...context_folder.constants import CAPABILITY as CONTEXT_FOLDER_CAPABILITY
         from .machine_info import machine_block
 
@@ -287,6 +290,8 @@ class SocketConnection:
                 # backend only probes instances that advertise it (older
                 # clients would silently never reply).
                 "liveness",
+                *([MCP_CAPABILITY] if not self._role else []),
+                *(["mixar_ui_v1"] if not self._role else []),
                 ADDON_PROJECT_CAPABILITY,
                 ADDON_PROJECT_TESTS_CAPABILITY,
                 ADDON_PROJECT_VERIFY_CAPABILITY,
