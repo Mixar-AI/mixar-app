@@ -197,6 +197,17 @@ void glyph_gift(const float cx, const float cy, const float s, const float col[4
   disc(cx + s * 0.1f, lid + s * 0.27f, s * 0.09f, col);
 }
 
+/** Two-pin plug with a short cable — an external connection. */
+void glyph_plug(const float cx, const float cy, const float s, const float col[4])
+{
+  const float w = stroke_width(s);
+  vrule(cy + s * 0.10f, cy + s * 0.43f, cx - s * 0.17f, w, col);
+  vrule(cy + s * 0.10f, cy + s * 0.43f, cx + s * 0.17f, w, col);
+  box_outline(cx - s * 0.34f, cx + s * 0.34f, cy - s * 0.22f,
+              cy + s * 0.10f, s * 0.10f, col);
+  vrule(cy - s * 0.44f, cy - s * 0.22f, cx, w, col);
+}
+
 }  // namespace
 
 void UI_mixar_card_icon_draw(
@@ -228,7 +239,11 @@ void UI_mixar_card_icon_draw(
     case MixarCardIcon::Gift:
       glyph_gift(cx, cy, size, c);
       break;
+    case MixarCardIcon::Plug:
+      glyph_plug(cx, cy, size, c);
+      break;
     case MixarCardIcon::None:
+    case MixarCardIcon::Count:
       break;
   }
 }

@@ -23,7 +23,7 @@ def test_closed_instance_does_not_rebind_to_another_project(monkeypatch):
 
 def test_lost_action_response_is_not_retried(monkeypatch):
     client = connector.Connector()
-    monkeypatch.setattr(client, "attach", lambda: ({}, {"session_id": "scene"}))
+    monkeypatch.setattr(client, "attach", lambda **_: ({}, {"session_id": "scene"}))
     calls = []
 
     def lost(*args, **kwargs):

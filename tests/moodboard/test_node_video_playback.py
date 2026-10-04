@@ -76,25 +76,15 @@ def test_asset_double_click_still_selects_objects_rather_than_playing():
     assert asset_branch < play_branch
 
 
-def test_hover_monitor_recognizes_node_previews():
-    """It compares the hovered index against ``playback.item_index`` and stops
-    anything else, so a node preview it cannot see stops on the first move."""
-    preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
+def test_node_preview_click_toggles_by_media_index():
+    """``moodboard_toggle_video_playback`` keys on an index into
+    ``mixie_moodboard_images``; a node index would silently toggle some
+    unrelated media item."""
+    video = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_video.cc")
 
-    hover = preview.split("static int hovered_video_index_from_event(")[1]
-    assert "moodboard_find_node_preview_video_under_mouse" in hover
-
-
-def test_node_preview_resolver_returns_a_media_index_not_a_node_index():
-    """``moodboard_toggle_video_playback`` and the hover monitor both key on an
-    index into ``mixie_moodboard_images``; a node index would silently
-    mismatch."""
-    geometry = _read(SPACE_MIXIE / "mixie_moodboard_graph_hit.cc")
-
-    resolver = geometry.split("int moodboard_find_node_preview_video_under_mouse(")[1]
-    assert "moodboard_find_embedded_media_index" in resolver
-    assert "moodboard_item_is_video(scene_ptr, media_index)" in resolver
-    assert "return media_index;" in resolver
+    assert "moodboard_find_embedded_media_index(scene_ptr, node_id)" in video
+    assert "moodboard_item_is_video(scene_ptr, media_index)" in video
+    assert "moodboard_toggle_video_playback(C, scene_ptr, media_index, reports)" in video
 
 
 def test_preview_bounds_have_a_single_definition():
@@ -117,7 +107,9 @@ def test_playback_state_is_pruned_against_main():
 
     assert "prune_dead_playback_entries" in preview
     assert "BLI_findindex(&bmain->images" in preview
-    assert "prune_dead_playback_entries(C);" in preview
+    # Before a toggle looks its image up, and on every redraw tick.
+    assert "prune_dead_playback_entries(CTX_data_main(C));" in preview
+    assert "prune_dead_playback_entries(G_MAIN);" in preview
 
 
 def test_export_reaches_media_owned_by_a_selected_node():

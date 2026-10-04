@@ -28,6 +28,14 @@ def client_name(ctx):
     return getattr(info, "name", "") or ""
 
 
+def client_info(ctx):
+    """The AI app's clientInfo, bounded, for content-free usage attribution."""
+    params = getattr(getattr(ctx, "session", None), "client_params", None)
+    info = getattr(params, "client_info", None)
+    return {"name": str(getattr(info, "name", "") or "")[:80],
+            "version": str(getattr(info, "version", "") or "")[:24]}
+
+
 def for_client(result, name):
     """``result`` is a CallToolResult as a JSON dict; returns the dict to send."""
     if (name in CODEX_CLIENTS and result.get("structuredContent") is not None

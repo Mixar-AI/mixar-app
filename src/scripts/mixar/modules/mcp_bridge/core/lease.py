@@ -90,7 +90,7 @@ def _receipt(operation):
 def begin_operation(params):
     """Acquire an idle scene. Repeating an active operation never extends it."""
     if not _enabled():
-        return _failure("mcp_disabled", "Enable MCP in Mixar first (Help > Connect AI Apps (MCP))")
+        return _failure("mcp_disabled", "Enable MCP in Mixar first (profile menu > Connect AI Apps (MCP))")
     try:
         operation_id = _uuid(params.get("operation_id"))
         session_id = _uuid(params["session_id"]) if params.get("session_id") else ""
@@ -135,9 +135,9 @@ def begin_operation(params):
         if session.get_state(scene) == SessionState.OFFLINE:
             return _failure("scene_offline", "Mixar is not connected to its server; wait for it to reconnect")
         if session.get_state(scene) != SessionState.IDLE or session.run_open(scene):
-            return _failure("scene_busy", "Wait for the current Mixar task to finish")
+            return _failure("scene_busy", "An agent is working in this scene tab")
         if session.get_session_id(scene) in _operations:
-            return _failure("scene_busy", "Another MCP operation owns this scene")
+            return _failure("scene_busy", "Another AI app connection is working in this scene tab")
         if len(_operations) >= MAX_ACTIVE_OPERATIONS:
             return _failure("operation_limit", "Too many active MCP operations")
         if not session.get_session_id(scene):

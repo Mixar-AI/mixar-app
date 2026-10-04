@@ -14,6 +14,9 @@ import weakref
 from .job import TERMINAL_STATES
 
 _active_batch = ContextVar('agent_generation_batch', default=None)
+# The submit origin of the whole invocation ("mcp" or ""). Kept apart from the
+# batch: MCP enqueues have no callback ref, so they never form a batch.
+_active_origin = ContextVar('agent_generation_origin', default=None)
 
 
 class AgentBatch:
@@ -58,6 +61,11 @@ def current_agent_batch():
     return _active_batch.get()
 
 
+def current_batch_origin():
+    """The invocation's origin inside agent_generation_batch, else None."""
+    return _active_origin.get()
+
+
 @contextmanager
 def agent_generation_batch(context):
     """Claim once per invocation; duplicates never consume a sibling's ref.
@@ -65,14 +73,17 @@ def agent_generation_batch(context):
     Only this synchronous scope shares the identity. On exit, even after an
     exception, stop accepting members before attempting terminal delivery.
     """
-    from mixar.modules.common.utils.agent_feedback import take_agent_ref
+    from mixar.modules.common.utils.agent_feedback import take_agent_ref, take_job_origin
 
     ref = take_agent_ref(context)
     batch = AgentBatch(ref) if ref else None
     token = _active_batch.set(batch)
+    # Like the ref, the origin belongs to the invocation: every sibling keeps it.
+    origin_token = _active_origin.set(take_job_origin(context))
     try:
         yield
     finally:
+        _active_origin.reset(origin_token)
         _active_batch.reset(token)
         if batch is not None:
             batch.sealed = True

@@ -5024,6 +5024,9 @@ msgstr ""
 msgid "This app is set up by pasting its configuration."
 msgstr ""
 
+msgid "Sign in to Mixar before connecting AI apps"
+msgstr ""
+
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
@@ -5039,16 +5042,22 @@ msgstr ""
 msgid "Let your AI assistant use Mixar scenes and controls."
 msgstr ""
 
-msgid "UI control is free; scene tools and generation use credits."
+msgid "Sign in to Mixar to connect AI apps."
 msgstr ""
 
-msgid "Sign in once. Your AI app can start Mixar when needed."
+msgid "Sign In"
 msgstr ""
 
 msgid "MCP enabled"
 msgstr ""
 
 msgid "Disable"
+msgstr ""
+
+msgid "Scene and UI tools are free; only AI generation uses credits."
+msgstr ""
+
+msgid "Your AI app can start Mixar when needed."
 msgstr ""
 
 msgid "Enable MCP"
@@ -19776,7 +19785,7 @@ msgstr ""
 msgid "{n} tools called"
 msgstr ""
 
-msgid "Captured viewport"
+msgid "Viewport render"
 msgstr ""
 
 msgid "Rendered final image"
@@ -25632,12 +25641,6 @@ msgstr "선택한 무드보드 항목이 비디오가 아닙니다"
 
 msgid "Cannot decode video: %s"
 msgstr "비디오를 디코딩할 수 없습니다: %s"
-
-msgid "Moodboard Video Hover Monitor"
-msgstr "무드보드 비디오 호버 모니터"
-
-msgid "Stop inline moodboard video playback when the pointer leaves its tile"
-msgstr "포인터가 타일을 벗어나면 무드보드 인라인 비디오 재생을 중지합니다"
 
 msgid "This board item has no image or video to preview"
 msgstr "이 보드 항목에는 미리 볼 이미지나 비디오가 없습니다"

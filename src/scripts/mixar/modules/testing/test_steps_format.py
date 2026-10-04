@@ -243,10 +243,10 @@ def test_humanize_unknown_tool_name_falls_back():
 
 def test_known_tools_get_friendly_labels():
     h = steps_format.humanize_tool_name
-    assert h("render_viewport") == "Captured viewport"
+    assert h("render_viewport") == "Viewport render"
     assert h("inspect_mesh_seams") == "Inspected seams"
     assert h("inspect_geometry") == "Measured geometry"
-    assert h("RENDER_VIEWPORT") == "Captured viewport"
+    assert h("RENDER_VIEWPORT") == "Viewport render"
 
 
 def test_capture_row_keeps_label_and_no_count_target():
@@ -255,7 +255,7 @@ def test_capture_row_keeps_label_and_no_count_target():
     assert bubble.step_items[0].kind == "READ"
     steps_format.finish_step_on_bubble(
         bubble, "r1", {"success": True, "modified_objects": ["Camera"]})
-    assert bubble.step_items[0].label == "Captured viewport"
+    assert bubble.step_items[0].label == "Viewport render"
     assert bubble.step_items[0].target == ""
 
 
