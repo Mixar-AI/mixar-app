@@ -81,14 +81,32 @@ def test_lost_native_callback_cleans_inspection(preview,rig):
     assert rig['cleaned']==1 and not preview.render_slot.busy()
 
 
-def test_auto_final_uses_bounded_cycles_and_restores_engine_and_denoising(preview):
+@pytest.mark.parametrize('engine', ['auto', 'cycles'])
+def test_disabled_cycles_addon_keeps_the_scene_engine(preview, engine):
     scene = preview.bpy.context.scene
     scene.render.engine = 'BLENDER_EEVEE'
+    del scene.cycles  # the add-on's unregister removes Scene.cycles
+    result = preview.start(preview.bpy.context, KEY, engine=engine, width=800, height=600)
+    assert result['status'] == 'running'
+    assert scene.render.engine == 'BLENDER_EEVEE'
+    _pixels(preview)
+    preview._finish(KEY, True)
+    assert preview.poll(KEY)['status'] == 'done'
+
+
+@pytest.mark.parametrize('engine,cap', [('auto', 32), ('cycles', 128)])
+def test_final_selects_dynamic_cycles_from_eevee_and_restores_settings(preview, engine, cap):
+    scene = preview.bpy.context.scene
+    scene.render.engine = 'BLENDER_EEVEE'
+    # This is Blender's real static RNA list; addon renderers are dynamic.
+    scene.render.bl_rna = SimpleNamespace(properties={'engine': SimpleNamespace(
+        enum_items=[SimpleNamespace(identifier='BLENDER_EEVEE')])})
     scene.cycles.samples = 512
-    result = preview.start(preview.bpy.context, KEY, engine='auto', width=800, height=600)
+    result = preview.start(preview.bpy.context, KEY, engine=engine, width=800, height=600)
     assert result['status'] == 'running'
     assert result['render']['engine'] == 'CYCLES'
-    assert result['render']['samples'] == 32 and scene.cycles.use_denoising
+    assert result['render']['samples'] == cap
+    assert scene.cycles.use_denoising is (engine == 'auto')
     _pixels(preview)
     preview._finish(KEY, True)
     assert scene.render.engine == 'BLENDER_EEVEE'

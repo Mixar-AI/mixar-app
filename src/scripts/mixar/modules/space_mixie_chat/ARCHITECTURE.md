@@ -94,7 +94,11 @@ configured render device. Native asynchronous EEVEE can still block UI drawing
 during first-use graphics-context/shader initialization. Automatic final previews
 use the scene camera/lighting with denoised Cycles capped at 32 samples; explicit
 EEVEE/Cycles requests retain their engine and sample caps. Older backends keep
-their prior engine selection. Solid inspections use
+their prior engine selection. Cycles is a dynamically registered renderer;
+the static RNA engine enum must never be used to decide whether it is available.
+Its add-on's `scene.cycles` settings signal availability, so it is selected
+even when the scene starts in EEVEE; with the add-on disabled the scene keeps
+its own engine instead of failing the preview. Solid inspections use
 Workbench. Over-budget material inspections fall back to Workbench with an
 explicit warning that materials were not evaluated. Over-budget Cycles finals
 retain the disclosed EEVEE fallback. Fast and final jobs share the same reservation and cleanup lifecycle.

@@ -263,14 +263,17 @@ def poll(key):
 def _engine_id(scene, requested):
     """The engine id to render with, or None to leave the scene's own alone.
 
-    ``requested`` is the backend's ``"auto"`` | ``"eevee"`` | ``"cycles"``. Auto
-    uses bounded Cycles to avoid EEVEE's first-use graphics-context stall. The EEVEE id
-    moved between Blender versions, so the one this build actually offers is
-    picked from the RNA enum rather than hardcoded.
+    Auto uses bounded Cycles to avoid EEVEE's first-use graphics-context stall.
+    Cycles is dynamically registered: RNA's static enum_items omits it, so its
+    add-on's ``scene.cycles`` settings stand in for availability. With the
+    add-on disabled the scene keeps its own engine rather than failing the job.
+    Only EEVEE's historical id variants are selected from the static list.
     """
     candidates = _ENGINE_REQUESTS.get(str(requested or "").strip().lower())
     if not candidates:
         return None
+    if candidates == ("CYCLES",):
+        return "CYCLES" if hasattr(scene, "cycles") else None
     try:
         available = {str(item.identifier) for item in
                      scene.render.bl_rna.properties["engine"].enum_items}

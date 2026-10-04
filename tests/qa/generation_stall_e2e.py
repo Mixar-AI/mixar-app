@@ -139,11 +139,15 @@ result=f._state['instance_expected']
 f=bpy.app.driver_namespace['preview_lifecycle_fixture']; i=bpy.app.driver_namespace['instance_preview_fixture']
 result=i.check(f._state['origin'],f._state['replies'][f._state['run']['request']],f._state['instance_expected'])
 """)
+        qa.eval("f=bpy.app.driver_namespace['preview_lifecycle_fixture']; s=f._state['origin']; "
+                "s.render.engine='BLENDER_EEVEE'; s.cycles.samples=512; result=True")
         call("f.start('final-auto',width=900,height=700,dispatch=True,engine='auto')")
         wait(lambda s:s['terminal'] and not s['native_running'] and not s['reserved'])
         data['final_auto']=call("f.finish('done')")
         assert data['final_auto']['render']['engine']=='CYCLES'
-        assert data['final_auto']['render']['samples']<=32
+        assert data['final_auto']['render']['samples']==32
+        assert qa.eval("f=bpy.app.driver_namespace['preview_lifecycle_fixture']; s=f._state['origin']; "
+                       "result=s.render.engine=='BLENDER_EEVEE' and s.cycles.samples==512")
         shutil.copyfile(data['final_auto']['captures'][0], OUT/'final-auto-render.png')
     finally:
         data['heartbeat']=qa.eval("h=bpy.app.driver_namespace['_qa_stall_heartbeat']; h['running']=False; result=h")
