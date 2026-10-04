@@ -52,10 +52,8 @@ Mixar additionally needs **Python 3.11+** and **rsync** on the build host (macOS
 The native Windows build (`scripts/windows/build.bat`) requires **Visual Studio
 2022 17.14.14 or newer** with the C++ workload. Blender 5.2 embeds **Python 3.13**
 from the pinned `upstream/lib/windows_x64` libraries; installing a newer host
-Python does not replace those libraries. The build checks both dependency
-revisions and Python payloads before overlaying, and reports the exact repair
-command if a checkout or Git LFS download is incomplete. Old Python cache
-entries are cleared automatically while compiled objects are kept.
+Python does not replace those libraries. Old Python cache entries are cleared
+automatically while compiled objects are kept.
 Ninja builds select the Visual Studio installation's default toolset explicitly.
 When that compiler changes, old CMake configuration is backed up under the build
 directory's `.mixar-toolchain-backups/` before configuring again. Target objects

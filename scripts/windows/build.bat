@@ -74,10 +74,6 @@ REM --- [2/8] Build Start ---
 echo [2/8] Starting build at %TIME%...
 
 REM --- [3/8] Overlay ---
-REM Check pins before copying: stale Blender libraries can select an older Python.
-powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%check_dependencies.ps1" -RootDir "%ROOT_DIR%" -UpstreamDir "%UPSTREAM_DIR%" -PythonVersion "%PYTHON_VERSION%"
-if %ERRORLEVEL% neq 0 exit /b 1
-
 echo [3/8] Overlaying Mixar sources onto source...
 call "%SCRIPT_DIR%overlay.bat"
 if %ERRORLEVEL% neq 0 (
