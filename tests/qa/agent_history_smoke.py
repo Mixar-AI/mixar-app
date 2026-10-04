@@ -42,6 +42,7 @@ def load_checkout(name, relative):
 
 
 load_checkout('mixar.modules.common.agent_history.constants', 'common/agent_history/constants.py')
+load_checkout('mixar.modules.common.agent_history.core.idle_cache', 'common/agent_history/core/idle_cache.py')
 store = load_checkout('mixar.modules.common.agent_history.core.store', 'common/agent_history/core/store.py')
 load_checkout('mixar.modules.common.agent_history.core.blobs', 'common/agent_history/core/blobs.py')
 sync_module = load_checkout('mixar.modules.common.agent_history.core.qa_sync', 'common/agent_history/core/sync.py')

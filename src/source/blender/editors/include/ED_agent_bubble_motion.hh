@@ -13,4 +13,10 @@ struct AgentBubbleMotionStats {
   double next_frame_seconds;
 };
 AgentBubbleMotionStats ED_agent_bubble_motion_stats();
+/** Chat redraws have their own timer; hiding the island must let it expire. */
+struct AgentChatAnimationStats {
+  uint64_t ticks;
+  bool scheduled;
+};
+AgentChatAnimationStats ED_agent_chat_animation_stats();
 }  // namespace blender

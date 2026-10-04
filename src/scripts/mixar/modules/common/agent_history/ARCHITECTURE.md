@@ -29,6 +29,19 @@ session IDs let a restarted app discover pending records under a new instance ID
 Disk/sequence/owner failures never acknowledge or execute saved content. A changed
 epoch records a gap. A missing manifest beside an existing journal fails closed.
 
+Idle sync keeps the two-second transport poll but discovers historical sessions
+from disk at most once per 30 seconds; current scene sessions are included on
+every poll. Repeated empty, available packets reuse only a successfully committed
+cursor. Under the archive lock, `core/idle_cache.py` checks the manifest, events
+directory and final journal's file identities before reuse, avoiding journal
+re-parsing and unchanged manifest fsyncs. Any disk or scene binding change,
+incoming record, gap, epoch change, or process restart uses the full validation
+and recovery path. The cache is bounded to 128 sessions and stores no record data.
+
+`MIXAR_AGENT_HISTORY_DIR` overrides the default `~/.mixar/agent_history` root.
+QA launches must set it to an isolated directory: a Blender profile alone does
+not isolate the archive. Fixtures and benchmarks use temporary roots exclusively.
+
 The module follows the operation-history file approach but has its own retention:
 no automatic 15-day pruning and no silent best-effort acknowledgement. Full-history
 backfill, Windows runtime QA and recovery from permanent server gaps are separate
@@ -40,3 +53,6 @@ Validation: `tests/test_agent_history.py`, `tests/test_agent_history_sync.py`,
 `request_read()`, then `finish()`. Capture and inspect the viewport after assertions.
 This smoke fixture uses this checkout's source and a deterministic transport, not
 a paid-model run or a rebuilt release bundle.
+`tests/qa/agent_history_idle_probe.py` replays empty polls against temporary large
+journals, asserts zero warm journal reads/manifest writes and verifies that a
+subsequent real record still commits; its timings isolate the archive hot path.

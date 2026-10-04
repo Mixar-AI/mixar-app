@@ -101,6 +101,8 @@ class ExecutionRequest:
     envelope: Optional[ExecutionEnvelope] = None
     queued_at: float = field(default_factory=time.monotonic)
     timing: dict = field(default_factory=dict)   # filled by pump.execute_request
+    response_attempted: bool = False  # completion ownership, never serialized
+    response_deferred: bool = False
 
     @property
     def is_notification(self) -> bool:

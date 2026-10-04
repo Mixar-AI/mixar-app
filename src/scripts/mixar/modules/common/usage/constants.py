@@ -53,7 +53,7 @@ SEVERITY_CRITICAL = 'CRITICAL'
 # ---------------------------------------------------------------------------
 
 #: ``plan_slug`` values starting with this mark a trial (mirrors the web
-#: dashboard's ``isTrialUser``). Trial users cannot buy credit top-ups.
+#: dashboard's ``isTrialUser``).
 TRIAL_SLUG_PREFIX = "trial"
 
 #: Dashboard handoff targets for the popover CTAs.
@@ -61,6 +61,6 @@ HANDOFF_TARGET_BUY_CREDITS = "buy-credits"
 HANDOFF_TARGET_PRICING = "pricing"
 
 #: ``billing_interval`` the backend reports for a free-tier account holding
-#: bonus credits (sign-up bonus, referral rewards). Such an account has a bar
-#: (full while any credit remains) but no plan, so it can never top up.
+#: bonus credits (sign-up bonus, referral rewards, top-ups). Such an account
+#: has a bar (full while any credit remains) but no plan to meter.
 FREE_BILLING_INTERVAL = "free"

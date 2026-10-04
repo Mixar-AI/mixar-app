@@ -41,8 +41,23 @@ def _entry(scene, shown) -> dict:
             "state": _session().get_state(scene).value, "shown": scene is shown}
 
 
+# Mixar's own modals while an agent works in a tab: they guard that tab and
+# stand down by themselves once the window shows another, as with the drawer's
+# "+ New scene". Only an operation the user has open blocks a tab change.
+AGENT_MODALS = frozenset({
+    "MIXAR_OT_agent_viewport_block", "mixar.agent_viewport_block",
+    "MIXIE_CHAT_OT_undo_shield", "mixie_chat.undo_shield",
+})
+
+
+def _user_modal(wm) -> bool:
+    return any(getattr(op, "bl_idname", "") not in AGENT_MODALS
+               for window in wm.windows for op in getattr(window, "modal_operators", ()))
+
+
 def _gate():
-    """Switching what every window shows must not cut into other work."""
+    """Switching what every window shows must not cut into other work. Another
+    tab's agent keeps working off screen, so it does not block."""
     from mixar.modules.common.render_coordinator.core import busy
     from mixar.modules.common.ui_control.core import ownership
     if busy():
@@ -52,8 +67,9 @@ def _gate():
         raise UIError("ui_busy", "Wait for window resize to finish")
     if ownership.active():
         raise UIError("ui_busy", "Release UI control before changing scenes")
-    if any(getattr(window, "modal_operators", ()) for window in wm.windows):
-        raise UIError("ui_busy", "Finish the current modal operation before changing scenes")
+    if _user_modal(wm):
+        raise UIError("ui_busy", "The user has an operation open in Mixar (a dialog, a transform or a "
+                                 "paint stroke); ask them to finish or cancel it, then try again")
 
 
 def _target(session: str):

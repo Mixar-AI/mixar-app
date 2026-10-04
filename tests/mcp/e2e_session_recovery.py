@@ -30,6 +30,7 @@ from e2e_scene import load_qa
 
 UI_INPUT = {"mixar_ui_observe", "mixar_ui_act", "mixar_ui_wait"}
 NOTIFY_ELIGIBLE = "__import__('mixar.modules.mcp_bridge.core.eligibility',fromlist=['valid']).valid()"
+UI_READY = "__import__('mixar.modules.common.ui_control.core.service',fromlist=['x'])._registered"
 
 
 class Replay:
@@ -61,6 +62,9 @@ class Replay:
         self.qa.cmd("wait_login", timeout=120)
         if eligible:  # Only once MCP is on: a fresh profile starts with it off.
             self.qa.wait(NOTIFY_ELIGIBLE, timeout=90)
+            # The UI controller opens its receipt journal off the main thread and
+            # serves interface/scene-tab tools a few seconds after sign-in.
+            self.qa.wait(UI_READY, timeout=60)
 
     def relaunch(self, blend=None):
         command = [sys.executable, str(Path(__file__).with_name("e2e_launch.py")), str(self.options.fixture),
@@ -198,7 +202,7 @@ result = True""")
         roots = {root["name"] for root in overview["roots"]}
         replay.check("open_project_follows_into_the_file", opened["opened"] and "AlphaCrate" in roots, roots)
         _, again, _ = await s.call("mixar_project_open", {"project": alpha})
-        replay.check("reopening_the_open_project_is_a_no_op", again["opened"] is False)
+        replay.check("reopening_the_open_project_is_a_no_op", (again or {}).get("opened") is False, again)
         await s.snap("project-opened.png")
 
 

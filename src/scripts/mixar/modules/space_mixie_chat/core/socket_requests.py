@@ -113,15 +113,16 @@ class SocketRequests:
                 threading.Thread(target=self._ws.close, daemon=True).start()
             return False
 
-    def queue_response(self, request_id: str, result: dict) -> None:
-        """Queue a JSON-RPC response for sending (thread-safe)."""
+    def queue_response(self, request_id: str, result: dict) -> bool:
+        """Queue a response; False means backpressure rejected it (thread-safe)."""
         response = {
             "jsonrpc": "2.0",
             "id": request_id,
             "result": result,
         }
-        self._enqueue_frame(response, required=True)
-        logger.debug(f"Response queued for request {request_id}")
+        accepted = self._enqueue_frame(response, required=True)
+        logger.debug("Response %s for request %s", "queued" if accepted else "rejected", request_id)
+        return accepted
 
     def _next_request_id(self) -> int:
         """Get next request ID (thread-safe)."""

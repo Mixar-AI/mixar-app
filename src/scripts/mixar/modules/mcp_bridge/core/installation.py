@@ -51,6 +51,30 @@ def provision(python, script, executable, enabled=True):
     return path
 
 
+# A first launch (Gatekeeper, shader cache, sign-in restore) can take well over
+# a minute before the relay appears; until then Mixar counts as starting. The
+# marker is removed as soon as an app publishes its relay or the launch fails,
+# so a quit or crashed app is not "starting" for the rest of the window.
+STARTING_SECONDS = 180
+OPEN_WAIT_SECONDS = 5
+
+
+def started():
+    """A launched Mixar is up (its relay is published), or the launch failed."""
+    try:
+        (directory() / "starting").unlink()
+    except OSError:
+        pass
+
+
+def start_in_progress():
+    """An MCP host started Mixar within the last STARTING_SECONDS."""
+    try:
+        return time.time()-(directory() / "starting").stat().st_mtime <= STARTING_SECONDS
+    except OSError:
+        return False
+
+
 def start_app():
     """At most one cold start across simultaneous MCP hosts; no repeated resurrection."""
     root = directory()
@@ -65,7 +89,7 @@ def start_app():
         return False
     marker = root / "starting"
     try:
-        if marker.exists() and time.time()-marker.stat().st_mtime > 60:
+        if marker.exists() and time.time()-marker.stat().st_mtime > STARTING_SECONDS:
             marker.unlink()
         fd = os.open(marker, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError:
@@ -76,6 +100,19 @@ def start_app():
         bundle = next((p for p in executable.parents if p.suffix == ".app"), None)
         if bundle:
             command = ["/usr/bin/open", "-a", str(bundle)]
-    subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                     stderr=subprocess.DEVNULL, start_new_session=True)
+    try:
+        process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        started()
+        return False
+    if command[0] == "/usr/bin/open":
+        # open hands the launch to LaunchServices and exits at once; a non-zero
+        # status means Mixar could not be opened, so nothing is starting.
+        try:
+            if process.wait(timeout=OPEN_WAIT_SECONDS) != 0:
+                started()
+                return False
+        except subprocess.TimeoutExpired:
+            pass
     return True

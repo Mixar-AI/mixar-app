@@ -138,10 +138,9 @@ def record_step_end(scene, request_id: str, result: dict, session_id: str = "") 
 def record_step_captures(scene, request_id: str, result: dict, session_id: str = "") -> None:
     """Attach capture tiles to an ALREADY finished step row.
 
-    The final render (`render_viewport(quality="final")`) replies late: the
-    executor closes the row with the deferral marker and the pixels arrive
-    minutes later from preview_deferral's poller. This hangs them under the
-    same row by request id.
+    For callers that receive image bytes after a terminal result. Deferred
+    preview renders instead call record_step_end with their terminal result,
+    so their row stays RUNNING until the native job finishes.
     """
     try:
         bubble = _find_bubble_with_step(scene, request_id)

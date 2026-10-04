@@ -66,7 +66,7 @@ CYCLES_FINAL_SAMPLE_CAP = 128
 EEVEE_SAMPLE_CAP = 16
 # 'BLENDER_EEVEE' IS EEVEE Next in 4.2+/5.x; the _NEXT id exists only in 4.2-4.5.
 _EEVEE_ENGINES = ("BLENDER_EEVEE", "BLENDER_EEVEE_NEXT")
-_ENGINE_REQUESTS = {"eevee": _EEVEE_ENGINES, "cycles": ("CYCLES",)}
+_ENGINE_REQUESTS = {"auto": ("CYCLES",), "eevee": _EEVEE_ENGINES, "cycles": ("CYCLES",)}
 
 _job = None        # the ONE in-flight job dict, main thread only
 _revision = 0      # VIEWPORT depsgraph updates seen so far
@@ -120,6 +120,8 @@ def _restore(job):
                 setattr(owner, name, original)
         except (ReferenceError, RuntimeError, AttributeError):
             pass
+    if job.get('inspection') is not None:
+        job['inspection'].cleanup()
     # Flush our own writes so they are counted in the revision NOW, before the
     # baseline is taken — otherwise the restore itself reads as a scene change.
     try:
@@ -183,10 +185,16 @@ def _finish(key, completed, lost=False):
     finally:
         try:
             try:
-                _restore(job)
-            except (ReferenceError, RuntimeError):
+                try:
+                    if job.get('inspection') is not None:
+                        result['render'] = job['render']
+                        job['inspection'].finish(result)
+                finally:
+                    _restore(job)
+            except Exception:
                 result.update(status="failed", error="scene_unavailable")
                 result.pop("image_url", None)
+                result.pop("image_base64", None)
             _job = None
             _remove_render_handlers()
             result["scene_revision"] = _revision
@@ -255,13 +263,17 @@ def poll(key):
 def _engine_id(scene, requested):
     """The engine id to render with, or None to leave the scene's own alone.
 
-    ``requested`` is the backend's ``"eevee"`` | ``"cycles"``. The EEVEE id
-    moved between Blender versions, so the one this build actually offers is
-    picked from the RNA enum rather than hardcoded.
+    Auto uses bounded Cycles to avoid EEVEE's first-use graphics-context stall.
+    Cycles is dynamically registered: RNA's static enum_items omits it, so its
+    add-on's ``scene.cycles`` settings stand in for availability. With the
+    add-on disabled the scene keeps its own engine rather than failing the job.
+    Only EEVEE's historical id variants are selected from the static list.
     """
     candidates = _ENGINE_REQUESTS.get(str(requested or "").strip().lower())
     if not candidates:
         return None
+    if candidates == ("CYCLES",):
+        return "CYCLES" if hasattr(scene, "cycles") else None
     try:
         available = {str(item.identifier) for item in
                      scene.render.bl_rna.properties["engine"].enum_items}
@@ -286,7 +298,7 @@ def _apply_resolution(render, set_value, width, height):
     set_value(render, "resolution_y", max(1, round(render.resolution_y * scale)))
 
 
-def _downgrade_over_budget(scene, set_value, max_faces):
+def _downgrade_over_budget(scene, set_value, max_faces, fallback=None):
     """Swap Cycles for EEVEE when the scene is too big for this machine.
 
     Cycles gives every object whose instancing is defeated its own mesh AND BVH,
@@ -304,10 +316,10 @@ def _downgrade_over_budget(scene, set_value, max_faces):
     """
     from mixar.modules.common.render_coordinator.core.geometry_budget import downgrade_over_budget
     return downgrade_over_budget(scene, set_value, max_faces,
-                                 _engine_id(scene, "eevee") or _EEVEE_ENGINES[0])
+                                 fallback or _engine_id(scene, "eevee") or _EEVEE_ENGINES[0])
 
 
-def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0):
+def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0, budget_engine=None):
     render = scene.render
     wanted = _engine_id(scene, engine)
     if wanted is not None and str(render.engine) != wanted:
@@ -315,7 +327,7 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0)
     # AFTER the call's own engine: the budget judges what this job will really
     # render with, so a scene the CALL turned into a Cycles render is downgraded
     # too — and the caps below then read the downgraded engine.
-    downgraded = _downgrade_over_budget(scene, set_value, max_faces)
+    downgraded = _downgrade_over_budget(scene, set_value, max_faces, budget_engine)
     _apply_resolution(render, set_value, int(width or 0), int(height or 0))
     set_value(render, "resolution_percentage", 100)
     set_value(render.image_settings, "file_format", "PNG")
@@ -324,6 +336,8 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0)
         cap = (CYCLES_FINAL_SAMPLE_CAP if str(engine).strip().lower() == "cycles"
                else CYCLES_SAMPLE_CAP)
         set_value(scene.cycles, "samples", min(scene.cycles.samples, cap))
+        if str(engine).strip().lower() == "auto":
+            set_value(scene.cycles, "use_denoising", True)
         # The device is the user's preference, enabled once at startup; here it
         # is a per-job setting like any other, restored on every exit path.
         if render_device.use_gpu():
@@ -336,7 +350,7 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0)
     return downgraded
 
 
-def start(context, key, width=0, height=0, engine="", max_faces=0):
+def start(context, key, width=0, height=0, engine="", max_faces=0, inspection=None):
     """Start the preview job for ``key``; idempotent for a key already seen.
 
     ``width``/``height``/``engine`` are the backend's request (see
@@ -362,7 +376,7 @@ def start(context, key, width=0, height=0, engine="", max_faces=0):
         return {"job_id": key, "status": "failed", "error": "scene_unavailable"}
     session = _scene_session(scene)
     win = context.window or next(iter(context.window_manager.windows), None)
-    if scene.camera is None or win is None or bpy.app.background:
+    if (scene.camera is None and inspection is None) or win is None or bpy.app.background:
         return {"job_id": key, "status": "failed", "error": "camera_and_window_required",
                 "scene_session": session, "render": _render_info(scene)}
     reservation = render_slot.acquire("agent-preview:" + key)
@@ -379,7 +393,20 @@ def start(context, key, width=0, height=0, engine="", max_faces=0):
            "reservation": reservation}
     _job = job
     try:
-        downgraded = _apply_settings(scene, set_value, width, height, engine, max_faces)
+        if inspection is not None:
+            from .inspection_preview import Inspection
+            job['inspection'] = Inspection(scene, inspection, set_value)
+            job['inspection'].prepare(context)
+            width, height = int(inspection.get('width', 1024)), int(inspection.get('height', 768))
+            engine = ''  # The inspection rig already chose its shading engine.
+        downgraded = _apply_settings(scene, set_value, width, height, engine, max_faces,
+                                    'BLENDER_WORKBENCH' if inspection is not None else None)
+        if inspection is not None and downgraded:
+            set_value(scene.display.shading, 'color_type', 'MATERIAL')
+            job['inspection'].metadata['warning'] = (
+                'Geometry exceeds the material-preview memory budget. This is a solid '
+                'structural preview; material nodes were not evaluated. Repair instancing '
+                'or reduce unique geometry before judging materials.')
         job["render"] = _render_info(scene)
         if downgraded:
             # Rides the render info the backend already forwards, so the model
@@ -404,7 +431,7 @@ def start(context, key, width=0, height=0, engine="", max_faces=0):
         job["revision"] = _revision
         return {"job_id": key, "status": "running", "render_revision": _revision,
                 "scene_session": session, "render": dict(job["render"])}
-    except Exception:
+    except Exception as exc:
         # A failure AFTER native invocation must not free the live renderer.
         if bpy.app.is_job_running("RENDER"):
             job["finishing"] = True
@@ -417,7 +444,10 @@ def start(context, key, width=0, height=0, engine="", max_faces=0):
         finally:
             _job = None
             render_slot.release(reservation)
-        value = {"job_id": key, "status": "failed", "error": "async_render_unavailable",
+        code = str(exc) if str(exc) in {
+            'inspection_mode_unsupported', 'inspection_view_unsupported',
+            'inspection_focus_not_found', 'inspection_mark_unavailable'} else 'async_render_unavailable'
+        value = {"job_id": key, "status": "failed", "error": code,
                  "scene_session": session, "render": job["render"] or _render_info(scene)}
         _publish(key, value)
         return value

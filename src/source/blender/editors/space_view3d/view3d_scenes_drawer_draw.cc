@@ -85,6 +85,41 @@ constexpr float THUMB_H = VIEW3D_SCENES_DRAWER_THUMB_H;
 
 using namespace view3d_scenes_drawer;
 
+void view3d_scenes_drawer_draw_background(const ScrArea *area)
+{
+  if (area->spacetype != SPACE_VIEW3D) {
+    return;
+  }
+  const ARegion *region = BKE_area_find_region_type(area, VIEW3D_SCENES_DRAWER_REGION_TYPE);
+  if (!region || !region->runtime->visible || region->overlap ||
+      (region->flag & (RGN_FLAG_HIDDEN | RGN_FLAG_POLL_FAILED | RGN_FLAG_TOO_SMALL)))
+  {
+    return;
+  }
+
+  /* Clipping the drawer below an overlapping header leaves its column without
+   * a WINDOW region underneath. Transparent header pixels must blend over the
+   * drawer canvas, never whatever the window backbuffer held in the last frame.
+   * Only fill the strips outside the drawer; its own buffer paints the body. */
+  const GPUBlend blend = GPU_blend_get();
+  GPU_blend(GPU_BLEND_NONE);
+  GPUVertFormat *format = immVertexFormat();
+  const uint pos = GPU_vertformat_attr_add(format, "pos", gpu::VertAttrType::SFLOAT_32_32);
+  immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
+  const float *canvas = ui::mixar_tokens::mixar_zen().canvas;
+  immUniformColor4f(canvas[0], canvas[1], canvas[2], 1.0f);
+  if (region->winrct.ymax < area->totrct.ymax) {
+    immRectf(pos, float(region->winrct.xmin), float(region->winrct.ymax + 1),
+             float(region->winrct.xmax + 1), float(area->totrct.ymax + 1));
+  }
+  if (region->winrct.ymin > area->totrct.ymin) {
+    immRectf(pos, float(region->winrct.xmin), float(area->totrct.ymin),
+             float(region->winrct.xmax + 1), float(region->winrct.ymin));
+  }
+  immUnbindProgram();
+  GPU_blend(blend);
+}
+
 void view3d_scenes_drawer_region_draw(const bContext *C, ARegion *region)
 {
   if (!view3d_scenes_drawer_host_active(C)) {

@@ -13,7 +13,7 @@ import bpy
 
 from ..constants import ACTION_TIMEOUT, MAX_PENDING, UIError
 from . import input as native_input, observe, ownership, schema
-from .receipts import Receipts
+from .receipt_startup import ReceiptInitializer
 
 
 @dataclass
@@ -39,6 +39,7 @@ _queue = queue.Queue(MAX_PENDING)
 _active = None
 _registered = False
 _receipts = None
+_receipt_initializer = ReceiptInitializer()
 _requests = {}
 _request_lock = threading.Lock()
 _disconnected = set()
@@ -112,12 +113,26 @@ def _signed_in():
         raise UIError("signin_required", "Sign in to Mixar before controlling its UI")
 
 
+def _is_signed_in():
+    wm = bpy.context.window_manager
+    return bool(getattr(wm, "mixie_chat_is_logged_in", False)) and not getattr(wm, "mixie_chat_session_expired", False)
+
+
+def _server_connected():
+    try:
+        from mixar.modules.space_mixie_chat.core.connection_manager import get_connection_manager
+        return bool(get_connection_manager().is_connected)
+    except Exception:  # noqa: BLE001 - status only
+        return False
+
+
 def _eligible():
     from mixar.modules.mcp_bridge.core import eligibility
     _signed_in()
     state = eligibility.status()
     if not state["eligible"]:
         messages = {"backend_update_required": "This backend needs the Mixar UI-control update",
+                    "desktop_not_connected": "Mixar is not connected to its server yet; wait for it to reconnect",
                     "client_update_required": "Update Mixar to use UI control",
                     "account_unavailable": "This Mixar account cannot use UI control"}
         raise UIError(state["reason"], messages.get(state["reason"], "Wait for Mixar sign-in and UI eligibility renewal"))
@@ -151,8 +166,9 @@ def _scene_tool(req):
     return result
 
 
-UI_CONTROL_OFF = ("Interface control is off. Scene tools still work; to click or inspect Mixar's interface, ask "
-                  "the user to turn on 'Let AI apps control Mixar's interface' in Help > Connect AI Apps (MCP)")
+UI_CONTROL_OFF = ("Interface control is off, so Mixar's interface cannot be inspected or clicked. To use it, ask "
+                  "the user to turn on 'Let AI apps control Mixar's interface' in the profile menu > Connect AI Apps (MCP). "
+                  "Scene work uses the scene tools; mixar_ui_context reports whether they are available")
 
 
 def _run(req):
@@ -174,7 +190,8 @@ def _run(req):
                 "scene_name": win.scene.name, "eligible": eligibility.valid(),
                 "account_status": eligibility.status(),
                 "input_busy": ownership.active(), "event_simulate": bpy.app.use_event_simulate,
-                "ui_control": runtime.ui_control_enabled()}, []
+                "ui_control": runtime.ui_control_enabled(), "signed_in": _is_signed_in(),
+                "server_connected": _server_connected()}, []
     if req.name == "mixar_ui_observe":
         settle_deadline = min(req.deadline, time.monotonic()+2)
         while ownership.settling():
@@ -303,14 +320,17 @@ def invalidate(*_args):
 
 
 def register():
+    """Finish registration when durable receipts are ready; never wait on disk."""
     global _registered, _receipts
     if _registered:
-        return
+        return True
     if not hasattr(bpy.context.window_manager, "mixar_ui_enable"):
-        return
-    path = Path(bpy.utils.user_resource('CONFIG')) / "mixar" / "ui-control" / "receipts.sqlite"
-    _receipts = Receipts(path)
-    _registered = True
+        return False
+    if _receipts is None:
+        path = Path(bpy.utils.user_resource('CONFIG')) / "mixar" / "ui-control" / "receipts.sqlite"
+        _receipts = _receipt_initializer.poll(path)
+    if _receipts is None:
+        return False
     for name in ("undo_pre", "redo_pre"):
         handlers = getattr(bpy.app.handlers, name)
         if invalidate not in handlers:
@@ -320,11 +340,18 @@ def register():
     if after_load not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(after_load)
     bpy.app.timers.register(_pump, first_interval=0.1, persistent=True)
+    _registered = True
+    return True
+
+
+def receipt_startup_status():
+    return _receipt_initializer.status()
 
 
 def unregister(shutdown=False):
     global _registered, _receipts
     _registered = False
+    _receipt_initializer.cancel()
     if not shutdown and _receipts is not None:
         invalidate()
         bpy.context.window_manager.mixar_ui_enable(enabled=False)

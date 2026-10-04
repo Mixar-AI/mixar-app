@@ -74,8 +74,6 @@ def _bind_moodboard_pointer(km):
         kmi.properties.extend = True
         addon_keymaps.append((km, kmi))
 
-    kmi = km.keymap_items.new('mixie.moodboard_video_hover', 'MOUSEMOVE', 'ANY')
-    addon_keymaps.append((km, kmi))
     kmi = km.keymap_items.new('mixie.moodboard_context_menu', 'RIGHTMOUSE', 'PRESS')
     addon_keymaps.append((km, kmi))
 

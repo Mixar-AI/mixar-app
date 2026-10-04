@@ -74,6 +74,10 @@ REM --- [2/8] Build Start ---
 echo [2/8] Starting build at %TIME%...
 
 REM --- [3/8] Overlay ---
+REM Check pins before copying: stale Blender libraries can select an older Python.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%check_dependencies.ps1" -RootDir "%ROOT_DIR%" -UpstreamDir "%UPSTREAM_DIR%" -PythonVersion "%PYTHON_VERSION%"
+if %ERRORLEVEL% neq 0 exit /b 1
+
 echo [3/8] Overlaying Mixar sources onto source...
 call "%SCRIPT_DIR%overlay.bat"
 if %ERRORLEVEL% neq 0 (
@@ -154,6 +158,7 @@ if not exist "%SOURCE_DIR%\scripts\mixar\config" mkdir "%SOURCE_DIR%\scripts\mix
 
 REM --- Visual Studio Environment (Ninja only) ---
 REM vcvarsall must be set up before cmake configure and before the build step.
+set "TOOLCHAIN_CMAKE_ARGS="
 if defined BUILD_WITH_NINJA (
     set "VCVARSALL="
     for %%E in (Community Professional Enterprise BuildTools) do (
@@ -168,12 +173,34 @@ if defined BUILD_WITH_NINJA (
         echo Error: Visual Studio 2022 not found. Install VS2022 with C++ workload.
         exit /b 1
     )
+    for %%V in ("!VCVARSALL!") do set "VC_TOOLS_VERSION_FILE=%%~dpVMicrosoft.VCToolsVersion.default.txt"
+    set "VS_TOOLSET_VERSION="
+    if exist "!VC_TOOLS_VERSION_FILE!" set /p VS_TOOLSET_VERSION=<"!VC_TOOLS_VERSION_FILE!"
+    if not defined VS_TOOLSET_VERSION (
+        echo Error: Visual Studio's default C++ toolset version was not found.
+        exit /b 1
+    )
     echo Setting up Visual Studio toolchain for Ninja...
-    call "!VCVARSALL!" x64
+    call "!VCVARSALL!" x64 -vcvars_ver=!VS_TOOLSET_VERSION!
     if !ERRORLEVEL! neq 0 (
         echo Error: Failed to initialize Visual Studio environment
         exit /b 1
     )
+    if not "!VCToolsVersion!"=="!VS_TOOLSET_VERSION!" (
+        echo Error: Could not activate MSVC !VS_TOOLSET_VERSION!. Open a fresh terminal and retry.
+        exit /b 1
+    )
+    REM A previous configure may still pin an older installed MSVC toolset.
+    REM Give CMake the active compiler explicitly so an update is discovered.
+    set "ACTIVE_CL=!VCToolsInstallDir!bin\Hostx64\x64\cl.exe"
+    if not exist "!ACTIVE_CL!" (
+        echo Error: Active Visual Studio x64 compiler was not found: !ACTIVE_CL!
+        exit /b 1
+    )
+    echo Compiler     : !ACTIVE_CL!
+    set "TOOLCHAIN_CMAKE_ARGS=-DCMAKE_C_COMPILER:FILEPATH="!ACTIVE_CL!" -DCMAKE_CXX_COMPILER:FILEPATH="!ACTIVE_CL!""
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%prepare_toolchain.ps1" -RootDir "%ROOT_DIR%" -BuildDir "%BUILD_ENV_DIR%" -Compiler "!ACTIVE_CL!"
+    if !ERRORLEVEL! neq 0 exit /b 1
 )
 
 REM --- CUDA / OptiX Selection ---
@@ -331,6 +358,7 @@ cmake -C "%CMAKE_DIR%\mixar_overrides.cmake" ^
     -DCMAKE_BUILD_TYPE=%BLENDER_BUILD_ENV% ^
     -DWITH_WINDOWS_RELEASE_PDB=OFF ^
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ^
+    %TOOLCHAIN_CMAKE_ARGS% ^
     %CUDA_CMAKE_ARGS%
 
 if %ERRORLEVEL% neq 0 (
@@ -388,7 +416,7 @@ echo Found Python: %PYTHON_BIN%
 REM --- [7/8] Config File ---
 echo [7/8] Generating runtime configuration for bundle...
 set "BUNDLE_CONFIG_DIR=%BUILD_ENV_DIR%\bin\%BLENDER_VERSION%\config"
-"!PYTHON_BIN!" "%ROOT_DIR%\scripts\generate_config.py" --output "%BUNDLE_CONFIG_DIR%\mixar.json"
+"!PYTHON_BIN!" -s "%ROOT_DIR%\scripts\generate_config.py" --output "%BUNDLE_CONFIG_DIR%\mixar.json"
 if !ERRORLEVEL! neq 0 (
     echo Error: Failed to generate runtime configuration
     exit /b 1
@@ -400,10 +428,12 @@ set "SITE_PACKAGES=%PY_BASE%\%BLENDER_VERSION%\python\lib\site-packages"
 set "REQUIREMENTS_FILE=%SCRIPT_DIR%..\python_requirements.txt"
 
 REM Bootstrap pip if not available (Blender's embedded Python may lack it)
-"!PYTHON_BIN!" -m pip --version >nul 2>&1
+REM Ignore user-site packages so unrelated tools cannot satisfy or conflict with
+REM bundled dependencies; import checks must inspect the embedded installation.
+"!PYTHON_BIN!" -s -m pip --version >nul 2>&1
 if !ERRORLEVEL! neq 0 (
     echo Bootstrapping pip with ensurepip...
-    "!PYTHON_BIN!" -m ensurepip --upgrade
+    "!PYTHON_BIN!" -s -m ensurepip --upgrade
     if !ERRORLEVEL! neq 0 (
         echo Error: Failed to bootstrap pip in embedded Python
         exit /b 1
@@ -413,19 +443,19 @@ if !ERRORLEVEL! neq 0 (
 echo Site-packages: %SITE_PACKAGES%
 if not exist "%SITE_PACKAGES%" mkdir "%SITE_PACKAGES%"
 
-"!PYTHON_BIN!" -m pip install --upgrade --target "%SITE_PACKAGES%" -r "%REQUIREMENTS_FILE%"
+"!PYTHON_BIN!" -s -m pip install --upgrade --target "%SITE_PACKAGES%" -r "%REQUIREMENTS_FILE%"
 if !ERRORLEVEL! neq 0 (
     echo Error: Failed to install Python packages
     exit /b 1
 )
 
 REM Verify critical packages are importable by Blender's Python
-"!PYTHON_BIN!" -c "import websocket; print('  websocket-client:', websocket.__version__)"
+"!PYTHON_BIN!" -s -c "import websocket; print('  websocket-client:', websocket.__version__)"
 if !ERRORLEVEL! neq 0 (
     echo Error: websocket-client installed but not importable — site-packages path mismatch
     exit /b 1
 )
-"!PYTHON_BIN!" -c "import truststore; print('  truststore:', truststore.__version__)"
+"!PYTHON_BIN!" -s -c "import truststore; print('  truststore:', truststore.__version__)"
 if !ERRORLEVEL! neq 0 (
     echo Error: truststore installed but not importable — enterprise TLS trust would silently fall back to certifi
     exit /b 1

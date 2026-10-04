@@ -227,31 +227,37 @@ class TestSeverity:
 
 
 class TestCanTopUp:
+    """Mirrors the server rule behind /subscriptions/credit-topup: every
+    signed-in account buys credits, no subscription needed."""
+
     def test_plain_subscriber_can(self):
         assert state.snapshot_from_payload(_payload()).can_top_up
 
-    def test_trial_cannot(self):
-        """Mirrors the server rule behind /subscriptions/credit-topup."""
+    def test_trial_can(self):
         snap = state.snapshot_from_payload(_payload(plan_slug="trial-7d"))
         assert snap.is_trial
-        assert not snap.can_top_up
+        assert snap.can_top_up
 
-    def test_cancelling_cannot(self):
+    def test_cancelling_can(self):
         snap = state.snapshot_from_payload(
             _payload(subscription_expires_at="2026-09-01T00:00:00+00:00")
         )
         assert snap.is_cancelling
-        assert not snap.can_top_up
+        assert snap.can_top_up
 
-    def test_free_tier_cannot(self):
-        assert not state.snapshot_free_tier().can_top_up
+    def test_free_tier_without_credits_can(self):
+        """The 404 case: nothing to meter, but buying credits still applies."""
+        assert state.snapshot_free_tier().can_top_up
 
-    def test_free_tier_with_bonus_credits_reads_full_but_cannot(self):
+    def test_signed_out_cannot(self):
+        assert not state.EMPTY.can_top_up
+
+    def test_free_tier_with_bonus_credits_reads_full_and_can(self):
         """A free account with credits answers 200 with ``billing_interval ==
         "free"`` and ``usage_pct`` 0 while any credit remains — the website's
         "100% left" + bonus line (Slack #bugs 2026-09-28: the card read 20%
         off lifetime grants). ``credits_per_month`` is the lifetime sum and
-        must never be used as a denominator; no plan, so "See Plans" stays."""
+        must never be used as a denominator."""
         snap = state.snapshot_from_payload(
             _payload(
                 plan_slug="free",
@@ -263,7 +269,7 @@ class TestCanTopUp:
                 days_left=0,
             )
         )
-        assert snap.has_subscription and snap.is_free and not snap.can_top_up
+        assert snap.has_subscription and snap.is_free and snap.can_top_up
         assert snap.remaining_pct == 100.0
         assert state.usage_factor(snap) == 1.0
         assert state.format_remaining_label(snap) == "100% left"
@@ -278,7 +284,7 @@ class TestCanTopUp:
         finally:
             state.clear()
         assert snap.is_free
-        assert not snap.can_top_up
+        assert snap.can_top_up
 
 
 # ---------------------------------------------------------------------------

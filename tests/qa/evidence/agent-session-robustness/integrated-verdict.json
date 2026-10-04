@@ -1,0 +1,208 @@
+{
+  "date": "2026-10-03",
+  "backend_head": "b4ae3a5ec0a52acf079724574ac570f5b8ab251a",
+  "client_merge_base": "5d491295f",
+  "app": {
+    "version": "4.2.1",
+    "blender_version": "5.2",
+    "environment": "Dev",
+    "candidate_python_hotloaded": true,
+    "fresh_candidate_native_build": false,
+    "render_device": "CPU",
+    "response_transport_substituted": true,
+    "paid_model_calls": false
+  },
+  "tests": {
+    "client": {
+      "passed": 306,
+      "skipped": 35
+    },
+    "backend_regressions": {
+      "passed": 829
+    },
+    "backend_migrations": {
+      "passed": 90,
+      "skipped": 5
+    },
+    "backend_latest_target_followup": {
+      "passed": 172,
+      "overlaps_regressions": true
+    }
+  },
+  "preview": {
+    "complete": {
+      "row": "DONE",
+      "success": true,
+      "result_status": "done",
+      "response_error": null,
+      "native_running": false,
+      "reserved": false,
+      "errors": [],
+      "restored_settings": [
+        800,
+        600,
+        70,
+        128
+      ],
+      "render": {
+        "engine": "CYCLES",
+        "device": "CPU",
+        "samples": 128,
+        "width": 1200,
+        "height": 800,
+        "elapsed_seconds": 56.98
+      }
+    },
+    "cancelled": {
+      "row": "FAILED",
+      "success": false,
+      "result_status": "cancelled",
+      "response_error": "preview_cancelled",
+      "native_running": false,
+      "reserved": false,
+      "errors": [],
+      "restored_settings": [
+        800,
+        600,
+        70,
+        128
+      ],
+      "render": {
+        "engine": "CYCLES",
+        "device": "CPU",
+        "samples": 128,
+        "width": 1920,
+        "height": 1440,
+        "elapsed_seconds": 1.545
+      }
+    }
+  },
+  "queue": {
+    "ok": true,
+    "checks": {
+      "running_row_remains_running": true,
+      "completion_capture_in_origin": true,
+      "completion_is_success": true,
+      "cancel_is_failure": true,
+      "cancel_row_is_failed": true,
+      "cancel_has_no_capture": true,
+      "render_uses_expected_device": true,
+      "no_terminal_row_during_native_render": true,
+      "dispatch_fault_replied": true,
+      "next_script_completed": true
+    },
+    "dispatch_recovery": {
+      "first": {
+        "success": false,
+        "error": "Executor request failed",
+        "error_type": "executor_failed",
+        "effects_uncertain": false
+      },
+      "second": {
+        "success": true,
+        "output": "second\n"
+      },
+      "second_executed": true,
+      "timer_active": false
+    }
+  },
+  "clarification": {
+    "rows": [
+      {
+        "label": "Asked a question",
+        "status": "DONE",
+        "detail": ""
+      },
+      {
+        "label": "Asked a question",
+        "status": "DONE",
+        "detail": ""
+      }
+    ],
+    "answer": "red"
+  },
+  "material_api": {
+    "shader_values": {
+      "Viewport_Only": {
+        "display": [
+          0.800000011920929,
+          0.019999999552965164,
+          0.019999999552965164,
+          1.0
+        ],
+        "shader": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ]
+      },
+      "Shader_Red": {
+        "display": [
+          0.800000011920929,
+          0.019999999552965164,
+          0.019999999552965164,
+          1.0
+        ],
+        "shader": [
+          0.800000011920929,
+          0.019999999552965164,
+          0.019999999552965164,
+          1.0
+        ]
+      }
+    },
+    "render": {
+      "engine": "CYCLES",
+      "device": "CPU",
+      "samples": 128,
+      "width": 800,
+      "height": 600,
+      "elapsed_seconds": 31.433
+    }
+  },
+  "publication": {
+    "success": true,
+    "vertices": 2140014,
+    "instances": 48,
+    "objects": 50,
+    "merge_seconds": 0.02660854099667631,
+    "world_translation": [
+      -34.0,
+      -36.0,
+      30.674999237060547
+    ],
+    "status": "committed",
+    "replay_preserved": true
+  },
+  "retention": {
+    "success": true,
+    "removed": 2,
+    "owned_output_retained": true,
+    "preparing_transaction_retained": true,
+    "shared_object_preserved": true
+  },
+  "geometry": {
+    "passed": true,
+    "measured_statuses": {
+      "touching": "pass",
+      "sunk": "fail",
+      "crossing_contact": "pass",
+      "fully_contained": "fail"
+    }
+  },
+  "screenshots_reviewed": [
+    "integrated-preview-complete.png",
+    "integrated-preview-cancel.png",
+    "integrated-clarification.png",
+    "integrated-material-api.png",
+    "integrated-geometry-contact.png"
+  ],
+  "limitations": [
+    "Native GPU attempt aborted in MetalKernelPipeline::compile with an NSURL nil path exception in the existing build.",
+    "With CYCLES_METAL_DISABLE_BINARY_ARCHIVES=1, the GPU job exceeded the 120-second scenario timeout and was cancelled normally; the lifecycle replays then explicitly used CPU.",
+    "No fresh macOS or Windows candidate native build or current Metal validation. Platform/tooling tests are skipped where unavailable.",
+    "Backend graph payloads and actual publication templates were replayed locally; deployed-backend live-model clarification/material behavior was not measured.",
+    "The 2,140,014-vertex publication fixture has no faces and is not the full Buddha-temple workload."
+  ]
+}

@@ -5,6 +5,35 @@
 version = 1
 
 [[annotations]]
+path = ["docs/development/moodboard-video-playback/*", "tests/qa/evidence/agent-session-robustness/*"]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
+path = "docs/development/scenes-drawer-transparency/*"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
+path = [
+  "docs/development/forest-runtime-fixed.png",
+  "docs/development/forest-review-viewport.png",
+  "docs/development/modeling-bicycle.png",
+  "docs/development/modeling-forest-fixed.png",
+  "docs/development/modeling-forest-terrain.png",
+  "docs/development/modeling-spiral-staircase.png",
+  "docs/development/modeling-vanity.png",
+  "docs/development/watch-performance-live.png",
+  "docs/development/watch-performance-plates.png",
+  "tests/qa/modeling_prompt_cases.json",
+]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
 path = "docs/development/scene-performance-merge.png"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
@@ -30,13 +59,6 @@ SPDX-License-Identifier = "GPL-2.0-or-later"
 # Test fixtures: data files with no comment syntax for an inline header.
 [[annotations]]
 path = "tests/**/fixtures/*.json"
-precedence = "closest"
-SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
-SPDX-License-Identifier = "GPL-2.0-or-later"
-
-# MCP replay artifacts contain only the disposable local QA scene and receipts.
-[[annotations]]
-path = "docs/development/mixar-mcp/*"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
 SPDX-License-Identifier = "GPL-2.0-or-later"

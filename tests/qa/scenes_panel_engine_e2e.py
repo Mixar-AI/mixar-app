@@ -173,10 +173,14 @@ def run(qa):
 
         # A split layout: one panel, on the larger 3D View, one toggle.
         layout_name = qa.eval('result=drv.main_window().workspace.name')
+        layout_ptr = qa.eval('result=drv.main_window().workspace.as_pointer()')
         qa.eval("import bpy\nwin=drv.main_window()\n"
                 "with bpy.context.temp_override(window=win):\n"
-                "    bpy.ops.workspace.duplicate()\n"
-                f"win.workspace.name={SPLIT_WORKSPACE!r}\nresult=True")
+                "    bpy.ops.workspace.duplicate()\nresult=True")
+        # Workspace activation is queued by Blender. Renaming in the same
+        # eval would rename the original, before the duplicate becomes active.
+        qa.wait(f"drv.main_window().workspace.as_pointer()!={layout_ptr}")
+        qa.eval(f"drv.main_window().workspace.name={SPLIT_WORKSPACE!r}\nresult=True")
         qa.wait(f"drv.main_window().workspace.name=={SPLIT_WORKSPACE!r}")
         views = qa.eval("result=len([a for a in drv.main_window().screen.areas if a.type=='VIEW_3D'])")
         qa.eval('result=split_host(0.3)')
@@ -186,6 +190,11 @@ def run(qa):
         qa.step('split_layout_one_panel', qa.eval,
                 'geometry=engine_panel_geometry()\n'
                 'geometry.update(toggle_heads_host_header())\nresult=geometry')
+        # A companion window can leave the main frontbuffer stale while its
+        # layout already reports the split. Capture the actual composed frame.
+        qa.eval("win=drv.main_window()\n"
+                "with bpy.context.temp_override(window=win, screen=win.screen):\n"
+                "    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)\nresult=True")
         qa.snap(str(out / 'engine-split.png'))
         qa.eval("import bpy\nwin=drv.main_window()\n"
                 "with bpy.context.temp_override(window=win):\n"

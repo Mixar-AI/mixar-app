@@ -24,10 +24,31 @@ APP_ITEMS = [(key, name, "") for key, name, _how in app_configs.APPS]
 SNIPPET_COLUMNS = 72
 
 
+def _signed_in(context):
+    """MCP acts for the signed-in account: no setup without one."""
+    wm = context.window_manager
+    return bool(getattr(wm, "mixie_chat_is_logged_in", False)) and not getattr(wm, "mixie_chat_session_expired", False)
+
+
+def _refuse_signed_out(op, context):
+    if _signed_in(context):
+        return False
+    op.report({'ERROR'}, "Sign in to Mixar before connecting AI apps")
+    return True
+
+
+def _save_tools_now():
+    """Save the tool list right away (on a worker thread) so the AI app being
+    set up gets every tool at its first connection."""
+    from ...core import tool_snapshot
+    tool_snapshot.forget()
+    runtime.refresh()
+
+
 def _enable(op):
     if not add_config("mcp_enabled", True):
         op.report({'WARNING'}, "MCP is enabled for this session; saving the preference failed")
-    runtime.refresh()
+    _save_tools_now()
 
 
 def _snippet_lines(text):
@@ -52,8 +73,17 @@ class MIXAR_OT_mcp_setup(Operator):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Let your AI assistant use Mixar scenes and controls.")
-        layout.label(text="UI control is free; scene tools and generation use credits.")
-        layout.label(text="Sign in once. Your AI app can start Mixar when needed.")
+        if not _signed_in(context):
+            layout.label(text="Sign in to Mixar to connect AI apps.", icon='INFO')
+            layout.operator("mixie_chat.login", text="Sign In")
+            if runtime.enabled():
+                # Turning MCP off never needs an account (the session may have expired).
+                row = layout.row()
+                row.label(text="MCP enabled", icon='CHECKMARK')
+                row.operator("mixar.set_mcp_enabled", text="Disable").enabled = False
+            return
+        layout.label(text="Scene and UI tools are free; only AI generation uses credits.")
+        layout.label(text="Your AI app can start Mixar when needed.")
         row = layout.row()
         if runtime.enabled():
             row.label(text="MCP enabled", icon='CHECKMARK')
@@ -98,8 +128,13 @@ class MIXAR_OT_set_mcp_enabled(Operator):
     enabled: BoolProperty(default=True)
 
     def execute(self, context):
+        if self.enabled and _refuse_signed_out(self, context):
+            return {'CANCELLED'}
         saved = add_config("mcp_enabled", self.enabled)
-        runtime.refresh()
+        if self.enabled:
+            _save_tools_now()
+        else:
+            runtime.refresh()
         if not saved:
             self.report({'WARNING'}, "MCP preference applies until Mixar closes; saving failed")
         elif self.enabled and not runtime.is_running():
@@ -138,6 +173,8 @@ class MIXAR_OT_copy_mcp_setup(Operator):
     client: EnumProperty(items=APP_ITEMS, default='JSON', translation_context=PRODUCT_NAMES)
 
     def execute(self, context):
+        if _refuse_signed_out(self, context):
+            return {'CANCELLED'}
         _enable(self)
         context.window_manager.clipboard = connection_config(
             self.client, bpy.utils.resource_path('LOCAL'), bpy.app.binary_path)
@@ -154,6 +191,8 @@ class MIXAR_OT_mcp_add_to_app(Operator):
                       translation_context=PRODUCT_NAMES)
 
     def execute(self, context):
+        if _refuse_signed_out(self, context):
+            return {'CANCELLED'}
         _enable(self)
         command, args = launch(bpy.utils.resource_path('LOCAL'), bpy.app.binary_path, True)
         if not app_add.start(self.app, command, args):

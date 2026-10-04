@@ -284,6 +284,11 @@ class SocketConnection:
                 # Image bytes by HTTP reference; sync frames stay small.
                 "agent_history_v2",
                 "script_execution",
+                # Prepared terrain imports plus mesh_bounds/linked_scatter.
+                # The backend gates these APIs on the connected instance.
+                "forest_runtime_v1",
+                "terrain_raycast_v1",
+                "inspection_preview_v1",
                 "notifications",
                 "local_llm",
                 # Client answers blender.liveness on the WS thread; the

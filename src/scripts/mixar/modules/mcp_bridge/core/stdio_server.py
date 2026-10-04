@@ -7,12 +7,12 @@ import json
 import uuid
 
 from mcp import types
-from mcp.server import Server, NotificationOptions
+from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
 from mixar.modules.common.ui_control.core import schema
-from . import presentation
-from .connector import Connector, instances
+from . import availability, presentation
+from .connector import Connector, instances, signed_in, usable
 
 # Clients put server instructions in the model's system prompt, and Claude Code
 # keeps only their first 2,048 characters: core rules first, the full playbook
@@ -49,8 +49,8 @@ Ask the user when an open choice matters (method, style, scale, detail, a
 large credit spend); settle small details yourself.
 Native UI tools (mixar_ui_*, if the user allows them) cover what no other
 tool does; never use OS-level computer use on Mixar.
-Inspection and UI input are free; scene edits cost Mixar credits (default 1)
-and generation its job price. After an uncertain outcome, inspect and use
+Only generation costs Mixar credits (its job price, as does
+create_layered_material); everything else is free. After an uncertain outcome, inspect and use
 mixar_call_status or mixar_ui_call_status with the same call UUID; never
 blindly repeat an edit.
 """
@@ -89,35 +89,20 @@ def failure(exc, call_id):
 
 
 def create_server(connector):
-    watcher = None
+    status = {"listed": False, "readiness": "starting"}
 
-    async def watch_ready(session):
-        delay = 1
-        for _ in range(12):
-            await asyncio.sleep(delay)
-            try:
-                await asyncio.to_thread(connector.catalog)
-                await session.send_tool_list_changed()
-                return
-            except (OSError, ValueError, KeyError, RuntimeError, TimeoutError):
-                delay = min(15, delay*2)
+    def visible(tools):
+        if getattr(connector, "health", {}).get("ui_control") is False:
+            # Interface control is opt-in; scene and project tools stay.
+            return [tool for tool in tools if tool["name"] not in schema.UI_INPUT]
+        return tools
 
     async def list_tools(ctx, params):
-        nonlocal watcher
-        tools = schema.tools()
-        try:
-            tools += with_ui_domain(await asyncio.wait_for(asyncio.to_thread(connector.catalog), timeout=7))
-            if getattr(connector, "health", {}).get("ui_control") is False:
-                # Interface control is opt-in; scene and project tools stay.
-                tools = [tool for tool in tools if tool["name"] not in schema.UI_INPUT]
-        except (OSError, ValueError, KeyError, RuntimeError, TimeoutError):
-            # Local readiness tools work before GUI/backend startup. Refresh the
-            # host's catalog automatically when the desktop becomes available.
-            if watcher is None or watcher.done():
-                watcher = asyncio.create_task(watch_ready(ctx.session))
-                connector.tasks.add(watcher)
-                watcher.add_done_callback(connector.tasks.discard)
-        tools = presentation.tools_for_client(tools, presentation.client_name(ctx))
+        # Every tool at once (live, or the copy saved while signed in); never wait.
+        backend, status["readiness"] = await availability.fetch_tools(connector)
+        tools = schema.tools() + (with_ui_domain(backend) if backend is not None else [])
+        status["listed"] = backend is not None
+        tools = presentation.tools_for_client(visible(tools), presentation.client_name(ctx))
         return types.ListToolsResult(tools=[types.Tool.model_validate(t) for t in tools])
 
     async def call_tool(ctx, params):
@@ -154,10 +139,11 @@ def create_server(connector):
                     args = {k: v for k, v in args.items() if k != "instance"}
                 elif connector.record is None:
                     available = await asyncio.to_thread(instances)
-                    if len(available) > 1 or (connector.instance and available and
+                    if (len(available) > 1 and usable(available) is None) or (connector.instance and available and
                             connector.instance not in {r["instance_id"] for r, _ in available}):
-                        result = {"instances": [{"instance": r["instance_id"],
-                                  "scene_name": h.get("scene_name")} for r, h in available]}
+                        result = {"instances": [{"instance": r["instance_id"], "scene_name": h.get("scene_name"),
+                                                 "signed_in": signed_in(h), "connected": bool(h.get("connected"))}
+                                                for r, h in available]}
                         return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(result))],
                                                     structured_content=result)
                 if args.get("session"):
@@ -172,7 +158,15 @@ def create_server(connector):
                            "usage": {"request_id": call_id, "credits_charged": 0}}
                 return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(payload))],
                                             structured_content=payload, meta={"mixar/request-id": call_id})
+            connector.client = presentation.client_info(ctx)
             result = await asyncio.to_thread(connector.call, params.name, args, call_id)
+            payload = result.get("structuredContent") or {}
+            if params.name == "mixar_ui_context" and isinstance(payload.get("result"), dict):
+                # Say whether scene work is possible in THIS session, and why not;
+                # also when the interface controller itself is still starting.
+                readiness, _ = await asyncio.to_thread(connector.readiness)
+                payload["result"].update(availability.scene_tools(status["listed"], readiness, connector.health))
+                result["content"][0] = {"type": "text", "text": json.dumps(payload)}
             if params.name == "mixar_tool_catalog" and not result.get("isError"):
                 payload = result["structuredContent"]["result"]
                 if "domains" in payload:
@@ -229,8 +223,7 @@ async def run(instance=None, session=None):
     server = create_server(connector)
     try:
         async with stdio_server() as (read, write):
-            await server.run(read, write, server.create_initialization_options(
-                notification_options=NotificationOptions(tools_changed=True)))
+            await server.run(read, write, server.create_initialization_options())
     finally:
         for task in list(connector.tasks):
             task.cancel()

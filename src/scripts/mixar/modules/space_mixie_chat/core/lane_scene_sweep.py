@@ -10,9 +10,11 @@ these itself (merge_scene on success, remove_scene on failure), but if the
 agent session dies first, those removal scripts arrive post-session and are
 dropped as stale by main_thread_executor — stranding the lane scenes in the
 user's file. This sweep runs when a session ends (turn settles to IDLE, New
-Chat, stale-script drop) and removes any leftover lane scenes, mirroring the
-backend's remove_scene semantics: objects visible ONLY in the lane scene are
-deleted, anything any other scene can still see survives untouched.
+Chat, stale-script drop). Token-owned workspaces with output or an incomplete
+merge remain available for backend reconciliation: session inactivity is not
+proof that a timed-out mutation failed. Only proven empty/helper-only owned
+workspaces may be swept. Legacy unowned lanes retain the old cleanup policy;
+objects visible from any other scene always survive.
 
 Everything here is main-thread only (mutates scenes) and fail-soft.
 """
@@ -22,6 +24,35 @@ from mixar.config.logging_config import get_logger
 from ..constants import AGENT_LANE_SESSION_PREFIX
 
 logger = get_logger(__name__)
+
+
+def _retention_reason(scene) -> str:
+    """Why a trusted workspace cannot be swept, or empty when cleanup is safe.
+
+    The backend owns publication/discard decisions. A clone is output too,
+    and an empty scene can still hold an incomplete publication transaction.
+    An unreadable inventory is never proof that the workspace is disposable.
+    """
+    import bpy
+
+    try:
+        token = scene.get("mixar_workspace_token")
+        if not token:
+            return ""  # Pre-token legacy lane; keep its existing cleanup policy.
+        for coll in bpy.data.collections:
+            if coll.get("mixar_workspace_token") == token:
+                state = coll.get("mixar_workspace_state")
+                plan = coll.get("mixar_workspace_merge_plan")
+                if state != "committed" and (state or plan is not None):
+                    return "merge_incomplete"
+        for obj in scene.collection.all_objects:
+            if (obj.get("mixar_workspace_source")
+                    or obj.get("mixar_workspace_token") != token
+                    or not obj.get("mixar_workspace_helper")):
+                return "workspace_output"
+    except Exception:
+        return "inventory_unavailable"
+    return ""
 
 
 def _lane_session_id(scene) -> str:
@@ -73,6 +104,13 @@ def _remove_lane_scene(lane) -> bool:
     if len(bpy.data.scenes) <= 1:
         return False
 
+    reason = _retention_reason(lane)
+    if reason:
+        from mixar.modules.common.scenes_log import slog
+        slog("sweep.retained", None, session_id=lane_parent_session(lane),
+             lane=getattr(lane, "name", "?"), reason=reason)
+        return False
+
     _point_windows_away_from(lane)
 
     outside = set()
@@ -106,8 +144,8 @@ def lane_parent_session(scene) -> str:
 def sweep_leaked_lane_scenes(parent_session_id: str = "") -> int:
     """Remove every leaked ``agentlane:*`` scene. Main thread only, fail-soft.
 
-    No-ops while an agent session is still active — lanes are only "leaked"
-    once nothing can legitimately clean them up anymore.
+    No-ops while the parent is active. Token-owned output remains recoverable
+    after its session ends; inactivity alone never authorizes deleting it.
     """
     import bpy
 

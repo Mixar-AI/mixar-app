@@ -13,6 +13,7 @@
 
 #include "BLI_rect.h"
 
+#include "mixie_chat_anim_pump.hh"
 #include "mixie_chat_layout_data.hh"
 #include "mixie_chat_ui_types.hh"
 namespace blender::gpu {
@@ -50,13 +51,6 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region);
 void mixie_chat_main_region_exit(wmWindowManager *wm, ARegion *region);
 void mixie_chat_main_region_listener(const wmRegionListenerParams *params);
 void mixie_chat_main_region_layout(const bContext *C, ARegion *region);
-
-/* Animation frame pump (mixie_chat_main_region.cc): a TIMERNOTIFIER wmTimer
- * that keeps chat redraws coming at animation rate while any draw-side
- * animation (slide-in, spinner/loader, scroll bounce) is live. Request from
- * the messages draw every frame; shutdown removes the timer outright. */
-void mixie_chat_anim_pump_request(const bContext *C, bool anim_active);
-void mixie_chat_anim_pump_shutdown(wmWindowManager *wm);
 
 /* Main region custom drawing */
 void mixie_chat_draw_messages(const bContext *C, ARegion *region);
