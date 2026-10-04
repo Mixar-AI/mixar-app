@@ -55,6 +55,18 @@ def refresh(context):
                      name="MixarUIEligibility").start()
 
 
+def _not_found_reason(response):
+    """A backend without the route answers FastAPI's bare "Not Found"; one with it
+    answers 404 when it cannot see this desktop's live agent connection."""
+    if response.status_code != 404:
+        return None
+    try:
+        detail = response.json().get("detail")
+    except (ValueError, AttributeError):
+        detail = None
+    return "backend_update_required" if detail in (None, "Not Found") else "desktop_not_connected"
+
+
 def _fetch(context, generation):
     global _refreshing, _deadline, _reason
     import requests
@@ -77,7 +89,7 @@ def _fetch(context, generation):
                         continue
                 break
             reason = {401: "signin_required", 403: "account_unavailable",
-                      404: "backend_update_required", 409: "client_update_required",
+                      404: _not_found_reason(response), 409: "client_update_required",
                       426: "client_update_required"}.get(response.status_code, reason)
             if response.status_code == 200:
                 data = response.json()

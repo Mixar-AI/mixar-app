@@ -26,7 +26,7 @@ def _scene():
     return SimpleNamespace(
         camera=object(),
         mixie_session_id="sess-1",
-        cycles=SimpleNamespace(samples=64, device="GPU"),
+        cycles=SimpleNamespace(samples=64, device="GPU", use_denoising=False),
         eevee=SimpleNamespace(taa_render_samples=64),
         render=SimpleNamespace(
             engine="CYCLES", resolution_x=1200, resolution_y=900,
@@ -322,9 +322,7 @@ def _device(preview, monkeypatch, *, allowed):
 
 
 def test_the_call_chooses_the_engine_and_eevee_is_not_the_scenes_cycles(preview, monkeypatch):
-    """Nothing used to choose: the scene's engine was whatever a worker script
-    had left on it, which is how three verification frames ran 45-66 s each on
-    Cycles CPU. EEVEE is now what the backend asks for by default."""
+    """An explicit engine request takes precedence over the scene's engine."""
     _device(preview, monkeypatch, allowed=True)
     scene = preview.bpy.context.scene
     result = preview.start(preview.bpy.context, KEY, width=1280, height=720, engine="eevee")

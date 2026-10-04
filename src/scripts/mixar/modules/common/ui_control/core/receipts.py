@@ -23,15 +23,22 @@ class Receipts:
         fd = os.open(path, os.O_CREAT | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0), 0o600)
         os.close(fd)
         self.db = sqlite3.connect(path, timeout=2, check_same_thread=False)
-        self.db.execute("PRAGMA journal_mode=WAL")
-        self.db.execute("PRAGMA synchronous=FULL")
-        self.db.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
-        self.db.execute("INSERT OR IGNORE INTO meta VALUES ('secret', ?)", (secrets.token_hex(32),))
-        self.secret = self.db.execute("SELECT value FROM meta WHERE key='secret'").fetchone()[0].encode()
-        self.db.execute("CREATE TABLE IF NOT EXISTS calls (id TEXT PRIMARY KEY, digest TEXT, status TEXT, created REAL)")
-        # Any prior accepted action belongs to a lost process; never redispatch it.
-        self.db.execute("UPDATE calls SET status='outcome_unknown' WHERE status IN ('accepted', 'running')")
-        self.db.commit()
+        try:
+            self.db.execute("PRAGMA journal_mode=WAL")
+            self.db.execute("PRAGMA synchronous=FULL")
+            self.db.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
+            self.db.execute("INSERT OR IGNORE INTO meta VALUES ('secret', ?)", (secrets.token_hex(32),))
+            self.secret = self.db.execute("SELECT value FROM meta WHERE key='secret'").fetchone()[0].encode()
+            self.db.execute("CREATE TABLE IF NOT EXISTS calls (id TEXT PRIMARY KEY, digest TEXT, status TEXT, created REAL)")
+            # Any prior accepted action belongs to a lost process; never redispatch it.
+            self.db.execute("UPDATE calls SET status='outcome_unknown' WHERE status IN ('accepted', 'running')")
+            self.db.commit()
+        except BaseException:
+            # A failed constructor is never assigned to service._receipts.
+            # Close here so its partially started transaction cannot retain a
+            # write lock and make all subsequent startup attempts fail too.
+            self.db.close()
+            raise
 
     def digest(self, principal, name, args):
         raw = json.dumps([principal, name, args], sort_keys=True, allow_nan=False).encode()

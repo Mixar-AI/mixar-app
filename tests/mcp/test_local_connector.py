@@ -26,7 +26,7 @@ SPEC.loader.exec_module(launcher)
 def relay(tmp_path, monkeypatch):
     monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "discovery"))
     context = {"instance_id": str(uuid.uuid4()), "session_id": str(uuid.uuid4()),
-               "scene_name": "MCP Test Scene", "connected": True}
+               "scene_name": "MCP Test Scene", "connected": True, "signed_in": True}
     calls = []
 
     def forward(request, snapshot, headers):
@@ -104,12 +104,22 @@ def test_transport_pins_explicit_scene_and_passes_call_id(relay):
 
 
 def test_disconnected_scene_never_forwards(relay):
+    """Listing tools needs only the account; anything reaching the scene needs the
+    desktop's live agent connection; nothing is forwarded while signed out."""
     server, context, calls = relay
     context["connected"] = False
-    status, _ = launcher.local_request(record(server), "POST", "/mcp",
-        b'{"jsonrpc":"2.0","id":1,"method":"tools/list"}')
-    assert status == 503
-    assert not calls
+    listing = b'{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+    call = b'{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"scene_overview"}}'
+    status, _ = launcher.local_request(record(server), "POST", "/mcp", call)
+    assert status == 503 and not calls
+    status, _ = launcher.local_request(record(server), "POST", "/mcp", listing)
+    assert status == 200 and len(calls) == 1
+    context["signed_in"] = False
+    status, body = launcher.local_request(record(server), "POST", "/mcp", listing)
+    assert status == 503 and b"Sign in" in body and len(calls) == 1
+    from mixar.modules.mcp_bridge.core import connector  # The agent sees the reason, not "HTTP 503".
+    with pytest.raises(RuntimeError, match="^Sign in to Mixar"):
+        connector.request(record(server), "POST", "/mcp", json.loads(call))
 
 
 def test_bad_session_never_forwards(relay):

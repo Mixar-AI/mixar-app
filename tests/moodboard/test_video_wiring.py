@@ -48,42 +48,92 @@ def test_inline_playback_is_compiled_and_reachable_from_video_clicks():
     assert "BKE_image_acquire_ibuf" in preview
     assert "MOV_get_duration_frames" in preview
     assert "MOV_get_fps" in preview
-    assert "WM_event_timer_add_notifier" in preview
+    assert "BLI_timer_register" in preview
     assert "moodboard_video_playback_frame" in preview
 
 
-def test_inline_playback_stops_when_the_pointer_leaves_its_tile():
+def _function(source: str, signature: str) -> str:
+    return source.split(signature, 1)[1].split("\n}\n", 1)[0]
+
+
+def test_inline_playback_runs_to_the_end_wherever_the_pointer_goes():
+    """A pass-through MOUSEMOVE monitor used to stop a movie the moment the
+    pointer left its tile (or crossed into the sidebar/header), so a clip could
+    only be watched by holding the mouse still over it. Nothing may stop
+    playback but the movie's own play/pause gesture or its end."""
+    preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
+    space = _read(SPACE_MIXIE / "space_mixie.cc")
+    intern = _read(SPACE_MIXIE / "mixie_intern.hh")
+    keymap = _read(MOODBOARD / "ui/keymap.py")
+
+    for source in (preview, space, intern):
+        assert "moodboard_video_hover" not in source
+        assert "stop_video_playback_outside_tile" not in source
+    assert "moodboard_video_hover" not in keymap
+    # The sidebar/header maps existed only to carry that monitor.
+    assert '"Mixie Sidebar"' not in space
+    assert '"Mixie Header"' not in space
+
+
+def test_inline_playback_plays_once_and_rests_on_the_first_frame():
+    """No hover stop means nothing else would ever end a looping clip, so a
+    movie plays through ONCE and returns to its poster frame."""
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
 
-    assert "stop_video_playback_outside_tile" in preview
-    assert "hovered_video_index_from_event" in preview
-    assert "playback.playing = false" in preview
-    assert "MIXIE_OT_moodboard_video_hover" in preview
-    assert "Stop inline moodboard video playback when the pointer leaves its tile" in preview
+    frame_at = _function(preview, "static int playback_frame_at(")
+    assert "%" not in frame_at, "playback must not wrap around and loop"
+    assert "if (frame > playback.frame_count)" in frame_at
+    finished = frame_at.split("if (frame > playback.frame_count)", 1)[1]
+    assert "playback.playing = false;" in finished
+    assert "playback.current_frame = 1;" in finished
+
+    # The frame that ends playback must already report "not playing", or the
+    # last redraw paints a pause glyph over the poster frame.
+    frame = _function(preview, "int moodboard_video_playback_frame(")
+    assert frame.index("playback_frame_at(") < frame.index("*r_is_playing = playback.playing")
+
+    # A press after the clip ran out restarts it instead of "pausing" it.
+    toggle = _function(preview, "bool moodboard_toggle_video_playback(")
+    settle = toggle.index("playback_frame_at(playback, now);")
+    assert settle < toggle.index("if (playback.playing)")
 
 
-def test_zen_drawer_is_a_canvas_for_video_hover():
-    """The Zen Mode moodboard is a View3D TOOL_PROPS drawer hosting the Mixie
-    canvas. Hover used to require RGN_TYPE_WINDOW only, so every mousemove in
-    the drawer forced hovered_index to -1 and stopped playback immediately —
-    play was never continuous. The drawer must hit-test like the Mixie window;
-    Mixie sidebar/header regions stay non-canvas so leaving the tile still
-    stops playback.
-    """
+def test_playback_redraw_tick_retires_itself_when_the_last_movie_ends():
+    """The redraw clock is a context-free BLI timer, so the tick that sees the
+    last movie end is the one that stops redrawing -- no event has to reach
+    the canvas, which may never happen once the pointer is elsewhere."""
     preview = _read(SPACE_MIXIE / "mixie_moodboard_ops_preview.cc")
-    common = _read(SPACE_MIXIE / "mixie_moodboard_ops_common.hh")
 
-    assert "hover_region_is_canvas" in preview
-    assert "RGN_TYPE_TOOL_PROPS" in preview
-    assert "moodboard_zen_drawer_active" in preview
-    # The WINDOW-only gate that broke the drawer must not be the sole test.
-    hover = preview.split("moodboard_video_hover_invoke(")[1].split(
-        "\n}\n", 1
-    )[0]
-    assert "hover_region_is_canvas(C, region)" in hover
-    assert "region->regiontype == RGN_TYPE_WINDOW ?" not in hover
-    assert "moodboard_zen_drawer_active" in common
-    assert 'STREQ(workspace->id.name + 2, "Zen Mode")' in common
+    assert "WM_event_timer_add_notifier" not in preview
+    tick = _function(preview, "static double video_redraw_tick(")
+    assert "prune_dead_playback_entries(G_MAIN);" in tick
+    assert "playback_frame_at(entry.second, now);" in tick
+    # The final tick still redraws, to put the poster and play glyph back.
+    assert "WM_main_add_notifier(NC_SPACE | ND_SPACE_MIXIE, nullptr);" in tick
+    assert "return any_playing ? MOODBOARD_VIDEO_REDRAW_SECONDS : -1.0;" in tick
+
+    ensure = _function(preview, "static void video_redraw_tick_ensure(")
+    assert "BLI_timer_is_registered(tick_id)" in ensure
+    toggle = _function(preview, "bool moodboard_toggle_video_playback(")
+    assert "video_redraw_tick_ensure();" in toggle
+
+
+def test_qa_exports_movie_playback_state():
+    """The harness can only assert playback through a QA target: the state is
+    C++ runtime-only. The disc must come from the shared play radius and the
+    node preview bounds, like the draw pass and both click hit-tests."""
+    qa = _read(SPACE_MIXIE / "mixie_moodboard_qa_targets.cc")
+
+    assert '"moodboard_video"' in qa
+    assert "moodboard_video_play_radius(v2d, tile)" in qa
+    assert "moodboard_graph_node_preview_bounds(*card, &tile)" in qa
+    assert "moodboard_video_playback_frame(image, &playing)" in qa
+    assert "t.sel = playing;" in qa
+    assert "t.value = std::to_string(frame);" in qa
+    # A node offers playback for its first embedded movie only, like the click.
+    assert "moodboard_find_embedded_media_index(&scene_ptr, owner) != i" in qa
+    graph_video = _read(SPACE_MIXIE / "mixie_moodboard_ops_graph_video.cc")
+    assert "moodboard_find_embedded_media_index(scene_ptr, node_id)" in graph_video
 
 
 def test_canvas_filters_preserve_leave_events_and_view2d_timers():
@@ -113,7 +163,7 @@ def test_inline_playback_is_runtime_only_and_cleans_up_on_shutdown():
     assert "static std::unordered_map<Image *, MoodboardVideoPlayback>" in preview
     assert "playback_frame_at" in preview
     assert "mixie_moodboard_video_playback_shutdown" in preview
-    assert "WM_event_timer_remove" in preview
+    assert "BLI_timer_unregister" in preview
     assert "g_video_playback.clear()" in preview
     assert "BKE_scene_add" not in preview
     assert "ED_screen_animation_play" not in preview

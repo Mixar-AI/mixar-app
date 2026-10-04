@@ -44,6 +44,7 @@
 
 #include "ED_node.hh"
 #include "ED_screen.hh"
+#include "ED_scenes_drawer.hh"
 #include "ED_view3d.hh"
 
 #include "GPU_batch_presets.hh"
@@ -1158,6 +1159,7 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
 
   /* Blit non-overlapping area regions. */
   ED_screen_areas_iter (win, screen, area) {
+    view3d_scenes_drawer_draw_background(area);
     for (ARegion &region : area->regionbase) {
       if (!region.runtime->visible) {
         continue;

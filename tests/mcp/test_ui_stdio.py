@@ -30,5 +30,5 @@ def test_sdk_initializes_and_exposes_ui_without_blender_or_backend(tmp_path):
                 assert {"mixar_ui_context", "mixar_ui_observe", "mixar_ui_act", "mixar_ui_call_status"} <= names
                 status = await session.call_tool("mixar_ui_context", {})
                 assert status.is_error
-                assert "unavailable" in str(status.content) or "starting" in str(status.content)
+                assert "Mixar is not open" in str(status.content)  # Nothing installed here.
     asyncio.run(run())

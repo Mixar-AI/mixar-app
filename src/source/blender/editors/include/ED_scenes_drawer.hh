@@ -42,6 +42,10 @@ class Texture;
 
 namespace blender {
 
+/** Fill the drawer column behind clipped overlap headers, in window pixel space.
+ * Called by the window compositor before blitting non-overlapping regions. */
+void view3d_scenes_drawer_draw_background(const ScrArea *area);
+
 /** Region type the Scenes drawer occupies on the 3D View. `TOOL_PROPS` is the
  * moodboard drawer; the navigation bar type is unused by View3D. */
 #define VIEW3D_SCENES_DRAWER_REGION_TYPE RGN_TYPE_NAV_BAR

@@ -611,70 +611,6 @@ void mixie_chat_main_region_draw(const bContext *C, ARegion *region)
   mixie_chat_draw_ink_overlay(C, region);
 }
 
-/* -------------------------------------------------------------------- */
-/** \name Animation Frame Pump
- *
- * Draw-side animations (bubble slide-in, spinner, streaming loader) advance
- * per draw and tag their own region — but a tag from inside a draw callback
- * does NOT wake Blender's idle event loop, so with no input events the next
- * frame only arrives on the next unrelated timer tick and animations stutter.
- *
- * The pump is a TIMERNOTIFIER wmTimer (same pattern as the View3D agent
- * strip tick): while any chat animation is live, it broadcasts
- * NC_SPACE | ND_SPACE_MIXIE_CHAT_TICK at CHAT_ANIM_PUMP_FPS; the (narrow)
- * main-region listener turns each tick into a redraw for every chat surface
- * (MIXIE_CHAT editor and the floating agent bubble).
- *
- * Lifecycle: every messages draw calls mixie_chat_anim_pump_request() with
- * whether that surface still animates. The timer is created on first demand
- * and removed after a short idle grace (the pump's own ticks keep draws
- * coming, so the idle path is guaranteed to run). Region exit removes it
- * outright — otherwise closing/switching away from the last chat surface
- * would leave an orphan timer waking the event loop forever. All removals go
- * through WM_event_timer_remove, which membership-checks first, so a pointer
- * the WM already freed on window close is a safe no-op.
- * \{ */
-
-#define CHAT_ANIM_PUMP_FPS 30.0
-#define CHAT_ANIM_PUMP_IDLE_GRACE 0.5 /* seconds without an active animation */
-
-static wmTimer *g_chat_anim_timer = nullptr;
-static double g_chat_anim_last_request = 0.0;
-
-void mixie_chat_anim_pump_request(const bContext *C, bool anim_active)
-{
-  wmWindowManager *wm = CTX_wm_manager(C);
-  if (wm == nullptr) {
-    return;
-  }
-  const double now = BLI_time_now_seconds();
-  if (anim_active) {
-    g_chat_anim_last_request = now;
-    if (g_chat_anim_timer == nullptr) {
-      wmWindow *win = CTX_wm_window(C);
-      if (win != nullptr) {
-        g_chat_anim_timer = WM_event_timer_add_notifier(
-            wm, win, NC_SPACE | ND_SPACE_MIXIE_CHAT_TICK, 1.0 / CHAT_ANIM_PUMP_FPS);
-      }
-    }
-  }
-  else if (g_chat_anim_timer != nullptr &&
-           (now - g_chat_anim_last_request) > CHAT_ANIM_PUMP_IDLE_GRACE)
-  {
-    WM_event_timer_remove(wm, nullptr, g_chat_anim_timer);
-    g_chat_anim_timer = nullptr;
-  }
-}
-
-void mixie_chat_anim_pump_shutdown(wmWindowManager *wm)
-{
-  if (wm == nullptr || g_chat_anim_timer == nullptr) {
-    return;
-  }
-  WM_event_timer_remove(wm, nullptr, g_chat_anim_timer);
-  g_chat_anim_timer = nullptr;
-}
-
 void mixie_chat_main_region_exit(wmWindowManager *wm, ARegion * /*region*/)
 {
   /* One of possibly several chat surfaces went away. If another surface is
@@ -718,8 +654,12 @@ void mixie_chat_main_region_listener(const wmRegionListenerParams *params)
       if (wmn->data == ND_SPACE_MIXIE_CHAT || wmn->data == ND_SPACE_AGENT_BUBBLE ||
           wmn->data == ND_SPACE_MIXIE_CHAT_TICK)
       {
-        /* MIXIE_CHAT_TICK is the animation frame pump (see above): it only
-         * redraws this main region, never the header/footer. */
+        /* Ticks expire even when the island is hidden or another tab owns
+         * its draw. Retain this last redraw so a stalled visible animation
+         * can settle or renew its request after the event loop resumes. */
+        if (wmn->data == ND_SPACE_MIXIE_CHAT_TICK) {
+          mixie_chat_anim_pump_tick();
+        }
         ED_region_tag_redraw(region);
       }
       break;

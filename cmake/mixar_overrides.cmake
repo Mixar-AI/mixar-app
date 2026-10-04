@@ -12,6 +12,7 @@ endif()
 
 # Windows/MSVC: Base compiler flags.
 if(CMAKE_HOST_WIN32)
+  include("${CMAKE_CURRENT_LIST_DIR}/windows_python_cache.cmake")
   set(CMAKE_CXX_FLAGS "/DWIN32 /D_WINDOWS /W3 /GR /EHsc" CACHE STRING "C++ compiler flags" FORCE)
   set(CMAKE_C_FLAGS "/DWIN32 /D_WINDOWS /W3" CACHE STRING "C compiler flags" FORCE)
 endif()
