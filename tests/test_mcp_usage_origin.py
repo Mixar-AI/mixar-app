@@ -180,9 +180,30 @@ def test_the_relay_thread_never_touches_blender(monkeypatch):
     touched, sent = [], []
     monkeypatch.setattr(bpy.app.timers, "register", lambda *a, **k: touched.append(a), raising=False)
     monkeypatch.setattr(capture_module, "capture", lambda event, props: sent.append((event, props["tool"])))
+    from mixar.modules.mcp_bridge.core import runtime
+    monkeypatch.setattr(runtime, "snapshot", lambda: {"headers": {"x-telemetry-consent": "1"}})
     worker = threading.Thread(target=usage.report, args=("mixar_scenes", {"mixar/client": {"name": "codex"}},
                                                          "s", {"isError": False}, 0.0))
     worker.start(); worker.join()
     assert not touched and not sent
     usage.flush()
     assert sent == [("mcp.tool_called", "mixar_scenes")]
+
+
+def test_a_call_made_while_opted_out_is_never_sent(monkeypatch):
+    """Turning Share Usage Data back on before the next tick must not send the
+    call made while it was off (consent is read when the call happens)."""
+    import importlib
+    from mixar.modules.mcp_bridge.core import runtime
+    capture_module = importlib.import_module("mixar.modules.common.analytics.capture")
+    sent = []
+    monkeypatch.setattr(capture_module, "capture", lambda event, props: sent.append(props["tool"]))
+    consent = {"value": "0"}
+    monkeypatch.setattr(runtime, "snapshot", lambda: {"headers": {"x-telemetry-consent": consent["value"]}})
+    usage.report("mixar_projects", {}, "s", {"isError": False}, 0.0)
+    consent["value"] = "1"  # Opted back in before the tick.
+    usage.flush()
+    assert sent == []
+    usage.report("mixar_scenes", {}, "s", {"isError": False}, 0.0)
+    usage.flush()
+    assert sent == ["mixar_scenes"]

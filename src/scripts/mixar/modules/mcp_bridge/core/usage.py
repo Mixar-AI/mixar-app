@@ -51,10 +51,19 @@ _pending = queue.SimpleQueue()
 _MAX_PENDING = 512
 
 
+def _consented():
+    """Share Usage Data as of the latest runtime tick, readable off the main thread."""
+    from . import runtime
+    return runtime.snapshot().get("headers", {}).get("x-telemetry-consent") == "1"
+
+
 def report(tool, meta, session, result, started):
-    """Called on the relay thread: queue the event, fail open."""
+    """Called on the relay thread: queue the event, fail open. Consent is checked
+    when the call happens and again when it is sent, so a call made while the
+    user opted out is never sent, even if sharing is turned back on before the
+    next tick."""
     try:
-        if _pending.qsize() >= _MAX_PENDING:
+        if _pending.qsize() >= _MAX_PENDING or not _consented():
             return
         client, version = client_of(meta)
         properties = {

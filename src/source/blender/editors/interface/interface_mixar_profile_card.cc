@@ -483,6 +483,14 @@ void UI_layout_mixar_profile_card(Layout *layout, bContext *C)
 {
   const AccountInfo info = read_account(C);
 
+  /* Every card button is an action (a dialog, a link, Logout): using one closes
+   * the card like a menu item, through the popover's own return path, so a
+   * dialog it opens is never drawn over it. Popovers set KEEP_OPEN before
+   * drawing; upstream clears it the same way for begin/end popovers. Never free
+   * the popover from a button function: the top-bar button that owns it would
+   * keep a dangling handle (crash on the dialog's Cancel). */
+  block_flag_disable(layout->block(), BLOCK_KEEP_OPEN);
+
   Layout &card = layout->column(false);
   MixarScope scope = card.mixar_scope();
   scope.density = mixar_chrome::density;

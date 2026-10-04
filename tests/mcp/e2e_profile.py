@@ -150,8 +150,24 @@ def run(qa, output, fixture, fallback_only):
         qa.click(**CONNECT)
         assert qa.find(text="MCP enabled", popup=True)["total"] == 1
         assert qa.find(op="MIXAR_OT_copy_mcp_setup", popup=True)["total"] >= 2
+        # The card closes once its button opened the dialog: nothing drawn under it.
+        assert qa.find(op="MIXAR_BYOK_OT_open_dialog", popup=True)["total"] == 0
+        assert qa.find(**CONNECT)["total"] == 0
         snap(qa, output / "setup-from-profile.png", {"text": "MCP enabled", "popup": True})
+        verdict["card_closes_behind_dialog"] = True
+        # Cancel the dialog (this crashed when the card was freed from a button
+        # function), then the card must open and work again.
+        qa.click(text="Cancel", popup=True)
+        time.sleep(1.0)
+        qa.eval("bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=3)\nresult=True")
+        assert qa.eval("result=True") is True and not qa.find(popup=True)["total"]
+        qa.click(text=email, area_type="TOPBAR")
+        qa.click(op="MIXAR_BYOK_OT_open_dialog", popup=True)  # Another dialog from the card.
+        time.sleep(0.6)
+        assert qa.find(**CONNECT)["total"] == 0  # The card closed behind it too.
         close_popups(qa)
+        assert qa.eval("result=True") is True
+        verdict["cancel_then_reopen_ok"] = True
         verdict["native_profile_entry_opens_setup"] = True
 
     # The Python fallback used by builds without the native card.
