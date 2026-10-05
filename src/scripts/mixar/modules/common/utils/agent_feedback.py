@@ -38,18 +38,21 @@ def clear_agent_gen_reason(context) -> None:
 
 
 _REF_KEY = "mixar_agent_ref"
+_ORIGIN_KEY = "mixar_job_origin"
 
 
 def clear_agent_ref(context=None) -> None:
-    """Discard an unclaimed ref when its synchronous agent script ends."""
+    """Discard an unclaimed ref (and its MCP origin) when its synchronous agent
+    script ends, so a later manual generation never inherits either."""
     try:
         if context is None:
             import bpy
 
             context = bpy.context
         wm = context.window_manager
-        if _REF_KEY in wm.keys():
-            del wm[_REF_KEY]
+        for key in (_REF_KEY, _ORIGIN_KEY):
+            if key in wm.keys():
+                del wm[key]
     except Exception:
         pass
 
@@ -89,3 +92,21 @@ def take_agent_ref(context) -> dict:
     if not isinstance(ref, dict) or not ref.get("generation_id"):
         return {}
     return {str(k): v for k, v in ref.items()}
+
+
+def take_job_origin(context) -> str:
+    """Read and CLEAR the backend's MCP marker for this enqueue: ``"mcp"`` or "".
+
+    The backend's enqueue script sets ``mixar_job_origin`` beside the agent ref
+    when an external AI app (MCP) asked for the generation, so the job submit
+    can say so (``X-Mixar-Job-Origin``). Cleared like the ref so a later manual
+    generation never inherits it.
+    """
+    try:
+        wm = context.window_manager
+        value = str(wm.get(_ORIGIN_KEY, "") or "")
+        if _ORIGIN_KEY in wm.keys():
+            del wm[_ORIGIN_KEY]
+    except Exception:
+        return ""
+    return "mcp" if value == "mcp" else ""

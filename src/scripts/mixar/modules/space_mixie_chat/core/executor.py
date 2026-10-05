@@ -54,16 +54,8 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
     """
     Safely executes generated bpy scripts.
 
-    Features:
-    - Captures stdout/stderr
-    - Detects scene changes (created/modified/deleted objects)
-    - Handles errors gracefully
-    - Integrates with Blender's undo system
-    - Cleans up bpy.app.handlers installed by scripts (HandlerCleanupMixin,
-      which exempts the preview-render callbacks by identity)
-    - Scene snapshot / diff and Object-mode restore (SceneStateMixin)
-    - Hardened sandbox: os and pathlib are NOT exposed at all; open, tempfile,
-      base64, urllib are restricted wrappers
+    Captures output, object changes and undo; restricts modules/builtins and
+    removes untrusted handlers. Preview callbacks are exempted by identity.
     """
 
     # Agent turn tracking for undo checkpoints (see AGENT_UNDO_* constants)
@@ -256,16 +248,7 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         return False
 
     def execute(self, script: str, push_undo: bool = True, session_id: str = "") -> ExecutionResult:
-        """
-        Execute a bpy script safely.
-
-        Args:
-            script: Python script to execute
-            push_undo: Whether to push an undo step before execution
-
-        Returns:
-            ExecutionResult with success status, output, and detected changes
-        """
+        """Execute under one lock, including preparation, snapshots and cleanup."""
         from mixar.modules.common.ui_control.core.ownership import active as ui_active
         if ui_active():
             return ExecutionResult(success=False, error="ui_busy: release native UI control before running scripts")
@@ -276,7 +259,12 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                 success=False,
                 error="Previous script still executing",
             )
+        try:
+            return self._execute_locked(script, push_undo, session_id)
+        finally:
+            self._execution_lock.release()
 
+    def _execute_locked(self, script, push_undo, session_id):
         self._current_session = session_id or ""
         # Capture scene state before execution
         before_state = self._capture_scene_state()
@@ -515,15 +503,14 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             # from `finalize_turn`), never between scripts: a script may leave
             # the tab in Edit / Sculpt / Texture Paint mode on purpose for the
             # next one. Here only the mode the turn started in is noted.
-            self.note_turn_mode(session_id, mode_before)
-            self._execution_lock.release()
-
-            # Clean up any handlers the script may have installed
-            self._cleanup_handlers(handler_snapshot)
-
-            # Restore stdout/stderr
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
+            try:
+                self.note_turn_mode(session_id, mode_before)
+                self._cleanup_handlers(handler_snapshot)
+            finally:
+                # Even a cleanup/RNA failure cannot leave the app's output
+                # redirected or the outer execution lock permanently held.
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
 
             # Capture output
             result.output = captured_stdout.getvalue()

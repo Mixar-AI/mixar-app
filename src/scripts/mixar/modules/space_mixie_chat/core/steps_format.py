@@ -107,12 +107,12 @@ def infer_step_kind(tool_name: str) -> str:
     return "TOOL"
 
 
-# Friendly, past-tense labels for the backend tools the user should be able
+# Friendly labels for the backend tools the user should be able
 # to recognise. The RAW tool name is never shown: an unknown name falls back
 # to the script classifier and then to the generic "Tool call" the result
 # counts refine on finish. Keep this table small and human — it is UI copy.
 _TOOL_LABELS = {
-    "render_viewport": n_("Captured viewport"),
+    "render_viewport": n_("Viewport render"),
     "render_viewport_final": n_("Rendered final image"),
     "render_final": n_("Rendered final image"),
     "render_multiview": n_("Captured views"),
@@ -139,7 +139,7 @@ CAPTURE_TOOLS = frozenset({
 def humanize_tool_name(tool_name: str) -> str:
     """Row label for a backend tool name — a friendly phrase, never the name.
 
-    "render_viewport" -> "Captured viewport". Names not in the table (the
+    "render_viewport" -> "Viewport render". Names not in the table (the
     backend sends "unknown" when a script has no tool name and
     "execute_bpy_script" for generated scripts) fall back to the generic
     label so the script classifier / result counts label the row by what

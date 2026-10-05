@@ -394,3 +394,25 @@ def test_recovery_clears_only_archive_warning_across_workers(module, monkeypatch
     replacement._recovered()
     assert items == {'unrelated': 'keep me'}
     notifications.dismiss.assert_called_once_with(module.SYNC_NOTICE_ID)
+
+
+def test_idle_discovery_is_bounded_but_live_scenes_and_new_owner_are_immediate(module, monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(module.time, 'monotonic', lambda: now[0])
+    discovered = Mock(side_effect=[['old-a'], ['old-a', 'old-b'], ['other-owner']])
+    monkeypatch.setattr(module.store, 'known_sessions', discovered)
+    sync = module.ArchiveSync(types.SimpleNamespace())
+    sync.scene_ids = {'live-a': 'history-a'}
+    assert sync._known_sessions() == ['live-a']
+    discovered.assert_not_called()
+    sync.owner = 'owner'
+    assert sync._known_sessions() == ['live-a', 'old-a']
+    sync.scene_ids['live-b'] = 'history-b'
+    now[0] += module.DISCOVERY_SECONDS - 1
+    assert sync._known_sessions() == ['live-a', 'live-b', 'old-a']
+    discovered.assert_called_once_with('owner')
+    now[0] += 1
+    assert sync._known_sessions() == ['live-a', 'live-b', 'old-a', 'old-b']
+    sync.owner = 'different'
+    assert sync._known_sessions() == ['live-a', 'live-b', 'other-owner']
+    assert discovered.call_count == 3

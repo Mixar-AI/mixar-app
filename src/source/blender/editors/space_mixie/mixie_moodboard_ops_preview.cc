@@ -5,19 +5,27 @@
 /** \file
  * \ingroup spmixie
  * \brief Runtime-only inline playback for moodboard movies.
+ *
+ * A movie plays ONCE, start to finish, at its native frame rate, then rests on
+ * its first frame. Only its own play/pause affordance (or a double-click) stops
+ * it early: where the pointer goes meanwhile is irrelevant, so a user can watch
+ * a clip while working elsewhere on the board.
  */
 
 #include "mixie_moodboard_ops_common.hh"
 
 #include <unordered_map>
 
+#include "BKE_global.hh"
+
 #include "BLI_listbase.h"
+#include "BLI_timer.h"
 
 #include "MOV_read.hh"
 
 namespace blender::ed::mixie {
 
-static constexpr double MOODBOARD_VIDEO_REDRAW_FPS = 30.0;
+static constexpr double MOODBOARD_VIDEO_REDRAW_SECONDS = 1.0 / 30.0;
 static constexpr float MOODBOARD_VIDEO_FALLBACK_FPS = 24.0f;
 
 struct MoodboardVideoPlayback {
@@ -27,12 +35,11 @@ struct MoodboardVideoPlayback {
   int frame_count = 1;
   float fps = MOODBOARD_VIDEO_FALLBACK_FPS;
   double started_at = 0.0;
-  Scene *owner_scene = nullptr;
-  int item_index = -1;
 };
 
 static std::unordered_map<Image *, MoodboardVideoPlayback> g_video_playback;
-static wmTimer *g_video_redraw_timer = nullptr;
+/** Only its address is used: the BLI timer id of the playback redraw tick. */
+static char g_video_tick_identity;
 
 Image *moodboard_item_image(PointerRNA *scene_ptr, const int index)
 {
@@ -56,36 +63,30 @@ Image *moodboard_item_image(PointerRNA *scene_ptr, const int index)
 
 static int playback_frame_at(MoodboardVideoPlayback &playback, const double now)
 {
-  if (!playback.playing || playback.frame_count <= 1) {
+  if (!playback.playing) {
     return playback.current_frame;
   }
 
   const double elapsed_seconds = std::max(now - playback.started_at, 0.0);
-  const int elapsed_frames = int(elapsed_seconds * playback.fps);
-  const int zero_based_frame = (playback.start_frame - 1 + elapsed_frames) %
-                               playback.frame_count;
-  playback.current_frame = zero_based_frame + 1;
+  const int frame = playback.start_frame + int(elapsed_seconds * playback.fps);
+  if (frame > playback.frame_count) {
+    /* Played through. Rest on the first frame -- the poster the tile showed
+     * before it was started -- so the next press plays the movie again. */
+    playback.playing = false;
+    playback.current_frame = 1;
+    return playback.current_frame;
+  }
+  playback.current_frame = frame;
   return playback.current_frame;
 }
 
-static bool any_video_playing()
-{
-  for (const auto &entry : g_video_playback) {
-    if (entry.second.playing) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static void prune_dead_playback_entries(bContext *C)
+static void prune_dead_playback_entries(Main *bmain)
 {
   /* Playback state is keyed on `Image *`. Generated movies are owned by their
    * inference node and freed with it, so deleting a node mid-playback would
    * otherwise leave an entry keyed on a dangling pointer — which a later
    * datablock allocated at the same address would inherit, appearing to start
    * mid-playback. Validate against Main instead of trusting the key. */
-  Main *bmain = CTX_data_main(C);
   if (!bmain) {
     return;
   }
@@ -99,114 +100,36 @@ static void prune_dead_playback_entries(bContext *C)
   }
 }
 
-static void video_redraw_timer_update(bContext *C)
+/**
+ * The one clock behind every playing movie. A BLI timer rather than a window
+ * timer: it needs no context, so the tick that sees the last movie play
+ * through is also the one that retires the redraw -- without waiting for an
+ * event to reach the canvas, which may never come once the pointer is gone.
+ */
+static double video_redraw_tick(uintptr_t /*uuid*/, void * /*user_data*/)
 {
-  prune_dead_playback_entries(C);
-  wmWindowManager *wm = CTX_wm_manager(C);
-  if (!wm) {
-    return;
-  }
-
-  if (any_video_playing()) {
-    if (!g_video_redraw_timer) {
-      wmWindow *window = CTX_wm_window(C);
-      if (window) {
-        g_video_redraw_timer = WM_event_timer_add_notifier(
-            wm, window, NC_SPACE | ND_SPACE_MIXIE, 1.0 / MOODBOARD_VIDEO_REDRAW_FPS);
-      }
-    }
-  }
-  else if (g_video_redraw_timer) {
-    WM_event_timer_remove(wm, nullptr, g_video_redraw_timer);
-    g_video_redraw_timer = nullptr;
-  }
-}
-
-static bool stop_video_playback_outside_tile(bContext *C,
-                                             Scene *hovered_scene,
-                                             const int hovered_index)
-{
+  prune_dead_playback_entries(G_MAIN);
   const double now = BLI_time_now_seconds();
-  bool stopped = false;
+  bool any_playing = false;
   for (auto &entry : g_video_playback) {
-    MoodboardVideoPlayback &playback = entry.second;
-    if (playback.playing &&
-        (playback.owner_scene != hovered_scene || playback.item_index != hovered_index))
-    {
-      playback_frame_at(playback, now);
-      playback.playing = false;
-      stopped = true;
-    }
+    playback_frame_at(entry.second, now);
+    any_playing |= entry.second.playing;
   }
-
-  if (stopped) {
-    video_redraw_timer_update(C);
-    WM_event_add_notifier(C, NC_SPACE | ND_SPACE_MIXIE, nullptr);
-  }
-  return stopped;
+  /* Sent on the final tick too: that redraw puts the poster frame and the
+   * play glyph back once a movie has finished. */
+  WM_main_add_notifier(NC_SPACE | ND_SPACE_MIXIE, nullptr);
+  return any_playing ? MOODBOARD_VIDEO_REDRAW_SECONDS : -1.0;
 }
 
-static int hovered_video_index_from_event(bContext *C,
-                                          PointerRNA *scene_ptr,
-                                          const wmEvent *event)
+static void video_redraw_tick_ensure()
 {
-  ARegion *region = CTX_wm_region(C);
-  if (!region || event->xy[0] < region->winrct.xmin || event->xy[0] > region->winrct.xmax ||
-      event->xy[1] < region->winrct.ymin || event->xy[1] > region->winrct.ymax)
-  {
-    return -1;
+  const uintptr_t tick_id = uintptr_t(&g_video_tick_identity);
+  if (!BLI_timer_is_registered(tick_id)) {
+    /* Persistent: across a file load the tick prunes the old file's entries
+     * against the new Main and then retires itself. */
+    BLI_timer_register(
+        tick_id, video_redraw_tick, nullptr, nullptr, MOODBOARD_VIDEO_REDRAW_SECONDS, true);
   }
-
-  const int region_x = event->xy[0] - region->winrct.xmin;
-  const int region_y = event->xy[1] - region->winrct.ymin;
-  float mouse_x, mouse_y;
-  ui::view2d_region_to_view(&region->v2d, region_x, region_y, &mouse_x, &mouse_y);
-
-  float pos_x, pos_y, scale, width, height;
-  const int index = moodboard_find_image_under_mouse(
-      scene_ptr, mouse_x, mouse_y, &pos_x, &pos_y, &scale, &width, &height);
-  if (index >= 0 && moodboard_item_is_video(scene_ptr, index)) {
-    return index;
-  }
-  /* Node-owned movies are skipped by the standalone-tile hit-test above, so
-   * without this the pointer would read as "outside every video tile" the
-   * moment it moves and stop the playback it just started. */
-  return moodboard_find_node_preview_video_under_mouse(
-      scene_ptr, mouse_x, mouse_y, nullptr);
-}
-
-static bool hover_region_is_canvas(const bContext *C, const ARegion *region)
-{
-  if (region == nullptr) {
-    return false;
-  }
-  /* Mixie WINDOW is the ordinary moodboard canvas. The Zen Mode drawer hosts
-   * the same canvas inside a View3D TOOL_PROPS region — treating only WINDOW
-   * as a canvas forced hovered_index to -1 on every drawer mousemove and
-   * stopped playback the moment the pointer moved. Sidebar/header Mixie
-   * regions stay non-canvas so leaving the tile still stops playback. */
-  if (region->regiontype == RGN_TYPE_WINDOW) {
-    return true;
-  }
-  return region->regiontype == RGN_TYPE_TOOL_PROPS && moodboard_zen_drawer_active(C);
-}
-
-static wmOperatorStatus moodboard_video_hover_invoke(bContext *C,
-                                                     wmOperator * /*op*/,
-                                                     const wmEvent *event)
-{
-  if (!any_video_playing()) {
-    return OPERATOR_PASS_THROUGH;
-  }
-
-  Scene *scene = CTX_data_scene(C);
-  PointerRNA scene_ptr = scene ? RNA_id_pointer_create(&scene->id) : PointerRNA_NULL;
-  ARegion *region = CTX_wm_region(C);
-  const int hovered_index = scene && hover_region_is_canvas(C, region) ?
-                                hovered_video_index_from_event(C, &scene_ptr, event) :
-                                -1;
-  stop_video_playback_outside_tile(C, scene, hovered_index);
-  return OPERATOR_PASS_THROUGH;
 }
 
 bool moodboard_item_is_video(PointerRNA *scene_ptr, const int index)
@@ -226,6 +149,7 @@ bool moodboard_toggle_video_playback(bContext *C,
     return false;
   }
 
+  prune_dead_playback_entries(CTX_data_main(C));
   auto playback_it = g_video_playback.find(image);
   if (playback_it == g_video_playback.end()) {
     /* Decoding the first frame validates the source and initializes Image::anims,
@@ -261,19 +185,19 @@ bool moodboard_toggle_video_playback(bContext *C,
 
   MoodboardVideoPlayback &playback = playback_it->second;
   const double now = BLI_time_now_seconds();
+  /* Settle first: a movie that played through since the last tick is
+   * finished, and this press must start it again rather than "pause" it. */
+  playback_frame_at(playback, now);
   if (playback.playing) {
-    playback_frame_at(playback, now);
     playback.playing = false;
   }
   else {
     playback.start_frame = playback.current_frame;
     playback.started_at = now;
-    playback.owner_scene = static_cast<Scene *>(scene_ptr->data);
-    playback.item_index = index;
     playback.playing = true;
+    video_redraw_tick_ensure();
   }
 
-  video_redraw_timer_update(C);
   WM_event_add_notifier(C, NC_SPACE | ND_SPACE_MIXIE, nullptr);
   return true;
 }
@@ -289,34 +213,19 @@ int moodboard_video_playback_frame(Image *image, bool *r_is_playing)
   }
 
   MoodboardVideoPlayback &playback = playback_it->second;
+  /* Advance before reporting: the frame that ends playback must draw with
+   * the play glyph, not a pause glyph over the poster. */
+  const int frame = playback_frame_at(playback, BLI_time_now_seconds());
   if (r_is_playing) {
     *r_is_playing = playback.playing;
   }
-  return playback_frame_at(playback, BLI_time_now_seconds());
+  return frame;
 }
 
-void mixie_moodboard_video_playback_shutdown(wmWindowManager *wm)
+void mixie_moodboard_video_playback_shutdown()
 {
-  if (wm && g_video_redraw_timer) {
-    WM_event_timer_remove(wm, nullptr, g_video_redraw_timer);
-  }
-  g_video_redraw_timer = nullptr;
+  BLI_timer_unregister(uintptr_t(&g_video_tick_identity));
   g_video_playback.clear();
 }
 
 }  // namespace blender::ed::mixie
-
-
-/* Mixar 5.2 port: operator registrations live in namespace blender. */
-namespace blender {
-void MIXIE_OT_moodboard_video_hover(wmOperatorType *ot)
-{
-  ot->name = "Moodboard Video Hover Monitor";
-  ot->idname = "MIXIE_OT_moodboard_video_hover";
-  ot->description = "Stop inline moodboard video playback when the pointer leaves its tile";
-
-  ot->invoke = blender::ed::mixie::moodboard_video_hover_invoke;
-  ot->poll = blender::ed::mixie::moodboard_poll;
-  ot->flag = OPTYPE_INTERNAL;
-}
-}  // namespace blender

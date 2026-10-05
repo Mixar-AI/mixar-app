@@ -12,9 +12,7 @@
  * routes it to the card's own drawing (see
  * `interface_mixar_profile_card_draw.cc`).
  *
- * Everything the card shows is read from RNA that Python owns; nothing
- * is cached here, so a stale card is impossible and there is no second
- * source of truth for account state.
+ * Account state is read live from Python-owned RNA.
  */
 
 #include <algorithm>
@@ -352,8 +350,8 @@ void add_usage(Layout *layout, const AccountInfo &info)
     RNA_string_set(&props, "target", MIXAR_TARGET_BUY_CREDITS);
   }
   else {
-    /* Trial, cancelling and free accounts cannot top up — the server
-     * refuses it, so offer plans rather than a button that would fail. */
+    /* Every signed-in account can top up — no subscription needed — so
+     * this is only a fallback: plans are the one page that never refuses. */
     PointerRNA props = cta.op("MIXAR_OT_open_billing", cta_label, ICON_NONE);
     RNA_string_set(&props, "target", MIXAR_TARGET_PRICING);
   }
@@ -420,7 +418,8 @@ void add_action(Layout *layout,
 
 void add_actions(Layout *layout)
 {
-  Layout &grid = layout->column(false);
+  /* Button insets supply the same gap horizontally and vertically. */
+  Layout &grid = layout->column(true);
 
   Layout &top = grid.row(true);
   top.scale_y_set(ROW_ACTION);
@@ -437,6 +436,12 @@ void add_actions(Layout *layout)
   settings.operator_context_set(wm::OpCallContext::InvokeDefault);
   add_action(&settings, "MIXAR_BYOK_OT_open_dialog", N_("AI Provider Settings"),
              MixarCardIcon::Sliders, MixarCardElement::CardButton);
+
+  Layout &connect = grid.row(true);
+  connect.scale_y_set(ROW_ACTION);
+  connect.operator_context_set(wm::OpCallContext::InvokeDefault);
+  add_action(&connect, "MIXAR_OT_connect_ai", N_("Connect AI Apps (MCP)"),
+             MixarCardIcon::Plug, MixarCardElement::CardButton);
 
   Layout &bottom = grid.row(true);
   bottom.scale_y_set(ROW_ACTION);
@@ -467,9 +472,6 @@ void add_logout(Layout *layout)
 
 }  // namespace
 
-/* -------------------------------------------------------------------- */
-/* Public API                                                            */
-
 MixarCardElement UI_mixar_card_element_get(const Button *but)
 {
   return but && but->mixar_style.component == MixarComponent::LegacyCard &&
@@ -480,6 +482,14 @@ MixarCardElement UI_mixar_card_element_get(const Button *but)
 void UI_layout_mixar_profile_card(Layout *layout, bContext *C)
 {
   const AccountInfo info = read_account(C);
+
+  /* Every card button is an action (a dialog, a link, Logout): using one closes
+   * the card like a menu item, through the popover's own return path, so a
+   * dialog it opens is never drawn over it. Popovers set KEEP_OPEN before
+   * drawing; upstream clears it the same way for begin/end popovers. Never free
+   * the popover from a button function: the top-bar button that owns it would
+   * keep a dangling handle (crash on the dialog's Cancel). */
+  block_flag_disable(layout->block(), BLOCK_KEEP_OPEN);
 
   Layout &card = layout->column(false);
   MixarScope scope = card.mixar_scope();

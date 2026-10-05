@@ -74,8 +74,8 @@ def test_profile_card_offers_refer_a_friend_with_its_own_glyph():
     assert '"MIXAR_OT_refer_friend", "Refer a Friend", MixarCardIcon::Gift' in card
     assert "Gift," in TYPES_HH.read_text(encoding="utf-8")
     assert "case MixarCardIcon::Gift:" in ICONS_CC.read_text(encoding="utf-8")
-    # The payload → icon clamp must reach the newest glyph, or Gift draws as Cross.
-    assert "int(MixarCardIcon::Gift)" in STYLE_CC.read_text(encoding="utf-8")
+    # The payload → icon clamp must include every glyph, including Gift.
+    assert "int(MixarCardIcon::Count) - 1" in STYLE_CC.read_text(encoding="utf-8")
     assert '"mixar.refer_friend"' in TOPBAR_PY.read_text(encoding="utf-8")
 
 

@@ -117,6 +117,7 @@ coverage.xml
 # Local QA evidence is not versioned; keep replay scripts and contracts.
 /docs/development/evidence/
 /docs/development/**/*.png
+/docs/development/mixar-mcp/
 /docs/development/**/*.json
 
 # Translations
