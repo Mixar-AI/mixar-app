@@ -243,6 +243,9 @@ def capture_session_ended(reason: str) -> None:
 
 def _on_consent_changed(self, context) -> None:
     set_enabled(bool(self.mixar_share_usage_data))
+    if not self.mixar_share_usage_data:
+        from mixar.modules.common.analytics.essential_events import reset_cinema_sessions
+        reset_cinema_sessions()
     if self.mixar_share_usage_data:
         try:
             capture(EVENT_TELEMETRY_ENABLED, context=context)
@@ -283,6 +286,8 @@ def _on_undo_post(*_unused) -> None:
 @persistent
 def _on_load(_unused) -> None:
     global _last_chat_mode, _last_history
+    from mixar.modules.common.analytics.essential_events import reset_cinema_sessions
+    reset_cinema_sessions()
     _last_panels.clear()
     _last_sidebars.clear()
     _suppressed_panels.clear()
