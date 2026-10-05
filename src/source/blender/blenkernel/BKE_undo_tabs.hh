@@ -200,6 +200,8 @@ void BKE_undo_tabs_walk_restored_note(const UndoStep *source);
  * with the data of the objects in Edit Mode now. */
 void BKE_undo_tabs_walk_restored_take(UndoStep *us, Main *bmain);
 void BKE_undo_tabs_walk_restored_free(UndoStep *us);
+/** A step was freed: drop the per-step change-check caches (a pointer may be reused). */
+void BKE_undo_tabs_step_caches_forget();
 /** The stack was cleared: the collected re-reads point at freed steps. */
 void BKE_undo_tabs_walk_restored_forget();
 bool BKE_undo_tabs_partial_active();

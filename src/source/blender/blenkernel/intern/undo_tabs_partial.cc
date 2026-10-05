@@ -13,12 +13,14 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <string>
 
 #include "CLG_log.h"
 
 #include "BLI_listbase.h"
 #include "BLI_utildefines.h"
+#include "BLI_hash.hh"
 #include "BLI_map.hh"
 #include "BLI_string.h"
 #include "BLI_time.h"
@@ -794,6 +796,71 @@ static int step_index(const UndoStack *ustack, const UndoStep *us)
 /** One change to a shared datablock: the stack index of the step that shows it
  * (a memfile step whose chunks for it differ from the memfile before, or a mode
  * step that names it) and an author of that change. */
+/** One memfile step's chunks per datablock and its address map, built once: a step's
+ * memfile never changes while the step lives. */
+struct StepIndex {
+  IdChunks chunks;
+  IdAddresses ids;
+};
+
+struct EqKey {
+  const UndoStep *a;
+  const UndoStep *b;
+  uint32_t uid;
+  uint64_t hash() const
+  {
+    return get_default_hash(a, b, uid);
+  }
+  friend bool operator==(const EqKey &x, const EqKey &y)
+  {
+    return x.a == y.a && x.b == y.b && x.uid == y.uid;
+  }
+};
+
+/* Every press re-reads the change history of every shared datablock across the
+ * whole stack (twice: the check and the walk), byte-comparing big arrays where
+ * copies are equal: 80-90 ms a press on a 2M-vertex mesh over 200 steps
+ * (tests/undo_isolation/undo_perf.py, MIXAR_UNDO_PERF_TOUCH). Both caches are
+ * dropped whenever a step is freed (a pointer could be reused). */
+static Map<const UndoStep *, std::unique_ptr<StepIndex>> g_step_index;
+static Map<EqKey, bool> g_eq_cache;
+
+void BKE_undo_tabs_step_caches_forget()
+{
+  g_step_index.clear();
+  g_eq_cache.clear();
+}
+
+static const StepIndex &step_index_of(const UndoStep *us)
+{
+  std::unique_ptr<StepIndex> &slot = g_step_index.lookup_or_add_cb(us, [&]() {
+    auto index = std::make_unique<StepIndex>();
+    if (const MemFile *memfile = g_memfile_get != nullptr ? g_memfile_get(us) : nullptr) {
+      for (const MemFileChunk &chunk : memfile->chunks) {
+        if (chunk.id_session_uid != 0) {
+          index->chunks.lookup_or_add_default(chunk.id_session_uid).append(&chunk);
+        }
+      }
+      index->ids = memfile_id_addresses(memfile);
+    }
+    return index;
+  });
+  return *slot;
+}
+
+static bool steps_id_equal(const UndoStep *a, const UndoStep *b, const uint32_t uid, const ID *id)
+{
+  const EqKey key{a, b, uid};
+  if (const bool *hit = g_eq_cache.lookup_ptr(key)) {
+    return *hit;
+  }
+  const StepIndex &ia = step_index_of(a);
+  const StepIndex &ib = step_index_of(b);
+  const bool equal = id_chunks_equal(ia.chunks.lookup_ptr(uid), ib.chunks.lookup_ptr(uid), id, ia.ids, ib.ids);
+  g_eq_cache.add(key, equal);
+  return equal;
+}
+
 struct IdChange {
   int index;
   uint32_t author;
@@ -813,14 +880,8 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
   for (const auto item : watched.items()) {
     uids.add(item.key);
   }
-  IdChunks prev;
-  IdAddresses prev_ids;
+  const UndoStep *prev_step = nullptr;
   bool have_prev = false;
-  struct SourceView {
-    IdChunks chunks;
-    IdAddresses ids;
-  };
-  Map<const UndoStep *, SourceView> sources;
   auto walk_source = [&](const UndoStep *step, const uint32_t uid) -> WalkSource {
     const WalkRestored *wr = static_cast<const WalkRestored *>(step->mixar_walk_restored);
     if (wr == nullptr || g_memfile_get == nullptr) {
@@ -889,34 +950,24 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
       }
       continue;
     }
-    IdChunks cur = memfile_id_chunks(memfile, uids);
-    IdAddresses cur_ids = memfile_id_addresses(memfile);
     if (have_prev) {
       for (const uint32_t uid : uids) {
         /* Re-read by a walk since the previous push: what the push changed is its
          * difference from the step the walk read it from. */
         const WalkSource walked = walk_source(us, uid);
         bool changed;
+        const ID *id = watched.lookup(uid);
         if (walked.step != nullptr) {
-          const UndoStep *source = walked.step;
-          const SourceView &sv = sources.lookup_or_add_cb(source, [&]() {
-            const MemFile *mf = g_memfile_get(source);
-            return SourceView{memfile_id_chunks(mf, uids), memfile_id_addresses(mf)};
-          });
-          changed = !id_chunks_equal(
-              sv.chunks.lookup_ptr(uid), cur.lookup_ptr(uid), watched.lookup(uid), sv.ids, cur_ids);
+          changed = !steps_id_equal(walked.step, us, uid, id);
           /* The walk's own change (it re-read another version than the previous
            * memfile held) is the walking tab's: a tab's undo that took back its
            * own recolour of a shared material is a change to that material. */
-          if (!id_chunks_equal(
-                  prev.lookup_ptr(uid), sv.chunks.lookup_ptr(uid), watched.lookup(uid), prev_ids, sv.ids))
-          {
+          if (!steps_id_equal(prev_step, walked.step, uid, id)) {
             out.lookup_or_add_default(uid).append({index, walked.tab, true});
           }
         }
         else {
-          changed = !id_chunks_equal(
-              prev.lookup_ptr(uid), cur.lookup_ptr(uid), watched.lookup(uid), prev_ids, cur_ids);
+          changed = !steps_id_equal(prev_step, us, uid, id);
         }
         if (changed) {
           /* A datablock a mode step named since the previous memfile: this memfile
@@ -949,8 +1000,7 @@ static IdChanges collect_id_changes(const UndoStack *ustack, const Map<uint32_t,
         }
       }
     }
-    prev = std::move(cur);
-    prev_ids = std::move(cur_ids);
+    prev_step = us;
     have_prev = true;
     mode_authors.clear();
   }

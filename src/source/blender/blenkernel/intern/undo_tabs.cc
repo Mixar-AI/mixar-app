@@ -438,6 +438,7 @@ void BKE_undo_step_tab_annotate(UndoStep *us, bContext *C, Main *bmain, const Un
 void BKE_undo_step_tab_free(UndoStep *us)
 {
   BKE_undo_tabs_walk_restored_free(us);
+  BKE_undo_tabs_step_caches_forget();
   if (us != nullptr && us->mixar_owners != nullptr) {
     BKE_undo_owner_map_free(us->mixar_owners);
     us->mixar_owners = nullptr;
