@@ -1103,6 +1103,15 @@ static bool partial_validate(Main *bmain,
     }
     return false;
   }
+  /* The tab itself did not exist at the step: the walk would free its own Scene
+   * (the reader drops what the walked tab made after the step). A tab never
+   * deletes itself by undo; closing a tab is the drawer's. */
+  if (!step_owners->owner.contains(tab_uid)) {
+    if (r_reason) {
+      *r_reason = "this tab did not exist yet at that step (Edit > Undo Whole Document walks every tab)";
+    }
+    return false;
+  }
   /* The conflicts: local datablocks this tab reaches that another tab reaches
    * too, now or at the step (what two OTHER tabs share is none of this tab's
    * business; review 2026-09-30, finding 1). */
