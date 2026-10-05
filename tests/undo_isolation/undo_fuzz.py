@@ -117,8 +117,11 @@ def name(prefix: str) -> str:
 
 
 def _mesh_hash(ob) -> str:
+    return _data_hash(ob.data)
+
+
+def _data_hash(me) -> str:
     h = hashlib.sha1()
-    me = ob.data
     if me.is_editmode:
         bm = bmesh.from_edit_mesh(me)
         coords = [tuple(v.co) for v in bm.verts]
@@ -547,8 +550,9 @@ def _renamed_ok(want: str, got: str) -> bool:
     if want == got:
         return True
     base = lambda n: n.rsplit(".", 1)[0] if n.rsplit(".", 1)[-1].isdigit() else n  # noqa: E731
-    return base(want) == base(got) and want in bpy.data.materials and \
-        bpy.data.materials[want].name_full != got
+    # Only the numeric suffix differs: the reader gave the restored one a free
+    # suffix (the name it had may have been taken and freed again since).
+    return base(want) == base(got)
 
 
 def press(uid: int, what: str) -> None:
@@ -556,6 +560,9 @@ def press(uid: int, what: str) -> None:
     show(uid)
     before = fingerprint_all()
     mat_colour_before = {m.name: tuple(round(c, 4) for c in m.diffuse_color) for m in bpy.data.materials}
+    # Every mesh as it stands before the press, orphans too: a restored object's
+    # shared mesh is kept as it is now when only another tab changed it since.
+    mesh_before = {m.session_uid: _data_hash(m) for m in bpy.data.meshes}
     shared = {u: shared_with(uid, u) for u in before if u != uid}
     stack_before = active_step()
     entry = {"press": what, "tab": scene_of(uid).name}
@@ -669,6 +676,14 @@ def press(uid: int, what: str) -> None:
             s_data |= {r["data"] for r in mine.values()} & {r["data"] for r in theirs.values()}
             s_mats |= {m[0] for r in mine.values() for m in r["materials"] if m} & \
                 {m[0] for r in theirs.values() for m in r["materials"] if m}
+        # ...and every material another tab used at a step since (it may be gone
+        # from that tab now: a restored object's material is kept as it stands).
+        n0 = _step_number(step)
+        for name_, snap in SNAP.items():
+            if _step_number(name_) >= n0:
+                for other, fp in snap.items():
+                    if other != uid:
+                        s_mats |= {m[0] for r in fp.get("objects", {}).values() for m in r["materials"] if m}
         # Each material's colour just before the press, whoever uses it (objects in
         # no scene included).
         colour_before = mat_colour_before
@@ -712,7 +727,8 @@ def press(uid: int, what: str) -> None:
                 elif f in ("mesh", "data_uid"):
                     data_shared = obj_shared or (was is not None and was.get("data") in s_data)
                     ok = data_shared and ((was is not None and got.get(f) == was.get(f)) or
-                                          _held_since(k, f, got.get(f), step))
+                                          _held_since(k, f, got.get(f), step) or
+                                          (f == "mesh" and mesh_before.get(got.get("data_uid")) == got.get(f)))
                 else:
                     ok = False
                 if not ok:
