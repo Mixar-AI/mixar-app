@@ -23,6 +23,8 @@ NEXT_STEPS = {
     "signed_out": "Ask the user to sign in to Mixar, then try again.",
     "starting": "Mixar is starting; wait a moment and try again.",
     "absent": "Mixar is not open; ask the user to open Mixar and sign in, then try again.",
+    "disabled": ("MCP is turned off in Mixar; ask the user to turn on \"Allow AI apps to use Mixar\" in "
+                 "Connect AI Apps (MCP) from Mixar's profile menu, then try again."),
     "connecting": "Mixar is signed in but still connecting to its server; wait a moment and try again.",
     "choose": "Several Mixar apps are open; call mixar_ui_context with one of their instance ids.",
     "closed": "The Mixar app this connection used was closed; call mixar_ui_context to choose a running one.",

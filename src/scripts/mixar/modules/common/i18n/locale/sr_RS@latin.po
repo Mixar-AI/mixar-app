@@ -6415,6 +6415,18 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Allow AI apps to use Mixar (MCP)"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on."
+msgstr ""
+
+msgid "MCP is on: AI apps can connect to this Mixar."
+msgstr ""
+
+msgid "MCP is on, waiting for Mixar's server connection."
+msgstr ""
+
 msgid "Connect AI Apps (MCP)"
 msgstr ""
 
@@ -6433,19 +6445,10 @@ msgstr ""
 msgid "Sign In"
 msgstr ""
 
-msgid "MCP enabled"
-msgstr ""
-
-msgid "Disable"
-msgstr ""
-
 msgid "Scene and UI tools are free; only AI generation uses credits."
 msgstr ""
 
 msgid "Your AI app can start Mixar when needed."
-msgstr ""
-
-msgid "Enable MCP"
 msgstr ""
 
 msgid "Let AI apps control Mixar's interface"
@@ -6469,7 +6472,10 @@ msgstr ""
 msgid "Setup Guide"
 msgstr ""
 
-msgid "Allow local AI clients to use your Mixar account and scenes"
+msgid "Allow AI Apps to Use Mixar (MCP)"
+msgstr ""
+
+msgid "Allow local AI apps (Claude, Codex, Cursor…) to use your Mixar account and scenes. While this is off, connected AI apps report Mixar as not connected"
 msgstr ""
 
 msgid "MCP preference applies until Mixar closes; saving failed"
@@ -6478,7 +6484,10 @@ msgstr ""
 msgid "MCP is waiting for the desktop connection"
 msgstr ""
 
-msgid "MCP disabled"
+msgid "MCP is on: AI apps can connect to Mixar"
+msgstr ""
+
+msgid "MCP is off: AI apps report Mixar as not connected until you turn it on"
 msgstr ""
 
 msgid "Let AI Apps Control Mixar's Interface"

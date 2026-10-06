@@ -59,6 +59,20 @@ STARTING_SECONDS = 180
 OPEN_WAIT_SECONDS = 5
 
 
+def disabled():
+    """The user turned MCP off in Mixar.
+
+    The app rewrites the manifest whenever the switch changes (runtime._tick),
+    so a missing relay with ``enabled: false`` here means the switch, not a
+    closed Mixar. No manifest (never set up) or an unreadable one says nothing.
+    """
+    try:
+        info = json.loads((directory() / "installation.json").read_text())
+    except (OSError, ValueError):
+        return False
+    return isinstance(info, dict) and info.get("version") == 1 and info.get("enabled") is False
+
+
 def started():
     """A launched Mixar is up (its relay is published), or the launch failed."""
     try:
