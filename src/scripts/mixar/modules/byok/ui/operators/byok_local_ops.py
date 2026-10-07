@@ -45,6 +45,10 @@ def prepare_dialog(wm) -> None:
             wm.byok_form_local_mode = 'CUSTOM'
             wm.byok_form_local_custom_base = reg.get("base_url", "")
             wm.byok_form_local_custom_model = reg.get("model_id", "") or ""
+            # The checkbox mirrors the stored flag; detection restarts fresh
+            # on every open, so a stale manual choice cannot outlive the form.
+            wm.byok_form_local_custom_vision = bool(reg.get("supports_vision"))
+            wm.byok_form_local_custom_vision_auto = True
     except Exception as exc:
         logger.debug("Local dialog prefill failed: %s", exc)
     if getattr(wm, 'byok_form_local_mode', 'MANAGED') == 'CUSTOM':
@@ -174,12 +178,44 @@ def _draw_custom(body, wm) -> None:
     byok_dialog_ui.field_input(body, wm, 'byok_form_local_custom_key')
     body.separator(factor=0.5)
 
+    _draw_vision_choice(body, wm)
+
     byok_dialog_ui.card_label(
         body,
         n_("Any OpenAI-compatible server on this computer — Ollama, "
            "LM Studio, llama.cpp…"),
         'MUTED',
     )
+
+
+def _draw_vision_choice(body, wm) -> None:
+    """Image-support rows: ask the server, or decide yourself.
+
+    Nothing else can tell whether a third-party server's model reads images
+    (it is not in the managed catalog), and getting it wrong either costs
+    the user their 3D screenshots or sends images a text-only model rejects.
+    """
+    auto = bool(getattr(wm, 'byok_form_local_custom_vision_auto', True))
+    column = body.column(align=True)
+    auto_row = column.row()
+    auto_row.scale_y = 0.9
+    auto_row.prop(wm, 'byok_form_local_custom_vision_auto',
+                  text=iface_("Detect image support"))
+    manual_row = column.row()
+    manual_row.scale_y = 0.9
+    manual_row.enabled = not auto
+    manual_row.prop(wm, 'byok_form_local_custom_vision',
+                    text=iface_("Accepts images (vision)"))
+    body.separator(factor=0.4)
+    byok_dialog_ui.card_label(
+        body,
+        n_("Sends one tiny test image when you save and uses your server's "
+           "answer. Turn it off to choose yourself.") if auto
+        else n_("Your own choice — Mixar sends 3D screenshots only while "
+                "this is ticked."),
+        'MUTED',
+    )
+    body.separator(factor=0.45)
 
 
 # ---------------------------------------------------------------------------
