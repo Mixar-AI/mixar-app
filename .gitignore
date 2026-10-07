@@ -218,6 +218,11 @@ geometry_node_setups/
 mixar_api_out/
 report/
 scripts/audit_out/
+# Local RAG validation server: the retrieval corpus (Chroma DB + docs cache)
+# and the binary-dumped truth tables. The shipped copy of the tables lives in
+# src/scripts/mixar/modules/space_mixie_chat/data/mixar_truth/; rag/ is only the
+# dev-side generator and its refresh artefacts.
+rag/
 
 # Public-mirror sync state (last private SHA mirrored to public).
 # sync_commit_mirror.sh writes one file per branch (.sync-state-develop,

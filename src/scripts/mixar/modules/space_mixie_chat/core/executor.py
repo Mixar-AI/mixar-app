@@ -212,6 +212,45 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
         finally:
             self._execution_lock.release()
 
+    def _apply_soft_gate(self, script, result):
+        """Normalize a script and collect advisory attribute warnings.
+
+        Returns the text to execute. This never changes the outcome of the
+        execution: the gate is advisory only (see the "SOFT GATE" section of
+        script_validator), and any failure inside it degrades to running the
+        original script untouched.
+
+        Warnings are attached to ``result`` so the model learns which bpy
+        attributes it invented on the same round trip — including on scripts
+        that succeed, where a confirmed miss is worth reporting but must not
+        stop the scene build.
+        """
+        normalized = script
+        try:
+            from .script_validator import prepare_script
+            report = prepare_script(script)
+            # Everything the report carries is read inside the guard: a report
+            # that is not a report (a refactor away returning a tuple, say) is
+            # a gate bug, and a gate bug must not become a script failure.
+            if report.notes:
+                logger.info("Script normalized: %s", "; ".join(report.notes))
+            if report.issues:
+                logger.warning(
+                    "Attribute gate reported %d issue(s), executing anyway:\n%s",
+                    len(report.issues),
+                    "\n".join(f"  - {issue}" for issue in report.issues),
+                )
+                result.attribute_warnings = report.warnings
+            normalized = report.normalized
+        except Exception as gate_error:  # noqa: BLE001 — a gate bug cannot fail a script
+            logger.warning("Attribute gate skipped (%s: %s)",
+                           type(gate_error).__name__, gate_error)
+            return script
+
+        if isinstance(normalized, str) and normalized:
+            return normalized
+        return script
+
     def _execute_locked(self, script, push_undo, session_id):
         self._current_session = session_id or ""
         # Capture scene state before execution
@@ -398,6 +437,12 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
                     f"Allowed modules: {', '.join(sorted(_allowed))}"
                 )
             exec_namespace["__builtins__"]["__import__"] = _restricted_import
+
+            # Soft attribute gate: rewrite known-bad Mixar idioms and collect
+            # advisory warnings about unconfirmed bpy attributes. Runs first so
+            # the sandbox check below validates the text that is actually
+            # compiled. It never blocks this script — see _apply_soft_gate.
+            script = self._apply_soft_gate(script, result)
 
             # AST validation: block sandbox escape patterns before compilation
             ast_error = validate_script_ast(script)

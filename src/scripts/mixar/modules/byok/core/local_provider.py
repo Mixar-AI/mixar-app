@@ -14,7 +14,8 @@ Owns the data behind the Local branch of the AI Provider dialog:
   thread — never probed from a draw);
 - the two save paths: managed (requires the supervised server healthy,
   registers base_url + manifest api-token with the backend) and custom
-  (worker-thread reachability ping of ``<base>/v1/models`` first).
+  (worker-thread reachability ping of ``<base>/v1/models`` plus a
+  vision-capability probe of the model first).
 
 Both saves go through the ordinary ``PUT /agent/byok``
 (`byok_client.save_credentials`) with the extended ``base_url`` /
@@ -229,7 +230,15 @@ def save_managed(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
 
 def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     """Custom save: validate the base is local, ping ``/v1/models`` on a
-    worker thread, then PUT the credential. Returns (started, ui_error)."""
+    worker thread, probe whether the model accepts images, then PUT the
+    credential. Returns (started, ui_error).
+
+    Third-party servers (Strata, custom llama.cpp builds…) are not in the
+    managed catalog, so nothing declares their capabilities: the probe in
+    ``local_models.core.detect`` asks the server itself. A manual checkbox
+    on the form wins over the probe, and an inconclusive probe stays
+    text-only (the safe direction — see ``_draw_custom``).
+    """
     from mixar.modules.local_models.core import relay
 
     base_url = (wm.byok_form_local_custom_base or "").strip().rstrip("/")
@@ -242,15 +251,29 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
     invalid = relay.validate_base_url(base_url)
     if invalid:
         return False, invalid
+    # Tri-state from two booleans: auto → ask the server, manual → obey.
+    auto_vision = bool(getattr(wm, "byok_form_local_custom_vision_auto", True))
+    manual_vision = bool(getattr(wm, "byok_form_local_custom_vision", False))
 
     def _thread():
         err = _ping_models_endpoint(base_url)
-        _schedule_on_main(_after_ping, err)
+        vision = None if auto_vision else manual_vision
+        if err is None and vision is None:
+            vision = _probe_vision_safely(base_url, model, api_key)
+        _schedule_on_main(_after_ping, err, vision)
 
-    def _after_ping(err):
+    def _after_ping(err, vision):
         if err:
             on_done(False, None, err)
             return
+        # Inconclusive probe → text-only. Ticking the box is one click;
+        # sending images to a model that cannot read them breaks the turn.
+        supports_vision = False if vision is None else bool(vision)
+        # Mirror what is about to be stored, so the checkbox shows the truth.
+        try:
+            wm.byok_form_local_custom_vision = supports_vision
+        except Exception:
+            pass
 
         def _wrapped(success, data, save_err):
             if success:
@@ -258,7 +281,7 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
                     from mixar.modules.local_models.core import (
                         manifest, orchestrator,
                     )
-                    manifest.set_registered(base_url, model, False)
+                    manifest.set_registered(base_url, model, supports_vision)
                     orchestrator.refresh_approved_bases()
                 except Exception as exc:
                     logger.warning("Local registration snapshot failed: %s", exc)
@@ -270,7 +293,7 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
             model=model,
             api_key=api_key,
             base_url=base_url,
-            supports_vision=False,
+            supports_vision=supports_vision,
             on_done=_wrapped,
         )
 
@@ -278,6 +301,21 @@ def save_custom_async(wm, on_done: Callable) -> Tuple[bool, Optional[str]]:
         target=_thread, daemon=True, name="MixarLocalCustomPing"
     ).start()
     return True, None
+
+
+def _probe_vision_safely(base_url: str, model: str,
+                         api_key: Optional[str]) -> Optional[bool]:
+    """Worker thread: does the custom model accept images? None = unknown.
+
+    Never fails a save — a server that hangs, refuses the probe, or needs
+    an auth header we do not have simply leaves the value undecided.
+    """
+    try:
+        from mixar.modules.local_models.core import detect
+        return detect.probe_vision(base_url, model, api_key)
+    except Exception as exc:
+        logger.debug("Local vision probe failed: %s", exc)
+        return None
 
 
 def _ping_models_endpoint(base_url: str) -> Optional[str]:

@@ -81,6 +81,16 @@ precedence = "closest"
 SPDX-FileCopyrightText = "Open-source contributors"
 SPDX-License-Identifier = "GPL-2.0-or-later"
 
+# Generated reference data: the Mixar attribute truth tables read by
+# space_mixie_chat/core/script_validator.py. Machine-dumped from a built mixar.exe
+# (see rag/mixar-rag-server.py --refresh-truth); JSON has no comment syntax for an
+# inline header, so the declaration lives here. Regenerate rather than hand-edit.
+[[annotations]]
+path = "src/scripts/mixar/modules/space_mixie_chat/data/mixar_truth/*.json"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Adeveda Enterprises Private Limited"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
 # Files derived from ucupaint (https://github.com/ucupumar/ucupaint, GPL-3.0-or-later).
 # lib.blend was originally based on ucupaint's lib_281.blend; the Python files
 # listed below adapt ucupaint patterns for layer/channel handling and UI.
