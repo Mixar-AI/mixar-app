@@ -19,6 +19,10 @@ class ExecutionResult:
     error: Optional[str] = None
     traceback: Optional[str] = None
 
+    # Advisory notes from the soft attribute gate (script_validator). These
+    # never affect `success` — see the "SOFT GATE" section of that module.
+    attribute_warnings: list[str] = field(default_factory=list)
+
     # Changes detected
     created_objects: list[str] = field(default_factory=list)
     modified_objects: list[str] = field(default_factory=list)
@@ -62,5 +66,11 @@ class ExecutionResult:
         # from any client-facing API response per its own contract.
         if self.traceback:
             response["traceback"] = self.traceback
+        # Advisory attribute findings from the soft gate, carried on SUCCESSFUL
+        # scripts too: the model gets the valid property names on this round
+        # trip instead of after a runtime failure. Additive key, and named to
+        # stay clear of any "warnings" a script returns in __RESULT__.
+        if self.attribute_warnings:
+            response["attribute_warnings"] = list(self.attribute_warnings)
 
         return response
