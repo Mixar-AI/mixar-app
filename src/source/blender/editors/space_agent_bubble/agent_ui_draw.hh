@@ -55,11 +55,6 @@ struct AgentIslandState {
   int active_tab;           /* AgentTabId. */
   bool agent_mode;          /* False puts the segmented thumb on Generate Mode. */
   int queue_count;          /* Shown in the Queue pill; 0 hides the count chip. */
-  /* Credits left, 0..1. The card's border is a meter for it: a full ring at
-   * 100%, shortening anticlockwise as credits are spent. -1 means "unknown"
-   * (not fetched, or a free account with no allowance) and draws the ring
-   * whole, because a border that reads empty would look like a bug. */
-  float credits_remaining;
   bool addon_is_new;        /* Draws the NEW badge on the Add-on tab. */
 
   /* Sketch reflects the viewport freeze and DRAFT marks. Handwriting is

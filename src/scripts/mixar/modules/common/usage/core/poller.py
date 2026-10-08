@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Background refresher for the account card's usage figures.
+"""Background refresher for the account card's credit balance.
 
 Follows the house handler pattern: a light repeating ``bpy.app.timers``
 tick decides *whether* to fetch, a daemon thread does the HTTP call and
@@ -12,7 +12,7 @@ reads :mod:`.state`.
 
 Refresh triggers, in order of how much they matter:
 
-* the TTL tick (the meter must not go stale while the app sits open),
+* the TTL tick (the balance must not go stale while the app sits open),
 * login (a fresh account must not inherit the previous user's figures),
 * queue drain (generations are what actually spend credits, so the
   number the user just watched change is refreshed as soon as it does).
@@ -95,9 +95,10 @@ def _mirror_to_rna(snapshot: state.UsageSnapshot) -> None:
         wm.mixar_usage_ready = snapshot.fetched_at > 0.0
         wm.mixar_usage_has_subscription = snapshot.has_subscription
         wm.mixar_usage_plan_name = snapshot.plan_name
-        wm.mixar_usage_remaining_pct = snapshot.remaining_pct
         wm.mixar_usage_credits_remaining = snapshot.credits_remaining
-        wm.mixar_usage_credits_total = snapshot.credits_total
+        wm.mixar_usage_monthly_remaining = snapshot.monthly_remaining
+        wm.mixar_usage_bonus_remaining = snapshot.bonus_remaining
+        wm.mixar_usage_has_allowance = snapshot.has_allowance
         wm.mixar_usage_can_top_up = snapshot.can_top_up
         wm.mixar_usage_stale = bool(snapshot.error)
     except AttributeError:

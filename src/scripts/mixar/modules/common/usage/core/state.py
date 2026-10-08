@@ -2,17 +2,18 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Cached subscription/usage snapshot backing the top-bar meter.
+"""Cached credit-balance snapshot backing the account card.
 
-Deliberately free of ``bpy`` so the percentage and threshold logic can be
+Deliberately free of ``bpy`` so the parsing and formatting logic can be
 unit-tested outside Blender. The module-level cache lives here; the
 :mod:`..core.poller` owns *when* it is refreshed and the UI layer only
 ever reads it.
 
-Percentages come from the backend's ``usage_pct`` (credits **used**) and
-are never recomputed from the balance — the server already handles
-grandfathered per-cycle allocations, trial allocations and clamping, and
-a second client-side formula would drift from the web dashboard.
+The card shows the credit balance as a plain number — the same figures the
+web dashboard prints — and never a percentage: a percentage needs a
+denominator, and the app and the website picking different ones is how the
+two used to disagree. Every figure is read straight off the backend's
+``/subscriptions/status`` buckets and never recomputed client-side.
 """
 
 from __future__ import annotations
@@ -26,23 +27,17 @@ from mixar.modules.common.i18n import iface_
 
 from ..constants import (
     FREE_BILLING_INTERVAL,
-    SEVERITY_CRITICAL,
-    SEVERITY_OK,
-    SEVERITY_WARNING,
     TRIAL_SLUG_PREFIX,
-    USAGE_CRITICAL_PCT,
     USAGE_TTL_SECONDS,
-    USAGE_WARNING_PCT,
 )
 
 
 @dataclass(frozen=True)
 class UsageSnapshot:
-    """One reading of the user's billing cycle.
+    """One reading of the user's credit balance.
 
-    ``has_subscription`` False covers both the free tier and a subscribed
-    account with no successful subscription payment on record — the
-    backend answers 404 for both, and neither has a quota to meter.
+    ``has_subscription`` False is the backend's 404: a free-tier account
+    that was never granted a credit.
     """
 
     has_subscription: bool = False
@@ -50,12 +45,18 @@ class UsageSnapshot:
     plan_name: str = ""
     #: ``"monthly"`` / ``"yearly"`` / ``"trial"`` / ``"free"`` — the backend's
     #: reading of what the allocation is. ``"free"`` is a free-tier account
-    #: holding bonus credits; its bar is full while any credit remains.
+    #: holding bonus credits, with no allowance behind them.
     billing_interval: str = ""
-    #: Credits consumed this cycle, as a percentage of the allocation.
-    usage_pct: float = 0.0
+    #: Total credits available (``balance_cents``: monthly + bonus, net of
+    #: holds) — the number the card leads with.
     credits_remaining: int = 0
-    credits_total: int = 0
+    #: Plan / trial / team-pool allowance left (``monthly_credits_remaining``).
+    monthly_remaining: int = 0
+    #: Top-ups, referral rewards, sign-up bonus left
+    #: (``bonus_credits_remaining``).
+    bonus_remaining: int = 0
+    #: The plan's monthly allowance (``credits_per_month``); 0 for none.
+    credits_per_month: int = 0
     days_left: int = 0
     #: Set when the subscription is cancelling — ``days_left`` then counts
     #: down to expiry rather than to the next cycle.
@@ -72,14 +73,14 @@ class UsageSnapshot:
 
     @property
     def is_free(self) -> bool:
-        """A free-tier account with credits to show — there is a bar, but
-        no plan behind it."""
+        """A free-tier account holding credits, with no plan behind them."""
         return self.has_subscription and self.billing_interval == FREE_BILLING_INTERVAL
 
     @property
-    def remaining_pct(self) -> float:
-        """Percentage of the cycle allocation still available."""
-        return max(0.0, min(100.0, 100.0 - self.usage_pct))
+    def has_allowance(self) -> bool:
+        """Whether a monthly allowance backs part of the balance — the only
+        case where splitting it into monthly and bonus says anything."""
+        return self.has_subscription and not self.is_free and self.credits_per_month > 0
 
     @property
     def can_top_up(self) -> bool:
@@ -171,13 +172,6 @@ def _coerce_int(value: Any, default: int = 0) -> int:
         return default
 
 
-def _coerce_float(value: Any, default: float = 0.0) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def snapshot_from_payload(
     payload: Any,
     credits_remaining: Optional[int] = None,
@@ -206,7 +200,6 @@ def snapshot_from_payload(
     if not isinstance(data, dict):
         data = payload
 
-    total = _coerce_int(data.get("credits_per_month"))
     balance = _coerce_int(data.get("balance_cents"))
     if credits_remaining is not None:
         balance = _coerce_int(credits_remaining, balance)
@@ -216,9 +209,10 @@ def snapshot_from_payload(
         plan_slug=str(data.get("plan_slug") or ""),
         plan_name=str(data.get("plan_name") or ""),
         billing_interval=str(data.get("billing_interval") or "").lower(),
-        usage_pct=max(0.0, min(100.0, _coerce_float(data.get("usage_pct")))),
         credits_remaining=max(0, balance),
-        credits_total=max(0, total),
+        monthly_remaining=max(0, _coerce_int(data.get("monthly_credits_remaining"))),
+        bonus_remaining=max(0, _coerce_int(data.get("bonus_credits_remaining"))),
+        credits_per_month=max(0, _coerce_int(data.get("credits_per_month"))),
         days_left=max(0, _coerce_int(data.get("days_left"))),
         is_cancelling=bool(data.get("subscription_expires_at")),
         fetched_at=time.monotonic() if now is None else now,
@@ -230,11 +224,10 @@ def snapshot_free_tier(
 ) -> UsageSnapshot:
     """Snapshot for the 404 ("No active subscription") case.
 
-    A free account that was never granted a credit has nothing to meter, so
-    there is no percentage to show — the UI switches to an upgrade
-    affordance instead of a meter. (A free account WITH a sign-up bonus or
-    referral credits answers 200 with ``billing_interval == "free"`` and
-    goes through :func:`snapshot_from_payload` like any plan.)
+    A free account that was never granted a credit — its balance is zero.
+    (A free account WITH a sign-up bonus or referral credits answers 200
+    with ``billing_interval == "free"`` and goes through
+    :func:`snapshot_from_payload` like any plan.)
     """
     return UsageSnapshot(
         has_subscription=False,
@@ -256,9 +249,10 @@ def snapshot_error(message: str, now: Optional[float] = None) -> UsageSnapshot:
         plan_slug=previous.plan_slug,
         plan_name=previous.plan_name,
         billing_interval=previous.billing_interval,
-        usage_pct=previous.usage_pct,
         credits_remaining=previous.credits_remaining,
-        credits_total=previous.credits_total,
+        monthly_remaining=previous.monthly_remaining,
+        bonus_remaining=previous.bonus_remaining,
+        credits_per_month=previous.credits_per_month,
         days_left=previous.days_left,
         is_cancelling=previous.is_cancelling,
         fetched_at=stamp,
@@ -271,30 +265,32 @@ def snapshot_error(message: str, now: Optional[float] = None) -> UsageSnapshot:
 # ---------------------------------------------------------------------------
 
 
-def usage_severity(remaining_pct: float) -> str:
-    """Severity band for a *remaining* percentage (not used)."""
-    if remaining_pct < USAGE_CRITICAL_PCT:
-        return SEVERITY_CRITICAL
-    if remaining_pct < USAGE_WARNING_PCT:
-        return SEVERITY_WARNING
-    return SEVERITY_OK
-
-
-def format_remaining_label(snapshot: UsageSnapshot) -> str:
-    """Short label for the top-bar pill, e.g. ``"68% left"``.
-
-    Rounds toward the user's disadvantage (floor) so a meter reading
-    "1% left" is never actually 0 credits, and so a truly exhausted cycle
-    reads "0% left" rather than rounding up to a reassuring "1%".
-    """
-    if not snapshot.has_subscription:
-        return iface_("Upgrade")
-    return iface_("{percent}% left").format(percent=int(snapshot.remaining_pct))
-
-
 def format_credits(value: int) -> str:
     """Thousands-separated credit count."""
     return "{:,}".format(max(0, _coerce_int(value)))
+
+
+def format_balance_label(snapshot: UsageSnapshot) -> str:
+    """The card's headline, e.g. ``"6,800 credits"``."""
+    count = max(0, snapshot.credits_remaining)
+    if count == 1:
+        return iface_("{count} credit").format(count=format_credits(count))
+    return iface_("{count} credits").format(count=format_credits(count))
+
+
+def format_breakdown_label(snapshot: UsageSnapshot) -> str:
+    """Where the balance comes from, e.g. ``"4,800 monthly · 2,000 bonus"``.
+
+    Empty unless a monthly allowance AND bonus credits both make up the
+    balance — otherwise the headline already says everything. Same rule
+    as the web dashboard's credit card.
+    """
+    if not snapshot.has_allowance or snapshot.bonus_remaining <= 0:
+        return ""
+    return iface_("{monthly} monthly · {bonus} bonus").format(
+        monthly=format_credits(snapshot.monthly_remaining),
+        bonus=format_credits(snapshot.bonus_remaining),
+    )
 
 
 def format_cycle_label(snapshot: UsageSnapshot) -> str:
@@ -312,31 +308,18 @@ def format_cycle_label(snapshot: UsageSnapshot) -> str:
     return iface_("{plan} · {count} days left in cycle").format(plan=name, count=days)
 
 
-def usage_factor(snapshot: UsageSnapshot) -> float:
-    """Fill fraction (0..1) for the bar widget — the portion REMAINING.
-
-    The bar depletes as credits are spent, which is the opposite of the
-    web dashboard's "% used" fill but the far more legible reading for a
-    persistent meter: a full bar means plenty left.
-    """
-    if not snapshot.has_subscription:
-        return 0.0
-    return max(0.0, min(1.0, snapshot.remaining_pct / 100.0))
-
-
 def build_snapshot_dict(snapshot: Optional[UsageSnapshot] = None) -> Dict[str, Any]:
     """Flat dict of the display-ready values, for tests and diagnostics."""
     snap = snapshot if snapshot is not None else get_snapshot()
     return {
         "has_subscription": snap.has_subscription,
         "plan_name": snap.plan_name,
-        "remaining_pct": snap.remaining_pct,
-        "severity": usage_severity(snap.remaining_pct),
-        "factor": usage_factor(snap),
-        "label": format_remaining_label(snap),
+        "label": format_balance_label(snap),
+        "breakdown": format_breakdown_label(snap),
         "cycle": format_cycle_label(snap),
         "credits_remaining": snap.credits_remaining,
-        "credits_total": snap.credits_total,
+        "monthly_remaining": snap.monthly_remaining,
+        "bonus_remaining": snap.bonus_remaining,
         "can_top_up": snap.can_top_up,
         "error": snap.error,
     }

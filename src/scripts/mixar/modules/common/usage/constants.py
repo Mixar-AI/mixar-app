@@ -2,13 +2,11 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Constants for the account card's usage meter.
+"""Constants for the account card's credit balance.
 
-Thresholds intentionally mirror the web dashboard's usage bar
-(``mixie-frontend`` ``DashboardPage.tsx``) so a user reading "18% left"
-in Mixar and "82% used" on the website is looking at the same number
-computed the same way — the backend's ``usage_pct`` is the one source of
-truth for both and is never recomputed client-side.
+The card prints the credit balance as a number, exactly as the web
+dashboard (``mixie-frontend`` ``DashboardPage.tsx``) does — no percentage
+and no bar, so the two surfaces cannot disagree about a denominator.
 """
 
 from __future__ import annotations
@@ -34,21 +32,6 @@ USAGE_INITIAL_DELAY_SECONDS = 4.0
 USAGE_REQUEST_TIMEOUT_SECONDS = 10.0
 
 # ---------------------------------------------------------------------------
-# Display thresholds — evaluated on credits REMAINING, not used
-# ---------------------------------------------------------------------------
-
-#: Below this % remaining the meter turns red and nudges to top up.
-USAGE_CRITICAL_PCT = 20.0
-
-#: Below this % remaining the meter turns amber.
-USAGE_WARNING_PCT = 50.0
-
-#: Severity keys returned by :func:`core.state.usage_severity`.
-SEVERITY_OK = 'OK'
-SEVERITY_WARNING = 'WARNING'
-SEVERITY_CRITICAL = 'CRITICAL'
-
-# ---------------------------------------------------------------------------
 # Plan classification
 # ---------------------------------------------------------------------------
 
@@ -61,6 +44,6 @@ HANDOFF_TARGET_BUY_CREDITS = "buy-credits"
 HANDOFF_TARGET_PRICING = "pricing"
 
 #: ``billing_interval`` the backend reports for a free-tier account holding
-#: bonus credits (sign-up bonus, referral rewards, top-ups). Such an account
-#: has a bar (full while any credit remains) but no plan to meter.
+#: bonus credits (sign-up bonus, referral rewards, top-ups) and no monthly
+#: allowance.
 FREE_BILLING_INTERVAL = "free"

@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""Tests for the account card's credit usage figures.
+"""Tests for the account card's credit balance.
 
-Covers the pure state/threshold logic, the greeting-name derivation, and
+Covers the pure state/formatting logic, the greeting-name derivation, and
 the cross-language contracts that can't be exercised through mocked
 ``bpy``: the C++ card reading exactly the RNA properties Python writes,
-and the two colour thresholds agreeing across the two languages.
+and the card printing a number rather than a meter.
 """
 
 import ast
@@ -58,6 +58,8 @@ def _payload(**overrides):
         "billing_interval": "monthly",
         "credits_per_month": 10000,
         "balance_cents": 6800,
+        "monthly_credits_remaining": 4800,
+        "bonus_credits_remaining": 2000,
         "plan_value_cents": 10000,
         "usage_pct": 32.0,
         "cycle_start": "2026-08-01T00:00:00+00:00",
@@ -86,43 +88,33 @@ class TestSnapshotFromPayload:
         snap = state.snapshot_from_payload(_payload())
         assert snap.has_subscription
         assert snap.plan_name == "Pro"
-        assert snap.usage_pct == 32.0
         assert snap.credits_remaining == 6800
-        assert snap.credits_total == 10000
+        assert snap.monthly_remaining == 4800
+        assert snap.bonus_remaining == 2000
+        assert snap.credits_per_month == 10000
         assert snap.days_left == 18
 
     def test_accepts_bare_inner_dict(self):
         """The HTTP client has handed back both shapes; neither may break."""
         inner = _payload()["data"]
-        assert state.snapshot_from_payload(inner).credits_total == 10000
+        assert state.snapshot_from_payload(inner).credits_remaining == 6800
 
-    def test_remaining_is_complement_of_backend_usage_pct(self):
-        """The server's usage_pct is authoritative — never recomputed from
-        the balance, which would drift from the web dashboard on
-        grandfathered allocations."""
-        snap = state.snapshot_from_payload(
-            _payload(usage_pct=32.0, balance_cents=1, credits_per_month=10000)
-        )
-        assert snap.remaining_pct == pytest.approx(68.0)
+    def test_no_percentage_is_kept(self):
+        """The card prints the balance, never a percentage — a meter needs a
+        denominator, and the app and the website picking different ones is
+        what made them disagree."""
+        snap = state.snapshot_from_payload(_payload(usage_pct=32.0))
+        assert not hasattr(snap, "usage_pct")
+        assert not hasattr(snap, "remaining_pct")
+        assert "%" not in state.format_balance_label(snap)
 
-    def test_usage_pct_is_clamped(self):
-        assert state.snapshot_from_payload(_payload(usage_pct=140.0)).remaining_pct == 0.0
-        assert state.snapshot_from_payload(_payload(usage_pct=-5.0)).remaining_pct == 100.0
-
-    def test_balance_above_allocation_reads_as_full(self):
+    def test_balance_above_allocation_is_printed_as_is(self):
         """Top-ups and shared team pools carry a balance past the cycle
-        allocation. The backend clamps usage_pct to 0 for that, which is
-        the correct reading — none of the allowance is spent — so the
-        card must show 100% and a full bar, not an over-full one."""
+        allocation; the number is simply the number."""
         snap = state.snapshot_from_payload(
             _payload(credits_per_month=5500, balance_cents=424285, usage_pct=0.0)
         )
-        assert snap.remaining_pct == 100.0
-        assert state.usage_factor(snap) == 1.0
-        assert state.format_remaining_label(snap) == "100% left"
-        # Both figures stay visible; the ratio is not "corrected" away.
-        assert snap.credits_remaining == 424285
-        assert snap.credits_total == 5500
+        assert state.format_balance_label(snap) == "424,285 credits"
 
     def test_credits_remaining_override_wins(self):
         snap = state.snapshot_from_payload(_payload(), credits_remaining=1234)
@@ -130,10 +122,16 @@ class TestSnapshotFromPayload:
 
     def test_garbage_values_do_not_raise(self):
         snap = state.snapshot_from_payload(
-            _payload(credits_per_month="lots", usage_pct=None, days_left="x")
+            _payload(
+                credits_per_month="lots",
+                monthly_credits_remaining=None,
+                bonus_credits_remaining="x",
+                days_left="x",
+            )
         )
-        assert snap.credits_total == 0
-        assert snap.usage_pct == 0.0
+        assert snap.credits_per_month == 0
+        assert snap.monthly_remaining == 0
+        assert snap.bonus_remaining == 0
         assert snap.days_left == 0
 
     def test_non_dict_payload_is_an_error_snapshot(self):
@@ -155,16 +153,18 @@ class TestFreeTierAndErrors:
         assert snap.credits_remaining == 250
         assert not snap.error
 
-    def test_free_tier_shows_no_percentage(self):
+    def test_free_tier_without_credits_reads_zero(self):
         snap = state.snapshot_free_tier()
-        assert state.format_remaining_label(snap) == "Upgrade"
-        assert state.usage_factor(snap) == 0.0
+        assert state.format_balance_label(snap) == "0 credits"
+        assert state.format_breakdown_label(snap) == ""
 
     def test_error_snapshot_keeps_previous_figures(self):
         state.set_snapshot(state.snapshot_from_payload(_payload()))
         snap = state.snapshot_error("Connection refused")
         assert snap.error == "Connection refused"
         assert snap.credits_remaining == 6800
+        assert snap.monthly_remaining == 4800
+        assert snap.bonus_remaining == 2000
         assert snap.plan_name == "Pro"
         assert snap.has_subscription
 
@@ -183,42 +183,6 @@ class TestFreeTierAndErrors:
         state.set_snapshot(state.snapshot_from_payload(_payload()))
         state.clear()
         assert state.get_snapshot() is state.EMPTY
-
-
-# ---------------------------------------------------------------------------
-# Thresholds
-# ---------------------------------------------------------------------------
-
-
-class TestSeverity:
-    @pytest.mark.parametrize(
-        "remaining_pct,expected",
-        [
-            (100.0, constants.SEVERITY_OK),
-            (50.0, constants.SEVERITY_OK),
-            (49.9, constants.SEVERITY_WARNING),
-            (20.0, constants.SEVERITY_WARNING),
-            (19.9, constants.SEVERITY_CRITICAL),
-            (0.0, constants.SEVERITY_CRITICAL),
-        ],
-    )
-    def test_bands(self, remaining_pct, expected):
-        assert state.usage_severity(remaining_pct) == expected
-
-    def test_thresholds_match_the_cpp_card(self):
-        """The bar is coloured in C++ and the wording chosen in Python; a
-        drifted boundary would show an amber bar beside a green label."""
-        draw = CARD_DRAW_CC.read_text(encoding="utf-8")
-        assert (
-            "constexpr float CARD_USAGE_CRITICAL_FACTOR = %.2ff"
-            % (constants.USAGE_CRITICAL_PCT / 100.0)
-            in draw
-        )
-        assert (
-            "constexpr float CARD_USAGE_WARNING_FACTOR = %.2ff"
-            % (constants.USAGE_WARNING_PCT / 100.0)
-            in draw
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -252,12 +216,10 @@ class TestCanTopUp:
     def test_signed_out_cannot(self):
         assert not state.EMPTY.can_top_up
 
-    def test_free_tier_with_bonus_credits_reads_full_and_can(self):
+    def test_free_tier_with_bonus_credits_prints_the_balance_and_can(self):
         """A free account with credits answers 200 with ``billing_interval ==
-        "free"`` and ``usage_pct`` 0 while any credit remains — the website's
-        "100% left" + bonus line (Slack #bugs 2026-09-28: the card read 20%
-        off lifetime grants). ``credits_per_month`` is the lifetime sum and
-        must never be used as a denominator."""
+        "free"``. ``credits_per_month`` is then the lifetime grant sum, not an
+        allowance, so no monthly/bonus split is shown."""
         snap = state.snapshot_from_payload(
             _payload(
                 plan_slug="free",
@@ -270,10 +232,9 @@ class TestCanTopUp:
             )
         )
         assert snap.has_subscription and snap.is_free and snap.can_top_up
-        assert snap.remaining_pct == 100.0
-        assert state.usage_factor(snap) == 1.0
-        assert state.format_remaining_label(snap) == "100% left"
-        assert state.usage_severity(snap.remaining_pct) == constants.SEVERITY_OK
+        assert not snap.has_allowance
+        assert state.format_balance_label(snap) == "5,615 credits"
+        assert state.format_breakdown_label(snap) == ""
 
     def test_failed_refresh_keeps_free_tier_marker(self):
         state.set_snapshot(
@@ -293,18 +254,24 @@ class TestCanTopUp:
 
 
 class TestFormatting:
-    def test_label_reads_as_remaining(self):
-        snap = state.snapshot_from_payload(_payload(usage_pct=32.0))
-        assert state.format_remaining_label(snap) == "68% left"
+    def test_balance_label_is_the_total(self):
+        snap = state.snapshot_from_payload(_payload())
+        assert state.format_balance_label(snap) == "6,800 credits"
 
-    def test_label_floors_rather_than_rounds_up(self):
-        """0.4% left must not reassure the user with '1% left'."""
-        snap = state.snapshot_from_payload(_payload(usage_pct=99.6))
-        assert state.format_remaining_label(snap) == "0% left"
+    def test_balance_label_singular(self):
+        snap = state.snapshot_from_payload(_payload(balance_cents=1))
+        assert state.format_balance_label(snap) == "1 credit"
 
-    def test_factor_is_the_remaining_portion(self):
-        snap = state.snapshot_from_payload(_payload(usage_pct=25.0))
-        assert state.usage_factor(snap) == pytest.approx(0.75)
+    def test_breakdown_splits_monthly_and_bonus(self):
+        snap = state.snapshot_from_payload(_payload())
+        assert state.format_breakdown_label(snap) == "4,800 monthly · 2,000 bonus"
+
+    def test_breakdown_hidden_without_bonus(self):
+        """With no bonus credits the headline is the monthly figure already."""
+        snap = state.snapshot_from_payload(
+            _payload(balance_cents=4800, bonus_credits_remaining=0)
+        )
+        assert state.format_breakdown_label(snap) == ""
 
     def test_cycle_label_counts_down_to_renewal(self):
         snap = state.snapshot_from_payload(_payload(days_left=18))
@@ -324,11 +291,10 @@ class TestFormatting:
         assert state.format_credits(6800) == "6,800"
 
     def test_snapshot_dict_is_display_ready(self):
-        state.set_snapshot(state.snapshot_from_payload(_payload(usage_pct=90.0)))
+        state.set_snapshot(state.snapshot_from_payload(_payload()))
         info = state.build_snapshot_dict()
-        assert info["label"] == "10% left"
-        assert info["severity"] == constants.SEVERITY_CRITICAL
-        assert info["factor"] == pytest.approx(0.10)
+        assert info["label"] == "6,800 credits"
+        assert info["breakdown"] == "4,800 monthly · 2,000 bonus"
         assert info["can_top_up"] is True
 
 
@@ -410,11 +376,13 @@ class TestCardRnaContract:
 
 class TestCardColourLiterals:
     """A `uchar[4]` colour written with three components zero-fills alpha
-    and draws completely invisible — which is exactly how the usage bar's
-    fill silently disappeared. Cheap to pin, near-impossible to spot in
+    and draws completely invisible — which is exactly how the old usage
+    bar's fill silently disappeared. Cheap to pin, near-impossible to spot in
     review."""
 
-    COLOUR_FILES = tuple(
+    COLOUR_FILES = (
+        REPO_ROOT / "src/source/blender/editors/include/UI_mixar_tokens.hh",
+    ) + tuple(
         REPO_ROOT / "src/source/blender/editors/interface" / name
         for name in (
             "interface_mixar_palette.hh",
@@ -450,13 +418,25 @@ class TestCardColourLiterals:
                 seen += 1
         assert seen, "no RGBA literals found — did the files move?"
 
-    def test_usage_bar_ramp_is_opaque(self):
-        source = CARD_DRAW_CC.read_text(encoding="utf-8")
-        ramp = dict(self._rgba_literals(source))
-        for name in ("CARD_USAGE_RAMP_START", "CARD_USAGE_RAMP_END"):
-            assert name in ramp, name
-            alpha = ramp[name].split(",")[3].strip()
-            assert alpha == "255", "%s alpha is %r" % (name, alpha)
+
+class TestNoUsageMeter:
+    """The card and the island print credits as a number; neither may grow
+    a percentage meter back (the app and the web dashboard disagreed about
+    its denominator)."""
+
+    ISLAND_STATE_CC = (
+        REPO_ROOT / "src/source/blender/editors/space_agent_bubble/agent_ui_state.cc"
+    )
+
+    def test_card_draws_no_bar_or_percentage(self):
+        card = CARD_CC.read_text(encoding="utf-8")
+        draw = CARD_DRAW_CC.read_text(encoding="utf-8")
+        assert "UsageBar" not in card + draw
+        assert "%%" not in card
+        assert "MixarCardElement::CreditBalance" in card
+
+    def test_island_reads_no_percentage(self):
+        assert "remaining_pct" not in self.ISLAND_STATE_CC.read_text(encoding="utf-8")
 
 
 class TestCardGlyphs:

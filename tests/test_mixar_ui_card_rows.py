@@ -46,7 +46,7 @@ def test_card_rows_use_named_chrome_recipes():
     assert "mixar_chrome::card_row_field" not in card
     assert "mixar_chrome::card_row_cta" in card
     assert "mixar_chrome::card_row_action" in card
-    assert "ROW_USAGE_BAR = 1.5f" in card
+    assert "ROW_CREDIT_BALANCE = mixar_chrome::card_row_heading" in card
     assert "CARD_ROW_FIELD" in byok
     assert "CARD_ROW_CTA" in byok
     assert "ACTION_SCALE_Y = CARD_ROW_CTA" in byok
