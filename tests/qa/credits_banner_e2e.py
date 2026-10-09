@@ -125,11 +125,11 @@ def wait_closed(qa):
     settle(qa, 0.4)
 
 
-def target(qa, text):
+def target(qa, text=None, value=None):
     for t in qa.eval(TARGETS):
-        if t.get('text') == text:
+        if (text is None or t.get('text') == text) and (value is None or t.get('value') == value):
             return t
-    raise ScenarioFail(f'no credits_banner target {text!r}')
+    raise ScenarioFail(f'no credits_banner target {text or value!r}')
 
 
 def hover(qa, rect):
@@ -307,12 +307,15 @@ def run(qa):
         if not chat:
             raise ScenarioFail('push: chat Upgrade bubble missing')
         snaps['open'] = snap(qa, out, '01_open')
-        upgrade = target(qa, 'Upgrade Plan')
+        # By action: the label is "Upgrade Plan", or "Subscribe" on a planless account.
+        upgrade = target(qa, value='UPGRADE')
+        if upgrade.get('text') not in ('Upgrade Plan', 'Subscribe'):
+            raise ScenarioFail(f"unexpected upgrade label {upgrade.get('text')!r}")
         hover(qa, upgrade['rect'])
-        if not target(qa, 'Upgrade Plan').get('sel'):
-            raise ScenarioFail('hover did not light Upgrade Plan')
+        if not target(qa, value='UPGRADE').get('sel'):
+            raise ScenarioFail('hover did not light the upgrade button')
         snaps['hover_upgrade'] = snap(qa, out, '03_hover_upgrade')
-        qa.step('click_upgrade', qa.click, surface='credits_banner', text='Upgrade Plan')
+        qa.step('click_upgrade', qa.click, surface='credits_banner', value='UPGRADE')
         qa.step('upgrade_closed', wait_closed, qa)
         expect_hits(qa, ['UPGRADE'], 'upgrade')
 

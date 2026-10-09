@@ -232,7 +232,7 @@ static void draw_button(const State &state, const Layout &layout, const Target t
   const int font = BLF_default();
   const float size = label_size(layout);
   BLF_size(font, size);
-  const char *label = target_label(target);
+  const char *label = target_label(target, state.subscribe);
   const float width = BLF_width(font, label, strlen(label));
   const float center = BLI_rctf_cent_x(&r);
   const float cy = BLI_rctf_cent_y(&r);
@@ -305,7 +305,7 @@ static void draw_link(const State &state, const Layout &layout, const Target tar
   const float rim[4] = {1.0f, 1.0f, 1.0f, (0.14f + 0.22f * hover) * alpha};
   round_box(r, BLI_rctf_size_y(&r) * 0.5f, fill, fill, rim, 1.0f);
   const int font = BLF_default();
-  const char *label = target_label(target);
+  const char *label = target_label(target, state.subscribe);
   const float available = BLI_rctf_size_x(&r) - BLI_rctf_size_y(&r) * 0.8f;
   BLF_size(font, label_size(layout) * 0.9f);
   const float width = BLF_width(font, label, strlen(label));
@@ -387,7 +387,9 @@ void draw(const wmWindow *win, void *customdata)
   BLF_size(font, card_w * 0.052f);
   BLF_character_weight(font, 700);
   const float ink[4] = {0.95f, 0.95f, 0.95f, appear};
-  text_centered(font, "You're all out of credits!", BLI_rctf_cent_x(&layout.card),
+  text_centered(font,
+                state->subscribe ? "Subscribe to continue" : "You're all out of credits!",
+                BLI_rctf_cent_x(&layout.card),
                 layout.card.ymax - card_h * 0.115f, ink);
   BLF_character_weight(font, 400);
   BLF_size(font, card_w * 0.024f);

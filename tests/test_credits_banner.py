@@ -224,3 +224,80 @@ def test_the_push_chat_bubble_does_not_request_a_second_banner():
     branch = source[source.index('if notif_type == "credit_upgrade":'):]
     branch = branch[:branch.index("return\n")]
     assert "request_banner=False" in branch
+
+
+# No signup trial: a free account (no plan) hitting a credit feature is asked
+# to subscribe, not to "upgrade" a plan it never had.
+
+
+def _usage(**fields):
+    from mixar.modules.common.usage.core import state as S
+
+    return S.UsageSnapshot(**{"fetched_at": 1.0, **fields})
+
+
+def test_only_a_known_planless_account_needs_a_subscription():
+    from mixar.modules.common.usage.core import state as S
+
+    assert _usage(has_subscription=False).needs_subscription  # backend 404: Free, no credits
+    assert _usage(has_subscription=True, billing_interval="free").needs_subscription
+    assert not _usage(has_subscription=True, billing_interval="monthly").needs_subscription
+    assert not _usage(has_subscription=True, billing_interval="trial", plan_slug="trial").needs_subscription
+    # Unknown tier keeps the generic upgrade copy.
+    assert not S.EMPTY.needs_subscription
+    assert not _usage(has_subscription=False, error="Usage unavailable").needs_subscription
+
+
+def test_the_banner_asks_a_planless_account_to_subscribe(monkeypatch):
+    from mixar.modules.common.usage.core import state as S
+
+    monkeypatch.setattr(S, "get_snapshot", lambda: _usage(has_subscription=False))
+    assert CB._account_needs_subscription() is True
+    monkeypatch.setattr(S, "get_snapshot", lambda: _usage(has_subscription=True, billing_interval="monthly"))
+    assert CB._account_needs_subscription() is False
+    source = (MODULES / "common/notifications/credits_banner.py").read_text()
+    call = source[source.index("bpy.ops.mixar.credits_banner("):]
+    assert "subscribe=_account_needs_subscription()" in call[:call.index(")\n")]
+
+
+def test_native_banner_has_the_subscribe_variant():
+    native = (EDITORS / "interface/mixar/credits_banner.cc").read_text()
+    draw = (EDITORS / "interface/mixar/credits_banner_draw.cc").read_text()
+    assert 'RNA_def_boolean(ot->srna,\n                         "subscribe"' in native
+    assert 'state->subscribe = RNA_boolean_get(op->ptr, "subscribe");' in native
+    assert 'return subscribe ? "Subscribe" : "Upgrade Plan";' in native
+    # QA text and the drawn label use the same variant.
+    assert "target_label(Target(t), state->subscribe)" in native
+    assert "target_label(target, state.subscribe)" in draw
+    assert '"Subscribe to continue"' in draw
+
+
+def test_a_planless_generation_failure_asks_for_a_subscription(monkeypatch):
+    from mixar.modules.common.job_queue.core import failure_info as FI
+    from mixar.modules.common.usage.core import state as S
+
+    error = InsufficientCreditsError(message="This feature uses credits.", status_code=402)
+    job = SimpleNamespace(error="", error_class="", error_reason="", user_message="")
+
+    monkeypatch.setattr(S, "get_snapshot", lambda: _usage(has_subscription=False))
+    FI.apply_client_failure(job, error)
+    assert job.error_class == "credits"
+    assert job.user_message == FI.SUBSCRIBE_MESSAGE
+    assert FI.failure_headline(job) == "Subscription needed"
+    assert "subscription" in FI.failure_hint(job)
+
+    monkeypatch.setattr(S, "get_snapshot", lambda: _usage(has_subscription=True, billing_interval="monthly"))
+    FI.apply_client_failure(job, error)
+    assert job.user_message == EH.OUT_OF_CREDITS_MESSAGE
+    assert FI.failure_headline(job) == "Out of credits"
+
+
+def test_the_chat_notice_asks_a_planless_account_to_subscribe():
+    from mixar.modules.space_mixie_chat.core import credits_notice as N
+
+    assert N._build_content(None, None, subscribe=True).startswith("**Get a subscription**")
+    assert N._build_content(None, None).startswith("**You're out of credits**")
+    # Backend push copy always wins over the local default.
+    assert N._build_content("Server title", "Server body", subscribe=True) == "**Server title**\n\nServer body"
+    source = (MODULES / "space_mixie_chat/core/credits_notice.py").read_text()
+    assert "iface_(_SUBSCRIBE_CTA_LABEL if subscribe else _CTA_LABEL)" in source
