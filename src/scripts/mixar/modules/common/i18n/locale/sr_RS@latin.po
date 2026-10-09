@@ -3048,7 +3048,7 @@ msgstr ""
 msgid "Action"
 msgstr "Akcija"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -3682,13 +3682,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Preuzimanje {percent}%"
 
-# derived
-msgid "Upgrade"
-msgstr "Unapredi"
+msgid "{count} credit"
+msgstr ""
 
-# derived
-msgid "{percent}% left"
-msgstr "{percent}% preostalo"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 # derived
 msgid "Subscription"
@@ -3758,28 +3759,29 @@ msgid "Display name of the current plan"
 msgstr "Prikazano ime tekućeg plana"
 
 # derived
-msgid "Remaining"
-msgstr "Preostalo"
-
-# derived
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Procenat dodele kredita u ciklusu koji je još dostupan"
-
-# derived
 msgid "Credits Remaining"
 msgstr "Preostali krediti"
 
-# derived
-msgid "Credits left in the current cycle"
-msgstr "Krediti preostali u tekućem ciklusu"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-# derived
-msgid "Credits Total"
-msgstr "Ukupno kredita"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-# derived
-msgid "Credit allocation for the current cycle"
-msgstr "Dodela kredita za tekući ciklus"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 # derived
 msgid "Can Top Up"
@@ -25353,9 +25355,12 @@ msgstr "Nije uspelo slanje poruke"
 msgid "You're out of credits"
 msgstr "Potrošili ste kredite"
 
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
 # derived
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Iskoristili ste mesečnu kvotu kredita. Nadogradite plan da nastavite da stvarate uz Mixie."
+msgid "Upgrade"
+msgstr "Unapredi"
 
 # derived
 msgid "Feedback comment is empty"
@@ -31354,11 +31359,17 @@ msgstr "Dobro došli !"
 msgid "%s Plan"
 msgstr "Plan %s"
 
-# derived
-msgid "Checking usage…"
-msgstr "Provera korišćenja…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+# derived
+msgid "%s credits"
+msgstr "krediti: %s"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 # derived
@@ -31372,18 +31383,6 @@ msgstr "Pogledaj planove"
 # derived
 msgid "couldn't refresh"
 msgstr "osvežavanje nije uspelo"
-
-# derived
-msgid "%s of %s left"
-msgstr "preostalo %s od %s"
-
-# derived
-msgid "%s credits"
-msgstr "krediti: %s"
-
-# derived
-msgid "no credits"
-msgstr "nema kredita"
 
 # derived
 msgid "Docs"

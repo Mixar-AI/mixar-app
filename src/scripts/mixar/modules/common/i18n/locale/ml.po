@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "പ്രവർത്തനം"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "{percent}% ഡൗൺലോഡ് ചെയ്യുന്നു"
 
-msgid "Upgrade"
-msgstr "അപ്ഗ്രേഡ് ചെയ്യുക"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% ബാക്കി"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "സബ്സ്ക്രിപ്ഷൻ"
@@ -2930,23 +2933,29 @@ msgstr "പ്ലാൻ പേര്"
 msgid "Display name of the current plan"
 msgstr "നിലവിലെ പ്ലാനിന്റെ പ്രദർശന പേര്"
 
-msgid "Remaining"
-msgstr "ശേഷിക്കുന്നത്"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "ചക്രത്തിലെ ക്രെഡിറ്റ് വിഹിതത്തിൽ ഇനിയും ലഭ്യമായ ശതമാനം"
-
 msgid "Credits Remaining"
 msgstr "ശേഷിക്കുന്ന ക്രെഡിറ്റുകൾ"
 
-msgid "Credits left in the current cycle"
-msgstr "നിലവിലെ ചക്രത്തിൽ ശേഷിക്കുന്ന ക്രെഡിറ്റുകൾ"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "ആകെ ക്രെഡിറ്റുകൾ"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "നിലവിലെ ചക്രത്തിലെ ക്രെഡിറ്റ് വിഹിതം"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "ടോപ്പ് അപ്പ് ചെയ്യാം"
@@ -19608,8 +19617,11 @@ msgstr "സന്ദേശം അയയ്ക്കാനായില്ല"
 msgid "You're out of credits"
 msgstr "നിങ്ങളുടെ ക്രെഡിറ്റുകൾ തീർന്നു"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "പ്രതിമാസ ക്രെഡിറ്റ് പരിധി തീർന്നു. Mixie-യോടൊപ്പം തുടരാൻ പ്ലാൻ അപ്ഗ്രേഡ് ചെയ്യുക."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "അപ്ഗ്രേഡ് ചെയ്യുക"
 
 msgid "Feedback comment is empty"
 msgstr "ഫീഡ്ബാക്ക് കുറിപ്പ് ശൂന്യമാണ്"
@@ -24346,10 +24358,16 @@ msgstr "സ്വാഗതം !"
 msgid "%s Plan"
 msgstr "%s പ്ലാൻ"
 
-msgid "Checking usage…"
-msgstr "ഉപയോഗം പരിശോധിക്കുന്നു…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s ക്രെഡിറ്റുകൾ"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "പ്ലാനുകൾ കാണുക"
 
 msgid "couldn't refresh"
 msgstr "പുതുക്കാനായില്ല"
-
-msgid "%s of %s left"
-msgstr "ബാക്കി %s / %s"
-
-msgid "%s credits"
-msgstr "%s ക്രെഡിറ്റുകൾ"
-
-msgid "no credits"
-msgstr "ക്രെഡിറ്റുകൾ ഇല്ല"
 
 msgid "Docs"
 msgstr "ഡോക്സ്"

@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "アクション"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "ダウンロード中 {percent}%"
 
-msgid "Upgrade"
-msgstr "アップグレード"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "残り {percent}%"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "サブスクリプション"
@@ -2930,23 +2933,29 @@ msgstr "プラン名"
 msgid "Display name of the current plan"
 msgstr "現在のプランの表示名"
 
-msgid "Remaining"
-msgstr "残り"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "サイクルのクレジット割り当てのうち、まだ利用可能な割合"
-
 msgid "Credits Remaining"
 msgstr "残りクレジット"
 
-msgid "Credits left in the current cycle"
-msgstr "現在のサイクルの残りクレジット"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "クレジット合計"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "現在のサイクルのクレジット割り当て"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "チャージ可能"
@@ -19612,8 +19621,11 @@ msgstr "メッセージを送信できませんでした"
 msgid "You're out of credits"
 msgstr "クレジットが不足しています"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "今月のクレジット上限に達しました。Mixie で制作を続けるには、プランをアップグレードしてください。"
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "アップグレード"
 
 msgid "Feedback comment is empty"
 msgstr "フィードバックのコメントが空です"
@@ -24350,10 +24362,16 @@ msgstr "ようこそ！"
 msgid "%s Plan"
 msgstr "%s プラン"
 
-msgid "Checking usage…"
-msgstr "使用量を確認中…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s クレジット"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24364,15 +24382,6 @@ msgstr "プランを見る"
 
 msgid "couldn't refresh"
 msgstr "更新できませんでした"
-
-msgid "%s of %s left"
-msgstr "残り %s / %s"
-
-msgid "%s credits"
-msgstr "%s クレジット"
-
-msgid "no credits"
-msgstr "クレジットなし"
 
 msgid "Docs"
 msgstr "ドキュメント"

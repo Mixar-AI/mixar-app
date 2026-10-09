@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Eylem"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "İndiriliyor %{percent}"
 
-msgid "Upgrade"
-msgstr "Yükselt"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "%{percent} kaldı"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Abonelik"
@@ -2930,23 +2933,29 @@ msgstr "Plan Adı"
 msgid "Display name of the current plan"
 msgstr "Geçerli planın görünen adı"
 
-msgid "Remaining"
-msgstr "Kalan"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Dönem kredi tahsisinin hâlâ kullanılabilir olan yüzdesi"
-
 msgid "Credits Remaining"
 msgstr "Kalan Krediler"
 
-msgid "Credits left in the current cycle"
-msgstr "Geçerli dönemde kalan krediler"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Toplam Kredi"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Geçerli dönemin kredi tahsisi"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Kredi Eklenebilir"
@@ -19608,8 +19617,11 @@ msgstr "Mesaj gönderilemedi"
 msgid "You're out of credits"
 msgstr "Krediniz bitti"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Aylık kredi hakkınızı kullandınız. Mixie ile üretmeye devam etmek için planınızı yükseltin."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Yükselt"
 
 msgid "Feedback comment is empty"
 msgstr "Geri bildirim yorumu boş"
@@ -24346,10 +24358,16 @@ msgstr "Hoş geldiniz!"
 msgid "%s Plan"
 msgstr "%s Planı"
 
-msgid "Checking usage…"
-msgstr "Kullanım denetleniyor…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s kredi"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Planları Gör"
 
 msgid "couldn't refresh"
 msgstr "yenilenemedi"
-
-msgid "%s of %s left"
-msgstr "%s / %s kaldı"
-
-msgid "%s credits"
-msgstr "%s kredi"
-
-msgid "no credits"
-msgstr "kredi yok"
 
 msgid "Docs"
 msgstr "Belgeler"

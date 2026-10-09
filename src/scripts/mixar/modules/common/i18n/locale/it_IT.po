@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Azione"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Download {percent}%"
 
-msgid "Upgrade"
-msgstr "Upgrade"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% rimanente"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Abbonamento"
@@ -2930,23 +2933,29 @@ msgstr "Nome piano"
 msgid "Display name of the current plan"
 msgstr "Nome visualizzato del piano corrente"
 
-msgid "Remaining"
-msgstr "Rimanente"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Percentuale dei crediti assegnati per il ciclo ancora disponibile"
-
 msgid "Credits Remaining"
 msgstr "Crediti rimanenti"
 
-msgid "Credits left in the current cycle"
-msgstr "Crediti rimasti nel ciclo corrente"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Crediti totali"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Crediti assegnati per il ciclo corrente"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Ricarica possibile"
@@ -19608,8 +19617,11 @@ msgstr "Invio del messaggio non riuscito"
 msgid "You're out of credits"
 msgstr "Crediti esauriti"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Ha esaurito i crediti mensili inclusi. Passi a un piano superiore per continuare a creare con Mixie."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Upgrade"
 
 msgid "Feedback comment is empty"
 msgstr "Il commento di feedback è vuoto"
@@ -24346,10 +24358,16 @@ msgstr "Benvenuto!"
 msgid "%s Plan"
 msgstr "Piano %s"
 
-msgid "Checking usage…"
-msgstr "Verifica utilizzo…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s crediti"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Vedi piani"
 
 msgid "couldn't refresh"
 msgstr "aggiornamento non riuscito"
-
-msgid "%s of %s left"
-msgstr "%s rimanenti su %s"
-
-msgid "%s credits"
-msgstr "%s crediti"
-
-msgid "no credits"
-msgstr "nessun credito"
 
 msgid "Docs"
 msgstr "Documentazione"

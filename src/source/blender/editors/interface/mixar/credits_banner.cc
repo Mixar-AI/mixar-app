@@ -59,6 +59,10 @@ const char *target_action(const Target target)
       return "REFER";
     case TARGET_CREATOR:
       return "CREATOR";
+    case TARGET_BYOK:
+      return "BYOK";
+    case TARGET_MCP:
+      return "MCP";
     default:
       return "DISMISS";
   }
@@ -73,6 +77,10 @@ const char *target_label(const Target target)
       return "Refer a Friend";
     case TARGET_CREATOR:
       return "Creator Program";
+    case TARGET_BYOK:
+      return "Use your own API key";
+    case TARGET_MCP:
+      return "Connect AI apps (MCP)";
     case TARGET_CLOSE:
       return "Close";
     default:

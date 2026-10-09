@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "ﺙﺪﺤﻟﺍ"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "%{percent} ﻞﻳﺰﻨﺘﻟﺍ ﺭٍﺎﺟ"
 
-msgid "Upgrade"
-msgstr "ﺔﻴﻗﺮﺗ"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "%{percent} ﻖٍﺒﺘﻣ"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "ﻙﺍﺮﺘﺷﻻ﻿ﺍ"
@@ -2930,23 +2933,29 @@ msgstr "ﺔﻄﺨﻟﺍ ﻢﺳﺍ"
 msgid "Display name of the current plan"
 msgstr "ﺔﻴﻟﺎﺤﻟﺍ ﺔﻄﺨﻠﻟ ﺽﺮﻌﻟﺍ ﻢﺳﺍ"
 
-msgid "Remaining"
-msgstr "ﻲﻘﺒﺘﻤﻟﺍ"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "ﺓﺭﻭﺪﻠﻟ ﺓﺪﺻﺭﻷ﻿ﺍ ﺕﺎﺼﺼﺨﻣ ﻦﻣ ﺔﻴﻘﺒﺘﻤﻟﺍ ﺔﻳﻮﺌﻤﻟﺍ ﺔﺒﺴﻨﻟﺍ"
-
 msgid "Credits Remaining"
 msgstr "ﺔﻴﻘﺒﺘﻤﻟﺍ ﺓﺪﺻﺭﻷ﻿ﺍ"
 
-msgid "Credits left in the current cycle"
-msgstr "ﺔﻴﻟﺎﺤﻟﺍ ﺓﺭﻭﺪﻟﺍ ﻲﻓ ﺔﻴﻘﺒﺘﻤﻟﺍ ﺓﺪﺻﺭﻷ﻿ﺍ"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "ﺓﺪﺻﺭﻷ﻿ﺍ ﻲﻟﺎﻤﺟﺇ"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "ﺔﻴﻟﺎﺤﻟﺍ ﺓﺭﻭﺪﻠﻟ ﺓﺪﺻﺭﻷ﻿ﺍ ﺕﺎﺼﺼﺨﻣ"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "ﺪﻴﺻﺮﻟﺍ ﻦﺤﺷ ﻦﻜﻤﻳ"
@@ -19608,8 +19617,11 @@ msgstr "ﺔﻟﺎﺳﺮﻟﺍ ﻝﺎﺳﺭﺇ ﻞﺸﻓ"
 msgid "You're out of credits"
 msgstr "ﻚﺗﺪﺻﺭﺃ ﺕﺪﻔﻧ"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr ".Mixie ﻊﻣ ﻉﺍﺪﺑﻹ﻿ﺍ ﺔﻠﺻﺍﻮﻤﻟ ﻚﺘﻄﺧ ﺔﻴﻗﺮﺗ ﻰﺟﺮﻳُ .ﺓﺪﺻﺭﻷ﻿ﺍ ﻦﻣ ﺔﻳﺮﻬﺸﻟﺍ ﻚﺘﺼﺣ ﺕﺪﻔﻨﺘﺳﺍ ﺪﻘﻟ"
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "ﺔﻴﻗﺮﺗ"
 
 msgid "Feedback comment is empty"
 msgstr "ﻍﺭﺎﻓ ﺕﺎﻈﺣﻼ﻿ﻤﻟﺍ ﻖﻴﻠﻌﺗ"
@@ -24346,10 +24358,16 @@ msgstr "!ﺎﺒًﺣﺮﻣ"
 msgid "%s Plan"
 msgstr "%s ﺔﻄﺧ"
 
-msgid "Checking usage…"
-msgstr "…ﻡﺍﺪﺨﺘﺳﻻ﻿ﺍ ﻦﻣ ﻖﻘﺤﺘﻟﺍ ﺭٍﺎﺟ"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s ﺪﻴﺻﺭ"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "ﻂﻄﺨﻟﺍ ﺽﺮﻋ"
 
 msgid "couldn't refresh"
 msgstr "ﺚﻳﺪﺤﺘﻟﺍ ﺭﺬّﻌﺗ"
-
-msgid "%s of %s left"
-msgstr "%s ﻦﻣ %s ﻖٍﺒﺘﻣ"
-
-msgid "%s credits"
-msgstr "%s ﺪﻴﺻﺭ"
-
-msgid "no credits"
-msgstr "ﺓﺪﺻﺭﺃ ﺪﺟﻮﺗ ﻻ﻿"
 
 msgid "Docs"
 msgstr "ﻖﻴﺛﻮﺘﻟﺍ"

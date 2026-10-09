@@ -38,8 +38,8 @@ CREDITS_BUBBLE_PREFIX = "credit-upgrade-"
 _CONTENT_MAXLEN = 4096
 _DEFAULT_TITLE = n_("You're out of credits")
 _DEFAULT_BODY = n_(
-    "You've used your monthly credit allowance. "
-    "Upgrade your plan to keep creating with Mixie."
+    "Get a plan or buy credits to keep creating with Mixie. "
+    "You can also run the agent on your own API key, or connect an AI app through MCP."
 )
 _CTA_LABEL = n_("Upgrade")
 

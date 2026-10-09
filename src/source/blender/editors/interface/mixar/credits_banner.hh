@@ -33,8 +33,11 @@ enum Target {
   TARGET_UPGRADE = 0,
   TARGET_REFER = 1,
   TARGET_CREATOR = 2,
-  TARGET_CLOSE = 3,
-  TARGET_COUNT = 4,
+  /* Free ways to keep using the agent: the user's own provider, or an MCP app. */
+  TARGET_BYOK = 3,
+  TARGET_MCP = 4,
+  TARGET_CLOSE = 5,
+  TARGET_COUNT = 6,
 };
 
 /** Action names sent to `mixar.credits_banner_action` (Python owns the URLs). */
@@ -69,7 +72,7 @@ struct State {
   float drag_offset = 0.0f;
   bool dragging = false;
   bool returning = false;
-  float hover_mix[TARGET_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+  float hover_mix[TARGET_COUNT] = {};
 };
 
 /** Seconds for the entrance and exit animations. */

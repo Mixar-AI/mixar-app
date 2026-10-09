@@ -104,15 +104,12 @@ def draw_dialog(layout, wm):
 
 def _draw_pitch(layout, wm):
     invitee = wm.mixar_referral_invitee_award
-    inviter = wm.mixar_referral_inviter_award
-    paid = wm.mixar_referral_paid_total
-    card_label(layout, "Out of credits? Invite friends and earn bonus credits.", 'SECTION')
-    if invitee or inviter:
-        card_label(layout, f"They get {format_credits(invitee)} credits and you get "
-                           f"{format_credits(inviter)} after their first generation.",
-                   'MUTED')
-    if paid > inviter:
-        card_label(layout, f"You earn {format_credits(paid)} in total if they subscribe.",
+    card_label(layout, "Out of credits? Invite friends and earn credits.", 'SECTION')
+    card_label(layout, f"You get {C.REFERRAL_REWARD_PERCENT}% of the credits a friend buys "
+                       "on their first purchase.",
+               'MUTED')
+    if invitee:
+        card_label(layout, f"They get {format_credits(invitee)} bonus credits on that purchase.",
                    'MUTED')
     count = wm.mixar_referral_count
     if count:

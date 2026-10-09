@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Åtgärd"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Laddar ned {percent}%"
 
-msgid "Upgrade"
-msgstr "Uppgradera"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% kvar"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Prenumeration"
@@ -2930,23 +2933,29 @@ msgstr "Plannamn"
 msgid "Display name of the current plan"
 msgstr "Visningsnamn för den aktuella planen"
 
-msgid "Remaining"
-msgstr "Återstående"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Andel av periodens kredittilldelning som fortfarande är tillgänglig"
-
 msgid "Credits Remaining"
 msgstr "Återstående krediter"
 
-msgid "Credits left in the current cycle"
-msgstr "Krediter kvar i den aktuella perioden"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Totalt antal krediter"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Kredittilldelning för den aktuella perioden"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Kan fylla på"
@@ -19608,8 +19617,11 @@ msgstr "Det gick inte att skicka meddelandet"
 msgid "You're out of credits"
 msgstr "Du har slut på krediter"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Du har använt din månatliga kreditkvot. Uppgradera din plan för att fortsätta skapa med Mixie."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Uppgradera"
 
 msgid "Feedback comment is empty"
 msgstr "Återkopplingskommentaren är tom"
@@ -24346,10 +24358,16 @@ msgstr "Välkommen!"
 msgid "%s Plan"
 msgstr "%s-plan"
 
-msgid "Checking usage…"
-msgstr "Kontrollerar användning…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s krediter"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Se planer"
 
 msgid "couldn't refresh"
 msgstr "kunde inte uppdatera"
-
-msgid "%s of %s left"
-msgstr "%s av %s kvar"
-
-msgid "%s credits"
-msgstr "%s krediter"
-
-msgid "no credits"
-msgstr "inga krediter"
 
 msgid "Docs"
 msgstr "Dokumentation"

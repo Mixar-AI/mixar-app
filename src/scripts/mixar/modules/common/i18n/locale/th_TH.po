@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "กระทำ"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "กำลังดาวน์โหลด {percent}%"
 
-msgid "Upgrade"
-msgstr "อัปเกรด"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "เหลือ {percent}%"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "การสมัครใช้งาน"
@@ -2930,23 +2933,29 @@ msgstr "ชื่อแพ็กเกจ"
 msgid "Display name of the current plan"
 msgstr "ชื่อที่แสดงของแพ็กเกจปัจจุบัน"
 
-msgid "Remaining"
-msgstr "คงเหลือ"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "เปอร์เซ็นต์ของเครดิตที่จัดสรรในรอบนี้ซึ่งยังใช้ได้"
-
 msgid "Credits Remaining"
 msgstr "เครดิตคงเหลือ"
 
-msgid "Credits left in the current cycle"
-msgstr "เครดิตที่เหลือในรอบปัจจุบัน"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "เครดิตทั้งหมด"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "เครดิตที่จัดสรรสำหรับรอบปัจจุบัน"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "เติมเครดิตได้"
@@ -19608,8 +19617,11 @@ msgstr "ส่งข้อความไม่สำเร็จ"
 msgid "You're out of credits"
 msgstr "เครดิตของคุณหมดแล้ว"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "คุณใช้เครดิตรายเดือนครบแล้ว โปรดอัปเกรดแพ็กเกจเพื่อสร้างสรรค์กับ Mixie ต่อ"
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "อัปเกรด"
 
 msgid "Feedback comment is empty"
 msgstr "ความคิดเห็นว่างเปล่า"
@@ -24346,10 +24358,16 @@ msgstr "ยินดีต้อนรับ !"
 msgid "%s Plan"
 msgstr "แผน %s"
 
-msgid "Checking usage…"
-msgstr "กำลังตรวจสอบการใช้งาน…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s เครดิต"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "ดูแผน"
 
 msgid "couldn't refresh"
 msgstr "รีเฟรชไม่สำเร็จ"
-
-msgid "%s of %s left"
-msgstr "เหลือ %s จาก %s"
-
-msgid "%s credits"
-msgstr "%s เครดิต"
-
-msgid "no credits"
-msgstr "ไม่มีเครดิต"
 
 msgid "Docs"
 msgstr "เอกสาร"

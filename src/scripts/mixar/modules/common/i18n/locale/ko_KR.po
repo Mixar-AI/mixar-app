@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "액션"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "다운로드 중 {percent}%"
 
-msgid "Upgrade"
-msgstr "업그레이드"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% 남음"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "구독"
@@ -2930,23 +2933,29 @@ msgstr "요금제 이름"
 msgid "Display name of the current plan"
 msgstr "현재 요금제의 표시 이름입니다"
 
-msgid "Remaining"
-msgstr "남은 양"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "주기별 크레딧 할당량 중 아직 사용 가능한 비율입니다"
-
 msgid "Credits Remaining"
 msgstr "남은 크레딧"
 
-msgid "Credits left in the current cycle"
-msgstr "현재 주기에 남은 크레딧입니다"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "총 크레딧"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "현재 주기의 크레딧 할당량입니다"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "충전 가능"
@@ -19608,8 +19617,11 @@ msgstr "메시지를 보내지 못했습니다"
 msgid "You're out of credits"
 msgstr "크레딧이 모두 소진되었습니다"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "월간 크레딧 한도를 모두 사용했습니다. Mixie로 계속 작업하려면 플랜을 업그레이드하세요."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "업그레이드"
 
 msgid "Feedback comment is empty"
 msgstr "피드백 코멘트가 비어 있습니다"
@@ -24346,10 +24358,16 @@ msgstr "환영합니다!"
 msgid "%s Plan"
 msgstr "%s 플랜"
 
-msgid "Checking usage…"
-msgstr "사용량 확인 중…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s 크레딧"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "플랜 보기"
 
 msgid "couldn't refresh"
 msgstr "새로고침할 수 없음"
-
-msgid "%s of %s left"
-msgstr "%s 남음 / 총 %s"
-
-msgid "%s credits"
-msgstr "%s 크레딧"
-
-msgid "no credits"
-msgstr "크레딧 없음"
 
 msgid "Docs"
 msgstr "문서"

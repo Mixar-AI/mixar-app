@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Аус"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Аҭыгара {percent}%"
 
-msgid "Upgrade"
-msgstr "Аиӷьтәра"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% ыҟан"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Аподписка"
@@ -2930,23 +2933,29 @@ msgstr "Аплан ахьӡ"
 msgid "Display name of the current plan"
 msgstr "Ари аплан иаарԥштәу ахьӡ"
 
-msgid "Remaining"
-msgstr "Ыҟоу"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Ацикл акредитқәа реилазаара аҟынтәи ыҟоу апроцент"
-
 msgid "Credits Remaining"
 msgstr "Ыҟоу акредитқәа"
 
-msgid "Credits left in the current cycle"
-msgstr "Ари ацикл аҿы ыҟоу акредитқәа"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Акредитқәа зегьы"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Ари ацикл азы акредитқәа реилазаара"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Ацҵара ауеит"
@@ -19608,8 +19617,11 @@ msgstr "Аҳәамҭа ашьҭра алымшеит"
 msgid "You're out of credits"
 msgstr "Шәкредитқәа хырҵеит"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Шәымзтәи акредитқәа рнорма шәырхеит. Mixie ала аԥҵара анаҩс азы аплан шәиӷьтә."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Аиӷьтәра"
 
 msgid "Feedback comment is empty"
 msgstr "Азҳәара акомментари ҭацәуп"
@@ -24346,10 +24358,16 @@ msgstr "Бзиала шәаабеит !"
 msgid "%s Plan"
 msgstr "%s Аплан"
 
-msgid "Checking usage…"
-msgstr "Ахархәара агәаҭара…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s акредит"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Апланқәа Аԥшра"
 
 msgid "couldn't refresh"
 msgstr "аиҭаҿыцтәра алымшаӡеит"
-
-msgid "%s of %s left"
-msgstr "%s ыҟоуп, %s аҟынтәи"
-
-msgid "%s credits"
-msgstr "%s акредит"
-
-msgid "no credits"
-msgstr "акредитқәа ыҟам"
 
 msgid "Docs"
 msgstr "Адокументациа"

@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Акција"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Преузимање {percent}%"
 
-msgid "Upgrade"
-msgstr "Унапреди"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% преостало"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Претплата"
@@ -2930,23 +2933,29 @@ msgstr "Име плана"
 msgid "Display name of the current plan"
 msgstr "Приказано име текућег плана"
 
-msgid "Remaining"
-msgstr "Преостало"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Проценат доделе кредита у циклусу који је још доступан"
-
 msgid "Credits Remaining"
 msgstr "Преостали кредити"
 
-msgid "Credits left in the current cycle"
-msgstr "Кредити преостали у текућем циклусу"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Укупно кредита"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Додела кредита за текући циклус"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Може допуна"
@@ -19608,8 +19617,11 @@ msgstr "Није успело слање поруке"
 msgid "You're out of credits"
 msgstr "Потрошили сте кредите"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Искористили сте месечну квоту кредита. Надоградите план да наставите да стварате уз Mixie."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Унапреди"
 
 msgid "Feedback comment is empty"
 msgstr "Коментар повратне информације је празан"
@@ -24346,10 +24358,16 @@ msgstr "Добро дошли !"
 msgid "%s Plan"
 msgstr "План %s"
 
-msgid "Checking usage…"
-msgstr "Провера коришћења…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "кредити: %s"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Погледај планове"
 
 msgid "couldn't refresh"
 msgstr "освежавање није успело"
-
-msgid "%s of %s left"
-msgstr "преостало %s од %s"
-
-msgid "%s credits"
-msgstr "кредити: %s"
-
-msgid "no credits"
-msgstr "нема кредита"
 
 msgid "Docs"
 msgstr "Документација"
