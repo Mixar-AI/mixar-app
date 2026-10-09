@@ -42,8 +42,9 @@ enum Target {
 
 /** Action names sent to `mixar.credits_banner_action` (Python owns the URLs). */
 const char *target_action(Target target);
-/** Visible label of a button target (QA text matching uses the same string). */
-const char *target_label(Target target);
+/** Visible label of a button target (QA text matching uses the same string).
+ * `subscribe` swaps "Upgrade Plan" for "Subscribe" (account with no plan). */
+const char *target_label(Target target, bool subscribe);
 
 struct Layout {
   rctf card;                   /* banner bounds, window pixels */
@@ -58,6 +59,8 @@ struct State {
   void *draw_handle = nullptr;
   wmTimer *timer = nullptr;
   std::string image_path;
+  /* No plan yet: ask for a subscription instead of an upgrade. */
+  bool subscribe = false;
   gpu::Texture *texture = nullptr;
   int image_w = 0;
   int image_h = 0;

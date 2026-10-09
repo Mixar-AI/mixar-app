@@ -77,6 +77,16 @@ class UsageSnapshot:
         return self.has_subscription and self.billing_interval == FREE_BILLING_INTERVAL
 
     @property
+    def needs_subscription(self) -> bool:
+        """No plan behind the account (Free tier: a new signup gets no trial),
+        so a credit-consuming feature asks for a subscription rather than an
+        upgrade. False until a reading says so — an unknown tier (not fetched
+        yet, or the first fetch failed) keeps the generic upgrade copy."""
+        if self.fetched_at <= 0.0:
+            return False
+        return self.is_free or (not self.has_subscription and not self.error)
+
+    @property
     def has_allowance(self) -> bool:
         """Whether a monthly allowance backs part of the balance — the only
         case where splitting it into monthly and bonus says anything."""
@@ -109,6 +119,12 @@ def get_snapshot() -> UsageSnapshot:
     """Current cached snapshot. Never None; ``EMPTY`` before first fetch."""
     with _lock:
         return _snapshot
+
+
+def needs_subscription() -> bool:
+    """Whether the signed-in account has no plan (see
+    :attr:`UsageSnapshot.needs_subscription`)."""
+    return get_snapshot().needs_subscription
 
 
 def set_snapshot(snapshot: UsageSnapshot) -> None:
