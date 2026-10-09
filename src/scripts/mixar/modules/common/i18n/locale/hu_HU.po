@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Akció"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Letöltés: {percent}%"
 
-msgid "Upgrade"
-msgstr "Csomagváltás"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% lesz hátra"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Előfizetés"
@@ -2930,23 +2933,29 @@ msgstr "Csomag neve"
 msgid "Display name of the current plan"
 msgstr "Az aktuális csomag megjelenített neve"
 
-msgid "Remaining"
-msgstr "Fennmaradó"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "A ciklus kreditkeretéből még elérhető százalék"
-
 msgid "Credits Remaining"
 msgstr "Fennmaradó kreditek"
 
-msgid "Credits left in the current cycle"
-msgstr "A jelenlegi ciklusban fennmaradó kreditek"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Kreditek összesen"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "A jelenlegi ciklus kreditkerete"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Feltölthető"
@@ -19608,8 +19617,11 @@ msgstr "Az üzenet nem küldhető el"
 msgid "You're out of credits"
 msgstr "Elfogyott a kreditje"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Elhasználta a havi kreditjeit. Váltson nagyobb csomagra, hogy tovább alkothasson a Mixie-vel."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Csomagváltás"
 
 msgid "Feedback comment is empty"
 msgstr "A visszajelzés megjegyzése üres"
@@ -24346,10 +24358,16 @@ msgstr "Üdvözöljük !"
 msgid "%s Plan"
 msgstr "%s csomag"
 
-msgid "Checking usage…"
-msgstr "Felhasználás ellenőrzése…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s kredit"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Csomagok megtekintése"
 
 msgid "couldn't refresh"
 msgstr "nem sikerült frissíteni"
-
-msgid "%s of %s left"
-msgstr "%s / %s maradt"
-
-msgid "%s credits"
-msgstr "%s kredit"
-
-msgid "no credits"
-msgstr "nincs kredit"
 
 msgid "Docs"
 msgstr "Dokumentáció"

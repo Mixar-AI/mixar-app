@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Acció"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "S'està baixant {percent}%"
 
-msgid "Upgrade"
-msgstr "Millorar"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "En queda un {percent}%"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Subscripció"
@@ -2930,23 +2933,29 @@ msgstr "Nom del pla"
 msgid "Display name of the current plan"
 msgstr "Nom visible del pla actual"
 
-msgid "Remaining"
-msgstr "Restant"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Percentatge de l'assignació de crèdits del cicle que encara està disponible"
-
 msgid "Credits Remaining"
 msgstr "Crèdits restants"
 
-msgid "Credits left in the current cycle"
-msgstr "Crèdits que queden al cicle actual"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Crèdits totals"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Assignació de crèdits del cicle actual"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Pot recarregar"
@@ -19608,8 +19617,11 @@ msgstr "No s'ha pogut enviar el missatge"
 msgid "You're out of credits"
 msgstr "No li queden crèdits"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Ha esgotat l'assignació mensual de crèdits. Actualitzi el pla per continuar creant amb Mixie."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Millorar"
 
 msgid "Feedback comment is empty"
 msgstr "El comentari és buit"
@@ -24346,10 +24358,16 @@ msgstr "Li donem la benvinguda!"
 msgid "%s Plan"
 msgstr "Pla %s"
 
-msgid "Checking usage…"
-msgstr "S'està comprovant l'ús…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s crèdits"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Veure els plans"
 
 msgid "couldn't refresh"
 msgstr "no s'ha pogut actualitzar"
-
-msgid "%s of %s left"
-msgstr "%s de %s restants"
-
-msgid "%s credits"
-msgstr "%s crèdits"
-
-msgid "no credits"
-msgstr "sense crèdits"
 
 msgid "Docs"
 msgstr "Documentació"

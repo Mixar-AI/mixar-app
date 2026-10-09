@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "செயல்"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "பதிவிறக்குகிறது {percent}%"
 
-msgid "Upgrade"
-msgstr "மேம்படுத்து"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "{percent}% மீதம்"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "சந்தா"
@@ -2930,23 +2933,29 @@ msgstr "திட்டப் பெயர்"
 msgid "Display name of the current plan"
 msgstr "நடப்புத் திட்டத்தின் காட்சிப் பெயர்"
 
-msgid "Remaining"
-msgstr "மீதம்"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "சுழற்சிக் கிரெடிட் ஒதுக்கீட்டில் இன்னும் கிடைக்கும் சதவீதம்"
-
 msgid "Credits Remaining"
 msgstr "மீதமுள்ள கிரெடிட்கள்"
 
-msgid "Credits left in the current cycle"
-msgstr "நடப்புச் சுழற்சியில் மீதமுள்ள கிரெடிட்கள்"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "மொத்தக் கிரெடிட்கள்"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "நடப்புச் சுழற்சிக்கான கிரெடிட் ஒதுக்கீடு"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "மேலே நிரப்பலாம்"
@@ -19608,8 +19617,11 @@ msgstr "செய்தியை அனுப்பத் தவறியது"
 msgid "You're out of credits"
 msgstr "உங்கள் கிரெடிட்கள் தீர்ந்துவிட்டன"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "உங்கள் மாதக் கிரெடிட் ஒதுக்கீட்டைப் பயன்படுத்திவிட்டீர்கள். Mixie-உடன் தொடர்ந்து உருவாக்க உங்கள் திட்டத்தை மேம்படுத்தவும்."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "மேம்படுத்து"
 
 msgid "Feedback comment is empty"
 msgstr "பின்னூட்டக் கருத்து காலியாக உள்ளது"
@@ -24346,10 +24358,16 @@ msgstr "வரவேற்கிறோம் !"
 msgid "%s Plan"
 msgstr "%s திட்டம்"
 
-msgid "Checking usage…"
-msgstr "பயன்பாடு சரிபார்க்கப்படுகிறது…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s கிரெடிட்கள்"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "திட்டங்களைக் காண்"
 
 msgid "couldn't refresh"
 msgstr "புதுப்பிக்க முடியவில்லை"
-
-msgid "%s of %s left"
-msgstr "%s / %s மீதம்"
-
-msgid "%s credits"
-msgstr "%s கிரெடிட்கள்"
-
-msgid "no credits"
-msgstr "கிரெடிட்கள் இல்லை"
 
 msgid "Docs"
 msgstr "ஆவணங்கள்"

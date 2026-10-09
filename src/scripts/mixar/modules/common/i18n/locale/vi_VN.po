@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Hành Động"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Đang tải xuống {percent}%"
 
-msgid "Upgrade"
-msgstr "Nâng Cấp"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "Còn {percent}%"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Gói Đăng Ký"
@@ -2930,23 +2933,29 @@ msgstr "Tên Gói"
 msgid "Display name of the current plan"
 msgstr "Tên hiển thị của gói hiện tại"
 
-msgid "Remaining"
-msgstr "Còn Lại"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Phần trăm tín dụng được cấp trong chu kỳ vẫn còn khả dụng"
-
 msgid "Credits Remaining"
 msgstr "Tín Dụng Còn Lại"
 
-msgid "Credits left in the current cycle"
-msgstr "Tín dụng còn lại trong chu kỳ hiện tại"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Tổng Tín Dụng"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Tín dụng được cấp cho chu kỳ hiện tại"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Có Thể Nạp Thêm"
@@ -19608,8 +19617,11 @@ msgstr "Gửi tin nhắn thất bại"
 msgid "You're out of credits"
 msgstr "Bạn đã hết tín dụng"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Bạn đã dùng hết hạn mức tín dụng hằng tháng. Hãy nâng cấp gói để tiếp tục sáng tạo với Mixie."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Nâng Cấp"
 
 msgid "Feedback comment is empty"
 msgstr "Nhận xét phản hồi đang trống"
@@ -24346,10 +24358,16 @@ msgstr "Chào mừng!"
 msgid "%s Plan"
 msgstr "Gói %s"
 
-msgid "Checking usage…"
-msgstr "Đang kiểm tra mức sử dụng…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s tín dụng"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Xem Các Gói"
 
 msgid "couldn't refresh"
 msgstr "không thể làm tươi lại"
-
-msgid "%s of %s left"
-msgstr "còn %s / %s"
-
-msgid "%s credits"
-msgstr "%s tín dụng"
-
-msgid "no credits"
-msgstr "hết tín dụng"
 
 msgid "Docs"
 msgstr "Tài Liệu"

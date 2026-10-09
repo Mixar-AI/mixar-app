@@ -13,6 +13,8 @@ Python place:
   (the same signed-in handoff the chat's Upgrade CTA uses);
 * ``REFER`` — the dashboard's referrals page, signed in through a handoff;
 * ``CREATOR`` — the public Creator Program page (the Help menu's link);
+* ``BYOK`` — the AI Provider Settings dialog (run the agent on the user's own key);
+* ``MCP`` — the Connect AI Apps (MCP) dialog;
 * ``DISMISS`` — ✕, Esc or a backdrop click.
 """
 
@@ -27,7 +29,7 @@ from ...constants import CREDITS_BANNER_CREATOR_URL, CREDITS_BANNER_REFERRAL_URL
 
 logger = get_logger(__name__)
 
-BANNER_ACTIONS = ("UPGRADE", "REFER", "CREATOR", "DISMISS")
+BANNER_ACTIONS = ("UPGRADE", "REFER", "CREATOR", "BYOK", "MCP", "DISMISS")
 
 
 def _open_url_on_main(url: str) -> None:
@@ -79,11 +81,52 @@ def _open_creator_program() -> None:
     _open_url_on_main(CREDITS_BANNER_CREATOR_URL)
 
 
+# Past the banner's ~0.16 s exit animation: the blocking banner modal would
+# otherwise still own the window's input when the dialog opens.
+_DIALOG_DELAY_SECONDS = 0.25
+
+
+def _invoke_dialog_on_main(op_path: str) -> None:
+    """Invoke a dialog operator (``"mixar_byok.open_dialog"``) once the banner is gone.
+
+    Called from the action operator, so ``bpy.context.window`` is still the
+    banner's window; the deferred call reopens that context.
+    """
+    window = getattr(bpy.context, "window", None)
+
+    def _fire():
+        try:
+            wm = bpy.context.window_manager
+            win = window if window in wm.windows[:] else (wm.windows[0] if wm.windows else None)
+            category, name = op_path.split(".")
+            op = getattr(getattr(bpy.ops, category), name)
+            if win is None:
+                op("INVOKE_DEFAULT")
+            else:
+                with bpy.context.temp_override(window=win, screen=win.screen):
+                    op("INVOKE_DEFAULT")
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Credits banner: %s failed to open: %s", op_path, exc)
+        return None
+
+    bpy.app.timers.register(_fire, first_interval=_DIALOG_DELAY_SECONDS)
+
+
+def _open_byok() -> None:
+    _invoke_dialog_on_main("mixar_byok.open_dialog")
+
+
+def _open_mcp() -> None:
+    _invoke_dialog_on_main("mixar.connect_ai")
+
+
 # Module-level so the QA replay can stand in for the browser.
 DESTINATIONS = {
     "UPGRADE": _open_upgrade,
     "REFER": _open_referrals,
     "CREATOR": _open_creator_program,
+    "BYOK": _open_byok,
+    "MCP": _open_mcp,
 }
 
 
@@ -96,7 +139,7 @@ class MIXAR_OT_credits_banner_action(bpy.types.Operator):
 
     action: StringProperty(
         name="Action",
-        description="UPGRADE, REFER, CREATOR or DISMISS",
+        description="UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS",
         default="DISMISS",
         options={"SKIP_SAVE"},
     )

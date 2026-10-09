@@ -2366,7 +2366,7 @@ msgstr ""
 msgid "Action"
 msgstr "Δράση"
 
-msgid "UPGRADE, REFER, CREATOR or DISMISS"
+msgid "UPGRADE, REFER, CREATOR, BYOK, MCP or DISMISS"
 msgstr ""
 
 msgid "Show Out-of-Credits Banner"
@@ -2873,11 +2873,14 @@ msgstr ""
 msgid "Downloading {percent}%"
 msgstr "Λήψη {percent}%"
 
-msgid "Upgrade"
-msgstr "Αναβάθμιση"
+msgid "{count} credit"
+msgstr ""
 
-msgid "{percent}% left"
-msgstr "απομένει {percent}%"
+msgid "{count} credits"
+msgstr ""
+
+msgid "{monthly} monthly · {bonus} bonus"
+msgstr ""
 
 msgid "Subscription"
 msgstr "Συνδρομή"
@@ -2930,23 +2933,29 @@ msgstr "Όνομα προγράμματος"
 msgid "Display name of the current plan"
 msgstr "Εμφανιζόμενο όνομα του τρέχοντος προγράμματος"
 
-msgid "Remaining"
-msgstr "Υπόλοιπο"
-
-msgid "Percentage of the cycle credit allocation still available"
-msgstr "Ποσοστό της κατανομής πιστώσεων του κύκλου που είναι ακόμη διαθέσιμο"
-
 msgid "Credits Remaining"
 msgstr "Υπόλοιπο πιστώσεων"
 
-msgid "Credits left in the current cycle"
-msgstr "Πιστώσεις που απομένουν στον τρέχοντα κύκλο"
+msgid "Total credits available (monthly allowance plus bonus credits)"
+msgstr ""
 
-msgid "Credits Total"
-msgstr "Σύνολο πιστώσεων"
+msgid "Monthly Credits Remaining"
+msgstr ""
 
-msgid "Credit allocation for the current cycle"
-msgstr "Κατανομή πιστώσεων για τον τρέχοντα κύκλο"
+msgid "Credits left in the plan's monthly allowance"
+msgstr ""
+
+msgid "Bonus Credits Remaining"
+msgstr ""
+
+msgid "Top-up, referral and sign-up bonus credits left"
+msgstr ""
+
+msgid "Has Allowance"
+msgstr ""
+
+msgid "Whether a monthly plan allowance backs part of the balance"
+msgstr ""
 
 msgid "Can Top Up"
 msgstr "Μπορεί να συμπληρώσει"
@@ -19608,8 +19617,11 @@ msgstr "Αποτυχία αποστολής μηνύματος."
 msgid "You're out of credits"
 msgstr "Οι πιστώσεις σας εξαντλήθηκαν"
 
-msgid "You've used your monthly credit allowance. Upgrade your plan to keep creating with Mixie."
-msgstr "Έχετε εξαντλήσει το μηνιαίο όριο πιστώσεων. Αναβαθμίστε το πρόγραμμά σας για να συνεχίσετε να δημιουργείτε με το Mixie."
+msgid "Get a plan or buy credits to keep creating with Mixie. You can also run the agent on your own API key, or connect an AI app through MCP."
+msgstr ""
+
+msgid "Upgrade"
+msgstr "Αναβάθμιση"
 
 msgid "Feedback comment is empty"
 msgstr "Το σχόλιο αξιολόγησης είναι κενό."
@@ -24346,10 +24358,16 @@ msgstr "Καλώς ορίσατε !"
 msgid "%s Plan"
 msgstr "%s πρόγραμμα"
 
-msgid "Checking usage…"
-msgstr "Έλεγχος χρήσης…"
+msgid "Checking credits…"
+msgstr ""
 
-msgid "Usage Remaining"
+msgid "%s credit"
+msgstr ""
+
+msgid "%s credits"
+msgstr "%s πιστώσεις"
+
+msgid "%s monthly · %s bonus"
 msgstr ""
 
 msgid "Buy Credits"
@@ -24360,15 +24378,6 @@ msgstr "Δείτε τα προγράμματα"
 
 msgid "couldn't refresh"
 msgstr "αδυναμία ανανέωσης"
-
-msgid "%s of %s left"
-msgstr "απομένουν %s από %s"
-
-msgid "%s credits"
-msgstr "%s πιστώσεις"
-
-msgid "no credits"
-msgstr "χωρίς πιστώσεις"
 
 msgid "Docs"
 msgstr "Έγγραφα"
