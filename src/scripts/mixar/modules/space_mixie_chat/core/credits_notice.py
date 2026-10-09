@@ -42,6 +42,23 @@ _DEFAULT_BODY = n_(
     "Upgrade your plan to keep creating with Mixie."
 )
 _CTA_LABEL = n_("Upgrade")
+# An account with no plan (no signup trial any more) is asked to subscribe.
+_SUBSCRIBE_TITLE = n_("Get a subscription")
+_SUBSCRIBE_BODY = n_(
+    "This feature uses credits. "
+    "Subscribe to a plan or buy credits to keep creating with Mixie."
+)
+_SUBSCRIBE_CTA_LABEL = n_("Subscribe")
+
+
+def _needs_subscription() -> bool:
+    try:
+        from mixar.modules.common.usage.core.state import needs_subscription
+
+        return needs_subscription()
+    except Exception as e:
+        logger.debug(f"credit notice tier lookup skipped: {e}")
+        return False
 
 
 def is_credits_exhausted_error(status_code, message: str = "") -> bool:
@@ -106,12 +123,13 @@ def add_credit_upgrade_chat_message(
         logger.warning("Cannot add credit-upgrade chat message - scene missing")
         return
 
-    content = _build_content(title, body)
+    subscribe = _needs_subscription()
+    content = _build_content(title, body, subscribe)
 
     # Refresh an existing notice in place instead of stacking duplicates.
     for msg in scene.mixie_chat_messages:
         if getattr(msg, "bubble_id", "").startswith(CREDITS_BUBBLE_PREFIX):
-            _fill_bubble(msg, content)
+            _fill_bubble(msg, content, subscribe)
             redraw_chat_areas()
             return
 
@@ -119,7 +137,7 @@ def add_credit_upgrade_chat_message(
     msg.bubble_id = f"{CREDITS_BUBBLE_PREFIX}{uuid.uuid4().hex[:8]}"
     msg.sender = "AGENT"
     msg.message_type = "AGENT"
-    _fill_bubble(msg, content)
+    _fill_bubble(msg, content, subscribe)
 
     try:
         from .animation_manager import start_slide_redraw_burst
@@ -129,13 +147,13 @@ def add_credit_upgrade_chat_message(
     redraw_chat_areas()
 
 
-def _build_content(title: str, body: str) -> str:
-    title = (title or rpt_(_DEFAULT_TITLE)).strip()
-    body = (body or rpt_(_DEFAULT_BODY)).strip()
+def _build_content(title: str, body: str, subscribe: bool = False) -> str:
+    title = (title or rpt_(_SUBSCRIBE_TITLE if subscribe else _DEFAULT_TITLE)).strip()
+    body = (body or rpt_(_SUBSCRIBE_BODY if subscribe else _DEFAULT_BODY)).strip()
     return f"**{title}**\n\n{body}"[:_CONTENT_MAXLEN]
 
 
-def _fill_bubble(msg, content: str) -> None:
+def _fill_bubble(msg, content: str, subscribe: bool = False) -> None:
     """Populate a bubble with markdown content + the Upgrade CTA button.
 
     Built manually (not via the slot pipeline): this is a client-originated
@@ -162,6 +180,6 @@ def _fill_bubble(msg, content: str) -> None:
 
     msg.action_items.clear()
     action = msg.action_items.add()
-    action.label = iface_(_CTA_LABEL)
+    action.label = iface_(_SUBSCRIBE_CTA_LABEL if subscribe else _CTA_LABEL)
     action.value = CREDIT_UPGRADE_CHAT_ACTION
     action.style = "PRIMARY"

@@ -64,11 +64,11 @@ const char *target_action(const Target target)
   }
 }
 
-const char *target_label(const Target target)
+const char *target_label(const Target target, const bool subscribe)
 {
   switch (target) {
     case TARGET_UPGRADE:
-      return "Upgrade Plan";
+      return subscribe ? "Subscribe" : "Upgrade Plan";
     case TARGET_REFER:
       return "Refer a Friend";
     case TARGET_CREATOR:
@@ -146,6 +146,7 @@ static wmOperatorStatus banner_invoke(bContext *C, wmOperator *op, const wmEvent
   char path[1024] = "";
   RNA_string_get(op->ptr, "image_path", path);
   state->image_path = path;
+  state->subscribe = RNA_boolean_get(op->ptr, "subscribe");
   state->win = win;
   state->opened_at = BLI_time_now_seconds();
   state->draw_handle = WM_draw_cb_activate(win, draw, state);
@@ -333,6 +334,12 @@ static void MIXAR_OT_credits_banner(wmOperatorType *ot)
   PropertyRNA *prop = RNA_def_string_file_path(
       ot->srna, "image_path", nullptr, 1024, "Image", "Banner art to draw");
   RNA_def_property_flag(prop, PROP_SKIP_SAVE);
+  prop = RNA_def_boolean(ot->srna,
+                         "subscribe",
+                         false,
+                         "Subscribe",
+                         "The account has no plan: ask for a subscription instead of an upgrade");
+  RNA_def_property_flag(prop, PROP_SKIP_SAVE);
 }
 
 /** \} */
@@ -374,7 +381,7 @@ static void qa_targets(const wmWindow *win,
   for (int t = 0; t < TARGET_COUNT; t++) {
     MixarQATarget target;
     target.surface = "credits_banner";
-    target.text = target_label(Target(t));
+    target.text = target_label(Target(t), state->subscribe);
     target.value = target_action(Target(t));
     target.index = t;
     BLI_rcti_rctf_copy_round(&target.rect_win, &layout.targets[t]);

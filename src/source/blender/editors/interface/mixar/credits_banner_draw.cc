@@ -231,7 +231,7 @@ static void draw_button(const State &state, const Layout &layout, const Target t
   const int font = BLF_default();
   const float size = label_size(layout);
   BLF_size(font, size);
-  const char *label = target_label(target);
+  const char *label = target_label(target, state.subscribe);
   const float width = BLF_width(font, label, strlen(label));
   const float center = BLI_rctf_cent_x(&r);
   const float cy = BLI_rctf_cent_y(&r);
@@ -363,12 +363,17 @@ void draw(const wmWindow *win, void *customdata)
   BLF_size(font, card_w * 0.052f);
   BLF_character_weight(font, 700);
   const float ink[4] = {0.95f, 0.95f, 0.95f, appear};
-  text_centered(font, "You're all out of credits!", BLI_rctf_cent_x(&layout.card),
+  text_centered(font,
+                state->subscribe ? "Subscribe to continue" : "You're all out of credits!",
+                BLI_rctf_cent_x(&layout.card),
                 layout.card.ymax - card_h * 0.145f, ink);
   BLF_character_weight(font, 400);
   BLF_size(font, card_w * 0.024f);
   const float muted[4] = {0.50f, 0.50f, 0.50f, appear};
-  text_centered(font, "Upgrade Plan or Earn Credits?", BLI_rctf_cent_x(&layout.card),
+  text_centered(font,
+                state->subscribe ? "This feature uses credits. Subscribe or Earn Credits?" :
+                                   "Upgrade Plan or Earn Credits?",
+                BLI_rctf_cent_x(&layout.card),
                 layout.card.ymax - card_h * 0.215f, muted);
   draw_button(*state, layout, TARGET_UPGRADE, appear);
   draw_button(*state, layout, TARGET_REFER, appear);
