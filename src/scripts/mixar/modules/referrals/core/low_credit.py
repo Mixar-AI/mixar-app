@@ -49,7 +49,7 @@ def crossed(previous, current, threshold: int = C.LOW_CREDIT_THRESHOLD) -> bool:
 def toast_copy(credits_left: int) -> tuple:
     return ("Running low on credits",
             f"You have {format_credits(credits_left)} credits left. "
-            "Invite friends to earn bonus credits.")
+            "Invite friends to earn credits when they buy.")
 
 
 def notify_if_crossed(previous, current) -> bool:
