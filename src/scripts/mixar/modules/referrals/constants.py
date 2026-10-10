@@ -28,6 +28,10 @@ NOTICE_ERROR = 'ERROR'
 #: Separators accepted between addresses in the email field.
 EMAIL_SEPARATORS = ",; \t\n"
 
+#: Share of the credits a referred friend buys on their first purchase (top-up
+#: or plan) that the inviter earns. Display only; the backend computes the award.
+REFERRAL_REWARD_PERCENT = 30
+
 #: A live drop to this balance or below raises the low-credit toast, whose
 #: button opens Refer a Friend (``core/low_credit.py``).
 LOW_CREDIT_THRESHOLD = 200

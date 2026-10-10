@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import io
+import os
 from typing import Any
 
 import bpy
@@ -28,13 +29,17 @@ def scene_snapshot() -> dict[str, Any]:
                 "mesh_verts": len(obj.data.vertices) if obj.type == "MESH" else 0,
             }
         )
+    # The file's basename only: an absolute path carries the user's home
+    # folder (and on Windows their account name) off to another process.
+    filepath = bpy.data.filepath or ""
     return {
         "scene_name": scene.name,
         "object_count": len(objects),
         "objects": objects[:200],
         "render_engine": scene.render.engine,
         "frame": int(scene.frame_current),
-        "filepath": bpy.data.filepath or "",
+        "file_name": os.path.basename(filepath),
+        "saved": bool(filepath),
     }
 
 

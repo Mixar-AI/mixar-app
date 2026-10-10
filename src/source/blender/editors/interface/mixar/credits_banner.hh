@@ -33,14 +33,18 @@ enum Target {
   TARGET_UPGRADE = 0,
   TARGET_REFER = 1,
   TARGET_CREATOR = 2,
-  TARGET_CLOSE = 3,
-  TARGET_COUNT = 4,
+  /* Free ways to keep using the agent: the user's own provider, or an MCP app. */
+  TARGET_BYOK = 3,
+  TARGET_MCP = 4,
+  TARGET_CLOSE = 5,
+  TARGET_COUNT = 6,
 };
 
 /** Action names sent to `mixar.credits_banner_action` (Python owns the URLs). */
 const char *target_action(Target target);
-/** Visible label of a button target (QA text matching uses the same string). */
-const char *target_label(Target target);
+/** Visible label of a button target (QA text matching uses the same string).
+ * `subscribe` swaps "Upgrade Plan" for "Subscribe" (account with no plan). */
+const char *target_label(Target target, bool subscribe);
 
 struct Layout {
   rctf card;                   /* banner bounds, window pixels */
@@ -55,6 +59,8 @@ struct State {
   void *draw_handle = nullptr;
   wmTimer *timer = nullptr;
   std::string image_path;
+  /* No plan yet: ask for a subscription instead of an upgrade. */
+  bool subscribe = false;
   gpu::Texture *texture = nullptr;
   int image_w = 0;
   int image_h = 0;
@@ -69,7 +75,7 @@ struct State {
   float drag_offset = 0.0f;
   bool dragging = false;
   bool returning = false;
-  float hover_mix[TARGET_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+  float hover_mix[TARGET_COUNT] = {};
 };
 
 /** Seconds for the entrance and exit animations. */

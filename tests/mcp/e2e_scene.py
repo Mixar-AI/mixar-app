@@ -3,7 +3,7 @@
 """Real desktop MCP scenario; run with a Python environment containing mcp==2.2.0.
 
 Requires an isolated QA app using a loopback backend and exactly two test
-credits. Exercises the actual Enable MCP control, official SDK stdio client,
+credits. Exercises the actual MCP switch, official SDK stdio client,
 scene mutation, duplicate recovery and a failed edit. Scene tools are free, so
 the two fixture credits never move; no hosted model call.
 The verdict and PNGs need a human/agent visual review before claiming success.

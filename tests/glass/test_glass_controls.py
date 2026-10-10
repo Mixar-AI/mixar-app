@@ -214,16 +214,8 @@ class TestTheProfilePlanChipIsAPane:
             )
 
     def test_the_card_machinery_stays_flat(self) -> None:
-        """The divider and the quota bar are controls: a groove and a gauge.
-
-        Showing the card through a divider stops it reading as a separator,
-        and a glassed track or fill makes the quota ambiguous — the reading
-        the flat ramp exists to make unmistakable.
-        """
+        """The divider is a control — a groove. Showing the card through it
+        stops it reading as a separator."""
         divider = _code(_fn_body(PROFILE_DRAW, "void draw_divider("))
-        usage = _code(_fn_body(PROFILE_DRAW, "void draw_usage_bar("))
-        for name, body in (("draw_divider", divider), ("draw_usage_bar", usage)):
-            assert "mixar_card_glass_round(" not in body, f"{name} was glassed"
+        assert "mixar_card_glass_round(" not in divider, "draw_divider was glassed"
         assert "mixar_card_fill_round(&line, 0.0f, border_strong_u)" in divider
-        assert "mixar_card_fill_round(&track, rad, sunken_u)" in usage
-        assert "fill_ramp(&fill, rad, CARD_USAGE_RAMP_START, CARD_USAGE_RAMP_END)" in usage

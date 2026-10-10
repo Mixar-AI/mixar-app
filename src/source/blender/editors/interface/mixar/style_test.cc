@@ -102,7 +102,7 @@ TEST(MixarStyle, CompatibilityPayloadIsBounded)
   Button button;
   button.type = ButtonType::But;
   button.hardmax = 27;
-  mixar_style_card(&button, MixarCardElement::UsageBar, 2.0f);
+  mixar_style_card(&button, MixarCardElement::CreditBalance, 2.0f);
   EXPECT_EQ(button.mixar_style.progress, 1.0f);
   EXPECT_EQ(button.hardmax, 27);
   EXPECT_EQ(button.mixar_style.theme, MixarTheme::LegacyMixar);

@@ -48,13 +48,22 @@ Layout layout_compute(const State &state, const float appear)
   }
   BLI_rctf_init(&l.targets[TARGET_CREATOR], x0 + 2.0f * (bw + gap),
                 l.card.xmax - cw * 0.04f, y0, y0 + l.button_h);
+  /* The free alternatives sit as a quiet link row under the subtitle. */
+  const float link_w = cw * 0.28f;
+  const float link_h = ch * 0.056f;
+  const float link_gap = cw * 0.025f;
+  const float link_cy = l.card.ymax - ch * 0.278f;
+  BLI_rctf_init(&l.targets[TARGET_BYOK], cx - link_gap * 0.5f - link_w, cx - link_gap * 0.5f,
+                link_cy - link_h * 0.5f, link_cy + link_h * 0.5f);
+  BLI_rctf_init(&l.targets[TARGET_MCP], cx + link_gap * 0.5f, cx + link_gap * 0.5f + link_w,
+                link_cy - link_h * 0.5f, link_cy + link_h * 0.5f);
   BLI_rctf_init(&l.art, cx - cw * 0.22f, cx + cw * 0.22f,
-                y0 + l.button_h, l.card.ymax - ch * 0.31f);
+                y0 + l.button_h, l.card.ymax - ch * 0.33f);
   const float close = cw * 0.057f;
   const float inset = cw * 0.066f;
   BLI_rctf_init(&l.targets[TARGET_CLOSE], l.card.xmax - inset - close,
-                l.card.xmax - inset, l.card.ymax - ch * 0.18f,
-                l.card.ymax - ch * 0.18f + close);
+                l.card.xmax - inset, l.card.ymax - ch * 0.15f,
+                l.card.ymax - ch * 0.15f + close);
   return l;
 }
 

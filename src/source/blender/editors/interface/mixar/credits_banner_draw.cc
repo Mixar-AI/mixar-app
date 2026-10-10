@@ -4,8 +4,9 @@
 /** \file
  * \ingroup edinterface
  *
- * Out-of-credits card: native heading, centered artwork, two green actions,
- * and a deliberate slide-to-continue control. Everything is drawn in
+ * Out-of-credits card: native heading, a row of free alternatives (own API
+ * key, MCP), centered artwork, two green actions, and a deliberate
+ * slide-to-continue control. Everything is drawn in
  * window pixels by a WM draw callback, so it sits above every editor.
  *
  * Geometry lives in `layout_compute`, shared with the click handler and the
@@ -231,7 +232,7 @@ static void draw_button(const State &state, const Layout &layout, const Target t
   const int font = BLF_default();
   const float size = label_size(layout);
   BLF_size(font, size);
-  const char *label = target_label(target);
+  const char *label = target_label(target, state.subscribe);
   const float width = BLF_width(font, label, strlen(label));
   const float center = BLI_rctf_cent_x(&r);
   const float cy = BLI_rctf_cent_y(&r);
@@ -291,6 +292,29 @@ static void draw_slider(const State &state, const Layout &layout, const float al
     const float caption[4] = {0.72f, 0.76f, 0.72f, alpha};
     text_centered(font, hint, BLI_rctf_cent_x(&r), r.ymax + layout.button_h * 0.4f, caption);
   }
+}
+
+/** Secondary action: a quiet outlined pill that brightens on hover/focus. */
+static void draw_link(const State &state, const Layout &layout, const Target target,
+                      const float alpha)
+{
+  const rctf &r = layout.targets[target];
+  const float hover = state.hover_mix[target];
+  const float shade = state.pressed == target ? 0.6f : 1.0f;
+  const float fill[4] = {1.0f, 1.0f, 1.0f, 0.06f * hover * shade * alpha};
+  const float rim[4] = {1.0f, 1.0f, 1.0f, (0.14f + 0.22f * hover) * alpha};
+  round_box(r, BLI_rctf_size_y(&r) * 0.5f, fill, fill, rim, 1.0f);
+  const int font = BLF_default();
+  const char *label = target_label(target, state.subscribe);
+  const float available = BLI_rctf_size_x(&r) - BLI_rctf_size_y(&r) * 0.8f;
+  BLF_size(font, label_size(layout) * 0.9f);
+  const float width = BLF_width(font, label, strlen(label));
+  if (width > available) {
+    BLF_size(font, label_size(layout) * 0.9f * available / width);
+  }
+  const float ink[4] = {0.80f + 0.15f * hover, 0.84f + 0.12f * hover, 0.80f + 0.15f * hover,
+                        alpha};
+  text_centered(font, label, BLI_rctf_cent_x(&r), BLI_rctf_cent_y(&r), ink);
 }
 
 static void draw_close(const State &state, const Layout &layout, const float appear)
@@ -363,15 +387,22 @@ void draw(const wmWindow *win, void *customdata)
   BLF_size(font, card_w * 0.052f);
   BLF_character_weight(font, 700);
   const float ink[4] = {0.95f, 0.95f, 0.95f, appear};
-  text_centered(font, "You're all out of credits!", BLI_rctf_cent_x(&layout.card),
-                layout.card.ymax - card_h * 0.145f, ink);
+  text_centered(font,
+                state->subscribe ? "Subscribe to continue" : "You're all out of credits!",
+                BLI_rctf_cent_x(&layout.card),
+                layout.card.ymax - card_h * 0.115f, ink);
   BLF_character_weight(font, 400);
   BLF_size(font, card_w * 0.024f);
   const float muted[4] = {0.50f, 0.50f, 0.50f, appear};
-  text_centered(font, "Upgrade Plan or Earn Credits?", BLI_rctf_cent_x(&layout.card),
-                layout.card.ymax - card_h * 0.215f, muted);
+  text_centered(font,
+                "Get a plan, or use your own API key or AI app.",
+                BLI_rctf_cent_x(&layout.card),
+                layout.card.ymax - card_h * 0.185f,
+                muted);
   draw_button(*state, layout, TARGET_UPGRADE, appear);
   draw_button(*state, layout, TARGET_REFER, appear);
+  draw_link(*state, layout, TARGET_BYOK, appear);
+  draw_link(*state, layout, TARGET_MCP, appear);
   draw_slider(*state, layout, appear, now - state->opened_at);
   draw_close(*state, layout, appear);
 

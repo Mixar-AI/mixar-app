@@ -344,17 +344,18 @@ void agent_ui_draw_island(ARegion *region,
 
   /* --- Card --- */
   {
-    /* Preserve the credit indication in the pill's quiet white rim. Lower the
-     * spent alpha rather than putting an opaque dark ring over native frost. */
-    const float border_spent[4] = {border[0], border[1], border[2], border[3] * 0.25f};
+    /* The pill's quiet white rim, drawn whole. It used to meter the credit
+     * percentage; credits are now a number on the account card (the same
+     * figure the web dashboard prints), so the ring no longer depletes.
+     * "Unknown" (-1) is the primitive's whole-ring path. */
     draw_card_border_meter(&layout->card,
                            AGENT_CARD_RADIUS * u,
                            glass.rim_width,
                            border,
-                           border_spent,
-                           state->credits_remaining);
+                           border,
+                           -1.0f);
   }
-  /* Expanding changes the shape, not the material. The credit meter already
+  /* Expanding changes the shape, not the material. The rim above already
    * draws PILL's rim, so keep only its sheen here to avoid a doubled edge. */
   glass_fill_round(&layout->card_fill,
                    ui::MIXAR_GLASS_PILL,
